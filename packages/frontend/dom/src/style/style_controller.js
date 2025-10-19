@@ -54,7 +54,7 @@ import { mergeOneStyle, mergeStyles } from "./style_composition.js";
 import { normalizeStyle, normalizeStyles } from "./style_parsing.js";
 
 // Global registry to track all style controllers and their managed elements
-const elementStyleRegistry = new WeakMap(); // element -> Set<controller>
+const elementControllerSetRegistry = new WeakMap(); // element -> Set<controller>
 const activeControllers = new Set(); // Set of all active controllers
 
 export const createStyleController = (name = "anonymous") => {
@@ -107,10 +107,10 @@ export const createStyleController = (name = "anonymous") => {
       throw new Error("Styles must be an object");
     }
 
-    if (!elementStyleRegistry.has(element)) {
-      elementStyleRegistry.set(element, new Set());
+    if (!elementControllerSetRegistry.has(element)) {
+      elementControllerSetRegistry.set(element, new Set());
     }
-    const elementControllers = elementStyleRegistry.get(element);
+    const elementControllers = elementControllerSetRegistry.get(element);
     elementControllers.add(controller);
     if (!controllerStylesRegistry.has(element)) {
       controllerStylesRegistry.set(element, {});
@@ -136,13 +136,13 @@ export const createStyleController = (name = "anonymous") => {
       // Clean up empty controller
       if (isEmpty) {
         controllerStylesRegistry.delete(element);
-        const elementControllers = elementStyleRegistry.get(element);
+        const elementControllers = elementControllerSetRegistry.get(element);
         if (elementControllers) {
           elementControllers.delete(controller);
 
           // Clean up empty element registry
           if (elementControllers.size === 0) {
-            elementStyleRegistry.delete(element);
+            elementControllerSetRegistry.delete(element);
           }
         }
       }
@@ -181,24 +181,24 @@ export const createStyleController = (name = "anonymous") => {
     controllerStylesRegistry.delete(element);
 
     // Clean up controller from element registry
-    const elementControllers = elementStyleRegistry.get(element);
+    const elementControllers = elementControllerSetRegistry.get(element);
     if (elementControllers) {
       elementControllers.delete(controller);
       if (elementControllers.size === 0) {
-        elementStyleRegistry.delete(element);
+        elementControllerSetRegistry.delete(element);
       }
     }
   };
 
   const clear = (element) => {
     controllerStylesRegistry.delete(element);
-    const elementControllers = elementStyleRegistry.get(element);
+    const elementControllers = elementControllerSetRegistry.get(element);
     if (elementControllers) {
       elementControllers.delete(controller);
 
       // Clean up empty element registry
       if (elementControllers.size === 0) {
-        elementStyleRegistry.delete(element);
+        elementControllerSetRegistry.delete(element);
       }
     }
     // Recompute and apply final styles
@@ -206,7 +206,7 @@ export const createStyleController = (name = "anonymous") => {
   };
 
   const getUnderlyingValue = (element, propertyName) => {
-    const elementControllers = elementStyleRegistry.get(element);
+    const elementControllers = elementControllerSetRegistry.get(element);
 
     const normalizeValueForJs = (value) => {
       // Use normalizeStyle to handle all property types including transform dot notation
@@ -311,7 +311,7 @@ export const createStyleController = (name = "anonymous") => {
 
   const destroy = () => {
     // Remove this controller from all elements and clean up animations
-    for (const [element, elementControllers] of elementStyleRegistry) {
+    for (const [element, elementControllers] of elementControllerSetRegistry) {
       if (!elementControllers.has(controller)) {
         continue;
       }
@@ -327,7 +327,7 @@ export const createStyleController = (name = "anonymous") => {
 
       // Clean up empty element registry
       if (elementControllers.size === 0) {
-        elementStyleRegistry.delete(element);
+        elementControllerSetRegistry.delete(element);
       }
     }
 
