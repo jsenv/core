@@ -163,12 +163,15 @@ export const createStyleController = (name = "anonymous") => {
   };
 
   const commit = (element) => {
-    const finalStyles = computeFinalStyles(element);
-
+    const controllerStyles = controllerStylesRegistry.get(element);
+    if (!controllerStyles) {
+      return; // No styles to commit from this controller
+    }
     // Read existing styles to compose with them
     const computedStyles = getComputedStyle(element);
-
-    for (const [key, value] of Object.entries(finalStyles)) {
+    // Convert controller styles to CSS and commit to inline styles
+    const cssStyles = normalizeStyles(controllerStyles, "css");
+    for (const [key, value] of Object.entries(cssStyles)) {
       const existingValue = computedStyles[key];
       element.style[key] = mergeOneStyle(existingValue, value, key, "css");
     }
@@ -326,19 +329,4 @@ export const createStyleController = (name = "anonymous") => {
 
   activeControllers.add(controller);
   return controller;
-};
-
-// Compute final styles by merging all controllers' styles for an element
-const computeFinalStyles = (element) => {
-  let finalStyles = {};
-  const elementControllers = elementStyleRegistry.get(element);
-  if (!elementControllers) {
-    return finalStyles;
-  }
-  // Merge styles from all controllers
-  for (const controller of elementControllers) {
-    const controllerStyles = controller.get(element);
-    finalStyles = mergeStyles(finalStyles, controllerStyles);
-  }
-  return finalStyles;
 };
