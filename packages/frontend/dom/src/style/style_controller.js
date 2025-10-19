@@ -57,6 +57,19 @@ import { normalizeStyle, normalizeStyles } from "./style_parsing.js";
 const elementControllerSetRegistry = new WeakMap(); // element -> Set<controller>
 const activeControllers = new Set(); // Set of all active controllers
 
+// Helper function to remove a controller from element registry and clean up if empty
+const removeControllerFromElementRegistry = (element, controller) => {
+  const elementControllerSet = elementControllerSetRegistry.get(element);
+  if (elementControllerSet) {
+    elementControllerSet.delete(controller);
+
+    // Clean up empty element registry
+    if (elementControllerSet.size === 0) {
+      elementControllerSetRegistry.delete(element);
+    }
+  }
+};
+
 export const createStyleController = (name = "anonymous") => {
   // Store styles for this specific controller
   const controllerStylesRegistry = new WeakMap(); // element -> styles
@@ -136,14 +149,7 @@ export const createStyleController = (name = "anonymous") => {
       // Clean up empty controller
       if (isEmpty) {
         controllerStylesRegistry.delete(element);
-        const elementControllerSet = elementControllerSetRegistry.get(element);
-        if (elementControllerSet) {
-          elementControllerSet.delete(controller);
-          // Clean up empty element registry
-          if (elementControllerSet.size === 0) {
-            elementControllerSetRegistry.delete(element);
-          }
-        }
+        removeControllerFromElementRegistry(element, controller);
       }
 
       // Recompute and apply final styles (or clean up animation if no styles left)
@@ -180,26 +186,12 @@ export const createStyleController = (name = "anonymous") => {
     controllerStylesRegistry.delete(element);
 
     // Clean up controller from element registry
-    const elementControllerSet = elementControllerSetRegistry.get(element);
-    if (elementControllerSet) {
-      elementControllerSet.delete(controller);
-      if (elementControllerSet.size === 0) {
-        elementControllerSetRegistry.delete(element);
-      }
-    }
+    removeControllerFromElementRegistry(element, controller);
   };
 
   const clear = (element) => {
     controllerStylesRegistry.delete(element);
-    const elementControllerSet = elementControllerSetRegistry.get(element);
-    if (elementControllerSet) {
-      elementControllerSet.delete(controller);
-
-      // Clean up empty element registry
-      if (elementControllerSet.size === 0) {
-        elementControllerSetRegistry.delete(element);
-      }
-    }
+    removeControllerFromElementRegistry(element, controller);
     // Recompute and apply final styles
     applyStyles(element);
   };
