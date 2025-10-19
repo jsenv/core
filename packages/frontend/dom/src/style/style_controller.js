@@ -266,6 +266,10 @@ export const createStyleController = (name = "anonymous") => {
       return underlyingValue;
     };
 
+    if (typeof propertyName === "function") {
+      return getWhileDisablingThisController(propertyName);
+    }
+
     // Handle computed layout properties (rect.*) - always read from DOM, bypass controllers
     if (propertyName.startsWith("rect.")) {
       return getWhileDisablingThisController(getFromDOMLayout);
