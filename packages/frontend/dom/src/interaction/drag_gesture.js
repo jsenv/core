@@ -197,12 +197,6 @@ export const createDragGestureController = (options = {}) => {
         layout = currentLayout;
       } else {
         // === APPLICATION DES CONTRAINTES ===
-        console.log({
-          dragX,
-          grabX,
-          layoutRequested,
-          scrollLeft: scrollContainer.scrollLeft,
-        });
         let layoutConstrained = layoutRequested;
         const limitLayout = (left, top) => {
           layoutConstrained = createLayout(

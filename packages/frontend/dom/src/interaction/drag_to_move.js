@@ -170,107 +170,127 @@ export const createDragToMoveGestureController = ({
       const elementRight = elementLeft + elementWidth;
       const elementBottom = elementTop + elementHeight;
 
-      const elementScrollableLeft = layout.scrollableLeft;
-      const elementScrollableTop = layout.scrollableTop;
-      const [elementPositionedLeft, elementPositionedTop] =
-        convertScrollablePosition(elementScrollableLeft, elementScrollableTop);
+      auto_scroll: {
+        hasCrossedScrollportLeftOnce =
+          hasCrossedScrollportLeftOnce || elementLeft < scrollport.left;
+        hasCrossedScrollportTopOnce =
+          hasCrossedScrollportTopOnce || elementTop < scrollport.top;
 
-      hasCrossedScrollportLeftOnce =
-        hasCrossedScrollportLeftOnce || elementLeft < scrollport.left;
-      hasCrossedScrollportTopOnce =
-        hasCrossedScrollportTopOnce || elementTop < scrollport.top;
-
-      const moveAndKeepIntoView = (axis) => {
-        let scroll;
-        let position;
-        compute_scroll: {
-          const currentScroll =
-            axis === "x"
-              ? scrollContainer.scrollLeft
-              : scrollContainer.scrollTop;
+        const getScrollMove = (axis) => {
           const isGoingPositive = axis === "x" ? isGoingRight : isGoingDown;
-          const isGoingNegative = axis === "x" ? isGoingLeft : isGoingUp;
-
           if (isGoingPositive) {
             const elementEnd = axis === "x" ? elementRight : elementBottom;
             const autoScrollAreaEnd =
               axis === "x" ? autoScrollArea.right : autoScrollArea.bottom;
 
-            if (elementEnd > autoScrollAreaEnd) {
-              const scrollAmountNeeded = elementEnd - autoScrollAreaEnd;
-              scroll = currentScroll + scrollAmountNeeded;
+            if (elementEnd <= autoScrollAreaEnd) {
+              return 0;
             }
-            break compute_scroll;
+            const scrollAmountNeeded = elementEnd - autoScrollAreaEnd;
+            return scrollAmountNeeded;
           }
-          if (isGoingNegative) {
-            const elementStart = axis === "x" ? elementLeft : elementTop;
-            const autoScrollAreaStart =
-              axis === "x" ? autoScrollArea.left : autoScrollArea.top;
-            const referenceOrEl = referenceElement || element;
-            const canAutoScrollNegative =
-              axis === "x"
-                ? !referenceOrEl.hasAttribute("data-sticky-left") ||
-                  hasCrossedScrollportLeftOnce
-                : !referenceOrEl.hasAttribute("data-sticky-top") ||
-                  hasCrossedScrollportTopOnce;
 
-            if (canAutoScrollNegative && elementStart < autoScrollAreaStart) {
-              const scrollAmountNeeded = autoScrollAreaStart - elementStart;
-              scroll = Math.max(0, currentScroll - scrollAmountNeeded);
-            }
+          const isGoingNegative = axis === "x" ? isGoingLeft : isGoingUp;
+          if (!isGoingNegative) {
+            return 0;
+          }
+
+          const referenceOrEl = referenceElement || element;
+          const canAutoScrollNegative =
+            axis === "x"
+              ? !referenceOrEl.hasAttribute("data-sticky-left") ||
+                hasCrossedScrollportLeftOnce
+              : !referenceOrEl.hasAttribute("data-sticky-top") ||
+                hasCrossedScrollportTopOnce;
+          if (!canAutoScrollNegative) {
+            return 0;
+          }
+
+          const elementStart = axis === "x" ? elementLeft : elementTop;
+          const autoScrollAreaStart =
+            axis === "x" ? autoScrollArea.left : autoScrollArea.top;
+          if (elementStart >= autoScrollAreaStart) {
+            return 0;
+          }
+
+          const scrollAmountNeeded = autoScrollAreaStart - elementStart;
+          return -scrollAmountNeeded;
+        };
+
+        let scrollLeftTarget;
+        let scrollTopTarget;
+        if (direction.x) {
+          const containerScrollLeftMove = getScrollMove("x");
+          if (containerScrollLeftMove) {
+            scrollLeftTarget =
+              scrollContainer.scrollLeft + containerScrollLeftMove;
           }
         }
-        compute_position: {
-          const elementStart =
-            axis === "x" ? elementPositionedLeft : elementPositionedTop;
-          let elementPosition = elementStart;
-          if (elementToMove) {
-            const offsetWithElementToMove = axis === "x" ? xOffset : yOffset;
-            elementPosition -= offsetWithElementToMove;
+        if (direction.y) {
+          const containerScrollTopMove = getScrollMove("y");
+          if (containerScrollTopMove) {
+            scrollTopTarget =
+              scrollContainer.scrollTop + containerScrollTopMove;
           }
-          position = elementPosition;
         }
-        return [scroll, position];
-      };
-
-      let xScroll;
-      let xPosition;
-      let yScroll;
-      let yPosition;
-      if (direction.x) {
-        [xScroll, xPosition] = moveAndKeepIntoView("x");
-      }
-      if (direction.y) {
-        [yScroll, yPosition] = moveAndKeepIntoView("y");
+        // now we know what to do, do it
+        if (scrollLeftTarget !== undefined) {
+          scrollContainer.scrollLeft = scrollLeftTarget;
+        }
+        if (scrollTopTarget !== undefined) {
+          scrollContainer.scrollTop = scrollTopTarget;
+        }
       }
 
-      if (xScroll !== undefined) {
-        scrollContainer.scrollLeft = xScroll;
-      }
-      if (yScroll !== undefined) {
-        scrollContainer.scrollTop = yScroll;
-      }
+      move: {
+        const elementScrollableLeft = layout.scrollableLeft;
+        const elementScrollableTop = layout.scrollableTop;
+        const [elementPositionedLeft, elementPositionedTop] =
+          convertScrollablePosition(
+            elementScrollableLeft,
+            elementScrollableTop,
+          );
+        let leftPositionToApply;
+        let topPositionToApply;
+        if (direction.x) {
+          leftPositionToApply = elementToMove
+            ? elementPositionedLeft - xOffset
+            : elementPositionedLeft;
+        }
+        if (direction.y) {
+          topPositionToApply = elementToMove
+            ? elementPositionedTop - yOffset
+            : elementPositionedTop;
+        }
 
-      const transform = {};
-      if (xPosition !== undefined) {
-        const leftAtGrab = dragGesture.gestureInfo.leftAtGrab;
-        const moveX = xPosition - leftAtGrab;
-        const translateX = translateXAtGrab ? translateXAtGrab + moveX : moveX;
-        transform.translateX = translateX;
-        console.log({
-          leftAtGrab,
-          xPosition,
+        const transform = {};
+        if (leftPositionToApply !== undefined) {
+          const leftAtGrab = dragGesture.gestureInfo.leftAtGrab;
+          const leftDelta = leftPositionToApply - leftAtGrab;
+          const translateX = translateXAtGrab
+            ? translateXAtGrab + leftDelta
+            : leftDelta;
+          transform.translateX = translateX;
+          console.log({
+            leftAtGrab,
+            elementScrollableLeft,
+            elementLeft,
+            leftPositionToApply,
+            translateX,
+          });
+        }
+        if (topPositionToApply !== undefined) {
+          const topAtGrab = dragGesture.gestureInfo.topAtGrab;
+          const topDelta = topPositionToApply - topAtGrab;
+          const translateY = translateYAtGrab
+            ? translateYAtGrab + topDelta
+            : topDelta;
+          transform.translateY = translateY;
+        }
+        dragStyleController.set(elementImpacted, {
+          transform,
         });
       }
-      if (yPosition !== undefined) {
-        const topAtGrab = dragGesture.gestureInfo.topAtGrab;
-        const moveY = yPosition - topAtGrab;
-        const translateY = translateYAtGrab ? translateYAtGrab + moveY : moveY;
-        transform.translateY = translateY;
-      }
-      dragStyleController.set(elementImpacted, {
-        transform,
-      });
     };
     dragGesture.addDragCallback(dragToMove);
   };
