@@ -38,16 +38,14 @@ export const createDragToMoveGestureController = ({
     const dragGestureName = dragGesture.gestureInfo.name;
     const scrollContainer = dragGesture.gestureInfo.scrollContainer;
     const elementImpacted = elementToMove || element;
-    const elementImpactedTranslateXAtGrab =
-      dragStyleController.getUnderlyingValue(
-        elementImpacted,
-        "transform.translateX",
-      );
-    const elementImpactedTranslateYAtGrab =
-      dragStyleController.getUnderlyingValue(
-        elementImpacted,
-        "transform.translateY",
-      );
+    const translateXAtGrab = dragStyleController.getUnderlyingValue(
+      elementImpacted,
+      "transform.translateX",
+    );
+    const translateYAtGrab = dragStyleController.getUnderlyingValue(
+      elementImpacted,
+      "transform.translateY",
+    );
     dragGesture.addReleaseCallback(() => {
       if (resetPositionAfterRelease) {
         dragStyleController.clear(elementImpacted);
@@ -257,17 +255,17 @@ export const createDragToMoveGestureController = ({
       if (xPosition !== undefined) {
         const leftAtGrab = dragGesture.gestureInfo.leftAtGrab;
         const moveX = xPosition - leftAtGrab;
-        const translateX = elementImpactedTranslateXAtGrab
-          ? elementImpactedTranslateXAtGrab + moveX
-          : moveX;
+        const translateX = translateXAtGrab ? translateXAtGrab + moveX : moveX;
         transform.translateX = translateX;
+        console.log({
+          leftAtGrab,
+          xPosition,
+        });
       }
       if (yPosition !== undefined) {
         const topAtGrab = dragGesture.gestureInfo.topAtGrab;
         const moveY = yPosition - topAtGrab;
-        const translateY = elementImpactedTranslateYAtGrab
-          ? elementImpactedTranslateYAtGrab + moveY
-          : moveY;
+        const translateY = translateYAtGrab ? translateYAtGrab + moveY : moveY;
         transform.translateY = translateY;
       }
       dragStyleController.set(elementImpacted, {
