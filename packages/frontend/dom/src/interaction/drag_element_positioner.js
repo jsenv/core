@@ -299,10 +299,7 @@ const createFullyDifferentPositioner = (
   return [scrollableLeft, scrollableTop, convertScrollablePosition];
 };
 
-const createStandardElementPositioner = (
-  element,
-  { scrollContainer, positionedParent },
-) => {
+const createStandardElementPositioner = (element, { scrollContainer }) => {
   let scrollableLeft;
   let scrollableTop;
   let convertScrollablePosition;
@@ -318,18 +315,8 @@ const createStandardElementPositioner = (
       scrollableLeftToConvert,
       scrollableTopToConvert,
     ) => {
-      const [
-        positionedParentLeftOffsetWithScrollContainer,
-        positionedParentTopOffsetWithScrollContainer,
-      ] = getPositionedParentOffsetWithScrollContainer(
-        positionedParent,
-        scrollContainer,
-      );
-
-      const positionedLeftWithoutScroll =
-        scrollableLeftToConvert - positionedParentLeftOffsetWithScrollContainer;
-      const positionedTopWithoutScroll =
-        scrollableTopToConvert - positionedParentTopOffsetWithScrollContainer;
+      const positionedLeftWithoutScroll = scrollableLeftToConvert;
+      const positionedTopWithoutScroll = scrollableTopToConvert;
       const [positionedLeft, positionedTop] = [
         scrollContainer.scrollLeft + positionedLeftWithoutScroll,
         scrollContainer.scrollTop + positionedTopWithoutScroll,
