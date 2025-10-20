@@ -47,6 +47,12 @@
  * - **getUnderlyingValue()**: Read the "natural" value without this controller's influence
  * - **Smart units**: Numeric values get appropriate units automatically (px, deg, unitless)
  *
+ * **Transform limitations:**
+ * - **3D Transforms**: Complex `matrix3d()` transforms are preserved as-is and cannot be decomposed
+ *   into individual properties. Only `matrix3d()` that represent simple 2D transforms are converted
+ *   to object notation. Magic properties like "transform.rotateX" work only with explicit CSS functions,
+ *   not with complex 3D matrices.
+ *
  * Multiple controllers can safely manage the same element without conflicts.
  */
 
