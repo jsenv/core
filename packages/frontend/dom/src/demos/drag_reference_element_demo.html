@@ -254,81 +254,79 @@
       <p><strong>Test Scenarios:</strong></p>
       <ul>
         <li>
-          <strong>Case 1:</strong> Same scroll container, different positioned
-          parents - Reference and element share the same scroll container but
+          <strong>Case 1:</strong> Document scroll container, different positioned
+          parents - Reference and element share the document as scroll container but
           have different offsetParents
         </li>
         <li>
-          <strong>Case 2:</strong> Different scroll containers, different
-          positioned parents - Reference and element are in completely different
-          coordinate systems
+          <strong>Case 2:</strong> Reference in scroll container, element in document - 
+          Reference element in custom scroll container, element positioned relative to document
         </li>
       </ul>
     </div>
 
-    <!-- Case 1: Same scroll container, different positioned parents -->
+    <!-- Case 1: Document scroll container, different positioned parents -->
     <div class="demo-section">
       <h2 class="demo-title">
-        Case 1: Same Scroll Container, Different Positioned Parents
+        Case 1: Document Scroll Container, Different Positioned Parents
       </h2>
       <div class="demo-container">
-        <div class="scroll-container" id="case1-scroll">
-          <div class="scroll-content">
-            <!-- Reference element in a positioned container -->
-            <div
-              style="
-                position: relative;
-                top: 20px;
-                left: 30px;
-                width: 100px;
-                height: 80px;
-                background: rgba(255, 152, 0, 0.1);
-                border: 1px dashed #ff9800;
-              "
-            >
-              <div
-                class="reference-element"
-                id="case1-ref"
-                style="top: 10px; left: 10px"
-              >
-                REF
-              </div>
-            </div>
-
-            <!-- Element in a different positioned container -->
-            <div
-              style="
-                position: relative;
-                top: 50px;
-                left: 200px;
-                width: 120px;
-                height: 100px;
-                background: rgba(76, 175, 80, 0.1);
-                border: 1px dashed #4caf50;
-              "
-            >
-              <div
-                class="element-to-move"
-                id="case1-element"
-                style="top: 20px; left: 20px"
-              >
-                ELEMENT
-              </div>
-            </div>
+        <!-- Reference element in a positioned container -->
+        <div
+          style="
+            position: relative;
+            top: 20px;
+            left: 30px;
+            width: 100px;
+            height: 80px;
+            background: rgba(255, 152, 0, 0.1);
+            border: 1px dashed #ff9800;
+          "
+        >
+          <div
+            class="reference-element"
+            id="case1-ref"
+            style="top: 10px; left: 10px"
+          >
+            REF
           </div>
         </div>
 
-        <div class="controls">
-          <h4>Programmatic Controls</h4>
-          <button class="grab-btn" id="case1-grab">Grab</button>
-          <button class="drag-btn" id="case1-drag-left" disabled>
-            Drag Left
-          </button>
-          <button class="drag-btn" id="case1-drag-right" disabled>
-            Drag Right
-          </button>
-          <button class="drag-btn" id="case1-drag-up" disabled>Drag Up</button>
-          <button class="drag-btn" id="case1-drag-down" disabled>
+        <!-- Element in a different positioned container -->
+        <div
+          style="
+            position: relative;
+            top: 50px;
+            left: 400px;
+            width: 120px;
+            height: 100px;
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px dashed #4caf50;
+          "
+        >
+          <div
+            class="element-to-move"
+            id="case1-element"
+            style="top: 20px; left: 20px"
+          >
+            ELEMENT
+          </div>
+        </div>
+
+        <div style="
+          background: #f9f9f9;
+          padding: 15px;
+          border-radius: 6px;
+          min-width: 280px;
+        ">
+          <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #333;">Instructions</h4>
+          <p style="margin: 0; font-size: 12px; color: #666;">
+            Click and drag the orange REF element to move the green ELEMENT. 
+            Both elements are in the document (same scroll container) but have different positioned parents.
+          </p>
+        </div>
+      </div>
+    </div>
             Drag Down
           </button>
           <button class="release-btn" id="case1-release" disabled>
@@ -342,13 +340,13 @@
       </div>
     </div>
 
-    <!-- Case 2: Different scroll containers, different positioned parents -->
+    <!-- Case 2: Reference in scroll container, element in document -->
     <div class="demo-section">
       <h2 class="demo-title">
-        Case 2: Different Scroll Containers, Different Positioned Parents
+        Case 2: Reference in Scroll Container, Element in Document
       </h2>
       <div class="demo-container">
-        <!-- Reference element in first scroll container -->
+        <!-- Reference element in scroll container -->
         <div class="scroll-container" id="case2-ref-scroll">
           <div class="scroll-content">
             <div
@@ -373,53 +371,41 @@
           </div>
         </div>
 
-        <!-- Element in second scroll container -->
-        <div class="scroll-container" id="case2-element-scroll">
-          <div class="scroll-content">
-            <div
-              style="
-                position: relative;
-                top: 60px;
-                left: 120px;
-                width: 120px;
-                height: 100px;
-                background: rgba(76, 175, 80, 0.1);
-                border: 1px dashed #4caf50;
-              "
-            >
-              <div
-                class="element-to-move"
-                id="case2-element"
-                style="top: 25px; left: 25px"
-              >
-                ELEMENT
-              </div>
-            </div>
+        <!-- Element in document -->
+        <div
+          style="
+            position: relative;
+            top: 60px;
+            left: 120px;
+            width: 120px;
+            height: 100px;
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px dashed #4caf50;
+          "
+        >
+          <div
+            class="element-to-move"
+            id="case2-element"
+            style="top: 25px; left: 25px"
+          >
+            ELEMENT
           </div>
         </div>
 
-        <div class="controls">
-          <h4>Programmatic Controls</h4>
-          <button class="grab-btn" id="case2-grab">Grab</button>
-          <button class="drag-btn" id="case2-drag-left" disabled>
-            Drag Left
-          </button>
-          <button class="drag-btn" id="case2-drag-right" disabled>
-            Drag Right
-          </button>
-          <button class="drag-btn" id="case2-drag-up" disabled>Drag Up</button>
-          <button class="drag-btn" id="case2-drag-down" disabled>
-            Drag Down
-          </button>
-          <button class="release-btn" id="case2-release" disabled>
-            Release
-          </button>
-          <div class="status" id="case2-status">
-            Ready - Click orange REF to drag green ELEMENT (different scroll
-            containers)
-          </div>
+        <div style="
+          background: #f9f9f9;
+          padding: 15px;
+          border-radius: 6px;
+          min-width: 280px;
+        ">
+          <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #333;">Instructions</h4>
+          <p style="margin: 0; font-size: 12px; color: #666;">
+            Click and drag the orange REF element (in scroll container) to move the green ELEMENT (in document).
+            Tests cross-coordinate system drag operation.
+          </p>
         </div>
       </div>
+    </div>
     </div>
 
     <script type="module">
@@ -429,65 +415,38 @@
       const cases = [
         {
           id: "case1",
-          label: "Same Scroll, Diff Parents",
+          label: "Doc Diff Parents",
           referenceElement: document.getElementById("case1-ref"),
           element: document.getElementById("case1-element"),
         },
         {
           id: "case2",
-          label: "Diff Scroll, Diff Parents",
+          label: "Scroll → Doc",
           referenceElement: document.getElementById("case2-ref"),
           element: document.getElementById("case2-element"),
         },
       ];
 
-      function updateStatus(caseId, message) {
-        const statusDiv = document.getElementById(`${caseId}-status`);
-        statusDiv.textContent = message;
-      }
-
-      function updateButtonStates(caseId, grabbed = false) {
-        const grabBtn = document.getElementById(`${caseId}-grab`);
-        const dragButtons = [
-          `${caseId}-drag-left`,
-          `${caseId}-drag-right`,
-          `${caseId}-drag-up`,
-          `${caseId}-drag-down`,
-        ].map((id) => document.getElementById(id));
-        const releaseBtn = document.getElementById(`${caseId}-release`);
-
-        grabBtn.disabled = grabbed;
-        dragButtons.forEach((btn) => {
-          btn.disabled = !grabbed;
-        });
-        releaseBtn.disabled = !grabbed;
-      }
-
       function setupCase(caseConfig) {
-        const { id, label, referenceElement, element } = caseConfig;
-        let dragGestureController = null;
-        let dragInstance = null;
+        const { label, referenceElement, element } = caseConfig;
 
         // Create drag gesture controller
         const createController = () => {
           return createDragToMoveGestureController({
             backdrop: false,
             onGrab: () => {
-              updateStatus(id, `${label} - Grabbed`);
+              console.log(`${label} - Grabbed`);
               element.setAttribute("data-dragging", "");
             },
             onDragStart: () => {
-              updateStatus(id, `${label} - Drag started`);
+              console.log(`${label} - Drag started`);
             },
             onDrag: (gestureInfo, phase) => {
-              updateStatus(id, `${label} - Dragging (${phase})`);
+              console.log(`${label} - Dragging (${phase})`);
             },
             onRelease: () => {
-              updateStatus(id, `${label} - Released`);
+              console.log(`${label} - Released`);
               element.removeAttribute("data-dragging");
-              dragGestureController = null;
-              dragInstance = null;
-              updateButtonStates(id, false);
             },
           });
         };
@@ -496,67 +455,12 @@
         referenceElement.addEventListener("mousedown", (event) => {
           event.preventDefault();
 
-          dragGestureController = createController();
+          const dragGestureController = createController();
           dragGestureController.grabViaMouse(event, {
             element,
             referenceElement,
           });
         });
-
-        // Programmatic controls
-        const grabBtn = document.getElementById(`${id}-grab`);
-        const dragLeftBtn = document.getElementById(`${id}-drag-left`);
-        const dragRightBtn = document.getElementById(`${id}-drag-right`);
-        const dragUpBtn = document.getElementById(`${id}-drag-up`);
-        const dragDownBtn = document.getElementById(`${id}-drag-down`);
-        const releaseBtn = document.getElementById(`${id}-release`);
-
-        grabBtn.addEventListener("click", () => {
-          if (dragInstance) return;
-
-          dragGestureController = createController();
-          dragInstance = dragGestureController.grab({
-            element,
-            referenceElement,
-          });
-          updateButtonStates(id, true);
-        });
-
-        dragLeftBtn.addEventListener("click", () => {
-          if (!dragInstance) return;
-          const currentGestureInfo = dragInstance.gestureInfo;
-          const newX = currentGestureInfo.moveX - 50;
-          dragInstance.drag(newX, undefined);
-        });
-
-        dragRightBtn.addEventListener("click", () => {
-          if (!dragInstance) return;
-          const currentGestureInfo = dragInstance.gestureInfo;
-          const newX = currentGestureInfo.moveX + 50;
-          dragInstance.drag(newX, undefined);
-        });
-
-        dragUpBtn.addEventListener("click", () => {
-          if (!dragInstance) return;
-          const currentGestureInfo = dragInstance.gestureInfo;
-          const newY = currentGestureInfo.moveY - 50;
-          dragInstance.drag(undefined, newY);
-        });
-
-        dragDownBtn.addEventListener("click", () => {
-          if (!dragInstance) return;
-          const currentGestureInfo = dragInstance.gestureInfo;
-          const newY = currentGestureInfo.moveY + 50;
-          dragInstance.drag(undefined, newY);
-        });
-
-        releaseBtn.addEventListener("click", () => {
-          if (!dragInstance) return;
-          dragInstance.release();
-        });
-
-        // Initialize button states
-        updateButtonStates(id, false);
       }
 
       // Setup all cases
@@ -564,20 +468,12 @@
 
       // Add some initial scroll to containers for testing
       document.addEventListener("DOMContentLoaded", () => {
-        const case1Scroll = document.getElementById("case1-scroll");
         const case2RefScroll = document.getElementById("case2-ref-scroll");
-        const case2ElementScroll = document.getElementById(
-          "case2-element-scroll",
-        );
-
-        case1Scroll.scrollLeft = 25;
-        case1Scroll.scrollTop = 15;
-
-        case2RefScroll.scrollLeft = 30;
-        case2RefScroll.scrollTop = 20;
-
-        case2ElementScroll.scrollLeft = 35;
-        case2ElementScroll.scrollTop = 25;
+        
+        if (case2RefScroll) {
+          case2RefScroll.scrollLeft = 30;
+          case2RefScroll.scrollTop = 20;
+        }
       });
     </script>
   </body>
