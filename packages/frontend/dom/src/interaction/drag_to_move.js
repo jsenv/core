@@ -38,16 +38,14 @@ export const createDragToMoveGestureController = ({
     const dragGestureName = dragGesture.gestureInfo.name;
     const scrollContainer = dragGesture.gestureInfo.scrollContainer;
     const elementImpacted = elementToMove || element;
-    const elementImpactedTranslateXAtGrab =
-      dragStyleController.getUnderlyingValue(
-        elementImpacted,
-        "transform.translateX",
-      );
-    const elementImpactedTranslateYAtGrab =
-      dragStyleController.getUnderlyingValue(
-        elementImpacted,
-        "transform.translateY",
-      );
+    const elementImpactedTranslateXAtGrab = dragStyleController.get(
+      elementImpacted,
+      "transform.translateX",
+    );
+    const elementImpactedTranslateYAtGrab = dragStyleController.get(
+      elementImpacted,
+      "transform.translateY",
+    );
 
     let xOffset;
     let yOffset;
@@ -250,14 +248,18 @@ export const createDragToMoveGestureController = ({
       if (xPosition !== undefined) {
         const leftAtGrab = dragGesture.gestureInfo.leftAtGrab;
         const moveX = xPosition - leftAtGrab;
-        const translateX = moveX - elementImpactedTranslateXAtGrab;
-        transform.translateX = `${translateX}px`;
+        const translateX = elementImpactedTranslateXAtGrab
+          ? moveX - elementImpactedTranslateXAtGrab
+          : moveX;
+        transform.translateX = translateX;
       }
       if (yPosition !== undefined) {
         const topAtGrab = dragGesture.gestureInfo.topAtGrab;
         const moveY = yPosition - topAtGrab;
-        const translateY = moveY - elementImpactedTranslateYAtGrab;
-        transform.translateY = `${translateY}px`;
+        const translateY = elementImpactedTranslateYAtGrab
+          ? moveY - elementImpactedTranslateYAtGrab
+          : moveY;
+        transform.translateY = translateY;
       }
       dragStyleController.set(elementImpacted, {
         transform,
@@ -268,8 +270,6 @@ export const createDragToMoveGestureController = ({
     dragGesture.addReleaseCallback(() => {
       if (resetPositionAfterRelease) {
         dragStyleController.clear(elementImpacted);
-      } else {
-        dragStyleController.commit(elementImpacted);
       }
     });
   };

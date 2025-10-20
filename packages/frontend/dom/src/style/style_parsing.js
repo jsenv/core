@@ -69,7 +69,14 @@ export const normalizeStyle = (value, propertyName, context = "js") => {
         // For js context, prefer objects
         return parseCSSTransform(value);
       }
-      return value;
+      // If code does transform: { translateX: "10px" }
+      // we want to store { translateX: 10 }
+      const transformNormalized = {};
+      for (const key of Object.keys(value)) {
+        const partValue = normalizeStyle(value[key], key, "js");
+        transformNormalized[key] = partValue;
+      }
+      return transformNormalized;
     }
     if (typeof value === "object" && value !== null) {
       // For CSS context, ensure transform is a string
