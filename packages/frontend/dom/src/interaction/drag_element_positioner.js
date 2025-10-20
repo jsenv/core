@@ -89,10 +89,16 @@ export const createDragElementPositioner = (
 };
 
 const { documentElement } = document;
-const createScrollAdjuster = (scrollContainer, positionedParent) => {
-  //  const scrollContainerIsDocument = scrollContainer === documentElement;
-  const fixedPosition = findSelfOrAncestorFixedPosition(positionedParent);
-  const { scrollLeft, scrollTop } = scrollContainer;
+const createScrollAdjuster = (
+  positionedParent,
+  scrollContainer,
+  referenceScrollContainer = scrollContainer,
+) => {
+  const scrollContainerIsDocument = scrollContainer === documentElement;
+  const fixedPosition =
+    scrollContainerIsDocument &&
+    findSelfOrAncestorFixedPosition(positionedParent);
+  const { scrollLeft, scrollTop } = referenceScrollContainer;
 
   return (leftWithoutScroll, topWithoutScroll) => {
     // I don't really get why we have to add scrollLeft (scrollLeft at grab)
@@ -105,8 +111,8 @@ const createScrollAdjuster = (scrollContainer, positionedParent) => {
       leftScrollToAdd += fixedPosition[0];
       topScrollToAdd += fixedPosition[1];
     } else {
-      leftScrollToAdd += scrollContainer.scrollLeft;
-      topScrollToAdd += scrollContainer.scrollTop;
+      leftScrollToAdd += referenceScrollContainer.scrollLeft;
+      topScrollToAdd += referenceScrollContainer.scrollTop;
     }
     return [
       leftWithoutScroll + leftScrollToAdd,
@@ -138,8 +144,8 @@ const createSameScrollDifferentParentPositioner = (
   }
   scrollable_converter: {
     const scrollAdjuster = createScrollAdjuster(
-      scrollContainer,
       positionedParent,
+      scrollContainer,
     );
 
     convertScrollablePosition = (
@@ -237,7 +243,7 @@ const createDifferentScrollSameParentPositioner = (
 // Both coordinate system and DOM positioning differ
 const createFullyDifferentPositioner = (
   element,
-  { referenceScrollContainer, positionedParent },
+  { positionedParent, scrollContainer, referenceScrollContainer },
 ) => {
   let scrollableLeft;
   let scrollableTop;
@@ -251,8 +257,9 @@ const createFullyDifferentPositioner = (
   }
   scrollable_converter: {
     const scrollAdjuster = createScrollAdjuster(
-      referenceScrollContainer,
       positionedParent,
+      scrollContainer,
+      referenceScrollContainer,
     );
 
     convertScrollablePosition = (
