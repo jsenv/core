@@ -77,6 +77,7 @@ export const normalizeStyle = (value, propertyName, context = "js") => {
     }
     return value;
   }
+
   // Handle transform.* properties (e.g., "transform.translateX")
   if (propertyName.startsWith("transform.")) {
     if (context === "css") {
@@ -102,43 +103,36 @@ export const normalizeStyle = (value, propertyName, context = "js") => {
     return undefined;
   }
 
-  // Handle regular CSS properties
-  if (context === "css" && typeof value === "number") {
-    // For CSS context, add appropriate units based on property name
-    if (pxProperties.includes(propertyName)) {
-      return `${value}px`;
+  if (pxProperties.includes(propertyName)) {
+    return normalizeNumber(value, context, "px");
+  }
+  if (degProperties.includes(propertyName)) {
+    return normalizeNumber(value, context, "deg");
+  }
+  if (unitlessProperties.includes(propertyName)) {
+    return normalizeNumber(value, context, "");
+  }
+
+  return value;
+};
+const normalizeNumber = (value, context, unit) => {
+  if (context === "css") {
+    if (typeof value === "number") {
+      return `${value}${unit}`;
     }
-    if (degProperties.includes(propertyName)) {
-      return `${value}deg`;
-    }
-    if (unitlessProperties.includes(propertyName)) {
-      return value;
-      // Keep as number for unitless properties
-    }
-    // For unknown properties, return as-is - don't assume units
     return value;
   }
-
-  // For "js" context with string values, try to convert to numbers when appropriate
-  if (context === "js" && typeof value === "string") {
-    // Special handling for zIndex "auto" value
-    if (propertyName === "zIndex" && value === "auto") {
+  if (typeof value === "string") {
+    if (value === "auto") {
       return "auto";
     }
-
-    // Try to parse numeric values for properties that should be numbers
-    if (
-      pxProperties.includes(propertyName) ||
-      degProperties.includes(propertyName) ||
-      unitlessProperties.includes(propertyName)
-    ) {
-      const numericValue = parseFloat(value);
-      if (!isNaN(numericValue)) {
-        return numericValue;
-      }
+    const numericValue = parseFloat(value);
+    if (isNaN(numericValue)) {
+      // console.warn
+      return value;
     }
+    return numericValue;
   }
-
   return value;
 };
 
@@ -154,15 +148,15 @@ export const normalizeStyles = (styles, context = "js") => {
 // Convert transform object to CSS string
 export const stringifyCSSTransform = (transformObj) => {
   const transforms = [];
-
-  for (const [prop, value] of Object.entries(transformObj)) {
-    if (value !== undefined && value !== null) {
-      // Normalize the value to CSS representation (add units when needed)
-      const normalizedValue = normalizeStyle(value, prop, "css");
-      transforms.push(`${prop}(${normalizedValue})`);
-    }
+  for (const key of Object.keys(transformObj)) {
+    const transformPartValue = transformObj[key];
+    const normalizedTransformPartValue = normalizeStyle(
+      transformPartValue,
+      key,
+      "css",
+    );
+    transforms.push(`${key}(${normalizedTransformPartValue})`);
   }
-
   return transforms.join(" ");
 };
 
