@@ -346,11 +346,21 @@ export const createDragGestureController = (options = {}) => {
         releaseY: mouseReleaseY,
       });
     };
+    const onPointerUp = (pointerEvent) => {
+      // <button disabled> for example does not emit mouseup if we release mouse over it
+      // -> we add "pointerup" to catch mouseup occuring on disabled element
+      if (pointerEvent.pointerType === "mouse") {
+        releaseViaMouse(pointerEvent);
+      }
+    };
+
     document.addEventListener("mousemove", dragViaMouse);
     document.addEventListener("mouseup", releaseViaMouse);
+    document.addEventListener("pointerup", onPointerUp);
     dragGesture.addReleaseCallback(() => {
       document.removeEventListener("mousemove", dragViaMouse);
       document.removeEventListener("mouseup", releaseViaMouse);
+      document.removeEventListener("pointerup", onPointerUp);
     });
     dragGesture.dragViaMouse = dragViaMouse;
     dragGesture.releaseViaMouse = releaseViaMouse;
