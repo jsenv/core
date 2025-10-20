@@ -88,7 +88,7 @@ export const normalizeStyle = (value, propertyName, context = "js") => {
         return undefined;
       }
       const parsedTransform = parseCSSTransform(value);
-      return parsedTransform[transformProperty];
+      return parsedTransform?.[transformProperty];
     }
     // If value is a transform object, extract the property directly
     if (typeof value === "object" && value !== null) {
