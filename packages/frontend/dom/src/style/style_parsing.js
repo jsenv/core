@@ -75,27 +75,27 @@ export const normalizeStyle = (value, propertyName, context = "js") => {
   }
   // Handle transform.* properties (e.g., "transform.translateX")
   if (propertyName.startsWith("transform.")) {
-    const transformProperty = propertyName.slice(10); // Remove "transform." prefix
-
-    if (context === "js" && typeof value === "string") {
-      // Convert string values to numbers in js context
-      const numericValue = parseFloat(value);
-      if (isNaN(numericValue)) {
-        return transformProperty.includes("scale") ? 1 : 0;
-      }
-      return numericValue;
-    }
-    if (context === "css" && typeof value === "number") {
-      if (pxProperties.includes(transformProperty)) {
-        return `${value}px`;
-      }
-      if (degProperties.includes(transformProperty)) {
-        return `${value}deg`;
-      }
-      // "scale" remain unitless
+    if (context === "css") {
+      console.warn(
+        `normalizeStyle: magic properties like "${propertyName}" are not applicable in "css" context. Returning original value.`,
+      );
       return value;
     }
-    return value;
+    const transformProperty = propertyName.slice(10); // Remove "transform." prefix
+    // If value is a CSS transform string, parse it first to extract the specific property
+    if (typeof value === "string") {
+      if (value === "none") {
+        return undefined;
+      }
+      const parsedTransform = parseCSSTransform(value);
+      return parsedTransform[transformProperty];
+    }
+    // If value is a transform object, extract the property directly
+    if (typeof value === "object" && value !== null) {
+      return value[transformProperty];
+    }
+    // never supposed to happen, the value given is neither string nor object
+    return undefined;
   }
 
   // Handle regular CSS properties
