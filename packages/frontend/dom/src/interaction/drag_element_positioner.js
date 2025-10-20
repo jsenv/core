@@ -1,3 +1,4 @@
+import { findSelfOrAncestorFixedPosition } from "../position/position_fixed.js";
 import { getScrollContainer } from "../scroll/scroll_container.js";
 
 /**
@@ -110,6 +111,9 @@ const createSameScrollDifferentParentPositioner = (
     );
   }
   scrollable_converter: {
+    const fixedPosition = findSelfOrAncestorFixedPosition(positionedParent);
+    const scrollLeft = scrollContainer.scrollLeft;
+
     convertScrollablePosition = (
       referenceScrollableLeftToConvert,
       referenceScrollableTopToConvert,
@@ -124,7 +128,6 @@ const createSameScrollDifferentParentPositioner = (
         positionedParent,
         scrollContainer,
       );
-
       const [
         referencePositionedParentLeftOffsetWithScrollContainer,
         referencePositionedParentTopOffsetWithScrollContainer,
@@ -146,8 +149,9 @@ const createSameScrollDifferentParentPositioner = (
             positionedParentLeftOffsetWithScrollContainer);
 
         // Step 3: Apply scroll to get final positioning
-        positionedLeft =
-          scrollContainer.scrollLeft + positionedLeftWithoutScroll;
+        positionedLeft = fixedPosition
+          ? scrollLeft + positionedLeftWithoutScroll
+          : scrollContainer.scrollLeft + positionedLeftWithoutScroll;
       }
       top: {
         // Step 1: Convert from reference scroll-relative to reference positioned-parent-relative
@@ -404,6 +408,11 @@ const getPositionedParentOffsetWithScrollContainer = (
     positionedParent.getBoundingClientRect();
 
   if (scrollContainerIsDocument) {
+    const fixedPosition = findSelfOrAncestorFixedPosition(positionedParent);
+    if (fixedPosition) {
+      return fixedPosition;
+    }
+
     // Document scroll container case:
     // When the document is scrolled, getBoundingClientRect() values are already affected
     // For example: if document is scrolled 200px to the right:
