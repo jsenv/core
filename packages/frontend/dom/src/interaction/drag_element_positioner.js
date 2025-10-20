@@ -363,8 +363,8 @@ export const getOffsetBetweenTwoElements = (
     // Document case: getBoundingClientRect already includes document scroll effects
     // Add current scroll position to get the static offset
     return [
-      basicXOffset + scrollContainer.scrollLeft,
-      basicYOffset + scrollContainer.scrollTop,
+      scrollContainer.scrollLeft + basicXOffset,
+      scrollContainer.scrollTop + basicYOffset,
     ];
   }
 
