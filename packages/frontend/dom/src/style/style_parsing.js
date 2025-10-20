@@ -252,25 +252,45 @@ const parseSimple2DMatrix = (a, b, c, d, e, f) => {
   if (e !== 0) result.translateX = e;
   if (f !== 0) result.translateY = f;
 
-  // Check for simple cases without rotation/skew
-  if (b === 0 && c === 0) {
-    // Pure scale and/or translate - only add if not default (1)
+  // Check for identity matrix (no transform)
+  if (a === 1 && b === 0 && c === 0 && d === 1) {
+    return result; // Only translation
+  }
+
+  // Decompose the 2D transformation matrix
+  // Based on: https://frederic-wang.fr/decomposition-of-2d-transform-matrices.html
+
+  const det = a * d - b * c;
+
+  if (det === 0) {
+    // Degenerate matrix (maps to a line or point)
+    return null;
+  }
+
+  // Extract scale and rotation
+  if (c === 0) {
+    // Simple case: no skew
     if (a !== 1) result.scaleX = a;
     if (d !== 1) result.scaleY = d;
-    return result;
-  }
 
-  // Check for pure rotation (no scale or skew)
-  const det = a * d - b * c;
-  if (det === 1 && a === d && b === -c) {
-    // This is a pure rotation matrix
-    const angle = Math.atan2(b, a) * (180 / Math.PI);
-    if (angle !== 0) {
-      result.rotate = angle;
+    if (b !== 0) {
+      // Rotation present
+      const angle = Math.atan(b / a) * (180 / Math.PI);
+      if (angle !== 0) result.rotate = angle;
     }
-    return result;
+  } else {
+    // General case: decompose using QR decomposition approach
+    const scaleX = Math.sqrt(a * a + b * b);
+    const scaleY = det / scaleX;
+    const rotation = Math.atan2(b, a) * (180 / Math.PI);
+    const skewX =
+      Math.atan((a * c + b * d) / (scaleX * scaleX)) * (180 / Math.PI);
+
+    if (scaleX !== 1) result.scaleX = scaleX;
+    if (scaleY !== 1) result.scaleY = scaleY;
+    if (rotation !== 0) result.rotate = rotation;
+    if (skewX !== 0) result.skewX = skewX;
   }
 
-  // For complex transforms (combined scale+rotate, skew, etc.), keep as matrix
-  return null;
+  return result;
 };
