@@ -110,13 +110,20 @@ export const createStyleController = (name = "anonymous") => {
     updateAnimationStyles(animation, mergedStyles);
   };
 
-  const get = (element) => {
+  const get = (element, propertyName) => {
     const elementData = elementWeakMap.get(element);
     if (!elementData) {
-      return {};
+      return undefined;
     }
     const { styles } = elementData;
-    return { ...styles };
+    if (propertyName === undefined) {
+      return { ...styles };
+    }
+    if (propertyName.startsWith("transform.")) {
+      const transformProp = propertyName.slice("transform.".length);
+      return styles.transform?.[transformProp];
+    }
+    return styles[propertyName];
   };
 
   const deleteMethod = (element, propertyName) => {
