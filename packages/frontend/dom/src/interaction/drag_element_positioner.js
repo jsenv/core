@@ -124,6 +124,7 @@ const createSameScrollDifferentParentPositioner = (
         positionedParent,
         scrollContainer,
       );
+
       const [
         referencePositionedParentLeftOffsetWithScrollContainer,
         referencePositionedParentTopOffsetWithScrollContainer,

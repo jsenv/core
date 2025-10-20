@@ -54,8 +54,8 @@ export const createDragToMoveGestureController = ({
       }
     });
 
-    let xOffset;
-    let yOffset;
+    let xOffset = 0;
+    let yOffset = 0;
     if (elementToMove) {
       // Calculate dynamic offset that accounts for scroll container position
       [xOffset, yOffset] = getOffsetBetweenTwoElements(
@@ -165,21 +165,21 @@ export const createDragToMoveGestureController = ({
     const dragToMove = (gestureInfo) => {
       const { isGoingDown, isGoingUp, isGoingLeft, isGoingRight, layout } =
         gestureInfo;
-      const elementLeft = layout.left;
-      const elementTop = layout.top;
-      const elementRight = elementLeft + elementWidth;
-      const elementBottom = elementTop + elementHeight;
+      const left = layout.left;
+      const top = layout.top;
+      const right = left + elementWidth;
+      const bottom = top + elementHeight;
 
       auto_scroll: {
         hasCrossedScrollportLeftOnce =
-          hasCrossedScrollportLeftOnce || elementLeft < scrollport.left;
+          hasCrossedScrollportLeftOnce || left < scrollport.left;
         hasCrossedScrollportTopOnce =
-          hasCrossedScrollportTopOnce || elementTop < scrollport.top;
+          hasCrossedScrollportTopOnce || top < scrollport.top;
 
         const getScrollMove = (axis) => {
           const isGoingPositive = axis === "x" ? isGoingRight : isGoingDown;
           if (isGoingPositive) {
-            const elementEnd = axis === "x" ? elementRight : elementBottom;
+            const elementEnd = axis === "x" ? right : bottom;
             const autoScrollAreaEnd =
               axis === "x" ? autoScrollArea.right : autoScrollArea.bottom;
 
@@ -206,7 +206,7 @@ export const createDragToMoveGestureController = ({
             return 0;
           }
 
-          const elementStart = axis === "x" ? elementLeft : elementTop;
+          const elementStart = axis === "x" ? left : top;
           const autoScrollAreaStart =
             axis === "x" ? autoScrollArea.left : autoScrollArea.top;
           if (elementStart >= autoScrollAreaStart) {
@@ -243,45 +243,32 @@ export const createDragToMoveGestureController = ({
       }
 
       move: {
-        const elementScrollableLeft = layout.scrollableLeft;
-        const elementScrollableTop = layout.scrollableTop;
-        const [elementPositionedLeft, elementPositionedTop] =
-          convertScrollablePosition(
-            elementScrollableLeft,
-            elementScrollableTop,
-          );
-        let elementLeftTarget;
-        let elementTopTarget;
-        if (direction.x) {
-          elementLeftTarget = elementToMove
-            ? elementPositionedLeft - xOffset
-            : elementPositionedLeft;
-        }
-        if (direction.y) {
-          elementTopTarget = elementToMove
-            ? elementPositionedTop - yOffset
-            : elementPositionedTop;
-        }
-
+        const { scrollableLeft, scrollableTop } = layout.scrollableLeft;
+        const [positionedLeft, positionedTop] = convertScrollablePosition(
+          scrollableLeft,
+          scrollableTop,
+        );
         const transform = {};
-        if (elementLeftTarget !== undefined) {
+        if (direction.x) {
+          const leftTarget = positionedLeft - xOffset;
           const leftAtGrab = dragGesture.gestureInfo.leftAtGrab;
-          const leftDelta = elementLeftTarget - leftAtGrab;
+          const leftDelta = leftTarget - leftAtGrab;
           const translateX = translateXAtGrab
             ? translateXAtGrab + leftDelta
             : leftDelta;
           transform.translateX = translateX;
           console.log({
             leftAtGrab,
-            elementScrollableLeft,
-            elementLeft,
-            elementLeftTarget,
+            scrollableLeft,
+            left,
+            leftTarget,
             translateX,
           });
         }
-        if (elementTopTarget !== undefined) {
+        if (direction.y) {
+          const topTarget = positionedTop - yOffset;
           const topAtGrab = dragGesture.gestureInfo.topAtGrab;
-          const topDelta = elementTopTarget - topAtGrab;
+          const topDelta = topTarget - topAtGrab;
           const translateY = translateYAtGrab
             ? translateYAtGrab + topDelta
             : topDelta;
