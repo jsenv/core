@@ -131,6 +131,7 @@
       const columnsConfig = Array.from({ length: 10 }, (_, i) => ({
         id: `col${i + 1}`,
         header: i === 7 ? "A larger header" : `Column ${i + 1}`,
+        width: i === 0 ? 50 : undefined,
       }));
 
       // eslint-disable-next-line no-unused-vars
@@ -314,7 +315,7 @@
                     <Col
                       key={column.id}
                       id={column.id}
-                      width={columnWidths[columnIndex + 1]}
+                      width={columnWidths[columnIndex + 1] || column.width}
                     />
                   ))}
                 </Colgroup>
