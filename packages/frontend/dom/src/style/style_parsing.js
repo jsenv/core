@@ -249,8 +249,12 @@ const parseSimple2DMatrix = (a, b, c, d, e, f) => {
   const result = {};
 
   // Extract translation - only add if not default (0)
-  if (e !== 0) result.translateX = e;
-  if (f !== 0) result.translateY = f;
+  if (e !== 0) {
+    result.translateX = e;
+  }
+  if (f !== 0) {
+    result.translateY = f;
+  }
 
   // Check for identity matrix (no transform)
   if (a === 1 && b === 0 && c === 0 && d === 1) {
@@ -261,36 +265,46 @@ const parseSimple2DMatrix = (a, b, c, d, e, f) => {
   // Based on: https://frederic-wang.fr/decomposition-of-2d-transform-matrices.html
 
   const det = a * d - b * c;
-
+  // Degenerate matrix (maps to a line or point)
   if (det === 0) {
-    // Degenerate matrix (maps to a line or point)
     return null;
   }
 
   // Extract scale and rotation
   if (c === 0) {
     // Simple case: no skew
-    if (a !== 1) result.scaleX = a;
-    if (d !== 1) result.scaleY = d;
-
-    if (b !== 0) {
-      // Rotation present
-      const angle = Math.atan(b / a) * (180 / Math.PI);
-      if (angle !== 0) result.rotate = angle;
+    if (a !== 1) {
+      result.scaleX = a;
     }
-  } else {
-    // General case: decompose using QR decomposition approach
-    const scaleX = Math.sqrt(a * a + b * b);
-    const scaleY = det / scaleX;
-    const rotation = Math.atan2(b, a) * (180 / Math.PI);
-    const skewX =
-      Math.atan((a * c + b * d) / (scaleX * scaleX)) * (180 / Math.PI);
-
-    if (scaleX !== 1) result.scaleX = scaleX;
-    if (scaleY !== 1) result.scaleY = scaleY;
-    if (rotation !== 0) result.rotate = rotation;
-    if (skewX !== 0) result.skewX = skewX;
+    if (d !== 1) {
+      result.scaleY = d;
+    }
+    if (b !== 0) {
+      const angle = Math.atan(b / a) * (180 / Math.PI);
+      if (angle !== 0) {
+        result.rotate = angle;
+      }
+    }
+    return result;
   }
 
+  // General case: decompose using QR decomposition approach
+  const scaleX = Math.sqrt(a * a + b * b);
+  const scaleY = det / scaleX;
+  const rotation = Math.atan2(b, a) * (180 / Math.PI);
+  const skewX =
+    Math.atan((a * c + b * d) / (scaleX * scaleX)) * (180 / Math.PI);
+  if (scaleX !== 1) {
+    result.scaleX = scaleX;
+  }
+  if (scaleY !== 1) {
+    result.scaleY = scaleY;
+  }
+  if (rotation !== 0) {
+    result.rotate = rotation;
+  }
+  if (skewX !== 0) {
+    result.skewX = skewX;
+  }
   return result;
 };
