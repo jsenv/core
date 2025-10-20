@@ -314,11 +314,6 @@ const createStandardElementPositioner = (
     );
   }
   scrollable_converter: {
-    const scrollAdjuster = createScrollAdjuster(
-      scrollContainer,
-      positionedParent,
-    );
-
     convertScrollablePosition = (
       scrollableLeftToConvert,
       scrollableTopToConvert,
@@ -335,10 +330,10 @@ const createStandardElementPositioner = (
         scrollableLeftToConvert - positionedParentLeftOffsetWithScrollContainer;
       const positionedTopWithoutScroll =
         scrollableTopToConvert - positionedParentTopOffsetWithScrollContainer;
-      const [positionedLeft, positionedTop] = scrollAdjuster(
-        positionedLeftWithoutScroll,
-        positionedTopWithoutScroll,
-      );
+      const [positionedLeft, positionedTop] = [
+        scrollContainer.scrollLeft + positionedLeftWithoutScroll,
+        scrollContainer.scrollTop + positionedTopWithoutScroll,
+      ];
 
       return [positionedLeft, positionedTop];
     };
