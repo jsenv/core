@@ -1,4 +1,6 @@
+import { createIterableWeakSet } from "@jsenv/dom";
 import { computed, signal } from "@preact/signals";
+
 import { getActionPrivateProperties } from "../action_private_properties.js";
 import { createAction, getActionDispatcher } from "../actions.js";
 import { SYMBOL_OBJECT_SIGNAL } from "../symbol_object_signal.js";
@@ -7,7 +9,6 @@ import {
   compareTwoJsValues,
 } from "../utils/compare_two_js_values.js";
 import { getCallerInfo } from "../utils/get_caller_info.js";
-import { createIterableWeakSet } from "../utils/iterable_weak_set.js";
 import { arraySignalStore, primitiveCanBeId } from "./array_signal_store.js";
 
 let DEBUG = false;

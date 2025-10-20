@@ -42,6 +42,10 @@ export const createIterableWeakSet = () => {
       return false;
     },
 
+    clear: () => {
+      objectWeakRefSet.clear();
+    },
+
     get size() {
       return objectWeakRefSet.size;
     },

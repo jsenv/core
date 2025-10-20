@@ -50,15 +50,20 @@
  * Multiple controllers can safely manage the same element without conflicts.
  */
 
+import { createIterableWeakSet } from "../iterable_weak_set.js";
 import { mergeOneStyle, mergeStyles } from "./style_composition.js";
 import { normalizeStyle, normalizeStyles } from "./style_parsing.js";
 
-// Global registry to track all style controllers and their managed elements
+// Global registry to be able to get list controllers currently managing an element styles
 const elementControllerSetRegistry = new WeakMap(); // element -> Set<controller>
-const activeControllers = new Set(); // Set of all active controllers
-
-// Helper function to remove a controller from element registry and clean up if empty
-const removeControllerFromElementRegistry = (element, controller) => {
+const onControllerAttachedToElement = (controller, element) => {
+  if (!elementControllerSetRegistry.has(element)) {
+    elementControllerSetRegistry.set(element, new Set());
+  }
+  const elementControllerSet = elementControllerSetRegistry.get(element);
+  elementControllerSet.add(controller);
+};
+const onControllerDetachedFromElement = (controller, element) => {
   const elementControllerSet = elementControllerSetRegistry.get(element);
   if (elementControllerSet) {
     elementControllerSet.delete(controller);
@@ -75,6 +80,8 @@ export const createStyleController = (name = "anonymous") => {
   const controllerStylesRegistry = new WeakMap(); // element -> styles
   // Store animations for this specific controller
   const controllerAnimationRegistry = new WeakMap(); // element -> animation
+  // Track elements managed by this controller
+  const managedElements = createIterableWeakSet();
 
   // Apply styles for this controller only
   const applyStyles = (element) => {
@@ -120,11 +127,12 @@ export const createStyleController = (name = "anonymous") => {
       throw new Error("Styles must be an object");
     }
 
-    if (!elementControllerSetRegistry.has(element)) {
-      elementControllerSetRegistry.set(element, new Set());
-    }
-    const elementControllerSet = elementControllerSetRegistry.get(element);
-    elementControllerSet.add(controller);
+    // Track this element as managed by this controller
+    managedElements.add(element);
+
+    // Notify that this controller is attached to the element
+    onControllerAttachedToElement(controller, element);
+
     if (!controllerStylesRegistry.has(element)) {
       controllerStylesRegistry.set(element, {});
     }
@@ -149,7 +157,8 @@ export const createStyleController = (name = "anonymous") => {
       // Clean up empty controller
       if (isEmpty) {
         controllerStylesRegistry.delete(element);
-        removeControllerFromElementRegistry(element, controller);
+        managedElements.delete(element);
+        onControllerDetachedFromElement(controller, element);
       }
 
       // Recompute and apply final styles (or clean up animation if no styles left)
@@ -184,14 +193,16 @@ export const createStyleController = (name = "anonymous") => {
 
     // Clear this controller's styles since they're now inline
     controllerStylesRegistry.delete(element);
+    managedElements.delete(element);
 
     // Clean up controller from element registry
-    removeControllerFromElementRegistry(element, controller);
+    onControllerDetachedFromElement(controller, element);
   };
 
   const clear = (element) => {
     controllerStylesRegistry.delete(element);
-    removeControllerFromElementRegistry(element, controller);
+    managedElements.delete(element);
+    onControllerDetachedFromElement(controller, element);
     // Recompute and apply final styles
     applyStyles(element);
   };
@@ -301,31 +312,18 @@ export const createStyleController = (name = "anonymous") => {
   };
 
   const destroy = () => {
-    // Remove this controller from all elements and clean up animations
-    for (const [
-      element,
-      elementControllerSet,
-    ] of elementControllerSetRegistry) {
-      if (!elementControllerSet.has(controller)) {
-        continue;
-      }
-      elementControllerSet.delete(controller);
-      controllerStylesRegistry.delete(element);
-
+    // Remove this controller from all managed elements and clean up animations
+    for (const element of managedElements) {
       // Clean up this controller's animation
       const animation = controllerAnimationRegistry.get(element);
       if (animation) {
         animation.cancel();
         controllerAnimationRegistry.delete(element);
       }
-
-      // Clean up empty element registry
-      if (elementControllerSet.size === 0) {
-        elementControllerSetRegistry.delete(element);
-      }
+      controllerStylesRegistry.delete(element);
+      onControllerDetachedFromElement(controller, element);
     }
-
-    activeControllers.delete(controller);
+    managedElements.clear();
   };
   const controller = {
     name,
@@ -338,6 +336,5 @@ export const createStyleController = (name = "anonymous") => {
     destroy,
   };
 
-  activeControllers.add(controller);
   return controller;
 };
