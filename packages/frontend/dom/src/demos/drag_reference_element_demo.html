@@ -235,8 +235,9 @@
       <h1>Drag Reference Element Demo</h1>
       <p>
         This demo tests drag operations where the
-        <strong>reference element</strong> (what you click/drag) is different
-        from the <strong>element to move</strong> (what actually moves).
+        <strong>reference element</strong> (what you click/drag) is in a
+        different positioning context from the <strong>element</strong> (what
+        actually moves).
       </p>
 
       <div class="legend">
@@ -246,51 +247,74 @@
         </div>
         <div class="legend-item">
           <div class="legend-color legend-move"></div>
-          <span>Element to Move (follows the drag)</span>
+          <span>Element (moves when dragging reference)</span>
         </div>
       </div>
 
       <p><strong>Test Scenarios:</strong></p>
       <ul>
         <li>
-          <strong>Case 1:</strong> Both elements in document - Reference element
-          controls movement of another element in the same coordinate system
+          <strong>Case 1:</strong> Same scroll container, different positioned
+          parents - Reference and element share the same scroll container but
+          have different offsetParents
         </li>
         <li>
-          <strong>Case 2:</strong> Reference in document, Element to move in
-          scroll container - Cross-coordinate system drag operation
-        </li>
-        <li>
-          <strong>Case 3:</strong> Both elements in scroll container - Reference
-          element and target both within scrollable content
-        </li>
-        <li>
-          <strong>Case 4:</strong> Reference in scroll container, Element to
-          move in document - Reverse cross-coordinate scenario
+          <strong>Case 2:</strong> Different scroll containers, different
+          positioned parents - Reference and element are in completely different
+          coordinate systems
         </li>
       </ul>
     </div>
 
-    <!-- Case 1: Both elements in document -->
+    <!-- Case 1: Same scroll container, different positioned parents -->
     <div class="demo-section">
       <h2 class="demo-title">
-        Case 1: Both in Document (same coordinate system)
+        Case 1: Same Scroll Container, Different Positioned Parents
       </h2>
       <div class="demo-container">
-        <div class="document-area">
-          <div
-            class="reference-element"
-            id="case1-ref"
-            style="top: 20px; left: 20px"
-          >
-            REF
-          </div>
-          <div
-            class="element-to-move"
-            id="case1-move"
-            style="top: 80px; left: 150px"
-          >
-            MOVE ME
+        <div class="scroll-container" id="case1-scroll">
+          <div class="scroll-content">
+            <!-- Reference element in a positioned container -->
+            <div
+              style="
+                position: relative;
+                top: 20px;
+                left: 30px;
+                width: 100px;
+                height: 80px;
+                background: rgba(255, 152, 0, 0.1);
+                border: 1px dashed #ff9800;
+              "
+            >
+              <div
+                class="reference-element"
+                id="case1-ref"
+                style="top: 10px; left: 10px"
+              >
+                REF
+              </div>
+            </div>
+
+            <!-- Element in a different positioned container -->
+            <div
+              style="
+                position: relative;
+                top: 50px;
+                left: 200px;
+                width: 120px;
+                height: 100px;
+                background: rgba(76, 175, 80, 0.1);
+                border: 1px dashed #4caf50;
+              "
+            >
+              <div
+                class="element-to-move"
+                id="case1-element"
+                style="top: 20px; left: 20px"
+              >
+                ELEMENT
+              </div>
+            </div>
           </div>
         </div>
 
@@ -311,36 +335,65 @@
             Release
           </button>
           <div class="status" id="case1-status">
-            Ready - Click orange REF to drag green element
+            Ready - Click orange REF to drag green ELEMENT (same scroll,
+            different parents)
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Case 2: Reference in document, Element to move in scroll container -->
+    <!-- Case 2: Different scroll containers, different positioned parents -->
     <div class="demo-section">
       <h2 class="demo-title">
-        Case 2: Reference in Document → Element in Scroll Container
+        Case 2: Different Scroll Containers, Different Positioned Parents
       </h2>
       <div class="demo-container">
-        <div class="document-area">
-          <div
-            class="reference-element"
-            id="case2-ref"
-            style="top: 60px; left: 120px"
-          >
-            REF
+        <!-- Reference element in first scroll container -->
+        <div class="scroll-container" id="case2-ref-scroll">
+          <div class="scroll-content">
+            <div
+              style="
+                position: relative;
+                top: 40px;
+                left: 80px;
+                width: 100px;
+                height: 80px;
+                background: rgba(255, 152, 0, 0.1);
+                border: 1px dashed #ff9800;
+              "
+            >
+              <div
+                class="reference-element"
+                id="case2-ref"
+                style="top: 15px; left: 15px"
+              >
+                REF
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="scroll-container" id="case2-scroll">
+        <!-- Element in second scroll container -->
+        <div class="scroll-container" id="case2-element-scroll">
           <div class="scroll-content">
             <div
-              class="element-to-move"
-              id="case2-move"
-              style="top: 50px; left: 100px"
+              style="
+                position: relative;
+                top: 60px;
+                left: 120px;
+                width: 120px;
+                height: 100px;
+                background: rgba(76, 175, 80, 0.1);
+                border: 1px dashed #4caf50;
+              "
             >
-              MOVE ME
+              <div
+                class="element-to-move"
+                id="case2-element"
+                style="top: 25px; left: 25px"
+              >
+                ELEMENT
+              </div>
             </div>
           </div>
         </div>
@@ -362,107 +415,8 @@
             Release
           </button>
           <div class="status" id="case2-status">
-            Ready - Click orange REF to drag green element in scroll area
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Case 3: Both elements in scroll container -->
-    <div class="demo-section">
-      <h2 class="demo-title">
-        Case 3: Both in Scroll Container (same scrollable system)
-      </h2>
-      <div class="demo-container">
-        <div class="scroll-container" id="case3-scroll">
-          <div class="scroll-content">
-            <div
-              class="reference-element"
-              id="case3-ref"
-              style="top: 30px; left: 50px"
-            >
-              REF
-            </div>
-            <div
-              class="element-to-move"
-              id="case3-move"
-              style="top: 120px; left: 200px"
-            >
-              MOVE ME
-            </div>
-          </div>
-        </div>
-
-        <div class="controls">
-          <h4>Programmatic Controls</h4>
-          <button class="grab-btn" id="case3-grab">Grab</button>
-          <button class="drag-btn" id="case3-drag-left" disabled>
-            Drag Left
-          </button>
-          <button class="drag-btn" id="case3-drag-right" disabled>
-            Drag Right
-          </button>
-          <button class="drag-btn" id="case3-drag-up" disabled>Drag Up</button>
-          <button class="drag-btn" id="case3-drag-down" disabled>
-            Drag Down
-          </button>
-          <button class="release-btn" id="case3-release" disabled>
-            Release
-          </button>
-          <div class="status" id="case3-status">
-            Ready - Click orange REF to drag green element in same scroll area
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Case 4: Reference in scroll container, Element to move in document -->
-    <div class="demo-section">
-      <h2 class="demo-title">
-        Case 4: Reference in Scroll Container → Element in Document
-      </h2>
-      <div class="demo-container">
-        <div class="scroll-container" id="case4-scroll">
-          <div class="scroll-content">
-            <div
-              class="reference-element"
-              id="case4-ref"
-              style="top: 80px; left: 150px"
-            >
-              REF
-            </div>
-          </div>
-        </div>
-
-        <div class="document-area">
-          <div
-            class="element-to-move"
-            id="case4-move"
-            style="top: 40px; left: 100px"
-          >
-            MOVE ME
-          </div>
-        </div>
-
-        <div class="controls">
-          <h4>Programmatic Controls</h4>
-          <button class="grab-btn" id="case4-grab">Grab</button>
-          <button class="drag-btn" id="case4-drag-left" disabled>
-            Drag Left
-          </button>
-          <button class="drag-btn" id="case4-drag-right" disabled>
-            Drag Right
-          </button>
-          <button class="drag-btn" id="case4-drag-up" disabled>Drag Up</button>
-          <button class="drag-btn" id="case4-drag-down" disabled>
-            Drag Down
-          </button>
-          <button class="release-btn" id="case4-release" disabled>
-            Release
-          </button>
-          <div class="status" id="case4-status">
-            Ready - Click orange REF in scroll area to drag green element in
-            document
+            Ready - Click orange REF to drag green ELEMENT (different scroll
+            containers)
           </div>
         </div>
       </div>
@@ -475,27 +429,15 @@
       const cases = [
         {
           id: "case1",
-          label: "Both in Document",
+          label: "Same Scroll, Diff Parents",
           referenceElement: document.getElementById("case1-ref"),
-          elementToMove: document.getElementById("case1-move"),
+          element: document.getElementById("case1-element"),
         },
         {
           id: "case2",
-          label: "Doc → Scroll",
+          label: "Diff Scroll, Diff Parents",
           referenceElement: document.getElementById("case2-ref"),
-          elementToMove: document.getElementById("case2-move"),
-        },
-        {
-          id: "case3",
-          label: "Both in Scroll",
-          referenceElement: document.getElementById("case3-ref"),
-          elementToMove: document.getElementById("case3-move"),
-        },
-        {
-          id: "case4",
-          label: "Scroll → Doc",
-          referenceElement: document.getElementById("case4-ref"),
-          elementToMove: document.getElementById("case4-move"),
+          element: document.getElementById("case2-element"),
         },
       ];
 
@@ -522,7 +464,7 @@
       }
 
       function setupCase(caseConfig) {
-        const { id, label, referenceElement, elementToMove } = caseConfig;
+        const { id, label, referenceElement, element } = caseConfig;
         let dragGestureController = null;
         let dragInstance = null;
 
@@ -532,7 +474,7 @@
             backdrop: false,
             onGrab: () => {
               updateStatus(id, `${label} - Grabbed`);
-              elementToMove.setAttribute("data-dragging", "");
+              element.setAttribute("data-dragging", "");
             },
             onDragStart: () => {
               updateStatus(id, `${label} - Drag started`);
@@ -542,7 +484,7 @@
             },
             onRelease: () => {
               updateStatus(id, `${label} - Released`);
-              elementToMove.removeAttribute("data-dragging");
+              element.removeAttribute("data-dragging");
               dragGestureController = null;
               dragInstance = null;
               updateButtonStates(id, false);
@@ -556,8 +498,8 @@
 
           dragGestureController = createController();
           dragGestureController.grabViaMouse(event, {
-            element: referenceElement,
-            elementToMove,
+            element,
+            referenceElement,
           });
         });
 
@@ -574,8 +516,8 @@
 
           dragGestureController = createController();
           dragInstance = dragGestureController.grab({
-            element: referenceElement,
-            elementToMove,
+            element,
+            referenceElement,
           });
           updateButtonStates(id, true);
         });
@@ -622,18 +564,20 @@
 
       // Add some initial scroll to containers for testing
       document.addEventListener("DOMContentLoaded", () => {
-        const case2Scroll = document.getElementById("case2-scroll");
-        const case3Scroll = document.getElementById("case3-scroll");
-        const case4Scroll = document.getElementById("case4-scroll");
+        const case1Scroll = document.getElementById("case1-scroll");
+        const case2RefScroll = document.getElementById("case2-ref-scroll");
+        const case2ElementScroll = document.getElementById(
+          "case2-element-scroll",
+        );
 
-        case2Scroll.scrollLeft = 30;
-        case2Scroll.scrollTop = 20;
+        case1Scroll.scrollLeft = 25;
+        case1Scroll.scrollTop = 15;
 
-        case3Scroll.scrollLeft = 25;
-        case3Scroll.scrollTop = 15;
+        case2RefScroll.scrollLeft = 30;
+        case2RefScroll.scrollTop = 20;
 
-        case4Scroll.scrollLeft = 40;
-        case4Scroll.scrollTop = 30;
+        case2ElementScroll.scrollLeft = 35;
+        case2ElementScroll.scrollTop = 25;
       });
     </script>
   </body>
