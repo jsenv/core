@@ -170,19 +170,104 @@ export const parseCSSTransform = (transformString) => {
 
   const transformObj = {};
 
-  // Simple regex to parse transform functions
+  // Parse transform functions
   const transformPattern = /(\w+)\(([^)]+)\)/g;
   let match;
 
   while ((match = transformPattern.exec(transformString)) !== null) {
     const [, functionName, value] = match;
-    // Normalize the value to JavaScript representation (numbers without units)
-    transformObj[functionName] = normalizeStyle(
-      value.trim(),
-      functionName,
-      "js",
-    );
+
+    // Handle matrix functions specially
+    if (functionName === "matrix" || functionName === "matrix3d") {
+      const matrixComponents = parseMatrixTransform(match[0]);
+      if (matrixComponents) {
+        // Only add non-default values to preserve original information
+        Object.assign(transformObj, matrixComponents);
+      }
+      // If matrix can't be parsed to simple components, skip it (keep complex transforms as-is)
+      continue;
+    }
+
+    // Handle regular transform functions
+    const normalizedValue = normalizeStyle(value.trim(), functionName, "js");
+    if (normalizedValue !== undefined) {
+      transformObj[functionName] = normalizedValue;
+    }
   }
 
-  return transformObj;
+  // Return undefined if no properties were extracted (preserves original information)
+  return Object.keys(transformObj).length > 0 ? transformObj : undefined;
+};
+
+// Parse a matrix transform and extract simple transform components when possible
+const parseMatrixTransform = (matrixString) => {
+  // Match matrix() or matrix3d() functions
+  const matrixMatch = matrixString.match(/matrix(?:3d)?\(([^)]+)\)/);
+  if (!matrixMatch) {
+    return null;
+  }
+
+  const values = matrixMatch[1].split(",").map((v) => parseFloat(v.trim()));
+
+  if (matrixString.includes("matrix3d")) {
+    // matrix3d(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p)
+    if (values.length !== 16) {
+      return null;
+    }
+    const [a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p] = values;
+    // Check if it's a simple 2D transform (most common case)
+    if (
+      c === 0 &&
+      d === 0 &&
+      g === 0 &&
+      h === 0 &&
+      i === 0 &&
+      j === 0 &&
+      k === 1 &&
+      l === 0 &&
+      o === 0 &&
+      p === 1
+    ) {
+      // This is essentially a 2D transform
+      return parseSimple2DMatrix(a, b, e, f, m, n);
+    }
+    return null; // Complex 3D transform
+  }
+  // matrix(a, b, c, d, e, f)
+  if (values.length !== 6) {
+    return null;
+  }
+  const [a, b, c, d, e, f] = values;
+  return parseSimple2DMatrix(a, b, c, d, e, f);
+};
+
+// Parse a simple 2D matrix into transform components
+const parseSimple2DMatrix = (a, b, c, d, e, f) => {
+  const result = {};
+
+  // Extract translation - only add if not default (0)
+  if (e !== 0) result.translateX = e;
+  if (f !== 0) result.translateY = f;
+
+  // Check for simple cases without rotation/skew
+  if (b === 0 && c === 0) {
+    // Pure scale and/or translate - only add if not default (1)
+    if (a !== 1) result.scaleX = a;
+    if (d !== 1) result.scaleY = d;
+    return result;
+  }
+
+  // Check for pure rotation (no scale or skew)
+  const det = a * d - b * c;
+  if (Math.abs(det - 1) < 0.0001 && Math.abs(a * a + b * b - 1) < 0.0001) {
+    // This is a pure rotation - only add if not default (0)
+    const angle = Math.atan2(b, a) * (180 / Math.PI);
+    if (Math.abs(angle) > 0.0001) {
+      result.rotate = Math.round(angle * 1000) / 1000; // Round to avoid floating point issues
+    }
+    return result;
+  }
+
+  // Complex transform, return null to keep as matrix
+  return null;
 };
