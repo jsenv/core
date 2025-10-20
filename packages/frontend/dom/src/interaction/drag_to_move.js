@@ -250,7 +250,7 @@ export const createDragToMoveGestureController = ({
         );
         const transform = {};
         if (direction.x) {
-          const leftTarget = positionedLeft - xOffset;
+          const leftTarget = positionedLeft + xOffset;
           const leftAtGrab = dragGesture.gestureInfo.leftAtGrab;
           const leftDelta = leftTarget - leftAtGrab;
           const translateX = translateXAtGrab
@@ -262,11 +262,10 @@ export const createDragToMoveGestureController = ({
             scrollableLeft,
             left,
             leftTarget,
-            translateX,
           });
         }
         if (direction.y) {
-          const topTarget = positionedTop - yOffset;
+          const topTarget = positionedTop + yOffset;
           const topAtGrab = dragGesture.gestureInfo.topAtGrab;
           const topDelta = topTarget - topAtGrab;
           const translateY = translateYAtGrab
