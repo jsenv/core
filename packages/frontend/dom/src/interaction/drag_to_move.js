@@ -250,23 +250,23 @@ export const createDragToMoveGestureController = ({
             elementScrollableLeft,
             elementScrollableTop,
           );
-        let leftPositionToApply;
-        let topPositionToApply;
+        let elementLeftTarget;
+        let elementTopTarget;
         if (direction.x) {
-          leftPositionToApply = elementToMove
+          elementLeftTarget = elementToMove
             ? elementPositionedLeft - xOffset
             : elementPositionedLeft;
         }
         if (direction.y) {
-          topPositionToApply = elementToMove
+          elementTopTarget = elementToMove
             ? elementPositionedTop - yOffset
             : elementPositionedTop;
         }
 
         const transform = {};
-        if (leftPositionToApply !== undefined) {
+        if (elementLeftTarget !== undefined) {
           const leftAtGrab = dragGesture.gestureInfo.leftAtGrab;
-          const leftDelta = leftPositionToApply - leftAtGrab;
+          const leftDelta = elementLeftTarget - leftAtGrab;
           const translateX = translateXAtGrab
             ? translateXAtGrab + leftDelta
             : leftDelta;
@@ -275,13 +275,13 @@ export const createDragToMoveGestureController = ({
             leftAtGrab,
             elementScrollableLeft,
             elementLeft,
-            leftPositionToApply,
+            elementLeftTarget,
             translateX,
           });
         }
-        if (topPositionToApply !== undefined) {
+        if (elementTopTarget !== undefined) {
           const topAtGrab = dragGesture.gestureInfo.topAtGrab;
-          const topDelta = topPositionToApply - topAtGrab;
+          const topDelta = elementTopTarget - topAtGrab;
           const translateY = translateYAtGrab
             ? translateYAtGrab + topDelta
             : topDelta;
