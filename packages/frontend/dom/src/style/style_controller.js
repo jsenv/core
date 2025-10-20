@@ -50,20 +50,20 @@
  * Multiple controllers can safely manage the same element without conflicts.
  */
 
-import { createIterableWeakSet } from "../iterable_weak_set.js";
 import { mergeOneStyle, mergeStyles } from "./style_composition.js";
 import { normalizeStyle, normalizeStyles } from "./style_parsing.js";
 
 // Global registry to be able to get list controllers currently managing an element styles
 const elementControllerSetRegistry = new WeakMap(); // element -> Set<controller>
-const onControllerAttachedToElement = (controller, element) => {
+// Top-level helpers for controller attachment tracking
+const onElementControllerAdded = (element, controller) => {
   if (!elementControllerSetRegistry.has(element)) {
     elementControllerSetRegistry.set(element, new Set());
   }
   const elementControllerSet = elementControllerSetRegistry.get(element);
   elementControllerSet.add(controller);
 };
-const onControllerDetachedFromElement = (controller, element) => {
+const onElementControllerRemoved = (element, controller) => {
   const elementControllerSet = elementControllerSetRegistry.get(element);
   if (elementControllerSet) {
     elementControllerSet.delete(controller);
@@ -76,135 +76,103 @@ const onControllerDetachedFromElement = (controller, element) => {
 };
 
 export const createStyleController = (name = "anonymous") => {
-  // Store styles for this specific controller
-  const controllerStylesRegistry = new WeakMap(); // element -> styles
-  // Store animations for this specific controller
-  const controllerAnimationRegistry = new WeakMap(); // element -> animation
-  // Track elements managed by this controller
-  const managedElements = createIterableWeakSet();
+  // Store element data for this controller: element -> { styles, animation }
+  const elementWeakMap = new WeakMap();
 
-  // Apply styles for this controller only
-  const applyStyles = (element) => {
-    const controllerStyles = controllerStylesRegistry.get(element);
-
-    if (!controllerStyles || Object.keys(controllerStyles).length === 0) {
-      // No styles, clean up animation
-      const animation = controllerAnimationRegistry.get(element);
-      if (animation) {
-        animation.cancel();
-        controllerAnimationRegistry.delete(element);
-      }
-      return;
-    }
-
-    const cssStyles = normalizeStyles(controllerStyles, "css");
-    const existingAnimation = controllerAnimationRegistry.get(element);
-    const keyframes = [cssStyles];
-
-    if (!existingAnimation) {
-      const animation = element.animate(keyframes, {
-        duration: 0,
-        fill: "forwards",
-      });
-      // Set a debug name for this animation
-      animation.id = name;
-      controllerAnimationRegistry.set(element, animation);
-      animation.play();
-      animation.pause();
-      return;
-    }
-
-    existingAnimation.effect.setKeyframes(keyframes);
-    existingAnimation.play();
-    existingAnimation.pause();
-  };
-
-  const set = (element, styles) => {
+  const set = (element, stylesToSet) => {
     if (!element || typeof element !== "object") {
       throw new Error("Element must be a valid DOM element");
     }
-    if (!styles || typeof styles !== "object") {
-      throw new Error("Styles must be an object");
+    if (!stylesToSet || typeof stylesToSet !== "object") {
+      throw new Error("styles must be an object");
     }
 
-    // Track this element as managed by this controller
-    managedElements.add(element);
-
-    // Notify that this controller is attached to the element
-    onControllerAttachedToElement(controller, element);
-
-    if (!controllerStylesRegistry.has(element)) {
-      controllerStylesRegistry.set(element, {});
+    const normalizedStylesToSet = normalizeStyles(stylesToSet, "js");
+    const elementData = elementWeakMap.get(element);
+    if (!elementData) {
+      const animation = createAnimationForStyles(
+        element,
+        normalizedStylesToSet,
+        name,
+      );
+      elementWeakMap.set(element, {
+        styles: normalizedStylesToSet,
+        animation,
+      });
+      onElementControllerAdded(element, controller);
+      return;
     }
-    const controllerStyles = controllerStylesRegistry.get(element);
-    const normalizedStyles = normalizeStyles(styles, "js");
-    const mergedStyles = mergeStyles(controllerStyles, normalizedStyles);
-    controllerStylesRegistry.set(element, mergedStyles);
-    applyStyles(element);
+
+    const { styles, animation } = elementData;
+    const mergedStyles = mergeStyles(styles, normalizedStylesToSet);
+    elementData.styles = mergedStyles;
+    updateAnimationStyles(animation, mergedStyles);
   };
 
   const get = (element) => {
-    const controllerStyles = controllerStylesRegistry.get(element);
-    return controllerStyles ? { ...controllerStyles } : {};
+    const elementData = elementWeakMap.get(element);
+    if (!elementData) {
+      return {};
+    }
+    const { styles } = elementData;
+    return { ...styles };
   };
 
   const deleteMethod = (element, propertyName) => {
-    const controllerStyles = controllerStylesRegistry.get(element);
-
-    if (controllerStyles && propertyName in controllerStyles) {
-      delete controllerStyles[propertyName];
-      const isEmpty = Object.keys(controllerStyles).length === 0;
-      // Clean up empty controller
-      if (isEmpty) {
-        controllerStylesRegistry.delete(element);
-        managedElements.delete(element);
-        onControllerDetachedFromElement(controller, element);
-      }
-
-      // Recompute and apply final styles (or clean up animation if no styles left)
-      applyStyles(element);
+    const elementData = elementWeakMap.get(element);
+    if (!elementData) {
+      return;
     }
+    const { styles, animation } = elementData;
+    const hasStyle = Object.hasOwn(styles, propertyName);
+    if (!hasStyle) {
+      return;
+    }
+    delete styles[propertyName];
+    const isEmpty = Object.keys(styles).length === 0;
+    // Clean up empty controller
+    if (isEmpty) {
+      animation.cancel();
+      elementWeakMap.delete(element);
+      onElementControllerRemoved(element, controller);
+      return;
+    }
+    updateAnimationStyles(animation, styles);
   };
 
   const commit = (element) => {
-    const controllerStyles = controllerStylesRegistry.get(element);
-    if (!controllerStyles) {
-      return; // No styles to commit from this controller
+    const elementData = elementWeakMap.get(element);
+    if (!elementData) {
+      return; // Nothing to commit on this element for this controller
     }
-
+    const { styles, animation } = elementData;
     // Cancel our animation permanently since we're committing styles to inline
-    const animation = controllerAnimationRegistry.get(element);
-    if (animation) {
-      animation.cancel();
-      controllerAnimationRegistry.delete(element);
-    }
-
+    // (Keep this BEFORE getComputedStyle to prevent computedStyle reading our animation styles)
+    animation.cancel();
     // Now read the true underlying styles (without our animation influence)
     const computedStyles = getComputedStyle(element);
-
     // Convert controller styles to CSS and commit to inline styles
-    const cssStyles = normalizeStyles(controllerStyles, "css");
-
+    const cssStyles = normalizeStyles(styles, "css");
     for (const [key, value] of Object.entries(cssStyles)) {
       // Merge with existing computed styles for all properties
       const existingValue = computedStyles[key];
       element.style[key] = mergeOneStyle(existingValue, value, key, "css");
     }
-
     // Clear this controller's styles since they're now inline
-    controllerStylesRegistry.delete(element);
-    managedElements.delete(element);
-
+    elementWeakMap.delete(element);
     // Clean up controller from element registry
-    onControllerDetachedFromElement(controller, element);
+    onElementControllerRemoved(element, controller);
   };
 
   const clear = (element) => {
-    controllerStylesRegistry.delete(element);
-    managedElements.delete(element);
-    onControllerDetachedFromElement(controller, element);
-    // Recompute and apply final styles
-    applyStyles(element);
+    const elementData = elementWeakMap.get(element);
+    if (!elementData) {
+      return;
+    }
+    const { animation } = elementData;
+    animation.cancel();
+    elementWeakMap.delete(element);
+    onElementControllerRemoved(element, controller);
   };
 
   const getUnderlyingValue = (element, propertyName) => {
@@ -277,17 +245,16 @@ export const createStyleController = (name = "anonymous") => {
     };
 
     const getWhileDisablingThisController = (fn) => {
-      const currentAnimation = controllerAnimationRegistry.get(element);
-      if (!currentAnimation) {
+      const elementData = elementWeakMap.get(element);
+      if (!elementData) {
         return fn();
       }
-
+      const { styles, animation } = elementData;
       // Temporarily cancel our animation to read underlying value
-      currentAnimation.cancel();
-      controllerAnimationRegistry.delete(element); // Remove cancelled animation from registry
+      animation.cancel();
       const underlyingValue = fn();
       // Restore our animation
-      applyStyles(element);
+      elementData.animation = createAnimationForStyles(element, styles, name);
       return underlyingValue;
     };
 
@@ -312,18 +279,23 @@ export const createStyleController = (name = "anonymous") => {
   };
 
   const destroy = () => {
-    // Remove this controller from all managed elements and clean up animations
-    for (const element of managedElements) {
-      // Clean up this controller's animation
-      const animation = controllerAnimationRegistry.get(element);
-      if (animation) {
-        animation.cancel();
-        controllerAnimationRegistry.delete(element);
+    // Remove this controller from all elements and clean up animations
+    for (const [
+      element,
+      elementControllerSet,
+    ] of elementControllerSetRegistry) {
+      if (!elementControllerSet.has(controller)) {
+        continue;
       }
-      controllerStylesRegistry.delete(element);
-      onControllerDetachedFromElement(controller, element);
+      const elementData = elementWeakMap.get(element);
+      if (!elementData) {
+        continue;
+      }
+      const { animation } = elementData;
+      animation.cancel();
+      elementWeakMap.delete(element);
+      onElementControllerRemoved(element, controller);
     }
-    managedElements.clear();
   };
   const controller = {
     name,
@@ -337,4 +309,22 @@ export const createStyleController = (name = "anonymous") => {
   };
 
   return controller;
+};
+
+const createAnimationForStyles = (element, jsStyles, id) => {
+  const cssStylesToSet = normalizeStyles(jsStyles, "css");
+  const animation = element.animate([cssStylesToSet], {
+    duration: 0,
+    fill: "forwards",
+  });
+  animation.id = id; // Set a debug name for this animation
+  animation.play();
+  animation.pause();
+};
+
+const updateAnimationStyles = (animation, jsStyles) => {
+  const cssStyles = normalizeStyles(jsStyles, "css");
+  animation.effect.setKeyframes([cssStyles]);
+  animation.play();
+  animation.pause();
 };
