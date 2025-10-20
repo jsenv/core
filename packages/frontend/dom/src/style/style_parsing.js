@@ -104,20 +104,23 @@ export const normalizeStyle = (value, propertyName, context = "js") => {
   }
 
   if (pxProperties.includes(propertyName)) {
-    return normalizeNumber(value, context, "px");
+    return normalizeNumber(value, context, "px", propertyName);
   }
   if (degProperties.includes(propertyName)) {
-    return normalizeNumber(value, context, "deg");
+    return normalizeNumber(value, context, "deg", propertyName);
   }
   if (unitlessProperties.includes(propertyName)) {
-    return normalizeNumber(value, context, "");
+    return normalizeNumber(value, context, "", propertyName);
   }
 
   return value;
 };
-const normalizeNumber = (value, context, unit) => {
+const normalizeNumber = (value, context, unit, propertyName) => {
   if (context === "css") {
     if (typeof value === "number") {
+      if (isNaN(value)) {
+        console.warn(`NaN found for "${propertyName}"`);
+      }
       return `${value}${unit}`;
     }
     return value;
@@ -128,7 +131,9 @@ const normalizeNumber = (value, context, unit) => {
     }
     const numericValue = parseFloat(value);
     if (isNaN(numericValue)) {
-      // console.warn
+      console.warn(
+        `"${propertyName}": ${value} cannot be converted to number, returning value as-is.`,
+      );
       return value;
     }
     return numericValue;
