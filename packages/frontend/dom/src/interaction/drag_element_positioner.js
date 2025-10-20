@@ -111,8 +111,11 @@ const createSameScrollDifferentParentPositioner = (
     );
   }
   scrollable_converter: {
-    const fixedPosition = findSelfOrAncestorFixedPosition(positionedParent);
-    const scrollLeft = scrollContainer.scrollLeft;
+    const scrollContainerIsDocument = scrollContainer === documentElement;
+    const fixedPosition =
+      scrollContainerIsDocument &&
+      findSelfOrAncestorFixedPosition(positionedParent);
+    const { scrollLeft, scrollTop } = scrollContainer;
 
     convertScrollablePosition = (
       referenceScrollableLeftToConvert,
@@ -150,7 +153,9 @@ const createSameScrollDifferentParentPositioner = (
 
         // Step 3: Apply scroll to get final positioning
         positionedLeft = fixedPosition
-          ? scrollLeft + positionedLeftWithoutScroll
+          ? // I don't really get why we have to add scrollLeft (scrollLeft at grab)
+            // to properly position the element in this scenario
+            scrollLeft + positionedLeftWithoutScroll
           : scrollContainer.scrollLeft + positionedLeftWithoutScroll;
       }
       top: {
@@ -166,7 +171,9 @@ const createSameScrollDifferentParentPositioner = (
             positionedParentTopOffsetWithScrollContainer);
 
         // Step 3: Apply scroll to get final positioning
-        positionedTop = scrollContainer.scrollTop + positionedTopWithoutScroll;
+        positionedTop = fixedPosition
+          ? scrollTop + positionedTopWithoutScroll
+          : scrollContainer.scrollTop + positionedTopWithoutScroll;
       }
 
       return [positionedLeft, positionedTop];
@@ -245,6 +252,8 @@ const createFullyDifferentPositioner = (
     );
   }
   scrollable_converter: {
+    const { scrollLeft, scrollTop } = referenceScrollContainer;
+
     convertScrollablePosition = (
       referenceScrollableLeftToConvert,
       referenceScrollableTopToConvert,
@@ -267,7 +276,9 @@ const createFullyDifferentPositioner = (
           positionedParentLeftOffsetWithReferenceScrollContainer;
         // Step 2: Apply element's scroll container scroll to get final position
         positionedLeft =
-          referenceScrollContainer.scrollLeft + positionedLeftWithoutScroll;
+          scrollLeft +
+          referenceScrollContainer.scrollLeft +
+          positionedLeftWithoutScroll;
       }
       top: {
         // Step 1: Convert from reference scroll container coordinates to element positioned parent coordinates (without scroll)
@@ -276,7 +287,9 @@ const createFullyDifferentPositioner = (
           positionedParentTopOffsetWithReferenceScrollContainer;
         // Step 2: Apply element's scroll container scroll to get final position
         positionedTop =
-          referenceScrollContainer.scrollTop + positionedTopWithoutScroll;
+          scrollTop +
+          referenceScrollContainer.scrollTop +
+          positionedTopWithoutScroll;
       }
 
       return [positionedLeft, positionedTop];
@@ -404,23 +417,21 @@ const getPositionedParentOffsetWithScrollContainer = (
   }
 
   const scrollContainerIsDocument = scrollContainer === documentElement;
-  const { left: positionedParentLeft, top: positionedParentTop } =
-    positionedParent.getBoundingClientRect();
 
   if (scrollContainerIsDocument) {
     const fixedPosition = findSelfOrAncestorFixedPosition(positionedParent);
     if (fixedPosition) {
       return fixedPosition;
     }
-
+    const { left, top } = positionedParent.getBoundingClientRect();
     // Document scroll container case:
     // When the document is scrolled, getBoundingClientRect() values are already affected
     // For example: if document is scrolled 200px to the right:
     //   - documentElement.getBoundingClientRect().left returns -200px
     //   - positionedParent.getBoundingClientRect().left already includes this scroll effect
     // To get the static offset (position as if no scroll), we add the current scroll position
-    const offsetLeft = scrollContainer.scrollLeft + positionedParentLeft;
-    const offsetTop = scrollContainer.scrollTop + positionedParentTop;
+    const offsetLeft = scrollContainer.scrollLeft + left;
+    const offsetTop = scrollContainer.scrollTop + top;
     return [offsetLeft, offsetTop];
   }
 
@@ -432,11 +443,10 @@ const getPositionedParentOffsetWithScrollContainer = (
   // 2. Get scroll container's position relative to viewport
   // 3. Calculate relative position: (parent position - container position)
   // 4. Add scroll position to get static offset (unaffected by current scroll)
+  const { left, top } = positionedParent.getBoundingClientRect();
   const { left: scrollContainerLeft, top: scrollContainerTop } =
     scrollContainer.getBoundingClientRect();
-  const offsetLeft =
-    scrollContainer.scrollLeft + positionedParentLeft - scrollContainerLeft;
-  const offsetTop =
-    scrollContainer.scrollTop + positionedParentTop - scrollContainerTop;
+  const offsetLeft = scrollContainer.scrollLeft + left - scrollContainerLeft;
+  const offsetTop = scrollContainer.scrollTop + top - scrollContainerTop;
   return [offsetLeft, offsetTop];
 };
