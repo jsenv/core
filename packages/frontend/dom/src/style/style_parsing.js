@@ -63,6 +63,16 @@ const unitlessProperties = [
 
 // Normalize a single style value
 export const normalizeStyle = (value, propertyName, context = "js") => {
+  if (propertyName === "transform") {
+    if (context === "css" && typeof value === "object" && value !== null) {
+      // For CSS context, ensure transform is a string
+      return stringifyCSSTransform(value);
+    }
+    if (context === "js" && typeof value === "string" && value !== "none") {
+      // For js context, prefer objects
+      return parseCSSTransform(value);
+    }
+  }
   // Handle transform.* properties (e.g., "transform.translateX")
   if (propertyName.startsWith("transform.")) {
     const transformProperty = propertyName.slice(10); // Remove "transform." prefix
@@ -125,19 +135,6 @@ export const normalizeStyle = (value, propertyName, context = "js") => {
     }
   }
 
-  // For "js" context, keep numbers as-is (preferred for internal representation)
-  // For non-numeric values, pass through unchanged
-
-  if (propertyName === "transform") {
-    if (context === "css" && typeof value === "object" && value !== null) {
-      // For CSS context, ensure transform is a string
-      return stringifyCSSTransform(value);
-    }
-    if (context === "js" && typeof value === "string" && value !== "none") {
-      // For js context, prefer objects
-      return parseCSSTransform(value);
-    }
-  }
   return value;
 };
 

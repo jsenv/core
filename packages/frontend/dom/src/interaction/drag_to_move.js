@@ -37,6 +37,17 @@ export const createDragToMoveGestureController = ({
     const direction = dragGesture.gestureInfo.direction;
     const dragGestureName = dragGesture.gestureInfo.name;
     const scrollContainer = dragGesture.gestureInfo.scrollContainer;
+    const elementImpacted = elementToMove || element;
+    const elementImpactedTranslateXAtGrab =
+      dragStyleController.getUnderlyingValue(
+        elementImpacted,
+        "transform.translateX",
+      );
+    const elementImpactedTranslateYAtGrab =
+      dragStyleController.getUnderlyingValue(
+        elementImpacted,
+        "transform.translateY",
+      );
 
     let xOffset;
     let yOffset;
@@ -239,14 +250,15 @@ export const createDragToMoveGestureController = ({
       if (xPosition !== undefined) {
         const leftAtGrab = dragGesture.gestureInfo.leftAtGrab;
         const moveX = xPosition - leftAtGrab;
-        transform.translateX = `${moveX}px`;
+        const translateX = moveX - elementImpactedTranslateXAtGrab;
+        transform.translateX = `${translateX}px`;
       }
       if (yPosition !== undefined) {
         const topAtGrab = dragGesture.gestureInfo.topAtGrab;
         const moveY = yPosition - topAtGrab;
-        transform.translateY = `${moveY}px`;
+        const translateY = moveY - elementImpactedTranslateYAtGrab;
+        transform.translateY = `${translateY}px`;
       }
-      const elementImpacted = elementToMove || element;
       dragStyleController.set(elementImpacted, {
         transform,
       });
@@ -254,7 +266,6 @@ export const createDragToMoveGestureController = ({
     dragGesture.addDragCallback(dragToMove);
 
     dragGesture.addReleaseCallback(() => {
-      const elementImpacted = elementToMove || element;
       if (resetPositionAfterRelease) {
         dragStyleController.clear(elementImpacted);
       } else {
