@@ -38,14 +38,23 @@ export const createDragToMoveGestureController = ({
     const dragGestureName = dragGesture.gestureInfo.name;
     const scrollContainer = dragGesture.gestureInfo.scrollContainer;
     const elementImpacted = elementToMove || element;
-    const elementImpactedTranslateXAtGrab = dragStyleController.get(
-      elementImpacted,
-      "transform.translateX",
-    );
-    const elementImpactedTranslateYAtGrab = dragStyleController.get(
-      elementImpacted,
-      "transform.translateY",
-    );
+    const elementImpactedTranslateXAtGrab =
+      dragStyleController.getUnderlyingValue(
+        elementImpacted,
+        "transform.translateX",
+      );
+    const elementImpactedTranslateYAtGrab =
+      dragStyleController.getUnderlyingValue(
+        elementImpacted,
+        "transform.translateY",
+      );
+    dragGesture.addReleaseCallback(() => {
+      if (resetPositionAfterRelease) {
+        dragStyleController.clear(elementImpacted);
+      } else {
+        dragStyleController.commit(elementImpacted);
+      }
+    });
 
     let xOffset;
     let yOffset;
@@ -249,7 +258,7 @@ export const createDragToMoveGestureController = ({
         const leftAtGrab = dragGesture.gestureInfo.leftAtGrab;
         const moveX = xPosition - leftAtGrab;
         const translateX = elementImpactedTranslateXAtGrab
-          ? moveX - elementImpactedTranslateXAtGrab
+          ? elementImpactedTranslateXAtGrab + moveX
           : moveX;
         transform.translateX = translateX;
       }
@@ -257,7 +266,7 @@ export const createDragToMoveGestureController = ({
         const topAtGrab = dragGesture.gestureInfo.topAtGrab;
         const moveY = yPosition - topAtGrab;
         const translateY = elementImpactedTranslateYAtGrab
-          ? moveY - elementImpactedTranslateYAtGrab
+          ? elementImpactedTranslateYAtGrab + moveY
           : moveY;
         transform.translateY = translateY;
       }
@@ -266,12 +275,6 @@ export const createDragToMoveGestureController = ({
       });
     };
     dragGesture.addDragCallback(dragToMove);
-
-    dragGesture.addReleaseCallback(() => {
-      if (resetPositionAfterRelease) {
-        dragStyleController.clear(elementImpacted);
-      }
-    });
   };
 
   const dragGestureController = createDragGestureController(options);
