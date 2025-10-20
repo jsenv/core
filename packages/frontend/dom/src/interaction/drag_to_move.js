@@ -164,10 +164,10 @@ export const createDragToMoveGestureController = ({
       hasCrossedScrollportTopOnce =
         hasCrossedScrollportTopOnce || elementTop < scrollport.top;
 
-      // Helper function to handle auto-scroll and element positioning for an axis
       const moveAndKeepIntoView = (axis) => {
-        keep_into_view: {
-          const scrollProperty = axis === "x" ? "scrollLeft" : "scrollTop";
+        let scroll;
+        let position;
+        compute_scroll: {
           const currentScroll =
             axis === "x"
               ? scrollContainer.scrollLeft
@@ -182,13 +182,11 @@ export const createDragToMoveGestureController = ({
 
             if (elementEnd > autoScrollAreaEnd) {
               const scrollAmountNeeded = elementEnd - autoScrollAreaEnd;
-              const scroll = currentScroll + scrollAmountNeeded;
-              // console.log(
-              //   `Scrolling ${scrollProperty} from ${currentScroll} to ${scroll} (amount: ${scrollAmountNeeded})`,
-              // );
-              scrollContainer[scrollProperty] = scroll;
+              scroll = currentScroll + scrollAmountNeeded;
             }
-          } else if (isGoingNegative) {
+            break compute_scroll;
+          }
+          if (isGoingNegative) {
             const elementStart = axis === "x" ? elementLeft : elementTop;
             const autoScrollAreaStart =
               axis === "x" ? autoScrollArea.left : autoScrollArea.top;
@@ -202,50 +200,56 @@ export const createDragToMoveGestureController = ({
 
             if (canAutoScrollNegative && elementStart < autoScrollAreaStart) {
               const scrollAmountNeeded = autoScrollAreaStart - elementStart;
-              const scroll = Math.max(0, currentScroll - scrollAmountNeeded);
-              // console.log(
-              //   `Scrolling ${scrollProperty} from ${currentScroll} to ${scroll} (amount: ${scrollAmountNeeded})`,
-              // );
-              scrollContainer[scrollProperty] = scroll;
+              scroll = Math.max(0, currentScroll - scrollAmountNeeded);
             }
           }
         }
-        move: {
-          const styleProperty = axis === "x" ? "translateX" : "translateY";
-
+        compute_position: {
           const elementStart =
             axis === "x" ? elementPositionedLeft : elementPositionedTop;
           let elementPosition = elementStart;
-          const elementImpacted = elementToMove || element;
           if (elementToMove) {
             const offsetWithElementToMove = axis === "x" ? xOffset : yOffset;
             elementPosition -= offsetWithElementToMove;
           }
-
-          if (axis === "x") {
-            console.log({
-              layoutX: layout.x,
-              elementScrollableLeft,
-              elementLeft,
-              elementPositionedLeft,
-              elementPosition,
-            });
-          }
-
-          dragStyleController.set(elementImpacted, {
-            transform: {
-              [styleProperty]: `${elementPosition}px`,
-            },
-          });
+          position = elementPosition;
         }
+        return [scroll, position];
       };
 
+      let xScroll;
+      let xPosition;
+      let yScroll;
+      let yPosition;
       if (direction.x) {
-        moveAndKeepIntoView("x");
+        [xScroll, xPosition] = moveAndKeepIntoView("x");
       }
       if (direction.y) {
-        moveAndKeepIntoView("y");
+        [yScroll, yPosition] = moveAndKeepIntoView("y");
       }
+
+      if (xScroll !== undefined) {
+        scrollContainer.scrollLeft = xScroll;
+      }
+      if (yScroll !== undefined) {
+        scrollContainer.scrollTop = yScroll;
+      }
+
+      const transform = {};
+      if (xPosition !== undefined) {
+        const leftAtGrab = dragGesture.gestureInfo.leftAtGrab;
+        const moveX = xPosition - leftAtGrab;
+        transform.translateX = `${moveX}px`;
+      }
+      if (yPosition !== undefined) {
+        const topAtGrab = dragGesture.gestureInfo.topAtGrab;
+        const moveY = yPosition - topAtGrab;
+        transform.translateY = `${moveY}px`;
+      }
+      const elementImpacted = elementToMove || element;
+      dragStyleController.set(elementImpacted, {
+        transform,
+      });
     };
     dragGesture.addDragCallback(dragToMove);
 
