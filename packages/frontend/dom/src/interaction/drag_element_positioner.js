@@ -349,30 +349,27 @@ export const getOffsetBetweenTwoElements = (
   elementB,
   scrollContainer,
 ) => {
+  if (elementA === elementB) {
+    return [0, 0];
+  }
+  const scrollContainerIsDocument = scrollContainer === documentElement;
   const elementARect = elementA.getBoundingClientRect();
   const elementBRect = elementB.getBoundingClientRect();
-
-  // Basic offset in viewport coordinates
-  const basicXOffset = elementARect.left - elementBRect.left;
-  const basicYOffset = elementARect.top - elementBRect.top;
-
-  // Account for scroll container position
-  const scrollContainerIsDocument = scrollContainer === documentElement;
-
+  const offsetLeftViewport = elementARect.left - elementBRect.left;
+  const offsetTopViewport = elementARect.top - elementBRect.top;
   if (scrollContainerIsDocument) {
     // Document case: getBoundingClientRect already includes document scroll effects
     // Add current scroll position to get the static offset
     return [
-      scrollContainer.scrollLeft + basicXOffset,
-      scrollContainer.scrollTop + basicYOffset,
+      scrollContainer.scrollLeft + offsetLeftViewport,
+      scrollContainer.scrollTop + offsetTopViewport,
     ];
   }
-
   // Custom scroll container case: account for container's position and scroll
   const scrollContainerRect = scrollContainer.getBoundingClientRect();
   return [
-    basicXOffset + scrollContainer.scrollLeft - scrollContainerRect.left,
-    basicYOffset + scrollContainer.scrollTop - scrollContainerRect.top,
+    offsetLeftViewport + scrollContainer.scrollLeft - scrollContainerRect.left,
+    offsetTopViewport + scrollContainer.scrollTop - scrollContainerRect.top,
   ];
 };
 
