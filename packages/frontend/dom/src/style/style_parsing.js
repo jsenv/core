@@ -262,15 +262,15 @@ const parseSimple2DMatrix = (a, b, c, d, e, f) => {
 
   // Check for pure rotation (no scale or skew)
   const det = a * d - b * c;
-  if (Math.abs(det - 1) < 0.0001 && Math.abs(a * a + b * b - 1) < 0.0001) {
-    // This is a pure rotation - only add if not default (0)
+  if (det === 1 && a === d && b === -c) {
+    // This is a pure rotation matrix
     const angle = Math.atan2(b, a) * (180 / Math.PI);
-    if (Math.abs(angle) > 0.0001) {
-      result.rotate = Math.round(angle * 1000) / 1000; // Round to avoid floating point issues
+    if (angle !== 0) {
+      result.rotate = angle;
     }
     return result;
   }
 
-  // Complex transform, return null to keep as matrix
+  // For complex transforms (combined scale+rotate, skew, etc.), keep as matrix
   return null;
 };
