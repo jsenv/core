@@ -53,8 +53,9 @@
 import { mergeOneStyle, mergeStyles } from "./style_composition.js";
 import { normalizeStyle, normalizeStyles } from "./style_parsing.js";
 
-// Global registry to be able to get list controllers currently managing an element styles
+// Global registry to track which controllers are managing each element's styles
 const elementControllerSetRegistry = new WeakMap(); // element -> Set<controller>
+
 // Top-level helpers for controller attachment tracking
 const onElementControllerAdded = (element, controller) => {
   if (!elementControllerSetRegistry.has(element)) {
@@ -311,8 +312,8 @@ export const createStyleController = (name = "anonymous") => {
   return controller;
 };
 
-const createAnimationForStyles = (element, jsStyles, id) => {
-  const cssStylesToSet = normalizeStyles(jsStyles, "css");
+const createAnimationForStyles = (element, styles, id) => {
+  const cssStylesToSet = normalizeStyles(styles, "css");
   const animation = element.animate([cssStylesToSet], {
     duration: 0,
     fill: "forwards",
@@ -320,10 +321,11 @@ const createAnimationForStyles = (element, jsStyles, id) => {
   animation.id = id; // Set a debug name for this animation
   animation.play();
   animation.pause();
+  return animation; // Return the created animation
 };
 
-const updateAnimationStyles = (animation, jsStyles) => {
-  const cssStyles = normalizeStyles(jsStyles, "css");
+const updateAnimationStyles = (animation, styles) => {
+  const cssStyles = normalizeStyles(styles, "css");
   animation.effect.setKeyframes([cssStyles]);
   animation.play();
   animation.pause();
