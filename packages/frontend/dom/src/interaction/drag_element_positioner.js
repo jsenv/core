@@ -88,6 +88,36 @@ export const createDragElementPositioner = (
 };
 
 const { documentElement } = document;
+const createScrollAdjuster = (scrollContainer, positionedParent) => {
+  const scrollContainerIsDocument = scrollContainer === documentElement;
+  const fixedPosition =
+    scrollContainerIsDocument &&
+    findSelfOrAncestorFixedPosition(positionedParent);
+  const { scrollLeft, scrollTop } = scrollContainer;
+
+  return (leftWithoutScroll, topWithoutScroll) => {
+    // I don't really get why we have to add scrollLeft (scrollLeft at grab)
+    // to properly position the element in this scenario
+    // It happens since we use translateX to position the element
+    // Or maybe since something else. In any case it works
+    let leftScrollToAdd = scrollLeft;
+    let topScrollToAdd = scrollTop;
+    if (fixedPosition) {
+      leftScrollToAdd += fixedPosition[0];
+    } else {
+      leftScrollToAdd += scrollContainer.scrollLeft;
+    }
+    if (fixedPosition) {
+      topScrollToAdd += fixedPosition[1];
+    } else {
+      topScrollToAdd += scrollContainer.scrollTop;
+    }
+    return [
+      leftWithoutScroll + leftScrollToAdd,
+      topWithoutScroll + topScrollToAdd,
+    ];
+  };
+};
 
 // Scenario 2: Same scroll container, different positioned parent
 // The coordinate system is the same, but we need different DOM positioning
@@ -111,19 +141,15 @@ const createSameScrollDifferentParentPositioner = (
     );
   }
   scrollable_converter: {
-    const scrollContainerIsDocument = scrollContainer === documentElement;
-    const fixedPosition =
-      scrollContainerIsDocument &&
-      findSelfOrAncestorFixedPosition(positionedParent);
-    const { scrollLeft, scrollTop } = scrollContainer;
+    const scrollAdjuster = createScrollAdjuster(
+      scrollContainer,
+      positionedParent,
+    );
 
     convertScrollablePosition = (
       referenceScrollableLeftToConvert,
       referenceScrollableTopToConvert,
     ) => {
-      let positionedLeft;
-      let positionedTop;
-
       const [
         positionedParentLeftOffsetWithScrollContainer,
         positionedParentTopOffsetWithScrollContainer,
@@ -139,42 +165,27 @@ const createSameScrollDifferentParentPositioner = (
         scrollContainer,
       );
 
-      left: {
-        // Step 1: Convert from reference scroll-relative to reference positioned-parent-relative
-        const referencePositionedLeftWithoutScroll =
-          referenceScrollableLeftToConvert -
-          referencePositionedParentLeftOffsetWithScrollContainer;
-
-        // Step 2: Convert to element positioned-parent-relative by adding the difference
-        const positionedLeftWithoutScroll =
-          referencePositionedLeftWithoutScroll +
-          (referencePositionedParentLeftOffsetWithScrollContainer -
-            positionedParentLeftOffsetWithScrollContainer);
-
-        // Step 3: Apply scroll to get final positioning
-        positionedLeft = fixedPosition
-          ? // I don't really get why we have to add scrollLeft (scrollLeft at grab)
-            // to properly position the element in this scenario
-            scrollLeft + positionedLeftWithoutScroll
-          : scrollContainer.scrollLeft + positionedLeftWithoutScroll;
-      }
-      top: {
-        // Step 1: Convert from reference scroll-relative to reference positioned-parent-relative
-        const referencePositionedTopWithoutScroll =
-          referenceScrollableTopToConvert -
-          referencePositionedParentTopOffsetWithScrollContainer;
-
-        // Step 2: Convert to element positioned-parent-relative by adding the difference
-        const positionedTopWithoutScroll =
-          referencePositionedTopWithoutScroll +
-          (referencePositionedParentTopOffsetWithScrollContainer -
-            positionedParentTopOffsetWithScrollContainer);
-
-        // Step 3: Apply scroll to get final positioning
-        positionedTop = fixedPosition
-          ? scrollTop + positionedTopWithoutScroll
-          : scrollContainer.scrollTop + positionedTopWithoutScroll;
-      }
+      // Step 1: Convert from reference scroll-relative to reference positioned-parent-relative
+      const referencePositionedLeftWithoutScroll =
+        referenceScrollableLeftToConvert -
+        referencePositionedParentLeftOffsetWithScrollContainer;
+      const referencePositionedTopWithoutScroll =
+        referenceScrollableTopToConvert -
+        referencePositionedParentTopOffsetWithScrollContainer;
+      // Step 2: Convert to element positioned-parent-relative by adding the difference
+      const positionedLeftWithoutScroll =
+        referencePositionedLeftWithoutScroll +
+        (referencePositionedParentLeftOffsetWithScrollContainer -
+          positionedParentLeftOffsetWithScrollContainer);
+      const positionedTopWithoutScroll =
+        referencePositionedTopWithoutScroll +
+        (referencePositionedParentTopOffsetWithScrollContainer -
+          positionedParentTopOffsetWithScrollContainer);
+      // Step 3: Apply scroll to get final positioning
+      const [positionedLeft, positionedTop] = scrollAdjuster(
+        positionedLeftWithoutScroll,
+        positionedTopWithoutScroll,
+      );
 
       return [positionedLeft, positionedTop];
     };
@@ -252,15 +263,15 @@ const createFullyDifferentPositioner = (
     );
   }
   scrollable_converter: {
-    const { scrollLeft, scrollTop } = referenceScrollContainer;
+    const scrollAdjuster = createScrollAdjuster(
+      referenceScrollContainer,
+      positionedParent,
+    );
 
     convertScrollablePosition = (
       referenceScrollableLeftToConvert,
       referenceScrollableTopToConvert,
     ) => {
-      let positionedLeft;
-      let positionedTop;
-
       const [
         positionedParentLeftOffsetWithReferenceScrollContainer,
         positionedParentTopOffsetWithReferenceScrollContainer,
@@ -269,28 +280,18 @@ const createFullyDifferentPositioner = (
         referenceScrollContainer,
       );
 
-      left: {
-        // Step 1: Convert from reference scroll container coordinates to element positioned parent coordinates (without scroll)
-        const positionedLeftWithoutScroll =
-          referenceScrollableLeftToConvert -
-          positionedParentLeftOffsetWithReferenceScrollContainer;
-        // Step 2: Apply element's scroll container scroll to get final position
-        positionedLeft =
-          scrollLeft +
-          referenceScrollContainer.scrollLeft +
-          positionedLeftWithoutScroll;
-      }
-      top: {
-        // Step 1: Convert from reference scroll container coordinates to element positioned parent coordinates (without scroll)
-        const positionedTopWithoutScroll =
-          referenceScrollableTopToConvert -
-          positionedParentTopOffsetWithReferenceScrollContainer;
-        // Step 2: Apply element's scroll container scroll to get final position
-        positionedTop =
-          scrollTop +
-          referenceScrollContainer.scrollTop +
-          positionedTopWithoutScroll;
-      }
+      // Step 1: Convert from reference scroll container coordinates to element positioned parent coordinates (without scroll)
+      const positionedLeftWithoutScroll =
+        referenceScrollableLeftToConvert -
+        positionedParentLeftOffsetWithReferenceScrollContainer;
+      const positionedTopWithoutScroll =
+        referenceScrollableTopToConvert -
+        positionedParentTopOffsetWithReferenceScrollContainer;
+      // Step 2: Apply element's scroll container scroll to get final position
+      const [positionedLeft, positionedTop] = scrollAdjuster(
+        positionedLeftWithoutScroll,
+        positionedTopWithoutScroll,
+      );
 
       return [positionedLeft, positionedTop];
     };
@@ -313,13 +314,15 @@ const createStandardElementPositioner = (
     );
   }
   scrollable_converter: {
+    const scrollAdjuster = createScrollAdjuster(
+      scrollContainer,
+      positionedParent,
+    );
+
     convertScrollablePosition = (
       scrollableLeftToConvert,
       scrollableTopToConvert,
     ) => {
-      let positionedLeft;
-      let positionedTop;
-
       const [
         positionedParentLeftOffsetWithScrollContainer,
         positionedParentTopOffsetWithScrollContainer,
@@ -328,18 +331,15 @@ const createStandardElementPositioner = (
         scrollContainer,
       );
 
-      left: {
-        const positionedLeftWithoutScroll =
-          scrollableLeftToConvert -
-          positionedParentLeftOffsetWithScrollContainer;
-        positionedLeft =
-          scrollContainer.scrollLeft + positionedLeftWithoutScroll;
-      }
-      top: {
-        const positionedTopWithoutScroll =
-          scrollableTopToConvert - positionedParentTopOffsetWithScrollContainer;
-        positionedTop = scrollContainer.scrollTop + positionedTopWithoutScroll;
-      }
+      const positionedLeftWithoutScroll =
+        scrollableLeftToConvert - positionedParentLeftOffsetWithScrollContainer;
+      const positionedTopWithoutScroll =
+        scrollableTopToConvert - positionedParentTopOffsetWithScrollContainer;
+      const [positionedLeft, positionedTop] = scrollAdjuster(
+        positionedLeftWithoutScroll,
+        positionedTopWithoutScroll,
+      );
+
       return [positionedLeft, positionedTop];
     };
   }
