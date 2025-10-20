@@ -243,7 +243,7 @@ export const createDragToMoveGestureController = ({
       }
 
       move: {
-        const { scrollableLeft, scrollableTop } = layout.scrollableLeft;
+        const { scrollableLeft, scrollableTop } = layout;
         const [positionedLeft, positionedTop] = convertScrollablePosition(
           scrollableLeft,
           scrollableTop,
