@@ -310,35 +310,33 @@ export const createDragGestureController = (options = {}) => {
   };
   dragGestureController.grab = grab;
 
-  const grabViaMouse = (mouseEvent, options) => {
-    if (mouseEvent.type === "mousedown" && mouseEvent.button !== 0) {
+  const initDragByPointer = (grabEvent, dragOptions, initializer) => {
+    if (grabEvent.button !== undefined && grabEvent.button !== 0) {
       return null;
     }
-    const target = mouseEvent.target;
+    const target = grabEvent.target;
     if (!target.closest) {
+      // target is a text node
       return null;
     }
     const mouseEventCoords = (mouseEvent) => {
       const { clientX, clientY } = mouseEvent;
       return [clientX, clientY];
     };
-
-    const [mouseGrabX, mouseGrabY] = mouseEventCoords(mouseEvent);
+    const [grabX, grabY] = mouseEventCoords(grabEvent);
     const dragGesture = dragGestureController.grab({
-      grabX: mouseGrabX,
-      grabY: mouseGrabY,
-      event: mouseEvent,
-      ...options,
+      grabX,
+      grabY,
+      event: grabEvent,
+      ...dragOptions,
     });
-
-    const dragViaMouse = (mousemoveEvent) => {
-      const [mouseDragX, mouseDragY] = mouseEventCoords(mousemoveEvent);
+    const dragViaPointer = (dragEvent) => {
+      const [mouseDragX, mouseDragY] = mouseEventCoords(dragEvent);
       dragGesture.drag(mouseDragX, mouseDragY, {
-        event: mousemoveEvent,
+        event: dragEvent,
       });
     };
-
-    const releaseViaMouse = (mouseupEvent) => {
+    const releaseViaPointer = (mouseupEvent) => {
       const [mouseReleaseX, mouseReleaseY] = mouseEventCoords(mouseupEvent);
       dragGesture.release({
         event: mouseupEvent,
@@ -346,27 +344,57 @@ export const createDragGestureController = (options = {}) => {
         releaseY: mouseReleaseY,
       });
     };
-    const onPointerUp = (pointerEvent) => {
-      // <button disabled> for example does not emit mouseup if we release mouse over it
-      // -> we add "pointerup" to catch mouseup occuring on disabled element
-      if (pointerEvent.pointerType === "mouse") {
-        releaseViaMouse(pointerEvent);
-      }
-    };
-
-    document.addEventListener("mousemove", dragViaMouse);
-    document.addEventListener("mouseup", releaseViaMouse);
-    document.addEventListener("pointerup", onPointerUp);
-    dragGesture.addReleaseCallback(() => {
-      document.removeEventListener("mousemove", dragViaMouse);
-      document.removeEventListener("mouseup", releaseViaMouse);
-      document.removeEventListener("pointerup", onPointerUp);
-    });
-    dragGesture.dragViaMouse = dragViaMouse;
-    dragGesture.releaseViaMouse = releaseViaMouse;
+    dragGesture.dragViaPointer = dragViaPointer;
+    dragGesture.releaseViaPointer = releaseViaPointer;
+    initializer({ onMove: dragViaPointer, onRelease: releaseViaPointer });
     return dragGesture;
   };
-  dragGestureController.grabViaMouse = grabViaMouse;
+
+  const grabViaPointer = (grabEvent, options) => {
+    if (grabEvent.type === "pointerdown") {
+      return initDragByPointer(grabEvent, options, ({ onMove, onRelease }) => {
+        const target = grabEvent.target;
+        target.setPointerCapture(grabEvent.pointerId);
+        target.addEventListener("lostpointercapture", onRelease);
+        target.addEventListener("pointercancel", onRelease);
+        target.addEventListener("pointermove", onMove);
+        target.addEventListener("pointerup", onRelease);
+        return () => {
+          target.releasePointerCapture(grabEvent.pointerId);
+          target.removeEventListener("lostpointercapture", onRelease);
+          target.removeEventListener("pointercancel", onRelease);
+          target.removeEventListener("pointermove", onMove);
+          target.removeEventListener("pointerup", onRelease);
+        };
+      });
+    }
+    if (grabEvent.type === "mousedown") {
+      console.warn(
+        `Received "mousedown" event, "pointerdown" events are recommended to perform drag gestures.`,
+      );
+      return initDragByPointer(grabEvent, options, ({ onMove, onRelease }) => {
+        const onPointerUp = (pointerEvent) => {
+          // <button disabled> for example does not emit mouseup if we release mouse over it
+          // -> we add "pointerup" to catch mouseup occuring on disabled element
+          if (pointerEvent.pointerType === "mouse") {
+            onRelease(pointerEvent);
+          }
+        };
+        document.addEventListener("mousemove", onMove);
+        document.addEventListener("mouseup", onRelease);
+        document.addEventListener("pointerup", onPointerUp);
+        return () => {
+          document.removeEventListener("mousemove", onMove);
+          document.removeEventListener("mouseup", onRelease);
+          document.removeEventListener("pointerup", onPointerUp);
+        };
+      });
+    }
+    throw new Error(
+      `Unsupported "${grabEvent.type}" evenet passed to grabViaPointer. "pointerdown" was expected.`,
+    );
+  };
+  dragGestureController.grabViaPointer = grabViaPointer;
 
   return dragGestureController;
 };
