@@ -346,7 +346,13 @@ export const createDragGestureController = (options = {}) => {
     };
     dragGesture.dragViaPointer = dragViaPointer;
     dragGesture.releaseViaPointer = releaseViaPointer;
-    initializer({ onMove: dragViaPointer, onRelease: releaseViaPointer });
+    const cleanup = initializer({
+      onMove: dragViaPointer,
+      onRelease: releaseViaPointer,
+    });
+    dragGesture.addReleaseCallback(() => {
+      cleanup();
+    });
     return dragGesture;
   };
 

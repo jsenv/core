@@ -221,13 +221,13 @@ const TableColumnLeftResizeHandle = ({
     <div
       className="navi_table_cell_resize_handle"
       data-left=""
-      onMouseDown={(e) => {
+      onPointerDown={(e) => {
         if (e.button !== 0) {
           return;
         }
         e.preventDefault(); // prevent text selection
         e.stopPropagation(); // prevent drag column or drag sticky frontier
-        initResizeTableColumnByMousedown(e, {
+        initResizeTableColumnViaPointer(e, {
           columnResizer: columnResizerRef.current,
           columnMinWidth,
           columnMaxWidth,
@@ -259,13 +259,13 @@ const TableColumnRightResizeHandle = ({
     <div
       className="navi_table_cell_resize_handle"
       data-right=""
-      onMouseDown={(e) => {
+      onPointerDown={(e) => {
         if (e.button !== 0) {
           return;
         }
         e.preventDefault(); // prevent text selection
         e.stopPropagation(); // prevent drag column or drag sticky frontier
-        initResizeTableColumnByMousedown(e, {
+        initResizeTableColumnViaPointer(e, {
           columnResizer: columnResizerRef.current,
           columnMinWidth,
           columnMaxWidth,
@@ -331,8 +331,8 @@ const onMouseLeaveRightResizeHandle = (e, columnResizer) => {
   columnResizer.removeAttribute("data-hover");
 };
 // Generic function to handle table cell resize for both axes
-const initResizeByMousedown = (
-  mousedownEvent,
+const initResizeViaPointer = (
+  pointerdownEvent,
   {
     tableCell,
     resizer,
@@ -438,14 +438,14 @@ const initResizeByMousedown = (
       onRelease(newSize, currentSize);
     },
   });
-  dragToMoveGestureController.grabViaMouse(mousedownEvent, {
+  dragToMoveGestureController.grabViaPointer(pointerdownEvent, {
     element: resizer,
     referenceElement: tableCell,
   });
 };
 
-const initResizeTableColumnByMousedown = (
-  mousedownEvent,
+const initResizeTableColumnViaPointer = (
+  pointerdownEvent,
   {
     columnResizer,
     columnMinWidth,
@@ -456,11 +456,11 @@ const initResizeTableColumnByMousedown = (
     isLeft,
   },
 ) => {
-  let tableCell = mousedownEvent.target.closest(".navi_table_cell");
+  let tableCell = pointerdownEvent.target.closest(".navi_table_cell");
   if (isLeft) {
     tableCell = tableCell.previousElementSibling;
   }
-  initResizeByMousedown(mousedownEvent, {
+  initResizeViaPointer(pointerdownEvent, {
     tableCell,
     resizer: columnResizer,
     minSize: columnMinWidth,
@@ -471,11 +471,11 @@ const initResizeTableColumnByMousedown = (
     axis: "x",
   });
 };
-const initResizeTableRowByMousedown = (
-  mousedownEvent,
+const initResizeTableRowViaPointer = (
+  pointerdownEvent,
   { rowResizer, rowMinHeight, rowMaxHeight, onGrab, onDrag, onRelease, isTop },
 ) => {
-  let tableCell = mousedownEvent.target.closest(".navi_table_cell");
+  let tableCell = pointerdownEvent.target.closest(".navi_table_cell");
   if (isTop) {
     const tableRow = tableCell.closest(".navi_tr");
     const previousTr = findPreviousTableRow(tableRow);
@@ -486,7 +486,7 @@ const initResizeTableRowByMousedown = (
     const columnIndex = Array.from(tableRow.children).indexOf(tableCell);
     tableCell = previousTr.children[columnIndex];
   }
-  initResizeByMousedown(mousedownEvent, {
+  initResizeViaPointer(pointerdownEvent, {
     tableCell,
     resizer: rowResizer,
     minSize: rowMinHeight,
@@ -550,13 +550,13 @@ const TableRowTopResizeHandle = ({
     <div
       className="navi_table_cell_resize_handle"
       data-top=""
-      onMouseDown={(e) => {
+      onPointerDown={(e) => {
         if (e.button !== 0) {
           return;
         }
         e.preventDefault(); // prevent text selection
         e.stopPropagation(); // prevent drag row
-        initResizeTableRowByMousedown(e, {
+        initResizeTableRowViaPointer(e, {
           rowResizer: rowResizerRef.current,
           rowMinHeight,
           rowMaxHeight,
@@ -588,13 +588,13 @@ const TableRowBottomResizeHandle = ({
     <div
       className="navi_table_cell_resize_handle"
       data-bottom=""
-      onMouseDown={(e) => {
+      onPointerDown={(e) => {
         if (e.button !== 0) {
           return;
         }
         e.preventDefault(); // prevent text selection
         e.stopPropagation(); // prevent drag row
-        initResizeTableRowByMousedown(e, {
+        initResizeTableRowViaPointer(e, {
           rowResizer: rowResizerRef.current,
           rowMinHeight,
           rowMaxHeight,
