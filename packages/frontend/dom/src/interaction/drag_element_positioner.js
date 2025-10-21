@@ -45,6 +45,10 @@ export const createDragElementPositioner = (
   referenceElement,
   elementToMove,
 ) => {
+  let scrollableLeft;
+  let scrollableTop;
+  let convertScrollablePosition;
+
   const positionedParent = elementToMove
     ? elementToMove.offsetParent
     : element.offsetParent;
@@ -59,10 +63,6 @@ export const createDragElementPositioner = (
       ? getScrollContainer(referenceElement)
       : undefined,
   });
-
-  let scrollableLeft;
-  let scrollableTop;
-  let convertScrollablePosition;
 
   scrollable_current: {
     [scrollableLeft, scrollableTop] = getScrollablePosition(
@@ -93,6 +93,22 @@ export const createDragElementPositioner = (
   }
   return [scrollableLeft, scrollableTop, convertScrollablePosition];
 };
+
+const getScrollablePosition = (element, scrollContainer) => {
+  const { left: elementViewportLeft, top: elementViewportTop } =
+    element.getBoundingClientRect();
+  const scrollContainerIsDocument = scrollContainer === documentElement;
+  if (scrollContainerIsDocument) {
+    return [elementViewportLeft, elementViewportTop];
+  }
+  const { left: scrollContainerLeft, top: scrollContainerTop } =
+    scrollContainer.getBoundingClientRect();
+  const scrollableLeft = elementViewportLeft - scrollContainerLeft;
+  const scrollableTop = elementViewportTop - scrollContainerTop;
+
+  return [scrollableLeft, scrollableTop];
+};
+
 const createGetOffsets = ({
   positionedParent,
   referencePositionedParent = positionedParent,
@@ -270,19 +286,4 @@ export const getDragCoordinates = (
   const leftRelativeToScrollContainer = scrollableLeft + scrollLeft;
   const topRelativeToScrollContainer = scrollableTop + scrollTop;
   return [leftRelativeToScrollContainer, topRelativeToScrollContainer];
-};
-
-const getScrollablePosition = (element, scrollContainer) => {
-  const { left: elementViewportLeft, top: elementViewportTop } =
-    element.getBoundingClientRect();
-  const scrollContainerIsDocument = scrollContainer === documentElement;
-  if (scrollContainerIsDocument) {
-    return [elementViewportLeft, elementViewportTop];
-  }
-  const { left: scrollContainerLeft, top: scrollContainerTop } =
-    scrollContainer.getBoundingClientRect();
-  const scrollableLeft = elementViewportLeft - scrollContainerLeft;
-  const scrollableTop = elementViewportTop - scrollContainerTop;
-
-  return [scrollableLeft, scrollableTop];
 };
