@@ -36,282 +36,21 @@ export const createDragElementPositioner = (
   referenceElement,
   elementToMove,
 ) => {
-  const scrollContainer = getScrollContainer(element);
   const positionedParent = elementToMove
     ? elementToMove.offsetParent
     : element.offsetParent;
-
-  if (!referenceElement) {
-    return createStandardElementPositioner(element, {
-      scrollContainer,
-      positionedParent,
-    });
-  }
-
-  // Analyze element positioning context relative to reference
-  const referenceScrollContainer = getScrollContainer(referenceElement);
-  const referencePositionedParent = referenceElement.offsetParent;
-
-  const sameScrollContainer = scrollContainer === referenceScrollContainer;
-  const samePositionedParent = positionedParent === referencePositionedParent;
-
-  if (sameScrollContainer && samePositionedParent) {
-    // Scenario 1: Same everything - use standard logic
-    return createStandardElementPositioner(element, {
-      scrollContainer,
-      positionedParent,
-    });
-  }
-
-  if (sameScrollContainer && !samePositionedParent) {
-    // Scenario 2: Same scroll container, different positioned parent
-    return createSameScrollDifferentParentPositioner(element, {
-      scrollContainer,
-      positionedParent,
-      referencePositionedParent,
-    });
-  }
-
-  if (!sameScrollContainer && samePositionedParent) {
-    // Scenario 3: Different scroll container, same positioned parent
-    return createDifferentScrollSameParentPositioner(element, {
-      positionedParent,
-      referenceScrollContainer,
-    });
-  }
-
-  // Scenario 4: Both different - most complex case
-  return createFullyDifferentPositioner(element, {
+  const scrollContainer = getScrollContainer(element);
+  const [getPositionOffsets, getScrollOffsets] = createGetOffsets({
     positionedParent,
     scrollContainer,
-    referenceScrollContainer,
-    referencePositionedParent,
+    referenceScrollContainer: referenceElement
+      ? getScrollContainer(referenceElement)
+      : undefined,
+    referencePositionedParent: referenceElement
+      ? referenceElement.offsetParent
+      : undefined,
   });
-};
 
-const { documentElement } = document;
-const createScrollAdjuster = (
-  positionedParent,
-  scrollContainer,
-  referenceScrollContainer = scrollContainer,
-) => {
-  const scrollContainerIsDocument = scrollContainer === documentElement;
-  const fixedPosition =
-    scrollContainerIsDocument &&
-    findSelfOrAncestorFixedPosition(positionedParent);
-  const { scrollLeft, scrollTop } = referenceScrollContainer;
-
-  return (leftWithoutScroll, topWithoutScroll) => {
-    // I don't really get why we have to add scrollLeft (scrollLeft at grab)
-    // to properly position the element in this scenario
-    // It happens since we use translateX to position the element
-    // Or maybe since something else. In any case it works
-    let leftScrollToAdd = scrollLeft;
-    let topScrollToAdd = scrollTop;
-    if (fixedPosition) {
-      leftScrollToAdd += fixedPosition[0];
-      topScrollToAdd += fixedPosition[1];
-    } else {
-      leftScrollToAdd += referenceScrollContainer.scrollLeft;
-      topScrollToAdd += referenceScrollContainer.scrollTop;
-    }
-    return [
-      leftWithoutScroll + leftScrollToAdd,
-      topWithoutScroll + topScrollToAdd,
-    ];
-  };
-};
-
-// Scenario 2: Same scroll container, different positioned parent
-// The coordinate system is the same, but we need different DOM positioning
-//
-// CHALLENGE: Convert coordinates from reference element's coordinate system to element's layout coordinates
-// - Input coordinates are relative to the reference element's scroll container (without scrolls)
-// - We need to output coordinates that can be used to position the element via its offsetParent
-// - This requires a 3-step conversion process through reference positioned parent coordinates
-const createSameScrollDifferentParentPositioner = (
-  element,
-  { scrollContainer, positionedParent, referencePositionedParent },
-) => {
-  let scrollableLeft;
-  let scrollableTop;
-  let convertScrollablePosition;
-  const [
-    offsetLeftBetweenPositionedParents,
-    offsetTopBetweenPositionedParents,
-  ] = getOffsetBetweenTwoElements(
-    referencePositionedParent,
-    positionedParent,
-    scrollContainer,
-  );
-
-  scrollable_current: {
-    [scrollableLeft, scrollableTop] = getScrollablePosition(
-      element,
-      scrollContainer,
-    );
-    scrollableLeft -= offsetLeftBetweenPositionedParents;
-    scrollableTop -= offsetTopBetweenPositionedParents;
-  }
-
-  scrollable_converter: {
-    const scrollAdjuster = createScrollAdjuster(
-      positionedParent,
-      scrollContainer,
-    );
-
-    convertScrollablePosition = (
-      referenceScrollableLeftToConvert,
-      referenceScrollableTopToConvert,
-    ) => {
-      const [
-        referencePositionedParentLeftOffsetWithScrollContainer,
-        referencePositionedParentTopOffsetWithScrollContainer,
-      ] = getPositionedParentOffsetWithScrollContainer(
-        referencePositionedParent,
-        scrollContainer,
-      );
-
-      // Step 1: Convert from reference scroll-relative to reference positioned-parent-relative
-      const referencePositionedLeftWithoutScroll =
-        referenceScrollableLeftToConvert -
-        referencePositionedParentLeftOffsetWithScrollContainer;
-      const referencePositionedTopWithoutScroll =
-        referenceScrollableTopToConvert -
-        referencePositionedParentTopOffsetWithScrollContainer;
-      // Step 2: Convert to element positioned-parent-relative by adding the difference
-      const positionedLeftWithoutScroll =
-        referencePositionedLeftWithoutScroll +
-        referencePositionedParentLeftOffsetWithScrollContainer -
-        offsetLeftBetweenPositionedParents;
-      const positionedTopWithoutScroll =
-        referencePositionedTopWithoutScroll +
-        referencePositionedParentTopOffsetWithScrollContainer -
-        offsetTopBetweenPositionedParents;
-      // Step 3: Apply scroll to get final positioning
-      const [positionedLeft, positionedTop] = scrollAdjuster(
-        positionedLeftWithoutScroll,
-        positionedTopWithoutScroll,
-      );
-
-      return [positionedLeft, positionedTop];
-    };
-  }
-
-  return [scrollableLeft, scrollableTop, convertScrollablePosition];
-};
-
-// Scenario 3: Different scroll container, same positioned parent
-// The DOM positioning is the same, but coordinate system reference differs
-const createDifferentScrollSameParentPositioner = (
-  element,
-  { referenceScrollContainer, positionedParent },
-) => {
-  let scrollableLeft;
-  let scrollableTop;
-  let convertScrollablePosition;
-
-  scrollable_current: {
-    [scrollableLeft, scrollableTop] = getScrollablePosition(
-      element,
-      referenceScrollContainer,
-    );
-  }
-  scrollable_converter: {
-    convertScrollablePosition = (
-      referenceScrollableLeftToConvert,
-      referenceScrollableTopToConvert,
-    ) => {
-      let positionedLeft;
-      let positionedTop;
-
-      const [
-        positionedParentLeftOffsetWithReferenceScrollContainer,
-        positionedParentTopOffsetWithReferenceScrollContainer,
-      ] = getPositionedParentOffsetWithScrollContainer(
-        positionedParent,
-        referenceScrollContainer,
-      );
-
-      left: {
-        // Convert from reference scroll container coordinates to positioned parent coordinates
-        positionedLeft =
-          referenceScrollableLeftToConvert -
-          positionedParentLeftOffsetWithReferenceScrollContainer;
-      }
-      top: {
-        // Convert from reference scroll container coordinates to positioned parent coordinates
-        positionedTop =
-          referenceScrollableTopToConvert -
-          positionedParentTopOffsetWithReferenceScrollContainer;
-      }
-
-      return [positionedLeft, positionedTop];
-    };
-  }
-
-  return [scrollableLeft, scrollableTop, convertScrollablePosition];
-};
-
-// Scenario 4: Both different - most complex case
-// Both coordinate system and DOM positioning differ
-const createFullyDifferentPositioner = (
-  element,
-  {
-    positionedParent,
-    scrollContainer,
-    referenceScrollContainer,
-    referencePositionedParent,
-  },
-) => {
-  let scrollableLeft;
-  let scrollableTop;
-  let convertScrollablePosition;
-  const [
-    offsetLeftBetweenPositionedParents,
-    offsetTopBetweenPositionedParents,
-  ] = getOffsetBetweenTwoElements(
-    referencePositionedParent,
-    positionedParent,
-    scrollContainer,
-  );
-
-  scrollable_current: {
-    [scrollableLeft, scrollableTop] = getScrollablePosition(
-      element,
-      referenceScrollContainer,
-    );
-    scrollableLeft -= offsetLeftBetweenPositionedParents;
-    scrollableTop -= offsetTopBetweenPositionedParents;
-  }
-  scrollable_converter: {
-    const scrollAdjuster = createScrollAdjuster(
-      positionedParent,
-      scrollContainer,
-      referenceScrollContainer,
-    );
-
-    convertScrollablePosition = (
-      referenceScrollableLeftToConvert,
-      referenceScrollableTopToConvert,
-    ) => {
-      // Step 1: Convert from reference scroll container coordinates to element positioned parent coordinates (without scroll)
-      const positionedLeftWithoutScroll =
-        referenceScrollableLeftToConvert - offsetLeftBetweenPositionedParents;
-      const positionedTopWithoutScroll =
-        referenceScrollableTopToConvert - offsetTopBetweenPositionedParents;
-      // Step 2: Apply element's scroll container scroll to get final position
-      const [positionedLeft, positionedTop] = scrollAdjuster(
-        positionedLeftWithoutScroll,
-        positionedTopWithoutScroll,
-      );
-      return [positionedLeft, positionedTop];
-    };
-  }
-  return [scrollableLeft, scrollableTop, convertScrollablePosition];
-};
-
-const createStandardElementPositioner = (element, { scrollContainer }) => {
   let scrollableLeft;
   let scrollableTop;
   let convertScrollablePosition;
@@ -321,18 +60,24 @@ const createStandardElementPositioner = (element, { scrollContainer }) => {
       element,
       scrollContainer,
     );
+    const [positionOffsetLeft, positionOffsetTop] = getPositionOffsets();
+    scrollableLeft += positionOffsetLeft;
+    scrollableTop += positionOffsetTop;
   }
   scrollable_converter: {
     convertScrollablePosition = (
       scrollableLeftToConvert,
       scrollableTopToConvert,
     ) => {
-      const positionedLeftWithoutScroll = scrollableLeftToConvert;
-      const positionedTopWithoutScroll = scrollableTopToConvert;
-      const [positionedLeft, positionedTop] = [
-        scrollContainer.scrollLeft + positionedLeftWithoutScroll,
-        scrollContainer.scrollTop + positionedTopWithoutScroll,
-      ];
+      const [positionOffsetLeft, positionOffsetTop] = getPositionOffsets();
+      const [scrollOffsetLeft, scrollOffsetTop] = getScrollOffsets();
+
+      const positionedLeftWithoutScroll =
+        scrollableLeftToConvert + positionOffsetLeft;
+      const positionedTopWithoutScroll =
+        scrollableTopToConvert + positionOffsetTop;
+      const positionedLeft = positionedLeftWithoutScroll + scrollOffsetLeft;
+      const positionedTop = positionedTopWithoutScroll + scrollOffsetTop;
 
       return [positionedLeft, positionedTop];
     };
@@ -340,72 +85,105 @@ const createStandardElementPositioner = (element, { scrollContainer }) => {
   return [scrollableLeft, scrollableTop, convertScrollablePosition];
 };
 
-export const getDragCoordinates = (
-  element,
-  scrollContainer = getScrollContainer(element),
+const { documentElement } = document;
+
+const GET_POSITION_NO_OFFSET = () => [0, 0];
+const GET_SCROLL_NO_OFFSET = () => [0, 0];
+const createGetOffsetsResult = (
+  getPositionOffsets = GET_POSITION_NO_OFFSET,
+  getScrollOffsets = GET_SCROLL_NO_OFFSET,
 ) => {
-  const [scrollableLeft, scrollableTop] = getScrollablePosition(
-    element,
-    scrollContainer,
+  const getOffsets = () => {
+    const [scrollOffsetLeft, scrollOffsetTop] = getScrollOffsets();
+    const [positionOffsetLeft, positionOffsetTop] = getPositionOffsets();
+    const totalOffsetLeft = scrollOffsetLeft - positionOffsetLeft;
+    const totalOffsetTop = scrollOffsetTop - positionOffsetTop;
+    return [totalOffsetLeft, totalOffsetTop];
+  };
+
+  return [getPositionOffsets, getScrollOffsets, getOffsets];
+};
+const createGetOffsets = ({
+  positionedParent,
+  referencePositionedParent,
+  scrollContainer,
+  referenceScrollContainer,
+}) => {
+  const samePositionedParent = positionedParent === referencePositionedParent;
+  const sameScrollContainer = scrollContainer === referenceScrollContainer;
+  return createGetOffsetsResult(
+    samePositionedParent
+      ? undefined
+      : createGetPositionOffsetsForDifferentParents(),
+    sameScrollContainer
+      ? undefined
+      : createGetScrollOffsetsForDifferentContainers(
+          scrollContainer,
+          referenceScrollContainer,
+          positionedParent,
+        ),
   );
-  const { scrollLeft, scrollTop } = scrollContainer;
-  const leftRelativeToScrollContainer = scrollableLeft + scrollLeft;
-  const topRelativeToScrollContainer = scrollableTop + scrollTop;
-  return [leftRelativeToScrollContainer, topRelativeToScrollContainer];
 };
 
-// Calculate the offset between two elements accounting for scroll container position
-// This is useful when elementToMove is different from the drag element
-const getOffsetBetweenTwoElements = (elementA, elementB, scrollContainer) => {
-  if (elementA === elementB) {
-    return [0, 0];
-  }
-
-  const aRect = elementA.getBoundingClientRect();
-  const bRect = elementB.getBoundingClientRect();
-  const aLeft = aRect.left;
-  const aTop = aRect.top;
-  const bLeft = bRect.left;
-  const bTop = bRect.top;
-  const offsetLeft = bLeft - aLeft;
-  const offsetTop = bTop - aTop;
-
+const createGetPositionOffsetsForDifferentParents = (
+  positionedParent,
+  referencePositionedParent,
+  scrollContainer,
+) => {
   // The overlay case is problematic because the overlay adjust its position to the target dynamically
   // This creates something complex to support properly.
-  // -> We detect overlay and force a diff of 0
-  if (isOverlayOf(elementB, elementA)) {
-    if (getComputedStyle(elementB).position === "fixed") {
-      return [0, 0];
+  // When overlay is fixed we there will never be any offset
+  // When overlay is absolute there is a diff relative to the scroll
+  // and eventually if the overlay is positioned differently than the other parent
+  if (isOverlayOf(positionedParent, referencePositionedParent)) {
+    if (getComputedStyle(positionedParent).position === "fixed") {
+      return undefined;
     }
   }
-  if (isOverlayOf(elementA, elementB)) {
-    if (getComputedStyle(elementA).position === "fixed") {
-      return [0, 0];
+  if (isOverlayOf(referencePositionedParent, positionedParent)) {
+    if (getComputedStyle(referencePositionedParent).position === "fixed") {
+      return undefined;
     }
   }
-
   const scrollContainerIsDocument = scrollContainer === documentElement;
   if (scrollContainerIsDocument) {
-    // Document case: getBoundingClientRect already includes document scroll effects
-    // Add current scroll position to get the static offset
-    const { scrollLeft: documentScrollLeft, scrollTop: documentScrollTop } =
-      scrollContainer;
-    const aLeftDocument = documentScrollLeft + aLeft;
-    const aTopDocument = documentScrollTop + aTop;
-    const bLeftDocument = documentScrollLeft + bLeft;
-    const bTopDocument = documentScrollTop + bTop;
-    const offsetLeftRelative = bLeftDocument - aLeftDocument;
-    const offsetTopRelative = bTopDocument - aTopDocument;
-    return [offsetLeftRelative, offsetTopRelative];
+    return () => {
+      // Document case: getBoundingClientRect already includes document scroll effects
+      // Add current scroll position to get the static offset
+      const { scrollLeft: documentScrollLeft, scrollTop: documentScrollTop } =
+        scrollContainer;
+      const aRect = positionedParent.getBoundingClientRect();
+      const bRect = referencePositionedParent.getBoundingClientRect();
+      const aLeft = aRect.left;
+      const aTop = aRect.top;
+      const bLeft = bRect.left;
+      const bTop = bRect.top;
+      const aLeftDocument = documentScrollLeft + aLeft;
+      const aTopDocument = documentScrollTop + aTop;
+      const bLeftDocument = documentScrollLeft + bLeft;
+      const bTopDocument = documentScrollTop + bTop;
+      const offsetLeft = bLeftDocument - aLeftDocument;
+      const offsetTop = bTopDocument - aTopDocument;
+      return [offsetLeft, offsetTop];
+    };
   }
 
   // Custom scroll container case: account for container's position and scroll
-  const scrollContainerRect = scrollContainer.getBoundingClientRect();
-  const offsetLeftRelative =
-    offsetLeft + scrollContainer.scrollLeft - scrollContainerRect.left;
-  const offsetTopRelative =
-    offsetTop + scrollContainer.scrollTop - scrollContainerRect.top;
-  return [offsetLeftRelative, offsetTopRelative];
+  return () => {
+    const aRect = positionedParent.getBoundingClientRect();
+    const bRect = referencePositionedParent.getBoundingClientRect();
+    const aLeft = aRect.left;
+    const aTop = aRect.top;
+    const bLeft = bRect.left;
+    const bTop = bRect.top;
+
+    const scrollContainerRect = scrollContainer.getBoundingClientRect();
+    const offsetLeft =
+      bLeft - aLeft + scrollContainer.scrollLeft - scrollContainerRect.left;
+    const offsetTop =
+      bTop - aTop + scrollContainer.scrollTop - scrollContainerRect.top;
+    return [offsetLeft, offsetTop];
+  };
 };
 const isOverlayOf = (element, potentialTarget) => {
   const overlayForAttribute = element.getAttribute("data-overlay-for");
@@ -426,6 +204,50 @@ const isOverlayOf = (element, potentialTarget) => {
   return false;
 };
 
+const createGetScrollOffsetsForDifferentContainers = (
+  scrollContainer,
+  referenceScrollContainer,
+  positionedParent,
+) => {
+  const scrollContainerIsDocument = scrollContainer === documentElement;
+  // I don't really get why we have to add scrollLeft (scrollLeft at grab)
+  // to properly position the element in this scenario
+  // It happens since we use translateX to position the element
+  // Or maybe since something else. In any case it works
+  const { scrollLeft, scrollTop } = scrollContainer;
+  if (scrollContainerIsDocument) {
+    const fixedPosition = findSelfOrAncestorFixedPosition(positionedParent);
+    if (fixedPosition) {
+      const getScrollOffsetsFixed = () => {
+        const leftScrollToAdd = scrollLeft + fixedPosition[0];
+        const topScrollToAdd = scrollTop + fixedPosition[1];
+        return [leftScrollToAdd, topScrollToAdd];
+      };
+      return getScrollOffsetsFixed;
+    }
+  }
+  const getScrollOffsetsWithScrolls = () => {
+    const leftScrollToAdd = scrollLeft + referenceScrollContainer.scrollLeft;
+    const topScrollToAdd = scrollTop + referenceScrollContainer.scrollTop;
+    return [leftScrollToAdd, topScrollToAdd];
+  };
+  return getScrollOffsetsWithScrolls;
+};
+
+export const getDragCoordinates = (
+  element,
+  scrollContainer = getScrollContainer(element),
+) => {
+  const [scrollableLeft, scrollableTop] = getScrollablePosition(
+    element,
+    scrollContainer,
+  );
+  const { scrollLeft, scrollTop } = scrollContainer;
+  const leftRelativeToScrollContainer = scrollableLeft + scrollLeft;
+  const topRelativeToScrollContainer = scrollableTop + scrollTop;
+  return [leftRelativeToScrollContainer, topRelativeToScrollContainer];
+};
+
 const getScrollablePosition = (element, scrollContainer) => {
   const { left: elementViewportLeft, top: elementViewportTop } =
     element.getBoundingClientRect();
@@ -439,48 +261,4 @@ const getScrollablePosition = (element, scrollContainer) => {
   const scrollableTop = elementViewportTop - scrollContainerTop;
 
   return [scrollableLeft, scrollableTop];
-};
-
-// Calculate static offset between positioned parent and scroll container
-// This offset should be independent of scroll position
-const getPositionedParentOffsetWithScrollContainer = (
-  positionedParent,
-  scrollContainer,
-) => {
-  if (positionedParent === scrollContainer) {
-    return [0, 0];
-  }
-
-  const scrollContainerIsDocument = scrollContainer === documentElement;
-  if (scrollContainerIsDocument) {
-    const fixedPosition = findSelfOrAncestorFixedPosition(positionedParent);
-    if (fixedPosition) {
-      return fixedPosition;
-    }
-    const { left, top } = positionedParent.getBoundingClientRect();
-    // Document scroll container case:
-    // When the document is scrolled, getBoundingClientRect() values are already affected
-    // For example: if document is scrolled 200px to the right:
-    //   - documentElement.getBoundingClientRect().left returns -200px
-    //   - positionedParent.getBoundingClientRect().left already includes this scroll effect
-    // To get the static offset (position as if no scroll), we add the current scroll position
-    const offsetLeft = scrollContainer.scrollLeft + left;
-    const offsetTop = scrollContainer.scrollTop + top;
-    return [offsetLeft, offsetTop];
-  }
-
-  // Custom scroll container case:
-  // getBoundingClientRect() values are affected by the container's scroll position
-  // We need to calculate the offset relative to the scroll container's coordinate system
-  // Steps:
-  // 1. Get positioned parent's position relative to viewport
-  // 2. Get scroll container's position relative to viewport
-  // 3. Calculate relative position: (parent position - container position)
-  // 4. Add scroll position to get static offset (unaffected by current scroll)
-  const { left, top } = positionedParent.getBoundingClientRect();
-  const { left: scrollContainerLeft, top: scrollContainerTop } =
-    scrollContainer.getBoundingClientRect();
-  const offsetLeft = scrollContainer.scrollLeft + left - scrollContainerLeft;
-  const offsetTop = scrollContainer.scrollTop + top - scrollContainerTop;
-  return [offsetLeft, offsetTop];
 };

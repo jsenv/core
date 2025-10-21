@@ -23,7 +23,7 @@ export const createDragToMoveGestureController = ({
   // initially grabbed the element, but moves with the element to show the current anchor position.
   // It becomes visible when there's a significant distance between mouse and grab point.
   showConstraintFeedbackLine = true,
-  showDebugMarkers = false,
+  showDebugMarkers = true,
   resetPositionAfterRelease = false,
   ...options
 } = {}) => {

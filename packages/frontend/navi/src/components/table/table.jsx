@@ -285,7 +285,10 @@ export const Table = forwardRef((props, ref) => {
           </TableStickyContext.Provider>
           <TableColumnResizer ref={columnResizerRef} />
           <TableRowResizer ref={rowResizerRef} />
-          <TableDragCloneContainer ref={tableDragCloneContainerRef} />
+          <TableDragCloneContainer
+            ref={tableDragCloneContainerRef}
+            tableId={id}
+          />
           <TableColumnDropPreview ref={tableColumnDropPreviewRef} />
         </TableUI>
       </div>

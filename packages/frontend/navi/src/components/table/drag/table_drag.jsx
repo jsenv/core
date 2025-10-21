@@ -224,7 +224,15 @@ export const swapItem = (array, indexA, indexB) => {
 };
 
 export const TableDragCloneContainer = forwardRef((props, ref) => {
-  return <div ref={ref} className="navi_table_drag_clone_container"></div>;
+  const { tableId } = props;
+
+  return (
+    <div
+      ref={ref}
+      className="navi_table_drag_clone_container"
+      data-overlay-for={tableId}
+    ></div>
+  );
 });
 export const TableColumnDropPreview = forwardRef((props, ref) => {
   return (
