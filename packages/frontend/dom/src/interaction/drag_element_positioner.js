@@ -4,32 +4,40 @@ import { getScrollContainer } from "../scroll/scroll_container.js";
 /**
  * Creates a coordinate system positioner for drag operations.
  *
+ * ARCHITECTURE:
+ * This function uses a modular offset-based approach to handle coordinate system conversions
+ * between different positioning contexts (scroll containers and positioned parents).
+ *
+ * The system decomposes coordinate conversion into two types of offsets:
+ * 1. Position offsets - compensate for different positioned parents
+ * 2. Scroll offsets - handle scroll position and container differences
+ *
  * COORDINATE SYSTEM:
- * Internally, we use a coordinate system described as "position relative to the scroll container".
- * This is similar to getBoundingClientRect() but relative to the scroll container
- * instead of always being relative to the viewport.
+ * - Input coordinates are relative to the reference element's scroll container
+ * - Output coordinates are relative to the element's positioned parent for DOM positioning
+ * - Handles cross-coordinate system scenarios (different scroll containers and positioned parents)
  *
- * CONVERSION CHALLENGE:
- * We need to convert these internal coordinates back to actual DOM layout coordinates.
- * This becomes complex when:
- * - The offsetParent position differs from the scroll container position
- * - A referenceElement is used (the coordinate system differs from the element)
+ * KEY SCENARIOS SUPPORTED:
+ * 1. Same positioned parent, same scroll container - Simple case, minimal offsets
+ * 2. Different positioned parents, same scroll container - Position offset compensation
+ * 3. Same positioned parent, different scroll containers - Scroll offset handling
+ * 4. Different positioned parents, different scroll containers - Full offset compensation
+ * 5. Overlay elements - Special handling for elements with data-overlay-for attribute
+ * 6. Fixed positioning - Special scroll offset handling for fixed positioned elements
  *
- * EXPECTED API CONTRACT:
- * The calling code expects this positioner to return:
- *
- * - [scrollableLeft, scrollableTop, convertScrollablePosition]
+ * API CONTRACT:
+ * Returns [scrollableLeft, scrollableTop, convertScrollablePosition] where:
  *
  * - scrollableLeft/scrollableTop:
- *   Current coordinates relative to the reference element's scroll container.
- *   When using a reference element, these coordinates represent where the element appears
- *   from the perspective of the reference element's coordinate system.
+ *   Current element coordinates in the reference coordinate system (adjusted for position offsets)
  *
  * - convertScrollablePosition:
- *   Convert from the internal scroll-relative coordinates to DOM positioning coordinates.
- *   When using a reference element, these functions must convert from the reference element's
- *   scroll-relative coordinates to the element's offsetParent-relative coordinates.
+ *   Converts reference coordinate system positions to DOM positioning coordinates
+ *   Applies both position and scroll offsets for accurate element placement
  *
+ * IMPLEMENTATION STRATEGY:
+ * Uses factory functions to create specialized offset calculators based on the specific
+ * combination of positioning contexts, optimizing for performance and code clarity.
  */
 
 export const createDragElementPositioner = (
