@@ -123,28 +123,26 @@ const createGetOffsets = ({
   }
   const scrollContainerIsDocument = scrollContainer === documentElement;
   if (scrollContainerIsDocument) {
-    return [
-      () => {
-        // Document case: getBoundingClientRect already includes document scroll effects
-        // Add current scroll position to get the static offset
-        const { scrollLeft: documentScrollLeft, scrollTop: documentScrollTop } =
-          scrollContainer;
-        const aRect = positionedParent.getBoundingClientRect();
-        const bRect = referencePositionedParent.getBoundingClientRect();
-        const aLeft = aRect.left;
-        const aTop = aRect.top;
-        const bLeft = bRect.left;
-        const bTop = bRect.top;
-        const aLeftDocument = documentScrollLeft + aLeft;
-        const aTopDocument = documentScrollTop + aTop;
-        const bLeftDocument = documentScrollLeft + bLeft;
-        const bTopDocument = documentScrollTop + bTop;
-        const offsetLeft = bLeftDocument - aLeftDocument;
-        const offsetTop = bTopDocument - aTopDocument;
-        return [offsetLeft, offsetTop];
-      },
-      getScrollOffsets,
-    ];
+    // Document case: getBoundingClientRect already includes document scroll effects
+    // Add current scroll position to get the static offset
+    const getPositionOffsetsDocument = () => {
+      const { scrollLeft: documentScrollLeft, scrollTop: documentScrollTop } =
+        scrollContainer;
+      const aRect = positionedParent.getBoundingClientRect();
+      const bRect = referencePositionedParent.getBoundingClientRect();
+      const aLeft = aRect.left;
+      const aTop = aRect.top;
+      const bLeft = bRect.left;
+      const bTop = bRect.top;
+      const aLeftDocument = documentScrollLeft + aLeft;
+      const aTopDocument = documentScrollTop + aTop;
+      const bLeftDocument = documentScrollLeft + bLeft;
+      const bTopDocument = documentScrollTop + bTop;
+      const offsetLeft = bLeftDocument - aLeftDocument;
+      const offsetTop = bTopDocument - aTopDocument;
+      return [offsetLeft, offsetTop];
+    };
+    return [getPositionOffsetsDocument, getScrollOffsets];
   }
   // Custom scroll container case: account for container's position and scroll
   return [
