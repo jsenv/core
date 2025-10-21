@@ -260,7 +260,6 @@ export const initDragTableColumnViaPointer = (
 ) => {
   dragAfterThreshold(pointerdownEvent, () => {
     const [teardown, addTeardown] = createPubSub();
-    const [triggerDrag, addDragEffect] = createPubSub();
 
     const tableCell = pointerdownEvent.target.closest(".navi_table_cell");
     const table = tableCell.closest(".navi_table");
@@ -359,7 +358,37 @@ export const initDragTableColumnViaPointer = (
 
     const colgroup = table.querySelector(".navi_colgroup");
     const colElements = Array.from(colgroup.children);
+
+    const col = colElements[columnIndex];
+    const colgroupClone = tableClone.querySelector(".navi_colgroup");
+    const colClone = colgroupClone.children[columnIndex];
+    const dragToMoveGestureController = createDragToMoveGestureController({
+      name: "move-column",
+      direction: { x: true },
+      threshold: 0,
+      onGrab,
+      onDrag: (gestureInfo) => {
+        onDrag?.(gestureInfo, dropColumnIndex);
+      },
+      resetPositionAfterRelease: !DEBUG_VISUAL,
+      onRelease: (gestureInfo) => {
+        if (!DEBUG_VISUAL) {
+          teardown();
+        }
+        onRelease?.(gestureInfo, dropColumnIndex);
+      },
+    });
+    const dragToMoveGesture = dragToMoveGestureController.grabViaPointer(
+      pointerdownEvent,
+      {
+        element: colClone,
+        referenceElement: col,
+        elementToMove: tableClone,
+      },
+    );
+
     drop_preview: {
+      // Get all column elements for drop target detection
       const dropCandidateElements = colElements.filter(
         (col) =>
           !(col.getAttribute("data-drag-obstacle") || "").includes(
@@ -367,7 +396,6 @@ export const initDragTableColumnViaPointer = (
           ),
       );
 
-      // Get all column elements for drop target detection
       const updateDropTarget = (dropTargetInfo) => {
         const targetColumn = dropTargetInfo.element;
         const targetColumnIndex = colElements.indexOf(targetColumn);
@@ -423,7 +451,7 @@ export const initDragTableColumnViaPointer = (
         dropPreview.setAttribute("data-visible", "");
       };
 
-      addDragEffect((gestureInfo) => {
+      dragToMoveGesture.addDragCallback((gestureInfo) => {
         const dropTargetInfo = getDropTargetInfo(
           gestureInfo,
           dropCandidateElements,
@@ -434,45 +462,12 @@ export const initDragTableColumnViaPointer = (
         }
         updateDropTarget(dropTargetInfo);
       });
-
-      document.body.appendChild(dropPreview);
-      addTeardown(() => {
-        dropPreview.remove();
+      dragToMoveGesture.addReleaseCallback(() => {
+        dropPreview.removeAttribute("data-visible");
       });
     }
 
-    init_drag_gesture: {
-      const col = colElements[columnIndex];
-      const colgroupClone = tableClone.querySelector(".navi_colgroup");
-      const colClone = colgroupClone.children[columnIndex];
-
-      const dragToMoveGestureController = createDragToMoveGestureController({
-        name: "move-column",
-        direction: { x: true },
-        threshold: 0,
-        onGrab,
-        onDrag: (gestureInfo) => {
-          triggerDrag(gestureInfo);
-          onDrag?.(gestureInfo, dropColumnIndex);
-        },
-        resetPositionAfterRelease: !DEBUG_VISUAL,
-        onRelease: (gestureInfo) => {
-          if (!DEBUG_VISUAL) {
-            teardown();
-          }
-          onRelease?.(gestureInfo, dropColumnIndex);
-        },
-      });
-      const dragToMoveGesture = dragToMoveGestureController.grabViaPointer(
-        pointerdownEvent,
-        {
-          element: colClone,
-          referenceElement: col,
-          elementToMove: tableClone,
-        },
-      );
-      return dragToMoveGesture;
-    }
+    return dragToMoveGesture;
   });
 };
 
