@@ -2,10 +2,7 @@ import { getScrollBox, getScrollport } from "../position/dom_coords.js";
 import { getScrollContainer } from "../scroll/scroll_container.js";
 import { createStyleController } from "../style/style_controller.js";
 import { initDragConstraints } from "./drag_constraint.js";
-import {
-  createDragElementPositioner,
-  getOffsetBetweenTwoElements,
-} from "./drag_element_positioner.js";
+import { createDragElementPositioner } from "./drag_element_positioner.js";
 import { createDragGestureController } from "./drag_gesture.js";
 import { applyStickyFrontiersToAutoScrollArea } from "./sticky_frontiers.js";
 
@@ -53,17 +50,6 @@ export const createDragToMoveGestureController = ({
         dragStyleController.commit(elementImpacted);
       }
     });
-
-    let xOffset = 0;
-    let yOffset = 0;
-    if (elementToMove) {
-      // Calculate dynamic offset that accounts for scroll container position
-      [xOffset, yOffset] = getOffsetBetweenTwoElements(
-        elementToMove,
-        element,
-        scrollContainer,
-      );
-    }
 
     let elementWidth;
     let elementHeight;
@@ -250,7 +236,7 @@ export const createDragToMoveGestureController = ({
         );
         const transform = {};
         if (direction.x) {
-          const leftTarget = positionedLeft + xOffset;
+          const leftTarget = positionedLeft;
           const leftAtGrab = dragGesture.gestureInfo.leftAtGrab;
           const leftDelta = leftTarget - leftAtGrab;
           const translateX = translateXAtGrab
@@ -265,7 +251,7 @@ export const createDragToMoveGestureController = ({
           });
         }
         if (direction.y) {
-          const topTarget = positionedTop + yOffset;
+          const topTarget = positionedTop;
           const topAtGrab = dragGesture.gestureInfo.topAtGrab;
           const topDelta = topTarget - topAtGrab;
           const translateY = translateYAtGrab

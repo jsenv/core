@@ -338,29 +338,14 @@ export const getOffsetBetweenTwoElements = (
   if (scrollContainerIsDocument) {
     // Document case: getBoundingClientRect already includes document scroll effects
     // Add current scroll position to get the static offset
-    const elementAFixedPosition = findSelfOrAncestorFixedPosition(elementA);
-    const elementBFixedPosition = findSelfOrAncestorFixedPosition(elementB);
     const { scrollLeft: documentScrollLeft, scrollTop: documentScrollTop } =
       scrollContainer;
-
-    let aLeft;
-    let aTop;
-    let bLeft;
-    let bTop;
-    if (elementAFixedPosition) {
-      [aLeft, aTop] = elementAFixedPosition;
-    } else {
-      const aRect = elementA.getBoundingClientRect();
-      aLeft = documentScrollLeft + aRect.left;
-      aTop = documentScrollTop + aRect.top;
-    }
-    if (elementBFixedPosition) {
-      [bLeft, bTop] = elementBFixedPosition;
-    } else {
-      const bRect = elementB.getBoundingClientRect();
-      bLeft = documentScrollLeft + bRect.left;
-      bTop = documentScrollTop + bRect.top;
-    }
+    const aRect = elementA.getBoundingClientRect();
+    const aLeft = documentScrollLeft + aRect.left;
+    const aTop = documentScrollTop + aRect.top;
+    const bRect = elementB.getBoundingClientRect();
+    const bLeft = documentScrollLeft + bRect.left;
+    const bTop = documentScrollTop + bRect.top;
     const offsetLeft = bLeft - aLeft;
     const offsetTop = bTop - aTop;
     return [offsetLeft, offsetTop];
