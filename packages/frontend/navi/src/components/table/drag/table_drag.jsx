@@ -254,12 +254,12 @@ export const TableColumnDropPreview = forwardRef((props, ref) => {
   );
 });
 
-export const initDragTableColumnByMousedown = async (
-  mousedownEvent,
+export const initDragTableColumnViaPointer = async (
+  pointerdownEvent,
   { tableDragCloneContainer, dropPreview, onGrab, onDrag, onRelease },
 ) => {
   const significantDragGestureInfo =
-    await createMouseDragThresholdPromise(mousedownEvent);
+    await createMouseDragThresholdPromise(pointerdownEvent);
   if (significantDragGestureInfo.status === "released") {
     return;
   }
@@ -267,7 +267,7 @@ export const initDragTableColumnByMousedown = async (
   const [teardown, addTeardown] = createPubSub();
   const [triggerDrag, addDragEffect] = createPubSub();
 
-  const tableCell = mousedownEvent.target.closest(".navi_table_cell");
+  const tableCell = pointerdownEvent.target.closest(".navi_table_cell");
   const table = tableCell.closest(".navi_table");
   const columnIndex = Array.from(tableCell.parentNode.children).indexOf(
     tableCell,
@@ -463,15 +463,15 @@ export const initDragTableColumnByMousedown = async (
         onRelease?.(gestureInfo, dropColumnIndex);
       },
     });
-    const dragToMoveGesture = dragToMoveGestureController.grabViaMouse(
-      mousedownEvent,
+    const dragToMoveGesture = dragToMoveGestureController.grabViaPointer(
+      pointerdownEvent,
       {
         element: colClone,
         referenceElement: col,
         elementToMove: tableClone,
       },
     );
-    dragToMoveGesture.dragViaMouse(significantDragGestureInfo.dragEvent);
+    dragToMoveGesture.dragViaPointer(significantDragGestureInfo.dragEvent);
   }
 };
 

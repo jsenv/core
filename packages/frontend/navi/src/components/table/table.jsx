@@ -65,7 +65,7 @@ import {
 } from "../selection/selection.jsx";
 import { useFocusGroup } from "../use_focus_group.js";
 import {
-  initDragTableColumnByMousedown,
+  initDragTableColumnViaPointer,
   TableColumnDropPreview,
   TableDragCloneContainer,
   TableDragContext,
@@ -614,14 +614,14 @@ export const TableCell = forwardRef((props, ref) => {
       data-editing={editing ? "" : undefined}
       data-grabbed={columnGrabbed ? "" : undefined}
       onClick={onClick}
-      onMouseDown={(e) => {
+      onPointerDown={(e) => {
         if (!innerCanDragColumn) {
           return;
         }
         if (e.button !== 0) {
           return;
         }
-        initDragTableColumnByMousedown(e, {
+        initDragTableColumnViaPointer(e, {
           tableDragCloneContainer: tableDragCloneContainerRef.current,
           dropPreview: tableColumnDropPreviewRef.current,
           onGrab: () => grabColumn(columnIndex),
