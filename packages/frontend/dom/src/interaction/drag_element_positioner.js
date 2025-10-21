@@ -116,14 +116,11 @@ const createGetOffsets = ({
   referenceScrollContainer = scrollContainer,
 }) => {
   const samePositionedParent = positionedParent === referencePositionedParent;
-  const sameScrollContainer = scrollContainer === referenceScrollContainer;
-  const getScrollOffsets = sameScrollContainer
-    ? createGetScrollOffsetsForSameContainer(scrollContainer, positionedParent)
-    : createGetScrollOffsetsForDifferentContainers(
-        scrollContainer,
-        referenceScrollContainer,
-        positionedParent,
-      );
+  const getScrollOffsets = createGetScrollOffsets(
+    scrollContainer,
+    referenceScrollContainer,
+    positionedParent,
+  );
 
   if (samePositionedParent) {
     return [() => [0, 0], getScrollOffsets];
@@ -213,7 +210,6 @@ const createGetOffsetsForOverlay = (
   };
   return [getPositionOffsetsOverlay, getScrollOffsetsOverlay];
 };
-
 const isOverlayOf = (element, potentialTarget) => {
   const overlayForAttribute = element.getAttribute("data-overlay-for");
   if (!overlayForAttribute) {
@@ -234,17 +230,7 @@ const isOverlayOf = (element, potentialTarget) => {
 };
 
 const { documentElement } = document;
-const createGetScrollOffsetsForSameContainer = (
-  scrollContainer,
-  positionedParent,
-) => {
-  return createGetScrollOffsetsForDifferentContainers(
-    scrollContainer,
-    scrollContainer,
-    positionedParent,
-  );
-};
-const createGetScrollOffsetsForDifferentContainers = (
+const createGetScrollOffsets = (
   scrollContainer,
   referenceScrollContainer,
   positionedParent,
