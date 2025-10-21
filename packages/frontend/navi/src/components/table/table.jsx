@@ -114,7 +114,7 @@ const TableSectionContext = createContext();
 const useIsInTableHead = () => useContext(TableSectionContext) === "head";
 
 export const Table = forwardRef((props, ref) => {
-  const tableDefaultId = useId();
+  const tableDefaultId = `table-${useId()}`;
   const {
     id = tableDefaultId,
     selection = [],
