@@ -1341,7 +1341,7 @@ export const createSelectionKeyboardShortcuts = (
     return true;
   };
 
-  if (enabled !== undefined && typeof enabled === "function") {
+  if (enabled !== undefined && typeof enabled !== "function") {
     const v = enabled;
     enabled = () => v;
   }
