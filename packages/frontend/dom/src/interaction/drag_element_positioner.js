@@ -93,31 +93,19 @@ const createGetOffsets = ({
 }) => {
   const samePositionedParent = positionedParent === referencePositionedParent;
   const sameScrollContainer = scrollContainer === referenceScrollContainer;
-  return [
-    samePositionedParent
-      ? () => [0, 0]
-      : createGetPositionOffsetsForDifferentParents(
-          positionedParent,
-          referencePositionedParent,
-          scrollContainer,
-        ),
-    sameScrollContainer
-      ? () => {
-          return [scrollContainer.scrollLeft, scrollContainer.scrollTop];
-        }
-      : createGetScrollOffsetsForDifferentContainers(
-          scrollContainer,
-          referenceScrollContainer,
-          positionedParent,
-        ),
-  ];
-};
+  const getScrollOffsets = sameScrollContainer
+    ? createGetScrollOffsetsForSameContainer(scrollContainer)
+    : createGetScrollOffsetsForDifferentContainers(
+        scrollContainer,
+        referenceScrollContainer,
+        positionedParent,
+      );
 
-const createGetPositionOffsetsForDifferentParents = (
-  positionedParent,
-  referencePositionedParent,
-  scrollContainer,
-) => {
+  if (samePositionedParent) {
+    return [() => [0, 0], getScrollOffsets];
+  }
+
+  // parents are different, oh boy let's go
   // The overlay case is problematic because the overlay adjust its position to the target dynamically
   // This creates something complex to support properly.
   // When overlay is fixed we there will never be any offset
@@ -125,54 +113,61 @@ const createGetPositionOffsetsForDifferentParents = (
   // and eventually if the overlay is positioned differently than the other parent
   if (isOverlayOf(positionedParent, referencePositionedParent)) {
     if (getComputedStyle(positionedParent).position === "fixed") {
-      return () => [0, 0];
+      return [() => [0, 0], () => [0, 0]];
     }
   }
   if (isOverlayOf(referencePositionedParent, positionedParent)) {
     if (getComputedStyle(referencePositionedParent).position === "fixed") {
-      return () => [0, 0];
+      return [() => [0, 0], () => [0, 0]];
     }
   }
   const scrollContainerIsDocument = scrollContainer === documentElement;
   if (scrollContainerIsDocument) {
-    return () => {
-      // Document case: getBoundingClientRect already includes document scroll effects
-      // Add current scroll position to get the static offset
-      const { scrollLeft: documentScrollLeft, scrollTop: documentScrollTop } =
-        scrollContainer;
+    return [
+      () => {
+        // Document case: getBoundingClientRect already includes document scroll effects
+        // Add current scroll position to get the static offset
+        const { scrollLeft: documentScrollLeft, scrollTop: documentScrollTop } =
+          scrollContainer;
+        const aRect = positionedParent.getBoundingClientRect();
+        const bRect = referencePositionedParent.getBoundingClientRect();
+        const aLeft = aRect.left;
+        const aTop = aRect.top;
+        const bLeft = bRect.left;
+        const bTop = bRect.top;
+        const aLeftDocument = documentScrollLeft + aLeft;
+        const aTopDocument = documentScrollTop + aTop;
+        const bLeftDocument = documentScrollLeft + bLeft;
+        const bTopDocument = documentScrollTop + bTop;
+        const offsetLeft = bLeftDocument - aLeftDocument;
+        const offsetTop = bTopDocument - aTopDocument;
+        return [offsetLeft, offsetTop];
+      },
+      getScrollOffsets,
+    ];
+  }
+
+  // Custom scroll container case: account for container's position and scroll
+  return [
+    () => {
       const aRect = positionedParent.getBoundingClientRect();
       const bRect = referencePositionedParent.getBoundingClientRect();
       const aLeft = aRect.left;
       const aTop = aRect.top;
       const bLeft = bRect.left;
       const bTop = bRect.top;
-      const aLeftDocument = documentScrollLeft + aLeft;
-      const aTopDocument = documentScrollTop + aTop;
-      const bLeftDocument = documentScrollLeft + bLeft;
-      const bTopDocument = documentScrollTop + bTop;
-      const offsetLeft = bLeftDocument - aLeftDocument;
-      const offsetTop = bTopDocument - aTopDocument;
+
+      const scrollContainerRect = scrollContainer.getBoundingClientRect();
+      const offsetLeft =
+        bLeft - aLeft + scrollContainer.scrollLeft - scrollContainerRect.left;
+      const offsetTop =
+        bTop - aTop + scrollContainer.scrollTop - scrollContainerRect.top;
       return [offsetLeft, offsetTop];
-    };
-  }
-
-  // Custom scroll container case: account for container's position and scroll
-  return () => {
-    const aRect = positionedParent.getBoundingClientRect();
-    const bRect = referencePositionedParent.getBoundingClientRect();
-    const aLeft = aRect.left;
-    const aTop = aRect.top;
-    const bLeft = bRect.left;
-    const bTop = bRect.top;
-
-    const scrollContainerRect = scrollContainer.getBoundingClientRect();
-    const offsetLeft =
-      bLeft - aLeft + scrollContainer.scrollLeft - scrollContainerRect.left;
-    const offsetTop =
-      bTop - aTop + scrollContainer.scrollTop - scrollContainerRect.top;
-    return [offsetLeft, offsetTop];
-  };
+    },
+    getScrollOffsets,
+  ];
 };
+
 const isOverlayOf = (element, potentialTarget) => {
   const overlayForAttribute = element.getAttribute("data-overlay-for");
   if (!overlayForAttribute) {
@@ -193,6 +188,11 @@ const isOverlayOf = (element, potentialTarget) => {
 };
 
 const { documentElement } = document;
+const createGetScrollOffsetsForSameContainer = (scrollContainer) => {
+  return () => {
+    return [scrollContainer.scrollLeft, scrollContainer.scrollTop];
+  };
+};
 const createGetScrollOffsetsForDifferentContainers = (
   scrollContainer,
   referenceScrollContainer,
