@@ -28,6 +28,9 @@ export const TableUI = forwardRef((props, ref) => {
 
     // TODO: external code should be able to call tableVisibleRectEffect.check();
     // (for the drag operation when we scroll)
+    // -> actually not that important because browser will dispatch "scroll" events
+    // cause by programmatic scrolls before re-painting
+    // -> no intermediate state visible to the user where overlay is not in sync
     const tableVisibleRectEffect = visibleRectEffect(table, (visibleRect) => {
       ui.style.setProperty("--table-visual-left", `${visibleRect.left}px`);
       ui.style.setProperty("--table-visual-width", `${visibleRect.width}px`);
