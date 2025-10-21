@@ -20,7 +20,7 @@ export const performArrowNavigation = (
     return false;
   }
   const activeElement = document.activeElement;
-  if (activeElement.hasAttribute("data-no-focusnav")) {
+  if (activeElement.hasAttribute("data-focusnav") === "none") {
     // no need to prevent default here (arrow don't move focus by default in a focus group)
     // (and it would prevent scroll via keyboard that we might want here)
     return true;

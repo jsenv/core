@@ -17,7 +17,7 @@ export const performTabNavigation = (
     return false;
   }
   const activeElement = document.activeElement;
-  if (activeElement.hasAttribute("data-no-focusnav")) {
+  if (activeElement.getAttribute("data-focusnav") === "none") {
     event.preventDefault(); // ensure tab cannot move focus
     return true;
   }

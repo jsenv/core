@@ -50,7 +50,7 @@
  * - Update table column info (I guess a down arrow icon which opens a meny when clicked for instance)
  */
 
-import { useActiveElement } from "@jsenv/dom";
+import { preventFocusNavViaKeyboard, useActiveElement } from "@jsenv/dom";
 import { createContext, toChildArray } from "preact";
 import { forwardRef } from "preact/compat";
 import { useContext, useId, useImperativeHandle, useRef } from "preact/hooks";
@@ -604,11 +604,6 @@ export const TableCell = forwardRef((props, ref) => {
       }
       data-after-sticky-top-frontier={isAfterStickyTopFrontier ? "" : undefined}
       tabIndex={-1}
-      // While dragging a column, the arrow keys should now scroll the scrollable container again
-      // And it makes no sense to change the selection/focused cell while dragging
-      // But it does make sens to be able to scroll via keyboard
-      // However the tab key should be prevented... hum
-      data-no-focusnav={grabTarget ? "" : undefined}
       data-height-xxs={
         rowHeight !== undefined && rowHeight < 42 ? "" : undefined
       }
@@ -643,6 +638,12 @@ export const TableCell = forwardRef((props, ref) => {
           return;
         }
         startEditing(e);
+      }}
+      onKeyDown={(e) => {
+        if (grabTarget) {
+          // L'idée ici c'est de d'appeler une fonction qui va autoriser ou non le focus via keyboard.
+          preventFocusNavViaKeyboard(e);
+        }
       }}
       oneditrequested={(e) => {
         if (!editable) {
