@@ -112,14 +112,20 @@ const createGetOffsets = ({
   // When overlay is absolute there is a diff relative to the scroll
   // and eventually if the overlay is positioned differently than the other parent
   if (isOverlayOf(positionedParent, referencePositionedParent)) {
-    if (getComputedStyle(positionedParent).position === "fixed") {
-      return [() => [0, 0], getScrollOffsets];
-    }
+    return createGetOffsetsForOverlay(
+      positionedParent,
+      referencePositionedParent,
+      scrollContainer,
+      getScrollOffsets,
+    );
   }
   if (isOverlayOf(referencePositionedParent, positionedParent)) {
-    if (getComputedStyle(referencePositionedParent).position === "fixed") {
-      return [() => [0, 0], getScrollOffsets];
-    }
+    return createGetOffsetsForOverlay(
+      referencePositionedParent,
+      positionedParent,
+      scrollContainer,
+      getScrollOffsets,
+    );
   }
   const scrollContainerIsDocument = scrollContainer === documentElement;
   if (scrollContainerIsDocument) {
@@ -161,6 +167,27 @@ const createGetOffsets = ({
     return [offsetLeft, offsetTop];
   };
   return [getPositionOffsetsCustomScrollContainer, getScrollOffsets];
+};
+const createGetOffsetsForOverlay = (
+  overlay,
+  overlayTarget,
+  scrollContainer,
+  getScrollOffsets,
+) => {
+  if (getComputedStyle(overlay).position === "fixed") {
+    return [() => [0, 0], getScrollOffsets];
+  }
+  const getPositionOffsetsOverlay = () => {
+    const overlayRect = overlay.getBoundingClientRect();
+    const overlayTargetRect = overlayTarget.getBoundingClientRect();
+    const offsetLeft = overlayTargetRect.left - overlayRect.left;
+    const offsetTop = overlayTargetRect.top - overlayRect.top;
+    return [offsetLeft, offsetTop];
+  };
+  const getScrollOffsetsOverlay = () => {
+    return [scrollContainer.scrollLeft, scrollContainer.scrollTop];
+  };
+  return [getPositionOffsetsOverlay, getScrollOffsetsOverlay];
 };
 
 const isOverlayOf = (element, potentialTarget) => {
