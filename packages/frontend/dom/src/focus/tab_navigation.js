@@ -16,8 +16,11 @@ export const performTabNavigation = (
   if (!isTabEvent(event)) {
     return false;
   }
-
   const activeElement = document.activeElement;
+  if (activeElement.hasAttribute("data-no-focusnav")) {
+    event.preventDefault(); // ensure tab cannot move focus
+    return true;
+  }
   const isForward = !event.shiftKey;
   const onTargetToFocus = (targetToFocus) => {
     console.debug(

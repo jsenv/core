@@ -603,10 +603,12 @@ export const TableCell = forwardRef((props, ref) => {
         isAfterStickyLeftFrontier ? "" : undefined
       }
       data-after-sticky-top-frontier={isAfterStickyTopFrontier ? "" : undefined}
+      tabIndex={-1}
       // While dragging a column, the arrow keys should now scroll the scrollable container again
       // And it makes no sense to change the selection/focused cell while dragging
       // But it does make sens to be able to scroll via keyboard
-      tabIndex={grabTarget ? undefined : -1}
+      // However the tab key should be prevented... hum
+      data-no-focusnav={grabTarget ? "" : undefined}
       data-height-xxs={
         rowHeight !== undefined && rowHeight < 42 ? "" : undefined
       }
