@@ -31,6 +31,7 @@ import { getScrollContainer } from "../scroll/scroll_container.js";
  *   scroll-relative coordinates to the element's offsetParent-relative coordinates.
  *
  */
+
 export const createDragElementPositioner = (
   element,
   referenceElement,
@@ -42,12 +43,12 @@ export const createDragElementPositioner = (
   const scrollContainer = getScrollContainer(element);
   const [getPositionOffsets, getScrollOffsets] = createGetOffsets({
     positionedParent,
+    referencePositionedParent: referenceElement
+      ? referenceElement.offsetParent
+      : undefined,
     scrollContainer,
     referenceScrollContainer: referenceElement
       ? getScrollContainer(referenceElement)
-      : undefined,
-    referencePositionedParent: referenceElement
-      ? referenceElement.offsetParent
       : undefined,
   });
 
@@ -84,20 +85,6 @@ export const createDragElementPositioner = (
   }
   return [scrollableLeft, scrollableTop, convertScrollablePosition];
 };
-
-const { documentElement } = document;
-
-const createGetOffsetsResult = (getPositionOffsets, getScrollOffsets) => {
-  const getOffsets = () => {
-    const [scrollOffsetLeft, scrollOffsetTop] = getScrollOffsets();
-    const [positionOffsetLeft, positionOffsetTop] = getPositionOffsets();
-    const totalOffsetLeft = scrollOffsetLeft - positionOffsetLeft;
-    const totalOffsetTop = scrollOffsetTop - positionOffsetTop;
-    return [totalOffsetLeft, totalOffsetTop];
-  };
-
-  return [getPositionOffsets, getScrollOffsets, getOffsets];
-};
 const createGetOffsets = ({
   positionedParent,
   referencePositionedParent = positionedParent,
@@ -106,7 +93,7 @@ const createGetOffsets = ({
 }) => {
   const samePositionedParent = positionedParent === referencePositionedParent;
   const sameScrollContainer = scrollContainer === referenceScrollContainer;
-  return createGetOffsetsResult(
+  return [
     samePositionedParent
       ? () => [0, 0]
       : createGetPositionOffsetsForDifferentParents(),
@@ -119,7 +106,7 @@ const createGetOffsets = ({
           referenceScrollContainer,
           positionedParent,
         ),
-  );
+  ];
 };
 
 const createGetPositionOffsetsForDifferentParents = (
@@ -201,6 +188,7 @@ const isOverlayOf = (element, potentialTarget) => {
   return false;
 };
 
+const { documentElement } = document;
 const createGetScrollOffsetsForDifferentContainers = (
   scrollContainer,
   referenceScrollContainer,
