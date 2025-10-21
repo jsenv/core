@@ -21,7 +21,7 @@ export const createDragGestureController = (options = {}) => {
     threshold = 5,
     direction: defaultDirection = { x: true, y: true },
     backdrop = true,
-    backdropZIndex = 1,
+    backdropZIndex = 1000,
   } = options;
 
   const dragGestureController = {
