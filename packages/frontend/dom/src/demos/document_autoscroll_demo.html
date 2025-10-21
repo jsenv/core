@@ -342,9 +342,9 @@
       const draggableElements = document.querySelectorAll("[data-draggable]");
       const dragElement = draggableElements[0];
       for (const draggable of draggableElements) {
-        draggable.onmousedown = (e) => {
+        draggable.onpointerdown = (e) => {
           // Set up the manual drag behavior
-          manualDragGestureController.grabViaMouse(e, {
+          manualDragGestureController.grabViaPointer(e, {
             element: draggable,
             onStart: () => {
               draggable.setAttribute("data-dragging", "");

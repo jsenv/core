@@ -105,9 +105,9 @@ const createGetOffsetsResult = (
 };
 const createGetOffsets = ({
   positionedParent,
-  referencePositionedParent,
+  referencePositionedParent = positionedParent,
   scrollContainer,
-  referenceScrollContainer,
+  referenceScrollContainer = scrollContainer,
 }) => {
   const samePositionedParent = positionedParent === referencePositionedParent;
   const sameScrollContainer = scrollContainer === referenceScrollContainer;
