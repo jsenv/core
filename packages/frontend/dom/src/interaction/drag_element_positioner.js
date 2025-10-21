@@ -356,22 +356,32 @@ export const getDragCoordinates = (
 
 // Calculate the offset between two elements accounting for scroll container position
 // This is useful when elementToMove is different from the drag element
-export const getOffsetBetweenTwoElements = (
-  elementA,
-  elementB,
-  scrollContainer,
-) => {
+const getOffsetBetweenTwoElements = (elementA, elementB, scrollContainer) => {
   if (elementA === elementB) {
     return [0, 0];
   }
+
+  const aRect = elementA.getBoundingClientRect();
+  const bRect = elementB.getBoundingClientRect();
+  const aLeft = aRect.left;
+  const aTop = aRect.top;
+  const bLeft = bRect.left;
+  const bTop = bRect.top;
+  const offsetLeft = bLeft - aLeft;
+  const offsetTop = bTop - aTop;
+
   // The overlay case is problematic because the overlay adjust its position to the target dynamically
   // This creates something complex to support properly.
   // -> We detect overlay and force a diff of 0
   if (isOverlayOf(elementB, elementA)) {
-    return [0, 0];
+    if (getComputedStyle(elementB).position === "fixed") {
+      return [0, 0];
+    }
   }
   if (isOverlayOf(elementA, elementB)) {
-    return [0, 0];
+    if (getComputedStyle(elementA).position === "fixed") {
+      return [0, 0];
+    }
   }
 
   const scrollContainerIsDocument = scrollContainer === documentElement;
@@ -380,32 +390,22 @@ export const getOffsetBetweenTwoElements = (
     // Add current scroll position to get the static offset
     const { scrollLeft: documentScrollLeft, scrollTop: documentScrollTop } =
       scrollContainer;
-    const aRect = elementA.getBoundingClientRect();
-    const aLeft = documentScrollLeft + aRect.left;
-    const aTop = documentScrollTop + aRect.top;
-    const bRect = elementB.getBoundingClientRect();
-    const bLeft = documentScrollLeft + bRect.left;
-    const bTop = documentScrollTop + bRect.top;
-    const offsetLeft = bLeft - aLeft;
-    const offsetTop = bTop - aTop;
-    return [offsetLeft, offsetTop];
+    const aLeftDocument = documentScrollLeft + aLeft;
+    const aTopDocument = documentScrollTop + aTop;
+    const bLeftDocument = documentScrollLeft + bLeft;
+    const bTopDocument = documentScrollTop + bTop;
+    const offsetLeftRelative = bLeftDocument - aLeftDocument;
+    const offsetTopRelative = bTopDocument - aTopDocument;
+    return [offsetLeftRelative, offsetTopRelative];
   }
 
   // Custom scroll container case: account for container's position and scroll
-  const aRect = elementA.getBoundingClientRect();
-  const bRect = elementB.getBoundingClientRect();
   const scrollContainerRect = scrollContainer.getBoundingClientRect();
-  const aLeft = aRect.left;
-  const aTop = aRect.top;
-  const bLeft = bRect.left;
-  const bTop = bRect.top;
-  const offsetLeftViewport = bLeft - aLeft;
-  const offsetTopViewport = bTop - aTop;
-  const offsetLeft =
-    offsetLeftViewport + scrollContainer.scrollLeft - scrollContainerRect.left;
-  const offsetTop =
-    offsetTopViewport + scrollContainer.scrollTop - scrollContainerRect.top;
-  return [offsetLeft, offsetTop];
+  const offsetLeftRelative =
+    offsetLeft + scrollContainer.scrollLeft - scrollContainerRect.left;
+  const offsetTopRelative =
+    offsetTop + scrollContainer.scrollTop - scrollContainerRect.top;
+  return [offsetLeftRelative, offsetTopRelative];
 };
 const isOverlayOf = (element, potentialTarget) => {
   const overlayForAttribute = element.getAttribute("data-overlay-for");
