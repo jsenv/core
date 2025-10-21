@@ -125,7 +125,7 @@ const createGetOffsets = ({
   if (scrollContainerIsDocument) {
     // Document case: getBoundingClientRect already includes document scroll effects
     // Add current scroll position to get the static offset
-    const getPositionOffsetsDocument = () => {
+    const getPositionOffsetsDocumentScrolling = () => {
       const { scrollLeft: documentScrollLeft, scrollTop: documentScrollTop } =
         scrollContainer;
       const aRect = positionedParent.getBoundingClientRect();
@@ -142,27 +142,25 @@ const createGetOffsets = ({
       const offsetTop = bTopDocument - aTopDocument;
       return [offsetLeft, offsetTop];
     };
-    return [getPositionOffsetsDocument, getScrollOffsets];
+    return [getPositionOffsetsDocumentScrolling, getScrollOffsets];
   }
   // Custom scroll container case: account for container's position and scroll
-  return [
-    () => {
-      const aRect = positionedParent.getBoundingClientRect();
-      const bRect = referencePositionedParent.getBoundingClientRect();
-      const aLeft = aRect.left;
-      const aTop = aRect.top;
-      const bLeft = bRect.left;
-      const bTop = bRect.top;
+  const getPositionOffsetsCustomScrollContainer = () => {
+    const aRect = positionedParent.getBoundingClientRect();
+    const bRect = referencePositionedParent.getBoundingClientRect();
+    const aLeft = aRect.left;
+    const aTop = aRect.top;
+    const bLeft = bRect.left;
+    const bTop = bRect.top;
 
-      const scrollContainerRect = scrollContainer.getBoundingClientRect();
-      const offsetLeft =
-        bLeft - aLeft + scrollContainer.scrollLeft - scrollContainerRect.left;
-      const offsetTop =
-        bTop - aTop + scrollContainer.scrollTop - scrollContainerRect.top;
-      return [offsetLeft, offsetTop];
-    },
-    getScrollOffsets,
-  ];
+    const scrollContainerRect = scrollContainer.getBoundingClientRect();
+    const offsetLeft =
+      bLeft - aLeft + scrollContainer.scrollLeft - scrollContainerRect.left;
+    const offsetTop =
+      bTop - aTop + scrollContainer.scrollTop - scrollContainerRect.top;
+    return [offsetLeft, offsetTop];
+  };
+  return [getPositionOffsetsCustomScrollContainer, getScrollOffsets];
 };
 
 const isOverlayOf = (element, potentialTarget) => {
