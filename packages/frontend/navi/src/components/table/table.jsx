@@ -639,10 +639,18 @@ export const TableCell = forwardRef((props, ref) => {
         }
         startEditing(e);
       }}
-      onKeyDown={(e) => {
-        if (grabTarget) {
-          // L'idée ici c'est de d'appeler une fonction qui va autoriser ou non le focus via keyboard.
-          preventFocusNavViaKeyboard(e);
+      onKeyDown={(keyboardEvent) => {
+        if (!grabTarget) {
+          return;
+        }
+        // Prevent space to scroll + our internal focus nav
+        preventFocusNavViaKeyboard(keyboardEvent);
+        // Prevent vertical arrow keys that would allow to scroll
+        if (
+          keyboardEvent.key === "ArrowUp" ||
+          keyboardEvent.key === "ArrowDown"
+        ) {
+          keyboardEvent.preventDefault();
         }
       }}
       oneditrequested={(e) => {

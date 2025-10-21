@@ -51,12 +51,14 @@ export const initFocusGroup = (
     };
     // Handle Tab navigation (exit group)
     element.addEventListener("keydown", handleTabKeyDown, {
-      capture: true,
+      // we must use capture: false to let chance for other part of the code
+      // to call preventFocusNav
+      capture: false,
       passive: false,
     });
     cleanupCallbackSet.add(() => {
       element.removeEventListener("keydown", handleTabKeyDown, {
-        capture: true,
+        capture: false,
         passive: false,
       });
     });
@@ -72,12 +74,14 @@ export const initFocusGroup = (
       performArrowNavigation(event, element, { direction, loop, name });
     };
     element.addEventListener("keydown", handleArrowKeyDown, {
-      capture: true,
+      // we must use capture: false to let chance for other part of the code
+      // to call preventFocusNav
+      capture: false,
       passive: false,
     });
     cleanupCallbackSet.add(() => {
       element.removeEventListener("keydown", handleArrowKeyDown, {
-        capture: true,
+        capture: false,
         passive: false,
       });
     });
