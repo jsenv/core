@@ -16,7 +16,7 @@ import.meta.css = /* css */ `
 `;
 
 export const TableUI = forwardRef((props, ref) => {
-  const { tableRef, children } = props;
+  const { tableRef, tableId, children } = props;
 
   // ui positioning
   useLayoutEffect(() => {
@@ -38,7 +38,7 @@ export const TableUI = forwardRef((props, ref) => {
   });
 
   return createPortal(
-    <div ref={ref} className="navi_table_ui">
+    <div ref={ref} className="navi_table_ui" data-overlay-for={tableId}>
       {children}
     </div>,
     document.body,

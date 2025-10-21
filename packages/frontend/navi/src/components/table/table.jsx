@@ -53,7 +53,7 @@
 import { useActiveElement } from "@jsenv/dom";
 import { createContext, toChildArray } from "preact";
 import { forwardRef } from "preact/compat";
-import { useContext, useImperativeHandle, useRef } from "preact/hooks";
+import { useContext, useId, useImperativeHandle, useRef } from "preact/hooks";
 
 import { Editable, useEditionController } from "../edition/editable.jsx";
 import { createIsolatedItemTracker } from "../item_tracker/use_isolated_item_tracker.jsx";
@@ -114,7 +114,9 @@ const TableSectionContext = createContext();
 const useIsInTableHead = () => useContext(TableSectionContext) === "head";
 
 export const Table = forwardRef((props, ref) => {
+  const tableDefaultId = useId();
   const {
+    id = tableDefaultId,
     selection = [],
     selectionColor,
     onSelectionChange,
@@ -253,6 +255,7 @@ export const Table = forwardRef((props, ref) => {
       <div ref={tableContainerRef} className="navi_table_container">
         <table
           ref={innerRef}
+          id={id}
           className="navi_table"
           aria-multiselectable="true"
           data-multiselection={selection.length > 1 ? "" : undefined}
@@ -276,7 +279,7 @@ export const Table = forwardRef((props, ref) => {
             </TableSelectionContext.Provider>
           </TableSizeContext.Provider>
         </table>
-        <TableUI ref={tableUIRef} tableRef={innerRef}>
+        <TableUI ref={tableUIRef} tableRef={innerRef} tableId={id}>
           <TableStickyContext.Provider value={stickyContextValue}>
             <TableStickyFrontier tableRef={innerRef} />
           </TableStickyContext.Provider>

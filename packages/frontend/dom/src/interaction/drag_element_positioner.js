@@ -85,6 +85,7 @@ export const createDragElementPositioner = (
     positionedParent,
     scrollContainer,
     referenceScrollContainer,
+    referencePositionedParent,
   });
 };
 
@@ -135,22 +136,14 @@ const createSameScrollDifferentParentPositioner = (
   let scrollableLeft;
   let scrollableTop;
   let convertScrollablePosition;
-  const positionedParentIsFixed =
-    getComputedStyle(positionedParent).position === "fixed";
-
-  let offsetLeftBetweenPositionedParents;
-  let offsetTopBetweenPositionedParents;
-  if (positionedParentIsFixed) {
-    offsetLeftBetweenPositionedParents = 0;
-    offsetTopBetweenPositionedParents = 0;
-  } else {
-    [offsetLeftBetweenPositionedParents, offsetTopBetweenPositionedParents] =
-      getOffsetBetweenTwoElements(
-        referencePositionedParent,
-        positionedParent,
-        scrollContainer,
-      );
-  }
+  const [
+    offsetLeftBetweenPositionedParents,
+    offsetTopBetweenPositionedParents,
+  ] = getOffsetBetweenTwoElements(
+    referencePositionedParent,
+    positionedParent,
+    scrollContainer,
+  );
 
   scrollable_current: {
     [scrollableLeft, scrollableTop] = getScrollablePosition(
@@ -264,17 +257,32 @@ const createDifferentScrollSameParentPositioner = (
 // Both coordinate system and DOM positioning differ
 const createFullyDifferentPositioner = (
   element,
-  { positionedParent, scrollContainer, referenceScrollContainer },
+  {
+    positionedParent,
+    scrollContainer,
+    referenceScrollContainer,
+    referencePositionedParent,
+  },
 ) => {
   let scrollableLeft;
   let scrollableTop;
   let convertScrollablePosition;
+  const [
+    offsetLeftBetweenPositionedParents,
+    offsetTopBetweenPositionedParents,
+  ] = getOffsetBetweenTwoElements(
+    referencePositionedParent,
+    positionedParent,
+    scrollContainer,
+  );
 
   scrollable_current: {
     [scrollableLeft, scrollableTop] = getScrollablePosition(
       element,
       referenceScrollContainer,
     );
+    scrollableLeft -= offsetLeftBetweenPositionedParents;
+    scrollableTop -= offsetTopBetweenPositionedParents;
   }
   scrollable_converter: {
     const scrollAdjuster = createScrollAdjuster(
@@ -288,8 +296,10 @@ const createFullyDifferentPositioner = (
       referenceScrollableTopToConvert,
     ) => {
       // Step 1: Convert from reference scroll container coordinates to element positioned parent coordinates (without scroll)
-      const positionedLeftWithoutScroll = referenceScrollableLeftToConvert;
-      const positionedTopWithoutScroll = referenceScrollableTopToConvert;
+      const positionedLeftWithoutScroll =
+        referenceScrollableLeftToConvert - offsetLeftBetweenPositionedParents;
+      const positionedTopWithoutScroll =
+        referenceScrollableTopToConvert - offsetTopBetweenPositionedParents;
       // Step 2: Apply element's scroll container scroll to get final position
       const [positionedLeft, positionedTop] = scrollAdjuster(
         positionedLeftWithoutScroll,
@@ -354,8 +364,17 @@ export const getOffsetBetweenTwoElements = (
   if (elementA === elementB) {
     return [0, 0];
   }
-  const scrollContainerIsDocument = scrollContainer === documentElement;
+  // The overlay case is problematic because the overlay adjust its position to the target dynamically
+  // This creates something complex to support properly.
+  // -> We detect overlay and force a diff of 0
+  if (isOverlayOf(elementB, elementA)) {
+    return [0, 0];
+  }
+  if (isOverlayOf(elementA, elementB)) {
+    return [0, 0];
+  }
 
+  const scrollContainerIsDocument = scrollContainer === documentElement;
   if (scrollContainerIsDocument) {
     // Document case: getBoundingClientRect already includes document scroll effects
     // Add current scroll position to get the static offset
@@ -387,6 +406,24 @@ export const getOffsetBetweenTwoElements = (
   const offsetTop =
     offsetTopViewport + scrollContainer.scrollTop - scrollContainerRect.top;
   return [offsetLeft, offsetTop];
+};
+const isOverlayOf = (element, potentialTarget) => {
+  const overlayForAttribute = element.getAttribute("data-overlay-for");
+  if (!overlayForAttribute) {
+    return false;
+  }
+  const overlayTarget = document.querySelector(`#${overlayForAttribute}`);
+  if (!overlayTarget) {
+    return false;
+  }
+  if (overlayTarget === potentialTarget) {
+    return true;
+  }
+  const overlayTargetPositionedParent = overlayTarget.offsetParent;
+  if (overlayTargetPositionedParent === potentialTarget) {
+    return true;
+  }
+  return false;
 };
 
 const getScrollablePosition = (element, scrollContainer) => {
