@@ -87,12 +87,7 @@ export const createDragElementPositioner = (
 
 const { documentElement } = document;
 
-const GET_POSITION_NO_OFFSET = () => [0, 0];
-const GET_SCROLL_NO_OFFSET = () => [0, 0];
-const createGetOffsetsResult = (
-  getPositionOffsets = GET_POSITION_NO_OFFSET,
-  getScrollOffsets = GET_SCROLL_NO_OFFSET,
-) => {
+const createGetOffsetsResult = (getPositionOffsets, getScrollOffsets) => {
   const getOffsets = () => {
     const [scrollOffsetLeft, scrollOffsetTop] = getScrollOffsets();
     const [positionOffsetLeft, positionOffsetTop] = getPositionOffsets();
@@ -113,10 +108,12 @@ const createGetOffsets = ({
   const sameScrollContainer = scrollContainer === referenceScrollContainer;
   return createGetOffsetsResult(
     samePositionedParent
-      ? undefined
+      ? () => [0, 0]
       : createGetPositionOffsetsForDifferentParents(),
     sameScrollContainer
-      ? undefined
+      ? () => {
+          return [scrollContainer.scrollLeft, scrollContainer.scrollTop];
+        }
       : createGetScrollOffsetsForDifferentContainers(
           scrollContainer,
           referenceScrollContainer,
