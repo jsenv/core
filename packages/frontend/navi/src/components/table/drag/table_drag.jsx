@@ -4,8 +4,6 @@ import {
   dragAfterThreshold,
   getDropTargetInfo,
   getScrollContainer,
-  getScrollRelativeRect,
-  scrollableCoordsToViewport,
   stickyAsRelativeCoords,
 } from "@jsenv/dom";
 import { createContext } from "preact";
@@ -274,8 +272,6 @@ export const initDragTableColumnViaPointer = (
     // ensure [data-drag-obstacle] inside the table clone are ignored
     tableClone.setAttribute("data-drag-ignore", "");
 
-    const scrollContainer = getScrollContainer(table);
-
     // Scale down the table clone and set transform origin to mouse grab point
     // const tableRect = table.getBoundingClientRect();
     // const mouseX = mousedownEvent.clientX - tableRect.left;
@@ -399,46 +395,18 @@ export const initDragTableColumnViaPointer = (
       const updateDropTarget = (dropTargetInfo) => {
         const targetColumn = dropTargetInfo.element;
         const targetColumnIndex = colElements.indexOf(targetColumn);
-
         dropColumnIndex = targetColumnIndex;
         if (dropColumnIndex === columnIndex) {
           dropPreview.removeAttribute("data-visible");
           return;
         }
-
-        const targetColumnRect = getScrollRelativeRect(
-          targetColumn,
-          scrollContainer,
-        );
-
-        // Convert column position to viewport coordinates, then to document coordinates
-        const [columnViewportLeft, columnViewportTop] =
-          scrollableCoordsToViewport(
-            targetColumnRect.left,
-            targetColumnRect.top,
-            scrollContainer,
-          );
-
-        // Convert viewport coordinates to document coordinates for absolute positioning
-        const { scrollLeft, scrollTop } = document.documentElement;
-        const columnDocumentLeft = columnViewportLeft + scrollLeft;
-        const columnDocumentTop = columnViewportTop + scrollTop;
-
         // Position the invisible container to match the target column
-        dropPreview.style.setProperty(
-          "--column-left",
-          `${columnDocumentLeft}px`,
-        );
-        dropPreview.style.setProperty("--column-top", `${columnDocumentTop}px`);
-        dropPreview.style.setProperty(
-          "--column-width",
-          `${targetColumnRect.width}px`,
-        );
-        dropPreview.style.setProperty(
-          "--column-height",
-          `${targetColumnRect.height}px`,
-        );
-
+        const { left, top, width, height } =
+          targetColumn.getBoundingClientRect();
+        dropPreview.style.setProperty("--column-left", `${left}px`);
+        dropPreview.style.setProperty("--column-top", `${top}px`);
+        dropPreview.style.setProperty("--column-width", `${width}px`);
+        dropPreview.style.setProperty("--column-height", `${height}px`);
         // Set data-after attribute to control line position via CSS
         if (dropColumnIndex > columnIndex) {
           // Dropping after: CSS will position line at right edge (100%)
