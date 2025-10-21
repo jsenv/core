@@ -94,7 +94,7 @@ const createGetOffsets = ({
   const samePositionedParent = positionedParent === referencePositionedParent;
   const sameScrollContainer = scrollContainer === referenceScrollContainer;
   const getScrollOffsets = sameScrollContainer
-    ? createGetScrollOffsetsForSameContainer(scrollContainer)
+    ? createGetScrollOffsetsForSameContainer(scrollContainer, positionedParent)
     : createGetScrollOffsetsForDifferentContainers(
         scrollContainer,
         referenceScrollContainer,
@@ -113,12 +113,12 @@ const createGetOffsets = ({
   // and eventually if the overlay is positioned differently than the other parent
   if (isOverlayOf(positionedParent, referencePositionedParent)) {
     if (getComputedStyle(positionedParent).position === "fixed") {
-      return [() => [0, 0], () => [0, 0]];
+      return [() => [0, 0], getScrollOffsets];
     }
   }
   if (isOverlayOf(referencePositionedParent, positionedParent)) {
     if (getComputedStyle(referencePositionedParent).position === "fixed") {
-      return [() => [0, 0], () => [0, 0]];
+      return [() => [0, 0], getScrollOffsets];
     }
   }
   const scrollContainerIsDocument = scrollContainer === documentElement;
@@ -146,7 +146,6 @@ const createGetOffsets = ({
       getScrollOffsets,
     ];
   }
-
   // Custom scroll container case: account for container's position and scroll
   return [
     () => {
@@ -188,10 +187,15 @@ const isOverlayOf = (element, potentialTarget) => {
 };
 
 const { documentElement } = document;
-const createGetScrollOffsetsForSameContainer = (scrollContainer) => {
-  return () => {
-    return [scrollContainer.scrollLeft, scrollContainer.scrollTop];
-  };
+const createGetScrollOffsetsForSameContainer = (
+  scrollContainer,
+  positionedParent,
+) => {
+  return createGetScrollOffsetsForDifferentContainers(
+    scrollContainer,
+    scrollContainer,
+    positionedParent,
+  );
 };
 const createGetScrollOffsetsForDifferentContainers = (
   scrollContainer,
