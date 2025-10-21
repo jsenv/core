@@ -135,13 +135,32 @@ const createSameScrollDifferentParentPositioner = (
   let scrollableLeft;
   let scrollableTop;
   let convertScrollablePosition;
+  const positionedParentIsFixed =
+    getComputedStyle(positionedParent).position === "fixed";
+
+  let offsetLeftBetweenPositionedParents;
+  let offsetTopBetweenPositionedParents;
+  if (positionedParentIsFixed) {
+    offsetLeftBetweenPositionedParents = 0;
+    offsetTopBetweenPositionedParents = 0;
+  } else {
+    [offsetLeftBetweenPositionedParents, offsetTopBetweenPositionedParents] =
+      getOffsetBetweenTwoElements(
+        referencePositionedParent,
+        positionedParent,
+        scrollContainer,
+      );
+  }
 
   scrollable_current: {
     [scrollableLeft, scrollableTop] = getScrollablePosition(
       element,
       scrollContainer,
     );
+    scrollableLeft -= offsetLeftBetweenPositionedParents;
+    scrollableTop -= offsetTopBetweenPositionedParents;
   }
+
   scrollable_converter: {
     const scrollAdjuster = createScrollAdjuster(
       positionedParent,
@@ -170,10 +189,12 @@ const createSameScrollDifferentParentPositioner = (
       // Step 2: Convert to element positioned-parent-relative by adding the difference
       const positionedLeftWithoutScroll =
         referencePositionedLeftWithoutScroll +
-        referencePositionedParentLeftOffsetWithScrollContainer;
+        referencePositionedParentLeftOffsetWithScrollContainer -
+        offsetLeftBetweenPositionedParents;
       const positionedTopWithoutScroll =
         referencePositionedTopWithoutScroll +
-        referencePositionedParentTopOffsetWithScrollContainer;
+        referencePositionedParentTopOffsetWithScrollContainer -
+        offsetTopBetweenPositionedParents;
       // Step 3: Apply scroll to get final positioning
       const [positionedLeft, positionedTop] = scrollAdjuster(
         positionedLeftWithoutScroll,

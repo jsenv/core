@@ -468,7 +468,7 @@ export const initDragTableColumnByMousedown = async (
       {
         element: colClone,
         referenceElement: col,
-        elementToMove: tableDragCloneContainer,
+        elementToMove: tableClone,
       },
     );
     dragToMoveGesture.dragViaMouse(significantDragGestureInfo.dragEvent);
