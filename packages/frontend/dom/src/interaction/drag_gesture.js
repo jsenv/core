@@ -405,32 +405,24 @@ export const createDragGestureController = (options = {}) => {
   return dragGestureController;
 };
 
-export const createMouseDragThresholdPromise = (dragEvent, threshold) => {
-  let _resolve;
-  let resolved = false;
-  const promise = new Promise((resolve) => {
-    _resolve = resolve;
-  });
-  const dragGestureController = createDragGestureController({
+export const dragAfterThreshold = (
+  grabEvent,
+  dragGestureInitializer,
+  threshold,
+) => {
+  const significantDragGestureController = createDragGestureController({
     threshold,
     backdrop: false,
     onDragStart: (gestureInfo) => {
-      resolved = true;
-      _resolve(gestureInfo);
-      setTimeout(() => {
-        dragGesture.release(); // kill that gesture
-      });
-    },
-    onRelease: (gestureInfo) => {
-      if (!resolved) {
-        _resolve(gestureInfo);
-      }
+      significantDragGesture.release(); // kill that gesture
+      const dragGesture = dragGestureInitializer();
+      dragGesture.dragViaPointer(gestureInfo.dragEvent);
     },
   });
-  const dragGesture = dragGestureController.grabViaPointer(dragEvent, {
-    element: dragEvent.target,
-  });
-  return promise;
+  const significantDragGesture =
+    significantDragGestureController.grabViaPointer(grabEvent, {
+      element: grabEvent.target,
+    });
 };
 
 const definePropertyAsReadOnly = (object, propertyName) => {

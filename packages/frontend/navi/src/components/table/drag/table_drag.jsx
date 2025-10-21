@@ -1,7 +1,7 @@
 import {
   createDragToMoveGestureController,
-  createMouseDragThresholdPromise,
   createPubSub,
+  dragAfterThreshold,
   getDropTargetInfo,
   getScrollContainer,
   getScrollRelativeRect,
@@ -254,225 +254,226 @@ export const TableColumnDropPreview = forwardRef((props, ref) => {
   );
 });
 
-export const initDragTableColumnViaPointer = async (
+export const initDragTableColumnViaPointer = (
   pointerdownEvent,
   { tableDragCloneContainer, dropPreview, onGrab, onDrag, onRelease },
 ) => {
-  const significantDragGestureInfo =
-    await createMouseDragThresholdPromise(pointerdownEvent);
-  if (significantDragGestureInfo.status === "released") {
-    return;
-  }
+  dragAfterThreshold(pointerdownEvent, () => {
+    const [teardown, addTeardown] = createPubSub();
+    const [triggerDrag, addDragEffect] = createPubSub();
 
-  const [teardown, addTeardown] = createPubSub();
-  const [triggerDrag, addDragEffect] = createPubSub();
+    const tableCell = pointerdownEvent.target.closest(".navi_table_cell");
+    const table = tableCell.closest(".navi_table");
+    const columnIndex = Array.from(tableCell.parentNode.children).indexOf(
+      tableCell,
+    );
 
-  const tableCell = pointerdownEvent.target.closest(".navi_table_cell");
-  const table = tableCell.closest(".navi_table");
-  const columnIndex = Array.from(tableCell.parentNode.children).indexOf(
-    tableCell,
-  );
+    // Track the drop target column index (starts as current column)
+    let dropColumnIndex = columnIndex;
 
-  // Track the drop target column index (starts as current column)
-  let dropColumnIndex = columnIndex;
+    const tableClone = table.cloneNode(true);
+    // ensure [data-drag-obstacle] inside the table clone are ignored
+    tableClone.setAttribute("data-drag-ignore", "");
 
-  const tableClone = table.cloneNode(true);
-  // ensure [data-drag-obstacle] inside the table clone are ignored
-  tableClone.setAttribute("data-drag-ignore", "");
-
-  const scrollContainer = getScrollContainer(table);
-
-  // Scale down the table clone and set transform origin to mouse grab point
-  // const tableRect = table.getBoundingClientRect();
-  // const mouseX = mousedownEvent.clientX - tableRect.left;
-  // const mouseY = mousedownEvent.clientY - tableRect.top;
-  // tableClone.style.transform = "scale(1.2)";
-  // tableClone.style.transformOrigin = `${mouseX}px ${mouseY}px`;
-
-  update_sticky_elements: {
-    // In the table clone we need to convert sticky elements to position: relative
-    // with calculated offsets that match their appearance in the original context
     const scrollContainer = getScrollContainer(table);
 
-    // important: only on cells, not on <col> nor <tr>
-    const originalStickyCells = table.querySelectorAll(
-      ".navi_table_cell[data-sticky-left], .navi_table_cell[data-sticky-top]",
-    );
-    const cloneStickyCells = tableClone.querySelectorAll(
-      ".navi_table_cell[data-sticky-left], .navi_table_cell[data-sticky-top]",
-    );
+    // Scale down the table clone and set transform origin to mouse grab point
+    // const tableRect = table.getBoundingClientRect();
+    // const mouseX = mousedownEvent.clientX - tableRect.left;
+    // const mouseY = mousedownEvent.clientY - tableRect.top;
+    // tableClone.style.transform = "scale(1.2)";
+    // tableClone.style.transformOrigin = `${mouseX}px ${mouseY}px`;
 
-    originalStickyCells.forEach((originalCell, index) => {
-      const cloneCell = cloneStickyCells[index];
-      const relativePosition = stickyAsRelativeCoords(
-        originalCell,
-        // Our clone is absolutely positioned on top of <table />
-        // So we need the sticky position relative to <table />
-        table,
-        {
-          scrollContainer,
-        },
+    update_sticky_elements: {
+      // In the table clone we need to convert sticky elements to position: relative
+      // with calculated offsets that match their appearance in the original context
+      const scrollContainer = getScrollContainer(table);
+
+      // important: only on cells, not on <col> nor <tr>
+      const originalStickyCells = table.querySelectorAll(
+        ".navi_table_cell[data-sticky-left], .navi_table_cell[data-sticky-top]",
       );
-      if (relativePosition) {
-        const [relativeLeft, relativeTop] = relativePosition;
-        cloneCell.style.position = "relative";
-        if (relativeLeft !== undefined) {
-          cloneCell.style.left = `${relativeLeft}px`;
+      const cloneStickyCells = tableClone.querySelectorAll(
+        ".navi_table_cell[data-sticky-left], .navi_table_cell[data-sticky-top]",
+      );
+
+      originalStickyCells.forEach((originalCell, index) => {
+        const cloneCell = cloneStickyCells[index];
+        const relativePosition = stickyAsRelativeCoords(
+          originalCell,
+          // Our clone is absolutely positioned on top of <table />
+          // So we need the sticky position relative to <table />
+          table,
+          {
+            scrollContainer,
+          },
+        );
+        if (relativePosition) {
+          const [relativeLeft, relativeTop] = relativePosition;
+          cloneCell.style.position = "relative";
+          if (relativeLeft !== undefined) {
+            cloneCell.style.left = `${relativeLeft}px`;
+          }
+          if (relativeTop !== undefined) {
+            cloneCell.style.top = `${relativeTop}px`;
+          }
         }
-        if (relativeTop !== undefined) {
-          cloneCell.style.top = `${relativeTop}px`;
+      });
+    }
+
+    sync_data_grabbed: {
+      // ensure [data-grabbed] are present in the table clone
+      // we could retry on "sync_attributes" but we want to be sure it's done asap to prevent table from being displayed at all
+      // I fear without this we might have an intermediate step where the table column clone is not visible
+      // as [data-grabbed] are not set
+      // Would not be a problem but this ensure we see exactly the table clone right away preventing any possibility
+      // of visual glitches
+      const tableCloneCells = tableClone.querySelectorAll(".navi_table_cell");
+      tableCloneCells.forEach((cellClone) => {
+        const cellColumnIndex = Array.from(
+          cellClone.parentNode.children,
+        ).indexOf(cellClone);
+        if (cellColumnIndex === columnIndex) {
+          cellClone.setAttribute("data-grabbed", "");
         }
-      }
-    });
-  }
+      });
+    }
 
-  sync_data_grabbed: {
-    // ensure [data-grabbed] are present in the table clone
-    // we could retry on "sync_attributes" but we want to be sure it's done asap to prevent table from being displayed at all
-    // I fear without this we might have an intermediate step where the table column clone is not visible
-    // as [data-grabbed] are not set
-    // Would not be a problem but this ensure we see exactly the table clone right away preventing any possibility
-    // of visual glitches
-    const tableCloneCells = tableClone.querySelectorAll(".navi_table_cell");
-    tableCloneCells.forEach((cellClone) => {
-      const cellColumnIndex = Array.from(cellClone.parentNode.children).indexOf(
-        cellClone,
-      );
-      if (cellColumnIndex === columnIndex) {
-        cellClone.setAttribute("data-grabbed", "");
-      }
-    });
-  }
+    append_in_dom: {
+      tableDragCloneContainer.appendChild(tableClone);
+      addTeardown(() => {
+        tableClone.remove();
+      });
+    }
 
-  append_in_dom: {
-    tableDragCloneContainer.appendChild(tableClone);
-    addTeardown(() => {
-      tableClone.remove();
-    });
-  }
+    sync_attributes: {
+      // Sync attribute changes from original table to clone
+      // This is used to:
+      // - handle table cells being selected as result of mousedown on the <th />
+      // - nothing else is supposed to change in the original <table /> during the drag gesture
+      const syncTableAttributes = createTableAttributeSync(table, tableClone);
+      addTeardown(() => {
+        syncTableAttributes.disconnect();
+      });
+    }
 
-  sync_attributes: {
-    // Sync attribute changes from original table to clone
-    // This is used to:
-    // - handle table cells being selected as result of mousedown on the <th />
-    // - nothing else is supposed to change in the original <table /> during the drag gesture
-    const syncTableAttributes = createTableAttributeSync(table, tableClone);
-    addTeardown(() => {
-      syncTableAttributes.disconnect();
-    });
-  }
-
-  const colgroup = table.querySelector(".navi_colgroup");
-  const colElements = Array.from(colgroup.children);
-  drop_preview: {
-    const dropCandidateElements = colElements.filter(
-      (col) =>
-        !(col.getAttribute("data-drag-obstacle") || "").includes("move-column"),
-    );
-
-    // Get all column elements for drop target detection
-    const updateDropTarget = (dropTargetInfo) => {
-      const targetColumn = dropTargetInfo.element;
-      const targetColumnIndex = colElements.indexOf(targetColumn);
-
-      dropColumnIndex = targetColumnIndex;
-      if (dropColumnIndex === columnIndex) {
-        dropPreview.removeAttribute("data-visible");
-        return;
-      }
-
-      const targetColumnRect = getScrollRelativeRect(
-        targetColumn,
-        scrollContainer,
+    const colgroup = table.querySelector(".navi_colgroup");
+    const colElements = Array.from(colgroup.children);
+    drop_preview: {
+      const dropCandidateElements = colElements.filter(
+        (col) =>
+          !(col.getAttribute("data-drag-obstacle") || "").includes(
+            "move-column",
+          ),
       );
 
-      // Convert column position to viewport coordinates, then to document coordinates
-      const [columnViewportLeft, columnViewportTop] =
-        scrollableCoordsToViewport(
-          targetColumnRect.left,
-          targetColumnRect.top,
+      // Get all column elements for drop target detection
+      const updateDropTarget = (dropTargetInfo) => {
+        const targetColumn = dropTargetInfo.element;
+        const targetColumnIndex = colElements.indexOf(targetColumn);
+
+        dropColumnIndex = targetColumnIndex;
+        if (dropColumnIndex === columnIndex) {
+          dropPreview.removeAttribute("data-visible");
+          return;
+        }
+
+        const targetColumnRect = getScrollRelativeRect(
+          targetColumn,
           scrollContainer,
         );
 
-      // Convert viewport coordinates to document coordinates for absolute positioning
-      const { scrollLeft, scrollTop } = document.documentElement;
-      const columnDocumentLeft = columnViewportLeft + scrollLeft;
-      const columnDocumentTop = columnViewportTop + scrollTop;
+        // Convert column position to viewport coordinates, then to document coordinates
+        const [columnViewportLeft, columnViewportTop] =
+          scrollableCoordsToViewport(
+            targetColumnRect.left,
+            targetColumnRect.top,
+            scrollContainer,
+          );
 
-      // Position the invisible container to match the target column
-      dropPreview.style.setProperty("--column-left", `${columnDocumentLeft}px`);
-      dropPreview.style.setProperty("--column-top", `${columnDocumentTop}px`);
-      dropPreview.style.setProperty(
-        "--column-width",
-        `${targetColumnRect.width}px`,
-      );
-      dropPreview.style.setProperty(
-        "--column-height",
-        `${targetColumnRect.height}px`,
-      );
+        // Convert viewport coordinates to document coordinates for absolute positioning
+        const { scrollLeft, scrollTop } = document.documentElement;
+        const columnDocumentLeft = columnViewportLeft + scrollLeft;
+        const columnDocumentTop = columnViewportTop + scrollTop;
 
-      // Set data-after attribute to control line position via CSS
-      if (dropColumnIndex > columnIndex) {
-        // Dropping after: CSS will position line at right edge (100%)
-        dropPreview.setAttribute("data-after", "");
-      } else {
-        // Dropping before: CSS will position line at left edge (0%)
-        dropPreview.removeAttribute("data-after");
-      }
-      dropPreview.setAttribute("data-drop-column-index", dropColumnIndex);
-      dropPreview.setAttribute("data-visible", "");
-    };
+        // Position the invisible container to match the target column
+        dropPreview.style.setProperty(
+          "--column-left",
+          `${columnDocumentLeft}px`,
+        );
+        dropPreview.style.setProperty("--column-top", `${columnDocumentTop}px`);
+        dropPreview.style.setProperty(
+          "--column-width",
+          `${targetColumnRect.width}px`,
+        );
+        dropPreview.style.setProperty(
+          "--column-height",
+          `${targetColumnRect.height}px`,
+        );
 
-    addDragEffect((gestureInfo) => {
-      const dropTargetInfo = getDropTargetInfo(
-        gestureInfo,
-        dropCandidateElements,
-      );
-      if (!dropTargetInfo) {
-        dropPreview.removeAttribute("data-visible");
-        return;
-      }
-      updateDropTarget(dropTargetInfo);
-    });
-
-    document.body.appendChild(dropPreview);
-    addTeardown(() => {
-      dropPreview.remove();
-    });
-  }
-
-  init_drag_gesture: {
-    const col = colElements[columnIndex];
-    const colgroupClone = tableClone.querySelector(".navi_colgroup");
-    const colClone = colgroupClone.children[columnIndex];
-
-    const dragToMoveGestureController = createDragToMoveGestureController({
-      name: "move-column",
-      direction: { x: true },
-      threshold: 0,
-      onGrab,
-      onDrag: (gestureInfo) => {
-        triggerDrag(gestureInfo);
-        onDrag?.(gestureInfo, dropColumnIndex);
-      },
-      resetPositionAfterRelease: !DEBUG_VISUAL,
-      onRelease: (gestureInfo) => {
-        if (!DEBUG_VISUAL) {
-          teardown();
+        // Set data-after attribute to control line position via CSS
+        if (dropColumnIndex > columnIndex) {
+          // Dropping after: CSS will position line at right edge (100%)
+          dropPreview.setAttribute("data-after", "");
+        } else {
+          // Dropping before: CSS will position line at left edge (0%)
+          dropPreview.removeAttribute("data-after");
         }
-        onRelease?.(gestureInfo, dropColumnIndex);
-      },
-    });
-    const dragToMoveGesture = dragToMoveGestureController.grabViaPointer(
-      pointerdownEvent,
-      {
-        element: colClone,
-        referenceElement: col,
-        elementToMove: tableClone,
-      },
-    );
-    dragToMoveGesture.dragViaPointer(significantDragGestureInfo.dragEvent);
-  }
+        dropPreview.setAttribute("data-drop-column-index", dropColumnIndex);
+        dropPreview.setAttribute("data-visible", "");
+      };
+
+      addDragEffect((gestureInfo) => {
+        const dropTargetInfo = getDropTargetInfo(
+          gestureInfo,
+          dropCandidateElements,
+        );
+        if (!dropTargetInfo) {
+          dropPreview.removeAttribute("data-visible");
+          return;
+        }
+        updateDropTarget(dropTargetInfo);
+      });
+
+      document.body.appendChild(dropPreview);
+      addTeardown(() => {
+        dropPreview.remove();
+      });
+    }
+
+    init_drag_gesture: {
+      const col = colElements[columnIndex];
+      const colgroupClone = tableClone.querySelector(".navi_colgroup");
+      const colClone = colgroupClone.children[columnIndex];
+
+      const dragToMoveGestureController = createDragToMoveGestureController({
+        name: "move-column",
+        direction: { x: true },
+        threshold: 0,
+        onGrab,
+        onDrag: (gestureInfo) => {
+          triggerDrag(gestureInfo);
+          onDrag?.(gestureInfo, dropColumnIndex);
+        },
+        resetPositionAfterRelease: !DEBUG_VISUAL,
+        onRelease: (gestureInfo) => {
+          if (!DEBUG_VISUAL) {
+            teardown();
+          }
+          onRelease?.(gestureInfo, dropColumnIndex);
+        },
+      });
+      const dragToMoveGesture = dragToMoveGestureController.grabViaPointer(
+        pointerdownEvent,
+        {
+          element: colClone,
+          referenceElement: col,
+          elementToMove: tableClone,
+        },
+      );
+      return dragToMoveGesture;
+    }
+  });
 };
 
 /**
