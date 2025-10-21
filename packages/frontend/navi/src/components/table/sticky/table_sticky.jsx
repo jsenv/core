@@ -315,7 +315,7 @@ const TableStickyLeftFrontier = ({
       className="navi_table_sticky_frontier"
       data-left=""
       inert={!canMoveFrontier}
-      onMouseDown={(e) => {
+      onPointerDown={(e) => {
         if (e.button !== 0) {
           return;
         }
@@ -327,7 +327,7 @@ const TableStickyLeftFrontier = ({
         const stickyLeftFrontierPreview = stickyLeftFrontierPreviewRef.current;
         const colgroup = table.querySelector("colgroup");
         const colElements = Array.from(colgroup.children);
-        initMoveStickyFrontierByMousedown(e, {
+        initMoveStickyFrontierViaPointer(e, {
           table,
           frontierGhost: stickyLeftFrontierGhost,
           frontierPreview: stickyLeftFrontierPreview,
@@ -358,7 +358,7 @@ const TableStickyTopFrontier = ({
       className="navi_table_sticky_frontier"
       data-top=""
       inert={!canMoveFrontier}
-      onMouseDown={(e) => {
+      onPointerDown={(e) => {
         if (e.button !== 0) {
           return;
         }
@@ -367,7 +367,7 @@ const TableStickyTopFrontier = ({
 
         const table = tableRef.current;
         const rowElements = Array.from(table.querySelectorAll("tr"));
-        initMoveStickyFrontierByMousedown(e, {
+        initMoveStickyFrontierViaPointer(e, {
           table,
           frontierGhost: stickyTopFrontierGhostRef.current,
           frontierPreview: stickyTopFrontierPreviewRef.current,
@@ -386,8 +386,8 @@ const TableStickyTopFrontier = ({
 };
 
 // Generic function to handle sticky frontier movement for both axes
-const initMoveStickyFrontierByMousedown = (
-  mousedownEvent,
+const initMoveStickyFrontierViaPointer = (
+  pointerdownEvent,
   {
     table,
     frontierGhost,
@@ -495,7 +495,7 @@ const initMoveStickyFrontierByMousedown = (
       onRelease?.(gesture, futureFrontierIndex);
     },
   });
-  moveFrontierGestureController.grabViaMouse(mousedownEvent, {
+  moveFrontierGestureController.grabViaPointer(pointerdownEvent, {
     element: ghostElement,
   });
 };

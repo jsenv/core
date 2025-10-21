@@ -1,10 +1,10 @@
 import { createDragGestureController } from "./drag_gesture.js";
 
 export const startDragToResizeGesture = (
-  mousedownEvent,
+  pointerdownEvent,
   { onDragStart, onDrag, onRelease, ...options },
 ) => {
-  const target = mousedownEvent.target;
+  const target = pointerdownEvent.target;
   if (!target.closest) {
     return null;
   }
@@ -43,8 +43,8 @@ export const startDragToResizeGesture = (
     },
   });
   elementWithDataResizeHandle.setAttribute("data-active", "");
-  const dragToResizeGesture = dragToResizeGestureController.grabViaMouse(
-    mousedownEvent,
+  const dragToResizeGesture = dragToResizeGestureController.grabViaPointer(
+    pointerdownEvent,
     {
       element: elementToResize,
       direction: resizeDirection,
