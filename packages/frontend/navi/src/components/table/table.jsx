@@ -643,8 +643,10 @@ export const TableCell = forwardRef((props, ref) => {
         if (!grabTarget) {
           return;
         }
-        // Prevent space to scroll + our internal focus nav
-        preventFocusNavViaKeyboard(keyboardEvent);
+        // prevent space to scroll
+        if (keyboardEvent.key === " ") {
+          keyboardEvent.preventDefault();
+        }
         // Prevent vertical arrow keys that would allow to scroll
         if (
           keyboardEvent.key === "ArrowUp" ||
@@ -652,6 +654,8 @@ export const TableCell = forwardRef((props, ref) => {
         ) {
           keyboardEvent.preventDefault();
         }
+        // Prevent our internal focus nav + tab to focus that could scroll the page
+        preventFocusNavViaKeyboard(keyboardEvent);
       }}
       oneditrequested={(e) => {
         if (!editable) {

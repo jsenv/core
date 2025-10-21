@@ -1,8 +1,8 @@
 import { preventFocusNav } from "./focus_nav_event_marker.js";
 
 export const preventFocusNavViaKeyboard = (keyboardEvent) => {
-  if (keyboardEvent.key === " ") {
-    // prevent space to scroll
+  if (keyboardEvent.key === "Tab") {
+    // prevent tab to move focus
     keyboardEvent.preventDefault();
     return true;
   }
