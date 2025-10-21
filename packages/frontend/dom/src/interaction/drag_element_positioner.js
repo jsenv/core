@@ -334,24 +334,53 @@ export const getOffsetBetweenTwoElements = (
     return [0, 0];
   }
   const scrollContainerIsDocument = scrollContainer === documentElement;
-  const elementARect = elementA.getBoundingClientRect();
-  const elementBRect = elementB.getBoundingClientRect();
-  const offsetLeftViewport = elementARect.left - elementBRect.left;
-  const offsetTopViewport = elementARect.top - elementBRect.top;
+
   if (scrollContainerIsDocument) {
     // Document case: getBoundingClientRect already includes document scroll effects
     // Add current scroll position to get the static offset
-    return [
-      scrollContainer.scrollLeft + offsetLeftViewport,
-      scrollContainer.scrollTop + offsetTopViewport,
-    ];
+    const elementAFixedPosition = findSelfOrAncestorFixedPosition(elementA);
+    const elementBFixedPosition = findSelfOrAncestorFixedPosition(elementB);
+    const { scrollLeft: documentScrollLeft, scrollTop: documentScrollTop } =
+      scrollContainer;
+
+    let aLeft;
+    let aTop;
+    let bLeft;
+    let bTop;
+    if (elementAFixedPosition) {
+      [aLeft, aTop] = elementAFixedPosition;
+    } else {
+      const aRect = elementA.getBoundingClientRect();
+      aLeft = documentScrollLeft + aRect.left;
+      aTop = documentScrollTop + aRect.top;
+    }
+    if (elementBFixedPosition) {
+      [bLeft, bTop] = elementBFixedPosition;
+    } else {
+      const bRect = elementB.getBoundingClientRect();
+      bLeft = documentScrollLeft + bRect.left;
+      bTop = documentScrollTop + bRect.top;
+    }
+    const offsetLeft = bLeft - aLeft;
+    const offsetTop = bTop - aTop;
+    return [offsetLeft, offsetTop];
   }
+
   // Custom scroll container case: account for container's position and scroll
+  const aRect = elementA.getBoundingClientRect();
+  const bRect = elementB.getBoundingClientRect();
   const scrollContainerRect = scrollContainer.getBoundingClientRect();
-  return [
-    offsetLeftViewport + scrollContainer.scrollLeft - scrollContainerRect.left,
-    offsetTopViewport + scrollContainer.scrollTop - scrollContainerRect.top,
-  ];
+  const aLeft = aRect.left;
+  const aTop = aRect.top;
+  const bLeft = bRect.left;
+  const bTop = bRect.top;
+  const offsetLeftViewport = bLeft - aLeft;
+  const offsetTopViewport = bTop - aTop;
+  const offsetLeft =
+    offsetLeftViewport + scrollContainer.scrollLeft - scrollContainerRect.left;
+  const offsetTop =
+    offsetTopViewport + scrollContainer.scrollTop - scrollContainerRect.top;
+  return [offsetLeft, offsetTop];
 };
 
 const getScrollablePosition = (element, scrollContainer) => {

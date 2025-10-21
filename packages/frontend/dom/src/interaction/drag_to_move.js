@@ -59,8 +59,8 @@ export const createDragToMoveGestureController = ({
     if (elementToMove) {
       // Calculate dynamic offset that accounts for scroll container position
       [xOffset, yOffset] = getOffsetBetweenTwoElements(
-        element,
         elementToMove,
+        element,
         scrollContainer,
       );
     }
