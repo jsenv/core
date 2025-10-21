@@ -436,6 +436,7 @@ const initResizeViaPointer = (
         axis === "x" ? gestureInfo.layout.xDelta : gestureInfo.layout.yDelta;
       const newSize = currentSize + sizeChange;
       onRelease(newSize, currentSize);
+      resizer.removeAttribute("data-hover");
     },
   });
   dragToMoveGestureController.grabViaPointer(pointerdownEvent, {
