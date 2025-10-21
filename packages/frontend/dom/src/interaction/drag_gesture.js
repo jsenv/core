@@ -26,7 +26,7 @@ export const createDragGestureController = (options = {}) => {
 
   const dragGestureController = {
     grab: null,
-    grabViaMouse: null,
+    gravViaPointer: null,
   };
 
   const grab = ({
@@ -405,7 +405,7 @@ export const createDragGestureController = (options = {}) => {
   return dragGestureController;
 };
 
-export const createMouseDragThresholdPromise = (mousedownEvent, threshold) => {
+export const createMouseDragThresholdPromise = (dragEvent, threshold) => {
   let _resolve;
   let resolved = false;
   const promise = new Promise((resolve) => {
@@ -427,8 +427,8 @@ export const createMouseDragThresholdPromise = (mousedownEvent, threshold) => {
       }
     },
   });
-  const dragGesture = dragGestureController.grabViaMouse(mousedownEvent, {
-    element: mousedownEvent.target,
+  const dragGesture = dragGestureController.grabViaPointer(dragEvent, {
+    element: dragEvent.target,
   });
   return promise;
 };
