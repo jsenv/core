@@ -120,6 +120,7 @@ const createGetOffsets = ({
     scrollContainer,
     referenceScrollContainer,
     positionedParent,
+    samePositionedParent,
   );
 
   if (samePositionedParent) {
@@ -234,13 +235,16 @@ const createGetScrollOffsets = (
   scrollContainer,
   referenceScrollContainer,
   positionedParent,
+  samePositionedParent,
 ) => {
   const scrollContainerIsDocument = scrollContainer === documentElement;
   // I don't really get why we have to add scrollLeft (scrollLeft at grab)
   // to properly position the element in this scenario
   // It happens since we use translateX to position the element
   // Or maybe since something else. In any case it works
-  const { scrollLeft, scrollTop } = scrollContainer;
+  const { scrollLeft, scrollTop } = samePositionedParent
+    ? { scrollLeft: 0, scrollTop: 0 }
+    : scrollContainer;
   if (scrollContainerIsDocument) {
     const fixedPosition = findSelfOrAncestorFixedPosition(positionedParent);
     if (fixedPosition) {
