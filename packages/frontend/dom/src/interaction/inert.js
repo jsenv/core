@@ -46,11 +46,10 @@ import { getAssociatedElements } from "../utils.js";
  * </body>
  * ```
  *
- * @param {Element} element - The element to keep active (non-inert)
- * @param {string} [shouldStayActiveSelector] - Optional CSS selector for elements that should stay active
+ * @param {Array[Element]} - Array of element to keep interactive (non inert)
  * @returns {Function} cleanup - Function to restore original inert states
  */
-export const makeRestInert = (element, shouldStayActiveSelector) => {
+export const isolateInteractions = (elements) => {
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
     for (const cleanupCallback of cleanupCallbackSet) {
@@ -59,18 +58,20 @@ export const makeRestInert = (element, shouldStayActiveSelector) => {
     cleanupCallbackSet.clear();
   };
 
-  // Build exclusion list: associated elements + their ancestors
-  const excludedNodeSet = new Set();
-  const associatedElements = getAssociatedElements(element);
-  if (associatedElements) {
-    for (const associatedElement of associatedElements) {
-      // Add the associated element itself
-      excludedNodeSet.add(associatedElement);
-      // Add all its ancestors up to document.body
-      let ancestor = associatedElement.parentNode;
-      while (ancestor && ancestor !== document.body) {
-        excludedNodeSet.add(ancestor);
-        ancestor = ancestor.parentNode;
+  const toKeepInteractiveSet = new Set();
+  const keepSelfAndAncestors = (el) => {
+    let ancestor = el.parentNode;
+    while (ancestor && ancestor !== document.body) {
+      toKeepInteractiveSet.add(ancestor);
+      ancestor = ancestor.parentNode;
+    }
+  };
+  for (const element of elements) {
+    keepSelfAndAncestors(element);
+    const associatedElements = getAssociatedElements(element);
+    if (associatedElements) {
+      for (const associatedElement of associatedElements) {
+        keepSelfAndAncestors(associatedElement);
       }
     }
   }
@@ -81,7 +82,7 @@ export const makeRestInert = (element, shouldStayActiveSelector) => {
       // and should stay interactive
       return;
     }
-    if (excludedNodeSet.has(el)) {
+    if (toKeepInteractiveSet.has(el)) {
       // element is associated or ancestor of associated element, keep it active
       return;
     }
@@ -92,60 +93,6 @@ export const makeRestInert = (element, shouldStayActiveSelector) => {
       restoreAttributes();
     });
   };
-
-  const makeElementInertSelectivelyOrCompletely = (el) => {
-    // If this element is excluded (associated or ancestor of associated), keep it active
-    if (excludedNodeSet.has(el)) {
-      return;
-    }
-
-    // If this element itself matches the selector, keep it active
-    if (shouldStayActiveSelector && el.matches(shouldStayActiveSelector)) {
-      return;
-    }
-
-    const hasActiveDescendants =
-      shouldStayActiveSelector && el.querySelector(shouldStayActiveSelector);
-    if (!hasActiveDescendants) {
-      // No active descendants, make the entire element inert
-      setInert(el);
-      return;
-    }
-    // Make this element's children selectively inert
-    const children = Array.from(el.children);
-    for (const child of children) {
-      makeElementInertSelectivelyOrCompletely(child);
-    }
-  };
-
-  // Step 1: Apply inert to direct siblings of the element
-  const parent = element.parentNode;
-  if (parent) {
-    const siblings = Array.from(parent.children);
-    for (const sibling of siblings) {
-      if (sibling !== element) {
-        makeElementInertSelectivelyOrCompletely(sibling);
-      }
-    }
-  }
-
-  // Step 2: Traverse up the hierarchy and apply inert to ancestor siblings
-  let currentElementAncestor = parent;
-  while (currentElementAncestor && currentElementAncestor !== document.body) {
-    const ancestorParent = currentElementAncestor.parentNode;
-    if (!ancestorParent) break;
-
-    // Get all siblings of the current ancestor
-    const ancestorSiblings = Array.from(ancestorParent.children);
-    for (const sibling of ancestorSiblings) {
-      if (sibling !== currentElementAncestor) {
-        makeElementInertSelectivelyOrCompletely(sibling);
-      }
-    }
-
-    // Move up to the next ancestor
-    currentElementAncestor = ancestorParent;
-  }
 
   return () => {
     cleanup();
