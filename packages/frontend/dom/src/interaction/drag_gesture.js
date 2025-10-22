@@ -160,6 +160,18 @@ export const createDragGestureController = (options = {}) => {
         backdropElement.className = "navi_drag_gesture_backdrop";
         backdropElement.style.zIndex = backdropZIndex;
         backdropElement.style.cursor = cursor;
+        if (!direction.x || !direction.y) {
+          backdropElement.onwheel = (e) => {
+            e.preventDefault();
+            const scrollX = direction.x ? e.deltaX : 0;
+            const scrollY = direction.y ? e.deltaY : 0;
+            scrollContainer.scrollBy({
+              left: scrollX,
+              top: scrollY,
+              behavior: "auto",
+            });
+          };
+        }
         document.body.appendChild(backdropElement);
         addReleaseCallback(() => {
           backdropElement.remove();
