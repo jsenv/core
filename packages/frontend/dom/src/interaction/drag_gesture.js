@@ -136,30 +136,32 @@ export const createDragGestureController = (options = {}) => {
         break document_interactions;
       }
       /*
-      During the drag gesture there is many things to manage to make drag gesture a prio:
+      GOAL: Take control of document-level interactions during drag gestures
+      
+      WHY: During drag operations, we need to prevent conflicting user interactions that would:
+      1. Interfere with the drag gesture (competing pointer events, focus changes)
+      2. Break the visual feedback (inconsistent cursors, hover states)
+      3. Cause unwanted scrolling (keyboard shortcuts, wheel events in restricted directions)
+      4. Create accessibility issues (focus jumping, screen reader confusion)
 
-      - We don't want other elements to trigger mouseover, we also want our cursor style to be 
-      the same on all the document
-        -> A backdrop is inserted in the document
+      STRATEGY: Create a controlled interaction environment by:
+      1. VISUAL CONTROL: Use a backdrop to unify cursor appearance and block pointer events
+      2. INTERACTION ISOLATION: Make non-dragged elements inert to prevent interference
+      3. FOCUS MANAGEMENT: Control focus location and prevent focus changes during drag
+      4. SELECTIVE SCROLLING: Allow scrolling only in directions supported by the drag gesture
 
-      - We don't want user to scroll the document in a direction not managed by the drag gesture.
-      (Because some drag gesture want to force a given visual state and support scrolling only in one direction
-      Like the <table> because it needs to support sticky in a clone absolutely positioned)
-        -> We prevent keyboard keys that would scroll in a forbidden direction
-        -> We'll prevent mousewheel on the backdrop
-
-    
-      - We don't want user to change the focus during the drag gesture because one thing at a time.
-        This also ensure browser won't scroll the focused element into view.
-        -> We move focus somewhere, prevent tab and restore on release
+      IMPLEMENTATION:
       */
 
-      // Set up backdrop
+      // 1. VISUAL CONTROL: Backdrop for consistent cursor and pointer event blocking
       if (backdrop) {
         const backdropElement = document.createElement("div");
         backdropElement.className = "navi_drag_gesture_backdrop";
         backdropElement.style.zIndex = backdropZIndex;
         backdropElement.style.cursor = cursor;
+
+        // Handle wheel events on backdrop for directionally-constrained drag gestures
+        // (e.g., table column resize should only allow horizontal scrolling)
         if (!direction.x || !direction.y) {
           backdropElement.onwheel = (e) => {
             e.preventDefault();
@@ -178,18 +180,20 @@ export const createDragGestureController = (options = {}) => {
         });
       }
 
-      // Ensure other elements can't react anymore (no keydown, pointer, etc)
-      // The backdrop prevents pointer events already but we need something for keydown
-      // and it's more explicit for screen readers for instance
+      // 2. INTERACTION ISOLATION: Make everything except the dragged element inert
+      // This prevents keyboard events, pointer interactions, and screen reader navigation
+      // on non-relevant elements during the drag operation
       const cleanupInert = makeRestInert(element);
       addReleaseCallback(() => {
         cleanupInert();
       });
 
+      // 3. FOCUS MANAGEMENT: Control and stabilize focus during drag
       const { activeElement } = document;
       const focusableElement = findFocusable(element);
+
+      // Prevent Tab navigation within the dragged element (focus should stay stable)
       if (focusableElement) {
-        // prevent focus within the dragged element during drag
         const onkeydown = (e) => {
           if (e.key === "Tab") {
             e.preventDefault();
@@ -201,16 +205,18 @@ export const createDragGestureController = (options = {}) => {
           focusableElement.removeEventListener("keydown", onkeydown);
         });
       }
-      const elementToFocus = focusableElement || document.body;
 
+      // Focus the dragged element (or document.body as fallback) to establish clear focus context
+      const elementToFocus = focusableElement || document.body;
       elementToFocus.focus();
       addReleaseCallback(() => {
-        activeElement.focus();
+        activeElement.focus(); // Restore original focus on release
       });
 
+      // 4. SELECTIVE SCROLLING: Allow keyboard scrolling only in supported directions
       scroll_via_keyboard: {
         const onDocumentKeydown = (keyboardEvent) => {
-          // no need to prevent "Tab" (that would cause a scroll) because all the document is inert except our element
+          // Vertical scrolling keys - prevent if vertical movement not supported
           if (
             keyboardEvent.key === "ArrowUp" ||
             keyboardEvent.key === "ArrowDown" ||
@@ -225,6 +231,7 @@ export const createDragGestureController = (options = {}) => {
             }
             return;
           }
+          // Horizontal scrolling keys - prevent if horizontal movement not supported
           if (
             keyboardEvent.key === "ArrowLeft" ||
             keyboardEvent.key === "ArrowRight"
