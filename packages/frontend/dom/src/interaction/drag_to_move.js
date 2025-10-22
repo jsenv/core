@@ -243,12 +243,12 @@ export const createDragToMoveGestureController = ({
             ? translateXAtGrab + leftDelta
             : leftDelta;
           transform.translateX = translateX;
-          console.log({
-            leftAtGrab,
-            scrollableLeft,
-            left,
-            leftTarget,
-          });
+          // console.log({
+          //   leftAtGrab,
+          //   scrollableLeft,
+          //   left,
+          //   leftTarget,
+          // });
         }
         if (direction.y) {
           const topTarget = positionedTop;
