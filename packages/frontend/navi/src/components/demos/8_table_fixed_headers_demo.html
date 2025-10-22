@@ -19,7 +19,7 @@
         max-width: 1000px;
         margin: 0 auto;
         background: white;
-        padding: 100px;
+        /* padding: 100px; */
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
@@ -283,14 +283,14 @@
                   setSelection(value);
                 }}
                 onColumnSizeChange={(width, columnIndex, column) => {
-                  console.log(column, `resized to ${width}px`);
+                  console.log(column.id, `resized to ${width}px`);
                   setColumnWidths((columnWidths) => {
                     columnWidths[columnIndex] = width;
                     return [...columnWidths];
                   });
                 }}
                 onRowSizeChange={(height, rowIndex, row) => {
-                  console.log(row, `resized to ${height}px`, rowIndex);
+                  console.log(row.id, `resized to ${height}px`, rowIndex);
                   setRowHeights((rowHeights) => {
                     rowHeights[rowIndex] = height;
                     return [...rowHeights];
