@@ -236,20 +236,39 @@ const createGetOffsetsForOverlay = (
 
   const getPositionOffsetsOverlay = () => {
     if (sameScrollContainer) {
-      return [0, 0];
+      const overlayRect = overlay.getBoundingClientRect();
+      const overlayTargetRect = overlayTarget.getBoundingClientRect();
+      const overlayLeft = overlayRect.left;
+      const overlayTop = overlayRect.top;
+      let overlayTargetLeft = overlayTargetRect.left;
+      let overlayTargetTop = overlayTargetRect.top;
+      if (scrollContainerIsDocument) {
+        overlayTargetLeft += scrollContainer.scrollLeft;
+        overlayTargetTop += scrollContainer.scrollTop;
+      }
+      const offsetLeftBetweenTargetAndOverlay = overlayTargetLeft - overlayLeft;
+      const offsetTopBetweenTargetAndOverlay = overlayTargetTop - overlayTop;
+      return [
+        -scrollContainer.scrollLeft + offsetLeftBetweenTargetAndOverlay,
+        -scrollContainer.scrollTop + offsetTopBetweenTargetAndOverlay,
+      ];
     }
 
     const scrollContainerRect = scrollContainer.getBoundingClientRect();
     const referenceScrollContainerRect =
       referenceScrollContainer.getBoundingClientRect();
-    let offsetLeftBetweenScrollContainers =
-      referenceScrollContainerRect.left - scrollContainerRect.left;
-    let offsetTopBetweenScrollContainers =
-      referenceScrollContainerRect.top - scrollContainerRect.top;
+    let scrollContainerLeft = scrollContainerRect.left;
+    let scrollContainerTop = scrollContainerRect.top;
+    let referenceScrollContainerLeft = referenceScrollContainerRect.left;
+    let referenceScrollContainerTop = referenceScrollContainerRect.top;
     if (scrollContainerIsDocument) {
-      offsetLeftBetweenScrollContainers -= scrollContainer.scrollLeft;
-      offsetTopBetweenScrollContainers -= scrollContainer.scrollTop;
+      scrollContainerLeft += scrollContainer.scrollLeft;
+      scrollContainerTop += scrollContainer.scrollTop;
     }
+    const offsetLeftBetweenScrollContainers =
+      referenceScrollContainerLeft - scrollContainerLeft;
+    const offsetTopBetweenScrollContainers =
+      referenceScrollContainerTop - scrollContainerTop;
     return [
       -offsetLeftBetweenScrollContainers - referenceScrollContainer.scrollLeft,
       -offsetTopBetweenScrollContainers - referenceScrollContainer.scrollTop,
