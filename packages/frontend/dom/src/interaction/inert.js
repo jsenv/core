@@ -60,6 +60,11 @@ export const makeRestInert = (element) => {
   };
 
   const ensureInert = (el) => {
+    if (el.hasAttribute("data-backdrop")) {
+      // backdrop elements are meant to control interactions hapenning at document level
+      // and should stay interactive
+      return;
+    }
     const restoreAttributes = setAttributes(el, {
       inert: "",
     });

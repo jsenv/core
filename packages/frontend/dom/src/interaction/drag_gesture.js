@@ -24,7 +24,7 @@ export const createDragGestureController = (options = {}) => {
     direction: defaultDirection = { x: true, y: true },
     documentInteractions = "auto",
     backdrop = true,
-    backdropZIndex = 1000,
+    backdropZIndex = 999999,
   } = options;
 
   const dragGestureController = {
@@ -153,10 +153,20 @@ export const createDragGestureController = (options = {}) => {
       IMPLEMENTATION:
       */
 
-      // 1. VISUAL CONTROL: Backdrop for consistent cursor and pointer event blocking
+      // 1. INTERACTION ISOLATION: Make everything except the dragged element inert
+      // This prevents keyboard events, pointer interactions, and screen reader navigation
+      // on non-relevant elements during the drag operation
+      const cleanupInert = makeRestInert(element);
+      addReleaseCallback(() => {
+        cleanupInert();
+      });
+
+      // 2. VISUAL CONTROL: Backdrop for consistent cursor and pointer event blocking
       if (backdrop) {
         const backdropElement = document.createElement("div");
         backdropElement.className = "navi_drag_gesture_backdrop";
+        backdropElement.ariaHidden = "true";
+        backdropElement.setAttribute("data-backdrop", "");
         backdropElement.style.zIndex = backdropZIndex;
         backdropElement.style.cursor = cursor;
 
@@ -179,14 +189,6 @@ export const createDragGestureController = (options = {}) => {
           backdropElement.remove();
         });
       }
-
-      // 2. INTERACTION ISOLATION: Make everything except the dragged element inert
-      // This prevents keyboard events, pointer interactions, and screen reader navigation
-      // on non-relevant elements during the drag operation
-      const cleanupInert = makeRestInert(element);
-      addReleaseCallback(() => {
-        cleanupInert();
-      });
 
       // 3. FOCUS MANAGEMENT: Control and stabilize focus during drag
       const { activeElement } = document;
