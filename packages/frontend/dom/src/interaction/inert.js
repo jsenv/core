@@ -16,12 +16,13 @@ import { setAttributes } from "../style_and_attributes.js";
  *     <div>...</div>
  *     <aside inert>already inert</aside>
  *     <div class="modal">...</div> ← Will call makeRestInert on this element
+ *     <div data-droppable>drop zone</div> ← Will stay active with shouldStayActive
  *   </main>
  *   <footer>...</footer>
  * </body>
  * ```
  *
- * After calling makeRestInert(document.querySelector(".modal")):
+ * After calling makeRestInert(document.querySelector(".modal"), el => el.closest("[data-droppable]")):
  * ```
  * <body>
  *   <header inert>...</header>
@@ -29,6 +30,7 @@ import { setAttributes } from "../style_and_attributes.js";
  *     <div inert>...</div>
  *     <aside inert>already inert</aside>
  *     <div class="modal">...</div> ← still active
+ *     <div data-droppable>drop zone</div> ← still active (matches shouldStayActive)
  *   </main>
  *   <footer inert>...</footer>
  * </body>
@@ -42,15 +44,17 @@ import { setAttributes } from "../style_and_attributes.js";
  *     <div>...</div>
  *     <aside inert>already inert</aside> ← [inert] preserved
  *     <div class="modal">...</div>
+ *     <div data-droppable>drop zone</div>
  *   </main>
  *   <footer>...</footer>
  * </body>
  * ```
  *
  * @param {Element} element - The element to keep active (non-inert)
+ * @param {Function} [shouldStayActive] - Optional function that returns truthy if an element should stay active
  * @returns {Function} cleanup - Function to restore original inert states
  */
-export const makeRestInert = (element) => {
+export const makeRestInert = (element, shouldStayActive) => {
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
     for (const cleanupCallback of cleanupCallbackSet) {
@@ -63,6 +67,10 @@ export const makeRestInert = (element) => {
     if (el.hasAttribute("data-backdrop")) {
       // backdrop elements are meant to control interactions hapenning at document level
       // and should stay interactive
+      return;
+    }
+    if (shouldStayActive && shouldStayActive(el)) {
+      // element should stay active based on the provided condition
       return;
     }
     const restoreAttributes = setAttributes(el, {
@@ -91,7 +99,7 @@ export const makeRestInert = (element) => {
     }
 
     // Also apply inert to elements outside the table using normal logic
-    const cleanupTableInert = makeRestInert(table);
+    const cleanupTableInert = makeRestInert(table, shouldStayActive);
 
     return () => {
       cleanup();

@@ -32,11 +32,24 @@ export const getDropTargetInfo = (gestureInfo, targetElements) => {
 
   const dragElementCenterX = dragElementRect.left + dragElementRect.width / 2;
   const dragElementCenterY = dragElementRect.top + dragElementRect.height / 2;
+  // Clamp coordinates to viewport to avoid issues with elementsFromPoint
+  const viewportWidth = document.documentElement.clientWidth;
+  const viewportHeight = document.documentElement.clientHeight;
+  const clientX =
+    dragElementCenterX < 0
+      ? 0
+      : dragElementCenterX > viewportWidth
+        ? viewportWidth - 1
+        : dragElementCenterX;
+  const clientY =
+    dragElementCenterY < 0
+      ? 0
+      : dragElementCenterY > viewportHeight
+        ? viewportHeight - 1
+        : dragElementCenterY;
+
   // Find the first target element in the stack (topmost visible target)
-  const elementsUnderDragElement = document.elementsFromPoint(
-    dragElementCenterX,
-    dragElementCenterY,
-  );
+  const elementsUnderDragElement = document.elementsFromPoint(clientX, clientY);
   let targetElement = null;
   let targetIndex = -1;
   for (const element of elementsUnderDragElement) {
@@ -49,8 +62,7 @@ export const getDropTargetInfo = (gestureInfo, targetElements) => {
     }
     // Special case: if element is <td> or <th> and not in targets,
     // try to find its corresponding <col> element
-    const isTableCell = element.tagName === "TD" || element.tagName === "TH";
-    if (!isTableCell) {
+    if (!isTableCell(element)) {
       continue;
     }
     try_col: {
@@ -83,6 +95,10 @@ export const getDropTargetInfo = (gestureInfo, targetElements) => {
       break;
     }
   }
+  if (!targetElement) {
+    targetElement = intersectingTargets[0];
+    targetIndex = 0;
+  }
 
   // Determine position within the target for both axes
   const targetRect = targetElement.getBoundingClientRect();
@@ -107,6 +123,10 @@ const rectangleAreIntersecting = (r1, r2) => {
     r2.top > r1.bottom ||
     r2.bottom < r1.top
   );
+};
+
+const isTableCell = (el) => {
+  return el.tagName === "TD" || el.tagName === "TH";
 };
 
 /**

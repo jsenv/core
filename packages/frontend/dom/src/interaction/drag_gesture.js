@@ -100,6 +100,7 @@ export const createDragGestureController = (options = {}) => {
       started: !threshold,
       status: "grabbed",
 
+      element,
       scrollContainer,
       grabX, // x grab coordinate (excluding scroll)
       grabY, // y grab coordinate (excluding scroll)
@@ -156,7 +157,9 @@ export const createDragGestureController = (options = {}) => {
       // 1. INTERACTION ISOLATION: Make everything except the dragged element inert
       // This prevents keyboard events, pointer interactions, and screen reader navigation
       // on non-relevant elements during the drag operation
-      const cleanupInert = makeRestInert(element);
+      const cleanupInert = makeRestInert(element, (el) =>
+        el.closest("[data-droppable]"),
+      );
       addReleaseCallback(() => {
         cleanupInert();
       });
@@ -193,21 +196,17 @@ export const createDragGestureController = (options = {}) => {
       // 3. FOCUS MANAGEMENT: Control and stabilize focus during drag
       const { activeElement } = document;
       const focusableElement = findFocusable(element);
-
-      // Prevent Tab navigation within the dragged element (focus should stay stable)
-      if (focusableElement) {
-        const onkeydown = (e) => {
-          if (e.key === "Tab") {
-            e.preventDefault();
-            return;
-          }
-        };
-        focusableElement.addEventListener("keydown", onkeydown);
-        addReleaseCallback(() => {
-          focusableElement.removeEventListener("keydown", onkeydown);
-        });
-      }
-
+      // Prevent Tab navigation entirely (focus should stay stable)
+      const onkeydown = (e) => {
+        if (e.key === "Tab") {
+          e.preventDefault();
+          return;
+        }
+      };
+      document.addEventListener("keydown", onkeydown);
+      addReleaseCallback(() => {
+        document.removeEventListener("keydown", onkeydown);
+      });
       // Focus the dragged element (or document.body as fallback) to establish clear focus context
       const elementToFocus = focusableElement || document.body;
       elementToFocus.focus({

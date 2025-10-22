@@ -37,7 +37,7 @@
  *
  * controller.delete(element, "opacity"); // Only removes opacity, keeps transform
  * controller.clear(element); // Removes all styles from this controller only
- * controller.destroy(); // Cleanup when done
+ * controller.clearAll(); // Cleanup when done
  * ```
  *
  * **Key features:**
@@ -292,7 +292,7 @@ export const createStyleController = (name = "anonymous") => {
     return getWhileDisablingThisController(getFromDOM);
   };
 
-  const destroy = () => {
+  const clearAll = () => {
     // Remove this controller from all elements and clean up animations
     for (const [
       element,
@@ -319,7 +319,7 @@ export const createStyleController = (name = "anonymous") => {
     getUnderlyingValue,
     commit,
     clear,
-    destroy,
+    clearAll,
   };
 
   return controller;
