@@ -210,9 +210,14 @@ export const createDragGestureController = (options = {}) => {
 
       // Focus the dragged element (or document.body as fallback) to establish clear focus context
       const elementToFocus = focusableElement || document.body;
-      elementToFocus.focus();
+      elementToFocus.focus({
+        preventScroll: true,
+      });
       addReleaseCallback(() => {
-        activeElement.focus(); // Restore original focus on release
+        // Restore original focus on release
+        activeElement.focus({
+          preventScroll: true,
+        });
       });
 
       // 4. SELECTIVE SCROLLING: Allow keyboard scrolling only in supported directions
