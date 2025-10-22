@@ -2,10 +2,15 @@ import { setAttributes } from "../style_and_attributes.js";
 import { getAssociatedElements } from "../utils.js";
 
 /**
- * Makes all DOM elements inert except for the specified elements and their ancestors.
+ * Isolates user interactions to only the specified elements, making everything else non-interactive.
  *
- * This function applies the `inert` attribute to sibling elements at each level of the DOM tree,
- * starting from the target elements and traversing up to document.body.
+ * This creates a controlled interaction environment where only the target elements (and their ancestors)
+ * can receive user input like clicks, keyboard events, focus, etc. All other DOM elements become
+ * non-interactive, preventing conflicting or unwanted interactions during critical operations
+ * like drag gestures, modal dialogs, or complex UI states.
+ *
+ * The function uses the `inert` attribute to achieve this isolation, applying it strategically
+ * to parts of the DOM tree while preserving the interactive elements and their ancestor chains.
  *
  * Example DOM structure and inert application:
  *
