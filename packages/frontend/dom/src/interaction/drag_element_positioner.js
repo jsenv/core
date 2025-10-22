@@ -137,16 +137,22 @@ const createGetOffsets = ({
     return createGetOffsetsForOverlay(
       positionedParent,
       referencePositionedParent,
-      scrollContainer,
-      getScrollOffsets,
+      {
+        scrollContainer,
+        referenceScrollContainer,
+        getScrollOffsets,
+      },
     );
   }
   if (isOverlayOf(referencePositionedParent, positionedParent)) {
     return createGetOffsetsForOverlay(
       referencePositionedParent,
       positionedParent,
-      scrollContainer,
-      getScrollOffsets,
+      {
+        scrollContainer,
+        referenceScrollContainer,
+        getScrollOffsets,
+      },
     );
   }
   const scrollContainerIsDocument = scrollContainer === documentElement;
@@ -193,21 +199,60 @@ const createGetOffsets = ({
 const createGetOffsetsForOverlay = (
   overlay,
   overlayTarget,
-  scrollContainer,
-  getScrollOffsets,
+  { scrollContainer, referenceScrollContainer, getScrollOffsets },
 ) => {
+  const sameScrollContainer = scrollContainer === referenceScrollContainer;
+
   if (getComputedStyle(overlay).position === "fixed") {
-    return [() => [0, 0], getScrollOffsets];
+    const getPositionOffsetsFixedOverlay = () => {
+      return [0, 0];
+    };
+    return [getPositionOffsetsFixedOverlay, getScrollOffsets];
   }
+
   const getPositionOffsetsOverlay = () => {
     const overlayRect = overlay.getBoundingClientRect();
     const overlayTargetRect = overlayTarget.getBoundingClientRect();
-    const offsetLeft = overlayTargetRect.left - overlayRect.left;
-    const offsetTop = overlayTargetRect.top - overlayRect.top;
-    return [offsetLeft, offsetTop];
+    let overlayOffsetLeft = overlayTargetRect.left - overlayRect.left;
+    let overlayOffsetTop = overlayTargetRect.top - overlayRect.top;
+    if (sameScrollContainer) {
+      const scrollContainerIsDocument =
+        scrollContainer === document.documentElement;
+      if (scrollContainerIsDocument) {
+        overlayOffsetLeft += scrollContainer.scrollLeft;
+        overlayOffsetTop += scrollContainer.scrollTop;
+      }
+      return [
+        -scrollContainer.scrollLeft + overlayOffsetLeft,
+        -scrollContainer.scrollTop + overlayOffsetTop,
+      ];
+    }
+
+    const scrollContainerRect = scrollContainer.getBoundingClientRect();
+    const referenceScrollContainerRect =
+      referenceScrollContainer.getBoundingClientRect();
+    const offsetLeftBetweenScrollContainers =
+      referenceScrollContainerRect.left - scrollContainerRect.left;
+    const offsetTopBetweenScrollContainers =
+      referenceScrollContainerRect.top - scrollContainerRect.top;
+    return [
+      overlayOffsetLeft -
+        referenceScrollContainer.scrollLeft -
+        offsetLeftBetweenScrollContainers,
+      overlayOffsetTop -
+        referenceScrollContainer.scrollTop -
+        offsetTopBetweenScrollContainers,
+    ];
   };
+
   const getScrollOffsetsOverlay = () => {
-    return [scrollContainer.scrollLeft, scrollContainer.scrollTop];
+    if (sameScrollContainer) {
+      return [scrollContainer.scrollLeft, scrollContainer.scrollTop];
+    }
+    return [
+      referenceScrollContainer.scrollLeft,
+      referenceScrollContainer.scrollTop,
+    ];
   };
   return [getPositionOffsetsOverlay, getScrollOffsetsOverlay];
 };
@@ -237,31 +282,48 @@ const createGetScrollOffsets = (
   positionedParent,
   samePositionedParent,
 ) => {
-  const scrollContainerIsDocument = scrollContainer === documentElement;
-  // I don't really get why we have to add scrollLeft (scrollLeft at grab)
-  // to properly position the element in this scenario
-  // It happens since we use translateX to position the element
-  // Or maybe since something else. In any case it works
-  const { scrollLeft, scrollTop } = samePositionedParent
-    ? { scrollLeft: 0, scrollTop: 0 }
-    : referenceScrollContainer;
-  if (scrollContainerIsDocument) {
-    const fixedPosition = findSelfOrAncestorFixedPosition(positionedParent);
-    if (fixedPosition) {
-      const getScrollOffsetsFixed = () => {
-        const leftScrollToAdd = scrollLeft + fixedPosition[0];
-        const topScrollToAdd = scrollTop + fixedPosition[1];
-        return [leftScrollToAdd, topScrollToAdd];
-      };
-      return getScrollOffsetsFixed;
+  const getGetScrollOffsetsSameContainer = () => {
+    const scrollContainerIsDocument = scrollContainer === documentElement;
+    // I don't really get why we have to add scrollLeft (scrollLeft at grab)
+    // to properly position the element in this scenario
+    // It happens since we use translateX to position the element
+    // Or maybe since something else. In any case it works
+    const { scrollLeft, scrollTop } = samePositionedParent
+      ? { scrollLeft: 0, scrollTop: 0 }
+      : referenceScrollContainer;
+    if (scrollContainerIsDocument) {
+      const fixedPosition = findSelfOrAncestorFixedPosition(positionedParent);
+      if (fixedPosition) {
+        const getScrollOffsetsFixed = () => {
+          const leftScrollToAdd = scrollLeft + fixedPosition[0];
+          const topScrollToAdd = scrollTop + fixedPosition[1];
+          return [leftScrollToAdd, topScrollToAdd];
+        };
+        return getScrollOffsetsFixed;
+      }
     }
-  }
-  const getScrollOffsets = () => {
-    const leftScrollToAdd = scrollLeft + referenceScrollContainer.scrollLeft;
-    const topScrollToAdd = scrollTop + referenceScrollContainer.scrollTop;
-    return [leftScrollToAdd, topScrollToAdd];
+    const getScrollOffsets = () => {
+      const leftScrollToAdd = scrollLeft + referenceScrollContainer.scrollLeft;
+      const topScrollToAdd = scrollTop + referenceScrollContainer.scrollTop;
+      return [leftScrollToAdd, topScrollToAdd];
+    };
+    return getScrollOffsets;
   };
-  return getScrollOffsets;
+
+  const sameScrollContainer = scrollContainer === referenceScrollContainer;
+  const getScrollOffsetsSameContainer = getGetScrollOffsetsSameContainer();
+  if (sameScrollContainer) {
+    return getScrollOffsetsSameContainer;
+  }
+  const getScrollOffsetsDifferentContainers = () => {
+    const [scrollLeftToAdd, scrollTopToAdd] = getScrollOffsetsSameContainer();
+    const rect = scrollContainer.getBoundingClientRect();
+    const referenceRect = referenceScrollContainer.getBoundingClientRect();
+    const leftDiff = referenceRect.left - rect.left;
+    const topDiff = referenceRect.top - rect.top;
+    return [scrollLeftToAdd + leftDiff, scrollTopToAdd + topDiff];
+  };
+  return getScrollOffsetsDifferentContainers;
 };
 export const getDragCoordinates = (
   element,
