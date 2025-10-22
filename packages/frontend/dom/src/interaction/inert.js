@@ -21,14 +21,14 @@ import { setAttributes } from "../style_and_attributes.js";
  * </body>
  * ```
  *
- * After calling makeRestInert(document.querySelector(".modal-container")):
+ * After calling makeRestInert(document.querySelector(".modal")):
  * ```
  * <body>
  *   <header inert>...</header>
  *   <main>
  *     <div inert>...</div>
  *     <aside inert>already inert</aside>
- *     <div class="modal">...</div>
+ *     <div class="modal">...</div> ← still active
  *   </main>
  *   <footer inert>...</footer>
  * </body>
@@ -67,6 +67,32 @@ export const makeRestInert = (element) => {
       restoreAttributes();
     });
   };
+
+  // Special handling for COL elements
+  if (element.tagName === "COL") {
+    const table = element.closest("table");
+    const colgroup = element.parentNode;
+    const columnIndex = Array.from(colgroup.children).indexOf(element);
+    const rows = table.querySelectorAll("tr");
+
+    // Apply inert to all table cells outside this column
+    for (const row of rows) {
+      const rowCells = row.children;
+      for (const rowCell of rowCells) {
+        if (rowCell.cellIndex !== columnIndex) {
+          ensureInert(rowCell);
+        }
+      }
+    }
+
+    // Also apply inert to elements outside the table using normal logic
+    const cleanupTableInert = makeRestInert(table);
+
+    return () => {
+      cleanup();
+      cleanupTableInert();
+    };
+  }
 
   // Step 1: Apply inert to direct siblings of the element
   const parent = element.parentNode;
