@@ -1,11 +1,56 @@
 import { setAttributes } from "../style_and_attributes.js";
 
+/**
+ * Makes all DOM elements inert except for the specified element and its ancestors.
+ *
+ * This function applies the `inert` attribute to sibling elements at each level of the DOM tree,
+ * starting from the target element and traversing up to document.body.
+ *
+ * Example DOM structure and inert application:
+ *
+ * Before calling makeRestInert:
+ * ```
+ * <body>
+ *   <header>...</header>
+ *   <main>
+ *     <div>...</div>
+ *     <aside inert>already inert</aside>
+ *     <div class="modal">...</div> ← Will call makeRestInert on this element
+ *   </main>
+ *   <footer>...</footer>
+ * </body>
+ * ```
+ *
+ * After calling makeRestInert(document.querySelector(".modal-container")):
+ * ```
+ * <body>
+ *   <header inert>...</header>
+ *   <main>
+ *     <div inert>...</div>
+ *     <aside inert>already inert</aside>
+ *     <div class="modal">...</div>
+ *   </main>
+ *   <footer inert>...</footer>
+ * </body>
+ * ```
+ *
+ * After calling cleanup():
+ * ```
+ * <body>
+ *   <header>...</header>
+ *   <main>
+ *     <div>...</div>
+ *     <aside inert>already inert</aside> ← [inert] preserved
+ *     <div class="modal">...</div>
+ *   </main>
+ *   <footer>...</footer>
+ * </body>
+ * ```
+ *
+ * @param {Element} element - The element to keep active (non-inert)
+ * @returns {Function} cleanup - Function to restore original inert states
+ */
 export const makeRestInert = (element) => {
-  // Every other nodes in the tree should be inert
-  // We have an element all his prev/next siblings should be inert.
-  // then we move up the tree to find all ancestor prev/next sibling too
-  // once we reach document body we stop
-
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
     for (const cleanupCallback of cleanupCallbackSet) {
