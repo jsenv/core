@@ -244,7 +244,7 @@ const createGetScrollOffsets = (
   // Or maybe since something else. In any case it works
   const { scrollLeft, scrollTop } = samePositionedParent
     ? { scrollLeft: 0, scrollTop: 0 }
-    : scrollContainer;
+    : referenceScrollContainer;
   if (scrollContainerIsDocument) {
     const fixedPosition = findSelfOrAncestorFixedPosition(positionedParent);
     if (fixedPosition) {
@@ -263,7 +263,6 @@ const createGetScrollOffsets = (
   };
   return getScrollOffsets;
 };
-
 export const getDragCoordinates = (
   element,
   scrollContainer = getScrollContainer(element),
