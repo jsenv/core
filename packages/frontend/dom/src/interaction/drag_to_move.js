@@ -275,9 +275,6 @@ export const createDragToMoveGestureController = ({
     elementToMove,
     ...rest
   } = {}) => {
-    if (!element) {
-      throw new Error("element is required");
-    }
     const scrollContainer = getScrollContainer(referenceElement || element);
     const [
       elementScrollableLeft,
@@ -285,6 +282,7 @@ export const createDragToMoveGestureController = ({
       convertScrollablePosition,
     ] = createDragElementPositioner(element, referenceElement, elementToMove);
     const dragGesture = grab({
+      element,
       scrollContainer,
       layoutScrollableLeft: elementScrollableLeft,
       layoutScrollableTop: elementScrollableTop,

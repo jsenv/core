@@ -50,7 +50,7 @@
  * - Update table column info (I guess a down arrow icon which opens a meny when clicked for instance)
  */
 
-import { preventFocusNavViaKeyboard, useActiveElement } from "@jsenv/dom";
+import { useActiveElement } from "@jsenv/dom";
 import { createContext, toChildArray } from "preact";
 import { forwardRef } from "preact/compat";
 import { useContext, useId, useImperativeHandle, useRef } from "preact/hooks";
@@ -638,24 +638,6 @@ export const TableCell = forwardRef((props, ref) => {
           return;
         }
         startEditing(e);
-      }}
-      onKeyDown={(keyboardEvent) => {
-        if (!grabTarget) {
-          return;
-        }
-        // prevent space to scroll
-        if (keyboardEvent.key === " ") {
-          keyboardEvent.preventDefault();
-        }
-        // Prevent vertical arrow keys that would allow to scroll
-        if (
-          keyboardEvent.key === "ArrowUp" ||
-          keyboardEvent.key === "ArrowDown"
-        ) {
-          keyboardEvent.preventDefault();
-        }
-        // Prevent our internal focus nav + tab to focus that could scroll the page
-        preventFocusNavViaKeyboard(keyboardEvent);
       }}
       oneditrequested={(e) => {
         if (!editable) {

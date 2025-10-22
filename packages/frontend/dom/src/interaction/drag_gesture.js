@@ -9,7 +9,9 @@
  *
  */
 
+import { findFocusable } from "../focus/find_focusable.js";
 import { createPubSub } from "../pub_sub.js";
+import { makeRestInert } from "./inert.js";
 
 export const createDragGestureController = (options = {}) => {
   const {
@@ -30,6 +32,7 @@ export const createDragGestureController = (options = {}) => {
   };
 
   const grab = ({
+    element,
     direction = defaultDirection,
     event = new CustomEvent("programmatic"),
     grabX = 0,
@@ -39,6 +42,9 @@ export const createDragGestureController = (options = {}) => {
     layoutScrollableLeft: scrollableLeftAtGrab = 0,
     layoutScrollableTop: scrollableTopAtGrab = 0,
   } = {}) => {
+    if (!element) {
+      throw new Error("element is required");
+    }
     if (!direction.x && !direction.y) {
       return null;
     }
@@ -124,16 +130,89 @@ export const createDragGestureController = (options = {}) => {
     definePropertyAsReadOnly(gestureInfo, "topAtGrab");
     definePropertyAsReadOnly(gestureInfo, "grabEvent");
 
-    // Set up backdrop
-    if (backdrop) {
-      const backdropElement = document.createElement("div");
-      backdropElement.className = "navi_drag_gesture_backdrop";
-      backdropElement.style.zIndex = backdropZIndex;
-      backdropElement.style.cursor = cursor;
-      document.body.appendChild(backdropElement);
+    document_interactions: {
+      /*
+      During the drag gesture there is many things to manage to make drag gesture a prio:
+
+      - We don't want other elements to trigger mouseover, we also want our cursor style to be 
+      the same on all the document
+        -> A backdrop is inserted in the document
+
+      - We don't want user to scroll the document in a direction not managed by the drag gesture.
+      (Because some drag gesture want to force a given visual state and support scrolling only in one direction
+      Like the <table> because it needs to support sticky in a clone absolutely positioned)
+        -> We prevent keyboard keys that would scroll in a forbidden direction
+        -> We'll prevent mousewheel on the backdrop
+
+    
+      - We don't want user to change the focus during the drag gesture because one thing at a time.
+        This also ensure browser won't scroll the focused element into view.
+        -> We move focus somewhere, prevent tab and restore on release
+      */
+
+      // Set up backdrop
+      if (backdrop) {
+        const backdropElement = document.createElement("div");
+        backdropElement.className = "navi_drag_gesture_backdrop";
+        backdropElement.style.zIndex = backdropZIndex;
+        backdropElement.style.cursor = cursor;
+        document.body.appendChild(backdropElement);
+        addReleaseCallback(() => {
+          backdropElement.remove();
+        });
+      }
+
+      // Ensure other elements can't react anymore (no keydown, pointer, etc)
+      // The backdrop prevents pointer events already but we need something for keydown
+      // and it's more explicit for screen readers for instance
+      const cleanupInert = makeRestInert(element);
       addReleaseCallback(() => {
-        backdropElement.remove();
+        cleanupInert();
       });
+
+      const { activeElement } = document;
+      const focusableElement = findFocusable(element) || document.body;
+      focusableElement.focus();
+      addReleaseCallback(() => {
+        activeElement.focus();
+      });
+
+      scroll_via_keyboard: {
+        const onDocumentKeydown = (keyboardEvent) => {
+          // if (keyboardEvent.key === "Tab") {
+          //   keyboardEvent.preventDefault();
+          //   return;
+          // }
+
+          if (
+            keyboardEvent.key === "ArrowUp" ||
+            keyboardEvent.key === "ArrowDown" ||
+            keyboardEvent.key === " " ||
+            keyboardEvent.key === "PageUp" ||
+            keyboardEvent.key === "PageDown" ||
+            keyboardEvent.key === "Home" ||
+            keyboardEvent.key === "End"
+          ) {
+            if (!direction.y) {
+              keyboardEvent.preventDefault();
+            }
+            return;
+          }
+          if (
+            keyboardEvent.key === "ArrowLeft" ||
+            keyboardEvent.key === "ArrowRight"
+          ) {
+            if (!direction.x) {
+              keyboardEvent.preventDefault();
+            }
+            return;
+          }
+        };
+        document.addEventListener("keydown", onDocumentKeydown);
+        addReleaseCallback(() => {
+          document.removeEventListener("keydown", onDocumentKeydown);
+        });
+      }
     }
 
     // Set up scroll event handling to adjust drag position when scrolling occurs

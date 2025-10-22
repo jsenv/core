@@ -28,6 +28,7 @@ export {
 } from "./src/focus/active_element.js";
 export { elementIsFocusable } from "./src/focus/element_is_focusable.js";
 export { elementIsVisible } from "./src/focus/element_is_visible.js";
+export { findFocusable } from "./src/focus/find_focusable.js";
 export { initFocusGroup } from "./src/focus/focus_group.js";
 export { preventFocusNavViaKeyboard } from "./src/focus/focus_nav.js";
 export { preventFocusNav } from "./src/focus/focus_nav_event_marker.js";
