@@ -260,6 +260,7 @@ export const Table = forwardRef((props, ref) => {
           aria-multiselectable="true"
           data-multiselection={selection.length > 1 ? "" : undefined}
           data-border-collapse={borderCollapse ? "" : undefined}
+          data-droppable=""
         >
           <TableSizeContext.Provider value={tableSizeContextValue}>
             <TableSelectionContext.Provider value={selectionContextValue}>
