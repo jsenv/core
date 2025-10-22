@@ -202,56 +202,79 @@ const createGetOffsetsForOverlay = (
   { scrollContainer, referenceScrollContainer, getScrollOffsets },
 ) => {
   const sameScrollContainer = scrollContainer === referenceScrollContainer;
+  const scrollContainerIsDocument =
+    scrollContainer === document.documentElement;
+  const referenceScrollContainerIsDocument =
+    referenceScrollContainer === documentElement;
 
   if (getComputedStyle(overlay).position === "fixed") {
+    if (referenceScrollContainerIsDocument) {
+      const getPositionOffsetsFixedOverlay = () => {
+        return [0, 0];
+      };
+      return [getPositionOffsetsFixedOverlay, getScrollOffsets];
+    }
     const getPositionOffsetsFixedOverlay = () => {
-      return [0, 0];
+      const scrollContainerRect = scrollContainer.getBoundingClientRect();
+      const referenceScrollContainerRect =
+        referenceScrollContainer.getBoundingClientRect();
+      let offsetLeftBetweenScrollContainers =
+        referenceScrollContainerRect.left - scrollContainerRect.left;
+      let offsetTopBetweenScrollContainers =
+        referenceScrollContainerRect.top - scrollContainerRect.top;
+      if (scrollContainerIsDocument) {
+        offsetLeftBetweenScrollContainers -= scrollContainer.scrollLeft;
+        offsetTopBetweenScrollContainers -= scrollContainer.scrollTop;
+      }
+      return [
+        -offsetLeftBetweenScrollContainers,
+        -offsetTopBetweenScrollContainers,
+      ];
     };
     return [getPositionOffsetsFixedOverlay, getScrollOffsets];
   }
 
   const getPositionOffsetsOverlay = () => {
-    const overlayRect = overlay.getBoundingClientRect();
-    const overlayTargetRect = overlayTarget.getBoundingClientRect();
-    let overlayOffsetLeft = overlayTargetRect.left - overlayRect.left;
-    let overlayOffsetTop = overlayTargetRect.top - overlayRect.top;
     if (sameScrollContainer) {
-      const scrollContainerIsDocument =
-        scrollContainer === document.documentElement;
-      if (scrollContainerIsDocument) {
-        overlayOffsetLeft += scrollContainer.scrollLeft;
-        overlayOffsetTop += scrollContainer.scrollTop;
-      }
-      return [
-        -scrollContainer.scrollLeft + overlayOffsetLeft,
-        -scrollContainer.scrollTop + overlayOffsetTop,
-      ];
+      return [0, 0];
     }
 
     const scrollContainerRect = scrollContainer.getBoundingClientRect();
     const referenceScrollContainerRect =
       referenceScrollContainer.getBoundingClientRect();
-    const offsetLeftBetweenScrollContainers =
+    let offsetLeftBetweenScrollContainers =
       referenceScrollContainerRect.left - scrollContainerRect.left;
-    const offsetTopBetweenScrollContainers =
+    let offsetTopBetweenScrollContainers =
       referenceScrollContainerRect.top - scrollContainerRect.top;
+    if (scrollContainerIsDocument) {
+      offsetLeftBetweenScrollContainers -= scrollContainer.scrollLeft;
+      offsetTopBetweenScrollContainers -= scrollContainer.scrollTop;
+    }
     return [
-      overlayOffsetLeft -
-        referenceScrollContainer.scrollLeft -
-        offsetLeftBetweenScrollContainers,
-      overlayOffsetTop -
-        referenceScrollContainer.scrollTop -
-        offsetTopBetweenScrollContainers,
+      -offsetLeftBetweenScrollContainers - referenceScrollContainer.scrollLeft,
+      -offsetTopBetweenScrollContainers - referenceScrollContainer.scrollTop,
     ];
   };
-
   const getScrollOffsetsOverlay = () => {
     if (sameScrollContainer) {
       return [scrollContainer.scrollLeft, scrollContainer.scrollTop];
     }
+
+    const scrollContainerRect = scrollContainer.getBoundingClientRect();
+    const referenceScrollContainerRect =
+      referenceScrollContainer.getBoundingClientRect();
+    let offsetLeftBetweenScrollContainers =
+      referenceScrollContainerRect.left - scrollContainerRect.left;
+    let offsetTopBetweenScrollContainers =
+      referenceScrollContainerRect.top - scrollContainerRect.top;
+    if (scrollContainerIsDocument) {
+      offsetLeftBetweenScrollContainers -= scrollContainer.scrollLeft;
+      offsetTopBetweenScrollContainers -= scrollContainer.scrollTop;
+    }
+
     return [
-      referenceScrollContainer.scrollLeft,
-      referenceScrollContainer.scrollTop,
+      referenceScrollContainer.scrollLeft + offsetLeftBetweenScrollContainers,
+      referenceScrollContainer.scrollTop + offsetTopBetweenScrollContainers,
     ];
   };
   return [getPositionOffsetsOverlay, getScrollOffsetsOverlay];
