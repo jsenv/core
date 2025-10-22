@@ -1,4 +1,4 @@
-import { createEventMarker } from "./event_marker.js";
+import { createEventMarker } from "../event_marker.js";
 
 export const focusNavEventMarker = createEventMarker("focus_nav");
 

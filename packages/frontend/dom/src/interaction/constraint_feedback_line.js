@@ -1,5 +1,3 @@
-import { scrollableCoordsToViewport } from "../scroll/scrollable_rect.js";
-
 export const setupConstraintFeedbackLine = () => {
   const constraintFeedbackLine = createConstraintFeedbackLine();
 
@@ -9,14 +7,17 @@ export const setupConstraintFeedbackLine = () => {
 
   // Internal function to update constraint feedback line
   const onDrag = (gestureInfo) => {
-    const { dragEvent: mousemoveEvent } = gestureInfo;
-    if (!mousemoveEvent) {
+    const { grabEvent, dragEvent } = gestureInfo;
+    if (
+      grabEvent.type === "programmatic" ||
+      dragEvent.type === "programmatic"
+    ) {
       // programmatic drag
       return;
     }
 
-    const mouseX = mousemoveEvent.clientX;
-    const mouseY = mousemoveEvent.clientY;
+    const mouseX = dragEvent.clientX;
+    const mouseY = dragEvent.clientY;
     // Use last known position if current position not available (e.g., during scroll)
     const effectiveMouseX = mouseX !== null ? mouseX : lastMouseX;
     const effectiveMouseY = mouseY !== null ? mouseY : lastMouseY;
@@ -28,19 +29,12 @@ export const setupConstraintFeedbackLine = () => {
     lastMouseX = mouseX;
     lastMouseY = mouseY;
 
-    const { xAtStart, yAtStart } = gestureInfo;
-
-    // Calculate current grab point position in viewport coordinates
-    // The grab point is where the element was initially grabbed, adjusted for movement
-    const [currentGrabPointX, currentGrabPointY] = scrollableCoordsToViewport(
-      xAtStart + gestureInfo.xMove,
-      yAtStart + gestureInfo.yMove,
-      gestureInfo.scrollContainer,
-    );
+    const grabClientX = grabEvent.clientX;
+    const grabClientY = grabEvent.clientY;
 
     // Calculate distance between mouse and current grab point
-    const deltaX = effectiveMouseX - currentGrabPointX;
-    const deltaY = effectiveMouseY - currentGrabPointY;
+    const deltaX = effectiveMouseX - grabClientX;
+    const deltaY = effectiveMouseY - grabClientY;
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
     // Show line only when distance is significant (> 20px threshold)
     const threshold = 20;
@@ -53,8 +47,8 @@ export const setupConstraintFeedbackLine = () => {
     // Calculate angle and position
     const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
     // Position line at current grab point (follows element movement)
-    constraintFeedbackLine.style.left = `${currentGrabPointX}px`;
-    constraintFeedbackLine.style.top = `${currentGrabPointY}px`;
+    constraintFeedbackLine.style.left = `${grabClientX}px`;
+    constraintFeedbackLine.style.top = `${grabClientY}px`;
     constraintFeedbackLine.style.width = `${distance}px`;
     constraintFeedbackLine.style.transform = `rotate(${angle}deg)`;
     // Fade in based on distance (more visible as distance increases)
