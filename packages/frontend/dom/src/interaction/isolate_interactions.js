@@ -19,7 +19,7 @@ import { getAssociatedElements } from "../utils.js";
  *       <div class="modal">modal content</div>
  *       <span>more content</span>
  *     </div>
- *     <aside>sidebar</aside>
+ *     <aside inert>already inert</aside>
  *     <div class="dropdown">dropdown menu</div>
  *   </main>
  *   <footer>...</footer>
@@ -29,14 +29,14 @@ import { getAssociatedElements } from "../utils.js";
  * After calling isolateInteractions([modal, dropdown]):
  * ```
  * <body>
- *   <header inert>...</header>
+ *   <header inert>...</header>  ← made inert (no active descendants)
  *   <main> ← not inert because it contains active elements
  *     <div> ← not inert because it contains .modal
  *       <span inert>some content</span> ← made inert selectively
  *       <div class="modal">modal content</div> ← stays active
  *       <span inert>more content</span> ← made inert selectively
  *     </div>
- *     <aside inert>sidebar</aside> ← made inert (no active descendants)
+ *     <aside inert>already inert</aside>
  *     <div class="dropdown">dropdown menu</div> ← stays active
  *   </main>
  *   <footer inert>...</footer>
@@ -53,7 +53,7 @@ import { getAssociatedElements } from "../utils.js";
  *       <div class="modal">modal content</div>
  *       <span>more content</span>
  *     </div>
- *     <aside>sidebar</aside>
+ *     <aside inert>already inert</aside> ← [inert] preserved
  *     <div class="dropdown">dropdown menu</div>
  *   </main>
  *   <footer>...</footer>
@@ -119,19 +119,21 @@ export const isolateInteractions = (elements) => {
       return;
     }
 
-    // Check if any descendant should stay interactive
-    const hasInteractiveDescendants = Array.from(el.querySelectorAll("*")).some(
-      (descendant) => toKeepInteractiveSet.has(descendant),
+    // Since we put all ancestors in toKeepInteractiveSet, if this element
+    // is not in the set, we can check if any of its direct children are.
+    // If none of the direct children are in the set, then no descendants are either.
+    const children = Array.from(el.children);
+    const hasInteractiveChildren = children.some((child) =>
+      toKeepInteractiveSet.has(child),
     );
 
-    if (!hasInteractiveDescendants) {
+    if (!hasInteractiveChildren) {
       // No interactive descendants, make the entire element inert
       setInert(el);
       return;
     }
 
-    // Make this element's children selectively inert
-    const children = Array.from(el.children);
+    // Some children need to stay interactive, process them selectively
     for (const child of children) {
       makeElementInertSelectivelyOrCompletely(child);
     }
