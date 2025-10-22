@@ -1,10 +1,14 @@
 import { setAttributes } from "../style_and_attributes.js";
+import { getAssociatedElements } from "../utils.js";
 
 /**
  * Makes all DOM elements inert except for the specified element and its ancestors.
  *
  * This function applies the `inert` attribute to sibling elements at each level of the DOM tree,
  * starting from the target element and traversing up to document.body.
+ *
+ * When a sibling contains elements matching the shouldStayActiveSelector, only the parts
+ * of that sibling that don't contain matching elements will be made inert.
  *
  * Example DOM structure and inert application:
  *
@@ -13,48 +17,40 @@ import { setAttributes } from "../style_and_attributes.js";
  * <body>
  *   <header>...</header>
  *   <main>
- *     <div>...</div>
+ *     <div>
+ *       <span>some content</span>
+ *       <div data-droppable>drop zone</div>
+ *       <span>more content</span>
+ *     </div>
  *     <aside inert>already inert</aside>
  *     <div class="modal">...</div> ← Will call makeRestInert on this element
- *     <div data-droppable>drop zone</div> ← Will stay active with shouldStayActive
  *   </main>
  *   <footer>...</footer>
  * </body>
  * ```
  *
- * After calling makeRestInert(document.querySelector(".modal"), el => el.closest("[data-droppable]")):
+ * After calling makeRestInert(document.querySelector(".modal"), "[data-droppable]"):
  * ```
  * <body>
  *   <header inert>...</header>
  *   <main>
- *     <div inert>...</div>
+ *     <div> ← not inert because it contains [data-droppable]
+ *       <span inert>some content</span> ← made inert selectively
+ *       <div data-droppable>drop zone</div> ← stays active
+ *       <span inert>more content</span> ← made inert selectively
+ *     </div>
  *     <aside inert>already inert</aside>
  *     <div class="modal">...</div> ← still active
- *     <div data-droppable>drop zone</div> ← still active (matches shouldStayActive)
  *   </main>
  *   <footer inert>...</footer>
  * </body>
  * ```
  *
- * After calling cleanup():
- * ```
- * <body>
- *   <header>...</header>
- *   <main>
- *     <div>...</div>
- *     <aside inert>already inert</aside> ← [inert] preserved
- *     <div class="modal">...</div>
- *     <div data-droppable>drop zone</div>
- *   </main>
- *   <footer>...</footer>
- * </body>
- * ```
- *
  * @param {Element} element - The element to keep active (non-inert)
- * @param {Function} [shouldStayActive] - Optional function that returns truthy if an element should stay active
+ * @param {string} [shouldStayActiveSelector] - Optional CSS selector for elements that should stay active
  * @returns {Function} cleanup - Function to restore original inert states
  */
-export const makeRestInert = (element, shouldStayActive) => {
+export const makeRestInert = (element, shouldStayActiveSelector) => {
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
     for (const cleanupCallback of cleanupCallbackSet) {
@@ -63,14 +59,10 @@ export const makeRestInert = (element, shouldStayActive) => {
     cleanupCallbackSet.clear();
   };
 
-  const ensureInert = (el) => {
+  const setInert = (el) => {
     if (el.hasAttribute("data-backdrop")) {
-      // backdrop elements are meant to control interactions hapenning at document level
+      // backdrop elements are meant to control interactions happening at document level
       // and should stay interactive
-      return;
-    }
-    if (shouldStayActive && shouldStayActive(el)) {
-      // element should stay active based on the provided condition
       return;
     }
     const restoreAttributes = setAttributes(el, {
@@ -81,30 +73,30 @@ export const makeRestInert = (element, shouldStayActive) => {
     });
   };
 
-  // Special handling for COL elements
-  if (element.tagName === "COL") {
-    const table = element.closest("table");
-    const colgroup = element.parentNode;
-    const columnIndex = Array.from(colgroup.children).indexOf(element);
-    const rows = table.querySelectorAll("tr");
-
-    // Apply inert to all table cells outside this column
-    for (const row of rows) {
-      const rowCells = row.children;
-      for (const rowCell of rowCells) {
-        if (rowCell.cellIndex !== columnIndex) {
-          ensureInert(rowCell);
-        }
-      }
+  const makeElementInertSelectivelyOrCompletely = (el) => {
+    // If this element itself matches the selector, keep it active
+    if (shouldStayActiveSelector && el.matches(shouldStayActiveSelector)) {
+      return;
     }
+    const hasActiveDescendants =
+      shouldStayActiveSelector && el.querySelector(shouldStayActiveSelector);
+    if (!hasActiveDescendants) {
+      // No active descendants, make the entire element inert
+      setInert(el);
+      return;
+    }
+    // Make this element's children selectively inert
+    const children = Array.from(el.children);
+    for (const child of children) {
+      makeElementInertSelectivelyOrCompletely(child);
+    }
+  };
 
-    // Also apply inert to elements outside the table using normal logic
-    const cleanupTableInert = makeRestInert(table, shouldStayActive);
-
-    return () => {
-      cleanup();
-      cleanupTableInert();
-    };
+  const associatedElements = getAssociatedElements(element);
+  if (associatedElements) {
+    for (const associatedElement of associatedElements) {
+      makeElementInertSelectivelyOrCompletely(associatedElement);
+    }
   }
 
   // Step 1: Apply inert to direct siblings of the element
@@ -113,7 +105,7 @@ export const makeRestInert = (element, shouldStayActive) => {
     const siblings = Array.from(parent.children);
     for (const sibling of siblings) {
       if (sibling !== element) {
-        ensureInert(sibling);
+        makeElementInertSelectivelyOrCompletely(sibling);
       }
     }
   }
@@ -128,7 +120,7 @@ export const makeRestInert = (element, shouldStayActive) => {
     const ancestorSiblings = Array.from(ancestorParent.children);
     for (const sibling of ancestorSiblings) {
       if (sibling !== currentElementAncestor) {
-        ensureInert(sibling);
+        makeElementInertSelectivelyOrCompletely(sibling);
       }
     }
 
