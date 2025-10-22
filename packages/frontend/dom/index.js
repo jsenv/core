@@ -58,11 +58,7 @@ export {
 export { allowWheelThrough } from "./src/scroll/wheel_through.js";
 
 // position
-export {
-  convertScrollRelativeRectToElementRect,
-  getMouseEventScrollRelativeRect,
-  getScrollRelativeRect,
-} from "./src/position/dom_coords.js";
+export { getScrollRelativeRect } from "./src/position/dom_coords.js";
 export { getPositionedParent } from "./src/position/offset_parent.js";
 export { initPositionSticky } from "./src/position/position_sticky.js";
 export { stickyAsRelativeCoords } from "./src/position/sticky_rect.js";
@@ -70,7 +66,6 @@ export {
   pickPositionRelativeTo,
   visibleRectEffect,
 } from "./src/position/visible_rect.js";
-export { getElementVisualCoords } from "./src/position/visual_rect.js";
 
 // size
 export { initFlexDetailsSet } from "./src/size/flex_details_set.js";
