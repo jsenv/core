@@ -44,17 +44,6 @@ export {
   getSelfAndAncestorScrolls,
 } from "./src/scroll/scroll_container.js";
 export { trapScrollInside } from "./src/scroll/scroll_trap.js";
-export {
-  elementToFixedCoords,
-  elementToStickyCoords,
-  fixedCoordsToScrollableCoords,
-  getElementScrollableRect,
-  mouseEventToScrollableCoords,
-  scrollableCoordsToPositionedParentCoords,
-  scrollableCoordsToViewport,
-  stickyLeftToScrollableLeft,
-  stickyTopToScrollableTop,
-} from "./src/scroll/scrollable_rect.js";
 export { allowWheelThrough } from "./src/scroll/wheel_through.js";
 
 // position
