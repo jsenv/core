@@ -23,22 +23,33 @@ export const makeRestInert = (element) => {
     });
   };
 
-  // Traverse up the tree starting from the given element
-  let currentElement = element;
-  while (currentElement && currentElement !== document.body) {
-    const parent = currentElement.parentNode;
-    if (!parent) break;
+  // Step 1: Apply inert to direct siblings of the element
+  const parent = element.parentNode;
+  if (parent) {
+    const siblings = Array.from(parent.children);
+    for (const sibling of siblings) {
+      if (sibling !== element) {
+        ensureInert(sibling);
+      }
+    }
+  }
 
-    // Get all siblings of the current element
-    const parentChildren = Array.from(parent.children);
-    for (const sibling of parentChildren) {
-      if (sibling !== currentElement) {
+  // Step 2: Traverse up the hierarchy and apply inert to ancestor siblings
+  let currentElementAncestor = parent;
+  while (currentElementAncestor && currentElementAncestor !== document.body) {
+    const ancestorParent = currentElementAncestor.parentNode;
+    if (!ancestorParent) break;
+
+    // Get all siblings of the current ancestor
+    const ancestorSiblings = Array.from(ancestorParent.children);
+    for (const sibling of ancestorSiblings) {
+      if (sibling !== currentElementAncestor) {
         ensureInert(sibling);
       }
     }
 
-    // Move up to the parent for the next iteration
-    currentElement = parent;
+    // Move up to the next ancestor
+    currentElementAncestor = ancestorParent;
   }
 
   return () => {
