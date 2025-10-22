@@ -22,6 +22,7 @@ export const createDragGestureController = (options = {}) => {
     onRelease,
     threshold = 5,
     direction: defaultDirection = { x: true, y: true },
+    documentInteractions = "auto",
     backdrop = true,
     backdropZIndex = 1000,
   } = options;
@@ -131,6 +132,9 @@ export const createDragGestureController = (options = {}) => {
     definePropertyAsReadOnly(gestureInfo, "grabEvent");
 
     document_interactions: {
+      if (documentInteractions === "manual") {
+        break document_interactions;
+      }
       /*
       During the drag gesture there is many things to manage to make drag gesture a prio:
 
@@ -491,7 +495,10 @@ export const dragAfterThreshold = (
 ) => {
   const significantDragGestureController = createDragGestureController({
     threshold,
-    backdrop: false,
+    // allow interaction for this intermediate gesture:
+    // user should still be able to scroll or interact with the document
+    // only once the gesture is significant we take control
+    documentInteractions: "manual",
     onDragStart: (gestureInfo) => {
       significantDragGesture.release(); // kill that gesture
       const dragGesture = dragGestureInitializer();
