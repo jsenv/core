@@ -194,6 +194,19 @@ export const createDragGestureController = (options = {}) => {
       // 3. FOCUS MANAGEMENT: Control and stabilize focus during drag
       const { activeElement } = document;
       const focusableElement = findFocusable(element);
+      // Focus the dragged element (or document.body as fallback) to establish clear focus context
+      // This also ensure any keydown event listened by the currently focused element
+      // won't be available during drag
+      const elementToFocus = focusableElement || document.body;
+      elementToFocus.focus({
+        preventScroll: true,
+      });
+      addReleaseCallback(() => {
+        // Restore original focus on release
+        activeElement.focus({
+          preventScroll: true,
+        });
+      });
       // Prevent Tab navigation entirely (focus should stay stable)
       const onkeydown = (e) => {
         if (e.key === "Tab") {
@@ -204,17 +217,6 @@ export const createDragGestureController = (options = {}) => {
       document.addEventListener("keydown", onkeydown);
       addReleaseCallback(() => {
         document.removeEventListener("keydown", onkeydown);
-      });
-      // Focus the dragged element (or document.body as fallback) to establish clear focus context
-      const elementToFocus = focusableElement || document.body;
-      elementToFocus.focus({
-        preventScroll: true,
-      });
-      addReleaseCallback(() => {
-        // Restore original focus on release
-        activeElement.focus({
-          preventScroll: true,
-        });
       });
 
       // 4. SELECTIVE SCROLLING: Allow keyboard scrolling only in supported directions

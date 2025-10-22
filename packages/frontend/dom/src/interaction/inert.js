@@ -59,10 +59,30 @@ export const makeRestInert = (element, shouldStayActiveSelector) => {
     cleanupCallbackSet.clear();
   };
 
+  // Build exclusion list: associated elements + their ancestors
+  const excludedNodeSet = new Set();
+  const associatedElements = getAssociatedElements(element);
+  if (associatedElements) {
+    for (const associatedElement of associatedElements) {
+      // Add the associated element itself
+      excludedNodeSet.add(associatedElement);
+      // Add all its ancestors up to document.body
+      let ancestor = associatedElement.parentNode;
+      while (ancestor && ancestor !== document.body) {
+        excludedNodeSet.add(ancestor);
+        ancestor = ancestor.parentNode;
+      }
+    }
+  }
+
   const setInert = (el) => {
     if (el.hasAttribute("data-backdrop")) {
       // backdrop elements are meant to control interactions happening at document level
       // and should stay interactive
+      return;
+    }
+    if (excludedNodeSet.has(el)) {
+      // element is associated or ancestor of associated element, keep it active
       return;
     }
     const restoreAttributes = setAttributes(el, {
@@ -74,10 +94,16 @@ export const makeRestInert = (element, shouldStayActiveSelector) => {
   };
 
   const makeElementInertSelectivelyOrCompletely = (el) => {
+    // If this element is excluded (associated or ancestor of associated), keep it active
+    if (excludedNodeSet.has(el)) {
+      return;
+    }
+
     // If this element itself matches the selector, keep it active
     if (shouldStayActiveSelector && el.matches(shouldStayActiveSelector)) {
       return;
     }
+
     const hasActiveDescendants =
       shouldStayActiveSelector && el.querySelector(shouldStayActiveSelector);
     if (!hasActiveDescendants) {
@@ -91,13 +117,6 @@ export const makeRestInert = (element, shouldStayActiveSelector) => {
       makeElementInertSelectivelyOrCompletely(child);
     }
   };
-
-  const associatedElements = getAssociatedElements(element);
-  if (associatedElements) {
-    for (const associatedElement of associatedElements) {
-      makeElementInertSelectivelyOrCompletely(associatedElement);
-    }
-  }
 
   // Step 1: Apply inert to direct siblings of the element
   const parent = element.parentNode;
