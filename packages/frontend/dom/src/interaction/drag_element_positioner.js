@@ -256,12 +256,12 @@ const createGetScrollOffsets = (
       return getScrollOffsetsFixed;
     }
   }
-  const getScrollOffsetsWithScrolls = () => {
+  const getScrollOffsets = () => {
     const leftScrollToAdd = scrollLeft + referenceScrollContainer.scrollLeft;
     const topScrollToAdd = scrollTop + referenceScrollContainer.scrollTop;
     return [leftScrollToAdd, topScrollToAdd];
   };
-  return getScrollOffsetsWithScrolls;
+  return getScrollOffsets;
 };
 
 export const getDragCoordinates = (
