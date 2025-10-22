@@ -11,7 +11,7 @@
 
 import { findFocusable } from "../focus/find_focusable.js";
 import { createPubSub } from "../pub_sub.js";
-import { makeRestInert } from "./inert.js";
+import { isolateInteractions } from "./isolate_interactions.js";
 
 export const createDragGestureController = (options = {}) => {
   const {
@@ -157,7 +157,10 @@ export const createDragGestureController = (options = {}) => {
       // 1. INTERACTION ISOLATION: Make everything except the dragged element inert
       // This prevents keyboard events, pointer interactions, and screen reader navigation
       // on non-relevant elements during the drag operation
-      const cleanupInert = makeRestInert(element, "[data-droppable]");
+      const cleanupInert = isolateInteractions([
+        element,
+        ...Array.from(document.querySelectorAll("[data-droppable]")),
+      ]);
       addReleaseCallback(() => {
         cleanupInert();
       });
