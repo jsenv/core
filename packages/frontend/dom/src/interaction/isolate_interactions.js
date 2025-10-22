@@ -94,13 +94,14 @@ export const isolateInteractions = (elements) => {
       }
     }
   }
+  // backdrop elements are meant to control interactions happening at document level
+  // and should stay interactive
+  const backdropElements = document.querySelectorAll("[data-backdrop]");
+  for (const backdropElement of backdropElements) {
+    keepSelfAndAncestors(backdropElement);
+  }
 
   const setInert = (el) => {
-    if (el.hasAttribute("data-backdrop")) {
-      // backdrop elements are meant to control interactions happening at document level
-      // and should stay interactive
-      return;
-    }
     if (toKeepInteractiveSet.has(el)) {
       // element should stay interactive
       return;
