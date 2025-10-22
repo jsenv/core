@@ -175,19 +175,30 @@ export const createDragGestureController = (options = {}) => {
       });
 
       const { activeElement } = document;
-      const focusableElement = findFocusable(element) || document.body;
-      focusableElement.focus();
+      const focusableElement = findFocusable(element);
+      if (focusableElement) {
+        // prevent focus within the dragged element during drag
+        const onkeydown = (e) => {
+          if (e.key === "Tab") {
+            e.preventDefault();
+            return;
+          }
+        };
+        focusableElement.addEventListener("keydown", onkeydown);
+        addReleaseCallback(() => {
+          focusableElement.removeEventListener("keydown", onkeydown);
+        });
+      }
+      const elementToFocus = focusableElement || document.body;
+
+      elementToFocus.focus();
       addReleaseCallback(() => {
         activeElement.focus();
       });
 
       scroll_via_keyboard: {
         const onDocumentKeydown = (keyboardEvent) => {
-          // if (keyboardEvent.key === "Tab") {
-          //   keyboardEvent.preventDefault();
-          //   return;
-          // }
-
+          // no need to prevent "Tab" (that would cause a scroll) because all the document is inert except our element
           if (
             keyboardEvent.key === "ArrowUp" ||
             keyboardEvent.key === "ArrowDown" ||
