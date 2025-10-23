@@ -36,6 +36,8 @@ export const eslintConfigRelax = ({
   prettierSortImport,
   jsxPragmaAuto = false,
   preact,
+  reactVersion = "detect",
+  reactVersionForPreact = "19.2.0",
   importResolutionLogLevel,
 
   browserFiles = [],
@@ -190,7 +192,7 @@ export const eslintConfigRelax = ({
       },
       settings: {
         react: {
-          version: "detect",
+          version: preact ? reactVersionForPreact : reactVersion,
         },
       },
       rules: {
