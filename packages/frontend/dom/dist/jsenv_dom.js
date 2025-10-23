@@ -3321,41 +3321,22 @@ const getDragCoordinates = (element, scrollContainer = getScrollContainer(elemen
 })();
 
 const installImportMetaCss = importMeta => {
-  let cssText = "";
-  let stylesheet = new CSSStyleSheet({
+  const stylesheet = new CSSStyleSheet({
     baseUrl: importMeta.url
   });
-  let adopted = false;
-  const css = {
-    toString: () => cssText,
-    update: value => {
-      cssText = value;
-      cssText += "\n/* sourceURL=".concat(importMeta.url, " */\n/* inlined from ").concat(importMeta.url, " */");
-      stylesheet.replaceSync(cssText);
-    },
-    inject: () => {
-      if (!adopted) {
-        document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
-        adopted = true;
-      }
-    },
-    remove: () => {
-      if (adopted) {
-        document.adoptedStyleSheets = document.adoptedStyleSheets.filter(s => s !== stylesheet);
-        adopted = false;
-      }
-    }
-  };
+  let called = false;
+  // eslint-disable-next-line accessor-pairs
   Object.defineProperty(importMeta, "css", {
-    get() {
-      return css;
-    },
+    configurable: true,
     set(value) {
-      css.update(value);
-      css.inject();
+      if (called) {
+        throw new Error("import.meta.css setter can only be called once");
+      }
+      called = true;
+      stylesheet.replaceSync(value);
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
     }
   });
-  return css.remove;
 };
 
 /**
