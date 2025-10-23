@@ -32,11 +32,11 @@
   },
   "dependencies": {
     "@jsenv/dom": "0.1.0",
-    "@jsenv/humanize": "1.6.0",
-    "@jsenv/validation": "0.0.1"
+    "@jsenv/humanize": "1.6.0"
   },
   "devDependencies": {
-    "@jsenv/assert": "4.5.3"
+    "@jsenv/assert": "4.5.3",
+    "@jsenv/core": "../../../"
   },
   "peerDependencies": {
     "@preact/signals": "^2.3.2",

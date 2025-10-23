@@ -1,4 +1,3 @@
-import { closeValidationMessage, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import {
   useContext,
@@ -8,6 +7,8 @@ import {
 } from "preact/hooks";
 
 import { useIsVisited } from "../../browser_integration/use_is_visited.js";
+import { closeValidationMessage } from "../../validation/custom_constraint_validation.js";
+import { useConstraints } from "../../validation/hooks/use_constraints.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useRequestedActionStatus } from "../field/use_action_events.js";
 import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";

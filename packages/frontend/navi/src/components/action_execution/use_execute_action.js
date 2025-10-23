@@ -1,5 +1,8 @@
-import { addCustomMessage, removeCustomMessage } from "@jsenv/validation";
 import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
+import {
+  addCustomMessage,
+  removeCustomMessage,
+} from "../../validation/custom_message.js";
 import { useResetErrorBoundary } from "../error_boundary_context.js";
 
 let debug = false;

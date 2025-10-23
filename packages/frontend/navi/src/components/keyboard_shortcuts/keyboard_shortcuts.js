@@ -1,8 +1,8 @@
 import { activeElementSignal, canInterceptKeys } from "@jsenv/dom";
-import { requestAction } from "@jsenv/validation";
 import { effect, signal } from "@preact/signals";
 import { useEffect, useRef } from "preact/hooks";
 
+import { requestAction } from "../../validation/custom_constraint_validation.js";
 import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { useActionEvents } from "../field/use_action_events.js";

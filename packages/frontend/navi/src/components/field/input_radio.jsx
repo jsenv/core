@@ -1,4 +1,3 @@
-import { useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import {
   useContext,
@@ -7,6 +6,7 @@ import {
   useRef,
 } from "preact/hooks";
 
+import { useConstraints } from "../../validation/hooks/use_constraints.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";

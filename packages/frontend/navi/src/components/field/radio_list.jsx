@@ -1,4 +1,3 @@
-import { requestAction } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import {
   useContext,
@@ -8,6 +7,7 @@ import {
 } from "preact/hooks";
 
 import { useActionStatus } from "../../use_action_status.js";
+import { requestAction } from "../../validation/custom_constraint_validation.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";

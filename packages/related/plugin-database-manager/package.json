@@ -32,7 +32,6 @@
     "@jsenv/navi": "0.0.1",
     "@jsenv/sigi": "0.1.2",
     "@jsenv/urls": "2.9.1",
-    "@jsenv/validation": "0.0.1",
     "@tanstack/table-core": "8.21.3",
     "jsonwebtoken": "9.0.2",
     "postgres": "3.4.7"
@@ -40,8 +39,8 @@
   "devDependencies": {
     "@jsenv/core": "../../../",
     "@jsenv/plugin-preact": "../../related/plugin-preact",
-    "@preact/signals": "2.2.1",
-    "preact": "10.27.0"
+    "@preact/signals": "2.3.2",
+    "preact": "10.27.2"
   },
   "publishConfig": {
     "access": "public"

@@ -1,15 +1,13 @@
 import {
+  createUniqueValueConstraint,
   Editable,
   FontSizedSvg,
   Input,
   Overflow,
+  SINGLE_SPACE_CONSTRAINT,
   useEditionController,
   useSignalSync,
 } from "@jsenv/navi";
-import {
-  createUniqueValueConstraint,
-  SINGLE_SPACE_CONSTRAINT,
-} from "@jsenv/validation";
 import { useSignal } from "@preact/signals";
 
 export const ExplorerItem = ({
