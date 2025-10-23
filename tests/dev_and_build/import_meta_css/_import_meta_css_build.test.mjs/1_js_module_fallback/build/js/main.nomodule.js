@@ -6,48 +6,28 @@ System.register([__v__("/jsenv_core_packages.js")], function (_export, _context)
     setters: [function (_buildJsenv_core_packagesJs) {}],
     execute: function () {
       installImportMetaCss = importMeta => {
-        let cssText = "";
-        let stylesheet = new CSSStyleSheet({
+        const stylesheet = new CSSStyleSheet({
           baseUrl: importMeta.url
         });
-        let adopted = false;
-        const css = {
-          toString: () => cssText,
-          update: value => {
-            cssText = value;
-            cssText += `
-/* sourceURL=${importMeta.url} */
-/* inlined from ${importMeta.url} */`;
-            stylesheet.replaceSync(cssText);
-          },
-          inject: () => {
-            if (!adopted) {
-              document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
-              adopted = true;
-            }
-          },
-          remove: () => {
-            if (adopted) {
-              document.adoptedStyleSheets = document.adoptedStyleSheets.filter(s => s !== stylesheet);
-              adopted = false;
-            }
-          }
-        };
+        let called = false;
         Object.defineProperty(importMeta, "css", {
-          get() {
-            return css;
-          },
+          configurable: true,
           set(value) {
-            css.update(value);
-            css.inject();
+            if (called) {
+              throw new Error("import.meta.css setter can only be called once");
+            }
+            called = true;
+            stylesheet.replaceSync(value);
+            document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
           }
         });
-        return css.remove;
       };
       installImportMetaCss(_context.meta);
-      _context.meta.css = `body {
-  background-color: red;
-}`;
+      _context.meta.css = `
+  body {
+    background-color: red;
+  }
+`;
       window.resolveResultPromise(window.getComputedStyle(document.body).backgroundColor);
     }
   };

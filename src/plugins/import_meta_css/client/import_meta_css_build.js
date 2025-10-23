@@ -1,8 +1,8 @@
-const installImportMetaCss = (importMeta) => {
+export const installImportMetaCss = (importMeta) => {
   const stylesheet = new CSSStyleSheet({ baseUrl: importMeta.url });
 
   let called = false;
-
+  // eslint-disable-next-line accessor-pairs
   Object.defineProperty(importMeta, "css", {
     configurable: true,
     set(value) {
@@ -18,13 +18,3 @@ const installImportMetaCss = (importMeta) => {
     },
   });
 };
-
-installImportMetaCss(import.meta);import.meta.css =           `
-  body {
-    background-color: red;
-  }
-`;
-
-window.resolveResultPromise(
-  window.getComputedStyle(document.body).backgroundColor,
-);

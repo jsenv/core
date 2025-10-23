@@ -3,7 +3,6 @@
 ```js
 run({
   runtimeCompat: { chrome: "60" },
-  minification: false,
 })
 ```
 
