@@ -622,7 +622,7 @@ const injectSupervisorIntoHTML = async ({
         actions.push(async () => {
           try {
             const inlineJsSupervised = await injectSupervisorIntoJs({
-              webServer,
+              // webServer,
               content: textContent,
               url: inlineScriptUrl,
               type,
@@ -841,7 +841,6 @@ const jsenvPluginSupervisor = ({
           if (sourcemap) {
             const original = getOriginalPosition({
               sourcemap,
-              url: file,
               line,
               column
             });

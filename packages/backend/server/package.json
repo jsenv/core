@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/server",
-  "version": "16.3.1",
+  "version": "16.3.2",
   "description": "A modern Node.js HTTP server with declarative routing, content negotiation, and WebSocket support",
   "repository": {
     "type": "git",

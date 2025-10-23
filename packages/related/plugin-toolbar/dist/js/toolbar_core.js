@@ -511,6 +511,7 @@ const createHorizontalBreakpoint = breakpointValue => {
   return createBreakpoint(windowWidthMeasure, breakpointValue);
 };
 const createMeasure = ({
+  name,
   compute,
   register
 }) => {
@@ -529,6 +530,7 @@ const createMeasure = ({
     });
   }
   return {
+    name,
     get,
     changed,
     unregister
@@ -556,6 +558,7 @@ const createSignal = () => {
   };
 };
 const windowWidthMeasure = createMeasure({
+  name: "window-width",
   compute: () => window.innerWidth,
   register: onchange => {
     window.addEventListener("resize", onchange);

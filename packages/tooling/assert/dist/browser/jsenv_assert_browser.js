@@ -5334,7 +5334,6 @@ let createRootNode;
   const referenceFromOthersSetDefault = new Set();
   const appendChildNodeGeneric = (node, childKey, params) => {
     const childNode = createNode({
-      id: node.nextId(),
       context: node.context,
       parent: node,
       path: node.path,

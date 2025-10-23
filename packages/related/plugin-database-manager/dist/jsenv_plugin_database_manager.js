@@ -22,7 +22,7 @@ const alterDatabaseQuery = async (sql, datname, colname, value) => {
   }
 };
 
-var _templateObject$3, _templateObject2$3, _templateObject3$3, _templateObject4$3, _templateObject5$3, _templateObject6$3, _templateObject7$3, _templateObject8$3;
+var _templateObject$3, _templateObject2$3, _templateObject3$3, _templateObject4$3, _templateObject5$3, _templateObject6$3, _templateObject7$3, _templateObject8$3, _templateObject9$3, _templateObject0$3, _templateObject1$2;
 const selectCurrentInfo = async sql => {
   const currentRoleResult = await sql(_templateObject$3 || (_templateObject$3 = _taggedTemplateLiteral(["\n    SELECT\n      current_user\n  "])));
   const currentRoleName = currentRoleResult[0].current_user;
@@ -58,12 +58,20 @@ const countRows = async (sql, tableName, {
   const [countResult] = await sql(_templateObject6$3 || (_templateObject6$3 = _taggedTemplateLiteral(["\n    SELECT\n      COUNT(*)\n    FROM\n      ", " ", "\n  "])), sql(tableName), whereClause || sql(_templateObject7$3 || (_templateObject7$3 = _taggedTemplateLiteral([""]))));
   return parseInt(countResult.count);
 };
-const getTableColumns = async (sql, tableName) => {
-  const columns = await sql(_templateObject8$3 || (_templateObject8$3 = _taggedTemplateLiteral(["\n    SELECT\n      *\n    FROM\n      information_schema.columns\n    WHERE\n      table_name = ", "\n  "])), tableName);
+const getTableColumns = async (sql, tableName, options = {}) => {
+  const {
+    schema
+  } = options;
+  const where = [];
+  where.push(sql(_templateObject8$3 || (_templateObject8$3 = _taggedTemplateLiteral(["table_name = ", ""])), tableName));
+  if (schema) {
+    where.push(sql(_templateObject9$3 || (_templateObject9$3 = _taggedTemplateLiteral(["table_schema = ", ""])), schema));
+  }
+  const columns = await sql(_templateObject0$3 || (_templateObject0$3 = _taggedTemplateLiteral(["\n    SELECT\n      *\n    FROM\n      information_schema.columns\n    WHERE\n      ", "\n    ORDER BY\n      ordinal_position ASC\n  "])), where.flatMap((x, i) => i ? [sql(_templateObject1$2 || (_templateObject1$2 = _taggedTemplateLiteral(["AND"]))), x] : x));
   return columns;
 };
 
-var _templateObject$2, _templateObject2$2, _templateObject3$2, _templateObject4$2, _templateObject5$2, _templateObject6$2, _templateObject7$2, _templateObject8$2, _templateObject9$1, _templateObject0$1;
+var _templateObject$2, _templateObject2$2, _templateObject3$2, _templateObject4$2, _templateObject5$2, _templateObject6$2, _templateObject7$2, _templateObject8$2, _templateObject9$2, _templateObject0$2;
 const selectRoleByName = async (sql, rolname) => {
   const results = await sql(_templateObject$2 || (_templateObject$2 = _taggedTemplateLiteral(["\n    SELECT\n      *\n    FROM\n      pg_roles\n    WHERE\n      rolname = ", "\n  "])), rolname);
   if (results.length === 0) {
@@ -112,9 +120,9 @@ const alterRoleQuery = async (sql, rolname, columnName, value) => {
   }
   if (columnName === "rolpassword") {
     if (value) {
-      return sql(_templateObject9$1 || (_templateObject9$1 = _taggedTemplateLiteral(["ALTER ROLE ", " PASSWORD '", "' "])), sql(rolname), sql.unsafe(value));
+      return sql(_templateObject9$2 || (_templateObject9$2 = _taggedTemplateLiteral(["ALTER ROLE ", " PASSWORD '", "' "])), sql(rolname), sql.unsafe(value));
     }
-    return sql(_templateObject0$1 || (_templateObject0$1 = _taggedTemplateLiteral(["ALTER ROLE ", " PASSWORD NULL"])), sql(rolname));
+    return sql(_templateObject0$2 || (_templateObject0$2 = _taggedTemplateLiteral(["ALTER ROLE ", " PASSWORD NULL"])), sql(rolname));
   }
   return null;
 };
@@ -128,13 +136,34 @@ const booleanOptionKeywords = {
   rolbypassrls: ["BYPASSRLS", "NOBYPASSRLS"]
 };
 
-var _templateObject$1, _templateObject2$1, _templateObject3$1, _templateObject4$1, _templateObject5$1, _templateObject6$1, _templateObject7$1, _templateObject8$1;
+var _templateObject$1, _templateObject2$1, _templateObject3$1, _templateObject4$1, _templateObject5$1, _templateObject6$1, _templateObject7$1, _templateObject8$1, _templateObject9$1, _templateObject0$1, _templateObject1$1, _templateObject10$1;
 const createTable = async (sql, tablename) => {
   await sql(_templateObject$1 || (_templateObject$1 = _taggedTemplateLiteral(["CREATE TABLE ", " (id SERIAL PRIMARY KEY)"])), sql(tablename));
 };
 const selectTable = async (sql, tablename) => {
-  const [table] = await sql(_templateObject2$1 || (_templateObject2$1 = _taggedTemplateLiteral(["\n    SELECT\n      pg_tables.*,\n      pg_class.oid AS tableoid\n    FROM\n      pg_tables\n      LEFT JOIN pg_class ON pg_class.relname = pg_tables.tablename\n      AND pg_class.relnamespace = (\n        SELECT\n          oid\n        FROM\n          pg_namespace\n        WHERE\n          nspname = pg_tables.schemaname\n      )\n    WHERE\n      pg_tables.tablename = ", "\n  "])), tablename);
-  return table;
+  const [table] = await sql(_templateObject2$1 || (_templateObject2$1 = _taggedTemplateLiteral(["\n    SELECT\n      pg_tables.*,\n      role.rolname AS owner_rolname,\n      role.oid AS owner_oid,\n      pg_class.oid AS tableoid\n    FROM\n      pg_tables\n      LEFT JOIN pg_roles role ON pg_tables.tableowner = role.rolname\n      LEFT JOIN pg_class ON pg_class.relname = pg_tables.tablename\n      AND pg_class.relnamespace = (\n        SELECT\n          oid\n        FROM\n          pg_namespace\n        WHERE\n          nspname = pg_tables.schemaname\n      )\n    WHERE\n      pg_tables.tablename = ", "\n  "])), tablename);
+  if (!table) {
+    return [null, {}];
+  }
+  const columns = await getTableColumns(sql, "pg_tables");
+  const ownerRole = table.owner_oid ? {
+    oid: table.owner_oid,
+    rolname: table.owner_rolname
+  } : null;
+  delete table.owner_rolname;
+  delete table.owner_oid;
+
+  // also return columns metadata (name, type, nullable, defaults, etc.)
+  // find the table schema to avoid ambiguity when same name exists in multiple schemas
+  const [tableInfo] = await sql(_templateObject3$1 || (_templateObject3$1 = _taggedTemplateLiteral(["\n    SELECT\n      schemaname\n    FROM\n      pg_tables\n    WHERE\n      tablename = ", "\n    LIMIT\n      1\n  "])), tablename);
+  const schemaColumns = await getTableColumns(sql, tablename, tableInfo && tableInfo.schemaname ? {
+    schema: tableInfo.schemaname
+  } : undefined);
+  return [table, {
+    columns,
+    schemaColumns,
+    ownerRole
+  }];
 };
 const selectTables = async (sql, {
   publicFilter,
@@ -142,24 +171,96 @@ const selectTables = async (sql, {
 }) => {
   let whereConditions = [];
   if (publicFilter) {
-    whereConditions.push(sql(_templateObject3$1 || (_templateObject3$1 = _taggedTemplateLiteral(["pg_tables.schemaname = 'public'"]))));
+    whereConditions.push(sql(_templateObject4$1 || (_templateObject4$1 = _taggedTemplateLiteral(["pg_tables.schemaname = 'public'"]))));
   } else {
-    whereConditions.push(sql(_templateObject4$1 || (_templateObject4$1 = _taggedTemplateLiteral(["\n      pg_tables.schemaname NOT IN ('pg_catalog', 'information_schema')\n    "]))));
+    whereConditions.push(sql(_templateObject5$1 || (_templateObject5$1 = _taggedTemplateLiteral(["\n      pg_tables.schemaname NOT IN ('pg_catalog', 'information_schema')\n    "]))));
   }
   if (rolname) {
-    whereConditions.push(sql(_templateObject5$1 || (_templateObject5$1 = _taggedTemplateLiteral(["pg_tables.tableowner = ", ""])), rolname));
+    whereConditions.push(sql(_templateObject6$1 || (_templateObject6$1 = _taggedTemplateLiteral(["pg_tables.tableowner = ", ""])), rolname));
   }
-  const data = await sql(_templateObject6$1 || (_templateObject6$1 = _taggedTemplateLiteral(["\n    SELECT\n      pg_tables.*,\n      pg_class.oid AS tableoid\n    FROM\n      pg_tables\n      LEFT JOIN pg_class ON pg_class.relname = pg_tables.tablename\n      AND pg_class.relnamespace = (\n        SELECT\n          oid\n        FROM\n          pg_namespace\n        WHERE\n          nspname = pg_tables.schemaname\n      )\n    WHERE\n      ", "\n    ORDER BY\n      pg_class.oid ASC\n  "])), whereConditions.flatMap((x, i) => i ? [sql(_templateObject7$1 || (_templateObject7$1 = _taggedTemplateLiteral(["AND"]))), x] : x));
+  const data = await sql(_templateObject7$1 || (_templateObject7$1 = _taggedTemplateLiteral(["\n    SELECT\n      pg_tables.*,\n      pg_class.oid AS tableoid\n    FROM\n      pg_tables\n      LEFT JOIN pg_class ON pg_class.relname = pg_tables.tablename\n      AND pg_class.relnamespace = (\n        SELECT\n          oid\n        FROM\n          pg_namespace\n        WHERE\n          nspname = pg_tables.schemaname\n      )\n    WHERE\n      ", "\n    ORDER BY\n      pg_class.oid ASC\n  "])), whereConditions.flatMap((x, i) => i ? [sql(_templateObject8$1 || (_templateObject8$1 = _taggedTemplateLiteral(["AND"]))), x] : x));
   return data;
 };
 const alterTableQuery = async (sql, tablename, columnName, value) => {
   if (columnName === "tablename") {
-    await sql(_templateObject8$1 || (_templateObject8$1 = _taggedTemplateLiteral(["\n      ALTER TABLE ", "\n      RENAME TO ", "\n    "])), sql(tablename), sql(value));
+    await sql(_templateObject9$1 || (_templateObject9$1 = _taggedTemplateLiteral(["\n      ALTER TABLE ", "\n      RENAME TO ", "\n    "])), sql(tablename), sql(value));
     return;
   }
 
   // TODO: Handle other column alterations
   throw new Error("Altering column \"".concat(columnName, "\" is not yet implemented"));
+};
+const insertRow = async (sql, tablename, values) => {
+  const columnNames = Object.keys(values);
+  // Determine table schema to query precise column metadata (always fetch before inserting)
+  const [tableInfo] = await sql(_templateObject0$1 || (_templateObject0$1 = _taggedTemplateLiteral(["\n    SELECT\n      schemaname\n    FROM\n      pg_tables\n    WHERE\n      tablename = ", "\n    LIMIT\n      1\n  "])), tablename);
+  const schema = tableInfo && tableInfo.schemaname;
+  const columnsMeta = await getTableColumns(sql, tablename, schema ? {
+    schema
+  } : undefined);
+  const provided = new Set(columnNames);
+  const finalColumns = [...columnNames];
+  const finalValues = [...columnNames.map(cn => values[cn])];
+  for (const col of columnsMeta) {
+    // skip if already provided
+    if (provided.has(col.column_name)) {
+      continue;
+    }
+    // respect generated/identity columns and defaults
+    const hasDefault = col.column_default !== null;
+    const isNullable = String(col.is_nullable).toUpperCase() === "YES";
+    const isIdentity = "is_identity" in col && String(col.is_identity).toUpperCase() === "YES" || false;
+    const isGeneratedAlways = "is_generated" in col && String(col.is_generated).toUpperCase() === "ALWAYS" || false;
+    if (isIdentity || isGeneratedAlways) {
+      continue; // let DB handle it
+    }
+    if (hasDefault) {
+      // let DB apply the default by omitting the column
+      continue;
+    }
+    if (isNullable) {
+      // leave it out entirely to allow NULL/DEFAULT to apply
+      continue;
+    }
+    // required without default: synthesize a value
+    finalColumns.push(col.column_name);
+    finalValues.push(generateValueForColumn(col));
+  }
+  if (finalColumns.length === 0) {
+    // nothing to insert? fall back again to DEFAULT VALUES
+    const insertDefault = await sql(_templateObject1$1 || (_templateObject1$1 = _taggedTemplateLiteral(["\n      INSERT INTO\n        ", "\n      DEFAULT VALUES\n      RETURNING\n        *\n    "])), sql(tablename));
+    const [insertedRow] = insertDefault;
+    return insertedRow;
+  }
+  const [insertedRow] = await sql(_templateObject10$1 || (_templateObject10$1 = _taggedTemplateLiteral(["\n    INSERT INTO\n      ", " (", ")\n    VALUES\n      (", ")\n    RETURNING\n      *\n  "])), sql(tablename), sql(finalColumns), finalValues);
+  return insertedRow;
+};
+// helper to generate a reasonable value for a required column
+const generateValueForColumn = col => {
+  const type = (col.udt_name || col.data_type || "").toLowerCase();
+  const maxLen = col.character_maximum_length;
+  if (type === "uuid") {
+    const rand = (globalThis.crypto && globalThis.crypto.randomUUID ? globalThis.crypto.randomUUID() : [4, 2, 2, 2, 6].map(len => [...Array(len)].map(() => Math.floor(Math.random() * 16).toString(16)).join("")).join("-")) || "00000000-0000-4000-8000-000000000000";
+    return rand;
+  }
+  if (type.includes("int") || type === "numeric" || type === "decimal" || type === "real" || type === "double precision") {
+    return 1;
+  }
+  if (type === "bool" || type === "boolean") {
+    return false;
+  }
+  if (type === "timestamp" || type === "timestamptz" || type === "date" || type === "time" || type === "timetz") {
+    return new Date().toISOString();
+  }
+  if (type === "json" || type === "jsonb") {
+    return {};
+  }
+  // arrays or enums and other types fallback: simple string
+  const base = "placeholder";
+  if (maxLen && Number.isFinite(maxLen)) {
+    return base.slice(0, maxLen);
+  }
+  return base;
 };
 
 var _templateObject, _templateObject2, _templateObject3, _templateObject4, _templateObject5, _templateObject6, _templateObject7, _templateObject8, _templateObject9, _templateObject0, _templateObject1, _templateObject10, _templateObject11, _templateObject12, _templateObject13, _templateObject14, _templateObject15, _templateObject16, _templateObject17, _templateObject18, _templateObject19, _templateObject20, _templateObject21, _templateObject22, _templateObject23, _templateObject24, _templateObject25, _templateObject26, _templateObject27;
@@ -258,11 +359,11 @@ const jsenvPluginDatabaseManager = ({
           tablename
         } = await request.json();
         await createTable(sql, tablename);
-        const table = await selectTable(sql, tablename);
+        const [table, tableMeta] = await selectTable(sql, tablename);
         return {
           data: table,
           meta: {
-            roleCounts: await countRoles(sql)
+            ...tableMeta
           }
         };
       },
@@ -270,23 +371,11 @@ const jsenvPluginDatabaseManager = ({
         const {
           tablename
         } = request.params;
-        const results = await sql(_templateObject || (_templateObject = _taggedTemplateLiteral(["\n            SELECT\n              pg_tables.*,\n              role.rolname AS owner_rolname,\n              role.oid AS owner_oid,\n              pg_class.oid AS tableoid\n            FROM\n              pg_tables\n              LEFT JOIN pg_roles role ON pg_tables.tableowner = role.rolname\n              LEFT JOIN pg_class ON pg_class.relname = pg_tables.tablename\n              AND pg_class.relnamespace = (\n                SELECT\n                  oid\n                FROM\n                  pg_namespace\n                WHERE\n                  nspname = pg_tables.schemaname\n              )\n            WHERE\n              pg_tables.tablename = ", "\n          "])), tablename);
-        if (results.length === 0) {
-          return null;
-        }
-        const columns = await getTableColumns(sql, "pg_tables");
-        const [table] = results;
-        const ownerRole = table.owner_oid ? {
-          oid: table.owner_oid,
-          rolname: table.owner_rolname
-        } : null;
-        delete table.owner_rolname;
-        delete table.owner_oid;
+        const [table, tableMeta] = await selectTable(sql, tablename);
         return {
           data: table,
           meta: {
-            ownerRole,
-            columns
+            ...tableMeta
           }
         };
       },
@@ -294,7 +383,7 @@ const jsenvPluginDatabaseManager = ({
         const {
           tablename
         } = request.params;
-        await sql(_templateObject2 || (_templateObject2 = _taggedTemplateLiteral(["DROP TABLE ", ""])), sql(tablename));
+        await sql(_templateObject || (_templateObject = _taggedTemplateLiteral(["DROP TABLE ", ""])), sql(tablename));
         return {
           data: null,
           meta: {
@@ -312,7 +401,7 @@ const jsenvPluginDatabaseManager = ({
         }
         await sql.begin(async sql => {
           for (const tablename of tablenames) {
-            await sql(_templateObject3 || (_templateObject3 = _taggedTemplateLiteral(["DROP TABLE ", ""])), sql(tablename));
+            await sql(_templateObject2 || (_templateObject2 = _taggedTemplateLiteral(["DROP TABLE ", ""])), sql(tablename));
           }
         });
         return {
@@ -331,6 +420,25 @@ const jsenvPluginDatabaseManager = ({
         await alterTableQuery(sql, tablename, colname, value);
         return {
           [colname]: value
+        };
+      },
+      "GET /:tablename/rows": async request => {
+        const {
+          tablename
+        } = request.params;
+        const rows = await sql(_templateObject3 || (_templateObject3 = _taggedTemplateLiteral(["\n            SELECT\n              *\n            FROM\n              (\n                SELECT\n                  t.*,\n                  row_number() OVER (\n                    ORDER BY\n                      t.ctid\n                  ) AS \"index\"\n                FROM\n                  ", " AS t\n              ) AS sub\n            ORDER BY\n              sub.\"index\"\n            LIMIT\n              1000\n          "])), sql(tablename));
+        return {
+          data: rows
+        };
+      },
+      "POST /:tablename/rows": async request => {
+        const {
+          tablename
+        } = request.params;
+        const rowData = await request.json();
+        const insertedRow = await insertRow(sql, tablename, rowData);
+        return {
+          data: insertedRow
         };
       }
     }), ...createRESTRoutes("".concat(pathname, "api/roles"), {
@@ -387,7 +495,7 @@ const jsenvPluginDatabaseManager = ({
         const {
           rolname
         } = request.params;
-        const result = await selectRoleByName(rolname);
+        const result = await selectRoleByName(sql, rolname);
         if (!result) {
           return null;
         }
@@ -858,7 +966,7 @@ const createRESTRoutes = (resource, endpoints) => {
         declarationSource: import.meta.url,
         fetch: async request => {
           const body = await handler(request);
-          if (!body) {
+          if (!body || "data" in body && "meta" in body && (body.data === null || body.data === undefined)) {
             const paramKeys = Object.keys(request.params);
             if (paramKeys.length) {
               const identifier = request.params[paramKeys[0]];
