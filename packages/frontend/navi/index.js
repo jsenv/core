@@ -84,6 +84,14 @@ export { SVGMaskOverlay } from "./src/components/svg/svg_mask_overlay.jsx";
 export { Overflow } from "./src/components/text/overflow.jsx";
 export { TextAndCount } from "./src/components/text/text_and_count.jsx";
 
+// Validation
+export { createUniqueValueConstraint } from "./src/validation/constraints/create_unique_value_constraint.js";
+export { SINGLE_SPACE_CONSTRAINT } from "./src/validation/constraints/single_space_constraint.js";
+export {
+  addCustomMessage,
+  removeCustomMessage,
+} from "./src/validation/custom_message.js";
+
 // Other
 export { useDependenciesDiff } from "./src/components/use_dependencies_diff.js";
 export { useFocusGroup } from "./src/components/use_focus_group.js";
