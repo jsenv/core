@@ -43,7 +43,7 @@
     "@jsenv/snapshot": "../snapshot",
     "@jsenv/terminal-text-size": "../terminal-text-size",
     "is-unicode-supported": "2.1.0",
-    "supports-color": "10.0.0"
+    "supports-color": "10.2.2"
   },
   "engines": {
     "node": ">=16.8.0"
