@@ -79,6 +79,16 @@ export const isolateInteractions = (elements) => {
 
   const toKeepInteractiveSet = new Set();
   const keepSelfAndAncestors = (el) => {
+    if (toKeepInteractiveSet.has(el)) {
+      return;
+    }
+    const associatedElements = getAssociatedElements(el);
+    if (associatedElements) {
+      for (const associatedElement of associatedElements) {
+        keepSelfAndAncestors(associatedElement);
+      }
+    }
+
     // Add the element itself
     toKeepInteractiveSet.add(el);
     // Add all its ancestors up to document.body
@@ -92,12 +102,6 @@ export const isolateInteractions = (elements) => {
   // Build set of elements to keep interactive
   for (const element of elements) {
     keepSelfAndAncestors(element);
-    const associatedElements = getAssociatedElements(element);
-    if (associatedElements) {
-      for (const associatedElement of associatedElements) {
-        keepSelfAndAncestors(associatedElement);
-      }
-    }
   }
   // backdrop elements are meant to control interactions happening at document level
   // and should stay interactive
