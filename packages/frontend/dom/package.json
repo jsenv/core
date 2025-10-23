@@ -1,17 +1,39 @@
 {
   "name": "@jsenv/dom",
-  "version": "0.0.1",
+  "version": "0.1.0",
+  "description": "DOM utilities for writing frontend code",
+  "license": "MIT",
+  "author": {
+    "name": "dmail",
+    "email": "dmaillard06@gmail.com"
+  },
   "exports": {
-    ".": "./index.js",
+    ".": {
+      "dev:jsenv": "./src/index.js",
+      "default": "./dist/jsenv_dom.js"
+    },
     "./details_content_full_height": "./src/size/details_content_full_height.js",
     "./details_toggle_animation": "./src/details_toggle_animation.js",
     "./resize": "./src/size/resize.js"
   },
+  "files": [
+    "/dist/",
+    "/src/",
+    "/index.js"
+  ],
+  "scripts": {
+    "build": "node ./scripts/build.mjs",
+    "prepublishOnly": "npm run build"
+  },
   "dependencies": {
-    "@preact/signals": "2.0.4",
-    "preact": "10.26.5"
+    "@preact/signals": "2.3.2",
+    "preact": "10.27.2"
   },
   "devDependencies": {
+    "@jsenv/core": "../../../",
     "@jsenv/navi": "../navi"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
