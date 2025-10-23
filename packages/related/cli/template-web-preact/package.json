@@ -20,7 +20,7 @@
   "devDependencies": {
     "@babel/plugin-syntax-import-attributes": "7.27.1",
     "@babel/plugin-transform-react-jsx": "7.27.1",
-    "@jsenv/assert": "4.5.3",
+    "@jsenv/assert": "4.5.4",
     "@jsenv/core": "40.10.0",
     "@jsenv/plugin-preact": "1.7.24",
     "@jsenv/plugin-bundling": "2.10.0",

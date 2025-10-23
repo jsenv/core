@@ -25,12 +25,12 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/assert": "4.5.3",
+    "@jsenv/assert": "4.5.4",
     "@jsenv/ast": "6.7.14",
     "@jsenv/exception": "1.2.1",
     "@jsenv/filesystem": "4.15.6",
     "@jsenv/humanize": "1.6.0",
-    "@jsenv/terminal-recorder": "1.5.25",
+    "@jsenv/terminal-recorder": "1.5.26",
     "@jsenv/url-meta": "8.5.7",
     "@jsenv/urls": "2.9.1",
     "@jsenv/utils": "2.3.1",
