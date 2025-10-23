@@ -1,6 +1,6 @@
 // https://developer.mozilla.org/en-US/docs/Glossary/Scroll_container
 
-import { getStyle } from "../../style/style_inline.js";
+import { getStyle } from "../../style/dom_styles.js";
 import { getScrollingElement, isScrollable } from "./is_scrollable.js";
 
 const { documentElement } = document;

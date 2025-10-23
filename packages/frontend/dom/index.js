@@ -3,12 +3,8 @@ export { createIterableWeakSet } from "./src/iterable_weak_set.js";
 export { createPubSub } from "./src/pub_sub.js";
 
 // style
+export { addWillChange, getStyle, setStyles } from "./src/style/dom_styles.js";
 export { createStyleController } from "./src/style/style_controller.js";
-export {
-  addWillChange,
-  getStyle,
-  setStyles,
-} from "./src/style/style_inline.js";
 
 // attributes
 export { addAttributeEffect } from "./src/attr/add_attribute_effect.js";

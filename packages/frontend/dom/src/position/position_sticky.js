@@ -24,7 +24,7 @@
 import { getScrollContainerSet } from "../interaction/scroll/scroll_container.js";
 import { getHeight } from "../size/get_height.js";
 import { getWidth } from "../size/get_width.js";
-import { forceStyles, setStyles } from "../style/style_inline.js";
+import { forceStyles, setStyles } from "../style/dom_styles.js";
 
 import.meta.css = /* css */ `
   [data-position-sticky-placeholder] {

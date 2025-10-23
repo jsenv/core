@@ -1,4 +1,4 @@
-import { getStyle } from "../../style/style_inline.js";
+import { getStyle } from "../../style/dom_styles.js";
 import {
   elementIsDetails,
   elementIsSummary,

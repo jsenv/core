@@ -1,4 +1,4 @@
-import { getStyle, setStyles } from "../../style/style_inline.js";
+import { getStyle, setStyles } from "../../style/dom_styles.js";
 import { isScrollable } from "./is_scrollable.js";
 import { getSelfAndAncestorScrolls } from "./scroll_container.js";
 import { measureScrollbar } from "./scrollbar_size.js";
