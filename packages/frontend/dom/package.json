@@ -35,10 +35,8 @@
   "dependencies": {},
   "devDependencies": {
     "@jsenv/core": "../../../",
-    "@jsenv/navi": "../navi"
-  },
-  "peerDependencies": {
-    "@preact/signals": "^2.3.2",
+    "@jsenv/navi": "../navi",
+     "@preact/signals": "^2.3.2",
     "preact": "^10.27.2"
   },
   "publishConfig": {

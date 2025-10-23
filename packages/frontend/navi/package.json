@@ -37,9 +37,7 @@
   "devDependencies": {
     "@jsenv/assert": "4.5.3",
     "@jsenv/core": "../../../",
-    "@jsenv/plugin-preact": "../../related/plugin-preact"
-  },
-  "peerDependencies": {
+    "@jsenv/plugin-preact": "../../related/plugin-preact",
     "@preact/signals": "^2.3.2",
     "preact": "^10.27.2"
   },
