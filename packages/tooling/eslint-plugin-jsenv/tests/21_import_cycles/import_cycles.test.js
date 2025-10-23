@@ -1,5 +1,6 @@
 import { noUnknownParamsRule } from "@jsenv/eslint-plugin";
 import { RuleTester } from "eslint";
+import { fileURLToPath } from "node:url";
 
 const ruleTester = new RuleTester({
   languageOptions: {
@@ -24,8 +25,7 @@ ruleTester.run("no-unknown-params with import cycles", noUnknownParamsRule, {
           data: { key: "value" }
         });
       `,
-      filename:
-        "/Users/dmail/Documents/dev/jsenv/core/packages/tooling/eslint-plugin-jsenv/tests/21_import_cycles/simple.js",
+      filename: import.meta.resolve("./fixtures/simple.js"),
     },
   ],
   invalid: [
@@ -54,8 +54,7 @@ ruleTester.run("no-unknown-params with import cycles", noUnknownParamsRule, {
           options: { key: "value" }
         });
       `,
-      filename:
-        "/Users/dmail/Documents/dev/jsenv/core/packages/tooling/eslint-plugin-jsenv/tests/21_import_cycles/file_a.js",
+      filename: fileURLToPath(import.meta.resolve("./fixtures/file_a.js")),
       errors: [
         {
           message: `"invalidParam" not found in helperFunction() (defined in ./file_b.js)`,
