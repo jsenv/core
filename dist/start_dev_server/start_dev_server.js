@@ -4742,7 +4742,7 @@ const jsenvPluginHtmlReferenceAnalysis = ({
           const createInlineReference = (
             node,
             inlineContent,
-            { type, expectedType, contentType },
+            { type, subtype, expectedType, contentType },
           ) => {
             const hotAccept =
               getHtmlNodeAttribute(node, "hot-accept") !== undefined;
@@ -4758,6 +4758,7 @@ const jsenvPluginHtmlReferenceAnalysis = ({
               getHtmlNodeAttribute(node, "jsenv-debug") !== undefined;
             const inlineReference = urlInfo.dependencies.foundInline({
               type,
+              subtype,
               expectedType,
               isOriginalPosition: isOriginal,
               specifierLine: line,
@@ -5634,7 +5635,6 @@ const createNodeEsmResolver = ({
     const resolveNodeEsmFallbackNullToDelegateToWebPlugin =
       createResolverWithFallbackOnError(
         applyNodeEsmResolution,
-
         () => DELEGATE_TO_WEB_RESOLUTION_PLUGIN,
       );
 
@@ -6050,7 +6050,6 @@ const jsenvPluginNodeEsmResolution = (
       );
     }
     return createNodeEsmResolver({
-      build: kitchenContext.build,
       runtimeCompat: kitchenContext.runtimeCompat,
       rootDirectoryUrl: kitchenContext.rootDirectoryUrl,
       packageConditions,
@@ -6067,7 +6066,6 @@ const jsenvPluginNodeEsmResolution = (
     appliesDuring: "*",
     init: (kitchenContext) => {
       nodeEsmResolverDefault = createNodeEsmResolver({
-        build: kitchenContext.build,
         runtimeCompat: kitchenContext.runtimeCompat,
         rootDirectoryUrl: kitchenContext.rootDirectoryUrl,
         preservesSymlink: true,
@@ -7396,7 +7394,7 @@ const jsenvPluginInliningIntoHtml = () => {
             });
           });
         };
-        const onScriptWithSrc = (scriptNode, { src }) => {
+        const onScriptWithSrc = (scriptNode, { type, src }) => {
           let scriptReference;
           for (const dependencyReference of urlInfo.referenceToOthersSet) {
             if (
@@ -7423,7 +7421,7 @@ const jsenvPluginInliningIntoHtml = () => {
             column,
             isOriginal,
             specifier: scriptInlineUrl,
-            type: scriptReference.type,
+            type,
             subtype: scriptReference.subtype,
             expectedType: scriptReference.expectedType,
           });
@@ -7467,7 +7465,7 @@ const jsenvPluginInliningIntoHtml = () => {
             if (!src) {
               return;
             }
-            onScriptWithSrc(scriptNode, { src });
+            onScriptWithSrc(scriptNode, { type, src });
           },
         });
         if (actions.length > 0) {
