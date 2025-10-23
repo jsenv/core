@@ -29,16 +29,16 @@
     "os": {
       "start": "<X>",
       "min": "<X>",
-      "max": "<X>",
-      "median": "<X>",
-      "end": "<X>"
+      "max": null,
+      "median": null,
+      "end": null
     },
     "process": {
       "start": "<X>",
       "min": "<X>",
-      "max": "<X>",
+      "max": null,
       "median": "<X>",
-      "end": "<X>"
+      "end": null
     }
   },
   "timings": {

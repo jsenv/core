@@ -3,7 +3,7 @@
   <testcase file="error_in_script_module.spec.html" name="chromium" time="[time]" timestamp="[timestamp]" tests="1" errors="1">
     <properties>
       <property name="runtimeName" value="chromium"></property>
-      <property name="runtimeVersion" value="136.0.7103.25"></property>
+      <property name="runtimeVersion" value="141.0.7390.37"></property>
     </properties>
   </testcase>
   <error type="Error"> 9 |   &lt;body&gt;
@@ -15,14 +15,14 @@ Error: here
   <testcase file="error_in_script_module.spec.html" name="firefox" time="[time]" timestamp="[timestamp]" tests="1" errors="1">
     <properties>
       <property name="runtimeName" value="firefox"></property>
-      <property name="runtimeVersion" value="137.0"></property>
+      <property name="runtimeVersion" value="142.0.1"></property>
     </properties>
   </testcase>
   <error type="Error">Error: here</error>
   <testcase file="error_in_script_module.spec.html" name="webkit" time="[time]" timestamp="[timestamp]" tests="1" errors="1">
     <properties>
       <property name="runtimeName" value="webkit"></property>
-      <property name="runtimeVersion" value="18.4"></property>
+      <property name="runtimeVersion" value="26.0"></property>
     </properties>
   </testcase>
   <error type="Error"> 9 |   &lt;body&gt;

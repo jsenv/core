@@ -1,6 +1,6 @@
 var _jsxFileName = "base/client/root.jsx";
-import { useEffect } from "/@fs@jsenv/core/packages/node_modules/react/index.js?cjs_as_js_module&v=19.1.0";
-import { jsxDEV as _jsxDEV } from "/@fs@jsenv/core/packages/node_modules/react/jsx-dev-runtime.js?cjs_as_js_module&v=19.1.0";
+import { useEffect } from "/@fs@jsenv/core/packages/node_modules/react/index.js?cjs_as_js_module&v=19.2.0";
+import { jsxDEV as _jsxDEV } from "/@fs@jsenv/core/packages/node_modules/react/jsx-dev-runtime.js?cjs_as_js_module&v=19.2.0";
 export const Root = ({
   onRender
 }) => {
