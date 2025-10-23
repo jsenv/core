@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Input Checkbox State Demo</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import {
+        // eslint-disable-next-line no-unused-vars
+        Button,
+        // eslint-disable-next-line no-unused-vars
+        Form,
+        // eslint-disable-next-line no-unused-vars
+        Label,
+        // eslint-disable-next-line no-unused-vars
+        Checkbox,
+      } from "@jsenv/navi";
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        return (
+          <div style="display: flex; flex-direction: column; gap: 40px">
+            <SingleCheckboxStateDemo />
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const SingleCheckboxStateDemo = () => {
+        // DATA STATE - This represents the actual data/server state
+        const [isEnabledInState, setIsEnabledInState] = useState(true);
+        const [checkboxBgColor, setCheckboxBgColor] = useState("#2196F3");
+
+        // UI FORM STATE - This represents the current form state (may differ from data state)
+        const [uiIsEnabled, setUiIsEnabled] = useState(isEnabledInState);
+
+        // Form submission feedback
+        const [isSubmitting, setIsSubmitting] = useState(false);
+        const [submitMessage, setSubmitMessage] = useState("");
+        const [submitError, setSubmitError] = useState("");
+        const [forceError, setForceError] = useState(false);
+
+        // Action that simulates submitting form data (takes 1s)
+        const submitForm = async ({ notifications }) => {
+          const isChecked = notifications === "on"; // Form checkbox value
+
+          setIsSubmitting(true);
+          setSubmitError("");
+          setSubmitMessage(
+            `Syncing notification setting: ${isChecked ? "enabled" : "disabled"}...`,
+          );
+
+          try {
+            console.log("Submitting form data:", { notifications: isChecked });
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+
+            // Simulate error if checkbox is checked
+            if (forceError) {
+              throw new Error(
+                "Simulated server error: Failed to update notification preferences",
+              );
+            }
+
+            // Update the data state to match the form submission
+            setIsEnabledInState(isChecked);
+
+            setSubmitMessage(
+              `✅ Successfully synced: notifications ${isChecked ? "enabled" : "disabled"}`,
+            );
+            console.log("Data state updated from form:", isChecked);
+          } catch (error) {
+            setSubmitError(error.message);
+            setSubmitMessage("");
+          } finally {
+            setIsSubmitting(false);
+          }
+        };
+
+        // Get what the reset would sync to
+        const getResetValue = () => {
+          return isEnabledInState ? "checked" : "unchecked";
+        };
+
+        // Get what the submit would send
+        const getSubmitValue = () => {
+          return uiIsEnabled ? "checked" : "unchecked";
+        };
+
+        return (
+          <div style="border: 2px solid #ddd; padding: 20px; border-radius: 8px; background: #f9f9f9;">
+            <h2>Single Checkbox State ↔ UI Form Demo</h2>
+
+            <div style="display: flex; gap: 20px; margin: 20px 0;">
+              {/* DATA STATE SECTION */}
+              <div style="flex: 1; padding: 15px; background: #fff; border-radius: 6px; border: 1px solid #ccc;">
+                <h3 style="margin: 0 0 15px 0; color: #2196F3;">
+                  🗄️ Data State
+                </h3>
+                <p style="margin: 0 0 15px 0; font-size: 14px; color: #666;">
+                  Direct manipulation of the data source
+                </p>
+
+                <div style="padding: 15px; border: 1px solid #eee; border-radius: 4px; background: #fafafa;">
+                  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px;">
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 500; cursor: pointer;">
+                      <input
+                        type="checkbox"
+                        checked={isEnabledInState}
+                        onChange={(e) => setIsEnabledInState(e.target.checked)}
+                        style="transform: scale(1.2);"
+                      />
+                      🔔 Notifications{" "}
+                      {isEnabledInState ? "ENABLED" : "DISABLED"}
+                    </label>
+                  </div>
+
+                  <div style="margin-bottom: 15px;">
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
+                      <span style="font-weight: 500;">UI Checkbox Color:</span>
+                      <select
+                        value={checkboxBgColor}
+                        onChange={(e) => setCheckboxBgColor(e.target.value)}
+                        style="padding: 4px 8px; border: 1px solid #ccc; border-radius: 3px; font-size: 12px;"
+                      >
+                        <option value="#2196F3">Blue</option>
+                        <option value="#4CAF50">Green</option>
+                        <option value="#FF9800">Orange</option>
+                        <option value="#9C27B0">Purple</option>
+                        <option value="#F44336">Red</option>
+                        <option value="#607D8B">Blue Grey</option>
+                        <option value="#795548">Brown</option>
+                        <option value="#E91E63">Pink</option>
+                      </select>
+                      <div
+                        style={{
+                          width: "16px",
+                          height: "16px",
+                          backgroundColor: checkboxBgColor,
+                          borderRadius: "2px",
+                          border: "1px solid #ccc",
+                        }}
+                        title="Current color preview"
+                      ></div>
+                    </label>
+                  </div>
+
+                  <div style="font-size: 12px; color: #666; margin-top: 8px;">
+                    Click the checkbox above to toggle the data state directly
+                  </div>
+                </div>
+              </div>
+
+              {/* UI FORM SECTION */}
+              <div style="flex: 1; padding: 15px; background: #fff; border-radius: 6px; border: 1px solid #ccc;">
+                <h3 style="margin: 0 0 15px 0; color: #FF9800;">📝 UI Form</h3>
+                <p style="margin: 0 0 15px 0; font-size: 14px; color: #666;">
+                  Checkbox interface for user interaction
+                </p>
+
+                <Form action={submitForm}>
+                  <fieldset style="border: 1px solid #ddd; padding: 15px; border-radius: 4px;">
+                    <legend>Notification Settings:</legend>
+
+                    <Label style="display: flex; align-items: center; gap: 10px; font-size: 16px; cursor: pointer;">
+                      <Checkbox
+                        name="notifications"
+                        checked={isEnabledInState}
+                        onUIStateChange={(uiState) =>
+                          setUiIsEnabled(Boolean(uiState))
+                        }
+                        accentColor={checkboxBgColor}
+                      />
+                      🔔 Enable push notifications
+                    </Label>
+                  </fieldset>
+
+                  {/* Error simulation checkbox */}
+                  <div style="margin: 10px 0; padding: 8px; background: #ffebee; border-radius: 4px; border: 1px solid #ffcdd2;">
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #d32f2f;">
+                      <input
+                        type="checkbox"
+                        checked={forceError}
+                        onChange={(e) => setForceError(e.target.checked)}
+                        style="margin: 0;"
+                      />
+                      🔧 Force submission error (for testing)
+                    </label>
+                  </div>
+
+                  {/* Submission feedback messages */}
+                  {(isSubmitting || submitMessage || submitError) && (
+                    <div style="margin: 10px 0; padding: 10px; border-radius: 4px; font-size: 14px;">
+                      {isSubmitting && (
+                        <div style="color: #1976d2; background: #e3f2fd; padding: 8px; border-radius: 3px; border-left: 3px solid #1976d2;">
+                          🔄 {submitMessage}
+                        </div>
+                      )}
+                      {!isSubmitting && submitMessage && (
+                        <div style="color: #388e3c; background: #e8f5e8; padding: 8px; border-radius: 3px; border-left: 3px solid #388e3c;">
+                          {submitMessage}
+                        </div>
+                      )}
+                      {submitError && (
+                        <div style="color: #d32f2f; background: #ffebee; padding: 8px; border-radius: 3px; border-left: 3px solid #d32f2f;">
+                          ❌ {submitError}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div style="margin-top: 15px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px;">
+                    <Button type="submit" disabled={isSubmitting}>
+                      {isSubmitting ? "⏳ Submitting..." : "📤 Submit Form"}{" "}
+                      {!isSubmitting && (
+                        <span style="font-size: 11px; opacity: 0.7;">
+                          ({getSubmitValue()})
+                        </span>
+                      )}
+                    </Button>
+                    <Button type="reset">
+                      🔄 Reset to State
+                      <span style="font-size: 11px; opacity: 0.7;">
+                        ({getResetValue()})
+                      </span>
+                    </Button>
+                  </div>
+                </Form>
+              </div>
+            </div>
+
+            <div style="background: #f0f8ff; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #2196F3;">
+              <h4 style="margin: 0 0 10px 0;">How it works:</h4>
+              <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+                <li>
+                  <strong>Data State</strong>: The actual notification setting
+                  with direct toggle button
+                </li>
+                <li>
+                  <strong>UI Form</strong>: Checkbox interface that can differ
+                  from the data state
+                </li>
+                <li>
+                  <strong>Submit</strong>: Updates data state to match the form
+                  checkbox selection
+                </li>
+                <li>
+                  <strong>Reset</strong>: Syncs form checkbox back to current
+                  data state
+                </li>
+                <li>
+                  <strong>Button Labels</strong>: Show exactly what will be
+                  submitted or reset to (checked/unchecked)
+                </li>
+              </ul>
+            </div>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

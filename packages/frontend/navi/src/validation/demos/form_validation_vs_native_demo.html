@@ -1,0 +1,172 @@
+<!-- 
+
+TOFIX:
+
+resize observer pas content lorsqu'on a un contenu vachement large
+
+lorsqu'on zoom le comportement semble étrange
+
+
+-->
+
+<!doctype html>
+<html>
+  <head>
+    <title>From validation demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        background: yellow;
+      }
+
+      input {
+        border-width: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div style="display: flex; gap: 30px">
+        <div>
+          <h3>Basic</h3>
+          <div style="border: 1px solid black; width: 300px">
+            <form action="javascript:void(0)">
+              <input
+                type="text"
+                pattern="^[a-z]{4,8}$"
+                title="4 to 8 lowercase letters"
+                autocomplete="off"
+                value="10"
+                oninput="this.reportValidity()"
+              />
+            </form>
+          </div>
+        </div>
+
+        <div>
+          <h3>Basic right</h3>
+          <div style="border: 1px solid black; width: 600px">
+            <form action="javascript:void(0)">
+              <input
+                type="text"
+                pattern="^[a-z]{4,8}$"
+                title="4 to 8 lowercase letters"
+                autocomplete="off"
+                value="10"
+                style="width: 500px"
+                oninput="this.reportValidity()"
+              />
+            </form>
+
+            <button id="report">reportValidity()</button>
+          </div>
+        </div>
+
+        <div>
+          <h3>Message smaller than input</h3>
+          <form action="javascript:void(0)">
+            <input
+              type="text"
+              pattern="^[a-z]{4,8}$"
+              title="4 to 8 lowercase letters"
+              autocomplete="off"
+              value="10"
+              oninput="this.reportValidity()"
+              style="width: 300px"
+            />
+          </form>
+        </div>
+
+        <div>
+          <h3>Message bigger than input</h3>
+          <form action="javascript:void(0)">
+            <input
+              type="text"
+              pattern="^[a-z]{4,8}$"
+              title="4 to 8 lowercase letters"
+              autocomplete="off"
+              value="10"
+              oninput="this.reportValidity()"
+              style="width: 20px"
+            />
+          </form>
+        </div>
+      </div>
+
+      <div>
+        <h3>Top of scrollable content</h3>
+        <div style="border: 1px solid black; overflow: auto; height: 150px">
+          <form action="javascript:void(0)">
+            <input
+              type="text"
+              pattern="^[a-z]{4,8}$"
+              title="4 to 8 lowercase letters"
+              autocomplete="off"
+              value="10"
+              oninput="this.reportValidity()"
+            />
+          </form>
+          <div style="height: 300px; background: blue"></div>
+        </div>
+      </div>
+
+      <div>
+        <h3>Bottom of scrollable content</h3>
+        <div style="border: 1px solid black; overflow: auto; height: 150px">
+          <div style="height: 300px; background: blue"></div>
+          <form action="javascript:void(0)">
+            <input
+              type="text"
+              pattern="^[a-z]{4,8}$"
+              title="4 to 8 lowercase letters"
+              autocomplete="off"
+              value="10"
+              oninput="this.reportValidity()"
+            />
+          </form>
+        </div>
+      </div>
+
+      <div>
+        <h3>Middle of scrollable content</h3>
+        <div style="border: 1px solid black; overflow: auto; height: 150px">
+          <div style="height: 250px; background: blue"></div>
+          <form action="javascript:void(0)">
+            <input
+              type="text"
+              pattern="^[a-z]{4,8}$"
+              title="4 to 8 lowercase letters"
+              autocomplete="off"
+              value="10"
+              oninput="this.reportValidity()"
+            />
+          </form>
+          <div style="height: 250px; background: blue"></div>
+        </div>
+      </div>
+    </div>
+
+    <br />
+    <br />
+    <br />
+    <div style="background: red; width: 2000px; height: 1px"></div>
+    <div style="background: blue; height: 400px"></div>
+    <script type="module">
+      import { openValidationMessage } from "../validation_message.js";
+
+      const inputs = document.querySelectorAll("input");
+      for (const input of inputs) {
+        input.addEventListener("focus", () => {
+          openValidationMessage(input, "Veuillez respecter le format requis.");
+        });
+      }
+
+      const reportButton = document.querySelector("#report");
+      document.querySelector("#report").onclick = () => {
+        reportButton.parentNode.querySelector("input").reportValidity();
+      };
+    </script>
+  </body>
+</html>

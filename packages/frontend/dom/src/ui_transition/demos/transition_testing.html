@@ -1,0 +1,354 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>UI Transition Testing</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui;
+        padding: 20px;
+      }
+
+      .controls {
+        margin-bottom: 20px;
+        padding: 16px;
+        background: #f5f5f5;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+
+      .button-group {
+        margin-bottom: 12px;
+      }
+
+      button {
+        margin: 0 8px 8px 0;
+        padding: 8px 16px;
+      }
+
+      .description {
+        color: #666;
+        font-size: 0.9em;
+        margin: 8px 0;
+      }
+
+      /* Test content styles */
+      #transition-box {
+        border: 2px solid #666;
+        /* padding: 16px; */
+        width: 300px;
+        margin-top: 20px;
+      }
+
+      .test-content {
+        padding: 20px;
+        background: #f0f0f0;
+        margin: 8px 0;
+        text-align: center;
+      }
+
+      .test-content.loading {
+        background: #e3f2fd;
+      }
+
+      .test-content.content {
+        background: #e8f5e9;
+      }
+
+      /* Debug info */
+      #debug-info {
+        margin-top: 20px;
+        font-family: monospace;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="controls">
+      <div class="button-group">
+        <button id="start-transition">Start Transition</button>
+        <button id="slow-loading">Slow Loading (3s)</button>
+        <button id="pause-transition" disabled>Pause Transition</button>
+        <button id="resume-transition" disabled>Resume Transition</button>
+      </div>
+      <div class="button-group">
+        <button id="insert-content" disabled>Insert Content</button>
+        <button id="change-to-fade" disabled>Change to Cross-fade</button>
+        <button id="change-to-slide" disabled>Change to Slide-left</button>
+        <button id="reset">Reset</button>
+      </div>
+      <div>
+        <label>
+          Content Transition Duration (ms):
+          <input
+            type="number"
+            id="transition-duration"
+            value="3000"
+            min="100"
+            step="100"
+            style="width: 80px"
+          />
+        </label>
+        <label style="margin-left: 20px">
+          Phase Transition Duration (ms):
+          <input
+            type="number"
+            id="phase-duration"
+            value="300"
+            min="100"
+            step="100"
+            style="width: 80px"
+          />
+        </label>
+      </div>
+      <div>
+        <label>
+          Content Transition Type:
+          <select id="content-transition-type">
+            <option value="slide-left">Slide Left</option>
+            <option value="cross-fade">Cross Fade</option>
+          </select>
+        </label>
+        <label style="margin-left: 20px">
+          Phase Transition Type:
+          <select id="phase-transition-type">
+            <option value="cross-fade">Cross Fade</option>
+            <option value="slide-left">Slide Left</option>
+          </select>
+        </label>
+      </div>
+      <div class="description">
+        <strong>Content Transitions:</strong> Between different content keys (a
+        → b → c)<br />
+        <strong>Phase Transitions:</strong> Between loading/content states for
+        same content key (loading → content)<br />
+        Test smooth transition interruptions: Start a transition, then click
+        "Insert Content" mid-animation to see smooth easing continuation.
+      </div>
+    </div>
+
+    <div
+      id="transition-box"
+      class="ui_transition_container"
+      data-size-transition
+      data-content-transition="slide-left"
+      data-content-transition-duration="3000"
+      data-phase-transition="cross-fade"
+      data-phase-transition-duration="300"
+    >
+      <div class="ui_transition_outer_wrapper">
+        <div class="ui_transition_measure_wrapper">
+          <div class="ui_transition_slot">
+            <div
+              class="test-content content"
+              data-content-key="a"
+              data-ui-name="a-content"
+            >
+              Initial Content
+            </div>
+          </div>
+          <div class="ui_transition_phase_overlay"></div>
+        </div>
+      </div>
+      <div class="ui_transition_content_overlay"></div>
+    </div>
+
+    <div id="debug-info"></div>
+
+    <script type="module">
+      import { initUITransition } from "../ui_transition.js";
+
+      const box = document.getElementById("transition-box");
+      const debugInfo = document.getElementById("debug-info");
+      const durationInput = document.getElementById("transition-duration");
+      const phaseDurationInput = document.getElementById("phase-duration");
+      const contentTypeSelect = document.getElementById(
+        "content-transition-type",
+      );
+      const phaseTypeSelect = document.getElementById("phase-transition-type");
+
+      const startButton = document.getElementById("start-transition");
+      const slowLoadingButton = document.getElementById("slow-loading");
+      const pauseButton = document.getElementById("pause-transition");
+      const resumeButton = document.getElementById("resume-transition");
+      const insertButton = document.getElementById("insert-content");
+      const changeToFadeButton = document.getElementById("change-to-fade");
+      const changeToSlideButton = document.getElementById("change-to-slide");
+      const resetButton = document.getElementById("reset");
+
+      let uiTransition = initUITransition(box);
+
+      // Update duration when input changes
+      durationInput.addEventListener("change", () => {
+        box.dataset.contentTransitionDuration = durationInput.value;
+      });
+
+      phaseDurationInput.addEventListener("change", () => {
+        box.dataset.phaseTransitionDuration = phaseDurationInput.value;
+      });
+
+      // Update transition types when selects change
+      contentTypeSelect.addEventListener("change", () => {
+        box.dataset.contentTransition = contentTypeSelect.value;
+      });
+
+      phaseTypeSelect.addEventListener("change", () => {
+        box.dataset.phaseTransition = phaseTypeSelect.value;
+      });
+
+      function updateDebugInfo() {
+        if (!uiTransition) return;
+
+        const state = uiTransition.getState();
+        debugInfo.textContent = JSON.stringify(
+          {
+            isPaused: state.isPaused,
+            contentTransitionInProgress: state.contentTransitionInProgress,
+            phaseTransitionInProgress: state.phaseTransitionInProgress,
+            contentDuration: box.dataset.contentTransitionDuration,
+            phaseDuration: box.dataset.phaseTransitionDuration,
+            contentType: box.dataset.contentTransition,
+            phaseType: box.dataset.phaseTransition,
+          },
+          null,
+          2,
+        );
+      }
+
+      // Update debug info periodically
+      setInterval(updateDebugInfo, 100);
+
+      function setContent(content) {
+        uiTransition.slot.innerHTML = content;
+      }
+
+      startButton.addEventListener("click", () => {
+        // Set loading state with same content key for phase transition
+        setContent(`
+          <div class="test-content loading" data-content-key="b" data-ui-name="b-loading" data-content-phase>
+            Loading...
+          </div>
+        `);
+
+        // Enable relevant buttons
+        pauseButton.disabled = false;
+        insertButton.disabled = false;
+        changeToFadeButton.disabled = false;
+        changeToSlideButton.disabled = false;
+        startButton.disabled = true;
+
+        updateDebugInfo();
+      });
+
+      slowLoadingButton.addEventListener("click", () => {
+        // Set slow loading state with same content key for phase transition
+        setContent(`
+          <div class="test-content loading" data-content-key="slow" data-ui-name="slow-loading" data-content-phase>
+            Slow Loading (3 seconds)...
+          </div>
+        `);
+
+        // Simulate slow loading, then show content with SAME content key
+        setTimeout(() => {
+          setContent(`
+            <div class="test-content content" data-content-key="slow" data-ui-name="slow-content">
+              Slow Content Loaded!
+            </div>
+          `);
+        }, 3000);
+
+        // Enable relevant buttons
+        pauseButton.disabled = false;
+        slowLoadingButton.disabled = true;
+
+        updateDebugInfo();
+      });
+
+      pauseButton.addEventListener("click", () => {
+        // Will be implemented when we add pause to the animation controller
+        uiTransition.pause();
+        pauseButton.disabled = true;
+        resumeButton.disabled = false;
+        updateDebugInfo();
+      });
+
+      resumeButton.addEventListener("click", () => {
+        // Will be implemented when we add resume to the animation controller
+        uiTransition.resume();
+        resumeButton.disabled = true;
+        pauseButton.disabled = false;
+        updateDebugInfo();
+      });
+
+      insertButton.addEventListener("click", () => {
+        // Replace loading with content (same content key for phase transition)
+        setContent(`
+          <div class="test-content content" style="background-color: orange" data-content-key="b" data-ui-name="b-content">
+            New Content
+          </div>
+        `);
+
+        // Disable buttons
+        insertButton.disabled = true;
+        updateDebugInfo();
+      });
+
+      changeToFadeButton.addEventListener("click", () => {
+        // Change transition type to cross-fade mid-animation
+        box.dataset.contentTransition = "cross-fade";
+
+        // Trigger content change to see smooth transition type change
+        setContent(`
+          <div class="test-content content" style="background-color: lightblue" data-content-key="c" data-ui-name="c-fade">
+            Cross-fade Content
+          </div>
+        `);
+
+        changeToFadeButton.disabled = true;
+        updateDebugInfo();
+      });
+
+      changeToSlideButton.addEventListener("click", () => {
+        // Change transition type back to slide-left mid-animation
+        box.dataset.contentTransition = "slide-left";
+
+        // Trigger content change to see smooth transition type change
+        setContent(`
+          <div class="test-content content" style="background-color: lightgreen" data-content-key="d" data-ui-name="d-slide">
+            Slide-left Content
+          </div>
+        `);
+
+        changeToSlideButton.disabled = true;
+        updateDebugInfo();
+      });
+
+      resetButton.addEventListener("click", () => {
+        // Reset to initial state
+        if (uiTransition) {
+          uiTransition.cleanup();
+        }
+
+        setContent(`
+          <div class="test-content content" data-content-key="a" data-ui-name="a-content">
+            Initial Content
+          </div>
+        `);
+
+        uiTransition = initUITransition(box);
+
+        // Reset buttons
+        startButton.disabled = false;
+        slowLoadingButton.disabled = false;
+        pauseButton.disabled = true;
+        resumeButton.disabled = true;
+        insertButton.disabled = true;
+        changeToFadeButton.disabled = true;
+        changeToSlideButton.disabled = true;
+
+        updateDebugInfo();
+      });
+    </script>
+  </body>
+</html>

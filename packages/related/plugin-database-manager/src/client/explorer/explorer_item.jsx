@@ -1,21 +1,20 @@
 import {
-  EditableText,
+  createUniqueValueConstraint,
+  Editable,
+  FontSizedSvg,
   Input,
-  useEditableController,
+  Overflow,
+  SINGLE_SPACE_CONSTRAINT,
+  useEditionController,
   useSignalSync,
 } from "@jsenv/navi";
-import {
-  createUniqueValueConstraint,
-  SINGLE_SPACE_CONSTRAINT,
-} from "@jsenv/validation";
 import { useSignal } from "@preact/signals";
-import { Overflow } from "../layout/overflow.jsx";
-import { FontSizedSvg } from "../svg/font_sized_svg.jsx";
 
 export const ExplorerItem = ({
   nameKey,
   item,
   renderItem,
+  selectionController,
   deletedItems,
   useItemArrayInStore,
   useRenameItemAction,
@@ -23,18 +22,19 @@ export const ExplorerItem = ({
 }) => {
   const itemName = item[nameKey];
 
-  const { editable, startEditing, stopEditing } = useEditableController();
+  const { editing, startEditing, stopEditing } = useEditionController();
   const deleteItemAction = useDeleteItemAction
     ? useDeleteItemAction(item)
     : null;
 
   const itemRendered = renderItem(item, {
+    selectionController,
     deletedItems,
     className: "explorer_item_content",
     shortcuts: [
       {
         key: "enter",
-        enabled: !editable,
+        enabled: !editing,
         action: startEditing,
         description: "Edit item name",
       },
@@ -55,7 +55,6 @@ export const ExplorerItem = ({
         item={item}
         useItemArrayInStore={useItemArrayInStore}
         useRenameItemAction={useRenameItemAction}
-        editable={editable}
         stopEditing={stopEditing}
       />
     ) : (
@@ -70,7 +69,7 @@ const RenameInputOrName = ({
   item,
   useItemArrayInStore,
   useRenameItemAction,
-  editable,
+  editing,
   stopEditing,
 }) => {
   const itemName = item[nameKey];
@@ -92,16 +91,17 @@ const RenameInputOrName = ({
   );
 
   return (
-    <EditableText
-      action={renameAction}
-      editable={editable}
+    <Editable
+      editing={editing}
       onEditEnd={stopEditing}
       value={itemName}
       valueSignal={nameSignal}
+      action={renameAction}
+      required
       constraints={[SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint]}
     >
       <Overflow>{itemName}</Overflow>
-    </EditableText>
+    </Editable>
   );
 };
 

@@ -18,18 +18,41 @@
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import { useNetworkSpeed } from "./network_speed.js";
 
+import.meta.css = /* css */ `
+  .navi_rectangle_loading {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    display: block;
+  }
+
+  .navi_rectangle_loading[data-visible] {
+    opacity: 1;
+  }
+`;
+
 export const RectangleLoading = ({
+  shouldShowSpinner,
   color = "currentColor",
   radius = 0,
   size = 2,
 }) => {
   const containerRef = useRef(null);
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const [containerWidth, setContainerWidth] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(0);
 
   useLayoutEffect(() => {
     const container = containerRef.current;
-    let animationFrameId = null;
+    if (!container) {
+      return null;
+    }
 
+    const { width, height } = container.getBoundingClientRect();
+    setContainerWidth(width);
+    setContainerHeight(height);
+
+    let animationFrameId = null;
     // Create a resize observer to detect changes in the container's dimensions
     const resizeObserver = new ResizeObserver((entries) => {
       // Use requestAnimationFrame to debounce updates
@@ -38,21 +61,13 @@ export const RectangleLoading = ({
       }
 
       animationFrameId = requestAnimationFrame(() => {
-        for (const entry of entries) {
-          const { width, height } = entry.contentRect;
-          setDimensions({ width, height });
-        }
+        const [containerEntry] = entries;
+        const { width, height } = containerEntry.contentRect;
+        setContainerWidth(width);
+        setContainerHeight(height);
       });
     });
-
     resizeObserver.observe(container);
-
-    // Initial measurement
-    setDimensions({
-      width: container.offsetWidth,
-      height: container.offsetHeight,
-    });
-
     return () => {
       if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
@@ -62,17 +77,21 @@ export const RectangleLoading = ({
   }, []);
 
   return (
-    <div name="rectangle_loading" ref={containerRef}>
-      {dimensions.width > 0 && dimensions.height > 0 && (
+    <span
+      ref={containerRef}
+      className="navi_rectangle_loading"
+      data-visible={shouldShowSpinner ? "" : undefined}
+    >
+      {containerWidth > 0 && containerHeight > 0 && (
         <RectangleLoadingSvg
           radius={radius}
           color={color}
-          width={dimensions.width}
-          height={dimensions.height}
+          width={containerWidth}
+          height={containerHeight}
           strokeWidth={size}
         />
       )}
-    </div>
+    </span>
   );
 };
 

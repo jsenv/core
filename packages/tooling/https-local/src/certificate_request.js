@@ -85,7 +85,6 @@ npx @jsenv/https-local install --trust`,
   logger.debug(`Generating server certificate...`);
   const { certificateForgeObject, certificatePrivateKeyForgeObject } =
     requestCertificateFromAuthority({
-      logger,
       authorityCertificateForgeObject: rootCertificateForgeObject,
       auhtorityCertificatePrivateKeyForgeObject:
         rootCertificatePrivateKeyForgeObject,

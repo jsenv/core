@@ -1,5 +1,6 @@
-import { Button, Field, Form, Input, Select, useSignalSync } from "@jsenv/navi";
+import { Button, Form, Input, Label, Select, useSignalSync } from "@jsenv/navi";
 import { useCallback, useState } from "preact/hooks";
+
 import { RoleLink } from "../role/role_link.jsx";
 
 export const DatabaseFieldset = ({
@@ -45,37 +46,35 @@ export const RoleField = ({ role }) => {
   }, []);
 
   return (
-    <Field
-      label="Owner:"
-      input={
-        <div style="display: inline-flex; flex-direction: row; gap: 0.5em;">
-          {editing ? (
-            <Form
-              action={() => {
-                // TODO
-              }}
-              onReset={stopEditing}
-            >
-              <Select value={role.rolname}>
-                {[
-                  {
-                    label: role.rolname,
-                    value: role.rolname,
-                  },
-                ]}
-              </Select>
-              <Button type="submit">Validate</Button>
-              <Button type="reset">Cancel</Button>
-            </Form>
-          ) : (
-            <>
-              <RoleLink role={role}>{role.rolname}</RoleLink>
-              <Button action={startEditing}>Change</Button>
-            </>
-          )}
-        </div>
-      }
-    />
+    <Label>
+      Owner:
+      <div style="display: inline-flex; flex-direction: row; gap: 0.5em;">
+        {editing ? (
+          <Form
+            action={() => {
+              // TODO
+            }}
+            onReset={stopEditing}
+          >
+            <Select value={role.rolname}>
+              {[
+                {
+                  label: role.rolname,
+                  value: role.rolname,
+                },
+              ]}
+            </Select>
+            <Button type="submit">Validate</Button>
+            <Button type="reset">Cancel</Button>
+          </Form>
+        ) : (
+          <>
+            <RoleLink role={role}>{role.rolname}</RoleLink>
+            <Button action={startEditing}>Change</Button>
+          </>
+        )}
+      </div>
+    </Label>
   );
 };
 
@@ -94,99 +93,116 @@ const DatabaseFieldWrapper = ({ item, column, usePutAction }) => {
     />
   );
 };
-export const DatabaseField = ({ column, label, value, ...rest }) => {
-  const columnName = column.column_name;
-  const { valueSignal } = rest;
 
+export const useDatabaseInputProps = ({ column, valueSignal }) => {
+  const columnName = column.column_name;
   if (column.data_type === "boolean") {
-    return (
-      <Field
-        label={label}
-        input={
-          <Input
-            type="checkbox"
-            name={columnName}
-            checkedSignal={valueSignal}
-            {...rest}
-          />
-        }
-      />
-    );
+    return {
+      type: "checkbox",
+      name: columnName,
+      valueSignal,
+    };
   }
   if (column.data_type === "timestamp with time zone") {
-    return (
-      <Field
-        label={label}
-        input={<Input type="datetime-local" name={columnName} {...rest} />}
-      />
-    );
+    return {
+      type: "datetime-local",
+      name: columnName,
+      valueSignal,
+    };
   }
   if (column.data_type === "integer") {
-    return (
-      <Field
-        label={label}
-        input={
-          <Input type="number" min="0" step="1" name={columnName} {...rest} />
-        }
-      />
-    );
+    return {
+      type: "number",
+      name: columnName,
+      valueSignal,
+      min: 0,
+      step: 1,
+    };
   }
   if (column.data_type === "name") {
-    return (
-      <Field
-        label={label}
-        input={<Input type="text" name={columnName} required {...rest} />}
-      />
-    );
+    return {
+      type: "text",
+      name: columnName,
+      valueSignal,
+      required: true,
+    };
+  }
+  if (column.data_type === "text") {
+    return {
+      type: "text",
+      name: columnName,
+      valueSignal,
+    };
   }
   if (column.data_type === "oid") {
-    return (
-      <Field
-        label={<span>{column.column_name}: </span>}
-        input={<span>{rest.value}</span>}
-      ></Field>
-    );
+    return {
+      type: "text",
+      name: columnName,
+      valueSignal,
+      readOnly: true,
+    };
   }
   if (column.column_name === "rolpassword") {
-    return (
-      <Field
-        label={label}
-        input={<Input type="text" name={columnName} {...rest} />}
-      />
-    );
+    return {
+      type: "text",
+      name: columnName,
+      valueSignal,
+    };
   }
   if (column.column_name === "rolconfig") {
     // rolconfig something custom like client_min_messages
     // see https://www.postgresql.org/docs/14/config-setting.html#CONFIG-SETTING-NAMES-VALUES
-    return (
-      <span>
-        <span>{column.column_name}: </span>
-        <span>{String(rest.value)}</span>
-      </span>
-    );
+    return {
+      type: "hidden",
+      name: columnName,
+      valueSignal,
+    };
   }
   if (column.data_type === "xid") {
-    return (
-      <Field
-        label={label}
-        input={<Input type="text" readOnly name={columnName} {...rest} />}
-      />
-    );
+    return {
+      type: "text",
+      valueSignal,
+      name: columnName,
+      readOnly: true,
+    };
   }
   if (column.column_name === "datacl") {
     // datacl is a custom type
     // see https://www.postgresql.org/docs/14/sql-grant.html
-    return (
-      <Field
-        label={<span>{column.column_name}: </span>}
-        input={<span>{String(rest.value)}</span>}
-      />
-    );
+    return {
+      type: "hidden",
+      name: columnName,
+      valueSignal,
+    };
   }
+  return {
+    type: "hidden",
+    name: columnName,
+    valueSignal,
+  };
+};
+
+export const DatabaseInput = ({ column, valueSignal, ...rest }) => {
+  const inputProps = useDatabaseInputProps({ column, valueSignal });
+  return <Input {...inputProps} {...rest} />;
+};
+
+export const DatabaseField = ({ column, label, ...rest }) => {
+  const columnName = column.column_name;
+  if (label === undefined) {
+    if (column.data_type === "oid") {
+      label = <span>{columnName}: </span>;
+    } else if (columnName === "rolconfig") {
+      label = <span>{columnName}: </span>;
+    } else {
+      label = <span>{columnName}:</span>;
+    }
+  }
+
   return (
-    <Field
-      label={<span>{column.column_name}: </span>}
-      input={String(value)}
-    ></Field>
+    <Label>
+      {label}
+      <DatabaseInput column={column} {...rest} />
+    </Label>
   );
 };

@@ -1,4 +1,8 @@
-import { SelectionProvider, ShortcutProvider } from "@jsenv/navi";
+import {
+  createSelectionKeyboardShortcuts,
+  useKeyboardShortcuts,
+  useSelectionController,
+} from "@jsenv/navi";
 import { useSignal } from "@preact/signals";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef, useState } from "preact/hooks";
@@ -24,17 +28,54 @@ export const ExplorerItemList = forwardRef((props, ref) => {
   const itemSelectionSignal = useSignal([]);
   const [deletedItems, setDeletedItems] = useState([]);
   const deleteManyAction = useDeleteManyItemAction?.(itemSelectionSignal);
-  const listChildren = (
-    <>
+  const selection = itemSelectionSignal.value;
+  const selectionLength = selection.length;
+  const selectionController = useSelectionController({
+    elementRef: innerRef,
+    layout: "vertical",
+    value: selection,
+    onChange: (newValue) => {
+      itemSelectionSignal.value = newValue;
+    },
+    multiple: Boolean(deleteManyAction),
+  });
+  useKeyboardShortcuts(innerRef, [
+    ...createSelectionKeyboardShortcuts(selectionController),
+    {
+      enabled: deleteManyAction && selectionLength > 0,
+      key: ["command+delete"],
+      action: deleteManyAction,
+      description: "Delete selected items",
+      confirmMessage:
+        selectionLength === 1
+          ? `Are you sure you want to delete "${selection[0]}"?`
+          : `Are you sure you want to delete the ${selectionLength} selected items?`,
+      onStart: () => {
+        setDeletedItems(selection);
+      },
+      onAbort: () => {
+        setDeletedItems([]);
+      },
+      onError: () => {
+        setDeletedItems([]);
+      },
+      onEnd: () => {
+        setDeletedItems([]);
+      },
+    },
+  ]);
+
+  return (
+    <ul ref={innerRef} className="explorer_item_list">
       {itemArray.map((item) => {
         return (
           <li className="explorer_item" key={item[idKey]}>
             <ExplorerItem
-              idKey={idKey}
               nameKey={nameKey}
               item={item}
               deletedItems={deletedItems}
               renderItem={renderItem}
+              selectionController={selectionController}
               useItemArrayInStore={useItemArrayInStore}
               useRenameItemAction={useRenameItemAction}
               useDeleteItemAction={
@@ -72,73 +113,6 @@ export const ExplorerItemList = forwardRef((props, ref) => {
           />
         </li>
       )}
-    </>
-  );
-
-  const list = (
-    <ul ref={innerRef} className="explorer_item_list">
-      {listChildren}
     </ul>
   );
-
-  if (deleteManyAction) {
-    const selectionLength = itemSelectionSignal.value.length;
-
-    return (
-      <ExplorerItemListWithShortcuts
-        elementRef={innerRef}
-        itemSelectionSignal={itemSelectionSignal}
-        setDeletedItems={setDeletedItems}
-        shortcuts={[
-          {
-            enabled: selectionLength > 0,
-            key: ["command+delete"],
-            action: deleteManyAction,
-            description: "Delete selected items",
-            confirmMessage:
-              selectionLength === 1
-                ? `Are you sure you want to delete "${itemSelectionSignal.value[0]}"?`
-                : `Are you sure you want to delete the ${selectionLength} selected items?`,
-          },
-        ]}
-      >
-        {list}
-      </ExplorerItemListWithShortcuts>
-    );
-  }
-
-  return list;
 });
-
-const ExplorerItemListWithShortcuts = ({
-  elementRef,
-  itemSelectionSignal,
-  setDeletedItems,
-  shortcuts,
-  children,
-}) => {
-  return (
-    <SelectionProvider
-      value={itemSelectionSignal.value}
-      onChange={(value) => {
-        itemSelectionSignal.value = value;
-      }}
-      onActionStart={() => {
-        setDeletedItems(itemSelectionSignal.value);
-      }}
-      onActionAbort={() => {
-        setDeletedItems([]);
-      }}
-      onActionError={() => {
-        setDeletedItems([]);
-      }}
-      onActionEnd={() => {
-        setDeletedItems([]);
-      }}
-    >
-      <ShortcutProvider shortcuts={shortcuts} elementRef={elementRef}>
-        {children}
-      </ShortcutProvider>
-    </SelectionProvider>
-  );
-};

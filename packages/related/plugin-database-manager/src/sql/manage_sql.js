@@ -97,14 +97,22 @@ export const countRows = async (sql, tableName, { whereClause } = {}) => {
   return parseInt(countResult.count);
 };
 
-export const getTableColumns = async (sql, tableName) => {
+export const getTableColumns = async (sql, tableName, options = {}) => {
+  const { schema } = options;
+  const where = [];
+  where.push(sql`table_name = ${tableName}`);
+  if (schema) {
+    where.push(sql`table_schema = ${schema}`);
+  }
   const columns = await sql`
     SELECT
       *
     FROM
       information_schema.columns
     WHERE
-      table_name = ${tableName}
+      ${where.flatMap((x, i) => (i ? [sql`AND`, x] : x))}
+    ORDER BY
+      ordinal_position ASC
   `;
   return columns;
 };

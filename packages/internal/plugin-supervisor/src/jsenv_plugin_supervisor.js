@@ -103,7 +103,6 @@ export const jsenvPluginSupervisor = ({
             if (sourcemap) {
               const original = getOriginalPosition({
                 sourcemap,
-                url: file,
                 line,
                 column,
               });

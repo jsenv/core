@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf8">
+    <link rel="icon" href="data:,">
+  </head>
+  <body>
+    <jsenv-scripts>
+      <script src="/@fs@jsenv/core/packages/backend/server/src/services/autoreload_on_server_restart/client/autoreload_on_server_restart.js" jsenv-injected-by="jsenv:autoreload_on_server_restart" data-ws-endpoint="/.internal/events.websocket"></script>
+      <script type="module" jsenv-injected-by="jsenv:drop_to_open" content-indented="">
+        import { initDropToOpen } from "/@fs@jsenv/core/src/plugins/drop_to_open/client/drop_to_open.js";
+            
+        initDropToOpen({
+          "rootDirectoryUrl": "base/client/"
+        });
+      </script>
+      <script jsenv-injected-by="jsenv:inject_globals" content-indented="">
+        Object.assign(window, {
+          "HTML_ROOT_PATHNAME": "/main.html"
+        });
+      </script>
+    </jsenv-scripts>
+  
+  
+    <script type="module" jsenv-cooked-by="jsenv:html_inline_content_analysis">
+      import { answer } from "/node_modules/foo/index.js";
+
+      console.log(answer);
+    
+//# sourceMappingURL=/@fsbase/.jsenv/chrome@141.00/main.html@L9C5-L13C14.js.map
+</script>
+  </body>
+</html>

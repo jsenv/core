@@ -1,18 +1,47 @@
 {
   "name": "@jsenv/dom",
-  "version": "0.0.1",
+  "version": "0.1.0",
+  "description": "DOM utilities for writing frontend code",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/frontend/dom"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "dmail",
+    "email": "dmaillard06@gmail.com"
+  },
+  "sideEffects": [
+    "./dist/jsenv_dom.js"
+  ],
+  "type": "module",
   "exports": {
-    ".": "./src/dom.js",
+    ".": {
+      "dev:jsenv": "./index.js",
+      "default": "./dist/jsenv_dom.js"
+    },
     "./details_content_full_height": "./src/size/details_content_full_height.js",
     "./details_toggle_animation": "./src/details_toggle_animation.js",
     "./resize": "./src/size/resize.js"
   },
-  "dependencies": {
-    "@jsenv/animation": "0.0.1",
-    "@preact/signals": "2.0.4",
-    "preact": "10.26.5"
+  "files": [
+    "/dist/",
+    "/src/",
+    "/index.js"
+  ],
+  "scripts": {
+    "build": "node ./scripts/build.mjs",
+    "prepublishOnly": "npm run build"
   },
+  "dependencies": {},
   "devDependencies": {
-    "@jsenv/navi": "../navi"
+    "@jsenv/core": "../../../",
+    "@jsenv/navi": "../navi",
+    "@preact/signals": "^2.3.2",
+    "preact": "^10.27.2"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Editable Text Demo</title>
+    <style>
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f8f9fa;
+      }
+
+      h1 {
+        text-align: center;
+        color: #333;
+        margin-bottom: 30px;
+      }
+
+      .demo-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 20px;
+      }
+
+      .demo-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e1e8ed;
+      }
+
+      .demo-title {
+        color: #2c3e50;
+        margin-top: 0;
+        margin-bottom: 15px;
+        font-size: 18px;
+        font-weight: 600;
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 8px;
+      }
+
+      .control-group {
+        margin-bottom: 15px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+        color: #555;
+      }
+
+      .button-group {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+        flex-wrap: wrap;
+      }
+
+      button {
+        padding: 6px 12px;
+        border: 1px solid #3498db;
+        background: #3498db;
+        color: white;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s ease;
+        box-sizing: border-box;
+      }
+
+      button:hover {
+        background: #2980b9;
+        border-color: #2980b9;
+      }
+
+      button:disabled {
+        background: #95a5a6;
+        border-color: #95a5a6;
+        cursor: not-allowed;
+      }
+
+      .editable-container {
+        margin: 15px 0;
+        padding: 15px;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        min-height: 40px;
+        font-size: 16px;
+        line-height: 1.4;
+        position: relative;
+      }
+
+      .result-display {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 12px;
+        margin-top: 15px;
+        font-family:
+          "SF Mono", "Monaco", "Inconsolata", "Fira Code", "Fira Mono",
+          "Droid Sans Mono", "Courier New", monospace;
+        font-size: 13px;
+        color: #495057;
+        min-height: 20px;
+        white-space: pre-wrap;
+      }
+
+      .result-success {
+        background: #d4edda;
+        border-color: #c3e6cb;
+        color: #155724;
+      }
+
+      .result-error {
+        background: #f8d7da;
+        border-color: #f5c6cb;
+        color: #721c24;
+      }
+
+      .result-loading {
+        background: #d1ecf1;
+        border-color: #bee5eb;
+        color: #0c5460;
+        animation: pulse 1.5s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.7;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .demo-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Editable Text Demo</h1>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { signal } from "@preact/signals";
+      import {
+        SINGLE_SPACE_CONSTRAINT,
+        useEditionController,
+        // eslint-disable-next-line no-unused-vars
+        Editable,
+        createAction,
+      } from "@jsenv/navi";
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        return (
+          <div className="demo-grid">
+            <BasicDemo />
+            <LoadingDemo />
+            <ErrorDemo />
+            <CustomStyleDemo />
+            <ActionObjectDemo />
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const BasicDemo = () => {
+        const { editing, startEditing, stopEditing } = useEditionController();
+        const [value, setValue] = useState("Click edit to change this text");
+        const [result, setResult] = useState("");
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Basic Editable Text</h3>
+            <div className="control-group">
+              <label>Editable Content:</label>
+              <div className="editable-container">
+                <Editable
+                  editing={editing}
+                  onEditEnd={() => {
+                    stopEditing();
+                    setResult(``);
+                  }}
+                  value={value}
+                  action={(newText) => {
+                    setValue(newText);
+                    return `Updated to: "${newText}"`;
+                  }}
+                  constraints={[SINGLE_SPACE_CONSTRAINT]}
+                />
+              </div>
+            </div>
+            <div className="button-group">
+              <button onClick={() => startEditing()} disabled={editing}>
+                {editing ? "Editing..." : "Start Editing"}
+              </button>
+            </div>
+            <div
+              className={`result-display ${result.startsWith("✅") ? "result-success" : result.startsWith("❌") ? "result-error" : ""}`}
+            >
+              Current value: "{value}"
+              <br />
+              {result || "Click 'Start Editing' to modify the text..."}
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const LoadingDemo = () => {
+        const { editing, startEditing, stopEditing } = useEditionController();
+        const [value, setValue] = useState("This will take 2 seconds to save");
+        const [result, setResult] = useState("");
+        const [isLoading, setIsLoading] = useState(false);
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Editable Text with Loading</h3>
+            <div className="control-group">
+              <label>Editable Content (2s delay):</label>
+              <div className="editable-container">
+                <Editable
+                  editing={editing}
+                  onEditEnd={() => {
+                    stopEditing();
+                    setIsLoading(false);
+                    setResult();
+                  }}
+                  value={value}
+                  action={async (newText) => {
+                    setIsLoading(true);
+                    setResult("Saving...");
+                    await new Promise((resolve) => setTimeout(resolve, 2000));
+                    setValue(newText);
+                    return `Saved: "${newText}"`;
+                  }}
+                  constraints={[SINGLE_SPACE_CONSTRAINT]}
+                />
+              </div>
+            </div>
+            <div className="button-group">
+              <button
+                onClick={() => startEditing()}
+                disabled={editing || isLoading}
+              >
+                {isLoading
+                  ? "Saving..."
+                  : editing
+                    ? "Editing..."
+                    : "Start Editing"}
+              </button>
+            </div>
+            <div
+              className={`result-display ${isLoading ? "result-loading" : result.startsWith("✅") ? "result-success" : result.startsWith("❌") ? "result-error" : ""}`}
+            >
+              Current value: "{value}"
+              <br />
+              {result || "This demo simulates a 2-second save operation..."}
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const ErrorDemo = () => {
+        const { editing, startEditing, stopEditing } = useEditionController();
+        const [value] = useState("This edit will always fail");
+        const [result, setResult] = useState("");
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Editable Text with Error Handling</h3>
+            <div className="control-group">
+              <label>Editable Content (always fails):</label>
+              <div className="editable-container">
+                <Editable
+                  editing={editing}
+                  onEditEnd={() => {
+                    stopEditing();
+                    setResult("");
+                  }}
+                  value={value}
+                  name="errorText"
+                  action={async (newText) => {
+                    setResult("Processing...");
+                    await new Promise((resolve) => setTimeout(resolve, 500));
+                    throw new Error(
+                      `Cannot save "${newText}" - simulated error`,
+                    );
+                  }}
+                  constraints={[SINGLE_SPACE_CONSTRAINT]}
+                />
+              </div>
+            </div>
+            <div className="button-group">
+              <button onClick={() => startEditing()} disabled={editing}>
+                {editing ? "Editing..." : "Start Editing (Will Fail)"}
+              </button>
+            </div>
+            <div
+              className={`result-display ${result === "Processing..." ? "result-loading" : result.startsWith("✅") ? "result-success" : result.startsWith("❌") ? "result-error" : ""}`}
+            >
+              Current value: "{value}"
+              <br />
+              {result || "This demo always throws an error when saving..."}
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const CustomStyleDemo = () => {
+        const { editing, startEditing, stopEditing } = useEditionController();
+        const [value, setValue] = useState("Bold styled text");
+        const [result, setResult] = useState("");
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Editable Text with Custom Styling</h3>
+            <div className="control-group">
+              <label>Styled Editable Content:</label>
+              <div className="editable-container">
+                <Editable
+                  editing={editing}
+                  onEditEnd={() => {
+                    stopEditing();
+                    setResult("");
+                  }}
+                  value={value}
+                  action={(newText) => {
+                    setValue(newText);
+                    return `Updated styled text: "${newText}"`;
+                  }}
+                  constraints={[SINGLE_SPACE_CONSTRAINT]}
+                >
+                  <strong style={{ color: "#e74c3c", fontSize: "18px" }}>
+                    {value}
+                  </strong>
+                </Editable>
+              </div>
+            </div>
+            <div className="button-group">
+              <button onClick={() => startEditing()} disabled={editing}>
+                {editing ? "Editing..." : "Start Editing"}
+              </button>
+            </div>
+            <div
+              className={`result-display ${result.startsWith("✅") ? "result-success" : result.startsWith("❌") ? "result-error" : ""}`}
+            >
+              Current value: "{value}"
+              <br />
+              {result || "This demo shows custom styling with bold red text..."}
+            </div>
+          </div>
+        );
+      };
+
+      // Create signal outside component to persist across renders
+      const editableTextSignal = signal("Click me to edit");
+      const updateTextAction = createAction(async (newText) => {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        editableTextSignal.value = newText;
+        return `Signal update: "${newText}"`;
+      });
+      // eslint-disable-next-line no-unused-vars
+      const ActionObjectDemo = () => {
+        const [result, setResult] = useState("");
+        const { editing, startEditing, stopEditing } = useEditionController();
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Action object editable Text</h3>
+            <div className="control-group">
+              <label>Content:</label>
+              <div className="editable-container">
+                <Editable
+                  editing={editing}
+                  onEditEnd={() => {
+                    stopEditing();
+                    setResult("");
+                  }}
+                  value={editableTextSignal.value}
+                  name="signalText"
+                  action={(newText) => {
+                    updateTextAction(newText);
+                  }}
+                  onActionStart={() => {
+                    setResult("Saving...");
+                  }}
+                  constraints={[SINGLE_SPACE_CONSTRAINT]}
+                >
+                  <span
+                    onClick={() => {
+                      startEditing();
+                    }}
+                  >
+                    {editableTextSignal.value}
+                  </span>
+                </Editable>
+              </div>
+            </div>
+            <div
+              className={`result-display ${result === "Saving..." ? "result-loading" : result.startsWith("✅") ? "result-success" : result.startsWith("❌") ? "result-error" : ""}`}
+            >
+              Current value: {editableTextSignal.value}
+              <br />
+              {result || "Use buttons to control edit mode..."}
+            </div>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

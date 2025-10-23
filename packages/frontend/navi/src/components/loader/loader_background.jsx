@@ -5,24 +5,53 @@ import { useDebounceTrue } from "../use_debounce_true.js";
 import { RectangleLoading } from "./rectangle_loading.jsx";
 
 import.meta.css = /* css */ `
-  [name="element_with_loader_wrapper"] {
-    display: inline-flex;
+  .navi_inline_wrapper {
     position: relative;
     width: fit-content;
+    display: inline-flex;
+    height: fit-content;
   }
 
-  [name="loading_rectangle_wrapper"] {
+  .navi_loading_rectangle_wrapper {
     pointer-events: none;
     position: absolute;
     z-index: 1;
+    opacity: 0;
+    top: var(--rectangle-top, 0);
+    left: var(--rectangle-left, 0);
+    bottom: var(--rectangle-bottom, 0);
+    right: var(--rectangle-right, 0);
   }
-
-  [name="rectangle_loading"] {
-    position: relative;
-    width: 100%;
-    height: 100%;
+  .navi_loading_rectangle_wrapper[data-visible] {
+    opacity: 1;
   }
 `;
+
+export const LoadableInlineElement = ({
+  children,
+  width,
+  height,
+  ...props
+}) => {
+  const actionName = props["data-action"];
+  if (actionName) {
+    delete props["data-action"];
+  }
+
+  return (
+    <span
+      className="navi_inline_wrapper"
+      style={{
+        ...(width ? { width } : {}),
+        ...(height ? { height } : {}),
+      }}
+      data-action={actionName}
+    >
+      <LoaderBackground {...props} />
+      {children}
+    </span>
+  );
+};
 
 export const LoaderBackground = ({
   loading,
@@ -59,7 +88,7 @@ export const LoaderBackground = ({
   }
 
   return (
-    <LoaderBackgroundWithWrapper
+    <LoaderBackgroundBasic
       targetSelector={targetSelector}
       loading={loading}
       color={color}
@@ -70,7 +99,7 @@ export const LoaderBackground = ({
       spacingRight={spacingRight}
     >
       {children}
-    </LoaderBackgroundWithWrapper>
+    </LoaderBackgroundBasic>
   );
 };
 
@@ -115,7 +144,7 @@ const LoaderBackgroundWithPortal = ({
   );
 };
 
-const LoaderBackgroundWithWrapper = ({
+const LoaderBackgroundBasic = ({
   loading,
   targetSelector,
   color,
@@ -127,8 +156,8 @@ const LoaderBackgroundWithWrapper = ({
   children,
 }) => {
   const shouldShowSpinner = useDebounceTrue(loading, 300);
-  const containerRef = useRef(null);
-  const [outlineOffset, setOutlineOffset] = useState(0);
+  const rectangleRef = useRef(null);
+  const [, setOutlineOffset] = useState(0);
   const [borderRadius, setBorderRadius] = useState(0);
   const [borderTopWidth, setBorderTopWidth] = useState(0);
   const [borderLeftWidth, setBorderLeftWidth] = useState(0);
@@ -142,17 +171,18 @@ const LoaderBackgroundWithWrapper = ({
   const [paddingLeft, setPaddingLeft] = useState(0);
   const [paddingRight, setPaddingRight] = useState(0);
   const [paddingBottom, setPaddingBottom] = useState(0);
-  const [flexGrow, setFlexGrow] = useState(0);
-  const [flexShrink, setFlexShrink] = useState(1);
-  const [flexBasis, setFlexBasis] = useState("auto");
 
   const [currentColor, setCurrentColor] = useState(color);
 
   useLayoutEffect(() => {
     let animationFrame;
     const updateStyles = () => {
-      const container = containerRef.current;
-      const containedElement = container.lastElementChild;
+      const rectangle = rectangleRef.current;
+      if (!rectangle) {
+        return;
+      }
+      const container = rectangle.parentElement;
+      const containedElement = rectangle.nextElementSibling;
       const target = targetSelector
         ? container.querySelector(targetSelector)
         : containedElement;
@@ -162,11 +192,6 @@ const LoaderBackgroundWithWrapper = ({
         const containedComputedStyle =
           window.getComputedStyle(containedElement);
         const targetComputedStyle = window.getComputedStyle(target);
-
-        // Read flex properties from the contained element to mirror its behavior
-        const newFlexGrow = containedComputedStyle.flexGrow || "0";
-        const newFlexShrink = containedComputedStyle.flexShrink || "1";
-        const newFlexBasis = containedComputedStyle.flexBasis || "auto";
 
         const newBorderTopWidth = resolveCSSSize(
           targetComputedStyle.borderTopWidth,
@@ -222,9 +247,6 @@ const LoaderBackgroundWithWrapper = ({
         setPaddingLeft(paddingLeft);
         setPaddingRight(paddingRight);
         setPaddingBottom(paddingBottom);
-        setFlexGrow(newFlexGrow);
-        setFlexShrink(newFlexShrink);
-        setFlexBasis(newFlexBasis);
 
         if (color) {
           setCurrentColor(color);
@@ -241,7 +263,6 @@ const LoaderBackgroundWithWrapper = ({
           setCurrentColor(newDetectedColor);
         }
       }
-
       // updateStyles is very cheap so we run it every frame
       animationFrame = requestAnimationFrame(updateStyles);
     };
@@ -253,20 +274,20 @@ const LoaderBackgroundWithWrapper = ({
   }, [color, targetSelector]);
 
   spacingTop += inset;
-  spacingTop += outlineOffset;
-  spacingTop -= borderTopWidth;
+  // spacingTop += outlineOffset;
+  // spacingTop -= borderTopWidth;
   spacingTop += marginTop;
   spacingLeft += inset;
-  spacingLeft += outlineOffset;
-  spacingLeft -= borderLeftWidth;
+  // spacingLeft += outlineOffset;
+  // spacingLeft -= borderLeftWidth;
   spacingLeft += marginLeft;
   spacingRight += inset;
-  spacingRight += outlineOffset;
-  spacingRight -= borderRightWidth;
+  // spacingRight += outlineOffset;
+  // spacingRight -= borderRightWidth;
   spacingRight += marginRight;
   spacingBottom += inset;
-  spacingBottom += outlineOffset;
-  spacingBottom -= borderBottomWidth;
+  // spacingBottom += outlineOffset;
+  // spacingBottom -= borderBottomWidth;
   spacingBottom += marginBottom;
   if (targetSelector) {
     // oversimplification that actually works
@@ -283,42 +304,42 @@ const LoaderBackgroundWithWrapper = ({
     borderRightWidth,
     borderBottomWidth,
   );
-  const size = Math.max(2, maxBorderWidth / 2);
-
-  spacingTop += size / 4;
-  spacingLeft += size / 4;
-  spacingRight += size / 4;
-  spacingBottom += size / 4;
+  const halfMaxBorderSize = maxBorderWidth / 2;
+  const size = halfMaxBorderSize < 2 ? 2 : halfMaxBorderSize;
+  const lineHalfSize = size / 2;
+  spacingTop -= lineHalfSize;
+  spacingLeft -= lineHalfSize;
+  spacingRight -= lineHalfSize;
+  spacingBottom -= lineHalfSize;
 
   return (
-    <div
-      name="element_with_loader_wrapper"
-      ref={containerRef}
-      data-loader-visible={shouldShowSpinner ? "" : undefined}
-      style={{
-        flexGrow,
-        flexShrink,
-        flexBasis,
-      }}
-    >
-      {shouldShowSpinner && (
-        <div
-          name="loading_rectangle_wrapper"
-          style={{
-            top: `${spacingTop}px`,
-            left: `${spacingLeft}px`,
-            bottom: `${spacingBottom}px`,
-            right: `${spacingRight}px`,
-          }}
-        >
+    <>
+      <span
+        ref={rectangleRef}
+        className="navi_loading_rectangle_wrapper"
+        data-visible={shouldShowSpinner ? "" : undefined}
+        style={{
+          "--rectangle-top": `${spacingTop}px`,
+          "--rectangle-left": `${spacingLeft}px`,
+          "--rectangle-bottom": `${spacingBottom}px`,
+          "--rectangle-right": `${spacingRight}px`,
+        }}
+      >
+        {/* We want to start rendering the loading asap
+        so it can start to rotate as soon as we start to load
+        This feels more natural when the loader appears with some initial rotation
+        correspondong to the time it took to display it. It feels like it was busy
+        And we don't display immeditaly in case it's very fast (<300ms) */}
+        {loading && (
           <RectangleLoading
+            shouldShowSpinner={shouldShowSpinner}
             color={currentColor}
             radius={borderRadius}
             size={size}
           />
-        </div>
-      )}
+        )}
+      </span>
       {children}
-    </div>
+    </>
   );
 };

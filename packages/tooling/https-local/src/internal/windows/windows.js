@@ -14,7 +14,6 @@ export const executeTrustQuery = async ({
   certificateCommonName,
   certificateFileUrl,
   certificateIsNew,
-  certificate,
   verb,
 }) => {
   const windowsTrustInfo = await executeTrustQueryOnWindows({
@@ -22,7 +21,6 @@ export const executeTrustQuery = async ({
     certificateCommonName,
     certificateFileUrl,
     certificateIsNew,
-    certificate,
     verb,
   });
 

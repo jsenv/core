@@ -4002,7 +4002,7 @@ const jsenvPluginInliningIntoHtml = () => {
             });
           });
         };
-        const onScriptWithSrc = (scriptNode, { src }) => {
+        const onScriptWithSrc = (scriptNode, { type, src }) => {
           let scriptReference;
           for (const dependencyReference of urlInfo.referenceToOthersSet) {
             if (
@@ -4029,7 +4029,7 @@ const jsenvPluginInliningIntoHtml = () => {
             column,
             isOriginal,
             specifier: scriptInlineUrl,
-            type: scriptReference.type,
+            type,
             subtype: scriptReference.subtype,
             expectedType: scriptReference.expectedType,
           });
@@ -4073,7 +4073,7 @@ const jsenvPluginInliningIntoHtml = () => {
             if (!src) {
               return;
             }
-            onScriptWithSrc(scriptNode, { src });
+            onScriptWithSrc(scriptNode, { type, src });
           },
         });
         if (actions.length > 0) {
@@ -5037,7 +5037,7 @@ const jsenvPluginHtmlReferenceAnalysis = ({
           const createInlineReference = (
             node,
             inlineContent,
-            { type, expectedType, contentType },
+            { type, subtype, expectedType, contentType },
           ) => {
             const hotAccept =
               getHtmlNodeAttribute(node, "hot-accept") !== undefined;
@@ -5053,6 +5053,7 @@ const jsenvPluginHtmlReferenceAnalysis = ({
               getHtmlNodeAttribute(node, "jsenv-debug") !== undefined;
             const inlineReference = urlInfo.dependencies.foundInline({
               type,
+              subtype,
               expectedType,
               isOriginalPosition: isOriginal,
               specifierLine: line,
@@ -5929,7 +5930,6 @@ const createNodeEsmResolver = ({
     const resolveNodeEsmFallbackNullToDelegateToWebPlugin =
       createResolverWithFallbackOnError(
         applyNodeEsmResolution,
-
         () => DELEGATE_TO_WEB_RESOLUTION_PLUGIN,
       );
 
@@ -6345,7 +6345,6 @@ const jsenvPluginNodeEsmResolution = (
       );
     }
     return createNodeEsmResolver({
-      build: kitchenContext.build,
       runtimeCompat: kitchenContext.runtimeCompat,
       rootDirectoryUrl: kitchenContext.rootDirectoryUrl,
       packageConditions,
@@ -6362,7 +6361,6 @@ const jsenvPluginNodeEsmResolution = (
     appliesDuring: "*",
     init: (kitchenContext) => {
       nodeEsmResolverDefault = createNodeEsmResolver({
-        build: kitchenContext.build,
         runtimeCompat: kitchenContext.runtimeCompat,
         rootDirectoryUrl: kitchenContext.rootDirectoryUrl,
         preservesSymlink: true,
@@ -7806,6 +7804,9 @@ const jsenvPluginImportMetaCss = () => {
   const importMetaCssClientFileUrl = import.meta.resolve(
     "../js/import_meta_css.js",
   );
+  const importMetaCssBuildFileUrl = import.meta.resolve(
+    "../js/import_meta_css_build.js",
+  );
 
   return {
     name: "jsenv:import_meta_css",
@@ -7826,32 +7827,14 @@ const jsenvPluginImportMetaCss = () => {
         if (!usesImportMetaCss) {
           return null;
         }
-        return injectImportMetaCss(urlInfo, importMetaCssClientFileUrl);
+        return injectImportMetaCss(
+          urlInfo,
+          urlInfo.context.build
+            ? importMetaCssBuildFileUrl
+            : importMetaCssClientFileUrl,
+        );
       },
     },
-  };
-};
-
-const injectImportMetaCss = (urlInfo, importMetaCssClientFileUrl) => {
-  const importMetaCssClientFileReference = urlInfo.dependencies.inject({
-    parentUrl: urlInfo.url,
-    type: "js_import",
-    expectedType: "js_module",
-    specifier: importMetaCssClientFileUrl,
-  });
-  let content = urlInfo.content;
-  let prelude = `import { installImportMetaCss } from ${importMetaCssClientFileReference.generatedSpecifier};
-
-const remove = installImportMetaCss(import.meta);
-if (import.meta.hot) {
-  import.meta.hot.dispose(() => {
-    remove();
-  });
-}
-
-`;
-  return {
-    content: `${prelude.replace(/\n/g, "")}${content}`,
   };
 };
 
@@ -7883,6 +7866,29 @@ const babelPluginMetadataUsesImportMetaCss = () => {
         state.file.metadata.usesImportMetaCss = usesImportMetaCss;
       },
     },
+  };
+};
+
+const injectImportMetaCss = (urlInfo, importMetaCssClientFileUrl) => {
+  const importMetaCssClientFileReference = urlInfo.dependencies.inject({
+    parentUrl: urlInfo.url,
+    type: "js_import",
+    expectedType: "js_module",
+    specifier: importMetaCssClientFileUrl,
+  });
+  let content = urlInfo.content;
+  let prelude = `import { installImportMetaCss } from ${importMetaCssClientFileReference.generatedSpecifier};
+
+const remove = installImportMetaCss(import.meta);
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    remove();
+  });
+}
+
+`;
+  return {
+    content: `${prelude.replace(/\n/g, "")}${content}`,
   };
 };
 
@@ -11565,7 +11571,7 @@ const build = async ({
   });
 
   const logLevel = logs.level;
-  const logger = createLogger({ logLevel });
+  let logger = createLogger({ logLevel });
   const animatedLogEnabled =
     logs.animated &&
     // canEraseProcessStdout
@@ -12046,9 +12052,9 @@ const build = async ({
     const buildTask = createTaskLog("build");
     buildAbortController = new AbortController();
     try {
+      logger = createLogger({ logLevel: "warn" });
       const result = await runBuild({
         signal: buildAbortController.signal,
-        logLevel: "warn",
       });
       buildTask.done();
       resolveFirstBuild(result);

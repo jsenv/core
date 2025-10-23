@@ -1,52 +1,29 @@
 const installImportMetaCss = (importMeta) => {
-  let cssText = "";
-  let stylesheet = new CSSStyleSheet({ baseUrl: importMeta.url });
-  let adopted = false;
+  const stylesheet = new CSSStyleSheet({ baseUrl: importMeta.url });
 
-  const css = {
-    toString: () => cssText,
-    update: (value) => {
-      cssText = value;
-      cssText += `
-/* sourceURL=${importMeta.url} */
-/* inlined from ${importMeta.url} */`;
-      stylesheet.replaceSync(cssText);
-    },
-    inject: () => {
-      if (!adopted) {
-        document.adoptedStyleSheets = [
-          ...document.adoptedStyleSheets,
-          stylesheet,
-        ];
-        adopted = true;
-      }
-    },
-    remove: () => {
-      if (adopted) {
-        document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
-          (s) => s !== stylesheet,
-        );
-        adopted = false;
-      }
-    },
-  };
+  let called = false;
 
   Object.defineProperty(importMeta, "css", {
-    get() {
-      return css;
-    },
+    configurable: true,
     set(value) {
-      css.update(value);
-      css.inject();
+      if (called) {
+        throw new Error("import.meta.css setter can only be called once");
+      }
+      called = true;
+      stylesheet.replaceSync(value);
+      document.adoptedStyleSheets = [
+        ...document.adoptedStyleSheets,
+        stylesheet,
+      ];
     },
   });
-
-  return css.remove;
 };
 
-installImportMetaCss(import.meta);import.meta.css =         `body {
-  background-color: red;
-}`;
+installImportMetaCss(import.meta);import.meta.css =           `
+  body {
+    background-color: red;
+  }
+`;
 
 window.resolveResultPromise(
   window.getComputedStyle(document.body).backgroundColor,

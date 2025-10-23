@@ -71,7 +71,6 @@ export const createNodeEsmResolver = ({
     const resolveNodeEsmFallbackNullToDelegateToWebPlugin =
       createResolverWithFallbackOnError(
         applyNodeEsmResolution,
-
         () => DELEGATE_TO_WEB_RESOLUTION_PLUGIN,
       );
 

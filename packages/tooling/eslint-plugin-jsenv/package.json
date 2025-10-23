@@ -1,0 +1,33 @@
+{
+  "name": "@jsenv/eslint-plugin",
+  "version": "1.0.0",
+  "description": "Custom ESLint rules for jsenv projects",
+  "keywords": [
+    "eslint",
+    "eslintplugin",
+    "eslint-plugin",
+    "jsenv"
+  ],
+  "license": "MIT",
+  "author": "jsenv",
+  "type": "module",
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "src/"
+  ],
+  "scripts": {
+    "test": "node ./tests/run-all.js"
+  },
+  "dependencies": {
+    "debug": "4.4.3"
+  },
+  "devDependencies": {
+    "@jsenv/eslint-import-resolver": "../eslint-import-resolver",
+    "eslint": "9.38.0",
+    "espree": "10.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

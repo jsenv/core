@@ -44,7 +44,6 @@ export const executeTrustQuery = async ({
   });
 
   const safariTrustInfo = await executeTrustQueryOnSafari({
-    logger,
     // safari needs macTrustInfo because it uses OS trust store
     macTrustInfo,
   });

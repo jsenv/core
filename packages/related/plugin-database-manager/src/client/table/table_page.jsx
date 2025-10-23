@@ -18,62 +18,66 @@
  *
  */
 
-import { Button } from "@jsenv/navi";
-import { DatabaseFieldset, RoleField } from "../components/database_field.jsx";
+import {
+  LinkWithIcon,
+  Route,
+  Tab,
+  TabList,
+  UITransition,
+  useRouteStatus,
+} from "@jsenv/navi";
 import { Page, PageBody, PageHead } from "../layout/page.jsx";
+import { TABLE_DATA_ROUTE, TABLE_SETTINGS_ROUTE } from "../routes.js";
+import { DataSvg } from "../svg/data_svg.jsx";
+import { SettingsSvg } from "../svg/settings_svg.jsx";
+import { TableData } from "./table_data.jsx";
 import { TableSvg } from "./table_icons.jsx";
-import { TABLE } from "./table_store.js";
+import { TableSettings } from "./table_settings.jsx";
 
 export const TablePage = ({ table }) => {
   const tablename = table.tablename;
-  const deleteTableAction = TABLE.DELETE.bindParams({ tablename });
+  const tableDataUrl = TABLE_DATA_ROUTE.buildUrl({ tablename });
+  const tableSettingUrl = TABLE_SETTINGS_ROUTE.buildUrl({ tablename });
+  const { active: tableDataRouteIsActive } = useRouteStatus(TABLE_DATA_ROUTE);
+  const { active: tableSettingsRouteIsActive } =
+    useRouteStatus(TABLE_SETTINGS_ROUTE);
 
   return (
-    <Page>
-      <PageHead
-        actions={[
-          {
-            component: (
-              <Button
-                data-confirm-message={`Are you sure you want to delete the table "${tablename}"?`}
-                action={deleteTableAction}
-              >
-                Delete
-              </Button>
-            ),
-          },
-        ]}
-      >
+    <Page data-ui-name="<TablePage />">
+      <PageHead spacingBottom={0}>
         <PageHead.Label icon={<TableSvg />} label={"Table:"}>
           {tablename}
         </PageHead.Label>
+        <TabList>
+          <Tab selected={tableDataRouteIsActive}>
+            <LinkWithIcon
+              icon={<DataSvg />}
+              href={tableDataUrl}
+              data-no-text-decoration
+            >
+              Data
+            </LinkWithIcon>
+          </Tab>
+          <Tab selected={tableSettingsRouteIsActive}>
+            <LinkWithIcon
+              icon={<SettingsSvg />}
+              href={tableSettingUrl}
+              data-no-text-decoration
+            >
+              Settings
+            </LinkWithIcon>
+          </Tab>
+        </TabList>
       </PageHead>
       <PageBody>
-        <>
-          <DatabaseFieldset
-            item={table}
-            columns={table.meta.columns}
-            usePutAction={(columnName, valueSignal) =>
-              TABLE.PUT.bindParams({
-                tablename: table.tablename,
-                columnName,
-                columnValue: valueSignal,
-              })
-            }
-            customFields={{
-              tableowner: () => {
-                const ownerRole = table.ownerRole;
-                return <RoleField role={ownerRole} />;
-              },
-            }}
-          />
-          <a
-            href="https://www.postgresql.org/docs/14/ddl-basics.html"
-            target="_blank"
-          >
-            TABLE documentation
-          </a>
-        </>
+        <UITransition>
+          <Route route={TABLE_DATA_ROUTE}>
+            {(rows) => <TableData table={table} rows={rows} />}
+          </Route>
+          <Route route={TABLE_SETTINGS_ROUTE}>
+            {() => <TableSettings table={table} />}
+          </Route>
+        </UITransition>
       </PageBody>
     </Page>
   );

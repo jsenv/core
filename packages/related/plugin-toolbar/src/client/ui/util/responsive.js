@@ -2,7 +2,7 @@ export const createHorizontalBreakpoint = (breakpointValue) => {
   return createBreakpoint(windowWidthMeasure, breakpointValue);
 };
 
-const createMeasure = ({ compute, register }) => {
+const createMeasure = ({ name, compute, register }) => {
   let currentValue = compute();
 
   const get = () => compute();
@@ -21,7 +21,7 @@ const createMeasure = ({ compute, register }) => {
     });
   }
 
-  return { get, changed, unregister };
+  return { name, get, changed, unregister };
 };
 
 const createSignal = () => {

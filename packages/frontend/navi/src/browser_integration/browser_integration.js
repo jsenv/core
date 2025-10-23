@@ -26,7 +26,14 @@ const applyActions = (params) => {
 
 const applyRouting = (
   url,
-  { globalAbortSignal, abortSignal, state, replace, isVisited },
+  {
+    globalAbortSignal,
+    abortSignal,
+    // state
+    replace,
+    isVisited,
+    reason,
+  },
 ) => {
   const {
     loadSet,
@@ -34,7 +41,11 @@ const applyRouting = (
     abortSignalMap,
     routeLoadRequestedMap,
     activeRouteSet,
-  } = updateRoutes(url, { state, replace, isVisited });
+  } = updateRoutes(url, {
+    replace,
+    // state,
+    isVisited,
+  });
   if (loadSet.size === 0 && reloadSet.size === 0) {
     return {
       allResult: undefined,
@@ -48,7 +59,7 @@ const applyRouting = (
     runSet: loadSet,
     rerunSet: reloadSet,
     abortSignalMap,
-    reason: `Document navigating to ${url}`,
+    reason,
   });
   const { allResult, runningActionSet } = updateActionsResult;
   const pendingTaskNameArray = [];
@@ -163,12 +174,26 @@ const useNavStateBasic = (id, initialValue, { debug } = {}) => {
     }
 
     const currentState = browserIntegration.getDocumentState() || {};
+
     if (value === undefined) {
+      if (!Object.hasOwn(currentState, id)) {
+        return;
+      }
       delete currentState[id];
-    } else {
-      currentState[id] = value;
+      browserIntegration.replaceDocumentState(currentState, {
+        reason: `delete "${id}" from browser state`,
+      });
+      return;
     }
-    browserIntegration.replaceDocumentState(currentState);
+
+    const valueInBrowserState = currentState[id];
+    if (valueInBrowserState === value) {
+      return;
+    }
+    currentState[id] = value;
+    browserIntegration.replaceDocumentState(currentState, {
+      reason: `set { ${id}: ${value} } in browser state`,
+    });
   };
 
   return [

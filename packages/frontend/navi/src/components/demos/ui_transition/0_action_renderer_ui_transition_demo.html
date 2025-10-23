@@ -1,0 +1,695 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ActionRenderer with UITransition Demo</title>
+    <style>
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .demo-container {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .demo-title {
+        margin-top: 0;
+        color: #333;
+        border-bottom: 2px solid #007acc;
+        padding-bottom: 10px;
+      }
+      .control-panel {
+        display: flex;
+        gap: 10px;
+        margin: 20px 0;
+        flex-wrap: wrap;
+      }
+      .control-panel button {
+        padding: 8px 16px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background: #f8f9fa;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+      .control-panel button:hover {
+        background: #e9ecef;
+      }
+      .control-panel button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .content-area {
+        min-height: 100px;
+        border: 2px dashed #ddd;
+        border-radius: 4px;
+        padding: 20px;
+        margin: 20px 0;
+      }
+      .loading-spinner {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #007acc;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-right: 10px;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      .success-content {
+        padding: 20px;
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        border-radius: 4px;
+        color: #155724;
+      }
+      .error-content {
+        padding: 20px;
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        border-radius: 4px;
+        color: #721c24;
+      }
+      .info-content {
+        padding: 20px;
+        background: #d1ecf1;
+        border: 1px solid #bee5eb;
+        border-radius: 4px;
+        color: #0c5460;
+      }
+      .config-section {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 4px;
+        padding: 15px;
+        margin: 10px 0;
+      }
+      .config-section h4 {
+        margin-top: 0;
+        color: #495057;
+      }
+      .checkbox-group {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+      .checkbox-group label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+      }
+      .config-section input[type="range"]:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .config-section .description {
+        margin: 8px 0 0 0;
+        font-size: 0.9em;
+        color: #666;
+        line-height: 1.4;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>ActionRenderer with UITransition Demo</h1>
+    <p>
+      This demo showcases how ActionRenderer uses UITransition to smoothly
+      animate between different action states (idle, loading, completed, error)
+      with different content sizes. You can control whether size changes are
+      animated or instant, and customize the duration of all transitions.
+    </p>
+
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import {
+        createAction,
+        // eslint-disable-next-line no-unused-vars
+        ActionRenderer,
+        // eslint-disable-next-line no-unused-vars
+        UITransition,
+      } from "@jsenv/navi";
+
+      const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+      // Demo actions with different behaviors
+      const createSuccessAction = (contentKey, delayMs = 1000) =>
+        createAction(async () => {
+          await delay(delayMs);
+          return {
+            contentType: contentKey,
+            timestamp: new Date().toISOString(),
+          };
+        });
+
+      const createErrorAction = (delayMs = 1000) =>
+        createAction(async () => {
+          await delay(delayMs);
+          throw new Error("Something went wrong! This is a demo error.");
+        });
+
+      const createSlowAction = () =>
+        createAction(async () => {
+          await delay(3000);
+          return {
+            contentType: "slow",
+            message: "This took 3 seconds to load!",
+            timestamp: new Date().toISOString(),
+          };
+        });
+
+      const createStuckLoadingAction = () =>
+        createAction(async () => {
+          // This action never resolves, staying in loading state
+          await new Promise(() => {}); // Never resolves
+        });
+
+      // Content renderers for different scenarios
+      const renderSmallContent = (data) => (
+        <div
+          className="success-content"
+          data-content-key="small"
+          data-ui-name="small-content"
+        >
+          <h4>Small Content</h4>
+          <p>This is small content that loaded successfully.</p>
+          <small>Loaded at: {data.timestamp}</small>
+        </div>
+      );
+
+      const renderLargeContent = (data) => (
+        <div
+          className="success-content"
+          data-content-key="large"
+          data-ui-name="large-content"
+        >
+          <h4>Large Content</h4>
+          <p>
+            This is much larger content that should cause a smooth size
+            transition when it loads.
+          </p>
+          <p>
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
+            eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
+            ad minim veniam, quis nostrud exercitation ullamco laboris.
+          </p>
+          <p>
+            Duis aute irure dolor in reprehenderit in voluptate velit esse
+            cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat
+            cupidatat non proident.
+          </p>
+          <div style="display: flex; gap: 10px; margin-top: 15px;">
+            <div style="flex: 1; padding: 10px; background: rgba(0,123,204,0.1); border-radius: 4px;">
+              <strong>Feature 1</strong>
+              <br />
+              Some additional content here
+            </div>
+            <div style="flex: 1; padding: 10px; background: rgba(0,123,204,0.1); border-radius: 4px;">
+              <strong>Feature 2</strong>
+              <br />
+              More content in this section
+            </div>
+          </div>
+          <small>Loaded at: {data.timestamp}</small>
+        </div>
+      );
+
+      const renderMediumContent = (data) => (
+        <div
+          className="success-content"
+          data-content-key="medium"
+          data-ui-name="medium-content"
+        >
+          <h4>Medium Content</h4>
+          <p>
+            This is medium-sized content that demonstrates size transitions.
+          </p>
+          <ul>
+            <li>Feature A: Working correctly</li>
+            <li>Feature B: All systems operational</li>
+            <li>Feature C: Performance optimized</li>
+          </ul>
+          <small>Loaded at: {data.timestamp}</small>
+        </div>
+      );
+
+      const renderSlowContent = (data) => (
+        <div
+          className="success-content"
+          data-content-key="slow"
+          data-ui-name="slow-content"
+        >
+          <h4>Slow Content</h4>
+          <p>{data.message}</p>
+          <p>
+            This content took 3 seconds to load and demonstrates phase
+            transitions from loading to content with the same content key.
+          </p>
+          <small>Loaded at: {data.timestamp}</small>
+        </div>
+      );
+
+      const renderLoadingContent = (contentKey) => (
+        <div
+          className="info-content"
+          data-content-phase
+          data-content-key={contentKey}
+          data-ui-name={`${contentKey}-loading`}
+        >
+          <div style="display: flex; align-items: center;">
+            <div className="loading-spinner"></div>
+            <span>Loading content...</span>
+          </div>
+        </div>
+      );
+
+      const renderErrorContent = (error, contentKey) => (
+        <div
+          className="error-content"
+          data-content-phase
+          data-content-key={contentKey}
+          data-ui-name={`${contentKey}-error`}
+        >
+          <h4>❌ Error Occurred</h4>
+          <p>{error.message}</p>
+          <small>Try again or check your connection.</small>
+        </div>
+      );
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const [currentAction, setCurrentAction] = useState(null);
+        const [transitionType, setTransitionType] = useState(() => {
+          return (
+            localStorage.getItem("ui-transition-demo-type") || "cross-fade"
+          );
+        });
+        const [transitionDuration, setTransitionDuration] = useState(() => {
+          const saved = localStorage.getItem("ui-transition-demo-duration");
+          return saved ? parseInt(saved) : 300;
+        });
+        const [phaseTransitionType, setPhaseTransitionType] = useState(() => {
+          return (
+            localStorage.getItem("ui-transition-demo-phase-type") ||
+            "cross-fade"
+          );
+        });
+        const [phaseTransitionDuration, setPhaseTransitionDuration] = useState(
+          () => {
+            const saved = localStorage.getItem(
+              "ui-transition-demo-phase-duration",
+            );
+            return saved ? parseInt(saved) : 300;
+          },
+        );
+        const [sizeTransition, setSizeTransition] = useState(() => {
+          const saved = localStorage.getItem("ui-transition-demo-size-enabled");
+          return saved ? saved === "true" : true; // Default to enabled
+        });
+        const [sizeTransitionDuration, setSizeTransitionDuration] = useState(
+          () => {
+            const saved = localStorage.getItem(
+              "ui-transition-demo-size-duration",
+            );
+            return saved ? parseInt(saved) : 300;
+          },
+        );
+
+        // Create actions with content key metadata
+        const smallAction = createSuccessAction("small", 800);
+        smallAction.meta = { contentKey: "small" };
+
+        const mediumAction = createSuccessAction("medium", 1200);
+        mediumAction.meta = { contentKey: "medium" };
+
+        const largeAction = createSuccessAction("large", 1000);
+        largeAction.meta = { contentKey: "large" };
+
+        const errorAction = createErrorAction(500);
+        errorAction.meta = { contentKey: "error" };
+
+        const slowAction = createSlowAction();
+        slowAction.meta = { contentKey: "slow" };
+
+        const stuckLoadingAction = createStuckLoadingAction();
+        stuckLoadingAction.meta = { contentKey: "stuck-loading" };
+
+        // Helper to get content key for an action
+        const getContentKeyForAction = (action) => {
+          if (!action) return "loading";
+
+          // Use the contentKey property we set on action.meta
+          return action.meta?.contentKey || "loading";
+        };
+
+        const triggerAction = (action) => {
+          setCurrentAction(() => action);
+          // Clear any previous state and trigger fresh load
+          action.rerun();
+        };
+
+        const handleTransitionTypeChange = (newType) => {
+          setTransitionType(newType);
+          localStorage.setItem("ui-transition-demo-type", newType);
+        };
+
+        const handleTransitionDurationChange = (newDuration) => {
+          setTransitionDuration(newDuration);
+          localStorage.setItem(
+            "ui-transition-demo-duration",
+            newDuration.toString(),
+          );
+        };
+
+        const handlePhaseTransitionTypeChange = (newType) => {
+          setPhaseTransitionType(newType);
+          localStorage.setItem("ui-transition-demo-phase-type", newType);
+        };
+
+        const handlePhaseTransitionDurationChange = (newDuration) => {
+          setPhaseTransitionDuration(newDuration);
+          localStorage.setItem(
+            "ui-transition-demo-phase-duration",
+            newDuration.toString(),
+          );
+        };
+
+        const handleSizeTransitionChange = (enabled) => {
+          setSizeTransition(enabled);
+          localStorage.setItem(
+            "ui-transition-demo-size-enabled",
+            enabled.toString(),
+          );
+        };
+
+        const handleSizeTransitionDurationChange = (newDuration) => {
+          setSizeTransitionDuration(newDuration);
+          localStorage.setItem(
+            "ui-transition-demo-size-duration",
+            newDuration.toString(),
+          );
+        };
+
+        return (
+          <div>
+            <div className="demo-container">
+              <h2 className="demo-title">🎭 Basic Action State Transitions</h2>
+              <p>
+                Click buttons to trigger different actions and watch smooth
+                transitions between loading, success, and error states.
+              </p>
+
+              <div className="control-panel">
+                <button onClick={() => triggerAction(smallAction)}>
+                  Load Small Content
+                </button>
+                <button onClick={() => triggerAction(mediumAction)}>
+                  Load Medium Content
+                </button>
+                <button onClick={() => triggerAction(largeAction)}>
+                  Load Large Content
+                </button>
+                <button onClick={() => triggerAction(errorAction)}>
+                  Trigger Error
+                </button>
+                <button onClick={() => triggerAction(slowAction)}>
+                  Slow Loading (3s)
+                </button>
+                <button onClick={() => triggerAction(stuckLoadingAction)}>
+                  Stay Loading
+                </button>
+                <button onClick={() => setCurrentAction(null)}>
+                  Clear Content
+                </button>
+              </div>
+
+              <div className="content-area">
+                <UITransition
+                  sizeTransition={sizeTransition}
+                  sizeTransitionDuration={sizeTransitionDuration}
+                  transitionType={transitionType}
+                  transitionDuration={transitionDuration}
+                  phaseTransitionType={phaseTransitionType}
+                  phaseTransitionDuration={phaseTransitionDuration}
+                >
+                  <ActionRenderer action={currentAction}>
+                    {{
+                      loading: () => {
+                        // Use the content key of what we're loading
+                        const contentKey =
+                          getContentKeyForAction(currentAction);
+                        return renderLoadingContent(contentKey);
+                      },
+                      error: (error) => {
+                        const contentKey =
+                          getContentKeyForAction(currentAction);
+                        return renderErrorContent(error, contentKey);
+                      },
+                      completed: (data) => {
+                        if (!data) return null;
+                        switch (data.contentType) {
+                          case "small":
+                            return renderSmallContent(data);
+                          case "medium":
+                            return renderMediumContent(data);
+                          case "large":
+                            return renderLargeContent(data);
+                          case "slow":
+                            return renderSlowContent(data);
+                          default:
+                            return renderSmallContent(data);
+                        }
+                      },
+                    }}
+                  </ActionRenderer>
+                </UITransition>
+              </div>
+            </div>
+
+            <div className="demo-container">
+              <h2 className="demo-title">⚙️ Transition Configuration</h2>
+
+              <div className="config-section">
+                <h4>Content Transition Type</h4>
+                <div className="checkbox-group">
+                  <label>
+                    <input
+                      type="radio"
+                      name="transition-type"
+                      value="cross-fade"
+                      checked={transitionType === "cross-fade"}
+                      onChange={(e) =>
+                        handleTransitionTypeChange(e.target.value)
+                      }
+                    />
+                    Cross Fade
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="transition-type"
+                      value="slide-left"
+                      checked={transitionType === "slide-left"}
+                      onChange={(e) =>
+                        handleTransitionTypeChange(e.target.value)
+                      }
+                    />
+                    Slide Left
+                  </label>
+                </div>
+              </div>
+
+              <div className="config-section">
+                <h4>Phase Transition Type</h4>
+                <div className="checkbox-group">
+                  <label>
+                    <input
+                      type="radio"
+                      name="phase-transition-type"
+                      value="cross-fade"
+                      checked={phaseTransitionType === "cross-fade"}
+                      onChange={(e) =>
+                        handlePhaseTransitionTypeChange(e.target.value)
+                      }
+                    />
+                    Cross Fade
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="phase-transition-type"
+                      value="slide-left"
+                      checked={phaseTransitionType === "slide-left"}
+                      onChange={(e) =>
+                        handlePhaseTransitionTypeChange(e.target.value)
+                      }
+                    />
+                    Slide Left
+                  </label>
+                </div>
+                <p className="description">
+                  <strong>Content Transitions:</strong> Between different
+                  content keys (small → medium → large)
+                  <br />
+                  <strong>Phase Transitions:</strong> Between loading/content
+                  states (loading → content) for same key
+                </p>
+              </div>
+
+              <div className="config-section">
+                <h4>Content Transition Duration</h4>
+                <label style="display: flex; align-items: center; gap: 10px;">
+                  <span>Duration: {transitionDuration}ms</span>
+                  <input
+                    type="range"
+                    min="100"
+                    max="1000"
+                    step="50"
+                    value={transitionDuration}
+                    onChange={(e) =>
+                      handleTransitionDurationChange(parseInt(e.target.value))
+                    }
+                    style="flex: 1;"
+                  />
+                </label>
+              </div>
+
+              <div className="config-section">
+                <h4>Phase Transition Duration</h4>
+                <label style="display: flex; align-items: center; gap: 10px;">
+                  <span>Duration: {phaseTransitionDuration}ms</span>
+                  <input
+                    type="range"
+                    min="100"
+                    max="1000"
+                    step="50"
+                    value={phaseTransitionDuration}
+                    onChange={(e) =>
+                      handlePhaseTransitionDurationChange(
+                        parseInt(e.target.value),
+                      )
+                    }
+                    style="flex: 1;"
+                  />
+                </label>
+              </div>
+
+              <div className="config-section">
+                <h4>Size Transition</h4>
+                <div className="checkbox-group">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={sizeTransition}
+                      onChange={(e) =>
+                        handleSizeTransitionChange(e.target.checked)
+                      }
+                    />
+                    Enable Size Transitions
+                  </label>
+                </div>
+                <p className="description">
+                  When enabled, the container smoothly animates to accommodate
+                  different content sizes. When disabled, size changes are
+                  instant.
+                </p>
+              </div>
+
+              <div className="config-section">
+                <h4>Size Transition Duration</h4>
+                <label style="display: flex; align-items: center; gap: 10px;">
+                  <span>Duration: {sizeTransitionDuration}ms</span>
+                  <input
+                    type="range"
+                    min="100"
+                    max="1000"
+                    step="50"
+                    value={sizeTransitionDuration}
+                    onChange={(e) =>
+                      handleSizeTransitionDurationChange(
+                        parseInt(e.target.value),
+                      )
+                    }
+                    style="flex: 1;"
+                    disabled={!sizeTransition}
+                  />
+                </label>
+                <p className="description">
+                  Controls how fast the container animates when content size
+                  changes. Only applies when size transitions are enabled.
+                </p>
+              </div>
+            </div>
+
+            <div className="demo-container">
+              <h2 className="demo-title">📝 What's Happening</h2>
+              <ul>
+                <li>
+                  <strong>UITransition Integration:</strong> ActionRenderer
+                  wraps all content in UITransition for smooth state changes
+                </li>
+                <li>
+                  <strong>Size Adaptation:</strong> Container can smoothly
+                  animate to accommodate different content sizes (when enabled)
+                </li>
+                <li>
+                  <strong>Optional Size Transitions:</strong> Toggle between
+                  instant and animated size changes using the "Enable Size
+                  Transitions" checkbox
+                </li>
+                <li>
+                  <strong>Content Phases:</strong> Loading and error states are
+                  marked with <code>data-content-phase</code>
+                </li>
+                <li>
+                  <strong>Content Keys:</strong> Each content type has a unique{" "}
+                  <code>data-content-key</code> for transition tracking
+                </li>
+                <li>
+                  <strong>Stay Loading:</strong> The "Stay Loading" button
+                  demonstrates persistent loading states that never complete
+                </li>
+              </ul>
+            </div>
+
+            <div className="demo-container">
+              <h2 className="demo-title">🔧 Developer Tools</h2>
+              <p>
+                Open browser dev tools and watch the console for debug logs
+                showing:
+              </p>
+              <ul>
+                <li>Size measurements and transitions</li>
+                <li>Content key changes and transition scenarios</li>
+                <li>Resize observer events</li>
+                <li>Animation progress and completion</li>
+              </ul>
+            </div>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

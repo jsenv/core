@@ -29,6 +29,9 @@ export const jsenvPluginImportMetaCss = () => {
   const importMetaCssClientFileUrl = import.meta.resolve(
     "./client/import_meta_css.js",
   );
+  const importMetaCssBuildFileUrl = import.meta.resolve(
+    "./client/import_meta_css_build.js",
+  );
 
   return {
     name: "jsenv:import_meta_css",
@@ -49,32 +52,14 @@ export const jsenvPluginImportMetaCss = () => {
         if (!usesImportMetaCss) {
           return null;
         }
-        return injectImportMetaCss(urlInfo, importMetaCssClientFileUrl);
+        return injectImportMetaCss(
+          urlInfo,
+          urlInfo.context.build
+            ? importMetaCssBuildFileUrl
+            : importMetaCssClientFileUrl,
+        );
       },
     },
-  };
-};
-
-const injectImportMetaCss = (urlInfo, importMetaCssClientFileUrl) => {
-  const importMetaCssClientFileReference = urlInfo.dependencies.inject({
-    parentUrl: urlInfo.url,
-    type: "js_import",
-    expectedType: "js_module",
-    specifier: importMetaCssClientFileUrl,
-  });
-  let content = urlInfo.content;
-  let prelude = `import { installImportMetaCss } from ${importMetaCssClientFileReference.generatedSpecifier};
-
-const remove = installImportMetaCss(import.meta);
-if (import.meta.hot) {
-  import.meta.hot.dispose(() => {
-    remove();
-  });
-}
-
-`;
-  return {
-    content: `${prelude.replace(/\n/g, "")}${content}`,
   };
 };
 
@@ -106,5 +91,28 @@ const babelPluginMetadataUsesImportMetaCss = () => {
         state.file.metadata.usesImportMetaCss = usesImportMetaCss;
       },
     },
+  };
+};
+
+const injectImportMetaCss = (urlInfo, importMetaCssClientFileUrl) => {
+  const importMetaCssClientFileReference = urlInfo.dependencies.inject({
+    parentUrl: urlInfo.url,
+    type: "js_import",
+    expectedType: "js_module",
+    specifier: importMetaCssClientFileUrl,
+  });
+  let content = urlInfo.content;
+  let prelude = `import { installImportMetaCss } from ${importMetaCssClientFileReference.generatedSpecifier};
+
+const remove = installImportMetaCss(import.meta);
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    remove();
+  });
+}
+
+`;
+  return {
+    content: `${prelude.replace(/\n/g, "")}${content}`,
   };
 };

@@ -1,15 +1,16 @@
 import { elementIsFocusable, findAfter } from "@jsenv/dom";
-import { requestAction } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useEffect, useImperativeHandle, useRef, useState } from "preact/hooks";
+
 import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
+import { requestAction } from "../../validation/custom_constraint_validation.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { ActionRenderer } from "../action_renderer.jsx";
-import { useKeyboardShortcuts } from "../shortcut/shortcut_context.jsx";
-import { useActionEvents } from "../use_action_events.js";
+import { useActionEvents } from "../field/use_action_events.js";
+import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
 import { useFocusGroup } from "../use_focus_group.js";
 import { SummaryMarker } from "./summary_marker.jsx";
 
@@ -60,7 +61,6 @@ const DetailsBasic = forwardRef((props, ref) => {
   const {
     id,
     label = "Summary",
-    children,
     open,
     loading,
     className,
@@ -70,6 +70,7 @@ const DetailsBasic = forwardRef((props, ref) => {
     openKeyShortcut = "ArrowRight",
     closeKeyShortcut = "ArrowLeft",
     onToggle,
+    children,
     ...rest
   } = props;
   const innerRef = useRef();
@@ -97,78 +98,72 @@ const DetailsBasic = forwardRef((props, ref) => {
    * - https://stackoverflow.com/questions/58942600/react-html-details-toggles-uncontrollably-when-starts-open
    *
    */
+
+  const summaryRef = useRef(null);
+  useKeyboardShortcuts(innerRef, [
+    {
+      key: openKeyShortcut,
+      enabled: arrowKeyShortcuts,
+      when: (e) =>
+        document.activeElement === summaryRef.current &&
+        // avoid handling openKeyShortcut twice when keydown occurs inside nested details
+        !e.defaultPrevented,
+      action: (e) => {
+        const details = innerRef.current;
+        if (!details.open) {
+          e.preventDefault();
+          details.open = true;
+          return;
+        }
+        const summary = summaryRef.current;
+        const firstFocusableElementInDetails = findAfter(
+          summary,
+          elementIsFocusable,
+          { root: details },
+        );
+        if (!firstFocusableElementInDetails) {
+          return;
+        }
+        e.preventDefault();
+        firstFocusableElementInDetails.focus();
+      },
+    },
+    {
+      key: closeKeyShortcut,
+      enabled: arrowKeyShortcuts,
+      when: () => {
+        const details = innerRef.current;
+        return details.open;
+      },
+      action: (e) => {
+        const details = innerRef.current;
+        const summary = summaryRef.current;
+        if (document.activeElement === summary) {
+          e.preventDefault();
+          summary.focus();
+          details.open = false;
+        } else {
+          e.preventDefault();
+          summary.focus();
+        }
+      },
+    },
+  ]);
+
   const mountedRef = useRef(false);
   useEffect(() => {
     mountedRef.current = true;
   }, []);
 
-  const summaryRef = useRef(null);
-
-  useKeyboardShortcuts(
-    innerRef,
-    [
-      {
-        key: openKeyShortcut,
-        enabled: arrowKeyShortcuts,
-        when: (e) =>
-          document.activeElement === summaryRef.current &&
-          // avoid handling openKeyShortcut twice when keydown occurs inside nested details
-          !e.defaultPrevented,
-        action: (e) => {
-          const details = innerRef.current;
-          if (!details.open) {
-            e.preventDefault();
-            details.open = true;
-            return;
-          }
-          const summary = summaryRef.current;
-          const firstFocusableElementInDetails = findAfter(
-            summary,
-            elementIsFocusable,
-            { root: details },
-          );
-          if (!firstFocusableElementInDetails) {
-            return;
-          }
-          e.preventDefault();
-          firstFocusableElementInDetails.focus();
-        },
-      },
-      {
-        key: closeKeyShortcut,
-        enabled: arrowKeyShortcuts,
-        when: () => {
-          const details = innerRef.current;
-          return details.open;
-        },
-        action: (e) => {
-          const details = innerRef.current;
-          const summary = summaryRef.current;
-          if (document.activeElement === summary) {
-            e.preventDefault();
-            summary.focus();
-            details.open = false;
-          } else {
-            e.preventDefault();
-            summary.focus();
-          }
-        },
-      },
-    ],
-    (shortcut, e) => {
-      shortcut.action(e);
-    },
-  );
-
   return (
     <details
       {...rest}
+      ref={innerRef}
       id={id}
       className={[
         "navi_details",
         ...(className ? className.split(" ") : []),
       ].join(" ")}
-      ref={innerRef}
       onToggle={(e) => {
         const isOpen = e.newState === "open";
         if (mountedRef.current) {
@@ -218,7 +213,9 @@ const DetailsWithAction = forwardRef((props, ref) => {
   });
   useActionEvents(innerRef, {
     onPrevented: onActionPrevented,
-    onAction: executeAction,
+    onAction: (e) => {
+      executeAction(e);
+    },
     onStart: onActionStart,
     onError: onActionError,
     onEnd: onActionEnd,
@@ -228,10 +225,12 @@ const DetailsWithAction = forwardRef((props, ref) => {
     <DetailsBasic
       {...rest}
       ref={innerRef}
+      loading={loading || actionLoading}
       onToggle={(toggleEvent) => {
         const isOpen = toggleEvent.newState === "open";
         if (isOpen) {
-          requestAction(effectiveAction, {
+          requestAction(toggleEvent.target, effectiveAction, {
+            actionOrigin: "action_prop",
             event: toggleEvent,
             method: "run",
           });
@@ -240,7 +239,6 @@ const DetailsWithAction = forwardRef((props, ref) => {
         }
         onToggle?.(toggleEvent);
       }}
-      loading={loading || actionLoading}
     >
       <ActionRenderer action={effectiveAction}>{children}</ActionRenderer>
     </DetailsBasic>

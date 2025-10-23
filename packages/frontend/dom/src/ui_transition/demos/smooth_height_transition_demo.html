@@ -1,0 +1,149 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Smooth height transition demo</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui;
+      }
+
+      .controls {
+        padding: 20px;
+        border-bottom: 1px solid #ccc;
+        background: #f5f5f5;
+      }
+
+      .demo-container {
+        padding: 20px;
+      }
+
+      /* The element we'll apply the smooth transition to */
+      #dynamic-content {
+        background: white;
+        border: 2px solid #666;
+        padding: 16px;
+        margin: 20px 0;
+        width: 300px;
+        /* we'll handle height transitions in JS */
+      }
+
+      /* Some preset content styles for testing */
+      .content-block {
+        background: #f0f0f0;
+        margin: 8px 0;
+        padding: 12px;
+      }
+
+      button {
+        margin: 0 8px 8px 0;
+        padding: 8px 16px;
+      }
+
+      textarea {
+        display: block;
+        width: 300px;
+        height: 100px;
+        margin: 8px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="controls">
+      <h3>Test Controls</h3>
+      <div>
+        <button id="small-content">Small Content</button>
+        <button id="medium-content">Medium Content</button>
+        <button id="large-content">Large Content</button>
+      </div>
+      <div>
+        <button id="add-block">Add Block</button>
+        <button id="remove-block">Remove Block</button>
+      </div>
+      <div>
+        <p>Custom content:</p>
+        <textarea id="custom-content">
+Hello, this is some initial content.</textarea
+        >
+      </div>
+    </div>
+
+    <div class="demo-container">
+      <div id="dynamic-content" class="ui-transition-container">
+        <div class="ui-transition-outer-wrapper">
+          <div class="ui-transition-measure-wrapper">
+            <div class="ui-transition-slot">
+              <div class="content-block">Initial content block</div>
+            </div>
+          </div>
+        </div>
+        <div class="ui-transition-overlay"></div>
+      </div>
+    </div>
+
+    <script type="module">
+      import { initUITransition } from "../ui_transition.js";
+
+      const dynamicContent = document.getElementById("dynamic-content");
+      const { slot } = initUITransition(dynamicContent);
+
+      // Setup event listeners
+      document
+        .getElementById("small-content")
+        .addEventListener("click", () => setPresetContent("small"));
+      document
+        .getElementById("medium-content")
+        .addEventListener("click", () => setPresetContent("medium"));
+      document
+        .getElementById("large-content")
+        .addEventListener("click", () => setPresetContent("large"));
+      document.getElementById("add-block").addEventListener("click", addBlock);
+      document
+        .getElementById("remove-block")
+        .addEventListener("click", removeBlock);
+      document
+        .getElementById("custom-content")
+        .addEventListener("input", (e) => updateCustomContent(e.target.value));
+
+      // Test helpers
+      const presetContents = {
+        small: `<div class="content-block">Small content</div>`,
+        medium: `
+          <div class="content-block">Medium content</div>
+          <div class="content-block">With multiple blocks</div>
+          <div class="content-block">To test transitions</div>
+        `,
+        large: `
+          <div class="content-block">Large content</div>
+          <div class="content-block">With many blocks</div>
+          <div class="content-block">To properly test</div>
+          <div class="content-block">How the transitions work</div>
+          <div class="content-block">With varying amounts of content</div>
+          <div class="content-block">And different heights</div>
+        `,
+      };
+
+      function setPresetContent(size) {
+        slot.innerHTML = presetContents[size];
+      }
+
+      function addBlock() {
+        const block = document.createElement("div");
+        block.className = "content-block";
+        block.textContent = `New content block ${slot.children.length + 1}`;
+        slot.appendChild(block);
+      }
+
+      function removeBlock() {
+        const blocks = slot.getElementsByClassName("content-block");
+        if (blocks.length > 0) {
+          blocks[blocks.length - 1].remove();
+        }
+      }
+
+      function updateCustomContent(text) {
+        slot.innerHTML = `<div class="content-block">${text}</div>`;
+      }
+    </script>
+  </body>
+</html>

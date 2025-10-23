@@ -1,0 +1,203 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Simple Validation Message Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background: linear-gradient(45deg, #f0f8ff, #e6f3ff);
+        min-height: 300vh; /* Make page scrollable */
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+
+      .section {
+        margin: 40px 0;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .target-element {
+        display: inline-block;
+        padding: 12px 20px;
+        background: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        margin: 10px;
+        font-size: 16px;
+      }
+
+      .target-element:hover {
+        background: #45a049;
+      }
+
+      .spacer {
+        height: 200px;
+        background: repeating-linear-gradient(
+          45deg,
+          transparent,
+          transparent 20px,
+          rgba(0, 0, 0, 0.1) 20px,
+          rgba(0, 0, 0, 0.1) 40px
+        );
+        margin: 40px 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #666;
+        font-weight: bold;
+        font-size: 18px;
+      }
+
+      .scroll-instruction {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: #333;
+        color: white;
+        padding: 10px;
+        border-radius: 4px;
+        font-size: 14px;
+        z-index: 1000;
+      }
+
+      .scrollable-container {
+        height: 300px;
+        width: 100%;
+        overflow: auto;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        background: #f9f9f9;
+        padding: 20px;
+      }
+
+      .scrollable-content {
+        height: 600px;
+        width: 800px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-around;
+        align-items: center;
+        background: repeating-linear-gradient(
+          45deg,
+          transparent,
+          transparent 30px,
+          rgba(0, 0, 255, 0.1) 30px,
+          rgba(0, 0, 255, 0.1) 60px
+        );
+      }
+    </style>
+  </head>
+  <body>
+    <div class="scroll-instruction">
+      Scroll to test validation message positioning
+    </div>
+
+    <div class="container">
+      <h1>Simple Validation Message Demo</h1>
+      <p>
+        This demo shows how the validation message follows its target element
+        during scrolling.
+      </p>
+
+      <div class="section">
+        <h2>Auto-opened Validation Message</h2>
+        <p>This validation message opens automatically when the page loads:</p>
+        <p>
+          <strong
+            >Scroll inside the container below to test positioning within a
+            scrollable parent:</strong
+          >
+        </p>
+        <div class="scrollable-container">
+          <div class="scrollable-content">
+            <div>Top of scrollable area</div>
+            <button id="auto-target" class="target-element">
+              Target Element (Auto-opened message)
+            </button>
+            <div>Bottom of scrollable area</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="spacer">
+        Scroll Area 1 - Keep scrolling to test positioning
+      </div>
+
+      <div class="section">
+        <h2>Middle Section</h2>
+        <p>
+          The validation message should follow the target element as you scroll
+          past this section.
+        </p>
+      </div>
+
+      <div class="spacer">Scroll Area 2 - More scrolling space</div>
+
+      <div class="section">
+        <h2>Another Section</h2>
+        <p>
+          Continue scrolling to test the message positioning at different scroll
+          positions.
+        </p>
+      </div>
+
+      <div class="spacer">Scroll Area 3 - Bottom section</div>
+
+      <div class="section">
+        <h2>Final Section</h2>
+        <p>Scroll back up to see how the validation message behaves.</p>
+      </div>
+
+      <div
+        style="
+          height: 50vh;
+          background: #f0f0f0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-top: 40px;
+        "
+      >
+        <p>Bottom spacer - scroll back up to see validation messages</p>
+      </div>
+    </div>
+
+    <script type="module">
+      import { openValidationMessage } from "../validation_message.js";
+
+      // Auto-open validation message on page load
+      window.addEventListener("load", () => {
+        const autoTarget = document.getElementById("auto-target");
+        openValidationMessage(
+          autoTarget,
+          `This is a very long validation message that was opened automatically when the page loaded. <strong>Try scrolling both horizontally and vertically</strong> within the container to see how the validation message follows the target element! This message is intentionally made very long to test how the positioning system handles messages that exceed the visible area of their container. The message should properly position itself even when parts of it would normally be clipped by the container boundaries. You can scroll in any direction - up, down, left, right - to test the robustness of the positioning algorithm. This lengthy content helps verify that the validation message system can handle edge cases where the message content is larger than the available viewport space within scrollable containers.`,
+          {
+            level: "warning",
+            debug: true,
+            canClickThrough: true,
+            onClose: () => {
+              console.log("Validation message was closed");
+            },
+          },
+        );
+      });
+
+      console.log(
+        "Simple validation message demo loaded. Check console for debug output.",
+      );
+    </script>
+  </body>
+</html>

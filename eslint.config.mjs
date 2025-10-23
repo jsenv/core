@@ -35,8 +35,8 @@ export default [
       "**/babel_helpers/",
       "**/_*test.*/",
       "**/_*test_manual.*/",
+      "**/packages/tooling/eslint-plugin-jsenv/tests/**/fixtures/**",
       "experiments/",
-      "**/frontend/router/src/",
     ],
   },
 ];

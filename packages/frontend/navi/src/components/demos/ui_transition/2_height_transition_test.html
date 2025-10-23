@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Height Transition Test - Big to Small</title>
+    <style>
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background: #f5f5f5;
+        line-height: 1.5;
+      }
+
+      h1 {
+        color: #333;
+        margin-bottom: 20px;
+      }
+
+      .controls {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .controls h3 {
+        margin-top: 0;
+        margin-bottom: 15px;
+        color: #555;
+      }
+
+      .button-group {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+      }
+
+      button {
+        padding: 10px 16px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        background: #fff;
+        cursor: pointer;
+        font: inherit;
+        transition: all 0.15s;
+      }
+
+      button:hover {
+        background: #f8f9fa;
+        border-color: #007acc;
+      }
+
+      button:active {
+        background: #e9ecef;
+      }
+
+      .demo-container {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      /* UI Transition Container */
+      #transition-box {
+        border: 2px solid #007acc;
+        border-radius: 8px;
+        background: #f8fbff;
+        max-width: 400px;
+        margin: 20px 0;
+      }
+
+      /* Content styles */
+      .big-content {
+        padding: 30px;
+        background: repeating-linear-gradient(
+          to bottom,
+          rgba(0, 0, 0, 0.05) 0px,
+          rgba(0, 0, 0, 0.05) 20px,
+          rgba(0, 0, 0, 0.1) 20px,
+          rgba(0, 0, 0, 0.1) 40px
+        );
+        color: #222;
+        border-radius: 6px;
+        min-height: 300px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+      }
+
+      .big-content h2 {
+        margin: 0 0 15px 0;
+        font-size: 24px;
+      }
+
+      .big-content p {
+        margin: 5px 0;
+        opacity: 0.9;
+        font-size: 16px;
+      }
+
+      .small-content {
+        padding: 15px;
+        background: transparent; /* reveal any cropping during cross-fade */
+        color: #222;
+        border-radius: 6px;
+        text-align: center;
+        font-weight: 600;
+        border: 1px dashed #bbb; /* show where the new smaller height is */
+      }
+
+      /* A bright bar anchored at the bottom to make cropping obvious when height shrinks */
+      .big-content .bottom-flag {
+        margin-top: 20px;
+        width: 100%;
+        height: 40px;
+        border-radius: 4px;
+        background: repeating-linear-gradient(
+          45deg,
+          #ff1744,
+          #ff1744 10px,
+          #ff9100 10px,
+          #ff9100 20px
+        );
+        box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.15) inset;
+      }
+
+      .note {
+        background: #e7f3ff;
+        border: 1px solid #b8daff;
+        color: #004085;
+        padding: 12px;
+        border-radius: 6px;
+        font-size: 14px;
+        margin-top: 15px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Height Transition Test</h1>
+
+    <div class="controls">
+      <h3>Test Controls</h3>
+      <div class="button-group">
+        <button id="show-big">Show Big Content</button>
+        <button id="show-small">Show Small Content</button>
+        <button id="clear">Clear Content</button>
+      </div>
+      <div class="button-group">
+        <label style="display: flex; align-items: center; gap: 8px">
+          <input type="checkbox" id="toggle-transitions" />
+          Enable Size Transitions
+        </label>
+      </div>
+    </div>
+
+    <div class="demo-container">
+      <h3>Transition Container</h3>
+      <div class="note">
+        Tip: With size transitions DISABLED (default), switching from the tall
+        content to the small content will crop the outgoing element while the
+        content transition runs. Toggle size transitions ON to see the
+        difference. The striped bar at the bottom of the big content helps
+        visualize cropping when the container height shrinks instantly.
+      </div>
+
+      <div
+        id="transition-box"
+        class="ui_transition_container"
+        data-content-transition="cross-fade"
+        data-content-transition-duration="600"
+      >
+        <div class="ui_transition_outer_wrapper">
+          <div class="ui_transition_measure_wrapper">
+            <div class="ui_transition_slot" data-content-key="initial">
+              <div class="big-content">
+                <h2>🎯 Big Content</h2>
+                <p>This is a tall element with lots of content</p>
+                <p>It takes up significant vertical space</p>
+                <p>Perfect for testing height transitions</p>
+                <p>When you switch to small content,</p>
+                <p>watch how smoothly it transitions!</p>
+                <div
+                  class="bottom-flag"
+                  title="Bottom area to reveal cropping"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="ui_transition_content_overlay"></div>
+      </div>
+    </div>
+
+    <script type="module">
+      import { initUITransition } from "../../../../../dom/src/ui_transition/ui_transition.js";
+
+      const transitionBox = document.getElementById("transition-box");
+      const { slot } = initUITransition(transitionBox);
+
+      // Content templates
+      const createBigContent = () => {
+        const div = document.createElement("div");
+        div.className = "big-content";
+        div.setAttribute("data-content-key", "big");
+        div.innerHTML = `
+          <h2>🎯 Big Content</h2>
+          <p>This is a tall element with lots of content</p>
+          <p>It takes up significant vertical space</p>
+          <p>Perfect for testing height transitions</p>
+          <p>When you switch to small content,</p>
+          <p>watch how smoothly it transitions!</p>
+          <div class="bottom-flag" title="Bottom area to reveal cropping"></div>
+        `;
+        return div;
+      };
+
+      const createSmallContent = () => {
+        const div = document.createElement("div");
+        div.className = "small-content";
+        div.setAttribute("data-content-key", "small");
+        div.textContent = "📦 Small Content - Compact and concise!";
+        return div;
+      };
+
+      // no loading state in this simplified demo
+
+      // Button handlers
+      document.getElementById("show-big").addEventListener("click", () => {
+        slot.innerHTML = "";
+        slot.appendChild(createBigContent());
+      });
+
+      document.getElementById("show-small").addEventListener("click", () => {
+        slot.innerHTML = "";
+        slot.appendChild(createSmallContent());
+      });
+
+      // removed loading button
+
+      document.getElementById("clear").addEventListener("click", () => {
+        slot.innerHTML = "";
+      });
+
+      // Initialize and handle size transitions checkbox
+      const sizeToggle = document.getElementById("toggle-transitions");
+      sizeToggle.checked = transitionBox.hasAttribute("data-size-transition");
+      sizeToggle.addEventListener("change", (e) => {
+        if (e.target.checked) {
+          transitionBox.setAttribute("data-size-transition", "");
+        } else {
+          transitionBox.removeAttribute("data-size-transition");
+        }
+      });
+
+      // removed debug toggle
+
+      // Quick test sequence
+      let testRunning = false;
+      document.addEventListener("keydown", (e) => {
+        if (e.key === " " && !testRunning) {
+          e.preventDefault();
+          testRunning = true;
+
+          // Auto-cycle through states (big -> small -> big)
+          setTimeout(() => {
+            slot.innerHTML = "";
+            slot.appendChild(createSmallContent());
+          }, 1000);
+
+          setTimeout(() => {
+            slot.innerHTML = "";
+            slot.appendChild(createBigContent());
+          }, 2500);
+
+          setTimeout(() => {
+            testRunning = false;
+          }, 5500);
+        }
+      });
+
+      console.log("Height Transition Test loaded!");
+      console.log("Press SPACEBAR for auto-cycle test");
+    </script>
+  </body>
+</html>

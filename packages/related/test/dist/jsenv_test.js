@@ -11230,7 +11230,6 @@ const execute = async ({
   measureMemoryUsage = false,
   onMeasureMemoryAvailable,
   collectPerformance = false,
-  collectCoverage = false,
   coverageTempDirectoryUrl,
   runtime,
   runtimeParams,

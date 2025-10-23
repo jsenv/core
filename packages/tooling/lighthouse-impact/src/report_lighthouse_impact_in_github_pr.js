@@ -7,7 +7,6 @@ import { patchOrPostGists } from "./pr_impact/patch_or_post_gists.js";
 export const reportLighthouseImpactInGithubPullRequest = async ({
   logLevel,
   commandLogs = false,
-  cancelOnSIGINT,
   rootDirectoryUrl,
 
   githubToken,
@@ -37,7 +36,6 @@ export const reportLighthouseImpactInGithubPullRequest = async ({
     commandLogs,
     // lighthouse report are super verbose, do not log them
     infoLogs: false,
-    cancelOnSIGINT,
     rootDirectoryUrl,
 
     githubToken,

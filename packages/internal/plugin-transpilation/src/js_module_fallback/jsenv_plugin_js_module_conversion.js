@@ -112,9 +112,7 @@ export const jsenvPluginJsModuleConversion = ({ remapImportSpecifier }) => {
         });
       }
       const { content, sourcemap } = await convertJsModuleToJsClassic({
-        rootDirectoryUrl: urlInfo.context.rootDirectoryUrl,
         input: jsModuleUrlInfo.content,
-        inputIsEntryPoint: urlInfo.isEntryPoint,
         inputSourcemap: jsModuleUrlInfo.sourcemap,
         inputUrl: jsModuleUrlInfo.url,
         outputUrl: urlInfo.url,

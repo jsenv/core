@@ -55,7 +55,7 @@ const commandHandlers = {
       ipMappings: {
         "127.0.0.1": ["localhost"],
       },
-      tryToUpdatesHostsFile: true,
+      tryToUpdateHostsFile: true,
     });
   },
   install: async ({ trust }) => {
@@ -74,7 +74,7 @@ const commandHandlers = {
       ipMappings: {
         "127.0.0.1": ["localhost"],
       },
-      tryToUpdatesHostsFile: true,
+      tryToUpdateHostsFile: true,
     });
   },
 };

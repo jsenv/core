@@ -78,7 +78,7 @@ export const jsenvPluginInliningIntoHtml = () => {
             });
           });
         };
-        const onScriptWithSrc = (scriptNode, { src }) => {
+        const onScriptWithSrc = (scriptNode, { type, src }) => {
           let scriptReference;
           for (const dependencyReference of urlInfo.referenceToOthersSet) {
             if (
@@ -105,7 +105,7 @@ export const jsenvPluginInliningIntoHtml = () => {
             column,
             isOriginal,
             specifier: scriptInlineUrl,
-            type: scriptReference.type,
+            type,
             subtype: scriptReference.subtype,
             expectedType: scriptReference.expectedType,
           });

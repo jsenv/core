@@ -24,7 +24,7 @@
     "@jsenv/humanize": "1.6.0",
     "@jsenv/package-publish": "1.11.35",
     "@jsenv/urls": "2.9.1",
-    "semver": "7.7.2"
+    "semver": "7.7.3"
   },
   "engines": {
     "node": ">=20.0.0"

@@ -81,7 +81,7 @@ const renderCommentBody = ({
 
     files.forEach((fileRelativeUrl) => {
       const { beforeMerge, afterMerge } = groupFileImpactMap[fileRelativeUrl];
-      const event = isAdded({ beforeMerge, afterMerge })
+      const event = isAdded({ beforeMerge })
         ? "added"
         : isDeleted({ beforeMerge, afterMerge })
           ? "deleted"

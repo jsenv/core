@@ -30,10 +30,17 @@ export const setupBrowserIntegrationViaHistory = ({
     return window.history.state ? { ...window.history.state } : null;
   };
 
-  const replaceDocumentState = (newState) => {
+  const replaceDocumentState = (
+    newState,
+    { reason = "replaceDocumentState called" } = {},
+  ) => {
     const url = window.location.href;
     window.history.replaceState(newState, null, url);
-    handleRoutingTask(url, { state: newState });
+    handleRoutingTask(url, {
+      replace: true,
+      state: newState,
+      reason,
+    });
   };
 
   const historyStartAtStart = getDocumentState();
@@ -73,7 +80,7 @@ export const setupBrowserIntegrationViaHistory = ({
   };
 
   let abortController = null;
-  const handleRoutingTask = (url, { state, replace }) => {
+  const handleRoutingTask = (url, { state, replace, reason }) => {
     markUrlAsVisited(url);
     updateDocumentUrl(url);
     updateDocumentState(state);
@@ -88,6 +95,7 @@ export const setupBrowserIntegrationViaHistory = ({
       state,
       replace,
       isVisited,
+      reason,
     });
 
     executeWithCleanup(
@@ -122,11 +130,23 @@ export const setupBrowserIntegrationViaHistory = ({
       if (linkElement.hasAttribute("data-readonly")) {
         return;
       }
-      // TODO: ignore anchor navigation
+      // Ignore anchor navigation (same page, different hash)
+      const currentUrl = new URL(window.location.href);
+      const targetUrl = new URL(href);
+      if (
+        currentUrl.pathname === targetUrl.pathname &&
+        currentUrl.search === targetUrl.search &&
+        targetUrl.hash !== ""
+      ) {
+        return;
+      }
       e.preventDefault();
       const state = null;
       history.pushState(state, null, href);
-      handleRoutingTask(href, { state });
+      handleRoutingTask(href, {
+        state,
+        reason: `"click" on a[href="${href}"]`,
+      });
     },
     { capture: true },
   );
@@ -142,7 +162,10 @@ export const setupBrowserIntegrationViaHistory = ({
   window.addEventListener("popstate", (popstateEvent) => {
     const url = window.location.href;
     const state = popstateEvent.state;
-    handleRoutingTask(url, { state });
+    handleRoutingTask(url, {
+      state,
+      reason: `"popstate" event for ${url}`,
+    });
   });
 
   const goTo = async (url, { state = null, replace } = {}) => {
@@ -155,7 +178,11 @@ export const setupBrowserIntegrationViaHistory = ({
     } else {
       window.history.pushState(state, null, url);
     }
-    handleRoutingTask(url, { state, replace });
+    handleRoutingTask(url, {
+      state,
+      replace,
+      reason: `goTo called with "${url}"`,
+    });
   };
 
   const stop = (reason = "stop called") => {
@@ -165,7 +192,9 @@ export const setupBrowserIntegrationViaHistory = ({
   const reload = () => {
     const url = window.location.href;
     const state = history.state;
-    handleRoutingTask(url, { state });
+    handleRoutingTask(url, {
+      state,
+    });
   };
 
   const goBack = () => {
@@ -180,7 +209,11 @@ export const setupBrowserIntegrationViaHistory = ({
     const url = window.location.href;
     const state = history.state;
     history.replaceState(state, null, url);
-    handleRoutingTask(url, { state, replace: true });
+    handleRoutingTask(url, {
+      state,
+      replace: true,
+      reason: "routing initialization",
+    });
   };
 
   return {

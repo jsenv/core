@@ -1,27 +1,3 @@
-/**
- * TODO: when switching from one state to another we should preserve the dimensions to prevent layout shift
- * the exact way to do this is not yet clear but I suspect something as follow:
- *
- *
- * While content is loading we don't know (except if we are given an size)
- * When reloading the content will be gone, we should keep a placeholder taking the same space
- * When there is an error the error should take the same space as the content
- * but be displayed on top
- * (If error is bigger it can take more space? I guess so, maybe an overflow would be better to prevent layout shit again)
- *
- * And once we know the new content size ideally we could have some sort of transition
- * (like an height transition from current height to new height)
- *
- * consider https://motion.dev/docs/react-layout-animations
- *
- * but might be too complexe for what we want.
- * we want ability to transit from anything to anything, it's not a layout change
- * it's more view transition but with a very simple behavior
- *
- * And certainly this https://developer.mozilla.org/en-US/docs/Web/API/View_Transition_API#pseudo-elements
- *
- */
-
 import { useErrorBoundary, useLayoutEffect } from "preact/hooks";
 import { getActionPrivateProperties } from "../action_private_properties.js";
 import { useActionStatus } from "../use_action_status.js";
@@ -45,7 +21,7 @@ const renderErrorDefault = (error) => {
 };
 const renderCompletedDefault = () => null;
 
-export const ActionRenderer = ({ action, children }) => {
+export const ActionRenderer = ({ action, children, disabled }) => {
   const {
     idle: renderIdle = renderIdleDefault,
     loading: renderLoading = renderLoadingDefault,
@@ -54,7 +30,12 @@ export const ActionRenderer = ({ action, children }) => {
     completed: renderCompleted,
     always: renderAlways,
   } = typeof children === "function" ? { completed: children } : children || {};
-  if (!action) {
+
+  if (disabled) {
+    return null;
+  }
+
+  if (action === undefined) {
     throw new Error(
       "ActionRenderer requires an action to render, but none was provided.",
     );
@@ -67,8 +48,10 @@ export const ActionRenderer = ({ action, children }) => {
   // This tells the action system that errors should be caught and stored
   // in the action's error state rather than bubbling up
   useLayoutEffect(() => {
-    const { ui } = getActionPrivateProperties(action);
-    ui.hasRenderers = true;
+    if (action) {
+      const { ui } = getActionPrivateProperties(action);
+      ui.hasRenderers = true;
+    }
   }, [action]);
 
   useLayoutEffect(() => {
@@ -80,7 +63,7 @@ export const ActionRenderer = ({ action, children }) => {
     return () => {
       actionUIRenderedPromiseWeakMap.delete(action);
     };
-  }, []);
+  }, [action]);
 
   // If renderAlways is provided, it wins and handles all rendering
   if (renderAlways) {
@@ -120,9 +103,15 @@ export const ActionRenderer = ({ action, children }) => {
   return renderCompletedSafe(data, action);
 };
 
+const defaultPromise = Promise.resolve();
+defaultPromise.resolve = () => {};
+
 const actionUIRenderedPromiseWeakMap = new WeakMap();
-const useUIRenderedPromise = (route) => {
-  const actionUIRenderedPromise = actionUIRenderedPromiseWeakMap.get(route);
+const useUIRenderedPromise = (action) => {
+  if (!action) {
+    return defaultPromise;
+  }
+  const actionUIRenderedPromise = actionUIRenderedPromiseWeakMap.get(action);
   if (actionUIRenderedPromise) {
     return actionUIRenderedPromise;
   }
@@ -131,6 +120,6 @@ const useUIRenderedPromise = (route) => {
     resolve = res;
   });
   promise.resolve = resolve;
-  actionUIRenderedPromiseWeakMap.set(route, promise);
+  actionUIRenderedPromiseWeakMap.set(action, promise);
   return promise;
 };

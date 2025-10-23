@@ -51,7 +51,7 @@ export const rulesRelax = {
   "consistent-return": ["error"],
   "constructor-super": ["error"],
   "curly": ["error"],
-  "default-case": ["error"],
+  "default-case": ["off"], // not alawys needed so it's annoying
   "dot-location": ["error", "property"],
   "dot-notation": ["off"],
   "eol-last": ["off"],
@@ -225,7 +225,19 @@ export const rulesRelax = {
   "no-unused-expressions": ["error"],
   "no-unused-labels": ["off"], // https://gist.github.com/getify/706e5e10822a298375da40f9cc1fa295
   "no-unused-private-class-members": ["error"],
-  "no-unused-vars": ["error"],
+  "no-unused-vars": [
+    "error",
+    {
+      // it's better to ensure rest siblings are reported
+      // because otherwise it's easy to miss that they get stripped of param forwaring
+      // which happens a lot in rect components
+      // const { importantParam, ...rest} =props;
+      // <OtherComponent {...rest} />
+      // If "importantParam" is not used, rest will not contains it anymore
+      // which can lead to bugs if OtherComponent expect "importantParam" to be there
+      ignoreRestSiblings: false,
+    },
+  ],
   "no-use-before-define": [
     "error",
     /*

@@ -1,9 +1,10 @@
 import { initFocusGroup } from "@jsenv/dom";
 import { useLayoutEffect } from "preact/hooks";
 
-export const useFocusGroup = (elementRef, options) => {
-  const { direction, skipTab, loop, name, enabled } = options;
-
+export const useFocusGroup = (
+  elementRef,
+  { enabled = true, direction, skipTab, loop, name } = {},
+) => {
   useLayoutEffect(() => {
     if (!enabled) {
       return null;

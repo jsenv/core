@@ -142,7 +142,7 @@ export const injectSupervisorIntoHTML = async (
         actions.push(async () => {
           try {
             const inlineJsSupervised = await injectSupervisorIntoJs({
-              webServer,
+              // webServer,
               content: textContent,
               url: inlineScriptUrl,
               type,

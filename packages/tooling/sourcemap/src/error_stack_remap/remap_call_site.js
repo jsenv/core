@@ -44,7 +44,7 @@ export const remapCallSite = async (
       const originalEvalOrigin = await remapEvalOrigin(origin, {
         resolveFile,
         urlToSourcemapConsumer,
-        readErrorStack,
+
         onFailure,
       });
       callSiteClone.getEvalOrigin = () => originalEvalOrigin;

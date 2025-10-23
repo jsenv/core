@@ -1,4 +1,5 @@
 import { initFlexDetailsSet } from "@jsenv/dom";
+import { FontSizedSvg, useRunOnMount } from "@jsenv/navi";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 // import { DatabaseSvg } from "../database/database_icons.jsx";
 // import { useCurrentDatabase } from "../database/database_signals.js";
@@ -20,15 +21,17 @@ import {
   RoleWithOwnershipListDetails,
   roleWithOwnershipListDetailsController,
 } from "../role/role_with_ownership/role_with_ownership_list_details.jsx";
-import { FontSizedSvg } from "../svg/font_sized_svg.jsx";
 import {
   TablesDetails,
   tablesDetailsController,
 } from "../table/tables_details.jsx";
 import "./explorer.css" with { type: "css" };
 import "./explorer_store.js";
+import { EXPLORER } from "./explorer_store.js";
 
 export const Explorer = () => {
+  useRunOnMount(EXPLORER.GET, Explorer);
+
   const role = useCurrentRole();
   // const database = useCurrentDatabase();
   const RoleIcon = pickRoleIcon(role);

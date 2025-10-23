@@ -1,14 +1,16 @@
-import { useFormContext } from "./form_context.js";
+import { useContext } from "preact/hooks";
+
+import { FormContext } from "./form_context.js";
 
 export const renderActionableComponent = (
   props,
   ref,
   { Basic, WithAction, InsideForm, WithActionInsideForm },
 ) => {
-  const { action, shortcuts, ignoreForm } = props;
-  const formContext = useFormContext();
+  const { action, shortcuts } = props;
+  const formContext = useContext(FormContext);
   const hasActionProps = Boolean(action || (shortcuts && shortcuts.length > 0));
-  const considerInsideForm = ignoreForm ? false : Boolean(formContext);
+  const considerInsideForm = Boolean(formContext);
 
   if (hasActionProps && WithAction) {
     if (considerInsideForm && WithActionInsideForm) {

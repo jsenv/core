@@ -55,8 +55,8 @@ Whether you are new to jsenv or an experienced user, this documentation will hel
     </a>
   </li>
   <li>
-    <a href="j_build_for_node/j_build_for_node.md">
-      J) Build for Node.js
+    <a href="j_build_a_package/j_build_a_package.md">
+      J) Build a package
     </a>
   </li>
 </ul>

@@ -28,7 +28,6 @@ export const reuseOrCreateCompiledFile = async ({
 
   const getCacheValidity = () => {
     const cacheValidity = validateCompileCache({
-      logger,
       compiledFileUrl,
       compileCacheStrategy,
       compileCacheAssetsValidation,

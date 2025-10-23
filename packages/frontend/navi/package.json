@@ -1,7 +1,7 @@
 {
   "name": "@jsenv/navi",
-  "version": "0.0.1",
-  "description": "A navigation library for JS environments",
+  "version": "0.1.0",
+  "description": "Library of components including navigation to create frontend applications",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
@@ -12,25 +12,36 @@
     "name": "dmail",
     "email": "dmaillard06@gmail.com"
   },
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/jsenv_navi.js"
+  ],
   "type": "module",
   "exports": {
-    ".": "./index.js",
+    ".": {
+      "dev:jsenv": "./index.js",
+      "default": "./dist/jsenv_navi.js"
+    },
     "./*": "./*"
   },
   "files": [
-    "/index.js",
-    "/src/"
+    "/dist/",
+    "/src/",
+    "/index.js"
   ],
+  "scripts": {
+    "build": "node ./scripts/build.mjs",
+    "prepublishOnly": "npm run build"
+  },
   "dependencies": {
-    "@jsenv/dom": "0.0.1",
+    "@jsenv/dom": "0.1.0",
     "@jsenv/humanize": "1.6.0"
   },
   "devDependencies": {
-    "@jsenv/assert": "4.5.3",
-    "@jsenv/validation": "0.0.1",
-    "@preact/signals": "2.2.1",
-    "preact": "10.27.0"
+    "@jsenv/assert": "4.5.4",
+    "@jsenv/core": "../../../",
+    "@jsenv/plugin-preact": "../../related/plugin-preact",
+    "@preact/signals": "2.3.2",
+    "preact": "10.27.2"
   },
   "publishConfig": {
     "access": "public"

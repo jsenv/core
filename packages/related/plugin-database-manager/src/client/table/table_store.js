@@ -24,12 +24,13 @@ export const TABLE = resource("table", {
     }
     const { data, meta } = await response.json();
     const table = data;
-    const { ownerRole, columns } = meta;
+    const { ownerRole, columns, schemaColumns } = meta;
     return {
       ...table,
       ownerRole,
       meta: {
         columns,
+        schemaColumns,
       },
     };
   },
@@ -115,3 +116,41 @@ export const useTableArray = () => {
   const tableArray = useActionData(TABLE.GET_MANY);
   return tableArray;
 };
+
+export const TABLE_ROW = resource("table_row", {
+  GET_MANY: async ({ tablename }, { signal }) => {
+    const response = await fetch(
+      `${window.DB_MANAGER_CONFIG.apiUrl}/tables/${tablename}/rows`,
+      {
+        signal,
+      },
+    );
+    if (!response.ok) {
+      throw await errorFromResponse(response, "Failed to get table rows");
+    }
+    const { data } = await response.json();
+    return data;
+  },
+  POST: async ({ tablename }, { signal }) => {
+    const response = await fetch(
+      `${window.DB_MANAGER_CONFIG.apiUrl}/tables/${tablename}/rows`,
+      {
+        signal,
+        method: "POST",
+        headers: {
+          "accept": "application/json",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({}),
+      },
+    );
+    if (!response.ok) {
+      throw await errorFromResponse(
+        response,
+        `Failed to create row in "${tablename}" table`,
+      );
+    }
+    const { data } = await response.json();
+    return data;
+  },
+});

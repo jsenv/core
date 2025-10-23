@@ -1,13 +1,12 @@
 // actions
 export { createAction, rerunActions, updateActions } from "./src/actions.js";
-export {
-  ShortcutProvider,
-  useKeyboardShortcuts,
-} from "./src/components/shortcut/shortcut_context.jsx";
+export { useRunOnMount } from "./src/components/action_execution/use_run_on_mount.js";
+export { useKeyboardShortcuts } from "./src/components/keyboard_shortcuts/keyboard_shortcuts.js";
 export { useActionData } from "./src/use_action_data.js";
 export { useActionStatus } from "./src/use_action_status.js";
 
 // state management (store)
+export { useStateArray } from "./src/components/use_state_array.js";
 export { resource } from "./src/store/resource_graph.js";
 export { valueInLocalStorage } from "./src/store/value_in_local_storage.js";
 
@@ -30,22 +29,73 @@ export { ActionRenderer } from "./src/components/action_renderer.jsx";
 export { Details } from "./src/components/details/details.jsx";
 export { SummaryMarker } from "./src/components/details/summary_marker.jsx";
 export {
-  EditableText,
-  useEditableController,
-} from "./src/components/editable_text/editable_text.jsx";
+  Editable,
+  useEditionController,
+} from "./src/components/edition/editable.jsx";
 export { ErrorBoundaryContext } from "./src/components/error_boundary_context.js";
-export { Form } from "./src/components/form.jsx";
-export { Button } from "./src/components/input/button.jsx";
-export { CheckboxList } from "./src/components/input/checkbox_list.jsx";
-export { Field } from "./src/components/input/field.jsx";
-export { Input } from "./src/components/input/input.jsx";
-export { RadioList } from "./src/components/input/radio_list.jsx";
-export { Select } from "./src/components/input/select.jsx";
+export { Button } from "./src/components/field/button.jsx";
+export {
+  Checkbox,
+  CheckboxList,
+} from "./src/components/field/checkbox_list.jsx";
+export { Form } from "./src/components/field/form.jsx";
+export { Input } from "./src/components/field/input.jsx";
+export { Label } from "./src/components/field/label.jsx";
+export { Radio, RadioList } from "./src/components/field/radio_list.jsx";
+export { Select } from "./src/components/field/select.jsx";
+export { ActiveKeyboardShortcuts } from "./src/components/keyboard_shortcuts/active_keyboard_shortcuts.jsx";
 export { Link } from "./src/components/link/link.jsx";
 export { Route } from "./src/components/route.jsx";
-export { SelectionProvider } from "./src/components/selection/selection.js";
+export {
+  SelectionContext,
+  createSelectionKeyboardShortcuts,
+  useSelectableElement,
+  useSelectionController,
+} from "./src/components/selection/selection.jsx";
+// Table start
+export {
+  isCellSelected,
+  isColumnSelected,
+  isRowSelected,
+  stringifyTableSelectionValue,
+} from "./src/components/table/selection/table_selection.js";
+export {
+  Col,
+  Colgroup,
+  RowNumberCol,
+  RowNumberTableCell,
+  Table,
+  TableCell,
+  Tbody,
+  Thead,
+  Tr,
+} from "./src/components/table/table.jsx";
+export { useCellsAndColumns } from "./src/components/table/use_cells_and_columns.js";
+// Table end
+export { Tab, TabList } from "./src/components/tablist/tablist.jsx";
+export { UITransition } from "./src/components/ui_transition.jsx";
 export { useSignalSync } from "./src/components/use_signal_sync.js";
 
-// for debbugging testing purposes
+// Text and icons
+export { LinkWithIcon } from "./src/components/link/link_with_icon.jsx";
+export { FontSizedSvg } from "./src/components/svg/font_sized_svg.jsx";
+export { IconAndText } from "./src/components/svg/icon_and_text.jsx";
+export { SVGMaskOverlay } from "./src/components/svg/svg_mask_overlay.jsx";
+export { Overflow } from "./src/components/text/overflow.jsx";
+export { TextAndCount } from "./src/components/text/text_and_count.jsx";
+
+// Validation
+export { createUniqueValueConstraint } from "./src/validation/constraints/create_unique_value_constraint.js";
+export { SINGLE_SPACE_CONSTRAINT } from "./src/validation/constraints/single_space_constraint.js";
+export {
+  addCustomMessage,
+  removeCustomMessage,
+} from "./src/validation/custom_message.js";
+
+// Other
+export { useDependenciesDiff } from "./src/components/use_dependencies_diff.js";
+export { useFocusGroup } from "./src/components/use_focus_group.js";
+
+// for debugging testing purposes
 export { enableDebugActions } from "./src/actions.js";
 export { enableDebugOnDocumentLoading } from "./src/browser_integration/document_loading_signal.js";

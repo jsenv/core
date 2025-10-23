@@ -4,10 +4,303 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Checkbox demo</title>
+    <title>Checkbox Demo</title>
+    <style>
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        min-height: 100vh;
+      }
+
+      h1 {
+        text-align: center;
+        color: #2c3e50;
+        margin-bottom: 30px;
+        font-size: 2.5rem;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .demo-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+
+      .demo-card {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e1e8ed;
+        transition:
+          transform 0.2s ease,
+          box-shadow 0.2s ease;
+      }
+
+      .demo-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+      }
+
+      .demo-title {
+        color: #2c3e50;
+        margin: 0 0 20px 0;
+        font-size: 1.3rem;
+        font-weight: 600;
+        border-bottom: 3px solid #3498db;
+        padding-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .demo-title::before {
+        content: "✨";
+        font-size: 1.2rem;
+      }
+
+      .checkbox-row {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin: 15px 0;
+        padding: 12px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+        transition: background 0.2s ease;
+      }
+
+      .checkbox-row:hover {
+        background: #e8f4f8;
+      }
+
+      .checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 1rem;
+        color: #495057;
+        cursor: pointer;
+        flex: 1;
+        min-width: 0;
+      }
+
+      .toggle-button {
+        padding: 8px 16px;
+        background: linear-gradient(45deg, #3498db, #2980b9);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        flex-shrink: 0;
+        white-space: nowrap;
+      }
+
+      .toggle-button:hover {
+        background: linear-gradient(45deg, #2980b9, #1f6591);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .comparison {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 15px;
+        padding: 12px;
+        background: #fff3cd;
+        border-radius: 6px;
+        border-left: 4px solid #ffc107;
+      }
+
+      .comparison-label {
+        font-size: 0.85rem;
+        color: #856404;
+        font-weight: 500;
+        margin-bottom: 5px;
+      }
+
+      .native-examples {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .native-examples label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.9rem;
+        color: #495057;
+      }
+
+      .prop-control-demo {
+        grid-column: 1 / -1;
+        background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+
+      .prop-control-demo .demo-title {
+        color: white;
+        border-bottom-color: #ffffff;
+      }
+
+      .prop-control-demo .demo-title::before {
+        content: "�️";
+      }
+
+      .color-controls {
+        margin-bottom: 25px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+      }
+
+      .color-select-group {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .color-select-label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        font-size: 0.95rem;
+      }
+
+      .color-select {
+        width: 100%;
+        padding: 8px 12px;
+        border: none;
+        border-radius: 6px;
+        background: white;
+        color: #333;
+        font-size: 0.9rem;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .state-controls {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        margin-bottom: 20px;
+      }
+
+      .state-controls h4 {
+        margin: 0 0 15px 0;
+        font-size: 1rem;
+        color: white;
+      }
+
+      .control-row {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        margin-bottom: 10px;
+      }
+
+      .control-group {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        min-width: 100px;
+      }
+
+      .control-toggle {
+        padding: 8px 16px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        min-width: 80px;
+        text-align: center;
+      }
+
+      .control-toggle.active {
+        background: rgba(255, 255, 255, 0.9);
+        color: #333;
+        border-color: white;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .control-toggle:hover {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: rgba(255, 255, 255, 0.5);
+      }
+
+      .control-toggle.active:hover {
+        background: white;
+      }
+
+      .control-label {
+        font-size: 0.9rem;
+        color: white;
+        margin: 0;
+      }
+
+      .accent-checkbox-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 20px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .accent-checkbox-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 6px;
+        font-size: 0.95rem;
+      }
+
+      @media (max-width: 768px) {
+        .demo-grid {
+          grid-template-columns: 1fr;
+        }
+
+        h1 {
+          font-size: 2rem;
+        }
+
+        .checkbox-row {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 10px;
+        }
+      }
+    </style>
   </head>
   <body>
-    <div id="root" style="position: relative"></div>
+    <h1>🎛️ Interactive Checkbox Demo</h1>
+    <div id="root"></div>
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
@@ -16,236 +309,320 @@
         // eslint-disable-next-line no-unused-vars
         Input,
         // eslint-disable-next-line no-unused-vars
-        Field,
+        Label,
       } from "@jsenv/navi";
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
+        return (
+          <div className="demo-grid">
+            <LoadingDemo />
+            <ReadOnlyDemo />
+            <DisabledDemo />
+            <PropControlDemo />
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const LoadingDemo = () => {
         const [loading, setLoading] = useState(false);
-        const [loadingB, setLoadingB] = useState(false);
-        const [loadingC, setLoadingC] = useState(false);
-        const [loadingD, setLoadingD] = useState(false);
-        const [loadingE, setLoadingE] = useState(false);
-        const [loadingF, setLoadingF] = useState(false);
 
         return (
-          <div>
-            <div style="display: flex; flex-direction: row; gap: 30px">
-              <div>
-                <p>
-                  <strong>Loading</strong>
-                </p>
+          <div className="demo-card">
+            <h3 className="demo-title">Loading States</h3>
 
-                <Field
-                  input={
-                    <Input
-                      id="test"
-                      type="checkbox"
-                      name="colors"
-                      loading={loading}
-                    />
-                  }
-                  label="Coucou"
-                ></Field>
-
-                <button>
-                  <span
-                    onClick={() => {
-                      setLoading(!loading);
-                    }}
-                  >
-                    Toggle
-                  </span>
-                </button>
-
-                <div>
-                  <label>
-                    <input type="checkbox" name="colors" checked />
-                    Coucou
-                  </label>
-                </div>
-              </div>
+            <div className="checkbox-row">
+              <Label className="checkbox-label">
+                <Input type="checkbox" name="loading-demo" loading={loading} />
+                Loading Checkbox
+              </Label>
+              <button
+                className="toggle-button"
+                onClick={() => setLoading(!loading)}
+              >
+                {loading ? "Stop Loading" : "Start Loading"}
+              </button>
             </div>
 
-            <div>
-              <div>
-                <p>
-                  <strong>Loading with action</strong>
-                </p>
-
-                <Field
-                  input={
-                    <Input
-                      id="test"
-                      action={() => {}}
-                      type="checkbox"
-                      name="colors"
-                      loading={loadingB}
-                    />
-                  }
-                  label="Coucou"
-                ></Field>
-
-                <button>
-                  <span
-                    onClick={() => {
-                      setLoadingB(!loadingB);
-                    }}
-                  >
-                    Toggle
-                  </span>
-                </button>
+            <div className="comparison">
+              <span className="comparison-label">Native comparison:</span>
+              <div className="native-examples">
+                <label>
+                  <input type="checkbox" name="native-loading" />
+                  Standard Checkbox
+                </label>
               </div>
             </div>
+          </div>
+        );
+      };
 
-            <div>
-              <div>
-                <p>
-                  <strong>Read Only</strong>
-                </p>
+      // eslint-disable-next-line no-unused-vars
+      const ReadOnlyDemo = () => {
+        const [loadingUnchecked, setLoadingUnchecked] = useState(false);
+        const [loadingChecked, setLoadingChecked] = useState(false);
 
-                <Field
-                  input={
-                    <Input
-                      id="test"
-                      readOnly
-                      type="checkbox"
-                      name="colors"
-                      loading={loadingC}
-                    />
-                  }
-                  label="C"
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Read-Only States</h3>
+
+            <div className="checkbox-row">
+              <Label className="checkbox-label">
+                <Input
+                  type="checkbox"
+                  name="readonly-unchecked"
+                  readOnly
+                  loading={loadingUnchecked}
                 />
+                Read-only (Unchecked)
+              </Label>
+              <button
+                className="toggle-button"
+                onClick={() => setLoadingUnchecked(!loadingUnchecked)}
+              >
+                Toggle Loading
+              </button>
+            </div>
 
-                <button>
-                  <span
-                    onClick={() => {
-                      setLoadingC(!loadingC);
-                    }}
+            <div className="checkbox-row">
+              <Label className="checkbox-label">
+                <Input
+                  type="checkbox"
+                  name="readonly-checked"
+                  readOnly
+                  checked
+                  loading={loadingChecked}
+                />
+                Read-only (Checked)
+              </Label>
+              <button
+                className="toggle-button"
+                onClick={() => setLoadingChecked(!loadingChecked)}
+              >
+                Toggle Loading
+              </button>
+            </div>
+
+            <div className="comparison">
+              <span className="comparison-label">Native comparison:</span>
+              <div className="native-examples">
+                <label>
+                  <input type="checkbox" readOnly />
+                  Native Read-only (Unchecked)
+                </label>
+                <label>
+                  <input type="checkbox" readOnly checked />
+                  Native Read-only (Checked)
+                </label>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const DisabledDemo = () => {
+        const [loadingUnchecked, setLoadingUnchecked] = useState(false);
+        const [loadingChecked, setLoadingChecked] = useState(false);
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Disabled States</h3>
+
+            <div className="checkbox-row">
+              <Label className="checkbox-label">
+                <Input
+                  type="checkbox"
+                  name="disabled-unchecked"
+                  disabled
+                  loading={loadingUnchecked}
+                />
+                Disabled (Unchecked)
+              </Label>
+              <button
+                className="toggle-button"
+                onClick={() => setLoadingUnchecked(!loadingUnchecked)}
+              >
+                Toggle Loading
+              </button>
+            </div>
+
+            <div className="checkbox-row">
+              <Label className="checkbox-label">
+                <Input
+                  type="checkbox"
+                  name="disabled-checked"
+                  disabled
+                  checked
+                  loading={loadingChecked}
+                />
+                Disabled (Checked)
+              </Label>
+              <button
+                className="toggle-button"
+                onClick={() => setLoadingChecked(!loadingChecked)}
+              >
+                Toggle Loading
+              </button>
+            </div>
+
+            <div className="comparison">
+              <span className="comparison-label">Native comparison:</span>
+              <div className="native-examples">
+                <label>
+                  <input type="checkbox" disabled />
+                  Native Disabled (Unchecked)
+                </label>
+                <label>
+                  <input type="checkbox" disabled checked />
+                  Native Disabled (Checked)
+                </label>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const PropControlDemo = () => {
+        const [accentColor, setAccentColor] = useState(undefined);
+        const [isChecked, setIsChecked] = useState(true);
+        const [isDisabled, setIsDisabled] = useState(false);
+        const [isReadOnly, setIsReadOnly] = useState(false);
+        const [isLoading, setIsLoading] = useState(false);
+
+        const colorOptions = [
+          { name: "Default (blue)", value: undefined },
+          { name: "Orange", value: "#ff8c00" },
+          { name: "Green", value: "#28a745" },
+          { name: "Purple", value: "#6f42c1" },
+          { name: "Red", value: "#dc3545" },
+          { name: "Pink", value: "#e83e8c" },
+          { name: "Teal", value: "#20c997" },
+        ];
+
+        return (
+          <div className="demo-card prop-control-demo">
+            <h3 className="demo-title">Interactive Prop Controller</h3>
+
+            <div className="color-controls">
+              <div className="color-select-group">
+                <label className="color-select-label">Accent Color:</label>
+                <select
+                  value={accentColor}
+                  onChange={(e) => setAccentColor(e.target.value)}
+                  className="color-select"
+                >
+                  {colorOptions.map(({ name, value }) => (
+                    <option key={value} value={value}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="state-controls">
+              <h4>Checkbox Properties:</h4>
+              <div className="control-row">
+                <div className="control-group">
+                  <button
+                    className={`control-toggle ${isChecked ? "active" : ""}`}
+                    onClick={() => setIsChecked(!isChecked)}
                   >
-                    Toggle
-                  </span>
-                </button>
+                    {isChecked ? "Checked" : "Unchecked"}
+                  </button>
+                  <span className="control-label">checked</span>
+                </div>
 
-                <div>
-                  <label>
-                    <input type="checkbox" name="colors" readonly />C
-                  </label>
+                <div className="control-group">
+                  <button
+                    className={`control-toggle ${isDisabled ? "active" : ""}`}
+                    onClick={() => setIsDisabled(!isDisabled)}
+                  >
+                    {isDisabled ? "true" : "false"}
+                  </button>
+                  <span className="control-label">disabled</span>
+                </div>
+
+                <div className="control-group">
+                  <button
+                    className={`control-toggle ${isReadOnly ? "active" : ""}`}
+                    onClick={() => setIsReadOnly(!isReadOnly)}
+                  >
+                    {isReadOnly ? "true" : "false"}
+                  </button>
+                  <span className="control-label">readOnly</span>
+                </div>
+
+                <div className="control-group">
+                  <button
+                    className={`control-toggle ${isLoading ? "active" : ""}`}
+                    onClick={() => setIsLoading(!isLoading)}
+                  >
+                    {isLoading ? "true" : "false"}
+                  </button>
+                  <span className="control-label">loading</span>
                 </div>
               </div>
             </div>
 
-            <div>
-              <div>
-                <p>
-                  <strong>Read Only + checked</strong>
-                </p>
+            <div className="accent-checkbox-grid">
+              <div className="accent-checkbox-item">
+                <Label className="checkbox-label">
+                  <Input
+                    type="checkbox"
+                    name="accent-test-checkbox"
+                    checked={isChecked}
+                    onUIStateChange={(v) => setIsChecked(Boolean(v))}
+                    disabled={isDisabled}
+                    readOnly={isReadOnly}
+                    loading={isLoading}
+                    accentColor={accentColor}
+                  />
+                  Test Checkbox
+                </Label>
+              </div>
 
-                <Field
-                  input={
-                    <Input
-                      id="test"
-                      readOnly
-                      checked
-                      type="checkbox"
-                      name="colors"
-                      loading={loadingD}
-                    />
-                  }
-                  label="D"
-                />
-
-                <button>
-                  <span
-                    onClick={() => {
-                      setLoadingD(!loadingD);
-                    }}
-                  >
-                    Toggle
-                  </span>
-                </button>
-
-                <div>
-                  <label>
-                    <input type="checkbox" name="colors" readonly />D
-                  </label>
-                </div>
+              <div className="accent-checkbox-item">
+                <Label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={(e) => setIsChecked(e.target.checked)}
+                    disabled={isDisabled}
+                    readOnly={isReadOnly}
+                    style={{ accentColor }}
+                  />
+                  Native Comparison
+                </Label>
               </div>
             </div>
 
-            <div>
-              <div>
-                <p>
-                  <strong>Disabled</strong>
-                </p>
-
-                <Field
-                  input={
-                    <Input
-                      id="test"
-                      disabled
-                      type="checkbox"
-                      name="colors"
-                      loading={loadingE}
-                    />
-                  }
-                  label="E"
-                />
-
-                <button>
-                  <span
-                    onClick={() => {
-                      setLoadingE(!loadingE);
-                    }}
-                  >
-                    Toggle
-                  </span>
-                </button>
-
-                <div>
-                  <label>
-                    <input type="checkbox" name="colors" disabled />E
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <div>
-                <p>
-                  <strong>Disabled + checked</strong>
-                </p>
-
-                <Field
-                  input={
-                    <Input
-                      id="test"
-                      disabled
-                      checked
-                      type="checkbox"
-                      name="colors"
-                      loading={loadingF}
-                    />
-                  }
-                  label="Coucou"
-                />
-
-                <button>
-                  <span
-                    onClick={() => {
-                      setLoadingF(!loadingF);
-                    }}
-                  >
-                    Toggle
-                  </span>
-                </button>
-
-                <div>
-                  <label>
-                    <input type="checkbox" name="colors" disabled checked />F
-                  </label>
-                </div>
-              </div>
+            <div
+              style={{
+                marginTop: "20px",
+                padding: "15px",
+                background: "rgba(255,255,255,0.1)",
+                borderRadius: "8px",
+              }}
+            >
+              <strong>Current Configuration:</strong>
+              <br />
+              <small>
+                checked: {isChecked ? "true" : "false"} | disabled:{" "}
+                {isDisabled ? "true" : "false"} | readOnly:{" "}
+                {isReadOnly ? "true" : "false"} | loading:{" "}
+                {isLoading ? "true" : "false"} | accentColor: {accentColor}
+              </small>
+              <br />
+              <br />
+              <small>
+                Use the toggle buttons above to test different property
+                combinations. Compare how the custom Input component behaves
+                versus a native checkbox.
+              </small>
             </div>
           </div>
         );

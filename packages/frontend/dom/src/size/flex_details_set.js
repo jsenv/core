@@ -3,68 +3,22 @@
  *
  */
 
-import { forceStyles } from "../style_and_attributes.js";
+import { startDragToResizeGesture } from "../interaction/drag/drag_to_resize_gesture.js";
+import { captureScrollState } from "../interaction/scroll/capture_scroll.js";
+import { forceStyles } from "../style/dom_styles.js";
+import { createHeightTransition } from "../transition/dom_transition.js";
+import { createGroupTransitionController } from "../transition/group_transition.js";
 import { getHeight } from "./get_height.js";
 import { getInnerHeight } from "./get_inner_height.js";
 import { getMarginSizes } from "./get_margin_sizes.js";
 import { getMinHeight } from "./get_min_height.js";
 import { resolveCSSSize } from "./resolve_css_size.js";
-import { createSizeAnimationGroupController } from "./size_animation_group_controller.js";
-import { startResizeGesture } from "./start_resize_gesture.js";
 
-const HEIGHT_ANIMATION_DURATION = 300;
+const HEIGHT_TRANSITION_DURATION = 300;
 const ANIMATE_TOGGLE = true;
 const ANIMATE_RESIZE_AFTER_MUTATION = true;
 const ANIMATION_THRESHOLD_PX = 10; // Don't animate changes smaller than this
 const DEBUG = false;
-
-// Helper to create scroll state capture/restore function for an element
-const captureScrollState = (element) => {
-  const scrollLeft = element.scrollLeft;
-  const scrollTop = element.scrollTop;
-  const scrollWidth = element.scrollWidth;
-  const scrollHeight = element.scrollHeight;
-  const clientWidth = element.clientWidth;
-  const clientHeight = element.clientHeight;
-
-  // Calculate scroll percentages to preserve relative position
-  const scrollLeftPercent =
-    scrollWidth > clientWidth ? scrollLeft / (scrollWidth - clientWidth) : 0;
-  const scrollTopPercent =
-    scrollHeight > clientHeight ? scrollTop / (scrollHeight - clientHeight) : 0;
-
-  // Return preserve function that maintains scroll position relative to content
-  return () => {
-    // Get current dimensions after DOM changes
-    const newScrollWidth = element.scrollWidth;
-    const newScrollHeight = element.scrollHeight;
-    const newClientWidth = element.clientWidth;
-    const newClientHeight = element.clientHeight;
-
-    // If content dimensions changed significantly, use percentage-based positioning
-    if (
-      Math.abs(newScrollWidth - scrollWidth) > 1 ||
-      Math.abs(newScrollHeight - scrollHeight) > 1 ||
-      Math.abs(newClientWidth - clientWidth) > 1 ||
-      Math.abs(newClientHeight - clientHeight) > 1
-    ) {
-      if (newScrollWidth > newClientWidth) {
-        const newScrollLeft =
-          scrollLeftPercent * (newScrollWidth - newClientWidth);
-        element.scrollLeft = newScrollLeft;
-      }
-
-      if (newScrollHeight > newClientHeight) {
-        const newScrollTop =
-          scrollTopPercent * (newScrollHeight - newClientHeight);
-        element.scrollTop = newScrollTop;
-      }
-    } else {
-      element.scrollLeft = scrollLeft;
-      element.scrollTop = scrollTop;
-    }
-  };
-};
 
 export const initFlexDetailsSet = (
   container,
@@ -80,8 +34,14 @@ export const initFlexDetailsSet = (
     cleanup: null,
   };
 
+  // Create animation controller for managing height animations
+  const transitionController = createGroupTransitionController();
+
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
+    // Cancel any ongoing animations
+    transitionController.cancel();
+
     for (const cleanupCallback of cleanupCallbackSet) {
       cleanupCallback();
     }
@@ -215,9 +175,6 @@ export const initFlexDetailsSet = (
     }
   };
 
-  const heightAnimationGroupController = createSizeAnimationGroupController({
-    duration: HEIGHT_ANIMATION_DURATION,
-  });
   const applyAllocatedSpaces = (resizeDetails) => {
     const changeSet = new Set();
     let maxChange = 0;
@@ -241,11 +198,10 @@ export const initFlexDetailsSet = (
         changeSet.add({
           element: child,
           target: allocatedSize,
-          sideEffect: (height, { timing } = {}) => {
+          sideEffect: (height, { isAnimationEnd } = {}) => {
             syncDetailsContentHeight(height, {
               isAnimation: true,
-              isAnimationStart: timing === "start",
-              isAnimationEnd: timing === "end",
+              isAnimationEnd,
             });
           },
         });
@@ -285,24 +241,44 @@ export const initFlexDetailsSet = (
       return;
     }
 
-    const animations = [];
-    for (const { element, target, sideEffect } of changeSet) {
-      animations.push({
-        element,
-        target,
-        sideEffect,
+    // Create height animations for each element in changeSet
+    const transitions = Array.from(changeSet).map(({ element, target }) => {
+      const transition = createHeightTransition(element, target, {
+        duration: HEIGHT_TRANSITION_DURATION,
       });
-    }
-    heightAnimationGroupController.animateAll(animations, {
+      return transition;
+    });
+
+    const transition = transitionController.animate(transitions, {
       onChange: (changeEntries, isLast) => {
+        // Apply side effects for each animated element
+        for (const { transition, value } of changeEntries) {
+          for (const change of changeSet) {
+            if (change.element === transition.key) {
+              if (change.sideEffect) {
+                change.sideEffect(value, { isAnimationEnd: isLast });
+              }
+              break;
+            }
+          }
+        }
+
         if (onSizeChange) {
+          // Convert animation entries to the expected format
+          const sizeChangeEntries = changeEntries.map(
+            ({ transition, value }) => ({
+              element: transition.key, // targetKey is the element
+              value,
+            }),
+          );
           onSizeChange(
-            changeEntries,
+            sizeChangeEntries,
             isLast ? { ...resizeDetails, animated: false } : resizeDetails,
           );
         }
       },
     });
+    transition.play();
   };
 
   const allocateSpace = (child, spaceToAllocate, requestSource) => {
@@ -837,17 +813,18 @@ export const initFlexDetailsSet = (
     const onmousedown = (event) => {
       const { start, move, end } = prepareResize();
 
-      startResizeGesture(event, {
-        onStart: (gesture) => {
+      startDragToResizeGesture(event, {
+        onDragStart: (gesture) => {
           start(gesture.element);
         },
-        onMove: (gesture) => {
+        onDrag: (gesture) => {
           const yMove = gesture.yMove;
           move(yMove, gesture);
         },
-        onEnd: () => {
+        onRelease: () => {
           end();
         },
+        constrainedFeedbackLine: false,
       });
     };
     container.addEventListener("mousedown", onmousedown);

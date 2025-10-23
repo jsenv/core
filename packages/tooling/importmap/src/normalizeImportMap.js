@@ -63,7 +63,6 @@ const normalizeMappings = (mappings, baseUrl) => {
     if (specifier.endsWith("/") && !addressUrl.endsWith("/")) {
       console.warn(
         formulateAddressUrlRequiresTrailingSlash({
-          addressUrl,
           address,
           specifier,
         }),

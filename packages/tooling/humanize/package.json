@@ -34,8 +34,8 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "ansi-escapes": "7.0.0",
-    "strip-ansi": "7.1.0"
+    "ansi-escapes": "7.1.1",
+    "strip-ansi": "7.1.2"
   },
   "devDependencies": {
     "@jsenv/assert": "../assert",
@@ -43,7 +43,7 @@
     "@jsenv/snapshot": "../snapshot",
     "@jsenv/terminal-text-size": "../terminal-text-size",
     "is-unicode-supported": "2.1.0",
-    "supports-color": "10.0.0"
+    "supports-color": "10.2.2"
   },
   "engines": {
     "node": ">=16.8.0"

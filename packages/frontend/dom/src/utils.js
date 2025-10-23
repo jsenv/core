@@ -42,3 +42,28 @@ export const elementIsDocument = (a) => a.nodeType === 9;
 export const elementIsIframe = ({ nodeName }) => nodeName === "IFRAME";
 export const elementIsDetails = ({ nodeName }) => nodeName === "DETAILS";
 export const elementIsSummary = ({ nodeName }) => nodeName === "SUMMARY";
+
+// should be used ONLY when an element is related to other elements that are not descendants of this element
+export const getAssociatedElements = (element) => {
+  if (element.tagName === "COL") {
+    const columnCells = [];
+    const colgroup = element.parentNode;
+    const columnIndex = Array.from(colgroup.children).indexOf(element);
+    const table = element.closest("table");
+    const rows = table.querySelectorAll("tr");
+    for (const row of rows) {
+      const rowCells = row.children;
+      for (const rowCell of rowCells) {
+        if (rowCell.cellIndex === columnIndex) {
+          columnCells.push(rowCell);
+        }
+      }
+    }
+    return columnCells;
+  }
+  // if (element.tagName === "TR") {
+  //   const rowCells = Array.from(element.children);
+  //   return rowCells;
+  // }
+  return null;
+};

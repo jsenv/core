@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Visible Rect Demo</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background: #f5f5f5;
+        min-height: 300vh; /* Make page tall enough to scroll */
+        min-width: 1200px; /* Force horizontal scrolling */
+      }
+
+      .demo-header {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .demo-title {
+        margin: 0 0 10px 0;
+        font-size: 24px;
+        color: #333;
+      }
+
+      .demo-description {
+        margin: 0;
+        color: #666;
+        line-height: 1.5;
+      }
+
+      .scrollable-container {
+        padding: 20px;
+        /* width/height will be set dynamically when overflow: auto */
+      }
+
+      .scrollable-container.custom-mode {
+        max-width: 600px;
+        max-height: 400px;
+      }
+
+      .scrollable-content {
+        position: relative;
+      }
+
+      .target-row {
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+        margin: 50px 0;
+      }
+
+      .side-content {
+        flex: 0 0 200px;
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.05);
+        border-radius: 8px;
+        min-height: 150px;
+      }
+
+      .side-content h4 {
+        margin: 0 0 10px 0;
+        font-size: 14px;
+        color: #333;
+      }
+
+      .side-content p {
+        margin: 0;
+        font-size: 13px;
+        color: #666;
+        line-height: 1.4;
+      }
+
+      .target-element {
+        flex: 1;
+        width: 400px;
+        min-width: 400px;
+        height: 600px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: 15px solid #333;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 18px;
+        text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      }
+
+      .overlay-ui {
+        position: fixed;
+        z-index: 1000;
+        overflow: hidden;
+        inset: 0;
+        pointer-events: none;
+        background: rgba(
+          0,
+          0,
+          255,
+          0.05
+        ); /* Discrete blue background to make it visible */
+      }
+
+      .overlay-container {
+        position: absolute;
+        background: rgba(255, 0, 0, 0.5);
+        border: 2px dashed white;
+        box-sizing: border-box; /* Ensure border is included in size */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
+        font-size: 12px;
+        /* Only transition visual properties, not positioning */
+        transition:
+          background-color 0.2s ease,
+          border-color 0.2s ease;
+      }
+
+      /* Dynamic styling based on visibility ratio */
+      .overlay-container.high-visibility {
+        background: rgba(0, 255, 0, 0.6);
+        border-color: #00ff00;
+      }
+
+      .overlay-container.medium-visibility {
+        background: rgba(255, 165, 0, 0.6);
+        border-color: #ffa500;
+      }
+
+      .overlay-container.low-visibility {
+        background: rgba(255, 0, 0, 0.6);
+        border-color: #ff0000;
+      }
+
+      .debug-info {
+        position: fixed;
+        top: 100px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        padding: 15px;
+        border-radius: 8px;
+        font-family: monospace;
+        font-size: 11px;
+        z-index: 2000;
+        max-width: 300px;
+        line-height: 1.4;
+      }
+
+      .debug-info h4 {
+        margin: 0 0 10px 0;
+        font-size: 12px;
+        color: #4caf50;
+      }
+
+      .debug-info .section {
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #333;
+      }
+
+      .debug-info .section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+      }
+
+      .content-section {
+        background: white;
+        margin: 40px 0;
+        padding: 40px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        min-width: 1000px; /* Force horizontal scrolling */
+      }
+
+      .content-section:nth-child(even) {
+        background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+        color: #1976d2;
+      }
+
+      .content-section:nth-child(odd) {
+        background: linear-gradient(135deg, #f3e5f5, #ce93d8);
+        color: #7b1fa2;
+      }
+
+      .scroll-indicator {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 10px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 12px;
+        z-index: 2000;
+      }
+
+      .controls {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        max-width: 400px;
+      }
+
+      .controls h3 {
+        margin: 0 0 15px 0;
+        font-size: 16px;
+        color: #333;
+      }
+
+      .controls button {
+        padding: 10px 15px;
+        background: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: bold;
+        margin-right: 10px;
+      }
+
+      .controls button:hover {
+        background: #45a049;
+      }
+
+      .controls button.active {
+        background: #2196f3;
+      }
+
+      .mode-status {
+        margin-top: 10px;
+        padding: 8px 12px;
+        background: #f0f0f0;
+        border-radius: 4px;
+        font-size: 12px;
+        color: #666;
+        font-style: italic;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-header">
+      <h1 class="demo-title">Visible Rect Demo</h1>
+      <p class="demo-description">
+        This demo shows how the <code>visibleRectEffect</code> API tracks the
+        visible portion of an element with two different visibility ratios:
+        <br />• <strong>Document Visibility:</strong> How much of the element is
+        visible in the browser viewport <br />•
+        <strong>Scroll Container Visibility:</strong> How much of the element is
+        visible within its scrollable parent <br /><strong
+          >Instructions:</strong
+        >
+        Scroll the page and watch how both ratios change. In custom container
+        mode, notice how scroll container visibility can be 100% while document
+        visibility is 0%.
+      </p>
+    </div>
+
+    <div class="controls">
+      <h3>Scrollable Container</h3>
+      <button id="documentBtn" class="active">Document</button>
+      <button id="customBtn">Custom Container</button>
+      <div class="mode-status" id="modeStatus">Current: Document scrolling</div>
+    </div>
+
+    <div class="scroll-indicator" id="scrollIndicator">Scroll: 0px</div>
+
+    <!-- Debug info panel -->
+    <div class="debug-info" id="debugInfo">
+      <h4>Visible Rect API Data</h4>
+      <div class="section">
+        <strong>Visible Rect:</strong><br />
+        <span id="visibleRect">No data</span>
+      </div>
+      <div class="section">
+        <strong>Element Full Size:</strong><br />
+        <span id="fullSize">No data</span>
+      </div>
+      <div class="section">
+        <strong>Document Visibility:</strong><br />
+        <span id="visibilityRatio">No data</span>
+      </div>
+      <div class="section">
+        <strong>Scroll Container Visibility:</strong><br />
+        <span id="scrollVisibilityRatio">No data</span>
+      </div>
+      <div class="section">
+        <strong>Visibility Status:</strong><br />
+        <span id="visibility">No data</span>
+      </div>
+    </div>
+
+    <!-- Single container that can switch between document and custom scrolling -->
+    <div class="scrollable-container" id="scrollableContainer">
+      <div class="scrollable-content">
+        <h3>Scrollable Content Area</h3>
+        <p>Content above the target element</p>
+
+        <div class="target-row">
+          <div class="side-content">
+            <h4>Left Content</h4>
+            <p>
+              This is some content on the left side of the target element. It
+              helps demonstrate how the overlay system works when the target is
+              part of a more complex layout.
+            </p>
+            <p>Additional content to make this section taller.</p>
+          </div>
+
+          <div class="target-element" id="targetElement">Target Element</div>
+
+          <div class="side-content">
+            <h4>Right Content</h4>
+            <p>
+              This is content on the right side of the target element. The
+              flexbox layout ensures proper alignment while maintaining the
+              overlay functionality.
+            </p>
+            <p>More content to balance the layout.</p>
+          </div>
+        </div>
+
+        <p>Content below target element</p>
+      </div>
+    </div>
+
+    <!-- Overlay UI showing the visible rect -->
+    <div class="overlay-ui" id="overlayUI" style="display: none">
+      <div class="overlay-container" id="overlayContainer">VISIBLE RECT</div>
+    </div>
+
+    <script type="module">
+      import { visibleRectEffect } from "../position/visible_rect.js";
+
+      const targetElement = document.getElementById("targetElement");
+      const scrollableContainer = document.getElementById(
+        "scrollableContainer",
+      );
+      const overlayUI = document.getElementById("overlayUI");
+      const overlayContainer = document.getElementById("overlayContainer");
+      const scrollIndicator = document.getElementById("scrollIndicator");
+      const documentBtn = document.getElementById("documentBtn");
+      const customBtn = document.getElementById("customBtn");
+      const modeStatus = document.getElementById("modeStatus");
+      const visibleRectSpan = document.getElementById("visibleRect");
+      const fullSizeSpan = document.getElementById("fullSize");
+      const visibilityRatioSpan = document.getElementById("visibilityRatio");
+      const scrollVisibilityRatioSpan = document.getElementById(
+        "scrollVisibilityRatio",
+      );
+      const visibilitySpan = document.getElementById("visibility");
+
+      let currentVisibleRectEffect = null;
+      const STORAGE_KEY = "overlay-demo-mode";
+
+      // Load saved mode from localStorage
+      const savedMode = localStorage.getItem(STORAGE_KEY) || "document";
+
+      // Update mode status display
+      function updateModeStatus(mode) {
+        if (mode === "document") {
+          modeStatus.textContent = "Current: Document scrolling";
+        } else {
+          modeStatus.textContent = "Current: Custom container scrolling";
+        }
+      }
+
+      // Update scroll indicator
+      const updateScrollIndicator = () => {
+        const scrollY = window.scrollY || document.documentElement.scrollTop;
+        const scrollX = window.scrollX || document.documentElement.scrollLeft;
+        scrollIndicator.textContent = `Scroll: ${Math.round(scrollX)}px, ${Math.round(scrollY)}px`;
+      };
+
+      // Initialize scroll indicator
+      updateScrollIndicator();
+      window.addEventListener("scroll", updateScrollIndicator);
+
+      // Initialize overlay
+      function initializeOverlay() {
+        if (currentVisibleRectEffect) {
+          currentVisibleRectEffect.disconnect();
+        }
+
+        overlayUI.style.display = "block";
+
+        currentVisibleRectEffect = visibleRectEffect(
+          targetElement,
+          (visibleRect, fullRect) => {
+            // Update overlay container position and size
+            overlayContainer.style.left = `${visibleRect.left}px`;
+            overlayContainer.style.top = `${visibleRect.top}px`;
+            overlayContainer.style.width = `${visibleRect.width}px`;
+            overlayContainer.style.height = `${visibleRect.height}px`;
+
+            // Hide overlay if element is not visible
+            if (visibleRect.width <= 0 || visibleRect.height <= 0) {
+              overlayContainer.style.display = "none";
+            } else {
+              overlayContainer.style.display = "flex";
+            }
+
+            // Update dynamic styling based on visibility ratio
+            overlayContainer.classList.remove(
+              "high-visibility",
+              "medium-visibility",
+              "low-visibility",
+            );
+            let visibilityClass = "low-visibility";
+            let overlayText = "VISIBLE RECT";
+
+            if (visibleRect.visibilityRatio >= 0.8) {
+              visibilityClass = "high-visibility";
+              overlayText = "FULLY VISIBLE";
+            } else if (visibleRect.visibilityRatio >= 0.3) {
+              visibilityClass = "medium-visibility";
+              overlayText = "PARTIALLY VISIBLE";
+            } else if (visibleRect.visibilityRatio > 0) {
+              visibilityClass = "low-visibility";
+              overlayText = "BARELY VISIBLE";
+            }
+
+            overlayContainer.classList.add(visibilityClass);
+            overlayContainer.textContent = overlayText;
+
+            // Update debug information
+            visibleRectSpan.innerHTML = `
+              left: ${Math.round(visibleRect.left)}px<br>
+              top: ${Math.round(visibleRect.top)}px<br>
+              width: ${Math.round(visibleRect.width)}px<br>
+              height: ${Math.round(visibleRect.height)}px
+            `;
+
+            fullSizeSpan.innerHTML = `
+              width: ${Math.round(fullRect.width)}px<br>
+              height: ${Math.round(fullRect.height)}px
+            `;
+
+            // Display the visibility ratios from the API
+            visibilityRatioSpan.innerHTML = `
+              ${(visibleRect.visibilityRatio * 100).toFixed(1)}%<br>
+              <small>Document Ratio: ${visibleRect.visibilityRatio.toFixed(3)}</small>
+            `;
+
+            scrollVisibilityRatioSpan.innerHTML = `
+              ${(visibleRect.scrollVisibilityRatio * 100).toFixed(1)}%<br>
+              <small>Scroll Ratio: ${visibleRect.scrollVisibilityRatio.toFixed(3)}</small>
+            `;
+
+            const isVisible = visibleRect.width > 0 && visibleRect.height > 0;
+
+            visibilitySpan.innerHTML = `
+              ${isVisible ? "Visible" : "Hidden"}<br>
+              <small>${visibilityClass.replace("-", " ").toUpperCase()}</small>
+            `;
+
+            console.log("Visible rect updated:", { visibleRect, fullRect });
+          },
+        );
+
+        console.log("Visible rect effect initialized");
+      }
+
+      // Set document scrolling mode
+      function setDocumentScrolling() {
+        scrollableContainer.style.overflow = "visible";
+        scrollableContainer.classList.remove("custom-mode");
+        localStorage.setItem(STORAGE_KEY, "document");
+        updateModeStatus("document");
+        initializeOverlay();
+        console.log("Document scrolling mode activated");
+      }
+
+      // Set custom container scrolling mode
+      function setCustomContainerScrolling() {
+        scrollableContainer.style.overflow = "auto";
+        scrollableContainer.classList.add("custom-mode");
+        localStorage.setItem(STORAGE_KEY, "custom");
+        updateModeStatus("custom");
+        initializeOverlay();
+        console.log("Custom container scrolling mode activated");
+      }
+
+      // Button handlers
+      documentBtn.addEventListener("click", () => {
+        documentBtn.classList.add("active");
+        customBtn.classList.remove("active");
+        setDocumentScrolling();
+      });
+
+      customBtn.addEventListener("click", () => {
+        customBtn.classList.add("active");
+        documentBtn.classList.remove("active");
+        setCustomContainerScrolling();
+      });
+
+      // Initialize with saved mode
+      if (savedMode === "custom") {
+        customBtn.classList.add("active");
+        documentBtn.classList.remove("active");
+        setCustomContainerScrolling();
+      } else {
+        documentBtn.classList.add("active");
+        customBtn.classList.remove("active");
+        setDocumentScrolling();
+      }
+
+      console.log("Visible rect demo initialized");
+    </script>
+  </body>
+</html>

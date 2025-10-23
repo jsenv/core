@@ -23,4 +23,3 @@ export const EXPLORER = resource("explorer", {
     return {};
   },
 });
-EXPLORER.GET.run();

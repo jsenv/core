@@ -4,6 +4,7 @@ export const explicitGlobals = {
   blur: "off",
   btoa: "off",
   caches: "off",
+  constructor: "off",
   close: "off",
   closed: "off",
   crypto: "off",

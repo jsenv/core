@@ -1,0 +1,628 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Content States Transition Demo</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui;
+      }
+
+      .page-layout {
+        display: flex;
+        min-height: 100vh;
+      }
+
+      .controls {
+        padding: 20px;
+        background: #f5f5f5;
+        border-right: 1px solid #ccc;
+        width: 400px;
+        flex-shrink: 0;
+      }
+
+      .demo-container {
+        flex-grow: 1;
+        padding: 20px;
+      }
+
+      .demo-container h2 {
+        margin-top: 0;
+        color: #666;
+        font-weight: 500;
+      }
+
+      #content-box {
+        background: white;
+        border: 2px solid #666;
+        padding: 16px;
+        margin: 20px 0;
+        width: 300px;
+      }
+
+      /* Nested wrapper structure:
+         - outer wrapper: manages size constraints during animations
+         - measure wrapper: allows measuring natural content size without animation constraints
+         - content: actual content that can change height */
+      .ui-transition-outer-wrapper {
+        position: relative;
+      }
+      .ui-transition-measure-wrapper {
+        /* prevent margins from collapsing which would affect measurements */
+        padding: 0.1px 0;
+      }
+
+      /* State-specific styles */
+      .loading-state {
+        color: #666;
+        text-align: center;
+      }
+
+      .loading-state.tall {
+        padding: 140px 0;
+      }
+
+      .content-state {
+        color: #000;
+      }
+
+      .content-state[data-animate-height] {
+        height: 0;
+        overflow: hidden;
+        transition: height 0.5s ease-out;
+      }
+
+      .content-state[data-animate-height].visible {
+        height: auto;
+      }
+
+      .content-state[data-animate-height] .content-block {
+        opacity: 0;
+        transition: opacity 0.5s ease-out;
+      }
+
+      .content-state[data-animate-height].visible .content-block {
+        opacity: 1;
+      }
+
+      .error-state {
+        color: #d32f2f;
+        text-align: center;
+      }
+
+      .error-state.tall {
+        padding: 140px 0;
+      }
+
+      /* Shared styles */
+      .content-block {
+        background: #f0f0f0;
+        margin: 8px 0;
+        padding: 12px;
+        transition: padding 0.3s;
+      }
+
+      .content-block[data-expanded] {
+        padding: 32px 12px;
+      }
+
+      button {
+        margin: 0 8px 8px 0;
+        padding: 8px 16px;
+      }
+
+      button.active {
+        background: #4caf50;
+        color: white;
+        border-color: #388e3c;
+      }
+
+      .description {
+        color: #666;
+        font-size: 0.9em;
+        margin: 8px 0 16px;
+      }
+
+      .separator {
+        height: 1px;
+        background: #ccc;
+        margin: 20px 0;
+      }
+
+      .speed-control {
+        background: #fff;
+        padding: 12px 15px;
+        border-radius: 4px;
+      }
+
+      details.manual-control {
+        margin-top: 20px;
+      }
+
+      details.manual-control summary {
+        cursor: pointer;
+        font-size: 1.17em;
+        font-weight: bold;
+        margin-top: 1em;
+      }
+
+      .radio-group {
+        display: flex;
+        gap: 20px;
+      }
+
+      .radio-group label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+      }
+
+      .spinner {
+        display: inline-block;
+        width: 24px;
+        height: 24px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #666;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 8px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-layout">
+      <div class="controls">
+        <h3>Content Lifecycle (Same UI Key)</h3>
+        <p class="description">
+          Simulates loading states and errors for the same content (like a page
+          refresh)
+        </p>
+        <div>
+          <button id="demo-content-loading">Load Content</button>
+          <button id="demo-loading-error">Loading → Error</button>
+          <button id="demo-error-retry">Error → Loading → Content</button>
+          <button id="demo-content-update">Update Active Content</button>
+          <button id="demo-content-add-block">Add Content Block</button>
+        </div>
+
+        <h3 style="margin-top: 20px">Content Navigation (Different UI Keys)</h3>
+        <p class="description">
+          Simulates navigating between different contents
+        </p>
+        <div>
+          <button id="demo-navigate-simple">Navigate: A → B</button>
+          <button id="demo-navigate-size-change">
+            Navigate: Small → Big Content
+          </button>
+        </div>
+
+        <div style="margin-top: 30px">
+          <div style="margin-bottom: 20px">
+            <label style="display: block; margin-bottom: 8px; font-weight: 500"
+              >Content Animation:</label
+            >
+            <label style="display: block">
+              <input type="checkbox" id="animate-content-height" />
+              Animate content height after insert
+            </label>
+            <p class="description" style="margin-top: 4px">
+              When checked, content blocks will animate their height after being
+              inserted. This helps demonstrate how height animations in content
+              can affect transitions.
+            </p>
+          </div>
+
+          <div style="margin-bottom: 20px">
+            <label style="display: block; margin-bottom: 8px; font-weight: 500"
+              >Sequence Behavior:</label
+            >
+            <label style="display: block">
+              <input type="checkbox" id="preserve-between-sequences" />
+              Preserve content between sequences
+            </label>
+            <p class="description" style="margin-top: 4px">
+              When checked, the content box will maintain its state between
+              sequence runs. When unchecked, it will reset to empty before each
+              sequence.
+            </p>
+          </div>
+
+          <div class="speed-control">
+            <label style="display: block; margin-bottom: 8px; font-weight: 500"
+              >Loading State Duration:</label
+            >
+            <div class="radio-group">
+              <label>
+                <input type="radio" name="speed" value="fast" checked />
+                Fast (100ms)
+              </label>
+              <label>
+                <input type="radio" name="speed" value="medium" /> Medium
+                (300ms)
+              </label>
+              <label>
+                <input type="radio" name="speed" value="slow" /> Slow (1s)
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="separator"></div>
+
+        <details class="manual-control">
+          <summary>Manual Control</summary>
+          <div style="padding-top: 10px">
+            <div>
+              <button id="show-loading">Loading</button>
+              <button id="show-content">Content A</button>
+              <button id="show-content-alt">Content B</button>
+              <button id="show-error">Error</button>
+            </div>
+            <div>
+              <button id="toggle-size">Toggle Large State Size</button>
+              <button id="reset-content">Reset Content</button>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <div class="demo-container">
+        <h2>Content Display Area</h2>
+        <p class="description">
+          This area shows how the UI handles different content states and
+          transitions. Use the controls on the left to trigger various content
+          lifecycle and navigation scenarios.
+        </p>
+        <div id="content-box" class="ui_transition_container">
+          <div class="ui_transition_outer_wrapper">
+            <div class="ui_transition_measure_wrapper">
+              <div class="ui_transition_slot"></div>
+            </div>
+          </div>
+          <div class="ui_transition_overlay"></div>
+        </div>
+      </div>
+    </div>
+
+    <style>
+      .ui-transition-container {
+        position: relative;
+      }
+      .ui-transition-wrapper {
+        position: relative;
+        overflow: hidden;
+      }
+      .ui-transition-content {
+        position: relative;
+        width: 100%;
+      }
+      .ui-transition-content > * {
+        width: 100%;
+      }
+    </style>
+
+    <script type="module">
+      import { initUITransition } from "../ui_transition.js";
+
+      const contentBox = document.getElementById("content-box");
+      let uiTransition = initUITransition(contentBox);
+
+      const createState = (type, options = {}) => {
+        const {
+          tall = false,
+          bigContent = false,
+          contentVariant = "A",
+        } = options;
+
+        const states = {
+          loading: (uiKey) => `
+            <div class="loading-state ${tall ? "tall" : ""}" data-content-key="${uiKey}" data-content-phase data-ui-name="loading">
+              <div class="spinner"></div>
+              <div>Loading...</div>
+            </div>
+          `,
+          content: (uiKey) => {
+            const shouldAnimate = document.getElementById(
+              "animate-content-height",
+            )?.checked;
+            return `
+            <div class="content-state" data-content-key="${uiKey}" ${shouldAnimate ? "data-animate-height" : ""} data-ui-name="${uiKey}">
+              ${
+                contentVariant === "B"
+                  ? `
+                <div class="content-block">Alternative content block</div>
+                <div class="content-block">With different structure</div>
+                ${bigContent ? `<div class="content-block">And extra content when big</div>` : ""}
+                `
+                  : bigContent
+                    ? Array.from({ length: 6 })
+                        .map(
+                          (_, i) => `
+                <div class="content-block">Content block ${i + 1}</div>
+              `,
+                        )
+                        .join("")
+                    : `
+                <div class="content-block">Content block one</div>
+                <div class="content-block">Content block two</div>
+                <div class="content-block">Content block three</div>
+              `
+              }
+            </div>
+          `;
+          },
+          error: (uiKey) => `
+            <div class="error-state ${tall ? "tall" : ""}" data-content-key="${uiKey}" data-content-phase data-ui-name="error">
+              <div>⚠️</div>
+              <div>An error occurred</div>
+            </div>
+          `,
+        };
+
+        return states[type](options.uiKey);
+      };
+
+      // For manual control
+      let isLargeState = false;
+      let activeButton = document.getElementById("show-content");
+      activeButton.classList.add("active");
+
+      const resetContent = () => {
+        // Properly cleanup the current maintainSize functionality
+        if (uiTransition) {
+          uiTransition.cleanup();
+        }
+
+        // Reset content without any animation
+        const contentContainer = contentBox.querySelector(
+          ".ui-transition-content",
+        );
+        if (contentContainer) {
+          contentContainer.innerHTML = "";
+        }
+
+        // Reinstall the maintainSize functionality
+        uiTransition = initUITransition(contentBox);
+
+        // Reset active button state
+        activeButton.classList.remove("active");
+        activeButton = document.getElementById("show-content");
+        activeButton.classList.add("active");
+      };
+
+      const setState = (type, options = {}) => {
+        if (
+          !options.skipButtonUpdate &&
+          type in { loading: 1, content: 1, error: 1 }
+        ) {
+          const buttonId =
+            type === "content" && options.contentVariant === "B"
+              ? "show-content-alt"
+              : `show-${type}`;
+          activeButton.classList.remove("active");
+          activeButton = document.getElementById(buttonId);
+          activeButton.classList.add("active");
+        }
+
+        // Generate UI key based on the content we're displaying
+        // For content A and B, they get different keys
+        // For loading/error states of the same content, they share the key
+        const uiKey =
+          options.contentVariant === "B" ? "content-b" : "content-a";
+        const content = createState(type, { ...options, uiKey });
+
+        uiTransition.slot.innerHTML = content;
+
+        // If it's content with height animation, add visible class in next frame
+        // This ensures height=0 is measured first by ui_transition.js
+        const contentState = uiTransition.slot.querySelector(
+          ".content-state[data-animate-height]",
+        );
+        if (contentState) {
+          requestAnimationFrame(() => {
+            contentState.classList.add("visible");
+          });
+        }
+      };
+
+      // Sequence runner
+      const runSequence = async (sequence) => {
+        for (const [type, delay, options] of sequence) {
+          setState(type, { skipButtonUpdate: true, ...options });
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      };
+
+      // Restore UI state from localStorage
+      const restoreUIState = () => {
+        // Restore animation checkbox
+        const shouldAnimate =
+          localStorage.getItem("animate-content-height") === "true";
+        document.getElementById("animate-content-height").checked =
+          shouldAnimate;
+
+        // Restore sequence preservation checkbox
+        const shouldPreserve =
+          localStorage.getItem("preserve-between-sequences") === "true";
+        document.getElementById("preserve-between-sequences").checked =
+          shouldPreserve;
+
+        // Restore speed selection
+        const savedSpeed = localStorage.getItem("loading-speed") || "fast";
+        document.querySelector(
+          `input[name="speed"][value="${savedSpeed}"]`,
+        ).checked = true;
+      };
+
+      // Save UI state to localStorage
+      const saveUIState = () => {
+        // Save animation checkbox
+        localStorage.setItem(
+          "animate-content-height",
+          document.getElementById("animate-content-height").checked,
+        );
+
+        // Save sequence preservation checkbox
+        localStorage.setItem(
+          "preserve-between-sequences",
+          document.getElementById("preserve-between-sequences").checked,
+        );
+
+        // Save speed selection
+        const selectedSpeed = document.querySelector(
+          'input[name="speed"]:checked',
+        ).value;
+        localStorage.setItem("loading-speed", selectedSpeed);
+      };
+
+      // Restore state on page load
+      restoreUIState();
+
+      // Setup persistence listeners
+      document
+        .getElementById("animate-content-height")
+        .addEventListener("change", saveUIState);
+      document
+        .getElementById("preserve-between-sequences")
+        .addEventListener("change", saveUIState);
+      document.querySelectorAll('input[name="speed"]').forEach((radio) => {
+        radio.addEventListener("change", saveUIState);
+      });
+
+      // Loading speed control
+      const LOADING_SPEEDS = {
+        fast: 100,
+        medium: 300,
+        slow: 1000,
+      };
+
+      const getLoadingSpeed = () => {
+        const selectedSpeed = document.querySelector(
+          'input[name="speed"]:checked',
+        ).value;
+        return LOADING_SPEEDS[selectedSpeed];
+      };
+
+      // Predefined sequences
+      const sequences = {
+        // Content Lifecycle (Same UI Key)
+        "content-loading": () => [
+          ["loading", getLoadingSpeed()],
+          ["content", 0],
+        ],
+        "loading-error": () => [
+          ["loading", getLoadingSpeed()],
+          ["error", 0],
+        ],
+        "error-retry": () => [
+          ["error", 500],
+          ["loading", getLoadingSpeed()],
+          ["content", 0],
+        ],
+
+        // Content Navigation (Different UI Keys)
+        "navigate-simple": () => [
+          ["content", 600], // Show initial content
+          ["loading", getLoadingSpeed()],
+          ["content", 0, { contentVariant: "B" }],
+        ],
+        "navigate-size-change": () => [
+          ["content", 500], // Show initial content
+          ["loading", getLoadingSpeed()],
+          ["content", 0, { bigContent: true }],
+        ],
+      };
+
+      // Setup sequence listeners
+      Object.keys(sequences).forEach((key) => {
+        document.getElementById(`demo-${key}`).addEventListener("click", () => {
+          const shouldPreserve = document.getElementById(
+            "preserve-between-sequences",
+          ).checked;
+          if (!shouldPreserve) {
+            resetContent();
+          }
+          runSequence(sequences[key]());
+        });
+      });
+
+      // Manual control listeners
+      document
+        .getElementById("show-loading")
+        .addEventListener("click", () =>
+          setState("loading", { tall: isLargeState }),
+        );
+      document
+        .getElementById("show-content")
+        .addEventListener("click", () => setState("content"));
+      document
+        .getElementById("show-content-alt")
+        .addEventListener("click", () =>
+          setState("content", { contentVariant: "B" }),
+        );
+      document
+        .getElementById("show-error")
+        .addEventListener("click", () =>
+          setState("error", { tall: isLargeState }),
+        );
+      document
+        .getElementById("reset-content")
+        .addEventListener("click", resetContent);
+
+      // Update Active Content button logic
+      document
+        .getElementById("demo-content-update")
+        .addEventListener("click", () => {
+          const slot = uiTransition.slot;
+          const contentState = slot.querySelector(".content-state");
+          if (!contentState) return;
+
+          // Toggle data-expanded attribute on content blocks
+          const blocks = contentState.querySelectorAll(".content-block");
+          blocks.forEach((block) => {
+            if (block.hasAttribute("data-expanded")) {
+              block.removeAttribute("data-expanded");
+              // Convert text back to normal case
+              block.textContent = block.textContent.toLowerCase();
+            } else {
+              block.setAttribute("data-expanded", "");
+              // Convert text to uppercase
+              block.textContent = block.textContent.toUpperCase();
+            }
+          });
+        });
+
+      document.getElementById("toggle-size").addEventListener("click", () => {
+        isLargeState = !isLargeState;
+        const currentState = activeButton.id.replace("show-", "");
+        setState(currentState, { tall: isLargeState });
+      });
+
+      // Add Content Block button logic
+      document
+        .getElementById("demo-content-add-block")
+        .addEventListener("click", () => {
+          // Only works if current state is content (A or B)
+          const slot = uiTransition.slot;
+          if (!slot) return;
+
+          // Add a new content block
+          const newBlock = document.createElement("div");
+          newBlock.className = "content-block";
+          newBlock.textContent = `Dynamically added block ${slot.children.length + 1}`;
+          slot.appendChild(newBlock);
+        });
+    </script>
+  </body>
+</html>

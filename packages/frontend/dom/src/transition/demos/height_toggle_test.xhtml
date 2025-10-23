@@ -1,0 +1,515 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Height Toggle Animation Test</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui;
+        padding: 20px;
+        background: #f0f0f0;
+      }
+
+      .controls {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .control-group {
+        margin-bottom: 16px;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .control-group label {
+        font-weight: bold;
+        min-width: 120px;
+      }
+
+      .toggle-button {
+        padding: 12px 24px;
+        border: 2px solid #0066cc;
+        border-radius: 8px;
+        background: #0066cc;
+        color: white;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold;
+        transition:
+          background 0.2s,
+          border-color 0.2s;
+      }
+
+      .toggle-button:hover {
+        background: #0052a3;
+        border-color: #0052a3;
+      }
+
+      .toggle-button.expanding {
+        background: #28a745;
+        border-color: #28a745;
+      }
+
+      .toggle-button.collapsing {
+        background: #dc3545;
+        border-color: #dc3545;
+      }
+
+      .quick-test-buttons {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .quick-test-buttons button {
+        padding: 6px 12px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        background: #f8f9fa;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      .quick-test-buttons button:hover {
+        background: #e9ecef;
+      }
+
+      .test-element {
+        background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+        border: 2px solid #333;
+        border-radius: 8px;
+        color: white;
+        font-weight: bold;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 20px 0;
+        width: 300px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        transition: box-shadow 0.2s;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .test-element[data-height-animated] {
+        box-shadow: 0 8px 24px rgba(255, 107, 107, 0.6);
+      }
+
+      .height-indicator {
+        position: absolute;
+        top: 5px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-family: monospace;
+      }
+
+      .status {
+        background: white;
+        padding: 16px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .status-item {
+        margin: 8px 0;
+        padding: 8px;
+        border-radius: 4px;
+        background: #f8f9fa;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .status-item.expanding {
+        background: #d4edda;
+        border-left: 4px solid #28a745;
+      }
+
+      .status-item.collapsing {
+        background: #f8d7da;
+        border-left: 4px solid #dc3545;
+      }
+
+      .status-item.idle {
+        background: #e2e3e5;
+        border-left: 4px solid #6c757d;
+      }
+
+      .progress-bar {
+        width: 100%;
+        height: 12px;
+        background: #e9ecef;
+        border-radius: 6px;
+        overflow: hidden;
+        margin: 8px 0;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #ff6b6b, #4ecdc4);
+        transition: width 0.1s linear;
+        border-radius: 6px;
+      }
+
+      .debug-log {
+        background: #1e1e1e;
+        color: #00ff00;
+        padding: 16px;
+        border-radius: 8px;
+        font-family: monospace;
+        font-size: 12px;
+        height: 250px;
+        overflow-y: auto;
+        margin-top: 20px;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .stat {
+        background: #f8f9fa;
+        padding: 12px;
+        border-radius: 6px;
+        text-align: center;
+      }
+
+      .stat-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #0066cc;
+      }
+
+      .stat-label {
+        font-size: 12px;
+        color: #6c757d;
+        margin-top: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Height Toggle Animation Test</h1>
+    <p>
+      Test rapid height animation toggling and mid-animation direction changes
+      using updateTarget
+    </p>
+
+    <div class="controls">
+      <h3>Animation Controls</h3>
+
+      <div class="control-group">
+        <button id="toggle-btn" class="toggle-button">
+          Toggle Height (100px ↔ 300px)
+        </button>
+      </div>
+
+      <div class="control-group">
+        <label>Quick Tests:</label>
+        <div class="quick-test-buttons">
+          <button id="rapid-test">Rapid Toggle (5x)</button>
+          <button id="interrupt-test">Interrupt Test</button>
+          <button id="reset-btn">Reset Element</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="status">
+      <h3>Animation Status</h3>
+      <div id="status-content">
+        <div class="status-item idle">
+          <span>Ready - Element at 150px</span>
+          <span>Target: 300px</span>
+        </div>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+      </div>
+      <div id="progress-text">Progress: 0%</div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-value" id="toggle-count">0</div>
+          <div class="stat-label">Total Toggles</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="current-height">150</div>
+          <div class="stat-label">Current Height (px)</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="target-height">300</div>
+          <div class="stat-label">Target Height (px)</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="animation-state">idle</div>
+          <div class="stat-label">Animation State</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="test-element" class="test-element" style="height: 150px">
+      <span>Height Animation Test</span>
+      <div class="height-indicator" id="height-indicator">150px</div>
+    </div>
+
+    <div class="debug-log" id="debug-log"></div>
+
+    <script type="module">
+      import { createHeightAnimation } from "@jsenv/dom";
+
+      const testElement = document.getElementById("test-element");
+      const debugLog = document.getElementById("debug-log");
+      const statusContent = document.getElementById("status-content");
+      const progressFill = document.getElementById("progress-fill");
+      const progressText = document.getElementById("progress-text");
+      const heightIndicator = document.getElementById("height-indicator");
+
+      // Controls
+      const toggleBtn = document.getElementById("toggle-btn");
+      const rapidTestBtn = document.getElementById("rapid-test");
+      const interruptTestBtn = document.getElementById("interrupt-test");
+      const resetBtn = document.getElementById("reset-btn");
+
+      // Stats
+      const toggleCountEl = document.getElementById("toggle-count");
+      const currentHeightEl = document.getElementById("current-height");
+      const targetHeightEl = document.getElementById("target-height");
+      const animationStateEl = document.getElementById("animation-state");
+
+      // State
+      let currentAnimation = null;
+      let isExpanded = false; // false = 150px (collapsed), true = 300px (expanded)
+      let toggleCount = 0;
+
+      const COLLAPSED_HEIGHT = 100;
+      const EXPANDED_HEIGHT = 300;
+      const ANIMATION_DURATION = 1000;
+
+      function log(message) {
+        const timestamp = new Date().toLocaleTimeString();
+        debugLog.innerHTML += `[${timestamp}] ${message}<br>`;
+        debugLog.scrollTop = debugLog.scrollHeight;
+      }
+
+      function updateStats() {
+        const currentHeight = Math.round(
+          parseFloat(testElement.style.height) || 150,
+        );
+        const targetHeight = isExpanded ? COLLAPSED_HEIGHT : EXPANDED_HEIGHT;
+
+        toggleCountEl.textContent = toggleCount;
+        currentHeightEl.textContent = currentHeight;
+        targetHeightEl.textContent = targetHeight;
+        heightIndicator.textContent = `${currentHeight}px`;
+
+        if (currentAnimation) {
+          animationStateEl.textContent = currentAnimation.playState;
+        } else {
+          animationStateEl.textContent = "idle";
+        }
+      }
+
+      function updateStatus(message, type = "idle") {
+        const targetHeight = isExpanded ? COLLAPSED_HEIGHT : EXPANDED_HEIGHT;
+        const currentHeight = Math.round(
+          parseFloat(testElement.style.height) || 150,
+        );
+
+        statusContent.innerHTML = `
+          <div class="status-item ${type}">
+            <span>${message}</span>
+            <span>${currentHeight}px → ${targetHeight}px</span>
+          </div>
+        `;
+      }
+
+      function updateProgress(progress) {
+        const percentage = Math.round(progress * 100);
+        progressFill.style.width = `${percentage}%`;
+        progressText.textContent = `Progress: ${percentage}%`;
+      }
+
+      function updateButtonState() {
+        const isAnimating =
+          currentAnimation && currentAnimation.playState === "running";
+
+        if (isAnimating) {
+          // During animation, determine direction by comparing current height to target
+          const currentHeight = Math.round(
+            parseFloat(testElement.style.height) || 150,
+          );
+          const targetHeight = isExpanded ? EXPANDED_HEIGHT : COLLAPSED_HEIGHT;
+
+          if (targetHeight > currentHeight) {
+            toggleBtn.className = "toggle-button expanding";
+            toggleBtn.textContent = `Expanding to ${targetHeight}px...`;
+          } else {
+            toggleBtn.className = "toggle-button collapsing";
+            toggleBtn.textContent = `Collapsing to ${targetHeight}px...`;
+          }
+        } else {
+          toggleBtn.className = "toggle-button";
+          const nextTarget = isExpanded ? COLLAPSED_HEIGHT : EXPANDED_HEIGHT;
+          const action = nextTarget === EXPANDED_HEIGHT ? "Expand" : "Collapse";
+          toggleBtn.textContent = `${action} to ${nextTarget}px`;
+        }
+      }
+
+      function resetElement() {
+        if (currentAnimation) {
+          currentAnimation.cancel();
+          currentAnimation = null;
+        }
+
+        testElement.style.height = "150px";
+        isExpanded = false;
+        toggleCount = 0;
+
+        updateStatus("Element reset to initial state", "idle");
+        updateProgress(0);
+        updateStats();
+        updateButtonState();
+        log("Element reset to 150px initial state");
+      }
+
+      function toggleHeight() {
+        toggleCount++;
+        const targetHeight = isExpanded ? COLLAPSED_HEIGHT : EXPANDED_HEIGHT;
+        const action =
+          targetHeight === EXPANDED_HEIGHT ? "Expanding" : "Collapsing";
+
+        log(`Toggle ${toggleCount}: ${action} to ${targetHeight}px`);
+
+        if (currentAnimation && currentAnimation.playState === "running") {
+          // Animation is running, update target
+          log(`Updating target mid-animation to ${targetHeight}px`);
+          currentAnimation.updateTarget(targetHeight);
+          updateStatus(
+            `Target updated mid-animation`,
+            targetHeight === COLLAPSED_HEIGHT ? "collapsing" : "expanding",
+          );
+        } else {
+          // Start new animation
+          const currentHeight = Math.round(
+            parseFloat(testElement.style.height) || 150,
+          );
+          log(
+            `Starting new animation from ${currentHeight}px to ${targetHeight}px`,
+          );
+
+          currentAnimation = createHeightAnimation(testElement, targetHeight, {
+            duration: ANIMATION_DURATION,
+            // Uncomment the line below to test with linear easing
+            // easing: (x) => x, // Linear easing for comparison
+          });
+
+          // Set up progress tracking
+          currentAnimation.channels.progress.add(({ progress }) => {
+            updateProgress(progress);
+            updateStats();
+          });
+
+          // Handle animation completion
+          currentAnimation.channels.finish.add(() => {
+            // Log the actual height when animation completes
+            const actualHeight = Math.round(
+              parseFloat(testElement.style.height) || 0,
+            );
+            log(
+              `Animation completed. Target was ${targetHeight}px, actual height is ${actualHeight}px`,
+            );
+            updateStatus(`Animation completed`, "idle");
+            updateProgress(0);
+            updateStats();
+            updateButtonState();
+          });
+
+          currentAnimation.play();
+          updateStatus(
+            `${action} animation started`,
+            targetHeight === COLLAPSED_HEIGHT ? "collapsing" : "expanding",
+          );
+        }
+
+        // Toggle the state for next click
+        isExpanded = !isExpanded;
+        updateStats();
+        updateButtonState();
+      }
+
+      function rapidToggleTest() {
+        log("Starting rapid toggle test (5 clicks in 2 seconds)");
+        let clickCount = 0;
+        const interval = setInterval(() => {
+          toggleHeight();
+          clickCount++;
+          if (clickCount >= 5) {
+            clearInterval(interval);
+            log("Rapid toggle test completed");
+          }
+        }, 400);
+      }
+
+      function interruptTest() {
+        log("Starting interrupt test");
+
+        // First, start an animation
+        toggleHeight();
+
+        // Then interrupt it multiple times
+        setTimeout(() => {
+          log("Interrupt 1: Changing direction");
+          toggleHeight();
+        }, 500);
+
+        setTimeout(() => {
+          log("Interrupt 2: Changing direction again");
+          toggleHeight();
+        }, 1000);
+
+        setTimeout(() => {
+          log("Interrupt 3: Final direction change");
+          toggleHeight();
+        }, 1500);
+      }
+
+      // Event listeners
+      toggleBtn.onclick = toggleHeight;
+      rapidTestBtn.onclick = rapidToggleTest;
+      interruptTestBtn.onclick = interruptTest;
+      resetBtn.onclick = resetElement;
+
+      // Real-time height monitoring
+      const observer = new MutationObserver(() => {
+        updateStats();
+      });
+      observer.observe(testElement, {
+        attributes: true,
+        attributeFilter: ["style"],
+      });
+
+      // Initialize
+      log("Height toggle animation test initialized");
+      log(
+        `Element starts at 150px, toggles between ${COLLAPSED_HEIGHT}px and ${EXPANDED_HEIGHT}px`,
+      );
+      log("Click toggle button to test updateTarget behavior");
+      updateStats();
+      updateButtonState();
+      updateStatus("Ready to start animation", "idle");
+    </script>
+  </body>
+</html>

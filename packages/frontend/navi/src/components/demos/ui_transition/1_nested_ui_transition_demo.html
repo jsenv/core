@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nested UITransition Demo (Pages & Sub Pages)</title>
+    <style>
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        max-width: 940px;
+        margin: 0 auto;
+        padding: 24px 24px 160px;
+        background: #f5f7fa;
+        line-height: 1.45;
+      }
+      h1 {
+        margin-top: 0;
+      }
+      .note {
+        background: #fff3cd;
+        border: 1px solid #ffe69c;
+        color: #664d03;
+        padding: 10px 14px;
+        border-radius: 6px;
+        font-size: 14px;
+      }
+      .controls,
+      .sub-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 16px 0 8px;
+      }
+      button {
+        cursor: pointer;
+        padding: 8px 14px;
+        border-radius: 4px;
+        border: 1px solid #d0d7de;
+        background: #fff;
+        font: inherit;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition:
+          background 0.15s,
+          box-shadow 0.15s;
+      }
+      button:hover {
+        background: #f0f2f4;
+      }
+      button.active {
+        background: #0969da;
+        color: #fff;
+        border-color: #0969da;
+      }
+      .outer-transition-container {
+        position: relative;
+        background: #ffffff;
+        border: 2px solid #2684ff44;
+        border-radius: 8px;
+        padding: 20px 22px 40px;
+        margin-top: 24px;
+        overflow: hidden; /* so slide-left stays clean */
+      }
+      .page-root {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        /* visual differences per page set in inline style */
+      }
+      .page-title {
+        margin: 0;
+        font-size: 20px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .nested-transition-container {
+        position: relative;
+        border: 2px dashed #6f42c144;
+        background: #faf9ff;
+        padding: 16px 18px 24px;
+        border-radius: 6px;
+        overflow: hidden; /* cross-fade stays confined */
+      }
+      .section-root {
+        position: relative;
+      }
+      .section-root h3 {
+        margin-top: 0;
+      }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        font-size: 12px;
+        margin-top: 10px;
+      }
+      .legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .box {
+        width: 14px;
+        height: 14px;
+        border-radius: 3px;
+        display: inline-block;
+      }
+      .box.outer {
+        background: #2684ff22;
+        border: 1px solid #2684ff;
+      }
+      .box.inner {
+        background: #6f42c122;
+        border: 1px solid #6f42c1;
+      }
+      .info {
+        font-size: 13px;
+        color: #555;
+        margin-top: 6px;
+      }
+      .size-diff-block {
+        padding: 12px 14px;
+        border-radius: 4px;
+        background: linear-gradient(105deg, #e0f2ff, #f1f8ff);
+        border: 1px solid #b6d9ff;
+        font-size: 14px;
+      }
+      .footer-note {
+        margin-top: 60px;
+        font-size: 12px;
+        color: #666;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Nested UITransition Demo</h1>
+    <p>
+      This file demonstrates
+      <strong
+        >an outer <code>UITransition</code> wrapping an inner
+        <code>UITransition</code></strong
+      >. Switching between Page A & Page B uses a
+      <code>slide-left</code> content transition. Inside each page, switching
+      between its sections uses a <code>cross-fade</code> content transition.
+      This allows you to see how a long/larger transition (page slide) can
+      encompass/overlap smaller fades.
+    </p>
+    <div class="note">
+      Outer: <code>transitionType = "slide-left"</code> (content transition).<br />
+      Inner: <code>transitionType = "cross-fade"</code> (content transition).<br />
+      Both layers have independent size transitions.
+    </div>
+
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      // eslint-disable-next-line no-unused-vars
+      import { UITransition } from "@jsenv/navi";
+
+      // eslint-disable-next-line no-unused-vars
+      const Page = ({ pageKey }) => {
+        const [sectionIndex, setSectionIndex] = useState(0);
+
+        const sections =
+          pageKey === "A"
+            ? [
+                {
+                  key: "intro",
+                  title: "Introduction",
+                  content: (
+                    <div
+                      className="section-root"
+                      data-content-key="intro"
+                      data-ui-name={`page-${pageKey}-intro`}
+                    >
+                      <h3>{pageKey} · Intro</h3>
+                      <p>
+                        This is the <strong>intro section</strong> of Page{" "}
+                        {pageKey}. It is the smallest one to highlight size
+                        growth when changing sections.
+                      </p>
+                    </div>
+                  ),
+                },
+                {
+                  key: "details",
+                  title: "Details",
+                  content: (
+                    <div
+                      className="section-root"
+                      data-content-key="details"
+                      data-ui-name={`page-${pageKey}-details`}
+                    >
+                      <h3>{pageKey} · Details</h3>
+                      <p>
+                        This section is a bit larger. It contains a list to make
+                        height differ and emphasize size transition inside the
+                        nested container.
+                      </p>
+                      <ul>
+                        <li>Point Alpha — descriptive text for clarity.</li>
+                        <li>
+                          Point Beta — demonstrates cross-fade with bigger
+                          blocks.
+                        </li>
+                        <li>Point Gamma — keeps layout stable during fade.</li>
+                      </ul>
+                      <div className="size-diff-block">
+                        Variable height content block (A/details)
+                      </div>
+                    </div>
+                  ),
+                },
+                {
+                  key: "extended",
+                  title: "Extended",
+                  content: (
+                    <div
+                      className="section-root"
+                      data-content-key="extended"
+                      data-ui-name={`page-${pageKey}-extended`}
+                    >
+                      <h3>{pageKey} · Extended</h3>
+                      <p>
+                        The extended section is the tallest. Long paragraphs
+                        plus a grid create a pronounced size difference showing
+                        nested size transitions while the outer page container
+                        remains stable.
+                      </p>
+                      <p>
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit,
+                        sed do eiusmod tempor incididunt ut labore et dolore
+                        magna aliqua. Ut enim ad minim veniam.
+                      </p>
+                      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:14px 0;">
+                        {[1, 2, 3, 4].map((n) => (
+                          <div
+                            style="background:#eef4ff;border:1px solid #d1e3ff;padding:8px;border-radius:4px;"
+                            key={n}
+                          >
+                            Card {n}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ),
+                },
+              ]
+            : [
+                {
+                  key: "alpha",
+                  title: "Alpha",
+                  content: (
+                    <div
+                      className="section-root"
+                      data-content-key="alpha"
+                      data-ui-name={`page-${pageKey}-alpha`}
+                    >
+                      <h3>{pageKey} · Alpha</h3>
+                      <p>
+                        Page {pageKey} starts with Alpha — a mid-sized first
+                        section.
+                      </p>
+                      <div className="size-diff-block">
+                        Moderate sized block (B/alpha)
+                      </div>
+                    </div>
+                  ),
+                },
+                {
+                  key: "beta",
+                  title: "Beta",
+                  content: (
+                    <div
+                      className="section-root"
+                      data-content-key="beta"
+                      data-ui-name={`page-${pageKey}-beta`}
+                    >
+                      <h3>{pageKey} · Beta</h3>
+                      <p>
+                        Beta shrinks a little so you can observe the container
+                        height animating downward on the nested transition.
+                      </p>
+                    </div>
+                  ),
+                },
+                {
+                  key: "gamma",
+                  title: "Gamma",
+                  content: (
+                    <div
+                      className="section-root"
+                      data-content-key="gamma"
+                      data-ui-name={`page-${pageKey}-gamma`}
+                    >
+                      <h3>{pageKey} · Gamma</h3>
+                      <p>
+                        Gamma is larger again with multiple paragraphs +
+                        decorative blocks.
+                      </p>
+                      <p>
+                        Mauris non tempor quam, et lacinia sapien. Mauris
+                        accumsan eros eget libero posuere vulputate. Etiam elit
+                        elit, elementum sed varius at, adipiscing vitae est.
+                      </p>
+                      <p>
+                        Suspendisse vel felis. Ut lorem lorem, interdum eu,
+                        tincidunt sit amet, laoreet vitae, arcu.
+                      </p>
+                    </div>
+                  ),
+                },
+              ];
+
+        const currentSection = sections[sectionIndex];
+
+        return (
+          <div
+            className="page-root"
+            data-content-key={pageKey}
+            data-ui-name={`page-${pageKey}`}
+            style={{
+              background: pageKey === "A" ? "#e8f4ff" : "#ffeef5",
+              border: `1px solid ${pageKey === "A" ? "#b8dcff" : "#ffc2d7"}`,
+              padding: "18px 18px 26px",
+              borderRadius: "6px",
+            }}
+          >
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+              <h2 className="page-title">
+                {pageKey === "A" ? "🅰️ Page A" : "🅱️ Page B"}
+              </h2>
+              <div className="sub-controls">
+                {sections.map((s, i) => (
+                  <button
+                    key={s.key}
+                    className={i === sectionIndex ? "active" : ""}
+                    onClick={() => setSectionIndex(i)}
+                  >
+                    {s.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="nested-transition-container">
+              <UITransition
+                transitionType="cross-fade"
+                transitionDuration={350}
+                sizeTransition
+                sizeTransitionDuration={350}
+              >
+                {currentSection.content}
+              </UITransition>
+              <div className="info">
+                Inner UITransition (purple dashed) cross-fades sections &
+                animates height.
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const [page, setPage] = useState("A");
+
+        return (
+          <div>
+            <div className="controls">
+              <button
+                onClick={() => setPage("A")}
+                className={page === "A" ? "active" : ""}
+              >
+                Page A
+              </button>
+              <button
+                onClick={() => setPage("B")}
+                className={page === "B" ? "active" : ""}
+              >
+                Page B
+              </button>
+            </div>
+            <div className="legend">
+              <span>
+                <span className="box outer"></span> Outer UITransition
+                (slide-left)
+              </span>
+              <span>
+                <span className="box inner"></span> Inner UITransition
+                (cross-fade)
+              </span>
+            </div>
+            <div className="outer-transition-container">
+              <UITransition
+                transitionType="slide-left"
+                transitionDuration={500}
+                sizeTransition
+                sizeTransitionDuration={400}
+              >
+                <Page pageKey={page} />
+              </UITransition>
+              <div className="info">
+                Outer UITransition (blue border) slides horizontally between
+                Page A & Page B.
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      render(<App />, document.getElementById("root"));
+    </script>
+    <div class="footer-note">
+      Open devtools console to observe any debug logs (if enabled in the library
+      build). Try switching pages mid section fade to see nested transition
+      interplay.
+    </div>
+  </body>
+</html>

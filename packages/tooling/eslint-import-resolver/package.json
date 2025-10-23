@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/eslint-import-resolver",
-  "version": "8.4.1",
+  "version": "8.4.2",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
@@ -36,7 +36,7 @@
     "@jsenv/node-esm-resolution": "../node-esm-resolution",
     "@jsenv/snapshot": "../snapshot",
     "@jsenv/urls": "../urls",
-    "rollup": "4.46.1"
+    "rollup": "4.52.5"
   },
   "publishConfig": {
     "access": "public"

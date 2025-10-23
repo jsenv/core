@@ -35,7 +35,7 @@ jobs:
           # - ubuntu-22.04 # disabled for now (got segfault)
           - macos-14 # might cause https://github.com/microsoft/playwright/issues/30585
           # - windows-2022 disabled until got a windows to make it work again
-        node: [24.1.0]
+        node: [25.0.0]
     runs-on: ${{ matrix.os }}
     name: test on ${{ matrix.os }} and node ${{ matrix.node }}
     env:

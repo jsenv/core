@@ -61,6 +61,24 @@
         border-color: #bee5eb;
         color: #0c5460;
       }
+      nav a {
+        color: #007bff;
+        text-decoration: none;
+      }
+      nav a:hover {
+        text-decoration: underline;
+      }
+      h2 {
+        margin-top: 40px;
+        margin-bottom: 20px;
+        padding-top: 20px;
+        border-top: 2px solid #e0e0e0;
+      }
+      h2:first-of-type {
+        margin-top: 0;
+        border-top: none;
+        padding-top: 0;
+      }
       .button-group {
         display: flex;
         gap: 10px;
@@ -77,38 +95,23 @@
       button:hover {
         background: #f8f9fa;
       }
-      button[type="submit"] {
-        background: #007bff;
-        color: white;
-        border-color: #007bff;
+      .control-group {
+        margin-bottom: 15px;
       }
-      button[type="submit"]:hover {
-        background: #0056b3;
+      label {
+        margin-bottom: 15px;
+        font-weight: 500;
+        color: #555;
       }
-      button[type="reset"] {
-        background: #6c757d;
-        color: white;
-        border-color: #6c757d;
-      }
-      button[type="reset"]:hover {
-        background: #545b62;
-      }
-      input {
+      label input {
+        display: block;
+        margin-top: 5px;
         width: 100%;
         padding: 8px 12px;
         border: 1px solid #ccc;
         border-radius: 4px;
         font-size: 14px;
         box-sizing: border-box;
-      }
-      .control-group {
-        margin-bottom: 15px;
-      }
-      label {
-        display: block;
-        margin-bottom: 5px;
-        font-weight: 500;
-        color: #555;
       }
     </style>
   </head>
@@ -119,8 +122,14 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      // eslint-disable-next-line no-unused-vars
-      import { Field, Input, Form, Button, createAction } from "@jsenv/navi";
+      import {
+        // eslint-disable-next-line no-unused-vars
+        Input,
+        // eslint-disable-next-line no-unused-vars
+        Form,
+        // eslint-disable-next-line no-unused-vars
+        Button,
+      } from "@jsenv/navi";
 
       const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -128,15 +137,498 @@
       const App = () => {
         return (
           <>
+            <div className="demo-card" style={{ marginBottom: "30px" }}>
+              <h2>Input Text Demo - Overview</h2>
+              <p>
+                This demo showcases different ways to use the Input component
+                with text inputs.
+              </p>
+              <nav>
+                <h3>Sections:</h3>
+                <ul style={{ marginLeft: "20px" }}>
+                  <li>
+                    <a href="#basic-inputs">
+                      1. Basic Input (no action/no form)
+                    </a>{" "}
+                    - Simple inputs with value handling
+                  </li>
+                  <li>
+                    <a href="#input-actions">2. Input with Actions</a> - Inputs
+                    that trigger actions on value change, including error
+                    handling
+                  </li>
+                  <li>
+                    <a href="#input-forms">3. Input inside Form</a> - Form
+                    integration patterns
+                  </li>
+                  <li>
+                    <a href="#datetime-local">4. Datetime-Local Inputs</a> -
+                    Special handling for datetime inputs with timezone
+                    conversion
+                  </li>
+                </ul>
+              </nav>
+            </div>
+
+            <h2 id="basic-inputs">1. Basic Input (no action/no form)</h2>
+            <div className="demo-grid">
+              <BasicInputNoActionDemo />
+              <InputWithDefaultValueDemo />
+            </div>
+
+            <h2 id="input-actions">2. Input with Actions</h2>
             <div className="demo-grid">
               <BasicInputDemo />
               <InputWithInitialValueDemo />
               <InputWithExternalControlDemo />
+              <InputWithErrorDemo />
+              <InputWithValidationErrorDemo />
+            </div>
+
+            <h2 id="input-forms">3. Input inside Form</h2>
+            <div className="demo-grid">
               <FormInputDemo />
-              <FormWithExternalControlDemo />
-              <SharedActionDemo />
+              <FormInputErrorDemo />
+            </div>
+
+            <h2 id="datetime-local">4. Datetime-Local Inputs</h2>
+            <div className="demo-grid">
+              <DateTimeLocalDemo />
+              <DateTimeLocalFormDemo />
             </div>
           </>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const DateTimeLocalDemo = () => {
+        // External state (what the server/app knows) - stored as UTC ISO string
+        const [externalDateTime, setExternalDateTime] = useState(
+          "2024-01-15T14:30:00Z", // UTC time
+        );
+
+        // UI state tracking
+        const [uiDateTime, setUiDateTime] = useState(externalDateTime);
+        const [actionValue, setActionValue] = useState("");
+        const [result, setResult] = useState("");
+        const [isLoading, setIsLoading] = useState(false);
+
+        const saveDateTime = async (dateTimeValue) => {
+          setIsLoading(true);
+          setActionValue(dateTimeValue || "(empty)");
+          setResult("Saving datetime...");
+          try {
+            await delay(1000);
+
+            // Simulate server response
+            const response = {
+              saved: dateTimeValue,
+              message: `Datetime saved successfully`,
+            };
+
+            // Update external state to match what was saved
+            setExternalDateTime(dateTimeValue);
+            setResult(`✅ ${response.message}\\nSaved: ${dateTimeValue}`);
+            return response;
+          } catch (error) {
+            setResult(`❌ Save failed: ${error.message}`);
+            throw error;
+          } finally {
+            setIsLoading(false);
+          }
+        };
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Datetime-Local State Demo</h3>
+
+            {/* External State Control */}
+            <div
+              style={{
+                marginBottom: "20px",
+                padding: "12px",
+                background: "#e3f2fd",
+                borderRadius: "4px",
+              }}
+            >
+              <h4
+                style={{
+                  margin: "0 0 10px 0",
+                  fontSize: "14px",
+                  color: "#1976d2",
+                }}
+              >
+                📊 External State (UTC)
+              </h4>
+              <div
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: "12px",
+                  marginBottom: "10px",
+                }}
+              >
+                Current: {externalDateTime || "(not set)"}
+              </div>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                <button
+                  onClick={() => setExternalDateTime("2024-01-15T14:30:00Z")}
+                  style={{ padding: "4px 8px", fontSize: "12px" }}
+                >
+                  Set Jan 15, 2:30 PM UTC
+                </button>
+                <button
+                  onClick={() => setExternalDateTime("2024-12-25T09:00:00Z")}
+                  style={{ padding: "4px 8px", fontSize: "12px" }}
+                >
+                  Set Dec 25, 9:00 AM UTC
+                </button>
+                <button
+                  onClick={() => setExternalDateTime(null)}
+                  style={{ padding: "4px 8px", fontSize: "12px" }}
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+
+            {/* UI Input */}
+            <div className="control-group">
+              <label>
+                Datetime Input (Local Time):
+                <Input
+                  type="datetime-local"
+                  name="datetime"
+                  value={externalDateTime} // External state controls the input
+                  onUIStateChange={(datetime) => {
+                    setUiDateTime(datetime);
+                  }}
+                  action={saveDateTime}
+                />
+              </label>
+            </div>
+
+            {/* State Display */}
+            <div style={{ marginBottom: "15px" }}>
+              <div
+                style={{ fontSize: "12px", color: "#666", marginBottom: "8px" }}
+              >
+                <strong>UI State:</strong> {uiDateTime || "(empty)"}
+              </div>
+              <div
+                style={{ fontSize: "12px", color: "#666", marginBottom: "8px" }}
+              >
+                <strong>Action receives:</strong>{" "}
+                {actionValue || "(waiting for action...)"}
+              </div>
+            </div>
+
+            <div
+              className={`result-display ${
+                isLoading
+                  ? "result-loading"
+                  : result.startsWith("✅")
+                    ? "result-success"
+                    : result.startsWith("❌")
+                      ? "result-error"
+                      : ""
+              }`}
+            >
+              {result ||
+                "Change the datetime and blur/enter to trigger action..."}
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const DateTimeLocalFormDemo = () => {
+        const [externalDateTime, setExternalDateTime] = useState(
+          "2024-06-01T10:00:00Z",
+        );
+        const [uiDateTime, setUiDateTime] = useState(externalDateTime);
+        const [result, setResult] = useState("");
+        const [isLoading, setIsLoading] = useState(false);
+
+        const submitForm = async (formData) => {
+          setIsLoading(true);
+          setResult("Submitting form...");
+          try {
+            await delay(1200);
+
+            const response = {
+              datetime: formData.appointmentTime,
+              message: "Appointment scheduled successfully",
+            };
+
+            // Update external state
+            setExternalDateTime(formData.appointmentTime);
+            setResult(
+              `✅ ${response.message}\\nScheduled for: ${formData.appointmentTime}`,
+            );
+            return response;
+          } catch (error) {
+            setResult(`❌ Form error: ${error.message}`);
+            throw error;
+          } finally {
+            setIsLoading(false);
+          }
+        };
+
+        const getResetValue = () => {
+          return externalDateTime || "(not set)";
+        };
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Datetime-Local in Form</h3>
+
+            {/* External State Control */}
+            <div
+              style={{
+                marginBottom: "20px",
+                padding: "12px",
+                background: "#e3f2fd",
+                borderRadius: "4px",
+              }}
+            >
+              <h4
+                style={{
+                  margin: "0 0 10px 0",
+                  fontSize: "14px",
+                  color: "#1976d2",
+                }}
+              >
+                📊 External State Control (UTC)
+              </h4>
+              <div
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: "12px",
+                  marginBottom: "10px",
+                }}
+              >
+                Current: {externalDateTime || "(not set)"}
+              </div>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                <button
+                  onClick={() => setExternalDateTime("2024-03-15T09:00:00Z")}
+                  style={{ padding: "4px 8px", fontSize: "12px" }}
+                >
+                  Set Mar 15, 9:00 AM UTC
+                </button>
+                <button
+                  onClick={() => setExternalDateTime("2024-08-20T16:30:00Z")}
+                  style={{ padding: "4px 8px", fontSize: "12px" }}
+                >
+                  Set Aug 20, 4:30 PM UTC
+                </button>
+                <button
+                  onClick={() => setExternalDateTime("2024-12-31T23:59:00Z")}
+                  style={{ padding: "4px 8px", fontSize: "12px" }}
+                >
+                  Set New Year's Eve
+                </button>
+                <button
+                  onClick={() => setExternalDateTime(null)}
+                  style={{ padding: "4px 8px", fontSize: "12px" }}
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+
+            <Form action={submitForm}>
+              <div className="control-group">
+                <label>
+                  Appointment Time:
+                  <Input
+                    type="datetime-local"
+                    name="appointmentTime"
+                    value={externalDateTime}
+                    onUIStateChange={setUiDateTime}
+                  />
+                </label>
+              </div>
+
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "10px",
+                }}
+              >
+                <strong>UI State:</strong> {uiDateTime || "(empty)"}
+              </div>
+
+              <div className="button-group">
+                <Button type="submit">
+                  Schedule Appointment
+                  {uiDateTime && (
+                    <span style={{ fontSize: "11px", opacity: "0.7" }}>
+                      {" "}
+                      ({uiDateTime})
+                    </span>
+                  )}
+                </Button>
+                <Button type="reset">
+                  Reset to Saved
+                  <span style={{ fontSize: "11px", opacity: "0.7" }}>
+                    {" "}
+                    ({getResetValue()})
+                  </span>
+                </Button>
+              </div>
+            </Form>
+
+            <div
+              className={`result-display ${
+                isLoading
+                  ? "result-loading"
+                  : result.startsWith("✅")
+                    ? "result-success"
+                    : result.startsWith("❌")
+                      ? "result-error"
+                      : ""
+              }`}
+            >
+              {result || "Select a datetime and submit..."}
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const BasicInputNoActionDemo = () => {
+        const [result, setResult] = useState("");
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Basic Input (No Action)</h3>
+            <div className="control-group">
+              <label>
+                Enter some text:
+                <Input
+                  name="text"
+                  placeholder="Type something..."
+                  onUIStateChange={(text) => {
+                    setResult(text ? `Current value: "${text}"` : "");
+                  }}
+                />
+              </label>
+            </div>
+            <div className="result-display">
+              {result || "Type in the input to see the value..."}
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const InputWithDefaultValueDemo = () => {
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Input with Default Value</h3>
+            <div className="control-group">
+              <label>
+                Input with default value:
+                <Input
+                  name="text"
+                  defaultValue="Hello World!"
+                  placeholder="Enter text..."
+                />
+              </label>
+            </div>
+            <div className="result-display">
+              Input starts with default value.
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const InputWithErrorDemo = () => {
+        const [result, setResult] = useState("");
+        const [isLoading, setIsLoading] = useState(false);
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Input with Action (Always Fails)</h3>
+            <div className="control-group">
+              <label>
+                Enter text (will always fail):
+                <Input
+                  name="text"
+                  placeholder="Type something..."
+                  action={async (text) => {
+                    setIsLoading(true);
+                    setResult("Processing...");
+                    try {
+                      await delay(1200);
+                      throw new Error(`Processing failed for input: "${text}"`);
+                    } catch (error) {
+                      setResult(`❌ ${error.message}`);
+                      throw error;
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  }}
+                />
+              </label>
+            </div>
+            <div
+              className={`result-display ${isLoading ? "result-loading" : result.startsWith("❌") ? "result-error" : ""}`}
+            >
+              {result || "This input action will always fail..."}
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const InputWithValidationErrorDemo = () => {
+        const [result, setResult] = useState("");
+        const [isLoading, setIsLoading] = useState(false);
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">
+              Input with Validation (Fails on Short Text)
+            </h3>
+            <div className="control-group">
+              <label>
+                Enter text (min 5 characters):
+                <Input
+                  name="text"
+                  placeholder="Must be at least 5 characters..."
+                  action={async (text) => {
+                    setIsLoading(true);
+                    setResult("Validating...");
+                    try {
+                      await delay(800);
+                      if (!text || text.length < 5) {
+                        throw new Error(
+                          "Text must be at least 5 characters long",
+                        );
+                      }
+                      const response = `✅ Valid input: "${text}" (${text.length} characters)`;
+                      setResult(response);
+                      return response;
+                    } catch (error) {
+                      setResult(`❌ Validation failed: ${error.message}`);
+                      throw error;
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  }}
+                />
+              </label>
+            </div>
+            <div
+              className={`result-display ${isLoading ? "result-loading" : result.startsWith("✅") ? "result-success" : result.startsWith("❌") ? "result-error" : ""}`}
+            >
+              {result || "Enter at least 5 characters to pass validation..."}
+            </div>
+          </div>
         );
       };
 
@@ -149,27 +641,28 @@
           <div className="demo-card">
             <h3 className="demo-title">Basic Input with Action</h3>
             <div className="control-group">
-              <label htmlFor="basic-input">Enter some text:</label>
-              <Input
-                id="basic-input"
-                name="text"
-                placeholder="Type something..."
-                action={async ({ text }) => {
-                  setIsLoading(true);
-                  setResult("Processing...");
-                  try {
-                    await delay(1000);
-                    const response = `✅ Processed: "${text}"`;
-                    setResult(response);
-                    return response;
-                  } catch (error) {
-                    setResult(`❌ Error: ${error.message}`);
-                    throw error;
-                  } finally {
-                    setIsLoading(false);
-                  }
-                }}
-              />
+              <label>
+                Enter some text:
+                <Input
+                  name="text"
+                  placeholder="Type something..."
+                  action={async (text) => {
+                    setIsLoading(true);
+                    setResult("Processing...");
+                    try {
+                      await delay(1000);
+                      const response = `✅ Processed: "${text}"`;
+                      setResult(response);
+                      return response;
+                    } catch (error) {
+                      setResult(`❌ Error: ${error.message}`);
+                      throw error;
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  }}
+                />
+              </label>
             </div>
             <div
               className={`result-display ${isLoading ? "result-loading" : result.startsWith("✅") ? "result-success" : result.startsWith("❌") ? "result-error" : ""}`}
@@ -182,25 +675,28 @@
 
       // eslint-disable-next-line no-unused-vars
       const InputWithInitialValueDemo = () => {
+        const [value, setValue] = useState("Hello World!");
         const [result, setResult] = useState("");
 
         return (
           <div className="demo-card">
             <h3 className="demo-title">Input with Initial Value</h3>
             <div className="control-group">
-              <label htmlFor="initial-input">Input with preset value:</label>
-              <Input
-                id="initial-input"
-                name="text"
-                value="Hello World!"
-                action={async ({ text }) => {
-                  setResult("Processing...");
-                  await delay(800);
-                  const response = `✅ Submitted: "${text}"`;
-                  setResult(response);
-                  return response;
-                }}
-              />
+              <label>
+                Input with preset value:
+                <Input
+                  name="text"
+                  value={value}
+                  onUIStateChange={setValue}
+                  action={async (text) => {
+                    setResult("Processing...");
+                    await delay(800);
+                    const response = `✅ Submitted: "${text}"`;
+                    setResult(response);
+                    return response;
+                  }}
+                />
+              </label>
             </div>
             <div
               className={`result-display ${result.startsWith("✅") ? "result-success" : ""}`}
@@ -213,48 +709,48 @@
 
       // eslint-disable-next-line no-unused-vars
       const InputWithExternalControlDemo = () => {
-        const [inputValue, setInputValue] = useState(undefined);
+        const [value, setValue] = useState(undefined);
         const [result, setResult] = useState("");
 
         return (
           <div className="demo-card">
             <h3 className="demo-title">Input with External Control</h3>
             <div className="control-group">
-              <label htmlFor="controlled-input">
+              <label>
                 Externally controlled input:
+                <Input
+                  name="text"
+                  value={value}
+                  placeholder="Use buttons below to set value"
+                  action={async (text) => {
+                    setResult("Processing...");
+                    await delay(600);
+                    const response = `✅ Action executed with: "${text}"`;
+                    setResult(response);
+                    setValue(text);
+                    return response;
+                  }}
+                />
               </label>
-              <Input
-                id="controlled-input"
-                name="text"
-                value={inputValue}
-                placeholder="Use buttons below to set value"
-                action={async ({ text }) => {
-                  setResult("Processing...");
-                  await delay(600);
-                  const response = `✅ Action executed with: "${text}"`;
-                  setResult(response);
-                  return response;
-                }}
-              />
             </div>
             <div className="button-group">
               <button
                 onClick={() => {
-                  setInputValue("Preset Value 1");
+                  setValue("Preset Value 1");
                 }}
               >
                 Set Value 1
               </button>
               <button
                 onClick={() => {
-                  setInputValue("Preset Value 2");
+                  setValue("Preset Value 2");
                 }}
               >
                 Set Value 2
               </button>
               <button
                 onClick={() => {
-                  setInputValue("");
+                  setValue("");
                 }}
               >
                 Clear
@@ -263,7 +759,7 @@
             <div
               className={`result-display ${result.startsWith("✅") ? "result-success" : ""}`}
             >
-              Current value: "{inputValue}"<br />
+              Current value: "{value}"<br />
               {result || "Click buttons to change value, then submit..."}
             </div>
           </div>
@@ -275,43 +771,33 @@
         const [result, setResult] = useState("");
         const [isLoading, setIsLoading] = useState(false);
 
+        const formDemoAction = async ({ username, email }) => {
+          setIsLoading(true);
+          setResult("Submitting form...");
+          try {
+            await delay(1200);
+            const response = `✅ Form submitted!\nUsername: ${username}\nEmail: ${email}`;
+            setResult(response);
+            return response;
+          } catch (error) {
+            setResult(`❌ Form error: ${error.message}`);
+            throw error;
+          } finally {
+            setIsLoading(false);
+          }
+        };
+
         return (
           <div className="demo-card">
             <h3 className="demo-title">Input inside Form</h3>
-            <Form
-              action={async ({ username, email }) => {
-                setIsLoading(true);
-                setResult("Submitting form...");
-                try {
-                  await delay(1200);
-                  const response = `✅ Form submitted!\nUsername: ${username}\nEmail: ${email}`;
-                  setResult(response);
-                  return response;
-                } catch (error) {
-                  setResult(`❌ Form error: ${error.message}`);
-                  throw error;
-                } finally {
-                  setIsLoading(false);
-                }
-              }}
-            >
+            <Form action={formDemoAction}>
               <div className="control-group">
-                <label htmlFor="form-username">Username:</label>
-                <Input
-                  id="form-username"
-                  name="username"
-                  placeholder="Enter username"
-                />
+                <label>
+                  Username:
+                  <Input name="username" placeholder="Enter username" />
+                </label>
               </div>
-              <div className="control-group">
-                <label htmlFor="form-email">Email:</label>
-                <Input
-                  id="form-email"
-                  name="email"
-                  type="email"
-                  placeholder="Enter email"
-                />
-              </div>
+              <div className="control-group"></div>
               <div className="button-group">
                 <Button type="submit">Submit Form</Button>
                 <Button type="reset">Reset</Button>
@@ -327,69 +813,54 @@
       };
 
       // eslint-disable-next-line no-unused-vars
-      const FormWithExternalControlDemo = () => {
-        const [username, setUsername] = useState(undefined);
-        const [email, setEmail] = useState(undefined);
+      const FormInputErrorDemo = () => {
         const [result, setResult] = useState("");
+        const [isLoading, setIsLoading] = useState(false);
+
+        const formErrorAction = async ({ username, email }) => {
+          setIsLoading(true);
+          setResult("Submitting form...");
+          try {
+            await delay(1000);
+            // Simulate server-side validation errors
+            if (!username || username.length < 3) {
+              throw new Error("Username must be at least 3 characters long");
+            }
+            if (username === "admin") {
+              throw new Error(
+                "Username 'admin' is reserved and cannot be used",
+              );
+            }
+            // This will never be reached due to the conditions above
+            const response = `✅ Form submitted!\nUsername: ${username}\nEmail: ${email}`;
+            setResult(response);
+            return response;
+          } catch (error) {
+            setResult(`❌ Form error: ${error.message}`);
+            throw error;
+          } finally {
+            setIsLoading(false);
+          }
+        };
 
         return (
           <div className="demo-card">
-            <h3 className="demo-title">Form with External Control</h3>
-            <Form
-              action={async (params) => {
-                setResult("Submitting form...");
-                await delay(1000);
-                const response = `✅ Form submitted!\nUsername: ${params.username}\nEmail: ${params.email}`;
-                setResult(response);
-                return response;
-              }}
+            <h3 className="demo-title">Form with Validation Errors</h3>
+            <p
+              style={{ fontSize: "14px", color: "#666", marginBottom: "15px" }}
             >
+              This form demonstrates server-side validation errors. Try: empty
+              fields, username &lt; 3 chars, invalid email, or "admin" username.
+            </p>
+            <Form action={formErrorAction}>
               <div className="control-group">
-                <label htmlFor="controlled-form-username">Username:</label>
-                <Input
-                  id="controlled-form-username"
-                  name="username"
-                  value={username}
-                  placeholder="Controlled by buttons"
-                />
-              </div>
-              <div className="control-group">
-                <label htmlFor="controlled-form-email">Email:</label>
-                <Input
-                  id="controlled-form-email"
-                  name="email"
-                  value={email}
-                  placeholder="Controlled by buttons"
-                />
-              </div>
-              <div className="button-group">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUsername("john_doe");
-                    setEmail("john@example.com");
-                  }}
-                >
-                  Set User 1
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUsername("jane_smith");
-                    setEmail("jane@example.com");
-                  }}
-                >
-                  Set User 2
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUsername("");
-                    setEmail("");
-                  }}
-                >
-                  Clear All
-                </button>
+                <label>
+                  Username:
+                  <Input
+                    name="username"
+                    placeholder="Enter username (try 'admin' or < 3 chars)"
+                  />
+                </label>
               </div>
               <div className="button-group">
                 <Button type="submit">Submit Form</Button>
@@ -397,63 +868,13 @@
               </div>
             </Form>
             <div
-              className={`result-display ${result.startsWith("✅") ? "result-success" : ""}`}
+              className={`result-display ${isLoading ? "result-loading" : result.startsWith("✅") ? "result-success" : result.startsWith("❌") ? "result-error" : ""}`}
             >
-              Current: {username} / {email}
-              <br />
-              {result || "Use buttons to set values, then submit..."}
+              {result || "Fill form and submit to see validation errors..."}
             </div>
           </div>
         );
       };
-
-      // eslint-disable-next-line no-unused-vars
-      const SharedActionDemo = () => {
-        const [result, setResult] = useState("");
-
-        return (
-          <div className="demo-card">
-            <h3 className="demo-title">Shared Action Example</h3>
-            <div className="control-group">
-              <label htmlFor="shared-input-1">Input 1 (shared action):</label>
-              <Input
-                id="shared-input-1"
-                name="name"
-                placeholder="Enter name for input 1"
-                action={sharedAction}
-                onActionStart={() => {
-                  setResult("Processing...");
-                }}
-                onActionEnd={(e) => {
-                  setResult(e.detail.data);
-                }}
-              />
-            </div>
-            <div className="control-group">
-              <label htmlFor="shared-input-2">
-                Input 2 (same shared action):
-              </label>
-              <Input
-                id="shared-input-2"
-                name="name"
-                placeholder="Enter name for input 2"
-                action={sharedAction}
-              />
-            </div>
-            <div
-              className={`result-display ${result.startsWith("✅") ? "result-success" : ""}`}
-            >
-              {result || "Type in either input and submit..."}
-            </div>
-          </div>
-        );
-      };
-
-      const sharedAction = createAction(async ({ name }) => {
-        await delay(800);
-        const response = `✅ Hello ${name}! (from shared action)`;
-        return response;
-      });
 
       render(<App />, document.querySelector("#root"));
     </script>

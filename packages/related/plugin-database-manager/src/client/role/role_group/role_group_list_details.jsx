@@ -1,4 +1,4 @@
-import { TextAndCount } from "../../components/text_and_count.jsx";
+import { TextAndCount } from "@jsenv/navi";
 import { useRoleGroupCount } from "../../database_manager_signals.js";
 import {
   createExplorerGroupController,

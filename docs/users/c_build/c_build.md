@@ -18,6 +18,19 @@
 
 <!-- PLACEHOLDER_END -->
 
+## Build Types: Apps vs Packages
+
+Jsenv can be used for two main build scenarios:
+
+1. **Building entire applications for the web (browser)** - This is what this page focuses on
+2. **Building packages** - For creating reusable packages that can be consumed by Node.js, browsers, or both
+
+This page specifically covers **building entire web applications** that will be deployed and run in browsers. The build process optimizes your application files, handles dependencies, and creates a production-ready version.
+
+For building packages (libraries, utilities, etc.), see [J) Build a package](../j_build_a_package/j_build_a_package.md).
+
+---
+
 This page explains how jsenv can be used to generate an optimized version of your source files into a specified directory.
 
 Best parts of jsenv build:

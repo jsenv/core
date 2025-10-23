@@ -11,8 +11,7 @@ export const errorFromResponse = async (response, message) => {
       if (typeof serverResponseJson === "string") {
         serverErrorMessage = serverResponseJson;
       } else {
-        serverErrorMessage =
-          serverResponseJson.message || serverResponseJson.stack;
+        serverErrorMessage = serverResponseJson.message;
         serverErrorStack = serverResponseJson.stack;
       }
     } catch {
@@ -27,9 +26,12 @@ export const errorFromResponse = async (response, message) => {
     }
   }
 
-  const errorMessage = message
-    ? `${message}: ${serverErrorMessage}`
-    : serverErrorMessage;
+  const errorMessage =
+    message && serverErrorMessage
+      ? `${message}: ${serverErrorMessage}`
+      : message
+        ? message
+        : serverErrorMessage;
   const error = new Error(errorMessage);
   if (serverErrorStack) {
     error.stack = serverErrorStack;

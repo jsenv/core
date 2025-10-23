@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Table Fixed Headers Demo - Large Dataset</title>
+    <style>
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        margin: 0px;
+        padding: 0;
+        background: #f5f5f5;
+      }
+
+      .demo-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        background: white;
+        padding: 100px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      /* Status display */
+      .status {
+        margin-top: 20px;
+        padding: 10px;
+        background: #f0f8ff;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 14px;
+      }
+
+      .actions {
+        margin-top: 15px;
+      }
+
+      button {
+        background: #0078d4;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-right: 8px;
+      }
+
+      button:hover {
+        background: #106ebe;
+      }
+
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .info {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 4px;
+        padding: 15px;
+        margin: 15px 0;
+      }
+
+      .info h3 {
+        margin-top: 0;
+        color: #856404;
+      }
+
+      .info p {
+        margin-bottom: 0;
+        color: #856404;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useRef, useState } from "preact/hooks";
+      import {
+        // eslint-disable-next-line no-unused-vars
+        Table,
+        // eslint-disable-next-line no-unused-vars
+        ActiveKeyboardShortcuts,
+        // eslint-disable-next-line no-unused-vars
+        TableCell,
+        // eslint-disable-next-line no-unused-vars
+        Colgroup,
+        // eslint-disable-next-line no-unused-vars
+        Col,
+        // eslint-disable-next-line no-unused-vars
+        Thead,
+        // eslint-disable-next-line no-unused-vars
+        Tbody,
+        // eslint-disable-next-line no-unused-vars
+        Tr,
+        // eslint-disable-next-line no-unused-vars
+        RowNumberCol,
+        // eslint-disable-next-line no-unused-vars
+        RowNumberTableCell,
+        useCellsAndColumns,
+        stringifyTableSelectionValue,
+      } from "@jsenv/navi";
+
+      // Generate large dataset to force scrolling
+      const generateLargeDataset = (rows = 50, cols = 10) => {
+        const data = [];
+        for (let i = 1; i <= rows; i++) {
+          const rowCells = [];
+          rowCells.id = i;
+          for (let j = 1; j <= cols; j++) {
+            if (i === 1 && j === 1) {
+              // rowCells.push(`Cell ${i}-${j}`);
+              rowCells.push(`A text that is longer`);
+            } else {
+              rowCells.push(`Cell ${i}-${j}`);
+            }
+          }
+          data.push(rowCells);
+        }
+        return data;
+      };
+
+      // Create large dataset (50 rows x 10 columns = 500 cells)
+      const data = generateLargeDataset(50, 10);
+      const columnsConfig = Array.from({ length: 10 }, (_, i) => ({
+        id: `col${i + 1}`,
+        header: i === 7 ? "A larger header" : `Column ${i + 1}`,
+        width: i === 0 ? 50 : undefined,
+      }));
+
+      // eslint-disable-next-line no-unused-vars
+      const FixedHeadersDemo = () => {
+        const tableRef = useRef(null);
+        const [selection, setSelection] = useState([]);
+        const [columnWidths, setColumnWidths] = useState([]);
+        const [rowHeights, setRowHeights] = useState([]);
+        const setColumnValue = (columnId, value) => {
+          console.log(`Set column ${columnId} value to "${value}"`);
+        };
+        const { cells, setCellValue, columns, setColumnOrder } =
+          useCellsAndColumns(data, columnsConfig);
+        const [
+          stickyLeftFrontierColumnIndex,
+          setStickyLeftFrontierColumnIndex,
+        ] = useState(() => {
+          const saved = localStorage.getItem(
+            "table-demo-stickyLeftFrontierColumnIndex",
+          );
+          return saved ? parseInt(saved, 10) : 2;
+        });
+        const [stickyTopFrontierRowIndex, setStickyTopFrontierRowIndex] =
+          useState(() => {
+            const saved = localStorage.getItem(
+              "table-demo-stickyTopFrontierRowIndex",
+            );
+            return saved ? parseInt(saved, 10) : 2;
+          });
+        const [useContainerScrolling, setUseContainerScrolling] = useState(
+          () => {
+            // Load from localStorage, default to false if not found
+            const saved = localStorage.getItem(
+              "table-demo-useContainerScrolling",
+            );
+            return saved === "true";
+          },
+        );
+
+        return (
+          <div className="demo-container">
+            <h1>Table Fixed Headers Demo - Large Dataset</h1>
+
+            <details>
+              <summary>Instructions for Testing</summary>
+
+              <div className="info">
+                <h3>Testing Fixed Row/Column Headers with Cell Editing</h3>
+                <p>
+                  This demo contains a large dataset (50 rows × 10 columns = 500
+                  cells) in a constrained container to force scrolling. The goal
+                  is to test and implement fixed first row (header) and first
+                  column behavior, plus cell editing functionality.
+                </p>
+              </div>
+
+              <p>
+                <strong>Current behavior:</strong> The table will scroll
+                normally with editable cells.
+                <br />
+                <strong>Cell editing:</strong> Double-click any data cell to
+                edit its value. Press Enter to save or Escape to cancel.
+                <br />
+                <strong>Desired behavior:</strong> First row and first column
+                should remain fixed while scrolling.
+              </p>
+            </details>
+
+            <div>
+              <button
+                onClick={() => {
+                  const newValue = !useContainerScrolling;
+                  setUseContainerScrolling(newValue);
+                  // Save to localStorage for persistence
+                  localStorage.setItem(
+                    "table-demo-useContainerScrolling",
+                    newValue.toString(),
+                  );
+                }}
+                style={{
+                  background: useContainerScrolling ? "#28a745" : "#6c757d",
+                  fontWeight: "bold",
+                }}
+              >
+                Scrolling:{" "}
+                {useContainerScrolling ? "Container (400×600px)" : "Document"}
+              </button>
+
+              <div style={{ marginTop: "15px" }}>
+                <label style={{ marginRight: "15px" }}>
+                  Sticky Left Frontier (Column Index):{" "}
+                  <input
+                    type="number"
+                    min="-1"
+                    max="10"
+                    value={stickyLeftFrontierColumnIndex}
+                    onChange={(e) => {
+                      const newValue = parseInt(e.target.value, 10);
+                      setStickyLeftFrontierColumnIndex(newValue);
+                      localStorage.setItem(
+                        "table-demo-stickyLeftFrontierColumnIndex",
+                        newValue.toString(),
+                      );
+                    }}
+                    style={{
+                      width: "60px",
+                      marginLeft: "5px",
+                      padding: "2px 6px",
+                      border: "1px solid #ccc",
+                      borderRadius: "3px",
+                    }}
+                  />
+                </label>
+
+                <label>
+                  Sticky Top Frontier (Row Index):{" "}
+                  <input
+                    type="number"
+                    min="-1"
+                    max="50"
+                    value={stickyTopFrontierRowIndex}
+                    onChange={(e) => {
+                      const newValue = parseInt(e.target.value, 10);
+                      setStickyTopFrontierRowIndex(newValue);
+                      localStorage.setItem(
+                        "table-demo-stickyTopFrontierRowIndex",
+                        newValue.toString(),
+                      );
+                    }}
+                    style={{
+                      width: "60px",
+                      marginLeft: "5px",
+                      padding: "2px 6px",
+                      border: "1px solid #ccc",
+                      borderRadius: "3px",
+                    }}
+                  />
+                </label>
+              </div>
+
+              <br />
+            </div>
+
+            <div className="table-container">
+              <Table
+                ref={tableRef}
+                selection={selection}
+                onSelectionChange={(value) => {
+                  setSelection(value);
+                }}
+                onColumnSizeChange={(width, columnIndex, column) => {
+                  console.log(column.id, `resized to ${width}px`);
+                  setColumnWidths((columnWidths) => {
+                    columnWidths[columnIndex] = width;
+                    return [...columnWidths];
+                  });
+                }}
+                onRowSizeChange={(height, rowIndex, row) => {
+                  console.log(row.id, `resized to ${height}px`, rowIndex);
+                  setRowHeights((rowHeights) => {
+                    rowHeights[rowIndex] = height;
+                    return [...rowHeights];
+                  });
+                }}
+                stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
+                onStickyLeftFrontierChange={setStickyLeftFrontierColumnIndex}
+                stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
+                onStickyTopFrontierChange={setStickyTopFrontierRowIndex}
+                onColumnOrderChange={(newColumnOrder) => {
+                  console.log("Column order changed:", newColumnOrder);
+                  setColumnOrder(newColumnOrder);
+                }}
+                borderCollapse
+                overflow={useContainerScrolling ? "auto" : undefined}
+                maxHeight={useContainerScrolling ? 400 : undefined}
+                maxWidth={useContainerScrolling ? 600 : undefined}
+              >
+                <Colgroup>
+                  <RowNumberCol width={columnWidths[0]} immovable={false} />
+                  {columns.map((column, columnIndex) => (
+                    <Col
+                      key={column.id}
+                      id={column.id}
+                      width={columnWidths[columnIndex + 1] || column.width}
+                    />
+                  ))}
+                </Colgroup>
+                <Thead>
+                  <Tr id="head" height={rowHeights[0]}>
+                    <RowNumberTableCell
+                      // just to help debugging column drag
+                      // in practice it won't work as it's purely visual
+                      // and column ordering works only for columns controlled by a state
+                      canDragColumn
+                    />
+                    {columns.map((col) => (
+                      <TableCell
+                        key={col.id}
+                        action={(value) => {
+                          setColumnValue(col.id, value);
+                        }}
+                      >
+                        {col.header}
+                      </TableCell>
+                    ))}
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {cells.map((rowCells, dataRowIndex) => {
+                    const rowIndex = dataRowIndex + 1;
+                    const rowData = data[dataRowIndex];
+                    return (
+                      <Tr
+                        id={rowData.id}
+                        key={rowData.id}
+                        height={rowHeights[rowIndex]}
+                      >
+                        <RowNumberTableCell />
+                        {rowCells.map((cellValue, columnIndex) => {
+                          return (
+                            <TableCell
+                              key={columns[columnIndex].id}
+                              action={(value) => {
+                                setCellValue(
+                                  { rowIndex: dataRowIndex, columnIndex },
+                                  value,
+                                );
+                              }}
+                            >
+                              {cellValue}
+                            </TableCell>
+                          );
+                        })}
+                      </Tr>
+                    );
+                  })}
+                </Tbody>
+              </Table>
+            </div>
+
+            <div className="status">
+              <div>
+                Dataset size:{" "}
+                <span>
+                  {cells.length} rows × {cells[0]?.length || 0} columns ={" "}
+                  {cells.length * (cells[0]?.length || 0)} cells
+                </span>
+              </div>
+              <div>
+                Selection:{" "}
+                <span>
+                  {JSON.stringify(selection.slice(0, 5))}
+                  {selection.length > 5
+                    ? `... (+${selection.length - 5} more)`
+                    : ""}
+                </span>
+              </div>
+              <div>
+                Total selection count: <span>{selection.length}</span>
+              </div>
+              <div>
+                Editable cells:{" "}
+                <span>
+                  {cells.length * (cells[0]?.length || 0)} cells with editing
+                  enabled
+                </span>
+              </div>
+              <div>
+                Column order:{" "}
+                <span>{JSON.stringify(columns.map((c) => c.id))}</span>
+              </div>
+              <div>
+                Column widths:{" "}
+                <span>
+                  {columnWidths.length
+                    ? JSON.stringify(columnWidths)
+                    : "Default (auto)"}
+                </span>
+              </div>
+              <div>
+                Row heights:{" "}
+                <span>
+                  {rowHeights.length
+                    ? JSON.stringify(rowHeights)
+                    : "Default (auto)"}
+                </span>
+              </div>
+            </div>
+
+            <div className="actions">
+              <button
+                onClick={() => {
+                  setSelection([]);
+                }}
+              >
+                Clear Selection
+              </button>
+              <button
+                onClick={() => {
+                  const allCells = [];
+                  for (let y = 0; y < cells.length; y++) {
+                    for (let x = 0; x < (cells[0]?.length || 0); x++) {
+                      allCells.push(
+                        stringifyTableSelectionValue("cell", {
+                          rowIndex: y + 1,
+                          columnIndex: x + 1,
+                        }),
+                      );
+                    }
+                  }
+                  setSelection(allCells);
+                }}
+              >
+                Select All ({cells.length * (cells[0]?.length || 0)} cells)
+              </button>
+              <button
+                onClick={() => {
+                  const firstRowCells = columns.map((_, columnIndex) =>
+                    stringifyTableSelectionValue("cell", {
+                      rowIndex: 0,
+                      columnIndex: columnIndex + 1,
+                    }),
+                  );
+                  setSelection(firstRowCells);
+                }}
+              >
+                Select First Row
+              </button>
+              <button
+                onClick={() => {
+                  // Select first column
+                  const firstColCells = data.map((_, rowIndex) =>
+                    stringifyTableSelectionValue("cell", {
+                      rowIndex,
+                      columnIndex: 0,
+                    }),
+                  );
+                  setSelection(firstColCells);
+                }}
+              >
+                Select First Column
+              </button>
+              <button
+                onClick={() => {
+                  setColumnWidths([]);
+                }}
+              >
+                Reset Column Widths
+              </button>
+              <button
+                onClick={() => {
+                  setRowHeights([]);
+                }}
+              >
+                Reset Row Heights
+              </button>
+              <button
+                onClick={() => {
+                  // Set a sample cell to demonstrate editing works
+                  // setBaseCellValues((prevValues) => {
+                  //   const newValues = prevValues.map((row, rowIdx) =>
+                  //     rowIdx === 0
+                  //       ? row.map((cell, colIdx) =>
+                  //           colIdx === 0
+                  //             ? `Edited at ${new Date().toLocaleTimeString()}`
+                  //             : cell,
+                  //         )
+                  //       : [...row],
+                  //   );
+                  //   return newValues;
+                  // });
+                }}
+              >
+                Demo Edit Cell (1,1)
+              </button>
+              <button
+                onClick={() => {
+                  setColumnOrder([...columns.map((c) => c.id)].reverse());
+                }}
+              >
+                Reverse Column Order
+              </button>
+              <button
+                onClick={() => {
+                  const shuffled = [...columns.map((c) => c.id)];
+                  for (let i = shuffled.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                  }
+                  setColumnOrder(shuffled);
+                }}
+              >
+                Shuffle Columns
+              </button>
+              <button
+                onClick={() => {
+                  setColumnOrder(columnsConfig.map((col) => col.id));
+                }}
+              >
+                Reset Column Order
+              </button>
+            </div>
+
+            {/*
+            <div>
+              <h3>Active keyboard shortcuts</h3>
+              <ActiveKeyboardShortcuts visible />
+            </div>
+
+            <div className="info">
+              <h3>Instructions for Testing</h3>
+              <p>
+                1. Scroll the table horizontally and vertically
+                <br />
+                2. Observe how headers behave during scrolling
+                <br />
+                3. Test selection behavior while scrolled
+                <br />
+                4. <strong>Double-click any data cell to edit its value</strong>
+                <br />
+                5. Use Enter to save changes, Escape to cancel editing
+                <br />
+                6. Check if borders and selection overlay work correctly with
+                fixed headers
+              </p>
+            </div>
+            */}
+          </div>
+        );
+      };
+
+      // Render the app
+      render(<FixedHeadersDemo />, document.getElementById("root"));
+
+      setTimeout(() => {
+        // document.querySelector(".navi_table_root").scrollLeft = 1500;
+      }, 500);
+
+      console.log("Fixed Headers Demo loaded with large dataset:");
+      console.log(
+        `- ${data.length} rows × 10 columns = ${data.length * 10} total cells`,
+      );
+      console.log("- Double-click data cells to edit values");
+      console.log("- Scroll the table to test fixed header behavior");
+      console.log(
+        "- Use selection features to test interaction with scrolling",
+      );
+    </script>
+  </body>
+</html>

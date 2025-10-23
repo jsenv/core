@@ -1,4 +1,5 @@
 import babelParser from "@babel/eslint-parser";
+import jsenvPlugin from "@jsenv/eslint-plugin";
 import { urlToRelativeUrl } from "@jsenv/urls";
 import html from "eslint-plugin-html";
 import pluginImportX from "eslint-plugin-import-x";
@@ -120,6 +121,15 @@ export const eslintConfigRelax = ({
         "import-x/extensions": [".js", ".mjs", ".jsx", ".ts", ".tsx"],
         // https://github.com/import-js/eslint-plugin-import/issues/1753
         "import-x/ignore": ["node_modules/playwright/"],
+      },
+    },
+    // jsenv plugin
+    {
+      plugins: {
+        jsenv: jsenvPlugin,
+      },
+      rules: {
+        "jsenv/no-unknown-params": ["off"], // Default: only report likely typos
       },
     },
     // node "module" files

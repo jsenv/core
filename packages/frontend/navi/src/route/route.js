@@ -54,7 +54,12 @@ export const updateRoutes = (
     const newActive = Boolean(match);
     let newParams;
     if (match) {
-      const extractedParams = extractParams(urlPattern, url);
+      const { optionalParamKeySet } = routePrivateProperties;
+      const extractedParams = extractParams(
+        urlPattern,
+        url,
+        optionalParamKeySet,
+      );
       if (compareTwoJsValues(oldParams, extractedParams)) {
         // No change in parameters, keep the old params
         newParams = oldParams;
@@ -112,6 +117,43 @@ export const updateRoutes = (
   const abortSignalMap = new Map();
   const routeLoadRequestedMap = new Map();
 
+  const shouldLoadOrReload = (route, shouldLoad) => {
+    const routeAction = route.action;
+    const currentAction = routeAction.getCurrentAction();
+    if (shouldLoad) {
+      if (replace || currentAction.aborted || currentAction.error) {
+        shouldLoad = false;
+      }
+    }
+    if (shouldLoad) {
+      toLoadSet.add(currentAction);
+    } else {
+      toReloadSet.add(currentAction);
+    }
+    routeLoadRequestedMap.set(route, currentAction);
+    // Create a new abort controller for this action
+    const actionAbortController = new AbortController();
+    actionAbortControllerWeakMap.set(currentAction, actionAbortController);
+    abortSignalMap.set(currentAction, actionAbortController.signal);
+  };
+
+  const shouldLoad = (route) => {
+    shouldLoadOrReload(route, true);
+  };
+  const shouldReload = (route) => {
+    shouldLoadOrReload(route, false);
+  };
+  const shouldAbort = (route) => {
+    const routeAction = route.action;
+    const currentAction = routeAction.getCurrentAction();
+    const actionAbortController =
+      actionAbortControllerWeakMap.get(currentAction);
+    if (actionAbortController) {
+      actionAbortController.abort(`route no longer matching`);
+      actionAbortControllerWeakMap.delete(currentAction);
+    }
+  };
+
   for (const {
     route,
     routePrivateProperties,
@@ -138,31 +180,13 @@ export const updateRoutes = (
           newParams,
         );
       }
-      const currentAction = routeAction.getCurrentAction();
-      if (replace) {
-        toLoadSet.add(currentAction);
-      } else {
-        toReloadSet.add(currentAction);
-      }
-      routeLoadRequestedMap.set(route, currentAction);
-
-      // Create a new abort controller for this action
-      const actionAbortController = new AbortController();
-      actionAbortControllerWeakMap.set(currentAction, actionAbortController);
-      abortSignalMap.set(currentAction, actionAbortController.signal);
-
+      shouldLoad(route);
       continue;
     }
 
     // Handle actions for routes that become inactive - abort them
     if (becomesInactive && ROUTE_DEACTIVATION_STRATEGY === "abort") {
-      const currentAction = routeAction.getCurrentAction();
-      const actionAbortController =
-        actionAbortControllerWeakMap.get(currentAction);
-      if (actionAbortController) {
-        actionAbortController.abort(`route no longer matching`);
-        actionAbortControllerWeakMap.delete(currentAction);
-      }
+      shouldAbort(route);
       continue;
     }
 
@@ -174,16 +198,7 @@ export const updateRoutes = (
           newParams,
         );
       }
-      const currentAction = routeAction.getCurrentAction();
-      if (!replace || currentAction.aborted || currentAction.error) {
-        toReloadSet.add(currentAction);
-        routeLoadRequestedMap.set(route, currentAction);
-        // Create a new abort controller for the reload
-        const actionAbortController = new AbortController();
-        actionAbortControllerWeakMap.set(currentAction, actionAbortController);
-        abortSignalMap.set(currentAction, actionAbortController.signal);
-      }
-      continue;
+      shouldReload(route);
     }
   }
 
@@ -195,7 +210,7 @@ export const updateRoutes = (
     activeRouteSet,
   };
 };
-const extractParams = (urlPattern, url) => {
+const extractParams = (urlPattern, url, ignoreSet = new Set()) => {
   const match = urlPattern.exec(url);
   if (!match) {
     return NO_PARAMS;
@@ -213,12 +228,15 @@ const extractParams = (urlPattern, url) => {
         const keyAsNumber = parseInt(key, 10);
         if (!isNaN(keyAsNumber)) {
           if (value) {
-            // Only include non-empty values
-            params[wildcardOffset + keyAsNumber] = decodeURIComponent(value);
+            // Only include non-empty values and non-ignored wildcard indices
+            const wildcardKey = String(wildcardOffset + keyAsNumber);
+            if (!ignoreSet.has(wildcardKey)) {
+              params[wildcardKey] = decodeURIComponent(value);
+            }
             localWildcardCount++;
           }
-        } else {
-          // Named group (:param or {param})
+        } else if (!ignoreSet.has(key)) {
+          // Named group (:param or {param}) - only include if not ignored
           params[key] = decodeURIComponent(value);
         }
       }
@@ -252,6 +270,7 @@ const createRoute = (urlPatternInput) => {
   };
 
   const route = {
+    urlPattern: urlPatternInput,
     isRoute: true,
     active: false,
     params: NO_PARAMS,
@@ -275,11 +294,13 @@ const createRoute = (urlPatternInput) => {
     visitedSignal: null,
     relativeUrlSignal: null,
     urlSignal: null,
+    optionalParamKeySet: null,
   };
   routePrivatePropertiesMap.set(route, routePrivateProperties);
 
   const buildRelativeUrl = (params = {}) => {
     let relativeUrl = urlPatternInput;
+
     // Replace named parameters (:param and {param})
     for (const key of Object.keys(params)) {
       const value = params[key];
@@ -287,16 +308,25 @@ const createRoute = (urlPatternInput) => {
       relativeUrl = relativeUrl.replace(`:${key}`, encodedValue);
       relativeUrl = relativeUrl.replace(`{${key}}`, encodedValue);
     }
-    // Replace wildcards (*) with numbered parameters (0, 1, 2, etc.)
-    let wildcardIndex = 0;
-    relativeUrl = relativeUrl.replace(/\*/g, () => {
-      const paramKey = wildcardIndex.toString();
-      const replacement = params[paramKey]
-        ? encodeURIComponent(params[paramKey])
-        : "*";
-      wildcardIndex++;
-      return replacement;
-    });
+
+    // Handle wildcards: if the pattern ends with /*? (optional wildcard)
+    // always remove the wildcard part for URL building since it's optional
+    if (relativeUrl.endsWith("/*?")) {
+      // Always remove the optional wildcard part for URL building
+      relativeUrl = relativeUrl.replace(/\/\*\?$/, "");
+    } else {
+      // For required wildcards (/*) or other patterns, replace normally
+      let wildcardIndex = 0;
+      relativeUrl = relativeUrl.replace(/\*/g, () => {
+        const paramKey = wildcardIndex.toString();
+        const replacement = params[paramKey]
+          ? encodeURIComponent(params[paramKey])
+          : "*";
+        wildcardIndex++;
+        return replacement;
+      });
+    }
+
     return relativeUrl;
   };
   const buildUrl = (params = {}) => {
@@ -429,6 +459,23 @@ const createRoute = (urlPatternInput) => {
     routePrivateProperties.relativeUrlSignal = relativeUrlSignal;
     routePrivateProperties.urlSignal = urlSignal;
     routePrivateProperties.cleanupCallbackSet = cleanupCallbackSet;
+
+    // Analyze pattern once to detect optional params (named and wildcard indices)
+    // Note: Wildcard indices are stored as strings ("0", "1", ...) to match keys from extractParams
+    const optionalParamKeySet = new Set();
+    normalizedUrlPattern.replace(/:([A-Za-z0-9_]+)\?/g, (_m, name) => {
+      optionalParamKeySet.add(name);
+      return "";
+    });
+    let wildcardIndex = 0;
+    normalizedUrlPattern.replace(/\*(\?)?/g, (_m, opt) => {
+      if (opt === "?") {
+        optionalParamKeySet.add(String(wildcardIndex));
+      }
+      wildcardIndex++;
+      return "";
+    });
+    routePrivateProperties.optionalParamKeySet = optionalParamKeySet;
   }
 
   return route;
@@ -450,13 +497,16 @@ export const useRouteStatus = (route) => {
     throw new Error(`Cannot find route private properties for ${route}`);
   }
 
-  const { activeSignal, paramsSignal, visitedSignal } = routePrivateProperties;
+  const { urlSignal, activeSignal, paramsSignal, visitedSignal } =
+    routePrivateProperties;
 
+  const url = urlSignal.value;
   const active = activeSignal.value;
   const params = paramsSignal.value;
   const visited = visitedSignal.value;
 
   return {
+    url,
     active,
     params,
     visited,

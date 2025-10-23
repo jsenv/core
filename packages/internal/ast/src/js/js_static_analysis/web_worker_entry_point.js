@@ -12,10 +12,17 @@ export const isNewWorkerCall = (node) => {
     node.callee.name === "Worker"
   );
 };
-export const analyzeNewWorkerCall = (node, { isJsModule, isNodeJs, onUrl }) => {
+export const analyzeNewWorkerCall = (
+  node,
+  {
+    isJsModule,
+    // isNodeJs,
+    onUrl,
+  },
+) => {
   analyzeWorkerCallArguments(node, {
     isJsModule,
-    isNodeJs,
+    // isNodeJs,
     onUrl,
     referenceSubtype: "new_worker_first_arg",
     expectedSubtype: "worker",

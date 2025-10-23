@@ -1496,7 +1496,6 @@ let createRootNode;
 
     const rootNode = createNode({
       context,
-      id: nodeId,
       group: "root",
       value,
       parent: null,
@@ -3822,7 +3821,6 @@ let createRootNode;
 
   const appendChildNodeGeneric = (node, childKey, params) => {
     const childNode = createNode({
-      id: node.nextId(),
       context: node.context,
       parent: node,
       path: node.path,

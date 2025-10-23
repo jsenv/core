@@ -57,7 +57,7 @@ export const useFontsReady = (fontFamily) => {
 };
 
 const TextComponent = ({
-  name,
+  // name,
   controller,
   dx = 0,
   dy = 0,
@@ -139,7 +139,7 @@ const TextComponent = ({
         autoIsRelativeToFont: true,
       });
       const [paragraphs, setParagraph] = initTextFiller(lines, {
-        name,
+        // name,
         dx,
         dy,
         lineHeight,
@@ -153,7 +153,6 @@ const TextComponent = ({
         outlineColor,
         outlineSize,
 
-        controller,
         svgElement,
         textElement,
       });

@@ -198,3 +198,13 @@ const userProxy = createActionProxy(getUserAction, {
 - **Feature Detection**: Progressive enhancement for new browser features
 
 This guide should help AI coding agents understand the architecture, patterns, and conventions used throughout the @jsenv/core codebase, enabling them to contribute effectively while maintaining consistency with the existing codebase.
+
+## Others
+
+- Prefer named things (named params, named export over default export for example).
+- Put helpers functions at the bottom of the file by default
+- Put constants simple variables (everything except functions) above the function using them. For the exported function is means top of the file after imports. For helper function it means above them.
+- Never write tests on your initiative.
+- Never rite documentation on your initiative.
+- Never use Math.max/Math.min. Code becomes hard to follow. Prefer explicit branching.
+- To add logs for debbuging, prefer console.debug and prefer plain sentence instead of objects. (Objects are harder to copy-paste)

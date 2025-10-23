@@ -1,20 +1,22 @@
-import { closeValidationMessage, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
-import { useImperativeHandle, useLayoutEffect, useRef } from "preact/hooks";
+import {
+  useContext,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+} from "preact/hooks";
+
 import { useIsVisited } from "../../browser_integration/use_is_visited.js";
-import { useActionStatus } from "../../use_action_status.js";
+import { closeValidationMessage } from "../../validation/custom_constraint_validation.js";
+import { useConstraints } from "../../validation/hooks/use_constraints.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import { LoaderBackground } from "../loader/loader_background.jsx";
+import { useRequestedActionStatus } from "../field/use_action_events.js";
+import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
+import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import {
-  clickToSelect,
-  keydownToSelect,
-  useRegisterSelectionValue,
-  useSelectionContext,
-} from "../selection/selection_context.jsx";
-import {
-  ShortcutProvider,
-  useShortcutContext,
-} from "../shortcut/shortcut_context.jsx";
+  SelectionContext,
+  useSelectableElement,
+} from "../selection/selection.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 
 /*
@@ -45,17 +47,17 @@ import.meta.css = /* css */ `
     pointer-events: none;
   }
 
-  .navi_link[data-with-selection] {
+  .navi_link[aria-selected] {
     position: relative;
   }
 
-  .navi_link[data-with-selection] input[type="checkbox"] {
+  .navi_link[aria-selected] input[type="checkbox"] {
     position: absolute;
     opacity: 0;
   }
 
   /* Visual feedback for selected state */
-  .navi_link[data-selected] {
+  .navi_link[aria-selected="true"] {
     background-color: light-dark(#bbdefb, #2563eb);
   }
 
@@ -65,6 +67,10 @@ import.meta.css = /* css */ `
 
   .navi_link[data-visited] {
     color: light-dark(#6a1b9a, #ab47bc);
+  }
+
+  .navi_link[data-no-text-decoration] {
+    text-decoration: none;
   }
 `;
 
@@ -76,20 +82,12 @@ export const Link = forwardRef((props, ref) => {
 });
 
 const LinkBasic = forwardRef((props, ref) => {
-  const selectionContext = useSelectionContext();
-
+  const selectionContext = useContext(SelectionContext);
   if (selectionContext) {
-    return (
-      <LinkWithSelection
-        ref={ref}
-        selectionContext={selectionContext}
-        {...props}
-      />
-    );
+    return <LinkWithSelection ref={ref} {...props} />;
   }
   return <LinkPlain ref={ref} {...props} />;
 });
-
 const LinkPlain = forwardRef((props, ref) => {
   const {
     className = "",
@@ -107,24 +105,24 @@ const LinkPlain = forwardRef((props, ref) => {
     href,
     ...rest
   } = props;
-
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
+  const isVisited = useIsVisited(href);
 
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
-
   const shouldDimColor = readOnly || disabled;
   useDimColorWhen(innerRef, shouldDimColor);
 
-  const isVisited = useIsVisited(href);
-
   return (
-    <LoaderBackground loading={loading} color="light-dark(#355fcc, #3b82f6)">
+    <LoadableInlineElement
+      loading={loading}
+      color="light-dark(#355fcc, #3b82f6)"
+    >
       <a
         {...rest}
-        href={href}
         ref={innerRef}
+        href={href}
         className={["navi_link", ...className.split(" ")].join(" ")}
         aria-busy={loading}
         inert={disabled}
@@ -152,48 +150,26 @@ const LinkPlain = forwardRef((props, ref) => {
       >
         {children}
       </a>
-    </LoaderBackground>
+    </LoadableInlineElement>
   );
 });
-
 const LinkWithSelection = forwardRef((props, ref) => {
-  const {
-    selectionContext,
-    name,
-    value,
-    children,
-    onClick,
-    onKeyDown,
-    ...rest
-  } = props;
-  const isSelected = selectionContext.isSelected(value);
-  useRegisterSelectionValue(value);
+  const { selection, selectionController } = useContext(SelectionContext);
+  const { value = props.href, children, ...rest } = props;
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
+  const { selected } = useSelectableElement(innerRef, {
+    selection,
+    selectionController,
+  });
 
   return (
     <LinkPlain
-      ref={ref}
       {...rest}
-      onClick={(e) => {
-        clickToSelect(e, { selectionContext, value });
-        onClick?.(e);
-      }}
-      onKeyDown={(e) => {
-        keydownToSelect(e, { selectionContext, value });
-        onKeyDown?.(e);
-      }}
-      data-with-selection=""
-      data-selected={isSelected ? "" : undefined}
+      ref={innerRef}
+      data-value={value}
+      aria-selected={selected}
     >
-      <input
-        className="navi_link_checkbox"
-        type="checkbox"
-        name={name}
-        value={value}
-        checked={isSelected}
-        // Prevent direct checkbox interaction - only via link clicks or keyboard nav (arrows)
-        disabled
-        tabIndex={-1} // Don't interfere with link tab order (might be overkill because there is already [disabled])
-      />
       {children}
     </LinkPlain>
   );
@@ -239,53 +215,40 @@ const useDimColorWhen = (elementRef, shouldDim) => {
 const LinkWithAction = forwardRef((props, ref) => {
   const {
     shortcuts = [],
+    readOnly,
     onActionPrevented,
     onActionStart,
     onActionAbort,
     onActionError,
     onActionEnd,
+    children,
+    loading,
     ...rest
   } = props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
+  const { actionPending } = useRequestedActionStatus(innerRef);
+  const innerLoading = Boolean(loading || actionPending);
+
+  useKeyboardShortcuts(innerRef, shortcuts, {
+    onActionPrevented,
+    onActionStart,
+    onActionAbort,
+    onActionError,
+    onActionEnd,
+  });
 
   return (
-    <ShortcutProvider
-      shortcuts={shortcuts}
-      elementRef={innerRef}
-      onActionPrevented={onActionPrevented}
-      onActionStart={onActionStart}
-      onActionAbort={onActionAbort}
-      onActionError={onActionError}
-      onActionEnd={onActionEnd}
+    <LinkBasic
+      {...rest}
+      ref={innerRef}
+      loading={innerLoading}
+      readOnly={readOnly || actionPending}
+      data-readonly-silent={actionPending && !readOnly ? "" : undefined}
+      /* When we have keyboard shortcuts the link outline is visible on focus (not solely on focus-visible) */
+      data-focus-visible=""
     >
-      <LinkWithShortcuts ref={innerRef} {...rest} />
-    </ShortcutProvider>
-  );
-});
-
-const LinkWithShortcuts = forwardRef((props, ref) => {
-  const { children, readOnly, loading, ...rest } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-  const { shortcutAction } = useShortcutContext();
-
-  const { loading: actionLoading } = useActionStatus(shortcutAction);
-  const innerLoading = Boolean(loading || actionLoading);
-
-  return (
-    <>
-      <LinkBasic
-        ref={innerRef}
-        {...rest}
-        loading={innerLoading}
-        readOnly={readOnly || actionLoading}
-        data-readonly-silent={actionLoading && !readOnly ? "" : undefined}
-        /* When we have keyboard shortcuts the link outline is visible on focus (not solely on focus-visible) */
-        data-focus-visible=""
-      >
-        {children}
-      </LinkBasic>
-    </>
+      {children}
+    </LinkBasic>
   );
 });

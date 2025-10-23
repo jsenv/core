@@ -8,7 +8,6 @@ import { jsenvCommentParameters } from "./internal/comment/jsenv_comment_paramet
 export const reportPerformanceImpact = async ({
   logLevel,
   commandLogs,
-  cancelOnSIGINT,
   rootDirectoryUrl,
 
   githubToken,
@@ -38,7 +37,6 @@ export const reportPerformanceImpact = async ({
   return commentGitHubPullRequestImpact({
     logLevel,
     commandLogs,
-    cancelOnSIGINT,
     rootDirectoryUrl,
 
     githubToken,

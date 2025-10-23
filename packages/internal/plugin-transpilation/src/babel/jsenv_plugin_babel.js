@@ -23,8 +23,8 @@ export const jsenvPluginBabel = ({ babelHelpersAsImport = true } = {}) => {
     const babelPluginStructure = getBaseBabelPluginStructure({
       url: urlInfo.originalUrl,
       isSupported,
-      isJsModule,
-      getImportSpecifier,
+      // isJsModule,
+      // getImportSpecifier,
     });
 
     if (!isSupported("async_generator_function")) {

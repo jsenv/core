@@ -7,8 +7,6 @@ import { jsenvCommentParameters } from "./internal/jsenv_comment_parameters.js";
 export const reportFileSizeImpactInGitHubPullRequest = async ({
   logLevel,
   commandLogs,
-  cancellationToken,
-  cancelOnSIGINT,
   rootDirectoryUrl,
 
   githubToken,
@@ -64,8 +62,6 @@ export const reportFileSizeImpactInGitHubPullRequest = async ({
   return commentGitHubPullRequestImpact({
     logLevel,
     commandLogs,
-    cancellationToken,
-    cancelOnSIGINT,
     rootDirectoryUrl,
 
     githubToken,

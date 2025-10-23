@@ -17,9 +17,9 @@ base/client/main.html:5:12
                ^
 ```
 
-# 2/3 write file "./.jsenv/chrome@139.00/main.html"
+# 2/3 write file "./.jsenv/chrome@141.00/main.html"
 
-see [./.jsenv/chrome@139.00/main.html](./.jsenv/chrome@139.00/main.html)
+see [./.jsenv/chrome@141.00/main.html](./.jsenv/chrome@141.00/main.html)
 
 # 3/3 resolve
 

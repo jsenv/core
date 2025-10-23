@@ -1,0 +1,1047 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Drag Gesture Demo - Multiple Cases</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background: #f0f0f0;
+      }
+
+      .demo-section {
+        margin: 40px auto;
+        max-width: 800px;
+      }
+
+      .demo-title {
+        background: white;
+        padding: 15px 20px;
+        border-radius: 8px 8px 0 0;
+        border-bottom: 2px solid #333;
+        margin: 0;
+        font-size: 18px;
+        font-weight: bold;
+        color: #333;
+      }
+
+      .container {
+        width: 400px;
+        height: 200px;
+        background: white;
+        overflow: auto;
+        overscroll-behavior: contain;
+        position: relative;
+        z-index: 10;
+        margin: 0 auto;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border-radius: 4px;
+      }
+
+      /* Horizontal scrollbar only - content wider but same height */
+      .horizontal-content {
+        width: 600px; /* Wider than container = horizontal scrollbar */
+        height: 180px; /* Same height as container = no vertical scrollbar */
+        background: linear-gradient(
+          90deg,
+          transparent 99px,
+          #ddd 100px,
+          #ddd 101px,
+          transparent 102px
+        );
+        background-size: 100px 100px;
+        position: relative;
+        z-index: 9;
+      }
+
+      /* Both scrollbars - content wider and taller */
+      .both-content {
+        width: 600px; /* Wider than container = horizontal scrollbar */
+        height: 400px; /* Taller than container = vertical scrollbar */
+        background:
+          linear-gradient(
+            90deg,
+            transparent 99px,
+            #ddd 100px,
+            #ddd 101px,
+            transparent 102px
+          ),
+          linear-gradient(
+            transparent 99px,
+            #ddd 100px,
+            #ddd 101px,
+            transparent 102px
+          );
+        background-size: 100px 100px;
+        position: relative;
+      }
+
+      .draggable-rectangle {
+        width: 80px;
+        height: 60px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: 2px solid #333;
+        border-radius: 8px;
+        position: absolute;
+        top: 50px;
+        left: 50px;
+        cursor: grab;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        transition: box-shadow 0.2s ease;
+      }
+
+      .draggable-rectangle:hover {
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+      }
+
+      .draggable-rectangle[data-dragging] {
+        cursor: grabbing;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+        z-index: 1000;
+      }
+
+      /* Solid obstacles that cannot be traversed */
+      .solid-obstacle {
+        position: absolute;
+        background: #e91e63;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 12px;
+        text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        border: 2px solid #c2185b;
+        z-index: 100;
+      }
+
+      #obstacleContainer {
+        width: 600px;
+        height: 400px;
+      }
+
+      /* Content area for Case 3 with obstacles */
+      .obstacle-content {
+        width: 1600px; /* Wider than container = horizontal scrollbar */
+        height: 800px; /* Taller than container = both scrollbars */
+        background:
+          linear-gradient(
+            90deg,
+            transparent 99px,
+            #ddd 100px,
+            #ddd 101px,
+            transparent 102px
+          ),
+          linear-gradient(
+            0deg,
+            transparent 99px,
+            #ddd 100px,
+            #ddd 101px,
+            transparent 102px
+          );
+        position: relative;
+      }
+
+      .info {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .info h1 {
+        margin-top: 0;
+        color: #333;
+      }
+
+      .info ul {
+        line-height: 1.6;
+      }
+
+      .debug-toggle {
+        margin: 20px auto;
+        text-align: center;
+      }
+
+      .debug-toggle label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        color: #333;
+        cursor: pointer;
+        background: white;
+        padding: 10px 15px;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease;
+      }
+
+      .debug-toggle label:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      .debug-toggle input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="info">
+      <h1>Drag Gesture Demo - Scrollbar Cases</h1>
+      <p>
+        This demo tests drag gesture auto-scroll with different scrollbar
+        configurations:
+      </p>
+      <ul>
+        <li>
+          <strong>Drag rectangles in any direction</strong> - they're not
+          restricted to scroll direction
+        </li>
+        <li>
+          <strong>Auto-scroll triggers</strong> when you drag near container
+          edges
+        </li>
+        <li>
+          <strong>Case 1:</strong> Only horizontal scrollbar visible (content
+          wider, same height)
+        </li>
+        <li>
+          <strong>Case 2:</strong> Both scrollbars visible (content wider and
+          taller)
+        </li>
+        <li>
+          <strong>Case 3:</strong> Solid obstacles - dragged element cannot
+          overlap with fixed objects
+        </li>
+        <li>
+          <strong>Visual debug markers</strong> show boundaries and scroll areas
+        </li>
+      </ul>
+    </div>
+
+    <!-- Case 1: Only Horizontal Scrollbar -->
+    <div class="demo-section">
+      <h2 class="demo-title">
+        Case 1: Only Horizontal Scrollbar (content wider, same height)
+      </h2>
+      <div
+        style="
+          display: flex;
+          gap: 20px;
+          align-items: flex-start;
+          justify-content: center;
+        "
+      >
+        <div class="container" id="horizontalContainer">
+          <div class="horizontal-content">
+            <div
+              class="draggable-rectangle"
+              id="horizontalRectangle"
+              style="left: 100px"
+            >
+              DRAG ME
+            </div>
+          </div>
+        </div>
+
+        <!-- Programmatic Controls for Case 1 -->
+        <div
+          style="
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            min-width: 280px;
+            position: relative;
+            z-index: 10;
+          "
+        >
+          <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #333">
+            Programmatic Controls
+          </h4>
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <button
+              id="grabBtn1"
+              style="
+                padding: 8px 12px;
+                background: #4caf50;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 12px;
+              "
+            >
+              Grab
+            </button>
+            <button
+              id="dragLeftBtn1"
+              disabled
+              style="
+                padding: 8px 12px;
+                background: #9c27b0;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 12px;
+                opacity: 0.5;
+              "
+            >
+              Drag Left
+            </button>
+            <button
+              id="dragRightBtn1"
+              disabled
+              style="
+                padding: 8px 12px;
+                background: #2196f3;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 12px;
+                opacity: 0.5;
+              "
+            >
+              Drag Right
+            </button>
+            <button
+              id="dragUpBtn1"
+              disabled
+              style="
+                padding: 8px 12px;
+                background: #607d8b;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 12px;
+                opacity: 0.5;
+              "
+            >
+              Drag Up
+            </button>
+            <button
+              id="dragDownBtn1"
+              disabled
+              style="
+                padding: 8px 12px;
+                background: #ff9800;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 12px;
+                opacity: 0.5;
+              "
+            >
+              Drag Down
+            </button>
+            <button
+              id="releaseBtn1"
+              disabled
+              style="
+                padding: 8px 12px;
+                background: #f44336;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 12px;
+                opacity: 0.5;
+              "
+            >
+              Release
+            </button>
+          </div>
+          <div
+            id="status1"
+            style="
+              margin-top: 10px;
+              padding: 8px;
+              background: #f9f9f9;
+              border-radius: 3px;
+              font-family: monospace;
+              font-size: 10px;
+              color: #666;
+            "
+          >
+            Ready
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Case 2: Both Scrollbars -->
+    <div class="demo-section">
+      <h2 class="demo-title">
+        Case 2: Both Scrollbars (content wider and taller)
+      </h2>
+      <div
+        style="
+          display: flex;
+          gap: 20px;
+          align-items: flex-start;
+          justify-content: center;
+        "
+      >
+        <div class="container" id="bothContainer">
+          <div class="both-content">
+            <div style="position: relative; left: 50px">
+              <!-- position: relative here to make things more complex and ensure it still work -->
+              <div class="draggable-rectangle" id="bothRectangle">DRAG ME</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Programmatic Controls for Case 2 -->
+        <div
+          style="
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            min-width: 280px;
+            position: relative;
+            z-index: 10;
+          "
+        >
+          <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #333">
+            Programmatic Controls
+          </h4>
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <button
+              id="grabBtn2"
+              style="
+                padding: 8px 12px;
+                background: #4caf50;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 12px;
+              "
+            >
+              Grab
+            </button>
+            <button
+              id="dragLeftBtn2"
+              disabled
+              style="
+                padding: 8px 12px;
+                background: #9c27b0;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 12px;
+                opacity: 0.5;
+              "
+            >
+              Drag Left
+            </button>
+            <button
+              id="dragRightBtn2"
+              disabled
+              style="
+                padding: 8px 12px;
+                background: #2196f3;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 12px;
+                opacity: 0.5;
+              "
+            >
+              Drag Right
+            </button>
+            <button
+              id="dragUpBtn2"
+              disabled
+              style="
+                padding: 8px 12px;
+                background: #607d8b;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 12px;
+                opacity: 0.5;
+              "
+            >
+              Drag Up
+            </button>
+            <button
+              id="dragDownBtn2"
+              disabled
+              style="
+                padding: 8px 12px;
+                background: #ff9800;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 12px;
+                opacity: 0.5;
+              "
+            >
+              Drag Down
+            </button>
+            <button
+              id="releaseBtn2"
+              disabled
+              style="
+                padding: 8px 12px;
+                background: #f44336;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 12px;
+                opacity: 0.5;
+              "
+            >
+              Release
+            </button>
+          </div>
+          <div
+            id="status2"
+            style="
+              margin-top: 10px;
+              padding: 8px;
+              background: #f9f9f9;
+              border-radius: 3px;
+              font-family: monospace;
+              font-size: 10px;
+              color: #666;
+            "
+          >
+            Ready
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Case 3: Solid Obstacles -->
+    <div class="demo-section">
+      <h2 class="demo-title">
+        Case 3: Solid Obstacles (content with non-traversable objects)
+      </h2>
+      <div
+        style="
+          display: flex;
+          gap: 20px;
+          align-items: flex-start;
+          justify-content: center;
+        "
+      >
+        <div class="container" id="obstacleContainer">
+          <div class="obstacle-content">
+            <!-- Draggable rectangle that must respect obstacles -->
+            <div
+              class="draggable-rectangle"
+              id="obstacleRectangle"
+              style="top: 30px; left: 50px"
+            >
+              DRAG ME
+            </div>
+
+            <!-- Solid obstacles that cannot be traversed -->
+            <div
+              class="solid-obstacle"
+              data-drag-obstacle
+              style="top: 70px; left: 150px; width: 80px; height: 60px"
+            >
+              WALL A
+            </div>
+
+            <div
+              class="solid-obstacle"
+              data-drag-obstacle
+              style="top: 150px; left: 300px; width: 100px; height: 40px"
+            >
+              WALL B
+            </div>
+
+            <div
+              class="solid-obstacle"
+              data-drag-obstacle
+              style="top: 50px; left: 500px; width: 60px; height: 80px"
+            >
+              WALL C
+            </div>
+
+            <div
+              class="solid-obstacle"
+              data-drag-obstacle
+              style="
+                position: sticky;
+                top: 250px;
+                left: 200px;
+                width: 60px;
+                height: 80px;
+              "
+            >
+              WALL D
+            </div>
+          </div>
+        </div>
+
+        <!-- Programmatic Controls for Case 3 -->
+        <div
+          style="
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            min-width: 280px;
+            position: relative;
+            z-index: 10;
+          "
+        >
+          <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #333">
+            Programmatic Controls
+          </h4>
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <button
+              id="grabBtn3"
+              style="
+                padding: 8px 12px;
+                background: #4caf50;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 12px;
+              "
+            >
+              Grab
+            </button>
+            <button
+              id="dragLeftBtn3"
+              disabled
+              style="
+                padding: 8px 12px;
+                background: #9c27b0;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 12px;
+                opacity: 0.5;
+              "
+            >
+              Drag Left
+            </button>
+            <button
+              id="dragRightBtn3"
+              disabled
+              style="
+                padding: 8px 12px;
+                background: #2196f3;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 12px;
+                opacity: 0.5;
+              "
+            >
+              Drag Right
+            </button>
+            <button
+              id="dragUpBtn3"
+              disabled
+              style="
+                padding: 8px 12px;
+                background: #607d8b;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 12px;
+                opacity: 0.5;
+              "
+            >
+              Drag Up
+            </button>
+            <button
+              id="dragDownBtn3"
+              disabled
+              style="
+                padding: 8px 12px;
+                background: #ff9800;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 12px;
+                opacity: 0.5;
+              "
+            >
+              Drag Down
+            </button>
+            <button
+              id="releaseBtn3"
+              disabled
+              style="
+                padding: 8px 12px;
+                background: #f44336;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 12px;
+                opacity: 0.5;
+              "
+            >
+              Release
+            </button>
+          </div>
+          <div
+            id="status3"
+            style="
+              margin-top: 10px;
+              padding: 8px;
+              background: #f9f9f9;
+              border-radius: 3px;
+              font-family: monospace;
+              font-size: 10px;
+              color: #666;
+            "
+          >
+            Ready
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      // Import the drag gesture functionality
+      // Note: You'll need to adjust the import path based on your setup
+      import { createDragToMoveGestureController } from "@jsenv/dom";
+
+      const horizontalRectangle = document.getElementById(
+        "horizontalRectangle",
+      );
+      const bothRectangle = document.getElementById("bothRectangle");
+      const obstacleRectangle = document.getElementById("obstacleRectangle");
+
+      // Programmatic controls for Case 1 (Horizontal)
+      const case1Controls = {
+        grabBtn: document.getElementById("grabBtn1"),
+        dragLeftBtn: document.getElementById("dragLeftBtn1"),
+        dragRightBtn: document.getElementById("dragRightBtn1"),
+        dragUpBtn: document.getElementById("dragUpBtn1"),
+        dragDownBtn: document.getElementById("dragDownBtn1"),
+        releaseBtn: document.getElementById("releaseBtn1"),
+        statusDiv: document.getElementById("status1"),
+        rectangle: horizontalRectangle,
+        dragGesture: null,
+        dragInstance: null,
+      };
+
+      // Programmatic controls for Case 2 (Both scrollbars)
+      const case2Controls = {
+        grabBtn: document.getElementById("grabBtn2"),
+        dragLeftBtn: document.getElementById("dragLeftBtn2"),
+        dragRightBtn: document.getElementById("dragRightBtn2"),
+        dragUpBtn: document.getElementById("dragUpBtn2"),
+        dragDownBtn: document.getElementById("dragDownBtn2"),
+        releaseBtn: document.getElementById("releaseBtn2"),
+        statusDiv: document.getElementById("status2"),
+        rectangle: bothRectangle,
+        dragGesture: null,
+        dragInstance: null,
+      };
+
+      // Programmatic controls for Case 3 (Solid obstacles)
+      const case3Controls = {
+        grabBtn: document.getElementById("grabBtn3"),
+        dragLeftBtn: document.getElementById("dragLeftBtn3"),
+        dragRightBtn: document.getElementById("dragRightBtn3"),
+        dragUpBtn: document.getElementById("dragUpBtn3"),
+        dragDownBtn: document.getElementById("dragDownBtn3"),
+        releaseBtn: document.getElementById("releaseBtn3"),
+        statusDiv: document.getElementById("status3"),
+        rectangle: obstacleRectangle,
+        dragGesture: null,
+        dragInstance: null,
+      };
+
+      function updateStatus(controls, message) {
+        controls.statusDiv.textContent = message;
+        // console.log("Programmatic Control:", message);
+      }
+
+      function updateButtonStates(controls, grabbed = false) {
+        controls.grabBtn.disabled = grabbed;
+        controls.dragLeftBtn.disabled = !grabbed;
+        controls.dragRightBtn.disabled = !grabbed;
+        controls.dragUpBtn.disabled = !grabbed;
+        controls.dragDownBtn.disabled = !grabbed;
+        controls.releaseBtn.disabled = !grabbed;
+
+        // Update visual disabled state
+        const buttons = [
+          controls.dragLeftBtn,
+          controls.dragRightBtn,
+          controls.dragUpBtn,
+          controls.dragDownBtn,
+          controls.releaseBtn,
+        ];
+        buttons.forEach((btn) => {
+          btn.style.opacity = grabbed ? "1" : "0.5";
+          btn.style.cursor = grabbed ? "pointer" : "not-allowed";
+        });
+
+        controls.grabBtn.style.opacity = grabbed ? "0.5" : "1";
+        controls.grabBtn.style.cursor = grabbed ? "not-allowed" : "pointer";
+      }
+
+      function setupProgrammaticControls(controls, caseLabel) {
+        // Grab button
+        controls.grabBtn.addEventListener("click", () => {
+          if (controls.dragInstance) return;
+
+          const rectangle = controls.rectangle;
+
+          const dragOptions = {
+            backdrop: false,
+            onGrab: () => {
+              updateStatus(controls, `Grabbed ${caseLabel} programmatically`);
+              // console.log("Programmatic grab:", gestureInfo);
+            },
+            onDragStart: () => {
+              updateStatus(controls, `Started drag on ${caseLabel}`);
+              // console.log("Programmatic drag start:", gestureInfo);
+            },
+            onDrag: (gestureInfo, phase) => {
+              updateStatus(controls, `Dragging ${caseLabel} (${phase})`);
+              // console.log("Programmatic drag:", gestureInfo, phase);
+            },
+            onRelease: () => {
+              updateStatus(controls, `Released ${caseLabel}`);
+              // console.log("Programmatic release:", gestureInfo);
+              controls.dragGesture = null;
+              controls.dragInstance = null;
+              updateButtonStates(controls, false);
+            },
+          };
+
+          controls.dragGesture = createDragToMoveGestureController(dragOptions);
+          controls.dragInstance = controls.dragGesture.grab({
+            element: rectangle,
+          });
+          updateButtonStates(controls, true);
+        });
+
+        // Drag Left button
+        controls.dragLeftBtn.addEventListener("click", () => {
+          if (!controls.dragInstance) return;
+
+          // Get current gesture position and move left by 50px
+          const currentGestureInfo = controls.dragInstance.gestureInfo;
+          const newX = currentGestureInfo.moveX - 50;
+
+          updateStatus(controls, `Dragging ${caseLabel} left by 50px`);
+          controls.dragInstance.drag(newX, undefined);
+        });
+
+        // Drag Right button
+        controls.dragRightBtn.addEventListener("click", () => {
+          if (!controls.dragInstance) return;
+
+          // Get current gesture position and move right by 50px
+          const currentGestureInfo = controls.dragInstance.gestureInfo;
+          const newX = currentGestureInfo.moveX + 50;
+
+          updateStatus(controls, `Dragging ${caseLabel} right by 50px`);
+          controls.dragInstance.drag(newX, undefined);
+        });
+
+        // Drag Up button
+        controls.dragUpBtn.addEventListener("click", () => {
+          if (!controls.dragInstance) return;
+
+          // Get current gesture position and move up by 50px
+          const currentGestureInfo = controls.dragInstance.gestureInfo;
+          const newY = currentGestureInfo.moveY - 50;
+
+          updateStatus(controls, `Dragging ${caseLabel} up by 50px`);
+          controls.dragInstance.drag(undefined, newY);
+        });
+
+        // Drag Down button
+        controls.dragDownBtn.addEventListener("click", () => {
+          if (!controls.dragInstance) return;
+
+          // Get current gesture position and move down by 50px
+          const currentGestureInfo = controls.dragInstance.gestureInfo;
+          const newY = currentGestureInfo.moveY + 50;
+
+          updateStatus(controls, `Dragging ${caseLabel} down by 50px`);
+          controls.dragInstance.drag(undefined, newY);
+        });
+
+        // Release button
+        controls.releaseBtn.addEventListener("click", () => {
+          if (!controls.dragInstance) return;
+
+          updateStatus(controls, `Releasing ${caseLabel}`);
+          controls.dragInstance.release();
+        });
+
+        updateButtonStates(controls, false);
+      }
+
+      // Set up both sets of controls
+      setupProgrammaticControls(case1Controls, "horizontal case");
+      setupProgrammaticControls(case2Controls, "both scrollbars case");
+      setupProgrammaticControls(case3Controls, "solid obstacles case");
+
+      // Function to set up drag gesture for any rectangle
+      function setupDragGesture(rectangle) {
+        rectangle.addEventListener("pointerdown", (event) => {
+          event.preventDefault(); // prevent drag to select which would allow to scroll
+          createDragToMoveGestureController({
+            backdrop: false,
+            onGrab: () => {
+              // console.log(`${caseLabel} - Grab started`, gestureInfo);
+            },
+            onDragStart: () => {
+              // console.log(`${caseLabel} - Drag started`, gestureInfo);
+            },
+            onDrag: () => {
+              // console.log(`${caseLabel} - Dragging`, gestureInfo, phase);
+            },
+            onRelease: () => {
+              // console.log(`${caseLabel} - Drag released`, gestureInfo);
+            },
+          }).grabViaPointer(event, {
+            element: rectangle,
+          });
+        });
+      }
+
+      // Set up drag gestures for all rectangles
+      setupDragGesture(horizontalRectangle, "Horizontal Only");
+      setupDragGesture(bothRectangle, "Both Directions");
+      setupDragGesture(obstacleRectangle, "With Obstacles"); // Obstacles handled automatically via [drag-obstacle] attribute
+    </script>
+
+    <script>
+      // Add visual feedback for multiple containers
+      document.addEventListener("DOMContentLoaded", () => {
+        const horizontalContainer = document.getElementById(
+          "horizontalContainer",
+        );
+        horizontalContainer.scrollLeft = 60;
+        const bothContainer = document.getElementById("bothContainer");
+        const horizontalRectangle = document.getElementById(
+          "horizontalRectangle",
+        );
+        const bothRectangle = document.getElementById("bothRectangle");
+
+        // Create info display for horizontal case
+        const horizontalInfo = createInfoDisplay(
+          "Horizontal Case",
+          "10px",
+          "10px",
+        );
+        const bothInfo = createInfoDisplay("Both Directions", "10px", "200px");
+
+        function createInfoDisplay(label, top, right) {
+          const info = document.createElement("div");
+          info.style.position = "fixed";
+          info.style.top = top;
+          info.style.right = right;
+          info.style.background = "rgba(0,0,0,0.8)";
+          info.style.color = "white";
+          info.style.padding = "8px 12px";
+          info.style.borderRadius = "4px";
+          info.style.fontSize = "11px";
+          info.style.fontFamily = "monospace";
+          info.style.zIndex = "10000";
+          info.style.lineHeight = "1.4";
+          info.style.minWidth = "160px";
+          document.body.appendChild(info);
+          return info;
+        }
+
+        function updateInfo(container, rectangle, infoDisplay, label) {
+          const rect = rectangle.getBoundingClientRect();
+          const containerRect = container.getBoundingClientRect();
+          const relativeX =
+            rect.left - containerRect.left + container.scrollLeft;
+          const relativeY = rect.top - containerRect.top + container.scrollTop;
+
+          infoDisplay.innerHTML = `
+            <div style="font-weight: bold; margin-bottom: 4px;">${label}</div>
+            <div>Scroll: ${Math.round(container.scrollLeft)}, ${Math.round(container.scrollTop)}</div>
+            <div>Pos: ${Math.round(relativeX)}, ${Math.round(relativeY)}</div>
+          `;
+        }
+
+        // Set up scroll listeners and initial updates
+        function setupContainerMonitoring(
+          container,
+          rectangle,
+          infoDisplay,
+          label,
+        ) {
+          function update() {
+            updateInfo(container, rectangle, infoDisplay, label);
+          }
+
+          container.addEventListener("scroll", update);
+          update();
+
+          // Update position info periodically while dragging
+          let updateInterval;
+          rectangle.addEventListener("mousedown", () => {
+            updateInterval = setInterval(update, 16); // ~60fps
+          });
+
+          document.addEventListener("mouseup", () => {
+            if (updateInterval) {
+              clearInterval(updateInterval);
+              update(); // Final update
+            }
+          });
+        }
+
+        setupContainerMonitoring(
+          horizontalContainer,
+          horizontalRectangle,
+          horizontalInfo,
+          "Horizontal Only",
+        );
+        setupContainerMonitoring(
+          bothContainer,
+          bothRectangle,
+          bothInfo,
+          "Both Directions",
+        );
+      });
+    </script>
+  </body>
+</html>

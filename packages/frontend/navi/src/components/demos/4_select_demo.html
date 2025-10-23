@@ -16,7 +16,7 @@
         // eslint-disable-next-line no-unused-vars
         Select,
         // eslint-disable-next-line no-unused-vars
-        Field,
+        Label,
       } from "@jsenv/navi";
 
       // eslint-disable-next-line no-unused-vars
@@ -41,17 +41,15 @@
                   <strong>Loading</strong>
                 </p>
 
-                <Field
-                  input={
-                    <Select name="loading" loading={loading}>
-                      {[
-                        { label: "a", value: "a" },
-                        { label: "b", value: "b" },
-                      ]}
-                    </Select>
-                  }
-                  label="Coucou"
-                ></Field>
+                <Label>
+                  Coucou
+                  <Select name="loading" loading={loading}>
+                    {[
+                      { label: "a", value: "a" },
+                      { label: "b", value: "b" },
+                    ]}
+                  </Select>
+                </Label>
 
                 <div>
                   <label>
@@ -69,17 +67,15 @@
                   <strong>Readonly</strong>
                 </p>
 
-                <Field
-                  input={
-                    <Select name="loading" loading={loading} value="b" readOnly>
-                      {[
-                        { label: "a", value: "a" },
-                        { label: "b", value: "b" },
-                      ]}
-                    </Select>
-                  }
-                  label="Coucou"
-                ></Field>
+                <Label>
+                  Coucou
+                  <Select name="loading" loading={loading} value="b" readOnly>
+                    {[
+                      { label: "a", value: "a" },
+                      { label: "b", value: "b" },
+                    ]}
+                  </Select>
+                </Label>
 
                 <div>
                   <label>

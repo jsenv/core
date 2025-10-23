@@ -1,5 +1,4 @@
-import { useRouteStatus } from "@jsenv/navi";
-import { LinkWithIcon } from "../components/link_with_icon.jsx";
+import { LinkWithIcon, useRouteStatus } from "@jsenv/navi";
 import { DATABASE_ROUTE } from "../routes.js";
 import { DatabaseSvg } from "./database_icons.jsx";
 import { useCurrentDatabase } from "./database_store.js";

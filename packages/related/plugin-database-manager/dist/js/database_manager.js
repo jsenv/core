@@ -1,7 +1,6 @@
-import { Link, resource, useActionData, setBaseUrl, defineRoutes, useRouteStatus, Form, Select, Button, Field, useSignalSync, Input, ErrorBoundaryContext, useEditableController, EditableText, ShortcutProvider, SelectionProvider, Details, valueInLocalStorage, useNavState, Route } from "@jsenv/navi";
-import { u, d, K, d$1, q, k, A, _, b, useSignal, D, F, E, G } from "../jsenv_plugin_database_manager_node_modules.js";
-import { initPositionSticky, initFlexDetailsSet, startResizeGesture, getInnerWidth, getWidth } from "@jsenv/dom";
-import { createUniqueValueConstraint, SINGLE_SPACE_CONSTRAINT } from "@jsenv/validation";
+import { d, u, useSignal, D, A, F, d$1, _, q, k, E, b, T, G } from "../jsenv_plugin_database_manager_node_modules.js";
+import { initFlexDetailsSet, startDragToResizeGesture, getInnerWidth, getWidth, initPositionSticky } from "@jsenv/dom";
+import { useEditionController, Overflow, createUniqueValueConstraint, FontSizedSvg, Input, SINGLE_SPACE_CONSTRAINT, useSignalSync, Editable, useSelectionController, useKeyboardShortcuts, createSelectionKeyboardShortcuts, Details, Button, valueInLocalStorage, SVGMaskOverlay, resource, useActionData, setBaseUrl, defineRoutes, createAction, useRouteStatus, LinkWithIcon, TextAndCount, IconAndText, useRunOnMount, Form, Select, Label, ErrorBoundaryContext, Route, useNavState, Table, TabList, Tab, UITransition } from "@jsenv/navi";
 
 /* eslint-disable */
 // construct-style-sheets-polyfill@3.1.0
@@ -325,158 +324,34 @@ import { createUniqueValueConstraint, SINGLE_SPACE_CONSTRAINT } from "@jsenv/val
   }
 })();
 
-const installImportMetaCss = importMeta => {
-  let cssText = "";
-  let stylesheet = new CSSStyleSheet({
-    baseUrl: importMeta.url
-  });
-  let adopted = false;
-  const css = {
-    toString: () => cssText,
-    update: value => {
-      cssText = value;
-      cssText += "\n/* sourceURL=".concat(importMeta.url, " */\n/* inlined from ").concat(importMeta.url, " */");
-      stylesheet.replaceSync(cssText);
-    },
-    inject: () => {
-      if (!adopted) {
-        document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
-        adopted = true;
-      }
-    },
-    remove: () => {
-      if (adopted) {
-        document.adoptedStyleSheets = document.adoptedStyleSheets.filter(s => s !== stylesheet);
-        adopted = false;
-      }
-    }
-  };
-  Object.defineProperty(importMeta, "css", {
-    get() {
-      return css;
-    },
-    set(value) {
-      css.update(value);
-      css.inject();
-    }
-  });
-  return css.remove;
-};
+/* eslint-env browser,node */
 
-/**
- * FontSizedSvg component
- *
- * This component wraps an SVG element to make it inherit the current font size.
- * It creates a container that's exactly 1em × 1em in size, allowing the SVG to scale
- * proportionally with the surrounding text.
- *
- * Usage:
- * ```jsx
- * <FontSizedSvg>
- *   <svg width="100%" height="100%" viewBox="...">
- *     <path d="..." />
- *    </svg>
- * </FontSizedSvg>
- * ```
- *
- * Notes:
- * - The wrapped SVG should use width="100%" and height="100%" to fill the container
- * - This ensures SVG icons match the current text size without additional styling
- * - Useful for inline icons that should respect the parent's font-size
+/*
+ * This file does not use export const InlineContent = function() {} on purpose:
+ * - An export would be renamed by rollup,
+ *   making it harder to statically detect new InlineContent() calls
+ * - An export would be renamed by terser
+ *   here again it becomes hard to detect new InlineContent() calls
+ * Instead it sets "__InlineContent__" on the global object and terser is configured by jsenv
+ * to preserve the __InlineContent__ global variable name
  */
 
-const FontSizedSvg = ({
-  width = "1em",
-  height = "1em",
-  children
-}) => {
-  return u("span", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      width,
-      height,
-      justifySelf: "center",
-      lineHeight: "1em",
-      flexShrink: 0
-    },
-    children: children
-  });
+const globalObject = typeof self === "object" ? self : process;
+globalObject.__InlineContent__ = function (content, {
+  type = "text/plain"
+}) {
+  this.text = content;
+  this.type = type;
 };
 
-const CurrentSvg = () => {
-  return u("svg", {
-    viewBox: "0 0 16 16",
-    width: "100%",
-    height: "100%",
-    xmlns: "http://www.w3.org/2000/svg",
-    children: u("path", {
-      d: "m 8 0 c -3.3125 0 -6 2.6875 -6 6 c 0.007812 0.710938 0.136719 1.414062 0.386719 2.078125 l -0.015625 -0.003906 c 0.636718 1.988281 3.78125 5.082031 5.625 6.929687 h 0.003906 v -0.003906 c 1.507812 -1.507812 3.878906 -3.925781 5.046875 -5.753906 c 0.261719 -0.414063 0.46875 -0.808594 0.585937 -1.171875 l -0.019531 0.003906 c 0.25 -0.664063 0.382813 -1.367187 0.386719 -2.078125 c 0 -3.3125 -2.683594 -6 -6 -6 z m 0 3.691406 c 1.273438 0 2.308594 1.035156 2.308594 2.308594 s -1.035156 2.308594 -2.308594 2.308594 c -1.273438 -0.003906 -2.304688 -1.035156 -2.304688 -2.308594 c -0.003906 -1.273438 1.03125 -2.304688 2.304688 -2.308594 z m 0 0",
-      fill: "#2e3436"
-    })
-  });
-};
-
-// https://www.svgrepo.com/svg/437987/plus-circle
-const PlusSvg = ({
-  circle,
-  backgroundColor = "",
-  color = "currentColor"
-}) => {
-  return u("svg", {
-    width: "100%",
-    height: "100%",
-    viewBox: "0 0 24 24",
-    fill: "none",
-    xmlns: "http://www.w3.org/2000/svg",
-    children: [backgroundColor && u("rect", {
-      x: "0",
-      y: "0",
-      width: "24",
-      height: "24",
-      fill: backgroundColor
-    }), circle && u("rect", {
-      x: "3",
-      y: "3",
-      width: "18",
-      height: "18",
-      rx: "9",
-      stroke: color,
-      "stroke-width": "2",
-      "stroke-linecap": "round",
-      "stroke-linejoin": "round"
-    }), u("path", {
-      d: "M12 7.75732L12 16.2426",
-      stroke: color,
-      "stroke-width": "2",
-      "stroke-linecap": "round"
-    }), u("path", {
-      d: "M7.75735 12L16.2426 12",
-      stroke: color,
-      "stroke-width": "2",
-      "stroke-linecap": "round"
-    })]
-  });
-};
-
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .link_with_icon {\n    white-space: nowrap;\n    align-items: center;\n    gap: 0.3em;\n    min-width: 0;\n    display: inline-flex;\n    flex-grow: 1;\n  }\n";
-const LinkWithIcon = ({
-  icon,
-  isCurrent,
-  children,
-  className = "",
-  ...rest
-}) => {
-  return u(Link, {
-    className: ["link_with_icon", ...className.split(" ")].join(" "),
-    ...rest,
-    children: [u(FontSizedSvg, {
-      children: icon
-    }), isCurrent && u(FontSizedSvg, {
-      children: u(CurrentSvg, {})
-    }), children]
-  });
-};
+const inlineContent$2 = new __InlineContent__("body {\n  color: #333;\n  background-color: #fff;\n  margin: 0;\n  font-family: system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Noto Sans, Ubuntu, Cantarell, Helvetica Neue, Arial, sans-serif;\n  line-height: 1.5;\n  transition: background-color .3s, color .3s;\n}\n\n* {\n  box-sizing: border-box;\n}\n\n[data-hidden] {\n  display: none !important;\n}\n", {
+  type: "text/css"
+});
+const stylesheet$2 = new CSSStyleSheet({
+  baseUrl: "/client/database_manager.css?side_effect"
+});
+stylesheet$2.replaceSync(inlineContent$2.text);
+document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet$2];
 
 const roleCanLoginCountSignal = d(0);
 const setRoleCanLoginCount = count => {
@@ -523,6 +398,504 @@ const useTableCount = () => {
   return tableCountSignal.value;
 };
 
+const ExplorerItem = ({
+  nameKey,
+  item,
+  renderItem,
+  selectionController,
+  deletedItems,
+  useItemArrayInStore,
+  useRenameItemAction,
+  useDeleteItemAction
+}) => {
+  const itemName = item[nameKey];
+  const {
+    editing,
+    startEditing,
+    stopEditing
+  } = useEditionController();
+  const deleteItemAction = useDeleteItemAction ? useDeleteItemAction(item) : null;
+  const itemRendered = renderItem(item, {
+    selectionController,
+    deletedItems,
+    className: "explorer_item_content",
+    shortcuts: [{
+      key: "enter",
+      enabled: !editing,
+      action: startEditing,
+      description: "Edit item name"
+    }, ...(deleteItemAction ? [{
+      key: "command+delete",
+      action: deleteItemAction,
+      description: "Delete item",
+      confirmMessage: "Are you sure you want to delete \"".concat(itemName, "\"?")
+    }] : [])],
+    children: useRenameItemAction ? u(RenameInputOrName, {
+      nameKey: nameKey,
+      item: item,
+      useItemArrayInStore: useItemArrayInStore,
+      useRenameItemAction: useRenameItemAction,
+      stopEditing: stopEditing
+    }) : u(Overflow, {
+      children: itemName
+    })
+  });
+  return itemRendered;
+};
+const RenameInputOrName = ({
+  nameKey,
+  item,
+  useItemArrayInStore,
+  useRenameItemAction,
+  editing,
+  stopEditing
+}) => {
+  const itemName = item[nameKey];
+  const nameSignal = useSignalSync(itemName);
+  const renameAction = useRenameItemAction(item, nameSignal);
+  const itemArrayInStore = useItemArrayInStore();
+  const otherValueSet = new Set();
+  for (const itemCandidate of itemArrayInStore) {
+    if (itemCandidate === item) {
+      continue;
+    }
+    otherValueSet.add(itemCandidate[nameKey]);
+  }
+  const uniqueNameConstraint = createUniqueValueConstraint(otherValueSet, "\"{value}\" already exist, please choose another name.");
+  return u(Editable, {
+    editing: editing,
+    onEditEnd: stopEditing,
+    value: itemName,
+    valueSignal: nameSignal,
+    action: renameAction,
+    required: true,
+    constraints: [SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint],
+    children: u(Overflow, {
+      children: itemName
+    })
+  });
+};
+const ExplorerNewItem = ({
+  nameKey,
+  useItemArrayInStore,
+  useCreateItemAction,
+  cancelOnBlurInvalid,
+  onCancel,
+  onActionEnd
+}) => {
+  const nameSignal = useSignal("");
+  const createItemAction = useCreateItemAction(nameSignal);
+  const itemArrayInStore = useItemArrayInStore();
+  const valueSet = new Set();
+  for (const item of itemArrayInStore) {
+    valueSet.add(item[nameKey]);
+  }
+  const uniqueNameConstraint = createUniqueValueConstraint(valueSet, "\"{value}\" already exists. Please choose an other name.");
+  return u("span", {
+    className: "explorer_item_content",
+    children: [u(FontSizedSvg, {
+      children: u(EnterNameIconSvg, {})
+    }), u(Input, {
+      action: createItemAction,
+      valueSignal: nameSignal,
+      cancelOnEscape: true,
+      cancelOnBlurInvalid: cancelOnBlurInvalid,
+      onCancel: onCancel,
+      onActionEnd: onActionEnd,
+      autoFocus: true,
+      required: true,
+      constraints: [SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint]
+    })]
+  });
+};
+const EnterNameIconSvg = ({
+  color = "currentColor"
+}) => {
+  return u("svg", {
+    viewBox: "0 0 24 24",
+    fill: "none",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: u("path", {
+      "fill-rule": "evenodd",
+      "clip-rule": "evenodd",
+      d: "M21.1213 2.70705C19.9497 1.53548 18.0503 1.53547 16.8787 2.70705L15.1989 4.38685L7.29289 12.2928C7.16473 12.421 7.07382 12.5816 7.02986 12.7574L6.02986 16.7574C5.94466 17.0982 6.04451 17.4587 6.29289 17.707C6.54127 17.9554 6.90176 18.0553 7.24254 17.9701L11.2425 16.9701C11.4184 16.9261 11.5789 16.8352 11.7071 16.707L19.5556 8.85857L21.2929 7.12126C22.4645 5.94969 22.4645 4.05019 21.2929 2.87862L21.1213 2.70705ZM18.2929 4.12126C18.6834 3.73074 19.3166 3.73074 19.7071 4.12126L19.8787 4.29283C20.2692 4.68336 20.2692 5.31653 19.8787 5.70705L18.8622 6.72357L17.3068 5.10738L18.2929 4.12126ZM15.8923 6.52185L17.4477 8.13804L10.4888 15.097L8.37437 15.6256L8.90296 13.5112L15.8923 6.52185ZM4 7.99994C4 7.44766 4.44772 6.99994 5 6.99994H10C10.5523 6.99994 11 6.55223 11 5.99994C11 5.44766 10.5523 4.99994 10 4.99994H5C3.34315 4.99994 2 6.34309 2 7.99994V18.9999C2 20.6568 3.34315 21.9999 5 21.9999H16C17.6569 21.9999 19 20.6568 19 18.9999V13.9999C19 13.4477 18.5523 12.9999 18 12.9999C17.4477 12.9999 17 13.4477 17 13.9999V18.9999C17 19.5522 16.5523 19.9999 16 19.9999H5C4.44772 19.9999 4 19.5522 4 18.9999V7.99994Z",
+      fill: color
+    })
+  });
+};
+
+const ExplorerItemList = D((props, ref) => {
+  const {
+    idKey,
+    nameKey,
+    itemArray,
+    renderItem,
+    useItemArrayInStore,
+    useRenameItemAction,
+    useDeleteManyItemAction,
+    useDeleteItemAction,
+    isCreatingNew,
+    useCreateItemAction,
+    stopCreatingNew
+  } = props;
+  const innerRef = A();
+  F(ref, () => innerRef.current);
+  const itemSelectionSignal = useSignal([]);
+  const [deletedItems, setDeletedItems] = d$1([]);
+  const deleteManyAction = useDeleteManyItemAction?.(itemSelectionSignal);
+  const selection = itemSelectionSignal.value;
+  const selectionLength = selection.length;
+  const selectionController = useSelectionController({
+    elementRef: innerRef,
+    layout: "vertical",
+    value: selection,
+    onChange: newValue => {
+      itemSelectionSignal.value = newValue;
+    },
+    multiple: Boolean(deleteManyAction)
+  });
+  useKeyboardShortcuts(innerRef, [...createSelectionKeyboardShortcuts(selectionController), {
+    enabled: deleteManyAction && selectionLength > 0,
+    key: ["command+delete"],
+    action: deleteManyAction,
+    description: "Delete selected items",
+    confirmMessage: selectionLength === 1 ? "Are you sure you want to delete \"".concat(selection[0], "\"?") : "Are you sure you want to delete the ".concat(selectionLength, " selected items?"),
+    onStart: () => {
+      setDeletedItems(selection);
+    },
+    onAbort: () => {
+      setDeletedItems([]);
+    },
+    onError: () => {
+      setDeletedItems([]);
+    },
+    onEnd: () => {
+      setDeletedItems([]);
+    }
+  }]);
+  return u("ul", {
+    ref: innerRef,
+    className: "explorer_item_list",
+    children: [itemArray.map(item => {
+      return u("li", {
+        className: "explorer_item",
+        children: u(ExplorerItem, {
+          nameKey: nameKey,
+          item: item,
+          deletedItems: deletedItems,
+          renderItem: renderItem,
+          selectionController: selectionController,
+          useItemArrayInStore: useItemArrayInStore,
+          useRenameItemAction: useRenameItemAction,
+          useDeleteItemAction: deleteManyAction ? () => null : useDeleteItemAction
+        })
+      }, item[idKey]);
+    }), isCreatingNew && u("li", {
+      className: "explorer_item",
+      children: u(ExplorerNewItem, {
+        nameKey: nameKey,
+        useItemArrayInStore: useItemArrayInStore,
+        useCreateItemAction: useCreateItemAction,
+        cancelOnBlurInvalid: true,
+        onCancel: (e, reason) => {
+          stopCreatingNew({
+            shouldRestoreFocus: reason === "escape_key"
+          });
+        },
+        onActionEnd: e => {
+          const input = e.target;
+          const eventCausingAction = e.detail.event;
+          const actionRequestedByKeyboard = eventCausingAction && eventCausingAction.type === "keydown" && eventCausingAction.key === "Enter";
+          const shouldRestoreFocus = actionRequestedByKeyboard &&
+          // If user focuses something else while action is running, respect it
+          document.activeElement === input;
+          stopCreatingNew({
+            shouldRestoreFocus
+          });
+        }
+      })
+    }, "new_item")]
+  });
+});
+
+/**
+ *
+ */
+
+const createExplorerGroupController = (id, {
+  detailsOpenAtStart,
+  detailsOnToggle
+}) => {
+  const [restoreHeight, storeHeight] = valueInLocalStorage("explorer_group_".concat(id, "_height"), {
+    type: "positive_number"
+  });
+  const heightSettingSignal = d(restoreHeight());
+  E(() => {
+    const height = heightSettingSignal.value;
+    storeHeight(height);
+  });
+  const useHeightSetting = () => {
+    return heightSettingSignal.value;
+  };
+  const setHeightSetting = width => {
+    heightSettingSignal.value = width;
+  };
+  return {
+    id,
+    useHeightSetting,
+    setHeightSetting,
+    detailsOpenAtStart,
+    detailsOnToggle
+  };
+};
+const ExplorerGroup = D((props, ref) => {
+  const {
+    controller,
+    detailsAction,
+    idKey,
+    nameKey,
+    labelChildren,
+    renderNewButtonChildren,
+    renderItem,
+    useItemArrayInStore,
+    useRenameItemAction,
+    useCreateItemAction,
+    useDeleteItemAction,
+    useDeleteManyItemAction,
+    onOpen,
+    onClose,
+    resizable,
+    ...rest
+  } = props;
+  const innerRef = A();
+  F(ref, () => innerRef.current);
+  _(() => {
+    setTimeout(() => {
+      innerRef.current.setAttribute("data-details-toggle-animation", "");
+    });
+  }, []);
+  const [isCreatingNew, setIsCreatingNew] = d$1(false);
+  const startCreatingNew = q(() => {
+    setIsCreatingNew(true);
+  }, [setIsCreatingNew]);
+  const stopCreatingNew = q(({
+    shouldRestoreFocus
+  }) => {
+    if (shouldRestoreFocus) {
+      createButtonRef.current.focus();
+    }
+    setIsCreatingNew(false);
+  }, [setIsCreatingNew]);
+  const heightSetting = controller.useHeightSetting();
+  const createButtonRef = A(null);
+  return u(k, {
+    children: [resizable && u("div", {
+      "data-resize-handle": controller.id,
+      id: "".concat(controller.id, "_resize_handle")
+    }), u(Details, {
+      ...rest,
+      ref: innerRef,
+      id: controller.id,
+      open: controller.detailsOpenAtStart,
+      focusGroup: true,
+      focusGroupDirection: "vertical",
+      className: "explorer_group",
+      onToggle: toggleEvent => {
+        controller.detailsOnToggle(toggleEvent.newState === "open");
+        if (toggleEvent.newState === "open") {
+          if (onOpen) {
+            onOpen();
+          }
+        } else if (onClose) {
+          onClose();
+        }
+      },
+      "data-resize": resizable ? "vertical" : "none",
+      "data-min-height": "150",
+      "data-requested-height": heightSetting,
+      action: detailsAction,
+      label: u(k, {
+        children: [labelChildren, renderNewButtonChildren ? u(k, {
+          children: [u("span", {
+            style: "display: flex; flex: 1"
+          }), u(Button, {
+            ref: createButtonRef,
+            className: "summary_action_icon",
+            discrete: true,
+            style: {
+              width: "22px",
+              height: "22px",
+              cursor: "pointer",
+              padding: "4px"
+            },
+            onMouseDown: e => {
+              // ensure when input is focused it stays focused
+              // without this preventDefault() the input would be blurred (which might cause creation of an item) and re-opened empty
+              e.preventDefault();
+            },
+            onClick: e => {
+              e.preventDefault();
+              startCreatingNew();
+            },
+            children: renderNewButtonChildren()
+          })]
+        }) : null]
+      }),
+      children: itemArray => {
+        return u("div", {
+          className: "explorer_group_content",
+          children: u(ExplorerItemList, {
+            idKey: idKey,
+            nameKey: nameKey,
+            itemArray: itemArray,
+            renderItem: renderItem,
+            useItemArrayInStore: useItemArrayInStore,
+            useRenameItemAction: useRenameItemAction,
+            useCreateItemAction: useCreateItemAction,
+            useDeleteItemAction: useDeleteItemAction,
+            useDeleteManyItemAction: useDeleteManyItemAction,
+            isCreatingNew: isCreatingNew,
+            stopCreatingNew: stopCreatingNew
+          })
+        });
+      }
+    })]
+  });
+});
+
+const [readDatabaseListDetailsOpened, storeDatabaseListDetailsOpened, eraseDatabaseListDetailsOpened] = valueInLocalStorage("databases_details_opened", {
+  type: "boolean"
+});
+const databaseListDetailsOpenAtStart = readDatabaseListDetailsOpened();
+const databaseListDetailsOnToggle = detailsOpen => {
+  if (detailsOpen) {
+    storeDatabaseListDetailsOpened(true);
+  } else {
+    eraseDatabaseListDetailsOpened();
+  }
+};
+
+// https://www.svgrepo.com/svg/437987/plus-circle
+const PlusSvg = ({
+  circle,
+  backgroundColor = "",
+  color = "currentColor"
+}) => {
+  return u("svg", {
+    width: "100%",
+    height: "100%",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: [backgroundColor && u("rect", {
+      x: "0",
+      y: "0",
+      width: "24",
+      height: "24",
+      fill: backgroundColor
+    }), circle && u("rect", {
+      x: "3",
+      y: "3",
+      width: "18",
+      height: "18",
+      rx: "9",
+      stroke: color,
+      "stroke-width": "2",
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round"
+    }), u("path", {
+      d: "M12 7.75732L12 16.2426",
+      stroke: color,
+      "stroke-width": "2",
+      "stroke-linecap": "round"
+    }), u("path", {
+      d: "M7.75735 12L16.2426 12",
+      stroke: color,
+      "stroke-width": "2",
+      "stroke-linecap": "round"
+    })]
+  });
+};
+
+const SvgIconGroup = ({
+  children
+}) => {
+  return u(SVGMaskOverlay, {
+    viewBox: "0 0 24 24",
+    children: [u("svg", {
+      children: [u("svg", {
+        x: "2",
+        y: "4",
+        width: "12",
+        height: "12",
+        overflow: "visible",
+        children: children
+      }), u("svg", {
+        x: "10",
+        y: "4",
+        width: "12",
+        height: "12",
+        overflow: "visible",
+        children: children
+      })]
+    }), u("svg", {
+      x: "6",
+      y: "8",
+      width: "12",
+      height: "12",
+      overflow: "visible",
+      children: children
+    })]
+  });
+};
+const SvgWithPlus = ({
+  children
+}) => {
+  return u(SVGMaskOverlay, {
+    viewBox: "0 0 24 24",
+    children: [children, u("svg", {
+      x: "12",
+      y: "12",
+      width: "16",
+      height: "16",
+      overflow: "visible",
+      children: [u("circle", {
+        cx: "8",
+        cy: "8",
+        r: "5",
+        fill: "transparent"
+      }), u(PlusSvg, {
+        color: "green"
+      })]
+    })]
+  });
+};
+
+const DatabaseSvg = () => {
+  return u("svg", {
+    viewBox: "0 0 24 24",
+    width: "100%",
+    height: "100%",
+    fill: "none",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: u("path", {
+      "fill-rule": "evenodd",
+      "clip-rule": "evenodd",
+      d: "M3.25 6C3.25 4.45831 4.48029 3.26447 6.00774 2.50075C7.58004 1.7146 9.69967 1.25 12 1.25C14.3003 1.25 16.42 1.7146 17.9923 2.50075C19.5197 3.26447 20.75 4.45831 20.75 6V18C20.75 19.5417 19.5197 20.7355 17.9923 21.4992C16.42 22.2854 14.3003 22.75 12 22.75C9.69967 22.75 7.58004 22.2854 6.00774 21.4992C4.48029 20.7355 3.25 19.5417 3.25 18V6ZM4.75 6C4.75 5.33255 5.31057 4.52639 6.67856 3.84239C8.00168 3.18083 9.88205 2.75 12 2.75C14.118 2.75 15.9983 3.18083 17.3214 3.84239C18.6894 4.52639 19.25 5.33255 19.25 6C19.25 6.66745 18.6894 7.47361 17.3214 8.15761C15.9983 8.81917 14.118 9.25 12 9.25C9.88205 9.25 8.00168 8.81917 6.67856 8.15761C5.31057 7.47361 4.75 6.66745 4.75 6ZM4.75 18C4.75 18.6674 5.31057 19.4736 6.67856 20.1576C8.00168 20.8192 9.88205 21.25 12 21.25C14.118 21.25 15.9983 20.8192 17.3214 20.1576C18.6894 19.4736 19.25 18.6674 19.25 18V14.7072C18.8733 15.0077 18.4459 15.2724 17.9923 15.4992C16.42 16.2854 14.3003 16.75 12 16.75C9.69967 16.75 7.58004 16.2854 6.00774 15.4992C5.55414 15.2724 5.12675 15.0077 4.75 14.7072V18ZM19.25 8.70722V12C19.25 12.6674 18.6894 13.4736 17.3214 14.1576C15.9983 14.8192 14.118 15.25 12 15.25C9.88205 15.25 8.00168 14.8192 6.67856 14.1576C5.31057 13.4736 4.75 12.6674 4.75 12V8.70722C5.12675 9.00772 5.55414 9.27245 6.00774 9.49925C7.58004 10.2854 9.69967 10.75 12 10.75C14.3003 10.75 16.42 10.2854 17.9923 9.49925C18.4459 9.27245 18.8733 9.00772 19.25 8.70722Z",
+      fill: "currentColor"
+    })
+  });
+};
+const DatabaseWithPlusSvg = ({
+  color
+}) => {
+  return u(SvgWithPlus, {
+    children: u(DatabaseSvg, {
+      color: color
+    })
+  });
+};
+
 const errorFromResponse = async (response, message) => {
   const status = response.status;
   const statusText = response.statusText;
@@ -535,7 +908,7 @@ const errorFromResponse = async (response, message) => {
       if (typeof serverResponseJson === "string") {
         serverErrorMessage = serverResponseJson;
       } else {
-        serverErrorMessage = serverResponseJson.message || serverResponseJson.stack;
+        serverErrorMessage = serverResponseJson.message;
         serverErrorStack = serverResponseJson.stack;
       }
     } catch (_unused) {
@@ -549,7 +922,7 @@ const errorFromResponse = async (response, message) => {
       serverErrorMessage = statusText;
     }
   }
-  const errorMessage = message ? "".concat(message, ": ").concat(serverErrorMessage) : serverErrorMessage;
+  const errorMessage = message && serverErrorMessage ? "".concat(message, ": ").concat(serverErrorMessage) : message ? message : serverErrorMessage;
   const error = new Error(errorMessage);
   if (serverErrorStack) {
     error.stack = serverErrorStack;
@@ -886,13 +1259,15 @@ const TABLE = resource("table", {
     const table = data;
     const {
       ownerRole,
-      columns
+      columns,
+      schemaColumns
     } = meta;
     return {
       ...table,
       ownerRole,
       meta: {
-        columns
+        columns,
+        schemaColumns
       }
     };
   },
@@ -1008,126 +1383,122 @@ const useTableArray = () => {
   const tableArray = useActionData(TABLE.GET_MANY);
   return tableArray;
 };
-
-setBaseUrl(window.DB_MANAGER_CONFIG.pathname);
-let [ROLE_ROUTE, DATABASE_ROUTE, TABLE_ROUTE] = defineRoutes({
-  "/roles/:rolname": ROLE.GET,
-  "/databases/:datname": DATABASE.GET,
-  "/tables/:tablename": TABLE.GET
+const TABLE_ROW = resource("table_row", {
+  GET_MANY: async ({
+    tablename
+  }, {
+    signal
+  }) => {
+    const response = await fetch("".concat(window.DB_MANAGER_CONFIG.apiUrl, "/tables/").concat(tablename, "/rows"), {
+      signal
+    });
+    if (!response.ok) {
+      throw await errorFromResponse(response, "Failed to get table rows");
+    }
+    const {
+      data
+    } = await response.json();
+    return data;
+  },
+  POST: async ({
+    tablename
+  }, {
+    signal
+  }) => {
+    const response = await fetch("".concat(window.DB_MANAGER_CONFIG.apiUrl, "/tables/").concat(tablename, "/rows"), {
+      signal,
+      method: "POST",
+      headers: {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({})
+    });
+    if (!response.ok) {
+      throw await errorFromResponse(response, "Failed to create row in \"".concat(tablename, "\" table"));
+    }
+    const {
+      data
+    } = await response.json();
+    return data;
+  }
 });
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .svg_mask_content * {\n    fill: black !important;\n    stroke: black !important;\n    fill-opacity: 1 !important;\n    stroke-opacity: 1 !important;\n    color: black !important;\n    opacity: 1 !important;\n  }\n";
-const SVGMaskOverlay = ({
-  viewBox,
-  children
+setBaseUrl(window.DB_MANAGER_CONFIG.pathname);
+let [ROLE_ROUTE, DATABASE_ROUTE, TABLE_ROUTE, TABLE_DATA_ROUTE, TABLE_SETTINGS_ROUTE] = defineRoutes({
+  "/roles/:rolname": ROLE.GET,
+  "/databases/:datname": DATABASE.GET,
+  "/tables/:tablename/*?": TABLE.GET,
+  "/tables/:tablename": TABLE_ROW.GET_MANY,
+  "/tables/:tablename/settings": createAction(() => {}, {
+    name: "get table settings"
+  })
+});
+
+const DatabaseLink = ({
+  database,
+  children,
+  ...rest
 }) => {
-  if (!Array.isArray(children)) {
-    return children;
-  }
-  if (children.length === 1) {
-    return children[0];
-  }
-  if (!viewBox) {
-    console.error("SVGComposition requires an explicit viewBox");
-    return null;
-  }
-
-  // First SVG is the base, all others are overlays
-  const [baseSvg, ...overlaySvgs] = children;
-
-  // Generate unique ID for this instance
-  const instanceId = "svgmo-".concat(Math.random().toString(36).slice(2, 9));
-
-  // Create nested masked elements
-  let maskedElement = baseSvg;
-
-  // Apply each mask in sequence
-  overlaySvgs.forEach((overlaySvg, index) => {
-    const maskId = "mask-".concat(instanceId, "-").concat(index);
-    maskedElement = u("g", {
-      mask: "url(#".concat(maskId, ")"),
-      children: maskedElement
-    });
+  const datname = database.datname;
+  const databaseUrl = DATABASE_ROUTE.buildUrl({
+    datname
   });
-  return u("svg", {
-    viewBox: viewBox,
-    width: "100%",
-    height: "100%",
-    children: [u("defs", {
-      children: overlaySvgs.map((overlaySvg, index) => {
-        const maskId = "mask-".concat(instanceId, "-").concat(index);
-
-        // IMPORTANT: clone the overlay SVG exactly as is, just add the mask class
-        return u("mask", {
-          id: maskId,
-          children: [u("rect", {
-            width: "100%",
-            height: "100%",
-            fill: "white"
-          }), K(overlaySvg, {
-            className: "svg_mask_content" // Apply styling to make it black
-          })]
-        }, maskId);
-      })
-    }), maskedElement, overlaySvgs]
+  const {
+    params
+  } = useRouteStatus(DATABASE_ROUTE);
+  const activeDatname = params.datname;
+  const currentDatabase = useCurrentDatabase();
+  const isCurrent = currentDatabase && datname === currentDatabase.datname;
+  return u(LinkWithIcon, {
+    icon: u(DatabaseSvg, {
+      color: "#333"
+    }),
+    isCurrent: isCurrent,
+    href: databaseUrl,
+    active: activeDatname === datname,
+    ...rest,
+    children: children
   });
 };
 
-const SvgIconGroup = ({
-  children
-}) => {
-  return u(SVGMaskOverlay, {
-    viewBox: "0 0 24 24",
-    width: "100%",
-    height: "100%",
-    children: [u("svg", {
-      children: [u("svg", {
-        x: "2",
-        y: "4",
-        width: "12",
-        height: "12",
-        overflow: "visible",
-        children: children
-      }), u("svg", {
-        x: "10",
-        y: "4",
-        width: "12",
-        height: "12",
-        overflow: "visible",
-        children: children
-      })]
-    }), u("svg", {
-      x: "6",
-      y: "8",
-      width: "12",
-      height: "12",
-      overflow: "visible",
-      children: children
-    })]
-  });
-};
-const SvgWithPlus = ({
-  children
-}) => {
-  return u(SVGMaskOverlay, {
-    viewBox: "0 0 24 24",
-    width: "100%",
-    height: "100%",
-    children: [children, u("svg", {
-      x: "12",
-      y: "12",
-      width: "16",
-      height: "16",
-      overflow: "visible",
-      children: [u("circle", {
-        cx: "8",
-        cy: "8",
-        r: "5",
-        fill: "transparent"
-      }), u(PlusSvg, {
-        color: "green"
-      })]
-    })]
+const databasesDetailsController = createExplorerGroupController("databases", {
+  detailsOpenAtStart: databaseListDetailsOpenAtStart,
+  detailsOnToggle: databaseListDetailsOnToggle
+});
+const DatabasesDetails = props => {
+  const databaseCount = useDatabaseCount();
+  const databaseArray = useDatabaseArray();
+  return u(ExplorerGroup, {
+    ...props,
+    controller: databasesDetailsController,
+    detailsAction: DATABASE.GET_MANY,
+    idKey: "oid",
+    nameKey: "datname",
+    labelChildren: u(TextAndCount, {
+      text: "DATABASES",
+      count: databaseCount
+    }),
+    renderNewButtonChildren: () => u(DatabaseWithPlusSvg, {}),
+    renderItem: (database, props) => u(DatabaseLink, {
+      draggable: false,
+      value: database.datname,
+      database: database,
+      ...props
+    }, database.oid),
+    useItemArrayInStore: useDatabaseArrayInStore,
+    useCreateItemAction: valueSignal => DATABASE.POST({
+      datname: valueSignal
+    }),
+    useDeleteItemAction: database => DATABASE.DELETE.bindParams({
+      datname: database.datname
+    }),
+    useRenameItemAction: (database, valueSignal) => DATABASE.PUT.bindParams({
+      datname: database.datname,
+      columnName: "datname",
+      columnValue: valueSignal
+    }),
+    children: databaseArray
   });
 };
 
@@ -1264,913 +1635,6 @@ const RoleLink = ({
   });
 };
 
-const DatabaseFieldset = ({
-  item,
-  columns,
-  usePutAction,
-  customFields = {},
-  ignoredFields = []
-}) => {
-  columns.sort((a, b) => {
-    return a.ordinal_position - b.ordinal_position;
-  });
-  return u("ul", {
-    children: columns.map(column => {
-      const columnName = column.column_name;
-      if (ignoredFields.includes(columnName)) {
-        return null;
-      }
-      const customField = customFields?.[columnName];
-      const dbField = customField ? customField(item) : u(DatabaseFieldWrapper, {
-        item: item,
-        column: column,
-        usePutAction: usePutAction
-      });
-      return u("li", {
-        children: dbField
-      }, columnName);
-    })
-  });
-};
-const RoleField = ({
-  role
-}) => {
-  const [editing, setEditing] = d$1(false);
-  const startEditing = q(() => {
-    setEditing(true);
-  }, []);
-  const stopEditing = q(() => {
-    setEditing(false);
-  }, []);
-  return u(Field, {
-    label: "Owner:",
-    input: u("div", {
-      style: "display: inline-flex; flex-direction: row; gap: 0.5em;",
-      children: editing ? u(Form, {
-        action: () => {
-          // TODO
-        },
-        onReset: stopEditing,
-        children: [u(Select, {
-          value: role.rolname,
-          children: [{
-            label: role.rolname,
-            value: role.rolname
-          }]
-        }), u(Button, {
-          type: "submit",
-          children: "Validate"
-        }), u(Button, {
-          type: "reset",
-          children: "Cancel"
-        })]
-      }) : u(k, {
-        children: [u(RoleLink, {
-          role: role,
-          children: role.rolname
-        }), u(Button, {
-          action: startEditing,
-          children: "Change"
-        })]
-      })
-    })
-  });
-};
-const DatabaseFieldWrapper = ({
-  item,
-  column,
-  usePutAction
-}) => {
-  const columnName = column.column_name;
-  const value = item ? item[columnName] : "";
-  const valueSignal = useSignalSync(value);
-  const putAction = usePutAction(columnName, valueSignal);
-  return u(DatabaseField, {
-    label: u("span", {
-      children: [columnName, ":"]
-    }),
-    column: column,
-    action: putAction,
-    valueSignal: valueSignal
-  });
-};
-const DatabaseField = ({
-  column,
-  label,
-  value,
-  ...rest
-}) => {
-  const columnName = column.column_name;
-  const {
-    valueSignal
-  } = rest;
-  if (column.data_type === "boolean") {
-    return u(Field, {
-      label: label,
-      input: u(Input, {
-        type: "checkbox",
-        name: columnName,
-        checkedSignal: valueSignal,
-        ...rest
-      })
-    });
-  }
-  if (column.data_type === "timestamp with time zone") {
-    return u(Field, {
-      label: label,
-      input: u(Input, {
-        type: "datetime-local",
-        name: columnName,
-        ...rest
-      })
-    });
-  }
-  if (column.data_type === "integer") {
-    return u(Field, {
-      label: label,
-      input: u(Input, {
-        type: "number",
-        min: "0",
-        step: "1",
-        name: columnName,
-        ...rest
-      })
-    });
-  }
-  if (column.data_type === "name") {
-    return u(Field, {
-      label: label,
-      input: u(Input, {
-        type: "text",
-        name: columnName,
-        required: true,
-        ...rest
-      })
-    });
-  }
-  if (column.data_type === "oid") {
-    return u(Field, {
-      label: u("span", {
-        children: [column.column_name, ": "]
-      }),
-      input: u("span", {
-        children: rest.value
-      })
-    });
-  }
-  if (column.column_name === "rolpassword") {
-    return u(Field, {
-      label: label,
-      input: u(Input, {
-        type: "text",
-        name: columnName,
-        ...rest
-      })
-    });
-  }
-  if (column.column_name === "rolconfig") {
-    // rolconfig something custom like client_min_messages
-    // see https://www.postgresql.org/docs/14/config-setting.html#CONFIG-SETTING-NAMES-VALUES
-    return u("span", {
-      children: [u("span", {
-        children: [column.column_name, ": "]
-      }), u("span", {
-        children: String(rest.value)
-      })]
-    });
-  }
-  if (column.data_type === "xid") {
-    return u(Field, {
-      label: label,
-      input: u(Input, {
-        type: "text",
-        readOnly: true,
-        name: columnName,
-        ...rest
-      })
-    });
-  }
-  if (column.column_name === "datacl") {
-    // datacl is a custom type
-    // see https://www.postgresql.org/docs/14/sql-grant.html
-    return u(Field, {
-      label: u("span", {
-        children: [column.column_name, ": "]
-      }),
-      input: u("span", {
-        children: String(rest.value)
-      })
-    });
-  }
-  return u(Field, {
-    label: u("span", {
-      children: [column.column_name, ": "]
-    }),
-    input: String(value)
-  });
-};
-
-const IconAndText = ({
-  icon,
-  children,
-  ...rest
-}) => {
-  if (typeof icon === "function") icon = icon({});
-  return u("span", {
-    className: "icon_and_text",
-    ...rest,
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: "0.1em",
-      ...rest.style
-    },
-    children: [u(FontSizedSvg, {
-      className: "icon",
-      children: icon
-    }), u("span", {
-      className: "text",
-      children: children
-    })]
-  });
-};
-
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .page_head {\n    display: flex;\n    gap: 10px;\n    justify-content: space-between;\n    align-items: center;\n\n    padding: 20px;\n    background: white;\n    position: sticky;\n    top: 0;\n  }\n\n  .page_head h1 {\n    margin: 0;\n    line-height: 1em;\n  }\n\n  .page_head > .actions {\n  }\n\n  .page_body {\n    padding-left: 20px;\n    padding-right: 20px;\n    padding-bottom: 20px;\n  }\n\n  .page_error {\n    padding: 20px;\n    background: #fdd;\n    border: 1px solid red;\n\n    margin-top: 0;\n    margin-bottom: 20px;\n  }\n";
-const Page = ({
-  children
-}) => {
-  const [error, resetError] = b();
-  return u(ErrorBoundaryContext.Provider, {
-    value: resetError,
-    children: [error && u(PageError, {
-      error: error
-    }), children]
-  });
-};
-const PageError = ({
-  error
-}) => {
-  return u("div", {
-    className: "page_error",
-    children: ["An error occured: ", error.message, u("details", {
-      children: [u("summary", {
-        children: "More info"
-      }), u("pre", {
-        children: u("code", {
-          children: error.stack
-        })
-      })]
-    })]
-  });
-};
-const PageHead = ({
-  children,
-  actions = []
-}) => {
-  const headerRef = A(null);
-  _(() => {
-    return initPositionSticky(headerRef.current);
-  }, []);
-  return u("header", {
-    ref: headerRef,
-    className: "page_head",
-    "data-position-sticky-fix": true,
-    children: [children, u("div", {
-      className: "actions",
-      children: actions.map(action => {
-        return action.component;
-      })
-    })]
-  });
-};
-const PageHeadLabel = ({
-  icon,
-  label,
-  children
-}) => {
-  return u("h1", {
-    style: "display: flex; align-items: stretch; gap: 0.2em;",
-    children: [u(IconAndText, {
-      icon: icon,
-      style: {
-        color: "lightgrey",
-        userSelect: "none",
-        whiteSpace: "nowrap"
-      },
-      children: label
-    }), u("span", {
-      children: children
-    })]
-  });
-};
-PageHead.Label = PageHeadLabel;
-const PageBody = ({
-  children
-}) => {
-  return u("section", {
-    className: "page_body",
-    children: children
-  });
-};
-
-const DatabaseSvg = () => {
-  return u("svg", {
-    viewBox: "0 0 24 24",
-    width: "100%",
-    height: "100%",
-    fill: "none",
-    xmlns: "http://www.w3.org/2000/svg",
-    children: u("path", {
-      "fill-rule": "evenodd",
-      "clip-rule": "evenodd",
-      d: "M3.25 6C3.25 4.45831 4.48029 3.26447 6.00774 2.50075C7.58004 1.7146 9.69967 1.25 12 1.25C14.3003 1.25 16.42 1.7146 17.9923 2.50075C19.5197 3.26447 20.75 4.45831 20.75 6V18C20.75 19.5417 19.5197 20.7355 17.9923 21.4992C16.42 22.2854 14.3003 22.75 12 22.75C9.69967 22.75 7.58004 22.2854 6.00774 21.4992C4.48029 20.7355 3.25 19.5417 3.25 18V6ZM4.75 6C4.75 5.33255 5.31057 4.52639 6.67856 3.84239C8.00168 3.18083 9.88205 2.75 12 2.75C14.118 2.75 15.9983 3.18083 17.3214 3.84239C18.6894 4.52639 19.25 5.33255 19.25 6C19.25 6.66745 18.6894 7.47361 17.3214 8.15761C15.9983 8.81917 14.118 9.25 12 9.25C9.88205 9.25 8.00168 8.81917 6.67856 8.15761C5.31057 7.47361 4.75 6.66745 4.75 6ZM4.75 18C4.75 18.6674 5.31057 19.4736 6.67856 20.1576C8.00168 20.8192 9.88205 21.25 12 21.25C14.118 21.25 15.9983 20.8192 17.3214 20.1576C18.6894 19.4736 19.25 18.6674 19.25 18V14.7072C18.8733 15.0077 18.4459 15.2724 17.9923 15.4992C16.42 16.2854 14.3003 16.75 12 16.75C9.69967 16.75 7.58004 16.2854 6.00774 15.4992C5.55414 15.2724 5.12675 15.0077 4.75 14.7072V18ZM19.25 8.70722V12C19.25 12.6674 18.6894 13.4736 17.3214 14.1576C15.9983 14.8192 14.118 15.25 12 15.25C9.88205 15.25 8.00168 14.8192 6.67856 14.1576C5.31057 13.4736 4.75 12.6674 4.75 12V8.70722C5.12675 9.00772 5.55414 9.27245 6.00774 9.49925C7.58004 10.2854 9.69967 10.75 12 10.75C14.3003 10.75 16.42 10.2854 17.9923 9.49925C18.4459 9.27245 18.8733 9.00772 19.25 8.70722Z",
-      fill: "currentColor"
-    })
-  });
-};
-const DatabaseWithPlusSvg = ({
-  color
-}) => {
-  return u(SvgWithPlus, {
-    children: u(DatabaseSvg, {
-      color: color
-    })
-  });
-};
-
-const DatabasePage = ({
-  database
-}) => {
-  const datname = database.datname;
-  const deleteDatabaseAction = DATABASE.DELETE.bindParams({
-    datname
-  });
-  return u(Page, {
-    children: [u(PageHead, {
-      actions: [{
-        component: u(Button, {
-          "data-confirm-message": "Are you sure you want to delete the database \"".concat(datname, "\"?"),
-          action: deleteDatabaseAction,
-          children: "Delete"
-        })
-      }],
-      children: u(PageHead.Label, {
-        icon: u(DatabaseSvg, {}),
-        label: "Database:",
-        children: datname
-      })
-    }), u(PageBody, {
-      children: [u(DatabaseFieldset, {
-        item: database,
-        columns: database.meta.columns,
-        usePutAction: (columnName, valueSignal) => DATABASE.PUT.bindParams({
-          datname: database.datname,
-          columnName,
-          columnValue: valueSignal
-        }),
-        customFields: {
-          datdba: () => {
-            const ownerRole = database.ownerRole;
-            return u(RoleField, {
-              role: ownerRole
-            });
-          }
-        }
-      }), u("a", {
-        href: "https://www.postgresql.org/docs/14/sql-alterdatabase.html",
-        target: "_blank",
-        children: "ALTER DATABASE documentation"
-      })]
-    })]
-  });
-};
-
-/* eslint-env browser,node */
-
-/*
- * This file does not use export const InlineContent = function() {} on purpose:
- * - An export would be renamed by rollup,
- *   making it harder to statically detect new InlineContent() calls
- * - An export would be renamed by terser
- *   here again it becomes hard to detect new InlineContent() calls
- * Instead it sets "__InlineContent__" on the global object and terser is configured by jsenv
- * to preserve the __InlineContent__ global variable name
- */
-
-const globalObject = typeof self === "object" ? self : process;
-globalObject.__InlineContent__ = function (content, {
-  type = "text/plain"
-}) {
-  this.text = content;
-  this.type = type;
-};
-
-const inlineContent$2 = new __InlineContent__("body {\n  color: #333;\n  background-color: #fff;\n  margin: 0;\n  font-family: system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Noto Sans, Ubuntu, Cantarell, Helvetica Neue, Arial, sans-serif;\n  line-height: 1.5;\n  transition: background-color .3s, color .3s;\n}\n\n* {\n  box-sizing: border-box;\n}\n\n[data-hidden] {\n  display: none !important;\n}\n", {
-  type: "text/css"
-});
-const stylesheet$2 = new CSSStyleSheet({
-  baseUrl: "/client/database_manager.css?side_effect"
-});
-stylesheet$2.replaceSync(inlineContent$2.text);
-document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet$2];
-
-const Overflow = ({
-  children,
-  afterContent
-}) => {
-  return u("div", {
-    style: "display: flex; flex-wrap: wrap; overflow: hidden; width: 100%; box-sizing: border-box; white-space: nowrap; text-overflow: ellipsis;",
-    children: u("div", {
-      style: "display: flex; flex-grow: 1; width: 0; gap: 0.3em",
-      children: [u("div", {
-        style: "overflow: hidden; max-width: 100%; text-overflow: ellipsis;",
-        children: children
-      }), afterContent]
-    })
-  });
-};
-
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .text_and_count {\n    display: flex;\n    align-items: center;\n    gap: 3px;\n    flex: 1;\n    white-space: nowrap;\n  }\n\n  .count {\n    position: relative;\n    top: -1px;\n    color: rgba(28, 43, 52, 0.4);\n  }\n";
-const TextAndCount = ({
-  text,
-  count
-}) => {
-  return u(Overflow, {
-    className: "text_and_count",
-    afterContent: count > 0 && u("span", {
-      className: "count",
-      children: ["(", count, ")"]
-    }),
-    children: u("span", {
-      className: "label",
-      children: text
-    })
-  });
-};
-
-const ExplorerItem = ({
-  nameKey,
-  item,
-  renderItem,
-  deletedItems,
-  useItemArrayInStore,
-  useRenameItemAction,
-  useDeleteItemAction
-}) => {
-  const itemName = item[nameKey];
-  const {
-    editable,
-    startEditing,
-    stopEditing
-  } = useEditableController();
-  const deleteItemAction = useDeleteItemAction ? useDeleteItemAction(item) : null;
-  const itemRendered = renderItem(item, {
-    deletedItems,
-    className: "explorer_item_content",
-    shortcuts: [{
-      key: "enter",
-      enabled: !editable,
-      action: startEditing,
-      description: "Edit item name"
-    }, ...(deleteItemAction ? [{
-      key: "command+delete",
-      action: deleteItemAction,
-      description: "Delete item",
-      confirmMessage: "Are you sure you want to delete \"".concat(itemName, "\"?")
-    }] : [])],
-    children: useRenameItemAction ? u(RenameInputOrName, {
-      nameKey: nameKey,
-      item: item,
-      useItemArrayInStore: useItemArrayInStore,
-      useRenameItemAction: useRenameItemAction,
-      editable: editable,
-      stopEditing: stopEditing
-    }) : u(Overflow, {
-      children: itemName
-    })
-  });
-  return itemRendered;
-};
-const RenameInputOrName = ({
-  nameKey,
-  item,
-  useItemArrayInStore,
-  useRenameItemAction,
-  editable,
-  stopEditing
-}) => {
-  const itemName = item[nameKey];
-  const nameSignal = useSignalSync(itemName);
-  const renameAction = useRenameItemAction(item, nameSignal);
-  const itemArrayInStore = useItemArrayInStore();
-  const otherValueSet = new Set();
-  for (const itemCandidate of itemArrayInStore) {
-    if (itemCandidate === item) {
-      continue;
-    }
-    otherValueSet.add(itemCandidate[nameKey]);
-  }
-  const uniqueNameConstraint = createUniqueValueConstraint(otherValueSet, "\"{value}\" already exist, please choose another name.");
-  return u(EditableText, {
-    action: renameAction,
-    editable: editable,
-    onEditEnd: stopEditing,
-    value: itemName,
-    valueSignal: nameSignal,
-    constraints: [SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint],
-    children: u(Overflow, {
-      children: itemName
-    })
-  });
-};
-const ExplorerNewItem = ({
-  nameKey,
-  useItemArrayInStore,
-  useCreateItemAction,
-  cancelOnBlurInvalid,
-  onCancel,
-  onActionEnd
-}) => {
-  const nameSignal = useSignal("");
-  const createItemAction = useCreateItemAction(nameSignal);
-  const itemArrayInStore = useItemArrayInStore();
-  const valueSet = new Set();
-  for (const item of itemArrayInStore) {
-    valueSet.add(item[nameKey]);
-  }
-  const uniqueNameConstraint = createUniqueValueConstraint(valueSet, "\"{value}\" already exists. Please choose an other name.");
-  return u("span", {
-    className: "explorer_item_content",
-    children: [u(FontSizedSvg, {
-      children: u(EnterNameIconSvg, {})
-    }), u(Input, {
-      action: createItemAction,
-      valueSignal: nameSignal,
-      cancelOnEscape: true,
-      cancelOnBlurInvalid: cancelOnBlurInvalid,
-      onCancel: onCancel,
-      onActionEnd: onActionEnd,
-      autoFocus: true,
-      required: true,
-      constraints: [SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint]
-    })]
-  });
-};
-const EnterNameIconSvg = ({
-  color = "currentColor"
-}) => {
-  return u("svg", {
-    viewBox: "0 0 24 24",
-    fill: "none",
-    xmlns: "http://www.w3.org/2000/svg",
-    children: u("path", {
-      "fill-rule": "evenodd",
-      "clip-rule": "evenodd",
-      d: "M21.1213 2.70705C19.9497 1.53548 18.0503 1.53547 16.8787 2.70705L15.1989 4.38685L7.29289 12.2928C7.16473 12.421 7.07382 12.5816 7.02986 12.7574L6.02986 16.7574C5.94466 17.0982 6.04451 17.4587 6.29289 17.707C6.54127 17.9554 6.90176 18.0553 7.24254 17.9701L11.2425 16.9701C11.4184 16.9261 11.5789 16.8352 11.7071 16.707L19.5556 8.85857L21.2929 7.12126C22.4645 5.94969 22.4645 4.05019 21.2929 2.87862L21.1213 2.70705ZM18.2929 4.12126C18.6834 3.73074 19.3166 3.73074 19.7071 4.12126L19.8787 4.29283C20.2692 4.68336 20.2692 5.31653 19.8787 5.70705L18.8622 6.72357L17.3068 5.10738L18.2929 4.12126ZM15.8923 6.52185L17.4477 8.13804L10.4888 15.097L8.37437 15.6256L8.90296 13.5112L15.8923 6.52185ZM4 7.99994C4 7.44766 4.44772 6.99994 5 6.99994H10C10.5523 6.99994 11 6.55223 11 5.99994C11 5.44766 10.5523 4.99994 10 4.99994H5C3.34315 4.99994 2 6.34309 2 7.99994V18.9999C2 20.6568 3.34315 21.9999 5 21.9999H16C17.6569 21.9999 19 20.6568 19 18.9999V13.9999C19 13.4477 18.5523 12.9999 18 12.9999C17.4477 12.9999 17 13.4477 17 13.9999V18.9999C17 19.5522 16.5523 19.9999 16 19.9999H5C4.44772 19.9999 4 19.5522 4 18.9999V7.99994Z",
-      fill: color
-    })
-  });
-};
-
-const ExplorerItemList = D((props, ref) => {
-  const {
-    idKey,
-    nameKey,
-    itemArray,
-    renderItem,
-    useItemArrayInStore,
-    useRenameItemAction,
-    useDeleteManyItemAction,
-    useDeleteItemAction,
-    isCreatingNew,
-    useCreateItemAction,
-    stopCreatingNew
-  } = props;
-  const innerRef = A();
-  F(ref, () => innerRef.current);
-  const itemSelectionSignal = useSignal([]);
-  const [deletedItems, setDeletedItems] = d$1([]);
-  const deleteManyAction = useDeleteManyItemAction?.(itemSelectionSignal);
-  const listChildren = u(k, {
-    children: [itemArray.map(item => {
-      return u("li", {
-        className: "explorer_item",
-        children: u(ExplorerItem, {
-          idKey: idKey,
-          nameKey: nameKey,
-          item: item,
-          deletedItems: deletedItems,
-          renderItem: renderItem,
-          useItemArrayInStore: useItemArrayInStore,
-          useRenameItemAction: useRenameItemAction,
-          useDeleteItemAction: deleteManyAction ? () => null : useDeleteItemAction
-        })
-      }, item[idKey]);
-    }), isCreatingNew && u("li", {
-      className: "explorer_item",
-      children: u(ExplorerNewItem, {
-        nameKey: nameKey,
-        useItemArrayInStore: useItemArrayInStore,
-        useCreateItemAction: useCreateItemAction,
-        cancelOnBlurInvalid: true,
-        onCancel: (e, reason) => {
-          stopCreatingNew({
-            shouldRestoreFocus: reason === "escape_key"
-          });
-        },
-        onActionEnd: e => {
-          const input = e.target;
-          const eventCausingAction = e.detail.event;
-          const actionRequestedByKeyboard = eventCausingAction && eventCausingAction.type === "keydown" && eventCausingAction.key === "Enter";
-          const shouldRestoreFocus = actionRequestedByKeyboard &&
-          // If user focuses something else while action is running, respect it
-          document.activeElement === input;
-          stopCreatingNew({
-            shouldRestoreFocus
-          });
-        }
-      })
-    }, "new_item")]
-  });
-  const list = u("ul", {
-    ref: innerRef,
-    className: "explorer_item_list",
-    children: listChildren
-  });
-  if (deleteManyAction) {
-    const selectionLength = itemSelectionSignal.value.length;
-    return u(ExplorerItemListWithShortcuts, {
-      elementRef: innerRef,
-      itemSelectionSignal: itemSelectionSignal,
-      setDeletedItems: setDeletedItems,
-      shortcuts: [{
-        enabled: selectionLength > 0,
-        key: ["command+delete"],
-        action: deleteManyAction,
-        description: "Delete selected items",
-        confirmMessage: selectionLength === 1 ? "Are you sure you want to delete \"".concat(itemSelectionSignal.value[0], "\"?") : "Are you sure you want to delete the ".concat(selectionLength, " selected items?")
-      }],
-      children: list
-    });
-  }
-  return list;
-});
-const ExplorerItemListWithShortcuts = ({
-  elementRef,
-  itemSelectionSignal,
-  setDeletedItems,
-  shortcuts,
-  children
-}) => {
-  return u(SelectionProvider, {
-    value: itemSelectionSignal.value,
-    onChange: value => {
-      itemSelectionSignal.value = value;
-    },
-    onActionStart: () => {
-      setDeletedItems(itemSelectionSignal.value);
-    },
-    onActionAbort: () => {
-      setDeletedItems([]);
-    },
-    onActionError: () => {
-      setDeletedItems([]);
-    },
-    onActionEnd: () => {
-      setDeletedItems([]);
-    },
-    children: u(ShortcutProvider, {
-      shortcuts: shortcuts,
-      elementRef: elementRef,
-      children: children
-    })
-  });
-};
-
-/**
- *
- */
-
-const createExplorerGroupController = (id, {
-  detailsOpenAtStart,
-  detailsOnToggle
-}) => {
-  const [restoreHeight, storeHeight] = valueInLocalStorage("explorer_group_".concat(id, "_height"), {
-    type: "positive_number"
-  });
-  const heightSettingSignal = d(restoreHeight());
-  E(() => {
-    const height = heightSettingSignal.value;
-    storeHeight(height);
-  });
-  const useHeightSetting = () => {
-    return heightSettingSignal.value;
-  };
-  const setHeightSetting = width => {
-    heightSettingSignal.value = width;
-  };
-  return {
-    id,
-    useHeightSetting,
-    setHeightSetting,
-    detailsOpenAtStart,
-    detailsOnToggle
-  };
-};
-const ExplorerGroup = D((props, ref) => {
-  const {
-    controller,
-    detailsAction,
-    idKey,
-    nameKey,
-    labelChildren,
-    renderNewButtonChildren,
-    renderItem,
-    useItemArrayInStore,
-    useRenameItemAction,
-    useCreateItemAction,
-    useDeleteItemAction,
-    useDeleteManyItemAction,
-    onOpen,
-    onClose,
-    resizable,
-    ...rest
-  } = props;
-  const innerRef = A();
-  F(ref, () => innerRef.current);
-  _(() => {
-    setTimeout(() => {
-      innerRef.current.setAttribute("data-details-toggle-animation", "");
-    });
-  }, []);
-  const [isCreatingNew, setIsCreatingNew] = d$1(false);
-  const startCreatingNew = q(() => {
-    setIsCreatingNew(true);
-  }, [setIsCreatingNew]);
-  const stopCreatingNew = q(({
-    shouldRestoreFocus
-  }) => {
-    if (shouldRestoreFocus) {
-      createButtonRef.current.focus();
-    }
-    setIsCreatingNew(false);
-  }, [setIsCreatingNew]);
-  const heightSetting = controller.useHeightSetting();
-  const createButtonRef = A(null);
-  return u(k, {
-    children: [resizable && u("div", {
-      "data-resize-handle": controller.id,
-      id: "".concat(controller.id, "_resize_handle")
-    }), u(Details, {
-      ...rest,
-      ref: innerRef,
-      id: controller.id,
-      open: controller.detailsOpenAtStart,
-      focusGroup: true,
-      focusGroupDirection: "vertical",
-      className: "explorer_group",
-      onToggle: toggleEvent => {
-        controller.detailsOnToggle(toggleEvent.newState === "open");
-        if (toggleEvent.newState === "open") {
-          if (onOpen) {
-            onOpen();
-          }
-        } else if (onClose) {
-          onClose();
-        }
-      },
-      "data-resize": resizable ? "vertical" : "none",
-      "data-min-height": "150",
-      "data-requested-height": heightSetting,
-      action: detailsAction,
-      label: u(k, {
-        children: [labelChildren, renderNewButtonChildren ? u(k, {
-          children: [u("span", {
-            style: "display: flex; flex: 1"
-          }), u(Button, {
-            ref: createButtonRef,
-            className: "summary_action_icon",
-            discrete: true,
-            style: {
-              width: "22px",
-              height: "22px",
-              cursor: "pointer",
-              padding: "4px"
-            },
-            onMouseDown: e => {
-              // ensure when input is focused it stays focused
-              // without this preventDefault() the input would be blurred (which might cause creation of an item) and re-opened empty
-              e.preventDefault();
-            },
-            onClick: e => {
-              e.preventDefault();
-              startCreatingNew();
-            },
-            children: renderNewButtonChildren()
-          })]
-        }) : null]
-      }),
-      children: itemArray => {
-        return u("div", {
-          className: "explorer_group_content",
-          children: u(ExplorerItemList, {
-            idKey: idKey,
-            nameKey: nameKey,
-            itemArray: itemArray,
-            renderItem: renderItem,
-            useItemArrayInStore: useItemArrayInStore,
-            useRenameItemAction: useRenameItemAction,
-            useCreateItemAction: useCreateItemAction,
-            useDeleteItemAction: useDeleteItemAction,
-            useDeleteManyItemAction: useDeleteManyItemAction,
-            isCreatingNew: isCreatingNew,
-            stopCreatingNew: stopCreatingNew
-          })
-        });
-      }
-    })]
-  });
-});
-
-const [readDatabaseListDetailsOpened, storeDatabaseListDetailsOpened, eraseDatabaseListDetailsOpened] = valueInLocalStorage("databases_details_opened", {
-  type: "boolean"
-});
-const databaseListDetailsOpenAtStart = readDatabaseListDetailsOpened();
-const databaseListDetailsOnToggle = detailsOpen => {
-  if (detailsOpen) {
-    storeDatabaseListDetailsOpened(true);
-  } else {
-    eraseDatabaseListDetailsOpened();
-  }
-};
-
-const DatabaseLink = ({
-  database,
-  children,
-  ...rest
-}) => {
-  const datname = database.datname;
-  const databaseUrl = DATABASE_ROUTE.buildUrl({
-    datname
-  });
-  const {
-    params
-  } = useRouteStatus(DATABASE_ROUTE);
-  const activeDatname = params.datname;
-  const currentDatabase = useCurrentDatabase();
-  const isCurrent = currentDatabase && datname === currentDatabase.datname;
-  return u(LinkWithIcon, {
-    icon: u(DatabaseSvg, {
-      color: "#333"
-    }),
-    isCurrent: isCurrent,
-    href: databaseUrl,
-    active: activeDatname === datname,
-    ...rest,
-    children: children
-  });
-};
-
-const databasesDetailsController = createExplorerGroupController("databases", {
-  detailsOpenAtStart: databaseListDetailsOpenAtStart,
-  detailsOnToggle: databaseListDetailsOnToggle
-});
-const DatabasesDetails = props => {
-  const databaseCount = useDatabaseCount();
-  const databaseArray = useDatabaseArray();
-  return u(ExplorerGroup, {
-    ...props,
-    controller: databasesDetailsController,
-    detailsAction: DATABASE.GET_MANY,
-    idKey: "oid",
-    nameKey: "datname",
-    labelChildren: u(TextAndCount, {
-      text: "DATABASES",
-      count: databaseCount
-    }),
-    renderNewButtonChildren: () => u(DatabaseWithPlusSvg, {}),
-    renderItem: (database, props) => u(DatabaseLink, {
-      draggable: false,
-      value: database.datname,
-      database: database,
-      ...props
-    }, database.oid),
-    useItemArrayInStore: useDatabaseArrayInStore,
-    useCreateItemAction: valueSignal => DATABASE.POST({
-      datname: valueSignal
-    }),
-    useDeleteItemAction: database => DATABASE.DELETE.bindParams({
-      datname: database.datname
-    }),
-    useRenameItemAction: (database, valueSignal) => DATABASE.PUT.bindParams({
-      datname: database.datname,
-      columnName: "datname",
-      columnValue: valueSignal
-    }),
-    children: databaseArray
-  });
-};
-
 const [readRoleCanLoginListDetailsOpened, storeRoleCanLoginListDetailsOpened, eraseRoleCanLoginListDetailsOpened] = valueInLocalStorage("role_can_login_list_details_opened", {
   type: "boolean"
 });
@@ -2277,6 +1741,25 @@ const RoleGroupListDetails = props => {
       columnValue: valueSignal
     }),
     children: roleCannotLoginArray
+  });
+};
+
+const installImportMetaCss = importMeta => {
+  const stylesheet = new CSSStyleSheet({
+    baseUrl: importMeta.url
+  });
+  let called = false;
+  // eslint-disable-next-line accessor-pairs
+  Object.defineProperty(importMeta, "css", {
+    configurable: true,
+    set(value) {
+      if (called) {
+        throw new Error("import.meta.css setter can only be called once");
+      }
+      called = true;
+      stylesheet.replaceSync(value);
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
+    }
   });
 };
 
@@ -2707,9 +2190,9 @@ const EXPLORER = resource("explorer", {
     return {};
   }
 });
-EXPLORER.GET.run();
 
 const Explorer = () => {
+  useRunOnMount(EXPLORER.GET, Explorer);
   const role = useCurrentRole();
   // const database = useCurrentDatabase();
   const RoleIcon = pickRoleIcon(role);
@@ -2816,12 +2299,12 @@ const Aside = ({
     onMouseDown: e => {
       let elementToResize;
       let widthAtStart;
-      startResizeGesture(e, {
-        onStart: gesture => {
+      startDragToResizeGesture(e, {
+        onDragStart: gesture => {
           elementToResize = gesture.element;
           widthAtStart = getWidth(elementToResize);
         },
-        onMove: gesture => {
+        onDrag: gesture => {
           const xMove = gesture.xMove;
           const newWidth = widthAtStart + xMove;
           const minWidth =
@@ -2841,7 +2324,7 @@ const Aside = ({
           }
           resizeWidthSetter(newWidth);
         },
-        onEnd: () => {
+        onRelease: () => {
           const resizeWidth = resizeWidthRef.current;
           if (resizeWidth) {
             setAsideWidth(resizeWidth);
@@ -2855,7 +2338,7 @@ const Aside = ({
   });
 };
 
-const inlineContent = new __InlineContent__("body {\n  scrollbar-gutter: stable;\n  overflow-x: hidden;\n}\n\n#app {\n  flex-direction: row;\n  display: flex;\n}\n\naside {\n  z-index: 1;\n  border-right: 1px solid #e0e0e0;\n  flex-shrink: 0;\n  width: 250px;\n  min-width: 100px;\n  height: 100vh;\n  min-height: 600px;\n  position: -webkit-sticky;\n  position: sticky;\n  top: 0;\n}\n\naside > [data-resize-handle] {\n  z-index: 1;\n  cursor: ew-resize;\n  width: 5px;\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  right: -2.5px;\n}\n\naside > [data-resize-handle]:hover, aside[data-resizing] > [data-resize-handle] {\n  opacity: .5;\n  background-color: #00f;\n}\n\nmain {\n  box-sizing: border-box;\n  z-index: 0;\n  flex: 1;\n  min-width: 200px;\n  min-height: 100vh;\n  padding-bottom: 0;\n  position: relative;\n  overflow-x: auto;\n}\n\n.main_body {\n  min-width: 100%;\n}\n", {
+const inlineContent = new __InlineContent__("body {\n  scrollbar-gutter: stable;\n  overflow-x: hidden;\n}\n\n#app {\n  flex-direction: row;\n  display: flex;\n}\n\naside {\n  z-index: 1;\n  border-right: 1px solid #e0e0e0;\n  flex-shrink: 0;\n  width: 250px;\n  min-width: 100px;\n  height: 100vh;\n  min-height: 600px;\n  position: -webkit-sticky;\n  position: sticky;\n  top: 0;\n}\n\naside > [data-resize-handle] {\n  z-index: 1;\n  cursor: ew-resize;\n  width: 5px;\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  right: -2.5px;\n}\n\naside > [data-resize-handle]:hover, aside[data-resizing] > [data-resize-handle] {\n  opacity: .5;\n  background-color: #00f;\n}\n\nmain {\n  box-sizing: border-box;\n  z-index: 0;\n  flex: 1;\n  min-width: 200px;\n  min-height: 100vh;\n  padding-bottom: 0;\n  position: relative;\n  overflow-x: auto;\n}\n\n.main_body {\n  flex: 1;\n  min-width: 100%;\n  display: flex;\n}\n", {
   type: "text/css"
 });
 const stylesheet = new CSSStyleSheet({
@@ -2863,6 +2346,382 @@ const stylesheet = new CSSStyleSheet({
 });
 stylesheet.replaceSync(inlineContent.text);
 document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
+
+const DatabaseFieldset = ({
+  item,
+  columns,
+  usePutAction,
+  customFields = {},
+  ignoredFields = []
+}) => {
+  columns.sort((a, b) => {
+    return a.ordinal_position - b.ordinal_position;
+  });
+  return u("ul", {
+    children: columns.map(column => {
+      const columnName = column.column_name;
+      if (ignoredFields.includes(columnName)) {
+        return null;
+      }
+      const customField = customFields?.[columnName];
+      const dbField = customField ? customField(item) : u(DatabaseFieldWrapper, {
+        item: item,
+        column: column,
+        usePutAction: usePutAction
+      });
+      return u("li", {
+        children: dbField
+      }, columnName);
+    })
+  });
+};
+const RoleField = ({
+  role
+}) => {
+  const [editing, setEditing] = d$1(false);
+  const startEditing = q(() => {
+    setEditing(true);
+  }, []);
+  const stopEditing = q(() => {
+    setEditing(false);
+  }, []);
+  return u(Label, {
+    children: ["Owner:", u("div", {
+      style: "display: inline-flex; flex-direction: row; gap: 0.5em;",
+      children: editing ? u(Form, {
+        action: () => {
+          // TODO
+        },
+        onReset: stopEditing,
+        children: [u(Select, {
+          value: role.rolname,
+          children: [{
+            label: role.rolname,
+            value: role.rolname
+          }]
+        }), u(Button, {
+          type: "submit",
+          children: "Validate"
+        }), u(Button, {
+          type: "reset",
+          children: "Cancel"
+        })]
+      }) : u(k, {
+        children: [u(RoleLink, {
+          role: role,
+          children: role.rolname
+        }), u(Button, {
+          action: startEditing,
+          children: "Change"
+        })]
+      })
+    })]
+  });
+};
+const DatabaseFieldWrapper = ({
+  item,
+  column,
+  usePutAction
+}) => {
+  const columnName = column.column_name;
+  const value = item ? item[columnName] : "";
+  const valueSignal = useSignalSync(value);
+  const putAction = usePutAction(columnName, valueSignal);
+  return u(DatabaseField, {
+    label: u("span", {
+      children: [columnName, ":"]
+    }),
+    column: column,
+    action: putAction,
+    valueSignal: valueSignal
+  });
+};
+const useDatabaseInputProps = ({
+  column,
+  valueSignal
+}) => {
+  const columnName = column.column_name;
+  if (column.data_type === "boolean") {
+    return {
+      type: "checkbox",
+      name: columnName,
+      valueSignal
+    };
+  }
+  if (column.data_type === "timestamp with time zone") {
+    return {
+      type: "datetime-local",
+      name: columnName,
+      valueSignal
+    };
+  }
+  if (column.data_type === "integer") {
+    return {
+      type: "number",
+      name: columnName,
+      valueSignal,
+      min: 0,
+      step: 1
+    };
+  }
+  if (column.data_type === "name") {
+    return {
+      type: "text",
+      name: columnName,
+      valueSignal,
+      required: true
+    };
+  }
+  if (column.data_type === "text") {
+    return {
+      type: "text",
+      name: columnName,
+      valueSignal
+    };
+  }
+  if (column.data_type === "oid") {
+    return {
+      type: "text",
+      name: columnName,
+      valueSignal,
+      readOnly: true
+    };
+  }
+  if (column.column_name === "rolpassword") {
+    return {
+      type: "text",
+      name: columnName,
+      valueSignal
+    };
+  }
+  if (column.column_name === "rolconfig") {
+    // rolconfig something custom like client_min_messages
+    // see https://www.postgresql.org/docs/14/config-setting.html#CONFIG-SETTING-NAMES-VALUES
+    return {
+      type: "hidden",
+      name: columnName,
+      valueSignal
+    };
+  }
+  if (column.data_type === "xid") {
+    return {
+      type: "text",
+      valueSignal,
+      name: columnName,
+      readOnly: true
+    };
+  }
+  if (column.column_name === "datacl") {
+    // datacl is a custom type
+    // see https://www.postgresql.org/docs/14/sql-grant.html
+    return {
+      type: "hidden",
+      name: columnName,
+      valueSignal
+    };
+  }
+  return {
+    type: "hidden",
+    name: columnName,
+    valueSignal
+  };
+};
+const DatabaseInput = ({
+  column,
+  valueSignal,
+  ...rest
+}) => {
+  const inputProps = useDatabaseInputProps({
+    column,
+    valueSignal
+  });
+  return u(Input, {
+    ...inputProps,
+    ...rest
+  });
+};
+const DatabaseField = ({
+  column,
+  label,
+  ...rest
+}) => {
+  const columnName = column.column_name;
+  if (label === undefined) {
+    if (column.data_type === "oid") {
+      label = u("span", {
+        children: [columnName, ": "]
+      });
+    } else if (columnName === "rolconfig") {
+      label = u("span", {
+        children: [columnName, ": "]
+      });
+    } else {
+      label = u("span", {
+        children: [columnName, ":"]
+      });
+    }
+  }
+  return u(Label, {
+    children: [label, u(DatabaseInput, {
+      column: column,
+      ...rest
+    })]
+  });
+};
+
+installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .page {\n    display: flex;\n    flex-direction: column;\n    flex: 1;\n  }\n\n  .page_head {\n    display: flex;\n    gap: 10px;\n    justify-content: space-between;\n    flex-direction: column;\n\n    padding: 20px;\n    background: white;\n    position: sticky;\n    top: 0;\n\n    background-color: rgb(239, 242, 245);\n    border-bottom: 1px solid rgb(69, 76, 84);\n  }\n\n  .page_head h1 {\n    margin: 0;\n    line-height: 1em;\n  }\n\n  .page_head_with_actions {\n    display: flex;\n    flex-direction: row;\n  }\n\n  .page_head > .actions {\n  }\n\n  .page_body {\n    padding-left: 20px;\n    padding-right: 20px;\n    padding-bottom: 20px;\n    padding-top: 20px;\n  }\n\n  .page_error {\n    padding: 20px;\n    background: #fdd;\n    border: 1px solid red;\n\n    margin-top: 0;\n    margin-bottom: 20px;\n  }\n";
+const Page = ({
+  children,
+  ...props
+}) => {
+  const [error, resetError] = b();
+  return u(ErrorBoundaryContext.Provider, {
+    value: resetError,
+    children: [error && u(PageError, {
+      error: error
+    }), u("div", {
+      className: "page",
+      ...props,
+      children: children
+    })]
+  });
+};
+const PageError = ({
+  error
+}) => {
+  return u("div", {
+    className: "page_error",
+    children: ["An error occured: ", error.message, u("details", {
+      children: [u("summary", {
+        children: "More info"
+      }), u("pre", {
+        children: u("code", {
+          children: error.stack
+        })
+      })]
+    })]
+  });
+};
+const PageHead = ({
+  children,
+  spacingBottom,
+  ...rest
+}) => {
+  const headerRef = A(null);
+  _(() => {
+    return initPositionSticky(headerRef.current);
+  }, []);
+  return u("header", {
+    ref: headerRef,
+    className: "page_head",
+    style: {
+      ...(spacingBottom === undefined ? {} : {
+        paddingBottom: "".concat(spacingBottom, "px")
+      })
+    },
+    ...rest,
+    children: children
+  });
+};
+const PageHeadLabel = ({
+  icon,
+  label,
+  children,
+  actions = []
+}) => {
+  const title = u("h1", {
+    style: "display: flex; align-items: stretch; gap: 0.2em;",
+    children: [u(IconAndText, {
+      icon: icon,
+      style: {
+        color: "lightgrey",
+        userSelect: "none",
+        whiteSpace: "nowrap"
+      },
+      children: label
+    }), u("span", {
+      children: children
+    })]
+  });
+  if (actions.length === 0) {
+    return title;
+  }
+  return u("div", {
+    className: "page_head_with_actions",
+    children: [title, u("div", {
+      className: "actions",
+      children: actions.map(action => {
+        return action.component;
+      })
+    })]
+  });
+};
+PageHead.Label = PageHeadLabel;
+const PageBody = ({
+  children
+}) => {
+  return u("section", {
+    className: "page_body",
+    children: children
+  });
+};
+
+const DatabasePage = ({
+  database
+}) => {
+  const datname = database.datname;
+  const deleteDatabaseAction = DATABASE.DELETE.bindParams({
+    datname
+  });
+  return u(Page, {
+    "data-ui-name": "<DatabasePage />",
+    children: [u(PageHead, {
+      actions: [{
+        component: u(Button, {
+          "data-confirm-message": "Are you sure you want to delete the database \"".concat(datname, "\"?"),
+          action: deleteDatabaseAction,
+          children: "Delete"
+        })
+      }],
+      children: u(PageHead.Label, {
+        icon: u(DatabaseSvg, {}),
+        label: "Database:",
+        children: datname
+      })
+    }), u(PageBody, {
+      children: [u(DatabaseFieldset, {
+        item: database,
+        columns: database.meta.columns,
+        usePutAction: (columnName, valueSignal) => DATABASE.PUT.bindParams({
+          datname: database.datname,
+          columnName,
+          columnValue: valueSignal
+        }),
+        customFields: {
+          datdba: () => {
+            const ownerRole = database.ownerRole;
+            return u(RoleField, {
+              role: ownerRole
+            });
+          }
+        }
+      }), u("a", {
+        href: "https://www.postgresql.org/docs/14/sql-alterdatabase.html",
+        target: "_blank",
+        children: "ALTER DATABASE documentation"
+      })]
+    })]
+  });
+};
+
+const DatabaseRoutes = () => {
+  return u(Route, {
+    route: DATABASE_ROUTE,
+    children: database => u(DatabasePage, {
+      database: database
+    })
+  });
+};
 
 const RoleDatabaseList = ({
   role
@@ -2895,6 +2754,7 @@ const RoleCanLoginPage = ({
   });
   const RoleIcon = pickRoleIcon(role);
   return u(Page, {
+    "data-ui-name": "<RoleCanLoginPage />",
     children: [u(PageHead, {
       actions: [{
         component: u(Button, {
@@ -2912,11 +2772,13 @@ const RoleCanLoginPage = ({
       children: [u(DatabaseFieldset, {
         item: role,
         columns: role.meta.columns,
-        usePutAction: (columnName, valueSignal) => ROLE.PUT.bindParams({
-          rolname: role.tablename,
-          columnName,
-          columnValue: valueSignal
-        }),
+        usePutAction: (columnName, valueSignal) => {
+          return ROLE.PUT.bindParams({
+            rolname: role.tablename,
+            columnName,
+            columnValue: valueSignal
+          });
+        },
         ignoredFields: ["rolcanlogin"]
       }), u(RoleDatabaseList, {
         role: role
@@ -3015,6 +2877,7 @@ const RoleGroupPage = ({
   });
   const RoleIcon = pickRoleIcon(role);
   return u(Page, {
+    "data-ui-name": "<RoleGroupPage />",
     children: [u(PageHead, {
       actions: [{
         component: u(Button, {
@@ -3064,6 +2927,172 @@ const RolePage = ({
   });
 };
 
+const RoleRoutes = () => {
+  return u(Route, {
+    route: ROLE_ROUTE,
+    children: role => u(RolePage, {
+      role: role
+    })
+  });
+};
+
+const DataSvg = () => {
+  return u("svg", {
+    viewBox: "0 0 24 24",
+    fill: "none",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: [u("path", {
+      d: "M9 7H7V9H9V7Z",
+      fill: "currentColor"
+    }), u("path", {
+      d: "M7 13V11H9V13H7Z",
+      fill: "currentColor"
+    }), u("path", {
+      d: "M7 15V17H9V15H7Z",
+      fill: "currentColor"
+    }), u("path", {
+      d: "M11 15V17H17V15H11Z",
+      fill: "currentColor"
+    }), u("path", {
+      d: "M17 13V11H11V13H17Z",
+      fill: "currentColor"
+    }), u("path", {
+      d: "M17 7V9H11V7H17Z",
+      fill: "currentColor"
+    })]
+  });
+};
+
+const SettingsSvg = () => {
+  return u("svg", {
+    width: "800px",
+    height: "800px",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: [u("circle", {
+      cx: "12",
+      cy: "12",
+      r: "3",
+      stroke: "currentColor",
+      "stroke-width": "1.5"
+    }), u("path", {
+      d: "M13.7654 2.15224C13.3978 2 12.9319 2 12 2C11.0681 2 10.6022 2 10.2346 2.15224C9.74457 2.35523 9.35522 2.74458 9.15223 3.23463C9.05957 3.45834 9.0233 3.7185 9.00911 4.09799C8.98826 4.65568 8.70226 5.17189 8.21894 5.45093C7.73564 5.72996 7.14559 5.71954 6.65219 5.45876C6.31645 5.2813 6.07301 5.18262 5.83294 5.15102C5.30704 5.08178 4.77518 5.22429 4.35436 5.5472C4.03874 5.78938 3.80577 6.1929 3.33983 6.99993C2.87389 7.80697 2.64092 8.21048 2.58899 8.60491C2.51976 9.1308 2.66227 9.66266 2.98518 10.0835C3.13256 10.2756 3.3397 10.437 3.66119 10.639C4.1338 10.936 4.43789 11.4419 4.43786 12C4.43783 12.5581 4.13375 13.0639 3.66118 13.3608C3.33965 13.5629 3.13248 13.7244 2.98508 13.9165C2.66217 14.3373 2.51966 14.8691 2.5889 15.395C2.64082 15.7894 2.87379 16.193 3.33973 17C3.80568 17.807 4.03865 18.2106 4.35426 18.4527C4.77508 18.7756 5.30694 18.9181 5.83284 18.8489C6.07289 18.8173 6.31632 18.7186 6.65204 18.5412C7.14547 18.2804 7.73556 18.27 8.2189 18.549C8.70224 18.8281 8.98826 19.3443 9.00911 19.9021C9.02331 20.2815 9.05957 20.5417 9.15223 20.7654C9.35522 21.2554 9.74457 21.6448 10.2346 21.8478C10.6022 22 11.0681 22 12 22C12.9319 22 13.3978 22 13.7654 21.8478C14.2554 21.6448 14.6448 21.2554 14.8477 20.7654C14.9404 20.5417 14.9767 20.2815 14.9909 19.902C15.0117 19.3443 15.2977 18.8281 15.781 18.549C16.2643 18.2699 16.8544 18.2804 17.3479 18.5412C17.6836 18.7186 17.927 18.8172 18.167 18.8488C18.6929 18.9181 19.2248 18.7756 19.6456 18.4527C19.9612 18.2105 20.1942 17.807 20.6601 16.9999C21.1261 16.1929 21.3591 15.7894 21.411 15.395C21.4802 14.8691 21.3377 14.3372 21.0148 13.9164C20.8674 13.7243 20.6602 13.5628 20.3387 13.3608C19.8662 13.0639 19.5621 12.558 19.5621 11.9999C19.5621 11.4418 19.8662 10.9361 20.3387 10.6392C20.6603 10.4371 20.8675 10.2757 21.0149 10.0835C21.3378 9.66273 21.4803 9.13087 21.4111 8.60497C21.3592 8.21055 21.1262 7.80703 20.6602 7C20.1943 6.19297 19.9613 5.78945 19.6457 5.54727C19.2249 5.22436 18.693 5.08185 18.1671 5.15109C17.9271 5.18269 17.6837 5.28136 17.3479 5.4588C16.8545 5.71959 16.2644 5.73002 15.7811 5.45096C15.2977 5.17191 15.0117 4.65566 14.9909 4.09794C14.9767 3.71848 14.9404 3.45833 14.8477 3.23463C14.6448 2.74458 14.2554 2.35523 13.7654 2.15224Z",
+      stroke: "currentColor",
+      "stroke-width": "1.5"
+    })]
+  });
+};
+
+installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .table_data_actions {\n    margin-bottom: 15px;\n  }\n\n  .database_table_cell {\n    padding: 0;\n  }\n\n  .database_table[data-multi-selection] .database_table_cell[data-selected] {\n    background-color: light-dark(\n      rgba(0, 120, 212, 0.08),\n      rgba(59, 130, 246, 0.15)\n    );\n  }\n\n  .database_table_cell:focus {\n    /* Table cell border size impacts the visual appeareance of the outline */\n    /* (It's kinda melted into the table border, as if it was 1.5 px instead of 2) */\n    /* To avoid this we display outline on .database_table_cell_content  */\n    outline: none;\n  }\n\n  .database_table_cell:focus .database_table_cell_content {\n    outline: 2px solid #0078d4;\n    outline-color: light-dark(#355fcc, #3b82f6);\n    outline-offset: -2px;\n  }\n\n  .database_table_cell[data-editing] .database_table_cell_content {\n    outline: 2px solid #a8c7fa;\n    outline-offset: 0px;\n  }\n\n  .database_table_cell_content {\n    display: inline-flex;\n    flex-grow: 1;\n    width: 100%;\n    height: 100%;\n  }\n\n  .database_table_cell_value {\n    display: inline-flex;\n    flex-grow: 1;\n    user-select: none;\n    padding: 8px;\n  }\n\n  .database_table_cell_content input {\n    width: 100%;\n    height: 100%;\n    display: inline-flex;\n    flex-grow: 1;\n    padding-left: 8px;\n    border-radius: 0; /* match table cell border-radius */\n  }\n\n  .database_table_cell_content input[type=\"number\"]::-webkit-inner-spin-button {\n    width: 14px;\n    height: 30px;\n  }\n\n  .database_table *[data-focus-within] {\n    background-color: light-dark(\n      rgba(0, 120, 212, 0.08),\n      rgba(59, 130, 246, 0.15)\n    );\n  }\n";
+const DatabaseTableHeaderCell = () => {};
+const DatabaseTableCell = () => {};
+const TableData = ({
+  table,
+  rows
+}) => {
+  const tableRef = A(null);
+  const tableName = table.tablename;
+  const createRow = TABLE_ROW.POST.bindParams({
+    tablename: tableName
+  });
+  const {
+    schemaColumns
+  } = table.meta;
+
+  // Stable column definitions - only recreate when schema changes
+  const columns = T(() => {
+    return schemaColumns.map((column, index) => {
+      const columnName = column.column_name;
+      const columnIndex = index + 1; // +1 because number column is first
+
+      return {
+        enableResizing: true,
+        accessorKey: columnName,
+        header: ({
+          header
+        }) => u(DatabaseTableHeaderCell, {
+          header: header,
+          columnName: columnName,
+          columnIndex: columnIndex
+        }),
+        cell: info => u(DatabaseTableCell, {
+          columnName: columnName,
+          column: column,
+          value: info.getValue(),
+          row: info.row
+        }),
+        footer: info => info.column.id
+      };
+    });
+  }, [schemaColumns]); // Only depend on schema, not dynamic state
+
+  const data = rows;
+  const [selection, setSelection] = d$1([]);
+  return u("div", {
+    children: [u(Table, {
+      ref: tableRef,
+      className: "database_table",
+      selection: selection,
+      onSelectionChange: setSelection,
+      idKey: "id",
+      columns: columns,
+      data: data,
+      style: {
+        height: "fit-content"
+      }
+    }), data.length === 0 ? u("div", {
+      children: "No data"
+    }) : null, u("div", {
+      className: "table_data_actions",
+      children: u(Button, {
+        action: createRow,
+        children: "Add row"
+      })
+    })]
+  });
+};
+
+const TableSettings = ({
+  table
+}) => {
+  const tablename = table.tablename;
+  const deleteTableAction = TABLE.DELETE.bindParams({
+    tablename
+  });
+  return u("div", {
+    children: [u(DatabaseFieldset, {
+      item: table,
+      columns: table.meta.columns,
+      usePutAction: (columnName, valueSignal) => TABLE.PUT.bindParams({
+        tablename: table.tablename,
+        columnName,
+        columnValue: valueSignal
+      }),
+      customFields: {
+        tableowner: () => {
+          const ownerRole = table.ownerRole;
+          return u(RoleField, {
+            role: ownerRole
+          });
+        }
+      }
+    }), u("a", {
+      href: "https://www.postgresql.org/docs/14/ddl-basics.html",
+      target: "_blank",
+      children: "TABLE documentation"
+    }), u("div", {
+      children: u("p", {
+        children: u(Button, {
+          "data-confirm-message": "Are you sure you want to delete the table \"".concat(tablename, "\"?"),
+          action: deleteTableAction,
+          children: "Delete this table"
+        })
+      })
+    })]
+  });
+};
+
 /**
  * ce qui me parait le mieux:
  *
@@ -3088,48 +3117,76 @@ const TablePage = ({
   table
 }) => {
   const tablename = table.tablename;
-  const deleteTableAction = TABLE.DELETE.bindParams({
+  const tableDataUrl = TABLE_DATA_ROUTE.buildUrl({
     tablename
   });
+  const tableSettingUrl = TABLE_SETTINGS_ROUTE.buildUrl({
+    tablename
+  });
+  const {
+    active: tableDataRouteIsActive
+  } = useRouteStatus(TABLE_DATA_ROUTE);
+  const {
+    active: tableSettingsRouteIsActive
+  } = useRouteStatus(TABLE_SETTINGS_ROUTE);
   return u(Page, {
+    "data-ui-name": "<TablePage />",
     children: [u(PageHead, {
-      actions: [{
-        component: u(Button, {
-          "data-confirm-message": "Are you sure you want to delete the table \"".concat(tablename, "\"?"),
-          action: deleteTableAction,
-          children: "Delete"
-        })
-      }],
-      children: u(PageHead.Label, {
+      spacingBottom: 0,
+      children: [u(PageHead.Label, {
         icon: u(TableSvg, {}),
         label: "Table:",
         children: tablename
-      })
+      }), u(TabList, {
+        children: [u(Tab, {
+          selected: tableDataRouteIsActive,
+          children: u(LinkWithIcon, {
+            icon: u(DataSvg, {}),
+            href: tableDataUrl,
+            "data-no-text-decoration": true,
+            children: "Data"
+          })
+        }), u(Tab, {
+          selected: tableSettingsRouteIsActive,
+          children: u(LinkWithIcon, {
+            icon: u(SettingsSvg, {}),
+            href: tableSettingUrl,
+            "data-no-text-decoration": true,
+            children: "Settings"
+          })
+        })]
+      })]
     }), u(PageBody, {
-      children: u(k, {
-        children: [u(DatabaseFieldset, {
-          item: table,
-          columns: table.meta.columns,
-          usePutAction: (columnName, valueSignal) => TABLE.PUT.bindParams({
-            tablename: table.tablename,
-            columnName,
-            columnValue: valueSignal
-          }),
-          customFields: {
-            tableowner: () => {
-              const ownerRole = table.ownerRole;
-              return u(RoleField, {
-                role: ownerRole
-              });
-            }
-          }
-        }), u("a", {
-          href: "https://www.postgresql.org/docs/14/ddl-basics.html",
-          target: "_blank",
-          children: "TABLE documentation"
+      children: u(UITransition, {
+        children: [u(Route, {
+          route: TABLE_DATA_ROUTE,
+          children: rows => u(TableData, {
+            table: table,
+            rows: rows
+          })
+        }), u(Route, {
+          route: TABLE_SETTINGS_ROUTE,
+          children: () => u(TableSettings, {
+            table: table
+          })
         })]
       })
     })]
+  });
+};
+
+const TableRoutes = () => {
+  return u(Route, {
+    route: TABLE_ROUTE,
+    children: table => u(TablePage, {
+      table: table
+    })
+  });
+};
+
+const MainRoutes = () => {
+  return u(UITransition, {
+    children: [u(RoleRoutes, {}), u(DatabaseRoutes, {}), u(TableRoutes, {})]
   });
 };
 
@@ -3141,22 +3198,7 @@ const App = () => {
     }), u("main", {
       children: u("div", {
         className: "main_body",
-        children: [u(Route, {
-          route: ROLE_ROUTE,
-          children: role => u(RolePage, {
-            role: role
-          })
-        }), u(Route, {
-          route: DATABASE_ROUTE,
-          children: database => u(DatabasePage, {
-            database: database
-          })
-        }), u(Route, {
-          route: TABLE_ROUTE,
-          children: table => u(TablePage, {
-            table: table
-          })
-        })]
+        children: u(MainRoutes, {})
       })
     })]
   });

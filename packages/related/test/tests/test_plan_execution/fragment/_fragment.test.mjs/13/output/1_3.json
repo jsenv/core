@@ -7,7 +7,7 @@
   },
   "runtime": {
     "name": "node",
-    "version": "24.1.0"
+    "version": "25.0.0"
   },
   "memoryUsage": {
     "os": {
@@ -58,7 +58,7 @@
       "count": 5,
       "runtimeType": "node",
       "runtimeName": "node_worker_thread",
-      "runtimeVersion": "24.1.0"
+      "runtimeVersion": "25.0.0"
     }
   },
   "fragment": "1/3",

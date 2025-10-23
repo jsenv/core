@@ -60,7 +60,6 @@ export const createPerfImpactComment = ({
         }),
         content: renderGroupImpactTable({
           formatPerformanceImpactCell,
-          groupName,
           beforeMergeMetrics,
           afterMergeMetrics,
           bigImpacts,

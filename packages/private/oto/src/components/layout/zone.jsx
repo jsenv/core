@@ -65,7 +65,7 @@ export const Zone = ({
   children = toChildArray(children);
   useLayoutEffect(() => {
     updateDimenionAndPosition({
-      name,
+      // name,
       element: elementRef.current,
       width,
       height,
@@ -73,7 +73,15 @@ export const Zone = ({
       x,
       y,
     });
-  }, [name, width, height, aspectRatio, x, y, ...children]);
+  }, [
+    // name
+    width,
+    height,
+    aspectRatio,
+    x,
+    y,
+    ...children,
+  ]);
 
   return (
     <div

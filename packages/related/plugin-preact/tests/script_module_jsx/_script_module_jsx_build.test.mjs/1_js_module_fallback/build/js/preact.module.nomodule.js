@@ -66,7 +66,7 @@ System.register([], function (_export, _context) {
     (!n.__d && (n.__d = !0) && i.push(n) && !$.__r++ || r != l.debounceRendering) && ((r = l.debounceRendering) || o)($);
   }
   function $() {
-    for (var n, u, t, r, o, f, c, s = 1; i.length;) i.length > s && i.sort(e), n = i.shift(), s = i.length, n.__d && (t = void 0, o = (r = (u = n).__v).__e, f = [], c = [], u.__P && ((t = d({}, r)).__v = r.__v + 1, l.vnode && l.vnode(t), O(u.__P, t, r, u.__n, u.__P.namespaceURI, 32 & r.__u ? [o] : null, f, null == o ? S(r) : o, !!(32 & r.__u), c), t.__v = r.__v, t.__.__k[t.__i] = t, N(f, t, c), t.__e != o && C(t)));
+    for (var n, u, t, r, o, f, c, s = 1; i.length;) i.length > s && i.sort(e), n = i.shift(), s = i.length, n.__d && (t = void 0, r = void 0, o = (r = (u = n).__v).__e, f = [], c = [], u.__P && ((t = d({}, r)).__v = r.__v + 1, l.vnode && l.vnode(t), O(u.__P, t, r, u.__n, u.__P.namespaceURI, 32 & r.__u ? [o] : null, f, null == o ? S(r) : o, !!(32 & r.__u), c), t.__v = r.__v, t.__.__k[t.__i] = t, N(f, t, c), r.__e = r.__ = null, t.__e != o && C(t)));
     $.__r = 0;
   }
   function I(n, l, u, t, i, r, o, e, f, c, s) {
@@ -76,9 +76,10 @@ System.register([], function (_export, _context) {
       w,
       d,
       g,
-      _ = t && t.__k || v,
-      m = l.length;
-    for (f = P(u, l, _, f, m), a = 0; a < m; a++) null != (y = u.__k[a]) && (h = -1 == y.__i ? p : _[y.__i] || p, y.__i = a, g = O(n, y, h, i, r, o, e, f, c, s), w = y.__e, y.ref && h.ref != y.ref && (h.ref && B(h.ref, null, y), s.push(y.ref, y.__c || w, y)), null == d && null != w && (d = w), 4 & y.__u || h.__k === y.__k ? f = A(y, f, n) : "function" == typeof y.type && void 0 !== g ? f = g : w && (f = w.nextSibling), y.__u &= -7);
+      _,
+      m = t && t.__k || v,
+      b = l.length;
+    for (f = P(u, l, m, f, b), a = 0; a < b; a++) null != (y = u.__k[a]) && (h = -1 == y.__i ? p : m[y.__i] || p, y.__i = a, g = O(n, y, h, i, r, o, e, f, c, s), w = y.__e, y.ref && h.ref != y.ref && (h.ref && B(h.ref, null, y), s.push(y.ref, y.__c || w, y)), null == d && null != w && (d = w), (_ = !!(4 & y.__u)) || h.__k === y.__k ? f = A(y, f, n, _) : "function" == typeof y.type && void 0 !== g ? f = g : w && (f = w.nextSibling), y.__u &= -7);
     return u.__e = d, f;
   }
   function P(n, l, u, t, i) {
@@ -96,13 +97,13 @@ System.register([], function (_export, _context) {
     if (a) for (r = 0; r < s; r++) null != (e = u[r]) && 0 == (2 & e.__u) && (e.__e == t && (t = S(e)), D(e, e));
     return t;
   }
-  function A(n, l, u) {
-    var t, i;
+  function A(n, l, u, t) {
+    var i, r;
     if ("function" == typeof n.type) {
-      for (t = n.__k, i = 0; t && i < t.length; i++) t[i] && (t[i].__ = n, l = A(t[i], l, u));
+      for (i = n.__k, r = 0; i && r < i.length; r++) i[r] && (i[r].__ = n, l = A(i[r], l, u, t));
       return l;
     }
-    n.__e != l && (l && n.type && !u.contains(l) && (l = S(n)), u.insertBefore(n.__e, l || null), l = n.__e);
+    n.__e != l && (t && (l && n.type && !l.parentNode && (l = S(n)), u.insertBefore(n.__e, l || null)), l = n.__e);
     do {
       l = l && l.nextSibling;
     } while (null != l && 8 == l.nodeType);

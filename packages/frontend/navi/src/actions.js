@@ -1,5 +1,7 @@
+import { createIterableWeakSet } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { batch, computed, effect, signal } from "@preact/signals";
+
 import {
   getActionPrivateProperties,
   setActionPrivateProperties,
@@ -12,20 +14,18 @@ import {
   RUNNING,
 } from "./action_run_states.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
-import { createIterableWeakSet } from "./utils/iterable_weak_set.js";
+import { isSignal } from "./utils/is_signal.js";
 import { createJsValueWeakMap } from "./utils/js_value_weak_map.js";
 import { mergeTwoJsValues } from "./utils/merge_two_js_values.js";
-import {
-  isSignal,
-  stringifyForDisplay,
-} from "./utils/stringify_for_display.js";
+import { stringifyForDisplay } from "./utils/stringify_for_display.js";
 import { weakEffect } from "./utils/weak_effect.js";
 
-const ACTION_AS_FUNCTION = true;
 let DEBUG = false;
 export const enableDebugActions = () => {
   DEBUG = true;
 };
+
+const ACTION_AS_FUNCTION = true;
 
 let dispatchActions = (params) => {
   const { requestedResult } = updateActions({
@@ -297,7 +297,11 @@ export const updateActions = ({
   }
 
   if (DEBUG) {
-    console.group(`updateActions()`);
+    let argSource = `reason: \`${reason}\``;
+    if (isReplace) {
+      argSource += `, isReplace: true`;
+    }
+    console.group(`updateActions({ ${argSource} })`);
     const lines = [
       ...(prerunSet.size ? [formatActionSet(prerunSet, "- prerun:")] : []),
       ...(runSet.size ? [formatActionSet(runSet, "- run:")] : []),
@@ -306,8 +310,7 @@ export const updateActions = ({
     ];
     console.debug(
       `requested operations:
-${lines.join("\n")}
-- meta: { reason: ${reason}, isReplace: ${isReplace} }`,
+${lines.join("\n")}`,
     );
   }
 
@@ -557,7 +560,6 @@ ${lines.join("\n")}`);
 
 const NO_PARAMS = {};
 const initialParamsDefault = NO_PARAMS;
-const metaDefault = {};
 
 const actionWeakMap = new WeakMap();
 export const createAction = (callback, rootOptions = {}) => {
@@ -568,10 +570,10 @@ export const createAction = (callback, rootOptions = {}) => {
 
   let rootAction;
 
-  const createActionCore = (
-    {
+  const createActionCore = (options, { parentAction } = {}) => {
+    let {
       name = callback.name || "anonymous",
-      params = initialParamsDefault,
+      params,
       isPrerun = true,
       runningState = IDLE,
       aborted = false,
@@ -583,12 +585,15 @@ export const createAction = (callback, rootOptions = {}) => {
       renderLoadedAsync,
       sideEffect = () => {},
       keepOldData = false,
-      meta = metaDefault,
+      meta = {},
       dataEffect,
       completeSideEffect,
-    },
-    { parentAction } = {},
-  ) => {
+    } = options;
+    if (!Object.hasOwn(options, "params")) {
+      // even undefined should be respect it's only when not provided at all we use default
+      params = initialParamsDefault;
+    }
+
     const initialData = data;
     const paramsSignal = signal(params);
     const isPrerunSignal = signal(isPrerun);
@@ -660,7 +665,8 @@ export const createAction = (callback, rootOptions = {}) => {
       if (isSignal(newParamsOrSignal)) {
         const combinedParamsSignal = computed(() => {
           const newParams = newParamsOrSignal.value;
-          return mergeTwoJsValues(params, newParams);
+          const result = mergeTwoJsValues(params, newParams);
+          return result;
         });
         return createActionProxyFromSignal(
           action,
@@ -692,12 +698,15 @@ export const createAction = (callback, rootOptions = {}) => {
         if (signalMap.size === 0) {
           // Pas de signals, merge statique normal
           if (params === null || typeof params !== "object") {
-            return createChildAction(newParamsOrSignal, options);
+            return createChildAction({
+              ...options,
+              params: newParamsOrSignal,
+            });
           }
           const combinedParams = mergeTwoJsValues(params, newParamsOrSignal);
           return createChildAction({
-            params: combinedParams,
             ...options,
+            params: combinedParams,
           });
         }
 
@@ -979,7 +988,7 @@ export const createAction = (callback, rootOptions = {}) => {
             completeSideEffect?.(action);
           });
           if (DEBUG) {
-            console.log(`"${action}": completed (reason: ${reason})`);
+            console.log(`"${action}": completed`);
           }
           return computedDataSignal.peek();
         };
@@ -1196,12 +1205,27 @@ const createActionProxyFromSignal = (
   };
 
   const nameSignal = signal();
-  const actionProxy = {
+  let actionProxy;
+  if (ACTION_AS_FUNCTION) {
+    actionProxy = function actionProxyFunction() {
+      return actionProxy.rerun();
+    };
+    Object.defineProperty(actionProxy, "name", {
+      configurable: true,
+      get() {
+        return nameSignal.value;
+      },
+    });
+  } else {
+    actionProxy = {
+      get name() {
+        return nameSignal.value;
+      },
+    };
+  }
+  Object.assign(actionProxy, {
     isProxy: true,
     callback: undefined,
-    get name() {
-      return nameSignal.value;
-    },
     params: undefined,
     isPrerun: undefined,
     runningState: undefined,
@@ -1228,7 +1252,7 @@ const createActionProxyFromSignal = (
     replaceParams: null, // Will be set below
     toString: () => actionProxy.name,
     meta: {},
-  };
+  });
   Object.preventExtensions(actionProxy);
 
   onActionTargetChange((actionTarget) => {

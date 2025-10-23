@@ -2,7 +2,7 @@
 
  */
 
-import { getInnerWidth, getWidth, startResizeGesture } from "@jsenv/dom";
+import { getInnerWidth, getWidth, startDragToResizeGesture } from "@jsenv/dom";
 import { valueInLocalStorage } from "@jsenv/navi";
 import { effect, signal } from "@preact/signals";
 import { useRef, useState } from "preact/hooks";
@@ -45,12 +45,12 @@ export const Aside = ({ children }) => {
       onMouseDown={(e) => {
         let elementToResize;
         let widthAtStart;
-        startResizeGesture(e, {
-          onStart: (gesture) => {
+        startDragToResizeGesture(e, {
+          onDragStart: (gesture) => {
             elementToResize = gesture.element;
             widthAtStart = getWidth(elementToResize);
           },
-          onMove: (gesture) => {
+          onDrag: (gesture) => {
             const xMove = gesture.xMove;
             const newWidth = widthAtStart + xMove;
             const minWidth =
@@ -71,7 +71,7 @@ export const Aside = ({ children }) => {
             }
             resizeWidthSetter(newWidth);
           },
-          onEnd: () => {
+          onRelease: () => {
             const resizeWidth = resizeWidthRef.current;
             if (resizeWidth) {
               setAsideWidth(resizeWidth);
