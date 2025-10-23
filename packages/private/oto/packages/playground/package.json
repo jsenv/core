@@ -4,6 +4,6 @@
   "private": true,
   "dependencies": {
     "hooks": "../hooks",
-    "preact": "10.26.5"
+    "preact": "10.27.2"
   }
 }

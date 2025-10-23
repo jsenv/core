@@ -34,8 +34,8 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "ansi-escapes": "7.0.0",
-    "strip-ansi": "7.1.0"
+    "ansi-escapes": "7.1.1",
+    "strip-ansi": "7.1.2"
   },
   "devDependencies": {
     "@jsenv/assert": "../assert",

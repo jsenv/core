@@ -28,13 +28,13 @@
     "@jsenv/filesystem": "4.15.6",
     "@jsenv/github-pull-request-impact": "1.8.33",
     "@jsenv/humanize": "1.6.0",
-    "lighthouse": "12.8.0"
+    "lighthouse": "13.0.1"
   },
   "devDependencies": {
     "@jsenv/assert": "../assert",
     "@jsenv/lighthouse-impact": "./",
     "@jsenv/server": "../../backend/server",
-    "playwright": "1.54.1"
+    "playwright": "1.56.1"
   },
   "engines": {
     "node": ">=20.0.0"
