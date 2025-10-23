@@ -1,4 +1,5 @@
-import { d, E, d$1, _ } from "/jsenv_dom_node_modules.js";
+import { signal, effect } from "@preact/signals";
+import { useState, useLayoutEffect } from "preact/hooks";
 
 const createIterableWeakSet = () => {
   const objectWeakRefSet = new Set();
@@ -1219,7 +1220,7 @@ const createPreviousNodeIterator = (fromNode, rootNode, skipRoot = null) => {
   };
 };
 
-const activeElementSignal = d(document.activeElement);
+const activeElementSignal = signal(document.activeElement);
 document.addEventListener("focus", () => {
   activeElementSignal.value = document.activeElement;
 }, {
@@ -1238,7 +1239,7 @@ const useActiveElement = () => {
   return activeElementSignal.value;
 };
 const addActiveElementEffect = callback => {
-  const remove = E(() => {
+  const remove = effect(() => {
     const activeElement = activeElementSignal.value;
     callback(activeElement);
   });
@@ -8455,8 +8456,8 @@ const getMaxWidth = (element, availableWidth = getAvailableWidth(element)) => {
 };
 
 const useAvailableHeight = elementRef => {
-  const [availableHeight, availableHeightSetter] = d$1(-1);
-  _(() => {
+  const [availableHeight, availableHeightSetter] = useState(-1);
+  useLayoutEffect(() => {
     const element = elementRef.current;
     const parentElement = element.parentElement;
     let raf;
@@ -8478,8 +8479,8 @@ const useAvailableHeight = elementRef => {
 };
 
 const useAvailableWidth = elementRef => {
-  const [availableWidth, availableWidthSetter] = d$1(-1);
-  _(() => {
+  const [availableWidth, availableWidthSetter] = useState(-1);
+  useLayoutEffect(() => {
     const element = elementRef.current;
     const parentElement = element.parentElement;
     let raf;
@@ -8521,10 +8522,10 @@ const useMaxWidth = (elementRef, availableWidth) => {
 const useResizeStatus = (elementRef, {
   as = "number"
 } = {}) => {
-  const [resizing, setIsResizing] = d$1(false);
-  const [resizeWidth, setResizeWidth] = d$1(null);
-  const [resizeHeight, setResizeHeight] = d$1(null);
-  _(() => {
+  const [resizing, setIsResizing] = useState(false);
+  const [resizeWidth, setResizeWidth] = useState(null);
+  const [resizeHeight, setResizeHeight] = useState(null);
+  useLayoutEffect(() => {
     const element = elementRef.current;
     const onresizestart = e => {
       const sizeInfo = e.detail;
