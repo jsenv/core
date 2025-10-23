@@ -7,7 +7,7 @@
   },
   "runtime": {
     "name": "node",
-    "version": "24.8.0"
+    "version": "25.0.0"
   },
   "memoryUsage": {
     "os": {
@@ -29,16 +29,16 @@
     "os": {
       "start": "<X>",
       "min": "<X>",
-      "max": null,
-      "median": null,
-      "end": null
+      "max": "<X>",
+      "median": "<X>",
+      "end": "<X>"
     },
     "process": {
       "start": "<X>",
       "min": "<X>",
-      "max": null,
+      "max": "<X>",
       "median": "<X>",
-      "end": null
+      "end": "<X>"
     }
   },
   "timings": {
@@ -58,7 +58,7 @@
       "count": 5,
       "runtimeType": "node",
       "runtimeName": "node_worker_thread",
-      "runtimeVersion": "24.8.0"
+      "runtimeVersion": "25.0.0"
     }
   },
   "fragment": "3/3",

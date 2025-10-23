@@ -7,7 +7,7 @@
   },
   "runtime": {
     "name": "node",
-    "version": "24.8.0"
+    "version": "25.0.0"
   },
   "memoryUsage": {
     "os": {

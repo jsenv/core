@@ -141,8 +141,8 @@
     "node": ">=20.8.0"
   },
   "volta": {
-    "node": "24.8.0",
-    "npm": "11.6.0"
+    "node": "25.0.0",
+    "npm": "11.6.2"
   },
   "publishConfig": {
     "access": "public"
