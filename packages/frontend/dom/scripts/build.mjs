@@ -13,6 +13,7 @@ await build({
         safari: "11.3",
       },
       minification: false,
+      preserveComments: true, // JSDoc comments are useful when people use the built file as reference
       versioning: false,
     },
   },

@@ -89,17 +89,17 @@ const createPubSub = () => {
   return [publish, subscribe, clear];
 };
 
-
+// https://github.com/davidtheclark/tabbable/blob/master/index.js
 const isDocumentElement = node => node === node.ownerDocument.documentElement;
 
-
-
-
-
-
-
-
-
+/**
+ * elementToOwnerWindow returns the window owning the element.
+ * Usually an element window will just be window.
+ * But when an element is inside an iframe, the window of that element
+ * is iframe.contentWindow
+ * It's often important to work with the correct window because
+ * element are scoped per iframes.
+ */
 const elementToOwnerWindow = element => {
   if (elementIsWindow(element)) {
     return element;
@@ -109,14 +109,14 @@ const elementToOwnerWindow = element => {
   }
   return elementToOwnerDocument(element).defaultView;
 };
-
-
-
-
-
-
-
-
+/**
+ * elementToOwnerDocument returns the document containing the element.
+ * Usually an element document is window.document.
+ * But when an element is inside an iframe, the document of that element
+ * is iframe.contentWindow.document
+ * It's often important to work with the correct document because
+ * element are scoped per iframes.
+ */
 const elementToOwnerDocument = element => {
   if (elementIsWindow(element)) {
     return element.document;
@@ -135,7 +135,7 @@ const elementIsSummary = ({
   nodeName
 }) => nodeName === "SUMMARY";
 
-
+// should be used ONLY when an element is related to other elements that are not descendants of this element
 const getAssociatedElements = element => {
   if (element.tagName === "COL") {
     const columnCells = [];
@@ -153,10 +153,10 @@ const getAssociatedElements = element => {
     }
     return columnCells;
   }
-
-
-
-
+  // if (element.tagName === "TR") {
+  //   const rowCells = Array.from(element.children);
+  //   return rowCells;
+  // }
   return null;
 };
 
@@ -191,12 +191,12 @@ const addWillChange = (element, property) => {
   const currentWillChange = element.style.willChange;
   const willChangeValues = currentWillChange ? currentWillChange.split(",").map(v => v.trim()).filter(Boolean) : [];
   if (willChangeValues.includes(property)) {
-
+    // Property already exists, return no-op
     return () => {};
   }
   willChangeValues.push(property);
   element.style.willChange = willChangeValues.join(", ");
-
+  // Return function to remove only this property
   return () => {
     const newValues = willChangeValues.filter(v => v !== property);
     if (newValues.length === 0) {
@@ -225,25 +225,25 @@ const createSetMany$1 = setter => {
 const setStyles = createSetMany$1(setStyle);
 const forceStyles = createSetMany$1(forceStyle);
 
-
+// Properties that need px units
 const pxProperties = ["width", "height", "top", "left", "right", "bottom", "margin", "marginTop", "marginRight", "marginBottom", "marginLeft", "padding", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "border", "borderWidth", "borderTopWidth", "borderRightWidth", "borderBottomWidth", "borderLeftWidth", "fontSize", "lineHeight", "letterSpacing", "wordSpacing", "translateX", "translateY", "translateZ", "borderRadius", "borderTopLeftRadius", "borderTopRightRadius", "borderBottomLeftRadius", "borderBottomRightRadius"];
 
-
+// Properties that need deg units
 const degProperties = ["rotate", "rotateX", "rotateY", "rotateZ", "skew", "skewX", "skewY"];
 
-
+// Properties that should remain unitless
 const unitlessProperties = ["opacity", "zIndex", "flexGrow", "flexShrink", "order", "columnCount", "scale", "scaleX", "scaleY", "scaleZ"];
 
-
+// Normalize a single style value
 const normalizeStyle = (value, propertyName, context = "js") => {
   if (propertyName === "transform") {
     if (context === "js") {
       if (typeof value === "string") {
-
+        // For js context, prefer objects
         return parseCSSTransform(value);
       }
-
-
+      // If code does transform: { translateX: "10px" }
+      // we want to store { translateX: 10 }
       const transformNormalized = {};
       for (const key of Object.keys(value)) {
         const partValue = normalizeStyle(value[key], key, "js");
@@ -252,20 +252,20 @@ const normalizeStyle = (value, propertyName, context = "js") => {
       return transformNormalized;
     }
     if (typeof value === "object" && value !== null) {
-
+      // For CSS context, ensure transform is a string
       return stringifyCSSTransform(value);
     }
     return value;
   }
 
-
+  // Handle transform.* properties (e.g., "transform.translateX")
   if (propertyName.startsWith("transform.")) {
     if (context === "css") {
       console.warn("normalizeStyle: magic properties like \"".concat(propertyName, "\" are not applicable in \"css\" context. Returning original value."));
       return value;
     }
-    const transformProperty = propertyName.slice(10);
-
+    const transformProperty = propertyName.slice(10); // Remove "transform." prefix
+    // If value is a CSS transform string, parse it first to extract the specific property
     if (typeof value === "string") {
       if (value === "none") {
         return undefined;
@@ -273,11 +273,11 @@ const normalizeStyle = (value, propertyName, context = "js") => {
       const parsedTransform = parseCSSTransform(value);
       return parsedTransform?.[transformProperty];
     }
-
+    // If value is a transform object, extract the property directly
     if (typeof value === "object" && value !== null) {
       return value[transformProperty];
     }
-
+    // never supposed to happen, the value given is neither string nor object
     return undefined;
   }
   if (pxProperties.includes(propertyName)) {
@@ -315,7 +315,7 @@ const normalizeNumber = (value, context, unit, propertyName) => {
   return value;
 };
 
-
+// Normalize styles for DOM application
 const normalizeStyles = (styles, context = "js") => {
   const normalized = {};
   for (const [key, value] of Object.entries(styles)) {
@@ -324,7 +324,7 @@ const normalizeStyles = (styles, context = "js") => {
   return normalized;
 };
 
-
+// Convert transform object to CSS string
 const stringifyCSSTransform = transformObj => {
   const transforms = [];
   for (const key of Object.keys(transformObj)) {
@@ -335,63 +335,63 @@ const stringifyCSSTransform = transformObj => {
   return transforms.join(" ");
 };
 
-
+// Parse transform CSS string into object
 const parseCSSTransform = transformString => {
   if (!transformString || transformString === "none") {
     return undefined;
   }
   const transformObj = {};
 
-
+  // Parse transform functions
   const transformPattern = /(\w+)\(([^)]+)\)/g;
   let match;
   while ((match = transformPattern.exec(transformString)) !== null) {
     const [, functionName, value] = match;
 
-
+    // Handle matrix functions specially
     if (functionName === "matrix" || functionName === "matrix3d") {
       const matrixComponents = parseMatrixTransform(match[0]);
       if (matrixComponents) {
-
+        // Only add non-default values to preserve original information
         Object.assign(transformObj, matrixComponents);
       }
-
+      // If matrix can't be parsed to simple components, skip it (keep complex transforms as-is)
       continue;
     }
 
-
+    // Handle regular transform functions
     const normalizedValue = normalizeStyle(value.trim(), functionName, "js");
     if (normalizedValue !== undefined) {
       transformObj[functionName] = normalizedValue;
     }
   }
 
-
+  // Return undefined if no properties were extracted (preserves original information)
   return Object.keys(transformObj).length > 0 ? transformObj : undefined;
 };
 
-
+// Parse a matrix transform and extract simple transform components when possible
 const parseMatrixTransform = matrixString => {
-
+  // Match matrix() or matrix3d() functions
   const matrixMatch = matrixString.match(/matrix(?:3d)?\(([^)]+)\)/);
   if (!matrixMatch) {
     return null;
   }
   const values = matrixMatch[1].split(",").map(v => parseFloat(v.trim()));
   if (matrixString.includes("matrix3d")) {
-
+    // matrix3d(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p)
     if (values.length !== 16) {
       return null;
     }
     const [a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p] = values;
-
+    // Check if it's a simple 2D transform (most common case)
     if (c === 0 && d === 0 && g === 0 && h === 0 && i === 0 && j === 0 && k === 1 && l === 0 && o === 0 && p === 1) {
-
+      // This is essentially a 2D transform
       return parseSimple2DMatrix(a, b, e, f, m, n);
     }
-    return null;
+    return null; // Complex 3D transform
   }
-
+  // matrix(a, b, c, d, e, f)
   if (values.length !== 6) {
     return null;
   }
@@ -399,11 +399,11 @@ const parseMatrixTransform = matrixString => {
   return parseSimple2DMatrix(a, b, c, d, e, f);
 };
 
-
+// Parse a simple 2D matrix into transform components
 const parseSimple2DMatrix = (a, b, c, d, e, f) => {
   const result = {};
 
-
+  // Extract translation - only add if not default (0)
   if (e !== 0) {
     result.translateX = e;
   }
@@ -411,23 +411,23 @@ const parseSimple2DMatrix = (a, b, c, d, e, f) => {
     result.translateY = f;
   }
 
-
+  // Check for identity matrix (no transform)
   if (a === 1 && b === 0 && c === 0 && d === 1) {
-    return result;
+    return result; // Only translation
   }
 
-
-
+  // Decompose the 2D transformation matrix
+  // Based on: https://frederic-wang.fr/decomposition-of-2d-transform-matrices.html
 
   const det = a * d - b * c;
-
+  // Degenerate matrix (maps to a line or point)
   if (det === 0) {
     return null;
   }
 
-
+  // Extract scale and rotation
   if (c === 0) {
-
+    // Simple case: no skew
     if (a !== 1) {
       result.scaleX = a;
     }
@@ -443,7 +443,7 @@ const parseSimple2DMatrix = (a, b, c, d, e, f) => {
     return result;
   }
 
-
+  // General case: decompose using QR decomposition approach
   const scaleX = Math.sqrt(a * a + b * b);
   const scaleY = det / scaleX;
   const rotation = Math.atan2(b, a) * (180 / Math.PI);
@@ -463,7 +463,7 @@ const parseSimple2DMatrix = (a, b, c, d, e, f) => {
   return result;
 };
 
-
+// Merge two style objects, handling special cases like transform
 const mergeStyles = (stylesA, stylesB) => {
   const result = {
     ...stylesA
@@ -478,18 +478,18 @@ const mergeStyles = (stylesA, stylesB) => {
   return result;
 };
 
-
+// Merge a single style property value with an existing value
 const mergeOneStyle = (existingValue, newValue, propertyName, context = "js") => {
   if (propertyName === "transform") {
+    // Matrix parsing is now handled automatically in parseCSSTransform
 
-
-
+    // Determine the types
     const existingIsString = typeof existingValue === "string" && existingValue !== "none";
     const newIsString = typeof newValue === "string" && newValue !== "none";
     const existingIsObject = typeof existingValue === "object" && existingValue !== null;
     const newIsObject = typeof newValue === "object" && newValue !== null;
 
-
+    // Case 1: Both are objects - merge directly
     if (existingIsObject && newIsObject) {
       const merged = {
         ...existingValue,
@@ -498,7 +498,7 @@ const mergeOneStyle = (existingValue, newValue, propertyName, context = "js") =>
       return context === "css" ? stringifyCSSTransform(merged) : merged;
     }
 
-
+    // Case 2: New is object, existing is string - parse existing and merge
     if (newIsObject && existingIsString) {
       const parsedExisting = parseCSSTransform(existingValue);
       const merged = {
@@ -508,7 +508,7 @@ const mergeOneStyle = (existingValue, newValue, propertyName, context = "js") =>
       return context === "css" ? stringifyCSSTransform(merged) : merged;
     }
 
-
+    // Case 3: New is string, existing is object - parse new and merge
     if (newIsString && existingIsObject) {
       const parsedNew = parseCSSTransform(newValue);
       const merged = {
@@ -518,7 +518,7 @@ const mergeOneStyle = (existingValue, newValue, propertyName, context = "js") =>
       return context === "css" ? stringifyCSSTransform(merged) : merged;
     }
 
-
+    // Case 4: Both are strings - parse both and merge
     if (existingIsString && newIsString) {
       const parsedExisting = parseCSSTransform(existingValue);
       const parsedNew = parseCSSTransform(newValue);
@@ -529,87 +529,87 @@ const mergeOneStyle = (existingValue, newValue, propertyName, context = "js") =>
       return context === "css" ? stringifyCSSTransform(merged) : merged;
     }
 
-
+    // Case 5: New is object, no existing or existing is none/null
     if (newIsObject) {
       return context === "css" ? stringifyCSSTransform(newValue) : newValue;
     }
 
-
+    // Case 6: New is string, no existing or existing is none/null
     if (newIsString) {
       if (context === "css") {
-        return newValue;
+        return newValue; // Already a string
       }
-      return parseCSSTransform(newValue);
+      return parseCSSTransform(newValue); // Convert to object
     }
   }
 
-
+  // For all other properties, simple replacement
   return newValue;
 };
 
+/**
+ * Style Controller System
+ *
+ * Solves CSS style manipulation problems in JavaScript:
+ *
+ * ## Main problems:
+ * 1. **Temporary style override**: Code wants to read current style, force another style,
+ *    then restore original. With inline styles this is ugly and loses original info.
+ * 2. **Multiple code parts**: When different parts of code want to touch styles simultaneously,
+ *    they step on each other (rare but happens).
+ * 3. **Transform composition**: CSS transforms are especially painful - you want to keep
+ *    existing transforms but force specific parts (e.g., keep `rotate(45deg)` but override
+ *    `translateX`). Native CSS overwrites the entire transform property.
+ *
+ * ## Solution:
+ * Controller pattern + Web Animations API to preserve inline styles. Code that sets
+ * inline styles expects to find them unchanged - we use animations for clean override:
+ *
+ * ```js
+ * const controller = createStyleController("myFeature");
+ *
+ * // Smart value conversion (100 → "100px", 45 → "45deg")
+ * controller.set(element, {
+ *   transform: { translateX: 100, rotate: 45 }, // Individual transform properties
+ *   opacity: 0.5
+ * });
+ *
+ * // Transform objects merged intelligently
+ * controller.set(element, {
+ *   transform: { translateX: 50 } // Merges with existing transforms
+ * });
+ *
+ * // Get underlying value without this controller's influence
+ * const originalOpacity = controller.getUnderlyingValue(element, "opacity");
+ * const originalTranslateX = controller.getUnderlyingValue(element, "transform.translateX"); // Magic dot notation!
+ * const actualWidth = controller.getUnderlyingValue(element, "rect.width"); // Layout measurements
+ *
+ * controller.delete(element, "opacity"); // Only removes opacity, keeps transform
+ * controller.clear(element); // Removes all styles from this controller only
+ * controller.clearAll(); // Cleanup when done
+ * ```
+ *
+ * **Key features:**
+ * - **Transform composition**: Intelligently merges transform components instead of overwriting
+ * - **Magic properties**: Access transform components with dot notation (e.g., "transform.translateX")
+ * - **Layout measurements**: Access actual rendered dimensions with rect.* (e.g., "rect.width")
+ * - **getUnderlyingValue()**: Read the "natural" value without this controller's influence
+ * - **Smart units**: Numeric values get appropriate units automatically (px, deg, unitless)
+ *
+ * **Transform limitations:**
+ * - **3D Transforms**: Complex `matrix3d()` transforms are preserved as-is and cannot be decomposed
+ *   into individual properties. Only `matrix3d()` that represent simple 2D transforms are converted
+ *   to object notation. Magic properties like "transform.rotateX" work only with explicit CSS functions,
+ *   not with complex 3D matrices.
+ *
+ * Multiple controllers can safely manage the same element without conflicts.
+ */
 
 
+// Global registry to track which controllers are managing each element's styles
+const elementControllerSetRegistry = new WeakMap(); // element -> Set<controller>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-const elementControllerSetRegistry = new WeakMap();
-
-
+// Top-level helpers for controller attachment tracking
 const onElementControllerAdded = (element, controller) => {
   if (!elementControllerSetRegistry.has(element)) {
     elementControllerSetRegistry.set(element, new Set());
@@ -622,14 +622,14 @@ const onElementControllerRemoved = (element, controller) => {
   if (elementControllerSet) {
     elementControllerSet.delete(controller);
 
-
+    // Clean up empty element registry
     if (elementControllerSet.size === 0) {
       elementControllerSetRegistry.delete(element);
     }
   }
 };
 const createStyleController = (name = "anonymous") => {
-
+  // Store element data for this controller: element -> { styles, animation }
   const elementWeakMap = new WeakMap();
   const set = (element, stylesToSet) => {
     if (!element || typeof element !== "object") {
@@ -691,7 +691,7 @@ const createStyleController = (name = "anonymous") => {
     }
     delete styles[propertyName];
     const isEmpty = Object.keys(styles).length === 0;
-
+    // Clean up empty controller
     if (isEmpty) {
       animation.cancel();
       elementWeakMap.delete(element);
@@ -703,27 +703,27 @@ const createStyleController = (name = "anonymous") => {
   const commit = element => {
     const elementData = elementWeakMap.get(element);
     if (!elementData) {
-      return;
+      return; // Nothing to commit on this element for this controller
     }
     const {
       styles,
       animation
     } = elementData;
-
-
+    // Cancel our animation permanently since we're committing styles to inline
+    // (Keep this BEFORE getComputedStyle to prevent computedStyle reading our animation styles)
     animation.cancel();
-
+    // Now read the true underlying styles (without our animation influence)
     const computedStyles = getComputedStyle(element);
-
+    // Convert controller styles to CSS and commit to inline styles
     const cssStyles = normalizeStyles(styles, "css");
     for (const [key, value] of Object.entries(cssStyles)) {
-
+      // Merge with existing computed styles for all properties
       const existingValue = computedStyles[key];
       element.style[key] = mergeOneStyle(existingValue, value, key, "css");
     }
-
+    // Clear this controller's styles since they're now inline
     elementWeakMap.delete(element);
-
+    // Clean up controller from element registry
     onElementControllerRemoved(element, controller);
   };
   const clear = element => {
@@ -741,7 +741,7 @@ const createStyleController = (name = "anonymous") => {
   const getUnderlyingValue = (element, propertyName) => {
     const elementControllerSet = elementControllerSetRegistry.get(element);
     const normalizeValueForJs = value => {
-
+      // Use normalizeStyle to handle all property types including transform dot notation
       return normalizeStyle(value, propertyName, "js");
     };
     const getFromOtherControllers = () => {
@@ -757,26 +757,26 @@ const createStyleController = (name = "anonymous") => {
         }
       }
 
-
-
-
-
-
+      // Note: For CSS width/height properties, we can trust the values from other controllers
+      // because we assume box-sizing: border-box. If the element used content-box,
+      // the CSS width/height would differ from getBoundingClientRect() due to padding/borders,
+      // but since controllers set the final rendered size, the CSS value is what matters.
+      // For actual layout measurements, use rect.* properties instead.
       return normalizeValueForJs(resultValue);
     };
     const getFromDOM = () => {
-
+      // Handle transform dot notation
       if (propertyName.startsWith("transform.")) {
         const transformValue = getComputedStyle(element).transform;
         return normalizeValueForJs(transformValue);
       }
-
+      // For all other CSS properties, use computed styles
       const computedValue = getComputedStyle(element)[propertyName];
       return normalizeValueForJs(computedValue);
     };
     const getFromDOMLayout = () => {
-
-
+      // For rect.* properties that reflect actual layout, always read from DOM
+      // These represent the actual rendered dimensions, bypassing any controller influence
       if (propertyName === "rect.width") {
         return element.getBoundingClientRect().width;
       }
@@ -806,10 +806,10 @@ const createStyleController = (name = "anonymous") => {
         styles,
         animation
       } = elementData;
-
+      // Temporarily cancel our animation to read underlying value
       animation.cancel();
       const underlyingValue = fn();
-
+      // Restore our animation
       elementData.animation = createAnimationForStyles(element, styles, name);
       return underlyingValue;
     };
@@ -817,15 +817,15 @@ const createStyleController = (name = "anonymous") => {
       return getWhileDisablingThisController(propertyName);
     }
 
-
+    // Handle computed layout properties (rect.*) - always read from DOM, bypass controllers
     if (propertyName.startsWith("rect.")) {
       return getWhileDisablingThisController(getFromDOMLayout);
     }
     if (!elementControllerSet || !elementControllerSet.has(controller)) {
-
+      // This controller is not applied, just read current value
       return getFromDOM();
     }
-
+    // Check if other controllers would provide this style
     const valueFromOtherControllers = getFromOtherControllers();
     if (valueFromOtherControllers !== undefined) {
       return valueFromOtherControllers;
@@ -833,7 +833,7 @@ const createStyleController = (name = "anonymous") => {
     return getWhileDisablingThisController(getFromDOM);
   };
   const clearAll = () => {
-
+    // Remove this controller from all elements and clean up animations
     for (const [element, elementControllerSet] of elementControllerSetRegistry) {
       if (!elementControllerSet.has(controller)) {
         continue;
@@ -868,10 +868,10 @@ const createAnimationForStyles = (element, styles, id) => {
     duration: 0,
     fill: "forwards"
   });
-  animation.id = id;
+  animation.id = id; // Set a debug name for this animation
   animation.play();
   animation.pause();
-  return animation;
+  return animation; // Return the created animation
 };
 const updateAnimationStyles = (animation, styles) => {
   const cssStyles = normalizeStyles(styles, "css");
@@ -917,12 +917,12 @@ const addAttributeEffect = (attributeName, effect) => {
             continue;
           }
 
-
+          // Clean up the removed node itself if it had the attribute
           if (removedNode.hasAttribute && removedNode.hasAttribute(attributeName)) {
             cleanupEffect(removedNode);
           }
 
-
+          // Clean up any children of the removed node that had the attribute
           if (removedNode.querySelectorAll) {
             const elementsWithAttribute = removedNode.querySelectorAll("[".concat(attributeName, "]"));
             for (const element of elementsWithAttribute) {
@@ -1091,9 +1091,9 @@ const getNextNode = (node, rootNode, skipChild = false, skipRoot = null) => {
   if (!skipChild) {
     const firstChild = node.firstChild;
     if (firstChild) {
-
+      // If the first child is skipRoot or inside skipRoot, skip it
       if (skipRoot && (firstChild === skipRoot || skipRoot.contains(firstChild))) {
-
+        // Skip this entire subtree by going to next sibling or up
         return getNextNode(node, rootNode, true, skipRoot);
       }
       return firstChild;
@@ -1101,7 +1101,7 @@ const getNextNode = (node, rootNode, skipChild = false, skipRoot = null) => {
   }
   const nextSibling = node.nextSibling;
   if (nextSibling) {
-
+    // If next sibling is skipRoot, skip it entirely
     if (skipRoot && nextSibling === skipRoot) {
       return getNextNode(nextSibling, rootNode, true, skipRoot);
     }
@@ -1131,11 +1131,11 @@ const createAfterNodeIterator = (fromNode, rootNode, skipChildren = false, skipR
   let current = fromNode;
   let childrenSkipped = false;
 
-
+  // If we're inside skipRoot, we need to start searching after skipRoot entirely
   if (skipRoot && (fromNode === skipRoot || skipRoot.contains(fromNode))) {
     current = skipRoot;
-    childrenSkipped = true;
-    skipChildren = true;
+    childrenSkipped = true; // Mark that we've already "processed" this node
+    skipChildren = true; // Force skip children to exit the skipRoot subtree
   }
   const next = (innerSkipChildren = false) => {
     const nextNode = getNextNode(current, rootNode, skipChildren && childrenSkipped === false || innerSkipChildren, skipRoot);
@@ -1153,14 +1153,14 @@ const createAfterNodeIterator = (fromNode, rootNode, skipChildren = false, skipR
 const getDeepestNode = (node, skipRoot = null) => {
   let deepestNode = node.lastChild;
   while (deepestNode) {
-
+    // If we hit skipRoot or enter its subtree, stop going deeper
     if (skipRoot && (deepestNode === skipRoot || skipRoot.contains(deepestNode))) {
-
+      // Try the previous sibling instead
       const previousSibling = deepestNode.previousSibling;
       if (previousSibling) {
         return getDeepestNode(previousSibling, skipRoot);
       }
-
+      // If no previous sibling, return the parent (which should be safe)
       return deepestNode.parentNode === node ? null : deepestNode.parentNode;
     }
     const lastChild = deepestNode.lastChild;
@@ -1175,15 +1175,15 @@ const getDeepestNode = (node, skipRoot = null) => {
 const getPreviousNode = (node, rootNode, skipRoot = null) => {
   const previousSibling = node.previousSibling;
   if (previousSibling) {
-
+    // If previous sibling is skipRoot, skip it entirely
     if (skipRoot && previousSibling === skipRoot) {
       return getPreviousNode(previousSibling, rootNode, skipRoot);
     }
     const deepestChild = getDeepestNode(previousSibling, skipRoot);
 
-
+    // Check if deepest child is inside skipRoot (shouldn't happen with updated getDeepestNode, but safe check)
     if (skipRoot && deepestChild && (deepestChild === skipRoot || skipRoot.contains(deepestChild))) {
-
+      // Skip this sibling entirely and try the next one
       return getPreviousNode(previousSibling, rootNode, skipRoot);
     }
     if (deepestChild) {
@@ -1202,7 +1202,7 @@ const getPreviousNode = (node, rootNode, skipRoot = null) => {
 const createPreviousNodeIterator = (fromNode, rootNode, skipRoot = null) => {
   let current = fromNode;
 
-
+  // If we're inside skipRoot, we need to start searching before skipRoot entirely
   if (skipRoot && (fromNode === skipRoot || skipRoot.contains(fromNode))) {
     current = skipRoot;
   }
@@ -1225,8 +1225,8 @@ document.addEventListener("focus", () => {
 }, {
   capture: true
 });
-
-
+// When clicking on document there is no "focus" event dispatched on the document
+// We can detect that with "blur" event when relatedTarget is null
 document.addEventListener("blur", e => {
   if (!e.relatedTarget) {
     activeElementSignal.value = document.activeElement;
@@ -1260,10 +1260,10 @@ const elementIsVisible = node => {
     if (getStyle(nodeOrAncestor, "display") === "none") {
       return false;
     }
-
+    // Check if element is inside a closed details element
     if (elementIsDetails(nodeOrAncestor) && !nodeOrAncestor.open) {
-
-
+      // Special case: summary elements are visible even when their parent details is closed
+      // But only if this details element is the direct parent of the summary
       if (elementIsSummary(node) && node.parentElement === nodeOrAncestor) ; else {
         return false;
       }
@@ -1274,7 +1274,7 @@ const elementIsVisible = node => {
 };
 
 const elementIsFocusable = node => {
-
+  // only element node can be focused, document, textNodes etc cannot
   if (node.nodeType !== 1) {
     return false;
   }
@@ -1319,7 +1319,7 @@ const canInteract = element => {
     return false;
   }
   if (element.hasAttribute("inert")) {
-
+    // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/inert
     return false;
   }
   return true;
@@ -1345,22 +1345,22 @@ const findFocusable = element => {
 
 const canInterceptKeys = event => {
   const target = event.target;
-
+  // Don't handle shortcuts when user is typing
   if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.contentEditable === "true" || target.isContentEditable) {
     return false;
   }
-
+  // Don't handle shortcuts when select dropdown is open
   if (target.tagName === "SELECT") {
     return false;
   }
-
+  // Don't handle shortcuts when target or container is disabled
   if (target.disabled || target.closest("[disabled]") || target.inert || target.closest("[inert]")) {
     return false;
   }
   return true;
 };
 
-
+// WeakMap to store focus group metadata
 const focusGroupRegistry = new WeakMap();
 const setFocusGroup = (element, options) => {
   focusGroupRegistry.set(element, options);
@@ -1406,8 +1406,8 @@ const performArrowNavigation = (event, element, {
   }
   const activeElement = document.activeElement;
   if (activeElement.hasAttribute("data-focusnav") === "none") {
-
-
+    // no need to prevent default here (arrow don't move focus by default in a focus group)
+    // (and it would prevent scroll via keyboard that we might want here)
     return true;
   }
   const onTargetToFocus = targetToFocus => {
@@ -1417,8 +1417,8 @@ const performArrowNavigation = (event, element, {
     targetToFocus.focus();
   };
 
-
-
+  // Grid navigation: we support only TABLE element for now
+  // A role="table" or an element with display: table could be used too but for now we need only TABLE support
   if (element.tagName === "TABLE") {
     const targetInGrid = getTargetInTableFocusGroup(event, element, {
       loop
@@ -1447,14 +1447,14 @@ const getTargetInLinearFocusGroup = (event, element, {
 }) => {
   const activeElement = document.activeElement;
 
-
+  // Check for Cmd/Ctrl + arrow keys for jumping to start/end of linear group
   const isJumpToEnd = event.metaKey || event.ctrlKey;
   if (isJumpToEnd) {
     return getJumpToEndTargetLinear(event, element, direction);
   }
   const isForward = isForwardArrow(event, direction);
 
-
+  // Arrow Left/Up: move to previous focusable element in group
   backward: {
     if (!isBackwardArrow(event, direction)) {
       break backward;
@@ -1480,7 +1480,7 @@ const getTargetInLinearFocusGroup = (event, element, {
     return null;
   }
 
-
+  // Arrow Right/Down: move to next focusable element in group
   forward: {
     if (!isForward) {
       break forward;
@@ -1498,7 +1498,7 @@ const getTargetInLinearFocusGroup = (event, element, {
       return ancestorTarget;
     }
     if (loop) {
-
+      // No next element, wrap to first focusable in group
       const firstFocusableElement = findDescendant(element, elementIsFocusable);
       if (firstFocusableElement) {
         return firstFocusableElement;
@@ -1508,7 +1508,7 @@ const getTargetInLinearFocusGroup = (event, element, {
   }
   return null;
 };
-
+// Find parent focus group with the same name and try delegation
 const delegateArrowNavigation = (event, currentElement, {
   name
 }) => {
@@ -1520,12 +1520,12 @@ const delegateArrowNavigation = (event, currentElement, {
       continue;
     }
 
-
-    const shouldDelegate = name === undefined && ancestorFocusGroup.name === undefined ? true
-    : ancestorFocusGroup.name === name;
+    // Check if groups should delegate to each other
+    const shouldDelegate = name === undefined && ancestorFocusGroup.name === undefined ? true // Both unnamed - delegate based on ancestor relationship
+    : ancestorFocusGroup.name === name; // Both have same explicit name
 
     if (shouldDelegate) {
-
+      // Try navigation in parent focus group
       return getTargetInLinearFocusGroup(event, ancestorElement, {
         direction: ancestorFocusGroup.direction,
         loop: ancestorFocusGroup.loop,
@@ -1536,18 +1536,18 @@ const delegateArrowNavigation = (event, currentElement, {
   return null;
 };
 
-
+// Handle Cmd/Ctrl + arrow keys for linear focus groups to jump to start/end
 const getJumpToEndTargetLinear = (event, element, direction) => {
-
+  // Check if this arrow key is valid for the given direction
   if (!isForwardArrow(event, direction) && !isBackwardArrow(event, direction)) {
     return null;
   }
   if (isBackwardArrow(event, direction)) {
-
+    // Jump to first focusable element in the group
     return findDescendant(element, elementIsFocusable);
   }
   if (isForwardArrow(event, direction)) {
-
+    // Jump to last focusable element in the group
     return findLastDescendant(element, elementIsFocusable);
   }
   return null;
@@ -1569,64 +1569,64 @@ const isForwardArrow = (event, direction = "both") => {
   return forwardKeys[direction]?.includes(event.key) ?? false;
 };
 
-
-
+// Handle arrow navigation inside an HTMLTableElement as a grid.
+// Moves focus to adjacent cell in the direction of the arrow key.
 const getTargetInTableFocusGroup = (event, table, {
   loop
 }) => {
   const arrowKey = event.key;
 
-
+  // Only handle arrow keys
   if (arrowKey !== "ArrowRight" && arrowKey !== "ArrowLeft" && arrowKey !== "ArrowUp" && arrowKey !== "ArrowDown") {
     return null;
   }
   const focusedElement = document.activeElement;
   const currentCell = focusedElement?.closest?.("td,th");
 
-
+  // If we're not currently in a table cell, try to focus the first focusable element in the table
   if (!currentCell || !table.contains(currentCell)) {
     return findDescendant(table, elementIsFocusable) || null;
   }
 
-
-  const currentRow = currentCell.parentElement;
+  // Get the current position in the table grid
+  const currentRow = currentCell.parentElement; // tr element
   const allRows = Array.from(table.rows);
-  const currentRowIndex =                                   currentRow.rowIndex;
-  const currentColumnIndex =                                    currentCell.cellIndex;
+  const currentRowIndex = /** @type {HTMLTableRowElement} */currentRow.rowIndex;
+  const currentColumnIndex = /** @type {HTMLTableCellElement} */currentCell.cellIndex;
 
-
+  // Check for Cmd/Ctrl + arrow keys for jumping to end of row/column
   const isJumpToEnd = event.metaKey || event.ctrlKey;
   if (isJumpToEnd) {
     return getJumpToEndTarget(arrowKey, allRows, currentRowIndex, currentColumnIndex);
   }
 
-
-
+  // Create an iterator that will scan through cells in the arrow direction
+  // until it finds one with a focusable element inside
   const candidateCells = createTableCellIterator(arrowKey, allRows, {
     startRow: currentRowIndex,
     startColumn: currentColumnIndex,
     originalColumn: currentColumnIndex,
-
+    // Used to maintain column alignment for vertical moves
     loopMode: normalizeLoop(loop)
   });
 
-
+  // Find the first cell that is itself focusable
   for (const candidateCell of candidateCells) {
     if (elementIsFocusable(candidateCell)) {
       return candidateCell;
     }
   }
-  return null;
+  return null; // No focusable cell found
 };
 
-
+// Handle Cmd/Ctrl + arrow keys to jump to the end of row/column
 const getJumpToEndTarget = (arrowKey, allRows, currentRowIndex, currentColumnIndex) => {
   if (arrowKey === "ArrowRight") {
-
+    // Jump to last focusable cell in current row
     const currentRow = allRows[currentRowIndex];
     if (!currentRow) return null;
 
-
+    // Start from the last cell and work backwards to find focusable
     const cells = Array.from(currentRow.cells);
     for (let i = cells.length - 1; i >= 0; i--) {
       const cell = cells[i];
@@ -1637,7 +1637,7 @@ const getJumpToEndTarget = (arrowKey, allRows, currentRowIndex, currentColumnInd
     return null;
   }
   if (arrowKey === "ArrowLeft") {
-
+    // Jump to first focusable cell in current row
     const currentRow = allRows[currentRowIndex];
     if (!currentRow) return null;
     const cells = Array.from(currentRow.cells);
@@ -1649,7 +1649,7 @@ const getJumpToEndTarget = (arrowKey, allRows, currentRowIndex, currentColumnInd
     return null;
   }
   if (arrowKey === "ArrowDown") {
-
+    // Jump to last focusable cell in current column
     for (let rowIndex = allRows.length - 1; rowIndex >= 0; rowIndex--) {
       const row = allRows[rowIndex];
       const cell = row?.cells?.[currentColumnIndex];
@@ -1660,7 +1660,7 @@ const getJumpToEndTarget = (arrowKey, allRows, currentRowIndex, currentColumnInd
     return null;
   }
   if (arrowKey === "ArrowUp") {
-
+    // Jump to first focusable cell in current column
     for (let rowIndex = 0; rowIndex < allRows.length; rowIndex++) {
       const row = allRows[rowIndex];
       const cell = row?.cells?.[currentColumnIndex];
@@ -1673,8 +1673,8 @@ const getJumpToEndTarget = (arrowKey, allRows, currentRowIndex, currentColumnInd
   return null;
 };
 
-
-
+// Create an iterator that yields table cells in the direction of arrow key movement.
+// This scans through cells until it finds one with a focusable element or completes a full loop.
 const createTableCellIterator = function* (arrowKey, allRows, {
   startRow,
   startColumn,
@@ -1682,78 +1682,78 @@ const createTableCellIterator = function* (arrowKey, allRows, {
   loopMode
 }) {
   if (allRows.length === 0) {
-    return;
+    return; // No rows to navigate
   }
 
-
-
+  // Keep track of which column we should prefer for vertical movements
+  // This helps maintain column alignment when moving up/down through rows of different lengths
   let preferredColumn = originalColumn;
   const normalizedLoopMode = normalizeLoop(loopMode);
 
-
+  // Helper function to calculate the next position based on current position and arrow key
   const calculateNextPosition = (currentRow, currentColumn) => getNextTablePosition(arrowKey, allRows, currentRow, currentColumn, preferredColumn, normalizedLoopMode);
 
-
+  // Start by calculating the first position to move to
   let nextPosition = calculateNextPosition(startRow, startColumn);
   if (!nextPosition) {
-    return;
+    return; // Cannot move in this direction (no looping enabled)
   }
 
-
+  // Keep track of our actual starting position to detect when we've completed a full loop
   const actualStartingPosition = "".concat(startRow, ":").concat(startColumn);
   while (true) {
-    const [nextColumn, nextRow] = nextPosition;
+    const [nextColumn, nextRow] = nextPosition; // Destructure [column, row]
     const targetRow = allRows[nextRow];
     const targetCell = targetRow?.cells?.[nextColumn];
 
-
+    // Yield the cell if it exists
     if (targetCell) {
       yield targetCell;
     }
 
-
-
-
+    // Update our preferred column based on movement:
+    // - For horizontal moves, update to current column
+    // - For vertical moves in flow mode at boundaries, advance to next/previous column
     if (arrowKey === "ArrowRight" || arrowKey === "ArrowLeft") {
       preferredColumn = nextColumn;
     } else if (arrowKey === "ArrowDown") {
       const isAtBottomRow = nextRow === allRows.length - 1;
       if (isAtBottomRow && normalizedLoopMode === "flow") {
-
+        // Moving down from bottom row in flow mode: advance to next column
         const maxColumns = getMaxColumns(allRows);
         preferredColumn = preferredColumn + 1;
         if (preferredColumn >= maxColumns) {
-          preferredColumn = 0;
+          preferredColumn = 0; // Wrap to first column
         }
       }
     } else if (arrowKey === "ArrowUp") {
       const isAtTopRow = nextRow === 0;
       if (isAtTopRow && normalizedLoopMode === "flow") {
-
+        // Moving up from top row in flow mode: go to previous column
         const maxColumns = getMaxColumns(allRows);
         if (preferredColumn === 0) {
-          preferredColumn = maxColumns - 1;
+          preferredColumn = maxColumns - 1; // Wrap to last column
         } else {
           preferredColumn = preferredColumn - 1;
         }
       }
     }
 
-
+    // Calculate where to move next
     nextPosition = calculateNextPosition(nextRow, nextColumn);
     if (!nextPosition) {
-      return;
+      return; // Hit a boundary with no looping
     }
 
-
+    // Check if we've completed a full loop by returning to our actual starting position
     const currentPositionKey = "".concat(nextRow, ":").concat(nextColumn);
     if (currentPositionKey === actualStartingPosition) {
-      return;
+      return; // We've gone full circle back to where we started
     }
   }
 };
 
-
+// Normalize loop option to a mode string or false
 const normalizeLoop = loop => {
   if (loop === true) return "wrap";
   if (loop === "wrap") return "wrap";
@@ -1762,138 +1762,138 @@ const normalizeLoop = loop => {
 };
 const getMaxColumns = rows => rows.reduce((max, r) => Math.max(max, r?.cells?.length || 0), 0);
 
-
-
+// Calculate the next row and column position when moving in a table with arrow keys.
+// Returns [column, row] for the next position, or null if movement is not possible.
 const getNextTablePosition = (arrowKey, allRows, currentRow, currentColumn, preferredColumn,
-
+// Used for vertical movement to maintain column alignment
 loopMode) => {
   if (arrowKey === "ArrowRight") {
     const currentRowLength = allRows[currentRow]?.cells?.length || 0;
     const nextColumn = currentColumn + 1;
 
-
+    // Can we move right within the same row?
     if (nextColumn < currentRowLength) {
-      return [nextColumn, currentRow];
+      return [nextColumn, currentRow]; // [column, row]
     }
 
-
+    // We're at the end of the row - handle boundary behavior
     if (loopMode === "flow") {
-
+      // Flow mode: move to first cell of next row (wrap to top if at bottom)
       let nextRow = currentRow + 1;
       if (nextRow >= allRows.length) {
-        nextRow = 0;
+        nextRow = 0; // Wrap to first row
       }
-      return [0, nextRow];
+      return [0, nextRow]; // [column, row]
     }
     if (loopMode === "wrap") {
-
-      return [0, currentRow];
+      // Wrap mode: stay in same row, wrap to first column
+      return [0, currentRow]; // [column, row]
     }
 
-
+    // No looping: can't move
     return null;
   }
   if (arrowKey === "ArrowLeft") {
     const previousColumn = currentColumn - 1;
 
-
+    // Can we move left within the same row?
     if (previousColumn >= 0) {
-      return [previousColumn, currentRow];
+      return [previousColumn, currentRow]; // [column, row]
     }
 
-
+    // We're at the beginning of the row - handle boundary behavior
     if (loopMode === "flow") {
-
+      // Flow mode: move to last cell of previous row (wrap to bottom if at top)
       let previousRow = currentRow - 1;
       if (previousRow < 0) {
-        previousRow = allRows.length - 1;
+        previousRow = allRows.length - 1; // Wrap to last row
       }
       const previousRowLength = allRows[previousRow]?.cells?.length || 0;
       const lastColumnInPreviousRow = Math.max(0, previousRowLength - 1);
-      return [lastColumnInPreviousRow, previousRow];
+      return [lastColumnInPreviousRow, previousRow]; // [column, row]
     }
     if (loopMode === "wrap") {
-
+      // Wrap mode: stay in same row, wrap to last column
       const currentRowLength = allRows[currentRow]?.cells?.length || 0;
       const lastColumnInCurrentRow = Math.max(0, currentRowLength - 1);
-      return [lastColumnInCurrentRow, currentRow];
+      return [lastColumnInCurrentRow, currentRow]; // [column, row]
     }
 
-
+    // No looping: can't move
     return null;
   }
   if (arrowKey === "ArrowDown") {
     const nextRow = currentRow + 1;
 
-
+    // Can we move down within the table?
     if (nextRow < allRows.length) {
       const nextRowLength = allRows[nextRow]?.cells?.length || 0;
-
+      // Try to maintain the preferred column, but clamp to row length
       const targetColumn = Math.min(preferredColumn, Math.max(0, nextRowLength - 1));
-      return [targetColumn, nextRow];
+      return [targetColumn, nextRow]; // [column, row]
     }
 
-
+    // We're at the bottom row - handle boundary behavior
     if (loopMode === "flow") {
-
+      // Flow mode: advance to next column and go to top row
       const maxColumns = Math.max(1, getMaxColumns(allRows));
       let nextColumnInFlow = currentColumn + 1;
       if (nextColumnInFlow >= maxColumns) {
-        nextColumnInFlow = 0;
+        nextColumnInFlow = 0; // Wrap to first column
       }
       const topRowLength = allRows[0]?.cells?.length || 0;
       const clampedColumn = Math.min(nextColumnInFlow, Math.max(0, topRowLength - 1));
-      return [clampedColumn, 0];
+      return [clampedColumn, 0]; // [column, row]
     }
     if (loopMode === "wrap") {
-
+      // Wrap mode: go to top row, maintaining preferred column
       const topRowLength = allRows[0]?.cells?.length || 0;
       const targetColumn = Math.min(preferredColumn, Math.max(0, topRowLength - 1));
-      return [targetColumn, 0];
+      return [targetColumn, 0]; // [column, row]
     }
 
-
+    // No looping: can't move
     return null;
   }
   if (arrowKey === "ArrowUp") {
     const previousRow = currentRow - 1;
 
-
+    // Can we move up within the table?
     if (previousRow >= 0) {
       const previousRowLength = allRows[previousRow]?.cells?.length || 0;
-
+      // Try to maintain the preferred column, but clamp to row length
       const targetColumn = Math.min(preferredColumn, Math.max(0, previousRowLength - 1));
-      return [targetColumn, previousRow];
+      return [targetColumn, previousRow]; // [column, row]
     }
 
-
+    // We're at the top row - handle boundary behavior
     if (loopMode === "flow") {
-
+      // Flow mode: go to previous column and move to bottom row
       const maxColumns = Math.max(1, getMaxColumns(allRows));
       let previousColumnInFlow;
       if (currentColumn === 0) {
-        previousColumnInFlow = maxColumns - 1;
+        previousColumnInFlow = maxColumns - 1; // Wrap to last column
       } else {
         previousColumnInFlow = currentColumn - 1;
       }
       const bottomRowIndex = allRows.length - 1;
       const bottomRowLength = allRows[bottomRowIndex]?.cells?.length || 0;
       const clampedColumn = Math.min(previousColumnInFlow, Math.max(0, bottomRowLength - 1));
-      return [clampedColumn, bottomRowIndex];
+      return [clampedColumn, bottomRowIndex]; // [column, row]
     }
     if (loopMode === "wrap") {
-
+      // Wrap mode: go to bottom row, maintaining preferred column
       const bottomRowIndex = allRows.length - 1;
       const bottomRowLength = allRows[bottomRowIndex]?.cells?.length || 0;
       const targetColumn = Math.min(preferredColumn, Math.max(0, bottomRowLength - 1));
-      return [targetColumn, bottomRowIndex];
+      return [targetColumn, bottomRowIndex]; // [column, row]
     }
 
-
+    // No looping: can't move
     return null;
   }
 
-
+  // Unknown arrow key
   return null;
 };
 
@@ -1906,7 +1906,7 @@ const performTabNavigation = (event, {
   }
   const activeElement = document.activeElement;
   if (activeElement.getAttribute("data-focusnav") === "none") {
-    event.preventDefault();
+    event.preventDefault(); // ensure tab cannot move focus
     return true;
   }
   const isForward = !event.shiftKey;
@@ -1992,21 +1992,21 @@ const hasNegativeTabIndex = element => {
   return element.hasAttribute && element.hasAttribute("tabIndex") && Number(element.getAttribute("tabindex")) < 0;
 };
 
+/**
+ * 
+- https://github.com/MicrosoftEdge/MSEdgeExplainers/blob/main/Focusgroup/explainer.md
+ - https://open-ui.org/components/focusgroup.explainer/
+ - https://github.com/openui/open-ui/issues/990
 
-
-
-
-
-
-
-
+ - https://github.com/MicrosoftEdge/MSEdgeExplainers/blob/main/Focusgroup/explainer.md#69-grid-focusgroups
+ */
 
 const initFocusGroup = (element, {
   direction = "both",
-
+  // extend = true,
   skipTab = true,
   loop = false,
-  name
+  name // Can be undefined for implicit ancestor-descendant grouping
 } = {}) => {
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
@@ -2016,11 +2016,11 @@ const initFocusGroup = (element, {
     cleanupCallbackSet.clear();
   };
 
-
+  // Store focus group data in registry
   const removeFocusGroup = setFocusGroup(element, {
     direction,
     loop,
-    name
+    name // Store undefined as-is for implicit grouping
   });
   cleanupCallbackSet.add(removeFocusGroup);
   tab: {
@@ -2029,17 +2029,17 @@ const initFocusGroup = (element, {
     }
     const handleTabKeyDown = event => {
       if (isFocusNavMarked(event)) {
-
+        // Prevent double handling of the same event + allow preventing focus nav from outside
         return;
       }
       performTabNavigation(event, {
         outsideOfElement: element
       });
     };
-
+    // Handle Tab navigation (exit group)
     element.addEventListener("keydown", handleTabKeyDown, {
-
-
+      // we must use capture: false to let chance for other part of the code
+      // to call preventFocusNav
       capture: false,
       passive: false
     });
@@ -2051,11 +2051,11 @@ const initFocusGroup = (element, {
     });
   }
 
-
+  // Handle Arrow key navigation (within group)
   {
     const handleArrowKeyDown = event => {
       if (isFocusNavMarked(event)) {
-
+        // Prevent double handling of the same event + allow preventing focus nav from outside
         return;
       }
       performArrowNavigation(event, element, {
@@ -2065,8 +2065,8 @@ const initFocusGroup = (element, {
       });
     };
     element.addEventListener("keydown", handleArrowKeyDown, {
-
-
+      // we must use capture: false to let chance for other part of the code
+      // to call preventFocusNav
       capture: false,
       passive: false
     });
@@ -2084,11 +2084,11 @@ const initFocusGroup = (element, {
 
 const preventFocusNavViaKeyboard = keyboardEvent => {
   if (keyboardEvent.key === "Tab") {
-
+    // prevent tab to move focus
     keyboardEvent.preventDefault();
     return true;
   }
-
+  // ensure we won't perform our internal focus nav in focus groups
   preventFocusNav(keyboardEvent);
   return false;
 };
@@ -2142,7 +2142,7 @@ const trapFocusInside = element => {
     };
   };
   const deactivate = activate({
-
+    // element
     lock
   });
   const untrap = () => {
@@ -2155,14 +2155,14 @@ const activeTraps = [];
 const activate = ({
   lock
 }) => {
-
+  // unlock any trap currently activated
   let previousTrap;
   if (activeTraps.length > 0) {
     previousTrap = activeTraps[activeTraps.length - 1];
     previousTrap.unlock();
   }
 
-
+  // store trap methods to lock/unlock as traps are acivated/deactivated
   const trap = {
     lock,
     unlock: lock()
@@ -2175,20 +2175,20 @@ const activate = ({
     }
     const lastTrap = activeTraps[activeTraps.length - 1];
     if (trap !== lastTrap) {
-
+      // TODO: investigate this and maybe remove this requirment
       console.warn("you must deactivate trap in the same order they were activated");
       return;
     }
     activeTraps.pop();
     trap.unlock();
-
+    // if any,reactivate the previous trap
     if (previousTrap) {
       previousTrap.unlock = previousTrap.lock();
     }
   };
 };
 
-
+// Helper to create scroll state capture/restore function for an element
 const captureScrollState = element => {
   const scrollLeft = element.scrollLeft;
   const scrollTop = element.scrollTop;
@@ -2197,19 +2197,19 @@ const captureScrollState = element => {
   const clientWidth = element.clientWidth;
   const clientHeight = element.clientHeight;
 
-
+  // Calculate scroll percentages to preserve relative position
   const scrollLeftPercent = scrollWidth > clientWidth ? scrollLeft / (scrollWidth - clientWidth) : 0;
   const scrollTopPercent = scrollHeight > clientHeight ? scrollTop / (scrollHeight - clientHeight) : 0;
 
-
+  // Return preserve function that maintains scroll position relative to content
   return () => {
-
+    // Get current dimensions after DOM changes
     const newScrollWidth = element.scrollWidth;
     const newScrollHeight = element.scrollHeight;
     const newClientWidth = element.clientWidth;
     const newClientHeight = element.clientHeight;
 
-
+    // If content dimensions changed significantly, use percentage-based positioning
     if (Math.abs(newScrollWidth - scrollWidth) > 1 || Math.abs(newScrollHeight - scrollHeight) > 1 || Math.abs(newClientWidth - clientWidth) > 1 || Math.abs(newClientHeight - clientHeight) > 1) {
       if (newScrollWidth > newClientWidth) {
         const newScrollLeft = scrollLeftPercent * (newScrollWidth - newClientWidth);
@@ -2226,9 +2226,9 @@ const captureScrollState = element => {
   };
 };
 
-
-
-
+// note: keep in mind that an element with overflow: 'hidden' is scrollable
+// it can be scrolled using keyboard arrows or JavaScript properties such as scrollTop, scrollLeft
+// the only overflow that prevents scroll is "visible"
 const isScrollable = (element, {
   includeHidden
 } = {}) => {
@@ -2249,7 +2249,7 @@ const canHaveVerticalScroll = (element, {
 }) => {
   const verticalOverflow = getStyle(element, "overflow-y");
   if (verticalOverflow === "visible") {
-
+    // browser returns "visible" on documentElement even if it is scrollable
     if (isDocumentElement(element)) {
       return true;
     }
@@ -2260,7 +2260,7 @@ const canHaveVerticalScroll = (element, {
   }
   const overflow = getStyle(element, "overflow");
   if (overflow === "visible") {
-
+    // browser returns "visible" on documentElement even if it is scrollable
     if (isDocumentElement(element)) {
       return true;
     }
@@ -2269,14 +2269,14 @@ const canHaveVerticalScroll = (element, {
   if (overflow === "hidden" || overflow === "clip") {
     return includeHidden;
   }
-  return true;
+  return true; // "auto", "scroll"
 };
 const canHaveHorizontalScroll = (element, {
   includeHidden
 }) => {
   const horizontalOverflow = getStyle(element, "overflow-x");
   if (horizontalOverflow === "visible") {
-
+    // browser returns "visible" on documentElement even if it is scrollable
     if (isDocumentElement(element)) {
       return true;
     }
@@ -2288,7 +2288,7 @@ const canHaveHorizontalScroll = (element, {
   const overflow = getStyle(element, "overflow");
   if (overflow === "visible") {
     if (isDocumentElement(element)) {
-
+      // browser returns "visible" on documentElement even if it is scrollable
       return true;
     }
     return false;
@@ -2296,7 +2296,7 @@ const canHaveHorizontalScroll = (element, {
   if (overflow === "hidden" || overflow === "clip") {
     return includeHidden;
   }
-  return true;
+  return true; // "auto", "scroll"
 };
 const getScrollingElement = document => {
   const {
@@ -2312,7 +2312,7 @@ const getScrollingElement = document => {
   const isFrameset = body && !/body/i.test(body.tagName);
   const possiblyScrollingElement = isFrameset ? getNextBodyElement(body) : body;
 
-
+  // If `body` is itself scrollable, it is not the `scrollingElement`.
   return possiblyScrollingElement && bodyIsScrollable(possiblyScrollingElement) ? null : possiblyScrollingElement;
 };
 const isHidden = element => {
@@ -2326,7 +2326,7 @@ const isHidden = element => {
   return true;
 };
 const isCompliant = document => {
-
+  // Note: document.compatMode can be toggle at runtime by document.write
   const isStandardsMode = /^CSS1/.test(document.compatMode);
   if (isStandardsMode) {
     return testScrollCompliance(document);
@@ -2346,11 +2346,11 @@ const testScrollCompliance = document => {
   return scrollComplianceResult;
 };
 const getNextBodyElement = frameset => {
-
-
-
-
-
+  // We use this function to be correct per spec in case `document.body` is
+  // a `frameset` but there exists a later `body`. Since `document.body` is
+  // a `frameset`, we know the root is an `html`, and there was no `body`
+  // before the `frameset`, so we just need to look at siblings after the
+  // `frameset`.
   let current = frameset;
   while (current = current.nextSibling) {
     if (current.nodeType === 1 && isBodyElement(current)) {
@@ -2361,7 +2361,7 @@ const getNextBodyElement = frameset => {
 };
 const isBodyElement = element => element.ownerDocument.body === element;
 const bodyIsScrollable = body => {
-
+  // a body element is scrollable if body and html are scrollable and rendered
   if (!isScrollable(body)) {
     return false;
   }
@@ -2378,7 +2378,7 @@ const bodyIsScrollable = body => {
   return true;
 };
 
-
+// https://developer.mozilla.org/en-US/docs/Glossary/Scroll_container
 
 const {
   documentElement: documentElement$2
@@ -2414,21 +2414,21 @@ const findScrollContainer = (element, {
 } = {}) => {
   const position = getStyle(element, "position");
   let parent = element.parentNode;
-
+  // Si l'élément est en position absolute, d'abord trouver le premier parent positionné
   if (position === "absolute") {
     while (parent && parent !== document) {
       if (parent === documentElement$2) {
-        break;
+        break; // documentElement est considéré comme positionné
       }
       const parentPosition = getStyle(parent, "position");
       if (parentPosition !== "static") {
-        break;
+        break; // Trouvé le premier parent positionné
       }
       parent = parent.parentNode;
     }
   }
 
-
+  // Maintenant chercher le premier parent scrollable à partir du parent positionné
   while (parent) {
     if (parent === document) {
       return null;
@@ -2473,7 +2473,7 @@ const getSelfAndAncestorScrolls = (element, startOnParent) => {
   return ancestorScrolls;
 };
 
-
+// https://github.com/shipshapecode/tether/blob/d6817f8c49a7a26b04c45e55589279dd1b5dd2bf/src/js/utils/parents.js#L1
 const getScrollContainerSet = element => {
   const scrollContainerSet = new Set();
   let elementOrScrollContainer = element;
@@ -2491,7 +2491,7 @@ const getScrollContainerSet = element => {
   return scrollContainerSet;
 };
 
-
+// https://davidwalsh.name/detect-scrollbar-width
 const measureScrollbar = scrollableElement => {
   const hasXScrollbar = scrollableElement.scrollHeight > scrollableElement.clientHeight;
   const hasYScrollbar = scrollableElement.scrollWidth > scrollableElement.clientWidth;
@@ -2511,7 +2511,7 @@ const trapScrollInside = element => {
   const cleanupCallbackSet = new Set();
   const lockScroll = el => {
     const [scrollbarWidth, scrollbarHeight] = measureScrollbar(el);
-
+    // scrollbar-gutter would work but would display an empty blank space
     const paddingRight = parseInt(getStyle(el, "padding-right"), 0);
     const paddingTop = parseInt(getStyle(el, "padding-top"), 0);
     const removeScrollLockStyles = setStyles(el, {
@@ -2545,11 +2545,11 @@ const trapScrollInside = element => {
   };
 };
 
-
-
-
-
-
+/**
+ * Creates intuitive scrolling behavior when scrolling over an element that needs to stay interactive
+ * (we can't use pointer-events: none). Instead of scrolling the document unexpectedly,
+ * finds and scrolls the appropriate scrollable container behind the overlay.
+ */
 
 const allowWheelThrough = (element, connectedElement) => {
   const isElementOrDescendant = possibleDescendant => {
@@ -2557,15 +2557,15 @@ const allowWheelThrough = (element, connectedElement) => {
   };
   const tryToScrollOne = (element, wheelEvent) => {
     if (element === document.documentElement) {
-
+      // let browser handle document scrolling
       return true;
     }
     const {
       deltaX,
       deltaY
     } = wheelEvent;
-
-
+    // we found what we want: a scrollable container behind the element
+    // we try to scroll it.
     const elementCanApplyScrollDeltaX = deltaX && canApplyScrollDelta(element, deltaX, "x");
     const elementCanApplyScrollDeltaY = deltaY && canApplyScrollDelta(element, deltaY, "y");
     if (!elementCanApplyScrollDeltaX && !elementCanApplyScrollDeltaY) {
@@ -2576,7 +2576,7 @@ const allowWheelThrough = (element, connectedElement) => {
     }
     const belongsToElement = isElementOrDescendant(element);
     if (belongsToElement) {
-
+      // let browser handle the scroll on the element itself
       return true;
     }
     wheelEvent.preventDefault();
@@ -2587,14 +2587,14 @@ const allowWheelThrough = (element, connectedElement) => {
     const onWheel = wheelEvent => {
       const connectedScrollContainer = getScrollContainer(connectedElement);
       if (connectedScrollContainer === document.documentElement) {
-
-
+        // the connected scrollable parent is the document
+        // there is nothing to do, browser native scroll will work as we want
         return;
       }
       const elementsBehindMouse = document.elementsFromPoint(wheelEvent.clientX, wheelEvent.clientY);
       for (const elementBehindMouse of elementsBehindMouse) {
         const belongsToElement = isElementOrDescendant(elementBehindMouse);
-
+        // try to scroll element itself
         if (tryToScrollOne(elementBehindMouse, wheelEvent)) {
           return;
         }
@@ -2602,8 +2602,8 @@ const allowWheelThrough = (element, connectedElement) => {
           break;
         }
       }
-
-
+      // At this stage the element has no scrollable parts
+      // we can try to scroll the connected scrollable parent
       tryToScrollOne(connectedScrollContainer, wheelEvent);
     };
     element.addEventListener("wheel", onWheel);
@@ -2613,14 +2613,14 @@ const allowWheelThrough = (element, connectedElement) => {
     const elementsBehindMouse = document.elementsFromPoint(wheelEvent.clientX, wheelEvent.clientY);
     for (const elementBehindMouse of elementsBehindMouse) {
       const belongsToElement = isElementOrDescendant(elementBehindMouse);
-
+      // try to scroll element itself
       if (tryToScrollOne(elementBehindMouse, wheelEvent)) {
         return;
       }
       if (belongsToElement) {
-
-
-
+        // the element is not scrollable and we don't care about his
+        // scrollable parent (because we know it's going to be the document)
+        // we search for scrollable container that might be behind it
         continue;
       }
       const scrollContainer = getScrollContainer(elementBehindMouse);
@@ -2644,15 +2644,15 @@ const canApplyScrollDelta = (element, delta, axis) => {
   let currentScroll = axis === "x" ? scrollLeft : scrollTop;
   let scrollEnd = axis === "x" ? scrollWidth : scrollHeight;
   if (size === scrollEnd) {
-
+    // when scrollWidth === clientWidth, there is no scroll to apply
     return false;
   }
   if (delta < 0 && currentScroll <= 0) {
-
+    // when scrollLeft is 0, we can't scroll to the left
     return false;
   }
   if (delta > 0 && currentScroll + size >= scrollEnd) {
-
+    // when scrollLeft + size >= scrollWidth, we can't scroll to the right
     return false;
   }
   return true;
@@ -2662,7 +2662,7 @@ const applyWheelScrollThrough = (element, wheelEvent) => {
   element.scrollBy({
     top: wheelEvent.deltaY,
     left: wheelEvent.deltaX,
-    behavior: wheelEvent.deltaMode === 0 ? "auto" : "smooth"
+    behavior: wheelEvent.deltaMode === 0 ? "auto" : "smooth" // optional tweak
   });
 };
 
@@ -2685,44 +2685,44 @@ const findSelfOrAncestorFixedPosition = element => {
   return null;
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+/**
+ * Creates a coordinate system positioner for drag operations.
+ *
+ * ARCHITECTURE:
+ * This function uses a modular offset-based approach to handle coordinate system conversions
+ * between different positioning contexts (scroll containers and positioned parents).
+ *
+ * The system decomposes coordinate conversion into two types of offsets:
+ * 1. Position offsets - compensate for different positioned parents
+ * 2. Scroll offsets - handle scroll position and container differences
+ *
+ * COORDINATE SYSTEM:
+ * - Input coordinates are relative to the reference element's scroll container
+ * - Output coordinates are relative to the element's positioned parent for DOM positioning
+ * - Handles cross-coordinate system scenarios (different scroll containers and positioned parents)
+ *
+ * KEY SCENARIOS SUPPORTED:
+ * 1. Same positioned parent, same scroll container - Simple case, minimal offsets
+ * 2. Different positioned parents, same scroll container - Position offset compensation
+ * 3. Same positioned parent, different scroll containers - Scroll offset handling
+ * 4. Different positioned parents, different scroll containers - Full offset compensation
+ * 5. Overlay elements - Special handling for elements with data-overlay-for attribute
+ * 6. Fixed positioning - Special scroll offset handling for fixed positioned elements
+ *
+ * API CONTRACT:
+ * Returns [scrollableLeft, scrollableTop, convertScrollablePosition] where:
+ *
+ * - scrollableLeft/scrollableTop:
+ *   Current element coordinates in the reference coordinate system (adjusted for position offsets)
+ *
+ * - convertScrollablePosition:
+ *   Converts reference coordinate system positions to DOM positioning coordinates
+ *   Applies both position and scroll offsets for accurate element placement
+ *
+ * IMPLEMENTATION STRATEGY:
+ * Uses factory functions to create specialized offset calculators based on the specific
+ * combination of positioning contexts, optimizing for performance and code clarity.
+ */
 
 const createDragElementPositioner = (element, referenceElement, elementToMove) => {
   let scrollableLeft;
@@ -2784,12 +2784,12 @@ const createGetOffsets = ({
     return [() => [0, 0], getScrollOffsets];
   }
 
-
-
-
-
-
-
+  // parents are different, oh boy let's go
+  // The overlay case is problematic because the overlay adjust its position to the target dynamically
+  // This creates something complex to support properly.
+  // When overlay is fixed we there will never be any offset
+  // When overlay is absolute there is a diff relative to the scroll
+  // and eventually if the overlay is positioned differently than the other parent
   if (isOverlayOf(positionedParent, referencePositionedParent)) {
     return createGetOffsetsForOverlay(positionedParent, referencePositionedParent, {
       scrollContainer,
@@ -2806,8 +2806,8 @@ const createGetOffsets = ({
   }
   const scrollContainerIsDocument = scrollContainer === documentElement$1;
   if (scrollContainerIsDocument) {
-
-
+    // Document case: getBoundingClientRect already includes document scroll effects
+    // Add current scroll position to get the static offset
     const getPositionOffsetsDocumentScrolling = () => {
       const {
         scrollLeft: documentScrollLeft,
@@ -2829,7 +2829,7 @@ const createGetOffsets = ({
     };
     return [getPositionOffsetsDocumentScrolling, getScrollOffsets];
   }
-
+  // Custom scroll container case: account for container's position and scroll
   const getPositionOffsetsCustomScrollContainer = () => {
     const aRect = positionedParent.getBoundingClientRect();
     const bRect = referencePositionedParent.getBoundingClientRect();
@@ -2942,10 +2942,10 @@ const {
 const createGetScrollOffsets = (scrollContainer, referenceScrollContainer, positionedParent, samePositionedParent) => {
   const getGetScrollOffsetsSameContainer = () => {
     const scrollContainerIsDocument = scrollContainer === documentElement$1;
-
-
-
-
+    // I don't really get why we have to add scrollLeft (scrollLeft at grab)
+    // to properly position the element in this scenario
+    // It happens since we use translateX to position the element
+    // Or maybe since something else. In any case it works
     const {
       scrollLeft,
       scrollTop
@@ -2997,10 +2997,10 @@ const getDragCoordinates = (element, scrollContainer = getScrollContainer(elemen
   return [leftRelativeToScrollContainer, topRelativeToScrollContainer];
 };
 
-
-
-
-
+/* eslint-disable */
+// construct-style-sheets-polyfill@3.1.0
+// to keep in sync with https://github.com/calebdwilliams/construct-style-sheets
+// copy pasted into jsenv codebase to inject this code with more ease
 (function () {
 
   if (typeof document === "undefined" || "adoptedStyleSheets" in document) {
@@ -3357,73 +3357,73 @@ const installImportMetaCss = importMeta => {
   return css.remove;
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+/**
+ * Isolates user interactions to only the specified elements, making everything else non-interactive.
+ *
+ * This creates a controlled interaction environment where only the target elements (and their ancestors)
+ * can receive user input like clicks, keyboard events, focus, etc. All other DOM elements become
+ * non-interactive, preventing conflicting or unwanted interactions during critical operations
+ * like drag gestures, modal dialogs, or complex UI states.
+ *
+ * The function uses the `inert` attribute to achieve this isolation, applying it strategically
+ * to parts of the DOM tree while preserving the interactive elements and their ancestor chains.
+ *
+ * Example DOM structure and inert application:
+ *
+ * Before calling isolateInteractions:
+ * ```
+ * <body>
+ *   <header>...</header>
+ *   <main>
+ *     <div>
+ *       <span>some content</span>
+ *       <div class="modal">modal content</div>
+ *       <span>more content</span>
+ *     </div>
+ *     <aside inert>already inert</aside>
+ *     <div class="dropdown">dropdown menu</div>
+ *   </main>
+ *   <footer>...</footer>
+ * </body>
+ * ```
+ *
+ * After calling isolateInteractions([modal, dropdown]):
+ * ```
+ * <body>
+ *   <header inert>...</header>  ← made inert (no active descendants)
+ *   <main> ← not inert because it contains active elements
+ *     <div> ← not inert because it contains .modal
+ *       <span inert>some content</span> ← made inert selectively
+ *       <div class="modal">modal content</div> ← stays active
+ *       <span inert>more content</span> ← made inert selectively
+ *     </div>
+ *     <aside inert>already inert</aside>
+ *     <div class="dropdown">dropdown menu</div> ← stays active
+ *   </main>
+ *   <footer inert>...</footer>
+ * </body>
+ * ```
+ *
+ * After calling cleanup():
+ * ```
+ * <body>
+ *   <header>...</header>
+ *   <main>
+ *     <div>
+ *       <span>some content</span>
+ *       <div class="modal">modal content</div>
+ *       <span>more content</span>
+ *     </div>
+ *     <aside inert>already inert</aside> ← [inert] preserved
+ *     <div class="dropdown">dropdown menu</div>
+ *   </main>
+ *   <footer>...</footer>
+ * </body>
+ * ```
+ *
+ * @param {Array<Element>} elements - Array of elements to keep interactive (non-inert)
+ * @returns {Function} cleanup - Function to restore original inert states
+ */
 const isolateInteractions = elements => {
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
@@ -3444,9 +3444,9 @@ const isolateInteractions = elements => {
       }
     }
 
-
+    // Add the element itself
     toKeepInteractiveSet.add(el);
-
+    // Add all its ancestors up to document.body
     let ancestor = el.parentNode;
     while (ancestor && ancestor !== document.body) {
       toKeepInteractiveSet.add(ancestor);
@@ -3454,19 +3454,19 @@ const isolateInteractions = elements => {
     }
   };
 
-
+  // Build set of elements to keep interactive
   for (const element of elements) {
     keepSelfAndAncestors(element);
   }
-
-
+  // backdrop elements are meant to control interactions happening at document level
+  // and should stay interactive
   const backdropElements = document.querySelectorAll("[data-backdrop]");
   for (const backdropElement of backdropElements) {
     keepSelfAndAncestors(backdropElement);
   }
   const setInert = el => {
     if (toKeepInteractiveSet.has(el)) {
-
+      // element should stay interactive
       return;
     }
     const restoreAttributes = setAttributes(el, {
@@ -3477,29 +3477,29 @@ const isolateInteractions = elements => {
     });
   };
   const makeElementInertSelectivelyOrCompletely = el => {
-
+    // If this element should stay interactive, keep it active
     if (toKeepInteractiveSet.has(el)) {
       return;
     }
 
-
-
-
+    // Since we put all ancestors in toKeepInteractiveSet, if this element
+    // is not in the set, we can check if any of its direct children are.
+    // If none of the direct children are in the set, then no descendants are either.
     const children = Array.from(el.children);
     const hasInteractiveChildren = children.some(child => toKeepInteractiveSet.has(child));
     if (!hasInteractiveChildren) {
-
+      // No interactive descendants, make the entire element inert
       setInert(el);
       return;
     }
 
-
+    // Some children need to stay interactive, process them selectively
     for (const child of children) {
       makeElementInertSelectivelyOrCompletely(child);
     }
   };
 
-
+  // Apply inert to all top-level elements that aren't in our keep-interactive set
   const bodyChildren = Array.from(document.body.children);
   for (const child of bodyChildren) {
     makeElementInertSelectivelyOrCompletely(child);
@@ -3569,19 +3569,19 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
       const scrollableLeft = left - scrollLeft;
       const scrollableTop = top - scrollTop;
       const layoutProps = {
-
+        // Raw input coordinates (dragX - grabX + scrollContainer.scrollLeft)
         x,
         y,
-
+        // container scrolls when layout is created
         scrollLeft,
         scrollTop,
-
+        // Position relative to container excluding scrolls
         scrollableLeft,
         scrollableTop,
-
+        // Position relative to container including scrolls
         left,
         top,
-
+        // Delta since grab (number representing how much we dragged)
         xDelta: left - leftAtGrab,
         yDelta: top - topAtGrab
       };
@@ -3596,22 +3596,22 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
       element,
       scrollContainer,
       grabX,
-
+      // x grab coordinate (excluding scroll)
       grabY,
-
+      // y grab coordinate (excluding scroll)
       grabLayout,
       leftAtGrab,
       topAtGrab,
       dragX: grabX,
-
+      // coordinate of the last drag (excluding scroll of the scrollContainer)
       dragY: grabY,
-
+      // coordinate of the last drag (excluding scroll of the scrollContainer)
       layout: grabLayout,
       isGoingUp: undefined,
       isGoingDown: undefined,
       isGoingLeft: undefined,
       isGoingRight: undefined,
-
+      // metadata about interaction sources
       grabEvent: event,
       dragEvent: null,
       releaseEvent: null
@@ -3629,31 +3629,31 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
       if (documentInteractions === "manual") {
         break document_interactions;
       }
+      /*
+      GOAL: Take control of document-level interactions during drag gestures
+      
+      WHY: During drag operations, we need to prevent conflicting user interactions that would:
+      1. Interfere with the drag gesture (competing pointer events, focus changes)
+      2. Break the visual feedback (inconsistent cursors, hover states)
+      3. Cause unwanted scrolling (keyboard shortcuts, wheel events in restricted directions)
+      4. Create accessibility issues (focus jumping, screen reader confusion)
+       STRATEGY: Create a controlled interaction environment by:
+      1. VISUAL CONTROL: Use a backdrop to unify cursor appearance and block pointer events
+      2. INTERACTION ISOLATION: Make non-dragged elements inert to prevent interference
+      3. FOCUS MANAGEMENT: Control focus location and prevent focus changes during drag
+      4. SELECTIVE SCROLLING: Allow scrolling only in directions supported by the drag gesture
+       IMPLEMENTATION:
+      */
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      // 1. INTERACTION ISOLATION: Make everything except the dragged element inert
+      // This prevents keyboard events, pointer interactions, and screen reader navigation
+      // on non-relevant elements during the drag operation
       const cleanupInert = isolateInteractions([element, ...Array.from(document.querySelectorAll("[data-droppable]"))]);
       addReleaseCallback(() => {
         cleanupInert();
       });
 
-
+      // 2. VISUAL CONTROL: Backdrop for consistent cursor and pointer event blocking
       if (backdrop) {
         const backdropElement = document.createElement("div");
         backdropElement.className = "navi_drag_gesture_backdrop";
@@ -3662,8 +3662,8 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
         backdropElement.style.zIndex = backdropZIndex;
         backdropElement.style.cursor = cursor;
 
-
-
+        // Handle wheel events on backdrop for directionally-constrained drag gestures
+        // (e.g., table column resize should only allow horizontal scrolling)
         if (!direction.x || !direction.y) {
           backdropElement.onwheel = e => {
             e.preventDefault();
@@ -3682,25 +3682,25 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
         });
       }
 
-
+      // 3. FOCUS MANAGEMENT: Control and stabilize focus during drag
       const {
         activeElement
       } = document;
       const focusableElement = findFocusable(element);
-
-
-
+      // Focus the dragged element (or document.body as fallback) to establish clear focus context
+      // This also ensure any keydown event listened by the currently focused element
+      // won't be available during drag
       const elementToFocus = focusableElement || document.body;
       elementToFocus.focus({
         preventScroll: true
       });
       addReleaseCallback(() => {
-
+        // Restore original focus on release
         activeElement.focus({
           preventScroll: true
         });
       });
-
+      // Prevent Tab navigation entirely (focus should stay stable)
       const onkeydown = e => {
         if (e.key === "Tab") {
           e.preventDefault();
@@ -3712,17 +3712,17 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
         document.removeEventListener("keydown", onkeydown);
       });
 
-
+      // 4. SELECTIVE SCROLLING: Allow keyboard scrolling only in supported directions
       {
         const onDocumentKeydown = keyboardEvent => {
-
+          // Vertical scrolling keys - prevent if vertical movement not supported
           if (keyboardEvent.key === "ArrowUp" || keyboardEvent.key === "ArrowDown" || keyboardEvent.key === " " || keyboardEvent.key === "PageUp" || keyboardEvent.key === "PageDown" || keyboardEvent.key === "Home" || keyboardEvent.key === "End") {
             if (!direction.y) {
               keyboardEvent.preventDefault();
             }
             return;
           }
-
+          // Horizontal scrolling keys - prevent if horizontal movement not supported
           if (keyboardEvent.key === "ArrowLeft" || keyboardEvent.key === "ArrowRight") {
             if (!direction.x) {
               keyboardEvent.preventDefault();
@@ -3737,7 +3737,7 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
       }
     }
 
-
+    // Set up scroll event handling to adjust drag position when scrolling occurs
     {
       let isHandlingScroll = false;
       const handleScroll = scrollEvent => {
@@ -3766,17 +3766,17 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
       dragEvent,
       isRelease = false
     }) => {
-
+      // === ÉTAT INITIAL (au moment du grab) ===
       const {
         grabX,
         grabY,
         grabLayout
       } = gestureInfo;
-
-
-
-
-
+      // === CE QUI EST DEMANDÉ (où on veut aller) ===
+      // Calcul de la direction basé sur le mouvement précédent
+      // (ne tient pas compte du mouvement final une fois les contraintes appliquées)
+      // (ici on veut connaitre l'intention)
+      // on va utiliser cela pour savoir vers où on scroll si nécéssaire par ex
       const currentDragX = gestureInfo.dragX;
       const currentDragY = gestureInfo.dragY;
       const isGoingLeft = dragX < currentDragX;
@@ -3791,7 +3791,7 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
       if (layoutRequested.x === currentLayout.x && layoutRequested.y === currentLayout.y) {
         layout = currentLayout;
       } else {
-
+        // === APPLICATION DES CONTRAINTES ===
         let layoutConstrained = layoutRequested;
         const limitLayout = (left, top) => {
           layoutConstrained = createLayout(left === undefined ? layoutConstrained.x : left - scrollableLeftAtGrab, top === undefined ? layoutConstrained.y : top - scrollableTopAtGrab);
@@ -3800,7 +3800,7 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
           dragEvent,
           isRelease
         });
-
+        // === ÉTAT FINAL ===
         layout = layoutConstrained;
       }
       const dragData = {
@@ -3822,7 +3822,7 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
         const deltaX = Math.abs(dragX - grabX);
         const deltaY = Math.abs(dragY - grabY);
         if (direction.x && direction.y) {
-
+          // Both directions: check both axes
           if (deltaX < threshold && deltaY < threshold) {
             return dragData;
           }
@@ -3840,9 +3840,9 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
       return dragData;
     };
     const drag = (dragX = gestureInfo.dragX,
-
+    // Scroll container relative X coordinate
     dragY = gestureInfo.dragY,
-
+    // Scroll container relative Y coordinate
     {
       event = new CustomEvent("programmatic"),
       isRelease = false
@@ -3855,17 +3855,17 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
       });
       const startedPrevious = gestureInfo.started;
       const layoutPrevious = gestureInfo.layout;
-
+      // previousGestureInfo = { ...gestureInfo };
       Object.assign(gestureInfo, dragData);
       if (!startedPrevious && gestureInfo.started) {
         onDragStart?.(gestureInfo);
       }
       const someLayoutChange = gestureInfo.layout !== layoutPrevious;
       publishDrag(gestureInfo,
-
-
-
-
+      // we still publish drag event even when unchanged
+      // because UI might need to adjust when document scrolls
+      // even if nothing truly changes visually the element
+      // can decide to stick to the scroll for example
       someLayoutChange);
     };
     const release = ({
@@ -3897,7 +3897,7 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
     }
     const target = grabEvent.target;
     if (!target.closest) {
-
+      // target is a text node
       return null;
     }
     const mouseEventCoords = mouseEvent => {
@@ -3967,8 +3967,8 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
         onRelease
       }) => {
         const onPointerUp = pointerEvent => {
-
-
+          // <button disabled> for example does not emit mouseup if we release mouse over it
+          // -> we add "pointerup" to catch mouseup occuring on disabled element
           if (pointerEvent.pointerType === "mouse") {
             onRelease(pointerEvent);
           }
@@ -3991,12 +3991,12 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
 const dragAfterThreshold = (grabEvent, dragGestureInitializer, threshold) => {
   const significantDragGestureController = createDragGestureController({
     threshold,
-
-
-
+    // allow interaction for this intermediate gesture:
+    // user should still be able to scroll or interact with the document
+    // only once the gesture is significant we take control
     documentInteractions: "manual",
     onDragStart: gestureInfo => {
-      significantDragGesture.release();
+      significantDragGesture.release(); // kill that gesture
       const dragGesture = dragGestureInitializer();
       dragGesture.dragViaPointer(gestureInfo.dragEvent);
     }
@@ -4011,7 +4011,7 @@ const definePropertyAsReadOnly = (object, propertyName) => {
     value: object[propertyName]
   });
 };
-import.meta.css =          "\n  .navi_drag_gesture_backdrop {\n    position: fixed;\n    inset: 0;\n    user-select: none;\n  }\n";
+import.meta.css = /* css */"\n  .navi_drag_gesture_backdrop {\n    position: fixed;\n    inset: 0;\n    user-select: none;\n  }\n";
 
 const getBorderSizes = element => {
   const {
@@ -4028,138 +4028,138 @@ const getBorderSizes = element => {
   };
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+/**
+ * DOM Coordinate Systems: The Missing APIs Problem
+ *
+ * When positioning and moving DOM elements, we commonly need coordinate information.
+ * The web platform provides getBoundingClientRect() which gives viewport-relative coordinates,
+ * but this creates several challenges when working with scrollable containers:
+ *
+ * ## The Problem
+ *
+ * 1. **Basic positioning**: getBoundingClientRect() works great for viewport-relative positioning
+ * 2. **Document scrolling**: When document has scroll, we add document.scrollLeft/scrollTop
+ * 3. **Scroll containers**: When elements are inside scrollable containers, we need coordinates
+ *    relative to that container, not the document
+ *
+ * ## Missing Browser APIs
+ *
+ * The web platform lacks essential APIs for scroll container workflows:
+ * - No equivalent of getBoundingClientRect() relative to scroll container
+ * - No built-in way to get element coordinates in scroll container space
+ * - Manual coordinate conversion is error-prone and inconsistent
+ *
+ * ## This Module's Solution
+ *
+ * This module provides the missing coordinate APIs that work seamlessly with scroll containers:
+ * - **getScrollRelativeRect()**: element rect relative to scroll container (PRIMARY API)
+ * - **getMouseEventScrollRelativeRect()**: Mouse coordinates in scroll container space
+ * - **convertScrollRelativeRectInto()**: Convert scroll-relative rect to element positioning coordinates
+ *
+ * These APIs abstract away the complexity of coordinate system conversion and provide
+ * a consistent interface for element positioning regardless of scroll container depth.
+ *
+ * ## Primary API: getScrollRelativeRect()
+ *
+ * This is the main API you want - element rectangle relative to scroll container:
+ *
+ * ```js
+ * const rect = element.getBoundingClientRect(); // viewport-relative
+ * const scrollRect = getScrollRelativeRect(element, scrollContainer); // scroll-relative
+ * ```
+ *
+ * Returns: { left, top, right, bottom, width, height, scrollLeft, scrollTop, scrollContainer, ...metadata }
+ *
+ * The scroll values are included so you can calculate scroll-absolute coordinates yourself:
+ * ```js
+ * const { left, top, scrollLeft, scrollTop } = getScrollRelativeRect(element);
+ * const scrollAbsoluteLeft = left + scrollLeft;
+ * const scrollAbsoluteTop = top + scrollTop;
+ * ```
+ *
+ * ## Secondary APIs:
+ *
+ * - **getMouseEventScrollRelativeRect()**: Get mouse coordinates as a rect in scroll container space
+ * - **convertScrollRelativeRectInto()**: Convert from scroll-relative coordinates to element positioning coordinates (for setting element.style.left/top)
+ *
+ * ## Coordinate System Terminology:
+ *
+ * - **Viewport-relative**: getBoundingClientRect() coordinates - relative to browser viewport
+ * - **Scroll-relative**: Coordinates relative to scroll container (ignoring current scroll position)
+ * - **Scroll-absolute**: Scroll-relative + scroll position (element's position in full scrollable content)
+ * - **Element coordinates**: Coordinates for positioning elements (via element.style.left/top)
+ *
+ * ## Legacy Coordinate System Diagrams
+ *
+ * X-Axis Coordinate Systems in Web Development
+ *
+ * Diagram showing horizontal positioning and scrollbars:
+ *
+ * VIEWPORT (visible part of the document)
+ * ┌───────────────────────────────────────────────┐
+ * │                                               │
+ * │                                               │
+ * │ container.offsetLeft: 20px                    │
+ * │       ┼─────────────────────────────┐         │
+ * │       │                             │         │
+ * │       │                             │         │
+ * │       │  el.offsetLeft: 100px       │         │
+ * │       │         ┼─────┐             │         │
+ * │       │         │     │             │         │
+ * │       │         └─────┘             │         │
+ * │       │                             │         │
+ * │       │ ░░░███░░░░░░░░░░░░░░░░░░░░░ │         │
+ * │       └─────│───────────────────────┘         │
+ * │ container.scrollLeft: 50px                    │
+ * │                                               │
+ * │                                               │
+ * │ ░░░░░░░███░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░│
+ * └─────────│─────────────────────────────────────┘
+ *   document.scrollLeft: 200px
+ *
+ *
+ * Left coordinate for the element:
+ *
+ * Document coordinates (absolute position in full document)
+ * • Result: 320px
+ * • Detail: container.offsetLeft + element.offsetLeft + document.scrollLeft
+ *           20                +  100              + 200               = 320px
+ *
+ * Viewport coordinates (getBoundingClientRect().left):
+ * • Result: 120px
+ * • Detail: container.offsetLeft + element.offsetLeft
+ *           20                +  100              = 120px
+ *
+ * Scroll coordinates (position within scroll container):
+ * • Result: 50px
+ * • Detail: element.offsetLeft - container.scrollLeft
+ *           100              - 50                 = 50px
+ *
+ * Scroll behavior examples:
+ *
+ * When document scrolls (scrollLeft: 200px → 300px):
+ * • Document coordinates: 320px → 420px
+ * • Viewport coordinates: 120px → 120px (unchanged)
+ * • Scroll coordinates: 50px → 50px (unchanged)
+ *
+ * When container scrolls (scrollLeft: 50px → 100px):
+ * • Document coordinates: 320px → 270px
+ * • Viewport coordinates: 120px → 70px
+ * • Scroll coordinates: 50px → 0px
+ */
 
 const {
   documentElement
 } = document;
 
-
-
-
-
-
-
-
-
+/**
+ * Get element rectangle relative to its scroll container
+ *
+ * @param {Element} element - The element to get coordinates for
+ * @param {Element} [scrollContainer] - Optional scroll container (auto-detected if not provided)
+ * @param {object} [options] - Configuration options
+ * @returns {object} { left, top, right, bottom, width, height, scrollLeft, scrollTop, scrollContainer, ...metadata }
+ */
 const getScrollRelativeRect = (element, scrollContainer = getScrollContainer(element), {
   useOriginalPositionEvenIfSticky = false
 } = {}) => {
@@ -4185,7 +4185,7 @@ const getScrollRelativeRect = (element, scrollContainer = getScrollContainer(ele
       top: topScrollRelative,
       right: leftScrollRelative + width,
       bottom: topScrollRelative + height,
-
+      // metadata
       width,
       height,
       scrollContainer,
@@ -4207,7 +4207,7 @@ const getScrollRelativeRect = (element, scrollContainer = getScrollContainer(ele
     {
       const usePositionSticky = computedStyle.position === "sticky";
       if (usePositionSticky) {
-
+        // For CSS position:sticky elements, use scrollable-relative coordinates
         const [leftScrollRelative, topScrollRelative] = viewportPosToScrollRelativePos(leftViewport, topViewport, scrollContainer);
         const isStickyLeft = computedStyle.left !== "auto";
         const isStickyTop = computedStyle.top !== "auto";
@@ -4225,8 +4225,8 @@ const getScrollRelativeRect = (element, scrollContainer = getScrollContainer(ele
       const hasStickyTopAttribute = element.hasAttribute("data-sticky-top");
       const useStickyAttribute = hasStickyLeftAttribute || hasStickyTopAttribute;
       if (useStickyAttribute) {
-
-
+        // Handle virtually sticky obstacles (<col> or <tr>) - elements with data-sticky attributes
+        // but not CSS position:sticky. Calculate their position based on scroll and sticky behavior
         let [leftScrollRelative, topScrollRelative] = viewportPosToScrollRelativePos(leftViewport, topViewport, scrollContainer);
         if (hasStickyLeftAttribute) {
           const leftCssValue = parseFloat(computedStyle.left) || 0;
@@ -4238,7 +4238,7 @@ const getScrollRelativeRect = (element, scrollContainer = getScrollContainer(ele
             const stickyPosition = scrollLeft + leftCssValue;
             const leftWithScroll = leftScrollRelative + scrollLeft;
             if (stickyPosition > leftWithScroll) {
-              leftScrollRelative = leftCssValue;
+              leftScrollRelative = leftCssValue; // Element is stuck
             }
           }
         }
@@ -4252,7 +4252,7 @@ const getScrollRelativeRect = (element, scrollContainer = getScrollContainer(ele
             const stickyPosition = scrollTop + topCssValue;
             const topWithScroll = topScrollRelative + scrollTop;
             if (stickyPosition > topWithScroll) {
-              topScrollRelative = topCssValue;
+              topScrollRelative = topCssValue; // Element is stuck
             }
           }
         }
@@ -4261,7 +4261,7 @@ const getScrollRelativeRect = (element, scrollContainer = getScrollContainer(ele
     }
   }
 
-
+  // For normal elements, use scrollable-relative coordinates
   const [leftScrollRelative, topScrollRelative] = viewportPosToScrollRelativePos(leftViewport, topViewport, scrollContainer);
   return createScrollRelativeRect(leftScrollRelative, topScrollRelative);
 };
@@ -4296,8 +4296,8 @@ const addScrollToRect = scrollRelativeRect => {
   };
 };
 
-
-
+// https://github.com/w3c/csswg-drafts/issues/3329
+// Return the portion of the element that is visible for this scoll container
 const getScrollBox = scrollContainer => {
   if (scrollContainer === documentElement) {
     const {
@@ -4331,7 +4331,7 @@ const getScrollBox = scrollContainer => {
     height: clientHeight
   };
 };
-
+// https://developer.mozilla.org/en-US/docs/Glossary/Scroll_container#scrollport
 const getScrollport = (scrollBox, scrollContainer) => {
   const {
     left,
@@ -4361,40 +4361,40 @@ const getElementSelector = element => {
 installImportMetaCss(import.meta);const setupConstraintFeedbackLine = () => {
   const constraintFeedbackLine = createConstraintFeedbackLine();
 
-
+  // Track last known mouse position for constraint feedback line during scroll
   let lastMouseX = null;
   let lastMouseY = null;
 
-
+  // Internal function to update constraint feedback line
   const onDrag = gestureInfo => {
     const {
       grabEvent,
       dragEvent
     } = gestureInfo;
     if (grabEvent.type === "programmatic" || dragEvent.type === "programmatic") {
-
+      // programmatic drag
       return;
     }
     const mouseX = dragEvent.clientX;
     const mouseY = dragEvent.clientY;
-
+    // Use last known position if current position not available (e.g., during scroll)
     const effectiveMouseX = mouseX !== null ? mouseX : lastMouseX;
     const effectiveMouseY = mouseY !== null ? mouseY : lastMouseY;
     if (effectiveMouseX === null || effectiveMouseY === null) {
       return;
     }
 
-
+    // Store current mouse position for potential use during scroll
     lastMouseX = mouseX;
     lastMouseY = mouseY;
     const grabClientX = grabEvent.clientX;
     const grabClientY = grabEvent.clientY;
 
-
+    // Calculate distance between mouse and current grab point
     const deltaX = effectiveMouseX - grabClientX;
     const deltaY = effectiveMouseY - grabClientY;
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-
+    // Show line only when distance is significant (> 20px threshold)
     const threshold = 20;
     if (distance <= threshold) {
       constraintFeedbackLine.style.opacity = "";
@@ -4402,14 +4402,14 @@ installImportMetaCss(import.meta);const setupConstraintFeedbackLine = () => {
       return;
     }
 
-
+    // Calculate angle and position
     const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
-
+    // Position line at current grab point (follows element movement)
     constraintFeedbackLine.style.left = "".concat(grabClientX, "px");
     constraintFeedbackLine.style.top = "".concat(grabClientY, "px");
     constraintFeedbackLine.style.width = "".concat(distance, "px");
     constraintFeedbackLine.style.transform = "rotate(".concat(angle, "deg)");
-
+    // Fade in based on distance (more visible as distance increases)
     const maxOpacity = 0.8;
     const opacityFactor = Math.min((distance - threshold) / 100, 1);
     constraintFeedbackLine.style.opacity = "".concat(maxOpacity * opacityFactor);
@@ -4429,7 +4429,7 @@ const createConstraintFeedbackLine = () => {
   document.body.appendChild(line);
   return line;
 };
-import.meta.css =          "\n  .navi_constraint_feedback_line {\n    position: fixed;\n    pointer-events: none;\n    z-index: 9998;\n    visibility: hidden;\n    transition: opacity 0.15s ease;\n    transform-origin: left center;\n    border-top: 2px dotted rgba(59, 130, 246, 0.7);\n  }\n\n  .navi_constraint_feedback_line[data-visible] {\n    visibility: visible;\n  }\n";
+import.meta.css = /* css */"\n  .navi_constraint_feedback_line {\n    position: fixed;\n    pointer-events: none;\n    z-index: 9998;\n    visibility: hidden;\n    transition: opacity 0.15s ease;\n    transform-origin: left center;\n    border-top: 2px dotted rgba(59, 130, 246, 0.7);\n  }\n\n  .navi_constraint_feedback_line[data-visible] {\n    visibility: visible;\n  }\n";
 
 installImportMetaCss(import.meta);const MARKER_SIZE = 12;
 let currentDebugMarkers = [];
@@ -4439,12 +4439,12 @@ let currentElementMarker = null;
 const setupDragDebugMarkers = (dragGesture, {
   referenceElement
 }) => {
-
+  // Clean up any existing persistent markers from previous drag gestures
   {
-
+    // Remove any existing markers from previous gestures
     const container = document.getElementById("navi_debug_markers_container");
     if (container) {
-      container.innerHTML = "";
+      container.innerHTML = ""; // Clear all markers efficiently
     }
   }
   const {
@@ -4459,7 +4459,7 @@ const setupDragDebugMarkers = (dragGesture, {
       bottom,
       autoScrollArea
     }) => {
-
+      // Schedule removal of previous markers if they exist
       const previousDebugMarkers = [...currentDebugMarkers];
       const previousConstraintMarkers = [...currentConstraintMarkers];
       const previousReferenceElementMarker = currentReferenceElementMarker;
@@ -4477,17 +4477,17 @@ const setupDragDebugMarkers = (dragGesture, {
         }, 100);
       }
 
-
+      // Clear current marker arrays
       currentDebugMarkers.length = 0;
       currentConstraintMarkers.length = 0;
       currentReferenceElementMarker = null;
       currentElementMarker = null;
 
-
-
-
+      // Create element marker (always show the dragged element)
+      // When there's a reference element, show it as "Dragged Element"
+      // When there's no reference element, show it as "Element"
       const elementLabel = referenceElement ? "Dragged Element" : "Element";
-      const elementColor = referenceElement ? "255, 0, 150" : "0, 200, 0";
+      const elementColor = referenceElement ? "255, 0, 150" : "0, 200, 0"; // Pink when with reference, green when standalone
 
       currentElementMarker = createElementMarker({
         left,
@@ -4499,7 +4499,7 @@ const setupDragDebugMarkers = (dragGesture, {
         color: elementColor
       });
 
-
+      // Create reference element marker if reference element exists
       if (referenceElement) {
         currentReferenceElementMarker = createReferenceElementMarker({
           left,
@@ -4510,7 +4510,7 @@ const setupDragDebugMarkers = (dragGesture, {
         });
       }
 
-
+      // Collect all markers to be created, then merge duplicates
       const markersToCreate = [];
       {
         if (direction.x) {
@@ -4519,7 +4519,7 @@ const setupDragDebugMarkers = (dragGesture, {
             x: autoScrollArea.left,
             y: 0,
             color: "0 128 0",
-
+            // green
             side: "left"
           });
           markersToCreate.push({
@@ -4527,7 +4527,7 @@ const setupDragDebugMarkers = (dragGesture, {
             x: autoScrollArea.right,
             y: 0,
             color: "0 128 0",
-
+            // green
             side: "right"
           });
         }
@@ -4537,7 +4537,7 @@ const setupDragDebugMarkers = (dragGesture, {
             x: 0,
             y: autoScrollArea.top,
             color: "255 0 0",
-
+            // red
             side: "top"
           });
           markersToCreate.push({
@@ -4545,20 +4545,20 @@ const setupDragDebugMarkers = (dragGesture, {
             x: 0,
             y: autoScrollArea.bottom,
             color: "255 165 0",
-
+            // orange
             side: "bottom"
           });
         }
       }
 
-
+      // Process each constraint individually to preserve names
       for (const constraint of constraints) {
         if (constraint.type === "bounds") {
           const {
             bounds
           } = constraint;
 
-
+          // Create individual markers for each bound with constraint name
           if (direction.x) {
             if (bounds.left !== undefined) {
               markersToCreate.push({
@@ -4566,19 +4566,19 @@ const setupDragDebugMarkers = (dragGesture, {
                 x: bounds.left,
                 y: 0,
                 color: "128 0 128",
-
+                // purple
                 side: "left"
               });
             }
             if (bounds.right !== undefined) {
-
-
+              // For visual clarity, show rightBound at the right edge of the element
+              // when element is positioned at rightBound (not the left edge position)
               markersToCreate.push({
                 name: "".concat(constraint.name, ".right"),
                 x: bounds.right,
                 y: 0,
                 color: "128 0 128",
-
+                // purple
                 side: "right"
               });
             }
@@ -4590,19 +4590,19 @@ const setupDragDebugMarkers = (dragGesture, {
                 x: 0,
                 y: bounds.top,
                 color: "128 0 128",
-
+                // purple
                 side: "top"
               });
             }
             if (bounds.bottom !== undefined) {
-
-
+              // For visual clarity, show bottomBound at the bottom edge of the element
+              // when element is positioned at bottomBound (not the left edge position)
               markersToCreate.push({
                 name: "".concat(constraint.name, ".bottom"),
                 x: 0,
                 y: bounds.bottom,
                 color: "128 0 128",
-
+                // purple
                 side: "bottom"
               });
             }
@@ -4613,7 +4613,7 @@ const setupDragDebugMarkers = (dragGesture, {
         }
       }
 
-
+      // Create markers with merging for overlapping positions
       const createdMarkers = createMergedMarkers(markersToCreate, scrollContainer);
       currentDebugMarkers.push(...createdMarkers.filter(m => m.type !== "constraint"));
       currentConstraintMarkers.push(...createdMarkers.filter(m => m.type === "constraint"));
@@ -4626,7 +4626,7 @@ const setupDragDebugMarkers = (dragGesture, {
   };
 };
 
-
+// Ensure markers container exists and return it
 const getMarkersContainer = () => {
   let container = document.getElementById("navi_debug_markers_container");
   if (!container) {
@@ -4638,8 +4638,8 @@ const getMarkersContainer = () => {
   return container;
 };
 
-
-
+// Convert document-relative coordinates to viewport coordinates for marker positioning
+// Takes the scroll container into account for proper positioning relative to the container
 const getDebugMarkerPos = (x, y, scrollContainer, side = null) => {
   const {
     documentElement
@@ -4649,37 +4649,37 @@ const getDebugMarkerPos = (x, y, scrollContainer, side = null) => {
   let baseX;
   let baseY;
   if (scrollContainer === documentElement) {
-
-
+    // our markers are injected into the document so we have the right coordinates already
+    // and we remove scroll because our markers are in a fixed position ancestor (to ensure they cannot influence scrollbars)
     baseX = leftWithoutScroll;
     baseY = topWithoutScroll;
   } else {
-
-
-
+    // we need to remove the scroll of the container?
+    // not sure I think here we might want to keep the scroll container scroll
+    // and that's it
     const scrollContainerRect = scrollContainer.getBoundingClientRect();
     baseX = scrollContainerRect.left + leftWithoutScroll;
     baseY = scrollContainerRect.top + topWithoutScroll;
   }
 
-
+  // Apply side-specific logic for extending markers across viewport
   if (side === "left" || side === "right") {
-
-    return [baseX, 0];
+    // Vertical markers: x should stay fixed in viewport, y can extend
+    return [baseX, 0]; // y=0 to start from top of viewport
   }
   if (side === "top" || side === "bottom") {
-
-    return [0, baseY];
+    // Horizontal markers: y should stay fixed in viewport, x can extend
+    return [0, baseY]; // x=0 to start from left of viewport
   }
 
-
+  // For obstacles and other markers: use converted coordinates directly
   return [baseX, baseY];
 };
 const createMergedMarkers = (markersToCreate, scrollContainer) => {
   const mergedMarkers = [];
   const positionMap = new Map();
 
-
+  // Group markers by position and side
   for (const marker of markersToCreate) {
     const key = "".concat(marker.x, ",").concat(marker.y, ",").concat(marker.side);
     if (!positionMap.has(key)) {
@@ -4688,20 +4688,20 @@ const createMergedMarkers = (markersToCreate, scrollContainer) => {
     positionMap.get(key).push(marker);
   }
 
-
+  // Create markers with merged labels for overlapping positions
   for (const [, markers] of positionMap) {
     if (markers.length === 1) {
-
+      // Single marker - create as normal
       const marker = markers[0];
       const domMarker = createDebugMarker(marker, scrollContainer);
       domMarker.type = marker.name.includes("Bound") ? "constraint" : "visible";
       mergedMarkers.push(domMarker);
     } else {
-
+      // Multiple markers at same position - merge labels
       const firstMarker = markers[0];
       const combinedName = markers.map(m => m.name).join(" + ");
 
-
+      // Use the first marker's color, or mix colors if needed
       const domMarker = createDebugMarker({
         ...firstMarker,
         name: combinedName
@@ -4719,19 +4719,19 @@ const createDebugMarker = ({
   color = "255 0 0",
   side
 }, scrollContainer) => {
-
+  // Convert coordinates from document-relative to viewport
   const [viewportX, viewportY] = getDebugMarkerPos(x, y, scrollContainer, side);
   const marker = document.createElement("div");
   marker.className = "navi_debug_marker";
   marker.setAttribute("data-".concat(side), "");
-
+  // Set the color as a CSS custom property
   marker.style.setProperty("--marker-color", "rgb(".concat(color, ")"));
-
+  // Position markers exactly at the boundary coordinates
   marker.style.left = side === "right" ? "".concat(viewportX - MARKER_SIZE, "px") : "".concat(viewportX, "px");
   marker.style.top = side === "bottom" ? "".concat(viewportY - MARKER_SIZE, "px") : "".concat(viewportY, "px");
   marker.title = name;
 
-
+  // Add label
   const label = document.createElement("div");
   label.className = "navi_debug_marker_label";
   label.textContent = name;
@@ -4744,7 +4744,7 @@ const createObstacleMarker = (obstacleObj, scrollContainer) => {
   const width = obstacleObj.bounds.right - obstacleObj.bounds.left;
   const height = obstacleObj.bounds.bottom - obstacleObj.bounds.top;
 
-
+  // Convert document-relative coordinates to viewport coordinates
   const [x, y] = getDebugMarkerPos(obstacleObj.bounds.left, obstacleObj.bounds.top, scrollContainer, "obstacle");
   const marker = document.createElement("div");
   marker.className = "navi_obstacle_marker";
@@ -4754,7 +4754,7 @@ const createObstacleMarker = (obstacleObj, scrollContainer) => {
   marker.style.height = "".concat(height, "px");
   marker.title = obstacleObj.name;
 
-
+  // Add label
   const label = document.createElement("div");
   label.className = "navi_obstacle_marker_label";
   label.textContent = obstacleObj.name;
@@ -4770,11 +4770,11 @@ const createElementMarker = ({
   bottom,
   scrollContainer,
   label = "Element",
-  color = "0, 200, 0"
+  color = "0, 200, 0" // Default green color
 }) => {
   const width = right - left;
   const height = bottom - top;
-
+  // Convert document-relative coordinates to viewport coordinates
   const [x, y] = getDebugMarkerPos(left, top, scrollContainer, "element");
   const marker = document.createElement("div");
   marker.className = "navi_element_marker";
@@ -4784,11 +4784,11 @@ const createElementMarker = ({
   marker.style.height = "".concat(height, "px");
   marker.title = label;
 
-
+  // Set the color as CSS custom properties
   marker.style.setProperty("--element-color", "rgb(".concat(color, ")"));
   marker.style.setProperty("--element-color-alpha", "rgba(".concat(color, ", 0.3)"));
 
-
+  // Add label
   const labelEl = document.createElement("div");
   labelEl.className = "navi_element_marker_label";
   labelEl.textContent = label;
@@ -4806,7 +4806,7 @@ const createReferenceElementMarker = ({
 }) => {
   const width = right - left;
   const height = bottom - top;
-
+  // Convert document-relative coordinates to viewport coordinates
   const [x, y] = getDebugMarkerPos(left, top, scrollContainer, "reference");
   const marker = document.createElement("div");
   marker.className = "navi_reference_element_marker";
@@ -4816,7 +4816,7 @@ const createReferenceElementMarker = ({
   marker.style.height = "".concat(height, "px");
   marker.title = "Reference Element";
 
-
+  // Add label
   const label = document.createElement("div");
   label.className = "navi_reference_element_marker_label";
   label.textContent = "Reference Element";
@@ -4825,7 +4825,7 @@ const createReferenceElementMarker = ({
   container.appendChild(marker);
   return marker;
 };
-import.meta.css =          "\n  .navi_debug_markers_container {\n    position: fixed;\n    top: 0;\n    left: 0;\n    width: 100vw;\n    height: 100vh;\n    overflow: hidden;\n    pointer-events: none;\n    z-index: 999998;\n    --marker-size: ".concat(MARKER_SIZE, "px;\n  }\n\n  .navi_debug_marker {\n    position: absolute;\n    pointer-events: none;\n  }\n\n  /* Markers based on side rather than orientation */\n  .navi_debug_marker[data-left],\n  .navi_debug_marker[data-right] {\n    width: var(--marker-size);\n    height: 100vh;\n  }\n\n  .navi_debug_marker[data-top],\n  .navi_debug_marker[data-bottom] {\n    width: 100vw;\n    height: var(--marker-size);\n  }\n\n  /* Gradient directions based on side, using CSS custom properties for color */\n  .navi_debug_marker[data-left] {\n    background: linear-gradient(\n      to right,\n      rgba(from var(--marker-color) r g b / 0.9) 0%,\n      rgba(from var(--marker-color) r g b / 0.7) 30%,\n      rgba(from var(--marker-color) r g b / 0.3) 70%,\n      rgba(from var(--marker-color) r g b / 0) 100%\n    );\n  }\n\n  .navi_debug_marker[data-right] {\n    background: linear-gradient(\n      to left,\n      rgba(from var(--marker-color) r g b / 0.9) 0%,\n      rgba(from var(--marker-color) r g b / 0.7) 30%,\n      rgba(from var(--marker-color) r g b / 0.3) 70%,\n      rgba(from var(--marker-color) r g b / 0) 100%\n    );\n  }\n\n  .navi_debug_marker[data-top] {\n    background: linear-gradient(\n      to bottom,\n      rgba(from var(--marker-color) r g b / 0.9) 0%,\n      rgba(from var(--marker-color) r g b / 0.7) 30%,\n      rgba(from var(--marker-color) r g b / 0.3) 70%,\n      rgba(from var(--marker-color) r g b / 0) 100%\n    );\n  }\n\n  .navi_debug_marker[data-bottom] {\n    background: linear-gradient(\n      to top,\n      rgba(from var(--marker-color) r g b / 0.9) 0%,\n      rgba(from var(--marker-color) r g b / 0.7) 30%,\n      rgba(from var(--marker-color) r g b / 0.3) 70%,\n      rgba(from var(--marker-color) r g b / 0) 100%\n    );\n  }\n\n  .navi_debug_marker_label {\n    position: absolute;\n    font-size: 12px;\n    font-weight: bold;\n    background: rgba(255, 255, 255, 0.9);\n    padding: 2px 6px;\n    border-radius: 3px;\n    border: 1px solid;\n    white-space: nowrap;\n    pointer-events: none;\n    color: rgb(from var(--marker-color) r g b / 1);\n    border-color: rgb(from var(--marker-color) r g b / 1);\n  }\n\n  /* Label positioning based on side data attributes */\n\n  /* Left side markers - vertical with 90\xB0 rotation */\n  .navi_debug_marker[data-left] .navi_debug_marker_label {\n    left: 10px;\n    top: 20px;\n    transform: rotate(90deg);\n    transform-origin: left center;\n  }\n\n  /* Right side markers - vertical with -90\xB0 rotation */\n  .navi_debug_marker[data-right] .navi_debug_marker_label {\n    right: 10px;\n    left: auto;\n    top: 20px;\n    transform: rotate(-90deg);\n    transform-origin: right center;\n  }\n\n  /* Top side markers - horizontal, label on the line */\n  .navi_debug_marker[data-top] .navi_debug_marker_label {\n    top: 0px;\n    left: 20px;\n  }\n\n  /* Bottom side markers - horizontal, label on the line */\n  .navi_debug_marker[data-bottom] .navi_debug_marker_label {\n    bottom: 0px;\n    top: auto;\n    left: 20px;\n  }\n\n  .navi_obstacle_marker {\n    position: absolute;\n    background-color: orange;\n    opacity: 0.6;\n    z-index: 9999;\n    pointer-events: none;\n  }\n\n  .navi_obstacle_marker_label {\n    position: absolute;\n    top: 50%;\n    left: 50%;\n    transform: translate(-50%, -50%);\n    font-size: 12px;\n    font-weight: bold;\n    color: white;\n    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);\n    pointer-events: none;\n  }\n\n  .navi_element_marker {\n    position: absolute;\n    background-color: var(--element-color-alpha, rgba(255, 0, 150, 0.3));\n    border: 2px solid var(--element-color, rgb(255, 0, 150));\n    opacity: 0.9;\n    z-index: 9997;\n    pointer-events: none;\n  }\n\n  .navi_element_marker_label {\n    position: absolute;\n    top: -25px;\n    right: 0;\n    font-size: 11px;\n    font-weight: bold;\n    color: var(--element-color, rgb(255, 0, 150));\n    background: rgba(255, 255, 255, 0.9);\n    padding: 2px 6px;\n    border-radius: 3px;\n    border: 1px solid var(--element-color, rgb(255, 0, 150));\n    white-space: nowrap;\n    pointer-events: none;\n  }\n\n  .navi_reference_element_marker {\n    position: absolute;\n    background-color: rgba(0, 150, 255, 0.3);\n    border: 2px dashed rgba(0, 150, 255, 0.7);\n    opacity: 0.8;\n    z-index: 9998;\n    pointer-events: none;\n  }\n\n  .navi_reference_element_marker_label {\n    position: absolute;\n    top: -25px;\n    left: 0;\n    font-size: 11px;\n    font-weight: bold;\n    color: rgba(0, 150, 255, 1);\n    background: rgba(255, 255, 255, 0.9);\n    padding: 2px 6px;\n    border-radius: 3px;\n    border: 1px solid rgba(0, 150, 255, 0.7);\n    white-space: nowrap;\n    pointer-events: none;\n  }\n");
+import.meta.css = /* css */"\n  .navi_debug_markers_container {\n    position: fixed;\n    top: 0;\n    left: 0;\n    width: 100vw;\n    height: 100vh;\n    overflow: hidden;\n    pointer-events: none;\n    z-index: 999998;\n    --marker-size: ".concat(MARKER_SIZE, "px;\n  }\n\n  .navi_debug_marker {\n    position: absolute;\n    pointer-events: none;\n  }\n\n  /* Markers based on side rather than orientation */\n  .navi_debug_marker[data-left],\n  .navi_debug_marker[data-right] {\n    width: var(--marker-size);\n    height: 100vh;\n  }\n\n  .navi_debug_marker[data-top],\n  .navi_debug_marker[data-bottom] {\n    width: 100vw;\n    height: var(--marker-size);\n  }\n\n  /* Gradient directions based on side, using CSS custom properties for color */\n  .navi_debug_marker[data-left] {\n    background: linear-gradient(\n      to right,\n      rgba(from var(--marker-color) r g b / 0.9) 0%,\n      rgba(from var(--marker-color) r g b / 0.7) 30%,\n      rgba(from var(--marker-color) r g b / 0.3) 70%,\n      rgba(from var(--marker-color) r g b / 0) 100%\n    );\n  }\n\n  .navi_debug_marker[data-right] {\n    background: linear-gradient(\n      to left,\n      rgba(from var(--marker-color) r g b / 0.9) 0%,\n      rgba(from var(--marker-color) r g b / 0.7) 30%,\n      rgba(from var(--marker-color) r g b / 0.3) 70%,\n      rgba(from var(--marker-color) r g b / 0) 100%\n    );\n  }\n\n  .navi_debug_marker[data-top] {\n    background: linear-gradient(\n      to bottom,\n      rgba(from var(--marker-color) r g b / 0.9) 0%,\n      rgba(from var(--marker-color) r g b / 0.7) 30%,\n      rgba(from var(--marker-color) r g b / 0.3) 70%,\n      rgba(from var(--marker-color) r g b / 0) 100%\n    );\n  }\n\n  .navi_debug_marker[data-bottom] {\n    background: linear-gradient(\n      to top,\n      rgba(from var(--marker-color) r g b / 0.9) 0%,\n      rgba(from var(--marker-color) r g b / 0.7) 30%,\n      rgba(from var(--marker-color) r g b / 0.3) 70%,\n      rgba(from var(--marker-color) r g b / 0) 100%\n    );\n  }\n\n  .navi_debug_marker_label {\n    position: absolute;\n    font-size: 12px;\n    font-weight: bold;\n    background: rgba(255, 255, 255, 0.9);\n    padding: 2px 6px;\n    border-radius: 3px;\n    border: 1px solid;\n    white-space: nowrap;\n    pointer-events: none;\n    color: rgb(from var(--marker-color) r g b / 1);\n    border-color: rgb(from var(--marker-color) r g b / 1);\n  }\n\n  /* Label positioning based on side data attributes */\n\n  /* Left side markers - vertical with 90\xB0 rotation */\n  .navi_debug_marker[data-left] .navi_debug_marker_label {\n    left: 10px;\n    top: 20px;\n    transform: rotate(90deg);\n    transform-origin: left center;\n  }\n\n  /* Right side markers - vertical with -90\xB0 rotation */\n  .navi_debug_marker[data-right] .navi_debug_marker_label {\n    right: 10px;\n    left: auto;\n    top: 20px;\n    transform: rotate(-90deg);\n    transform-origin: right center;\n  }\n\n  /* Top side markers - horizontal, label on the line */\n  .navi_debug_marker[data-top] .navi_debug_marker_label {\n    top: 0px;\n    left: 20px;\n  }\n\n  /* Bottom side markers - horizontal, label on the line */\n  .navi_debug_marker[data-bottom] .navi_debug_marker_label {\n    bottom: 0px;\n    top: auto;\n    left: 20px;\n  }\n\n  .navi_obstacle_marker {\n    position: absolute;\n    background-color: orange;\n    opacity: 0.6;\n    z-index: 9999;\n    pointer-events: none;\n  }\n\n  .navi_obstacle_marker_label {\n    position: absolute;\n    top: 50%;\n    left: 50%;\n    transform: translate(-50%, -50%);\n    font-size: 12px;\n    font-weight: bold;\n    color: white;\n    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);\n    pointer-events: none;\n  }\n\n  .navi_element_marker {\n    position: absolute;\n    background-color: var(--element-color-alpha, rgba(255, 0, 150, 0.3));\n    border: 2px solid var(--element-color, rgb(255, 0, 150));\n    opacity: 0.9;\n    z-index: 9997;\n    pointer-events: none;\n  }\n\n  .navi_element_marker_label {\n    position: absolute;\n    top: -25px;\n    right: 0;\n    font-size: 11px;\n    font-weight: bold;\n    color: var(--element-color, rgb(255, 0, 150));\n    background: rgba(255, 255, 255, 0.9);\n    padding: 2px 6px;\n    border-radius: 3px;\n    border: 1px solid var(--element-color, rgb(255, 0, 150));\n    white-space: nowrap;\n    pointer-events: none;\n  }\n\n  .navi_reference_element_marker {\n    position: absolute;\n    background-color: rgba(0, 150, 255, 0.3);\n    border: 2px dashed rgba(0, 150, 255, 0.7);\n    opacity: 0.8;\n    z-index: 9998;\n    pointer-events: none;\n  }\n\n  .navi_reference_element_marker_label {\n    position: absolute;\n    top: -25px;\n    left: 0;\n    font-size: 11px;\n    font-weight: bold;\n    color: rgba(0, 150, 255, 1);\n    background: rgba(255, 255, 255, 0.9);\n    padding: 2px 6px;\n    border-radius: 3px;\n    border: 1px solid rgba(0, 150, 255, 0.7);\n    white-space: nowrap;\n    pointer-events: none;\n  }\n");
 
 const initDragConstraints = (dragGesture, {
   areaConstraint,
@@ -4878,7 +4878,7 @@ const initDragConstraints = (dragGesture, {
       obstacleAttributeName,
       gestureInfo: dragGesture.gestureInfo,
       isDraggedElementSticky: false
-
+      // isStickyLeftOrHasStickyLeftAttr || isStickyTopOrHasStickyTopAttr,
     });
     for (const obstacleConstraintFunction of obstacleConstraintFunctions) {
       addConstraint(obstacleConstraintFunction);
@@ -4931,12 +4931,12 @@ const initDragConstraints = (dragGesture, {
       console.debug("Drag by ".concat(dragEvent.type, ": ").concat(property, " ").concat(action, " from ").concat(requested.toFixed(2), " to ").concat(constrained.toFixed(2), " by ").concat(constraint.type, ":").concat(constraint.name), constraint.element);
     };
 
-
-
+    // Apply each constraint in sequence, accumulating their effects
+    // This allows multiple constraints to work together (e.g., bounds + obstacles)
     for (const constraint of constraints) {
       const result = constraint.apply({
-
-
+        // each constraint works with scroll included coordinates
+        // and coordinates we provide here includes the scroll of the container
         left: elementLeft,
         top: elementTop,
         right: elementLeft + elementWidth,
@@ -5047,7 +5047,7 @@ const createAreaConstraint = (areaConstraint, {
         return value;
       }
       if (value === undefined) {
-
+        // defaults to scrollport
         return ({
           scrollport
         }) => scrollport[side];
@@ -5100,8 +5100,8 @@ const createObstacleConstraintsFromQuerySelector = (scrollableElement, {
       hasCrossedVisibleAreaLeftOnce,
       hasCrossedVisibleAreaTopOnce
     }) => {
-
-
+      // Only apply the "before crossing visible area" logic when dragging sticky elements
+      // Non-sticky elements should be able to cross sticky obstacles while stuck regardless of visible area crossing
       const useOriginalPositionEvenIfSticky = isDraggedElementSticky ? !hasCrossedVisibleAreaLeftOnce && !hasCrossedVisibleAreaTopOnce : true;
       const obstacleScrollRelativeRect = getScrollRelativeRect(obstacle, scrollableElement, {
         useOriginalPositionEvenIfSticky
@@ -5113,7 +5113,7 @@ const createObstacleConstraintsFromQuerySelector = (scrollableElement, {
         obstacleBounds = addScrollToRect(obstacleScrollRelativeRect);
       }
 
-
+      // obstacleBounds are already in scrollable-relative coordinates, no conversion needed
       const obstacleObject = createObstacleContraint(obstacleBounds, {
         name: "".concat(obstacleBounds.isSticky ? "sticky " : "", "obstacle (").concat(getElementSelector(obstacle), ")"),
         element: obstacle
@@ -5141,19 +5141,19 @@ const createBoundConstraint = (bounds, {
   }) => {
     let leftConstrained = left;
     let topConstrained = top;
-
+    // Left boundary: element's left edge should not go before leftBound
     if (leftBound !== undefined && left < leftBound) {
       leftConstrained = leftBound;
     }
-
+    // Right boundary: element's right edge should not go past rightBound
     if (rightBound !== undefined && right > rightBound) {
       leftConstrained = rightBound - width;
     }
-
+    // Top boundary: element's top edge should not go before topBound
     if (topBound !== undefined && top < topBound) {
       topConstrained = topBound;
     }
-
+    // Bottom boundary: element's bottom edge should not go past bottomBound
     if (bottomBound !== undefined && bottom > bottomBound) {
       topConstrained = bottomBound - height;
     }
@@ -5189,9 +5189,9 @@ const createObstacleContraint = (bounds, {
     currentLeft,
     currentTop
   }) => {
-
+    // Simple collision detection: check where element is and prevent movement into obstacle
     {
-
+      // Determine current position relative to obstacle
       const currentLeftRounded = roundForConstraints(currentLeft);
       const currentRightRounded = roundForConstraints(currentLeft + width);
       const currentTopRounded = roundForConstraints(currentTop);
@@ -5201,7 +5201,7 @@ const createObstacleContraint = (bounds, {
       const isAbove = currentBottomRounded <= topBoundRounded;
       const isBelow = currentTopRounded >= bottomBoundRounded;
 
-
+      // If element is on the left, apply X constraint to prevent moving right into obstacle
       if (isOnTheLeft) {
         const wouldHaveYOverlap = top < bottomBound && bottom > topBound;
         if (wouldHaveYOverlap) {
@@ -5211,7 +5211,7 @@ const createObstacleContraint = (bounds, {
           }
         }
       }
-
+      // If element is on the right, apply X constraint to prevent moving left into obstacle
       else if (isOnTheRight) {
         const wouldHaveYOverlap = top < bottomBound && bottom > topBound;
         if (wouldHaveYOverlap) {
@@ -5221,7 +5221,7 @@ const createObstacleContraint = (bounds, {
           }
         }
       }
-
+      // If element is above, apply Y constraint to prevent moving down into obstacle
       else if (isAbove) {
         const wouldHaveXOverlap = left < rightBound && right > leftBound;
         if (wouldHaveXOverlap) {
@@ -5231,7 +5231,7 @@ const createObstacleContraint = (bounds, {
           }
         }
       }
-
+      // If element is below, apply Y constraint to prevent moving up into obstacle
       else if (isBelow) {
         const wouldHaveXOverlap = left < rightBound && right > leftBound;
         if (wouldHaveXOverlap) {
@@ -5243,34 +5243,34 @@ const createObstacleContraint = (bounds, {
       }
     }
 
-
-
-    const distanceToLeft = right - leftBound;
-    const distanceToRight = rightBound - left;
-    const distanceToTop = bottom - topBound;
-    const distanceToBottom = bottomBound - top;
-
+    // Element is overlapping with obstacle - push it out in the direction of least resistance
+    // Calculate distances to push element out in each direction
+    const distanceToLeft = right - leftBound; // Distance to push left
+    const distanceToRight = rightBound - left; // Distance to push right
+    const distanceToTop = bottom - topBound; // Distance to push up
+    const distanceToBottom = bottomBound - top; // Distance to push down
+    // Find the minimum distance (direction of least resistance)
     const minDistance = Math.min(distanceToLeft, distanceToRight, distanceToTop, distanceToBottom);
     if (minDistance === distanceToLeft) {
-
+      // Push left: element should not go past leftBound - elementWidth
       const maxLeft = leftBound - width;
       if (left > maxLeft) {
         return [maxLeft, top];
       }
     } else if (minDistance === distanceToRight) {
-
+      // Push right: element should not go before rightBound
       const minLeft = rightBound;
       if (left < minLeft) {
         return [minLeft, top];
       }
     } else if (minDistance === distanceToTop) {
-
+      // Push up: element should not go past topBound - elementHeight
       const maxTop = topBound - height;
       if (top > maxTop) {
         return [left, maxTop];
       }
     } else if (minDistance === distanceToBottom) {
-
+      // Push down: element should not go before bottomBound
       const minTop = bottomBound;
       if (top < minTop) {
         return [left, minTop];
@@ -5287,23 +5287,23 @@ const createObstacleContraint = (bounds, {
   };
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+/**
+ * Rounds coordinates to prevent floating point precision issues in constraint calculations.
+ *
+ * This is critical for obstacle detection because:
+ * 1. Boundary detection relies on precise comparisons (e.g., elementRight <= obstacleLeft)
+ * 2. Floating point arithmetic can produce values like 149.99999999 instead of 150
+ * 3. This causes incorrect boundary classifications (element appears "on left" when it should be "overlapping")
+ *
+ * Scroll events are more susceptible to this issue because:
+ * - Mouse events use integer pixel coordinates from the DOM (e.g., clientX: 150)
+ * - Scroll events use element.scrollLeft which can have sub-pixel values from CSS transforms, zoom, etc.
+ * - Scroll compensation calculations (scrollDelta * ratios) amplify floating point errors
+ * - Multiple scroll events accumulate these errors over time
+ *
+ * Using 2-decimal precision maintains smooth sub-pixel positioning while ensuring
+ * reliable boundary detection for constraint systems.
+ */
 const roundForConstraints = value => {
   return Math.round(value * 100) / 100;
 };
@@ -5339,7 +5339,7 @@ const applyStickyFrontiersToAutoScrollArea = (autoScrollArea, {
         left = bounds.right;
         continue;
       }
-
+      // right
       if (bounds.left >= right) {
         continue;
       }
@@ -5361,7 +5361,7 @@ const applyStickyFrontiersToAutoScrollArea = (autoScrollArea, {
         element
       } = verticalStickyFrontier;
 
-
+      // Frontier acts as a top barrier - constrains from the bottom edge of the frontier
       if (side === "top") {
         if (bounds.bottom <= top) {
           continue;
@@ -5370,7 +5370,7 @@ const applyStickyFrontiersToAutoScrollArea = (autoScrollArea, {
         continue;
       }
 
-
+      // Frontier acts as a bottom barrier - constrains from the top edge of the frontier
       if (bounds.top >= bottom) {
         continue;
       }
@@ -5401,7 +5401,7 @@ const createStickyFrontierOnAxis = (element, {
     }
     const hasPrimary = frontier.hasAttribute(primaryAttrName);
     const hasOpposite = frontier.hasAttribute(oppositeAttrName);
-
+    // Check if element has both sides (invalid)
     if (hasPrimary && hasOpposite) {
       const elementSelector = getElementSelector(frontier);
       console.warn("Sticky frontier element (".concat(elementSelector, ") has both ").concat(primarySide, " and ").concat(oppositeSide, " attributes. \n  A sticky frontier should only have one side attribute."));
@@ -5432,19 +5432,19 @@ const createStickyFrontierOnAxis = (element, {
 const dragStyleController = createStyleController("drag_to_move");
 const createDragToMoveGestureController = ({
   stickyFrontiers = true,
-
-
+  // Padding to reduce the area used to autoscroll by this amount (applied after sticky frontiers)
+  // This creates an invisible space around the area where elements cannot be dragged
   autoScrollAreaPadding = 0,
-
+  // constraints,
   areaConstraint = "scroll",
-
+  // "scroll" | "scrollport" | "none" | {left,top,right,bottom} | function
   obstaclesContainer,
   obstacleAttributeName = "data-drag-obstacle",
-
-
-
-
-
+  // Visual feedback line connecting mouse cursor to the moving grab point when constraints prevent following
+  // This provides intuitive feedback during drag operations when the element cannot reach the mouse
+  // position due to obstacles, boundaries, or other constraints. The line originates from where the mouse
+  // initially grabbed the element, but moves with the element to show the current anchor position.
+  // It becomes visible when there's a significant distance between mouse and grab point.
   showConstraintFeedbackLine = true,
   showDebugMarkers = true,
   resetPositionAfterRelease = false,
@@ -5482,8 +5482,8 @@ const createDragToMoveGestureController = ({
     }
     let scrollArea;
     {
-
-
+      // computed at start so that scrollWidth/scrollHeight are fixed
+      // even if the dragging side effects increases them afterwards
       scrollArea = {
         left: 0,
         top: 0,
@@ -5494,8 +5494,8 @@ const createDragToMoveGestureController = ({
     let scrollport;
     let autoScrollArea;
     {
-
-
+      // for visible are we also want to snapshot the widht/height
+      // and we'll add scrollContainer container scrolls during drag (getScrollport does that)
       const scrollBox = getScrollBox(scrollContainer);
       const updateScrollportAndAutoScrollArea = () => {
         scrollport = getScrollport(scrollBox, scrollContainer);
@@ -5522,13 +5522,13 @@ const createDragToMoveGestureController = ({
       dragGesture.addBeforeDragCallback(updateScrollportAndAutoScrollArea);
     }
 
-
+    // Set up dragging attribute
     element.setAttribute("data-grabbed", "");
     dragGesture.addReleaseCallback(() => {
       element.removeAttribute("data-grabbed");
     });
 
-
+    // Will be used for dynamic constraints on sticky elements
     let hasCrossedScrollportLeftOnce = false;
     let hasCrossedScrollportTopOnce = false;
     const dragConstraints = initDragConstraints(dragGesture, {
@@ -5610,7 +5610,7 @@ const createDragToMoveGestureController = ({
             scrollTopTarget = scrollContainer.scrollTop + containerScrollTopMove;
           }
         }
-
+        // now we know what to do, do it
         if (scrollLeftTarget !== undefined) {
           scrollContainer.scrollLeft = scrollLeftTarget;
         }
@@ -5631,12 +5631,12 @@ const createDragToMoveGestureController = ({
           const leftDelta = leftTarget - leftAtGrab;
           const translateX = translateXAtGrab ? translateXAtGrab + leftDelta : leftDelta;
           transform.translateX = translateX;
-
-
-
-
-
-
+          // console.log({
+          //   leftAtGrab,
+          //   scrollableLeft,
+          //   left,
+          //   leftTarget,
+          // });
         }
         if (direction.y) {
           const topTarget = positionedTop;
@@ -5705,8 +5705,8 @@ const startDragToResizeGesture = (pointerdownEvent, {
     console.warn("No element to resize found");
     return null;
   }
-
-
+  // inspired by https://developer.mozilla.org/en-US/docs/Web/CSS/resize
+  // "horizontal", "vertical", "both"
   const resizeDirection = getResizeDirection(elementToResize);
   if (!resizeDirection.x && !resizeDirection.y) {
     return null;
@@ -5740,14 +5740,14 @@ const getResizeDirection = element => {
   };
 };
 
-
-
-
-
-
-
-
-
+/**
+ * Detects the drop target based on what element is actually under the mouse cursor.
+ * Uses document.elementsFromPoint() to respect visual stacking order naturally.
+ *
+ * @param {Object} gestureInfo - Gesture information
+ * @param {Element[]} targetElements - Array of potential drop target elements
+ * @returns {Object|null} Drop target info with elementSide or null if no valid target found
+ */
 const getDropTargetInfo = (gestureInfo, targetElements) => {
   const dragElement = gestureInfo.element;
   const dragElementRect = dragElement.getBoundingClientRect();
@@ -5772,26 +5772,26 @@ const getDropTargetInfo = (gestureInfo, targetElements) => {
   }
   const dragElementCenterX = dragElementRect.left + dragElementRect.width / 2;
   const dragElementCenterY = dragElementRect.top + dragElementRect.height / 2;
-
+  // Clamp coordinates to viewport to avoid issues with elementsFromPoint
   const viewportWidth = document.documentElement.clientWidth;
   const viewportHeight = document.documentElement.clientHeight;
   const clientX = dragElementCenterX < 0 ? 0 : dragElementCenterX > viewportWidth ? viewportWidth - 1 : dragElementCenterX;
   const clientY = dragElementCenterY < 0 ? 0 : dragElementCenterY > viewportHeight ? viewportHeight - 1 : dragElementCenterY;
 
-
+  // Find the first target element in the stack (topmost visible target)
   const elementsUnderDragElement = document.elementsFromPoint(clientX, clientY);
   let targetElement = null;
   let targetIndex = -1;
   for (const element of elementsUnderDragElement) {
-
+    // First, check if the element itself is a target
     const directIndex = intersectingTargets.indexOf(element);
     if (directIndex !== -1) {
       targetElement = element;
       targetIndex = directIndex;
       break;
     }
-
-
+    // Special case: if element is <td> or <th> and not in targets,
+    // try to find its corresponding <col> element
     if (!isTableCell(element)) {
       continue;
     }
@@ -5830,7 +5830,7 @@ const getDropTargetInfo = (gestureInfo, targetElements) => {
     targetIndex = 0;
   }
 
-
+  // Determine position within the target for both axes
   const targetRect = targetElement.getBoundingClientRect();
   const targetCenterX = targetRect.left + targetRect.width / 2;
   const targetCenterY = targetRect.top + targetRect.height / 2;
@@ -5852,12 +5852,12 @@ const isTableCell = el => {
   return el.tagName === "TD" || el.tagName === "TH";
 };
 
-
-
-
-
-
-
+/**
+ * Find the corresponding <col> element for a given <td> or <th> cell
+ * @param {Element} cellElement - The <td> or <th> element
+ * @param {Element[]} targetColElements - Array of <col> elements to search in
+ * @returns {Element|null} The corresponding <col> element or null if not found
+ */
 const findTableCellCol = cellElement => {
   const table = cellElement.closest("table");
   const colgroup = table.querySelector("colgroup");
@@ -5896,16 +5896,16 @@ const getWidth = element => {
   return width;
 };
 
-installImportMetaCss(import.meta);import.meta.css =          "\n  [data-position-sticky-placeholder] {\n    opacity: 0 !important;\n    position: static !important;\n    width: auto !important;\n    height: auto !important;\n  }\n";
+installImportMetaCss(import.meta);import.meta.css = /* css */"\n  [data-position-sticky-placeholder] {\n    opacity: 0 !important;\n    position: static !important;\n    width: auto !important;\n    height: auto !important;\n  }\n";
 const initPositionSticky = element => {
   const computedStyle = getComputedStyle(element);
   const topCssValue = computedStyle.top;
   const top = parseFloat(topCssValue);
   if (isNaN(top)) {
-    return () => {};
+    return () => {}; // Early return if no valid top value
   }
 
-
+  // Skip polyfill if native position:sticky would work (no overflow:auto/hidden parents)
   const scrollContainerSet = getScrollContainerSet(element);
   {
     let hasOverflowHiddenOrAuto = false;
@@ -5923,7 +5923,7 @@ const initPositionSticky = element => {
       }
     }
     if (!hasOverflowHiddenOrAuto) {
-      return () => {};
+      return () => {}; // Native sticky will work fine
     }
   }
   const cleanupCallbackSet = new Set();
@@ -5956,7 +5956,7 @@ const initPositionSticky = element => {
     updatePosition();
   };
   const updatePosition = () => {
-
+    // Ensure placeholder dimensions match element
     setStyles(placeholder, {
       width: "".concat(width, "px"),
       height: "".concat(height, "px")
@@ -5964,36 +5964,36 @@ const initPositionSticky = element => {
     const placeholderRect = placeholder.getBoundingClientRect();
     const parentRect = parentElement.getBoundingClientRect();
 
-
+    // Calculate left position in viewport coordinates (fixed positioning)
     const leftPosition = placeholderRect.left;
     element.style.left = "".concat(Math.round(leftPosition), "px");
 
-
+    // Determine if element should be sticky or at its natural position
     let topPosition;
     let isStuck = false;
 
-
+    // Check if we need to stick the element
     if (placeholderRect.top <= top) {
-
+      // Element should be stuck at "top" position in the viewport
       topPosition = top;
       isStuck = true;
 
-
+      // But make sure it doesn't go beyond parent's bottom boundary
       const parentBottom = parentRect.bottom;
       const elementBottom = top + height;
       if (elementBottom > parentBottom) {
-
+        // Adjust to stay within parent
         topPosition = parentBottom - height;
       }
     } else {
-
+      // Element should be at its natural position in the flow
       topPosition = placeholderRect.top;
     }
     element.style.top = "".concat(topPosition, "px");
     element.style.width = "".concat(width, "px");
     element.style.height = "".concat(height, "px");
 
-
+    // Set attribute for potential styling
     if (isStuck) {
       element.setAttribute("data-sticky", "");
     } else {
@@ -6004,7 +6004,7 @@ const initPositionSticky = element => {
     const restorePositionStyle = forceStyles(element, {
       "position": "fixed",
       "z-index": 1,
-      "will-change": "transform"
+      "will-change": "transform" // Hint for hardware acceleration
     });
     cleanupCallbackSet.add(restorePositionStyle);
   }
@@ -6073,7 +6073,7 @@ const stickyAsRelativeCoords = (element, referenceElement, {
   let leftPosition;
   let topPosition;
   if (isDocumentScrolling) {
-
+    // For document scrolling: check if element is currently stuck and calculate offset
 
     if (hasStickyLeftAttribute) {
       const cssLeftValue = parseFloat(computedStyle.left) || 0;
@@ -6098,56 +6098,56 @@ const stickyAsRelativeCoords = (element, referenceElement, {
     return [leftPosition, topPosition];
   }
 
-
+  // For container scrolling: check if element is currently stuck and calculate offset
   const scrollContainerRect = scrollContainer.getBoundingClientRect();
   if (hasStickyLeftAttribute) {
     const cssLeftValue = parseFloat(computedStyle.left) || 0;
-
+    // Check if element is stuck to the left edge of the scrollable container
     const isStuckLeft = elementRect.left <= scrollContainerRect.left + cssLeftValue;
     if (isStuckLeft) {
-
+      // Element is stuck - calculate its offset relative to reference element
       const elementOffsetRelative = elementRect.left - referenceElementRect.left;
       leftPosition = elementOffsetRelative - cssLeftValue;
     } else {
-
+      // Element is not stuck - behaves like position: relative with no offset
       leftPosition = 0;
     }
   }
   if (hasTopStickyAttribute) {
     const cssTopValue = parseFloat(computedStyle.top) || 0;
-
+    // Check if element is stuck to the top edge of the scrollable container
     const isStuckTop = elementRect.top <= scrollContainerRect.top + cssTopValue;
     if (isStuckTop) {
-
+      // Element is stuck - calculate its offset relative to reference element
       const elementOffsetRelative = elementRect.top - referenceElementRect.top;
       topPosition = elementOffsetRelative - cssTopValue;
     } else {
-
+      // Element is not stuck - behaves like position: relative with no offset
       topPosition = 0;
     }
   }
   return [leftPosition, topPosition];
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
+// Creates a visible rect effect that tracks how much of an element is visible within its scrollable parent
+// and within the document viewport. This is useful for implementing overlays, lazy loading, or any UI
+// that needs to react to element visibility changes.
+//
+// The function returns two visibility ratios:
+// - scrollVisibilityRatio: Visibility ratio relative to the scrollable parent (0-1)
+// - visibilityRatio: Visibility ratio relative to the document viewport (0-1)
+//
+// When scrollable parent is the document, both ratios will be the same.
+// When scrollable parent is a custom container, scrollVisibilityRatio might be 1.0 (fully visible
+// within the container) while visibilityRatio could be 0.0 (container is scrolled out of viewport).
+// A bit like https://tetherjs.dev/ but different
 const visibleRectEffect = (element, update) => {
   const [teardown, addTeardown] = createPubSub();
   const scrollContainer = getScrollContainer(element);
   const scrollContainerIsDocument = scrollContainer === document.documentElement;
   const check = reason => {
 
-
+    // 1. Calculate element position relative to scrollable parent
     const {
       scrollLeft,
       scrollTop
@@ -6155,16 +6155,16 @@ const visibleRectEffect = (element, update) => {
     const visibleAreaLeft = scrollLeft;
     const visibleAreaTop = scrollTop;
 
-
+    // Get element position relative to its scrollable parent
     let elementAbsoluteLeft;
     let elementAbsoluteTop;
     if (scrollContainerIsDocument) {
-
+      // For document scrolling, use offsetLeft/offsetTop relative to document
       const rect = element.getBoundingClientRect();
       elementAbsoluteLeft = rect.left + scrollLeft;
       elementAbsoluteTop = rect.top + scrollTop;
     } else {
-
+      // For custom container, get position relative to the container
       const elementRect = element.getBoundingClientRect();
       const scrollContainerRect = scrollContainer.getBoundingClientRect();
       elementAbsoluteLeft = elementRect.left - scrollContainerRect.left + scrollLeft;
@@ -6172,7 +6172,7 @@ const visibleRectEffect = (element, update) => {
     }
     const leftVisible = visibleAreaLeft < elementAbsoluteLeft ? elementAbsoluteLeft - visibleAreaLeft : 0;
     const topVisible = visibleAreaTop < elementAbsoluteTop ? elementAbsoluteTop - visibleAreaTop : 0;
-
+    // Convert to overlay coordinates (adjust for custom scrollable container)
     let overlayLeft = leftVisible;
     let overlayTop = topVisible;
     if (!scrollContainerIsDocument) {
@@ -6184,7 +6184,7 @@ const visibleRectEffect = (element, update) => {
       overlayTop += scrollableTop;
     }
 
-
+    // 2. Calculate element visible width/height
     const {
       width,
       height
@@ -6193,7 +6193,7 @@ const visibleRectEffect = (element, update) => {
     const visibleAreaHeight = scrollContainer.clientHeight;
     const visibleAreaRight = visibleAreaLeft + visibleAreaWidth;
     const visibleAreaBottom = visibleAreaTop + visibleAreaHeight;
-
+    // 2.1 Calculate visible width
     let widthVisible;
     {
       const maxVisibleWidth = visibleAreaWidth - leftVisible;
@@ -6201,20 +6201,20 @@ const visibleRectEffect = (element, update) => {
       const elementLeftIsVisible = elementAbsoluteLeft >= visibleAreaLeft;
       const elementRightIsVisible = elementAbsoluteRight <= visibleAreaRight;
       if (elementLeftIsVisible && elementRightIsVisible) {
-
+        // Element fully visible horizontally
         widthVisible = width;
       } else if (elementLeftIsVisible && !elementRightIsVisible) {
-
+        // Element left is visible, right is cut off
         widthVisible = visibleAreaRight - elementAbsoluteLeft;
       } else if (!elementLeftIsVisible && elementRightIsVisible) {
-
+        // Element left is cut off, right is visible
         widthVisible = elementAbsoluteRight - visibleAreaLeft;
       } else {
-
+        // Element spans beyond both sides, show only visible area portion
         widthVisible = maxVisibleWidth;
       }
     }
-
+    // 2.2 Calculate visible height
     let heightVisible;
     {
       const maxVisibleHeight = visibleAreaHeight - topVisible;
@@ -6222,32 +6222,32 @@ const visibleRectEffect = (element, update) => {
       const elementTopIsVisible = elementAbsoluteTop >= visibleAreaTop;
       const elementBottomIsVisible = elementAbsoluteBottom <= visibleAreaBottom;
       if (elementTopIsVisible && elementBottomIsVisible) {
-
+        // Element fully visible vertically
         heightVisible = height;
       } else if (elementTopIsVisible && !elementBottomIsVisible) {
-
+        // Element top is visible, bottom is cut off
         heightVisible = visibleAreaBottom - elementAbsoluteTop;
       } else if (!elementTopIsVisible && elementBottomIsVisible) {
-
+        // Element top is cut off, bottom is visible
         heightVisible = elementAbsoluteBottom - visibleAreaTop;
       } else {
-
+        // Element spans beyond both sides, show only visible area portion
         heightVisible = maxVisibleHeight;
       }
     }
 
-
+    // Calculate visibility ratios
     const scrollVisibilityRatio = widthVisible * heightVisible / (width * height);
-
+    // Calculate visibility ratio relative to document viewport
     let documentVisibilityRatio;
     if (scrollContainerIsDocument) {
       documentVisibilityRatio = scrollVisibilityRatio;
     } else {
-
+      // For custom containers, calculate visibility relative to document viewport
       const elementRect = element.getBoundingClientRect();
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
-
+      // Calculate how much of the element is visible in the document viewport
       const elementLeft = Math.max(0, elementRect.left);
       const elementTop = Math.max(0, elementRect.top);
       const elementRight = Math.min(viewportWidth, elementRect.right);
@@ -6283,20 +6283,20 @@ const visibleRectEffect = (element, update) => {
         }
       }
     };
-
-
-
-
-
-
-
-
-
-
+    // let rafId = null;
+    // const scheduleCheck = (reason) => {
+    //   cancelAnimationFrame(rafId);
+    //   rafId = requestAnimationFrame(() => {
+    //     autoCheck(reason);
+    //   });
+    // };
+    // addTeardown(() => {
+    //   cancelAnimationFrame(rafId);
+    // });
 
     {
-
-
+      // If scrollable parent is not document, also listen to document scroll
+      // to update UI position when the scrollable parent moves in viewport
       const onDocumentScroll = () => {
         autoCheck("document_scroll");
       };
@@ -6338,12 +6338,12 @@ const visibleRectEffect = (element, update) => {
         }
       });
       resizeObserver.observe(element);
-
+      // Temporarily disconnect ResizeObserver to prevent feedback loops eventually caused by update function
       onBeforeAutoCheck(() => {
         resizeObserver.unobserve(element);
         return () => {
-
-
+          // This triggers a new call to the resive observer that will be ignored thanks to
+          // the widthDiff/heightDiff early return
           resizeObserver.observe(element);
         };
       });
@@ -6405,7 +6405,7 @@ const pickPositionRelativeTo = (element, target, {
 } = {}) => {
   const viewportWidth = document.documentElement.clientWidth;
   const viewportHeight = document.documentElement.clientHeight;
-
+  // Get viewport-relative positions
   const elementRect = element.getBoundingClientRect();
   const targetRect = target.getBoundingClientRect();
   const {
@@ -6424,41 +6424,41 @@ const pickPositionRelativeTo = (element, target, {
   const elementHeight = elementBottom - elementTop;
   const targetWidth = targetRight - targetLeft;
 
-
+  // Calculate horizontal position (viewport-relative)
   let elementPositionLeft;
   {
-
+    // Check if target element is wider than viewport
     const targetIsWiderThanViewport = targetWidth > viewportWidth;
     if (targetIsWiderThanViewport) {
       const targetLeftIsVisible = targetLeft >= 0;
       const targetRightIsVisible = targetRight <= viewportWidth;
       if (!targetLeftIsVisible && targetRightIsVisible) {
-
+        // Target extends beyond left edge but right side is visible
         const viewportCenter = viewportWidth / 2;
         const distanceFromRightEdge = viewportWidth - targetRight;
         elementPositionLeft = viewportCenter - distanceFromRightEdge / 2 - elementWidth / 2;
       } else if (targetLeftIsVisible && !targetRightIsVisible) {
-
+        // Target extends beyond right edge but left side is visible
         const viewportCenter = viewportWidth / 2;
         const distanceFromLeftEdge = -targetLeft;
         elementPositionLeft = viewportCenter - distanceFromLeftEdge / 2 - elementWidth / 2;
       } else {
-
+        // Target extends beyond both edges or is fully visible (center in viewport)
         elementPositionLeft = viewportWidth / 2 - elementWidth / 2;
       }
     } else {
-
+      // Target fits within viewport width - center element relative to target
       elementPositionLeft = targetLeft + targetWidth / 2 - elementWidth / 2;
-
+      // Special handling when element is wider than target
       if (alignToViewportEdgeWhenTargetNearEdge) {
         const elementIsWiderThanTarget = elementWidth > targetWidth;
         const targetIsNearLeftEdge = targetLeft < alignToViewportEdgeWhenTargetNearEdge;
         if (elementIsWiderThanTarget && targetIsNearLeftEdge) {
-          elementPositionLeft = 0;
+          elementPositionLeft = 0; // Left edge of viewport
         }
       }
     }
-
+    // Constrain horizontal position to viewport boundaries
     if (elementPositionLeft < 0) {
       elementPositionLeft = 0;
     } else if (elementPositionLeft + elementWidth > viewportWidth) {
@@ -6466,7 +6466,7 @@ const pickPositionRelativeTo = (element, target, {
     }
   }
 
-
+  // Calculate vertical position (viewport-relative)
   let position;
   const spaceAboveTarget = targetTop;
   const spaceBelowTarget = viewportHeight - targetBottom;
@@ -6476,9 +6476,9 @@ const pickPositionRelativeTo = (element, target, {
       break determine_position;
     }
     const preferredPosition = element.getAttribute("data-position");
-    const minContentVisibilityRatio = 0.6;
+    const minContentVisibilityRatio = 0.6; // 60% minimum visibility to keep position
     if (preferredPosition) {
-
+      // Element has a preferred position - try to keep it unless we really struggle
       const visibleRatio = preferredPosition === "above" ? spaceAboveTarget / elementHeight : spaceBelowTarget / elementHeight;
       const canShowMinimumContent = visibleRatio >= minContentVisibilityRatio;
       if (canShowMinimumContent) {
@@ -6486,7 +6486,7 @@ const pickPositionRelativeTo = (element, target, {
         break determine_position;
       }
     }
-
+    // No preferred position - use original logic (prefer below, fallback to above if more space)
     const elementFitsBelow = spaceBelowTarget >= elementHeight;
     if (elementFitsBelow) {
       position = "below";
@@ -6498,18 +6498,18 @@ const pickPositionRelativeTo = (element, target, {
   let elementPositionTop;
   {
     if (position === "below") {
-
+      // Calculate top position when placing below target (ensure whole pixels)
       const idealTopWhenBelow = targetBottom;
       elementPositionTop = idealTopWhenBelow % 1 === 0 ? idealTopWhenBelow : Math.floor(idealTopWhenBelow) + 1;
     } else {
-
+      // Calculate top position when placing above target
       const idealTopWhenAbove = targetTop - elementHeight;
       const minimumTopInViewport = 0;
       elementPositionTop = idealTopWhenAbove < minimumTopInViewport ? minimumTopInViewport : idealTopWhenAbove;
     }
   }
 
-
+  // Get document scroll for final coordinate conversion
   const {
     scrollLeft,
     scrollTop
@@ -6539,10 +6539,10 @@ const parseTransform = transform => {
   if (!transform || transform === "none") return new Map();
   const transformMap = new Map();
   if (transform.startsWith("matrix(")) {
-
+    // matrix(a, b, c, d, e, f) where e is translateX and f is translateY
     const values = transform.match(/matrix\((.*?)\)/)?.[1].split(",").map(Number);
     if (values) {
-      const translateX = values[4];
+      const translateX = values[4]; // e value from matrix
       transformMap.set("translateX", {
         value: translateX,
         unit: "px"
@@ -6551,7 +6551,7 @@ const parseTransform = transform => {
     }
   }
 
-
+  // For direct transform functions (when set via style.transform)
   const matches = transform.matchAll(/(\w+)\(([-\d.]+)(%|px|deg)?\)/g);
   for (const match of matches) {
     const [, func, value, unit = ""] = match;
@@ -6624,15 +6624,15 @@ const removeFromTimeline = (callback, isVisual) => {
   }
 };
 
-
-
+// We need setTimeout to animate things like volume because requestAnimationFrame would be killed when tab is not visible
+// while we might want to fadeout volumn when leaving the page for instance
 const createBackgroundUpdateLoop = () => {
   let timeout;
   const update = () => {
     for (const backgroundCallback of backgroundCallbackSet) {
       backgroundCallback();
     }
-    timeout = setTimeout(update, 16);
+    timeout = setTimeout(update, 16); // roughly 60fps
   };
   return {
     start: () => {
@@ -6643,7 +6643,7 @@ const createBackgroundUpdateLoop = () => {
     }
   };
 };
-
+// For visual things we use animation frame which is more performant and made for this
 const createAnimationFrameLoop = () => {
   let animationFrame = null;
   const update = () => {
@@ -6674,7 +6674,7 @@ const startTimeline = () => {
 };
 startTimeline();
 
-
+// Default lifecycle methods that do nothing
 const LIFECYCLE_DEFAULT = {
   setup: () => {},
   pause: () => {},
@@ -6701,7 +6701,7 @@ const createTransition = ({
   if (onUpdate) {
     updateCallbacks.add(onUpdate);
   }
-  let playState = "idle";
+  let playState = "idle"; // 'idle', 'running', 'paused', 'finished'
   let isFirstUpdate = false;
   let resume;
   let executionLifecycle = null;
@@ -6710,7 +6710,7 @@ const createTransition = ({
     playState = "running";
     executionLifecycle = lifecycle.setup(transition);
 
-
+    // Allow setup to override from value if transition.from is undefined
     if (transition.from === undefined && executionLifecycle.from !== undefined) {
       transition.from = executionLifecycle.from;
     }
@@ -6749,7 +6749,7 @@ const createTransition = ({
         resume();
         return;
       }
-
+      // "finished"
       start();
     },
     update: (value, isLast) => {
@@ -6778,7 +6778,7 @@ const createTransition = ({
       }
       playState = "paused";
 
-
+      // Let the transition handle its own pause logic
       resume = lifecycle.pause(transition);
     },
     cancel: () => {
@@ -6799,7 +6799,7 @@ const createTransition = ({
         console.warn("transition already finished");
         return;
       }
-
+      // "running" or "paused"
       lifecycle.finish(transition);
       executionLifecycle.teardown();
       resume = null;
@@ -6816,13 +6816,13 @@ const createTransition = ({
         return;
       }
 
-
+      // Simply swap from and to values to reverse direction
       const originalFrom = transition.from;
       const originalTo = transition.to;
       transition.from = originalTo;
       transition.to = originalFrom;
 
-
+      // Let the transition handle its own reverse logic (if any)
       if (lifecycle.reverse) {
         lifecycle.reverse(transition);
       }
@@ -6843,7 +6843,7 @@ const createTransition = ({
       transition.from = currentValue;
       transition.to = newTarget;
 
-
+      // Let the transition handle its own target update logic
       lifecycle.updateTarget(transition);
     },
     ...rest
@@ -6851,7 +6851,7 @@ const createTransition = ({
   return transition;
 };
 
-
+// Timeline-managed transition that adds/removes itself from the animation timeline
 const createTimelineTransition = ({
   isVisual,
   duration,
@@ -6859,7 +6859,7 @@ const createTimelineTransition = ({
   easing = EASING.EASE_OUT,
   lifecycle,
   startProgress = 0,
-
+  // Progress to start from (0-1)
   ...options
 }) => {
   if (typeof duration !== "number" || duration <= 0) {
@@ -6871,9 +6871,9 @@ const createTimelineTransition = ({
     const msElapsedSinceStart = timelineCurrentTime - transition.startTime;
     const msRemaining = transition.duration - msElapsedSinceStart;
     if (
-
+    // we reach the end, round progress to 1
     msRemaining < 0 ||
-
+    // we are very close from the end, round progress to 1
     msRemaining <= transition.frameDuration) {
       transition.frameRemainingCount = 0;
       transition.progress = 1;
@@ -6883,19 +6883,19 @@ const createTimelineTransition = ({
     }
     if (lastUpdateTime === -1) ; else {
       const timeSinceLastUpdate = timelineCurrentTime - lastUpdateTime;
-
-
-      const frameTimeTolerance = 3;
+      // Allow rendering if we're within 3ms of the target frame duration
+      // This prevents choppy animations when browser timing is slightly off
+      const frameTimeTolerance = 3; // ms
       const targetFrameTime = transition.frameDuration - frameTimeTolerance;
 
-
+      // Skip update only if we're significantly early
       if (timeSinceLastUpdate < targetFrameTime) {
         return;
       }
     }
     lastUpdateTime = timelineCurrentTime;
     const rawProgress = Math.min(msElapsedSinceStart / transition.duration, 1);
-
+    // Apply start progress offset - transition runs from startProgress to 1
     const progress = startProgress + rawProgress * (1 - startProgress);
     transition.progress = progress;
     const easedProgress = transition.easing(progress);
@@ -6916,7 +6916,7 @@ const createTimelineTransition = ({
     ...options,
     startTime: null,
     progress: startProgress,
-
+    // Initialize with start progress
     duration,
     easing,
     fps,
@@ -6925,19 +6925,19 @@ const createTimelineTransition = ({
     },
     frameRemainingCount: 0,
     startProgress,
-
+    // Store for calculations
     lifecycle: {
       ...lifecycle,
       setup: transition => {
-
+        // Handle timeline management
         lastUpdateTime = -1;
         transition.startTime = getTimelineCurrentTime();
-
+        // Calculate remaining frames based on remaining progress
         const remainingProgress = 1 - startProgress;
         const remainingDuration = transition.duration * remainingProgress;
         transition.frameRemainingCount = Math.ceil(remainingDuration / transition.frameDuration);
         onTimelineNeeded();
-
+        // Call the original setup
         return setup(transition);
       },
       pause: transition => {
@@ -6946,7 +6946,7 @@ const createTimelineTransition = ({
         return () => {
           const pausedDuration = getTimelineCurrentTime() - pauseTime;
           transition.startTime += pausedDuration;
-
+          // Only adjust lastUpdateTime if it was set (not -1)
           if (lastUpdateTime !== -1) {
             lastUpdateTime += pausedDuration;
           }
@@ -6955,8 +6955,8 @@ const createTimelineTransition = ({
       },
       updateTarget: transition => {
         transition.startTime = getTimelineCurrentTime();
-
-
+        // Don't reset lastUpdateTime - we want visual continuity for smooth target updates
+        // Recalculate remaining frames from current progress
         const remainingProgress = 1 - transition.progress;
         const remainingDuration = transition.duration * remainingProgress;
         transition.frameRemainingCount = Math.ceil(remainingDuration / transition.frameDuration);
@@ -6992,7 +6992,7 @@ const createCallbackController = () => {
   return [callbacks, execute];
 };
 
-installImportMetaCss(import.meta);import.meta.css =          "\n  /* Transition data attributes override inline styles using CSS custom properties */\n  *[data-transition-opacity] {\n    opacity: var(--ui-transition-opacity) !important;\n  }\n\n  *[data-transition-translate-x] {\n    transform: translateX(var(--ui-transition-translate-x)) !important;\n  }\n\n  *[data-transition-width] {\n    width: var(--ui-transition-width) !important;\n  }\n\n  *[data-transition-height] {\n    height: var(--ui-transition-height) !important;\n  }\n";
+installImportMetaCss(import.meta);import.meta.css = /* css */"\n  /* Transition data attributes override inline styles using CSS custom properties */\n  *[data-transition-opacity] {\n    opacity: var(--ui-transition-opacity) !important;\n  }\n\n  *[data-transition-translate-x] {\n    transform: translateX(var(--ui-transition-translate-x)) !important;\n  }\n\n  *[data-transition-width] {\n    width: var(--ui-transition-width) !important;\n  }\n\n  *[data-transition-height] {\n    height: var(--ui-transition-height) !important;\n  }\n";
 const createHeightTransition = (element, to, options) => {
   const heightTransition = createTimelineTransition({
     ...options,
@@ -7148,15 +7148,15 @@ const getTranslateX = element => {
   return transformMap.get("translateX")?.value || 0;
 };
 
-
+// Helper functions for getting natural (non-transition) values
 const getOpacityWithoutTransition = element => {
   const transitionOpacity = element.getAttribute("data-transition-opacity");
 
-
+  // Temporarily remove transition attribute
   element.removeAttribute("data-transition-opacity");
   const naturalValue = parseFloat(getComputedStyle(element).opacity) || 0;
 
-
+  // Restore transition attribute if it existed
   if (transitionOpacity !== null) {
     element.setAttribute("data-transition-opacity", transitionOpacity);
   }
@@ -7165,20 +7165,20 @@ const getOpacityWithoutTransition = element => {
 const getTranslateXWithoutTransition = element => {
   const transitionTranslateX = element.getAttribute("data-transition-translate-x");
 
-
+  // Temporarily remove transition attribute
   element.removeAttribute("data-transition-translate-x");
   const transform = getComputedStyle(element).transform;
   const transformMap = parseTransform(transform);
   const naturalValue = transformMap.get("translateX")?.value || 0;
 
-
+  // Restore transition attribute if it existed
   if (transitionTranslateX !== null) {
     element.setAttribute("data-transition-translate-x", transitionTranslateX);
   }
   return naturalValue;
 };
 
-
+// transition that manages multiple transitions
 const createGroupTransition = transitionArray => {
   let finishedCount = 0;
   let duration = 0;
@@ -7199,7 +7199,7 @@ const createGroupTransition = transitionArray => {
         const cleanupCallbackSet = new Set();
         for (const childTransition of transitionArray) {
           const removeFinishListener = childTransition.channels.finish.add(
-
+          // eslint-disable-next-line no-loop-func
           () => {
             finishedCount++;
             const allFinished = finishedCount === childCount;
@@ -7210,7 +7210,7 @@ const createGroupTransition = transitionArray => {
           cleanupCallbackSet.add(removeFinishListener);
           childTransition.play();
           const removeUpdateListener = childTransition.channels.update.add(() => {
-
+            // Calculate average progress (handle undefined progress)
             let totalProgress = 0;
             let progressCount = 0;
             for (const t of transitionArray) {
@@ -7220,9 +7220,9 @@ const createGroupTransition = transitionArray => {
               }
             }
             const averageProgress = progressCount > 0 ? totalProgress / progressCount : 0;
-
+            // Expose progress on the group transition for external access
             transition.progress = averageProgress;
-
+            // Update this transition's value with average progress
             const isLast = averageProgress >= 1;
             transition.update(averageProgress, isLast);
           });
@@ -7279,30 +7279,30 @@ const createGroupTransition = transitionArray => {
   return groupTransition;
 };
 
-
-
-
-
+/**
+ * Creates an interface that manages ongoing transitions
+ * and handles target updates automatically
+ */
 const createGroupTransitionController = () => {
-
+  // Track all active transitions for cancellation and matching
   const activeTransitions = new Set();
   return {
-
-
-
-
-
-
-
-
-
+    /**
+     * Animate multiple transitions simultaneously
+     * Automatically handles updateTarget for transitions that match constructor + targetKey
+     * @param {Array} transitions - Array of transition objects with constructor and targetKey properties
+     * @param {Object} options - Transition options
+     * @param {Function} options.onChange - Called with (changeEntries, isLast) during transition
+     * @param {Function} options.onFinish - Called when all transitions complete
+     * @returns {Object} Playback controller with play(), pause(), cancel(), etc.
+     */
     animate: (transitions, options = {}) => {
       const {
         onChange,
         onFinish
       } = options;
       if (transitions.length === 0) {
-
+        // No transitions to animate, call onFinish immediately
         if (onFinish) {
           onFinish([]);
         }
@@ -7325,9 +7325,9 @@ const createGroupTransitionController = () => {
       const newTransitions = [];
       const updatedTransitions = [];
 
-
+      // Separate transitions into new vs updates to existing ones
       for (const transition of transitions) {
-
+        // Look for existing transition with same constructor and targetKey
         let existingTransition = null;
         for (const transitionCandidate of activeTransitions) {
           if (transitionCandidate.constructor === transition.constructor && transitionCandidate.key === transition.key) {
@@ -7336,15 +7336,15 @@ const createGroupTransitionController = () => {
           }
         }
         if (existingTransition && existingTransition.playState === "running") {
-
+          // Update the existing transition's target if it supports updateTarget
           if (existingTransition.updateTarget) {
             existingTransition.updateTarget(transition.to);
           }
           updatedTransitions.push(existingTransition);
         } else {
-
+          // Track this new transition
           activeTransitions.add(transition);
-
+          // Clean up tracking when transition finishes
           transition.channels.finish.add(() => {
             activeTransitions.delete(transition);
           });
@@ -7352,22 +7352,22 @@ const createGroupTransitionController = () => {
         }
       }
 
-
+      // If we only have updated transitions (no new ones), return a minimal controller
       if (newTransitions.length === 0) {
         return {
           play: () => {},
-
+          // Already playing
           pause: () => updatedTransitions.forEach(transition => transition.pause()),
           cancel: () => updatedTransitions.forEach(transition => transition.cancel()),
           finish: () => updatedTransitions.forEach(transition => transition.finish()),
           reverse: () => updatedTransitions.forEach(transition => transition.reverse()),
           playState: "running",
-
+          // All are already running
           channels: {
             update: {
               add: () => {}
             },
-
+            // Update tracking already set up
             finish: {
               add: () => {}
             }
@@ -7375,23 +7375,23 @@ const createGroupTransitionController = () => {
         };
       }
 
-
+      // Create group transition to coordinate new transitions only
       const groupTransition = createGroupTransition(newTransitions);
 
-
+      // Add unified update tracking for ALL transitions (new + updated)
       if (onChange) {
         groupTransition.channels.update.add(transition => {
-
+          // Build change entries for current state of ALL transitions
           const changeEntries = [...newTransitions, ...updatedTransitions].map(transition => ({
             transition,
             value: transition.value
           }));
-          const isLast = transition.value >= 1;
+          const isLast = transition.value >= 1; // isLast = value >= 1 (since group tracks 0-1)
           onChange(changeEntries, isLast);
         });
       }
 
-
+      // Add finish tracking
       if (onFinish) {
         groupTransition.channels.finish.add(() => {
           const changeEntries = [...newTransitions, ...updatedTransitions].map(transition => ({
@@ -7403,17 +7403,17 @@ const createGroupTransitionController = () => {
       }
       return groupTransition;
     },
-
-
-
+    /**
+     * Cancel all ongoing transitions managed by this controller
+     */
     cancel: () => {
-
+      // Cancel all active transitions
       for (const transition of activeTransitions) {
         if (transition.playState === "running" || transition.playState === "paused") {
           transition.cancel();
         }
       }
-
+      // Clear the sets - the finish callbacks will handle individual cleanup
       activeTransitions.clear();
     }
   };
@@ -7435,7 +7435,7 @@ const getPaddingSizes = element => {
 };
 
 const getInnerHeight = element => {
-
+  // Always subtract paddings and borders to get the content height
   const paddingSizes = getPaddingSizes(element);
   const borderSizes = getBorderSizes(element);
   const height = getHeight(element);
@@ -7516,15 +7516,15 @@ const getMinHeight = (element, availableHeight) => {
   });
 };
 
-
-
-
-
+/**
+ *
+ *
+ */
 
 const HEIGHT_TRANSITION_DURATION = 300;
 const ANIMATE_TOGGLE = true;
 const ANIMATE_RESIZE_AFTER_MUTATION = true;
-const ANIMATION_THRESHOLD_PX = 10;
+const ANIMATION_THRESHOLD_PX = 10; // Don't animate changes smaller than this
 const DEBUG$1 = false;
 const initFlexDetailsSet = (container, {
   onSizeChange,
@@ -7537,11 +7537,11 @@ const initFlexDetailsSet = (container, {
     cleanup: null
   };
 
-
+  // Create animation controller for managing height animations
   const transitionController = createGroupTransitionController();
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
-
+    // Cancel any ongoing animations
     transitionController.cancel();
     for (const cleanupCallback of cleanupCallbackSet) {
       cleanupCallback();
@@ -7616,14 +7616,14 @@ const initFlexDetailsSet = (container, {
           });
           const detailsContentHeight = getHeight(detailsContent);
           restoreSizeStyle();
-
+          // Preserve scroll position after height manipulation
           preserveScroll();
           detailsHeight = summaryHeight + detailsContentHeight;
         } else {
-
-
-
-
+          // empty details content like
+          // <details><summary>...</summary></details>
+          // or textual content like
+          // <details><summary>...</summary>textual content</details>
           detailsHeight = size;
         }
         if (details.hasAttribute("data-requested-height")) {
@@ -7672,7 +7672,7 @@ const initFlexDetailsSet = (container, {
         continue;
       }
 
-
+      // Track the maximum change to decide if animation is worth it
       maxChange = Math.max(maxChange, sizeChange);
       if (isDetailsElement(child) && child.open) {
         const syncDetailsContentHeight = prepareSyncDetailsContentHeight(child);
@@ -7699,7 +7699,7 @@ const initFlexDetailsSet = (container, {
       return;
     }
 
-
+    // Don't animate if changes are too small (avoids imperceptible animations that hide scrollbars)
     const shouldAnimate = resizeDetails.animated && maxChange >= ANIMATION_THRESHOLD_PX;
     if (debug && resizeDetails.animated && !shouldAnimate) {
       console.debug("\uD83D\uDEAB Skipping animation: max change ".concat(maxChange.toFixed(2), "px < ").concat(ANIMATION_THRESHOLD_PX, "px threshold"));
@@ -7725,7 +7725,7 @@ const initFlexDetailsSet = (container, {
       return;
     }
 
-
+    // Create height animations for each element in changeSet
     const transitions = Array.from(changeSet).map(({
       element,
       target
@@ -7737,7 +7737,7 @@ const initFlexDetailsSet = (container, {
     });
     const transition = transitionController.animate(transitions, {
       onChange: (changeEntries, isLast) => {
-
+        // Apply side effects for each animated element
         for (const {
           transition,
           value
@@ -7754,13 +7754,13 @@ const initFlexDetailsSet = (container, {
           }
         }
         if (onSizeChange) {
-
+          // Convert animation entries to the expected format
           const sizeChangeEntries = changeEntries.map(({
             transition,
             value
           }) => ({
             element: transition.key,
-
+            // targetKey is the element
             value
           }));
           onSizeChange(sizeChangeEntries, isLast ? {
@@ -7963,7 +7963,7 @@ const initFlexDetailsSet = (container, {
       childToShrinkFrom: lastChild
     });
     if (resizeDetails.reason === "initial_space_distribution" || resizeDetails.reason === "content_change") {
-      spaceMap.clear();
+      spaceMap.clear(); // force to set size at start
     }
     applyAllocatedSpaces(resizeDetails);
     saveCurrentSizeAsRequestedSizes();
@@ -8081,7 +8081,7 @@ const initFlexDetailsSet = (container, {
   {
     const prepareResize = () => {
       let resizedElement;
-
+      // let startSpaceMap;
       let startAllocatedSpaceMap;
       let currentAllocatedSpaceMap;
       const start = element => {
@@ -8089,7 +8089,7 @@ const initFlexDetailsSet = (container, {
           reason: "mouse_resize_start"
         });
         resizedElement = element;
-
+        // startSpaceMap = new Map(spaceMap);
         startAllocatedSpaceMap = new Map(allocatedSpaceMap);
       };
       const applyMoveDiffToSizes = (moveDiff, reason) => {
@@ -8098,9 +8098,9 @@ const initFlexDetailsSet = (container, {
         if (moveDiff > 0) {
           remainingMoveToApply = moveDiff;
           {
-
-
-
+            // alors ici on veut grow pour tenter de restaurer la diff
+            // entre requestedMap et spaceMap
+            // s'il n'y en a pas alors on aura pas appliquer ce move
             const spaceGivenToNextSiblings = updateNextSiblingsAllocatedSpace(resizedElement, remainingMoveToApply, reason, nextSibling => {
               const requestedSpace = requestedSpaceMap.get(nextSibling);
               const space = spaceMap.get(nextSibling);
@@ -8146,12 +8146,12 @@ const initFlexDetailsSet = (container, {
         }
       };
       const move = (yMove, gesture) => {
-
-
-
-
-
-
+        // if (isNaN(moveRequestedSize) || !isFinite(moveRequestedSize)) {
+        //   console.warn(
+        //     `requestResize called with invalid size: ${moveRequestedSize}`,
+        //   );
+        //   return;
+        // }
         const reason = "applying ".concat(yMove, "px move on ").concat(resizedElement.id);
         if (debug) {
           console.group(reason);
@@ -8214,21 +8214,21 @@ const initFlexDetailsSet = (container, {
     });
   }
   {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    /**
+     * In the following HTML browser will set `<div>` height as if it was "auto"
+     *
+     * ```html
+     * <details style="height: 100px;">
+     *   <summary>...</summary>
+     *   <div style="height: 100%"></div>
+     * </details>
+     * ```
+     *
+     * So we always maintain a precise px height for the details content to ensure
+     * it takes 100% of the details height (minus the summay)
+     *
+     * To achieve this we need to update these px heights when the container size changes
+     */
     const resizeObserver = new ResizeObserver(() => {
       updateSpaceDistribution({
         reason: "container_resize"
@@ -8240,10 +8240,10 @@ const initFlexDetailsSet = (container, {
     });
   }
   {
-
-
-
-
+    // Track when the DOM structure changes inside the container
+    // This detects when:
+    // - Details elements are added/removed
+    // - The content inside details elements changes
     const mutationObserver = new MutationObserver(mutations => {
       for (const mutation of mutations) {
         if (mutation.type === "childList") {
@@ -8288,7 +8288,7 @@ const prepareSyncDetailsContentHeight = details => {
     };
   }
 
-
+  // Capture scroll state at the beginning before any DOM manipulation
   const preserveScroll = captureScrollState(content);
   content.style.height = "var(--content-height)";
   const contentComputedStyle = getComputedStyle(content);
@@ -8302,27 +8302,27 @@ const prepareSyncDetailsContentHeight = details => {
     details.style.setProperty("--content-height", getHeightCssValue(contentHeight));
     if (!isAnimation || isAnimationEnd) {
       if (scrollbarMightTakeHorizontalSpace) {
-
-
-
-
-
-
-
-
-
-
+        // Fix scrollbar induced overflow:
+        //
+        // 1. browser displays a scrollbar because there is an overflow inside overflow: auto
+        // 2. we set height exactly to the natural height required to prevent overflow
+        //
+        // actual: browser keeps scrollbar displayed
+        // expected: scrollbar is hidden
+        //
+        // Solution: Temporarily prevent scrollbar to display
+        // force layout recalculation, then restore
         const restoreOverflow = forceStyles(content, {
           "overflow-y": "hidden"
         });
-
+        // eslint-disable-next-line no-unused-expressions
         content.offsetHeight;
         restoreOverflow();
       }
     }
 
-
-
+    // Preserve scroll position at the end after all DOM manipulations
+    // The captureScrollState function is smart enough to handle new dimensions
     preserveScroll();
   };
 };
@@ -8343,7 +8343,7 @@ const getAvailableWidth = (element, parentWidth = getWidth(element.parentElement
 };
 
 const getInnerWidth = element => {
-
+  // Always subtract paddings and borders to get the content width
   const paddingSizes = getPaddingSizes(element);
   const borderSizes = getBorderSizes(element);
   const width = getWidth(element);
@@ -8556,14 +8556,14 @@ const useResizeStatus = (elementRef, {
   };
 };
 
-installImportMetaCss(import.meta);import.meta.css =          "\n  .ui_transition_container {\n    display: inline-flex;\n    flex: 1;\n    position: relative;\n    overflow: hidden;\n  }\n\n  .ui_transition_outer_wrapper {\n    display: inline-flex;\n    flex: 1;\n  }\n\n  .ui_transition_measure_wrapper {\n    overflow: hidden;\n    display: inline-flex;\n    flex: 1;\n  }\n\n  .ui_transition_slot {\n    position: relative;\n    display: inline-flex;\n    flex: 1;\n  }\n\n  .ui_transition_phase_overlay {\n    position: absolute;\n    inset: 0;\n    pointer-events: none;\n  }\n\n  .ui_transition_content_overlay {\n    position: absolute;\n    inset: 0;\n    pointer-events: none;\n  }\n";
+installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .ui_transition_container {\n    display: inline-flex;\n    flex: 1;\n    position: relative;\n    overflow: hidden;\n  }\n\n  .ui_transition_outer_wrapper {\n    display: inline-flex;\n    flex: 1;\n  }\n\n  .ui_transition_measure_wrapper {\n    overflow: hidden;\n    display: inline-flex;\n    flex: 1;\n  }\n\n  .ui_transition_slot {\n    position: relative;\n    display: inline-flex;\n    flex: 1;\n  }\n\n  .ui_transition_phase_overlay {\n    position: absolute;\n    inset: 0;\n    pointer-events: none;\n  }\n\n  .ui_transition_content_overlay {\n    position: absolute;\n    inset: 0;\n    pointer-events: none;\n  }\n";
 const DEBUG = {
   size: false,
   transition: false,
   transition_updates: false
 };
 
-
+// Utility function to format content key states consistently for debug logs
 const formatContentKeyState = (contentKey, hasChild, hasTextNode = false) => {
   if (hasTextNode) {
     return "[text]";
@@ -8576,12 +8576,12 @@ const formatContentKeyState = (contentKey, hasChild, hasTextNode = false) => {
   }
   return "[data-content-key=\"".concat(contentKey, "\"]");
 };
-const SIZE_TRANSITION_DURATION = 150;
-const SIZE_DIFF_EPSILON = 0.5;
-const CONTENT_TRANSITION = "cross-fade";
-const CONTENT_TRANSITION_DURATION = 300;
+const SIZE_TRANSITION_DURATION = 150; // Default size transition duration
+const SIZE_DIFF_EPSILON = 0.5; // Ignore size transition when difference below this (px)
+const CONTENT_TRANSITION = "cross-fade"; // Default content transition type
+const CONTENT_TRANSITION_DURATION = 300; // Default content transition duration
 const PHASE_TRANSITION = "cross-fade";
-const PHASE_TRANSITION_DURATION = 300;
+const PHASE_TRANSITION_DURATION = 300; // Default phase transition duration
 
 const initUITransition = container => {
   const localDebug = {
@@ -8622,36 +8622,36 @@ const initUITransition = container => {
   }
   const transitionController = createGroupTransitionController();
 
-
+  // Transition state
   let activeContentTransition = null;
   let activeContentTransitionType = null;
   let activePhaseTransition = null;
   let activePhaseTransitionType = null;
   let isPaused = false;
 
-
-  let naturalContentWidth = 0;
+  // Size state
+  let naturalContentWidth = 0; // Natural size of actual content (not loading/error states)
   let naturalContentHeight = 0;
-  let constrainedWidth = 0;
+  let constrainedWidth = 0; // Current constrained dimensions (what outer wrapper is set to)
   let constrainedHeight = 0;
   let sizeTransition = null;
   let resizeObserver = null;
-  let sizeHoldActive = false;
+  let sizeHoldActive = false; // Hold previous dimensions during content transitions when size transitions are disabled
 
-
+  // Prevent reacting to our own constrained size changes while animating
   let suppressResizeObserver = false;
-  let pendingResizeSync = false;
+  let pendingResizeSync = false; // ensure one measurement after suppression ends
 
-
+  // Handle size updates based on content state
   let hasSizeTransitions = container.hasAttribute("data-size-transition");
   const initialTransitionEnabled = container.hasAttribute("data-initial-transition");
-  let hasPopulatedOnce = false;
+  let hasPopulatedOnce = false; // track if we've already populated once (null → something)
 
-
+  // Child state
   let lastContentKey = null;
   let previousChild = null;
-  let isContentPhase = false;
-  let wasContentPhase = false;
+  let isContentPhase = false; // Current state: true when showing content phase (loading/error)
+  let wasContentPhase = false; // Previous state for comparison
 
   const measureContentSize = () => {
     return [getWidth(measureWrapper), getHeight(measureWrapper)];
@@ -8706,7 +8706,7 @@ const initUITransition = container => {
     constrainedHeight = afterHeight;
     naturalContentWidth = afterWidth;
     naturalContentHeight = afterHeight;
-
+    // Defer a sync if suppression just ended; actual dispatch will come from resize observer
     if (!suppressResizeObserver && pendingResizeSync) {
       pendingResizeSync = false;
       updateContentDimensions();
@@ -8720,7 +8720,7 @@ const initUITransition = container => {
     const widthDiff = Math.abs(targetWidth - constrainedWidth);
     const heightDiff = Math.abs(targetHeight - constrainedHeight);
     if (widthDiff <= SIZE_DIFF_EPSILON && heightDiff <= SIZE_DIFF_EPSILON) {
-
+      // Both diffs negligible; just sync styles if changed and bail
       if (widthDiff > 0) {
         outerWrapper.style.width = "".concat(targetWidth, "px");
         constrainedWidth = targetWidth;
@@ -8733,7 +8733,7 @@ const initUITransition = container => {
       return;
     }
     if (!shouldAnimate) {
-
+      // No size transitions - just update dimensions instantly
       debug("size", "Updating size instantly:", {
         width: "".concat(constrainedWidth, " \u2192 ").concat(targetWidth),
         height: "".concat(constrainedHeight, " \u2192 ").concat(targetHeight)
@@ -8743,7 +8743,7 @@ const initUITransition = container => {
       outerWrapper.style.height = "".concat(targetHeight, "px");
       constrainedWidth = targetWidth;
       constrainedHeight = targetHeight;
-
+      // allow any resize notifications to settle then re-enable
       requestAnimationFrame(() => {
         suppressResizeObserver = false;
         if (pendingResizeSync) {
@@ -8754,7 +8754,7 @@ const initUITransition = container => {
       return;
     }
 
-
+    // Animated size transition
     debug("size", "Animating size:", {
       width: "".concat(constrainedWidth, " \u2192 ").concat(targetWidth),
       height: "".concat(constrainedHeight, " \u2192 ").concat(targetHeight)
@@ -8763,9 +8763,9 @@ const initUITransition = container => {
     outerWrapper.style.overflow = "hidden";
     const transitions = [];
 
-
+    // heightDiff & widthDiff already computed earlier in updateToSize when deciding to skip entirely
     if (heightDiff <= SIZE_DIFF_EPSILON) {
-
+      // Treat as identical
       if (heightDiff > 0) {
         debug("size", "Skip height transition (negligible diff ".concat(heightDiff.toFixed(4), "px)"));
       }
@@ -8802,7 +8802,7 @@ const initUITransition = container => {
       sizeTransition = transitionController.animate(transitions, {
         onFinish: () => {
           releaseConstraints("animated size transition completed");
-
+          // End suppression next frame to avoid RO loop warnings
           requestAnimationFrame(() => {
             suppressResizeObserver = false;
             if (pendingResizeSync) {
@@ -8838,7 +8838,7 @@ const initUITransition = container => {
   };
   let isUpdating = false;
 
-
+  // Shared transition setup function
   const setupTransition = ({
     isPhaseTransition = false,
     overlay,
@@ -8858,10 +8858,10 @@ const initUITransition = container => {
     } else if (needsOldChildClone) {
       overlay.innerHTML = "";
 
-
+      // Clone the individual element for the transition
       oldChild = previousChild.cloneNode(true);
 
-
+      // Remove specified attributes
       attributeToRemove.forEach(attr => oldChild.removeAttribute(attr));
       oldChild.setAttribute("data-ui-transition-old", "");
       overlay.appendChild(oldChild);
@@ -8872,17 +8872,17 @@ const initUITransition = container => {
       debug("transition", "No old child to clone for ".concat(isPhaseTransition ? "phase" : "content", " transition"));
     }
 
-
-
-
+    // Determine which elements to return based on transition type:
+    // - Phase transitions: operate on individual elements (cross-fade between specific elements)
+    // - Content transitions: operate at container level (slide entire containers, outlive content phases)
     let oldElement;
     let newElement;
     if (isPhaseTransition) {
-
+      // Phase transitions work on individual elements
       oldElement = oldChild;
       newElement = firstChild;
     } else {
-
+      // Content transitions work at container level and can outlive content phase changes
       oldElement = oldChild ? overlay : null;
       newElement = firstChild ? measureWrapper : null;
     }
@@ -8894,7 +8894,7 @@ const initUITransition = container => {
     };
   };
 
-
+  // Initialize with current size
   [constrainedWidth, constrainedHeight] = measureContentSize();
   const handleChildSlotMutation = (reason = "mutation") => {
     if (isUpdating) {
@@ -8911,7 +8911,7 @@ const initUITransition = container => {
         console.group("UI Update: ".concat(updateLabel, " (reason: ").concat(reason, ")"));
       }
 
-
+      // Check for text nodes in the slot (not supported)
       const hasTextNode = Array.from(slot.childNodes).some(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
       if (hasTextNode) {
         console.warn("UI Transition: Text nodes in transition slots are not supported. Please wrap text content in an element.", {
@@ -8920,7 +8920,7 @@ const initUITransition = container => {
         });
       }
 
-
+      // Check for multiple elements in the slot (not supported yet)
       const hasMultipleElements = slot.children.length > 1;
       if (hasMultipleElements) {
         console.warn("UI Transition: Multiple elements in transition slots are not supported yet. Please use a single container element.", {
@@ -8929,7 +8929,7 @@ const initUITransition = container => {
         });
       }
 
-
+      // Prefer data-content-key on child, fallback to slot
       let currentContentKey = null;
       let slotContentKey = slot.getAttribute("data-content-key");
       let childContentKey = firstChild?.getAttribute("data-content-key");
@@ -8941,28 +8941,28 @@ const initUITransition = container => {
       }
       currentContentKey = childContentKey || slotContentKey || null;
 
-
+      // Determine transition scenarios early for early registration check
       const hadChild = previousChild !== null;
       const hasChild = firstChild !== null;
 
-
+      // Check for text nodes in previous state (reconstruct from previousChild)
       const hadTextNode = previousChild && previousChild.nodeType === Node.TEXT_NODE;
 
-
+      // Compute formatted content key states ONCE per mutation (requirement: max 2 calls)
       const previousContentKeyState = formatContentKeyState(lastContentKey, hadChild, hadTextNode);
       const currentContentKeyState = formatContentKeyState(currentContentKey, hasChild, hasTextNode);
 
-
+      // Track previous key before any potential early registration update
       const prevKeyBeforeRegistration = lastContentKey;
 
-
+      // Prepare phase info early so logging can be unified (even for early return)
       wasContentPhase = isContentPhase;
-      isContentPhase = firstChild ? firstChild.hasAttribute("data-content-phase") : true;
+      isContentPhase = firstChild ? firstChild.hasAttribute("data-content-phase") : true; // empty (no child) is treated as content phase
 
       const previousIsContentPhase = !hadChild || wasContentPhase;
       const currentIsContentPhase = !hasChild || isContentPhase;
 
-
+      // Early conceptual registration path: empty slot, text nodes, or multiple elements (no visual transition)
       const shouldGiveUpEarlyAndJustRegister = !hadChild && !hasChild && !hasTextNode || hasTextNode || hasMultipleElements;
       let earlyAction = null;
       if (shouldGiveUpEarlyAndJustRegister) {
@@ -8983,22 +8983,22 @@ const initUITransition = container => {
             earlyAction = "changed";
           }
         }
-
+        // Will update lastContentKey after unified logging
       }
 
-
+      // Decide which representation to display for previous/current in early case
       const conceptualPrevDisplay = prevKeyBeforeRegistration === null ? "[unkeyed]" : "[data-content-key=\"".concat(prevKeyBeforeRegistration, "\"]");
       const conceptualCurrentDisplay = currentContentKey === null ? "[unkeyed]" : "[data-content-key=\"".concat(currentContentKey, "\"]");
       const previousDisplay = shouldGiveUpEarlyAndJustRegister ? conceptualPrevDisplay : previousContentKeyState;
       const currentDisplay = shouldGiveUpEarlyAndJustRegister ? conceptualCurrentDisplay : currentContentKeyState;
 
-
+      // Build a simple descriptive sentence
       let contentKeysSentence = "Content key: ".concat(previousDisplay, " \u2192 ").concat(currentDisplay);
       debug("transition", contentKeysSentence);
       if (shouldGiveUpEarlyAndJustRegister) {
-
+        // Log decision explicitly (was previously embedded)
         debug("transition", "Decision: EARLY_RETURN (".concat(earlyAction, ")"));
-
+        // Register new conceptual key & return early (skip rest of transition logic)
         lastContentKey = currentContentKey;
         if (localDebug.transition) {
           console.groupEnd();
@@ -9014,33 +9014,33 @@ const initUITransition = container => {
       outerWrapper.style.width = "".concat(constrainedWidth, "px");
       outerWrapper.style.height = "".concat(constrainedHeight, "px");
 
-
+      // Handle resize observation
       stopResizeObserver();
       if (firstChild && !isContentPhase) {
         startResizeObserver();
         debug("size", "Observing child resize");
       }
 
+      // Determine transition scenarios (hadChild/hasChild already computed above for logging)
 
+      /**
+       * Content Phase Logic: Why empty slots are treated as content phases
+       *
+       * When there is no child element (React component returns null), it is considered
+       * that the component does not render anything temporarily. This might be because:
+       * - The component is loading but does not have a loading state
+       * - The component has an error but does not have an error state
+       * - The component is conceptually unloaded (underlying content was deleted/is not accessible)
+       *
+       * This represents a phase of the given content: having nothing to display.
+       *
+       * We support transitions between different contents via the ability to set
+       * [data-content-key] on the ".ui_transition_slot". This is also useful when you want
+       * all children of a React component to inherit the same data-content-key without
+       * explicitly setting the attribute on each child element.
+       */
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      // Content key change when either slot or child has data-content-key and it changed
       let shouldDoContentTransition = false;
       if ((slot.getAttribute("data-content-key") || firstChild?.getAttribute("data-content-key")) && lastContentKey !== null) {
         shouldDoContentTransition = currentContentKey !== lastContentKey;
@@ -9049,16 +9049,16 @@ const initUITransition = container => {
       const becomesPopulated = !hadChild && hasChild;
       const isInitialPopulationWithoutTransition = becomesPopulated && !hasPopulatedOnce && !initialTransitionEnabled;
 
-
-
+      // Content phase change: any transition between content/content-phase/null except when slot key changes
+      // This includes: null→loading, loading→content, content→loading, loading→null, etc.
       const shouldDoPhaseTransition = !shouldDoContentTransition && (becomesPopulated || becomesEmpty || hadChild && hasChild && (previousIsContentPhase !== currentIsContentPhase || previousIsContentPhase && currentIsContentPhase));
       const contentChange = hadChild && hasChild && shouldDoContentTransition;
       const phaseChange = hadChild && hasChild && shouldDoPhaseTransition;
 
-
+      // Determine if we only need to preserve an existing content transition (no new change)
       const preserveOnlyContentTransition = activeContentTransition !== null && !shouldDoContentTransition && !shouldDoPhaseTransition && !becomesPopulated && !becomesEmpty;
 
-
+      // Include becomesPopulated in content transition only if it's not a phase transition
       const shouldDoContentTransitionIncludingPopulation = shouldDoContentTransition || becomesPopulated && !shouldDoPhaseTransition;
       const decisions = [];
       if (shouldDoContentTransition) decisions.push("CONTENT TRANSITION");
@@ -9071,19 +9071,19 @@ const initUITransition = container => {
         debug("transition", "Preserving existing content transition (progress ".concat(progress, "%)"));
       }
 
-
-
-
+      // Early return optimization: if no transition decision and we are not continuing
+      // an existing active content transition (animationProgress > 0), we can skip
+      // all transition setup logic below.
       if (decisions.length === 1 && decisions[0] === "NO TRANSITION" && activeContentTransition === null && activePhaseTransition === null) {
         debug("transition", "Early return: no transition or continuation required");
-
+        // Still ensure size logic executes below (so do not return before size alignment)
       }
 
-
+      // Handle initial population skip (first null → something): no content or size animations
       if (isInitialPopulationWithoutTransition) {
         debug("transition", "Initial population detected: skipping transitions (opt-in with data-initial-transition)");
 
-
+        // Apply sizes instantly, no animation
         if (isContentPhase) {
           applySizeConstraints(newWidth, newHeight);
         } else {
@@ -9091,7 +9091,7 @@ const initUITransition = container => {
           releaseConstraints("initial population - skip transitions");
         }
 
-
+        // Register state and mark initial population done
         previousChild = firstChild;
         lastContentKey = currentContentKey;
         hasPopulatedOnce = true;
@@ -9101,7 +9101,7 @@ const initUITransition = container => {
         return;
       }
 
-
+      // Plan size transition upfront; execution will happen after content/phase transitions
       let sizePlan = {
         action: "none",
         targetWidth: constrainedWidth,
@@ -9122,7 +9122,7 @@ const initUITransition = container => {
         sizePlan.targetHeight = targetHeight;
         if (targetWidth === constrainedWidth && targetHeight === constrainedHeight) {
           debug("size", "No size change required");
-
+          // We'll handle potential constraint release in final section (if not holding)
           break size_transition;
         }
         debug("size", "Size change needed:", {
@@ -9130,18 +9130,18 @@ const initUITransition = container => {
           height: "".concat(constrainedHeight, " \u2192 ").concat(targetHeight)
         });
         if (isContentPhase) {
-
+          // Content phases (loading/error) always use size constraints for consistent sizing
           sizePlan.action = hasSizeTransitions ? "animate" : "applyConstraints";
         } else {
-
+          // Actual content: update natural content dimensions for future content phases
           updateNaturalContentSize(targetWidth, targetHeight);
           sizePlan.action = hasSizeTransitions ? "animate" : "release";
         }
       }
       content_transition: {
-
+        // Handle content transitions (slide-left, cross-fade for content key changes)
         if (decisions.length === 1 && decisions[0] === "NO TRANSITION" && activeContentTransition === null && activePhaseTransition === null) {
-
+          // Skip creating any new transitions entirely
         } else if (shouldDoContentTransitionIncludingPopulation && !preserveOnlyContentTransition) {
           const existingOldContents = contentOverlay.querySelectorAll("[data-ui-transition-old]");
           const animationProgress = activeContentTransition?.progress || 0;
@@ -9172,8 +9172,8 @@ const initUITransition = container => {
             attributeToRemove: ["data-content-key"]
           });
 
-
-
+          // If size transitions are disabled and the new content is smaller,
+          // hold the previous size to avoid cropping during the transition.
           if (!hasSizeTransitions) {
             const willShrinkWidth = constrainedWidth > newWidth;
             const willShrinkHeight = constrainedHeight > newHeight;
@@ -9194,7 +9194,7 @@ const initUITransition = container => {
               activeContentTransition = null;
               activeContentTransitionType = null;
               if (sizeHoldActive) {
-
+                // Release the hold after the content transition completes
                 releaseConstraints("content transition completed - release size hold");
                 sizeHoldActive = false;
               }
@@ -9206,13 +9206,13 @@ const initUITransition = container => {
           }
           activeContentTransitionType = type;
         } else if (!shouldDoContentTransition && !preserveOnlyContentTransition) {
-
+          // Clean up content overlay if no content transition needed and nothing to preserve
           contentOverlay.innerHTML = "";
           activeContentTransition = null;
           activeContentTransitionType = null;
         }
 
-
+        // Handle phase transitions (cross-fade for content phase changes)
         if (shouldDoPhaseTransition) {
           const phaseTransitionType = container.getAttribute("data-phase-transition") || PHASE_TRANSITION;
           const existingOldPhaseContents = phaseOverlay.querySelectorAll("[data-ui-transition-old]");
@@ -9265,17 +9265,17 @@ const initUITransition = container => {
         }
       }
 
-
+      // Store current child for next transition
       previousChild = firstChild;
       lastContentKey = currentContentKey;
       if (becomesPopulated) {
         hasPopulatedOnce = true;
       }
 
-
+      // Execute planned size action, unless holding size during a content transition
       if (!sizeHoldActive) {
         if (sizePlan.targetWidth === constrainedWidth && sizePlan.targetHeight === constrainedHeight) {
-
+          // no size changes planned; possibly release constraints
           if (!isContentPhase) {
             releaseConstraints("no size change needed");
           }
@@ -9295,10 +9295,10 @@ const initUITransition = container => {
     }
   };
 
-
+  // Run once at init to process current slot content (warnings, sizing, transitions)
   handleChildSlotMutation("init");
 
-
+  // Watch for child changes and attribute changes on children
   const mutationObserver = new MutationObserver(mutations => {
     let childListMutation = false;
     const attributeMutationSet = new Set();
@@ -9340,7 +9340,7 @@ const initUITransition = container => {
     characterData: false
   });
 
-
+  // Return API
   return {
     slot,
     cleanup: () => {
@@ -9406,7 +9406,7 @@ const animateTransition = (transitionController, newChild, setupTransition, {
     oldElement,
     newElement
   } = setupTransition();
-
+  // Use precomputed content key states (expected to be provided by caller)
   const fromContentKey = fromContentKeyState;
   const toContentKey = toContentKeyState;
   debug("transition", "Setting up animation:", {
@@ -9451,7 +9451,7 @@ const slideLeft = {
       return [];
     }
     if (!newElement) {
-
+      // Content -> Empty (slide out left only)
       const currentPosition = getTranslateX(oldElement);
       const containerWidth = getInnerWidth(oldElement.parentElement);
       const from = currentPosition;
@@ -9476,9 +9476,9 @@ const slideLeft = {
       })];
     }
     if (!oldElement) {
-
+      // Empty -> Content (slide in from right)
       const containerWidth = getInnerWidth(newElement.parentElement);
-      const from = containerWidth;
+      const from = containerWidth; // Start from right edge for slide-in effect
       const to = getTranslateXWithoutTransition(newElement);
       debug("transition", "Slide in from empty:", {
         from,
@@ -9500,18 +9500,18 @@ const slideLeft = {
       })];
     }
 
+    // Content -> Content (slide left)
+    // The old content (oldElement) slides OUT to the left
+    // The new content (newElement) slides IN from the right
 
-
-
-
-
+    // Get positions for the slide animation
     const containerWidth = getInnerWidth(newElement.parentElement);
     const oldContentPosition = getTranslateX(oldElement);
     const currentNewPosition = getTranslateX(newElement);
     const naturalNewPosition = getTranslateXWithoutTransition(newElement);
 
-
-
+    // For smooth continuation: if newElement is mid-transition,
+    // calculate new position to maintain seamless sliding
     let startNewPosition;
     if (currentNewPosition !== 0 && naturalNewPosition === 0) {
       startNewPosition = currentNewPosition + containerWidth;
@@ -9520,7 +9520,7 @@ const slideLeft = {
       startNewPosition = naturalNewPosition || containerWidth;
     }
 
-
+    // For phase transitions, force new content to start from right edge for proper slide-in
     const effectiveFromPosition = isPhaseTransition ? containerWidth : startNewPosition;
     debug("transition", "Slide transition:", {
       oldContent: "".concat(oldContentPosition, " \u2192 ").concat(-containerWidth),
@@ -9528,7 +9528,7 @@ const slideLeft = {
     });
     const transitions = [];
 
-
+    // Slide old content out
     transitions.push(createTranslateXTransition(oldElement, -containerWidth, {
       from: oldContentPosition,
       duration,
@@ -9540,7 +9540,7 @@ const slideLeft = {
       }
     }));
 
-
+    // Slide new content in
     transitions.push(createTranslateXTransition(newElement, naturalNewPosition, {
       from: effectiveFromPosition,
       duration,
@@ -9570,7 +9570,7 @@ const crossFade = {
       return [];
     }
     if (!newElement) {
-
+      // Content -> Empty (fade out only)
       const from = getOpacity(oldElement);
       const to = 0;
       debug("transition", "Fade out to empty:", {
@@ -9593,7 +9593,7 @@ const crossFade = {
       })];
     }
     if (!oldElement) {
-
+      // Empty -> Content (fade in only)
       const from = 0;
       const to = getOpacityWithoutTransition(newElement);
       debug("transition", "Fade in from empty:", {
@@ -9616,21 +9616,21 @@ const crossFade = {
       })];
     }
 
-
-
+    // Content -> Content (cross-fade)
+    // Get current opacity for both elements
     const oldOpacity = getOpacity(oldElement);
     const newOpacity = getOpacity(newElement);
     const newNaturalOpacity = getOpacityWithoutTransition(newElement);
 
-
-
+    // For phase transitions, always start new content from 0 for clean visual transition
+    // For content transitions, check for ongoing transitions to continue smoothly
     let effectiveFromOpacity;
     if (isPhaseTransition) {
-      effectiveFromOpacity = 0;
+      effectiveFromOpacity = 0; // Always start fresh for phase transitions (loading → content, etc.)
     } else {
-
-
-
+      // For content transitions: if new element has ongoing opacity transition
+      // (indicated by non-zero opacity when natural opacity is different),
+      // start from current opacity to continue smoothly, otherwise start from 0
       const hasOngoingTransition = newOpacity !== newNaturalOpacity && newOpacity > 0;
       effectiveFromOpacity = hasOngoingTransition ? newOpacity : 0;
     }
@@ -9654,7 +9654,7 @@ const crossFade = {
       from: effectiveFromOpacity,
       duration,
       startProgress: isPhaseTransition ? 0 : startProgress,
-
+      // Phase transitions: new content always starts fresh
       onUpdate: ({
         value,
         timing
