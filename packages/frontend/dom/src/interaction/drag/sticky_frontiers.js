@@ -1,5 +1,5 @@
-import { getScrollRelativeRect } from "../position/dom_coords.js";
-import { getElementSelector } from "./element_log.js";
+import { getScrollRelativeRect } from "../../position/dom_coords.js";
+import { getElementSelector } from "../element_log.js";
 
 export const applyStickyFrontiersToAutoScrollArea = (
   autoScrollArea,

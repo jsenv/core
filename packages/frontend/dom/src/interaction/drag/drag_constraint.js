@@ -1,10 +1,10 @@
 import {
   addScrollToRect,
   getScrollRelativeRect,
-} from "../position/dom_coords.js";
+} from "../../position/dom_coords.js";
+import { getElementSelector } from "../element_log.js";
 import { setupConstraintFeedbackLine } from "./constraint_feedback_line.js";
 import { setupDragDebugMarkers } from "./drag_debug_markers.js";
-import { getElementSelector } from "./element_log.js";
 
 const CONSOLE_DEBUG_BOUNDS = true;
 const CONSOLE_DEBUG_OBSTACLES = false;

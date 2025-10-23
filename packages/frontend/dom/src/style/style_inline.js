@@ -1,4 +1,4 @@
-import { elementToOwnerWindow } from "./utils.js";
+import { elementToOwnerWindow } from "../utils.js";
 
 export const getComputedStyle = (element) =>
   elementToOwnerWindow(element).getComputedStyle(element);
@@ -76,20 +76,6 @@ export const addWillChange = (element, property) => {
   };
 };
 
-export const setAttribute = (element, name, value) => {
-  if (element.hasAttribute(name)) {
-    const prevValue = element.getAttribute(name);
-    element.setAttribute(name, value);
-    return () => {
-      element.setAttribute(name, prevValue);
-    };
-  }
-  element.setAttribute(name, value);
-  return () => {
-    element.removeAttribute(name);
-  };
-};
-
 const createSetMany = (setter) => {
   return (element, description) => {
     const cleanupCallbackSet = new Set();
@@ -109,4 +95,3 @@ const createSetMany = (setter) => {
 
 export const setStyles = createSetMany(setStyle);
 export const forceStyles = createSetMany(forceStyle);
-export const setAttributes = createSetMany(setAttribute);

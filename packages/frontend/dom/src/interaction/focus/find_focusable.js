@@ -1,5 +1,5 @@
-import { findDescendant } from "../traversal.js";
-import { getAssociatedElements } from "../utils.js";
+import { findDescendant } from "../../traversal.js";
+import { getAssociatedElements } from "../../utils.js";
 import { elementIsFocusable } from "./element_is_focusable.js";
 
 export const findFocusable = (element) => {

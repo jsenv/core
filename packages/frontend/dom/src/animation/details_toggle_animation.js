@@ -1,4 +1,4 @@
-import { addAttributeEffect } from "./add_attribute_effect";
+import { addAttributeEffect } from "../attr/add_attribute_effect";
 
 let debug = true;
 const DURATION = 500;

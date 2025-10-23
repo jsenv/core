@@ -9,9 +9,9 @@
  *
  */
 
+import { createPubSub } from "../../pub_sub.js";
 import { findFocusable } from "../focus/find_focusable.js";
-import { createPubSub } from "../pub_sub.js";
-import { isolateInteractions } from "./isolate_interactions.js";
+import { isolateInteractions } from "../isolate_interactions.js";
 
 export const createDragGestureController = (options = {}) => {
   const {

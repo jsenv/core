@@ -1,5 +1,5 @@
+import { getScrollContainer } from "../interaction/scroll/scroll_container.js";
 import { createPubSub } from "../pub_sub.js";
-import { getScrollContainer } from "../scroll/scroll_container.js";
 
 const DEBUG = false;
 

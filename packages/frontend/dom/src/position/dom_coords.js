@@ -118,7 +118,7 @@
  * • Scroll coordinates: 50px → 0px
  */
 
-import { getScrollContainer } from "../scroll/scroll_container.js";
+import { getScrollContainer } from "../interaction/scroll/scroll_container.js";
 import { getBorderSizes } from "../size/get_border_sizes.js";
 
 const { documentElement } = document;

@@ -1,5 +1,5 @@
-import { getStyle } from "../style_and_attributes.js";
-import { isDocumentElement } from "../utils.js";
+import { getStyle } from "../../style/style_inline.js";
+import { isDocumentElement } from "../../utils.js";
 
 // note: keep in mind that an element with overflow: 'hidden' is scrollable
 // it can be scrolled using keyboard arrows or JavaScript properties such as scrollTop, scrollLeft

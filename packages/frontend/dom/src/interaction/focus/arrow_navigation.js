@@ -1,10 +1,10 @@
-import { canInterceptKeys } from "../keyboard.js";
 import {
   findAfter,
   findBefore,
   findDescendant,
   findLastDescendant,
-} from "../traversal.js";
+} from "../../traversal.js";
+import { canInterceptKeys } from "../keyboard.js";
 import { elementIsFocusable } from "./element_is_focusable.js";
 import { getFocusGroup } from "./focus_group_registry.js";
 import { markFocusNav } from "./focus_nav_event_marker.js";

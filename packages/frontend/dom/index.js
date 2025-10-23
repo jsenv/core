@@ -1,16 +1,18 @@
+// state management
 export { createIterableWeakSet } from "./src/iterable_weak_set.js";
 export { createPubSub } from "./src/pub_sub.js";
 
-// style and attributes
-export { addAttributeEffect } from "./src/add_attribute_effect.js";
+// style
 export { createStyleController } from "./src/style/style_controller.js";
 export {
   addWillChange,
   getStyle,
-  setAttribute,
-  setAttributes,
   setStyles,
-} from "./src/style_and_attributes.js";
+} from "./src/style/style_inline.js";
+
+// attributes
+export { addAttributeEffect } from "./src/attr/add_attribute_effect.js";
+export { setAttribute, setAttributes } from "./src/attr/attributes.js";
 
 // traversal
 export {
@@ -20,31 +22,40 @@ export {
   findDescendant,
 } from "./src/traversal.js";
 
-// focus
+// interaction/focus
 export {
   activeElementSignal,
   addActiveElementEffect,
   useActiveElement,
-} from "./src/focus/active_element.js";
-export { elementIsFocusable } from "./src/focus/element_is_focusable.js";
-export { elementIsVisible } from "./src/focus/element_is_visible.js";
-export { findFocusable } from "./src/focus/find_focusable.js";
-export { initFocusGroup } from "./src/focus/focus_group.js";
-export { preventFocusNavViaKeyboard } from "./src/focus/focus_nav.js";
-export { preventFocusNav } from "./src/focus/focus_nav_event_marker.js";
-export { trapFocusInside } from "./src/focus/focus_trap.js";
-export { canInterceptKeys } from "./src/keyboard.js";
-
-// scroll
-export { captureScrollState } from "./src/scroll/capture_scroll.js";
-export { isScrollable } from "./src/scroll/is_scrollable.js";
+} from "./src/interaction/focus/active_element.js";
+export { elementIsFocusable } from "./src/interaction/focus/element_is_focusable.js";
+export { elementIsVisible } from "./src/interaction/focus/element_is_visible.js";
+export { findFocusable } from "./src/interaction/focus/find_focusable.js";
+export { initFocusGroup } from "./src/interaction/focus/focus_group.js";
+export { preventFocusNavViaKeyboard } from "./src/interaction/focus/focus_nav.js";
+export { preventFocusNav } from "./src/interaction/focus/focus_nav_event_marker.js";
+export { trapFocusInside } from "./src/interaction/focus/focus_trap.js";
+// interaction/keyboard
+export { canInterceptKeys } from "./src/interaction/keyboard.js";
+// interaction/scroll
+export { captureScrollState } from "./src/interaction/scroll/capture_scroll.js";
+export { isScrollable } from "./src/interaction/scroll/is_scrollable.js";
 export {
   getScrollContainer,
   getScrollContainerSet,
   getSelfAndAncestorScrolls,
-} from "./src/scroll/scroll_container.js";
-export { trapScrollInside } from "./src/scroll/scroll_trap.js";
-export { allowWheelThrough } from "./src/scroll/wheel_through.js";
+} from "./src/interaction/scroll/scroll_container.js";
+export { trapScrollInside } from "./src/interaction/scroll/scroll_trap.js";
+export { allowWheelThrough } from "./src/interaction/scroll/wheel_through.js";
+// interaction/drag
+export { getDragCoordinates } from "./src/interaction/drag/drag_element_positioner.js";
+export {
+  createDragGestureController,
+  dragAfterThreshold,
+} from "./src/interaction/drag/drag_gesture.js";
+export { createDragToMoveGestureController } from "./src/interaction/drag/drag_to_move.js";
+export { startDragToResizeGesture } from "./src/interaction/drag/drag_to_resize_gesture.js";
+export { getDropTargetInfo } from "./src/interaction/drag/drop_target_detection.js";
 
 // position
 export { getScrollRelativeRect } from "./src/position/dom_coords.js";
@@ -92,13 +103,3 @@ export {
   createTransition,
 } from "./src/transition/transition_playback.js";
 export { initUITransition } from "./src/ui_transition/ui_transition.js";
-
-// interaction
-export { getDragCoordinates } from "./src/interaction/drag_element_positioner.js";
-export {
-  createDragGestureController,
-  dragAfterThreshold,
-} from "./src/interaction/drag_gesture.js";
-export { createDragToMoveGestureController } from "./src/interaction/drag_to_move.js";
-export { startDragToResizeGesture } from "./src/interaction/drag_to_resize_gesture.js";
-export { getDropTargetInfo } from "./src/interaction/drop_target_detection.js";

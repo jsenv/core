@@ -1,4 +1,4 @@
-import { getScrollContainer } from "../scroll/scroll_container.js";
+import { getScrollContainer } from "../interaction/scroll/scroll_container.js";
 
 export const stickyAsRelativeCoords = (
   element,

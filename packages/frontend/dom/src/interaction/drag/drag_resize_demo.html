@@ -382,7 +382,7 @@
     <div class="constraint-feedback" id="feedback"></div>
 
     <script type="module">
-      import { createDragGesture } from "./drag_gesture.js";
+      import { createDragGestureController } from "./drag_gesture.js";
 
       // Global state
       let constraintsEnabled = true;
@@ -402,7 +402,7 @@
           const direction = handle.dataset.direction;
 
           // Setup drag for resize handle
-          const cleanup = createDragGesture({
+          const cleanup = createDragGestureController({
             onGrab: () => {
               // Handle can be grabbed
               return {

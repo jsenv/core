@@ -3,7 +3,7 @@ import {
   findBefore,
   findDescendant,
   findLastDescendant,
-} from "../traversal.js";
+} from "../../traversal.js";
 import { elementIsFocusable } from "./element_is_focusable.js";
 import { markFocusNav } from "./focus_nav_event_marker.js";
 

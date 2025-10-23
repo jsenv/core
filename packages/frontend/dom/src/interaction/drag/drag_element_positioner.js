@@ -1,4 +1,4 @@
-import { findSelfOrAncestorFixedPosition } from "../position/position_fixed.js";
+import { findSelfOrAncestorFixedPosition } from "../../position/position_fixed.js";
 import { getScrollContainer } from "../scroll/scroll_container.js";
 
 /**

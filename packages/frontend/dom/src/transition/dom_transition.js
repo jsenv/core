@@ -9,7 +9,7 @@
 
 import { getHeight } from "../size/get_height.js";
 import { getWidth } from "../size/get_width.js";
-import { addWillChange } from "../style_and_attributes.js";
+import { addWillChange } from "../style/style_inline.js";
 import { parseTransform } from "./transform_style_parser.js";
 import { createTimelineTransition } from "./transition_playback.js";
 

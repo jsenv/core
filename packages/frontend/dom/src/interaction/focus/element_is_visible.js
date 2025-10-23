@@ -1,9 +1,9 @@
-import { getStyle } from "../style_and_attributes.js";
+import { getStyle } from "../../style/style_inline.js";
 import {
   elementIsDetails,
   elementIsSummary,
   isDocumentElement,
-} from "../utils.js";
+} from "../../utils.js";
 
 export const elementIsVisible = (node) => {
   if (isDocumentElement(node)) {

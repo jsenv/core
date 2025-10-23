@@ -1,6 +1,6 @@
-import { getScrollBox, getScrollport } from "../position/dom_coords.js";
+import { getScrollBox, getScrollport } from "../../position/dom_coords.js";
+import { createStyleController } from "../../style/style_controller.js";
 import { getScrollContainer } from "../scroll/scroll_container.js";
-import { createStyleController } from "../style/style_controller.js";
 import { initDragConstraints } from "./drag_constraint.js";
 import { createDragElementPositioner } from "./drag_element_positioner.js";
 import { createDragGestureController } from "./drag_gesture.js";

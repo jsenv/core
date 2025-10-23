@@ -1,4 +1,4 @@
-import { setAttributes } from "../style_and_attributes.js";
+import { setAttributes } from "../attr/attributes.js";
 import { getAssociatedElements } from "../utils.js";
 
 /**
