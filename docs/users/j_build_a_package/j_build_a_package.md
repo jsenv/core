@@ -22,7 +22,7 @@ This page explains how to use jsenv to build **packages** (libraries, utilities,
 When building a package, you need to consider your target runtime environment:
 
 1. **Node.js packages** - For server-side, CLI tools, build scripts
-2. **Browser packages** - For client-side libraries, web components  
+2. **Browser packages** - For client-side libraries, web components
 3. **Universal packages** - For libraries that work in both environments
 
 ## Common Package Build Configuration
@@ -74,17 +74,14 @@ ignore: {
 ```
 
 This is particularly useful when:
+
 - Building packages with peer dependencies
 - Creating plugins that expect certain libraries to be provided by the consumer
 - Building packages that should not bundle heavy dependencies
 
 ## Building for Node.js
 
-Node.js packages are typically used for:
-- Server-side libraries
-- CLI tools
-- Build scripts and automation
-- Backend utilities
+Building packages for Node.js reduces the number of files, which improves performance. Fewer files means faster startup times and reduced I/O overhead. For example, @jsenv/core itself uses this approach, transforming thousands of source files into just 40 optimized files with intelligent code splitting.
 
 ### Basic Node.js Package Build
 
@@ -101,7 +98,6 @@ await build({
       runtimeCompat: {
         node: "18.0.0", // Target minimum Node.js version
       },
-      format: "esm", // or "commonjs" for legacy compatibility
       minification: true,
       bundling: true, // Bundle dependencies into single file
       ignore: {
@@ -112,32 +108,7 @@ await build({
 });
 ```
 
-### Multiple Entry Points for Node.js
-
-```js
-entryPoints: {
-  "./src/index.js": {
-    buildRelativeUrl: "./index.js",
-    runtimeCompat: { node: "18.0.0" },
-  },
-  "./src/cli.js": {
-    buildRelativeUrl: "./cli.js", 
-    runtimeCompat: { node: "18.0.0" },
-  },
-  "./src/utils.js": {
-    buildRelativeUrl: "./utils.js",
-    runtimeCompat: { node: "18.0.0" },
-  },
-},
-```
-
 ## Building for Browser
-
-Browser packages are typically used for:
-- Client-side libraries
-- Web components
-- Frontend utilities
-- Browser-specific APIs
 
 ### Basic Browser Package Build
 
@@ -153,12 +124,10 @@ await build({
       buildRelativeUrl: "./browser.js",
       runtimeCompat: {
         chrome: "64",
-        edge: "79", 
+        edge: "79",
         firefox: "67",
         safari: "11.3",
       },
-      format: "esm",
-      minification: true,
       bundling: true,
       ignore: {
         "file://**/node_modules/": true,
@@ -168,29 +137,10 @@ await build({
 });
 ```
 
-### Browser Package with UMD Format
-
-For maximum compatibility, including older module systems:
-
-```js
-entryPoints: {
-  "./src/index.js": {
-    buildRelativeUrl: "./browser.umd.js",
-    format: "umd",
-    globalName: "MyLibrary", // Global variable name for UMD
-    runtimeCompat: {
-      chrome: "60",
-      edge: "79",
-      firefox: "60", 
-      safari: "11",
-    },
-  },
-},
-```
-
 ## Building Universal Packages
 
 Universal packages work in both Node.js and browser environments. This requires careful consideration of:
+
 - Runtime-specific APIs
 - Module formats
 - Dependency management
@@ -218,16 +168,15 @@ await build({
         "file://**/node_modules/": true,
       },
     },
-    // Browser build  
+    // Browser build
     "./src/index.js": {
       buildRelativeUrl: "./browser.js",
       runtimeCompat: {
         chrome: "64",
         edge: "79",
-        firefox: "67", 
+        firefox: "67",
         safari: "11.3",
       },
-      format: "esm",
       ignore: {
         "file://**/node_modules/": true,
       },
@@ -247,7 +196,7 @@ Configure your package.json to support both environments:
   "exports": {
     ".": {
       "node": "./dist/node.js",
-      "browser": "./dist/browser.js", 
+      "browser": "./dist/browser.js",
       "default": "./dist/browser.js"
     }
   },
@@ -273,19 +222,6 @@ entryPoints: {
 },
 ```
 
-### External Dependencies
-
-Mark dependencies as external (not bundled):
-
-```js
-entryPoints: {
-  "./src/index.js": {
-    buildRelativeUrl: "./index.js", 
-    external: ["react", "lodash"], // These won't be bundled
-  },
-},
-```
-
 ### Conditional Builds
 
 Build different versions based on conditions:
@@ -302,28 +238,6 @@ entryPoints: {
   },
 },
 ```
-
-## Best Practices
-
-1. **Choose the right format**: ESM for modern environments, CommonJS for legacy Node.js, UMD for maximum browser compatibility
-
-2. **Manage dependencies carefully**: Use `ignore` for peer dependencies, `external` for runtime dependencies
-
-3. **Consider file size**: Bundle for browser packages, keep dependencies external for Node.js packages when possible
-
-4. **Version targeting**: Be specific about minimum versions to enable optimal transpilation
-
-5. **Documentation**: Preserve comments and JSDoc for better developer experience
-
-6. **Testing**: Test your built packages in the target environments before publishing
-
-## Package Types Summary
-
-| Package Type | Format | Runtime Compat | Bundling | Common Use Cases |
-|-------------|--------|----------------|----------|------------------|
-| Node.js | ESM/CommonJS | `node: "18.0.0"` | Optional | CLI tools, servers, build scripts |
-| Browser | ESM/UMD | Browser versions | Recommended | Web libraries, components |
-| Universal | Multiple builds | Both | Environment-specific | Utility libraries, data processing |
 
 <!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
