@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "40.9.1",
+  "version": "40.10.0",
   "description": "Tool to develop, test and build js projects",
   "repository": {
     "type": "git",
@@ -75,12 +75,12 @@
   },
   "dependencies": {
     "@financial-times/polyfill-useragent-normaliser": "1.10.2",
-    "@jsenv/ast": "6.7.13",
-    "@jsenv/js-module-fallback": "1.4.21",
-    "@jsenv/plugin-bundling": "2.9.12",
+    "@jsenv/ast": "6.7.14",
+    "@jsenv/js-module-fallback": "1.4.22",
+    "@jsenv/plugin-bundling": "2.10.0",
     "@jsenv/plugin-minification": "1.7.2",
-    "@jsenv/plugin-supervisor": "1.7.6",
-    "@jsenv/plugin-transpilation": "1.5.59",
+    "@jsenv/plugin-supervisor": "1.7.7",
+    "@jsenv/plugin-transpilation": "1.5.60",
     "@jsenv/server": "16.3.1",
     "@jsenv/sourcemap": "1.3.10",
     "react-table": "7.8.0"
