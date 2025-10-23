@@ -1,7 +1,7 @@
 import { build } from "@jsenv/core";
 
 await build({
-  sourceDirectoryUrl: import.meta.resolve("../src/"),
+  sourceDirectoryUrl: import.meta.resolve("../"),
   buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
     "./index.js": {

@@ -3,9 +3,9 @@
  *
  */
 
-import { startDragToResizeGesture } from "../interaction/drag_to_resize_gesture.js";
-import { captureScrollState } from "../scroll/capture_scroll.js";
-import { forceStyles } from "../style_and_attributes.js";
+import { startDragToResizeGesture } from "../interaction/drag/drag_to_resize_gesture.js";
+import { captureScrollState } from "../interaction/scroll/capture_scroll.js";
+import { forceStyles } from "../style/dom_styles.js";
 import { createHeightTransition } from "../transition/dom_transition.js";
 import { createGroupTransitionController } from "../transition/group_transition.js";
 import { getHeight } from "./get_height.js";
