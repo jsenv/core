@@ -1,4 +1,4 @@
-import { addAttributeEffect } from "../add_attribute_effect.js";
+import { addAttributeEffect } from "../attr/add_attribute_effect.js";
 import { getHeight } from "./get_height.js";
 
 export const ensureDetailsContentFullHeight = (details) => {

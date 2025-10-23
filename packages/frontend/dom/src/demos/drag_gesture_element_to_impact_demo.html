@@ -356,26 +356,10 @@
     </div>
 
     <script type="module">
-      import { createDragToMoveGestureController } from "../interaction/drag_gesture.js";
-      import {
-        DRAG_DEBUG_MARKERS,
-        enableDebugMarkers,
-        disableDebugMarkers,
-      } from "../interaction/debug_markers.js";
+      import { createDragToMoveGestureController } from "@jsenv/dom";
 
-      const debugCheckbox = document.getElementById("debugMarkersCheckbox");
       const demo1Info = document.getElementById("demo1Info");
       const elementInfo = document.getElementById("elementInfo");
-
-      // Handle debug markers toggle
-      debugCheckbox.checked = DRAG_DEBUG_MARKERS;
-      debugCheckbox.addEventListener("change", (e) => {
-        if (e.target.checked) {
-          enableDebugMarkers();
-        } else {
-          disableDebugMarkers();
-        }
-      });
 
       // Demo 1: Basic Handle → Target
       const handle1 = document.getElementById("handle1");

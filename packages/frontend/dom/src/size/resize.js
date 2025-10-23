@@ -36,7 +36,7 @@
  * - Access resize information from event.detail (xMove, yMove, etc.)
  */
 
-import { addAttributeEffect } from "../add_attribute_effect.js";
+import { addAttributeEffect } from "../attr/add_attribute_effect.js";
 import { canTakeSize } from "./can_take_size.js";
 import { getAvailableHeight } from "./get_available_height.js";
 import { getAvailableWidth } from "./get_available_width.js";
