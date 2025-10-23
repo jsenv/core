@@ -11,7 +11,7 @@
       I) Test in Node.js
     </td>
     <td width="2000px" align="right" nowrap>
-      <a href="../j_build_for_node/j_build_for_node.md">&gt; J) Build for Node.js</a>
+      <a href="../j_build_a_package/j_build_a_package.md">&gt; J) Build a package</a>
     </td>
   </tr>
 </table>
@@ -375,7 +375,7 @@ Code coverage can be collected while executing test files.
       I) Test in Node.js
     </td>
     <td width="2000px" align="right" nowrap>
-      <a href="../j_build_for_node/j_build_for_node.md">&gt; J) Build for Node.js</a>
+      <a href="../j_build_a_package/j_build_a_package.md">&gt; J) Build a package</a>
     </td>
   </tr>
 </table>
