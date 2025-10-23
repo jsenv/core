@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@jsenv/urls": "2.9.1",
-    "magic-string": "0.30.17",
+    "magic-string": "0.30.19",
     "source-map-js": "1.2.1"
   },
   "publishConfig": {

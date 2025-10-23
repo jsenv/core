@@ -12,7 +12,9 @@
     "name": "dmail",
     "email": "dmaillard06@gmail.com"
   },
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/jsenv_dom.js"
+  ],
   "type": "module",
   "exports": {
     ".": {
@@ -36,7 +38,7 @@
   "devDependencies": {
     "@jsenv/core": "../../../",
     "@jsenv/navi": "../navi",
-     "@preact/signals": "^2.3.2",
+    "@preact/signals": "^2.3.2",
     "preact": "^10.27.2"
   },
   "publishConfig": {

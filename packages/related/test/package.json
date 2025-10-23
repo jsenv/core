@@ -42,7 +42,7 @@
     "istanbul-lib-coverage": "3.2.2",
     "istanbul-lib-instrument": "6.0.3",
     "istanbul-lib-report": "3.0.1",
-    "istanbul-reports": "3.1.7",
+    "istanbul-reports": "3.2.0",
     "pidtree": "0.6.0",
     "v8-to-istanbul": "9.3.0"
   },
@@ -66,8 +66,8 @@
     "@jsenv/urls": "../../tooling/urls",
     "@jsenv/utils": "../../tooling/utils",
     "prettier": "3.6.2",
-    "strip-ansi": "7.1.0",
-    "supports-color": "10.0.0"
+    "strip-ansi": "7.1.2",
+    "supports-color": "10.2.2"
   },
   "optionalDependencies": {
     "playwright": "1.x",

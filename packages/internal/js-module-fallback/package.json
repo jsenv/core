@@ -31,7 +31,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@babel/parser": "7.28.0",
+    "@babel/parser": "7.28.4",
     "@babel/plugin-transform-dynamic-import": "7.27.1",
     "@babel/plugin-transform-modules-systemjs": "7.27.1",
     "@babel/plugin-transform-modules-umd": "7.27.1",

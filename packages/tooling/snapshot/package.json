@@ -34,11 +34,11 @@
     "@jsenv/url-meta": "8.5.7",
     "@jsenv/urls": "2.9.1",
     "@jsenv/utils": "2.3.1",
-    "ansi-regex": "6.1.0",
+    "ansi-regex": "6.2.2",
     "pixelmatch": "7.1.0",
     "pngjs": "7.0.0",
     "prettier": "3.6.2",
-    "strip-ansi": "7.1.0"
+    "strip-ansi": "7.1.2"
   },
   "devDependencies": {
     "@jsenv/assert": "../assert",

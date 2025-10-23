@@ -24,8 +24,8 @@
     "@babel/plugin-syntax-optional-catch-binding": "7.8.3",
     "@babel/plugin-transform-arrow-functions": "7.27.1",
     "@babel/plugin-transform-block-scoped-functions": "7.27.1",
-    "@babel/plugin-transform-block-scoping": "7.28.0",
-    "@babel/plugin-transform-classes": "7.28.0",
+    "@babel/plugin-transform-block-scoping": "7.28.4",
+    "@babel/plugin-transform-classes": "7.28.4",
     "@babel/plugin-transform-computed-properties": "7.27.1",
     "@babel/plugin-transform-destructuring": "7.28.0",
     "@babel/plugin-transform-dotall-regex": "7.27.1",
@@ -37,12 +37,12 @@
     "@babel/plugin-transform-literals": "7.27.1",
     "@babel/plugin-transform-new-target": "7.27.1",
     "@babel/plugin-transform-numeric-separator": "7.27.1",
-    "@babel/plugin-transform-object-rest-spread": "7.28.0",
+    "@babel/plugin-transform-object-rest-spread": "7.28.4",
     "@babel/plugin-transform-object-super": "7.27.1",
     "@babel/plugin-transform-optional-catch-binding": "7.27.1",
     "@babel/plugin-transform-optional-chaining": "7.27.1",
     "@babel/plugin-transform-parameters": "7.27.7",
-    "@babel/plugin-transform-regenerator": "7.28.1",
+    "@babel/plugin-transform-regenerator": "7.28.4",
     "@babel/plugin-transform-shorthand-properties": "7.27.1",
     "@babel/plugin-transform-spread": "7.27.1",
     "@babel/plugin-transform-sticky-regex": "7.27.1",
@@ -57,7 +57,7 @@
     "@jsenv/utils": "2.3.1",
     "babel-plugin-transform-async-to-promises": "0.8.18",
     "construct-style-sheets-polyfill": "3.1.0",
-    "lightningcss": "1.30.1"
+    "lightningcss": "1.30.2"
   },
   "engines": {
     "node": ">=16.13.0"
