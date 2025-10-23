@@ -2,11 +2,18 @@
   "name": "@jsenv/dom",
   "version": "0.1.0",
   "description": "DOM utilities for writing frontend code",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/frontend/dom"
+  },
   "license": "MIT",
   "author": {
     "name": "dmail",
     "email": "dmaillard06@gmail.com"
   },
+  "sideEffects": false,
+  "type": "module",
   "exports": {
     ".": {
       "dev:jsenv": "./src/index.js",
