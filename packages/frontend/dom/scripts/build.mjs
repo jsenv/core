@@ -15,6 +15,9 @@ await build({
       minification: false,
       preserveComments: true, // JSDoc comments are useful when people use the built file as reference
       versioning: false,
+      ignore: {
+        "file://**/node_modules/": true,
+      },
     },
   },
 });
