@@ -15,9 +15,9 @@
         <text x="10" y="157.55" style="white-space:pre">    at applyRequestInternalRedirection (@jsenv/core/packages/backend/server/src/start_server.js:399:23)</text>
         <text x="10" y="176.55" style="white-space:pre">    at getResponseProperties (@jsenv/core/packages/backend/server/src/start_server.js:532:17)</text>
         <text x="10" y="195.55" style="white-space:pre">    at Server.requestEventHandler (@jsenv/core/packages/backend/server/src/start_server.js:698:42)</text>
-        <text x="10" y="214.55" style="white-space:pre">    at Server.emit (node:events:519:35)</text>
-        <text x="10" y="233.55" style="white-space:pre">    at parserOnIncoming (node:_http_server:1155:12)</text>
-        <text x="10" y="252.55" style="white-space:pre">    at HTTPParser.parserOnHeadersComplete (node:_http_common:117:17)</text>
+        <text x="10" y="214.55" style="white-space:pre">    at Server.emit (node:events:520:35)</text>
+        <text x="10" y="233.55" style="white-space:pre">    at parserOnIncoming (node:_http_server:1173:12)</text>
+        <text x="10" y="252.55" style="white-space:pre">    at HTTPParser.parserOnHeadersComplete (node:_http_common:121:17)</text>
         <text x="26.8" y="271.55" fill="#cd5555">500</text>
         <text x="52.01" y="271.55" style="white-space:pre"> Internal Server Error</text>
       </g>
