@@ -12,11 +12,13 @@
     "name": "dmail",
     "email": "dmaillard06@gmail.com"
   },
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/jsenv_navi.js"
+  ],
   "type": "module",
   "exports": {
     ".": {
-      "dev:jsenv": "./src/index.js",
+      "dev:jsenv": "./index.js",
       "default": "./dist/jsenv_navi.js"
     },
     "./*": "./*"

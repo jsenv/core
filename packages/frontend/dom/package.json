@@ -18,7 +18,7 @@
   "type": "module",
   "exports": {
     ".": {
-      "dev:jsenv": "./src/index.js",
+      "dev:jsenv": "./index.js",
       "default": "./dist/jsenv_dom.js"
     },
     "./details_content_full_height": "./src/size/details_content_full_height.js",
