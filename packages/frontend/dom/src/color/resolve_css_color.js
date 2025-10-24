@@ -4,7 +4,7 @@ import { parseCSSColor } from "./color_parsing.js";
  * Resolves a color value, handling CSS custom properties
  * @param {Element} element - DOM element to resolve CSS variables against
  * @param {string} color - CSS color value (may include CSS variables)
- * @returns {Array<number>|null} [r, g, b] values or null if parsing fails
+ * @returns {Array<number>|null} [r, g, b, a] values or null if parsing fails
  */
 export const resolveCSSColor = (element, color) => {
   if (!color || typeof color !== "string") {

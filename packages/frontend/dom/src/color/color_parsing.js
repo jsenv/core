@@ -1,8 +1,8 @@
 /**
- * Parses a CSS color string into RGB values
- * Supports hex (#rgb, #rrggbb), rgb(), rgba(), hsl(), hsla()
+ * Parses a CSS color string into RGBA values
+ * Supports hex (#rgb, #rrggbb, #rrggbbaa), rgb(), rgba(), hsl(), hsla()
  * @param {string} color - CSS color string
- * @returns {Array<number>|null} [r, g, b] values or null if parsing fails
+ * @returns {Array<number>|null} [r, g, b, a] values or null if parsing fails
  */
 export const parseCSSColor = (color) => {
   if (!color || typeof color !== "string") {
@@ -19,14 +19,22 @@ export const parseCSSColor = (color) => {
       const r = parseInt(hex[0] + hex[0], 16);
       const g = parseInt(hex[1] + hex[1], 16);
       const b = parseInt(hex[2] + hex[2], 16);
-      return [r, g, b];
+      return [r, g, b, 1];
     }
     if (hex.length === 6) {
       // #rrggbb
       const r = parseInt(hex.slice(0, 2), 16);
       const g = parseInt(hex.slice(2, 4), 16);
       const b = parseInt(hex.slice(4, 6), 16);
-      return [r, g, b];
+      return [r, g, b, 1];
+    }
+    if (hex.length === 8) {
+      // #rrggbbaa
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      const a = parseInt(hex.slice(6, 8), 16) / 255;
+      return [r, g, b, a];
     }
   }
 
@@ -35,7 +43,11 @@ export const parseCSSColor = (color) => {
   if (rgbMatch) {
     const values = rgbMatch[1].split(",").map((v) => parseFloat(v.trim()));
     if (values.length >= 3) {
-      return [values[0], values[1], values[2]];
+      const r = values[0];
+      const g = values[1];
+      const b = values[2];
+      const a = values.length >= 4 ? values[3] : 1;
+      return [r, g, b, a];
     }
   }
 
@@ -45,13 +57,15 @@ export const parseCSSColor = (color) => {
     const values = hslMatch[1].split(",").map((v) => parseFloat(v.trim()));
     if (values.length >= 3) {
       const [h, s, l] = values;
-      return hslToRgb(h, s / 100, l / 100);
+      const a = values.length >= 4 ? values[3] : 1;
+      const [r, g, b] = hslToRgb(h, s / 100, l / 100);
+      return [r, g, b, a];
     }
   }
 
   // Named colors (basic set)
   if (namedColors[color]) {
-    return namedColors[color];
+    return [...namedColors[color], 1];
   }
   return null;
 };
