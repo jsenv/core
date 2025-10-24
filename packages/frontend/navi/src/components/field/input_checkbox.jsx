@@ -121,14 +121,14 @@ import.meta.css = /* css */ `
     --navi-field-foreground-color: var(--navi-field-disabled-foreground-color);
   }
   [data-field-wrapper][data-checked][data-readonly] {
-    stroke: var(--navi-field-foreground-disabled-color);
+    stroke: var(--navi-field-disabled-foreground-color);
   }
   [data-field-wrapper][data-checked][data-disabled] .custom_checkbox_marker {
-    stroke: var(--navi-field-foreground-disabled-color);
+    stroke: var(--navi-field-disabled-foreground-color);
   }
   [data-field-wrapper][data-checked][data-disabled] [data-field] {
-    --navi-field-background-color: var(--navi-field-background-disabled-color);
-    --navi-field-border-color: var(--navi-field-background-disabled-color);
+    --navi-field-background-color: var(--navi-field-disabled-background-color);
+    --navi-field-border-color: var(--navi-field-disabled-background-color);
   }
 `;
 
