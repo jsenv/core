@@ -46,6 +46,7 @@ import.meta.css = /* css */ `
     position: relative;
     padding-block: 1px;
     padding-inline: 6px;
+    border-radius: inherit;
   }
 
   button[data-custom]:active .navi_button_content {
@@ -114,6 +115,8 @@ const ButtonBasic = forwardRef((props, ref) => {
     borderWidth = border === "none" || discrete ? 0 : 1,
     outlineWidth = discrete ? 0 : 1,
     borderColor = "light-dark(#767676, #8e8e93)",
+    background,
+    backgroundColor = "light-dark(#f3f4f6, #2d3748)",
     ...restStyle
   } = style;
   borderWidth = resolveCSSSize(borderWidth);
@@ -139,7 +142,7 @@ const ButtonBasic = forwardRef((props, ref) => {
         <span
           className="navi_button_content"
           data-field=""
-          data-field-with-background=""
+          data-field-with-background={background === "none" ? undefined : ""}
           data-field-with-hover=""
           data-field-with-border={borderWidth ? "" : undefined}
           data-field-with-border-hover={discrete ? "" : undefined}
@@ -148,9 +151,10 @@ const ButtonBasic = forwardRef((props, ref) => {
           data-readonly={innerReadOnly ? "" : undefined}
           data-disabled={innerDisabled ? "" : undefined}
           style={{
-            "--field-border-width": `${borderWidth}px`,
-            "--field-outline-width": `${outlineWidth}px`,
-            "--field-border-color": borderColor,
+            "--navi-field-border-width": `${borderWidth}px`,
+            "--navi-field-outline-width": `${outlineWidth}px`,
+            "--navi-field-border-color": borderColor,
+            "--navi-field-background-color": backgroundColor,
           }}
         >
           {children}

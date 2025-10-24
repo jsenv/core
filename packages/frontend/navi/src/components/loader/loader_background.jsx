@@ -10,6 +10,7 @@ import.meta.css = /* css */ `
     width: fit-content;
     display: inline-flex;
     height: fit-content;
+    border-radius: inherit;
   }
 
   .navi_loading_rectangle_wrapper {
