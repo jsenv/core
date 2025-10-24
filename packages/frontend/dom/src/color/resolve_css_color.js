@@ -1,5 +1,5 @@
 import { parseCSSColor } from "./color_parsing.js";
-import { colorSchemeIsDark } from "./color_scheme.js";
+import { prefersDarkColors } from "./color_scheme.js";
 
 /**
  * Resolves a color value, handling CSS custom properties and light-dark() function
@@ -21,7 +21,7 @@ export const resolveCSSColor = (color, element) => {
     const darkColor = lightDarkMatch[2].trim();
 
     // Select the appropriate color and recursively resolve it
-    const prefersDark = colorSchemeIsDark(element);
+    const prefersDark = prefersDarkColors(element);
     resolvedColor = prefersDark ? darkColor : lightColor;
     return resolveCSSColor(resolvedColor, element);
   }

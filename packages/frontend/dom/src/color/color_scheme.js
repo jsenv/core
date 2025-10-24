@@ -3,21 +3,26 @@
  * @param {Element} [element] - DOM element to check color-scheme against (optional)
  * @returns {boolean} True if dark mode is active
  */
-export const colorSchemeIsDark = (element) => {
-  if (element) {
-    // Check the computed color-scheme property
-    const computedStyle = getComputedStyle(element);
-    const colorScheme = computedStyle.colorScheme;
+export const prefersDarkColors = (element) => {
+  const colorScheme = getPreferedColorScheme(element);
+  return colorScheme.includes("dark");
+};
 
-    if (colorScheme.includes("dark")) {
-      return true;
-    }
-    if (colorScheme.includes("light")) {
-      return false;
-    }
-    // If color-scheme is not set or is 'normal', fall through to media query
+export const prefersLightColors = (element) => {
+  return !prefersDarkColors(element);
+};
+
+export const getPreferedColorScheme = (element) => {
+  const computedStyle = getComputedStyle(element || document.documentElement);
+  const colorScheme = computedStyle.colorScheme;
+
+  // If no explicit color-scheme is set, or it's "normal",
+  // fall back to prefers-color-scheme media query
+  if (!colorScheme || colorScheme === "normal") {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
   }
 
-  // Fallback to system preference via media query
-  return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  return colorScheme;
 };
