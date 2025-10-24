@@ -31,22 +31,28 @@ export const forwardFieldPseudoSelectors = (
     });
   }
   data_focus_and_focus_visible: {
-    addEventListener("focusin", () => {
-      updateBooleanAttribute("focus", true);
-      if (field.matches(":focus-visible")) {
-        updateBooleanAttribute("focus-visible", true);
+    const updateFocus = () => {
+      if (
+        document.activeElement === field ||
+        field.contains(document.activeElement)
+      ) {
+        updateBooleanAttribute("focus", true);
+        if (field.matches(":focus-visible")) {
+          updateBooleanAttribute("focus-visible", true);
+        }
+      } else {
+        updateBooleanAttribute("focus", false);
+        updateBooleanAttribute("focus-visible", false);
       }
-    });
-    addEventListener("focusout", () => {
-      updateBooleanAttribute("focus", false);
-      updateBooleanAttribute("focus-visible", false);
-    });
+    };
+    updateFocus();
+    addEventListener("focusin", updateFocus);
+    addEventListener("focusout", updateFocus);
   }
   data_active: {
     let onmouseup;
     addEventListener("mousedown", () => {
       updateBooleanAttribute("active", true);
-
       onmouseup = () => {
         document.removeEventListener("mouseup", onmouseup);
         updateBooleanAttribute("active", false);
@@ -60,23 +66,47 @@ export const forwardFieldPseudoSelectors = (
   }
   data_checked: {
     if (field.type === "checkbox") {
-      addEventListener("input", () => {
+      const updateChecked = () => {
         if (field.checked) {
           updateBooleanAttribute("checked", true);
         } else {
           updateBooleanAttribute("checked", false);
         }
+      };
+      updateChecked();
+      addEventListener("input", updateChecked);
+      const mutationObserver = new MutationObserver(() => {
+        updateChecked();
+      });
+      mutationObserver.observe(field, {
+        attributes: true,
+        attributeFilter: ["checked"],
+      });
+      addTeardown(() => {
+        mutationObserver.disconnect();
       });
     }
     if (field.type === "radio") {
-      const thisRadio = field;
-      const radioSet = thisRadio.closest("[data-radio-list], fieldset, form");
-      radioSet.addEventListener("input", () => {
+      const updateChecked = () => {
         if (field.checked) {
           updateBooleanAttribute("checked", true);
         } else {
           updateBooleanAttribute("checked", false);
         }
+      };
+      updateChecked();
+      const thisRadio = field;
+      const radioSet = thisRadio.closest("[data-radio-list], fieldset, form");
+      radioSet.addEventListener("input", updateChecked);
+      addTeardown(() => {
+        radioSet.removeEventListener("input", updateChecked);
+      });
+      const mutationObserver = new MutationObserver(() => {
+        updateChecked();
+      });
+      mutationObserver.observe(field, {
+        attributes: true,
+        attributeFilter: ["checked"],
       });
     }
   }
