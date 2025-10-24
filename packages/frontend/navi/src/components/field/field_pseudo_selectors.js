@@ -108,6 +108,9 @@ export const forwardFieldPseudoSelectors = (
         attributes: true,
         attributeFilter: ["checked"],
       });
+      addTeardown(() => {
+        mutationObserver.disconnect();
+      });
     }
   }
 

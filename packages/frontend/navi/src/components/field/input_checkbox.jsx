@@ -180,7 +180,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
     autoFocus,
     constraints = [],
     appeareance = "custom", // "custom" or "default"
-    accentColor,
+    accentColor = "#3b82f6",
     onClick,
     onInput,
     ...rest
@@ -265,7 +265,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
       loading={innerLoading}
       inset={-1}
       targetSelector={appeareance === "custom" ? ".custom_checkbox" : ""}
-      color="light-dark(#355fcc, #3b82f6)"
+      color={accentColor}
     >
       {inputCheckboxDisplayed}
     </LoadableInlineElement>
