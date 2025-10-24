@@ -40,6 +40,14 @@ export const LoadableInlineElement = forwardRef((props, ref) => {
   if (dataFieldWrapper) {
     delete props["data-field-wrapper"];
   }
+  const dataReadOnly = props["data-readonly"];
+  if (dataReadOnly) {
+    delete props["data-readonly"];
+  }
+  const dataDisabled = props["data-disabled"];
+  if (dataDisabled) {
+    delete props["data-disabled"];
+  }
 
   return (
     <span
@@ -51,6 +59,8 @@ export const LoadableInlineElement = forwardRef((props, ref) => {
       }}
       data-action={actionName}
       data-field-wrapper={dataFieldWrapper}
+      data-readonly={dataReadOnly}
+      data-disabled={dataDisabled}
     >
       <LoaderBackground {...rest} />
       {children}
