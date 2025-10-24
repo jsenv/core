@@ -263,13 +263,16 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
       loading={innerLoading}
       inset={-1}
       targetSelector={appeareance === "custom" ? ".custom_checkbox" : ""}
-      color={"var(--navi-field-accent-color)"}
+      color="var(--navi-field-accent-color)"
+      style={{
+        ...(accentColor ? { "--navi-field-accent-color": accentColor } : {}),
+      }}
     >
       {inputCheckboxDisplayed}
     </LoadableInlineElement>
   );
 });
-const CustomCheckbox = ({ accentColor, children }) => {
+const CustomCheckbox = ({ children }) => {
   const ref = useRef();
   useLayoutEffect(() => {
     const customCheckbox = ref.current;
@@ -286,13 +289,7 @@ const CustomCheckbox = ({ accentColor, children }) => {
   }, []);
 
   return (
-    <div
-      ref={ref}
-      className="custom_checkbox_wrapper"
-      style={{
-        ...(accentColor ? { "--navi-field-accent-color": accentColor } : {}),
-      }}
-    >
+    <div ref={ref} className="custom_checkbox_wrapper">
       {children}
       <div
         className="custom_checkbox"

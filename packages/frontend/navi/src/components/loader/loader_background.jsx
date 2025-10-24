@@ -30,39 +30,48 @@ import.meta.css = /* css */ `
 `;
 
 export const LoadableInlineElement = forwardRef((props, ref) => {
-  const { children, width, height, ...rest } = props;
-
-  const actionName = props["data-action"];
-  if (actionName) {
-    delete props["data-action"];
-  }
-  const dataFieldWrapper = props["data-field-wrapper"];
-  if (dataFieldWrapper) {
-    delete props["data-field-wrapper"];
-  }
-  const dataReadOnly = props["data-readonly"];
-  if (dataReadOnly) {
-    delete props["data-readonly"];
-  }
-  const dataDisabled = props["data-disabled"];
-  if (dataDisabled) {
-    delete props["data-disabled"];
-  }
+  const {
+    // background props
+    loading,
+    containerRef,
+    targetSelector,
+    color,
+    inset,
+    spacingTop,
+    spacingLeft,
+    spacingBottom,
+    spacingRight,
+    // other props
+    width,
+    height,
+    children,
+    ...rest
+  } = props;
 
   return (
     <span
+      {...rest}
       ref={ref}
       className="navi_inline_wrapper"
       style={{
+        ...rest.style,
         ...(width ? { width } : {}),
         ...(height ? { height } : {}),
       }}
-      data-action={actionName}
-      data-field-wrapper={dataFieldWrapper}
-      data-readonly={dataReadOnly}
-      data-disabled={dataDisabled}
     >
-      <LoaderBackground {...rest} />
+      <LoaderBackground
+        {...{
+          loading,
+          containerRef,
+          targetSelector,
+          color,
+          inset,
+          spacingTop,
+          spacingLeft,
+          spacingBottom,
+          spacingRight,
+        }}
+      />
       {children}
     </span>
   );
