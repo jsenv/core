@@ -1,9 +1,10 @@
 import { parseCSSColor } from "./color_parsing.js";
+import { isDarkMode } from "./is_dark_mode.js";
 
 /**
- * Resolves a color value, handling CSS custom properties
- * @param {Element} element - DOM element to resolve CSS variables against
- * @param {string} color - CSS color value (may include CSS variables)
+ * Resolves a color value, handling CSS custom properties and light-dark() function
+ * @param {string} color - CSS color value (may include CSS variables, light-dark())
+ * @param {Element} element - DOM element to resolve CSS variables and light-dark() against
  * @returns {Array<number>|null} [r, g, b, a] values or null if parsing fails
  */
 export const resolveCSSColor = (color, element) => {
@@ -13,8 +14,20 @@ export const resolveCSSColor = (color, element) => {
 
   let resolvedColor = color;
 
+  // Handle light-dark() function
+  const lightDarkMatch = color.match(/light-dark\(([^,]+),([^)]+)\)/);
+  if (lightDarkMatch) {
+    const lightColor = lightDarkMatch[1].trim();
+    const darkColor = lightDarkMatch[2].trim();
+
+    // Select the appropriate color and recursively resolve it
+    const useDarkColor = isDarkMode(element);
+    resolvedColor = useDarkColor ? darkColor : lightColor;
+    return resolveCSSColor(resolvedColor, element);
+  }
+
   // If it's a CSS custom property, resolve it using getComputedStyle
-  if (color.includes("var(")) {
+  if (resolvedColor.includes("var(")) {
     const computedStyle = getComputedStyle(element);
 
     // Handle var() syntax
@@ -33,6 +46,6 @@ export const resolveCSSColor = (color, element) => {
     }
   }
 
-  // Parse the resolved color and return RGB array
+  // Parse the resolved color and return RGBA array
   return parseCSSColor(resolvedColor);
 };
