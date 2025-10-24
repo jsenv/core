@@ -3,12 +3,14 @@ import { useState, useLayoutEffect } from "preact/hooks";
 
 const createIterableWeakSet = () => {
   const objectWeakRefSet = new Set();
+
   return {
-    add: object => {
+    add: (object) => {
       const objectWeakRef = new WeakRef(object);
       objectWeakRefSet.add(objectWeakRef);
     },
-    delete: object => {
+
+    delete: (object) => {
       for (const weakRef of objectWeakRefSet) {
         if (weakRef.deref() === object) {
           objectWeakRefSet.delete(weakRef);
@@ -17,6 +19,7 @@ const createIterableWeakSet = () => {
       }
       return false;
     },
+
     *[Symbol.iterator]() {
       for (const objectWeakRef of objectWeakRefSet) {
         const object = objectWeakRef.deref();
@@ -27,7 +30,8 @@ const createIterableWeakSet = () => {
         yield object;
       }
     },
-    has: object => {
+
+    has: (object) => {
       for (const weakRef of objectWeakRefSet) {
         const objectCandidate = weakRef.deref();
         if (objectCandidate === undefined) {
@@ -40,12 +44,15 @@ const createIterableWeakSet = () => {
       }
       return false;
     },
+
     clear: () => {
       objectWeakRefSet.clear();
     },
+
     get size() {
       return objectWeakRefSet.size;
     },
+
     getStats: () => {
       let alive = 0;
       let dead = 0;
@@ -56,17 +63,14 @@ const createIterableWeakSet = () => {
           dead++;
         }
       }
-      return {
-        total: objectWeakRefSet.size,
-        alive,
-        dead
-      };
-    }
+      return { total: objectWeakRefSet.size, alive, dead };
+    },
   };
 };
 
 const createPubSub = () => {
   const callbackSet = new Set();
+
   const publish = (...args) => {
     const results = [];
     for (const callback of callbackSet) {
@@ -75,7 +79,8 @@ const createPubSub = () => {
     }
     return results;
   };
-  const subscribe = callback => {
+
+  const subscribe = (callback) => {
     if (typeof callback !== "function") {
       throw new TypeError("callback must be a function");
     }
@@ -84,14 +89,17 @@ const createPubSub = () => {
       callbackSet.delete(callback);
     };
   };
+
   const clear = () => {
     callbackSet.clear();
   };
+
   return [publish, subscribe, clear];
 };
 
 // https://github.com/davidtheclark/tabbable/blob/master/index.js
-const isDocumentElement = node => node === node.ownerDocument.documentElement;
+const isDocumentElement = (node) =>
+  node === node.ownerDocument.documentElement;
 
 /**
  * elementToOwnerWindow returns the window owning the element.
@@ -101,7 +109,7 @@ const isDocumentElement = node => node === node.ownerDocument.documentElement;
  * It's often important to work with the correct window because
  * element are scoped per iframes.
  */
-const elementToOwnerWindow = element => {
+const elementToOwnerWindow = (element) => {
   if (elementIsWindow(element)) {
     return element;
   }
@@ -118,7 +126,7 @@ const elementToOwnerWindow = element => {
  * It's often important to work with the correct document because
  * element are scoped per iframes.
  */
-const elementToOwnerDocument = element => {
+const elementToOwnerDocument = (element) => {
   if (elementIsWindow(element)) {
     return element.document;
   }
@@ -127,17 +135,14 @@ const elementToOwnerDocument = element => {
   }
   return element.ownerDocument;
 };
-const elementIsWindow = a => a.window === a;
-const elementIsDocument = a => a.nodeType === 9;
-const elementIsDetails = ({
-  nodeName
-}) => nodeName === "DETAILS";
-const elementIsSummary = ({
-  nodeName
-}) => nodeName === "SUMMARY";
+
+const elementIsWindow = (a) => a.window === a;
+const elementIsDocument = (a) => a.nodeType === 9;
+const elementIsDetails = ({ nodeName }) => nodeName === "DETAILS";
+const elementIsSummary = ({ nodeName }) => nodeName === "SUMMARY";
 
 // should be used ONLY when an element is related to other elements that are not descendants of this element
-const getAssociatedElements = element => {
+const getAssociatedElements = (element) => {
   if (element.tagName === "COL") {
     const columnCells = [];
     const colgroup = element.parentNode;
@@ -161,9 +166,13 @@ const getAssociatedElements = element => {
   return null;
 };
 
-const getComputedStyle$1 = element => elementToOwnerWindow(element).getComputedStyle(element);
-const getStyle = (element, name) => getComputedStyle$1(element).getPropertyValue(name);
+const getComputedStyle$1 = (element) =>
+  elementToOwnerWindow(element).getComputedStyle(element);
+
+const getStyle = (element, name) =>
+  getComputedStyle$1(element).getPropertyValue(name);
 const setStyle = (element, name, value) => {
+
   const prevValue = element.style[name];
   if (prevValue) {
     element.style.setProperty(name, value);
@@ -188,18 +197,26 @@ const forceStyle = (element, name, value) => {
   const restoreStyle = setStyle(element, name, value);
   return restoreStyle;
 };
+
 const addWillChange = (element, property) => {
   const currentWillChange = element.style.willChange;
-  const willChangeValues = currentWillChange ? currentWillChange.split(",").map(v => v.trim()).filter(Boolean) : [];
+  const willChangeValues = currentWillChange
+    ? currentWillChange
+        .split(",")
+        .map((v) => v.trim())
+        .filter(Boolean)
+    : [];
+
   if (willChangeValues.includes(property)) {
     // Property already exists, return no-op
     return () => {};
   }
+
   willChangeValues.push(property);
   element.style.willChange = willChangeValues.join(", ");
   // Return function to remove only this property
   return () => {
-    const newValues = willChangeValues.filter(v => v !== property);
+    const newValues = willChangeValues.filter((v) => v !== property);
     if (newValues.length === 0) {
       element.style.removeProperty("will-change");
     } else {
@@ -207,7 +224,8 @@ const addWillChange = (element, property) => {
     }
   };
 };
-const createSetMany$1 = setter => {
+
+const createSetMany$1 = (setter) => {
   return (element, description) => {
     const cleanupCallbackSet = new Set();
     for (const name of Object.keys(description)) {
@@ -223,17 +241,72 @@ const createSetMany$1 = setter => {
     };
   };
 };
+
 const setStyles = createSetMany$1(setStyle);
 const forceStyles = createSetMany$1(forceStyle);
 
 // Properties that need px units
-const pxProperties = ["width", "height", "top", "left", "right", "bottom", "margin", "marginTop", "marginRight", "marginBottom", "marginLeft", "padding", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "border", "borderWidth", "borderTopWidth", "borderRightWidth", "borderBottomWidth", "borderLeftWidth", "fontSize", "lineHeight", "letterSpacing", "wordSpacing", "translateX", "translateY", "translateZ", "borderRadius", "borderTopLeftRadius", "borderTopRightRadius", "borderBottomLeftRadius", "borderBottomRightRadius"];
+const pxProperties = [
+  "width",
+  "height",
+  "top",
+  "left",
+  "right",
+  "bottom",
+  "margin",
+  "marginTop",
+  "marginRight",
+  "marginBottom",
+  "marginLeft",
+  "padding",
+  "paddingTop",
+  "paddingRight",
+  "paddingBottom",
+  "paddingLeft",
+  "border",
+  "borderWidth",
+  "borderTopWidth",
+  "borderRightWidth",
+  "borderBottomWidth",
+  "borderLeftWidth",
+  "fontSize",
+  "lineHeight",
+  "letterSpacing",
+  "wordSpacing",
+  "translateX",
+  "translateY",
+  "translateZ",
+  "borderRadius",
+  "borderTopLeftRadius",
+  "borderTopRightRadius",
+  "borderBottomLeftRadius",
+  "borderBottomRightRadius",
+];
 
 // Properties that need deg units
-const degProperties = ["rotate", "rotateX", "rotateY", "rotateZ", "skew", "skewX", "skewY"];
+const degProperties = [
+  "rotate",
+  "rotateX",
+  "rotateY",
+  "rotateZ",
+  "skew",
+  "skewX",
+  "skewY",
+];
 
 // Properties that should remain unitless
-const unitlessProperties = ["opacity", "zIndex", "flexGrow", "flexShrink", "order", "columnCount", "scale", "scaleX", "scaleY", "scaleZ"];
+const unitlessProperties = [
+  "opacity",
+  "zIndex",
+  "flexGrow",
+  "flexShrink",
+  "order",
+  "columnCount",
+  "scale",
+  "scaleX",
+  "scaleY",
+  "scaleZ",
+];
 
 // Normalize a single style value
 const normalizeStyle = (value, propertyName, context = "js") => {
@@ -262,7 +335,9 @@ const normalizeStyle = (value, propertyName, context = "js") => {
   // Handle transform.* properties (e.g., "transform.translateX")
   if (propertyName.startsWith("transform.")) {
     if (context === "css") {
-      console.warn("normalizeStyle: magic properties like \"".concat(propertyName, "\" are not applicable in \"css\" context. Returning original value."));
+      console.warn(
+        `normalizeStyle: magic properties like "${propertyName}" are not applicable in "css" context. Returning original value.`,
+      );
       return value;
     }
     const transformProperty = propertyName.slice(10); // Remove "transform." prefix
@@ -281,6 +356,7 @@ const normalizeStyle = (value, propertyName, context = "js") => {
     // never supposed to happen, the value given is neither string nor object
     return undefined;
   }
+
   if (pxProperties.includes(propertyName)) {
     return normalizeNumber(value, context, "px", propertyName);
   }
@@ -290,15 +366,16 @@ const normalizeStyle = (value, propertyName, context = "js") => {
   if (unitlessProperties.includes(propertyName)) {
     return normalizeNumber(value, context, "", propertyName);
   }
+
   return value;
 };
 const normalizeNumber = (value, context, unit, propertyName) => {
   if (context === "css") {
     if (typeof value === "number") {
       if (isNaN(value)) {
-        console.warn("NaN found for \"".concat(propertyName, "\""));
+        console.warn(`NaN found for "${propertyName}"`);
       }
-      return "".concat(value).concat(unit);
+      return `${value}${unit}`;
     }
     return value;
   }
@@ -308,7 +385,9 @@ const normalizeNumber = (value, context, unit, propertyName) => {
     }
     const numericValue = parseFloat(value);
     if (isNaN(numericValue)) {
-      console.warn("\"".concat(propertyName, "\": ").concat(value, " cannot be converted to number, returning value as-is."));
+      console.warn(
+        `"${propertyName}": ${value} cannot be converted to number, returning value as-is.`,
+      );
       return value;
     }
     return numericValue;
@@ -326,26 +405,32 @@ const normalizeStyles = (styles, context = "js") => {
 };
 
 // Convert transform object to CSS string
-const stringifyCSSTransform = transformObj => {
+const stringifyCSSTransform = (transformObj) => {
   const transforms = [];
   for (const key of Object.keys(transformObj)) {
     const transformPartValue = transformObj[key];
-    const normalizedTransformPartValue = normalizeStyle(transformPartValue, key, "css");
-    transforms.push("".concat(key, "(").concat(normalizedTransformPartValue, ")"));
+    const normalizedTransformPartValue = normalizeStyle(
+      transformPartValue,
+      key,
+      "css",
+    );
+    transforms.push(`${key}(${normalizedTransformPartValue})`);
   }
   return transforms.join(" ");
 };
 
 // Parse transform CSS string into object
-const parseCSSTransform = transformString => {
+const parseCSSTransform = (transformString) => {
   if (!transformString || transformString === "none") {
     return undefined;
   }
+
   const transformObj = {};
 
   // Parse transform functions
   const transformPattern = /(\w+)\(([^)]+)\)/g;
   let match;
+
   while ((match = transformPattern.exec(transformString)) !== null) {
     const [, functionName, value] = match;
 
@@ -372,13 +457,15 @@ const parseCSSTransform = transformString => {
 };
 
 // Parse a matrix transform and extract simple transform components when possible
-const parseMatrixTransform = matrixString => {
+const parseMatrixTransform = (matrixString) => {
   // Match matrix() or matrix3d() functions
   const matrixMatch = matrixString.match(/matrix(?:3d)?\(([^)]+)\)/);
   if (!matrixMatch) {
     return null;
   }
-  const values = matrixMatch[1].split(",").map(v => parseFloat(v.trim()));
+
+  const values = matrixMatch[1].split(",").map((v) => parseFloat(v.trim()));
+
   if (matrixString.includes("matrix3d")) {
     // matrix3d(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p)
     if (values.length !== 16) {
@@ -386,7 +473,18 @@ const parseMatrixTransform = matrixString => {
     }
     const [a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p] = values;
     // Check if it's a simple 2D transform (most common case)
-    if (c === 0 && d === 0 && g === 0 && h === 0 && i === 0 && j === 0 && k === 1 && l === 0 && o === 0 && p === 1) {
+    if (
+      c === 0 &&
+      d === 0 &&
+      g === 0 &&
+      h === 0 &&
+      i === 0 &&
+      j === 0 &&
+      k === 1 &&
+      l === 0 &&
+      o === 0 &&
+      p === 1
+    ) {
       // This is essentially a 2D transform
       return parseSimple2DMatrix(a, b, e, f, m, n);
     }
@@ -448,7 +546,8 @@ const parseSimple2DMatrix = (a, b, c, d, e, f) => {
   const scaleX = Math.sqrt(a * a + b * b);
   const scaleY = det / scaleX;
   const rotation = Math.atan2(b, a) * (180 / Math.PI);
-  const skewX = Math.atan((a * c + b * d) / (scaleX * scaleX)) * (180 / Math.PI);
+  const skewX =
+    Math.atan((a * c + b * d) / (scaleX * scaleX)) * (180 / Math.PI);
   if (scaleX !== 1) {
     result.scaleX = scaleX;
   }
@@ -466,9 +565,7 @@ const parseSimple2DMatrix = (a, b, c, d, e, f) => {
 
 // Merge two style objects, handling special cases like transform
 const mergeStyles = (stylesA, stylesB) => {
-  const result = {
-    ...stylesA
-  };
+  const result = { ...stylesA };
   for (const key of Object.keys(stylesB)) {
     if (key === "transform") {
       result[key] = mergeOneStyle(stylesA[key], stylesB[key], key);
@@ -480,42 +577,40 @@ const mergeStyles = (stylesA, stylesB) => {
 };
 
 // Merge a single style property value with an existing value
-const mergeOneStyle = (existingValue, newValue, propertyName, context = "js") => {
+const mergeOneStyle = (
+  existingValue,
+  newValue,
+  propertyName,
+  context = "js",
+) => {
   if (propertyName === "transform") {
     // Matrix parsing is now handled automatically in parseCSSTransform
 
     // Determine the types
-    const existingIsString = typeof existingValue === "string" && existingValue !== "none";
+    const existingIsString =
+      typeof existingValue === "string" && existingValue !== "none";
     const newIsString = typeof newValue === "string" && newValue !== "none";
-    const existingIsObject = typeof existingValue === "object" && existingValue !== null;
+    const existingIsObject =
+      typeof existingValue === "object" && existingValue !== null;
     const newIsObject = typeof newValue === "object" && newValue !== null;
 
     // Case 1: Both are objects - merge directly
     if (existingIsObject && newIsObject) {
-      const merged = {
-        ...existingValue,
-        ...newValue
-      };
+      const merged = { ...existingValue, ...newValue };
       return context === "css" ? stringifyCSSTransform(merged) : merged;
     }
 
     // Case 2: New is object, existing is string - parse existing and merge
     if (newIsObject && existingIsString) {
       const parsedExisting = parseCSSTransform(existingValue);
-      const merged = {
-        ...parsedExisting,
-        ...newValue
-      };
+      const merged = { ...parsedExisting, ...newValue };
       return context === "css" ? stringifyCSSTransform(merged) : merged;
     }
 
     // Case 3: New is string, existing is object - parse new and merge
     if (newIsString && existingIsObject) {
       const parsedNew = parseCSSTransform(newValue);
-      const merged = {
-        ...existingValue,
-        ...parsedNew
-      };
+      const merged = { ...existingValue, ...parsedNew };
       return context === "css" ? stringifyCSSTransform(merged) : merged;
     }
 
@@ -523,10 +618,7 @@ const mergeOneStyle = (existingValue, newValue, propertyName, context = "js") =>
     if (existingIsString && newIsString) {
       const parsedExisting = parseCSSTransform(existingValue);
       const parsedNew = parseCSSTransform(newValue);
-      const merged = {
-        ...parsedExisting,
-        ...parsedNew
-      };
+      const merged = { ...parsedExisting, ...parsedNew };
       return context === "css" ? stringifyCSSTransform(merged) : merged;
     }
 
@@ -629,9 +721,11 @@ const onElementControllerRemoved = (element, controller) => {
     }
   }
 };
+
 const createStyleController = (name = "anonymous") => {
   // Store element data for this controller: element -> { styles, animation }
   const elementWeakMap = new WeakMap();
+
   const set = (element, stylesToSet) => {
     if (!element || typeof element !== "object") {
       throw new Error("Element must be a valid DOM element");
@@ -639,37 +733,37 @@ const createStyleController = (name = "anonymous") => {
     if (!stylesToSet || typeof stylesToSet !== "object") {
       throw new Error("styles must be an object");
     }
+
     const normalizedStylesToSet = normalizeStyles(stylesToSet, "js");
     const elementData = elementWeakMap.get(element);
     if (!elementData) {
-      const animation = createAnimationForStyles(element, normalizedStylesToSet, name);
+      const animation = createAnimationForStyles(
+        element,
+        normalizedStylesToSet,
+        name,
+      );
       elementWeakMap.set(element, {
         styles: normalizedStylesToSet,
-        animation
+        animation,
       });
       onElementControllerAdded(element, controller);
       return;
     }
-    const {
-      styles,
-      animation
-    } = elementData;
+
+    const { styles, animation } = elementData;
     const mergedStyles = mergeStyles(styles, normalizedStylesToSet);
     elementData.styles = mergedStyles;
     updateAnimationStyles(animation, mergedStyles);
   };
+
   const get = (element, propertyName) => {
     const elementData = elementWeakMap.get(element);
     if (!elementData) {
       return undefined;
     }
-    const {
-      styles
-    } = elementData;
+    const { styles } = elementData;
     if (propertyName === undefined) {
-      return {
-        ...styles
-      };
+      return { ...styles };
     }
     if (propertyName.startsWith("transform.")) {
       const transformProp = propertyName.slice("transform.".length);
@@ -677,15 +771,13 @@ const createStyleController = (name = "anonymous") => {
     }
     return styles[propertyName];
   };
+
   const deleteMethod = (element, propertyName) => {
     const elementData = elementWeakMap.get(element);
     if (!elementData) {
       return;
     }
-    const {
-      styles,
-      animation
-    } = elementData;
+    const { styles, animation } = elementData;
     const hasStyle = Object.hasOwn(styles, propertyName);
     if (!hasStyle) {
       return;
@@ -701,15 +793,13 @@ const createStyleController = (name = "anonymous") => {
     }
     updateAnimationStyles(animation, styles);
   };
-  const commit = element => {
+
+  const commit = (element) => {
     const elementData = elementWeakMap.get(element);
     if (!elementData) {
       return; // Nothing to commit on this element for this controller
     }
-    const {
-      styles,
-      animation
-    } = elementData;
+    const { styles, animation } = elementData;
     // Cancel our animation permanently since we're committing styles to inline
     // (Keep this BEFORE getComputedStyle to prevent computedStyle reading our animation styles)
     animation.cancel();
@@ -727,34 +817,41 @@ const createStyleController = (name = "anonymous") => {
     // Clean up controller from element registry
     onElementControllerRemoved(element, controller);
   };
-  const clear = element => {
+
+  const clear = (element) => {
     const elementData = elementWeakMap.get(element);
     if (!elementData) {
       return;
     }
-    const {
-      animation
-    } = elementData;
+    const { animation } = elementData;
     animation.cancel();
     elementWeakMap.delete(element);
     onElementControllerRemoved(element, controller);
   };
+
   const getUnderlyingValue = (element, propertyName) => {
     const elementControllerSet = elementControllerSetRegistry.get(element);
-    const normalizeValueForJs = value => {
+
+    const normalizeValueForJs = (value) => {
       // Use normalizeStyle to handle all property types including transform dot notation
       return normalizeStyle(value, propertyName, "js");
     };
+
     const getFromOtherControllers = () => {
       if (!elementControllerSet || elementControllerSet.size <= 1) {
         return undefined;
       }
+
       let resultValue;
       for (const otherController of elementControllerSet) {
         if (otherController === controller) continue;
         const otherStyles = otherController.get(element);
         if (propertyName in otherStyles) {
-          resultValue = mergeOneStyle(resultValue, otherStyles[propertyName], propertyName);
+          resultValue = mergeOneStyle(
+            resultValue,
+            otherStyles[propertyName],
+            propertyName,
+          );
         }
       }
 
@@ -765,6 +862,7 @@ const createStyleController = (name = "anonymous") => {
       // For actual layout measurements, use rect.* properties instead.
       return normalizeValueForJs(resultValue);
     };
+
     const getFromDOM = () => {
       // Handle transform dot notation
       if (propertyName.startsWith("transform.")) {
@@ -775,6 +873,7 @@ const createStyleController = (name = "anonymous") => {
       const computedValue = getComputedStyle(element)[propertyName];
       return normalizeValueForJs(computedValue);
     };
+
     const getFromDOMLayout = () => {
       // For rect.* properties that reflect actual layout, always read from DOM
       // These represent the actual rendered dimensions, bypassing any controller influence
@@ -798,15 +897,13 @@ const createStyleController = (name = "anonymous") => {
       }
       return undefined;
     };
-    const getWhileDisablingThisController = fn => {
+
+    const getWhileDisablingThisController = (fn) => {
       const elementData = elementWeakMap.get(element);
       if (!elementData) {
         return fn();
       }
-      const {
-        styles,
-        animation
-      } = elementData;
+      const { styles, animation } = elementData;
       // Temporarily cancel our animation to read underlying value
       animation.cancel();
       const underlyingValue = fn();
@@ -814,6 +911,7 @@ const createStyleController = (name = "anonymous") => {
       elementData.animation = createAnimationForStyles(element, styles, name);
       return underlyingValue;
     };
+
     if (typeof propertyName === "function") {
       return getWhileDisablingThisController(propertyName);
     }
@@ -833,9 +931,13 @@ const createStyleController = (name = "anonymous") => {
     }
     return getWhileDisablingThisController(getFromDOM);
   };
+
   const clearAll = () => {
     // Remove this controller from all elements and clean up animations
-    for (const [element, elementControllerSet] of elementControllerSetRegistry) {
+    for (const [
+      element,
+      elementControllerSet,
+    ] of elementControllerSetRegistry) {
       if (!elementControllerSet.has(controller)) {
         continue;
       }
@@ -843,9 +945,7 @@ const createStyleController = (name = "anonymous") => {
       if (!elementData) {
         continue;
       }
-      const {
-        animation
-      } = elementData;
+      const { animation } = elementData;
       animation.cancel();
       elementWeakMap.delete(element);
       onElementControllerRemoved(element, controller);
@@ -859,21 +959,24 @@ const createStyleController = (name = "anonymous") => {
     getUnderlyingValue,
     commit,
     clear,
-    clearAll
+    clearAll,
   };
+
   return controller;
 };
+
 const createAnimationForStyles = (element, styles, id) => {
   const cssStylesToSet = normalizeStyles(styles, "css");
   const animation = element.animate([cssStylesToSet], {
     duration: 0,
-    fill: "forwards"
+    fill: "forwards",
   });
   animation.id = id; // Set a debug name for this animation
   animation.play();
   animation.pause();
   return animation; // Return the created animation
 };
+
 const updateAnimationStyles = (animation, styles) => {
   const cssStyles = normalizeStyles(styles, "css");
   animation.effect.setKeyframes([cssStyles]);
@@ -883,28 +986,36 @@ const updateAnimationStyles = (animation, styles) => {
 
 const addAttributeEffect = (attributeName, effect) => {
   const cleanupWeakMap = new WeakMap();
-  const applyEffect = element => {
+  const applyEffect = (element) => {
     const cleanup = effect(element);
-    cleanupWeakMap.set(element, typeof cleanup === "function" ? cleanup : () => {});
+    cleanupWeakMap.set(
+      element,
+      typeof cleanup === "function" ? cleanup : () => {},
+    );
   };
-  const cleanupEffect = element => {
+
+  const cleanupEffect = (element) => {
     const cleanup = cleanupWeakMap.get(element);
     if (cleanup) {
       cleanup();
       cleanupWeakMap.delete(element);
     }
   };
-  const checkElement = element => {
+
+  const checkElement = (element) => {
     if (element.hasAttribute(attributeName)) {
       applyEffect(element);
     }
-    const elementWithAttributeCollection = element.querySelectorAll("[".concat(attributeName, "]"));
+    const elementWithAttributeCollection = element.querySelectorAll(
+      `[${attributeName}]`,
+    );
     for (const elementWithAttribute of elementWithAttributeCollection) {
       applyEffect(elementWithAttribute);
     }
   };
+
   checkElement(document.body);
-  const mutationObserver = new MutationObserver(mutations => {
+  const mutationObserver = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       if (mutation.type === "childList") {
         for (const addedNode of mutation.addedNodes) {
@@ -913,26 +1024,35 @@ const addAttributeEffect = (attributeName, effect) => {
           }
           checkElement(addedNode);
         }
+
         for (const removedNode of mutation.removedNodes) {
           if (removedNode.nodeType !== Node.ELEMENT_NODE) {
             continue;
           }
 
           // Clean up the removed node itself if it had the attribute
-          if (removedNode.hasAttribute && removedNode.hasAttribute(attributeName)) {
+          if (
+            removedNode.hasAttribute &&
+            removedNode.hasAttribute(attributeName)
+          ) {
             cleanupEffect(removedNode);
           }
 
           // Clean up any children of the removed node that had the attribute
           if (removedNode.querySelectorAll) {
-            const elementsWithAttribute = removedNode.querySelectorAll("[".concat(attributeName, "]"));
+            const elementsWithAttribute = removedNode.querySelectorAll(
+              `[${attributeName}]`,
+            );
             for (const element of elementsWithAttribute) {
               cleanupEffect(element);
             }
           }
         }
       }
-      if (mutation.type === "attributes" && mutation.attributeName === attributeName) {
+      if (
+        mutation.type === "attributes" &&
+        mutation.attributeName === attributeName
+      ) {
         const element = mutation.target;
         if (element.hasAttribute(attributeName)) {
           applyEffect(element);
@@ -946,8 +1066,9 @@ const addAttributeEffect = (attributeName, effect) => {
     childList: true,
     subtree: true,
     attributes: true,
-    attributeFilter: [attributeName]
+    attributeFilter: [attributeName],
   });
+
   return () => {
     mutationObserver.disconnect();
     for (const cleanup of cleanupWeakMap.values()) {
@@ -970,7 +1091,8 @@ const setAttribute = (element, name, value) => {
     element.removeAttribute(name);
   };
 };
-const createSetMany = setter => {
+
+const createSetMany = (setter) => {
   return (element, description) => {
     const cleanupCallbackSet = new Set();
     for (const name of Object.keys(description)) {
@@ -986,7 +1108,284 @@ const createSetMany = setter => {
     };
   };
 };
+
 const setAttributes = createSetMany(setAttribute);
+
+/**
+ * Calculates the contrast ratio between two RGBA colors
+ * Based on WCAG 2.1 specification
+ * @param {Array<number>} rgba1 - [r, g, b, a] values for first color
+ * @param {Array<number>} rgba2 - [r, g, b, a] values for second color
+ * @param {Array<number>} [background=[255, 255, 255, 1]] - Background color to composite against when colors have transparency
+ * @returns {number} Contrast ratio (1-21)
+ */
+const getContrastRatio = (
+  rgba1,
+  rgba2,
+  background = [255, 255, 255, 1],
+) => {
+  // When colors have transparency (alpha < 1), we need to composite them
+  // against a background to get their effective appearance
+  const composited1 = compositeColor(rgba1, background);
+  const composited2 = compositeColor(rgba2, background);
+
+  const lum1 = getLuminance(composited1[0], composited1[1], composited1[2]);
+  const lum2 = getLuminance(composited2[0], composited2[1], composited2[2]);
+  const brightest = Math.max(lum1, lum2);
+  const darkest = Math.min(lum1, lum2);
+  return (brightest + 0.05) / (darkest + 0.05);
+};
+
+/**
+ * Composites a color with alpha over a background color
+ * @param {Array<number>} foreground - [r, g, b, a] foreground color
+ * @param {Array<number>} background - [r, g, b, a] background color
+ * @returns {Array<number>} [r, g, b] composited color (alpha is flattened)
+ */
+const compositeColor = (foreground, background) => {
+  const [fr, fg, fb, fa] = foreground;
+  const [br, bg, bb, ba] = background;
+
+  // No transparency: return the foreground color as-is
+  if (fa === 1) {
+    return [fr, fg, fb];
+  }
+
+  // Alpha compositing formula: C = αA * CA + αB * (1 - αA) * CB
+  const alpha = fa + ba * (1 - fa);
+
+  if (alpha === 0) {
+    return [0, 0, 0];
+  }
+
+  const r = (fa * fr + ba * (1 - fa) * br) / alpha;
+  const g = (fa * fg + ba * (1 - fa) * bg) / alpha;
+  const b = (fa * fb + ba * (1 - fa) * bb) / alpha;
+
+  return [Math.round(r), Math.round(g), Math.round(b)];
+};
+
+/**
+ * Calculates the relative luminance of an RGB color
+ * Based on WCAG 2.1 specification
+ * @param {number} r - Red component (0-255)
+ * @param {number} g - Green component (0-255)
+ * @param {number} b - Blue component (0-255)
+ * @returns {number} Relative luminance (0-1)
+ */
+const getLuminance = (r, g, b) => {
+  const [rs, gs, bs] = [r, g, b].map((c) => {
+    c = c / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+};
+
+/**
+ * Parses a CSS color string into RGBA values
+ * Supports hex (#rgb, #rrggbb, #rrggbbaa), rgb(), rgba(), hsl(), hsla()
+ * @param {string} color - CSS color string
+ * @returns {Array<number>|null} [r, g, b, a] values or null if parsing fails
+ */
+const parseCSSColor = (color) => {
+  if (!color || typeof color !== "string") {
+    return null;
+  }
+
+  color = color.trim().toLowerCase();
+
+  // Hex colors
+  if (color.startsWith("#")) {
+    const hex = color.slice(1);
+    if (hex.length === 3) {
+      // #rgb -> #rrggbb
+      const r = parseInt(hex[0] + hex[0], 16);
+      const g = parseInt(hex[1] + hex[1], 16);
+      const b = parseInt(hex[2] + hex[2], 16);
+      return [r, g, b, 1];
+    }
+    if (hex.length === 6) {
+      // #rrggbb
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      return [r, g, b, 1];
+    }
+    if (hex.length === 8) {
+      // #rrggbbaa
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      const a = parseInt(hex.slice(6, 8), 16) / 255;
+      return [r, g, b, a];
+    }
+  }
+
+  // RGB/RGBA colors
+  const rgbMatch = color.match(/rgba?\(([^)]+)\)/);
+  if (rgbMatch) {
+    const values = rgbMatch[1].split(",").map((v) => parseFloat(v.trim()));
+    if (values.length >= 3) {
+      const r = values[0];
+      const g = values[1];
+      const b = values[2];
+      const a = values.length >= 4 ? values[3] : 1;
+      return [r, g, b, a];
+    }
+  }
+
+  // HSL/HSLA colors - convert to RGB
+  const hslMatch = color.match(/hsla?\(([^)]+)\)/);
+  if (hslMatch) {
+    const values = hslMatch[1].split(",").map((v) => parseFloat(v.trim()));
+    if (values.length >= 3) {
+      const [h, s, l] = values;
+      const a = values.length >= 4 ? values[3] : 1;
+      const [r, g, b] = hslToRgb(h, s / 100, l / 100);
+      return [r, g, b, a];
+    }
+  }
+
+  // Named colors (basic set)
+  if (namedColors[color]) {
+    return [...namedColors[color], 1];
+  }
+  return null;
+};
+
+const namedColors = {
+  black: [0, 0, 0],
+  white: [255, 255, 255],
+  red: [255, 0, 0],
+  green: [0, 128, 0],
+  blue: [0, 0, 255],
+  yellow: [255, 255, 0],
+  cyan: [0, 255, 255],
+  magenta: [255, 0, 255],
+  silver: [192, 192, 192],
+  gray: [128, 128, 128],
+  grey: [128, 128, 128],
+  maroon: [128, 0, 0],
+  olive: [128, 128, 0],
+  lime: [0, 255, 0],
+  aqua: [0, 255, 255],
+  teal: [0, 128, 128],
+  navy: [0, 0, 128],
+  fuchsia: [255, 0, 255],
+  purple: [128, 0, 128],
+};
+
+/**
+ * Converts HSL color to RGB
+ * @param {number} h - Hue (0-360)
+ * @param {number} s - Saturation (0-1)
+ * @param {number} l - Lightness (0-1)
+ * @returns {Array<number>} [r, g, b] values
+ */
+const hslToRgb = (h, s, l) => {
+  h = h % 360;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = l - c / 2;
+  const createRgb = (r, g, b) => {
+    return [
+      Math.round((r + m) * 255),
+      Math.round((g + m) * 255),
+      Math.round((b + m) * 255),
+    ];
+  };
+
+  if (h >= 0 && h < 60) {
+    return createRgb(c, x, 0);
+  }
+  if (h >= 60 && h < 120) {
+    return createRgb(x, c, 0);
+  }
+  if (h >= 120 && h < 180) {
+    return createRgb(0, c, x);
+  }
+  if (h >= 180 && h < 240) {
+    return createRgb(0, x, c);
+  }
+  if (h >= 240 && h < 300) {
+    return createRgb(x, 0, c);
+  }
+  if (h >= 300 && h < 360) {
+    return createRgb(c, 0, x);
+  }
+
+  return createRgb(0, 0, 0);
+};
+
+/**
+ * Resolves a color value, handling CSS custom properties
+ * @param {Element} element - DOM element to resolve CSS variables against
+ * @param {string} color - CSS color value (may include CSS variables)
+ * @returns {Array<number>|null} [r, g, b, a] values or null if parsing fails
+ */
+const resolveCSSColor = (element, color) => {
+  if (!color || typeof color !== "string") {
+    return null;
+  }
+
+  let resolvedColor = color;
+
+  // If it's a CSS custom property, resolve it using getComputedStyle
+  if (color.includes("var(")) {
+    const computedStyle = getComputedStyle(element);
+
+    // Handle var() syntax
+    const varMatch = color.match(/var\(([^,)]+)(?:,([^)]+))?\)/);
+    if (varMatch) {
+      const propertyName = varMatch[1].trim();
+      const fallback = varMatch[2]?.trim();
+
+      const resolvedValue = computedStyle.getPropertyValue(propertyName).trim();
+      if (resolvedValue) {
+        resolvedColor = resolvedValue;
+      } else if (fallback) {
+        // Recursively resolve fallback (in case it's also a CSS variable)
+        return resolveCSSColor(element, fallback);
+      }
+    }
+  }
+
+  // Parse the resolved color and return RGB array
+  return parseCSSColor(resolvedColor);
+};
+
+/**
+ * Chooses between light and dark colors based on which provides better contrast against a background
+ * @param {Element} element - DOM element to resolve CSS variables against
+ * @param {string} backgroundColor - CSS color value (hex, rgb, hsl, CSS variable, etc.)
+ * @param {string} lightColor - Light color option (typically for dark backgrounds)
+ * @param {string} darkColor - Dark color option (typically for light backgrounds)
+ * @returns {string} The color that provides better contrast (lightColor or darkColor)
+ */
+
+const pickLightOrDark = (
+  element,
+  backgroundColor,
+  lightColor,
+  darkColor,
+) => {
+  const resolvedBgColor = resolveCSSColor(element, backgroundColor);
+  const resolvedLightColor = resolveCSSColor(element, lightColor);
+  const resolvedDarkColor = resolveCSSColor(element, darkColor);
+
+  if (!resolvedBgColor || !resolvedLightColor || !resolvedDarkColor) {
+    // Fallback to light color if parsing fails
+    return lightColor;
+  }
+
+  const contrastWithLight = getContrastRatio(
+    resolvedBgColor,
+    resolvedLightColor,
+  );
+  const contrastWithDark = getContrastRatio(resolvedBgColor, resolvedDarkColor);
+
+  return contrastWithLight > contrastWithDark ? lightColor : darkColor;
+};
 
 const findAncestor = (node, predicate) => {
   let ancestor = node.parentNode;
@@ -998,14 +1397,10 @@ const findAncestor = (node, predicate) => {
   }
   return null;
 };
-const findDescendant = (rootNode, fn, {
-  skipRoot
-} = {}) => {
+
+const findDescendant = (rootNode, fn, { skipRoot } = {}) => {
   const iterator = createNextNodeIterator(rootNode, rootNode, skipRoot);
-  let {
-    done,
-    value: node
-  } = iterator.next();
+  let { done, value: node } = iterator.next();
   while (done === false) {
     let skipChildren = false;
     if (node === skipRoot) {
@@ -1018,88 +1413,78 @@ const findDescendant = (rootNode, fn, {
         return node;
       }
     }
-    ({
-      done,
-      value: node
-    } = iterator.next(skipChildren));
+    ({ done, value: node } = iterator.next(skipChildren));
   }
   return null;
 };
-const findLastDescendant = (rootNode, fn, {
-  skipRoot
-} = {}) => {
+
+const findLastDescendant = (rootNode, fn, { skipRoot } = {}) => {
   const deepestNode = getDeepestNode(rootNode, skipRoot);
   if (deepestNode) {
-    const iterator = createPreviousNodeIterator(deepestNode, rootNode, skipRoot);
-    let {
-      done,
-      value: node
-    } = iterator.next();
+    const iterator = createPreviousNodeIterator(
+      deepestNode,
+      rootNode,
+      skipRoot,
+    );
+    let { done, value: node } = iterator.next();
     while (done === false) {
       if (fn(node)) {
         return node;
       }
-      ({
-        done,
-        value: node
-      } = iterator.next());
+      ({ done, value: node } = iterator.next());
     }
   }
   return null;
 };
-const findAfter = (from, predicate, {
-  root = null,
-  skipRoot = null,
-  skipChildren = false
-} = {}) => {
+
+const findAfter = (
+  from,
+  predicate,
+  { root = null, skipRoot = null, skipChildren = false } = {},
+) => {
   const iterator = createAfterNodeIterator(from, root, skipChildren, skipRoot);
-  let {
-    done,
-    value: node
-  } = iterator.next();
+  let { done, value: node } = iterator.next();
   while (done === false) {
     if (predicate(node)) {
       return node;
     }
-    ({
-      done,
-      value: node
-    } = iterator.next());
+    ({ done, value: node } = iterator.next());
   }
   return null;
 };
-const findBefore = (from, predicate, {
-  root = null,
-  skipRoot = null
-} = {}) => {
+
+const findBefore = (
+  from,
+  predicate,
+  { root = null, skipRoot = null } = {},
+) => {
   const iterator = createPreviousNodeIterator(from, root, skipRoot);
-  let {
-    done,
-    value: node
-  } = iterator.next();
+  let { done, value: node } = iterator.next();
   while (done === false) {
     if (predicate(node)) {
       return node;
     }
-    ({
-      done,
-      value: node
-    } = iterator.next());
+    ({ done, value: node } = iterator.next());
   }
   return null;
 };
+
 const getNextNode = (node, rootNode, skipChild = false, skipRoot = null) => {
   if (!skipChild) {
     const firstChild = node.firstChild;
     if (firstChild) {
       // If the first child is skipRoot or inside skipRoot, skip it
-      if (skipRoot && (firstChild === skipRoot || skipRoot.contains(firstChild))) {
+      if (
+        skipRoot &&
+        (firstChild === skipRoot || skipRoot.contains(firstChild))
+      ) {
         // Skip this entire subtree by going to next sibling or up
         return getNextNode(node, rootNode, true, skipRoot);
       }
       return firstChild;
     }
   }
+
   const nextSibling = node.nextSibling;
   if (nextSibling) {
     // If next sibling is skipRoot, skip it entirely
@@ -1108,27 +1493,39 @@ const getNextNode = (node, rootNode, skipChild = false, skipRoot = null) => {
     }
     return nextSibling;
   }
+
   const parentNode = node.parentNode;
   if (parentNode && parentNode !== rootNode) {
     return getNextNode(parentNode, rootNode, true, skipRoot);
   }
+
   return null;
 };
+
 const createNextNodeIterator = (node, rootNode, skipRoot = null) => {
   let current = node;
   const next = (innerSkipChildren = false) => {
-    const nextNode = getNextNode(current, rootNode, innerSkipChildren, skipRoot);
+    const nextNode = getNextNode(
+      current,
+      rootNode,
+      innerSkipChildren,
+      skipRoot,
+    );
     current = nextNode;
     return {
       done: Boolean(nextNode) === false,
-      value: nextNode
+      value: nextNode,
     };
   };
-  return {
-    next
-  };
+  return { next };
 };
-const createAfterNodeIterator = (fromNode, rootNode, skipChildren = false, skipRoot = null) => {
+
+const createAfterNodeIterator = (
+  fromNode,
+  rootNode,
+  skipChildren = false,
+  skipRoot = null,
+) => {
   let current = fromNode;
   let childrenSkipped = false;
 
@@ -1138,24 +1535,32 @@ const createAfterNodeIterator = (fromNode, rootNode, skipChildren = false, skipR
     childrenSkipped = true; // Mark that we've already "processed" this node
     skipChildren = true; // Force skip children to exit the skipRoot subtree
   }
+
   const next = (innerSkipChildren = false) => {
-    const nextNode = getNextNode(current, rootNode, skipChildren && childrenSkipped === false || innerSkipChildren, skipRoot);
+    const nextNode = getNextNode(
+      current,
+      rootNode,
+      (skipChildren && childrenSkipped === false) || innerSkipChildren,
+      skipRoot,
+    );
     childrenSkipped = true;
     current = nextNode;
     return {
       done: Boolean(nextNode) === false,
-      value: nextNode
+      value: nextNode,
     };
   };
-  return {
-    next
-  };
+  return { next };
 };
+
 const getDeepestNode = (node, skipRoot = null) => {
   let deepestNode = node.lastChild;
   while (deepestNode) {
     // If we hit skipRoot or enter its subtree, stop going deeper
-    if (skipRoot && (deepestNode === skipRoot || skipRoot.contains(deepestNode))) {
+    if (
+      skipRoot &&
+      (deepestNode === skipRoot || skipRoot.contains(deepestNode))
+    ) {
       // Try the previous sibling instead
       const previousSibling = deepestNode.previousSibling;
       if (previousSibling) {
@@ -1164,6 +1569,7 @@ const getDeepestNode = (node, skipRoot = null) => {
       // If no previous sibling, return the parent (which should be safe)
       return deepestNode.parentNode === node ? null : deepestNode.parentNode;
     }
+
     const lastChild = deepestNode.lastChild;
     if (lastChild) {
       deepestNode = lastChild;
@@ -1173,6 +1579,7 @@ const getDeepestNode = (node, skipRoot = null) => {
   }
   return deepestNode;
 };
+
 const getPreviousNode = (node, rootNode, skipRoot = null) => {
   const previousSibling = node.previousSibling;
   if (previousSibling) {
@@ -1180,13 +1587,19 @@ const getPreviousNode = (node, rootNode, skipRoot = null) => {
     if (skipRoot && previousSibling === skipRoot) {
       return getPreviousNode(previousSibling, rootNode, skipRoot);
     }
+
     const deepestChild = getDeepestNode(previousSibling, skipRoot);
 
     // Check if deepest child is inside skipRoot (shouldn't happen with updated getDeepestNode, but safe check)
-    if (skipRoot && deepestChild && (deepestChild === skipRoot || skipRoot.contains(deepestChild))) {
+    if (
+      skipRoot &&
+      deepestChild &&
+      (deepestChild === skipRoot || skipRoot.contains(deepestChild))
+    ) {
       // Skip this sibling entirely and try the next one
       return getPreviousNode(previousSibling, rootNode, skipRoot);
     }
+
     if (deepestChild) {
       return deepestChild;
     }
@@ -1200,6 +1613,7 @@ const getPreviousNode = (node, rootNode, skipRoot = null) => {
   }
   return null;
 };
+
 const createPreviousNodeIterator = (fromNode, rootNode, skipRoot = null) => {
   let current = fromNode;
 
@@ -1207,38 +1621,45 @@ const createPreviousNodeIterator = (fromNode, rootNode, skipRoot = null) => {
   if (skipRoot && (fromNode === skipRoot || skipRoot.contains(fromNode))) {
     current = skipRoot;
   }
+
   const next = () => {
     const previousNode = getPreviousNode(current, rootNode, skipRoot);
     current = previousNode;
     return {
       done: Boolean(previousNode) === false,
-      value: previousNode
+      value: previousNode,
     };
   };
   return {
-    next
+    next,
   };
 };
 
 const activeElementSignal = signal(document.activeElement);
-document.addEventListener("focus", () => {
-  activeElementSignal.value = document.activeElement;
-}, {
-  capture: true
-});
+
+document.addEventListener(
+  "focus",
+  () => {
+    activeElementSignal.value = document.activeElement;
+  },
+  { capture: true },
+);
 // When clicking on document there is no "focus" event dispatched on the document
 // We can detect that with "blur" event when relatedTarget is null
-document.addEventListener("blur", e => {
-  if (!e.relatedTarget) {
-    activeElementSignal.value = document.activeElement;
-  }
-}, {
-  capture: true
-});
+document.addEventListener(
+  "blur",
+  (e) => {
+    if (!e.relatedTarget) {
+      activeElementSignal.value = document.activeElement;
+    }
+  },
+  { capture: true },
+);
+
 const useActiveElement = () => {
   return activeElementSignal.value;
 };
-const addActiveElementEffect = callback => {
+const addActiveElementEffect = (callback) => {
   const remove = effect(() => {
     const activeElement = activeElementSignal.value;
     callback(activeElement);
@@ -1246,7 +1667,7 @@ const addActiveElementEffect = callback => {
   return remove;
 };
 
-const elementIsVisible = node => {
+const elementIsVisible = (node) => {
   if (isDocumentElement(node)) {
     return true;
   }
@@ -1274,7 +1695,7 @@ const elementIsVisible = node => {
   return true;
 };
 
-const elementIsFocusable = node => {
+const elementIsFocusable = (node) => {
   // only element node can be focused, document, textNodes etc cannot
   if (node.nodeType !== 1) {
     return false;
@@ -1289,7 +1710,10 @@ const elementIsFocusable = node => {
     }
     return elementIsVisible(node);
   }
-  if (["button", "select", "datalist", "iframe", "textarea"].indexOf(nodeName) > -1) {
+  if (
+    ["button", "select", "datalist", "iframe", "textarea"].indexOf(nodeName) >
+    -1
+  ) {
     return elementIsVisible(node);
   }
   if (["a", "area"].indexOf(nodeName) > -1) {
@@ -1315,7 +1739,8 @@ const elementIsFocusable = node => {
   }
   return false;
 };
-const canInteract = element => {
+
+const canInteract = (element) => {
   if (element.disabled) {
     return false;
   }
@@ -1326,7 +1751,7 @@ const canInteract = element => {
   return true;
 };
 
-const findFocusable = element => {
+const findFocusable = (element) => {
   const associatedElements = getAssociatedElements(element);
   if (associatedElements) {
     for (const associatedElement of associatedElements) {
@@ -1344,10 +1769,15 @@ const findFocusable = element => {
   return focusableDescendant;
 };
 
-const canInterceptKeys = event => {
+const canInterceptKeys = (event) => {
   const target = event.target;
   // Don't handle shortcuts when user is typing
-  if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.contentEditable === "true" || target.isContentEditable) {
+  if (
+    target.tagName === "INPUT" ||
+    target.tagName === "TEXTAREA" ||
+    target.contentEditable === "true" ||
+    target.isContentEditable
+  ) {
     return false;
   }
   // Don't handle shortcuts when select dropdown is open
@@ -1355,7 +1785,12 @@ const canInterceptKeys = event => {
     return false;
   }
   // Don't handle shortcuts when target or container is disabled
-  if (target.disabled || target.closest("[disabled]") || target.inert || target.closest("[inert]")) {
+  if (
+    target.disabled ||
+    target.closest("[disabled]") ||
+    target.inert ||
+    target.closest("[inert]")
+  ) {
     return false;
   }
   return true;
@@ -1363,45 +1798,50 @@ const canInterceptKeys = event => {
 
 // WeakMap to store focus group metadata
 const focusGroupRegistry = new WeakMap();
+
 const setFocusGroup = (element, options) => {
   focusGroupRegistry.set(element, options);
   return () => {
     focusGroupRegistry.delete(element);
   };
 };
-const getFocusGroup = element => {
+const getFocusGroup = (element) => {
   return focusGroupRegistry.get(element);
 };
 
-const createEventMarker = symbolName => {
+const createEventMarker = (symbolName) => {
   const symbol = Symbol.for(symbolName);
-  const isMarked = event => {
+
+  const isMarked = (event) => {
     return Boolean(event[symbol]);
   };
+
   return {
-    mark: event => {
+    mark: (event) => {
       event[symbol] = true;
     },
-    isMarked
+    isMarked,
   };
 };
 
 const focusNavEventMarker = createEventMarker("focus_nav");
-const preventFocusNav = event => {
-  focusNavEventMarker.mark(event);
-};
-const isFocusNavMarked = event => {
-  return focusNavEventMarker.isMarked(event);
-};
-const markFocusNav = event => {
+
+const preventFocusNav = (event) => {
   focusNavEventMarker.mark(event);
 };
 
-const performArrowNavigation = (event, element, {
-  direction = "both",
-  loop,
-  name
-} = {}) => {
+const isFocusNavMarked = (event) => {
+  return focusNavEventMarker.isMarked(event);
+};
+const markFocusNav = (event) => {
+  focusNavEventMarker.mark(event);
+};
+
+const performArrowNavigation = (
+  event,
+  element,
+  { direction = "both", loop, name } = {},
+) => {
   if (!canInterceptKeys(event)) {
     return false;
   }
@@ -1411,8 +1851,14 @@ const performArrowNavigation = (event, element, {
     // (and it would prevent scroll via keyboard that we might want here)
     return true;
   }
-  const onTargetToFocus = targetToFocus => {
-    console.debug("Arrow navigation: ".concat(event.key, " from"), activeElement, "to", targetToFocus);
+
+  const onTargetToFocus = (targetToFocus) => {
+    console.debug(
+      `Arrow navigation: ${event.key} from`,
+      activeElement,
+      "to",
+      targetToFocus,
+    );
     event.preventDefault();
     markFocusNav(event);
     targetToFocus.focus();
@@ -1421,19 +1867,18 @@ const performArrowNavigation = (event, element, {
   // Grid navigation: we support only TABLE element for now
   // A role="table" or an element with display: table could be used too but for now we need only TABLE support
   if (element.tagName === "TABLE") {
-    const targetInGrid = getTargetInTableFocusGroup(event, element, {
-      loop
-    });
+    const targetInGrid = getTargetInTableFocusGroup(event, element, { loop });
     if (!targetInGrid) {
       return false;
     }
     onTargetToFocus(targetInGrid);
     return true;
   }
+
   const targetInLinearGroup = getTargetInLinearFocusGroup(event, element, {
     direction,
     loop,
-    name
+    name,
   });
   if (!targetInLinearGroup) {
     return false;
@@ -1441,18 +1886,21 @@ const performArrowNavigation = (event, element, {
   onTargetToFocus(targetInLinearGroup);
   return true;
 };
-const getTargetInLinearFocusGroup = (event, element, {
-  direction,
-  loop,
-  name
-}) => {
+
+const getTargetInLinearFocusGroup = (
+  event,
+  element,
+  { direction, loop, name },
+) => {
   const activeElement = document.activeElement;
 
   // Check for Cmd/Ctrl + arrow keys for jumping to start/end of linear group
   const isJumpToEnd = event.metaKey || event.ctrlKey;
+
   if (isJumpToEnd) {
     return getJumpToEndTargetLinear(event, element, direction);
   }
+
   const isForward = isForwardArrow(event, direction);
 
   // Arrow Left/Up: move to previous focusable element in group
@@ -1461,19 +1909,22 @@ const getTargetInLinearFocusGroup = (event, element, {
       break backward;
     }
     const previousElement = findBefore(activeElement, elementIsFocusable, {
-      root: element
+      root: element,
     });
     if (previousElement) {
       return previousElement;
     }
     const ancestorTarget = delegateArrowNavigation(event, element, {
-      name
+      name,
     });
     if (ancestorTarget) {
       return ancestorTarget;
     }
     if (loop) {
-      const lastFocusableElement = findLastDescendant(element, elementIsFocusable);
+      const lastFocusableElement = findLastDescendant(
+        element,
+        elementIsFocusable,
+      );
       if (lastFocusableElement) {
         return lastFocusableElement;
       }
@@ -1487,13 +1938,13 @@ const getTargetInLinearFocusGroup = (event, element, {
       break forward;
     }
     const nextElement = findAfter(activeElement, elementIsFocusable, {
-      root: element
+      root: element,
     });
     if (nextElement) {
       return nextElement;
     }
     const ancestorTarget = delegateArrowNavigation(event, element, {
-      name
+      name,
     });
     if (ancestorTarget) {
       return ancestorTarget;
@@ -1507,12 +1958,11 @@ const getTargetInLinearFocusGroup = (event, element, {
     }
     return null;
   }
+
   return null;
 };
 // Find parent focus group with the same name and try delegation
-const delegateArrowNavigation = (event, currentElement, {
-  name
-}) => {
+const delegateArrowNavigation = (event, currentElement, { name }) => {
   let ancestorElement = currentElement.parentElement;
   while (ancestorElement) {
     const ancestorFocusGroup = getFocusGroup(ancestorElement);
@@ -1522,15 +1972,17 @@ const delegateArrowNavigation = (event, currentElement, {
     }
 
     // Check if groups should delegate to each other
-    const shouldDelegate = name === undefined && ancestorFocusGroup.name === undefined ? true // Both unnamed - delegate based on ancestor relationship
-    : ancestorFocusGroup.name === name; // Both have same explicit name
+    const shouldDelegate =
+      name === undefined && ancestorFocusGroup.name === undefined
+        ? true // Both unnamed - delegate based on ancestor relationship
+        : ancestorFocusGroup.name === name; // Both have same explicit name
 
     if (shouldDelegate) {
       // Try navigation in parent focus group
       return getTargetInLinearFocusGroup(event, ancestorElement, {
         direction: ancestorFocusGroup.direction,
         loop: ancestorFocusGroup.loop,
-        name: ancestorFocusGroup.name
+        name: ancestorFocusGroup.name,
       });
     }
   }
@@ -1543,21 +1995,25 @@ const getJumpToEndTargetLinear = (event, element, direction) => {
   if (!isForwardArrow(event, direction) && !isBackwardArrow(event, direction)) {
     return null;
   }
+
   if (isBackwardArrow(event, direction)) {
     // Jump to first focusable element in the group
     return findDescendant(element, elementIsFocusable);
   }
+
   if (isForwardArrow(event, direction)) {
     // Jump to last focusable element in the group
     return findLastDescendant(element, elementIsFocusable);
   }
+
   return null;
 };
+
 const isBackwardArrow = (event, direction = "both") => {
   const backwardKeys = {
     both: ["ArrowLeft", "ArrowUp"],
     vertical: ["ArrowUp"],
-    horizontal: ["ArrowLeft"]
+    horizontal: ["ArrowLeft"],
   };
   return backwardKeys[direction]?.includes(event.key) ?? false;
 };
@@ -1565,22 +2021,26 @@ const isForwardArrow = (event, direction = "both") => {
   const forwardKeys = {
     both: ["ArrowRight", "ArrowDown"],
     vertical: ["ArrowDown"],
-    horizontal: ["ArrowRight"]
+    horizontal: ["ArrowRight"],
   };
   return forwardKeys[direction]?.includes(event.key) ?? false;
 };
 
 // Handle arrow navigation inside an HTMLTableElement as a grid.
 // Moves focus to adjacent cell in the direction of the arrow key.
-const getTargetInTableFocusGroup = (event, table, {
-  loop
-}) => {
+const getTargetInTableFocusGroup = (event, table, { loop }) => {
   const arrowKey = event.key;
 
   // Only handle arrow keys
-  if (arrowKey !== "ArrowRight" && arrowKey !== "ArrowLeft" && arrowKey !== "ArrowUp" && arrowKey !== "ArrowDown") {
+  if (
+    arrowKey !== "ArrowRight" &&
+    arrowKey !== "ArrowLeft" &&
+    arrowKey !== "ArrowUp" &&
+    arrowKey !== "ArrowDown"
+  ) {
     return null;
   }
+
   const focusedElement = document.activeElement;
   const currentCell = focusedElement?.closest?.("td,th");
 
@@ -1592,13 +2052,21 @@ const getTargetInTableFocusGroup = (event, table, {
   // Get the current position in the table grid
   const currentRow = currentCell.parentElement; // tr element
   const allRows = Array.from(table.rows);
-  const currentRowIndex = /** @type {HTMLTableRowElement} */currentRow.rowIndex;
-  const currentColumnIndex = /** @type {HTMLTableCellElement} */currentCell.cellIndex;
+  const currentRowIndex = /** @type {HTMLTableRowElement} */ (currentRow)
+    .rowIndex;
+  const currentColumnIndex = /** @type {HTMLTableCellElement} */ (currentCell)
+    .cellIndex;
 
   // Check for Cmd/Ctrl + arrow keys for jumping to end of row/column
   const isJumpToEnd = event.metaKey || event.ctrlKey;
+
   if (isJumpToEnd) {
-    return getJumpToEndTarget(arrowKey, allRows, currentRowIndex, currentColumnIndex);
+    return getJumpToEndTarget(
+      arrowKey,
+      allRows,
+      currentRowIndex,
+      currentColumnIndex,
+    );
   }
 
   // Create an iterator that will scan through cells in the arrow direction
@@ -1606,9 +2074,8 @@ const getTargetInTableFocusGroup = (event, table, {
   const candidateCells = createTableCellIterator(arrowKey, allRows, {
     startRow: currentRowIndex,
     startColumn: currentColumnIndex,
-    originalColumn: currentColumnIndex,
-    // Used to maintain column alignment for vertical moves
-    loopMode: normalizeLoop(loop)
+    originalColumn: currentColumnIndex, // Used to maintain column alignment for vertical moves
+    loopMode: normalizeLoop(loop),
   });
 
   // Find the first cell that is itself focusable
@@ -1617,11 +2084,17 @@ const getTargetInTableFocusGroup = (event, table, {
       return candidateCell;
     }
   }
+
   return null; // No focusable cell found
 };
 
 // Handle Cmd/Ctrl + arrow keys to jump to the end of row/column
-const getJumpToEndTarget = (arrowKey, allRows, currentRowIndex, currentColumnIndex) => {
+const getJumpToEndTarget = (
+  arrowKey,
+  allRows,
+  currentRowIndex,
+  currentColumnIndex,
+) => {
   if (arrowKey === "ArrowRight") {
     // Jump to last focusable cell in current row
     const currentRow = allRows[currentRowIndex];
@@ -1637,10 +2110,12 @@ const getJumpToEndTarget = (arrowKey, allRows, currentRowIndex, currentColumnInd
     }
     return null;
   }
+
   if (arrowKey === "ArrowLeft") {
     // Jump to first focusable cell in current row
     const currentRow = allRows[currentRowIndex];
     if (!currentRow) return null;
+
     const cells = Array.from(currentRow.cells);
     for (const cell of cells) {
       if (elementIsFocusable(cell)) {
@@ -1649,6 +2124,7 @@ const getJumpToEndTarget = (arrowKey, allRows, currentRowIndex, currentColumnInd
     }
     return null;
   }
+
   if (arrowKey === "ArrowDown") {
     // Jump to last focusable cell in current column
     for (let rowIndex = allRows.length - 1; rowIndex >= 0; rowIndex--) {
@@ -1660,6 +2136,7 @@ const getJumpToEndTarget = (arrowKey, allRows, currentRowIndex, currentColumnInd
     }
     return null;
   }
+
   if (arrowKey === "ArrowUp") {
     // Jump to first focusable cell in current column
     for (let rowIndex = 0; rowIndex < allRows.length; rowIndex++) {
@@ -1671,17 +2148,17 @@ const getJumpToEndTarget = (arrowKey, allRows, currentRowIndex, currentColumnInd
     }
     return null;
   }
+
   return null;
 };
 
 // Create an iterator that yields table cells in the direction of arrow key movement.
 // This scans through cells until it finds one with a focusable element or completes a full loop.
-const createTableCellIterator = function* (arrowKey, allRows, {
-  startRow,
-  startColumn,
-  originalColumn,
-  loopMode
-}) {
+const createTableCellIterator = function* (
+  arrowKey,
+  allRows,
+  { startRow, startColumn, originalColumn, loopMode },
+) {
   if (allRows.length === 0) {
     return; // No rows to navigate
   }
@@ -1689,10 +2166,19 @@ const createTableCellIterator = function* (arrowKey, allRows, {
   // Keep track of which column we should prefer for vertical movements
   // This helps maintain column alignment when moving up/down through rows of different lengths
   let preferredColumn = originalColumn;
+
   const normalizedLoopMode = normalizeLoop(loopMode);
 
   // Helper function to calculate the next position based on current position and arrow key
-  const calculateNextPosition = (currentRow, currentColumn) => getNextTablePosition(arrowKey, allRows, currentRow, currentColumn, preferredColumn, normalizedLoopMode);
+  const calculateNextPosition = (currentRow, currentColumn) =>
+    getNextTablePosition(
+      arrowKey,
+      allRows,
+      currentRow,
+      currentColumn,
+      preferredColumn,
+      normalizedLoopMode,
+    );
 
   // Start by calculating the first position to move to
   let nextPosition = calculateNextPosition(startRow, startColumn);
@@ -1701,7 +2187,8 @@ const createTableCellIterator = function* (arrowKey, allRows, {
   }
 
   // Keep track of our actual starting position to detect when we've completed a full loop
-  const actualStartingPosition = "".concat(startRow, ":").concat(startColumn);
+  const actualStartingPosition = `${startRow}:${startColumn}`;
+
   while (true) {
     const [nextColumn, nextRow] = nextPosition; // Destructure [column, row]
     const targetRow = allRows[nextRow];
@@ -1747,7 +2234,7 @@ const createTableCellIterator = function* (arrowKey, allRows, {
     }
 
     // Check if we've completed a full loop by returning to our actual starting position
-    const currentPositionKey = "".concat(nextRow, ":").concat(nextColumn);
+    const currentPositionKey = `${nextRow}:${nextColumn}`;
     if (currentPositionKey === actualStartingPosition) {
       return; // We've gone full circle back to where we started
     }
@@ -1755,19 +2242,26 @@ const createTableCellIterator = function* (arrowKey, allRows, {
 };
 
 // Normalize loop option to a mode string or false
-const normalizeLoop = loop => {
+const normalizeLoop = (loop) => {
   if (loop === true) return "wrap";
   if (loop === "wrap") return "wrap";
   if (loop === "flow") return "flow";
   return false;
 };
-const getMaxColumns = rows => rows.reduce((max, r) => Math.max(max, r?.cells?.length || 0), 0);
+
+const getMaxColumns = (rows) =>
+  rows.reduce((max, r) => Math.max(max, r?.cells?.length || 0), 0);
 
 // Calculate the next row and column position when moving in a table with arrow keys.
 // Returns [column, row] for the next position, or null if movement is not possible.
-const getNextTablePosition = (arrowKey, allRows, currentRow, currentColumn, preferredColumn,
-// Used for vertical movement to maintain column alignment
-loopMode) => {
+const getNextTablePosition = (
+  arrowKey,
+  allRows,
+  currentRow,
+  currentColumn,
+  preferredColumn, // Used for vertical movement to maintain column alignment
+  loopMode,
+) => {
   if (arrowKey === "ArrowRight") {
     const currentRowLength = allRows[currentRow]?.cells?.length || 0;
     const nextColumn = currentColumn + 1;
@@ -1786,6 +2280,7 @@ loopMode) => {
       }
       return [0, nextRow]; // [column, row]
     }
+
     if (loopMode === "wrap") {
       // Wrap mode: stay in same row, wrap to first column
       return [0, currentRow]; // [column, row]
@@ -1794,6 +2289,7 @@ loopMode) => {
     // No looping: can't move
     return null;
   }
+
   if (arrowKey === "ArrowLeft") {
     const previousColumn = currentColumn - 1;
 
@@ -1813,6 +2309,7 @@ loopMode) => {
       const lastColumnInPreviousRow = Math.max(0, previousRowLength - 1);
       return [lastColumnInPreviousRow, previousRow]; // [column, row]
     }
+
     if (loopMode === "wrap") {
       // Wrap mode: stay in same row, wrap to last column
       const currentRowLength = allRows[currentRow]?.cells?.length || 0;
@@ -1823,6 +2320,7 @@ loopMode) => {
     // No looping: can't move
     return null;
   }
+
   if (arrowKey === "ArrowDown") {
     const nextRow = currentRow + 1;
 
@@ -1830,7 +2328,10 @@ loopMode) => {
     if (nextRow < allRows.length) {
       const nextRowLength = allRows[nextRow]?.cells?.length || 0;
       // Try to maintain the preferred column, but clamp to row length
-      const targetColumn = Math.min(preferredColumn, Math.max(0, nextRowLength - 1));
+      const targetColumn = Math.min(
+        preferredColumn,
+        Math.max(0, nextRowLength - 1),
+      );
       return [targetColumn, nextRow]; // [column, row]
     }
 
@@ -1843,19 +2344,27 @@ loopMode) => {
         nextColumnInFlow = 0; // Wrap to first column
       }
       const topRowLength = allRows[0]?.cells?.length || 0;
-      const clampedColumn = Math.min(nextColumnInFlow, Math.max(0, topRowLength - 1));
+      const clampedColumn = Math.min(
+        nextColumnInFlow,
+        Math.max(0, topRowLength - 1),
+      );
       return [clampedColumn, 0]; // [column, row]
     }
+
     if (loopMode === "wrap") {
       // Wrap mode: go to top row, maintaining preferred column
       const topRowLength = allRows[0]?.cells?.length || 0;
-      const targetColumn = Math.min(preferredColumn, Math.max(0, topRowLength - 1));
+      const targetColumn = Math.min(
+        preferredColumn,
+        Math.max(0, topRowLength - 1),
+      );
       return [targetColumn, 0]; // [column, row]
     }
 
     // No looping: can't move
     return null;
   }
+
   if (arrowKey === "ArrowUp") {
     const previousRow = currentRow - 1;
 
@@ -1863,7 +2372,10 @@ loopMode) => {
     if (previousRow >= 0) {
       const previousRowLength = allRows[previousRow]?.cells?.length || 0;
       // Try to maintain the preferred column, but clamp to row length
-      const targetColumn = Math.min(preferredColumn, Math.max(0, previousRowLength - 1));
+      const targetColumn = Math.min(
+        preferredColumn,
+        Math.max(0, previousRowLength - 1),
+      );
       return [targetColumn, previousRow]; // [column, row]
     }
 
@@ -1879,14 +2391,21 @@ loopMode) => {
       }
       const bottomRowIndex = allRows.length - 1;
       const bottomRowLength = allRows[bottomRowIndex]?.cells?.length || 0;
-      const clampedColumn = Math.min(previousColumnInFlow, Math.max(0, bottomRowLength - 1));
+      const clampedColumn = Math.min(
+        previousColumnInFlow,
+        Math.max(0, bottomRowLength - 1),
+      );
       return [clampedColumn, bottomRowIndex]; // [column, row]
     }
+
     if (loopMode === "wrap") {
       // Wrap mode: go to bottom row, maintaining preferred column
       const bottomRowIndex = allRows.length - 1;
       const bottomRowLength = allRows[bottomRowIndex]?.cells?.length || 0;
-      const targetColumn = Math.min(preferredColumn, Math.max(0, bottomRowLength - 1));
+      const targetColumn = Math.min(
+        preferredColumn,
+        Math.max(0, bottomRowLength - 1),
+      );
       return [targetColumn, bottomRowIndex]; // [column, row]
     }
 
@@ -1898,10 +2417,10 @@ loopMode) => {
   return null;
 };
 
-const performTabNavigation = (event, {
-  rootElement = document.body,
-  outsideOfElement = null
-} = {}) => {
+const performTabNavigation = (
+  event,
+  { rootElement = document.body, outsideOfElement = null } = {},
+) => {
   if (!isTabEvent$1(event)) {
     return false;
   }
@@ -1911,22 +2430,33 @@ const performTabNavigation = (event, {
     return true;
   }
   const isForward = !event.shiftKey;
-  const onTargetToFocus = targetToFocus => {
-    console.debug("Tab navigation: ".concat(isForward ? "forward" : "backward", " from"), activeElement, "to", targetToFocus);
+  const onTargetToFocus = (targetToFocus) => {
+    console.debug(
+      `Tab navigation: ${isForward ? "forward" : "backward"} from`,
+      activeElement,
+      "to",
+      targetToFocus,
+    );
     event.preventDefault();
     markFocusNav(event);
     targetToFocus.focus();
   };
+
   {
-    console.debug("Tab navigation: ".concat(isForward ? "forward" : "backward", " from,"), activeElement);
+    console.debug(
+      `Tab navigation: ${isForward ? "forward" : "backward"} from,`,
+      activeElement,
+    );
   }
-  const predicate = candidate => {
+
+  const predicate = (candidate) => {
     const canBeFocusedByTab = isFocusableByTab(candidate);
     {
-      console.debug("Testing", candidate, "".concat(canBeFocusedByTab ? "✓" : "✗"));
+      console.debug(`Testing`, candidate, `${canBeFocusedByTab ? "✓" : "✗"}`);
     }
     return canBeFocusedByTab;
   };
+
   const activeElementIsRoot = activeElement === rootElement;
   forward: {
     if (!isForward) {
@@ -1934,7 +2464,7 @@ const performTabNavigation = (event, {
     }
     if (activeElementIsRoot) {
       const firstFocusableElement = findDescendant(activeElement, predicate, {
-        skipRoot: outsideOfElement
+        skipRoot: outsideOfElement,
       });
       if (firstFocusableElement) {
         return onTargetToFocus(firstFocusableElement);
@@ -1943,38 +2473,44 @@ const performTabNavigation = (event, {
     }
     const nextFocusableElement = findAfter(activeElement, predicate, {
       root: rootElement,
-      skipRoot: outsideOfElement
+      skipRoot: outsideOfElement,
     });
     if (nextFocusableElement) {
       return onTargetToFocus(nextFocusableElement);
     }
     const firstFocusableElement = findDescendant(activeElement, predicate, {
-      skipRoot: outsideOfElement
+      skipRoot: outsideOfElement,
     });
     if (firstFocusableElement) {
       return onTargetToFocus(firstFocusableElement);
     }
     return false;
   }
+
   {
     if (activeElementIsRoot) {
-      const lastFocusableElement = findLastDescendant(activeElement, predicate, {
-        skipRoot: outsideOfElement
-      });
+      const lastFocusableElement = findLastDescendant(
+        activeElement,
+        predicate,
+        {
+          skipRoot: outsideOfElement,
+        },
+      );
       if (lastFocusableElement) {
         return onTargetToFocus(lastFocusableElement);
       }
       return false;
     }
+
     const previousFocusableElement = findBefore(activeElement, predicate, {
       root: rootElement,
-      skipRoot: outsideOfElement
+      skipRoot: outsideOfElement,
     });
     if (previousFocusableElement) {
       return onTargetToFocus(previousFocusableElement);
     }
     const lastFocusableElement = findLastDescendant(activeElement, predicate, {
-      skipRoot: outsideOfElement
+      skipRoot: outsideOfElement,
     });
     if (lastFocusableElement) {
       return onTargetToFocus(lastFocusableElement);
@@ -1982,15 +2518,21 @@ const performTabNavigation = (event, {
     return false;
   }
 };
-const isTabEvent$1 = event => event.key === "Tab" || event.keyCode === 9;
-const isFocusableByTab = element => {
+
+const isTabEvent$1 = (event) => event.key === "Tab" || event.keyCode === 9;
+
+const isFocusableByTab = (element) => {
   if (hasNegativeTabIndex(element)) {
     return false;
   }
   return elementIsFocusable(element);
 };
-const hasNegativeTabIndex = element => {
-  return element.hasAttribute && element.hasAttribute("tabIndex") && Number(element.getAttribute("tabindex")) < 0;
+const hasNegativeTabIndex = (element) => {
+  return (
+    element.hasAttribute &&
+    element.hasAttribute("tabIndex") &&
+    Number(element.getAttribute("tabindex")) < 0
+  );
 };
 
 /**
@@ -2002,13 +2544,17 @@ const hasNegativeTabIndex = element => {
  - https://github.com/MicrosoftEdge/MSEdgeExplainers/blob/main/Focusgroup/explainer.md#69-grid-focusgroups
  */
 
-const initFocusGroup = (element, {
-  direction = "both",
-  // extend = true,
-  skipTab = true,
-  loop = false,
-  name // Can be undefined for implicit ancestor-descendant grouping
-} = {}) => {
+
+const initFocusGroup = (
+  element,
+  {
+    direction = "both",
+    // extend = true,
+    skipTab = true,
+    loop = false,
+    name, // Can be undefined for implicit ancestor-descendant grouping
+  } = {},
+) => {
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
     for (const callback of cleanupCallbackSet) {
@@ -2021,69 +2567,63 @@ const initFocusGroup = (element, {
   const removeFocusGroup = setFocusGroup(element, {
     direction,
     loop,
-    name // Store undefined as-is for implicit grouping
+    name, // Store undefined as-is for implicit grouping
   });
   cleanupCallbackSet.add(removeFocusGroup);
+
   tab: {
     if (!skipTab) {
       break tab;
     }
-    const handleTabKeyDown = event => {
+    const handleTabKeyDown = (event) => {
       if (isFocusNavMarked(event)) {
         // Prevent double handling of the same event + allow preventing focus nav from outside
         return;
       }
-      performTabNavigation(event, {
-        outsideOfElement: element
-      });
+      performTabNavigation(event, { outsideOfElement: element });
     };
     // Handle Tab navigation (exit group)
     element.addEventListener("keydown", handleTabKeyDown, {
       // we must use capture: false to let chance for other part of the code
       // to call preventFocusNav
       capture: false,
-      passive: false
+      passive: false,
     });
     cleanupCallbackSet.add(() => {
       element.removeEventListener("keydown", handleTabKeyDown, {
         capture: false,
-        passive: false
+        passive: false,
       });
     });
   }
 
   // Handle Arrow key navigation (within group)
   {
-    const handleArrowKeyDown = event => {
+    const handleArrowKeyDown = (event) => {
       if (isFocusNavMarked(event)) {
         // Prevent double handling of the same event + allow preventing focus nav from outside
         return;
       }
-      performArrowNavigation(event, element, {
-        direction,
-        loop,
-        name
-      });
+      performArrowNavigation(event, element, { direction, loop, name });
     };
     element.addEventListener("keydown", handleArrowKeyDown, {
       // we must use capture: false to let chance for other part of the code
       // to call preventFocusNav
       capture: false,
-      passive: false
+      passive: false,
     });
     cleanupCallbackSet.add(() => {
       element.removeEventListener("keydown", handleArrowKeyDown, {
         capture: false,
-        passive: false
+        passive: false,
       });
     });
   }
-  return {
-    cleanup
-  };
+
+  return { cleanup };
 };
 
-const preventFocusNavViaKeyboard = keyboardEvent => {
+const preventFocusNavViaKeyboard = (keyboardEvent) => {
   if (keyboardEvent.key === "Tab") {
     // prevent tab to move focus
     keyboardEvent.preventDefault();
@@ -2094,68 +2634,77 @@ const preventFocusNavViaKeyboard = keyboardEvent => {
   return false;
 };
 
-const trapFocusInside = element => {
+const trapFocusInside = (element) => {
   if (element.nodeType === 3) {
     console.warn("cannot trap focus inside a text node");
     return () => {};
   }
-  const trappedElement = activeTraps.find(activeTrap => activeTrap.element === element);
+
+  const trappedElement = activeTraps.find(
+    (activeTrap) => activeTrap.element === element,
+  );
   if (trappedElement) {
     console.warn("focus already trapped inside this element");
     return () => {};
   }
-  const isEventOutside = event => {
+
+  const isEventOutside = (event) => {
     if (event.target === element) return false;
     if (element.contains(event.target)) return false;
     return true;
   };
+
   const lock = () => {
-    const onmousedown = event => {
+    const onmousedown = (event) => {
       if (isEventOutside(event)) {
         event.preventDefault();
         event.stopImmediatePropagation();
       }
     };
-    const onkeydown = event => {
+
+    const onkeydown = (event) => {
       if (isTabEvent(event)) {
-        performTabNavigation(event, {
-          rootElement: element
-        });
+        performTabNavigation(event, { rootElement: element });
       }
     };
+
     document.addEventListener("mousedown", onmousedown, {
       capture: true,
-      passive: false
+      passive: false,
     });
     document.addEventListener("keydown", onkeydown, {
       capture: true,
-      passive: false
+      passive: false,
     });
+
     return () => {
       document.removeEventListener("mousedown", onmousedown, {
         capture: true,
-        passive: false
+        passive: false,
       });
       document.removeEventListener("keydown", onkeydown, {
         capture: true,
-        passive: false
+        passive: false,
       });
     };
   };
+
   const deactivate = activate({
     // element
-    lock
+    lock,
   });
+
   const untrap = () => {
     deactivate();
   };
+
   return untrap;
 };
-const isTabEvent = event => event.key === "Tab" || event.keyCode === 9;
+
+const isTabEvent = (event) => event.key === "Tab" || event.keyCode === 9;
+
 const activeTraps = [];
-const activate = ({
-  lock
-}) => {
+const activate = ({ lock }) => {
   // unlock any trap currently activated
   let previousTrap;
   if (activeTraps.length > 0) {
@@ -2164,11 +2713,9 @@ const activate = ({
   }
 
   // store trap methods to lock/unlock as traps are acivated/deactivated
-  const trap = {
-    lock,
-    unlock: lock()
-  };
+  const trap = { lock, unlock: lock() };
   activeTraps.push(trap);
+
   return () => {
     if (activeTraps.length === 0) {
       console.warn("cannot deactivate an already deactivated trap");
@@ -2177,7 +2724,9 @@ const activate = ({
     const lastTrap = activeTraps[activeTraps.length - 1];
     if (trap !== lastTrap) {
       // TODO: investigate this and maybe remove this requirment
-      console.warn("you must deactivate trap in the same order they were activated");
+      console.warn(
+        "you must deactivate trap in the same order they were activated",
+      );
       return;
     }
     activeTraps.pop();
@@ -2190,7 +2739,7 @@ const activate = ({
 };
 
 // Helper to create scroll state capture/restore function for an element
-const captureScrollState = element => {
+const captureScrollState = (element) => {
   const scrollLeft = element.scrollLeft;
   const scrollTop = element.scrollTop;
   const scrollWidth = element.scrollWidth;
@@ -2199,8 +2748,10 @@ const captureScrollState = element => {
   const clientHeight = element.clientHeight;
 
   // Calculate scroll percentages to preserve relative position
-  const scrollLeftPercent = scrollWidth > clientWidth ? scrollLeft / (scrollWidth - clientWidth) : 0;
-  const scrollTopPercent = scrollHeight > clientHeight ? scrollTop / (scrollHeight - clientHeight) : 0;
+  const scrollLeftPercent =
+    scrollWidth > clientWidth ? scrollLeft / (scrollWidth - clientWidth) : 0;
+  const scrollTopPercent =
+    scrollHeight > clientHeight ? scrollTop / (scrollHeight - clientHeight) : 0;
 
   // Return preserve function that maintains scroll position relative to content
   return () => {
@@ -2211,13 +2762,21 @@ const captureScrollState = element => {
     const newClientHeight = element.clientHeight;
 
     // If content dimensions changed significantly, use percentage-based positioning
-    if (Math.abs(newScrollWidth - scrollWidth) > 1 || Math.abs(newScrollHeight - scrollHeight) > 1 || Math.abs(newClientWidth - clientWidth) > 1 || Math.abs(newClientHeight - clientHeight) > 1) {
+    if (
+      Math.abs(newScrollWidth - scrollWidth) > 1 ||
+      Math.abs(newScrollHeight - scrollHeight) > 1 ||
+      Math.abs(newClientWidth - clientWidth) > 1 ||
+      Math.abs(newClientHeight - clientHeight) > 1
+    ) {
       if (newScrollWidth > newClientWidth) {
-        const newScrollLeft = scrollLeftPercent * (newScrollWidth - newClientWidth);
+        const newScrollLeft =
+          scrollLeftPercent * (newScrollWidth - newClientWidth);
         element.scrollLeft = newScrollLeft;
       }
+
       if (newScrollHeight > newClientHeight) {
-        const newScrollTop = scrollTopPercent * (newScrollHeight - newClientHeight);
+        const newScrollTop =
+          scrollTopPercent * (newScrollHeight - newClientHeight);
         element.scrollTop = newScrollTop;
       }
     } else {
@@ -2230,24 +2789,17 @@ const captureScrollState = element => {
 // note: keep in mind that an element with overflow: 'hidden' is scrollable
 // it can be scrolled using keyboard arrows or JavaScript properties such as scrollTop, scrollLeft
 // the only overflow that prevents scroll is "visible"
-const isScrollable = (element, {
-  includeHidden
-} = {}) => {
-  if (canHaveVerticalScroll(element, {
-    includeHidden
-  })) {
+const isScrollable = (element, { includeHidden } = {}) => {
+  if (canHaveVerticalScroll(element, { includeHidden })) {
     return true;
   }
-  if (canHaveHorizontalScroll(element, {
-    includeHidden
-  })) {
+  if (canHaveHorizontalScroll(element, { includeHidden })) {
     return true;
   }
   return false;
 };
-const canHaveVerticalScroll = (element, {
-  includeHidden
-}) => {
+
+const canHaveVerticalScroll = (element, { includeHidden }) => {
   const verticalOverflow = getStyle(element, "overflow-y");
   if (verticalOverflow === "visible") {
     // browser returns "visible" on documentElement even if it is scrollable
@@ -2272,9 +2824,7 @@ const canHaveVerticalScroll = (element, {
   }
   return true; // "auto", "scroll"
 };
-const canHaveHorizontalScroll = (element, {
-  includeHidden
-}) => {
+const canHaveHorizontalScroll = (element, { includeHidden }) => {
   const horizontalOverflow = getStyle(element, "overflow-x");
   if (horizontalOverflow === "visible") {
     // browser returns "visible" on documentElement even if it is scrollable
@@ -2299,34 +2849,44 @@ const canHaveHorizontalScroll = (element, {
   }
   return true; // "auto", "scroll"
 };
-const getScrollingElement = document => {
-  const {
-    scrollingElement
-  } = document;
+
+const getScrollingElement = (document) => {
+  const { scrollingElement } = document;
   if (scrollingElement) {
     return scrollingElement;
   }
+
   if (isCompliant(document)) {
     return document.documentElement;
   }
+
   const body = document.body;
   const isFrameset = body && !/body/i.test(body.tagName);
   const possiblyScrollingElement = isFrameset ? getNextBodyElement(body) : body;
 
   // If `body` is itself scrollable, it is not the `scrollingElement`.
-  return possiblyScrollingElement && bodyIsScrollable(possiblyScrollingElement) ? null : possiblyScrollingElement;
+  return possiblyScrollingElement && bodyIsScrollable(possiblyScrollingElement)
+    ? null
+    : possiblyScrollingElement;
 };
-const isHidden = element => {
+
+const isHidden = (element) => {
   const display = getStyle(element, "display");
   if (display === "none") {
     return false;
   }
-  if (display === "table-row" || display === "table-group" || display === "table-column") {
+
+  if (
+    display === "table-row" ||
+    display === "table-group" ||
+    display === "table-column"
+  ) {
     return getStyle(element, "visibility") !== "collapsed";
   }
+
   return true;
 };
-const isCompliant = document => {
+const isCompliant = (document) => {
   // Note: document.compatMode can be toggle at runtime by document.write
   const isStandardsMode = /^CSS1/.test(document.compatMode);
   if (isStandardsMode) {
@@ -2334,7 +2894,7 @@ const isCompliant = document => {
   }
   return false;
 };
-const testScrollCompliance = document => {
+const testScrollCompliance = (document) => {
   const iframe = document.createElement("iframe");
   iframe.style.height = "1px";
   const parentNode = document.body || document.documentElement || document;
@@ -2342,26 +2902,28 @@ const testScrollCompliance = document => {
   const iframeDocument = iframe.contentWindow.document;
   iframeDocument.write('<!DOCTYPE html><div style="height:9999em">x</div>');
   iframeDocument.close();
-  const scrollComplianceResult = iframeDocument.documentElement.scrollHeight > iframeDocument.body.scrollHeight;
+  const scrollComplianceResult =
+    iframeDocument.documentElement.scrollHeight >
+    iframeDocument.body.scrollHeight;
   iframe.parentNode.removeChild(iframe);
   return scrollComplianceResult;
 };
-const getNextBodyElement = frameset => {
+const getNextBodyElement = (frameset) => {
   // We use this function to be correct per spec in case `document.body` is
   // a `frameset` but there exists a later `body`. Since `document.body` is
   // a `frameset`, we know the root is an `html`, and there was no `body`
   // before the `frameset`, so we just need to look at siblings after the
   // `frameset`.
   let current = frameset;
-  while (current = current.nextSibling) {
+  while ((current = current.nextSibling)) {
     if (current.nodeType === 1 && isBodyElement(current)) {
       return current;
     }
   }
   return null;
 };
-const isBodyElement = element => element.ownerDocument.body === element;
-const bodyIsScrollable = body => {
+const isBodyElement = (element) => element.ownerDocument.body === element;
+const bodyIsScrollable = (body) => {
   // a body element is scrollable if body and html are scrollable and rendered
   if (!isScrollable(body)) {
     return false;
@@ -2369,6 +2931,7 @@ const bodyIsScrollable = body => {
   if (isHidden(body)) {
     return false;
   }
+
   const documentElement = body.ownerDocument.documentElement;
   if (!isScrollable(documentElement)) {
     return false;
@@ -2376,17 +2939,16 @@ const bodyIsScrollable = body => {
   if (isHidden(documentElement)) {
     return false;
   }
+
   return true;
 };
 
 // https://developer.mozilla.org/en-US/docs/Glossary/Scroll_container
 
-const {
-  documentElement: documentElement$2
-} = document;
-const getScrollContainer = (arg, {
-  includeHidden
-} = {}) => {
+
+const { documentElement: documentElement$2 } = document;
+
+const getScrollContainer = (arg, { includeHidden } = {}) => {
   if (typeof arg !== "object" || arg.nodeType !== 1) {
     throw new TypeError("getScrollContainer first argument must be DOM node");
   }
@@ -2395,9 +2957,7 @@ const getScrollContainer = (arg, {
     return null;
   }
   if (element === documentElement$2) {
-    if (isScrollable(element, {
-      includeHidden
-    })) {
+    if (isScrollable(element, { includeHidden })) {
       return element;
     }
     return null;
@@ -2406,13 +2966,13 @@ const getScrollContainer = (arg, {
   if (position === "fixed") {
     return getScrollingElement(element.ownerDocument);
   }
-  return findScrollContainer(element, {
-    includeHidden
-  }) || getScrollingElement(element.ownerDocument);
+  return (
+    findScrollContainer(element, { includeHidden }) ||
+    getScrollingElement(element.ownerDocument)
+  );
 };
-const findScrollContainer = (element, {
-  includeHidden
-} = {}) => {
+
+const findScrollContainer = (element, { includeHidden } = {}) => {
   const position = getStyle(element, "position");
   let parent = element.parentNode;
   // Si l'élément est en position absolute, d'abord trouver le premier parent positionné
@@ -2434,25 +2994,24 @@ const findScrollContainer = (element, {
     if (parent === document) {
       return null;
     }
-    if (isScrollable(parent, {
-      includeHidden
-    })) {
+    if (isScrollable(parent, { includeHidden })) {
       return parent;
     }
     parent = parent.parentNode;
   }
   return null;
 };
+
 const getSelfAndAncestorScrolls = (element, startOnParent) => {
   let scrollX = 0;
   let scrollY = 0;
   const ancestorScrolls = [];
-  const visitElement = elementOrScrollContainer => {
+  const visitElement = (elementOrScrollContainer) => {
     const scrollContainer = getScrollContainer(elementOrScrollContainer);
     if (scrollContainer) {
       ancestorScrolls.push({
         element: elementOrScrollContainer,
-        scrollContainer
+        scrollContainer,
       });
       scrollX += scrollContainer.scrollLeft;
       scrollY += scrollContainer.scrollTop;
@@ -2475,7 +3034,7 @@ const getSelfAndAncestorScrolls = (element, startOnParent) => {
 };
 
 // https://github.com/shipshapecode/tether/blob/d6817f8c49a7a26b04c45e55589279dd1b5dd2bf/src/js/utils/parents.js#L1
-const getScrollContainerSet = element => {
+const getScrollContainerSet = (element) => {
   const scrollContainerSet = new Set();
   let elementOrScrollContainer = element;
   while (true) {
@@ -2493,32 +3052,37 @@ const getScrollContainerSet = element => {
 };
 
 // https://davidwalsh.name/detect-scrollbar-width
-const measureScrollbar = scrollableElement => {
-  const hasXScrollbar = scrollableElement.scrollHeight > scrollableElement.clientHeight;
-  const hasYScrollbar = scrollableElement.scrollWidth > scrollableElement.clientWidth;
+const measureScrollbar = (scrollableElement) => {
+  const hasXScrollbar =
+    scrollableElement.scrollHeight > scrollableElement.clientHeight;
+  const hasYScrollbar =
+    scrollableElement.scrollWidth > scrollableElement.clientWidth;
   if (!hasXScrollbar && !hasYScrollbar) {
     return [0, 0];
   }
   const scrollDiv = document.createElement("div");
-  scrollDiv.style.cssText = "position: absolute; width: 100px; height: 100px; overflow: scroll; pointer-events: none; visibility: hidden;";
+  scrollDiv.style.cssText = `position: absolute; width: 100px; height: 100px; overflow: scroll; pointer-events: none; visibility: hidden;`;
   scrollableElement.appendChild(scrollDiv);
   const scrollbarWidth = scrollDiv.offsetWidth - scrollDiv.clientWidth;
   const scrollbarHeight = scrollDiv.offsetHeight - scrollDiv.clientHeight;
   scrollableElement.removeChild(scrollDiv);
-  return [hasXScrollbar ? scrollbarWidth : 0, hasYScrollbar ? scrollbarHeight : 0];
+  return [
+    hasXScrollbar ? scrollbarWidth : 0,
+    hasYScrollbar ? scrollbarHeight : 0,
+  ];
 };
 
-const trapScrollInside = element => {
+const trapScrollInside = (element) => {
   const cleanupCallbackSet = new Set();
-  const lockScroll = el => {
+  const lockScroll = (el) => {
     const [scrollbarWidth, scrollbarHeight] = measureScrollbar(el);
     // scrollbar-gutter would work but would display an empty blank space
     const paddingRight = parseInt(getStyle(el, "padding-right"), 0);
     const paddingTop = parseInt(getStyle(el, "padding-top"), 0);
     const removeScrollLockStyles = setStyles(el, {
-      "padding-right": "".concat(paddingRight + scrollbarWidth, "px"),
-      "padding-top": "".concat(paddingTop + scrollbarHeight, "px"),
-      "overflow": "hidden"
+      "padding-right": `${paddingRight + scrollbarWidth}px`,
+      "padding-top": `${paddingTop + scrollbarHeight}px`,
+      "overflow": "hidden",
     });
     cleanupCallbackSet.add(() => {
       removeScrollLockStyles();
@@ -2533,11 +3097,13 @@ const trapScrollInside = element => {
     }
     previous = previous.previousSibling;
   }
+
   const selfAndAncestorScrolls = getSelfAndAncestorScrolls(element);
   for (const selfOrAncestorScroll of selfAndAncestorScrolls) {
     const elementToScrollLock = selfOrAncestorScroll.scrollContainer;
     lockScroll(elementToScrollLock);
   }
+
   return () => {
     for (const cleanupCallback of cleanupCallbackSet) {
       cleanupCallback();
@@ -2552,23 +3118,26 @@ const trapScrollInside = element => {
  * finds and scrolls the appropriate scrollable container behind the overlay.
  */
 
+
 const allowWheelThrough = (element, connectedElement) => {
-  const isElementOrDescendant = possibleDescendant => {
-    return possibleDescendant === element || element.contains(possibleDescendant);
+  const isElementOrDescendant = (possibleDescendant) => {
+    return (
+      possibleDescendant === element || element.contains(possibleDescendant)
+    );
   };
   const tryToScrollOne = (element, wheelEvent) => {
     if (element === document.documentElement) {
       // let browser handle document scrolling
       return true;
     }
-    const {
-      deltaX,
-      deltaY
-    } = wheelEvent;
+
+    const { deltaX, deltaY } = wheelEvent;
     // we found what we want: a scrollable container behind the element
     // we try to scroll it.
-    const elementCanApplyScrollDeltaX = deltaX && canApplyScrollDelta(element, deltaX, "x");
-    const elementCanApplyScrollDeltaY = deltaY && canApplyScrollDelta(element, deltaY, "y");
+    const elementCanApplyScrollDeltaX =
+      deltaX && canApplyScrollDelta(element, deltaX, "x");
+    const elementCanApplyScrollDeltaY =
+      deltaY && canApplyScrollDelta(element, deltaY, "y");
     if (!elementCanApplyScrollDeltaX && !elementCanApplyScrollDeltaY) {
       return false;
     }
@@ -2584,15 +3153,20 @@ const allowWheelThrough = (element, connectedElement) => {
     applyWheelScrollThrough(element, wheelEvent);
     return true;
   };
+
   if (connectedElement) {
-    const onWheel = wheelEvent => {
+    const onWheel = (wheelEvent) => {
       const connectedScrollContainer = getScrollContainer(connectedElement);
       if (connectedScrollContainer === document.documentElement) {
         // the connected scrollable parent is the document
         // there is nothing to do, browser native scroll will work as we want
         return;
       }
-      const elementsBehindMouse = document.elementsFromPoint(wheelEvent.clientX, wheelEvent.clientY);
+
+      const elementsBehindMouse = document.elementsFromPoint(
+        wheelEvent.clientX,
+        wheelEvent.clientY,
+      );
       for (const elementBehindMouse of elementsBehindMouse) {
         const belongsToElement = isElementOrDescendant(elementBehindMouse);
         // try to scroll element itself
@@ -2610,8 +3184,12 @@ const allowWheelThrough = (element, connectedElement) => {
     element.addEventListener("wheel", onWheel);
     return;
   }
-  const onWheel = wheelEvent => {
-    const elementsBehindMouse = document.elementsFromPoint(wheelEvent.clientX, wheelEvent.clientY);
+
+  const onWheel = (wheelEvent) => {
+    const elementsBehindMouse = document.elementsFromPoint(
+      wheelEvent.clientX,
+      wheelEvent.clientY,
+    );
     for (const elementBehindMouse of elementsBehindMouse) {
       const belongsToElement = isElementOrDescendant(elementBehindMouse);
       // try to scroll element itself
@@ -2632,6 +3210,7 @@ const allowWheelThrough = (element, connectedElement) => {
   };
   element.addEventListener("wheel", onWheel);
 };
+
 const canApplyScrollDelta = (element, delta, axis) => {
   const {
     clientWidth,
@@ -2639,11 +3218,13 @@ const canApplyScrollDelta = (element, delta, axis) => {
     scrollWidth,
     scrollHeight,
     scrollLeft,
-    scrollTop
+    scrollTop,
   } = element;
+
   let size = axis === "x" ? clientWidth : clientHeight;
   let currentScroll = axis === "x" ? scrollLeft : scrollTop;
   let scrollEnd = axis === "x" ? scrollWidth : scrollHeight;
+
   if (size === scrollEnd) {
     // when scrollWidth === clientWidth, there is no scroll to apply
     return false;
@@ -2658,24 +3239,22 @@ const canApplyScrollDelta = (element, delta, axis) => {
   }
   return true;
 };
+
 const applyWheelScrollThrough = (element, wheelEvent) => {
   wheelEvent.preventDefault();
   element.scrollBy({
     top: wheelEvent.deltaY,
     left: wheelEvent.deltaX,
-    behavior: wheelEvent.deltaMode === 0 ? "auto" : "smooth" // optional tweak
+    behavior: wheelEvent.deltaMode === 0 ? "auto" : "smooth", // optional tweak
   });
 };
 
-const findSelfOrAncestorFixedPosition = element => {
+const findSelfOrAncestorFixedPosition = (element) => {
   let current = element;
   while (true) {
     const computedStyle = window.getComputedStyle(current);
     if (computedStyle.position === "fixed") {
-      const {
-        left,
-        top
-      } = current.getBoundingClientRect();
+      const { left, top } = current.getBoundingClientRect();
       return [left, top];
     }
     current = current.parentElement;
@@ -2725,62 +3304,89 @@ const findSelfOrAncestorFixedPosition = element => {
  * combination of positioning contexts, optimizing for performance and code clarity.
  */
 
-const createDragElementPositioner = (element, referenceElement, elementToMove) => {
+const createDragElementPositioner = (
+  element,
+  referenceElement,
+  elementToMove,
+) => {
   let scrollableLeft;
   let scrollableTop;
   let convertScrollablePosition;
-  const positionedParent = elementToMove ? elementToMove.offsetParent : element.offsetParent;
+
+  const positionedParent = elementToMove
+    ? elementToMove.offsetParent
+    : element.offsetParent;
   const scrollContainer = getScrollContainer(element);
   const [getPositionOffsets, getScrollOffsets] = createGetOffsets({
     positionedParent,
-    referencePositionedParent: referenceElement ? referenceElement.offsetParent : undefined,
+    referencePositionedParent: referenceElement
+      ? referenceElement.offsetParent
+      : undefined,
     scrollContainer,
-    referenceScrollContainer: referenceElement ? getScrollContainer(referenceElement) : undefined
+    referenceScrollContainer: referenceElement
+      ? getScrollContainer(referenceElement)
+      : undefined,
   });
+
   {
-    [scrollableLeft, scrollableTop] = getScrollablePosition(element, scrollContainer);
+    [scrollableLeft, scrollableTop] = getScrollablePosition(
+      element,
+      scrollContainer,
+    );
     const [positionOffsetLeft, positionOffsetTop] = getPositionOffsets();
     scrollableLeft += positionOffsetLeft;
     scrollableTop += positionOffsetTop;
   }
   {
-    convertScrollablePosition = (scrollableLeftToConvert, scrollableTopToConvert) => {
+    convertScrollablePosition = (
+      scrollableLeftToConvert,
+      scrollableTopToConvert,
+    ) => {
       const [positionOffsetLeft, positionOffsetTop] = getPositionOffsets();
       const [scrollOffsetLeft, scrollOffsetTop] = getScrollOffsets();
-      const positionedLeftWithoutScroll = scrollableLeftToConvert + positionOffsetLeft;
-      const positionedTopWithoutScroll = scrollableTopToConvert + positionOffsetTop;
+
+      const positionedLeftWithoutScroll =
+        scrollableLeftToConvert + positionOffsetLeft;
+      const positionedTopWithoutScroll =
+        scrollableTopToConvert + positionOffsetTop;
       const positionedLeft = positionedLeftWithoutScroll + scrollOffsetLeft;
       const positionedTop = positionedTopWithoutScroll + scrollOffsetTop;
+
       return [positionedLeft, positionedTop];
     };
   }
   return [scrollableLeft, scrollableTop, convertScrollablePosition];
 };
+
 const getScrollablePosition = (element, scrollContainer) => {
-  const {
-    left: elementViewportLeft,
-    top: elementViewportTop
-  } = element.getBoundingClientRect();
+  const { left: elementViewportLeft, top: elementViewportTop } =
+    element.getBoundingClientRect();
   const scrollContainerIsDocument = scrollContainer === documentElement$1;
   if (scrollContainerIsDocument) {
     return [elementViewportLeft, elementViewportTop];
   }
-  const {
-    left: scrollContainerLeft,
-    top: scrollContainerTop
-  } = scrollContainer.getBoundingClientRect();
+  const { left: scrollContainerLeft, top: scrollContainerTop } =
+    scrollContainer.getBoundingClientRect();
   const scrollableLeft = elementViewportLeft - scrollContainerLeft;
   const scrollableTop = elementViewportTop - scrollContainerTop;
+
   return [scrollableLeft, scrollableTop];
 };
+
 const createGetOffsets = ({
   positionedParent,
   referencePositionedParent = positionedParent,
   scrollContainer,
-  referenceScrollContainer = scrollContainer
+  referenceScrollContainer = scrollContainer,
 }) => {
   const samePositionedParent = positionedParent === referencePositionedParent;
-  const getScrollOffsets = createGetScrollOffsets(scrollContainer, referenceScrollContainer, positionedParent, samePositionedParent);
+  const getScrollOffsets = createGetScrollOffsets(
+    scrollContainer,
+    referenceScrollContainer,
+    positionedParent,
+    samePositionedParent,
+  );
+
   if (samePositionedParent) {
     return [() => [0, 0], getScrollOffsets];
   }
@@ -2792,28 +3398,34 @@ const createGetOffsets = ({
   // When overlay is absolute there is a diff relative to the scroll
   // and eventually if the overlay is positioned differently than the other parent
   if (isOverlayOf(positionedParent, referencePositionedParent)) {
-    return createGetOffsetsForOverlay(positionedParent, referencePositionedParent, {
-      scrollContainer,
-      referenceScrollContainer,
-      getScrollOffsets
-    });
+    return createGetOffsetsForOverlay(
+      positionedParent,
+      referencePositionedParent,
+      {
+        scrollContainer,
+        referenceScrollContainer,
+        getScrollOffsets,
+      },
+    );
   }
   if (isOverlayOf(referencePositionedParent, positionedParent)) {
-    return createGetOffsetsForOverlay(referencePositionedParent, positionedParent, {
-      scrollContainer,
-      referenceScrollContainer,
-      getScrollOffsets
-    });
+    return createGetOffsetsForOverlay(
+      referencePositionedParent,
+      positionedParent,
+      {
+        scrollContainer,
+        referenceScrollContainer,
+        getScrollOffsets,
+      },
+    );
   }
   const scrollContainerIsDocument = scrollContainer === documentElement$1;
   if (scrollContainerIsDocument) {
     // Document case: getBoundingClientRect already includes document scroll effects
     // Add current scroll position to get the static offset
     const getPositionOffsetsDocumentScrolling = () => {
-      const {
-        scrollLeft: documentScrollLeft,
-        scrollTop: documentScrollTop
-      } = scrollContainer;
+      const { scrollLeft: documentScrollLeft, scrollTop: documentScrollTop } =
+        scrollContainer;
       const aRect = positionedParent.getBoundingClientRect();
       const bRect = referencePositionedParent.getBoundingClientRect();
       const aLeft = aRect.left;
@@ -2838,21 +3450,27 @@ const createGetOffsets = ({
     const aTop = aRect.top;
     const bLeft = bRect.left;
     const bTop = bRect.top;
+
     const scrollContainerRect = scrollContainer.getBoundingClientRect();
-    const offsetLeft = bLeft - aLeft + scrollContainer.scrollLeft - scrollContainerRect.left;
-    const offsetTop = bTop - aTop + scrollContainer.scrollTop - scrollContainerRect.top;
+    const offsetLeft =
+      bLeft - aLeft + scrollContainer.scrollLeft - scrollContainerRect.left;
+    const offsetTop =
+      bTop - aTop + scrollContainer.scrollTop - scrollContainerRect.top;
     return [offsetLeft, offsetTop];
   };
   return [getPositionOffsetsCustomScrollContainer, getScrollOffsets];
 };
-const createGetOffsetsForOverlay = (overlay, overlayTarget, {
-  scrollContainer,
-  referenceScrollContainer,
-  getScrollOffsets
-}) => {
+const createGetOffsetsForOverlay = (
+  overlay,
+  overlayTarget,
+  { scrollContainer, referenceScrollContainer, getScrollOffsets },
+) => {
   const sameScrollContainer = scrollContainer === referenceScrollContainer;
-  const scrollContainerIsDocument = scrollContainer === document.documentElement;
-  const referenceScrollContainerIsDocument = referenceScrollContainer === documentElement$1;
+  const scrollContainerIsDocument =
+    scrollContainer === document.documentElement;
+  const referenceScrollContainerIsDocument =
+    referenceScrollContainer === documentElement$1;
+
   if (getComputedStyle(overlay).position === "fixed") {
     if (referenceScrollContainerIsDocument) {
       const getPositionOffsetsFixedOverlay = () => {
@@ -2862,17 +3480,24 @@ const createGetOffsetsForOverlay = (overlay, overlayTarget, {
     }
     const getPositionOffsetsFixedOverlay = () => {
       const scrollContainerRect = scrollContainer.getBoundingClientRect();
-      const referenceScrollContainerRect = referenceScrollContainer.getBoundingClientRect();
-      let offsetLeftBetweenScrollContainers = referenceScrollContainerRect.left - scrollContainerRect.left;
-      let offsetTopBetweenScrollContainers = referenceScrollContainerRect.top - scrollContainerRect.top;
+      const referenceScrollContainerRect =
+        referenceScrollContainer.getBoundingClientRect();
+      let offsetLeftBetweenScrollContainers =
+        referenceScrollContainerRect.left - scrollContainerRect.left;
+      let offsetTopBetweenScrollContainers =
+        referenceScrollContainerRect.top - scrollContainerRect.top;
       if (scrollContainerIsDocument) {
         offsetLeftBetweenScrollContainers -= scrollContainer.scrollLeft;
         offsetTopBetweenScrollContainers -= scrollContainer.scrollTop;
       }
-      return [-offsetLeftBetweenScrollContainers, -offsetTopBetweenScrollContainers];
+      return [
+        -offsetLeftBetweenScrollContainers,
+        -offsetTopBetweenScrollContainers,
+      ];
     };
     return [getPositionOffsetsFixedOverlay, getScrollOffsets];
   }
+
   const getPositionOffsetsOverlay = () => {
     if (sameScrollContainer) {
       const overlayRect = overlay.getBoundingClientRect();
@@ -2887,10 +3512,15 @@ const createGetOffsetsForOverlay = (overlay, overlayTarget, {
       }
       const offsetLeftBetweenTargetAndOverlay = overlayTargetLeft - overlayLeft;
       const offsetTopBetweenTargetAndOverlay = overlayTargetTop - overlayTop;
-      return [-scrollContainer.scrollLeft + offsetLeftBetweenTargetAndOverlay, -scrollContainer.scrollTop + offsetTopBetweenTargetAndOverlay];
+      return [
+        -scrollContainer.scrollLeft + offsetLeftBetweenTargetAndOverlay,
+        -scrollContainer.scrollTop + offsetTopBetweenTargetAndOverlay,
+      ];
     }
+
     const scrollContainerRect = scrollContainer.getBoundingClientRect();
-    const referenceScrollContainerRect = referenceScrollContainer.getBoundingClientRect();
+    const referenceScrollContainerRect =
+      referenceScrollContainer.getBoundingClientRect();
     let scrollContainerLeft = scrollContainerRect.left;
     let scrollContainerTop = scrollContainerRect.top;
     let referenceScrollContainerLeft = referenceScrollContainerRect.left;
@@ -2899,23 +3529,36 @@ const createGetOffsetsForOverlay = (overlay, overlayTarget, {
       scrollContainerLeft += scrollContainer.scrollLeft;
       scrollContainerTop += scrollContainer.scrollTop;
     }
-    const offsetLeftBetweenScrollContainers = referenceScrollContainerLeft - scrollContainerLeft;
-    const offsetTopBetweenScrollContainers = referenceScrollContainerTop - scrollContainerTop;
-    return [-offsetLeftBetweenScrollContainers - referenceScrollContainer.scrollLeft, -offsetTopBetweenScrollContainers - referenceScrollContainer.scrollTop];
+    const offsetLeftBetweenScrollContainers =
+      referenceScrollContainerLeft - scrollContainerLeft;
+    const offsetTopBetweenScrollContainers =
+      referenceScrollContainerTop - scrollContainerTop;
+    return [
+      -offsetLeftBetweenScrollContainers - referenceScrollContainer.scrollLeft,
+      -offsetTopBetweenScrollContainers - referenceScrollContainer.scrollTop,
+    ];
   };
   const getScrollOffsetsOverlay = () => {
     if (sameScrollContainer) {
       return [scrollContainer.scrollLeft, scrollContainer.scrollTop];
     }
+
     const scrollContainerRect = scrollContainer.getBoundingClientRect();
-    const referenceScrollContainerRect = referenceScrollContainer.getBoundingClientRect();
-    let offsetLeftBetweenScrollContainers = referenceScrollContainerRect.left - scrollContainerRect.left;
-    let offsetTopBetweenScrollContainers = referenceScrollContainerRect.top - scrollContainerRect.top;
+    const referenceScrollContainerRect =
+      referenceScrollContainer.getBoundingClientRect();
+    let offsetLeftBetweenScrollContainers =
+      referenceScrollContainerRect.left - scrollContainerRect.left;
+    let offsetTopBetweenScrollContainers =
+      referenceScrollContainerRect.top - scrollContainerRect.top;
     if (scrollContainerIsDocument) {
       offsetLeftBetweenScrollContainers -= scrollContainer.scrollLeft;
       offsetTopBetweenScrollContainers -= scrollContainer.scrollTop;
     }
-    return [referenceScrollContainer.scrollLeft + offsetLeftBetweenScrollContainers, referenceScrollContainer.scrollTop + offsetTopBetweenScrollContainers];
+
+    return [
+      referenceScrollContainer.scrollLeft + offsetLeftBetweenScrollContainers,
+      referenceScrollContainer.scrollTop + offsetTopBetweenScrollContainers,
+    ];
   };
   return [getPositionOffsetsOverlay, getScrollOffsetsOverlay];
 };
@@ -2924,7 +3567,7 @@ const isOverlayOf = (element, potentialTarget) => {
   if (!overlayForAttribute) {
     return false;
   }
-  const overlayTarget = document.querySelector("#".concat(overlayForAttribute));
+  const overlayTarget = document.querySelector(`#${overlayForAttribute}`);
   if (!overlayTarget) {
     return false;
   }
@@ -2937,23 +3580,23 @@ const isOverlayOf = (element, potentialTarget) => {
   }
   return false;
 };
-const {
-  documentElement: documentElement$1
-} = document;
-const createGetScrollOffsets = (scrollContainer, referenceScrollContainer, positionedParent, samePositionedParent) => {
+
+const { documentElement: documentElement$1 } = document;
+const createGetScrollOffsets = (
+  scrollContainer,
+  referenceScrollContainer,
+  positionedParent,
+  samePositionedParent,
+) => {
   const getGetScrollOffsetsSameContainer = () => {
     const scrollContainerIsDocument = scrollContainer === documentElement$1;
     // I don't really get why we have to add scrollLeft (scrollLeft at grab)
     // to properly position the element in this scenario
     // It happens since we use translateX to position the element
     // Or maybe since something else. In any case it works
-    const {
-      scrollLeft,
-      scrollTop
-    } = samePositionedParent ? {
-      scrollLeft: 0,
-      scrollTop: 0
-    } : referenceScrollContainer;
+    const { scrollLeft, scrollTop } = samePositionedParent
+      ? { scrollLeft: 0, scrollTop: 0 }
+      : referenceScrollContainer;
     if (scrollContainerIsDocument) {
       const fixedPosition = findSelfOrAncestorFixedPosition(positionedParent);
       if (fixedPosition) {
@@ -2972,6 +3615,7 @@ const createGetScrollOffsets = (scrollContainer, referenceScrollContainer, posit
     };
     return getScrollOffsets;
   };
+
   const sameScrollContainer = scrollContainer === referenceScrollContainer;
   const getScrollOffsetsSameContainer = getGetScrollOffsetsSameContainer();
   if (sameScrollContainer) {
@@ -2987,12 +3631,15 @@ const createGetScrollOffsets = (scrollContainer, referenceScrollContainer, posit
   };
   return getScrollOffsetsDifferentContainers;
 };
-const getDragCoordinates = (element, scrollContainer = getScrollContainer(element)) => {
-  const [scrollableLeft, scrollableTop] = getScrollablePosition(element, scrollContainer);
-  const {
-    scrollLeft,
-    scrollTop
-  } = scrollContainer;
+const getDragCoordinates = (
+  element,
+  scrollContainer = getScrollContainer(element),
+) => {
+  const [scrollableLeft, scrollableTop] = getScrollablePosition(
+    element,
+    scrollContainer,
+  );
+  const { scrollLeft, scrollTop } = scrollContainer;
   const leftRelativeToScrollContainer = scrollableLeft + scrollLeft;
   const topRelativeToScrollContainer = scrollableTop + scrollTop;
   return [leftRelativeToScrollContainer, topRelativeToScrollContainer];
@@ -3007,22 +3654,28 @@ const getDragCoordinates = (element, scrollContainer = getScrollContainer(elemen
   if (typeof document === "undefined" || "adoptedStyleSheets" in document) {
     return;
   }
+
   var hasShadyCss = "ShadyCSS" in window && !ShadyCSS.nativeShadow;
   var bootstrapper = document.implementation.createHTMLDocument("");
   var closedShadowRootRegistry = new WeakMap();
   var _DOMException = typeof DOMException === "object" ? Error : DOMException;
   var defineProperty = Object.defineProperty;
   var forEach = Array.prototype.forEach;
+
   var importPattern = /@import.+?;?$/gm;
   function rejectImports(contents) {
     var _contents = contents.replace(importPattern, "");
     if (_contents !== contents) {
-      console.warn("@import rules are not allowed here. See https://github.com/WICG/construct-stylesheets/issues/119#issuecomment-588352418");
+      console.warn(
+        "@import rules are not allowed here. See https://github.com/WICG/construct-stylesheets/issues/119#issuecomment-588352418",
+      );
     }
     return _contents.trim();
   }
   function isElementConnected(element) {
-    return "isConnected" in element ? element.isConnected : document.contains(element);
+    return "isConnected" in element
+      ? element.isConnected
+      : document.contains(element);
   }
   function unique(arr) {
     return arr.filter(function (value, index) {
@@ -3040,20 +3693,37 @@ const getDragCoordinates = (element, scrollContainer = getScrollContainer(elemen
   function getShadowRoot(element) {
     return element.shadowRoot || closedShadowRootRegistry.get(element);
   }
-  var cssStyleSheetMethods = ["addRule", "deleteRule", "insertRule", "removeRule"];
+
+  var cssStyleSheetMethods = [
+    "addRule",
+    "deleteRule",
+    "insertRule",
+    "removeRule",
+  ];
   var NonConstructedStyleSheet = CSSStyleSheet;
   var nonConstructedProto = NonConstructedStyleSheet.prototype;
   nonConstructedProto.replace = function () {
-    return Promise.reject(new _DOMException("Can't call replace on non-constructed CSSStyleSheets."));
+    return Promise.reject(
+      new _DOMException(
+        "Can't call replace on non-constructed CSSStyleSheets.",
+      ),
+    );
   };
   nonConstructedProto.replaceSync = function () {
-    throw new _DOMException("Failed to execute 'replaceSync' on 'CSSStyleSheet': Can't call replaceSync on non-constructed CSSStyleSheets.");
+    throw new _DOMException(
+      "Failed to execute 'replaceSync' on 'CSSStyleSheet': Can't call replaceSync on non-constructed CSSStyleSheets.",
+    );
   };
   function isCSSStyleSheetInstance(instance) {
-    return typeof instance === "object" ? proto$1.isPrototypeOf(instance) || nonConstructedProto.isPrototypeOf(instance) : false;
+    return typeof instance === "object"
+      ? proto$1.isPrototypeOf(instance) ||
+          nonConstructedProto.isPrototypeOf(instance)
+      : false;
   }
   function isNonConstructedStyleSheetInstance(instance) {
-    return typeof instance === "object" ? nonConstructedProto.isPrototypeOf(instance) : false;
+    return typeof instance === "object"
+      ? nonConstructedProto.isPrototypeOf(instance)
+      : false;
   }
   var $basicStyleElement = new WeakMap();
   var $locations = new WeakMap();
@@ -3070,9 +3740,12 @@ const getDragCoordinates = (element, scrollContainer = getScrollContainer(elemen
   }
   function removeAdopterLocation(sheet, location) {
     $adoptersByLocation.get(sheet).delete(location);
-    $locations.set(sheet, $locations.get(sheet).filter(function (_location) {
-      return _location !== location;
-    }));
+    $locations.set(
+      sheet,
+      $locations.get(sheet).filter(function (_location) {
+        return _location !== location;
+      }),
+    );
   }
   function restyleAdopter(sheet, adopter) {
     requestAnimationFrame(function () {
@@ -3124,7 +3797,7 @@ const getDragCoordinates = (element, scrollContainer = getScrollContainer(elemen
     get: function cssRules() {
       checkInvocationCorrectness(this);
       return $basicStyleElement.get(this).sheet.cssRules;
-    }
+    },
   });
   defineProperty(proto$1, "media", {
     configurable: true,
@@ -3132,17 +3805,14 @@ const getDragCoordinates = (element, scrollContainer = getScrollContainer(elemen
     get: function media() {
       checkInvocationCorrectness(this);
       return $basicStyleElement.get(this).sheet.media;
-    }
+    },
   });
   cssStyleSheetMethods.forEach(function (method) {
     proto$1[method] = function () {
       var self = this;
       checkInvocationCorrectness(self);
       var args = arguments;
-      $appliedMethods.get(self).push({
-        method: method,
-        args: args
-      });
+      $appliedMethods.get(self).push({ method: method, args: args });
       $locations.get(self).forEach(function (location) {
         if (location.isConnected()) {
           var sheet = getAdopterByLocation(self, location).sheet;
@@ -3155,11 +3825,12 @@ const getDragCoordinates = (element, scrollContainer = getScrollContainer(elemen
   });
   defineProperty(ConstructedStyleSheet, Symbol.hasInstance, {
     configurable: true,
-    value: isCSSStyleSheetInstance
+    value: isCSSStyleSheetInstance,
   });
+
   var defaultObserverOptions = {
     childList: true,
-    subtree: true
+    subtree: true,
   };
   var locations = new WeakMap();
   function getAssociatedLocation(element) {
@@ -3179,14 +3850,22 @@ const getDragCoordinates = (element, scrollContainer = getScrollContainer(elemen
       },
       set: function (sheets) {
         getAssociatedLocation(this).update(sheets);
-      }
+      },
     });
   }
   function traverseWebComponents(node, callback) {
-    var iter = document.createNodeIterator(node, NodeFilter.SHOW_ELEMENT, function (foundNode) {
-      return getShadowRoot(foundNode) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-    }, null, false);
-    for (var next = void 0; next = iter.nextNode();) {
+    var iter = document.createNodeIterator(
+      node,
+      NodeFilter.SHOW_ELEMENT,
+      function (foundNode) {
+        return getShadowRoot(foundNode)
+          ? NodeFilter.FILTER_ACCEPT
+          : NodeFilter.FILTER_REJECT;
+      },
+      null,
+      false,
+    );
+    for (var next = void 0; (next = iter.nextNode()); ) {
       callback(getShadowRoot(next));
     }
   }
@@ -3194,9 +3873,12 @@ const getDragCoordinates = (element, scrollContainer = getScrollContainer(elemen
   var $uniqueSheets = new WeakMap();
   var $observer = new WeakMap();
   function isExistingAdopter(self, element) {
-    return element instanceof HTMLStyleElement && $uniqueSheets.get(self).some(function (sheet) {
-      return getAdopterByLocation(sheet, self);
-    });
+    return (
+      element instanceof HTMLStyleElement &&
+      $uniqueSheets.get(self).some(function (sheet) {
+        return getAdopterByLocation(sheet, self);
+      })
+    );
   }
   function getAdopterContainer(self) {
     var element = $element.get(self);
@@ -3209,7 +3891,9 @@ const getDragCoordinates = (element, scrollContainer = getScrollContainer(elemen
     var container = getAdopterContainer(self);
     observer.disconnect();
     sheets.forEach(function (sheet) {
-      styleList.appendChild(getAdopterByLocation(sheet, self) || addAdopterLocation(sheet, self));
+      styleList.appendChild(
+        getAdopterByLocation(sheet, self) || addAdopterLocation(sheet, self),
+      );
     });
     container.insertBefore(styleList, null);
     observer.observe(container, defaultObserverOptions);
@@ -3222,42 +3906,47 @@ const getDragCoordinates = (element, scrollContainer = getScrollContainer(elemen
     self.sheets = [];
     $element.set(self, element);
     $uniqueSheets.set(self, []);
-    $observer.set(self, new MutationObserver(function (mutations, observer) {
-      if (!document) {
-        observer.disconnect();
-        return;
-      }
-      mutations.forEach(function (mutation) {
-        if (!hasShadyCss) {
-          forEach.call(mutation.addedNodes, function (node) {
+    $observer.set(
+      self,
+      new MutationObserver(function (mutations, observer) {
+        if (!document) {
+          observer.disconnect();
+          return;
+        }
+        mutations.forEach(function (mutation) {
+          if (!hasShadyCss) {
+            forEach.call(mutation.addedNodes, function (node) {
+              if (!(node instanceof Element)) {
+                return;
+              }
+              traverseWebComponents(node, function (root) {
+                getAssociatedLocation(root).connect();
+              });
+            });
+          }
+          forEach.call(mutation.removedNodes, function (node) {
             if (!(node instanceof Element)) {
               return;
             }
-            traverseWebComponents(node, function (root) {
-              getAssociatedLocation(root).connect();
-            });
+            if (isExistingAdopter(self, node)) {
+              adopt(self);
+            }
+            if (!hasShadyCss) {
+              traverseWebComponents(node, function (root) {
+                getAssociatedLocation(root).disconnect();
+              });
+            }
           });
-        }
-        forEach.call(mutation.removedNodes, function (node) {
-          if (!(node instanceof Element)) {
-            return;
-          }
-          if (isExistingAdopter(self, node)) {
-            adopt(self);
-          }
-          if (!hasShadyCss) {
-            traverseWebComponents(node, function (root) {
-              getAssociatedLocation(root).disconnect();
-            });
-          }
         });
-      });
-    }));
+      }),
+    );
   }
   Location.prototype = {
     isConnected: function () {
       var element = $element.get(this);
-      return element instanceof Document ? element.readyState !== "loading" : isElementConnected(element.host);
+      return element instanceof Document
+        ? element.readyState !== "loading"
+        : isElementConnected(element.host);
     },
     connect: function () {
       var container = getAdopterContainer(this);
@@ -3274,15 +3963,28 @@ const getDragCoordinates = (element, scrollContainer = getScrollContainer(elemen
     },
     update: function (sheets) {
       var self = this;
-      var locationType = $element.get(self) === document ? "Document" : "ShadowRoot";
+      var locationType =
+        $element.get(self) === document ? "Document" : "ShadowRoot";
       if (!Array.isArray(sheets)) {
-        throw new TypeError("Failed to set the 'adoptedStyleSheets' property on " + locationType + ": Iterator getter is not callable.");
+        throw new TypeError(
+          "Failed to set the 'adoptedStyleSheets' property on " +
+            locationType +
+            ": Iterator getter is not callable.",
+        );
       }
       if (!sheets.every(isCSSStyleSheetInstance)) {
-        throw new TypeError("Failed to set the 'adoptedStyleSheets' property on " + locationType + ": Failed to convert value to 'CSSStyleSheet'");
+        throw new TypeError(
+          "Failed to set the 'adoptedStyleSheets' property on " +
+            locationType +
+            ": Failed to convert value to 'CSSStyleSheet'",
+        );
       }
       if (sheets.some(isNonConstructedStyleSheetInstance)) {
-        throw new TypeError("Failed to set the 'adoptedStyleSheets' property on " + locationType + ": Can't adopt non-constructed stylesheets");
+        throw new TypeError(
+          "Failed to set the 'adoptedStyleSheets' property on " +
+            locationType +
+            ": Can't adopt non-constructed stylesheets",
+        );
       }
       self.sheets = sheets;
       var oldUniqueSheets = $uniqueSheets.get(self);
@@ -3296,8 +3998,9 @@ const getDragCoordinates = (element, scrollContainer = getScrollContainer(elemen
       if (self.isConnected() && uniqueSheets.length > 0) {
         adopt(self);
       }
-    }
+    },
   };
+
   window.CSSStyleSheet = ConstructedStyleSheet;
   attachAdoptedStyleSheetProperty(Document);
   if ("ShadowRoot" in window) {
@@ -3316,7 +4019,10 @@ const getDragCoordinates = (element, scrollContainer = getScrollContainer(elemen
   if (documentLocation.isConnected()) {
     documentLocation.connect();
   } else {
-    document.addEventListener("DOMContentLoaded", documentLocation.connect.bind(documentLocation));
+    document.addEventListener(
+      "DOMContentLoaded",
+      documentLocation.connect.bind(documentLocation),
+    );
   }
 })();
 
@@ -3406,7 +4112,7 @@ const installImportMetaCss = importMeta => {
  * @param {Array<Element>} elements - Array of elements to keep interactive (non-inert)
  * @returns {Function} cleanup - Function to restore original inert states
  */
-const isolateInteractions = elements => {
+const isolateInteractions = (elements) => {
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
     for (const cleanupCallback of cleanupCallbackSet) {
@@ -3414,8 +4120,9 @@ const isolateInteractions = elements => {
     }
     cleanupCallbackSet.clear();
   };
+
   const toKeepInteractiveSet = new Set();
-  const keepSelfAndAncestors = el => {
+  const keepSelfAndAncestors = (el) => {
     if (toKeepInteractiveSet.has(el)) {
       return;
     }
@@ -3446,19 +4153,21 @@ const isolateInteractions = elements => {
   for (const backdropElement of backdropElements) {
     keepSelfAndAncestors(backdropElement);
   }
-  const setInert = el => {
+
+  const setInert = (el) => {
     if (toKeepInteractiveSet.has(el)) {
       // element should stay interactive
       return;
     }
     const restoreAttributes = setAttributes(el, {
-      inert: ""
+      inert: "",
     });
     cleanupCallbackSet.add(() => {
       restoreAttributes();
     });
   };
-  const makeElementInertSelectivelyOrCompletely = el => {
+
+  const makeElementInertSelectivelyOrCompletely = (el) => {
     // If this element should stay interactive, keep it active
     if (toKeepInteractiveSet.has(el)) {
       return;
@@ -3468,7 +4177,10 @@ const isolateInteractions = elements => {
     // is not in the set, we can check if any of its direct children are.
     // If none of the direct children are in the set, then no descendants are either.
     const children = Array.from(el.children);
-    const hasInteractiveChildren = children.some(child => toKeepInteractiveSet.has(child));
+    const hasInteractiveChildren = children.some((child) =>
+      toKeepInteractiveSet.has(child),
+    );
+
     if (!hasInteractiveChildren) {
       // No interactive descendants, make the entire element inert
       setInert(el);
@@ -3486,12 +4198,14 @@ const isolateInteractions = elements => {
   for (const child of bodyChildren) {
     makeElementInertSelectivelyOrCompletely(child);
   }
+
   return () => {
     cleanup();
   };
 };
 
-installImportMetaCss(import.meta);const createDragGestureController = (options = {}) => {
+installImportMetaCss(import.meta);
+const createDragGestureController = (options = {}) => {
   const {
     name,
     onGrab,
@@ -3499,18 +4213,17 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
     onDrag,
     onRelease,
     threshold = 5,
-    direction: defaultDirection = {
-      x: true,
-      y: true
-    },
+    direction: defaultDirection = { x: true, y: true },
     documentInteractions = "auto",
     backdrop = true,
-    backdropZIndex = 999999
+    backdropZIndex = 999999,
   } = options;
+
   const dragGestureController = {
     grab: null,
-    gravViaPointer: null
+    gravViaPointer: null,
   };
+
   const grab = ({
     element,
     direction = defaultDirection,
@@ -3520,7 +4233,7 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
     cursor = "grabbing",
     scrollContainer = document.documentElement,
     layoutScrollableLeft: scrollableLeftAtGrab = 0,
-    layoutScrollableTop: scrollableTopAtGrab = 0
+    layoutScrollableTop: scrollableTopAtGrab = 0,
   } = {}) => {
     if (!element) {
       throw new Error("element is required");
@@ -3528,6 +4241,7 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
     if (!direction.x && !direction.y) {
       return null;
     }
+
     const [publishBeforeDrag, addBeforeDragCallback] = createPubSub();
     const [publishDrag, addDragCallback] = createPubSub();
     const [publishRelease, addReleaseCallback] = createPubSub();
@@ -3537,15 +4251,13 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
     if (onRelease) {
       addReleaseCallback(onRelease);
     }
+
     const scrollLeftAtGrab = scrollContainer.scrollLeft;
     const scrollTopAtGrab = scrollContainer.scrollTop;
     const leftAtGrab = scrollLeftAtGrab + scrollableLeftAtGrab;
     const topAtGrab = scrollTopAtGrab + scrollableTopAtGrab;
     const createLayout = (x, y) => {
-      const {
-        scrollLeft,
-        scrollTop
-      } = scrollContainer;
+      const { scrollLeft, scrollTop } = scrollContainer;
       const left = scrollableLeftAtGrab + x;
       const top = scrollableTopAtGrab + y;
       const scrollableLeft = left - scrollLeft;
@@ -3565,38 +4277,42 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
         top,
         // Delta since grab (number representing how much we dragged)
         xDelta: left - leftAtGrab,
-        yDelta: top - topAtGrab
+        yDelta: top - topAtGrab,
       };
       return layoutProps;
     };
-    const grabLayout = createLayout(grabX + scrollContainer.scrollLeft, grabY + scrollContainer.scrollTop);
+
+    const grabLayout = createLayout(
+      grabX + scrollContainer.scrollLeft,
+      grabY + scrollContainer.scrollTop,
+    );
     const gestureInfo = {
       name,
       direction,
       started: !threshold,
       status: "grabbed",
+
       element,
       scrollContainer,
-      grabX,
-      // x grab coordinate (excluding scroll)
-      grabY,
-      // y grab coordinate (excluding scroll)
+      grabX, // x grab coordinate (excluding scroll)
+      grabY, // y grab coordinate (excluding scroll)
       grabLayout,
       leftAtGrab,
       topAtGrab,
-      dragX: grabX,
-      // coordinate of the last drag (excluding scroll of the scrollContainer)
-      dragY: grabY,
-      // coordinate of the last drag (excluding scroll of the scrollContainer)
+
+      dragX: grabX, // coordinate of the last drag (excluding scroll of the scrollContainer)
+      dragY: grabY, // coordinate of the last drag (excluding scroll of the scrollContainer)
       layout: grabLayout,
+
       isGoingUp: undefined,
       isGoingDown: undefined,
       isGoingLeft: undefined,
       isGoingRight: undefined,
+
       // metadata about interaction sources
       grabEvent: event,
       dragEvent: null,
-      releaseEvent: null
+      releaseEvent: null,
     };
     definePropertyAsReadOnly(gestureInfo, "name");
     definePropertyAsReadOnly(gestureInfo, "direction");
@@ -3607,6 +4323,7 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
     definePropertyAsReadOnly(gestureInfo, "leftAtGrab");
     definePropertyAsReadOnly(gestureInfo, "topAtGrab");
     definePropertyAsReadOnly(gestureInfo, "grabEvent");
+
     document_interactions: {
       if (documentInteractions === "manual") {
         break document_interactions;
@@ -3619,18 +4336,23 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
       2. Break the visual feedback (inconsistent cursors, hover states)
       3. Cause unwanted scrolling (keyboard shortcuts, wheel events in restricted directions)
       4. Create accessibility issues (focus jumping, screen reader confusion)
-       STRATEGY: Create a controlled interaction environment by:
+
+      STRATEGY: Create a controlled interaction environment by:
       1. VISUAL CONTROL: Use a backdrop to unify cursor appearance and block pointer events
       2. INTERACTION ISOLATION: Make non-dragged elements inert to prevent interference
       3. FOCUS MANAGEMENT: Control focus location and prevent focus changes during drag
       4. SELECTIVE SCROLLING: Allow scrolling only in directions supported by the drag gesture
-       IMPLEMENTATION:
+
+      IMPLEMENTATION:
       */
 
       // 1. INTERACTION ISOLATION: Make everything except the dragged element inert
       // This prevents keyboard events, pointer interactions, and screen reader navigation
       // on non-relevant elements during the drag operation
-      const cleanupInert = isolateInteractions([element, ...Array.from(document.querySelectorAll("[data-droppable]"))]);
+      const cleanupInert = isolateInteractions([
+        element,
+        ...Array.from(document.querySelectorAll("[data-droppable]")),
+      ]);
       addReleaseCallback(() => {
         cleanupInert();
       });
@@ -3647,14 +4369,14 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
         // Handle wheel events on backdrop for directionally-constrained drag gestures
         // (e.g., table column resize should only allow horizontal scrolling)
         if (!direction.x || !direction.y) {
-          backdropElement.onwheel = e => {
+          backdropElement.onwheel = (e) => {
             e.preventDefault();
             const scrollX = direction.x ? e.deltaX : 0;
             const scrollY = direction.y ? e.deltaY : 0;
             scrollContainer.scrollBy({
               left: scrollX,
               top: scrollY,
-              behavior: "auto"
+              behavior: "auto",
             });
           };
         }
@@ -3665,25 +4387,23 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
       }
 
       // 3. FOCUS MANAGEMENT: Control and stabilize focus during drag
-      const {
-        activeElement
-      } = document;
+      const { activeElement } = document;
       const focusableElement = findFocusable(element);
       // Focus the dragged element (or document.body as fallback) to establish clear focus context
       // This also ensure any keydown event listened by the currently focused element
       // won't be available during drag
       const elementToFocus = focusableElement || document.body;
       elementToFocus.focus({
-        preventScroll: true
+        preventScroll: true,
       });
       addReleaseCallback(() => {
         // Restore original focus on release
         activeElement.focus({
-          preventScroll: true
+          preventScroll: true,
         });
       });
       // Prevent Tab navigation entirely (focus should stay stable)
-      const onkeydown = e => {
+      const onkeydown = (e) => {
         if (e.key === "Tab") {
           e.preventDefault();
           return;
@@ -3696,16 +4416,27 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
 
       // 4. SELECTIVE SCROLLING: Allow keyboard scrolling only in supported directions
       {
-        const onDocumentKeydown = keyboardEvent => {
+        const onDocumentKeydown = (keyboardEvent) => {
           // Vertical scrolling keys - prevent if vertical movement not supported
-          if (keyboardEvent.key === "ArrowUp" || keyboardEvent.key === "ArrowDown" || keyboardEvent.key === " " || keyboardEvent.key === "PageUp" || keyboardEvent.key === "PageDown" || keyboardEvent.key === "Home" || keyboardEvent.key === "End") {
+          if (
+            keyboardEvent.key === "ArrowUp" ||
+            keyboardEvent.key === "ArrowDown" ||
+            keyboardEvent.key === " " ||
+            keyboardEvent.key === "PageUp" ||
+            keyboardEvent.key === "PageDown" ||
+            keyboardEvent.key === "Home" ||
+            keyboardEvent.key === "End"
+          ) {
             if (!direction.y) {
               keyboardEvent.preventDefault();
             }
             return;
           }
           // Horizontal scrolling keys - prevent if horizontal movement not supported
-          if (keyboardEvent.key === "ArrowLeft" || keyboardEvent.key === "ArrowRight") {
+          if (
+            keyboardEvent.key === "ArrowLeft" ||
+            keyboardEvent.key === "ArrowRight"
+          ) {
             if (!direction.x) {
               keyboardEvent.preventDefault();
             }
@@ -3722,38 +4453,36 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
     // Set up scroll event handling to adjust drag position when scrolling occurs
     {
       let isHandlingScroll = false;
-      const handleScroll = scrollEvent => {
+      const handleScroll = (scrollEvent) => {
         if (isHandlingScroll) {
           return;
         }
         isHandlingScroll = true;
-        drag(gestureInfo.dragX, gestureInfo.dragY, {
-          event: scrollEvent
-        });
+        drag(gestureInfo.dragX, gestureInfo.dragY, { event: scrollEvent });
         isHandlingScroll = false;
       };
-      const scrollEventReceiver = scrollContainer === document.documentElement ? document : scrollContainer;
+      const scrollEventReceiver =
+        scrollContainer === document.documentElement
+          ? document
+          : scrollContainer;
       scrollEventReceiver.addEventListener("scroll", handleScroll, {
-        passive: true
+        passive: true,
       });
       addReleaseCallback(() => {
         scrollEventReceiver.removeEventListener("scroll", handleScroll, {
-          passive: true
+          passive: true,
         });
       });
     }
+
     const determineDragData = ({
       dragX,
       dragY,
       dragEvent,
-      isRelease = false
+      isRelease = false,
     }) => {
       // === ÉTAT INITIAL (au moment du grab) ===
-      const {
-        grabX,
-        grabY,
-        grabLayout
-      } = gestureInfo;
+      const { grabX, grabY, grabLayout } = gestureInfo;
       // === CE QUI EST DEMANDÉ (où on veut aller) ===
       // Calcul de la direction basé sur le mouvement précédent
       // (ne tient pas compte du mouvement final une fois les contraintes appliquées)
@@ -3765,38 +4494,56 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
       const isGoingRight = dragX > currentDragX;
       const isGoingUp = dragY < currentDragY;
       const isGoingDown = dragY > currentDragY;
-      const layoutXRequested = direction.x ? scrollContainer.scrollLeft + (dragX - grabX) : grabLayout.scrollLeft;
-      const layoutYRequested = direction.y ? scrollContainer.scrollTop + (dragY - grabY) : grabLayout.scrollTop;
+
+      const layoutXRequested = direction.x
+        ? scrollContainer.scrollLeft + (dragX - grabX)
+        : grabLayout.scrollLeft;
+      const layoutYRequested = direction.y
+        ? scrollContainer.scrollTop + (dragY - grabY)
+        : grabLayout.scrollTop;
       const layoutRequested = createLayout(layoutXRequested, layoutYRequested);
       const currentLayout = gestureInfo.layout;
       let layout;
-      if (layoutRequested.x === currentLayout.x && layoutRequested.y === currentLayout.y) {
+      if (
+        layoutRequested.x === currentLayout.x &&
+        layoutRequested.y === currentLayout.y
+      ) {
         layout = currentLayout;
       } else {
         // === APPLICATION DES CONTRAINTES ===
         let layoutConstrained = layoutRequested;
         const limitLayout = (left, top) => {
-          layoutConstrained = createLayout(left === undefined ? layoutConstrained.x : left - scrollableLeftAtGrab, top === undefined ? layoutConstrained.y : top - scrollableTopAtGrab);
+          layoutConstrained = createLayout(
+            left === undefined
+              ? layoutConstrained.x
+              : left - scrollableLeftAtGrab,
+            top === undefined ? layoutConstrained.y : top - scrollableTopAtGrab,
+          );
         };
+
         publishBeforeDrag(layoutRequested, currentLayout, limitLayout, {
           dragEvent,
-          isRelease
+          isRelease,
         });
         // === ÉTAT FINAL ===
         layout = layoutConstrained;
       }
+
       const dragData = {
         dragX,
         dragY,
         layout,
+
         isGoingLeft,
         isGoingRight,
         isGoingUp,
         isGoingDown,
+
         status: isRelease ? "released" : "dragging",
         dragEvent: isRelease ? gestureInfo.dragEvent : dragEvent,
-        releaseEvent: isRelease ? dragEvent : null
+        releaseEvent: isRelease ? dragEvent : null,
       };
+
       if (isRelease) {
         return dragData;
       }
@@ -3821,19 +4568,18 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
       }
       return dragData;
     };
-    const drag = (dragX = gestureInfo.dragX,
-    // Scroll container relative X coordinate
-    dragY = gestureInfo.dragY,
-    // Scroll container relative Y coordinate
-    {
-      event = new CustomEvent("programmatic"),
-      isRelease = false
-    } = {}) => {
+
+    const drag = (
+      dragX = gestureInfo.dragX, // Scroll container relative X coordinate
+      dragY = gestureInfo.dragY, // Scroll container relative Y coordinate
+      { event = new CustomEvent("programmatic"), isRelease = false } = {},
+    ) => {
+
       const dragData = determineDragData({
         dragX,
         dragY,
         dragEvent: event,
-        isRelease
+        isRelease,
       });
       const startedPrevious = gestureInfo.started;
       const layoutPrevious = gestureInfo.layout;
@@ -3843,24 +4589,25 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
         onDragStart?.(gestureInfo);
       }
       const someLayoutChange = gestureInfo.layout !== layoutPrevious;
-      publishDrag(gestureInfo,
-      // we still publish drag event even when unchanged
-      // because UI might need to adjust when document scrolls
-      // even if nothing truly changes visually the element
-      // can decide to stick to the scroll for example
-      someLayoutChange);
+      publishDrag(
+        gestureInfo,
+        // we still publish drag event even when unchanged
+        // because UI might need to adjust when document scrolls
+        // even if nothing truly changes visually the element
+        // can decide to stick to the scroll for example
+        someLayoutChange,
+      );
     };
+
     const release = ({
       event = new CustomEvent("programmatic"),
       releaseX = gestureInfo.dragX,
-      releaseY = gestureInfo.dragY
+      releaseY = gestureInfo.dragY,
     } = {}) => {
-      drag(releaseX, releaseY, {
-        event,
-        isRelease: true
-      });
+      drag(releaseX, releaseY, { event, isRelease: true });
       publishRelease(gestureInfo);
     };
+
     onGrab?.(gestureInfo);
     const dragGesture = {
       gestureInfo,
@@ -3868,11 +4615,12 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
       addDragCallback,
       addReleaseCallback,
       drag,
-      release
+      release,
     };
     return dragGesture;
   };
   dragGestureController.grab = grab;
+
   const initDragByPointer = (grabEvent, dragOptions, initializer) => {
     if (grabEvent.button !== undefined && grabEvent.button !== 0) {
       return null;
@@ -3882,11 +4630,8 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
       // target is a text node
       return null;
     }
-    const mouseEventCoords = mouseEvent => {
-      const {
-        clientX,
-        clientY
-      } = mouseEvent;
+    const mouseEventCoords = (mouseEvent) => {
+      const { clientX, clientY } = mouseEvent;
       return [clientX, clientY];
     };
     const [grabX, grabY] = mouseEventCoords(grabEvent);
@@ -3894,39 +4639,37 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
       grabX,
       grabY,
       event: grabEvent,
-      ...dragOptions
+      ...dragOptions,
     });
-    const dragViaPointer = dragEvent => {
+    const dragViaPointer = (dragEvent) => {
       const [mouseDragX, mouseDragY] = mouseEventCoords(dragEvent);
       dragGesture.drag(mouseDragX, mouseDragY, {
-        event: dragEvent
+        event: dragEvent,
       });
     };
-    const releaseViaPointer = mouseupEvent => {
+    const releaseViaPointer = (mouseupEvent) => {
       const [mouseReleaseX, mouseReleaseY] = mouseEventCoords(mouseupEvent);
       dragGesture.release({
         event: mouseupEvent,
         releaseX: mouseReleaseX,
-        releaseY: mouseReleaseY
+        releaseY: mouseReleaseY,
       });
     };
     dragGesture.dragViaPointer = dragViaPointer;
     dragGesture.releaseViaPointer = releaseViaPointer;
     const cleanup = initializer({
       onMove: dragViaPointer,
-      onRelease: releaseViaPointer
+      onRelease: releaseViaPointer,
     });
     dragGesture.addReleaseCallback(() => {
       cleanup();
     });
     return dragGesture;
   };
+
   const grabViaPointer = (grabEvent, options) => {
     if (grabEvent.type === "pointerdown") {
-      return initDragByPointer(grabEvent, options, ({
-        onMove,
-        onRelease
-      }) => {
+      return initDragByPointer(grabEvent, options, ({ onMove, onRelease }) => {
         const target = grabEvent.target;
         target.setPointerCapture(grabEvent.pointerId);
         target.addEventListener("lostpointercapture", onRelease);
@@ -3943,12 +4686,11 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
       });
     }
     if (grabEvent.type === "mousedown") {
-      console.warn("Received \"mousedown\" event, \"pointerdown\" events are recommended to perform drag gestures.");
-      return initDragByPointer(grabEvent, options, ({
-        onMove,
-        onRelease
-      }) => {
-        const onPointerUp = pointerEvent => {
+      console.warn(
+        `Received "mousedown" event, "pointerdown" events are recommended to perform drag gestures.`,
+      );
+      return initDragByPointer(grabEvent, options, ({ onMove, onRelease }) => {
+        const onPointerUp = (pointerEvent) => {
           // <button disabled> for example does not emit mouseup if we release mouse over it
           // -> we add "pointerup" to catch mouseup occuring on disabled element
           if (pointerEvent.pointerType === "mouse") {
@@ -3965,48 +4707,65 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
         };
       });
     }
-    throw new Error("Unsupported \"".concat(grabEvent.type, "\" evenet passed to grabViaPointer. \"pointerdown\" was expected."));
+    throw new Error(
+      `Unsupported "${grabEvent.type}" evenet passed to grabViaPointer. "pointerdown" was expected.`,
+    );
   };
   dragGestureController.grabViaPointer = grabViaPointer;
+
   return dragGestureController;
 };
-const dragAfterThreshold = (grabEvent, dragGestureInitializer, threshold) => {
+
+const dragAfterThreshold = (
+  grabEvent,
+  dragGestureInitializer,
+  threshold,
+) => {
   const significantDragGestureController = createDragGestureController({
     threshold,
     // allow interaction for this intermediate gesture:
     // user should still be able to scroll or interact with the document
     // only once the gesture is significant we take control
     documentInteractions: "manual",
-    onDragStart: gestureInfo => {
+    onDragStart: (gestureInfo) => {
       significantDragGesture.release(); // kill that gesture
       const dragGesture = dragGestureInitializer();
       dragGesture.dragViaPointer(gestureInfo.dragEvent);
-    }
+    },
   });
-  const significantDragGesture = significantDragGestureController.grabViaPointer(grabEvent, {
-    element: grabEvent.target
-  });
+  const significantDragGesture =
+    significantDragGestureController.grabViaPointer(grabEvent, {
+      element: grabEvent.target,
+    });
 };
+
 const definePropertyAsReadOnly = (object, propertyName) => {
   Object.defineProperty(object, propertyName, {
     writable: false,
-    value: object[propertyName]
+    value: object[propertyName],
   });
 };
-import.meta.css = /* css */"\n  .navi_drag_gesture_backdrop {\n    position: fixed;\n    inset: 0;\n    user-select: none;\n  }\n";
 
-const getBorderSizes = element => {
+import.meta.css = /* css */ `
+  .navi_drag_gesture_backdrop {
+    position: fixed;
+    inset: 0;
+    user-select: none;
+  }
+`;
+
+const getBorderSizes = (element) => {
   const {
     borderLeftWidth,
     borderRightWidth,
     borderTopWidth,
-    borderBottomWidth
+    borderBottomWidth,
   } = window.getComputedStyle(element, null);
   return {
     left: parseFloat(borderLeftWidth),
     right: parseFloat(borderRightWidth),
     top: parseFloat(borderTopWidth),
-    bottom: parseFloat(borderBottomWidth)
+    bottom: parseFloat(borderBottomWidth),
   };
 };
 
@@ -4130,9 +4889,8 @@ const getBorderSizes = element => {
  * • Scroll coordinates: 50px → 0px
  */
 
-const {
-  documentElement
-} = document;
+
+const { documentElement } = document;
 
 /**
  * Get element rectangle relative to its scroll container
@@ -4142,15 +4900,18 @@ const {
  * @param {object} [options] - Configuration options
  * @returns {object} { left, top, right, bottom, width, height, scrollLeft, scrollTop, scrollContainer, ...metadata }
  */
-const getScrollRelativeRect = (element, scrollContainer = getScrollContainer(element), {
-  useOriginalPositionEvenIfSticky = false
-} = {}) => {
+const getScrollRelativeRect = (
+  element,
+  scrollContainer = getScrollContainer(element),
+  { useOriginalPositionEvenIfSticky = false } = {},
+) => {
   const {
     left: leftViewport,
     top: topViewport,
     width,
-    height
+    height,
   } = element.getBoundingClientRect();
+
   let fromFixed = false;
   let fromStickyLeft;
   let fromStickyTop;
@@ -4160,13 +4921,18 @@ const getScrollRelativeRect = (element, scrollContainer = getScrollContainer(ele
   const scrollTop = scrollContainer.scrollTop;
   const scrollContainerIsDocument = scrollContainer === documentElement;
   const createScrollRelativeRect = (leftScrollRelative, topScrollRelative) => {
-    const isStickyLeftOrHasStickyLeftAttr = Boolean(fromStickyLeft || fromStickyLeftAttr);
-    const isStickyTopOrHasStickyTopAttr = Boolean(fromStickyTop || fromStickyTopAttr);
+    const isStickyLeftOrHasStickyLeftAttr = Boolean(
+      fromStickyLeft || fromStickyLeftAttr,
+    );
+    const isStickyTopOrHasStickyTopAttr = Boolean(
+      fromStickyTop || fromStickyTopAttr,
+    );
     return {
       left: leftScrollRelative,
       top: topScrollRelative,
       right: leftScrollRelative + width,
       bottom: topScrollRelative + height,
+
       // metadata
       width,
       height,
@@ -4181,40 +4947,51 @@ const getScrollRelativeRect = (element, scrollContainer = getScrollContainer(ele
       fromStickyTopAttr,
       isStickyLeftOrHasStickyLeftAttr,
       isStickyTopOrHasStickyTopAttr,
-      isSticky: isStickyLeftOrHasStickyLeftAttr || isStickyTopOrHasStickyTopAttr
+      isSticky:
+        isStickyLeftOrHasStickyLeftAttr || isStickyTopOrHasStickyTopAttr,
     };
   };
+
   {
     const computedStyle = getComputedStyle(element);
     {
       const usePositionSticky = computedStyle.position === "sticky";
       if (usePositionSticky) {
         // For CSS position:sticky elements, use scrollable-relative coordinates
-        const [leftScrollRelative, topScrollRelative] = viewportPosToScrollRelativePos(leftViewport, topViewport, scrollContainer);
+        const [leftScrollRelative, topScrollRelative] =
+          viewportPosToScrollRelativePos(
+            leftViewport,
+            topViewport,
+            scrollContainer,
+          );
         const isStickyLeft = computedStyle.left !== "auto";
         const isStickyTop = computedStyle.top !== "auto";
-        fromStickyLeft = isStickyLeft ? {
-          value: parseFloat(computedStyle.left) || 0
-        } : undefined;
-        fromStickyTop = isStickyTop ? {
-          value: parseFloat(computedStyle.top) || 0
-        } : undefined;
+        fromStickyLeft = isStickyLeft
+          ? { value: parseFloat(computedStyle.left) || 0 }
+          : undefined;
+        fromStickyTop = isStickyTop
+          ? { value: parseFloat(computedStyle.top) || 0 }
+          : undefined;
         return createScrollRelativeRect(leftScrollRelative, topScrollRelative);
       }
     }
     {
       const hasStickyLeftAttribute = element.hasAttribute("data-sticky-left");
       const hasStickyTopAttribute = element.hasAttribute("data-sticky-top");
-      const useStickyAttribute = hasStickyLeftAttribute || hasStickyTopAttribute;
+      const useStickyAttribute =
+        hasStickyLeftAttribute || hasStickyTopAttribute;
       if (useStickyAttribute) {
         // Handle virtually sticky obstacles (<col> or <tr>) - elements with data-sticky attributes
         // but not CSS position:sticky. Calculate their position based on scroll and sticky behavior
-        let [leftScrollRelative, topScrollRelative] = viewportPosToScrollRelativePos(leftViewport, topViewport, scrollContainer);
+        let [leftScrollRelative, topScrollRelative] =
+          viewportPosToScrollRelativePos(
+            leftViewport,
+            topViewport,
+            scrollContainer,
+          );
         if (hasStickyLeftAttribute) {
           const leftCssValue = parseFloat(computedStyle.left) || 0;
-          fromStickyLeftAttr = {
-            value: leftCssValue
-          };
+          fromStickyLeftAttr = { value: leftCssValue };
           if (useOriginalPositionEvenIfSticky) ; else {
             const scrollLeft = scrollContainer.scrollLeft;
             const stickyPosition = scrollLeft + leftCssValue;
@@ -4226,9 +5003,7 @@ const getScrollRelativeRect = (element, scrollContainer = getScrollContainer(ele
         }
         if (hasStickyTopAttribute) {
           const topCssValue = parseFloat(computedStyle.top) || 0;
-          fromStickyTopAttr = {
-            value: topCssValue
-          };
+          fromStickyTopAttr = { value: topCssValue };
           if (useOriginalPositionEvenIfSticky) ; else {
             const scrollTop = scrollContainer.scrollTop;
             const stickyPosition = scrollTop + topCssValue;
@@ -4244,29 +5019,30 @@ const getScrollRelativeRect = (element, scrollContainer = getScrollContainer(ele
   }
 
   // For normal elements, use scrollable-relative coordinates
-  const [leftScrollRelative, topScrollRelative] = viewportPosToScrollRelativePos(leftViewport, topViewport, scrollContainer);
+  const [leftScrollRelative, topScrollRelative] =
+    viewportPosToScrollRelativePos(leftViewport, topViewport, scrollContainer);
   return createScrollRelativeRect(leftScrollRelative, topScrollRelative);
 };
-const viewportPosToScrollRelativePos = (leftViewport, topViewport, scrollContainer) => {
+const viewportPosToScrollRelativePos = (
+  leftViewport,
+  topViewport,
+  scrollContainer,
+) => {
   const scrollContainerIsDocument = scrollContainer === documentElement;
   if (scrollContainerIsDocument) {
     return [leftViewport, topViewport];
   }
-  const {
-    left: scrollContainerLeftViewport,
-    top: scrollContainerTopViewport
-  } = scrollContainer.getBoundingClientRect();
-  return [leftViewport - scrollContainerLeftViewport, topViewport - scrollContainerTopViewport];
+  const { left: scrollContainerLeftViewport, top: scrollContainerTopViewport } =
+    scrollContainer.getBoundingClientRect();
+  return [
+    leftViewport - scrollContainerLeftViewport,
+    topViewport - scrollContainerTopViewport,
+  ];
 };
-const addScrollToRect = scrollRelativeRect => {
-  const {
-    left,
-    top,
-    width,
-    height,
-    scrollLeft,
-    scrollTop
-  } = scrollRelativeRect;
+
+const addScrollToRect = (scrollRelativeRect) => {
+  const { left, top, width, height, scrollLeft, scrollTop } =
+    scrollRelativeRect;
   const leftWithScroll = left + scrollLeft;
   const topWithScroll = top + scrollTop;
   return {
@@ -4274,31 +5050,27 @@ const addScrollToRect = scrollRelativeRect => {
     left: leftWithScroll,
     top: topWithScroll,
     right: leftWithScroll + width,
-    bottom: topWithScroll + height
+    bottom: topWithScroll + height,
   };
 };
 
 // https://github.com/w3c/csswg-drafts/issues/3329
 // Return the portion of the element that is visible for this scoll container
-const getScrollBox = scrollContainer => {
+const getScrollBox = (scrollContainer) => {
   if (scrollContainer === documentElement) {
-    const {
-      clientWidth,
-      clientHeight
-    } = documentElement;
+    const { clientWidth, clientHeight } = documentElement;
+
     return {
       left: 0,
       top: 0,
       right: clientWidth,
       bottom: clientHeight,
       width: clientWidth,
-      height: clientHeight
+      height: clientHeight,
     };
   }
-  const {
-    clientWidth,
-    clientHeight
-  } = scrollContainer;
+
+  const { clientWidth, clientHeight } = scrollContainer;
   const scrollContainerBorderSizes = getBorderSizes(scrollContainer);
   const left = scrollContainerBorderSizes.left;
   const top = scrollContainerBorderSizes.top;
@@ -4310,17 +5082,12 @@ const getScrollBox = scrollContainer => {
     right,
     bottom,
     width: clientWidth,
-    height: clientHeight
+    height: clientHeight,
   };
 };
 // https://developer.mozilla.org/en-US/docs/Glossary/Scroll_container#scrollport
 const getScrollport = (scrollBox, scrollContainer) => {
-  const {
-    left,
-    top,
-    width,
-    height
-  } = scrollBox;
+  const { left, top, width, height } = scrollBox;
   const leftWithScroll = left + scrollContainer.scrollLeft;
   const topWithScroll = top + scrollContainer.scrollTop;
   const rightWithScroll = leftWithScroll + width;
@@ -4329,15 +5096,17 @@ const getScrollport = (scrollBox, scrollContainer) => {
     left: leftWithScroll,
     top: topWithScroll,
     right: rightWithScroll,
-    bottom: bottomWithScroll
+    bottom: bottomWithScroll,
   };
 };
 
-const getElementSelector = element => {
+const getElementSelector = (element) => {
   const tagName = element.tagName.toLowerCase();
-  const id = element.id ? "#".concat(element.id) : "";
-  const className = element.className ? ".".concat(element.className.split(" ").join(".")) : "";
-  return "".concat(tagName).concat(id).concat(className);
+  const id = element.id ? `#${element.id}` : "";
+  const className = element.className
+    ? `.${element.className.split(" ").join(".")}`
+    : "";
+  return `${tagName}${id}${className}`;
 };
 
 installImportMetaCss(import.meta);const setupConstraintFeedbackLine = () => {
@@ -4348,15 +5117,16 @@ installImportMetaCss(import.meta);const setupConstraintFeedbackLine = () => {
   let lastMouseY = null;
 
   // Internal function to update constraint feedback line
-  const onDrag = gestureInfo => {
-    const {
-      grabEvent,
-      dragEvent
-    } = gestureInfo;
-    if (grabEvent.type === "programmatic" || dragEvent.type === "programmatic") {
+  const onDrag = (gestureInfo) => {
+    const { grabEvent, dragEvent } = gestureInfo;
+    if (
+      grabEvent.type === "programmatic" ||
+      dragEvent.type === "programmatic"
+    ) {
       // programmatic drag
       return;
     }
+
     const mouseX = dragEvent.clientX;
     const mouseY = dragEvent.clientY;
     // Use last known position if current position not available (e.g., during scroll)
@@ -4369,6 +5139,7 @@ installImportMetaCss(import.meta);const setupConstraintFeedbackLine = () => {
     // Store current mouse position for potential use during scroll
     lastMouseX = mouseX;
     lastMouseY = mouseY;
+
     const grabClientX = grabEvent.clientX;
     const grabClientY = grabEvent.clientY;
 
@@ -4387,40 +5158,58 @@ installImportMetaCss(import.meta);const setupConstraintFeedbackLine = () => {
     // Calculate angle and position
     const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
     // Position line at current grab point (follows element movement)
-    constraintFeedbackLine.style.left = "".concat(grabClientX, "px");
-    constraintFeedbackLine.style.top = "".concat(grabClientY, "px");
-    constraintFeedbackLine.style.width = "".concat(distance, "px");
-    constraintFeedbackLine.style.transform = "rotate(".concat(angle, "deg)");
+    constraintFeedbackLine.style.left = `${grabClientX}px`;
+    constraintFeedbackLine.style.top = `${grabClientY}px`;
+    constraintFeedbackLine.style.width = `${distance}px`;
+    constraintFeedbackLine.style.transform = `rotate(${angle}deg)`;
     // Fade in based on distance (more visible as distance increases)
     const maxOpacity = 0.8;
     const opacityFactor = Math.min((distance - threshold) / 100, 1);
-    constraintFeedbackLine.style.opacity = "".concat(maxOpacity * opacityFactor);
+    constraintFeedbackLine.style.opacity = `${maxOpacity * opacityFactor}`;
     constraintFeedbackLine.setAttribute("data-visible", "");
   };
+
   return {
     onDrag,
     onRelease: () => {
       constraintFeedbackLine.remove();
-    }
+    },
   };
 };
+
 const createConstraintFeedbackLine = () => {
   const line = document.createElement("div");
   line.className = "navi_constraint_feedback_line";
-  line.title = "Constraint feedback - shows distance between mouse and moving grab point";
+  line.title =
+    "Constraint feedback - shows distance between mouse and moving grab point";
   document.body.appendChild(line);
   return line;
 };
-import.meta.css = /* css */"\n  .navi_constraint_feedback_line {\n    position: fixed;\n    pointer-events: none;\n    z-index: 9998;\n    visibility: hidden;\n    transition: opacity 0.15s ease;\n    transform-origin: left center;\n    border-top: 2px dotted rgba(59, 130, 246, 0.7);\n  }\n\n  .navi_constraint_feedback_line[data-visible] {\n    visibility: visible;\n  }\n";
+
+import.meta.css = /* css */ `
+  .navi_constraint_feedback_line {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9998;
+    visibility: hidden;
+    transition: opacity 0.15s ease;
+    transform-origin: left center;
+    border-top: 2px dotted rgba(59, 130, 246, 0.7);
+  }
+
+  .navi_constraint_feedback_line[data-visible] {
+    visibility: visible;
+  }
+`;
 
 installImportMetaCss(import.meta);const MARKER_SIZE = 12;
+
 let currentDebugMarkers = [];
 let currentConstraintMarkers = [];
 let currentReferenceElementMarker = null;
 let currentElementMarker = null;
-const setupDragDebugMarkers = (dragGesture, {
-  referenceElement
-}) => {
+
+const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
   // Clean up any existing persistent markers from previous drag gestures
   {
     // Remove any existing markers from previous gestures
@@ -4429,27 +5218,29 @@ const setupDragDebugMarkers = (dragGesture, {
       container.innerHTML = ""; // Clear all markers efficiently
     }
   }
-  const {
-    direction,
-    scrollContainer
-  } = dragGesture.gestureInfo;
+
+  const { direction, scrollContainer } = dragGesture.gestureInfo;
+
   return {
-    onConstraints: (constraints, {
-      left,
-      top,
-      right,
-      bottom,
-      autoScrollArea
-    }) => {
+    onConstraints: (
+      constraints,
+      { left, top, right, bottom, autoScrollArea },
+    ) => {
       // Schedule removal of previous markers if they exist
       const previousDebugMarkers = [...currentDebugMarkers];
       const previousConstraintMarkers = [...currentConstraintMarkers];
       const previousReferenceElementMarker = currentReferenceElementMarker;
       const previousElementMarker = currentElementMarker;
-      if (previousDebugMarkers.length > 0 || previousConstraintMarkers.length > 0 || previousReferenceElementMarker || previousElementMarker) {
+
+      if (
+        previousDebugMarkers.length > 0 ||
+        previousConstraintMarkers.length > 0 ||
+        previousReferenceElementMarker ||
+        previousElementMarker
+      ) {
         setTimeout(() => {
-          previousDebugMarkers.forEach(marker => marker.remove());
-          previousConstraintMarkers.forEach(marker => marker.remove());
+          previousDebugMarkers.forEach((marker) => marker.remove());
+          previousConstraintMarkers.forEach((marker) => marker.remove());
           if (previousReferenceElementMarker) {
             previousReferenceElementMarker.remove();
           }
@@ -4478,7 +5269,7 @@ const setupDragDebugMarkers = (dragGesture, {
         bottom,
         scrollContainer,
         label: elementLabel,
-        color: elementColor
+        color: elementColor,
       });
 
       // Create reference element marker if reference element exists
@@ -4488,47 +5279,52 @@ const setupDragDebugMarkers = (dragGesture, {
           top,
           right,
           bottom,
-          scrollContainer
+          scrollContainer,
         });
       }
 
       // Collect all markers to be created, then merge duplicates
       const markersToCreate = [];
+
       {
         if (direction.x) {
           markersToCreate.push({
-            name: autoScrollArea.paddingLeft ? "autoscroll.left + padding(".concat(autoScrollArea.paddingLeft, ")") : "autoscroll.left",
+            name: autoScrollArea.paddingLeft
+              ? `autoscroll.left + padding(${autoScrollArea.paddingLeft})`
+              : "autoscroll.left",
             x: autoScrollArea.left,
             y: 0,
-            color: "0 128 0",
-            // green
-            side: "left"
+            color: "0 128 0", // green
+            side: "left",
           });
           markersToCreate.push({
-            name: autoScrollArea.paddingRight ? "autoscroll.right + padding(".concat(autoScrollArea.paddingRight, ")") : "autoscroll.right",
+            name: autoScrollArea.paddingRight
+              ? `autoscroll.right + padding(${autoScrollArea.paddingRight})`
+              : "autoscroll.right",
             x: autoScrollArea.right,
             y: 0,
-            color: "0 128 0",
-            // green
-            side: "right"
+            color: "0 128 0", // green
+            side: "right",
           });
         }
         if (direction.y) {
           markersToCreate.push({
-            name: autoScrollArea.paddingTop ? "autoscroll.top + padding(".concat(autoScrollArea.paddingTop, ")") : "autoscroll.top",
+            name: autoScrollArea.paddingTop
+              ? `autoscroll.top + padding(${autoScrollArea.paddingTop})`
+              : "autoscroll.top",
             x: 0,
             y: autoScrollArea.top,
-            color: "255 0 0",
-            // red
-            side: "top"
+            color: "255 0 0", // red
+            side: "top",
           });
           markersToCreate.push({
-            name: autoScrollArea.paddingBottom ? "autoscroll.bottom + padding(".concat(autoScrollArea.paddingBottom, ")") : "autoscroll.bottom",
+            name: autoScrollArea.paddingBottom
+              ? `autoscroll.bottom + padding(${autoScrollArea.paddingBottom})`
+              : "autoscroll.bottom",
             x: 0,
             y: autoScrollArea.bottom,
-            color: "255 165 0",
-            // orange
-            side: "bottom"
+            color: "255 165 0", // orange
+            side: "bottom",
           });
         }
       }
@@ -4536,75 +5332,79 @@ const setupDragDebugMarkers = (dragGesture, {
       // Process each constraint individually to preserve names
       for (const constraint of constraints) {
         if (constraint.type === "bounds") {
-          const {
-            bounds
-          } = constraint;
+          const { bounds } = constraint;
 
           // Create individual markers for each bound with constraint name
           if (direction.x) {
             if (bounds.left !== undefined) {
               markersToCreate.push({
-                name: "".concat(constraint.name, ".left"),
+                name: `${constraint.name}.left`,
                 x: bounds.left,
                 y: 0,
-                color: "128 0 128",
-                // purple
-                side: "left"
+                color: "128 0 128", // purple
+                side: "left",
               });
             }
             if (bounds.right !== undefined) {
               // For visual clarity, show rightBound at the right edge of the element
               // when element is positioned at rightBound (not the left edge position)
               markersToCreate.push({
-                name: "".concat(constraint.name, ".right"),
+                name: `${constraint.name}.right`,
                 x: bounds.right,
                 y: 0,
-                color: "128 0 128",
-                // purple
-                side: "right"
+                color: "128 0 128", // purple
+                side: "right",
               });
             }
           }
           if (direction.y) {
             if (bounds.top !== undefined) {
               markersToCreate.push({
-                name: "".concat(constraint.name, ".top"),
+                name: `${constraint.name}.top`,
                 x: 0,
                 y: bounds.top,
-                color: "128 0 128",
-                // purple
-                side: "top"
+                color: "128 0 128", // purple
+                side: "top",
               });
             }
             if (bounds.bottom !== undefined) {
               // For visual clarity, show bottomBound at the bottom edge of the element
               // when element is positioned at bottomBound (not the left edge position)
               markersToCreate.push({
-                name: "".concat(constraint.name, ".bottom"),
+                name: `${constraint.name}.bottom`,
                 x: 0,
                 y: bounds.bottom,
-                color: "128 0 128",
-                // purple
-                side: "bottom"
+                color: "128 0 128", // purple
+                side: "bottom",
               });
             }
           }
         } else if (constraint.type === "obstacle") {
-          const obstacleMarker = createObstacleMarker(constraint, scrollContainer);
+          const obstacleMarker = createObstacleMarker(
+            constraint,
+            scrollContainer,
+          );
           currentConstraintMarkers.push(obstacleMarker);
         }
       }
 
       // Create markers with merging for overlapping positions
-      const createdMarkers = createMergedMarkers(markersToCreate, scrollContainer);
-      currentDebugMarkers.push(...createdMarkers.filter(m => m.type !== "constraint"));
-      currentConstraintMarkers.push(...createdMarkers.filter(m => m.type === "constraint"));
+      const createdMarkers = createMergedMarkers(
+        markersToCreate,
+        scrollContainer,
+      );
+      currentDebugMarkers.push(
+        ...createdMarkers.filter((m) => m.type !== "constraint"),
+      );
+      currentConstraintMarkers.push(
+        ...createdMarkers.filter((m) => m.type === "constraint"),
+      );
     },
     onRelease: () => {
       {
         return;
       }
-    }
+    },
   };
 };
 
@@ -4623,9 +5423,8 @@ const getMarkersContainer = () => {
 // Convert document-relative coordinates to viewport coordinates for marker positioning
 // Takes the scroll container into account for proper positioning relative to the container
 const getDebugMarkerPos = (x, y, scrollContainer, side = null) => {
-  const {
-    documentElement
-  } = document;
+  const { documentElement } = document;
+
   const leftWithoutScroll = x - scrollContainer.scrollLeft;
   const topWithoutScroll = y - scrollContainer.scrollTop;
   let baseX;
@@ -4657,13 +5456,15 @@ const getDebugMarkerPos = (x, y, scrollContainer, side = null) => {
   // For obstacles and other markers: use converted coordinates directly
   return [baseX, baseY];
 };
+
 const createMergedMarkers = (markersToCreate, scrollContainer) => {
   const mergedMarkers = [];
   const positionMap = new Map();
 
   // Group markers by position and side
   for (const marker of markersToCreate) {
-    const key = "".concat(marker.x, ",").concat(marker.y, ",").concat(marker.side);
+    const key = `${marker.x},${marker.y},${marker.side}`;
+
     if (!positionMap.has(key)) {
       positionMap.set(key, []);
     }
@@ -4681,43 +5482,51 @@ const createMergedMarkers = (markersToCreate, scrollContainer) => {
     } else {
       // Multiple markers at same position - merge labels
       const firstMarker = markers[0];
-      const combinedName = markers.map(m => m.name).join(" + ");
+      const combinedName = markers.map((m) => m.name).join(" + ");
 
       // Use the first marker's color, or mix colors if needed
-      const domMarker = createDebugMarker({
-        ...firstMarker,
-        name: combinedName
-      }, scrollContainer);
-      domMarker.type = markers.some(m => m.name.includes("Bound")) ? "constraint" : "visible";
+      const domMarker = createDebugMarker(
+        {
+          ...firstMarker,
+          name: combinedName,
+        },
+        scrollContainer,
+      );
+      domMarker.type = markers.some((m) => m.name.includes("Bound"))
+        ? "constraint"
+        : "visible";
       mergedMarkers.push(domMarker);
     }
   }
+
   return mergedMarkers;
 };
-const createDebugMarker = ({
-  name,
-  x,
-  y,
-  color = "255 0 0",
-  side
-}, scrollContainer) => {
+
+const createDebugMarker = (
+  { name, x, y, color = "255 0 0", side },
+  scrollContainer,
+) => {
   // Convert coordinates from document-relative to viewport
   const [viewportX, viewportY] = getDebugMarkerPos(x, y, scrollContainer, side);
+
   const marker = document.createElement("div");
-  marker.className = "navi_debug_marker";
-  marker.setAttribute("data-".concat(side), "");
+  marker.className = `navi_debug_marker`;
+  marker.setAttribute(`data-${side}`, "");
   // Set the color as a CSS custom property
-  marker.style.setProperty("--marker-color", "rgb(".concat(color, ")"));
+  marker.style.setProperty("--marker-color", `rgb(${color})`);
   // Position markers exactly at the boundary coordinates
-  marker.style.left = side === "right" ? "".concat(viewportX - MARKER_SIZE, "px") : "".concat(viewportX, "px");
-  marker.style.top = side === "bottom" ? "".concat(viewportY - MARKER_SIZE, "px") : "".concat(viewportY, "px");
+  marker.style.left =
+    side === "right" ? `${viewportX - MARKER_SIZE}px` : `${viewportX}px`;
+  marker.style.top =
+    side === "bottom" ? `${viewportY - MARKER_SIZE}px` : `${viewportY}px`;
   marker.title = name;
 
   // Add label
   const label = document.createElement("div");
-  label.className = "navi_debug_marker_label";
+  label.className = `navi_debug_marker_label`;
   label.textContent = name;
   marker.appendChild(label);
+
   const container = getMarkersContainer();
   container.appendChild(marker);
   return marker;
@@ -4727,13 +5536,19 @@ const createObstacleMarker = (obstacleObj, scrollContainer) => {
   const height = obstacleObj.bounds.bottom - obstacleObj.bounds.top;
 
   // Convert document-relative coordinates to viewport coordinates
-  const [x, y] = getDebugMarkerPos(obstacleObj.bounds.left, obstacleObj.bounds.top, scrollContainer, "obstacle");
+  const [x, y] = getDebugMarkerPos(
+    obstacleObj.bounds.left,
+    obstacleObj.bounds.top,
+    scrollContainer,
+    "obstacle",
+  );
+
   const marker = document.createElement("div");
   marker.className = "navi_obstacle_marker";
-  marker.style.left = "".concat(x, "px");
-  marker.style.top = "".concat(y, "px");
-  marker.style.width = "".concat(width, "px");
-  marker.style.height = "".concat(height, "px");
+  marker.style.left = `${x}px`;
+  marker.style.top = `${y}px`;
+  marker.style.width = `${width}px`;
+  marker.style.height = `${height}px`;
   marker.title = obstacleObj.name;
 
   // Add label
@@ -4741,10 +5556,12 @@ const createObstacleMarker = (obstacleObj, scrollContainer) => {
   label.className = "navi_obstacle_marker_label";
   label.textContent = obstacleObj.name;
   marker.appendChild(label);
+
   const container = getMarkersContainer();
   container.appendChild(marker);
   return marker;
 };
+
 const createElementMarker = ({
   left,
   top,
@@ -4752,50 +5569,54 @@ const createElementMarker = ({
   bottom,
   scrollContainer,
   label = "Element",
-  color = "0, 200, 0" // Default green color
+  color = "0, 200, 0", // Default green color
 }) => {
   const width = right - left;
   const height = bottom - top;
   // Convert document-relative coordinates to viewport coordinates
   const [x, y] = getDebugMarkerPos(left, top, scrollContainer, "element");
+
   const marker = document.createElement("div");
   marker.className = "navi_element_marker";
-  marker.style.left = "".concat(x, "px");
-  marker.style.top = "".concat(y, "px");
-  marker.style.width = "".concat(width, "px");
-  marker.style.height = "".concat(height, "px");
+  marker.style.left = `${x}px`;
+  marker.style.top = `${y}px`;
+  marker.style.width = `${width}px`;
+  marker.style.height = `${height}px`;
   marker.title = label;
 
   // Set the color as CSS custom properties
-  marker.style.setProperty("--element-color", "rgb(".concat(color, ")"));
-  marker.style.setProperty("--element-color-alpha", "rgba(".concat(color, ", 0.3)"));
+  marker.style.setProperty("--element-color", `rgb(${color})`);
+  marker.style.setProperty("--element-color-alpha", `rgba(${color}, 0.3)`);
 
   // Add label
   const labelEl = document.createElement("div");
   labelEl.className = "navi_element_marker_label";
   labelEl.textContent = label;
   marker.appendChild(labelEl);
+
   const container = getMarkersContainer();
   container.appendChild(marker);
   return marker;
 };
+
 const createReferenceElementMarker = ({
   left,
   top,
   right,
   bottom,
-  scrollContainer
+  scrollContainer,
 }) => {
   const width = right - left;
   const height = bottom - top;
   // Convert document-relative coordinates to viewport coordinates
   const [x, y] = getDebugMarkerPos(left, top, scrollContainer, "reference");
+
   const marker = document.createElement("div");
   marker.className = "navi_reference_element_marker";
-  marker.style.left = "".concat(x, "px");
-  marker.style.top = "".concat(y, "px");
-  marker.style.width = "".concat(width, "px");
-  marker.style.height = "".concat(height, "px");
+  marker.style.left = `${x}px`;
+  marker.style.top = `${y}px`;
+  marker.style.width = `${width}px`;
+  marker.style.height = `${height}px`;
   marker.title = "Reference Element";
 
   // Add label
@@ -4803,32 +5624,224 @@ const createReferenceElementMarker = ({
   label.className = "navi_reference_element_marker_label";
   label.textContent = "Reference Element";
   marker.appendChild(label);
+
   const container = getMarkersContainer();
   container.appendChild(marker);
   return marker;
 };
-import.meta.css = /* css */"\n  .navi_debug_markers_container {\n    position: fixed;\n    top: 0;\n    left: 0;\n    width: 100vw;\n    height: 100vh;\n    overflow: hidden;\n    pointer-events: none;\n    z-index: 999998;\n    --marker-size: ".concat(MARKER_SIZE, "px;\n  }\n\n  .navi_debug_marker {\n    position: absolute;\n    pointer-events: none;\n  }\n\n  /* Markers based on side rather than orientation */\n  .navi_debug_marker[data-left],\n  .navi_debug_marker[data-right] {\n    width: var(--marker-size);\n    height: 100vh;\n  }\n\n  .navi_debug_marker[data-top],\n  .navi_debug_marker[data-bottom] {\n    width: 100vw;\n    height: var(--marker-size);\n  }\n\n  /* Gradient directions based on side, using CSS custom properties for color */\n  .navi_debug_marker[data-left] {\n    background: linear-gradient(\n      to right,\n      rgba(from var(--marker-color) r g b / 0.9) 0%,\n      rgba(from var(--marker-color) r g b / 0.7) 30%,\n      rgba(from var(--marker-color) r g b / 0.3) 70%,\n      rgba(from var(--marker-color) r g b / 0) 100%\n    );\n  }\n\n  .navi_debug_marker[data-right] {\n    background: linear-gradient(\n      to left,\n      rgba(from var(--marker-color) r g b / 0.9) 0%,\n      rgba(from var(--marker-color) r g b / 0.7) 30%,\n      rgba(from var(--marker-color) r g b / 0.3) 70%,\n      rgba(from var(--marker-color) r g b / 0) 100%\n    );\n  }\n\n  .navi_debug_marker[data-top] {\n    background: linear-gradient(\n      to bottom,\n      rgba(from var(--marker-color) r g b / 0.9) 0%,\n      rgba(from var(--marker-color) r g b / 0.7) 30%,\n      rgba(from var(--marker-color) r g b / 0.3) 70%,\n      rgba(from var(--marker-color) r g b / 0) 100%\n    );\n  }\n\n  .navi_debug_marker[data-bottom] {\n    background: linear-gradient(\n      to top,\n      rgba(from var(--marker-color) r g b / 0.9) 0%,\n      rgba(from var(--marker-color) r g b / 0.7) 30%,\n      rgba(from var(--marker-color) r g b / 0.3) 70%,\n      rgba(from var(--marker-color) r g b / 0) 100%\n    );\n  }\n\n  .navi_debug_marker_label {\n    position: absolute;\n    font-size: 12px;\n    font-weight: bold;\n    background: rgba(255, 255, 255, 0.9);\n    padding: 2px 6px;\n    border-radius: 3px;\n    border: 1px solid;\n    white-space: nowrap;\n    pointer-events: none;\n    color: rgb(from var(--marker-color) r g b / 1);\n    border-color: rgb(from var(--marker-color) r g b / 1);\n  }\n\n  /* Label positioning based on side data attributes */\n\n  /* Left side markers - vertical with 90\xB0 rotation */\n  .navi_debug_marker[data-left] .navi_debug_marker_label {\n    left: 10px;\n    top: 20px;\n    transform: rotate(90deg);\n    transform-origin: left center;\n  }\n\n  /* Right side markers - vertical with -90\xB0 rotation */\n  .navi_debug_marker[data-right] .navi_debug_marker_label {\n    right: 10px;\n    left: auto;\n    top: 20px;\n    transform: rotate(-90deg);\n    transform-origin: right center;\n  }\n\n  /* Top side markers - horizontal, label on the line */\n  .navi_debug_marker[data-top] .navi_debug_marker_label {\n    top: 0px;\n    left: 20px;\n  }\n\n  /* Bottom side markers - horizontal, label on the line */\n  .navi_debug_marker[data-bottom] .navi_debug_marker_label {\n    bottom: 0px;\n    top: auto;\n    left: 20px;\n  }\n\n  .navi_obstacle_marker {\n    position: absolute;\n    background-color: orange;\n    opacity: 0.6;\n    z-index: 9999;\n    pointer-events: none;\n  }\n\n  .navi_obstacle_marker_label {\n    position: absolute;\n    top: 50%;\n    left: 50%;\n    transform: translate(-50%, -50%);\n    font-size: 12px;\n    font-weight: bold;\n    color: white;\n    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);\n    pointer-events: none;\n  }\n\n  .navi_element_marker {\n    position: absolute;\n    background-color: var(--element-color-alpha, rgba(255, 0, 150, 0.3));\n    border: 2px solid var(--element-color, rgb(255, 0, 150));\n    opacity: 0.9;\n    z-index: 9997;\n    pointer-events: none;\n  }\n\n  .navi_element_marker_label {\n    position: absolute;\n    top: -25px;\n    right: 0;\n    font-size: 11px;\n    font-weight: bold;\n    color: var(--element-color, rgb(255, 0, 150));\n    background: rgba(255, 255, 255, 0.9);\n    padding: 2px 6px;\n    border-radius: 3px;\n    border: 1px solid var(--element-color, rgb(255, 0, 150));\n    white-space: nowrap;\n    pointer-events: none;\n  }\n\n  .navi_reference_element_marker {\n    position: absolute;\n    background-color: rgba(0, 150, 255, 0.3);\n    border: 2px dashed rgba(0, 150, 255, 0.7);\n    opacity: 0.8;\n    z-index: 9998;\n    pointer-events: none;\n  }\n\n  .navi_reference_element_marker_label {\n    position: absolute;\n    top: -25px;\n    left: 0;\n    font-size: 11px;\n    font-weight: bold;\n    color: rgba(0, 150, 255, 1);\n    background: rgba(255, 255, 255, 0.9);\n    padding: 2px 6px;\n    border-radius: 3px;\n    border: 1px solid rgba(0, 150, 255, 0.7);\n    white-space: nowrap;\n    pointer-events: none;\n  }\n");
 
-const initDragConstraints = (dragGesture, {
-  areaConstraint,
-  obstaclesContainer,
-  obstacleAttributeName,
-  showConstraintFeedbackLine,
-  showDebugMarkers,
-  referenceElement
-}) => {
+import.meta.css = /* css */ `
+  .navi_debug_markers_container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 999998;
+    --marker-size: ${MARKER_SIZE}px;
+  }
+
+  .navi_debug_marker {
+    position: absolute;
+    pointer-events: none;
+  }
+
+  /* Markers based on side rather than orientation */
+  .navi_debug_marker[data-left],
+  .navi_debug_marker[data-right] {
+    width: var(--marker-size);
+    height: 100vh;
+  }
+
+  .navi_debug_marker[data-top],
+  .navi_debug_marker[data-bottom] {
+    width: 100vw;
+    height: var(--marker-size);
+  }
+
+  /* Gradient directions based on side, using CSS custom properties for color */
+  .navi_debug_marker[data-left] {
+    background: linear-gradient(
+      to right,
+      rgba(from var(--marker-color) r g b / 0.9) 0%,
+      rgba(from var(--marker-color) r g b / 0.7) 30%,
+      rgba(from var(--marker-color) r g b / 0.3) 70%,
+      rgba(from var(--marker-color) r g b / 0) 100%
+    );
+  }
+
+  .navi_debug_marker[data-right] {
+    background: linear-gradient(
+      to left,
+      rgba(from var(--marker-color) r g b / 0.9) 0%,
+      rgba(from var(--marker-color) r g b / 0.7) 30%,
+      rgba(from var(--marker-color) r g b / 0.3) 70%,
+      rgba(from var(--marker-color) r g b / 0) 100%
+    );
+  }
+
+  .navi_debug_marker[data-top] {
+    background: linear-gradient(
+      to bottom,
+      rgba(from var(--marker-color) r g b / 0.9) 0%,
+      rgba(from var(--marker-color) r g b / 0.7) 30%,
+      rgba(from var(--marker-color) r g b / 0.3) 70%,
+      rgba(from var(--marker-color) r g b / 0) 100%
+    );
+  }
+
+  .navi_debug_marker[data-bottom] {
+    background: linear-gradient(
+      to top,
+      rgba(from var(--marker-color) r g b / 0.9) 0%,
+      rgba(from var(--marker-color) r g b / 0.7) 30%,
+      rgba(from var(--marker-color) r g b / 0.3) 70%,
+      rgba(from var(--marker-color) r g b / 0) 100%
+    );
+  }
+
+  .navi_debug_marker_label {
+    position: absolute;
+    font-size: 12px;
+    font-weight: bold;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid;
+    white-space: nowrap;
+    pointer-events: none;
+    color: rgb(from var(--marker-color) r g b / 1);
+    border-color: rgb(from var(--marker-color) r g b / 1);
+  }
+
+  /* Label positioning based on side data attributes */
+
+  /* Left side markers - vertical with 90° rotation */
+  .navi_debug_marker[data-left] .navi_debug_marker_label {
+    left: 10px;
+    top: 20px;
+    transform: rotate(90deg);
+    transform-origin: left center;
+  }
+
+  /* Right side markers - vertical with -90° rotation */
+  .navi_debug_marker[data-right] .navi_debug_marker_label {
+    right: 10px;
+    left: auto;
+    top: 20px;
+    transform: rotate(-90deg);
+    transform-origin: right center;
+  }
+
+  /* Top side markers - horizontal, label on the line */
+  .navi_debug_marker[data-top] .navi_debug_marker_label {
+    top: 0px;
+    left: 20px;
+  }
+
+  /* Bottom side markers - horizontal, label on the line */
+  .navi_debug_marker[data-bottom] .navi_debug_marker_label {
+    bottom: 0px;
+    top: auto;
+    left: 20px;
+  }
+
+  .navi_obstacle_marker {
+    position: absolute;
+    background-color: orange;
+    opacity: 0.6;
+    z-index: 9999;
+    pointer-events: none;
+  }
+
+  .navi_obstacle_marker_label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 12px;
+    font-weight: bold;
+    color: white;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
+    pointer-events: none;
+  }
+
+  .navi_element_marker {
+    position: absolute;
+    background-color: var(--element-color-alpha, rgba(255, 0, 150, 0.3));
+    border: 2px solid var(--element-color, rgb(255, 0, 150));
+    opacity: 0.9;
+    z-index: 9997;
+    pointer-events: none;
+  }
+
+  .navi_element_marker_label {
+    position: absolute;
+    top: -25px;
+    right: 0;
+    font-size: 11px;
+    font-weight: bold;
+    color: var(--element-color, rgb(255, 0, 150));
+    background: rgba(255, 255, 255, 0.9);
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid var(--element-color, rgb(255, 0, 150));
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  .navi_reference_element_marker {
+    position: absolute;
+    background-color: rgba(0, 150, 255, 0.3);
+    border: 2px dashed rgba(0, 150, 255, 0.7);
+    opacity: 0.8;
+    z-index: 9998;
+    pointer-events: none;
+  }
+
+  .navi_reference_element_marker_label {
+    position: absolute;
+    top: -25px;
+    left: 0;
+    font-size: 11px;
+    font-weight: bold;
+    color: rgba(0, 150, 255, 1);
+    background: rgba(255, 255, 255, 0.9);
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid rgba(0, 150, 255, 0.7);
+    white-space: nowrap;
+    pointer-events: none;
+  }
+`;
+
+const initDragConstraints = (
+  dragGesture,
+  {
+    areaConstraint,
+    obstaclesContainer,
+    obstacleAttributeName,
+    showConstraintFeedbackLine,
+    showDebugMarkers,
+    referenceElement,
+  },
+) => {
   const dragGestureName = dragGesture.gestureInfo.name;
   const direction = dragGesture.gestureInfo.direction;
   const scrollContainer = dragGesture.gestureInfo.scrollContainer;
   const leftAtGrab = dragGesture.gestureInfo.leftAtGrab;
   const topAtGrab = dragGesture.gestureInfo.topAtGrab;
+
   const constraintFunctions = [];
-  const addConstraint = constraint => {
+  const addConstraint = (constraint) => {
     constraintFunctions.push(constraint);
   };
+
   if (showConstraintFeedbackLine) {
     const constraintFeedbackLine = setupConstraintFeedbackLine();
-    dragGesture.addDragCallback(gestureInfo => {
+    dragGesture.addDragCallback((gestureInfo) => {
       constraintFeedbackLine.onDrag(gestureInfo);
     });
     dragGesture.addReleaseCallback(() => {
@@ -4838,15 +5851,16 @@ const initDragConstraints = (dragGesture, {
   let dragDebugMarkers;
   if (showDebugMarkers) {
     dragDebugMarkers = setupDragDebugMarkers(dragGesture, {
-      referenceElement
+      referenceElement,
     });
     dragGesture.addReleaseCallback(() => {
       dragDebugMarkers.onRelease();
     });
   }
+
   {
     const areaConstraintFunction = createAreaConstraint(areaConstraint, {
-      scrollContainer
+      scrollContainer,
     });
     if (areaConstraintFunction) {
       addConstraint(areaConstraintFunction);
@@ -4856,35 +5870,44 @@ const initDragConstraints = (dragGesture, {
     if (!obstacleAttributeName || !obstaclesContainer) {
       break obstacles;
     }
-    const obstacleConstraintFunctions = createObstacleConstraintsFromQuerySelector(obstaclesContainer, {
-      obstacleAttributeName,
-      gestureInfo: dragGesture.gestureInfo,
-      isDraggedElementSticky: false
-      // isStickyLeftOrHasStickyLeftAttr || isStickyTopOrHasStickyTopAttr,
-    });
+    const obstacleConstraintFunctions =
+      createObstacleConstraintsFromQuerySelector(obstaclesContainer, {
+        obstacleAttributeName,
+        gestureInfo: dragGesture.gestureInfo,
+        isDraggedElementSticky: false,
+        // isStickyLeftOrHasStickyLeftAttr || isStickyTopOrHasStickyTopAttr,
+      });
     for (const obstacleConstraintFunction of obstacleConstraintFunctions) {
       addConstraint(obstacleConstraintFunction);
     }
   }
-  const applyConstraints = (layoutRequested, currentLayout, limitLayout, {
-    elementWidth,
-    elementHeight,
-    scrollArea,
-    scrollport,
-    hasCrossedScrollportLeftOnce,
-    hasCrossedScrollportTopOnce,
-    autoScrollArea,
-    dragEvent
-  }) => {
+
+  const applyConstraints = (
+    layoutRequested,
+    currentLayout,
+    limitLayout,
+    {
+      elementWidth,
+      elementHeight,
+      scrollArea,
+      scrollport,
+      hasCrossedScrollportLeftOnce,
+      hasCrossedScrollportTopOnce,
+      autoScrollArea,
+      dragEvent,
+    },
+  ) => {
     if (constraintFunctions.length === 0) {
       return;
     }
+
     const elementCurrentLeft = currentLayout.left;
     const elementCurrentTop = currentLayout.top;
     const elementLeftRequested = layoutRequested.left;
     const elementTopRequested = layoutRequested.top;
     let elementLeft = elementLeftRequested;
     let elementTop = elementTopRequested;
+
     const constraintInitParams = {
       leftAtGrab,
       topAtGrab,
@@ -4899,18 +5922,25 @@ const initDragConstraints = (dragGesture, {
       scrollport,
       autoScrollArea,
       dragGestureName,
-      dragEvent
+      dragEvent,
     };
-    const constraints = constraintFunctions.map(fn => fn(constraintInitParams));
+    const constraints = constraintFunctions.map((fn) =>
+      fn(constraintInitParams),
+    );
+
     const logConstraintEnforcement = (axis, constraint) => {
       if (constraint.type === "obstacle") {
         return;
       }
-      const requested = axis === "x" ? elementLeftRequested : elementTopRequested;
+      const requested =
+        axis === "x" ? elementLeftRequested : elementTopRequested;
       const constrained = axis === "x" ? elementLeft : elementTop;
       const action = constrained > requested ? "increased" : "capped";
       const property = axis === "x" ? "left" : "top";
-      console.debug("Drag by ".concat(dragEvent.type, ": ").concat(property, " ").concat(action, " from ").concat(requested.toFixed(2), " to ").concat(constrained.toFixed(2), " by ").concat(constraint.type, ":").concat(constraint.name), constraint.element);
+      console.debug(
+        `Drag by ${dragEvent.type}: ${property} ${action} from ${requested.toFixed(2)} to ${constrained.toFixed(2)} by ${constraint.type}:${constraint.name}`,
+        constraint.element,
+      );
     };
 
     // Apply each constraint in sequence, accumulating their effects
@@ -4929,7 +5959,7 @@ const initDragConstraints = (dragGesture, {
         currentTop: elementCurrentTop,
         scrollport,
         hasCrossedScrollportLeftOnce,
-        hasCrossedScrollportTopOnce
+        hasCrossedScrollportTopOnce,
       });
       if (!result) {
         continue;
@@ -4944,6 +5974,7 @@ const initDragConstraints = (dragGesture, {
         logConstraintEnforcement("y", constraint);
       }
     }
+
     if (dragDebugMarkers) {
       dragDebugMarkers.onConstraints(constraints, {
         left: elementLeft,
@@ -4953,86 +5984,73 @@ const initDragConstraints = (dragGesture, {
         elementWidth,
         elementHeight,
         scrollport,
-        autoScrollArea
+        autoScrollArea,
       });
     }
+
     const leftModified = elementLeft !== elementLeftRequested;
     const topModified = elementTop !== elementTopRequested;
     if (!leftModified && !topModified) {
       {
-        console.debug("Drag by ".concat(dragEvent.type, ": no constraint enforcement needed (").concat(elementLeftRequested.toFixed(2), ", ").concat(elementTopRequested.toFixed(2), ")"));
+        console.debug(
+          `Drag by ${dragEvent.type}: no constraint enforcement needed (${elementLeftRequested.toFixed(2)}, ${elementTopRequested.toFixed(2)})`,
+        );
       }
       return;
     }
+
     limitLayout(elementLeft, elementTop);
   };
-  return {
-    applyConstraints
-  };
+
+  return { applyConstraints };
 };
-const createAreaConstraint = (areaConstraint, {
-  scrollContainer
-}) => {
+
+const createAreaConstraint = (areaConstraint, { scrollContainer }) => {
   if (!areaConstraint || areaConstraint === "none") {
     return null;
   }
   if (areaConstraint === "scrollport") {
-    const scrollportConstraintFunction = ({
-      scrollport
-    }) => {
+    const scrollportConstraintFunction = ({ scrollport }) => {
       return createBoundConstraint(scrollport, {
         element: scrollContainer,
-        name: "scrollport"
+        name: "scrollport",
       });
     };
     return scrollportConstraintFunction;
   }
   if (areaConstraint === "scroll") {
-    const scrollAreaConstraintFunction = ({
-      scrollArea
-    }) => {
+    const scrollAreaConstraintFunction = ({ scrollArea }) => {
       return createBoundConstraint(scrollArea, {
         element: scrollContainer,
-        name: "scroll_area"
+        name: "scroll_area",
       });
     };
     return scrollAreaConstraintFunction;
   }
   if (typeof areaConstraint === "function") {
-    const dynamicAreaConstraintFunction = params => {
+    const dynamicAreaConstraintFunction = (params) => {
       const bounds = areaConstraint(params);
       return createBoundConstraint(bounds, {
-        name: "dynamic_area"
+        name: "dynamic_area",
       });
     };
     return dynamicAreaConstraintFunction;
   }
   if (typeof areaConstraint === "object") {
-    const {
-      left,
-      top,
-      right,
-      bottom
-    } = areaConstraint;
+    const { left, top, right, bottom } = areaConstraint;
     const turnSidePropertyInToGetter = (value, side) => {
       if (value === "scrollport") {
-        return ({
-          scrollport
-        }) => scrollport[side];
+        return ({ scrollport }) => scrollport[side];
       }
       if (value === "scroll") {
-        return ({
-          scrollArea
-        }) => scrollArea[side];
+        return ({ scrollArea }) => scrollArea[side];
       }
       if (typeof value === "function") {
         return value;
       }
       if (value === undefined) {
         // defaults to scrollport
-        return ({
-          scrollport
-        }) => scrollport[side];
+        return ({ scrollport }) => scrollport[side];
       }
       return () => value;
     };
@@ -5040,87 +6058,99 @@ const createAreaConstraint = (areaConstraint, {
     const getRight = turnSidePropertyInToGetter(right, "right");
     const getTop = turnSidePropertyInToGetter(top, "top");
     const getBottom = turnSidePropertyInToGetter(bottom, "bottom");
-    const dynamicAreaConstraintFunction = params => {
+
+    const dynamicAreaConstraintFunction = (params) => {
       const bounds = {
         left: getLeft(params),
         right: getRight(params),
         top: getTop(params),
-        bottom: getBottom(params)
+        bottom: getBottom(params),
       };
       return createBoundConstraint(bounds, {
-        name: "dynamic_area"
+        name: "dynamic_area",
       });
     };
     return dynamicAreaConstraintFunction;
   }
-  console.warn("Unknown areaConstraint value: ".concat(areaConstraint, ". Expected \"scrollport\", \"scroll\", \"none\", an object with boundary definitions, or a function returning boundary definitions."));
+  console.warn(
+    `Unknown areaConstraint value: ${areaConstraint}. Expected "scrollport", "scroll", "none", an object with boundary definitions, or a function returning boundary definitions.`,
+  );
   return null;
 };
-const createObstacleConstraintsFromQuerySelector = (scrollableElement, {
-  obstacleAttributeName,
-  gestureInfo,
-  isDraggedElementSticky = false
-}) => {
+
+const createObstacleConstraintsFromQuerySelector = (
+  scrollableElement,
+  { obstacleAttributeName, gestureInfo, isDraggedElementSticky = false },
+) => {
   const dragGestureName = gestureInfo.name;
-  const obstacles = scrollableElement.querySelectorAll("[".concat(obstacleAttributeName, "]"));
+  const obstacles = scrollableElement.querySelectorAll(
+    `[${obstacleAttributeName}]`,
+  );
   const obstacleConstraintFunctions = [];
   for (const obstacle of obstacles) {
     if (obstacle.closest("[data-drag-ignore]")) {
       continue;
     }
     if (dragGestureName) {
-      const obstacleAttributeValue = obstacle.getAttribute(obstacleAttributeName);
+      const obstacleAttributeValue = obstacle.getAttribute(
+        obstacleAttributeName,
+      );
       if (obstacleAttributeValue) {
         const obstacleNames = obstacleAttributeValue.split(",");
-        const found = obstacleNames.some(obstacleName => obstacleName.trim().toLowerCase() === dragGestureName.toLowerCase());
+        const found = obstacleNames.some(
+          (obstacleName) =>
+            obstacleName.trim().toLowerCase() === dragGestureName.toLowerCase(),
+        );
         if (!found) {
           continue;
         }
       }
     }
-    obstacleConstraintFunctions.push(({
-      hasCrossedVisibleAreaLeftOnce,
-      hasCrossedVisibleAreaTopOnce
-    }) => {
-      // Only apply the "before crossing visible area" logic when dragging sticky elements
-      // Non-sticky elements should be able to cross sticky obstacles while stuck regardless of visible area crossing
-      const useOriginalPositionEvenIfSticky = isDraggedElementSticky ? !hasCrossedVisibleAreaLeftOnce && !hasCrossedVisibleAreaTopOnce : true;
-      const obstacleScrollRelativeRect = getScrollRelativeRect(obstacle, scrollableElement, {
-        useOriginalPositionEvenIfSticky
-      });
-      let obstacleBounds;
-      if (useOriginalPositionEvenIfSticky && obstacleScrollRelativeRect.isSticky) {
-        obstacleBounds = obstacleScrollRelativeRect;
-      } else {
-        obstacleBounds = addScrollToRect(obstacleScrollRelativeRect);
-      }
 
-      // obstacleBounds are already in scrollable-relative coordinates, no conversion needed
-      const obstacleObject = createObstacleContraint(obstacleBounds, {
-        name: "".concat(obstacleBounds.isSticky ? "sticky " : "", "obstacle (").concat(getElementSelector(obstacle), ")"),
-        element: obstacle
-      });
-      return obstacleObject;
-    });
+    obstacleConstraintFunctions.push(
+      ({ hasCrossedVisibleAreaLeftOnce, hasCrossedVisibleAreaTopOnce }) => {
+        // Only apply the "before crossing visible area" logic when dragging sticky elements
+        // Non-sticky elements should be able to cross sticky obstacles while stuck regardless of visible area crossing
+        const useOriginalPositionEvenIfSticky = isDraggedElementSticky
+          ? !hasCrossedVisibleAreaLeftOnce && !hasCrossedVisibleAreaTopOnce
+          : true;
+
+        const obstacleScrollRelativeRect = getScrollRelativeRect(
+          obstacle,
+          scrollableElement,
+          {
+            useOriginalPositionEvenIfSticky,
+          },
+        );
+        let obstacleBounds;
+        if (
+          useOriginalPositionEvenIfSticky &&
+          obstacleScrollRelativeRect.isSticky
+        ) {
+          obstacleBounds = obstacleScrollRelativeRect;
+        } else {
+          obstacleBounds = addScrollToRect(obstacleScrollRelativeRect);
+        }
+
+        // obstacleBounds are already in scrollable-relative coordinates, no conversion needed
+        const obstacleObject = createObstacleContraint(obstacleBounds, {
+          name: `${obstacleBounds.isSticky ? "sticky " : ""}obstacle (${getElementSelector(obstacle)})`,
+          element: obstacle,
+        });
+        return obstacleObject;
+      },
+    );
   }
   return obstacleConstraintFunctions;
 };
-const createBoundConstraint = (bounds, {
-  name,
-  element
-} = {}) => {
+
+const createBoundConstraint = (bounds, { name, element } = {}) => {
   const leftBound = bounds.left;
   const rightBound = bounds.right;
   const topBound = bounds.top;
   const bottomBound = bounds.bottom;
-  const apply = ({
-    left,
-    top,
-    right,
-    bottom,
-    width,
-    height
-  }) => {
+
+  const apply = ({ left, top, right, bottom, width, height }) => {
     let leftConstrained = left;
     let topConstrained = top;
     // Left boundary: element's left edge should not go before leftBound
@@ -5141,18 +6171,16 @@ const createBoundConstraint = (bounds, {
     }
     return [leftConstrained, topConstrained];
   };
+
   return {
     type: "bounds",
     name,
     apply,
     element,
-    bounds
+    bounds,
   };
 };
-const createObstacleContraint = (bounds, {
-  element,
-  name
-}) => {
+const createObstacleContraint = (bounds, { element, name }) => {
   const leftBound = bounds.left;
   const rightBound = bounds.right;
   const topBound = bounds.top;
@@ -5161,6 +6189,7 @@ const createObstacleContraint = (bounds, {
   const rightBoundRounded = roundForConstraints(rightBound);
   const topBoundRounded = roundForConstraints(topBound);
   const bottomBoundRounded = roundForConstraints(bottomBound);
+
   const apply = ({
     left,
     top,
@@ -5169,7 +6198,7 @@ const createObstacleContraint = (bounds, {
     width,
     height,
     currentLeft,
-    currentTop
+    currentTop,
   }) => {
     // Simple collision detection: check where element is and prevent movement into obstacle
     {
@@ -5232,7 +6261,12 @@ const createObstacleContraint = (bounds, {
     const distanceToTop = bottom - topBound; // Distance to push up
     const distanceToBottom = bottomBound - top; // Distance to push down
     // Find the minimum distance (direction of least resistance)
-    const minDistance = Math.min(distanceToLeft, distanceToRight, distanceToTop, distanceToBottom);
+    const minDistance = Math.min(
+      distanceToLeft,
+      distanceToRight,
+      distanceToTop,
+      distanceToBottom,
+    );
     if (minDistance === distanceToLeft) {
       // Push left: element should not go past leftBound - elementWidth
       const maxLeft = leftBound - width;
@@ -5258,14 +6292,16 @@ const createObstacleContraint = (bounds, {
         return [left, minTop];
       }
     }
+
     return null;
   };
+
   return {
     type: "obstacle",
     name,
     apply,
     element,
-    bounds
+    bounds,
   };
 };
 
@@ -5286,34 +6322,28 @@ const createObstacleContraint = (bounds, {
  * Using 2-decimal precision maintains smooth sub-pixel positioning while ensuring
  * reliable boundary detection for constraint systems.
  */
-const roundForConstraints = value => {
+const roundForConstraints = (value) => {
   return Math.round(value * 100) / 100;
 };
 
-const applyStickyFrontiersToAutoScrollArea = (autoScrollArea, {
-  direction,
-  scrollContainer,
-  dragName
-}) => {
-  let {
-    left,
-    right,
-    top,
-    bottom
-  } = autoScrollArea;
+const applyStickyFrontiersToAutoScrollArea = (
+  autoScrollArea,
+  { direction, scrollContainer, dragName },
+) => {
+  let { left, right, top, bottom } = autoScrollArea;
+
   if (direction.x) {
-    const horizontalStickyFrontiers = createStickyFrontierOnAxis(scrollContainer, {
-      name: dragName,
+    const horizontalStickyFrontiers = createStickyFrontierOnAxis(
       scrollContainer,
-      primarySide: "left",
-      oppositeSide: "right"
-    });
+      {
+        name: dragName,
+        scrollContainer,
+        primarySide: "left",
+        oppositeSide: "right",
+      },
+    );
     for (const horizontalStickyFrontier of horizontalStickyFrontiers) {
-      const {
-        side,
-        bounds,
-        element
-      } = horizontalStickyFrontier;
+      const { side, bounds, element } = horizontalStickyFrontier;
       if (side === "left") {
         if (bounds.right <= left) {
           continue;
@@ -5329,19 +6359,19 @@ const applyStickyFrontiersToAutoScrollArea = (autoScrollArea, {
       continue;
     }
   }
+
   if (direction.y) {
-    const verticalStickyFrontiers = createStickyFrontierOnAxis(scrollContainer, {
-      name: dragName,
+    const verticalStickyFrontiers = createStickyFrontierOnAxis(
       scrollContainer,
-      primarySide: "top",
-      oppositeSide: "bottom"
-    });
+      {
+        name: dragName,
+        scrollContainer,
+        primarySide: "top",
+        oppositeSide: "bottom",
+      },
+    );
     for (const verticalStickyFrontier of verticalStickyFrontiers) {
-      const {
-        side,
-        bounds,
-        element
-      } = verticalStickyFrontier;
+      const { side, bounds, element } = verticalStickyFrontier;
 
       // Frontier acts as a top barrier - constrains from the bottom edge of the frontier
       if (side === "top") {
@@ -5360,22 +6390,19 @@ const applyStickyFrontiersToAutoScrollArea = (autoScrollArea, {
       continue;
     }
   }
-  return {
-    left,
-    right,
-    top,
-    bottom
-  };
+
+  return { left, right, top, bottom };
 };
-const createStickyFrontierOnAxis = (element, {
-  name,
-  scrollContainer,
-  primarySide,
-  oppositeSide
-}) => {
-  const primaryAttrName = "data-drag-sticky-".concat(primarySide, "-frontier");
-  const oppositeAttrName = "data-drag-sticky-".concat(oppositeSide, "-frontier");
-  const frontiers = element.querySelectorAll("[".concat(primaryAttrName, "], [").concat(oppositeAttrName, "]"));
+
+const createStickyFrontierOnAxis = (
+  element,
+  { name, scrollContainer, primarySide, oppositeSide },
+) => {
+  const primaryAttrName = `data-drag-sticky-${primarySide}-frontier`;
+  const oppositeAttrName = `data-drag-sticky-${oppositeSide}-frontier`;
+  const frontiers = element.querySelectorAll(
+    `[${primaryAttrName}], [${oppositeAttrName}]`,
+  );
   const matchingStickyFrontiers = [];
   for (const frontier of frontiers) {
     if (frontier.closest("[data-drag-ignore]")) {
@@ -5386,14 +6413,20 @@ const createStickyFrontierOnAxis = (element, {
     // Check if element has both sides (invalid)
     if (hasPrimary && hasOpposite) {
       const elementSelector = getElementSelector(frontier);
-      console.warn("Sticky frontier element (".concat(elementSelector, ") has both ").concat(primarySide, " and ").concat(oppositeSide, " attributes. \n  A sticky frontier should only have one side attribute."));
+      console.warn(
+        `Sticky frontier element (${elementSelector}) has both ${primarySide} and ${oppositeSide} attributes. 
+  A sticky frontier should only have one side attribute.`,
+      );
       continue;
     }
     const attrName = hasPrimary ? primaryAttrName : oppositeAttrName;
     const attributeValue = frontier.getAttribute(attrName);
     if (attributeValue && name) {
       const frontierNames = attributeValue.split(",");
-      const isMatching = frontierNames.some(frontierName => frontierName.trim().toLowerCase() === name.toLowerCase());
+      const isMatching = frontierNames.some(
+        (frontierName) =>
+          frontierName.trim().toLowerCase() === name.toLowerCase(),
+      );
       if (!isMatching) {
         continue;
       }
@@ -5404,7 +6437,7 @@ const createStickyFrontierOnAxis = (element, {
       element: frontier,
       side: hasPrimary ? primarySide : oppositeSide,
       bounds: frontierBounds,
-      name: "sticky_frontier_".concat(hasPrimary ? primarySide : oppositeSide, " (").concat(getElementSelector(frontier), ")")
+      name: `sticky_frontier_${hasPrimary ? primarySide : oppositeSide} (${getElementSelector(frontier)})`,
     };
     matchingStickyFrontiers.push(stickyFrontierObject);
   }
@@ -5412,14 +6445,14 @@ const createStickyFrontierOnAxis = (element, {
 };
 
 const dragStyleController = createStyleController("drag_to_move");
+
 const createDragToMoveGestureController = ({
   stickyFrontiers = true,
   // Padding to reduce the area used to autoscroll by this amount (applied after sticky frontiers)
   // This creates an invisible space around the area where elements cannot be dragged
   autoScrollAreaPadding = 0,
   // constraints,
-  areaConstraint = "scroll",
-  // "scroll" | "scrollport" | "none" | {left,top,right,bottom} | function
+  areaConstraint = "scroll", // "scroll" | "scrollport" | "none" | {left,top,right,bottom} | function
   obstaclesContainer,
   obstacleAttributeName = "data-drag-obstacle",
   // Visual feedback line connecting mouse cursor to the moving grab point when constraints prevent following
@@ -5432,18 +6465,22 @@ const createDragToMoveGestureController = ({
   resetPositionAfterRelease = false,
   ...options
 } = {}) => {
-  const initGrabToMoveElement = (dragGesture, {
-    element,
-    referenceElement,
-    elementToMove,
-    convertScrollablePosition
-  }) => {
+  const initGrabToMoveElement = (
+    dragGesture,
+    { element, referenceElement, elementToMove, convertScrollablePosition },
+  ) => {
     const direction = dragGesture.gestureInfo.direction;
     dragGesture.gestureInfo.name;
     const scrollContainer = dragGesture.gestureInfo.scrollContainer;
     const elementImpacted = elementToMove || element;
-    const translateXAtGrab = dragStyleController.getUnderlyingValue(elementImpacted, "transform.translateX");
-    const translateYAtGrab = dragStyleController.getUnderlyingValue(elementImpacted, "transform.translateY");
+    const translateXAtGrab = dragStyleController.getUnderlyingValue(
+      elementImpacted,
+      "transform.translateX",
+    );
+    const translateYAtGrab = dragStyleController.getUnderlyingValue(
+      elementImpacted,
+      "transform.translateY",
+    );
     dragGesture.addReleaseCallback(() => {
       if (resetPositionAfterRelease) {
         dragStyleController.clear(elementImpacted);
@@ -5451,6 +6488,7 @@ const createDragToMoveGestureController = ({
         dragStyleController.commit(elementImpacted);
       }
     });
+
     let elementWidth;
     let elementHeight;
     {
@@ -5462,6 +6500,7 @@ const createDragToMoveGestureController = ({
       updateElementDimension();
       dragGesture.addBeforeDragCallback(updateElementDimension);
     }
+
     let scrollArea;
     {
       // computed at start so that scrollWidth/scrollHeight are fixed
@@ -5470,9 +6509,10 @@ const createDragToMoveGestureController = ({
         left: 0,
         top: 0,
         right: scrollContainer.scrollWidth,
-        bottom: scrollContainer.scrollHeight
+        bottom: scrollContainer.scrollHeight,
       };
     }
+
     let scrollport;
     let autoScrollArea;
     {
@@ -5483,9 +6523,12 @@ const createDragToMoveGestureController = ({
         scrollport = getScrollport(scrollBox, scrollContainer);
         autoScrollArea = scrollport;
         if (stickyFrontiers) {
-          autoScrollArea = applyStickyFrontiersToAutoScrollArea(autoScrollArea, {
-            scrollContainer,
-            direction});
+          autoScrollArea = applyStickyFrontiersToAutoScrollArea(
+            autoScrollArea,
+            {
+              scrollContainer,
+              direction},
+          );
         }
         if (autoScrollAreaPadding > 0) {
           autoScrollArea = {
@@ -5496,7 +6539,7 @@ const createDragToMoveGestureController = ({
             left: autoScrollArea.left + autoScrollAreaPadding,
             top: autoScrollArea.top + autoScrollAreaPadding,
             right: autoScrollArea.right - autoScrollAreaPadding,
-            bottom: autoScrollArea.bottom - autoScrollAreaPadding
+            bottom: autoScrollArea.bottom - autoScrollAreaPadding,
           };
         }
       };
@@ -5519,77 +6562,97 @@ const createDragToMoveGestureController = ({
       obstacleAttributeName,
       showConstraintFeedbackLine,
       showDebugMarkers,
-      referenceElement
+      referenceElement,
     });
-    dragGesture.addBeforeDragCallback((layoutRequested, currentLayout, limitLayout, {
-      dragEvent
-    }) => {
-      dragConstraints.applyConstraints(layoutRequested, currentLayout, limitLayout, {
-        elementWidth,
-        elementHeight,
-        scrollArea,
-        scrollport,
-        hasCrossedScrollportLeftOnce,
-        hasCrossedScrollportTopOnce,
-        autoScrollArea,
-        dragEvent
-      });
-    });
-    const dragToMove = gestureInfo => {
-      const {
-        isGoingDown,
-        isGoingUp,
-        isGoingLeft,
-        isGoingRight,
-        layout
-      } = gestureInfo;
+    dragGesture.addBeforeDragCallback(
+      (layoutRequested, currentLayout, limitLayout, { dragEvent }) => {
+        dragConstraints.applyConstraints(
+          layoutRequested,
+          currentLayout,
+          limitLayout,
+          {
+            elementWidth,
+            elementHeight,
+            scrollArea,
+            scrollport,
+            hasCrossedScrollportLeftOnce,
+            hasCrossedScrollportTopOnce,
+            autoScrollArea,
+            dragEvent,
+          },
+        );
+      },
+    );
+
+    const dragToMove = (gestureInfo) => {
+      const { isGoingDown, isGoingUp, isGoingLeft, isGoingRight, layout } =
+        gestureInfo;
       const left = layout.left;
       const top = layout.top;
       const right = left + elementWidth;
       const bottom = top + elementHeight;
+
       {
-        hasCrossedScrollportLeftOnce = hasCrossedScrollportLeftOnce || left < scrollport.left;
-        hasCrossedScrollportTopOnce = hasCrossedScrollportTopOnce || top < scrollport.top;
-        const getScrollMove = axis => {
+        hasCrossedScrollportLeftOnce =
+          hasCrossedScrollportLeftOnce || left < scrollport.left;
+        hasCrossedScrollportTopOnce =
+          hasCrossedScrollportTopOnce || top < scrollport.top;
+
+        const getScrollMove = (axis) => {
           const isGoingPositive = axis === "x" ? isGoingRight : isGoingDown;
           if (isGoingPositive) {
             const elementEnd = axis === "x" ? right : bottom;
-            const autoScrollAreaEnd = axis === "x" ? autoScrollArea.right : autoScrollArea.bottom;
+            const autoScrollAreaEnd =
+              axis === "x" ? autoScrollArea.right : autoScrollArea.bottom;
+
             if (elementEnd <= autoScrollAreaEnd) {
               return 0;
             }
             const scrollAmountNeeded = elementEnd - autoScrollAreaEnd;
             return scrollAmountNeeded;
           }
+
           const isGoingNegative = axis === "x" ? isGoingLeft : isGoingUp;
           if (!isGoingNegative) {
             return 0;
           }
+
           const referenceOrEl = referenceElement || element;
-          const canAutoScrollNegative = axis === "x" ? !referenceOrEl.hasAttribute("data-sticky-left") || hasCrossedScrollportLeftOnce : !referenceOrEl.hasAttribute("data-sticky-top") || hasCrossedScrollportTopOnce;
+          const canAutoScrollNegative =
+            axis === "x"
+              ? !referenceOrEl.hasAttribute("data-sticky-left") ||
+                hasCrossedScrollportLeftOnce
+              : !referenceOrEl.hasAttribute("data-sticky-top") ||
+                hasCrossedScrollportTopOnce;
           if (!canAutoScrollNegative) {
             return 0;
           }
+
           const elementStart = axis === "x" ? left : top;
-          const autoScrollAreaStart = axis === "x" ? autoScrollArea.left : autoScrollArea.top;
+          const autoScrollAreaStart =
+            axis === "x" ? autoScrollArea.left : autoScrollArea.top;
           if (elementStart >= autoScrollAreaStart) {
             return 0;
           }
+
           const scrollAmountNeeded = autoScrollAreaStart - elementStart;
           return -scrollAmountNeeded;
         };
+
         let scrollLeftTarget;
         let scrollTopTarget;
         if (direction.x) {
           const containerScrollLeftMove = getScrollMove("x");
           if (containerScrollLeftMove) {
-            scrollLeftTarget = scrollContainer.scrollLeft + containerScrollLeftMove;
+            scrollLeftTarget =
+              scrollContainer.scrollLeft + containerScrollLeftMove;
           }
         }
         if (direction.y) {
           const containerScrollTopMove = getScrollMove("y");
           if (containerScrollTopMove) {
-            scrollTopTarget = scrollContainer.scrollTop + containerScrollTopMove;
+            scrollTopTarget =
+              scrollContainer.scrollTop + containerScrollTopMove;
           }
         }
         // now we know what to do, do it
@@ -5600,18 +6663,21 @@ const createDragToMoveGestureController = ({
           scrollContainer.scrollTop = scrollTopTarget;
         }
       }
+
       {
-        const {
+        const { scrollableLeft, scrollableTop } = layout;
+        const [positionedLeft, positionedTop] = convertScrollablePosition(
           scrollableLeft,
-          scrollableTop
-        } = layout;
-        const [positionedLeft, positionedTop] = convertScrollablePosition(scrollableLeft, scrollableTop);
+          scrollableTop,
+        );
         const transform = {};
         if (direction.x) {
           const leftTarget = positionedLeft;
           const leftAtGrab = dragGesture.gestureInfo.leftAtGrab;
           const leftDelta = leftTarget - leftAtGrab;
-          const translateX = translateXAtGrab ? translateXAtGrab + leftDelta : leftDelta;
+          const translateX = translateXAtGrab
+            ? translateXAtGrab + leftDelta
+            : leftDelta;
           transform.translateX = translateX;
           // console.log({
           //   leftAtGrab,
@@ -5624,16 +6690,19 @@ const createDragToMoveGestureController = ({
           const topTarget = positionedTop;
           const topAtGrab = dragGesture.gestureInfo.topAtGrab;
           const topDelta = topTarget - topAtGrab;
-          const translateY = translateYAtGrab ? translateYAtGrab + topDelta : topDelta;
+          const translateY = translateYAtGrab
+            ? translateYAtGrab + topDelta
+            : topDelta;
           transform.translateY = translateY;
         }
         dragStyleController.set(elementImpacted, {
-          transform
+          transform,
         });
       }
     };
     dragGesture.addDragCallback(dragToMove);
   };
+
   const dragGestureController = createDragGestureController(options);
   const grab = dragGestureController.grab;
   dragGestureController.grab = ({
@@ -5643,31 +6712,34 @@ const createDragToMoveGestureController = ({
     ...rest
   } = {}) => {
     const scrollContainer = getScrollContainer(referenceElement || element);
-    const [elementScrollableLeft, elementScrollableTop, convertScrollablePosition] = createDragElementPositioner(element, referenceElement, elementToMove);
+    const [
+      elementScrollableLeft,
+      elementScrollableTop,
+      convertScrollablePosition,
+    ] = createDragElementPositioner(element, referenceElement, elementToMove);
     const dragGesture = grab({
       element,
       scrollContainer,
       layoutScrollableLeft: elementScrollableLeft,
       layoutScrollableTop: elementScrollableTop,
-      ...rest
+      ...rest,
     });
     initGrabToMoveElement(dragGesture, {
       element,
       referenceElement,
       elementToMove,
-      convertScrollablePosition
+      convertScrollablePosition,
     });
     return dragGesture;
   };
+
   return dragGestureController;
 };
 
-const startDragToResizeGesture = (pointerdownEvent, {
-  onDragStart,
-  onDrag,
-  onRelease,
-  ...options
-}) => {
+const startDragToResizeGesture = (
+  pointerdownEvent,
+  { onDragStart, onDrag, onRelease, ...options },
+) => {
   const target = pointerdownEvent.target;
   if (!target.closest) {
     return null;
@@ -5677,11 +6749,12 @@ const startDragToResizeGesture = (pointerdownEvent, {
     return null;
   }
   let elementToResize;
-  const dataResizeHandle = elementWithDataResizeHandle.getAttribute("data-resize-handle");
+  const dataResizeHandle =
+    elementWithDataResizeHandle.getAttribute("data-resize-handle");
   if (!dataResizeHandle || dataResizeHandle === "true") {
     elementToResize = elementWithDataResizeHandle.closest("[data-resize]");
   } else {
-    elementToResize = document.querySelector("#".concat(dataResizeHandle));
+    elementToResize = document.querySelector(`#${dataResizeHandle}`);
   }
   if (!elementToResize) {
     console.warn("No element to resize found");
@@ -5693,6 +6766,7 @@ const startDragToResizeGesture = (pointerdownEvent, {
   if (!resizeDirection.x && !resizeDirection.y) {
     return null;
   }
+
   const dragToResizeGestureController = createDragGestureController({
     onDragStart: (...args) => {
       onDragStart?.(...args);
@@ -5701,25 +6775,31 @@ const startDragToResizeGesture = (pointerdownEvent, {
     onRelease: (...args) => {
       elementWithDataResizeHandle.removeAttribute("data-active");
       onRelease?.(...args);
-    }
+    },
   });
   elementWithDataResizeHandle.setAttribute("data-active", "");
-  const dragToResizeGesture = dragToResizeGestureController.grabViaPointer(pointerdownEvent, {
-    element: elementToResize,
-    direction: resizeDirection,
-    cursor: resizeDirection.x && resizeDirection.y ? "nwse-resize" : resizeDirection.x ? "ew-resize" : "ns-resize",
-    ...options
-  });
+  const dragToResizeGesture = dragToResizeGestureController.grabViaPointer(
+    pointerdownEvent,
+    {
+      element: elementToResize,
+      direction: resizeDirection,
+      cursor:
+        resizeDirection.x && resizeDirection.y
+          ? "nwse-resize"
+          : resizeDirection.x
+            ? "ew-resize"
+            : "ns-resize",
+      ...options,
+    },
+  );
   return dragToResizeGesture;
 };
-const getResizeDirection = element => {
+
+const getResizeDirection = (element) => {
   const direction = element.getAttribute("data-resize");
   const x = direction === "horizontal" || direction === "both";
   const y = direction === "vertical" || direction === "both";
-  return {
-    x,
-    y
-  };
+  return { x, y };
 };
 
 /**
@@ -5749,16 +6829,28 @@ const getDropTargetInfo = (gestureInfo, targetElements) => {
     }
     intersectingTargets.push(targetElement);
   }
+
   if (intersectingTargets.length === 0) {
     return null;
   }
+
   const dragElementCenterX = dragElementRect.left + dragElementRect.width / 2;
   const dragElementCenterY = dragElementRect.top + dragElementRect.height / 2;
   // Clamp coordinates to viewport to avoid issues with elementsFromPoint
   const viewportWidth = document.documentElement.clientWidth;
   const viewportHeight = document.documentElement.clientHeight;
-  const clientX = dragElementCenterX < 0 ? 0 : dragElementCenterX > viewportWidth ? viewportWidth - 1 : dragElementCenterX;
-  const clientY = dragElementCenterY < 0 ? 0 : dragElementCenterY > viewportHeight ? viewportHeight - 1 : dragElementCenterY;
+  const clientX =
+    dragElementCenterX < 0
+      ? 0
+      : dragElementCenterX > viewportWidth
+        ? viewportWidth - 1
+        : dragElementCenterX;
+  const clientY =
+    dragElementCenterY < 0
+      ? 0
+      : dragElementCenterY > viewportHeight
+        ? viewportHeight - 1
+        : dragElementCenterY;
 
   // Find the first target element in the stack (topmost visible target)
   const elementsUnderDragElement = document.elementsFromPoint(clientX, clientY);
@@ -5821,16 +6913,23 @@ const getDropTargetInfo = (gestureInfo, targetElements) => {
     element: targetElement,
     elementSide: {
       x: dragElementRect.left < targetCenterX ? "start" : "end",
-      y: dragElementRect.top < targetCenterY ? "start" : "end"
+      y: dragElementRect.top < targetCenterY ? "start" : "end",
     },
-    intersecting: intersectingTargets
+    intersecting: intersectingTargets,
   };
   return result;
 };
+
 const rectangleAreIntersecting = (r1, r2) => {
-  return !(r2.left > r1.right || r2.right < r1.left || r2.top > r1.bottom || r2.bottom < r1.top);
+  return !(
+    r2.left > r1.right ||
+    r2.right < r1.left ||
+    r2.top > r1.bottom ||
+    r2.bottom < r1.top
+  );
 };
-const isTableCell = el => {
+
+const isTableCell = (el) => {
   return el.tagName === "TD" || el.tagName === "TH";
 };
 
@@ -5840,7 +6939,7 @@ const isTableCell = el => {
  * @param {Element[]} targetColElements - Array of <col> elements to search in
  * @returns {Element|null} The corresponding <col> element or null if not found
  */
-const findTableCellCol = cellElement => {
+const findTableCellCol = (cellElement) => {
   const table = cellElement.closest("table");
   const colgroup = table.querySelector("colgroup");
   if (!colgroup) {
@@ -5852,11 +6951,15 @@ const findTableCellCol = cellElement => {
   return correspondingCol;
 };
 
-const getPositionedParent = element => {
+const getPositionedParent = (element) => {
   let parent = element.parentElement;
   while (parent && parent !== document.body) {
     const position = window.getComputedStyle(parent).position;
-    if (position === "relative" || position === "absolute" || position === "fixed") {
+    if (
+      position === "relative" ||
+      position === "absolute" ||
+      position === "fixed"
+    ) {
       return parent;
     }
     parent = parent.parentElement;
@@ -5864,22 +6967,27 @@ const getPositionedParent = element => {
   return document.body;
 };
 
-const getHeight = element => {
-  const {
-    height
-  } = element.getBoundingClientRect();
+const getHeight = (element) => {
+  const { height } = element.getBoundingClientRect();
   return height;
 };
 
-const getWidth = element => {
-  const {
-    width
-  } = element.getBoundingClientRect();
+const getWidth = (element) => {
+  const { width } = element.getBoundingClientRect();
   return width;
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  [data-position-sticky-placeholder] {\n    opacity: 0 !important;\n    position: static !important;\n    width: auto !important;\n    height: auto !important;\n  }\n";
-const initPositionSticky = element => {
+installImportMetaCss(import.meta);
+import.meta.css = /* css */ `
+  [data-position-sticky-placeholder] {
+    opacity: 0 !important;
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+  }
+`;
+
+const initPositionSticky = (element) => {
   const computedStyle = getComputedStyle(element);
   const topCssValue = computedStyle.top;
   const top = parseFloat(topCssValue);
@@ -5908,6 +7016,7 @@ const initPositionSticky = element => {
       return () => {}; // Native sticky will work fine
     }
   }
+
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
     for (const cleanupCallback of cleanupCallbackSet) {
@@ -5915,6 +7024,7 @@ const initPositionSticky = element => {
     }
     cleanupCallbackSet.clear();
   };
+
   const parentElement = element.parentElement;
   const createPlaceholderClone = () => {
     const clone = element.cloneNode(true);
@@ -5922,13 +7032,16 @@ const initPositionSticky = element => {
     clone.removeAttribute("data-sticky");
     return clone;
   };
+
   let placeholder = createPlaceholderClone();
   parentElement.insertBefore(placeholder, element);
   cleanupCallbackSet.add(() => {
     placeholder.remove();
   });
+
   let width = getWidth(element);
   let height = getHeight(element);
+
   const updateSize = () => {
     const newPlaceholder = createPlaceholderClone();
     parentElement.replaceChild(newPlaceholder, placeholder);
@@ -5937,18 +7050,20 @@ const initPositionSticky = element => {
     height = getHeight(placeholder);
     updatePosition();
   };
+
   const updatePosition = () => {
     // Ensure placeholder dimensions match element
     setStyles(placeholder, {
-      width: "".concat(width, "px"),
-      height: "".concat(height, "px")
+      width: `${width}px`,
+      height: `${height}px`,
     });
+
     const placeholderRect = placeholder.getBoundingClientRect();
     const parentRect = parentElement.getBoundingClientRect();
 
     // Calculate left position in viewport coordinates (fixed positioning)
     const leftPosition = placeholderRect.left;
-    element.style.left = "".concat(Math.round(leftPosition), "px");
+    element.style.left = `${Math.round(leftPosition)}px`;
 
     // Determine if element should be sticky or at its natural position
     let topPosition;
@@ -5963,6 +7078,7 @@ const initPositionSticky = element => {
       // But make sure it doesn't go beyond parent's bottom boundary
       const parentBottom = parentRect.bottom;
       const elementBottom = top + height;
+
       if (elementBottom > parentBottom) {
         // Adjust to stay within parent
         topPosition = parentBottom - height;
@@ -5971,9 +7087,10 @@ const initPositionSticky = element => {
       // Element should be at its natural position in the flow
       topPosition = placeholderRect.top;
     }
-    element.style.top = "".concat(topPosition, "px");
-    element.style.width = "".concat(width, "px");
-    element.style.height = "".concat(height, "px");
+
+    element.style.top = `${topPosition}px`;
+    element.style.width = `${width}px`;
+    element.style.height = `${height}px`;
 
     // Set attribute for potential styling
     if (isStuck) {
@@ -5982,30 +7099,35 @@ const initPositionSticky = element => {
       element.removeAttribute("data-sticky");
     }
   };
+
   {
     const restorePositionStyle = forceStyles(element, {
       "position": "fixed",
       "z-index": 1,
-      "will-change": "transform" // Hint for hardware acceleration
+      "will-change": "transform", // Hint for hardware acceleration
     });
     cleanupCallbackSet.add(restorePositionStyle);
   }
+
   updatePosition();
+
   {
     const handleScroll = () => {
       updatePosition();
     };
+
     for (const scrollContainer of scrollContainerSet) {
       scrollContainer.addEventListener("scroll", handleScroll, {
-        passive: true
+        passive: true,
       });
       cleanupCallbackSet.add(() => {
         scrollContainer.removeEventListener("scroll", handleScroll, {
-          passive: true
+          passive: true,
         });
       });
     }
   }
+
   {
     let animationFrame = null;
     const resizeObserver = new ResizeObserver(() => {
@@ -6024,6 +7146,7 @@ const initPositionSticky = element => {
       animationFrame = null;
     });
   }
+
   {
     const mutationObserver = new MutationObserver(() => {
       updateSize();
@@ -6031,18 +7154,21 @@ const initPositionSticky = element => {
     mutationObserver.observe(element, {
       childList: true,
       subtree: true,
-      characterData: true
+      characterData: true,
     });
     cleanupCallbackSet.add(() => {
       mutationObserver.disconnect();
     });
   }
+
   return cleanup;
 };
 
-const stickyAsRelativeCoords = (element, referenceElement, {
-  scrollContainer = getScrollContainer(element)
-} = {}) => {
+const stickyAsRelativeCoords = (
+  element,
+  referenceElement,
+  { scrollContainer = getScrollContainer(element) } = {},
+) => {
   const hasStickyLeftAttribute = element.hasAttribute("data-sticky-left");
   const hasTopStickyAttribute = element.hasAttribute("data-sticky-top");
   if (!hasStickyLeftAttribute && !hasTopStickyAttribute) {
@@ -6052,6 +7178,7 @@ const stickyAsRelativeCoords = (element, referenceElement, {
   const referenceElementRect = referenceElement.getBoundingClientRect();
   const computedStyle = getComputedStyle(element);
   const isDocumentScrolling = scrollContainer === document.documentElement;
+
   let leftPosition;
   let topPosition;
   if (isDocumentScrolling) {
@@ -6061,7 +7188,8 @@ const stickyAsRelativeCoords = (element, referenceElement, {
       const cssLeftValue = parseFloat(computedStyle.left) || 0;
       const isStuckLeft = elementRect.left <= cssLeftValue;
       if (isStuckLeft) {
-        const elementOffsetRelative = elementRect.left - referenceElementRect.left;
+        const elementOffsetRelative =
+          elementRect.left - referenceElementRect.left;
         leftPosition = elementOffsetRelative - cssLeftValue;
       } else {
         leftPosition = 0;
@@ -6071,7 +7199,8 @@ const stickyAsRelativeCoords = (element, referenceElement, {
       const cssTopValue = parseFloat(computedStyle.top) || 0;
       const isStuckTop = elementRect.top <= cssTopValue;
       if (isStuckTop) {
-        const elementOffsetRelative = elementRect.top - referenceElementRect.top;
+        const elementOffsetRelative =
+          elementRect.top - referenceElementRect.top;
         topPosition = elementOffsetRelative - cssTopValue;
       } else {
         topPosition = 0;
@@ -6085,10 +7214,12 @@ const stickyAsRelativeCoords = (element, referenceElement, {
   if (hasStickyLeftAttribute) {
     const cssLeftValue = parseFloat(computedStyle.left) || 0;
     // Check if element is stuck to the left edge of the scrollable container
-    const isStuckLeft = elementRect.left <= scrollContainerRect.left + cssLeftValue;
+    const isStuckLeft =
+      elementRect.left <= scrollContainerRect.left + cssLeftValue;
     if (isStuckLeft) {
       // Element is stuck - calculate its offset relative to reference element
-      const elementOffsetRelative = elementRect.left - referenceElementRect.left;
+      const elementOffsetRelative =
+        elementRect.left - referenceElementRect.left;
       leftPosition = elementOffsetRelative - cssLeftValue;
     } else {
       // Element is not stuck - behaves like position: relative with no offset
@@ -6126,14 +7257,12 @@ const stickyAsRelativeCoords = (element, referenceElement, {
 const visibleRectEffect = (element, update) => {
   const [teardown, addTeardown] = createPubSub();
   const scrollContainer = getScrollContainer(element);
-  const scrollContainerIsDocument = scrollContainer === document.documentElement;
-  const check = reason => {
+  const scrollContainerIsDocument =
+    scrollContainer === document.documentElement;
+  const check = (reason) => {
 
     // 1. Calculate element position relative to scrollable parent
-    const {
-      scrollLeft,
-      scrollTop
-    } = scrollContainer;
+    const { scrollLeft, scrollTop } = scrollContainer;
     const visibleAreaLeft = scrollLeft;
     const visibleAreaTop = scrollTop;
 
@@ -6149,28 +7278,32 @@ const visibleRectEffect = (element, update) => {
       // For custom container, get position relative to the container
       const elementRect = element.getBoundingClientRect();
       const scrollContainerRect = scrollContainer.getBoundingClientRect();
-      elementAbsoluteLeft = elementRect.left - scrollContainerRect.left + scrollLeft;
-      elementAbsoluteTop = elementRect.top - scrollContainerRect.top + scrollTop;
+      elementAbsoluteLeft =
+        elementRect.left - scrollContainerRect.left + scrollLeft;
+      elementAbsoluteTop =
+        elementRect.top - scrollContainerRect.top + scrollTop;
     }
-    const leftVisible = visibleAreaLeft < elementAbsoluteLeft ? elementAbsoluteLeft - visibleAreaLeft : 0;
-    const topVisible = visibleAreaTop < elementAbsoluteTop ? elementAbsoluteTop - visibleAreaTop : 0;
+
+    const leftVisible =
+      visibleAreaLeft < elementAbsoluteLeft
+        ? elementAbsoluteLeft - visibleAreaLeft
+        : 0;
+    const topVisible =
+      visibleAreaTop < elementAbsoluteTop
+        ? elementAbsoluteTop - visibleAreaTop
+        : 0;
     // Convert to overlay coordinates (adjust for custom scrollable container)
     let overlayLeft = leftVisible;
     let overlayTop = topVisible;
     if (!scrollContainerIsDocument) {
-      const {
-        left: scrollableLeft,
-        top: scrollableTop
-      } = scrollContainer.getBoundingClientRect();
+      const { left: scrollableLeft, top: scrollableTop } =
+        scrollContainer.getBoundingClientRect();
       overlayLeft += scrollableLeft;
       overlayTop += scrollableTop;
     }
 
     // 2. Calculate element visible width/height
-    const {
-      width,
-      height
-    } = element.getBoundingClientRect();
+    const { width, height } = element.getBoundingClientRect();
     const visibleAreaWidth = scrollContainer.clientWidth;
     const visibleAreaHeight = scrollContainer.clientHeight;
     const visibleAreaRight = visibleAreaLeft + visibleAreaWidth;
@@ -6219,7 +7352,8 @@ const visibleRectEffect = (element, update) => {
     }
 
     // Calculate visibility ratios
-    const scrollVisibilityRatio = widthVisible * heightVisible / (width * height);
+    const scrollVisibilityRatio =
+      (widthVisible * heightVisible) / (width * height);
     // Calculate visibility ratio relative to document viewport
     let documentVisibilityRatio;
     if (scrollContainerIsDocument) {
@@ -6236,8 +7370,10 @@ const visibleRectEffect = (element, update) => {
       const elementBottom = Math.min(viewportHeight, elementRect.bottom);
       const documentVisibleWidth = Math.max(0, elementRight - elementLeft);
       const documentVisibleHeight = Math.max(0, elementBottom - elementTop);
-      documentVisibilityRatio = documentVisibleWidth * documentVisibleHeight / (width * height);
+      documentVisibilityRatio =
+        (documentVisibleWidth * documentVisibleHeight) / (width * height);
     }
+
     const visibleRect = {
       left: overlayLeft,
       top: overlayTop,
@@ -6246,17 +7382,19 @@ const visibleRectEffect = (element, update) => {
       width: widthVisible,
       height: heightVisible,
       visibilityRatio: documentVisibilityRatio,
-      scrollVisibilityRatio
+      scrollVisibilityRatio,
     };
     update(visibleRect, {
       width,
-      height
+      height,
     });
   };
+
   check();
+
   const [publishBeforeAutoCheck, onBeforeAutoCheck] = createPubSub();
   {
-    const autoCheck = reason => {
+    const autoCheck = (reason) => {
       const beforeCheckResults = publishBeforeAutoCheck(reason);
       check();
       for (const beforeCheckResult of beforeCheckResults) {
@@ -6283,11 +7421,11 @@ const visibleRectEffect = (element, update) => {
         autoCheck("document_scroll");
       };
       document.addEventListener("scroll", onDocumentScroll, {
-        passive: true
+        passive: true,
       });
       addTeardown(() => {
         document.removeEventListener("scroll", onDocumentScroll, {
-          passive: true
+          passive: true,
         });
       });
       if (!scrollContainerIsDocument) {
@@ -6295,11 +7433,11 @@ const visibleRectEffect = (element, update) => {
           autoCheck("scrollable_parent_scroll");
         };
         scrollContainer.addEventListener("scroll", onScroll, {
-          passive: true
+          passive: true,
         });
         addTeardown(() => {
           scrollContainer.removeEventListener("scroll", onScroll, {
-            passive: true
+            passive: true,
           });
         });
       }
@@ -6334,25 +7472,31 @@ const visibleRectEffect = (element, update) => {
       });
     }
     {
-      const documentIntersectionObserver = new IntersectionObserver(() => {
-        autoCheck("element_intersection_with_document_change");
-      }, {
-        root: null,
-        rootMargin: "0px",
-        threshold: [0, 0.1, 0.9, 1]
-      });
+      const documentIntersectionObserver = new IntersectionObserver(
+        () => {
+          autoCheck("element_intersection_with_document_change");
+        },
+        {
+          root: null,
+          rootMargin: "0px",
+          threshold: [0, 0.1, 0.9, 1],
+        },
+      );
       documentIntersectionObserver.observe(element);
       addTeardown(() => {
         documentIntersectionObserver.disconnect();
       });
       if (!scrollContainerIsDocument) {
-        const scrollIntersectionObserver = new IntersectionObserver(() => {
-          autoCheck("element_intersection_with_scroll_change");
-        }, {
-          root: scrollContainer,
-          rootMargin: "0px",
-          threshold: [0, 0, 1, 0.9, 1]
-        });
+        const scrollIntersectionObserver = new IntersectionObserver(
+          () => {
+            autoCheck("element_intersection_with_scroll_change");
+          },
+          {
+            root: scrollContainer,
+            rootMargin: "0px",
+            threshold: [0, 0, 1, 0.9, 1],
+          },
+        );
         scrollIntersectionObserver.observe(element);
         addTeardown(() => {
           scrollIntersectionObserver.disconnect();
@@ -6364,27 +7508,31 @@ const visibleRectEffect = (element, update) => {
         autoCheck("window_touchmove");
       };
       window.addEventListener("touchmove", onWindowTouchMove, {
-        passive: true
+        passive: true,
       });
       addTeardown(() => {
         window.removeEventListener("touchmove", onWindowTouchMove, {
-          passive: true
+          passive: true,
         });
       });
     }
   }
+
   return {
     check,
     onBeforeAutoCheck,
     disconnect: () => {
       teardown();
-    }
+    },
   };
 };
-const pickPositionRelativeTo = (element, target, {
-  alignToViewportEdgeWhenTargetNearEdge = 0,
-  forcePosition
-} = {}) => {
+
+const pickPositionRelativeTo = (
+  element,
+  target,
+  { alignToViewportEdgeWhenTargetNearEdge = 0, forcePosition } = {},
+) => {
+
   const viewportWidth = document.documentElement.clientWidth;
   const viewportHeight = document.documentElement.clientHeight;
   // Get viewport-relative positions
@@ -6394,13 +7542,13 @@ const pickPositionRelativeTo = (element, target, {
     left: elementLeft,
     right: elementRight,
     top: elementTop,
-    bottom: elementBottom
+    bottom: elementBottom,
   } = elementRect;
   const {
     left: targetLeft,
     right: targetRight,
     top: targetTop,
-    bottom: targetBottom
+    bottom: targetBottom,
   } = targetRect;
   const elementWidth = elementRight - elementLeft;
   const elementHeight = elementBottom - elementTop;
@@ -6414,16 +7562,19 @@ const pickPositionRelativeTo = (element, target, {
     if (targetIsWiderThanViewport) {
       const targetLeftIsVisible = targetLeft >= 0;
       const targetRightIsVisible = targetRight <= viewportWidth;
+
       if (!targetLeftIsVisible && targetRightIsVisible) {
         // Target extends beyond left edge but right side is visible
         const viewportCenter = viewportWidth / 2;
         const distanceFromRightEdge = viewportWidth - targetRight;
-        elementPositionLeft = viewportCenter - distanceFromRightEdge / 2 - elementWidth / 2;
+        elementPositionLeft =
+          viewportCenter - distanceFromRightEdge / 2 - elementWidth / 2;
       } else if (targetLeftIsVisible && !targetRightIsVisible) {
         // Target extends beyond right edge but left side is visible
         const viewportCenter = viewportWidth / 2;
         const distanceFromLeftEdge = -targetLeft;
-        elementPositionLeft = viewportCenter - distanceFromLeftEdge / 2 - elementWidth / 2;
+        elementPositionLeft =
+          viewportCenter - distanceFromLeftEdge / 2 - elementWidth / 2;
       } else {
         // Target extends beyond both edges or is fully visible (center in viewport)
         elementPositionLeft = viewportWidth / 2 - elementWidth / 2;
@@ -6434,7 +7585,8 @@ const pickPositionRelativeTo = (element, target, {
       // Special handling when element is wider than target
       if (alignToViewportEdgeWhenTargetNearEdge) {
         const elementIsWiderThanTarget = elementWidth > targetWidth;
-        const targetIsNearLeftEdge = targetLeft < alignToViewportEdgeWhenTargetNearEdge;
+        const targetIsNearLeftEdge =
+          targetLeft < alignToViewportEdgeWhenTargetNearEdge;
         if (elementIsWiderThanTarget && targetIsNearLeftEdge) {
           elementPositionLeft = 0; // Left edge of viewport
         }
@@ -6461,7 +7613,10 @@ const pickPositionRelativeTo = (element, target, {
     const minContentVisibilityRatio = 0.6; // 60% minimum visibility to keep position
     if (preferredPosition) {
       // Element has a preferred position - try to keep it unless we really struggle
-      const visibleRatio = preferredPosition === "above" ? spaceAboveTarget / elementHeight : spaceBelowTarget / elementHeight;
+      const visibleRatio =
+        preferredPosition === "above"
+          ? spaceAboveTarget / elementHeight
+          : spaceBelowTarget / elementHeight;
       const canShowMinimumContent = visibleRatio >= minContentVisibilityRatio;
       if (canShowMinimumContent) {
         position = preferredPosition;
@@ -6477,31 +7632,36 @@ const pickPositionRelativeTo = (element, target, {
     const hasMoreSpaceBelow = spaceBelowTarget >= spaceAboveTarget;
     position = hasMoreSpaceBelow ? "below" : "above";
   }
+
   let elementPositionTop;
   {
     if (position === "below") {
       // Calculate top position when placing below target (ensure whole pixels)
       const idealTopWhenBelow = targetBottom;
-      elementPositionTop = idealTopWhenBelow % 1 === 0 ? idealTopWhenBelow : Math.floor(idealTopWhenBelow) + 1;
+      elementPositionTop =
+        idealTopWhenBelow % 1 === 0
+          ? idealTopWhenBelow
+          : Math.floor(idealTopWhenBelow) + 1;
     } else {
       // Calculate top position when placing above target
       const idealTopWhenAbove = targetTop - elementHeight;
       const minimumTopInViewport = 0;
-      elementPositionTop = idealTopWhenAbove < minimumTopInViewport ? minimumTopInViewport : idealTopWhenAbove;
+      elementPositionTop =
+        idealTopWhenAbove < minimumTopInViewport
+          ? minimumTopInViewport
+          : idealTopWhenAbove;
     }
   }
 
   // Get document scroll for final coordinate conversion
-  const {
-    scrollLeft,
-    scrollTop
-  } = document.documentElement;
+  const { scrollLeft, scrollTop } = document.documentElement;
   const elementDocumentLeft = elementPositionLeft + scrollLeft;
   const elementDocumentTop = elementPositionTop + scrollTop;
   const targetDocumentLeft = targetLeft + scrollLeft;
   const targetDocumentTop = targetTop + scrollTop;
   const targetDocumentRight = targetRight + scrollLeft;
   const targetDocumentBottom = targetBottom + scrollTop;
+
   return {
     position,
     left: elementDocumentLeft,
@@ -6513,22 +7673,23 @@ const pickPositionRelativeTo = (element, target, {
     targetRight: targetDocumentRight,
     targetBottom: targetDocumentBottom,
     spaceAboveTarget,
-    spaceBelowTarget
+    spaceBelowTarget,
   };
 };
 
-const parseTransform = transform => {
+const parseTransform = (transform) => {
   if (!transform || transform === "none") return new Map();
   const transformMap = new Map();
+
   if (transform.startsWith("matrix(")) {
     // matrix(a, b, c, d, e, f) where e is translateX and f is translateY
-    const values = transform.match(/matrix\((.*?)\)/)?.[1].split(",").map(Number);
+    const values = transform
+      .match(/matrix\((.*?)\)/)?.[1]
+      .split(",")
+      .map(Number);
     if (values) {
       const translateX = values[4]; // e value from matrix
-      transformMap.set("translateX", {
-        value: translateX,
-        unit: "px"
-      });
+      transformMap.set("translateX", { value: translateX, unit: "px" });
       return transformMap;
     }
   }
@@ -6537,39 +7698,36 @@ const parseTransform = transform => {
   const matches = transform.matchAll(/(\w+)\(([-\d.]+)(%|px|deg)?\)/g);
   for (const match of matches) {
     const [, func, value, unit = ""] = match;
-    transformMap.set(func, {
-      value: parseFloat(value),
-      unit
-    });
+    transformMap.set(func, { value: parseFloat(value), unit });
   }
   return transformMap;
 };
 
 const EASING = {
-  LINEAR: x => x,
-  EASE: x => {
+  LINEAR: (x) => x,
+  EASE: (x) => {
     return cubicBezier(x, 0.25, 0.1, 0.25, 1.0);
   },
-  EASE_IN: x => {
+  EASE_IN: (x) => {
     return cubicBezier(x, 0.42, 0, 1.0, 1.0);
   },
-  EASE_OUT: x => {
+  EASE_OUT: (x) => {
     return cubicBezier(x, 0, 0, 0.58, 1.0);
   },
-  EASE_IN_OUT: x => {
+  EASE_IN_OUT: (x) => {
     return cubicBezier(x, 0.42, 0, 0.58, 1.0);
   },
-  EASE_IN_OUT_CUBIC: x => {
+  EASE_IN_OUT_CUBIC: (x) => {
     return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
   },
-  EASE_IN_EXPO: x => {
+  EASE_IN_EXPO: (x) => {
     return x === 0 ? 0 : Math.pow(2, 10 * x - 10);
   },
-  EASE_OUT_EXPO: x => {
+  EASE_OUT_EXPO: (x) => {
     return x === 1 ? 1 : 1 - Math.pow(2, -10 * x);
   },
-  EASE_OUT_ELASTIC: x => {
-    const c4 = 2 * Math.PI / 3;
+  EASE_OUT_ELASTIC: (x) => {
+    const c4 = (2 * Math.PI) / 3;
     if (x === 0) {
       return 0;
     }
@@ -6578,17 +7736,24 @@ const EASING = {
     }
     return Math.pow(2, -10 * x) * Math.sin((x * 10 - 0.75) * c4) + 1;
   },
-  EASE_OUT_CUBIC: x => {
+  EASE_OUT_CUBIC: (x) => {
     return 1 - Math.pow(1 - x, 3);
-  }
+  },
 };
+
 const cubicBezier = (t, initial, p1, p2, final) => {
-  return (1 - t) * (1 - t) * (1 - t) * initial + 3 * (1 - t) * (1 - t) * t * p1 + 3 * (1 - t) * t * t * p2 + t * t * t * final;
+  return (
+    (1 - t) * (1 - t) * (1 - t) * initial +
+    3 * (1 - t) * (1 - t) * t * p1 +
+    3 * (1 - t) * t * t * p2 +
+    t * t * t * final
+  );
 };
 
 const getTimelineCurrentTime = () => {
   return document.timeline.currentTime;
 };
+
 const visualCallbackSet = new Set();
 const backgroundCallbackSet = new Set();
 const addOnTimeline = (callback, isVisual) => {
@@ -6622,7 +7787,7 @@ const createBackgroundUpdateLoop = () => {
     },
     stop: () => {
       clearTimeout(timeout);
-    }
+    },
   };
 };
 // For visual things we use animation frame which is more performant and made for this
@@ -6640,11 +7805,12 @@ const createAnimationFrameLoop = () => {
     },
     stop: () => {
       cancelAnimationFrame(animationFrame);
-    }
+    },
   };
 };
 const backgroundUpdateLoop = createBackgroundUpdateLoop();
 const animationUpdateLoop = createAnimationFrameLoop();
+
 let timelineIsRunning = false;
 const startTimeline = () => {
   if (timelineIsRunning) {
@@ -6662,8 +7828,9 @@ const LIFECYCLE_DEFAULT = {
   pause: () => {},
   cancel: () => {},
   finish: () => {},
-  updateTarget: () => {}
+  updateTarget: () => {},
 };
+
 const createTransition = ({
   constructor,
   key,
@@ -6678,32 +7845,44 @@ const createTransition = ({
   const [finishCallbacks, executeFinishCallbacks] = createCallbackController();
   const channels = {
     update: updateCallbacks,
-    finish: finishCallbacks
+    finish: finishCallbacks,
   };
   if (onUpdate) {
     updateCallbacks.add(onUpdate);
   }
+
   let playState = "idle"; // 'idle', 'running', 'paused', 'finished'
   let isFirstUpdate = false;
   let resume;
   let executionLifecycle = null;
+
   const start = () => {
     isFirstUpdate = true;
     playState = "running";
+
     executionLifecycle = lifecycle.setup(transition);
 
     // Allow setup to override from value if transition.from is undefined
-    if (transition.from === undefined && executionLifecycle.from !== undefined) {
+    if (
+      transition.from === undefined &&
+      executionLifecycle.from !== undefined
+    ) {
       transition.from = executionLifecycle.from;
     }
+
     const diff = Math.abs(transition.to - transition.from);
     if (diff === 0) {
-      console.warn("".concat(constructor.name, " transition has identical from and to values (").concat(transition.from, "). This transition will have no effect."));
+      console.warn(
+        `${constructor.name} transition has identical from and to values (${transition.from}). This transition will have no effect.`,
+      );
     } else if (typeof minDiff === "number" && diff < minDiff) {
-      console.warn("".concat(constructor.name, " transition difference is very small (").concat(diff, "). Consider if this transition is necessary (minimum threshold: ").concat(minDiff, ")."));
+      console.warn(
+        `${constructor.name} transition difference is very small (${diff}). Consider if this transition is necessary (minimum threshold: ${minDiff}).`,
+      );
     }
     transition.update(transition.value);
   };
+
   const transition = {
     constructor,
     key,
@@ -6715,6 +7894,7 @@ const createTransition = ({
     get playState() {
       return playState;
     },
+
     play: () => {
       if (playState === "idle") {
         transition.value = transition.from;
@@ -6734,6 +7914,7 @@ const createTransition = ({
       // "finished"
       start();
     },
+
     update: (value, isLast) => {
       if (playState === "idle") {
         console.warn("Cannot update transition that is idle");
@@ -6743,12 +7924,14 @@ const createTransition = ({
         console.warn("Cannot update a finished transition");
         return;
       }
+
       transition.value = value;
       transition.timing = isLast ? "end" : isFirstUpdate ? "start" : "progress";
       isFirstUpdate = false;
       executionLifecycle.update(transition);
       executeUpdateCallbacks(transition);
     },
+
     pause: () => {
       if (playState === "paused") {
         console.warn("transition already paused");
@@ -6763,6 +7946,7 @@ const createTransition = ({
       // Let the transition handle its own pause logic
       resume = lifecycle.pause(transition);
     },
+
     cancel: () => {
       if (executionLifecycle) {
         lifecycle.cancel(transition);
@@ -6772,6 +7956,7 @@ const createTransition = ({
       resume = null;
       playState = "idle";
     },
+
     finish: () => {
       if (playState === "idle") {
         console.warn("Cannot finish a transition that is idle");
@@ -6788,6 +7973,7 @@ const createTransition = ({
       playState = "finished";
       executeFinishCallbacks();
     },
+
     reverse: () => {
       if (playState === "idle") {
         console.warn("Cannot reverse a transition that is idle");
@@ -6801,6 +7987,7 @@ const createTransition = ({
       // Simply swap from and to values to reverse direction
       const originalFrom = transition.from;
       const originalTo = transition.to;
+
       transition.from = originalTo;
       transition.to = originalFrom;
 
@@ -6809,9 +7996,16 @@ const createTransition = ({
         lifecycle.reverse(transition);
       }
     },
-    updateTarget: newTarget => {
-      if (typeof newTarget !== "number" || isNaN(newTarget) || !isFinite(newTarget)) {
-        throw new Error("updateTarget: newTarget must be a finite number, got ".concat(newTarget));
+
+    updateTarget: (newTarget) => {
+      if (
+        typeof newTarget !== "number" ||
+        isNaN(newTarget) ||
+        !isFinite(newTarget)
+      ) {
+        throw new Error(
+          `updateTarget: newTarget must be a finite number, got ${newTarget}`,
+        );
       }
       if (playState === "idle") {
         console.warn("Cannot update target of idle transition");
@@ -6828,8 +8022,10 @@ const createTransition = ({
       // Let the transition handle its own target update logic
       lifecycle.updateTarget(transition);
     },
-    ...rest
+
+    ...rest,
   };
+
   return transition;
 };
 
@@ -6840,23 +8036,28 @@ const createTimelineTransition = ({
   fps = 60,
   easing = EASING.EASE_OUT,
   lifecycle,
-  startProgress = 0,
-  // Progress to start from (0-1)
+  startProgress = 0, // Progress to start from (0-1)
   ...options
 }) => {
   if (typeof duration !== "number" || duration <= 0) {
-    throw new Error("Invalid duration: ".concat(duration, ". Duration must be a positive number."));
+    throw new Error(
+      `Invalid duration: ${duration}. Duration must be a positive number.`,
+    );
   }
+
   let lastUpdateTime = -1;
+
   const timeChangeCallback = () => {
     const timelineCurrentTime = getTimelineCurrentTime();
     const msElapsedSinceStart = timelineCurrentTime - transition.startTime;
     const msRemaining = transition.duration - msElapsedSinceStart;
+
     if (
-    // we reach the end, round progress to 1
-    msRemaining < 0 ||
-    // we are very close from the end, round progress to 1
-    msRemaining <= transition.frameDuration) {
+      // we reach the end, round progress to 1
+      msRemaining < 0 ||
+      // we are very close from the end, round progress to 1
+      msRemaining <= transition.frameDuration
+    ) {
       transition.frameRemainingCount = 0;
       transition.progress = 1;
       transition.update(transition.to, true);
@@ -6881,8 +8082,11 @@ const createTimelineTransition = ({
     const progress = startProgress + rawProgress * (1 - startProgress);
     transition.progress = progress;
     const easedProgress = transition.easing(progress);
-    const value = transition.from + (transition.to - transition.from) * easedProgress;
-    transition.frameRemainingCount = Math.ceil(msRemaining / transition.frameDuration);
+    const value =
+      transition.from + (transition.to - transition.from) * easedProgress;
+    transition.frameRemainingCount = Math.ceil(
+      msRemaining / transition.frameDuration,
+    );
     transition.update(value);
   };
   const onTimelineNeeded = () => {
@@ -6891,14 +8095,12 @@ const createTimelineTransition = ({
   const onTimelineNotNeeded = () => {
     removeFromTimeline(timeChangeCallback, isVisual);
   };
-  const {
-    setup
-  } = lifecycle;
+
+  const { setup } = lifecycle;
   const transition = createTransition({
     ...options,
     startTime: null,
-    progress: startProgress,
-    // Initialize with start progress
+    progress: startProgress, // Initialize with start progress
     duration,
     easing,
     fps,
@@ -6906,23 +8108,24 @@ const createTimelineTransition = ({
       return 1000 / fps;
     },
     frameRemainingCount: 0,
-    startProgress,
-    // Store for calculations
+    startProgress, // Store for calculations
     lifecycle: {
       ...lifecycle,
-      setup: transition => {
+      setup: (transition) => {
         // Handle timeline management
         lastUpdateTime = -1;
         transition.startTime = getTimelineCurrentTime();
         // Calculate remaining frames based on remaining progress
         const remainingProgress = 1 - startProgress;
         const remainingDuration = transition.duration * remainingProgress;
-        transition.frameRemainingCount = Math.ceil(remainingDuration / transition.frameDuration);
+        transition.frameRemainingCount = Math.ceil(
+          remainingDuration / transition.frameDuration,
+        );
         onTimelineNeeded();
         // Call the original setup
         return setup(transition);
       },
-      pause: transition => {
+      pause: (transition) => {
         const pauseTime = getTimelineCurrentTime();
         onTimelineNotNeeded();
         return () => {
@@ -6935,24 +8138,27 @@ const createTimelineTransition = ({
           onTimelineNeeded();
         };
       },
-      updateTarget: transition => {
+      updateTarget: (transition) => {
         transition.startTime = getTimelineCurrentTime();
         // Don't reset lastUpdateTime - we want visual continuity for smooth target updates
         // Recalculate remaining frames from current progress
         const remainingProgress = 1 - transition.progress;
         const remainingDuration = transition.duration * remainingProgress;
-        transition.frameRemainingCount = Math.ceil(remainingDuration / transition.frameDuration);
+        transition.frameRemainingCount = Math.ceil(
+          remainingDuration / transition.frameDuration,
+        );
       },
       cancel: () => {
         onTimelineNotNeeded();
       },
       finish: () => {
         onTimelineNotNeeded();
-      }
-    }
+      },
+    },
   });
   return transition;
 };
+
 const createCallbackController = () => {
   const callbackSet = new Set();
   const execute = (...args) => {
@@ -6961,7 +8167,7 @@ const createCallbackController = () => {
     }
   };
   const callbacks = {
-    add: callback => {
+    add: (callback) => {
       if (typeof callback !== "function") {
         throw new TypeError("Callback must be a function");
       }
@@ -6969,12 +8175,31 @@ const createCallbackController = () => {
       return () => {
         callbackSet.delete(callback);
       };
-    }
+    },
   };
   return [callbacks, execute];
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  /* Transition data attributes override inline styles using CSS custom properties */\n  *[data-transition-opacity] {\n    opacity: var(--ui-transition-opacity) !important;\n  }\n\n  *[data-transition-translate-x] {\n    transform: translateX(var(--ui-transition-translate-x)) !important;\n  }\n\n  *[data-transition-width] {\n    width: var(--ui-transition-width) !important;\n  }\n\n  *[data-transition-height] {\n    height: var(--ui-transition-height) !important;\n  }\n";
+installImportMetaCss(import.meta);
+import.meta.css = /* css */ `
+  /* Transition data attributes override inline styles using CSS custom properties */
+  *[data-transition-opacity] {
+    opacity: var(--ui-transition-opacity) !important;
+  }
+
+  *[data-transition-translate-x] {
+    transform: translateX(var(--ui-transition-translate-x)) !important;
+  }
+
+  *[data-transition-width] {
+    width: var(--ui-transition-width) !important;
+  }
+
+  *[data-transition-height] {
+    height: var(--ui-transition-height) !important;
+  }
+`;
+
 const createHeightTransition = (element, to, options) => {
   const heightTransition = createTimelineTransition({
     ...options,
@@ -6988,10 +8213,8 @@ const createHeightTransition = (element, to, options) => {
         const restoreWillChange = addWillChange(element, "height");
         return {
           from: getHeight(element),
-          update: ({
-            value
-          }) => {
-            const valueWithUnit = "".concat(value, "px");
+          update: ({ value }) => {
+            const valueWithUnit = `${value}px`;
             element.setAttribute("data-transition-height", valueWithUnit);
             element.style.setProperty("--ui-transition-height", valueWithUnit);
           },
@@ -7003,10 +8226,10 @@ const createHeightTransition = (element, to, options) => {
           restore: () => {
             element.removeAttribute("data-transition-height");
             element.style.removeProperty("--ui-transition-height");
-          }
+          },
         };
-      }
-    }
+      },
+    },
   });
   return heightTransition;
 };
@@ -7023,10 +8246,8 @@ const createWidthTransition = (element, to, options) => {
         const restoreWillChange = addWillChange(element, "width");
         return {
           from: getWidth(element),
-          update: ({
-            value
-          }) => {
-            const valueWithUnit = "".concat(value, "px");
+          update: ({ value }) => {
+            const valueWithUnit = `${value}px`;
             element.setAttribute("data-transition-width", valueWithUnit);
             element.style.setProperty("--ui-transition-width", valueWithUnit);
           },
@@ -7038,10 +8259,10 @@ const createWidthTransition = (element, to, options) => {
           restore: () => {
             element.removeAttribute("data-transition-width");
             element.style.removeProperty("--ui-transition-width");
-          }
+          },
         };
-      }
-    }
+      },
+    },
   });
   return widthTransition;
 };
@@ -7058,9 +8279,7 @@ const createOpacityTransition = (element, to, options = {}) => {
         const restoreWillChange = addWillChange(element, "opacity");
         return {
           from: getOpacity(element),
-          update: ({
-            value
-          }) => {
+          update: ({ value }) => {
             element.setAttribute("data-transition-opacity", value);
             element.style.setProperty("--ui-transition-opacity", value);
           },
@@ -7072,16 +8291,17 @@ const createOpacityTransition = (element, to, options = {}) => {
           restore: () => {
             element.removeAttribute("data-transition-opacity");
             element.style.removeProperty("--ui-transition-opacity");
-          }
+          },
         };
-      }
-    }
+      },
+    },
   });
   return opacityTransition;
 };
-const getOpacity = element => {
+const getOpacity = (element) => {
   return parseFloat(getComputedStyle(element).opacity) || 0;
 };
+
 const createTranslateXTransition = (element, to, options) => {
   let unit = "px";
   if (typeof to === "string") {
@@ -7090,6 +8310,7 @@ const createTranslateXTransition = (element, to, options) => {
     }
     to = parseFloat(to);
   }
+
   const translateXTransition = createTimelineTransition({
     ...options,
     constructor: createTranslateXTransition,
@@ -7102,12 +8323,13 @@ const createTranslateXTransition = (element, to, options) => {
         const restoreWillChange = addWillChange(element, "transform");
         return {
           from: getTranslateX(element),
-          update: ({
-            value
-          }) => {
-            const valueWithUnit = "".concat(value).concat(unit);
+          update: ({ value }) => {
+            const valueWithUnit = `${value}${unit}`;
             element.setAttribute("data-transition-translate-x", valueWithUnit);
-            element.style.setProperty("--ui-transition-translate-x", valueWithUnit);
+            element.style.setProperty(
+              "--ui-transition-translate-x",
+              valueWithUnit,
+            );
           },
           teardown: () => {
             restoreWillChange();
@@ -7117,38 +8339,44 @@ const createTranslateXTransition = (element, to, options) => {
           restore: () => {
             element.removeAttribute("data-transition-translate-x");
             element.style.removeProperty("--ui-transition-translate-x");
-          }
+          },
         };
-      }
-    }
+      },
+    },
   });
   return translateXTransition;
 };
-const getTranslateX = element => {
+const getTranslateX = (element) => {
   const transform = getComputedStyle(element).transform;
   const transformMap = parseTransform(transform);
   return transformMap.get("translateX")?.value || 0;
 };
 
 // Helper functions for getting natural (non-transition) values
-const getOpacityWithoutTransition = element => {
+const getOpacityWithoutTransition = (element) => {
   const transitionOpacity = element.getAttribute("data-transition-opacity");
 
   // Temporarily remove transition attribute
   element.removeAttribute("data-transition-opacity");
+
   const naturalValue = parseFloat(getComputedStyle(element).opacity) || 0;
 
   // Restore transition attribute if it existed
   if (transitionOpacity !== null) {
     element.setAttribute("data-transition-opacity", transitionOpacity);
   }
+
   return naturalValue;
 };
-const getTranslateXWithoutTransition = element => {
-  const transitionTranslateX = element.getAttribute("data-transition-translate-x");
+
+const getTranslateXWithoutTransition = (element) => {
+  const transitionTranslateX = element.getAttribute(
+    "data-transition-translate-x",
+  );
 
   // Temporarily remove transition attribute
   element.removeAttribute("data-transition-translate-x");
+
   const transform = getComputedStyle(element).transform;
   const transformMap = parseTransform(transform);
   const naturalValue = transformMap.get("translateX")?.value || 0;
@@ -7157,11 +8385,12 @@ const getTranslateXWithoutTransition = element => {
   if (transitionTranslateX !== null) {
     element.setAttribute("data-transition-translate-x", transitionTranslateX);
   }
+
   return naturalValue;
 };
 
 // transition that manages multiple transitions
-const createGroupTransition = transitionArray => {
+const createGroupTransition = (transitionArray) => {
   let finishedCount = 0;
   let duration = 0;
   let childCount = transitionArray.length;
@@ -7170,46 +8399,54 @@ const createGroupTransition = transitionArray => {
       duration = childTransition.duration;
     }
   }
+
   const groupTransition = createTransition({
     constructor: createGroupTransition,
     from: 0,
     to: 1,
     duration,
     lifecycle: {
-      setup: transition => {
+      setup: (transition) => {
         finishedCount = 0;
+
         const cleanupCallbackSet = new Set();
         for (const childTransition of transitionArray) {
           const removeFinishListener = childTransition.channels.finish.add(
-          // eslint-disable-next-line no-loop-func
-          () => {
-            finishedCount++;
-            const allFinished = finishedCount === childCount;
-            if (allFinished) {
-              transition.finish();
-            }
-          });
+            // eslint-disable-next-line no-loop-func
+            () => {
+              finishedCount++;
+              const allFinished = finishedCount === childCount;
+              if (allFinished) {
+                transition.finish();
+              }
+            },
+          );
           cleanupCallbackSet.add(removeFinishListener);
           childTransition.play();
-          const removeUpdateListener = childTransition.channels.update.add(() => {
-            // Calculate average progress (handle undefined progress)
-            let totalProgress = 0;
-            let progressCount = 0;
-            for (const t of transitionArray) {
-              if (typeof t.progress === "number") {
-                totalProgress += t.progress;
-                progressCount++;
+
+          const removeUpdateListener = childTransition.channels.update.add(
+            () => {
+              // Calculate average progress (handle undefined progress)
+              let totalProgress = 0;
+              let progressCount = 0;
+              for (const t of transitionArray) {
+                if (typeof t.progress === "number") {
+                  totalProgress += t.progress;
+                  progressCount++;
+                }
               }
-            }
-            const averageProgress = progressCount > 0 ? totalProgress / progressCount : 0;
-            // Expose progress on the group transition for external access
-            transition.progress = averageProgress;
-            // Update this transition's value with average progress
-            const isLast = averageProgress >= 1;
-            transition.update(averageProgress, isLast);
-          });
+              const averageProgress =
+                progressCount > 0 ? totalProgress / progressCount : 0;
+              // Expose progress on the group transition for external access
+              transition.progress = averageProgress;
+              // Update this transition's value with average progress
+              const isLast = averageProgress >= 1;
+              transition.update(averageProgress, isLast);
+            },
+          );
           cleanupCallbackSet.add(removeUpdateListener);
         }
+
         return {
           update: () => {},
           teardown: () => {
@@ -7218,7 +8455,7 @@ const createGroupTransition = transitionArray => {
             }
             cleanupCallbackSet.clear();
           },
-          restore: () => {}
+          restore: () => {},
         };
       },
       pause: () => {
@@ -7235,6 +8472,7 @@ const createGroupTransition = transitionArray => {
           }
         };
       },
+
       cancel: () => {
         for (const childTransition of transitionArray) {
           if (childTransition.playState !== "idle") {
@@ -7242,6 +8480,7 @@ const createGroupTransition = transitionArray => {
           }
         }
       },
+
       finish: () => {
         for (const childTransition of transitionArray) {
           if (childTransition.playState !== "finished") {
@@ -7249,14 +8488,18 @@ const createGroupTransition = transitionArray => {
           }
         }
       },
+
       reverse: () => {
         for (const childTransition of transitionArray) {
-          if (childTransition.playState === "running" || childTransition.playState === "paused") {
+          if (
+            childTransition.playState === "running" ||
+            childTransition.playState === "paused"
+          ) {
             childTransition.reverse();
           }
         }
-      }
-    }
+      },
+    },
   });
   return groupTransition;
 };
@@ -7268,6 +8511,7 @@ const createGroupTransition = transitionArray => {
 const createGroupTransitionController = () => {
   // Track all active transitions for cancellation and matching
   const activeTransitions = new Set();
+
   return {
     /**
      * Animate multiple transitions simultaneously
@@ -7279,10 +8523,8 @@ const createGroupTransitionController = () => {
      * @returns {Object} Playback controller with play(), pause(), cancel(), etc.
      */
     animate: (transitions, options = {}) => {
-      const {
-        onChange,
-        onFinish
-      } = options;
+      const { onChange, onFinish } = options;
+
       if (transitions.length === 0) {
         // No transitions to animate, call onFinish immediately
         if (onFinish) {
@@ -7294,16 +8536,10 @@ const createGroupTransitionController = () => {
           cancel: () => {},
           finish: () => {},
           playState: "idle",
-          channels: {
-            update: {
-              add: () => {}
-            },
-            finish: {
-              add: () => {}
-            }
-          }
+          channels: { update: { add: () => {} }, finish: { add: () => {} } },
         };
       }
+
       const newTransitions = [];
       const updatedTransitions = [];
 
@@ -7312,11 +8548,15 @@ const createGroupTransitionController = () => {
         // Look for existing transition with same constructor and targetKey
         let existingTransition = null;
         for (const transitionCandidate of activeTransitions) {
-          if (transitionCandidate.constructor === transition.constructor && transitionCandidate.key === transition.key) {
+          if (
+            transitionCandidate.constructor === transition.constructor &&
+            transitionCandidate.key === transition.key
+          ) {
             existingTransition = transitionCandidate;
             break;
           }
         }
+
         if (existingTransition && existingTransition.playState === "running") {
           // Update the existing transition's target if it supports updateTarget
           if (existingTransition.updateTarget) {
@@ -7330,6 +8570,7 @@ const createGroupTransitionController = () => {
           transition.channels.finish.add(() => {
             activeTransitions.delete(transition);
           });
+
           newTransitions.push(transition);
         }
       }
@@ -7337,23 +8578,20 @@ const createGroupTransitionController = () => {
       // If we only have updated transitions (no new ones), return a minimal controller
       if (newTransitions.length === 0) {
         return {
-          play: () => {},
-          // Already playing
-          pause: () => updatedTransitions.forEach(transition => transition.pause()),
-          cancel: () => updatedTransitions.forEach(transition => transition.cancel()),
-          finish: () => updatedTransitions.forEach(transition => transition.finish()),
-          reverse: () => updatedTransitions.forEach(transition => transition.reverse()),
-          playState: "running",
-          // All are already running
+          play: () => {}, // Already playing
+          pause: () =>
+            updatedTransitions.forEach((transition) => transition.pause()),
+          cancel: () =>
+            updatedTransitions.forEach((transition) => transition.cancel()),
+          finish: () =>
+            updatedTransitions.forEach((transition) => transition.finish()),
+          reverse: () =>
+            updatedTransitions.forEach((transition) => transition.reverse()),
+          playState: "running", // All are already running
           channels: {
-            update: {
-              add: () => {}
-            },
-            // Update tracking already set up
-            finish: {
-              add: () => {}
-            }
-          }
+            update: { add: () => {} }, // Update tracking already set up
+            finish: { add: () => {} },
+          },
         };
       }
 
@@ -7362,12 +8600,15 @@ const createGroupTransitionController = () => {
 
       // Add unified update tracking for ALL transitions (new + updated)
       if (onChange) {
-        groupTransition.channels.update.add(transition => {
+        groupTransition.channels.update.add((transition) => {
           // Build change entries for current state of ALL transitions
-          const changeEntries = [...newTransitions, ...updatedTransitions].map(transition => ({
-            transition,
-            value: transition.value
-          }));
+          const changeEntries = [...newTransitions, ...updatedTransitions].map(
+            (transition) => ({
+              transition,
+              value: transition.value,
+            }),
+          );
+
           const isLast = transition.value >= 1; // isLast = value >= 1 (since group tracks 0-1)
           onChange(changeEntries, isLast);
         });
@@ -7376,89 +8617,95 @@ const createGroupTransitionController = () => {
       // Add finish tracking
       if (onFinish) {
         groupTransition.channels.finish.add(() => {
-          const changeEntries = [...newTransitions, ...updatedTransitions].map(transition => ({
-            transition,
-            value: transition.value
-          }));
+          const changeEntries = [...newTransitions, ...updatedTransitions].map(
+            (transition) => ({
+              transition,
+              value: transition.value,
+            }),
+          );
           onFinish(changeEntries);
         });
       }
+
       return groupTransition;
     },
+
     /**
      * Cancel all ongoing transitions managed by this controller
      */
     cancel: () => {
       // Cancel all active transitions
       for (const transition of activeTransitions) {
-        if (transition.playState === "running" || transition.playState === "paused") {
+        if (
+          transition.playState === "running" ||
+          transition.playState === "paused"
+        ) {
           transition.cancel();
         }
       }
       // Clear the sets - the finish callbacks will handle individual cleanup
       activeTransitions.clear();
-    }
+    },
   };
 };
 
-const getPaddingSizes = element => {
-  const {
-    paddingLeft,
-    paddingRight,
-    paddingTop,
-    paddingBottom
-  } = window.getComputedStyle(element, null);
+const getPaddingSizes = (element) => {
+  const { paddingLeft, paddingRight, paddingTop, paddingBottom } =
+    window.getComputedStyle(element, null);
   return {
     left: parseFloat(paddingLeft),
     right: parseFloat(paddingRight),
     top: parseFloat(paddingTop),
-    bottom: parseFloat(paddingBottom)
+    bottom: parseFloat(paddingBottom),
   };
 };
 
-const getInnerHeight = element => {
+const getInnerHeight = (element) => {
   // Always subtract paddings and borders to get the content height
   const paddingSizes = getPaddingSizes(element);
   const borderSizes = getBorderSizes(element);
   const height = getHeight(element);
   const verticalSpaceTakenByPaddings = paddingSizes.top + paddingSizes.bottom;
   const verticalSpaceTakenByBorders = borderSizes.top + borderSizes.bottom;
-  const innerHeight = height - verticalSpaceTakenByPaddings - verticalSpaceTakenByBorders;
+  const innerHeight =
+    height - verticalSpaceTakenByPaddings - verticalSpaceTakenByBorders;
   return innerHeight;
 };
 
-const getMarginSizes = element => {
-  const {
-    marginLeft,
-    marginRight,
-    marginTop,
-    marginBottom
-  } = window.getComputedStyle(element, null);
+const getMarginSizes = (element) => {
+  const { marginLeft, marginRight, marginTop, marginBottom } =
+    window.getComputedStyle(element, null);
   return {
     left: parseFloat(marginLeft),
     right: parseFloat(marginRight),
     top: parseFloat(marginTop),
-    bottom: parseFloat(marginBottom)
+    bottom: parseFloat(marginBottom),
   };
 };
 
-const getAvailableHeight = (element, parentHeight = getHeight(element.parentElement)) => {
+const getAvailableHeight = (
+  element,
+  parentHeight = getHeight(element.parentElement),
+) => {
   const parentElement = element.parentElement;
   const paddingSizes = getPaddingSizes(parentElement);
   const borderSizes = getBorderSizes(parentElement);
   let availableHeight = parentHeight;
-  availableHeight -= paddingSizes.top + paddingSizes.bottom + borderSizes.top + borderSizes.bottom;
+  availableHeight -=
+    paddingSizes.top +
+    paddingSizes.bottom +
+    borderSizes.top +
+    borderSizes.bottom;
   if (availableHeight < 0) {
     availableHeight = 0;
   }
   return availableHeight;
 };
 
-const resolveCSSSize = (size, {
-  availableSize,
-  fontSize,
-  autoIsRelativeToFont
-} = {}) => {
+const resolveCSSSize = (
+  size,
+  { availableSize, fontSize, autoIsRelativeToFont } = {},
+) => {
   if (typeof size === "string") {
     if (size === "auto") {
       return autoIsRelativeToFont ? fontSize : availableSize;
@@ -7473,13 +8720,15 @@ const resolveCSSSize = (size, {
       return parseFloat(size) * fontSize;
     }
     if (size.endsWith("rem")) {
-      return parseFloat(size) * getComputedStyle(document.documentElement).fontSize;
+      return (
+        parseFloat(size) * getComputedStyle(document.documentElement).fontSize
+      );
     }
     if (size.endsWith("vw")) {
-      return parseFloat(size) / 100 * window.innerWidth;
+      return (parseFloat(size) / 100) * window.innerWidth;
     }
     if (size.endsWith("vh")) {
-      return parseFloat(size) / 100 * window.innerHeight;
+      return (parseFloat(size) / 100) * window.innerHeight;
     }
     return parseFloat(size);
   }
@@ -7488,13 +8737,13 @@ const resolveCSSSize = (size, {
 
 const getMinHeight = (element, availableHeight) => {
   const computedStyle = window.getComputedStyle(element);
-  const {
-    minHeight,
-    fontSize
-  } = computedStyle;
+  const { minHeight, fontSize } = computedStyle;
   return resolveCSSSize(minHeight, {
-    availableSize: availableHeight === undefined ? getAvailableHeight(element) : availableHeight,
-    fontSize
+    availableSize:
+      availableHeight === undefined
+        ? getAvailableHeight(element)
+        : availableHeight,
+    fontSize,
   });
 };
 
@@ -7503,34 +8752,42 @@ const getMinHeight = (element, availableHeight) => {
  *
  */
 
+
 const HEIGHT_TRANSITION_DURATION = 300;
 const ANIMATE_TOGGLE = true;
 const ANIMATE_RESIZE_AFTER_MUTATION = true;
 const ANIMATION_THRESHOLD_PX = 10; // Don't animate changes smaller than this
 const DEBUG$1 = false;
-const initFlexDetailsSet = (container, {
-  onSizeChange,
-  onResizableDetailsChange,
-  onMouseResizeEnd,
-  onRequestedSizeChange,
-  debug = DEBUG$1
-} = {}) => {
+
+const initFlexDetailsSet = (
+  container,
+  {
+    onSizeChange,
+    onResizableDetailsChange,
+    onMouseResizeEnd,
+    onRequestedSizeChange,
+    debug = DEBUG$1,
+  } = {},
+) => {
   const flexDetailsSet = {
-    cleanup: null
+    cleanup: null,
   };
 
   // Create animation controller for managing height animations
   const transitionController = createGroupTransitionController();
+
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
     // Cancel any ongoing animations
     transitionController.cancel();
+
     for (const cleanupCallback of cleanupCallbackSet) {
       cleanupCallback();
     }
     cleanupCallbackSet.clear();
   };
   flexDetailsSet.cleanup = cleanup;
+
   const spaceMap = new Map();
   const marginSizeMap = new Map();
   const requestedSpaceMap = new Map();
@@ -7563,13 +8820,15 @@ const initFlexDetailsSet = (container, {
     openedDetailsArray.length = 0;
     lastChild = null;
     if (debug) {
-      console.debug("\uD83D\uDCD0 Container space: ".concat(availableSpace, "px"));
+      console.debug(`📐 Container space: ${availableSpace}px`);
     }
+
     for (const child of container.children) {
       lastChild = child;
       const marginSizes = getMarginSizes(child);
       const marginSize = marginSizes.top + marginSizes.bottom;
       marginSizeMap.set(child, marginSize);
+
       if (!isDetailsElement(child)) {
         const size = getHeight(child);
         spaceMap.set(child, size + marginSize);
@@ -7584,7 +8843,9 @@ const initFlexDetailsSet = (container, {
       let minSize;
       const summary = details.querySelector("summary");
       const summaryHeight = getHeight(summary);
+
       size = getHeight(details);
+
       if (details.open) {
         openedDetailsArray.push(details);
         canGrowSet.add(details);
@@ -7594,7 +8855,7 @@ const initFlexDetailsSet = (container, {
         if (detailsContent) {
           const preserveScroll = captureScrollState(detailsContent);
           const restoreSizeStyle = forceStyles(detailsContent, {
-            height: "auto"
+            height: "auto",
           });
           const detailsContentHeight = getHeight(detailsContent);
           restoreSizeStyle();
@@ -7608,17 +8869,23 @@ const initFlexDetailsSet = (container, {
           // <details><summary>...</summary>textual content</details>
           detailsHeight = size;
         }
+
         if (details.hasAttribute("data-requested-height")) {
-          const requestedHeightAttribute = details.getAttribute("data-requested-height");
+          const requestedHeightAttribute = details.getAttribute(
+            "data-requested-height",
+          );
           requestedSize = resolveCSSSize(requestedHeightAttribute);
           if (isNaN(requestedSize) || !isFinite(requestedSize)) {
-            console.warn("details ".concat(details.id, " has invalid data-requested-height attribute: ").concat(requestedHeightAttribute));
+            console.warn(
+              `details ${details.id} has invalid data-requested-height attribute: ${requestedHeightAttribute}`,
+            );
           }
           requestedSizeSource = "data-requested-height attribute";
         } else {
           requestedSize = detailsHeight;
           requestedSizeSource = "summary and content height";
         }
+
         const dataMinHeight = details.getAttribute("data-min-height");
         if (dataMinHeight) {
           minSize = parseFloat(dataMinHeight, 10);
@@ -7635,129 +8902,129 @@ const initFlexDetailsSet = (container, {
       minSpaceMap.set(details, minSize + marginSize);
       if (debug) {
         const currentSizeFormatted = spaceToSize(size + marginSize, details);
-        const requestedSizeFormatted = spaceToSize(requestedSize + marginSize, details);
+        const requestedSizeFormatted = spaceToSize(
+          requestedSize + marginSize,
+          details,
+        );
         const minSizeFormatted = spaceToSize(minSize + marginSize, details);
-        console.debug("  ".concat(details.id, ": ").concat(currentSizeFormatted, "px \u2192 wants ").concat(requestedSizeFormatted, "px (min: ").concat(minSizeFormatted, "px) [").concat(requestedSizeSource, "]"));
+        console.debug(
+          `  ${details.id}: ${currentSizeFormatted}px → wants ${requestedSizeFormatted}px (min: ${minSizeFormatted}px) [${requestedSizeSource}]`,
+        );
       }
     }
   };
-  const applyAllocatedSpaces = resizeDetails => {
+
+  const applyAllocatedSpaces = (resizeDetails) => {
     const changeSet = new Set();
     let maxChange = 0;
+
     for (const child of container.children) {
       const allocatedSpace = allocatedSpaceMap.get(child);
       const allocatedSize = spaceToSize(allocatedSpace, child);
       const space = spaceMap.get(child);
       const size = spaceToSize(space, child);
       const sizeChange = Math.abs(size - allocatedSize);
+
       if (size === allocatedSize) {
         continue;
       }
 
       // Track the maximum change to decide if animation is worth it
       maxChange = Math.max(maxChange, sizeChange);
+
       if (isDetailsElement(child) && child.open) {
         const syncDetailsContentHeight = prepareSyncDetailsContentHeight(child);
         changeSet.add({
           element: child,
           target: allocatedSize,
-          sideEffect: (height, {
-            isAnimationEnd
-          } = {}) => {
+          sideEffect: (height, { isAnimationEnd } = {}) => {
             syncDetailsContentHeight(height, {
               isAnimation: true,
-              isAnimationEnd
+              isAnimationEnd,
             });
-          }
+          },
         });
       } else {
         changeSet.add({
           element: child,
-          target: allocatedSize
+          target: allocatedSize,
         });
       }
     }
+
     if (changeSet.size === 0) {
       return;
     }
 
     // Don't animate if changes are too small (avoids imperceptible animations that hide scrollbars)
-    const shouldAnimate = resizeDetails.animated && maxChange >= ANIMATION_THRESHOLD_PX;
+    const shouldAnimate =
+      resizeDetails.animated && maxChange >= ANIMATION_THRESHOLD_PX;
+
     if (debug && resizeDetails.animated && !shouldAnimate) {
-      console.debug("\uD83D\uDEAB Skipping animation: max change ".concat(maxChange.toFixed(2), "px < ").concat(ANIMATION_THRESHOLD_PX, "px threshold"));
+      console.debug(
+        `🚫 Skipping animation: max change ${maxChange.toFixed(2)}px < ${ANIMATION_THRESHOLD_PX}px threshold`,
+      );
     }
+
     if (!shouldAnimate) {
       const sizeChangeEntries = [];
-      for (const {
-        element,
-        target,
-        sideEffect
-      } of changeSet) {
-        element.style.height = "".concat(target, "px");
+      for (const { element, target, sideEffect } of changeSet) {
+        element.style.height = `${target}px`;
         spaceMap.set(element, sizeToSpace(target, element));
         if (sideEffect) {
           sideEffect(target);
         }
-        sizeChangeEntries.push({
-          element,
-          value: target
-        });
+        sizeChangeEntries.push({ element, value: target });
       }
       onSizeChange?.(sizeChangeEntries, resizeDetails);
       return;
     }
 
     // Create height animations for each element in changeSet
-    const transitions = Array.from(changeSet).map(({
-      element,
-      target
-    }) => {
+    const transitions = Array.from(changeSet).map(({ element, target }) => {
       const transition = createHeightTransition(element, target, {
-        duration: HEIGHT_TRANSITION_DURATION
+        duration: HEIGHT_TRANSITION_DURATION,
       });
       return transition;
     });
+
     const transition = transitionController.animate(transitions, {
       onChange: (changeEntries, isLast) => {
         // Apply side effects for each animated element
-        for (const {
-          transition,
-          value
-        } of changeEntries) {
+        for (const { transition, value } of changeEntries) {
           for (const change of changeSet) {
             if (change.element === transition.key) {
               if (change.sideEffect) {
-                change.sideEffect(value, {
-                  isAnimationEnd: isLast
-                });
+                change.sideEffect(value, { isAnimationEnd: isLast });
               }
               break;
             }
           }
         }
+
         if (onSizeChange) {
           // Convert animation entries to the expected format
-          const sizeChangeEntries = changeEntries.map(({
-            transition,
-            value
-          }) => ({
-            element: transition.key,
-            // targetKey is the element
-            value
-          }));
-          onSizeChange(sizeChangeEntries, isLast ? {
-            ...resizeDetails,
-            animated: false
-          } : resizeDetails);
+          const sizeChangeEntries = changeEntries.map(
+            ({ transition, value }) => ({
+              element: transition.key, // targetKey is the element
+              value,
+            }),
+          );
+          onSizeChange(
+            sizeChangeEntries,
+            isLast ? { ...resizeDetails, animated: false } : resizeDetails,
+          );
         }
-      }
+      },
     });
     transition.play();
   };
+
   const allocateSpace = (child, spaceToAllocate, requestSource) => {
     const requestedSpace = requestedSpaceMap.get(child);
     const canShrink = canShrinkSet.has(child);
     const canGrow = canGrowSet.has(child);
+
     let allocatedSpace;
     let allocatedSpaceSource;
     allocate: {
@@ -7781,29 +9048,39 @@ const initFlexDetailsSet = (container, {
       allocatedSpaceSource = requestSource;
       break allocate;
     }
+
     if (allocatedSpace < requestedSpace) {
       if (!canShrink) {
         allocatedSpace = requestedSpace;
-        allocatedSpaceSource = "".concat(requestSource, " + cannot shrink");
+        allocatedSpaceSource = `${requestSource} + cannot shrink`;
       }
     } else if (allocatedSpace > requestedSpace) {
       if (!canGrow) {
         allocatedSpace = requestedSpace;
-        allocatedSpaceSource = "".concat(requestSource, " + cannot grow");
+        allocatedSpaceSource = `${requestSource} + cannot grow`;
       }
     }
+
     remainingSpace -= allocatedSpace;
     if (debug) {
       const allocatedSize = spaceToSize(allocatedSpace, child);
-      const sourceInfo = allocatedSpaceSource === requestSource ? "" : " (".concat(allocatedSpaceSource, ")");
+      const sourceInfo =
+        allocatedSpaceSource === requestSource
+          ? ""
+          : ` (${allocatedSpaceSource})`;
       if (allocatedSpace === spaceToAllocate) {
-        console.debug("  \u2192 ".concat(allocatedSize, "px to \"").concat(child.id, "\"").concat(sourceInfo, " | ").concat(remainingSpace, "px remaining"));
+        console.debug(
+          `  → ${allocatedSize}px to "${child.id}"${sourceInfo} | ${remainingSpace}px remaining`,
+        );
       } else {
         const requestedSize = spaceToSize(spaceToAllocate, child);
-        console.debug("  \u2192 ".concat(allocatedSize, "px -out of ").concat(requestedSize, "px wanted- to \"").concat(child.id, "\"").concat(sourceInfo, " | ").concat(remainingSpace, "px remaining"));
+        console.debug(
+          `  → ${allocatedSize}px -out of ${requestedSize}px wanted- to "${child.id}"${sourceInfo} | ${remainingSpace}px remaining`,
+        );
       }
     }
     allocatedSpaceMap.set(child, allocatedSpace);
+
     const space = spaceMap.get(child);
     return allocatedSpace - space;
   };
@@ -7815,51 +9092,74 @@ const initFlexDetailsSet = (container, {
     remainingSpace += allocatedSpace;
     const spaceToAllocate = allocatedSpace + diff;
     if (debug) {
-      console.debug("\uD83D\uDD04 ".concat(child.id, ": ").concat(allocatedSpace, "px + ").concat(diff, "px = ").concat(spaceToAllocate, "px (").concat(source, ")"));
+      console.debug(
+        `🔄 ${child.id}: ${allocatedSpace}px + ${diff}px = ${spaceToAllocate}px (${source})`,
+      );
     }
     allocateSpace(child, spaceToAllocate, source);
     const reallocatedSpace = allocatedSpaceMap.get(child);
     return reallocatedSpace - allocatedSpace;
   };
-  const distributeAvailableSpace = source => {
+  const distributeAvailableSpace = (source) => {
     if (debug) {
-      console.debug("\uD83D\uDCE6 Distributing ".concat(availableSpace, "px among ").concat(container.children.length, " children:"));
+      console.debug(
+        `📦 Distributing ${availableSpace}px among ${container.children.length} children:`,
+      );
     }
     for (const child of container.children) {
       allocateSpace(child, requestedSpaceMap.get(child), source);
     }
     if (debug) {
-      console.debug("\uD83D\uDCE6 After distribution: ".concat(remainingSpace, "px remaining"));
+      console.debug(`📦 After distribution: ${remainingSpace}px remaining`);
     }
   };
-  const distributeRemainingSpace = ({
-    childToGrow,
-    childToShrinkFrom
-  }) => {
+  const distributeRemainingSpace = ({ childToGrow, childToShrinkFrom }) => {
     if (!remainingSpace) {
       return;
     }
     if (remainingSpace < 0) {
       const spaceToSteal = -remainingSpace;
       if (debug) {
-        console.debug("\u26A0\uFE0F  Deficit: ".concat(remainingSpace, "px, stealing ").concat(spaceToSteal, "px from elements before ").concat(childToShrinkFrom.id));
+        console.debug(
+          `⚠️  Deficit: ${remainingSpace}px, stealing ${spaceToSteal}px from elements before ${childToShrinkFrom.id}`,
+        );
       }
-      updatePreviousSiblingsAllocatedSpace(childToShrinkFrom, -spaceToSteal, "remaining space is negative: ".concat(remainingSpace, "px"));
+      updatePreviousSiblingsAllocatedSpace(
+        childToShrinkFrom,
+        -spaceToSteal,
+        `remaining space is negative: ${remainingSpace}px`,
+      );
       return;
     }
     if (childToGrow) {
       if (debug) {
-        console.debug("\u2728 Bonus: giving ".concat(remainingSpace, "px to ").concat(childToGrow.id));
+        console.debug(
+          `✨ Bonus: giving ${remainingSpace}px to ${childToGrow.id}`,
+        );
       }
-      applyDiffOnAllocatedSpace(childToGrow, remainingSpace, "remaining space is positive: ".concat(remainingSpace, "px"));
+      applyDiffOnAllocatedSpace(
+        childToGrow,
+        remainingSpace,
+        `remaining space is positive: ${remainingSpace}px`,
+      );
     }
   };
-  const updatePreviousSiblingsAllocatedSpace = (child, diffToApply, source, mapRemainingDiffToApply) => {
+
+  const updatePreviousSiblingsAllocatedSpace = (
+    child,
+    diffToApply,
+    source,
+    mapRemainingDiffToApply,
+  ) => {
     let spaceDiffSum = 0;
     let remainingDiffToApply = diffToApply;
     let previousSibling = child.previousElementSibling;
     while (previousSibling) {
-      const spaceDiff = applyDiffOnAllocatedSpace(previousSibling, remainingDiffToApply, source);
+      const spaceDiff = applyDiffOnAllocatedSpace(
+        previousSibling,
+        remainingDiffToApply,
+        source,
+      );
       if (spaceDiff) {
         spaceDiffSum += spaceDiff;
         remainingDiffToApply -= spaceDiff;
@@ -7871,15 +9171,27 @@ const initFlexDetailsSet = (container, {
     }
     return spaceDiffSum;
   };
-  const updateNextSiblingsAllocatedSpace = (child, diffToApply, reason, mapRemainingDiffToApply) => {
+  const updateNextSiblingsAllocatedSpace = (
+    child,
+    diffToApply,
+    reason,
+    mapRemainingDiffToApply,
+  ) => {
     let spaceDiffSum = 0;
     let remainingDiffToApply = diffToApply;
     let nextSibling = child.nextElementSibling;
     while (nextSibling) {
       if (mapRemainingDiffToApply) {
-        remainingDiffToApply = mapRemainingDiffToApply(nextSibling, remainingDiffToApply);
+        remainingDiffToApply = mapRemainingDiffToApply(
+          nextSibling,
+          remainingDiffToApply,
+        );
       }
-      const spaceDiff = applyDiffOnAllocatedSpace(nextSibling, remainingDiffToApply, reason);
+      const spaceDiff = applyDiffOnAllocatedSpace(
+        nextSibling,
+        remainingDiffToApply,
+        reason,
+      );
       if (spaceDiff) {
         spaceDiffSum += spaceDiff;
         remainingDiffToApply -= spaceDiff;
@@ -7905,7 +9217,9 @@ const initFlexDetailsSet = (container, {
       nextSibling = nextSibling.nextElementSibling;
     }
     if (debug) {
-      console.debug("coult not update next sibling allocated space, try on previous siblings");
+      console.debug(
+        "coult not update next sibling allocated space, try on previous siblings",
+      );
     }
     let previousSibling = child.previousElementSibling;
     while (previousSibling) {
@@ -7913,7 +9227,11 @@ const initFlexDetailsSet = (container, {
         previousSibling = previousSibling.previousElementSibling;
         continue;
       }
-      const spaceDiff = applyDiffOnAllocatedSpace(previousSibling, diff, reason);
+      const spaceDiff = applyDiffOnAllocatedSpace(
+        previousSibling,
+        diff,
+        reason,
+      );
       if (spaceDiff) {
         return spaceDiff;
       }
@@ -7921,12 +9239,16 @@ const initFlexDetailsSet = (container, {
     }
     return 0;
   };
+
   const saveCurrentSizeAsRequestedSizes = ({
-    replaceExistingAttributes
+    replaceExistingAttributes,
   } = {}) => {
     for (const child of container.children) {
       if (canGrowSet.has(child) || canShrinkSet.has(child)) {
-        if (child.hasAttribute("data-requested-height") && !replaceExistingAttributes) {
+        if (
+          child.hasAttribute("data-requested-height") &&
+          !replaceExistingAttributes
+        ) {
           continue;
         }
         const allocatedSpace = allocatedSpaceMap.get(child);
@@ -7934,17 +9256,21 @@ const initFlexDetailsSet = (container, {
       }
     }
   };
-  const updateSpaceDistribution = resizeDetails => {
+
+  const updateSpaceDistribution = (resizeDetails) => {
     if (debug) {
-      console.group("updateSpaceDistribution: ".concat(resizeDetails.reason));
+      console.group(`updateSpaceDistribution: ${resizeDetails.reason}`);
     }
     prepareSpaceDistribution();
     distributeAvailableSpace(resizeDetails.reason);
     distributeRemainingSpace({
       childToGrow: openedDetailsArray[openedDetailsArray.length - 1],
-      childToShrinkFrom: lastChild
+      childToShrinkFrom: lastChild,
     });
-    if (resizeDetails.reason === "initial_space_distribution" || resizeDetails.reason === "content_change") {
+    if (
+      resizeDetails.reason === "initial_space_distribution" ||
+      resizeDetails.reason === "content_change"
+    ) {
       spaceMap.clear(); // force to set size at start
     }
     applyAllocatedSpaces(resizeDetails);
@@ -7953,6 +9279,7 @@ const initFlexDetailsSet = (container, {
       console.groupEnd();
     }
   };
+
   const resizableDetailsIdSet = new Set();
   const updateResizableDetails = () => {
     const currentResizableDetailsIdSet = new Set();
@@ -7971,6 +9298,7 @@ const initFlexDetailsSet = (container, {
         hasPreviousOpen = true;
       }
     }
+
     let someNew;
     let someOld;
     for (const currentId of currentResizableDetailsIdSet) {
@@ -7989,52 +9317,68 @@ const initFlexDetailsSet = (container, {
       onResizableDetailsChange?.(resizableDetailsIdSet);
     }
   };
+
   {
     updateSpaceDistribution({
-      reason: "initial_space_distribution"
+      reason: "initial_space_distribution",
     });
     updateResizableDetails();
   }
+
   {
-    const distributeSpaceAfterToggle = details => {
-      const reason = details.open ? "".concat(details.id, " just opened") : "".concat(details.id, " just closed");
+    const distributeSpaceAfterToggle = (details) => {
+      const reason = details.open
+        ? `${details.id} just opened`
+        : `${details.id} just closed`;
       if (debug) {
-        console.group("distributeSpaceAfterToggle: ".concat(reason));
+        console.group(`distributeSpaceAfterToggle: ${reason}`);
       }
       prepareSpaceDistribution();
       distributeAvailableSpace(reason);
+
       const requestedSpace = requestedSpaceMap.get(details);
       const allocatedSpace = allocatedSpaceMap.get(details);
       const spaceToSteal = requestedSpace - allocatedSpace - remainingSpace;
       if (spaceToSteal === 0) {
         distributeRemainingSpace({
           childToGrow: openedDetailsArray[openedDetailsArray.length - 1],
-          childToShrinkFrom: lastChild
+          childToShrinkFrom: lastChild,
         });
         return;
       }
       if (debug) {
-        console.debug("".concat(details.id, " would like to take ").concat(requestedSpace, "px (").concat(reason, "). Trying to steal ").concat(spaceToSteal, "px from sibling, remaining space: ").concat(remainingSpace, "px"));
+        console.debug(
+          `${details.id} would like to take ${requestedSpace}px (${reason}). Trying to steal ${spaceToSteal}px from sibling, remaining space: ${remainingSpace}px`,
+        );
       }
-      const spaceStolenFromSibling = -updateSiblingAllocatedSpace(details, -spaceToSteal, reason);
+      const spaceStolenFromSibling = -updateSiblingAllocatedSpace(
+        details,
+        -spaceToSteal,
+        reason,
+      );
       if (spaceStolenFromSibling) {
         if (debug) {
-          console.debug("".concat(spaceStolenFromSibling, "px space stolen from sibling"));
+          console.debug(
+            `${spaceStolenFromSibling}px space stolen from sibling`,
+          );
         }
         applyDiffOnAllocatedSpace(details, requestedSpace, reason);
       } else {
         if (debug) {
-          console.debug("no space could be stolen from sibling, remaining space: ".concat(remainingSpace, "px"));
+          console.debug(
+            `no space could be stolen from sibling, remaining space: ${remainingSpace}px`,
+          );
         }
         distributeRemainingSpace({
           childToGrow: openedDetailsArray[0],
-          childToShrinkFrom: lastChild
+          childToShrinkFrom: lastChild,
         });
       }
       if (debug) {
         console.groupEnd();
       }
     };
+
     for (const child of container.children) {
       if (!isDetailsElement(child)) {
         continue;
@@ -8044,7 +9388,7 @@ const initFlexDetailsSet = (container, {
         distributeSpaceAfterToggle(details);
         applyAllocatedSpaces({
           reason: details.open ? "details_opened" : "details_closed",
-          animated: ANIMATE_TOGGLE
+          animated: ANIMATE_TOGGLE,
         });
         updateResizableDetails();
       };
@@ -8060,20 +9404,23 @@ const initFlexDetailsSet = (container, {
       });
     }
   }
+
   {
     const prepareResize = () => {
       let resizedElement;
       // let startSpaceMap;
       let startAllocatedSpaceMap;
       let currentAllocatedSpaceMap;
-      const start = element => {
+
+      const start = (element) => {
         updateSpaceDistribution({
-          reason: "mouse_resize_start"
+          reason: "mouse_resize_start",
         });
         resizedElement = element;
         // startSpaceMap = new Map(spaceMap);
         startAllocatedSpaceMap = new Map(allocatedSpaceMap);
       };
+
       const applyMoveDiffToSizes = (moveDiff, reason) => {
         let spaceDiff = 0;
         let remainingMoveToApply;
@@ -8083,26 +9430,40 @@ const initFlexDetailsSet = (container, {
             // alors ici on veut grow pour tenter de restaurer la diff
             // entre requestedMap et spaceMap
             // s'il n'y en a pas alors on aura pas appliquer ce move
-            const spaceGivenToNextSiblings = updateNextSiblingsAllocatedSpace(resizedElement, remainingMoveToApply, reason, nextSibling => {
-              const requestedSpace = requestedSpaceMap.get(nextSibling);
-              const space = spaceMap.get(nextSibling);
-              return requestedSpace - space;
-            });
+            const spaceGivenToNextSiblings = updateNextSiblingsAllocatedSpace(
+              resizedElement,
+              remainingMoveToApply,
+              reason,
+              (nextSibling) => {
+                const requestedSpace = requestedSpaceMap.get(nextSibling);
+                const space = spaceMap.get(nextSibling);
+                return requestedSpace - space;
+              },
+            );
             if (spaceGivenToNextSiblings) {
               spaceDiff -= spaceGivenToNextSiblings;
               remainingMoveToApply -= spaceGivenToNextSiblings;
               if (debug) {
-                console.debug("".concat(spaceGivenToNextSiblings, "px given to previous siblings"));
+                console.debug(
+                  `${spaceGivenToNextSiblings}px given to previous siblings`,
+                );
               }
             }
           }
           {
-            const spaceStolenFromPreviousSiblings = -updatePreviousSiblingsAllocatedSpace(resizedElement, -remainingMoveToApply, reason);
+            const spaceStolenFromPreviousSiblings =
+              -updatePreviousSiblingsAllocatedSpace(
+                resizedElement,
+                -remainingMoveToApply,
+                reason,
+              );
             if (spaceStolenFromPreviousSiblings) {
               spaceDiff += spaceStolenFromPreviousSiblings;
               remainingMoveToApply -= spaceStolenFromPreviousSiblings;
               if (debug) {
-                console.debug("".concat(spaceStolenFromPreviousSiblings, "px stolen from previous siblings"));
+                console.debug(
+                  `${spaceStolenFromPreviousSiblings}px stolen from previous siblings`,
+                );
               }
             }
           }
@@ -8110,23 +9471,37 @@ const initFlexDetailsSet = (container, {
             applyDiffOnAllocatedSpace(resizedElement, spaceDiff, reason);
           }
         }
+
         remainingMoveToApply = -moveDiff;
         {
-          const selfShrink = -applyDiffOnAllocatedSpace(resizedElement, -remainingMoveToApply, reason);
+          const selfShrink = -applyDiffOnAllocatedSpace(
+            resizedElement,
+            -remainingMoveToApply,
+            reason,
+          );
           remainingMoveToApply -= selfShrink;
           spaceDiff += selfShrink;
         }
         {
-          const nextSiblingsShrink = -updateNextSiblingsAllocatedSpace(resizedElement, -remainingMoveToApply, reason);
+          const nextSiblingsShrink = -updateNextSiblingsAllocatedSpace(
+            resizedElement,
+            -remainingMoveToApply,
+            reason,
+          );
           if (nextSiblingsShrink) {
             remainingMoveToApply -= nextSiblingsShrink;
             spaceDiff += nextSiblingsShrink;
           }
         }
         {
-          updatePreviousSiblingsAllocatedSpace(resizedElement, spaceDiff, reason);
+          updatePreviousSiblingsAllocatedSpace(
+            resizedElement,
+            spaceDiff,
+            reason,
+          );
         }
       };
+
       const move = (yMove, gesture) => {
         // if (isNaN(moveRequestedSize) || !isFinite(moveRequestedSize)) {
         //   console.warn(
@@ -8134,14 +9509,15 @@ const initFlexDetailsSet = (container, {
         //   );
         //   return;
         // }
-        const reason = "applying ".concat(yMove, "px move on ").concat(resizedElement.id);
+        const reason = `applying ${yMove}px move on ${resizedElement.id}`;
         if (debug) {
           console.group(reason);
         }
+
         const moveDiff = -yMove;
         applyMoveDiffToSizes(moveDiff, reason);
         applyAllocatedSpaces({
-          reason: gesture.isMouseUp ? "mouse_resize_end" : "mouse_resize"
+          reason: gesture.isMouseUp ? "mouse_resize_end" : "mouse_resize",
         });
         currentAllocatedSpaceMap = new Map(allocatedSpaceMap);
         allocatedSpaceMap = new Map(startAllocatedSpaceMap);
@@ -8149,12 +9525,11 @@ const initFlexDetailsSet = (container, {
           console.groupEnd();
         }
       };
+
       const end = () => {
         if (currentAllocatedSpaceMap) {
           allocatedSpaceMap = currentAllocatedSpaceMap;
-          saveCurrentSizeAsRequestedSizes({
-            replaceExistingAttributes: true
-          });
+          saveCurrentSizeAsRequestedSizes({ replaceExistingAttributes: true });
           if (onRequestedSizeChange) {
             for (const [child, allocatedSpace] of allocatedSpaceMap) {
               const size = spaceToSize(allocatedSpace, child);
@@ -8164,30 +9539,25 @@ const initFlexDetailsSet = (container, {
           onMouseResizeEnd?.();
         }
       };
-      return {
-        start,
-        move,
-        end
-      };
+
+      return { start, move, end };
     };
-    const onmousedown = event => {
-      const {
-        start,
-        move,
-        end
-      } = prepareResize();
+
+    const onmousedown = (event) => {
+      const { start, move, end } = prepareResize();
+
       startDragToResizeGesture(event, {
-        onDragStart: gesture => {
+        onDragStart: (gesture) => {
           start(gesture.element);
         },
-        onDrag: gesture => {
+        onDrag: (gesture) => {
           const yMove = gesture.yMove;
           move(yMove, gesture);
         },
         onRelease: () => {
           end();
         },
-        constrainedFeedbackLine: false
+        constrainedFeedbackLine: false,
       });
     };
     container.addEventListener("mousedown", onmousedown);
@@ -8195,6 +9565,7 @@ const initFlexDetailsSet = (container, {
       container.removeEventListener("mousedown", onmousedown);
     });
   }
+
   {
     /**
      * In the following HTML browser will set `<div>` height as if it was "auto"
@@ -8213,7 +9584,7 @@ const initFlexDetailsSet = (container, {
      */
     const resizeObserver = new ResizeObserver(() => {
       updateSpaceDistribution({
-        reason: "container_resize"
+        reason: "container_resize",
       });
     });
     resizeObserver.observe(container);
@@ -8221,24 +9592,25 @@ const initFlexDetailsSet = (container, {
       resizeObserver.disconnect();
     });
   }
+
   {
     // Track when the DOM structure changes inside the container
     // This detects when:
     // - Details elements are added/removed
     // - The content inside details elements changes
-    const mutationObserver = new MutationObserver(mutations => {
+    const mutationObserver = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         if (mutation.type === "childList") {
           updateSpaceDistribution({
             reason: "content_change",
-            animated: ANIMATE_RESIZE_AFTER_MUTATION
+            animated: ANIMATE_RESIZE_AFTER_MUTATION,
           });
           return;
         }
         if (mutation.type === "characterData") {
           updateSpaceDistribution({
             reason: "content_change",
-            animated: ANIMATE_RESIZE_AFTER_MUTATION
+            animated: ANIMATE_RESIZE_AFTER_MUTATION,
           });
           return;
         }
@@ -8247,41 +9619,62 @@ const initFlexDetailsSet = (container, {
     mutationObserver.observe(container, {
       childList: true,
       subtree: true,
-      characterData: true
+      characterData: true,
     });
     cleanupCallbackSet.add(() => {
       mutationObserver.disconnect();
     });
   }
+
   return flexDetailsSet;
 };
-const prepareSyncDetailsContentHeight = details => {
-  const getHeightCssValue = height => {
-    return "".concat(height, "px");
+
+const prepareSyncDetailsContentHeight = (details) => {
+  const getHeightCssValue = (height) => {
+    return `${height}px`;
   };
+
   const summary = details.querySelector("summary");
   const summaryHeight = getHeight(summary);
-  details.style.setProperty("--summary-height", getHeightCssValue(summaryHeight));
+  details.style.setProperty(
+    "--summary-height",
+    getHeightCssValue(summaryHeight),
+  );
+
   const content = summary.nextElementSibling;
   if (!content) {
-    return detailsHeight => {
-      details.style.setProperty("--details-height", getHeightCssValue(detailsHeight));
-      details.style.setProperty("--content-height", getHeightCssValue(detailsHeight - summaryHeight));
+    return (detailsHeight) => {
+      details.style.setProperty(
+        "--details-height",
+        getHeightCssValue(detailsHeight),
+      );
+      details.style.setProperty(
+        "--content-height",
+        getHeightCssValue(detailsHeight - summaryHeight),
+      );
     };
   }
 
   // Capture scroll state at the beginning before any DOM manipulation
   const preserveScroll = captureScrollState(content);
   content.style.height = "var(--content-height)";
+
   const contentComputedStyle = getComputedStyle(content);
-  const scrollbarMightTakeHorizontalSpace = contentComputedStyle.overflowY === "auto" && contentComputedStyle.scrollbarGutter !== "stable";
-  return (detailsHeight, {
-    isAnimation,
-    isAnimationEnd
-  } = {}) => {
+  const scrollbarMightTakeHorizontalSpace =
+    contentComputedStyle.overflowY === "auto" &&
+    contentComputedStyle.scrollbarGutter !== "stable";
+
+  return (detailsHeight, { isAnimation, isAnimationEnd } = {}) => {
     const contentHeight = detailsHeight - summaryHeight;
-    details.style.setProperty("--details-height", getHeightCssValue(detailsHeight));
-    details.style.setProperty("--content-height", getHeightCssValue(contentHeight));
+    details.style.setProperty(
+      "--details-height",
+      getHeightCssValue(detailsHeight),
+    );
+    details.style.setProperty(
+      "--content-height",
+      getHeightCssValue(contentHeight),
+    );
+
     if (!isAnimation || isAnimationEnd) {
       if (scrollbarMightTakeHorizontalSpace) {
         // Fix scrollbar induced overflow:
@@ -8295,7 +9688,7 @@ const prepareSyncDetailsContentHeight = details => {
         // Solution: Temporarily prevent scrollbar to display
         // force layout recalculation, then restore
         const restoreOverflow = forceStyles(content, {
-          "overflow-y": "hidden"
+          "overflow-y": "hidden",
         });
         // eslint-disable-next-line no-unused-expressions
         content.offsetHeight;
@@ -8308,41 +9701,57 @@ const prepareSyncDetailsContentHeight = details => {
     preserveScroll();
   };
 };
-const isDetailsElement = element => {
+
+const isDetailsElement = (element) => {
   return element && element.tagName === "DETAILS";
 };
 
-const getAvailableWidth = (element, parentWidth = getWidth(element.parentElement)) => {
+const getAvailableWidth = (
+  element,
+  parentWidth = getWidth(element.parentElement),
+) => {
   const parentElement = element.parentElement;
   const paddingSizes = getPaddingSizes(parentElement);
   const borderSizes = getBorderSizes(parentElement);
   let availableWidth = parentWidth;
-  availableWidth -= paddingSizes.left + paddingSizes.right + borderSizes.left + borderSizes.right;
+  availableWidth -=
+    paddingSizes.left +
+    paddingSizes.right +
+    borderSizes.left +
+    borderSizes.right;
   if (availableWidth < 0) {
     availableWidth = 0;
   }
   return availableWidth;
 };
 
-const getInnerWidth = element => {
+const getInnerWidth = (element) => {
   // Always subtract paddings and borders to get the content width
   const paddingSizes = getPaddingSizes(element);
   const borderSizes = getBorderSizes(element);
   const width = getWidth(element);
   const horizontalSpaceTakenByPaddings = paddingSizes.left + paddingSizes.right;
   const horizontalSpaceTakenByBorders = borderSizes.left + borderSizes.right;
-  const innerWidth = width - horizontalSpaceTakenByPaddings - horizontalSpaceTakenByBorders;
+  const innerWidth =
+    width - horizontalSpaceTakenByPaddings - horizontalSpaceTakenByBorders;
   return innerWidth;
 };
 
-const getMaxHeight = (element, availableHeight = getAvailableHeight(element)) => {
+const getMaxHeight = (
+  element,
+  availableHeight = getAvailableHeight(element),
+) => {
   let maxHeight = availableHeight;
   const marginSizes = getMarginSizes(element);
   maxHeight -= marginSizes.top;
   maxHeight -= marginSizes.bottom;
+
   const parentElement = element.parentElement;
   const parentElementComputedStyle = window.getComputedStyle(parentElement);
-  if (parentElementComputedStyle.display === "flex" && parentElementComputedStyle.flexDirection === "column") {
+  if (
+    parentElementComputedStyle.display === "flex" &&
+    parentElementComputedStyle.flexDirection === "column"
+  ) {
     let previousSibling = element.previousElementSibling;
     while (previousSibling) {
       if (canTakeSpace(previousSibling)) {
@@ -8368,8 +9777,10 @@ const getMaxHeight = (element, availableHeight = getAvailableHeight(element)) =>
   }
   return maxHeight;
 };
-const canTakeSpace = element => {
+
+const canTakeSpace = (element) => {
   const computedStyle = window.getComputedStyle(element);
+
   if (computedStyle.display === "none") {
     return false;
   }
@@ -8379,8 +9790,9 @@ const canTakeSpace = element => {
   return true;
 };
 
-const canTakeSize = element => {
+const canTakeSize = (element) => {
   const computedStyle = window.getComputedStyle(element);
+
   if (computedStyle.display === "none") {
     return false;
   }
@@ -8392,24 +9804,32 @@ const canTakeSize = element => {
 
 const getMinWidth = (element, availableWidth) => {
   const computedStyle = window.getComputedStyle(element);
-  const {
-    minWidth,
-    fontSize
-  } = computedStyle;
+  const { minWidth, fontSize } = computedStyle;
   return resolveCSSSize(minWidth, {
-    availableSize: availableWidth === undefined ? getAvailableWidth(element) : availableWidth,
-    fontSize
+    availableSize:
+      availableWidth === undefined
+        ? getAvailableWidth(element)
+        : availableWidth,
+    fontSize,
   });
 };
 
-const getMaxWidth = (element, availableWidth = getAvailableWidth(element)) => {
+const getMaxWidth = (
+  element,
+  availableWidth = getAvailableWidth(element),
+) => {
   let maxWidth = availableWidth;
+
   const marginSizes = getMarginSizes(element);
   maxWidth -= marginSizes.left;
   maxWidth -= marginSizes.right;
+
   const parentElement = element.parentElement;
   const parentElementComputedStyle = window.getComputedStyle(parentElement);
-  if (parentElementComputedStyle.display === "flex" && parentElementComputedStyle.flexDirection === "row") {
+  if (
+    parentElementComputedStyle.display === "flex" &&
+    parentElementComputedStyle.flexDirection === "row"
+  ) {
     let previousSibling = element.previousElementSibling;
     while (previousSibling) {
       if (canTakeSize(previousSibling)) {
@@ -8436,13 +9856,14 @@ const getMaxWidth = (element, availableWidth = getAvailableWidth(element)) => {
   return maxWidth;
 };
 
-const useAvailableHeight = elementRef => {
+const useAvailableHeight = (elementRef) => {
   const [availableHeight, availableHeightSetter] = useState(-1);
+
   useLayoutEffect(() => {
     const element = elementRef.current;
     const parentElement = element.parentElement;
     let raf;
-    const resizeObserver = new ResizeObserver(entries => {
+    const resizeObserver = new ResizeObserver((entries) => {
       const [entry] = entries;
       const parentHeight = entry.contentRect.height;
       const availableH = getAvailableHeight(element, parentHeight);
@@ -8456,16 +9877,18 @@ const useAvailableHeight = elementRef => {
       cancelAnimationFrame(raf);
     };
   }, []);
+
   return availableHeight;
 };
 
-const useAvailableWidth = elementRef => {
+const useAvailableWidth = (elementRef) => {
   const [availableWidth, availableWidthSetter] = useState(-1);
+
   useLayoutEffect(() => {
     const element = elementRef.current;
     const parentElement = element.parentElement;
     let raf;
-    const resizeObserver = new ResizeObserver(entries => {
+    const resizeObserver = new ResizeObserver((entries) => {
       const [entry] = entries;
       const parentWidth = entry.contentRect.width;
       const availableW = getAvailableWidth(element, parentWidth);
@@ -8479,6 +9902,7 @@ const useAvailableWidth = elementRef => {
       cancelAnimationFrame(raf);
     };
   }, []);
+
   return availableWidth;
 };
 
@@ -8500,28 +9924,37 @@ const useMaxWidth = (elementRef, availableWidth) => {
   return maxWidth;
 };
 
-const useResizeStatus = (elementRef, {
-  as = "number"
-} = {}) => {
+const useResizeStatus = (elementRef, { as = "number" } = {}) => {
   const [resizing, setIsResizing] = useState(false);
   const [resizeWidth, setResizeWidth] = useState(null);
   const [resizeHeight, setResizeHeight] = useState(null);
+
   useLayoutEffect(() => {
     const element = elementRef.current;
-    const onresizestart = e => {
+
+    const onresizestart = (e) => {
       const sizeInfo = e.detail;
-      setResizeWidth(as === "number" ? sizeInfo.width : sizeInfo.widthAsPercentage);
-      setResizeHeight(as === "number" ? sizeInfo.height : sizeInfo.heightAsPercentage);
+      setResizeWidth(
+        as === "number" ? sizeInfo.width : sizeInfo.widthAsPercentage,
+      );
+      setResizeHeight(
+        as === "number" ? sizeInfo.height : sizeInfo.heightAsPercentage,
+      );
       setIsResizing(true);
     };
-    const onresize = e => {
+    const onresize = (e) => {
       const sizeInfo = e.detail;
-      setResizeWidth(as === "number" ? sizeInfo.width : sizeInfo.widthAsPercentage);
-      setResizeHeight(as === "number" ? sizeInfo.height : sizeInfo.heightAsPercentage);
+      setResizeWidth(
+        as === "number" ? sizeInfo.width : sizeInfo.widthAsPercentage,
+      );
+      setResizeHeight(
+        as === "number" ? sizeInfo.height : sizeInfo.heightAsPercentage,
+      );
     };
     const onresizeend = () => {
       setIsResizing(false);
     };
+
     element.addEventListener("resizestart", onresizestart);
     element.addEventListener("resize", onresize);
     element.addEventListener("resizeend", onresizeend);
@@ -8531,18 +9964,57 @@ const useResizeStatus = (elementRef, {
       element.removeEventListener("resizeend", onresizeend);
     };
   }, [as]);
+
   return {
     resizing,
     resizeWidth,
-    resizeHeight
+    resizeHeight,
   };
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .ui_transition_container {\n    display: inline-flex;\n    flex: 1;\n    position: relative;\n    overflow: hidden;\n  }\n\n  .ui_transition_outer_wrapper {\n    display: inline-flex;\n    flex: 1;\n  }\n\n  .ui_transition_measure_wrapper {\n    overflow: hidden;\n    display: inline-flex;\n    flex: 1;\n  }\n\n  .ui_transition_slot {\n    position: relative;\n    display: inline-flex;\n    flex: 1;\n  }\n\n  .ui_transition_phase_overlay {\n    position: absolute;\n    inset: 0;\n    pointer-events: none;\n  }\n\n  .ui_transition_content_overlay {\n    position: absolute;\n    inset: 0;\n    pointer-events: none;\n  }\n";
+installImportMetaCss(import.meta);
+import.meta.css = /* css */ `
+  .ui_transition_container {
+    display: inline-flex;
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ui_transition_outer_wrapper {
+    display: inline-flex;
+    flex: 1;
+  }
+
+  .ui_transition_measure_wrapper {
+    overflow: hidden;
+    display: inline-flex;
+    flex: 1;
+  }
+
+  .ui_transition_slot {
+    position: relative;
+    display: inline-flex;
+    flex: 1;
+  }
+
+  .ui_transition_phase_overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .ui_transition_content_overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+`;
+
 const DEBUG = {
   size: false,
   transition: false,
-  transition_updates: false
+  transition_updates: false,
 };
 
 // Utility function to format content key states consistently for debug logs
@@ -8556,8 +10028,9 @@ const formatContentKeyState = (contentKey, hasChild, hasTextNode = false) => {
   if (contentKey === null || contentKey === undefined) {
     return "[unkeyed]";
   }
-  return "[data-content-key=\"".concat(contentKey, "\"]");
+  return `[data-content-key="${contentKey}"]`;
 };
+
 const SIZE_TRANSITION_DURATION = 150; // Default size transition duration
 const SIZE_DIFF_EPSILON = 0.5; // Ignore size transition when difference below this (px)
 const CONTENT_TRANSITION = "cross-fade"; // Default content transition type
@@ -8565,27 +10038,35 @@ const CONTENT_TRANSITION_DURATION = 300; // Default content transition duration
 const PHASE_TRANSITION = "cross-fade";
 const PHASE_TRANSITION_DURATION = 300; // Default phase transition duration
 
-const initUITransition = container => {
+const initUITransition = (container) => {
   const localDebug = {
     ...DEBUG,
-    transition: container.hasAttribute("data-debug-transition")
+    transition: container.hasAttribute("data-debug-transition"),
   };
+
   const debug = (type, ...args) => {
     if (localDebug[type]) {
-      console.debug("[".concat(type, "]"), ...args);
+      console.debug(`[${type}]`, ...args);
     }
   };
+
   if (!container.classList.contains("ui_transition_container")) {
     console.error("Element must have ui_transition_container class");
-    return {
-      cleanup: () => {}
-    };
+    return { cleanup: () => {} };
   }
+
   const outerWrapper = container.querySelector(".ui_transition_outer_wrapper");
-  const measureWrapper = container.querySelector(".ui_transition_measure_wrapper");
+  const measureWrapper = container.querySelector(
+    ".ui_transition_measure_wrapper",
+  );
   const slot = container.querySelector(".ui_transition_slot");
-  let phaseOverlay = measureWrapper.querySelector(".ui_transition_phase_overlay");
-  let contentOverlay = container.querySelector(".ui_transition_content_overlay");
+  let phaseOverlay = measureWrapper.querySelector(
+    ".ui_transition_phase_overlay",
+  );
+  let contentOverlay = container.querySelector(
+    ".ui_transition_content_overlay",
+  );
+
   if (!phaseOverlay) {
     phaseOverlay = document.createElement("div");
     phaseOverlay.className = "ui_transition_phase_overlay";
@@ -8596,12 +10077,18 @@ const initUITransition = container => {
     contentOverlay.className = "ui_transition_content_overlay";
     container.appendChild(contentOverlay);
   }
-  if (!outerWrapper || !measureWrapper || !slot || !phaseOverlay || !contentOverlay) {
+
+  if (
+    !outerWrapper ||
+    !measureWrapper ||
+    !slot ||
+    !phaseOverlay ||
+    !contentOverlay
+  ) {
     console.error("Missing required ui-transition structure");
-    return {
-      cleanup: () => {}
-    };
+    return { cleanup: () => {} };
   }
+
   const transitionController = createGroupTransitionController();
 
   // Transition state
@@ -8626,7 +10113,9 @@ const initUITransition = container => {
 
   // Handle size updates based on content state
   let hasSizeTransitions = container.hasAttribute("data-size-transition");
-  const initialTransitionEnabled = container.hasAttribute("data-initial-transition");
+  const initialTransitionEnabled = container.hasAttribute(
+    "data-initial-transition",
+  );
   let hasPopulatedOnce = false; // track if we've already populated once (null → something)
 
   // Child state
@@ -8638,13 +10127,16 @@ const initUITransition = container => {
   const measureContentSize = () => {
     return [getWidth(measureWrapper), getHeight(measureWrapper)];
   };
+
   const updateContentDimensions = () => {
     const [newWidth, newHeight] = measureContentSize();
     debug("size", "Content size changed:", {
-      width: "".concat(naturalContentWidth, " \u2192 ").concat(newWidth),
-      height: "".concat(naturalContentHeight, " \u2192 ").concat(newHeight)
+      width: `${naturalContentWidth} → ${newWidth}`,
+      height: `${naturalContentHeight} → ${newHeight}`,
     });
+
     updateNaturalContentSize(newWidth, newHeight);
+
     if (sizeTransition) {
       debug("size", "Updating animation target:", newHeight);
       updateToSize(newWidth, newHeight);
@@ -8653,12 +10145,14 @@ const initUITransition = container => {
       constrainedHeight = newHeight;
     }
   };
+
   const stopResizeObserver = () => {
     if (resizeObserver) {
       resizeObserver.disconnect();
       resizeObserver = null;
     }
   };
+
   const startResizeObserver = () => {
     resizeObserver = new ResizeObserver(() => {
       if (!hasSizeTransitions) {
@@ -8673,16 +10167,17 @@ const initUITransition = container => {
     });
     resizeObserver.observe(measureWrapper);
   };
-  const releaseConstraints = reason => {
-    debug("size", "Releasing constraints (".concat(reason, ")"));
+
+  const releaseConstraints = (reason) => {
+    debug("size", `Releasing constraints (${reason})`);
     const [beforeWidth, beforeHeight] = measureContentSize();
     outerWrapper.style.width = "";
     outerWrapper.style.height = "";
     outerWrapper.style.overflow = "";
     const [afterWidth, afterHeight] = measureContentSize();
     debug("size", "Size after release:", {
-      width: "".concat(beforeWidth, " \u2192 ").concat(afterWidth),
-      height: "".concat(beforeHeight, " \u2192 ").concat(afterHeight)
+      width: `${beforeWidth} → ${afterWidth}`,
+      height: `${beforeHeight} → ${afterHeight}`,
     });
     constrainedWidth = afterWidth;
     constrainedHeight = afterHeight;
@@ -8694,35 +10189,45 @@ const initUITransition = container => {
       updateContentDimensions();
     }
   };
+
   const updateToSize = (targetWidth, targetHeight) => {
-    if (constrainedWidth === targetWidth && constrainedHeight === targetHeight) {
+    if (
+      constrainedWidth === targetWidth &&
+      constrainedHeight === targetHeight
+    ) {
       return;
     }
+
     const shouldAnimate = container.hasAttribute("data-size-transition");
     const widthDiff = Math.abs(targetWidth - constrainedWidth);
     const heightDiff = Math.abs(targetHeight - constrainedHeight);
+
     if (widthDiff <= SIZE_DIFF_EPSILON && heightDiff <= SIZE_DIFF_EPSILON) {
       // Both diffs negligible; just sync styles if changed and bail
       if (widthDiff > 0) {
-        outerWrapper.style.width = "".concat(targetWidth, "px");
+        outerWrapper.style.width = `${targetWidth}px`;
         constrainedWidth = targetWidth;
       }
       if (heightDiff > 0) {
-        outerWrapper.style.height = "".concat(targetHeight, "px");
+        outerWrapper.style.height = `${targetHeight}px`;
         constrainedHeight = targetHeight;
       }
-      debug("size", "Skip size animation entirely (diffs width:".concat(widthDiff.toFixed(4), "px height:").concat(heightDiff.toFixed(4), "px)"));
+      debug(
+        "size",
+        `Skip size animation entirely (diffs width:${widthDiff.toFixed(4)}px height:${heightDiff.toFixed(4)}px)`,
+      );
       return;
     }
+
     if (!shouldAnimate) {
       // No size transitions - just update dimensions instantly
       debug("size", "Updating size instantly:", {
-        width: "".concat(constrainedWidth, " \u2192 ").concat(targetWidth),
-        height: "".concat(constrainedHeight, " \u2192 ").concat(targetHeight)
+        width: `${constrainedWidth} → ${targetWidth}`,
+        height: `${constrainedHeight} → ${targetHeight}`,
       });
       suppressResizeObserver = true;
-      outerWrapper.style.width = "".concat(targetWidth, "px");
-      outerWrapper.style.height = "".concat(targetHeight, "px");
+      outerWrapper.style.width = `${targetWidth}px`;
+      outerWrapper.style.height = `${targetHeight}px`;
       constrainedWidth = targetWidth;
       constrainedHeight = targetHeight;
       // allow any resize notifications to settle then re-enable
@@ -8738,10 +10243,15 @@ const initUITransition = container => {
 
     // Animated size transition
     debug("size", "Animating size:", {
-      width: "".concat(constrainedWidth, " \u2192 ").concat(targetWidth),
-      height: "".concat(constrainedHeight, " \u2192 ").concat(targetHeight)
+      width: `${constrainedWidth} → ${targetWidth}`,
+      height: `${constrainedHeight} → ${targetHeight}`,
     });
-    const duration = parseInt(container.getAttribute("data-size-transition-duration") || SIZE_TRANSITION_DURATION);
+
+    const duration = parseInt(
+      container.getAttribute("data-size-transition-duration") ||
+        SIZE_TRANSITION_DURATION,
+    );
+
     outerWrapper.style.overflow = "hidden";
     const transitions = [];
 
@@ -8749,36 +10259,44 @@ const initUITransition = container => {
     if (heightDiff <= SIZE_DIFF_EPSILON) {
       // Treat as identical
       if (heightDiff > 0) {
-        debug("size", "Skip height transition (negligible diff ".concat(heightDiff.toFixed(4), "px)"));
+        debug(
+          "size",
+          `Skip height transition (negligible diff ${heightDiff.toFixed(4)}px)`,
+        );
       }
-      outerWrapper.style.height = "".concat(targetHeight, "px");
+      outerWrapper.style.height = `${targetHeight}px`;
       constrainedHeight = targetHeight;
     } else if (targetHeight !== constrainedHeight) {
-      transitions.push(createHeightTransition(outerWrapper, targetHeight, {
-        duration,
-        onUpdate: ({
-          value
-        }) => {
-          constrainedHeight = value;
-        }
-      }));
+      transitions.push(
+        createHeightTransition(outerWrapper, targetHeight, {
+          duration,
+          onUpdate: ({ value }) => {
+            constrainedHeight = value;
+          },
+        }),
+      );
     }
+
     if (widthDiff <= SIZE_DIFF_EPSILON) {
       if (widthDiff > 0) {
-        debug("size", "Skip width transition (negligible diff ".concat(widthDiff.toFixed(4), "px)"));
+        debug(
+          "size",
+          `Skip width transition (negligible diff ${widthDiff.toFixed(4)}px)`,
+        );
       }
-      outerWrapper.style.width = "".concat(targetWidth, "px");
+      outerWrapper.style.width = `${targetWidth}px`;
       constrainedWidth = targetWidth;
     } else if (targetWidth !== constrainedWidth) {
-      transitions.push(createWidthTransition(outerWrapper, targetWidth, {
-        duration,
-        onUpdate: ({
-          value
-        }) => {
-          constrainedWidth = value;
-        }
-      }));
+      transitions.push(
+        createWidthTransition(outerWrapper, targetWidth, {
+          duration,
+          onUpdate: ({ value }) => {
+            constrainedWidth = value;
+          },
+        }),
+      );
     }
+
     if (transitions.length > 0) {
       suppressResizeObserver = true;
       sizeTransition = transitionController.animate(transitions, {
@@ -8792,32 +10310,39 @@ const initUITransition = container => {
               updateContentDimensions();
             }
           });
-        }
+        },
       });
       sizeTransition.play();
     } else {
-      debug("size", "No size transitions created (identical or negligible differences)");
+      debug(
+        "size",
+        "No size transitions created (identical or negligible differences)",
+      );
     }
   };
+
   const applySizeConstraints = (targetWidth, targetHeight) => {
     debug("size", "Applying size constraints:", {
-      width: "".concat(constrainedWidth, " \u2192 ").concat(targetWidth),
-      height: "".concat(constrainedHeight, " \u2192 ").concat(targetHeight)
+      width: `${constrainedWidth} → ${targetWidth}`,
+      height: `${constrainedHeight} → ${targetHeight}`,
     });
-    outerWrapper.style.width = "".concat(targetWidth, "px");
-    outerWrapper.style.height = "".concat(targetHeight, "px");
+
+    outerWrapper.style.width = `${targetWidth}px`;
+    outerWrapper.style.height = `${targetHeight}px`;
     outerWrapper.style.overflow = "hidden";
     constrainedWidth = targetWidth;
     constrainedHeight = targetHeight;
   };
+
   const updateNaturalContentSize = (newWidth, newHeight) => {
     debug("size", "Updating natural content size:", {
-      width: "".concat(naturalContentWidth, " \u2192 ").concat(newWidth),
-      height: "".concat(naturalContentHeight, " \u2192 ").concat(newHeight)
+      width: `${naturalContentWidth} → ${newWidth}`,
+      height: `${naturalContentHeight} → ${newHeight}`,
     });
     naturalContentWidth = newWidth;
     naturalContentHeight = newHeight;
   };
+
   let isUpdating = false;
 
   // Shared transition setup function
@@ -8828,14 +10353,18 @@ const initUITransition = container => {
     needsOldChildClone,
     previousChild,
     firstChild,
-    attributeToRemove = []
+    attributeToRemove = [],
   }) => {
     let oldChild = null;
     let cleanup = () => {};
     const currentTransitionElement = existingOldContents[0];
+
     if (currentTransitionElement) {
       oldChild = currentTransitionElement;
-      debug("transition", "Continuing from current ".concat(isPhaseTransition ? "phase" : "content", " transition element"));
+      debug(
+        "transition",
+        `Continuing from current ${isPhaseTransition ? "phase" : "content"} transition element`,
+      );
       cleanup = () => oldChild.remove();
     } else if (needsOldChildClone) {
       overlay.innerHTML = "";
@@ -8844,14 +10373,22 @@ const initUITransition = container => {
       oldChild = previousChild.cloneNode(true);
 
       // Remove specified attributes
-      attributeToRemove.forEach(attr => oldChild.removeAttribute(attr));
+      attributeToRemove.forEach((attr) => oldChild.removeAttribute(attr));
+
       oldChild.setAttribute("data-ui-transition-old", "");
       overlay.appendChild(oldChild);
-      debug("transition", "Cloned previous child for ".concat(isPhaseTransition ? "phase" : "content", " transition:"), previousChild.getAttribute("data-ui-name") || "unnamed");
+      debug(
+        "transition",
+        `Cloned previous child for ${isPhaseTransition ? "phase" : "content"} transition:`,
+        previousChild.getAttribute("data-ui-name") || "unnamed",
+      );
       cleanup = () => oldChild.remove();
     } else {
       overlay.innerHTML = "";
-      debug("transition", "No old child to clone for ".concat(isPhaseTransition ? "phase" : "content", " transition"));
+      debug(
+        "transition",
+        `No old child to clone for ${isPhaseTransition ? "phase" : "content"} transition`,
+      );
     }
 
     // Determine which elements to return based on transition type:
@@ -8868,47 +10405,55 @@ const initUITransition = container => {
       oldElement = oldChild ? overlay : null;
       newElement = firstChild ? measureWrapper : null;
     }
+
     return {
       oldChild,
       cleanup,
       oldElement,
-      newElement
+      newElement,
     };
   };
 
   // Initialize with current size
   [constrainedWidth, constrainedHeight] = measureContentSize();
+
   const handleChildSlotMutation = (reason = "mutation") => {
     if (isUpdating) {
       debug("transition", "Preventing recursive update");
       return;
     }
+
     hasSizeTransitions = container.hasAttribute("data-size-transition");
+
     try {
       isUpdating = true;
       const firstChild = slot.children[0] || null;
       const childUIName = firstChild?.getAttribute("data-ui-name");
       if (localDebug.transition) {
-        const updateLabel = childUIName || (firstChild ? "data-ui-name not specified" : "cleared/empty");
-        console.group("UI Update: ".concat(updateLabel, " (reason: ").concat(reason, ")"));
+        const updateLabel =
+          childUIName ||
+          (firstChild ? "data-ui-name not specified" : "cleared/empty");
+        console.group(`UI Update: ${updateLabel} (reason: ${reason})`);
       }
 
       // Check for text nodes in the slot (not supported)
-      const hasTextNode = Array.from(slot.childNodes).some(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+      const hasTextNode = Array.from(slot.childNodes).some(
+        (node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim(),
+      );
       if (hasTextNode) {
-        console.warn("UI Transition: Text nodes in transition slots are not supported. Please wrap text content in an element.", {
-          slot,
-          textContent: slot.textContent.trim()
-        });
+        console.warn(
+          "UI Transition: Text nodes in transition slots are not supported. Please wrap text content in an element.",
+          { slot, textContent: slot.textContent.trim() },
+        );
       }
 
       // Check for multiple elements in the slot (not supported yet)
       const hasMultipleElements = slot.children.length > 1;
       if (hasMultipleElements) {
-        console.warn("UI Transition: Multiple elements in transition slots are not supported yet. Please use a single container element.", {
-          slot,
-          elementCount: slot.children.length
-        });
+        console.warn(
+          "UI Transition: Multiple elements in transition slots are not supported yet. Please use a single container element.",
+          { slot, elementCount: slot.children.length },
+        );
       }
 
       // Prefer data-content-key on child, fallback to slot
@@ -8916,10 +10461,10 @@ const initUITransition = container => {
       let slotContentKey = slot.getAttribute("data-content-key");
       let childContentKey = firstChild?.getAttribute("data-content-key");
       if (childContentKey && slotContentKey) {
-        console.warn("Both data-content-key found on child and ui_transition_slot. Using child value.", {
-          childContentKey,
-          slotContentKey
-        });
+        console.warn(
+          "Both data-content-key found on child and ui_transition_slot. Using child value.",
+          { childContentKey, slotContentKey },
+        );
       }
       currentContentKey = childContentKey || slotContentKey || null;
 
@@ -8928,24 +10473,38 @@ const initUITransition = container => {
       const hasChild = firstChild !== null;
 
       // Check for text nodes in previous state (reconstruct from previousChild)
-      const hadTextNode = previousChild && previousChild.nodeType === Node.TEXT_NODE;
+      const hadTextNode =
+        previousChild && previousChild.nodeType === Node.TEXT_NODE;
 
       // Compute formatted content key states ONCE per mutation (requirement: max 2 calls)
-      const previousContentKeyState = formatContentKeyState(lastContentKey, hadChild, hadTextNode);
-      const currentContentKeyState = formatContentKeyState(currentContentKey, hasChild, hasTextNode);
+      const previousContentKeyState = formatContentKeyState(
+        lastContentKey,
+        hadChild,
+        hadTextNode,
+      );
+      const currentContentKeyState = formatContentKeyState(
+        currentContentKey,
+        hasChild,
+        hasTextNode,
+      );
 
       // Track previous key before any potential early registration update
       const prevKeyBeforeRegistration = lastContentKey;
 
       // Prepare phase info early so logging can be unified (even for early return)
       wasContentPhase = isContentPhase;
-      isContentPhase = firstChild ? firstChild.hasAttribute("data-content-phase") : true; // empty (no child) is treated as content phase
+      isContentPhase = firstChild
+        ? firstChild.hasAttribute("data-content-phase")
+        : true; // empty (no child) is treated as content phase
 
       const previousIsContentPhase = !hadChild || wasContentPhase;
       const currentIsContentPhase = !hasChild || isContentPhase;
 
       // Early conceptual registration path: empty slot, text nodes, or multiple elements (no visual transition)
-      const shouldGiveUpEarlyAndJustRegister = !hadChild && !hasChild && !hasTextNode || hasTextNode || hasMultipleElements;
+      const shouldGiveUpEarlyAndJustRegister =
+        (!hadChild && !hasChild && !hasTextNode) ||
+        hasTextNode ||
+        hasMultipleElements;
       let earlyAction = null;
       if (shouldGiveUpEarlyAndJustRegister) {
         if (hasTextNode) {
@@ -8969,17 +10528,28 @@ const initUITransition = container => {
       }
 
       // Decide which representation to display for previous/current in early case
-      const conceptualPrevDisplay = prevKeyBeforeRegistration === null ? "[unkeyed]" : "[data-content-key=\"".concat(prevKeyBeforeRegistration, "\"]");
-      const conceptualCurrentDisplay = currentContentKey === null ? "[unkeyed]" : "[data-content-key=\"".concat(currentContentKey, "\"]");
-      const previousDisplay = shouldGiveUpEarlyAndJustRegister ? conceptualPrevDisplay : previousContentKeyState;
-      const currentDisplay = shouldGiveUpEarlyAndJustRegister ? conceptualCurrentDisplay : currentContentKeyState;
+      const conceptualPrevDisplay =
+        prevKeyBeforeRegistration === null
+          ? "[unkeyed]"
+          : `[data-content-key="${prevKeyBeforeRegistration}"]`;
+      const conceptualCurrentDisplay =
+        currentContentKey === null
+          ? "[unkeyed]"
+          : `[data-content-key="${currentContentKey}"]`;
+      const previousDisplay = shouldGiveUpEarlyAndJustRegister
+        ? conceptualPrevDisplay
+        : previousContentKeyState;
+      const currentDisplay = shouldGiveUpEarlyAndJustRegister
+        ? conceptualCurrentDisplay
+        : currentContentKeyState;
 
       // Build a simple descriptive sentence
-      let contentKeysSentence = "Content key: ".concat(previousDisplay, " \u2192 ").concat(currentDisplay);
+      let contentKeysSentence = `Content key: ${previousDisplay} → ${currentDisplay}`;
       debug("transition", contentKeysSentence);
+
       if (shouldGiveUpEarlyAndJustRegister) {
         // Log decision explicitly (was previously embedded)
-        debug("transition", "Decision: EARLY_RETURN (".concat(earlyAction, ")"));
+        debug("transition", `Decision: EARLY_RETURN (${earlyAction})`);
         // Register new conceptual key & return early (skip rest of transition logic)
         lastContentKey = currentContentKey;
         if (localDebug.transition) {
@@ -8987,14 +10557,19 @@ const initUITransition = container => {
         }
         return;
       }
-      debug("size", "Update triggered, size: ".concat(constrainedWidth, "x").concat(constrainedHeight));
+      debug(
+        "size",
+        `Update triggered, size: ${constrainedWidth}x${constrainedHeight}`,
+      );
+
       if (sizeTransition) {
         sizeTransition.cancel();
       }
+
       const [newWidth, newHeight] = measureContentSize();
-      debug("size", "Measured size: ".concat(newWidth, "x").concat(newHeight));
-      outerWrapper.style.width = "".concat(constrainedWidth, "px");
-      outerWrapper.style.height = "".concat(constrainedHeight, "px");
+      debug("size", `Measured size: ${newWidth}x${newHeight}`);
+      outerWrapper.style.width = `${constrainedWidth}px`;
+      outerWrapper.style.height = `${constrainedHeight}px`;
 
       // Handle resize observation
       stopResizeObserver();
@@ -9024,46 +10599,84 @@ const initUITransition = container => {
 
       // Content key change when either slot or child has data-content-key and it changed
       let shouldDoContentTransition = false;
-      if ((slot.getAttribute("data-content-key") || firstChild?.getAttribute("data-content-key")) && lastContentKey !== null) {
+      if (
+        (slot.getAttribute("data-content-key") ||
+          firstChild?.getAttribute("data-content-key")) &&
+        lastContentKey !== null
+      ) {
         shouldDoContentTransition = currentContentKey !== lastContentKey;
       }
+
       const becomesEmpty = hadChild && !hasChild;
       const becomesPopulated = !hadChild && hasChild;
-      const isInitialPopulationWithoutTransition = becomesPopulated && !hasPopulatedOnce && !initialTransitionEnabled;
+      const isInitialPopulationWithoutTransition =
+        becomesPopulated && !hasPopulatedOnce && !initialTransitionEnabled;
 
       // Content phase change: any transition between content/content-phase/null except when slot key changes
       // This includes: null→loading, loading→content, content→loading, loading→null, etc.
-      const shouldDoPhaseTransition = !shouldDoContentTransition && (becomesPopulated || becomesEmpty || hadChild && hasChild && (previousIsContentPhase !== currentIsContentPhase || previousIsContentPhase && currentIsContentPhase));
+      const shouldDoPhaseTransition =
+        !shouldDoContentTransition &&
+        (becomesPopulated ||
+          becomesEmpty ||
+          (hadChild &&
+            hasChild &&
+            (previousIsContentPhase !== currentIsContentPhase ||
+              (previousIsContentPhase && currentIsContentPhase))));
+
       const contentChange = hadChild && hasChild && shouldDoContentTransition;
       const phaseChange = hadChild && hasChild && shouldDoPhaseTransition;
 
       // Determine if we only need to preserve an existing content transition (no new change)
-      const preserveOnlyContentTransition = activeContentTransition !== null && !shouldDoContentTransition && !shouldDoPhaseTransition && !becomesPopulated && !becomesEmpty;
+      const preserveOnlyContentTransition =
+        activeContentTransition !== null &&
+        !shouldDoContentTransition &&
+        !shouldDoPhaseTransition &&
+        !becomesPopulated &&
+        !becomesEmpty;
 
       // Include becomesPopulated in content transition only if it's not a phase transition
-      const shouldDoContentTransitionIncludingPopulation = shouldDoContentTransition || becomesPopulated && !shouldDoPhaseTransition;
+      const shouldDoContentTransitionIncludingPopulation =
+        shouldDoContentTransition ||
+        (becomesPopulated && !shouldDoPhaseTransition);
+
       const decisions = [];
       if (shouldDoContentTransition) decisions.push("CONTENT TRANSITION");
       if (shouldDoPhaseTransition) decisions.push("PHASE TRANSITION");
-      if (preserveOnlyContentTransition) decisions.push("PRESERVE CONTENT TRANSITION");
+      if (preserveOnlyContentTransition)
+        decisions.push("PRESERVE CONTENT TRANSITION");
       if (decisions.length === 0) decisions.push("NO TRANSITION");
-      debug("transition", "Decision: ".concat(decisions.join(" + ")));
+
+      debug("transition", `Decision: ${decisions.join(" + ")}`);
       if (preserveOnlyContentTransition) {
         const progress = (activeContentTransition.progress * 100).toFixed(1);
-        debug("transition", "Preserving existing content transition (progress ".concat(progress, "%)"));
+        debug(
+          "transition",
+          `Preserving existing content transition (progress ${progress}%)`,
+        );
       }
 
       // Early return optimization: if no transition decision and we are not continuing
       // an existing active content transition (animationProgress > 0), we can skip
       // all transition setup logic below.
-      if (decisions.length === 1 && decisions[0] === "NO TRANSITION" && activeContentTransition === null && activePhaseTransition === null) {
-        debug("transition", "Early return: no transition or continuation required");
+      if (
+        decisions.length === 1 &&
+        decisions[0] === "NO TRANSITION" &&
+        activeContentTransition === null &&
+        activePhaseTransition === null
+      ) {
+        debug(
+          "transition",
+          `Early return: no transition or continuation required`,
+        );
         // Still ensure size logic executes below (so do not return before size alignment)
       }
 
       // Handle initial population skip (first null → something): no content or size animations
       if (isInitialPopulationWithoutTransition) {
-        debug("transition", "Initial population detected: skipping transitions (opt-in with data-initial-transition)");
+        debug(
+          "transition",
+          "Initial population detected: skipping transitions (opt-in with data-initial-transition)",
+        );
 
         // Apply sizes instantly, no animation
         if (isContentPhase) {
@@ -9087,30 +10700,43 @@ const initUITransition = container => {
       let sizePlan = {
         action: "none",
         targetWidth: constrainedWidth,
-        targetHeight: constrainedHeight
+        targetHeight: constrainedHeight,
       };
+
       size_transition: {
         const getTargetDimensions = () => {
           if (!isContentPhase) {
             return [newWidth, newHeight];
           }
-          const shouldUseNewDimensions = naturalContentWidth === 0 && naturalContentHeight === 0;
-          const targetWidth = shouldUseNewDimensions ? newWidth : naturalContentWidth || newWidth;
-          const targetHeight = shouldUseNewDimensions ? newHeight : naturalContentHeight || newHeight;
+          const shouldUseNewDimensions =
+            naturalContentWidth === 0 && naturalContentHeight === 0;
+          const targetWidth = shouldUseNewDimensions
+            ? newWidth
+            : naturalContentWidth || newWidth;
+          const targetHeight = shouldUseNewDimensions
+            ? newHeight
+            : naturalContentHeight || newHeight;
           return [targetWidth, targetHeight];
         };
+
         const [targetWidth, targetHeight] = getTargetDimensions();
         sizePlan.targetWidth = targetWidth;
         sizePlan.targetHeight = targetHeight;
-        if (targetWidth === constrainedWidth && targetHeight === constrainedHeight) {
+
+        if (
+          targetWidth === constrainedWidth &&
+          targetHeight === constrainedHeight
+        ) {
           debug("size", "No size change required");
           // We'll handle potential constraint release in final section (if not holding)
           break size_transition;
         }
+
         debug("size", "Size change needed:", {
-          width: "".concat(constrainedWidth, " \u2192 ").concat(targetWidth),
-          height: "".concat(constrainedHeight, " \u2192 ").concat(targetHeight)
+          width: `${constrainedWidth} → ${targetWidth}`,
+          height: `${constrainedHeight} → ${targetHeight}`,
         });
+
         if (isContentPhase) {
           // Content phases (loading/error) always use size constraints for consistent sizing
           sizePlan.action = hasSizeTransitions ? "animate" : "applyConstraints";
@@ -9120,39 +10746,82 @@ const initUITransition = container => {
           sizePlan.action = hasSizeTransitions ? "animate" : "release";
         }
       }
+
       content_transition: {
         // Handle content transitions (slide-left, cross-fade for content key changes)
-        if (decisions.length === 1 && decisions[0] === "NO TRANSITION" && activeContentTransition === null && activePhaseTransition === null) {
+        if (
+          decisions.length === 1 &&
+          decisions[0] === "NO TRANSITION" &&
+          activeContentTransition === null &&
+          activePhaseTransition === null
+        ) {
           // Skip creating any new transitions entirely
-        } else if (shouldDoContentTransitionIncludingPopulation && !preserveOnlyContentTransition) {
-          const existingOldContents = contentOverlay.querySelectorAll("[data-ui-transition-old]");
+        } else if (
+          shouldDoContentTransitionIncludingPopulation &&
+          !preserveOnlyContentTransition
+        ) {
+          const existingOldContents = contentOverlay.querySelectorAll(
+            "[data-ui-transition-old]",
+          );
           const animationProgress = activeContentTransition?.progress || 0;
+
           if (animationProgress > 0) {
-            debug("transition", "Preserving content transition progress: ".concat((animationProgress * 100).toFixed(1), "%"));
+            debug(
+              "transition",
+              `Preserving content transition progress: ${(animationProgress * 100).toFixed(1)}%`,
+            );
           }
-          const newTransitionType = container.getAttribute("data-content-transition") || CONTENT_TRANSITION;
-          const canContinueSmoothly = activeContentTransitionType === newTransitionType && activeContentTransition;
+
+          const newTransitionType =
+            container.getAttribute("data-content-transition") ||
+            CONTENT_TRANSITION;
+          const canContinueSmoothly =
+            activeContentTransitionType === newTransitionType &&
+            activeContentTransition;
+
           if (canContinueSmoothly) {
-            debug("transition", "Continuing with same content transition type (restarting due to actual change)");
+            debug(
+              "transition",
+              "Continuing with same content transition type (restarting due to actual change)",
+            );
             activeContentTransition.cancel();
-          } else if (activeContentTransition && activeContentTransitionType !== newTransitionType) {
-            debug("transition", "Different content transition type, keeping both", "".concat(activeContentTransitionType, " \u2192 ").concat(newTransitionType));
+          } else if (
+            activeContentTransition &&
+            activeContentTransitionType !== newTransitionType
+          ) {
+            debug(
+              "transition",
+              "Different content transition type, keeping both",
+              `${activeContentTransitionType} → ${newTransitionType}`,
+            );
           } else if (activeContentTransition) {
             debug("transition", "Cancelling current content transition");
             activeContentTransition.cancel();
           }
-          const needsOldChildClone = (contentChange || becomesEmpty) && previousChild && !existingOldContents[0];
-          const duration = parseInt(container.getAttribute("data-content-transition-duration") || CONTENT_TRANSITION_DURATION);
-          const type = container.getAttribute("data-content-transition") || CONTENT_TRANSITION;
-          const setupContentTransition = () => setupTransition({
-            isPhaseTransition: false,
-            overlay: contentOverlay,
-            existingOldContents,
-            needsOldChildClone,
-            previousChild,
-            firstChild,
-            attributeToRemove: ["data-content-key"]
-          });
+
+          const needsOldChildClone =
+            (contentChange || becomesEmpty) &&
+            previousChild &&
+            !existingOldContents[0];
+
+          const duration = parseInt(
+            container.getAttribute("data-content-transition-duration") ||
+              CONTENT_TRANSITION_DURATION,
+          );
+          const type =
+            container.getAttribute("data-content-transition") ||
+            CONTENT_TRANSITION;
+
+          const setupContentTransition = () =>
+            setupTransition({
+              isPhaseTransition: false,
+              overlay: contentOverlay,
+              existingOldContents,
+              needsOldChildClone,
+              previousChild,
+              firstChild,
+              attributeToRemove: ["data-content-key"],
+            });
 
           // If size transitions are disabled and the new content is smaller,
           // hold the previous size to avoid cropping during the transition.
@@ -9161,33 +10830,48 @@ const initUITransition = container => {
             const willShrinkHeight = constrainedHeight > newHeight;
             sizeHoldActive = willShrinkWidth || willShrinkHeight;
             if (sizeHoldActive) {
-              debug("size", "Holding previous size during content transition: ".concat(constrainedWidth, "x").concat(constrainedHeight));
+              debug(
+                "size",
+                `Holding previous size during content transition: ${constrainedWidth}x${constrainedHeight}`,
+              );
               applySizeConstraints(constrainedWidth, constrainedHeight);
             }
           }
-          activeContentTransition = animateTransition(transitionController, firstChild, setupContentTransition, {
-            duration,
-            type,
-            animationProgress,
-            isPhaseTransition: false,
-            fromContentKeyState: previousContentKeyState,
-            toContentKeyState: currentContentKeyState,
-            onComplete: () => {
-              activeContentTransition = null;
-              activeContentTransitionType = null;
-              if (sizeHoldActive) {
-                // Release the hold after the content transition completes
-                releaseConstraints("content transition completed - release size hold");
-                sizeHoldActive = false;
-              }
+
+          activeContentTransition = animateTransition(
+            transitionController,
+            firstChild,
+            setupContentTransition,
+            {
+              duration,
+              type,
+              animationProgress,
+              isPhaseTransition: false,
+              fromContentKeyState: previousContentKeyState,
+              toContentKeyState: currentContentKeyState,
+              onComplete: () => {
+                activeContentTransition = null;
+                activeContentTransitionType = null;
+                if (sizeHoldActive) {
+                  // Release the hold after the content transition completes
+                  releaseConstraints(
+                    "content transition completed - release size hold",
+                  );
+                  sizeHoldActive = false;
+                }
+              },
+              debug,
             },
-            debug
-          });
+          );
+
           if (activeContentTransition) {
             activeContentTransition.play();
           }
           activeContentTransitionType = type;
-        } else if (!shouldDoContentTransition && !preserveOnlyContentTransition) {
+        } else if (
+          !shouldDoContentTransition &&
+          !preserveOnlyContentTransition
+        ) {
           // Clean up content overlay if no content transition needed and nothing to preserve
           contentOverlay.innerHTML = "";
           activeContentTransition = null;
@@ -9196,50 +10880,99 @@ const initUITransition = container => {
 
         // Handle phase transitions (cross-fade for content phase changes)
         if (shouldDoPhaseTransition) {
-          const phaseTransitionType = container.getAttribute("data-phase-transition") || PHASE_TRANSITION;
-          const existingOldPhaseContents = phaseOverlay.querySelectorAll("[data-ui-transition-old]");
+          const phaseTransitionType =
+            container.getAttribute("data-phase-transition") || PHASE_TRANSITION;
+
+          const existingOldPhaseContents = phaseOverlay.querySelectorAll(
+            "[data-ui-transition-old]",
+          );
           const phaseAnimationProgress = activePhaseTransition?.progress || 0;
+
           if (phaseAnimationProgress > 0) {
-            debug("transition", "Preserving phase transition progress: ".concat((phaseAnimationProgress * 100).toFixed(1), "%"));
+            debug(
+              "transition",
+              `Preserving phase transition progress: ${(phaseAnimationProgress * 100).toFixed(1)}%`,
+            );
           }
-          const canContinueSmoothly = activePhaseTransitionType === phaseTransitionType && activePhaseTransition;
+
+          const canContinueSmoothly =
+            activePhaseTransitionType === phaseTransitionType &&
+            activePhaseTransition;
+
           if (canContinueSmoothly) {
             debug("transition", "Continuing with same phase transition type");
             activePhaseTransition.cancel();
-          } else if (activePhaseTransition && activePhaseTransitionType !== phaseTransitionType) {
-            debug("transition", "Different phase transition type, keeping both", "".concat(activePhaseTransitionType, " \u2192 ").concat(phaseTransitionType));
+          } else if (
+            activePhaseTransition &&
+            activePhaseTransitionType !== phaseTransitionType
+          ) {
+            debug(
+              "transition",
+              "Different phase transition type, keeping both",
+              `${activePhaseTransitionType} → ${phaseTransitionType}`,
+            );
           } else if (activePhaseTransition) {
             debug("transition", "Cancelling current phase transition");
             activePhaseTransition.cancel();
           }
-          const needsOldPhaseClone = (becomesEmpty || becomesPopulated || phaseChange) && previousChild && !existingOldPhaseContents[0];
-          const phaseDuration = parseInt(container.getAttribute("data-phase-transition-duration") || PHASE_TRANSITION_DURATION);
-          const setupPhaseTransition = () => setupTransition({
-            isPhaseTransition: true,
-            overlay: phaseOverlay,
-            existingOldContents: existingOldPhaseContents,
-            needsOldChildClone: needsOldPhaseClone,
-            previousChild,
+
+          const needsOldPhaseClone =
+            (becomesEmpty || becomesPopulated || phaseChange) &&
+            previousChild &&
+            !existingOldPhaseContents[0];
+
+          const phaseDuration = parseInt(
+            container.getAttribute("data-phase-transition-duration") ||
+              PHASE_TRANSITION_DURATION,
+          );
+
+          const setupPhaseTransition = () =>
+            setupTransition({
+              isPhaseTransition: true,
+              overlay: phaseOverlay,
+              existingOldContents: existingOldPhaseContents,
+              needsOldChildClone: needsOldPhaseClone,
+              previousChild,
+              firstChild,
+              attributeToRemove: ["data-content-key", "data-content-phase"],
+            });
+
+          const fromPhase = !hadChild
+            ? "null"
+            : wasContentPhase
+              ? "content-phase"
+              : "content";
+          const toPhase = !hasChild
+            ? "null"
+            : isContentPhase
+              ? "content-phase"
+              : "content";
+
+          debug(
+            "transition",
+            `Starting phase transition: ${fromPhase} → ${toPhase}`,
+          );
+
+          activePhaseTransition = animateTransition(
+            transitionController,
             firstChild,
-            attributeToRemove: ["data-content-key", "data-content-phase"]
-          });
-          const fromPhase = !hadChild ? "null" : wasContentPhase ? "content-phase" : "content";
-          const toPhase = !hasChild ? "null" : isContentPhase ? "content-phase" : "content";
-          debug("transition", "Starting phase transition: ".concat(fromPhase, " \u2192 ").concat(toPhase));
-          activePhaseTransition = animateTransition(transitionController, firstChild, setupPhaseTransition, {
-            duration: phaseDuration,
-            type: phaseTransitionType,
-            animationProgress: phaseAnimationProgress,
-            isPhaseTransition: true,
-            fromContentKeyState: previousContentKeyState,
-            toContentKeyState: currentContentKeyState,
-            onComplete: () => {
-              activePhaseTransition = null;
-              activePhaseTransitionType = null;
-              debug("transition", "Phase transition complete");
+            setupPhaseTransition,
+            {
+              duration: phaseDuration,
+              type: phaseTransitionType,
+              animationProgress: phaseAnimationProgress,
+              isPhaseTransition: true,
+              fromContentKeyState: previousContentKeyState,
+              toContentKeyState: currentContentKeyState,
+              onComplete: () => {
+                activePhaseTransition = null;
+                activePhaseTransitionType = null;
+                debug("transition", "Phase transition complete");
+              },
+              debug,
             },
-            debug
-          });
+          );
+
           if (activePhaseTransition) {
             activePhaseTransition.play();
           }
@@ -9256,7 +10989,10 @@ const initUITransition = container => {
 
       // Execute planned size action, unless holding size during a content transition
       if (!sizeHoldActive) {
-        if (sizePlan.targetWidth === constrainedWidth && sizePlan.targetHeight === constrainedHeight) {
+        if (
+          sizePlan.targetWidth === constrainedWidth &&
+          sizePlan.targetHeight === constrainedHeight
+        ) {
           // no size changes planned; possibly release constraints
           if (!isContentPhase) {
             releaseConstraints("no size change needed");
@@ -9281,25 +11017,31 @@ const initUITransition = container => {
   handleChildSlotMutation("init");
 
   // Watch for child changes and attribute changes on children
-  const mutationObserver = new MutationObserver(mutations => {
+  const mutationObserver = new MutationObserver((mutations) => {
     let childListMutation = false;
     const attributeMutationSet = new Set();
+
     for (const mutation of mutations) {
       if (mutation.type === "childList") {
         childListMutation = true;
         continue;
       }
       if (mutation.type === "attributes") {
-        const {
-          attributeName,
-          target
-        } = mutation;
-        if (attributeName === "data-content-key" || attributeName === "data-content-phase") {
+        const { attributeName, target } = mutation;
+        if (
+          attributeName === "data-content-key" ||
+          attributeName === "data-content-phase"
+        ) {
           attributeMutationSet.add(attributeName);
-          debug("transition", "Attribute change detected: ".concat(attributeName, " on"), target.getAttribute("data-ui-name") || "element");
+          debug(
+            "transition",
+            `Attribute change detected: ${attributeName} on`,
+            target.getAttribute("data-ui-name") || "element",
+          );
         }
       }
     }
+
     if (!childListMutation && attributeMutationSet.size === 0) {
       return;
     }
@@ -9309,22 +11051,24 @@ const initUITransition = container => {
     }
     if (attributeMutationSet.size) {
       for (const attr of attributeMutationSet) {
-        reasonParts.push("[".concat(attr, "] change"));
+        reasonParts.push(`[${attr}] change`);
       }
     }
     const reason = reasonParts.join("+");
     handleChildSlotMutation(reason);
   });
+
   mutationObserver.observe(slot, {
     childList: true,
     attributes: true,
     attributeFilter: ["data-content-key", "data-content-phase"],
-    characterData: false
+    characterData: false,
   });
 
   // Return API
   return {
     slot,
+
     cleanup: () => {
       mutationObserver.disconnect();
       stopResizeObserver();
@@ -9361,20 +11105,26 @@ const initUITransition = container => {
     getState: () => ({
       isPaused,
       contentTransitionInProgress: activeContentTransition !== null,
-      phaseTransitionInProgress: activePhaseTransition !== null
-    })
+      phaseTransitionInProgress: activePhaseTransition !== null,
+    }),
   };
 };
-const animateTransition = (transitionController, newChild, setupTransition, {
-  type,
-  duration,
-  animationProgress = 0,
-  isPhaseTransition,
-  onComplete,
-  fromContentKeyState,
-  toContentKeyState,
-  debug
-}) => {
+
+const animateTransition = (
+  transitionController,
+  newChild,
+  setupTransition,
+  {
+    type,
+    duration,
+    animationProgress = 0,
+    isPhaseTransition,
+    onComplete,
+    fromContentKeyState,
+    toContentKeyState,
+    debug,
+  },
+) => {
   let transitionType;
   if (type === "cross-fade") {
     transitionType = crossFade;
@@ -9383,103 +11133,105 @@ const animateTransition = (transitionController, newChild, setupTransition, {
   } else {
     return null;
   }
-  const {
-    cleanup,
-    oldElement,
-    newElement
-  } = setupTransition();
+
+  const { cleanup, oldElement, newElement } = setupTransition();
   // Use precomputed content key states (expected to be provided by caller)
   const fromContentKey = fromContentKeyState;
   const toContentKey = toContentKeyState;
+
   debug("transition", "Setting up animation:", {
     type,
     from: fromContentKey,
     to: toContentKey,
-    progress: "".concat((animationProgress * 100).toFixed(1), "%")
+    progress: `${(animationProgress * 100).toFixed(1)}%`,
   });
+
   const remainingDuration = Math.max(100, duration * (1 - animationProgress));
-  debug("transition", "Animation duration: ".concat(remainingDuration, "ms"));
+  debug("transition", `Animation duration: ${remainingDuration}ms`);
+
   const transitions = transitionType.apply(oldElement, newElement, {
     duration: remainingDuration,
     startProgress: animationProgress,
     isPhaseTransition,
-    debug
+    debug,
   });
-  debug("transition", "Created ".concat(transitions.length, " transition(s) for animation"));
+
+  debug(
+    "transition",
+    `Created ${transitions.length} transition(s) for animation`,
+  );
+
   if (transitions.length === 0) {
     debug("transition", "No transitions to animate, cleaning up immediately");
     cleanup();
     onComplete?.();
     return null;
   }
+
   const groupTransition = transitionController.animate(transitions, {
     onFinish: () => {
       groupTransition.cancel();
       cleanup();
       onComplete?.();
-    }
+    },
   });
+
   return groupTransition;
 };
+
 const slideLeft = {
   name: "slide-left",
-  apply: (oldElement, newElement, {
-    duration,
-    startProgress = 0,
-    isPhaseTransition = false,
-    debug
-  }) => {
+  apply: (
+    oldElement,
+    newElement,
+    { duration, startProgress = 0, isPhaseTransition = false, debug },
+  ) => {
     if (!oldElement && !newElement) {
       return [];
     }
+
     if (!newElement) {
       // Content -> Empty (slide out left only)
       const currentPosition = getTranslateX(oldElement);
       const containerWidth = getInnerWidth(oldElement.parentElement);
       const from = currentPosition;
       const to = -containerWidth;
-      debug("transition", "Slide out to empty:", {
-        from,
-        to
-      });
-      return [createTranslateXTransition(oldElement, to, {
-        from,
-        duration,
-        startProgress,
-        onUpdate: ({
-          value,
-          timing
-        }) => {
-          debug("transition_updates", "Slide out progress:", value);
-          if (timing === "end") {
-            debug("transition", "Slide out complete");
-          }
-        }
-      })];
+      debug("transition", "Slide out to empty:", { from, to });
+
+      return [
+        createTranslateXTransition(oldElement, to, {
+          from,
+          duration,
+          startProgress,
+          onUpdate: ({ value, timing }) => {
+            debug("transition_updates", "Slide out progress:", value);
+            if (timing === "end") {
+              debug("transition", "Slide out complete");
+            }
+          },
+        }),
+      ];
     }
+
     if (!oldElement) {
       // Empty -> Content (slide in from right)
       const containerWidth = getInnerWidth(newElement.parentElement);
       const from = containerWidth; // Start from right edge for slide-in effect
       const to = getTranslateXWithoutTransition(newElement);
-      debug("transition", "Slide in from empty:", {
-        from,
-        to
-      });
-      return [createTranslateXTransition(newElement, to, {
-        from,
-        duration,
-        startProgress,
-        onUpdate: ({
-          value,
-          timing
-        }) => {
-          debug("transition_updates", "Slide in progress:", value);
-          if (timing === "end") {
-            debug("transition", "Slide in complete");
-          }
-        }
-      })];
+      debug("transition", "Slide in from empty:", { from, to });
+      return [
+        createTranslateXTransition(newElement, to, {
+          from,
+          duration,
+          startProgress,
+          onUpdate: ({ value, timing }) => {
+            debug("transition_updates", "Slide in progress:", value);
+            if (timing === "end") {
+              debug("transition", "Slide in complete");
+            }
+          },
+        }),
+      ];
     }
 
     // Content -> Content (slide left)
@@ -9497,105 +11249,107 @@ const slideLeft = {
     let startNewPosition;
     if (currentNewPosition !== 0 && naturalNewPosition === 0) {
       startNewPosition = currentNewPosition + containerWidth;
-      debug("transition", "Calculated seamless position:", "".concat(currentNewPosition, " + ").concat(containerWidth, " = ").concat(startNewPosition));
+      debug(
+        "transition",
+        "Calculated seamless position:",
+        `${currentNewPosition} + ${containerWidth} = ${startNewPosition}`,
+      );
     } else {
       startNewPosition = naturalNewPosition || containerWidth;
     }
 
     // For phase transitions, force new content to start from right edge for proper slide-in
-    const effectiveFromPosition = isPhaseTransition ? containerWidth : startNewPosition;
+    const effectiveFromPosition = isPhaseTransition
+      ? containerWidth
+      : startNewPosition;
+
     debug("transition", "Slide transition:", {
-      oldContent: "".concat(oldContentPosition, " \u2192 ").concat(-containerWidth),
-      newContent: "".concat(effectiveFromPosition, " \u2192 ").concat(naturalNewPosition)
+      oldContent: `${oldContentPosition} → ${-containerWidth}`,
+      newContent: `${effectiveFromPosition} → ${naturalNewPosition}`,
     });
+
     const transitions = [];
 
     // Slide old content out
-    transitions.push(createTranslateXTransition(oldElement, -containerWidth, {
-      from: oldContentPosition,
-      duration,
-      startProgress,
-      onUpdate: ({
-        value
-      }) => {
-        debug("transition_updates", "Old content slide out:", value);
-      }
-    }));
+    transitions.push(
+      createTranslateXTransition(oldElement, -containerWidth, {
+        from: oldContentPosition,
+        duration,
+        startProgress,
+        onUpdate: ({ value }) => {
+          debug("transition_updates", "Old content slide out:", value);
+        },
+      }),
+    );
 
     // Slide new content in
-    transitions.push(createTranslateXTransition(newElement, naturalNewPosition, {
-      from: effectiveFromPosition,
-      duration,
-      startProgress,
-      onUpdate: ({
-        value,
-        timing
-      }) => {
-        debug("transition_updates", "New content slide in:", value);
-        if (timing === "end") {
-          debug("transition", "Slide complete");
-        }
-      }
-    }));
+    transitions.push(
+      createTranslateXTransition(newElement, naturalNewPosition, {
+        from: effectiveFromPosition,
+        duration,
+        startProgress,
+        onUpdate: ({ value, timing }) => {
+          debug("transition_updates", "New content slide in:", value);
+          if (timing === "end") {
+            debug("transition", "Slide complete");
+          }
+        },
+      }),
+    );
+
     return transitions;
-  }
+  },
 };
+
 const crossFade = {
   name: "cross-fade",
-  apply: (oldElement, newElement, {
-    duration,
-    startProgress = 0,
-    isPhaseTransition = false,
-    debug
-  }) => {
+  apply: (
+    oldElement,
+    newElement,
+    { duration, startProgress = 0, isPhaseTransition = false, debug },
+  ) => {
     if (!oldElement && !newElement) {
       return [];
     }
+
     if (!newElement) {
       // Content -> Empty (fade out only)
       const from = getOpacity(oldElement);
       const to = 0;
-      debug("transition", "Fade out to empty:", {
-        from,
-        to
-      });
-      return [createOpacityTransition(oldElement, to, {
-        from,
-        duration,
-        startProgress,
-        onUpdate: ({
-          value,
-          timing
-        }) => {
-          debug("transition_updates", "Content fade out:", value.toFixed(3));
-          if (timing === "end") {
-            debug("transition", "Fade out complete");
-          }
-        }
-      })];
+      debug("transition", "Fade out to empty:", { from, to });
+      return [
+        createOpacityTransition(oldElement, to, {
+          from,
+          duration,
+          startProgress,
+          onUpdate: ({ value, timing }) => {
+            debug("transition_updates", "Content fade out:", value.toFixed(3));
+            if (timing === "end") {
+              debug("transition", "Fade out complete");
+            }
+          },
+        }),
+      ];
     }
+
     if (!oldElement) {
       // Empty -> Content (fade in only)
       const from = 0;
       const to = getOpacityWithoutTransition(newElement);
-      debug("transition", "Fade in from empty:", {
-        from,
-        to
-      });
-      return [createOpacityTransition(newElement, to, {
-        from,
-        duration,
-        startProgress,
-        onUpdate: ({
-          value,
-          timing
-        }) => {
-          debug("transition_updates", "Fade in progress:", value.toFixed(3));
-          if (timing === "end") {
-            debug("transition", "Fade in complete");
-          }
-        }
-      })];
+      debug("transition", "Fade in from empty:", { from, to });
+      return [
+        createOpacityTransition(newElement, to, {
+          from,
+          duration,
+          startProgress,
+          onUpdate: ({ value, timing }) => {
+            debug("transition_updates", "Fade in progress:", value.toFixed(3));
+            if (timing === "end") {
+              debug("transition", "Fade in complete");
+            }
+          },
+        }),
+      ];
     }
 
     // Content -> Content (cross-fade)
@@ -9613,41 +11367,45 @@ const crossFade = {
       // For content transitions: if new element has ongoing opacity transition
       // (indicated by non-zero opacity when natural opacity is different),
       // start from current opacity to continue smoothly, otherwise start from 0
-      const hasOngoingTransition = newOpacity !== newNaturalOpacity && newOpacity > 0;
+      const hasOngoingTransition =
+        newOpacity !== newNaturalOpacity && newOpacity > 0;
       effectiveFromOpacity = hasOngoingTransition ? newOpacity : 0;
     }
+
     debug("transition", "Cross-fade transition:", {
-      oldOpacity: "".concat(oldOpacity, " \u2192 0"),
-      newOpacity: "".concat(effectiveFromOpacity, " \u2192 ").concat(newNaturalOpacity),
-      isPhaseTransition
+      oldOpacity: `${oldOpacity} → 0`,
+      newOpacity: `${effectiveFromOpacity} → ${newNaturalOpacity}`,
+      isPhaseTransition,
     });
-    return [createOpacityTransition(oldElement, 0, {
-      from: oldOpacity,
-      duration,
-      startProgress,
-      onUpdate: ({
-        value
-      }) => {
-        if (value > 0) {
-          debug("transition_updates", "Old content fade out:", value.toFixed(3));
-        }
-      }
-    }), createOpacityTransition(newElement, newNaturalOpacity, {
-      from: effectiveFromOpacity,
-      duration,
-      startProgress: isPhaseTransition ? 0 : startProgress,
-      // Phase transitions: new content always starts fresh
-      onUpdate: ({
-        value,
-        timing
-      }) => {
-        debug("transition_updates", "New content fade in:", value.toFixed(3));
-        if (timing === "end") {
-          debug("transition", "Cross-fade complete");
-        }
-      }
-    })];
-  }
+
+    return [
+      createOpacityTransition(oldElement, 0, {
+        from: oldOpacity,
+        duration,
+        startProgress,
+        onUpdate: ({ value }) => {
+          if (value > 0) {
+            debug(
+              "transition_updates",
+              "Old content fade out:",
+              value.toFixed(3),
+            );
+          }
+        },
+      }),
+      createOpacityTransition(newElement, newNaturalOpacity, {
+        from: effectiveFromOpacity,
+        duration,
+        startProgress: isPhaseTransition ? 0 : startProgress, // Phase transitions: new content always starts fresh
+        onUpdate: ({ value, timing }) => {
+          debug("transition_updates", "New content fade in:", value.toFixed(3));
+          if (timing === "end") {
+            debug("transition", "Cross-fade complete");
+          }
+        },
+      }),
+    ];
+  },
 };
 
-export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, addWillChange, allowWheelThrough, canInterceptKeys, captureScrollState, createDragGestureController, createDragToMoveGestureController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createWidthTransition, cubicBezier, dragAfterThreshold, elementIsFocusable, elementIsVisible, findAfter, findAncestor, findBefore, findDescendant, findFocusable, getAvailableHeight, getAvailableWidth, getBorderSizes, getDragCoordinates, getDropTargetInfo, getHeight, getInnerHeight, getInnerWidth, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getPaddingSizes, getPositionedParent, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getWidth, initFlexDetailsSet, initFocusGroup, initPositionSticky, initUITransition, isScrollable, pickPositionRelativeTo, preventFocusNav, preventFocusNavViaKeyboard, resolveCSSSize, setAttribute, setAttributes, setStyles, startDragToResizeGesture, stickyAsRelativeCoords, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };
+export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, addWillChange, allowWheelThrough, canInterceptKeys, captureScrollState, createDragGestureController, createDragToMoveGestureController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createWidthTransition, cubicBezier, dragAfterThreshold, elementIsFocusable, elementIsVisible, findAfter, findAncestor, findBefore, findDescendant, findFocusable, getAvailableHeight, getAvailableWidth, getBorderSizes, getContrastRatio, getDragCoordinates, getDropTargetInfo, getHeight, getInnerHeight, getInnerWidth, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getPaddingSizes, getPositionedParent, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getWidth, initFlexDetailsSet, initFocusGroup, initPositionSticky, initUITransition, isScrollable, parseCSSColor, pickLightOrDark, pickPositionRelativeTo, preventFocusNav, preventFocusNavViaKeyboard, resolveCSSColor, resolveCSSSize, setAttribute, setAttributes, setStyles, startDragToResizeGesture, stickyAsRelativeCoords, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };

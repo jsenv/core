@@ -1,3 +1,4 @@
+import { pickLightOrDark } from "@jsenv/dom";
 import { forwardRef } from "preact/compat";
 import {
   useContext,
@@ -64,7 +65,7 @@ import.meta.css = /* css */ `
     pointer-events: none;
   }
   .custom_checkbox_marker {
-    stroke: var(--navi-field-checkmark-color);
+    stroke: var(--navi-field-foreground-color);
   }
 
   [data-field-wrapper][data-hover][data-checked] .custom_checkbox {
@@ -72,8 +73,8 @@ import.meta.css = /* css */ `
     border-color: var(--navi-field-strong-color);
   }
   [data-field-wrapper][data-checked] .custom_checkbox {
-    background: var(--navi-field-checked-color);
-    border-color: var(--navi-field-checked-color);
+    background: var(--navi-field-background-color);
+    border-color: var(--navi-field-border-color);
   }
   [data-field-wrapper][data-checked] .custom_checkbox svg {
     opacity: 1;
@@ -108,12 +109,12 @@ import.meta.css = /* css */ `
     border-color: var(--navi-field-disabled-border-color);
   }
   [data-field-wrapper][data-disabled][data-checked] .custom_checkbox {
-    background: var(--navi-field-checked-disabled-color);
-    border-color: var(--navi-field-checked-disabled-color);
+    background: var(--navi-field-background-disabled-color);
+    border-color: var(--navi-field-background-disabled-color);
   }
 
   [data-field-wrapper][data-disabled][data-checked] .custom_checkbox_marker {
-    stroke: var(--navi-field-checkmark-disabled-color);
+    stroke: var(--navi-field-foreground-disabled-color);
   }
 `;
 
@@ -248,11 +249,29 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
   );
 });
 const CustomCheckbox = ({ accentColor, children }) => {
+  const ref = useRef();
+  useLayoutEffect(() => {
+    const customCheckbox = ref.current;
+    const colorPicked = pickLightOrDark(
+      customCheckbox,
+      "--navi-field-background-color",
+      "--navi-field-foreground-light",
+      "--navi-field-foreground-dark",
+    );
+    customCheckbox.style.setProperty(
+      "--navi-field-foreground-color",
+      colorPicked,
+    );
+  }, []);
+
   return (
     <div
+      ref={ref}
       className="custom_checkbox_wrapper"
       style={{
-        ...(accentColor ? { "--navi-field-checked-color": accentColor } : {}),
+        ...(accentColor
+          ? { "--navi-field-background-color": accentColor }
+          : {}),
       }}
     >
       {children}

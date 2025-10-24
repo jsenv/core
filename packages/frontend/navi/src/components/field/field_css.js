@@ -42,8 +42,8 @@ import.meta.css = /* css */ `
     );
     --navi-field-readonly-text-color: var(--navi-field-disabled-text-color);
 
-    --navi-field-checkmark-light: white;
-    --navi-field-checkmark-dark: #3b82f6;
+    --navi-field-foreground-light: white;
+    --navi-field-foreground-dark: #3b82f6;
   }
 
   [data-field] {
