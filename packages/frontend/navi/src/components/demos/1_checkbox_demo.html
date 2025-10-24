@@ -493,7 +493,7 @@
         const [isLoading, setIsLoading] = useState(false);
 
         const colorOptions = [
-          { name: "Default (blue)", value: undefined },
+          { name: "Default (blue)", value: "default" },
           { name: "Orange", value: "#ff8c00" },
           { name: "Green", value: "#28a745" },
           { name: "Purple", value: "#6f42c1" },
@@ -511,7 +511,11 @@
                 <label className="color-select-label">Accent Color:</label>
                 <select
                   value={accentColor}
-                  onChange={(e) => setAccentColor(e.target.value)}
+                  onChange={(e) => {
+                    setAccentColor(
+                      e.target.value === "default" ? undefined : e.target.value,
+                    );
+                  }}
                   className="color-select"
                 >
                   {colorOptions.map(({ name, value }) => (

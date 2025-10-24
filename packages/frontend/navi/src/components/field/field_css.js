@@ -7,8 +7,6 @@ import.meta.css = /* css */ `
     --navi-field-background-color: light-dark(#f3f4f6, #2d3748);
     --navi-field-accent-color: light-dark(#355fcc, #3b82f6);
     --navi-field-outline-color: var(--navi-field-accent-color);
-    --navi-field-foreground-light-color: white;
-    --navi-field-foreground-dark-color: #3b82f6;
 
     --navi-field-disabled-border-color: color-mix(
       in srgb,
@@ -36,7 +34,6 @@ import.meta.css = /* css */ `
       var(--navi-field-background-color) 95%,
       black
     );
-    --navi-field-disabled-foreground-color: grey;
 
     --navi-field-disabled-color: color-mix(
       in srgb,

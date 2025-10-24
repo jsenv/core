@@ -32,6 +32,12 @@ import {
 } from "./use_ui_state_controller.js";
 
 import.meta.css = /* css */ `
+  :root {
+    --navi-checkmark-light-color: white;
+    --navi-checkmark-dark-color: darkgrey;
+    --navi-checkmark-color: var(--navi-checkmark-light-color);
+  }
+
   .custom_checkbox_wrapper {
     display: inline-flex;
     box-sizing: content-box;
@@ -102,7 +108,7 @@ import.meta.css = /* css */ `
     transform: scale(1);
   }
   [data-field-wrapper][data-checked] .custom_checkbox_marker {
-    stroke: var(--navi-field-foreground-color);
+    stroke: var(--navi-checkmark-color);
   }
   [data-field-wrapper][data-checked] [data-field] {
     --navi-field-background-color: var(--navi-field-accent-color);
@@ -123,7 +129,6 @@ import.meta.css = /* css */ `
   [data-field-wrapper][data-checked][data-readonly] [data-field] {
     --navi-field-background-color: var(--navi-field-disabled-background-color);
     --navi-field-border-color: var(--navi-field-disabled-border-color);
-    --navi-field-foreground-color: var(--navi-field-disabled-foreground-color);
   }
   [data-field-wrapper][data-checked][data-readonly] .custom_checkbox_marker {
     stroke: grey;
@@ -277,21 +282,21 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
     </LoadableInlineElement>
   );
 });
-const CustomCheckbox = ({ children }) => {
+const CustomCheckbox = ({ accentColor, children }) => {
   const ref = useRef();
   useLayoutEffect(() => {
     const customCheckbox = ref.current;
     const colorPicked = pickLightOrDark(
       customCheckbox,
       "var(--navi-field-accent-color)",
-      "var(--navi-field-foreground-light-color)",
-      "var(--navi-field-foreground-dark-color)",
+      "var(--navi-checkmark-light-color)",
+      "var(--navi-checkmark-dark-color)",
     );
     customCheckbox.style.setProperty(
-      "--navi-field-foreground-color",
+      "--navi-field-checkmark-color",
       colorPicked,
     );
-  }, []);
+  }, [accentColor]);
 
   return (
     <div ref={ref} className="custom_checkbox_wrapper">
