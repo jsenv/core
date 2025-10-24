@@ -29,7 +29,7 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const LoadableInlineElement = forwardRef((ref, props) => {
+export const LoadableInlineElement = forwardRef((props, ref) => {
   const { children, width, height, ...rest } = props;
 
   const actionName = props["data-action"];

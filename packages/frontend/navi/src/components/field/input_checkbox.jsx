@@ -251,15 +251,17 @@ const CustomCheckbox = ({ accentColor, children }) => {
   return (
     <div
       className="custom_checkbox_wrapper"
-      data-field=""
-      data-field-with-border=""
-      data-field-with-hover-effect-on-border=""
       style={{
         ...(accentColor ? { "--navi-field-checked-color": accentColor } : {}),
       }}
     >
       {children}
-      <div className="custom_checkbox">
+      <div
+        className="custom_checkbox"
+        data-field=""
+        data-field-with-border=""
+        data-field-with-hover-effect-on-border=""
+      >
         <svg viewBox="0 0 12 12" aria-hidden="true">
           <path
             className="custom_checkbox_marker"

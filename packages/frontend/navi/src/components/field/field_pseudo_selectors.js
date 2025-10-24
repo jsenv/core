@@ -13,10 +13,12 @@ export const forwardFieldPseudoSelectors = (
     });
   };
   const updateBooleanAttribute = (attributeName, isPresent) => {
+    const attributeToSet = `data-${attributeName}`;
+
     if (isPresent) {
-      nodeReceivingAttributes.setAttribute(attributeName, "");
+      nodeReceivingAttributes.setAttribute(attributeToSet, "");
     } else {
-      nodeReceivingAttributes.removeAttribute(attributeName);
+      nodeReceivingAttributes.removeAttribute(attributeToSet);
     }
   };
 
@@ -41,12 +43,19 @@ export const forwardFieldPseudoSelectors = (
     });
   }
   data_active: {
+    let onmouseup;
     addEventListener("mousedown", () => {
       updateBooleanAttribute("active", true);
-      const remove = addEventListener(document, "mouseup", () => {
-        remove();
+
+      onmouseup = () => {
+        document.removeEventListener("mouseup", onmouseup);
         updateBooleanAttribute("active", false);
-      });
+      };
+      document.addEventListener("mouseup", onmouseup);
+    });
+
+    addTeardown(() => {
+      document.removeEventListener("mouseup", onmouseup);
     });
   }
   data_checked: {
