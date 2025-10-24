@@ -125,15 +125,15 @@ import.meta.css = /* css */ `
     --navi-field-border-color: var(--navi-field-disabled-border-color);
     --navi-field-foreground-color: var(--navi-field-disabled-foreground-color);
   }
-  [data-field-wrapper][data-checked][data-readonly] {
-    stroke: var(--navi-field-disabled-foreground-color);
+  [data-field-wrapper][data-checked][data-readonly] .custom_checkbox_marker {
+    stroke: grey;
   }
   [data-field-wrapper][data-checked][data-disabled] .custom_checkbox_marker {
-    stroke: var(--navi-field-disabled-foreground-color);
+    stroke: #eeeeee;
   }
   [data-field-wrapper][data-checked][data-disabled] [data-field] {
-    --navi-field-background-color: #eeeeee;
-    --navi-field-border-color: #eeeeee;
+    --navi-field-background-color: #d3d3d3;
+    --navi-field-border-color: #d3d3d3;
   }
 `;
 
