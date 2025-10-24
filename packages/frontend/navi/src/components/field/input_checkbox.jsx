@@ -68,48 +68,47 @@ import.meta.css = /* css */ `
     stroke: var(--navi-field-foreground-color);
   }
 
-  [data-field-wrapper][data-checked] .custom_checkbox {
+  [data-field-wrapper][data-checked] [data-field] {
     --navi-field-background-color: var(--navi-field-accent-color);
     --navi-field-border-color: var(--navi-field-accent-color);
   }
-  [data-field-wrapper][data-checked][data-hover] .custom_checkbox {
+  [data-field-wrapper][data-checked][data-hover] [data-field] {
     --navi-field-background-color: var(--navi-field-accent-color);
     --navi-field-border-color: var(--navi-field-accent-color);
   }
-  [data-field-wrapper][data-checked] .custom_checkbox svg {
+  [data-field-wrapper][data-checked] [data-field] svg {
     opacity: 1;
     transform: scale(1);
   }
 
-  [data-field-wrapper][data-readonly] .custom_checkbox {
+  [data-field-wrapper][data-readonly] [data-field] {
     background-color: var(--navi-field-readonly-background-color);
     border-color: var(--navi-field-readonly-border-color);
   }
-  [data-field-wrapper][data-checked][data-readonly] .custom_checkbox {
+  [data-field-wrapper][data-checked][data-readonly] [data-field] {
     background: var(--navi-field-checked-disabled-color);
     border-color: var(--navi-field-readonly-border-color);
   }
-  [data-field-wrapper][data-readonly][data-hover] .custom_checkbox {
+  [data-field-wrapper][data-readonly][data-hover] [data-field] {
     background-color: var(--navi-field-readonly-background-color);
     border-color: var(--navi-field-readonly-border-color);
   }
-  [data-field-wrapper][data-checked][data-readonly][data-hover]
-    .custom_checkbox {
+  [data-field-wrapper][data-checked][data-readonly][data-hover] [data-field] {
     background: var(--navi-field-checked-disabled-color);
     border-color: var(--navi-field-readonly-border-color);
   }
   [data-field-wrapper][data-readonly][data-checked] {
     stroke: var(--navi-field-foreground-disabled-color);
   }
-  [data-field-wrapper][data-focus-visible] .custom_checkbox {
+  [data-field-wrapper][data-focus-visible] [data-field] {
     outline: 2px solid var(--navi-field-outline-color);
     outline-offset: 1px;
   }
-  [data-field-wrapper][data-disabled] .custom_checkbox {
+  [data-field-wrapper][data-disabled] [data-field] {
     background-color: var(--navi-field-disabled-background-color);
     border-color: var(--navi-field-disabled-border-color);
   }
-  [data-field-wrapper][data-disabled][data-checked] .custom_checkbox {
+  [data-field-wrapper][data-disabled][data-checked] [data-field] {
     background: var(--navi-field-background-disabled-color);
     border-color: var(--navi-field-background-disabled-color);
   }
@@ -277,9 +276,10 @@ const CustomCheckbox = ({ accentColor, children }) => {
       <div
         className="custom_checkbox"
         data-field=""
-        data-field-with-background=""
         data-field-with-border=""
         data-field-with-hover-effect-on-border=""
+        data-field-with-background=""
+        data-field-with-hover-effect-on-background=""
       >
         <svg viewBox="0 0 12 12" aria-hidden="true">
           <path
