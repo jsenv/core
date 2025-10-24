@@ -54,6 +54,7 @@ import.meta.css = /* css */ `
     display: inline-flex;
     margin: 3px 3px 3px 4px;
     border-radius: inherit;
+    border: 1px solid var(--navi-field-border-color);
   }
   .custom_checkbox svg {
     width: 100%;
@@ -69,6 +70,10 @@ import.meta.css = /* css */ `
   }
   [data-field-wrapper][data-hover] {
     --navi-field-border-color: var(--navi-field-hover-border-color);
+  }
+  [data-field-wrapper][data-focus-visible] [data-field] {
+    outline: 2px solid var(--navi-field-outline-color);
+    outline-offset: 1px;
   }
 
   /* Readonly */
@@ -288,7 +293,6 @@ const CustomCheckbox = ({ accentColor, children }) => {
       <div
         className="custom_checkbox"
         data-field=""
-        data-field-with-border=""
         data-field-with-background=""
       >
         <svg viewBox="0 0 12 12" aria-hidden="true">
