@@ -1,5 +1,10 @@
 import { forwardRef } from "preact/compat";
-import { useContext, useImperativeHandle, useRef } from "preact/hooks";
+import {
+  useContext,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+} from "preact/hooks";
 
 import { useActionStatus } from "../../use_action_status.js";
 import { requestAction } from "../../validation/custom_constraint_validation.js";
@@ -9,6 +14,7 @@ import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
+import { forwardFieldPseudoSelectors } from "./field_pseudo_selectors.js";
 import { ReportReadOnlyOnLabelContext } from "./label.jsx";
 import { useActionEvents } from "./use_action_events.js";
 import {
@@ -25,17 +31,12 @@ import {
 } from "./use_ui_state_controller.js";
 
 import.meta.css = /* css */ `
-  .custom_checkbox_wrapper[data-field-wrapper] {
+  .custom_checkbox_wrapper {
     display: inline-flex;
     box-sizing: content-box;
-
-    --checkmark-color: white;
-    --checkmark-disabled-color: #eeeeee;
-    --checked-color: #3b82f6;
-    --checked-disabled-color: #d3d3d3;
-
+    border-radius: inherit;
     /* TODO: find a better way maybe? */
-    --field-strong-color: var(--checked-color);
+    --navi-field-strong-color: var(--navi-field-checked-color);
   }
 
   .custom_checkbox_wrapper input {
@@ -50,8 +51,6 @@ import.meta.css = /* css */ `
   .custom_checkbox {
     width: 13px;
     height: 13px;
-    border: 1px solid var(--field-border-color);
-    border-radius: 2px;
     box-sizing: border-box;
     display: inline-flex;
     margin: 3px 3px 3px 4px;
@@ -64,69 +63,57 @@ import.meta.css = /* css */ `
     transition: all 0.15s ease;
     pointer-events: none;
   }
-  .custom_checkbox svg path {
-    stroke: var(--checkmark-color);
+  .custom_checkbox_marker {
+    stroke: var(--navi-field-checkmark-color);
   }
 
-  .custom_checkbox_wrapper:hover .custom_checkbox {
-    border-color: var(--field-hover-border-color);
+  [data-field-wrapper][data-hover][data-checked] .custom_checkbox {
+    background: var(--navi-field-strong-color);
+    border-color: var(--navi-field-strong-color);
   }
-  .custom_checkbox_wrapper:hover input:checked + .custom_checkbox {
-    background: var(--field-strong-color);
-    border-color: var(--field-strong-color);
+  [data-field-wrapper][data-checked] .custom_checkbox {
+    background: var(--navi-field-checked-color);
+    border-color: var(--navi-field-checked-color);
   }
-  .custom_checkbox_wrapper input:checked + .custom_checkbox {
-    background: var(--checked-color);
-    border-color: var(--checked-color);
-  }
-  .custom_checkbox_wrapper input:checked + .custom_checkbox svg {
+  [data-field-wrapper][data-checked] .custom_checkbox svg {
     opacity: 1;
     transform: scale(1);
   }
-
-  .custom_checkbox_wrapper input[data-readonly] + .custom_checkbox {
-    background-color: var(--field-readonly-background-color);
-    border-color: var(--field-readonly-border-color);
+  [data-field-wrapper][data-readonly] .custom_checkbox {
+    background-color: var(--navi-field-readonly-background-color);
+    border-color: var(--navi-field-readonly-border-color);
   }
-  .custom_checkbox_wrapper input[data-readonly]:checked + .custom_checkbox {
-    background: var(--checked-disabled-color);
-    border-color: var(--checked-disabled-color);
+  [data-field-wrapper][data-readonly][data-checked] .custom_checkbox {
+    background: var(--navi-field-checked-disabled-color);
+    border-color: var(--navi-field-readonly-border-color);
   }
-  .custom_checkbox_wrapper:hover input[data-readonly] + .custom_checkbox {
-    background-color: var(--field-readonly-background-color);
-    border-color: var(--field-readonly-border-color);
+  [data-field-wrapper][data-readonly][data-hover] .custom_checkbox {
+    background-color: var(--navi-field-readonly-background-color);
+    border-color: var(--navi-field-readonly-border-color);
   }
-  .custom_checkbox_wrapper:hover
-    input[data-readonly]:checked
-    + .custom_checkbox {
-    background: var(--checked-disabled-color);
-    border-color: var(--checked-disabled-color);
+  [data-field-wrapper][data-readonly][data-hover][data-checked]
+    .custom_checkbox {
+    background: var(--navi-field-checked-disabled-color);
+    border-color: var(--navi-field-readonly-border-color);
   }
-  .custom_checkbox_wrapper
-    input[data-readonly]:checked
-    + .custom_checkbox
-    .custom_checkbox_marker {
-    stroke: var(--checkmark-disabled-color);
+  [data-field-wrapper][data-readonly][data-checked] {
+    stroke: var(--navi-field-checkmark-disabled-color);
   }
-
-  .custom_checkbox_wrapper input:focus-visible + .custom_checkbox {
-    outline: 2px solid var(--field-outline-color);
+  [data-field-wrapper][data-focus-visible] .custom_checkbox {
+    outline: 2px solid var(--navi-field-outline-color);
     outline-offset: 1px;
   }
+  [data-field-wrapper][data-disabled] .custom_checkbox {
+    background-color: var(--navi-field-disabled-background-color);
+    border-color: var(--navi-field-disabled-border-color);
+  }
+  [data-field-wrapper][data-disabled][data-checked] .custom_checkbox {
+    background: var(--navi-field-checked-disabled-color);
+    border-color: var(--navi-field-checked-disabled-color);
+  }
 
-  .custom_checkbox_wrapper input[disabled] + .custom_checkbox {
-    background-color: var(--field-disabled-background-color);
-    border-color: var(--field-disabled-border-color);
-  }
-  .custom_checkbox_wrapper input[disabled]:checked + .custom_checkbox {
-    background: var(--checked-disabled-color);
-    border-color: var(--checked-disabled-color);
-  }
-  .custom_checkbox_wrapper
-    input[disabled]:checked
-    + .custom_checkbox
-    .custom_checkbox_marker {
-    stroke: var(--checkmark-disabled-color);
+  [data-field-wrapper][data-disabled][data-checked] .custom_checkbox_marker {
+    stroke: var(--navi-field-checkmark-disabled-color);
   }
 `;
 
@@ -241,9 +228,16 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
       inputCheckbox
     );
 
+  const containerRef = useRef();
+  useLayoutEffect(() => {
+    return forwardFieldPseudoSelectors(innerRef.current, containerRef.current);
+  }, []);
+
   return (
     <LoadableInlineElement
+      ref={containerRef}
       data-action={actionName}
+      data-field-wrapper=""
       loading={innerLoading}
       inset={-1}
       targetSelector={appeareance === "custom" ? ".custom_checkbox" : ""}
@@ -257,9 +251,11 @@ const CustomCheckbox = ({ accentColor, children }) => {
   return (
     <div
       className="custom_checkbox_wrapper"
-      data-field-wrapper=""
+      data-field=""
+      data-field-with-border=""
+      data-field-with-hover-effect-on-border=""
       style={{
-        ...(accentColor ? { "--checked-color": accentColor } : {}),
+        ...(accentColor ? { "--navi-field-checked-color": accentColor } : {}),
       }}
     >
       {children}

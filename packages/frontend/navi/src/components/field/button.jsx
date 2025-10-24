@@ -143,7 +143,7 @@ const ButtonBasic = forwardRef((props, ref) => {
           className="navi_button_content"
           data-field=""
           data-field-with-background={background === "none" ? undefined : ""}
-          data-field-with-hover=""
+          data-field-with-hover-effect-on-border=""
           data-field-with-border={borderWidth ? "" : undefined}
           data-field-with-border-hover={discrete ? "" : undefined}
           data-field-with-background-hover={discrete ? "" : undefined}

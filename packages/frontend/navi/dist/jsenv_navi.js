@@ -6,12 +6,14 @@ import { forwardRef, createPortal } from "preact/compat";
 
 const createIterableWeakSet = () => {
   const objectWeakRefSet = new Set();
+
   return {
-    add: object => {
+    add: (object) => {
       const objectWeakRef = new WeakRef(object);
       objectWeakRefSet.add(objectWeakRef);
     },
-    delete: object => {
+
+    delete: (object) => {
       for (const weakRef of objectWeakRefSet) {
         if (weakRef.deref() === object) {
           objectWeakRefSet.delete(weakRef);
@@ -20,6 +22,7 @@ const createIterableWeakSet = () => {
       }
       return false;
     },
+
     *[Symbol.iterator]() {
       for (const objectWeakRef of objectWeakRefSet) {
         const object = objectWeakRef.deref();
@@ -30,7 +33,8 @@ const createIterableWeakSet = () => {
         yield object;
       }
     },
-    has: object => {
+
+    has: (object) => {
       for (const weakRef of objectWeakRefSet) {
         const objectCandidate = weakRef.deref();
         if (objectCandidate === undefined) {
@@ -43,12 +47,15 @@ const createIterableWeakSet = () => {
       }
       return false;
     },
+
     clear: () => {
       objectWeakRefSet.clear();
     },
+
     get size() {
       return objectWeakRefSet.size;
     },
+
     getStats: () => {
       let alive = 0;
       let dead = 0;
@@ -59,17 +66,14 @@ const createIterableWeakSet = () => {
           dead++;
         }
       }
-      return {
-        total: objectWeakRefSet.size,
-        alive,
-        dead
-      };
-    }
+      return { total: objectWeakRefSet.size, alive, dead };
+    },
   };
 };
 
 const createPubSub = () => {
   const callbackSet = new Set();
+
   const publish = (...args) => {
     const results = [];
     for (const callback of callbackSet) {
@@ -78,7 +82,8 @@ const createPubSub = () => {
     }
     return results;
   };
-  const subscribe = callback => {
+
+  const subscribe = (callback) => {
     if (typeof callback !== "function") {
       throw new TypeError("callback must be a function");
     }
@@ -87,14 +92,17 @@ const createPubSub = () => {
       callbackSet.delete(callback);
     };
   };
+
   const clear = () => {
     callbackSet.clear();
   };
+
   return [publish, subscribe, clear];
 };
 
 // https://github.com/davidtheclark/tabbable/blob/master/index.js
-const isDocumentElement = node => node === node.ownerDocument.documentElement;
+const isDocumentElement = (node) =>
+  node === node.ownerDocument.documentElement;
 
 /**
  * elementToOwnerWindow returns the window owning the element.
@@ -104,7 +112,7 @@ const isDocumentElement = node => node === node.ownerDocument.documentElement;
  * It's often important to work with the correct window because
  * element are scoped per iframes.
  */
-const elementToOwnerWindow = element => {
+const elementToOwnerWindow = (element) => {
   if (elementIsWindow(element)) {
     return element;
   }
@@ -121,7 +129,7 @@ const elementToOwnerWindow = element => {
  * It's often important to work with the correct document because
  * element are scoped per iframes.
  */
-const elementToOwnerDocument = element => {
+const elementToOwnerDocument = (element) => {
   if (elementIsWindow(element)) {
     return element.document;
   }
@@ -130,17 +138,14 @@ const elementToOwnerDocument = element => {
   }
   return element.ownerDocument;
 };
-const elementIsWindow = a => a.window === a;
-const elementIsDocument = a => a.nodeType === 9;
-const elementIsDetails = ({
-  nodeName
-}) => nodeName === "DETAILS";
-const elementIsSummary = ({
-  nodeName
-}) => nodeName === "SUMMARY";
+
+const elementIsWindow = (a) => a.window === a;
+const elementIsDocument = (a) => a.nodeType === 9;
+const elementIsDetails = ({ nodeName }) => nodeName === "DETAILS";
+const elementIsSummary = ({ nodeName }) => nodeName === "SUMMARY";
 
 // should be used ONLY when an element is related to other elements that are not descendants of this element
-const getAssociatedElements = element => {
+const getAssociatedElements = (element) => {
   if (element.tagName === "COL") {
     const columnCells = [];
     const colgroup = element.parentNode;
@@ -164,9 +169,13 @@ const getAssociatedElements = element => {
   return null;
 };
 
-const getComputedStyle$1 = element => elementToOwnerWindow(element).getComputedStyle(element);
-const getStyle = (element, name) => getComputedStyle$1(element).getPropertyValue(name);
+const getComputedStyle$1 = (element) =>
+  elementToOwnerWindow(element).getComputedStyle(element);
+
+const getStyle = (element, name) =>
+  getComputedStyle$1(element).getPropertyValue(name);
 const setStyle = (element, name, value) => {
+
   const prevValue = element.style[name];
   if (prevValue) {
     element.style.setProperty(name, value);
@@ -179,18 +188,26 @@ const setStyle = (element, name, value) => {
     element.style.removeProperty(name);
   };
 };
+
 const addWillChange = (element, property) => {
   const currentWillChange = element.style.willChange;
-  const willChangeValues = currentWillChange ? currentWillChange.split(",").map(v => v.trim()).filter(Boolean) : [];
+  const willChangeValues = currentWillChange
+    ? currentWillChange
+        .split(",")
+        .map((v) => v.trim())
+        .filter(Boolean)
+    : [];
+
   if (willChangeValues.includes(property)) {
     // Property already exists, return no-op
     return () => {};
   }
+
   willChangeValues.push(property);
   element.style.willChange = willChangeValues.join(", ");
   // Return function to remove only this property
   return () => {
-    const newValues = willChangeValues.filter(v => v !== property);
+    const newValues = willChangeValues.filter((v) => v !== property);
     if (newValues.length === 0) {
       element.style.removeProperty("will-change");
     } else {
@@ -198,7 +215,8 @@ const addWillChange = (element, property) => {
     }
   };
 };
-const createSetMany$1 = setter => {
+
+const createSetMany$1 = (setter) => {
   return (element, description) => {
     const cleanupCallbackSet = new Set();
     for (const name of Object.keys(description)) {
@@ -214,16 +232,71 @@ const createSetMany$1 = setter => {
     };
   };
 };
+
 const setStyles = createSetMany$1(setStyle);
 
 // Properties that need px units
-const pxProperties = ["width", "height", "top", "left", "right", "bottom", "margin", "marginTop", "marginRight", "marginBottom", "marginLeft", "padding", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "border", "borderWidth", "borderTopWidth", "borderRightWidth", "borderBottomWidth", "borderLeftWidth", "fontSize", "lineHeight", "letterSpacing", "wordSpacing", "translateX", "translateY", "translateZ", "borderRadius", "borderTopLeftRadius", "borderTopRightRadius", "borderBottomLeftRadius", "borderBottomRightRadius"];
+const pxProperties = [
+  "width",
+  "height",
+  "top",
+  "left",
+  "right",
+  "bottom",
+  "margin",
+  "marginTop",
+  "marginRight",
+  "marginBottom",
+  "marginLeft",
+  "padding",
+  "paddingTop",
+  "paddingRight",
+  "paddingBottom",
+  "paddingLeft",
+  "border",
+  "borderWidth",
+  "borderTopWidth",
+  "borderRightWidth",
+  "borderBottomWidth",
+  "borderLeftWidth",
+  "fontSize",
+  "lineHeight",
+  "letterSpacing",
+  "wordSpacing",
+  "translateX",
+  "translateY",
+  "translateZ",
+  "borderRadius",
+  "borderTopLeftRadius",
+  "borderTopRightRadius",
+  "borderBottomLeftRadius",
+  "borderBottomRightRadius",
+];
 
 // Properties that need deg units
-const degProperties = ["rotate", "rotateX", "rotateY", "rotateZ", "skew", "skewX", "skewY"];
+const degProperties = [
+  "rotate",
+  "rotateX",
+  "rotateY",
+  "rotateZ",
+  "skew",
+  "skewX",
+  "skewY",
+];
 
 // Properties that should remain unitless
-const unitlessProperties = ["opacity", "zIndex", "flexGrow", "flexShrink", "order", "columnCount", "scale", "scaleX", "scaleY", "scaleZ"];
+const unitlessProperties = [
+  "opacity",
+  "zIndex",
+  "flexGrow",
+  "flexShrink",
+  "order",
+  "columnCount",
+  "scale",
+  "scaleX",
+  "scaleY",
+  "scaleZ",
+];
 
 // Normalize a single style value
 const normalizeStyle = (value, propertyName, context = "js") => {
@@ -252,7 +325,9 @@ const normalizeStyle = (value, propertyName, context = "js") => {
   // Handle transform.* properties (e.g., "transform.translateX")
   if (propertyName.startsWith("transform.")) {
     if (context === "css") {
-      console.warn("normalizeStyle: magic properties like \"".concat(propertyName, "\" are not applicable in \"css\" context. Returning original value."));
+      console.warn(
+        `normalizeStyle: magic properties like "${propertyName}" are not applicable in "css" context. Returning original value.`,
+      );
       return value;
     }
     const transformProperty = propertyName.slice(10); // Remove "transform." prefix
@@ -271,6 +346,7 @@ const normalizeStyle = (value, propertyName, context = "js") => {
     // never supposed to happen, the value given is neither string nor object
     return undefined;
   }
+
   if (pxProperties.includes(propertyName)) {
     return normalizeNumber(value, context, "px", propertyName);
   }
@@ -280,15 +356,16 @@ const normalizeStyle = (value, propertyName, context = "js") => {
   if (unitlessProperties.includes(propertyName)) {
     return normalizeNumber(value, context, "", propertyName);
   }
+
   return value;
 };
 const normalizeNumber = (value, context, unit, propertyName) => {
   if (context === "css") {
     if (typeof value === "number") {
       if (isNaN(value)) {
-        console.warn("NaN found for \"".concat(propertyName, "\""));
+        console.warn(`NaN found for "${propertyName}"`);
       }
-      return "".concat(value).concat(unit);
+      return `${value}${unit}`;
     }
     return value;
   }
@@ -298,7 +375,9 @@ const normalizeNumber = (value, context, unit, propertyName) => {
     }
     const numericValue = parseFloat(value);
     if (isNaN(numericValue)) {
-      console.warn("\"".concat(propertyName, "\": ").concat(value, " cannot be converted to number, returning value as-is."));
+      console.warn(
+        `"${propertyName}": ${value} cannot be converted to number, returning value as-is.`,
+      );
       return value;
     }
     return numericValue;
@@ -316,26 +395,32 @@ const normalizeStyles = (styles, context = "js") => {
 };
 
 // Convert transform object to CSS string
-const stringifyCSSTransform = transformObj => {
+const stringifyCSSTransform = (transformObj) => {
   const transforms = [];
   for (const key of Object.keys(transformObj)) {
     const transformPartValue = transformObj[key];
-    const normalizedTransformPartValue = normalizeStyle(transformPartValue, key, "css");
-    transforms.push("".concat(key, "(").concat(normalizedTransformPartValue, ")"));
+    const normalizedTransformPartValue = normalizeStyle(
+      transformPartValue,
+      key,
+      "css",
+    );
+    transforms.push(`${key}(${normalizedTransformPartValue})`);
   }
   return transforms.join(" ");
 };
 
 // Parse transform CSS string into object
-const parseCSSTransform = transformString => {
+const parseCSSTransform = (transformString) => {
   if (!transformString || transformString === "none") {
     return undefined;
   }
+
   const transformObj = {};
 
   // Parse transform functions
   const transformPattern = /(\w+)\(([^)]+)\)/g;
   let match;
+
   while ((match = transformPattern.exec(transformString)) !== null) {
     const [, functionName, value] = match;
 
@@ -362,13 +447,15 @@ const parseCSSTransform = transformString => {
 };
 
 // Parse a matrix transform and extract simple transform components when possible
-const parseMatrixTransform = matrixString => {
+const parseMatrixTransform = (matrixString) => {
   // Match matrix() or matrix3d() functions
   const matrixMatch = matrixString.match(/matrix(?:3d)?\(([^)]+)\)/);
   if (!matrixMatch) {
     return null;
   }
-  const values = matrixMatch[1].split(",").map(v => parseFloat(v.trim()));
+
+  const values = matrixMatch[1].split(",").map((v) => parseFloat(v.trim()));
+
   if (matrixString.includes("matrix3d")) {
     // matrix3d(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p)
     if (values.length !== 16) {
@@ -376,7 +463,18 @@ const parseMatrixTransform = matrixString => {
     }
     const [a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p] = values;
     // Check if it's a simple 2D transform (most common case)
-    if (c === 0 && d === 0 && g === 0 && h === 0 && i === 0 && j === 0 && k === 1 && l === 0 && o === 0 && p === 1) {
+    if (
+      c === 0 &&
+      d === 0 &&
+      g === 0 &&
+      h === 0 &&
+      i === 0 &&
+      j === 0 &&
+      k === 1 &&
+      l === 0 &&
+      o === 0 &&
+      p === 1
+    ) {
       // This is essentially a 2D transform
       return parseSimple2DMatrix(a, b, e, f, m, n);
     }
@@ -438,7 +536,8 @@ const parseSimple2DMatrix = (a, b, c, d, e, f) => {
   const scaleX = Math.sqrt(a * a + b * b);
   const scaleY = det / scaleX;
   const rotation = Math.atan2(b, a) * (180 / Math.PI);
-  const skewX = Math.atan((a * c + b * d) / (scaleX * scaleX)) * (180 / Math.PI);
+  const skewX =
+    Math.atan((a * c + b * d) / (scaleX * scaleX)) * (180 / Math.PI);
   if (scaleX !== 1) {
     result.scaleX = scaleX;
   }
@@ -456,9 +555,7 @@ const parseSimple2DMatrix = (a, b, c, d, e, f) => {
 
 // Merge two style objects, handling special cases like transform
 const mergeStyles = (stylesA, stylesB) => {
-  const result = {
-    ...stylesA
-  };
+  const result = { ...stylesA };
   for (const key of Object.keys(stylesB)) {
     if (key === "transform") {
       result[key] = mergeOneStyle(stylesA[key], stylesB[key], key);
@@ -470,42 +567,40 @@ const mergeStyles = (stylesA, stylesB) => {
 };
 
 // Merge a single style property value with an existing value
-const mergeOneStyle = (existingValue, newValue, propertyName, context = "js") => {
+const mergeOneStyle = (
+  existingValue,
+  newValue,
+  propertyName,
+  context = "js",
+) => {
   if (propertyName === "transform") {
     // Matrix parsing is now handled automatically in parseCSSTransform
 
     // Determine the types
-    const existingIsString = typeof existingValue === "string" && existingValue !== "none";
+    const existingIsString =
+      typeof existingValue === "string" && existingValue !== "none";
     const newIsString = typeof newValue === "string" && newValue !== "none";
-    const existingIsObject = typeof existingValue === "object" && existingValue !== null;
+    const existingIsObject =
+      typeof existingValue === "object" && existingValue !== null;
     const newIsObject = typeof newValue === "object" && newValue !== null;
 
     // Case 1: Both are objects - merge directly
     if (existingIsObject && newIsObject) {
-      const merged = {
-        ...existingValue,
-        ...newValue
-      };
+      const merged = { ...existingValue, ...newValue };
       return context === "css" ? stringifyCSSTransform(merged) : merged;
     }
 
     // Case 2: New is object, existing is string - parse existing and merge
     if (newIsObject && existingIsString) {
       const parsedExisting = parseCSSTransform(existingValue);
-      const merged = {
-        ...parsedExisting,
-        ...newValue
-      };
+      const merged = { ...parsedExisting, ...newValue };
       return context === "css" ? stringifyCSSTransform(merged) : merged;
     }
 
     // Case 3: New is string, existing is object - parse new and merge
     if (newIsString && existingIsObject) {
       const parsedNew = parseCSSTransform(newValue);
-      const merged = {
-        ...existingValue,
-        ...parsedNew
-      };
+      const merged = { ...existingValue, ...parsedNew };
       return context === "css" ? stringifyCSSTransform(merged) : merged;
     }
 
@@ -513,10 +608,7 @@ const mergeOneStyle = (existingValue, newValue, propertyName, context = "js") =>
     if (existingIsString && newIsString) {
       const parsedExisting = parseCSSTransform(existingValue);
       const parsedNew = parseCSSTransform(newValue);
-      const merged = {
-        ...parsedExisting,
-        ...parsedNew
-      };
+      const merged = { ...parsedExisting, ...parsedNew };
       return context === "css" ? stringifyCSSTransform(merged) : merged;
     }
 
@@ -619,9 +711,11 @@ const onElementControllerRemoved = (element, controller) => {
     }
   }
 };
+
 const createStyleController = (name = "anonymous") => {
   // Store element data for this controller: element -> { styles, animation }
   const elementWeakMap = new WeakMap();
+
   const set = (element, stylesToSet) => {
     if (!element || typeof element !== "object") {
       throw new Error("Element must be a valid DOM element");
@@ -629,37 +723,37 @@ const createStyleController = (name = "anonymous") => {
     if (!stylesToSet || typeof stylesToSet !== "object") {
       throw new Error("styles must be an object");
     }
+
     const normalizedStylesToSet = normalizeStyles(stylesToSet, "js");
     const elementData = elementWeakMap.get(element);
     if (!elementData) {
-      const animation = createAnimationForStyles(element, normalizedStylesToSet, name);
+      const animation = createAnimationForStyles(
+        element,
+        normalizedStylesToSet,
+        name,
+      );
       elementWeakMap.set(element, {
         styles: normalizedStylesToSet,
-        animation
+        animation,
       });
       onElementControllerAdded(element, controller);
       return;
     }
-    const {
-      styles,
-      animation
-    } = elementData;
+
+    const { styles, animation } = elementData;
     const mergedStyles = mergeStyles(styles, normalizedStylesToSet);
     elementData.styles = mergedStyles;
     updateAnimationStyles(animation, mergedStyles);
   };
+
   const get = (element, propertyName) => {
     const elementData = elementWeakMap.get(element);
     if (!elementData) {
       return undefined;
     }
-    const {
-      styles
-    } = elementData;
+    const { styles } = elementData;
     if (propertyName === undefined) {
-      return {
-        ...styles
-      };
+      return { ...styles };
     }
     if (propertyName.startsWith("transform.")) {
       const transformProp = propertyName.slice("transform.".length);
@@ -667,15 +761,13 @@ const createStyleController = (name = "anonymous") => {
     }
     return styles[propertyName];
   };
+
   const deleteMethod = (element, propertyName) => {
     const elementData = elementWeakMap.get(element);
     if (!elementData) {
       return;
     }
-    const {
-      styles,
-      animation
-    } = elementData;
+    const { styles, animation } = elementData;
     const hasStyle = Object.hasOwn(styles, propertyName);
     if (!hasStyle) {
       return;
@@ -691,15 +783,13 @@ const createStyleController = (name = "anonymous") => {
     }
     updateAnimationStyles(animation, styles);
   };
-  const commit = element => {
+
+  const commit = (element) => {
     const elementData = elementWeakMap.get(element);
     if (!elementData) {
       return; // Nothing to commit on this element for this controller
     }
-    const {
-      styles,
-      animation
-    } = elementData;
+    const { styles, animation } = elementData;
     // Cancel our animation permanently since we're committing styles to inline
     // (Keep this BEFORE getComputedStyle to prevent computedStyle reading our animation styles)
     animation.cancel();
@@ -717,34 +807,41 @@ const createStyleController = (name = "anonymous") => {
     // Clean up controller from element registry
     onElementControllerRemoved(element, controller);
   };
-  const clear = element => {
+
+  const clear = (element) => {
     const elementData = elementWeakMap.get(element);
     if (!elementData) {
       return;
     }
-    const {
-      animation
-    } = elementData;
+    const { animation } = elementData;
     animation.cancel();
     elementWeakMap.delete(element);
     onElementControllerRemoved(element, controller);
   };
+
   const getUnderlyingValue = (element, propertyName) => {
     const elementControllerSet = elementControllerSetRegistry.get(element);
-    const normalizeValueForJs = value => {
+
+    const normalizeValueForJs = (value) => {
       // Use normalizeStyle to handle all property types including transform dot notation
       return normalizeStyle(value, propertyName, "js");
     };
+
     const getFromOtherControllers = () => {
       if (!elementControllerSet || elementControllerSet.size <= 1) {
         return undefined;
       }
+
       let resultValue;
       for (const otherController of elementControllerSet) {
         if (otherController === controller) continue;
         const otherStyles = otherController.get(element);
         if (propertyName in otherStyles) {
-          resultValue = mergeOneStyle(resultValue, otherStyles[propertyName], propertyName);
+          resultValue = mergeOneStyle(
+            resultValue,
+            otherStyles[propertyName],
+            propertyName,
+          );
         }
       }
 
@@ -755,6 +852,7 @@ const createStyleController = (name = "anonymous") => {
       // For actual layout measurements, use rect.* properties instead.
       return normalizeValueForJs(resultValue);
     };
+
     const getFromDOM = () => {
       // Handle transform dot notation
       if (propertyName.startsWith("transform.")) {
@@ -765,6 +863,7 @@ const createStyleController = (name = "anonymous") => {
       const computedValue = getComputedStyle(element)[propertyName];
       return normalizeValueForJs(computedValue);
     };
+
     const getFromDOMLayout = () => {
       // For rect.* properties that reflect actual layout, always read from DOM
       // These represent the actual rendered dimensions, bypassing any controller influence
@@ -788,15 +887,13 @@ const createStyleController = (name = "anonymous") => {
       }
       return undefined;
     };
-    const getWhileDisablingThisController = fn => {
+
+    const getWhileDisablingThisController = (fn) => {
       const elementData = elementWeakMap.get(element);
       if (!elementData) {
         return fn();
       }
-      const {
-        styles,
-        animation
-      } = elementData;
+      const { styles, animation } = elementData;
       // Temporarily cancel our animation to read underlying value
       animation.cancel();
       const underlyingValue = fn();
@@ -804,6 +901,7 @@ const createStyleController = (name = "anonymous") => {
       elementData.animation = createAnimationForStyles(element, styles, name);
       return underlyingValue;
     };
+
     if (typeof propertyName === "function") {
       return getWhileDisablingThisController(propertyName);
     }
@@ -823,9 +921,13 @@ const createStyleController = (name = "anonymous") => {
     }
     return getWhileDisablingThisController(getFromDOM);
   };
+
   const clearAll = () => {
     // Remove this controller from all elements and clean up animations
-    for (const [element, elementControllerSet] of elementControllerSetRegistry) {
+    for (const [
+      element,
+      elementControllerSet,
+    ] of elementControllerSetRegistry) {
       if (!elementControllerSet.has(controller)) {
         continue;
       }
@@ -833,9 +935,7 @@ const createStyleController = (name = "anonymous") => {
       if (!elementData) {
         continue;
       }
-      const {
-        animation
-      } = elementData;
+      const { animation } = elementData;
       animation.cancel();
       elementWeakMap.delete(element);
       onElementControllerRemoved(element, controller);
@@ -849,21 +949,24 @@ const createStyleController = (name = "anonymous") => {
     getUnderlyingValue,
     commit,
     clear,
-    clearAll
+    clearAll,
   };
+
   return controller;
 };
+
 const createAnimationForStyles = (element, styles, id) => {
   const cssStylesToSet = normalizeStyles(styles, "css");
   const animation = element.animate([cssStylesToSet], {
     duration: 0,
-    fill: "forwards"
+    fill: "forwards",
   });
   animation.id = id; // Set a debug name for this animation
   animation.play();
   animation.pause();
   return animation; // Return the created animation
 };
+
 const updateAnimationStyles = (animation, styles) => {
   const cssStyles = normalizeStyles(styles, "css");
   animation.effect.setKeyframes([cssStyles]);
@@ -884,7 +987,8 @@ const setAttribute = (element, name, value) => {
     element.removeAttribute(name);
   };
 };
-const createSetMany = setter => {
+
+const createSetMany = (setter) => {
   return (element, description) => {
     const cleanupCallbackSet = new Set();
     for (const name of Object.keys(description)) {
@@ -900,16 +1004,12 @@ const createSetMany = setter => {
     };
   };
 };
+
 const setAttributes = createSetMany(setAttribute);
 
-const findDescendant = (rootNode, fn, {
-  skipRoot
-} = {}) => {
+const findDescendant = (rootNode, fn, { skipRoot } = {}) => {
   const iterator = createNextNodeIterator(rootNode, rootNode, skipRoot);
-  let {
-    done,
-    value: node
-  } = iterator.next();
+  let { done, value: node } = iterator.next();
   while (done === false) {
     let skipChildren = false;
     if (node === skipRoot) {
@@ -922,88 +1022,78 @@ const findDescendant = (rootNode, fn, {
         return node;
       }
     }
-    ({
-      done,
-      value: node
-    } = iterator.next(skipChildren));
+    ({ done, value: node } = iterator.next(skipChildren));
   }
   return null;
 };
-const findLastDescendant = (rootNode, fn, {
-  skipRoot
-} = {}) => {
+
+const findLastDescendant = (rootNode, fn, { skipRoot } = {}) => {
   const deepestNode = getDeepestNode(rootNode, skipRoot);
   if (deepestNode) {
-    const iterator = createPreviousNodeIterator(deepestNode, rootNode, skipRoot);
-    let {
-      done,
-      value: node
-    } = iterator.next();
+    const iterator = createPreviousNodeIterator(
+      deepestNode,
+      rootNode,
+      skipRoot,
+    );
+    let { done, value: node } = iterator.next();
     while (done === false) {
       if (fn(node)) {
         return node;
       }
-      ({
-        done,
-        value: node
-      } = iterator.next());
+      ({ done, value: node } = iterator.next());
     }
   }
   return null;
 };
-const findAfter = (from, predicate, {
-  root = null,
-  skipRoot = null,
-  skipChildren = false
-} = {}) => {
+
+const findAfter = (
+  from,
+  predicate,
+  { root = null, skipRoot = null, skipChildren = false } = {},
+) => {
   const iterator = createAfterNodeIterator(from, root, skipChildren, skipRoot);
-  let {
-    done,
-    value: node
-  } = iterator.next();
+  let { done, value: node } = iterator.next();
   while (done === false) {
     if (predicate(node)) {
       return node;
     }
-    ({
-      done,
-      value: node
-    } = iterator.next());
+    ({ done, value: node } = iterator.next());
   }
   return null;
 };
-const findBefore = (from, predicate, {
-  root = null,
-  skipRoot = null
-} = {}) => {
+
+const findBefore = (
+  from,
+  predicate,
+  { root = null, skipRoot = null } = {},
+) => {
   const iterator = createPreviousNodeIterator(from, root, skipRoot);
-  let {
-    done,
-    value: node
-  } = iterator.next();
+  let { done, value: node } = iterator.next();
   while (done === false) {
     if (predicate(node)) {
       return node;
     }
-    ({
-      done,
-      value: node
-    } = iterator.next());
+    ({ done, value: node } = iterator.next());
   }
   return null;
 };
+
 const getNextNode = (node, rootNode, skipChild = false, skipRoot = null) => {
   if (!skipChild) {
     const firstChild = node.firstChild;
     if (firstChild) {
       // If the first child is skipRoot or inside skipRoot, skip it
-      if (skipRoot && (firstChild === skipRoot || skipRoot.contains(firstChild))) {
+      if (
+        skipRoot &&
+        (firstChild === skipRoot || skipRoot.contains(firstChild))
+      ) {
         // Skip this entire subtree by going to next sibling or up
         return getNextNode(node, rootNode, true, skipRoot);
       }
       return firstChild;
     }
   }
+
   const nextSibling = node.nextSibling;
   if (nextSibling) {
     // If next sibling is skipRoot, skip it entirely
@@ -1012,27 +1102,39 @@ const getNextNode = (node, rootNode, skipChild = false, skipRoot = null) => {
     }
     return nextSibling;
   }
+
   const parentNode = node.parentNode;
   if (parentNode && parentNode !== rootNode) {
     return getNextNode(parentNode, rootNode, true, skipRoot);
   }
+
   return null;
 };
+
 const createNextNodeIterator = (node, rootNode, skipRoot = null) => {
   let current = node;
   const next = (innerSkipChildren = false) => {
-    const nextNode = getNextNode(current, rootNode, innerSkipChildren, skipRoot);
+    const nextNode = getNextNode(
+      current,
+      rootNode,
+      innerSkipChildren,
+      skipRoot,
+    );
     current = nextNode;
     return {
       done: Boolean(nextNode) === false,
-      value: nextNode
+      value: nextNode,
     };
   };
-  return {
-    next
-  };
+  return { next };
 };
-const createAfterNodeIterator = (fromNode, rootNode, skipChildren = false, skipRoot = null) => {
+
+const createAfterNodeIterator = (
+  fromNode,
+  rootNode,
+  skipChildren = false,
+  skipRoot = null,
+) => {
   let current = fromNode;
   let childrenSkipped = false;
 
@@ -1042,24 +1144,32 @@ const createAfterNodeIterator = (fromNode, rootNode, skipChildren = false, skipR
     childrenSkipped = true; // Mark that we've already "processed" this node
     skipChildren = true; // Force skip children to exit the skipRoot subtree
   }
+
   const next = (innerSkipChildren = false) => {
-    const nextNode = getNextNode(current, rootNode, skipChildren && childrenSkipped === false || innerSkipChildren, skipRoot);
+    const nextNode = getNextNode(
+      current,
+      rootNode,
+      (skipChildren && childrenSkipped === false) || innerSkipChildren,
+      skipRoot,
+    );
     childrenSkipped = true;
     current = nextNode;
     return {
       done: Boolean(nextNode) === false,
-      value: nextNode
+      value: nextNode,
     };
   };
-  return {
-    next
-  };
+  return { next };
 };
+
 const getDeepestNode = (node, skipRoot = null) => {
   let deepestNode = node.lastChild;
   while (deepestNode) {
     // If we hit skipRoot or enter its subtree, stop going deeper
-    if (skipRoot && (deepestNode === skipRoot || skipRoot.contains(deepestNode))) {
+    if (
+      skipRoot &&
+      (deepestNode === skipRoot || skipRoot.contains(deepestNode))
+    ) {
       // Try the previous sibling instead
       const previousSibling = deepestNode.previousSibling;
       if (previousSibling) {
@@ -1068,6 +1178,7 @@ const getDeepestNode = (node, skipRoot = null) => {
       // If no previous sibling, return the parent (which should be safe)
       return deepestNode.parentNode === node ? null : deepestNode.parentNode;
     }
+
     const lastChild = deepestNode.lastChild;
     if (lastChild) {
       deepestNode = lastChild;
@@ -1077,6 +1188,7 @@ const getDeepestNode = (node, skipRoot = null) => {
   }
   return deepestNode;
 };
+
 const getPreviousNode = (node, rootNode, skipRoot = null) => {
   const previousSibling = node.previousSibling;
   if (previousSibling) {
@@ -1084,13 +1196,19 @@ const getPreviousNode = (node, rootNode, skipRoot = null) => {
     if (skipRoot && previousSibling === skipRoot) {
       return getPreviousNode(previousSibling, rootNode, skipRoot);
     }
+
     const deepestChild = getDeepestNode(previousSibling, skipRoot);
 
     // Check if deepest child is inside skipRoot (shouldn't happen with updated getDeepestNode, but safe check)
-    if (skipRoot && deepestChild && (deepestChild === skipRoot || skipRoot.contains(deepestChild))) {
+    if (
+      skipRoot &&
+      deepestChild &&
+      (deepestChild === skipRoot || skipRoot.contains(deepestChild))
+    ) {
       // Skip this sibling entirely and try the next one
       return getPreviousNode(previousSibling, rootNode, skipRoot);
     }
+
     if (deepestChild) {
       return deepestChild;
     }
@@ -1104,6 +1222,7 @@ const getPreviousNode = (node, rootNode, skipRoot = null) => {
   }
   return null;
 };
+
 const createPreviousNodeIterator = (fromNode, rootNode, skipRoot = null) => {
   let current = fromNode;
 
@@ -1111,39 +1230,46 @@ const createPreviousNodeIterator = (fromNode, rootNode, skipRoot = null) => {
   if (skipRoot && (fromNode === skipRoot || skipRoot.contains(fromNode))) {
     current = skipRoot;
   }
+
   const next = () => {
     const previousNode = getPreviousNode(current, rootNode, skipRoot);
     current = previousNode;
     return {
       done: Boolean(previousNode) === false,
-      value: previousNode
+      value: previousNode,
     };
   };
   return {
-    next
+    next,
   };
 };
 
 const activeElementSignal = signal(document.activeElement);
-document.addEventListener("focus", () => {
-  activeElementSignal.value = document.activeElement;
-}, {
-  capture: true
-});
+
+document.addEventListener(
+  "focus",
+  () => {
+    activeElementSignal.value = document.activeElement;
+  },
+  { capture: true },
+);
 // When clicking on document there is no "focus" event dispatched on the document
 // We can detect that with "blur" event when relatedTarget is null
-document.addEventListener("blur", e => {
-  if (!e.relatedTarget) {
-    activeElementSignal.value = document.activeElement;
-  }
-}, {
-  capture: true
-});
+document.addEventListener(
+  "blur",
+  (e) => {
+    if (!e.relatedTarget) {
+      activeElementSignal.value = document.activeElement;
+    }
+  },
+  { capture: true },
+);
+
 const useActiveElement = () => {
   return activeElementSignal.value;
 };
 
-const elementIsVisible = node => {
+const elementIsVisible = (node) => {
   if (isDocumentElement(node)) {
     return true;
   }
@@ -1171,7 +1297,7 @@ const elementIsVisible = node => {
   return true;
 };
 
-const elementIsFocusable = node => {
+const elementIsFocusable = (node) => {
   // only element node can be focused, document, textNodes etc cannot
   if (node.nodeType !== 1) {
     return false;
@@ -1186,7 +1312,10 @@ const elementIsFocusable = node => {
     }
     return elementIsVisible(node);
   }
-  if (["button", "select", "datalist", "iframe", "textarea"].indexOf(nodeName) > -1) {
+  if (
+    ["button", "select", "datalist", "iframe", "textarea"].indexOf(nodeName) >
+    -1
+  ) {
     return elementIsVisible(node);
   }
   if (["a", "area"].indexOf(nodeName) > -1) {
@@ -1212,7 +1341,8 @@ const elementIsFocusable = node => {
   }
   return false;
 };
-const canInteract = element => {
+
+const canInteract = (element) => {
   if (element.disabled) {
     return false;
   }
@@ -1223,7 +1353,7 @@ const canInteract = element => {
   return true;
 };
 
-const findFocusable = element => {
+const findFocusable = (element) => {
   const associatedElements = getAssociatedElements(element);
   if (associatedElements) {
     for (const associatedElement of associatedElements) {
@@ -1241,10 +1371,15 @@ const findFocusable = element => {
   return focusableDescendant;
 };
 
-const canInterceptKeys = event => {
+const canInterceptKeys = (event) => {
   const target = event.target;
   // Don't handle shortcuts when user is typing
-  if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.contentEditable === "true" || target.isContentEditable) {
+  if (
+    target.tagName === "INPUT" ||
+    target.tagName === "TEXTAREA" ||
+    target.contentEditable === "true" ||
+    target.isContentEditable
+  ) {
     return false;
   }
   // Don't handle shortcuts when select dropdown is open
@@ -1252,7 +1387,12 @@ const canInterceptKeys = event => {
     return false;
   }
   // Don't handle shortcuts when target or container is disabled
-  if (target.disabled || target.closest("[disabled]") || target.inert || target.closest("[inert]")) {
+  if (
+    target.disabled ||
+    target.closest("[disabled]") ||
+    target.inert ||
+    target.closest("[inert]")
+  ) {
     return false;
   }
   return true;
@@ -1260,42 +1400,46 @@ const canInterceptKeys = event => {
 
 // WeakMap to store focus group metadata
 const focusGroupRegistry = new WeakMap();
+
 const setFocusGroup = (element, options) => {
   focusGroupRegistry.set(element, options);
   return () => {
     focusGroupRegistry.delete(element);
   };
 };
-const getFocusGroup = element => {
+const getFocusGroup = (element) => {
   return focusGroupRegistry.get(element);
 };
 
-const createEventMarker = symbolName => {
+const createEventMarker = (symbolName) => {
   const symbol = Symbol.for(symbolName);
-  const isMarked = event => {
+
+  const isMarked = (event) => {
     return Boolean(event[symbol]);
   };
+
   return {
-    mark: event => {
+    mark: (event) => {
       event[symbol] = true;
     },
-    isMarked
+    isMarked,
   };
 };
 
 const focusNavEventMarker = createEventMarker("focus_nav");
-const isFocusNavMarked = event => {
+
+const isFocusNavMarked = (event) => {
   return focusNavEventMarker.isMarked(event);
 };
-const markFocusNav = event => {
+const markFocusNav = (event) => {
   focusNavEventMarker.mark(event);
 };
 
-const performArrowNavigation = (event, element, {
-  direction = "both",
-  loop,
-  name
-} = {}) => {
+const performArrowNavigation = (
+  event,
+  element,
+  { direction = "both", loop, name } = {},
+) => {
   if (!canInterceptKeys(event)) {
     return false;
   }
@@ -1305,8 +1449,14 @@ const performArrowNavigation = (event, element, {
     // (and it would prevent scroll via keyboard that we might want here)
     return true;
   }
-  const onTargetToFocus = targetToFocus => {
-    console.debug("Arrow navigation: ".concat(event.key, " from"), activeElement, "to", targetToFocus);
+
+  const onTargetToFocus = (targetToFocus) => {
+    console.debug(
+      `Arrow navigation: ${event.key} from`,
+      activeElement,
+      "to",
+      targetToFocus,
+    );
     event.preventDefault();
     markFocusNav(event);
     targetToFocus.focus();
@@ -1315,19 +1465,18 @@ const performArrowNavigation = (event, element, {
   // Grid navigation: we support only TABLE element for now
   // A role="table" or an element with display: table could be used too but for now we need only TABLE support
   if (element.tagName === "TABLE") {
-    const targetInGrid = getTargetInTableFocusGroup(event, element, {
-      loop
-    });
+    const targetInGrid = getTargetInTableFocusGroup(event, element, { loop });
     if (!targetInGrid) {
       return false;
     }
     onTargetToFocus(targetInGrid);
     return true;
   }
+
   const targetInLinearGroup = getTargetInLinearFocusGroup(event, element, {
     direction,
     loop,
-    name
+    name,
   });
   if (!targetInLinearGroup) {
     return false;
@@ -1335,18 +1484,21 @@ const performArrowNavigation = (event, element, {
   onTargetToFocus(targetInLinearGroup);
   return true;
 };
-const getTargetInLinearFocusGroup = (event, element, {
-  direction,
-  loop,
-  name
-}) => {
+
+const getTargetInLinearFocusGroup = (
+  event,
+  element,
+  { direction, loop, name },
+) => {
   const activeElement = document.activeElement;
 
   // Check for Cmd/Ctrl + arrow keys for jumping to start/end of linear group
   const isJumpToEnd = event.metaKey || event.ctrlKey;
+
   if (isJumpToEnd) {
     return getJumpToEndTargetLinear(event, element, direction);
   }
+
   const isForward = isForwardArrow(event, direction);
 
   // Arrow Left/Up: move to previous focusable element in group
@@ -1355,19 +1507,22 @@ const getTargetInLinearFocusGroup = (event, element, {
       break backward;
     }
     const previousElement = findBefore(activeElement, elementIsFocusable, {
-      root: element
+      root: element,
     });
     if (previousElement) {
       return previousElement;
     }
     const ancestorTarget = delegateArrowNavigation(event, element, {
-      name
+      name,
     });
     if (ancestorTarget) {
       return ancestorTarget;
     }
     if (loop) {
-      const lastFocusableElement = findLastDescendant(element, elementIsFocusable);
+      const lastFocusableElement = findLastDescendant(
+        element,
+        elementIsFocusable,
+      );
       if (lastFocusableElement) {
         return lastFocusableElement;
       }
@@ -1381,13 +1536,13 @@ const getTargetInLinearFocusGroup = (event, element, {
       break forward;
     }
     const nextElement = findAfter(activeElement, elementIsFocusable, {
-      root: element
+      root: element,
     });
     if (nextElement) {
       return nextElement;
     }
     const ancestorTarget = delegateArrowNavigation(event, element, {
-      name
+      name,
     });
     if (ancestorTarget) {
       return ancestorTarget;
@@ -1401,12 +1556,11 @@ const getTargetInLinearFocusGroup = (event, element, {
     }
     return null;
   }
+
   return null;
 };
 // Find parent focus group with the same name and try delegation
-const delegateArrowNavigation = (event, currentElement, {
-  name
-}) => {
+const delegateArrowNavigation = (event, currentElement, { name }) => {
   let ancestorElement = currentElement.parentElement;
   while (ancestorElement) {
     const ancestorFocusGroup = getFocusGroup(ancestorElement);
@@ -1416,15 +1570,17 @@ const delegateArrowNavigation = (event, currentElement, {
     }
 
     // Check if groups should delegate to each other
-    const shouldDelegate = name === undefined && ancestorFocusGroup.name === undefined ? true // Both unnamed - delegate based on ancestor relationship
-    : ancestorFocusGroup.name === name; // Both have same explicit name
+    const shouldDelegate =
+      name === undefined && ancestorFocusGroup.name === undefined
+        ? true // Both unnamed - delegate based on ancestor relationship
+        : ancestorFocusGroup.name === name; // Both have same explicit name
 
     if (shouldDelegate) {
       // Try navigation in parent focus group
       return getTargetInLinearFocusGroup(event, ancestorElement, {
         direction: ancestorFocusGroup.direction,
         loop: ancestorFocusGroup.loop,
-        name: ancestorFocusGroup.name
+        name: ancestorFocusGroup.name,
       });
     }
   }
@@ -1437,21 +1593,25 @@ const getJumpToEndTargetLinear = (event, element, direction) => {
   if (!isForwardArrow(event, direction) && !isBackwardArrow(event, direction)) {
     return null;
   }
+
   if (isBackwardArrow(event, direction)) {
     // Jump to first focusable element in the group
     return findDescendant(element, elementIsFocusable);
   }
+
   if (isForwardArrow(event, direction)) {
     // Jump to last focusable element in the group
     return findLastDescendant(element, elementIsFocusable);
   }
+
   return null;
 };
+
 const isBackwardArrow = (event, direction = "both") => {
   const backwardKeys = {
     both: ["ArrowLeft", "ArrowUp"],
     vertical: ["ArrowUp"],
-    horizontal: ["ArrowLeft"]
+    horizontal: ["ArrowLeft"],
   };
   return backwardKeys[direction]?.includes(event.key) ?? false;
 };
@@ -1459,22 +1619,26 @@ const isForwardArrow = (event, direction = "both") => {
   const forwardKeys = {
     both: ["ArrowRight", "ArrowDown"],
     vertical: ["ArrowDown"],
-    horizontal: ["ArrowRight"]
+    horizontal: ["ArrowRight"],
   };
   return forwardKeys[direction]?.includes(event.key) ?? false;
 };
 
 // Handle arrow navigation inside an HTMLTableElement as a grid.
 // Moves focus to adjacent cell in the direction of the arrow key.
-const getTargetInTableFocusGroup = (event, table, {
-  loop
-}) => {
+const getTargetInTableFocusGroup = (event, table, { loop }) => {
   const arrowKey = event.key;
 
   // Only handle arrow keys
-  if (arrowKey !== "ArrowRight" && arrowKey !== "ArrowLeft" && arrowKey !== "ArrowUp" && arrowKey !== "ArrowDown") {
+  if (
+    arrowKey !== "ArrowRight" &&
+    arrowKey !== "ArrowLeft" &&
+    arrowKey !== "ArrowUp" &&
+    arrowKey !== "ArrowDown"
+  ) {
     return null;
   }
+
   const focusedElement = document.activeElement;
   const currentCell = focusedElement?.closest?.("td,th");
 
@@ -1486,13 +1650,21 @@ const getTargetInTableFocusGroup = (event, table, {
   // Get the current position in the table grid
   const currentRow = currentCell.parentElement; // tr element
   const allRows = Array.from(table.rows);
-  const currentRowIndex = /** @type {HTMLTableRowElement} */currentRow.rowIndex;
-  const currentColumnIndex = /** @type {HTMLTableCellElement} */currentCell.cellIndex;
+  const currentRowIndex = /** @type {HTMLTableRowElement} */ (currentRow)
+    .rowIndex;
+  const currentColumnIndex = /** @type {HTMLTableCellElement} */ (currentCell)
+    .cellIndex;
 
   // Check for Cmd/Ctrl + arrow keys for jumping to end of row/column
   const isJumpToEnd = event.metaKey || event.ctrlKey;
+
   if (isJumpToEnd) {
-    return getJumpToEndTarget(arrowKey, allRows, currentRowIndex, currentColumnIndex);
+    return getJumpToEndTarget(
+      arrowKey,
+      allRows,
+      currentRowIndex,
+      currentColumnIndex,
+    );
   }
 
   // Create an iterator that will scan through cells in the arrow direction
@@ -1500,9 +1672,8 @@ const getTargetInTableFocusGroup = (event, table, {
   const candidateCells = createTableCellIterator(arrowKey, allRows, {
     startRow: currentRowIndex,
     startColumn: currentColumnIndex,
-    originalColumn: currentColumnIndex,
-    // Used to maintain column alignment for vertical moves
-    loopMode: normalizeLoop(loop)
+    originalColumn: currentColumnIndex, // Used to maintain column alignment for vertical moves
+    loopMode: normalizeLoop(loop),
   });
 
   // Find the first cell that is itself focusable
@@ -1511,11 +1682,17 @@ const getTargetInTableFocusGroup = (event, table, {
       return candidateCell;
     }
   }
+
   return null; // No focusable cell found
 };
 
 // Handle Cmd/Ctrl + arrow keys to jump to the end of row/column
-const getJumpToEndTarget = (arrowKey, allRows, currentRowIndex, currentColumnIndex) => {
+const getJumpToEndTarget = (
+  arrowKey,
+  allRows,
+  currentRowIndex,
+  currentColumnIndex,
+) => {
   if (arrowKey === "ArrowRight") {
     // Jump to last focusable cell in current row
     const currentRow = allRows[currentRowIndex];
@@ -1531,10 +1708,12 @@ const getJumpToEndTarget = (arrowKey, allRows, currentRowIndex, currentColumnInd
     }
     return null;
   }
+
   if (arrowKey === "ArrowLeft") {
     // Jump to first focusable cell in current row
     const currentRow = allRows[currentRowIndex];
     if (!currentRow) return null;
+
     const cells = Array.from(currentRow.cells);
     for (const cell of cells) {
       if (elementIsFocusable(cell)) {
@@ -1543,6 +1722,7 @@ const getJumpToEndTarget = (arrowKey, allRows, currentRowIndex, currentColumnInd
     }
     return null;
   }
+
   if (arrowKey === "ArrowDown") {
     // Jump to last focusable cell in current column
     for (let rowIndex = allRows.length - 1; rowIndex >= 0; rowIndex--) {
@@ -1554,6 +1734,7 @@ const getJumpToEndTarget = (arrowKey, allRows, currentRowIndex, currentColumnInd
     }
     return null;
   }
+
   if (arrowKey === "ArrowUp") {
     // Jump to first focusable cell in current column
     for (let rowIndex = 0; rowIndex < allRows.length; rowIndex++) {
@@ -1565,17 +1746,17 @@ const getJumpToEndTarget = (arrowKey, allRows, currentRowIndex, currentColumnInd
     }
     return null;
   }
+
   return null;
 };
 
 // Create an iterator that yields table cells in the direction of arrow key movement.
 // This scans through cells until it finds one with a focusable element or completes a full loop.
-const createTableCellIterator = function* (arrowKey, allRows, {
-  startRow,
-  startColumn,
-  originalColumn,
-  loopMode
-}) {
+const createTableCellIterator = function* (
+  arrowKey,
+  allRows,
+  { startRow, startColumn, originalColumn, loopMode },
+) {
   if (allRows.length === 0) {
     return; // No rows to navigate
   }
@@ -1583,10 +1764,19 @@ const createTableCellIterator = function* (arrowKey, allRows, {
   // Keep track of which column we should prefer for vertical movements
   // This helps maintain column alignment when moving up/down through rows of different lengths
   let preferredColumn = originalColumn;
+
   const normalizedLoopMode = normalizeLoop(loopMode);
 
   // Helper function to calculate the next position based on current position and arrow key
-  const calculateNextPosition = (currentRow, currentColumn) => getNextTablePosition(arrowKey, allRows, currentRow, currentColumn, preferredColumn, normalizedLoopMode);
+  const calculateNextPosition = (currentRow, currentColumn) =>
+    getNextTablePosition(
+      arrowKey,
+      allRows,
+      currentRow,
+      currentColumn,
+      preferredColumn,
+      normalizedLoopMode,
+    );
 
   // Start by calculating the first position to move to
   let nextPosition = calculateNextPosition(startRow, startColumn);
@@ -1595,7 +1785,8 @@ const createTableCellIterator = function* (arrowKey, allRows, {
   }
 
   // Keep track of our actual starting position to detect when we've completed a full loop
-  const actualStartingPosition = "".concat(startRow, ":").concat(startColumn);
+  const actualStartingPosition = `${startRow}:${startColumn}`;
+
   while (true) {
     const [nextColumn, nextRow] = nextPosition; // Destructure [column, row]
     const targetRow = allRows[nextRow];
@@ -1641,7 +1832,7 @@ const createTableCellIterator = function* (arrowKey, allRows, {
     }
 
     // Check if we've completed a full loop by returning to our actual starting position
-    const currentPositionKey = "".concat(nextRow, ":").concat(nextColumn);
+    const currentPositionKey = `${nextRow}:${nextColumn}`;
     if (currentPositionKey === actualStartingPosition) {
       return; // We've gone full circle back to where we started
     }
@@ -1649,19 +1840,26 @@ const createTableCellIterator = function* (arrowKey, allRows, {
 };
 
 // Normalize loop option to a mode string or false
-const normalizeLoop = loop => {
+const normalizeLoop = (loop) => {
   if (loop === true) return "wrap";
   if (loop === "wrap") return "wrap";
   if (loop === "flow") return "flow";
   return false;
 };
-const getMaxColumns = rows => rows.reduce((max, r) => Math.max(max, r?.cells?.length || 0), 0);
+
+const getMaxColumns = (rows) =>
+  rows.reduce((max, r) => Math.max(max, r?.cells?.length || 0), 0);
 
 // Calculate the next row and column position when moving in a table with arrow keys.
 // Returns [column, row] for the next position, or null if movement is not possible.
-const getNextTablePosition = (arrowKey, allRows, currentRow, currentColumn, preferredColumn,
-// Used for vertical movement to maintain column alignment
-loopMode) => {
+const getNextTablePosition = (
+  arrowKey,
+  allRows,
+  currentRow,
+  currentColumn,
+  preferredColumn, // Used for vertical movement to maintain column alignment
+  loopMode,
+) => {
   if (arrowKey === "ArrowRight") {
     const currentRowLength = allRows[currentRow]?.cells?.length || 0;
     const nextColumn = currentColumn + 1;
@@ -1680,6 +1878,7 @@ loopMode) => {
       }
       return [0, nextRow]; // [column, row]
     }
+
     if (loopMode === "wrap") {
       // Wrap mode: stay in same row, wrap to first column
       return [0, currentRow]; // [column, row]
@@ -1688,6 +1887,7 @@ loopMode) => {
     // No looping: can't move
     return null;
   }
+
   if (arrowKey === "ArrowLeft") {
     const previousColumn = currentColumn - 1;
 
@@ -1707,6 +1907,7 @@ loopMode) => {
       const lastColumnInPreviousRow = Math.max(0, previousRowLength - 1);
       return [lastColumnInPreviousRow, previousRow]; // [column, row]
     }
+
     if (loopMode === "wrap") {
       // Wrap mode: stay in same row, wrap to last column
       const currentRowLength = allRows[currentRow]?.cells?.length || 0;
@@ -1717,6 +1918,7 @@ loopMode) => {
     // No looping: can't move
     return null;
   }
+
   if (arrowKey === "ArrowDown") {
     const nextRow = currentRow + 1;
 
@@ -1724,7 +1926,10 @@ loopMode) => {
     if (nextRow < allRows.length) {
       const nextRowLength = allRows[nextRow]?.cells?.length || 0;
       // Try to maintain the preferred column, but clamp to row length
-      const targetColumn = Math.min(preferredColumn, Math.max(0, nextRowLength - 1));
+      const targetColumn = Math.min(
+        preferredColumn,
+        Math.max(0, nextRowLength - 1),
+      );
       return [targetColumn, nextRow]; // [column, row]
     }
 
@@ -1737,19 +1942,27 @@ loopMode) => {
         nextColumnInFlow = 0; // Wrap to first column
       }
       const topRowLength = allRows[0]?.cells?.length || 0;
-      const clampedColumn = Math.min(nextColumnInFlow, Math.max(0, topRowLength - 1));
+      const clampedColumn = Math.min(
+        nextColumnInFlow,
+        Math.max(0, topRowLength - 1),
+      );
       return [clampedColumn, 0]; // [column, row]
     }
+
     if (loopMode === "wrap") {
       // Wrap mode: go to top row, maintaining preferred column
       const topRowLength = allRows[0]?.cells?.length || 0;
-      const targetColumn = Math.min(preferredColumn, Math.max(0, topRowLength - 1));
+      const targetColumn = Math.min(
+        preferredColumn,
+        Math.max(0, topRowLength - 1),
+      );
       return [targetColumn, 0]; // [column, row]
     }
 
     // No looping: can't move
     return null;
   }
+
   if (arrowKey === "ArrowUp") {
     const previousRow = currentRow - 1;
 
@@ -1757,7 +1970,10 @@ loopMode) => {
     if (previousRow >= 0) {
       const previousRowLength = allRows[previousRow]?.cells?.length || 0;
       // Try to maintain the preferred column, but clamp to row length
-      const targetColumn = Math.min(preferredColumn, Math.max(0, previousRowLength - 1));
+      const targetColumn = Math.min(
+        preferredColumn,
+        Math.max(0, previousRowLength - 1),
+      );
       return [targetColumn, previousRow]; // [column, row]
     }
 
@@ -1773,14 +1989,21 @@ loopMode) => {
       }
       const bottomRowIndex = allRows.length - 1;
       const bottomRowLength = allRows[bottomRowIndex]?.cells?.length || 0;
-      const clampedColumn = Math.min(previousColumnInFlow, Math.max(0, bottomRowLength - 1));
+      const clampedColumn = Math.min(
+        previousColumnInFlow,
+        Math.max(0, bottomRowLength - 1),
+      );
       return [clampedColumn, bottomRowIndex]; // [column, row]
     }
+
     if (loopMode === "wrap") {
       // Wrap mode: go to bottom row, maintaining preferred column
       const bottomRowIndex = allRows.length - 1;
       const bottomRowLength = allRows[bottomRowIndex]?.cells?.length || 0;
-      const targetColumn = Math.min(preferredColumn, Math.max(0, bottomRowLength - 1));
+      const targetColumn = Math.min(
+        preferredColumn,
+        Math.max(0, bottomRowLength - 1),
+      );
       return [targetColumn, bottomRowIndex]; // [column, row]
     }
 
@@ -1792,10 +2015,10 @@ loopMode) => {
   return null;
 };
 
-const performTabNavigation = (event, {
-  rootElement = document.body,
-  outsideOfElement = null
-} = {}) => {
+const performTabNavigation = (
+  event,
+  { rootElement = document.body, outsideOfElement = null } = {},
+) => {
   if (!isTabEvent(event)) {
     return false;
   }
@@ -1805,22 +2028,33 @@ const performTabNavigation = (event, {
     return true;
   }
   const isForward = !event.shiftKey;
-  const onTargetToFocus = targetToFocus => {
-    console.debug("Tab navigation: ".concat(isForward ? "forward" : "backward", " from"), activeElement, "to", targetToFocus);
+  const onTargetToFocus = (targetToFocus) => {
+    console.debug(
+      `Tab navigation: ${isForward ? "forward" : "backward"} from`,
+      activeElement,
+      "to",
+      targetToFocus,
+    );
     event.preventDefault();
     markFocusNav(event);
     targetToFocus.focus();
   };
+
   {
-    console.debug("Tab navigation: ".concat(isForward ? "forward" : "backward", " from,"), activeElement);
+    console.debug(
+      `Tab navigation: ${isForward ? "forward" : "backward"} from,`,
+      activeElement,
+    );
   }
-  const predicate = candidate => {
+
+  const predicate = (candidate) => {
     const canBeFocusedByTab = isFocusableByTab(candidate);
     {
-      console.debug("Testing", candidate, "".concat(canBeFocusedByTab ? "✓" : "✗"));
+      console.debug(`Testing`, candidate, `${canBeFocusedByTab ? "✓" : "✗"}`);
     }
     return canBeFocusedByTab;
   };
+
   const activeElementIsRoot = activeElement === rootElement;
   forward: {
     if (!isForward) {
@@ -1828,7 +2062,7 @@ const performTabNavigation = (event, {
     }
     if (activeElementIsRoot) {
       const firstFocusableElement = findDescendant(activeElement, predicate, {
-        skipRoot: outsideOfElement
+        skipRoot: outsideOfElement,
       });
       if (firstFocusableElement) {
         return onTargetToFocus(firstFocusableElement);
@@ -1837,38 +2071,44 @@ const performTabNavigation = (event, {
     }
     const nextFocusableElement = findAfter(activeElement, predicate, {
       root: rootElement,
-      skipRoot: outsideOfElement
+      skipRoot: outsideOfElement,
     });
     if (nextFocusableElement) {
       return onTargetToFocus(nextFocusableElement);
     }
     const firstFocusableElement = findDescendant(activeElement, predicate, {
-      skipRoot: outsideOfElement
+      skipRoot: outsideOfElement,
     });
     if (firstFocusableElement) {
       return onTargetToFocus(firstFocusableElement);
     }
     return false;
   }
+
   {
     if (activeElementIsRoot) {
-      const lastFocusableElement = findLastDescendant(activeElement, predicate, {
-        skipRoot: outsideOfElement
-      });
+      const lastFocusableElement = findLastDescendant(
+        activeElement,
+        predicate,
+        {
+          skipRoot: outsideOfElement,
+        },
+      );
       if (lastFocusableElement) {
         return onTargetToFocus(lastFocusableElement);
       }
       return false;
     }
+
     const previousFocusableElement = findBefore(activeElement, predicate, {
       root: rootElement,
-      skipRoot: outsideOfElement
+      skipRoot: outsideOfElement,
     });
     if (previousFocusableElement) {
       return onTargetToFocus(previousFocusableElement);
     }
     const lastFocusableElement = findLastDescendant(activeElement, predicate, {
-      skipRoot: outsideOfElement
+      skipRoot: outsideOfElement,
     });
     if (lastFocusableElement) {
       return onTargetToFocus(lastFocusableElement);
@@ -1876,15 +2116,21 @@ const performTabNavigation = (event, {
     return false;
   }
 };
-const isTabEvent = event => event.key === "Tab" || event.keyCode === 9;
-const isFocusableByTab = element => {
+
+const isTabEvent = (event) => event.key === "Tab" || event.keyCode === 9;
+
+const isFocusableByTab = (element) => {
   if (hasNegativeTabIndex(element)) {
     return false;
   }
   return elementIsFocusable(element);
 };
-const hasNegativeTabIndex = element => {
-  return element.hasAttribute && element.hasAttribute("tabIndex") && Number(element.getAttribute("tabindex")) < 0;
+const hasNegativeTabIndex = (element) => {
+  return (
+    element.hasAttribute &&
+    element.hasAttribute("tabIndex") &&
+    Number(element.getAttribute("tabindex")) < 0
+  );
 };
 
 /**
@@ -1896,13 +2142,17 @@ const hasNegativeTabIndex = element => {
  - https://github.com/MicrosoftEdge/MSEdgeExplainers/blob/main/Focusgroup/explainer.md#69-grid-focusgroups
  */
 
-const initFocusGroup = (element, {
-  direction = "both",
-  // extend = true,
-  skipTab = true,
-  loop = false,
-  name // Can be undefined for implicit ancestor-descendant grouping
-} = {}) => {
+
+const initFocusGroup = (
+  element,
+  {
+    direction = "both",
+    // extend = true,
+    skipTab = true,
+    loop = false,
+    name, // Can be undefined for implicit ancestor-descendant grouping
+  } = {},
+) => {
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
     for (const callback of cleanupCallbackSet) {
@@ -1915,89 +2165,76 @@ const initFocusGroup = (element, {
   const removeFocusGroup = setFocusGroup(element, {
     direction,
     loop,
-    name // Store undefined as-is for implicit grouping
+    name, // Store undefined as-is for implicit grouping
   });
   cleanupCallbackSet.add(removeFocusGroup);
+
   tab: {
     if (!skipTab) {
       break tab;
     }
-    const handleTabKeyDown = event => {
+    const handleTabKeyDown = (event) => {
       if (isFocusNavMarked(event)) {
         // Prevent double handling of the same event + allow preventing focus nav from outside
         return;
       }
-      performTabNavigation(event, {
-        outsideOfElement: element
-      });
+      performTabNavigation(event, { outsideOfElement: element });
     };
     // Handle Tab navigation (exit group)
     element.addEventListener("keydown", handleTabKeyDown, {
       // we must use capture: false to let chance for other part of the code
       // to call preventFocusNav
       capture: false,
-      passive: false
+      passive: false,
     });
     cleanupCallbackSet.add(() => {
       element.removeEventListener("keydown", handleTabKeyDown, {
         capture: false,
-        passive: false
+        passive: false,
       });
     });
   }
 
   // Handle Arrow key navigation (within group)
   {
-    const handleArrowKeyDown = event => {
+    const handleArrowKeyDown = (event) => {
       if (isFocusNavMarked(event)) {
         // Prevent double handling of the same event + allow preventing focus nav from outside
         return;
       }
-      performArrowNavigation(event, element, {
-        direction,
-        loop,
-        name
-      });
+      performArrowNavigation(event, element, { direction, loop, name });
     };
     element.addEventListener("keydown", handleArrowKeyDown, {
       // we must use capture: false to let chance for other part of the code
       // to call preventFocusNav
       capture: false,
-      passive: false
+      passive: false,
     });
     cleanupCallbackSet.add(() => {
       element.removeEventListener("keydown", handleArrowKeyDown, {
         capture: false,
-        passive: false
+        passive: false,
       });
     });
   }
-  return {
-    cleanup
-  };
+
+  return { cleanup };
 };
 
 // note: keep in mind that an element with overflow: 'hidden' is scrollable
 // it can be scrolled using keyboard arrows or JavaScript properties such as scrollTop, scrollLeft
 // the only overflow that prevents scroll is "visible"
-const isScrollable = (element, {
-  includeHidden
-} = {}) => {
-  if (canHaveVerticalScroll(element, {
-    includeHidden
-  })) {
+const isScrollable = (element, { includeHidden } = {}) => {
+  if (canHaveVerticalScroll(element, { includeHidden })) {
     return true;
   }
-  if (canHaveHorizontalScroll(element, {
-    includeHidden
-  })) {
+  if (canHaveHorizontalScroll(element, { includeHidden })) {
     return true;
   }
   return false;
 };
-const canHaveVerticalScroll = (element, {
-  includeHidden
-}) => {
+
+const canHaveVerticalScroll = (element, { includeHidden }) => {
   const verticalOverflow = getStyle(element, "overflow-y");
   if (verticalOverflow === "visible") {
     // browser returns "visible" on documentElement even if it is scrollable
@@ -2022,9 +2259,7 @@ const canHaveVerticalScroll = (element, {
   }
   return true; // "auto", "scroll"
 };
-const canHaveHorizontalScroll = (element, {
-  includeHidden
-}) => {
+const canHaveHorizontalScroll = (element, { includeHidden }) => {
   const horizontalOverflow = getStyle(element, "overflow-x");
   if (horizontalOverflow === "visible") {
     // browser returns "visible" on documentElement even if it is scrollable
@@ -2049,34 +2284,44 @@ const canHaveHorizontalScroll = (element, {
   }
   return true; // "auto", "scroll"
 };
-const getScrollingElement = document => {
-  const {
-    scrollingElement
-  } = document;
+
+const getScrollingElement = (document) => {
+  const { scrollingElement } = document;
   if (scrollingElement) {
     return scrollingElement;
   }
+
   if (isCompliant(document)) {
     return document.documentElement;
   }
+
   const body = document.body;
   const isFrameset = body && !/body/i.test(body.tagName);
   const possiblyScrollingElement = isFrameset ? getNextBodyElement(body) : body;
 
   // If `body` is itself scrollable, it is not the `scrollingElement`.
-  return possiblyScrollingElement && bodyIsScrollable(possiblyScrollingElement) ? null : possiblyScrollingElement;
+  return possiblyScrollingElement && bodyIsScrollable(possiblyScrollingElement)
+    ? null
+    : possiblyScrollingElement;
 };
-const isHidden = element => {
+
+const isHidden = (element) => {
   const display = getStyle(element, "display");
   if (display === "none") {
     return false;
   }
-  if (display === "table-row" || display === "table-group" || display === "table-column") {
+
+  if (
+    display === "table-row" ||
+    display === "table-group" ||
+    display === "table-column"
+  ) {
     return getStyle(element, "visibility") !== "collapsed";
   }
+
   return true;
 };
-const isCompliant = document => {
+const isCompliant = (document) => {
   // Note: document.compatMode can be toggle at runtime by document.write
   const isStandardsMode = /^CSS1/.test(document.compatMode);
   if (isStandardsMode) {
@@ -2084,7 +2329,7 @@ const isCompliant = document => {
   }
   return false;
 };
-const testScrollCompliance = document => {
+const testScrollCompliance = (document) => {
   const iframe = document.createElement("iframe");
   iframe.style.height = "1px";
   const parentNode = document.body || document.documentElement || document;
@@ -2092,26 +2337,28 @@ const testScrollCompliance = document => {
   const iframeDocument = iframe.contentWindow.document;
   iframeDocument.write('<!DOCTYPE html><div style="height:9999em">x</div>');
   iframeDocument.close();
-  const scrollComplianceResult = iframeDocument.documentElement.scrollHeight > iframeDocument.body.scrollHeight;
+  const scrollComplianceResult =
+    iframeDocument.documentElement.scrollHeight >
+    iframeDocument.body.scrollHeight;
   iframe.parentNode.removeChild(iframe);
   return scrollComplianceResult;
 };
-const getNextBodyElement = frameset => {
+const getNextBodyElement = (frameset) => {
   // We use this function to be correct per spec in case `document.body` is
   // a `frameset` but there exists a later `body`. Since `document.body` is
   // a `frameset`, we know the root is an `html`, and there was no `body`
   // before the `frameset`, so we just need to look at siblings after the
   // `frameset`.
   let current = frameset;
-  while (current = current.nextSibling) {
+  while ((current = current.nextSibling)) {
     if (current.nodeType === 1 && isBodyElement(current)) {
       return current;
     }
   }
   return null;
 };
-const isBodyElement = element => element.ownerDocument.body === element;
-const bodyIsScrollable = body => {
+const isBodyElement = (element) => element.ownerDocument.body === element;
+const bodyIsScrollable = (body) => {
   // a body element is scrollable if body and html are scrollable and rendered
   if (!isScrollable(body)) {
     return false;
@@ -2119,6 +2366,7 @@ const bodyIsScrollable = body => {
   if (isHidden(body)) {
     return false;
   }
+
   const documentElement = body.ownerDocument.documentElement;
   if (!isScrollable(documentElement)) {
     return false;
@@ -2126,17 +2374,16 @@ const bodyIsScrollable = body => {
   if (isHidden(documentElement)) {
     return false;
   }
+
   return true;
 };
 
 // https://developer.mozilla.org/en-US/docs/Glossary/Scroll_container
 
-const {
-  documentElement: documentElement$2
-} = document;
-const getScrollContainer = (arg, {
-  includeHidden
-} = {}) => {
+
+const { documentElement: documentElement$2 } = document;
+
+const getScrollContainer = (arg, { includeHidden } = {}) => {
   if (typeof arg !== "object" || arg.nodeType !== 1) {
     throw new TypeError("getScrollContainer first argument must be DOM node");
   }
@@ -2145,9 +2392,7 @@ const getScrollContainer = (arg, {
     return null;
   }
   if (element === documentElement$2) {
-    if (isScrollable(element, {
-      includeHidden
-    })) {
+    if (isScrollable(element, { includeHidden })) {
       return element;
     }
     return null;
@@ -2156,13 +2401,13 @@ const getScrollContainer = (arg, {
   if (position === "fixed") {
     return getScrollingElement(element.ownerDocument);
   }
-  return findScrollContainer(element, {
-    includeHidden
-  }) || getScrollingElement(element.ownerDocument);
+  return (
+    findScrollContainer(element, { includeHidden }) ||
+    getScrollingElement(element.ownerDocument)
+  );
 };
-const findScrollContainer = (element, {
-  includeHidden
-} = {}) => {
+
+const findScrollContainer = (element, { includeHidden } = {}) => {
   const position = getStyle(element, "position");
   let parent = element.parentNode;
   // Si l'élément est en position absolute, d'abord trouver le premier parent positionné
@@ -2184,9 +2429,7 @@ const findScrollContainer = (element, {
     if (parent === document) {
       return null;
     }
-    if (isScrollable(parent, {
-      includeHidden
-    })) {
+    if (isScrollable(parent, { includeHidden })) {
       return parent;
     }
     parent = parent.parentNode;
@@ -2200,23 +2443,26 @@ const findScrollContainer = (element, {
  * finds and scrolls the appropriate scrollable container behind the overlay.
  */
 
+
 const allowWheelThrough = (element, connectedElement) => {
-  const isElementOrDescendant = possibleDescendant => {
-    return possibleDescendant === element || element.contains(possibleDescendant);
+  const isElementOrDescendant = (possibleDescendant) => {
+    return (
+      possibleDescendant === element || element.contains(possibleDescendant)
+    );
   };
   const tryToScrollOne = (element, wheelEvent) => {
     if (element === document.documentElement) {
       // let browser handle document scrolling
       return true;
     }
-    const {
-      deltaX,
-      deltaY
-    } = wheelEvent;
+
+    const { deltaX, deltaY } = wheelEvent;
     // we found what we want: a scrollable container behind the element
     // we try to scroll it.
-    const elementCanApplyScrollDeltaX = deltaX && canApplyScrollDelta(element, deltaX, "x");
-    const elementCanApplyScrollDeltaY = deltaY && canApplyScrollDelta(element, deltaY, "y");
+    const elementCanApplyScrollDeltaX =
+      deltaX && canApplyScrollDelta(element, deltaX, "x");
+    const elementCanApplyScrollDeltaY =
+      deltaY && canApplyScrollDelta(element, deltaY, "y");
     if (!elementCanApplyScrollDeltaX && !elementCanApplyScrollDeltaY) {
       return false;
     }
@@ -2232,15 +2478,20 @@ const allowWheelThrough = (element, connectedElement) => {
     applyWheelScrollThrough(element, wheelEvent);
     return true;
   };
+
   if (connectedElement) {
-    const onWheel = wheelEvent => {
+    const onWheel = (wheelEvent) => {
       const connectedScrollContainer = getScrollContainer(connectedElement);
       if (connectedScrollContainer === document.documentElement) {
         // the connected scrollable parent is the document
         // there is nothing to do, browser native scroll will work as we want
         return;
       }
-      const elementsBehindMouse = document.elementsFromPoint(wheelEvent.clientX, wheelEvent.clientY);
+
+      const elementsBehindMouse = document.elementsFromPoint(
+        wheelEvent.clientX,
+        wheelEvent.clientY,
+      );
       for (const elementBehindMouse of elementsBehindMouse) {
         const belongsToElement = isElementOrDescendant(elementBehindMouse);
         // try to scroll element itself
@@ -2258,8 +2509,12 @@ const allowWheelThrough = (element, connectedElement) => {
     element.addEventListener("wheel", onWheel);
     return;
   }
-  const onWheel = wheelEvent => {
-    const elementsBehindMouse = document.elementsFromPoint(wheelEvent.clientX, wheelEvent.clientY);
+
+  const onWheel = (wheelEvent) => {
+    const elementsBehindMouse = document.elementsFromPoint(
+      wheelEvent.clientX,
+      wheelEvent.clientY,
+    );
     for (const elementBehindMouse of elementsBehindMouse) {
       const belongsToElement = isElementOrDescendant(elementBehindMouse);
       // try to scroll element itself
@@ -2280,6 +2535,7 @@ const allowWheelThrough = (element, connectedElement) => {
   };
   element.addEventListener("wheel", onWheel);
 };
+
 const canApplyScrollDelta = (element, delta, axis) => {
   const {
     clientWidth,
@@ -2287,11 +2543,13 @@ const canApplyScrollDelta = (element, delta, axis) => {
     scrollWidth,
     scrollHeight,
     scrollLeft,
-    scrollTop
+    scrollTop,
   } = element;
+
   let size = axis === "x" ? clientWidth : clientHeight;
   let currentScroll = axis === "x" ? scrollLeft : scrollTop;
   let scrollEnd = axis === "x" ? scrollWidth : scrollHeight;
+
   if (size === scrollEnd) {
     // when scrollWidth === clientWidth, there is no scroll to apply
     return false;
@@ -2306,24 +2564,22 @@ const canApplyScrollDelta = (element, delta, axis) => {
   }
   return true;
 };
+
 const applyWheelScrollThrough = (element, wheelEvent) => {
   wheelEvent.preventDefault();
   element.scrollBy({
     top: wheelEvent.deltaY,
     left: wheelEvent.deltaX,
-    behavior: wheelEvent.deltaMode === 0 ? "auto" : "smooth" // optional tweak
+    behavior: wheelEvent.deltaMode === 0 ? "auto" : "smooth", // optional tweak
   });
 };
 
-const findSelfOrAncestorFixedPosition = element => {
+const findSelfOrAncestorFixedPosition = (element) => {
   let current = element;
   while (true) {
     const computedStyle = window.getComputedStyle(current);
     if (computedStyle.position === "fixed") {
-      const {
-        left,
-        top
-      } = current.getBoundingClientRect();
+      const { left, top } = current.getBoundingClientRect();
       return [left, top];
     }
     current = current.parentElement;
@@ -2373,62 +2629,89 @@ const findSelfOrAncestorFixedPosition = element => {
  * combination of positioning contexts, optimizing for performance and code clarity.
  */
 
-const createDragElementPositioner = (element, referenceElement, elementToMove) => {
+const createDragElementPositioner = (
+  element,
+  referenceElement,
+  elementToMove,
+) => {
   let scrollableLeft;
   let scrollableTop;
   let convertScrollablePosition;
-  const positionedParent = elementToMove ? elementToMove.offsetParent : element.offsetParent;
+
+  const positionedParent = elementToMove
+    ? elementToMove.offsetParent
+    : element.offsetParent;
   const scrollContainer = getScrollContainer(element);
   const [getPositionOffsets, getScrollOffsets] = createGetOffsets({
     positionedParent,
-    referencePositionedParent: referenceElement ? referenceElement.offsetParent : undefined,
+    referencePositionedParent: referenceElement
+      ? referenceElement.offsetParent
+      : undefined,
     scrollContainer,
-    referenceScrollContainer: referenceElement ? getScrollContainer(referenceElement) : undefined
+    referenceScrollContainer: referenceElement
+      ? getScrollContainer(referenceElement)
+      : undefined,
   });
+
   {
-    [scrollableLeft, scrollableTop] = getScrollablePosition(element, scrollContainer);
+    [scrollableLeft, scrollableTop] = getScrollablePosition(
+      element,
+      scrollContainer,
+    );
     const [positionOffsetLeft, positionOffsetTop] = getPositionOffsets();
     scrollableLeft += positionOffsetLeft;
     scrollableTop += positionOffsetTop;
   }
   {
-    convertScrollablePosition = (scrollableLeftToConvert, scrollableTopToConvert) => {
+    convertScrollablePosition = (
+      scrollableLeftToConvert,
+      scrollableTopToConvert,
+    ) => {
       const [positionOffsetLeft, positionOffsetTop] = getPositionOffsets();
       const [scrollOffsetLeft, scrollOffsetTop] = getScrollOffsets();
-      const positionedLeftWithoutScroll = scrollableLeftToConvert + positionOffsetLeft;
-      const positionedTopWithoutScroll = scrollableTopToConvert + positionOffsetTop;
+
+      const positionedLeftWithoutScroll =
+        scrollableLeftToConvert + positionOffsetLeft;
+      const positionedTopWithoutScroll =
+        scrollableTopToConvert + positionOffsetTop;
       const positionedLeft = positionedLeftWithoutScroll + scrollOffsetLeft;
       const positionedTop = positionedTopWithoutScroll + scrollOffsetTop;
+
       return [positionedLeft, positionedTop];
     };
   }
   return [scrollableLeft, scrollableTop, convertScrollablePosition];
 };
+
 const getScrollablePosition = (element, scrollContainer) => {
-  const {
-    left: elementViewportLeft,
-    top: elementViewportTop
-  } = element.getBoundingClientRect();
+  const { left: elementViewportLeft, top: elementViewportTop } =
+    element.getBoundingClientRect();
   const scrollContainerIsDocument = scrollContainer === documentElement$1;
   if (scrollContainerIsDocument) {
     return [elementViewportLeft, elementViewportTop];
   }
-  const {
-    left: scrollContainerLeft,
-    top: scrollContainerTop
-  } = scrollContainer.getBoundingClientRect();
+  const { left: scrollContainerLeft, top: scrollContainerTop } =
+    scrollContainer.getBoundingClientRect();
   const scrollableLeft = elementViewportLeft - scrollContainerLeft;
   const scrollableTop = elementViewportTop - scrollContainerTop;
+
   return [scrollableLeft, scrollableTop];
 };
+
 const createGetOffsets = ({
   positionedParent,
   referencePositionedParent = positionedParent,
   scrollContainer,
-  referenceScrollContainer = scrollContainer
+  referenceScrollContainer = scrollContainer,
 }) => {
   const samePositionedParent = positionedParent === referencePositionedParent;
-  const getScrollOffsets = createGetScrollOffsets(scrollContainer, referenceScrollContainer, positionedParent, samePositionedParent);
+  const getScrollOffsets = createGetScrollOffsets(
+    scrollContainer,
+    referenceScrollContainer,
+    positionedParent,
+    samePositionedParent,
+  );
+
   if (samePositionedParent) {
     return [() => [0, 0], getScrollOffsets];
   }
@@ -2440,28 +2723,34 @@ const createGetOffsets = ({
   // When overlay is absolute there is a diff relative to the scroll
   // and eventually if the overlay is positioned differently than the other parent
   if (isOverlayOf(positionedParent, referencePositionedParent)) {
-    return createGetOffsetsForOverlay(positionedParent, referencePositionedParent, {
-      scrollContainer,
-      referenceScrollContainer,
-      getScrollOffsets
-    });
+    return createGetOffsetsForOverlay(
+      positionedParent,
+      referencePositionedParent,
+      {
+        scrollContainer,
+        referenceScrollContainer,
+        getScrollOffsets,
+      },
+    );
   }
   if (isOverlayOf(referencePositionedParent, positionedParent)) {
-    return createGetOffsetsForOverlay(referencePositionedParent, positionedParent, {
-      scrollContainer,
-      referenceScrollContainer,
-      getScrollOffsets
-    });
+    return createGetOffsetsForOverlay(
+      referencePositionedParent,
+      positionedParent,
+      {
+        scrollContainer,
+        referenceScrollContainer,
+        getScrollOffsets,
+      },
+    );
   }
   const scrollContainerIsDocument = scrollContainer === documentElement$1;
   if (scrollContainerIsDocument) {
     // Document case: getBoundingClientRect already includes document scroll effects
     // Add current scroll position to get the static offset
     const getPositionOffsetsDocumentScrolling = () => {
-      const {
-        scrollLeft: documentScrollLeft,
-        scrollTop: documentScrollTop
-      } = scrollContainer;
+      const { scrollLeft: documentScrollLeft, scrollTop: documentScrollTop } =
+        scrollContainer;
       const aRect = positionedParent.getBoundingClientRect();
       const bRect = referencePositionedParent.getBoundingClientRect();
       const aLeft = aRect.left;
@@ -2486,21 +2775,27 @@ const createGetOffsets = ({
     const aTop = aRect.top;
     const bLeft = bRect.left;
     const bTop = bRect.top;
+
     const scrollContainerRect = scrollContainer.getBoundingClientRect();
-    const offsetLeft = bLeft - aLeft + scrollContainer.scrollLeft - scrollContainerRect.left;
-    const offsetTop = bTop - aTop + scrollContainer.scrollTop - scrollContainerRect.top;
+    const offsetLeft =
+      bLeft - aLeft + scrollContainer.scrollLeft - scrollContainerRect.left;
+    const offsetTop =
+      bTop - aTop + scrollContainer.scrollTop - scrollContainerRect.top;
     return [offsetLeft, offsetTop];
   };
   return [getPositionOffsetsCustomScrollContainer, getScrollOffsets];
 };
-const createGetOffsetsForOverlay = (overlay, overlayTarget, {
-  scrollContainer,
-  referenceScrollContainer,
-  getScrollOffsets
-}) => {
+const createGetOffsetsForOverlay = (
+  overlay,
+  overlayTarget,
+  { scrollContainer, referenceScrollContainer, getScrollOffsets },
+) => {
   const sameScrollContainer = scrollContainer === referenceScrollContainer;
-  const scrollContainerIsDocument = scrollContainer === document.documentElement;
-  const referenceScrollContainerIsDocument = referenceScrollContainer === documentElement$1;
+  const scrollContainerIsDocument =
+    scrollContainer === document.documentElement;
+  const referenceScrollContainerIsDocument =
+    referenceScrollContainer === documentElement$1;
+
   if (getComputedStyle(overlay).position === "fixed") {
     if (referenceScrollContainerIsDocument) {
       const getPositionOffsetsFixedOverlay = () => {
@@ -2510,17 +2805,24 @@ const createGetOffsetsForOverlay = (overlay, overlayTarget, {
     }
     const getPositionOffsetsFixedOverlay = () => {
       const scrollContainerRect = scrollContainer.getBoundingClientRect();
-      const referenceScrollContainerRect = referenceScrollContainer.getBoundingClientRect();
-      let offsetLeftBetweenScrollContainers = referenceScrollContainerRect.left - scrollContainerRect.left;
-      let offsetTopBetweenScrollContainers = referenceScrollContainerRect.top - scrollContainerRect.top;
+      const referenceScrollContainerRect =
+        referenceScrollContainer.getBoundingClientRect();
+      let offsetLeftBetweenScrollContainers =
+        referenceScrollContainerRect.left - scrollContainerRect.left;
+      let offsetTopBetweenScrollContainers =
+        referenceScrollContainerRect.top - scrollContainerRect.top;
       if (scrollContainerIsDocument) {
         offsetLeftBetweenScrollContainers -= scrollContainer.scrollLeft;
         offsetTopBetweenScrollContainers -= scrollContainer.scrollTop;
       }
-      return [-offsetLeftBetweenScrollContainers, -offsetTopBetweenScrollContainers];
+      return [
+        -offsetLeftBetweenScrollContainers,
+        -offsetTopBetweenScrollContainers,
+      ];
     };
     return [getPositionOffsetsFixedOverlay, getScrollOffsets];
   }
+
   const getPositionOffsetsOverlay = () => {
     if (sameScrollContainer) {
       const overlayRect = overlay.getBoundingClientRect();
@@ -2535,10 +2837,15 @@ const createGetOffsetsForOverlay = (overlay, overlayTarget, {
       }
       const offsetLeftBetweenTargetAndOverlay = overlayTargetLeft - overlayLeft;
       const offsetTopBetweenTargetAndOverlay = overlayTargetTop - overlayTop;
-      return [-scrollContainer.scrollLeft + offsetLeftBetweenTargetAndOverlay, -scrollContainer.scrollTop + offsetTopBetweenTargetAndOverlay];
+      return [
+        -scrollContainer.scrollLeft + offsetLeftBetweenTargetAndOverlay,
+        -scrollContainer.scrollTop + offsetTopBetweenTargetAndOverlay,
+      ];
     }
+
     const scrollContainerRect = scrollContainer.getBoundingClientRect();
-    const referenceScrollContainerRect = referenceScrollContainer.getBoundingClientRect();
+    const referenceScrollContainerRect =
+      referenceScrollContainer.getBoundingClientRect();
     let scrollContainerLeft = scrollContainerRect.left;
     let scrollContainerTop = scrollContainerRect.top;
     let referenceScrollContainerLeft = referenceScrollContainerRect.left;
@@ -2547,23 +2854,36 @@ const createGetOffsetsForOverlay = (overlay, overlayTarget, {
       scrollContainerLeft += scrollContainer.scrollLeft;
       scrollContainerTop += scrollContainer.scrollTop;
     }
-    const offsetLeftBetweenScrollContainers = referenceScrollContainerLeft - scrollContainerLeft;
-    const offsetTopBetweenScrollContainers = referenceScrollContainerTop - scrollContainerTop;
-    return [-offsetLeftBetweenScrollContainers - referenceScrollContainer.scrollLeft, -offsetTopBetweenScrollContainers - referenceScrollContainer.scrollTop];
+    const offsetLeftBetweenScrollContainers =
+      referenceScrollContainerLeft - scrollContainerLeft;
+    const offsetTopBetweenScrollContainers =
+      referenceScrollContainerTop - scrollContainerTop;
+    return [
+      -offsetLeftBetweenScrollContainers - referenceScrollContainer.scrollLeft,
+      -offsetTopBetweenScrollContainers - referenceScrollContainer.scrollTop,
+    ];
   };
   const getScrollOffsetsOverlay = () => {
     if (sameScrollContainer) {
       return [scrollContainer.scrollLeft, scrollContainer.scrollTop];
     }
+
     const scrollContainerRect = scrollContainer.getBoundingClientRect();
-    const referenceScrollContainerRect = referenceScrollContainer.getBoundingClientRect();
-    let offsetLeftBetweenScrollContainers = referenceScrollContainerRect.left - scrollContainerRect.left;
-    let offsetTopBetweenScrollContainers = referenceScrollContainerRect.top - scrollContainerRect.top;
+    const referenceScrollContainerRect =
+      referenceScrollContainer.getBoundingClientRect();
+    let offsetLeftBetweenScrollContainers =
+      referenceScrollContainerRect.left - scrollContainerRect.left;
+    let offsetTopBetweenScrollContainers =
+      referenceScrollContainerRect.top - scrollContainerRect.top;
     if (scrollContainerIsDocument) {
       offsetLeftBetweenScrollContainers -= scrollContainer.scrollLeft;
       offsetTopBetweenScrollContainers -= scrollContainer.scrollTop;
     }
-    return [referenceScrollContainer.scrollLeft + offsetLeftBetweenScrollContainers, referenceScrollContainer.scrollTop + offsetTopBetweenScrollContainers];
+
+    return [
+      referenceScrollContainer.scrollLeft + offsetLeftBetweenScrollContainers,
+      referenceScrollContainer.scrollTop + offsetTopBetweenScrollContainers,
+    ];
   };
   return [getPositionOffsetsOverlay, getScrollOffsetsOverlay];
 };
@@ -2572,7 +2892,7 @@ const isOverlayOf = (element, potentialTarget) => {
   if (!overlayForAttribute) {
     return false;
   }
-  const overlayTarget = document.querySelector("#".concat(overlayForAttribute));
+  const overlayTarget = document.querySelector(`#${overlayForAttribute}`);
   if (!overlayTarget) {
     return false;
   }
@@ -2585,23 +2905,23 @@ const isOverlayOf = (element, potentialTarget) => {
   }
   return false;
 };
-const {
-  documentElement: documentElement$1
-} = document;
-const createGetScrollOffsets = (scrollContainer, referenceScrollContainer, positionedParent, samePositionedParent) => {
+
+const { documentElement: documentElement$1 } = document;
+const createGetScrollOffsets = (
+  scrollContainer,
+  referenceScrollContainer,
+  positionedParent,
+  samePositionedParent,
+) => {
   const getGetScrollOffsetsSameContainer = () => {
     const scrollContainerIsDocument = scrollContainer === documentElement$1;
     // I don't really get why we have to add scrollLeft (scrollLeft at grab)
     // to properly position the element in this scenario
     // It happens since we use translateX to position the element
     // Or maybe since something else. In any case it works
-    const {
-      scrollLeft,
-      scrollTop
-    } = samePositionedParent ? {
-      scrollLeft: 0,
-      scrollTop: 0
-    } : referenceScrollContainer;
+    const { scrollLeft, scrollTop } = samePositionedParent
+      ? { scrollLeft: 0, scrollTop: 0 }
+      : referenceScrollContainer;
     if (scrollContainerIsDocument) {
       const fixedPosition = findSelfOrAncestorFixedPosition(positionedParent);
       if (fixedPosition) {
@@ -2620,6 +2940,7 @@ const createGetScrollOffsets = (scrollContainer, referenceScrollContainer, posit
     };
     return getScrollOffsets;
   };
+
   const sameScrollContainer = scrollContainer === referenceScrollContainer;
   const getScrollOffsetsSameContainer = getGetScrollOffsetsSameContainer();
   if (sameScrollContainer) {
@@ -2636,332 +2957,9 @@ const createGetScrollOffsets = (scrollContainer, referenceScrollContainer, posit
   return getScrollOffsetsDifferentContainers;
 };
 
-/* eslint-disable */
-// construct-style-sheets-polyfill@3.1.0
-// to keep in sync with https://github.com/calebdwilliams/construct-style-sheets
-// copy pasted into jsenv codebase to inject this code with more ease
-(function () {
+const installImportMetaCss = (importMeta) => {
+  const stylesheet = new CSSStyleSheet({ baseUrl: importMeta.url });
 
-  if (typeof document === "undefined" || "adoptedStyleSheets" in document) {
-    return;
-  }
-  var hasShadyCss = "ShadyCSS" in window && !ShadyCSS.nativeShadow;
-  var bootstrapper = document.implementation.createHTMLDocument("");
-  var closedShadowRootRegistry = new WeakMap();
-  var _DOMException = typeof DOMException === "object" ? Error : DOMException;
-  var defineProperty = Object.defineProperty;
-  var forEach = Array.prototype.forEach;
-  var importPattern = /@import.+?;?$/gm;
-  function rejectImports(contents) {
-    var _contents = contents.replace(importPattern, "");
-    if (_contents !== contents) {
-      console.warn("@import rules are not allowed here. See https://github.com/WICG/construct-stylesheets/issues/119#issuecomment-588352418");
-    }
-    return _contents.trim();
-  }
-  function isElementConnected(element) {
-    return "isConnected" in element ? element.isConnected : document.contains(element);
-  }
-  function unique(arr) {
-    return arr.filter(function (value, index) {
-      return arr.indexOf(value) === index;
-    });
-  }
-  function diff(arr1, arr2) {
-    return arr1.filter(function (value) {
-      return arr2.indexOf(value) === -1;
-    });
-  }
-  function removeNode(node) {
-    node.parentNode.removeChild(node);
-  }
-  function getShadowRoot(element) {
-    return element.shadowRoot || closedShadowRootRegistry.get(element);
-  }
-  var cssStyleSheetMethods = ["addRule", "deleteRule", "insertRule", "removeRule"];
-  var NonConstructedStyleSheet = CSSStyleSheet;
-  var nonConstructedProto = NonConstructedStyleSheet.prototype;
-  nonConstructedProto.replace = function () {
-    return Promise.reject(new _DOMException("Can't call replace on non-constructed CSSStyleSheets."));
-  };
-  nonConstructedProto.replaceSync = function () {
-    throw new _DOMException("Failed to execute 'replaceSync' on 'CSSStyleSheet': Can't call replaceSync on non-constructed CSSStyleSheets.");
-  };
-  function isCSSStyleSheetInstance(instance) {
-    return typeof instance === "object" ? proto$1.isPrototypeOf(instance) || nonConstructedProto.isPrototypeOf(instance) : false;
-  }
-  function isNonConstructedStyleSheetInstance(instance) {
-    return typeof instance === "object" ? nonConstructedProto.isPrototypeOf(instance) : false;
-  }
-  var $basicStyleElement = new WeakMap();
-  var $locations = new WeakMap();
-  var $adoptersByLocation = new WeakMap();
-  var $appliedMethods = new WeakMap();
-  function addAdopterLocation(sheet, location) {
-    var adopter = document.createElement("style");
-    $adoptersByLocation.get(sheet).set(location, adopter);
-    $locations.get(sheet).push(location);
-    return adopter;
-  }
-  function getAdopterByLocation(sheet, location) {
-    return $adoptersByLocation.get(sheet).get(location);
-  }
-  function removeAdopterLocation(sheet, location) {
-    $adoptersByLocation.get(sheet).delete(location);
-    $locations.set(sheet, $locations.get(sheet).filter(function (_location) {
-      return _location !== location;
-    }));
-  }
-  function restyleAdopter(sheet, adopter) {
-    requestAnimationFrame(function () {
-      adopter.textContent = $basicStyleElement.get(sheet).textContent;
-      $appliedMethods.get(sheet).forEach(function (command) {
-        return adopter.sheet[command.method].apply(adopter.sheet, command.args);
-      });
-    });
-  }
-  function checkInvocationCorrectness(self) {
-    if (!$basicStyleElement.has(self)) {
-      throw new TypeError("Illegal invocation");
-    }
-  }
-  function ConstructedStyleSheet() {
-    var self = this;
-    var style = document.createElement("style");
-    bootstrapper.body.appendChild(style);
-    $basicStyleElement.set(self, style);
-    $locations.set(self, []);
-    $adoptersByLocation.set(self, new WeakMap());
-    $appliedMethods.set(self, []);
-  }
-  var proto$1 = ConstructedStyleSheet.prototype;
-  proto$1.replace = function replace(contents) {
-    try {
-      this.replaceSync(contents);
-      return Promise.resolve(this);
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  };
-  proto$1.replaceSync = function replaceSync(contents) {
-    checkInvocationCorrectness(this);
-    if (typeof contents === "string") {
-      var self_1 = this;
-      $basicStyleElement.get(self_1).textContent = rejectImports(contents);
-      $appliedMethods.set(self_1, []);
-      $locations.get(self_1).forEach(function (location) {
-        if (location.isConnected()) {
-          restyleAdopter(self_1, getAdopterByLocation(self_1, location));
-        }
-      });
-    }
-  };
-  defineProperty(proto$1, "cssRules", {
-    configurable: true,
-    enumerable: true,
-    get: function cssRules() {
-      checkInvocationCorrectness(this);
-      return $basicStyleElement.get(this).sheet.cssRules;
-    }
-  });
-  defineProperty(proto$1, "media", {
-    configurable: true,
-    enumerable: true,
-    get: function media() {
-      checkInvocationCorrectness(this);
-      return $basicStyleElement.get(this).sheet.media;
-    }
-  });
-  cssStyleSheetMethods.forEach(function (method) {
-    proto$1[method] = function () {
-      var self = this;
-      checkInvocationCorrectness(self);
-      var args = arguments;
-      $appliedMethods.get(self).push({
-        method: method,
-        args: args
-      });
-      $locations.get(self).forEach(function (location) {
-        if (location.isConnected()) {
-          var sheet = getAdopterByLocation(self, location).sheet;
-          sheet[method].apply(sheet, args);
-        }
-      });
-      var basicSheet = $basicStyleElement.get(self).sheet;
-      return basicSheet[method].apply(basicSheet, args);
-    };
-  });
-  defineProperty(ConstructedStyleSheet, Symbol.hasInstance, {
-    configurable: true,
-    value: isCSSStyleSheetInstance
-  });
-  var defaultObserverOptions = {
-    childList: true,
-    subtree: true
-  };
-  var locations = new WeakMap();
-  function getAssociatedLocation(element) {
-    var location = locations.get(element);
-    if (!location) {
-      location = new Location(element);
-      locations.set(element, location);
-    }
-    return location;
-  }
-  function attachAdoptedStyleSheetProperty(constructor) {
-    defineProperty(constructor.prototype, "adoptedStyleSheets", {
-      configurable: true,
-      enumerable: true,
-      get: function () {
-        return getAssociatedLocation(this).sheets;
-      },
-      set: function (sheets) {
-        getAssociatedLocation(this).update(sheets);
-      }
-    });
-  }
-  function traverseWebComponents(node, callback) {
-    var iter = document.createNodeIterator(node, NodeFilter.SHOW_ELEMENT, function (foundNode) {
-      return getShadowRoot(foundNode) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-    }, null, false);
-    for (var next = void 0; next = iter.nextNode();) {
-      callback(getShadowRoot(next));
-    }
-  }
-  var $element = new WeakMap();
-  var $uniqueSheets = new WeakMap();
-  var $observer = new WeakMap();
-  function isExistingAdopter(self, element) {
-    return element instanceof HTMLStyleElement && $uniqueSheets.get(self).some(function (sheet) {
-      return getAdopterByLocation(sheet, self);
-    });
-  }
-  function getAdopterContainer(self) {
-    var element = $element.get(self);
-    return element instanceof Document ? element.body : element;
-  }
-  function adopt(self) {
-    var styleList = document.createDocumentFragment();
-    var sheets = $uniqueSheets.get(self);
-    var observer = $observer.get(self);
-    var container = getAdopterContainer(self);
-    observer.disconnect();
-    sheets.forEach(function (sheet) {
-      styleList.appendChild(getAdopterByLocation(sheet, self) || addAdopterLocation(sheet, self));
-    });
-    container.insertBefore(styleList, null);
-    observer.observe(container, defaultObserverOptions);
-    sheets.forEach(function (sheet) {
-      restyleAdopter(sheet, getAdopterByLocation(sheet, self));
-    });
-  }
-  function Location(element) {
-    var self = this;
-    self.sheets = [];
-    $element.set(self, element);
-    $uniqueSheets.set(self, []);
-    $observer.set(self, new MutationObserver(function (mutations, observer) {
-      if (!document) {
-        observer.disconnect();
-        return;
-      }
-      mutations.forEach(function (mutation) {
-        if (!hasShadyCss) {
-          forEach.call(mutation.addedNodes, function (node) {
-            if (!(node instanceof Element)) {
-              return;
-            }
-            traverseWebComponents(node, function (root) {
-              getAssociatedLocation(root).connect();
-            });
-          });
-        }
-        forEach.call(mutation.removedNodes, function (node) {
-          if (!(node instanceof Element)) {
-            return;
-          }
-          if (isExistingAdopter(self, node)) {
-            adopt(self);
-          }
-          if (!hasShadyCss) {
-            traverseWebComponents(node, function (root) {
-              getAssociatedLocation(root).disconnect();
-            });
-          }
-        });
-      });
-    }));
-  }
-  Location.prototype = {
-    isConnected: function () {
-      var element = $element.get(this);
-      return element instanceof Document ? element.readyState !== "loading" : isElementConnected(element.host);
-    },
-    connect: function () {
-      var container = getAdopterContainer(this);
-      $observer.get(this).observe(container, defaultObserverOptions);
-      if ($uniqueSheets.get(this).length > 0) {
-        adopt(this);
-      }
-      traverseWebComponents(container, function (root) {
-        getAssociatedLocation(root).connect();
-      });
-    },
-    disconnect: function () {
-      $observer.get(this).disconnect();
-    },
-    update: function (sheets) {
-      var self = this;
-      var locationType = $element.get(self) === document ? "Document" : "ShadowRoot";
-      if (!Array.isArray(sheets)) {
-        throw new TypeError("Failed to set the 'adoptedStyleSheets' property on " + locationType + ": Iterator getter is not callable.");
-      }
-      if (!sheets.every(isCSSStyleSheetInstance)) {
-        throw new TypeError("Failed to set the 'adoptedStyleSheets' property on " + locationType + ": Failed to convert value to 'CSSStyleSheet'");
-      }
-      if (sheets.some(isNonConstructedStyleSheetInstance)) {
-        throw new TypeError("Failed to set the 'adoptedStyleSheets' property on " + locationType + ": Can't adopt non-constructed stylesheets");
-      }
-      self.sheets = sheets;
-      var oldUniqueSheets = $uniqueSheets.get(self);
-      var uniqueSheets = unique(sheets);
-      var removedSheets = diff(oldUniqueSheets, uniqueSheets);
-      removedSheets.forEach(function (sheet) {
-        removeNode(getAdopterByLocation(sheet, self));
-        removeAdopterLocation(sheet, self);
-      });
-      $uniqueSheets.set(self, uniqueSheets);
-      if (self.isConnected() && uniqueSheets.length > 0) {
-        adopt(self);
-      }
-    }
-  };
-  window.CSSStyleSheet = ConstructedStyleSheet;
-  attachAdoptedStyleSheetProperty(Document);
-  if ("ShadowRoot" in window) {
-    attachAdoptedStyleSheetProperty(ShadowRoot);
-    var proto = Element.prototype;
-    var attach_1 = proto.attachShadow;
-    proto.attachShadow = function attachShadow(init) {
-      var root = attach_1.call(this, init);
-      if (init.mode === "closed") {
-        closedShadowRootRegistry.set(this, root);
-      }
-      return root;
-    };
-  }
-  var documentLocation = getAssociatedLocation(document);
-  if (documentLocation.isConnected()) {
-    documentLocation.connect();
-  } else {
-    document.addEventListener("DOMContentLoaded", documentLocation.connect.bind(documentLocation));
-  }
-})();
-
-const installImportMetaCss = importMeta => {
-  const stylesheet = new CSSStyleSheet({
-    baseUrl: importMeta.url
-  });
   let called = false;
   // eslint-disable-next-line accessor-pairs
   Object.defineProperty(importMeta, "css", {
@@ -2972,8 +2970,11 @@ const installImportMetaCss = importMeta => {
       }
       called = true;
       stylesheet.replaceSync(value);
-      document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
-    }
+      document.adoptedStyleSheets = [
+        ...document.adoptedStyleSheets,
+        stylesheet,
+      ];
+    },
   });
 };
 
@@ -3044,7 +3045,7 @@ const installImportMetaCss = importMeta => {
  * @param {Array<Element>} elements - Array of elements to keep interactive (non-inert)
  * @returns {Function} cleanup - Function to restore original inert states
  */
-const isolateInteractions = elements => {
+const isolateInteractions = (elements) => {
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
     for (const cleanupCallback of cleanupCallbackSet) {
@@ -3052,8 +3053,9 @@ const isolateInteractions = elements => {
     }
     cleanupCallbackSet.clear();
   };
+
   const toKeepInteractiveSet = new Set();
-  const keepSelfAndAncestors = el => {
+  const keepSelfAndAncestors = (el) => {
     if (toKeepInteractiveSet.has(el)) {
       return;
     }
@@ -3084,19 +3086,21 @@ const isolateInteractions = elements => {
   for (const backdropElement of backdropElements) {
     keepSelfAndAncestors(backdropElement);
   }
-  const setInert = el => {
+
+  const setInert = (el) => {
     if (toKeepInteractiveSet.has(el)) {
       // element should stay interactive
       return;
     }
     const restoreAttributes = setAttributes(el, {
-      inert: ""
+      inert: "",
     });
     cleanupCallbackSet.add(() => {
       restoreAttributes();
     });
   };
-  const makeElementInertSelectivelyOrCompletely = el => {
+
+  const makeElementInertSelectivelyOrCompletely = (el) => {
     // If this element should stay interactive, keep it active
     if (toKeepInteractiveSet.has(el)) {
       return;
@@ -3106,7 +3110,10 @@ const isolateInteractions = elements => {
     // is not in the set, we can check if any of its direct children are.
     // If none of the direct children are in the set, then no descendants are either.
     const children = Array.from(el.children);
-    const hasInteractiveChildren = children.some(child => toKeepInteractiveSet.has(child));
+    const hasInteractiveChildren = children.some((child) =>
+      toKeepInteractiveSet.has(child),
+    );
+
     if (!hasInteractiveChildren) {
       // No interactive descendants, make the entire element inert
       setInert(el);
@@ -3124,12 +3131,14 @@ const isolateInteractions = elements => {
   for (const child of bodyChildren) {
     makeElementInertSelectivelyOrCompletely(child);
   }
+
   return () => {
     cleanup();
   };
 };
 
-installImportMetaCss(import.meta);const createDragGestureController = (options = {}) => {
+installImportMetaCss(import.meta);
+const createDragGestureController = (options = {}) => {
   const {
     name,
     onGrab,
@@ -3137,18 +3146,17 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
     onDrag,
     onRelease,
     threshold = 5,
-    direction: defaultDirection = {
-      x: true,
-      y: true
-    },
+    direction: defaultDirection = { x: true, y: true },
     documentInteractions = "auto",
     backdrop = true,
-    backdropZIndex = 999999
+    backdropZIndex = 999999,
   } = options;
+
   const dragGestureController = {
     grab: null,
-    gravViaPointer: null
+    gravViaPointer: null,
   };
+
   const grab = ({
     element,
     direction = defaultDirection,
@@ -3158,7 +3166,7 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
     cursor = "grabbing",
     scrollContainer = document.documentElement,
     layoutScrollableLeft: scrollableLeftAtGrab = 0,
-    layoutScrollableTop: scrollableTopAtGrab = 0
+    layoutScrollableTop: scrollableTopAtGrab = 0,
   } = {}) => {
     if (!element) {
       throw new Error("element is required");
@@ -3166,6 +3174,7 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
     if (!direction.x && !direction.y) {
       return null;
     }
+
     const [publishBeforeDrag, addBeforeDragCallback] = createPubSub();
     const [publishDrag, addDragCallback] = createPubSub();
     const [publishRelease, addReleaseCallback] = createPubSub();
@@ -3175,15 +3184,13 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
     if (onRelease) {
       addReleaseCallback(onRelease);
     }
+
     const scrollLeftAtGrab = scrollContainer.scrollLeft;
     const scrollTopAtGrab = scrollContainer.scrollTop;
     const leftAtGrab = scrollLeftAtGrab + scrollableLeftAtGrab;
     const topAtGrab = scrollTopAtGrab + scrollableTopAtGrab;
     const createLayout = (x, y) => {
-      const {
-        scrollLeft,
-        scrollTop
-      } = scrollContainer;
+      const { scrollLeft, scrollTop } = scrollContainer;
       const left = scrollableLeftAtGrab + x;
       const top = scrollableTopAtGrab + y;
       const scrollableLeft = left - scrollLeft;
@@ -3203,38 +3210,42 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
         top,
         // Delta since grab (number representing how much we dragged)
         xDelta: left - leftAtGrab,
-        yDelta: top - topAtGrab
+        yDelta: top - topAtGrab,
       };
       return layoutProps;
     };
-    const grabLayout = createLayout(grabX + scrollContainer.scrollLeft, grabY + scrollContainer.scrollTop);
+
+    const grabLayout = createLayout(
+      grabX + scrollContainer.scrollLeft,
+      grabY + scrollContainer.scrollTop,
+    );
     const gestureInfo = {
       name,
       direction,
       started: !threshold,
       status: "grabbed",
+
       element,
       scrollContainer,
-      grabX,
-      // x grab coordinate (excluding scroll)
-      grabY,
-      // y grab coordinate (excluding scroll)
+      grabX, // x grab coordinate (excluding scroll)
+      grabY, // y grab coordinate (excluding scroll)
       grabLayout,
       leftAtGrab,
       topAtGrab,
-      dragX: grabX,
-      // coordinate of the last drag (excluding scroll of the scrollContainer)
-      dragY: grabY,
-      // coordinate of the last drag (excluding scroll of the scrollContainer)
+
+      dragX: grabX, // coordinate of the last drag (excluding scroll of the scrollContainer)
+      dragY: grabY, // coordinate of the last drag (excluding scroll of the scrollContainer)
       layout: grabLayout,
+
       isGoingUp: undefined,
       isGoingDown: undefined,
       isGoingLeft: undefined,
       isGoingRight: undefined,
+
       // metadata about interaction sources
       grabEvent: event,
       dragEvent: null,
-      releaseEvent: null
+      releaseEvent: null,
     };
     definePropertyAsReadOnly(gestureInfo, "name");
     definePropertyAsReadOnly(gestureInfo, "direction");
@@ -3245,6 +3256,7 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
     definePropertyAsReadOnly(gestureInfo, "leftAtGrab");
     definePropertyAsReadOnly(gestureInfo, "topAtGrab");
     definePropertyAsReadOnly(gestureInfo, "grabEvent");
+
     document_interactions: {
       if (documentInteractions === "manual") {
         break document_interactions;
@@ -3257,18 +3269,23 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
       2. Break the visual feedback (inconsistent cursors, hover states)
       3. Cause unwanted scrolling (keyboard shortcuts, wheel events in restricted directions)
       4. Create accessibility issues (focus jumping, screen reader confusion)
-       STRATEGY: Create a controlled interaction environment by:
+
+      STRATEGY: Create a controlled interaction environment by:
       1. VISUAL CONTROL: Use a backdrop to unify cursor appearance and block pointer events
       2. INTERACTION ISOLATION: Make non-dragged elements inert to prevent interference
       3. FOCUS MANAGEMENT: Control focus location and prevent focus changes during drag
       4. SELECTIVE SCROLLING: Allow scrolling only in directions supported by the drag gesture
-       IMPLEMENTATION:
+
+      IMPLEMENTATION:
       */
 
       // 1. INTERACTION ISOLATION: Make everything except the dragged element inert
       // This prevents keyboard events, pointer interactions, and screen reader navigation
       // on non-relevant elements during the drag operation
-      const cleanupInert = isolateInteractions([element, ...Array.from(document.querySelectorAll("[data-droppable]"))]);
+      const cleanupInert = isolateInteractions([
+        element,
+        ...Array.from(document.querySelectorAll("[data-droppable]")),
+      ]);
       addReleaseCallback(() => {
         cleanupInert();
       });
@@ -3285,14 +3302,14 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
         // Handle wheel events on backdrop for directionally-constrained drag gestures
         // (e.g., table column resize should only allow horizontal scrolling)
         if (!direction.x || !direction.y) {
-          backdropElement.onwheel = e => {
+          backdropElement.onwheel = (e) => {
             e.preventDefault();
             const scrollX = direction.x ? e.deltaX : 0;
             const scrollY = direction.y ? e.deltaY : 0;
             scrollContainer.scrollBy({
               left: scrollX,
               top: scrollY,
-              behavior: "auto"
+              behavior: "auto",
             });
           };
         }
@@ -3303,25 +3320,23 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
       }
 
       // 3. FOCUS MANAGEMENT: Control and stabilize focus during drag
-      const {
-        activeElement
-      } = document;
+      const { activeElement } = document;
       const focusableElement = findFocusable(element);
       // Focus the dragged element (or document.body as fallback) to establish clear focus context
       // This also ensure any keydown event listened by the currently focused element
       // won't be available during drag
       const elementToFocus = focusableElement || document.body;
       elementToFocus.focus({
-        preventScroll: true
+        preventScroll: true,
       });
       addReleaseCallback(() => {
         // Restore original focus on release
         activeElement.focus({
-          preventScroll: true
+          preventScroll: true,
         });
       });
       // Prevent Tab navigation entirely (focus should stay stable)
-      const onkeydown = e => {
+      const onkeydown = (e) => {
         if (e.key === "Tab") {
           e.preventDefault();
           return;
@@ -3334,16 +3349,27 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
 
       // 4. SELECTIVE SCROLLING: Allow keyboard scrolling only in supported directions
       {
-        const onDocumentKeydown = keyboardEvent => {
+        const onDocumentKeydown = (keyboardEvent) => {
           // Vertical scrolling keys - prevent if vertical movement not supported
-          if (keyboardEvent.key === "ArrowUp" || keyboardEvent.key === "ArrowDown" || keyboardEvent.key === " " || keyboardEvent.key === "PageUp" || keyboardEvent.key === "PageDown" || keyboardEvent.key === "Home" || keyboardEvent.key === "End") {
+          if (
+            keyboardEvent.key === "ArrowUp" ||
+            keyboardEvent.key === "ArrowDown" ||
+            keyboardEvent.key === " " ||
+            keyboardEvent.key === "PageUp" ||
+            keyboardEvent.key === "PageDown" ||
+            keyboardEvent.key === "Home" ||
+            keyboardEvent.key === "End"
+          ) {
             if (!direction.y) {
               keyboardEvent.preventDefault();
             }
             return;
           }
           // Horizontal scrolling keys - prevent if horizontal movement not supported
-          if (keyboardEvent.key === "ArrowLeft" || keyboardEvent.key === "ArrowRight") {
+          if (
+            keyboardEvent.key === "ArrowLeft" ||
+            keyboardEvent.key === "ArrowRight"
+          ) {
             if (!direction.x) {
               keyboardEvent.preventDefault();
             }
@@ -3360,38 +3386,36 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
     // Set up scroll event handling to adjust drag position when scrolling occurs
     {
       let isHandlingScroll = false;
-      const handleScroll = scrollEvent => {
+      const handleScroll = (scrollEvent) => {
         if (isHandlingScroll) {
           return;
         }
         isHandlingScroll = true;
-        drag(gestureInfo.dragX, gestureInfo.dragY, {
-          event: scrollEvent
-        });
+        drag(gestureInfo.dragX, gestureInfo.dragY, { event: scrollEvent });
         isHandlingScroll = false;
       };
-      const scrollEventReceiver = scrollContainer === document.documentElement ? document : scrollContainer;
+      const scrollEventReceiver =
+        scrollContainer === document.documentElement
+          ? document
+          : scrollContainer;
       scrollEventReceiver.addEventListener("scroll", handleScroll, {
-        passive: true
+        passive: true,
       });
       addReleaseCallback(() => {
         scrollEventReceiver.removeEventListener("scroll", handleScroll, {
-          passive: true
+          passive: true,
         });
       });
     }
+
     const determineDragData = ({
       dragX,
       dragY,
       dragEvent,
-      isRelease = false
+      isRelease = false,
     }) => {
       // === ÉTAT INITIAL (au moment du grab) ===
-      const {
-        grabX,
-        grabY,
-        grabLayout
-      } = gestureInfo;
+      const { grabX, grabY, grabLayout } = gestureInfo;
       // === CE QUI EST DEMANDÉ (où on veut aller) ===
       // Calcul de la direction basé sur le mouvement précédent
       // (ne tient pas compte du mouvement final une fois les contraintes appliquées)
@@ -3403,38 +3427,56 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
       const isGoingRight = dragX > currentDragX;
       const isGoingUp = dragY < currentDragY;
       const isGoingDown = dragY > currentDragY;
-      const layoutXRequested = direction.x ? scrollContainer.scrollLeft + (dragX - grabX) : grabLayout.scrollLeft;
-      const layoutYRequested = direction.y ? scrollContainer.scrollTop + (dragY - grabY) : grabLayout.scrollTop;
+
+      const layoutXRequested = direction.x
+        ? scrollContainer.scrollLeft + (dragX - grabX)
+        : grabLayout.scrollLeft;
+      const layoutYRequested = direction.y
+        ? scrollContainer.scrollTop + (dragY - grabY)
+        : grabLayout.scrollTop;
       const layoutRequested = createLayout(layoutXRequested, layoutYRequested);
       const currentLayout = gestureInfo.layout;
       let layout;
-      if (layoutRequested.x === currentLayout.x && layoutRequested.y === currentLayout.y) {
+      if (
+        layoutRequested.x === currentLayout.x &&
+        layoutRequested.y === currentLayout.y
+      ) {
         layout = currentLayout;
       } else {
         // === APPLICATION DES CONTRAINTES ===
         let layoutConstrained = layoutRequested;
         const limitLayout = (left, top) => {
-          layoutConstrained = createLayout(left === undefined ? layoutConstrained.x : left - scrollableLeftAtGrab, top === undefined ? layoutConstrained.y : top - scrollableTopAtGrab);
+          layoutConstrained = createLayout(
+            left === undefined
+              ? layoutConstrained.x
+              : left - scrollableLeftAtGrab,
+            top === undefined ? layoutConstrained.y : top - scrollableTopAtGrab,
+          );
         };
+
         publishBeforeDrag(layoutRequested, currentLayout, limitLayout, {
           dragEvent,
-          isRelease
+          isRelease,
         });
         // === ÉTAT FINAL ===
         layout = layoutConstrained;
       }
+
       const dragData = {
         dragX,
         dragY,
         layout,
+
         isGoingLeft,
         isGoingRight,
         isGoingUp,
         isGoingDown,
+
         status: isRelease ? "released" : "dragging",
         dragEvent: isRelease ? gestureInfo.dragEvent : dragEvent,
-        releaseEvent: isRelease ? dragEvent : null
+        releaseEvent: isRelease ? dragEvent : null,
       };
+
       if (isRelease) {
         return dragData;
       }
@@ -3459,19 +3501,18 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
       }
       return dragData;
     };
-    const drag = (dragX = gestureInfo.dragX,
-    // Scroll container relative X coordinate
-    dragY = gestureInfo.dragY,
-    // Scroll container relative Y coordinate
-    {
-      event = new CustomEvent("programmatic"),
-      isRelease = false
-    } = {}) => {
+
+    const drag = (
+      dragX = gestureInfo.dragX, // Scroll container relative X coordinate
+      dragY = gestureInfo.dragY, // Scroll container relative Y coordinate
+      { event = new CustomEvent("programmatic"), isRelease = false } = {},
+    ) => {
+
       const dragData = determineDragData({
         dragX,
         dragY,
         dragEvent: event,
-        isRelease
+        isRelease,
       });
       const startedPrevious = gestureInfo.started;
       const layoutPrevious = gestureInfo.layout;
@@ -3481,24 +3522,25 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
         onDragStart?.(gestureInfo);
       }
       const someLayoutChange = gestureInfo.layout !== layoutPrevious;
-      publishDrag(gestureInfo,
-      // we still publish drag event even when unchanged
-      // because UI might need to adjust when document scrolls
-      // even if nothing truly changes visually the element
-      // can decide to stick to the scroll for example
-      someLayoutChange);
+      publishDrag(
+        gestureInfo,
+        // we still publish drag event even when unchanged
+        // because UI might need to adjust when document scrolls
+        // even if nothing truly changes visually the element
+        // can decide to stick to the scroll for example
+        someLayoutChange,
+      );
     };
+
     const release = ({
       event = new CustomEvent("programmatic"),
       releaseX = gestureInfo.dragX,
-      releaseY = gestureInfo.dragY
+      releaseY = gestureInfo.dragY,
     } = {}) => {
-      drag(releaseX, releaseY, {
-        event,
-        isRelease: true
-      });
+      drag(releaseX, releaseY, { event, isRelease: true });
       publishRelease(gestureInfo);
     };
+
     onGrab?.(gestureInfo);
     const dragGesture = {
       gestureInfo,
@@ -3506,11 +3548,12 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
       addDragCallback,
       addReleaseCallback,
       drag,
-      release
+      release,
     };
     return dragGesture;
   };
   dragGestureController.grab = grab;
+
   const initDragByPointer = (grabEvent, dragOptions, initializer) => {
     if (grabEvent.button !== undefined && grabEvent.button !== 0) {
       return null;
@@ -3520,11 +3563,8 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
       // target is a text node
       return null;
     }
-    const mouseEventCoords = mouseEvent => {
-      const {
-        clientX,
-        clientY
-      } = mouseEvent;
+    const mouseEventCoords = (mouseEvent) => {
+      const { clientX, clientY } = mouseEvent;
       return [clientX, clientY];
     };
     const [grabX, grabY] = mouseEventCoords(grabEvent);
@@ -3532,39 +3572,37 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
       grabX,
       grabY,
       event: grabEvent,
-      ...dragOptions
+      ...dragOptions,
     });
-    const dragViaPointer = dragEvent => {
+    const dragViaPointer = (dragEvent) => {
       const [mouseDragX, mouseDragY] = mouseEventCoords(dragEvent);
       dragGesture.drag(mouseDragX, mouseDragY, {
-        event: dragEvent
+        event: dragEvent,
       });
     };
-    const releaseViaPointer = mouseupEvent => {
+    const releaseViaPointer = (mouseupEvent) => {
       const [mouseReleaseX, mouseReleaseY] = mouseEventCoords(mouseupEvent);
       dragGesture.release({
         event: mouseupEvent,
         releaseX: mouseReleaseX,
-        releaseY: mouseReleaseY
+        releaseY: mouseReleaseY,
       });
     };
     dragGesture.dragViaPointer = dragViaPointer;
     dragGesture.releaseViaPointer = releaseViaPointer;
     const cleanup = initializer({
       onMove: dragViaPointer,
-      onRelease: releaseViaPointer
+      onRelease: releaseViaPointer,
     });
     dragGesture.addReleaseCallback(() => {
       cleanup();
     });
     return dragGesture;
   };
+
   const grabViaPointer = (grabEvent, options) => {
     if (grabEvent.type === "pointerdown") {
-      return initDragByPointer(grabEvent, options, ({
-        onMove,
-        onRelease
-      }) => {
+      return initDragByPointer(grabEvent, options, ({ onMove, onRelease }) => {
         const target = grabEvent.target;
         target.setPointerCapture(grabEvent.pointerId);
         target.addEventListener("lostpointercapture", onRelease);
@@ -3581,12 +3619,11 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
       });
     }
     if (grabEvent.type === "mousedown") {
-      console.warn("Received \"mousedown\" event, \"pointerdown\" events are recommended to perform drag gestures.");
-      return initDragByPointer(grabEvent, options, ({
-        onMove,
-        onRelease
-      }) => {
-        const onPointerUp = pointerEvent => {
+      console.warn(
+        `Received "mousedown" event, "pointerdown" events are recommended to perform drag gestures.`,
+      );
+      return initDragByPointer(grabEvent, options, ({ onMove, onRelease }) => {
+        const onPointerUp = (pointerEvent) => {
           // <button disabled> for example does not emit mouseup if we release mouse over it
           // -> we add "pointerup" to catch mouseup occuring on disabled element
           if (pointerEvent.pointerType === "mouse") {
@@ -3603,48 +3640,65 @@ installImportMetaCss(import.meta);const createDragGestureController = (options =
         };
       });
     }
-    throw new Error("Unsupported \"".concat(grabEvent.type, "\" evenet passed to grabViaPointer. \"pointerdown\" was expected."));
+    throw new Error(
+      `Unsupported "${grabEvent.type}" evenet passed to grabViaPointer. "pointerdown" was expected.`,
+    );
   };
   dragGestureController.grabViaPointer = grabViaPointer;
+
   return dragGestureController;
 };
-const dragAfterThreshold = (grabEvent, dragGestureInitializer, threshold) => {
+
+const dragAfterThreshold = (
+  grabEvent,
+  dragGestureInitializer,
+  threshold,
+) => {
   const significantDragGestureController = createDragGestureController({
     threshold,
     // allow interaction for this intermediate gesture:
     // user should still be able to scroll or interact with the document
     // only once the gesture is significant we take control
     documentInteractions: "manual",
-    onDragStart: gestureInfo => {
+    onDragStart: (gestureInfo) => {
       significantDragGesture.release(); // kill that gesture
       const dragGesture = dragGestureInitializer();
       dragGesture.dragViaPointer(gestureInfo.dragEvent);
-    }
+    },
   });
-  const significantDragGesture = significantDragGestureController.grabViaPointer(grabEvent, {
-    element: grabEvent.target
-  });
+  const significantDragGesture =
+    significantDragGestureController.grabViaPointer(grabEvent, {
+      element: grabEvent.target,
+    });
 };
+
 const definePropertyAsReadOnly = (object, propertyName) => {
   Object.defineProperty(object, propertyName, {
     writable: false,
-    value: object[propertyName]
+    value: object[propertyName],
   });
 };
-import.meta.css = /* css */"\n  .navi_drag_gesture_backdrop {\n    position: fixed;\n    inset: 0;\n    user-select: none;\n  }\n";
 
-const getBorderSizes = element => {
+import.meta.css = /* css */ `
+  .navi_drag_gesture_backdrop {
+    position: fixed;
+    inset: 0;
+    user-select: none;
+  }
+`;
+
+const getBorderSizes = (element) => {
   const {
     borderLeftWidth,
     borderRightWidth,
     borderTopWidth,
-    borderBottomWidth
+    borderBottomWidth,
   } = window.getComputedStyle(element, null);
   return {
     left: parseFloat(borderLeftWidth),
     right: parseFloat(borderRightWidth),
     top: parseFloat(borderTopWidth),
-    bottom: parseFloat(borderBottomWidth)
+    bottom: parseFloat(borderBottomWidth),
   };
 };
 
@@ -3768,9 +3822,8 @@ const getBorderSizes = element => {
  * • Scroll coordinates: 50px → 0px
  */
 
-const {
-  documentElement
-} = document;
+
+const { documentElement } = document;
 
 /**
  * Get element rectangle relative to its scroll container
@@ -3780,15 +3833,18 @@ const {
  * @param {object} [options] - Configuration options
  * @returns {object} { left, top, right, bottom, width, height, scrollLeft, scrollTop, scrollContainer, ...metadata }
  */
-const getScrollRelativeRect = (element, scrollContainer = getScrollContainer(element), {
-  useOriginalPositionEvenIfSticky = false
-} = {}) => {
+const getScrollRelativeRect = (
+  element,
+  scrollContainer = getScrollContainer(element),
+  { useOriginalPositionEvenIfSticky = false } = {},
+) => {
   const {
     left: leftViewport,
     top: topViewport,
     width,
-    height
+    height,
   } = element.getBoundingClientRect();
+
   let fromFixed = false;
   let fromStickyLeft;
   let fromStickyTop;
@@ -3798,13 +3854,18 @@ const getScrollRelativeRect = (element, scrollContainer = getScrollContainer(ele
   const scrollTop = scrollContainer.scrollTop;
   const scrollContainerIsDocument = scrollContainer === documentElement;
   const createScrollRelativeRect = (leftScrollRelative, topScrollRelative) => {
-    const isStickyLeftOrHasStickyLeftAttr = Boolean(fromStickyLeft || fromStickyLeftAttr);
-    const isStickyTopOrHasStickyTopAttr = Boolean(fromStickyTop || fromStickyTopAttr);
+    const isStickyLeftOrHasStickyLeftAttr = Boolean(
+      fromStickyLeft || fromStickyLeftAttr,
+    );
+    const isStickyTopOrHasStickyTopAttr = Boolean(
+      fromStickyTop || fromStickyTopAttr,
+    );
     return {
       left: leftScrollRelative,
       top: topScrollRelative,
       right: leftScrollRelative + width,
       bottom: topScrollRelative + height,
+
       // metadata
       width,
       height,
@@ -3819,40 +3880,51 @@ const getScrollRelativeRect = (element, scrollContainer = getScrollContainer(ele
       fromStickyTopAttr,
       isStickyLeftOrHasStickyLeftAttr,
       isStickyTopOrHasStickyTopAttr,
-      isSticky: isStickyLeftOrHasStickyLeftAttr || isStickyTopOrHasStickyTopAttr
+      isSticky:
+        isStickyLeftOrHasStickyLeftAttr || isStickyTopOrHasStickyTopAttr,
     };
   };
+
   {
     const computedStyle = getComputedStyle(element);
     {
       const usePositionSticky = computedStyle.position === "sticky";
       if (usePositionSticky) {
         // For CSS position:sticky elements, use scrollable-relative coordinates
-        const [leftScrollRelative, topScrollRelative] = viewportPosToScrollRelativePos(leftViewport, topViewport, scrollContainer);
+        const [leftScrollRelative, topScrollRelative] =
+          viewportPosToScrollRelativePos(
+            leftViewport,
+            topViewport,
+            scrollContainer,
+          );
         const isStickyLeft = computedStyle.left !== "auto";
         const isStickyTop = computedStyle.top !== "auto";
-        fromStickyLeft = isStickyLeft ? {
-          value: parseFloat(computedStyle.left) || 0
-        } : undefined;
-        fromStickyTop = isStickyTop ? {
-          value: parseFloat(computedStyle.top) || 0
-        } : undefined;
+        fromStickyLeft = isStickyLeft
+          ? { value: parseFloat(computedStyle.left) || 0 }
+          : undefined;
+        fromStickyTop = isStickyTop
+          ? { value: parseFloat(computedStyle.top) || 0 }
+          : undefined;
         return createScrollRelativeRect(leftScrollRelative, topScrollRelative);
       }
     }
     {
       const hasStickyLeftAttribute = element.hasAttribute("data-sticky-left");
       const hasStickyTopAttribute = element.hasAttribute("data-sticky-top");
-      const useStickyAttribute = hasStickyLeftAttribute || hasStickyTopAttribute;
+      const useStickyAttribute =
+        hasStickyLeftAttribute || hasStickyTopAttribute;
       if (useStickyAttribute) {
         // Handle virtually sticky obstacles (<col> or <tr>) - elements with data-sticky attributes
         // but not CSS position:sticky. Calculate their position based on scroll and sticky behavior
-        let [leftScrollRelative, topScrollRelative] = viewportPosToScrollRelativePos(leftViewport, topViewport, scrollContainer);
+        let [leftScrollRelative, topScrollRelative] =
+          viewportPosToScrollRelativePos(
+            leftViewport,
+            topViewport,
+            scrollContainer,
+          );
         if (hasStickyLeftAttribute) {
           const leftCssValue = parseFloat(computedStyle.left) || 0;
-          fromStickyLeftAttr = {
-            value: leftCssValue
-          };
+          fromStickyLeftAttr = { value: leftCssValue };
           if (useOriginalPositionEvenIfSticky) ; else {
             const scrollLeft = scrollContainer.scrollLeft;
             const stickyPosition = scrollLeft + leftCssValue;
@@ -3864,9 +3936,7 @@ const getScrollRelativeRect = (element, scrollContainer = getScrollContainer(ele
         }
         if (hasStickyTopAttribute) {
           const topCssValue = parseFloat(computedStyle.top) || 0;
-          fromStickyTopAttr = {
-            value: topCssValue
-          };
+          fromStickyTopAttr = { value: topCssValue };
           if (useOriginalPositionEvenIfSticky) ; else {
             const scrollTop = scrollContainer.scrollTop;
             const stickyPosition = scrollTop + topCssValue;
@@ -3882,29 +3952,30 @@ const getScrollRelativeRect = (element, scrollContainer = getScrollContainer(ele
   }
 
   // For normal elements, use scrollable-relative coordinates
-  const [leftScrollRelative, topScrollRelative] = viewportPosToScrollRelativePos(leftViewport, topViewport, scrollContainer);
+  const [leftScrollRelative, topScrollRelative] =
+    viewportPosToScrollRelativePos(leftViewport, topViewport, scrollContainer);
   return createScrollRelativeRect(leftScrollRelative, topScrollRelative);
 };
-const viewportPosToScrollRelativePos = (leftViewport, topViewport, scrollContainer) => {
+const viewportPosToScrollRelativePos = (
+  leftViewport,
+  topViewport,
+  scrollContainer,
+) => {
   const scrollContainerIsDocument = scrollContainer === documentElement;
   if (scrollContainerIsDocument) {
     return [leftViewport, topViewport];
   }
-  const {
-    left: scrollContainerLeftViewport,
-    top: scrollContainerTopViewport
-  } = scrollContainer.getBoundingClientRect();
-  return [leftViewport - scrollContainerLeftViewport, topViewport - scrollContainerTopViewport];
+  const { left: scrollContainerLeftViewport, top: scrollContainerTopViewport } =
+    scrollContainer.getBoundingClientRect();
+  return [
+    leftViewport - scrollContainerLeftViewport,
+    topViewport - scrollContainerTopViewport,
+  ];
 };
-const addScrollToRect = scrollRelativeRect => {
-  const {
-    left,
-    top,
-    width,
-    height,
-    scrollLeft,
-    scrollTop
-  } = scrollRelativeRect;
+
+const addScrollToRect = (scrollRelativeRect) => {
+  const { left, top, width, height, scrollLeft, scrollTop } =
+    scrollRelativeRect;
   const leftWithScroll = left + scrollLeft;
   const topWithScroll = top + scrollTop;
   return {
@@ -3912,31 +3983,27 @@ const addScrollToRect = scrollRelativeRect => {
     left: leftWithScroll,
     top: topWithScroll,
     right: leftWithScroll + width,
-    bottom: topWithScroll + height
+    bottom: topWithScroll + height,
   };
 };
 
 // https://github.com/w3c/csswg-drafts/issues/3329
 // Return the portion of the element that is visible for this scoll container
-const getScrollBox = scrollContainer => {
+const getScrollBox = (scrollContainer) => {
   if (scrollContainer === documentElement) {
-    const {
-      clientWidth,
-      clientHeight
-    } = documentElement;
+    const { clientWidth, clientHeight } = documentElement;
+
     return {
       left: 0,
       top: 0,
       right: clientWidth,
       bottom: clientHeight,
       width: clientWidth,
-      height: clientHeight
+      height: clientHeight,
     };
   }
-  const {
-    clientWidth,
-    clientHeight
-  } = scrollContainer;
+
+  const { clientWidth, clientHeight } = scrollContainer;
   const scrollContainerBorderSizes = getBorderSizes(scrollContainer);
   const left = scrollContainerBorderSizes.left;
   const top = scrollContainerBorderSizes.top;
@@ -3948,17 +4015,12 @@ const getScrollBox = scrollContainer => {
     right,
     bottom,
     width: clientWidth,
-    height: clientHeight
+    height: clientHeight,
   };
 };
 // https://developer.mozilla.org/en-US/docs/Glossary/Scroll_container#scrollport
 const getScrollport = (scrollBox, scrollContainer) => {
-  const {
-    left,
-    top,
-    width,
-    height
-  } = scrollBox;
+  const { left, top, width, height } = scrollBox;
   const leftWithScroll = left + scrollContainer.scrollLeft;
   const topWithScroll = top + scrollContainer.scrollTop;
   const rightWithScroll = leftWithScroll + width;
@@ -3967,15 +4029,17 @@ const getScrollport = (scrollBox, scrollContainer) => {
     left: leftWithScroll,
     top: topWithScroll,
     right: rightWithScroll,
-    bottom: bottomWithScroll
+    bottom: bottomWithScroll,
   };
 };
 
-const getElementSelector = element => {
+const getElementSelector = (element) => {
   const tagName = element.tagName.toLowerCase();
-  const id = element.id ? "#".concat(element.id) : "";
-  const className = element.className ? ".".concat(element.className.split(" ").join(".")) : "";
-  return "".concat(tagName).concat(id).concat(className);
+  const id = element.id ? `#${element.id}` : "";
+  const className = element.className
+    ? `.${element.className.split(" ").join(".")}`
+    : "";
+  return `${tagName}${id}${className}`;
 };
 
 installImportMetaCss(import.meta);const setupConstraintFeedbackLine = () => {
@@ -3986,15 +4050,16 @@ installImportMetaCss(import.meta);const setupConstraintFeedbackLine = () => {
   let lastMouseY = null;
 
   // Internal function to update constraint feedback line
-  const onDrag = gestureInfo => {
-    const {
-      grabEvent,
-      dragEvent
-    } = gestureInfo;
-    if (grabEvent.type === "programmatic" || dragEvent.type === "programmatic") {
+  const onDrag = (gestureInfo) => {
+    const { grabEvent, dragEvent } = gestureInfo;
+    if (
+      grabEvent.type === "programmatic" ||
+      dragEvent.type === "programmatic"
+    ) {
       // programmatic drag
       return;
     }
+
     const mouseX = dragEvent.clientX;
     const mouseY = dragEvent.clientY;
     // Use last known position if current position not available (e.g., during scroll)
@@ -4007,6 +4072,7 @@ installImportMetaCss(import.meta);const setupConstraintFeedbackLine = () => {
     // Store current mouse position for potential use during scroll
     lastMouseX = mouseX;
     lastMouseY = mouseY;
+
     const grabClientX = grabEvent.clientX;
     const grabClientY = grabEvent.clientY;
 
@@ -4025,40 +4091,58 @@ installImportMetaCss(import.meta);const setupConstraintFeedbackLine = () => {
     // Calculate angle and position
     const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
     // Position line at current grab point (follows element movement)
-    constraintFeedbackLine.style.left = "".concat(grabClientX, "px");
-    constraintFeedbackLine.style.top = "".concat(grabClientY, "px");
-    constraintFeedbackLine.style.width = "".concat(distance, "px");
-    constraintFeedbackLine.style.transform = "rotate(".concat(angle, "deg)");
+    constraintFeedbackLine.style.left = `${grabClientX}px`;
+    constraintFeedbackLine.style.top = `${grabClientY}px`;
+    constraintFeedbackLine.style.width = `${distance}px`;
+    constraintFeedbackLine.style.transform = `rotate(${angle}deg)`;
     // Fade in based on distance (more visible as distance increases)
     const maxOpacity = 0.8;
     const opacityFactor = Math.min((distance - threshold) / 100, 1);
-    constraintFeedbackLine.style.opacity = "".concat(maxOpacity * opacityFactor);
+    constraintFeedbackLine.style.opacity = `${maxOpacity * opacityFactor}`;
     constraintFeedbackLine.setAttribute("data-visible", "");
   };
+
   return {
     onDrag,
     onRelease: () => {
       constraintFeedbackLine.remove();
-    }
+    },
   };
 };
+
 const createConstraintFeedbackLine = () => {
   const line = document.createElement("div");
   line.className = "navi_constraint_feedback_line";
-  line.title = "Constraint feedback - shows distance between mouse and moving grab point";
+  line.title =
+    "Constraint feedback - shows distance between mouse and moving grab point";
   document.body.appendChild(line);
   return line;
 };
-import.meta.css = /* css */"\n  .navi_constraint_feedback_line {\n    position: fixed;\n    pointer-events: none;\n    z-index: 9998;\n    visibility: hidden;\n    transition: opacity 0.15s ease;\n    transform-origin: left center;\n    border-top: 2px dotted rgba(59, 130, 246, 0.7);\n  }\n\n  .navi_constraint_feedback_line[data-visible] {\n    visibility: visible;\n  }\n";
+
+import.meta.css = /* css */ `
+  .navi_constraint_feedback_line {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9998;
+    visibility: hidden;
+    transition: opacity 0.15s ease;
+    transform-origin: left center;
+    border-top: 2px dotted rgba(59, 130, 246, 0.7);
+  }
+
+  .navi_constraint_feedback_line[data-visible] {
+    visibility: visible;
+  }
+`;
 
 installImportMetaCss(import.meta);const MARKER_SIZE = 12;
+
 let currentDebugMarkers = [];
 let currentConstraintMarkers = [];
 let currentReferenceElementMarker = null;
 let currentElementMarker = null;
-const setupDragDebugMarkers = (dragGesture, {
-  referenceElement
-}) => {
+
+const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
   // Clean up any existing persistent markers from previous drag gestures
   {
     // Remove any existing markers from previous gestures
@@ -4067,27 +4151,29 @@ const setupDragDebugMarkers = (dragGesture, {
       container.innerHTML = ""; // Clear all markers efficiently
     }
   }
-  const {
-    direction,
-    scrollContainer
-  } = dragGesture.gestureInfo;
+
+  const { direction, scrollContainer } = dragGesture.gestureInfo;
+
   return {
-    onConstraints: (constraints, {
-      left,
-      top,
-      right,
-      bottom,
-      autoScrollArea
-    }) => {
+    onConstraints: (
+      constraints,
+      { left, top, right, bottom, autoScrollArea },
+    ) => {
       // Schedule removal of previous markers if they exist
       const previousDebugMarkers = [...currentDebugMarkers];
       const previousConstraintMarkers = [...currentConstraintMarkers];
       const previousReferenceElementMarker = currentReferenceElementMarker;
       const previousElementMarker = currentElementMarker;
-      if (previousDebugMarkers.length > 0 || previousConstraintMarkers.length > 0 || previousReferenceElementMarker || previousElementMarker) {
+
+      if (
+        previousDebugMarkers.length > 0 ||
+        previousConstraintMarkers.length > 0 ||
+        previousReferenceElementMarker ||
+        previousElementMarker
+      ) {
         setTimeout(() => {
-          previousDebugMarkers.forEach(marker => marker.remove());
-          previousConstraintMarkers.forEach(marker => marker.remove());
+          previousDebugMarkers.forEach((marker) => marker.remove());
+          previousConstraintMarkers.forEach((marker) => marker.remove());
           if (previousReferenceElementMarker) {
             previousReferenceElementMarker.remove();
           }
@@ -4116,7 +4202,7 @@ const setupDragDebugMarkers = (dragGesture, {
         bottom,
         scrollContainer,
         label: elementLabel,
-        color: elementColor
+        color: elementColor,
       });
 
       // Create reference element marker if reference element exists
@@ -4126,47 +4212,52 @@ const setupDragDebugMarkers = (dragGesture, {
           top,
           right,
           bottom,
-          scrollContainer
+          scrollContainer,
         });
       }
 
       // Collect all markers to be created, then merge duplicates
       const markersToCreate = [];
+
       {
         if (direction.x) {
           markersToCreate.push({
-            name: autoScrollArea.paddingLeft ? "autoscroll.left + padding(".concat(autoScrollArea.paddingLeft, ")") : "autoscroll.left",
+            name: autoScrollArea.paddingLeft
+              ? `autoscroll.left + padding(${autoScrollArea.paddingLeft})`
+              : "autoscroll.left",
             x: autoScrollArea.left,
             y: 0,
-            color: "0 128 0",
-            // green
-            side: "left"
+            color: "0 128 0", // green
+            side: "left",
           });
           markersToCreate.push({
-            name: autoScrollArea.paddingRight ? "autoscroll.right + padding(".concat(autoScrollArea.paddingRight, ")") : "autoscroll.right",
+            name: autoScrollArea.paddingRight
+              ? `autoscroll.right + padding(${autoScrollArea.paddingRight})`
+              : "autoscroll.right",
             x: autoScrollArea.right,
             y: 0,
-            color: "0 128 0",
-            // green
-            side: "right"
+            color: "0 128 0", // green
+            side: "right",
           });
         }
         if (direction.y) {
           markersToCreate.push({
-            name: autoScrollArea.paddingTop ? "autoscroll.top + padding(".concat(autoScrollArea.paddingTop, ")") : "autoscroll.top",
+            name: autoScrollArea.paddingTop
+              ? `autoscroll.top + padding(${autoScrollArea.paddingTop})`
+              : "autoscroll.top",
             x: 0,
             y: autoScrollArea.top,
-            color: "255 0 0",
-            // red
-            side: "top"
+            color: "255 0 0", // red
+            side: "top",
           });
           markersToCreate.push({
-            name: autoScrollArea.paddingBottom ? "autoscroll.bottom + padding(".concat(autoScrollArea.paddingBottom, ")") : "autoscroll.bottom",
+            name: autoScrollArea.paddingBottom
+              ? `autoscroll.bottom + padding(${autoScrollArea.paddingBottom})`
+              : "autoscroll.bottom",
             x: 0,
             y: autoScrollArea.bottom,
-            color: "255 165 0",
-            // orange
-            side: "bottom"
+            color: "255 165 0", // orange
+            side: "bottom",
           });
         }
       }
@@ -4174,75 +4265,79 @@ const setupDragDebugMarkers = (dragGesture, {
       // Process each constraint individually to preserve names
       for (const constraint of constraints) {
         if (constraint.type === "bounds") {
-          const {
-            bounds
-          } = constraint;
+          const { bounds } = constraint;
 
           // Create individual markers for each bound with constraint name
           if (direction.x) {
             if (bounds.left !== undefined) {
               markersToCreate.push({
-                name: "".concat(constraint.name, ".left"),
+                name: `${constraint.name}.left`,
                 x: bounds.left,
                 y: 0,
-                color: "128 0 128",
-                // purple
-                side: "left"
+                color: "128 0 128", // purple
+                side: "left",
               });
             }
             if (bounds.right !== undefined) {
               // For visual clarity, show rightBound at the right edge of the element
               // when element is positioned at rightBound (not the left edge position)
               markersToCreate.push({
-                name: "".concat(constraint.name, ".right"),
+                name: `${constraint.name}.right`,
                 x: bounds.right,
                 y: 0,
-                color: "128 0 128",
-                // purple
-                side: "right"
+                color: "128 0 128", // purple
+                side: "right",
               });
             }
           }
           if (direction.y) {
             if (bounds.top !== undefined) {
               markersToCreate.push({
-                name: "".concat(constraint.name, ".top"),
+                name: `${constraint.name}.top`,
                 x: 0,
                 y: bounds.top,
-                color: "128 0 128",
-                // purple
-                side: "top"
+                color: "128 0 128", // purple
+                side: "top",
               });
             }
             if (bounds.bottom !== undefined) {
               // For visual clarity, show bottomBound at the bottom edge of the element
               // when element is positioned at bottomBound (not the left edge position)
               markersToCreate.push({
-                name: "".concat(constraint.name, ".bottom"),
+                name: `${constraint.name}.bottom`,
                 x: 0,
                 y: bounds.bottom,
-                color: "128 0 128",
-                // purple
-                side: "bottom"
+                color: "128 0 128", // purple
+                side: "bottom",
               });
             }
           }
         } else if (constraint.type === "obstacle") {
-          const obstacleMarker = createObstacleMarker(constraint, scrollContainer);
+          const obstacleMarker = createObstacleMarker(
+            constraint,
+            scrollContainer,
+          );
           currentConstraintMarkers.push(obstacleMarker);
         }
       }
 
       // Create markers with merging for overlapping positions
-      const createdMarkers = createMergedMarkers(markersToCreate, scrollContainer);
-      currentDebugMarkers.push(...createdMarkers.filter(m => m.type !== "constraint"));
-      currentConstraintMarkers.push(...createdMarkers.filter(m => m.type === "constraint"));
+      const createdMarkers = createMergedMarkers(
+        markersToCreate,
+        scrollContainer,
+      );
+      currentDebugMarkers.push(
+        ...createdMarkers.filter((m) => m.type !== "constraint"),
+      );
+      currentConstraintMarkers.push(
+        ...createdMarkers.filter((m) => m.type === "constraint"),
+      );
     },
     onRelease: () => {
       {
         return;
       }
-    }
+    },
   };
 };
 
@@ -4261,9 +4356,8 @@ const getMarkersContainer = () => {
 // Convert document-relative coordinates to viewport coordinates for marker positioning
 // Takes the scroll container into account for proper positioning relative to the container
 const getDebugMarkerPos = (x, y, scrollContainer, side = null) => {
-  const {
-    documentElement
-  } = document;
+  const { documentElement } = document;
+
   const leftWithoutScroll = x - scrollContainer.scrollLeft;
   const topWithoutScroll = y - scrollContainer.scrollTop;
   let baseX;
@@ -4295,13 +4389,15 @@ const getDebugMarkerPos = (x, y, scrollContainer, side = null) => {
   // For obstacles and other markers: use converted coordinates directly
   return [baseX, baseY];
 };
+
 const createMergedMarkers = (markersToCreate, scrollContainer) => {
   const mergedMarkers = [];
   const positionMap = new Map();
 
   // Group markers by position and side
   for (const marker of markersToCreate) {
-    const key = "".concat(marker.x, ",").concat(marker.y, ",").concat(marker.side);
+    const key = `${marker.x},${marker.y},${marker.side}`;
+
     if (!positionMap.has(key)) {
       positionMap.set(key, []);
     }
@@ -4319,43 +4415,51 @@ const createMergedMarkers = (markersToCreate, scrollContainer) => {
     } else {
       // Multiple markers at same position - merge labels
       const firstMarker = markers[0];
-      const combinedName = markers.map(m => m.name).join(" + ");
+      const combinedName = markers.map((m) => m.name).join(" + ");
 
       // Use the first marker's color, or mix colors if needed
-      const domMarker = createDebugMarker({
-        ...firstMarker,
-        name: combinedName
-      }, scrollContainer);
-      domMarker.type = markers.some(m => m.name.includes("Bound")) ? "constraint" : "visible";
+      const domMarker = createDebugMarker(
+        {
+          ...firstMarker,
+          name: combinedName,
+        },
+        scrollContainer,
+      );
+      domMarker.type = markers.some((m) => m.name.includes("Bound"))
+        ? "constraint"
+        : "visible";
       mergedMarkers.push(domMarker);
     }
   }
+
   return mergedMarkers;
 };
-const createDebugMarker = ({
-  name,
-  x,
-  y,
-  color = "255 0 0",
-  side
-}, scrollContainer) => {
+
+const createDebugMarker = (
+  { name, x, y, color = "255 0 0", side },
+  scrollContainer,
+) => {
   // Convert coordinates from document-relative to viewport
   const [viewportX, viewportY] = getDebugMarkerPos(x, y, scrollContainer, side);
+
   const marker = document.createElement("div");
-  marker.className = "navi_debug_marker";
-  marker.setAttribute("data-".concat(side), "");
+  marker.className = `navi_debug_marker`;
+  marker.setAttribute(`data-${side}`, "");
   // Set the color as a CSS custom property
-  marker.style.setProperty("--marker-color", "rgb(".concat(color, ")"));
+  marker.style.setProperty("--marker-color", `rgb(${color})`);
   // Position markers exactly at the boundary coordinates
-  marker.style.left = side === "right" ? "".concat(viewportX - MARKER_SIZE, "px") : "".concat(viewportX, "px");
-  marker.style.top = side === "bottom" ? "".concat(viewportY - MARKER_SIZE, "px") : "".concat(viewportY, "px");
+  marker.style.left =
+    side === "right" ? `${viewportX - MARKER_SIZE}px` : `${viewportX}px`;
+  marker.style.top =
+    side === "bottom" ? `${viewportY - MARKER_SIZE}px` : `${viewportY}px`;
   marker.title = name;
 
   // Add label
   const label = document.createElement("div");
-  label.className = "navi_debug_marker_label";
+  label.className = `navi_debug_marker_label`;
   label.textContent = name;
   marker.appendChild(label);
+
   const container = getMarkersContainer();
   container.appendChild(marker);
   return marker;
@@ -4365,13 +4469,19 @@ const createObstacleMarker = (obstacleObj, scrollContainer) => {
   const height = obstacleObj.bounds.bottom - obstacleObj.bounds.top;
 
   // Convert document-relative coordinates to viewport coordinates
-  const [x, y] = getDebugMarkerPos(obstacleObj.bounds.left, obstacleObj.bounds.top, scrollContainer, "obstacle");
+  const [x, y] = getDebugMarkerPos(
+    obstacleObj.bounds.left,
+    obstacleObj.bounds.top,
+    scrollContainer,
+    "obstacle",
+  );
+
   const marker = document.createElement("div");
   marker.className = "navi_obstacle_marker";
-  marker.style.left = "".concat(x, "px");
-  marker.style.top = "".concat(y, "px");
-  marker.style.width = "".concat(width, "px");
-  marker.style.height = "".concat(height, "px");
+  marker.style.left = `${x}px`;
+  marker.style.top = `${y}px`;
+  marker.style.width = `${width}px`;
+  marker.style.height = `${height}px`;
   marker.title = obstacleObj.name;
 
   // Add label
@@ -4379,10 +4489,12 @@ const createObstacleMarker = (obstacleObj, scrollContainer) => {
   label.className = "navi_obstacle_marker_label";
   label.textContent = obstacleObj.name;
   marker.appendChild(label);
+
   const container = getMarkersContainer();
   container.appendChild(marker);
   return marker;
 };
+
 const createElementMarker = ({
   left,
   top,
@@ -4390,50 +4502,54 @@ const createElementMarker = ({
   bottom,
   scrollContainer,
   label = "Element",
-  color = "0, 200, 0" // Default green color
+  color = "0, 200, 0", // Default green color
 }) => {
   const width = right - left;
   const height = bottom - top;
   // Convert document-relative coordinates to viewport coordinates
   const [x, y] = getDebugMarkerPos(left, top, scrollContainer, "element");
+
   const marker = document.createElement("div");
   marker.className = "navi_element_marker";
-  marker.style.left = "".concat(x, "px");
-  marker.style.top = "".concat(y, "px");
-  marker.style.width = "".concat(width, "px");
-  marker.style.height = "".concat(height, "px");
+  marker.style.left = `${x}px`;
+  marker.style.top = `${y}px`;
+  marker.style.width = `${width}px`;
+  marker.style.height = `${height}px`;
   marker.title = label;
 
   // Set the color as CSS custom properties
-  marker.style.setProperty("--element-color", "rgb(".concat(color, ")"));
-  marker.style.setProperty("--element-color-alpha", "rgba(".concat(color, ", 0.3)"));
+  marker.style.setProperty("--element-color", `rgb(${color})`);
+  marker.style.setProperty("--element-color-alpha", `rgba(${color}, 0.3)`);
 
   // Add label
   const labelEl = document.createElement("div");
   labelEl.className = "navi_element_marker_label";
   labelEl.textContent = label;
   marker.appendChild(labelEl);
+
   const container = getMarkersContainer();
   container.appendChild(marker);
   return marker;
 };
+
 const createReferenceElementMarker = ({
   left,
   top,
   right,
   bottom,
-  scrollContainer
+  scrollContainer,
 }) => {
   const width = right - left;
   const height = bottom - top;
   // Convert document-relative coordinates to viewport coordinates
   const [x, y] = getDebugMarkerPos(left, top, scrollContainer, "reference");
+
   const marker = document.createElement("div");
   marker.className = "navi_reference_element_marker";
-  marker.style.left = "".concat(x, "px");
-  marker.style.top = "".concat(y, "px");
-  marker.style.width = "".concat(width, "px");
-  marker.style.height = "".concat(height, "px");
+  marker.style.left = `${x}px`;
+  marker.style.top = `${y}px`;
+  marker.style.width = `${width}px`;
+  marker.style.height = `${height}px`;
   marker.title = "Reference Element";
 
   // Add label
@@ -4441,32 +4557,224 @@ const createReferenceElementMarker = ({
   label.className = "navi_reference_element_marker_label";
   label.textContent = "Reference Element";
   marker.appendChild(label);
+
   const container = getMarkersContainer();
   container.appendChild(marker);
   return marker;
 };
-import.meta.css = /* css */"\n  .navi_debug_markers_container {\n    position: fixed;\n    top: 0;\n    left: 0;\n    width: 100vw;\n    height: 100vh;\n    overflow: hidden;\n    pointer-events: none;\n    z-index: 999998;\n    --marker-size: ".concat(MARKER_SIZE, "px;\n  }\n\n  .navi_debug_marker {\n    position: absolute;\n    pointer-events: none;\n  }\n\n  /* Markers based on side rather than orientation */\n  .navi_debug_marker[data-left],\n  .navi_debug_marker[data-right] {\n    width: var(--marker-size);\n    height: 100vh;\n  }\n\n  .navi_debug_marker[data-top],\n  .navi_debug_marker[data-bottom] {\n    width: 100vw;\n    height: var(--marker-size);\n  }\n\n  /* Gradient directions based on side, using CSS custom properties for color */\n  .navi_debug_marker[data-left] {\n    background: linear-gradient(\n      to right,\n      rgba(from var(--marker-color) r g b / 0.9) 0%,\n      rgba(from var(--marker-color) r g b / 0.7) 30%,\n      rgba(from var(--marker-color) r g b / 0.3) 70%,\n      rgba(from var(--marker-color) r g b / 0) 100%\n    );\n  }\n\n  .navi_debug_marker[data-right] {\n    background: linear-gradient(\n      to left,\n      rgba(from var(--marker-color) r g b / 0.9) 0%,\n      rgba(from var(--marker-color) r g b / 0.7) 30%,\n      rgba(from var(--marker-color) r g b / 0.3) 70%,\n      rgba(from var(--marker-color) r g b / 0) 100%\n    );\n  }\n\n  .navi_debug_marker[data-top] {\n    background: linear-gradient(\n      to bottom,\n      rgba(from var(--marker-color) r g b / 0.9) 0%,\n      rgba(from var(--marker-color) r g b / 0.7) 30%,\n      rgba(from var(--marker-color) r g b / 0.3) 70%,\n      rgba(from var(--marker-color) r g b / 0) 100%\n    );\n  }\n\n  .navi_debug_marker[data-bottom] {\n    background: linear-gradient(\n      to top,\n      rgba(from var(--marker-color) r g b / 0.9) 0%,\n      rgba(from var(--marker-color) r g b / 0.7) 30%,\n      rgba(from var(--marker-color) r g b / 0.3) 70%,\n      rgba(from var(--marker-color) r g b / 0) 100%\n    );\n  }\n\n  .navi_debug_marker_label {\n    position: absolute;\n    font-size: 12px;\n    font-weight: bold;\n    background: rgba(255, 255, 255, 0.9);\n    padding: 2px 6px;\n    border-radius: 3px;\n    border: 1px solid;\n    white-space: nowrap;\n    pointer-events: none;\n    color: rgb(from var(--marker-color) r g b / 1);\n    border-color: rgb(from var(--marker-color) r g b / 1);\n  }\n\n  /* Label positioning based on side data attributes */\n\n  /* Left side markers - vertical with 90\xB0 rotation */\n  .navi_debug_marker[data-left] .navi_debug_marker_label {\n    left: 10px;\n    top: 20px;\n    transform: rotate(90deg);\n    transform-origin: left center;\n  }\n\n  /* Right side markers - vertical with -90\xB0 rotation */\n  .navi_debug_marker[data-right] .navi_debug_marker_label {\n    right: 10px;\n    left: auto;\n    top: 20px;\n    transform: rotate(-90deg);\n    transform-origin: right center;\n  }\n\n  /* Top side markers - horizontal, label on the line */\n  .navi_debug_marker[data-top] .navi_debug_marker_label {\n    top: 0px;\n    left: 20px;\n  }\n\n  /* Bottom side markers - horizontal, label on the line */\n  .navi_debug_marker[data-bottom] .navi_debug_marker_label {\n    bottom: 0px;\n    top: auto;\n    left: 20px;\n  }\n\n  .navi_obstacle_marker {\n    position: absolute;\n    background-color: orange;\n    opacity: 0.6;\n    z-index: 9999;\n    pointer-events: none;\n  }\n\n  .navi_obstacle_marker_label {\n    position: absolute;\n    top: 50%;\n    left: 50%;\n    transform: translate(-50%, -50%);\n    font-size: 12px;\n    font-weight: bold;\n    color: white;\n    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);\n    pointer-events: none;\n  }\n\n  .navi_element_marker {\n    position: absolute;\n    background-color: var(--element-color-alpha, rgba(255, 0, 150, 0.3));\n    border: 2px solid var(--element-color, rgb(255, 0, 150));\n    opacity: 0.9;\n    z-index: 9997;\n    pointer-events: none;\n  }\n\n  .navi_element_marker_label {\n    position: absolute;\n    top: -25px;\n    right: 0;\n    font-size: 11px;\n    font-weight: bold;\n    color: var(--element-color, rgb(255, 0, 150));\n    background: rgba(255, 255, 255, 0.9);\n    padding: 2px 6px;\n    border-radius: 3px;\n    border: 1px solid var(--element-color, rgb(255, 0, 150));\n    white-space: nowrap;\n    pointer-events: none;\n  }\n\n  .navi_reference_element_marker {\n    position: absolute;\n    background-color: rgba(0, 150, 255, 0.3);\n    border: 2px dashed rgba(0, 150, 255, 0.7);\n    opacity: 0.8;\n    z-index: 9998;\n    pointer-events: none;\n  }\n\n  .navi_reference_element_marker_label {\n    position: absolute;\n    top: -25px;\n    left: 0;\n    font-size: 11px;\n    font-weight: bold;\n    color: rgba(0, 150, 255, 1);\n    background: rgba(255, 255, 255, 0.9);\n    padding: 2px 6px;\n    border-radius: 3px;\n    border: 1px solid rgba(0, 150, 255, 0.7);\n    white-space: nowrap;\n    pointer-events: none;\n  }\n");
 
-const initDragConstraints = (dragGesture, {
-  areaConstraint,
-  obstaclesContainer,
-  obstacleAttributeName,
-  showConstraintFeedbackLine,
-  showDebugMarkers,
-  referenceElement
-}) => {
+import.meta.css = /* css */ `
+  .navi_debug_markers_container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 999998;
+    --marker-size: ${MARKER_SIZE}px;
+  }
+
+  .navi_debug_marker {
+    position: absolute;
+    pointer-events: none;
+  }
+
+  /* Markers based on side rather than orientation */
+  .navi_debug_marker[data-left],
+  .navi_debug_marker[data-right] {
+    width: var(--marker-size);
+    height: 100vh;
+  }
+
+  .navi_debug_marker[data-top],
+  .navi_debug_marker[data-bottom] {
+    width: 100vw;
+    height: var(--marker-size);
+  }
+
+  /* Gradient directions based on side, using CSS custom properties for color */
+  .navi_debug_marker[data-left] {
+    background: linear-gradient(
+      to right,
+      rgba(from var(--marker-color) r g b / 0.9) 0%,
+      rgba(from var(--marker-color) r g b / 0.7) 30%,
+      rgba(from var(--marker-color) r g b / 0.3) 70%,
+      rgba(from var(--marker-color) r g b / 0) 100%
+    );
+  }
+
+  .navi_debug_marker[data-right] {
+    background: linear-gradient(
+      to left,
+      rgba(from var(--marker-color) r g b / 0.9) 0%,
+      rgba(from var(--marker-color) r g b / 0.7) 30%,
+      rgba(from var(--marker-color) r g b / 0.3) 70%,
+      rgba(from var(--marker-color) r g b / 0) 100%
+    );
+  }
+
+  .navi_debug_marker[data-top] {
+    background: linear-gradient(
+      to bottom,
+      rgba(from var(--marker-color) r g b / 0.9) 0%,
+      rgba(from var(--marker-color) r g b / 0.7) 30%,
+      rgba(from var(--marker-color) r g b / 0.3) 70%,
+      rgba(from var(--marker-color) r g b / 0) 100%
+    );
+  }
+
+  .navi_debug_marker[data-bottom] {
+    background: linear-gradient(
+      to top,
+      rgba(from var(--marker-color) r g b / 0.9) 0%,
+      rgba(from var(--marker-color) r g b / 0.7) 30%,
+      rgba(from var(--marker-color) r g b / 0.3) 70%,
+      rgba(from var(--marker-color) r g b / 0) 100%
+    );
+  }
+
+  .navi_debug_marker_label {
+    position: absolute;
+    font-size: 12px;
+    font-weight: bold;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid;
+    white-space: nowrap;
+    pointer-events: none;
+    color: rgb(from var(--marker-color) r g b / 1);
+    border-color: rgb(from var(--marker-color) r g b / 1);
+  }
+
+  /* Label positioning based on side data attributes */
+
+  /* Left side markers - vertical with 90° rotation */
+  .navi_debug_marker[data-left] .navi_debug_marker_label {
+    left: 10px;
+    top: 20px;
+    transform: rotate(90deg);
+    transform-origin: left center;
+  }
+
+  /* Right side markers - vertical with -90° rotation */
+  .navi_debug_marker[data-right] .navi_debug_marker_label {
+    right: 10px;
+    left: auto;
+    top: 20px;
+    transform: rotate(-90deg);
+    transform-origin: right center;
+  }
+
+  /* Top side markers - horizontal, label on the line */
+  .navi_debug_marker[data-top] .navi_debug_marker_label {
+    top: 0px;
+    left: 20px;
+  }
+
+  /* Bottom side markers - horizontal, label on the line */
+  .navi_debug_marker[data-bottom] .navi_debug_marker_label {
+    bottom: 0px;
+    top: auto;
+    left: 20px;
+  }
+
+  .navi_obstacle_marker {
+    position: absolute;
+    background-color: orange;
+    opacity: 0.6;
+    z-index: 9999;
+    pointer-events: none;
+  }
+
+  .navi_obstacle_marker_label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 12px;
+    font-weight: bold;
+    color: white;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
+    pointer-events: none;
+  }
+
+  .navi_element_marker {
+    position: absolute;
+    background-color: var(--element-color-alpha, rgba(255, 0, 150, 0.3));
+    border: 2px solid var(--element-color, rgb(255, 0, 150));
+    opacity: 0.9;
+    z-index: 9997;
+    pointer-events: none;
+  }
+
+  .navi_element_marker_label {
+    position: absolute;
+    top: -25px;
+    right: 0;
+    font-size: 11px;
+    font-weight: bold;
+    color: var(--element-color, rgb(255, 0, 150));
+    background: rgba(255, 255, 255, 0.9);
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid var(--element-color, rgb(255, 0, 150));
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  .navi_reference_element_marker {
+    position: absolute;
+    background-color: rgba(0, 150, 255, 0.3);
+    border: 2px dashed rgba(0, 150, 255, 0.7);
+    opacity: 0.8;
+    z-index: 9998;
+    pointer-events: none;
+  }
+
+  .navi_reference_element_marker_label {
+    position: absolute;
+    top: -25px;
+    left: 0;
+    font-size: 11px;
+    font-weight: bold;
+    color: rgba(0, 150, 255, 1);
+    background: rgba(255, 255, 255, 0.9);
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid rgba(0, 150, 255, 0.7);
+    white-space: nowrap;
+    pointer-events: none;
+  }
+`;
+
+const initDragConstraints = (
+  dragGesture,
+  {
+    areaConstraint,
+    obstaclesContainer,
+    obstacleAttributeName,
+    showConstraintFeedbackLine,
+    showDebugMarkers,
+    referenceElement,
+  },
+) => {
   const dragGestureName = dragGesture.gestureInfo.name;
   const direction = dragGesture.gestureInfo.direction;
   const scrollContainer = dragGesture.gestureInfo.scrollContainer;
   const leftAtGrab = dragGesture.gestureInfo.leftAtGrab;
   const topAtGrab = dragGesture.gestureInfo.topAtGrab;
+
   const constraintFunctions = [];
-  const addConstraint = constraint => {
+  const addConstraint = (constraint) => {
     constraintFunctions.push(constraint);
   };
+
   if (showConstraintFeedbackLine) {
     const constraintFeedbackLine = setupConstraintFeedbackLine();
-    dragGesture.addDragCallback(gestureInfo => {
+    dragGesture.addDragCallback((gestureInfo) => {
       constraintFeedbackLine.onDrag(gestureInfo);
     });
     dragGesture.addReleaseCallback(() => {
@@ -4476,15 +4784,16 @@ const initDragConstraints = (dragGesture, {
   let dragDebugMarkers;
   if (showDebugMarkers) {
     dragDebugMarkers = setupDragDebugMarkers(dragGesture, {
-      referenceElement
+      referenceElement,
     });
     dragGesture.addReleaseCallback(() => {
       dragDebugMarkers.onRelease();
     });
   }
+
   {
     const areaConstraintFunction = createAreaConstraint(areaConstraint, {
-      scrollContainer
+      scrollContainer,
     });
     if (areaConstraintFunction) {
       addConstraint(areaConstraintFunction);
@@ -4494,35 +4803,44 @@ const initDragConstraints = (dragGesture, {
     if (!obstacleAttributeName || !obstaclesContainer) {
       break obstacles;
     }
-    const obstacleConstraintFunctions = createObstacleConstraintsFromQuerySelector(obstaclesContainer, {
-      obstacleAttributeName,
-      gestureInfo: dragGesture.gestureInfo,
-      isDraggedElementSticky: false
-      // isStickyLeftOrHasStickyLeftAttr || isStickyTopOrHasStickyTopAttr,
-    });
+    const obstacleConstraintFunctions =
+      createObstacleConstraintsFromQuerySelector(obstaclesContainer, {
+        obstacleAttributeName,
+        gestureInfo: dragGesture.gestureInfo,
+        isDraggedElementSticky: false,
+        // isStickyLeftOrHasStickyLeftAttr || isStickyTopOrHasStickyTopAttr,
+      });
     for (const obstacleConstraintFunction of obstacleConstraintFunctions) {
       addConstraint(obstacleConstraintFunction);
     }
   }
-  const applyConstraints = (layoutRequested, currentLayout, limitLayout, {
-    elementWidth,
-    elementHeight,
-    scrollArea,
-    scrollport,
-    hasCrossedScrollportLeftOnce,
-    hasCrossedScrollportTopOnce,
-    autoScrollArea,
-    dragEvent
-  }) => {
+
+  const applyConstraints = (
+    layoutRequested,
+    currentLayout,
+    limitLayout,
+    {
+      elementWidth,
+      elementHeight,
+      scrollArea,
+      scrollport,
+      hasCrossedScrollportLeftOnce,
+      hasCrossedScrollportTopOnce,
+      autoScrollArea,
+      dragEvent,
+    },
+  ) => {
     if (constraintFunctions.length === 0) {
       return;
     }
+
     const elementCurrentLeft = currentLayout.left;
     const elementCurrentTop = currentLayout.top;
     const elementLeftRequested = layoutRequested.left;
     const elementTopRequested = layoutRequested.top;
     let elementLeft = elementLeftRequested;
     let elementTop = elementTopRequested;
+
     const constraintInitParams = {
       leftAtGrab,
       topAtGrab,
@@ -4537,18 +4855,25 @@ const initDragConstraints = (dragGesture, {
       scrollport,
       autoScrollArea,
       dragGestureName,
-      dragEvent
+      dragEvent,
     };
-    const constraints = constraintFunctions.map(fn => fn(constraintInitParams));
+    const constraints = constraintFunctions.map((fn) =>
+      fn(constraintInitParams),
+    );
+
     const logConstraintEnforcement = (axis, constraint) => {
       if (constraint.type === "obstacle") {
         return;
       }
-      const requested = axis === "x" ? elementLeftRequested : elementTopRequested;
+      const requested =
+        axis === "x" ? elementLeftRequested : elementTopRequested;
       const constrained = axis === "x" ? elementLeft : elementTop;
       const action = constrained > requested ? "increased" : "capped";
       const property = axis === "x" ? "left" : "top";
-      console.debug("Drag by ".concat(dragEvent.type, ": ").concat(property, " ").concat(action, " from ").concat(requested.toFixed(2), " to ").concat(constrained.toFixed(2), " by ").concat(constraint.type, ":").concat(constraint.name), constraint.element);
+      console.debug(
+        `Drag by ${dragEvent.type}: ${property} ${action} from ${requested.toFixed(2)} to ${constrained.toFixed(2)} by ${constraint.type}:${constraint.name}`,
+        constraint.element,
+      );
     };
 
     // Apply each constraint in sequence, accumulating their effects
@@ -4567,7 +4892,7 @@ const initDragConstraints = (dragGesture, {
         currentTop: elementCurrentTop,
         scrollport,
         hasCrossedScrollportLeftOnce,
-        hasCrossedScrollportTopOnce
+        hasCrossedScrollportTopOnce,
       });
       if (!result) {
         continue;
@@ -4582,6 +4907,7 @@ const initDragConstraints = (dragGesture, {
         logConstraintEnforcement("y", constraint);
       }
     }
+
     if (dragDebugMarkers) {
       dragDebugMarkers.onConstraints(constraints, {
         left: elementLeft,
@@ -4591,86 +4917,73 @@ const initDragConstraints = (dragGesture, {
         elementWidth,
         elementHeight,
         scrollport,
-        autoScrollArea
+        autoScrollArea,
       });
     }
+
     const leftModified = elementLeft !== elementLeftRequested;
     const topModified = elementTop !== elementTopRequested;
     if (!leftModified && !topModified) {
       {
-        console.debug("Drag by ".concat(dragEvent.type, ": no constraint enforcement needed (").concat(elementLeftRequested.toFixed(2), ", ").concat(elementTopRequested.toFixed(2), ")"));
+        console.debug(
+          `Drag by ${dragEvent.type}: no constraint enforcement needed (${elementLeftRequested.toFixed(2)}, ${elementTopRequested.toFixed(2)})`,
+        );
       }
       return;
     }
+
     limitLayout(elementLeft, elementTop);
   };
-  return {
-    applyConstraints
-  };
+
+  return { applyConstraints };
 };
-const createAreaConstraint = (areaConstraint, {
-  scrollContainer
-}) => {
+
+const createAreaConstraint = (areaConstraint, { scrollContainer }) => {
   if (!areaConstraint || areaConstraint === "none") {
     return null;
   }
   if (areaConstraint === "scrollport") {
-    const scrollportConstraintFunction = ({
-      scrollport
-    }) => {
+    const scrollportConstraintFunction = ({ scrollport }) => {
       return createBoundConstraint(scrollport, {
         element: scrollContainer,
-        name: "scrollport"
+        name: "scrollport",
       });
     };
     return scrollportConstraintFunction;
   }
   if (areaConstraint === "scroll") {
-    const scrollAreaConstraintFunction = ({
-      scrollArea
-    }) => {
+    const scrollAreaConstraintFunction = ({ scrollArea }) => {
       return createBoundConstraint(scrollArea, {
         element: scrollContainer,
-        name: "scroll_area"
+        name: "scroll_area",
       });
     };
     return scrollAreaConstraintFunction;
   }
   if (typeof areaConstraint === "function") {
-    const dynamicAreaConstraintFunction = params => {
+    const dynamicAreaConstraintFunction = (params) => {
       const bounds = areaConstraint(params);
       return createBoundConstraint(bounds, {
-        name: "dynamic_area"
+        name: "dynamic_area",
       });
     };
     return dynamicAreaConstraintFunction;
   }
   if (typeof areaConstraint === "object") {
-    const {
-      left,
-      top,
-      right,
-      bottom
-    } = areaConstraint;
+    const { left, top, right, bottom } = areaConstraint;
     const turnSidePropertyInToGetter = (value, side) => {
       if (value === "scrollport") {
-        return ({
-          scrollport
-        }) => scrollport[side];
+        return ({ scrollport }) => scrollport[side];
       }
       if (value === "scroll") {
-        return ({
-          scrollArea
-        }) => scrollArea[side];
+        return ({ scrollArea }) => scrollArea[side];
       }
       if (typeof value === "function") {
         return value;
       }
       if (value === undefined) {
         // defaults to scrollport
-        return ({
-          scrollport
-        }) => scrollport[side];
+        return ({ scrollport }) => scrollport[side];
       }
       return () => value;
     };
@@ -4678,87 +4991,99 @@ const createAreaConstraint = (areaConstraint, {
     const getRight = turnSidePropertyInToGetter(right, "right");
     const getTop = turnSidePropertyInToGetter(top, "top");
     const getBottom = turnSidePropertyInToGetter(bottom, "bottom");
-    const dynamicAreaConstraintFunction = params => {
+
+    const dynamicAreaConstraintFunction = (params) => {
       const bounds = {
         left: getLeft(params),
         right: getRight(params),
         top: getTop(params),
-        bottom: getBottom(params)
+        bottom: getBottom(params),
       };
       return createBoundConstraint(bounds, {
-        name: "dynamic_area"
+        name: "dynamic_area",
       });
     };
     return dynamicAreaConstraintFunction;
   }
-  console.warn("Unknown areaConstraint value: ".concat(areaConstraint, ". Expected \"scrollport\", \"scroll\", \"none\", an object with boundary definitions, or a function returning boundary definitions."));
+  console.warn(
+    `Unknown areaConstraint value: ${areaConstraint}. Expected "scrollport", "scroll", "none", an object with boundary definitions, or a function returning boundary definitions.`,
+  );
   return null;
 };
-const createObstacleConstraintsFromQuerySelector = (scrollableElement, {
-  obstacleAttributeName,
-  gestureInfo,
-  isDraggedElementSticky = false
-}) => {
+
+const createObstacleConstraintsFromQuerySelector = (
+  scrollableElement,
+  { obstacleAttributeName, gestureInfo, isDraggedElementSticky = false },
+) => {
   const dragGestureName = gestureInfo.name;
-  const obstacles = scrollableElement.querySelectorAll("[".concat(obstacleAttributeName, "]"));
+  const obstacles = scrollableElement.querySelectorAll(
+    `[${obstacleAttributeName}]`,
+  );
   const obstacleConstraintFunctions = [];
   for (const obstacle of obstacles) {
     if (obstacle.closest("[data-drag-ignore]")) {
       continue;
     }
     if (dragGestureName) {
-      const obstacleAttributeValue = obstacle.getAttribute(obstacleAttributeName);
+      const obstacleAttributeValue = obstacle.getAttribute(
+        obstacleAttributeName,
+      );
       if (obstacleAttributeValue) {
         const obstacleNames = obstacleAttributeValue.split(",");
-        const found = obstacleNames.some(obstacleName => obstacleName.trim().toLowerCase() === dragGestureName.toLowerCase());
+        const found = obstacleNames.some(
+          (obstacleName) =>
+            obstacleName.trim().toLowerCase() === dragGestureName.toLowerCase(),
+        );
         if (!found) {
           continue;
         }
       }
     }
-    obstacleConstraintFunctions.push(({
-      hasCrossedVisibleAreaLeftOnce,
-      hasCrossedVisibleAreaTopOnce
-    }) => {
-      // Only apply the "before crossing visible area" logic when dragging sticky elements
-      // Non-sticky elements should be able to cross sticky obstacles while stuck regardless of visible area crossing
-      const useOriginalPositionEvenIfSticky = isDraggedElementSticky ? !hasCrossedVisibleAreaLeftOnce && !hasCrossedVisibleAreaTopOnce : true;
-      const obstacleScrollRelativeRect = getScrollRelativeRect(obstacle, scrollableElement, {
-        useOriginalPositionEvenIfSticky
-      });
-      let obstacleBounds;
-      if (useOriginalPositionEvenIfSticky && obstacleScrollRelativeRect.isSticky) {
-        obstacleBounds = obstacleScrollRelativeRect;
-      } else {
-        obstacleBounds = addScrollToRect(obstacleScrollRelativeRect);
-      }
 
-      // obstacleBounds are already in scrollable-relative coordinates, no conversion needed
-      const obstacleObject = createObstacleContraint(obstacleBounds, {
-        name: "".concat(obstacleBounds.isSticky ? "sticky " : "", "obstacle (").concat(getElementSelector(obstacle), ")"),
-        element: obstacle
-      });
-      return obstacleObject;
-    });
+    obstacleConstraintFunctions.push(
+      ({ hasCrossedVisibleAreaLeftOnce, hasCrossedVisibleAreaTopOnce }) => {
+        // Only apply the "before crossing visible area" logic when dragging sticky elements
+        // Non-sticky elements should be able to cross sticky obstacles while stuck regardless of visible area crossing
+        const useOriginalPositionEvenIfSticky = isDraggedElementSticky
+          ? !hasCrossedVisibleAreaLeftOnce && !hasCrossedVisibleAreaTopOnce
+          : true;
+
+        const obstacleScrollRelativeRect = getScrollRelativeRect(
+          obstacle,
+          scrollableElement,
+          {
+            useOriginalPositionEvenIfSticky,
+          },
+        );
+        let obstacleBounds;
+        if (
+          useOriginalPositionEvenIfSticky &&
+          obstacleScrollRelativeRect.isSticky
+        ) {
+          obstacleBounds = obstacleScrollRelativeRect;
+        } else {
+          obstacleBounds = addScrollToRect(obstacleScrollRelativeRect);
+        }
+
+        // obstacleBounds are already in scrollable-relative coordinates, no conversion needed
+        const obstacleObject = createObstacleContraint(obstacleBounds, {
+          name: `${obstacleBounds.isSticky ? "sticky " : ""}obstacle (${getElementSelector(obstacle)})`,
+          element: obstacle,
+        });
+        return obstacleObject;
+      },
+    );
   }
   return obstacleConstraintFunctions;
 };
-const createBoundConstraint = (bounds, {
-  name,
-  element
-} = {}) => {
+
+const createBoundConstraint = (bounds, { name, element } = {}) => {
   const leftBound = bounds.left;
   const rightBound = bounds.right;
   const topBound = bounds.top;
   const bottomBound = bounds.bottom;
-  const apply = ({
-    left,
-    top,
-    right,
-    bottom,
-    width,
-    height
-  }) => {
+
+  const apply = ({ left, top, right, bottom, width, height }) => {
     let leftConstrained = left;
     let topConstrained = top;
     // Left boundary: element's left edge should not go before leftBound
@@ -4779,18 +5104,16 @@ const createBoundConstraint = (bounds, {
     }
     return [leftConstrained, topConstrained];
   };
+
   return {
     type: "bounds",
     name,
     apply,
     element,
-    bounds
+    bounds,
   };
 };
-const createObstacleContraint = (bounds, {
-  element,
-  name
-}) => {
+const createObstacleContraint = (bounds, { element, name }) => {
   const leftBound = bounds.left;
   const rightBound = bounds.right;
   const topBound = bounds.top;
@@ -4799,6 +5122,7 @@ const createObstacleContraint = (bounds, {
   const rightBoundRounded = roundForConstraints(rightBound);
   const topBoundRounded = roundForConstraints(topBound);
   const bottomBoundRounded = roundForConstraints(bottomBound);
+
   const apply = ({
     left,
     top,
@@ -4807,7 +5131,7 @@ const createObstacleContraint = (bounds, {
     width,
     height,
     currentLeft,
-    currentTop
+    currentTop,
   }) => {
     // Simple collision detection: check where element is and prevent movement into obstacle
     {
@@ -4870,7 +5194,12 @@ const createObstacleContraint = (bounds, {
     const distanceToTop = bottom - topBound; // Distance to push up
     const distanceToBottom = bottomBound - top; // Distance to push down
     // Find the minimum distance (direction of least resistance)
-    const minDistance = Math.min(distanceToLeft, distanceToRight, distanceToTop, distanceToBottom);
+    const minDistance = Math.min(
+      distanceToLeft,
+      distanceToRight,
+      distanceToTop,
+      distanceToBottom,
+    );
     if (minDistance === distanceToLeft) {
       // Push left: element should not go past leftBound - elementWidth
       const maxLeft = leftBound - width;
@@ -4896,14 +5225,16 @@ const createObstacleContraint = (bounds, {
         return [left, minTop];
       }
     }
+
     return null;
   };
+
   return {
     type: "obstacle",
     name,
     apply,
     element,
-    bounds
+    bounds,
   };
 };
 
@@ -4924,34 +5255,28 @@ const createObstacleContraint = (bounds, {
  * Using 2-decimal precision maintains smooth sub-pixel positioning while ensuring
  * reliable boundary detection for constraint systems.
  */
-const roundForConstraints = value => {
+const roundForConstraints = (value) => {
   return Math.round(value * 100) / 100;
 };
 
-const applyStickyFrontiersToAutoScrollArea = (autoScrollArea, {
-  direction,
-  scrollContainer,
-  dragName
-}) => {
-  let {
-    left,
-    right,
-    top,
-    bottom
-  } = autoScrollArea;
+const applyStickyFrontiersToAutoScrollArea = (
+  autoScrollArea,
+  { direction, scrollContainer, dragName },
+) => {
+  let { left, right, top, bottom } = autoScrollArea;
+
   if (direction.x) {
-    const horizontalStickyFrontiers = createStickyFrontierOnAxis(scrollContainer, {
-      name: dragName,
+    const horizontalStickyFrontiers = createStickyFrontierOnAxis(
       scrollContainer,
-      primarySide: "left",
-      oppositeSide: "right"
-    });
+      {
+        name: dragName,
+        scrollContainer,
+        primarySide: "left",
+        oppositeSide: "right",
+      },
+    );
     for (const horizontalStickyFrontier of horizontalStickyFrontiers) {
-      const {
-        side,
-        bounds,
-        element
-      } = horizontalStickyFrontier;
+      const { side, bounds, element } = horizontalStickyFrontier;
       if (side === "left") {
         if (bounds.right <= left) {
           continue;
@@ -4967,19 +5292,19 @@ const applyStickyFrontiersToAutoScrollArea = (autoScrollArea, {
       continue;
     }
   }
+
   if (direction.y) {
-    const verticalStickyFrontiers = createStickyFrontierOnAxis(scrollContainer, {
-      name: dragName,
+    const verticalStickyFrontiers = createStickyFrontierOnAxis(
       scrollContainer,
-      primarySide: "top",
-      oppositeSide: "bottom"
-    });
+      {
+        name: dragName,
+        scrollContainer,
+        primarySide: "top",
+        oppositeSide: "bottom",
+      },
+    );
     for (const verticalStickyFrontier of verticalStickyFrontiers) {
-      const {
-        side,
-        bounds,
-        element
-      } = verticalStickyFrontier;
+      const { side, bounds, element } = verticalStickyFrontier;
 
       // Frontier acts as a top barrier - constrains from the bottom edge of the frontier
       if (side === "top") {
@@ -4998,22 +5323,19 @@ const applyStickyFrontiersToAutoScrollArea = (autoScrollArea, {
       continue;
     }
   }
-  return {
-    left,
-    right,
-    top,
-    bottom
-  };
+
+  return { left, right, top, bottom };
 };
-const createStickyFrontierOnAxis = (element, {
-  name,
-  scrollContainer,
-  primarySide,
-  oppositeSide
-}) => {
-  const primaryAttrName = "data-drag-sticky-".concat(primarySide, "-frontier");
-  const oppositeAttrName = "data-drag-sticky-".concat(oppositeSide, "-frontier");
-  const frontiers = element.querySelectorAll("[".concat(primaryAttrName, "], [").concat(oppositeAttrName, "]"));
+
+const createStickyFrontierOnAxis = (
+  element,
+  { name, scrollContainer, primarySide, oppositeSide },
+) => {
+  const primaryAttrName = `data-drag-sticky-${primarySide}-frontier`;
+  const oppositeAttrName = `data-drag-sticky-${oppositeSide}-frontier`;
+  const frontiers = element.querySelectorAll(
+    `[${primaryAttrName}], [${oppositeAttrName}]`,
+  );
   const matchingStickyFrontiers = [];
   for (const frontier of frontiers) {
     if (frontier.closest("[data-drag-ignore]")) {
@@ -5024,14 +5346,20 @@ const createStickyFrontierOnAxis = (element, {
     // Check if element has both sides (invalid)
     if (hasPrimary && hasOpposite) {
       const elementSelector = getElementSelector(frontier);
-      console.warn("Sticky frontier element (".concat(elementSelector, ") has both ").concat(primarySide, " and ").concat(oppositeSide, " attributes. \n  A sticky frontier should only have one side attribute."));
+      console.warn(
+        `Sticky frontier element (${elementSelector}) has both ${primarySide} and ${oppositeSide} attributes. 
+  A sticky frontier should only have one side attribute.`,
+      );
       continue;
     }
     const attrName = hasPrimary ? primaryAttrName : oppositeAttrName;
     const attributeValue = frontier.getAttribute(attrName);
     if (attributeValue && name) {
       const frontierNames = attributeValue.split(",");
-      const isMatching = frontierNames.some(frontierName => frontierName.trim().toLowerCase() === name.toLowerCase());
+      const isMatching = frontierNames.some(
+        (frontierName) =>
+          frontierName.trim().toLowerCase() === name.toLowerCase(),
+      );
       if (!isMatching) {
         continue;
       }
@@ -5042,7 +5370,7 @@ const createStickyFrontierOnAxis = (element, {
       element: frontier,
       side: hasPrimary ? primarySide : oppositeSide,
       bounds: frontierBounds,
-      name: "sticky_frontier_".concat(hasPrimary ? primarySide : oppositeSide, " (").concat(getElementSelector(frontier), ")")
+      name: `sticky_frontier_${hasPrimary ? primarySide : oppositeSide} (${getElementSelector(frontier)})`,
     };
     matchingStickyFrontiers.push(stickyFrontierObject);
   }
@@ -5050,14 +5378,14 @@ const createStickyFrontierOnAxis = (element, {
 };
 
 const dragStyleController = createStyleController("drag_to_move");
+
 const createDragToMoveGestureController = ({
   stickyFrontiers = true,
   // Padding to reduce the area used to autoscroll by this amount (applied after sticky frontiers)
   // This creates an invisible space around the area where elements cannot be dragged
   autoScrollAreaPadding = 0,
   // constraints,
-  areaConstraint = "scroll",
-  // "scroll" | "scrollport" | "none" | {left,top,right,bottom} | function
+  areaConstraint = "scroll", // "scroll" | "scrollport" | "none" | {left,top,right,bottom} | function
   obstaclesContainer,
   obstacleAttributeName = "data-drag-obstacle",
   // Visual feedback line connecting mouse cursor to the moving grab point when constraints prevent following
@@ -5070,18 +5398,22 @@ const createDragToMoveGestureController = ({
   resetPositionAfterRelease = false,
   ...options
 } = {}) => {
-  const initGrabToMoveElement = (dragGesture, {
-    element,
-    referenceElement,
-    elementToMove,
-    convertScrollablePosition
-  }) => {
+  const initGrabToMoveElement = (
+    dragGesture,
+    { element, referenceElement, elementToMove, convertScrollablePosition },
+  ) => {
     const direction = dragGesture.gestureInfo.direction;
     dragGesture.gestureInfo.name;
     const scrollContainer = dragGesture.gestureInfo.scrollContainer;
     const elementImpacted = elementToMove || element;
-    const translateXAtGrab = dragStyleController.getUnderlyingValue(elementImpacted, "transform.translateX");
-    const translateYAtGrab = dragStyleController.getUnderlyingValue(elementImpacted, "transform.translateY");
+    const translateXAtGrab = dragStyleController.getUnderlyingValue(
+      elementImpacted,
+      "transform.translateX",
+    );
+    const translateYAtGrab = dragStyleController.getUnderlyingValue(
+      elementImpacted,
+      "transform.translateY",
+    );
     dragGesture.addReleaseCallback(() => {
       if (resetPositionAfterRelease) {
         dragStyleController.clear(elementImpacted);
@@ -5089,6 +5421,7 @@ const createDragToMoveGestureController = ({
         dragStyleController.commit(elementImpacted);
       }
     });
+
     let elementWidth;
     let elementHeight;
     {
@@ -5100,6 +5433,7 @@ const createDragToMoveGestureController = ({
       updateElementDimension();
       dragGesture.addBeforeDragCallback(updateElementDimension);
     }
+
     let scrollArea;
     {
       // computed at start so that scrollWidth/scrollHeight are fixed
@@ -5108,9 +5442,10 @@ const createDragToMoveGestureController = ({
         left: 0,
         top: 0,
         right: scrollContainer.scrollWidth,
-        bottom: scrollContainer.scrollHeight
+        bottom: scrollContainer.scrollHeight,
       };
     }
+
     let scrollport;
     let autoScrollArea;
     {
@@ -5121,9 +5456,12 @@ const createDragToMoveGestureController = ({
         scrollport = getScrollport(scrollBox, scrollContainer);
         autoScrollArea = scrollport;
         if (stickyFrontiers) {
-          autoScrollArea = applyStickyFrontiersToAutoScrollArea(autoScrollArea, {
-            scrollContainer,
-            direction});
+          autoScrollArea = applyStickyFrontiersToAutoScrollArea(
+            autoScrollArea,
+            {
+              scrollContainer,
+              direction},
+          );
         }
         if (autoScrollAreaPadding > 0) {
           autoScrollArea = {
@@ -5134,7 +5472,7 @@ const createDragToMoveGestureController = ({
             left: autoScrollArea.left + autoScrollAreaPadding,
             top: autoScrollArea.top + autoScrollAreaPadding,
             right: autoScrollArea.right - autoScrollAreaPadding,
-            bottom: autoScrollArea.bottom - autoScrollAreaPadding
+            bottom: autoScrollArea.bottom - autoScrollAreaPadding,
           };
         }
       };
@@ -5157,77 +5495,97 @@ const createDragToMoveGestureController = ({
       obstacleAttributeName,
       showConstraintFeedbackLine,
       showDebugMarkers,
-      referenceElement
+      referenceElement,
     });
-    dragGesture.addBeforeDragCallback((layoutRequested, currentLayout, limitLayout, {
-      dragEvent
-    }) => {
-      dragConstraints.applyConstraints(layoutRequested, currentLayout, limitLayout, {
-        elementWidth,
-        elementHeight,
-        scrollArea,
-        scrollport,
-        hasCrossedScrollportLeftOnce,
-        hasCrossedScrollportTopOnce,
-        autoScrollArea,
-        dragEvent
-      });
-    });
-    const dragToMove = gestureInfo => {
-      const {
-        isGoingDown,
-        isGoingUp,
-        isGoingLeft,
-        isGoingRight,
-        layout
-      } = gestureInfo;
+    dragGesture.addBeforeDragCallback(
+      (layoutRequested, currentLayout, limitLayout, { dragEvent }) => {
+        dragConstraints.applyConstraints(
+          layoutRequested,
+          currentLayout,
+          limitLayout,
+          {
+            elementWidth,
+            elementHeight,
+            scrollArea,
+            scrollport,
+            hasCrossedScrollportLeftOnce,
+            hasCrossedScrollportTopOnce,
+            autoScrollArea,
+            dragEvent,
+          },
+        );
+      },
+    );
+
+    const dragToMove = (gestureInfo) => {
+      const { isGoingDown, isGoingUp, isGoingLeft, isGoingRight, layout } =
+        gestureInfo;
       const left = layout.left;
       const top = layout.top;
       const right = left + elementWidth;
       const bottom = top + elementHeight;
+
       {
-        hasCrossedScrollportLeftOnce = hasCrossedScrollportLeftOnce || left < scrollport.left;
-        hasCrossedScrollportTopOnce = hasCrossedScrollportTopOnce || top < scrollport.top;
-        const getScrollMove = axis => {
+        hasCrossedScrollportLeftOnce =
+          hasCrossedScrollportLeftOnce || left < scrollport.left;
+        hasCrossedScrollportTopOnce =
+          hasCrossedScrollportTopOnce || top < scrollport.top;
+
+        const getScrollMove = (axis) => {
           const isGoingPositive = axis === "x" ? isGoingRight : isGoingDown;
           if (isGoingPositive) {
             const elementEnd = axis === "x" ? right : bottom;
-            const autoScrollAreaEnd = axis === "x" ? autoScrollArea.right : autoScrollArea.bottom;
+            const autoScrollAreaEnd =
+              axis === "x" ? autoScrollArea.right : autoScrollArea.bottom;
+
             if (elementEnd <= autoScrollAreaEnd) {
               return 0;
             }
             const scrollAmountNeeded = elementEnd - autoScrollAreaEnd;
             return scrollAmountNeeded;
           }
+
           const isGoingNegative = axis === "x" ? isGoingLeft : isGoingUp;
           if (!isGoingNegative) {
             return 0;
           }
+
           const referenceOrEl = referenceElement || element;
-          const canAutoScrollNegative = axis === "x" ? !referenceOrEl.hasAttribute("data-sticky-left") || hasCrossedScrollportLeftOnce : !referenceOrEl.hasAttribute("data-sticky-top") || hasCrossedScrollportTopOnce;
+          const canAutoScrollNegative =
+            axis === "x"
+              ? !referenceOrEl.hasAttribute("data-sticky-left") ||
+                hasCrossedScrollportLeftOnce
+              : !referenceOrEl.hasAttribute("data-sticky-top") ||
+                hasCrossedScrollportTopOnce;
           if (!canAutoScrollNegative) {
             return 0;
           }
+
           const elementStart = axis === "x" ? left : top;
-          const autoScrollAreaStart = axis === "x" ? autoScrollArea.left : autoScrollArea.top;
+          const autoScrollAreaStart =
+            axis === "x" ? autoScrollArea.left : autoScrollArea.top;
           if (elementStart >= autoScrollAreaStart) {
             return 0;
           }
+
           const scrollAmountNeeded = autoScrollAreaStart - elementStart;
           return -scrollAmountNeeded;
         };
+
         let scrollLeftTarget;
         let scrollTopTarget;
         if (direction.x) {
           const containerScrollLeftMove = getScrollMove("x");
           if (containerScrollLeftMove) {
-            scrollLeftTarget = scrollContainer.scrollLeft + containerScrollLeftMove;
+            scrollLeftTarget =
+              scrollContainer.scrollLeft + containerScrollLeftMove;
           }
         }
         if (direction.y) {
           const containerScrollTopMove = getScrollMove("y");
           if (containerScrollTopMove) {
-            scrollTopTarget = scrollContainer.scrollTop + containerScrollTopMove;
+            scrollTopTarget =
+              scrollContainer.scrollTop + containerScrollTopMove;
           }
         }
         // now we know what to do, do it
@@ -5238,18 +5596,21 @@ const createDragToMoveGestureController = ({
           scrollContainer.scrollTop = scrollTopTarget;
         }
       }
+
       {
-        const {
+        const { scrollableLeft, scrollableTop } = layout;
+        const [positionedLeft, positionedTop] = convertScrollablePosition(
           scrollableLeft,
-          scrollableTop
-        } = layout;
-        const [positionedLeft, positionedTop] = convertScrollablePosition(scrollableLeft, scrollableTop);
+          scrollableTop,
+        );
         const transform = {};
         if (direction.x) {
           const leftTarget = positionedLeft;
           const leftAtGrab = dragGesture.gestureInfo.leftAtGrab;
           const leftDelta = leftTarget - leftAtGrab;
-          const translateX = translateXAtGrab ? translateXAtGrab + leftDelta : leftDelta;
+          const translateX = translateXAtGrab
+            ? translateXAtGrab + leftDelta
+            : leftDelta;
           transform.translateX = translateX;
           // console.log({
           //   leftAtGrab,
@@ -5262,16 +5623,19 @@ const createDragToMoveGestureController = ({
           const topTarget = positionedTop;
           const topAtGrab = dragGesture.gestureInfo.topAtGrab;
           const topDelta = topTarget - topAtGrab;
-          const translateY = translateYAtGrab ? translateYAtGrab + topDelta : topDelta;
+          const translateY = translateYAtGrab
+            ? translateYAtGrab + topDelta
+            : topDelta;
           transform.translateY = translateY;
         }
         dragStyleController.set(elementImpacted, {
-          transform
+          transform,
         });
       }
     };
     dragGesture.addDragCallback(dragToMove);
   };
+
   const dragGestureController = createDragGestureController(options);
   const grab = dragGestureController.grab;
   dragGestureController.grab = ({
@@ -5281,22 +5645,27 @@ const createDragToMoveGestureController = ({
     ...rest
   } = {}) => {
     const scrollContainer = getScrollContainer(referenceElement || element);
-    const [elementScrollableLeft, elementScrollableTop, convertScrollablePosition] = createDragElementPositioner(element, referenceElement, elementToMove);
+    const [
+      elementScrollableLeft,
+      elementScrollableTop,
+      convertScrollablePosition,
+    ] = createDragElementPositioner(element, referenceElement, elementToMove);
     const dragGesture = grab({
       element,
       scrollContainer,
       layoutScrollableLeft: elementScrollableLeft,
       layoutScrollableTop: elementScrollableTop,
-      ...rest
+      ...rest,
     });
     initGrabToMoveElement(dragGesture, {
       element,
       referenceElement,
       elementToMove,
-      convertScrollablePosition
+      convertScrollablePosition,
     });
     return dragGesture;
   };
+
   return dragGestureController;
 };
 
@@ -5327,16 +5696,28 @@ const getDropTargetInfo = (gestureInfo, targetElements) => {
     }
     intersectingTargets.push(targetElement);
   }
+
   if (intersectingTargets.length === 0) {
     return null;
   }
+
   const dragElementCenterX = dragElementRect.left + dragElementRect.width / 2;
   const dragElementCenterY = dragElementRect.top + dragElementRect.height / 2;
   // Clamp coordinates to viewport to avoid issues with elementsFromPoint
   const viewportWidth = document.documentElement.clientWidth;
   const viewportHeight = document.documentElement.clientHeight;
-  const clientX = dragElementCenterX < 0 ? 0 : dragElementCenterX > viewportWidth ? viewportWidth - 1 : dragElementCenterX;
-  const clientY = dragElementCenterY < 0 ? 0 : dragElementCenterY > viewportHeight ? viewportHeight - 1 : dragElementCenterY;
+  const clientX =
+    dragElementCenterX < 0
+      ? 0
+      : dragElementCenterX > viewportWidth
+        ? viewportWidth - 1
+        : dragElementCenterX;
+  const clientY =
+    dragElementCenterY < 0
+      ? 0
+      : dragElementCenterY > viewportHeight
+        ? viewportHeight - 1
+        : dragElementCenterY;
 
   // Find the first target element in the stack (topmost visible target)
   const elementsUnderDragElement = document.elementsFromPoint(clientX, clientY);
@@ -5399,16 +5780,23 @@ const getDropTargetInfo = (gestureInfo, targetElements) => {
     element: targetElement,
     elementSide: {
       x: dragElementRect.left < targetCenterX ? "start" : "end",
-      y: dragElementRect.top < targetCenterY ? "start" : "end"
+      y: dragElementRect.top < targetCenterY ? "start" : "end",
     },
-    intersecting: intersectingTargets
+    intersecting: intersectingTargets,
   };
   return result;
 };
+
 const rectangleAreIntersecting = (r1, r2) => {
-  return !(r2.left > r1.right || r2.right < r1.left || r2.top > r1.bottom || r2.bottom < r1.top);
+  return !(
+    r2.left > r1.right ||
+    r2.right < r1.left ||
+    r2.top > r1.bottom ||
+    r2.bottom < r1.top
+  );
 };
-const isTableCell = el => {
+
+const isTableCell = (el) => {
   return el.tagName === "TD" || el.tagName === "TH";
 };
 
@@ -5418,7 +5806,7 @@ const isTableCell = el => {
  * @param {Element[]} targetColElements - Array of <col> elements to search in
  * @returns {Element|null} The corresponding <col> element or null if not found
  */
-const findTableCellCol = cellElement => {
+const findTableCellCol = (cellElement) => {
   const table = cellElement.closest("table");
   const colgroup = table.querySelector("colgroup");
   if (!colgroup) {
@@ -5430,23 +5818,21 @@ const findTableCellCol = cellElement => {
   return correspondingCol;
 };
 
-const getHeight = element => {
-  const {
-    height
-  } = element.getBoundingClientRect();
+const getHeight = (element) => {
+  const { height } = element.getBoundingClientRect();
   return height;
 };
 
-const getWidth = element => {
-  const {
-    width
-  } = element.getBoundingClientRect();
+const getWidth = (element) => {
+  const { width } = element.getBoundingClientRect();
   return width;
 };
 
-const stickyAsRelativeCoords = (element, referenceElement, {
-  scrollContainer = getScrollContainer(element)
-} = {}) => {
+const stickyAsRelativeCoords = (
+  element,
+  referenceElement,
+  { scrollContainer = getScrollContainer(element) } = {},
+) => {
   const hasStickyLeftAttribute = element.hasAttribute("data-sticky-left");
   const hasTopStickyAttribute = element.hasAttribute("data-sticky-top");
   if (!hasStickyLeftAttribute && !hasTopStickyAttribute) {
@@ -5456,6 +5842,7 @@ const stickyAsRelativeCoords = (element, referenceElement, {
   const referenceElementRect = referenceElement.getBoundingClientRect();
   const computedStyle = getComputedStyle(element);
   const isDocumentScrolling = scrollContainer === document.documentElement;
+
   let leftPosition;
   let topPosition;
   if (isDocumentScrolling) {
@@ -5465,7 +5852,8 @@ const stickyAsRelativeCoords = (element, referenceElement, {
       const cssLeftValue = parseFloat(computedStyle.left) || 0;
       const isStuckLeft = elementRect.left <= cssLeftValue;
       if (isStuckLeft) {
-        const elementOffsetRelative = elementRect.left - referenceElementRect.left;
+        const elementOffsetRelative =
+          elementRect.left - referenceElementRect.left;
         leftPosition = elementOffsetRelative - cssLeftValue;
       } else {
         leftPosition = 0;
@@ -5475,7 +5863,8 @@ const stickyAsRelativeCoords = (element, referenceElement, {
       const cssTopValue = parseFloat(computedStyle.top) || 0;
       const isStuckTop = elementRect.top <= cssTopValue;
       if (isStuckTop) {
-        const elementOffsetRelative = elementRect.top - referenceElementRect.top;
+        const elementOffsetRelative =
+          elementRect.top - referenceElementRect.top;
         topPosition = elementOffsetRelative - cssTopValue;
       } else {
         topPosition = 0;
@@ -5489,10 +5878,12 @@ const stickyAsRelativeCoords = (element, referenceElement, {
   if (hasStickyLeftAttribute) {
     const cssLeftValue = parseFloat(computedStyle.left) || 0;
     // Check if element is stuck to the left edge of the scrollable container
-    const isStuckLeft = elementRect.left <= scrollContainerRect.left + cssLeftValue;
+    const isStuckLeft =
+      elementRect.left <= scrollContainerRect.left + cssLeftValue;
     if (isStuckLeft) {
       // Element is stuck - calculate its offset relative to reference element
-      const elementOffsetRelative = elementRect.left - referenceElementRect.left;
+      const elementOffsetRelative =
+        elementRect.left - referenceElementRect.left;
       leftPosition = elementOffsetRelative - cssLeftValue;
     } else {
       // Element is not stuck - behaves like position: relative with no offset
@@ -5530,14 +5921,12 @@ const stickyAsRelativeCoords = (element, referenceElement, {
 const visibleRectEffect = (element, update) => {
   const [teardown, addTeardown] = createPubSub();
   const scrollContainer = getScrollContainer(element);
-  const scrollContainerIsDocument = scrollContainer === document.documentElement;
-  const check = reason => {
+  const scrollContainerIsDocument =
+    scrollContainer === document.documentElement;
+  const check = (reason) => {
 
     // 1. Calculate element position relative to scrollable parent
-    const {
-      scrollLeft,
-      scrollTop
-    } = scrollContainer;
+    const { scrollLeft, scrollTop } = scrollContainer;
     const visibleAreaLeft = scrollLeft;
     const visibleAreaTop = scrollTop;
 
@@ -5553,28 +5942,32 @@ const visibleRectEffect = (element, update) => {
       // For custom container, get position relative to the container
       const elementRect = element.getBoundingClientRect();
       const scrollContainerRect = scrollContainer.getBoundingClientRect();
-      elementAbsoluteLeft = elementRect.left - scrollContainerRect.left + scrollLeft;
-      elementAbsoluteTop = elementRect.top - scrollContainerRect.top + scrollTop;
+      elementAbsoluteLeft =
+        elementRect.left - scrollContainerRect.left + scrollLeft;
+      elementAbsoluteTop =
+        elementRect.top - scrollContainerRect.top + scrollTop;
     }
-    const leftVisible = visibleAreaLeft < elementAbsoluteLeft ? elementAbsoluteLeft - visibleAreaLeft : 0;
-    const topVisible = visibleAreaTop < elementAbsoluteTop ? elementAbsoluteTop - visibleAreaTop : 0;
+
+    const leftVisible =
+      visibleAreaLeft < elementAbsoluteLeft
+        ? elementAbsoluteLeft - visibleAreaLeft
+        : 0;
+    const topVisible =
+      visibleAreaTop < elementAbsoluteTop
+        ? elementAbsoluteTop - visibleAreaTop
+        : 0;
     // Convert to overlay coordinates (adjust for custom scrollable container)
     let overlayLeft = leftVisible;
     let overlayTop = topVisible;
     if (!scrollContainerIsDocument) {
-      const {
-        left: scrollableLeft,
-        top: scrollableTop
-      } = scrollContainer.getBoundingClientRect();
+      const { left: scrollableLeft, top: scrollableTop } =
+        scrollContainer.getBoundingClientRect();
       overlayLeft += scrollableLeft;
       overlayTop += scrollableTop;
     }
 
     // 2. Calculate element visible width/height
-    const {
-      width,
-      height
-    } = element.getBoundingClientRect();
+    const { width, height } = element.getBoundingClientRect();
     const visibleAreaWidth = scrollContainer.clientWidth;
     const visibleAreaHeight = scrollContainer.clientHeight;
     const visibleAreaRight = visibleAreaLeft + visibleAreaWidth;
@@ -5623,7 +6016,8 @@ const visibleRectEffect = (element, update) => {
     }
 
     // Calculate visibility ratios
-    const scrollVisibilityRatio = widthVisible * heightVisible / (width * height);
+    const scrollVisibilityRatio =
+      (widthVisible * heightVisible) / (width * height);
     // Calculate visibility ratio relative to document viewport
     let documentVisibilityRatio;
     if (scrollContainerIsDocument) {
@@ -5640,8 +6034,10 @@ const visibleRectEffect = (element, update) => {
       const elementBottom = Math.min(viewportHeight, elementRect.bottom);
       const documentVisibleWidth = Math.max(0, elementRight - elementLeft);
       const documentVisibleHeight = Math.max(0, elementBottom - elementTop);
-      documentVisibilityRatio = documentVisibleWidth * documentVisibleHeight / (width * height);
+      documentVisibilityRatio =
+        (documentVisibleWidth * documentVisibleHeight) / (width * height);
     }
+
     const visibleRect = {
       left: overlayLeft,
       top: overlayTop,
@@ -5650,17 +6046,19 @@ const visibleRectEffect = (element, update) => {
       width: widthVisible,
       height: heightVisible,
       visibilityRatio: documentVisibilityRatio,
-      scrollVisibilityRatio
+      scrollVisibilityRatio,
     };
     update(visibleRect, {
       width,
-      height
+      height,
     });
   };
+
   check();
+
   const [publishBeforeAutoCheck, onBeforeAutoCheck] = createPubSub();
   {
-    const autoCheck = reason => {
+    const autoCheck = (reason) => {
       const beforeCheckResults = publishBeforeAutoCheck(reason);
       check();
       for (const beforeCheckResult of beforeCheckResults) {
@@ -5687,11 +6085,11 @@ const visibleRectEffect = (element, update) => {
         autoCheck("document_scroll");
       };
       document.addEventListener("scroll", onDocumentScroll, {
-        passive: true
+        passive: true,
       });
       addTeardown(() => {
         document.removeEventListener("scroll", onDocumentScroll, {
-          passive: true
+          passive: true,
         });
       });
       if (!scrollContainerIsDocument) {
@@ -5699,11 +6097,11 @@ const visibleRectEffect = (element, update) => {
           autoCheck("scrollable_parent_scroll");
         };
         scrollContainer.addEventListener("scroll", onScroll, {
-          passive: true
+          passive: true,
         });
         addTeardown(() => {
           scrollContainer.removeEventListener("scroll", onScroll, {
-            passive: true
+            passive: true,
           });
         });
       }
@@ -5738,25 +6136,31 @@ const visibleRectEffect = (element, update) => {
       });
     }
     {
-      const documentIntersectionObserver = new IntersectionObserver(() => {
-        autoCheck("element_intersection_with_document_change");
-      }, {
-        root: null,
-        rootMargin: "0px",
-        threshold: [0, 0.1, 0.9, 1]
-      });
+      const documentIntersectionObserver = new IntersectionObserver(
+        () => {
+          autoCheck("element_intersection_with_document_change");
+        },
+        {
+          root: null,
+          rootMargin: "0px",
+          threshold: [0, 0.1, 0.9, 1],
+        },
+      );
       documentIntersectionObserver.observe(element);
       addTeardown(() => {
         documentIntersectionObserver.disconnect();
       });
       if (!scrollContainerIsDocument) {
-        const scrollIntersectionObserver = new IntersectionObserver(() => {
-          autoCheck("element_intersection_with_scroll_change");
-        }, {
-          root: scrollContainer,
-          rootMargin: "0px",
-          threshold: [0, 0, 1, 0.9, 1]
-        });
+        const scrollIntersectionObserver = new IntersectionObserver(
+          () => {
+            autoCheck("element_intersection_with_scroll_change");
+          },
+          {
+            root: scrollContainer,
+            rootMargin: "0px",
+            threshold: [0, 0, 1, 0.9, 1],
+          },
+        );
         scrollIntersectionObserver.observe(element);
         addTeardown(() => {
           scrollIntersectionObserver.disconnect();
@@ -5768,27 +6172,31 @@ const visibleRectEffect = (element, update) => {
         autoCheck("window_touchmove");
       };
       window.addEventListener("touchmove", onWindowTouchMove, {
-        passive: true
+        passive: true,
       });
       addTeardown(() => {
         window.removeEventListener("touchmove", onWindowTouchMove, {
-          passive: true
+          passive: true,
         });
       });
     }
   }
+
   return {
     check,
     onBeforeAutoCheck,
     disconnect: () => {
       teardown();
-    }
+    },
   };
 };
-const pickPositionRelativeTo = (element, target, {
-  alignToViewportEdgeWhenTargetNearEdge = 0,
-  forcePosition
-} = {}) => {
+
+const pickPositionRelativeTo = (
+  element,
+  target,
+  { alignToViewportEdgeWhenTargetNearEdge = 0, forcePosition } = {},
+) => {
+
   const viewportWidth = document.documentElement.clientWidth;
   const viewportHeight = document.documentElement.clientHeight;
   // Get viewport-relative positions
@@ -5798,13 +6206,13 @@ const pickPositionRelativeTo = (element, target, {
     left: elementLeft,
     right: elementRight,
     top: elementTop,
-    bottom: elementBottom
+    bottom: elementBottom,
   } = elementRect;
   const {
     left: targetLeft,
     right: targetRight,
     top: targetTop,
-    bottom: targetBottom
+    bottom: targetBottom,
   } = targetRect;
   const elementWidth = elementRight - elementLeft;
   const elementHeight = elementBottom - elementTop;
@@ -5818,16 +6226,19 @@ const pickPositionRelativeTo = (element, target, {
     if (targetIsWiderThanViewport) {
       const targetLeftIsVisible = targetLeft >= 0;
       const targetRightIsVisible = targetRight <= viewportWidth;
+
       if (!targetLeftIsVisible && targetRightIsVisible) {
         // Target extends beyond left edge but right side is visible
         const viewportCenter = viewportWidth / 2;
         const distanceFromRightEdge = viewportWidth - targetRight;
-        elementPositionLeft = viewportCenter - distanceFromRightEdge / 2 - elementWidth / 2;
+        elementPositionLeft =
+          viewportCenter - distanceFromRightEdge / 2 - elementWidth / 2;
       } else if (targetLeftIsVisible && !targetRightIsVisible) {
         // Target extends beyond right edge but left side is visible
         const viewportCenter = viewportWidth / 2;
         const distanceFromLeftEdge = -targetLeft;
-        elementPositionLeft = viewportCenter - distanceFromLeftEdge / 2 - elementWidth / 2;
+        elementPositionLeft =
+          viewportCenter - distanceFromLeftEdge / 2 - elementWidth / 2;
       } else {
         // Target extends beyond both edges or is fully visible (center in viewport)
         elementPositionLeft = viewportWidth / 2 - elementWidth / 2;
@@ -5838,7 +6249,8 @@ const pickPositionRelativeTo = (element, target, {
       // Special handling when element is wider than target
       if (alignToViewportEdgeWhenTargetNearEdge) {
         const elementIsWiderThanTarget = elementWidth > targetWidth;
-        const targetIsNearLeftEdge = targetLeft < alignToViewportEdgeWhenTargetNearEdge;
+        const targetIsNearLeftEdge =
+          targetLeft < alignToViewportEdgeWhenTargetNearEdge;
         if (elementIsWiderThanTarget && targetIsNearLeftEdge) {
           elementPositionLeft = 0; // Left edge of viewport
         }
@@ -5865,7 +6277,10 @@ const pickPositionRelativeTo = (element, target, {
     const minContentVisibilityRatio = 0.6; // 60% minimum visibility to keep position
     if (preferredPosition) {
       // Element has a preferred position - try to keep it unless we really struggle
-      const visibleRatio = preferredPosition === "above" ? spaceAboveTarget / elementHeight : spaceBelowTarget / elementHeight;
+      const visibleRatio =
+        preferredPosition === "above"
+          ? spaceAboveTarget / elementHeight
+          : spaceBelowTarget / elementHeight;
       const canShowMinimumContent = visibleRatio >= minContentVisibilityRatio;
       if (canShowMinimumContent) {
         position = preferredPosition;
@@ -5881,31 +6296,36 @@ const pickPositionRelativeTo = (element, target, {
     const hasMoreSpaceBelow = spaceBelowTarget >= spaceAboveTarget;
     position = hasMoreSpaceBelow ? "below" : "above";
   }
+
   let elementPositionTop;
   {
     if (position === "below") {
       // Calculate top position when placing below target (ensure whole pixels)
       const idealTopWhenBelow = targetBottom;
-      elementPositionTop = idealTopWhenBelow % 1 === 0 ? idealTopWhenBelow : Math.floor(idealTopWhenBelow) + 1;
+      elementPositionTop =
+        idealTopWhenBelow % 1 === 0
+          ? idealTopWhenBelow
+          : Math.floor(idealTopWhenBelow) + 1;
     } else {
       // Calculate top position when placing above target
       const idealTopWhenAbove = targetTop - elementHeight;
       const minimumTopInViewport = 0;
-      elementPositionTop = idealTopWhenAbove < minimumTopInViewport ? minimumTopInViewport : idealTopWhenAbove;
+      elementPositionTop =
+        idealTopWhenAbove < minimumTopInViewport
+          ? minimumTopInViewport
+          : idealTopWhenAbove;
     }
   }
 
   // Get document scroll for final coordinate conversion
-  const {
-    scrollLeft,
-    scrollTop
-  } = document.documentElement;
+  const { scrollLeft, scrollTop } = document.documentElement;
   const elementDocumentLeft = elementPositionLeft + scrollLeft;
   const elementDocumentTop = elementPositionTop + scrollTop;
   const targetDocumentLeft = targetLeft + scrollLeft;
   const targetDocumentTop = targetTop + scrollTop;
   const targetDocumentRight = targetRight + scrollLeft;
   const targetDocumentBottom = targetBottom + scrollTop;
+
   return {
     position,
     left: elementDocumentLeft,
@@ -5917,22 +6337,23 @@ const pickPositionRelativeTo = (element, target, {
     targetRight: targetDocumentRight,
     targetBottom: targetDocumentBottom,
     spaceAboveTarget,
-    spaceBelowTarget
+    spaceBelowTarget,
   };
 };
 
-const parseTransform = transform => {
+const parseTransform = (transform) => {
   if (!transform || transform === "none") return new Map();
   const transformMap = new Map();
+
   if (transform.startsWith("matrix(")) {
     // matrix(a, b, c, d, e, f) where e is translateX and f is translateY
-    const values = transform.match(/matrix\((.*?)\)/)?.[1].split(",").map(Number);
+    const values = transform
+      .match(/matrix\((.*?)\)/)?.[1]
+      .split(",")
+      .map(Number);
     if (values) {
       const translateX = values[4]; // e value from matrix
-      transformMap.set("translateX", {
-        value: translateX,
-        unit: "px"
-      });
+      transformMap.set("translateX", { value: translateX, unit: "px" });
       return transformMap;
     }
   }
@@ -5941,25 +6362,29 @@ const parseTransform = transform => {
   const matches = transform.matchAll(/(\w+)\(([-\d.]+)(%|px|deg)?\)/g);
   for (const match of matches) {
     const [, func, value, unit = ""] = match;
-    transformMap.set(func, {
-      value: parseFloat(value),
-      unit
-    });
+    transformMap.set(func, { value: parseFloat(value), unit });
   }
   return transformMap;
 };
 
 const EASING = {
-  EASE_OUT: x => {
+  EASE_OUT: (x) => {
     return cubicBezier(x, 0, 0, 0.58, 1.0);
   }};
+
 const cubicBezier = (t, initial, p1, p2, final) => {
-  return (1 - t) * (1 - t) * (1 - t) * initial + 3 * (1 - t) * (1 - t) * t * p1 + 3 * (1 - t) * t * t * p2 + t * t * t * final;
+  return (
+    (1 - t) * (1 - t) * (1 - t) * initial +
+    3 * (1 - t) * (1 - t) * t * p1 +
+    3 * (1 - t) * t * t * p2 +
+    t * t * t * final
+  );
 };
 
 const getTimelineCurrentTime = () => {
   return document.timeline.currentTime;
 };
+
 const visualCallbackSet = new Set();
 const backgroundCallbackSet = new Set();
 const addOnTimeline = (callback, isVisual) => {
@@ -5989,7 +6414,7 @@ const createBackgroundUpdateLoop = () => {
     },
     stop: () => {
       clearTimeout(timeout);
-    }
+    },
   };
 };
 // For visual things we use animation frame which is more performant and made for this
@@ -6007,11 +6432,12 @@ const createAnimationFrameLoop = () => {
     },
     stop: () => {
       cancelAnimationFrame(animationFrame);
-    }
+    },
   };
 };
 const backgroundUpdateLoop = createBackgroundUpdateLoop();
 const animationUpdateLoop = createAnimationFrameLoop();
+
 let timelineIsRunning = false;
 const startTimeline = () => {
   if (timelineIsRunning) {
@@ -6029,8 +6455,9 @@ const LIFECYCLE_DEFAULT = {
   pause: () => {},
   cancel: () => {},
   finish: () => {},
-  updateTarget: () => {}
+  updateTarget: () => {},
 };
+
 const createTransition = ({
   constructor,
   key,
@@ -6045,32 +6472,44 @@ const createTransition = ({
   const [finishCallbacks, executeFinishCallbacks] = createCallbackController();
   const channels = {
     update: updateCallbacks,
-    finish: finishCallbacks
+    finish: finishCallbacks,
   };
   if (onUpdate) {
     updateCallbacks.add(onUpdate);
   }
+
   let playState = "idle"; // 'idle', 'running', 'paused', 'finished'
   let isFirstUpdate = false;
   let resume;
   let executionLifecycle = null;
+
   const start = () => {
     isFirstUpdate = true;
     playState = "running";
+
     executionLifecycle = lifecycle.setup(transition);
 
     // Allow setup to override from value if transition.from is undefined
-    if (transition.from === undefined && executionLifecycle.from !== undefined) {
+    if (
+      transition.from === undefined &&
+      executionLifecycle.from !== undefined
+    ) {
       transition.from = executionLifecycle.from;
     }
+
     const diff = Math.abs(transition.to - transition.from);
     if (diff === 0) {
-      console.warn("".concat(constructor.name, " transition has identical from and to values (").concat(transition.from, "). This transition will have no effect."));
+      console.warn(
+        `${constructor.name} transition has identical from and to values (${transition.from}). This transition will have no effect.`,
+      );
     } else if (typeof minDiff === "number" && diff < minDiff) {
-      console.warn("".concat(constructor.name, " transition difference is very small (").concat(diff, "). Consider if this transition is necessary (minimum threshold: ").concat(minDiff, ")."));
+      console.warn(
+        `${constructor.name} transition difference is very small (${diff}). Consider if this transition is necessary (minimum threshold: ${minDiff}).`,
+      );
     }
     transition.update(transition.value);
   };
+
   const transition = {
     constructor,
     key,
@@ -6082,6 +6521,7 @@ const createTransition = ({
     get playState() {
       return playState;
     },
+
     play: () => {
       if (playState === "idle") {
         transition.value = transition.from;
@@ -6101,6 +6541,7 @@ const createTransition = ({
       // "finished"
       start();
     },
+
     update: (value, isLast) => {
       if (playState === "idle") {
         console.warn("Cannot update transition that is idle");
@@ -6110,12 +6551,14 @@ const createTransition = ({
         console.warn("Cannot update a finished transition");
         return;
       }
+
       transition.value = value;
       transition.timing = isLast ? "end" : isFirstUpdate ? "start" : "progress";
       isFirstUpdate = false;
       executionLifecycle.update(transition);
       executeUpdateCallbacks(transition);
     },
+
     pause: () => {
       if (playState === "paused") {
         console.warn("transition already paused");
@@ -6130,6 +6573,7 @@ const createTransition = ({
       // Let the transition handle its own pause logic
       resume = lifecycle.pause(transition);
     },
+
     cancel: () => {
       if (executionLifecycle) {
         lifecycle.cancel(transition);
@@ -6139,6 +6583,7 @@ const createTransition = ({
       resume = null;
       playState = "idle";
     },
+
     finish: () => {
       if (playState === "idle") {
         console.warn("Cannot finish a transition that is idle");
@@ -6155,6 +6600,7 @@ const createTransition = ({
       playState = "finished";
       executeFinishCallbacks();
     },
+
     reverse: () => {
       if (playState === "idle") {
         console.warn("Cannot reverse a transition that is idle");
@@ -6168,6 +6614,7 @@ const createTransition = ({
       // Simply swap from and to values to reverse direction
       const originalFrom = transition.from;
       const originalTo = transition.to;
+
       transition.from = originalTo;
       transition.to = originalFrom;
 
@@ -6176,9 +6623,16 @@ const createTransition = ({
         lifecycle.reverse(transition);
       }
     },
-    updateTarget: newTarget => {
-      if (typeof newTarget !== "number" || isNaN(newTarget) || !isFinite(newTarget)) {
-        throw new Error("updateTarget: newTarget must be a finite number, got ".concat(newTarget));
+
+    updateTarget: (newTarget) => {
+      if (
+        typeof newTarget !== "number" ||
+        isNaN(newTarget) ||
+        !isFinite(newTarget)
+      ) {
+        throw new Error(
+          `updateTarget: newTarget must be a finite number, got ${newTarget}`,
+        );
       }
       if (playState === "idle") {
         console.warn("Cannot update target of idle transition");
@@ -6195,8 +6649,10 @@ const createTransition = ({
       // Let the transition handle its own target update logic
       lifecycle.updateTarget(transition);
     },
-    ...rest
+
+    ...rest,
   };
+
   return transition;
 };
 
@@ -6207,23 +6663,28 @@ const createTimelineTransition = ({
   fps = 60,
   easing = EASING.EASE_OUT,
   lifecycle,
-  startProgress = 0,
-  // Progress to start from (0-1)
+  startProgress = 0, // Progress to start from (0-1)
   ...options
 }) => {
   if (typeof duration !== "number" || duration <= 0) {
-    throw new Error("Invalid duration: ".concat(duration, ". Duration must be a positive number."));
+    throw new Error(
+      `Invalid duration: ${duration}. Duration must be a positive number.`,
+    );
   }
+
   let lastUpdateTime = -1;
+
   const timeChangeCallback = () => {
     const timelineCurrentTime = getTimelineCurrentTime();
     const msElapsedSinceStart = timelineCurrentTime - transition.startTime;
     const msRemaining = transition.duration - msElapsedSinceStart;
+
     if (
-    // we reach the end, round progress to 1
-    msRemaining < 0 ||
-    // we are very close from the end, round progress to 1
-    msRemaining <= transition.frameDuration) {
+      // we reach the end, round progress to 1
+      msRemaining < 0 ||
+      // we are very close from the end, round progress to 1
+      msRemaining <= transition.frameDuration
+    ) {
       transition.frameRemainingCount = 0;
       transition.progress = 1;
       transition.update(transition.to, true);
@@ -6248,8 +6709,11 @@ const createTimelineTransition = ({
     const progress = startProgress + rawProgress * (1 - startProgress);
     transition.progress = progress;
     const easedProgress = transition.easing(progress);
-    const value = transition.from + (transition.to - transition.from) * easedProgress;
-    transition.frameRemainingCount = Math.ceil(msRemaining / transition.frameDuration);
+    const value =
+      transition.from + (transition.to - transition.from) * easedProgress;
+    transition.frameRemainingCount = Math.ceil(
+      msRemaining / transition.frameDuration,
+    );
     transition.update(value);
   };
   const onTimelineNeeded = () => {
@@ -6258,14 +6722,12 @@ const createTimelineTransition = ({
   const onTimelineNotNeeded = () => {
     removeFromTimeline(timeChangeCallback);
   };
-  const {
-    setup
-  } = lifecycle;
+
+  const { setup } = lifecycle;
   const transition = createTransition({
     ...options,
     startTime: null,
-    progress: startProgress,
-    // Initialize with start progress
+    progress: startProgress, // Initialize with start progress
     duration,
     easing,
     fps,
@@ -6273,23 +6735,24 @@ const createTimelineTransition = ({
       return 1000 / fps;
     },
     frameRemainingCount: 0,
-    startProgress,
-    // Store for calculations
+    startProgress, // Store for calculations
     lifecycle: {
       ...lifecycle,
-      setup: transition => {
+      setup: (transition) => {
         // Handle timeline management
         lastUpdateTime = -1;
         transition.startTime = getTimelineCurrentTime();
         // Calculate remaining frames based on remaining progress
         const remainingProgress = 1 - startProgress;
         const remainingDuration = transition.duration * remainingProgress;
-        transition.frameRemainingCount = Math.ceil(remainingDuration / transition.frameDuration);
+        transition.frameRemainingCount = Math.ceil(
+          remainingDuration / transition.frameDuration,
+        );
         onTimelineNeeded();
         // Call the original setup
         return setup(transition);
       },
-      pause: transition => {
+      pause: (transition) => {
         const pauseTime = getTimelineCurrentTime();
         onTimelineNotNeeded();
         return () => {
@@ -6302,24 +6765,27 @@ const createTimelineTransition = ({
           onTimelineNeeded();
         };
       },
-      updateTarget: transition => {
+      updateTarget: (transition) => {
         transition.startTime = getTimelineCurrentTime();
         // Don't reset lastUpdateTime - we want visual continuity for smooth target updates
         // Recalculate remaining frames from current progress
         const remainingProgress = 1 - transition.progress;
         const remainingDuration = transition.duration * remainingProgress;
-        transition.frameRemainingCount = Math.ceil(remainingDuration / transition.frameDuration);
+        transition.frameRemainingCount = Math.ceil(
+          remainingDuration / transition.frameDuration,
+        );
       },
       cancel: () => {
         onTimelineNotNeeded();
       },
       finish: () => {
         onTimelineNotNeeded();
-      }
-    }
+      },
+    },
   });
   return transition;
 };
+
 const createCallbackController = () => {
   const callbackSet = new Set();
   const execute = (...args) => {
@@ -6328,7 +6794,7 @@ const createCallbackController = () => {
     }
   };
   const callbacks = {
-    add: callback => {
+    add: (callback) => {
       if (typeof callback !== "function") {
         throw new TypeError("Callback must be a function");
       }
@@ -6336,12 +6802,31 @@ const createCallbackController = () => {
       return () => {
         callbackSet.delete(callback);
       };
-    }
+    },
   };
   return [callbacks, execute];
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  /* Transition data attributes override inline styles using CSS custom properties */\n  *[data-transition-opacity] {\n    opacity: var(--ui-transition-opacity) !important;\n  }\n\n  *[data-transition-translate-x] {\n    transform: translateX(var(--ui-transition-translate-x)) !important;\n  }\n\n  *[data-transition-width] {\n    width: var(--ui-transition-width) !important;\n  }\n\n  *[data-transition-height] {\n    height: var(--ui-transition-height) !important;\n  }\n";
+installImportMetaCss(import.meta);
+import.meta.css = /* css */ `
+  /* Transition data attributes override inline styles using CSS custom properties */
+  *[data-transition-opacity] {
+    opacity: var(--ui-transition-opacity) !important;
+  }
+
+  *[data-transition-translate-x] {
+    transform: translateX(var(--ui-transition-translate-x)) !important;
+  }
+
+  *[data-transition-width] {
+    width: var(--ui-transition-width) !important;
+  }
+
+  *[data-transition-height] {
+    height: var(--ui-transition-height) !important;
+  }
+`;
+
 const createHeightTransition = (element, to, options) => {
   const heightTransition = createTimelineTransition({
     ...options,
@@ -6355,10 +6840,8 @@ const createHeightTransition = (element, to, options) => {
         const restoreWillChange = addWillChange(element, "height");
         return {
           from: getHeight(element),
-          update: ({
-            value
-          }) => {
-            const valueWithUnit = "".concat(value, "px");
+          update: ({ value }) => {
+            const valueWithUnit = `${value}px`;
             element.setAttribute("data-transition-height", valueWithUnit);
             element.style.setProperty("--ui-transition-height", valueWithUnit);
           },
@@ -6370,10 +6853,10 @@ const createHeightTransition = (element, to, options) => {
           restore: () => {
             element.removeAttribute("data-transition-height");
             element.style.removeProperty("--ui-transition-height");
-          }
+          },
         };
-      }
-    }
+      },
+    },
   });
   return heightTransition;
 };
@@ -6390,10 +6873,8 @@ const createWidthTransition = (element, to, options) => {
         const restoreWillChange = addWillChange(element, "width");
         return {
           from: getWidth(element),
-          update: ({
-            value
-          }) => {
-            const valueWithUnit = "".concat(value, "px");
+          update: ({ value }) => {
+            const valueWithUnit = `${value}px`;
             element.setAttribute("data-transition-width", valueWithUnit);
             element.style.setProperty("--ui-transition-width", valueWithUnit);
           },
@@ -6405,10 +6886,10 @@ const createWidthTransition = (element, to, options) => {
           restore: () => {
             element.removeAttribute("data-transition-width");
             element.style.removeProperty("--ui-transition-width");
-          }
+          },
         };
-      }
-    }
+      },
+    },
   });
   return widthTransition;
 };
@@ -6425,9 +6906,7 @@ const createOpacityTransition = (element, to, options = {}) => {
         const restoreWillChange = addWillChange(element, "opacity");
         return {
           from: getOpacity(element),
-          update: ({
-            value
-          }) => {
+          update: ({ value }) => {
             element.setAttribute("data-transition-opacity", value);
             element.style.setProperty("--ui-transition-opacity", value);
           },
@@ -6439,16 +6918,17 @@ const createOpacityTransition = (element, to, options = {}) => {
           restore: () => {
             element.removeAttribute("data-transition-opacity");
             element.style.removeProperty("--ui-transition-opacity");
-          }
+          },
         };
-      }
-    }
+      },
+    },
   });
   return opacityTransition;
 };
-const getOpacity = element => {
+const getOpacity = (element) => {
   return parseFloat(getComputedStyle(element).opacity) || 0;
 };
+
 const createTranslateXTransition = (element, to, options) => {
   let unit = "px";
   if (typeof to === "string") {
@@ -6457,6 +6937,7 @@ const createTranslateXTransition = (element, to, options) => {
     }
     to = parseFloat(to);
   }
+
   const translateXTransition = createTimelineTransition({
     ...options,
     constructor: createTranslateXTransition,
@@ -6469,12 +6950,13 @@ const createTranslateXTransition = (element, to, options) => {
         const restoreWillChange = addWillChange(element, "transform");
         return {
           from: getTranslateX(element),
-          update: ({
-            value
-          }) => {
-            const valueWithUnit = "".concat(value).concat(unit);
+          update: ({ value }) => {
+            const valueWithUnit = `${value}${unit}`;
             element.setAttribute("data-transition-translate-x", valueWithUnit);
-            element.style.setProperty("--ui-transition-translate-x", valueWithUnit);
+            element.style.setProperty(
+              "--ui-transition-translate-x",
+              valueWithUnit,
+            );
           },
           teardown: () => {
             restoreWillChange();
@@ -6484,38 +6966,44 @@ const createTranslateXTransition = (element, to, options) => {
           restore: () => {
             element.removeAttribute("data-transition-translate-x");
             element.style.removeProperty("--ui-transition-translate-x");
-          }
+          },
         };
-      }
-    }
+      },
+    },
   });
   return translateXTransition;
 };
-const getTranslateX = element => {
+const getTranslateX = (element) => {
   const transform = getComputedStyle(element).transform;
   const transformMap = parseTransform(transform);
   return transformMap.get("translateX")?.value || 0;
 };
 
 // Helper functions for getting natural (non-transition) values
-const getOpacityWithoutTransition = element => {
+const getOpacityWithoutTransition = (element) => {
   const transitionOpacity = element.getAttribute("data-transition-opacity");
 
   // Temporarily remove transition attribute
   element.removeAttribute("data-transition-opacity");
+
   const naturalValue = parseFloat(getComputedStyle(element).opacity) || 0;
 
   // Restore transition attribute if it existed
   if (transitionOpacity !== null) {
     element.setAttribute("data-transition-opacity", transitionOpacity);
   }
+
   return naturalValue;
 };
-const getTranslateXWithoutTransition = element => {
-  const transitionTranslateX = element.getAttribute("data-transition-translate-x");
+
+const getTranslateXWithoutTransition = (element) => {
+  const transitionTranslateX = element.getAttribute(
+    "data-transition-translate-x",
+  );
 
   // Temporarily remove transition attribute
   element.removeAttribute("data-transition-translate-x");
+
   const transform = getComputedStyle(element).transform;
   const transformMap = parseTransform(transform);
   const naturalValue = transformMap.get("translateX")?.value || 0;
@@ -6524,11 +7012,12 @@ const getTranslateXWithoutTransition = element => {
   if (transitionTranslateX !== null) {
     element.setAttribute("data-transition-translate-x", transitionTranslateX);
   }
+
   return naturalValue;
 };
 
 // transition that manages multiple transitions
-const createGroupTransition = transitionArray => {
+const createGroupTransition = (transitionArray) => {
   let finishedCount = 0;
   let duration = 0;
   let childCount = transitionArray.length;
@@ -6537,46 +7026,54 @@ const createGroupTransition = transitionArray => {
       duration = childTransition.duration;
     }
   }
+
   const groupTransition = createTransition({
     constructor: createGroupTransition,
     from: 0,
     to: 1,
     duration,
     lifecycle: {
-      setup: transition => {
+      setup: (transition) => {
         finishedCount = 0;
+
         const cleanupCallbackSet = new Set();
         for (const childTransition of transitionArray) {
           const removeFinishListener = childTransition.channels.finish.add(
-          // eslint-disable-next-line no-loop-func
-          () => {
-            finishedCount++;
-            const allFinished = finishedCount === childCount;
-            if (allFinished) {
-              transition.finish();
-            }
-          });
+            // eslint-disable-next-line no-loop-func
+            () => {
+              finishedCount++;
+              const allFinished = finishedCount === childCount;
+              if (allFinished) {
+                transition.finish();
+              }
+            },
+          );
           cleanupCallbackSet.add(removeFinishListener);
           childTransition.play();
-          const removeUpdateListener = childTransition.channels.update.add(() => {
-            // Calculate average progress (handle undefined progress)
-            let totalProgress = 0;
-            let progressCount = 0;
-            for (const t of transitionArray) {
-              if (typeof t.progress === "number") {
-                totalProgress += t.progress;
-                progressCount++;
+
+          const removeUpdateListener = childTransition.channels.update.add(
+            () => {
+              // Calculate average progress (handle undefined progress)
+              let totalProgress = 0;
+              let progressCount = 0;
+              for (const t of transitionArray) {
+                if (typeof t.progress === "number") {
+                  totalProgress += t.progress;
+                  progressCount++;
+                }
               }
-            }
-            const averageProgress = progressCount > 0 ? totalProgress / progressCount : 0;
-            // Expose progress on the group transition for external access
-            transition.progress = averageProgress;
-            // Update this transition's value with average progress
-            const isLast = averageProgress >= 1;
-            transition.update(averageProgress, isLast);
-          });
+              const averageProgress =
+                progressCount > 0 ? totalProgress / progressCount : 0;
+              // Expose progress on the group transition for external access
+              transition.progress = averageProgress;
+              // Update this transition's value with average progress
+              const isLast = averageProgress >= 1;
+              transition.update(averageProgress, isLast);
+            },
+          );
           cleanupCallbackSet.add(removeUpdateListener);
         }
+
         return {
           update: () => {},
           teardown: () => {
@@ -6585,7 +7082,7 @@ const createGroupTransition = transitionArray => {
             }
             cleanupCallbackSet.clear();
           },
-          restore: () => {}
+          restore: () => {},
         };
       },
       pause: () => {
@@ -6602,6 +7099,7 @@ const createGroupTransition = transitionArray => {
           }
         };
       },
+
       cancel: () => {
         for (const childTransition of transitionArray) {
           if (childTransition.playState !== "idle") {
@@ -6609,6 +7107,7 @@ const createGroupTransition = transitionArray => {
           }
         }
       },
+
       finish: () => {
         for (const childTransition of transitionArray) {
           if (childTransition.playState !== "finished") {
@@ -6616,14 +7115,18 @@ const createGroupTransition = transitionArray => {
           }
         }
       },
+
       reverse: () => {
         for (const childTransition of transitionArray) {
-          if (childTransition.playState === "running" || childTransition.playState === "paused") {
+          if (
+            childTransition.playState === "running" ||
+            childTransition.playState === "paused"
+          ) {
             childTransition.reverse();
           }
         }
-      }
-    }
+      },
+    },
   });
   return groupTransition;
 };
@@ -6635,6 +7138,7 @@ const createGroupTransition = transitionArray => {
 const createGroupTransitionController = () => {
   // Track all active transitions for cancellation and matching
   const activeTransitions = new Set();
+
   return {
     /**
      * Animate multiple transitions simultaneously
@@ -6646,10 +7150,8 @@ const createGroupTransitionController = () => {
      * @returns {Object} Playback controller with play(), pause(), cancel(), etc.
      */
     animate: (transitions, options = {}) => {
-      const {
-        onChange,
-        onFinish
-      } = options;
+      const { onChange, onFinish } = options;
+
       if (transitions.length === 0) {
         // No transitions to animate, call onFinish immediately
         if (onFinish) {
@@ -6661,16 +7163,10 @@ const createGroupTransitionController = () => {
           cancel: () => {},
           finish: () => {},
           playState: "idle",
-          channels: {
-            update: {
-              add: () => {}
-            },
-            finish: {
-              add: () => {}
-            }
-          }
+          channels: { update: { add: () => {} }, finish: { add: () => {} } },
         };
       }
+
       const newTransitions = [];
       const updatedTransitions = [];
 
@@ -6679,11 +7175,15 @@ const createGroupTransitionController = () => {
         // Look for existing transition with same constructor and targetKey
         let existingTransition = null;
         for (const transitionCandidate of activeTransitions) {
-          if (transitionCandidate.constructor === transition.constructor && transitionCandidate.key === transition.key) {
+          if (
+            transitionCandidate.constructor === transition.constructor &&
+            transitionCandidate.key === transition.key
+          ) {
             existingTransition = transitionCandidate;
             break;
           }
         }
+
         if (existingTransition && existingTransition.playState === "running") {
           // Update the existing transition's target if it supports updateTarget
           if (existingTransition.updateTarget) {
@@ -6697,6 +7197,7 @@ const createGroupTransitionController = () => {
           transition.channels.finish.add(() => {
             activeTransitions.delete(transition);
           });
+
           newTransitions.push(transition);
         }
       }
@@ -6704,23 +7205,20 @@ const createGroupTransitionController = () => {
       // If we only have updated transitions (no new ones), return a minimal controller
       if (newTransitions.length === 0) {
         return {
-          play: () => {},
-          // Already playing
-          pause: () => updatedTransitions.forEach(transition => transition.pause()),
-          cancel: () => updatedTransitions.forEach(transition => transition.cancel()),
-          finish: () => updatedTransitions.forEach(transition => transition.finish()),
-          reverse: () => updatedTransitions.forEach(transition => transition.reverse()),
-          playState: "running",
-          // All are already running
+          play: () => {}, // Already playing
+          pause: () =>
+            updatedTransitions.forEach((transition) => transition.pause()),
+          cancel: () =>
+            updatedTransitions.forEach((transition) => transition.cancel()),
+          finish: () =>
+            updatedTransitions.forEach((transition) => transition.finish()),
+          reverse: () =>
+            updatedTransitions.forEach((transition) => transition.reverse()),
+          playState: "running", // All are already running
           channels: {
-            update: {
-              add: () => {}
-            },
-            // Update tracking already set up
-            finish: {
-              add: () => {}
-            }
-          }
+            update: { add: () => {} }, // Update tracking already set up
+            finish: { add: () => {} },
+          },
         };
       }
 
@@ -6729,12 +7227,15 @@ const createGroupTransitionController = () => {
 
       // Add unified update tracking for ALL transitions (new + updated)
       if (onChange) {
-        groupTransition.channels.update.add(transition => {
+        groupTransition.channels.update.add((transition) => {
           // Build change entries for current state of ALL transitions
-          const changeEntries = [...newTransitions, ...updatedTransitions].map(transition => ({
-            transition,
-            value: transition.value
-          }));
+          const changeEntries = [...newTransitions, ...updatedTransitions].map(
+            (transition) => ({
+              transition,
+              value: transition.value,
+            }),
+          );
+
           const isLast = transition.value >= 1; // isLast = value >= 1 (since group tracks 0-1)
           onChange(changeEntries, isLast);
         });
@@ -6743,51 +7244,53 @@ const createGroupTransitionController = () => {
       // Add finish tracking
       if (onFinish) {
         groupTransition.channels.finish.add(() => {
-          const changeEntries = [...newTransitions, ...updatedTransitions].map(transition => ({
-            transition,
-            value: transition.value
-          }));
+          const changeEntries = [...newTransitions, ...updatedTransitions].map(
+            (transition) => ({
+              transition,
+              value: transition.value,
+            }),
+          );
           onFinish(changeEntries);
         });
       }
+
       return groupTransition;
     },
+
     /**
      * Cancel all ongoing transitions managed by this controller
      */
     cancel: () => {
       // Cancel all active transitions
       for (const transition of activeTransitions) {
-        if (transition.playState === "running" || transition.playState === "paused") {
+        if (
+          transition.playState === "running" ||
+          transition.playState === "paused"
+        ) {
           transition.cancel();
         }
       }
       // Clear the sets - the finish callbacks will handle individual cleanup
       activeTransitions.clear();
-    }
+    },
   };
 };
 
-const getPaddingSizes = element => {
-  const {
-    paddingLeft,
-    paddingRight,
-    paddingTop,
-    paddingBottom
-  } = window.getComputedStyle(element, null);
+const getPaddingSizes = (element) => {
+  const { paddingLeft, paddingRight, paddingTop, paddingBottom } =
+    window.getComputedStyle(element, null);
   return {
     left: parseFloat(paddingLeft),
     right: parseFloat(paddingRight),
     top: parseFloat(paddingTop),
-    bottom: parseFloat(paddingBottom)
+    bottom: parseFloat(paddingBottom),
   };
 };
 
-const resolveCSSSize = (size, {
-  availableSize,
-  fontSize,
-  autoIsRelativeToFont
-} = {}) => {
+const resolveCSSSize = (
+  size,
+  { availableSize, fontSize, autoIsRelativeToFont } = {},
+) => {
   if (typeof size === "string") {
     if (size === "auto") {
       return autoIsRelativeToFont ? fontSize : availableSize;
@@ -6802,35 +7305,76 @@ const resolveCSSSize = (size, {
       return parseFloat(size) * fontSize;
     }
     if (size.endsWith("rem")) {
-      return parseFloat(size) * getComputedStyle(document.documentElement).fontSize;
+      return (
+        parseFloat(size) * getComputedStyle(document.documentElement).fontSize
+      );
     }
     if (size.endsWith("vw")) {
-      return parseFloat(size) / 100 * window.innerWidth;
+      return (parseFloat(size) / 100) * window.innerWidth;
     }
     if (size.endsWith("vh")) {
-      return parseFloat(size) / 100 * window.innerHeight;
+      return (parseFloat(size) / 100) * window.innerHeight;
     }
     return parseFloat(size);
   }
   return size;
 };
 
-const getInnerWidth = element => {
+const getInnerWidth = (element) => {
   // Always subtract paddings and borders to get the content width
   const paddingSizes = getPaddingSizes(element);
   const borderSizes = getBorderSizes(element);
   const width = getWidth(element);
   const horizontalSpaceTakenByPaddings = paddingSizes.left + paddingSizes.right;
   const horizontalSpaceTakenByBorders = borderSizes.left + borderSizes.right;
-  const innerWidth = width - horizontalSpaceTakenByPaddings - horizontalSpaceTakenByBorders;
+  const innerWidth =
+    width - horizontalSpaceTakenByPaddings - horizontalSpaceTakenByBorders;
   return innerWidth;
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .ui_transition_container {\n    display: inline-flex;\n    flex: 1;\n    position: relative;\n    overflow: hidden;\n  }\n\n  .ui_transition_outer_wrapper {\n    display: inline-flex;\n    flex: 1;\n  }\n\n  .ui_transition_measure_wrapper {\n    overflow: hidden;\n    display: inline-flex;\n    flex: 1;\n  }\n\n  .ui_transition_slot {\n    position: relative;\n    display: inline-flex;\n    flex: 1;\n  }\n\n  .ui_transition_phase_overlay {\n    position: absolute;\n    inset: 0;\n    pointer-events: none;\n  }\n\n  .ui_transition_content_overlay {\n    position: absolute;\n    inset: 0;\n    pointer-events: none;\n  }\n";
+installImportMetaCss(import.meta);
+import.meta.css = /* css */ `
+  .ui_transition_container {
+    display: inline-flex;
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ui_transition_outer_wrapper {
+    display: inline-flex;
+    flex: 1;
+  }
+
+  .ui_transition_measure_wrapper {
+    overflow: hidden;
+    display: inline-flex;
+    flex: 1;
+  }
+
+  .ui_transition_slot {
+    position: relative;
+    display: inline-flex;
+    flex: 1;
+  }
+
+  .ui_transition_phase_overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .ui_transition_content_overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+`;
+
 const DEBUG$3 = {
   size: false,
   transition: false,
-  transition_updates: false
+  transition_updates: false,
 };
 
 // Utility function to format content key states consistently for debug logs
@@ -6844,8 +7388,9 @@ const formatContentKeyState = (contentKey, hasChild, hasTextNode = false) => {
   if (contentKey === null || contentKey === undefined) {
     return "[unkeyed]";
   }
-  return "[data-content-key=\"".concat(contentKey, "\"]");
+  return `[data-content-key="${contentKey}"]`;
 };
+
 const SIZE_TRANSITION_DURATION = 150; // Default size transition duration
 const SIZE_DIFF_EPSILON = 0.5; // Ignore size transition when difference below this (px)
 const CONTENT_TRANSITION = "cross-fade"; // Default content transition type
@@ -6853,27 +7398,35 @@ const CONTENT_TRANSITION_DURATION = 300; // Default content transition duration
 const PHASE_TRANSITION = "cross-fade";
 const PHASE_TRANSITION_DURATION = 300; // Default phase transition duration
 
-const initUITransition = container => {
+const initUITransition = (container) => {
   const localDebug = {
     ...DEBUG$3,
-    transition: container.hasAttribute("data-debug-transition")
+    transition: container.hasAttribute("data-debug-transition"),
   };
+
   const debug = (type, ...args) => {
     if (localDebug[type]) {
-      console.debug("[".concat(type, "]"), ...args);
+      console.debug(`[${type}]`, ...args);
     }
   };
+
   if (!container.classList.contains("ui_transition_container")) {
     console.error("Element must have ui_transition_container class");
-    return {
-      cleanup: () => {}
-    };
+    return { cleanup: () => {} };
   }
+
   const outerWrapper = container.querySelector(".ui_transition_outer_wrapper");
-  const measureWrapper = container.querySelector(".ui_transition_measure_wrapper");
+  const measureWrapper = container.querySelector(
+    ".ui_transition_measure_wrapper",
+  );
   const slot = container.querySelector(".ui_transition_slot");
-  let phaseOverlay = measureWrapper.querySelector(".ui_transition_phase_overlay");
-  let contentOverlay = container.querySelector(".ui_transition_content_overlay");
+  let phaseOverlay = measureWrapper.querySelector(
+    ".ui_transition_phase_overlay",
+  );
+  let contentOverlay = container.querySelector(
+    ".ui_transition_content_overlay",
+  );
+
   if (!phaseOverlay) {
     phaseOverlay = document.createElement("div");
     phaseOverlay.className = "ui_transition_phase_overlay";
@@ -6884,12 +7437,18 @@ const initUITransition = container => {
     contentOverlay.className = "ui_transition_content_overlay";
     container.appendChild(contentOverlay);
   }
-  if (!outerWrapper || !measureWrapper || !slot || !phaseOverlay || !contentOverlay) {
+
+  if (
+    !outerWrapper ||
+    !measureWrapper ||
+    !slot ||
+    !phaseOverlay ||
+    !contentOverlay
+  ) {
     console.error("Missing required ui-transition structure");
-    return {
-      cleanup: () => {}
-    };
+    return { cleanup: () => {} };
   }
+
   const transitionController = createGroupTransitionController();
 
   // Transition state
@@ -6914,7 +7473,9 @@ const initUITransition = container => {
 
   // Handle size updates based on content state
   let hasSizeTransitions = container.hasAttribute("data-size-transition");
-  const initialTransitionEnabled = container.hasAttribute("data-initial-transition");
+  const initialTransitionEnabled = container.hasAttribute(
+    "data-initial-transition",
+  );
   let hasPopulatedOnce = false; // track if we've already populated once (null → something)
 
   // Child state
@@ -6926,13 +7487,16 @@ const initUITransition = container => {
   const measureContentSize = () => {
     return [getWidth(measureWrapper), getHeight(measureWrapper)];
   };
+
   const updateContentDimensions = () => {
     const [newWidth, newHeight] = measureContentSize();
     debug("size", "Content size changed:", {
-      width: "".concat(naturalContentWidth, " \u2192 ").concat(newWidth),
-      height: "".concat(naturalContentHeight, " \u2192 ").concat(newHeight)
+      width: `${naturalContentWidth} → ${newWidth}`,
+      height: `${naturalContentHeight} → ${newHeight}`,
     });
+
     updateNaturalContentSize(newWidth, newHeight);
+
     if (sizeTransition) {
       debug("size", "Updating animation target:", newHeight);
       updateToSize(newWidth, newHeight);
@@ -6941,12 +7505,14 @@ const initUITransition = container => {
       constrainedHeight = newHeight;
     }
   };
+
   const stopResizeObserver = () => {
     if (resizeObserver) {
       resizeObserver.disconnect();
       resizeObserver = null;
     }
   };
+
   const startResizeObserver = () => {
     resizeObserver = new ResizeObserver(() => {
       if (!hasSizeTransitions) {
@@ -6961,16 +7527,17 @@ const initUITransition = container => {
     });
     resizeObserver.observe(measureWrapper);
   };
-  const releaseConstraints = reason => {
-    debug("size", "Releasing constraints (".concat(reason, ")"));
+
+  const releaseConstraints = (reason) => {
+    debug("size", `Releasing constraints (${reason})`);
     const [beforeWidth, beforeHeight] = measureContentSize();
     outerWrapper.style.width = "";
     outerWrapper.style.height = "";
     outerWrapper.style.overflow = "";
     const [afterWidth, afterHeight] = measureContentSize();
     debug("size", "Size after release:", {
-      width: "".concat(beforeWidth, " \u2192 ").concat(afterWidth),
-      height: "".concat(beforeHeight, " \u2192 ").concat(afterHeight)
+      width: `${beforeWidth} → ${afterWidth}`,
+      height: `${beforeHeight} → ${afterHeight}`,
     });
     constrainedWidth = afterWidth;
     constrainedHeight = afterHeight;
@@ -6982,35 +7549,45 @@ const initUITransition = container => {
       updateContentDimensions();
     }
   };
+
   const updateToSize = (targetWidth, targetHeight) => {
-    if (constrainedWidth === targetWidth && constrainedHeight === targetHeight) {
+    if (
+      constrainedWidth === targetWidth &&
+      constrainedHeight === targetHeight
+    ) {
       return;
     }
+
     const shouldAnimate = container.hasAttribute("data-size-transition");
     const widthDiff = Math.abs(targetWidth - constrainedWidth);
     const heightDiff = Math.abs(targetHeight - constrainedHeight);
+
     if (widthDiff <= SIZE_DIFF_EPSILON && heightDiff <= SIZE_DIFF_EPSILON) {
       // Both diffs negligible; just sync styles if changed and bail
       if (widthDiff > 0) {
-        outerWrapper.style.width = "".concat(targetWidth, "px");
+        outerWrapper.style.width = `${targetWidth}px`;
         constrainedWidth = targetWidth;
       }
       if (heightDiff > 0) {
-        outerWrapper.style.height = "".concat(targetHeight, "px");
+        outerWrapper.style.height = `${targetHeight}px`;
         constrainedHeight = targetHeight;
       }
-      debug("size", "Skip size animation entirely (diffs width:".concat(widthDiff.toFixed(4), "px height:").concat(heightDiff.toFixed(4), "px)"));
+      debug(
+        "size",
+        `Skip size animation entirely (diffs width:${widthDiff.toFixed(4)}px height:${heightDiff.toFixed(4)}px)`,
+      );
       return;
     }
+
     if (!shouldAnimate) {
       // No size transitions - just update dimensions instantly
       debug("size", "Updating size instantly:", {
-        width: "".concat(constrainedWidth, " \u2192 ").concat(targetWidth),
-        height: "".concat(constrainedHeight, " \u2192 ").concat(targetHeight)
+        width: `${constrainedWidth} → ${targetWidth}`,
+        height: `${constrainedHeight} → ${targetHeight}`,
       });
       suppressResizeObserver = true;
-      outerWrapper.style.width = "".concat(targetWidth, "px");
-      outerWrapper.style.height = "".concat(targetHeight, "px");
+      outerWrapper.style.width = `${targetWidth}px`;
+      outerWrapper.style.height = `${targetHeight}px`;
       constrainedWidth = targetWidth;
       constrainedHeight = targetHeight;
       // allow any resize notifications to settle then re-enable
@@ -7026,10 +7603,15 @@ const initUITransition = container => {
 
     // Animated size transition
     debug("size", "Animating size:", {
-      width: "".concat(constrainedWidth, " \u2192 ").concat(targetWidth),
-      height: "".concat(constrainedHeight, " \u2192 ").concat(targetHeight)
+      width: `${constrainedWidth} → ${targetWidth}`,
+      height: `${constrainedHeight} → ${targetHeight}`,
     });
-    const duration = parseInt(container.getAttribute("data-size-transition-duration") || SIZE_TRANSITION_DURATION);
+
+    const duration = parseInt(
+      container.getAttribute("data-size-transition-duration") ||
+        SIZE_TRANSITION_DURATION,
+    );
+
     outerWrapper.style.overflow = "hidden";
     const transitions = [];
 
@@ -7037,36 +7619,44 @@ const initUITransition = container => {
     if (heightDiff <= SIZE_DIFF_EPSILON) {
       // Treat as identical
       if (heightDiff > 0) {
-        debug("size", "Skip height transition (negligible diff ".concat(heightDiff.toFixed(4), "px)"));
+        debug(
+          "size",
+          `Skip height transition (negligible diff ${heightDiff.toFixed(4)}px)`,
+        );
       }
-      outerWrapper.style.height = "".concat(targetHeight, "px");
+      outerWrapper.style.height = `${targetHeight}px`;
       constrainedHeight = targetHeight;
     } else if (targetHeight !== constrainedHeight) {
-      transitions.push(createHeightTransition(outerWrapper, targetHeight, {
-        duration,
-        onUpdate: ({
-          value
-        }) => {
-          constrainedHeight = value;
-        }
-      }));
+      transitions.push(
+        createHeightTransition(outerWrapper, targetHeight, {
+          duration,
+          onUpdate: ({ value }) => {
+            constrainedHeight = value;
+          },
+        }),
+      );
     }
+
     if (widthDiff <= SIZE_DIFF_EPSILON) {
       if (widthDiff > 0) {
-        debug("size", "Skip width transition (negligible diff ".concat(widthDiff.toFixed(4), "px)"));
+        debug(
+          "size",
+          `Skip width transition (negligible diff ${widthDiff.toFixed(4)}px)`,
+        );
       }
-      outerWrapper.style.width = "".concat(targetWidth, "px");
+      outerWrapper.style.width = `${targetWidth}px`;
       constrainedWidth = targetWidth;
     } else if (targetWidth !== constrainedWidth) {
-      transitions.push(createWidthTransition(outerWrapper, targetWidth, {
-        duration,
-        onUpdate: ({
-          value
-        }) => {
-          constrainedWidth = value;
-        }
-      }));
+      transitions.push(
+        createWidthTransition(outerWrapper, targetWidth, {
+          duration,
+          onUpdate: ({ value }) => {
+            constrainedWidth = value;
+          },
+        }),
+      );
     }
+
     if (transitions.length > 0) {
       suppressResizeObserver = true;
       sizeTransition = transitionController.animate(transitions, {
@@ -7080,32 +7670,39 @@ const initUITransition = container => {
               updateContentDimensions();
             }
           });
-        }
+        },
       });
       sizeTransition.play();
     } else {
-      debug("size", "No size transitions created (identical or negligible differences)");
+      debug(
+        "size",
+        "No size transitions created (identical or negligible differences)",
+      );
     }
   };
+
   const applySizeConstraints = (targetWidth, targetHeight) => {
     debug("size", "Applying size constraints:", {
-      width: "".concat(constrainedWidth, " \u2192 ").concat(targetWidth),
-      height: "".concat(constrainedHeight, " \u2192 ").concat(targetHeight)
+      width: `${constrainedWidth} → ${targetWidth}`,
+      height: `${constrainedHeight} → ${targetHeight}`,
     });
-    outerWrapper.style.width = "".concat(targetWidth, "px");
-    outerWrapper.style.height = "".concat(targetHeight, "px");
+
+    outerWrapper.style.width = `${targetWidth}px`;
+    outerWrapper.style.height = `${targetHeight}px`;
     outerWrapper.style.overflow = "hidden";
     constrainedWidth = targetWidth;
     constrainedHeight = targetHeight;
   };
+
   const updateNaturalContentSize = (newWidth, newHeight) => {
     debug("size", "Updating natural content size:", {
-      width: "".concat(naturalContentWidth, " \u2192 ").concat(newWidth),
-      height: "".concat(naturalContentHeight, " \u2192 ").concat(newHeight)
+      width: `${naturalContentWidth} → ${newWidth}`,
+      height: `${naturalContentHeight} → ${newHeight}`,
     });
     naturalContentWidth = newWidth;
     naturalContentHeight = newHeight;
   };
+
   let isUpdating = false;
 
   // Shared transition setup function
@@ -7116,14 +7713,18 @@ const initUITransition = container => {
     needsOldChildClone,
     previousChild,
     firstChild,
-    attributeToRemove = []
+    attributeToRemove = [],
   }) => {
     let oldChild = null;
     let cleanup = () => {};
     const currentTransitionElement = existingOldContents[0];
+
     if (currentTransitionElement) {
       oldChild = currentTransitionElement;
-      debug("transition", "Continuing from current ".concat(isPhaseTransition ? "phase" : "content", " transition element"));
+      debug(
+        "transition",
+        `Continuing from current ${isPhaseTransition ? "phase" : "content"} transition element`,
+      );
       cleanup = () => oldChild.remove();
     } else if (needsOldChildClone) {
       overlay.innerHTML = "";
@@ -7132,14 +7733,22 @@ const initUITransition = container => {
       oldChild = previousChild.cloneNode(true);
 
       // Remove specified attributes
-      attributeToRemove.forEach(attr => oldChild.removeAttribute(attr));
+      attributeToRemove.forEach((attr) => oldChild.removeAttribute(attr));
+
       oldChild.setAttribute("data-ui-transition-old", "");
       overlay.appendChild(oldChild);
-      debug("transition", "Cloned previous child for ".concat(isPhaseTransition ? "phase" : "content", " transition:"), previousChild.getAttribute("data-ui-name") || "unnamed");
+      debug(
+        "transition",
+        `Cloned previous child for ${isPhaseTransition ? "phase" : "content"} transition:`,
+        previousChild.getAttribute("data-ui-name") || "unnamed",
+      );
       cleanup = () => oldChild.remove();
     } else {
       overlay.innerHTML = "";
-      debug("transition", "No old child to clone for ".concat(isPhaseTransition ? "phase" : "content", " transition"));
+      debug(
+        "transition",
+        `No old child to clone for ${isPhaseTransition ? "phase" : "content"} transition`,
+      );
     }
 
     // Determine which elements to return based on transition type:
@@ -7156,47 +7765,55 @@ const initUITransition = container => {
       oldElement = oldChild ? overlay : null;
       newElement = firstChild ? measureWrapper : null;
     }
+
     return {
       oldChild,
       cleanup,
       oldElement,
-      newElement
+      newElement,
     };
   };
 
   // Initialize with current size
   [constrainedWidth, constrainedHeight] = measureContentSize();
+
   const handleChildSlotMutation = (reason = "mutation") => {
     if (isUpdating) {
       debug("transition", "Preventing recursive update");
       return;
     }
+
     hasSizeTransitions = container.hasAttribute("data-size-transition");
+
     try {
       isUpdating = true;
       const firstChild = slot.children[0] || null;
       const childUIName = firstChild?.getAttribute("data-ui-name");
       if (localDebug.transition) {
-        const updateLabel = childUIName || (firstChild ? "data-ui-name not specified" : "cleared/empty");
-        console.group("UI Update: ".concat(updateLabel, " (reason: ").concat(reason, ")"));
+        const updateLabel =
+          childUIName ||
+          (firstChild ? "data-ui-name not specified" : "cleared/empty");
+        console.group(`UI Update: ${updateLabel} (reason: ${reason})`);
       }
 
       // Check for text nodes in the slot (not supported)
-      const hasTextNode = Array.from(slot.childNodes).some(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+      const hasTextNode = Array.from(slot.childNodes).some(
+        (node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim(),
+      );
       if (hasTextNode) {
-        console.warn("UI Transition: Text nodes in transition slots are not supported. Please wrap text content in an element.", {
-          slot,
-          textContent: slot.textContent.trim()
-        });
+        console.warn(
+          "UI Transition: Text nodes in transition slots are not supported. Please wrap text content in an element.",
+          { slot, textContent: slot.textContent.trim() },
+        );
       }
 
       // Check for multiple elements in the slot (not supported yet)
       const hasMultipleElements = slot.children.length > 1;
       if (hasMultipleElements) {
-        console.warn("UI Transition: Multiple elements in transition slots are not supported yet. Please use a single container element.", {
-          slot,
-          elementCount: slot.children.length
-        });
+        console.warn(
+          "UI Transition: Multiple elements in transition slots are not supported yet. Please use a single container element.",
+          { slot, elementCount: slot.children.length },
+        );
       }
 
       // Prefer data-content-key on child, fallback to slot
@@ -7204,10 +7821,10 @@ const initUITransition = container => {
       let slotContentKey = slot.getAttribute("data-content-key");
       let childContentKey = firstChild?.getAttribute("data-content-key");
       if (childContentKey && slotContentKey) {
-        console.warn("Both data-content-key found on child and ui_transition_slot. Using child value.", {
-          childContentKey,
-          slotContentKey
-        });
+        console.warn(
+          "Both data-content-key found on child and ui_transition_slot. Using child value.",
+          { childContentKey, slotContentKey },
+        );
       }
       currentContentKey = childContentKey || slotContentKey || null;
 
@@ -7216,24 +7833,38 @@ const initUITransition = container => {
       const hasChild = firstChild !== null;
 
       // Check for text nodes in previous state (reconstruct from previousChild)
-      const hadTextNode = previousChild && previousChild.nodeType === Node.TEXT_NODE;
+      const hadTextNode =
+        previousChild && previousChild.nodeType === Node.TEXT_NODE;
 
       // Compute formatted content key states ONCE per mutation (requirement: max 2 calls)
-      const previousContentKeyState = formatContentKeyState(lastContentKey, hadChild, hadTextNode);
-      const currentContentKeyState = formatContentKeyState(currentContentKey, hasChild, hasTextNode);
+      const previousContentKeyState = formatContentKeyState(
+        lastContentKey,
+        hadChild,
+        hadTextNode,
+      );
+      const currentContentKeyState = formatContentKeyState(
+        currentContentKey,
+        hasChild,
+        hasTextNode,
+      );
 
       // Track previous key before any potential early registration update
       const prevKeyBeforeRegistration = lastContentKey;
 
       // Prepare phase info early so logging can be unified (even for early return)
       wasContentPhase = isContentPhase;
-      isContentPhase = firstChild ? firstChild.hasAttribute("data-content-phase") : true; // empty (no child) is treated as content phase
+      isContentPhase = firstChild
+        ? firstChild.hasAttribute("data-content-phase")
+        : true; // empty (no child) is treated as content phase
 
       const previousIsContentPhase = !hadChild || wasContentPhase;
       const currentIsContentPhase = !hasChild || isContentPhase;
 
       // Early conceptual registration path: empty slot, text nodes, or multiple elements (no visual transition)
-      const shouldGiveUpEarlyAndJustRegister = !hadChild && !hasChild && !hasTextNode || hasTextNode || hasMultipleElements;
+      const shouldGiveUpEarlyAndJustRegister =
+        (!hadChild && !hasChild && !hasTextNode) ||
+        hasTextNode ||
+        hasMultipleElements;
       let earlyAction = null;
       if (shouldGiveUpEarlyAndJustRegister) {
         if (hasTextNode) {
@@ -7257,17 +7888,28 @@ const initUITransition = container => {
       }
 
       // Decide which representation to display for previous/current in early case
-      const conceptualPrevDisplay = prevKeyBeforeRegistration === null ? "[unkeyed]" : "[data-content-key=\"".concat(prevKeyBeforeRegistration, "\"]");
-      const conceptualCurrentDisplay = currentContentKey === null ? "[unkeyed]" : "[data-content-key=\"".concat(currentContentKey, "\"]");
-      const previousDisplay = shouldGiveUpEarlyAndJustRegister ? conceptualPrevDisplay : previousContentKeyState;
-      const currentDisplay = shouldGiveUpEarlyAndJustRegister ? conceptualCurrentDisplay : currentContentKeyState;
+      const conceptualPrevDisplay =
+        prevKeyBeforeRegistration === null
+          ? "[unkeyed]"
+          : `[data-content-key="${prevKeyBeforeRegistration}"]`;
+      const conceptualCurrentDisplay =
+        currentContentKey === null
+          ? "[unkeyed]"
+          : `[data-content-key="${currentContentKey}"]`;
+      const previousDisplay = shouldGiveUpEarlyAndJustRegister
+        ? conceptualPrevDisplay
+        : previousContentKeyState;
+      const currentDisplay = shouldGiveUpEarlyAndJustRegister
+        ? conceptualCurrentDisplay
+        : currentContentKeyState;
 
       // Build a simple descriptive sentence
-      let contentKeysSentence = "Content key: ".concat(previousDisplay, " \u2192 ").concat(currentDisplay);
+      let contentKeysSentence = `Content key: ${previousDisplay} → ${currentDisplay}`;
       debug("transition", contentKeysSentence);
+
       if (shouldGiveUpEarlyAndJustRegister) {
         // Log decision explicitly (was previously embedded)
-        debug("transition", "Decision: EARLY_RETURN (".concat(earlyAction, ")"));
+        debug("transition", `Decision: EARLY_RETURN (${earlyAction})`);
         // Register new conceptual key & return early (skip rest of transition logic)
         lastContentKey = currentContentKey;
         if (localDebug.transition) {
@@ -7275,14 +7917,19 @@ const initUITransition = container => {
         }
         return;
       }
-      debug("size", "Update triggered, size: ".concat(constrainedWidth, "x").concat(constrainedHeight));
+      debug(
+        "size",
+        `Update triggered, size: ${constrainedWidth}x${constrainedHeight}`,
+      );
+
       if (sizeTransition) {
         sizeTransition.cancel();
       }
+
       const [newWidth, newHeight] = measureContentSize();
-      debug("size", "Measured size: ".concat(newWidth, "x").concat(newHeight));
-      outerWrapper.style.width = "".concat(constrainedWidth, "px");
-      outerWrapper.style.height = "".concat(constrainedHeight, "px");
+      debug("size", `Measured size: ${newWidth}x${newHeight}`);
+      outerWrapper.style.width = `${constrainedWidth}px`;
+      outerWrapper.style.height = `${constrainedHeight}px`;
 
       // Handle resize observation
       stopResizeObserver();
@@ -7312,46 +7959,84 @@ const initUITransition = container => {
 
       // Content key change when either slot or child has data-content-key and it changed
       let shouldDoContentTransition = false;
-      if ((slot.getAttribute("data-content-key") || firstChild?.getAttribute("data-content-key")) && lastContentKey !== null) {
+      if (
+        (slot.getAttribute("data-content-key") ||
+          firstChild?.getAttribute("data-content-key")) &&
+        lastContentKey !== null
+      ) {
         shouldDoContentTransition = currentContentKey !== lastContentKey;
       }
+
       const becomesEmpty = hadChild && !hasChild;
       const becomesPopulated = !hadChild && hasChild;
-      const isInitialPopulationWithoutTransition = becomesPopulated && !hasPopulatedOnce && !initialTransitionEnabled;
+      const isInitialPopulationWithoutTransition =
+        becomesPopulated && !hasPopulatedOnce && !initialTransitionEnabled;
 
       // Content phase change: any transition between content/content-phase/null except when slot key changes
       // This includes: null→loading, loading→content, content→loading, loading→null, etc.
-      const shouldDoPhaseTransition = !shouldDoContentTransition && (becomesPopulated || becomesEmpty || hadChild && hasChild && (previousIsContentPhase !== currentIsContentPhase || previousIsContentPhase && currentIsContentPhase));
+      const shouldDoPhaseTransition =
+        !shouldDoContentTransition &&
+        (becomesPopulated ||
+          becomesEmpty ||
+          (hadChild &&
+            hasChild &&
+            (previousIsContentPhase !== currentIsContentPhase ||
+              (previousIsContentPhase && currentIsContentPhase))));
+
       const contentChange = hadChild && hasChild && shouldDoContentTransition;
       const phaseChange = hadChild && hasChild && shouldDoPhaseTransition;
 
       // Determine if we only need to preserve an existing content transition (no new change)
-      const preserveOnlyContentTransition = activeContentTransition !== null && !shouldDoContentTransition && !shouldDoPhaseTransition && !becomesPopulated && !becomesEmpty;
+      const preserveOnlyContentTransition =
+        activeContentTransition !== null &&
+        !shouldDoContentTransition &&
+        !shouldDoPhaseTransition &&
+        !becomesPopulated &&
+        !becomesEmpty;
 
       // Include becomesPopulated in content transition only if it's not a phase transition
-      const shouldDoContentTransitionIncludingPopulation = shouldDoContentTransition || becomesPopulated && !shouldDoPhaseTransition;
+      const shouldDoContentTransitionIncludingPopulation =
+        shouldDoContentTransition ||
+        (becomesPopulated && !shouldDoPhaseTransition);
+
       const decisions = [];
       if (shouldDoContentTransition) decisions.push("CONTENT TRANSITION");
       if (shouldDoPhaseTransition) decisions.push("PHASE TRANSITION");
-      if (preserveOnlyContentTransition) decisions.push("PRESERVE CONTENT TRANSITION");
+      if (preserveOnlyContentTransition)
+        decisions.push("PRESERVE CONTENT TRANSITION");
       if (decisions.length === 0) decisions.push("NO TRANSITION");
-      debug("transition", "Decision: ".concat(decisions.join(" + ")));
+
+      debug("transition", `Decision: ${decisions.join(" + ")}`);
       if (preserveOnlyContentTransition) {
         const progress = (activeContentTransition.progress * 100).toFixed(1);
-        debug("transition", "Preserving existing content transition (progress ".concat(progress, "%)"));
+        debug(
+          "transition",
+          `Preserving existing content transition (progress ${progress}%)`,
+        );
       }
 
       // Early return optimization: if no transition decision and we are not continuing
       // an existing active content transition (animationProgress > 0), we can skip
       // all transition setup logic below.
-      if (decisions.length === 1 && decisions[0] === "NO TRANSITION" && activeContentTransition === null && activePhaseTransition === null) {
-        debug("transition", "Early return: no transition or continuation required");
+      if (
+        decisions.length === 1 &&
+        decisions[0] === "NO TRANSITION" &&
+        activeContentTransition === null &&
+        activePhaseTransition === null
+      ) {
+        debug(
+          "transition",
+          `Early return: no transition or continuation required`,
+        );
         // Still ensure size logic executes below (so do not return before size alignment)
       }
 
       // Handle initial population skip (first null → something): no content or size animations
       if (isInitialPopulationWithoutTransition) {
-        debug("transition", "Initial population detected: skipping transitions (opt-in with data-initial-transition)");
+        debug(
+          "transition",
+          "Initial population detected: skipping transitions (opt-in with data-initial-transition)",
+        );
 
         // Apply sizes instantly, no animation
         if (isContentPhase) {
@@ -7375,30 +8060,43 @@ const initUITransition = container => {
       let sizePlan = {
         action: "none",
         targetWidth: constrainedWidth,
-        targetHeight: constrainedHeight
+        targetHeight: constrainedHeight,
       };
+
       size_transition: {
         const getTargetDimensions = () => {
           if (!isContentPhase) {
             return [newWidth, newHeight];
           }
-          const shouldUseNewDimensions = naturalContentWidth === 0 && naturalContentHeight === 0;
-          const targetWidth = shouldUseNewDimensions ? newWidth : naturalContentWidth || newWidth;
-          const targetHeight = shouldUseNewDimensions ? newHeight : naturalContentHeight || newHeight;
+          const shouldUseNewDimensions =
+            naturalContentWidth === 0 && naturalContentHeight === 0;
+          const targetWidth = shouldUseNewDimensions
+            ? newWidth
+            : naturalContentWidth || newWidth;
+          const targetHeight = shouldUseNewDimensions
+            ? newHeight
+            : naturalContentHeight || newHeight;
           return [targetWidth, targetHeight];
         };
+
         const [targetWidth, targetHeight] = getTargetDimensions();
         sizePlan.targetWidth = targetWidth;
         sizePlan.targetHeight = targetHeight;
-        if (targetWidth === constrainedWidth && targetHeight === constrainedHeight) {
+
+        if (
+          targetWidth === constrainedWidth &&
+          targetHeight === constrainedHeight
+        ) {
           debug("size", "No size change required");
           // We'll handle potential constraint release in final section (if not holding)
           break size_transition;
         }
+
         debug("size", "Size change needed:", {
-          width: "".concat(constrainedWidth, " \u2192 ").concat(targetWidth),
-          height: "".concat(constrainedHeight, " \u2192 ").concat(targetHeight)
+          width: `${constrainedWidth} → ${targetWidth}`,
+          height: `${constrainedHeight} → ${targetHeight}`,
         });
+
         if (isContentPhase) {
           // Content phases (loading/error) always use size constraints for consistent sizing
           sizePlan.action = hasSizeTransitions ? "animate" : "applyConstraints";
@@ -7408,39 +8106,82 @@ const initUITransition = container => {
           sizePlan.action = hasSizeTransitions ? "animate" : "release";
         }
       }
+
       content_transition: {
         // Handle content transitions (slide-left, cross-fade for content key changes)
-        if (decisions.length === 1 && decisions[0] === "NO TRANSITION" && activeContentTransition === null && activePhaseTransition === null) {
+        if (
+          decisions.length === 1 &&
+          decisions[0] === "NO TRANSITION" &&
+          activeContentTransition === null &&
+          activePhaseTransition === null
+        ) {
           // Skip creating any new transitions entirely
-        } else if (shouldDoContentTransitionIncludingPopulation && !preserveOnlyContentTransition) {
-          const existingOldContents = contentOverlay.querySelectorAll("[data-ui-transition-old]");
+        } else if (
+          shouldDoContentTransitionIncludingPopulation &&
+          !preserveOnlyContentTransition
+        ) {
+          const existingOldContents = contentOverlay.querySelectorAll(
+            "[data-ui-transition-old]",
+          );
           const animationProgress = activeContentTransition?.progress || 0;
+
           if (animationProgress > 0) {
-            debug("transition", "Preserving content transition progress: ".concat((animationProgress * 100).toFixed(1), "%"));
+            debug(
+              "transition",
+              `Preserving content transition progress: ${(animationProgress * 100).toFixed(1)}%`,
+            );
           }
-          const newTransitionType = container.getAttribute("data-content-transition") || CONTENT_TRANSITION;
-          const canContinueSmoothly = activeContentTransitionType === newTransitionType && activeContentTransition;
+
+          const newTransitionType =
+            container.getAttribute("data-content-transition") ||
+            CONTENT_TRANSITION;
+          const canContinueSmoothly =
+            activeContentTransitionType === newTransitionType &&
+            activeContentTransition;
+
           if (canContinueSmoothly) {
-            debug("transition", "Continuing with same content transition type (restarting due to actual change)");
+            debug(
+              "transition",
+              "Continuing with same content transition type (restarting due to actual change)",
+            );
             activeContentTransition.cancel();
-          } else if (activeContentTransition && activeContentTransitionType !== newTransitionType) {
-            debug("transition", "Different content transition type, keeping both", "".concat(activeContentTransitionType, " \u2192 ").concat(newTransitionType));
+          } else if (
+            activeContentTransition &&
+            activeContentTransitionType !== newTransitionType
+          ) {
+            debug(
+              "transition",
+              "Different content transition type, keeping both",
+              `${activeContentTransitionType} → ${newTransitionType}`,
+            );
           } else if (activeContentTransition) {
             debug("transition", "Cancelling current content transition");
             activeContentTransition.cancel();
           }
-          const needsOldChildClone = (contentChange || becomesEmpty) && previousChild && !existingOldContents[0];
-          const duration = parseInt(container.getAttribute("data-content-transition-duration") || CONTENT_TRANSITION_DURATION);
-          const type = container.getAttribute("data-content-transition") || CONTENT_TRANSITION;
-          const setupContentTransition = () => setupTransition({
-            isPhaseTransition: false,
-            overlay: contentOverlay,
-            existingOldContents,
-            needsOldChildClone,
-            previousChild,
-            firstChild,
-            attributeToRemove: ["data-content-key"]
-          });
+
+          const needsOldChildClone =
+            (contentChange || becomesEmpty) &&
+            previousChild &&
+            !existingOldContents[0];
+
+          const duration = parseInt(
+            container.getAttribute("data-content-transition-duration") ||
+              CONTENT_TRANSITION_DURATION,
+          );
+          const type =
+            container.getAttribute("data-content-transition") ||
+            CONTENT_TRANSITION;
+
+          const setupContentTransition = () =>
+            setupTransition({
+              isPhaseTransition: false,
+              overlay: contentOverlay,
+              existingOldContents,
+              needsOldChildClone,
+              previousChild,
+              firstChild,
+              attributeToRemove: ["data-content-key"],
+            });
 
           // If size transitions are disabled and the new content is smaller,
           // hold the previous size to avoid cropping during the transition.
@@ -7449,33 +8190,48 @@ const initUITransition = container => {
             const willShrinkHeight = constrainedHeight > newHeight;
             sizeHoldActive = willShrinkWidth || willShrinkHeight;
             if (sizeHoldActive) {
-              debug("size", "Holding previous size during content transition: ".concat(constrainedWidth, "x").concat(constrainedHeight));
+              debug(
+                "size",
+                `Holding previous size during content transition: ${constrainedWidth}x${constrainedHeight}`,
+              );
               applySizeConstraints(constrainedWidth, constrainedHeight);
             }
           }
-          activeContentTransition = animateTransition(transitionController, firstChild, setupContentTransition, {
-            duration,
-            type,
-            animationProgress,
-            isPhaseTransition: false,
-            fromContentKeyState: previousContentKeyState,
-            toContentKeyState: currentContentKeyState,
-            onComplete: () => {
-              activeContentTransition = null;
-              activeContentTransitionType = null;
-              if (sizeHoldActive) {
-                // Release the hold after the content transition completes
-                releaseConstraints("content transition completed - release size hold");
-                sizeHoldActive = false;
-              }
+
+          activeContentTransition = animateTransition(
+            transitionController,
+            firstChild,
+            setupContentTransition,
+            {
+              duration,
+              type,
+              animationProgress,
+              isPhaseTransition: false,
+              fromContentKeyState: previousContentKeyState,
+              toContentKeyState: currentContentKeyState,
+              onComplete: () => {
+                activeContentTransition = null;
+                activeContentTransitionType = null;
+                if (sizeHoldActive) {
+                  // Release the hold after the content transition completes
+                  releaseConstraints(
+                    "content transition completed - release size hold",
+                  );
+                  sizeHoldActive = false;
+                }
+              },
+              debug,
             },
-            debug
-          });
+          );
+
           if (activeContentTransition) {
             activeContentTransition.play();
           }
           activeContentTransitionType = type;
-        } else if (!shouldDoContentTransition && !preserveOnlyContentTransition) {
+        } else if (
+          !shouldDoContentTransition &&
+          !preserveOnlyContentTransition
+        ) {
           // Clean up content overlay if no content transition needed and nothing to preserve
           contentOverlay.innerHTML = "";
           activeContentTransition = null;
@@ -7484,50 +8240,99 @@ const initUITransition = container => {
 
         // Handle phase transitions (cross-fade for content phase changes)
         if (shouldDoPhaseTransition) {
-          const phaseTransitionType = container.getAttribute("data-phase-transition") || PHASE_TRANSITION;
-          const existingOldPhaseContents = phaseOverlay.querySelectorAll("[data-ui-transition-old]");
+          const phaseTransitionType =
+            container.getAttribute("data-phase-transition") || PHASE_TRANSITION;
+
+          const existingOldPhaseContents = phaseOverlay.querySelectorAll(
+            "[data-ui-transition-old]",
+          );
           const phaseAnimationProgress = activePhaseTransition?.progress || 0;
+
           if (phaseAnimationProgress > 0) {
-            debug("transition", "Preserving phase transition progress: ".concat((phaseAnimationProgress * 100).toFixed(1), "%"));
+            debug(
+              "transition",
+              `Preserving phase transition progress: ${(phaseAnimationProgress * 100).toFixed(1)}%`,
+            );
           }
-          const canContinueSmoothly = activePhaseTransitionType === phaseTransitionType && activePhaseTransition;
+
+          const canContinueSmoothly =
+            activePhaseTransitionType === phaseTransitionType &&
+            activePhaseTransition;
+
           if (canContinueSmoothly) {
             debug("transition", "Continuing with same phase transition type");
             activePhaseTransition.cancel();
-          } else if (activePhaseTransition && activePhaseTransitionType !== phaseTransitionType) {
-            debug("transition", "Different phase transition type, keeping both", "".concat(activePhaseTransitionType, " \u2192 ").concat(phaseTransitionType));
+          } else if (
+            activePhaseTransition &&
+            activePhaseTransitionType !== phaseTransitionType
+          ) {
+            debug(
+              "transition",
+              "Different phase transition type, keeping both",
+              `${activePhaseTransitionType} → ${phaseTransitionType}`,
+            );
           } else if (activePhaseTransition) {
             debug("transition", "Cancelling current phase transition");
             activePhaseTransition.cancel();
           }
-          const needsOldPhaseClone = (becomesEmpty || becomesPopulated || phaseChange) && previousChild && !existingOldPhaseContents[0];
-          const phaseDuration = parseInt(container.getAttribute("data-phase-transition-duration") || PHASE_TRANSITION_DURATION);
-          const setupPhaseTransition = () => setupTransition({
-            isPhaseTransition: true,
-            overlay: phaseOverlay,
-            existingOldContents: existingOldPhaseContents,
-            needsOldChildClone: needsOldPhaseClone,
-            previousChild,
+
+          const needsOldPhaseClone =
+            (becomesEmpty || becomesPopulated || phaseChange) &&
+            previousChild &&
+            !existingOldPhaseContents[0];
+
+          const phaseDuration = parseInt(
+            container.getAttribute("data-phase-transition-duration") ||
+              PHASE_TRANSITION_DURATION,
+          );
+
+          const setupPhaseTransition = () =>
+            setupTransition({
+              isPhaseTransition: true,
+              overlay: phaseOverlay,
+              existingOldContents: existingOldPhaseContents,
+              needsOldChildClone: needsOldPhaseClone,
+              previousChild,
+              firstChild,
+              attributeToRemove: ["data-content-key", "data-content-phase"],
+            });
+
+          const fromPhase = !hadChild
+            ? "null"
+            : wasContentPhase
+              ? "content-phase"
+              : "content";
+          const toPhase = !hasChild
+            ? "null"
+            : isContentPhase
+              ? "content-phase"
+              : "content";
+
+          debug(
+            "transition",
+            `Starting phase transition: ${fromPhase} → ${toPhase}`,
+          );
+
+          activePhaseTransition = animateTransition(
+            transitionController,
             firstChild,
-            attributeToRemove: ["data-content-key", "data-content-phase"]
-          });
-          const fromPhase = !hadChild ? "null" : wasContentPhase ? "content-phase" : "content";
-          const toPhase = !hasChild ? "null" : isContentPhase ? "content-phase" : "content";
-          debug("transition", "Starting phase transition: ".concat(fromPhase, " \u2192 ").concat(toPhase));
-          activePhaseTransition = animateTransition(transitionController, firstChild, setupPhaseTransition, {
-            duration: phaseDuration,
-            type: phaseTransitionType,
-            animationProgress: phaseAnimationProgress,
-            isPhaseTransition: true,
-            fromContentKeyState: previousContentKeyState,
-            toContentKeyState: currentContentKeyState,
-            onComplete: () => {
-              activePhaseTransition = null;
-              activePhaseTransitionType = null;
-              debug("transition", "Phase transition complete");
+            setupPhaseTransition,
+            {
+              duration: phaseDuration,
+              type: phaseTransitionType,
+              animationProgress: phaseAnimationProgress,
+              isPhaseTransition: true,
+              fromContentKeyState: previousContentKeyState,
+              toContentKeyState: currentContentKeyState,
+              onComplete: () => {
+                activePhaseTransition = null;
+                activePhaseTransitionType = null;
+                debug("transition", "Phase transition complete");
+              },
+              debug,
             },
-            debug
-          });
+          );
+
           if (activePhaseTransition) {
             activePhaseTransition.play();
           }
@@ -7544,7 +8349,10 @@ const initUITransition = container => {
 
       // Execute planned size action, unless holding size during a content transition
       if (!sizeHoldActive) {
-        if (sizePlan.targetWidth === constrainedWidth && sizePlan.targetHeight === constrainedHeight) {
+        if (
+          sizePlan.targetWidth === constrainedWidth &&
+          sizePlan.targetHeight === constrainedHeight
+        ) {
           // no size changes planned; possibly release constraints
           if (!isContentPhase) {
             releaseConstraints("no size change needed");
@@ -7569,25 +8377,31 @@ const initUITransition = container => {
   handleChildSlotMutation("init");
 
   // Watch for child changes and attribute changes on children
-  const mutationObserver = new MutationObserver(mutations => {
+  const mutationObserver = new MutationObserver((mutations) => {
     let childListMutation = false;
     const attributeMutationSet = new Set();
+
     for (const mutation of mutations) {
       if (mutation.type === "childList") {
         childListMutation = true;
         continue;
       }
       if (mutation.type === "attributes") {
-        const {
-          attributeName,
-          target
-        } = mutation;
-        if (attributeName === "data-content-key" || attributeName === "data-content-phase") {
+        const { attributeName, target } = mutation;
+        if (
+          attributeName === "data-content-key" ||
+          attributeName === "data-content-phase"
+        ) {
           attributeMutationSet.add(attributeName);
-          debug("transition", "Attribute change detected: ".concat(attributeName, " on"), target.getAttribute("data-ui-name") || "element");
+          debug(
+            "transition",
+            `Attribute change detected: ${attributeName} on`,
+            target.getAttribute("data-ui-name") || "element",
+          );
         }
       }
     }
+
     if (!childListMutation && attributeMutationSet.size === 0) {
       return;
     }
@@ -7597,22 +8411,24 @@ const initUITransition = container => {
     }
     if (attributeMutationSet.size) {
       for (const attr of attributeMutationSet) {
-        reasonParts.push("[".concat(attr, "] change"));
+        reasonParts.push(`[${attr}] change`);
       }
     }
     const reason = reasonParts.join("+");
     handleChildSlotMutation(reason);
   });
+
   mutationObserver.observe(slot, {
     childList: true,
     attributes: true,
     attributeFilter: ["data-content-key", "data-content-phase"],
-    characterData: false
+    characterData: false,
   });
 
   // Return API
   return {
     slot,
+
     cleanup: () => {
       mutationObserver.disconnect();
       stopResizeObserver();
@@ -7649,20 +8465,26 @@ const initUITransition = container => {
     getState: () => ({
       isPaused,
       contentTransitionInProgress: activeContentTransition !== null,
-      phaseTransitionInProgress: activePhaseTransition !== null
-    })
+      phaseTransitionInProgress: activePhaseTransition !== null,
+    }),
   };
 };
-const animateTransition = (transitionController, newChild, setupTransition, {
-  type,
-  duration,
-  animationProgress = 0,
-  isPhaseTransition,
-  onComplete,
-  fromContentKeyState,
-  toContentKeyState,
-  debug
-}) => {
+
+const animateTransition = (
+  transitionController,
+  newChild,
+  setupTransition,
+  {
+    type,
+    duration,
+    animationProgress = 0,
+    isPhaseTransition,
+    onComplete,
+    fromContentKeyState,
+    toContentKeyState,
+    debug,
+  },
+) => {
   let transitionType;
   if (type === "cross-fade") {
     transitionType = crossFade;
@@ -7671,103 +8493,105 @@ const animateTransition = (transitionController, newChild, setupTransition, {
   } else {
     return null;
   }
-  const {
-    cleanup,
-    oldElement,
-    newElement
-  } = setupTransition();
+
+  const { cleanup, oldElement, newElement } = setupTransition();
   // Use precomputed content key states (expected to be provided by caller)
   const fromContentKey = fromContentKeyState;
   const toContentKey = toContentKeyState;
+
   debug("transition", "Setting up animation:", {
     type,
     from: fromContentKey,
     to: toContentKey,
-    progress: "".concat((animationProgress * 100).toFixed(1), "%")
+    progress: `${(animationProgress * 100).toFixed(1)}%`,
   });
+
   const remainingDuration = Math.max(100, duration * (1 - animationProgress));
-  debug("transition", "Animation duration: ".concat(remainingDuration, "ms"));
+  debug("transition", `Animation duration: ${remainingDuration}ms`);
+
   const transitions = transitionType.apply(oldElement, newElement, {
     duration: remainingDuration,
     startProgress: animationProgress,
     isPhaseTransition,
-    debug
+    debug,
   });
-  debug("transition", "Created ".concat(transitions.length, " transition(s) for animation"));
+
+  debug(
+    "transition",
+    `Created ${transitions.length} transition(s) for animation`,
+  );
+
   if (transitions.length === 0) {
     debug("transition", "No transitions to animate, cleaning up immediately");
     cleanup();
     onComplete?.();
     return null;
   }
+
   const groupTransition = transitionController.animate(transitions, {
     onFinish: () => {
       groupTransition.cancel();
       cleanup();
       onComplete?.();
-    }
+    },
   });
+
   return groupTransition;
 };
+
 const slideLeft = {
   name: "slide-left",
-  apply: (oldElement, newElement, {
-    duration,
-    startProgress = 0,
-    isPhaseTransition = false,
-    debug
-  }) => {
+  apply: (
+    oldElement,
+    newElement,
+    { duration, startProgress = 0, isPhaseTransition = false, debug },
+  ) => {
     if (!oldElement && !newElement) {
       return [];
     }
+
     if (!newElement) {
       // Content -> Empty (slide out left only)
       const currentPosition = getTranslateX(oldElement);
       const containerWidth = getInnerWidth(oldElement.parentElement);
       const from = currentPosition;
       const to = -containerWidth;
-      debug("transition", "Slide out to empty:", {
-        from,
-        to
-      });
-      return [createTranslateXTransition(oldElement, to, {
-        from,
-        duration,
-        startProgress,
-        onUpdate: ({
-          value,
-          timing
-        }) => {
-          debug("transition_updates", "Slide out progress:", value);
-          if (timing === "end") {
-            debug("transition", "Slide out complete");
-          }
-        }
-      })];
+      debug("transition", "Slide out to empty:", { from, to });
+
+      return [
+        createTranslateXTransition(oldElement, to, {
+          from,
+          duration,
+          startProgress,
+          onUpdate: ({ value, timing }) => {
+            debug("transition_updates", "Slide out progress:", value);
+            if (timing === "end") {
+              debug("transition", "Slide out complete");
+            }
+          },
+        }),
+      ];
     }
+
     if (!oldElement) {
       // Empty -> Content (slide in from right)
       const containerWidth = getInnerWidth(newElement.parentElement);
       const from = containerWidth; // Start from right edge for slide-in effect
       const to = getTranslateXWithoutTransition(newElement);
-      debug("transition", "Slide in from empty:", {
-        from,
-        to
-      });
-      return [createTranslateXTransition(newElement, to, {
-        from,
-        duration,
-        startProgress,
-        onUpdate: ({
-          value,
-          timing
-        }) => {
-          debug("transition_updates", "Slide in progress:", value);
-          if (timing === "end") {
-            debug("transition", "Slide in complete");
-          }
-        }
-      })];
+      debug("transition", "Slide in from empty:", { from, to });
+      return [
+        createTranslateXTransition(newElement, to, {
+          from,
+          duration,
+          startProgress,
+          onUpdate: ({ value, timing }) => {
+            debug("transition_updates", "Slide in progress:", value);
+            if (timing === "end") {
+              debug("transition", "Slide in complete");
+            }
+          },
+        }),
+      ];
     }
 
     // Content -> Content (slide left)
@@ -7785,105 +8609,107 @@ const slideLeft = {
     let startNewPosition;
     if (currentNewPosition !== 0 && naturalNewPosition === 0) {
       startNewPosition = currentNewPosition + containerWidth;
-      debug("transition", "Calculated seamless position:", "".concat(currentNewPosition, " + ").concat(containerWidth, " = ").concat(startNewPosition));
+      debug(
+        "transition",
+        "Calculated seamless position:",
+        `${currentNewPosition} + ${containerWidth} = ${startNewPosition}`,
+      );
     } else {
       startNewPosition = naturalNewPosition || containerWidth;
     }
 
     // For phase transitions, force new content to start from right edge for proper slide-in
-    const effectiveFromPosition = isPhaseTransition ? containerWidth : startNewPosition;
+    const effectiveFromPosition = isPhaseTransition
+      ? containerWidth
+      : startNewPosition;
+
     debug("transition", "Slide transition:", {
-      oldContent: "".concat(oldContentPosition, " \u2192 ").concat(-containerWidth),
-      newContent: "".concat(effectiveFromPosition, " \u2192 ").concat(naturalNewPosition)
+      oldContent: `${oldContentPosition} → ${-containerWidth}`,
+      newContent: `${effectiveFromPosition} → ${naturalNewPosition}`,
     });
+
     const transitions = [];
 
     // Slide old content out
-    transitions.push(createTranslateXTransition(oldElement, -containerWidth, {
-      from: oldContentPosition,
-      duration,
-      startProgress,
-      onUpdate: ({
-        value
-      }) => {
-        debug("transition_updates", "Old content slide out:", value);
-      }
-    }));
+    transitions.push(
+      createTranslateXTransition(oldElement, -containerWidth, {
+        from: oldContentPosition,
+        duration,
+        startProgress,
+        onUpdate: ({ value }) => {
+          debug("transition_updates", "Old content slide out:", value);
+        },
+      }),
+    );
 
     // Slide new content in
-    transitions.push(createTranslateXTransition(newElement, naturalNewPosition, {
-      from: effectiveFromPosition,
-      duration,
-      startProgress,
-      onUpdate: ({
-        value,
-        timing
-      }) => {
-        debug("transition_updates", "New content slide in:", value);
-        if (timing === "end") {
-          debug("transition", "Slide complete");
-        }
-      }
-    }));
+    transitions.push(
+      createTranslateXTransition(newElement, naturalNewPosition, {
+        from: effectiveFromPosition,
+        duration,
+        startProgress,
+        onUpdate: ({ value, timing }) => {
+          debug("transition_updates", "New content slide in:", value);
+          if (timing === "end") {
+            debug("transition", "Slide complete");
+          }
+        },
+      }),
+    );
+
     return transitions;
-  }
+  },
 };
+
 const crossFade = {
   name: "cross-fade",
-  apply: (oldElement, newElement, {
-    duration,
-    startProgress = 0,
-    isPhaseTransition = false,
-    debug
-  }) => {
+  apply: (
+    oldElement,
+    newElement,
+    { duration, startProgress = 0, isPhaseTransition = false, debug },
+  ) => {
     if (!oldElement && !newElement) {
       return [];
     }
+
     if (!newElement) {
       // Content -> Empty (fade out only)
       const from = getOpacity(oldElement);
       const to = 0;
-      debug("transition", "Fade out to empty:", {
-        from,
-        to
-      });
-      return [createOpacityTransition(oldElement, to, {
-        from,
-        duration,
-        startProgress,
-        onUpdate: ({
-          value,
-          timing
-        }) => {
-          debug("transition_updates", "Content fade out:", value.toFixed(3));
-          if (timing === "end") {
-            debug("transition", "Fade out complete");
-          }
-        }
-      })];
+      debug("transition", "Fade out to empty:", { from, to });
+      return [
+        createOpacityTransition(oldElement, to, {
+          from,
+          duration,
+          startProgress,
+          onUpdate: ({ value, timing }) => {
+            debug("transition_updates", "Content fade out:", value.toFixed(3));
+            if (timing === "end") {
+              debug("transition", "Fade out complete");
+            }
+          },
+        }),
+      ];
     }
+
     if (!oldElement) {
       // Empty -> Content (fade in only)
       const from = 0;
       const to = getOpacityWithoutTransition(newElement);
-      debug("transition", "Fade in from empty:", {
-        from,
-        to
-      });
-      return [createOpacityTransition(newElement, to, {
-        from,
-        duration,
-        startProgress,
-        onUpdate: ({
-          value,
-          timing
-        }) => {
-          debug("transition_updates", "Fade in progress:", value.toFixed(3));
-          if (timing === "end") {
-            debug("transition", "Fade in complete");
-          }
-        }
-      })];
+      debug("transition", "Fade in from empty:", { from, to });
+      return [
+        createOpacityTransition(newElement, to, {
+          from,
+          duration,
+          startProgress,
+          onUpdate: ({ value, timing }) => {
+            debug("transition_updates", "Fade in progress:", value.toFixed(3));
+            if (timing === "end") {
+              debug("transition", "Fade in complete");
+            }
+          },
+        }),
+      ];
     }
 
     // Content -> Content (cross-fade)
@@ -7901,49 +8727,51 @@ const crossFade = {
       // For content transitions: if new element has ongoing opacity transition
       // (indicated by non-zero opacity when natural opacity is different),
       // start from current opacity to continue smoothly, otherwise start from 0
-      const hasOngoingTransition = newOpacity !== newNaturalOpacity && newOpacity > 0;
+      const hasOngoingTransition =
+        newOpacity !== newNaturalOpacity && newOpacity > 0;
       effectiveFromOpacity = hasOngoingTransition ? newOpacity : 0;
     }
+
     debug("transition", "Cross-fade transition:", {
-      oldOpacity: "".concat(oldOpacity, " \u2192 0"),
-      newOpacity: "".concat(effectiveFromOpacity, " \u2192 ").concat(newNaturalOpacity),
-      isPhaseTransition
+      oldOpacity: `${oldOpacity} → 0`,
+      newOpacity: `${effectiveFromOpacity} → ${newNaturalOpacity}`,
+      isPhaseTransition,
     });
-    return [createOpacityTransition(oldElement, 0, {
-      from: oldOpacity,
-      duration,
-      startProgress,
-      onUpdate: ({
-        value
-      }) => {
-        if (value > 0) {
-          debug("transition_updates", "Old content fade out:", value.toFixed(3));
-        }
-      }
-    }), createOpacityTransition(newElement, newNaturalOpacity, {
-      from: effectiveFromOpacity,
-      duration,
-      startProgress: isPhaseTransition ? 0 : startProgress,
-      // Phase transitions: new content always starts fresh
-      onUpdate: ({
-        value,
-        timing
-      }) => {
-        debug("transition_updates", "New content fade in:", value.toFixed(3));
-        if (timing === "end") {
-          debug("transition", "Cross-fade complete");
-        }
-      }
-    })];
-  }
+
+    return [
+      createOpacityTransition(oldElement, 0, {
+        from: oldOpacity,
+        duration,
+        startProgress,
+        onUpdate: ({ value }) => {
+          if (value > 0) {
+            debug(
+              "transition_updates",
+              "Old content fade out:",
+              value.toFixed(3),
+            );
+          }
+        },
+      }),
+      createOpacityTransition(newElement, newNaturalOpacity, {
+        from: effectiveFromOpacity,
+        duration,
+        startProgress: isPhaseTransition ? 0 : startProgress, // Phase transitions: new content always starts fresh
+        onUpdate: ({ value, timing }) => {
+          debug("transition_updates", "New content fade in:", value.toFixed(3));
+          if (timing === "end") {
+            debug("transition", "Cross-fade complete");
+          }
+        },
+      }),
+    ];
+  },
 };
 
-const prefixFirstAndIndentRemainingLines = (text, {
-  prefix,
-  indentation,
-  trimLines,
-  trimLastLine
-}) => {
+const prefixFirstAndIndentRemainingLines = (
+  text,
+  { prefix, indentation, trimLines, trimLastLine },
+) => {
   const lines = text.split(/\r?\n/);
   const firstLine = lines.shift();
   if (indentation === undefined) {
@@ -7951,21 +8779,25 @@ const prefixFirstAndIndentRemainingLines = (text, {
       indentation = "  "; // prefix + space
     }
   }
-  let result = prefix ? "".concat(prefix, " ").concat(firstLine) : firstLine;
+  let result = prefix ? `${prefix} ${firstLine}` : firstLine;
   let i = 0;
   while (i < lines.length) {
     const line = trimLines ? lines[i].trim() : lines[i];
     i++;
-    result += line.length ? "\n".concat(indentation).concat(line) : trimLastLine && i === lines.length ? "" : "\n";
+    result += line.length
+      ? `\n${indentation}${line}`
+      : trimLastLine && i === lines.length
+        ? ""
+        : `\n`;
   }
   return result;
 };
 
 const actionPrivatePropertiesWeakMap = new WeakMap();
-const getActionPrivateProperties = action => {
+const getActionPrivateProperties = (action) => {
   const actionPrivateProperties = actionPrivatePropertiesWeakMap.get(action);
   if (!actionPrivateProperties) {
-    throw new Error("Cannot find action private properties for \"".concat(action, "\""));
+    throw new Error(`Cannot find action private properties for "${action}"`);
   }
   return actionPrivateProperties;
 };
@@ -7973,38 +8805,32 @@ const setActionPrivateProperties = (action, properties) => {
   actionPrivatePropertiesWeakMap.set(action, properties);
 };
 
-const IDLE = {
-  id: "idle"
-};
-const RUNNING = {
-  id: "running"
-};
-const ABORTED = {
-  id: "aborted"
-};
-const FAILED = {
-  id: "failed"
-};
-const COMPLETED = {
-  id: "completed"
-};
+const IDLE = { id: "idle" };
+const RUNNING = { id: "running" };
+const ABORTED = { id: "aborted" };
+const FAILED = { id: "failed" };
+const COMPLETED = { id: "completed" };
 
 const SYMBOL_OBJECT_SIGNAL = Symbol.for("navi_object_signal");
 
-const isSignal = value => {
+const isSignal = (value) => {
   return getSignalType(value) !== null;
 };
+
 const BRAND_SYMBOL = Symbol.for("preact-signals");
-const getSignalType = value => {
+const getSignalType = (value) => {
   if (!value || typeof value !== "object") {
     return null;
   }
+
   if (value.brand !== BRAND_SYMBOL) {
     return null;
   }
+
   if (typeof value._fn === "function") {
     return "computed";
   }
+
   return "signal";
 };
 
@@ -8099,6 +8925,7 @@ const getSignalType = value => {
  * Use Symbol.for() to ensure the same symbol across different modules/contexts.
  */
 const SYMBOL_IDENTITY = Symbol.for("navi_object_identity");
+
 const compareTwoJsValues = (a, b, seenSet = new Set()) => {
   if (a === b) {
     return true;
@@ -8120,8 +8947,10 @@ const compareTwoJsValues = (a, b, seenSet = new Set()) => {
   if (aType !== bType) {
     return false;
   }
-  const aIsPrimitive = a === null || aType !== "object" && aType !== "function";
-  const bIsPrimitive = b === null || bType !== "object" && bType !== "function";
+  const aIsPrimitive =
+    a === null || (aType !== "object" && aType !== "function");
+  const bIsPrimitive =
+    b === null || (bType !== "object" && bType !== "function");
   if (aIsPrimitive !== bIsPrimitive) {
     return false;
   }
@@ -8198,6 +9027,7 @@ const compareTwoJsValues = (a, b, seenSet = new Set()) => {
  * synchronized lifetimes while allowing natural garbage collection.
  */
 
+
 const createJsValueWeakMap = () => {
   // Core ephemeron maps for mutual retention
   const keyToValue = new WeakMap(); // key -> value
@@ -8208,6 +9038,7 @@ const createJsValueWeakMap = () => {
 
   // Primitive cache
   const primitiveCache = new Map();
+
   function cleanupKeyRegistry() {
     for (const keyRef of keyRegistry) {
       if (keyRef.deref() === undefined) {
@@ -8215,6 +9046,7 @@ const createJsValueWeakMap = () => {
       }
     }
   }
+
   return {
     *[Symbol.iterator]() {
       cleanupKeyRegistry();
@@ -8228,8 +9060,10 @@ const createJsValueWeakMap = () => {
         yield [k, v];
       }
     },
+
     get(key) {
-      const isObject = key && (typeof key === "object" || typeof key === "function");
+      const isObject =
+        key && (typeof key === "object" || typeof key === "function");
       if (isObject) {
         // Fast path: exact key match
         if (keyToValue.has(key)) {
@@ -8248,8 +9082,10 @@ const createJsValueWeakMap = () => {
       }
       return primitiveCache.get(key);
     },
+
     set(key, value) {
-      const isObject = key && (typeof key === "object" || typeof key === "function");
+      const isObject =
+        key && (typeof key === "object" || typeof key === "function");
       if (isObject) {
         cleanupKeyRegistry();
 
@@ -8273,8 +9109,10 @@ const createJsValueWeakMap = () => {
         primitiveCache.set(key, value);
       }
     },
+
     delete(key) {
-      const isObject = key && (typeof key === "object" || typeof key === "function");
+      const isObject =
+        key && (typeof key === "object" || typeof key === "function");
       if (isObject) {
         cleanupKeyRegistry();
 
@@ -8309,31 +9147,43 @@ const createJsValueWeakMap = () => {
       }
       return primitiveCache.delete(key);
     },
+
     getStats: () => {
       cleanupKeyRegistry();
-      const aliveKeys = Array.from(keyRegistry).filter(ref => ref.deref()).length;
+      const aliveKeys = Array.from(keyRegistry).filter((ref) =>
+        ref.deref(),
+      ).length;
+
       return {
         ephemeronPairs: {
           total: keyRegistry.size,
           alive: aliveKeys,
-          note: "True ephemeron: key ↔ value mutual retention via dual WeakMap"
+          note: "True ephemeron: key ↔ value mutual retention via dual WeakMap",
         },
         primitive: {
           total: primitiveCache.size,
-          note: "Primitive keys never GC'd"
-        }
+          note: "Primitive keys never GC'd",
+        },
       };
-    }
+    },
   };
 };
 
 const MERGE_AS_PRIMITIVE_SYMBOL = Symbol("navi_merge_as_primitive");
+
 const mergeTwoJsValues = (firstValue, secondValue) => {
-  const firstIsPrimitive = firstValue === null || typeof firstValue !== "object" || MERGE_AS_PRIMITIVE_SYMBOL in firstValue;
+  const firstIsPrimitive =
+    firstValue === null ||
+    typeof firstValue !== "object" ||
+    MERGE_AS_PRIMITIVE_SYMBOL in firstValue;
+
   if (firstIsPrimitive) {
     return secondValue;
   }
-  const secondIsPrimitive = secondValue === null || typeof secondValue !== "object" || MERGE_AS_PRIMITIVE_SYMBOL in secondValue;
+  const secondIsPrimitive =
+    secondValue === null ||
+    typeof secondValue !== "object" ||
+    MERGE_AS_PRIMITIVE_SYMBOL in secondValue;
   if (secondIsPrimitive) {
     return secondValue;
   }
@@ -8346,6 +9196,7 @@ const mergeTwoJsValues = (firstValue, secondValue) => {
   for (const key of firstKeys) {
     const firstValueForKey = firstValue[key];
     const secondHasKey = secondKeys.includes(key);
+
     if (secondHasKey) {
       const secondValueForKey = secondValue[key];
       const mergedValue = mergeTwoJsValues(firstValueForKey, secondValueForKey);
@@ -8357,6 +9208,7 @@ const mergeTwoJsValues = (firstValue, secondValue) => {
       objectMerge[key] = firstValueForKey;
     }
   }
+
   for (const key of secondKeys) {
     if (firstKeys.includes(key)) {
       continue;
@@ -8364,6 +9216,7 @@ const mergeTwoJsValues = (firstValue, secondValue) => {
     objectMerge[key] = secondValue[key];
     hasChanged = true;
   }
+
   if (!hasChanged) {
     return firstValue;
   }
@@ -8371,15 +9224,23 @@ const mergeTwoJsValues = (firstValue, secondValue) => {
 };
 
 const MAX_ENTRIES = 5;
-const stringifyForDisplay = (value, maxDepth = 2, currentDepth = 0, options = {}) => {
-  const {
-    asFunctionArgs = false
-  } = options;
+
+const stringifyForDisplay = (
+  value,
+  maxDepth = 2,
+  currentDepth = 0,
+  options = {},
+) => {
+  const { asFunctionArgs = false } = options;
   const indent = "  ".repeat(currentDepth);
   const nextIndent = "  ".repeat(currentDepth + 1);
+
   if (currentDepth >= maxDepth) {
-    return typeof value === "object" && value !== null ? "[Object]" : String(value);
+    return typeof value === "object" && value !== null
+      ? "[Object]"
+      : String(value);
   }
+
   if (value === null) {
     return "null";
   }
@@ -8387,58 +9248,64 @@ const stringifyForDisplay = (value, maxDepth = 2, currentDepth = 0, options = {}
     return "undefined";
   }
   if (typeof value === "string") {
-    return "\"".concat(value, "\"");
+    return `"${value}"`;
   }
   if (typeof value === "number" || typeof value === "boolean") {
     return String(value);
   }
   if (typeof value === "function") {
-    return "[Function ".concat(value.name || "anonymous", "]");
+    return `[Function ${value.name || "anonymous"}]`;
   }
   if (value instanceof Date) {
-    return "Date(".concat(value.toISOString(), ")");
+    return `Date(${value.toISOString()})`;
   }
   if (value instanceof RegExp) {
     return value.toString();
   }
+
   if (Array.isArray(value)) {
     const openBracket = asFunctionArgs ? "(" : "[";
     const closeBracket = asFunctionArgs ? ")" : "]";
-    if (value.length === 0) return "".concat(openBracket).concat(closeBracket);
+
+    if (value.length === 0) return `${openBracket}${closeBracket}`;
 
     // Display arrays with only one element on a single line
     if (value.length === 1) {
-      const item = stringifyForDisplay(value[0], maxDepth, currentDepth + 1,
-      // Remove asFunctionArgs for nested calls
-      {
-        ...options,
-        asFunctionArgs: false
-      });
-      return "".concat(openBracket).concat(item).concat(closeBracket);
+      const item = stringifyForDisplay(
+        value[0],
+        maxDepth,
+        currentDepth + 1,
+        // Remove asFunctionArgs for nested calls
+        { ...options, asFunctionArgs: false },
+      );
+      return `${openBracket}${item}${closeBracket}`;
     }
+
     if (value.length > MAX_ENTRIES) {
-      const preview = value.slice(0, MAX_ENTRIES).map(v => "".concat(nextIndent).concat(stringifyForDisplay(v, maxDepth, currentDepth + 1, {
-        ...options,
-        asFunctionArgs: false
-      })));
-      return "".concat(openBracket, "\n").concat(preview.join(",\n"), ",\n").concat(nextIndent, "...").concat(value.length - MAX_ENTRIES, " more\n").concat(indent).concat(closeBracket);
+      const preview = value
+        .slice(0, MAX_ENTRIES)
+        .map(
+          (v) =>
+            `${nextIndent}${stringifyForDisplay(v, maxDepth, currentDepth + 1, { ...options, asFunctionArgs: false })}`,
+        );
+      return `${openBracket}\n${preview.join(",\n")},\n${nextIndent}...${value.length - MAX_ENTRIES} more\n${indent}${closeBracket}`;
     }
-    const items = value.map(v => "".concat(nextIndent).concat(stringifyForDisplay(v, maxDepth, currentDepth + 1, {
-      ...options,
-      asFunctionArgs: false
-    })));
-    return "".concat(openBracket, "\n").concat(items.join(",\n"), "\n").concat(indent).concat(closeBracket);
+
+    const items = value.map(
+      (v) =>
+        `${nextIndent}${stringifyForDisplay(v, maxDepth, currentDepth + 1, { ...options, asFunctionArgs: false })}`,
+    );
+    return `${openBracket}\n${items.join(",\n")}\n${indent}${closeBracket}`;
   }
+
   if (typeof value === "object") {
     const signalType = getSignalType(value);
     if (signalType) {
       const signalValue = value.peek();
       const prefix = signalType === "computed" ? "computed" : "signal";
-      return "".concat(prefix, "(").concat(stringifyForDisplay(signalValue, maxDepth, currentDepth, {
-        ...options,
-        asFunctionArgs: false
-      }), ")");
+      return `${prefix}(${stringifyForDisplay(signalValue, maxDepth, currentDepth, { ...options, asFunctionArgs: false })})`;
     }
+
     const entries = Object.entries(value);
     if (entries.length === 0) return "{}";
 
@@ -8461,23 +9328,28 @@ const stringifyForDisplay = (value, maxDepth = 2, currentDepth = 0, options = {}
       const [key, val] = allEntries[0];
       const valueStr = stringifyForDisplay(val, maxDepth, currentDepth + 1, {
         ...options,
-        asFunctionArgs: false
+        asFunctionArgs: false,
       });
-      return "{ ".concat(key, ": ").concat(valueStr, " }");
+      return `{ ${key}: ${valueStr} }`;
     }
+
     if (allEntries.length > MAX_ENTRIES) {
-      const preview = allEntries.slice(0, MAX_ENTRIES).map(([k, v]) => "".concat(nextIndent).concat(k, ": ").concat(stringifyForDisplay(v, maxDepth, currentDepth + 1, {
-        ...options,
-        asFunctionArgs: false
-      })));
-      return "{\n".concat(preview.join(",\n"), ",\n").concat(nextIndent, "...").concat(allEntries.length - MAX_ENTRIES, " more\n").concat(indent, "}");
+      const preview = allEntries
+        .slice(0, MAX_ENTRIES)
+        .map(
+          ([k, v]) =>
+            `${nextIndent}${k}: ${stringifyForDisplay(v, maxDepth, currentDepth + 1, { ...options, asFunctionArgs: false })}`,
+        );
+      return `{\n${preview.join(",\n")},\n${nextIndent}...${allEntries.length - MAX_ENTRIES} more\n${indent}}`;
     }
-    const pairs = allEntries.map(([k, v]) => "".concat(nextIndent).concat(k, ": ").concat(stringifyForDisplay(v, maxDepth, currentDepth + 1, {
-      ...options,
-      asFunctionArgs: false
-    })));
-    return "{\n".concat(pairs.join(",\n"), "\n").concat(indent, "}");
+
+    const pairs = allEntries.map(
+      ([k, v]) =>
+        `${nextIndent}${k}: ${stringifyForDisplay(v, maxDepth, currentDepth + 1, { ...options, asFunctionArgs: false })}`,
+    );
+    return `{\n${pairs.join(",\n")}\n${indent}}`;
   }
+
   return String(value);
 };
 
@@ -8532,39 +9404,44 @@ let DEBUG$2 = false;
 const enableDebugActions = () => {
   DEBUG$2 = true;
 };
-let dispatchActions = params => {
-  const {
-    requestedResult
-  } = updateActions({
+
+let dispatchActions = (params) => {
+  const { requestedResult } = updateActions({
     globalAbortSignal: new AbortController().signal,
     abortSignal: new AbortController().signal,
-    ...params
+    ...params,
   });
   return requestedResult;
 };
+
 const dispatchSingleAction = (action, method, options) => {
   const requestedResult = dispatchActions({
     prerunSet: method === "prerun" ? new Set([action]) : undefined,
     runSet: method === "run" ? new Set([action]) : undefined,
     rerunSet: method === "rerun" ? new Set([action]) : undefined,
     resetSet: method === "reset" ? new Set([action]) : undefined,
-    ...options
+    ...options,
   });
   if (requestedResult && typeof requestedResult.then === "function") {
-    return requestedResult.then(resolvedResult => resolvedResult ? resolvedResult[0] : undefined);
+    return requestedResult.then((resolvedResult) =>
+      resolvedResult ? resolvedResult[0] : undefined,
+    );
   }
   return requestedResult ? requestedResult[0] : undefined;
 };
-const setActionDispatcher = value => {
+const setActionDispatcher = (value) => {
   dispatchActions = value;
 };
+
 const getActionDispatcher = () => dispatchActions;
-const rerunActions = async (actionSet, {
-  reason = "rerunActions was called"
-} = {}) => {
+
+const rerunActions = async (
+  actionSet,
+  { reason = "rerunActions was called" } = {},
+) => {
   return dispatchActions({
     rerunSet: actionSet,
-    reason
+    reason,
   });
 };
 
@@ -8584,17 +9461,18 @@ const prerunProtectionRegistry = (() => {
   const protectedActionMap = new Map(); // action -> { timeoutId, timestamp }
   const PROTECTION_DURATION = 5 * 60 * 1000; // 5 minutes en millisecondes
 
-  const unprotect = action => {
+  const unprotect = (action) => {
     const protection = protectedActionMap.get(action);
     if (protection) {
       clearTimeout(protection.timeoutId);
       protectedActionMap.delete(action);
       if (DEBUG$2) {
         const elapsed = Date.now() - protection.timestamp;
-        console.debug("\"".concat(action, "\": GC protection removed after ").concat(elapsed, "ms"));
+        console.debug(`"${action}": GC protection removed after ${elapsed}ms`);
       }
     }
   };
+
   return {
     protect(action) {
       // Si déjà protégée, étendre la protection
@@ -8602,71 +9480,92 @@ const prerunProtectionRegistry = (() => {
         const existing = protectedActionMap.get(action);
         clearTimeout(existing.timeoutId);
       }
+
       const timestamp = Date.now();
       const timeoutId = setTimeout(() => {
         unprotect(action);
         if (DEBUG$2) {
-          console.debug("\"".concat(action, "\": prerun protection expired after ").concat(PROTECTION_DURATION, "ms"));
+          console.debug(
+            `"${action}": prerun protection expired after ${PROTECTION_DURATION}ms`,
+          );
         }
       }, PROTECTION_DURATION);
-      protectedActionMap.set(action, {
-        timeoutId,
-        timestamp
-      });
+
+      protectedActionMap.set(action, { timeoutId, timestamp });
+
       if (DEBUG$2) {
-        console.debug("\"".concat(action, "\": protected from GC for ").concat(PROTECTION_DURATION, "ms"));
+        console.debug(
+          `"${action}": protected from GC for ${PROTECTION_DURATION}ms`,
+        );
       }
     },
+
     unprotect,
+
     isProtected(action) {
       return protectedActionMap.has(action);
     },
+
     // Pour debugging
     getProtectedActions() {
       return Array.from(protectedActionMap.keys());
     },
+
     // Nettoyage manuel si nécessaire
     clear() {
       for (const [, protection] of protectedActionMap) {
         clearTimeout(protection.timeoutId);
       }
       protectedActionMap.clear();
-    }
+    },
   };
 })();
+
 const formatActionSet = (actionSet, prefix = "") => {
   let message = "";
-  message += "".concat(prefix);
+  message += `${prefix}`;
   for (const action of actionSet) {
     message += "\n";
     message += prefixFirstAndIndentRemainingLines(String(action), {
-      prefix: "  -"
+      prefix: "  -",
     });
   }
   return message;
 };
+
 const actionAbortMap = new Map();
 const actionPromiseMap = new Map();
 const activationWeakSet = createIterableWeakSet();
+
 const getActivationInfo = () => {
   const runningSet = new Set();
   const settledSet = new Set();
+
   for (const action of activationWeakSet) {
     const privateProps = getActionPrivateProperties(action);
     const runningState = privateProps.runningStateSignal.peek();
+
     if (runningState === RUNNING) {
       runningSet.add(action);
-    } else if (runningState === COMPLETED || runningState === FAILED || runningState === ABORTED) {
+    } else if (
+      runningState === COMPLETED ||
+      runningState === FAILED ||
+      runningState === ABORTED
+    ) {
       settledSet.add(action);
     } else {
-      throw new Error("An action in the activation weak set must be RUNNING, ABORTED, FAILED or COMPLETED, found \"".concat(runningState.id, "\" for action \"").concat(action, "\""));
+      throw new Error(
+        `An action in the activation weak set must be RUNNING, ABORTED, FAILED or COMPLETED, found "${runningState.id}" for action "${action}"`,
+      );
     }
   }
+
   return {
     runningSet,
-    settledSet
+    settledSet,
   };
 };
+
 const updateActions = ({
   globalAbortSignal,
   abortSignal,
@@ -8679,7 +9578,7 @@ const updateActions = ({
   abortSignalMap = new Map(),
   onComplete,
   onAbort,
-  onError
+  onError,
 } = {}) => {
   /*
    * Action update flow:
@@ -8703,18 +9602,24 @@ const updateActions = ({
    * - stays*Set: actions that remain in their current state
    */
 
-  const {
-    runningSet,
-    settledSet
-  } = getActivationInfo();
+  const { runningSet, settledSet } = getActivationInfo();
+
   if (DEBUG$2) {
-    let argSource = "reason: `".concat(reason, "`");
+    let argSource = `reason: \`${reason}\``;
     if (isReplace) {
-      argSource += ", isReplace: true";
+      argSource += `, isReplace: true`;
     }
-    console.group("updateActions({ ".concat(argSource, " })"));
-    const lines = [...(prerunSet.size ? [formatActionSet(prerunSet, "- prerun:")] : []), ...(runSet.size ? [formatActionSet(runSet, "- run:")] : []), ...(rerunSet.size ? [formatActionSet(rerunSet, "- rerun:")] : []), ...(resetSet.size ? [formatActionSet(resetSet, "- reset:")] : [])];
-    console.debug("requested operations:\n".concat(lines.join("\n")));
+    console.group(`updateActions({ ${argSource} })`);
+    const lines = [
+      ...(prerunSet.size ? [formatActionSet(prerunSet, "- prerun:")] : []),
+      ...(runSet.size ? [formatActionSet(runSet, "- run:")] : []),
+      ...(rerunSet.size ? [formatActionSet(rerunSet, "- rerun:")] : []),
+      ...(resetSet.size ? [formatActionSet(resetSet, "- reset:")] : []),
+    ];
+    console.debug(
+      `requested operations:
+${lines.join("\n")}`,
+    );
   }
 
   // Internal sets that track what operations will actually be performed
@@ -8738,11 +9643,17 @@ const updateActions = ({
 
   // Step 2: Process prerun, run, and rerun sets
   {
-    const handleActionRequest = (action, requestType // "prerun", "run", or "rerun"
+    const handleActionRequest = (
+      action,
+      requestType, // "prerun", "run", or "rerun"
     ) => {
       const isPrerun = requestType === "prerun";
       const isRerun = requestType === "rerun";
-      if (action.runningState === RUNNING || action.runningState === COMPLETED) {
+
+      if (
+        action.runningState === RUNNING ||
+        action.runningState === COMPLETED
+      ) {
         // Action is already running/completed
         // By default, we don't interfere with already active actions
         // Unless it's a rerun or the action is also being reset
@@ -8797,7 +9708,10 @@ const updateActions = ({
   // Step 3: Determine which actions will stay in their current state
   {
     for (const actionRunning of runningSet) {
-      if (willResetSet.has(actionRunning)) ; else if (willRunSet.has(actionRunning) || willPrerunSet.has(actionRunning)) ; else {
+      if (willResetSet.has(actionRunning)) ; else if (
+        willRunSet.has(actionRunning) ||
+        willPrerunSet.has(actionRunning)
+      ) ; else {
         // an action that was running and not affected by this update
         const actionPromise = actionPromiseMap.get(actionRunning);
         allThenableArray.push(actionPromise);
@@ -8815,20 +9729,44 @@ const updateActions = ({
     }
   }
   if (DEBUG$2) {
-    const lines = [...(willResetSet.size ? [formatActionSet(willResetSet, "- will reset:")] : []), ...(willPrerunSet.size ? [formatActionSet(willPrerunSet, "- will prerun:")] : []), ...(willPromoteSet.size ? [formatActionSet(willPromoteSet, "- will promote:")] : []), ...(willRunSet.size ? [formatActionSet(willRunSet, "- will run:")] : []), ...(staysRunningSet.size ? [formatActionSet(staysRunningSet, "- stays running:")] : []), ...(staysAbortedSet.size ? [formatActionSet(staysAbortedSet, "- stays aborted:")] : []), ...(staysFailedSet.size ? [formatActionSet(staysFailedSet, "- stays failed:")] : []), ...(staysCompletedSet.size ? [formatActionSet(staysCompletedSet, "- stays completed:")] : [])];
-    console.debug("operations that will be performed:\n".concat(lines.join("\n")));
+    const lines = [
+      ...(willResetSet.size
+        ? [formatActionSet(willResetSet, "- will reset:")]
+        : []),
+      ...(willPrerunSet.size
+        ? [formatActionSet(willPrerunSet, "- will prerun:")]
+        : []),
+      ...(willPromoteSet.size
+        ? [formatActionSet(willPromoteSet, "- will promote:")]
+        : []),
+      ...(willRunSet.size ? [formatActionSet(willRunSet, "- will run:")] : []),
+      ...(staysRunningSet.size
+        ? [formatActionSet(staysRunningSet, "- stays running:")]
+        : []),
+      ...(staysAbortedSet.size
+        ? [formatActionSet(staysAbortedSet, "- stays aborted:")]
+        : []),
+      ...(staysFailedSet.size
+        ? [formatActionSet(staysFailedSet, "- stays failed:")]
+        : []),
+      ...(staysCompletedSet.size
+        ? [formatActionSet(staysCompletedSet, "- stays completed:")]
+        : []),
+    ];
+    console.debug(`operations that will be performed:
+${lines.join("\n")}`);
   }
 
   // Step 4: Execute resets
   {
     for (const actionToReset of willResetSet) {
-      const actionToResetPrivateProperties = getActionPrivateProperties(actionToReset);
-      actionToResetPrivateProperties.performStop({
-        reason
-      });
+      const actionToResetPrivateProperties =
+        getActionPrivateProperties(actionToReset);
+      actionToResetPrivateProperties.performStop({ reason });
       activationWeakSet.delete(actionToReset);
     }
   }
+
   const resultArray = []; // Store results with their execution order
   let hasAsync = false;
 
@@ -8837,7 +9775,9 @@ const updateActions = ({
     const onActionToRunOrPrerun = (actionToPrerunOrRun, isPrerun) => {
       const actionSpecificSignal = abortSignalMap.get(actionToPrerunOrRun);
       const effectiveSignal = actionSpecificSignal || abortSignal;
-      const actionToRunPrivateProperties = getActionPrivateProperties(actionToPrerunOrRun);
+
+      const actionToRunPrivateProperties =
+        getActionPrivateProperties(actionToPrerunOrRun);
       const performRunResult = actionToRunPrivateProperties.performRun({
         globalAbortSignal,
         abortSignal: effectiveSignal,
@@ -8845,9 +9785,10 @@ const updateActions = ({
         isPrerun,
         onComplete,
         onAbort,
-        onError
+        onError,
       });
       activationWeakSet.add(actionToPrerunOrRun);
+
       if (performRunResult && typeof performRunResult.then === "function") {
         actionPromiseMap.set(actionToPrerunOrRun, performRunResult);
         allThenableArray.push(performRunResult);
@@ -8855,13 +9796,13 @@ const updateActions = ({
         // Store async result with order info
         resultArray.push({
           type: "async",
-          promise: performRunResult
+          promise: performRunResult,
         });
       } else {
         // Store sync result with order info
         resultArray.push({
           type: "sync",
-          result: performRunResult
+          result: performRunResult,
         });
       }
     };
@@ -8878,7 +9819,8 @@ const updateActions = ({
 
     // Execute promotions (prerun -> run requested)
     for (const actionToPromote of willPromoteSet) {
-      const actionToPromotePrivateProperties = getActionPrivateProperties(actionToPromote);
+      const actionToPromotePrivateProperties =
+        getActionPrivateProperties(actionToPromote);
       actionToPromotePrivateProperties.isPrerunSignal.value = false;
     }
   }
@@ -8891,30 +9833,39 @@ const updateActions = ({
   if (resultArray.length === 0) {
     requestedResult = null;
   } else if (hasAsync) {
-    requestedResult = Promise.all(resultArray.map(item => item.type === "sync" ? item.result : item.promise));
+    requestedResult = Promise.all(
+      resultArray.map((item) =>
+        item.type === "sync" ? item.result : item.promise,
+      ),
+    );
   } else {
-    requestedResult = resultArray.map(item => item.result);
+    requestedResult = resultArray.map((item) => item.result);
   }
-  const allResult = allThenableArray.length ? Promise.allSettled(allThenableArray) : null;
+
+  const allResult = allThenableArray.length
+    ? Promise.allSettled(allThenableArray)
+    : null;
   const runningActionSet = new Set([...willPrerunSet, ...willRunSet]);
   return {
     requestedResult,
     allResult,
-    runningActionSet
+    runningActionSet,
   };
 };
+
 const NO_PARAMS$1 = {};
 const initialParamsDefault = NO_PARAMS$1;
+
 const actionWeakMap = new WeakMap();
 const createAction = (callback, rootOptions = {}) => {
   const existing = actionWeakMap.get(callback);
   if (existing) {
     return existing;
   }
+
   let rootAction;
-  const createActionCore = (options, {
-    parentAction
-  } = {}) => {
+
+  const createActionCore = (options, { parentAction } = {}) => {
     let {
       name = callback.name || "anonymous",
       params,
@@ -8931,30 +9882,39 @@ const createAction = (callback, rootOptions = {}) => {
       keepOldData = false,
       meta = {},
       dataEffect,
-      completeSideEffect
+      completeSideEffect,
     } = options;
     if (!Object.hasOwn(options, "params")) {
       // even undefined should be respect it's only when not provided at all we use default
       params = initialParamsDefault;
     }
+
     const initialData = data;
     const paramsSignal = signal(params);
     const isPrerunSignal = signal(isPrerun);
     const runningStateSignal = signal(runningState);
     const errorSignal = signal(error);
     const dataSignal = signal(initialData);
-    const computedDataSignal = compute ? computed(() => {
-      const data = dataSignal.value;
-      return compute(data);
-    }) : dataSignal;
-    computedData = computedData === undefined ? compute ? compute(data) : data : computedData;
-    const prerun = options => {
+    const computedDataSignal = compute
+      ? computed(() => {
+          const data = dataSignal.value;
+          return compute(data);
+        })
+      : dataSignal;
+    computedData =
+      computedData === undefined
+        ? compute
+          ? compute(data)
+          : data
+        : computedData;
+
+    const prerun = (options) => {
       return dispatchSingleAction(action, "prerun", options);
     };
-    const run = options => {
+    const run = (options) => {
       return dispatchSingleAction(action, "run", options);
     };
-    const rerun = options => {
+    const rerun = (options) => {
       return dispatchSingleAction(action, "rerun", options);
     };
     /**
@@ -8964,10 +9924,10 @@ const createAction = (callback, rootOptions = {}) => {
      * 3. Clean up any resources and side effects
      * 4. Reset data to initial value (unless keepOldData is true)
      */
-    const stop = options => {
+    const stop = (options) => {
       return dispatchSingleAction(action, "stop", options);
     };
-    const abort = reason => {
+    const abort = (reason) => {
       if (runningState !== RUNNING) {
         return false;
       }
@@ -8976,12 +9936,14 @@ const createAction = (callback, rootOptions = {}) => {
         return false;
       }
       if (DEBUG$2) {
-        console.log("\"".concat(action, "\": aborting (reason: ").concat(reason, ")"));
+        console.log(`"${action}": aborting (reason: ${reason})`);
       }
       actionAbort(reason);
       return true;
     };
+
     let action;
+
     const childActionWeakSet = createIterableWeakSet();
     /*
      * Ephemeron behavior is critical here: actions must keep params alive.
@@ -9001,13 +9963,18 @@ const createAction = (callback, rootOptions = {}) => {
           const result = mergeTwoJsValues(params, newParams);
           return result;
         });
-        return createActionProxyFromSignal(action, combinedParamsSignal, options);
+        return createActionProxyFromSignal(
+          action,
+          combinedParamsSignal,
+          options,
+        );
       }
 
       // ✅ CAS 2: Objet -> vérifier s'il contient des signals
       if (newParamsOrSignal && typeof newParamsOrSignal === "object") {
         const staticParams = {};
         const signalMap = new Map();
+
         const keyArray = Object.keys(newParamsOrSignal);
         for (const key of keyArray) {
           const value = newParamsOrSignal[key];
@@ -9022,18 +9989,19 @@ const createAction = (callback, rootOptions = {}) => {
             }
           }
         }
+
         if (signalMap.size === 0) {
           // Pas de signals, merge statique normal
           if (params === null || typeof params !== "object") {
             return createChildAction({
               ...options,
-              params: newParamsOrSignal
+              params: newParamsOrSignal,
             });
           }
           const combinedParams = mergeTwoJsValues(params, newParamsOrSignal);
           return createChildAction({
             ...options,
-            params: combinedParams
+            params: combinedParams,
           });
         }
 
@@ -9056,7 +10024,7 @@ const createAction = (callback, rootOptions = {}) => {
       // ✅ CAS 3: Primitive -> action enfant
       return createChildAction({
         params: newParamsOrSignal,
-        ...options
+        ...options,
       });
     };
     const bindParams = (newParamsOrSignal, options = {}) => {
@@ -9067,29 +10035,30 @@ const createAction = (callback, rootOptions = {}) => {
       const childAction = _bindParams(newParamsOrSignal, options);
       childActionWeakMap.set(newParamsOrSignal, childAction);
       childActionWeakSet.add(childAction);
+
       return childAction;
     };
-    const createChildAction = childOptions => {
+
+    const createChildAction = (childOptions) => {
       const childActionOptions = {
         ...rootOptions,
         ...childOptions,
         meta: {
           ...rootOptions.meta,
-          ...childOptions.meta
-        }
+          ...childOptions.meta,
+        },
       };
       const childAction = createActionCore(childActionOptions, {
-        parentAction: action
+        parentAction: action,
       });
       return childAction;
     };
 
     // ✅ Implement matchAllSelfOrDescendant
-    const matchAllSelfOrDescendant = (predicate, {
-      includeProxies
-    } = {}) => {
+    const matchAllSelfOrDescendant = (predicate, { includeProxies } = {}) => {
       const matches = [];
-      const traverse = currentAction => {
+
+      const traverse = (currentAction) => {
         if (currentAction.isProxy && !includeProxies) {
           // proxy action should be ignored because the underlying action will be found anyway
           // and if we check the proxy action we'll end up with duplicates
@@ -9097,20 +10066,24 @@ const createAction = (callback, rootOptions = {}) => {
           // and as they are 2 different objects they would be added to the set
           return;
         }
+
         if (predicate(currentAction)) {
           matches.push(currentAction);
         }
 
         // Get child actions from the current action
-        const currentActionPrivateProps = getActionPrivateProperties(currentAction);
+        const currentActionPrivateProps =
+          getActionPrivateProperties(currentAction);
         const childActionWeakSet = currentActionPrivateProps.childActionWeakSet;
         for (const childAction of childActionWeakSet) {
           traverse(childAction);
         }
       };
+
       traverse(action);
       return matches;
     };
+
     name = generateActionName(name, params);
     {
       // Create the action as a function that can be called directly
@@ -9121,7 +10094,7 @@ const createAction = (callback, rootOptions = {}) => {
       Object.defineProperty(action, "name", {
         configurable: true,
         writable: true,
-        value: name
+        value: name,
       });
     }
 
@@ -9145,9 +10118,8 @@ const createAction = (callback, rootOptions = {}) => {
       stop,
       abort,
       bindParams,
-      matchAllSelfOrDescendant,
-      // ✅ Add the new method
-      replaceParams: newParams => {
+      matchAllSelfOrDescendant, // ✅ Add the new method
+      replaceParams: (newParams) => {
         const currentParams = paramsSignal.value;
         const nextParams = mergeTwoJsValues(currentParams, newParams);
         if (nextParams === currentParams) {
@@ -9157,11 +10129,14 @@ const createAction = (callback, rootOptions = {}) => {
         // Update the weak map BEFORE updating the signal
         // so that any code triggered by the signal update finds this action
         if (parentAction) {
-          const parentActionPrivateProps = getActionPrivateProperties(parentAction);
-          const parentChildActionWeakMap = parentActionPrivateProps.childActionWeakMap;
+          const parentActionPrivateProps =
+            getActionPrivateProperties(parentAction);
+          const parentChildActionWeakMap =
+            parentActionPrivateProps.childActionWeakMap;
           parentChildActionWeakMap.delete(currentParams);
           parentChildActionWeakMap.set(nextParams, action);
         }
+
         params = nextParams;
         action.params = nextParams;
         action.name = generateActionName(name, nextParams);
@@ -9169,17 +10144,17 @@ const createAction = (callback, rootOptions = {}) => {
         return true;
       },
       toString: () => action.name,
-      meta
+      meta,
     });
     Object.preventExtensions(action);
 
     // Effects pour synchroniser les propriétés
     {
-      weakEffect([action], actionRef => {
+      weakEffect([action], (actionRef) => {
         isPrerun = isPrerunSignal.value;
         actionRef.isPrerun = isPrerun;
       });
-      weakEffect([action], actionRef => {
+      weakEffect([action], (actionRef) => {
         runningState = runningStateSignal.value;
         actionRef.runningState = runningState;
         aborted = runningState === ABORTED;
@@ -9187,11 +10162,11 @@ const createAction = (callback, rootOptions = {}) => {
         completed = runningState === COMPLETED;
         actionRef.completed = completed;
       });
-      weakEffect([action], actionRef => {
+      weakEffect([action], (actionRef) => {
         error = errorSignal.value;
         actionRef.error = error;
       });
-      weakEffect([action], actionRef => {
+      weakEffect([action], (actionRef) => {
         data = dataSignal.value;
         computedData = computedDataSignal.value;
         actionRef.data = data;
@@ -9204,10 +10179,11 @@ const createAction = (callback, rootOptions = {}) => {
       const ui = {
         renderLoaded: null,
         renderLoadedAsync,
-        hasRenderers: false // Flag to track if action is bound to UI components
+        hasRenderers: false, // Flag to track if action is bound to UI components
       };
       let sideEffectCleanup;
-      const performRun = runParams => {
+
+      const performRun = (runParams) => {
         const {
           globalAbortSignal,
           abortSignal,
@@ -9215,14 +10191,16 @@ const createAction = (callback, rootOptions = {}) => {
           isPrerun,
           onComplete,
           onAbort,
-          onError
+          onError,
         } = runParams;
+
         if (isPrerun) {
           prerunProtectionRegistry.protect(action);
         }
+
         const internalAbortController = new AbortController();
         const internalAbortSignal = internalAbortController.signal;
-        const abort = abortReason => {
+        const abort = (abortReason) => {
           runningStateSignal.value = ABORTED;
           internalAbortController.abort(abortReason);
           actionAbortMap.delete(action);
@@ -9230,22 +10208,26 @@ const createAction = (callback, rootOptions = {}) => {
             prerunProtectionRegistry.unprotect(action);
           }
           if (DEBUG$2) {
-            console.log("\"".concat(action, "\": aborted (reason: ").concat(abortReason, ")"));
+            console.log(`"${action}": aborted (reason: ${abortReason})`);
           }
         };
+
         const onAbortFromSpecific = () => {
           abort(abortSignal.reason);
         };
         const onAbortFromGlobal = () => {
           abort(globalAbortSignal.reason);
         };
+
         if (abortSignal) {
           abortSignal.addEventListener("abort", onAbortFromSpecific);
         }
         if (globalAbortSignal) {
           globalAbortSignal.addEventListener("abort", onAbortFromGlobal);
         }
+
         actionAbortMap.set(action, abort);
+
         batch(() => {
           errorSignal.value = null;
           runningStateSignal.value = RUNNING;
@@ -9253,17 +10235,15 @@ const createAction = (callback, rootOptions = {}) => {
             isPrerunSignal.value = false;
           }
         });
+
         const args = [];
         args.push(params);
-        args.push({
-          signal: internalAbortSignal,
-          reason,
-          isPrerun
-        });
+        args.push({ signal: internalAbortSignal, reason, isPrerun });
         const returnValue = sideEffect(...args);
         if (typeof returnValue === "function") {
           sideEffectCleanup = returnValue;
         }
+
         let runResult;
         let rejected = false;
         let rejectedValue;
@@ -9293,17 +10273,19 @@ const createAction = (callback, rootOptions = {}) => {
            * before the UI attempts to render the now-missing resource.
            */
           batch(() => {
-            dataSignal.value = dataEffect ? dataEffect(runResult, action) : runResult;
+            dataSignal.value = dataEffect
+              ? dataEffect(runResult, action)
+              : runResult;
             runningStateSignal.value = COMPLETED;
             onComplete?.(computedDataSignal.peek(), action);
             completeSideEffect?.(action);
           });
           if (DEBUG$2) {
-            console.log("\"".concat(action, "\": completed"));
+            console.log(`"${action}": completed`);
           }
           return computedDataSignal.peek();
         };
-        const onRunError = e => {
+        const onRunError = (e) => {
           if (abortSignal) {
             abortSignal.removeEventListener("abort", onAbortFromSpecific);
           }
@@ -9321,16 +10303,21 @@ const createAction = (callback, rootOptions = {}) => {
             return e;
           }
           if (e.name === "AbortError") {
-            throw new Error("never supposed to happen, abort error should be handled by the abort signal");
+            throw new Error(
+              "never supposed to happen, abort error should be handled by the abort signal",
+            );
           }
           if (DEBUG$2) {
-            console.log("\"".concat(action, "\": failed (error: ").concat(e, ", handled by ui: ").concat(ui.hasRenderers, ")"));
+            console.log(
+              `"${action}": failed (error: ${e}, handled by ui: ${ui.hasRenderers})`,
+            );
           }
           batch(() => {
             errorSignal.value = e;
             runningStateSignal.value = FAILED;
             onError?.(e, action);
           });
+
           if (ui.hasRenderers || onError) {
             console.error(e);
             // For UI-bound actions: error is properly handled by logging + UI display
@@ -9341,28 +10328,37 @@ const createAction = (callback, rootOptions = {}) => {
           }
           throw e;
         };
+
         try {
           const thenableArray = [];
           const callbackResult = callback(...args);
           if (callbackResult && typeof callbackResult.then === "function") {
-            thenableArray.push(callbackResult.then(value => {
-              runResult = value;
-            }, e => {
-              rejected = true;
-              rejectedValue = e;
-            }));
+            thenableArray.push(
+              callbackResult.then(
+                (value) => {
+                  runResult = value;
+                },
+                (e) => {
+                  rejected = true;
+                  rejectedValue = e;
+                },
+              ),
+            );
           } else {
             runResult = callbackResult;
           }
           if (ui.renderLoadedAsync && !ui.renderLoaded) {
-            const renderLoadedPromise = ui.renderLoadedAsync(...args).then(renderLoaded => {
-              ui.renderLoaded = renderLoaded;
-            }, e => {
-              if (!rejected) {
-                rejected = true;
-                rejectedValue = e;
-              }
-            });
+            const renderLoadedPromise = ui.renderLoadedAsync(...args).then(
+              (renderLoaded) => {
+                ui.renderLoaded = renderLoaded;
+              },
+              (e) => {
+                if (!rejected) {
+                  rejected = true;
+                  rejectedValue = e;
+                }
+              },
+            );
             thenableArray.push(renderLoadedPromise);
           }
           if (thenableArray.length === 0) {
@@ -9378,18 +10374,20 @@ const createAction = (callback, rootOptions = {}) => {
           return onRunError(e);
         }
       };
-      const performStop = ({
-        reason
-      }) => {
+
+      const performStop = ({ reason }) => {
         abort(reason);
         if (DEBUG$2) {
-          console.log("\"".concat(action, "\": stopping (reason: ").concat(reason, ")"));
+          console.log(`"${action}": stopping (reason: ${reason})`);
         }
+
         prerunProtectionRegistry.unprotect(action);
+
         if (sideEffectCleanup) {
           sideEffectCleanup(reason);
           sideEffectCleanup = undefined;
         }
+
         actionPromiseMap.delete(action);
         batch(() => {
           errorSignal.value = null;
@@ -9400,34 +10398,42 @@ const createAction = (callback, rootOptions = {}) => {
           runningStateSignal.value = IDLE;
         });
       };
+
       const privateProperties = {
         initialData,
+
         paramsSignal,
         runningStateSignal,
         isPrerunSignal,
         dataSignal,
         computedDataSignal,
         errorSignal,
+
         performRun,
         performStop,
         ui,
+
         childActionWeakSet,
-        childActionWeakMap
+        childActionWeakMap,
       };
       setActionPrivateProperties(action, privateProperties);
     }
+
     return action;
   };
+
   rootAction = createActionCore(rootOptions);
   actionWeakMap.set(callback, rootAction);
   return rootAction;
 };
-const createActionProxyFromSignal = (action, paramsSignal, {
-  rerunOnChange = false,
-  onChange
-} = {}) => {
+
+const createActionProxyFromSignal = (
+  action,
+  paramsSignal,
+  { rerunOnChange = false, onChange } = {},
+) => {
   const actionTargetChangeCallbackSet = new Set();
-  const onActionTargetChange = callback => {
+  const onActionTargetChange = (callback) => {
     actionTargetChangeCallbackSet.add(callback);
     return () => {
       actionTargetChangeCallbackSet.delete(callback);
@@ -9446,12 +10452,15 @@ const createActionProxyFromSignal = (action, paramsSignal, {
       }
     }
   };
+
   let actionTarget = null;
   let currentAction = action;
   let currentActionPrivateProperties = getActionPrivateProperties(action);
   let actionTargetPreviousWeakRef = null;
-  const _updateTarget = params => {
+
+  const _updateTarget = (params) => {
     const previousActionTarget = actionTargetPreviousWeakRef?.deref();
+
     if (params === NO_PARAMS$1) {
       actionTarget = null;
       currentAction = action;
@@ -9464,10 +10473,13 @@ const createActionProxyFromSignal = (action, paramsSignal, {
       currentAction = actionTarget;
       currentActionPrivateProperties = getActionPrivateProperties(actionTarget);
     }
-    actionTargetPreviousWeakRef = actionTarget ? new WeakRef(actionTarget) : null;
+    actionTargetPreviousWeakRef = actionTarget
+      ? new WeakRef(actionTarget)
+      : null;
     triggerTargetChange(actionTarget, previousActionTarget);
   };
-  const proxyMethod = method => {
+
+  const proxyMethod = (method) => {
     return (...args) => {
       /*
        * Ensure the proxy targets the correct action before method execution.
@@ -9479,6 +10491,7 @@ const createActionProxyFromSignal = (action, paramsSignal, {
       return currentAction[method](...args);
     };
   };
+
   const nameSignal = signal();
   let actionProxy;
   {
@@ -9489,7 +10502,7 @@ const createActionProxyFromSignal = (action, paramsSignal, {
       configurable: true,
       get() {
         return nameSignal.value;
-      }
+      },
     });
   }
   Object.assign(actionProxy, {
@@ -9514,17 +10527,19 @@ const createActionProxyFromSignal = (action, paramsSignal, {
       return currentAction;
     },
     bindParams: () => {
-      throw new Error("bindParams() is not supported on action proxies, use the underlying action instead");
+      throw new Error(
+        `bindParams() is not supported on action proxies, use the underlying action instead`,
+      );
     },
-    replaceParams: null,
-    // Will be set below
+    replaceParams: null, // Will be set below
     toString: () => actionProxy.name,
-    meta: {}
+    meta: {},
   });
   Object.preventExtensions(actionProxy);
-  onActionTargetChange(actionTarget => {
+
+  onActionTargetChange((actionTarget) => {
     const currentAction = actionTarget || action;
-    nameSignal.value = "[Proxy] ".concat(currentAction.name);
+    nameSignal.value = `[Proxy] ${currentAction.name}`;
     actionProxy.callback = currentAction.callback;
     actionProxy.params = currentAction.params;
     actionProxy.isPrerun = currentAction.isPrerun;
@@ -9535,6 +10550,7 @@ const createActionProxyFromSignal = (action, paramsSignal, {
     actionProxy.computedData = currentAction.computedData;
     actionProxy.completed = currentAction.completed;
   });
+
   const proxyPrivateSignal = (signalPropertyName, propertyName) => {
     const signalProxy = signal();
     let dispose;
@@ -9544,7 +10560,8 @@ const createActionProxyFromSignal = (action, paramsSignal, {
         dispose = undefined;
       }
       dispose = effect(() => {
-        const currentActionSignal = currentActionPrivateProperties[signalPropertyName];
+        const currentActionSignal =
+          currentActionPrivateProperties[signalPropertyName];
         const currentActionSignalValue = currentActionSignal.value;
         signalProxy.value = currentActionSignalValue;
         if (propertyName) {
@@ -9555,7 +10572,7 @@ const createActionProxyFromSignal = (action, paramsSignal, {
     });
     return signalProxy;
   };
-  const proxyPrivateMethod = method => {
+  const proxyPrivateMethod = (method) => {
     return (...args) => currentActionPrivateProperties[method](...args);
   };
 
@@ -9564,23 +10581,31 @@ const createActionProxyFromSignal = (action, paramsSignal, {
 
   // Watch for changes in the original paramsSignal and update ours
   // (original signal wins over any replaceParams calls)
-  weakEffect([paramsSignal, proxyParamsSignal], (paramsSignalRef, proxyParamsSignalRef) => {
-    proxyParamsSignalRef.value = paramsSignalRef.value;
-  });
+  weakEffect(
+    [paramsSignal, proxyParamsSignal],
+    (paramsSignalRef, proxyParamsSignalRef) => {
+      proxyParamsSignalRef.value = paramsSignalRef.value;
+    },
+  );
+
   const proxyPrivateProperties = {
     get currentAction() {
       return currentAction;
     },
     paramsSignal: proxyParamsSignal,
     isPrerunSignal: proxyPrivateSignal("isPrerunSignal", "isPrerun"),
-    runningStateSignal: proxyPrivateSignal("runningStateSignal", "runningState"),
+    runningStateSignal: proxyPrivateSignal(
+      "runningStateSignal",
+      "runningState",
+    ),
     errorSignal: proxyPrivateSignal("errorSignal", "error"),
     dataSignal: proxyPrivateSignal("dataSignal", "data"),
     computedDataSignal: proxyPrivateSignal("computedDataSignal"),
     performRun: proxyPrivateMethod("performRun"),
     performStop: proxyPrivateMethod("performStop"),
-    ui: currentActionPrivateProperties.ui
+    ui: currentActionPrivateProperties.ui,
   };
+
   onActionTargetChange((actionTarget, previousTarget) => {
     proxyPrivateProperties.ui = currentActionPrivateProperties.ui;
     if (previousTarget && actionTarget) {
@@ -9590,16 +10615,19 @@ const createActionProxyFromSignal = (action, paramsSignal, {
         newPrivateProps.ui.hasRenderers = true;
       }
     }
-    proxyPrivateProperties.childActionWeakSet = currentActionPrivateProperties.childActionWeakSet;
+    proxyPrivateProperties.childActionWeakSet =
+      currentActionPrivateProperties.childActionWeakSet;
   });
   setActionPrivateProperties(actionProxy, proxyPrivateProperties);
+
   {
     weakEffect([action], () => {
       const params = proxyParamsSignal.value;
       _updateTarget(params);
     });
   }
-  actionProxy.replaceParams = newParams => {
+
+  actionProxy.replaceParams = (newParams) => {
     if (currentAction === action) {
       const currentParams = proxyParamsSignal.value;
       const nextParams = mergeTwoJsValues(currentParams, newParams);
@@ -9612,12 +10640,18 @@ const createActionProxyFromSignal = (action, paramsSignal, {
     if (!currentAction.replaceParams(newParams)) {
       return false;
     }
-    proxyParamsSignal.value = currentActionPrivateProperties.paramsSignal.peek();
+    proxyParamsSignal.value =
+      currentActionPrivateProperties.paramsSignal.peek();
     return true;
   };
+
   if (rerunOnChange) {
     onActionTargetChange((actionTarget, actionTargetPrevious) => {
-      if (actionTarget && actionTargetPrevious && !actionTargetPrevious.isPrerun) {
+      if (
+        actionTarget &&
+        actionTargetPrevious &&
+        !actionTargetPrevious.isPrerun
+      ) {
         actionTarget.rerun();
       }
     });
@@ -9627,23 +10661,25 @@ const createActionProxyFromSignal = (action, paramsSignal, {
       onChange(actionTarget, actionTargetPrevious);
     });
   }
+
   return actionProxy;
 };
+
 const generateActionName = (name, params) => {
   if (params === NO_PARAMS$1) {
-    return "".concat(name, "({})");
+    return `${name}({})`;
   }
   // Use stringifyForDisplay with asFunctionArgs option for the entire args array
   const argsString = stringifyForDisplay([params], 3, 0, {
-    asFunctionArgs: true
+    asFunctionArgs: true,
   });
-  return "".concat(name).concat(argsString);
+  return `${name}${argsString}`;
 };
 
 const useRunOnMount = (action, Component) => {
   useEffect(() => {
     action.run({
-      reason: "<".concat(Component.name, " /> mounted")
+      reason: `<${Component.name} /> mounted`,
     });
   }, []);
 };
@@ -9656,25 +10692,25 @@ const useRunOnMount = (action, Component) => {
 // in our case it's just here in case some code is wrongly calling "requestAction" or "checkValidity" on a disabled element
 const DISABLED_CONSTRAINT = {
   name: "disabled",
-  check: element => {
+  check: (element) => {
     if (element.disabled) {
-      return "Ce champ est d\xE9sactiv\xE9.";
+      return `Ce champ est désactivé.`;
     }
     return null;
-  }
+  },
 };
+
 const REQUIRED_CONSTRAINT = {
   name: "required",
-  check: (element, {
-    registerChange
-  }) => {
+  check: (element, { registerChange }) => {
     if (!element.required) {
       return null;
     }
     const requiredMessage = element.getAttribute("data-required-message");
+
     if (element.type === "checkbox") {
       if (!element.checked) {
-        return requiredMessage || "Veuillez cocher cette case.";
+        return requiredMessage || `Veuillez cocher cette case.`;
       }
       return null;
     }
@@ -9684,43 +10720,52 @@ const REQUIRED_CONSTRAINT = {
       if (!name) {
         // If no name, check just this radio
         if (!element.checked) {
-          return requiredMessage || "Veuillez s\xE9lectionner une option.";
+          return requiredMessage || `Veuillez sélectionner une option.`;
         }
         return null;
       }
+
       const closestFieldset = element.closest("fieldset");
-      const fieldsetRequiredMessage = closestFieldset ? closestFieldset.getAttribute("data-required-message") : null;
+      const fieldsetRequiredMessage = closestFieldset
+        ? closestFieldset.getAttribute("data-required-message")
+        : null;
 
       // Find the container (form or closest fieldset)
       const container = element.form || closestFieldset || document;
       // Check if any radio with the same name is checked
-      const radioSelector = "input[type=\"radio\"][name=\"".concat(CSS.escape(name), "\"]");
+      const radioSelector = `input[type="radio"][name="${CSS.escape(name)}"]`;
       const radiosWithSameName = container.querySelectorAll(radioSelector);
       for (const radio of radiosWithSameName) {
         if (radio.checked) {
           return null; // At least one radio is selected
         }
-        registerChange(onChange => {
+        registerChange((onChange) => {
           radio.addEventListener("change", onChange);
           return () => {
             radio.removeEventListener("change", onChange);
           };
         });
       }
+
       return {
-        message: requiredMessage || fieldsetRequiredMessage || "Veuillez s\xE9lectionner une option.",
-        target: closestFieldset ? closestFieldset.querySelector("legend") : undefined
+        message:
+          requiredMessage ||
+          fieldsetRequiredMessage ||
+          `Veuillez sélectionner une option.`,
+        target: closestFieldset
+          ? closestFieldset.querySelector("legend")
+          : undefined,
       };
     }
     if (!element.value) {
-      return requiredMessage || "Veuillez remplir ce champ.";
+      return requiredMessage || `Veuillez remplir ce champ.`;
     }
     return null;
-  }
+  },
 };
 const PATTERN_CONSTRAINT = {
   name: "pattern",
-  check: input => {
+  check: (input) => {
     const pattern = input.pattern;
     if (!pattern) {
       return null;
@@ -9735,21 +10780,22 @@ const PATTERN_CONSTRAINT = {
       if (patternMessage) {
         return patternMessage;
       }
-      let message = "Veuillez respecter le format requis.";
+      let message = `Veuillez respecter le format requis.`;
       const title = input.title;
       if (title) {
-        message += "<br />".concat(title);
+        message += `<br />${title}`;
       }
       return message;
     }
     return null;
-  }
+  },
 };
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/email#validation
-const emailregex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+const emailregex =
+  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 const TYPE_EMAIL_CONSTRAINT = {
   name: "type_email",
-  check: input => {
+  check: (input) => {
     if (input.type !== "email") {
       return null;
     }
@@ -9758,17 +10804,18 @@ const TYPE_EMAIL_CONSTRAINT = {
       return null;
     }
     if (!value.includes("@")) {
-      return "Veuillez inclure \"@\" dans l'adresse e-mail. Il manque un symbole \"@\" dans ".concat(value, ".");
+      return `Veuillez inclure "@" dans l'adresse e-mail. Il manque un symbole "@" dans ${value}.`;
     }
     if (!emailregex.test(value)) {
-      return "Veuillez saisir une adresse e-mail valide.";
+      return `Veuillez saisir une adresse e-mail valide.`;
     }
     return null;
-  }
+  },
 };
+
 const MIN_LENGTH_CONSTRAINT = {
   name: "min_length",
-  check: element => {
+  check: (element) => {
     if (element.tagName === "INPUT") {
       if (!INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET.has(element.type)) {
         return null;
@@ -9776,10 +10823,12 @@ const MIN_LENGTH_CONSTRAINT = {
     } else if (element.tagName !== "TEXTAREA") {
       return null;
     }
+
     const minLength = element.minLength;
     if (minLength === -1) {
       return null;
     }
+
     const value = element.value;
     const valueLength = value.length;
     if (valueLength === 0) {
@@ -9787,17 +10836,25 @@ const MIN_LENGTH_CONSTRAINT = {
     }
     if (valueLength < minLength) {
       if (valueLength === 1) {
-        return "Ce champ doit contenir au moins ".concat(minLength, " caract\xE8re (il contient actuellement un seul caract\xE8re).");
+        return `Ce champ doit contenir au moins ${minLength} caractère (il contient actuellement un seul caractère).`;
       }
-      return "Ce champ doit contenir au moins ".concat(minLength, " caract\xE8res (il contient actuellement ").concat(valueLength, " caract\xE8res).");
+      return `Ce champ doit contenir au moins ${minLength} caractères (il contient actuellement ${valueLength} caractères).`;
     }
     return null;
-  }
+  },
 };
-const INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET = new Set(["text", "search", "url", "tel", "email", "password"]);
+const INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET = new Set([
+  "text",
+  "search",
+  "url",
+  "tel",
+  "email",
+  "password",
+]);
+
 const MAX_LENGTH_CONSTRAINT = {
   name: "max_length",
-  check: element => {
+  check: (element) => {
     if (element.tagName === "INPUT") {
       if (!INPUT_TYPE_SUPPORTING_MAX_LENGTH_SET.has(element.type)) {
         return null;
@@ -9805,22 +10862,27 @@ const MAX_LENGTH_CONSTRAINT = {
     } else if (element.tagName !== "TEXTAREA") {
       return null;
     }
+
     const maxLength = element.maxLength;
     if (maxLength === -1) {
       return null;
     }
+
     const value = element.value;
     const valueLength = value.length;
     if (valueLength > maxLength) {
-      return "Ce champ doit contenir au maximum ".concat(maxLength, " caract\xE8res (il contient actuellement ").concat(valueLength, " caract\xE8res).");
+      return `Ce champ doit contenir au maximum ${maxLength} caractères (il contient actuellement ${valueLength} caractères).`;
     }
     return null;
-  }
+  },
 };
-const INPUT_TYPE_SUPPORTING_MAX_LENGTH_SET = new Set(INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET);
+const INPUT_TYPE_SUPPORTING_MAX_LENGTH_SET = new Set(
+  INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET,
+);
+
 const TYPE_NUMBER_CONSTRAINT = {
   name: "type_number",
-  check: element => {
+  check: (element) => {
     if (element.tagName !== "INPUT") {
       return null;
     }
@@ -9832,14 +10894,15 @@ const TYPE_NUMBER_CONSTRAINT = {
     }
     const value = element.valueAsNumber;
     if (isNaN(value)) {
-      return "Doit \xEAtre un nombre.";
+      return `Doit être un nombre.`;
     }
     return null;
-  }
+  },
 };
+
 const MIN_CONSTRAINT = {
   name: "min",
-  check: element => {
+  check: (element) => {
     if (element.tagName !== "INPUT") {
       return null;
     }
@@ -9858,7 +10921,10 @@ const MIN_CONSTRAINT = {
       }
       if (valueAsNumber < minNumber) {
         const minMessage = element.getAttribute("data-min-message");
-        return minMessage || "Doit \xEAtre sup\xE9rieur ou \xE9gal \xE0 <strong>".concat(minString, "</strong>.");
+        return (
+          minMessage ||
+          `Doit être supérieur ou égal à <strong>${minString}</strong>.`
+        );
       }
       return null;
     }
@@ -9871,10 +10937,10 @@ const MIN_CONSTRAINT = {
       const value = element.value;
       const [hours, minutes] = value.split(":").map(Number);
       if (hours < minHours) {
-        return "Doit \xEAtre <strong>".concat(min, "</strong> ou plus.");
+        return `Doit être <strong>${min}</strong> ou plus.`;
       }
       if (hours === minHours && minMinutes < minutes) {
-        return "Doit \xEAtre <strong>".concat(min, "</strong> ou plus.");
+        return `Doit être <strong>${min}</strong> ou plus.`;
       }
       return null;
     }
@@ -9884,11 +10950,12 @@ const MIN_CONSTRAINT = {
     // "date", "month", "week", "datetime-local"
     // - same as "range"
     return null;
-  }
+  },
 };
+
 const MAX_CONSTRAINT = {
   name: "max",
-  check: element => {
+  check: (element) => {
     if (element.tagName !== "INPUT") {
       return null;
     }
@@ -9907,7 +10974,7 @@ const MAX_CONSTRAINT = {
       }
       if (valueAsNumber > maxNumber) {
         const maxMessage = element.getAttribute("data-max-message");
-        return maxMessage || "Doit \xEAtre <strong>".concat(maxString, "</strong> ou plus.");
+        return maxMessage || `Doit être <strong>${maxString}</strong> ou plus.`;
       }
       return null;
     }
@@ -9920,22 +10987,20 @@ const MAX_CONSTRAINT = {
       const value = element.value;
       const [hours, minutes] = value.split(":").map(Number);
       if (hours > maxHours) {
-        return "Doit \xEAtre <strong>".concat(max, "</strong> ou moins.");
+        return `Doit être <strong>${max}</strong> ou moins.`;
       }
       if (hours === maxHours && maxMinutes > minutes) {
-        return "Doit \xEAtre <strong>".concat(max, "</strong> ou moins.");
+        return `Doit être <strong>${max}</strong> ou moins.`;
       }
       return null;
     }
     return null;
-  }
+  },
 };
 
 const READONLY_CONSTRAINT = {
   name: "readonly",
-  check: (element, {
-    skipReadonly
-  }) => {
+  check: (element, { skipReadonly }) => {
     if (skipReadonly) {
       return null;
     }
@@ -9944,29 +11009,30 @@ const READONLY_CONSTRAINT = {
     }
     const readonlySilent = element.hasAttribute("data-readonly-silent");
     if (readonlySilent) {
-      return {
-        silent: true
-      };
+      return { silent: true };
     }
     const readonlyMessage = element.getAttribute("data-readonly-message");
     if (readonlyMessage) {
       return {
         message: readonlyMessage,
-        level: "info"
+        level: "info",
       };
     }
     const isBusy = element.getAttribute("aria-busy") === "true";
     if (isBusy) {
       return {
-        message: "Cette action est en cours. Veuillez patienter.",
-        level: "info"
+        message: `Cette action est en cours. Veuillez patienter.`,
+        level: "info",
       };
     }
     return {
-      message: element.tagName === "BUTTON" ? "Cet action n'est pas disponible pour l'instant." : "Cet \xE9l\xE9ment est en lecture seule et ne peut pas \xEAtre modifi\xE9.",
-      level: "info"
+      message:
+        element.tagName === "BUTTON"
+          ? `Cet action n'est pas disponible pour l'instant.`
+          : `Cet élément est en lecture seule et ne peut pas être modifié.`,
+      level: "info",
     };
-  }
+  },
 };
 
 installImportMetaCss(import.meta);
@@ -9988,31 +11054,201 @@ installImportMetaCss(import.meta);
  * @returns {Function} - Function to hide and remove the validation message
  */
 
-import.meta.css = /* css */"\n  /* Ensure the validation message CANNOT cause overflow */\n  /* might be important to ensure it cannot create scrollbars in the document */\n  /* When measuring the size it should take */\n  .jsenv_validation_message_container {\n    position: fixed;\n    inset: 0;\n    overflow: hidden;\n  }\n\n  .jsenv_validation_message {\n    display: block;\n    overflow: visible;\n    height: auto;\n    position: absolute;\n    z-index: 1;\n    opacity: 0;\n    left: 0;\n    top: 0;\n    /* will be positioned with transform: translate */\n    transition: opacity 0.2s ease-in-out;\n  }\n\n  .jsenv_validation_message_border {\n    position: absolute;\n    pointer-events: none;\n    filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));\n  }\n\n  .jsenv_validation_message_body_wrapper {\n    border-style: solid;\n    border-color: transparent;\n    position: relative;\n  }\n\n  .jsenv_validation_message_body {\n    padding: 8px;\n    position: relative;\n    max-width: 47vw;\n    display: flex;\n    flex-direction: row;\n    gap: 10px;\n  }\n\n  .jsenv_validation_message_icon {\n    display: flex;\n    align-self: flex-start;\n    align-items: center;\n    justify-content: center;\n    width: 22px;\n    height: 22px;\n    border-radius: 2px;\n    flex-shrink: 0;\n  }\n\n  .jsenv_validation_message_exclamation_svg {\n    width: 16px;\n    height: 12px;\n    color: white;\n  }\n\n  .jsenv_validation_message[data-level=\"info\"] .jsenv_validation_message_icon {\n    background-color: #2196f3;\n  }\n  .jsenv_validation_message[data-level=\"warning\"]\n    .jsenv_validation_message_icon {\n    background-color: #ff9800;\n  }\n  .jsenv_validation_message[data-level=\"error\"] .jsenv_validation_message_icon {\n    background-color: #f44336;\n  }\n\n  .jsenv_validation_message_content {\n    align-self: center;\n    word-break: break-word;\n    min-width: 0;\n    overflow-wrap: anywhere;\n  }\n\n  .jsenv_validation_message_border svg {\n    position: absolute;\n    inset: 0;\n    overflow: visible;\n  }\n\n  .border_path {\n    fill: var(--border-color);\n  }\n\n  .background_path {\n    fill: var(--background-color);\n  }\n\n  .jsenv_validation_message_close_button_column {\n    display: flex;\n    height: 22px;\n  }\n  .jsenv_validation_message_close_button {\n    border: none;\n    background: none;\n    padding: 0;\n    width: 1em;\n    height: 1em;\n    font-size: inherit;\n    cursor: pointer;\n    border-radius: 0.2em;\n    align-self: center;\n    color: currentColor;\n  }\n  .jsenv_validation_message_close_button:hover {\n    background: rgba(0, 0, 0, 0.1);\n  }\n  .close_svg {\n    width: 100%;\n    height: 100%;\n  }\n\n  .error_stack {\n    overflow: auto;\n    max-height: 200px;\n  }\n";
+import.meta.css = /* css */ `
+  /* Ensure the validation message CANNOT cause overflow */
+  /* might be important to ensure it cannot create scrollbars in the document */
+  /* When measuring the size it should take */
+  .jsenv_validation_message_container {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+  }
+
+  .jsenv_validation_message {
+    display: block;
+    overflow: visible;
+    height: auto;
+    position: absolute;
+    z-index: 1;
+    opacity: 0;
+    left: 0;
+    top: 0;
+    /* will be positioned with transform: translate */
+    transition: opacity 0.2s ease-in-out;
+  }
+
+  .jsenv_validation_message_border {
+    position: absolute;
+    pointer-events: none;
+    filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
+  }
+
+  .jsenv_validation_message_body_wrapper {
+    border-style: solid;
+    border-color: transparent;
+    position: relative;
+  }
+
+  .jsenv_validation_message_body {
+    padding: 8px;
+    position: relative;
+    max-width: 47vw;
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+  }
+
+  .jsenv_validation_message_icon {
+    display: flex;
+    align-self: flex-start;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .jsenv_validation_message_exclamation_svg {
+    width: 16px;
+    height: 12px;
+    color: white;
+  }
+
+  .jsenv_validation_message[data-level="info"] .jsenv_validation_message_icon {
+    background-color: #2196f3;
+  }
+  .jsenv_validation_message[data-level="warning"]
+    .jsenv_validation_message_icon {
+    background-color: #ff9800;
+  }
+  .jsenv_validation_message[data-level="error"] .jsenv_validation_message_icon {
+    background-color: #f44336;
+  }
+
+  .jsenv_validation_message_content {
+    align-self: center;
+    word-break: break-word;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .jsenv_validation_message_border svg {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+  }
+
+  .border_path {
+    fill: var(--border-color);
+  }
+
+  .background_path {
+    fill: var(--background-color);
+  }
+
+  .jsenv_validation_message_close_button_column {
+    display: flex;
+    height: 22px;
+  }
+  .jsenv_validation_message_close_button {
+    border: none;
+    background: none;
+    padding: 0;
+    width: 1em;
+    height: 1em;
+    font-size: inherit;
+    cursor: pointer;
+    border-radius: 0.2em;
+    align-self: center;
+    color: currentColor;
+  }
+  .jsenv_validation_message_close_button:hover {
+    background: rgba(0, 0, 0, 0.1);
+  }
+  .close_svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .error_stack {
+    overflow: auto;
+    max-height: 200px;
+  }
+`;
 
 // HTML template for the validation message
-const validationMessageTemplate = /* html */"\n<div\n    class=\"jsenv_validation_message_container\"\n  >\n    <div class=\"jsenv_validation_message\" role=\"alert\" aria-live=\"assertive\">\n      <div class=\"jsenv_validation_message_body_wrapper\">\n        <div class=\"jsenv_validation_message_border\"></div>\n        <div class=\"jsenv_validation_message_body\">\n          <div class=\"jsenv_validation_message_icon\">\n            <svg\n              class=\"jsenv_validation_message_exclamation_svg\"\n              viewBox=\"0 0 125 300\"\n              xmlns=\"http://www.w3.org/2000/svg\"\n            >\n              <path\n                fill=\"currentColor\"\n                d=\"m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z\"\n              />\n            </svg>\n          </div>\n          <div class=\"jsenv_validation_message_content\">Default message</div>\n          <div class=\"jsenv_validation_message_close_button_column\">\n            <button class=\"jsenv_validation_message_close_button\">\n              <svg\n                class=\"close_svg\"\n                viewBox=\"0 0 24 24\"\n                fill=\"none\"\n                xmlns=\"http://www.w3.org/2000/svg\"\n              >\n                <path\n                  fill-rule=\"evenodd\"\n                  clip-rule=\"evenodd\"\n                  d=\"M5.29289 5.29289C5.68342 4.90237 6.31658 4.90237 6.70711 5.29289L12 10.5858L17.2929 5.29289C17.6834 4.90237 18.3166 4.90237 18.7071 5.29289C19.0976 5.68342 19.0976 6.31658 18.7071 6.70711L13.4142 12L18.7071 17.2929C19.0976 17.6834 19.0976 18.3166 18.7071 18.7071C18.3166 19.0976 17.6834 19.0976 17.2929 18.7071L12 13.4142L6.70711 18.7071C6.31658 19.0976 5.68342 19.0976 5.29289 18.7071C4.90237 18.3166 4.90237 17.6834 5.29289 17.2929L10.5858 12L5.29289 6.70711C4.90237 6.31658 4.90237 5.68342 5.29289 5.29289Z\"\n                  fill=\"currentColor\"\n                />\n              </svg>\n            </button>\n          </div>\n        </div>\n      </div>\n    </div>\n  </div>\n";
-const openValidationMessage = (targetElement, message, {
-  level = "warning",
-  onClose,
-  closeOnClickOutside = level === "info",
-  debug = false
-} = {}) => {
+const validationMessageTemplate = /* html */ `
+<div
+    class="jsenv_validation_message_container"
+  >
+    <div class="jsenv_validation_message" role="alert" aria-live="assertive">
+      <div class="jsenv_validation_message_body_wrapper">
+        <div class="jsenv_validation_message_border"></div>
+        <div class="jsenv_validation_message_body">
+          <div class="jsenv_validation_message_icon">
+            <svg
+              class="jsenv_validation_message_exclamation_svg"
+              viewBox="0 0 125 300"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                fill="currentColor"
+                d="m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z"
+              />
+            </svg>
+          </div>
+          <div class="jsenv_validation_message_content">Default message</div>
+          <div class="jsenv_validation_message_close_button_column">
+            <button class="jsenv_validation_message_close_button">
+              <svg
+                class="close_svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  fill-rule="evenodd"
+                  clip-rule="evenodd"
+                  d="M5.29289 5.29289C5.68342 4.90237 6.31658 4.90237 6.70711 5.29289L12 10.5858L17.2929 5.29289C17.6834 4.90237 18.3166 4.90237 18.7071 5.29289C19.0976 5.68342 19.0976 6.31658 18.7071 6.70711L13.4142 12L18.7071 17.2929C19.0976 17.6834 19.0976 18.3166 18.7071 18.7071C18.3166 19.0976 17.6834 19.0976 17.2929 18.7071L12 13.4142L6.70711 18.7071C6.31658 19.0976 5.68342 19.0976 5.29289 18.7071C4.90237 18.3166 4.90237 17.6834 5.29289 17.2929L10.5858 12L5.29289 6.70711C4.90237 6.31658 4.90237 5.68342 5.29289 5.29289Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+`;
+
+const openValidationMessage = (
+  targetElement,
+  message,
+  {
+    level = "warning",
+    onClose,
+    closeOnClickOutside = level === "info",
+    debug = false,
+  } = {},
+) => {
   let _closeOnClickOutside = closeOnClickOutside;
+
   if (debug) {
     console.debug("open validation message on", targetElement, {
       message,
-      level
+      level,
     });
   }
+
   let opened = true;
   const closeCallbackSet = new Set();
-  const close = reason => {
+  const close = (reason) => {
     if (!opened) {
       return;
     }
     if (debug) {
-      console.debug("validation message closed (reason: ".concat(reason, ")"));
+      console.debug(`validation message closed (reason: ${reason})`);
     }
     opened = false;
     for (const closeCallback of closeCallbackSet) {
@@ -10023,36 +11259,49 @@ const openValidationMessage = (targetElement, message, {
 
   // Create and add validation message to document
   const jsenvValidationMessage = createValidationMessage();
-  const jsenvValidationMessageContent = jsenvValidationMessage.querySelector(".jsenv_validation_message_content");
-  const jsenvValidationMessageCloseButton = jsenvValidationMessage.querySelector(".jsenv_validation_message_close_button");
+  const jsenvValidationMessageContent = jsenvValidationMessage.querySelector(
+    ".jsenv_validation_message_content",
+  );
+  const jsenvValidationMessageCloseButton =
+    jsenvValidationMessage.querySelector(
+      ".jsenv_validation_message_close_button",
+    );
   jsenvValidationMessageCloseButton.onclick = () => {
     close("click_close_button");
   };
-  const update = (newMessage, {
-    level = "warning",
-    closeOnClickOutside = level === "info"
-  } = {}) => {
+
+  const update = (
+    newMessage,
+    { level = "warning", closeOnClickOutside = level === "info" } = {},
+  ) => {
     _closeOnClickOutside = closeOnClickOutside;
-    const borderColor = level === "info" ? "blue" : level === "warning" ? "grey" : "red";
+    const borderColor =
+      level === "info" ? "blue" : level === "warning" ? "grey" : "red";
     const backgroundColor = "white";
+
     jsenvValidationMessage.style.setProperty("--border-color", borderColor);
-    jsenvValidationMessage.style.setProperty("--background-color", backgroundColor);
+    jsenvValidationMessage.style.setProperty(
+      "--background-color",
+      backgroundColor,
+    );
+
     if (Error.isError(newMessage)) {
       const error = newMessage;
       newMessage = error.message;
-      newMessage += "<pre class=\"error_stack\">".concat(escapeHtml(error.stack), "</pre>");
+      newMessage += `<pre class="error_stack">${escapeHtml(error.stack)}</pre>`;
     }
+
     jsenvValidationMessage.setAttribute("data-level", level);
     jsenvValidationMessageContent.innerHTML = newMessage;
   };
-  update(message, {
-    level
-  });
+  update(message, { level });
+
   jsenvValidationMessage.style.opacity = "0";
+
   allowWheelThrough(jsenvValidationMessage, targetElement);
 
   // Connect validation message with target element for accessibility
-  const validationMessageId = "jsenv_validation_message-".concat(Date.now());
+  const validationMessageId = `jsenv_validation_message-${Date.now()}`;
   jsenvValidationMessage.id = validationMessageId;
   targetElement.setAttribute("aria-invalid", "true");
   targetElement.setAttribute("aria-errormessage", validationMessageId);
@@ -10060,14 +11309,19 @@ const openValidationMessage = (targetElement, message, {
     targetElement.removeAttribute("aria-invalid");
     targetElement.removeAttribute("aria-errormessage");
   });
+
   document.body.appendChild(jsenvValidationMessage);
   closeCallbackSet.add(() => {
     jsenvValidationMessage.remove();
   });
-  const positionFollower = stickValidationMessageToTarget(jsenvValidationMessage, targetElement);
+
+  const positionFollower = stickValidationMessageToTarget(
+    jsenvValidationMessage,
+    targetElement);
   closeCallbackSet.add(() => {
     positionFollower.stop();
   });
+
   if (onClose) {
     closeCallbackSet.add(onClose);
   }
@@ -10087,13 +11341,18 @@ const openValidationMessage = (targetElement, message, {
       targetElement.removeEventListener("focus", onfocus);
     });
   }
+
   {
-    const handleClickOutside = event => {
+    const handleClickOutside = (event) => {
       if (!_closeOnClickOutside) {
         return;
       }
+
       const clickTarget = event.target;
-      if (clickTarget === jsenvValidationMessage || jsenvValidationMessage.contains(clickTarget)) {
+      if (
+        clickTarget === jsenvValidationMessage ||
+        jsenvValidationMessage.contains(clickTarget)
+      ) {
         return;
       }
       // if (
@@ -10109,11 +11368,12 @@ const openValidationMessage = (targetElement, message, {
       document.removeEventListener("click", handleClickOutside, true);
     });
   }
+
   const validationMessage = {
     jsenvValidationMessage,
     update,
     close,
-    updatePosition: positionFollower.updatePosition
+    updatePosition: positionFollower.updatePosition,
   };
   targetElement.jsenvValidationMessage = validationMessage;
   closeCallbackSet.add(() => {
@@ -10138,10 +11398,14 @@ const ARROW_SPACING = 8;
  */
 const generateSvgWithTopArrow = (width, height, arrowPosition) => {
   // Calculate valid arrow position range
-  const arrowLeft = ARROW_WIDTH / 2 + CORNER_RADIUS + BORDER_WIDTH + ARROW_SPACING;
+  const arrowLeft =
+    ARROW_WIDTH / 2 + CORNER_RADIUS + BORDER_WIDTH + ARROW_SPACING;
   const minArrowPos = arrowLeft;
   const maxArrowPos = width - arrowLeft;
-  const constrainedArrowPos = Math.max(minArrowPos, Math.min(arrowPosition, maxArrowPos));
+  const constrainedArrowPos = Math.max(
+    minArrowPos,
+    Math.min(arrowPosition, maxArrowPos),
+  );
 
   // Calculate content height
   const contentHeight = height - ARROW_HEIGHT;
@@ -10154,12 +11418,50 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
   const innerArrowWidthReduction = Math.min(BORDER_WIDTH * 0.3, 1);
 
   // Outer path (border)
-  const outerPath = "\n      M".concat(CORNER_RADIUS, ",").concat(ARROW_HEIGHT, " \n      H").concat(constrainedArrowPos - ARROW_WIDTH / 2, " \n      L").concat(constrainedArrowPos, ",0 \n      L").concat(constrainedArrowPos + ARROW_WIDTH / 2, ",").concat(ARROW_HEIGHT, " \n      H").concat(width - CORNER_RADIUS, " \n      Q").concat(width, ",").concat(ARROW_HEIGHT, " ").concat(width, ",").concat(ARROW_HEIGHT + CORNER_RADIUS, " \n      V").concat(adjustedHeight - CORNER_RADIUS, " \n      Q").concat(width, ",").concat(adjustedHeight, " ").concat(width - CORNER_RADIUS, ",").concat(adjustedHeight, " \n      H").concat(CORNER_RADIUS, " \n      Q0,").concat(adjustedHeight, " 0,").concat(adjustedHeight - CORNER_RADIUS, " \n      V").concat(ARROW_HEIGHT + CORNER_RADIUS, " \n      Q0,").concat(ARROW_HEIGHT, " ").concat(CORNER_RADIUS, ",").concat(ARROW_HEIGHT, "\n    ");
+  const outerPath = `
+      M${CORNER_RADIUS},${ARROW_HEIGHT} 
+      H${constrainedArrowPos - ARROW_WIDTH / 2} 
+      L${constrainedArrowPos},0 
+      L${constrainedArrowPos + ARROW_WIDTH / 2},${ARROW_HEIGHT} 
+      H${width - CORNER_RADIUS} 
+      Q${width},${ARROW_HEIGHT} ${width},${ARROW_HEIGHT + CORNER_RADIUS} 
+      V${adjustedHeight - CORNER_RADIUS} 
+      Q${width},${adjustedHeight} ${width - CORNER_RADIUS},${adjustedHeight} 
+      H${CORNER_RADIUS} 
+      Q0,${adjustedHeight} 0,${adjustedHeight - CORNER_RADIUS} 
+      V${ARROW_HEIGHT + CORNER_RADIUS} 
+      Q0,${ARROW_HEIGHT} ${CORNER_RADIUS},${ARROW_HEIGHT}
+    `;
 
   // Inner path (content) - keep arrow width almost the same
   const innerRadius = Math.max(0, CORNER_RADIUS - BORDER_WIDTH);
-  const innerPath = "\n    M".concat(innerRadius + BORDER_WIDTH, ",").concat(ARROW_HEIGHT + BORDER_WIDTH, " \n    H").concat(constrainedArrowPos - ARROW_WIDTH / 2 + innerArrowWidthReduction, " \n    L").concat(constrainedArrowPos, ",").concat(BORDER_WIDTH, " \n    L").concat(constrainedArrowPos + ARROW_WIDTH / 2 - innerArrowWidthReduction, ",").concat(ARROW_HEIGHT + BORDER_WIDTH, " \n    H").concat(width - innerRadius - BORDER_WIDTH, " \n    Q").concat(width - BORDER_WIDTH, ",").concat(ARROW_HEIGHT + BORDER_WIDTH, " ").concat(width - BORDER_WIDTH, ",").concat(ARROW_HEIGHT + innerRadius + BORDER_WIDTH, " \n    V").concat(adjustedHeight - innerRadius - BORDER_WIDTH, " \n    Q").concat(width - BORDER_WIDTH, ",").concat(adjustedHeight - BORDER_WIDTH, " ").concat(width - innerRadius - BORDER_WIDTH, ",").concat(adjustedHeight - BORDER_WIDTH, " \n    H").concat(innerRadius + BORDER_WIDTH, " \n    Q").concat(BORDER_WIDTH, ",").concat(adjustedHeight - BORDER_WIDTH, " ").concat(BORDER_WIDTH, ",").concat(adjustedHeight - innerRadius - BORDER_WIDTH, " \n    V").concat(ARROW_HEIGHT + innerRadius + BORDER_WIDTH, " \n    Q").concat(BORDER_WIDTH, ",").concat(ARROW_HEIGHT + BORDER_WIDTH, " ").concat(innerRadius + BORDER_WIDTH, ",").concat(ARROW_HEIGHT + BORDER_WIDTH, "\n  ");
-  return /*html */"<svg\n      width=\"".concat(adjustedWidth, "\"\n      height=\"").concat(adjustedHeight, "\"\n      viewBox=\"0 0 ").concat(adjustedWidth, " ").concat(adjustedHeight, "\"\n      fill=\"none\"\n      xmlns=\"http://www.w3.org/2000/svg\"\n      role=\"presentation\"\n      aria-hidden=\"true\"\n    >\n      <path d=\"").concat(outerPath, "\" class=\"border_path\" />\n      <path d=\"").concat(innerPath, "\" class=\"background_path\" />\n    </svg>");
+  const innerPath = `
+    M${innerRadius + BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} 
+    H${constrainedArrowPos - ARROW_WIDTH / 2 + innerArrowWidthReduction} 
+    L${constrainedArrowPos},${BORDER_WIDTH} 
+    L${constrainedArrowPos + ARROW_WIDTH / 2 - innerArrowWidthReduction},${ARROW_HEIGHT + BORDER_WIDTH} 
+    H${width - innerRadius - BORDER_WIDTH} 
+    Q${width - BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} ${width - BORDER_WIDTH},${ARROW_HEIGHT + innerRadius + BORDER_WIDTH} 
+    V${adjustedHeight - innerRadius - BORDER_WIDTH} 
+    Q${width - BORDER_WIDTH},${adjustedHeight - BORDER_WIDTH} ${width - innerRadius - BORDER_WIDTH},${adjustedHeight - BORDER_WIDTH} 
+    H${innerRadius + BORDER_WIDTH} 
+    Q${BORDER_WIDTH},${adjustedHeight - BORDER_WIDTH} ${BORDER_WIDTH},${adjustedHeight - innerRadius - BORDER_WIDTH} 
+    V${ARROW_HEIGHT + innerRadius + BORDER_WIDTH} 
+    Q${BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} ${innerRadius + BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH}
+  `;
+
+  return /*html */ `<svg
+      width="${adjustedWidth}"
+      height="${adjustedHeight}"
+      viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      role="presentation"
+      aria-hidden="true"
+    >
+      <path d="${outerPath}" class="border_path" />
+      <path d="${innerPath}" class="background_path" />
+    </svg>`;
 };
 
 /**
@@ -10171,10 +11473,14 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
  */
 const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
   // Calculate valid arrow position range
-  const arrowLeft = ARROW_WIDTH / 2 + CORNER_RADIUS + BORDER_WIDTH + ARROW_SPACING;
+  const arrowLeft =
+    ARROW_WIDTH / 2 + CORNER_RADIUS + BORDER_WIDTH + ARROW_SPACING;
   const minArrowPos = arrowLeft;
   const maxArrowPos = width - arrowLeft;
-  const constrainedArrowPos = Math.max(minArrowPos, Math.min(arrowPosition, maxArrowPos));
+  const constrainedArrowPos = Math.max(
+    minArrowPos,
+    Math.min(arrowPosition, maxArrowPos),
+  );
 
   // Calculate content height
   const contentHeight = height - ARROW_HEIGHT;
@@ -10187,12 +11493,50 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
   const innerArrowWidthReduction = Math.min(BORDER_WIDTH * 0.3, 1);
 
   // Outer path with rounded corners
-  const outerPath = "\n      M".concat(CORNER_RADIUS, ",0 \n      H").concat(width - CORNER_RADIUS, " \n      Q").concat(width, ",0 ").concat(width, ",").concat(CORNER_RADIUS, " \n      V").concat(contentHeight - CORNER_RADIUS, " \n      Q").concat(width, ",").concat(contentHeight, " ").concat(width - CORNER_RADIUS, ",").concat(contentHeight, " \n      H").concat(constrainedArrowPos + ARROW_WIDTH / 2, " \n      L").concat(constrainedArrowPos, ",").concat(adjustedHeight, " \n      L").concat(constrainedArrowPos - ARROW_WIDTH / 2, ",").concat(contentHeight, " \n      H").concat(CORNER_RADIUS, " \n      Q0,").concat(contentHeight, " 0,").concat(contentHeight - CORNER_RADIUS, " \n      V").concat(CORNER_RADIUS, " \n      Q0,0 ").concat(CORNER_RADIUS, ",0\n    ");
+  const outerPath = `
+      M${CORNER_RADIUS},0 
+      H${width - CORNER_RADIUS} 
+      Q${width},0 ${width},${CORNER_RADIUS} 
+      V${contentHeight - CORNER_RADIUS} 
+      Q${width},${contentHeight} ${width - CORNER_RADIUS},${contentHeight} 
+      H${constrainedArrowPos + ARROW_WIDTH / 2} 
+      L${constrainedArrowPos},${adjustedHeight} 
+      L${constrainedArrowPos - ARROW_WIDTH / 2},${contentHeight} 
+      H${CORNER_RADIUS} 
+      Q0,${contentHeight} 0,${contentHeight - CORNER_RADIUS} 
+      V${CORNER_RADIUS} 
+      Q0,0 ${CORNER_RADIUS},0
+    `;
 
   // Inner path with correct arrow direction and color
   const innerRadius = Math.max(0, CORNER_RADIUS - BORDER_WIDTH);
-  const innerPath = "\n    M".concat(innerRadius + BORDER_WIDTH, ",").concat(BORDER_WIDTH, " \n    H").concat(width - innerRadius - BORDER_WIDTH, " \n    Q").concat(width - BORDER_WIDTH, ",").concat(BORDER_WIDTH, " ").concat(width - BORDER_WIDTH, ",").concat(innerRadius + BORDER_WIDTH, " \n    V").concat(contentHeight - innerRadius - BORDER_WIDTH, " \n    Q").concat(width - BORDER_WIDTH, ",").concat(contentHeight - BORDER_WIDTH, " ").concat(width - innerRadius - BORDER_WIDTH, ",").concat(contentHeight - BORDER_WIDTH, " \n    H").concat(constrainedArrowPos + ARROW_WIDTH / 2 - innerArrowWidthReduction, " \n    L").concat(constrainedArrowPos, ",").concat(adjustedHeight - BORDER_WIDTH, " \n    L").concat(constrainedArrowPos - ARROW_WIDTH / 2 + innerArrowWidthReduction, ",").concat(contentHeight - BORDER_WIDTH, " \n    H").concat(innerRadius + BORDER_WIDTH, " \n    Q").concat(BORDER_WIDTH, ",").concat(contentHeight - BORDER_WIDTH, " ").concat(BORDER_WIDTH, ",").concat(contentHeight - innerRadius - BORDER_WIDTH, " \n    V").concat(innerRadius + BORDER_WIDTH, " \n    Q").concat(BORDER_WIDTH, ",").concat(BORDER_WIDTH, " ").concat(innerRadius + BORDER_WIDTH, ",").concat(BORDER_WIDTH, "\n  ");
-  return /*html */"<svg\n      width=\"".concat(adjustedWidth, "\"\n      height=\"").concat(adjustedHeight, "\"\n      viewBox=\"0 0 ").concat(adjustedWidth, " ").concat(adjustedHeight, "\"\n      fill=\"none\"\n      xmlns=\"http://www.w3.org/2000/svg\"\n      role=\"presentation\"\n      aria-hidden=\"true\"\n    >\n      <path d=\"").concat(outerPath, "\" class=\"border_path\" />\n      <path d=\"").concat(innerPath, "\" class=\"background_path\" />\n    </svg>");
+  const innerPath = `
+    M${innerRadius + BORDER_WIDTH},${BORDER_WIDTH} 
+    H${width - innerRadius - BORDER_WIDTH} 
+    Q${width - BORDER_WIDTH},${BORDER_WIDTH} ${width - BORDER_WIDTH},${innerRadius + BORDER_WIDTH} 
+    V${contentHeight - innerRadius - BORDER_WIDTH} 
+    Q${width - BORDER_WIDTH},${contentHeight - BORDER_WIDTH} ${width - innerRadius - BORDER_WIDTH},${contentHeight - BORDER_WIDTH} 
+    H${constrainedArrowPos + ARROW_WIDTH / 2 - innerArrowWidthReduction} 
+    L${constrainedArrowPos},${adjustedHeight - BORDER_WIDTH} 
+    L${constrainedArrowPos - ARROW_WIDTH / 2 + innerArrowWidthReduction},${contentHeight - BORDER_WIDTH} 
+    H${innerRadius + BORDER_WIDTH} 
+    Q${BORDER_WIDTH},${contentHeight - BORDER_WIDTH} ${BORDER_WIDTH},${contentHeight - innerRadius - BORDER_WIDTH} 
+    V${innerRadius + BORDER_WIDTH} 
+    Q${BORDER_WIDTH},${BORDER_WIDTH} ${innerRadius + BORDER_WIDTH},${BORDER_WIDTH}
+  `;
+
+  return /*html */ `<svg
+      width="${adjustedWidth}"
+      height="${adjustedHeight}"
+      viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      role="presentation"
+      aria-hidden="true"
+    >
+      <path d="${outerPath}" class="border_path" />
+      <path d="${innerPath}" class="background_path" />
+    </svg>`;
 };
 
 /**
@@ -10206,131 +11550,163 @@ const createValidationMessage = () => {
   const validationMessage = div.querySelector(".jsenv_validation_message");
   return validationMessage;
 };
+
 const stickValidationMessageToTarget = (validationMessage, targetElement) => {
   // Get references to validation message parts
-  const validationMessageBodyWrapper = validationMessage.querySelector(".jsenv_validation_message_body_wrapper");
-  const validationMessageBorder = validationMessage.querySelector(".jsenv_validation_message_border");
-  const validationMessageContent = validationMessage.querySelector(".jsenv_validation_message_content");
+  const validationMessageBodyWrapper = validationMessage.querySelector(
+    ".jsenv_validation_message_body_wrapper",
+  );
+  const validationMessageBorder = validationMessage.querySelector(
+    ".jsenv_validation_message_border",
+  );
+  const validationMessageContent = validationMessage.querySelector(
+    ".jsenv_validation_message_content",
+  );
 
   // Set initial border styles
-  validationMessageBodyWrapper.style.borderWidth = "".concat(BORDER_WIDTH, "px");
-  validationMessageBorder.style.left = "-".concat(BORDER_WIDTH, "px");
-  validationMessageBorder.style.right = "-".concat(BORDER_WIDTH, "px");
-  const targetVisibleRectEffect = visibleRectEffect(targetElement, ({
-    left: targetLeft,
-    right: targetRight,
-    visibilityRatio
-  }) => {
-    // reset max height and overflow because it impacts the element size
-    // and we need to re-check if we need to have an overflow or not.
-    // to avoid visual impact we do this on an invisible clone.
-    // It's ok to do this because the element is absolutely positioned
-    const validationMessageClone = validationMessage.cloneNode(true);
-    validationMessageClone.style.visibility = "hidden";
-    const validationMessageContentClone = validationMessageClone.querySelector(".jsenv_validation_message_content");
-    validationMessageContentClone.style.maxHeight = "";
-    validationMessageContentClone.style.overflowY = "";
-    validationMessage.parentNode.appendChild(validationMessageClone);
-    const {
-      position,
-      left: validationMessageLeft,
-      top: validationMessageTop,
-      width: validationMessageWidth,
-      height: validationMessageHeight,
-      spaceAboveTarget,
-      spaceBelowTarget
-    } = pickPositionRelativeTo(validationMessageClone, targetElement, {
-      alignToViewportEdgeWhenTargetNearEdge: 20
-    });
+  validationMessageBodyWrapper.style.borderWidth = `${BORDER_WIDTH}px`;
+  validationMessageBorder.style.left = `-${BORDER_WIDTH}px`;
+  validationMessageBorder.style.right = `-${BORDER_WIDTH}px`;
 
-    // Get element padding and border to properly position arrow
-    const targetBorderSizes = getBorderSizes(targetElement);
+  const targetVisibleRectEffect = visibleRectEffect(
+    targetElement,
+    ({ left: targetLeft, right: targetRight, visibilityRatio }) => {
+      // reset max height and overflow because it impacts the element size
+      // and we need to re-check if we need to have an overflow or not.
+      // to avoid visual impact we do this on an invisible clone.
+      // It's ok to do this because the element is absolutely positioned
+      const validationMessageClone = validationMessage.cloneNode(true);
+      validationMessageClone.style.visibility = "hidden";
+      const validationMessageContentClone =
+        validationMessageClone.querySelector(
+          ".jsenv_validation_message_content",
+        );
+      validationMessageContentClone.style.maxHeight = "";
+      validationMessageContentClone.style.overflowY = "";
+      validationMessage.parentNode.appendChild(validationMessageClone);
+      const {
+        position,
+        left: validationMessageLeft,
+        top: validationMessageTop,
+        width: validationMessageWidth,
+        height: validationMessageHeight,
+        spaceAboveTarget,
+        spaceBelowTarget,
+      } = pickPositionRelativeTo(validationMessageClone, targetElement, {
+        alignToViewportEdgeWhenTargetNearEdge: 20,
+      });
 
-    // Calculate arrow position to point at target element
-    let arrowLeftPosOnValidationMessage;
-    // Determine arrow target position based on attribute
-    const arrowPositionAttribute = targetElement.getAttribute("data-validation-message-arrow-x");
-    let arrowTargetLeft;
-    if (arrowPositionAttribute === "center") {
-      // Target the center of the element
-      arrowTargetLeft = targetRight / 2;
-    } else {
-      // Default behavior: target the left edge of the element (after borders)
-      arrowTargetLeft = targetLeft + targetBorderSizes.left;
-    }
+      // Get element padding and border to properly position arrow
+      const targetBorderSizes = getBorderSizes(targetElement);
 
-    // Calculate arrow position within the validation message
-    if (validationMessageLeft < arrowTargetLeft) {
-      // Validation message is left of the target point, move arrow right
-      const diff = arrowTargetLeft - validationMessageLeft;
-      arrowLeftPosOnValidationMessage = diff;
-    } else if (validationMessageLeft + validationMessageWidth < arrowTargetLeft) {
-      // Edge case: target point is beyond right edge of validation message
-      arrowLeftPosOnValidationMessage = validationMessageWidth - ARROW_WIDTH;
-    } else {
-      // Target point is within validation message width
-      arrowLeftPosOnValidationMessage = arrowTargetLeft - validationMessageLeft;
-    }
+      // Calculate arrow position to point at target element
+      let arrowLeftPosOnValidationMessage;
+      // Determine arrow target position based on attribute
+      const arrowPositionAttribute = targetElement.getAttribute(
+        "data-validation-message-arrow-x",
+      );
+      let arrowTargetLeft;
+      if (arrowPositionAttribute === "center") {
+        // Target the center of the element
+        arrowTargetLeft = targetRight / 2;
+      } else {
+        // Default behavior: target the left edge of the element (after borders)
+        arrowTargetLeft = targetLeft + targetBorderSizes.left;
+      }
 
-    // Ensure arrow stays within validation message bounds with some padding
-    const minArrowPos = CORNER_RADIUS + ARROW_WIDTH / 2 + ARROW_SPACING;
-    const maxArrowPos = validationMessageWidth - minArrowPos;
-    arrowLeftPosOnValidationMessage = Math.max(minArrowPos, Math.min(arrowLeftPosOnValidationMessage, maxArrowPos));
+      // Calculate arrow position within the validation message
+      if (validationMessageLeft < arrowTargetLeft) {
+        // Validation message is left of the target point, move arrow right
+        const diff = arrowTargetLeft - validationMessageLeft;
+        arrowLeftPosOnValidationMessage = diff;
+      } else if (
+        validationMessageLeft + validationMessageWidth <
+        arrowTargetLeft
+      ) {
+        // Edge case: target point is beyond right edge of validation message
+        arrowLeftPosOnValidationMessage = validationMessageWidth - ARROW_WIDTH;
+      } else {
+        // Target point is within validation message width
+        arrowLeftPosOnValidationMessage =
+          arrowTargetLeft - validationMessageLeft;
+      }
 
-    // Force content overflow when there is not enough space to display
-    // the entirety of the validation message
-    const spaceAvailable = position === "below" ? spaceBelowTarget : spaceAboveTarget;
-    let spaceAvailableForContent = spaceAvailable;
-    spaceAvailableForContent -= ARROW_HEIGHT;
-    spaceAvailableForContent -= BORDER_WIDTH * 2;
-    spaceAvailableForContent -= 16; // padding * 2
-    let contentHeight = validationMessageHeight;
-    contentHeight -= ARROW_HEIGHT;
-    contentHeight -= BORDER_WIDTH * 2;
-    contentHeight -= 16; // padding * 2
-    const spaceRemainingAfterContent = spaceAvailableForContent - contentHeight;
-    console.log({
-      position,
-      spaceBelowTarget,
-      validationMessageHeight,
-      spaceAvailableForContent,
-      contentHeight,
-      spaceRemainingAfterContent
-    });
-    if (spaceRemainingAfterContent < 2) {
-      const maxHeight = spaceAvailableForContent;
-      validationMessageContent.style.maxHeight = "".concat(maxHeight, "px");
-      validationMessageContent.style.overflowY = "scroll";
-    } else {
-      validationMessageContent.style.maxHeight = "";
-      validationMessageContent.style.overflowY = "";
-    }
-    const {
-      width,
-      height
-    } = validationMessage.getBoundingClientRect();
-    if (position === "above") {
-      // Position above target element
-      validationMessageBodyWrapper.style.marginTop = "";
-      validationMessageBodyWrapper.style.marginBottom = "".concat(ARROW_HEIGHT, "px");
-      validationMessageBorder.style.top = "-".concat(BORDER_WIDTH, "px");
-      validationMessageBorder.style.bottom = "-".concat(BORDER_WIDTH + ARROW_HEIGHT - 0.5, "px");
-      validationMessageBorder.innerHTML = generateSvgWithBottomArrow(width, height, arrowLeftPosOnValidationMessage);
-    } else {
-      validationMessageBodyWrapper.style.marginTop = "".concat(ARROW_HEIGHT, "px");
-      validationMessageBodyWrapper.style.marginBottom = "";
-      validationMessageBorder.style.top = "-".concat(BORDER_WIDTH + ARROW_HEIGHT - 0.5, "px");
-      validationMessageBorder.style.bottom = "-".concat(BORDER_WIDTH, "px");
-      validationMessageBorder.innerHTML = generateSvgWithTopArrow(width, height, arrowLeftPosOnValidationMessage);
-    }
-    validationMessage.style.opacity = visibilityRatio ? "1" : "0";
-    validationMessage.setAttribute("data-position", position);
-    validationMessage.style.transform = "translateX(".concat(validationMessageLeft, "px) translateY(").concat(validationMessageTop, "px)");
-    validationMessageClone.remove();
-  });
-  const messageSizeChangeObserver = observeValidationMessageSizeChange(validationMessageContent, (width, height) => {
-    targetVisibleRectEffect.check("content_size_change (".concat(width, "x").concat(height, ")"));
-  });
+      // Ensure arrow stays within validation message bounds with some padding
+      const minArrowPos = CORNER_RADIUS + ARROW_WIDTH / 2 + ARROW_SPACING;
+      const maxArrowPos = validationMessageWidth - minArrowPos;
+      arrowLeftPosOnValidationMessage = Math.max(
+        minArrowPos,
+        Math.min(arrowLeftPosOnValidationMessage, maxArrowPos),
+      );
+
+      // Force content overflow when there is not enough space to display
+      // the entirety of the validation message
+      const spaceAvailable =
+        position === "below" ? spaceBelowTarget : spaceAboveTarget;
+      let spaceAvailableForContent = spaceAvailable;
+      spaceAvailableForContent -= ARROW_HEIGHT;
+      spaceAvailableForContent -= BORDER_WIDTH * 2;
+      spaceAvailableForContent -= 16; // padding * 2
+      let contentHeight = validationMessageHeight;
+      contentHeight -= ARROW_HEIGHT;
+      contentHeight -= BORDER_WIDTH * 2;
+      contentHeight -= 16; // padding * 2
+      const spaceRemainingAfterContent =
+        spaceAvailableForContent - contentHeight;
+      console.log({
+        position,
+        spaceBelowTarget,
+        validationMessageHeight,
+        spaceAvailableForContent,
+        contentHeight,
+        spaceRemainingAfterContent,
+      });
+      if (spaceRemainingAfterContent < 2) {
+        const maxHeight = spaceAvailableForContent;
+        validationMessageContent.style.maxHeight = `${maxHeight}px`;
+        validationMessageContent.style.overflowY = "scroll";
+      } else {
+        validationMessageContent.style.maxHeight = "";
+        validationMessageContent.style.overflowY = "";
+      }
+
+      const { width, height } = validationMessage.getBoundingClientRect();
+      if (position === "above") {
+        // Position above target element
+        validationMessageBodyWrapper.style.marginTop = "";
+        validationMessageBodyWrapper.style.marginBottom = `${ARROW_HEIGHT}px`;
+        validationMessageBorder.style.top = `-${BORDER_WIDTH}px`;
+        validationMessageBorder.style.bottom = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
+        validationMessageBorder.innerHTML = generateSvgWithBottomArrow(
+          width,
+          height,
+          arrowLeftPosOnValidationMessage,
+        );
+      } else {
+        validationMessageBodyWrapper.style.marginTop = `${ARROW_HEIGHT}px`;
+        validationMessageBodyWrapper.style.marginBottom = "";
+        validationMessageBorder.style.top = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
+        validationMessageBorder.style.bottom = `-${BORDER_WIDTH}px`;
+        validationMessageBorder.innerHTML = generateSvgWithTopArrow(
+          width,
+          height,
+          arrowLeftPosOnValidationMessage,
+        );
+      }
+
+      validationMessage.style.opacity = visibilityRatio ? "1" : "0";
+      validationMessage.setAttribute("data-position", position);
+      validationMessage.style.transform = `translateX(${validationMessageLeft}px) translateY(${validationMessageTop}px)`;
+
+      validationMessageClone.remove();
+    },
+  );
+  const messageSizeChangeObserver = observeValidationMessageSizeChange(
+    validationMessageContent,
+    (width, height) => {
+      targetVisibleRectEffect.check(`content_size_change (${width}x${height})`);
+    },
+  );
   targetVisibleRectEffect.onBeforeAutoCheck(() => {
     // prevent feedback loop because check triggers size change which triggers check...
     messageSizeChangeObserver.disable();
@@ -10338,23 +11714,22 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
       messageSizeChangeObserver.enable();
     };
   });
+
   return {
     updatePosition: targetVisibleRectEffect.check,
     stop: () => {
       messageSizeChangeObserver.disconnect();
       targetVisibleRectEffect.disconnect();
-    }
+    },
   };
 };
+
 const observeValidationMessageSizeChange = (elementSizeToObserve, callback) => {
   let lastContentWidth;
   let lastContentHeight;
-  const resizeObserver = new ResizeObserver(entries => {
+  const resizeObserver = new ResizeObserver((entries) => {
     const [entry] = entries;
-    const {
-      width,
-      height
-    } = entry.contentRect;
+    const { width, height } = entry.contentRect;
     // Debounce tiny changes that are likely sub-pixel rounding
     if (lastContentWidth !== undefined) {
       const widthDiff = Math.abs(width - lastContentWidth);
@@ -10369,6 +11744,7 @@ const observeValidationMessageSizeChange = (elementSizeToObserve, callback) => {
     callback(width, height);
   });
   resizeObserver.observe(elementSizeToObserve);
+
   return {
     disable: () => {
       resizeObserver.unobserve(elementSizeToObserve);
@@ -10378,11 +11754,17 @@ const observeValidationMessageSizeChange = (elementSizeToObserve, callback) => {
     },
     disconnect: () => {
       resizeObserver.disconnect();
-    }
+    },
   };
 };
-const escapeHtml = string => {
-  return string.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+
+const escapeHtml = (string) => {
+  return string
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 };
 
 /**
@@ -10414,38 +11796,48 @@ const escapeHtml = string => {
  * - Validation messages that follow the input element and adapt to viewport
  */
 
+
 const validationInProgressWeakSet = new WeakSet();
-const requestAction = (target, action, {
-  event,
-  requester = target,
-  actionOrigin,
-  method = "rerun",
-  meta = {},
-  confirmMessage
-} = {}) => {
+
+const requestAction = (
+  target,
+  action,
+  {
+    event,
+    requester = target,
+    actionOrigin,
+    method = "rerun",
+    meta = {},
+    confirmMessage,
+  } = {},
+) => {
   if (!actionOrigin) {
     console.warn("requestAction: actionOrigin is required");
   }
   let elementToValidate = requester;
+
   let validationInterface = elementToValidate.__validationInterface__;
   if (!validationInterface) {
     validationInterface = installCustomConstraintValidation(elementToValidate);
   }
+
   const customEventDetail = {
     action,
     actionOrigin,
     method,
     event,
     requester,
-    meta
+    meta,
   };
 
   // Determine what needs to be validated and how to handle the result
   const isForm = elementToValidate.tagName === "FORM";
   const formToValidate = isForm ? elementToValidate : elementToValidate.form;
+
   let isValid = false;
   let elementForConfirmation = elementToValidate;
   let elementForDispatch = elementToValidate;
+
   if (formToValidate) {
     // Form validation case
     if (validationInProgressWeakSet.has(formToValidate)) {
@@ -10464,9 +11856,11 @@ const requestAction = (target, action, {
       if (!elementValidationInterface) {
         continue;
       }
+
       const elementIsValid = elementValidationInterface.checkValidity({
         fromRequestAction: true,
-        skipReadonly: formElement.tagName === "BUTTON" && formElement !== requester
+        skipReadonly:
+          formElement.tagName === "BUTTON" && formElement !== requester,
       });
       if (!elementIsValid) {
         elementValidationInterface.reportValidity();
@@ -10474,19 +11868,19 @@ const requestAction = (target, action, {
         break;
       }
     }
+
     elementForConfirmation = formToValidate;
     elementForDispatch = target;
   } else {
     // Single element validation case
-    isValid = validationInterface.checkValidity({
-      fromRequestAction: true
-    });
+    isValid = validationInterface.checkValidity({ fromRequestAction: true });
     if (!isValid) {
       if (event) {
         event.preventDefault();
       }
       validationInterface.reportValidity();
     }
+
     elementForConfirmation = target;
     elementForDispatch = target;
   }
@@ -10494,19 +11888,21 @@ const requestAction = (target, action, {
   // If validation failed, dispatch actionprevented and return
   if (!isValid) {
     const actionPreventedCustomEvent = new CustomEvent("actionprevented", {
-      detail: customEventDetail
+      detail: customEventDetail,
     });
     elementForDispatch.dispatchEvent(actionPreventedCustomEvent);
     return false;
   }
 
   // Validation passed, check for confirmation
-  confirmMessage = confirmMessage || elementForConfirmation.getAttribute("data-confirm-message");
+  confirmMessage =
+    confirmMessage ||
+    elementForConfirmation.getAttribute("data-confirm-message");
   if (confirmMessage) {
     // eslint-disable-next-line no-alert
     if (!window.confirm(confirmMessage)) {
       const actionPreventedCustomEvent = new CustomEvent("actionprevented", {
-        detail: customEventDetail
+        detail: customEventDetail,
       });
       elementForDispatch.dispatchEvent(actionPreventedCustomEvent);
       return false;
@@ -10515,28 +11911,32 @@ const requestAction = (target, action, {
 
   // All good, dispatch the action
   const actionCustomEvent = new CustomEvent("action", {
-    detail: customEventDetail
+    detail: customEventDetail,
   });
   elementForDispatch.dispatchEvent(actionCustomEvent);
   return true;
 };
+
 const closeValidationMessage = (element, reason) => {
   const validationInterface = element.__validationInterface__;
   if (!validationInterface) {
     return false;
   }
-  const {
-    validationMessage
-  } = validationInterface;
+  const { validationMessage } = validationInterface;
   if (!validationMessage) {
     return false;
   }
   return validationMessage.close(reason);
 };
-const installCustomConstraintValidation = (element, elementReceivingValidationMessage = element) => {
+
+const installCustomConstraintValidation = (
+  element,
+  elementReceivingValidationMessage = element,
+) => {
   if (element.tagName === "INPUT" && element.type === "hidden") {
     elementReceivingValidationMessage = element.form || document.body;
   }
+
   const validationInterface = {
     uninstall: undefined,
     registerConstraint: undefined,
@@ -10544,8 +11944,9 @@ const installCustomConstraintValidation = (element, elementReceivingValidationMe
     removeCustomMessage: undefined,
     checkValidity: undefined,
     reportValidity: undefined,
-    validationMessage: null
+    validationMessage: null,
   };
+
   const cleanupCallbackSet = new Set();
   {
     const uninstall = () => {
@@ -10556,23 +11957,27 @@ const installCustomConstraintValidation = (element, elementReceivingValidationMe
     };
     validationInterface.uninstall = uninstall;
   }
+
   {
     element.__validationInterface__ = validationInterface;
     cleanupCallbackSet.add(() => {
       delete element.__validationInterface__;
     });
   }
-  const dispatchCancelCustomEvent = options => {
+
+  const dispatchCancelCustomEvent = (options) => {
     const cancelEvent = new CustomEvent("cancel", options);
     element.dispatchEvent(cancelEvent);
   };
-  const closeElementValidationMessage = reason => {
+
+  const closeElementValidationMessage = (reason) => {
     if (validationInterface.validationMessage) {
       validationInterface.validationMessage.close(reason);
       return true;
     }
     return false;
   };
+
   const constraintSet = new Set();
   constraintSet.add(DISABLED_CONSTRAINT);
   constraintSet.add(REQUIRED_CONSTRAINT);
@@ -10585,11 +11990,11 @@ const installCustomConstraintValidation = (element, elementReceivingValidationMe
   constraintSet.add(MAX_CONSTRAINT);
   constraintSet.add(READONLY_CONSTRAINT);
   {
-    validationInterface.registerConstraint = constraint => {
+    validationInterface.registerConstraint = (constraint) => {
       if (typeof constraint === "function") {
         constraint = {
           name: constraint.name || "custom_function",
-          check: constraint
+          check: constraint,
         };
       }
       constraintSet.add(constraint);
@@ -10598,11 +12003,11 @@ const installCustomConstraintValidation = (element, elementReceivingValidationMe
       };
     };
   }
+
   let failedConstraintInfo = null;
   const validityInfoMap = new Map();
-  const resetValidity = ({
-    fromRequestAction
-  } = {}) => {
+
+  const resetValidity = ({ fromRequestAction } = {}) => {
     if (fromRequestAction && failedConstraintInfo) {
       for (const [key, customMessage] of customMessageMap) {
         if (customMessage.removeOnRequestAction) {
@@ -10610,6 +12015,7 @@ const installCustomConstraintValidation = (element, elementReceivingValidationMe
         }
       }
     }
+
     for (const [, validityInfo] of validityInfoMap) {
       if (validityInfo.cleanup) {
         validityInfo.cleanup();
@@ -10619,16 +12025,12 @@ const installCustomConstraintValidation = (element, elementReceivingValidationMe
     failedConstraintInfo = null;
   };
   cleanupCallbackSet.add(resetValidity);
-  const checkValidity = ({
-    fromRequestAction,
-    skipReadonly
-  } = {}) => {
-    resetValidity({
-      fromRequestAction
-    });
+
+  const checkValidity = ({ fromRequestAction, skipReadonly } = {}) => {
+    resetValidity({ fromRequestAction });
     for (const constraint of constraintSet) {
       const constraintCleanupSet = new Set();
-      const registerChange = register => {
+      const registerChange = (register) => {
         const registerResult = register(() => {
           checkValidity();
         });
@@ -10642,35 +12044,38 @@ const installCustomConstraintValidation = (element, elementReceivingValidationMe
         }
         constraintCleanupSet.clear();
       };
+
       const checkResult = constraint.check(element, {
         fromRequestAction,
         skipReadonly,
-        registerChange
+        registerChange,
       });
       if (!checkResult) {
         cleanup();
         continue;
       }
-      const constraintValidityInfo = typeof checkResult === "string" ? {
-        message: checkResult
-      } : checkResult;
+      const constraintValidityInfo =
+        typeof checkResult === "string"
+          ? { message: checkResult }
+          : checkResult;
+
       failedConstraintInfo = {
         name: constraint.name,
         constraint,
         ...constraintValidityInfo,
         cleanup,
-        reportStatus: "not_reported"
+        reportStatus: "not_reported",
       };
       validityInfoMap.set(constraint, failedConstraintInfo);
     }
+
     if (!failedConstraintInfo) {
       closeElementValidationMessage("becomes_valid");
     }
+
     return !failedConstraintInfo;
   };
-  const reportValidity = ({
-    skipFocus
-  } = {}) => {
+  const reportValidity = ({ skipFocus } = {}) => {
     if (!failedConstraintInfo) {
       closeElementValidationMessage("becomes_valid");
       return;
@@ -10680,14 +12085,10 @@ const installCustomConstraintValidation = (element, elementReceivingValidationMe
       return;
     }
     if (validationInterface.validationMessage) {
-      const {
-        message,
-        level,
-        closeOnClickOutside
-      } = failedConstraintInfo;
+      const { message, level, closeOnClickOutside } = failedConstraintInfo;
       validationInterface.validationMessage.update(message, {
         level,
-        closeOnClickOutside
+        closeOnClickOutside,
       });
       return;
     }
@@ -10697,59 +12098,58 @@ const installCustomConstraintValidation = (element, elementReceivingValidationMe
     const closeOnCleanup = () => {
       closeElementValidationMessage("cleanup");
     };
-    const elementTarget = failedConstraintInfo.target || elementReceivingValidationMessage;
-    validationInterface.validationMessage = openValidationMessage(elementTarget, failedConstraintInfo.message, {
-      level: failedConstraintInfo.level,
-      closeOnClickOutside: failedConstraintInfo.closeOnClickOutside,
-      onClose: () => {
-        cleanupCallbackSet.delete(closeOnCleanup);
-        validationInterface.validationMessage = null;
-        if (failedConstraintInfo) {
-          failedConstraintInfo.reportStatus = "closed";
-        }
-        if (!skipFocus) {
-          element.focus();
-        }
-      }
-    });
+
+    const elementTarget =
+      failedConstraintInfo.target || elementReceivingValidationMessage;
+
+    validationInterface.validationMessage = openValidationMessage(
+      elementTarget,
+      failedConstraintInfo.message,
+      {
+        level: failedConstraintInfo.level,
+        closeOnClickOutside: failedConstraintInfo.closeOnClickOutside,
+        onClose: () => {
+          cleanupCallbackSet.delete(closeOnCleanup);
+          validationInterface.validationMessage = null;
+          if (failedConstraintInfo) {
+            failedConstraintInfo.reportStatus = "closed";
+          }
+          if (!skipFocus) {
+            element.focus();
+          }
+        },
+      },
+    );
     failedConstraintInfo.reportStatus = "reported";
     cleanupCallbackSet.add(closeOnCleanup);
   };
   validationInterface.checkValidity = checkValidity;
   validationInterface.reportValidity = reportValidity;
+
   const customMessageMap = new Map();
   {
     constraintSet.add({
       name: "custom_message",
       check: () => {
-        for (const [, {
-          message,
-          level
-        }] of customMessageMap) {
-          return {
-            message,
-            level
-          };
+        for (const [, { message, level }] of customMessageMap) {
+          return { message, level };
         }
         return null;
-      }
+      },
     });
-    const addCustomMessage = (key, message, {
-      level = "error",
-      removeOnRequestAction = false
-    } = {}) => {
-      customMessageMap.set(key, {
-        message,
-        level,
-        removeOnRequestAction
-      });
+    const addCustomMessage = (
+      key,
+      message,
+      { level = "error", removeOnRequestAction = false } = {},
+    ) => {
+      customMessageMap.set(key, { message, level, removeOnRequestAction });
       checkValidity();
       reportValidity();
       return () => {
         removeCustomMessage(key);
       };
     };
-    const removeCustomMessage = key => {
+    const removeCustomMessage = (key) => {
       if (customMessageMap.has(key)) {
         customMessageMap.delete(key);
         checkValidity();
@@ -10761,9 +12161,10 @@ const installCustomConstraintValidation = (element, elementReceivingValidationMe
     });
     Object.assign(validationInterface, {
       addCustomMessage,
-      removeCustomMessage
+      removeCustomMessage,
     });
   }
+
   {
     const oninput = () => {
       customMessageMap.clear();
@@ -10775,6 +12176,7 @@ const installCustomConstraintValidation = (element, elementReceivingValidationMe
       element.removeEventListener("input", oninput);
     });
   }
+
   {
     // this ensure we re-check validity (and remove message no longer relevant)
     // once the action ends (used to remove the NOT_BUSY_CONSTRAINT message)
@@ -10792,6 +12194,7 @@ const installCustomConstraintValidation = (element, elementReceivingValidationMe
       element.removeEventListener("actionend", onactionend);
     });
   }
+
   {
     const nativeReportValidity = element.reportValidity;
     element.reportValidity = () => {
@@ -10801,16 +12204,16 @@ const installCustomConstraintValidation = (element, elementReceivingValidationMe
       element.reportValidity = nativeReportValidity;
     });
   }
+
   {
     const onRequestSubmit = (form, e) => {
       if (form !== element.form && form !== element) {
         return;
       }
+
       const requestSubmitCustomEvent = new CustomEvent("requestsubmit", {
         cancelable: true,
-        detail: {
-          cause: e
-        }
+        detail: { cause: e },
       });
       form.dispatchEvent(requestSubmitCustomEvent);
       if (requestSubmitCustomEvent.defaultPrevented) {
@@ -10822,12 +12225,13 @@ const installCustomConstraintValidation = (element, elementReceivingValidationMe
       requestSubmitCallbackSet.delete(onRequestSubmit);
     });
   }
+
   execute_on_form_submit: {
     const form = element.form || element.tagName === "FORM" ? element : null;
     if (!form) {
       break execute_on_form_submit;
     }
-    const removeListener = addEventListener(form, "submit", e => {
+    const removeListener = addEventListener(form, "submit", (e) => {
       e.preventDefault();
       const actionCustomEvent = new CustomEvent("action", {
         detail: {
@@ -10835,8 +12239,8 @@ const installCustomConstraintValidation = (element, elementReceivingValidationMe
           event: e,
           method: "rerun",
           requester: form,
-          meta: {}
-        }
+          meta: {},
+        },
       });
       form.dispatchEvent(actionCustomEvent);
     });
@@ -10844,15 +12248,12 @@ const installCustomConstraintValidation = (element, elementReceivingValidationMe
       removeListener();
     });
   }
+
   {
-    const onkeydown = e => {
+    const onkeydown = (e) => {
       if (e.key === "Escape") {
         if (!closeElementValidationMessage("escape_key")) {
-          dispatchCancelCustomEvent({
-            detail: {
-              reason: "escape_key"
-            }
-          });
+          dispatchCancelCustomEvent({ detail: { reason: "escape_key" } });
         }
       }
     };
@@ -10861,14 +12262,11 @@ const installCustomConstraintValidation = (element, elementReceivingValidationMe
       element.removeEventListener("keydown", onkeydown);
     });
   }
+
   {
     const onblur = () => {
       if (element.value === "") {
-        dispatchCancelCustomEvent({
-          detail: {
-            reason: "blur_empty"
-          }
-        });
+        dispatchCancelCustomEvent({ detail: { reason: "blur_empty" } });
         return;
       }
       // if we have failed constraint, we cancel too
@@ -10876,8 +12274,8 @@ const installCustomConstraintValidation = (element, elementReceivingValidationMe
         dispatchCancelCustomEvent({
           detail: {
             reason: "blur_invalid",
-            failedConstraintInfo
-          }
+            failedConstraintInfo,
+          },
         });
         return;
       }
@@ -10887,6 +12285,7 @@ const installCustomConstraintValidation = (element, elementReceivingValidationMe
       element.removeEventListener("blur", onblur);
     });
   }
+
   return validationInterface;
 };
 
@@ -10900,10 +12299,7 @@ HTMLFormElement.prototype.requestSubmit = function (submitter) {
     prevented = true;
   };
   for (const requestSubmitCallback of requestSubmitCallbackSet) {
-    requestSubmitCallback(this, {
-      submitter,
-      preventDefault
-    });
+    requestSubmitCallback(this, { submitter, preventDefault });
   }
   if (prevented) {
     return;
@@ -10941,6 +12337,7 @@ const addIntoArray = (array, ...valuesToAdd) => {
     arrayWithThisValue.push(valueToAdd);
     return arrayWithThisValue;
   }
+
   const existingValueSet = new Set();
   const arrayWithTheseValues = [];
   for (const existingValue of array) {
@@ -10957,6 +12354,7 @@ const addIntoArray = (array, ...valuesToAdd) => {
   }
   return hasNewValues ? arrayWithTheseValues : array;
 };
+
 const removeFromArray = (array, ...valuesToRemove) => {
   if (valuesToRemove.length === 1) {
     const [valueToRemove] = valuesToRemove;
@@ -10974,6 +12372,7 @@ const removeFromArray = (array, ...valuesToRemove) => {
     }
     return arrayWithoutThisValue;
   }
+
   const valuesToRemoveSet = new Set(valuesToRemove);
   const arrayWithoutTheseValues = [];
   let hasRemovedValues = false;
@@ -10993,7 +12392,7 @@ const useActionBoundToOneParam = (action, externalValue) => {
   const actionFirstArgSignal = useSignal(externalValue);
   const boundAction = useBoundAction(action, actionFirstArgSignal);
   const getValue = useCallback(() => actionFirstArgSignal.value, []);
-  const setValue = useCallback(value => {
+  const setValue = useCallback((value) => {
     actionFirstArgSignal.value = value;
   }, []);
   const externalValueRef = useRef(externalValue);
@@ -11001,17 +12400,29 @@ const useActionBoundToOneParam = (action, externalValue) => {
     externalValueRef.current = externalValue;
     setValue(externalValue);
   }
+
   const value = getValue();
   return [boundAction, value, setValue];
 };
-const useActionBoundToOneArrayParam = (action, name, externalValue, fallbackValue, defaultValue) => {
-  const [boundAction, value, setValue, initialValue] = useActionBoundToOneParam(action, name);
+const useActionBoundToOneArrayParam = (
+  action,
+  name,
+  externalValue,
+  fallbackValue,
+  defaultValue,
+) => {
+  const [boundAction, value, setValue, initialValue] = useActionBoundToOneParam(
+    action,
+    name);
+
   const add = (valueToAdd, valueArray = value) => {
     setValue(addIntoArray(valueArray, valueToAdd));
   };
+
   const remove = (valueToRemove, valueArray = value) => {
     setValue(removeFromArray(valueArray, valueToRemove));
   };
+
   const result = [boundAction, value, setValue, initialValue];
   result.add = add;
   result.remove = remove;
@@ -11021,9 +12432,11 @@ const useActionBoundToOneArrayParam = (action, name, externalValue, fallbackValu
 const useAction = (action, paramsSignal) => {
   return useBoundAction(action, paramsSignal);
 };
+
 const useBoundAction = (action, actionParamsSignal) => {
   const actionRef = useRef();
   const actionCallbackRef = useRef();
+
   if (!action) {
     return null;
   }
@@ -11033,19 +12446,23 @@ const useBoundAction = (action, actionParamsSignal) => {
     if (existingAction) {
       return existingAction;
     }
-    const actionFromFunction = createAction((...args) => {
-      return actionCallbackRef.current?.(...args);
-    }, {
-      name: action.name,
-      // We don't want to give empty params by default
-      // we want to give undefined for regular functions
-      params: undefined
-    });
+    const actionFromFunction = createAction(
+      (...args) => {
+        return actionCallbackRef.current?.(...args);
+      },
+      {
+        name: action.name,
+        // We don't want to give empty params by default
+        // we want to give undefined for regular functions
+        params: undefined,
+      },
+    );
     if (!actionParamsSignal) {
       actionRef.current = actionFromFunction;
       return actionFromFunction;
     }
-    const actionBoundToParams = actionFromFunction.bindParams(actionParamsSignal);
+    const actionBoundToParams =
+      actionFromFunction.bindParams(actionParamsSignal);
     actionRef.current = actionBoundToParams;
     return actionBoundToParams;
   }
@@ -11054,14 +12471,20 @@ const useBoundAction = (action, actionParamsSignal) => {
   }
   return action;
 };
-const isFunctionButNotAnActionFunction = action => {
+
+const isFunctionButNotAnActionFunction = (action) => {
   return typeof action === "function" && !action.isAction;
 };
 
 const addCustomMessage = (element, key, message, options) => {
-  const customConstraintValidation = element.__validationInterface__ || (element.__validationInterface__ = installCustomConstraintValidation(element));
+  const customConstraintValidation =
+    element.__validationInterface__ ||
+    (element.__validationInterface__ =
+      installCustomConstraintValidation(element));
+
   return customConstraintValidation.addCustomMessage(key, message, options);
 };
+
 const removeCustomMessage = (element, key) => {
   const customConstraintValidation = element.__validationInterface__;
   if (!customConstraintValidation) {
@@ -11071,14 +12494,18 @@ const removeCustomMessage = (element, key) => {
 };
 
 const ErrorBoundaryContext = createContext(null);
+
 const useResetErrorBoundary = () => {
   const resetErrorBoundary = useContext(ErrorBoundaryContext);
   return resetErrorBoundary;
 };
 
-const useExecuteAction = (elementRef, {
-  errorEffect = "show_validation_message" // "show_validation_message" or "throw"
-} = {}) => {
+const useExecuteAction = (
+  elementRef,
+  {
+    errorEffect = "show_validation_message", // "show_validation_message" or "throw"
+  } = {},
+) => {
   // see https://medium.com/trabe/catching-asynchronous-errors-in-react-using-error-boundaries-5e8a5fd7b971
   // and https://codepen.io/dmail/pen/XJJqeGp?editors=0010
   // To change if https://github.com/preactjs/preact/issues/4754 lands
@@ -11090,14 +12517,15 @@ const useExecuteAction = (elementRef, {
       throw error;
     }
   }, [error]);
+
   const validationMessageTargetRef = useRef(null);
-  const addErrorMessage = error => {
+  const addErrorMessage = (error) => {
     const validationMessageTarget = validationMessageTargetRef.current;
     addCustomMessage(validationMessageTarget, "action_error", error, {
       // This error should not prevent <form> submission
       // so whenever user tries to submit the form the error is cleared
       // (Hitting enter key, clicking on submit button, etc. would allow to re-submit the form in error state)
-      removeOnRequestAction: true
+      removeOnRequestAction: true,
     });
   };
   const removeErrorMessage = () => {
@@ -11106,6 +12534,7 @@ const useExecuteAction = (elementRef, {
       removeCustomMessage(validationMessageTarget, "action_error");
     }
   };
+
   useLayoutEffect(() => {
     const element = elementRef.current;
     if (!element) {
@@ -11126,98 +12555,107 @@ const useExecuteAction = (elementRef, {
 
   // const errorEffectRef = useRef();
   // errorEffectRef.current = errorEffect;
-  const executeAction = useCallback(actionEvent => {
-    const {
-      action,
-      actionOrigin,
-      requester,
-      event,
-      method
-    } = actionEvent.detail;
-    const sharedActionEventDetail = {
-      action,
-      actionOrigin,
-      requester,
-      event,
-      method
-    };
-    const dispatchCustomEvent = (type, options) => {
-      const element = elementRef.current;
-      const customEvent = new CustomEvent(type, options);
-      element.dispatchEvent(customEvent);
-    };
-    if (resetErrorBoundary) {
-      resetErrorBoundary();
-    }
-    removeErrorMessage();
-    setError(null);
-    const validationMessageTarget = requester || elementRef.current;
-    validationMessageTargetRef.current = validationMessageTarget;
-    dispatchCustomEvent("actionstart", {
-      detail: sharedActionEventDetail
-    });
-    return action[method]({
-      reason: "\"".concat(event.type, "\" event on ").concat((() => {
-        const target = event.target;
-        const tagName = target.tagName.toLowerCase();
-        if (target.id) {
-          return "".concat(tagName, "#").concat(target.id);
-        }
-        const uiName = target.getAttribute("data-ui-name");
-        if (uiName) {
-          return "".concat(tagName, "[data-ui-name=\"").concat(uiName, "\"]");
-        }
-        return "<".concat(tagName, ">");
-      })()),
-      onAbort: reason => {
-        if (
-        // at this stage the action side effect might have removed the <element> from the DOM
-        // (in theory no because action side effect are batched to happen after)
-        // but other side effects might do this
-        elementRef.current) {
-          dispatchCustomEvent("actionabort", {
-            detail: {
-              ...sharedActionEventDetail,
-              reason
-            }
-          });
-        }
-      },
-      onError: error => {
-        if (
-        // at this stage the action side effect might have removed the <element> from the DOM
-        // (in theory no because action side effect are batched to happen after)
-        // but other side effects might do this
-        elementRef.current) {
-          dispatchCustomEvent("actionerror", {
-            detail: {
-              ...sharedActionEventDetail,
-              error
-            }
-          });
-        }
-        if (errorEffect === "show_validation_message") {
-          addErrorMessage(error);
-        } else if (errorEffect === "throw") {
-          setError(error);
-        }
-      },
-      onComplete: data => {
-        if (
-        // at this stage the action side effect might have removed the <element> from the DOM
-        // (in theory no because action side effect are batched to happen after)
-        // but other side effects might do this
-        elementRef.current) {
-          dispatchCustomEvent("actionend", {
-            detail: {
-              ...sharedActionEventDetail,
-              data
-            }
-          });
-        }
+  const executeAction = useCallback(
+    (actionEvent) => {
+      const { action, actionOrigin, requester, event, method } =
+        actionEvent.detail;
+      const sharedActionEventDetail = {
+        action,
+        actionOrigin,
+        requester,
+        event,
+        method,
+      };
+
+      const dispatchCustomEvent = (type, options) => {
+        const element = elementRef.current;
+        const customEvent = new CustomEvent(type, options);
+        element.dispatchEvent(customEvent);
+      };
+      if (resetErrorBoundary) {
+        resetErrorBoundary();
       }
-    });
-  }, [errorEffect]);
+      removeErrorMessage();
+      setError(null);
+
+      const validationMessageTarget = requester || elementRef.current;
+      validationMessageTargetRef.current = validationMessageTarget;
+
+      dispatchCustomEvent("actionstart", {
+        detail: sharedActionEventDetail,
+      });
+
+      return action[method]({
+        reason: `"${event.type}" event on ${(() => {
+          const target = event.target;
+          const tagName = target.tagName.toLowerCase();
+
+          if (target.id) {
+            return `${tagName}#${target.id}`;
+          }
+
+          const uiName = target.getAttribute("data-ui-name");
+          if (uiName) {
+            return `${tagName}[data-ui-name="${uiName}"]`;
+          }
+
+          return `<${tagName}>`;
+        })()}`,
+        onAbort: (reason) => {
+          if (
+            // at this stage the action side effect might have removed the <element> from the DOM
+            // (in theory no because action side effect are batched to happen after)
+            // but other side effects might do this
+            elementRef.current
+          ) {
+            dispatchCustomEvent("actionabort", {
+              detail: {
+                ...sharedActionEventDetail,
+                reason,
+              },
+            });
+          }
+        },
+        onError: (error) => {
+          if (
+            // at this stage the action side effect might have removed the <element> from the DOM
+            // (in theory no because action side effect are batched to happen after)
+            // but other side effects might do this
+            elementRef.current
+          ) {
+            dispatchCustomEvent("actionerror", {
+              detail: {
+                ...sharedActionEventDetail,
+                error,
+              },
+            });
+          }
+          if (errorEffect === "show_validation_message") {
+            addErrorMessage(error);
+          } else if (errorEffect === "throw") {
+            setError(error);
+          }
+        },
+        onComplete: (data) => {
+          if (
+            // at this stage the action side effect might have removed the <element> from the DOM
+            // (in theory no because action side effect are batched to happen after)
+            // but other side effects might do this
+            elementRef.current
+          ) {
+            dispatchCustomEvent("actionend", {
+              detail: {
+                ...sharedActionEventDetail,
+                data,
+              },
+            });
+          }
+        },
+      });
+    },
+    [errorEffect],
+  );
+
   return executeAction;
 };
 
@@ -11279,6 +12717,7 @@ const addManyEventListeners = (element, events) => {
  * Perfect for library components that need performance without burdening consumers.
  */
 
+
 const useStableCallback = (callback, mapper) => {
   const callbackRef = useRef();
   callbackRef.current = callback;
@@ -11288,6 +12727,7 @@ const useStableCallback = (callback, mapper) => {
   if (!callback) {
     return callback;
   }
+
   const existingStableCallback = stableCallbackRef.current;
   if (existingStableCallback) {
     return existingStableCallback;
@@ -11300,21 +12740,24 @@ const useStableCallback = (callback, mapper) => {
   return stableCallback;
 };
 
-const useActionEvents = (elementRef, {
-  actionOrigin = "action_prop",
-  /**
-   * @param {Event} e - L'événement original
-   * @param {"form_reset" | "blur_invalid" | "escape_key"} reason - Raison du cancel
-   */
-  onCancel,
-  onRequested,
-  onPrevented,
-  onAction,
-  onStart,
-  onAbort,
-  onError,
-  onEnd
-}) => {
+const useActionEvents = (
+  elementRef,
+  {
+    actionOrigin = "action_prop",
+    /**
+     * @param {Event} e - L'événement original
+     * @param {"form_reset" | "blur_invalid" | "escape_key"} reason - Raison du cancel
+     */
+    onCancel,
+    onRequested,
+    onPrevented,
+    onAction,
+    onStart,
+    onAbort,
+    onError,
+    onEnd,
+  },
+) => {
   onCancel = useStableCallback(onCancel);
   onRequested = useStableCallback(onRequested);
   onPrevented = useStableCallback(onPrevented);
@@ -11323,66 +12766,80 @@ const useActionEvents = (elementRef, {
   onAbort = useStableCallback(onAbort);
   onError = useStableCallback(onError);
   onEnd = useStableCallback(onEnd);
+
   useLayoutEffect(() => {
     const element = elementRef.current;
     if (!element) {
       return null;
     }
+
     return addManyEventListeners(element, {
-      cancel: e => {
+      cancel: (e) => {
         // cancel don't need to check for actionOrigin because
         // it's actually unrelated to a specific actions
         // in that sense it should likely be moved elsewhere as it's related to
         // interaction and constraint validation, not to a specific action
         onCancel?.(e, e.detail.reason);
       },
-      actionrequested: e => {
+      actionrequested: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
         onRequested?.(e);
       },
-      actionprevented: e => {
+      actionprevented: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
         onPrevented?.(e);
       },
-      action: e => {
+      action: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
         onAction?.(e);
       },
-      actionstart: e => {
+      actionstart: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
         onStart?.(e);
       },
-      actionabort: e => {
+      actionabort: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
         onAbort?.(e);
       },
-      actionerror: e => {
+      actionerror: (e) => {
         if (e.detail.actionOrigin !== actionOrigin) {
           return;
         }
         onError?.(e.detail.error, e);
       },
-      actionend: onEnd
+      actionend: onEnd,
     });
-  }, [actionOrigin, onCancel, onRequested, onPrevented, onAction, onStart, onAbort, onError, onEnd]);
+  }, [
+    actionOrigin,
+    onCancel,
+    onRequested,
+    onPrevented,
+    onAction,
+    onStart,
+    onAbort,
+    onError,
+    onEnd,
+  ]);
 };
-const useRequestedActionStatus = elementRef => {
+
+const useRequestedActionStatus = (elementRef) => {
   const [actionRequester, setActionRequester] = useState(null);
   const [actionPending, setActionPending] = useState(false);
   const [actionAborted, setActionAborted] = useState(false);
   const [actionError, setActionError] = useState(null);
+
   useActionEvents(elementRef, {
-    onAction: actionEvent => {
+    onAction: (actionEvent) => {
       setActionRequester(actionEvent.detail.requester);
     },
     onStart: () => {
@@ -11394,19 +12851,20 @@ const useRequestedActionStatus = elementRef => {
       setActionPending(false);
       setActionAborted(true);
     },
-    onError: error => {
+    onError: (error) => {
       setActionPending(false);
       setActionError(error);
     },
     onEnd: () => {
       setActionPending(false);
-    }
+    },
   });
+
   return {
     actionRequester,
     actionPending,
     actionAborted,
-    actionError
+    actionError,
   };
 };
 
@@ -11423,62 +12881,49 @@ const isMac = detectMac();
 // Maps canonical browser key names to their user-friendly aliases.
 // Used for both event matching and ARIA normalization.
 const keyMapping = {
-  " ": {
-    alias: ["space"]
-  },
-  "escape": {
-    alias: ["esc"]
-  },
-  "arrowup": {
-    alias: ["up"]
-  },
-  "arrowdown": {
-    alias: ["down"]
-  },
-  "arrowleft": {
-    alias: ["left"]
-  },
-  "arrowright": {
-    alias: ["right"]
-  },
-  "delete": {
-    alias: ["del"]
-  },
+  " ": { alias: ["space"] },
+  "escape": { alias: ["esc"] },
+  "arrowup": { alias: ["up"] },
+  "arrowdown": { alias: ["down"] },
+  "arrowleft": { alias: ["left"] },
+  "arrowright": { alias: ["right"] },
+  "delete": { alias: ["del"] },
   // Platform-specific mappings
-  ...(isMac ? {
-    delete: {
-      alias: ["backspace"]
-    }
-  } : {
-    backspace: {
-      alias: ["delete"]
-    }
-  })
+  ...(isMac
+    ? { delete: { alias: ["backspace"] } }
+    : { backspace: { alias: ["delete"] } }),
 };
 
 const activeShortcutsSignal = signal([]);
 const shortcutsMap = new Map();
+
 const areShortcutsEqual = (shortcutA, shortcutB) => {
-  return shortcutA.key === shortcutB.key && shortcutA.description === shortcutB.description && shortcutA.enabled === shortcutB.enabled;
+  return (
+    shortcutA.key === shortcutB.key &&
+    shortcutA.description === shortcutB.description &&
+    shortcutA.enabled === shortcutB.enabled
+  );
 };
+
 const areShortcutArraysEqual = (arrayA, arrayB) => {
   if (arrayA.length !== arrayB.length) {
     return false;
   }
+
   for (let i = 0; i < arrayA.length; i++) {
     if (!areShortcutsEqual(arrayA[i], arrayB[i])) {
       return false;
     }
   }
+
   return true;
 };
+
 const updateActiveShortcuts = () => {
   const activeElement = activeElementSignal.peek();
   const currentActiveShortcuts = activeShortcutsSignal.peek();
   const activeShortcuts = [];
-  for (const [element, {
-    shortcuts
-  }] of shortcutsMap) {
+  for (const [element, { shortcuts }] of shortcutsMap) {
     if (element === activeElement || element.contains(activeElement)) {
       activeShortcuts.push(...shortcuts);
     }
@@ -11495,35 +12940,39 @@ effect(() => {
   updateActiveShortcuts();
 });
 const addShortcuts = (element, shortcuts) => {
-  shortcutsMap.set(element, {
-    shortcuts
-  });
+  shortcutsMap.set(element, { shortcuts });
   updateActiveShortcuts();
 };
-const removeShortcuts = element => {
+const removeShortcuts = (element) => {
   shortcutsMap.delete(element);
   updateActiveShortcuts();
 };
-const useKeyboardShortcuts = (elementRef, shortcuts, {
-  onActionPrevented,
-  onActionStart,
-  onActionAbort,
-  onActionError,
-  onActionEnd,
-  allowConcurrentActions
-} = {}) => {
+
+const useKeyboardShortcuts = (
+  elementRef,
+  shortcuts,
+  {
+    onActionPrevented,
+    onActionStart,
+    onActionAbort,
+    onActionError,
+    onActionEnd,
+    allowConcurrentActions,
+  } = {},
+) => {
   if (!elementRef) {
-    throw new Error("useKeyboardShortcuts requires an elementRef to attach shortcuts to.");
+    throw new Error(
+      "useKeyboardShortcuts requires an elementRef to attach shortcuts to.",
+    );
   }
+
   const executeAction = useExecuteAction(elementRef);
   const shortcutActionIsBusyRef = useRef(false);
   useActionEvents(elementRef, {
     actionOrigin: "keyboard_shortcut",
     onPrevented: onActionPrevented,
-    onAction: actionEvent => {
-      const {
-        shortcut
-      } = actionEvent.detail.meta || {};
+    onAction: (actionEvent) => {
+      const { shortcut } = actionEvent.detail.meta || {};
       if (!shortcut) {
         // not a shortcut (an other interaction triggered the action, don't request it again)
         return;
@@ -11532,13 +12981,11 @@ const useKeyboardShortcuts = (elementRef, shortcuts, {
       // otherwise setState would call that action immediately
       // setAction(() => actionEvent.detail.action);
       executeAction(actionEvent, {
-        requester: document.activeElement
+        requester: document.activeElement,
       });
     },
-    onStart: e => {
-      const {
-        shortcut
-      } = e.detail.meta || {};
+    onStart: (e) => {
+      const { shortcut } = e.detail.meta || {};
       if (!shortcut) {
         return;
       }
@@ -11548,10 +12995,8 @@ const useKeyboardShortcuts = (elementRef, shortcuts, {
       shortcut.onStart?.(e);
       onActionStart?.(e);
     },
-    onAbort: e => {
-      const {
-        shortcut
-      } = e.detail.meta || {};
+    onAbort: (e) => {
+      const { shortcut } = e.detail.meta || {};
       if (!shortcut) {
         return;
       }
@@ -11560,9 +13005,7 @@ const useKeyboardShortcuts = (elementRef, shortcuts, {
       onActionAbort?.(e);
     },
     onError: (error, e) => {
-      const {
-        shortcut
-      } = e.detail.meta || {};
+      const { shortcut } = e.detail.meta || {};
       if (!shortcut) {
         return;
       }
@@ -11570,53 +13013,58 @@ const useKeyboardShortcuts = (elementRef, shortcuts, {
       shortcut.onError?.(error, e);
       onActionError?.(error, e);
     },
-    onEnd: e => {
-      const {
-        shortcut
-      } = e.detail.meta || {};
+    onEnd: (e) => {
+      const { shortcut } = e.detail.meta || {};
       if (!shortcut) {
         return;
       }
       shortcutActionIsBusyRef.current = false;
       shortcut.onEnd?.(e);
       onActionEnd?.(e);
-    }
+    },
   });
+
   const shortcutDeps = [];
   for (const shortcut of shortcuts) {
-    shortcutDeps.push(shortcut.key, shortcut.description, shortcut.enabled, shortcut.confirmMessage);
+    shortcutDeps.push(
+      shortcut.key,
+      shortcut.description,
+      shortcut.enabled,
+      shortcut.confirmMessage,
+    );
     shortcut.action = useAction(shortcut.action);
   }
+
   useEffect(() => {
     const element = elementRef.current;
     const shortcutsCopy = [];
     for (const shortcutCandidate of shortcuts) {
       shortcutsCopy.push({
         ...shortcutCandidate,
-        handler: keyboardEvent => {
+        handler: (keyboardEvent) => {
           if (shortcutCandidate.handler) {
             return shortcutCandidate.handler(keyboardEvent);
           }
           if (shortcutActionIsBusyRef.current) {
             return false;
           }
-          const {
-            action
-          } = shortcutCandidate;
+          const { action } = shortcutCandidate;
           return requestAction(element, action, {
             event: keyboardEvent,
             requester: document.activeElement,
             confirmMessage: shortcutCandidate.confirmMessage,
             actionOrigin: "keyboard_shortcut",
             meta: {
-              shortcut: shortcutCandidate
-            }
+              shortcut: shortcutCandidate,
+            },
           });
-        }
+        },
       });
     }
+
     addShortcuts(element, shortcuts);
-    const onKeydown = event => {
+
+    const onKeydown = (event) => {
       applyKeyboardShortcuts(shortcutsCopy, event);
     };
     element.addEventListener("keydown", onKeydown);
@@ -11626,18 +13074,17 @@ const useKeyboardShortcuts = (elementRef, shortcuts, {
     };
   }, [shortcutDeps]);
 };
+
 const applyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
   if (!canInterceptKeys(keyboardEvent)) {
     return null;
   }
   for (const shortcutCandidate of shortcuts) {
-    let {
-      enabled = true,
-      key
-    } = shortcutCandidate;
+    let { enabled = true, key } = shortcutCandidate;
     if (!enabled) {
       continue;
     }
+
     if (typeof key === "function") {
       const keyReturnValue = key(keyboardEvent);
       if (!keyReturnValue) {
@@ -11647,7 +13094,7 @@ const applyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
     }
     if (!key) {
       console.error(shortcutCandidate);
-      throw new TypeError("key is required in keyboard shortcut, got ".concat(key));
+      throw new TypeError(`key is required in keyboard shortcut, got ${key}`);
     }
 
     // Handle platform-specific combination objects
@@ -11663,8 +13110,17 @@ const applyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
     }
 
     // Check both the actual combination and cross-platform combination
-    const matchesActual = actualCombination && keyboardEventIsMatchingKeyCombination(keyboardEvent, actualCombination);
-    const matchesCrossPlatform = crossPlatformCombination && crossPlatformCombination !== actualCombination && keyboardEventIsMatchingKeyCombination(keyboardEvent, crossPlatformCombination);
+    const matchesActual =
+      actualCombination &&
+      keyboardEventIsMatchingKeyCombination(keyboardEvent, actualCombination);
+    const matchesCrossPlatform =
+      crossPlatformCombination &&
+      crossPlatformCombination !== actualCombination &&
+      keyboardEventIsMatchingKeyCombination(
+        keyboardEvent,
+        crossPlatformCombination,
+      );
+
     if (!matchesActual && !matchesCrossPlatform) {
       continue;
     }
@@ -11679,13 +13135,15 @@ const applyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
   }
   return null;
 };
-const containsPlatformSpecificKeys = combination => {
+const containsPlatformSpecificKeys = (combination) => {
   const lowerCombination = combination.toLowerCase();
   const macSpecificKeys = ["command", "cmd"];
-  return macSpecificKeys.some(key => lowerCombination.includes(key));
+
+  return macSpecificKeys.some((key) => lowerCombination.includes(key));
 };
-const generateCrossPlatformCombination = combination => {
+const generateCrossPlatformCombination = (combination) => {
   let crossPlatform = combination;
+
   if (isMac) {
     // No need to convert anything TO Windows/Linux-specific format since we're on Mac
     return null;
@@ -11693,10 +13151,12 @@ const generateCrossPlatformCombination = combination => {
   // If not on Mac but combination contains Mac-specific keys, generate Windows equivalent
   crossPlatform = crossPlatform.replace(/\bcommand\b/gi, "control");
   crossPlatform = crossPlatform.replace(/\bcmd\b/gi, "control");
+
   return crossPlatform;
 };
 const keyboardEventIsMatchingKeyCombination = (event, keyCombination) => {
   const keys = keyCombination.toLowerCase().split("+");
+
   for (const key of keys) {
     let modifierFound = false;
 
@@ -11708,6 +13168,7 @@ const keyboardEventIsMatchingKeyCombination = (event, keyCombination) => {
       if (isMac && config.macNames) {
         allNames.push(...config.macNames);
       }
+
       if (allNames.includes(key)) {
         // Check if the corresponding event property is pressed
         if (!event[eventProperty]) {
@@ -11732,13 +13193,18 @@ const keyboardEventIsMatchingKeyCombination = (event, keyCombination) => {
         }
 
         // Only allow a-z and 0-9 ranges
-        const isValidRange = startChar >= "a" && endChar <= "z" || startChar >= "0" && endChar <= "9";
+        const isValidRange =
+          (startChar >= "a" && endChar <= "z") ||
+          (startChar >= "0" && endChar <= "9");
+
         if (!isValidRange) {
           return false; // Invalid range pattern
         }
+
         const eventKeyCode = eventKey.charCodeAt(0);
         const startCode = startChar.charCodeAt(0);
         const endCode = endChar.charCodeAt(0);
+
         if (eventKeyCode >= startCode && eventKeyCode <= endCode) {
           continue; // Range matched
         }
@@ -11757,22 +13223,23 @@ const keyboardEventIsMatchingKeyCombination = (event, keyCombination) => {
 const modifierKeyMapping = {
   metaKey: {
     names: ["meta"],
-    macNames: ["command", "cmd"]
+    macNames: ["command", "cmd"],
   },
   ctrlKey: {
-    names: ["control", "ctrl"]
+    names: ["control", "ctrl"],
   },
   shiftKey: {
-    names: ["shift"]
+    names: ["shift"],
   },
   altKey: {
     names: ["alt"],
-    macNames: ["option"]
-  }
+    macNames: ["option"],
+  },
 };
 const isSameKey = (browserEventKey, key) => {
   browserEventKey = browserEventKey.toLowerCase();
   key = key.toLowerCase();
+
   if (browserEventKey === key) {
     return true;
   }
@@ -11784,21 +13251,20 @@ const isSameKey = (browserEventKey, key) => {
       return true;
     }
   }
+
   return false;
 };
 
-const useActionData = action => {
+const useActionData = (action) => {
   if (!action) {
     return undefined;
   }
-  const {
-    computedDataSignal
-  } = getActionPrivateProperties(action);
+  const { computedDataSignal } = getActionPrivateProperties(action);
   const data = computedDataSignal.value;
   return data;
 };
 
-const useActionStatus = action => {
+const useActionStatus = (action) => {
   if (!action) {
     return {
       params: undefined,
@@ -11809,7 +13275,7 @@ const useActionStatus = action => {
       aborted: false,
       error: null,
       completed: false,
-      data: undefined
+      data: undefined,
     };
   }
   const {
@@ -11817,8 +13283,9 @@ const useActionStatus = action => {
     runningStateSignal,
     isPrerunSignal,
     errorSignal,
-    computedDataSignal
+    computedDataSignal,
   } = getActionPrivateProperties(action);
+
   const params = paramsSignal.value;
   const isPrerun = isPrerunSignal.value;
   const runningState = runningStateSignal.value;
@@ -11828,6 +13295,7 @@ const useActionStatus = action => {
   const loading = runningState === RUNNING;
   const completed = runningState === COMPLETED;
   const data = computedDataSignal.value;
+
   return {
     params,
     runningState,
@@ -11837,7 +13305,7 @@ const useActionStatus = action => {
     aborted,
     error,
     completed,
-    data
+    data,
   };
 };
 
@@ -11858,7 +13326,11 @@ const useActionStatus = action => {
  * resolveInitialValue(undefined, "backup", "") → "backup"
  * resolveInitialValue("", "backup", "") → "backup" (empty same as default)
  */
-const resolveInitialValue = (externalValue, fallbackValue, defaultValue) => {
+const resolveInitialValue = (
+  externalValue,
+  fallbackValue,
+  defaultValue,
+) => {
   if (externalValue !== undefined && externalValue !== defaultValue) {
     return externalValue;
   }
@@ -11877,33 +13349,49 @@ const resolveInitialValue = (externalValue, fallbackValue, defaultValue) => {
  * @param {Function} setValue - Function to call when external value changes
  * @param {string} name - Parameter name for debugging
  */
-const useExternalValueSync = (externalValue, defaultValue, setValue, name = "") => {
+const useExternalValueSync = (
+  externalValue,
+  defaultValue,
+  setValue,
+  name = "",
+) => {
   // Track external value changes and sync them
   const previousExternalValueRef = useRef(externalValue);
   if (externalValue !== previousExternalValueRef.current) {
     previousExternalValueRef.current = externalValue;
     // Always sync external value changes - use defaultValue only when external is undefined
-    const valueToSet = externalValue === undefined ? defaultValue : externalValue;
+    const valueToSet =
+      externalValue === undefined ? defaultValue : externalValue;
     setValue(valueToSet);
   }
 };
+
 const UNSET = {};
-const useInitialValue = compute => {
+const useInitialValue = (compute) => {
   const initialValueRef = useRef(UNSET);
   let initialValue = initialValueRef.current;
   if (initialValue !== UNSET) {
     return initialValue;
   }
+
   initialValue = compute();
   initialValueRef.current = initialValue;
   return initialValue;
 };
 
 const FIRST_MOUNT = {};
-const useStateArray = (externalValue, fallbackValue, defaultValue = []) => {
+const useStateArray = (
+  externalValue,
+  fallbackValue,
+  defaultValue = [],
+) => {
   const initialValueRef = useRef(FIRST_MOUNT);
   if (initialValueRef.current === FIRST_MOUNT) {
-    const initialValue = resolveInitialValue(externalValue, fallbackValue, defaultValue);
+    const initialValue = resolveInitialValue(
+      externalValue,
+      fallbackValue,
+      defaultValue,
+    );
     initialValueRef.current = initialValue;
   }
   const initialValue = initialValueRef.current;
@@ -11911,20 +13399,24 @@ const useStateArray = (externalValue, fallbackValue, defaultValue = []) => {
 
   // Only sync external value changes if externalValue was explicitly provided
   useExternalValueSync(externalValue, defaultValue, setArray, "state_array");
-  const add = useCallback(valueToAdd => {
-    setArray(array => {
+
+  const add = useCallback((valueToAdd) => {
+    setArray((array) => {
       const newArray = addIntoArray(array, valueToAdd);
       return newArray;
     });
   }, []);
-  const remove = useCallback(valueToRemove => {
-    setArray(array => {
+
+  const remove = useCallback((valueToRemove) => {
+    setArray((array) => {
       return removeFromArray(array, valueToRemove);
     });
   }, []);
+
   const reset = useCallback(() => {
     setArray(initialValue);
   }, [initialValue]);
+
   return [array, add, remove, reset];
 };
 
@@ -11932,14 +13424,16 @@ const getCallerInfo = (targetFunction = null, additionalOffset = 0) => {
   const originalPrepareStackTrace = Error.prepareStackTrace;
   try {
     Error.prepareStackTrace = (_, stack) => stack;
+
     const error = new Error();
     const stack = error.stack;
+
     if (!stack || stack.length === 0 || !Array.isArray(stack)) {
-      return {
-        raw: "unknown"
-      };
+      return { raw: "unknown" };
     }
+
     let targetIndex = -1;
+
     if (targetFunction) {
       // ✅ Chercher la fonction cible par référence directe
       for (let i = 0; i < stack.length; i++) {
@@ -11952,23 +13446,26 @@ const getCallerInfo = (targetFunction = null, additionalOffset = 0) => {
           break;
         }
       }
+
       if (targetIndex === -1) {
         return {
-          raw: "target function not found in stack",
-          targetFunction: targetFunction.name
+          raw: `target function not found in stack`,
+          targetFunction: targetFunction.name,
         };
       }
 
       // ✅ Prendre la fonction qui appelle targetFunction + offset
       const callerIndex = targetIndex + 1 + additionalOffset;
+
       if (callerIndex >= stack.length) {
         return {
-          raw: "caller at offset ".concat(additionalOffset, " not found"),
+          raw: `caller at offset ${additionalOffset} not found`,
           targetFunction: targetFunction.name,
           requestedIndex: callerIndex,
-          stackLength: stack.length
+          stackLength: stack.length,
         };
       }
+
       const callerFrame = stack[callerIndex];
       return {
         file: callerFrame.getFileName(),
@@ -11977,63 +13474,69 @@ const getCallerInfo = (targetFunction = null, additionalOffset = 0) => {
         function: callerFrame.getFunctionName() || "<anonymous>",
         raw: callerFrame.toString(),
         targetFunction: targetFunction.name,
-        offset: additionalOffset
+        offset: additionalOffset,
       };
     }
 
     // ✅ Comportement original si pas de targetFunction
     if (stack.length > 2) {
       const callerFrame = stack[2 + additionalOffset];
+
       if (!callerFrame) {
         return {
-          raw: "caller at offset ".concat(additionalOffset, " not found"),
+          raw: `caller at offset ${additionalOffset} not found`,
           requestedIndex: 2 + additionalOffset,
-          stackLength: stack.length
+          stackLength: stack.length,
         };
       }
+
       return {
         file: callerFrame.getFileName(),
         line: callerFrame.getLineNumber(),
         column: callerFrame.getColumnNumber(),
         function: callerFrame.getFunctionName() || "<anonymous>",
         raw: callerFrame.toString(),
-        offset: additionalOffset
+        offset: additionalOffset,
       };
     }
-    return {
-      raw: "unknown"
-    };
+
+    return { raw: "unknown" };
   } finally {
     Error.prepareStackTrace = originalPrepareStackTrace;
   }
 };
 
-const primitiveCanBeId = value => {
+const primitiveCanBeId = (value) => {
   const type = typeof value;
   if (type === "string" || type === "number" || type === "symbol") {
     return true;
   }
   return false;
 };
-const arraySignalStore = (initialArray = [], idKey = "id", {
-  mutableIdKeys = [],
-  name,
-  createItem = props => {
-    return {
-      ...props
-    };
-  }
-}) => {
+
+const arraySignalStore = (
+  initialArray = [],
+  idKey = "id",
+  {
+    mutableIdKeys = [],
+    name,
+    createItem = (props) => {
+      return { ...props };
+    },
+  },
+) => {
   const store = {
-    name
+    name,
   };
-  const createItemFromProps = props => {
+
+  const createItemFromProps = (props) => {
     if (props === null || typeof props !== "object") {
       return props;
     }
     const item = createItem(props);
     return item;
   };
+
   const arraySignal = signal(initialArray);
   const derivedSignal = computed(() => {
     const array = arraySignal.value;
@@ -12068,12 +13571,10 @@ const arraySignalStore = (initialArray = [], idKey = "id", {
       }
     }
   });
+
   const propertiesObserverSet = new Set();
   const observeProperties = (itemSignal, callback) => {
-    const observer = {
-      itemSignal,
-      callback
-    };
+    const observer = { itemSignal, callback };
     propertiesObserverSet.add(observer);
 
     // Return cleanup function
@@ -12081,27 +13582,27 @@ const arraySignalStore = (initialArray = [], idKey = "id", {
       propertiesObserverSet.delete(observer);
     };
   };
+
   const removalsCallbackSet = new Set();
-  const observeRemovals = callback => {
+  const observeRemovals = (callback) => {
     removalsCallbackSet.add(callback);
   };
+
   const itemMatchLifecycleSet = new Set();
-  const registerItemMatchLifecycle = (matchPredicate, {
-    match,
-    nomatch
-  }) => {
+  const registerItemMatchLifecycle = (matchPredicate, { match, nomatch }) => {
     const matchState = {
       hasMatched: false,
-      hadMatchedBefore: false
+      hadMatchedBefore: false,
     };
     const itemMatchLifecycle = {
       matchPredicate,
       match,
       nomatch,
-      matchState
+      matchState,
     };
     itemMatchLifecycleSet.add(itemMatchLifecycle);
   };
+
   const readIdFromItemProps = (props, array) => {
     let id;
     if (Object.hasOwn(props, idKey)) {
@@ -12111,6 +13612,7 @@ const arraySignalStore = (initialArray = [], idKey = "id", {
     if (mutableIdKeys.length === 0) {
       return undefined;
     }
+
     let mutableIdKey;
     for (const mutableIdKeyCandidate of mutableIdKeys) {
       if (Object.hasOwn(props, mutableIdKeyCandidate)) {
@@ -12119,7 +13621,10 @@ const arraySignalStore = (initialArray = [], idKey = "id", {
       }
     }
     if (!mutableIdKey) {
-      throw new Error("item properties must have one of the following keys:\n".concat([idKey, ...mutableIdKeys].join(", ")));
+      throw new Error(
+        `item properties must have one of the following keys:
+${[idKey, ...mutableIdKeys].join(", ")}`,
+      );
     }
     const mutableIdValue = props[mutableIdKey];
     for (const itemCandidate of array) {
@@ -12130,17 +13635,21 @@ const arraySignalStore = (initialArray = [], idKey = "id", {
       }
     }
     if (!id) {
-      throw new Error("None of the existing item uses ".concat(mutableIdKey, ": ").concat(mutableIdValue, ", so item properties must specify the \"").concat(idKey, "\" key."));
+      throw new Error(
+        `None of the existing item uses ${mutableIdKey}: ${mutableIdValue}, so item properties must specify the "${idKey}" key.`,
+      );
     }
     return id;
   };
+
   effect(() => {
     const array = arraySignal.value;
+
     for (const {
       matchPredicate,
       match,
       nomatch,
-      matchState
+      matchState,
     } of itemMatchLifecycleSet) {
       let currentlyHasMatch = false;
 
@@ -12170,9 +13679,11 @@ const arraySignalStore = (initialArray = [], idKey = "id", {
       }
     }
   });
+
   const select = (...args) => {
     const array = arraySignal.value;
     const idMap = idMapSignal.value;
+
     let property;
     let value;
     if (args.length === 1) {
@@ -12189,19 +13700,25 @@ const arraySignalStore = (initialArray = [], idKey = "id", {
       return idMap.get(value);
     }
     for (const itemCandidate of array) {
-      const valueCandidate = typeof property === "function" ? property(itemCandidate) : itemCandidate[property];
+      const valueCandidate =
+        typeof property === "function"
+          ? property(itemCandidate)
+          : itemCandidate[property];
       if (valueCandidate === value) {
         return itemCandidate;
       }
     }
     return null;
   };
-  const selectAll = toMatchArray => {
+  const selectAll = (toMatchArray) => {
     const array = arraySignal.value;
     const result = [];
     const idMap = idMapSignal.value;
     for (const toMatch of toMatchArray) {
-      const id = toMatch !== null && typeof toMatch === "object" ? readIdFromItemProps(toMatch, array) : toMatch;
+      const id =
+        toMatch !== null && typeof toMatch === "object"
+          ? readIdFromItemProps(toMatch, array)
+          : toMatch;
       const item = idMap.get(id);
       if (item) {
         result.push(item);
@@ -12217,10 +13734,7 @@ const arraySignalStore = (initialArray = [], idKey = "id", {
       }
       // we call at the end so that itemWithProps and arraySignal.value was set too
       for (const observer of propertiesObserverSet) {
-        const {
-          itemSignal,
-          callback
-        } = observer;
+        const { itemSignal, callback } = observer;
         const watchedItem = itemSignal.peek();
         if (!watchedItem) {
           continue;
@@ -12236,9 +13750,13 @@ const arraySignalStore = (initialArray = [], idKey = "id", {
     const assign = (item, props) => {
       const itemOwnPropertyDescriptors = Object.getOwnPropertyDescriptors(item);
       const itemOwnKeys = Object.keys(itemOwnPropertyDescriptors);
-      const itemWithProps = Object.create(Object.getPrototypeOf(item), itemOwnPropertyDescriptors);
+      const itemWithProps = Object.create(
+        Object.getPrototypeOf(item),
+        itemOwnPropertyDescriptors,
+      );
       let hasChanges = false;
       const propertyMutations = {};
+
       for (const key of Object.keys(props)) {
         const newValue = props[key];
         if (itemOwnKeys.includes(key)) {
@@ -12250,7 +13768,7 @@ const arraySignalStore = (initialArray = [], idKey = "id", {
               oldValue,
               newValue,
               target: item,
-              newTarget: itemWithProps
+              newTarget: itemWithProps,
             };
           }
         } else {
@@ -12260,10 +13778,11 @@ const arraySignalStore = (initialArray = [], idKey = "id", {
             added: true,
             newValue,
             target: item,
-            newTarget: itemWithProps
+            newTarget: itemWithProps,
           };
         }
       }
+
       if (!hasChanges) {
         return item;
       }
@@ -12272,6 +13791,7 @@ const arraySignalStore = (initialArray = [], idKey = "id", {
       itemMutationsMap.set(item[idKey], propertyMutations);
       return itemWithProps;
     };
+
     const array = arraySignal.peek();
     if (args.length === 1 && Array.isArray(args[0])) {
       const propsArray = args[0];
@@ -12296,17 +13816,16 @@ const arraySignalStore = (initialArray = [], idKey = "id", {
         existingEntryMap.set(id, {
           existingItem,
           existingItemIndex: index,
-          processed: false
+          processed: false,
         });
         index++;
       }
+
       for (const props of propsArray) {
         const id = readIdFromItemProps(props, array);
         const existingEntry = existingEntryMap.get(id);
         if (existingEntry) {
-          const {
-            existingItem
-          } = existingEntry;
+          const { existingItem } = existingEntry;
           const itemWithPropsOrItem = assign(existingItem, props);
           if (itemWithPropsOrItem !== existingItem) {
             hasUpdate = true;
@@ -12321,11 +13840,13 @@ const arraySignalStore = (initialArray = [], idKey = "id", {
           arrayWithOnlyAffectedItems.push(item);
         }
       }
+
       for (const [, existingEntry] of existingEntryMap) {
         if (!existingEntry.processed) {
           arraySomeUpdated.push(existingEntry.existingItem);
         }
       }
+
       if (hasNew || hasUpdate) {
         arraySignal.value = arraySomeUpdated;
         triggerPropertyMutations();
@@ -12343,7 +13864,9 @@ const arraySignalStore = (initialArray = [], idKey = "id", {
       const firstArg = args[0];
       propertyToMatch = idKey;
       if (!firstArg || typeof firstArg !== "object") {
-        throw new TypeError("Expected an object as first argument, got ".concat(firstArg));
+        throw new TypeError(
+          `Expected an object as first argument, got ${firstArg}`,
+        );
       }
       valueToMatch = readIdFromItemProps(firstArg, array);
       props = firstArg;
@@ -12360,7 +13883,10 @@ const arraySignalStore = (initialArray = [], idKey = "id", {
       props = args[2];
     }
     for (const itemCandidate of array) {
-      const itemCandidateValue = typeof propertyToMatch === "function" ? propertyToMatch(itemCandidate) : itemCandidate[propertyToMatch];
+      const itemCandidateValue =
+        typeof propertyToMatch === "function"
+          ? propertyToMatch(itemCandidate)
+          : itemCandidate[propertyToMatch];
       if (itemCandidateValue === valueToMatch) {
         const itemWithPropsOrItem = assign(itemCandidate, props);
         if (itemWithPropsOrItem === itemCandidate) {
@@ -12398,6 +13924,7 @@ const arraySignalStore = (initialArray = [], idKey = "id", {
         removalsCallback(removedItemArray);
       }
     };
+
     const array = arraySignal.peek();
     if (args.length === 1 && Array.isArray(args[0])) {
       const firstArg = args[0];
@@ -12405,12 +13932,13 @@ const arraySignalStore = (initialArray = [], idKey = "id", {
       let hasFound = false;
       const idToRemoveSet = new Set();
       const idRemovedArray = [];
+
       for (const value of firstArg) {
         if (typeof value === "object" && value !== null) {
           const id = readIdFromItemProps(value, array);
           idToRemoveSet.add(id);
         } else if (!primitiveCanBeId(value)) {
-          throw new TypeError("id to drop must be an id, got ".concat(value));
+          throw new TypeError(`id to drop must be an id, got ${value}`);
         }
         idToRemoveSet.add(value);
       }
@@ -12425,7 +13953,9 @@ const arraySignalStore = (initialArray = [], idKey = "id", {
         }
       }
       if (idToRemoveSet.size > 0) {
-        console.warn("arraySignalStore.drop: Some ids were not found in the array: ".concat(Array.from(idToRemoveSet).join(", ")));
+        console.warn(
+          `arraySignalStore.drop: Some ids were not found in the array: ${Array.from(idToRemoveSet).join(", ")}`,
+        );
       }
       if (hasFound) {
         arraySignal.value = arrayWithoutDroppedItems;
@@ -12442,7 +13972,7 @@ const arraySignalStore = (initialArray = [], idKey = "id", {
       if (valueToMatch !== null && typeof valueToMatch === "object") {
         valueToMatch = readIdFromItemProps(valueToMatch, array);
       } else if (!primitiveCanBeId(valueToMatch)) {
-        throw new TypeError("id to drop must be an id, got ".concat(valueToMatch));
+        throw new TypeError(`id to drop must be an id, got ${valueToMatch}`);
       }
     } else {
       propertyToMatch = args[0];
@@ -12452,7 +13982,10 @@ const arraySignalStore = (initialArray = [], idKey = "id", {
     let found = false;
     let itemDropped = null;
     for (const itemCandidate of array) {
-      const itemCandidateValue = typeof propertyToMatch === "function" ? propertyToMatch(itemCandidate) : itemCandidate[propertyToMatch];
+      const itemCandidateValue =
+        typeof propertyToMatch === "function"
+          ? propertyToMatch(itemCandidate)
+          : itemCandidate[propertyToMatch];
       if (itemCandidateValue === valueToMatch) {
         itemDropped = itemCandidate;
         found = true;
@@ -12468,9 +14001,10 @@ const arraySignalStore = (initialArray = [], idKey = "id", {
     }
     return null;
   };
+
   const signalForMutableIdKey = (mutableIdKey, mutableIdValueSignal) => {
     const itemIdSignal = signal(null);
-    const check = value => {
+    const check = (value) => {
       const item = select(mutableIdKey, value);
       if (!item) {
         return false;
@@ -12486,10 +14020,12 @@ const arraySignalStore = (initialArray = [], idKey = "id", {
         }
       });
     }
+
     return computed(() => {
       return select(itemIdSignal.value);
     });
   };
+
   Object.assign(store, {
     mutableIdKeys,
     arraySignal,
@@ -12497,10 +14033,11 @@ const arraySignalStore = (initialArray = [], idKey = "id", {
     selectAll,
     upsert,
     drop,
+
     observeProperties,
     observeRemovals,
     registerItemMatchLifecycle,
-    signalForMutableIdKey
+    signalForMutableIdKey,
   });
   return store;
 };
@@ -12516,13 +14053,14 @@ const createResourceLifecycleManager = () => {
       rerunOn,
       paramScope = null,
       dependencies = [],
-      mutableIdKeys = []
+      mutableIdKeys = [],
     } = config;
+
     registeredResources.set(resourceInstance, {
       rerunOn,
       paramScope,
       mutableIdKeys,
-      httpActions: new Set()
+      httpActions: new Set(),
     });
 
     // Register dependencies
@@ -12535,59 +14073,91 @@ const createResourceLifecycleManager = () => {
       }
     }
   };
+
   const registerAction = (resourceInstance, httpAction) => {
     const config = registeredResources.get(resourceInstance);
     if (config) {
       config.httpActions.add(httpAction);
     }
   };
+
   const shouldRerunAfter = (rerunConfig, httpVerb) => {
     if (rerunConfig === false) return false;
     if (rerunConfig === "*") return true;
     if (Array.isArray(rerunConfig)) {
-      const verbSet = new Set(rerunConfig.map(v => v.toUpperCase()));
+      const verbSet = new Set(rerunConfig.map((v) => v.toUpperCase()));
       if (verbSet.has("*")) return true;
       return verbSet.has(httpVerb.toUpperCase());
     }
     return false;
   };
+
   const isParamSubset = (parentParams, childParams) => {
     if (!parentParams || !childParams) return false;
     for (const [key, value] of Object.entries(parentParams)) {
-      if (!(key in childParams) || !compareTwoJsValues(childParams[key], value)) {
+      if (
+        !(key in childParams) ||
+        !compareTwoJsValues(childParams[key], value)
+      ) {
         return false;
       }
     }
     return true;
   };
-  const findEffectOnActions = triggeringAction => {
+
+  const findEffectOnActions = (triggeringAction) => {
     // Determines which actions to rerun/reset when an action completes.
 
     const actionsToRerun = new Set();
     const actionsToReset = new Set();
     const reasonSet = new Set();
+
     for (const [resourceInstance, config] of registeredResources) {
-      const shouldRerunGetMany = shouldRerunAfter(config.rerunOn.GET_MANY, triggeringAction.meta.httpVerb);
-      const shouldRerunGet = shouldRerunAfter(config.rerunOn.GET, triggeringAction.meta.httpVerb);
+      const shouldRerunGetMany = shouldRerunAfter(
+        config.rerunOn.GET_MANY,
+        triggeringAction.meta.httpVerb,
+      );
+      const shouldRerunGet = shouldRerunAfter(
+        config.rerunOn.GET,
+        triggeringAction.meta.httpVerb,
+      );
 
       // Skip if no rerun or reset rules apply
-      const hasMutableIdAutorerun = (triggeringAction.meta.httpVerb === "POST" || triggeringAction.meta.httpVerb === "PUT" || triggeringAction.meta.httpVerb === "PATCH") && config.mutableIdKeys.length > 0;
-      if (!shouldRerunGetMany && !shouldRerunGet && triggeringAction.meta.httpVerb !== "DELETE" && !hasMutableIdAutorerun) {
+      const hasMutableIdAutorerun =
+        (triggeringAction.meta.httpVerb === "POST" ||
+          triggeringAction.meta.httpVerb === "PUT" ||
+          triggeringAction.meta.httpVerb === "PATCH") &&
+        config.mutableIdKeys.length > 0;
+
+      if (
+        !shouldRerunGetMany &&
+        !shouldRerunGet &&
+        triggeringAction.meta.httpVerb !== "DELETE" &&
+        !hasMutableIdAutorerun
+      ) {
         continue;
       }
 
       // Parameter scope predicate for config-driven rules
       // Same scope ID or no scope = compatible, subset check for different scopes
-      const paramScopePredicate = config.paramScope ? candidateAction => {
-        if (candidateAction.meta.paramScope?.id === config.paramScope.id) return true;
-        if (!candidateAction.meta.paramScope) return true;
-        const candidateParams = candidateAction.meta.paramScope.params;
-        const currentParams = config.paramScope.params;
-        return isParamSubset(candidateParams, currentParams);
-      } : candidateAction => !candidateAction.meta.paramScope;
+      const paramScopePredicate = config.paramScope
+        ? (candidateAction) => {
+            if (candidateAction.meta.paramScope?.id === config.paramScope.id)
+              return true;
+            if (!candidateAction.meta.paramScope) return true;
+            const candidateParams = candidateAction.meta.paramScope.params;
+            const currentParams = config.paramScope.params;
+            return isParamSubset(candidateParams, currentParams);
+          }
+        : (candidateAction) => !candidateAction.meta.paramScope;
+
       for (const httpAction of config.httpActions) {
         // Find all instances of this action
-        const actionCandidateArray = httpAction.matchAllSelfOrDescendant(action => !action.isPrerun && action.completed && action !== triggeringAction);
+        const actionCandidateArray = httpAction.matchAllSelfOrDescendant(
+          (action) =>
+            !action.isPrerun && action.completed && action !== triggeringAction,
+        );
+
         for (const actionCandidate of actionCandidateArray) {
           const triggerVerb = triggeringAction.meta.httpVerb;
           const candidateVerb = actionCandidate.meta.httpVerb;
@@ -12595,15 +14165,22 @@ const createResourceLifecycleManager = () => {
           if (triggerVerb === candidateVerb) {
             continue;
           }
+
           const triggeringResource = getResourceForAction(triggeringAction);
           const isSameResource = triggeringResource === resourceInstance;
 
           // Config-driven same-resource effects (respects param scope)
           config_effect: {
-            if (!isSameResource || triggerVerb === "GET" || candidateVerb !== "GET") {
+            if (
+              !isSameResource ||
+              triggerVerb === "GET" ||
+              candidateVerb !== "GET"
+            ) {
               break config_effect;
             }
-            const shouldRerun = candidateIsPlural ? shouldRerunGetMany : shouldRerunGet;
+            const shouldRerun = candidateIsPlural
+              ? shouldRerunGetMany
+              : shouldRerunGet;
             if (!shouldRerun) {
               break config_effect;
             }
@@ -12629,10 +14206,11 @@ const createResourceLifecycleManager = () => {
               continue;
             }
             // Get the ID(s) that were deleted
-            const {
-              dataSignal
-            } = getActionPrivateProperties(triggeringAction);
-            const deleteIdSet = triggeringAction.meta.httpMany ? new Set(dataSignal.peek()) : new Set([dataSignal.peek()]);
+            const { dataSignal } = getActionPrivateProperties(triggeringAction);
+            const deleteIdSet = triggeringAction.meta.httpMany
+              ? new Set(dataSignal.peek())
+              : new Set([dataSignal.peek()]);
+
             const candidateId = actionCandidate.data;
             const isAffected = deleteIdSet.has(candidateId);
             if (!isAffected) {
@@ -12650,18 +14228,31 @@ const createResourceLifecycleManager = () => {
 
           // MutableId effects: rerun GET when matching resource created/updated
           {
-            if (hasMutableIdAutorerun && candidateVerb === "GET" && !candidateIsPlural && isSameResource) {
-              const {
-                computedDataSignal
-              } = getActionPrivateProperties(triggeringAction);
+            if (
+              hasMutableIdAutorerun &&
+              candidateVerb === "GET" &&
+              !candidateIsPlural &&
+              isSameResource
+            ) {
+              const { computedDataSignal } =
+                getActionPrivateProperties(triggeringAction);
               const modifiedData = computedDataSignal.peek();
+
               if (modifiedData && typeof modifiedData === "object") {
                 for (const mutableIdKey of config.mutableIdKeys) {
                   const modifiedMutableId = modifiedData[mutableIdKey];
                   const candidateParams = actionCandidate.params;
-                  if (modifiedMutableId !== undefined && candidateParams && typeof candidateParams === "object" && candidateParams[mutableIdKey] === modifiedMutableId) {
+
+                  if (
+                    modifiedMutableId !== undefined &&
+                    candidateParams &&
+                    typeof candidateParams === "object" &&
+                    candidateParams[mutableIdKey] === modifiedMutableId
+                  ) {
                     actionsToRerun.add(actionCandidate);
-                    reasonSet.add("".concat(triggeringAction.meta.httpVerb, "-mutableId autorerun"));
+                    reasonSet.add(
+                      `${triggeringAction.meta.httpVerb}-mutableId autorerun`,
+                    );
                     break;
                   }
                 }
@@ -12671,7 +14262,15 @@ const createResourceLifecycleManager = () => {
 
           // Cross-resource dependency effects: rerun dependent GET_MANY
           {
-            if (triggeringResource && resourceDependencies.get(triggeringResource)?.has(resourceInstance) && triggerVerb !== "GET" && candidateVerb === "GET" && candidateIsPlural) {
+            if (
+              triggeringResource &&
+              resourceDependencies
+                .get(triggeringResource)
+                ?.has(resourceInstance) &&
+              triggerVerb !== "GET" &&
+              candidateVerb === "GET" &&
+              candidateIsPlural
+            ) {
               actionsToRerun.add(actionCandidate);
               reasonSet.add("dependency autorerun");
               continue;
@@ -12680,37 +14279,38 @@ const createResourceLifecycleManager = () => {
         }
       }
     }
+
     return {
       actionsToRerun,
       actionsToReset,
-      reasons: Array.from(reasonSet)
+      reasons: Array.from(reasonSet),
     };
   };
-  const onActionComplete = httpAction => {
-    const {
-      actionsToRerun,
-      actionsToReset,
-      reasons
-    } = findEffectOnActions(httpAction);
+
+  const onActionComplete = (httpAction) => {
+    const { actionsToRerun, actionsToReset, reasons } =
+      findEffectOnActions(httpAction);
+
     if (actionsToRerun.size > 0 || actionsToReset.size > 0) {
-      const reason = "".concat(httpAction, " triggered ").concat(reasons.join(" and "));
+      const reason = `${httpAction} triggered ${reasons.join(" and ")}`;
       const dispatchActions = getActionDispatcher();
       dispatchActions({
         rerunSet: actionsToRerun,
         resetSet: actionsToReset,
-        reason
+        reason,
       });
     }
   };
 
   // Helper to find which resource an action belongs to
-  const getResourceForAction = action => {
+  const getResourceForAction = (action) => {
     return action.meta.resourceInstance;
   };
+
   return {
     registerResource,
     registerAction,
-    onActionComplete
+    onActionComplete,
   };
 };
 
@@ -12720,200 +14320,218 @@ const resourceLifecycleManager = createResourceLifecycleManager();
 // Cache for parameter scope identifiers
 const paramScopeWeakSet = createIterableWeakSet();
 let paramScopeIdCounter = 0;
-const getParamScope = params => {
+const getParamScope = (params) => {
   for (const existingParamScope of paramScopeWeakSet) {
     if (compareTwoJsValues(existingParamScope.params, params)) {
       return existingParamScope;
     }
   }
-  const id = Symbol("paramScope-".concat(++paramScopeIdCounter));
+  const id = Symbol(`paramScope-${++paramScopeIdCounter}`);
   const newParamScope = {
     params,
-    id
+    id,
   };
   paramScopeWeakSet.add(newParamScope);
   return newParamScope;
 };
-const createHttpHandlerForRootResource = (name, {
-  idKey,
-  store,
-  /*
-  Default autorerun behavior explanation:
-   GET: false (RECOMMENDED)
-  What happens:
-  - GET actions are reset by DELETE operations (not rerun)
-  - DELETE operation on the displayed item would display nothing in the UI (action is in IDLE state)
-  - PUT/PATCH operations update UI via signals, no rerun needed
-  - This approach minimizes unnecessary API calls
-   How to handle:
-  - Applications can provide custom UI for deleted items (e.g., "Item not found")
-  - Or redirect users to appropriate pages (e.g., back to list view)
-   Alternative (NOT RECOMMENDED):
-  - Use GET: ["DELETE"] to rerun and display 404 error received from backend
-  - Poor UX: users expect immediate feedback, not loading + error state
-   GET_MANY: ["POST"]
-  - POST: New items may or may not appear in lists (depends on filters, pagination, etc.)
-    Backend determines visibility better than client-side logic
-  - DELETE: Excluded by default because:
-    • UI handles deletions via store signals (selectAll filters out deleted items)
-    • DELETE operations rarely change list content beyond item removal
-    • Avoids unnecessary API calls (can be overridden if needed)
-  */
-  rerunOn = {
-    GET: false,
-    GET_MANY: ["POST"
-    // "DELETE"
-    ]
+
+const createHttpHandlerForRootResource = (
+  name,
+  {
+    idKey,
+    store,
+    /*
+    Default autorerun behavior explanation:
+
+    GET: false (RECOMMENDED)
+    What happens:
+    - GET actions are reset by DELETE operations (not rerun)
+    - DELETE operation on the displayed item would display nothing in the UI (action is in IDLE state)
+    - PUT/PATCH operations update UI via signals, no rerun needed
+    - This approach minimizes unnecessary API calls
+
+    How to handle:
+    - Applications can provide custom UI for deleted items (e.g., "Item not found")
+    - Or redirect users to appropriate pages (e.g., back to list view)
+
+    Alternative (NOT RECOMMENDED):
+    - Use GET: ["DELETE"] to rerun and display 404 error received from backend
+    - Poor UX: users expect immediate feedback, not loading + error state
+
+    GET_MANY: ["POST"]
+    - POST: New items may or may not appear in lists (depends on filters, pagination, etc.)
+      Backend determines visibility better than client-side logic
+    - DELETE: Excluded by default because:
+      • UI handles deletions via store signals (selectAll filters out deleted items)
+      • DELETE operations rarely change list content beyond item removal
+      • Avoids unnecessary API calls (can be overridden if needed)
+    */
+    rerunOn = {
+      GET: false,
+      GET_MANY: [
+        "POST",
+        // "DELETE"
+      ],
+    },
+    paramScope,
+    dependencies = [],
+    resourceInstance,
+    mutableIdKeys = [],
   },
-  paramScope,
-  dependencies = [],
-  resourceInstance,
-  mutableIdKeys = []
-}) => {
+) => {
   // Register this resource with the resource lifecycle manager
   resourceLifecycleManager.registerResource(resourceInstance, {
     rerunOn,
     paramScope,
     dependencies,
     idKey,
-    mutableIdKeys
+    mutableIdKeys,
   });
-  const createActionAffectingOneItem = (httpVerb, {
-    callback,
-    ...options
-  }) => {
-    const applyDataEffect = httpVerb === "DELETE" ? itemIdOrItemProps => {
-      const itemId = store.drop(itemIdOrItemProps);
-      return itemId;
-    } : data => {
-      let item;
-      if (Array.isArray(data)) {
-        // the callback is returning something like [property, value, props]
-        // this is to support a case like:
-        // store.upsert("name", "currentName", { name: "newName" })
-        // where we want to update the name property of an existing item
-        item = store.upsert(...data);
-      } else {
-        item = store.upsert(data);
-      }
-      const itemId = item[idKey];
-      return itemId;
-    };
+
+  const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
+    const applyDataEffect =
+      httpVerb === "DELETE"
+        ? (itemIdOrItemProps) => {
+            const itemId = store.drop(itemIdOrItemProps);
+            return itemId;
+          }
+        : (data) => {
+            let item;
+            if (Array.isArray(data)) {
+              // the callback is returning something like [property, value, props]
+              // this is to support a case like:
+              // store.upsert("name", "currentName", { name: "newName" })
+              // where we want to update the name property of an existing item
+              item = store.upsert(...data);
+            } else {
+              item = store.upsert(data);
+            }
+            const itemId = item[idKey];
+            return itemId;
+          };
+
     const callerInfo = getCallerInfo(null, 2);
     // Provide more fallback options for better debugging
-    const locationInfo = callerInfo.file && callerInfo.line && callerInfo.column ? "".concat(callerInfo.file, ":").concat(callerInfo.line, ":").concat(callerInfo.column) : callerInfo.raw || "unknown location";
-    const originalActionName = "".concat(name, ".").concat(httpVerb);
+    const locationInfo =
+      callerInfo.file && callerInfo.line && callerInfo.column
+        ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
+        : callerInfo.raw || "unknown location";
+    const originalActionName = `${name}.${httpVerb}`;
     const httpActionAffectingOneItem = createAction(callback, {
-      meta: {
-        httpVerb,
-        httpMany: false,
-        paramScope,
-        resourceInstance,
-        store
-      },
-      name: "".concat(name, ".").concat(httpVerb),
+      meta: { httpVerb, httpMany: false, paramScope, resourceInstance, store },
+      name: `${name}.${httpVerb}`,
       dataEffect: (data, action) => {
         const actionLabel = action.name;
+
         if (httpVerb === "DELETE") {
           if (!isProps(data) && !primitiveCanBeId(data)) {
-            throw new TypeError("".concat(actionLabel, " must return an object (that will be used to drop \"").concat(name, "\" resource), received ").concat(data, ".\n           ").concat(originalActionName, " source location: ").concat(locationInfo));
+            throw new TypeError(
+              `${actionLabel} must return an object (that will be used to drop "${name}" resource), received ${data}.
+           ${originalActionName} source location: ${locationInfo}`,
+            );
           }
           return applyDataEffect(data);
         }
         if (!isProps(data)) {
-          throw new TypeError("".concat(actionLabel, " must return an object (that will be used to upsert \"").concat(name, "\" resource), received ").concat(data, ".\n           ").concat(originalActionName, " source location: ").concat(locationInfo));
+          throw new TypeError(
+            `${actionLabel} must return an object (that will be used to upsert "${name}" resource), received ${data}.
+           ${originalActionName} source location: ${locationInfo}`,
+          );
         }
         return applyDataEffect(data);
       },
-      compute: itemId => store.select(itemId),
-      completeSideEffect: actionCompleted => resourceLifecycleManager.onActionComplete(actionCompleted),
-      ...options
+      compute: (itemId) => store.select(itemId),
+      completeSideEffect: (actionCompleted) =>
+        resourceLifecycleManager.onActionComplete(actionCompleted),
+      ...options,
     });
-    resourceLifecycleManager.registerAction(resourceInstance, httpActionAffectingOneItem);
+    resourceLifecycleManager.registerAction(
+      resourceInstance,
+      httpActionAffectingOneItem,
+    );
     return httpActionAffectingOneItem;
   };
-  const GET = (callback, options) => createActionAffectingOneItem("GET", {
-    callback,
-    applyDataEffect: data => {
-      const item = store.upsert(data);
-      const itemId = item[idKey];
-      return itemId;
-    },
-    compute: itemId => store.select(itemId),
-    ...options
-  });
-  const POST = (callback, options) => createActionAffectingOneItem("POST", {
-    callback,
-    applyDataEffect: data => {
-      const item = store.upsert(data);
-      const itemId = item[idKey];
-      return itemId;
-    },
-    compute: itemId => store.select(itemId),
-    ...options
-  });
-  const PUT = (callback, options) => createActionAffectingOneItem("PUT", {
-    callback,
-    ...options
-  });
-  const PATCH = (callback, options) => createActionAffectingOneItem("PATCH", {
-    callback,
-    ...options
-  });
-  const DELETE = (callback, options) => createActionAffectingOneItem("DELETE", {
-    callback,
-    ...options
-  });
-  const createActionAffectingManyItems = (httpVerb, {
-    callback,
-    ...options
-  }) => {
-    const applyDataEffect = httpVerb === "DELETE" ? idOrMutableIdArray => {
-      const idArray = store.drop(idOrMutableIdArray);
-      return idArray;
-    } : dataArray => {
-      const itemArray = store.upsert(dataArray);
-      const idArray = itemArray.map(item => item[idKey]);
-      return idArray;
-    };
-    const httpActionAffectingManyItems = createAction(callback, {
-      meta: {
-        httpVerb,
-        httpMany: true,
-        paramScope,
-        resourceInstance,
-        store
+  const GET = (callback, options) =>
+    createActionAffectingOneItem("GET", {
+      callback,
+      applyDataEffect: (data) => {
+        const item = store.upsert(data);
+        const itemId = item[idKey];
+        return itemId;
       },
-      name: "".concat(name, ".").concat(httpVerb, "_MANY"),
+      compute: (itemId) => store.select(itemId),
+      ...options,
+    });
+  const POST = (callback, options) =>
+    createActionAffectingOneItem("POST", {
+      callback,
+      applyDataEffect: (data) => {
+        const item = store.upsert(data);
+        const itemId = item[idKey];
+        return itemId;
+      },
+      compute: (itemId) => store.select(itemId),
+      ...options,
+    });
+  const PUT = (callback, options) =>
+    createActionAffectingOneItem("PUT", {
+      callback,
+      ...options,
+    });
+  const PATCH = (callback, options) =>
+    createActionAffectingOneItem("PATCH", {
+      callback,
+      ...options,
+    });
+  const DELETE = (callback, options) =>
+    createActionAffectingOneItem("DELETE", {
+      callback,
+      ...options,
+    });
+
+  const createActionAffectingManyItems = (
+    httpVerb,
+    { callback, ...options },
+  ) => {
+    const applyDataEffect =
+      httpVerb === "DELETE"
+        ? (idOrMutableIdArray) => {
+            const idArray = store.drop(idOrMutableIdArray);
+            return idArray;
+          }
+        : (dataArray) => {
+            const itemArray = store.upsert(dataArray);
+            const idArray = itemArray.map((item) => item[idKey]);
+            return idArray;
+          };
+
+    const httpActionAffectingManyItems = createAction(callback, {
+      meta: { httpVerb, httpMany: true, paramScope, resourceInstance, store },
+      name: `${name}.${httpVerb}_MANY`,
       data: [],
       dataEffect: applyDataEffect,
-      compute: idArray => store.selectAll(idArray),
-      completeSideEffect: actionCompleted => resourceLifecycleManager.onActionComplete(actionCompleted),
-      ...options
+      compute: (idArray) => store.selectAll(idArray),
+      completeSideEffect: (actionCompleted) =>
+        resourceLifecycleManager.onActionComplete(actionCompleted),
+      ...options,
     });
-    resourceLifecycleManager.registerAction(resourceInstance, httpActionAffectingManyItems);
+    resourceLifecycleManager.registerAction(
+      resourceInstance,
+      httpActionAffectingManyItems,
+    );
     return httpActionAffectingManyItems;
   };
-  const GET_MANY = (callback, options) => createActionAffectingManyItems("GET", {
-    callback,
-    ...options
-  });
-  const POST_MANY = (callback, options) => createActionAffectingManyItems("POST", {
-    callback,
-    ...options
-  });
-  const PUT_MANY = (callback, options) => createActionAffectingManyItems("PUT", {
-    callback,
-    ...options
-  });
-  const PATCH_MANY = (callback, options) => createActionAffectingManyItems("PATCH", {
-    callback,
-    ...options
-  });
-  const DELETE_MANY = (callback, options) => createActionAffectingManyItems("DELETE", {
-    callback,
-    ...options
-  });
+  const GET_MANY = (callback, options) =>
+    createActionAffectingManyItems("GET", { callback, ...options });
+  const POST_MANY = (callback, options) =>
+    createActionAffectingManyItems("POST", { callback, ...options });
+  const PUT_MANY = (callback, options) =>
+    createActionAffectingManyItems("PUT", { callback, ...options });
+  const PATCH_MANY = (callback, options) =>
+    createActionAffectingManyItems("PATCH", { callback, ...options });
+  const DELETE_MANY = (callback, options) =>
+    createActionAffectingManyItems("DELETE", { callback, ...options });
+
   return {
     GET,
     POST,
@@ -12924,93 +14542,110 @@ const createHttpHandlerForRootResource = (name, {
     POST_MANY,
     PUT_MANY,
     PATCH_MANY,
-    DELETE_MANY
+    DELETE_MANY,
   };
 };
-const createHttpHandlerForRelationshipToOneResource = (name, {
-  idKey,
-  store,
-  propertyName,
-  childIdKey,
-  childStore,
-  resourceInstance,
-  resourceLifecycleManager
-}) => {
-  const createActionAffectingOneItem = (httpVerb, {
-    callback,
-    ...options
-  }) => {
-    const applyDataEffect = httpVerb === "DELETE" ? itemId => {
-      const item = store.select(itemId);
-      const childItemId = item[propertyName][childIdKey];
-      store.upsert({
-        [idKey]: itemId,
-        [propertyName]: null
-      });
-      return childItemId;
-    } :
-    // callback must return object with the following format:
-    // {
-    //   [idKey]: 123,
-    //   [propertyName]: {
-    //     [childIdKey]: 456, ...childProps
-    //   }
-    // }
-    // the following could happen too if there is no relationship
-    // {
-    //   [idKey]: 123,
-    //   [propertyName]: null
-    // }
-    data => {
-      const item = store.upsert(data);
-      const childItem = item[propertyName];
-      const childItemId = childItem ? childItem[childIdKey] : undefined;
-      return childItemId;
-    };
+const createHttpHandlerForRelationshipToOneResource = (
+  name,
+  {
+    idKey,
+    store,
+    propertyName,
+    childIdKey,
+    childStore,
+    resourceInstance,
+    resourceLifecycleManager,
+  },
+) => {
+  const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
+    const applyDataEffect =
+      httpVerb === "DELETE"
+        ? (itemId) => {
+            const item = store.select(itemId);
+            const childItemId = item[propertyName][childIdKey];
+            store.upsert({
+              [idKey]: itemId,
+              [propertyName]: null,
+            });
+            return childItemId;
+          }
+        : // callback must return object with the following format:
+          // {
+          //   [idKey]: 123,
+          //   [propertyName]: {
+          //     [childIdKey]: 456, ...childProps
+          //   }
+          // }
+          // the following could happen too if there is no relationship
+          // {
+          //   [idKey]: 123,
+          //   [propertyName]: null
+          // }
+          (data) => {
+            const item = store.upsert(data);
+            const childItem = item[propertyName];
+            const childItemId = childItem ? childItem[childIdKey] : undefined;
+            return childItemId;
+          };
+
     const callerInfo = getCallerInfo(null, 2);
     // Provide more fallback options for better debugging
-    const locationInfo = callerInfo.file && callerInfo.line && callerInfo.column ? "".concat(callerInfo.file, ":").concat(callerInfo.line, ":").concat(callerInfo.column) : callerInfo.raw || "unknown location";
-    const originalActionName = "".concat(name, ".").concat(httpVerb);
+    const locationInfo =
+      callerInfo.file && callerInfo.line && callerInfo.column
+        ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
+        : callerInfo.raw || "unknown location";
+    const originalActionName = `${name}.${httpVerb}`;
+
     const httpActionAffectingOneItem = createAction(callback, {
-      meta: {
-        httpVerb,
-        httpMany: false,
-        resourceInstance,
-        store
-      },
-      name: "".concat(name, ".").concat(httpVerb),
+      meta: { httpVerb, httpMany: false, resourceInstance, store },
+      name: `${name}.${httpVerb}`,
       dataEffect: (data, action) => {
         const actionLabel = action.name;
+
         if (httpVerb === "DELETE") {
           if (!isProps(data) && !primitiveCanBeId(data)) {
-            throw new TypeError("".concat(actionLabel, " must return an object (that will be used to drop \"").concat(name, "\" resource), received ").concat(data, ".\n           ").concat(originalActionName, " source location: ").concat(locationInfo));
+            throw new TypeError(
+              `${actionLabel} must return an object (that will be used to drop "${name}" resource), received ${data}.
+           ${originalActionName} source location: ${locationInfo}`,
+            );
           }
           return applyDataEffect(data);
         }
         if (!isProps(data)) {
-          throw new TypeError("".concat(actionLabel, " must return an object (that will be used to upsert \"").concat(name, "\" resource), received ").concat(data, ".\n           ").concat(originalActionName, " source location: ").concat(locationInfo));
+          throw new TypeError(
+            `${actionLabel} must return an object (that will be used to upsert "${name}" resource), received ${data}.
+           ${originalActionName} source location: ${locationInfo}`,
+          );
         }
         return applyDataEffect(data);
       },
-      compute: childItemId => childStore.select(childItemId),
-      completeSideEffect: actionCompleted => resourceLifecycleManager.onActionComplete(actionCompleted),
-      ...options
+      compute: (childItemId) => childStore.select(childItemId),
+      completeSideEffect: (actionCompleted) =>
+        resourceLifecycleManager.onActionComplete(actionCompleted),
+      ...options,
     });
-    resourceLifecycleManager.registerAction(resourceInstance, httpActionAffectingOneItem);
+    resourceLifecycleManager.registerAction(
+      resourceInstance,
+      httpActionAffectingOneItem,
+    );
     return httpActionAffectingOneItem;
   };
-  const GET = (callback, options) => createActionAffectingOneItem("GET", {
-    callback,
-    ...options
-  });
-  const PUT = (callback, options) => createActionAffectingOneItem("PUT", {
-    callback,
-    ...options
-  });
-  const DELETE = (callback, options) => createActionAffectingOneItem("DELETE", {
-    callback,
-    ...options
-  });
+
+  const GET = (callback, options) =>
+    createActionAffectingOneItem("GET", {
+      callback,
+      ...options,
+    });
+  const PUT = (callback, options) =>
+    createActionAffectingOneItem("PUT", {
+      callback,
+      ...options,
+    });
+  const DELETE = (callback, options) =>
+    createActionAffectingOneItem("DELETE", {
+      callback,
+      ...options,
+    });
 
   // il n'y a pas de many puisque on cible une seule resource
   // genre table.owner -> c'est un seul owner qu'on peut
@@ -13018,222 +14653,259 @@ const createHttpHandlerForRelationshipToOneResource = (name, {
   // PUT -> mettre a jour l'owner de la table
   // DELETE -> supprimer l'owner de la table
 
-  return {
-    GET,
-    PUT,
-    DELETE
-  };
+  return { GET, PUT, DELETE };
 };
-const createHttpHandlerRelationshipToManyResource = (name, {
-  idKey,
-  store,
-  propertyName,
-  childIdKey,
-  childStore,
-  resourceInstance,
-  resourceLifecycleManager
-} = {}) => {
+const createHttpHandlerRelationshipToManyResource = (
+  name,
+  {
+    idKey,
+    store,
+    propertyName,
+    childIdKey,
+    childStore,
+    resourceInstance,
+    resourceLifecycleManager,
+  } = {},
+) => {
   // idéalement s'il y a un GET sur le store originel on voudrait ptet le reload
   // parce que le store originel peut retourner cette liste ou etre impacté
   // pour l'instant on ignore
 
   // one item AND many child items
-  const createActionAffectingOneItem = (httpVerb, {
-    callback,
-    ...options
-  }) => {
-    const applyDataEffect = httpVerb === "DELETE" ? ([itemId, childItemId]) => {
-      const item = store.select(itemId);
-      const childItemArray = item[propertyName];
-      const childItemArrayWithoutThisOne = [];
-      let found = false;
-      for (const childItemCandidate of childItemArray) {
-        const childItemCandidateId = childItemCandidate[childIdKey];
-        if (childItemCandidateId === childItemId) {
-          found = true;
-        } else {
-          childItemArrayWithoutThisOne.push(childItemCandidate);
-        }
-      }
-      if (found) {
-        store.upsert({
-          [idKey]: itemId,
-          [propertyName]: childItemArrayWithoutThisOne
-        });
-      }
-      return childItemId;
-    } : childData => {
-      const childItem = childStore.upsert(childData); // if the child item was used it will reload thanks to signals
-      const childItemId = childItem[childIdKey];
-      return childItemId;
-    };
+  const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
+    const applyDataEffect =
+      httpVerb === "DELETE"
+        ? ([itemId, childItemId]) => {
+            const item = store.select(itemId);
+            const childItemArray = item[propertyName];
+            const childItemArrayWithoutThisOne = [];
+            let found = false;
+            for (const childItemCandidate of childItemArray) {
+              const childItemCandidateId = childItemCandidate[childIdKey];
+              if (childItemCandidateId === childItemId) {
+                found = true;
+              } else {
+                childItemArrayWithoutThisOne.push(childItemCandidate);
+              }
+            }
+            if (found) {
+              store.upsert({
+                [idKey]: itemId,
+                [propertyName]: childItemArrayWithoutThisOne,
+              });
+            }
+            return childItemId;
+          }
+        : (childData) => {
+            const childItem = childStore.upsert(childData); // if the child item was used it will reload thanks to signals
+            const childItemId = childItem[childIdKey];
+            return childItemId;
+          };
+
     const callerInfo = getCallerInfo(null, 2);
     // Provide more fallback options for better debugging
-    const locationInfo = callerInfo.file && callerInfo.line && callerInfo.column ? "".concat(callerInfo.file, ":").concat(callerInfo.line, ":").concat(callerInfo.column) : callerInfo.raw || "unknown location";
-    const originalActionName = "".concat(name, ".").concat(httpVerb);
+    const locationInfo =
+      callerInfo.file && callerInfo.line && callerInfo.column
+        ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
+        : callerInfo.raw || "unknown location";
+    const originalActionName = `${name}.${httpVerb}`;
+
     const httpActionAffectingOneItem = createAction(callback, {
-      meta: {
-        httpVerb,
-        httpMany: false,
-        resourceInstance,
-        store: childStore
-      },
-      name: "".concat(name, ".").concat(httpVerb),
+      meta: { httpVerb, httpMany: false, resourceInstance, store: childStore },
+      name: `${name}.${httpVerb}`,
       dataEffect: (data, action) => {
         const actionLabel = action.name;
+
         if (httpVerb === "DELETE") {
           // For DELETE in many relationship, we expect [itemId, childItemId] array
           if (!Array.isArray(data) || data.length !== 2) {
-            throw new TypeError("".concat(actionLabel, " must return an array [itemId, childItemId] (that will be used to remove relationship), received ").concat(data, ".\n           ").concat(originalActionName, " source location: ").concat(locationInfo));
+            throw new TypeError(
+              `${actionLabel} must return an array [itemId, childItemId] (that will be used to remove relationship), received ${data}.
+           ${originalActionName} source location: ${locationInfo}`,
+            );
           }
           return applyDataEffect(data);
         }
         if (!isProps(data)) {
-          throw new TypeError("".concat(actionLabel, " must return an object (that will be used to upsert child item), received ").concat(data, ".\n           ").concat(originalActionName, " source location: ").concat(locationInfo));
+          throw new TypeError(
+            `${actionLabel} must return an object (that will be used to upsert child item), received ${data}.
+           ${originalActionName} source location: ${locationInfo}`,
+          );
         }
         return applyDataEffect(data);
       },
-      compute: childItemId => childStore.select(childItemId),
-      completeSideEffect: actionCompleted => resourceLifecycleManager.onActionComplete(actionCompleted),
-      ...options
+      compute: (childItemId) => childStore.select(childItemId),
+      completeSideEffect: (actionCompleted) =>
+        resourceLifecycleManager.onActionComplete(actionCompleted),
+      ...options,
     });
-    resourceLifecycleManager.registerAction(resourceInstance, httpActionAffectingOneItem);
+    resourceLifecycleManager.registerAction(
+      resourceInstance,
+      httpActionAffectingOneItem,
+    );
     return httpActionAffectingOneItem;
   };
-  const GET = (callback, options) => createActionAffectingOneItem("GET", {
-    callback,
-    ...options
-  });
+  const GET = (callback, options) =>
+    createActionAffectingOneItem("GET", {
+      callback,
+      ...options,
+    });
   // le souci que je vois ici c'est que je n'ai pas la moindre idée d'ou
   // inserer le childItem (ni meme s'il doit etre visible)
   // je pense que la bonne chose a faire est de reload
   // l'objet user.tables s'il en existe un
   // TODO: find any GET action on "user" and reload it
-  const POST = (callback, options) => createActionAffectingOneItem("POST", {
-    callback,
-    ...options
-  });
-  const PUT = (callback, options) => createActionAffectingOneItem("PUT", {
-    callback,
-    ...options
-  });
-  const PATCH = (callback, options) => createActionAffectingOneItem("PATCH", {
-    callback,
-    ...options
-  });
-  const DELETE = (callback, options) => createActionAffectingOneItem("DELETE", {
-    callback,
-    ...options
-  });
-  const createActionAffectingManyItems = (httpVerb, {
-    callback,
-    ...options
-  }) => {
-    const applyDataEffect = httpVerb === "GET" ? data => {
-      // callback must return object with the following format:
-      // {
-      //   [idKey]: 123,
-      //   [propertyName]: [
-      //      { [childIdKey]: 456, ...childProps },
-      //      { [childIdKey]: 789, ...childProps },
-      //      ...
-      //   ]
-      // }
-      // the array can be empty
-      const item = store.upsert(data);
-      const childItemArray = item[propertyName];
-      const childItemIdArray = childItemArray.map(childItem => childItem[childIdKey]);
-      return childItemIdArray;
-    } : httpVerb === "DELETE" ? ([itemIdOrMutableId, childItemIdOrMutableIdArray]) => {
-      const item = store.select(itemIdOrMutableId);
-      const childItemArray = item[propertyName];
-      const deletedChildItemIdArray = [];
-      const childItemArrayWithoutThoose = [];
-      let someFound = false;
-      const deletedChildItemArray = childStore.select(childItemIdOrMutableIdArray);
-      for (const childItemCandidate of childItemArray) {
-        if (deletedChildItemArray.includes(childItemCandidate)) {
-          someFound = true;
-          deletedChildItemIdArray.push(childItemCandidate[childIdKey]);
-        } else {
-          childItemArrayWithoutThoose.push(childItemCandidate);
-        }
-      }
-      if (someFound) {
-        store.upsert({
-          [idKey]: item[idKey],
-          [propertyName]: childItemArrayWithoutThoose
-        });
-      }
-      return deletedChildItemIdArray;
-    } : childDataArray => {
-      // hum ici aussi on voudra reload "user" pour POST
-      // les autres les signals se charge de reload si visible
-      const childItemArray = childStore.upsert(childDataArray);
-      const childItemIdArray = childItemArray.map(childItem => childItem[childIdKey]);
-      return childItemIdArray;
-    };
+  const POST = (callback, options) =>
+    createActionAffectingOneItem("POST", {
+      callback,
+      ...options,
+    });
+  const PUT = (callback, options) =>
+    createActionAffectingOneItem("PUT", {
+      callback,
+      ...options,
+    });
+  const PATCH = (callback, options) =>
+    createActionAffectingOneItem("PATCH", {
+      callback,
+      ...options,
+    });
+  const DELETE = (callback, options) =>
+    createActionAffectingOneItem("DELETE", {
+      callback,
+      ...options,
+    });
+
+  const createActionAffectingManyItems = (
+    httpVerb,
+    { callback, ...options },
+  ) => {
+    const applyDataEffect =
+      httpVerb === "GET"
+        ? (data) => {
+            // callback must return object with the following format:
+            // {
+            //   [idKey]: 123,
+            //   [propertyName]: [
+            //      { [childIdKey]: 456, ...childProps },
+            //      { [childIdKey]: 789, ...childProps },
+            //      ...
+            //   ]
+            // }
+            // the array can be empty
+            const item = store.upsert(data);
+            const childItemArray = item[propertyName];
+            const childItemIdArray = childItemArray.map(
+              (childItem) => childItem[childIdKey],
+            );
+            return childItemIdArray;
+          }
+        : httpVerb === "DELETE"
+          ? ([itemIdOrMutableId, childItemIdOrMutableIdArray]) => {
+              const item = store.select(itemIdOrMutableId);
+              const childItemArray = item[propertyName];
+              const deletedChildItemIdArray = [];
+              const childItemArrayWithoutThoose = [];
+              let someFound = false;
+              const deletedChildItemArray = childStore.select(
+                childItemIdOrMutableIdArray,
+              );
+              for (const childItemCandidate of childItemArray) {
+                if (deletedChildItemArray.includes(childItemCandidate)) {
+                  someFound = true;
+                  deletedChildItemIdArray.push(childItemCandidate[childIdKey]);
+                } else {
+                  childItemArrayWithoutThoose.push(childItemCandidate);
+                }
+              }
+              if (someFound) {
+                store.upsert({
+                  [idKey]: item[idKey],
+                  [propertyName]: childItemArrayWithoutThoose,
+                });
+              }
+              return deletedChildItemIdArray;
+            }
+          : (childDataArray) => {
+              // hum ici aussi on voudra reload "user" pour POST
+              // les autres les signals se charge de reload si visible
+              const childItemArray = childStore.upsert(childDataArray);
+              const childItemIdArray = childItemArray.map(
+                (childItem) => childItem[childIdKey],
+              );
+              return childItemIdArray;
+            };
+
     const callerInfo = getCallerInfo(null, 2);
     // Provide more fallback options for better debugging
-    const locationInfo = callerInfo.file && callerInfo.line && callerInfo.column ? "".concat(callerInfo.file, ":").concat(callerInfo.line, ":").concat(callerInfo.column) : callerInfo.raw || "unknown location";
-    const originalActionName = "".concat(name, ".").concat(httpVerb, "[many]");
+    const locationInfo =
+      callerInfo.file && callerInfo.line && callerInfo.column
+        ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
+        : callerInfo.raw || "unknown location";
+    const originalActionName = `${name}.${httpVerb}[many]`;
+
     const httpActionAffectingManyItem = createAction(callback, {
-      meta: {
-        httpVerb,
-        httpMany: true,
-        resourceInstance,
-        store: childStore
-      },
-      name: "".concat(name, ".").concat(httpVerb, "[many]"),
+      meta: { httpVerb, httpMany: true, resourceInstance, store: childStore },
+      name: `${name}.${httpVerb}[many]`,
       data: [],
       dataEffect: (data, action) => {
         const actionLabel = action.name;
+
         if (httpVerb === "GET") {
           if (!isProps(data)) {
-            throw new TypeError("".concat(actionLabel, " must return an object (that will be used to upsert \"").concat(name, "\" resource with many relationships), received ").concat(data, ".\n           ").concat(originalActionName, " source location: ").concat(locationInfo));
+            throw new TypeError(
+              `${actionLabel} must return an object (that will be used to upsert "${name}" resource with many relationships), received ${data}.
+           ${originalActionName} source location: ${locationInfo}`,
+            );
           }
           return applyDataEffect(data);
         }
         if (httpVerb === "DELETE") {
           // For DELETE_MANY in many relationship, we expect [itemId, childItemIdArray] array
-          if (!Array.isArray(data) || data.length !== 2 || !Array.isArray(data[1])) {
-            throw new TypeError("".concat(actionLabel, " must return an array [itemId, childItemIdArray] (that will be used to remove relationships), received ").concat(data, ".\n           ").concat(originalActionName, " source location: ").concat(locationInfo));
+          if (
+            !Array.isArray(data) ||
+            data.length !== 2 ||
+            !Array.isArray(data[1])
+          ) {
+            throw new TypeError(
+              `${actionLabel} must return an array [itemId, childItemIdArray] (that will be used to remove relationships), received ${data}.
+           ${originalActionName} source location: ${locationInfo}`,
+            );
           }
           return applyDataEffect(data);
         }
         // For POST, PUT, PATCH - expect array of objects
         if (!Array.isArray(data)) {
-          throw new TypeError("".concat(actionLabel, " must return an array of objects (that will be used to upsert child items), received ").concat(data, ".\n           ").concat(originalActionName, " source location: ").concat(locationInfo));
+          throw new TypeError(
+            `${actionLabel} must return an array of objects (that will be used to upsert child items), received ${data}.
+           ${originalActionName} source location: ${locationInfo}`,
+          );
         }
         return applyDataEffect(data);
       },
-      compute: childItemIdArray => childStore.selectAll(childItemIdArray),
-      completeSideEffect: actionCompleted => resourceLifecycleManager.onActionComplete(actionCompleted),
-      ...options
+      compute: (childItemIdArray) => childStore.selectAll(childItemIdArray),
+      completeSideEffect: (actionCompleted) =>
+        resourceLifecycleManager.onActionComplete(actionCompleted),
+      ...options,
     });
-    resourceLifecycleManager.registerAction(resourceInstance, httpActionAffectingManyItem);
+    resourceLifecycleManager.registerAction(
+      resourceInstance,
+      httpActionAffectingManyItem,
+    );
     return httpActionAffectingManyItem;
   };
-  const GET_MANY = (callback, options) => createActionAffectingManyItems("GET", {
-    callback,
-    ...options
-  });
-  const POST_MANY = (callback, options) => createActionAffectingManyItems("POST", {
-    callback,
-    ...options
-  });
-  const PUT_MANY = (callback, options) => createActionAffectingManyItems("PUT", {
-    callback,
-    ...options
-  });
-  const PATCH_MANY = (callback, options) => createActionAffectingManyItems("PATCH", {
-    callback,
-    ...options
-  });
-  const DELETE_MANY = (callback, options) => createActionAffectingManyItems("DELETE", {
-    callback,
-    ...options
-  });
+
+  const GET_MANY = (callback, options) =>
+    createActionAffectingManyItems("GET", { callback, ...options });
+  const POST_MANY = (callback, options) =>
+    createActionAffectingManyItems("POST", { callback, ...options });
+  const PUT_MANY = (callback, options) =>
+    createActionAffectingManyItems("PUT", { callback, ...options });
+  const PATCH_MANY = (callback, options) =>
+    createActionAffectingManyItems("PATCH", { callback, ...options });
+  const DELETE_MANY = (callback, options) =>
+    createActionAffectingManyItems("DELETE", { callback, ...options });
+
   return {
     GET,
     POST,
@@ -13244,16 +14916,14 @@ const createHttpHandlerRelationshipToManyResource = (name, {
     POST_MANY,
     PUT_MANY,
     PATCH_MANY,
-    DELETE_MANY
+    DELETE_MANY,
   };
 };
-const resource = (name, {
-  idKey,
-  mutableIdKeys = [],
-  rerunOn,
-  httpHandler,
-  ...rest
-} = {}) => {
+
+const resource = (
+  name,
+  { idKey, mutableIdKeys = [], rerunOn, httpHandler, ...rest } = {},
+) => {
   if (idKey === undefined) {
     idKey = mutableIdKeys.length === 0 ? "id" : mutableIdKeys[0];
   }
@@ -13263,69 +14933,73 @@ const resource = (name, {
     idKey,
     httpActions: {},
     addItemSetup: undefined,
-    httpHandler
+    httpHandler,
   };
   if (!httpHandler) {
     const setupCallbackSet = new Set();
-    const addItemSetup = callback => {
+    const addItemSetup = (callback) => {
       setupCallbackSet.add(callback);
     };
     resourceInstance.addItemSetup = addItemSetup;
+
     const itemPrototype = {
       [Symbol.toStringTag]: name,
       toString() {
-        let string = "".concat(name);
+        let string = `${name}`;
         if (mutableIdKeys.length) {
           for (const mutableIdKey of mutableIdKeys) {
             const mutableId = this[mutableIdKey];
             if (mutableId !== undefined) {
-              string += "[".concat(mutableIdKey, "=").concat(mutableId, "]");
+              string += `[${mutableIdKey}=${mutableId}]`;
               return string;
             }
           }
         }
         const id = this[idKey];
         if (id) {
-          string += "[".concat(idKey, "=").concat(id, "]");
+          string += `[${idKey}=${id}]`;
         }
         return string;
-      }
+      },
     };
+
     const store = arraySignalStore([], idKey, {
       mutableIdKeys,
-      name: "".concat(name, " store"),
-      createItem: props => {
+      name: `${name} store`,
+      createItem: (props) => {
         const item = Object.create(itemPrototype);
         Object.assign(item, props);
         Object.defineProperty(item, SYMBOL_IDENTITY, {
           value: item[idKey],
           writable: false,
           enumerable: false,
-          configurable: false
+          configurable: false,
         });
         for (const setupCallback of setupCallbackSet) {
           setupCallback(item);
         }
         return item;
-      }
+      },
     });
     const useArray = () => {
       return store.arraySignal.value;
     };
-    const useById = id => {
+    const useById = (id) => {
       return store.select(idKey, id);
     };
+
     Object.assign(resourceInstance, {
       useArray,
       useById,
-      store
+      store,
     });
+
     httpHandler = createHttpHandlerForRootResource(name, {
       idKey,
       store,
       rerunOn,
       resourceInstance,
-      mutableIdKeys
+      mutableIdKeys,
     });
   }
   resourceInstance.httpHandler = httpHandler;
@@ -13342,12 +15016,13 @@ const resource = (name, {
     const action = method(rest[key]);
     resourceInstance[key] = action;
   }
+
   resourceInstance.one = (propertyName, childResource, options) => {
     const childIdKey = childResource.idKey;
-    const childName = "".concat(name, ".").concat(propertyName);
-    resourceInstance.addItemSetup(item => {
+    const childName = `${name}.${propertyName}`;
+    resourceInstance.addItemSetup((item) => {
       const childItemIdSignal = signal();
-      const updateChildItemId = value => {
+      const updateChildItemId = (value) => {
         const currentChildItemId = childItemIdSignal.peek();
         if (isProps(value)) {
           const childItem = childResource.store.upsert(value);
@@ -13359,9 +15034,7 @@ const resource = (name, {
           return true;
         }
         if (primitiveCanBeId(value)) {
-          const childItemProps = {
-            [childIdKey]: value
-          };
+          const childItemProps = { [childIdKey]: value };
           const childItem = childResource.store.upsert(childItemProps);
           const childItemId = childItem[childIdKey];
           if (currentChildItemId === childItemId) {
@@ -13377,6 +15050,7 @@ const resource = (name, {
         return true;
       };
       updateChildItemId(item[propertyName]);
+
       const childItemSignal = computed(() => {
         const childItemId = childItemIdSignal.value;
         const childItem = childResource.store.select(childItemId);
@@ -13385,55 +15059,61 @@ const resource = (name, {
       const childItemFacadeSignal = computed(() => {
         const childItem = childItemSignal.value;
         if (childItem) {
-          const childItemCopy = Object.create(Object.getPrototypeOf(childItem), Object.getOwnPropertyDescriptors(childItem));
+          const childItemCopy = Object.create(
+            Object.getPrototypeOf(childItem),
+            Object.getOwnPropertyDescriptors(childItem),
+          );
           Object.defineProperty(childItemCopy, SYMBOL_OBJECT_SIGNAL, {
             value: childItemSignal,
             writable: false,
             enumerable: false,
-            configurable: false
+            configurable: false,
           });
           return childItemCopy;
         }
         const nullItem = {
           [SYMBOL_OBJECT_SIGNAL]: childItemSignal,
-          valueOf: () => null
+          valueOf: () => null,
         };
         return nullItem;
       });
+
       Object.defineProperty(item, propertyName, {
         get: () => {
           const childItemFacade = childItemFacadeSignal.value;
           return childItemFacade;
         },
-        set: value => {
+        set: (value) => {
           if (!updateChildItemId(value)) {
             return;
           }
-        }
+        },
       });
     });
-    const httpHandlerForRelationshipToOneChild = createHttpHandlerForRelationshipToOneResource(childName, {
-      idKey,
-      store: resourceInstance.store,
-      propertyName,
-      childIdKey,
-      childStore: childResource.store,
-      resourceInstance,
-      resourceLifecycleManager
-    });
+    const httpHandlerForRelationshipToOneChild =
+      createHttpHandlerForRelationshipToOneResource(childName, {
+        idKey,
+        store: resourceInstance.store,
+        propertyName,
+        childIdKey,
+        childStore: childResource.store,
+        resourceInstance,
+        resourceLifecycleManager,
+      });
     return resource(childName, {
       idKey: childIdKey,
       httpHandler: httpHandlerForRelationshipToOneChild,
-      ...options
+      ...options,
     });
   };
   resourceInstance.many = (propertyName, childResource, options) => {
     const childIdKey = childResource.idKey;
-    const childName = "".concat(name, ".").concat(propertyName);
-    resourceInstance.addItemSetup(item => {
+    const childName = `${name}.${propertyName}`;
+    resourceInstance.addItemSetup((item) => {
       const childItemIdArraySignal = signal([]);
-      const updateChildItemIdArray = valueArray => {
+      const updateChildItemIdArray = (valueArray) => {
         const currentIdArray = childItemIdArraySignal.peek();
+
         if (!Array.isArray(valueArray)) {
           if (currentIdArray.length === 0) {
             return;
@@ -13441,6 +15121,7 @@ const resource = (name, {
           childItemIdArraySignal.value = [];
           return;
         }
+
         let i = 0;
         const idArray = [];
         let modified = false;
@@ -13458,9 +15139,7 @@ const resource = (name, {
             continue;
           }
           if (primitiveCanBeId(value)) {
-            const childItemProps = {
-              [childIdKey]: value
-            };
+            const childItemProps = { [childIdKey]: value };
             const childItem = childResource.store.upsert(childItemProps);
             const childItemId = childItem[childIdKey];
             if (currentIdAtIndex !== childItemId) {
@@ -13475,6 +15154,7 @@ const resource = (name, {
         }
       };
       updateChildItemIdArray(item[propertyName]);
+
       const childItemArraySignal = computed(() => {
         const childItemIdArray = childItemIdArraySignal.value;
         const childItemArray = childResource.store.selectAll(childItemIdArray);
@@ -13482,33 +15162,35 @@ const resource = (name, {
           value: childItemArraySignal,
           writable: false,
           enumerable: false,
-          configurable: false
+          configurable: false,
         });
         return childItemArray;
       });
+
       Object.defineProperty(item, propertyName, {
         get: () => {
           const childItemArray = childItemArraySignal.value;
           return childItemArray;
         },
-        set: value => {
+        set: (value) => {
           updateChildItemIdArray(value);
-        }
+        },
       });
     });
-    const httpHandleForChildManyResource = createHttpHandlerRelationshipToManyResource(childName, {
-      idKey,
-      store: resourceInstance.store,
-      propertyName,
-      childIdKey,
-      childStore: childResource.store,
-      resourceInstance,
-      resourceLifecycleManager
-    });
+    const httpHandleForChildManyResource =
+      createHttpHandlerRelationshipToManyResource(childName, {
+        idKey,
+        store: resourceInstance.store,
+        propertyName,
+        childIdKey,
+        childStore: childResource.store,
+        resourceInstance,
+        resourceLifecycleManager,
+      });
     return resource(childName, {
       idKey: childIdKey,
       httpHandler: httpHandleForChildManyResource,
-      ...options
+      ...options,
     });
   };
 
@@ -13546,12 +15228,10 @@ const resource = (name, {
   const withParams = (params, options = {}) => {
     // Require parameters
     if (!params || Object.keys(params).length === 0) {
-      throw new Error("resource(".concat(name, ").withParams() requires parameters"));
+      throw new Error(`resource(${name}).withParams() requires parameters`);
     }
-    const {
-      dependencies = [],
-      rerunOn: customRerunOn
-    } = options;
+
+    const { dependencies = [], rerunOn: customRerunOn } = options;
 
     // Generate unique param scope for these parameters
     const paramScopeObject = getParamScope(params);
@@ -13567,7 +15247,7 @@ const resource = (name, {
       paramScope: paramScopeObject,
       dependencies,
       resourceInstance,
-      mutableIdKeys
+      mutableIdKeys,
     });
 
     // Create parameterized resource
@@ -13582,9 +15262,8 @@ const resource = (name, {
       httpHandler: parameterizedHttpHandler,
       one: resourceInstance.one,
       many: resourceInstance.many,
-      dependencies,
-      // Store dependencies for debugging/inspection
-      httpActions: resourceInstance.httpActions
+      dependencies, // Store dependencies for debugging/inspection
+      httpActions: resourceInstance.httpActions,
     };
 
     // Create HTTP actions from the parameterized handler and bind parameters
@@ -13600,39 +15279,45 @@ const resource = (name, {
     // Add withParams method to the parameterized resource for chaining
     parameterizedResource.withParams = (newParams, newOptions = {}) => {
       if (!newParams || Object.keys(newParams).length === 0) {
-        throw new Error("resource(".concat(name, ").withParams() requires parameters"));
+        throw new Error(`resource(${name}).withParams() requires parameters`);
       }
       // Merge current params with new ones for chaining
-      const mergedParams = {
-        ...params,
-        ...newParams
-      };
+      const mergedParams = { ...params, ...newParams };
       // Merge options, with new options taking precedence
       const mergedOptions = {
         dependencies,
         rerunOn: finalRerunOn,
-        ...newOptions
+        ...newOptions,
       };
       return withParams(mergedParams, mergedOptions);
     };
+
     return parameterizedResource;
   };
+
   resourceInstance.withParams = withParams;
+
   return resourceInstance;
 };
-const isProps = value => {
+
+const isProps = (value) => {
   return value !== null && typeof value === "object";
 };
 
 const valueInLocalStorage = (key, options = {}) => {
-  const {
-    type = "string"
-  } = options;
+  const { type = "string" } = options;
   const converter = typeConverters[type];
   if (converter === undefined) {
-    console.warn("Invalid type \"".concat(type, "\" for \"").concat(key, "\" in local storage, expected one of ").concat(Object.keys(typeConverters).join(", ")));
+    console.warn(
+      `Invalid type "${type}" for "${key}" in local storage, expected one of ${Object.keys(
+        typeConverters,
+      ).join(", ")}`,
+    );
   }
-  const getValidityMessage = (valueToCheck, valueInLocalStorage = valueToCheck) => {
+  const getValidityMessage = (
+    valueToCheck,
+    valueInLocalStorage = valueToCheck,
+  ) => {
     if (!converter) {
       return "";
     }
@@ -13641,13 +15326,14 @@ const valueInLocalStorage = (key, options = {}) => {
     }
     const checkValidityResult = converter.checkValidity(valueToCheck);
     if (checkValidityResult === false) {
-      return "".concat(valueInLocalStorage);
+      return `${valueInLocalStorage}`;
     }
     if (!checkValidityResult) {
       return "";
     }
-    return "".concat(checkValidityResult, ", got \"").concat(valueInLocalStorage, "\"");
+    return `${checkValidityResult}, got "${valueInLocalStorage}"`;
   };
+
   const get = () => {
     let valueInLocalStorage = window.localStorage.getItem(key);
     if (valueInLocalStorage === null) {
@@ -13655,28 +15341,37 @@ const valueInLocalStorage = (key, options = {}) => {
     }
     if (converter && converter.decode) {
       const valueDecoded = converter.decode(valueInLocalStorage);
-      const validityMessage = getValidityMessage(valueDecoded, valueInLocalStorage);
+      const validityMessage = getValidityMessage(
+        valueDecoded,
+        valueInLocalStorage,
+      );
       if (validityMessage) {
-        console.warn("The value found in localStorage \"".concat(key, "\" is invalid: ").concat(validityMessage));
+        console.warn(
+          `The value found in localStorage "${key}" is invalid: ${validityMessage}`,
+        );
         return undefined;
       }
       return valueDecoded;
     }
     const validityMessage = getValidityMessage(valueInLocalStorage);
     if (validityMessage) {
-      console.warn("The value found in localStorage \"".concat(key, "\" is invalid: ").concat(validityMessage));
+      console.warn(
+        `The value found in localStorage "${key}" is invalid: ${validityMessage}`,
+      );
       return undefined;
     }
     return valueInLocalStorage;
   };
-  const set = value => {
+  const set = (value) => {
     if (value === undefined) {
       window.localStorage.removeItem(key);
       return;
     }
     const validityMessage = getValidityMessage(value);
     if (validityMessage) {
-      console.warn("The value to set in localStorage \"".concat(key, "\" is invalid: ").concat(validityMessage));
+      console.warn(
+        `The value to set in localStorage "${key}" is invalid: ${validityMessage}`,
+      );
     }
     if (converter && converter.encode) {
       const valueEncoded = converter.encode(value);
@@ -13688,120 +15383,121 @@ const valueInLocalStorage = (key, options = {}) => {
   const remove = () => {
     window.localStorage.removeItem(key);
   };
+
   return [get, set, remove];
 };
+
 const typeConverters = {
   boolean: {
-    checkValidity: value => {
+    checkValidity: (value) => {
       if (typeof value !== "boolean") {
-        return "must be a boolean";
+        return `must be a boolean`;
       }
       return "";
     },
-    decode: value => {
+    decode: (value) => {
       return value === "true";
-    }
+    },
   },
   string: {
-    checkValidity: value => {
+    checkValidity: (value) => {
       if (typeof value !== "string") {
-        return "must be a string";
+        return `must be a string`;
       }
       return "";
-    }
+    },
   },
   number: {
-    decode: value => {
+    decode: (value) => {
       const valueParsed = parseFloat(value);
       return valueParsed;
     },
-    checkValidity: value => {
+    checkValidity: (value) => {
       if (typeof value !== "number") {
-        return "must be a number";
+        return `must be a number`;
       }
       if (!Number.isFinite(value)) {
-        return "must be finite";
+        return `must be finite`;
       }
       return "";
-    }
+    },
   },
   positive_number: {
-    decode: value => {
+    decode: (value) => {
       const valueParsed = parseFloat(value);
       return valueParsed;
     },
-    checkValidity: value => {
+    checkValidity: (value) => {
       if (typeof value !== "number") {
-        return "must be a number";
+        return `must be a number`;
       }
       if (value < 0) {
-        return "must be positive";
+        return `must be positive`;
       }
       return "";
-    }
+    },
   },
   positive_integer: {
-    decode: value => {
+    decode: (value) => {
       const valueParsed = parseInt(value, 10);
       return valueParsed;
     },
-    checkValidity: value => {
+    checkValidity: (value) => {
       if (typeof value !== "number") {
-        return "must be a number";
+        return `must be a number`;
       }
       if (!Number.isInteger(value)) {
-        return "must be an integer";
+        return `must be an integer`;
       }
       if (value < 0) {
-        return "must be positive";
+        return `must be positive`;
       }
       return "";
-    }
+    },
   },
   percentage: {
-    checkValidity: value => {
+    checkValidity: (value) => {
       if (typeof value !== "string") {
-        return "must be a percentage";
+        return `must be a percentage`;
       }
       if (!value.endsWith("%")) {
-        return "must end with %";
+        return `must end with %`;
       }
       const percentageString = value.slice(0, -1);
       const percentageFloat = parseFloat(percentageString);
       if (typeof percentageFloat !== "number") {
-        return "must be a percentage";
+        return `must be a percentage`;
       }
       if (percentageFloat < 0 || percentageFloat > 100) {
-        return "must be between 0 and 100";
+        return `must be between 0 and 100`;
       }
       return "";
-    }
+    },
   },
   object: {
-    decode: value => {
+    decode: (value) => {
       const valueParsed = JSON.parse(value);
       return valueParsed;
     },
-    encode: value => {
+    encode: (value) => {
       const valueStringified = JSON.stringify(value);
       return valueStringified;
     },
-    checkValidity: value => {
+    checkValidity: (value) => {
       if (value === null || typeof value !== "object") {
-        return "must be an object";
+        return `must be an object`;
       }
       return "";
-    }
-  }
+    },
+  },
 };
 
 let baseUrl = window.location.origin;
-const setBaseUrl = value => {
+
+const setBaseUrl = (value) => {
   baseUrl = new URL(value, window.location).href;
 };
-const NO_PARAMS = {
-  [SYMBOL_IDENTITY]: Symbol("no_params")
-};
+const NO_PARAMS = { [SYMBOL_IDENTITY]: Symbol("no_params") };
 // Controls what happens to actions when their route becomes inactive:
 // 'abort' - Cancel the action immediately when route deactivates
 // 'keep-loading' - Allow action to continue running after route deactivation
@@ -13816,22 +15512,23 @@ const routeSet = new Set();
 const routePreviousStateMap = new WeakMap();
 // Store abort controllers per action to control their lifecycle based on route state
 const actionAbortControllerWeakMap = new WeakMap();
-const updateRoutes = (url, {
-  // state
-  replace,
-  isVisited
-}) => {
+const updateRoutes = (
+  url,
+  {
+    // state
+    replace,
+    isVisited,
+  },
+) => {
   const routeMatchInfoSet = new Set();
   for (const route of routeSet) {
     const routePrivateProperties = getRoutePrivateProperties(route);
-    const {
-      urlPattern
-    } = routePrivateProperties;
+    const { urlPattern } = routePrivateProperties;
 
     // Get previous state
     const previousState = routePreviousStateMap.get(route) || {
       active: false,
-      params: NO_PARAMS
+      params: NO_PARAMS,
     };
     const oldActive = previousState.active;
     const oldParams = previousState.params;
@@ -13840,10 +15537,12 @@ const updateRoutes = (url, {
     const newActive = Boolean(match);
     let newParams;
     if (match) {
-      const {
-        optionalParamKeySet
-      } = routePrivateProperties;
-      const extractedParams = extractParams(urlPattern, url, optionalParamKeySet);
+      const { optionalParamKeySet } = routePrivateProperties;
+      const extractedParams = extractParams(
+        urlPattern,
+        url,
+        optionalParamKeySet,
+      );
       if (compareTwoJsValues(oldParams, extractedParams)) {
         // No change in parameters, keep the old params
         newParams = oldParams;
@@ -13853,19 +15552,20 @@ const updateRoutes = (url, {
     } else {
       newParams = NO_PARAMS;
     }
+
     const routeMatchInfo = {
       route,
       routePrivateProperties,
       oldActive,
       newActive,
       oldParams,
-      newParams
+      newParams,
     };
     routeMatchInfoSet.add(routeMatchInfo);
     // Store current state for next comparison
     routePreviousStateMap.set(route, {
       active: newActive,
-      params: newParams
+      params: newParams,
     });
   }
 
@@ -13876,13 +15576,10 @@ const updateRoutes = (url, {
       route,
       routePrivateProperties,
       newActive,
-      newParams
+      newParams,
     } of routeMatchInfoSet) {
-      const {
-        activeSignal,
-        paramsSignal,
-        visitedSignal
-      } = routePrivateProperties;
+      const { activeSignal, paramsSignal, visitedSignal } =
+        routePrivateProperties;
       const visited = isVisited(route.url);
       activeSignal.value = newActive;
       paramsSignal.value = newParams;
@@ -13902,6 +15599,7 @@ const updateRoutes = (url, {
   const toReloadSet = new Set();
   const abortSignalMap = new Map();
   const routeLoadRequestedMap = new Map();
+
   const shouldLoadOrReload = (route, shouldLoad) => {
     const routeAction = route.action;
     const currentAction = routeAction.getCurrentAction();
@@ -13921,36 +15619,41 @@ const updateRoutes = (url, {
     actionAbortControllerWeakMap.set(currentAction, actionAbortController);
     abortSignalMap.set(currentAction, actionAbortController.signal);
   };
-  const shouldLoad = route => {
+
+  const shouldLoad = (route) => {
     shouldLoadOrReload(route, true);
   };
-  const shouldReload = route => {
+  const shouldReload = (route) => {
     shouldLoadOrReload(route, false);
   };
-  const shouldAbort = route => {
+  const shouldAbort = (route) => {
     const routeAction = route.action;
     const currentAction = routeAction.getCurrentAction();
-    const actionAbortController = actionAbortControllerWeakMap.get(currentAction);
+    const actionAbortController =
+      actionAbortControllerWeakMap.get(currentAction);
     if (actionAbortController) {
-      actionAbortController.abort("route no longer matching");
+      actionAbortController.abort(`route no longer matching`);
       actionAbortControllerWeakMap.delete(currentAction);
     }
   };
+
   for (const {
     route,
     routePrivateProperties,
     newActive,
     oldActive,
     newParams,
-    oldParams
+    oldParams,
   } of routeMatchInfoSet) {
     const routeAction = route.action;
     if (!routeAction) {
       continue;
     }
+
     const becomesActive = newActive && !oldActive;
     const becomesInactive = !newActive && oldActive;
-    const paramsChangedWhileActive = newActive && oldActive && newParams !== oldParams;
+    const paramsChangedWhileActive =
+      newActive && oldActive && newParams !== oldParams;
 
     // Handle actions for routes that become active
     if (becomesActive) {
@@ -13969,12 +15672,13 @@ const updateRoutes = (url, {
       shouldReload(route);
     }
   }
+
   return {
     loadSet: toLoadSet,
     reloadSet: toReloadSet,
     abortSignalMap,
     routeLoadRequestedMap,
-    activeRouteSet
+    activeRouteSet,
   };
 };
 const extractParams = (urlPattern, url, ignoreSet = new Set()) => {
@@ -14013,12 +15717,21 @@ const extractParams = (urlPattern, url, ignoreSet = new Set()) => {
   }
   return params;
 };
-const URL_PATTERN_PROPERTIES_WITH_GROUP_SET = new Set(["protocol", "username", "password", "hostname", "pathname", "search", "hash"]);
+const URL_PATTERN_PROPERTIES_WITH_GROUP_SET = new Set([
+  "protocol",
+  "username",
+  "password",
+  "hostname",
+  "pathname",
+  "search",
+  "hash",
+]);
+
 const routePrivatePropertiesMap = new Map();
-const getRoutePrivateProperties = route => {
+const getRoutePrivateProperties = (route) => {
   return routePrivatePropertiesMap.get(route);
 };
-const createRoute = urlPatternInput => {
+const createRoute = (urlPatternInput) => {
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
     for (const cleanupCallback of cleanupCallbackSet) {
@@ -14026,6 +15739,7 @@ const createRoute = urlPatternInput => {
     }
     cleanupCallbackSet.clear();
   };
+
   const route = {
     urlPattern: urlPatternInput,
     isRoute: true,
@@ -14038,11 +15752,12 @@ const createRoute = urlPatternInput => {
     action: null,
     cleanup,
     toString: () => {
-      return "route \"".concat(urlPatternInput, "\"");
+      return `route "${urlPatternInput}"`;
     },
-    replaceParams: undefined
+    replaceParams: undefined,
   };
   routeSet.add(route);
+
   const routePrivateProperties = {
     urlPattern: undefined,
     activeSignal: null,
@@ -14050,9 +15765,10 @@ const createRoute = urlPatternInput => {
     visitedSignal: null,
     relativeUrlSignal: null,
     urlSignal: null,
-    optionalParamKeySet: null
+    optionalParamKeySet: null,
   };
   routePrivatePropertiesMap.set(route, routePrivateProperties);
+
   const buildRelativeUrl = (params = {}) => {
     let relativeUrl = urlPatternInput;
 
@@ -14060,8 +15776,8 @@ const createRoute = urlPatternInput => {
     for (const key of Object.keys(params)) {
       const value = params[key];
       const encodedValue = encodeURIComponent(value);
-      relativeUrl = relativeUrl.replace(":".concat(key), encodedValue);
-      relativeUrl = relativeUrl.replace("{".concat(key, "}"), encodedValue);
+      relativeUrl = relativeUrl.replace(`:${key}`, encodedValue);
+      relativeUrl = relativeUrl.replace(`{${key}}`, encodedValue);
     }
 
     // Handle wildcards: if the pattern ends with /*? (optional wildcard)
@@ -14074,11 +15790,14 @@ const createRoute = urlPatternInput => {
       let wildcardIndex = 0;
       relativeUrl = relativeUrl.replace(/\*/g, () => {
         const paramKey = wildcardIndex.toString();
-        const replacement = params[paramKey] ? encodeURIComponent(params[paramKey]) : "*";
+        const replacement = params[paramKey]
+          ? encodeURIComponent(params[paramKey])
+          : "*";
         wildcardIndex++;
         return replacement;
       });
     }
+
     return relativeUrl;
   };
   const buildUrl = (params = {}) => {
@@ -14090,6 +15809,7 @@ const createRoute = urlPatternInput => {
     return url;
   };
   route.buildUrl = buildUrl;
+
   const activeSignal = signal(false);
   const paramsSignal = signal(NO_PARAMS);
   const visitedSignal = signal(false);
@@ -14102,6 +15822,7 @@ const createRoute = urlPatternInput => {
     route.relativeUrl = relativeUrlSignal.value;
   });
   cleanupCallbackSet.add(disposeRelativeUrlEffect);
+
   const urlSignal = computed(() => {
     const relativeUrl = relativeUrlSignal.value;
     const url = new URL(relativeUrl, baseUrl).href;
@@ -14111,22 +15832,19 @@ const createRoute = urlPatternInput => {
     route.url = urlSignal.value;
   });
   cleanupCallbackSet.add(disposeUrlEffect);
-  const replaceParams = newParams => {
+
+  const replaceParams = (newParams) => {
     const currentParams = paramsSignal.peek();
-    const updatedParams = {
-      ...currentParams,
-      ...newParams
-    };
+    const updatedParams = { ...currentParams, ...newParams };
     const updatedUrl = route.buildUrl(updatedParams);
     if (route.action) {
       route.action.replaceParams(updatedParams);
     }
-    browserIntegration$1.goTo(updatedUrl, {
-      replace: true
-    });
+    browserIntegration$1.goTo(updatedUrl, { replace: true });
   };
   route.replaceParams = replaceParams;
-  const bindAction = action => {
+
+  const bindAction = (action) => {
     /*
      *
      * here I need to check the store for that action (if any)
@@ -14140,13 +15858,9 @@ const createRoute = urlPatternInput => {
      *
      */
 
-    const {
-      store
-    } = action.meta;
+    const { store } = action.meta;
     if (store) {
-      const {
-        mutableIdKeys
-      } = store;
+      const { mutableIdKeys } = store;
       if (mutableIdKeys.length) {
         const mutableIdKey = mutableIdKeys[0];
         const mutableIdValueSignal = computed(() => {
@@ -14154,14 +15868,17 @@ const createRoute = urlPatternInput => {
           const mutableIdValue = params[mutableIdKey];
           return mutableIdValue;
         });
-        const routeItemSignal = store.signalForMutableIdKey(mutableIdKey, mutableIdValueSignal);
-        store.observeProperties(routeItemSignal, propertyMutations => {
+        const routeItemSignal = store.signalForMutableIdKey(
+          mutableIdKey,
+          mutableIdValueSignal,
+        );
+        store.observeProperties(routeItemSignal, (propertyMutations) => {
           const mutableIdPropertyMutation = propertyMutations[mutableIdKey];
           if (!mutableIdPropertyMutation) {
             return;
           }
           route.replaceParams({
-            [mutableIdKey]: mutableIdPropertyMutation.newValue
+            [mutableIdKey]: mutableIdPropertyMutation.newValue,
           });
         });
       }
@@ -14189,7 +15906,7 @@ const createRoute = urlPatternInput => {
       // the only thing that bothers me a little is that it reloads all routes
       route.reload();
     },
-    });
+  });
     */
 
     const actionBoundToThisRoute = action.bindParams(paramsSignal);
@@ -14197,11 +15914,14 @@ const createRoute = urlPatternInput => {
     return actionBoundToThisRoute;
   };
   route.bindAction = bindAction;
+
   {
     // Remove leading slash from urlPattern to make it relative to baseUrl
-    const normalizedUrlPattern = urlPatternInput.startsWith("/") ? urlPatternInput.slice(1) : urlPatternInput;
+    const normalizedUrlPattern = urlPatternInput.startsWith("/")
+      ? urlPatternInput.slice(1)
+      : urlPatternInput;
     const urlPattern = new URLPattern(normalizedUrlPattern, baseUrl, {
-      ignoreCase: true
+      ignoreCase: true,
     });
     routePrivateProperties.urlPattern = urlPattern;
     routePrivateProperties.activeSignal = activeSignal;
@@ -14228,36 +15948,38 @@ const createRoute = urlPatternInput => {
     });
     routePrivateProperties.optionalParamKeySet = optionalParamKeySet;
   }
+
   return route;
 };
-const useRouteStatus = route => {
+const useRouteStatus = (route) => {
   const routePrivateProperties = getRoutePrivateProperties(route);
   if (!routePrivateProperties) {
-    throw new Error("Cannot find route private properties for ".concat(route));
+    throw new Error(`Cannot find route private properties for ${route}`);
   }
-  const {
-    urlSignal,
-    activeSignal,
-    paramsSignal,
-    visitedSignal
-  } = routePrivateProperties;
+
+  const { urlSignal, activeSignal, paramsSignal, visitedSignal } =
+    routePrivateProperties;
+
   const url = urlSignal.value;
   const active = activeSignal.value;
   const params = paramsSignal.value;
   const visited = visitedSignal.value;
+
   return {
     url,
     active,
     params,
-    visited
+    visited,
   };
 };
+
 let browserIntegration$1;
-const setBrowserIntegration = integration => {
+const setBrowserIntegration = (integration) => {
   browserIntegration$1 = integration;
 };
+
 let onRouteDefined = () => {};
-const setOnRouteDefined = v => {
+const setOnRouteDefined = (v) => {
   onRouteDefined = v;
 };
 /**
@@ -14276,12 +15998,13 @@ const setOnRouteDefined = v => {
 // at any given time (url can be shared, reloaded, etc..)
 // Later I'll consider adding ability to have dynamic import into the mix
 // (An async function returning an action)
-const defineRoutes = routeDefinition => {
+const defineRoutes = (routeDefinition) => {
   // Clean up existing routes
   for (const route of routeSet) {
     route.cleanup();
   }
   routeSet.clear();
+
   const routeArray = [];
   for (const key of Object.keys(routeDefinition)) {
     const value = routeDefinition[key];
@@ -14297,17 +16020,20 @@ const defineRoutes = routeDefinition => {
     routeArray.push(route);
   }
   onRouteDefined();
+
   return routeArray;
 };
 
 const arraySignal = (initialValue = []) => {
   const theSignal = signal(initialValue);
+
   const add = (...args) => {
     theSignal.value = addIntoArray(theSignal.peek(), ...args);
   };
   const remove = (...args) => {
     theSignal.value = removeFromArray(theSignal.peek(), ...args);
   };
+
   return [theSignal, add, remove];
 };
 
@@ -14337,6 +16063,7 @@ let DEBUG$1 = false;
 const enableDebugOnDocumentLoading = () => {
   DEBUG$1 = true;
 };
+
 const windowIsLoadingSignal = signal(true);
 if (document.readyState === "complete") {
   windowIsLoadingSignal.value = false;
@@ -14347,35 +16074,63 @@ if (document.readyState === "complete") {
     }
   });
 }
-const [documentLoadingRouteArraySignal, addToDocumentLoadingRouteArraySignal, removeFromDocumentLoadingRouteArraySignal] = arraySignal([]);
+
+const [
+  documentLoadingRouteArraySignal,
+  addToDocumentLoadingRouteArraySignal,
+  removeFromDocumentLoadingRouteArraySignal,
+] = arraySignal([]);
 const routingWhile = (fn, routeNames = []) => {
   if (DEBUG$1 && routeNames.length > 0) {
-    console.debug("routingWhile: Adding routes to loading state:", routeNames);
+    console.debug(`routingWhile: Adding routes to loading state:`, routeNames);
   }
   addToDocumentLoadingRouteArraySignal(...routeNames);
   return executeWithCleanup(fn, () => {
     removeFromDocumentLoadingRouteArraySignal(...routeNames);
     if (DEBUG$1 && routeNames.length > 0) {
-      console.debug("routingWhile: Removed routes from loading state:", routeNames, "state after removing:", documentLoadingRouteArraySignal.peek());
+      console.debug(
+        `routingWhile: Removed routes from loading state:`,
+        routeNames,
+        "state after removing:",
+        documentLoadingRouteArraySignal.peek(),
+      );
     }
   });
 };
-const [documentLoadingActionArraySignal, addToDocumentLoadingActionArraySignal, removeFromDocumentLoadingActionArraySignal] = arraySignal([]);
+
+const [
+  documentLoadingActionArraySignal,
+  addToDocumentLoadingActionArraySignal,
+  removeFromDocumentLoadingActionArraySignal,
+] = arraySignal([]);
 const workingWhile = (fn, actionNames = []) => {
   if (DEBUG$1 && actionNames.length > 0) {
-    console.debug("workingWhile: Adding actions to loading state:", actionNames);
+    console.debug(
+      `workingWhile: Adding actions to loading state:`,
+      actionNames,
+    );
   }
   addToDocumentLoadingActionArraySignal(...actionNames);
   return executeWithCleanup(fn, () => {
     removeFromDocumentLoadingActionArraySignal(...actionNames);
     if (DEBUG$1 && actionNames.length > 0) {
-      console.debug("routingWhile: Removed action from loading state:", actionNames, "start after removing:", documentLoadingActionArraySignal.peek());
+      console.debug(
+        `routingWhile: Removed action from loading state:`,
+        actionNames,
+        "start after removing:",
+        documentLoadingActionArraySignal.peek(),
+      );
     }
   });
 };
+
 const documentIsBusySignal = computed(() => {
-  return documentLoadingRouteArraySignal.value.length > 0 || documentLoadingActionArraySignal.value.length > 0;
+  return (
+    documentLoadingRouteArraySignal.value.length > 0 ||
+    documentLoadingActionArraySignal.value.length > 0
+  );
 });
+
 computed(() => {
   const windowIsLoading = windowIsLoadingSignal.value;
   const routesLoading = documentLoadingRouteArraySignal.value;
@@ -14397,7 +16152,7 @@ const documentStateSignal = signal(null);
 const useDocumentState = () => {
   return documentStateSignal.value;
 };
-const updateDocumentState = value => {
+const updateDocumentState = (value) => {
   documentStateSignal.value = value;
 };
 
@@ -14405,61 +16160,64 @@ const documentUrlSignal = signal(window.location.href);
 const useDocumentUrl = () => {
   return documentUrlSignal.value;
 };
-const updateDocumentUrl = value => {
+const updateDocumentUrl = (value) => {
   documentUrlSignal.value = value;
 };
 
 const setupBrowserIntegrationViaHistory = ({
   applyActions,
-  applyRouting
+  applyRouting,
 }) => {
-  const {
-    history
-  } = window;
+  const { history } = window;
+
   let globalAbortController = new AbortController();
-  const triggerGlobalAbort = reason => {
+  const triggerGlobalAbort = (reason) => {
     globalAbortController.abort(reason);
     globalAbortController = new AbortController();
   };
-  const dispatchActions = params => {
-    const {
-      requestedResult
-    } = applyActions({
+
+  const dispatchActions = (params) => {
+    const { requestedResult } = applyActions({
       globalAbortSignal: globalAbortController.signal,
       abortSignal: new AbortController().signal,
-      ...params
+      ...params,
     });
     return requestedResult;
   };
   setActionDispatcher(dispatchActions);
+
   const getDocumentState = () => {
-    return window.history.state ? {
-      ...window.history.state
-    } : null;
+    return window.history.state ? { ...window.history.state } : null;
   };
-  const replaceDocumentState = (newState, {
-    reason = "replaceDocumentState called"
-  } = {}) => {
+
+  const replaceDocumentState = (
+    newState,
+    { reason = "replaceDocumentState called" } = {},
+  ) => {
     const url = window.location.href;
     window.history.replaceState(newState, null, url);
     handleRoutingTask(url, {
       replace: true,
       state: newState,
-      reason
+      reason,
     });
   };
+
   const historyStartAtStart = getDocumentState();
-  const visitedUrlSet = historyStartAtStart ? new Set(historyStartAtStart.jsenv_visited_urls || []) : new Set();
+  const visitedUrlSet = historyStartAtStart
+    ? new Set(historyStartAtStart.jsenv_visited_urls || [])
+    : new Set();
 
   // Create a signal that tracks visited URLs for reactive updates
   // Using a counter instead of the Set directly for better performance
   // Links will check isVisited() when this signal changes
   const visitedUrlsSignal = signal(0);
-  const isVisited = url => {
+
+  const isVisited = (url) => {
     url = new URL(url, window.location.href).href;
     return visitedUrlSet.has(url);
   };
-  const markUrlAsVisited = url => {
+  const markUrlAsVisited = (url) => {
     if (visitedUrlSet.has(url)) {
       return;
     }
@@ -14467,98 +16225,110 @@ const setupBrowserIntegrationViaHistory = ({
 
     // Increment signal to notify subscribers that visited URLs changed
     visitedUrlsSignal.value++;
+
     const historyState = getDocumentState() || {};
     const hsitoryStateWithVisitedUrls = {
       ...historyState,
-      jsenv_visited_urls: Array.from(visitedUrlSet)
+      jsenv_visited_urls: Array.from(visitedUrlSet),
     };
-    window.history.replaceState(hsitoryStateWithVisitedUrls, null, window.location.href);
+    window.history.replaceState(
+      hsitoryStateWithVisitedUrls,
+      null,
+      window.location.href,
+    );
     updateDocumentState(hsitoryStateWithVisitedUrls);
   };
+
   let abortController = null;
-  const handleRoutingTask = (url, {
-    state,
-    replace,
-    reason
-  }) => {
+  const handleRoutingTask = (url, { state, replace, reason }) => {
     markUrlAsVisited(url);
     updateDocumentUrl(url);
     updateDocumentState(state);
     if (abortController) {
-      abortController.abort("navigating to ".concat(url));
+      abortController.abort(`navigating to ${url}`);
     }
     abortController = new AbortController();
-    const {
-      allResult,
-      requestedResult
-    } = applyRouting(url, {
+
+    const { allResult, requestedResult } = applyRouting(url, {
       globalAbortSignal: globalAbortController.signal,
       abortSignal: abortController.signal,
       state,
       replace,
       isVisited,
-      reason
+      reason,
     });
-    executeWithCleanup(() => allResult, () => {
-      abortController = undefined;
-    });
+
+    executeWithCleanup(
+      () => allResult,
+      () => {
+        abortController = undefined;
+      },
+    );
     return requestedResult;
   };
 
   // Browser event handlers
-  window.addEventListener("click", e => {
-    if (e.button !== 0) {
-      // Ignore non-left clicks
-      return;
-    }
-    if (e.metaKey) {
-      // Ignore clicks with meta key (e.g. open in new tab)
-      return;
-    }
-    const linkElement = e.target.closest("a");
-    if (!linkElement) {
-      return;
-    }
-    const href = linkElement.href;
-    if (!href || !href.startsWith(window.location.origin)) {
-      return;
-    }
-    if (linkElement.hasAttribute("data-readonly")) {
-      return;
-    }
-    // Ignore anchor navigation (same page, different hash)
-    const currentUrl = new URL(window.location.href);
-    const targetUrl = new URL(href);
-    if (currentUrl.pathname === targetUrl.pathname && currentUrl.search === targetUrl.search && targetUrl.hash !== "") {
-      return;
-    }
-    e.preventDefault();
-    const state = null;
-    history.pushState(state, null, href);
-    handleRoutingTask(href, {
-      state,
-      reason: "\"click\" on a[href=\"".concat(href, "\"]")
-    });
-  }, {
-    capture: true
-  });
-  window.addEventListener("submit", () => {
-    // TODO: Handle form submissions
-  }, {
-    capture: true
-  });
-  window.addEventListener("popstate", popstateEvent => {
+  window.addEventListener(
+    "click",
+    (e) => {
+      if (e.button !== 0) {
+        // Ignore non-left clicks
+        return;
+      }
+      if (e.metaKey) {
+        // Ignore clicks with meta key (e.g. open in new tab)
+        return;
+      }
+      const linkElement = e.target.closest("a");
+      if (!linkElement) {
+        return;
+      }
+      const href = linkElement.href;
+      if (!href || !href.startsWith(window.location.origin)) {
+        return;
+      }
+      if (linkElement.hasAttribute("data-readonly")) {
+        return;
+      }
+      // Ignore anchor navigation (same page, different hash)
+      const currentUrl = new URL(window.location.href);
+      const targetUrl = new URL(href);
+      if (
+        currentUrl.pathname === targetUrl.pathname &&
+        currentUrl.search === targetUrl.search &&
+        targetUrl.hash !== ""
+      ) {
+        return;
+      }
+      e.preventDefault();
+      const state = null;
+      history.pushState(state, null, href);
+      handleRoutingTask(href, {
+        state,
+        reason: `"click" on a[href="${href}"]`,
+      });
+    },
+    { capture: true },
+  );
+
+  window.addEventListener(
+    "submit",
+    () => {
+      // TODO: Handle form submissions
+    },
+    { capture: true },
+  );
+
+  window.addEventListener("popstate", (popstateEvent) => {
     const url = window.location.href;
     const state = popstateEvent.state;
     handleRoutingTask(url, {
       state,
-      reason: "\"popstate\" event for ".concat(url)
+      reason: `"popstate" event for ${url}`,
     });
   });
-  const goTo = async (url, {
-    state = null,
-    replace
-  } = {}) => {
+
+  const goTo = async (url, { state = null, replace } = {}) => {
     const currentUrl = documentUrlSignal.peek();
     if (url === currentUrl) {
       return;
@@ -14571,25 +16341,30 @@ const setupBrowserIntegrationViaHistory = ({
     handleRoutingTask(url, {
       state,
       replace,
-      reason: "goTo called with \"".concat(url, "\"")
+      reason: `goTo called with "${url}"`,
     });
   };
+
   const stop = (reason = "stop called") => {
     triggerGlobalAbort(reason);
   };
+
   const reload = () => {
     const url = window.location.href;
     const state = history.state;
     handleRoutingTask(url, {
-      state
+      state,
     });
   };
+
   const goBack = () => {
     window.history.back();
   };
+
   const goForward = () => {
     window.history.forward();
   };
+
   const init = () => {
     const url = window.location.href;
     const state = history.state;
@@ -14597,9 +16372,10 @@ const setupBrowserIntegrationViaHistory = ({
     handleRoutingTask(url, {
       state,
       replace: true,
-      reason: "routing initialization"
+      reason: "routing initialization",
     });
   };
+
   return {
     integration: "browser_history_api",
     init,
@@ -14611,16 +16387,13 @@ const setupBrowserIntegrationViaHistory = ({
     getDocumentState,
     replaceDocumentState,
     isVisited,
-    visitedUrlsSignal
+    visitedUrlsSignal,
   };
 };
 
-const applyActions = params => {
+const applyActions = (params) => {
   const updateActionsResult = updateActions(params);
-  const {
-    allResult,
-    runningActionSet
-  } = updateActionsResult;
+  const { allResult, runningActionSet } = updateActionsResult;
   const pendingTaskNameArray = [];
   for (const runningAction of runningActionSet) {
     pendingTaskNameArray.push(runningAction.name);
@@ -14628,30 +16401,34 @@ const applyActions = params => {
   workingWhile(() => allResult, pendingTaskNameArray);
   return updateActionsResult;
 };
-const applyRouting = (url, {
-  globalAbortSignal,
-  abortSignal,
-  // state
-  replace,
-  isVisited,
-  reason
-}) => {
+
+const applyRouting = (
+  url,
+  {
+    globalAbortSignal,
+    abortSignal,
+    // state
+    replace,
+    isVisited,
+    reason,
+  },
+) => {
   const {
     loadSet,
     reloadSet,
     abortSignalMap,
     routeLoadRequestedMap,
-    activeRouteSet
+    activeRouteSet,
   } = updateRoutes(url, {
     replace,
     // state,
-    isVisited
+    isVisited,
   });
   if (loadSet.size === 0 && reloadSet.size === 0) {
     return {
       allResult: undefined,
       requestedResult: undefined,
-      activeRouteSet: new Set()
+      activeRouteSet: new Set(),
     };
   }
   const updateActionsResult = updateActions({
@@ -14660,32 +16437,29 @@ const applyRouting = (url, {
     runSet: loadSet,
     rerunSet: reloadSet,
     abortSignalMap,
-    reason
+    reason,
   });
-  const {
-    allResult,
-    runningActionSet
-  } = updateActionsResult;
+  const { allResult, runningActionSet } = updateActionsResult;
   const pendingTaskNameArray = [];
   for (const [route, routeAction] of routeLoadRequestedMap) {
     if (runningActionSet.has(routeAction)) {
-      pendingTaskNameArray.push("".concat(route.relativeUrl, " -> ").concat(routeAction.name));
+      pendingTaskNameArray.push(`${route.relativeUrl} -> ${routeAction.name}`);
     }
   }
   routingWhile(() => allResult, pendingTaskNameArray);
-  return {
-    ...updateActionsResult,
-    activeRouteSet
-  };
+  return { ...updateActionsResult, activeRouteSet };
 };
+
 const browserIntegration = setupBrowserIntegrationViaHistory({
   applyActions,
-  applyRouting
+  applyRouting,
 });
+
 setOnRouteDefined(() => {
   browserIntegration.init();
 });
 setBrowserIntegration(browserIntegration);
+
 const actionIntegratedVia = browserIntegration.integration;
 const goTo = browserIntegration.goTo;
 const stopLoad = (reason = "stopLoad() called") => {
@@ -14704,66 +16478,90 @@ const goForward = browserIntegration.goForward;
 const isVisited = browserIntegration.isVisited;
 const visitedUrlsSignal = browserIntegration.visitedUrlsSignal;
 browserIntegration.handleActionTask;
+
 const NOT_SET = {};
 const NO_OP = () => {};
 const NO_ID_GIVEN = [undefined, NO_OP, NO_OP];
-const useNavStateBasic = (id, initialValue, {
-  debug
-} = {}) => {
+const useNavStateBasic = (id, initialValue, { debug } = {}) => {
   const navStateRef = useRef(NOT_SET);
   if (!id) {
     return NO_ID_GIVEN;
   }
+
   if (navStateRef.current === NOT_SET) {
     const documentState = browserIntegration.getDocumentState();
     const valueInDocumentState = documentState ? documentState[id] : undefined;
     if (valueInDocumentState === undefined) {
       navStateRef.current = initialValue;
       if (initialValue !== undefined) {
-        console.debug("useNavState(".concat(id, ") initial value is ").concat(initialValue, " (from initialValue passed in as argument)"));
+        console.debug(
+          `useNavState(${id}) initial value is ${initialValue} (from initialValue passed in as argument)`,
+        );
       }
     } else {
       navStateRef.current = valueInDocumentState;
       if (debug) {
-        console.debug("useNavState(".concat(id, ") initial value is ").concat(initialValue, " (from nav state)"));
+        console.debug(
+          `useNavState(${id}) initial value is ${initialValue} (from nav state)`,
+        );
       }
     }
   }
-  const set = value => {
+
+  const set = (value) => {
     const currentValue = navStateRef.current;
     if (typeof value === "function") {
       value = value(currentValue);
     }
     if (debug) {
-      console.debug("useNavState(".concat(id, ") set ").concat(value, " (previous was ").concat(currentValue, ")"));
+      console.debug(
+        `useNavState(${id}) set ${value} (previous was ${currentValue})`,
+      );
     }
+
     const currentState = browserIntegration.getDocumentState() || {};
+
     if (value === undefined) {
       if (!Object.hasOwn(currentState, id)) {
         return;
       }
       delete currentState[id];
       browserIntegration.replaceDocumentState(currentState, {
-        reason: "delete \"".concat(id, "\" from browser state")
+        reason: `delete "${id}" from browser state`,
       });
       return;
     }
+
     const valueInBrowserState = currentState[id];
     if (valueInBrowserState === value) {
       return;
     }
     currentState[id] = value;
     browserIntegration.replaceDocumentState(currentState, {
-      reason: "set { ".concat(id, ": ").concat(value, " } in browser state")
+      reason: `set { ${id}: ${value} } in browser state`,
     });
   };
-  return [navStateRef.current, set, () => {
-    set(undefined);
-  }];
+
+  return [
+    navStateRef.current,
+    set,
+    () => {
+      set(undefined);
+    },
+  ];
 };
+
 const useNavState = useNavStateBasic;
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .action_error {\n    padding: 20px;\n    background: #fdd;\n    border: 1px solid red;\n    margin-top: 0;\n    margin-bottom: 20px;\n  }\n";
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .action_error {
+    padding: 20px;
+    background: #fdd;
+    border: 1px solid red;
+    margin-top: 0;
+    margin-bottom: 20px;
+  }
+`;
 const renderIdleDefault = () => null;
 const renderLoadingDefault = () => null;
 const renderAbortedDefault = () => null;
@@ -14931,13 +16729,10 @@ const renderActionableComponent = (props, ref, {
   });
 };
 
-const useFocusGroup = (elementRef, {
-  enabled = true,
-  direction,
-  skipTab,
-  loop,
-  name
-} = {}) => {
+const useFocusGroup = (
+  elementRef,
+  { enabled = true, direction, skipTab, loop, name } = {},
+) => {
   useLayoutEffect(() => {
     if (!enabled) {
       return null;
@@ -14946,7 +16741,7 @@ const useFocusGroup = (elementRef, {
       direction,
       skipTab,
       loop,
-      name
+      name,
     });
     return focusGroup.cleanup;
   }, [direction, skipTab, loop, name]);
@@ -14955,6 +16750,7 @@ const useFocusGroup = (elementRef, {
 const useDebounceTrue = (value, delay = 300) => {
   const [debouncedTrue, setDebouncedTrue] = useState(false);
   const timerRef = useRef(null);
+
   useLayoutEffect(() => {
     // If value is true or becomes true, start a timer
     if (value) {
@@ -14977,12 +16773,87 @@ const useDebounceTrue = (value, delay = 300) => {
       }
     };
   }, [value, delay]);
+
   return debouncedTrue;
 };
 
 installImportMetaCss(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
 const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
-import.meta.css = /* css */"\n  .summary_marker {\n    width: 1em;\n    height: 1em;\n    line-height: 1em;\n  }\n  .summary_marker_svg .arrow {\n    animation-duration: 0.3s;\n    animation-fill-mode: forwards;\n    animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);\n  }\n  .summary_marker_svg .arrow[data-animation-target=\"down\"] {\n    animation-name: morph-to-down;\n  }\n  @keyframes morph-to-down {\n    from {\n      d: path(\"".concat(rightArrowPath, "\");\n    }\n    to {\n      d: path(\"").concat(downArrowPath, "\");\n    }\n  }\n  .summary_marker_svg .arrow[data-animation-target=\"right\"] {\n    animation-name: morph-to-right;\n  }\n  @keyframes morph-to-right {\n    from {\n      d: path(\"").concat(downArrowPath, "\");\n    }\n    to {\n      d: path(\"").concat(rightArrowPath, "\");\n    }\n  }\n\n  .summary_marker_svg .foreground_circle {\n    stroke-dasharray: 503 1507; /* ~25% of circle perimeter */\n    stroke-dashoffset: 0;\n    animation: progress-around-circle 1.5s linear infinite;\n  }\n  @keyframes progress-around-circle {\n    0% {\n      stroke-dashoffset: 0;\n    }\n    100% {\n      stroke-dashoffset: -2010;\n    }\n  }\n\n  /* fading and scaling */\n  .summary_marker_svg .arrow {\n    transition: opacity 0.3s ease-in-out;\n    opacity: 1;\n  }\n  .summary_marker_svg .loading_container {\n    transition: transform 0.3s linear;\n    transform: scale(0.3);\n  }\n  .summary_marker_svg .background_circle,\n  .summary_marker_svg .foreground_circle {\n    transition: opacity 0.3s ease-in-out;\n    opacity: 0;\n  }\n  .summary_marker_svg[data-loading] .arrow {\n    opacity: 0;\n  }\n  .summary_marker_svg[data-loading] .loading_container {\n    transform: scale(1);\n  }\n  .summary_marker_svg[data-loading] .background_circle {\n    opacity: 0.2;\n  }\n  .summary_marker_svg[data-loading] .foreground_circle {\n    opacity: 1;\n  }\n");
+import.meta.css = /* css */`
+  .summary_marker {
+    width: 1em;
+    height: 1em;
+    line-height: 1em;
+  }
+  .summary_marker_svg .arrow {
+    animation-duration: 0.3s;
+    animation-fill-mode: forwards;
+    animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .summary_marker_svg .arrow[data-animation-target="down"] {
+    animation-name: morph-to-down;
+  }
+  @keyframes morph-to-down {
+    from {
+      d: path("${rightArrowPath}");
+    }
+    to {
+      d: path("${downArrowPath}");
+    }
+  }
+  .summary_marker_svg .arrow[data-animation-target="right"] {
+    animation-name: morph-to-right;
+  }
+  @keyframes morph-to-right {
+    from {
+      d: path("${downArrowPath}");
+    }
+    to {
+      d: path("${rightArrowPath}");
+    }
+  }
+
+  .summary_marker_svg .foreground_circle {
+    stroke-dasharray: 503 1507; /* ~25% of circle perimeter */
+    stroke-dashoffset: 0;
+    animation: progress-around-circle 1.5s linear infinite;
+  }
+  @keyframes progress-around-circle {
+    0% {
+      stroke-dashoffset: 0;
+    }
+    100% {
+      stroke-dashoffset: -2010;
+    }
+  }
+
+  /* fading and scaling */
+  .summary_marker_svg .arrow {
+    transition: opacity 0.3s ease-in-out;
+    opacity: 1;
+  }
+  .summary_marker_svg .loading_container {
+    transition: transform 0.3s linear;
+    transform: scale(0.3);
+  }
+  .summary_marker_svg .background_circle,
+  .summary_marker_svg .foreground_circle {
+    transition: opacity 0.3s ease-in-out;
+    opacity: 0;
+  }
+  .summary_marker_svg[data-loading] .arrow {
+    opacity: 0;
+  }
+  .summary_marker_svg[data-loading] .loading_container {
+    transform: scale(1);
+  }
+  .summary_marker_svg[data-loading] .background_circle {
+    opacity: 0.2;
+  }
+  .summary_marker_svg[data-loading] .foreground_circle {
+    opacity: 1;
+  }
+`;
 const SummaryMarker = ({
   open,
   loading
@@ -15042,7 +16913,41 @@ const SummaryMarker = ({
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .navi_details {\n    display: flex;\n    flex-direction: column;\n    position: relative;\n    z-index: 1;\n    flex-shrink: 0;\n  }\n\n  .navi_details > summary {\n    flex-shrink: 0;\n    cursor: pointer;\n    display: flex;\n    flex-direction: column;\n    user-select: none;\n  }\n  .summary_body {\n    display: flex;\n    flex-direction: row;\n    align-items: center;\n    width: 100%;\n    gap: 0.2em;\n  }\n  .summary_label {\n    display: flex;\n    flex: 1;\n    gap: 0.2em;\n    align-items: center;\n    padding-right: 10px;\n  }\n\n  .navi_details > summary:focus {\n    z-index: 1;\n  }\n";
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .navi_details {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0;
+  }
+
+  .navi_details > summary {
+    flex-shrink: 0;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+  }
+  .summary_body {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+    gap: 0.2em;
+  }
+  .summary_label {
+    display: flex;
+    flex: 1;
+    gap: 0.2em;
+    align-items: center;
+    padding-right: 10px;
+  }
+
+  .navi_details > summary:focus {
+    z-index: 1;
+  }
+`;
 const Details = forwardRef((props, ref) => {
   return renderActionableComponent(props, ref, {
     Basic: DetailsBasic,
@@ -15229,10 +17134,13 @@ const DetailsWithAction = forwardRef((props, ref) => {
 
 const useCustomValidationRef = (elementRef, targetSelector) => {
   const customValidationRef = useRef();
+
   useLayoutEffect(() => {
     const element = elementRef.current;
     if (!element) {
-      console.warn("useCustomValidationRef: elementRef.current is null, make sure to pass a ref to an element");
+      console.warn(
+        "useCustomValidationRef: elementRef.current is null, make sure to pass a ref to an element",
+      );
       /* can happen if the component does this for instance:
       const Component = () => {
         const ref = useRef(null) 
@@ -15242,7 +17150,8 @@ const useCustomValidationRef = (elementRef, targetSelector) => {
         }
         return <span></span>
       }
-       usually it's better to split the component in two but hey 
+
+      usually it's better to split the component in two but hey 
       */
       return null;
     }
@@ -15257,8 +17166,10 @@ const useCustomValidationRef = (elementRef, targetSelector) => {
       unsubscribe();
     };
   }, [targetSelector]);
+
   return customValidationRef;
 };
+
 const subscribeCountWeakMap = new WeakMap();
 const subscribe = (element, target) => {
   if (element.__validationInterface__) {
@@ -15272,7 +17183,8 @@ const subscribe = (element, target) => {
     unsubscribe(element);
   };
 };
-const unsubscribe = element => {
+
+const unsubscribe = (element) => {
   const subscribeCount = subscribeCountWeakMap.get(element);
   if (subscribeCount === 1) {
     element.__validationInterface__.uninstall();
@@ -15283,7 +17195,10 @@ const unsubscribe = element => {
 };
 
 const useConstraints = (elementRef, constraints, targetSelector) => {
-  const customValidationRef = useCustomValidationRef(elementRef, targetSelector);
+  const customValidationRef = useCustomValidationRef(
+    elementRef,
+    targetSelector,
+  );
   useLayoutEffect(() => {
     const customValidation = customValidationRef.current;
     const cleanupCallbackSet = new Set();
@@ -15302,7 +17217,12 @@ const useConstraints = (elementRef, constraints, targetSelector) => {
 const useNetworkSpeed = () => {
   return networkSpeedSignal.value;
 };
-const connection = window.navigator.connection || window.navigator.mozConnection || window.navigator.webkitConnection;
+
+const connection =
+  window.navigator.connection ||
+  window.navigator.mozConnection ||
+  window.navigator.webkitConnection;
+
 const getNetworkSpeed = () => {
   // ✅ Network Information API (support moderne)
   if (!connection) {
@@ -15324,10 +17244,13 @@ const getNetworkSpeed = () => {
   }
   return "3g";
 };
+
 const updateNetworkSpeed = () => {
   networkSpeedSignal.value = getNetworkSpeed();
 };
+
 const networkSpeedSignal = signal(getNetworkSpeed());
+
 const setupNetworkMonitoring = () => {
   const cleanupFunctions = [];
 
@@ -15350,6 +17273,7 @@ const setupNetworkMonitoring = () => {
       updateNetworkSpeed();
     }
   };
+
   document.addEventListener("visibilitychange", handleVisibilityChange);
   cleanupFunctions.push(() => {
     document.removeEventListener("visibilitychange", handleVisibilityChange);
@@ -15359,6 +17283,7 @@ const setupNetworkMonitoring = () => {
   const handleOnline = () => {
     updateNetworkSpeed();
   };
+
   window.addEventListener("online", handleOnline);
   cleanupFunctions.push(() => {
     window.removeEventListener("online", handleOnline);
@@ -15366,12 +17291,24 @@ const setupNetworkMonitoring = () => {
 
   // Cleanup global
   return () => {
-    cleanupFunctions.forEach(cleanup => cleanup());
+    cleanupFunctions.forEach((cleanup) => cleanup());
   };
 };
 setupNetworkMonitoring();
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .navi_rectangle_loading {\n    position: relative;\n    width: 100%;\n    height: 100%;\n    opacity: 0;\n    display: block;\n  }\n\n  .navi_rectangle_loading[data-visible] {\n    opacity: 1;\n  }\n";
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .navi_rectangle_loading {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    display: block;
+  }
+
+  .navi_rectangle_loading[data-visible] {
+    opacity: 1;
+  }
+`;
 const RectangleLoading = ({
   shouldShowSpinner,
   color = "currentColor",
@@ -15461,13 +17398,27 @@ const RectangleLoadingSvg = ({
     // ✅ Circle path centered in the drawable area
     const centerX = margin + drawableWidth / 2;
     const centerY = margin + drawableHeight / 2;
-    rectPath = "\n      M ".concat(centerX + actualRadius, ",").concat(centerY, "\n      A ").concat(actualRadius, ",").concat(actualRadius, " 0 1 1 ").concat(centerX - actualRadius, ",").concat(centerY, "\n      A ").concat(actualRadius, ",").concat(actualRadius, " 0 1 1 ").concat(centerX + actualRadius, ",").concat(centerY, "\n    ");
+    rectPath = `
+      M ${centerX + actualRadius},${centerY}
+      A ${actualRadius},${actualRadius} 0 1 1 ${centerX - actualRadius},${centerY}
+      A ${actualRadius},${actualRadius} 0 1 1 ${centerX + actualRadius},${centerY}
+    `;
   } else {
     // ✅ Rectangle: calculate perimeter properly
     const straightEdges = 2 * (drawableWidth - 2 * actualRadius) + 2 * (drawableHeight - 2 * actualRadius);
     const cornerArcs = actualRadius > 0 ? 2 * Math.PI * actualRadius : 0;
     pathLength = straightEdges + cornerArcs;
-    rectPath = "\n      M ".concat(margin + actualRadius, ",").concat(margin, "\n      L ").concat(margin + drawableWidth - actualRadius, ",").concat(margin, "\n      A ").concat(actualRadius, ",").concat(actualRadius, " 0 0 1 ").concat(margin + drawableWidth, ",").concat(margin + actualRadius, "\n      L ").concat(margin + drawableWidth, ",").concat(margin + drawableHeight - actualRadius, "\n      A ").concat(actualRadius, ",").concat(actualRadius, " 0 0 1 ").concat(margin + drawableWidth - actualRadius, ",").concat(margin + drawableHeight, "\n      L ").concat(margin + actualRadius, ",").concat(margin + drawableHeight, "\n      A ").concat(actualRadius, ",").concat(actualRadius, " 0 0 1 ").concat(margin, ",").concat(margin + drawableHeight - actualRadius, "\n      L ").concat(margin, ",").concat(margin + actualRadius, "\n      A ").concat(actualRadius, ",").concat(actualRadius, " 0 0 1 ").concat(margin + actualRadius, ",").concat(margin, "\n    ");
+    rectPath = `
+      M ${margin + actualRadius},${margin}
+      L ${margin + drawableWidth - actualRadius},${margin}
+      A ${actualRadius},${actualRadius} 0 0 1 ${margin + drawableWidth},${margin + actualRadius}
+      L ${margin + drawableWidth},${margin + drawableHeight - actualRadius}
+      A ${actualRadius},${actualRadius} 0 0 1 ${margin + drawableWidth - actualRadius},${margin + drawableHeight}
+      L ${margin + actualRadius},${margin + drawableHeight}
+      A ${actualRadius},${actualRadius} 0 0 1 ${margin},${margin + drawableHeight - actualRadius}
+      L ${margin},${margin + actualRadius}
+      A ${actualRadius},${actualRadius} 0 0 1 ${margin + actualRadius},${margin}
+    `;
   }
 
   // Fixed segment size in pixels
@@ -15491,7 +17442,7 @@ const RectangleLoadingSvg = ({
   return jsxs("svg", {
     width: "100%",
     height: "100%",
-    viewBox: "0 0 ".concat(width, " ").concat(height),
+    viewBox: `0 0 ${width} ${height}`,
     preserveAspectRatio: "none",
     style: "overflow: visible",
     xmlns: "http://www.w3.org/2000/svg",
@@ -15518,13 +17469,13 @@ const RectangleLoadingSvg = ({
       stroke: color,
       strokeWidth: strokeWidth,
       strokeLinecap: "round",
-      strokeDasharray: "".concat(segmentLength, " ").concat(gapLength),
+      strokeDasharray: `${segmentLength} ${gapLength}`,
       pathLength: pathLength,
       children: jsx("animate", {
         attributeName: "stroke-dashoffset",
         from: pathLength,
         to: "0",
-        dur: "".concat(animationDuration, "s"),
+        dur: `${animationDuration}s`,
         repeatCount: "indefinite",
         begin: "0s"
       })
@@ -15533,16 +17484,38 @@ const RectangleLoadingSvg = ({
       fill: color,
       children: jsx("animateMotion", {
         path: rectPath,
-        dur: "".concat(animationDuration, "s"),
+        dur: `${animationDuration}s`,
         repeatCount: "indefinite",
         rotate: "auto",
-        begin: "".concat(circleOffset, "s")
+        begin: `${circleOffset}s`
       })
     })]
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .navi_inline_wrapper {\n    position: relative;\n    width: fit-content;\n    display: inline-flex;\n    height: fit-content;\n  }\n\n  .navi_loading_rectangle_wrapper {\n    pointer-events: none;\n    position: absolute;\n    z-index: 1;\n    opacity: 0;\n    top: var(--rectangle-top, 0);\n    left: var(--rectangle-left, 0);\n    bottom: var(--rectangle-bottom, 0);\n    right: var(--rectangle-right, 0);\n  }\n  .navi_loading_rectangle_wrapper[data-visible] {\n    opacity: 1;\n  }\n";
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .navi_inline_wrapper {
+    position: relative;
+    width: fit-content;
+    display: inline-flex;
+    height: fit-content;
+    border-radius: inherit;
+  }
+
+  .navi_loading_rectangle_wrapper {
+    pointer-events: none;
+    position: absolute;
+    z-index: 1;
+    opacity: 0;
+    top: var(--rectangle-top, 0);
+    left: var(--rectangle-left, 0);
+    bottom: var(--rectangle-bottom, 0);
+    right: var(--rectangle-right, 0);
+  }
+  .navi_loading_rectangle_wrapper[data-visible] {
+    opacity: 1;
+  }
+`;
 const LoadableInlineElement = ({
   children,
   width,
@@ -15634,10 +17607,10 @@ const LoaderBackgroundWithPortal = ({
     children: [jsx("div", {
       style: {
         position: "absolute",
-        top: "".concat(inset + paddingTop + spacingTop, "px"),
-        bottom: "".concat(inset + spacingBottom, "px"),
-        left: "".concat(inset + spacingLeft, "px"),
-        right: "".concat(inset + spacingRight, "px")
+        top: `${inset + paddingTop + spacingTop}px`,
+        bottom: `${inset + spacingBottom}px`,
+        left: `${inset + spacingLeft}px`,
+        right: `${inset + spacingRight}px`
       },
       children: shouldShowSpinner && jsx(RectangleLoading, {
         color: color
@@ -15779,10 +17752,10 @@ const LoaderBackgroundBasic = ({
       className: "navi_loading_rectangle_wrapper",
       "data-visible": shouldShowSpinner ? "" : undefined,
       style: {
-        "--rectangle-top": "".concat(spacingTop, "px"),
-        "--rectangle-left": "".concat(spacingLeft, "px"),
-        "--rectangle-bottom": "".concat(spacingBottom, "px"),
-        "--rectangle-right": "".concat(spacingRight, "px")
+        "--rectangle-top": `${spacingTop}px`,
+        "--rectangle-left": `${spacingLeft}px`,
+        "--rectangle-bottom": `${spacingBottom}px`,
+        "--rectangle-right": `${spacingRight}px`
       },
       children: loading && jsx(RectangleLoading, {
         shouldShowSpinner: shouldShowSpinner,
@@ -15797,43 +17770,53 @@ const LoaderBackgroundBasic = ({
 // autoFocus does not work so we focus in a useLayoutEffect,
 // see https://github.com/preactjs/preact/issues/1255
 
+
 let blurEvent = null;
 let timeout;
-document.body.addEventListener("blur", e => {
-  blurEvent = e;
-  setTimeout(() => {
+document.body.addEventListener(
+  "blur",
+  (e) => {
+    blurEvent = e;
+    setTimeout(() => {
+      blurEvent = null;
+    });
+  },
+  { capture: true },
+);
+document.body.addEventListener(
+  "focus",
+  () => {
+    clearTimeout(timeout);
     blurEvent = null;
-  });
-}, {
-  capture: true
-});
-document.body.addEventListener("focus", () => {
-  clearTimeout(timeout);
-  blurEvent = null;
-}, {
-  capture: true
-});
-const useAutoFocus = (focusableElementRef, autoFocus, {
-  autoFocusVisible,
-  autoSelect
-} = {}) => {
+  },
+  { capture: true },
+);
+
+const useAutoFocus = (
+  focusableElementRef,
+  autoFocus,
+  { autoFocusVisible, autoSelect } = {},
+) => {
   useLayoutEffect(() => {
     if (!autoFocus) {
       return null;
     }
     const activeElement = document.activeElement;
     const focusableElement = focusableElementRef.current;
-    focusableElement.focus({
-      focusVisible: autoFocusVisible
-    });
+    focusableElement.focus({ focusVisible: autoFocusVisible });
     if (autoSelect) {
       focusableElement.select();
       // Keep the beginning of the text visible instead of scrolling to the end
       focusableElement.scrollLeft = 0;
     }
     return () => {
-      const focusIsOnSelfOrInsideSelf = document.activeElement === focusableElement || focusableElement.contains(document.activeElement);
-      if (!focusIsOnSelfOrInsideSelf && document.activeElement !== document.body) {
+      const focusIsOnSelfOrInsideSelf =
+        document.activeElement === focusableElement ||
+        focusableElement.contains(document.activeElement);
+      if (
+        !focusIsOnSelfOrInsideSelf &&
+        document.activeElement !== document.body
+      ) {
         // focus is not on our element (or body) anymore
         // keep it where it is
         return;
@@ -15848,11 +17831,16 @@ const useAutoFocus = (focusableElementRef, autoFocus, {
         // previously active element is no longer in the document
         return;
       }
+
       if (blurEvent) {
         // But if this element is unmounted during a blur, the element that is about to receive focus should prevail
         const elementAboutToReceiveFocus = blurEvent.relatedTarget;
-        const isSelfOrInsideSelf = elementAboutToReceiveFocus === focusableElement || focusableElement.contains(elementAboutToReceiveFocus);
-        const isPreviouslyActiveElementOrInsideIt = elementAboutToReceiveFocus === activeElement || activeElement && activeElement.contains(elementAboutToReceiveFocus);
+        const isSelfOrInsideSelf =
+          elementAboutToReceiveFocus === focusableElement ||
+          focusableElement.contains(elementAboutToReceiveFocus);
+        const isPreviouslyActiveElementOrInsideIt =
+          elementAboutToReceiveFocus === activeElement ||
+          (activeElement && activeElement.contains(elementAboutToReceiveFocus));
         if (!isSelfOrInsideSelf && !isPreviouslyActiveElementOrInsideIt) {
           // the element about to receive focus is not the input itself or inside it
           // and is not the previously active element or inside it
@@ -15860,21 +17848,24 @@ const useAutoFocus = (focusableElementRef, autoFocus, {
           return;
         }
       }
+
       activeElement.focus();
     };
   }, []);
+
   useEffect(() => {
     if (autoFocus) {
       const focusableElement = focusableElementRef.current;
-      focusableElement.scrollIntoView({
-        inline: "nearest",
-        block: "nearest"
-      });
+      focusableElement.scrollIntoView({ inline: "nearest", block: "nearest" });
     }
   }, []);
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  label[data-readonly] {\n    color: rgba(0, 0, 0, 0.5);\n  }\n";
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  label[data-readonly] {
+    color: rgba(0, 0, 0, 0.5);
+  }
+`;
 const ReportReadOnlyOnLabelContext = createContext();
 const Label = forwardRef((props, ref) => {
   const {
@@ -15901,9 +17892,11 @@ const debugUIState = (...args) => {
 };
 const debugUIGroup = (...args) => {
 };
+
 const UIStateControllerContext = createContext();
 const UIStateContext = createContext();
 const ParentUIStateControllerContext = createContext();
+
 const FieldNameContext = createContext();
 const ReadOnlyContext = createContext();
 const DisabledContext = createContext();
@@ -15927,23 +17920,23 @@ const LoadingElementContext = createContext();
  *
  * See README.md for detailed usage examples and patterns.
  */
-const useUIStateController = (props, componentType, {
-  statePropName = "value",
-  defaultStatePropName = "defaultValue",
-  fallbackState = "",
-  getStateFromProp = prop => prop,
-  getPropFromState = state => state
-} = {}) => {
+const useUIStateController = (
+  props,
+  componentType,
+  {
+    statePropName = "value",
+    defaultStatePropName = "defaultValue",
+    fallbackState = "",
+    getStateFromProp = (prop) => prop,
+    getPropFromState = (state) => state,
+  } = {},
+) => {
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const formContext = useContext(FormContext);
-  const {
-    id,
-    name,
-    onUIStateChange,
-    action
-  } = props;
+  const { id, name, onUIStateChange, action } = props;
   const uncontrolled = !formContext && !action;
   const [navState, setNavState] = useNavState(id);
+
   const uiStateControllerRef = useRef();
   const hasStateProp = Object.hasOwn(props, statePropName);
   const state = props[statePropName];
@@ -15975,12 +17968,24 @@ const useUIStateController = (props, componentType, {
    * The component re-renders so it's the action/form that is considered as responsible
    * to update the state and as a result allowed to have "checked"/"value" prop without "onUIStateChange"
    */
-  const readOnly = uncontrolled && hasStateProp && !onUIStateChange && !parentUIStateController;
-  const [notifyParentAboutChildMount, notifyParentAboutChildUIStateChange, notifyParentAboutChildUnmount] = useParentControllerNotifiers(parentUIStateController, uiStateControllerRef);
+  const readOnly =
+    uncontrolled &&
+    hasStateProp &&
+    !onUIStateChange &&
+    !parentUIStateController;
+
+  const [
+    notifyParentAboutChildMount,
+    notifyParentAboutChildUIStateChange,
+    notifyParentAboutChildUnmount,
+  ] = useParentControllerNotifiers(
+    parentUIStateController,
+    uiStateControllerRef);
   useLayoutEffect(() => {
     notifyParentAboutChildMount();
     return notifyParentAboutChildUnmount;
   }, []);
+
   const existingUIStateController = uiStateControllerRef.current;
   if (existingUIStateController) {
     existingUIStateController._checkForUpdates({
@@ -15991,11 +17996,14 @@ const useUIStateController = (props, componentType, {
       getStateFromProp,
       hasStateProp,
       stateInitial,
-      state
+      state,
     });
     return existingUIStateController;
   }
-  debugUIState("Creating \"".concat(componentType, "\" ui state controller - initial state:"), JSON.stringify(stateInitial));
+  debugUIState(
+    `Creating "${componentType}" ui state controller - initial state:`,
+    JSON.stringify(stateInitial),
+  );
   const [publishUIState, subscribeUIState] = createPubSub();
   const uiStateController = {
     _checkForUpdates: ({
@@ -16006,7 +18014,7 @@ const useUIStateController = (props, componentType, {
       getStateFromProp,
       hasStateProp,
       stateInitial,
-      state
+      state,
     }) => {
       uiStateController.readOnly = readOnly;
       uiStateController.name = name;
@@ -16014,18 +18022,23 @@ const useUIStateController = (props, componentType, {
       uiStateController.getPropFromState = getPropFromState;
       uiStateController.getStateFromProp = getStateFromProp;
       uiStateController.stateInitial = stateInitial;
+
       if (hasStateProp) {
         uiStateController.hasStateProp = true;
         const currentState = uiStateController.state;
         if (state !== currentState) {
           uiStateController.state = state;
-          uiStateController.setUIState(uiStateController.getPropFromState(state), new CustomEvent("state_prop"));
+          uiStateController.setUIState(
+            uiStateController.getPropFromState(state),
+            new CustomEvent("state_prop"),
+          );
         }
       } else if (uiStateController.hasStateProp) {
         uiStateController.hasStateProp = false;
         uiStateController.state = uiStateController.stateInitial;
       }
     },
+
     componentType,
     readOnly,
     name,
@@ -16044,13 +18057,15 @@ const useUIStateController = (props, componentType, {
       if (newUIState === currentUIState) {
         return;
       }
-      debugUIState("".concat(componentType, ".setUIState(").concat(JSON.stringify(newUIState), ", \"").concat(e.type, "\") -> updating to ").concat(JSON.stringify(newUIState)));
+      debugUIState(
+        `${componentType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updating to ${JSON.stringify(newUIState)}`,
+      );
       uiStateController.uiState = newUIState;
       publishUIState(newUIState);
       uiStateController.onUIStateChange?.(newUIState, e);
       notifyParentAboutChildUIStateChange(e);
     },
-    resetUIState: e => {
+    resetUIState: (e) => {
       const currentState = uiStateController.state;
       uiStateController.setUIState(currentState, e);
     },
@@ -16059,31 +18074,44 @@ const useUIStateController = (props, componentType, {
         setNavState(undefined);
       }
     },
-    subscribe: subscribeUIState
+    subscribe: subscribeUIState,
   };
   uiStateControllerRef.current = uiStateController;
   return uiStateController;
 };
+
 const NO_PARENT = [() => {}, () => {}, () => {}];
-const useParentControllerNotifiers = (parentUIStateController, uiStateControllerRef, componentType) => {
+const useParentControllerNotifiers = (
+  parentUIStateController,
+  uiStateControllerRef,
+  componentType,
+) => {
   return useMemo(() => {
     if (!parentUIStateController) {
       return NO_PARENT;
     }
+
     parentUIStateController.componentType;
     const notifyParentAboutChildMount = () => {
       const uiStateController = uiStateControllerRef.current;
       parentUIStateController.registerChild(uiStateController);
     };
-    const notifyParentAboutChildUIStateChange = e => {
+
+    const notifyParentAboutChildUIStateChange = (e) => {
       const uiStateController = uiStateControllerRef.current;
       parentUIStateController.onChildUIStateChange(uiStateController, e);
     };
+
     const notifyParentAboutChildUnmount = () => {
       const uiStateController = uiStateControllerRef.current;
       parentUIStateController.unregisterChild(uiStateController);
     };
-    return [notifyParentAboutChildMount, notifyParentAboutChildUIStateChange, notifyParentAboutChildUnmount];
+
+    return [
+      notifyParentAboutChildMount,
+      notifyParentAboutChildUIStateChange,
+      notifyParentAboutChildUnmount,
+    ];
   }, []);
 };
 
@@ -16143,55 +18171,70 @@ const useParentControllerNotifiers = (parentUIStateController, uiStateController
  * - **Dynamic Lists**: Handles variable number of repeated input groups
  */
 
-const useUIGroupStateController = (props, componentType, {
-  childComponentType,
-  aggregateChildStates,
-  emptyState = undefined
-}) => {
+const useUIGroupStateController = (
+  props,
+  componentType,
+  { childComponentType, aggregateChildStates, emptyState = undefined },
+) => {
   if (typeof aggregateChildStates !== "function") {
     throw new TypeError("aggregateChildStates must be a function");
   }
   const parentUIStateController = useContext(ParentUIStateControllerContext);
-  const {
-    onUIStateChange,
-    name
-  } = props;
+  const { onUIStateChange, name } = props;
   const childUIStateControllerArrayRef = useRef([]);
   const childUIStateControllerArray = childUIStateControllerArrayRef.current;
   const uiStateControllerRef = useRef();
+
   const groupIsRenderingRef = useRef(false);
   const pendingChangeRef = useRef(false);
   groupIsRenderingRef.current = true;
   pendingChangeRef.current = false;
-  const [notifyParentAboutChildMount, notifyParentAboutChildUIStateChange, notifyParentAboutChildUnmount] = useParentControllerNotifiers(parentUIStateController, uiStateControllerRef);
+
+  const [
+    notifyParentAboutChildMount,
+    notifyParentAboutChildUIStateChange,
+    notifyParentAboutChildUnmount,
+  ] = useParentControllerNotifiers(
+    parentUIStateController,
+    uiStateControllerRef);
   useLayoutEffect(() => {
     notifyParentAboutChildMount();
     return notifyParentAboutChildUnmount;
   }, []);
+
   const onChange = (_, e) => {
     if (groupIsRenderingRef.current) {
       pendingChangeRef.current = true;
       return;
     }
-    const newUIState = aggregateChildStates(childUIStateControllerArray, emptyState);
+    const newUIState = aggregateChildStates(
+      childUIStateControllerArray,
+      emptyState,
+    );
     const uiStateController = uiStateControllerRef.current;
     uiStateController.setUIState(newUIState, e);
   };
+
   useLayoutEffect(() => {
     groupIsRenderingRef.current = false;
     if (pendingChangeRef.current) {
       pendingChangeRef.current = false;
-      onChange(null, new CustomEvent("".concat(componentType, "_batched_ui_state_update")));
+      onChange(
+        null,
+        new CustomEvent(`${componentType}_batched_ui_state_update`),
+      );
     }
   });
+
   const existingUIStateController = uiStateControllerRef.current;
   if (existingUIStateController) {
     existingUIStateController.name = name;
     existingUIStateController.onUIStateChange = onUIStateChange;
     return existingUIStateController;
   }
+
   const [publishUIState, subscribeUIState] = createPubSub();
-  const isMonitoringChild = childUIStateController => {
+  const isMonitoringChild = (childUIStateController) => {
     if (childComponentType === "*") {
       return true;
     }
@@ -16208,28 +18251,39 @@ const useUIGroupStateController = (props, componentType, {
         return;
       }
       uiStateController.uiState = newUIState;
-      debugUIGroup("".concat(componentType, ".setUIState(").concat(JSON.stringify(newUIState), ", \"").concat(e.type, "\") -> updates from ").concat(JSON.stringify(currentUIState), " to ").concat(JSON.stringify(newUIState)));
+      debugUIGroup(
+        `${componentType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
+      );
       publishUIState(newUIState);
       uiStateController.onUIStateChange?.(newUIState, e);
       notifyParentAboutChildUIStateChange(e);
     },
-    registerChild: childUIStateController => {
+    registerChild: (childUIStateController) => {
       if (!isMonitoringChild(childUIStateController)) {
         return;
       }
       const childComponentType = childUIStateController.componentType;
       childUIStateControllerArray.push(childUIStateController);
-      debugUIGroup("".concat(componentType, ".registerChild(\"").concat(childComponentType, "\") -> registered (total: ").concat(childUIStateControllerArray.length, ")"));
-      onChange(childUIStateController, new CustomEvent("".concat(childComponentType, "_mount")));
+      debugUIGroup(
+        `${componentType}.registerChild("${childComponentType}") -> registered (total: ${childUIStateControllerArray.length})`,
+      );
+      onChange(
+        childUIStateController,
+        new CustomEvent(`${childComponentType}_mount`),
+      );
     },
     onChildUIStateChange: (childUIStateController, e) => {
       if (!isMonitoringChild(childUIStateController)) {
         return;
       }
-      debugUIGroup("".concat(componentType, ".onChildUIStateChange(\"").concat(childComponentType, "\") to ").concat(JSON.stringify(childUIStateController.uiState)));
+      debugUIGroup(
+        `${componentType}.onChildUIStateChange("${childComponentType}") to ${JSON.stringify(
+          childUIStateController.uiState,
+        )}`,
+      );
       onChange(childUIStateController, e);
     },
-    unregisterChild: childUIStateController => {
+    unregisterChild: (childUIStateController) => {
       if (!isMonitoringChild(childUIStateController)) {
         return;
       }
@@ -16239,21 +18293,26 @@ const useUIGroupStateController = (props, componentType, {
         return;
       }
       childUIStateControllerArray.splice(index, 1);
-      debugUIGroup("".concat(componentType, ".unregisterChild(\"").concat(childComponentType, "\") -> unregisteed (remaining: ").concat(childUIStateControllerArray.length, ")"));
-      onChange(childUIStateController, new CustomEvent("".concat(childComponentType, "_unmount")));
+      debugUIGroup(
+        `${componentType}.unregisterChild("${childComponentType}") -> unregisteed (remaining: ${childUIStateControllerArray.length})`,
+      );
+      onChange(
+        childUIStateController,
+        new CustomEvent(`${childComponentType}_unmount`),
+      );
     },
-    resetUIState: e => {
+    resetUIState: (e) => {
       // we should likely batch the changes that will be reported for performances
       for (const childUIStateController of childUIStateControllerArray) {
         childUIStateController.resetUIState(e);
       }
     },
-    actionEnd: e => {
+    actionEnd: (e) => {
       for (const childUIStateController of childUIStateControllerArray) {
         childUIStateController.actionEnd(e);
       }
     },
-    subscribe: subscribeUIState
+    subscribe: subscribeUIState,
   };
   uiStateControllerRef.current = uiStateController;
   return uiStateController;
@@ -16269,20 +18328,129 @@ const useUIGroupStateController = (props, componentType, {
  * @param {Object} uiStateController - The UI state controller to track
  * @returns {any} The current UI state
  */
-const useUIState = uiStateController => {
-  const [trackedUIState, setTrackedUIState] = useState(uiStateController.uiState);
+const useUIState = (uiStateController) => {
+  const [trackedUIState, setTrackedUIState] = useState(
+    uiStateController.uiState,
+  );
+
   useLayoutEffect(() => {
     // Subscribe to UI state changes
     const unsubscribe = uiStateController.subscribe(setTrackedUIState);
 
     // Sync with current state in case it changed before subscription
     setTrackedUIState(uiStateController.uiState);
+
     return unsubscribe;
   }, [uiStateController]);
+
   return trackedUIState;
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .custom_checkbox_wrapper[data-field-wrapper] {\n    display: inline-flex;\n    box-sizing: content-box;\n\n    --checkmark-color: white;\n    --checkmark-disabled-color: #eeeeee;\n    --checked-color: #3b82f6;\n    --checked-disabled-color: #d3d3d3;\n\n    /* TODO: find a better way maybe? */\n    --field-strong-color: var(--checked-color);\n  }\n\n  .custom_checkbox_wrapper input {\n    position: absolute;\n    opacity: 0;\n    inset: 0;\n    margin: 0;\n    padding: 0;\n    border: none;\n  }\n\n  .custom_checkbox {\n    width: 13px;\n    height: 13px;\n    border: 1px solid var(--field-border-color);\n    border-radius: 2px;\n    box-sizing: border-box;\n    display: inline-flex;\n    margin: 3px 3px 3px 4px;\n  }\n  .custom_checkbox svg {\n    width: 100%;\n    height: 100%;\n    opacity: 0;\n    transform: scale(0.5);\n    transition: all 0.15s ease;\n    pointer-events: none;\n  }\n  .custom_checkbox svg path {\n    stroke: var(--checkmark-color);\n  }\n\n  .custom_checkbox_wrapper:hover .custom_checkbox {\n    border-color: var(--field-hover-border-color);\n  }\n  .custom_checkbox_wrapper:hover input:checked + .custom_checkbox {\n    background: var(--field-strong-color);\n    border-color: var(--field-strong-color);\n  }\n  .custom_checkbox_wrapper input:checked + .custom_checkbox {\n    background: var(--checked-color);\n    border-color: var(--checked-color);\n  }\n  .custom_checkbox_wrapper input:checked + .custom_checkbox svg {\n    opacity: 1;\n    transform: scale(1);\n  }\n\n  .custom_checkbox_wrapper input[data-readonly] + .custom_checkbox {\n    background-color: var(--field-readonly-background-color);\n    border-color: var(--field-readonly-border-color);\n  }\n  .custom_checkbox_wrapper input[data-readonly]:checked + .custom_checkbox {\n    background: var(--checked-disabled-color);\n    border-color: var(--checked-disabled-color);\n  }\n  .custom_checkbox_wrapper:hover input[data-readonly] + .custom_checkbox {\n    background-color: var(--field-readonly-background-color);\n    border-color: var(--field-readonly-border-color);\n  }\n  .custom_checkbox_wrapper:hover\n    input[data-readonly]:checked\n    + .custom_checkbox {\n    background: var(--checked-disabled-color);\n    border-color: var(--checked-disabled-color);\n  }\n  .custom_checkbox_wrapper\n    input[data-readonly]:checked\n    + .custom_checkbox\n    .custom_checkbox_marker {\n    stroke: var(--checkmark-disabled-color);\n  }\n\n  .custom_checkbox_wrapper input:focus-visible + .custom_checkbox {\n    outline: 2px solid var(--field-outline-color);\n    outline-offset: 1px;\n  }\n\n  .custom_checkbox_wrapper input[disabled] + .custom_checkbox {\n    background-color: var(--field-disabled-background-color);\n    border-color: var(--field-disabled-border-color);\n  }\n  .custom_checkbox_wrapper input[disabled]:checked + .custom_checkbox {\n    background: var(--checked-disabled-color);\n    border-color: var(--checked-disabled-color);\n  }\n  .custom_checkbox_wrapper\n    input[disabled]:checked\n    + .custom_checkbox\n    .custom_checkbox_marker {\n    stroke: var(--checkmark-disabled-color);\n  }\n";
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .custom_checkbox_wrapper[data-field-wrapper] {
+    display: inline-flex;
+    box-sizing: content-box;
+
+    --checkmark-color: white;
+    --checkmark-disabled-color: #eeeeee;
+    --checked-color: #3b82f6;
+    --checked-disabled-color: #d3d3d3;
+
+    /* TODO: find a better way maybe? */
+    --field-strong-color: var(--checked-color);
+  }
+
+  .custom_checkbox_wrapper input {
+    position: absolute;
+    opacity: 0;
+    inset: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+  }
+
+  .custom_checkbox {
+    width: 13px;
+    height: 13px;
+    border: 1px solid var(--field-border-color);
+    border-radius: 2px;
+    box-sizing: border-box;
+    display: inline-flex;
+    margin: 3px 3px 3px 4px;
+  }
+  .custom_checkbox svg {
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: all 0.15s ease;
+    pointer-events: none;
+  }
+  .custom_checkbox svg path {
+    stroke: var(--checkmark-color);
+  }
+
+  .custom_checkbox_wrapper:hover .custom_checkbox {
+    border-color: var(--field-hover-border-color);
+  }
+  .custom_checkbox_wrapper:hover input:checked + .custom_checkbox {
+    background: var(--field-strong-color);
+    border-color: var(--field-strong-color);
+  }
+  .custom_checkbox_wrapper input:checked + .custom_checkbox {
+    background: var(--checked-color);
+    border-color: var(--checked-color);
+  }
+  .custom_checkbox_wrapper input:checked + .custom_checkbox svg {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .custom_checkbox_wrapper input[data-readonly] + .custom_checkbox {
+    background-color: var(--field-readonly-background-color);
+    border-color: var(--field-readonly-border-color);
+  }
+  .custom_checkbox_wrapper input[data-readonly]:checked + .custom_checkbox {
+    background: var(--checked-disabled-color);
+    border-color: var(--checked-disabled-color);
+  }
+  .custom_checkbox_wrapper:hover input[data-readonly] + .custom_checkbox {
+    background-color: var(--field-readonly-background-color);
+    border-color: var(--field-readonly-border-color);
+  }
+  .custom_checkbox_wrapper:hover
+    input[data-readonly]:checked
+    + .custom_checkbox {
+    background: var(--checked-disabled-color);
+    border-color: var(--checked-disabled-color);
+  }
+  .custom_checkbox_wrapper
+    input[data-readonly]:checked
+    + .custom_checkbox
+    .custom_checkbox_marker {
+    stroke: var(--checkmark-disabled-color);
+  }
+
+  .custom_checkbox_wrapper input:focus-visible + .custom_checkbox {
+    outline: 2px solid var(--field-outline-color);
+    outline-offset: 1px;
+  }
+
+  .custom_checkbox_wrapper input[disabled] + .custom_checkbox {
+    background-color: var(--field-disabled-background-color);
+    border-color: var(--field-disabled-border-color);
+  }
+  .custom_checkbox_wrapper input[disabled]:checked + .custom_checkbox {
+    background: var(--checked-disabled-color);
+    border-color: var(--checked-disabled-color);
+  }
+  .custom_checkbox_wrapper
+    input[disabled]:checked
+    + .custom_checkbox
+    .custom_checkbox_marker {
+    stroke: var(--checkmark-disabled-color);
+  }
+`;
 const InputCheckbox = forwardRef((props, ref) => {
   const {
     value = "on"
@@ -16373,13 +18541,11 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
     }
     // eslint-disable-next-line react/no-unknown-property
     ,
-
     onresetuistate: e => {
       uiStateController.resetUIState(e);
     }
     // eslint-disable-next-line react/no-unknown-property
     ,
-
     onsetuistate: e => {
       uiStateController.setUIState(e.detail.value, e);
     }
@@ -16492,7 +18658,172 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
 });
 const InputCheckboxInsideForm = InputCheckboxBasic;
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .custom_radio_wrapper {\n    position: relative;\n    display: inline-flex;\n    box-sizing: content-box;\n\n    --checked-color: #3b82f6;\n    --checked-disabled-color: var(--field-disabled-border-color);\n\n    --checkmark-color: var(--checked-color);\n    --checkmark-disabled-color: var(--field-disabled-text-color);\n  }\n\n  .custom_radio_wrapper input {\n    position: absolute;\n    opacity: 0;\n    inset: 0;\n    margin: 0;\n    padding: 0;\n    border: none;\n  }\n\n  .custom_radio {\n    width: 13px;\n    height: 13px;\n    background: transparent;\n    border-radius: 50%;\n    display: inline-flex;\n    align-items: center;\n    justify-content: center;\n    margin-left: 5px;\n    margin-top: 3px;\n    margin-right: 3px;\n  }\n\n  .custom_radio svg {\n    width: 100%;\n    height: 100%;\n    pointer-events: none;\n  }\n\n  .custom_radio svg .custom_radio_dashed_border {\n    display: none;\n  }\n\n  .custom_radio svg .custom_radio_marker {\n    fill: var(--checkmark-color);\n    opacity: 0;\n    transform-origin: center;\n    transform: scale(0.3);\n  }\n\n  .custom_radio[data-transition] svg {\n    transition: all 0.15s ease;\n  }\n  .custom_radio[data-transition] svg .custom_radio_dashed_border {\n    transition: all 0.15s ease;\n  }\n  .custom_radio[data-transition] svg .custom_radio_border {\n    transition: all 0.15s ease;\n  }\n\n  /* \xC9tats hover */\n  .custom_radio_wrapper:hover .custom_radio svg .custom_radio_border {\n    stroke: var(--field-hover-border-color);\n  }\n  .custom_radio_wrapper:hover .custom_radio svg .custom_radio_marker {\n    fill: var(--field-strong-color);\n  }\n\n  .custom_radio_wrapper:hover\n    input:checked\n    + .custom_radio\n    svg\n    .custom_radio_border {\n    stroke: var(--field-strong-color);\n  }\n\n  /* \xC9tat checked */\n  .custom_radio_wrapper input:checked + .custom_radio svg .custom_radio_border {\n    stroke: var(--field-strong-color);\n  }\n\n  .custom_radio_wrapper input:checked + .custom_radio svg .custom_radio_marker {\n    opacity: 1;\n    transform: scale(1);\n  }\n\n  /* \xC9tats disabled */\n  .custom_radio_wrapper\n    input[disabled]\n    + .custom_radio\n    svg\n    .custom_radio_border {\n    fill: light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3));\n    stroke: var(--field-disabled-border-color);\n  }\n\n  .custom_radio_wrapper\n    input[disabled]:checked\n    + .custom_radio\n    svg\n    .custom_radio_border {\n    stroke: var(--checked-disabled-color);\n  }\n\n  .custom_radio_wrapper\n    input[disabled]:checked\n    + .custom_radio\n    svg\n    .custom_radio_marker {\n    fill: var(--checkmark-disabled-color);\n  }\n\n  .custom_radio_wrapper\n    input[data-readonly]\n    + .custom_radio\n    svg\n    .custom_radio_border {\n    fill: light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3));\n    stroke: var(--field-disabled-border-color);\n  }\n  .custom_radio_wrapper\n    input[data-readonly]\n    + .custom_radio\n    svg\n    .custom_radio_dashed_border {\n    display: none;\n  }\n  .custom_radio_wrapper\n    input[data-readonly]:checked\n    + .custom_radio\n    svg\n    .custom_radio_border {\n    stroke: var(--checked-disabled-color);\n  }\n  .custom_radio_wrapper\n    input[data-readonly]:checked\n    + .custom_radio\n    svg\n    .custom_radio_marker {\n    fill: var(--checkmark-disabled-color);\n  }\n  .custom_radio_wrapper:hover\n    input[data-readonly]\n    + .custom_radio\n    svg\n    .custom_radio_border {\n    fill: light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3));\n    stroke: var(--field-disabled-border-color);\n  }\n  .custom_radio_wrapper:hover\n    input[data-readonly]:checked\n    + .custom_radio\n    svg\n    .custom_radio_border {\n    stroke: var(--checked-disabled-color);\n  }\n\n  /* Focus state avec outline */\n  .custom_radio_wrapper input:focus-visible + .custom_radio {\n    outline: 2px solid var(--field-outline-color);\n    outline-offset: 1px;\n    border-radius: 50%;\n  }\n";
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .custom_radio_wrapper {
+    position: relative;
+    display: inline-flex;
+    box-sizing: content-box;
+
+    --checked-color: #3b82f6;
+    --checked-disabled-color: var(--field-disabled-border-color);
+
+    --checkmark-color: var(--checked-color);
+    --checkmark-disabled-color: var(--field-disabled-text-color);
+  }
+
+  .custom_radio_wrapper input {
+    position: absolute;
+    opacity: 0;
+    inset: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+  }
+
+  .custom_radio {
+    width: 13px;
+    height: 13px;
+    background: transparent;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 5px;
+    margin-top: 3px;
+    margin-right: 3px;
+  }
+
+  .custom_radio svg {
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  .custom_radio svg .custom_radio_dashed_border {
+    display: none;
+  }
+
+  .custom_radio svg .custom_radio_marker {
+    fill: var(--checkmark-color);
+    opacity: 0;
+    transform-origin: center;
+    transform: scale(0.3);
+  }
+
+  .custom_radio[data-transition] svg {
+    transition: all 0.15s ease;
+  }
+  .custom_radio[data-transition] svg .custom_radio_dashed_border {
+    transition: all 0.15s ease;
+  }
+  .custom_radio[data-transition] svg .custom_radio_border {
+    transition: all 0.15s ease;
+  }
+
+  /* États hover */
+  .custom_radio_wrapper:hover .custom_radio svg .custom_radio_border {
+    stroke: var(--field-hover-border-color);
+  }
+  .custom_radio_wrapper:hover .custom_radio svg .custom_radio_marker {
+    fill: var(--field-strong-color);
+  }
+
+  .custom_radio_wrapper:hover
+    input:checked
+    + .custom_radio
+    svg
+    .custom_radio_border {
+    stroke: var(--field-strong-color);
+  }
+
+  /* État checked */
+  .custom_radio_wrapper input:checked + .custom_radio svg .custom_radio_border {
+    stroke: var(--field-strong-color);
+  }
+
+  .custom_radio_wrapper input:checked + .custom_radio svg .custom_radio_marker {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* États disabled */
+  .custom_radio_wrapper
+    input[disabled]
+    + .custom_radio
+    svg
+    .custom_radio_border {
+    fill: light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3));
+    stroke: var(--field-disabled-border-color);
+  }
+
+  .custom_radio_wrapper
+    input[disabled]:checked
+    + .custom_radio
+    svg
+    .custom_radio_border {
+    stroke: var(--checked-disabled-color);
+  }
+
+  .custom_radio_wrapper
+    input[disabled]:checked
+    + .custom_radio
+    svg
+    .custom_radio_marker {
+    fill: var(--checkmark-disabled-color);
+  }
+
+  .custom_radio_wrapper
+    input[data-readonly]
+    + .custom_radio
+    svg
+    .custom_radio_border {
+    fill: light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3));
+    stroke: var(--field-disabled-border-color);
+  }
+  .custom_radio_wrapper
+    input[data-readonly]
+    + .custom_radio
+    svg
+    .custom_radio_dashed_border {
+    display: none;
+  }
+  .custom_radio_wrapper
+    input[data-readonly]:checked
+    + .custom_radio
+    svg
+    .custom_radio_border {
+    stroke: var(--checked-disabled-color);
+  }
+  .custom_radio_wrapper
+    input[data-readonly]:checked
+    + .custom_radio
+    svg
+    .custom_radio_marker {
+    fill: var(--checkmark-disabled-color);
+  }
+  .custom_radio_wrapper:hover
+    input[data-readonly]
+    + .custom_radio
+    svg
+    .custom_radio_border {
+    fill: light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3));
+    stroke: var(--field-disabled-border-color);
+  }
+  .custom_radio_wrapper:hover
+    input[data-readonly]:checked
+    + .custom_radio
+    svg
+    .custom_radio_border {
+    stroke: var(--checked-disabled-color);
+  }
+
+  /* Focus state avec outline */
+  .custom_radio_wrapper input:focus-visible + .custom_radio {
+    outline: 2px solid var(--field-outline-color);
+    outline-offset: 1px;
+    border-radius: 50%;
+  }
+`;
 const InputRadio = forwardRef((props, ref) => {
   const {
     value = "on"
@@ -16565,7 +18896,7 @@ const InputRadioBasic = forwardRef((props, ref) => {
   const updateOtherRadiosInGroup = () => {
     const thisRadio = innerRef.current;
     const radioList = thisRadio.closest("[data-radio-list]");
-    const radioInputs = radioList.querySelectorAll("input[type=\"radio\"][name=\"".concat(thisRadio.name, "\"]"));
+    const radioInputs = radioList.querySelectorAll(`input[type="radio"][name="${thisRadio.name}"]`);
     for (const radioInput of radioInputs) {
       if (radioInput === thisRadio) {
         continue;
@@ -16607,13 +18938,11 @@ const InputRadioBasic = forwardRef((props, ref) => {
     }
     // eslint-disable-next-line react/no-unknown-property
     ,
-
     onresetuistate: e => {
       uiStateController.resetUIState(e);
     }
     // eslint-disable-next-line react/no-unknown-property
     ,
-
     onsetuistate: e => {
       uiStateController.setUIState(e.detail.value, e);
     }
@@ -16672,11 +19001,137 @@ const CustomRadio = ({
   });
 };
 const InputRadioWithAction = () => {
-  throw new Error("<Input type=\"radio\" /> with an action make no sense. Use <RadioList action={something} /> instead");
+  throw new Error(`<Input type="radio" /> with an action make no sense. Use <RadioList action={something} /> instead`);
 };
 const InputRadioInsideForm = InputRadio;
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  [data-field],\n  [data-field-wrapper] {\n    --field-border-width: 1px;\n    --field-outline-width: 1px;\n\n    --field-strong-color: light-dark(#355fcc, #3b82f6);\n    --field-outline-color: var(--field-strong-color);\n    --field-background-color: light-dark(#f3f4f6, #2d3748);\n    --field-border-color: light-dark(#767676, #8e8e93);\n\n    --field-disabled-border-color: color-mix(\n      in srgb,\n      var(--field-border-color) 30%,\n      white\n    );\n    --field-readonly-border-color: var(--field-disabled-border-color);\n    --field-active-border-color: color-mix(\n      in srgb,\n      var(--field-border-color) 90%,\n      black\n    );\n    --field-hover-border-color: color-mix(\n      in srgb,\n      var(--field-border-color) 70%,\n      black\n    );\n\n    --field-disabled-background-color: var(--field-background-color);\n    --field-readonly-background-color: var(--field-disabled-background-color);\n    --field-hover-background-color: color-mix(\n      in srgb,\n      var(--field-background-color) 95%,\n      black\n    );\n\n    --field-disabled-text-color: color-mix(\n      in srgb,\n      currentColor 30%,\n      transparent\n    );\n    --field-readonly-text-color: var(--field-disabled-text-color);\n  }\n\n  [data-field] {\n    border-radius: 2px;\n    outline-width: var(--field-border-width);\n    outline-style: solid;\n    outline-color: transparent;\n    outline-offset: calc(-1 * (var(--field-border-width)));\n  }\n\n  [data-field][data-field-with-border] {\n    border-width: calc(var(--field-border-width) + var(--field-outline-width));\n    border-style: solid;\n    border-color: transparent;\n    outline-color: var(--field-border-color);\n  }\n\n  [data-field-with-border-hover] {\n    border: 0;\n  }\n\n  [data-field-with-background] {\n    background-color: var(--field-background-color);\n  }\n  [data-field-with-background-hover] {\n    background: none;\n  }\n\n  [data-field-with-background]:hover {\n    background-color: var(--field-hover-background-color);\n  }\n\n  [data-field-with-hover]:hover {\n    outline-color: var(--field-hover-border-color);\n  }\n\n  [data-field-with-border]:active,\n  [data-field][data-field-with-border][data-active] {\n    outline-color: var(--field-active-border-color);\n    background-color: none;\n  }\n\n  [data-field-with-border][readonly],\n  [data-field-with-border][data-readonly] {\n    outline-color: var(--field-readonly-border-color);\n  }\n\n  [data-field][readonly],\n  [data-field][data-readonly] {\n    color: var(--field-readonly-text-color);\n  }\n\n  [data-field-with-background][readonly],\n  [data-field-with-background][data-readonly] {\n    background-color: var(--field-readonly-background-color);\n  }\n\n  [data-field]:focus-visible,\n  [data-field][data-focus-visible]:focus {\n    outline-style: solid;\n    outline-width: calc(var(--field-border-width) + var(--field-outline-width));\n    outline-offset: calc(\n      -1 * (var(--field-border-width) + var(--field-outline-width))\n    );\n    outline-color: var(--field-outline-color);\n  }\n\n  [data-field]:disabled,\n  [data-field][data-disabled],\n  [data-field-with-hover]:disabled:hover,\n  [data-field-with-hover][data-disabled]:hover {\n    outline-color: var(--field-disabled-border-color);\n    color: var(--field-disabled-text-color);\n  }\n  [data-field-with-background]:disabled,\n  [data-field-with-background][disabled] {\n    background-color: var(--field-disabled-background-color);\n  }\n";
+installImportMetaCss(import.meta);import.meta.css = /* css */ `
+  :root {
+    --navi-field-border-width: 1px;
+    --navi-field-outline-width: 1px;
+    --navi-field-border-radius: 2px;
+
+    --navi-field-strong-color: light-dark(#355fcc, #3b82f6);
+    --navi-field-outline-color: var(--navi-field-strong-color);
+    --navi-field-background-color: light-dark(#f3f4f6, #2d3748);
+    --navi-field-border-color: light-dark(#767676, #8e8e93);
+
+    --navi-field-disabled-border-color: color-mix(
+      in srgb,
+      var(--navi-field-border-color) 30%,
+      white
+    );
+    --navi-field-readonly-border-color: var(--navi-field-disabled-border-color);
+    --navi-field-active-border-color: color-mix(
+      in srgb,
+      var(--navi-field-border-color) 90%,
+      black
+    );
+    --navi-field-hover-border-color: color-mix(
+      in srgb,
+      var(--navi-field-border-color) 70%,
+      black
+    );
+
+    --navi-field-disabled-background-color: var(--navi-field-background-color);
+    --navi-field-readonly-background-color: var(
+      --navi-field-disabled-background-color
+    );
+    --navi-field-hover-background-color: color-mix(
+      in srgb,
+      var(--navi-field-background-color) 95%,
+      black
+    );
+
+    --navi-field-disabled-text-color: color-mix(
+      in srgb,
+      currentColor 30%,
+      transparent
+    );
+    --navi-field-readonly-text-color: var(--navi-field-disabled-text-color);
+  }
+
+  [data-field] {
+    border-radius: var(--navi-field-border-radius);
+    outline-width: var(--navi-field-border-width);
+    outline-style: solid;
+    outline-color: transparent;
+    outline-offset: calc(-1 * (var(--navifield-border-width)));
+  }
+
+  [data-field][data-field-with-border] {
+    border-width: calc(
+      var(--navi-field-border-width) + var(--navi-field-outline-width)
+    );
+    border-style: solid;
+    border-color: transparent;
+    outline-color: var(--navi-field-border-color);
+  }
+
+  [data-field-with-border-hover] {
+    border: 0;
+  }
+
+  [data-field-with-background] {
+    background-color: var(--navi-field-background-color);
+  }
+  [data-field-with-background-hover] {
+    background: none;
+  }
+
+  [data-field-with-background]:hover {
+    background-color: var(--navi-field-hover-background-color);
+  }
+
+  [data-field-with-hover]:hover {
+    outline-color: var(--navi-field-hover-border-color);
+  }
+
+  [data-field-with-border]:active,
+  [data-field][data-field-with-border][data-active] {
+    outline-color: var(--navi-field-active-border-color);
+    background-color: none;
+  }
+
+  [data-field-with-border][readonly],
+  [data-field-with-border][data-readonly] {
+    outline-color: var(--navi-field-readonly-border-color);
+  }
+
+  [data-field][readonly],
+  [data-field][data-readonly] {
+    color: var(--navi-field-readonly-text-color);
+  }
+
+  [data-field-with-background][readonly],
+  [data-field-with-background][data-readonly] {
+    background-color: var(--navi-field-readonly-background-color);
+  }
+
+  [data-field]:focus-visible,
+  [data-field][data-focus-visible]:focus {
+    outline-style: solid;
+    outline-width: calc(
+      var(--navi-field-border-width) + var(--navi-field-outline-width)
+    );
+    outline-offset: calc(
+      -1 * (var(--navi-field-border-width) + var(--navi-field-outline-width))
+    );
+    outline-color: var(--navi-field-outline-color);
+  }
+
+  [data-field]:disabled,
+  [data-field][data-disabled],
+  [data-field-with-hover]:disabled:hover,
+  [data-field-with-hover][data-disabled]:hover {
+    outline-color: var(--navi-field-disabled-border-color);
+    color: var(--navi-field-disabled-text-color);
+  }
+  [data-field-with-background]:disabled,
+  [data-field-with-background][disabled] {
+    background-color: var(--navi-field-disabled-background-color);
+  }
+`;
 
 /**
  * Input component for all textual input types.
@@ -16773,13 +19228,11 @@ const InputTextualBasic = forwardRef((props, ref) => {
     }
     // eslint-disable-next-line react/no-unknown-property
     ,
-
     onresetuistate: e => {
       uiStateController.resetUIState(e);
     }
     // eslint-disable-next-line react/no-unknown-property
     ,
-
     onsetuistate: e => {
       uiStateController.setUIState(e.detail.value, e);
     }
@@ -17007,7 +19460,7 @@ const convertToLocalTimezone = dateTimeString => {
   const hours = String(date.getHours()).padStart(2, "0");
   const minutes = String(date.getMinutes()).padStart(2, "0");
   const seconds = String(date.getSeconds()).padStart(2, "0");
-  return "".concat(year, "-").concat(month, "-").concat(day, "T").concat(hours, ":").concat(minutes, ":").concat(seconds);
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 };
 /**
  * Converts a datetime string without timezone (local time) to UTC format with 'Z' notation
@@ -17062,7 +19515,12 @@ const Input = forwardRef((props, ref) => {
   });
 });
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .navi_editable_wrapper {\n    position: absolute;\n    inset: 0;\n  }\n";
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .navi_editable_wrapper {
+    position: absolute;
+    inset: 0;
+  }
+`;
 const useEditionController = () => {
   const [editing, editingSetter] = useState(null);
   const startEditing = useCallback(event => {
@@ -17205,25 +19663,30 @@ const Editable = forwardRef((props, ref) => {
   });
 });
 
-const useFormEvents = (elementRef, {
-  onFormReset,
-  onFormActionPrevented,
-  onFormActionStart,
-  onFormActionAbort,
-  onFormActionError,
-  onFormActionEnd
-}) => {
+const useFormEvents = (
+  elementRef,
+  {
+    onFormReset,
+    onFormActionPrevented,
+    onFormActionStart,
+    onFormActionAbort,
+    onFormActionError,
+    onFormActionEnd,
+  },
+) => {
   onFormReset = useStableCallback(onFormReset);
   onFormActionPrevented = useStableCallback(onFormActionPrevented);
   onFormActionStart = useStableCallback(onFormActionStart);
   onFormActionAbort = useStableCallback(onFormActionAbort);
   onFormActionError = useStableCallback(onFormActionError);
   onFormActionEnd = useStableCallback(onFormActionEnd);
+
   useLayoutEffect(() => {
     const element = elementRef.current;
     if (!element) {
       return null;
     }
+
     let form = element.form;
     if (!form) {
       // some non input elements may want to listen form events (<RadioList> is a <div>)
@@ -17239,12 +19702,63 @@ const useFormEvents = (elementRef, {
       actionstart: onFormActionStart,
       actionabort: onFormActionAbort,
       actionerror: onFormActionError,
-      actionend: onFormActionEnd
+      actionend: onFormActionEnd,
     });
-  }, [onFormReset, onFormActionPrevented, onFormActionStart, onFormActionAbort, onFormActionError, onFormActionEnd]);
+  }, [
+    onFormReset,
+    onFormActionPrevented,
+    onFormActionStart,
+    onFormActionAbort,
+    onFormActionError,
+    onFormActionEnd,
+  ]);
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  button[data-custom] {\n    border: none;\n    background: none;\n    display: inline-block;\n    padding: 0;\n  }\n\n  button[data-custom] .navi_button_content {\n    transition-duration: 0.15s;\n    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);\n    transition-property: transform;\n    display: inline-flex;\n    position: relative;\n    padding-block: 1px;\n    padding-inline: 6px;\n  }\n\n  button[data-custom]:active .navi_button_content {\n    transform: scale(0.9);\n  }\n\n  button[data-custom]:disabled .navi_button_content {\n    transform: none;\n  }\n\n  button[data-custom] .navi_button_shadow {\n    position: absolute;\n    inset: calc(-1 * (var(--field-border-width) + var(--field-outline-width)));\n    pointer-events: none;\n    border-radius: inherit;\n  }\n  button[data-custom]:active .navi_button_shadow {\n    box-shadow:\n      inset 0 3px 6px rgba(0, 0, 0, 0.2),\n      inset 0 1px 2px rgba(0, 0, 0, 0.3),\n      inset 0 0 0 1px rgba(0, 0, 0, 0.1),\n      inset 2px 0 4px rgba(0, 0, 0, 0.1),\n      inset -2px 0 4px rgba(0, 0, 0, 0.1);\n  }\n  button[data-custom]:disabled > .navi_button_shadow {\n    box-shadow: none;\n  }\n";
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  button[data-custom] {
+    border: none;
+    background: none;
+    display: inline-block;
+    padding: 0;
+  }
+
+  button[data-custom] .navi_button_content {
+    transition-duration: 0.15s;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-property: transform;
+    display: inline-flex;
+    position: relative;
+    padding-block: 1px;
+    padding-inline: 6px;
+    border-radius: inherit;
+  }
+
+  button[data-custom]:active .navi_button_content {
+    transform: scale(0.9);
+  }
+
+  button[data-custom]:disabled .navi_button_content {
+    transform: none;
+  }
+
+  button[data-custom] .navi_button_shadow {
+    position: absolute;
+    inset: calc(-1 * (var(--field-border-width) + var(--field-outline-width)));
+    pointer-events: none;
+    border-radius: inherit;
+  }
+  button[data-custom]:active .navi_button_shadow {
+    box-shadow:
+      inset 0 3px 6px rgba(0, 0, 0, 0.2),
+      inset 0 1px 2px rgba(0, 0, 0, 0.3),
+      inset 0 0 0 1px rgba(0, 0, 0, 0.1),
+      inset 2px 0 4px rgba(0, 0, 0, 0.1),
+      inset -2px 0 4px rgba(0, 0, 0, 0.1);
+  }
+  button[data-custom]:disabled > .navi_button_shadow {
+    box-shadow: none;
+  }
+`;
 const Button = forwardRef((props, ref) => {
   return renderActionableComponent(props, ref, {
     Basic: ButtonBasic,
@@ -17282,6 +19796,8 @@ const ButtonBasic = forwardRef((props, ref) => {
     borderWidth = border === "none" || discrete ? 0 : 1,
     outlineWidth = discrete ? 0 : 1,
     borderColor = "light-dark(#767676, #8e8e93)",
+    background,
+    backgroundColor = "light-dark(#f3f4f6, #2d3748)",
     ...restStyle
   } = style;
   borderWidth = resolveCSSSize(borderWidth);
@@ -17303,7 +19819,7 @@ const ButtonBasic = forwardRef((props, ref) => {
       children: jsxs("span", {
         className: "navi_button_content",
         "data-field": "",
-        "data-field-with-background": "",
+        "data-field-with-background": background === "none" ? undefined : "",
         "data-field-with-hover": "",
         "data-field-with-border": borderWidth ? "" : undefined,
         "data-field-with-border-hover": discrete ? "" : undefined,
@@ -17312,9 +19828,10 @@ const ButtonBasic = forwardRef((props, ref) => {
         "data-readonly": innerReadOnly ? "" : undefined,
         "data-disabled": innerDisabled ? "" : undefined,
         style: {
-          "--field-border-width": "".concat(borderWidth, "px"),
-          "--field-outline-width": "".concat(outlineWidth, "px"),
-          "--field-border-color": borderColor
+          "--navi-field-border-width": `${borderWidth}px`,
+          "--navi-field-outline-width": `${outlineWidth}px`,
+          "--navi-field-border-color": borderColor,
+          "--navi-field-background-color": backgroundColor
         },
         children: [children, jsx("span", {
           className: "navi_button_shadow"
@@ -17505,7 +20022,12 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
   });
 });
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .navi_checkbox_list {\n    display: flex;\n    flex-direction: column;\n  }\n";
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .navi_checkbox_list {
+    display: flex;
+    flex-direction: column;
+  }
+`;
 const CheckboxList = forwardRef((props, ref) => {
   const uiStateController = useUIGroupStateController(props, "checkbox_list", {
     childComponentType: "checkbox",
@@ -17561,7 +20083,6 @@ const CheckboxListBasic = forwardRef((props, ref) => {
     "data-checkbox-list": true
     // eslint-disable-next-line react/no-unknown-property
     ,
-
     onresetuistate: e => {
       uiStateController.resetUIState(e);
     },
@@ -17657,14 +20178,17 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
 });
 const CheckboxListInsideForm = CheckboxListBasic;
 
-const collectFormElementValues = element => {
+const collectFormElementValues = (element) => {
   let formElements;
   if (element.tagName === "FORM") {
     formElements = element.elements;
   } else {
     // fieldset or anything else
-    formElements = element.querySelectorAll("input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button[name]:not([disabled])");
+    formElements = element.querySelectorAll(
+      "input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button[name]:not([disabled])",
+    );
   }
+
   const values = {};
   const checkboxArrayNameSet = new Set();
   for (const formElement of formElements) {
@@ -17676,13 +20200,16 @@ const collectFormElementValues = element => {
         values[name] = [];
         continue;
       }
-      const closestDataCheckboxList = formElement.closest("[data-checkbox-list]");
+      const closestDataCheckboxList = formElement.closest(
+        "[data-checkbox-list]",
+      );
       if (closestDataCheckboxList) {
         checkboxArrayNameSet.add(name);
         values[name] = [];
       }
     }
   }
+
   for (const formElement of formElements) {
     const name = formElement.name;
     if (!name) {
@@ -17700,26 +20227,31 @@ const collectFormElementValues = element => {
   }
   return values;
 };
-const getFormElementValue = formElement => {
-  const {
-    type,
-    tagName
-  } = formElement;
+
+const getFormElementValue = (formElement) => {
+  const { type, tagName } = formElement;
+
   if (tagName === "SELECT") {
     if (formElement.multiple) {
-      return Array.from(formElement.selectedOptions, option => getValue(option));
+      return Array.from(formElement.selectedOptions, (option) =>
+        getValue(option),
+      );
     }
     return formElement.value;
   }
+
   if (type === "checkbox" || type === "radio") {
     return formElement.checked ? getValue(formElement) : undefined;
   }
+
   if (type === "file") {
     return formElement.files; // Return FileList for special handling
   }
+
   return getValue(formElement);
 };
-const getValue = formElement => {
+
+const getValue = (formElement) => {
   const hasDataValueAttribute = formElement.hasAttribute("data-value");
   if (hasDataValueAttribute) {
     // happens for "datetime-local" inputs to keep the timezone
@@ -17919,7 +20451,12 @@ const FormWithAction = forwardRef((props, ref) => {
 //   form.dispatchEvent(customEvent);
 // };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .navi_radio_list {\n    display: flex;\n    flex-direction: column;\n  }\n";
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .navi_radio_list {
+    display: flex;
+    flex-direction: column;
+  }
+`;
 const RadioList = forwardRef((props, ref) => {
   const uiStateController = useUIGroupStateController(props, "radio_list", {
     childComponentType: "radio",
@@ -17976,7 +20513,6 @@ const RadioListBasic = forwardRef((props, ref) => {
     "data-radio-list": true
     // eslint-disable-next-line react/no-unknown-property
     ,
-
     onresetuistate: e => {
       uiStateController.resetUIState(e);
     },
@@ -18075,15 +20611,18 @@ const RadioListInsideForm = RadioListBasic;
 const useRefArray = (items, keyFromItem) => {
   const refMapRef = useRef(new Map());
   const previousKeySetRef = useRef(new Set());
+
   return useMemo(() => {
     const refMap = refMapRef.current;
     const previousKeySet = previousKeySetRef.current;
     const currentKeySet = new Set();
     const refArray = [];
+
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       const key = keyFromItem(item);
       currentKeySet.add(key);
+
       const refForKey = refMap.get(key);
       if (refForKey) {
         refArray[i] = refForKey;
@@ -18093,17 +20632,23 @@ const useRefArray = (items, keyFromItem) => {
         refArray[i] = newRef;
       }
     }
+
     for (const key of previousKeySet) {
       if (!currentKeySet.has(key)) {
         refMap.delete(key);
       }
     }
     previousKeySetRef.current = currentKeySet;
+
     return refArray;
   }, [items]);
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .navi_select[data-readonly] {\n    pointer-events: none;\n  }\n";
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .navi_select[data-readonly] {
+    pointer-events: none;
+  }
+`;
 const Select = forwardRef((props, ref) => {
   const select = renderActionableComponent(props, ref, {
     Basic: SelectBasic,
@@ -18257,7 +20802,7 @@ const SelectWithAction = forwardRef((props, ref) => {
       const selectedValue = select.value;
       setValue(selectedValue);
       const radioListContainer = innerRef.current;
-      const optionSelected = select.querySelector("option[value=\"".concat(selectedValue, "\"]"));
+      const optionSelected = select.querySelector(`option[value="${selectedValue}"]`);
       requestAction(radioListContainer, boundAction, {
         event,
         requester: optionSelected,
@@ -18317,7 +20862,7 @@ const SelectInsideForm = forwardRef((props, ref) => {
 });
 
 // http://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-keyshortcuts
-const generateAriaKeyShortcuts = key => {
+const generateAriaKeyShortcuts = (key) => {
   let actualCombination;
 
   // Handle platform-specific combination objects
@@ -18326,12 +20871,15 @@ const generateAriaKeyShortcuts = key => {
   } else {
     actualCombination = key;
   }
+
   if (actualCombination) {
     return normalizeKeyCombination(actualCombination);
   }
+
   return "";
 };
-const normalizeKeyCombination = combination => {
+
+const normalizeKeyCombination = (combination) => {
   const lowerCaseCombination = combination.toLowerCase();
   const keys = lowerCaseCombination.split("+");
 
@@ -18343,22 +20891,22 @@ const normalizeKeyCombination = combination => {
     if (keyToAriaKeyMapping[key]) {
       key = keyToAriaKeyMapping[key];
     }
+
     keys[i] = key;
   }
+
   return keys.join("+");
 };
 const keyToAriaKeyMapping = {
   // Platform-specific ARIA names
   command: "meta",
-  option: "altgraph",
-  // Mac option key uses "altgraph" in ARIA spec
+  option: "altgraph", // Mac option key uses "altgraph" in ARIA spec
 
   // Regular keys - platform-specific normalization
-  delete: isMac ? "backspace" : "delete",
-  // Mac delete key is backspace semantically
-  backspace: isMac ? "backspace" : "delete"
+  delete: isMac ? "backspace" : "delete", // Mac delete key is backspace semantically
+  backspace: isMac ? "backspace" : "delete",
 };
-const normalizeKey = key => {
+const normalizeKey = (key) => {
   key = key.toLowerCase();
 
   // Find the canonical form for this key
@@ -18368,10 +20916,45 @@ const normalizeKey = key => {
       return canonicalKey;
     }
   }
+
   return key;
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .navi_shortcut_container[data-visually-hidden] {\n    /* Visually hidden container - doesn't affect layout */\n    position: absolute;\n    width: 1px;\n    height: 1px;\n    padding: 0;\n    margin: -1px;\n    overflow: hidden;\n    clip: rect(0, 0, 0, 0);\n    white-space: nowrap;\n    border: 0;\n\n    /* Ensure it's not interactable */\n    opacity: 0;\n    pointer-events: none;\n  }\n\n  .navi_shortcut_button[data-visually-hidden] {\n    /* Visually hidden but accessible to screen readers */\n    position: absolute;\n    width: 1px;\n    height: 1px;\n    padding: 0;\n    margin: -1px;\n    overflow: hidden;\n    clip: rect(0, 0, 0, 0);\n    white-space: nowrap;\n    border: 0;\n\n    /* Ensure it's not focusable via tab navigation */\n    opacity: 0;\n    pointer-events: none;\n  }\n";
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .navi_shortcut_container[data-visually-hidden] {
+    /* Visually hidden container - doesn't affect layout */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+
+    /* Ensure it's not interactable */
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .navi_shortcut_button[data-visually-hidden] {
+    /* Visually hidden but accessible to screen readers */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+
+    /* Ensure it's not focusable via tab navigation */
+    opacity: 0;
+    pointer-events: none;
+  }
+`;
 const ActiveKeyboardShortcuts = ({
   visible
 }) => {
@@ -18420,11 +21003,12 @@ const KeyboardShortcutAriaElement = ({
  * @param {string} url - The URL to check
  * @returns {boolean} Whether the URL has been visited
  */
-const useIsVisited = url => {
+const useIsVisited = (url) => {
   return useMemo(() => {
     // Access the signal to create reactive dependency
     // eslint-disable-next-line no-unused-expressions
     visitedUrlsSignal.value;
+
     return isVisited(url);
   }, [url, visitedUrlsSignal.value]);
 };
@@ -18442,7 +21026,7 @@ const DEBUG = {
 };
 const debug = (category, ...args) => {
   if (DEBUG[category]) {
-    console.debug("[selection:".concat(category, "]"), ...args);
+    console.debug(`[selection:${category}]`, ...args);
   }
 };
 const SelectionContext = createContext();
@@ -18577,7 +21161,7 @@ const createBaseSelectionController = ({
       }
     }
     const finalValue = Array.from(selectionSet);
-    debug("selection", "".concat(type, " setSelection: calling onChange with:"), finalValue);
+    debug("selection", `${type} setSelection: calling onChange with:`, finalValue);
     onChange(finalValue, event);
     publishChange(finalValue, event);
   };
@@ -18585,26 +21169,26 @@ const createBaseSelectionController = ({
   let activeElement = null;
   const registerElement = (element, options = {}) => {
     const elementValue = getElementValue(element);
-    debug("registration", "".concat(type, " registerElement:"), element, "value:", elementValue, "registry size before:", registry.size);
+    debug("registration", `${type} registerElement:`, element, "value:", elementValue, "registry size before:", registry.size);
     registry.add(element);
     // Store the selectionImpact callback if provided
     if (options.selectionImpact) {
       element._selectionImpact = options.selectionImpact;
     }
-    debug("registration", "".concat(type, " registerElement: registry size after:"), registry.size);
+    debug("registration", `${type} registerElement: registry size after:`, registry.size);
   };
   const unregisterElement = element => {
     const elementValue = getElementValue(element);
-    debug("registration", "".concat(type, " unregisterElement:"), element, "value:", elementValue, "registry size before:", registry.size);
+    debug("registration", `${type} unregisterElement:`, element, "value:", elementValue, "registry size before:", registry.size);
     registry.delete(element);
-    debug("registration", "".concat(type, " unregisterElement: registry size after:"), registry.size);
+    debug("registration", `${type} unregisterElement: registry size after:`, registry.size);
   };
   const setActiveElement = element => {
     activeElement = element;
   };
   const setAnchorElement = element => {
     const elementValue = getElementValue(element);
-    debug("selection", "".concat(type, " setAnchorElement:"), element, "value:", elementValue);
+    debug("selection", `${type} setAnchorElement:`, element, "value:", elementValue);
     anchorElement = element;
   };
   const isElementSelected = element => {
@@ -18618,28 +21202,28 @@ const createBaseSelectionController = ({
   };
   // Selection manipulation methods
   const setSelection = (newSelection, event = null) => {
-    debug("selection", "".concat(type, " setSelection called with:"), newSelection, "current selection:", baseSelection.value);
+    debug("selection", `${type} setSelection called with:`, newSelection, "current selection:", baseSelection.value);
     if (newSelection.length === baseSelection.value.length && newSelection.every((value, index) => value === baseSelection.value[index])) {
-      debug("selection", "".concat(type, " setSelection: no change, returning early"));
+      debug("selection", `${type} setSelection: no change, returning early`);
       return;
     }
     update(newSelection, event);
   };
   const addToSelection = (arrayOfValuesToAdd, event = null) => {
-    debug("selection", "".concat(type, " addToSelection called with:"), arrayOfValuesToAdd, "current selection:", baseSelection.value);
+    debug("selection", `${type} addToSelection called with:`, arrayOfValuesToAdd, "current selection:", baseSelection.value);
     const selectionWithValues = [...baseSelection.value];
     let modified = false;
     for (const valueToAdd of arrayOfValuesToAdd) {
       if (!selectionWithValues.includes(valueToAdd)) {
         modified = true;
         selectionWithValues.push(valueToAdd);
-        debug("selection", "".concat(type, " addToSelection: adding value:"), valueToAdd);
+        debug("selection", `${type} addToSelection: adding value:`, valueToAdd);
       }
     }
     if (modified) {
       update(selectionWithValues, event);
     } else {
-      debug("selection", "".concat(type, " addToSelection: no changes made"));
+      debug("selection", `${type} addToSelection: no changes made`);
     }
   };
   const removeFromSelection = (arrayOfValuesToRemove, event = null) => {
@@ -18903,7 +21487,7 @@ const createLinearSelectionController = ({
   ...options
 }) => {
   if (!["horizontal", "vertical"].includes(layout)) {
-    throw new Error("useLinearSelection: Invalid axis \"".concat(layout, "\". Must be \"horizontal\" or \"vertical\"."));
+    throw new Error(`useLinearSelection: Invalid axis "${layout}". Must be "horizontal" or "vertical".`);
   }
   const registry = new Set();
 
@@ -19470,28 +22054,28 @@ const createSelectionKeyboardShortcuts = (selectionController, {
       shouldClearPreviousSelection
     } = handleCrossTypeNavigation(selectableElement, elementToSelect, isMultiSelect);
     if (isShiftSelect) {
-      debug("interaction", "keydownToSelect: ".concat(key, " with Shift - selecting from anchor to target element"));
+      debug("interaction", `keydownToSelect: ${key} with Shift - selecting from anchor to target element`);
       selectionController.setActiveElement(elementToSelect);
       selectionController.selectFromAnchorTo(elementToSelect, keyboardEvent);
       return true;
     }
     if (isMultiSelect && !isCrossType) {
-      debug("interaction", "keydownToSelect: ".concat(key, " with multi-select - adding to selection"));
+      debug("interaction", `keydownToSelect: ${key} with multi-select - adding to selection`);
       selectionController.addToSelection([targetValue], keyboardEvent);
       return true;
     }
     // Handle cross-type navigation
     if (shouldClearPreviousSelection) {
-      debug("interaction", "keydownToSelect: ".concat(key, " - cross-type navigation, clearing and setting new selection"));
+      debug("interaction", `keydownToSelect: ${key} - cross-type navigation, clearing and setting new selection`);
       selectionController.setSelection([targetValue], keyboardEvent);
       return true;
     }
     if (isCrossType && !shouldClearPreviousSelection) {
-      debug("interaction", "keydownToSelect: ".concat(key, " - cross-type navigation with Cmd, adding to selection"));
+      debug("interaction", `keydownToSelect: ${key} - cross-type navigation with Cmd, adding to selection`);
       selectionController.addToSelection([targetValue], keyboardEvent);
       return true;
     }
-    debug("interaction", "keydownToSelect: ".concat(key, " - setting selection to target element"));
+    debug("interaction", `keydownToSelect: ${key} - setting selection to target element`);
     selectionController.setSelection([targetValue], keyboardEvent);
     return true;
   };
@@ -19715,7 +22299,51 @@ const createSelectionKeyboardShortcuts = (selectionController, {
   }];
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .navi_link {\n    border-radius: 2px;\n  }\n\n  .navi_link:focus {\n    position: relative;\n    z-index: 1; /* Ensure focus outline is above other elements */\n  }\n\n  .navi_link[data-readonly] > *,\n  .navi_link[inert] > * {\n    opacity: 0.5;\n  }\n\n  .navi_link[inert] {\n    pointer-events: none;\n  }\n\n  .navi_link[aria-selected] {\n    position: relative;\n  }\n\n  .navi_link[aria-selected] input[type=\"checkbox\"] {\n    position: absolute;\n    opacity: 0;\n  }\n\n  /* Visual feedback for selected state */\n  .navi_link[aria-selected=\"true\"] {\n    background-color: light-dark(#bbdefb, #2563eb);\n  }\n\n  .navi_link[data-active] {\n    font-weight: bold;\n  }\n\n  .navi_link[data-visited] {\n    color: light-dark(#6a1b9a, #ab47bc);\n  }\n\n  .navi_link[data-no-text-decoration] {\n    text-decoration: none;\n  }\n";
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .navi_link {
+    border-radius: 2px;
+  }
+
+  .navi_link:focus {
+    position: relative;
+    z-index: 1; /* Ensure focus outline is above other elements */
+  }
+
+  .navi_link[data-readonly] > *,
+  .navi_link[inert] > * {
+    opacity: 0.5;
+  }
+
+  .navi_link[inert] {
+    pointer-events: none;
+  }
+
+  .navi_link[aria-selected] {
+    position: relative;
+  }
+
+  .navi_link[aria-selected] input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+  }
+
+  /* Visual feedback for selected state */
+  .navi_link[aria-selected="true"] {
+    background-color: light-dark(#bbdefb, #2563eb);
+  }
+
+  .navi_link[data-active] {
+    font-weight: bold;
+  }
+
+  .navi_link[data-visited] {
+    color: light-dark(#6a1b9a, #ab47bc);
+  }
+
+  .navi_link[data-no-text-decoration] {
+    text-decoration: none;
+  }
+`;
 const Link = forwardRef((props, ref) => {
   return renderActionableComponent(props, ref, {
     Basic: LinkBasic,
@@ -19849,7 +22477,7 @@ const useDimColorWhen = (elementRef, shouldDim) => {
       // Capture color just before applying disabled state
       const computedStyle = getComputedStyle(element);
       const currentColor = computedStyle.color;
-      element.style.color = "color(from ".concat(currentColor, " srgb r g b / 0.5)");
+      element.style.color = `color(from ${currentColor} srgb r g b / 0.5)`;
     } else {
       // Clear the inline style to let CSS take over
       element.style.color = "";
@@ -20026,7 +22654,10 @@ const Route = ({
 };
 
 const TableSelectionContext = createContext();
-const useTableSelectionContextValue = (selection, selectionController) => {
+const useTableSelectionContextValue = (
+  selection,
+  selectionController,
+) => {
   const selectionContextValue = useMemo(() => {
     const selectedColumnIds = [];
     const selectedRowIds = [];
@@ -20035,25 +22666,17 @@ const useTableSelectionContextValue = (selection, selectionController) => {
     for (const item of selection) {
       const selectionValueInfo = parseTableSelectionValue(item);
       if (selectionValueInfo.type === "row") {
-        const {
-          rowId
-        } = selectionValueInfo;
+        const { rowId } = selectionValueInfo;
         selectedRowIds.push(rowId);
         continue;
       }
       if (selectionValueInfo.type === "column") {
-        const {
-          columnId
-        } = selectionValueInfo;
+        const { columnId } = selectionValueInfo;
         selectedColumnIds.push(columnId);
         continue;
       }
       if (selectionValueInfo.type === "cell") {
-        const {
-          cellId,
-          columnId,
-          rowId
-        } = selectionValueInfo;
+        const { cellId, columnId, rowId } = selectionValueInfo;
         columnIdWithSomeSelectedCellSet.add(columnId);
         rowIdWithSomeSelectedCellSet.add(rowId);
         continue;
@@ -20065,48 +22688,36 @@ const useTableSelectionContextValue = (selection, selectionController) => {
       selectedColumnIds,
       selectedRowIds,
       columnIdWithSomeSelectedCellSet,
-      rowIdWithSomeSelectedCellSet
+      rowIdWithSomeSelectedCellSet,
     };
   }, [selection]);
+
   return selectionContextValue;
 };
-const parseTableSelectionValue = selectionValue => {
+
+const parseTableSelectionValue = (selectionValue) => {
   if (selectionValue.startsWith("column:")) {
     const columnId = selectionValue.slice("column:".length);
-    return {
-      type: "column",
-      columnId
-    };
+    return { type: "column", columnId };
   }
   if (selectionValue.startsWith("row:")) {
     const rowId = selectionValue.slice("row:".length);
-    return {
-      type: "row",
-      rowId
-    };
+    return { type: "row", rowId };
   }
   const cellId = selectionValue.slice("cell:".length);
   const [columnId, rowId] = cellId.split("-");
-  return {
-    type: "cell",
-    cellId,
-    columnId,
-    rowId
-  };
+  return { type: "cell", cellId, columnId, rowId };
 };
 const stringifyTableSelectionValue = (type, value) => {
   if (type === "cell") {
-    const {
-      columnId,
-      rowId
-    } = value;
-    return "cell:".concat(columnId, "-").concat(rowId);
+    const { columnId, rowId } = value;
+    return `cell:${columnId}-${rowId}`;
   }
   if (type === "column") {
-    return "column:".concat(value);
+    return `column:${value}`;
   }
   if (type === "row") {
-    return "row:".concat(value);
+    return `row:${value}`;
   }
   return "";
 };
@@ -20363,18 +22974,141 @@ const Z_INDEX_EDITING = 1; /* To go above neighbours, but should not be too big 
 const Z_INDEX_STICKY_COLUMN = Z_INDEX_EDITING + 1;
 const Z_INDEX_STICKY_ROW = Z_INDEX_STICKY_COLUMN + 1;
 const Z_INDEX_STICKY_CORNER = Z_INDEX_STICKY_ROW + 1;
+
 const Z_INDEX_STICKY_FRONTIER_BACKDROP = Z_INDEX_STICKY_CORNER + 1;
-const Z_INDEX_STICKY_FRONTIER_PREVIEW = Z_INDEX_STICKY_FRONTIER_BACKDROP + 1;
-const Z_INDEX_STICKY_FRONTIER_GHOST = Z_INDEX_STICKY_FRONTIER_PREVIEW + 1;
+const Z_INDEX_STICKY_FRONTIER_PREVIEW =
+  Z_INDEX_STICKY_FRONTIER_BACKDROP + 1;
+const Z_INDEX_STICKY_FRONTIER_GHOST =
+  Z_INDEX_STICKY_FRONTIER_PREVIEW + 1;
 const Z_INDEX_RESIZER_BACKDROP = Z_INDEX_STICKY_CORNER + 1; // above sticky cells
 
 const Z_INDEX_CELL_FOREGROUND = 1;
 const Z_INDEX_STICKY_FRONTIER_HANDLE = 2; // above the cell placeholder to keep the sticky frontier visible
 const Z_INDEX_RESIZER_HANDLE = Z_INDEX_STICKY_FRONTIER_HANDLE + 1;
 const Z_INDEX_DROP_PREVIEW = Z_INDEX_STICKY_CORNER + 1;
+
 const Z_INDEX_TABLE_UI = Z_INDEX_STICKY_CORNER + 1;
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .navi_table_drag_clone_container {\n    position: absolute;\n    left: var(--table-visual-left);\n    top: var(--table-visual-top);\n    width: var(--table-visual-width);\n    height: var(--table-visual-height);\n    /* background: rgba(0, 0, 0, 0.5); */\n  }\n\n  .navi_table_cell[data-grabbed]::before,\n  .navi_table_cell[data-grabbed]::after {\n    box-shadow: none !important;\n  }\n\n  /* We preprend \".navi_table_container\" to ensure it propertly overrides */\n  .navi_table_drag_clone_container .navi_table_cell {\n    opacity: ".concat(0, ";\n  }\n\n  .navi_table_drag_clone_container .navi_table_cell[data-grabbed] {\n    opacity: 0.7;\n  }\n\n  .navi_table_drag_clone_container .navi_table_cell_sticky_frontier {\n    opacity: 0;\n  }\n\n  .navi_table_drag_clone_container .navi_table_cell[data-sticky-left],\n  .navi_table_drag_clone_container .navi_table_cell[data-sticky-top] {\n    position: relative;\n  }\n\n  .navi_table_cell_foreground {\n    pointer-events: none;\n    position: absolute;\n    inset: 0;\n    background: lightgrey;\n    opacity: 0;\n    z-index: ").concat(Z_INDEX_CELL_FOREGROUND, ";\n  }\n  .navi_table_cell[data-first-row] .navi_table_cell_foreground {\n    background-color: grey;\n  }\n  .navi_table_cell_foreground[data-visible] {\n    opacity: 1;\n  }\n\n  .navi_table_drag_clone_container .navi_table_cell_foreground {\n    opacity: 1;\n    background-color: rgba(255, 255, 255, 0.2);\n    backdrop-filter: blur(10px);\n  }\n  .navi_table_drag_clone_container\n    .navi_table_cell[data-first-row][data-grabbed] {\n    opacity: 1;\n  }\n  .navi_table_drag_clone_container\n    .navi_table_cell[data-first-row]\n    .navi_table_cell_foreground {\n    opacity: 0;\n  }\n\n  .navi_table_column_drop_preview {\n    position: absolute;\n    left: var(--column-left);\n    top: var(--column-top);\n    width: var(--column-width);\n    height: var(--column-height);\n    pointer-events: none;\n    z-index: ").concat(Z_INDEX_DROP_PREVIEW, ";\n    /* Invisible container - just for positioning */\n    background: transparent;\n    border: none;\n  }\n\n  .navi_table_column_drop_preview_line {\n    position: absolute;\n    top: 0;\n    bottom: 0;\n    width: 4px;\n    background: rgba(0, 0, 255, 0.5);\n    opacity: 0;\n    left: 0; /* Default: left edge for dropping before */\n    transform: translateX(-50%);\n  }\n  .navi_table_column_drop_preview[data-after]\n    .navi_table_column_drop_preview_line {\n    left: 100%; /* Right edge for dropping after */\n  }\n  .navi_table_column_drop_preview[data-visible]\n    .navi_table_column_drop_preview_line {\n    opacity: 1;\n  }\n\n  .navi_table_column_drop_preview .arrow_positioner {\n    position: absolute;\n    left: 0; /* Default: left edge for dropping before */\n    display: flex;\n    opacity: 0;\n    transform: translateX(-50%);\n    color: rgba(0, 0, 255, 0.5);\n  }\n  .navi_table_column_drop_preview[data-after] .arrow_positioner {\n    left: 100%; /* Right edge for dropping after */\n  }\n  .navi_table_column_drop_preview[data-visible] .arrow_positioner {\n    opacity: 1;\n  }\n  .navi_table_column_drop_preview .arrow_positioner[data-top] {\n    top: -10px;\n  }\n  .navi_table_column_drop_preview .arrow_positioner[data-bottom] {\n    bottom: -10px;\n  }\n  .arrow_positioner svg {\n    width: 10px;\n    height: 10px;\n  }\n");
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .navi_table_drag_clone_container {
+    position: absolute;
+    left: var(--table-visual-left);
+    top: var(--table-visual-top);
+    width: var(--table-visual-width);
+    height: var(--table-visual-height);
+    /* background: rgba(0, 0, 0, 0.5); */
+  }
+
+  .navi_table_cell[data-grabbed]::before,
+  .navi_table_cell[data-grabbed]::after {
+    box-shadow: none !important;
+  }
+
+  /* We preprend ".navi_table_container" to ensure it propertly overrides */
+  .navi_table_drag_clone_container .navi_table_cell {
+    opacity: ${0};
+  }
+
+  .navi_table_drag_clone_container .navi_table_cell[data-grabbed] {
+    opacity: 0.7;
+  }
+
+  .navi_table_drag_clone_container .navi_table_cell_sticky_frontier {
+    opacity: 0;
+  }
+
+  .navi_table_drag_clone_container .navi_table_cell[data-sticky-left],
+  .navi_table_drag_clone_container .navi_table_cell[data-sticky-top] {
+    position: relative;
+  }
+
+  .navi_table_cell_foreground {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    background: lightgrey;
+    opacity: 0;
+    z-index: ${Z_INDEX_CELL_FOREGROUND};
+  }
+  .navi_table_cell[data-first-row] .navi_table_cell_foreground {
+    background-color: grey;
+  }
+  .navi_table_cell_foreground[data-visible] {
+    opacity: 1;
+  }
+
+  .navi_table_drag_clone_container .navi_table_cell_foreground {
+    opacity: 1;
+    background-color: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+  }
+  .navi_table_drag_clone_container
+    .navi_table_cell[data-first-row][data-grabbed] {
+    opacity: 1;
+  }
+  .navi_table_drag_clone_container
+    .navi_table_cell[data-first-row]
+    .navi_table_cell_foreground {
+    opacity: 0;
+  }
+
+  .navi_table_column_drop_preview {
+    position: absolute;
+    left: var(--column-left);
+    top: var(--column-top);
+    width: var(--column-width);
+    height: var(--column-height);
+    pointer-events: none;
+    z-index: ${Z_INDEX_DROP_PREVIEW};
+    /* Invisible container - just for positioning */
+    background: transparent;
+    border: none;
+  }
+
+  .navi_table_column_drop_preview_line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: rgba(0, 0, 255, 0.5);
+    opacity: 0;
+    left: 0; /* Default: left edge for dropping before */
+    transform: translateX(-50%);
+  }
+  .navi_table_column_drop_preview[data-after]
+    .navi_table_column_drop_preview_line {
+    left: 100%; /* Right edge for dropping after */
+  }
+  .navi_table_column_drop_preview[data-visible]
+    .navi_table_column_drop_preview_line {
+    opacity: 1;
+  }
+
+  .navi_table_column_drop_preview .arrow_positioner {
+    position: absolute;
+    left: 0; /* Default: left edge for dropping before */
+    display: flex;
+    opacity: 0;
+    transform: translateX(-50%);
+    color: rgba(0, 0, 255, 0.5);
+  }
+  .navi_table_column_drop_preview[data-after] .arrow_positioner {
+    left: 100%; /* Right edge for dropping after */
+  }
+  .navi_table_column_drop_preview[data-visible] .arrow_positioner {
+    opacity: 1;
+  }
+  .navi_table_column_drop_preview .arrow_positioner[data-top] {
+    top: -10px;
+  }
+  .navi_table_column_drop_preview .arrow_positioner[data-bottom] {
+    bottom: -10px;
+  }
+  .arrow_positioner svg {
+    width: 10px;
+    height: 10px;
+  }
+`;
 const TableDragContext = createContext();
 const useTableDragContextValue = ({
   tableDragCloneContainerRef,
@@ -20386,7 +23120,7 @@ const useTableDragContextValue = ({
   setColumnOrder = useStableCallback(setColumnOrder);
   const [grabTarget, setGrabTarget] = useState(null);
   const grabColumn = columnIndex => {
-    setGrabTarget("column:".concat(columnIndex));
+    setGrabTarget(`column:${columnIndex}`);
   };
   const releaseColumn = (columnIndex, newColumnIndex) => {
     setGrabTarget(null);
@@ -20519,10 +23253,10 @@ const initDragTableColumnViaPointer = (pointerdownEvent, {
           const [relativeLeft, relativeTop] = relativePosition;
           cloneCell.style.position = "relative";
           if (relativeLeft !== undefined) {
-            cloneCell.style.left = "".concat(relativeLeft, "px");
+            cloneCell.style.left = `${relativeLeft}px`;
           }
           if (relativeTop !== undefined) {
-            cloneCell.style.top = "".concat(relativeTop, "px");
+            cloneCell.style.top = `${relativeTop}px`;
           }
         }
       });
@@ -20603,10 +23337,10 @@ const initDragTableColumnViaPointer = (pointerdownEvent, {
           width,
           height
         } = targetColumn.getBoundingClientRect();
-        dropPreview.style.setProperty("--column-left", "".concat(left, "px"));
-        dropPreview.style.setProperty("--column-top", "".concat(top, "px"));
-        dropPreview.style.setProperty("--column-width", "".concat(width, "px"));
-        dropPreview.style.setProperty("--column-height", "".concat(height, "px"));
+        dropPreview.style.setProperty("--column-left", `${left}px`);
+        dropPreview.style.setProperty("--column-top", `${top}px`);
+        dropPreview.style.setProperty("--column-width", `${width}px`);
+        dropPreview.style.setProperty("--column-height", `${height}px`);
         // Set data-after attribute to control line position via CSS
         if (dropColumnIndex > columnIndex) {
           // Dropping after: CSS will position line at right edge (100%)
@@ -20690,32 +23424,41 @@ const createTableAttributeSync = (table, tableClone) => {
 };
 
 const TableSizeContext = createContext();
+
 const useTableSizeContextValue = ({
   onColumnSizeChange,
   onRowSizeChange,
   columns,
   rows,
   columnResizerRef,
-  rowResizerRef
+  rowResizerRef,
 }) => {
   onColumnSizeChange = useStableCallback(onColumnSizeChange);
   onRowSizeChange = useStableCallback(onRowSizeChange);
+
   const tableSizeContextValue = useMemo(() => {
-    const onColumnSizeChangeWithColumn = onColumnSizeChange ? (width, columnIndex) => {
-      const column = columns[columnIndex];
-      return onColumnSizeChange(width, columnIndex, column);
-    } : onColumnSizeChange;
-    const onRowSizeChangeWithRow = onRowSizeChange ? (height, rowIndex) => {
-      const row = rows[rowIndex];
-      return onRowSizeChange(height, rowIndex, row);
-    } : onRowSizeChange;
+    const onColumnSizeChangeWithColumn = onColumnSizeChange
+      ? (width, columnIndex) => {
+          const column = columns[columnIndex];
+          return onColumnSizeChange(width, columnIndex, column);
+        }
+      : onColumnSizeChange;
+
+    const onRowSizeChangeWithRow = onRowSizeChange
+      ? (height, rowIndex) => {
+          const row = rows[rowIndex];
+          return onRowSizeChange(height, rowIndex, row);
+        }
+      : onRowSizeChange;
+
     return {
       onColumnSizeChange: onColumnSizeChangeWithColumn,
       onRowSizeChange: onRowSizeChangeWithRow,
       columnResizerRef,
-      rowResizerRef
+      rowResizerRef,
     };
   }, []);
+
   return tableSizeContextValue;
 };
 
@@ -20723,7 +23466,161 @@ installImportMetaCss(import.meta);const ROW_MIN_HEIGHT = 30;
 const ROW_MAX_HEIGHT = 100;
 const COLUMN_MIN_WIDTH = 50;
 const COLUMN_MAX_WIDTH = 500;
-import.meta.css = /* css */"\n  body {\n    --table-resizer-handle-color: #063b7c;\n    --table-resizer-color: #387ec9;\n  }\n\n  .navi_table_cell {\n    /* ensure table cell padding does not count when we say column = 50px we want a column of 50px, not 50px + paddings */\n    box-sizing: border-box;\n  }\n\n  .navi_table_cell_resize_handle {\n    position: absolute;\n    /* background: orange; */\n    /* opacity: 0.5; */\n    z-index: ".concat(Z_INDEX_RESIZER_HANDLE, ";\n  }\n  .navi_table_cell_resize_handle[data-left],\n  .navi_table_cell_resize_handle[data-right] {\n    cursor: ew-resize;\n    top: 0;\n    bottom: 0;\n    width: 8px;\n  }\n  .navi_table_cell_resize_handle[data-left] {\n    left: 0;\n  }\n  .navi_table_cell_resize_handle[data-right] {\n    right: 0;\n  }\n\n  .navi_table_cell_resize_handle[data-top],\n  .navi_table_cell_resize_handle[data-bottom] {\n    cursor: ns-resize;\n    left: 0;\n    right: 0;\n    height: 8px;\n  }\n  .navi_table_cell_resize_handle[data-top] {\n    top: 0;\n  }\n  .navi_table_cell_resize_handle[data-bottom] {\n    bottom: 0;\n  }\n\n  .navi_table_column_resizer {\n    pointer-events: none;\n    position: absolute;\n    left: var(--table-column-resizer-left);\n    width: 10px;\n    top: var(--table-visual-top);\n    height: var(--table-visual-height);\n    opacity: 0;\n  }\n  .navi_table_column_resize_handle {\n    position: absolute;\n    height: 100%;\n    top: 50%;\n    transform: translateY(-50%);\n    border-radius: 15px;\n    background: var(--table-resizer-handle-color);\n    /* opacity: 0.5; */\n    width: 5px;\n    height: 26px;\n    max-height: 80%;\n  }\n  .navi_table_column_resize_handle[data-left] {\n    left: 2px;\n  }\n  .navi_table_column_resize_handle[data-right] {\n    right: 3px;\n  }\n  .navi_table_column_resize_handle_container {\n    position: absolute;\n    top: 0;\n    left: -10px;\n    right: 0;\n    height: var(--table-cell-height);\n  }\n  .navi_table_column_resizer_line {\n    position: absolute;\n    top: 0;\n    bottom: 0;\n    width: 5px;\n    left: -3px;\n    background: var(--table-resizer-color);\n    opacity: 0;\n    transition: opacity 0.1s ease;\n  }\n  .navi_table_column_resizer[data-hover],\n  .navi_table_column_resizer[data-grabbed] {\n    opacity: 1;\n  }\n  .navi_table_column_resizer[data-hover] {\n    transition-delay: 150ms; /* Delay before showing hover effect */\n  }\n  .navi_table_column_resizer[data-grabbed] .navi_table_column_resizer_line {\n    opacity: 1;\n  }\n\n  .navi_table_row_resizer {\n    pointer-events: none;\n    position: absolute;\n    left: var(--table-visual-left);\n    width: var(--table-visual-width);\n    top: var(--table-row-resizer-top);\n    height: 10px;\n    opacity: 0;\n  }\n  .navi_table_row_resize_handle {\n    position: absolute;\n    width: 100%;\n    left: 50%;\n    transform: translateX(-50%);\n    border-radius: 15px;\n    background: var(--table-resizer-handle-color);\n    /* opacity: 0.5; */\n    width: 26px;\n    height: 5px;\n    max-width: 80%;\n  }\n  .navi_table_row_resize_handle[data-top] {\n    top: 2px;\n  }\n  .navi_table_row_resize_handle[data-bottom] {\n    bottom: 3px;\n  }\n  .navi_table_row_resize_handle_container {\n    position: absolute;\n    left: 0;\n    top: -10px;\n    bottom: 0;\n    width: var(--table-cell-width);\n  }\n  .navi_table_row_resizer_line {\n    position: absolute;\n    left: 0;\n    right: 0;\n    height: 5px;\n    top: -3px;\n    background: var(--table-resizer-color);\n    opacity: 0;\n    transition: opacity 0.1s ease;\n  }\n  .navi_table_row_resizer[data-hover],\n  .navi_table_row_resizer[data-grabbed] {\n    opacity: 1;\n  }\n  .navi_table_row_resizer[data-hover] {\n    transition-delay: 150ms; /* Delay before showing hover effect */\n  }\n  .navi_table_row_resizer[data-grabbed] .navi_table_row_resizer_line {\n    opacity: 1;\n  }\n");
+import.meta.css = /* css */`
+  body {
+    --table-resizer-handle-color: #063b7c;
+    --table-resizer-color: #387ec9;
+  }
+
+  .navi_table_cell {
+    /* ensure table cell padding does not count when we say column = 50px we want a column of 50px, not 50px + paddings */
+    box-sizing: border-box;
+  }
+
+  .navi_table_cell_resize_handle {
+    position: absolute;
+    /* background: orange; */
+    /* opacity: 0.5; */
+    z-index: ${Z_INDEX_RESIZER_HANDLE};
+  }
+  .navi_table_cell_resize_handle[data-left],
+  .navi_table_cell_resize_handle[data-right] {
+    cursor: ew-resize;
+    top: 0;
+    bottom: 0;
+    width: 8px;
+  }
+  .navi_table_cell_resize_handle[data-left] {
+    left: 0;
+  }
+  .navi_table_cell_resize_handle[data-right] {
+    right: 0;
+  }
+
+  .navi_table_cell_resize_handle[data-top],
+  .navi_table_cell_resize_handle[data-bottom] {
+    cursor: ns-resize;
+    left: 0;
+    right: 0;
+    height: 8px;
+  }
+  .navi_table_cell_resize_handle[data-top] {
+    top: 0;
+  }
+  .navi_table_cell_resize_handle[data-bottom] {
+    bottom: 0;
+  }
+
+  .navi_table_column_resizer {
+    pointer-events: none;
+    position: absolute;
+    left: var(--table-column-resizer-left);
+    width: 10px;
+    top: var(--table-visual-top);
+    height: var(--table-visual-height);
+    opacity: 0;
+  }
+  .navi_table_column_resize_handle {
+    position: absolute;
+    height: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    border-radius: 15px;
+    background: var(--table-resizer-handle-color);
+    /* opacity: 0.5; */
+    width: 5px;
+    height: 26px;
+    max-height: 80%;
+  }
+  .navi_table_column_resize_handle[data-left] {
+    left: 2px;
+  }
+  .navi_table_column_resize_handle[data-right] {
+    right: 3px;
+  }
+  .navi_table_column_resize_handle_container {
+    position: absolute;
+    top: 0;
+    left: -10px;
+    right: 0;
+    height: var(--table-cell-height);
+  }
+  .navi_table_column_resizer_line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+    left: -3px;
+    background: var(--table-resizer-color);
+    opacity: 0;
+    transition: opacity 0.1s ease;
+  }
+  .navi_table_column_resizer[data-hover],
+  .navi_table_column_resizer[data-grabbed] {
+    opacity: 1;
+  }
+  .navi_table_column_resizer[data-hover] {
+    transition-delay: 150ms; /* Delay before showing hover effect */
+  }
+  .navi_table_column_resizer[data-grabbed] .navi_table_column_resizer_line {
+    opacity: 1;
+  }
+
+  .navi_table_row_resizer {
+    pointer-events: none;
+    position: absolute;
+    left: var(--table-visual-left);
+    width: var(--table-visual-width);
+    top: var(--table-row-resizer-top);
+    height: 10px;
+    opacity: 0;
+  }
+  .navi_table_row_resize_handle {
+    position: absolute;
+    width: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 15px;
+    background: var(--table-resizer-handle-color);
+    /* opacity: 0.5; */
+    width: 26px;
+    height: 5px;
+    max-width: 80%;
+  }
+  .navi_table_row_resize_handle[data-top] {
+    top: 2px;
+  }
+  .navi_table_row_resize_handle[data-bottom] {
+    bottom: 3px;
+  }
+  .navi_table_row_resize_handle_container {
+    position: absolute;
+    left: 0;
+    top: -10px;
+    bottom: 0;
+    width: var(--table-cell-width);
+  }
+  .navi_table_row_resizer_line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 5px;
+    top: -3px;
+    background: var(--table-resizer-color);
+    opacity: 0;
+    transition: opacity 0.1s ease;
+  }
+  .navi_table_row_resizer[data-hover],
+  .navi_table_row_resizer[data-grabbed] {
+    opacity: 1;
+  }
+  .navi_table_row_resizer[data-hover] {
+    transition-delay: 150ms; /* Delay before showing hover effect */
+  }
+  .navi_table_row_resizer[data-grabbed] .navi_table_row_resizer_line {
+    opacity: 1;
+  }
+`;
 
 // Column resize components
 const TableColumnResizer = forwardRef((props, ref) => {
@@ -20847,8 +23744,8 @@ const updateTableColumnResizerPosition = (columnCell, columnResizer) => {
   const columnCellRect = columnCell.getBoundingClientRect();
   const columnRight = columnCellRect.right;
   const cellHeight = columnCellRect.height;
-  columnResizer.style.setProperty("--table-column-resizer-left", "".concat(columnRight, "px"));
-  columnResizer.style.setProperty("--table-cell-height", "".concat(cellHeight, "px"));
+  columnResizer.style.setProperty("--table-column-resizer-left", `${columnRight}px`);
+  columnResizer.style.setProperty("--table-cell-height", `${cellHeight}px`);
   columnResizer.setAttribute("data-hover", "");
 };
 // Row resize helper functions
@@ -20861,8 +23758,8 @@ const updateTableRowResizerPosition = (rowCell, rowResizer) => {
   const rowCellRect = rowCell.getBoundingClientRect();
   const rowBottom = rowCellRect.bottom;
   const cellWidth = rowCellRect.width;
-  rowResizer.style.setProperty("--table-row-resizer-top", "".concat(rowBottom, "px"));
-  rowResizer.style.setProperty("--table-cell-width", "".concat(cellWidth, "px"));
+  rowResizer.style.setProperty("--table-row-resizer-top", `${rowBottom}px`);
+  rowResizer.style.setProperty("--table-cell-width", `${cellWidth}px`);
   rowResizer.setAttribute("data-hover", "");
 };
 const onMouseEnterLeftResizeHandle = (e, columnResizer) => {
@@ -21189,7 +24086,97 @@ const findPreviousTableRow = currentRow => {
   return currentIndex > 0 ? allRows[currentIndex - 1] : null;
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  body {\n    --selection-border-color: #0078d4;\n    --selection-background-color: #eaf1fd;\n  }\n\n  .navi_table_cell[aria-selected=\"true\"] {\n    background-color: var(--selection-background-color);\n  }\n\n  /* One border */\n  .navi_table_cell[data-selection-border-top]::after {\n    box-shadow: inset 0 1px 0 0 var(--selection-border-color);\n  }\n  .navi_table_cell[data-selection-border-right]::after {\n    box-shadow: inset -1px 0 0 0 var(--selection-border-color);\n  }\n  .navi_table_cell[data-selection-border-bottom]::after {\n    box-shadow: inset 0 -1px 0 0 var(--selection-border-color);\n  }\n  .navi_table_cell[data-selection-border-left]::after {\n    box-shadow: inset 1px 0 0 0 var(--selection-border-color);\n  }\n\n  /* Two border combinations */\n  .navi_table_cell[data-selection-border-top][data-selection-border-right]::after {\n    box-shadow:\n      inset 0 1px 0 0 var(--selection-border-color),\n      inset -1px 0 0 0 var(--selection-border-color);\n  }\n  .navi_table_cell[data-selection-border-top][data-selection-border-bottom]::after {\n    box-shadow:\n      inset 0 1px 0 0 var(--selection-border-color),\n      inset 0 -1px 0 0 var(--selection-border-color);\n  }\n  .navi_table_cell[data-selection-border-top][data-selection-border-left]::after {\n    box-shadow:\n      inset 0 1px 0 0 var(--selection-border-color),\n      inset 1px 0 0 0 var(--selection-border-color);\n  }\n  .navi_table_cell[data-selection-border-right][data-selection-border-bottom]::after {\n    box-shadow:\n      inset -1px 0 0 0 var(--selection-border-color),\n      inset 0 -1px 0 0 var(--selection-border-color);\n  }\n  .navi_table_cell[data-selection-border-right][data-selection-border-left]::after {\n    box-shadow:\n      inset -1px 0 0 0 var(--selection-border-color),\n      inset 1px 0 0 0 var(--selection-border-color);\n  }\n  .navi_table_cell[data-selection-border-bottom][data-selection-border-left]::after {\n    box-shadow:\n      inset 0 -1px 0 0 var(--selection-border-color),\n      inset 1px 0 0 0 var(--selection-border-color);\n  }\n\n  /* Three border combinations */\n  .navi_table_cell[data-selection-border-top][data-selection-border-right][data-selection-border-bottom]::after {\n    box-shadow:\n      inset 0 1px 0 0 var(--selection-border-color),\n      inset -1px 0 0 0 var(--selection-border-color),\n      inset 0 -1px 0 0 var(--selection-border-color);\n  }\n  .navi_table_cell[data-selection-border-top][data-selection-border-bottom][data-selection-border-left]::after {\n    box-shadow:\n      inset 0 1px 0 0 var(--selection-border-color),\n      inset 0 -1px 0 0 var(--selection-border-color),\n      inset 1px 0 0 0 var(--selection-border-color);\n  }\n  .navi_table_cell[data-selection-border-top][data-selection-border-right][data-selection-border-left]::after {\n    box-shadow:\n      inset 0 1px 0 0 var(--selection-border-color),\n      inset -1px 0 0 0 var(--selection-border-color),\n      inset 1px 0 0 0 var(--selection-border-color);\n  }\n  .navi_table_cell[data-selection-border-right][data-selection-border-bottom][data-selection-border-left]::after {\n    box-shadow:\n      inset -1px 0 0 0 var(--selection-border-color),\n      inset 0 -1px 0 0 var(--selection-border-color),\n      inset 1px 0 0 0 var(--selection-border-color);\n  }\n\n  /* Four border combinations (full selection) */\n  .navi_table_cell[data-selection-border-top][data-selection-border-right][data-selection-border-bottom][data-selection-border-left]::after {\n    box-shadow:\n      inset 0 1px 0 0 var(--selection-border-color),\n      inset -1px 0 0 0 var(--selection-border-color),\n      inset 0 -1px 0 0 var(--selection-border-color),\n      inset 1px 0 0 0 var(--selection-border-color);\n  }\n";
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  body {
+    --selection-border-color: #0078d4;
+    --selection-background-color: #eaf1fd;
+  }
+
+  .navi_table_cell[aria-selected="true"] {
+    background-color: var(--selection-background-color);
+  }
+
+  /* One border */
+  .navi_table_cell[data-selection-border-top]::after {
+    box-shadow: inset 0 1px 0 0 var(--selection-border-color);
+  }
+  .navi_table_cell[data-selection-border-right]::after {
+    box-shadow: inset -1px 0 0 0 var(--selection-border-color);
+  }
+  .navi_table_cell[data-selection-border-bottom]::after {
+    box-shadow: inset 0 -1px 0 0 var(--selection-border-color);
+  }
+  .navi_table_cell[data-selection-border-left]::after {
+    box-shadow: inset 1px 0 0 0 var(--selection-border-color);
+  }
+
+  /* Two border combinations */
+  .navi_table_cell[data-selection-border-top][data-selection-border-right]::after {
+    box-shadow:
+      inset 0 1px 0 0 var(--selection-border-color),
+      inset -1px 0 0 0 var(--selection-border-color);
+  }
+  .navi_table_cell[data-selection-border-top][data-selection-border-bottom]::after {
+    box-shadow:
+      inset 0 1px 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color);
+  }
+  .navi_table_cell[data-selection-border-top][data-selection-border-left]::after {
+    box-shadow:
+      inset 0 1px 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--selection-border-color);
+  }
+  .navi_table_cell[data-selection-border-right][data-selection-border-bottom]::after {
+    box-shadow:
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color);
+  }
+  .navi_table_cell[data-selection-border-right][data-selection-border-left]::after {
+    box-shadow:
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--selection-border-color);
+  }
+  .navi_table_cell[data-selection-border-bottom][data-selection-border-left]::after {
+    box-shadow:
+      inset 0 -1px 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--selection-border-color);
+  }
+
+  /* Three border combinations */
+  .navi_table_cell[data-selection-border-top][data-selection-border-right][data-selection-border-bottom]::after {
+    box-shadow:
+      inset 0 1px 0 0 var(--selection-border-color),
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color);
+  }
+  .navi_table_cell[data-selection-border-top][data-selection-border-bottom][data-selection-border-left]::after {
+    box-shadow:
+      inset 0 1px 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--selection-border-color);
+  }
+  .navi_table_cell[data-selection-border-top][data-selection-border-right][data-selection-border-left]::after {
+    box-shadow:
+      inset 0 1px 0 0 var(--selection-border-color),
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--selection-border-color);
+  }
+  .navi_table_cell[data-selection-border-right][data-selection-border-bottom][data-selection-border-left]::after {
+    box-shadow:
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--selection-border-color);
+  }
+
+  /* Four border combinations (full selection) */
+  .navi_table_cell[data-selection-border-top][data-selection-border-right][data-selection-border-bottom][data-selection-border-left]::after {
+    box-shadow:
+      inset 0 1px 0 0 var(--selection-border-color),
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--selection-border-color);
+  }
+`;
 const useTableSelectionController = ({
   tableRef,
   selection,
@@ -21257,7 +24244,7 @@ const updateSelectionBorders = (tableElement, selectionController) => {
   });
 
   // Create a set for fast lookup of selected cell positions
-  const selectedPositions = new Set(cellPositions.map(pos => "".concat(pos.rowIndex, ",").concat(pos.columnIndex)));
+  const selectedPositions = new Set(cellPositions.map(pos => `${pos.rowIndex},${pos.columnIndex}`));
 
   // Apply selection borders based on actual neighbors (for proper L-shaped selection support)
   cellPositions.forEach(({
@@ -21266,25 +24253,25 @@ const updateSelectionBorders = (tableElement, selectionController) => {
     columnIndex
   }) => {
     // Top border: if cell above is NOT selected or doesn't exist
-    const cellAbove = "".concat(rowIndex - 1, ",").concat(columnIndex);
+    const cellAbove = `${rowIndex - 1},${columnIndex}`;
     if (!selectedPositions.has(cellAbove)) {
       element.setAttribute("data-selection-border-top", "");
     }
 
     // Bottom border: if cell below is NOT selected or doesn't exist
-    const cellBelow = "".concat(rowIndex + 1, ",").concat(columnIndex);
+    const cellBelow = `${rowIndex + 1},${columnIndex}`;
     if (!selectedPositions.has(cellBelow)) {
       element.setAttribute("data-selection-border-bottom", "");
     }
 
     // Left border: if cell to the left is NOT selected or doesn't exist
-    const cellLeft = "".concat(rowIndex, ",").concat(columnIndex - 1);
+    const cellLeft = `${rowIndex},${columnIndex - 1}`;
     if (!selectedPositions.has(cellLeft)) {
       element.setAttribute("data-selection-border-left", "");
     }
 
     // Right border: if cell to the right is NOT selected or doesn't exist
-    const cellRight = "".concat(rowIndex, ",").concat(columnIndex + 1);
+    const cellRight = `${rowIndex},${columnIndex + 1}`;
     if (!selectedPositions.has(cellRight)) {
       element.setAttribute("data-selection-border-right", "");
     }
@@ -21295,10 +24282,10 @@ const updateSelectionBorders = (tableElement, selectionController) => {
 
 
 // React hook version for easy integration
-const useStickyGroup = (elementRef, {
-  elementReceivingCumulativeStickyPositionRef,
-  elementSelector
-} = {}) => {
+const useStickyGroup = (
+  elementRef,
+  { elementReceivingCumulativeStickyPositionRef, elementSelector } = {},
+) => {
   useLayoutEffect(() => {
     const element = elementRef.current;
     if (!element) {
@@ -21306,10 +24293,12 @@ const useStickyGroup = (elementRef, {
     }
     return initStickyGroup(element, {
       elementSelector,
-      elementReceivingCumulativeStickyPosition: elementReceivingCumulativeStickyPositionRef.current
+      elementReceivingCumulativeStickyPosition:
+        elementReceivingCumulativeStickyPositionRef.current,
     });
   }, [elementSelector]);
 };
+
 const ITEM_LEFT_VAR = "--sticky-group-item-left";
 const ITEM_TOP_VAR = "--sticky-group-item-top";
 const FRONTIER_LEFT_VAR = "--sticky-group-left";
@@ -21325,28 +24314,35 @@ const FRONTIER_TOP_VAR = "--sticky-group-top";
  * @param {HTMLElement} container The container element
  * @returns {Function} Cleanup function
  */
-const initStickyGroup = (container, {
-  elementSelector,
-  elementReceivingCumulativeStickyPosition
-} = {}) => {
+const initStickyGroup = (
+  container,
+  { elementSelector, elementReceivingCumulativeStickyPosition } = {},
+) => {
   if (!container) {
     throw new Error("initStickyGroup: container is required");
   }
+
   const [teardown, addTeardown] = createPubSub();
   const [cleanup, addCleanup, clearCleanup] = createPubSub();
   addTeardown(cleanup);
-  const element = elementSelector ? container.querySelector(elementSelector) : container;
-  const isGrid = element.tagName === "TABLE" || element.classList.contains("navi_table");
+
+  const element = elementSelector
+    ? container.querySelector(elementSelector)
+    : container;
+  const isGrid =
+    element.tagName === "TABLE" || element.classList.contains("navi_table");
   const updatePositions = () => {
     // Clear all previous CSS variable cleanups before setting new ones
     cleanup();
     clearCleanup();
+
     if (isGrid) {
       updateGridPositions();
     } else {
       updateLinearPositions();
     }
   };
+
   const updateGridPositions = () => {
     // Handle table grid - update both horizontal and vertical sticky elements
     updateTableColumns();
@@ -21354,7 +24350,9 @@ const initStickyGroup = (container, {
   };
   const updateTableColumns = () => {
     // Find all sticky columns by checking all rows to identify which columns have sticky cells
-    const allStickyColumnCells = element.querySelectorAll(".navi_table_cell[data-sticky-left]");
+    const allStickyColumnCells = element.querySelectorAll(
+      ".navi_table_cell[data-sticky-left]",
+    );
     if (allStickyColumnCells.length === 0) {
       return;
     }
@@ -21367,7 +24365,7 @@ const initStickyGroup = (container, {
 
     // Group sticky cells by column index
     const stickyColumnsByIndex = new Map();
-    allStickyColumnCells.forEach(cell => {
+    allStickyColumnCells.forEach((cell) => {
       const row = cell.closest(".navi_tr");
       const columnIndex = Array.from(row.children).indexOf(cell);
       if (!stickyColumnsByIndex.has(columnIndex)) {
@@ -21377,16 +24375,19 @@ const initStickyGroup = (container, {
     });
 
     // Sort columns by index and process them
-    const sortedColumnIndices = Array.from(stickyColumnsByIndex.keys()).sort((a, b) => a - b);
+    const sortedColumnIndices = Array.from(stickyColumnsByIndex.keys()).sort(
+      (a, b) => a - b,
+    );
     let cumulativeWidth = 0;
+
     sortedColumnIndices.forEach((columnIndex, stickyIndex) => {
       const cellsInColumn = stickyColumnsByIndex.get(columnIndex);
       const leftPosition = stickyIndex === 0 ? 0 : cumulativeWidth;
 
       // Set CSS variable on all sticky cells in this column using setStyles for proper cleanup
-      cellsInColumn.forEach(cell => {
+      cellsInColumn.forEach((cell) => {
         const restoreStyles = setStyles(cell, {
-          [ITEM_LEFT_VAR]: "".concat(leftPosition, "px")
+          [ITEM_LEFT_VAR]: `${leftPosition}px`,
         });
         addCleanup(restoreStyles);
       });
@@ -21398,7 +24399,7 @@ const initStickyGroup = (container, {
         const correspondingCol = colElements[columnIndex];
         if (correspondingCol) {
           const restoreStyles = setStyles(correspondingCol, {
-            [ITEM_LEFT_VAR]: "".concat(leftPosition, "px")
+            [ITEM_LEFT_VAR]: `${leftPosition}px`,
           });
           addCleanup(restoreStyles);
         }
@@ -21416,26 +24417,32 @@ const initStickyGroup = (container, {
 
     // Set frontier variables with proper cleanup tracking
     const restoreContainerStyles = setStyles(container, {
-      [FRONTIER_LEFT_VAR]: "".concat(cumulativeWidth, "px")
+      [FRONTIER_LEFT_VAR]: `${cumulativeWidth}px`,
     });
     addCleanup(restoreContainerStyles);
+
     if (elementReceivingCumulativeStickyPosition) {
-      const restoreCumulativeStyles = setStyles(elementReceivingCumulativeStickyPosition, {
-        [FRONTIER_LEFT_VAR]: "".concat(cumulativeWidth, "px")
-      });
+      const restoreCumulativeStyles = setStyles(
+        elementReceivingCumulativeStickyPosition,
+        {
+          [FRONTIER_LEFT_VAR]: `${cumulativeWidth}px`,
+        },
+      );
       addCleanup(restoreCumulativeStyles);
     }
   };
   const updateTableRows = () => {
     // Handle sticky rows by finding cells with data-sticky-top and grouping by row
-    const stickyCells = element.querySelectorAll(".navi_table_cell[data-sticky-top]");
+    const stickyCells = element.querySelectorAll(
+      ".navi_table_cell[data-sticky-top]",
+    );
     if (stickyCells.length === 0) {
       return;
     }
 
     // Group cells by their parent row
     const rowsWithStickyCells = new Map();
-    stickyCells.forEach(cell => {
+    stickyCells.forEach((cell) => {
       const row = cell.parentElement;
       if (!rowsWithStickyCells.has(row)) {
         rowsWithStickyCells.set(row, []);
@@ -21450,22 +24457,23 @@ const initStickyGroup = (container, {
       const bIndex = allRows.indexOf(b);
       return aIndex - bIndex;
     });
+
     let cumulativeHeight = 0;
     stickyRows.forEach((row, index) => {
       const rowCells = rowsWithStickyCells.get(row);
       const topPosition = index === 0 ? 0 : cumulativeHeight;
 
       // Set CSS variable on all sticky cells in this row using setStyles for proper cleanup
-      rowCells.forEach(cell => {
+      rowCells.forEach((cell) => {
         const restoreStyles = setStyles(cell, {
-          [ITEM_TOP_VAR]: "".concat(topPosition, "px")
+          [ITEM_TOP_VAR]: `${topPosition}px`,
         });
         addCleanup(restoreStyles);
       });
 
       // Also set CSS variable on the <tr> element itself
       const restoreRowStyles = setStyles(row, {
-        [ITEM_TOP_VAR]: "".concat(topPosition, "px")
+        [ITEM_TOP_VAR]: `${topPosition}px`,
       });
       addCleanup(restoreRowStyles);
 
@@ -21480,30 +24488,39 @@ const initStickyGroup = (container, {
 
     // Set frontier variables with proper cleanup tracking
     const restoreContainerStyles = setStyles(container, {
-      [FRONTIER_TOP_VAR]: "".concat(cumulativeHeight, "px")
+      [FRONTIER_TOP_VAR]: `${cumulativeHeight}px`,
     });
     addCleanup(restoreContainerStyles);
+
     if (elementReceivingCumulativeStickyPosition) {
-      const restoreCumulativeStyles = setStyles(elementReceivingCumulativeStickyPosition, {
-        [FRONTIER_TOP_VAR]: "".concat(cumulativeHeight, "px")
-      });
+      const restoreCumulativeStyles = setStyles(
+        elementReceivingCumulativeStickyPosition,
+        {
+          [FRONTIER_TOP_VAR]: `${cumulativeHeight}px`,
+        },
+      );
       addCleanup(restoreCumulativeStyles);
     }
   };
+
   const updateLinearPositions = () => {
     // Handle linear container - detect direction from first sticky element
-    const stickyElements = element.querySelectorAll("[data-sticky-left], [data-sticky-top]");
+    const stickyElements = element.querySelectorAll(
+      "[data-sticky-left], [data-sticky-top]",
+    );
     if (stickyElements.length <= 1) return;
+
     const firstElement = stickyElements[0];
     const isHorizontal = firstElement.hasAttribute("data-sticky-left");
     const dimensionProperty = isHorizontal ? "width" : "height";
     const cssVariableName = isHorizontal ? ITEM_LEFT_VAR : ITEM_TOP_VAR;
+
     let cumulativeSize = 0;
     stickyElements.forEach((element, index) => {
       if (index === 0) {
         // First element stays at position 0
         const restoreStyles = setStyles(element, {
-          [cssVariableName]: "0px"
+          [cssVariableName]: "0px",
         });
         addCleanup(restoreStyles);
         cumulativeSize = element.getBoundingClientRect()[dimensionProperty];
@@ -21511,7 +24528,7 @@ const initStickyGroup = (container, {
         // Subsequent elements use cumulative positioning
         const position = cumulativeSize;
         const restoreStyles = setStyles(element, {
-          [cssVariableName]: "".concat(position, "px")
+          [cssVariableName]: `${position}px`,
         });
         addCleanup(restoreStyles);
         cumulativeSize += element.getBoundingClientRect()[dimensionProperty];
@@ -21521,13 +24538,17 @@ const initStickyGroup = (container, {
     // Set frontier variables with proper cleanup tracking
     const frontierVar = isHorizontal ? FRONTIER_LEFT_VAR : FRONTIER_TOP_VAR;
     const restoreContainerStyles = setStyles(container, {
-      [frontierVar]: "".concat(cumulativeSize, "px")
+      [frontierVar]: `${cumulativeSize}px`,
     });
     addCleanup(restoreContainerStyles);
+
     if (elementReceivingCumulativeStickyPosition) {
-      const restoreCumulativeStyles = setStyles(elementReceivingCumulativeStickyPosition, {
-        [frontierVar]: "".concat(cumulativeSize, "px")
-      });
+      const restoreCumulativeStyles = setStyles(
+        elementReceivingCumulativeStickyPosition,
+        {
+          [frontierVar]: `${cumulativeSize}px`,
+        },
+      );
       addCleanup(restoreCumulativeStyles);
     }
   };
@@ -21541,20 +24562,25 @@ const initStickyGroup = (container, {
   });
 
   // Set up MutationObserver to handle DOM changes
-  const mutationObserver = new MutationObserver(mutations => {
+  const mutationObserver = new MutationObserver((mutations) => {
     let shouldUpdate = false;
-    mutations.forEach(mutation => {
+
+    mutations.forEach((mutation) => {
       // Check if sticky elements were added/removed or attributes changed
       if (mutation.type === "childList") {
         shouldUpdate = true;
       }
       if (mutation.type === "attributes") {
         // Check if the mutation affects sticky attributes
-        if (mutation.attributeName === "data-sticky-left" || mutation.attributeName === "data-sticky-top") {
+        if (
+          mutation.attributeName === "data-sticky-left" ||
+          mutation.attributeName === "data-sticky-top"
+        ) {
           shouldUpdate = true;
         }
       }
     });
+
     if (shouldUpdate) {
       updatePositions();
     }
@@ -21565,11 +24591,12 @@ const initStickyGroup = (container, {
   addTeardown(() => {
     resizeObserver.disconnect();
   });
+
   mutationObserver.observe(element, {
     attributes: true,
     childList: true,
     subtree: true,
-    attributeFilter: ["data-sticky-left", "data-sticky-top"]
+    attributeFilter: ["data-sticky-left", "data-sticky-top"],
   });
   addTeardown(() => {
     mutationObserver.disconnect();
@@ -21605,25 +24632,264 @@ const initStickyGroup = (container, {
 // };
 
 const TableStickyContext = createContext();
+
 const useTableStickyContextValue = ({
   stickyLeftFrontierColumnIndex,
   stickyTopFrontierRowIndex,
   onStickyLeftFrontierChange,
-  onStickyTopFrontierChange
+  onStickyTopFrontierChange,
 }) => {
   onStickyLeftFrontierChange = useStableCallback(onStickyLeftFrontierChange);
   onStickyTopFrontierChange = useStableCallback(onStickyTopFrontierChange);
+
   return useMemo(() => {
     return {
       stickyLeftFrontierColumnIndex,
       stickyTopFrontierRowIndex,
       onStickyLeftFrontierChange,
-      onStickyTopFrontierChange
+      onStickyTopFrontierChange,
     };
   }, [stickyLeftFrontierColumnIndex, stickyTopFrontierRowIndex]);
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  body {\n    --sticky-frontier-color: #c0c0c0;\n    --sticky-frontier-size: 12px;\n    --sticky-frontier-ghost-size: 8px;\n  }\n\n  .navi_table_cell[data-sticky-top] {\n    position: sticky;\n    top: var(--sticky-group-item-top, 0);\n    z-index: ".concat(Z_INDEX_STICKY_ROW, ";\n  }\n  .navi_table_cell[data-sticky-left] {\n    position: sticky;\n    left: var(--sticky-group-item-left, 0);\n    z-index: ").concat(Z_INDEX_STICKY_COLUMN, ";\n  }\n  .navi_table_cell[data-sticky-left][data-sticky-top] {\n    position: sticky;\n    top: var(--sticky-group-item-top, 0);\n    left: var(--sticky-group-item-left, 0);\n    z-index: ").concat(Z_INDEX_STICKY_CORNER, ";\n  }\n\n  /* Useful because drag gesture will read this value to detect <col>, <tr> virtual position */\n  .navi_col {\n    left: var(--sticky-group-item-left, 0);\n  }\n  .navi_tr {\n    top: var(--sticky-group-item-top, 0);\n  }\n\n  .navi_table_sticky_frontier {\n    position: absolute;\n    cursor: grab;\n    pointer-events: auto;\n  }\n\n  .navi_table_sticky_frontier[data-left] {\n    left: calc(var(--table-visual-left) + var(--sticky-group-left));\n    width: var(--sticky-frontier-size);\n    top: calc(var(--table-visual-top) + var(--sticky-group-top));\n    height: calc(var(--table-visual-height) - var(--sticky-group-top));\n    background: linear-gradient(\n      to right,\n      rgba(0, 0, 0, 0.1) 0%,\n      rgba(0, 0, 0, 0) 100%\n    );\n  }\n\n  .navi_table_sticky_frontier[data-top] {\n    left: calc(var(--table-visual-left) + var(--sticky-group-left));\n    width: calc(var(--table-visual-width) - var(--sticky-group-left));\n    top: calc(var(--table-visual-top) + var(--sticky-group-top));\n    height: var(--sticky-frontier-size);\n    background: linear-gradient(\n      to bottom,\n      rgba(0, 0, 0, 0.1) 0%,\n      rgba(0, 0, 0, 0) 100%\n    );\n  }\n\n  .navi_table_sticky_frontier_ghost,\n  .navi_table_sticky_frontier_preview {\n    position: absolute;\n    pointer-events: none;\n    opacity: 0;\n  }\n  .navi_table_sticky_frontier_ghost {\n    z-index: ").concat(Z_INDEX_STICKY_FRONTIER_GHOST, ";\n    background: rgba(68, 71, 70, 0.5);\n  }\n  .navi_table_sticky_frontier_preview {\n    z-index: ").concat(Z_INDEX_STICKY_FRONTIER_PREVIEW, ";\n    background: rgba(56, 121, 200, 0.5);\n  }\n  .navi_table_sticky_frontier_ghost[data-visible],\n  .navi_table_sticky_frontier_preview[data-visible] {\n    opacity: 1;\n  }\n  .navi_table_sticky_frontier_ghost[data-left],\n  .navi_table_sticky_frontier_preview[data-left] {\n    top: 0;\n    width: var(--sticky-frontier-ghost-size);\n    height: var(--table-height, 100%);\n  }\n  .navi_table_sticky_frontier_ghost[data-left] {\n    left: var(--sticky-frontier-ghost-position, 0px);\n  }\n  .navi_table_sticky_frontier_preview[data-left] {\n    left: var(--sticky-frontier-preview-position, 0px);\n  }\n\n  .navi_table_sticky_frontier_ghost[data-top],\n  .navi_table_sticky_frontier_preview[data-top] {\n    left: 0;\n    width: var(--table-width, 100%);\n    height: var(--sticky-frontier-ghost-size);\n  }\n\n  .navi_table_sticky_frontier_ghost[data-top] {\n    top: var(--sticky-frontier-ghost-position, 0px);\n  }\n  .navi_table_sticky_frontier_preview[data-top] {\n    top: var(--sticky-frontier-preview-position, 0px);\n  }\n\n  /* Positioning adjustments for ::after pseudo-elements on cells adjacent to sticky frontiers */\n  /* These ensure selection and focus borders align with the ::before borders */\n  .navi_table[data-border-collapse]\n    .navi_table_cell[data-after-sticky-left-frontier]::after {\n    left: 0;\n  }\n\n  .navi_table[data-border-collapse]\n    .navi_table_cell[data-after-sticky-top-frontier]::after {\n    top: 0;\n  }\n\n  /* Base borders for sticky cells (will be overridden by frontier rules) */\n  .navi_table[data-border-collapse] .navi_table_cell[data-sticky-left]::before {\n    box-shadow:\n      inset -1px 0 0 0 var(--border-color),\n      inset 0 -1px 0 0 var(--border-color);\n  }\n\n  .navi_table[data-border-collapse] .navi_table_cell[data-sticky-top]::before {\n    box-shadow:\n      inset -1px 0 0 0 var(--border-color),\n      inset 0 -1px 0 0 var(--border-color);\n  }\n\n  /* Header row sticky cells need top border */\n  .navi_table[data-border-collapse]\n    .navi_table_cell[data-first-row][data-sticky-left]::before {\n    box-shadow:\n      inset 0 1px 0 0 var(--border-color),\n      inset -1px 0 0 0 var(--border-color),\n      inset 0 -1px 0 0 var(--border-color);\n  }\n\n  .navi_table[data-border-collapse]\n    .navi_table_cell[data-first-row][data-sticky-top]::before {\n    box-shadow:\n      inset 0 1px 0 0 var(--border-color),\n      inset -1px 0 0 0 var(--border-color),\n      inset 0 -1px 0 0 var(--border-color);\n  }\n\n  /* First column sticky cells need left border */\n  .navi_table[data-border-collapse]\n    .navi_table_cell[data-first-column][data-sticky-left]::before {\n    box-shadow:\n      inset 1px 0 0 0 var(--border-color),\n      inset -1px 0 0 0 var(--border-color),\n      inset 0 -1px 0 0 var(--border-color);\n  }\n\n  .navi_table[data-border-collapse]\n    .navi_table_cell[data-first-column][data-sticky-top]::before {\n    box-shadow:\n      inset 1px 0 0 0 var(--border-color),\n      inset -1px 0 0 0 var(--border-color),\n      inset 0 -1px 0 0 var(--border-color);\n  }\n\n  /* Header first column sticky cells get all four regular borders */\n  .navi_table[data-border-collapse]\n    .navi_table_cell[data-first-row][data-first-column][data-sticky-left]::before,\n  .navi_table[data-border-collapse]\n    .navi_table_cell[data-first-row][data-first-column][data-sticky-top]::before {\n    box-shadow:\n      inset 0 1px 0 0 var(--border-color),\n      inset 1px 0 0 0 var(--border-color),\n      inset -1px 0 0 0 var(--border-color),\n      inset 0 -1px 0 0 var(--border-color);\n  }\n\n  /* Borders for cells immediately after sticky frontiers */\n\n  /* Left border for the column after sticky-x-frontier */\n  .navi_table[data-border-collapse]\n    .navi_table_cell[data-after-sticky-left-frontier]::before {\n    box-shadow:\n      inset 1px 0 0 0 var(--border-color),\n      inset -1px 0 0 0 var(--border-color),\n      inset 0 -1px 0 0 var(--border-color);\n  }\n\n  /* Header cells after sticky-x-frontier also need top border (for border-collapse) */\n  .navi_table[data-border-collapse]\n    .navi_table_cell[data-first-row][data-after-sticky-left-frontier]::before {\n    box-shadow:\n      inset 0 1px 0 0 var(--border-color),\n      inset 1px 0 0 0 var(--border-color),\n      inset -1px 0 0 0 var(--border-color),\n      inset 0 -1px 0 0 var(--border-color);\n  }\n\n  /* Top border for the row after sticky-y-frontier */\n  .navi_table[data-border-collapse]\n    .navi_table_cell[data-after-sticky-top-frontier]::before {\n    box-shadow:\n      inset 0 1px 0 0 var(--border-color),\n      inset -1px 0 0 0 var(--border-color),\n      inset 0 -1px 0 0 var(--border-color);\n  }\n\n  /* Header cells after sticky-y-frontier also need left border (for border-collapse) */\n  .navi_table[data-border-collapse]\n    .navi_table_cell[data-first-row][data-after-sticky-top-frontier]::before {\n    box-shadow:\n      inset 0 1px 0 0 var(--border-color),\n      inset 1px 0 0 0 var(--border-color),\n      inset -1px 0 0 0 var(--border-color),\n      inset 0 -1px 0 0 var(--border-color);\n  }\n\n  /* First column cells after sticky-y-frontier need all four borders (for border-collapse) */\n  .navi_table[data-border-collapse]\n    .navi_table_cell[data-first-column][data-after-sticky-top-frontier]::before {\n    box-shadow:\n      inset 0 1px 0 0 var(--border-color),\n      inset 1px 0 0 0 var(--border-color),\n      inset -1px 0 0 0 var(--border-color),\n      inset 0 -1px 0 0 var(--border-color);\n  }\n\n  /* Corner case: cell after both sticky frontiers */\n  .navi_table[data-border-collapse]\n    .navi_table_cell[data-after-sticky-left-frontier][data-after-sticky-top-frontier]::before {\n    box-shadow:\n      inset 1px 0 0 0 var(--border-color),\n      inset 0 1px 0 0 var(--border-color),\n      inset -1px 0 0 0 var(--border-color),\n      inset 0 -1px 0 0 var(--border-color);\n  }\n");
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  body {
+    --sticky-frontier-color: #c0c0c0;
+    --sticky-frontier-size: 12px;
+    --sticky-frontier-ghost-size: 8px;
+  }
+
+  .navi_table_cell[data-sticky-top] {
+    position: sticky;
+    top: var(--sticky-group-item-top, 0);
+    z-index: ${Z_INDEX_STICKY_ROW};
+  }
+  .navi_table_cell[data-sticky-left] {
+    position: sticky;
+    left: var(--sticky-group-item-left, 0);
+    z-index: ${Z_INDEX_STICKY_COLUMN};
+  }
+  .navi_table_cell[data-sticky-left][data-sticky-top] {
+    position: sticky;
+    top: var(--sticky-group-item-top, 0);
+    left: var(--sticky-group-item-left, 0);
+    z-index: ${Z_INDEX_STICKY_CORNER};
+  }
+
+  /* Useful because drag gesture will read this value to detect <col>, <tr> virtual position */
+  .navi_col {
+    left: var(--sticky-group-item-left, 0);
+  }
+  .navi_tr {
+    top: var(--sticky-group-item-top, 0);
+  }
+
+  .navi_table_sticky_frontier {
+    position: absolute;
+    cursor: grab;
+    pointer-events: auto;
+  }
+
+  .navi_table_sticky_frontier[data-left] {
+    left: calc(var(--table-visual-left) + var(--sticky-group-left));
+    width: var(--sticky-frontier-size);
+    top: calc(var(--table-visual-top) + var(--sticky-group-top));
+    height: calc(var(--table-visual-height) - var(--sticky-group-top));
+    background: linear-gradient(
+      to right,
+      rgba(0, 0, 0, 0.1) 0%,
+      rgba(0, 0, 0, 0) 100%
+    );
+  }
+
+  .navi_table_sticky_frontier[data-top] {
+    left: calc(var(--table-visual-left) + var(--sticky-group-left));
+    width: calc(var(--table-visual-width) - var(--sticky-group-left));
+    top: calc(var(--table-visual-top) + var(--sticky-group-top));
+    height: var(--sticky-frontier-size);
+    background: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.1) 0%,
+      rgba(0, 0, 0, 0) 100%
+    );
+  }
+
+  .navi_table_sticky_frontier_ghost,
+  .navi_table_sticky_frontier_preview {
+    position: absolute;
+    pointer-events: none;
+    opacity: 0;
+  }
+  .navi_table_sticky_frontier_ghost {
+    z-index: ${Z_INDEX_STICKY_FRONTIER_GHOST};
+    background: rgba(68, 71, 70, 0.5);
+  }
+  .navi_table_sticky_frontier_preview {
+    z-index: ${Z_INDEX_STICKY_FRONTIER_PREVIEW};
+    background: rgba(56, 121, 200, 0.5);
+  }
+  .navi_table_sticky_frontier_ghost[data-visible],
+  .navi_table_sticky_frontier_preview[data-visible] {
+    opacity: 1;
+  }
+  .navi_table_sticky_frontier_ghost[data-left],
+  .navi_table_sticky_frontier_preview[data-left] {
+    top: 0;
+    width: var(--sticky-frontier-ghost-size);
+    height: var(--table-height, 100%);
+  }
+  .navi_table_sticky_frontier_ghost[data-left] {
+    left: var(--sticky-frontier-ghost-position, 0px);
+  }
+  .navi_table_sticky_frontier_preview[data-left] {
+    left: var(--sticky-frontier-preview-position, 0px);
+  }
+
+  .navi_table_sticky_frontier_ghost[data-top],
+  .navi_table_sticky_frontier_preview[data-top] {
+    left: 0;
+    width: var(--table-width, 100%);
+    height: var(--sticky-frontier-ghost-size);
+  }
+
+  .navi_table_sticky_frontier_ghost[data-top] {
+    top: var(--sticky-frontier-ghost-position, 0px);
+  }
+  .navi_table_sticky_frontier_preview[data-top] {
+    top: var(--sticky-frontier-preview-position, 0px);
+  }
+
+  /* Positioning adjustments for ::after pseudo-elements on cells adjacent to sticky frontiers */
+  /* These ensure selection and focus borders align with the ::before borders */
+  .navi_table[data-border-collapse]
+    .navi_table_cell[data-after-sticky-left-frontier]::after {
+    left: 0;
+  }
+
+  .navi_table[data-border-collapse]
+    .navi_table_cell[data-after-sticky-top-frontier]::after {
+    top: 0;
+  }
+
+  /* Base borders for sticky cells (will be overridden by frontier rules) */
+  .navi_table[data-border-collapse] .navi_table_cell[data-sticky-left]::before {
+    box-shadow:
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  .navi_table[data-border-collapse] .navi_table_cell[data-sticky-top]::before {
+    box-shadow:
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* Header row sticky cells need top border */
+  .navi_table[data-border-collapse]
+    .navi_table_cell[data-first-row][data-sticky-left]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    .navi_table_cell[data-first-row][data-sticky-top]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* First column sticky cells need left border */
+  .navi_table[data-border-collapse]
+    .navi_table_cell[data-first-column][data-sticky-left]::before {
+    box-shadow:
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    .navi_table_cell[data-first-column][data-sticky-top]::before {
+    box-shadow:
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* Header first column sticky cells get all four regular borders */
+  .navi_table[data-border-collapse]
+    .navi_table_cell[data-first-row][data-first-column][data-sticky-left]::before,
+  .navi_table[data-border-collapse]
+    .navi_table_cell[data-first-row][data-first-column][data-sticky-top]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* Borders for cells immediately after sticky frontiers */
+
+  /* Left border for the column after sticky-x-frontier */
+  .navi_table[data-border-collapse]
+    .navi_table_cell[data-after-sticky-left-frontier]::before {
+    box-shadow:
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* Header cells after sticky-x-frontier also need top border (for border-collapse) */
+  .navi_table[data-border-collapse]
+    .navi_table_cell[data-first-row][data-after-sticky-left-frontier]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* Top border for the row after sticky-y-frontier */
+  .navi_table[data-border-collapse]
+    .navi_table_cell[data-after-sticky-top-frontier]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* Header cells after sticky-y-frontier also need left border (for border-collapse) */
+  .navi_table[data-border-collapse]
+    .navi_table_cell[data-first-row][data-after-sticky-top-frontier]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* First column cells after sticky-y-frontier need all four borders (for border-collapse) */
+  .navi_table[data-border-collapse]
+    .navi_table_cell[data-first-column][data-after-sticky-top-frontier]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* Corner case: cell after both sticky frontiers */
+  .navi_table[data-border-collapse]
+    .navi_table_cell[data-after-sticky-left-frontier][data-after-sticky-top-frontier]::before {
+    box-shadow:
+      inset 1px 0 0 0 var(--border-color),
+      inset 0 1px 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+`;
 const TableStickyFrontier = ({
   tableRef
 }) => {
@@ -21785,7 +25051,7 @@ const initMoveStickyFrontierViaPointer = (pointerdownEvent, {
     const element = elements[frontierIndex];
     const elementRect = element.getBoundingClientRect();
     const position = getPosition(elementRect);
-    ghostElement.style.setProperty(ghostVariableName, "".concat(position, "px"));
+    ghostElement.style.setProperty(ghostVariableName, `${position}px`);
   }
   ghostElement.setAttribute("data-visible", "");
   let futureFrontierIndex = frontierIndex;
@@ -21807,7 +25073,7 @@ const initMoveStickyFrontierViaPointer = (pointerdownEvent, {
       const elementRect = element.getBoundingClientRect();
       previewPosition = getPosition(elementRect);
     }
-    previewElement.style.setProperty(previewVariableName, "".concat(previewPosition, "px"));
+    previewElement.style.setProperty(previewVariableName, `${previewPosition}px`);
     previewElement.setAttribute("data-visible", "");
   };
   const moveFrontierGestureController = createDragToMoveGestureController({
@@ -21845,7 +25111,16 @@ const initMoveStickyFrontierViaPointer = (pointerdownEvent, {
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .navi_table_ui {\n    position: fixed;\n    z-index: ".concat(Z_INDEX_TABLE_UI, ";\n    overflow: hidden; /* Ensure UI elements cannot impact scrollbars of the document  */\n    inset: 0;\n    pointer-events: none; /* UI elements must use pointer-events: auto if they need to be interactive */\n    /* background: rgba(0, 255, 0, 0.2); */\n  }\n");
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .navi_table_ui {
+    position: fixed;
+    z-index: ${Z_INDEX_TABLE_UI};
+    overflow: hidden; /* Ensure UI elements cannot impact scrollbars of the document  */
+    inset: 0;
+    pointer-events: none; /* UI elements must use pointer-events: auto if they need to be interactive */
+    /* background: rgba(0, 255, 0, 0.2); */
+  }
+`;
 const TableUI = forwardRef((props, ref) => {
   const {
     tableRef,
@@ -21867,10 +25142,10 @@ const TableUI = forwardRef((props, ref) => {
     // cause by programmatic scrolls before re-painting
     // -> no intermediate state visible to the user where overlay is not in sync
     const tableVisibleRectEffect = visibleRectEffect(table, visibleRect => {
-      ui.style.setProperty("--table-visual-left", "".concat(visibleRect.left, "px"));
-      ui.style.setProperty("--table-visual-width", "".concat(visibleRect.width, "px"));
-      ui.style.setProperty("--table-visual-top", "".concat(visibleRect.top, "px"));
-      ui.style.setProperty("--table-visual-height", "".concat(visibleRect.height, "px"));
+      ui.style.setProperty("--table-visual-left", `${visibleRect.left}px`);
+      ui.style.setProperty("--table-visual-width", `${visibleRect.width}px`);
+      ui.style.setProperty("--table-visual-top", `${visibleRect.top}px`);
+      ui.style.setProperty("--table-visual-height", `${visibleRect.height}px`);
     });
     return tableVisibleRectEffect.disconnect;
   });
@@ -21945,7 +25220,7 @@ const RowIndexContext = createContext();
 const TableSectionContext = createContext();
 const useIsInTableHead = () => useContext(TableSectionContext) === "head";
 const Table = forwardRef((props, ref) => {
-  const tableDefaultId = "table-".concat(useId());
+  const tableDefaultId = `table-${useId()}`;
   const {
     id = tableDefaultId,
     selection = [],
@@ -22065,8 +25340,8 @@ const Table = forwardRef((props, ref) => {
     className: "navi_table_root",
     style: {
       overflow,
-      "--table-max-width": maxWidth ? "".concat(maxWidth, "px") : undefined,
-      "--table-max-height": maxHeight ? "".concat(maxHeight, "px") : undefined
+      "--table-max-width": maxWidth ? `${maxWidth}px` : undefined,
+      "--table-max-height": maxHeight ? `${maxHeight}px` : undefined
     },
     children: jsxs("div", {
       ref: tableContainerRef,
@@ -22157,8 +25432,8 @@ const Col = ({
     "data-drag-sticky-left-frontier": isStickyLeft ? "" : undefined,
     "data-drag-obstacle": immovable ? "move-column" : undefined,
     style: {
-      minWidth: width ? "".concat(width, "px") : undefined,
-      maxWidth: width ? "".concat(width, "px") : undefined
+      minWidth: width ? `${width}px` : undefined,
+      maxWidth: width ? `${width}px` : undefined
     }
   });
 };
@@ -22220,8 +25495,8 @@ const Tr = ({
     "data-sticky-top": isStickyTop ? "" : undefined,
     "data-drag-sticky-top-frontier": isStickyTopFrontier ? "" : undefined,
     style: {
-      height: height ? "".concat(height, "px") : undefined,
-      maxHeight: height ? "".concat(height, "px") : undefined
+      height: height ? `${height}px` : undefined,
+      maxHeight: height ? `${height}px` : undefined
     },
     children: jsx(ColumnConsumerProvider, {
       children: jsx(TableRowCells, {
@@ -22356,7 +25631,7 @@ const TableCell = forwardRef((props, ref) => {
     releaseColumn,
     canChangeColumnOrder
   } = useContext(TableDragContext);
-  const columnGrabbed = grabTarget === "column:".concat(columnIndex);
+  const columnGrabbed = grabTarget === `column:${columnIndex}`;
 
   // resizing
   const innerCanDragColumn = canDragColumn === undefined ? rowIndex === 0 && !column.immovable && Boolean(canChangeColumnOrder) : canDragColumn;
@@ -22382,13 +25657,13 @@ const TableCell = forwardRef((props, ref) => {
   }
   const columnWidth = column.width;
   if (columnWidth !== undefined) {
-    innerStyle.minWidth = "".concat(columnWidth, "px");
-    innerStyle.width = "".concat(columnWidth, "px");
-    innerStyle.maxWidth = "".concat(columnWidth, "px");
+    innerStyle.minWidth = `${columnWidth}px`;
+    innerStyle.width = `${columnWidth}px`;
+    innerStyle.maxWidth = `${columnWidth}px`;
   }
   const rowHeight = row.height;
   if (rowHeight !== undefined) {
-    innerStyle.maxHeight = "".concat(rowHeight, "px");
+    innerStyle.maxHeight = `${rowHeight}px`;
   }
   const innerAlignX = alignX || isFirstRow ? "center" : "start";
   const innerAlignY = alignY || isFirstColumn ? "center" : "start";
@@ -22407,7 +25682,6 @@ const TableCell = forwardRef((props, ref) => {
     // we use [data-focus] so that the attribute can be copied
     // to the dragged cell copies
     ,
-
     "data-focus": activeElement === cellRef.current ? "" : undefined,
     "data-first-row": isFirstRow ? "" : undefined,
     "data-first-column": isFirstColumn ? "" : undefined,
@@ -22565,16 +25839,14 @@ const useCellsAndColumns = (cells, columns) => {
     }
     return reorderedCells;
   }, [baseCells, columnOrderedIndexMap, orderedColumnIds.length]);
-  const setCellValue = ({
-    columnIndex,
-    rowIndex
-  }, value) => {
+
+  const setCellValue = ({ columnIndex, rowIndex }, value) => {
     const originalColumnIndex = columnOrderedIndexMap.get(columnIndex);
     if (originalColumnIndex === undefined) {
-      console.warn("Invalid column index: ".concat(columnIndex));
+      console.warn(`Invalid column index: ${columnIndex}`);
       return;
     }
-    setBaseCells(previousCells => {
+    setBaseCells((previousCells) => {
       const newCells = [];
       for (let y = 0; y < previousCells.length; y++) {
         const currentRow = previousCells[y];
@@ -22592,15 +25864,85 @@ const useCellsAndColumns = (cells, columns) => {
       return newCells;
     });
   };
+
   return {
     cells: orderedCells,
     setCellValue,
     columns: orderedColumns,
-    setColumnOrder: setOrderedAllColumnIds
+    setColumnOrder: setOrderedAllColumnIds,
   };
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .navi_tablist {\n    display: flex;\n    overflow-x: auto;\n    overflow-y: hidden;\n    justify-content: space-between;\n  }\n\n  .navi_tablist > ul {\n    align-items: center;\n    display: flex;\n    gap: 0.5rem;\n    list-style: none;\n    margin: 0;\n    padding: 0;\n  }\n\n  .navi_tablist > ul > li {\n    display: inline-flex;\n    position: relative;\n  }\n\n  .navi_tab {\n    white-space: nowrap;\n    display: flex;\n    flex-direction: column;\n  }\n\n  .navi_tab_content {\n    transition: background 0.12s ease-out;\n    border-radius: 6px;\n    text-decoration: none;\n    line-height: 30px;\n    display: flex;\n    padding: 0 0.5rem;\n  }\n\n  .navi_tab:hover .navi_tab_content {\n    background: #dae0e7;\n    color: #010409;\n  }\n\n  .navi_tab .active_marker {\n    display: flex;\n    background: transparent;\n    border-radius: 0.1px;\n    width: 100%;\n    z-index: 1;\n    height: 2px;\n    margin-top: 5px;\n  }\n\n  /* Hidden bold clone to reserve space for bold width without affecting height */\n  .navi_tab_content_bold_clone {\n    font-weight: 600; /* force bold to compute max width */\n    visibility: hidden; /* not visible */\n    display: block; /* in-flow so it contributes to width */\n    height: 0; /* zero height so it doesn't change layout height */\n    overflow: hidden; /* avoid any accidental height */\n    pointer-events: none; /* inert */\n  }\n\n  .navi_tab[aria-selected=\"true\"] .active_marker {\n    background: rgb(205, 52, 37);\n  }\n\n  .navi_tab[aria-selected=\"true\"] .navi_tab_content {\n    font-weight: 600;\n  }\n";
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .navi_tablist {
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    justify-content: space-between;
+  }
+
+  .navi_tablist > ul {
+    align-items: center;
+    display: flex;
+    gap: 0.5rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .navi_tablist > ul > li {
+    display: inline-flex;
+    position: relative;
+  }
+
+  .navi_tab {
+    white-space: nowrap;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .navi_tab_content {
+    transition: background 0.12s ease-out;
+    border-radius: 6px;
+    text-decoration: none;
+    line-height: 30px;
+    display: flex;
+    padding: 0 0.5rem;
+  }
+
+  .navi_tab:hover .navi_tab_content {
+    background: #dae0e7;
+    color: #010409;
+  }
+
+  .navi_tab .active_marker {
+    display: flex;
+    background: transparent;
+    border-radius: 0.1px;
+    width: 100%;
+    z-index: 1;
+    height: 2px;
+    margin-top: 5px;
+  }
+
+  /* Hidden bold clone to reserve space for bold width without affecting height */
+  .navi_tab_content_bold_clone {
+    font-weight: 600; /* force bold to compute max width */
+    visibility: hidden; /* not visible */
+    display: block; /* in-flow so it contributes to width */
+    height: 0; /* zero height so it doesn't change layout height */
+    overflow: hidden; /* avoid any accidental height */
+    pointer-events: none; /* inert */
+  }
+
+  .navi_tab[aria-selected="true"] .active_marker {
+    background: rgb(205, 52, 37);
+  }
+
+  .navi_tab[aria-selected="true"] .navi_tab_content {
+    font-weight: 600;
+  }
+`;
 const TabList = ({
   children,
   ...props
@@ -22685,6 +26027,7 @@ const useSignalSync = (value, initialValue = value) => {
     previousValueRef.current = value;
     signal.value = value; // Model takes precedence
   }
+
   return signal;
 };
 
@@ -22731,7 +26074,16 @@ const FontSizedSvg = ({
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .link_with_icon {\n    white-space: nowrap;\n    align-items: center;\n    gap: 0.3em;\n    min-width: 0;\n    display: inline-flex;\n    flex-grow: 1;\n  }\n";
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .link_with_icon {
+    white-space: nowrap;
+    align-items: center;
+    gap: 0.3em;
+    min-width: 0;
+    display: inline-flex;
+    flex-grow: 1;
+  }
+`;
 const LinkWithIcon = ({
   icon,
   isCurrent,
@@ -22787,7 +26139,16 @@ const IconAndText = ({
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .svg_mask_content * {\n    fill: black !important;\n    stroke: black !important;\n    fill-opacity: 1 !important;\n    stroke-opacity: 1 !important;\n    color: black !important;\n    opacity: 1 !important;\n  }\n";
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .svg_mask_content * {
+    fill: black !important;
+    stroke: black !important;
+    fill-opacity: 1 !important;
+    stroke-opacity: 1 !important;
+    color: black !important;
+    opacity: 1 !important;
+  }
+`;
 const SVGMaskOverlay = ({
   viewBox,
   children
@@ -22807,16 +26168,16 @@ const SVGMaskOverlay = ({
   const [baseSvg, ...overlaySvgs] = children;
 
   // Generate unique ID for this instance
-  const instanceId = "svgmo-".concat(Math.random().toString(36).slice(2, 9));
+  const instanceId = `svgmo-${Math.random().toString(36).slice(2, 9)}`;
 
   // Create nested masked elements
   let maskedElement = baseSvg;
 
   // Apply each mask in sequence
   overlaySvgs.forEach((overlaySvg, index) => {
-    const maskId = "mask-".concat(instanceId, "-").concat(index);
+    const maskId = `mask-${instanceId}-${index}`;
     maskedElement = jsx("g", {
-      mask: "url(#".concat(maskId, ")"),
+      mask: `url(#${maskId})`,
       children: maskedElement
     });
   });
@@ -22826,7 +26187,7 @@ const SVGMaskOverlay = ({
     height: "100%",
     children: [jsx("defs", {
       children: overlaySvgs.map((overlaySvg, index) => {
-        const maskId = "mask-".concat(instanceId, "-").concat(index);
+        const maskId = `mask-${instanceId}-${index}`;
 
         // IMPORTANT: clone the overlay SVG exactly as is, just add the mask class
         return jsxs("mask", {
@@ -22862,7 +26223,21 @@ const Overflow = ({
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */"\n  .text_and_count {\n    display: flex;\n    align-items: center;\n    gap: 3px;\n    flex: 1;\n    white-space: nowrap;\n  }\n\n  .count {\n    position: relative;\n    top: -1px;\n    color: rgba(28, 43, 52, 0.4);\n  }\n";
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .text_and_count {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex: 1;
+    white-space: nowrap;
+  }
+
+  .count {
+    position: relative;
+    top: -1px;
+    color: rgba(28, 43, 52, 0.4);
+  }
+`;
 const TextAndCount = ({
   text,
   count
@@ -22881,16 +26256,18 @@ const TextAndCount = ({
 };
 
 const createUniqueValueConstraint = (
-// the set might be incomplete (the front usually don't have the full copy of all the items from the backend)
-// but this is already nice to help user with what we know
-// it's also possible that front is unsync with backend, preventing user to choose a value
-// that is actually free.
-// But this is unlikely to happen and user could reload the page to be able to choose that name
-// that suddenly became available
-existingValueSet, message = "\"{value}\" already exists. Please choose another value.") => {
+  // the set might be incomplete (the front usually don't have the full copy of all the items from the backend)
+  // but this is already nice to help user with what we know
+  // it's also possible that front is unsync with backend, preventing user to choose a value
+  // that is actually free.
+  // But this is unlikely to happen and user could reload the page to be able to choose that name
+  // that suddenly became available
+  existingValueSet,
+  message = `"{value}" already exists. Please choose another value.`,
+) => {
   return {
     name: "unique_value",
-    check: input => {
+    check: (input) => {
       const inputValue = input.value;
       const hasConflict = existingValueSet.has(inputValue);
       // console.log({
@@ -22902,13 +26279,13 @@ existingValueSet, message = "\"{value}\" already exists. Please choose another v
         return message.replace("{value}", inputValue);
       }
       return "";
-    }
+    },
   };
 };
 
 const SINGLE_SPACE_CONSTRAINT = {
   name: "single_space",
-  check: input => {
+  check: (input) => {
     const inputValue = input.value;
     const hasLeadingSpace = inputValue.startsWith(" ");
     const hasTrailingSpace = inputValue.endsWith(" ");
@@ -22917,7 +26294,7 @@ const SINGLE_SPACE_CONSTRAINT = {
       return "Spaces at the beginning, end, or consecutive spaces are not allowed";
     }
     return "";
-  }
+  },
 };
 
 /*
@@ -22932,7 +26309,8 @@ const SINGLE_SPACE_CONSTRAINT = {
  * }, [name, value])
  */
 
-const useDependenciesDiff = inputs => {
+
+const useDependenciesDiff = (inputs) => {
   const oldInputsRef = useRef(inputs);
   const inputValuesArray = Object.values(inputs);
   const inputKeysArray = Object.keys(inputs);
@@ -22944,15 +26322,13 @@ const useDependenciesDiff = inputs => {
       const previous = oldInputs[key];
       const current = inputs[key];
       if (previous !== current) {
-        diff[key] = {
-          previous,
-          current
-        };
+        diff[key] = { previous, current };
       }
     }
     diffRef.current = diff;
     oldInputsRef.current = inputs;
   }, inputValuesArray);
+
   return diffRef.current;
 };
 

@@ -1,6 +1,7 @@
 import { resolveCSSSize } from "@jsenv/dom";
-import { createPortal } from "preact/compat";
+import { createPortal, forwardRef } from "preact/compat";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
+
 import { useDebounceTrue } from "../use_debounce_true.js";
 import { RectangleLoading } from "./rectangle_loading.jsx";
 
@@ -28,12 +29,9 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const LoadableInlineElement = ({
-  children,
-  width,
-  height,
-  ...props
-}) => {
+export const LoadableInlineElement = forwardRef((ref, props) => {
+  const { children, width, height, ...rest } = props;
+
   const actionName = props["data-action"];
   if (actionName) {
     delete props["data-action"];
@@ -41,6 +39,7 @@ export const LoadableInlineElement = ({
 
   return (
     <span
+      ref={ref}
       className="navi_inline_wrapper"
       style={{
         ...(width ? { width } : {}),
@@ -48,11 +47,11 @@ export const LoadableInlineElement = ({
       }}
       data-action={actionName}
     >
-      <LoaderBackground {...props} />
+      <LoaderBackground {...rest} />
       {children}
     </span>
   );
-};
+});
 
 export const LoaderBackground = ({
   loading,
