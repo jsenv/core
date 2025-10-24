@@ -1,4 +1,4 @@
-import { resolveCSSColor, resolveCSSSize } from "@jsenv/dom";
+import { resolveCSSSize } from "@jsenv/dom";
 import { createPortal, forwardRef } from "preact/compat";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 
