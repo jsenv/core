@@ -79,7 +79,7 @@ import.meta.css = /* css */ `
   /* Readonly */
   [data-field-wrapper][data-readonly] [data-field] {
     --navi-field-border-color: var(--navi-field-readonly-border-color);
-    --navi-field-background-color: var(--navi-field-readonly-border-color);
+    --navi-field-background-color: var(--navi-field-readonly-background-color);
   }
   [data-field-wrapper][data-readonly][data-hover] [data-field] {
     --navi-field-background-color: var(--navi-field-readonly-background-color);
@@ -116,12 +116,9 @@ import.meta.css = /* css */ `
     );
   }
   [data-field-wrapper][data-checked][data-readonly] [data-field] {
-    --navi-field-background: var(--navi-field-checked-disabled-color);
-    --navi-field-border-color: var(--navi-field-readonly-border-color);
-  }
-  [data-field-wrapper][data-checked][data-readonly][data-hover] [data-field] {
-    --navi-field-background-color: var(--navi-field-checked-disabled-color);
-    --navi-field-border-color: var(--navi-field-readonly-border-color);
+    --navi-field-background-color: var(--navi-field-disabled-background-color);
+    --navi-field-border-color: var(--navi-field-disabled-border-color);
+    --navi-field-foreground-color: var(--navi-field-disabled-foreground-color);
   }
   [data-field-wrapper][data-checked][data-readonly] {
     stroke: var(--navi-field-foreground-disabled-color);

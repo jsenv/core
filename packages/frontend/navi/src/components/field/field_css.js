@@ -36,6 +36,7 @@ import.meta.css = /* css */ `
       var(--navi-field-background-color) 95%,
       black
     );
+    --navi-field-disabled-foreground-color: grey;
 
     --navi-field-disabled-color: color-mix(
       in srgb,
