@@ -67,49 +67,65 @@ export const forwardFieldPseudoSelectors = (
   data_checked: {
     if (field.type === "checkbox") {
       const updateChecked = () => {
-        if (field.checked) {
-          updateBooleanAttribute("checked", true);
-        } else {
-          updateBooleanAttribute("checked", false);
-        }
+        updateBooleanAttribute("checked", field.checked);
       };
+
+      // Initial state
       updateChecked();
+
+      // Listen to user interactions
       addEventListener("input", updateChecked);
-      const mutationObserver = new MutationObserver(() => {
-        updateChecked();
+
+      // Intercept programmatic changes to .checked property
+      const originalDescriptor = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "checked",
+      );
+      Object.defineProperty(field, "checked", {
+        get: originalDescriptor.get,
+        set(value) {
+          originalDescriptor.set.call(this, value);
+          updateChecked();
+        },
+        configurable: true,
       });
-      mutationObserver.observe(field, {
-        attributes: true,
-        attributeFilter: ["checked"],
-      });
+
       addTeardown(() => {
-        mutationObserver.disconnect();
+        // Restore original property descriptor
+        Object.defineProperty(field, "checked", originalDescriptor);
       });
     }
     if (field.type === "radio") {
       const updateChecked = () => {
-        if (field.checked) {
-          updateBooleanAttribute("checked", true);
-        } else {
-          updateBooleanAttribute("checked", false);
-        }
+        updateBooleanAttribute("checked", field.checked);
       };
+
+      // Initial state
       updateChecked();
-      const thisRadio = field;
-      const radioSet = thisRadio.closest("[data-radio-list], fieldset, form");
+
+      // Listen to changes on the radio group
+      const radioSet =
+        field.closest("[data-radio-list], fieldset, form") || document;
       radioSet.addEventListener("input", updateChecked);
+
+      // Intercept programmatic changes to .checked property
+      const originalDescriptor = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "checked",
+      );
+      Object.defineProperty(field, "checked", {
+        get: originalDescriptor.get,
+        set(value) {
+          originalDescriptor.set.call(this, value);
+          updateChecked();
+        },
+        configurable: true,
+      });
+
       addTeardown(() => {
         radioSet.removeEventListener("input", updateChecked);
-      });
-      const mutationObserver = new MutationObserver(() => {
-        updateChecked();
-      });
-      mutationObserver.observe(field, {
-        attributes: true,
-        attributeFilter: ["checked"],
-      });
-      addTeardown(() => {
-        mutationObserver.disconnect();
+        // Restore original property descriptor
+        Object.defineProperty(field, "checked", originalDescriptor);
       });
     }
   }
