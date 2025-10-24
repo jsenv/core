@@ -262,7 +262,13 @@ const InputTextualWithAction = forwardRef((props, ref) => {
   );
 });
 const InputTextualInsideForm = forwardRef((props, ref) => {
-  const { onKeyDown, ...rest } = props;
+  const {
+    onKeyDown,
+    // We destructure formContext to avoid passing it to the underlying input element
+    // eslint-disable-next-line no-unused-vars
+    formContext,
+    ...rest
+  } = props;
 
   return (
     <InputTextualBasic

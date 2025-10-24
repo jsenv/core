@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-database-manager",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
@@ -29,7 +29,7 @@
   "dependencies": {
     "@jsenv/database": "0.0.1",
     "@jsenv/dom": "0.1.0",
-    "@jsenv/navi": "0.1.0",
+    "@jsenv/navi": "0.1.1",
     "@jsenv/sigi": "0.1.2",
     "@jsenv/urls": "2.9.1",
     "@tanstack/table-core": "8.21.3",
