@@ -254,7 +254,9 @@ const LoaderBackgroundBasic = ({
         setPaddingBottom(paddingBottom);
 
         if (color) {
-          setCurrentColor(resolveCSSColor(color, rectangle));
+          // const resolvedColor = resolveCSSColor(color, rectangle, "css");
+          //  console.log(resolvedColor);
+          setCurrentColor(color);
         } else if (
           newOutlineColor &&
           newOutlineColor !== "rgba(0, 0, 0, 0)" &&

@@ -12,7 +12,7 @@ export { setAttribute, setAttributes } from "./src/attr/attributes.js";
 
 // colors
 export { getContrastRatio } from "./src/color/color_constrast.js";
-export { parseCSSColor } from "./src/color/color_parsing.js";
+export { parseCSSColor, stringifyCSSColor } from "./src/color/color_parsing.js";
 export {
   getPreferedColorScheme,
   prefersDarkColors,

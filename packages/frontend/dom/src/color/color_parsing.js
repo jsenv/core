@@ -70,6 +70,50 @@ export const parseCSSColor = (color) => {
   return null;
 };
 
+/**
+ * Converts RGBA values back to a CSS color string
+ * Prefers named colors when possible, then rgb() for opaque colors, rgba() for transparent
+ * @param {Array<number>} rgba - [r, g, b, a] values
+ * @returns {string|null} CSS color string or null if invalid input
+ */
+export const stringifyCSSColor = (rgba) => {
+  if (!Array.isArray(rgba) || rgba.length < 3) {
+    return null;
+  }
+
+  const [r, g, b, a = 1] = rgba;
+
+  // Validate RGB values
+  if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
+    return null;
+  }
+
+  // Validate alpha value
+  if (a < 0 || a > 1) {
+    return null;
+  }
+
+  // Round RGB values to integers
+  const rInt = Math.round(r);
+  const gInt = Math.round(g);
+  const bInt = Math.round(b);
+
+  // Check for named colors (only for fully opaque colors)
+  if (a === 1) {
+    for (const [name, [nameR, nameG, nameB]] of Object.entries(namedColors)) {
+      if (rInt === nameR && gInt === nameG && bInt === nameB) {
+        return name;
+      }
+    }
+  }
+
+  // Use rgb() for opaque colors, rgba() for transparent
+  if (a === 1) {
+    return `rgb(${rInt}, ${gInt}, ${bInt})`;
+  }
+  return `rgba(${rInt}, ${gInt}, ${bInt}, ${a})`;
+};
+
 const namedColors = {
   black: [0, 0, 0],
   white: [255, 255, 255],

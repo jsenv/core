@@ -1,13 +1,14 @@
-import { parseCSSColor } from "./color_parsing.js";
+import { parseCSSColor, stringifyCSSColor } from "./color_parsing.js";
 import { prefersDarkColors } from "./color_scheme.js";
 
 /**
  * Resolves a color value, handling CSS custom properties and light-dark() function
  * @param {string} color - CSS color value (may include CSS variables, light-dark())
  * @param {Element} element - DOM element to resolve CSS variables and light-dark() against
- * @returns {Array<number>|null} [r, g, b, a] values or null if parsing fails
+ * @param {string} context - Return format: "js" for RGBA array, "css" for CSS string
+ * @returns {Array<number>|string|null} [r, g, b, a] values, CSS string, or null if parsing fails
  */
-export const resolveCSSColor = (color, element) => {
+export const resolveCSSColor = (color, element, context = "js") => {
   if (!color || typeof color !== "string") {
     return null;
   }
@@ -23,7 +24,7 @@ export const resolveCSSColor = (color, element) => {
     // Select the appropriate color and recursively resolve it
     const prefersDark = prefersDarkColors(element);
     resolvedColor = prefersDark ? darkColor : lightColor;
-    return resolveCSSColor(resolvedColor, element);
+    return resolveCSSColor(resolvedColor, element, context);
   }
 
   // If it's a CSS custom property, resolve it using getComputedStyle
@@ -38,14 +39,22 @@ export const resolveCSSColor = (color, element) => {
 
       const resolvedValue = computedStyle.getPropertyValue(propertyName).trim();
       if (resolvedValue) {
-        resolvedColor = resolvedValue;
-      } else if (fallback) {
+        // Recursively resolve in case the CSS variable contains light-dark() or other variables
+        return resolveCSSColor(resolvedValue, element, context);
+      }
+      if (fallback) {
         // Recursively resolve fallback (in case it's also a CSS variable)
-        return resolveCSSColor(fallback, element);
+        return resolveCSSColor(fallback, element, context);
       }
     }
   }
 
-  // Parse the resolved color and return RGBA array
-  return parseCSSColor(resolvedColor);
+  // Parse the resolved color and return in the requested format
+  const rgba = parseCSSColor(resolvedColor);
+
+  if (context === "css") {
+    return rgba ? stringifyCSSColor(rgba) : null;
+  }
+
+  return rgba;
 };
