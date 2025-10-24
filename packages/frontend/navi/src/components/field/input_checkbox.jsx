@@ -68,23 +68,24 @@ import.meta.css = /* css */ `
     stroke: var(--navi-field-foreground-color);
   }
 
-  [data-field-wrapper][data-hover][data-checked] .custom_checkbox {
-    background: var(--navi-field-background-color);
-    border-color: var(--navi-field-border-color);
-  }
   [data-field-wrapper][data-checked] .custom_checkbox {
-    background: var(--navi-field-background-color);
-    border-color: var(--navi-field-border-color);
+    --navi-field-background-color: var(--navi-field-accent-color);
+    --navi-field-border-color: var(--navi-field-accent-color);
+  }
+  [data-field-wrapper][data-checked][data-hover] .custom_checkbox {
+    --navi-field-background-color: var(--navi-field-accent-color);
+    --navi-field-border-color: var(--navi-field-accent-color);
   }
   [data-field-wrapper][data-checked] .custom_checkbox svg {
     opacity: 1;
     transform: scale(1);
   }
+
   [data-field-wrapper][data-readonly] .custom_checkbox {
     background-color: var(--navi-field-readonly-background-color);
     border-color: var(--navi-field-readonly-border-color);
   }
-  [data-field-wrapper][data-readonly][data-checked] .custom_checkbox {
+  [data-field-wrapper][data-checked][data-readonly] .custom_checkbox {
     background: var(--navi-field-checked-disabled-color);
     border-color: var(--navi-field-readonly-border-color);
   }
@@ -92,7 +93,7 @@ import.meta.css = /* css */ `
     background-color: var(--navi-field-readonly-background-color);
     border-color: var(--navi-field-readonly-border-color);
   }
-  [data-field-wrapper][data-readonly][data-hover][data-checked]
+  [data-field-wrapper][data-checked][data-readonly][data-hover]
     .custom_checkbox {
     background: var(--navi-field-checked-disabled-color);
     border-color: var(--navi-field-readonly-border-color);

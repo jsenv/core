@@ -98,10 +98,12 @@ import.meta.css = /* css */ `
   [data-field-with-background-hover-only] {
     background: none;
   }
-  [data-field-wrapper][data-hover] [data-field-with-background] {
+  [data-field-wrapper][data-hover]
+    [data-field-with-hover-effect-on-background] {
     background-color: var(--navi-field-hover-background-color);
   }
-  [data-field-wrapper][data-readonly] [data-field-with-background] {
+  [data-field-wrapper][data-readonly]
+    [data-field-with-hover-effect-on-background] {
     background-color: var(--navi-field-readonly-background-color);
   }
 `;
