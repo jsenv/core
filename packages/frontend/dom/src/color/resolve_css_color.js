@@ -1,13 +1,17 @@
+import { parseCSSColor } from "./color_parsing.js";
+
 /**
  * Resolves a color value, handling CSS custom properties
  * @param {Element} element - DOM element to resolve CSS variables against
  * @param {string} color - CSS color value (may include CSS variables)
- * @returns {string} Resolved color value
+ * @returns {Array<number>|null} [r, g, b] values or null if parsing fails
  */
 export const resolveCSSColor = (element, color) => {
   if (!color || typeof color !== "string") {
-    return color;
+    return null;
   }
+
+  let resolvedColor = color;
 
   // If it's a CSS custom property, resolve it using getComputedStyle
   if (color.includes("var(")) {
@@ -21,14 +25,14 @@ export const resolveCSSColor = (element, color) => {
 
       const resolvedValue = computedStyle.getPropertyValue(propertyName).trim();
       if (resolvedValue) {
-        return resolvedValue;
-      }
-      if (fallback) {
+        resolvedColor = resolvedValue;
+      } else if (fallback) {
         // Recursively resolve fallback (in case it's also a CSS variable)
         return resolveCSSColor(element, fallback);
       }
     }
   }
 
-  return color;
+  // Parse the resolved color and return RGB array
+  return parseCSSColor(resolvedColor);
 };

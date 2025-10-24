@@ -7,7 +7,6 @@
  * @returns {string} The color that provides better contrast (lightColor or darkColor)
  */
 import { getContrastRatio } from "./color_constrast.js";
-import { parseColor } from "./color_parsing.js";
 import { resolveCSSColor } from "./resolve_css_color.js";
 
 export const pickLightOrDark = (
@@ -20,17 +19,16 @@ export const pickLightOrDark = (
   const resolvedLightColor = resolveCSSColor(element, lightColor);
   const resolvedDarkColor = resolveCSSColor(element, darkColor);
 
-  const bgRgb = parseColor(resolvedBgColor);
-  const lightRgb = parseColor(resolvedLightColor);
-  const darkRgb = parseColor(resolvedDarkColor);
-
-  if (!bgRgb || !lightRgb || !darkRgb) {
+  if (!resolvedBgColor || !resolvedLightColor || !resolvedDarkColor) {
     // Fallback to light color if parsing fails
     return lightColor;
   }
 
-  const contrastWithLight = getContrastRatio(bgRgb, lightRgb);
-  const contrastWithDark = getContrastRatio(bgRgb, darkRgb);
+  const contrastWithLight = getContrastRatio(
+    resolvedBgColor,
+    resolvedLightColor,
+  );
+  const contrastWithDark = getContrastRatio(resolvedBgColor, resolvedDarkColor);
 
   return contrastWithLight > contrastWithDark ? lightColor : darkColor;
 };
