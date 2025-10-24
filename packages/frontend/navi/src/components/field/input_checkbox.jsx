@@ -54,7 +54,8 @@ import.meta.css = /* css */ `
     display: inline-flex;
     margin: 3px 3px 3px 4px;
     border-radius: inherit;
-    border: 1px solid var(--navi-field-border-color);
+    border-width: 1px;
+    border-style: solid;
   }
   .custom_checkbox svg {
     width: 100%;
@@ -67,6 +68,10 @@ import.meta.css = /* css */ `
 
   [data-field-wrapper] {
     --navi-field-background-color: white;
+  }
+  [data-field-wrapper] [data-field] {
+    background-color: var(--navi-field-background-color);
+    border-color: var(--navi-field-border-color);
   }
   [data-field-wrapper][data-hover] {
     --navi-field-border-color: var(--navi-field-hover-border-color);
@@ -127,8 +132,8 @@ import.meta.css = /* css */ `
     stroke: var(--navi-field-disabled-foreground-color);
   }
   [data-field-wrapper][data-checked][data-disabled] [data-field] {
-    --navi-field-background-color: var(--navi-field-disabled-background-color);
-    --navi-field-border-color: var(--navi-field-disabled-background-color);
+    --navi-field-background-color: #eeeeee;
+    --navi-field-border-color: #eeeeee;
   }
 `;
 

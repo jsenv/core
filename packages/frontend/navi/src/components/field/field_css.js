@@ -50,7 +50,7 @@ import.meta.css = /* css */ `
     outline-width: var(--navi-field-border-width);
     outline-style: solid;
     outline-color: transparent;
-    outline-offset: calc(-1 * (var(--navifield-border-width)));
+    outline-offset: calc(-1 * (var(--navi-field-border-width)));
   }
   [data-field-wrapper][data-readonly] [data-field] {
     color: var(--navi-field-readonly-color);
@@ -64,11 +64,6 @@ import.meta.css = /* css */ `
       -1 * (var(--navi-field-border-width) + var(--navi-field-outline-width))
     );
     outline-color: var(--navi-field-outline-color);
-  }
-  [data-field-wrapper][data-disabled] [data-field] {
-    background-color: var(--navi-field-disabled-background-color);
-    outline-color: var(--navi-field-disabled-border-color);
-    color: var(--navi-field-disabled-color);
   }
 
   [data-field-with-border] {
@@ -98,13 +93,5 @@ import.meta.css = /* css */ `
   }
   [data-field-with-background-hover-only] {
     background: none;
-  }
-  [data-field-wrapper][data-hover]
-    [data-field-with-hover-effect-on-background] {
-    background-color: var(--navi-field-hover-background-color);
-  }
-  [data-field-wrapper][data-readonly]
-    [data-field-with-hover-effect-on-background] {
-    background-color: var(--navi-field-readonly-background-color);
   }
 `;
