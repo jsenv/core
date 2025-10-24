@@ -36,6 +36,10 @@ export const LoadableInlineElement = forwardRef((props, ref) => {
   if (actionName) {
     delete props["data-action"];
   }
+  const dataFieldWrapper = props["data-field-wrapper"];
+  if (dataFieldWrapper) {
+    delete props["data-field-wrapper"];
+  }
 
   return (
     <span
@@ -46,6 +50,7 @@ export const LoadableInlineElement = forwardRef((props, ref) => {
         ...(height ? { height } : {}),
       }}
       data-action={actionName}
+      data-field-wrapper={dataFieldWrapper}
     >
       <LoaderBackground {...rest} />
       {children}

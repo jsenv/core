@@ -35,9 +35,8 @@ import.meta.css = /* css */ `
   .custom_checkbox_wrapper {
     display: inline-flex;
     box-sizing: content-box;
-    border-radius: inherit;
-    /* TODO: find a better way maybe? */
-    --navi-field-strong-color: var(--navi-field-checked-color);
+    border-radius: 2px;
+    --navi-field-background-color: white;
   }
 
   .custom_checkbox_wrapper input {
@@ -55,6 +54,7 @@ import.meta.css = /* css */ `
     box-sizing: border-box;
     display: inline-flex;
     margin: 3px 3px 3px 4px;
+    border-radius: inherit;
   }
   .custom_checkbox svg {
     width: 100%;
@@ -69,8 +69,8 @@ import.meta.css = /* css */ `
   }
 
   [data-field-wrapper][data-hover][data-checked] .custom_checkbox {
-    background: var(--navi-field-strong-color);
-    border-color: var(--navi-field-strong-color);
+    background: var(--navi-field-background-color);
+    border-color: var(--navi-field-border-color);
   }
   [data-field-wrapper][data-checked] .custom_checkbox {
     background: var(--navi-field-background-color);
@@ -98,7 +98,7 @@ import.meta.css = /* css */ `
     border-color: var(--navi-field-readonly-border-color);
   }
   [data-field-wrapper][data-readonly][data-checked] {
-    stroke: var(--navi-field-checkmark-disabled-color);
+    stroke: var(--navi-field-foreground-disabled-color);
   }
   [data-field-wrapper][data-focus-visible] .custom_checkbox {
     outline: 2px solid var(--navi-field-outline-color);
@@ -254,9 +254,9 @@ const CustomCheckbox = ({ accentColor, children }) => {
     const customCheckbox = ref.current;
     const colorPicked = pickLightOrDark(
       customCheckbox,
-      "--navi-field-background-color",
-      "--navi-field-foreground-light",
-      "--navi-field-foreground-dark",
+      "var(--navi-field-accent-color)",
+      "var(--navi-field-foreground-light-color)",
+      "var(--navi-field-foreground-dark-color)",
     );
     customCheckbox.style.setProperty(
       "--navi-field-foreground-color",
@@ -269,15 +269,14 @@ const CustomCheckbox = ({ accentColor, children }) => {
       ref={ref}
       className="custom_checkbox_wrapper"
       style={{
-        ...(accentColor
-          ? { "--navi-field-background-color": accentColor }
-          : {}),
+        ...(accentColor ? { "--navi-field-accent-color": accentColor } : {}),
       }}
     >
       {children}
       <div
         className="custom_checkbox"
         data-field=""
+        data-field-with-background=""
         data-field-with-border=""
         data-field-with-hover-effect-on-border=""
       >

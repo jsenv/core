@@ -3,10 +3,12 @@ import.meta.css = /* css */ `
     --navi-field-border-width: 1px;
     --navi-field-outline-width: 1px;
 
-    --navi-field-strong-color: light-dark(#355fcc, #3b82f6);
-    --navi-field-outline-color: var(--navi-field-strong-color);
-    --navi-field-background-color: light-dark(#f3f4f6, #2d3748);
     --navi-field-border-color: light-dark(#767676, #8e8e93);
+    --navi-field-background-color: light-dark(#f3f4f6, #2d3748);
+    --navi-field-accent-color: light-dark(#355fcc, #3b82f6);
+    --navi-field-outline-color: var(--navi-field-accent-color);
+    --navi-field-foreground-light-color: white;
+    --navi-field-foreground-dark-color: #3b82f6;
 
     --navi-field-disabled-border-color: color-mix(
       in srgb,
@@ -35,15 +37,12 @@ import.meta.css = /* css */ `
       black
     );
 
-    --navi-field-disabled-text-color: color-mix(
+    --navi-field-disabled-color: color-mix(
       in srgb,
       currentColor 30%,
       transparent
     );
-    --navi-field-readonly-text-color: var(--navi-field-disabled-text-color);
-
-    --navi-field-foreground-light: white;
-    --navi-field-foreground-dark: #3b82f6;
+    --navi-field-readonly-color: var(--navi-field-disabled-color);
   }
 
   [data-field] {
@@ -53,7 +52,7 @@ import.meta.css = /* css */ `
     outline-offset: calc(-1 * (var(--navifield-border-width)));
   }
   [data-field-wrapper][data-readonly] [data-field] {
-    color: var(--navi-field-readonly-text-color);
+    color: var(--navi-field-readonly-color);
   }
   [data-field-wrapper][data-focus-visible] [data-field] {
     outline-style: solid;
@@ -68,7 +67,7 @@ import.meta.css = /* css */ `
   [data-field-wrapper][data-disabled] [data-field] {
     background-color: var(--navi-field-disabled-background-color);
     outline-color: var(--navi-field-disabled-border-color);
-    color: var(--navi-field-disabled-text-color);
+    color: var(--navi-field-disabled-color);
   }
 
   [data-field-with-border] {
@@ -85,6 +84,9 @@ import.meta.css = /* css */ `
   [data-field-wrapper][data-hover] [data-field-with-hover-effect-on-border] {
     outline-color: var(--navi-field-hover-border-color);
   }
+  [data-field-wrapper][data-readonly] [data-field-with-border] {
+    outline-color: var(--navi-field-readonly-border-color);
+  }
   [data-field-wrapper][data-active] [data-field-with-border] {
     outline-color: var(--navi-field-active-border-color);
     background-color: none;
@@ -96,13 +98,8 @@ import.meta.css = /* css */ `
   [data-field-with-background-hover-only] {
     background: none;
   }
-
   [data-field-wrapper][data-hover] [data-field-with-background] {
     background-color: var(--navi-field-hover-background-color);
-  }
-
-  [data-field-wrapper][data-readonly] [data-field-with-border] {
-    outline-color: var(--navi-field-readonly-border-color);
   }
   [data-field-wrapper][data-readonly] [data-field-with-background] {
     background-color: var(--navi-field-readonly-background-color);
