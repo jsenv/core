@@ -180,7 +180,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
     autoFocus,
     constraints = [],
     appeareance = "custom", // "custom" or "default"
-    accentColor = "#3b82f6",
+    accentColor = "var(--navi-field-accent-color)",
     onClick,
     onInput,
     ...rest

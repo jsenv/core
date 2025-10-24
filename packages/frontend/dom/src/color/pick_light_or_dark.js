@@ -15,9 +15,9 @@ export const pickLightOrDark = (
   lightColor,
   darkColor,
 ) => {
-  const resolvedBgColor = resolveCSSColor(element, backgroundColor);
-  const resolvedLightColor = resolveCSSColor(element, lightColor);
-  const resolvedDarkColor = resolveCSSColor(element, darkColor);
+  const resolvedBgColor = resolveCSSColor(backgroundColor, element);
+  const resolvedLightColor = resolveCSSColor(lightColor, element);
+  const resolvedDarkColor = resolveCSSColor(darkColor, element);
 
   if (!resolvedBgColor || !resolvedLightColor || !resolvedDarkColor) {
     // Fallback to light color if parsing fails

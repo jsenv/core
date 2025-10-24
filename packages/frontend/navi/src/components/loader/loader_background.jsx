@@ -1,4 +1,4 @@
-import { resolveCSSSize } from "@jsenv/dom";
+import { resolveCSSColor, resolveCSSSize } from "@jsenv/dom";
 import { createPortal, forwardRef } from "preact/compat";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 
@@ -254,7 +254,7 @@ const LoaderBackgroundBasic = ({
         setPaddingBottom(paddingBottom);
 
         if (color) {
-          setCurrentColor(color);
+          setCurrentColor(resolveCSSColor(color, rectangle));
         } else if (
           newOutlineColor &&
           newOutlineColor !== "rgba(0, 0, 0, 0)" &&

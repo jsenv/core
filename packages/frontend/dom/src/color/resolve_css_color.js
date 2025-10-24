@@ -6,7 +6,7 @@ import { parseCSSColor } from "./color_parsing.js";
  * @param {string} color - CSS color value (may include CSS variables)
  * @returns {Array<number>|null} [r, g, b, a] values or null if parsing fails
  */
-export const resolveCSSColor = (element, color) => {
+export const resolveCSSColor = (color, element) => {
   if (!color || typeof color !== "string") {
     return null;
   }
@@ -28,7 +28,7 @@ export const resolveCSSColor = (element, color) => {
         resolvedColor = resolvedValue;
       } else if (fallback) {
         // Recursively resolve fallback (in case it's also a CSS variable)
-        return resolveCSSColor(element, fallback);
+        return resolveCSSColor(fallback, element);
       }
     }
   }

@@ -1323,7 +1323,7 @@ const hslToRgb = (h, s, l) => {
  * @param {string} color - CSS color value (may include CSS variables)
  * @returns {Array<number>|null} [r, g, b, a] values or null if parsing fails
  */
-const resolveCSSColor = (element, color) => {
+const resolveCSSColor = (color, element) => {
   if (!color || typeof color !== "string") {
     return null;
   }
@@ -1345,7 +1345,7 @@ const resolveCSSColor = (element, color) => {
         resolvedColor = resolvedValue;
       } else if (fallback) {
         // Recursively resolve fallback (in case it's also a CSS variable)
-        return resolveCSSColor(element, fallback);
+        return resolveCSSColor(fallback, element);
       }
     }
   }
