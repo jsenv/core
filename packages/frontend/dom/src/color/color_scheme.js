@@ -3,7 +3,7 @@
  * @param {Element} [element] - DOM element to check color-scheme against (optional)
  * @returns {boolean} True if dark mode is active
  */
-export const isDarkMode = (element) => {
+export const colorSchemeIsDark = (element) => {
   if (element) {
     // Check the computed color-scheme property
     const computedStyle = getComputedStyle(element);
