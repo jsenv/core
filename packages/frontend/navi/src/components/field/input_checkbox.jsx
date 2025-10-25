@@ -198,6 +198,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
     accentColor,
     onClick,
     onInput,
+    style,
     ...rest
   } = props;
   const innerRef = useRef(null);
@@ -224,6 +225,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
       {...rest}
       ref={innerRef}
       type="checkbox"
+      style={appeareance === "custom" ? undefined : style}
       name={innerName}
       checked={checked}
       readOnly={innerReadOnly}
@@ -260,6 +262,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
         accentColor={accentColor}
         readOnly={readOnly}
         disabled={innerDisabled}
+        style={style}
       >
         {inputCheckbox}
       </CustomCheckbox>
@@ -287,6 +290,7 @@ const CustomCheckbox = ({
   readOnly,
   disabled,
   inputRef,
+  style,
   children,
 }) => {
   const ref = useRef();
@@ -311,6 +315,7 @@ const CustomCheckbox = ({
       className="navi_checkbox"
       style={{
         ...(accentColor ? { "--accent-color": accentColor } : {}),
+        ...style,
       }}
       data-readonly={readOnly ? "" : undefined}
       data-disabled={disabled ? "" : undefined}

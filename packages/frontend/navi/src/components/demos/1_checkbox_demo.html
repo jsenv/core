@@ -282,13 +282,13 @@
       }
 
       /* Custom styles override section */
-      .my_styles input[type="checkbox"] {
-        accent-color: green;
-        width: 20px;
-        height: 20px;
+      .my_styles .navi_checkbox {
+        --accent-color: green;
+        --width: 20px;
+        --height: 20px;
       }
-      .my_styles input[type="checkbox"]:hover {
-        accent-color: yellow;
+      .my_styles .navi_checkbox[data-hover] {
+        --accent-color: yellow;
       }
 
       .custom-styles-demo {
