@@ -45,7 +45,6 @@ import.meta.css = /* css */ `
   .navi_custom_checkbox input {
     position: absolute;
     opacity: 0;
-    inset: 0;
     margin: 0;
     padding: 0;
     border: none;

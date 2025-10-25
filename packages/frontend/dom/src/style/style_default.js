@@ -1,6 +1,6 @@
 import { normalizeStyle } from "./style_parsing.js";
 
-const DEBUG = true;
+const DEBUG = false;
 
 // Register the style isolator custom element once
 let persistentStyleIsolator = null;

@@ -193,7 +193,7 @@ const toSync = {
   "color": syncUsingCssVar("--navi-color"),
 };
 const createStyleForwarder = (sourceElement, targetElement) => {
-  const defaultStyles = getDefaultStyles(sourceElement);
+  const defaultStyles = getDefaultStyles(sourceElement, "css");
 
   const syncOneStyle = (styleName, howToSync) => {
     const currentValue = getStyle(sourceElement, styleName);
