@@ -1,13 +1,13 @@
 import { normalizeStyle } from "./style_parsing.js";
 
-// Register the style extractor custom element once
-let persistentStyleExtractor = null;
-const getNaviStyleExtractor = () => {
-  if (persistentStyleExtractor) {
-    return persistentStyleExtractor;
+// Register the style isolator custom element once
+let persistentStyleIsolator = null;
+const getNaviStyleIsolator = () => {
+  if (persistentStyleIsolator) {
+    return persistentStyleIsolator;
   }
 
-  class StyleExtractor extends HTMLElement {
+  class StyleIsolator extends HTMLElement {
     constructor() {
       super();
 
@@ -34,7 +34,7 @@ const getNaviStyleExtractor = () => {
       this.unstyledElementSlot = shadow.querySelector("#unstyled_element_slot");
     }
 
-    extractDefaultStyles(element) {
+    getIsolatedStyles(element) {
       this.unstyledElementSlot.innerHTML = "";
       const unstyledElement = element.cloneNode(true);
       this.unstyledElementSlot.appendChild(unstyledElement);
@@ -55,12 +55,12 @@ const getNaviStyleExtractor = () => {
     }
   }
 
-  customElements.define("navi-style-extractor", StyleExtractor);
+  customElements.define("navi-style-isolator", StyleIsolator);
 
   // Create and add the persistent element to the document
-  persistentStyleExtractor = document.createElement("navi-style-extractor");
-  document.body.appendChild(persistentStyleExtractor);
-  return persistentStyleExtractor;
+  persistentStyleIsolator = document.createElement("navi-style-isolator");
+  document.body.appendChild(persistentStyleIsolator);
+  return persistentStyleIsolator;
 };
 
 const stylesCache = new Map();
@@ -104,9 +104,9 @@ export const getDefaultStyles = (input) => {
     return stylesCache.get(cacheKey);
   }
 
-  // Get the persistent style extractor element
-  const naviStyleExtractor = getNaviStyleExtractor();
-  const defaultStyles = naviStyleExtractor.extractDefaultStyles(element);
+  // Get the persistent style isolator element
+  const naviStyleIsolator = getNaviStyleIsolator();
+  const defaultStyles = naviStyleIsolator.getIsolatedStyles(element);
 
   // Cache the result
   stylesCache.set(cacheKey, defaultStyles);
