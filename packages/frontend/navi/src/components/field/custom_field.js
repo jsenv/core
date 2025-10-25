@@ -1,9 +1,6 @@
 import { createPubSub } from "@jsenv/dom";
 
-export const forwardFieldPseudoSelectors = (
-  field,
-  nodeReceivingAttributes = field,
-) => {
+export const initCustomField = (customField, field) => {
   const [teardown, addTeardown] = createPubSub();
 
   const addEventListener = (eventType, listener) => {
@@ -16,9 +13,9 @@ export const forwardFieldPseudoSelectors = (
     const attributeToSet = `data-${attributeName}`;
 
     if (isPresent) {
-      nodeReceivingAttributes.setAttribute(attributeToSet, "");
+      customField.setAttribute(attributeToSet, "");
     } else {
-      nodeReceivingAttributes.removeAttribute(attributeToSet);
+      customField.removeAttribute(attributeToSet);
     }
   };
 

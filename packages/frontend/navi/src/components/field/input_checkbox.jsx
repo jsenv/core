@@ -15,7 +15,7 @@ import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
-import { forwardFieldPseudoSelectors } from "./field_pseudo_selectors.js";
+import { initCustomField } from "./custom_field.js";
 import { ReportReadOnlyOnLabelContext } from "./label.jsx";
 import { useActionEvents } from "./use_action_events.js";
 import {
@@ -322,7 +322,7 @@ const CustomCheckbox = ({
   }, [accentColor]);
 
   useLayoutEffect(() => {
-    return forwardFieldPseudoSelectors(inputRef.current, ref.current);
+    return initCustomField(ref.current, inputRef.current);
   }, []);
 
   return (
