@@ -33,8 +33,8 @@ import {
 
 import.meta.css = /* css */ `
   :root {
-    --navi-checkmark-light-color: white;
-    --navi-checkmark-dark-color: darkgrey;
+    --navi-checkmark-color-light: white;
+    --navi-checkmark-color-dark: darkgrey;
     --navi-checkmark-color: var(--navi-checkmark-light-color);
   }
 
@@ -315,8 +315,8 @@ const CustomCheckbox = ({
     const colorPicked = pickLightOrDark(
       customCheckbox,
       "var(--navi-accent-color)",
-      "var(--navi-checkmark-light-color)",
-      "var(--navi-checkmark-dark-color)",
+      "var(--navi-checkmark-color-light)",
+      "var(--navi-checkmark-color-dark)",
     );
     customCheckbox.style.setProperty("--navi-checkmark-color", colorPicked);
   }, [accentColor]);
@@ -329,6 +329,9 @@ const CustomCheckbox = ({
     <div
       ref={ref}
       className="navi_custom_checkbox"
+      style={{
+        ...(accentColor ? { "--navi-accent-color": accentColor } : {}),
+      }}
       data-readonly={readOnly ? "" : undefined}
       data-disabled={disabled ? "" : undefined}
     >
