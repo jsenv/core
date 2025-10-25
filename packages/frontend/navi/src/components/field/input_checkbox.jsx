@@ -52,7 +52,7 @@ import.meta.css = /* css */ `
     --outline-color: light-dark(#355fcc, #4476ff);
     --border-color: light-dark(#767676, #8e8e93);
     --background-color: white;
-    --accent-color: light-dark(#355fcc, #4476ff);
+    --accent-color: light-dark(#4476ff, #3b82f6);
     --color: currentColor;
     --checkmark-color: var(--navi-checkmark-color);
 
