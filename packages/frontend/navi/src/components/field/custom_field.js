@@ -148,17 +148,17 @@ const toSync = {
   "margin-top": syncUsingStyle("margin-top"),
   "margin-bottom": syncUsingStyle("margin-bottom"),
 
-  "outline-width": syncUsingCssVar("--navi-outline-width"),
-  "border-width": syncUsingCssVar("--navi-border-width"),
-  "border-radius": syncUsingCssVar("--navi-border-radius"),
-  "width": syncUsingCssVar("--navi-width"),
-  "height": syncUsingCssVar("--navi-height"),
+  "outline-width": syncUsingCssVar("--outline-width"),
+  "border-width": syncUsingCssVar("--border-width"),
+  "border-radius": syncUsingCssVar("--border-radius"),
+  "width": syncUsingCssVar("--width"),
+  "height": syncUsingCssVar("--height"),
 
-  "outline-color": syncUsingCssVar("--navi-outline-color"),
-  "border-color": syncUsingCssVar("--navi-border-color"),
-  "background-color": syncUsingCssVar("--navi-background-color"),
-  "accent-color": syncUsingCssVar("--navi-accent-color"),
-  "color": syncUsingCssVar("--navi-color"),
+  "outline-color": syncUsingCssVar("--outline-color"),
+  "border-color": syncUsingCssVar("--border-color"),
+  "background-color": syncUsingCssVar("--background-color"),
+  "accent-color": syncUsingCssVar("--accent-color"),
+  "color": syncUsingCssVar("--color"),
 };
 const createStyleForwarder = (sourceElement, targetElement) => {
   const defaultStyles = getDefaultStyles(sourceElement, "css");

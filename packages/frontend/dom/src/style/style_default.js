@@ -62,8 +62,9 @@ const getNaviStyleIsolator = () => {
     }
   }
 
-  customElements.define("navi-style-isolator", StyleIsolator);
-
+  if (!customElements.get("navi-style-isolator")) {
+    customElements.define("navi-style-isolator", StyleIsolator);
+  }
   // Create and add the persistent element to the document
   persistentStyleIsolator = document.createElement("navi-style-isolator");
   document.body.appendChild(persistentStyleIsolator);
