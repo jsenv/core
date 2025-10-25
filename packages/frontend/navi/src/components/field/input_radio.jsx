@@ -131,6 +131,18 @@ import.meta.css = /* css */ `
   .navi_radio[data-hover] .navi_radio_marker {
     fill: var(--mark-color-hover);
   }
+  /* Checked */
+  .navi_radio[data-checked] .navi_radio_border {
+    stroke: var(--border-color-checked);
+  }
+  .navi_radio[data-checked] .navi_radio_marker {
+    opacity: 1;
+    transform: scale(1);
+  }
+  .navi_radio[data-hover][data-checked] .navi_radio_border {
+    stroke: var(--border-color-checked-hover);
+  }
+
   /* Readonly */
   .navi_radio[data-readonly] .navi_radio_border {
     stroke: var(--border-color-readonly);
@@ -142,6 +154,13 @@ import.meta.css = /* css */ `
   .navi_radio[data-readonly] .navi_radio_dashed_border {
     display: none;
   }
+  .navi_radio[data-checked][data-readonly] .navi_radio_border {
+    stroke: var(--border-color-checked-readonly);
+    fill: var(--background-color-checked-readonly);
+  }
+  .navi_radio[data-checked][data-readonly] .navi_radio_marker {
+    fill: var(--mark-color-readonly);
+  }
   /* Disabled */
   .navi_radio[data-disabled] .navi_radio_border {
     stroke: var(--border-color-disabled);
@@ -149,24 +168,6 @@ import.meta.css = /* css */ `
   }
   .navi_radio[data-disabled] .navi_radio_marker {
     fill: var(--mark-color-disabled);
-  }
-  /* Checked */
-  .navi_radio[data-checked] .navi_radio_border {
-    stroke: var(--border-color-checked);
-  }
-  .navi_radio[data-checked] .navi_radio_marker {
-    opacity: 1;
-    transform: scale(1);
-  }
-  .navi_radio[data-checked][data-hover] .navi_radio_border {
-    stroke: var(--border-color-checked-hover);
-  }
-  .navi_radio[data-checked][data-readonly] .navi_radio_border {
-    stroke: var(--border-color-checked-readonly);
-    fill: var(--background-color-checked-readonly);
-  }
-  .navi_radio[data-checked][data-readonly] .navi_radio_marker {
-    fill: var(--mark-color-readonly);
   }
   .navi_radio[data-checked][data-disabled] .navi_radio_marker {
     fill: var(--mark-color-disabled);
