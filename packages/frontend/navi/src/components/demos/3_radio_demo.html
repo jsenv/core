@@ -420,7 +420,7 @@
 
       // eslint-disable-next-line no-unused-vars
       const ReadOnlyDemo = () => {
-        const [readOnly, setReadOnly] = useState(false);
+        const [readOnly, setReadOnly] = useState(true);
         const [selectedValue, setSelectedValue] = useState("option2");
 
         return (
@@ -511,7 +511,6 @@
       // eslint-disable-next-line no-unused-vars
       const DisabledDemo = () => {
         const [disabled, setDisabled] = useState(true);
-        const [selectedValue, setSelectedValue] = useState("option1");
 
         return (
           <div className="demo-card">
@@ -524,8 +523,8 @@
                   type="radio"
                   name="disabled-demo"
                   value="option1"
-                  checked={selectedValue === "option1"}
-                  onChange={() => setSelectedValue("option1")}
+                  checked={true}
+                  onUIStateChange={() => {}}
                   disabled={disabled}
                 />
                 Option 1 (Initially Selected)
@@ -535,8 +534,6 @@
                   type="radio"
                   name="disabled-demo"
                   value="option2"
-                  checked={selectedValue === "option2"}
-                  onChange={() => setSelectedValue("option2")}
                   disabled={disabled}
                 />
                 Option 2
@@ -546,8 +543,6 @@
                   type="radio"
                   name="disabled-demo"
                   value="option3"
-                  checked={selectedValue === "option3"}
-                  onChange={() => setSelectedValue("option3")}
                   disabled={disabled}
                 />
                 Option 3

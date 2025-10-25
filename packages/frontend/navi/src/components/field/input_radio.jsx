@@ -57,6 +57,7 @@ import.meta.css = /* css */ `
     --border-color-checked-readonly: #d3d3d3;
     --border-color-checked-disabled: #d3d3d3;
     --background-color-readonly: var(--background-color);
+    --background-color-disabled: var(--background-color);
     --background-color-checked-readonly: #d3d3d3;
     --background-color-checked-disabled: var(--background-color);
     --mark-color-hover: var(--accent-color-checked);
@@ -145,6 +146,9 @@ import.meta.css = /* css */ `
   .navi_radio[data-disabled] .navi_radio_border {
     stroke: var(--border-color-disabled);
     fill: var(--background-color-disabled);
+  }
+  .navi_radio[data-disabled] .navi_radio_marker {
+    fill: var(--mark-color-disabled);
   }
   /* Checked */
   .navi_radio[data-checked] .navi_radio_border {
