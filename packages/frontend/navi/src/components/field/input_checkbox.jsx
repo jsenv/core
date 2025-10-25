@@ -60,6 +60,7 @@ import.meta.css = /* css */ `
     --navi-outline-color: light-dark(#355fcc, #3b82f6);
     --navi-border-color: light-dark(#767676, #8e8e93);
     --navi-background-color: white;
+    --navi-accent-color: light-dark(#355fcc, #3b82f6);
 
     --navi-border-color-readonly: color-mix(
       in srgb,
