@@ -38,19 +38,10 @@ import.meta.css = /* css */ `
     --navi-checkmark-color: var(--navi-checkmark-light-color);
   }
 
-  .navi_custom_checkbox {
+  .navi_checkbox {
     display: inline-flex;
     box-sizing: content-box;
-  }
-  .navi_custom_checkbox input {
-    position: absolute;
-    opacity: 0;
-    margin: 0;
-    padding: 0;
-    border: none;
-  }
 
-  .navi_custom_checkbox {
     --outline-offset: 1px;
     --outline-width: 2px;
     --border-width: 1px;
@@ -58,7 +49,7 @@ import.meta.css = /* css */ `
     --width: 13px;
     --height: 13px;
 
-    --outline-color: light-dark(#355fcc, #3b82f6);
+    --outline-color: light-dark(#355fcc, #4476ff);
     --border-color: light-dark(#767676, #8e8e93);
     --background-color: white;
     --accent-color: light-dark(#355fcc, #4476ff);
@@ -73,19 +64,18 @@ import.meta.css = /* css */ `
     --checkmark-color-readonly: grey;
     --checkmark-color-disabled: #eeeeee;
   }
-
-  .navi_custom_checkbox_field svg {
-    width: 100%;
-    height: 100%;
+  .navi_checkbox input {
+    position: absolute;
+    inset: 0;
     opacity: 0;
-    transform: scale(0.5);
-    transition: all 0.15s ease;
-    pointer-events: none;
+    margin: 0;
+    padding: 0;
+    border: none;
   }
-
-  .navi_custom_checkbox_field {
+  .navi_checkbox_field {
     display: inline-flex;
     margin: 3px 3px 3px 4px;
+    box-sizing: border-box;
 
     outline-width: var(--outline-width);
     outline-offset: var(--outline-offset);
@@ -93,7 +83,6 @@ import.meta.css = /* css */ `
     border-radius: var(--border-radius);
     width: var(--width);
     height: var(--height);
-    box-sizing: border-box;
 
     outline-style: none;
     border-style: solid;
@@ -103,55 +92,59 @@ import.meta.css = /* css */ `
     background-color: var(--background-color);
     color: var(--color);
   }
+  .navi_checkbox_marker {
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: all 0.15s ease;
+    pointer-events: none;
+  }
 
   /* Focus */
-  .navi_custom_checkbox[data-focus-visible] [data-field] {
+  .navi_checkbox[data-focus-visible] .navi_checkbox_field {
     outline-style: solid;
   }
   /* Hover */
-  .navi_custom_checkbox[data-hover] {
+  .navi_checkbox[data-hover] {
     --border-color: var(--border-color-hover);
   }
   /* Readonly */
-  .navi_custom_checkbox[data-readonly] [data-field],
-  .navi_custom_checkbox[data-readonly][data-hover] [data-field] {
+  .navi_checkbox[data-readonly] .navi_checkbox_field,
+  .navi_checkbox[data-readonly][data-hover] .navi_checkbox_field {
     --border-color: var(--border-color-readonly);
     --background-color: var(--background-color-readonly);
   }
   /* Disabled */
-  .navi_custom_checkbox[data-disabled] [data-field] {
+  .navi_checkbox[data-disabled] .navi_checkbox_field {
     --background-color: var(--background-color-disabled);
     --border-color: var(--border-color-disabled);
   }
   /* Checked */
-  .navi_custom_checkbox[data-checked] [data-field] svg {
+  .navi_checkbox[data-checked] .navi_checkbox_marker {
     opacity: 1;
     transform: scale(1);
-  }
-  .navi_custom_checkbox[data-checked] .navi_custom_checkbox_marker {
     stroke: var(--checkmark-color);
   }
-  .navi_custom_checkbox[data-checked] [data-field] {
+  .navi_checkbox[data-checked] .navi_checkbox_field {
     --background-color: var(--accent-color);
     --border-color: var(--accent-color);
   }
-  .navi_custom_checkbox[data-checked][data-hover] [data-field] {
+  .navi_checkbox[data-checked][data-hover] .navi_checkbox_field {
     --background-color: color-mix(in srgb, var(--accent-color) 70%, black);
     --border-color: color-mix(in srgb, var(--accent-color) 70%, black);
   }
-  .navi_custom_checkbox[data-checked][data-readonly] [data-field] {
+  .navi_checkbox[data-checked][data-readonly] .navi_checkbox_field {
     --background-color: var(--background-color-disabled);
     --border-color: var(--border-color-disabled);
   }
-  .navi_custom_checkbox[data-checked][data-readonly]
-    .navi_custom_checkbox_marker {
+  .navi_checkbox[data-checked][data-readonly] .navi_checkbox_marker {
     stroke: var(--checkmark-color-readonly);
   }
-  .navi_custom_checkbox[data-checked][data-disabled]
-    .navi_custom_checkbox_marker {
+  .navi_checkbox[data-checked][data-disabled] .navi_checkbox_marker {
     stroke: var(--checkmark-color-disabled);
   }
-  .navi_custom_checkbox[data-checked][data-disabled] [data-field] {
+  .navi_checkbox[data-checked][data-disabled] .navi_checkbox_field {
     --border-color: var(--border-color-checked-disabled);
     --background-color: var(--background-color-checked-disabled);
   }
@@ -279,13 +272,11 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
       data-action={actionName}
       loading={innerLoading}
       inset={-1}
-      targetSelector={
-        appeareance === "custom" ? ".navi_custom_checkbox_field" : ""
-      }
+      targetSelector={appeareance === "custom" ? ".navi_checkbox_field" : ""}
       style={{
-        ...(accentColor ? { "--navi-accent-color": accentColor } : {}),
+        ...(accentColor ? { "--accent-color": accentColor } : {}),
       }}
-      color="var(--navi-accent-color)"
+      color="var(--accent-color)"
     >
       {inputCheckboxDisplayed}
     </LoadableInlineElement>
@@ -303,11 +294,11 @@ const CustomCheckbox = ({
     const customCheckbox = ref.current;
     const colorPicked = pickLightOrDark(
       customCheckbox,
-      "var(--navi-accent-color)",
+      "var(--accent-color)",
       "var(--navi-checkmark-color-light)",
       "var(--navi-checkmark-color-dark)",
     );
-    customCheckbox.style.setProperty("--navi-checkmark-color", colorPicked);
+    customCheckbox.style.setProperty("--checkmark-color", colorPicked);
   }, [accentColor]);
 
   useLayoutEffect(() => {
@@ -317,22 +308,21 @@ const CustomCheckbox = ({
   return (
     <div
       ref={ref}
-      className="navi_custom_checkbox"
+      className="navi_checkbox"
       style={{
-        ...(accentColor ? { "--navi-accent-color": accentColor } : {}),
+        ...(accentColor ? { "--accent-color": accentColor } : {}),
       }}
       data-readonly={readOnly ? "" : undefined}
       data-disabled={disabled ? "" : undefined}
     >
       {children}
-      <div className="navi_custom_checkbox_field" data-field="">
-        <svg viewBox="0 0 12 12" aria-hidden="true">
-          <path
-            className="navi_custom_checkbox_marker"
-            d="M10.5 2L4.5 9L1.5 5.5"
-            fill="none"
-            strokeWidth="2"
-          />
+      <div className="navi_checkbox_field">
+        <svg
+          viewBox="0 0 12 12"
+          aria-hidden="true"
+          className="navi_checkbox_marker"
+        >
+          <path d="M10.5 2L4.5 9L1.5 5.5" fill="none" strokeWidth="2" />
         </svg>
       </div>
     </div>
