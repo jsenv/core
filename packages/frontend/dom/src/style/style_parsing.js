@@ -136,6 +136,9 @@ const normalizeNumber = (value, context, unit, propertyName) => {
     if (value === "auto") {
       return "auto";
     }
+    if (value === "none") {
+      return "none";
+    }
     const numericValue = parseFloat(value);
     if (isNaN(numericValue)) {
       console.warn(
