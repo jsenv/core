@@ -180,7 +180,13 @@ const syncUsingCssVar = (cssVar) => {
   };
 };
 const toSync = {
+  "border-width": syncUsingCssVar("--navi-border-width"),
+
+  "outline-color": syncUsingCssVar("--navi-outline-color"),
+  "border-color": syncUsingCssVar("--navi-border-color"),
+  "background-color": syncUsingCssVar("--navi-background-color"),
   "accent-color": syncUsingCssVar("--navi-accent-color"),
+  "color": syncUsingCssVar("--navi-color"),
 };
 const createStyleForwarder = (sourceElement, targetElement) => {
   const defaultStyles = getDefaultStyles(sourceElement);

@@ -61,6 +61,8 @@ import.meta.css = /* css */ `
     --navi-border-color: light-dark(#767676, #8e8e93);
     --navi-background-color: white;
     --navi-accent-color: light-dark(#355fcc, #3b82f6);
+    --navi-color: currentColor;
+
     --navi-border-color-readonly: color-mix(
       in srgb,
       var(--navi-border-color) 30%,
