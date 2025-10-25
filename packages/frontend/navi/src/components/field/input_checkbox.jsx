@@ -34,7 +34,7 @@ import {
 import.meta.css = /* css */ `
   :root {
     --navi-checkmark-color-light: white;
-    --navi-checkmark-color-dark: darkgrey;
+    --navi-checkmark-color-dark: rgb(55, 55, 55);
     --navi-checkmark-color: var(--navi-checkmark-light-color);
   }
 

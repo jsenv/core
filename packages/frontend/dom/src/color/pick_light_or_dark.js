@@ -12,8 +12,8 @@ import { resolveCSSColor } from "./resolve_css_color.js";
 export const pickLightOrDark = (
   element,
   backgroundColor,
-  lightColor,
-  darkColor,
+  lightColor = "white",
+  darkColor = "black",
 ) => {
   const resolvedBgColor = resolveCSSColor(backgroundColor, element);
   const resolvedLightColor = resolveCSSColor(lightColor, element);
