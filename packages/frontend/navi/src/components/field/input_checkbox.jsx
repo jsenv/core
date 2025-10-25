@@ -248,6 +248,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
   const inputCheckboxDisplayed =
     appeareance === "custom" ? (
       <CustomCheckbox
+        inputRef={innerRef}
         accentColor={accentColor}
         readOnly={readOnly}
         disabled={innerDisabled}
@@ -258,18 +259,9 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
       inputCheckbox
     );
 
-  const containerRef = useRef();
-  useLayoutEffect(() => {
-    return forwardFieldPseudoSelectors(innerRef.current, containerRef.current);
-  }, []);
-
   return (
     <LoadableInlineElement
-      ref={containerRef}
       data-action={actionName}
-      data-field-wrapper=""
-      data-readonly={readOnly ? "" : undefined}
-      data-disabled={disabled ? "" : undefined}
       loading={innerLoading}
       inset={-1}
       targetSelector={appeareance === "custom" ? ".custom_checkbox" : ""}
@@ -282,7 +274,13 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
     </LoadableInlineElement>
   );
 });
-const CustomCheckbox = ({ accentColor, children }) => {
+const CustomCheckbox = ({
+  accentColor,
+  readOnly,
+  disabled,
+  inputRef,
+  children,
+}) => {
   const ref = useRef();
   useLayoutEffect(() => {
     const customCheckbox = ref.current;
@@ -298,8 +296,18 @@ const CustomCheckbox = ({ accentColor, children }) => {
     );
   }, [accentColor]);
 
+  useLayoutEffect(() => {
+    return forwardFieldPseudoSelectors(inputRef.current, ref.current);
+  }, []);
+
   return (
-    <div ref={ref} className="custom_checkbox_wrapper">
+    <div
+      ref={ref}
+      className="custom_checkbox_wrapper"
+      data-field-wrapper=""
+      data-readonly={readOnly ? "" : undefined}
+      data-disabled={disabled ? "" : undefined}
+    >
       {children}
       <div
         className="custom_checkbox"

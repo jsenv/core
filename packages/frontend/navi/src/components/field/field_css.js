@@ -4,9 +4,9 @@ import.meta.css = /* css */ `
     --navi-field-outline-width: 1px;
 
     --navi-field-border-color: light-dark(#767676, #8e8e93);
+    --navi-field-outline-color: light-dark(#355fcc, #3b82f6);
     --navi-field-background-color: light-dark(#f3f4f6, #2d3748);
     --navi-field-accent-color: light-dark(#355fcc, #3b82f6);
-    --navi-field-outline-color: var(--navi-field-accent-color);
 
     --navi-field-disabled-border-color: color-mix(
       in srgb,
@@ -35,22 +35,23 @@ import.meta.css = /* css */ `
       black
     );
 
-    --navi-field-disabled-color: color-mix(
+    --navi-field-readonly-color: color-mix(
       in srgb,
       currentColor 30%,
       transparent
     );
-    --navi-field-readonly-color: var(--navi-field-disabled-color);
+    --navi-field-disabled-color: var(--navi-field-readonly-color);
   }
 
   [data-field] {
     outline-width: var(--navi-field-border-width);
-    outline-style: solid;
-    outline-color: transparent;
+    outline-style: none;
+    outline-color: var(--navi-field-outline-color);
     outline-offset: calc(-1 * (var(--navi-field-border-width)));
+    color: var(--navi-field-color);
   }
   [data-field-wrapper][data-readonly] [data-field] {
-    color: var(--navi-field-readonly-color);
+    --navi-field-color: var(--navi-field-readonly-color);
   }
   [data-field-wrapper][data-focus-visible] [data-field] {
     outline-style: solid;
@@ -60,7 +61,6 @@ import.meta.css = /* css */ `
     outline-offset: calc(
       -1 * (var(--navi-field-border-width) + var(--navi-field-outline-width))
     );
-    outline-color: var(--navi-field-outline-color);
   }
 
   [data-field-with-border] {
