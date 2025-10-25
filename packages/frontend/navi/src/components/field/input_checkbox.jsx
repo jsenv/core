@@ -74,17 +74,23 @@ import.meta.css = /* css */ `
 
   [data-field-wrapper] {
     --navi-field-background-color: white;
+    --navi-field-outline-width: 2px;
+    --navi-field-outline-offset: 1px;
   }
   [data-field-wrapper] [data-field] {
     background-color: var(--navi-field-background-color);
     border-color: var(--navi-field-border-color);
+    color: var(--navi-field-color);
+    outline-color: var(--navi-field-outline-color);
+    outline-style: none;
+    outline-width: var(--navi-field-outline-width);
+    outline-offset: var(--navi-field-outline-offset);
   }
   [data-field-wrapper][data-hover] {
     --navi-field-border-color: var(--navi-field-hover-border-color);
   }
   [data-field-wrapper][data-focus-visible] [data-field] {
-    outline: 2px solid var(--navi-field-outline-color);
-    outline-offset: 1px;
+    outline-style: solid;
   }
 
   /* Readonly */
