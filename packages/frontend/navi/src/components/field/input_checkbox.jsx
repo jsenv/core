@@ -49,7 +49,7 @@ import.meta.css = /* css */ `
     --width: 13px;
     --height: 13px;
 
-    --outline-color: light-dark(#355fcc, #4476ff);
+    --outline-color: light-dark(#4476ff, #3b82f6);
     --border-color: light-dark(#767676, #8e8e93);
     --background-color: white;
     --accent-color: light-dark(#4476ff, #3b82f6);
@@ -106,7 +106,7 @@ import.meta.css = /* css */ `
     outline-style: solid;
   }
   /* Hover */
-  .navi_checkbox[data-hover] {
+  .navi_checkbox[data-hover] .navi_checkbox_field {
     --border-color: var(--border-color-hover);
   }
   /* Readonly */
