@@ -1,4 +1,5 @@
-const registeredComponents = new Set();
+import { normalizeStyle } from "./style_parsing.js";
+
 const stylesCache = new Map();
 
 /**
@@ -61,7 +62,6 @@ export const getDefaultStyles = (elementString) => {
   // Create instance
   customElements.define(componentName, UnstyledElement);
   const unstyledElement = new UnstyledElement();
-  registeredComponents.add(componentName);
   // Add to DOM (required for getComputedStyle to work)
   document.body.appendChild(unstyledElement);
 
@@ -72,7 +72,10 @@ export const getDefaultStyles = (elementString) => {
   const stylesCopy = {};
   for (let i = 0; i < computedStyles.length; i++) {
     const property = computedStyles[i];
-    stylesCopy[property] = computedStyles.getPropertyValue(property);
+    stylesCopy[property] = normalizeStyle(
+      computedStyles.getPropertyValue(property),
+      property,
+    );
   }
 
   // Cache the result
