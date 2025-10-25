@@ -8,9 +8,8 @@ export const styleEffect = (element, callback, properties = []) => {
     const computedStyle = getComputedStyle(element);
     for (const property of properties) {
       values[property] = normalizeStyle(
-        element,
-        property,
         computedStyle.getPropertyValue(property),
+        property,
       );
     }
     callback(values);

@@ -34,7 +34,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/dom": "0.1.0",
+    "@jsenv/dom": "0.2.0",
     "@jsenv/humanize": "1.6.0"
   },
   "devDependencies": {
