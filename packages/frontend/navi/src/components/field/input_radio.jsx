@@ -346,7 +346,7 @@ const CustomRadio = ({
   }, []);
 
   return (
-    <div
+    <span
       ref={ref}
       className="navi_radio"
       style={{
@@ -357,7 +357,7 @@ const CustomRadio = ({
       data-disabled={disabled ? "" : undefined}
     >
       {children}
-      <div className="navi_radio_field">
+      <span className="navi_radio_field">
         <svg
           viewBox="0 0 12 12"
           aria-hidden="true"
@@ -384,8 +384,8 @@ const CustomRadio = ({
           {/* Inner fill circle - only visible when checked */}
           <circle className="navi_radio_marker" cx="6" cy="6" r="3.5" />
         </svg>
-      </div>
-    </div>
+      </span>
+    </span>
   );
 };
 
