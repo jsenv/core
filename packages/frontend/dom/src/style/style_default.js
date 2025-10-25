@@ -3,6 +3,35 @@ import { normalizeStyle } from "./style_parsing.js";
 const stylesCache = new Map();
 
 /**
+ * Creates an HTML element from a CSS selector
+ * @param {string} selector - CSS selector (e.g., 'input[type="text"]', 'button', 'a[href="#"]')
+ * @returns {Element} DOM element
+ */
+const createElementFromSelector = (selector) => {
+  // Parse the selector to extract tag name and attributes
+  const tagMatch = selector.match(/^([a-zA-Z][a-zA-Z0-9-]*)/);
+  if (!tagMatch) {
+    throw new Error(`Invalid selector: ${selector}`);
+  }
+
+  const tagName = tagMatch[1].toLowerCase();
+  const element = document.createElement(tagName);
+
+  // Extract and apply attributes from selector
+  const attributeRegex = /\[([^=\]]+)(?:=(?:"([^"]*)"|'([^']*)'|([^\]]*)))?\]/g;
+  let attributeMatch;
+
+  while ((attributeMatch = attributeRegex.exec(selector)) !== null) {
+    const attrName = attributeMatch[1];
+    const attrValue =
+      attributeMatch[2] || attributeMatch[3] || attributeMatch[4] || "";
+    element.setAttribute(attrName, attrValue);
+  }
+
+  return element;
+};
+
+/**
  * Generates a component name from an element
  * @param {Element} element - DOM element to generate name for
  * @returns {string} Component name
@@ -16,24 +45,19 @@ const generateComponentName = (element) => {
 
 /**
  * Gets the default browser styles for an HTML element by creating an isolated custom element
- * @param {string} elementString - HTML element string (e.g., '<input type="text" />')
+ * @param {string} selector - CSS selector (e.g., 'input[type="text"]', 'button', 'a[href]')
  * @returns {CSSStyleDeclaration} Computed styles of the unstyled element
  */
-export const getDefaultStyles = (elementString) => {
+export const getDefaultStyles = (selector) => {
   // Check cache first
-  if (stylesCache.has(elementString)) {
-    return stylesCache.get(elementString);
+  if (stylesCache.has(selector)) {
+    return stylesCache.get(selector);
   }
 
-  // Parse element string first to get component name
-  const tempDiv = document.createElement("div");
-  tempDiv.innerHTML = elementString;
-  const parsedElement = tempDiv.firstElementChild;
-  if (!parsedElement) {
-    throw new Error(`Invalid element string: ${elementString}`);
-  }
-  const tagName = parsedElement.tagName.toLowerCase();
-  const componentName = generateComponentName(parsedElement);
+  // Parse selector to create element
+  const element = createElementFromSelector(selector);
+  const tagName = element.tagName.toLowerCase();
+  const componentName = generateComponentName(element);
   let customElement = null;
   // Create custom element class that will handle this specific element
   class UnstyledElement extends HTMLElement {
@@ -54,9 +78,12 @@ export const getDefaultStyles = (elementString) => {
               all: revert;
             }
           </style>
-          ${elementString}
         `;
-      customElement = shadow.querySelector(tagName);
+
+      // Create and append the element
+      const actualElement = element.cloneNode(true);
+      shadow.appendChild(actualElement);
+      customElement = actualElement;
     }
   }
   // Create instance
@@ -79,7 +106,7 @@ export const getDefaultStyles = (elementString) => {
   }
 
   // Cache the result
-  stylesCache.set(elementString, stylesCopy);
+  stylesCache.set(selector, stylesCopy);
 
   return stylesCopy;
 };

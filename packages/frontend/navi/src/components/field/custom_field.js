@@ -1,4 +1,6 @@
-import { createPubSub } from "@jsenv/dom";
+import { createPubSub, getDefaultStyles, styleEffect } from "@jsenv/dom";
+
+const checkboxDefaultStyles = getDefaultStyles(`input[type="checkbox"]`);
 
 export const initCustomField = (customField, field) => {
   const [teardown, addTeardown] = createPubSub();
@@ -126,6 +128,17 @@ export const initCustomField = (customField, field) => {
       });
     }
   }
+
+  const cleanupStyleEffect = styleEffect(
+    field,
+    (data) => {
+      console.log(data);
+    },
+    ["accent-color"],
+  );
+  addTeardown(() => {
+    cleanupStyleEffect();
+  });
 
   return teardown;
 };

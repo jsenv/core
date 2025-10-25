@@ -281,6 +281,50 @@
         font-size: 0.95rem;
       }
 
+      /* Custom styles override section */
+      .my_styles input[type="checkbox"] {
+        accent-color: green;
+      }
+
+      .custom-styles-demo {
+        margin-top: 30px;
+      }
+
+      .custom-styles-test {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 20px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        margin: 15px 0;
+      }
+
+      .custom-styles-test h4 {
+        margin-top: 0;
+        color: #2c3e50;
+        font-size: 1.1rem;
+      }
+
+      .custom-styles-comparison {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-top: 15px;
+      }
+
+      .comparison-item {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 15px;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .comparison-item h5 {
+        margin-top: 0;
+        margin-bottom: 10px;
+        color: #34495e;
+        font-size: 0.9rem;
+      }
+
       @media (max-width: 768px) {
         .demo-grid {
           grid-template-columns: 1fr;
@@ -320,6 +364,7 @@
             <ReadOnlyDemo />
             <DisabledDemo />
             <PropControlDemo />
+            <CustomStylesDemo />
           </div>
         );
       };
@@ -627,6 +672,72 @@
                 combinations. Compare how the custom Input component behaves
                 versus a native checkbox.
               </small>
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const CustomStylesDemo = () => {
+        return (
+          <div className="custom-styles-demo">
+            <h2 style={{ color: "#2c3e50", marginBottom: "20px" }}>
+              Ability to Override with Custom Styles
+            </h2>
+
+            <div className="custom-styles-test">
+              <h4>Accent Color Override Test</h4>
+              <p>
+                Testing if CSS <code>accent-color</code> property can override
+                the component's styling:
+              </p>
+
+              <div className="custom-styles-comparison">
+                <div className="comparison-item">
+                  <h5>Default Checkbox</h5>
+                  <Label className="checkbox-label">
+                    <Input
+                      type="checkbox"
+                      name="default-checkbox"
+                      defaultChecked={true}
+                    />
+                    Default styling
+                  </Label>
+                </div>
+
+                <div className="comparison-item my_styles">
+                  <h5>Custom Styled Checkbox (.my_styles)</h5>
+                  <Label className="checkbox-label">
+                    <Input
+                      type="checkbox"
+                      name="custom-styled-checkbox"
+                      defaultChecked={true}
+                    />
+                    Should be green accent
+                  </Label>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  marginTop: "15px",
+                  padding: "10px",
+                  background: "rgba(255,255,255,0.1)",
+                  borderRadius: "4px",
+                }}
+              >
+                <p
+                  style={{
+                    marginTop: "10px",
+                    fontSize: "0.9em",
+                    color: "#666",
+                  }}
+                >
+                  If the custom styling works, the checkbox on the right should
+                  have a green accent color instead of the component's default
+                  accent color.
+                </p>
+              </div>
             </div>
           </div>
         );
