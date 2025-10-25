@@ -135,7 +135,14 @@ export const initCustomField = (customField, field) => {
       const currentAccentColor = data["accent-color"];
       const defaultAccentColor = checkboxDefaultStyles["accent-color"];
 
-      console.log({ currentAccentColor, defaultAccentColor });
+      if (currentAccentColor === defaultAccentColor) {
+        customField.removeAttribute("--navi-accent-color");
+      } else {
+        customField.style.setProperty(
+          "--navi-accent-color",
+          currentAccentColor,
+        );
+      }
     },
     ["accent-color"],
   );
