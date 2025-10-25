@@ -58,10 +58,9 @@ import.meta.css = /* css */ `
     --border-color-checked-disabled: #d3d3d3;
     --background-color-checked-readonly: #d3d3d3;
     --background-color-checked-disabled: #d3d3d3;
+    --mark-color-hover: var(--accent-color-checked);
     --mark-color-readonly: grey;
     --mark-color-disabled: #eeeeee;
-    --mark-color-checked: var(--accent-color);
-    --mark-color-checked-hover: var(--accent-color-checked);
   }
   .navi_radio input {
     position: absolute;
@@ -128,8 +127,8 @@ import.meta.css = /* css */ `
   }
   /* Readonly */
   .navi_radio[data-readonly] .navi_radio_border {
-    fill: light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3));
     stroke: var(--border-color-disabled);
+    fill: var(--background-color-readonly);
   }
   .navi_radio[data-readonly] .navi_radio_dashed_border {
     display: none;
@@ -144,7 +143,7 @@ import.meta.css = /* css */ `
   /* Disabled */
   .navi_radio[data-disabled] .navi_radio_border {
     stroke: var(--border-color-disabled);
-    fill: var(--mark-color-disabled);
+    fill: var(--background-color-disabled);
   }
   /* Checked */
   .navi_radio[data-checked] .navi_radio_border {
@@ -161,10 +160,10 @@ import.meta.css = /* css */ `
     stroke: var(--border-color-checked-readonly);
   }
   .navi_radio[data-checked][data-readonly] .navi_radio_marker {
-    fill: var(--mark-color-checked-readonly);
+    fill: var(--mark-color-readonly);
   }
   .navi_radio[data-checked][data-disabled] .navi_radio_marker {
-    fill: var(--mark-color-checked-disabled);
+    fill: var(--mark-color-disabled);
   }
 `;
 
