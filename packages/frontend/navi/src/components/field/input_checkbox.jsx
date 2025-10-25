@@ -61,7 +61,6 @@ import.meta.css = /* css */ `
     --navi-border-color: light-dark(#767676, #8e8e93);
     --navi-background-color: white;
     --navi-accent-color: light-dark(#355fcc, #3b82f6);
-
     --navi-border-color-readonly: color-mix(
       in srgb,
       var(--navi-border-color) 30%,
@@ -75,6 +74,8 @@ import.meta.css = /* css */ `
     );
     --navi-border-color-checked-disabled: #d3d3d3;
     --navi-background-color-checked-disabled: #d3d3d3;
+    --navi-checkmark-color-readonly: grey;
+    --navi-checkmark-color-disabled: #eeeeee;
   }
 
   .navi_custom_checkbox_field svg {
@@ -87,24 +88,24 @@ import.meta.css = /* css */ `
   }
 
   .navi_custom_checkbox_field {
+    display: inline-flex;
+    margin: 3px 3px 3px 4px;
+
     outline-width: var(--navi-outline-width);
     outline-offset: var(--navi-outline-offset);
     border-width: var(--navi-border-width);
+    width: 13px;
+    height: 13px;
+    box-sizing: border-box;
 
     outline-style: none;
     border-style: solid;
+    border-radius: inherit;
 
     outline-color: var(--navi-outline-color);
     border-color: var(--navi-border-color);
     background-color: var(--navi-background-color);
     color: var(--navi-color);
-
-    width: 13px;
-    height: 13px;
-    box-sizing: border-box;
-    display: inline-flex;
-    margin: 3px 3px 3px 4px;
-    border-radius: inherit;
   }
   .navi_custom_checkbox[data-hover] {
     --navi-border-color: var(--navi-border-color-hover);
@@ -155,11 +156,11 @@ import.meta.css = /* css */ `
   }
   .navi_custom_checkbox[data-checked][data-readonly]
     .navi_custom_checkbox_marker {
-    stroke: grey;
+    stroke: var(--navi-checkmark-color-readonly);
   }
   .navi_custom_checkbox[data-checked][data-disabled]
     .navi_custom_checkbox_marker {
-    stroke: #eeeeee;
+    stroke: var(--navi-checkmark-color-disabled);
   }
   .navi_custom_checkbox[data-checked][data-disabled] [data-field] {
     --navi-border-color: var(--navi-border-color-checked-disabled);
