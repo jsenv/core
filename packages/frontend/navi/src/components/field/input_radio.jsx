@@ -44,7 +44,7 @@ import.meta.css = /* css */ `
     --border-color: light-dark(#767676, #8e8e93);
     --background-color: white;
     --accent-color: var(--navi-radiomark-color);
-    --radiomark-color: var(--accent-color);
+    --mark-color: var(--accent-color);
 
     /* light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3)); */
     --accent-color-checked: color-mix(in srgb, var(--accent-color) 70%, black);
