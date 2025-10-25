@@ -180,7 +180,11 @@ const syncUsingCssVar = (cssVar) => {
   };
 };
 const toSync = {
+  "outline-width": syncUsingCssVar("--navi-outline-width"),
   "border-width": syncUsingCssVar("--navi-border-width"),
+  "border-radius": syncUsingCssVar("--navi-border-radius"),
+  "width": syncUsingCssVar("--navi-width"),
+  "height": syncUsingCssVar("--navi-height"),
 
   "outline-color": syncUsingCssVar("--navi-outline-color"),
   "border-color": syncUsingCssVar("--navi-border-color"),

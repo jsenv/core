@@ -41,7 +41,6 @@ import.meta.css = /* css */ `
   .navi_custom_checkbox {
     display: inline-flex;
     box-sizing: content-box;
-    border-radius: 2px;
   }
   .navi_custom_checkbox input {
     position: absolute;
@@ -56,6 +55,9 @@ import.meta.css = /* css */ `
     --navi-outline-width: 2px;
     --navi-outline-offset: 1px;
     --navi-border-width: 1px;
+    --navi-border-radius: 2px;
+    --navi-width: 13px;
+    --navi-height: 13px;
 
     --navi-outline-color: light-dark(#355fcc, #3b82f6);
     --navi-border-color: light-dark(#767676, #8e8e93);
@@ -96,13 +98,13 @@ import.meta.css = /* css */ `
     outline-width: var(--navi-outline-width);
     outline-offset: var(--navi-outline-offset);
     border-width: var(--navi-border-width);
-    width: 13px;
-    height: 13px;
+    border-radius: var(--navi-border-radius);
+    width: var(--navi-width);
+    height: var(--navi-height);
     box-sizing: border-box;
 
     outline-style: none;
     border-style: solid;
-    border-radius: inherit;
 
     outline-color: var(--navi-outline-color);
     border-color: var(--navi-border-color);
