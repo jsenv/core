@@ -62,8 +62,6 @@ import.meta.css = /* css */ `
     --mark-color-hover: var(--accent-color-checked);
     --mark-color-readonly: grey;
     --mark-color-disabled: #eeeeee;
-
-    cursor: inherit;
   }
   .navi_radio input {
     position: absolute;
@@ -71,6 +69,7 @@ import.meta.css = /* css */ `
     inset: 0;
     margin: 0;
     padding: 0;
+    cursor: inherit;
   }
   .navi_radio_field {
     display: inline-flex;

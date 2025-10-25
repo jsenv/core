@@ -73,6 +73,7 @@ import.meta.css = /* css */ `
     margin: 0;
     padding: 0;
     border: none;
+    cursor: inherit;
   }
   .navi_checkbox_field {
     display: inline-flex;
