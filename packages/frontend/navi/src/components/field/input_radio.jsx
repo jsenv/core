@@ -27,7 +27,7 @@ import {
 
 import.meta.css = /* css */ `
   :root {
-    --navi-radiomark-color: light-dark(#355fcc, #3b82f6);
+    --navi-radiomark-color: light-dark(#4476ff, #3b82f6);
   }
 
   .navi_radio {
@@ -47,16 +47,21 @@ import.meta.css = /* css */ `
     --radiomark-color: var(--accent-color);
 
     /* light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3)); */
+    --accent-color-checked: color-mix(in srgb, var(--accent-color) 70%, black);
 
     --border-color-readonly: color-mix(in srgb, var(--border-color) 30%, white);
     --border-color-disabled: var(--border-color-readonly);
     --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
+    --border-color-checked: var(--accent-color);
+    --border-color-checked-hover: var(--accent-color-checked);
     --border-color-checked-readonly: #d3d3d3;
     --border-color-checked-disabled: #d3d3d3;
     --background-color-checked-readonly: #d3d3d3;
     --background-color-checked-disabled: #d3d3d3;
-    --checkmark-color-readonly: grey;
-    --checkmark-color-disabled: #eeeeee;
+    --mark-color-readonly: grey;
+    --mark-color-disabled: #eeeeee;
+    --mark-color-checked: var(--accent-color);
+    --mark-color-checked-hover: var(--accent-color-checked);
   }
   .navi_radio input {
     position: absolute;
@@ -84,18 +89,19 @@ import.meta.css = /* css */ `
     outline-color: var(--outline-color);
     background-color: var(--background-color);
   }
-
+  .navi_radio_border {
+    stroke: var(--border-color);
+    fill: var(--background-color);
+  }
   .navi_radio_marker {
     width: 100%;
     height: 100%;
     pointer-events: none;
-
-    fill: var(--radiomark-color);
     opacity: 0;
     transform-origin: center;
     transform: scale(0.3);
+    fill: var(--mark-color);
   }
-
   .navi_radio_dashed_border {
     display: none;
   }
@@ -109,31 +115,18 @@ import.meta.css = /* css */ `
     transition: all 0.15s ease;
   }
 
-  /* Focus state avec outline */
+  /* Focus */
   .navi_radio[data-focus-visible] .navi_radio_field {
     outline-style: solid;
   }
-
-  /* États hover */
+  /* Hover */
   .navi_radio[data-hover] .navi_radio_border {
     stroke: var(--border-color-hover);
   }
   .navi_radio[data-hover] .navi_radio_marker {
-    fill: var(--accent-color);
+    fill: var(--mark-color-hover);
   }
-
-  /* États disabled */
-  .navi_radio[data-disabled] .navi_radio_border {
-    fill: light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3));
-    stroke: var(--border-color-disabled);
-  }
-  .navi_radio[data-disabled] .navi_radio_border {
-    stroke: var(--border-color-disabled);
-  }
-  .navi_radio[data-disabled][data-checked] .navi_radio_marker {
-    fill: var(--radiomark-color-disabled);
-  }
-
+  /* Readonly */
   .navi_radio[data-readonly] .navi_radio_border {
     fill: light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3));
     stroke: var(--border-color-disabled);
@@ -142,26 +135,36 @@ import.meta.css = /* css */ `
     display: none;
   }
   .navi_radio[data-readonly] .navi_radio_border {
-    stroke: var(--border-color-readonly-checked);
-  }
-  .navi_radio[data-readonly][data-checked] .navi_radio_marker {
-    fill: var(--checkmark-color-readonly);
+    stroke: var(--border-color-readonly);
   }
   .navi_radio[data-readonly] .navi_radio_border {
     fill: var(--border-color-readonly);
     stroke: var(--border-color-disabled);
   }
-  .navi_radio[data-readonly][data-checked] .navi_radio_border {
-    stroke: var(--border-color-disabled-checked);
+  /* Disabled */
+  .navi_radio[data-disabled] .navi_radio_border {
+    stroke: var(--border-color-disabled);
+    fill: var(--mark-color-disabled);
   }
-
-  /* État checked */
+  /* Checked */
   .navi_radio[data-checked] .navi_radio_border {
     stroke: var(--border-color-checked);
   }
   .navi_radio[data-checked] .navi_radio_marker {
     opacity: 1;
     transform: scale(1);
+  }
+  .navi_radio[data-checked][data-hover] .navi_radio_border {
+    stroke: var(--border-color-checked-hover);
+  }
+  .navi_radio[data-checked][data-readonly] .navi_radio_border {
+    stroke: var(--border-color-checked-readonly);
+  }
+  .navi_radio[data-checked][data-readonly] .navi_radio_marker {
+    fill: var(--mark-color-checked-readonly);
+  }
+  .navi_radio[data-checked][data-disabled] .navi_radio_marker {
+    fill: var(--mark-color-checked-disabled);
   }
 `;
 
@@ -365,8 +368,6 @@ const CustomRadio = ({
             cx="6"
             cy="6"
             r="5.5"
-            fill="white"
-            stroke="var(--border-color)"
             strokeWidth="1"
           />
           {/* Dashed border for readonly - calculated for even distribution */}
@@ -375,8 +376,6 @@ const CustomRadio = ({
             cx="6"
             cy="6"
             r="5.5"
-            fill="var(--background-color-readonly)"
-            stroke="var(--border-color)"
             strokeWidth="1"
             strokeDasharray="2.16 2.16"
             strokeDashoffset="0"
