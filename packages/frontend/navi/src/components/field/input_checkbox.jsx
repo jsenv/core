@@ -293,10 +293,10 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
       targetSelector={
         appeareance === "custom" ? ".navi_custom_checkbox_field" : ""
       }
-      color="var(--navi-accent-color)"
       style={{
         ...(accentColor ? { "--navi-accent-color": accentColor } : {}),
       }}
+      color="var(--navi-accent-color)"
     >
       {inputCheckboxDisplayed}
     </LoadableInlineElement>
