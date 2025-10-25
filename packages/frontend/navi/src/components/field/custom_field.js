@@ -7,8 +7,8 @@ import {
 
 export const initCustomField = (customField, field) => {
   const [teardown, addTeardown] = createPubSub();
-  const defaultStyles = getDefaultStyles(field);
 
+  const styleForwarder = createStyleForwarder(field, customField);
   const addEventListener = (eventType, listener) => {
     field.addEventListener(eventType, listener);
     return addTeardown(() => {
@@ -16,34 +16,26 @@ export const initCustomField = (customField, field) => {
     });
   };
   const updateBooleanAttribute = (attributeName, isPresent) => {
-    const attributeToSet = `data-${attributeName}`;
-
     if (isPresent) {
-      customField.setAttribute(attributeToSet, "");
+      customField.setAttribute(attributeName, "");
     } else {
-      customField.removeAttribute(attributeToSet);
+      customField.removeAttribute(attributeName);
     }
   };
-
-  const checkStyle = (name) => {
-    const currentValue = getStyle(field, name);
-    const defaultValue = defaultStyles[name];
-    if (currentValue === defaultValue) {
-      customField.removeAttribute(`--navi-${name}`);
-    } else {
-      customField.style.setProperty(`--navi-${name}`, currentValue);
+  const updateState = (values) => {
+    for (const stateName of Object.keys(values)) {
+      const value = values[stateName];
+      updateBooleanAttribute(`data-${stateName}`, value);
     }
-  };
-  const checkStyles = () => {
-    checkStyle("accent-color");
+    styleForwarder.update();
   };
 
   data_hover: {
     addEventListener("mouseenter", () => {
-      updateBooleanAttribute("hover", true);
+      updateState({ hover: true });
     });
     addEventListener("mouseleave", () => {
-      updateBooleanAttribute("hover", false);
+      updateState({ hover: false });
     });
   }
   data_focus_and_focus_visible: {
@@ -52,13 +44,15 @@ export const initCustomField = (customField, field) => {
         document.activeElement === field ||
         field.contains(document.activeElement)
       ) {
-        updateBooleanAttribute("focus", true);
-        if (field.matches(":focus-visible")) {
-          updateBooleanAttribute("focus-visible", true);
-        }
+        updateState({
+          "focus": true,
+          "focus-visible": field.matches(":focus-visible"),
+        });
       } else {
-        updateBooleanAttribute("focus", false);
-        updateBooleanAttribute("focus-visible", false);
+        updateState({
+          "focus": false,
+          "focus-visible": false,
+        });
       }
     };
     updateFocus();
@@ -68,10 +62,15 @@ export const initCustomField = (customField, field) => {
   data_active: {
     let onmouseup;
     addEventListener("mousedown", () => {
-      updateBooleanAttribute("active", true);
+      updateState({
+        active: true,
+      });
+
       onmouseup = () => {
         document.removeEventListener("mouseup", onmouseup);
-        updateBooleanAttribute("active", false);
+        updateState({
+          active: false,
+        });
       };
       document.addEventListener("mouseup", onmouseup);
     });
@@ -83,7 +82,9 @@ export const initCustomField = (customField, field) => {
   data_checked: {
     if (field.type === "checkbox") {
       const updateChecked = () => {
-        updateBooleanAttribute("checked", field.checked);
+        updateState({
+          checked: field.checked,
+        });
       };
 
       // Initial state
@@ -113,7 +114,9 @@ export const initCustomField = (customField, field) => {
     }
     if (field.type === "radio") {
       const updateChecked = () => {
-        updateBooleanAttribute("checked", field.checked);
+        updateState({
+          checked: field.checked,
+        });
       };
 
       // Initial state
@@ -146,12 +149,58 @@ export const initCustomField = (customField, field) => {
     }
   }
 
-  const cleanupStyleEffect = styleEffect(field, () => {
-    checkStyles();
-  }, ["accent-color"]);
+  styleForwarder.update();
   addTeardown(() => {
-    cleanupStyleEffect();
+    styleForwarder.disconnect();
   });
 
   return teardown;
+};
+
+const syncUsingCssVar = (cssVar) => {
+  return {
+    set: (el, value) => {
+      el.style.setProperty(cssVar, value);
+    },
+    remove: (el) => {
+      el.style.removeProperty(cssVar);
+    },
+  };
+};
+const toSync = {
+  "accent-color": syncUsingCssVar("--navi-accent-color"),
+};
+const createStyleForwarder = (sourceElement, targetElement) => {
+  const defaultStyles = getDefaultStyles(sourceElement);
+
+  const syncOneStyle = (styleName, howToSync) => {
+    const currentValue = getStyle(sourceElement, styleName);
+    const defaultValue = defaultStyles[styleName];
+    if (currentValue === defaultValue) {
+      howToSync.remove(targetElement);
+    } else {
+      howToSync.set(targetElement, currentValue);
+    }
+  };
+
+  const update = () => {
+    for (const key of Object.keys(toSync)) {
+      syncOneStyle(key, toSync[key]);
+    }
+  };
+  update();
+  const cleanupStyleEffect = styleEffect(
+    sourceElement,
+    () => {
+      update();
+    },
+    Object.keys(toSync),
+  );
+
+  return {
+    update,
+    disconnect: () => {
+      cleanupStyleEffect();
+    },
+  };
 };
