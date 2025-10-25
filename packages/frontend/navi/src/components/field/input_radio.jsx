@@ -58,7 +58,7 @@ import.meta.css = /* css */ `
     --border-color-checked-disabled: #d3d3d3;
     --background-color-readonly: var(--background-color);
     --background-color-checked-readonly: #d3d3d3;
-    --background-color-checked-disabled: #d3d3d3;
+    --background-color-checked-disabled: var(--background-color);
     --mark-color-hover: var(--accent-color-checked);
     --mark-color-readonly: grey;
     --mark-color-disabled: #eeeeee;
