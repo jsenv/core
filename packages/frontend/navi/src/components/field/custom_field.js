@@ -132,7 +132,10 @@ export const initCustomField = (customField, field) => {
   const cleanupStyleEffect = styleEffect(
     field,
     (data) => {
-      console.log(data);
+      const currentAccentColor = data["accent-color"];
+      const defaultAccentColor = checkboxDefaultStyles["accent-color"];
+
+      console.log({ currentAccentColor, defaultAccentColor });
     },
     ["accent-color"],
   );

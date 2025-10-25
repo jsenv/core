@@ -73,6 +73,10 @@ export const getDefaultStyles = (selector) => {
             :host {
               all: initial;
               display: block;
+              position: fixed;
+              opacity: 0;
+              visibility: hidden;
+              pointer-events: none;
             }
             ${tagName} {
               all: revert;
@@ -104,6 +108,8 @@ export const getDefaultStyles = (selector) => {
       property,
     );
   }
+
+  unstyledElement.remove();
 
   // Cache the result
   stylesCache.set(selector, stylesCopy);
