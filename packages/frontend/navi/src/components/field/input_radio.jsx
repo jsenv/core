@@ -11,7 +11,10 @@ import { renderActionableComponent } from "../action_execution/render_actionable
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { initCustomField } from "./custom_field.js";
-import { ReportReadOnlyOnLabelContext } from "./label.jsx";
+import {
+  ReportDisabledOnLabelContext,
+  ReportReadOnlyOnLabelContext,
+} from "./label.jsx";
 import {
   DisabledContext,
   FieldNameContext,
@@ -142,7 +145,6 @@ import.meta.css = /* css */ `
   .navi_radio[data-hover][data-checked] .navi_radio_border {
     stroke: var(--border-color-checked-hover);
   }
-
   /* Readonly */
   .navi_radio[data-readonly] .navi_radio_border {
     stroke: var(--border-color-readonly);
@@ -168,6 +170,9 @@ import.meta.css = /* css */ `
   }
   .navi_radio[data-disabled] .navi_radio_marker {
     fill: var(--mark-color-disabled);
+  }
+  .navi_radio[data-hover][data-checked][data-disabled] .navi_radio_border {
+    stroke: var(--border-color-disabled);
   }
   .navi_radio[data-checked][data-disabled] .navi_radio_marker {
     fill: var(--mark-color-disabled);
@@ -206,6 +211,7 @@ const InputRadioBasic = forwardRef((props, ref) => {
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
   const reportReadOnlyOnLabel = useContext(ReportReadOnlyOnLabelContext);
+  const reportDisabledOnLabel = useContext(ReportDisabledOnLabelContext);
   const {
     name,
     readOnly,
@@ -235,6 +241,7 @@ const InputRadioBasic = forwardRef((props, ref) => {
     readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
 
   reportReadOnlyOnLabel?.(innerReadOnly);
+  reportDisabledOnLabel?.(innerDisabled);
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
   const checked = Boolean(uiState);
@@ -326,6 +333,7 @@ const InputRadioBasic = forwardRef((props, ref) => {
     <LoadableInlineElement
       data-action={actionName}
       loading={innerLoading}
+      inset={-1}
       targetSelector={appeareance === "custom" ? ".navi_radio_field" : ""}
       style={{
         "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",

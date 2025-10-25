@@ -16,7 +16,10 @@ import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { initCustomField } from "./custom_field.js";
-import { ReportReadOnlyOnLabelContext } from "./label.jsx";
+import {
+  ReportDisabledOnLabelContext,
+  ReportReadOnlyOnLabelContext,
+} from "./label.jsx";
 import { useActionEvents } from "./use_action_events.js";
 import {
   DisabledContext,
@@ -185,6 +188,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
   const reportReadOnlyOnLabel = useContext(ReportReadOnlyOnLabelContext);
+  const reportDisabledOnLabel = useContext(ReportDisabledOnLabelContext);
   const {
     name,
     readOnly,
@@ -212,6 +216,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
   const innerReadOnly =
     readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
   reportReadOnlyOnLabel?.(innerReadOnly);
+  reportDisabledOnLabel?.(innerDisabled);
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
 
