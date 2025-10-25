@@ -34,7 +34,9 @@
     "build": "node ./scripts/build.mjs",
     "prepublishOnly": "npm run build"
   },
-  "dependencies": {},
+  "dependencies": {
+    "style-observer": "0.1.2"
+  },
   "devDependencies": {
     "@jsenv/core": "../../../",
     "@jsenv/navi": "../navi",
