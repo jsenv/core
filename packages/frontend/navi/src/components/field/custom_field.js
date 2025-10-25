@@ -10,97 +10,52 @@ export const initCustomField = (customField, field) => {
   const [teardown, addTeardown] = createPubSub();
 
   const styleForwarder = createStyleForwarder(field, customField);
-  const addEventListener = (eventType, listener) => {
-    field.addEventListener(eventType, listener);
-    return addTeardown(() => {
-      field.removeEventListener(eventType, listener);
-    });
-  };
-  const updateBooleanAttribute = (attributeName, isPresent) => {
-    if (isPresent) {
-      customField.setAttribute(attributeName, "");
-    } else {
-      customField.removeAttribute(attributeName);
-    }
-  };
-  const updateState = (values) => {
-    for (const stateName of Object.keys(values)) {
-      const value = values[stateName];
-      updateBooleanAttribute(`data-${stateName}`, value);
-    }
-    styleForwarder.update();
-  };
 
-  data_hover: {
-    addEventListener("mouseenter", () => {
-      updateState({ hover: true });
-    });
-    addEventListener("mouseleave", () => {
-      updateState({ hover: false });
-    });
-  }
-  data_focus_and_focus_visible: {
-    const updateFocus = () => {
-      if (
-        document.activeElement === field ||
-        field.contains(document.activeElement)
-      ) {
-        updateState({
-          "focus": true,
-          "focus-visible": field.matches(":focus-visible"),
-        });
+  pseudo_classes: {
+    const addEventListener = (element, eventType, listener) => {
+      element.addEventListener(eventType, listener);
+      return addTeardown(() => {
+        element.removeEventListener(eventType, listener);
+      });
+    };
+    const updateBooleanAttribute = (attributeName, isPresent) => {
+      if (isPresent) {
+        customField.setAttribute(attributeName, "");
       } else {
-        updateState({
-          "focus": false,
-          "focus-visible": false,
-        });
+        customField.removeAttribute(attributeName);
       }
     };
-    updateFocus();
-    addEventListener("focusin", updateFocus);
-    addEventListener("focusout", updateFocus);
+    const checkPseudoClasses = () => {
+      const hover = field.matches(":hover");
+      const active = field.matches(":active");
+      const checked = field.matches(":checked");
+      const focus = field.matches(":focus");
+      const focusVisible = field.matches(":focus-visible");
+      updateBooleanAttribute(`data-hover`, hover);
+      updateBooleanAttribute(`data-active`, active);
+      updateBooleanAttribute(`data-checked`, checked);
+      updateBooleanAttribute(`data-focus`, focus);
+      updateBooleanAttribute(`data-focus-visible`, focusVisible);
 
-    // Listen to document key events to update :focus-visible state
-    document.addEventListener("keydown", updateFocus);
-    document.addEventListener("keyup", updateFocus);
-    addTeardown(() => {
-      document.removeEventListener("keydown", updateFocus);
-      document.removeEventListener("keyup", updateFocus);
-    });
-  }
-  data_active: {
-    let onmouseup;
-    addEventListener("mousedown", () => {
-      updateState({
-        active: true,
-      });
+      styleForwarder.update();
+    };
 
-      onmouseup = () => {
-        document.removeEventListener("mouseup", onmouseup);
-        updateState({
-          active: false,
-        });
-      };
-      document.addEventListener("mouseup", onmouseup);
-    });
-
-    addTeardown(() => {
-      document.removeEventListener("mouseup", onmouseup);
-    });
-  }
-  data_checked: {
+    // :hover
+    addEventListener(field, "mouseenter", checkPseudoClasses);
+    addEventListener(field, "mouseleave", checkPseudoClasses);
+    // :active
+    addEventListener(field, "mousedown", checkPseudoClasses);
+    addEventListener(document, "mouseup", checkPseudoClasses);
+    // :focus
+    addEventListener(field, "focusin", checkPseudoClasses);
+    addEventListener(field, "focusout", checkPseudoClasses);
+    // :focus-visible
+    addEventListener(document, "keydown", checkPseudoClasses);
+    addEventListener(document, "keyup", checkPseudoClasses);
+    // :checked
     if (field.type === "checkbox") {
-      const updateChecked = () => {
-        updateState({
-          checked: field.checked,
-        });
-      };
-
-      // Initial state
-      updateChecked();
-
       // Listen to user interactions
-      addEventListener("input", updateChecked);
+      addEventListener(field, "input", checkPseudoClasses);
 
       // Intercept programmatic changes to .checked property
       const originalDescriptor = Object.getOwnPropertyDescriptor(
@@ -111,30 +66,20 @@ export const initCustomField = (customField, field) => {
         get: originalDescriptor.get,
         set(value) {
           originalDescriptor.set.call(this, value);
-          updateChecked();
+          checkPseudoClasses();
         },
         configurable: true,
       });
-
       addTeardown(() => {
         // Restore original property descriptor
         Object.defineProperty(field, "checked", originalDescriptor);
       });
     }
     if (field.type === "radio") {
-      const updateChecked = () => {
-        updateState({
-          checked: field.checked,
-        });
-      };
-
-      // Initial state
-      updateChecked();
-
       // Listen to changes on the radio group
       const radioSet =
         field.closest("[data-radio-list], fieldset, form") || document;
-      radioSet.addEventListener("input", updateChecked);
+      addEventListener(radioSet, "input", checkPseudoClasses);
 
       // Intercept programmatic changes to .checked property
       const originalDescriptor = Object.getOwnPropertyDescriptor(
@@ -145,17 +90,23 @@ export const initCustomField = (customField, field) => {
         get: originalDescriptor.get,
         set(value) {
           originalDescriptor.set.call(this, value);
-          updateChecked();
+          checkPseudoClasses();
         },
         configurable: true,
       });
-
       addTeardown(() => {
-        radioSet.removeEventListener("input", updateChecked);
         // Restore original property descriptor
         Object.defineProperty(field, "checked", originalDescriptor);
       });
     }
+
+    // just in case + catch use forcing them in chrome devtools
+    const interval = setInterval(() => {
+      checkPseudoClasses();
+    }, 150);
+    addTeardown(() => {
+      clearInterval(interval);
+    });
   }
 
   styleForwarder.update();
@@ -179,7 +130,24 @@ const syncUsingCssVar = (cssVar) => {
     },
   };
 };
+const syncUsingStyle = (styleName) => {
+  return {
+    set: (el, value) => {
+      customFieldSync.set(el, {
+        [styleName]: value,
+      });
+    },
+    remove: (el) => {
+      customFieldSync.delete(el, styleName);
+    },
+  };
+};
 const toSync = {
+  "margin-left": syncUsingStyle("margin-left"),
+  "margin-right": syncUsingStyle("margin-right"),
+  "margin-top": syncUsingStyle("margin-top"),
+  "margin-bottom": syncUsingStyle("margin-bottom"),
+
   "outline-width": syncUsingCssVar("--navi-outline-width"),
   "border-width": syncUsingCssVar("--navi-border-width"),
   "border-radius": syncUsingCssVar("--navi-border-radius"),
