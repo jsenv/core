@@ -88,6 +88,9 @@ import.meta.css = /* css */ `
     outline-color: var(--outline-color);
     background-color: var(--background-color);
   }
+  .navi_radio_field svg {
+    overflow: visible;
+  }
   .navi_radio_border {
     stroke: var(--border-color);
     fill: var(--background-color);
@@ -127,18 +130,14 @@ import.meta.css = /* css */ `
   }
   /* Readonly */
   .navi_radio[data-readonly] .navi_radio_border {
-    stroke: var(--border-color-disabled);
+    stroke: var(--border-color-readonly);
     fill: var(--background-color-readonly);
+  }
+  .navi_radio[data-readonly] .navi_radio_marker {
+    fill: var(--mark-color-readonly);
   }
   .navi_radio[data-readonly] .navi_radio_dashed_border {
     display: none;
-  }
-  .navi_radio[data-readonly] .navi_radio_border {
-    stroke: var(--border-color-readonly);
-  }
-  .navi_radio[data-readonly] .navi_radio_border {
-    fill: var(--border-color-readonly);
-    stroke: var(--border-color-disabled);
   }
   /* Disabled */
   .navi_radio[data-disabled] .navi_radio_border {
@@ -272,7 +271,6 @@ const InputRadioBasic = forwardRef((props, ref) => {
       style={appeareance === "custom" ? undefined : style}
       name={innerName}
       checked={checked}
-      data-readonly={innerReadOnly ? "" : undefined}
       disabled={innerDisabled}
       required={innerRequired}
       data-validation-message-arrow-x="center"
@@ -306,7 +304,7 @@ const InputRadioBasic = forwardRef((props, ref) => {
       <CustomRadio
         inputRef={innerRef}
         accentColor={accentColor}
-        readOnly={readOnly}
+        readOnly={innerReadOnly}
         disabled={innerDisabled}
         style={style}
       >
