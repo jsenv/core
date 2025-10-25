@@ -107,13 +107,15 @@ import.meta.css = /* css */ `
     background-color: var(--navi-background-color);
     color: var(--navi-color);
   }
-  .navi_custom_checkbox[data-hover] {
-    --navi-border-color: var(--navi-border-color-hover);
-  }
+
+  /* Focus */
   .navi_custom_checkbox[data-focus-visible] [data-field] {
     outline-style: solid;
   }
-
+  /* Hover */
+  .navi_custom_checkbox[data-hover] {
+    --navi-border-color: var(--navi-border-color-hover);
+  }
   /* Readonly */
   .navi_custom_checkbox[data-readonly] [data-field],
   .navi_custom_checkbox[data-readonly][data-hover] [data-field] {
@@ -125,8 +127,7 @@ import.meta.css = /* css */ `
     --navi-background-color: var(--navi-background-color-disabled);
     --navi-border-color: var(--navi-border-color-disabled);
   }
-
-  /* Checked state */
+  /* Checked */
   .navi_custom_checkbox[data-checked] [data-field] svg {
     opacity: 1;
     transform: scale(1);

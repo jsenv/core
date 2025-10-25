@@ -1,5 +1,6 @@
 import {
   createPubSub,
+  createStyleController,
   getDefaultStyles,
   getStyle,
   styleEffect,
@@ -165,13 +166,16 @@ export const initCustomField = (customField, field) => {
   return teardown;
 };
 
+const customFieldSync = createStyleController("custom_field_sync");
 const syncUsingCssVar = (cssVar) => {
   return {
     set: (el, value) => {
-      el.style.setProperty(cssVar, value);
+      customFieldSync.set(el, {
+        [cssVar]: value,
+      });
     },
     remove: (el) => {
-      el.style.removeProperty(cssVar);
+      customFieldSync.delete(el, cssVar);
     },
   };
 };
