@@ -34,7 +34,7 @@ const getNaviStyleIsolator = () => {
       this.unstyledElementSlot = shadow.querySelector("#unstyled_element_slot");
     }
 
-    getIsolatedStyles(element) {
+    getIsolatedStyles(element, context = "js") {
       this.unstyledElementSlot.innerHTML = "";
       const unstyledElement = element.cloneNode(true);
       this.unstyledElementSlot.appendChild(unstyledElement);
@@ -48,6 +48,7 @@ const getNaviStyleIsolator = () => {
         stylesCopy[property] = normalizeStyle(
           computedStyles.getPropertyValue(property),
           property,
+          context,
         );
       }
 
@@ -67,9 +68,10 @@ const stylesCache = new Map();
 /**
  * Gets the default browser styles for an HTML element by creating an isolated custom element
  * @param {string|Element} input - CSS selector (e.g., 'input[type="text"]'), HTML source (e.g., '<button>'), or DOM element
- * @returns {CSSStyleDeclaration} Computed styles of the unstyled element
+ * @param {string} context - Output format: "js" for JS object (default) or "css" for CSS string
+ * @returns {Object|string} Computed styles as JS object or CSS string
  */
-export const getDefaultStyles = (input) => {
+export const getDefaultStyles = (input, context = "js") => {
   let element;
   let cacheKey;
 
@@ -83,16 +85,16 @@ export const getDefaultStyles = (input) => {
       if (!element) {
         throw new Error(`Invalid HTML source: ${input}`);
       }
-      cacheKey = input;
+      cacheKey = `${input}:${context}`;
     } else {
       // CSS selector
       element = createElementFromSelector(input);
-      cacheKey = input;
+      cacheKey = `${input}:${context}`;
     }
   } else if (input instanceof Element) {
     // DOM element
     element = input;
-    cacheKey = input.outerHTML;
+    cacheKey = `${input.outerHTML}:${context}`;
   } else {
     throw new Error(
       "Input must be a CSS selector, HTML source, or DOM element",
@@ -106,7 +108,7 @@ export const getDefaultStyles = (input) => {
 
   // Get the persistent style isolator element
   const naviStyleIsolator = getNaviStyleIsolator();
-  const defaultStyles = naviStyleIsolator.getIsolatedStyles(element);
+  const defaultStyles = naviStyleIsolator.getIsolatedStyles(element, context);
 
   // Cache the result
   stylesCache.set(cacheKey, defaultStyles);
