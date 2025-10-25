@@ -12,6 +12,7 @@ import.meta.css = /* css */ `
     display: inline-flex;
     height: fit-content;
     border-radius: inherit;
+    cursor: inherit;
   }
 
   .navi_loading_rectangle_wrapper {

@@ -56,11 +56,14 @@ import.meta.css = /* css */ `
     --border-color-checked-hover: var(--accent-color-checked);
     --border-color-checked-readonly: #d3d3d3;
     --border-color-checked-disabled: #d3d3d3;
+    --background-color-readonly: var(--background-color);
     --background-color-checked-readonly: #d3d3d3;
     --background-color-checked-disabled: #d3d3d3;
     --mark-color-hover: var(--accent-color-checked);
     --mark-color-readonly: grey;
     --mark-color-disabled: #eeeeee;
+
+    cursor: inherit;
   }
   .navi_radio input {
     position: absolute;
@@ -157,6 +160,7 @@ import.meta.css = /* css */ `
   }
   .navi_radio[data-checked][data-readonly] .navi_radio_border {
     stroke: var(--border-color-checked-readonly);
+    fill: var(--background-color-checked-readonly);
   }
   .navi_radio[data-checked][data-readonly] .navi_radio_marker {
     fill: var(--mark-color-readonly);

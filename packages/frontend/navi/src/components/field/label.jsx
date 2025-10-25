@@ -3,8 +3,13 @@ import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef, useState } from "preact/hooks";
 
 import.meta.css = /* css */ `
+  label {
+    cursor: pointer;
+  }
+
   label[data-readonly] {
     color: rgba(0, 0, 0, 0.5);
+    cursor: default;
   }
 `;
 
