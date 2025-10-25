@@ -15,6 +15,8 @@
       import {
         // eslint-disable-next-line no-unused-vars
         Input,
+        // eslint-disable-next-line no-unused-vars
+        Label,
       } from "@jsenv/navi";
 
       // eslint-disable-next-line no-unused-vars
@@ -33,12 +35,10 @@
                   <strong>Loading</strong>
                 </p>
 
-                <Field
-                  input={
-                    <Input type="radio" name="loading" loading={loading} />
-                  }
-                  label="Coucou"
-                ></Field>
+                <Label>
+                  <Input type="radio" name="loading" loading={loading} />
+                  Coucou
+                </Label>
 
                 <button>
                   <span
@@ -65,17 +65,15 @@
                   <strong>Read only</strong>
                 </p>
 
-                <Field
-                  input={
-                    <Input
-                      readOnly
-                      type="radio"
-                      name="readonly"
-                      loading={loadingE}
-                    />
-                  }
-                  label="C"
-                />
+                <Label>
+                  <Input
+                    readOnly
+                    type="radio"
+                    name="readonly"
+                    loading={loadingE}
+                  />
+                  C
+                </Label>
 
                 <button>
                   <span
@@ -101,18 +99,16 @@
                   <strong>Read only + checked</strong>
                 </p>
 
-                <Field
-                  input={
-                    <Input
-                      readOnly
-                      checked
-                      type="radio"
-                      name="readonly_checked"
-                      loading={loadingD}
-                    />
-                  }
-                  label="D"
-                />
+                <Label>
+                  <Input
+                    readOnly
+                    checked
+                    type="radio"
+                    name="readonly_checked"
+                    loading={loadingD}
+                  />
+                  D
+                </Label>
 
                 <button>
                   <span
@@ -138,17 +134,15 @@
                   <strong>Disabled</strong>
                 </p>
 
-                <Field
-                  input={
-                    <Input
-                      disabled
-                      type="radio"
-                      name="disabled"
-                      loading={loadingE}
-                    />
-                  }
-                  label="E"
-                />
+                <Label>
+                  <Input
+                    disabled
+                    type="radio"
+                    name="disabled"
+                    loading={loadingE}
+                  />
+                  E
+                </Label>
 
                 <button>
                   <span
@@ -174,18 +168,16 @@
                   <strong>Disabled checked</strong>
                 </p>
 
-                <Field
-                  input={
-                    <Input
-                      disabled
-                      checked
-                      type="radio"
-                      name="disabled_checked"
-                      loading={loadingF}
-                    />
-                  }
-                  label="F"
-                />
+                <Label>
+                  <Input
+                    disabled
+                    checked
+                    type="radio"
+                    name="disabled_checked"
+                    loading={loadingF}
+                  />
+                  F
+                </Label>
 
                 <button>
                   <span

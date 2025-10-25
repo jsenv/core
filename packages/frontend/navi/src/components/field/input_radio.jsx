@@ -10,6 +10,7 @@ import { useConstraints } from "../../validation/hooks/use_constraints.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
+import { initCustomField } from "./custom_field.js";
 import { ReportReadOnlyOnLabelContext } from "./label.jsx";
 import {
   DisabledContext,
@@ -25,23 +26,24 @@ import {
 } from "./use_ui_state_controller.js";
 
 import.meta.css = /* css */ `
-  .custom_radio_wrapper {
+  :root {
+    --navi-radiomark-color: light-dark(#355fcc, #3b82f6);
+  }
+
+  .navi_radio {
     position: relative;
     display: inline-flex;
     box-sizing: content-box;
     border-radius: inherit;
   }
-
-  .custom_radio_wrapper input {
+  .navi_radio input {
     position: absolute;
     opacity: 0;
     inset: 0;
     margin: 0;
     padding: 0;
-    border: none;
   }
-
-  .custom_radio {
+  .navi_radio_field {
     width: 13px;
     height: 13px;
     background: transparent;
@@ -54,135 +56,92 @@ import.meta.css = /* css */ `
     margin-right: 3px;
   }
 
-  .custom_radio svg {
+  .navi_radio_marker {
     width: 100%;
     height: 100%;
     pointer-events: none;
   }
 
-  .custom_radio svg .custom_radio_dashed_border {
+  .navi_radio_dashed_border {
     display: none;
   }
 
-  .custom_radio svg .custom_radio_marker {
+  .navi_radio_marker {
     fill: var(--navi-checkmark-color);
     opacity: 0;
     transform-origin: center;
     transform: scale(0.3);
   }
 
-  .custom_radio[data-transition] svg {
+  .custom_radio[data-transition] .navi_radio_marker {
     transition: all 0.15s ease;
   }
-  .custom_radio[data-transition] svg .custom_radio_dashed_border {
+  .custom_radio[data-transition] .navi_radio_dashed_border {
     transition: all 0.15s ease;
   }
-  .custom_radio[data-transition] svg .custom_radio_border {
+  .custom_radio[data-transition] .navi_radio_border {
     transition: all 0.15s ease;
-  }
-
-  /* États hover */
-  .custom_radio_wrapper:hover .custom_radio svg .custom_radio_border {
-    stroke: var(--navi-field-hover-border-color);
-  }
-  .custom_radio_wrapper:hover .custom_radio svg .custom_radio_marker {
-    fill: var(--navi-field-strong-color);
-  }
-
-  .custom_radio_wrapper:hover
-    input:checked
-    + .custom_radio
-    svg
-    .custom_radio_border {
-    stroke: var(--navi-field-strong-color);
-  }
-
-  /* État checked */
-  .custom_radio_wrapper input:checked + .custom_radio svg .custom_radio_border {
-    stroke: var(--navi-field-strong-color);
-  }
-
-  .custom_radio_wrapper input:checked + .custom_radio svg .custom_radio_marker {
-    opacity: 1;
-    transform: scale(1);
-  }
-
-  /* États disabled */
-  .custom_radio_wrapper
-    input[disabled]
-    + .custom_radio
-    svg
-    .custom_radio_border {
-    fill: light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3));
-    stroke: var(--navi-field-disabled-border-color);
-  }
-
-  .custom_radio_wrapper
-    input[disabled]:checked
-    + .custom_radio
-    svg
-    .custom_radio_border {
-    stroke: var(--navi-checked-disabled-color);
-  }
-
-  .custom_radio_wrapper
-    input[disabled]:checked
-    + .custom_radio
-    svg
-    .custom_radio_marker {
-    fill: var(--navi-checkmark-disabled-color);
-  }
-
-  .custom_radio_wrapper
-    input[data-readonly]
-    + .custom_radio
-    svg
-    .custom_radio_border {
-    fill: light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3));
-    stroke: var(--navi-field-disabled-border-color);
-  }
-  .custom_radio_wrapper
-    input[data-readonly]
-    + .custom_radio
-    svg
-    .custom_radio_dashed_border {
-    display: none;
-  }
-  .custom_radio_wrapper
-    input[data-readonly]:checked
-    + .custom_radio
-    svg
-    .custom_radio_border {
-    stroke: var(--navi-checked-disabled-color);
-  }
-  .custom_radio_wrapper
-    input[data-readonly]:checked
-    + .custom_radio
-    svg
-    .custom_radio_marker {
-    fill: var(--navi-checkmark-disabled-color);
-  }
-  .custom_radio_wrapper:hover
-    input[data-readonly]
-    + .custom_radio
-    svg
-    .custom_radio_border {
-    fill: light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3));
-    stroke: var(--navi-field-disabled-border-color);
-  }
-  .custom_radio_wrapper:hover
-    input[data-readonly]:checked
-    + .custom_radio
-    svg
-    .custom_radio_border {
-    stroke: var(--navi-checked-disabled-color);
   }
 
   /* Focus state avec outline */
-  .custom_radio_wrapper input:focus-visible + .custom_radio {
-    outline: 2px solid var(--navi-field-outline-color);
+  .navi_radio[data-focus-visible] .navi_radio_field {
+    outline: 2px solid var(--outline-color);
     outline-offset: 1px;
     border-radius: 50%;
+  }
+
+  /* États hover */
+  .navi_radio[data-hover] .navi_radio_border {
+    stroke: var(--border-color-hover);
+  }
+  .navi_radio[data-hover] .navi_radio_marker {
+    fill: var(--accent-color);
+  }
+
+  /* États disabled */
+  .navi_radio[data-disabled] .navi_radio_border {
+    fill: light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3));
+    stroke: var(--navi-field-disabled-border-color);
+  }
+  .navi_radio[data-disabled][data-checked] .navi_radio_border {
+    stroke: var(--navi-checked-disabled-color);
+  }
+
+  .navi_radio[data-disabled][data-checked] .navi_radio_marker {
+    fill: var(--navi-radiomark-color-disabled);
+  }
+
+  .navi_radio[data-readonly] .navi_radio_border {
+    fill: light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3));
+    stroke: var(--navi-field-disabled-border-color);
+  }
+  .navi_radio[data-readonly] .navi_radio_dashed_border {
+    display: none;
+  }
+  .navi_radio[data-readonly][data-checked] .navi_radio_border {
+    stroke: var(--navi-checked-disabled-color);
+  }
+  .navi_radio[data-readonly][data-checked] .navi_radio_marker {
+    fill: var(--navi-checkmark-disabled-color);
+  }
+  .navi_radio[data-hover][data-readonly] .navi_radio_border {
+    fill: light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3));
+    stroke: var(--navi-field-disabled-border-color);
+  }
+  .navi_radio[data-hover][data-readonly][data-checked] .navi_radio_border {
+    stroke: var(--navi-checked-disabled-color);
+  }
+
+  /* État checked */
+  .navi_radio[data-checked] .navi_radio_border {
+    stroke: var(--navi-field-strong-color);
+  }
+  .navi_radio[data-checked] .navi_radio_marker {
+    opacity: 1;
+    transform: scale(1);
+  }
+  .navi_radio[data-checked][data-hover] .navi_radio_border {
+    stroke: var(--navi-field-strong-color);
   }
 `;
 
@@ -232,6 +191,7 @@ const InputRadioBasic = forwardRef((props, ref) => {
     accentColor,
     onClick,
     onInput,
+    style,
     ...rest
   } = props;
   const innerRef = useRef(null);
@@ -261,6 +221,9 @@ const InputRadioBasic = forwardRef((props, ref) => {
   const updateOtherRadiosInGroup = () => {
     const thisRadio = innerRef.current;
     const radioList = thisRadio.closest("[data-radio-list]");
+    if (!radioList) {
+      return;
+    }
     const radioInputs = radioList.querySelectorAll(
       `input[type="radio"][name="${thisRadio.name}"]`,
     );
@@ -284,6 +247,7 @@ const InputRadioBasic = forwardRef((props, ref) => {
       {...rest}
       ref={innerRef}
       type="radio"
+      style={appeareance === "custom" ? undefined : style}
       name={innerName}
       checked={checked}
       data-readonly={innerReadOnly ? "" : undefined}
@@ -317,7 +281,15 @@ const InputRadioBasic = forwardRef((props, ref) => {
   );
   const inputRadioDisplayed =
     appeareance === "custom" ? (
-      <CustomRadio accentColor={accentColor}>{inputRadio}</CustomRadio>
+      <CustomRadio
+        inputRef={innerRef}
+        accentColor={accentColor}
+        readOnly={readOnly}
+        disabled={innerDisabled}
+        style={style}
+      >
+        {inputRadio}
+      </CustomRadio>
     ) : (
       inputRadio
     );
@@ -326,19 +298,42 @@ const InputRadioBasic = forwardRef((props, ref) => {
     <LoadableInlineElement
       data-action={actionName}
       loading={innerLoading}
-      targetSelector={appeareance === "custom" ? ".custom_radio" : ""}
-      inset={-1}
-      color="light-dark(#355fcc, #3b82f6)"
+      targetSelector={appeareance === "custom" ? ".navi_radio_field" : ""}
+      style={{
+        "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
+      }}
+      color="var(--accent-color)"
     >
       {inputRadioDisplayed}
     </LoadableInlineElement>
   );
 });
-const CustomRadio = ({ children }) => {
+const CustomRadio = ({
+  inputRef,
+  accentColor,
+  readOnly,
+  disabled,
+  style,
+  children,
+}) => {
+  const ref = useRef();
+  useLayoutEffect(() => {
+    return initCustomField(ref.current, inputRef.current);
+  }, []);
+
   return (
-    <div className="custom_radio_wrapper" data-field-wrapper="">
+    <div
+      ref={ref}
+      className="navi_radio"
+      style={{
+        ...(accentColor ? { "--accent-color": accentColor } : {}),
+        ...style,
+      }}
+      data-readonly={readOnly ? "" : undefined}
+      data-disabled={disabled ? "" : undefined}
+    >
       {children}
-      <div className="custom_radio">
+      <div className="navi_radio_field">
         <svg
           viewBox="0 0 12 12"
           aria-hidden="true"
@@ -346,28 +341,28 @@ const CustomRadio = ({ children }) => {
         >
           {/* Border circle - always visible */}
           <circle
-            className="custom_radio_border"
+            className="navi_radio_border"
             cx="6"
             cy="6"
             r="5.5"
             fill="white"
-            stroke="var(--navi-field-border-color)"
+            stroke="var(--border-color)"
             strokeWidth="1"
           />
           {/* Dashed border for readonly - calculated for even distribution */}
           <circle
-            className="custom_radio_dashed_border"
+            className="navi_radio_dashed_border"
             cx="6"
             cy="6"
             r="5.5"
-            fill="var(--navi-field-readonly-background-color)"
-            stroke="var(--navi-field-border-color)"
+            fill="var(--background-color-readonly)"
+            stroke="var(--border-color)"
             strokeWidth="1"
             strokeDasharray="2.16 2.16"
             strokeDashoffset="0"
           />
           {/* Inner fill circle - only visible when checked */}
-          <circle className="custom_radio_marker" cx="6" cy="6" r="3.5" />
+          <circle className="navi_radio_marker" cx="6" cy="6" r="3.5" />
         </svg>
       </div>
     </div>
