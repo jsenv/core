@@ -274,7 +274,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
       inset={-1}
       targetSelector={appeareance === "custom" ? ".navi_checkbox_field" : ""}
       style={{
-        ...(accentColor ? { "--accent-color": accentColor } : {}),
+        "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
       }}
       color="var(--accent-color)"
     >
