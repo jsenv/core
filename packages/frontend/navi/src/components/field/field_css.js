@@ -43,52 +43,45 @@ import.meta.css = /* css */ `
     --navi-field-disabled-color: var(--navi-field-readonly-color);
   }
 
-  [data-field] {
+  [data-field-border-and-outline] {
+    border-width: calc(
+      var(--navi-field-border-width) + var(--navi-field-outline-width)
+    );
     outline-width: var(--navi-field-border-width);
-    outline-style: none;
-    outline-color: var(--navi-field-outline-color);
     outline-offset: calc(-1 * (var(--navi-field-border-width)));
-    color: var(--navi-field-color);
+
+    border-style: solid;
+    outline-style: none;
+
+    border-color: transparent;
+    outline-color: var(--navi-field-border-color);
   }
-  [data-field-wrapper][data-readonly] [data-field] {
-    --navi-field-color: var(--navi-field-readonly-color);
-  }
-  [data-field-wrapper][data-focus-visible] [data-field] {
-    outline-style: solid;
+  [data-field-wrapper][data-focus-visible] [data-field-border-and-outline] {
     outline-width: calc(
       var(--navi-field-border-width) + var(--navi-field-outline-width)
     );
     outline-offset: calc(
       -1 * (var(--navi-field-border-width) + var(--navi-field-outline-width))
     );
+    outline-style: solid;
+  }
+  [data-field-wrapper][data-readonly] [data-field-border-and-outline] {
+    --navi-field-outline-color: var(--navi-field-readonly-border-color);
+    --navi-field-background-color: none;
+  }
+  [data-field-wrapper][data-active] [data-field-border-and-outline] {
+    --navi-field-outline-color: var(--navi-field-active-border-color);
+    --navi-field-background-color: none;
   }
 
-  [data-field-with-border] {
-    border-width: calc(
-      var(--navi-field-border-width) + var(--navi-field-outline-width)
-    );
-    border-style: solid;
-    border-color: transparent;
-    outline-color: var(--navi-field-border-color);
-  }
-  [data-field-with-border-hover-only] {
+  [data-field-border-hover-only] {
     border: 0;
   }
   [data-field-wrapper][data-hover] [data-field-with-hover-effect-on-border] {
     outline-color: var(--navi-field-hover-border-color);
   }
-  [data-field-wrapper][data-readonly] [data-field-with-border] {
-    outline-color: var(--navi-field-readonly-border-color);
-  }
-  [data-field-wrapper][data-active] [data-field-with-border] {
-    outline-color: var(--navi-field-active-border-color);
-    background-color: none;
-  }
 
-  [data-field-with-background] {
-    background-color: var(--navi-field-background-color);
-  }
-  [data-field-with-background-hover-only] {
-    background: none;
+  [data-field-wrapper][data-readonly] [data-field] {
+    --navi-field-color: var(--navi-field-readonly-color);
   }
 `;
