@@ -93,7 +93,6 @@ export const getDefaultStyles = (elementString) => {
 
     return stylesCopy;
   } finally {
-    // Clean up - remove the element from DOM
-    document.body.removeChild(unstyledElement);
+    unstyledElement.remove();
   }
 };

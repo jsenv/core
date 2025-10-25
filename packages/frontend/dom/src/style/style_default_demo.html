@@ -1,292 +1,131 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>getDefaultStyles Demo</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Button Background-Color Demo</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-            background: #f5f5f5;
-        }
-        
-        .demo-section {
-            background: white;
-            padding: 20px;
-            margin: 20px 0;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .demo-section h2 {
-            margin-top: 0;
-            color: #333;
-        }
-        
-        .test-element {
-            margin: 10px 0;
-            padding: 8px;
-            border: 1px solid #ddd;
-            background: #fafafa;
-        }
-        
-        .styles-output {
-            background: #f8f8f8;
-            border: 1px solid #ddd;
-            padding: 10px;
-            margin: 10px 0;
-            font-family: monospace;
-            font-size: 12px;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-        
-        .property {
-            margin: 2px 0;
-        }
-        
-        .property-name {
-            color: #0066cc;
-            font-weight: bold;
-        }
-        
-        .property-value {
-            color: #666;
-        }
-        
-        button {
-            background: #007acc;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin: 5px;
-        }
-        
-        button:hover {
-            background: #005fa3;
-        }
-        
-        .error {
-            color: red;
-            background: #ffe6e6;
-            padding: 10px;
-            border-radius: 4px;
-            margin: 10px 0;
-        }
-        
-        /* Intentionally style some elements to test isolation */
-        input {
-            background: red !important;
-            color: yellow !important;
-            border: 5px solid purple !important;
-        }
-        
-        button {
-            background: green !important;
-        }
+      body {
+        font-family: Arial, sans-serif;
+        margin: 40px;
+        line-height: 1.6;
+      }
+
+      .demo-section {
+        background: white;
+        padding: 20px;
+        margin: 20px 0;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+      }
+
+      .result {
+        background: #f8f8f8;
+        border: 1px solid #ddd;
+        padding: 15px;
+        margin: 10px 0;
+        font-family: monospace;
+        font-size: 14px;
+      }
+
+      .result h3 {
+        margin-top: 0;
+        font-family: Arial, sans-serif;
+      }
+
+      .color-preview {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 1px solid #333;
+        vertical-align: middle;
+        margin-left: 8px;
+      }
+
+      /* Intentionally style buttons to test isolation */
+      button {
+        background: red !important;
+        color: white !important;
+        border: 3px solid blue !important;
+        padding: 10px 20px;
+        margin: 10px;
+      }
     </style>
-</head>
-<body>
-    <h1>getDefaultStyles Demo</h1>
-    <p>This demo tests the <code>getDefaultStyles</code> function with various HTML elements.</p>
-    
+  </head>
+  <body>
+    <h1>Button Background-Color Demo</h1>
+    <p>
+      This demo tests <code>getDefaultStyles('&lt;button&gt;')</code> and
+      focuses on the background-color property.
+    </p>
+
     <div class="demo-section">
-        <h2>Test Elements</h2>
-        <p>These are styled elements on the page (should look different from defaults):</p>
-        
-        <div class="test-element">
-            <label>Text Input: </label>
-            <input type="text" placeholder="This input is styled">
-        </div>
-        
-        <div class="test-element">
-            <label>Email Input: </label>
-            <input type="email" placeholder="email@example.com">
-        </div>
-        
-        <div class="test-element">
-            <label>Checkbox: </label>
-            <input type="checkbox" checked>
-        </div>
-        
-        <div class="test-element">
-            <label>Button: </label>
-            <button type="button">Styled Button</button>
-        </div>
-        
-        <div class="test-element">
-            <label>Link: </label>
-            <a href="#" onclick="return false;">Test Link</a>
-        </div>
+      <h2>Styled Button on Page</h2>
+      <p>This button is styled with CSS (red background):</p>
+      <button>Styled Button</button>
+      <p>
+        <em
+          >The button above should be red, proving our page CSS is working.</em
+        >
+      </p>
     </div>
-    
+
     <div class="demo-section">
-        <h2>Default Styles Test</h2>
-        <p>Click buttons to get default styles for various elements:</p>
-        
-        <button onclick="testElement('<input type=&quot;text&quot; />')">Test Text Input</button>
-        <button onclick="testElement('<input type=&quot;email&quot; />')">Test Email Input</button>
-        <button onclick="testElement('<input type=&quot;checkbox&quot; />')">Test Checkbox</button>
-        <button onclick="testElement('<input type=&quot;radio&quot; />')">Test Radio</button>
-        <button onclick="testElement('<button>Test</button>')">Test Button</button>
-        <button onclick="testElement('<a href=&quot;#&quot;>Link</a>')">Test Link</a>
-        <button onclick="testElement('<textarea></textarea>')">Test Textarea</button>
-        <button onclick="testElement('<select><option>Option</option></select>')">Test Select</button>
-        
-        <div>
-            <label>Custom element string: </label>
-            <input type="text" id="customElement" placeholder="e.g., <input type='password' required />">
-            <button onclick="testCustomElement()">Test Custom</button>
-        </div>
-        
-        <button onclick="testCache()">Test Cache Performance</button>
-        <button onclick="clearResults()">Clear Results</button>
-    </div>
-    
-    <div class="demo-section">
-        <h2>Results</h2>
-        <div id="results"></div>
+      <h2>Default Button Background-Color Test</h2>
+      <button onclick="testButtonBackgroundColor()">
+        Get Button Default Background-Color
+      </button>
+      <div id="result"></div>
     </div>
 
     <script type="module">
-        import { getDefaultStyles } from './style_default.js';
-        
-        // Make functions available globally for onclick handlers
-        window.testElement = testElement;
-        window.testCustomElement = testCustomElement;
-        window.testCache = testCache;
-        window.clearResults = clearResults;
-        
-        function testElement(elementString) {
-            const resultsDiv = document.getElementById('results');
-            
-            try {
-                console.log(`Testing: ${elementString}`);
-                const startTime = performance.now();
-                
-                const styles = getDefaultStyles(elementString);
-                
-                const endTime = performance.now();
-                const duration = (endTime - startTime).toFixed(2);
-                
-                // Create result display
-                const resultDiv = document.createElement('div');
-                resultDiv.className = 'styles-output';
-                
-                const header = document.createElement('h3');
-                header.textContent = `${elementString} (${duration}ms)`;
-                
-                const stylesDiv = document.createElement('div');
-                
-                // Show interesting properties
-                const interestingProps = [
-                    'display', 'width', 'height', 'margin', 'padding', 'border',
-                    'background', 'color', 'font-family', 'font-size', 'line-height',
-                    'box-sizing', 'appearance', 'outline'
-                ];
-                
-                interestingProps.forEach(prop => {
-                    if (styles[prop]) {
-                        const propDiv = document.createElement('div');
-                        propDiv.className = 'property';
-                        propDiv.innerHTML = `<span class="property-name">${prop}:</span> <span class="property-value">${styles[prop]}</span>`;
-                        stylesDiv.appendChild(propDiv);
-                    }
-                });
-                
-                // Add a details section with all properties
-                const details = document.createElement('details');
-                const summary = document.createElement('summary');
-                summary.textContent = `All Properties (${Object.keys(styles).length})`;
-                details.appendChild(summary);
-                
-                const allPropsDiv = document.createElement('div');
-                Object.keys(styles).sort().forEach(prop => {
-                    const propDiv = document.createElement('div');
-                    propDiv.className = 'property';
-                    propDiv.innerHTML = `<span class="property-name">${prop}:</span> <span class="property-value">${styles[prop]}</span>`;
-                    allPropsDiv.appendChild(propDiv);
-                });
-                details.appendChild(allPropsDiv);
-                
-                resultDiv.appendChild(header);
-                resultDiv.appendChild(stylesDiv);
-                resultDiv.appendChild(details);
-                
-                resultsDiv.appendChild(resultDiv);
-                resultDiv.scrollIntoView({ behavior: 'smooth' });
-                
-            } catch (error) {
-                console.error('Error testing element:', error);
-                
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'error';
-                errorDiv.innerHTML = `<h3>Error testing ${elementString}</h3><p>${error.message}</p>`;
-                resultsDiv.appendChild(errorDiv);
-            }
+      import { getDefaultStyles } from "./style_default.js";
+
+      // Make function available globally for onclick
+      window.testButtonBackgroundColor = testButtonBackgroundColor;
+
+      function testButtonBackgroundColor() {
+        const resultDiv = document.getElementById("result");
+
+        try {
+          console.log("Testing button default background-color...");
+          const startTime = performance.now();
+
+          // Get default styles for button
+          const styles = getDefaultStyles("<button>");
+
+          const endTime = performance.now();
+          const duration = (endTime - startTime).toFixed(2);
+
+          // Extract background-color
+          const backgroundColor = styles["background-color"];
+
+          // Display result
+          resultDiv.innerHTML = `
+                    <div class="result">
+                        <h3>Result (${duration}ms)</h3>
+                        <p><strong>Element:</strong> &lt;button&gt;</p>
+                        <p><strong>background-color:</strong> <code>${backgroundColor}</code> <span class="color-preview" style="background-color: ${backgroundColor};" title="Color preview: ${backgroundColor}"></span></p>
+                        <p><strong>Expected:</strong> Should be a light color (not red), proving CSS isolation works</p>
+                        <p><strong>Full styles object keys:</strong> ${Object.keys(styles).length} properties</p>
+                    </div>
+                `;
+
+          console.log("Button default background-color:", backgroundColor);
+          console.log("Full styles object:", styles);
+        } catch (error) {
+          console.error("Error:", error);
+          resultDiv.innerHTML = `
+                    <div class="result" style="background: #ffe6e6;">
+                        <h3>Error</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
         }
-        
-        function testCustomElement() {
-            const customInput = document.getElementById('customElement');
-            const elementString = customInput.value.trim();
-            
-            if (!elementString) {
-                const resultsDiv = document.getElementById('results');
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'error';
-                errorDiv.innerHTML = '<p>Please enter an element string</p>';
-                resultsDiv.appendChild(errorDiv);
-                return;
-            }
-            
-            testElement(elementString);
-            customInput.value = '';
-        }
-        
-        function testCache() {
-            const elementString = '<input type="text" />';
-            const iterations = 100;
-            
-            console.log(`Testing cache performance with ${iterations} iterations...`);
-            
-            const startTime = performance.now();
-            for (let i = 0; i < iterations; i++) {
-                getDefaultStyles(elementString);
-            }
-            const endTime = performance.now();
-            
-            const totalTime = (endTime - startTime).toFixed(2);
-            const avgTime = (totalTime / iterations).toFixed(3);
-            
-            const resultsDiv = document.getElementById('results');
-            const resultDiv = document.createElement('div');
-            resultDiv.className = 'styles-output';
-            resultDiv.innerHTML = `
-                <h3>Cache Performance Test</h3>
-                <p><strong>Element:</strong> ${elementString}</p>
-                <p><strong>Iterations:</strong> ${iterations}</p>
-                <p><strong>Total Time:</strong> ${totalTime}ms</p>
-                <p><strong>Average Time:</strong> ${avgTime}ms per call</p>
-                <p><strong>Note:</strong> First call creates and caches, subsequent calls should be much faster.</p>
-            `;
-            
-            resultsDiv.appendChild(resultDiv);
-            resultDiv.scrollIntoView({ behavior: 'smooth' });
-        }
-        
-        function clearResults() {
-            document.getElementById('results').innerHTML = '';
-        }
-        
-        // Auto-test a few elements on load
-        setTimeout(() => {
-            console.log('Running initial tests...');
-            testElement('<input type="text" />');
-            testElement('<button>Test</button>');
-        }, 500);
+      }
+
+      // Auto-run test on page load
+      setTimeout(testButtonBackgroundColor, 500);
     </script>
-</body>
+  </body>
 </html>
