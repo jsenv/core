@@ -38,13 +38,13 @@ import.meta.css = /* css */ `
     --navi-checkmark-color: var(--navi-checkmark-light-color);
   }
 
-  .custom_checkbox_wrapper {
+  .navi_custom_checkbox {
     display: inline-flex;
     box-sizing: content-box;
     border-radius: 2px;
   }
 
-  .custom_checkbox_wrapper input {
+  .navi_custom_checkbox input {
     position: absolute;
     opacity: 0;
     inset: 0;
@@ -53,7 +53,7 @@ import.meta.css = /* css */ `
     border: none;
   }
 
-  .custom_checkbox {
+  .navi_custom_checkbox_field {
     width: 13px;
     height: 13px;
     box-sizing: border-box;
@@ -63,7 +63,7 @@ import.meta.css = /* css */ `
     border-width: 1px;
     border-style: solid;
   }
-  .custom_checkbox svg {
+  .navi_custom_checkbox_field svg {
     width: 100%;
     height: 100%;
     opacity: 0;
@@ -72,12 +72,12 @@ import.meta.css = /* css */ `
     pointer-events: none;
   }
 
-  [data-field-wrapper] {
+  .navi_custom_checkbox {
     --navi-field-background-color: white;
     --navi-field-outline-width: 2px;
     --navi-field-outline-offset: 1px;
   }
-  [data-field-wrapper] [data-field] {
+  .navi_custom_checkbox [data-field] {
     background-color: var(--navi-field-background-color);
     border-color: var(--navi-field-border-color);
     color: var(--navi-field-color);
@@ -86,41 +86,41 @@ import.meta.css = /* css */ `
     outline-width: var(--navi-field-outline-width);
     outline-offset: var(--navi-field-outline-offset);
   }
-  [data-field-wrapper][data-hover] {
+  .navi_custom_checkbox[data-hover] {
     --navi-field-border-color: var(--navi-field-hover-border-color);
   }
-  [data-field-wrapper][data-focus-visible] [data-field] {
+  .navi_custom_checkbox[data-focus-visible] [data-field] {
     outline-style: solid;
   }
 
   /* Readonly */
-  [data-field-wrapper][data-readonly] [data-field] {
+  .navi_custom_checkbox[data-readonly] [data-field] {
     --navi-field-border-color: var(--navi-field-readonly-border-color);
     --navi-field-background-color: var(--navi-field-readonly-background-color);
   }
-  [data-field-wrapper][data-readonly][data-hover] [data-field] {
+  .navi_custom_checkbox[data-readonly][data-hover] [data-field] {
     --navi-field-background-color: var(--navi-field-readonly-background-color);
     --navi-field-border-color: var(--navi-field-readonly-border-color);
   }
   /* Disabled */
-  [data-field-wrapper][data-disabled] [data-field] {
+  .navi_custom_checkbox[data-disabled] [data-field] {
     --navi-field-background-color: var(--navi-field-disabled-background-color);
     --navi-field-border-color: var(--navi-field-disabled-border-color);
   }
 
   /* Checked state */
-  [data-field-wrapper][data-checked] [data-field] svg {
+  .navi_custom_checkbox[data-checked] [data-field] svg {
     opacity: 1;
     transform: scale(1);
   }
-  [data-field-wrapper][data-checked] .custom_checkbox_marker {
+  .navi_custom_checkbox[data-checked] .navi_custom_checkbox_marker {
     stroke: var(--navi-checkmark-color);
   }
-  [data-field-wrapper][data-checked] [data-field] {
+  .navi_custom_checkbox[data-checked] [data-field] {
     --navi-field-background-color: var(--navi-field-accent-color);
     --navi-field-border-color: var(--navi-field-accent-color);
   }
-  [data-field-wrapper][data-checked][data-hover] [data-field] {
+  .navi_custom_checkbox[data-checked][data-hover] [data-field] {
     --navi-field-background-color: color-mix(
       in srgb,
       var(--navi-field-accent-color) 70%,
@@ -132,17 +132,19 @@ import.meta.css = /* css */ `
       black
     );
   }
-  [data-field-wrapper][data-checked][data-readonly] [data-field] {
+  .navi_custom_checkbox[data-checked][data-readonly] [data-field] {
     --navi-field-background-color: var(--navi-field-disabled-background-color);
     --navi-field-border-color: var(--navi-field-disabled-border-color);
   }
-  [data-field-wrapper][data-checked][data-readonly] .custom_checkbox_marker {
+  .navi_custom_checkbox[data-checked][data-readonly]
+    .navi_custom_checkbox_marker {
     stroke: grey;
   }
-  [data-field-wrapper][data-checked][data-disabled] .custom_checkbox_marker {
+  .navi_custom_checkbox[data-checked][data-disabled]
+    .navi_custom_checkbox_marker {
     stroke: #eeeeee;
   }
-  [data-field-wrapper][data-checked][data-disabled] [data-field] {
+  .navi_custom_checkbox[data-checked][data-disabled] [data-field] {
     --navi-field-background-color: #d3d3d3;
     --navi-field-border-color: #d3d3d3;
   }
@@ -270,7 +272,9 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
       data-action={actionName}
       loading={innerLoading}
       inset={-1}
-      targetSelector={appeareance === "custom" ? ".custom_checkbox" : ""}
+      targetSelector={
+        appeareance === "custom" ? ".navi_custom_checkbox_field" : ""
+      }
       color="var(--navi-field-accent-color)"
       style={{
         ...(accentColor ? { "--navi-field-accent-color": accentColor } : {}),
@@ -309,20 +313,16 @@ const CustomCheckbox = ({
   return (
     <div
       ref={ref}
-      className="custom_checkbox_wrapper"
+      className="navi_custom_checkbox"
       data-field-wrapper=""
       data-readonly={readOnly ? "" : undefined}
       data-disabled={disabled ? "" : undefined}
     >
       {children}
-      <div
-        className="custom_checkbox"
-        data-field=""
-        data-field-with-background=""
-      >
+      <div className="navi_custom_checkbox_field" data-field="">
         <svg viewBox="0 0 12 12" aria-hidden="true">
           <path
-            className="custom_checkbox_marker"
+            className="navi_custom_checkbox_marker"
             d="M10.5 2L4.5 9L1.5 5.5"
             fill="none"
             strokeWidth="2"
