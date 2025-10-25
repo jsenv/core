@@ -350,7 +350,11 @@
                   name="loading-demo"
                   value="option1"
                   checked={selectedValue === "option1"}
-                  onChange={() => setSelectedValue("option1")}
+                  onUIStateChange={(checked) => {
+                    if (checked) {
+                      setSelectedValue("option1");
+                    }
+                  }}
                   loading={loading}
                 />
                 Option 1
@@ -361,7 +365,11 @@
                   name="loading-demo"
                   value="option2"
                   checked={selectedValue === "option2"}
-                  onChange={() => setSelectedValue("option2")}
+                  onUIStateChange={(checked) => {
+                    if (checked) {
+                      setSelectedValue("option2");
+                    }
+                  }}
                   loading={loading}
                 />
                 Option 2
@@ -372,7 +380,11 @@
                   name="loading-demo"
                   value="option3"
                   checked={selectedValue === "option3"}
-                  onChange={() => setSelectedValue("option3")}
+                  onUIStateChange={(checked) => {
+                    if (checked) {
+                      setSelectedValue("option3");
+                    }
+                  }}
                   loading={loading}
                 />
                 Option 3
