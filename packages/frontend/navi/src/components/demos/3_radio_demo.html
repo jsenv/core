@@ -4,10 +4,311 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Radio loading demo</title>
+    <title>Radio Demo</title>
+    <style>
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        min-height: 100vh;
+      }
+
+      h1 {
+        text-align: center;
+        color: #2c3e50;
+        margin-bottom: 30px;
+        font-size: 2.5rem;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .demo-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+
+      .demo-card {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e1e8ed;
+        transition:
+          transform 0.2s ease,
+          box-shadow 0.2s ease;
+      }
+
+      .demo-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+      }
+
+      .demo-title {
+        color: #2c3e50;
+        margin: 0 0 20px 0;
+        font-size: 1.3rem;
+        font-weight: 600;
+        border-bottom: 3px solid #e74c3c;
+        padding-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .demo-title::before {
+        content: "🔘";
+        font-size: 1.2rem;
+      }
+
+      .radio-row {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin: 15px 0;
+        padding: 12px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+        transition: background 0.2s ease;
+      }
+
+      .radio-row:hover {
+        background: #e8f4f8;
+      }
+
+      .radio-label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 1rem;
+        color: #495057;
+        cursor: pointer;
+        flex: 1;
+        min-width: 0;
+      }
+
+      .toggle-button {
+        padding: 8px 16px;
+        background: linear-gradient(45deg, #e74c3c, #c0392b);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        flex-shrink: 0;
+        white-space: nowrap;
+      }
+
+      .toggle-button:hover {
+        background: linear-gradient(45deg, #c0392b, #a93226);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .comparison {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 15px;
+        padding: 12px;
+        background: #fff3cd;
+        border-radius: 6px;
+        border-left: 4px solid #ffc107;
+      }
+
+      .comparison-label {
+        font-size: 0.85rem;
+        color: #856404;
+        font-weight: 500;
+        margin-bottom: 5px;
+      }
+
+      .native-examples {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .native-examples label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.9rem;
+        color: #495057;
+      }
+
+      .prop-control-demo {
+        grid-column: 1 / -1;
+        background: linear-gradient(45deg, #e74c3c 0%, #c0392b 100%);
+        color: white;
+      }
+
+      .prop-control-demo .demo-title {
+        color: white;
+        border-bottom-color: #ffffff;
+      }
+
+      .prop-control-demo .demo-title::before {
+        content: "🎛️";
+      }
+
+      .color-controls {
+        margin-bottom: 25px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+      }
+
+      .color-select-group {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .color-select-label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        font-size: 0.95rem;
+      }
+
+      .color-select {
+        width: 100%;
+        padding: 8px 12px;
+        border: none;
+        border-radius: 6px;
+        background: white;
+        color: #333;
+        font-size: 0.9rem;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .state-controls {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        margin-bottom: 20px;
+      }
+
+      .state-controls h4 {
+        margin-top: 0;
+        margin-bottom: 15px;
+        font-size: 1.1rem;
+      }
+
+      .state-toggles {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 10px;
+      }
+
+      .state-toggle {
+        background: rgba(255, 255, 255, 0.9);
+        color: #333;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .state-toggle:hover {
+        background: white;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .state-toggle.active {
+        background: #ffffff;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .radio-group {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin: 15px 0;
+        padding: 15px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .radio-group h4 {
+        margin: 0 0 10px 0;
+        font-size: 1rem;
+        color: white;
+      }
+
+      .custom-styles-test {
+        background: rgba(255, 255, 255, 0.9);
+        color: #333;
+        padding: 20px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        margin: 15px 0;
+      }
+
+      .custom-styles-test h4 {
+        margin-top: 0;
+        color: #2c3e50;
+        font-size: 1.1rem;
+      }
+
+      .custom-styles-comparison {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-top: 15px;
+      }
+
+      .comparison-item {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 15px;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .comparison-item h5 {
+        margin-top: 0;
+        margin-bottom: 10px;
+        color: #34495e;
+        font-size: 0.9rem;
+      }
+
+      @media (max-width: 768px) {
+        .demo-grid {
+          grid-template-columns: 1fr;
+        }
+
+        h1 {
+          font-size: 2rem;
+        }
+
+        .radio-row {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 10px;
+        }
+      }
+    </style>
   </head>
   <body>
-    <div id="root" style="position: relative"></div>
+    <h1>🔘 Interactive Radio Demo</h1>
+    <div id="root"></div>
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
@@ -21,192 +322,547 @@
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
+        return (
+          <div className="demo-grid">
+            <LoadingDemo />
+            <ReadOnlyDemo />
+            <DisabledDemo />
+            <PropControlDemo />
+            <CustomStylesDemo />
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const LoadingDemo = () => {
         const [loading, setLoading] = useState(false);
-        const [loadingC, setLoadingC] = useState(false);
-        const [loadingD, setLoadingD] = useState(false);
-        const [loadingE, setLoadingE] = useState(false);
-        const [loadingF, setLoadingF] = useState(false);
+        const [selectedValue, setSelectedValue] = useState("option1");
 
         return (
-          <div>
-            <div style="display: flex; flex-direction: row; gap: 30px">
-              <div>
-                <p>
-                  <strong>Loading</strong>
-                </p>
+          <div className="demo-card">
+            <h3 className="demo-title">Loading States</h3>
 
-                <Label>
-                  <Input type="radio" name="loading" loading={loading} />
-                  Coucou
-                </Label>
-
-                <button>
-                  <span
-                    onClick={() => {
-                      setLoading(!loading);
-                    }}
-                  >
-                    Toggle
-                  </span>
-                </button>
-
-                <div>
-                  <label>
-                    <input type="radio" name="loading_native" />
-                    Coucou
-                  </label>
-                </div>
-              </div>
+            <div className="radio-group">
+              <h4>Radio Group (Loading: {loading ? "Yes" : "No"})</h4>
+              <Label className="radio-label">
+                <Input
+                  type="radio"
+                  name="loading-demo"
+                  value="option1"
+                  checked={selectedValue === "option1"}
+                  onChange={() => setSelectedValue("option1")}
+                  loading={loading}
+                />
+                Option 1
+              </Label>
+              <Label className="radio-label">
+                <Input
+                  type="radio"
+                  name="loading-demo"
+                  value="option2"
+                  checked={selectedValue === "option2"}
+                  onChange={() => setSelectedValue("option2")}
+                  loading={loading}
+                />
+                Option 2
+              </Label>
+              <Label className="radio-label">
+                <Input
+                  type="radio"
+                  name="loading-demo"
+                  value="option3"
+                  checked={selectedValue === "option3"}
+                  onChange={() => setSelectedValue("option3")}
+                  loading={loading}
+                />
+                Option 3
+              </Label>
             </div>
 
-            <div>
-              <div>
-                <p>
-                  <strong>Read only</strong>
-                </p>
+            <button
+              className="toggle-button"
+              onClick={() => setLoading(!loading)}
+            >
+              {loading ? "Stop Loading" : "Start Loading"}
+            </button>
 
-                <Label>
-                  <Input
-                    readOnly
-                    type="radio"
-                    name="readonly"
-                    loading={loadingE}
-                  />
-                  C
-                </Label>
-
-                <button>
-                  <span
-                    onClick={() => {
-                      setLoadingC(!loadingC);
-                    }}
-                  >
-                    Toggle
-                  </span>
-                </button>
-
-                <div>
-                  <label>
-                    <input type="radio" name="readonly_native" readonly />C
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <div>
-                <p>
-                  <strong>Read only + checked</strong>
-                </p>
-
-                <Label>
-                  <Input
-                    readOnly
-                    checked
-                    type="radio"
-                    name="readonly_checked"
-                    loading={loadingD}
-                  />
-                  D
-                </Label>
-
-                <button>
-                  <span
-                    onClick={() => {
-                      setLoadingD(!loadingD);
-                    }}
-                  >
-                    Toggle
-                  </span>
-                </button>
-
-                <div>
-                  <label>
-                    <input type="radio" name="readonly_native" readonly />D
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <div>
-                <p>
-                  <strong>Disabled</strong>
-                </p>
-
-                <Label>
-                  <Input
-                    disabled
-                    type="radio"
-                    name="disabled"
-                    loading={loadingE}
-                  />
-                  E
-                </Label>
-
-                <button>
-                  <span
-                    onClick={() => {
-                      setLoadingE(!loadingE);
-                    }}
-                  >
-                    Toggle
-                  </span>
-                </button>
-
-                <div>
-                  <label>
-                    <input type="radio" name="disabled_native" disabled />E
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <div>
-                <p>
-                  <strong>Disabled checked</strong>
-                </p>
-
-                <Label>
-                  <Input
-                    disabled
-                    checked
-                    type="radio"
-                    name="disabled_checked"
-                    loading={loadingF}
-                  />
-                  F
-                </Label>
-
-                <button>
-                  <span
-                    onClick={() => {
-                      setLoadingF(!loadingF);
-                    }}
-                  >
-                    Toggle
-                  </span>
-                </button>
-
-                <div>
-                  <label>
-                    <input
-                      type="radio"
-                      name="disabled_checked_native"
-                      disabled
-                      checked
-                    />
-                    F
-                  </label>
-                </div>
+            <div className="comparison">
+              <span className="comparison-label">Native comparison:</span>
+              <div className="native-examples">
+                <label>
+                  <input type="radio" name="native-loading" value="1" />
+                  Native Radio 1
+                </label>
+                <label>
+                  <input type="radio" name="native-loading" value="2" />
+                  Native Radio 2
+                </label>
+                <label>
+                  <input type="radio" name="native-loading" value="3" />
+                  Native Radio 3
+                </label>
               </div>
             </div>
           </div>
         );
       };
 
-      render(<App />, document.querySelector("#root"));
+      // eslint-disable-next-line no-unused-vars
+      const ReadOnlyDemo = () => {
+        const [readOnly, setReadOnly] = useState(false);
+        const [selectedValue, setSelectedValue] = useState("option2");
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Read-Only States</h3>
+
+            <div className="radio-group">
+              <h4>Radio Group (Read-only: {readOnly ? "Yes" : "No"})</h4>
+              <Label className="radio-label">
+                <Input
+                  type="radio"
+                  name="readonly-demo"
+                  value="option1"
+                  checked={selectedValue === "option1"}
+                  onChange={() => !readOnly && setSelectedValue("option1")}
+                  readOnly={readOnly}
+                />
+                Option 1
+              </Label>
+              <Label className="radio-label">
+                <Input
+                  type="radio"
+                  name="readonly-demo"
+                  value="option2"
+                  checked={selectedValue === "option2"}
+                  onChange={() => !readOnly && setSelectedValue("option2")}
+                  readOnly={readOnly}
+                />
+                Option 2 (Initially Selected)
+              </Label>
+              <Label className="radio-label">
+                <Input
+                  type="radio"
+                  name="readonly-demo"
+                  value="option3"
+                  checked={selectedValue === "option3"}
+                  onChange={() => !readOnly && setSelectedValue("option3")}
+                  readOnly={readOnly}
+                />
+                Option 3
+              </Label>
+            </div>
+
+            <button
+              className="toggle-button"
+              onClick={() => setReadOnly(!readOnly)}
+            >
+              {readOnly ? "Make Editable" : "Make Read-Only"}
+            </button>
+
+            <div className="comparison">
+              <span className="comparison-label">Native comparison:</span>
+              <div className="native-examples">
+                <label>
+                  <input
+                    type="radio"
+                    name="native-readonly"
+                    value="1"
+                    readOnly
+                  />
+                  Native Read-Only Radio 1
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="native-readonly"
+                    value="2"
+                    readOnly
+                    checked
+                  />
+                  Native Read-Only Radio 2
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="native-readonly"
+                    value="3"
+                    readOnly
+                  />
+                  Native Read-Only Radio 3
+                </label>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const DisabledDemo = () => {
+        const [disabled, setDisabled] = useState(false);
+        const [selectedValue, setSelectedValue] = useState("option1");
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Disabled States</h3>
+
+            <div className="radio-group">
+              <h4>Radio Group (Disabled: {disabled ? "Yes" : "No"})</h4>
+              <Label className="radio-label">
+                <Input
+                  type="radio"
+                  name="disabled-demo"
+                  value="option1"
+                  checked={selectedValue === "option1"}
+                  onChange={() => setSelectedValue("option1")}
+                  disabled={disabled}
+                />
+                Option 1 (Initially Selected)
+              </Label>
+              <Label className="radio-label">
+                <Input
+                  type="radio"
+                  name="disabled-demo"
+                  value="option2"
+                  checked={selectedValue === "option2"}
+                  onChange={() => setSelectedValue("option2")}
+                  disabled={disabled}
+                />
+                Option 2
+              </Label>
+              <Label className="radio-label">
+                <Input
+                  type="radio"
+                  name="disabled-demo"
+                  value="option3"
+                  checked={selectedValue === "option3"}
+                  onChange={() => setSelectedValue("option3")}
+                  disabled={disabled}
+                />
+                Option 3
+              </Label>
+            </div>
+
+            <button
+              className="toggle-button"
+              onClick={() => setDisabled(!disabled)}
+            >
+              {disabled ? "Enable Radios" : "Disable Radios"}
+            </button>
+
+            <div className="comparison">
+              <span className="comparison-label">Native comparison:</span>
+              <div className="native-examples">
+                <label>
+                  <input
+                    type="radio"
+                    name="native-disabled"
+                    value="1"
+                    disabled
+                    checked
+                  />
+                  Native Disabled Radio 1
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="native-disabled"
+                    value="2"
+                    disabled
+                  />
+                  Native Disabled Radio 2
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="native-disabled"
+                    value="3"
+                    disabled
+                  />
+                  Native Disabled Radio 3
+                </label>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const PropControlDemo = () => {
+        const [radiomarkColor, setRadiomarkColor] = useState("#e74c3c");
+        const [borderColor, setBorderColor] = useState("#767676");
+        const [backgroundColor, setBackgroundColor] = useState("#ffffff");
+        const [loading, setLoading] = useState(false);
+        const [readOnly, setReadOnly] = useState(false);
+        const [disabled, setDisabled] = useState(false);
+        const [selectedValue, setSelectedValue] = useState("option2");
+
+        return (
+          <div className="demo-card prop-control-demo">
+            <h3 className="demo-title">Property Controls</h3>
+
+            <div className="color-controls">
+              <div className="color-select-group">
+                <label className="color-select-label">Radiomark Color:</label>
+                <select
+                  className="color-select"
+                  value={radiomarkColor}
+                  onChange={(e) => setRadiomarkColor(e.target.value)}
+                >
+                  <option value="#e74c3c">Red (Default)</option>
+                  <option value="#3498db">Blue</option>
+                  <option value="#2ecc71">Green</option>
+                  <option value="#f39c12">Orange</option>
+                  <option value="#9b59b6">Purple</option>
+                  <option value="#1abc9c">Teal</option>
+                  <option value="#34495e">Dark Gray</option>
+                </select>
+              </div>
+
+              <div className="color-select-group">
+                <label className="color-select-label">Border Color:</label>
+                <select
+                  className="color-select"
+                  value={borderColor}
+                  onChange={(e) => setBorderColor(e.target.value)}
+                >
+                  <option value="#767676">Gray (Default)</option>
+                  <option value="#e74c3c">Red</option>
+                  <option value="#3498db">Blue</option>
+                  <option value="#2ecc71">Green</option>
+                  <option value="#34495e">Dark</option>
+                  <option value="#95a5a6">Light Gray</option>
+                </select>
+              </div>
+
+              <div className="color-select-group">
+                <label className="color-select-label">Background Color:</label>
+                <select
+                  className="color-select"
+                  value={backgroundColor}
+                  onChange={(e) => setBackgroundColor(e.target.value)}
+                >
+                  <option value="#ffffff">White (Default)</option>
+                  <option value="#ecf0f1">Light Gray</option>
+                  <option value="#bdc3c7">Medium Gray</option>
+                  <option value="#f8f9fa">Off White</option>
+                  <option value="#fff5f5">Light Pink</option>
+                  <option value="#f0f8ff">Light Blue</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="state-controls">
+              <h4>State Controls:</h4>
+              <div className="state-toggles">
+                <button
+                  className={`state-toggle ${loading ? "active" : ""}`}
+                  onClick={() => setLoading(!loading)}
+                >
+                  {loading ? "Stop Loading" : "Start Loading"}
+                </button>
+                <button
+                  className={`state-toggle ${readOnly ? "active" : ""}`}
+                  onClick={() => setReadOnly(!readOnly)}
+                >
+                  {readOnly ? "Make Editable" : "Make Read-Only"}
+                </button>
+                <button
+                  className={`state-toggle ${disabled ? "active" : ""}`}
+                  onClick={() => setDisabled(!disabled)}
+                >
+                  {disabled ? "Enable" : "Disable"}
+                </button>
+              </div>
+            </div>
+
+            <div
+              className="radio-group"
+              style={{
+                "--navi-radiomark-color": radiomarkColor,
+                "--border-color": borderColor,
+                "--background-color": backgroundColor,
+              }}
+            >
+              <h4>Customized Radio Group</h4>
+              <Label className="radio-label">
+                <Input
+                  type="radio"
+                  name="prop-control-demo"
+                  value="option1"
+                  checked={selectedValue === "option1"}
+                  onChange={() =>
+                    !readOnly && !disabled && setSelectedValue("option1")
+                  }
+                  loading={loading}
+                  readOnly={readOnly}
+                  disabled={disabled}
+                />
+                Option 1
+              </Label>
+              <Label className="radio-label">
+                <Input
+                  type="radio"
+                  name="prop-control-demo"
+                  value="option2"
+                  checked={selectedValue === "option2"}
+                  onChange={() =>
+                    !readOnly && !disabled && setSelectedValue("option2")
+                  }
+                  loading={loading}
+                  readOnly={readOnly}
+                  disabled={disabled}
+                />
+                Option 2 (Initially Selected)
+              </Label>
+              <Label className="radio-label">
+                <Input
+                  type="radio"
+                  name="prop-control-demo"
+                  value="option3"
+                  checked={selectedValue === "option3"}
+                  onChange={() =>
+                    !readOnly && !disabled && setSelectedValue("option3")
+                  }
+                  loading={loading}
+                  readOnly={readOnly}
+                  disabled={disabled}
+                />
+                Option 3
+              </Label>
+            </div>
+
+            <div className="custom-styles-test">
+              <h4>Current CSS Custom Properties:</h4>
+              <pre style={{ fontSize: "0.8rem", lineHeight: "1.4" }}>
+                {`--navi-radiomark-color: ${radiomarkColor};
+--border-color: ${borderColor};  
+--background-color: ${backgroundColor};`}
+              </pre>
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const CustomStylesDemo = () => {
+        const [selectedValue1, setSelectedValue1] = useState("small");
+        const [selectedValue2, setSelectedValue2] = useState("medium");
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Custom Styles</h3>
+
+            <div className="custom-styles-comparison">
+              <div className="comparison-item">
+                <h5>Small Radio Buttons</h5>
+                <div
+                  className="radio-group"
+                  style={{
+                    "--width": "10px",
+                    "--height": "10px",
+                    "--navi-radiomark-color": "#3498db",
+                  }}
+                >
+                  <Label className="radio-label">
+                    <Input
+                      type="radio"
+                      name="small-radios"
+                      value="small"
+                      checked={selectedValue1 === "small"}
+                      onChange={() => setSelectedValue1("small")}
+                    />
+                    Small Option
+                  </Label>
+                  <Label className="radio-label">
+                    <Input
+                      type="radio"
+                      name="small-radios"
+                      value="medium"
+                      checked={selectedValue1 === "medium"}
+                      onChange={() => setSelectedValue1("medium")}
+                    />
+                    Medium Option
+                  </Label>
+                  <Label className="radio-label">
+                    <Input
+                      type="radio"
+                      name="small-radios"
+                      value="large"
+                      checked={selectedValue1 === "large"}
+                      onChange={() => setSelectedValue1("large")}
+                    />
+                    Large Option
+                  </Label>
+                </div>
+              </div>
+
+              <div className="comparison-item">
+                <h5>Large Radio Buttons</h5>
+                <div
+                  className="radio-group"
+                  style={{
+                    "--width": "20px",
+                    "--height": "20px",
+                    "--navi-radiomark-color": "#e74c3c",
+                  }}
+                >
+                  <Label className="radio-label">
+                    <Input
+                      type="radio"
+                      name="large-radios"
+                      value="small"
+                      checked={selectedValue2 === "small"}
+                      onChange={() => setSelectedValue2("small")}
+                    />
+                    Small Option
+                  </Label>
+                  <Label className="radio-label">
+                    <Input
+                      type="radio"
+                      name="large-radios"
+                      value="medium"
+                      checked={selectedValue2 === "medium"}
+                      onChange={() => setSelectedValue2("medium")}
+                    />
+                    Medium Option
+                  </Label>
+                  <Label className="radio-label">
+                    <Input
+                      type="radio"
+                      name="large-radios"
+                      value="large"
+                      checked={selectedValue2 === "large"}
+                      onChange={() => setSelectedValue2("large")}
+                    />
+                    Large Option
+                  </Label>
+                </div>
+              </div>
+            </div>
+
+            <div className="comparison">
+              <span className="comparison-label">Native comparison:</span>
+              <div className="native-examples">
+                <label>
+                  <input type="radio" name="native-custom" value="1" />
+                  Native Radio 1
+                </label>
+                <label>
+                  <input type="radio" name="native-custom" value="2" />
+                  Native Radio 2
+                </label>
+                <label>
+                  <input type="radio" name="native-custom" value="3" />
+                  Native Radio 3
+                </label>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      render(<App />, document.getElementById("root"));
     </script>
   </body>
 </html>

@@ -53,7 +53,7 @@ import.meta.css = /* css */ `
     --border-color: light-dark(#767676, #8e8e93);
     --background-color: white;
     --accent-color: light-dark(#4476ff, #3b82f6);
-    --color: currentColor;
+    /* --color: currentColor; */
     --checkmark-color: var(--navi-checkmark-color);
 
     --border-color-readonly: color-mix(in srgb, var(--border-color) 30%, white);
@@ -77,8 +77,8 @@ import.meta.css = /* css */ `
     margin: 3px 3px 3px 4px;
     box-sizing: border-box;
 
-    outline-width: var(--outline-width);
     outline-offset: var(--outline-offset);
+    outline-width: var(--outline-width);
     border-width: var(--border-width);
     border-radius: var(--border-radius);
     width: var(--width);
@@ -90,7 +90,7 @@ import.meta.css = /* css */ `
     outline-color: var(--outline-color);
     border-color: var(--border-color);
     background-color: var(--background-color);
-    color: var(--color);
+    /* color: var(--color); */
   }
   .navi_checkbox_marker {
     width: 100%;

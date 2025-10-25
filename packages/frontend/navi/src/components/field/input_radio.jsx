@@ -31,10 +31,20 @@ import.meta.css = /* css */ `
   }
 
   .navi_radio {
-    position: relative;
     display: inline-flex;
     box-sizing: content-box;
-    border-radius: inherit;
+    position: relative;
+
+    --outline-offset: 1px;
+    --outline-width: 2px;
+    --width: 13px;
+    --height: 13px;
+
+    --outline-color: light-dark(#4476ff, #3b82f6);
+    --border-color: light-dark(#767676, #8e8e93);
+    --background-color: white;
+    --accent-color: var(--navi-radiomark-color);
+    --radiomark-color: var(--navi-radiomark-color);
   }
   .navi_radio input {
     position: absolute;
@@ -44,50 +54,53 @@ import.meta.css = /* css */ `
     padding: 0;
   }
   .navi_radio_field {
-    width: 13px;
-    height: 13px;
-    background: transparent;
-    border-radius: 50%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     margin-left: 5px;
     margin-top: 3px;
     margin-right: 3px;
+    border-radius: 50%;
+    width: var(--width);
+    height: var(--height);
+
+    outline-offset: var(--outline-offset);
+    outline-width: var(--outline-width);
+
+    outline-style: none;
+
+    outline-color: var(--outline-color);
+    border-color: var(--border-color);
+    background-color: var(--background-color);
   }
 
   .navi_radio_marker {
     width: 100%;
     height: 100%;
     pointer-events: none;
-  }
 
-  .navi_radio_dashed_border {
-    display: none;
-  }
-
-  .navi_radio_marker {
-    fill: var(--navi-checkmark-color);
+    fill: var(--radiomark-color);
     opacity: 0;
     transform-origin: center;
     transform: scale(0.3);
   }
 
-  .custom_radio[data-transition] .navi_radio_marker {
+  .navi_radio_dashed_border {
+    display: none;
+  }
+  .navi_radio[data-transition] .navi_radio_marker {
     transition: all 0.15s ease;
   }
-  .custom_radio[data-transition] .navi_radio_dashed_border {
+  .navi_radio[data-transition] .navi_radio_dashed_border {
     transition: all 0.15s ease;
   }
-  .custom_radio[data-transition] .navi_radio_border {
+  .navi_radio[data-transition] .navi_radio_border {
     transition: all 0.15s ease;
   }
 
   /* Focus state avec outline */
   .navi_radio[data-focus-visible] .navi_radio_field {
-    outline: 2px solid var(--outline-color);
-    outline-offset: 1px;
-    border-radius: 50%;
+    outline-style: solid;
   }
 
   /* États hover */
