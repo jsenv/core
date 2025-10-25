@@ -262,7 +262,7 @@ export const eslintConfigRelax = ({
         "import-x/resolver": {
           "@jsenv/eslint-import-resolver": {
             rootDirectoryUrl: browserDirectoryUrl || rootDirectoryUrl,
-            packageConditions: ["browser", "import"],
+            packageConditions: ["browser", "development", "dev:*", "import"],
             logLevel: importResolutionLogLevel,
           },
         },
