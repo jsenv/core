@@ -1,6 +1,121 @@
 import { normalizeStyle } from "./style_parsing.js";
 
+// Register the unstyled custom element once
+let unstyledElementRegistered = false;
+const registerUnstyledElement = () => {
+  if (unstyledElementRegistered) return;
+
+  class UnstyledElement extends HTMLElement {
+    constructor() {
+      super();
+
+      // Create shadow DOM to isolate from external CSS
+      const shadow = this.attachShadow({ mode: "closed" });
+
+      shadow.innerHTML = `
+        <style>
+          :host {
+            all: initial;
+            display: block;
+            position: fixed;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+          }
+          * {
+            all: revert;
+          }
+        </style>
+      `;
+    }
+
+    setElement(element) {
+      // Clear previous content and add new element
+      const shadow = this.shadowRoot;
+      const styleElement = shadow.querySelector("style");
+      shadow.innerHTML = "";
+      shadow.appendChild(styleElement);
+
+      const clonedElement = element.cloneNode(true);
+      shadow.appendChild(clonedElement);
+      return clonedElement;
+    }
+  }
+
+  customElements.define("navi-unstyled", UnstyledElement);
+  unstyledElementRegistered = true;
+};
+
 const stylesCache = new Map();
+/**
+ * Gets the default browser styles for an HTML element by creating an isolated custom element
+ * @param {string|Element} input - CSS selector (e.g., 'input[type="text"]'), HTML source (e.g., '<button>'), or DOM element
+ * @returns {CSSStyleDeclaration} Computed styles of the unstyled element
+ */
+export const getDefaultStyles = (input) => {
+  let element;
+  let cacheKey;
+
+  // Determine input type and create element accordingly
+  if (typeof input === "string") {
+    if (input[0] === "<") {
+      // HTML source
+      const tempDiv = document.createElement("div");
+      tempDiv.innerHTML = input;
+      element = tempDiv.firstElementChild;
+      if (!element) {
+        throw new Error(`Invalid HTML source: ${input}`);
+      }
+      cacheKey = input;
+    } else {
+      // CSS selector
+      element = createElementFromSelector(input);
+      cacheKey = input;
+    }
+  } else if (input instanceof Element) {
+    // DOM element
+    element = input;
+    cacheKey = input.outerHTML;
+  } else {
+    throw new Error(
+      "Input must be a CSS selector, HTML source, or DOM element",
+    );
+  }
+
+  // Check cache first
+  if (stylesCache.has(cacheKey)) {
+    return stylesCache.get(cacheKey);
+  }
+
+  // Register the unstyled element if not already done
+  registerUnstyledElement();
+
+  // Create instance and inject our element
+  const unstyledElement = document.createElement("navi-unstyled");
+  const elementShadow = unstyledElement.setElement(element);
+
+  // Add to DOM (required for getComputedStyle to work)
+  document.body.appendChild(unstyledElement);
+
+  // Get computed styles of the actual element inside the shadow DOM
+  const computedStyles = getComputedStyle(elementShadow);
+  // Create a copy of the styles since the original will be invalidated when element is removed
+  const stylesCopy = {};
+  for (let i = 0; i < computedStyles.length; i++) {
+    const property = computedStyles[i];
+    stylesCopy[property] = normalizeStyle(
+      computedStyles.getPropertyValue(property),
+      property,
+    );
+  }
+
+  unstyledElement.remove();
+
+  // Cache the result
+  stylesCache.set(cacheKey, stylesCopy);
+
+  return stylesCopy;
+};
 
 /**
  * Creates an HTML element from a CSS selector
@@ -29,90 +144,4 @@ const createElementFromSelector = (selector) => {
   }
 
   return element;
-};
-
-/**
- * Generates a component name from an element
- * @param {Element} element - DOM element to generate name for
- * @returns {string} Component name
- */
-const generateComponentName = (element) => {
-  const tagName = element.tagName.toLowerCase();
-  const type = element.getAttribute("type");
-
-  return type ? `navi-unstyled-${tagName}-${type}` : `navi-unstyled-${tagName}`;
-};
-
-/**
- * Gets the default browser styles for an HTML element by creating an isolated custom element
- * @param {string} selector - CSS selector (e.g., 'input[type="text"]', 'button', 'a[href]')
- * @returns {CSSStyleDeclaration} Computed styles of the unstyled element
- */
-export const getDefaultStyles = (selector) => {
-  // Check cache first
-  if (stylesCache.has(selector)) {
-    return stylesCache.get(selector);
-  }
-
-  // Parse selector to create element
-  const element = createElementFromSelector(selector);
-  const tagName = element.tagName.toLowerCase();
-  const componentName = generateComponentName(element);
-  let customElement = null;
-  // Create custom element class that will handle this specific element
-  class UnstyledElement extends HTMLElement {
-    constructor() {
-      super();
-
-      // Create shadow DOM to isolate from external CSS
-      const shadow = this.attachShadow({ mode: "closed" });
-
-      // Create the actual element using innerHTML
-      shadow.innerHTML = `
-          <style>
-            :host {
-              all: initial;
-              display: block;
-              position: fixed;
-              opacity: 0;
-              visibility: hidden;
-              pointer-events: none;
-            }
-            ${tagName} {
-              all: revert;
-            }
-          </style>
-        `;
-
-      // Create and append the element
-      const actualElement = element.cloneNode(true);
-      shadow.appendChild(actualElement);
-      customElement = actualElement;
-    }
-  }
-  // Create instance
-  customElements.define(componentName, UnstyledElement);
-  const unstyledElement = new UnstyledElement();
-  // Add to DOM (required for getComputedStyle to work)
-  document.body.appendChild(unstyledElement);
-
-  // Get computed styles of the actual element inside the shadow DOM
-  const computedStyles = getComputedStyle(customElement);
-
-  // Create a copy of the styles since the original will be invalidated when element is removed
-  const stylesCopy = {};
-  for (let i = 0; i < computedStyles.length; i++) {
-    const property = computedStyles[i];
-    stylesCopy[property] = normalizeStyle(
-      computedStyles.getPropertyValue(property),
-      property,
-    );
-  }
-
-  unstyledElement.remove();
-
-  // Cache the result
-  stylesCache.set(selector, stylesCopy);
-
-  return stylesCopy;
 };

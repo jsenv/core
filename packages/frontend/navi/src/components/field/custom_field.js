@@ -1,9 +1,13 @@
-import { createPubSub, getDefaultStyles, styleEffect } from "@jsenv/dom";
-
-const checkboxDefaultStyles = getDefaultStyles(`input[type="checkbox"]`);
+import {
+  createPubSub,
+  getDefaultStyles,
+  getStyle,
+  styleEffect,
+} from "@jsenv/dom";
 
 export const initCustomField = (customField, field) => {
   const [teardown, addTeardown] = createPubSub();
+  const defaultStyles = getDefaultStyles(field);
 
   const addEventListener = (eventType, listener) => {
     field.addEventListener(eventType, listener);
@@ -19,6 +23,19 @@ export const initCustomField = (customField, field) => {
     } else {
       customField.removeAttribute(attributeToSet);
     }
+  };
+
+  const checkStyle = (name) => {
+    const currentValue = getStyle(field, name);
+    const defaultValue = defaultStyles[name];
+    if (currentValue === defaultValue) {
+      customField.removeAttribute(`--navi-${name}`);
+    } else {
+      customField.style.setProperty(`--navi-${name}`, currentValue);
+    }
+  };
+  const checkStyles = () => {
+    checkStyle("accent-color");
   };
 
   data_hover: {
@@ -129,23 +146,9 @@ export const initCustomField = (customField, field) => {
     }
   }
 
-  const cleanupStyleEffect = styleEffect(
-    field,
-    (data) => {
-      const currentAccentColor = data["accent-color"];
-      const defaultAccentColor = checkboxDefaultStyles["accent-color"];
-
-      if (currentAccentColor === defaultAccentColor) {
-        customField.removeAttribute("--navi-accent-color");
-      } else {
-        customField.style.setProperty(
-          "--navi-accent-color",
-          currentAccentColor,
-        );
-      }
-    },
-    ["accent-color"],
-  );
+  const cleanupStyleEffect = styleEffect(field, () => {
+    checkStyles();
+  }, ["accent-color"]);
   addTeardown(() => {
     cleanupStyleEffect();
   });
