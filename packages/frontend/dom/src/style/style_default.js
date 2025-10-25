@@ -1,9 +1,11 @@
 import { normalizeStyle } from "./style_parsing.js";
 
 // Register the unstyled custom element once
-let unstyledElementRegistered = false;
-const registerUnstyledElement = () => {
-  if (unstyledElementRegistered) return;
+let persistentUnstyledElement = null;
+const getNaviUnstyledElement = () => {
+  if (persistentUnstyledElement) {
+    return persistentUnstyledElement;
+  }
 
   class UnstyledElement extends HTMLElement {
     constructor() {
@@ -43,7 +45,11 @@ const registerUnstyledElement = () => {
   }
 
   customElements.define("navi-unstyled", UnstyledElement);
-  unstyledElementRegistered = true;
+
+  // Create and add the persistent element to the document
+  persistentUnstyledElement = document.createElement("navi-unstyled");
+  document.body.appendChild(persistentUnstyledElement);
+  return persistentUnstyledElement;
 };
 
 const stylesCache = new Map();
@@ -88,14 +94,8 @@ export const getDefaultStyles = (input) => {
   }
 
   // Register the unstyled element if not already done
-  registerUnstyledElement();
-
-  // Create instance and inject our element
-  const unstyledElement = document.createElement("navi-unstyled");
-  const elementShadow = unstyledElement.setElement(element);
-
-  // Add to DOM (required for getComputedStyle to work)
-  document.body.appendChild(unstyledElement);
+  const naviUnstyledElement = getNaviUnstyledElement();
+  const elementShadow = naviUnstyledElement.setElement(element);
 
   // Get computed styles of the actual element inside the shadow DOM
   const computedStyles = getComputedStyle(elementShadow);
@@ -108,8 +108,6 @@ export const getDefaultStyles = (input) => {
       property,
     );
   }
-
-  unstyledElement.remove();
 
   // Cache the result
   stylesCache.set(cacheKey, stylesCopy);
