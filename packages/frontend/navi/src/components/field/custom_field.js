@@ -58,6 +58,14 @@ export const initCustomField = (customField, field) => {
     updateFocus();
     addEventListener("focusin", updateFocus);
     addEventListener("focusout", updateFocus);
+
+    // Listen to document key events to update :focus-visible state
+    document.addEventListener("keydown", updateFocus);
+    document.addEventListener("keyup", updateFocus);
+    addTeardown(() => {
+      document.removeEventListener("keydown", updateFocus);
+      document.removeEventListener("keyup", updateFocus);
+    });
   }
   data_active: {
     let onmouseup;
