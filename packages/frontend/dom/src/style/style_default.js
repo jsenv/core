@@ -1,5 +1,7 @@
 import { normalizeStyle } from "./style_parsing.js";
 
+const DEBUG = true;
+
 // Register the style isolator custom element once
 let persistentStyleIsolator = null;
 const getNaviStyleIsolator = () => {
@@ -20,8 +22,10 @@ const getNaviStyleIsolator = () => {
             all: initial;
             display: block;
             position: fixed;
-            opacity: 0;
-            visibility: hidden;
+            top: 0;
+            left: 0;
+            opacity: ${DEBUG ? 0.5 : 0};
+            visibility: ${DEBUG ? "visible" : "hidden"};
             pointer-events: none;
           }
           * {
@@ -35,7 +39,9 @@ const getNaviStyleIsolator = () => {
     }
 
     getIsolatedStyles(element, context = "js") {
-      this.unstyledElementSlot.innerHTML = "";
+      if (!DEBUG) {
+        this.unstyledElementSlot.innerHTML = "";
+      }
       const unstyledElement = element.cloneNode(true);
       this.unstyledElementSlot.appendChild(unstyledElement);
 
