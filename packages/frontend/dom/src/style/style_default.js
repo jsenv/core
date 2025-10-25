@@ -1,13 +1,13 @@
 import { normalizeStyle } from "./style_parsing.js";
 
-// Register the unstyled custom element once
-let persistentUnstyledElement = null;
-const getNaviUnstyledElement = () => {
-  if (persistentUnstyledElement) {
-    return persistentUnstyledElement;
+// Register the style extractor custom element once
+let persistentStyleExtractor = null;
+const getNaviStyleExtractor = () => {
+  if (persistentStyleExtractor) {
+    return persistentStyleExtractor;
   }
 
-  class UnstyledElement extends HTMLElement {
+  class StyleExtractor extends HTMLElement {
     constructor() {
       super();
 
@@ -28,28 +28,39 @@ const getNaviUnstyledElement = () => {
             all: revert;
           }
         </style>
+        <div id="unstyled_element_slot"></div>
       `;
+
+      this.unstyledElementSlot = shadow.querySelector("#unstyled_element_slot");
     }
 
-    setElement(element) {
-      // Clear previous content and add new element
-      const shadow = this.shadowRoot;
-      const styleElement = shadow.querySelector("style");
-      shadow.innerHTML = "";
-      shadow.appendChild(styleElement);
+    extractDefaultStyles(element) {
+      this.unstyledElementSlot.innerHTML = "";
+      const unstyledElement = element.cloneNode(true);
+      this.unstyledElementSlot.appendChild(unstyledElement);
 
-      const clonedElement = element.cloneNode(true);
-      shadow.appendChild(clonedElement);
-      return clonedElement;
+      // Get computed styles of the actual element inside the shadow DOM
+      const computedStyles = getComputedStyle(unstyledElement);
+      // Create a copy of the styles since the original will be invalidated when element is removed
+      const stylesCopy = {};
+      for (let i = 0; i < computedStyles.length; i++) {
+        const property = computedStyles[i];
+        stylesCopy[property] = normalizeStyle(
+          computedStyles.getPropertyValue(property),
+          property,
+        );
+      }
+
+      return stylesCopy;
     }
   }
 
-  customElements.define("navi-unstyled", UnstyledElement);
+  customElements.define("navi-style-extractor", StyleExtractor);
 
   // Create and add the persistent element to the document
-  persistentUnstyledElement = document.createElement("navi-unstyled");
-  document.body.appendChild(persistentUnstyledElement);
-  return persistentUnstyledElement;
+  persistentStyleExtractor = document.createElement("navi-style-extractor");
+  document.body.appendChild(persistentStyleExtractor);
+  return persistentStyleExtractor;
 };
 
 const stylesCache = new Map();
@@ -93,26 +104,14 @@ export const getDefaultStyles = (input) => {
     return stylesCache.get(cacheKey);
   }
 
-  // Register the unstyled element if not already done
-  const naviUnstyledElement = getNaviUnstyledElement();
-  const elementShadow = naviUnstyledElement.setElement(element);
-
-  // Get computed styles of the actual element inside the shadow DOM
-  const computedStyles = getComputedStyle(elementShadow);
-  // Create a copy of the styles since the original will be invalidated when element is removed
-  const stylesCopy = {};
-  for (let i = 0; i < computedStyles.length; i++) {
-    const property = computedStyles[i];
-    stylesCopy[property] = normalizeStyle(
-      computedStyles.getPropertyValue(property),
-      property,
-    );
-  }
+  // Get the persistent style extractor element
+  const naviStyleExtractor = getNaviStyleExtractor();
+  const defaultStyles = naviStyleExtractor.extractDefaultStyles(element);
 
   // Cache the result
-  stylesCache.set(cacheKey, stylesCopy);
+  stylesCache.set(cacheKey, defaultStyles);
 
-  return stylesCopy;
+  return defaultStyles;
 };
 
 /**
