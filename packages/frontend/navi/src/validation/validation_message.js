@@ -33,137 +33,141 @@ const ARROW_HEIGHT = 8;
 const ARROW_SPACING = 8;
 
 import.meta.css = /* css */ `
-  :root {
-    --navi-info-color: #2196f3;
-    --navi-warning-color: #ff9800;
-    --navi-error-color: #f44336;
-    --navi-validation-message-background-color: white;
-  }
+  @layer navi {
+    :root {
+      --navi-info-color: #2196f3;
+      --navi-warning-color: #ff9800;
+      --navi-error-color: #f44336;
+      --navi-validation-message-background-color: white;
+    }
 
-  /* Ensure the validation message CANNOT cause overflow */
-  /* might be important to ensure it cannot create scrollbars in the document */
-  /* When measuring the size it should take */
-  .jsenv_validation_message_container {
-    position: fixed;
-    inset: 0;
-    overflow: hidden;
-  }
+    /* Ensure the validation message CANNOT cause overflow */
+    /* might be important to ensure it cannot create scrollbars in the document */
+    /* When measuring the size it should take */
+    .jsenv_validation_message_container {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+    }
 
-  .jsenv_validation_message {
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: 1;
-    display: block;
-    height: auto;
-    opacity: 0;
-    /* will be positioned with transform: translate */
-    transition: opacity 0.2s ease-in-out;
-    overflow: visible;
-  }
+    .jsenv_validation_message {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+      display: block;
+      height: auto;
+      opacity: 0;
+      /* will be positioned with transform: translate */
+      transition: opacity 0.2s ease-in-out;
+      overflow: visible;
+    }
 
-  .jsenv_validation_message_border {
-    position: absolute;
-    filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
-    pointer-events: none;
-  }
+    .jsenv_validation_message_border {
+      position: absolute;
+      filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
+      pointer-events: none;
+    }
 
-  .jsenv_validation_message_body_wrapper {
-    position: relative;
-    border-style: solid;
-    border-color: transparent;
-  }
+    .jsenv_validation_message_body_wrapper {
+      position: relative;
+      border-style: solid;
+      border-color: transparent;
+    }
 
-  .jsenv_validation_message_body {
-    position: relative;
-    display: flex;
-    max-width: 47vw;
-    padding: 8px;
-    flex-direction: row;
-    gap: 10px;
-  }
+    .jsenv_validation_message_body {
+      position: relative;
+      display: flex;
+      max-width: 47vw;
+      padding: 8px;
+      flex-direction: row;
+      gap: 10px;
+    }
 
-  .jsenv_validation_message_icon {
-    display: flex;
-    width: 22px;
-    height: 22px;
-    flex-shrink: 0;
-    align-items: center;
-    align-self: flex-start;
-    justify-content: center;
-    border-radius: 2px;
-  }
-
-  .jsenv_validation_message_exclamation_svg {
-    width: 16px;
-    height: 12px;
-    color: white;
-  }
-
-  .jsenv_validation_message[data-level="info"] .border_path {
-    fill: var(--navi-info-color);
-  }
-  .jsenv_validation_message[data-level="info"] .jsenv_validation_message_icon {
-    background-color: var(--navi-info-color);
-  }
-  .jsenv_validation_message[data-level="warning"] .border_path {
-    fill: var(--navi-warning-color);
-  }
-  .jsenv_validation_message[data-level="warning"]
     .jsenv_validation_message_icon {
-    background-color: var(--navi-warning-color);
-  }
-  .jsenv_validation_message[data-level="error"] .border_path {
-    fill: var(--navi-error-color);
-  }
-  .jsenv_validation_message[data-level="error"] .jsenv_validation_message_icon {
-    background-color: var(--navi-error-color);
-  }
+      display: flex;
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+      align-items: center;
+      align-self: flex-start;
+      justify-content: center;
+      border-radius: 2px;
+    }
 
-  .jsenv_validation_message_content {
-    min-width: 0;
-    align-self: center;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-  }
+    .jsenv_validation_message_exclamation_svg {
+      width: 16px;
+      height: 12px;
+      color: white;
+    }
 
-  .jsenv_validation_message_border svg {
-    position: absolute;
-    inset: 0;
-    overflow: visible;
-  }
+    .jsenv_validation_message[data-level="info"] .border_path {
+      fill: var(--navi-info-color);
+    }
+    .jsenv_validation_message[data-level="info"]
+      .jsenv_validation_message_icon {
+      background-color: var(--navi-info-color);
+    }
+    .jsenv_validation_message[data-level="warning"] .border_path {
+      fill: var(--navi-warning-color);
+    }
+    .jsenv_validation_message[data-level="warning"]
+      .jsenv_validation_message_icon {
+      background-color: var(--navi-warning-color);
+    }
+    .jsenv_validation_message[data-level="error"] .border_path {
+      fill: var(--navi-error-color);
+    }
+    .jsenv_validation_message[data-level="error"]
+      .jsenv_validation_message_icon {
+      background-color: var(--navi-error-color);
+    }
 
-  .background_path {
-    fill: var(--navi-validation-message-background-color);
-  }
+    .jsenv_validation_message_content {
+      min-width: 0;
+      align-self: center;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
 
-  .jsenv_validation_message_close_button_column {
-    display: flex;
-    height: 22px;
-  }
-  .jsenv_validation_message_close_button {
-    width: 1em;
-    height: 1em;
-    padding: 0;
-    align-self: center;
-    color: currentColor;
-    font-size: inherit;
-    background: none;
-    border: none;
-    border-radius: 0.2em;
-    cursor: pointer;
-  }
-  .jsenv_validation_message_close_button:hover {
-    background: rgba(0, 0, 0, 0.1);
-  }
-  .close_svg {
-    width: 100%;
-    height: 100%;
-  }
+    .jsenv_validation_message_border svg {
+      position: absolute;
+      inset: 0;
+      overflow: visible;
+    }
 
-  .error_stack {
-    max-height: 200px;
-    overflow: auto;
+    .background_path {
+      fill: var(--navi-validation-message-background-color);
+    }
+
+    .jsenv_validation_message_close_button_column {
+      display: flex;
+      height: 22px;
+    }
+    .jsenv_validation_message_close_button {
+      width: 1em;
+      height: 1em;
+      padding: 0;
+      align-self: center;
+      color: currentColor;
+      font-size: inherit;
+      background: none;
+      border: none;
+      border-radius: 0.2em;
+      cursor: pointer;
+    }
+    .jsenv_validation_message_close_button:hover {
+      background: rgba(0, 0, 0, 0.1);
+    }
+    .close_svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .error_stack {
+      max-height: 200px;
+      overflow: auto;
+    }
   }
 `;
 

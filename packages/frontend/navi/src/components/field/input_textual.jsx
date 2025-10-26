@@ -48,80 +48,82 @@ import {
 } from "./use_ui_state_controller.js";
 
 import.meta.css = /* css */ `
-  .navi_input {
-    --border-width: 1px;
-    --outline-width: 1px;
-    --outer-width: calc(var(--border-width) + var(--outline-width));
-    --padding-x: 6px;
-    --padding-y: 1px;
+  @layer navi {
+    .navi_input {
+      --border-width: 1px;
+      --outline-width: 1px;
+      --outer-width: calc(var(--border-width) + var(--outline-width));
+      --padding-x: 6px;
+      --padding-y: 1px;
 
-    --outline-color: light-dark(#4476ff, #3b82f6);
+      --outline-color: light-dark(#4476ff, #3b82f6);
 
-    --border-radius: 2px;
-    --border-color: light-dark(#767676, #8e8e93);
-    --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
-    --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
-    --border-color-readonly: color-mix(
-      in srgb,
-      var(--border-color) 45%,
-      transparent
-    );
-    --border-color-disabled: var(--border-color-readonly);
+      --border-radius: 2px;
+      --border-color: light-dark(#767676, #8e8e93);
+      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
+      --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
+      --border-color-readonly: color-mix(
+        in srgb,
+        var(--border-color) 45%,
+        transparent
+      );
+      --border-color-disabled: var(--border-color-readonly);
 
-    --background-color: white;
-    --background-color-hover: color-mix(
-      in srgb,
-      var(--background-color) 95%,
-      black
-    );
-    --background-color-readonly: var(--background-color);
-    --background-color-disabled: color-mix(
-      in srgb,
-      var(--background-color) 60%,
-      transparent
-    );
+      --background-color: white;
+      --background-color-hover: color-mix(
+        in srgb,
+        var(--background-color) 95%,
+        black
+      );
+      --background-color-readonly: var(--background-color);
+      --background-color-disabled: color-mix(
+        in srgb,
+        var(--background-color) 60%,
+        transparent
+      );
 
-    --color: currentColor;
-    --color-readonly: color-mix(in srgb, currentColor 60%, transparent);
-    --color-disabled: var(--color-readonly);
-    color: var(--color);
+      --color: currentColor;
+      --color-readonly: color-mix(in srgb, currentColor 60%, transparent);
+      --color-disabled: var(--color-readonly);
+      color: var(--color);
 
-    background-color: var(--background-color);
-    border-width: var(--outer-width);
-    border-width: var(--outer-width);
-    border-style: solid;
-    border-color: transparent;
-    border-radius: var(--border-radius);
-    outline-width: var(--border-width);
-    outline-style: solid;
-    outline-color: var(--border-color);
-    outline-offset: calc(-1 * (var(--border-width)));
-  }
-  /* Focus */
-  .navi_input[data-focus] {
-    border-color: var(--outline-color);
-    outline-width: var(--outer-width);
-    outline-color: var(--outline-color);
-    outline-offset: calc(-1 * var(--outer-width));
-  }
-  /* Readonly */
-  .navi_input[data-readonly] {
-    color: var(--color-readonly);
-    background-color: var(--background-color-readonly);
-    outline-color: var(--border-color-readonly);
-  }
-  .navi_input[data-readonly]::placeholder {
-    color: var(--color-readonly);
-  }
-  /* Disabled */
-  .navi_input[data-disabled] {
-    color: var(--color-disabled);
-    background-color: var(--background-color-disabled);
-    outline-color: var(--border-color-disabled);
-  }
-  /* Invalid */
-  .navi_input[aria-invalid="true"] {
-    border-color: var(--invalid-color);
+      background-color: var(--background-color);
+      border-width: var(--outer-width);
+      border-width: var(--outer-width);
+      border-style: solid;
+      border-color: transparent;
+      border-radius: var(--border-radius);
+      outline-width: var(--border-width);
+      outline-style: solid;
+      outline-color: var(--border-color);
+      outline-offset: calc(-1 * (var(--border-width)));
+    }
+    /* Focus */
+    .navi_input[data-focus] {
+      border-color: var(--outline-color);
+      outline-width: var(--outer-width);
+      outline-color: var(--outline-color);
+      outline-offset: calc(-1 * var(--outer-width));
+    }
+    /* Readonly */
+    .navi_input[data-readonly] {
+      color: var(--color-readonly);
+      background-color: var(--background-color-readonly);
+      outline-color: var(--border-color-readonly);
+    }
+    .navi_input[data-readonly]::placeholder {
+      color: var(--color-readonly);
+    }
+    /* Disabled */
+    .navi_input[data-disabled] {
+      color: var(--color-disabled);
+      background-color: var(--background-color-disabled);
+      outline-color: var(--border-color-disabled);
+    }
+    /* Invalid */
+    .navi_input[aria-invalid="true"] {
+      border-color: var(--invalid-color);
+    }
   }
 `;
 

@@ -38,140 +38,146 @@ import {
  * So we redefine chrome styles so that loader can keep up with the actual color visible to the user
  */
 import.meta.css = /* css */ `
-  .navi_button {
-    position: relative;
-    display: inline-block;
-    padding: 0;
-    background: none;
-    border: none;
-    outline: none;
+  @layer navi {
+    .navi_button {
+      position: relative;
+      display: inline-block;
+      padding: 0;
+      background: none;
+      border: none;
+      outline: none;
 
-    --border-width: 1px;
-    --outline-width: 1px;
-    --outer-width: calc(var(--border-width) + var(--outline-width));
-    --padding-x: 6px;
-    --padding-y: 1px;
+      --border-width: 1px;
+      --outline-width: 1px;
+      --outer-width: calc(var(--border-width) + var(--outline-width));
+      --padding-x: 6px;
+      --padding-y: 1px;
 
-    --outline-color: light-dark(#4476ff, #3b82f6);
+      --outline-color: light-dark(#4476ff, #3b82f6);
 
-    --border-radius: 2px;
-    --border-color: light-dark(#767676, #8e8e93);
-    --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
-    --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
-    --border-color-readonly: color-mix(in srgb, var(--border-color) 30%, white);
-    --border-color-disabled: var(--border-color-readonly);
+      --border-radius: 2px;
+      --border-color: light-dark(#767676, #8e8e93);
+      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
+      --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
+      --border-color-readonly: color-mix(
+        in srgb,
+        var(--border-color) 30%,
+        white
+      );
+      --border-color-disabled: var(--border-color-readonly);
 
-    --background-color: light-dark(#f3f4f6, #2d3748);
-    --background-color-hover: color-mix(
-      in srgb,
-      var(--background-color) 95%,
-      black
-    );
-    --background-color-readonly: var(--background-color);
-    --background-color-disabled: var(--background-color);
+      --background-color: light-dark(#f3f4f6, #2d3748);
+      --background-color-hover: color-mix(
+        in srgb,
+        var(--background-color) 95%,
+        black
+      );
+      --background-color-readonly: var(--background-color);
+      --background-color-disabled: var(--background-color);
 
-    --color: currentColor;
-    --color-readonly: color-mix(in srgb, currentColor 30%, transparent);
-    --color-disabled: var(--color-readonly);
-  }
-  .navi_button_content {
-    position: relative;
-    display: inline-flex;
-    padding-top: var(--padding-y);
-    padding-right: var(--padding-x);
-    padding-bottom: var(--padding-y);
-    padding-left: var(--padding-x);
-    color: var(--color);
-    background-color: var(--background-color);
-    border-width: var(--outer-width);
-    border-style: solid;
-    border-color: transparent;
-    border-radius: var(--border-radius);
-    outline-width: var(--border-width);
-    outline-style: solid;
-    outline-color: var(--border-color);
-    outline-offset: calc(-1 * (var(--border-width)));
-    transition-property: transform;
-    transition-duration: 0.15s;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .navi_button_shadow {
-    position: absolute;
-    inset: calc(-1 * var(--outer-width));
-    border-radius: inherit;
-    pointer-events: none;
-  }
-  /* Focus */
-  .navi_button[data-focus-visible] .navi_button_content {
-    --border-color: var(--outline-color);
-    outline-width: var(--outer-width);
-    outline-offset: calc(-1 * var(--outer-width));
-  }
-  /* Hover */
-  .navi_button[data-hover] .navi_button_content {
-    --border-color: var(--border-color-hover);
-    --background-color: var(--background-color-hover);
-  }
-  /* Active */
-  .navi_button[data-active] .navi_button_content {
-    --outline-color: var(--border-color-active);
-    --background-color: none;
-    transform: scale(0.9);
-  }
-  .navi_button[data-active] .navi_button_shadow {
-    box-shadow:
-      inset 0 3px 6px rgba(0, 0, 0, 0.2),
-      inset 0 1px 2px rgba(0, 0, 0, 0.3),
-      inset 0 0 0 1px rgba(0, 0, 0, 0.1),
-      inset 2px 0 4px rgba(0, 0, 0, 0.1),
-      inset -2px 0 4px rgba(0, 0, 0, 0.1);
-  }
-  /* Readonly */
-  .navi_button[data-readonly] .navi_button_content {
-    --border-color: var(--border-color-disabled);
-    --outline-color: var(--border-color-readonly);
-    --background-color: var(--background-color-readonly);
-    --color: var(--color-readonly);
-  }
-  /* Disabled */
-  .navi_button[data-disabled] .navi_button_content {
-    --border-color: var(--border-color-disabled);
-    --background-color: var(--background-color-disabled);
-    --color: var(--color-disabled);
-    transform: none; /* no active effect */
-  }
-  .navi_button[data-disabled] .navi_button_shadow {
-    box-shadow: none;
-  }
-  /* Invalid */
-  .navi_button[aria-invalid="true"] .navi_button_content {
-    --border-color: var(--invalid-color);
-  }
+      --color: currentColor;
+      --color-readonly: color-mix(in srgb, currentColor 30%, transparent);
+      --color-disabled: var(--color-readonly);
+    }
+    .navi_button_content {
+      position: relative;
+      display: inline-flex;
+      padding-top: var(--padding-y);
+      padding-right: var(--padding-x);
+      padding-bottom: var(--padding-y);
+      padding-left: var(--padding-x);
+      color: var(--color);
+      background-color: var(--background-color);
+      border-width: var(--outer-width);
+      border-style: solid;
+      border-color: transparent;
+      border-radius: var(--border-radius);
+      outline-width: var(--border-width);
+      outline-style: solid;
+      outline-color: var(--border-color);
+      outline-offset: calc(-1 * (var(--border-width)));
+      transition-property: transform;
+      transition-duration: 0.15s;
+      transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .navi_button_shadow {
+      position: absolute;
+      inset: calc(-1 * var(--outer-width));
+      border-radius: inherit;
+      pointer-events: none;
+    }
+    /* Focus */
+    .navi_button[data-focus-visible] .navi_button_content {
+      --border-color: var(--outline-color);
+      outline-width: var(--outer-width);
+      outline-offset: calc(-1 * var(--outer-width));
+    }
+    /* Hover */
+    .navi_button[data-hover] .navi_button_content {
+      --border-color: var(--border-color-hover);
+      --background-color: var(--background-color-hover);
+    }
+    /* Active */
+    .navi_button[data-active] .navi_button_content {
+      --outline-color: var(--border-color-active);
+      --background-color: none;
+      transform: scale(0.9);
+    }
+    .navi_button[data-active] .navi_button_shadow {
+      box-shadow:
+        inset 0 3px 6px rgba(0, 0, 0, 0.2),
+        inset 0 1px 2px rgba(0, 0, 0, 0.3),
+        inset 0 0 0 1px rgba(0, 0, 0, 0.1),
+        inset 2px 0 4px rgba(0, 0, 0, 0.1),
+        inset -2px 0 4px rgba(0, 0, 0, 0.1);
+    }
+    /* Readonly */
+    .navi_button[data-readonly] .navi_button_content {
+      --border-color: var(--border-color-disabled);
+      --outline-color: var(--border-color-readonly);
+      --background-color: var(--background-color-readonly);
+      --color: var(--color-readonly);
+    }
+    /* Disabled */
+    .navi_button[data-disabled] .navi_button_content {
+      --border-color: var(--border-color-disabled);
+      --background-color: var(--background-color-disabled);
+      --color: var(--color-disabled);
+      transform: none; /* no active effect */
+    }
+    .navi_button[data-disabled] .navi_button_shadow {
+      box-shadow: none;
+    }
+    /* Invalid */
+    .navi_button[aria-invalid="true"] .navi_button_content {
+      --border-color: var(--invalid-color);
+    }
 
-  /* Discrete variant */
-  .navi_button[data-discrete] .navi_button_content {
-    --background-color: transparent;
-    --border-color: transparent;
-  }
-  .navi_button[data-discrete][data-hover] .navi_button_content {
-    --border-color: var(--border-color-hover);
-  }
-  .navi_button[data-discrete][data-readonly] .navi_button_content {
-    --border-color: transparent;
-  }
-  .navi_button[data-discrete][data-disabled] .navi_button_content {
-    --border-color: transparent;
-  }
-  button[data-discrete] {
-    background-color: transparent;
-    border-color: transparent;
-  }
-  button[data-discrete]:hover {
-    border-color: revert;
-  }
-  button[data-discrete][data-readonly],
-  button[data-discrete][data-disabled] {
-    border-color: transparent;
+    /* Discrete variant */
+    .navi_button[data-discrete] .navi_button_content {
+      --background-color: transparent;
+      --border-color: transparent;
+    }
+    .navi_button[data-discrete][data-hover] .navi_button_content {
+      --border-color: var(--border-color-hover);
+    }
+    .navi_button[data-discrete][data-readonly] .navi_button_content {
+      --border-color: transparent;
+    }
+    .navi_button[data-discrete][data-disabled] .navi_button_content {
+      --border-color: transparent;
+    }
+    button[data-discrete] {
+      background-color: transparent;
+      border-color: transparent;
+    }
+    button[data-discrete]:hover {
+      border-color: revert;
+    }
+    button[data-discrete][data-readonly],
+    button[data-discrete][data-disabled] {
+      border-color: transparent;
+    }
   }
 `;
 export const Button = forwardRef((props, ref) => {

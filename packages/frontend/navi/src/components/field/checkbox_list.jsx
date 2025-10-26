@@ -30,9 +30,11 @@ import {
 } from "./use_ui_state_controller.js";
 
 import.meta.css = /* css */ `
-  .navi_checkbox_list {
-    display: flex;
-    flex-direction: column;
+  @layer navi {
+    .navi_checkbox_list {
+      display: flex;
+      flex-direction: column;
+    }
   }
 `;
 

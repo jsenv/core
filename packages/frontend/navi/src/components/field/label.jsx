@@ -3,14 +3,16 @@ import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef, useState } from "preact/hooks";
 
 import.meta.css = /* css */ `
-  label {
-    cursor: pointer;
-  }
+  @layer navi {
+    label {
+      cursor: pointer;
+    }
 
-  label[data-readonly],
-  label[data-disabled] {
-    color: rgba(0, 0, 0, 0.5);
-    cursor: default;
+    label[data-readonly],
+    label[data-disabled] {
+      color: rgba(0, 0, 0, 0.5);
+      cursor: default;
+    }
   }
 `;
 
