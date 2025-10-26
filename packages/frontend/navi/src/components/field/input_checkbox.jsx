@@ -76,30 +76,29 @@ import.meta.css = /* css */ `
   .navi_checkbox input {
     position: absolute;
     inset: 0;
-    opacity: 0;
     margin: 0;
     padding: 0;
     border: none;
+    opacity: 0;
     cursor: inherit;
   }
   .navi_checkbox_field {
     display: inline-flex;
-    margin: 3px 3px 3px 4px;
     box-sizing: border-box;
-
-    outline-offset: var(--outline-offset);
-    outline-width: var(--outline-width);
-    border-width: var(--border-width);
-    border-radius: var(--border-radius);
     width: var(--width);
     height: var(--height);
+    margin: 3px 3px 3px 4px;
+    background-color: var(--background-color);
+    border-width: var(--border-width);
+    border-style: solid;
+    border-color: var(--border-color);
+    border-radius: var(--border-radius);
+    outline-width: var(--outline-width);
 
     outline-style: none;
-    border-style: solid;
 
     outline-color: var(--outline-color);
-    border-color: var(--border-color);
-    background-color: var(--background-color);
+    outline-offset: var(--outline-offset);
     /* color: var(--color); */
   }
   .navi_checkbox_marker {
@@ -126,8 +125,8 @@ import.meta.css = /* css */ `
   }
   .navi_checkbox[data-checked] .navi_checkbox_marker {
     opacity: 1;
-    transform: scale(1);
     stroke: var(--checkmark-color);
+    transform: scale(1);
   }
   /* Readonly */
   .navi_checkbox[data-readonly] .navi_checkbox_field,
