@@ -1,4 +1,4 @@
-export const createPubSub = () => {
+export const createPubSub = (clearOnPublish = false) => {
   const callbackSet = new Set();
 
   const publish = (...args) => {
@@ -6,6 +6,9 @@ export const createPubSub = () => {
     for (const callback of callbackSet) {
       const result = callback(...args);
       results.push(result);
+    }
+    if (clearOnPublish) {
+      callbackSet.clear();
     }
     return results;
   };

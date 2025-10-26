@@ -1,5 +1,6 @@
 import {
   allowWheelThrough,
+  createPubSub,
   createStyleController,
   getBorderSizes,
   pickPositionRelativeTo,
@@ -233,8 +234,8 @@ export const openValidationMessage = (
     });
   }
 
+  const [teardown, addTeardown] = createPubSub(true);
   let opened = true;
-  const closeCallbackSet = new Set();
   const close = (reason) => {
     if (!opened) {
       return;
@@ -243,10 +244,7 @@ export const openValidationMessage = (
       console.debug(`validation message closed (reason: ${reason})`);
     }
     opened = false;
-    for (const closeCallback of closeCallbackSet) {
-      closeCallback();
-    }
-    closeCallbackSet.clear();
+    teardown(reason);
   };
 
   // Create and add validation message to document
@@ -292,14 +290,14 @@ export const openValidationMessage = (
     "--invalid-color",
     `var(--navi-${level}-color)`,
   );
-  closeCallbackSet.add(() => {
+  addTeardown(() => {
     targetElement.removeAttribute("aria-invalid");
     targetElement.removeAttribute("aria-errormessage");
     targetElement.style.removeProperty("--invalid-color");
   });
 
   document.body.appendChild(jsenvValidationMessage);
-  closeCallbackSet.add(() => {
+  addTeardown(() => {
     jsenvValidationMessage.remove();
   });
 
@@ -310,12 +308,12 @@ export const openValidationMessage = (
       debug,
     },
   );
-  closeCallbackSet.add(() => {
+  addTeardown(() => {
     positionFollower.stop();
   });
 
   if (onClose) {
-    closeCallbackSet.add(onClose);
+    addTeardown(onClose);
   }
   close_on_target_focus: {
     const onfocus = () => {
@@ -329,7 +327,7 @@ export const openValidationMessage = (
       close("target_element_focus");
     };
     targetElement.addEventListener("focus", onfocus);
-    closeCallbackSet.add(() => {
+    addTeardown(() => {
       targetElement.removeEventListener("focus", onfocus);
     });
   }
@@ -356,7 +354,7 @@ export const openValidationMessage = (
       close("click_outside");
     };
     document.addEventListener("click", handleClickOutside, true);
-    closeCallbackSet.add(() => {
+    addTeardown(() => {
       document.removeEventListener("click", handleClickOutside, true);
     });
   }
@@ -368,7 +366,7 @@ export const openValidationMessage = (
     updatePosition: positionFollower.updatePosition,
   };
   targetElement.jsenvValidationMessage = validationMessage;
-  closeCallbackSet.add(() => {
+  addTeardown(() => {
     delete targetElement.jsenvValidationMessage;
   });
   return validationMessage;
