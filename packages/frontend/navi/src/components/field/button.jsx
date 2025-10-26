@@ -41,9 +41,13 @@ import.meta.css = /* css */ `
     padding: 0;
     background: none;
     border: none;
+    outline: none;
 
     --border-width: 1px;
     --outline-width: 1px;
+    --outer-width: calc(var(--border-width) + var(--outline-width));
+
+    --outline-color: light-dark(#355fcc, #3b82f6);
 
     --border-radius: 2px;
     --border-color: light-dark(#767676, #8e8e93);
@@ -71,7 +75,7 @@ import.meta.css = /* css */ `
     padding-block: 1px;
     padding-inline: 6px;
     background-color: var(--background-color);
-    border-width: calc(var(--border-width) + var(--outline-width));
+    border-width: var(--outer-width);
     border-style: solid;
     border-color: transparent;
     border-radius: var(--border-radius);
@@ -85,14 +89,15 @@ import.meta.css = /* css */ `
   }
   .navi_button_shadow {
     position: absolute;
-    inset: calc(-1 * (var(--border-width) + var(--outline-width)));
+    inset: calc(-1 * var(--outer-width));
     border-radius: inherit;
     pointer-events: none;
   }
 
   .navi_button[data-focus-visible] .navi_button_content {
-    outline-width: calc(var(--border-width) + var(--outline-width));
-    outline-offset: calc(-1 * (var(--border-width) + var(--outline-width)));
+    --border-color: var(--outline-color);
+    outline-width: var(--outer-width);
+    outline-offset: calc(-1 * var(--outer-width));
   }
   .navi_button[data-readonly] .navi_button_content {
     --outline-color: var(--border-color-readonly);
