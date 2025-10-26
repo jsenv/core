@@ -34,7 +34,6 @@ import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { initCustomField } from "./custom_field.js";
-import "./field_css.js";
 import { ReportReadOnlyOnLabelContext } from "./label.jsx";
 import { useActionEvents } from "./use_action_events.js";
 import {

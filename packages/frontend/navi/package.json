@@ -13,8 +13,7 @@
     "email": "dmaillard06@gmail.com"
   },
   "sideEffects": [
-    "./dist/jsenv_navi.js",
-    "./src/components/field/field_css.js"
+    "./dist/jsenv_navi.js"
   ],
   "type": "module",
   "exports": {
