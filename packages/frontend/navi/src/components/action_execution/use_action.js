@@ -29,7 +29,7 @@ export const useActionBoundToOneArrayParam = (
   fallbackValue,
   defaultValue,
 ) => {
-  const [boundAction, value, setValue, initialValue] = useActionBoundToOneParam(
+  const [boundAction, value, setValue] = useActionBoundToOneParam(
     action,
     name,
     externalValue,
@@ -45,7 +45,7 @@ export const useActionBoundToOneArrayParam = (
     setValue(removeFromArray(valueArray, valueToRemove));
   };
 
-  const result = [boundAction, value, setValue, initialValue];
+  const result = [boundAction, value, setValue];
   result.add = add;
   result.remove = remove;
   return result;

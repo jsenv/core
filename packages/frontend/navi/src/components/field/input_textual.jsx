@@ -215,6 +215,9 @@ const InputTextualBasic = forwardRef((props, ref) => {
     return initCustomField(innerRef.current, innerRef.current);
   }, []);
 
+  if (type === "hidden") {
+    return inputTextual;
+  }
   return (
     <LoadableInlineElement
       loading={innerLoading}

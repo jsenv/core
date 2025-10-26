@@ -6,9 +6,11 @@ import {
   useRef,
 } from "preact/hooks";
 
+import { getActionPrivateProperties } from "../../action_private_properties.js";
 import { useActionStatus } from "../../use_action_status.js";
 import { requestAction } from "../../validation/custom_constraint_validation.js";
 import { useConstraints } from "../../validation/hooks/use_constraints.js";
+import { FormActionContext } from "../action_execution/form_context.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
@@ -362,8 +364,10 @@ const ButtonInsideForm = forwardRef((props, ref) => {
 });
 
 const ButtonWithActionInsideForm = forwardRef((props, ref) => {
+  const formAction = useContext(FormActionContext);
   const {
-    formContext,
+    // eslint-disable-next-line no-unused-vars
+    formContext, // to avoid passing it to the button element
     type,
     action,
     loading,
@@ -383,7 +387,7 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
       `<Button type="${type}" /> should not have their own action`,
     );
   }
-  const { formParamsSignal } = formContext;
+  const formParamsSignal = getActionPrivateProperties(formAction).paramsSignal;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
   const actionBoundToFormParams = useAction(action, formParamsSignal);

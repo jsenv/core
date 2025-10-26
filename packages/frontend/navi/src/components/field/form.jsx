@@ -18,7 +18,10 @@ import { useContext, useImperativeHandle, useMemo, useRef } from "preact/hooks";
 
 import { requestAction } from "../../validation/custom_constraint_validation.js";
 import { useConstraints } from "../../validation/hooks/use_constraints.js";
-import { FormContext } from "../action_execution/form_context.js";
+import {
+  FormActionContext,
+  FormContext,
+} from "../action_execution/form_context.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
@@ -193,9 +196,11 @@ const FormWithAction = forwardRef((props, ref) => {
         });
       }}
     >
-      <LoadingElementContext.Provider value={formActionRequester}>
-        {children}
-      </LoadingElementContext.Provider>
+      <FormActionContext.Provider value={actionBoundToUIState}>
+        <LoadingElementContext.Provider value={formActionRequester}>
+          {children}
+        </LoadingElementContext.Provider>
+      </FormActionContext.Provider>
     </FormBasic>
   );
 });
