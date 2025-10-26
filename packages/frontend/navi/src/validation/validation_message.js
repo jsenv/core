@@ -24,6 +24,13 @@ import {
  * @returns {Function} - Function to hide and remove the validation message
  */
 
+// Configuration parameters for validation message appearance
+const BORDER_WIDTH = 1;
+const CORNER_RADIUS = 3;
+const ARROW_WIDTH = 16;
+const ARROW_HEIGHT = 8;
+const ARROW_SPACING = 8;
+
 import.meta.css = /* css */ `
   /* Ensure the validation message CANNOT cause overflow */
   /* might be important to ensure it cannot create scrollbars in the document */
@@ -358,13 +365,6 @@ export const openValidationMessage = (
   });
   return validationMessage;
 };
-
-// Configuration parameters for validation message appearance
-const ARROW_WIDTH = 16;
-const ARROW_HEIGHT = 8;
-const CORNER_RADIUS = 3;
-const BORDER_WIDTH = 1;
-const ARROW_SPACING = 8;
 
 /**
  * Generates SVG path for validation message with arrow on top
