@@ -223,7 +223,7 @@ const ButtonBasic = forwardRef((props, ref) => {
       className={appearance === "navi" ? "navi_button" : undefined}
       data-discrete={discrete ? "" : undefined}
       data-readonly={innerReadOnly ? "" : undefined}
-      data-readonly-silent={innerReadOnly ? "" : undefined}
+      data-readonly-silent={innerLoading ? "" : undefined}
       data-disabled={innerDisabled ? "" : undefined}
       data-validation-message-arrow-x="center"
       aria-busy={innerLoading}
