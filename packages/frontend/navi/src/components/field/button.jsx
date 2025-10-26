@@ -45,6 +45,7 @@ import.meta.css = /* css */ `
     --border-width: 1px;
     --outline-width: 1px;
 
+    --border-radius: 2px;
     --border-color: light-dark(#767676, #8e8e93);
     --border-color-readonly: color-mix(in srgb, var(--border-color) 30%, white);
     --border-color-disabled: var(--border-color-readonly);
@@ -65,18 +66,32 @@ import.meta.css = /* css */ `
     --color-disabled: var(--color-readonly);
   }
   .navi_button_content {
+    position: relative;
+    display: inline-flex;
+    padding-block: 1px;
+    padding-inline: 6px;
+    background-color: var(--background-color);
     border-width: calc(var(--border-width) + var(--outline-width));
     border-style: solid;
     border-color: transparent;
+    border-radius: var(--border-radius);
     outline-width: var(--border-width);
-    outline-style: none;
+    outline-style: solid;
     outline-color: var(--border-color);
     outline-offset: calc(-1 * (var(--border-width)));
+    transition-property: transform;
+    transition-duration: 0.15s;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .navi_button_shadow {
+    position: absolute;
+    inset: calc(-1 * (var(--border-width) + var(--outline-width)));
+    border-radius: inherit;
+    pointer-events: none;
   }
 
   .navi_button[data-focus-visible] .navi_button_content {
     outline-width: calc(var(--border-width) + var(--outline-width));
-    outline-style: solid;
     outline-offset: calc(-1 * (var(--border-width) + var(--outline-width)));
   }
   .navi_button[data-readonly] .navi_button_content {
@@ -88,22 +103,6 @@ import.meta.css = /* css */ `
     --background-color: none;
   }
 
-  .navi_button_content {
-    position: relative;
-    display: inline-flex;
-    padding-block: 1px;
-    padding-inline: 6px;
-    border-radius: inherit;
-    transition-property: transform;
-    transition-duration: 0.15s;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .navi_button_shadow {
-    position: absolute;
-    inset: calc(-1 * (var(--border-width) + var(--outline-width)));
-    border-radius: inherit;
-    pointer-events: none;
-  }
   .navi_button[data-active] .navi_button_content {
     transform: scale(0.9);
   }
