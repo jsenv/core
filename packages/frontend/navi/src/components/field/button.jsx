@@ -47,7 +47,7 @@ import.meta.css = /* css */ `
     --outline-width: 1px;
     --outer-width: calc(var(--border-width) + var(--outline-width));
 
-    --outline-color: light-dark(#355fcc, #3b82f6);
+    --outline-color: light-dark(#4476ff, #3b82f6);
 
     --border-radius: 2px;
     --border-color: light-dark(#767676, #8e8e93);
