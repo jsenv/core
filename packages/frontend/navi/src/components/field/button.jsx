@@ -51,19 +51,19 @@ import.meta.css = /* css */ `
 
     --border-radius: 2px;
     --border-color: light-dark(#767676, #8e8e93);
+    --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
+    --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
     --border-color-readonly: color-mix(in srgb, var(--border-color) 30%, white);
     --border-color-disabled: var(--border-color-readonly);
-    --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
-    --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
 
     --background-color: light-dark(#f3f4f6, #2d3748);
-    --background-color-readonly: var(--background-color);
-    --background-color-disabled: var(--background-color);
     --background-color-hover: color-mix(
       in srgb,
       var(--background-color) 95%,
       black
     );
+    --background-color-readonly: var(--background-color);
+    --background-color-disabled: var(--background-color);
 
     --color: currentColor;
     --color-readonly: color-mix(in srgb, currentColor 30%, transparent);
@@ -74,6 +74,7 @@ import.meta.css = /* css */ `
     display: inline-flex;
     padding-block: 1px;
     padding-inline: 6px;
+    color: var(--color);
     background-color: var(--background-color);
     border-width: var(--outer-width);
     border-style: solid;
@@ -94,21 +95,21 @@ import.meta.css = /* css */ `
     pointer-events: none;
   }
 
+  /* Focus */
   .navi_button[data-focus-visible] .navi_button_content {
     --border-color: var(--outline-color);
     outline-width: var(--outer-width);
     outline-offset: calc(-1 * var(--outer-width));
   }
-  .navi_button[data-readonly] .navi_button_content {
-    --outline-color: var(--border-color-readonly);
-    --background-color: none;
+  /* Hover */
+  .navi_button[data-hover] .navi_button_content {
+    --border-color: var(--border-color-hover);
+    --background-color: var(--background-color-hover);
   }
-  .navi_button[data-active] ..navi_button_content {
+  /* Active */
+  .navi_button[data-active] .navi_button_content {
     --outline-color: var(--border-color-active);
     --background-color: none;
-  }
-
-  .navi_button[data-active] .navi_button_content {
     transform: scale(0.9);
   }
   .navi_button[data-active] .navi_button_shadow {
@@ -119,8 +120,19 @@ import.meta.css = /* css */ `
       inset 2px 0 4px rgba(0, 0, 0, 0.1),
       inset -2px 0 4px rgba(0, 0, 0, 0.1);
   }
+  /* Readonly */
+  .navi_button[data-readonly] .navi_button_content {
+    --border-color: var(--border-color-disabled);
+    --outline-color: var(--border-color-readonly);
+    --background-color: var(--background-color-readonly);
+    --color: var(--color-readonly);
+  }
+  /* Disabled */
   .navi_button[data-disabled] .navi_button_content {
-    transform: none;
+    --border-color: var(--border-color-disabled);
+    --background-color: var(--background-color-disabled);
+    --color: var(--color-disabled);
+    transform: none; /* no active effect */
   }
   .navi_button[data-disabled] .navi_button_shadow {
     box-shadow: none;
