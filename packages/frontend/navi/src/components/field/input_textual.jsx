@@ -83,7 +83,7 @@ import.meta.css = /* css */ `
     );
 
     --color: currentColor;
-    --color-readonly: color-mix(in srgb, currentColor 30%, transparent);
+    --color-readonly: color-mix(in srgb, currentColor 60%, transparent);
     --color-disabled: var(--color-readonly);
     color: var(--color);
 
@@ -110,6 +110,9 @@ import.meta.css = /* css */ `
     color: var(--color-readonly);
     background-color: var(--background-color-readonly);
     outline-color: var(--border-color-readonly);
+  }
+  .navi_input[data-readonly]::placeholder {
+    color: var(--color-readonly);
   }
   /* Disabled */
   .navi_input[data-disabled] {
