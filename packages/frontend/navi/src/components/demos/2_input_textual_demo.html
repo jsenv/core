@@ -35,6 +35,18 @@
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
 
+      .demo-card.loading-demo {
+        background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+      }
+
+      .demo-card.readonly-demo {
+        background: linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%);
+      }
+
+      .demo-card.disabled-demo {
+        background: linear-gradient(135deg, #f1f8e9 0%, #e8f5e8 100%);
+      }
+
       .demo-title {
         margin-top: 0;
         margin-bottom: 15px;
@@ -191,7 +203,7 @@
         const [loading, setLoading] = useState(false);
 
         return (
-          <div className="demo-card">
+          <div className="demo-card loading-demo">
             <h3 className="demo-title">💫 Loading State</h3>
             <div className="control-group">
               <h4>@jsenv/navi Input</h4>
@@ -221,7 +233,7 @@
         const [loading, setLoading] = useState(false);
 
         return (
-          <div className="demo-card">
+          <div className="demo-card readonly-demo">
             <h3 className="demo-title">🔒 Read-only State</h3>
             <div className="control-group">
               <h4>@jsenv/navi Read-only</h4>
@@ -245,7 +257,7 @@
         const [loading, setLoading] = useState(false);
 
         return (
-          <div className="demo-card">
+          <div className="demo-card disabled-demo">
             <h3 className="demo-title">🚫 Disabled State</h3>
             <div className="control-group">
               <h4>@jsenv/navi Disabled</h4>

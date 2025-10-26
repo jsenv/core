@@ -62,7 +62,11 @@ import.meta.css = /* css */ `
     --border-color: light-dark(#767676, #8e8e93);
     --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
     --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
-    --border-color-readonly: color-mix(in srgb, var(--border-color) 30%, white);
+    --border-color-readonly: color-mix(
+      in srgb,
+      var(--background-color) 5%,
+      transparent
+    );
     --border-color-disabled: var(--border-color-readonly);
 
     --background-color: white;
@@ -72,7 +76,11 @@ import.meta.css = /* css */ `
       black
     );
     --background-color-readonly: var(--background-color);
-    --background-color-disabled: var(--background-color);
+    --background-color-disabled: color-mix(
+      in srgb,
+      var(--background-color) 65%,
+      transparent
+    );
 
     --color: currentColor;
     --color-readonly: color-mix(in srgb, currentColor 30%, transparent);
@@ -96,6 +104,12 @@ import.meta.css = /* css */ `
     outline-width: var(--outer-width);
     outline-color: var(--outline-color);
     outline-offset: calc(-1 * var(--outer-width));
+  }
+
+  .navi_input[data-disabled] {
+    color: var(--color-disabled);
+    background-color: var(--background-color-disabled);
+    outline-color: var(--border-color-disabled);
   }
 `;
 
