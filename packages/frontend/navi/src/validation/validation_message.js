@@ -32,6 +32,13 @@ const ARROW_HEIGHT = 8;
 const ARROW_SPACING = 8;
 
 import.meta.css = /* css */ `
+  :root {
+    --navi-info-color: #2196f3;
+    --navi-warning-color: #ff9800;
+    --navi-error-color: #f44336;
+    --navi-validation-message-background-color: white;
+  }
+
   /* Ensure the validation message CANNOT cause overflow */
   /* might be important to ensure it cannot create scrollbars in the document */
   /* When measuring the size it should take */
@@ -92,15 +99,24 @@ import.meta.css = /* css */ `
     color: white;
   }
 
+  .jsenv_validation_message[data-level="info"] .border_path {
+    fill: var(--navi-info-color);
+  }
   .jsenv_validation_message[data-level="info"] .jsenv_validation_message_icon {
-    background-color: #2196f3;
+    background-color: var(--navi-info-color);
+  }
+  .jsenv_validation_message[data-level="warning"] .border_path {
+    fill: var(--navi-warning-color);
   }
   .jsenv_validation_message[data-level="warning"]
     .jsenv_validation_message_icon {
-    background-color: #ff9800;
+    background-color: var(--navi-warning-color);
+  }
+  .jsenv_validation_message[data-level="error"] .border_path {
+    fill: var(--navi-error-color);
   }
   .jsenv_validation_message[data-level="error"] .jsenv_validation_message_icon {
-    background-color: #f44336;
+    background-color: var(--navi-error-color);
   }
 
   .jsenv_validation_message_content {
@@ -116,12 +132,8 @@ import.meta.css = /* css */ `
     overflow: visible;
   }
 
-  .border_path {
-    fill: var(--border-color);
-  }
-
   .background_path {
-    fill: var(--background-color);
+    fill: var(--navi-validation-message-background-color);
   }
 
   .jsenv_validation_message_close_button_column {
@@ -255,15 +267,6 @@ export const openValidationMessage = (
     { level = "warning", closeOnClickOutside = level === "info" } = {},
   ) => {
     _closeOnClickOutside = closeOnClickOutside;
-    const borderColor =
-      level === "info" ? "blue" : level === "warning" ? "grey" : "red";
-    const backgroundColor = "white";
-
-    jsenvValidationMessage.style.setProperty("--border-color", borderColor);
-    jsenvValidationMessage.style.setProperty(
-      "--background-color",
-      backgroundColor,
-    );
 
     if (Error.isError(newMessage)) {
       const error = newMessage;
