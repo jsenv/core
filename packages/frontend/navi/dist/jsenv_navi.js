@@ -11962,137 +11962,141 @@ const ARROW_HEIGHT = 8;
 const ARROW_SPACING = 8;
 
 import.meta.css = /* css */ `
-  :root {
-    --navi-info-color: #2196f3;
-    --navi-warning-color: #ff9800;
-    --navi-error-color: #f44336;
-    --navi-validation-message-background-color: white;
-  }
+  @layer navi {
+    :root {
+      --navi-info-color: #2196f3;
+      --navi-warning-color: #ff9800;
+      --navi-error-color: #f44336;
+      --navi-validation-message-background-color: white;
+    }
 
-  /* Ensure the validation message CANNOT cause overflow */
-  /* might be important to ensure it cannot create scrollbars in the document */
-  /* When measuring the size it should take */
-  .jsenv_validation_message_container {
-    position: fixed;
-    inset: 0;
-    overflow: hidden;
-  }
+    /* Ensure the validation message CANNOT cause overflow */
+    /* might be important to ensure it cannot create scrollbars in the document */
+    /* When measuring the size it should take */
+    .jsenv_validation_message_container {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+    }
 
-  .jsenv_validation_message {
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: 1;
-    display: block;
-    height: auto;
-    opacity: 0;
-    /* will be positioned with transform: translate */
-    transition: opacity 0.2s ease-in-out;
-    overflow: visible;
-  }
+    .jsenv_validation_message {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+      display: block;
+      height: auto;
+      opacity: 0;
+      /* will be positioned with transform: translate */
+      transition: opacity 0.2s ease-in-out;
+      overflow: visible;
+    }
 
-  .jsenv_validation_message_border {
-    position: absolute;
-    filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
-    pointer-events: none;
-  }
+    .jsenv_validation_message_border {
+      position: absolute;
+      filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
+      pointer-events: none;
+    }
 
-  .jsenv_validation_message_body_wrapper {
-    position: relative;
-    border-style: solid;
-    border-color: transparent;
-  }
+    .jsenv_validation_message_body_wrapper {
+      position: relative;
+      border-style: solid;
+      border-color: transparent;
+    }
 
-  .jsenv_validation_message_body {
-    position: relative;
-    display: flex;
-    max-width: 47vw;
-    padding: 8px;
-    flex-direction: row;
-    gap: 10px;
-  }
+    .jsenv_validation_message_body {
+      position: relative;
+      display: flex;
+      max-width: 47vw;
+      padding: 8px;
+      flex-direction: row;
+      gap: 10px;
+    }
 
-  .jsenv_validation_message_icon {
-    display: flex;
-    width: 22px;
-    height: 22px;
-    flex-shrink: 0;
-    align-items: center;
-    align-self: flex-start;
-    justify-content: center;
-    border-radius: 2px;
-  }
-
-  .jsenv_validation_message_exclamation_svg {
-    width: 16px;
-    height: 12px;
-    color: white;
-  }
-
-  .jsenv_validation_message[data-level="info"] .border_path {
-    fill: var(--navi-info-color);
-  }
-  .jsenv_validation_message[data-level="info"] .jsenv_validation_message_icon {
-    background-color: var(--navi-info-color);
-  }
-  .jsenv_validation_message[data-level="warning"] .border_path {
-    fill: var(--navi-warning-color);
-  }
-  .jsenv_validation_message[data-level="warning"]
     .jsenv_validation_message_icon {
-    background-color: var(--navi-warning-color);
-  }
-  .jsenv_validation_message[data-level="error"] .border_path {
-    fill: var(--navi-error-color);
-  }
-  .jsenv_validation_message[data-level="error"] .jsenv_validation_message_icon {
-    background-color: var(--navi-error-color);
-  }
+      display: flex;
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+      align-items: center;
+      align-self: flex-start;
+      justify-content: center;
+      border-radius: 2px;
+    }
 
-  .jsenv_validation_message_content {
-    min-width: 0;
-    align-self: center;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-  }
+    .jsenv_validation_message_exclamation_svg {
+      width: 16px;
+      height: 12px;
+      color: white;
+    }
 
-  .jsenv_validation_message_border svg {
-    position: absolute;
-    inset: 0;
-    overflow: visible;
-  }
+    .jsenv_validation_message[data-level="info"] .border_path {
+      fill: var(--navi-info-color);
+    }
+    .jsenv_validation_message[data-level="info"]
+      .jsenv_validation_message_icon {
+      background-color: var(--navi-info-color);
+    }
+    .jsenv_validation_message[data-level="warning"] .border_path {
+      fill: var(--navi-warning-color);
+    }
+    .jsenv_validation_message[data-level="warning"]
+      .jsenv_validation_message_icon {
+      background-color: var(--navi-warning-color);
+    }
+    .jsenv_validation_message[data-level="error"] .border_path {
+      fill: var(--navi-error-color);
+    }
+    .jsenv_validation_message[data-level="error"]
+      .jsenv_validation_message_icon {
+      background-color: var(--navi-error-color);
+    }
 
-  .background_path {
-    fill: var(--navi-validation-message-background-color);
-  }
+    .jsenv_validation_message_content {
+      min-width: 0;
+      align-self: center;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
 
-  .jsenv_validation_message_close_button_column {
-    display: flex;
-    height: 22px;
-  }
-  .jsenv_validation_message_close_button {
-    width: 1em;
-    height: 1em;
-    padding: 0;
-    align-self: center;
-    color: currentColor;
-    font-size: inherit;
-    background: none;
-    border: none;
-    border-radius: 0.2em;
-    cursor: pointer;
-  }
-  .jsenv_validation_message_close_button:hover {
-    background: rgba(0, 0, 0, 0.1);
-  }
-  .close_svg {
-    width: 100%;
-    height: 100%;
-  }
+    .jsenv_validation_message_border svg {
+      position: absolute;
+      inset: 0;
+      overflow: visible;
+    }
 
-  .error_stack {
-    max-height: 200px;
-    overflow: auto;
+    .background_path {
+      fill: var(--navi-validation-message-background-color);
+    }
+
+    .jsenv_validation_message_close_button_column {
+      display: flex;
+      height: 22px;
+    }
+    .jsenv_validation_message_close_button {
+      width: 1em;
+      height: 1em;
+      padding: 0;
+      align-self: center;
+      color: currentColor;
+      font-size: inherit;
+      background: none;
+      border: none;
+      border-radius: 0.2em;
+      cursor: pointer;
+    }
+    .jsenv_validation_message_close_button:hover {
+      background: rgba(0, 0, 0, 0.1);
+    }
+    .close_svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .error_stack {
+      max-height: 200px;
+      overflow: auto;
+    }
   }
 `;
 
@@ -18896,14 +18900,16 @@ const initCustomField = (customField, field) => {
 };
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
-  label {
-    cursor: pointer;
-  }
+  @layer navi {
+    label {
+      cursor: pointer;
+    }
 
-  label[data-readonly],
-  label[data-disabled] {
-    color: rgba(0, 0, 0, 0.5);
-    cursor: default;
+    label[data-readonly],
+    label[data-disabled] {
+      color: rgba(0, 0, 0, 0.5);
+      cursor: default;
+    }
   }
 `;
 const ReportReadOnlyOnLabelContext = createContext();
@@ -19395,121 +19401,131 @@ const useUIState = (uiStateController) => {
 };
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
-  :root {
-    --navi-checkmark-color-light: white;
-    --navi-checkmark-color-dark: rgb(55, 55, 55);
-    --navi-checkmark-color: var(--navi-checkmark-light-color);
-  }
+  @layer navi {
+    :root {
+      --navi-checkmark-color-light: white;
+      --navi-checkmark-color-dark: rgb(55, 55, 55);
+      --navi-checkmark-color: var(--navi-checkmark-light-color);
+    }
 
-  .navi_checkbox {
-    position: relative;
-    display: inline-flex;
-    box-sizing: content-box;
+    .navi_checkbox {
+      position: relative;
+      display: inline-flex;
+      box-sizing: content-box;
 
-    --outline-offset: 1px;
-    --outline-width: 2px;
-    --border-width: 1px;
-    --border-radius: 2px;
-    --width: 13px;
-    --height: 13px;
+      --outline-offset: 1px;
+      --outline-width: 2px;
+      --border-width: 1px;
+      --border-radius: 2px;
+      --width: 13px;
+      --height: 13px;
 
-    --outline-color: light-dark(#4476ff, #3b82f6);
-    --border-color: light-dark(#767676, #8e8e93);
-    --background-color: white;
-    --accent-color: light-dark(#4476ff, #3b82f6);
-    /* --color: currentColor; */
-    --checkmark-color: var(--navi-checkmark-color);
+      --outline-color: light-dark(#4476ff, #3b82f6);
+      --border-color: light-dark(#767676, #8e8e93);
+      --background-color: white;
+      --accent-color: light-dark(#4476ff, #3b82f6);
+      /* --color: currentColor; */
+      --checkmark-color: var(--navi-checkmark-color);
 
-    --border-color-readonly: color-mix(in srgb, var(--border-color) 30%, white);
-    --border-color-disabled: var(--border-color-readonly);
-    --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
-    --border-color-checked-readonly: #d3d3d3;
-    --border-color-checked-disabled: #d3d3d3;
-    --background-color-checked-readonly: var(--navi-background-color-readonly);
-    --background-color-checked-disabled: var(--navi-background-color-disabled);
-    --checkmark-color-readonly: var(--navi-color-readonly);
-    --checkmark-color-disabled: var(--navi-color-disabled);
-  }
-  .navi_checkbox input {
-    position: absolute;
-    inset: 0;
-    margin: 0;
-    padding: 0;
-    border: none;
-    opacity: 0;
-    cursor: inherit;
-  }
-  .navi_checkbox_field {
-    display: inline-flex;
-    box-sizing: border-box;
-    width: var(--width);
-    height: var(--height);
-    margin: 3px 3px 3px 4px;
-    background-color: var(--background-color);
-    border-width: var(--border-width);
-    border-style: solid;
-    border-color: var(--border-color);
-    border-radius: var(--border-radius);
-    outline-width: var(--outline-width);
+      --border-color-readonly: color-mix(
+        in srgb,
+        var(--border-color) 30%,
+        white
+      );
+      --border-color-disabled: var(--border-color-readonly);
+      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
+      --border-color-checked-readonly: #d3d3d3;
+      --border-color-checked-disabled: #d3d3d3;
+      --background-color-checked-readonly: var(
+        --navi-background-color-readonly
+      );
+      --background-color-checked-disabled: var(
+        --navi-background-color-disabled
+      );
+      --checkmark-color-readonly: var(--navi-color-readonly);
+      --checkmark-color-disabled: var(--navi-color-disabled);
+    }
+    .navi_checkbox input {
+      position: absolute;
+      inset: 0;
+      margin: 0;
+      padding: 0;
+      border: none;
+      opacity: 0;
+      cursor: inherit;
+    }
+    .navi_checkbox_field {
+      display: inline-flex;
+      box-sizing: border-box;
+      width: var(--width);
+      height: var(--height);
+      margin: 3px 3px 3px 4px;
+      background-color: var(--background-color);
+      border-width: var(--border-width);
+      border-style: solid;
+      border-color: var(--border-color);
+      border-radius: var(--border-radius);
+      outline-width: var(--outline-width);
 
-    outline-style: none;
+      outline-style: none;
 
-    outline-color: var(--outline-color);
-    outline-offset: var(--outline-offset);
-    /* color: var(--color); */
-  }
-  .navi_checkbox_marker {
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    transform: scale(0.5);
-    transition: all 0.15s ease;
-    pointer-events: none;
-  }
+      outline-color: var(--outline-color);
+      outline-offset: var(--outline-offset);
+      /* color: var(--color); */
+    }
+    .navi_checkbox_marker {
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      transform: scale(0.5);
+      transition: all 0.15s ease;
+      pointer-events: none;
+    }
 
-  /* Focus */
-  .navi_checkbox[data-focus-visible] .navi_checkbox_field {
-    outline-style: solid;
-  }
-  /* Hover */
-  .navi_checkbox[data-hover] .navi_checkbox_field {
-    --border-color: var(--border-color-hover);
-  }
-  /* Checked */
-  .navi_checkbox[data-checked] .navi_checkbox_field {
-    --background-color: var(--accent-color);
-    --border-color: var(--accent-color);
-  }
-  .navi_checkbox[data-checked] .navi_checkbox_marker {
-    opacity: 1;
-    stroke: var(--checkmark-color);
-    transform: scale(1);
-  }
-  /* Readonly */
-  .navi_checkbox[data-readonly] .navi_checkbox_field,
-  .navi_checkbox[data-readonly][data-hover] .navi_checkbox_field {
-    --border-color: var(--border-color-readonly);
-    --background-color: var(--background-color-readonly);
-  }
-  .navi_checkbox[data-checked][data-readonly] .navi_checkbox_field {
-    --background-color: var(--background-color-checked-readonly);
-    --border-color: var(--border-color-checked-readonly);
-  }
-  .navi_checkbox[data-checked][data-readonly] .navi_checkbox_marker {
-    stroke: var(--checkmark-color-readonly);
-  }
-  /* Disabled */
-  .navi_checkbox[data-disabled] .navi_checkbox_field {
-    --background-color: var(--background-color-disabled);
-    --border-color: var(--border-color-disabled);
-  }
-  .navi_checkbox[data-checked][data-disabled] .navi_checkbox_field {
-    --border-color: var(--border-color-checked-disabled);
-    --background-color: var(--background-color-checked-disabled);
-  }
+    /* Focus */
+    .navi_checkbox[data-focus-visible] .navi_checkbox_field {
+      outline-style: solid;
+    }
+    /* Hover */
+    .navi_checkbox[data-hover] .navi_checkbox_field {
+      --border-color: var(--border-color-hover);
+    }
+    /* Checked */
+    .navi_checkbox[data-checked] .navi_checkbox_field {
+      --background-color: var(--accent-color);
+      --border-color: var(--accent-color);
+    }
+    .navi_checkbox[data-checked] .navi_checkbox_marker {
+      opacity: 1;
+      stroke: var(--checkmark-color);
+      transform: scale(1);
+    }
+    /* Readonly */
+    .navi_checkbox[data-readonly] .navi_checkbox_field,
+    .navi_checkbox[data-readonly][data-hover] .navi_checkbox_field {
+      --border-color: var(--border-color-readonly);
+      --background-color: var(--background-color-readonly);
+    }
+    .navi_checkbox[data-checked][data-readonly] .navi_checkbox_field {
+      --background-color: var(--background-color-checked-readonly);
+      --border-color: var(--border-color-checked-readonly);
+    }
+    .navi_checkbox[data-checked][data-readonly] .navi_checkbox_marker {
+      stroke: var(--checkmark-color-readonly);
+    }
+    /* Disabled */
+    .navi_checkbox[data-disabled] .navi_checkbox_field {
+      --background-color: var(--background-color-disabled);
+      --border-color: var(--border-color-disabled);
+    }
+    .navi_checkbox[data-checked][data-disabled] .navi_checkbox_field {
+      --border-color: var(--border-color-checked-disabled);
+      --background-color: var(--background-color-checked-disabled);
+    }
 
-  .navi_checkbox[data-checked][data-disabled] .navi_checkbox_marker {
-    stroke: var(--checkmark-color-disabled);
+    .navi_checkbox[data-checked][data-disabled] .navi_checkbox_marker {
+      stroke: var(--checkmark-color-disabled);
+    }
   }
 `;
 const InputCheckbox = forwardRef((props, ref) => {
@@ -19757,152 +19773,162 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
 const InputCheckboxInsideForm = InputCheckboxBasic;
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
-  :root {
-    --navi-radiomark-color: light-dark(#4476ff, #3b82f6);
-  }
+  @layer navi {
+    :root {
+      --navi-radiomark-color: light-dark(#4476ff, #3b82f6);
+    }
 
-  .navi_radio {
-    position: relative;
-    display: inline-flex;
-    box-sizing: content-box;
+    .navi_radio {
+      position: relative;
+      display: inline-flex;
+      box-sizing: content-box;
 
-    --outline-offset: 1px;
-    --outline-width: 2px;
-    --width: 13px;
-    --height: 13px;
+      --outline-offset: 1px;
+      --outline-width: 2px;
+      --width: 13px;
+      --height: 13px;
 
-    --outline-color: light-dark(#4476ff, #3b82f6);
-    --border-color: light-dark(#767676, #8e8e93);
-    --background-color: white;
-    --accent-color: var(--navi-radiomark-color);
-    --mark-color: var(--accent-color);
+      --outline-color: light-dark(#4476ff, #3b82f6);
+      --border-color: light-dark(#767676, #8e8e93);
+      --background-color: white;
+      --accent-color: var(--navi-radiomark-color);
+      --mark-color: var(--accent-color);
 
-    /* light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3)); */
-    --accent-color-checked: color-mix(in srgb, var(--accent-color) 70%, black);
+      /* light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3)); */
+      --accent-color-checked: color-mix(
+        in srgb,
+        var(--accent-color) 70%,
+        black
+      );
 
-    --border-color-readonly: color-mix(in srgb, var(--border-color) 30%, white);
-    --border-color-disabled: var(--border-color-readonly);
-    --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
-    --border-color-checked: var(--accent-color);
-    --border-color-checked-hover: var(--accent-color-checked);
-    --border-color-checked-readonly: #d3d3d3;
-    --border-color-checked-disabled: #d3d3d3;
-    --background-color-readonly: var(--background-color);
-    --background-color-disabled: var(--background-color);
-    --background-color-checked-readonly: #d3d3d3;
-    --background-color-checked-disabled: var(--background-color);
-    --mark-color-hover: var(--accent-color-checked);
-    --mark-color-readonly: grey;
-    --mark-color-disabled: #eeeeee;
-  }
-  .navi_radio input {
-    position: absolute;
-    inset: 0;
-    margin: 0;
-    padding: 0;
-    opacity: 0;
-    cursor: inherit;
-  }
-  .navi_radio_field {
-    display: inline-flex;
-    width: var(--width);
-    height: var(--height);
-    margin-top: 3px;
-    margin-right: 3px;
-    margin-left: 5px;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    outline-width: var(--outline-width);
+      --border-color-readonly: color-mix(
+        in srgb,
+        var(--border-color) 30%,
+        white
+      );
+      --border-color-disabled: var(--border-color-readonly);
+      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
+      --border-color-checked: var(--accent-color);
+      --border-color-checked-hover: var(--accent-color-checked);
+      --border-color-checked-readonly: #d3d3d3;
+      --border-color-checked-disabled: #d3d3d3;
+      --background-color-readonly: var(--background-color);
+      --background-color-disabled: var(--background-color);
+      --background-color-checked-readonly: #d3d3d3;
+      --background-color-checked-disabled: var(--background-color);
+      --mark-color-hover: var(--accent-color-checked);
+      --mark-color-readonly: grey;
+      --mark-color-disabled: #eeeeee;
+    }
+    .navi_radio input {
+      position: absolute;
+      inset: 0;
+      margin: 0;
+      padding: 0;
+      opacity: 0;
+      cursor: inherit;
+    }
+    .navi_radio_field {
+      display: inline-flex;
+      width: var(--width);
+      height: var(--height);
+      margin-top: 3px;
+      margin-right: 3px;
+      margin-left: 5px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      outline-width: var(--outline-width);
 
-    outline-style: none;
+      outline-style: none;
 
-    outline-color: var(--outline-color);
+      outline-color: var(--outline-color);
 
-    outline-offset: var(--outline-offset);
-  }
-  .navi_radio_field svg {
-    overflow: visible;
-  }
-  .navi_radio_border {
-    fill: var(--background-color);
-    stroke: var(--border-color);
-  }
-  .navi_radio_marker {
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    fill: var(--mark-color);
-    transform: scale(0.3);
-    transform-origin: center;
-    pointer-events: none;
-  }
-  .navi_radio_dashed_border {
-    display: none;
-  }
-  .navi_radio[data-transition] .navi_radio_marker {
-    transition: all 0.15s ease;
-  }
-  .navi_radio[data-transition] .navi_radio_dashed_border {
-    transition: all 0.15s ease;
-  }
-  .navi_radio[data-transition] .navi_radio_border {
-    transition: all 0.15s ease;
-  }
+      outline-offset: var(--outline-offset);
+    }
+    .navi_radio_field svg {
+      overflow: visible;
+    }
+    .navi_radio_border {
+      fill: var(--background-color);
+      stroke: var(--border-color);
+    }
+    .navi_radio_marker {
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      fill: var(--mark-color);
+      transform: scale(0.3);
+      transform-origin: center;
+      pointer-events: none;
+    }
+    .navi_radio_dashed_border {
+      display: none;
+    }
+    .navi_radio[data-transition] .navi_radio_marker {
+      transition: all 0.15s ease;
+    }
+    .navi_radio[data-transition] .navi_radio_dashed_border {
+      transition: all 0.15s ease;
+    }
+    .navi_radio[data-transition] .navi_radio_border {
+      transition: all 0.15s ease;
+    }
 
-  /* Focus */
-  .navi_radio[data-focus-visible] .navi_radio_field {
-    outline-style: solid;
-  }
-  /* Hover */
-  .navi_radio[data-hover] .navi_radio_border {
-    stroke: var(--border-color-hover);
-  }
-  .navi_radio[data-hover] .navi_radio_marker {
-    fill: var(--mark-color-hover);
-  }
-  /* Checked */
-  .navi_radio[data-checked] .navi_radio_border {
-    stroke: var(--border-color-checked);
-  }
-  .navi_radio[data-checked] .navi_radio_marker {
-    opacity: 1;
-    transform: scale(1);
-  }
-  .navi_radio[data-hover][data-checked] .navi_radio_border {
-    stroke: var(--border-color-checked-hover);
-  }
-  /* Readonly */
-  .navi_radio[data-readonly] .navi_radio_border {
-    fill: var(--background-color-readonly);
-    stroke: var(--border-color-readonly);
-  }
-  .navi_radio[data-readonly] .navi_radio_marker {
-    fill: var(--mark-color-readonly);
-  }
-  .navi_radio[data-readonly] .navi_radio_dashed_border {
-    display: none;
-  }
-  .navi_radio[data-checked][data-readonly] .navi_radio_border {
-    fill: var(--background-color-checked-readonly);
-    stroke: var(--border-color-checked-readonly);
-  }
-  .navi_radio[data-checked][data-readonly] .navi_radio_marker {
-    fill: var(--mark-color-readonly);
-  }
-  /* Disabled */
-  .navi_radio[data-disabled] .navi_radio_border {
-    fill: var(--background-color-disabled);
-    stroke: var(--border-color-disabled);
-  }
-  .navi_radio[data-disabled] .navi_radio_marker {
-    fill: var(--mark-color-disabled);
-  }
-  .navi_radio[data-hover][data-checked][data-disabled] .navi_radio_border {
-    stroke: var(--border-color-disabled);
-  }
-  .navi_radio[data-checked][data-disabled] .navi_radio_marker {
-    fill: var(--mark-color-disabled);
+    /* Focus */
+    .navi_radio[data-focus-visible] .navi_radio_field {
+      outline-style: solid;
+    }
+    /* Hover */
+    .navi_radio[data-hover] .navi_radio_border {
+      stroke: var(--border-color-hover);
+    }
+    .navi_radio[data-hover] .navi_radio_marker {
+      fill: var(--mark-color-hover);
+    }
+    /* Checked */
+    .navi_radio[data-checked] .navi_radio_border {
+      stroke: var(--border-color-checked);
+    }
+    .navi_radio[data-checked] .navi_radio_marker {
+      opacity: 1;
+      transform: scale(1);
+    }
+    .navi_radio[data-hover][data-checked] .navi_radio_border {
+      stroke: var(--border-color-checked-hover);
+    }
+    /* Readonly */
+    .navi_radio[data-readonly] .navi_radio_border {
+      fill: var(--background-color-readonly);
+      stroke: var(--border-color-readonly);
+    }
+    .navi_radio[data-readonly] .navi_radio_marker {
+      fill: var(--mark-color-readonly);
+    }
+    .navi_radio[data-readonly] .navi_radio_dashed_border {
+      display: none;
+    }
+    .navi_radio[data-checked][data-readonly] .navi_radio_border {
+      fill: var(--background-color-checked-readonly);
+      stroke: var(--border-color-checked-readonly);
+    }
+    .navi_radio[data-checked][data-readonly] .navi_radio_marker {
+      fill: var(--mark-color-readonly);
+    }
+    /* Disabled */
+    .navi_radio[data-disabled] .navi_radio_border {
+      fill: var(--background-color-disabled);
+      stroke: var(--border-color-disabled);
+    }
+    .navi_radio[data-disabled] .navi_radio_marker {
+      fill: var(--mark-color-disabled);
+    }
+    .navi_radio[data-hover][data-checked][data-disabled] .navi_radio_border {
+      stroke: var(--border-color-disabled);
+    }
+    .navi_radio[data-checked][data-disabled] .navi_radio_marker {
+      fill: var(--mark-color-disabled);
+    }
   }
 `;
 const InputRadio = forwardRef((props, ref) => {
@@ -20122,169 +20148,83 @@ const InputRadioWithAction = () => {
 };
 const InputRadioInsideForm = InputRadio;
 
-installImportMetaCss(import.meta);import.meta.css = /* css */ `
-  :root {
-    --navi-field-border-width: 1px;
-    --navi-field-outline-width: 1px;
-
-    --navi-field-border-color: light-dark(#767676, #8e8e93);
-    --navi-field-outline-color: light-dark(#355fcc, #3b82f6);
-    --navi-field-background-color: light-dark(#f3f4f6, #2d3748);
-    --navi-field-accent-color: light-dark(#355fcc, #3b82f6);
-
-    --navi-field-disabled-border-color: color-mix(
-      in srgb,
-      var(--navi-field-border-color) 30%,
-      white
-    );
-    --navi-field-readonly-border-color: var(--navi-field-disabled-border-color);
-    --navi-field-active-border-color: color-mix(
-      in srgb,
-      var(--navi-field-border-color) 90%,
-      black
-    );
-    --navi-field-hover-border-color: color-mix(
-      in srgb,
-      var(--navi-field-border-color) 70%,
-      black
-    );
-
-    --navi-field-disabled-background-color: var(--navi-field-background-color);
-    --navi-field-readonly-background-color: var(
-      --navi-field-disabled-background-color
-    );
-    --navi-field-hover-background-color: color-mix(
-      in srgb,
-      var(--navi-field-background-color) 95%,
-      black
-    );
-
-    --navi-field-readonly-color: color-mix(
-      in srgb,
-      currentColor 30%,
-      transparent
-    );
-    --navi-field-disabled-color: var(--navi-field-readonly-color);
-  }
-
-  [data-field-border-and-outline] {
-    border-width: calc(
-      var(--navi-field-border-width) + var(--navi-field-outline-width)
-    );
-
-    border-style: solid;
-
-    border-color: transparent;
-    outline-width: var(--navi-field-border-width);
-    outline-style: none;
-    outline-color: var(--navi-field-border-color);
-    outline-offset: calc(-1 * (var(--navi-field-border-width)));
-  }
-  [data-field-wrapper][data-focus-visible] [data-field-border-and-outline] {
-    outline-width: calc(
-      var(--navi-field-border-width) + var(--navi-field-outline-width)
-    );
-    outline-style: solid;
-    outline-offset: calc(
-      -1 * (var(--navi-field-border-width) + var(--navi-field-outline-width))
-    );
-  }
-  [data-field-wrapper][data-readonly] [data-field-border-and-outline] {
-    --navi-field-outline-color: var(--navi-field-readonly-border-color);
-    --navi-field-background-color: none;
-  }
-  [data-field-wrapper][data-active] [data-field-border-and-outline] {
-    --navi-field-outline-color: var(--navi-field-active-border-color);
-    --navi-field-background-color: none;
-  }
-
-  [data-field-border-hover-only] {
-    border: 0;
-  }
-  [data-field-wrapper][data-hover] [data-field-with-hover-effect-on-border] {
-    outline-color: var(--navi-field-hover-border-color);
-  }
-
-  [data-field-wrapper][data-readonly] [data-field] {
-    --navi-field-color: var(--navi-field-readonly-color);
-  }
-`;
-
 installImportMetaCss(import.meta);import.meta.css = /* css */`
-  .navi_input {
-    --border-width: 1px;
-    --outline-width: 1px;
-    --outer-width: calc(var(--border-width) + var(--outline-width));
-    --padding-x: 6px;
-    --padding-y: 1px;
+  @layer navi {
+    .navi_input {
+      --border-width: 1px;
+      --outline-width: 1px;
+      --outer-width: calc(var(--border-width) + var(--outline-width));
+      --padding-x: 6px;
+      --padding-y: 1px;
 
-    --outline-color: light-dark(#4476ff, #3b82f6);
+      --outline-color: light-dark(#4476ff, #3b82f6);
 
-    --border-radius: 2px;
-    --border-color: light-dark(#767676, #8e8e93);
-    --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
-    --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
-    --border-color-readonly: color-mix(
-      in srgb,
-      var(--border-color) 45%,
-      transparent
-    );
-    --border-color-disabled: var(--border-color-readonly);
+      --border-radius: 2px;
+      --border-color: light-dark(#767676, #8e8e93);
+      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
+      --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
+      --border-color-readonly: color-mix(
+        in srgb,
+        var(--border-color) 45%,
+        transparent
+      );
+      --border-color-disabled: var(--border-color-readonly);
 
-    --background-color: white;
-    --background-color-hover: color-mix(
-      in srgb,
-      var(--background-color) 95%,
-      black
-    );
-    --background-color-readonly: var(--background-color);
-    --background-color-disabled: color-mix(
-      in srgb,
-      var(--background-color) 60%,
-      transparent
-    );
+      --background-color: white;
+      --background-color-hover: color-mix(
+        in srgb,
+        var(--background-color) 95%,
+        black
+      );
+      --background-color-readonly: var(--background-color);
+      --background-color-disabled: color-mix(
+        in srgb,
+        var(--background-color) 60%,
+        transparent
+      );
 
-    --color: currentColor;
-    --color-readonly: color-mix(in srgb, currentColor 60%, transparent);
-    --color-disabled: var(--color-readonly);
-    color: var(--color);
+      --color: currentColor;
+      --color-readonly: color-mix(in srgb, currentColor 60%, transparent);
+      --color-disabled: var(--color-readonly);
+      color: var(--color);
 
-    background-color: var(--background-color);
-    border-width: var(--outer-width);
-    border-width: var(--outer-width);
-    border-style: solid;
-    border-color: transparent;
-    border-radius: var(--border-radius);
-    outline-width: var(--border-width);
-    outline-style: solid;
-    outline-color: var(--border-color);
-    outline-offset: calc(-1 * (var(--border-width)));
-  }
-  /* Focus */
-  .navi_input[data-focus] {
-    border-color: var(--outline-color);
-    outline-width: var(--outer-width);
-    outline-color: var(--outline-color);
-    outline-offset: calc(-1 * var(--outer-width));
-  }
-  /* Readonly */
-  .navi_input[data-readonly] {
-    color: var(--color-readonly);
-    background-color: var(--background-color-readonly);
-    outline-color: var(--border-color-readonly);
-  }
-  .navi_input[data-readonly]::placeholder {
-    color: var(--color-readonly);
-  }
-  /* Disabled */
-  .navi_input[data-disabled] {
-    color: var(--color-disabled);
-    background-color: var(--background-color-disabled);
-    outline-color: var(--border-color-disabled);
-  }
-  /* Invalid */
-  .navi_input[aria-invalid="true"] {
-    border-color: var(--invalid-color);
+      background-color: var(--background-color);
+      border-width: var(--outer-width);
+      border-width: var(--outer-width);
+      border-style: solid;
+      border-color: transparent;
+      border-radius: var(--border-radius);
+      outline-width: var(--border-width);
+      outline-style: solid;
+      outline-color: var(--border-color);
+      outline-offset: calc(-1 * (var(--border-width)));
+    }
+    /* Focus */
+    .navi_input[data-focus] {
+      border-color: var(--outline-color);
+      outline-width: var(--outer-width);
+      outline-color: var(--outline-color);
+      outline-offset: calc(-1 * var(--outer-width));
+    }
+    /* Readonly */
+    .navi_input[data-readonly] {
+      color: var(--color-readonly);
+      background-color: var(--background-color-readonly);
+      outline-color: var(--border-color-readonly);
+    }
+    .navi_input[data-readonly]::placeholder {
+      color: var(--color-readonly);
+    }
+    /* Disabled */
+    .navi_input[data-disabled] {
+      color: var(--color-disabled);
+      background-color: var(--background-color-disabled);
+      outline-color: var(--border-color-disabled);
+    }
+    /* Invalid */
+    .navi_input[aria-invalid="true"] {
+      border-color: var(--invalid-color);
+    }
   }
 `;
 const InputTextual = forwardRef((props, ref) => {
@@ -20862,140 +20802,146 @@ const useFormEvents = (
 };
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
-  .navi_button {
-    position: relative;
-    display: inline-block;
-    padding: 0;
-    background: none;
-    border: none;
-    outline: none;
+  @layer navi {
+    .navi_button {
+      position: relative;
+      display: inline-block;
+      padding: 0;
+      background: none;
+      border: none;
+      outline: none;
 
-    --border-width: 1px;
-    --outline-width: 1px;
-    --outer-width: calc(var(--border-width) + var(--outline-width));
-    --padding-x: 6px;
-    --padding-y: 1px;
+      --border-width: 1px;
+      --outline-width: 1px;
+      --outer-width: calc(var(--border-width) + var(--outline-width));
+      --padding-x: 6px;
+      --padding-y: 1px;
 
-    --outline-color: light-dark(#4476ff, #3b82f6);
+      --outline-color: light-dark(#4476ff, #3b82f6);
 
-    --border-radius: 2px;
-    --border-color: light-dark(#767676, #8e8e93);
-    --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
-    --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
-    --border-color-readonly: color-mix(in srgb, var(--border-color) 30%, white);
-    --border-color-disabled: var(--border-color-readonly);
+      --border-radius: 2px;
+      --border-color: light-dark(#767676, #8e8e93);
+      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
+      --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
+      --border-color-readonly: color-mix(
+        in srgb,
+        var(--border-color) 30%,
+        white
+      );
+      --border-color-disabled: var(--border-color-readonly);
 
-    --background-color: light-dark(#f3f4f6, #2d3748);
-    --background-color-hover: color-mix(
-      in srgb,
-      var(--background-color) 95%,
-      black
-    );
-    --background-color-readonly: var(--background-color);
-    --background-color-disabled: var(--background-color);
+      --background-color: light-dark(#f3f4f6, #2d3748);
+      --background-color-hover: color-mix(
+        in srgb,
+        var(--background-color) 95%,
+        black
+      );
+      --background-color-readonly: var(--background-color);
+      --background-color-disabled: var(--background-color);
 
-    --color: currentColor;
-    --color-readonly: color-mix(in srgb, currentColor 30%, transparent);
-    --color-disabled: var(--color-readonly);
-  }
-  .navi_button_content {
-    position: relative;
-    display: inline-flex;
-    padding-top: var(--padding-y);
-    padding-right: var(--padding-x);
-    padding-bottom: var(--padding-y);
-    padding-left: var(--padding-x);
-    color: var(--color);
-    background-color: var(--background-color);
-    border-width: var(--outer-width);
-    border-style: solid;
-    border-color: transparent;
-    border-radius: var(--border-radius);
-    outline-width: var(--border-width);
-    outline-style: solid;
-    outline-color: var(--border-color);
-    outline-offset: calc(-1 * (var(--border-width)));
-    transition-property: transform;
-    transition-duration: 0.15s;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .navi_button_shadow {
-    position: absolute;
-    inset: calc(-1 * var(--outer-width));
-    border-radius: inherit;
-    pointer-events: none;
-  }
-  /* Focus */
-  .navi_button[data-focus-visible] .navi_button_content {
-    --border-color: var(--outline-color);
-    outline-width: var(--outer-width);
-    outline-offset: calc(-1 * var(--outer-width));
-  }
-  /* Hover */
-  .navi_button[data-hover] .navi_button_content {
-    --border-color: var(--border-color-hover);
-    --background-color: var(--background-color-hover);
-  }
-  /* Active */
-  .navi_button[data-active] .navi_button_content {
-    --outline-color: var(--border-color-active);
-    --background-color: none;
-    transform: scale(0.9);
-  }
-  .navi_button[data-active] .navi_button_shadow {
-    box-shadow:
-      inset 0 3px 6px rgba(0, 0, 0, 0.2),
-      inset 0 1px 2px rgba(0, 0, 0, 0.3),
-      inset 0 0 0 1px rgba(0, 0, 0, 0.1),
-      inset 2px 0 4px rgba(0, 0, 0, 0.1),
-      inset -2px 0 4px rgba(0, 0, 0, 0.1);
-  }
-  /* Readonly */
-  .navi_button[data-readonly] .navi_button_content {
-    --border-color: var(--border-color-disabled);
-    --outline-color: var(--border-color-readonly);
-    --background-color: var(--background-color-readonly);
-    --color: var(--color-readonly);
-  }
-  /* Disabled */
-  .navi_button[data-disabled] .navi_button_content {
-    --border-color: var(--border-color-disabled);
-    --background-color: var(--background-color-disabled);
-    --color: var(--color-disabled);
-    transform: none; /* no active effect */
-  }
-  .navi_button[data-disabled] .navi_button_shadow {
-    box-shadow: none;
-  }
-  /* Invalid */
-  .navi_button[aria-invalid="true"] .navi_button_content {
-    --border-color: var(--invalid-color);
-  }
+      --color: currentColor;
+      --color-readonly: color-mix(in srgb, currentColor 30%, transparent);
+      --color-disabled: var(--color-readonly);
+    }
+    .navi_button_content {
+      position: relative;
+      display: inline-flex;
+      padding-top: var(--padding-y);
+      padding-right: var(--padding-x);
+      padding-bottom: var(--padding-y);
+      padding-left: var(--padding-x);
+      color: var(--color);
+      background-color: var(--background-color);
+      border-width: var(--outer-width);
+      border-style: solid;
+      border-color: transparent;
+      border-radius: var(--border-radius);
+      outline-width: var(--border-width);
+      outline-style: solid;
+      outline-color: var(--border-color);
+      outline-offset: calc(-1 * (var(--border-width)));
+      transition-property: transform;
+      transition-duration: 0.15s;
+      transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .navi_button_shadow {
+      position: absolute;
+      inset: calc(-1 * var(--outer-width));
+      border-radius: inherit;
+      pointer-events: none;
+    }
+    /* Focus */
+    .navi_button[data-focus-visible] .navi_button_content {
+      --border-color: var(--outline-color);
+      outline-width: var(--outer-width);
+      outline-offset: calc(-1 * var(--outer-width));
+    }
+    /* Hover */
+    .navi_button[data-hover] .navi_button_content {
+      --border-color: var(--border-color-hover);
+      --background-color: var(--background-color-hover);
+    }
+    /* Active */
+    .navi_button[data-active] .navi_button_content {
+      --outline-color: var(--border-color-active);
+      --background-color: none;
+      transform: scale(0.9);
+    }
+    .navi_button[data-active] .navi_button_shadow {
+      box-shadow:
+        inset 0 3px 6px rgba(0, 0, 0, 0.2),
+        inset 0 1px 2px rgba(0, 0, 0, 0.3),
+        inset 0 0 0 1px rgba(0, 0, 0, 0.1),
+        inset 2px 0 4px rgba(0, 0, 0, 0.1),
+        inset -2px 0 4px rgba(0, 0, 0, 0.1);
+    }
+    /* Readonly */
+    .navi_button[data-readonly] .navi_button_content {
+      --border-color: var(--border-color-disabled);
+      --outline-color: var(--border-color-readonly);
+      --background-color: var(--background-color-readonly);
+      --color: var(--color-readonly);
+    }
+    /* Disabled */
+    .navi_button[data-disabled] .navi_button_content {
+      --border-color: var(--border-color-disabled);
+      --background-color: var(--background-color-disabled);
+      --color: var(--color-disabled);
+      transform: none; /* no active effect */
+    }
+    .navi_button[data-disabled] .navi_button_shadow {
+      box-shadow: none;
+    }
+    /* Invalid */
+    .navi_button[aria-invalid="true"] .navi_button_content {
+      --border-color: var(--invalid-color);
+    }
 
-  /* Discrete variant */
-  .navi_button[data-discrete] .navi_button_content {
-    --background-color: transparent;
-    --border-color: transparent;
-  }
-  .navi_button[data-discrete][data-hover] .navi_button_content {
-    --border-color: var(--border-color-hover);
-  }
-  .navi_button[data-discrete][data-readonly] .navi_button_content {
-    --border-color: transparent;
-  }
-  .navi_button[data-discrete][data-disabled] .navi_button_content {
-    --border-color: transparent;
-  }
-  button[data-discrete] {
-    background-color: transparent;
-    border-color: transparent;
-  }
-  button[data-discrete]:hover {
-    border-color: revert;
-  }
-  button[data-discrete][data-readonly],
-  button[data-discrete][data-disabled] {
-    border-color: transparent;
+    /* Discrete variant */
+    .navi_button[data-discrete] .navi_button_content {
+      --background-color: transparent;
+      --border-color: transparent;
+    }
+    .navi_button[data-discrete][data-hover] .navi_button_content {
+      --border-color: var(--border-color-hover);
+    }
+    .navi_button[data-discrete][data-readonly] .navi_button_content {
+      --border-color: transparent;
+    }
+    .navi_button[data-discrete][data-disabled] .navi_button_content {
+      --border-color: transparent;
+    }
+    button[data-discrete] {
+      background-color: transparent;
+      border-color: transparent;
+    }
+    button[data-discrete]:hover {
+      border-color: revert;
+    }
+    button[data-discrete][data-readonly],
+    button[data-discrete][data-disabled] {
+      border-color: transparent;
+    }
   }
 `;
 const Button = forwardRef((props, ref) => {
@@ -21259,9 +21205,11 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
 });
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
-  .navi_checkbox_list {
-    display: flex;
-    flex-direction: column;
+  @layer navi {
+    .navi_checkbox_list {
+      display: flex;
+      flex-direction: column;
+    }
   }
 `;
 const CheckboxList = forwardRef((props, ref) => {
@@ -21691,9 +21639,11 @@ const FormWithAction = forwardRef((props, ref) => {
 // };
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
-  .navi_radio_list {
-    display: flex;
-    flex-direction: column;
+  @layer navi {
+    .navi_radio_list {
+      display: flex;
+      flex-direction: column;
+    }
   }
 `;
 const RadioList = forwardRef((props, ref) => {
