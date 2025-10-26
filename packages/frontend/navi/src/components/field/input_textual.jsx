@@ -91,9 +91,10 @@ import.meta.css = /* css */ `
     outline-offset: calc(-1 * (var(--border-width)));
   }
 
-  .navi_input[data-focus-visible] {
+  .navi_input[data-focus] {
     border-color: var(--outline-color);
-    --outline-width: var(--outer-width);
+    outline-width: var(--outer-width);
+    outline-color: var(--outline-color);
     outline-offset: calc(-1 * var(--outer-width));
   }
 `;
