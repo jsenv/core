@@ -288,9 +288,14 @@ export const openValidationMessage = (
   jsenvValidationMessage.id = validationMessageId;
   targetElement.setAttribute("aria-invalid", "true");
   targetElement.setAttribute("aria-errormessage", validationMessageId);
+  targetElement.style.setProperty(
+    "--invalid-color",
+    `var(--navi-${level}-color)`,
+  );
   closeCallbackSet.add(() => {
     targetElement.removeAttribute("aria-invalid");
     targetElement.removeAttribute("aria-errormessage");
+    targetElement.style.removeProperty("--invalid-color");
   });
 
   document.body.appendChild(jsenvValidationMessage);

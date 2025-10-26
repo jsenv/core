@@ -141,6 +141,10 @@ import.meta.css = /* css */ `
   .navi_button[data-disabled] .navi_button_shadow {
     box-shadow: none;
   }
+  /* Invalid */
+  .navi_button[aria-invalid="true"] .navi_button_content {
+    --border-color: var(--invalid-color);
+  }
 
   /* Discrete variant */
   .navi_button[data-discrete] .navi_button_content {
