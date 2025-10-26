@@ -105,7 +105,10 @@ import.meta.css = /* css */ `
     outline-color: var(--outline-color);
     outline-offset: calc(-1 * var(--outer-width));
   }
-
+  .navi_input[data-readonly] {
+    color: var(--color-readonly);
+    background-color: var(--background-color-readonly);
+  }
   .navi_input[data-disabled] {
     color: var(--color-disabled);
     background-color: var(--background-color-disabled);
@@ -221,6 +224,7 @@ const InputTextualBasic = forwardRef((props, ref) => {
       color="var(--accent-color)"
       width={width}
       height={height}
+      inset={-1}
     >
       {inputTextual}
     </LoadableInlineElement>
