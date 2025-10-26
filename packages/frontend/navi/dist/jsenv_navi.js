@@ -71,7 +71,7 @@ const createIterableWeakSet = () => {
   };
 };
 
-const createPubSub = () => {
+const createPubSub = (clearOnPublish = false) => {
   const callbackSet = new Set();
 
   const publish = (...args) => {
@@ -79,6 +79,9 @@ const createPubSub = () => {
     for (const callback of callbackSet) {
       const result = callback(...args);
       results.push(result);
+    }
+    if (clearOnPublish) {
+      callbackSet.clear();
     }
     return results;
   };
@@ -372,6 +375,9 @@ const normalizeNumber = (value, context, unit, propertyName) => {
   if (typeof value === "string") {
     if (value === "auto") {
       return "auto";
+    }
+    if (value === "none") {
+      return "none";
     }
     const numericValue = parseFloat(value);
     if (isNaN(numericValue)) {
@@ -1006,6 +1012,512 @@ const createSetMany = (setter) => {
 };
 
 const setAttributes = createSetMany(setAttribute);
+
+/**
+ * Calculates the contrast ratio between two RGBA colors
+ * Based on WCAG 2.1 specification
+ * @param {Array<number>} rgba1 - [r, g, b, a] values for first color
+ * @param {Array<number>} rgba2 - [r, g, b, a] values for second color
+ * @param {Array<number>} [background=[255, 255, 255, 1]] - Background color to composite against when colors have transparency
+ * @returns {number} Contrast ratio (1-21)
+ */
+const getContrastRatio = (
+  rgba1,
+  rgba2,
+  background = [255, 255, 255, 1],
+) => {
+  // When colors have transparency (alpha < 1), we need to composite them
+  // against a background to get their effective appearance
+  const composited1 = compositeColor(rgba1, background);
+  const composited2 = compositeColor(rgba2, background);
+
+  const lum1 = getLuminance(composited1[0], composited1[1], composited1[2]);
+  const lum2 = getLuminance(composited2[0], composited2[1], composited2[2]);
+  const brightest = Math.max(lum1, lum2);
+  const darkest = Math.min(lum1, lum2);
+  return (brightest + 0.05) / (darkest + 0.05);
+};
+
+/**
+ * Composites a color with alpha over a background color
+ * @param {Array<number>} foreground - [r, g, b, a] foreground color
+ * @param {Array<number>} background - [r, g, b, a] background color
+ * @returns {Array<number>} [r, g, b] composited color (alpha is flattened)
+ */
+const compositeColor = (foreground, background) => {
+  const [fr, fg, fb, fa] = foreground;
+  const [br, bg, bb, ba] = background;
+
+  // No transparency: return the foreground color as-is
+  if (fa === 1) {
+    return [fr, fg, fb];
+  }
+
+  // Alpha compositing formula: C = αA * CA + αB * (1 - αA) * CB
+  const alpha = fa + ba * (1 - fa);
+
+  if (alpha === 0) {
+    return [0, 0, 0];
+  }
+
+  const r = (fa * fr + ba * (1 - fa) * br) / alpha;
+  const g = (fa * fg + ba * (1 - fa) * bg) / alpha;
+  const b = (fa * fb + ba * (1 - fa) * bb) / alpha;
+
+  return [Math.round(r), Math.round(g), Math.round(b)];
+};
+
+/**
+ * Calculates the relative luminance of an RGB color
+ * Based on WCAG 2.1 specification
+ * @param {number} r - Red component (0-255)
+ * @param {number} g - Green component (0-255)
+ * @param {number} b - Blue component (0-255)
+ * @returns {number} Relative luminance (0-1)
+ */
+const getLuminance = (r, g, b) => {
+  const [rs, gs, bs] = [r, g, b].map((c) => {
+    c = c / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+};
+
+/**
+ * Parses a CSS color string into RGBA values
+ * Supports hex (#rgb, #rrggbb, #rrggbbaa), rgb(), rgba(), hsl(), hsla()
+ * @param {string} color - CSS color string
+ * @returns {Array<number>|null} [r, g, b, a] values or null if parsing fails
+ */
+const parseCSSColor = (color) => {
+  if (!color || typeof color !== "string") {
+    return null;
+  }
+
+  color = color.trim().toLowerCase();
+
+  // Hex colors
+  if (color.startsWith("#")) {
+    const hex = color.slice(1);
+    if (hex.length === 3) {
+      // #rgb -> #rrggbb
+      const r = parseInt(hex[0] + hex[0], 16);
+      const g = parseInt(hex[1] + hex[1], 16);
+      const b = parseInt(hex[2] + hex[2], 16);
+      return [r, g, b, 1];
+    }
+    if (hex.length === 6) {
+      // #rrggbb
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      return [r, g, b, 1];
+    }
+    if (hex.length === 8) {
+      // #rrggbbaa
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      const a = parseInt(hex.slice(6, 8), 16) / 255;
+      return [r, g, b, a];
+    }
+  }
+
+  // RGB/RGBA colors
+  const rgbMatch = color.match(/rgba?\(([^)]+)\)/);
+  if (rgbMatch) {
+    const values = rgbMatch[1].split(",").map((v) => parseFloat(v.trim()));
+    if (values.length >= 3) {
+      const r = values[0];
+      const g = values[1];
+      const b = values[2];
+      const a = values.length >= 4 ? values[3] : 1;
+      return [r, g, b, a];
+    }
+  }
+
+  // HSL/HSLA colors - convert to RGB
+  const hslMatch = color.match(/hsla?\(([^)]+)\)/);
+  if (hslMatch) {
+    const values = hslMatch[1].split(",").map((v) => parseFloat(v.trim()));
+    if (values.length >= 3) {
+      const [h, s, l] = values;
+      const a = values.length >= 4 ? values[3] : 1;
+      const [r, g, b] = hslToRgb(h, s / 100, l / 100);
+      return [r, g, b, a];
+    }
+  }
+
+  // Named colors (basic set)
+  if (namedColors[color]) {
+    return [...namedColors[color], 1];
+  }
+  return null;
+};
+
+/**
+ * Converts RGBA values back to a CSS color string
+ * Prefers named colors when possible, then rgb() for opaque colors, rgba() for transparent
+ * @param {Array<number>} rgba - [r, g, b, a] values
+ * @returns {string|null} CSS color string or null if invalid input
+ */
+const stringifyCSSColor = (rgba) => {
+  if (!Array.isArray(rgba) || rgba.length < 3) {
+    return null;
+  }
+
+  const [r, g, b, a = 1] = rgba;
+
+  // Validate RGB values
+  if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
+    return null;
+  }
+
+  // Validate alpha value
+  if (a < 0 || a > 1) {
+    return null;
+  }
+
+  // Round RGB values to integers
+  const rInt = Math.round(r);
+  const gInt = Math.round(g);
+  const bInt = Math.round(b);
+
+  // Check for named colors (only for fully opaque colors)
+  if (a === 1) {
+    for (const [name, [nameR, nameG, nameB]] of Object.entries(namedColors)) {
+      if (rInt === nameR && gInt === nameG && bInt === nameB) {
+        return name;
+      }
+    }
+  }
+
+  // Use rgb() for opaque colors, rgba() for transparent
+  if (a === 1) {
+    return `rgb(${rInt}, ${gInt}, ${bInt})`;
+  }
+  return `rgba(${rInt}, ${gInt}, ${bInt}, ${a})`;
+};
+
+const namedColors = {
+  // Basic colors
+  black: [0, 0, 0],
+  white: [255, 255, 255],
+  red: [255, 0, 0],
+  green: [0, 128, 0],
+  blue: [0, 0, 255],
+  yellow: [255, 255, 0],
+  cyan: [0, 255, 255],
+  magenta: [255, 0, 255],
+
+  // Gray variations
+  silver: [192, 192, 192],
+  gray: [128, 128, 128],
+  grey: [128, 128, 128],
+  darkgray: [169, 169, 169],
+  darkgrey: [169, 169, 169],
+  lightgray: [211, 211, 211],
+  lightgrey: [211, 211, 211],
+  dimgray: [105, 105, 105],
+  dimgrey: [105, 105, 105],
+  gainsboro: [220, 220, 220],
+  whitesmoke: [245, 245, 245],
+
+  // Extended basic colors
+  maroon: [128, 0, 0],
+  olive: [128, 128, 0],
+  lime: [0, 255, 0],
+  aqua: [0, 255, 255],
+  teal: [0, 128, 128],
+  navy: [0, 0, 128],
+  fuchsia: [255, 0, 255],
+  purple: [128, 0, 128],
+
+  // Red variations
+  darkred: [139, 0, 0],
+  firebrick: [178, 34, 34],
+  crimson: [220, 20, 60],
+  indianred: [205, 92, 92],
+  lightcoral: [240, 128, 128],
+  salmon: [250, 128, 114],
+  darksalmon: [233, 150, 122],
+  lightsalmon: [255, 160, 122],
+
+  // Pink variations
+  pink: [255, 192, 203],
+  lightpink: [255, 182, 193],
+  hotpink: [255, 105, 180],
+  deeppink: [255, 20, 147],
+  mediumvioletred: [199, 21, 133],
+  palevioletred: [219, 112, 147],
+
+  // Orange variations
+  orange: [255, 165, 0],
+  darkorange: [255, 140, 0],
+  orangered: [255, 69, 0],
+  tomato: [255, 99, 71],
+  coral: [255, 127, 80],
+
+  // Yellow variations
+  gold: [255, 215, 0],
+  lightyellow: [255, 255, 224],
+  lemonchiffon: [255, 250, 205],
+  lightgoldenrodyellow: [250, 250, 210],
+  papayawhip: [255, 239, 213],
+  moccasin: [255, 228, 181],
+  peachpuff: [255, 218, 185],
+  palegoldenrod: [238, 232, 170],
+  khaki: [240, 230, 140],
+  darkkhaki: [189, 183, 107],
+
+  // Green variations
+  darkgreen: [0, 100, 0],
+  forestgreen: [34, 139, 34],
+  seagreen: [46, 139, 87],
+  mediumseagreen: [60, 179, 113],
+  springgreen: [0, 255, 127],
+  mediumspringgreen: [0, 250, 154],
+  lawngreen: [124, 252, 0],
+  chartreuse: [127, 255, 0],
+  greenyellow: [173, 255, 47],
+  limegreen: [50, 205, 50],
+  palegreen: [152, 251, 152],
+  lightgreen: [144, 238, 144],
+  mediumaquamarine: [102, 205, 170],
+  aquamarine: [127, 255, 212],
+  darkolivegreen: [85, 107, 47],
+  olivedrab: [107, 142, 35],
+  yellowgreen: [154, 205, 50],
+
+  // Blue variations
+  darkblue: [0, 0, 139],
+  mediumblue: [0, 0, 205],
+  royalblue: [65, 105, 225],
+  steelblue: [70, 130, 180],
+  dodgerblue: [30, 144, 255],
+  deepskyblue: [0, 191, 255],
+  skyblue: [135, 206, 235],
+  lightskyblue: [135, 206, 250],
+  lightblue: [173, 216, 230],
+  powderblue: [176, 224, 230],
+  lightcyan: [224, 255, 255],
+  paleturquoise: [175, 238, 238],
+  darkturquoise: [0, 206, 209],
+  mediumturquoise: [72, 209, 204],
+  turquoise: [64, 224, 208],
+  cadetblue: [95, 158, 160],
+  darkcyan: [0, 139, 139],
+  lightseagreen: [32, 178, 170],
+
+  // Purple variations
+  indigo: [75, 0, 130],
+  darkviolet: [148, 0, 211],
+  blueviolet: [138, 43, 226],
+  mediumpurple: [147, 112, 219],
+  mediumslateblue: [123, 104, 238],
+  slateblue: [106, 90, 205],
+  darkslateblue: [72, 61, 139],
+  lavender: [230, 230, 250],
+  thistle: [216, 191, 216],
+  plum: [221, 160, 221],
+  violet: [238, 130, 238],
+  orchid: [218, 112, 214],
+  mediumorchid: [186, 85, 211],
+  darkorchid: [153, 50, 204],
+  darkmagenta: [139, 0, 139],
+
+  // Brown variations
+  brown: [165, 42, 42],
+  saddlebrown: [139, 69, 19],
+  sienna: [160, 82, 45],
+  chocolate: [210, 105, 30],
+  darkgoldenrod: [184, 134, 11],
+  peru: [205, 133, 63],
+  rosybrown: [188, 143, 143],
+  goldenrod: [218, 165, 32],
+  sandybrown: [244, 164, 96],
+  tan: [210, 180, 140],
+  burlywood: [222, 184, 135],
+  wheat: [245, 222, 179],
+  navajowhite: [255, 222, 173],
+  bisque: [255, 228, 196],
+  blanchedalmond: [255, 235, 205],
+  cornsilk: [255, 248, 220],
+
+  // Special colors
+  transparent: [0, 0, 0], // Note: alpha will be 0 for transparent
+  aliceblue: [240, 248, 255],
+  antiquewhite: [250, 235, 215],
+  azure: [240, 255, 255],
+  beige: [245, 245, 220],
+  honeydew: [240, 255, 240],
+  ivory: [255, 255, 240],
+  lavenderblush: [255, 240, 245],
+  linen: [250, 240, 230],
+  mintcream: [245, 255, 250],
+  mistyrose: [255, 228, 225],
+  oldlace: [253, 245, 230],
+  seashell: [255, 245, 238],
+  snow: [255, 250, 250],
+};
+
+/**
+ * Converts HSL color to RGB
+ * @param {number} h - Hue (0-360)
+ * @param {number} s - Saturation (0-1)
+ * @param {number} l - Lightness (0-1)
+ * @returns {Array<number>} [r, g, b] values
+ */
+const hslToRgb = (h, s, l) => {
+  h = h % 360;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = l - c / 2;
+  const createRgb = (r, g, b) => {
+    return [
+      Math.round((r + m) * 255),
+      Math.round((g + m) * 255),
+      Math.round((b + m) * 255),
+    ];
+  };
+
+  if (h >= 0 && h < 60) {
+    return createRgb(c, x, 0);
+  }
+  if (h >= 60 && h < 120) {
+    return createRgb(x, c, 0);
+  }
+  if (h >= 120 && h < 180) {
+    return createRgb(0, c, x);
+  }
+  if (h >= 180 && h < 240) {
+    return createRgb(0, x, c);
+  }
+  if (h >= 240 && h < 300) {
+    return createRgb(x, 0, c);
+  }
+  if (h >= 300 && h < 360) {
+    return createRgb(c, 0, x);
+  }
+
+  return createRgb(0, 0, 0);
+};
+
+/**
+ * Determines if the current color scheme is dark mode
+ * @param {Element} [element] - DOM element to check color-scheme against (optional)
+ * @returns {boolean} True if dark mode is active
+ */
+const prefersDarkColors = (element) => {
+  const colorScheme = getPreferedColorScheme(element);
+  return colorScheme.includes("dark");
+};
+
+const getPreferedColorScheme = (element) => {
+  const computedStyle = getComputedStyle(element || document.documentElement);
+  const colorScheme = computedStyle.colorScheme;
+
+  // If no explicit color-scheme is set, or it's "normal",
+  // fall back to prefers-color-scheme media query
+  if (!colorScheme || colorScheme === "normal") {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  }
+
+  return colorScheme;
+};
+
+/**
+ * Resolves a color value, handling CSS custom properties and light-dark() function
+ * @param {string} color - CSS color value (may include CSS variables, light-dark())
+ * @param {Element} element - DOM element to resolve CSS variables and light-dark() against
+ * @param {string} context - Return format: "js" for RGBA array, "css" for CSS string
+ * @returns {Array<number>|string|null} [r, g, b, a] values, CSS string, or null if parsing fails
+ */
+const resolveCSSColor = (color, element, context = "js") => {
+  if (!color || typeof color !== "string") {
+    return null;
+  }
+
+  let resolvedColor = color;
+
+  // Handle light-dark() function
+  const lightDarkMatch = color.match(/light-dark\(([^,]+),([^)]+)\)/);
+  if (lightDarkMatch) {
+    const lightColor = lightDarkMatch[1].trim();
+    const darkColor = lightDarkMatch[2].trim();
+
+    // Select the appropriate color and recursively resolve it
+    const prefersDark = prefersDarkColors(element);
+    resolvedColor = prefersDark ? darkColor : lightColor;
+    return resolveCSSColor(resolvedColor, element, context);
+  }
+
+  // If it's a CSS custom property, resolve it using getComputedStyle
+  if (resolvedColor.includes("var(")) {
+    const computedStyle = getComputedStyle(element);
+
+    // Handle var() syntax
+    const varMatch = color.match(/var\(([^,)]+)(?:,([^)]+))?\)/);
+    if (varMatch) {
+      const propertyName = varMatch[1].trim();
+      const fallback = varMatch[2]?.trim();
+
+      const resolvedValue = computedStyle.getPropertyValue(propertyName).trim();
+      if (resolvedValue) {
+        // Recursively resolve in case the CSS variable contains light-dark() or other variables
+        return resolveCSSColor(resolvedValue, element, context);
+      }
+      if (fallback) {
+        // Recursively resolve fallback (in case it's also a CSS variable)
+        return resolveCSSColor(fallback, element, context);
+      }
+    }
+  }
+
+  // Parse the resolved color and return in the requested format
+  const rgba = parseCSSColor(resolvedColor);
+
+  if (context === "css") {
+    return rgba ? stringifyCSSColor(rgba) : null;
+  }
+
+  return rgba;
+};
+
+/**
+ * Chooses between light and dark colors based on which provides better contrast against a background
+ * @param {Element} element - DOM element to resolve CSS variables against
+ * @param {string} backgroundColor - CSS color value (hex, rgb, hsl, CSS variable, etc.)
+ * @param {string} lightColor - Light color option (typically for dark backgrounds)
+ * @param {string} darkColor - Dark color option (typically for light backgrounds)
+ * @returns {string} The color that provides better contrast (lightColor or darkColor)
+ */
+
+const pickLightOrDark = (
+  element,
+  backgroundColor,
+  lightColor = "white",
+  darkColor = "black",
+) => {
+  const resolvedBgColor = resolveCSSColor(backgroundColor, element);
+  const resolvedLightColor = resolveCSSColor(lightColor, element);
+  const resolvedDarkColor = resolveCSSColor(darkColor, element);
+
+  if (!resolvedBgColor || !resolvedLightColor || !resolvedDarkColor) {
+    // Fallback to light color if parsing fails
+    return lightColor;
+  }
+
+  const contrastWithLight = getContrastRatio(
+    resolvedBgColor,
+    resolvedLightColor,
+  );
+  const contrastWithDark = getContrastRatio(resolvedBgColor, resolvedDarkColor);
+
+  return contrastWithLight > contrastWithDark ? lightColor : darkColor;
+};
 
 const findDescendant = (rootNode, fn, { skipRoot } = {}) => {
   const iterator = createNextNodeIterator(rootNode, rootNode, skipRoot);
@@ -2957,9 +3469,391 @@ const createGetScrollOffsets = (
   return getScrollOffsetsDifferentContainers;
 };
 
-const installImportMetaCss = (importMeta) => {
-  const stylesheet = new CSSStyleSheet({ baseUrl: importMeta.url });
+/* eslint-disable */
+// construct-style-sheets-polyfill@3.1.0
+// to keep in sync with https://github.com/calebdwilliams/construct-style-sheets
+// copy pasted into jsenv codebase to inject this code with more ease
+(function () {
 
+  if (typeof document === "undefined" || "adoptedStyleSheets" in document) {
+    return;
+  }
+
+  var hasShadyCss = "ShadyCSS" in window && !ShadyCSS.nativeShadow;
+  var bootstrapper = document.implementation.createHTMLDocument("");
+  var closedShadowRootRegistry = new WeakMap();
+  var _DOMException = typeof DOMException === "object" ? Error : DOMException;
+  var defineProperty = Object.defineProperty;
+  var forEach = Array.prototype.forEach;
+
+  var importPattern = /@import.+?;?$/gm;
+  function rejectImports(contents) {
+    var _contents = contents.replace(importPattern, "");
+    if (_contents !== contents) {
+      console.warn(
+        "@import rules are not allowed here. See https://github.com/WICG/construct-stylesheets/issues/119#issuecomment-588352418",
+      );
+    }
+    return _contents.trim();
+  }
+  function isElementConnected(element) {
+    return "isConnected" in element
+      ? element.isConnected
+      : document.contains(element);
+  }
+  function unique(arr) {
+    return arr.filter(function (value, index) {
+      return arr.indexOf(value) === index;
+    });
+  }
+  function diff(arr1, arr2) {
+    return arr1.filter(function (value) {
+      return arr2.indexOf(value) === -1;
+    });
+  }
+  function removeNode(node) {
+    node.parentNode.removeChild(node);
+  }
+  function getShadowRoot(element) {
+    return element.shadowRoot || closedShadowRootRegistry.get(element);
+  }
+
+  var cssStyleSheetMethods = [
+    "addRule",
+    "deleteRule",
+    "insertRule",
+    "removeRule",
+  ];
+  var NonConstructedStyleSheet = CSSStyleSheet;
+  var nonConstructedProto = NonConstructedStyleSheet.prototype;
+  nonConstructedProto.replace = function () {
+    return Promise.reject(
+      new _DOMException(
+        "Can't call replace on non-constructed CSSStyleSheets.",
+      ),
+    );
+  };
+  nonConstructedProto.replaceSync = function () {
+    throw new _DOMException(
+      "Failed to execute 'replaceSync' on 'CSSStyleSheet': Can't call replaceSync on non-constructed CSSStyleSheets.",
+    );
+  };
+  function isCSSStyleSheetInstance(instance) {
+    return typeof instance === "object"
+      ? proto$1.isPrototypeOf(instance) ||
+          nonConstructedProto.isPrototypeOf(instance)
+      : false;
+  }
+  function isNonConstructedStyleSheetInstance(instance) {
+    return typeof instance === "object"
+      ? nonConstructedProto.isPrototypeOf(instance)
+      : false;
+  }
+  var $basicStyleElement = new WeakMap();
+  var $locations = new WeakMap();
+  var $adoptersByLocation = new WeakMap();
+  var $appliedMethods = new WeakMap();
+  function addAdopterLocation(sheet, location) {
+    var adopter = document.createElement("style");
+    $adoptersByLocation.get(sheet).set(location, adopter);
+    $locations.get(sheet).push(location);
+    return adopter;
+  }
+  function getAdopterByLocation(sheet, location) {
+    return $adoptersByLocation.get(sheet).get(location);
+  }
+  function removeAdopterLocation(sheet, location) {
+    $adoptersByLocation.get(sheet).delete(location);
+    $locations.set(
+      sheet,
+      $locations.get(sheet).filter(function (_location) {
+        return _location !== location;
+      }),
+    );
+  }
+  function restyleAdopter(sheet, adopter) {
+    requestAnimationFrame(function () {
+      adopter.textContent = $basicStyleElement.get(sheet).textContent;
+      $appliedMethods.get(sheet).forEach(function (command) {
+        return adopter.sheet[command.method].apply(adopter.sheet, command.args);
+      });
+    });
+  }
+  function checkInvocationCorrectness(self) {
+    if (!$basicStyleElement.has(self)) {
+      throw new TypeError("Illegal invocation");
+    }
+  }
+  function ConstructedStyleSheet() {
+    var self = this;
+    var style = document.createElement("style");
+    bootstrapper.body.appendChild(style);
+    $basicStyleElement.set(self, style);
+    $locations.set(self, []);
+    $adoptersByLocation.set(self, new WeakMap());
+    $appliedMethods.set(self, []);
+  }
+  var proto$1 = ConstructedStyleSheet.prototype;
+  proto$1.replace = function replace(contents) {
+    try {
+      this.replaceSync(contents);
+      return Promise.resolve(this);
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+  proto$1.replaceSync = function replaceSync(contents) {
+    checkInvocationCorrectness(this);
+    if (typeof contents === "string") {
+      var self_1 = this;
+      $basicStyleElement.get(self_1).textContent = rejectImports(contents);
+      $appliedMethods.set(self_1, []);
+      $locations.get(self_1).forEach(function (location) {
+        if (location.isConnected()) {
+          restyleAdopter(self_1, getAdopterByLocation(self_1, location));
+        }
+      });
+    }
+  };
+  defineProperty(proto$1, "cssRules", {
+    configurable: true,
+    enumerable: true,
+    get: function cssRules() {
+      checkInvocationCorrectness(this);
+      return $basicStyleElement.get(this).sheet.cssRules;
+    },
+  });
+  defineProperty(proto$1, "media", {
+    configurable: true,
+    enumerable: true,
+    get: function media() {
+      checkInvocationCorrectness(this);
+      return $basicStyleElement.get(this).sheet.media;
+    },
+  });
+  cssStyleSheetMethods.forEach(function (method) {
+    proto$1[method] = function () {
+      var self = this;
+      checkInvocationCorrectness(self);
+      var args = arguments;
+      $appliedMethods.get(self).push({ method: method, args: args });
+      $locations.get(self).forEach(function (location) {
+        if (location.isConnected()) {
+          var sheet = getAdopterByLocation(self, location).sheet;
+          sheet[method].apply(sheet, args);
+        }
+      });
+      var basicSheet = $basicStyleElement.get(self).sheet;
+      return basicSheet[method].apply(basicSheet, args);
+    };
+  });
+  defineProperty(ConstructedStyleSheet, Symbol.hasInstance, {
+    configurable: true,
+    value: isCSSStyleSheetInstance,
+  });
+
+  var defaultObserverOptions = {
+    childList: true,
+    subtree: true,
+  };
+  var locations = new WeakMap();
+  function getAssociatedLocation(element) {
+    var location = locations.get(element);
+    if (!location) {
+      location = new Location(element);
+      locations.set(element, location);
+    }
+    return location;
+  }
+  function attachAdoptedStyleSheetProperty(constructor) {
+    defineProperty(constructor.prototype, "adoptedStyleSheets", {
+      configurable: true,
+      enumerable: true,
+      get: function () {
+        return getAssociatedLocation(this).sheets;
+      },
+      set: function (sheets) {
+        getAssociatedLocation(this).update(sheets);
+      },
+    });
+  }
+  function traverseWebComponents(node, callback) {
+    var iter = document.createNodeIterator(
+      node,
+      NodeFilter.SHOW_ELEMENT,
+      function (foundNode) {
+        return getShadowRoot(foundNode)
+          ? NodeFilter.FILTER_ACCEPT
+          : NodeFilter.FILTER_REJECT;
+      },
+      null,
+      false,
+    );
+    for (var next = void 0; (next = iter.nextNode()); ) {
+      callback(getShadowRoot(next));
+    }
+  }
+  var $element = new WeakMap();
+  var $uniqueSheets = new WeakMap();
+  var $observer = new WeakMap();
+  function isExistingAdopter(self, element) {
+    return (
+      element instanceof HTMLStyleElement &&
+      $uniqueSheets.get(self).some(function (sheet) {
+        return getAdopterByLocation(sheet, self);
+      })
+    );
+  }
+  function getAdopterContainer(self) {
+    var element = $element.get(self);
+    return element instanceof Document ? element.body : element;
+  }
+  function adopt(self) {
+    var styleList = document.createDocumentFragment();
+    var sheets = $uniqueSheets.get(self);
+    var observer = $observer.get(self);
+    var container = getAdopterContainer(self);
+    observer.disconnect();
+    sheets.forEach(function (sheet) {
+      styleList.appendChild(
+        getAdopterByLocation(sheet, self) || addAdopterLocation(sheet, self),
+      );
+    });
+    container.insertBefore(styleList, null);
+    observer.observe(container, defaultObserverOptions);
+    sheets.forEach(function (sheet) {
+      restyleAdopter(sheet, getAdopterByLocation(sheet, self));
+    });
+  }
+  function Location(element) {
+    var self = this;
+    self.sheets = [];
+    $element.set(self, element);
+    $uniqueSheets.set(self, []);
+    $observer.set(
+      self,
+      new MutationObserver(function (mutations, observer) {
+        if (!document) {
+          observer.disconnect();
+          return;
+        }
+        mutations.forEach(function (mutation) {
+          if (!hasShadyCss) {
+            forEach.call(mutation.addedNodes, function (node) {
+              if (!(node instanceof Element)) {
+                return;
+              }
+              traverseWebComponents(node, function (root) {
+                getAssociatedLocation(root).connect();
+              });
+            });
+          }
+          forEach.call(mutation.removedNodes, function (node) {
+            if (!(node instanceof Element)) {
+              return;
+            }
+            if (isExistingAdopter(self, node)) {
+              adopt(self);
+            }
+            if (!hasShadyCss) {
+              traverseWebComponents(node, function (root) {
+                getAssociatedLocation(root).disconnect();
+              });
+            }
+          });
+        });
+      }),
+    );
+  }
+  Location.prototype = {
+    isConnected: function () {
+      var element = $element.get(this);
+      return element instanceof Document
+        ? element.readyState !== "loading"
+        : isElementConnected(element.host);
+    },
+    connect: function () {
+      var container = getAdopterContainer(this);
+      $observer.get(this).observe(container, defaultObserverOptions);
+      if ($uniqueSheets.get(this).length > 0) {
+        adopt(this);
+      }
+      traverseWebComponents(container, function (root) {
+        getAssociatedLocation(root).connect();
+      });
+    },
+    disconnect: function () {
+      $observer.get(this).disconnect();
+    },
+    update: function (sheets) {
+      var self = this;
+      var locationType =
+        $element.get(self) === document ? "Document" : "ShadowRoot";
+      if (!Array.isArray(sheets)) {
+        throw new TypeError(
+          "Failed to set the 'adoptedStyleSheets' property on " +
+            locationType +
+            ": Iterator getter is not callable.",
+        );
+      }
+      if (!sheets.every(isCSSStyleSheetInstance)) {
+        throw new TypeError(
+          "Failed to set the 'adoptedStyleSheets' property on " +
+            locationType +
+            ": Failed to convert value to 'CSSStyleSheet'",
+        );
+      }
+      if (sheets.some(isNonConstructedStyleSheetInstance)) {
+        throw new TypeError(
+          "Failed to set the 'adoptedStyleSheets' property on " +
+            locationType +
+            ": Can't adopt non-constructed stylesheets",
+        );
+      }
+      self.sheets = sheets;
+      var oldUniqueSheets = $uniqueSheets.get(self);
+      var uniqueSheets = unique(sheets);
+      var removedSheets = diff(oldUniqueSheets, uniqueSheets);
+      removedSheets.forEach(function (sheet) {
+        removeNode(getAdopterByLocation(sheet, self));
+        removeAdopterLocation(sheet, self);
+      });
+      $uniqueSheets.set(self, uniqueSheets);
+      if (self.isConnected() && uniqueSheets.length > 0) {
+        adopt(self);
+      }
+    },
+  };
+
+  window.CSSStyleSheet = ConstructedStyleSheet;
+  attachAdoptedStyleSheetProperty(Document);
+  if ("ShadowRoot" in window) {
+    attachAdoptedStyleSheetProperty(ShadowRoot);
+    var proto = Element.prototype;
+    var attach_1 = proto.attachShadow;
+    proto.attachShadow = function attachShadow(init) {
+      var root = attach_1.call(this, init);
+      if (init.mode === "closed") {
+        closedShadowRootRegistry.set(this, root);
+      }
+      return root;
+    };
+  }
+  var documentLocation = getAssociatedLocation(document);
+  if (documentLocation.isConnected()) {
+    documentLocation.connect();
+  } else {
+    document.addEventListener(
+      "DOMContentLoaded",
+      documentLocation.connect.bind(documentLocation),
+    );
+  }
+})();
+
+const installImportMetaCss = importMeta => {
+  const stylesheet = new CSSStyleSheet({
+    baseUrl: importMeta.url
+  });
   let called = false;
   // eslint-disable-next-line accessor-pairs
   Object.defineProperty(importMeta, "css", {
@@ -2970,11 +3864,8 @@ const installImportMetaCss = (importMeta) => {
       }
       called = true;
       stylesheet.replaceSync(value);
-      document.adoptedStyleSheets = [
-        ...document.adoptedStyleSheets,
-        stylesheet,
-      ];
-    },
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
+    }
   });
 };
 
@@ -6194,7 +7085,11 @@ const visibleRectEffect = (element, update) => {
 const pickPositionRelativeTo = (
   element,
   target,
-  { alignToViewportEdgeWhenTargetNearEdge = 0, forcePosition } = {},
+  {
+    alignToViewportEdgeWhenTargetNearEdge = 0,
+    minLeft = 0,
+    forcePosition,
+  } = {},
 ) => {
 
   const viewportWidth = document.documentElement.clientWidth;
@@ -6252,7 +7147,7 @@ const pickPositionRelativeTo = (
         const targetIsNearLeftEdge =
           targetLeft < alignToViewportEdgeWhenTargetNearEdge;
         if (elementIsWiderThanTarget && targetIsNearLeftEdge) {
-          elementPositionLeft = 0; // Left edge of viewport
+          elementPositionLeft = minLeft; // Left edge of viewport
         }
       }
     }
@@ -11007,6 +11902,9 @@ const READONLY_CONSTRAINT = {
     if (!element.readonly && !element.hasAttribute("data-readonly")) {
       return null;
     }
+    if (element.type === "hidden") {
+      return null;
+    }
     const readonlySilent = element.hasAttribute("data-readonly-silent");
     if (readonlySilent) {
       return { silent: true };
@@ -11021,11 +11919,13 @@ const READONLY_CONSTRAINT = {
     const isBusy = element.getAttribute("aria-busy") === "true";
     if (isBusy) {
       return {
+        target: element,
         message: `Cette action est en cours. Veuillez patienter.`,
         level: "info",
       };
     }
     return {
+      target: element,
       message:
         element.tagName === "BUTTON"
           ? `Cet action n'est pas disponible pour l'instant.`
@@ -11054,7 +11954,21 @@ installImportMetaCss(import.meta);
  * @returns {Function} - Function to hide and remove the validation message
  */
 
+// Configuration parameters for validation message appearance
+const BORDER_WIDTH = 1;
+const CORNER_RADIUS = 3;
+const ARROW_WIDTH = 16;
+const ARROW_HEIGHT = 8;
+const ARROW_SPACING = 8;
+
 import.meta.css = /* css */ `
+  :root {
+    --navi-info-color: #2196f3;
+    --navi-warning-color: #ff9800;
+    --navi-error-color: #f44336;
+    --navi-validation-message-background-color: white;
+  }
+
   /* Ensure the validation message CANNOT cause overflow */
   /* might be important to ensure it cannot create scrollbars in the document */
   /* When measuring the size it should take */
@@ -11065,48 +11979,48 @@ import.meta.css = /* css */ `
   }
 
   .jsenv_validation_message {
-    display: block;
-    overflow: visible;
-    height: auto;
     position: absolute;
-    z-index: 1;
-    opacity: 0;
-    left: 0;
     top: 0;
+    left: 0;
+    z-index: 1;
+    display: block;
+    height: auto;
+    opacity: 0;
     /* will be positioned with transform: translate */
     transition: opacity 0.2s ease-in-out;
+    overflow: visible;
   }
 
   .jsenv_validation_message_border {
     position: absolute;
-    pointer-events: none;
     filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
+    pointer-events: none;
   }
 
   .jsenv_validation_message_body_wrapper {
+    position: relative;
     border-style: solid;
     border-color: transparent;
-    position: relative;
   }
 
   .jsenv_validation_message_body {
-    padding: 8px;
     position: relative;
-    max-width: 47vw;
     display: flex;
+    max-width: 47vw;
+    padding: 8px;
     flex-direction: row;
     gap: 10px;
   }
 
   .jsenv_validation_message_icon {
     display: flex;
-    align-self: flex-start;
-    align-items: center;
-    justify-content: center;
     width: 22px;
     height: 22px;
-    border-radius: 2px;
     flex-shrink: 0;
+    align-items: center;
+    align-self: flex-start;
+    justify-content: center;
+    border-radius: 2px;
   }
 
   .jsenv_validation_message_exclamation_svg {
@@ -11115,21 +12029,30 @@ import.meta.css = /* css */ `
     color: white;
   }
 
+  .jsenv_validation_message[data-level="info"] .border_path {
+    fill: var(--navi-info-color);
+  }
   .jsenv_validation_message[data-level="info"] .jsenv_validation_message_icon {
-    background-color: #2196f3;
+    background-color: var(--navi-info-color);
+  }
+  .jsenv_validation_message[data-level="warning"] .border_path {
+    fill: var(--navi-warning-color);
   }
   .jsenv_validation_message[data-level="warning"]
     .jsenv_validation_message_icon {
-    background-color: #ff9800;
+    background-color: var(--navi-warning-color);
+  }
+  .jsenv_validation_message[data-level="error"] .border_path {
+    fill: var(--navi-error-color);
   }
   .jsenv_validation_message[data-level="error"] .jsenv_validation_message_icon {
-    background-color: #f44336;
+    background-color: var(--navi-error-color);
   }
 
   .jsenv_validation_message_content {
+    min-width: 0;
     align-self: center;
     word-break: break-word;
-    min-width: 0;
     overflow-wrap: anywhere;
   }
 
@@ -11139,12 +12062,8 @@ import.meta.css = /* css */ `
     overflow: visible;
   }
 
-  .border_path {
-    fill: var(--border-color);
-  }
-
   .background_path {
-    fill: var(--background-color);
+    fill: var(--navi-validation-message-background-color);
   }
 
   .jsenv_validation_message_close_button_column {
@@ -11152,16 +12071,16 @@ import.meta.css = /* css */ `
     height: 22px;
   }
   .jsenv_validation_message_close_button {
-    border: none;
-    background: none;
-    padding: 0;
     width: 1em;
     height: 1em;
-    font-size: inherit;
-    cursor: pointer;
-    border-radius: 0.2em;
+    padding: 0;
     align-self: center;
     color: currentColor;
+    font-size: inherit;
+    background: none;
+    border: none;
+    border-radius: 0.2em;
+    cursor: pointer;
   }
   .jsenv_validation_message_close_button:hover {
     background: rgba(0, 0, 0, 0.1);
@@ -11172,8 +12091,8 @@ import.meta.css = /* css */ `
   }
 
   .error_stack {
-    overflow: auto;
     max-height: 200px;
+    overflow: auto;
   }
 `;
 
@@ -11222,6 +12141,9 @@ const validationMessageTemplate = /* html */ `
   </div>
 `;
 
+const validationMessageStyleController =
+  createStyleController("validation_message");
+
 const openValidationMessage = (
   targetElement,
   message,
@@ -11241,8 +12163,8 @@ const openValidationMessage = (
     });
   }
 
+  const [teardown, addTeardown] = createPubSub(true);
   let opened = true;
-  const closeCallbackSet = new Set();
   const close = (reason) => {
     if (!opened) {
       return;
@@ -11251,10 +12173,7 @@ const openValidationMessage = (
       console.debug(`validation message closed (reason: ${reason})`);
     }
     opened = false;
-    for (const closeCallback of closeCallbackSet) {
-      closeCallback();
-    }
-    closeCallbackSet.clear();
+    teardown(reason);
   };
 
   // Create and add validation message to document
@@ -11275,15 +12194,6 @@ const openValidationMessage = (
     { level = "warning", closeOnClickOutside = level === "info" } = {},
   ) => {
     _closeOnClickOutside = closeOnClickOutside;
-    const borderColor =
-      level === "info" ? "blue" : level === "warning" ? "grey" : "red";
-    const backgroundColor = "white";
-
-    jsenvValidationMessage.style.setProperty("--border-color", borderColor);
-    jsenvValidationMessage.style.setProperty(
-      "--background-color",
-      backgroundColor,
-    );
 
     if (Error.isError(newMessage)) {
       const error = newMessage;
@@ -11296,7 +12206,7 @@ const openValidationMessage = (
   };
   update(message, { level });
 
-  jsenvValidationMessage.style.opacity = "0";
+  validationMessageStyleController.set(jsenvValidationMessage, { opacity: 0 });
 
   allowWheelThrough(jsenvValidationMessage, targetElement);
 
@@ -11305,25 +12215,30 @@ const openValidationMessage = (
   jsenvValidationMessage.id = validationMessageId;
   targetElement.setAttribute("aria-invalid", "true");
   targetElement.setAttribute("aria-errormessage", validationMessageId);
-  closeCallbackSet.add(() => {
+  targetElement.style.setProperty(
+    "--invalid-color",
+    `var(--navi-${level}-color)`,
+  );
+  addTeardown(() => {
     targetElement.removeAttribute("aria-invalid");
     targetElement.removeAttribute("aria-errormessage");
+    targetElement.style.removeProperty("--invalid-color");
   });
 
   document.body.appendChild(jsenvValidationMessage);
-  closeCallbackSet.add(() => {
+  addTeardown(() => {
     jsenvValidationMessage.remove();
   });
 
   const positionFollower = stickValidationMessageToTarget(
     jsenvValidationMessage,
     targetElement);
-  closeCallbackSet.add(() => {
+  addTeardown(() => {
     positionFollower.stop();
   });
 
   if (onClose) {
-    closeCallbackSet.add(onClose);
+    addTeardown(onClose);
   }
   {
     const onfocus = () => {
@@ -11337,7 +12252,7 @@ const openValidationMessage = (
       close("target_element_focus");
     };
     targetElement.addEventListener("focus", onfocus);
-    closeCallbackSet.add(() => {
+    addTeardown(() => {
       targetElement.removeEventListener("focus", onfocus);
     });
   }
@@ -11364,7 +12279,7 @@ const openValidationMessage = (
       close("click_outside");
     };
     document.addEventListener("click", handleClickOutside, true);
-    closeCallbackSet.add(() => {
+    addTeardown(() => {
       document.removeEventListener("click", handleClickOutside, true);
     });
   }
@@ -11376,18 +12291,11 @@ const openValidationMessage = (
     updatePosition: positionFollower.updatePosition,
   };
   targetElement.jsenvValidationMessage = validationMessage;
-  closeCallbackSet.add(() => {
+  addTeardown(() => {
     delete targetElement.jsenvValidationMessage;
   });
   return validationMessage;
 };
-
-// Configuration parameters for validation message appearance
-const ARROW_WIDTH = 16;
-const ARROW_HEIGHT = 8;
-const CORNER_RADIUS = 3;
-const BORDER_WIDTH = 1;
-const ARROW_SPACING = 8;
 
 /**
  * Generates SVG path for validation message with arrow on top
@@ -11594,6 +12502,8 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
         spaceBelowTarget,
       } = pickPositionRelativeTo(validationMessageClone, targetElement, {
         alignToViewportEdgeWhenTargetNearEdge: 20,
+        // when fully to the left, the border color is collé to the browser window making it hard to see
+        minLeft: 1,
       });
 
       // Get element padding and border to properly position arrow
@@ -11608,7 +12518,7 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
       let arrowTargetLeft;
       if (arrowPositionAttribute === "center") {
         // Target the center of the element
-        arrowTargetLeft = targetRight / 2;
+        arrowTargetLeft = (targetLeft + targetRight) / 2;
       } else {
         // Default behavior: target the left edge of the element (after borders)
         arrowTargetLeft = targetLeft + targetBorderSizes.left;
@@ -11653,14 +12563,6 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
       contentHeight -= 16; // padding * 2
       const spaceRemainingAfterContent =
         spaceAvailableForContent - contentHeight;
-      console.log({
-        position,
-        spaceBelowTarget,
-        validationMessageHeight,
-        spaceAvailableForContent,
-        contentHeight,
-        spaceRemainingAfterContent,
-      });
       if (spaceRemainingAfterContent < 2) {
         const maxHeight = spaceAvailableForContent;
         validationMessageContent.style.maxHeight = `${maxHeight}px`;
@@ -11694,10 +12596,14 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
         );
       }
 
-      validationMessage.style.opacity = visibilityRatio ? "1" : "0";
       validationMessage.setAttribute("data-position", position);
-      validationMessage.style.transform = `translateX(${validationMessageLeft}px) translateY(${validationMessageTop}px)`;
-
+      validationMessageStyleController.set(validationMessage, {
+        opacity: visibilityRatio ? 1 : 0,
+        transform: {
+          translateX: validationMessageLeft,
+          translateY: validationMessageTop,
+        },
+      });
       validationMessageClone.remove();
     },
   );
@@ -12411,7 +13317,7 @@ const useActionBoundToOneArrayParam = (
   fallbackValue,
   defaultValue,
 ) => {
-  const [boundAction, value, setValue, initialValue] = useActionBoundToOneParam(
+  const [boundAction, value, setValue] = useActionBoundToOneParam(
     action,
     name);
 
@@ -12423,7 +13329,7 @@ const useActionBoundToOneArrayParam = (
     setValue(removeFromArray(valueArray, valueToRemove));
   };
 
-  const result = [boundAction, value, setValue, initialValue];
+  const result = [boundAction, value, setValue];
   result.add = add;
   result.remove = remove;
   return result;
@@ -16690,6 +17596,8 @@ const useUIRenderedPromise = action => {
 
 const FormContext = createContext();
 
+const FormActionContext = createContext();
+
 const renderActionableComponent = (props, ref, {
   Basic,
   WithAction,
@@ -17500,6 +18408,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     display: inline-flex;
     height: fit-content;
     border-radius: inherit;
+    cursor: inherit;
   }
 
   .navi_loading_rectangle_wrapper {
@@ -17516,19 +18425,30 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     opacity: 1;
   }
 `;
-const LoadableInlineElement = ({
-  children,
-  width,
-  height,
-  ...props
-}) => {
-  const actionName = props["data-action"];
-  if (actionName) {
-    delete props["data-action"];
-  }
+const LoadableInlineElement = forwardRef((props, ref) => {
+  const {
+    // background props
+    loading,
+    containerRef,
+    targetSelector,
+    color,
+    inset,
+    spacingTop,
+    spacingLeft,
+    spacingBottom,
+    spacingRight,
+    // other props
+    width,
+    height,
+    children,
+    ...rest
+  } = props;
   return jsxs("span", {
+    ...rest,
+    ref: ref,
     className: "navi_inline_wrapper",
     style: {
+      ...rest.style,
       ...(width ? {
         width
       } : {}),
@@ -17536,12 +18456,19 @@ const LoadableInlineElement = ({
         height
       } : {})
     },
-    "data-action": actionName,
     children: [jsx(LoaderBackground, {
-      ...props
+      loading,
+      containerRef,
+      targetSelector,
+      color,
+      inset,
+      spacingTop,
+      spacingLeft,
+      spacingBottom,
+      spacingRight
     }), children]
   });
-};
+});
 const LoaderBackground = ({
   loading,
   containerRef,
@@ -17697,6 +18624,8 @@ const LoaderBackgroundBasic = ({
         setPaddingRight(paddingRight);
         setPaddingBottom(paddingBottom);
         if (color) {
+          // const resolvedColor = resolveCSSColor(color, rectangle, "css");
+          //  console.log(resolvedColor);
           setCurrentColor(color);
         } else if (newOutlineColor && newOutlineColor !== "rgba(0, 0, 0, 0)" && (document.activeElement === containedElement || newBorderColor === "rgba(0, 0, 0, 0)")) {
           setCurrentColor(newOutlineColor);
@@ -17861,15 +18790,128 @@ const useAutoFocus = (
   }, []);
 };
 
+const initCustomField = (customField, field) => {
+  const [teardown, addTeardown] = createPubSub();
+
+  const addEventListener = (element, eventType, listener) => {
+    element.addEventListener(eventType, listener);
+    return addTeardown(() => {
+      element.removeEventListener(eventType, listener);
+    });
+  };
+  const updateBooleanAttribute = (attributeName, isPresent) => {
+    if (isPresent) {
+      customField.setAttribute(attributeName, "");
+    } else {
+      customField.removeAttribute(attributeName);
+    }
+  };
+  const checkPseudoClasses = () => {
+    const hover = field.matches(":hover");
+    const active = field.matches(":active");
+    const checked = field.matches(":checked");
+    const focus = field.matches(":focus");
+    const focusVisible = field.matches(":focus-visible");
+    const valid = field.matches(":valid");
+    const invalid = field.matches(":invalid");
+    updateBooleanAttribute(`data-hover`, hover);
+    updateBooleanAttribute(`data-active`, active);
+    updateBooleanAttribute(`data-checked`, checked);
+    updateBooleanAttribute(`data-focus`, focus);
+    updateBooleanAttribute(`data-focus-visible`, focusVisible);
+    updateBooleanAttribute(`data-valid`, valid);
+    updateBooleanAttribute(`data-invalid`, invalid);
+  };
+
+  // :hover
+  addEventListener(field, "mouseenter", checkPseudoClasses);
+  addEventListener(field, "mouseleave", checkPseudoClasses);
+  // :active
+  addEventListener(field, "mousedown", checkPseudoClasses);
+  addEventListener(document, "mouseup", checkPseudoClasses);
+  // :focus
+  addEventListener(field, "focusin", checkPseudoClasses);
+  addEventListener(field, "focusout", checkPseudoClasses);
+  // :focus-visible
+  addEventListener(document, "keydown", checkPseudoClasses);
+  addEventListener(document, "keyup", checkPseudoClasses);
+  // :checked
+  if (field.type === "checkbox") {
+    // Listen to user interactions
+    addEventListener(field, "input", checkPseudoClasses);
+
+    // Intercept programmatic changes to .checked property
+    const originalDescriptor = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      "checked",
+    );
+    Object.defineProperty(field, "checked", {
+      get: originalDescriptor.get,
+      set(value) {
+        originalDescriptor.set.call(this, value);
+        checkPseudoClasses();
+      },
+      configurable: true,
+    });
+    addTeardown(() => {
+      // Restore original property descriptor
+      Object.defineProperty(field, "checked", originalDescriptor);
+    });
+  } else if (field.type === "radio") {
+    // Listen to changes on the radio group
+    const radioSet =
+      field.closest("[data-radio-list], fieldset, form") || document;
+    addEventListener(radioSet, "input", checkPseudoClasses);
+
+    // Intercept programmatic changes to .checked property
+    const originalDescriptor = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      "checked",
+    );
+    Object.defineProperty(field, "checked", {
+      get: originalDescriptor.get,
+      set(value) {
+        originalDescriptor.set.call(this, value);
+        checkPseudoClasses();
+      },
+      configurable: true,
+    });
+    addTeardown(() => {
+      // Restore original property descriptor
+      Object.defineProperty(field, "checked", originalDescriptor);
+    });
+  } else if (field.tagName === "INPUT") {
+    addEventListener(field, "input", checkPseudoClasses);
+  }
+
+  // just in case + catch use forcing them in chrome devtools
+  const interval = setInterval(() => {
+    checkPseudoClasses();
+  }, 150);
+  addTeardown(() => {
+    clearInterval(interval);
+  });
+
+  return teardown;
+};
+
 installImportMetaCss(import.meta);import.meta.css = /* css */`
-  label[data-readonly] {
+  label {
+    cursor: pointer;
+  }
+
+  label[data-readonly],
+  label[data-disabled] {
     color: rgba(0, 0, 0, 0.5);
+    cursor: default;
   }
 `;
 const ReportReadOnlyOnLabelContext = createContext();
+const ReportDisabledOnLabelContext = createContext();
 const Label = forwardRef((props, ref) => {
   const {
     readOnly,
+    disabled,
     children,
     ...rest
   } = props;
@@ -17877,13 +18919,19 @@ const Label = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
   const [inputReadOnly, setInputReadOnly] = useState(false);
   const innerReadOnly = readOnly || inputReadOnly;
+  const [inputDisabled, setInputDisabled] = useState(false);
+  const innerDisabled = disabled || inputDisabled;
   return jsx("label", {
     ref: innerRef,
     "data-readonly": innerReadOnly ? "" : undefined,
+    "data-disabled": innerDisabled ? "" : undefined,
     ...rest,
     children: jsx(ReportReadOnlyOnLabelContext.Provider, {
       value: setInputReadOnly,
-      children: children
+      children: jsx(ReportDisabledOnLabelContext.Provider, {
+        value: setInputDisabled,
+        children: children
+      })
     })
   });
 });
@@ -18347,38 +19395,70 @@ const useUIState = (uiStateController) => {
 };
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
-  .custom_checkbox_wrapper[data-field-wrapper] {
+  :root {
+    --navi-checkmark-color-light: white;
+    --navi-checkmark-color-dark: rgb(55, 55, 55);
+    --navi-checkmark-color: var(--navi-checkmark-light-color);
+  }
+
+  .navi_checkbox {
+    position: relative;
     display: inline-flex;
     box-sizing: content-box;
 
-    --checkmark-color: white;
-    --checkmark-disabled-color: #eeeeee;
-    --checked-color: #3b82f6;
-    --checked-disabled-color: #d3d3d3;
+    --outline-offset: 1px;
+    --outline-width: 2px;
+    --border-width: 1px;
+    --border-radius: 2px;
+    --width: 13px;
+    --height: 13px;
 
-    /* TODO: find a better way maybe? */
-    --field-strong-color: var(--checked-color);
+    --outline-color: light-dark(#4476ff, #3b82f6);
+    --border-color: light-dark(#767676, #8e8e93);
+    --background-color: white;
+    --accent-color: light-dark(#4476ff, #3b82f6);
+    /* --color: currentColor; */
+    --checkmark-color: var(--navi-checkmark-color);
+
+    --border-color-readonly: color-mix(in srgb, var(--border-color) 30%, white);
+    --border-color-disabled: var(--border-color-readonly);
+    --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
+    --border-color-checked-readonly: #d3d3d3;
+    --border-color-checked-disabled: #d3d3d3;
+    --background-color-checked-readonly: var(--navi-background-color-readonly);
+    --background-color-checked-disabled: var(--navi-background-color-disabled);
+    --checkmark-color-readonly: var(--navi-color-readonly);
+    --checkmark-color-disabled: var(--navi-color-disabled);
   }
-
-  .custom_checkbox_wrapper input {
+  .navi_checkbox input {
     position: absolute;
-    opacity: 0;
     inset: 0;
     margin: 0;
     padding: 0;
     border: none;
+    opacity: 0;
+    cursor: inherit;
   }
-
-  .custom_checkbox {
-    width: 13px;
-    height: 13px;
-    border: 1px solid var(--field-border-color);
-    border-radius: 2px;
-    box-sizing: border-box;
+  .navi_checkbox_field {
     display: inline-flex;
+    box-sizing: border-box;
+    width: var(--width);
+    height: var(--height);
     margin: 3px 3px 3px 4px;
+    background-color: var(--background-color);
+    border-width: var(--border-width);
+    border-style: solid;
+    border-color: var(--border-color);
+    border-radius: var(--border-radius);
+    outline-width: var(--outline-width);
+
+    outline-style: none;
+
+    outline-color: var(--outline-color);
+    outline-offset: var(--outline-offset);
+    /* color: var(--color); */
   }
-  .custom_checkbox svg {
+  .navi_checkbox_marker {
     width: 100%;
     height: 100%;
     opacity: 0;
@@ -18386,69 +19466,50 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     transition: all 0.15s ease;
     pointer-events: none;
   }
-  .custom_checkbox svg path {
-    stroke: var(--checkmark-color);
-  }
 
-  .custom_checkbox_wrapper:hover .custom_checkbox {
-    border-color: var(--field-hover-border-color);
+  /* Focus */
+  .navi_checkbox[data-focus-visible] .navi_checkbox_field {
+    outline-style: solid;
   }
-  .custom_checkbox_wrapper:hover input:checked + .custom_checkbox {
-    background: var(--field-strong-color);
-    border-color: var(--field-strong-color);
+  /* Hover */
+  .navi_checkbox[data-hover] .navi_checkbox_field {
+    --border-color: var(--border-color-hover);
   }
-  .custom_checkbox_wrapper input:checked + .custom_checkbox {
-    background: var(--checked-color);
-    border-color: var(--checked-color);
+  /* Checked */
+  .navi_checkbox[data-checked] .navi_checkbox_field {
+    --background-color: var(--accent-color);
+    --border-color: var(--accent-color);
   }
-  .custom_checkbox_wrapper input:checked + .custom_checkbox svg {
+  .navi_checkbox[data-checked] .navi_checkbox_marker {
     opacity: 1;
+    stroke: var(--checkmark-color);
     transform: scale(1);
   }
-
-  .custom_checkbox_wrapper input[data-readonly] + .custom_checkbox {
-    background-color: var(--field-readonly-background-color);
-    border-color: var(--field-readonly-border-color);
+  /* Readonly */
+  .navi_checkbox[data-readonly] .navi_checkbox_field,
+  .navi_checkbox[data-readonly][data-hover] .navi_checkbox_field {
+    --border-color: var(--border-color-readonly);
+    --background-color: var(--background-color-readonly);
   }
-  .custom_checkbox_wrapper input[data-readonly]:checked + .custom_checkbox {
-    background: var(--checked-disabled-color);
-    border-color: var(--checked-disabled-color);
+  .navi_checkbox[data-checked][data-readonly] .navi_checkbox_field {
+    --background-color: var(--background-color-checked-readonly);
+    --border-color: var(--border-color-checked-readonly);
   }
-  .custom_checkbox_wrapper:hover input[data-readonly] + .custom_checkbox {
-    background-color: var(--field-readonly-background-color);
-    border-color: var(--field-readonly-border-color);
+  .navi_checkbox[data-checked][data-readonly] .navi_checkbox_marker {
+    stroke: var(--checkmark-color-readonly);
   }
-  .custom_checkbox_wrapper:hover
-    input[data-readonly]:checked
-    + .custom_checkbox {
-    background: var(--checked-disabled-color);
-    border-color: var(--checked-disabled-color);
+  /* Disabled */
+  .navi_checkbox[data-disabled] .navi_checkbox_field {
+    --background-color: var(--background-color-disabled);
+    --border-color: var(--border-color-disabled);
   }
-  .custom_checkbox_wrapper
-    input[data-readonly]:checked
-    + .custom_checkbox
-    .custom_checkbox_marker {
-    stroke: var(--checkmark-disabled-color);
+  .navi_checkbox[data-checked][data-disabled] .navi_checkbox_field {
+    --border-color: var(--border-color-checked-disabled);
+    --background-color: var(--background-color-checked-disabled);
   }
 
-  .custom_checkbox_wrapper input:focus-visible + .custom_checkbox {
-    outline: 2px solid var(--field-outline-color);
-    outline-offset: 1px;
-  }
-
-  .custom_checkbox_wrapper input[disabled] + .custom_checkbox {
-    background-color: var(--field-disabled-background-color);
-    border-color: var(--field-disabled-border-color);
-  }
-  .custom_checkbox_wrapper input[disabled]:checked + .custom_checkbox {
-    background: var(--checked-disabled-color);
-    border-color: var(--checked-disabled-color);
-  }
-  .custom_checkbox_wrapper
-    input[disabled]:checked
-    + .custom_checkbox
-    .custom_checkbox_marker {
-    stroke: var(--checkmark-disabled-color);
+  .navi_checkbox[data-checked][data-disabled] .navi_checkbox_marker {
+    stroke: var(--checkmark-color-disabled);
   }
 `;
 const InputCheckbox = forwardRef((props, ref) => {
@@ -18486,6 +19547,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
   const reportReadOnlyOnLabel = useContext(ReportReadOnlyOnLabelContext);
+  const reportDisabledOnLabel = useContext(ReportDisabledOnLabelContext);
   const {
     name,
     readOnly,
@@ -18494,11 +19556,12 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
     loading,
     autoFocus,
     constraints = [],
-    appeareance = "custom",
-    // "custom" or "default"
+    appeareance = "navi",
+    // "navi" or "default"
     accentColor,
     onClick,
     onInput,
+    style,
     ...rest
   } = props;
   const innerRef = useRef(null);
@@ -18509,6 +19572,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
   const innerLoading = loading || contextLoading && loadingElement === innerRef.current;
   const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
   reportReadOnlyOnLabel?.(innerReadOnly);
+  reportDisabledOnLabel?.(innerDisabled);
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
   const checked = Boolean(uiState);
@@ -18520,9 +19584,9 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
     ...rest,
     ref: innerRef,
     type: "checkbox",
+    style: appeareance === "default" ? style : undefined,
     name: innerName,
     checked: checked,
-    "data-readonly": innerReadOnly ? "" : undefined,
     readOnly: innerReadOnly,
     disabled: innerDisabled,
     required: innerRequired,
@@ -18550,38 +19614,72 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
       uiStateController.setUIState(e.detail.value, e);
     }
   });
-  const inputCheckboxDisplayed = appeareance === "custom" ? jsx(CustomCheckbox, {
-    accentColor: accentColor,
-    children: inputCheckbox
-  }) : inputCheckbox;
-  return jsx(LoadableInlineElement, {
-    "data-action": actionName,
+  const loaderProps = {
     loading: innerLoading,
     inset: -1,
-    targetSelector: appeareance === "custom" ? ".custom_checkbox" : "",
-    color: "light-dark(#355fcc, #3b82f6)",
-    children: inputCheckboxDisplayed
+    style: {
+      "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)"
+    },
+    color: "var(--accent-color)"
+  };
+  if (appeareance === "navi") {
+    return jsx(NaviCheckbox, {
+      "data-action": actionName,
+      inputRef: innerRef,
+      accentColor: accentColor,
+      readOnly: readOnly,
+      disabled: innerDisabled,
+      style: style,
+      children: jsx(LoaderBackground, {
+        ...loaderProps,
+        targetSelector: ".navi_checkbox_field",
+        children: inputCheckbox
+      })
+    });
+  }
+  return jsx(LoadableInlineElement, {
+    ...loaderProps,
+    "data-action": actionName,
+    children: inputCheckbox
   });
 });
-const CustomCheckbox = ({
+const NaviCheckbox = ({
   accentColor,
-  children
+  readOnly,
+  disabled,
+  inputRef,
+  style,
+  children,
+  ...rest
 }) => {
+  const ref = useRef();
+  useLayoutEffect(() => {
+    const naviCheckbox = ref.current;
+    const colorPicked = pickLightOrDark(naviCheckbox, "var(--accent-color)", "var(--navi-checkmark-color-light)", "var(--navi-checkmark-color-dark)");
+    naviCheckbox.style.setProperty("--checkmark-color", colorPicked);
+  }, [accentColor]);
+  useLayoutEffect(() => {
+    return initCustomField(ref.current, inputRef.current);
+  }, []);
   return jsxs("div", {
-    className: "custom_checkbox_wrapper",
-    "data-field-wrapper": "",
+    ...rest,
+    ref: ref,
+    className: "navi_checkbox",
     style: {
       ...(accentColor ? {
-        "--checked-color": accentColor
-      } : {})
+        "--accent-color": accentColor
+      } : {}),
+      ...style
     },
+    "data-readonly": readOnly ? "" : undefined,
+    "data-disabled": disabled ? "" : undefined,
     children: [children, jsx("div", {
-      className: "custom_checkbox",
+      className: "navi_checkbox_field",
       children: jsx("svg", {
         viewBox: "0 0 12 12",
         "aria-hidden": "true",
+        className: "navi_checkbox_marker",
         children: jsx("path", {
-          className: "custom_checkbox_marker",
           d: "M10.5 2L4.5 9L1.5 5.5",
           fill: "none",
           strokeWidth: "2"
@@ -18659,169 +19757,152 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
 const InputCheckboxInsideForm = InputCheckboxBasic;
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
-  .custom_radio_wrapper {
+  :root {
+    --navi-radiomark-color: light-dark(#4476ff, #3b82f6);
+  }
+
+  .navi_radio {
     position: relative;
     display: inline-flex;
     box-sizing: content-box;
 
-    --checked-color: #3b82f6;
-    --checked-disabled-color: var(--field-disabled-border-color);
+    --outline-offset: 1px;
+    --outline-width: 2px;
+    --width: 13px;
+    --height: 13px;
 
-    --checkmark-color: var(--checked-color);
-    --checkmark-disabled-color: var(--field-disabled-text-color);
+    --outline-color: light-dark(#4476ff, #3b82f6);
+    --border-color: light-dark(#767676, #8e8e93);
+    --background-color: white;
+    --accent-color: var(--navi-radiomark-color);
+    --mark-color: var(--accent-color);
+
+    /* light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3)); */
+    --accent-color-checked: color-mix(in srgb, var(--accent-color) 70%, black);
+
+    --border-color-readonly: color-mix(in srgb, var(--border-color) 30%, white);
+    --border-color-disabled: var(--border-color-readonly);
+    --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
+    --border-color-checked: var(--accent-color);
+    --border-color-checked-hover: var(--accent-color-checked);
+    --border-color-checked-readonly: #d3d3d3;
+    --border-color-checked-disabled: #d3d3d3;
+    --background-color-readonly: var(--background-color);
+    --background-color-disabled: var(--background-color);
+    --background-color-checked-readonly: #d3d3d3;
+    --background-color-checked-disabled: var(--background-color);
+    --mark-color-hover: var(--accent-color-checked);
+    --mark-color-readonly: grey;
+    --mark-color-disabled: #eeeeee;
   }
-
-  .custom_radio_wrapper input {
+  .navi_radio input {
     position: absolute;
-    opacity: 0;
     inset: 0;
     margin: 0;
     padding: 0;
-    border: none;
+    opacity: 0;
+    cursor: inherit;
   }
-
-  .custom_radio {
-    width: 13px;
-    height: 13px;
-    background: transparent;
-    border-radius: 50%;
+  .navi_radio_field {
     display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin-left: 5px;
+    width: var(--width);
+    height: var(--height);
     margin-top: 3px;
     margin-right: 3px;
-  }
+    margin-left: 5px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    outline-width: var(--outline-width);
 
-  .custom_radio svg {
+    outline-style: none;
+
+    outline-color: var(--outline-color);
+
+    outline-offset: var(--outline-offset);
+  }
+  .navi_radio_field svg {
+    overflow: visible;
+  }
+  .navi_radio_border {
+    fill: var(--background-color);
+    stroke: var(--border-color);
+  }
+  .navi_radio_marker {
     width: 100%;
     height: 100%;
+    opacity: 0;
+    fill: var(--mark-color);
+    transform: scale(0.3);
+    transform-origin: center;
     pointer-events: none;
   }
-
-  .custom_radio svg .custom_radio_dashed_border {
+  .navi_radio_dashed_border {
     display: none;
   }
-
-  .custom_radio svg .custom_radio_marker {
-    fill: var(--checkmark-color);
-    opacity: 0;
-    transform-origin: center;
-    transform: scale(0.3);
-  }
-
-  .custom_radio[data-transition] svg {
+  .navi_radio[data-transition] .navi_radio_marker {
     transition: all 0.15s ease;
   }
-  .custom_radio[data-transition] svg .custom_radio_dashed_border {
+  .navi_radio[data-transition] .navi_radio_dashed_border {
     transition: all 0.15s ease;
   }
-  .custom_radio[data-transition] svg .custom_radio_border {
+  .navi_radio[data-transition] .navi_radio_border {
     transition: all 0.15s ease;
   }
 
-  /* États hover */
-  .custom_radio_wrapper:hover .custom_radio svg .custom_radio_border {
-    stroke: var(--field-hover-border-color);
+  /* Focus */
+  .navi_radio[data-focus-visible] .navi_radio_field {
+    outline-style: solid;
   }
-  .custom_radio_wrapper:hover .custom_radio svg .custom_radio_marker {
-    fill: var(--field-strong-color);
+  /* Hover */
+  .navi_radio[data-hover] .navi_radio_border {
+    stroke: var(--border-color-hover);
   }
-
-  .custom_radio_wrapper:hover
-    input:checked
-    + .custom_radio
-    svg
-    .custom_radio_border {
-    stroke: var(--field-strong-color);
+  .navi_radio[data-hover] .navi_radio_marker {
+    fill: var(--mark-color-hover);
   }
-
-  /* État checked */
-  .custom_radio_wrapper input:checked + .custom_radio svg .custom_radio_border {
-    stroke: var(--field-strong-color);
+  /* Checked */
+  .navi_radio[data-checked] .navi_radio_border {
+    stroke: var(--border-color-checked);
   }
-
-  .custom_radio_wrapper input:checked + .custom_radio svg .custom_radio_marker {
+  .navi_radio[data-checked] .navi_radio_marker {
     opacity: 1;
     transform: scale(1);
   }
-
-  /* États disabled */
-  .custom_radio_wrapper
-    input[disabled]
-    + .custom_radio
-    svg
-    .custom_radio_border {
-    fill: light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3));
-    stroke: var(--field-disabled-border-color);
+  .navi_radio[data-hover][data-checked] .navi_radio_border {
+    stroke: var(--border-color-checked-hover);
   }
-
-  .custom_radio_wrapper
-    input[disabled]:checked
-    + .custom_radio
-    svg
-    .custom_radio_border {
-    stroke: var(--checked-disabled-color);
+  /* Readonly */
+  .navi_radio[data-readonly] .navi_radio_border {
+    fill: var(--background-color-readonly);
+    stroke: var(--border-color-readonly);
   }
-
-  .custom_radio_wrapper
-    input[disabled]:checked
-    + .custom_radio
-    svg
-    .custom_radio_marker {
-    fill: var(--checkmark-disabled-color);
+  .navi_radio[data-readonly] .navi_radio_marker {
+    fill: var(--mark-color-readonly);
   }
-
-  .custom_radio_wrapper
-    input[data-readonly]
-    + .custom_radio
-    svg
-    .custom_radio_border {
-    fill: light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3));
-    stroke: var(--field-disabled-border-color);
-  }
-  .custom_radio_wrapper
-    input[data-readonly]
-    + .custom_radio
-    svg
-    .custom_radio_dashed_border {
+  .navi_radio[data-readonly] .navi_radio_dashed_border {
     display: none;
   }
-  .custom_radio_wrapper
-    input[data-readonly]:checked
-    + .custom_radio
-    svg
-    .custom_radio_border {
-    stroke: var(--checked-disabled-color);
+  .navi_radio[data-checked][data-readonly] .navi_radio_border {
+    fill: var(--background-color-checked-readonly);
+    stroke: var(--border-color-checked-readonly);
   }
-  .custom_radio_wrapper
-    input[data-readonly]:checked
-    + .custom_radio
-    svg
-    .custom_radio_marker {
-    fill: var(--checkmark-disabled-color);
+  .navi_radio[data-checked][data-readonly] .navi_radio_marker {
+    fill: var(--mark-color-readonly);
   }
-  .custom_radio_wrapper:hover
-    input[data-readonly]
-    + .custom_radio
-    svg
-    .custom_radio_border {
-    fill: light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3));
-    stroke: var(--field-disabled-border-color);
+  /* Disabled */
+  .navi_radio[data-disabled] .navi_radio_border {
+    fill: var(--background-color-disabled);
+    stroke: var(--border-color-disabled);
   }
-  .custom_radio_wrapper:hover
-    input[data-readonly]:checked
-    + .custom_radio
-    svg
-    .custom_radio_border {
-    stroke: var(--checked-disabled-color);
+  .navi_radio[data-disabled] .navi_radio_marker {
+    fill: var(--mark-color-disabled);
   }
-
-  /* Focus state avec outline */
-  .custom_radio_wrapper input:focus-visible + .custom_radio {
-    outline: 2px solid var(--field-outline-color);
-    outline-offset: 1px;
-    border-radius: 50%;
+  .navi_radio[data-hover][data-checked][data-disabled] .navi_radio_border {
+    stroke: var(--border-color-disabled);
+  }
+  .navi_radio[data-checked][data-disabled] .navi_radio_marker {
+    fill: var(--mark-color-disabled);
   }
 `;
 const InputRadio = forwardRef((props, ref) => {
@@ -18858,6 +19939,7 @@ const InputRadioBasic = forwardRef((props, ref) => {
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
   const reportReadOnlyOnLabel = useContext(ReportReadOnlyOnLabelContext);
+  const reportDisabledOnLabel = useContext(ReportDisabledOnLabelContext);
   const {
     name,
     readOnly,
@@ -18866,11 +19948,12 @@ const InputRadioBasic = forwardRef((props, ref) => {
     loading,
     autoFocus,
     constraints = [],
-    appeareance = "custom",
-    // "custom" or "default"
+    appeareance = "navi",
+    // "navi" or "default"
     accentColor,
     onClick,
     onInput,
+    style,
     ...rest
   } = props;
   const innerRef = useRef(null);
@@ -18881,14 +19964,10 @@ const InputRadioBasic = forwardRef((props, ref) => {
   const innerLoading = loading || contextLoading && contextLoadingElement === innerRef.current;
   const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
   reportReadOnlyOnLabel?.(innerReadOnly);
+  reportDisabledOnLabel?.(innerDisabled);
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
   const checked = Boolean(uiState);
-  const actionName = rest["data-action"];
-  if (actionName) {
-    delete rest["data-action"];
-  }
-
   // we must first dispatch an event to inform all other radios they where unchecked
   // this way each other radio uiStateController knows thery are unchecked
   // we do this on "input"
@@ -18896,6 +19975,9 @@ const InputRadioBasic = forwardRef((props, ref) => {
   const updateOtherRadiosInGroup = () => {
     const thisRadio = innerRef.current;
     const radioList = thisRadio.closest("[data-radio-list]");
+    if (!radioList) {
+      return;
+    }
     const radioInputs = radioList.querySelectorAll(`input[type="radio"][name="${thisRadio.name}"]`);
     for (const radioInput of radioInputs) {
       if (radioInput === thisRadio) {
@@ -18911,13 +19993,17 @@ const InputRadioBasic = forwardRef((props, ref) => {
       updateOtherRadiosInGroup();
     }
   }, [checked]);
+  const actionName = rest["data-action"];
+  if (actionName) {
+    delete rest["data-action"];
+  }
   const inputRadio = jsx("input", {
     ...rest,
     ref: innerRef,
     type: "radio",
+    style: appeareance === "default" ? style : undefined,
     name: innerName,
     checked: checked,
-    "data-readonly": innerReadOnly ? "" : undefined,
     disabled: innerDisabled,
     required: innerRequired,
     "data-validation-message-arrow-x": "center",
@@ -18947,51 +20033,82 @@ const InputRadioBasic = forwardRef((props, ref) => {
       uiStateController.setUIState(e.detail.value, e);
     }
   });
-  const inputRadioDisplayed = appeareance === "custom" ? jsx(CustomRadio, {
-    accentColor: accentColor,
-    children: inputRadio
-  }) : inputRadio;
-  return jsx(LoadableInlineElement, {
-    "data-action": actionName,
+  const loaderProps = {
     loading: innerLoading,
-    targetSelector: appeareance === "custom" ? ".custom_radio" : "",
     inset: -1,
-    color: "light-dark(#355fcc, #3b82f6)",
-    children: inputRadioDisplayed
+    style: {
+      "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)"
+    },
+    color: "var(--accent-color)"
+  };
+  if (appeareance === "navi") {
+    return jsx(NaviRadio, {
+      "data-action": actionName,
+      inputRef: innerRef,
+      accentColor: accentColor,
+      readOnly: innerReadOnly,
+      disabled: innerDisabled,
+      style: style,
+      children: jsx(LoaderBackground, {
+        ...loaderProps,
+        targetSelector: ".navi_radio_field",
+        children: inputRadio
+      })
+    });
+  }
+  return jsx(LoadableInlineElement, {
+    ...loaderProps,
+    "data-action": actionName,
+    children: inputRadio
   });
 });
-const CustomRadio = ({
-  children
+const NaviRadio = ({
+  inputRef,
+  accentColor,
+  readOnly,
+  disabled,
+  style,
+  children,
+  ...rest
 }) => {
-  return jsxs("div", {
-    className: "custom_radio_wrapper",
-    "data-field-wrapper": "",
-    children: [children, jsx("div", {
-      className: "custom_radio",
+  const ref = useRef();
+  useLayoutEffect(() => {
+    return initCustomField(ref.current, inputRef.current);
+  }, []);
+  return jsxs("span", {
+    ...rest,
+    ref: ref,
+    className: "navi_radio",
+    style: {
+      ...(accentColor ? {
+        "--accent-color": accentColor
+      } : {}),
+      ...style
+    },
+    "data-readonly": readOnly ? "" : undefined,
+    "data-disabled": disabled ? "" : undefined,
+    children: [children, jsx("span", {
+      className: "navi_radio_field",
       children: jsxs("svg", {
         viewBox: "0 0 12 12",
         "aria-hidden": "true",
         preserveAspectRatio: "xMidYMid meet",
         children: [jsx("circle", {
-          className: "custom_radio_border",
+          className: "navi_radio_border",
           cx: "6",
           cy: "6",
           r: "5.5",
-          fill: "white",
-          stroke: "var(--field-border-color)",
           strokeWidth: "1"
         }), jsx("circle", {
-          className: "custom_radio_dashed_border",
+          className: "navi_radio_dashed_border",
           cx: "6",
           cy: "6",
           r: "5.5",
-          fill: "var(--field-readonly-background-color)",
-          stroke: "var(--field-border-color)",
           strokeWidth: "1",
           strokeDasharray: "2.16 2.16",
           strokeDashoffset: "0"
         }), jsx("circle", {
-          className: "custom_radio_marker",
+          className: "navi_radio_marker",
           cx: "6",
           cy: "6",
           r: "3.5"
@@ -19009,12 +20126,11 @@ installImportMetaCss(import.meta);import.meta.css = /* css */ `
   :root {
     --navi-field-border-width: 1px;
     --navi-field-outline-width: 1px;
-    --navi-field-border-radius: 2px;
 
-    --navi-field-strong-color: light-dark(#355fcc, #3b82f6);
-    --navi-field-outline-color: var(--navi-field-strong-color);
-    --navi-field-background-color: light-dark(#f3f4f6, #2d3748);
     --navi-field-border-color: light-dark(#767676, #8e8e93);
+    --navi-field-outline-color: light-dark(#355fcc, #3b82f6);
+    --navi-field-background-color: light-dark(#f3f4f6, #2d3748);
+    --navi-field-accent-color: light-dark(#355fcc, #3b82f6);
 
     --navi-field-disabled-border-color: color-mix(
       in srgb,
@@ -19043,114 +20159,134 @@ installImportMetaCss(import.meta);import.meta.css = /* css */ `
       black
     );
 
-    --navi-field-disabled-text-color: color-mix(
+    --navi-field-readonly-color: color-mix(
       in srgb,
       currentColor 30%,
       transparent
     );
-    --navi-field-readonly-text-color: var(--navi-field-disabled-text-color);
+    --navi-field-disabled-color: var(--navi-field-readonly-color);
   }
 
-  [data-field] {
-    border-radius: var(--navi-field-border-radius);
-    outline-width: var(--navi-field-border-width);
-    outline-style: solid;
-    outline-color: transparent;
-    outline-offset: calc(-1 * (var(--navifield-border-width)));
-  }
-
-  [data-field][data-field-with-border] {
+  [data-field-border-and-outline] {
     border-width: calc(
       var(--navi-field-border-width) + var(--navi-field-outline-width)
     );
+
     border-style: solid;
+
     border-color: transparent;
+    outline-width: var(--navi-field-border-width);
+    outline-style: none;
     outline-color: var(--navi-field-border-color);
+    outline-offset: calc(-1 * (var(--navi-field-border-width)));
   }
-
-  [data-field-with-border-hover] {
-    border: 0;
-  }
-
-  [data-field-with-background] {
-    background-color: var(--navi-field-background-color);
-  }
-  [data-field-with-background-hover] {
-    background: none;
-  }
-
-  [data-field-with-background]:hover {
-    background-color: var(--navi-field-hover-background-color);
-  }
-
-  [data-field-with-hover]:hover {
-    outline-color: var(--navi-field-hover-border-color);
-  }
-
-  [data-field-with-border]:active,
-  [data-field][data-field-with-border][data-active] {
-    outline-color: var(--navi-field-active-border-color);
-    background-color: none;
-  }
-
-  [data-field-with-border][readonly],
-  [data-field-with-border][data-readonly] {
-    outline-color: var(--navi-field-readonly-border-color);
-  }
-
-  [data-field][readonly],
-  [data-field][data-readonly] {
-    color: var(--navi-field-readonly-text-color);
-  }
-
-  [data-field-with-background][readonly],
-  [data-field-with-background][data-readonly] {
-    background-color: var(--navi-field-readonly-background-color);
-  }
-
-  [data-field]:focus-visible,
-  [data-field][data-focus-visible]:focus {
-    outline-style: solid;
+  [data-field-wrapper][data-focus-visible] [data-field-border-and-outline] {
     outline-width: calc(
       var(--navi-field-border-width) + var(--navi-field-outline-width)
     );
+    outline-style: solid;
     outline-offset: calc(
       -1 * (var(--navi-field-border-width) + var(--navi-field-outline-width))
     );
-    outline-color: var(--navi-field-outline-color);
+  }
+  [data-field-wrapper][data-readonly] [data-field-border-and-outline] {
+    --navi-field-outline-color: var(--navi-field-readonly-border-color);
+    --navi-field-background-color: none;
+  }
+  [data-field-wrapper][data-active] [data-field-border-and-outline] {
+    --navi-field-outline-color: var(--navi-field-active-border-color);
+    --navi-field-background-color: none;
   }
 
-  [data-field]:disabled,
-  [data-field][data-disabled],
-  [data-field-with-hover]:disabled:hover,
-  [data-field-with-hover][data-disabled]:hover {
-    outline-color: var(--navi-field-disabled-border-color);
-    color: var(--navi-field-disabled-text-color);
+  [data-field-border-hover-only] {
+    border: 0;
   }
-  [data-field-with-background]:disabled,
-  [data-field-with-background][disabled] {
-    background-color: var(--navi-field-disabled-background-color);
+  [data-field-wrapper][data-hover] [data-field-with-hover-effect-on-border] {
+    outline-color: var(--navi-field-hover-border-color);
+  }
+
+  [data-field-wrapper][data-readonly] [data-field] {
+    --navi-field-color: var(--navi-field-readonly-color);
   }
 `;
 
-/**
- * Input component for all textual input types.
- *
- * Supports:
- * - text (default)
- * - password
- * - hidden
- * - email
- * - url
- * - search
- * - tel
- * - etc.
- *
- * For non-textual inputs, specialized components will be used:
- * - <InputCheckbox /> for type="checkbox"
- * - <InputRadio /> for type="radio"
- */
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .navi_input {
+    --border-width: 1px;
+    --outline-width: 1px;
+    --outer-width: calc(var(--border-width) + var(--outline-width));
+    --padding-x: 6px;
+    --padding-y: 1px;
 
+    --outline-color: light-dark(#4476ff, #3b82f6);
+
+    --border-radius: 2px;
+    --border-color: light-dark(#767676, #8e8e93);
+    --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
+    --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
+    --border-color-readonly: color-mix(
+      in srgb,
+      var(--border-color) 45%,
+      transparent
+    );
+    --border-color-disabled: var(--border-color-readonly);
+
+    --background-color: white;
+    --background-color-hover: color-mix(
+      in srgb,
+      var(--background-color) 95%,
+      black
+    );
+    --background-color-readonly: var(--background-color);
+    --background-color-disabled: color-mix(
+      in srgb,
+      var(--background-color) 60%,
+      transparent
+    );
+
+    --color: currentColor;
+    --color-readonly: color-mix(in srgb, currentColor 60%, transparent);
+    --color-disabled: var(--color-readonly);
+    color: var(--color);
+
+    background-color: var(--background-color);
+    border-width: var(--outer-width);
+    border-width: var(--outer-width);
+    border-style: solid;
+    border-color: transparent;
+    border-radius: var(--border-radius);
+    outline-width: var(--border-width);
+    outline-style: solid;
+    outline-color: var(--border-color);
+    outline-offset: calc(-1 * (var(--border-width)));
+  }
+  /* Focus */
+  .navi_input[data-focus] {
+    border-color: var(--outline-color);
+    outline-width: var(--outer-width);
+    outline-color: var(--outline-color);
+    outline-offset: calc(-1 * var(--outer-width));
+  }
+  /* Readonly */
+  .navi_input[data-readonly] {
+    color: var(--color-readonly);
+    background-color: var(--background-color-readonly);
+    outline-color: var(--border-color-readonly);
+  }
+  .navi_input[data-readonly]::placeholder {
+    color: var(--color-readonly);
+  }
+  /* Disabled */
+  .navi_input[data-disabled] {
+    color: var(--color-disabled);
+    background-color: var(--background-color-disabled);
+    outline-color: var(--border-color-disabled);
+  }
+  /* Invalid */
+  .navi_input[aria-invalid="true"] {
+    border-color: var(--invalid-color);
+  }
+`;
 const InputTextual = forwardRef((props, ref) => {
   const uiStateController = useUIStateController(props, "input");
   const uiState = useUIState(uiStateController);
@@ -19185,7 +20321,8 @@ const InputTextualBasic = forwardRef((props, ref) => {
     autoFocus,
     autoFocusVisible,
     autoSelect,
-    appearance = "custom",
+    appearance = "navi",
+    accentColor,
     width,
     height,
     ...rest
@@ -19206,14 +20343,14 @@ const InputTextualBasic = forwardRef((props, ref) => {
   const inputTextual = jsx("input", {
     ...rest,
     ref: innerRef,
+    className: appearance === "navi" ? "navi_input" : undefined,
     type: type,
     "data-value": uiState,
     value: innerValue,
-    "data-field": "",
-    "data-field-with-border": "",
-    "data-custom": appearance === "custom" ? "" : undefined,
     readOnly: innerReadOnly,
     disabled: innerDisabled,
+    "data-readOnly": innerReadOnly ? "" : undefined,
+    "data-disabled": innerDisabled ? "" : undefined,
     onInput: e => {
       let inputValue;
       if (type === "number") {
@@ -19237,11 +20374,21 @@ const InputTextualBasic = forwardRef((props, ref) => {
       uiStateController.setUIState(e.detail.value, e);
     }
   });
+  useLayoutEffect(() => {
+    return initCustomField(innerRef.current, innerRef.current);
+  }, []);
+  if (type === "hidden") {
+    return inputTextual;
+  }
   return jsx(LoadableInlineElement, {
     loading: innerLoading,
-    color: "light-dark(#355fcc, #3b82f6)",
+    style: {
+      "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)"
+    },
+    color: "var(--accent-color)",
     width: width,
     height: height,
+    inset: -1,
     children: inputTextual
   });
 });
@@ -19715,39 +20862,87 @@ const useFormEvents = (
 };
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
-  button[data-custom] {
-    border: none;
-    background: none;
+  .navi_button {
+    position: relative;
     display: inline-block;
     padding: 0;
-  }
+    background: none;
+    border: none;
+    outline: none;
 
-  button[data-custom] .navi_button_content {
+    --border-width: 1px;
+    --outline-width: 1px;
+    --outer-width: calc(var(--border-width) + var(--outline-width));
+    --padding-x: 6px;
+    --padding-y: 1px;
+
+    --outline-color: light-dark(#4476ff, #3b82f6);
+
+    --border-radius: 2px;
+    --border-color: light-dark(#767676, #8e8e93);
+    --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
+    --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
+    --border-color-readonly: color-mix(in srgb, var(--border-color) 30%, white);
+    --border-color-disabled: var(--border-color-readonly);
+
+    --background-color: light-dark(#f3f4f6, #2d3748);
+    --background-color-hover: color-mix(
+      in srgb,
+      var(--background-color) 95%,
+      black
+    );
+    --background-color-readonly: var(--background-color);
+    --background-color-disabled: var(--background-color);
+
+    --color: currentColor;
+    --color-readonly: color-mix(in srgb, currentColor 30%, transparent);
+    --color-disabled: var(--color-readonly);
+  }
+  .navi_button_content {
+    position: relative;
+    display: inline-flex;
+    padding-top: var(--padding-y);
+    padding-right: var(--padding-x);
+    padding-bottom: var(--padding-y);
+    padding-left: var(--padding-x);
+    color: var(--color);
+    background-color: var(--background-color);
+    border-width: var(--outer-width);
+    border-style: solid;
+    border-color: transparent;
+    border-radius: var(--border-radius);
+    outline-width: var(--border-width);
+    outline-style: solid;
+    outline-color: var(--border-color);
+    outline-offset: calc(-1 * (var(--border-width)));
+    transition-property: transform;
     transition-duration: 0.15s;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-property: transform;
-    display: inline-flex;
-    position: relative;
-    padding-block: 1px;
-    padding-inline: 6px;
-    border-radius: inherit;
   }
-
-  button[data-custom]:active .navi_button_content {
+  .navi_button_shadow {
+    position: absolute;
+    inset: calc(-1 * var(--outer-width));
+    border-radius: inherit;
+    pointer-events: none;
+  }
+  /* Focus */
+  .navi_button[data-focus-visible] .navi_button_content {
+    --border-color: var(--outline-color);
+    outline-width: var(--outer-width);
+    outline-offset: calc(-1 * var(--outer-width));
+  }
+  /* Hover */
+  .navi_button[data-hover] .navi_button_content {
+    --border-color: var(--border-color-hover);
+    --background-color: var(--background-color-hover);
+  }
+  /* Active */
+  .navi_button[data-active] .navi_button_content {
+    --outline-color: var(--border-color-active);
+    --background-color: none;
     transform: scale(0.9);
   }
-
-  button[data-custom]:disabled .navi_button_content {
-    transform: none;
-  }
-
-  button[data-custom] .navi_button_shadow {
-    position: absolute;
-    inset: calc(-1 * (var(--field-border-width) + var(--field-outline-width)));
-    pointer-events: none;
-    border-radius: inherit;
-  }
-  button[data-custom]:active .navi_button_shadow {
+  .navi_button[data-active] .navi_button_shadow {
     box-shadow:
       inset 0 3px 6px rgba(0, 0, 0, 0.2),
       inset 0 1px 2px rgba(0, 0, 0, 0.3),
@@ -19755,8 +20950,52 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       inset 2px 0 4px rgba(0, 0, 0, 0.1),
       inset -2px 0 4px rgba(0, 0, 0, 0.1);
   }
-  button[data-custom]:disabled > .navi_button_shadow {
+  /* Readonly */
+  .navi_button[data-readonly] .navi_button_content {
+    --border-color: var(--border-color-disabled);
+    --outline-color: var(--border-color-readonly);
+    --background-color: var(--background-color-readonly);
+    --color: var(--color-readonly);
+  }
+  /* Disabled */
+  .navi_button[data-disabled] .navi_button_content {
+    --border-color: var(--border-color-disabled);
+    --background-color: var(--background-color-disabled);
+    --color: var(--color-disabled);
+    transform: none; /* no active effect */
+  }
+  .navi_button[data-disabled] .navi_button_shadow {
     box-shadow: none;
+  }
+  /* Invalid */
+  .navi_button[aria-invalid="true"] .navi_button_content {
+    --border-color: var(--invalid-color);
+  }
+
+  /* Discrete variant */
+  .navi_button[data-discrete] .navi_button_content {
+    --background-color: transparent;
+    --border-color: transparent;
+  }
+  .navi_button[data-discrete][data-hover] .navi_button_content {
+    --border-color: var(--border-color-hover);
+  }
+  .navi_button[data-discrete][data-readonly] .navi_button_content {
+    --border-color: transparent;
+  }
+  .navi_button[data-discrete][data-disabled] .navi_button_content {
+    --border-color: transparent;
+  }
+  button[data-discrete] {
+    background-color: transparent;
+    border-color: transparent;
+  }
+  button[data-discrete]:hover {
+    border-color: revert;
+  }
+  button[data-discrete][data-readonly],
+  button[data-discrete][data-disabled] {
+    border-color: transparent;
   }
 `;
 const Button = forwardRef((props, ref) => {
@@ -19778,9 +21017,8 @@ const ButtonBasic = forwardRef((props, ref) => {
     loading,
     constraints = [],
     autoFocus,
-    appearance = "custom",
+    appearance = "navi",
     discrete,
-    style = {},
     children,
     ...rest
   } = props;
@@ -19791,55 +21029,49 @@ const ButtonBasic = forwardRef((props, ref) => {
   const innerLoading = loading || contextLoading && contextLoadingElement === innerRef.current;
   const innerReadOnly = readOnly || contextReadOnly || innerLoading;
   const innerDisabled = disabled || contextDisabled;
-  let {
-    border,
-    borderWidth = border === "none" || discrete ? 0 : 1,
-    outlineWidth = discrete ? 0 : 1,
-    borderColor = "light-dark(#767676, #8e8e93)",
-    background,
-    backgroundColor = "light-dark(#f3f4f6, #2d3748)",
-    ...restStyle
-  } = style;
-  borderWidth = resolveCSSSize(borderWidth);
-  outlineWidth = resolveCSSSize(outlineWidth);
+  let buttonChildren;
+  if (appearance === "navi") {
+    buttonChildren = jsx(NaviButton, {
+      buttonRef: innerRef,
+      children: children
+    });
+  } else {
+    buttonChildren = children;
+  }
   return jsx("button", {
     ...rest,
     ref: innerRef,
-    "data-custom": appearance === "custom" ? "" : undefined,
-    "data-readonly-silent": innerReadOnly ? "" : undefined,
+    className: appearance === "navi" ? "navi_button" : undefined,
+    "data-discrete": discrete ? "" : undefined,
     "data-readonly": innerReadOnly ? "" : undefined,
+    "data-readonly-silent": innerLoading ? "" : undefined,
+    "data-disabled": innerDisabled ? "" : undefined,
+    "data-validation-message-arrow-x": "center",
     "aria-busy": innerLoading,
-    style: {
-      ...restStyle
-    },
-    children: jsx(LoadableInlineElement, {
+    children: jsx(LoaderBackground, {
       loading: innerLoading,
       inset: -1,
       color: "light-dark(#355fcc, #3b82f6)",
-      children: jsxs("span", {
-        className: "navi_button_content",
-        "data-field": "",
-        "data-field-with-background": background === "none" ? undefined : "",
-        "data-field-with-hover": "",
-        "data-field-with-border": borderWidth ? "" : undefined,
-        "data-field-with-border-hover": discrete ? "" : undefined,
-        "data-field-with-background-hover": discrete ? "" : undefined,
-        "data-validation-message-arrow-x": "center",
-        "data-readonly": innerReadOnly ? "" : undefined,
-        "data-disabled": innerDisabled ? "" : undefined,
-        style: {
-          "--navi-field-border-width": `${borderWidth}px`,
-          "--navi-field-outline-width": `${outlineWidth}px`,
-          "--navi-field-border-color": borderColor,
-          "--navi-field-background-color": backgroundColor
-        },
-        children: [children, jsx("span", {
-          className: "navi_button_shadow"
-        })]
-      })
+      children: buttonChildren
     })
   });
 });
+const NaviButton = ({
+  buttonRef,
+  children
+}) => {
+  const ref = useRef();
+  useLayoutEffect(() => {
+    return initCustomField(buttonRef.current, buttonRef.current);
+  }, []);
+  return jsxs("span", {
+    ref: ref,
+    className: "navi_button_content",
+    children: [children, jsx("span", {
+      className: "navi_button_shadow"
+    })]
+  });
+};
 const ButtonWithAction = forwardRef((props, ref) => {
   const {
     action,
@@ -19894,18 +21126,20 @@ const ButtonWithAction = forwardRef((props, ref) => {
 });
 const ButtonInsideForm = forwardRef((props, ref) => {
   const {
+    // eslint-disable-next-line no-unused-vars
     formContext,
     type,
     onClick,
     children,
     loading,
+    readOnly,
     ...rest
   } = props;
-  const formLoading = formContext.loading;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
   const wouldSubmitFormByType = type === "submit" || type === "image";
-  const innerLoading = loading || formLoading && wouldSubmitFormByType;
+  const innerLoading = loading;
+  const innerReadOnly = readOnly;
   const handleClick = event => {
     const buttonElement = innerRef.current;
     const {
@@ -19942,6 +21176,7 @@ const ButtonInsideForm = forwardRef((props, ref) => {
     ref: innerRef,
     type: type,
     loading: innerLoading,
+    readOnly: innerReadOnly,
     onClick: event => {
       handleClick(event);
       onClick?.(event);
@@ -19950,8 +21185,11 @@ const ButtonInsideForm = forwardRef((props, ref) => {
   });
 });
 const ButtonWithActionInsideForm = forwardRef((props, ref) => {
+  const formAction = useContext(FormActionContext);
   const {
+    // eslint-disable-next-line no-unused-vars
     formContext,
+    // to avoid passing it to the button element
     type,
     action,
     loading,
@@ -19964,9 +21202,7 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
     onActionEnd,
     ...rest
   } = props;
-  const {
-    formParamsSignal
-  } = formContext;
+  const formParamsSignal = getActionPrivateProperties(formAction).paramsSignal;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
   const actionBoundToFormParams = useAction(action, formParamsSignal);
@@ -20434,9 +21670,12 @@ const FormWithAction = forwardRef((props, ref) => {
         actionOrigin: "action_prop"
       });
     },
-    children: jsx(LoadingElementContext.Provider, {
-      value: formActionRequester,
-      children: children
+    children: jsx(FormActionContext.Provider, {
+      value: actionBoundToUIState,
+      children: jsx(LoadingElementContext.Provider, {
+        value: formActionRequester,
+        children: children
+      })
     })
   });
 });

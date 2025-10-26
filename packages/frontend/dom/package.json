@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/dom",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "DOM utilities for writing frontend code",
   "repository": {
     "type": "git",
@@ -34,9 +34,7 @@
     "build": "node ./scripts/build.mjs",
     "prepublishOnly": "npm run build"
   },
-  "dependencies": {
-    "style-observer": "0.1.2"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@jsenv/core": "../../../",
     "@jsenv/navi": "../navi",

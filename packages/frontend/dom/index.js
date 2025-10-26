@@ -6,7 +6,6 @@ export { createPubSub } from "./src/pub_sub.js";
 export { addWillChange, getStyle, setStyles } from "./src/style/dom_styles.js";
 export { createStyleController } from "./src/style/style_controller.js";
 export { getDefaultStyles } from "./src/style/style_default.js";
-export { styleEffect } from "./src/style/style_effect.js";
 
 // attributes
 export { addAttributeEffect } from "./src/attr/add_attribute_effect.js";

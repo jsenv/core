@@ -1,3 +1,4 @@
+import StyleObserver from "style-observer";
 import { signal, effect } from "@preact/signals";
 import { useState, useLayoutEffect } from "preact/hooks";
 
@@ -68,7 +69,7 @@ const createIterableWeakSet = () => {
   };
 };
 
-const createPubSub = () => {
+const createPubSub = (clearOnPublish = false) => {
   const callbackSet = new Set();
 
   const publish = (...args) => {
@@ -76,6 +77,9 @@ const createPubSub = () => {
     for (const callback of callbackSet) {
       const result = callback(...args);
       results.push(result);
+    }
+    if (clearOnPublish) {
+      callbackSet.clear();
     }
     return results;
   };
@@ -382,6 +386,9 @@ const normalizeNumber = (value, context, unit, propertyName) => {
   if (typeof value === "string") {
     if (value === "auto") {
       return "auto";
+    }
+    if (value === "none") {
+      return "none";
     }
     const numericValue = parseFloat(value);
     if (isNaN(numericValue)) {
@@ -984,6 +991,180 @@ const updateAnimationStyles = (animation, styles) => {
   animation.pause();
 };
 
+// Register the style isolator custom element once
+let persistentStyleIsolator = null;
+const getNaviStyleIsolator = () => {
+  if (persistentStyleIsolator) {
+    return persistentStyleIsolator;
+  }
+
+  class StyleIsolator extends HTMLElement {
+    constructor() {
+      super();
+
+      // Create shadow DOM to isolate from external CSS
+      const shadow = this.attachShadow({ mode: "closed" });
+
+      shadow.innerHTML = `
+        <style>
+          :host {
+            all: initial;
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+            opacity: ${0};
+            visibility: ${"hidden"};
+            pointer-events: none;
+          }
+          * {
+            all: revert;
+          }
+        </style>
+        <div id="unstyled_element_slot"></div>
+      `;
+
+      this.unstyledElementSlot = shadow.querySelector("#unstyled_element_slot");
+    }
+
+    getIsolatedStyles(element, context = "js") {
+      {
+        this.unstyledElementSlot.innerHTML = "";
+      }
+      const unstyledElement = element.cloneNode(true);
+      this.unstyledElementSlot.appendChild(unstyledElement);
+
+      // Get computed styles of the actual element inside the shadow DOM
+      const computedStyles = getComputedStyle(unstyledElement);
+      // Create a copy of the styles since the original will be invalidated when element is removed
+      const stylesCopy = {};
+      for (let i = 0; i < computedStyles.length; i++) {
+        const property = computedStyles[i];
+        stylesCopy[property] = normalizeStyle(
+          computedStyles.getPropertyValue(property),
+          property,
+          context,
+        );
+      }
+
+      return stylesCopy;
+    }
+  }
+
+  if (!customElements.get("navi-style-isolator")) {
+    customElements.define("navi-style-isolator", StyleIsolator);
+  }
+  // Create and add the persistent element to the document
+  persistentStyleIsolator = document.createElement("navi-style-isolator");
+  document.body.appendChild(persistentStyleIsolator);
+  return persistentStyleIsolator;
+};
+
+const stylesCache = new Map();
+/**
+ * Gets the default browser styles for an HTML element by creating an isolated custom element
+ * @param {string|Element} input - CSS selector (e.g., 'input[type="text"]'), HTML source (e.g., '<button>'), or DOM element
+ * @param {string} context - Output format: "js" for JS object (default) or "css" for CSS string
+ * @returns {Object|string} Computed styles as JS object or CSS string
+ */
+const getDefaultStyles = (input, context = "js") => {
+  let element;
+  let cacheKey;
+
+  // Determine input type and create element accordingly
+  if (typeof input === "string") {
+    if (input[0] === "<") {
+      // HTML source
+      const tempDiv = document.createElement("div");
+      tempDiv.innerHTML = input;
+      element = tempDiv.firstElementChild;
+      if (!element) {
+        throw new Error(`Invalid HTML source: ${input}`);
+      }
+      cacheKey = `${input}:${context}`;
+    } else {
+      // CSS selector
+      element = createElementFromSelector(input);
+      cacheKey = `${input}:${context}`;
+    }
+  } else if (input instanceof Element) {
+    // DOM element
+    element = input;
+    cacheKey = `${input.outerHTML}:${context}`;
+  } else {
+    throw new Error(
+      "Input must be a CSS selector, HTML source, or DOM element",
+    );
+  }
+
+  // Check cache first
+  if (stylesCache.has(cacheKey)) {
+    return stylesCache.get(cacheKey);
+  }
+
+  // Get the persistent style isolator element
+  const naviStyleIsolator = getNaviStyleIsolator();
+  const defaultStyles = naviStyleIsolator.getIsolatedStyles(element, context);
+
+  // Cache the result
+  stylesCache.set(cacheKey, defaultStyles);
+
+  return defaultStyles;
+};
+
+/**
+ * Creates an HTML element from a CSS selector
+ * @param {string} selector - CSS selector (e.g., 'input[type="text"]', 'button', 'a[href="#"]')
+ * @returns {Element} DOM element
+ */
+const createElementFromSelector = (selector) => {
+  // Parse the selector to extract tag name and attributes
+  const tagMatch = selector.match(/^([a-zA-Z][a-zA-Z0-9-]*)/);
+  if (!tagMatch) {
+    throw new Error(`Invalid selector: ${selector}`);
+  }
+
+  const tagName = tagMatch[1].toLowerCase();
+  const element = document.createElement(tagName);
+
+  // Extract and apply attributes from selector
+  const attributeRegex = /\[([^=\]]+)(?:=(?:"([^"]*)"|'([^']*)'|([^\]]*)))?\]/g;
+  let attributeMatch;
+
+  while ((attributeMatch = attributeRegex.exec(selector)) !== null) {
+    const attrName = attributeMatch[1];
+    const attrValue =
+      attributeMatch[2] || attributeMatch[3] || attributeMatch[4] || "";
+    element.setAttribute(attrName, attrValue);
+  }
+
+  return element;
+};
+
+const styleEffect = (element, callback, properties = []) => {
+  const check = () => {
+    const values = {};
+    const computedStyle = getComputedStyle(element);
+    for (const property of properties) {
+      values[property] = normalizeStyle(
+        computedStyle.getPropertyValue(property),
+        property,
+      );
+    }
+    callback(values);
+  };
+
+  check();
+  const observer = new StyleObserver(() => {
+    check();
+  });
+  observer.observe(element, properties);
+
+  return () => {
+    observer.unobserve();
+  };
+};
+
 const addAttributeEffect = (attributeName, effect) => {
   const cleanupWeakMap = new WeakMap();
   const applyEffect = (element) => {
@@ -1253,7 +1434,52 @@ const parseCSSColor = (color) => {
   return null;
 };
 
+/**
+ * Converts RGBA values back to a CSS color string
+ * Prefers named colors when possible, then rgb() for opaque colors, rgba() for transparent
+ * @param {Array<number>} rgba - [r, g, b, a] values
+ * @returns {string|null} CSS color string or null if invalid input
+ */
+const stringifyCSSColor = (rgba) => {
+  if (!Array.isArray(rgba) || rgba.length < 3) {
+    return null;
+  }
+
+  const [r, g, b, a = 1] = rgba;
+
+  // Validate RGB values
+  if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
+    return null;
+  }
+
+  // Validate alpha value
+  if (a < 0 || a > 1) {
+    return null;
+  }
+
+  // Round RGB values to integers
+  const rInt = Math.round(r);
+  const gInt = Math.round(g);
+  const bInt = Math.round(b);
+
+  // Check for named colors (only for fully opaque colors)
+  if (a === 1) {
+    for (const [name, [nameR, nameG, nameB]] of Object.entries(namedColors)) {
+      if (rInt === nameR && gInt === nameG && bInt === nameB) {
+        return name;
+      }
+    }
+  }
+
+  // Use rgb() for opaque colors, rgba() for transparent
+  if (a === 1) {
+    return `rgb(${rInt}, ${gInt}, ${bInt})`;
+  }
+  return `rgba(${rInt}, ${gInt}, ${bInt}, ${a})`;
+};
+
 const namedColors = {
+  // Basic colors
   black: [0, 0, 0],
   white: [255, 255, 255],
   red: [255, 0, 0],
@@ -1262,9 +1488,21 @@ const namedColors = {
   yellow: [255, 255, 0],
   cyan: [0, 255, 255],
   magenta: [255, 0, 255],
+
+  // Gray variations
   silver: [192, 192, 192],
   gray: [128, 128, 128],
   grey: [128, 128, 128],
+  darkgray: [169, 169, 169],
+  darkgrey: [169, 169, 169],
+  lightgray: [211, 211, 211],
+  lightgrey: [211, 211, 211],
+  dimgray: [105, 105, 105],
+  dimgrey: [105, 105, 105],
+  gainsboro: [220, 220, 220],
+  whitesmoke: [245, 245, 245],
+
+  // Extended basic colors
   maroon: [128, 0, 0],
   olive: [128, 128, 0],
   lime: [0, 255, 0],
@@ -1273,6 +1511,133 @@ const namedColors = {
   navy: [0, 0, 128],
   fuchsia: [255, 0, 255],
   purple: [128, 0, 128],
+
+  // Red variations
+  darkred: [139, 0, 0],
+  firebrick: [178, 34, 34],
+  crimson: [220, 20, 60],
+  indianred: [205, 92, 92],
+  lightcoral: [240, 128, 128],
+  salmon: [250, 128, 114],
+  darksalmon: [233, 150, 122],
+  lightsalmon: [255, 160, 122],
+
+  // Pink variations
+  pink: [255, 192, 203],
+  lightpink: [255, 182, 193],
+  hotpink: [255, 105, 180],
+  deeppink: [255, 20, 147],
+  mediumvioletred: [199, 21, 133],
+  palevioletred: [219, 112, 147],
+
+  // Orange variations
+  orange: [255, 165, 0],
+  darkorange: [255, 140, 0],
+  orangered: [255, 69, 0],
+  tomato: [255, 99, 71],
+  coral: [255, 127, 80],
+
+  // Yellow variations
+  gold: [255, 215, 0],
+  lightyellow: [255, 255, 224],
+  lemonchiffon: [255, 250, 205],
+  lightgoldenrodyellow: [250, 250, 210],
+  papayawhip: [255, 239, 213],
+  moccasin: [255, 228, 181],
+  peachpuff: [255, 218, 185],
+  palegoldenrod: [238, 232, 170],
+  khaki: [240, 230, 140],
+  darkkhaki: [189, 183, 107],
+
+  // Green variations
+  darkgreen: [0, 100, 0],
+  forestgreen: [34, 139, 34],
+  seagreen: [46, 139, 87],
+  mediumseagreen: [60, 179, 113],
+  springgreen: [0, 255, 127],
+  mediumspringgreen: [0, 250, 154],
+  lawngreen: [124, 252, 0],
+  chartreuse: [127, 255, 0],
+  greenyellow: [173, 255, 47],
+  limegreen: [50, 205, 50],
+  palegreen: [152, 251, 152],
+  lightgreen: [144, 238, 144],
+  mediumaquamarine: [102, 205, 170],
+  aquamarine: [127, 255, 212],
+  darkolivegreen: [85, 107, 47],
+  olivedrab: [107, 142, 35],
+  yellowgreen: [154, 205, 50],
+
+  // Blue variations
+  darkblue: [0, 0, 139],
+  mediumblue: [0, 0, 205],
+  royalblue: [65, 105, 225],
+  steelblue: [70, 130, 180],
+  dodgerblue: [30, 144, 255],
+  deepskyblue: [0, 191, 255],
+  skyblue: [135, 206, 235],
+  lightskyblue: [135, 206, 250],
+  lightblue: [173, 216, 230],
+  powderblue: [176, 224, 230],
+  lightcyan: [224, 255, 255],
+  paleturquoise: [175, 238, 238],
+  darkturquoise: [0, 206, 209],
+  mediumturquoise: [72, 209, 204],
+  turquoise: [64, 224, 208],
+  cadetblue: [95, 158, 160],
+  darkcyan: [0, 139, 139],
+  lightseagreen: [32, 178, 170],
+
+  // Purple variations
+  indigo: [75, 0, 130],
+  darkviolet: [148, 0, 211],
+  blueviolet: [138, 43, 226],
+  mediumpurple: [147, 112, 219],
+  mediumslateblue: [123, 104, 238],
+  slateblue: [106, 90, 205],
+  darkslateblue: [72, 61, 139],
+  lavender: [230, 230, 250],
+  thistle: [216, 191, 216],
+  plum: [221, 160, 221],
+  violet: [238, 130, 238],
+  orchid: [218, 112, 214],
+  mediumorchid: [186, 85, 211],
+  darkorchid: [153, 50, 204],
+  darkmagenta: [139, 0, 139],
+
+  // Brown variations
+  brown: [165, 42, 42],
+  saddlebrown: [139, 69, 19],
+  sienna: [160, 82, 45],
+  chocolate: [210, 105, 30],
+  darkgoldenrod: [184, 134, 11],
+  peru: [205, 133, 63],
+  rosybrown: [188, 143, 143],
+  goldenrod: [218, 165, 32],
+  sandybrown: [244, 164, 96],
+  tan: [210, 180, 140],
+  burlywood: [222, 184, 135],
+  wheat: [245, 222, 179],
+  navajowhite: [255, 222, 173],
+  bisque: [255, 228, 196],
+  blanchedalmond: [255, 235, 205],
+  cornsilk: [255, 248, 220],
+
+  // Special colors
+  transparent: [0, 0, 0], // Note: alpha will be 0 for transparent
+  aliceblue: [240, 248, 255],
+  antiquewhite: [250, 235, 215],
+  azure: [240, 255, 255],
+  beige: [245, 245, 220],
+  honeydew: [240, 255, 240],
+  ivory: [255, 255, 240],
+  lavenderblush: [255, 240, 245],
+  linen: [250, 240, 230],
+  mintcream: [245, 255, 250],
+  mistyrose: [255, 228, 225],
+  oldlace: [253, 245, 230],
+  seashell: [255, 245, 238],
+  snow: [255, 250, 250],
 };
 
 /**
@@ -1318,20 +1683,62 @@ const hslToRgb = (h, s, l) => {
 };
 
 /**
- * Resolves a color value, handling CSS custom properties
- * @param {Element} element - DOM element to resolve CSS variables against
- * @param {string} color - CSS color value (may include CSS variables)
- * @returns {Array<number>|null} [r, g, b, a] values or null if parsing fails
+ * Determines if the current color scheme is dark mode
+ * @param {Element} [element] - DOM element to check color-scheme against (optional)
+ * @returns {boolean} True if dark mode is active
  */
-const resolveCSSColor = (color, element) => {
+const prefersDarkColors = (element) => {
+  const colorScheme = getPreferedColorScheme(element);
+  return colorScheme.includes("dark");
+};
+
+const prefersLightColors = (element) => {
+  return !prefersDarkColors(element);
+};
+
+const getPreferedColorScheme = (element) => {
+  const computedStyle = getComputedStyle(element || document.documentElement);
+  const colorScheme = computedStyle.colorScheme;
+
+  // If no explicit color-scheme is set, or it's "normal",
+  // fall back to prefers-color-scheme media query
+  if (!colorScheme || colorScheme === "normal") {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  }
+
+  return colorScheme;
+};
+
+/**
+ * Resolves a color value, handling CSS custom properties and light-dark() function
+ * @param {string} color - CSS color value (may include CSS variables, light-dark())
+ * @param {Element} element - DOM element to resolve CSS variables and light-dark() against
+ * @param {string} context - Return format: "js" for RGBA array, "css" for CSS string
+ * @returns {Array<number>|string|null} [r, g, b, a] values, CSS string, or null if parsing fails
+ */
+const resolveCSSColor = (color, element, context = "js") => {
   if (!color || typeof color !== "string") {
     return null;
   }
 
   let resolvedColor = color;
 
+  // Handle light-dark() function
+  const lightDarkMatch = color.match(/light-dark\(([^,]+),([^)]+)\)/);
+  if (lightDarkMatch) {
+    const lightColor = lightDarkMatch[1].trim();
+    const darkColor = lightDarkMatch[2].trim();
+
+    // Select the appropriate color and recursively resolve it
+    const prefersDark = prefersDarkColors(element);
+    resolvedColor = prefersDark ? darkColor : lightColor;
+    return resolveCSSColor(resolvedColor, element, context);
+  }
+
   // If it's a CSS custom property, resolve it using getComputedStyle
-  if (color.includes("var(")) {
+  if (resolvedColor.includes("var(")) {
     const computedStyle = getComputedStyle(element);
 
     // Handle var() syntax
@@ -1342,16 +1749,24 @@ const resolveCSSColor = (color, element) => {
 
       const resolvedValue = computedStyle.getPropertyValue(propertyName).trim();
       if (resolvedValue) {
-        resolvedColor = resolvedValue;
-      } else if (fallback) {
+        // Recursively resolve in case the CSS variable contains light-dark() or other variables
+        return resolveCSSColor(resolvedValue, element, context);
+      }
+      if (fallback) {
         // Recursively resolve fallback (in case it's also a CSS variable)
-        return resolveCSSColor(fallback, element);
+        return resolveCSSColor(fallback, element, context);
       }
     }
   }
 
-  // Parse the resolved color and return RGB array
-  return parseCSSColor(resolvedColor);
+  // Parse the resolved color and return in the requested format
+  const rgba = parseCSSColor(resolvedColor);
+
+  if (context === "css") {
+    return rgba ? stringifyCSSColor(rgba) : null;
+  }
+
+  return rgba;
 };
 
 /**
@@ -1366,12 +1781,12 @@ const resolveCSSColor = (color, element) => {
 const pickLightOrDark = (
   element,
   backgroundColor,
-  lightColor,
-  darkColor,
+  lightColor = "white",
+  darkColor = "black",
 ) => {
-  const resolvedBgColor = resolveCSSColor(element, backgroundColor);
-  const resolvedLightColor = resolveCSSColor(element, lightColor);
-  const resolvedDarkColor = resolveCSSColor(element, darkColor);
+  const resolvedBgColor = resolveCSSColor(backgroundColor, element);
+  const resolvedLightColor = resolveCSSColor(lightColor, element);
+  const resolvedDarkColor = resolveCSSColor(darkColor, element);
 
   if (!resolvedBgColor || !resolvedLightColor || !resolvedDarkColor) {
     // Fallback to light color if parsing fails
@@ -7530,7 +7945,11 @@ const visibleRectEffect = (element, update) => {
 const pickPositionRelativeTo = (
   element,
   target,
-  { alignToViewportEdgeWhenTargetNearEdge = 0, forcePosition } = {},
+  {
+    alignToViewportEdgeWhenTargetNearEdge = 0,
+    minLeft = 0,
+    forcePosition,
+  } = {},
 ) => {
 
   const viewportWidth = document.documentElement.clientWidth;
@@ -7588,7 +8007,7 @@ const pickPositionRelativeTo = (
         const targetIsNearLeftEdge =
           targetLeft < alignToViewportEdgeWhenTargetNearEdge;
         if (elementIsWiderThanTarget && targetIsNearLeftEdge) {
-          elementPositionLeft = 0; // Left edge of viewport
+          elementPositionLeft = minLeft; // Left edge of viewport
         }
       }
     }
@@ -11408,4 +11827,4 @@ const crossFade = {
   },
 };
 
-export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, addWillChange, allowWheelThrough, canInterceptKeys, captureScrollState, createDragGestureController, createDragToMoveGestureController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createWidthTransition, cubicBezier, dragAfterThreshold, elementIsFocusable, elementIsVisible, findAfter, findAncestor, findBefore, findDescendant, findFocusable, getAvailableHeight, getAvailableWidth, getBorderSizes, getContrastRatio, getDragCoordinates, getDropTargetInfo, getHeight, getInnerHeight, getInnerWidth, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getPaddingSizes, getPositionedParent, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getWidth, initFlexDetailsSet, initFocusGroup, initPositionSticky, initUITransition, isScrollable, parseCSSColor, pickLightOrDark, pickPositionRelativeTo, preventFocusNav, preventFocusNavViaKeyboard, resolveCSSColor, resolveCSSSize, setAttribute, setAttributes, setStyles, startDragToResizeGesture, stickyAsRelativeCoords, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };
+export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, addWillChange, allowWheelThrough, canInterceptKeys, captureScrollState, createDragGestureController, createDragToMoveGestureController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createWidthTransition, cubicBezier, dragAfterThreshold, elementIsFocusable, elementIsVisible, findAfter, findAncestor, findBefore, findDescendant, findFocusable, getAvailableHeight, getAvailableWidth, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getHeight, getInnerHeight, getInnerWidth, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getPaddingSizes, getPositionedParent, getPreferedColorScheme, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getWidth, initFlexDetailsSet, initFocusGroup, initPositionSticky, initUITransition, isScrollable, parseCSSColor, pickLightOrDark, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, resolveCSSColor, resolveCSSSize, setAttribute, setAttributes, setStyles, startDragToResizeGesture, stickyAsRelativeCoords, stringifyCSSColor, styleEffect, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };
