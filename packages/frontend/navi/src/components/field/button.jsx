@@ -1,6 +1,10 @@
-import { resolveCSSSize } from "@jsenv/dom";
 import { forwardRef } from "preact/compat";
-import { useContext, useImperativeHandle, useRef } from "preact/hooks";
+import {
+  useContext,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+} from "preact/hooks";
 
 import { useActionStatus } from "../../use_action_status.js";
 import { requestAction } from "../../validation/custom_constraint_validation.js";
@@ -8,8 +12,9 @@ import { useConstraints } from "../../validation/hooks/use_constraints.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
-import { LoadableInlineElement } from "../loader/loader_background.jsx";
+import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
+import { initCustomField } from "./custom_field.js";
 import { useActionEvents } from "./use_action_events.js";
 import { useFormEvents } from "./use_form_events.js";
 import {
@@ -30,39 +35,79 @@ import {
  * So we redefine chrome styles so that loader can keep up with the actual color visible to the user
  */
 import.meta.css = /* css */ `
-  button[data-custom] {
-    border: none;
-    background: none;
+  .navi_button {
+    position: relative;
     display: inline-block;
     padding: 0;
+    background: none;
+    border: none;
+
+    --border-width: 1px;
+    --outline-width: 1px;
+
+    --border-color: light-dark(#767676, #8e8e93);
+    --border-color-readonly: color-mix(in srgb, var(--border-color) 30%, white);
+    --border-color-disabled: var(--border-color-readonly);
+    --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
+    --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
+
+    --background-color: light-dark(#f3f4f6, #2d3748);
+    --background-color-readonly: var(--background-color);
+    --background-color-disabled: var(--background-color);
+    --background-color-hover: color-mix(
+      in srgb,
+      var(--background-color) 95%,
+      black
+    );
+
+    --color: currentColor;
+    --color-readonly: color-mix(in srgb, currentColor 30%, transparent);
+    --color-disabled: var(--color-readonly);
+  }
+  .navi_button_content {
+    border-width: calc(var(--border-width) + var(--outline-width));
+    border-style: solid;
+    border-color: transparent;
+    outline-width: var(--border-width);
+    outline-style: none;
+    outline-color: var(--border-color);
+    outline-offset: calc(-1 * (var(--border-width)));
   }
 
-  button[data-custom] .navi_button_content {
-    transition-duration: 0.15s;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-property: transform;
-    display: inline-flex;
+  .navi_button[data-focus-visible] .navi_button_content {
+    outline-width: calc(var(--border-width) + var(--outline-width));
+    outline-style: solid;
+    outline-offset: calc(-1 * (var(--border-width) + var(--outline-width)));
+  }
+  .navi_button[data-readonly] .navi_button_content {
+    --outline-color: var(--border-color-readonly);
+    --background-color: none;
+  }
+  .navi_button[data-active] ..navi_button_content {
+    --outline-color: var(--border-color-active);
+    --background-color: none;
+  }
+
+  .navi_button_content {
     position: relative;
+    display: inline-flex;
     padding-block: 1px;
     padding-inline: 6px;
     border-radius: inherit;
+    transition-property: transform;
+    transition-duration: 0.15s;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   }
-
-  button[data-custom]:active .navi_button_content {
+  .navi_button_shadow {
+    position: absolute;
+    inset: calc(-1 * (var(--border-width) + var(--outline-width)));
+    border-radius: inherit;
+    pointer-events: none;
+  }
+  .navi_button[data-active] .navi_button_content {
     transform: scale(0.9);
   }
-
-  button[data-custom]:disabled .navi_button_content {
-    transform: none;
-  }
-
-  button[data-custom] .navi_button_shadow {
-    position: absolute;
-    inset: calc(-1 * (var(--field-border-width) + var(--field-outline-width)));
-    pointer-events: none;
-    border-radius: inherit;
-  }
-  button[data-custom]:active .navi_button_shadow {
+  .navi_button[data-active] .navi_button_shadow {
     box-shadow:
       inset 0 3px 6px rgba(0, 0, 0, 0.2),
       inset 0 1px 2px rgba(0, 0, 0, 0.3),
@@ -70,7 +115,10 @@ import.meta.css = /* css */ `
       inset 2px 0 4px rgba(0, 0, 0, 0.1),
       inset -2px 0 4px rgba(0, 0, 0, 0.1);
   }
-  button[data-custom]:disabled > .navi_button_shadow {
+  .navi_button[data-disabled] .navi_button_content {
+    transform: none;
+  }
+  .navi_button[data-disabled] .navi_button_shadow {
     box-shadow: none;
   }
 `;
@@ -96,7 +144,6 @@ const ButtonBasic = forwardRef((props, ref) => {
     autoFocus,
     appearance = "navi",
     discrete,
-    style = {},
     children,
     ...rest
   } = props;
@@ -109,61 +156,49 @@ const ButtonBasic = forwardRef((props, ref) => {
     loading || (contextLoading && contextLoadingElement === innerRef.current);
   const innerReadOnly = readOnly || contextReadOnly || innerLoading;
   const innerDisabled = disabled || contextDisabled;
-  let {
-    border,
-    borderWidth = border === "none" || discrete ? 0 : 1,
-    outlineWidth = discrete ? 0 : 1,
-    borderColor = "light-dark(#767676, #8e8e93)",
-    background,
-    backgroundColor = "light-dark(#f3f4f6, #2d3748)",
-    ...restStyle
-  } = style;
-  borderWidth = resolveCSSSize(borderWidth);
-  outlineWidth = resolveCSSSize(outlineWidth);
+
+  let buttonChildren;
+  if (appearance === "navi") {
+    buttonChildren = <NaviButton buttonRef={innerRef}>{children}</NaviButton>;
+  } else {
+    buttonChildren = children;
+  }
 
   return (
     <button
       {...rest}
       ref={innerRef}
-      className={appearance === "navi" ? "" : undefined}
-      data-readonly-silent={innerReadOnly ? "" : undefined}
+      className={appearance === "navi" ? "navi_button" : undefined}
+      data-discrete={discrete ? "" : undefined}
       data-readonly={innerReadOnly ? "" : undefined}
+      data-readonly-silent={innerReadOnly ? "" : undefined}
+      data-disabled={innerDisabled ? "" : undefined}
+      data-validation-message-arrow-x="center"
       aria-busy={innerLoading}
-      style={{
-        ...restStyle,
-      }}
     >
-      <LoadableInlineElement
+      <LoaderBackground
         loading={innerLoading}
         inset={-1}
         color="light-dark(#355fcc, #3b82f6)"
       >
-        <span
-          className="navi_button_content"
-          data-field=""
-          data-field-with-background={background === "none" ? undefined : ""}
-          data-field-with-hover-effect-on-border=""
-          data-field-with-border={borderWidth ? "" : undefined}
-          data-field-with-border-hover={discrete ? "" : undefined}
-          data-field-with-background-hover={discrete ? "" : undefined}
-          data-validation-message-arrow-x="center"
-          data-readonly={innerReadOnly ? "" : undefined}
-          data-disabled={innerDisabled ? "" : undefined}
-          style={{
-            "--navi-field-border-width": `${borderWidth}px`,
-            "--navi-field-outline-width": `${outlineWidth}px`,
-            "--navi-field-border-color": borderColor,
-            "--navi-field-background-color": backgroundColor,
-          }}
-        >
-          {children}
-          <span className="navi_button_shadow"></span>
-        </span>
-      </LoadableInlineElement>
+        {buttonChildren}
+      </LoaderBackground>
     </button>
   );
 });
-const NaviButton = ({ inputRef }) => {};
+const NaviButton = ({ buttonRef, children }) => {
+  const ref = useRef();
+  useLayoutEffect(() => {
+    return initCustomField(buttonRef.current, buttonRef.current);
+  }, []);
+
+  return (
+    <span ref={ref} className="navi_button_content">
+      {children}
+      <span className="navi_button_shadow"></span>
+    </span>
+  );
+};
 
 const ButtonWithAction = forwardRef((props, ref) => {
   const {

@@ -228,6 +228,15 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
   if (actionName) {
     delete rest["data-action"];
   }
+  const loaderProps = {
+    "data-action": actionName,
+    "loading": innerLoading,
+    "inset": -1,
+    "style": {
+      "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
+    },
+    "color": "var(--accent-color)",
+  };
   const inputCheckbox = (
     <input
       {...rest}
@@ -273,14 +282,8 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
         style={style}
       >
         <LoaderBackground
-          data-action={actionName}
-          loading={innerLoading}
-          inset={-1}
+          {...loaderProps}
           targetSelector={appeareance === "navi" ? ".navi_checkbox_field" : ""}
-          style={{
-            "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
-          }}
-          color="var(--accent-color)"
         >
           {inputCheckbox}
         </LoaderBackground>
@@ -289,15 +292,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
   }
 
   return (
-    <LoadableInlineElement
-      data-action={actionName}
-      loading={innerLoading}
-      inset={-1}
-      style={{
-        "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
-      }}
-      color="var(--accent-color)"
-    >
+    <LoadableInlineElement {...loaderProps}>
       {inputCheckbox}
     </LoadableInlineElement>
   );
