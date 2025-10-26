@@ -33,6 +33,7 @@ import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
+import { initCustomField } from "./custom_field.js";
 import "./field_css.js";
 import { ReportReadOnlyOnLabelContext } from "./label.jsx";
 import { useActionEvents } from "./use_action_events.js";
@@ -46,6 +47,56 @@ import {
   useUIState,
   useUIStateController,
 } from "./use_ui_state_controller.js";
+
+import.meta.css = /* css */ `
+  .navi_input {
+    --border-width: 1px;
+    --outline-width: 1px;
+    --outer-width: calc(var(--border-width) + var(--outline-width));
+    --padding-x: 6px;
+    --padding-y: 1px;
+
+    --outline-color: light-dark(#4476ff, #3b82f6);
+
+    --border-radius: 2px;
+    --border-color: light-dark(#767676, #8e8e93);
+    --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
+    --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
+    --border-color-readonly: color-mix(in srgb, var(--border-color) 30%, white);
+    --border-color-disabled: var(--border-color-readonly);
+
+    --background-color: white;
+    --background-color-hover: color-mix(
+      in srgb,
+      var(--background-color) 95%,
+      black
+    );
+    --background-color-readonly: var(--background-color);
+    --background-color-disabled: var(--background-color);
+
+    --color: currentColor;
+    --color-readonly: color-mix(in srgb, currentColor 30%, transparent);
+    --color-disabled: var(--color-readonly);
+    color: var(--color);
+
+    background-color: var(--background-color);
+    border-width: var(--outer-width);
+    border-width: var(--outer-width);
+    border-style: solid;
+    border-color: transparent;
+    border-radius: var(--border-radius);
+    outline-width: var(--border-width);
+    outline-style: solid;
+    outline-color: var(--border-color);
+    outline-offset: calc(-1 * (var(--border-width)));
+  }
+
+  .navi_input[data-focus-visible] {
+    border-color: var(--outline-color);
+    --outline-width: var(--outer-width);
+    outline-offset: calc(-1 * var(--outer-width));
+  }
+`;
 
 export const InputTextual = forwardRef((props, ref) => {
   const uiStateController = useUIStateController(props, "input");
@@ -83,7 +134,8 @@ const InputTextualBasic = forwardRef((props, ref) => {
     autoFocus,
     autoFocusVisible,
     autoSelect,
-    appearance = "custom",
+    appearance = "navi",
+    accentColor,
     width,
     height,
     ...rest
@@ -110,14 +162,14 @@ const InputTextualBasic = forwardRef((props, ref) => {
     <input
       {...rest}
       ref={innerRef}
+      className={appearance === "navi" ? "navi_input" : undefined}
       type={type}
       data-value={uiState}
       value={innerValue}
-      data-field=""
-      data-field-with-border=""
-      data-custom={appearance === "custom" ? "" : undefined}
       readOnly={innerReadOnly}
       disabled={innerDisabled}
+      data-readOnly={innerReadOnly ? "" : undefined}
+      data-disabled={innerDisabled ? "" : undefined}
       onInput={(e) => {
         let inputValue;
         if (type === "number") {
@@ -141,10 +193,17 @@ const InputTextualBasic = forwardRef((props, ref) => {
     />
   );
 
+  useLayoutEffect(() => {
+    return initCustomField(innerRef.current, innerRef.current);
+  }, []);
+
   return (
     <LoadableInlineElement
       loading={innerLoading}
-      color="light-dark(#355fcc, #3b82f6)"
+      style={{
+        "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
+      }}
+      color="var(--accent-color)"
       width={width}
       height={height}
     >

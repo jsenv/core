@@ -279,14 +279,6 @@ const InputRadioBasic = forwardRef((props, ref) => {
   if (actionName) {
     delete rest["data-action"];
   }
-  const loaderProps = {
-    loading: innerLoading,
-    inset: -1,
-    style: {
-      "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
-    },
-    color: "var(--accent-color)",
-  };
   const inputRadio = (
     <input
       {...rest}
@@ -323,6 +315,14 @@ const InputRadioBasic = forwardRef((props, ref) => {
       }}
     />
   );
+  const loaderProps = {
+    loading: innerLoading,
+    inset: -1,
+    style: {
+      "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
+    },
+    color: "var(--accent-color)",
+  };
   if (appeareance === "navi") {
     return (
       <NaviRadio
@@ -341,7 +341,7 @@ const InputRadioBasic = forwardRef((props, ref) => {
   }
 
   return (
-    <LoadableInlineElement {...loaderProps} targetSelector=".navi_radio_field">
+    <LoadableInlineElement {...loaderProps} data-action={actionName}>
       {inputRadio}
     </LoadableInlineElement>
   );
