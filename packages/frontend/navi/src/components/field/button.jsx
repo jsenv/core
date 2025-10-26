@@ -47,6 +47,8 @@ import.meta.css = /* css */ `
     --border-width: 1px;
     --outline-width: 1px;
     --outer-width: calc(var(--border-width) + var(--outline-width));
+    --padding-x: 6px;
+    --padding-y: 1px;
 
     --outline-color: light-dark(#4476ff, #3b82f6);
 
@@ -73,8 +75,10 @@ import.meta.css = /* css */ `
   .navi_button_content {
     position: relative;
     display: inline-flex;
-    padding-block: 1px;
-    padding-inline: 6px;
+    padding-top: var(--padding-y);
+    padding-right: var(--padding-x);
+    padding-bottom: var(--padding-y);
+    padding-left: var(--padding-x);
     color: var(--color);
     background-color: var(--background-color);
     border-width: var(--outer-width);

@@ -7,72 +7,72 @@
     <title>Button Demo</title>
     <style>
       body {
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         max-width: 1400px;
+        min-height: 100vh;
         margin: 0 auto;
         padding: 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        min-height: 100vh;
       }
 
       h1 {
-        text-align: center;
-        color: white;
         margin-bottom: 30px;
+        color: white;
         font-size: 2.5rem;
+        text-align: center;
         text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
       }
 
       .demo-grid {
         display: grid;
+        margin-bottom: 30px;
         grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
         gap: 20px;
-        margin-bottom: 30px;
       }
 
       .demo-card {
-        background: white;
-        border-radius: 12px;
         padding: 25px;
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        background: white;
         border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
         transition:
           transform 0.2s ease,
           box-shadow 0.2s ease;
       }
 
       .demo-card:hover {
-        transform: translateY(-2px);
         box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
+        transform: translateY(-2px);
       }
 
       .demo-title {
-        color: #2c3e50;
-        margin: 0 0 20px 0;
-        font-size: 1.3rem;
-        font-weight: 600;
-        border-bottom: 3px solid #667eea;
-        padding-bottom: 10px;
         display: flex;
+        margin: 0 0 20px 0;
+        padding-bottom: 10px;
         align-items: center;
         gap: 10px;
+        color: #2c3e50;
+        font-weight: 600;
+        font-size: 1.3rem;
+        border-bottom: 3px solid #667eea;
       }
 
       .demo-title::before {
-        content: "🔘";
         font-size: 1.2rem;
+        content: "🔘";
       }
 
       .button-row {
         display: flex;
-        align-items: center;
-        gap: 15px;
         margin: 15px 0;
         padding: 12px;
+        align-items: center;
+        gap: 15px;
         background: #f8f9fa;
-        border-radius: 8px;
         border: 1px solid #e9ecef;
+        border-radius: 8px;
         transition: background 0.2s ease;
       }
 
@@ -82,49 +82,49 @@
 
       .button-container {
         display: flex;
+        min-width: 0;
+        flex: 1;
         align-items: center;
         gap: 10px;
-        flex: 1;
-        min-width: 0;
       }
 
       .toggle-button {
         padding: 8px 16px;
-        background: linear-gradient(45deg, #667eea, #764ba2);
+        flex-shrink: 0;
         color: white;
+        font-weight: 500;
+        font-size: 0.9rem;
+        white-space: nowrap;
+        background: linear-gradient(45deg, #667eea, #764ba2);
         border: none;
         border-radius: 6px;
-        cursor: pointer;
-        font-size: 0.9rem;
-        font-weight: 500;
-        transition: all 0.2s ease;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        flex-shrink: 0;
-        white-space: nowrap;
+        transition: all 0.2s ease;
+        cursor: pointer;
       }
 
       .toggle-button:hover {
         background: linear-gradient(45deg, #5a6fd8, #6b3fa0);
-        transform: translateY(-1px);
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        transform: translateY(-1px);
       }
 
       .comparison {
         display: flex;
-        flex-direction: column;
-        gap: 8px;
         margin-top: 15px;
         padding: 12px;
+        flex-direction: column;
+        gap: 8px;
         background: #fff3cd;
-        border-radius: 6px;
         border-left: 4px solid #ffc107;
+        border-radius: 6px;
       }
 
       .comparison-label {
-        font-size: 0.85rem;
+        margin-bottom: 5px;
         color: #856404;
         font-weight: 500;
-        margin-bottom: 5px;
+        font-size: 0.85rem;
       }
 
       .native-examples {
@@ -134,15 +134,15 @@
       }
 
       .native-examples button {
-        align-self: flex-start;
         padding: 8px 16px;
+        align-self: flex-start;
         font-size: 0.9rem;
       }
 
       .prop-control-demo {
         grid-column: 1 / -1;
-        background: linear-gradient(45deg, #ff6b6b 0%, #feca57 100%);
         color: white;
+        background: linear-gradient(45deg, #ff6b6b 0%, #feca57 100%);
       }
 
       .prop-control-demo .demo-title {
@@ -155,17 +155,17 @@
       }
 
       .prop-controls {
-        margin-bottom: 25px;
         display: grid;
+        margin-bottom: 25px;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 15px;
       }
 
       .prop-select-group {
-        background: rgba(255, 255, 255, 0.1);
         padding: 15px;
-        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.1);
         border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
       }
 
       .prop-select-label {
@@ -178,65 +178,65 @@
       .prop-select {
         width: 100%;
         padding: 8px 12px;
-        border: none;
-        border-radius: 6px;
-        background: white;
         color: #333;
         font-size: 0.9rem;
-        cursor: pointer;
+        background: white;
+        border: none;
+        border-radius: 6px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        cursor: pointer;
       }
 
       .state-controls {
-        background: rgba(255, 255, 255, 0.1);
-        padding: 15px;
-        border-radius: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
         margin-bottom: 20px;
+        padding: 15px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
       }
 
       .state-controls h4 {
         margin: 0 0 15px 0;
-        font-size: 1rem;
         color: white;
+        font-size: 1rem;
       }
 
       .control-row {
         display: flex;
-        gap: 15px;
-        flex-wrap: wrap;
         margin-bottom: 10px;
+        flex-wrap: wrap;
+        gap: 15px;
       }
 
       .control-group {
         display: flex;
+        min-width: 100px;
+        padding: 12px;
         flex-direction: column;
         align-items: center;
         gap: 8px;
         background: rgba(255, 255, 255, 0.05);
-        padding: 12px;
-        border-radius: 8px;
         border: 1px solid rgba(255, 255, 255, 0.1);
-        min-width: 100px;
+        border-radius: 8px;
       }
 
       .control-toggle {
-        padding: 8px 16px;
-        border: 2px solid rgba(255, 255, 255, 0.3);
-        background: rgba(255, 255, 255, 0.1);
-        color: white;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 0.85rem;
-        font-weight: 500;
-        transition: all 0.2s ease;
         min-width: 80px;
+        padding: 8px 16px;
+        color: white;
+        font-weight: 500;
+        font-size: 0.85rem;
         text-align: center;
+        background: rgba(255, 255, 255, 0.1);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 6px;
+        transition: all 0.2s ease;
+        cursor: pointer;
       }
 
       .control-toggle.active {
-        background: rgba(255, 255, 255, 0.9);
         color: #333;
+        background: rgba(255, 255, 255, 0.9);
         border-color: white;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
       }
@@ -251,36 +251,36 @@
       }
 
       .control-label {
-        font-size: 0.9rem;
-        color: white;
         margin: 0;
+        color: white;
+        font-size: 0.9rem;
       }
 
       .button-test-grid {
         display: grid;
+        padding: 20px;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 15px;
         background: rgba(255, 255, 255, 0.1);
-        padding: 20px;
-        border-radius: 8px;
         border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
       }
 
       .button-test-item {
         display: flex;
+        padding: 15px;
         flex-direction: column;
         align-items: center;
         gap: 10px;
-        padding: 15px;
+        text-align: center;
         background: rgba(255, 255, 255, 0.05);
         border-radius: 6px;
-        text-align: center;
       }
 
       .button-label {
-        font-size: 0.9rem;
-        color: white;
         margin-bottom: 8px;
+        color: white;
+        font-size: 0.9rem;
       }
 
       @media (max-width: 768px) {
@@ -448,7 +448,11 @@
               <div className="button-container">
                 <Button
                   loading={loading}
-                  style={{ borderWidth: 8, padding: "12px 24px" }}
+                  style={{
+                    "--border-width": "8px",
+                    "--padding-x": "12px",
+                    "--padding-y": "24px",
+                  }}
                 >
                   Thick Border Button
                 </Button>
