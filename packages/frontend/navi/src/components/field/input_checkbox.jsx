@@ -13,7 +13,10 @@ import { useConstraints } from "../../validation/hooks/use_constraints.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
-import { LoadableInlineElement } from "../loader/loader_background.jsx";
+import {
+  LoadableInlineElement,
+  LoaderBackground,
+} from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { initCustomField } from "./custom_field.js";
 import {
@@ -42,6 +45,7 @@ import.meta.css = /* css */ `
   }
 
   .navi_checkbox {
+    position: relative;
     display: inline-flex;
     box-sizing: content-box;
 
@@ -260,8 +264,8 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
     />
   );
 
-  const inputCheckboxDisplayed =
-    appeareance === "navi" ? (
+  if (appeareance === "navi") {
+    return (
       <NaviCheckbox
         inputRef={innerRef}
         accentColor={accentColor}
@@ -269,24 +273,33 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
         disabled={innerDisabled}
         style={style}
       >
-        {inputCheckbox}
+        <LoaderBackground
+          data-action={actionName}
+          loading={innerLoading}
+          inset={-1}
+          targetSelector={appeareance === "navi" ? ".navi_checkbox_field" : ""}
+          style={{
+            "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
+          }}
+          color="var(--accent-color)"
+        >
+          {inputCheckbox}
+        </LoaderBackground>
       </NaviCheckbox>
-    ) : (
-      inputCheckbox
     );
+  }
 
   return (
     <LoadableInlineElement
       data-action={actionName}
       loading={innerLoading}
       inset={-1}
-      targetSelector={appeareance === "navi" ? ".navi_checkbox_field" : ""}
       style={{
         "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
       }}
       color="var(--accent-color)"
     >
-      {inputCheckboxDisplayed}
+      {inputCheckbox}
     </LoadableInlineElement>
   );
 });
