@@ -1,6 +1,11 @@
 import { noUnknownParamsRule } from "@jsenv/eslint-plugin";
 import { RuleTester } from "eslint";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
 import { clearFileParseCache } from "../../src/rule_no_unknown_params/utils/import_resolution.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const ruleTester = new RuleTester({
   languageOptions: {
@@ -11,6 +16,8 @@ const ruleTester = new RuleTester({
 
 // Clear cache before tests - this demonstrates the caching API is available
 clearFileParseCache();
+
+const testFilePath = join(__dirname, "test_main.js");
 
 // Test caching behavior with import resolution
 ruleTester.run("no-unknown-params caching mechanism", noUnknownParamsRule, {
@@ -33,12 +40,15 @@ ruleTester.run("no-unknown-params caching mechanism", noUnknownParamsRule, {
           a: 1, b: 2, c: 3, d: 4, e: 5
         });
       `,
-      filename:
-        "/Users/dmail/Documents/dev/jsenv/core/packages/tooling/eslint-plugin-jsenv/tests/20_caching_and_performance/test.js",
+      filename: testFilePath,
       errors: [
         {
-          message: `"invalidParam" not found in extremeFunction() (defined in ./extreme_function.js)`,
-          type: "Property",
+          messageId: "not_found_param_with_file",
+          data: {
+            param: "invalidParam",
+            func: "extremeFunction",
+            filePath: "./extreme_function.js",
+          },
         },
       ],
     },
