@@ -64,7 +64,7 @@ import.meta.css = /* css */ `
     --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
     --border-color-readonly: color-mix(
       in srgb,
-      var(--background-color) 5%,
+      var(--border-color) 45%,
       transparent
     );
     --border-color-disabled: var(--border-color-readonly);
@@ -78,7 +78,7 @@ import.meta.css = /* css */ `
     --background-color-readonly: var(--background-color);
     --background-color-disabled: color-mix(
       in srgb,
-      var(--background-color) 65%,
+      var(--background-color) 60%,
       transparent
     );
 
