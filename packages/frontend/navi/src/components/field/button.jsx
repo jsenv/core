@@ -99,7 +99,6 @@ import.meta.css = /* css */ `
     border-radius: inherit;
     pointer-events: none;
   }
-
   /* Focus */
   .navi_button[data-focus-visible] .navi_button_content {
     --border-color: var(--outline-color);
@@ -141,6 +140,32 @@ import.meta.css = /* css */ `
   }
   .navi_button[data-disabled] .navi_button_shadow {
     box-shadow: none;
+  }
+
+  /* Discrete variant */
+  .navi_button[data-discrete] .navi_button_content {
+    --background-color: transparent;
+    --border-color: transparent;
+  }
+  .navi_button[data-discrete][data-hover] .navi_button_content {
+    --border-color: var(--border-color-hover);
+  }
+  .navi_button[data-discrete][data-readonly] .navi_button_content {
+    --border-color: transparent;
+  }
+  .navi_button[data-discrete][data-disabled] .navi_button_content {
+    --border-color: transparent;
+  }
+  button[data-discrete] {
+    background-color: transparent;
+    border-color: transparent;
+  }
+  button[data-discrete]:hover {
+    border-color: revert;
+  }
+  button[data-discrete][data-readonly],
+  button[data-discrete][data-disabled] {
+    border-color: transparent;
   }
 `;
 export const Button = forwardRef((props, ref) => {

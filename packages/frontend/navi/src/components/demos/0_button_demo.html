@@ -320,6 +320,7 @@
             <ReadOnlyDemo />
             <DisabledDemo />
             <SizeVariationsDemo />
+            <DiscreteDemo />
             <PropControlDemo />
           </div>
         );
@@ -471,6 +472,82 @@
                 <small style={{ color: "#666" }}>
                   Loading animation speed should be consistent regardless of
                   button size
+                </small>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const DiscreteDemo = () => {
+        const [loading, setLoading] = useState(false);
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Discrete Buttons</h3>
+
+            <div className="button-row">
+              <div className="button-container">
+                <Button discrete loading={loading}>
+                  Discrete Button
+                </Button>
+                <span style={{ fontSize: "0.9rem", color: "#666" }}>
+                  Subtle, minimal styling
+                </span>
+              </div>
+              <button
+                className="toggle-button"
+                onClick={() => setLoading(!loading)}
+              >
+                {loading ? "Stop Loading" : "Start Loading"}
+              </button>
+            </div>
+
+            <div className="button-row">
+              <div className="button-container">
+                <Button discrete disabled>
+                  Disabled Discrete
+                </Button>
+                <span style={{ fontSize: "0.9rem", color: "#666" }}>
+                  Disabled state
+                </span>
+              </div>
+            </div>
+
+            <div className="button-row">
+              <div className="button-container">
+                <Button discrete readOnly>
+                  Read-Only Discrete
+                </Button>
+                <span style={{ fontSize: "0.9rem", color: "#666" }}>
+                  Read-only state
+                </span>
+              </div>
+            </div>
+
+            <div className="comparison">
+              <span className="comparison-label">Comparison:</span>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "15px",
+                  alignItems: "center",
+                  marginTop: "10px",
+                }}
+              >
+                <Button appearance="default" loading={loading}>
+                  Regular Button
+                </Button>
+                <Button appearance="default" discrete loading={loading}>
+                  Discrete Button
+                </Button>
+              </div>
+              <div className="native-examples">
+                <small style={{ color: "#666" }}>
+                  Discrete buttons have minimal styling and blend better with
+                  content. They're perfect for secondary actions or when you
+                  want less visual emphasis.
                 </small>
               </div>
             </div>
