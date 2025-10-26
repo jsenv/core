@@ -229,15 +229,6 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
   if (actionName) {
     delete rest["data-action"];
   }
-  const loaderProps = {
-    "data-action": actionName,
-    "loading": innerLoading,
-    "inset": -1,
-    "style": {
-      "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
-    },
-    "color": "var(--accent-color)",
-  };
   const inputCheckbox = (
     <input
       {...rest}
@@ -272,10 +263,18 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
       }}
     />
   );
-
+  const loaderProps = {
+    loading: innerLoading,
+    inset: -1,
+    style: {
+      "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
+    },
+    color: "var(--accent-color)",
+  };
   if (appeareance === "navi") {
     return (
       <NaviCheckbox
+        data-action={actionName}
         inputRef={innerRef}
         accentColor={accentColor}
         readOnly={readOnly}
@@ -284,7 +283,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
       >
         <LoaderBackground
           {...loaderProps}
-          targetSelector={appeareance === "navi" ? ".navi_checkbox_field" : ""}
+          targetSelector=".navi_checkbox_field"
         >
           {inputCheckbox}
         </LoaderBackground>
@@ -293,7 +292,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
   }
 
   return (
-    <LoadableInlineElement {...loaderProps}>
+    <LoadableInlineElement {...loaderProps} data-action={actionName}>
       {inputCheckbox}
     </LoadableInlineElement>
   );
@@ -305,6 +304,7 @@ const NaviCheckbox = ({
   inputRef,
   style,
   children,
+  ...rest
 }) => {
   const ref = useRef();
   useLayoutEffect(() => {
@@ -324,6 +324,7 @@ const NaviCheckbox = ({
 
   return (
     <div
+      {...rest}
       ref={ref}
       className="navi_checkbox"
       style={{

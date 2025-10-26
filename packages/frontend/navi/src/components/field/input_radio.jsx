@@ -8,7 +8,10 @@ import {
 
 import { useConstraints } from "../../validation/hooks/use_constraints.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import { LoadableInlineElement } from "../loader/loader_background.jsx";
+import {
+  LoadableInlineElement,
+  LoaderBackground,
+} from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { initCustomField } from "./custom_field.js";
 import {
@@ -34,9 +37,9 @@ import.meta.css = /* css */ `
   }
 
   .navi_radio {
+    position: relative;
     display: inline-flex;
     box-sizing: content-box;
-    position: relative;
 
     --outline-offset: 1px;
     --outline-width: 2px;
@@ -69,46 +72,46 @@ import.meta.css = /* css */ `
   }
   .navi_radio input {
     position: absolute;
-    opacity: 0;
     inset: 0;
     margin: 0;
     padding: 0;
+    opacity: 0;
     cursor: inherit;
   }
   .navi_radio_field {
     display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin-left: 5px;
-    margin-top: 3px;
-    margin-right: 3px;
-    border-radius: 50%;
     width: var(--width);
     height: var(--height);
-
-    outline-offset: var(--outline-offset);
+    margin-top: 3px;
+    margin-right: 3px;
+    margin-left: 5px;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--background-color);
+    border-radius: 50%;
     outline-width: var(--outline-width);
 
     outline-style: none;
 
     outline-color: var(--outline-color);
-    background-color: var(--background-color);
+
+    outline-offset: var(--outline-offset);
   }
   .navi_radio_field svg {
     overflow: visible;
   }
   .navi_radio_border {
-    stroke: var(--border-color);
     fill: var(--background-color);
+    stroke: var(--border-color);
   }
   .navi_radio_marker {
     width: 100%;
     height: 100%;
-    pointer-events: none;
     opacity: 0;
-    transform-origin: center;
-    transform: scale(0.3);
     fill: var(--mark-color);
+    transform: scale(0.3);
+    transform-origin: center;
+    pointer-events: none;
   }
   .navi_radio_dashed_border {
     display: none;
@@ -147,8 +150,8 @@ import.meta.css = /* css */ `
   }
   /* Readonly */
   .navi_radio[data-readonly] .navi_radio_border {
-    stroke: var(--border-color-readonly);
     fill: var(--background-color-readonly);
+    stroke: var(--border-color-readonly);
   }
   .navi_radio[data-readonly] .navi_radio_marker {
     fill: var(--mark-color-readonly);
@@ -157,16 +160,16 @@ import.meta.css = /* css */ `
     display: none;
   }
   .navi_radio[data-checked][data-readonly] .navi_radio_border {
-    stroke: var(--border-color-checked-readonly);
     fill: var(--background-color-checked-readonly);
+    stroke: var(--border-color-checked-readonly);
   }
   .navi_radio[data-checked][data-readonly] .navi_radio_marker {
     fill: var(--mark-color-readonly);
   }
   /* Disabled */
   .navi_radio[data-disabled] .navi_radio_border {
-    stroke: var(--border-color-disabled);
     fill: var(--background-color-disabled);
+    stroke: var(--border-color-disabled);
   }
   .navi_radio[data-disabled] .navi_radio_marker {
     fill: var(--mark-color-disabled);
@@ -245,11 +248,6 @@ const InputRadioBasic = forwardRef((props, ref) => {
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
   const checked = Boolean(uiState);
-  const actionName = rest["data-action"];
-  if (actionName) {
-    delete rest["data-action"];
-  }
-
   // we must first dispatch an event to inform all other radios they where unchecked
   // this way each other radio uiStateController knows thery are unchecked
   // we do this on "input"
@@ -278,6 +276,18 @@ const InputRadioBasic = forwardRef((props, ref) => {
     }
   }, [checked]);
 
+  const actionName = rest["data-action"];
+  if (actionName) {
+    delete rest["data-action"];
+  }
+  const loaderProps = {
+    loading: innerLoading,
+    inset: -1,
+    style: {
+      "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
+    },
+    color: "var(--accent-color)",
+  };
   const inputRadio = (
     <input
       {...rest}
@@ -314,33 +324,26 @@ const InputRadioBasic = forwardRef((props, ref) => {
       }}
     />
   );
-  const inputRadioDisplayed =
-    appeareance === "navi" ? (
+  if (appeareance === "navi") {
+    return (
       <NaviRadio
+        data-action={actionName}
         inputRef={innerRef}
         accentColor={accentColor}
         readOnly={innerReadOnly}
         disabled={innerDisabled}
         style={style}
       >
-        {inputRadio}
+        <LoaderBackground {...loaderProps} targetSelector=".navi_radio_field">
+          {inputRadio}
+        </LoaderBackground>
       </NaviRadio>
-    ) : (
-      inputRadio
     );
+  }
 
   return (
-    <LoadableInlineElement
-      data-action={actionName}
-      loading={innerLoading}
-      inset={-1}
-      targetSelector={appeareance === "navi" ? ".navi_radio_field" : ""}
-      style={{
-        "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
-      }}
-      color="var(--accent-color)"
-    >
-      {inputRadioDisplayed}
+    <LoadableInlineElement {...loaderProps} targetSelector=".navi_radio_field">
+      {inputRadio}
     </LoadableInlineElement>
   );
 });
@@ -351,6 +354,7 @@ const NaviRadio = ({
   disabled,
   style,
   children,
+  ...rest
 }) => {
   const ref = useRef();
   useLayoutEffect(() => {
@@ -359,6 +363,7 @@ const NaviRadio = ({
 
   return (
     <span
+      {...rest}
       ref={ref}
       className="navi_radio"
       style={{
