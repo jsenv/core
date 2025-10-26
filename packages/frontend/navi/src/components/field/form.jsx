@@ -90,6 +90,8 @@ const FormBasic = forwardRef((props, ref) => {
     return { loading };
   }, [loading]);
 
+  console.log("form is loading", loading);
+
   return (
     <form
       {...rest}

@@ -308,13 +308,22 @@ const ButtonWithAction = forwardRef((props, ref) => {
 });
 
 const ButtonInsideForm = forwardRef((props, ref) => {
-  const { formContext, type, onClick, children, loading, ...rest } = props;
-  const formLoading = formContext.loading;
+  const {
+    // eslint-disable-next-line no-unused-vars
+    formContext,
+    type,
+    onClick,
+    children,
+    loading,
+    readOnly,
+    ...rest
+  } = props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
   const wouldSubmitFormByType = type === "submit" || type === "image";
-  const innerLoading = loading || (formLoading && wouldSubmitFormByType);
+  const innerLoading = loading;
+  const innerReadOnly = readOnly;
   const handleClick = (event) => {
     const buttonElement = innerRef.current;
     const { form } = buttonElement;
@@ -353,6 +362,7 @@ const ButtonInsideForm = forwardRef((props, ref) => {
       ref={innerRef}
       type={type}
       loading={innerLoading}
+      readOnly={innerReadOnly}
       onClick={(event) => {
         handleClick(event);
         onClick?.(event);
