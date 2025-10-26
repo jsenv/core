@@ -46,7 +46,7 @@
                 <p>
                   <strong>Border radius</strong>
                 </p>
-                <Button style={{ borderRadius: "20px" }}>C</Button>
+                <Button style={{ "--border-radius": "20px" }}>C</Button>
               </div>
             </div>
 
@@ -55,21 +55,23 @@
                 <p>
                   <strong>Violet border</strong>
                 </p>
-                <Button style={{ borderColor: "violet" }}>D</Button>
+                <Button style={{ "--border-color": "violet" }}>D</Button>
               </div>
 
               <div>
                 <p>
                   <strong>Border width</strong>
                 </p>
-                <Button style={{ borderWidth: "10px" }}>D</Button>
+                <Button style={{ "--border-width": "10px" }}>D</Button>
               </div>
 
               <div>
                 <p>
                   <strong>Outline width</strong>
                 </p>
-                <Button style={{ borderWidth: "5px", outlineWidth: "5px" }}>
+                <Button
+                  style={{ "--border-width": "5px", "--outline-width": "5px" }}
+                >
                   D
                 </Button>
               </div>
