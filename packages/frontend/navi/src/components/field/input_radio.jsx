@@ -87,7 +87,6 @@ import.meta.css = /* css */ `
     margin-left: 5px;
     align-items: center;
     justify-content: center;
-    background-color: var(--background-color);
     border-radius: 50%;
     outline-width: var(--outline-width);
 
