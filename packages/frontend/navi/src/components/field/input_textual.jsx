@@ -108,6 +108,7 @@ import.meta.css = /* css */ `
   .navi_input[data-readonly] {
     color: var(--color-readonly);
     background-color: var(--background-color-readonly);
+    outline-color: var(--border-color-readonly);
   }
   .navi_input[data-disabled] {
     color: var(--color-disabled);
