@@ -15,6 +15,7 @@ import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { initCustomField } from "./custom_field.js";
+import "./navi_css_vars.js";
 import { useActionEvents } from "./use_action_events.js";
 import { useFormEvents } from "./use_form_events.js";
 import {
