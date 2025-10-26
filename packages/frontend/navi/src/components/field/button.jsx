@@ -10,7 +10,6 @@ import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
-import "./field_css.js";
 import { useActionEvents } from "./use_action_events.js";
 import { useFormEvents } from "./use_form_events.js";
 import {
@@ -95,7 +94,7 @@ const ButtonBasic = forwardRef((props, ref) => {
     loading,
     constraints = [],
     autoFocus,
-    appearance = "custom",
+    appearance = "navi",
     discrete,
     style = {},
     children,
@@ -126,7 +125,7 @@ const ButtonBasic = forwardRef((props, ref) => {
     <button
       {...rest}
       ref={innerRef}
-      data-custom={appearance === "custom" ? "" : undefined}
+      className={appearance === "navi" ? "" : undefined}
       data-readonly-silent={innerReadOnly ? "" : undefined}
       data-readonly={innerReadOnly ? "" : undefined}
       aria-busy={innerLoading}
@@ -164,6 +163,7 @@ const ButtonBasic = forwardRef((props, ref) => {
     </button>
   );
 });
+const NaviButton = ({ inputRef }) => {};
 
 const ButtonWithAction = forwardRef((props, ref) => {
   const {

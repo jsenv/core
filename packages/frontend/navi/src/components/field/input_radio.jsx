@@ -222,7 +222,7 @@ const InputRadioBasic = forwardRef((props, ref) => {
     autoFocus,
     constraints = [],
 
-    appeareance = "custom", // "custom" or "default"
+    appeareance = "navi", // "navi" or "default"
     accentColor,
     onClick,
     onInput,
@@ -283,7 +283,7 @@ const InputRadioBasic = forwardRef((props, ref) => {
       {...rest}
       ref={innerRef}
       type="radio"
-      style={appeareance === "custom" ? undefined : style}
+      style={appeareance === "default" ? style : undefined}
       name={innerName}
       checked={checked}
       disabled={innerDisabled}
@@ -315,8 +315,8 @@ const InputRadioBasic = forwardRef((props, ref) => {
     />
   );
   const inputRadioDisplayed =
-    appeareance === "custom" ? (
-      <CustomRadio
+    appeareance === "navi" ? (
+      <NaviRadio
         inputRef={innerRef}
         accentColor={accentColor}
         readOnly={innerReadOnly}
@@ -324,7 +324,7 @@ const InputRadioBasic = forwardRef((props, ref) => {
         style={style}
       >
         {inputRadio}
-      </CustomRadio>
+      </NaviRadio>
     ) : (
       inputRadio
     );
@@ -334,7 +334,7 @@ const InputRadioBasic = forwardRef((props, ref) => {
       data-action={actionName}
       loading={innerLoading}
       inset={-1}
-      targetSelector={appeareance === "custom" ? ".navi_radio_field" : ""}
+      targetSelector={appeareance === "navi" ? ".navi_radio_field" : ""}
       style={{
         "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
       }}
@@ -344,7 +344,7 @@ const InputRadioBasic = forwardRef((props, ref) => {
     </LoadableInlineElement>
   );
 });
-const CustomRadio = ({
+const NaviRadio = ({
   inputRef,
   accentColor,
   readOnly,

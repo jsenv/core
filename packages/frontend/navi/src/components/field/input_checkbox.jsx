@@ -198,7 +198,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
 
     autoFocus,
     constraints = [],
-    appeareance = "custom", // "custom" or "default"
+    appeareance = "navi", // "navi" or "default"
     accentColor,
     onClick,
     onInput,
@@ -230,7 +230,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
       {...rest}
       ref={innerRef}
       type="checkbox"
-      style={appeareance === "custom" ? undefined : style}
+      style={appeareance === "default" ? style : undefined}
       name={innerName}
       checked={checked}
       readOnly={innerReadOnly}
@@ -261,8 +261,8 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
   );
 
   const inputCheckboxDisplayed =
-    appeareance === "custom" ? (
-      <CustomCheckbox
+    appeareance === "navi" ? (
+      <NaviCheckbox
         inputRef={innerRef}
         accentColor={accentColor}
         readOnly={readOnly}
@@ -270,7 +270,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
         style={style}
       >
         {inputCheckbox}
-      </CustomCheckbox>
+      </NaviCheckbox>
     ) : (
       inputCheckbox
     );
@@ -280,7 +280,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
       data-action={actionName}
       loading={innerLoading}
       inset={-1}
-      targetSelector={appeareance === "custom" ? ".navi_checkbox_field" : ""}
+      targetSelector={appeareance === "navi" ? ".navi_checkbox_field" : ""}
       style={{
         "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
       }}
@@ -290,7 +290,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
     </LoadableInlineElement>
   );
 });
-const CustomCheckbox = ({
+const NaviCheckbox = ({
   accentColor,
   readOnly,
   disabled,
@@ -300,14 +300,14 @@ const CustomCheckbox = ({
 }) => {
   const ref = useRef();
   useLayoutEffect(() => {
-    const customCheckbox = ref.current;
+    const naviCheckbox = ref.current;
     const colorPicked = pickLightOrDark(
-      customCheckbox,
+      naviCheckbox,
       "var(--accent-color)",
       "var(--navi-checkmark-color-light)",
       "var(--navi-checkmark-color-dark)",
     );
-    customCheckbox.style.setProperty("--checkmark-color", colorPicked);
+    naviCheckbox.style.setProperty("--checkmark-color", colorPicked);
   }, [accentColor]);
 
   useLayoutEffect(() => {

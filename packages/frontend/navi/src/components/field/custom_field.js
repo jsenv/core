@@ -22,11 +22,15 @@ export const initCustomField = (customField, field) => {
     const checked = field.matches(":checked");
     const focus = field.matches(":focus");
     const focusVisible = field.matches(":focus-visible");
+    const valid = field.matches(":valid");
+    const invalid = field.matches(":invalid");
     updateBooleanAttribute(`data-hover`, hover);
     updateBooleanAttribute(`data-active`, active);
     updateBooleanAttribute(`data-checked`, checked);
     updateBooleanAttribute(`data-focus`, focus);
     updateBooleanAttribute(`data-focus-visible`, focusVisible);
+    updateBooleanAttribute(`data-valid`, valid);
+    updateBooleanAttribute(`data-invalid`, invalid);
   };
 
   // :hover
@@ -63,8 +67,7 @@ export const initCustomField = (customField, field) => {
       // Restore original property descriptor
       Object.defineProperty(field, "checked", originalDescriptor);
     });
-  }
-  if (field.type === "radio") {
+  } else if (field.type === "radio") {
     // Listen to changes on the radio group
     const radioSet =
       field.closest("[data-radio-list], fieldset, form") || document;
@@ -87,6 +90,8 @@ export const initCustomField = (customField, field) => {
       // Restore original property descriptor
       Object.defineProperty(field, "checked", originalDescriptor);
     });
+  } else if (field.tagName === "INPUT") {
+    addEventListener(field, "input", checkPseudoClasses);
   }
 
   // just in case + catch use forcing them in chrome devtools
