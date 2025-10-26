@@ -98,22 +98,28 @@ import.meta.css = /* css */ `
     outline-color: var(--border-color);
     outline-offset: calc(-1 * (var(--border-width)));
   }
-
+  /* Focus */
   .navi_input[data-focus] {
     border-color: var(--outline-color);
     outline-width: var(--outer-width);
     outline-color: var(--outline-color);
     outline-offset: calc(-1 * var(--outer-width));
   }
+  /* Readonly */
   .navi_input[data-readonly] {
     color: var(--color-readonly);
     background-color: var(--background-color-readonly);
     outline-color: var(--border-color-readonly);
   }
+  /* Disabled */
   .navi_input[data-disabled] {
     color: var(--color-disabled);
     background-color: var(--background-color-disabled);
     outline-color: var(--border-color-disabled);
+  }
+  /* Invalid */
+  .navi_input[aria-invalid="true"] {
+    border-color: var(--invalid-color);
   }
 `;
 
