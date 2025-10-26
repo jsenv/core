@@ -595,7 +595,7 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
       let arrowTargetLeft;
       if (arrowPositionAttribute === "center") {
         // Target the center of the element
-        arrowTargetLeft = targetRight / 2;
+        arrowTargetLeft = (targetLeft + targetRight) / 2;
       } else {
         // Default behavior: target the left edge of the element (after borders)
         arrowTargetLeft = targetLeft + targetBorderSizes.left;

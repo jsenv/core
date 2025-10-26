@@ -7,6 +7,9 @@ export const READONLY_CONSTRAINT = {
     if (!element.readonly && !element.hasAttribute("data-readonly")) {
       return null;
     }
+    if (element.type === "hidden") {
+      return null;
+    }
     const readonlySilent = element.hasAttribute("data-readonly-silent");
     if (readonlySilent) {
       return { silent: true };
@@ -21,11 +24,13 @@ export const READONLY_CONSTRAINT = {
     const isBusy = element.getAttribute("aria-busy") === "true";
     if (isBusy) {
       return {
+        target: element,
         message: `Cette action est en cours. Veuillez patienter.`,
         level: "info",
       };
     }
     return {
+      target: element,
       message:
         element.tagName === "BUTTON"
           ? `Cet action n'est pas disponible pour l'instant.`
