@@ -47,23 +47,23 @@ import.meta.css = /* css */ `
     border-width: calc(
       var(--navi-field-border-width) + var(--navi-field-outline-width)
     );
-    outline-width: var(--navi-field-border-width);
-    outline-offset: calc(-1 * (var(--navi-field-border-width)));
 
     border-style: solid;
-    outline-style: none;
 
     border-color: transparent;
+    outline-width: var(--navi-field-border-width);
+    outline-style: none;
     outline-color: var(--navi-field-border-color);
+    outline-offset: calc(-1 * (var(--navi-field-border-width)));
   }
   [data-field-wrapper][data-focus-visible] [data-field-border-and-outline] {
     outline-width: calc(
       var(--navi-field-border-width) + var(--navi-field-outline-width)
     );
+    outline-style: solid;
     outline-offset: calc(
       -1 * (var(--navi-field-border-width) + var(--navi-field-outline-width))
     );
-    outline-style: solid;
   }
   [data-field-wrapper][data-readonly] [data-field-border-and-outline] {
     --navi-field-outline-color: var(--navi-field-readonly-border-color);

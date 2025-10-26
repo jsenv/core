@@ -23,6 +23,7 @@ import {
   ReportDisabledOnLabelContext,
   ReportReadOnlyOnLabelContext,
 } from "./label.jsx";
+import "./navi_css_vars.js";
 import { useActionEvents } from "./use_action_events.js";
 import {
   DisabledContext,
@@ -68,10 +69,10 @@ import.meta.css = /* css */ `
     --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
     --border-color-checked-readonly: #d3d3d3;
     --border-color-checked-disabled: #d3d3d3;
-    --background-color-checked-readonly: #d3d3d3;
-    --background-color-checked-disabled: #d3d3d3;
-    --checkmark-color-readonly: grey;
-    --checkmark-color-disabled: #eeeeee;
+    --background-color-checked-readonly: var(--navi-background-color-readonly);
+    --background-color-checked-disabled: var(--navi-background-color-disabled);
+    --checkmark-color-readonly: var(--navi-color-readonly);
+    --checkmark-color-disabled: var(--navi-color-disabled);
   }
   .navi_checkbox input {
     position: absolute;
