@@ -54,8 +54,12 @@ await snapshotBuildTests(
   {
     executionEffects: {
       catch: (error) => {
-        error.stack = "";
-        delete error.cause;
+        if (error.name === "TRANSFORM_URL_CONTENT_ERROR") {
+          error.message =
+            'Cannot export after a top-level await when using topLevelAwait: "simple"!';
+          error.stack = "";
+          delete error.cause;
+        }
       },
     },
   },
