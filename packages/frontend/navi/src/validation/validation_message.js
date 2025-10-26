@@ -1,5 +1,6 @@
 import {
   allowWheelThrough,
+  createStyleController,
   getBorderSizes,
   pickPositionRelativeTo,
   visibleRectEffect,
@@ -34,48 +35,48 @@ import.meta.css = /* css */ `
   }
 
   .jsenv_validation_message {
-    display: block;
-    overflow: visible;
-    height: auto;
     position: absolute;
-    z-index: 1;
-    opacity: 0;
-    left: 0;
     top: 0;
+    left: 0;
+    z-index: 1;
+    display: block;
+    height: auto;
+    opacity: 0;
     /* will be positioned with transform: translate */
     transition: opacity 0.2s ease-in-out;
+    overflow: visible;
   }
 
   .jsenv_validation_message_border {
     position: absolute;
-    pointer-events: none;
     filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
+    pointer-events: none;
   }
 
   .jsenv_validation_message_body_wrapper {
+    position: relative;
     border-style: solid;
     border-color: transparent;
-    position: relative;
   }
 
   .jsenv_validation_message_body {
-    padding: 8px;
     position: relative;
-    max-width: 47vw;
     display: flex;
+    max-width: 47vw;
+    padding: 8px;
     flex-direction: row;
     gap: 10px;
   }
 
   .jsenv_validation_message_icon {
     display: flex;
-    align-self: flex-start;
-    align-items: center;
-    justify-content: center;
     width: 22px;
     height: 22px;
-    border-radius: 2px;
     flex-shrink: 0;
+    align-items: center;
+    align-self: flex-start;
+    justify-content: center;
+    border-radius: 2px;
   }
 
   .jsenv_validation_message_exclamation_svg {
@@ -96,9 +97,9 @@ import.meta.css = /* css */ `
   }
 
   .jsenv_validation_message_content {
+    min-width: 0;
     align-self: center;
     word-break: break-word;
-    min-width: 0;
     overflow-wrap: anywhere;
   }
 
@@ -121,16 +122,16 @@ import.meta.css = /* css */ `
     height: 22px;
   }
   .jsenv_validation_message_close_button {
-    border: none;
-    background: none;
-    padding: 0;
     width: 1em;
     height: 1em;
-    font-size: inherit;
-    cursor: pointer;
-    border-radius: 0.2em;
+    padding: 0;
     align-self: center;
     color: currentColor;
+    font-size: inherit;
+    background: none;
+    border: none;
+    border-radius: 0.2em;
+    cursor: pointer;
   }
   .jsenv_validation_message_close_button:hover {
     background: rgba(0, 0, 0, 0.1);
@@ -141,8 +142,8 @@ import.meta.css = /* css */ `
   }
 
   .error_stack {
-    overflow: auto;
     max-height: 200px;
+    overflow: auto;
   }
 `;
 
@@ -190,6 +191,9 @@ const validationMessageTemplate = /* html */ `
     </div>
   </div>
 `;
+
+const validationMessageStyleController =
+  createStyleController("validation_message");
 
 export const openValidationMessage = (
   targetElement,
@@ -265,7 +269,7 @@ export const openValidationMessage = (
   };
   update(message, { level });
 
-  jsenvValidationMessage.style.opacity = "0";
+  validationMessageStyleController.set(jsenvValidationMessage, { opacity: 0 });
 
   allowWheelThrough(jsenvValidationMessage, targetElement);
 
@@ -567,6 +571,8 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
         spaceBelowTarget,
       } = pickPositionRelativeTo(validationMessageClone, targetElement, {
         alignToViewportEdgeWhenTargetNearEdge: 20,
+        // when fully to the left, the border color is collé to the browser window making it hard to see
+        minLeft: 1,
       });
 
       // Get element padding and border to properly position arrow
@@ -626,14 +632,6 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
       contentHeight -= 16; // padding * 2
       const spaceRemainingAfterContent =
         spaceAvailableForContent - contentHeight;
-      console.log({
-        position,
-        spaceBelowTarget,
-        validationMessageHeight,
-        spaceAvailableForContent,
-        contentHeight,
-        spaceRemainingAfterContent,
-      });
       if (spaceRemainingAfterContent < 2) {
         const maxHeight = spaceAvailableForContent;
         validationMessageContent.style.maxHeight = `${maxHeight}px`;
@@ -667,10 +665,14 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
         );
       }
 
-      validationMessage.style.opacity = visibilityRatio ? "1" : "0";
       validationMessage.setAttribute("data-position", position);
-      validationMessage.style.transform = `translateX(${validationMessageLeft}px) translateY(${validationMessageTop}px)`;
-
+      validationMessageStyleController.set(validationMessage, {
+        opacity: visibilityRatio ? 1 : 0,
+        transform: {
+          translateX: validationMessageLeft,
+          translateY: validationMessageTop,
+        },
+      });
       validationMessageClone.remove();
     },
   );

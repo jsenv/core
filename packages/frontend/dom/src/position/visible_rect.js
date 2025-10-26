@@ -318,7 +318,11 @@ export const visibleRectEffect = (element, update) => {
 export const pickPositionRelativeTo = (
   element,
   target,
-  { alignToViewportEdgeWhenTargetNearEdge = 0, forcePosition } = {},
+  {
+    alignToViewportEdgeWhenTargetNearEdge = 0,
+    minLeft = 0,
+    forcePosition,
+  } = {},
 ) => {
   if (
     import.meta.dev &&
@@ -392,7 +396,7 @@ export const pickPositionRelativeTo = (
         const targetIsNearLeftEdge =
           targetLeft < alignToViewportEdgeWhenTargetNearEdge;
         if (elementIsWiderThanTarget && targetIsNearLeftEdge) {
-          elementPositionLeft = 0; // Left edge of viewport
+          elementPositionLeft = minLeft; // Left edge of viewport
         }
       }
     }
