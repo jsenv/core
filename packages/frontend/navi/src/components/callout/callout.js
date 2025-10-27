@@ -555,7 +555,7 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
 
   const anchorVisibleRectEffect = visibleRectEffect(
     anchorElement,
-    ({ left: targetLeft, right: targetRight, visibilityRatio }) => {
+    ({ left: anchorLeft, right: anchorRight, visibilityRatio }) => {
       // reset max height and overflow because it impacts the element size
       // and we need to re-check if we need to have an overflow or not.
       // to avoid visual impact we do this on an invisible clone.
@@ -582,47 +582,44 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
         minLeft: 1,
       });
 
-      // Get element padding and border to properly position arrow
-      const targetBorderSizes = getBorderSizes(anchorElement);
-
-      // Calculate arrow position to point at target element
-      let arrowLeftPosOnValidationMessage;
+      // Calculate arrow position to point at anchor element
+      let arrowLeftPosOnCallout;
       // Determine arrow target position based on attribute
       const arrowPositionAttribute = anchorElement.getAttribute(
         "data-validation-message-arrow-x",
       );
       let arrowTargetLeft;
       if (arrowPositionAttribute === "center") {
-        // Target the center of the element
-        arrowTargetLeft = (targetLeft + targetRight) / 2;
+        // Target the center of the anchor element
+        arrowTargetLeft = (anchorLeft + anchorRight) / 2;
       } else {
-        // Default behavior: target the left edge of the element (after borders)
-        arrowTargetLeft = targetLeft + targetBorderSizes.left;
+        const anchorBorderSizes = getBorderSizes(anchorElement);
+        // Default behavior: target the left edge of the anchor element (after borders)
+        arrowTargetLeft = anchorLeft + anchorBorderSizes.left;
       }
 
       // Calculate arrow position within the validation message
       if (validationMessageLeft < arrowTargetLeft) {
         // Validation message is left of the target point, move arrow right
         const diff = arrowTargetLeft - validationMessageLeft;
-        arrowLeftPosOnValidationMessage = diff;
+        arrowLeftPosOnCallout = diff;
       } else if (
         validationMessageLeft + validationMessageWidth <
         arrowTargetLeft
       ) {
         // Edge case: target point is beyond right edge of validation message
-        arrowLeftPosOnValidationMessage = validationMessageWidth - ARROW_WIDTH;
+        arrowLeftPosOnCallout = validationMessageWidth - ARROW_WIDTH;
       } else {
         // Target point is within validation message width
-        arrowLeftPosOnValidationMessage =
-          arrowTargetLeft - validationMessageLeft;
+        arrowLeftPosOnCallout = arrowTargetLeft - validationMessageLeft;
       }
 
       // Ensure arrow stays within validation message bounds with some padding
       const minArrowPos = CORNER_RADIUS + ARROW_WIDTH / 2 + ARROW_SPACING;
       const maxArrowPos = validationMessageWidth - minArrowPos;
-      arrowLeftPosOnValidationMessage = Math.max(
+      arrowLeftPosOnCallout = Math.max(
         minArrowPos,
-        Math.min(arrowLeftPosOnValidationMessage, maxArrowPos),
+        Math.min(arrowLeftPosOnCallout, maxArrowPos),
       );
 
       // Force content overflow when there is not enough space to display
@@ -658,7 +655,7 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
         calloutFrameElement.innerHTML = generateSvgWithBottomArrow(
           width,
           height,
-          arrowLeftPosOnValidationMessage,
+          arrowLeftPosOnCallout,
         );
       } else {
         calloutBoxElement.style.marginTop = `${ARROW_HEIGHT}px`;
@@ -668,7 +665,7 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
         calloutFrameElement.innerHTML = generateSvgWithTopArrow(
           width,
           height,
-          arrowLeftPosOnValidationMessage,
+          arrowLeftPosOnCallout,
         );
       }
 
@@ -683,30 +680,30 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
       calloutElementClone.remove();
     },
   );
-  const messageSizeChangeObserver = observeValidationMessageSizeChange(
+  const calloutSizeChangeObserver = observeCalloutSizeChange(
     calloutMessageElement,
     (width, height) => {
-      anchorVisibleRectEffect.check(`content_size_change (${width}x${height})`);
+      anchorVisibleRectEffect.check(`callout_size_change (${width}x${height})`);
     },
   );
   anchorVisibleRectEffect.onBeforeAutoCheck(() => {
     // prevent feedback loop because check triggers size change which triggers check...
-    messageSizeChangeObserver.disable();
+    calloutSizeChangeObserver.disable();
     return () => {
-      messageSizeChangeObserver.enable();
+      calloutSizeChangeObserver.enable();
     };
   });
 
   return {
     updatePosition: anchorVisibleRectEffect.check,
     stop: () => {
-      messageSizeChangeObserver.disconnect();
+      calloutSizeChangeObserver.disconnect();
       anchorVisibleRectEffect.disconnect();
     },
   };
 };
 
-const observeValidationMessageSizeChange = (elementSizeToObserve, callback) => {
+const observeCalloutSizeChange = (elementSizeToObserve, callback) => {
   let lastContentWidth;
   let lastContentHeight;
   const resizeObserver = new ResizeObserver((entries) => {
