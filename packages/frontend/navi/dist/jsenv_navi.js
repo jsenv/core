@@ -20593,6 +20593,8 @@ const InputTextualBasic = forwardRef((props, ref) => {
     ...rest,
     ref: innerRef,
     className: appearance === "navi" ? "navi_input" : undefined,
+    width: width,
+    height: height,
     type: type,
     "data-value": uiState,
     value: innerValue,
