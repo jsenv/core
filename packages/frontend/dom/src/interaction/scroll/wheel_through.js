@@ -56,11 +56,12 @@ export const allowWheelThrough = (element, connectedElement) => {
         wheelEvent.clientY,
       );
       for (const elementBehindMouse of elementsBehindMouse) {
-        const belongsToElement = isElementOrDescendant(elementBehindMouse);
         // try to scroll element itself
         if (tryToScrollOne(elementBehindMouse, wheelEvent)) {
           return;
         }
+        const belongsToElement = isElementOrDescendant(elementBehindMouse);
+        // try to scroll what is behind
         if (!belongsToElement) {
           break;
         }
@@ -79,17 +80,16 @@ export const allowWheelThrough = (element, connectedElement) => {
       wheelEvent.clientY,
     );
     for (const elementBehindMouse of elementsBehindMouse) {
-      const belongsToElement = isElementOrDescendant(elementBehindMouse);
       // try to scroll element itself
       if (tryToScrollOne(elementBehindMouse, wheelEvent)) {
         return;
       }
+      const belongsToElement = isElementOrDescendant(elementBehindMouse);
       if (belongsToElement) {
-        // the element is not scrollable and we don't care about his
-        // scrollable parent (because we know it's going to be the document)
-        // we search for scrollable container that might be behind it
+        // keep searching if something in our element is scrollable
         continue;
       }
+      // our element is not scrollable, try to scroll the container behind the mouse
       const scrollContainer = getScrollContainer(elementBehindMouse);
       if (tryToScrollOne(scrollContainer, wheelEvent)) {
         return;
