@@ -472,11 +472,10 @@ const centerCalloutInViewport = (calloutElement) => {
 
   // Generate simple rectangle SVG without arrow and position in center
   const updateCenteredPosition = () => {
-    // Reset styles to measure natural size
-    calloutMessageElement.style.maxHeight = "";
-    calloutMessageElement.style.overflowY = "";
-
-    const { height } = calloutElement.getBoundingClientRect();
+    const calloutElementClone =
+      cloneCalloutToMeasureNaturalSize(calloutElement);
+    const { height } = calloutElementClone.getBoundingClientRect();
+    calloutElementClone.remove();
 
     // Handle content overflow when viewport is too small
     const viewportHeight = window.innerHeight;
@@ -490,6 +489,10 @@ const centerCalloutInViewport = (calloutElement) => {
 
       calloutMessageElement.style.maxHeight = `${spaceAvailableForContent}px`;
       calloutMessageElement.style.overflowY = "scroll";
+    } else {
+      // Reset overflow styles if not needed
+      calloutMessageElement.style.maxHeight = "";
+      calloutMessageElement.style.overflowY = "";
     }
 
     // Get final dimensions after potential overflow adjustments
@@ -552,18 +555,8 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
   const anchorVisibleRectEffect = visibleRectEffect(
     anchorElement,
     ({ left: anchorLeft, right: anchorRight, visibilityRatio }) => {
-      // reset max height and overflow because it impacts the element size
-      // and we need to re-check if we need to have an overflow or not.
-      // to avoid visual impact we do this on an invisible clone.
-      // It's ok to do this because the element is absolutely positioned
-      const calloutElementClone = calloutElement.cloneNode(true);
-      calloutElementClone.style.visibility = "hidden";
-      const calloutMessageElementClone = calloutElementClone.querySelector(
-        ".navi_callout_message",
-      );
-      calloutMessageElementClone.style.maxHeight = "";
-      calloutMessageElementClone.style.overflowY = "";
-      calloutElement.parentNode.appendChild(calloutElementClone);
+      const calloutElementClone =
+        cloneCalloutToMeasureNaturalSize(calloutElement);
       const {
         position,
         left: calloutLeft,
@@ -577,6 +570,7 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
         // when fully to the left, the border color is collé to the browser window making it hard to see
         minLeft: 1,
       });
+      calloutElementClone.remove();
 
       // Calculate arrow position to point at anchorElement element
       let arrowLeftPosOnCallout;
@@ -670,7 +664,6 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
           translateY: calloutTop,
         },
       });
-      calloutElementClone.remove();
     },
   );
   const calloutSizeChangeObserver = observeCalloutSizeChange(
@@ -737,6 +730,24 @@ const escapeHtml = (string) => {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+};
+
+// It's ok to do this because the element is absolutely positioned
+const cloneCalloutToMeasureNaturalSize = (calloutElement) => {
+  // Create invisible clone to measure natural size
+  const calloutElementClone = calloutElement.cloneNode(true);
+  calloutElementClone.style.visibility = "hidden";
+  const calloutMessageElementClone = calloutElementClone.querySelector(
+    ".navi_callout_message",
+  );
+  // Reset any overflow constraints on the clone
+  calloutMessageElementClone.style.maxHeight = "";
+  calloutMessageElementClone.style.overflowY = "";
+
+  // Add clone to DOM to measure
+  calloutElement.parentNode.appendChild(calloutElementClone);
+
+  return calloutElementClone;
 };
 
 /**
