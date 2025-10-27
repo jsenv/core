@@ -24,7 +24,7 @@ export { useDocumentState } from "./src/browser_integration/document_state_signa
 export { useDocumentUrl } from "./src/browser_integration/document_url_signal.js";
 export { defineRoutes, setBaseUrl, useRouteStatus } from "./src/route/route.js";
 
-// UI
+// Components
 export { ActionRenderer } from "./src/components/action_renderer.jsx";
 export { Details } from "./src/components/details/details.jsx";
 export { SummaryMarker } from "./src/components/details/summary_marker.jsx";
@@ -75,7 +75,6 @@ export { useCellsAndColumns } from "./src/components/table/use_cells_and_columns
 export { Tab, TabList } from "./src/components/tablist/tablist.jsx";
 export { UITransition } from "./src/components/ui_transition.jsx";
 export { useSignalSync } from "./src/components/use_signal_sync.js";
-
 // Text and icons
 export { LinkWithIcon } from "./src/components/link/link_with_icon.jsx";
 export { FontSizedSvg } from "./src/components/svg/font_sized_svg.jsx";
@@ -83,6 +82,8 @@ export { IconAndText } from "./src/components/svg/icon_and_text.jsx";
 export { SVGMaskOverlay } from "./src/components/svg/svg_mask_overlay.jsx";
 export { Overflow } from "./src/components/text/overflow.jsx";
 export { TextAndCount } from "./src/components/text/text_and_count.jsx";
+// Callout, dialogs, ...
+export { openCallout } from "./src/components/callout/callout.js";
 
 // Validation
 export { createUniqueValueConstraint } from "./src/validation/constraints/create_unique_value_constraint.js";
