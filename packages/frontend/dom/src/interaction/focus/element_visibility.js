@@ -98,19 +98,14 @@ export const getVisuallyVisibleInfo = (
   return { visible: true, reason: "visually visible" };
 };
 export const getFirstVisuallyVisibleAncestor = (node, options = {}) => {
-  let currentNode = node;
-
-  while (currentNode) {
-    const visibilityInfo = getVisuallyVisibleInfo(currentNode, options);
+  let ancestorCandidate = node.parentNode;
+  while (ancestorCandidate) {
+    const visibilityInfo = getVisuallyVisibleInfo(ancestorCandidate, options);
     if (visibilityInfo.visible) {
-      return {
-        element: currentNode,
-        visibilityInfo,
-      };
+      return ancestorCandidate;
     }
-    currentNode = currentNode.parentElement;
+    ancestorCandidate = ancestorCandidate.parentElement;
   }
-
   // This shouldn't happen in normal cases since document element is always visible
   return null;
 };

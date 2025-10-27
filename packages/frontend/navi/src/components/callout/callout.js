@@ -3,6 +3,8 @@ import {
   createPubSub,
   createStyleController,
   getBorderSizes,
+  getFirstVisuallyVisibleAncestor,
+  getVisuallyVisibleInfo,
   pickPositionRelativeTo,
   visibleRectEffect,
 } from "@jsenv/dom";
@@ -49,6 +51,16 @@ export const openCallout = (
     debug = false,
   } = {},
 ) => {
+  const anchorVisuallyVisibleInfo = getVisuallyVisibleInfo(anchorElement, {
+    countOffscreenAsVisible: true,
+  });
+  if (!anchorVisuallyVisibleInfo.visible) {
+    console.warn(
+      `anchor element is not visually visible (${anchorVisuallyVisibleInfo.reason}) -> will be anchored to first visually visible ancestor`,
+    );
+    anchorElement = getFirstVisuallyVisibleAncestor(anchorElement);
+  }
+
   const callout = {
     opened: true,
     close: null,
