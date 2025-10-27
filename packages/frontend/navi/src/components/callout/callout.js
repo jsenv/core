@@ -231,15 +231,23 @@ export const openCallout = (
 
   // Create and add validation message to document
   const calloutElement = createCalloutElement();
-  const jsenvValidationMessageContent = calloutElement.querySelector(
+  const calloutMessageElement = calloutElement.querySelector(
     ".navi_callout_message",
   );
-  const jsenvValidationMessageCloseButton = calloutElement.querySelector(
+  const calloutCloseButton = calloutElement.querySelector(
     ".navi_callout_close_button",
   );
-  jsenvValidationMessageCloseButton.onclick = () => {
+  calloutCloseButton.onclick = () => {
     close("click_close_button");
   };
+  const calloutId = `navi_callout${Date.now()}`;
+  calloutElement.id = calloutId;
+  calloutStyleController.set(calloutElement, { opacity: 0 });
+  allowWheelThrough(calloutElement, targetElement);
+  targetElement.setAttribute("data-callout", calloutId);
+  addTeardown(() => {
+    targetElement.removeAttribute("data-callout");
+  });
 
   const update = (
     newMessage,
@@ -254,42 +262,31 @@ export const openCallout = (
     }
 
     calloutElement.setAttribute("data-level", level);
-    jsenvValidationMessageContent.innerHTML = newMessage;
+    calloutMessageElement.innerHTML = newMessage;
+
+    // Connect validation message with target element for accessibility
+    if (level === "info") {
+      calloutElement.setAttribute("role", "status");
+      targetElement.setAttribute("aria-describedby", calloutId);
+      addTeardown(() => {
+        targetElement.removeAttribute("aria-describedby");
+      });
+    } else {
+      calloutElement.setAttribute("role", "alert");
+      targetElement.setAttribute("aria-errormessage", calloutId);
+      targetElement.setAttribute("aria-invalid", "true");
+      addTeardown(() => {
+        targetElement.removeAttribute("aria-errormessage");
+        targetElement.removeAttribute("aria-invalid");
+      });
+    }
+    targetElement.style.setProperty(
+      "--callout-color",
+      `var(--navi-${level}-color)`,
+    );
+    targetElement.style.removeProperty("--callout-color");
   };
   update(message, { level });
-
-  calloutStyleController.set(calloutElement, { opacity: 0 });
-
-  allowWheelThrough(calloutElement, targetElement);
-
-  // Connect validation message with target element for accessibility
-  const validationMessageId = `navi_callout${Date.now()}`;
-  calloutElement.id = validationMessageId;
-
-  if (level === "info") {
-    calloutElement.setAttribute("role", "status");
-    targetElement.setAttribute("aria-describedby", validationMessageId);
-    addTeardown(() => {
-      targetElement.removeAttribute("aria-describedby");
-    });
-  } else {
-    calloutElement.setAttribute("role", "alert");
-    targetElement.setAttribute("aria-errormessage", validationMessageId);
-    targetElement.setAttribute("aria-invalid", "true");
-    addTeardown(() => {
-      targetElement.removeAttribute("aria-errormessage");
-      targetElement.removeAttribute("aria-invalid");
-    });
-  }
-  targetElement.setAttribute("data-callout", validationMessageId);
-  targetElement.style.setProperty(
-    "--callout-color",
-    `var(--navi-${level}-color)`,
-  );
-  addTeardown(() => {
-    targetElement.removeAttribute("data-callout");
-    targetElement.style.removeProperty("--callout-color");
-  });
 
   document.body.appendChild(calloutElement);
   addTeardown(() => {
