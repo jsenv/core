@@ -263,13 +263,13 @@ import.meta.css = /* css */ `
       filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
       pointer-events: none;
     }
-    .navi_callout[data-level="info"] .navi_callout_border_path {
+    .navi_callout[data-level="info"] .navi_callout_border {
       fill: var(--navi-info-color);
     }
-    .navi_callout[data-level="warning"] .navi_callout_border_path {
+    .navi_callout[data-level="warning"] .navi_callout_border {
       fill: var(--navi-warning-color);
     }
-    .navi_callout[data-level="error"] .navi_callout_border_path {
+    .navi_callout[data-level="error"] .navi_callout_border {
       fill: var(--navi-error-color);
     }
     .navi_callout_frame svg {
@@ -277,7 +277,7 @@ import.meta.css = /* css */ `
       inset: 0;
       overflow: visible;
     }
-    .navi_callout_background_path {
+    .navi_callout_background {
       fill: var(--navi-callout-background-color);
     }
 
@@ -699,8 +699,8 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
       role="presentation"
       aria-hidden="true"
     >
-      <path d="${outerPath}" class="navi_callout_border_path" />
-      <path d="${innerPath}" class="navi_callout_background_path" />
+      <path d="${outerPath}" class="navi_callout_border" />
+      <path d="${innerPath}" class="navi_callout_background" />
     </svg>`;
 };
 
@@ -775,8 +775,8 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
       role="presentation"
       aria-hidden="true"
     >
-      <path d="${outerPath}" class="navi_callout_border_path" />
-      <path d="${innerPath}" class="navi_callout_background_path" />
+      <path d="${outerPath}" class="navi_callout_border" />
+      <path d="${innerPath}" class="navi_callout_background" />
     </svg>`;
 };
 
@@ -787,33 +787,6 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
  * @returns {string} - SVG markup
  */
 const generateSvgWithoutArrow = (width, height) => {
-  // Outer path (border)
-  const outerPath = `
-      M${CORNER_RADIUS},0 
-      H${width - CORNER_RADIUS} 
-      Q${width},0 ${width},${CORNER_RADIUS} 
-      V${height - CORNER_RADIUS} 
-      Q${width},${height} ${width - CORNER_RADIUS},${height} 
-      H${CORNER_RADIUS} 
-      Q0,${height} 0,${height - CORNER_RADIUS} 
-      V${CORNER_RADIUS} 
-      Q0,0 ${CORNER_RADIUS},0
-    `;
-
-  // Inner path (content)
-  const innerRadius = Math.max(0, CORNER_RADIUS - BORDER_WIDTH);
-  const innerPath = `
-    M${innerRadius + BORDER_WIDTH},${BORDER_WIDTH} 
-    H${width - innerRadius - BORDER_WIDTH} 
-    Q${width - BORDER_WIDTH},${BORDER_WIDTH} ${width - BORDER_WIDTH},${innerRadius + BORDER_WIDTH} 
-    V${height - innerRadius - BORDER_WIDTH} 
-    Q${width - BORDER_WIDTH},${height - BORDER_WIDTH} ${width - innerRadius - BORDER_WIDTH},${height - BORDER_WIDTH} 
-    H${innerRadius + BORDER_WIDTH} 
-    Q${BORDER_WIDTH},${height - BORDER_WIDTH} ${BORDER_WIDTH},${height - innerRadius - BORDER_WIDTH} 
-    V${innerRadius + BORDER_WIDTH} 
-    Q${BORDER_WIDTH},${BORDER_WIDTH} ${innerRadius + BORDER_WIDTH},${BORDER_WIDTH}
-  `;
-
   return /* html */ `
     <svg
       width="${width}"
@@ -824,7 +797,23 @@ const generateSvgWithoutArrow = (width, height) => {
       role="presentation"
       aria-hidden="true"
     >
-      <path d="${outerPath}" class="navi_callout_border_path" />
-      <path d="${innerPath}" class="navi_callout_background_path" />
+      <rect
+        x="0"
+        y="0"
+        width="${width}"
+        height="${height}"
+        rx="${CORNER_RADIUS}"
+        ry="${CORNER_RADIUS}"
+        class="navi_callout_border"
+      />
+      <rect
+        x="${BORDER_WIDTH}"
+        y="${BORDER_WIDTH}"
+        width="${width - BORDER_WIDTH * 2}"
+        height="${height - BORDER_WIDTH * 2}"
+        rx="${Math.max(0, CORNER_RADIUS - BORDER_WIDTH)}"
+        ry="${Math.max(0, CORNER_RADIUS - BORDER_WIDTH)}"
+        class="navi_callout_background"
+      />
     </svg>`;
 };
