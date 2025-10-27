@@ -540,21 +540,20 @@ const createCalloutElement = () => {
 
 const stickCalloutToAnchor = (calloutElement, anchorElement) => {
   // Get references to validation message parts
-  const validationMessageBodyWrapper =
-    calloutElement.querySelector(".navi_callout_box");
-  const validationMessageBorder = calloutElement.querySelector(
+  const calloutBoxElement = calloutElement.querySelector(".navi_callout_box");
+  const calloutFrameElement = calloutElement.querySelector(
     ".navi_callout_frame",
   );
-  const validationMessageContent = calloutElement.querySelector(
+  const calloutMessageElement = calloutElement.querySelector(
     ".navi_callout_message",
   );
 
   // Set initial border styles
-  validationMessageBodyWrapper.style.borderWidth = `${BORDER_WIDTH}px`;
-  validationMessageBorder.style.left = `-${BORDER_WIDTH}px`;
-  validationMessageBorder.style.right = `-${BORDER_WIDTH}px`;
+  calloutBoxElement.style.borderWidth = `${BORDER_WIDTH}px`;
+  calloutFrameElement.style.left = `-${BORDER_WIDTH}px`;
+  calloutFrameElement.style.right = `-${BORDER_WIDTH}px`;
 
-  const targetVisibleRectEffect = visibleRectEffect(
+  const anchorVisibleRectEffect = visibleRectEffect(
     anchorElement,
     ({ left: targetLeft, right: targetRight, visibilityRatio }) => {
       // reset max height and overflow because it impacts the element size
@@ -642,31 +641,31 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
         spaceAvailableForContent - contentHeight;
       if (spaceRemainingAfterContent < 2) {
         const maxHeight = spaceAvailableForContent;
-        validationMessageContent.style.maxHeight = `${maxHeight}px`;
-        validationMessageContent.style.overflowY = "scroll";
+        calloutMessageElement.style.maxHeight = `${maxHeight}px`;
+        calloutMessageElement.style.overflowY = "scroll";
       } else {
-        validationMessageContent.style.maxHeight = "";
-        validationMessageContent.style.overflowY = "";
+        calloutMessageElement.style.maxHeight = "";
+        calloutMessageElement.style.overflowY = "";
       }
 
       const { width, height } = calloutElement.getBoundingClientRect();
       if (position === "above") {
         // Position above target element
-        validationMessageBodyWrapper.style.marginTop = "";
-        validationMessageBodyWrapper.style.marginBottom = `${ARROW_HEIGHT}px`;
-        validationMessageBorder.style.top = `-${BORDER_WIDTH}px`;
-        validationMessageBorder.style.bottom = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
-        validationMessageBorder.innerHTML = generateSvgWithBottomArrow(
+        calloutBoxElement.style.marginTop = "";
+        calloutBoxElement.style.marginBottom = `${ARROW_HEIGHT}px`;
+        calloutFrameElement.style.top = `-${BORDER_WIDTH}px`;
+        calloutFrameElement.style.bottom = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
+        calloutFrameElement.innerHTML = generateSvgWithBottomArrow(
           width,
           height,
           arrowLeftPosOnValidationMessage,
         );
       } else {
-        validationMessageBodyWrapper.style.marginTop = `${ARROW_HEIGHT}px`;
-        validationMessageBodyWrapper.style.marginBottom = "";
-        validationMessageBorder.style.top = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
-        validationMessageBorder.style.bottom = `-${BORDER_WIDTH}px`;
-        validationMessageBorder.innerHTML = generateSvgWithTopArrow(
+        calloutBoxElement.style.marginTop = `${ARROW_HEIGHT}px`;
+        calloutBoxElement.style.marginBottom = "";
+        calloutFrameElement.style.top = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
+        calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
+        calloutFrameElement.innerHTML = generateSvgWithTopArrow(
           width,
           height,
           arrowLeftPosOnValidationMessage,
@@ -685,12 +684,12 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
     },
   );
   const messageSizeChangeObserver = observeValidationMessageSizeChange(
-    validationMessageContent,
+    calloutMessageElement,
     (width, height) => {
-      targetVisibleRectEffect.check(`content_size_change (${width}x${height})`);
+      anchorVisibleRectEffect.check(`content_size_change (${width}x${height})`);
     },
   );
-  targetVisibleRectEffect.onBeforeAutoCheck(() => {
+  anchorVisibleRectEffect.onBeforeAutoCheck(() => {
     // prevent feedback loop because check triggers size change which triggers check...
     messageSizeChangeObserver.disable();
     return () => {
@@ -699,10 +698,10 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
   });
 
   return {
-    updatePosition: targetVisibleRectEffect.check,
+    updatePosition: anchorVisibleRectEffect.check,
     stop: () => {
       messageSizeChangeObserver.disconnect();
-      targetVisibleRectEffect.disconnect();
+      anchorVisibleRectEffect.disconnect();
     },
   };
 };
