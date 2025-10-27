@@ -51,19 +51,35 @@ import.meta.css = /* css */ `
       overflow: visible;
     }
 
-    .jsenv_validation_message_border {
+    .navi_callout_frame {
       position: absolute;
       filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
       pointer-events: none;
     }
+    .navi_callout[data-level="info"] .navi_callout_border_path {
+      fill: var(--navi-info-color);
+    }
+    .navi_callout[data-level="warning"] .navi_callout_border_path {
+      fill: var(--navi-warning-color);
+    }
+    .navi_callout[data-level="error"] .navi_callout_border_path {
+      fill: var(--navi-error-color);
+    }
+    .navi_callout_frame svg {
+      position: absolute;
+      inset: 0;
+      overflow: visible;
+    }
+    .navi_callout_background_path {
+      fill: var(--navi-callout-background-color);
+    }
 
-    .jsenv_validation_message_body_wrapper {
+    .navi_callout_box {
       position: relative;
       border-style: solid;
       border-color: transparent;
     }
-
-    .jsenv_validation_message_body {
+    .navi_callout_body {
       position: relative;
       display: flex;
       max-width: 47vw;
@@ -71,8 +87,7 @@ import.meta.css = /* css */ `
       flex-direction: row;
       gap: 10px;
     }
-
-    .jsenv_validation_message_icon {
+    .navi_callout_icon {
       display: flex;
       width: 22px;
       height: 22px;
@@ -82,54 +97,31 @@ import.meta.css = /* css */ `
       justify-content: center;
       border-radius: 2px;
     }
-
-    .jsenv_validation_message_exclamation_svg {
+    .navi_callout_icon_svg {
       width: 16px;
       height: 12px;
       color: white;
     }
-
-    .navi_callout[data-level="info"] .border_path {
-      fill: var(--navi-info-color);
-    }
-    .navi_callout[data-level="info"] .jsenv_validation_message_icon {
+    .navi_callout[data-level="info"] .navi_callout_icon {
       background-color: var(--navi-info-color);
     }
-    .navi_callout[data-level="warning"] .border_path {
-      fill: var(--navi-warning-color);
-    }
-    .navi_callout[data-level="warning"] .jsenv_validation_message_icon {
+    .navi_callout[data-level="warning"] .navi_callout_icon {
       background-color: var(--navi-warning-color);
     }
-    .navi_callout[data-level="error"] .border_path {
-      fill: var(--navi-error-color);
-    }
-    .navi_callout[data-level="error"] .jsenv_validation_message_icon {
+    .navi_callout[data-level="error"] .navi_callout_icon {
       background-color: var(--navi-error-color);
     }
-
-    .jsenv_validation_message_content {
+    .navi_callout_message {
       min-width: 0;
       align-self: center;
       word-break: break-word;
       overflow-wrap: anywhere;
     }
-
-    .jsenv_validation_message_border svg {
-      position: absolute;
-      inset: 0;
-      overflow: visible;
-    }
-
-    .background_path {
-      fill: var(--navi-callout-background-color);
-    }
-
-    .jsenv_validation_message_close_button_column {
+    .navi_callout_close_button_column {
       display: flex;
       height: 22px;
     }
-    .jsenv_validation_message_close_button {
+    .navi_callout_close_button {
       width: 1em;
       height: 1em;
       padding: 0;
@@ -141,15 +133,14 @@ import.meta.css = /* css */ `
       border-radius: 0.2em;
       cursor: pointer;
     }
-    .jsenv_validation_message_close_button:hover {
+    .navi_callout_close_button:hover {
       background: rgba(0, 0, 0, 0.1);
     }
-    .close_svg {
+    .navi_callout_close_button_svg {
       width: 100%;
       height: 100%;
     }
-
-    .error_stack {
+    .navi_callout_error_stack {
       max-height: 200px;
       overflow: auto;
     }
@@ -159,12 +150,12 @@ import.meta.css = /* css */ `
 // HTML template for the validation message
 const calloutTemplate = /* html */ `
   <div class="navi_callout">
-    <div class="jsenv_validation_message_body_wrapper">
-      <div class="jsenv_validation_message_border"></div>
-      <div class="jsenv_validation_message_body">
-        <div class="jsenv_validation_message_icon">
+    <div class="navi_callout_box">
+      <div class="navi_callout_frame"></div>
+      <div class="navi_callout_body">
+        <div class="navi_callout_icon">
           <svg
-            class="jsenv_validation_message_exclamation_svg"
+            class="navi_callout_icon_svg"
             viewBox="0 0 125 300"
             xmlns="http://www.w3.org/2000/svg"
           >
@@ -174,11 +165,11 @@ const calloutTemplate = /* html */ `
             />
           </svg>
         </div>
-        <div class="jsenv_validation_message_content">Default message</div>
-        <div class="jsenv_validation_message_close_button_column">
-          <button class="jsenv_validation_message_close_button">
+        <div class="navi_callout_message">Default message</div>
+        <div class="navi_callout_close_button_column">
+          <button class="navi_callout_close_button">
             <svg
-              class="close_svg"
+              class="navi_callout_close_button_svg"
               viewBox="0 0 24 24"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
@@ -219,7 +210,7 @@ export const openCallout = (
   let _closeOnClickOutside = closeOnClickOutside;
 
   if (debug) {
-    console.debug("open validation message on", targetElement, {
+    console.debug("open callout on", targetElement, {
       message,
       level,
     });
@@ -232,7 +223,7 @@ export const openCallout = (
       return;
     }
     if (debug) {
-      console.debug(`validation message closed (reason: ${reason})`);
+      console.debug(`callout closed (reason: ${reason})`);
     }
     opened = false;
     teardown(reason);
@@ -241,12 +232,10 @@ export const openCallout = (
   // Create and add validation message to document
   const jsenvValidationMessage = createValidationMessage();
   const jsenvValidationMessageContent = jsenvValidationMessage.querySelector(
-    ".jsenv_validation_message_content",
+    ".navi_callout_message",
   );
   const jsenvValidationMessageCloseButton =
-    jsenvValidationMessage.querySelector(
-      ".jsenv_validation_message_close_button",
-    );
+    jsenvValidationMessage.querySelector(".navi_callout_close_button");
   jsenvValidationMessageCloseButton.onclick = () => {
     close("click_close_button");
   };
@@ -260,7 +249,7 @@ export const openCallout = (
     if (Error.isError(newMessage)) {
       const error = newMessage;
       newMessage = error.message;
-      newMessage += `<pre class="error_stack">${escapeHtml(error.stack)}</pre>`;
+      newMessage += `<pre class="navi_callout_error_stack">${escapeHtml(error.stack)}</pre>`;
     }
 
     jsenvValidationMessage.setAttribute("data-level", level);
@@ -447,8 +436,8 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
       role="presentation"
       aria-hidden="true"
     >
-      <path d="${outerPath}" class="border_path" />
-      <path d="${innerPath}" class="background_path" />
+      <path d="${outerPath}" class="navi_callout_border_path" />
+      <path d="${innerPath}" class="navi_callout_background_path" />
     </svg>`;
 };
 
@@ -522,8 +511,8 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
       role="presentation"
       aria-hidden="true"
     >
-      <path d="${outerPath}" class="border_path" />
-      <path d="${innerPath}" class="background_path" />
+      <path d="${outerPath}" class="navi_callout_border_path" />
+      <path d="${innerPath}" class="navi_callout_background_path" />
     </svg>`;
 };
 
@@ -541,14 +530,13 @@ const createValidationMessage = () => {
 
 const stickValidationMessageToTarget = (validationMessage, targetElement) => {
   // Get references to validation message parts
-  const validationMessageBodyWrapper = validationMessage.querySelector(
-    ".jsenv_validation_message_body_wrapper",
-  );
+  const validationMessageBodyWrapper =
+    validationMessage.querySelector(".navi_callout_box");
   const validationMessageBorder = validationMessage.querySelector(
-    ".jsenv_validation_message_border",
+    ".navi_callout_frame",
   );
   const validationMessageContent = validationMessage.querySelector(
-    ".jsenv_validation_message_content",
+    ".navi_callout_message",
   );
 
   // Set initial border styles
@@ -566,9 +554,7 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
       const validationMessageClone = validationMessage.cloneNode(true);
       validationMessageClone.style.visibility = "hidden";
       const validationMessageContentClone =
-        validationMessageClone.querySelector(
-          ".jsenv_validation_message_content",
-        );
+        validationMessageClone.querySelector(".navi_callout_message");
       validationMessageContentClone.style.maxHeight = "";
       validationMessageContentClone.style.overflowY = "";
       validationMessage.parentNode.appendChild(validationMessageClone);
