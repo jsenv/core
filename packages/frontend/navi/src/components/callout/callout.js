@@ -376,156 +376,6 @@ const calloutTemplate = /* html */ `
 const calloutStyleController = createStyleController("callout");
 
 /**
- * Generates SVG path for callout with arrow on top
- * @param {number} width - Callout width
- * @param {number} height - Callout height
- * @param {number} arrowPosition - Horizontal position of arrow
- * @returns {string} - SVG markup
- */
-const generateSvgWithTopArrow = (width, height, arrowPosition) => {
-  // Calculate valid arrow position range
-  const arrowLeft =
-    ARROW_WIDTH / 2 + CORNER_RADIUS + BORDER_WIDTH + ARROW_SPACING;
-  const minArrowPos = arrowLeft;
-  const maxArrowPos = width - arrowLeft;
-  const constrainedArrowPos = Math.max(
-    minArrowPos,
-    Math.min(arrowPosition, maxArrowPos),
-  );
-
-  // Calculate content height
-  const contentHeight = height - ARROW_HEIGHT;
-
-  // Create two paths: one for the border (outer) and one for the content (inner)
-  const adjustedWidth = width;
-  const adjustedHeight = contentHeight + ARROW_HEIGHT;
-
-  // Slight adjustment for visual balance
-  const innerArrowWidthReduction = Math.min(BORDER_WIDTH * 0.3, 1);
-
-  // Outer path (border)
-  const outerPath = `
-      M${CORNER_RADIUS},${ARROW_HEIGHT} 
-      H${constrainedArrowPos - ARROW_WIDTH / 2} 
-      L${constrainedArrowPos},0 
-      L${constrainedArrowPos + ARROW_WIDTH / 2},${ARROW_HEIGHT} 
-      H${width - CORNER_RADIUS} 
-      Q${width},${ARROW_HEIGHT} ${width},${ARROW_HEIGHT + CORNER_RADIUS} 
-      V${adjustedHeight - CORNER_RADIUS} 
-      Q${width},${adjustedHeight} ${width - CORNER_RADIUS},${adjustedHeight} 
-      H${CORNER_RADIUS} 
-      Q0,${adjustedHeight} 0,${adjustedHeight - CORNER_RADIUS} 
-      V${ARROW_HEIGHT + CORNER_RADIUS} 
-      Q0,${ARROW_HEIGHT} ${CORNER_RADIUS},${ARROW_HEIGHT}
-    `;
-
-  // Inner path (content) - keep arrow width almost the same
-  const innerRadius = Math.max(0, CORNER_RADIUS - BORDER_WIDTH);
-  const innerPath = `
-    M${innerRadius + BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} 
-    H${constrainedArrowPos - ARROW_WIDTH / 2 + innerArrowWidthReduction} 
-    L${constrainedArrowPos},${BORDER_WIDTH} 
-    L${constrainedArrowPos + ARROW_WIDTH / 2 - innerArrowWidthReduction},${ARROW_HEIGHT + BORDER_WIDTH} 
-    H${width - innerRadius - BORDER_WIDTH} 
-    Q${width - BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} ${width - BORDER_WIDTH},${ARROW_HEIGHT + innerRadius + BORDER_WIDTH} 
-    V${adjustedHeight - innerRadius - BORDER_WIDTH} 
-    Q${width - BORDER_WIDTH},${adjustedHeight - BORDER_WIDTH} ${width - innerRadius - BORDER_WIDTH},${adjustedHeight - BORDER_WIDTH} 
-    H${innerRadius + BORDER_WIDTH} 
-    Q${BORDER_WIDTH},${adjustedHeight - BORDER_WIDTH} ${BORDER_WIDTH},${adjustedHeight - innerRadius - BORDER_WIDTH} 
-    V${ARROW_HEIGHT + innerRadius + BORDER_WIDTH} 
-    Q${BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} ${innerRadius + BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH}
-  `;
-
-  return /*html */ `<svg
-      width="${adjustedWidth}"
-      height="${adjustedHeight}"
-      viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      role="presentation"
-      aria-hidden="true"
-    >
-      <path d="${outerPath}" class="navi_callout_border_path" />
-      <path d="${innerPath}" class="navi_callout_background_path" />
-    </svg>`;
-};
-
-/**
- * Generates SVG path for callout with arrow on bottom
- * @param {number} width - Callout width
- * @param {number} height - Callout height
- * @param {number} arrowPosition - Horizontal position of arrow
- * @returns {string} - SVG markup
- */
-const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
-  // Calculate valid arrow position range
-  const arrowLeft =
-    ARROW_WIDTH / 2 + CORNER_RADIUS + BORDER_WIDTH + ARROW_SPACING;
-  const minArrowPos = arrowLeft;
-  const maxArrowPos = width - arrowLeft;
-  const constrainedArrowPos = Math.max(
-    minArrowPos,
-    Math.min(arrowPosition, maxArrowPos),
-  );
-
-  // Calculate content height
-  const contentHeight = height - ARROW_HEIGHT;
-
-  // Create two paths: one for the border (outer) and one for the content (inner)
-  const adjustedWidth = width;
-  const adjustedHeight = contentHeight + ARROW_HEIGHT;
-
-  // For small border widths, keep inner arrow nearly the same size as outer
-  const innerArrowWidthReduction = Math.min(BORDER_WIDTH * 0.3, 1);
-
-  // Outer path with rounded corners
-  const outerPath = `
-      M${CORNER_RADIUS},0 
-      H${width - CORNER_RADIUS} 
-      Q${width},0 ${width},${CORNER_RADIUS} 
-      V${contentHeight - CORNER_RADIUS} 
-      Q${width},${contentHeight} ${width - CORNER_RADIUS},${contentHeight} 
-      H${constrainedArrowPos + ARROW_WIDTH / 2} 
-      L${constrainedArrowPos},${adjustedHeight} 
-      L${constrainedArrowPos - ARROW_WIDTH / 2},${contentHeight} 
-      H${CORNER_RADIUS} 
-      Q0,${contentHeight} 0,${contentHeight - CORNER_RADIUS} 
-      V${CORNER_RADIUS} 
-      Q0,0 ${CORNER_RADIUS},0
-    `;
-
-  // Inner path with correct arrow direction and color
-  const innerRadius = Math.max(0, CORNER_RADIUS - BORDER_WIDTH);
-  const innerPath = `
-    M${innerRadius + BORDER_WIDTH},${BORDER_WIDTH} 
-    H${width - innerRadius - BORDER_WIDTH} 
-    Q${width - BORDER_WIDTH},${BORDER_WIDTH} ${width - BORDER_WIDTH},${innerRadius + BORDER_WIDTH} 
-    V${contentHeight - innerRadius - BORDER_WIDTH} 
-    Q${width - BORDER_WIDTH},${contentHeight - BORDER_WIDTH} ${width - innerRadius - BORDER_WIDTH},${contentHeight - BORDER_WIDTH} 
-    H${constrainedArrowPos + ARROW_WIDTH / 2 - innerArrowWidthReduction} 
-    L${constrainedArrowPos},${adjustedHeight - BORDER_WIDTH} 
-    L${constrainedArrowPos - ARROW_WIDTH / 2 + innerArrowWidthReduction},${contentHeight - BORDER_WIDTH} 
-    H${innerRadius + BORDER_WIDTH} 
-    Q${BORDER_WIDTH},${contentHeight - BORDER_WIDTH} ${BORDER_WIDTH},${contentHeight - innerRadius - BORDER_WIDTH} 
-    V${innerRadius + BORDER_WIDTH} 
-    Q${BORDER_WIDTH},${BORDER_WIDTH} ${innerRadius + BORDER_WIDTH},${BORDER_WIDTH}
-  `;
-
-  return /*html */ `<svg
-      width="${adjustedWidth}"
-      height="${adjustedHeight}"
-      viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      role="presentation"
-      aria-hidden="true"
-    >
-      <path d="${outerPath}" class="navi_callout_border_path" />
-      <path d="${innerPath}" class="navi_callout_background_path" />
-    </svg>`;
-};
-
-/**
  * Creates a new callout element with specified content
  * @param {string} content - HTML content for the callout
  * @returns {HTMLElement} - The callout element
@@ -740,4 +590,154 @@ const escapeHtml = (string) => {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+};
+
+/**
+ * Generates SVG path for callout with arrow on top
+ * @param {number} width - Callout width
+ * @param {number} height - Callout height
+ * @param {number} arrowPosition - Horizontal position of arrow
+ * @returns {string} - SVG markup
+ */
+const generateSvgWithTopArrow = (width, height, arrowPosition) => {
+  // Calculate valid arrow position range
+  const arrowLeft =
+    ARROW_WIDTH / 2 + CORNER_RADIUS + BORDER_WIDTH + ARROW_SPACING;
+  const minArrowPos = arrowLeft;
+  const maxArrowPos = width - arrowLeft;
+  const constrainedArrowPos = Math.max(
+    minArrowPos,
+    Math.min(arrowPosition, maxArrowPos),
+  );
+
+  // Calculate content height
+  const contentHeight = height - ARROW_HEIGHT;
+
+  // Create two paths: one for the border (outer) and one for the content (inner)
+  const adjustedWidth = width;
+  const adjustedHeight = contentHeight + ARROW_HEIGHT;
+
+  // Slight adjustment for visual balance
+  const innerArrowWidthReduction = Math.min(BORDER_WIDTH * 0.3, 1);
+
+  // Outer path (border)
+  const outerPath = `
+      M${CORNER_RADIUS},${ARROW_HEIGHT} 
+      H${constrainedArrowPos - ARROW_WIDTH / 2} 
+      L${constrainedArrowPos},0 
+      L${constrainedArrowPos + ARROW_WIDTH / 2},${ARROW_HEIGHT} 
+      H${width - CORNER_RADIUS} 
+      Q${width},${ARROW_HEIGHT} ${width},${ARROW_HEIGHT + CORNER_RADIUS} 
+      V${adjustedHeight - CORNER_RADIUS} 
+      Q${width},${adjustedHeight} ${width - CORNER_RADIUS},${adjustedHeight} 
+      H${CORNER_RADIUS} 
+      Q0,${adjustedHeight} 0,${adjustedHeight - CORNER_RADIUS} 
+      V${ARROW_HEIGHT + CORNER_RADIUS} 
+      Q0,${ARROW_HEIGHT} ${CORNER_RADIUS},${ARROW_HEIGHT}
+    `;
+
+  // Inner path (content) - keep arrow width almost the same
+  const innerRadius = Math.max(0, CORNER_RADIUS - BORDER_WIDTH);
+  const innerPath = `
+    M${innerRadius + BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} 
+    H${constrainedArrowPos - ARROW_WIDTH / 2 + innerArrowWidthReduction} 
+    L${constrainedArrowPos},${BORDER_WIDTH} 
+    L${constrainedArrowPos + ARROW_WIDTH / 2 - innerArrowWidthReduction},${ARROW_HEIGHT + BORDER_WIDTH} 
+    H${width - innerRadius - BORDER_WIDTH} 
+    Q${width - BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} ${width - BORDER_WIDTH},${ARROW_HEIGHT + innerRadius + BORDER_WIDTH} 
+    V${adjustedHeight - innerRadius - BORDER_WIDTH} 
+    Q${width - BORDER_WIDTH},${adjustedHeight - BORDER_WIDTH} ${width - innerRadius - BORDER_WIDTH},${adjustedHeight - BORDER_WIDTH} 
+    H${innerRadius + BORDER_WIDTH} 
+    Q${BORDER_WIDTH},${adjustedHeight - BORDER_WIDTH} ${BORDER_WIDTH},${adjustedHeight - innerRadius - BORDER_WIDTH} 
+    V${ARROW_HEIGHT + innerRadius + BORDER_WIDTH} 
+    Q${BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} ${innerRadius + BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH}
+  `;
+
+  return /*html */ `<svg
+      width="${adjustedWidth}"
+      height="${adjustedHeight}"
+      viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      role="presentation"
+      aria-hidden="true"
+    >
+      <path d="${outerPath}" class="navi_callout_border_path" />
+      <path d="${innerPath}" class="navi_callout_background_path" />
+    </svg>`;
+};
+
+/**
+ * Generates SVG path for callout with arrow on bottom
+ * @param {number} width - Callout width
+ * @param {number} height - Callout height
+ * @param {number} arrowPosition - Horizontal position of arrow
+ * @returns {string} - SVG markup
+ */
+const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
+  // Calculate valid arrow position range
+  const arrowLeft =
+    ARROW_WIDTH / 2 + CORNER_RADIUS + BORDER_WIDTH + ARROW_SPACING;
+  const minArrowPos = arrowLeft;
+  const maxArrowPos = width - arrowLeft;
+  const constrainedArrowPos = Math.max(
+    minArrowPos,
+    Math.min(arrowPosition, maxArrowPos),
+  );
+
+  // Calculate content height
+  const contentHeight = height - ARROW_HEIGHT;
+
+  // Create two paths: one for the border (outer) and one for the content (inner)
+  const adjustedWidth = width;
+  const adjustedHeight = contentHeight + ARROW_HEIGHT;
+
+  // For small border widths, keep inner arrow nearly the same size as outer
+  const innerArrowWidthReduction = Math.min(BORDER_WIDTH * 0.3, 1);
+
+  // Outer path with rounded corners
+  const outerPath = `
+      M${CORNER_RADIUS},0 
+      H${width - CORNER_RADIUS} 
+      Q${width},0 ${width},${CORNER_RADIUS} 
+      V${contentHeight - CORNER_RADIUS} 
+      Q${width},${contentHeight} ${width - CORNER_RADIUS},${contentHeight} 
+      H${constrainedArrowPos + ARROW_WIDTH / 2} 
+      L${constrainedArrowPos},${adjustedHeight} 
+      L${constrainedArrowPos - ARROW_WIDTH / 2},${contentHeight} 
+      H${CORNER_RADIUS} 
+      Q0,${contentHeight} 0,${contentHeight - CORNER_RADIUS} 
+      V${CORNER_RADIUS} 
+      Q0,0 ${CORNER_RADIUS},0
+    `;
+
+  // Inner path with correct arrow direction and color
+  const innerRadius = Math.max(0, CORNER_RADIUS - BORDER_WIDTH);
+  const innerPath = `
+    M${innerRadius + BORDER_WIDTH},${BORDER_WIDTH} 
+    H${width - innerRadius - BORDER_WIDTH} 
+    Q${width - BORDER_WIDTH},${BORDER_WIDTH} ${width - BORDER_WIDTH},${innerRadius + BORDER_WIDTH} 
+    V${contentHeight - innerRadius - BORDER_WIDTH} 
+    Q${width - BORDER_WIDTH},${contentHeight - BORDER_WIDTH} ${width - innerRadius - BORDER_WIDTH},${contentHeight - BORDER_WIDTH} 
+    H${constrainedArrowPos + ARROW_WIDTH / 2 - innerArrowWidthReduction} 
+    L${constrainedArrowPos},${adjustedHeight - BORDER_WIDTH} 
+    L${constrainedArrowPos - ARROW_WIDTH / 2 + innerArrowWidthReduction},${contentHeight - BORDER_WIDTH} 
+    H${innerRadius + BORDER_WIDTH} 
+    Q${BORDER_WIDTH},${contentHeight - BORDER_WIDTH} ${BORDER_WIDTH},${contentHeight - innerRadius - BORDER_WIDTH} 
+    V${innerRadius + BORDER_WIDTH} 
+    Q${BORDER_WIDTH},${BORDER_WIDTH} ${innerRadius + BORDER_WIDTH},${BORDER_WIDTH}
+  `;
+
+  return /*html */ `<svg
+      width="${adjustedWidth}"
+      height="${adjustedHeight}"
+      viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      role="presentation"
+      aria-hidden="true"
+    >
+      <path d="${outerPath}" class="navi_callout_border_path" />
+      <path d="${innerPath}" class="navi_callout_background_path" />
+    </svg>`;
 };
