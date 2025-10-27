@@ -5,6 +5,7 @@ import {
   createValueEffect,
   getBorderSizes,
   getFirstVisuallyVisibleAncestor,
+  getPaddingSizes,
   getVisuallyVisibleInfo,
   pickPositionRelativeTo,
   visibleRectEffect,
@@ -286,6 +287,7 @@ import.meta.css = /* css */ `
   @layer navi {
     :root {
       --navi-callout-background-color: white;
+      --navi-callout-padding: 8px;
     }
 
     .navi_callout {
@@ -333,7 +335,7 @@ import.meta.css = /* css */ `
       position: relative;
       display: flex;
       max-width: 47vw;
-      padding: 8px;
+      padding: var(--navi-callout-padding);
       flex-direction: row;
       gap: 10px;
     }
@@ -457,6 +459,7 @@ const centerCalloutInViewport = (calloutElement) => {
   const calloutFrameElement = calloutElement.querySelector(
     ".navi_callout_frame",
   );
+  const calloutBodyElement = calloutElement.querySelector(".navi_callout_body");
   const calloutMessageElement = calloutElement.querySelector(
     ".navi_callout_message",
   );
@@ -482,11 +485,11 @@ const centerCalloutInViewport = (calloutElement) => {
     const maxAllowedHeight = viewportHeight - 40; // Leave some margin from viewport edges
 
     if (height > maxAllowedHeight) {
-      // Calculate available space for content
-      let spaceAvailableForContent = maxAllowedHeight;
-      spaceAvailableForContent -= BORDER_WIDTH * 2;
-      spaceAvailableForContent -= 16; // padding * 2
-
+      const paddingSizes = getPaddingSizes(calloutBodyElement);
+      const paddingY = paddingSizes.top + paddingSizes.bottom;
+      const spaceNeededAroundContent = BORDER_WIDTH * 2 + paddingY;
+      const spaceAvailableForContent =
+        maxAllowedHeight - spaceNeededAroundContent;
       calloutMessageElement.style.maxHeight = `${spaceAvailableForContent}px`;
       calloutMessageElement.style.overflowY = "scroll";
     } else {
@@ -543,6 +546,7 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
   const calloutFrameElement = calloutElement.querySelector(
     ".navi_callout_frame",
   );
+  const calloutBodyElement = calloutElement.querySelector(".navi_callout_body");
   const calloutMessageElement = calloutElement.querySelector(
     ".navi_callout_message",
   );
@@ -613,14 +617,13 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
       // the entirety of the callout
       const spaceAvailable =
         position === "below" ? spaceBelowTarget : spaceAboveTarget;
-      let spaceAvailableForContent = spaceAvailable;
-      spaceAvailableForContent -= ARROW_HEIGHT;
-      spaceAvailableForContent -= BORDER_WIDTH * 2;
-      spaceAvailableForContent -= 16; // padding * 2
-      let contentHeight = calloutHeight;
-      contentHeight -= ARROW_HEIGHT;
-      contentHeight -= BORDER_WIDTH * 2;
-      contentHeight -= 16; // padding * 2
+      const paddingSizes = getPaddingSizes(calloutBodyElement);
+      const paddingY = paddingSizes.top + paddingSizes.bottom;
+      const spaceNeededAroundContent =
+        ARROW_HEIGHT + BORDER_WIDTH * 2 + paddingY;
+      const spaceAvailableForContent =
+        spaceAvailable - spaceNeededAroundContent;
+      const contentHeight = calloutHeight - spaceNeededAroundContent;
       const spaceRemainingAfterContent =
         spaceAvailableForContent - contentHeight;
       if (spaceRemainingAfterContent < 2) {
