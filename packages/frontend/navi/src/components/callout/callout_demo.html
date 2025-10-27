@@ -180,21 +180,21 @@
       window.addEventListener("load", () => {
         const autoTarget = document.getElementById("auto-target");
         openCallout(
-          `This is a very long validation message that was opened automatically when the page loaded. <strong>Try scrolling both horizontally and vertically</strong> within the container to see how the validation message follows the target element! This message is intentionally made very long to test how the positioning system handles messages that exceed the visible area of their container. The message should properly position itself even when parts of it would normally be clipped by the container boundaries. You can scroll in any direction - up, down, left, right - to test the robustness of the positioning algorithm. This lengthy content helps verify that the validation message system can handle edge cases where the message content is larger than the available viewport space within scrollable containers.`,
+          `This is a very long callout that was opened automatically when the page loaded. <strong>Try scrolling both horizontally and vertically</strong> within the container to see how the callout follows the target element! This message is intentionally made very long to test how the positioning system handles callouts that exceed the visible area of their container. The callout should properly position itself even when parts of it would normally be clipped by the container boundaries. You can scroll in any direction - up, down, left, right - to test the robustness of the positioning algorithm. This lengthy content helps verify that the callout system can handle edge cases where the callout content is larger than the available viewport space within scrollable containers.`,
           {
             anchor: autoTarget,
             level: "warning",
             debug: true,
             canClickThrough: true,
             onClose: () => {
-              console.log("Validation message was closed");
+              console.log("Callout was closed");
             },
           },
         );
       });
 
       console.log(
-        "Simple validation message demo loaded. Check console for debug output.",
+        "Simple callout demo loaded. Check console for debug output.",
       );
     </script>
   </body>
