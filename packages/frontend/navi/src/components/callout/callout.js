@@ -27,7 +27,7 @@ import {
 export const openCallout = (
   message,
   {
-    anchor,
+    anchorElement,
     // "info" | "warning" | "error"
     // "info": polite announcement
     // -> "This element cannot be modified"
@@ -53,7 +53,7 @@ export const openCallout = (
   };
 
   if (debug) {
-    console.debug("open callout on", anchor, {
+    console.debug("open callout on", anchorElement, {
       message,
       level,
     });
@@ -85,18 +85,18 @@ export const openCallout = (
   const calloutId = `navi_callout_${Date.now()}`;
   calloutElement.id = calloutId;
   calloutStyleController.set(calloutElement, { opacity: 0 });
-  allowWheelThrough(calloutElement, anchor);
-  anchor.setAttribute("data-callout", calloutId);
+  allowWheelThrough(calloutElement, anchorElement);
+  anchorElement.setAttribute("data-callout", calloutId);
   addTeardown(() => {
-    anchor.removeAttribute("data-callout");
+    anchorElement.removeAttribute("data-callout");
   });
 
   const resetAccessibilityAttributes = () => {
     if (callout.level === "info") {
-      anchor.removeAttribute("aria-describedby");
+      anchorElement.removeAttribute("aria-describedby");
     } else {
-      anchor.removeAttribute("aria-errormessage");
-      anchor.removeAttribute("aria-invalid");
+      anchorElement.removeAttribute("aria-errormessage");
+      anchorElement.removeAttribute("aria-invalid");
     }
   };
   const update = (newMessage, options = {}) => {
@@ -108,13 +108,16 @@ export const openCallout = (
       }
       if (level === "info") {
         calloutElement.setAttribute("role", "status");
-        anchor.setAttribute("aria-describedby", calloutId);
+        anchorElement.setAttribute("aria-describedby", calloutId);
       } else {
         calloutElement.setAttribute("role", "alert");
-        anchor.setAttribute("aria-errormessage", calloutId);
-        anchor.setAttribute("aria-invalid", "true");
+        anchorElement.setAttribute("aria-errormessage", calloutId);
+        anchorElement.setAttribute("aria-invalid", "true");
       }
-      anchor.style.setProperty("--callout-color", `var(--navi-${level}-color)`);
+      anchorElement.style.setProperty(
+        "--callout-color",
+        `var(--navi-${level}-color)`,
+      );
       callout.level = level;
     }
 
@@ -132,7 +135,7 @@ export const openCallout = (
   update(message, { level });
   addTeardown(() => {
     resetAccessibilityAttributes();
-    anchor.style.removeProperty("--callout-color");
+    anchorElement.style.removeProperty("--callout-color");
   });
 
   document.body.appendChild(calloutElement);
@@ -140,7 +143,7 @@ export const openCallout = (
     calloutElement.remove();
   });
 
-  const positionFollower = stickCalloutToAnchor(calloutElement, anchor, {
+  const positionFollower = stickCalloutToAnchor(calloutElement, anchorElement, {
     debug,
   });
   addTeardown(() => {
@@ -156,14 +159,14 @@ export const openCallout = (
         // error messages must be explicitely closed by the user
         return;
       }
-      if (anchor.hasAttribute("data-callout-stay-on-focus")) {
+      if (anchorElement.hasAttribute("data-callout-stay-on-focus")) {
         return;
       }
       close("target_element_focus");
     };
-    anchor.addEventListener("focus", onfocus);
+    anchorElement.addEventListener("focus", onfocus);
     addTeardown(() => {
-      anchor.removeEventListener("focus", onfocus);
+      anchorElement.removeEventListener("focus", onfocus);
     });
   }
 
@@ -200,9 +203,9 @@ export const openCallout = (
     close,
     updatePosition: positionFollower.updatePosition,
   });
-  anchor.callout = callout;
+  anchorElement.callout = callout;
   addTeardown(() => {
-    delete anchor.callout;
+    delete anchorElement.callout;
   });
   return callout;
 };
@@ -578,7 +581,7 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
         minLeft: 1,
       });
 
-      // Calculate arrow position to point at anchor element
+      // Calculate arrow position to point at anchorElement element
       let arrowLeftPosOnCallout;
       // Determine arrow target position based on attribute
       const arrowPositionAttribute = anchorElement.getAttribute(
@@ -586,11 +589,11 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
       );
       let arrowAnchorLeft;
       if (arrowPositionAttribute === "center") {
-        // Target the center of the anchor element
+        // Target the center of the anchorElement element
         arrowAnchorLeft = (anchorLeft + anchorRight) / 2;
       } else {
         const anchorBorderSizes = getBorderSizes(anchorElement);
-        // Default behavior: target the left edge of the anchor element (after borders)
+        // Default behavior: target the left edge of the anchorElement element (after borders)
         arrowAnchorLeft = anchorLeft + anchorBorderSizes.left;
       }
 
