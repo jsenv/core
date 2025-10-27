@@ -117,7 +117,24 @@ export const openCallout = (
       newMessage = error.message;
       newMessage += `<pre class="navi_callout_error_stack">${escapeHtml(error.stack)}</pre>`;
     }
-    calloutMessageElement.innerHTML = newMessage;
+
+    // Check if the message is a full HTML document (starts with DOCTYPE)
+    if (typeof newMessage === "string" && isHtmlDocument(newMessage)) {
+      // Create iframe to isolate the HTML document
+      const iframe = document.createElement("iframe");
+      iframe.style.border = "none";
+      iframe.style.width = "100%";
+      iframe.style.minHeight = "200px";
+      iframe.style.maxHeight = "400px";
+      iframe.style.backgroundColor = "white";
+      iframe.srcdoc = newMessage;
+
+      // Clear existing content and add iframe
+      calloutMessageElement.innerHTML = "";
+      calloutMessageElement.appendChild(iframe);
+    } else {
+      calloutMessageElement.innerHTML = newMessage;
+    }
   };
   close_on_click_outside: {
     const handleClickOutside = (event) => {
@@ -368,6 +385,12 @@ import.meta.css = /* css */ `
       align-self: center;
       word-break: break-word;
       overflow-wrap: anywhere;
+    }
+    .navi_callout_message iframe {
+      display: block;
+      margin: 0;
+      border: 1px solid #ddd;
+      border-radius: 4px;
     }
     .navi_callout_close_button_column {
       display: flex;
@@ -733,6 +756,20 @@ const escapeHtml = (string) => {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+};
+
+/**
+ * Checks if a string is a full HTML document (starts with DOCTYPE)
+ * @param {string} content - The content to check
+ * @returns {boolean} - True if it looks like a complete HTML document
+ */
+const isHtmlDocument = (content) => {
+  if (typeof content !== "string") {
+    return false;
+  }
+  // Trim whitespace and check if it starts with DOCTYPE (case insensitive)
+  const trimmed = content.trim();
+  return /^<!doctype\s+html/i.test(trimmed);
 };
 
 // It's ok to do this because the element is absolutely positioned

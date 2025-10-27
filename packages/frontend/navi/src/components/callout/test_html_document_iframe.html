@@ -1,0 +1,182 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Test HTML Document in Callout</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+      }
+      .test-button {
+        display: inline-block;
+        margin: 10px;
+        padding: 10px 20px;
+        color: white;
+        font-size: 14px;
+        background: #007acc;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .test-section {
+        margin: 40px 0;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+      pre {
+        padding: 10px;
+        font-size: 12px;
+        background: #f5f5f5;
+        border-radius: 4px;
+        overflow-x: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>HTML Document in Callout Test</h1>
+
+    <div class="test-section">
+      <h2>Test 1: Regular HTML content (no DOCTYPE)</h2>
+      <button class="test-button" onclick="showRegularHtml()">
+        Show Regular HTML
+      </button>
+      <p>This should display as normal innerHTML (no iframe).</p>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 2: Complete HTML document (with DOCTYPE)</h2>
+      <button class="test-button" onclick="showHtmlDocument()">
+        Show HTML Document
+      </button>
+      <p>This should display in an iframe to prevent style conflicts.</p>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 3: HTML document with conflicting styles</h2>
+      <button class="test-button" onclick="showConflictingStylesDocument()">
+        Show Document with Conflicting Styles
+      </button>
+      <p>This demonstrates how iframe isolation prevents style conflicts.</p>
+    </div>
+
+    <script type="module">
+      import { openCallout } from "./callout.js";
+
+      let currentCallout = null;
+
+      function closeCurrentCallout() {
+        if (currentCallout) {
+          currentCallout.close();
+          currentCallout = null;
+        }
+      }
+
+      window.showRegularHtml = () => {
+        closeCurrentCallout();
+        const regularHtml = `
+        <h3>Regular HTML Content</h3>
+        <p>This is just regular HTML content without DOCTYPE.</p>
+        <ul>
+          <li>Item 1</li>
+          <li>Item 2</li>
+          <li>Item 3</li>
+        </ul>
+        <p><strong>Note:</strong> This should display as innerHTML, not in an iframe.</p>
+      `;
+
+        currentCallout = openCallout(regularHtml, {
+          level: "info",
+          debug: true,
+        });
+      };
+
+      window.showHtmlDocument = () => {
+        closeCurrentCallout();
+        const htmlDocument = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Embedded Document</title>
+  <style>
+    body {
+      font-family: Georgia, serif;
+      background: linear-gradient(45deg, #e3f2fd, #fff3e0);
+      margin: 0;
+      padding: 20px;
+    }
+    h1 { color: #1976d2; }
+    .highlight { background: yellow; padding: 2px 4px; }
+  </style>
+</head>
+<body>
+  <h1>Complete HTML Document</h1>
+  <p>This is a <span class="highlight">complete HTML document</span> with its own styles.</p>
+  <p>It's displayed in an iframe to prevent any style conflicts with the parent page.</p>
+  <div style="border: 2px solid #4caf50; padding: 10px; margin: 10px 0; border-radius: 8px;">
+    <strong>Isolated Environment:</strong> This document has its own CSS and doesn't interfere with the callout styles.
+  </div>
+</body>
+</html>`;
+
+        currentCallout = openCallout(htmlDocument, {
+          level: "warning",
+          debug: true,
+        });
+      };
+
+      window.showConflictingStylesDocument = () => {
+        closeCurrentCallout();
+        const conflictingDocument = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Conflicting Styles</title>
+  <style>
+    /* These styles would conflict with the main page if not isolated */
+    body { 
+      background: #ff5722; 
+      color: white; 
+      font-family: 'Comic Sans MS', cursive;
+      margin: 0;
+      padding: 15px;
+    }
+    button { 
+      background: #4caf50; 
+      color: white; 
+      border: none; 
+      padding: 8px 16px; 
+      border-radius: 20px;
+      cursor: pointer;
+    }
+    .navi_callout { 
+      /* This would break the callout if not isolated */
+      display: none !important; 
+    }
+  </style>
+</head>
+<body>
+  <h1>🎨 Document with Conflicting Styles</h1>
+  <p>This document has styles that would completely break the callout if not isolated in an iframe!</p>
+  <button onclick="alert('This button works inside the iframe!')">Click me!</button>
+  <p><em>Notice how the styles don't affect the callout container.</em></p>
+</body>
+</html>`;
+
+        currentCallout = openCallout(conflictingDocument, {
+          level: "error",
+          debug: true,
+        });
+      };
+
+      // Close callout on escape key
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          closeCurrentCallout();
+        }
+      });
+    </script>
+  </body>
+</html>
