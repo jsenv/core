@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
   <head>
-    <title>Simple Validation Message Demo</title>
+    <title>Simple Callout Demo</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta charset="utf-8" />
     <link rel="icon" href="data:," />
@@ -101,20 +101,18 @@
     </style>
   </head>
   <body>
-    <div class="scroll-instruction">
-      Scroll to test validation message positioning
-    </div>
+    <div class="scroll-instruction">Scroll to test callout positioning</div>
 
     <div class="container">
-      <h1>Simple Validation Message Demo</h1>
+      <h1>Simple Callout Demo</h1>
       <p>
-        This demo shows how the validation message follows its target element
-        during scrolling.
+        This demo shows how the callout follows its target element during
+        scrolling.
       </p>
 
       <div class="section">
-        <h2>Auto-opened Validation Message</h2>
-        <p>This validation message opens automatically when the page loads:</p>
+        <h2>Auto-opened Callout</h2>
+        <p>This callout opens automatically when the page loads:</p>
         <p>
           <strong
             >Scroll inside the container below to test positioning within a
@@ -139,8 +137,8 @@
       <div class="section">
         <h2>Middle Section</h2>
         <p>
-          The validation message should follow the target element as you scroll
-          past this section.
+          The callout should follow the target element as you scroll past this
+          section.
         </p>
       </div>
 
@@ -158,7 +156,7 @@
 
       <div class="section">
         <h2>Final Section</h2>
-        <p>Scroll back up to see how the validation message behaves.</p>
+        <p>Scroll back up to see how the callout behaves.</p>
       </div>
 
       <div
@@ -171,14 +169,14 @@
           margin-top: 40px;
         "
       >
-        <p>Bottom spacer - scroll back up to see validation messages</p>
+        <p>Bottom spacer - scroll back up to see callouts</p>
       </div>
     </div>
 
     <script type="module">
       import { openCallout } from "@jsenv/navi";
 
-      // Auto-open validation message on page load
+      // Auto-open callout on page load
       window.addEventListener("load", () => {
         const autoTarget = document.getElementById("auto-target");
         openCallout(
