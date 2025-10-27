@@ -120,9 +120,9 @@ import.meta.css = /* css */ `
       background-color: var(--background-color-disabled);
       outline-color: var(--border-color-disabled);
     }
-    /* Invalid */
-    .navi_input[aria-invalid="true"] {
-      border-color: var(--invalid-color);
+    /* Callout (info, warning, error) */
+    .navi_input[data-callout] {
+      border-color: var(--callout-color);
     }
   }
 `;

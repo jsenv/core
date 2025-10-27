@@ -287,6 +287,7 @@ export const openCallout = (
   // Connect validation message with target element for accessibility
   const validationMessageId = `navi_callout_message_${Date.now()}`;
   jsenvValidationMessage.id = validationMessageId;
+
   if (level === "info") {
     jsenvValidationMessage.setAttribute("role", "status");
     targetElement.setAttribute("aria-describedby", validationMessageId);
@@ -302,12 +303,14 @@ export const openCallout = (
       targetElement.removeAttribute("aria-invalid");
     });
   }
+  targetElement.setAttribute("data-callout", validationMessageId);
   targetElement.style.setProperty(
-    "--invalid-color",
+    "--callout-color",
     `var(--navi-${level}-color)`,
   );
   addTeardown(() => {
-    targetElement.style.removeProperty("--invalid-color");
+    targetElement.removeAttribute("data-callout");
+    targetElement.style.removeProperty("--callout-color");
   });
 
   document.body.appendChild(jsenvValidationMessage);
