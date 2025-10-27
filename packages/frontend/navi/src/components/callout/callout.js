@@ -309,13 +309,9 @@ export const openCallout = (
     calloutElement.remove();
   });
 
-  const positionFollower = stickValidationMessageToTarget(
-    calloutElement,
-    targetElement,
-    {
-      debug,
-    },
-  );
+  const positionFollower = stickCalloutToAnchor(calloutElement, targetElement, {
+    debug,
+  });
   addTeardown(() => {
     positionFollower.stop();
   });
@@ -542,14 +538,14 @@ const createCalloutElement = () => {
   return calloutElement;
 };
 
-const stickValidationMessageToTarget = (validationMessage, targetElement) => {
+const stickCalloutToAnchor = (calloutElement, anchorElement) => {
   // Get references to validation message parts
   const validationMessageBodyWrapper =
-    validationMessage.querySelector(".navi_callout_box");
-  const validationMessageBorder = validationMessage.querySelector(
+    calloutElement.querySelector(".navi_callout_box");
+  const validationMessageBorder = calloutElement.querySelector(
     ".navi_callout_frame",
   );
-  const validationMessageContent = validationMessage.querySelector(
+  const validationMessageContent = calloutElement.querySelector(
     ".navi_callout_message",
   );
 
@@ -559,19 +555,20 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
   validationMessageBorder.style.right = `-${BORDER_WIDTH}px`;
 
   const targetVisibleRectEffect = visibleRectEffect(
-    targetElement,
+    anchorElement,
     ({ left: targetLeft, right: targetRight, visibilityRatio }) => {
       // reset max height and overflow because it impacts the element size
       // and we need to re-check if we need to have an overflow or not.
       // to avoid visual impact we do this on an invisible clone.
       // It's ok to do this because the element is absolutely positioned
-      const validationMessageClone = validationMessage.cloneNode(true);
-      validationMessageClone.style.visibility = "hidden";
-      const validationMessageContentClone =
-        validationMessageClone.querySelector(".navi_callout_message");
-      validationMessageContentClone.style.maxHeight = "";
-      validationMessageContentClone.style.overflowY = "";
-      validationMessage.parentNode.appendChild(validationMessageClone);
+      const calloutElementClone = calloutElement.cloneNode(true);
+      calloutElementClone.style.visibility = "hidden";
+      const calloutMessageElementClone = calloutElementClone.querySelector(
+        ".navi_callout_message",
+      );
+      calloutMessageElementClone.style.maxHeight = "";
+      calloutMessageElementClone.style.overflowY = "";
+      calloutElement.parentNode.appendChild(calloutElementClone);
       const {
         position,
         left: validationMessageLeft,
@@ -580,19 +577,19 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
         height: validationMessageHeight,
         spaceAboveTarget,
         spaceBelowTarget,
-      } = pickPositionRelativeTo(validationMessageClone, targetElement, {
+      } = pickPositionRelativeTo(calloutElementClone, anchorElement, {
         alignToViewportEdgeWhenTargetNearEdge: 20,
         // when fully to the left, the border color is collé to the browser window making it hard to see
         minLeft: 1,
       });
 
       // Get element padding and border to properly position arrow
-      const targetBorderSizes = getBorderSizes(targetElement);
+      const targetBorderSizes = getBorderSizes(anchorElement);
 
       // Calculate arrow position to point at target element
       let arrowLeftPosOnValidationMessage;
       // Determine arrow target position based on attribute
-      const arrowPositionAttribute = targetElement.getAttribute(
+      const arrowPositionAttribute = anchorElement.getAttribute(
         "data-validation-message-arrow-x",
       );
       let arrowTargetLeft;
@@ -652,7 +649,7 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
         validationMessageContent.style.overflowY = "";
       }
 
-      const { width, height } = validationMessage.getBoundingClientRect();
+      const { width, height } = calloutElement.getBoundingClientRect();
       if (position === "above") {
         // Position above target element
         validationMessageBodyWrapper.style.marginTop = "";
@@ -676,15 +673,15 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
         );
       }
 
-      validationMessage.setAttribute("data-position", position);
-      calloutStyleController.set(validationMessage, {
+      calloutElement.setAttribute("data-position", position);
+      calloutStyleController.set(calloutElement, {
         opacity: visibilityRatio ? 1 : 0,
         transform: {
           translateX: validationMessageLeft,
           translateY: validationMessageTop,
         },
       });
-      validationMessageClone.remove();
+      calloutElementClone.remove();
     },
   );
   const messageSizeChangeObserver = observeValidationMessageSizeChange(
