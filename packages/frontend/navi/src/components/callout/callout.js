@@ -24,6 +24,188 @@ import {
  * @param {boolean} options.scrollIntoView - Whether to scroll the target element into view
  * @returns {Function} - Function to hide and remove the callout
  */
+export const openCallout = (
+  message,
+  {
+    anchor,
+    // "info" | "warning" | "error"
+    // "info": polite announcement
+    // -> "This element cannot be modified"
+    // "warning": expected failure, requires user attention, likely acitonable
+    // -> "field is required"
+    // "error": unexpected failure, requires user attention, might not be actionable
+    // -> "Server error"
+    level = "warning",
+    onClose,
+    closeOnClickOutside = level === "info",
+    debug = false,
+  } = {},
+) => {
+  const callout = {
+    opened: true,
+    close: null,
+    level: undefined,
+
+    update: null,
+    updatePosition: null,
+
+    element: null,
+  };
+
+  if (debug) {
+    console.debug("open callout on", anchor, {
+      message,
+      level,
+    });
+  }
+
+  const [teardown, addTeardown] = createPubSub(true);
+  const close = (reason) => {
+    if (!callout.opened) {
+      return;
+    }
+    if (debug) {
+      console.debug(`callout closed (reason: ${reason})`);
+    }
+    callout.opened = false;
+    teardown(reason);
+  };
+
+  // Create and add callout to document
+  const calloutElement = createCalloutElement();
+  const calloutMessageElement = calloutElement.querySelector(
+    ".navi_callout_message",
+  );
+  const calloutCloseButton = calloutElement.querySelector(
+    ".navi_callout_close_button",
+  );
+  calloutCloseButton.onclick = () => {
+    close("click_close_button");
+  };
+  const calloutId = `navi_callout_${Date.now()}`;
+  calloutElement.id = calloutId;
+  calloutStyleController.set(calloutElement, { opacity: 0 });
+  allowWheelThrough(calloutElement, anchor);
+  anchor.setAttribute("data-callout", calloutId);
+  addTeardown(() => {
+    anchor.removeAttribute("data-callout");
+  });
+
+  const resetAccessibilityAttributes = () => {
+    if (callout.level === "info") {
+      anchor.removeAttribute("aria-describedby");
+    } else {
+      anchor.removeAttribute("aria-errormessage");
+      anchor.removeAttribute("aria-invalid");
+    }
+  };
+  const update = (newMessage, options = {}) => {
+    // Connect callout with target element for accessibility
+    if (options.level && options.level !== callout.level) {
+      calloutElement.setAttribute("data-level", level);
+      if (callout.level) {
+        resetAccessibilityAttributes();
+      }
+      if (level === "info") {
+        calloutElement.setAttribute("role", "status");
+        anchor.setAttribute("aria-describedby", calloutId);
+      } else {
+        calloutElement.setAttribute("role", "alert");
+        anchor.setAttribute("aria-errormessage", calloutId);
+        anchor.setAttribute("aria-invalid", "true");
+      }
+      anchor.style.setProperty("--callout-color", `var(--navi-${level}-color)`);
+      callout.level = level;
+    }
+
+    if (options.closeOnClickOutside) {
+      closeOnClickOutside = options.closeOnClickOutside;
+    }
+
+    if (Error.isError(newMessage)) {
+      const error = newMessage;
+      newMessage = error.message;
+      newMessage += `<pre class="navi_callout_error_stack">${escapeHtml(error.stack)}</pre>`;
+    }
+    calloutMessageElement.innerHTML = newMessage;
+  };
+  update(message, { level });
+  addTeardown(() => {
+    resetAccessibilityAttributes();
+    anchor.style.removeProperty("--callout-color");
+  });
+
+  document.body.appendChild(calloutElement);
+  addTeardown(() => {
+    calloutElement.remove();
+  });
+
+  const positionFollower = stickCalloutToAnchor(calloutElement, anchor, {
+    debug,
+  });
+  addTeardown(() => {
+    positionFollower.stop();
+  });
+
+  if (onClose) {
+    addTeardown(onClose);
+  }
+  close_on_target_focus: {
+    const onfocus = () => {
+      if (level === "error") {
+        // error messages must be explicitely closed by the user
+        return;
+      }
+      if (anchor.hasAttribute("data-callout-stay-on-focus")) {
+        return;
+      }
+      close("target_element_focus");
+    };
+    anchor.addEventListener("focus", onfocus);
+    addTeardown(() => {
+      anchor.removeEventListener("focus", onfocus);
+    });
+  }
+
+  close_on_click_outside: {
+    const handleClickOutside = (event) => {
+      if (!closeOnClickOutside) {
+        return;
+      }
+
+      const clickTarget = event.target;
+      if (
+        clickTarget === calloutElement ||
+        calloutElement.contains(clickTarget)
+      ) {
+        return;
+      }
+      // if (
+      //   clickTarget === targetElement ||
+      //   targetElement.contains(clickTarget)
+      // ) {
+      //   return;
+      // }
+      close("click_outside");
+    };
+    document.addEventListener("click", handleClickOutside, true);
+    addTeardown(() => {
+      document.removeEventListener("click", handleClickOutside, true);
+    });
+  }
+
+  Object.assign(callout, {
+    calloutElement,
+    update,
+    close,
+    updatePosition: positionFollower.updatePosition,
+  });
+  anchor.callout = callout;
+  addTeardown(() => {
+    delete anchor.callout;
+  });
+  return callout;
+};
 
 // Configuration parameters for callout appearance
 const BORDER_WIDTH = 1;
@@ -189,192 +371,6 @@ const calloutTemplate = /* html */ `
 `;
 
 const calloutStyleController = createStyleController("callout");
-
-export const openCallout = (
-  message,
-  {
-    anchor: targetElement,
-    // "info" | "warning" | "error"
-    // "info": polite announcement
-    // -> "This element cannot be modified"
-    // "warning": expected failure, requires user attention, likely acitonable
-    // -> "field is required"
-    // "error": unexpected failure, requires user attention, might not be actionable
-    // -> "Server error"
-    level = "warning",
-    onClose,
-    closeOnClickOutside = level === "info",
-    debug = false,
-  } = {},
-) => {
-  const callout = {
-    opened: true,
-    close: null,
-    level: undefined,
-
-    update: null,
-    updatePosition: null,
-
-    element: null,
-  };
-
-  if (debug) {
-    console.debug("open callout on", targetElement, {
-      message,
-      level,
-    });
-  }
-
-  const [teardown, addTeardown] = createPubSub(true);
-  const close = (reason) => {
-    if (!callout.opened) {
-      return;
-    }
-    if (debug) {
-      console.debug(`callout closed (reason: ${reason})`);
-    }
-    callout.opened = false;
-    teardown(reason);
-  };
-
-  // Create and add callout to document
-  const calloutElement = createCalloutElement();
-  const calloutMessageElement = calloutElement.querySelector(
-    ".navi_callout_message",
-  );
-  const calloutCloseButton = calloutElement.querySelector(
-    ".navi_callout_close_button",
-  );
-  calloutCloseButton.onclick = () => {
-    close("click_close_button");
-  };
-  const calloutId = `navi_callout_${Date.now()}`;
-  calloutElement.id = calloutId;
-  calloutStyleController.set(calloutElement, { opacity: 0 });
-  allowWheelThrough(calloutElement, targetElement);
-  targetElement.setAttribute("data-callout", calloutId);
-  addTeardown(() => {
-    targetElement.removeAttribute("data-callout");
-  });
-
-  const resetAccessibilityAttributes = () => {
-    if (callout.level === "info") {
-      targetElement.removeAttribute("aria-describedby");
-    } else {
-      targetElement.removeAttribute("aria-errormessage");
-      targetElement.removeAttribute("aria-invalid");
-    }
-  };
-  const update = (newMessage, options = {}) => {
-    // Connect callout with target element for accessibility
-    if (options.level && options.level !== callout.level) {
-      calloutElement.setAttribute("data-level", level);
-      if (callout.level) {
-        resetAccessibilityAttributes();
-      }
-      if (level === "info") {
-        calloutElement.setAttribute("role", "status");
-        targetElement.setAttribute("aria-describedby", calloutId);
-      } else {
-        calloutElement.setAttribute("role", "alert");
-        targetElement.setAttribute("aria-errormessage", calloutId);
-        targetElement.setAttribute("aria-invalid", "true");
-      }
-      targetElement.style.setProperty(
-        "--callout-color",
-        `var(--navi-${level}-color)`,
-      );
-      callout.level = level;
-    }
-
-    if (options.closeOnClickOutside) {
-      closeOnClickOutside = options.closeOnClickOutside;
-    }
-
-    if (Error.isError(newMessage)) {
-      const error = newMessage;
-      newMessage = error.message;
-      newMessage += `<pre class="navi_callout_error_stack">${escapeHtml(error.stack)}</pre>`;
-    }
-    calloutMessageElement.innerHTML = newMessage;
-  };
-  update(message, { level });
-  addTeardown(() => {
-    resetAccessibilityAttributes();
-    targetElement.style.removeProperty("--callout-color");
-  });
-
-  document.body.appendChild(calloutElement);
-  addTeardown(() => {
-    calloutElement.remove();
-  });
-
-  const positionFollower = stickCalloutToAnchor(calloutElement, targetElement, {
-    debug,
-  });
-  addTeardown(() => {
-    positionFollower.stop();
-  });
-
-  if (onClose) {
-    addTeardown(onClose);
-  }
-  close_on_target_focus: {
-    const onfocus = () => {
-      if (level === "error") {
-        // error messages must be explicitely closed by the user
-        return;
-      }
-      if (targetElement.hasAttribute("data-callout-stay-on-focus")) {
-        return;
-      }
-      close("target_element_focus");
-    };
-    targetElement.addEventListener("focus", onfocus);
-    addTeardown(() => {
-      targetElement.removeEventListener("focus", onfocus);
-    });
-  }
-
-  close_on_click_outside: {
-    const handleClickOutside = (event) => {
-      if (!closeOnClickOutside) {
-        return;
-      }
-
-      const clickTarget = event.target;
-      if (
-        clickTarget === calloutElement ||
-        calloutElement.contains(clickTarget)
-      ) {
-        return;
-      }
-      // if (
-      //   clickTarget === targetElement ||
-      //   targetElement.contains(clickTarget)
-      // ) {
-      //   return;
-      // }
-      close("click_outside");
-    };
-    document.addEventListener("click", handleClickOutside, true);
-    addTeardown(() => {
-      document.removeEventListener("click", handleClickOutside, true);
-    });
-  }
-
-  Object.assign(callout, {
-    calloutElement,
-    update,
-    close,
-    updatePosition: positionFollower.updatePosition,
-  });
-  targetElement.callout = callout;
-  addTeardown(() => {
-    delete targetElement.callout;
-  });
-  return callout;
-};
 
 /**
  * Generates SVG path for callout with arrow on top
