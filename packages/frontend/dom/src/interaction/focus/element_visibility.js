@@ -100,7 +100,7 @@ export const getVisuallyVisibleInfo = (
 export const getFirstVisuallyVisibleAncestor = (node, options = {}) => {
   let currentNode = node;
 
-  while (currentNode && !isDocumentElement(currentNode)) {
+  while (currentNode) {
     const visibilityInfo = getVisuallyVisibleInfo(currentNode, options);
     if (visibilityInfo.visible) {
       return {
@@ -111,14 +111,6 @@ export const getFirstVisuallyVisibleAncestor = (node, options = {}) => {
     currentNode = currentNode.parentElement;
   }
 
-  // If we reach the document element, return it as it's always considered visible
-  if (isDocumentElement(currentNode)) {
-    return {
-      element: currentNode,
-      visibilityInfo: { visible: true, reason: "is document" },
-    };
-  }
-
-  // This shouldn't happen in normal cases, but handle gracefully
+  // This shouldn't happen in normal cases since document element is always visible
   return null;
 };
