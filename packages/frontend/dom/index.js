@@ -37,7 +37,13 @@ export {
   useActiveElement,
 } from "./src/interaction/focus/active_element.js";
 export { elementIsFocusable } from "./src/interaction/focus/element_is_focusable.js";
-export { elementIsVisible } from "./src/interaction/focus/element_is_visible.js";
+export {
+  elementIsVisibleForFocus,
+  elementIsVisuallyVisible,
+  getFirstVisuallyVisibleAncestor,
+  getFocusVisibilityInfo,
+  getVisuallyVisibleInfo,
+} from "./src/interaction/focus/element_visibility.js";
 export { findFocusable } from "./src/interaction/focus/find_focusable.js";
 export { initFocusGroup } from "./src/interaction/focus/focus_group.js";
 export { preventFocusNavViaKeyboard } from "./src/interaction/focus/focus_nav.js";
