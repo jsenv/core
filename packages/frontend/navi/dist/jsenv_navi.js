@@ -4,6 +4,421 @@ import { createContext, createRef, toChildArray, cloneElement } from "preact";
 import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
 import { forwardRef, createPortal } from "preact/compat";
 
+/* eslint-disable */
+// construct-style-sheets-polyfill@3.1.0
+// to keep in sync with https://github.com/calebdwilliams/construct-style-sheets
+// copy pasted into jsenv codebase to inject this code with more ease
+(function () {
+
+  if (typeof document === "undefined" || "adoptedStyleSheets" in document) {
+    return;
+  }
+
+  var hasShadyCss = "ShadyCSS" in window && !ShadyCSS.nativeShadow;
+  var bootstrapper = document.implementation.createHTMLDocument("");
+  var closedShadowRootRegistry = new WeakMap();
+  var _DOMException = typeof DOMException === "object" ? Error : DOMException;
+  var defineProperty = Object.defineProperty;
+  var forEach = Array.prototype.forEach;
+
+  var importPattern = /@import.+?;?$/gm;
+  function rejectImports(contents) {
+    var _contents = contents.replace(importPattern, "");
+    if (_contents !== contents) {
+      console.warn(
+        "@import rules are not allowed here. See https://github.com/WICG/construct-stylesheets/issues/119#issuecomment-588352418",
+      );
+    }
+    return _contents.trim();
+  }
+  function isElementConnected(element) {
+    return "isConnected" in element
+      ? element.isConnected
+      : document.contains(element);
+  }
+  function unique(arr) {
+    return arr.filter(function (value, index) {
+      return arr.indexOf(value) === index;
+    });
+  }
+  function diff(arr1, arr2) {
+    return arr1.filter(function (value) {
+      return arr2.indexOf(value) === -1;
+    });
+  }
+  function removeNode(node) {
+    node.parentNode.removeChild(node);
+  }
+  function getShadowRoot(element) {
+    return element.shadowRoot || closedShadowRootRegistry.get(element);
+  }
+
+  var cssStyleSheetMethods = [
+    "addRule",
+    "deleteRule",
+    "insertRule",
+    "removeRule",
+  ];
+  var NonConstructedStyleSheet = CSSStyleSheet;
+  var nonConstructedProto = NonConstructedStyleSheet.prototype;
+  nonConstructedProto.replace = function () {
+    return Promise.reject(
+      new _DOMException(
+        "Can't call replace on non-constructed CSSStyleSheets.",
+      ),
+    );
+  };
+  nonConstructedProto.replaceSync = function () {
+    throw new _DOMException(
+      "Failed to execute 'replaceSync' on 'CSSStyleSheet': Can't call replaceSync on non-constructed CSSStyleSheets.",
+    );
+  };
+  function isCSSStyleSheetInstance(instance) {
+    return typeof instance === "object"
+      ? proto$1.isPrototypeOf(instance) ||
+          nonConstructedProto.isPrototypeOf(instance)
+      : false;
+  }
+  function isNonConstructedStyleSheetInstance(instance) {
+    return typeof instance === "object"
+      ? nonConstructedProto.isPrototypeOf(instance)
+      : false;
+  }
+  var $basicStyleElement = new WeakMap();
+  var $locations = new WeakMap();
+  var $adoptersByLocation = new WeakMap();
+  var $appliedMethods = new WeakMap();
+  function addAdopterLocation(sheet, location) {
+    var adopter = document.createElement("style");
+    $adoptersByLocation.get(sheet).set(location, adopter);
+    $locations.get(sheet).push(location);
+    return adopter;
+  }
+  function getAdopterByLocation(sheet, location) {
+    return $adoptersByLocation.get(sheet).get(location);
+  }
+  function removeAdopterLocation(sheet, location) {
+    $adoptersByLocation.get(sheet).delete(location);
+    $locations.set(
+      sheet,
+      $locations.get(sheet).filter(function (_location) {
+        return _location !== location;
+      }),
+    );
+  }
+  function restyleAdopter(sheet, adopter) {
+    requestAnimationFrame(function () {
+      adopter.textContent = $basicStyleElement.get(sheet).textContent;
+      $appliedMethods.get(sheet).forEach(function (command) {
+        return adopter.sheet[command.method].apply(adopter.sheet, command.args);
+      });
+    });
+  }
+  function checkInvocationCorrectness(self) {
+    if (!$basicStyleElement.has(self)) {
+      throw new TypeError("Illegal invocation");
+    }
+  }
+  function ConstructedStyleSheet() {
+    var self = this;
+    var style = document.createElement("style");
+    bootstrapper.body.appendChild(style);
+    $basicStyleElement.set(self, style);
+    $locations.set(self, []);
+    $adoptersByLocation.set(self, new WeakMap());
+    $appliedMethods.set(self, []);
+  }
+  var proto$1 = ConstructedStyleSheet.prototype;
+  proto$1.replace = function replace(contents) {
+    try {
+      this.replaceSync(contents);
+      return Promise.resolve(this);
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  };
+  proto$1.replaceSync = function replaceSync(contents) {
+    checkInvocationCorrectness(this);
+    if (typeof contents === "string") {
+      var self_1 = this;
+      $basicStyleElement.get(self_1).textContent = rejectImports(contents);
+      $appliedMethods.set(self_1, []);
+      $locations.get(self_1).forEach(function (location) {
+        if (location.isConnected()) {
+          restyleAdopter(self_1, getAdopterByLocation(self_1, location));
+        }
+      });
+    }
+  };
+  defineProperty(proto$1, "cssRules", {
+    configurable: true,
+    enumerable: true,
+    get: function cssRules() {
+      checkInvocationCorrectness(this);
+      return $basicStyleElement.get(this).sheet.cssRules;
+    },
+  });
+  defineProperty(proto$1, "media", {
+    configurable: true,
+    enumerable: true,
+    get: function media() {
+      checkInvocationCorrectness(this);
+      return $basicStyleElement.get(this).sheet.media;
+    },
+  });
+  cssStyleSheetMethods.forEach(function (method) {
+    proto$1[method] = function () {
+      var self = this;
+      checkInvocationCorrectness(self);
+      var args = arguments;
+      $appliedMethods.get(self).push({ method: method, args: args });
+      $locations.get(self).forEach(function (location) {
+        if (location.isConnected()) {
+          var sheet = getAdopterByLocation(self, location).sheet;
+          sheet[method].apply(sheet, args);
+        }
+      });
+      var basicSheet = $basicStyleElement.get(self).sheet;
+      return basicSheet[method].apply(basicSheet, args);
+    };
+  });
+  defineProperty(ConstructedStyleSheet, Symbol.hasInstance, {
+    configurable: true,
+    value: isCSSStyleSheetInstance,
+  });
+
+  var defaultObserverOptions = {
+    childList: true,
+    subtree: true,
+  };
+  var locations = new WeakMap();
+  function getAssociatedLocation(element) {
+    var location = locations.get(element);
+    if (!location) {
+      location = new Location(element);
+      locations.set(element, location);
+    }
+    return location;
+  }
+  function attachAdoptedStyleSheetProperty(constructor) {
+    defineProperty(constructor.prototype, "adoptedStyleSheets", {
+      configurable: true,
+      enumerable: true,
+      get: function () {
+        return getAssociatedLocation(this).sheets;
+      },
+      set: function (sheets) {
+        getAssociatedLocation(this).update(sheets);
+      },
+    });
+  }
+  function traverseWebComponents(node, callback) {
+    var iter = document.createNodeIterator(
+      node,
+      NodeFilter.SHOW_ELEMENT,
+      function (foundNode) {
+        return getShadowRoot(foundNode)
+          ? NodeFilter.FILTER_ACCEPT
+          : NodeFilter.FILTER_REJECT;
+      },
+      null,
+      false,
+    );
+    for (var next = void 0; (next = iter.nextNode()); ) {
+      callback(getShadowRoot(next));
+    }
+  }
+  var $element = new WeakMap();
+  var $uniqueSheets = new WeakMap();
+  var $observer = new WeakMap();
+  function isExistingAdopter(self, element) {
+    return (
+      element instanceof HTMLStyleElement &&
+      $uniqueSheets.get(self).some(function (sheet) {
+        return getAdopterByLocation(sheet, self);
+      })
+    );
+  }
+  function getAdopterContainer(self) {
+    var element = $element.get(self);
+    return element instanceof Document ? element.body : element;
+  }
+  function adopt(self) {
+    var styleList = document.createDocumentFragment();
+    var sheets = $uniqueSheets.get(self);
+    var observer = $observer.get(self);
+    var container = getAdopterContainer(self);
+    observer.disconnect();
+    sheets.forEach(function (sheet) {
+      styleList.appendChild(
+        getAdopterByLocation(sheet, self) || addAdopterLocation(sheet, self),
+      );
+    });
+    container.insertBefore(styleList, null);
+    observer.observe(container, defaultObserverOptions);
+    sheets.forEach(function (sheet) {
+      restyleAdopter(sheet, getAdopterByLocation(sheet, self));
+    });
+  }
+  function Location(element) {
+    var self = this;
+    self.sheets = [];
+    $element.set(self, element);
+    $uniqueSheets.set(self, []);
+    $observer.set(
+      self,
+      new MutationObserver(function (mutations, observer) {
+        if (!document) {
+          observer.disconnect();
+          return;
+        }
+        mutations.forEach(function (mutation) {
+          if (!hasShadyCss) {
+            forEach.call(mutation.addedNodes, function (node) {
+              if (!(node instanceof Element)) {
+                return;
+              }
+              traverseWebComponents(node, function (root) {
+                getAssociatedLocation(root).connect();
+              });
+            });
+          }
+          forEach.call(mutation.removedNodes, function (node) {
+            if (!(node instanceof Element)) {
+              return;
+            }
+            if (isExistingAdopter(self, node)) {
+              adopt(self);
+            }
+            if (!hasShadyCss) {
+              traverseWebComponents(node, function (root) {
+                getAssociatedLocation(root).disconnect();
+              });
+            }
+          });
+        });
+      }),
+    );
+  }
+  Location.prototype = {
+    isConnected: function () {
+      var element = $element.get(this);
+      return element instanceof Document
+        ? element.readyState !== "loading"
+        : isElementConnected(element.host);
+    },
+    connect: function () {
+      var container = getAdopterContainer(this);
+      $observer.get(this).observe(container, defaultObserverOptions);
+      if ($uniqueSheets.get(this).length > 0) {
+        adopt(this);
+      }
+      traverseWebComponents(container, function (root) {
+        getAssociatedLocation(root).connect();
+      });
+    },
+    disconnect: function () {
+      $observer.get(this).disconnect();
+    },
+    update: function (sheets) {
+      var self = this;
+      var locationType =
+        $element.get(self) === document ? "Document" : "ShadowRoot";
+      if (!Array.isArray(sheets)) {
+        throw new TypeError(
+          "Failed to set the 'adoptedStyleSheets' property on " +
+            locationType +
+            ": Iterator getter is not callable.",
+        );
+      }
+      if (!sheets.every(isCSSStyleSheetInstance)) {
+        throw new TypeError(
+          "Failed to set the 'adoptedStyleSheets' property on " +
+            locationType +
+            ": Failed to convert value to 'CSSStyleSheet'",
+        );
+      }
+      if (sheets.some(isNonConstructedStyleSheetInstance)) {
+        throw new TypeError(
+          "Failed to set the 'adoptedStyleSheets' property on " +
+            locationType +
+            ": Can't adopt non-constructed stylesheets",
+        );
+      }
+      self.sheets = sheets;
+      var oldUniqueSheets = $uniqueSheets.get(self);
+      var uniqueSheets = unique(sheets);
+      var removedSheets = diff(oldUniqueSheets, uniqueSheets);
+      removedSheets.forEach(function (sheet) {
+        removeNode(getAdopterByLocation(sheet, self));
+        removeAdopterLocation(sheet, self);
+      });
+      $uniqueSheets.set(self, uniqueSheets);
+      if (self.isConnected() && uniqueSheets.length > 0) {
+        adopt(self);
+      }
+    },
+  };
+
+  window.CSSStyleSheet = ConstructedStyleSheet;
+  attachAdoptedStyleSheetProperty(Document);
+  if ("ShadowRoot" in window) {
+    attachAdoptedStyleSheetProperty(ShadowRoot);
+    var proto = Element.prototype;
+    var attach_1 = proto.attachShadow;
+    proto.attachShadow = function attachShadow(init) {
+      var root = attach_1.call(this, init);
+      if (init.mode === "closed") {
+        closedShadowRootRegistry.set(this, root);
+      }
+      return root;
+    };
+  }
+  var documentLocation = getAssociatedLocation(document);
+  if (documentLocation.isConnected()) {
+    documentLocation.connect();
+  } else {
+    document.addEventListener(
+      "DOMContentLoaded",
+      documentLocation.connect.bind(documentLocation),
+    );
+  }
+})();
+
+const installImportMetaCss = importMeta => {
+  const stylesheet = new CSSStyleSheet({
+    baseUrl: importMeta.url
+  });
+  let called = false;
+  // eslint-disable-next-line accessor-pairs
+  Object.defineProperty(importMeta, "css", {
+    configurable: true,
+    set(value) {
+      if (called) {
+        throw new Error("import.meta.css setter can only be called once");
+      }
+      called = true;
+      stylesheet.replaceSync(value);
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
+    }
+  });
+};
+
+installImportMetaCss(import.meta);import.meta.css = /* css */ `
+  @layer navi {
+    :root {
+      --navi-background-color-readonly: #d3d3d3;
+      --navi-color-readonly: grey;
+      --navi-background-color-disabled: #d3d3d3;
+      --navi-color-disabled: #eeeeee;
+
+      --navi-info-color: #2196f3;
+      --navi-warning-color: #ff9800;
+      --navi-error-color: #f44336;
+    }
+  }
+`;
+
 const createIterableWeakSet = () => {
   const objectWeakRefSet = new Set();
 
@@ -101,6 +516,38 @@ const createPubSub = (clearOnPublish = false) => {
   };
 
   return [publish, subscribe, clear];
+};
+
+const createValueEffect = (value) => {
+  const callbackSet = new Set();
+  const previousValueCleanupSet = new Set();
+
+  const updateValue = (newValue) => {
+    if (newValue === value) {
+      return;
+    }
+    for (const cleanup of previousValueCleanupSet) {
+      cleanup();
+    }
+    previousValueCleanupSet.clear();
+    const oldValue = value;
+    value = newValue;
+    for (const callback of callbackSet) {
+      const returnValue = callback(newValue, oldValue);
+      if (typeof returnValue === "function") {
+        previousValueCleanupSet.add(returnValue);
+      }
+    }
+  };
+
+  const addEffect = (callback) => {
+    callbackSet.add(callback);
+    return () => {
+      callbackSet.delete(callback);
+    };
+  };
+
+  return [updateValue, addEffect];
 };
 
 // https://github.com/davidtheclark/tabbable/blob/master/index.js
@@ -1781,12 +2228,21 @@ const useActiveElement = () => {
   return activeElementSignal.value;
 };
 
-const elementIsVisible = (node) => {
+const elementIsVisibleForFocus = (node) => {
+  return getFocusVisibilityInfo(node).visible;
+};
+const getFocusVisibilityInfo = (node) => {
   if (isDocumentElement(node)) {
-    return true;
+    return { visible: true, reason: "is document" };
+  }
+  if (node.hasAttribute("hidden")) {
+    return { visible: false, reason: "has hidden attribute" };
   }
   if (getStyle(node, "visibility") === "hidden") {
-    return false;
+    return { visible: false, reason: "uses visiblity: hidden" };
+  }
+  if (node.tagName === "INPUT" && node.type === "hidden") {
+    return { visible: false, reason: "input type hidden" };
   }
   let nodeOrAncestor = node;
   while (nodeOrAncestor) {
@@ -1794,19 +2250,83 @@ const elementIsVisible = (node) => {
       break;
     }
     if (getStyle(nodeOrAncestor, "display") === "none") {
-      return false;
+      return { visible: false, reason: "ancestor uses display: none" };
     }
     // Check if element is inside a closed details element
     if (elementIsDetails(nodeOrAncestor) && !nodeOrAncestor.open) {
       // Special case: summary elements are visible even when their parent details is closed
       // But only if this details element is the direct parent of the summary
-      if (elementIsSummary(node) && node.parentElement === nodeOrAncestor) ; else {
-        return false;
+      if (!elementIsSummary(node) || node.parentElement !== nodeOrAncestor) {
+        return { visible: false, reason: "inside closed details element" };
       }
+      // Continue checking ancestors
     }
     nodeOrAncestor = nodeOrAncestor.parentNode;
   }
-  return true;
+  return { visible: true, reason: "no reason to be hidden" };
+};
+const getVisuallyVisibleInfo = (
+  node,
+  { countOffscreenAsVisible = false } = {},
+) => {
+  // First check all the focusable visibility conditions
+  const focusVisibilityInfo = getFocusVisibilityInfo(node);
+  if (!focusVisibilityInfo.visible) {
+    return focusVisibilityInfo;
+  }
+
+  // Additional visual visibility checks
+  if (getStyle(node, "opacity") === "0") {
+    return { visible: false, reason: "uses opacity: 0" };
+  }
+
+  const rect = node.getBoundingClientRect();
+  if (rect.width === 0 && rect.height === 0) {
+    return { visible: false, reason: "has zero dimensions" };
+  }
+
+  // Check for clipping
+  const clipStyle = getStyle(node, "clip");
+  if (clipStyle && clipStyle !== "auto" && clipStyle.includes("rect(0")) {
+    return { visible: false, reason: "clipped with clip property" };
+  }
+
+  const clipPathStyle = getStyle(node, "clip-path");
+  if (clipPathStyle && clipPathStyle.includes("inset(100%")) {
+    return { visible: false, reason: "clipped with clip-path" };
+  }
+
+  // Check if positioned off-screen (unless option says to count as visible)
+  if (!countOffscreenAsVisible) {
+    if (
+      rect.right < 0 ||
+      rect.bottom < 0 ||
+      rect.left > window.innerWidth ||
+      rect.top > window.innerHeight
+    ) {
+      return { visible: false, reason: "positioned off-screen" };
+    }
+  }
+
+  // Check for transform scale(0)
+  const transformStyle = getStyle(node, "transform");
+  if (transformStyle && transformStyle.includes("scale(0")) {
+    return { visible: false, reason: "scaled to zero with transform" };
+  }
+
+  return { visible: true, reason: "visually visible" };
+};
+const getFirstVisuallyVisibleAncestor = (node, options = {}) => {
+  let ancestorCandidate = node.parentNode;
+  while (ancestorCandidate) {
+    const visibilityInfo = getVisuallyVisibleInfo(ancestorCandidate, options);
+    if (visibilityInfo.visible) {
+      return ancestorCandidate;
+    }
+    ancestorCandidate = ancestorCandidate.parentElement;
+  }
+  // This shouldn't happen in normal cases since document element is always visible
+  return null;
 };
 
 const elementIsFocusable = (node) => {
@@ -1822,34 +2342,34 @@ const elementIsFocusable = (node) => {
     if (node.type === "hidden") {
       return false;
     }
-    return elementIsVisible(node);
+    return elementIsVisibleForFocus(node);
   }
   if (
     ["button", "select", "datalist", "iframe", "textarea"].indexOf(nodeName) >
     -1
   ) {
-    return elementIsVisible(node);
+    return elementIsVisibleForFocus(node);
   }
   if (["a", "area"].indexOf(nodeName) > -1) {
     if (node.hasAttribute("href") === false) {
       return false;
     }
-    return elementIsVisible(node);
+    return elementIsVisibleForFocus(node);
   }
   if (["audio", "video"].indexOf(nodeName) > -1) {
     if (node.hasAttribute("controls") === false) {
       return false;
     }
-    return elementIsVisible(node);
+    return elementIsVisibleForFocus(node);
   }
   if (nodeName === "summary") {
-    return elementIsVisible(node);
+    return elementIsVisibleForFocus(node);
   }
   if (node.hasAttribute("tabindex") || node.hasAttribute("tabIndex")) {
-    return elementIsVisible(node);
+    return elementIsVisibleForFocus(node);
   }
   if (node.hasAttribute("draggable")) {
-    return elementIsVisible(node);
+    return elementIsVisibleForFocus(node);
   }
   return false;
 };
@@ -3005,11 +3525,12 @@ const allowWheelThrough = (element, connectedElement) => {
         wheelEvent.clientY,
       );
       for (const elementBehindMouse of elementsBehindMouse) {
-        const belongsToElement = isElementOrDescendant(elementBehindMouse);
         // try to scroll element itself
         if (tryToScrollOne(elementBehindMouse, wheelEvent)) {
           return;
         }
+        const belongsToElement = isElementOrDescendant(elementBehindMouse);
+        // try to scroll what is behind
         if (!belongsToElement) {
           break;
         }
@@ -3028,17 +3549,16 @@ const allowWheelThrough = (element, connectedElement) => {
       wheelEvent.clientY,
     );
     for (const elementBehindMouse of elementsBehindMouse) {
-      const belongsToElement = isElementOrDescendant(elementBehindMouse);
       // try to scroll element itself
       if (tryToScrollOne(elementBehindMouse, wheelEvent)) {
         return;
       }
+      const belongsToElement = isElementOrDescendant(elementBehindMouse);
       if (belongsToElement) {
-        // the element is not scrollable and we don't care about his
-        // scrollable parent (because we know it's going to be the document)
-        // we search for scrollable container that might be behind it
+        // keep searching if something in our element is scrollable
         continue;
       }
+      // our element is not scrollable, try to scroll the container behind the mouse
       const scrollContainer = getScrollContainer(elementBehindMouse);
       if (tryToScrollOne(scrollContainer, wheelEvent)) {
         return;
@@ -3467,406 +3987,6 @@ const createGetScrollOffsets = (
     return [scrollLeftToAdd + leftDiff, scrollTopToAdd + topDiff];
   };
   return getScrollOffsetsDifferentContainers;
-};
-
-/* eslint-disable */
-// construct-style-sheets-polyfill@3.1.0
-// to keep in sync with https://github.com/calebdwilliams/construct-style-sheets
-// copy pasted into jsenv codebase to inject this code with more ease
-(function () {
-
-  if (typeof document === "undefined" || "adoptedStyleSheets" in document) {
-    return;
-  }
-
-  var hasShadyCss = "ShadyCSS" in window && !ShadyCSS.nativeShadow;
-  var bootstrapper = document.implementation.createHTMLDocument("");
-  var closedShadowRootRegistry = new WeakMap();
-  var _DOMException = typeof DOMException === "object" ? Error : DOMException;
-  var defineProperty = Object.defineProperty;
-  var forEach = Array.prototype.forEach;
-
-  var importPattern = /@import.+?;?$/gm;
-  function rejectImports(contents) {
-    var _contents = contents.replace(importPattern, "");
-    if (_contents !== contents) {
-      console.warn(
-        "@import rules are not allowed here. See https://github.com/WICG/construct-stylesheets/issues/119#issuecomment-588352418",
-      );
-    }
-    return _contents.trim();
-  }
-  function isElementConnected(element) {
-    return "isConnected" in element
-      ? element.isConnected
-      : document.contains(element);
-  }
-  function unique(arr) {
-    return arr.filter(function (value, index) {
-      return arr.indexOf(value) === index;
-    });
-  }
-  function diff(arr1, arr2) {
-    return arr1.filter(function (value) {
-      return arr2.indexOf(value) === -1;
-    });
-  }
-  function removeNode(node) {
-    node.parentNode.removeChild(node);
-  }
-  function getShadowRoot(element) {
-    return element.shadowRoot || closedShadowRootRegistry.get(element);
-  }
-
-  var cssStyleSheetMethods = [
-    "addRule",
-    "deleteRule",
-    "insertRule",
-    "removeRule",
-  ];
-  var NonConstructedStyleSheet = CSSStyleSheet;
-  var nonConstructedProto = NonConstructedStyleSheet.prototype;
-  nonConstructedProto.replace = function () {
-    return Promise.reject(
-      new _DOMException(
-        "Can't call replace on non-constructed CSSStyleSheets.",
-      ),
-    );
-  };
-  nonConstructedProto.replaceSync = function () {
-    throw new _DOMException(
-      "Failed to execute 'replaceSync' on 'CSSStyleSheet': Can't call replaceSync on non-constructed CSSStyleSheets.",
-    );
-  };
-  function isCSSStyleSheetInstance(instance) {
-    return typeof instance === "object"
-      ? proto$1.isPrototypeOf(instance) ||
-          nonConstructedProto.isPrototypeOf(instance)
-      : false;
-  }
-  function isNonConstructedStyleSheetInstance(instance) {
-    return typeof instance === "object"
-      ? nonConstructedProto.isPrototypeOf(instance)
-      : false;
-  }
-  var $basicStyleElement = new WeakMap();
-  var $locations = new WeakMap();
-  var $adoptersByLocation = new WeakMap();
-  var $appliedMethods = new WeakMap();
-  function addAdopterLocation(sheet, location) {
-    var adopter = document.createElement("style");
-    $adoptersByLocation.get(sheet).set(location, adopter);
-    $locations.get(sheet).push(location);
-    return adopter;
-  }
-  function getAdopterByLocation(sheet, location) {
-    return $adoptersByLocation.get(sheet).get(location);
-  }
-  function removeAdopterLocation(sheet, location) {
-    $adoptersByLocation.get(sheet).delete(location);
-    $locations.set(
-      sheet,
-      $locations.get(sheet).filter(function (_location) {
-        return _location !== location;
-      }),
-    );
-  }
-  function restyleAdopter(sheet, adopter) {
-    requestAnimationFrame(function () {
-      adopter.textContent = $basicStyleElement.get(sheet).textContent;
-      $appliedMethods.get(sheet).forEach(function (command) {
-        return adopter.sheet[command.method].apply(adopter.sheet, command.args);
-      });
-    });
-  }
-  function checkInvocationCorrectness(self) {
-    if (!$basicStyleElement.has(self)) {
-      throw new TypeError("Illegal invocation");
-    }
-  }
-  function ConstructedStyleSheet() {
-    var self = this;
-    var style = document.createElement("style");
-    bootstrapper.body.appendChild(style);
-    $basicStyleElement.set(self, style);
-    $locations.set(self, []);
-    $adoptersByLocation.set(self, new WeakMap());
-    $appliedMethods.set(self, []);
-  }
-  var proto$1 = ConstructedStyleSheet.prototype;
-  proto$1.replace = function replace(contents) {
-    try {
-      this.replaceSync(contents);
-      return Promise.resolve(this);
-    } catch (e) {
-      return Promise.reject(e);
-    }
-  };
-  proto$1.replaceSync = function replaceSync(contents) {
-    checkInvocationCorrectness(this);
-    if (typeof contents === "string") {
-      var self_1 = this;
-      $basicStyleElement.get(self_1).textContent = rejectImports(contents);
-      $appliedMethods.set(self_1, []);
-      $locations.get(self_1).forEach(function (location) {
-        if (location.isConnected()) {
-          restyleAdopter(self_1, getAdopterByLocation(self_1, location));
-        }
-      });
-    }
-  };
-  defineProperty(proto$1, "cssRules", {
-    configurable: true,
-    enumerable: true,
-    get: function cssRules() {
-      checkInvocationCorrectness(this);
-      return $basicStyleElement.get(this).sheet.cssRules;
-    },
-  });
-  defineProperty(proto$1, "media", {
-    configurable: true,
-    enumerable: true,
-    get: function media() {
-      checkInvocationCorrectness(this);
-      return $basicStyleElement.get(this).sheet.media;
-    },
-  });
-  cssStyleSheetMethods.forEach(function (method) {
-    proto$1[method] = function () {
-      var self = this;
-      checkInvocationCorrectness(self);
-      var args = arguments;
-      $appliedMethods.get(self).push({ method: method, args: args });
-      $locations.get(self).forEach(function (location) {
-        if (location.isConnected()) {
-          var sheet = getAdopterByLocation(self, location).sheet;
-          sheet[method].apply(sheet, args);
-        }
-      });
-      var basicSheet = $basicStyleElement.get(self).sheet;
-      return basicSheet[method].apply(basicSheet, args);
-    };
-  });
-  defineProperty(ConstructedStyleSheet, Symbol.hasInstance, {
-    configurable: true,
-    value: isCSSStyleSheetInstance,
-  });
-
-  var defaultObserverOptions = {
-    childList: true,
-    subtree: true,
-  };
-  var locations = new WeakMap();
-  function getAssociatedLocation(element) {
-    var location = locations.get(element);
-    if (!location) {
-      location = new Location(element);
-      locations.set(element, location);
-    }
-    return location;
-  }
-  function attachAdoptedStyleSheetProperty(constructor) {
-    defineProperty(constructor.prototype, "adoptedStyleSheets", {
-      configurable: true,
-      enumerable: true,
-      get: function () {
-        return getAssociatedLocation(this).sheets;
-      },
-      set: function (sheets) {
-        getAssociatedLocation(this).update(sheets);
-      },
-    });
-  }
-  function traverseWebComponents(node, callback) {
-    var iter = document.createNodeIterator(
-      node,
-      NodeFilter.SHOW_ELEMENT,
-      function (foundNode) {
-        return getShadowRoot(foundNode)
-          ? NodeFilter.FILTER_ACCEPT
-          : NodeFilter.FILTER_REJECT;
-      },
-      null,
-      false,
-    );
-    for (var next = void 0; (next = iter.nextNode()); ) {
-      callback(getShadowRoot(next));
-    }
-  }
-  var $element = new WeakMap();
-  var $uniqueSheets = new WeakMap();
-  var $observer = new WeakMap();
-  function isExistingAdopter(self, element) {
-    return (
-      element instanceof HTMLStyleElement &&
-      $uniqueSheets.get(self).some(function (sheet) {
-        return getAdopterByLocation(sheet, self);
-      })
-    );
-  }
-  function getAdopterContainer(self) {
-    var element = $element.get(self);
-    return element instanceof Document ? element.body : element;
-  }
-  function adopt(self) {
-    var styleList = document.createDocumentFragment();
-    var sheets = $uniqueSheets.get(self);
-    var observer = $observer.get(self);
-    var container = getAdopterContainer(self);
-    observer.disconnect();
-    sheets.forEach(function (sheet) {
-      styleList.appendChild(
-        getAdopterByLocation(sheet, self) || addAdopterLocation(sheet, self),
-      );
-    });
-    container.insertBefore(styleList, null);
-    observer.observe(container, defaultObserverOptions);
-    sheets.forEach(function (sheet) {
-      restyleAdopter(sheet, getAdopterByLocation(sheet, self));
-    });
-  }
-  function Location(element) {
-    var self = this;
-    self.sheets = [];
-    $element.set(self, element);
-    $uniqueSheets.set(self, []);
-    $observer.set(
-      self,
-      new MutationObserver(function (mutations, observer) {
-        if (!document) {
-          observer.disconnect();
-          return;
-        }
-        mutations.forEach(function (mutation) {
-          if (!hasShadyCss) {
-            forEach.call(mutation.addedNodes, function (node) {
-              if (!(node instanceof Element)) {
-                return;
-              }
-              traverseWebComponents(node, function (root) {
-                getAssociatedLocation(root).connect();
-              });
-            });
-          }
-          forEach.call(mutation.removedNodes, function (node) {
-            if (!(node instanceof Element)) {
-              return;
-            }
-            if (isExistingAdopter(self, node)) {
-              adopt(self);
-            }
-            if (!hasShadyCss) {
-              traverseWebComponents(node, function (root) {
-                getAssociatedLocation(root).disconnect();
-              });
-            }
-          });
-        });
-      }),
-    );
-  }
-  Location.prototype = {
-    isConnected: function () {
-      var element = $element.get(this);
-      return element instanceof Document
-        ? element.readyState !== "loading"
-        : isElementConnected(element.host);
-    },
-    connect: function () {
-      var container = getAdopterContainer(this);
-      $observer.get(this).observe(container, defaultObserverOptions);
-      if ($uniqueSheets.get(this).length > 0) {
-        adopt(this);
-      }
-      traverseWebComponents(container, function (root) {
-        getAssociatedLocation(root).connect();
-      });
-    },
-    disconnect: function () {
-      $observer.get(this).disconnect();
-    },
-    update: function (sheets) {
-      var self = this;
-      var locationType =
-        $element.get(self) === document ? "Document" : "ShadowRoot";
-      if (!Array.isArray(sheets)) {
-        throw new TypeError(
-          "Failed to set the 'adoptedStyleSheets' property on " +
-            locationType +
-            ": Iterator getter is not callable.",
-        );
-      }
-      if (!sheets.every(isCSSStyleSheetInstance)) {
-        throw new TypeError(
-          "Failed to set the 'adoptedStyleSheets' property on " +
-            locationType +
-            ": Failed to convert value to 'CSSStyleSheet'",
-        );
-      }
-      if (sheets.some(isNonConstructedStyleSheetInstance)) {
-        throw new TypeError(
-          "Failed to set the 'adoptedStyleSheets' property on " +
-            locationType +
-            ": Can't adopt non-constructed stylesheets",
-        );
-      }
-      self.sheets = sheets;
-      var oldUniqueSheets = $uniqueSheets.get(self);
-      var uniqueSheets = unique(sheets);
-      var removedSheets = diff(oldUniqueSheets, uniqueSheets);
-      removedSheets.forEach(function (sheet) {
-        removeNode(getAdopterByLocation(sheet, self));
-        removeAdopterLocation(sheet, self);
-      });
-      $uniqueSheets.set(self, uniqueSheets);
-      if (self.isConnected() && uniqueSheets.length > 0) {
-        adopt(self);
-      }
-    },
-  };
-
-  window.CSSStyleSheet = ConstructedStyleSheet;
-  attachAdoptedStyleSheetProperty(Document);
-  if ("ShadowRoot" in window) {
-    attachAdoptedStyleSheetProperty(ShadowRoot);
-    var proto = Element.prototype;
-    var attach_1 = proto.attachShadow;
-    proto.attachShadow = function attachShadow(init) {
-      var root = attach_1.call(this, init);
-      if (init.mode === "closed") {
-        closedShadowRootRegistry.set(this, root);
-      }
-      return root;
-    };
-  }
-  var documentLocation = getAssociatedLocation(document);
-  if (documentLocation.isConnected()) {
-    documentLocation.connect();
-  } else {
-    document.addEventListener(
-      "DOMContentLoaded",
-      documentLocation.connect.bind(documentLocation),
-    );
-  }
-})();
-
-const installImportMetaCss = importMeta => {
-  const stylesheet = new CSSStyleSheet({
-    baseUrl: importMeta.url
-  });
-  let called = false;
-  // eslint-disable-next-line accessor-pairs
-  Object.defineProperty(importMeta, "css", {
-    configurable: true,
-    set(value) {
-      if (called) {
-        throw new Error("import.meta.css setter can only be called once");
-      }
-      called = true;
-      stylesheet.replaceSync(value);
-      document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
-    }
-  });
 };
 
 /**
@@ -11579,6 +11699,939 @@ const useRunOnMount = (action, Component) => {
   }, []);
 };
 
+installImportMetaCss(import.meta);
+/**
+ * A callout component that mimics native browser validation messages.
+ * Features:
+ * - Positions above or below target element based on available space
+ * - Follows target element during scrolling and resizing
+ * - Automatically hides when target element is not visible
+ * - Arrow automatically shows when pointing at a valid anchor element
+ * - Centers in viewport when no anchor element provided or anchor is too big
+ */
+
+/**
+ * Shows a callout attached to the specified element
+ * @param {string} message - HTML content for the callout
+ * @param {Object} options - Configuration options
+ * @param {HTMLElement} [options.anchorElement] - Element the callout should follow. If not provided or too big, callout will be centered in viewport
+ * @param {string} [options.level="warning"] - Callout level: "info" | "warning" | "error"
+ * @param {Function} [options.onClose] - Callback when callout is closed
+ * @param {boolean} [options.closeOnClickOutside] - Whether to close on outside clicks (defaults to true for "info" level)
+ * @param {boolean} [options.debug=false] - Enable debug logging
+ * @returns {Object} - Callout object with properties:
+ *   - {Function} close - Function to close the callout
+ *   - {Function} update - Function to update message and options
+ *   - {Function} updatePosition - Function to update position
+ *   - {HTMLElement} element - The callout DOM element
+ *   - {boolean} opened - Whether the callout is currently open
+ */
+const openCallout = (
+  message,
+  {
+    anchorElement,
+    // Level determines visual styling and behavior:
+    // "info" - polite announcement (e.g., "This element cannot be modified")
+    // "warning" - expected failure requiring user action (e.g., "Field is required")
+    // "error" - unexpected failure, may not be actionable (e.g., "Server error")
+    level = "warning",
+    onClose,
+    closeOnClickOutside = level === "info",
+    debug = false,
+  } = {},
+) => {
+  const callout = {
+    opened: true,
+    close: null,
+    level: undefined,
+
+    update: null,
+    updatePosition: null,
+
+    element: null,
+  };
+
+  if (debug) {
+    console.debug("open callout", {
+      anchorElement,
+      message,
+      level,
+    });
+  }
+
+  const [teardown, addTeardown] = createPubSub(true);
+  const close = (reason) => {
+    if (!callout.opened) {
+      return;
+    }
+    if (debug) {
+      console.debug(`callout closed (reason: ${reason})`);
+    }
+    callout.opened = false;
+    teardown(reason);
+  };
+  if (onClose) {
+    addTeardown(onClose);
+  }
+
+  const [updateLevel, addLevelEffect] = createValueEffect(undefined);
+
+  // Create and add callout to document
+  const calloutElement = createCalloutElement();
+  const calloutMessageElement = calloutElement.querySelector(
+    ".navi_callout_message",
+  );
+  const calloutCloseButton = calloutElement.querySelector(
+    ".navi_callout_close_button",
+  );
+  calloutCloseButton.onclick = () => {
+    close("click_close_button");
+  };
+  const calloutId = `navi_callout_${Date.now()}`;
+  calloutElement.id = calloutId;
+  calloutStyleController.set(calloutElement, { opacity: 0 });
+  const update = (newMessage, options = {}) => {
+    // Connect callout with target element for accessibility
+    if (options.level && options.level !== callout.level) {
+      callout.level = level;
+      updateLevel(level);
+    }
+
+    if (options.closeOnClickOutside) {
+      closeOnClickOutside = options.closeOnClickOutside;
+    }
+
+    if (Error.isError(newMessage)) {
+      const error = newMessage;
+      newMessage = error.message;
+      newMessage += `<pre class="navi_callout_error_stack">${escapeHtml(error.stack)}</pre>`;
+    }
+    calloutMessageElement.innerHTML = newMessage;
+  };
+  {
+    const handleClickOutside = (event) => {
+      if (!closeOnClickOutside) {
+        return;
+      }
+
+      const clickTarget = event.target;
+      if (
+        clickTarget === calloutElement ||
+        calloutElement.contains(clickTarget)
+      ) {
+        return;
+      }
+      // if (
+      //   clickTarget === targetElement ||
+      //   targetElement.contains(clickTarget)
+      // ) {
+      //   return;
+      // }
+      close("click_outside");
+    };
+    document.addEventListener("click", handleClickOutside, true);
+    addTeardown(() => {
+      document.removeEventListener("click", handleClickOutside, true);
+    });
+  }
+  Object.assign(callout, {
+    element: calloutElement,
+    update,
+    close,
+  });
+  addLevelEffect(() => {
+    calloutElement.setAttribute("data-level", level);
+    if (level === "info") {
+      calloutElement.setAttribute("role", "status");
+    } else {
+      calloutElement.setAttribute("role", "alert");
+    }
+  });
+  document.body.appendChild(calloutElement);
+  addTeardown(() => {
+    calloutElement.remove();
+  });
+
+  if (anchorElement) {
+    const anchorVisuallyVisibleInfo = getVisuallyVisibleInfo(anchorElement, {
+      countOffscreenAsVisible: true,
+    });
+    if (!anchorVisuallyVisibleInfo.visible) {
+      console.warn(
+        `anchor element is not visually visible (${anchorVisuallyVisibleInfo.reason}) -> will be anchored to first visually visible ancestor`,
+      );
+      anchorElement = getFirstVisuallyVisibleAncestor(anchorElement);
+    }
+
+    allowWheelThrough(calloutElement, anchorElement);
+    anchorElement.setAttribute("data-callout", calloutId);
+    addTeardown(() => {
+      anchorElement.removeAttribute("data-callout");
+    });
+
+    addLevelEffect(() => {
+      anchorElement.style.setProperty(
+        "--callout-color",
+        `var(--navi-${level}-color)`,
+      );
+      return () => {
+        anchorElement.style.removeProperty("--callout-color");
+      };
+    });
+    addLevelEffect((level) => {
+      if (level === "info") {
+        anchorElement.setAttribute("aria-describedby", calloutId);
+        return () => {
+          anchorElement.removeAttribute("aria-describedby");
+        };
+      }
+      anchorElement.setAttribute("aria-errormessage", calloutId);
+      anchorElement.setAttribute("aria-invalid", "true");
+      return () => {
+        anchorElement.removeAttribute("aria-errormessage");
+        anchorElement.removeAttribute("aria-invalid");
+      };
+    });
+
+    {
+      const onfocus = () => {
+        if (level === "error") {
+          // error messages must be explicitely closed by the user
+          return;
+        }
+        if (anchorElement.hasAttribute("data-callout-stay-on-focus")) {
+          return;
+        }
+        close("target_element_focus");
+      };
+      anchorElement.addEventListener("focus", onfocus);
+      addTeardown(() => {
+        anchorElement.removeEventListener("focus", onfocus);
+      });
+    }
+    anchorElement.callout = callout;
+    addTeardown(() => {
+      delete anchorElement.callout;
+    });
+  }
+
+  update(message, { level });
+
+  {
+    let positioner;
+    let strategy;
+    const determine = () => {
+      if (!anchorElement) {
+        return "centered";
+      }
+      // Check if anchor element is too big to reasonably position callout relative to it
+      const anchorRect = anchorElement.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const anchorTooBig = anchorRect.height > viewportHeight - 50;
+      if (anchorTooBig) {
+        return "centered";
+      }
+      return "anchored";
+    };
+    const updatePositioner = () => {
+      const newStrategy = determine();
+      if (newStrategy === strategy) {
+        return;
+      }
+      positioner?.stop();
+      if (newStrategy === "centered") {
+        positioner = centerCalloutInViewport(calloutElement);
+      } else {
+        positioner = stickCalloutToAnchor(calloutElement, anchorElement);
+      }
+      strategy = newStrategy;
+    };
+    updatePositioner();
+    addTeardown(() => {
+      positioner.stop();
+    });
+    {
+      const handleResize = () => {
+        updatePositioner();
+      };
+      window.addEventListener("resize", handleResize);
+      addTeardown(() => {
+        window.removeEventListener("resize", handleResize);
+      });
+    }
+    callout.updatePosition = () => positioner.update();
+  }
+
+  return callout;
+};
+
+// Configuration parameters for callout appearance
+const BORDER_WIDTH = 1;
+const CORNER_RADIUS = 3;
+const ARROW_WIDTH = 16;
+const ARROW_HEIGHT = 8;
+const ARROW_SPACING = 8;
+
+import.meta.css = /* css */ `
+  @layer navi {
+    :root {
+      --navi-callout-background-color: white;
+      --navi-callout-padding: 8px;
+    }
+
+    .navi_callout {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+      display: block;
+      height: auto;
+      opacity: 0;
+      /* will be positioned with transform: translate */
+      transition: opacity 0.2s ease-in-out;
+      overflow: visible;
+    }
+
+    .navi_callout_frame {
+      position: absolute;
+      filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
+      pointer-events: none;
+    }
+    .navi_callout[data-level="info"] .navi_callout_border {
+      fill: var(--navi-info-color);
+    }
+    .navi_callout[data-level="warning"] .navi_callout_border {
+      fill: var(--navi-warning-color);
+    }
+    .navi_callout[data-level="error"] .navi_callout_border {
+      fill: var(--navi-error-color);
+    }
+    .navi_callout_frame svg {
+      position: absolute;
+      inset: 0;
+      overflow: visible;
+    }
+    .navi_callout_background {
+      fill: var(--navi-callout-background-color);
+    }
+
+    .navi_callout_box {
+      position: relative;
+      border-style: solid;
+      border-color: transparent;
+    }
+    .navi_callout_body {
+      position: relative;
+      display: flex;
+      max-width: 47vw;
+      padding: var(--navi-callout-padding);
+      flex-direction: row;
+      gap: 10px;
+    }
+    .navi_callout_icon {
+      display: flex;
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+      align-items: center;
+      align-self: flex-start;
+      justify-content: center;
+      border-radius: 2px;
+    }
+    .navi_callout_icon_svg {
+      width: 16px;
+      height: 12px;
+      color: white;
+    }
+    .navi_callout[data-level="info"] .navi_callout_icon {
+      background-color: var(--navi-info-color);
+    }
+    .navi_callout[data-level="warning"] .navi_callout_icon {
+      background-color: var(--navi-warning-color);
+    }
+    .navi_callout[data-level="error"] .navi_callout_icon {
+      background-color: var(--navi-error-color);
+    }
+    .navi_callout_message {
+      min-width: 0;
+      align-self: center;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+    .navi_callout_close_button_column {
+      display: flex;
+      height: 22px;
+    }
+    .navi_callout_close_button {
+      width: 1em;
+      height: 1em;
+      padding: 0;
+      align-self: center;
+      color: currentColor;
+      font-size: inherit;
+      background: none;
+      border: none;
+      border-radius: 0.2em;
+      cursor: pointer;
+    }
+    .navi_callout_close_button:hover {
+      background: rgba(0, 0, 0, 0.1);
+    }
+    .navi_callout_close_button_svg {
+      width: 100%;
+      height: 100%;
+    }
+    .navi_callout_error_stack {
+      max-height: 200px;
+      overflow: auto;
+    }
+  }
+`;
+
+// HTML template for the callout
+const calloutTemplate = /* html */ `
+  <div class="navi_callout">
+    <div class="navi_callout_box">
+      <div class="navi_callout_frame"></div>
+      <div class="navi_callout_body">
+        <div class="navi_callout_icon">
+          <svg
+            class="navi_callout_icon_svg"
+            viewBox="0 0 125 300"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              fill="currentColor"
+              d="m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z"
+            />
+          </svg>
+        </div>
+        <div class="navi_callout_message">Default message</div>
+        <div class="navi_callout_close_button_column">
+          <button class="navi_callout_close_button">
+            <svg
+              class="navi_callout_close_button_svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                fill-rule="evenodd"
+                clip-rule="evenodd"
+                d="M5.29289 5.29289C5.68342 4.90237 6.31658 4.90237 6.70711 5.29289L12 10.5858L17.2929 5.29289C17.6834 4.90237 18.3166 4.90237 18.7071 5.29289C19.0976 5.68342 19.0976 6.31658 18.7071 6.70711L13.4142 12L18.7071 17.2929C19.0976 17.6834 19.0976 18.3166 18.7071 18.7071C18.3166 19.0976 17.6834 19.0976 17.2929 18.7071L12 13.4142L6.70711 18.7071C6.31658 19.0976 5.68342 19.0976 5.29289 18.7071C4.90237 18.3166 4.90237 17.6834 5.29289 17.2929L10.5858 12L5.29289 6.70711C4.90237 6.31658 4.90237 5.68342 5.29289 5.29289Z"
+                fill="currentColor"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+`;
+
+const calloutStyleController = createStyleController("callout");
+
+/**
+ * Creates a new callout element from template
+ * @returns {HTMLElement} - The callout element
+ */
+const createCalloutElement = () => {
+  const div = document.createElement("div");
+  div.innerHTML = calloutTemplate;
+  const calloutElement = div.firstElementChild;
+  return calloutElement;
+};
+
+const centerCalloutInViewport = (calloutElement) => {
+  // Set up initial styles for centered positioning
+  const calloutBoxElement = calloutElement.querySelector(".navi_callout_box");
+  const calloutFrameElement = calloutElement.querySelector(
+    ".navi_callout_frame",
+  );
+  const calloutBodyElement = calloutElement.querySelector(".navi_callout_body");
+  const calloutMessageElement = calloutElement.querySelector(
+    ".navi_callout_message",
+  );
+
+  // Remove any margins and set frame positioning for no arrow
+  calloutBoxElement.style.marginTop = "";
+  calloutBoxElement.style.marginBottom = "";
+  calloutBoxElement.style.borderWidth = `${BORDER_WIDTH}px`;
+  calloutFrameElement.style.left = `-${BORDER_WIDTH}px`;
+  calloutFrameElement.style.right = `-${BORDER_WIDTH}px`;
+  calloutFrameElement.style.top = `-${BORDER_WIDTH}px`;
+  calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
+
+  // Generate simple rectangle SVG without arrow and position in center
+  const updateCenteredPosition = () => {
+    const calloutElementClone =
+      cloneCalloutToMeasureNaturalSize(calloutElement);
+    const { height } = calloutElementClone.getBoundingClientRect();
+    calloutElementClone.remove();
+
+    // Handle content overflow when viewport is too small
+    const viewportHeight = window.innerHeight;
+    const maxAllowedHeight = viewportHeight - 40; // Leave some margin from viewport edges
+
+    if (height > maxAllowedHeight) {
+      const paddingSizes = getPaddingSizes(calloutBodyElement);
+      const paddingY = paddingSizes.top + paddingSizes.bottom;
+      const spaceNeededAroundContent = BORDER_WIDTH * 2 + paddingY;
+      const spaceAvailableForContent =
+        maxAllowedHeight - spaceNeededAroundContent;
+      calloutMessageElement.style.maxHeight = `${spaceAvailableForContent}px`;
+      calloutMessageElement.style.overflowY = "scroll";
+    } else {
+      // Reset overflow styles if not needed
+      calloutMessageElement.style.maxHeight = "";
+      calloutMessageElement.style.overflowY = "";
+    }
+
+    // Get final dimensions after potential overflow adjustments
+    const { width: finalWidth, height: finalHeight } =
+      calloutElement.getBoundingClientRect();
+    calloutFrameElement.innerHTML = generateSvgWithoutArrow(
+      finalWidth,
+      finalHeight,
+    );
+
+    // Center in viewport
+    const viewportWidth = window.innerWidth;
+    const left = (viewportWidth - finalWidth) / 2;
+    const top = (viewportHeight - finalHeight) / 2;
+
+    calloutStyleController.set(calloutElement, {
+      opacity: 1,
+      transform: {
+        translateX: left,
+        translateY: top,
+      },
+    });
+  };
+
+  // Initial positioning
+  updateCenteredPosition();
+
+  window.addEventListener("resize", updateCenteredPosition);
+
+  // Return positioning function for dynamic updates
+  return {
+    update: updateCenteredPosition,
+    stop: () => {
+      window.removeEventListener("resize", updateCenteredPosition);
+    },
+  };
+};
+
+/**
+ * Positions a callout relative to an anchor element with an arrow pointing to it
+ * @param {HTMLElement} calloutElement - The callout element to position
+ * @param {HTMLElement} anchorElement - The anchor element to stick to
+ * @returns {Object} - Object with update and stop functions
+ */
+const stickCalloutToAnchor = (calloutElement, anchorElement) => {
+  // Get references to callout parts
+  const calloutBoxElement = calloutElement.querySelector(".navi_callout_box");
+  const calloutFrameElement = calloutElement.querySelector(
+    ".navi_callout_frame",
+  );
+  const calloutBodyElement = calloutElement.querySelector(".navi_callout_body");
+  const calloutMessageElement = calloutElement.querySelector(
+    ".navi_callout_message",
+  );
+
+  // Set initial border styles
+  calloutBoxElement.style.borderWidth = `${BORDER_WIDTH}px`;
+  calloutFrameElement.style.left = `-${BORDER_WIDTH}px`;
+  calloutFrameElement.style.right = `-${BORDER_WIDTH}px`;
+
+  const anchorVisibleRectEffect = visibleRectEffect(
+    anchorElement,
+    ({ left: anchorLeft, right: anchorRight, visibilityRatio }) => {
+      const calloutElementClone =
+        cloneCalloutToMeasureNaturalSize(calloutElement);
+      const {
+        position,
+        left: calloutLeft,
+        top: calloutTop,
+        width: calloutWidth,
+        height: calloutHeight,
+        spaceAboveTarget,
+        spaceBelowTarget,
+      } = pickPositionRelativeTo(calloutElementClone, anchorElement, {
+        alignToViewportEdgeWhenTargetNearEdge: 20,
+        // when fully to the left, the border color is collé to the browser window making it hard to see
+        minLeft: 1,
+      });
+      calloutElementClone.remove();
+
+      // Calculate arrow position to point at anchorElement element
+      let arrowLeftPosOnCallout;
+      // Determine arrow target position based on attribute
+      const arrowPositionAttribute = anchorElement.getAttribute(
+        "data-callout-arrow-x",
+      );
+      let arrowAnchorLeft;
+      if (arrowPositionAttribute === "center") {
+        // Target the center of the anchorElement element
+        arrowAnchorLeft = (anchorLeft + anchorRight) / 2;
+      } else {
+        const anchorBorderSizes = getBorderSizes(anchorElement);
+        // Default behavior: target the left edge of the anchorElement element (after borders)
+        arrowAnchorLeft = anchorLeft + anchorBorderSizes.left;
+      }
+
+      // Calculate arrow position within the callout
+      if (calloutLeft < arrowAnchorLeft) {
+        // Callout is left of the target point, move arrow right
+        const diff = arrowAnchorLeft - calloutLeft;
+        arrowLeftPosOnCallout = diff;
+      } else if (calloutLeft + calloutWidth < arrowAnchorLeft) {
+        // Edge case: target point is beyond right edge of callout
+        arrowLeftPosOnCallout = calloutWidth - ARROW_WIDTH;
+      } else {
+        // Target point is within callout width
+        arrowLeftPosOnCallout = arrowAnchorLeft - calloutLeft;
+      }
+
+      // Ensure arrow stays within callout bounds with some padding
+      const minArrowPos = CORNER_RADIUS + ARROW_WIDTH / 2 + ARROW_SPACING;
+      const maxArrowPos = calloutWidth - minArrowPos;
+      arrowLeftPosOnCallout = Math.max(
+        minArrowPos,
+        Math.min(arrowLeftPosOnCallout, maxArrowPos),
+      );
+
+      // Force content overflow when there is not enough space to display
+      // the entirety of the callout
+      const spaceAvailable =
+        position === "below" ? spaceBelowTarget : spaceAboveTarget;
+      const paddingSizes = getPaddingSizes(calloutBodyElement);
+      const paddingY = paddingSizes.top + paddingSizes.bottom;
+      const spaceNeededAroundContent =
+        ARROW_HEIGHT + BORDER_WIDTH * 2 + paddingY;
+      const spaceAvailableForContent =
+        spaceAvailable - spaceNeededAroundContent;
+      const contentHeight = calloutHeight - spaceNeededAroundContent;
+      const spaceRemainingAfterContent =
+        spaceAvailableForContent - contentHeight;
+      if (spaceRemainingAfterContent < 2) {
+        const maxHeight = spaceAvailableForContent;
+        calloutMessageElement.style.maxHeight = `${maxHeight}px`;
+        calloutMessageElement.style.overflowY = "scroll";
+      } else {
+        calloutMessageElement.style.maxHeight = "";
+        calloutMessageElement.style.overflowY = "";
+      }
+
+      const { width, height } = calloutElement.getBoundingClientRect();
+      if (position === "above") {
+        // Position above target element
+        calloutBoxElement.style.marginTop = "";
+        calloutBoxElement.style.marginBottom = `${ARROW_HEIGHT}px`;
+        calloutFrameElement.style.top = `-${BORDER_WIDTH}px`;
+        calloutFrameElement.style.bottom = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
+        calloutFrameElement.innerHTML = generateSvgWithBottomArrow(
+          width,
+          height,
+          arrowLeftPosOnCallout,
+        );
+      } else {
+        calloutBoxElement.style.marginTop = `${ARROW_HEIGHT}px`;
+        calloutBoxElement.style.marginBottom = "";
+        calloutFrameElement.style.top = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
+        calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
+        calloutFrameElement.innerHTML = generateSvgWithTopArrow(
+          width,
+          height,
+          arrowLeftPosOnCallout,
+        );
+      }
+
+      calloutElement.setAttribute("data-position", position);
+      calloutStyleController.set(calloutElement, {
+        opacity: visibilityRatio ? 1 : 0,
+        transform: {
+          translateX: calloutLeft,
+          translateY: calloutTop,
+        },
+      });
+    },
+  );
+  const calloutSizeChangeObserver = observeCalloutSizeChange(
+    calloutMessageElement,
+    (width, height) => {
+      anchorVisibleRectEffect.check(`callout_size_change (${width}x${height})`);
+    },
+  );
+  anchorVisibleRectEffect.onBeforeAutoCheck(() => {
+    // prevent feedback loop because check triggers size change which triggers check...
+    calloutSizeChangeObserver.disable();
+    return () => {
+      calloutSizeChangeObserver.enable();
+    };
+  });
+
+  return {
+    update: anchorVisibleRectEffect.check,
+    stop: () => {
+      calloutSizeChangeObserver.disconnect();
+      anchorVisibleRectEffect.disconnect();
+    },
+  };
+};
+
+const observeCalloutSizeChange = (elementSizeToObserve, callback) => {
+  let lastContentWidth;
+  let lastContentHeight;
+  const resizeObserver = new ResizeObserver((entries) => {
+    const [entry] = entries;
+    const { width, height } = entry.contentRect;
+    // Debounce tiny changes that are likely sub-pixel rounding
+    if (lastContentWidth !== undefined) {
+      const widthDiff = Math.abs(width - lastContentWidth);
+      const heightDiff = Math.abs(height - lastContentHeight);
+      const threshold = 1; // Ignore changes smaller than 1px
+      if (widthDiff < threshold && heightDiff < threshold) {
+        return;
+      }
+    }
+    lastContentWidth = width;
+    lastContentHeight = height;
+    callback(width, height);
+  });
+  resizeObserver.observe(elementSizeToObserve);
+
+  return {
+    disable: () => {
+      resizeObserver.unobserve(elementSizeToObserve);
+    },
+    enable: () => {
+      resizeObserver.observe(elementSizeToObserve);
+    },
+    disconnect: () => {
+      resizeObserver.disconnect();
+    },
+  };
+};
+
+const escapeHtml = (string) => {
+  return string
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+
+// It's ok to do this because the element is absolutely positioned
+const cloneCalloutToMeasureNaturalSize = (calloutElement) => {
+  // Create invisible clone to measure natural size
+  const calloutElementClone = calloutElement.cloneNode(true);
+  calloutElementClone.style.visibility = "hidden";
+  const calloutMessageElementClone = calloutElementClone.querySelector(
+    ".navi_callout_message",
+  );
+  // Reset any overflow constraints on the clone
+  calloutMessageElementClone.style.maxHeight = "";
+  calloutMessageElementClone.style.overflowY = "";
+
+  // Add clone to DOM to measure
+  calloutElement.parentNode.appendChild(calloutElementClone);
+
+  return calloutElementClone;
+};
+
+/**
+ * Generates SVG path for callout with arrow on top
+ * @param {number} width - Callout width
+ * @param {number} height - Callout height
+ * @param {number} arrowPosition - Horizontal position of arrow
+ * @returns {string} - SVG markup
+ */
+const generateSvgWithTopArrow = (width, height, arrowPosition) => {
+  // Calculate valid arrow position range
+  const arrowLeft =
+    ARROW_WIDTH / 2 + CORNER_RADIUS + BORDER_WIDTH + ARROW_SPACING;
+  const minArrowPos = arrowLeft;
+  const maxArrowPos = width - arrowLeft;
+  const constrainedArrowPos = Math.max(
+    minArrowPos,
+    Math.min(arrowPosition, maxArrowPos),
+  );
+
+  // Calculate content height
+  const contentHeight = height - ARROW_HEIGHT;
+
+  // Create two paths: one for the border (outer) and one for the content (inner)
+  const adjustedWidth = width;
+  const adjustedHeight = contentHeight + ARROW_HEIGHT;
+
+  // Slight adjustment for visual balance
+  const innerArrowWidthReduction = Math.min(BORDER_WIDTH * 0.3, 1);
+
+  // Outer path (border)
+  const outerPath = `
+      M${CORNER_RADIUS},${ARROW_HEIGHT} 
+      H${constrainedArrowPos - ARROW_WIDTH / 2} 
+      L${constrainedArrowPos},0 
+      L${constrainedArrowPos + ARROW_WIDTH / 2},${ARROW_HEIGHT} 
+      H${width - CORNER_RADIUS} 
+      Q${width},${ARROW_HEIGHT} ${width},${ARROW_HEIGHT + CORNER_RADIUS} 
+      V${adjustedHeight - CORNER_RADIUS} 
+      Q${width},${adjustedHeight} ${width - CORNER_RADIUS},${adjustedHeight} 
+      H${CORNER_RADIUS} 
+      Q0,${adjustedHeight} 0,${adjustedHeight - CORNER_RADIUS} 
+      V${ARROW_HEIGHT + CORNER_RADIUS} 
+      Q0,${ARROW_HEIGHT} ${CORNER_RADIUS},${ARROW_HEIGHT}
+    `;
+
+  // Inner path (content) - keep arrow width almost the same
+  const innerRadius = Math.max(0, CORNER_RADIUS - BORDER_WIDTH);
+  const innerPath = `
+    M${innerRadius + BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} 
+    H${constrainedArrowPos - ARROW_WIDTH / 2 + innerArrowWidthReduction} 
+    L${constrainedArrowPos},${BORDER_WIDTH} 
+    L${constrainedArrowPos + ARROW_WIDTH / 2 - innerArrowWidthReduction},${ARROW_HEIGHT + BORDER_WIDTH} 
+    H${width - innerRadius - BORDER_WIDTH} 
+    Q${width - BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} ${width - BORDER_WIDTH},${ARROW_HEIGHT + innerRadius + BORDER_WIDTH} 
+    V${adjustedHeight - innerRadius - BORDER_WIDTH} 
+    Q${width - BORDER_WIDTH},${adjustedHeight - BORDER_WIDTH} ${width - innerRadius - BORDER_WIDTH},${adjustedHeight - BORDER_WIDTH} 
+    H${innerRadius + BORDER_WIDTH} 
+    Q${BORDER_WIDTH},${adjustedHeight - BORDER_WIDTH} ${BORDER_WIDTH},${adjustedHeight - innerRadius - BORDER_WIDTH} 
+    V${ARROW_HEIGHT + innerRadius + BORDER_WIDTH} 
+    Q${BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} ${innerRadius + BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH}
+  `;
+
+  return /* html */ `
+    <svg
+      width="${adjustedWidth}"
+      height="${adjustedHeight}"
+      viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      role="presentation"
+      aria-hidden="true"
+    >
+      <path d="${outerPath}" class="navi_callout_border" />
+      <path d="${innerPath}" class="navi_callout_background" />
+    </svg>`;
+};
+
+/**
+ * Generates SVG path for callout with arrow on bottom
+ * @param {number} width - Callout width
+ * @param {number} height - Callout height
+ * @param {number} arrowPosition - Horizontal position of arrow
+ * @returns {string} - SVG markup
+ */
+const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
+  // Calculate valid arrow position range
+  const arrowLeft =
+    ARROW_WIDTH / 2 + CORNER_RADIUS + BORDER_WIDTH + ARROW_SPACING;
+  const minArrowPos = arrowLeft;
+  const maxArrowPos = width - arrowLeft;
+  const constrainedArrowPos = Math.max(
+    minArrowPos,
+    Math.min(arrowPosition, maxArrowPos),
+  );
+
+  // Calculate content height
+  const contentHeight = height - ARROW_HEIGHT;
+
+  // Create two paths: one for the border (outer) and one for the content (inner)
+  const adjustedWidth = width;
+  const adjustedHeight = contentHeight + ARROW_HEIGHT;
+
+  // For small border widths, keep inner arrow nearly the same size as outer
+  const innerArrowWidthReduction = Math.min(BORDER_WIDTH * 0.3, 1);
+
+  // Outer path with rounded corners
+  const outerPath = `
+      M${CORNER_RADIUS},0 
+      H${width - CORNER_RADIUS} 
+      Q${width},0 ${width},${CORNER_RADIUS} 
+      V${contentHeight - CORNER_RADIUS} 
+      Q${width},${contentHeight} ${width - CORNER_RADIUS},${contentHeight} 
+      H${constrainedArrowPos + ARROW_WIDTH / 2} 
+      L${constrainedArrowPos},${adjustedHeight} 
+      L${constrainedArrowPos - ARROW_WIDTH / 2},${contentHeight} 
+      H${CORNER_RADIUS} 
+      Q0,${contentHeight} 0,${contentHeight - CORNER_RADIUS} 
+      V${CORNER_RADIUS} 
+      Q0,0 ${CORNER_RADIUS},0
+    `;
+
+  // Inner path with correct arrow direction and color
+  const innerRadius = Math.max(0, CORNER_RADIUS - BORDER_WIDTH);
+  const innerPath = `
+    M${innerRadius + BORDER_WIDTH},${BORDER_WIDTH} 
+    H${width - innerRadius - BORDER_WIDTH} 
+    Q${width - BORDER_WIDTH},${BORDER_WIDTH} ${width - BORDER_WIDTH},${innerRadius + BORDER_WIDTH} 
+    V${contentHeight - innerRadius - BORDER_WIDTH} 
+    Q${width - BORDER_WIDTH},${contentHeight - BORDER_WIDTH} ${width - innerRadius - BORDER_WIDTH},${contentHeight - BORDER_WIDTH} 
+    H${constrainedArrowPos + ARROW_WIDTH / 2 - innerArrowWidthReduction} 
+    L${constrainedArrowPos},${adjustedHeight - BORDER_WIDTH} 
+    L${constrainedArrowPos - ARROW_WIDTH / 2 + innerArrowWidthReduction},${contentHeight - BORDER_WIDTH} 
+    H${innerRadius + BORDER_WIDTH} 
+    Q${BORDER_WIDTH},${contentHeight - BORDER_WIDTH} ${BORDER_WIDTH},${contentHeight - innerRadius - BORDER_WIDTH} 
+    V${innerRadius + BORDER_WIDTH} 
+    Q${BORDER_WIDTH},${BORDER_WIDTH} ${innerRadius + BORDER_WIDTH},${BORDER_WIDTH}
+  `;
+
+  return /* html */ `
+    <svg
+      width="${adjustedWidth}"
+      height="${adjustedHeight}"
+      viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      role="presentation"
+      aria-hidden="true"
+    >
+      <path d="${outerPath}" class="navi_callout_border" />
+      <path d="${innerPath}" class="navi_callout_background" />
+    </svg>`;
+};
+
+/**
+ * Generates SVG path for callout without arrow (simple rectangle)
+ * @param {number} width - Callout width
+ * @param {number} height - Callout height
+ * @returns {string} - SVG markup
+ */
+const generateSvgWithoutArrow = (width, height) => {
+  return /* html */ `
+    <svg
+      width="${width}"
+      height="${height}"
+      viewBox="0 0 ${width} ${height}"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      role="presentation"
+      aria-hidden="true"
+    >
+      <rect
+        class="navi_callout_border"
+        x="0"
+        y="0"
+        width="${width}"
+        height="${height}"
+        rx="${CORNER_RADIUS}"
+        ry="${CORNER_RADIUS}"
+      />
+      <rect
+        class="navi_callout_background"
+        x="${BORDER_WIDTH}"
+        y="${BORDER_WIDTH}"
+        width="${width - BORDER_WIDTH * 2}"
+        height="${height - BORDER_WIDTH * 2}"
+        rx="${Math.max(0, CORNER_RADIUS - BORDER_WIDTH)}"
+        ry="${Math.max(0, CORNER_RADIUS - BORDER_WIDTH)}"
+      />
+    </svg>`;
+};
+
 /**
  * https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
  */
@@ -11935,748 +12988,6 @@ const READONLY_CONSTRAINT = {
   },
 };
 
-installImportMetaCss(import.meta);
-/**
- * A validation message component that mimics native browser validation messages.
- * Features:
- * - Positions above or below target element based on available space
- * - Follows target element during scrolling and resizing
- * - Automatically hides when target element is not visible
- * - Arrow points at the target element
- */
-
-/**
- * Shows a validation message attached to the specified element
- * @param {HTMLElement} targetElement - Element the validation message should follow
- * @param {string} message - HTML content for the validation message
- * @param {Object} options - Configuration options
- * @param {boolean} options.scrollIntoView - Whether to scroll the target element into view
- * @returns {Function} - Function to hide and remove the validation message
- */
-
-// Configuration parameters for validation message appearance
-const BORDER_WIDTH = 1;
-const CORNER_RADIUS = 3;
-const ARROW_WIDTH = 16;
-const ARROW_HEIGHT = 8;
-const ARROW_SPACING = 8;
-
-import.meta.css = /* css */ `
-  @layer navi {
-    :root {
-      --navi-info-color: #2196f3;
-      --navi-warning-color: #ff9800;
-      --navi-error-color: #f44336;
-      --navi-validation-message-background-color: white;
-    }
-
-    /* Ensure the validation message CANNOT cause overflow */
-    /* might be important to ensure it cannot create scrollbars in the document */
-    /* When measuring the size it should take */
-    .jsenv_validation_message_container {
-      position: fixed;
-      inset: 0;
-      overflow: hidden;
-    }
-
-    .jsenv_validation_message {
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 1;
-      display: block;
-      height: auto;
-      opacity: 0;
-      /* will be positioned with transform: translate */
-      transition: opacity 0.2s ease-in-out;
-      overflow: visible;
-    }
-
-    .jsenv_validation_message_border {
-      position: absolute;
-      filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
-      pointer-events: none;
-    }
-
-    .jsenv_validation_message_body_wrapper {
-      position: relative;
-      border-style: solid;
-      border-color: transparent;
-    }
-
-    .jsenv_validation_message_body {
-      position: relative;
-      display: flex;
-      max-width: 47vw;
-      padding: 8px;
-      flex-direction: row;
-      gap: 10px;
-    }
-
-    .jsenv_validation_message_icon {
-      display: flex;
-      width: 22px;
-      height: 22px;
-      flex-shrink: 0;
-      align-items: center;
-      align-self: flex-start;
-      justify-content: center;
-      border-radius: 2px;
-    }
-
-    .jsenv_validation_message_exclamation_svg {
-      width: 16px;
-      height: 12px;
-      color: white;
-    }
-
-    .jsenv_validation_message[data-level="info"] .border_path {
-      fill: var(--navi-info-color);
-    }
-    .jsenv_validation_message[data-level="info"]
-      .jsenv_validation_message_icon {
-      background-color: var(--navi-info-color);
-    }
-    .jsenv_validation_message[data-level="warning"] .border_path {
-      fill: var(--navi-warning-color);
-    }
-    .jsenv_validation_message[data-level="warning"]
-      .jsenv_validation_message_icon {
-      background-color: var(--navi-warning-color);
-    }
-    .jsenv_validation_message[data-level="error"] .border_path {
-      fill: var(--navi-error-color);
-    }
-    .jsenv_validation_message[data-level="error"]
-      .jsenv_validation_message_icon {
-      background-color: var(--navi-error-color);
-    }
-
-    .jsenv_validation_message_content {
-      min-width: 0;
-      align-self: center;
-      word-break: break-word;
-      overflow-wrap: anywhere;
-    }
-
-    .jsenv_validation_message_border svg {
-      position: absolute;
-      inset: 0;
-      overflow: visible;
-    }
-
-    .background_path {
-      fill: var(--navi-validation-message-background-color);
-    }
-
-    .jsenv_validation_message_close_button_column {
-      display: flex;
-      height: 22px;
-    }
-    .jsenv_validation_message_close_button {
-      width: 1em;
-      height: 1em;
-      padding: 0;
-      align-self: center;
-      color: currentColor;
-      font-size: inherit;
-      background: none;
-      border: none;
-      border-radius: 0.2em;
-      cursor: pointer;
-    }
-    .jsenv_validation_message_close_button:hover {
-      background: rgba(0, 0, 0, 0.1);
-    }
-    .close_svg {
-      width: 100%;
-      height: 100%;
-    }
-
-    .error_stack {
-      max-height: 200px;
-      overflow: auto;
-    }
-  }
-`;
-
-// HTML template for the validation message
-const validationMessageTemplate = /* html */ `
-<div
-    class="jsenv_validation_message_container"
-  >
-    <div class="jsenv_validation_message" role="alert" aria-live="assertive">
-      <div class="jsenv_validation_message_body_wrapper">
-        <div class="jsenv_validation_message_border"></div>
-        <div class="jsenv_validation_message_body">
-          <div class="jsenv_validation_message_icon">
-            <svg
-              class="jsenv_validation_message_exclamation_svg"
-              viewBox="0 0 125 300"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                fill="currentColor"
-                d="m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z"
-              />
-            </svg>
-          </div>
-          <div class="jsenv_validation_message_content">Default message</div>
-          <div class="jsenv_validation_message_close_button_column">
-            <button class="jsenv_validation_message_close_button">
-              <svg
-                class="close_svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  fill-rule="evenodd"
-                  clip-rule="evenodd"
-                  d="M5.29289 5.29289C5.68342 4.90237 6.31658 4.90237 6.70711 5.29289L12 10.5858L17.2929 5.29289C17.6834 4.90237 18.3166 4.90237 18.7071 5.29289C19.0976 5.68342 19.0976 6.31658 18.7071 6.70711L13.4142 12L18.7071 17.2929C19.0976 17.6834 19.0976 18.3166 18.7071 18.7071C18.3166 19.0976 17.6834 19.0976 17.2929 18.7071L12 13.4142L6.70711 18.7071C6.31658 19.0976 5.68342 19.0976 5.29289 18.7071C4.90237 18.3166 4.90237 17.6834 5.29289 17.2929L10.5858 12L5.29289 6.70711C4.90237 6.31658 4.90237 5.68342 5.29289 5.29289Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-`;
-
-const validationMessageStyleController =
-  createStyleController("validation_message");
-
-const openValidationMessage = (
-  targetElement,
-  message,
-  {
-    level = "warning",
-    onClose,
-    closeOnClickOutside = level === "info",
-    debug = false,
-  } = {},
-) => {
-  let _closeOnClickOutside = closeOnClickOutside;
-
-  if (debug) {
-    console.debug("open validation message on", targetElement, {
-      message,
-      level,
-    });
-  }
-
-  const [teardown, addTeardown] = createPubSub(true);
-  let opened = true;
-  const close = (reason) => {
-    if (!opened) {
-      return;
-    }
-    if (debug) {
-      console.debug(`validation message closed (reason: ${reason})`);
-    }
-    opened = false;
-    teardown(reason);
-  };
-
-  // Create and add validation message to document
-  const jsenvValidationMessage = createValidationMessage();
-  const jsenvValidationMessageContent = jsenvValidationMessage.querySelector(
-    ".jsenv_validation_message_content",
-  );
-  const jsenvValidationMessageCloseButton =
-    jsenvValidationMessage.querySelector(
-      ".jsenv_validation_message_close_button",
-    );
-  jsenvValidationMessageCloseButton.onclick = () => {
-    close("click_close_button");
-  };
-
-  const update = (
-    newMessage,
-    { level = "warning", closeOnClickOutside = level === "info" } = {},
-  ) => {
-    _closeOnClickOutside = closeOnClickOutside;
-
-    if (Error.isError(newMessage)) {
-      const error = newMessage;
-      newMessage = error.message;
-      newMessage += `<pre class="error_stack">${escapeHtml(error.stack)}</pre>`;
-    }
-
-    jsenvValidationMessage.setAttribute("data-level", level);
-    jsenvValidationMessageContent.innerHTML = newMessage;
-  };
-  update(message, { level });
-
-  validationMessageStyleController.set(jsenvValidationMessage, { opacity: 0 });
-
-  allowWheelThrough(jsenvValidationMessage, targetElement);
-
-  // Connect validation message with target element for accessibility
-  const validationMessageId = `jsenv_validation_message-${Date.now()}`;
-  jsenvValidationMessage.id = validationMessageId;
-  targetElement.setAttribute("aria-invalid", "true");
-  targetElement.setAttribute("aria-errormessage", validationMessageId);
-  targetElement.style.setProperty(
-    "--invalid-color",
-    `var(--navi-${level}-color)`,
-  );
-  addTeardown(() => {
-    targetElement.removeAttribute("aria-invalid");
-    targetElement.removeAttribute("aria-errormessage");
-    targetElement.style.removeProperty("--invalid-color");
-  });
-
-  document.body.appendChild(jsenvValidationMessage);
-  addTeardown(() => {
-    jsenvValidationMessage.remove();
-  });
-
-  const positionFollower = stickValidationMessageToTarget(
-    jsenvValidationMessage,
-    targetElement);
-  addTeardown(() => {
-    positionFollower.stop();
-  });
-
-  if (onClose) {
-    addTeardown(onClose);
-  }
-  {
-    const onfocus = () => {
-      if (level === "error") {
-        // error messages must be explicitely closed by the user
-        return;
-      }
-      if (targetElement.hasAttribute("data-validation-message-stay-on-focus")) {
-        return;
-      }
-      close("target_element_focus");
-    };
-    targetElement.addEventListener("focus", onfocus);
-    addTeardown(() => {
-      targetElement.removeEventListener("focus", onfocus);
-    });
-  }
-
-  {
-    const handleClickOutside = (event) => {
-      if (!_closeOnClickOutside) {
-        return;
-      }
-
-      const clickTarget = event.target;
-      if (
-        clickTarget === jsenvValidationMessage ||
-        jsenvValidationMessage.contains(clickTarget)
-      ) {
-        return;
-      }
-      // if (
-      //   clickTarget === targetElement ||
-      //   targetElement.contains(clickTarget)
-      // ) {
-      //   return;
-      // }
-      close("click_outside");
-    };
-    document.addEventListener("click", handleClickOutside, true);
-    addTeardown(() => {
-      document.removeEventListener("click", handleClickOutside, true);
-    });
-  }
-
-  const validationMessage = {
-    jsenvValidationMessage,
-    update,
-    close,
-    updatePosition: positionFollower.updatePosition,
-  };
-  targetElement.jsenvValidationMessage = validationMessage;
-  addTeardown(() => {
-    delete targetElement.jsenvValidationMessage;
-  });
-  return validationMessage;
-};
-
-/**
- * Generates SVG path for validation message with arrow on top
- * @param {number} width - Validation message width
- * @param {number} height - Validation message height
- * @param {number} arrowPosition - Horizontal position of arrow
- * @returns {string} - SVG markup
- */
-const generateSvgWithTopArrow = (width, height, arrowPosition) => {
-  // Calculate valid arrow position range
-  const arrowLeft =
-    ARROW_WIDTH / 2 + CORNER_RADIUS + BORDER_WIDTH + ARROW_SPACING;
-  const minArrowPos = arrowLeft;
-  const maxArrowPos = width - arrowLeft;
-  const constrainedArrowPos = Math.max(
-    minArrowPos,
-    Math.min(arrowPosition, maxArrowPos),
-  );
-
-  // Calculate content height
-  const contentHeight = height - ARROW_HEIGHT;
-
-  // Create two paths: one for the border (outer) and one for the content (inner)
-  const adjustedWidth = width;
-  const adjustedHeight = contentHeight + ARROW_HEIGHT;
-
-  // Slight adjustment for visual balance
-  const innerArrowWidthReduction = Math.min(BORDER_WIDTH * 0.3, 1);
-
-  // Outer path (border)
-  const outerPath = `
-      M${CORNER_RADIUS},${ARROW_HEIGHT} 
-      H${constrainedArrowPos - ARROW_WIDTH / 2} 
-      L${constrainedArrowPos},0 
-      L${constrainedArrowPos + ARROW_WIDTH / 2},${ARROW_HEIGHT} 
-      H${width - CORNER_RADIUS} 
-      Q${width},${ARROW_HEIGHT} ${width},${ARROW_HEIGHT + CORNER_RADIUS} 
-      V${adjustedHeight - CORNER_RADIUS} 
-      Q${width},${adjustedHeight} ${width - CORNER_RADIUS},${adjustedHeight} 
-      H${CORNER_RADIUS} 
-      Q0,${adjustedHeight} 0,${adjustedHeight - CORNER_RADIUS} 
-      V${ARROW_HEIGHT + CORNER_RADIUS} 
-      Q0,${ARROW_HEIGHT} ${CORNER_RADIUS},${ARROW_HEIGHT}
-    `;
-
-  // Inner path (content) - keep arrow width almost the same
-  const innerRadius = Math.max(0, CORNER_RADIUS - BORDER_WIDTH);
-  const innerPath = `
-    M${innerRadius + BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} 
-    H${constrainedArrowPos - ARROW_WIDTH / 2 + innerArrowWidthReduction} 
-    L${constrainedArrowPos},${BORDER_WIDTH} 
-    L${constrainedArrowPos + ARROW_WIDTH / 2 - innerArrowWidthReduction},${ARROW_HEIGHT + BORDER_WIDTH} 
-    H${width - innerRadius - BORDER_WIDTH} 
-    Q${width - BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} ${width - BORDER_WIDTH},${ARROW_HEIGHT + innerRadius + BORDER_WIDTH} 
-    V${adjustedHeight - innerRadius - BORDER_WIDTH} 
-    Q${width - BORDER_WIDTH},${adjustedHeight - BORDER_WIDTH} ${width - innerRadius - BORDER_WIDTH},${adjustedHeight - BORDER_WIDTH} 
-    H${innerRadius + BORDER_WIDTH} 
-    Q${BORDER_WIDTH},${adjustedHeight - BORDER_WIDTH} ${BORDER_WIDTH},${adjustedHeight - innerRadius - BORDER_WIDTH} 
-    V${ARROW_HEIGHT + innerRadius + BORDER_WIDTH} 
-    Q${BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} ${innerRadius + BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH}
-  `;
-
-  return /*html */ `<svg
-      width="${adjustedWidth}"
-      height="${adjustedHeight}"
-      viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      role="presentation"
-      aria-hidden="true"
-    >
-      <path d="${outerPath}" class="border_path" />
-      <path d="${innerPath}" class="background_path" />
-    </svg>`;
-};
-
-/**
- * Generates SVG path for validation message with arrow on bottom
- * @param {number} width - Validation message width
- * @param {number} height - Validation message height
- * @param {number} arrowPosition - Horizontal position of arrow
- * @returns {string} - SVG markup
- */
-const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
-  // Calculate valid arrow position range
-  const arrowLeft =
-    ARROW_WIDTH / 2 + CORNER_RADIUS + BORDER_WIDTH + ARROW_SPACING;
-  const minArrowPos = arrowLeft;
-  const maxArrowPos = width - arrowLeft;
-  const constrainedArrowPos = Math.max(
-    minArrowPos,
-    Math.min(arrowPosition, maxArrowPos),
-  );
-
-  // Calculate content height
-  const contentHeight = height - ARROW_HEIGHT;
-
-  // Create two paths: one for the border (outer) and one for the content (inner)
-  const adjustedWidth = width;
-  const adjustedHeight = contentHeight + ARROW_HEIGHT;
-
-  // For small border widths, keep inner arrow nearly the same size as outer
-  const innerArrowWidthReduction = Math.min(BORDER_WIDTH * 0.3, 1);
-
-  // Outer path with rounded corners
-  const outerPath = `
-      M${CORNER_RADIUS},0 
-      H${width - CORNER_RADIUS} 
-      Q${width},0 ${width},${CORNER_RADIUS} 
-      V${contentHeight - CORNER_RADIUS} 
-      Q${width},${contentHeight} ${width - CORNER_RADIUS},${contentHeight} 
-      H${constrainedArrowPos + ARROW_WIDTH / 2} 
-      L${constrainedArrowPos},${adjustedHeight} 
-      L${constrainedArrowPos - ARROW_WIDTH / 2},${contentHeight} 
-      H${CORNER_RADIUS} 
-      Q0,${contentHeight} 0,${contentHeight - CORNER_RADIUS} 
-      V${CORNER_RADIUS} 
-      Q0,0 ${CORNER_RADIUS},0
-    `;
-
-  // Inner path with correct arrow direction and color
-  const innerRadius = Math.max(0, CORNER_RADIUS - BORDER_WIDTH);
-  const innerPath = `
-    M${innerRadius + BORDER_WIDTH},${BORDER_WIDTH} 
-    H${width - innerRadius - BORDER_WIDTH} 
-    Q${width - BORDER_WIDTH},${BORDER_WIDTH} ${width - BORDER_WIDTH},${innerRadius + BORDER_WIDTH} 
-    V${contentHeight - innerRadius - BORDER_WIDTH} 
-    Q${width - BORDER_WIDTH},${contentHeight - BORDER_WIDTH} ${width - innerRadius - BORDER_WIDTH},${contentHeight - BORDER_WIDTH} 
-    H${constrainedArrowPos + ARROW_WIDTH / 2 - innerArrowWidthReduction} 
-    L${constrainedArrowPos},${adjustedHeight - BORDER_WIDTH} 
-    L${constrainedArrowPos - ARROW_WIDTH / 2 + innerArrowWidthReduction},${contentHeight - BORDER_WIDTH} 
-    H${innerRadius + BORDER_WIDTH} 
-    Q${BORDER_WIDTH},${contentHeight - BORDER_WIDTH} ${BORDER_WIDTH},${contentHeight - innerRadius - BORDER_WIDTH} 
-    V${innerRadius + BORDER_WIDTH} 
-    Q${BORDER_WIDTH},${BORDER_WIDTH} ${innerRadius + BORDER_WIDTH},${BORDER_WIDTH}
-  `;
-
-  return /*html */ `<svg
-      width="${adjustedWidth}"
-      height="${adjustedHeight}"
-      viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      role="presentation"
-      aria-hidden="true"
-    >
-      <path d="${outerPath}" class="border_path" />
-      <path d="${innerPath}" class="background_path" />
-    </svg>`;
-};
-
-/**
- * Creates a new validation message element with specified content
- * @param {string} content - HTML content for the validation message
- * @returns {HTMLElement} - The validation message element
- */
-const createValidationMessage = () => {
-  const div = document.createElement("div");
-  div.innerHTML = validationMessageTemplate;
-  const validationMessage = div.querySelector(".jsenv_validation_message");
-  return validationMessage;
-};
-
-const stickValidationMessageToTarget = (validationMessage, targetElement) => {
-  // Get references to validation message parts
-  const validationMessageBodyWrapper = validationMessage.querySelector(
-    ".jsenv_validation_message_body_wrapper",
-  );
-  const validationMessageBorder = validationMessage.querySelector(
-    ".jsenv_validation_message_border",
-  );
-  const validationMessageContent = validationMessage.querySelector(
-    ".jsenv_validation_message_content",
-  );
-
-  // Set initial border styles
-  validationMessageBodyWrapper.style.borderWidth = `${BORDER_WIDTH}px`;
-  validationMessageBorder.style.left = `-${BORDER_WIDTH}px`;
-  validationMessageBorder.style.right = `-${BORDER_WIDTH}px`;
-
-  const targetVisibleRectEffect = visibleRectEffect(
-    targetElement,
-    ({ left: targetLeft, right: targetRight, visibilityRatio }) => {
-      // reset max height and overflow because it impacts the element size
-      // and we need to re-check if we need to have an overflow or not.
-      // to avoid visual impact we do this on an invisible clone.
-      // It's ok to do this because the element is absolutely positioned
-      const validationMessageClone = validationMessage.cloneNode(true);
-      validationMessageClone.style.visibility = "hidden";
-      const validationMessageContentClone =
-        validationMessageClone.querySelector(
-          ".jsenv_validation_message_content",
-        );
-      validationMessageContentClone.style.maxHeight = "";
-      validationMessageContentClone.style.overflowY = "";
-      validationMessage.parentNode.appendChild(validationMessageClone);
-      const {
-        position,
-        left: validationMessageLeft,
-        top: validationMessageTop,
-        width: validationMessageWidth,
-        height: validationMessageHeight,
-        spaceAboveTarget,
-        spaceBelowTarget,
-      } = pickPositionRelativeTo(validationMessageClone, targetElement, {
-        alignToViewportEdgeWhenTargetNearEdge: 20,
-        // when fully to the left, the border color is collé to the browser window making it hard to see
-        minLeft: 1,
-      });
-
-      // Get element padding and border to properly position arrow
-      const targetBorderSizes = getBorderSizes(targetElement);
-
-      // Calculate arrow position to point at target element
-      let arrowLeftPosOnValidationMessage;
-      // Determine arrow target position based on attribute
-      const arrowPositionAttribute = targetElement.getAttribute(
-        "data-validation-message-arrow-x",
-      );
-      let arrowTargetLeft;
-      if (arrowPositionAttribute === "center") {
-        // Target the center of the element
-        arrowTargetLeft = (targetLeft + targetRight) / 2;
-      } else {
-        // Default behavior: target the left edge of the element (after borders)
-        arrowTargetLeft = targetLeft + targetBorderSizes.left;
-      }
-
-      // Calculate arrow position within the validation message
-      if (validationMessageLeft < arrowTargetLeft) {
-        // Validation message is left of the target point, move arrow right
-        const diff = arrowTargetLeft - validationMessageLeft;
-        arrowLeftPosOnValidationMessage = diff;
-      } else if (
-        validationMessageLeft + validationMessageWidth <
-        arrowTargetLeft
-      ) {
-        // Edge case: target point is beyond right edge of validation message
-        arrowLeftPosOnValidationMessage = validationMessageWidth - ARROW_WIDTH;
-      } else {
-        // Target point is within validation message width
-        arrowLeftPosOnValidationMessage =
-          arrowTargetLeft - validationMessageLeft;
-      }
-
-      // Ensure arrow stays within validation message bounds with some padding
-      const minArrowPos = CORNER_RADIUS + ARROW_WIDTH / 2 + ARROW_SPACING;
-      const maxArrowPos = validationMessageWidth - minArrowPos;
-      arrowLeftPosOnValidationMessage = Math.max(
-        minArrowPos,
-        Math.min(arrowLeftPosOnValidationMessage, maxArrowPos),
-      );
-
-      // Force content overflow when there is not enough space to display
-      // the entirety of the validation message
-      const spaceAvailable =
-        position === "below" ? spaceBelowTarget : spaceAboveTarget;
-      let spaceAvailableForContent = spaceAvailable;
-      spaceAvailableForContent -= ARROW_HEIGHT;
-      spaceAvailableForContent -= BORDER_WIDTH * 2;
-      spaceAvailableForContent -= 16; // padding * 2
-      let contentHeight = validationMessageHeight;
-      contentHeight -= ARROW_HEIGHT;
-      contentHeight -= BORDER_WIDTH * 2;
-      contentHeight -= 16; // padding * 2
-      const spaceRemainingAfterContent =
-        spaceAvailableForContent - contentHeight;
-      if (spaceRemainingAfterContent < 2) {
-        const maxHeight = spaceAvailableForContent;
-        validationMessageContent.style.maxHeight = `${maxHeight}px`;
-        validationMessageContent.style.overflowY = "scroll";
-      } else {
-        validationMessageContent.style.maxHeight = "";
-        validationMessageContent.style.overflowY = "";
-      }
-
-      const { width, height } = validationMessage.getBoundingClientRect();
-      if (position === "above") {
-        // Position above target element
-        validationMessageBodyWrapper.style.marginTop = "";
-        validationMessageBodyWrapper.style.marginBottom = `${ARROW_HEIGHT}px`;
-        validationMessageBorder.style.top = `-${BORDER_WIDTH}px`;
-        validationMessageBorder.style.bottom = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
-        validationMessageBorder.innerHTML = generateSvgWithBottomArrow(
-          width,
-          height,
-          arrowLeftPosOnValidationMessage,
-        );
-      } else {
-        validationMessageBodyWrapper.style.marginTop = `${ARROW_HEIGHT}px`;
-        validationMessageBodyWrapper.style.marginBottom = "";
-        validationMessageBorder.style.top = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
-        validationMessageBorder.style.bottom = `-${BORDER_WIDTH}px`;
-        validationMessageBorder.innerHTML = generateSvgWithTopArrow(
-          width,
-          height,
-          arrowLeftPosOnValidationMessage,
-        );
-      }
-
-      validationMessage.setAttribute("data-position", position);
-      validationMessageStyleController.set(validationMessage, {
-        opacity: visibilityRatio ? 1 : 0,
-        transform: {
-          translateX: validationMessageLeft,
-          translateY: validationMessageTop,
-        },
-      });
-      validationMessageClone.remove();
-    },
-  );
-  const messageSizeChangeObserver = observeValidationMessageSizeChange(
-    validationMessageContent,
-    (width, height) => {
-      targetVisibleRectEffect.check(`content_size_change (${width}x${height})`);
-    },
-  );
-  targetVisibleRectEffect.onBeforeAutoCheck(() => {
-    // prevent feedback loop because check triggers size change which triggers check...
-    messageSizeChangeObserver.disable();
-    return () => {
-      messageSizeChangeObserver.enable();
-    };
-  });
-
-  return {
-    updatePosition: targetVisibleRectEffect.check,
-    stop: () => {
-      messageSizeChangeObserver.disconnect();
-      targetVisibleRectEffect.disconnect();
-    },
-  };
-};
-
-const observeValidationMessageSizeChange = (elementSizeToObserve, callback) => {
-  let lastContentWidth;
-  let lastContentHeight;
-  const resizeObserver = new ResizeObserver((entries) => {
-    const [entry] = entries;
-    const { width, height } = entry.contentRect;
-    // Debounce tiny changes that are likely sub-pixel rounding
-    if (lastContentWidth !== undefined) {
-      const widthDiff = Math.abs(width - lastContentWidth);
-      const heightDiff = Math.abs(height - lastContentHeight);
-      const threshold = 1; // Ignore changes smaller than 1px
-      if (widthDiff < threshold && heightDiff < threshold) {
-        return;
-      }
-    }
-    lastContentWidth = width;
-    lastContentHeight = height;
-    callback(width, height);
-  });
-  resizeObserver.observe(elementSizeToObserve);
-
-  return {
-    disable: () => {
-      resizeObserver.unobserve(elementSizeToObserve);
-    },
-    enable: () => {
-      resizeObserver.observe(elementSizeToObserve);
-    },
-    disconnect: () => {
-      resizeObserver.disconnect();
-    },
-  };
-};
-
-const escapeHtml = (string) => {
-  return string
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-};
-
 /**
  * Custom form validation implementation
  *
@@ -13009,11 +13320,9 @@ const installCustomConstraintValidation = (
       closeElementValidationMessage("cleanup");
     };
 
-    const elementTarget =
-      failedConstraintInfo.target || elementReceivingValidationMessage;
+    failedConstraintInfo.target || elementReceivingValidationMessage;
 
-    validationInterface.validationMessage = openValidationMessage(
-      elementTarget,
+    validationInterface.validationMessage = openCallout(
       failedConstraintInfo.message,
       {
         level: failedConstraintInfo.level,
@@ -19606,7 +19915,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
     readOnly: innerReadOnly,
     disabled: innerDisabled,
     required: innerRequired,
-    "data-validation-message-arrow-x": "center",
+    "data-callout-arrow-x": "center",
     onClick: e => {
       if (innerReadOnly) {
         e.preventDefault();
@@ -20032,7 +20341,7 @@ const InputRadioBasic = forwardRef((props, ref) => {
     checked: checked,
     disabled: innerDisabled,
     required: innerRequired,
-    "data-validation-message-arrow-x": "center",
+    "data-callout-arrow-x": "center",
     onClick: e => {
       if (innerReadOnly) {
         e.preventDefault();
@@ -20221,9 +20530,9 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       background-color: var(--background-color-disabled);
       outline-color: var(--border-color-disabled);
     }
-    /* Invalid */
-    .navi_input[aria-invalid="true"] {
-      border-color: var(--invalid-color);
+    /* Callout (info, warning, error) */
+    .navi_input[data-callout] {
+      border-color: var(--callout-color);
     }
   }
 `;
@@ -20912,9 +21221,9 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     .navi_button[data-disabled] .navi_button_shadow {
       box-shadow: none;
     }
-    /* Invalid */
-    .navi_button[aria-invalid="true"] .navi_button_content {
-      --border-color: var(--invalid-color);
+    /* Callout (info, warning, error) */
+    .navi_button[data-callout] .navi_button_content {
+      --border-color: var(--callout-color);
     }
 
     /* Discrete variant */
@@ -20992,7 +21301,7 @@ const ButtonBasic = forwardRef((props, ref) => {
     "data-readonly": innerReadOnly ? "" : undefined,
     "data-readonly-silent": innerLoading ? "" : undefined,
     "data-disabled": innerDisabled ? "" : undefined,
-    "data-validation-message-arrow-x": "center",
+    "data-callout-arrow-x": "center",
     "aria-busy": innerLoading,
     children: jsx(LoaderBackground, {
       loading: innerLoading,
@@ -27521,4 +27830,4 @@ const useDependenciesDiff = (inputs) => {
   return diffRef.current;
 };
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Button, Checkbox, CheckboxList, Col, Colgroup, Details, Editable, ErrorBoundaryContext, FontSizedSvg, Form, IconAndText, Input, Label, Link, LinkWithIcon, Overflow, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, Select, SelectionContext, SummaryMarker, Tab, TabList, Table, TableCell, Tbody, TextAndCount, Thead, Tr, UITransition, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, defineRoutes, enableDebugActions, enableDebugOnDocumentLoading, goBack, goForward, goTo, isCellSelected, isColumnSelected, isRowSelected, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, Button, Checkbox, CheckboxList, Col, Colgroup, Details, Editable, ErrorBoundaryContext, FontSizedSvg, Form, IconAndText, Input, Label, Link, LinkWithIcon, Overflow, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, Select, SelectionContext, SummaryMarker, Tab, TabList, Table, TableCell, Tbody, TextAndCount, Thead, Tr, UITransition, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, defineRoutes, enableDebugActions, enableDebugOnDocumentLoading, goBack, goForward, goTo, isCellSelected, isColumnSelected, isRowSelected, openCallout, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, valueInLocalStorage };

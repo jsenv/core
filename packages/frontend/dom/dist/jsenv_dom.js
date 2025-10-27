@@ -100,6 +100,38 @@ const createPubSub = (clearOnPublish = false) => {
   return [publish, subscribe, clear];
 };
 
+const createValueEffect = (value) => {
+  const callbackSet = new Set();
+  const previousValueCleanupSet = new Set();
+
+  const updateValue = (newValue) => {
+    if (newValue === value) {
+      return;
+    }
+    for (const cleanup of previousValueCleanupSet) {
+      cleanup();
+    }
+    previousValueCleanupSet.clear();
+    const oldValue = value;
+    value = newValue;
+    for (const callback of callbackSet) {
+      const returnValue = callback(newValue, oldValue);
+      if (typeof returnValue === "function") {
+        previousValueCleanupSet.add(returnValue);
+      }
+    }
+  };
+
+  const addEffect = (callback) => {
+    callbackSet.add(callback);
+    return () => {
+      callbackSet.delete(callback);
+    };
+  };
+
+  return [updateValue, addEffect];
+};
+
 // https://github.com/davidtheclark/tabbable/blob/master/index.js
 const isDocumentElement = (node) =>
   node === node.ownerDocument.documentElement;
@@ -2057,12 +2089,21 @@ const addActiveElementEffect = (callback) => {
   return remove;
 };
 
-const elementIsVisible = (node) => {
+const elementIsVisibleForFocus = (node) => {
+  return getFocusVisibilityInfo(node).visible;
+};
+const getFocusVisibilityInfo = (node) => {
   if (isDocumentElement(node)) {
-    return true;
+    return { visible: true, reason: "is document" };
+  }
+  if (node.hasAttribute("hidden")) {
+    return { visible: false, reason: "has hidden attribute" };
   }
   if (getStyle(node, "visibility") === "hidden") {
-    return false;
+    return { visible: false, reason: "uses visiblity: hidden" };
+  }
+  if (node.tagName === "INPUT" && node.type === "hidden") {
+    return { visible: false, reason: "input type hidden" };
   }
   let nodeOrAncestor = node;
   while (nodeOrAncestor) {
@@ -2070,19 +2111,87 @@ const elementIsVisible = (node) => {
       break;
     }
     if (getStyle(nodeOrAncestor, "display") === "none") {
-      return false;
+      return { visible: false, reason: "ancestor uses display: none" };
     }
     // Check if element is inside a closed details element
     if (elementIsDetails(nodeOrAncestor) && !nodeOrAncestor.open) {
       // Special case: summary elements are visible even when their parent details is closed
       // But only if this details element is the direct parent of the summary
-      if (elementIsSummary(node) && node.parentElement === nodeOrAncestor) ; else {
-        return false;
+      if (!elementIsSummary(node) || node.parentElement !== nodeOrAncestor) {
+        return { visible: false, reason: "inside closed details element" };
       }
+      // Continue checking ancestors
     }
     nodeOrAncestor = nodeOrAncestor.parentNode;
   }
-  return true;
+  return { visible: true, reason: "no reason to be hidden" };
+};
+
+const elementIsVisuallyVisible = (node, options = {}) => {
+  return getVisuallyVisibleInfo(node, options).visible;
+};
+const getVisuallyVisibleInfo = (
+  node,
+  { countOffscreenAsVisible = false } = {},
+) => {
+  // First check all the focusable visibility conditions
+  const focusVisibilityInfo = getFocusVisibilityInfo(node);
+  if (!focusVisibilityInfo.visible) {
+    return focusVisibilityInfo;
+  }
+
+  // Additional visual visibility checks
+  if (getStyle(node, "opacity") === "0") {
+    return { visible: false, reason: "uses opacity: 0" };
+  }
+
+  const rect = node.getBoundingClientRect();
+  if (rect.width === 0 && rect.height === 0) {
+    return { visible: false, reason: "has zero dimensions" };
+  }
+
+  // Check for clipping
+  const clipStyle = getStyle(node, "clip");
+  if (clipStyle && clipStyle !== "auto" && clipStyle.includes("rect(0")) {
+    return { visible: false, reason: "clipped with clip property" };
+  }
+
+  const clipPathStyle = getStyle(node, "clip-path");
+  if (clipPathStyle && clipPathStyle.includes("inset(100%")) {
+    return { visible: false, reason: "clipped with clip-path" };
+  }
+
+  // Check if positioned off-screen (unless option says to count as visible)
+  if (!countOffscreenAsVisible) {
+    if (
+      rect.right < 0 ||
+      rect.bottom < 0 ||
+      rect.left > window.innerWidth ||
+      rect.top > window.innerHeight
+    ) {
+      return { visible: false, reason: "positioned off-screen" };
+    }
+  }
+
+  // Check for transform scale(0)
+  const transformStyle = getStyle(node, "transform");
+  if (transformStyle && transformStyle.includes("scale(0")) {
+    return { visible: false, reason: "scaled to zero with transform" };
+  }
+
+  return { visible: true, reason: "visually visible" };
+};
+const getFirstVisuallyVisibleAncestor = (node, options = {}) => {
+  let ancestorCandidate = node.parentNode;
+  while (ancestorCandidate) {
+    const visibilityInfo = getVisuallyVisibleInfo(ancestorCandidate, options);
+    if (visibilityInfo.visible) {
+      return ancestorCandidate;
+    }
+    ancestorCandidate = ancestorCandidate.parentElement;
+  }
+  // This shouldn't happen in normal cases since document element is always visible
+  return null;
 };
 
 const elementIsFocusable = (node) => {
@@ -2098,34 +2207,34 @@ const elementIsFocusable = (node) => {
     if (node.type === "hidden") {
       return false;
     }
-    return elementIsVisible(node);
+    return elementIsVisibleForFocus(node);
   }
   if (
     ["button", "select", "datalist", "iframe", "textarea"].indexOf(nodeName) >
     -1
   ) {
-    return elementIsVisible(node);
+    return elementIsVisibleForFocus(node);
   }
   if (["a", "area"].indexOf(nodeName) > -1) {
     if (node.hasAttribute("href") === false) {
       return false;
     }
-    return elementIsVisible(node);
+    return elementIsVisibleForFocus(node);
   }
   if (["audio", "video"].indexOf(nodeName) > -1) {
     if (node.hasAttribute("controls") === false) {
       return false;
     }
-    return elementIsVisible(node);
+    return elementIsVisibleForFocus(node);
   }
   if (nodeName === "summary") {
-    return elementIsVisible(node);
+    return elementIsVisibleForFocus(node);
   }
   if (node.hasAttribute("tabindex") || node.hasAttribute("tabIndex")) {
-    return elementIsVisible(node);
+    return elementIsVisibleForFocus(node);
   }
   if (node.hasAttribute("draggable")) {
-    return elementIsVisible(node);
+    return elementIsVisibleForFocus(node);
   }
   return false;
 };
@@ -3558,11 +3667,12 @@ const allowWheelThrough = (element, connectedElement) => {
         wheelEvent.clientY,
       );
       for (const elementBehindMouse of elementsBehindMouse) {
-        const belongsToElement = isElementOrDescendant(elementBehindMouse);
         // try to scroll element itself
         if (tryToScrollOne(elementBehindMouse, wheelEvent)) {
           return;
         }
+        const belongsToElement = isElementOrDescendant(elementBehindMouse);
+        // try to scroll what is behind
         if (!belongsToElement) {
           break;
         }
@@ -3581,17 +3691,16 @@ const allowWheelThrough = (element, connectedElement) => {
       wheelEvent.clientY,
     );
     for (const elementBehindMouse of elementsBehindMouse) {
-      const belongsToElement = isElementOrDescendant(elementBehindMouse);
       // try to scroll element itself
       if (tryToScrollOne(elementBehindMouse, wheelEvent)) {
         return;
       }
+      const belongsToElement = isElementOrDescendant(elementBehindMouse);
       if (belongsToElement) {
-        // the element is not scrollable and we don't care about his
-        // scrollable parent (because we know it's going to be the document)
-        // we search for scrollable container that might be behind it
+        // keep searching if something in our element is scrollable
         continue;
       }
+      // our element is not scrollable, try to scroll the container behind the mouse
       const scrollContainer = getScrollContainer(elementBehindMouse);
       if (tryToScrollOne(scrollContainer, wheelEvent)) {
         return;
@@ -11802,4 +11911,4 @@ const crossFade = {
   },
 };
 
-export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, addWillChange, allowWheelThrough, canInterceptKeys, captureScrollState, createDragGestureController, createDragToMoveGestureController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createWidthTransition, cubicBezier, dragAfterThreshold, elementIsFocusable, elementIsVisible, findAfter, findAncestor, findBefore, findDescendant, findFocusable, getAvailableHeight, getAvailableWidth, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getHeight, getInnerHeight, getInnerWidth, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getPaddingSizes, getPositionedParent, getPreferedColorScheme, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getWidth, initFlexDetailsSet, initFocusGroup, initPositionSticky, initUITransition, isScrollable, parseCSSColor, pickLightOrDark, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, resolveCSSColor, resolveCSSSize, setAttribute, setAttributes, setStyles, startDragToResizeGesture, stickyAsRelativeCoords, stringifyCSSColor, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };
+export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, addWillChange, allowWheelThrough, canInterceptKeys, captureScrollState, createDragGestureController, createDragToMoveGestureController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findFocusable, getAvailableHeight, getAvailableWidth, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getInnerHeight, getInnerWidth, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getPaddingSizes, getPositionedParent, getPreferedColorScheme, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getVisuallyVisibleInfo, getWidth, initFlexDetailsSet, initFocusGroup, initPositionSticky, initUITransition, isScrollable, parseCSSColor, pickLightOrDark, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, resolveCSSColor, resolveCSSSize, setAttribute, setAttributes, setStyles, startDragToResizeGesture, stickyAsRelativeCoords, stringifyCSSColor, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };
