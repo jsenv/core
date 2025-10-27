@@ -248,7 +248,7 @@ export const openCallout = (
   calloutCloseButton.onclick = () => {
     close("click_close_button");
   };
-  const calloutId = `navi_callout${Date.now()}`;
+  const calloutId = `navi_callout_${Date.now()}`;
   calloutElement.id = calloutId;
   calloutStyleController.set(calloutElement, { opacity: 0 });
   allowWheelThrough(calloutElement, targetElement);
