@@ -1,4 +1,4 @@
-import { elementIsVisible } from "./element_is_visible.js";
+import { elementIsVisibleForFocus } from "./element_visibility.js";
 
 export const elementIsFocusable = (node) => {
   // only element node can be focused, document, textNodes etc cannot
@@ -13,34 +13,34 @@ export const elementIsFocusable = (node) => {
     if (node.type === "hidden") {
       return false;
     }
-    return elementIsVisible(node);
+    return elementIsVisibleForFocus(node);
   }
   if (
     ["button", "select", "datalist", "iframe", "textarea"].indexOf(nodeName) >
     -1
   ) {
-    return elementIsVisible(node);
+    return elementIsVisibleForFocus(node);
   }
   if (["a", "area"].indexOf(nodeName) > -1) {
     if (node.hasAttribute("href") === false) {
       return false;
     }
-    return elementIsVisible(node);
+    return elementIsVisibleForFocus(node);
   }
   if (["audio", "video"].indexOf(nodeName) > -1) {
     if (node.hasAttribute("controls") === false) {
       return false;
     }
-    return elementIsVisible(node);
+    return elementIsVisibleForFocus(node);
   }
   if (nodeName === "summary") {
-    return elementIsVisible(node);
+    return elementIsVisibleForFocus(node);
   }
   if (node.hasAttribute("tabindex") || node.hasAttribute("tabIndex")) {
-    return elementIsVisible(node);
+    return elementIsVisibleForFocus(node);
   }
   if (node.hasAttribute("draggable")) {
-    return elementIsVisible(node);
+    return elementIsVisibleForFocus(node);
   }
   return false;
 };
