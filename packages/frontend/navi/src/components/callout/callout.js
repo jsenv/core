@@ -207,7 +207,16 @@ export const openCallout = (
     debug = false,
   } = {},
 ) => {
-  let _closeOnClickOutside = closeOnClickOutside;
+  const callout = {
+    opened: true,
+    close: null,
+    level: undefined,
+
+    update: null,
+    updatePosition: null,
+
+    element: null,
+  };
 
   if (debug) {
     console.debug("open callout on", targetElement, {
@@ -217,15 +226,14 @@ export const openCallout = (
   }
 
   const [teardown, addTeardown] = createPubSub(true);
-  let opened = true;
   const close = (reason) => {
-    if (!opened) {
+    if (!callout.opened) {
       return;
     }
     if (debug) {
       console.debug(`callout closed (reason: ${reason})`);
     }
-    opened = false;
+    callout.opened = false;
     teardown(reason);
   };
 
@@ -249,44 +257,52 @@ export const openCallout = (
     targetElement.removeAttribute("data-callout");
   });
 
-  const update = (
-    newMessage,
-    { level = "warning", closeOnClickOutside = level === "info" } = {},
-  ) => {
-    _closeOnClickOutside = closeOnClickOutside;
+  const resetAccessibilityAttributes = () => {
+    if (callout.level === "info") {
+      targetElement.removeAttribute("aria-describedby");
+    } else {
+      targetElement.removeAttribute("aria-errormessage");
+      targetElement.removeAttribute("aria-invalid");
+    }
+  };
+  const update = (newMessage, options = {}) => {
+    // Connect validation message with target element for accessibility
+    if (options.level && options.level !== callout.level) {
+      calloutElement.setAttribute("data-level", level);
+      if (callout.level) {
+        resetAccessibilityAttributes();
+      }
+      if (level === "info") {
+        calloutElement.setAttribute("role", "status");
+        targetElement.setAttribute("aria-describedby", calloutId);
+      } else {
+        calloutElement.setAttribute("role", "alert");
+        targetElement.setAttribute("aria-errormessage", calloutId);
+        targetElement.setAttribute("aria-invalid", "true");
+      }
+      targetElement.style.setProperty(
+        "--callout-color",
+        `var(--navi-${level}-color)`,
+      );
+      callout.level = level;
+    }
+
+    if (options.closeOnClickOutside) {
+      closeOnClickOutside = options.closeOnClickOutside;
+    }
 
     if (Error.isError(newMessage)) {
       const error = newMessage;
       newMessage = error.message;
       newMessage += `<pre class="navi_callout_error_stack">${escapeHtml(error.stack)}</pre>`;
     }
-
-    calloutElement.setAttribute("data-level", level);
     calloutMessageElement.innerHTML = newMessage;
-
-    // Connect validation message with target element for accessibility
-    if (level === "info") {
-      calloutElement.setAttribute("role", "status");
-      targetElement.setAttribute("aria-describedby", calloutId);
-      addTeardown(() => {
-        targetElement.removeAttribute("aria-describedby");
-      });
-    } else {
-      calloutElement.setAttribute("role", "alert");
-      targetElement.setAttribute("aria-errormessage", calloutId);
-      targetElement.setAttribute("aria-invalid", "true");
-      addTeardown(() => {
-        targetElement.removeAttribute("aria-errormessage");
-        targetElement.removeAttribute("aria-invalid");
-      });
-    }
-    targetElement.style.setProperty(
-      "--callout-color",
-      `var(--navi-${level}-color)`,
-    );
-    targetElement.style.removeProperty("--callout-color");
   };
   update(message, { level });
+  addTeardown(() => {
+    resetAccessibilityAttributes();
+    targetElement.style.removeProperty("--callout-color");
+  });
 
   document.body.appendChild(calloutElement);
   addTeardown(() => {
@@ -326,7 +342,7 @@ export const openCallout = (
 
   close_on_click_outside: {
     const handleClickOutside = (event) => {
-      if (!_closeOnClickOutside) {
+      if (!closeOnClickOutside) {
         return;
       }
 
@@ -351,12 +367,12 @@ export const openCallout = (
     });
   }
 
-  const callout = {
+  Object.assign(callout, {
     calloutElement,
     update,
     close,
     updatePosition: positionFollower.updatePosition,
-  };
+  });
   targetElement.callout = callout;
   addTeardown(() => {
     delete targetElement.callout;
