@@ -166,7 +166,7 @@ import.meta.css = /* css */ `
 `;
 
 // HTML template for the validation message
-const validationMessageTemplate = /* html */ `
+const calloutTemplate = /* html */ `
 <div class="navi_callout">
     <div class="navi_callout_message" role="alert" aria-live="assertive">
       <div class="jsenv_validation_message_body_wrapper">
@@ -208,8 +208,7 @@ const validationMessageTemplate = /* html */ `
   </div>
 `;
 
-const validationMessageStyleController =
-  createStyleController("validation_message");
+const calloutStyleController = createStyleController("callout");
 
 export const openCallout = (
   message,
@@ -280,7 +279,7 @@ export const openCallout = (
   };
   update(message, { level });
 
-  validationMessageStyleController.set(jsenvValidationMessage, { opacity: 0 });
+  calloutStyleController.set(jsenvValidationMessage, { opacity: 0 });
 
   allowWheelThrough(jsenvValidationMessage, targetElement);
 
@@ -546,7 +545,7 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
  */
 const createValidationMessage = () => {
   const div = document.createElement("div");
-  div.innerHTML = validationMessageTemplate;
+  div.innerHTML = calloutTemplate;
   const validationMessage = div.querySelector(".navi_callout_message");
   return validationMessage;
 };
@@ -689,7 +688,7 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
       }
 
       validationMessage.setAttribute("data-position", position);
-      validationMessageStyleController.set(validationMessage, {
+      calloutStyleController.set(validationMessage, {
         opacity: visibilityRatio ? 1 : 0,
         transform: {
           translateX: validationMessageLeft,
