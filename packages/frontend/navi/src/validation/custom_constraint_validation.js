@@ -27,6 +27,7 @@
  * - Validation messages that follow the input element and adapt to viewport
  */
 
+import { openValidationMessage } from "../components/callout/validation_message.js";
 import {
   DISABLED_CONSTRAINT,
   MAX_CONSTRAINT,
@@ -39,7 +40,6 @@ import {
   TYPE_NUMBER_CONSTRAINT,
 } from "./constraints/native_constraints.js";
 import { READONLY_CONSTRAINT } from "./constraints/readonly_constraint.js";
-import { openValidationMessage } from "./validation_message.js";
 
 let debug = false;
 
