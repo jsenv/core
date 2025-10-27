@@ -18,11 +18,19 @@ import {
 
 /**
  * Shows a callout attached to the specified element
- * @param {HTMLElement} targetElement - Element the callout should follow
  * @param {string} message - HTML content for the callout
  * @param {Object} options - Configuration options
- * @param {boolean} options.scrollIntoView - Whether to scroll the target element into view
- * @returns {Function} - Function to hide and remove the callout
+ * @param {HTMLElement} options.anchorElement - Element the callout should follow
+ * @param {string} [options.level="warning"] - Callout level: "info" | "warning" | "error"
+ * @param {Function} [options.onClose] - Callback when callout is closed
+ * @param {boolean} [options.closeOnClickOutside] - Whether to close on outside clicks (defaults to true for "info" level)
+ * @param {boolean} [options.debug=false] - Enable debug logging
+ * @returns {Object} - Callout object with properties:
+ *   - {Function} close - Function to close the callout
+ *   - {Function} update - Function to update message and options
+ *   - {Function} updatePosition - Function to update position
+ *   - {HTMLElement} element - The callout DOM element
+ *   - {boolean} opened - Whether the callout is currently open
  */
 export const openCallout = (
   message,
@@ -198,7 +206,7 @@ export const openCallout = (
   }
 
   Object.assign(callout, {
-    calloutElement,
+    element: calloutElement,
     update,
     close,
     updatePosition: positionFollower.updatePosition,
@@ -376,8 +384,7 @@ const calloutTemplate = /* html */ `
 const calloutStyleController = createStyleController("callout");
 
 /**
- * Creates a new callout element with specified content
- * @param {string} content - HTML content for the callout
+ * Creates a new callout element from template
  * @returns {HTMLElement} - The callout element
  */
 const createCalloutElement = () => {
