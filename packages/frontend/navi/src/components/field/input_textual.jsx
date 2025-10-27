@@ -165,6 +165,7 @@ const InputTextualBasic = forwardRef((props, ref) => {
     autoSelect,
     appearance = "navi",
     accentColor,
+    style,
     width,
     height,
     ...rest
@@ -187,13 +188,19 @@ const InputTextualBasic = forwardRef((props, ref) => {
   });
   useConstraints(innerRef, constraints);
 
+  const innerStyle = { ...style };
+  if (width !== undefined) {
+    innerStyle.width = width;
+  }
+  if (height !== undefined) {
+    innerStyle.height = height;
+  }
   const inputTextual = (
     <input
       {...rest}
       ref={innerRef}
       className={appearance === "navi" ? "navi_input" : undefined}
-      width={width}
-      height={height}
+      style={innerStyle}
       type={type}
       data-value={uiState}
       value={innerValue}
