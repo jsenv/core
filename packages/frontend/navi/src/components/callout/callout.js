@@ -517,10 +517,14 @@ const centerCalloutInViewport = (calloutElement) => {
   // Initial positioning
   updateCenteredPosition();
 
+  window.addEventListener("resize", updateCenteredPosition);
+
   // Return positioning function for dynamic updates
   return {
     update: updateCenteredPosition,
-    stop: () => {},
+    stop: () => {
+      window.removeEventListener("resize", updateCenteredPosition);
+    },
   };
 };
 
