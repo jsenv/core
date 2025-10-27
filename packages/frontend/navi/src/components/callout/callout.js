@@ -246,6 +246,9 @@ export const openCallout = (
   update(message, { level });
 
   positioning: {
+    const documentScrollLeftAtOpen = document.documentElement.scrollLeft;
+    const documentScrollTopAtOpen = document.documentElement.scrollTop;
+
     let positioner;
     let strategy;
     const determine = () => {
@@ -268,7 +271,10 @@ export const openCallout = (
       }
       positioner?.stop();
       if (newStrategy === "centered") {
-        positioner = centerCalloutInViewport(calloutElement);
+        positioner = centerCalloutInViewport(calloutElement, {
+          documentScrollLeftAtOpen,
+          documentScrollTopAtOpen,
+        });
       } else {
         positioner = stickCalloutToAnchor(calloutElement, anchorElement);
       }
@@ -476,7 +482,10 @@ const createCalloutElement = () => {
   return calloutElement;
 };
 
-const centerCalloutInViewport = (calloutElement) => {
+const centerCalloutInViewport = (
+  calloutElement,
+  { documentScrollLeftAtOpen, documentScrollTopAtOpen },
+) => {
   // Set up initial styles for centered positioning
   const calloutBoxElement = calloutElement.querySelector(".navi_callout_box");
   const calloutFrameElement = calloutElement.querySelector(
@@ -529,10 +538,10 @@ const centerCalloutInViewport = (calloutElement) => {
       finalHeight,
     );
 
-    // Center in viewport
+    // Center in viewport (accounting for document scroll)
     const viewportWidth = window.innerWidth;
-    const left = (viewportWidth - finalWidth) / 2;
-    const top = (viewportHeight - finalHeight) / 2;
+    const left = documentScrollLeftAtOpen + (viewportWidth - finalWidth) / 2;
+    const top = documentScrollTopAtOpen + (viewportHeight - finalHeight) / 2;
 
     calloutStyleController.set(calloutElement, {
       opacity: 1,
@@ -545,7 +554,6 @@ const centerCalloutInViewport = (calloutElement) => {
 
   // Initial positioning
   updateCenteredPosition();
-
   window.addEventListener("resize", updateCenteredPosition);
 
   // Return positioning function for dynamic updates

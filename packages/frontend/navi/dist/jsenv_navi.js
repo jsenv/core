@@ -11806,7 +11806,24 @@ const openCallout = (
       newMessage = error.message;
       newMessage += `<pre class="navi_callout_error_stack">${escapeHtml(error.stack)}</pre>`;
     }
-    calloutMessageElement.innerHTML = newMessage;
+
+    // Check if the message is a full HTML document (starts with DOCTYPE)
+    if (typeof newMessage === "string" && isHtmlDocument(newMessage)) {
+      // Create iframe to isolate the HTML document
+      const iframe = document.createElement("iframe");
+      iframe.style.border = "none";
+      iframe.style.width = "100%";
+      iframe.style.minHeight = "200px";
+      iframe.style.maxHeight = "400px";
+      iframe.style.backgroundColor = "white";
+      iframe.srcdoc = newMessage;
+
+      // Clear existing content and add iframe
+      calloutMessageElement.innerHTML = "";
+      calloutMessageElement.appendChild(iframe);
+    } else {
+      calloutMessageElement.innerHTML = newMessage;
+    }
   };
   {
     const handleClickOutside = (event) => {
@@ -11918,6 +11935,9 @@ const openCallout = (
   update(message, { level });
 
   {
+    const documentScrollLeftAtOpen = document.documentElement.scrollLeft;
+    const documentScrollTopAtOpen = document.documentElement.scrollTop;
+
     let positioner;
     let strategy;
     const determine = () => {
@@ -11940,7 +11960,10 @@ const openCallout = (
       }
       positioner?.stop();
       if (newStrategy === "centered") {
-        positioner = centerCalloutInViewport(calloutElement);
+        positioner = centerCalloutInViewport(calloutElement, {
+          documentScrollLeftAtOpen,
+          documentScrollTopAtOpen,
+        });
       } else {
         positioner = stickCalloutToAnchor(calloutElement, anchorElement);
       }
@@ -12058,6 +12081,12 @@ import.meta.css = /* css */ `
       word-break: break-word;
       overflow-wrap: anywhere;
     }
+    .navi_callout_message iframe {
+      display: block;
+      margin: 0;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
     .navi_callout_close_button_column {
       display: flex;
       height: 22px;
@@ -12142,7 +12171,10 @@ const createCalloutElement = () => {
   return calloutElement;
 };
 
-const centerCalloutInViewport = (calloutElement) => {
+const centerCalloutInViewport = (
+  calloutElement,
+  { documentScrollLeftAtOpen, documentScrollTopAtOpen },
+) => {
   // Set up initial styles for centered positioning
   const calloutBoxElement = calloutElement.querySelector(".navi_callout_box");
   const calloutFrameElement = calloutElement.querySelector(
@@ -12195,10 +12227,10 @@ const centerCalloutInViewport = (calloutElement) => {
       finalHeight,
     );
 
-    // Center in viewport
+    // Center in viewport (accounting for document scroll)
     const viewportWidth = window.innerWidth;
-    const left = (viewportWidth - finalWidth) / 2;
-    const top = (viewportHeight - finalHeight) / 2;
+    const left = documentScrollLeftAtOpen + (viewportWidth - finalWidth) / 2;
+    const top = documentScrollTopAtOpen + (viewportHeight - finalHeight) / 2;
 
     calloutStyleController.set(calloutElement, {
       opacity: 1,
@@ -12211,7 +12243,6 @@ const centerCalloutInViewport = (calloutElement) => {
 
   // Initial positioning
   updateCenteredPosition();
-
   window.addEventListener("resize", updateCenteredPosition);
 
   // Return positioning function for dynamic updates
@@ -12422,6 +12453,20 @@ const escapeHtml = (string) => {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+};
+
+/**
+ * Checks if a string is a full HTML document (starts with DOCTYPE)
+ * @param {string} content - The content to check
+ * @returns {boolean} - True if it looks like a complete HTML document
+ */
+const isHtmlDocument = (content) => {
+  if (typeof content !== "string") {
+    return false;
+  }
+  // Trim whitespace and check if it starts with DOCTYPE (case insensitive)
+  const trimmed = content.trim();
+  return /^<!doctype\s+html/i.test(trimmed);
 };
 
 // It's ok to do this because the element is absolutely positioned
