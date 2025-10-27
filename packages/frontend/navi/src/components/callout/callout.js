@@ -215,6 +215,13 @@ export const openCallout = (
   message,
   {
     anchor: targetElement,
+    // "info" | "warning" | "error"
+    // "info": polite announcement
+    // -> "This element cannot be modified"
+    // "warning": expected failure, requires user attention, likely acitonable
+    // -> "field is required"
+    // "error": unexpected failure, requires user attention, might not be actionable
+    // -> "Server error"
     level = "warning",
     onClose,
     closeOnClickOutside = level === "info",
@@ -278,17 +285,28 @@ export const openCallout = (
   allowWheelThrough(jsenvValidationMessage, targetElement);
 
   // Connect validation message with target element for accessibility
-  const validationMessageId = `navi_callout_message-${Date.now()}`;
+  const validationMessageId = `navi_callout_message_${Date.now()}`;
   jsenvValidationMessage.id = validationMessageId;
-  targetElement.setAttribute("aria-invalid", "true");
-  targetElement.setAttribute("aria-errormessage", validationMessageId);
+  if (level === "info") {
+    jsenvValidationMessage.setAttribute("role", "status");
+    targetElement.setAttribute("aria-describedby", validationMessageId);
+    addTeardown(() => {
+      targetElement.removeAttribute("aria-describedby");
+    });
+  } else {
+    jsenvValidationMessage.setAttribute("role", "alert");
+    targetElement.setAttribute("aria-errormessage", validationMessageId);
+    targetElement.setAttribute("aria-invalid", "true");
+    addTeardown(() => {
+      targetElement.removeAttribute("aria-errormessage");
+      targetElement.removeAttribute("aria-invalid");
+    });
+  }
   targetElement.style.setProperty(
     "--invalid-color",
     `var(--navi-${level}-color)`,
   );
   addTeardown(() => {
-    targetElement.removeAttribute("aria-invalid");
-    targetElement.removeAttribute("aria-errormessage");
     targetElement.style.removeProperty("--invalid-color");
   });
 
