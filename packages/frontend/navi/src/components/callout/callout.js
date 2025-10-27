@@ -41,13 +41,13 @@ import.meta.css = /* css */ `
     /* Ensure the validation message CANNOT cause overflow */
     /* might be important to ensure it cannot create scrollbars in the document */
     /* When measuring the size it should take */
-    .jsenv_validation_message_container {
+    .navi_callout {
       position: fixed;
       inset: 0;
       overflow: hidden;
     }
 
-    .jsenv_validation_message {
+    .navi_callout_message {
       position: absolute;
       top: 0;
       left: 0;
@@ -98,25 +98,22 @@ import.meta.css = /* css */ `
       color: white;
     }
 
-    .jsenv_validation_message[data-level="info"] .border_path {
+    .navi_message[data-level="info"] .border_path {
       fill: var(--navi-info-color);
     }
-    .jsenv_validation_message[data-level="info"]
-      .jsenv_validation_message_icon {
+    .navi_message[data-level="info"] .jsenv_validation_message_icon {
       background-color: var(--navi-info-color);
     }
-    .jsenv_validation_message[data-level="warning"] .border_path {
+    .navi_message[data-level="warning"] .border_path {
       fill: var(--navi-warning-color);
     }
-    .jsenv_validation_message[data-level="warning"]
-      .jsenv_validation_message_icon {
+    .navi_message[data-level="warning"] .jsenv_validation_message_icon {
       background-color: var(--navi-warning-color);
     }
-    .jsenv_validation_message[data-level="error"] .border_path {
+    .navi_message[data-level="error"] .border_path {
       fill: var(--navi-error-color);
     }
-    .jsenv_validation_message[data-level="error"]
-      .jsenv_validation_message_icon {
+    .navi_message[data-level="error"] .jsenv_validation_message_icon {
       background-color: var(--navi-error-color);
     }
 
@@ -170,10 +167,8 @@ import.meta.css = /* css */ `
 
 // HTML template for the validation message
 const validationMessageTemplate = /* html */ `
-<div
-    class="jsenv_validation_message_container"
-  >
-    <div class="jsenv_validation_message" role="alert" aria-live="assertive">
+<div class="navi_callout">
+    <div class="navi_callout_message" role="alert" aria-live="assertive">
       <div class="jsenv_validation_message_body_wrapper">
         <div class="jsenv_validation_message_border"></div>
         <div class="jsenv_validation_message_body">
@@ -283,7 +278,7 @@ export const openCallout = (
   allowWheelThrough(jsenvValidationMessage, targetElement);
 
   // Connect validation message with target element for accessibility
-  const validationMessageId = `jsenv_validation_message-${Date.now()}`;
+  const validationMessageId = `navi_message-${Date.now()}`;
   jsenvValidationMessage.id = validationMessageId;
   targetElement.setAttribute("aria-invalid", "true");
   targetElement.setAttribute("aria-errormessage", validationMessageId);
@@ -531,7 +526,7 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
 const createValidationMessage = () => {
   const div = document.createElement("div");
   div.innerHTML = validationMessageTemplate;
-  const validationMessage = div.querySelector(".jsenv_validation_message");
+  const validationMessage = div.querySelector(".navi_message");
   return validationMessage;
 };
 
