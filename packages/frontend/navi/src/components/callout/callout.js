@@ -179,87 +179,99 @@ export const openCallout = (
       anchorElement = getFirstVisuallyVisibleAncestor(anchorElement);
     }
 
-    // Check if anchor element is too big to reasonably position callout relative to it
-    const anchorRect = anchorElement.getBoundingClientRect();
-    const viewportHeight = window.innerHeight;
-    const anchorTooBig = anchorRect.height > viewportHeight - 50;
+    allowWheelThrough(calloutElement, anchorElement);
+    anchorElement.setAttribute("data-callout", calloutId);
+    addTeardown(() => {
+      anchorElement.removeAttribute("data-callout");
+    });
 
-    if (anchorTooBig) {
-      console.warn(
-        `anchor element is too big (${anchorRect.height}px > ${viewportHeight - 50}px) -> centering callout in viewport`,
+    addLevelEffect(() => {
+      anchorElement.style.setProperty(
+        "--callout-color",
+        `var(--navi-${level}-color)`,
       );
-      // Treat as if there's no anchor - center in viewport without arrow
-      centerCalloutInViewport(calloutElement);
-      callout.updatePosition = () => {};
-    } else {
-      // We have a valid anchor that we can point to - use arrow
-      allowWheelThrough(calloutElement, anchorElement);
-      anchorElement.setAttribute("data-callout", calloutId);
-      addTeardown(() => {
-        anchorElement.removeAttribute("data-callout");
-      });
-
-      addLevelEffect(() => {
-        anchorElement.style.setProperty(
-          "--callout-color",
-          `var(--navi-${level}-color)`,
-        );
+      return () => {
+        anchorElement.style.removeProperty("--callout-color");
+      };
+    });
+    addLevelEffect((level) => {
+      if (level === "info") {
+        anchorElement.setAttribute("aria-describedby", calloutId);
         return () => {
-          anchorElement.style.removeProperty("--callout-color");
+          anchorElement.removeAttribute("aria-describedby");
         };
-      });
-      addLevelEffect((level) => {
-        if (level === "info") {
-          anchorElement.setAttribute("aria-describedby", calloutId);
-          return () => {
-            anchorElement.removeAttribute("aria-describedby");
-          };
+      }
+      anchorElement.setAttribute("aria-errormessage", calloutId);
+      anchorElement.setAttribute("aria-invalid", "true");
+      return () => {
+        anchorElement.removeAttribute("aria-errormessage");
+        anchorElement.removeAttribute("aria-invalid");
+      };
+    });
+
+    close_on_anchor_focus: {
+      const onfocus = () => {
+        if (level === "error") {
+          // error messages must be explicitely closed by the user
+          return;
         }
-        anchorElement.setAttribute("aria-errormessage", calloutId);
-        anchorElement.setAttribute("aria-invalid", "true");
-        return () => {
-          anchorElement.removeAttribute("aria-errormessage");
-          anchorElement.removeAttribute("aria-invalid");
-        };
-      });
-
-      stick_to_anchor: {
-        const positionFollower = stickCalloutToAnchor(
-          calloutElement,
-          anchorElement,
-          { arrow: true }, // We have a valid anchor, so show arrow
-        );
-        callout.updatePosition = positionFollower.updatePosition;
-        addTeardown(() => {
-          positionFollower.stop();
-        });
-      }
-
-      close_on_anchor_focus: {
-        const onfocus = () => {
-          if (level === "error") {
-            // error messages must be explicitely closed by the user
-            return;
-          }
-          if (anchorElement.hasAttribute("data-callout-stay-on-focus")) {
-            return;
-          }
-          close("target_element_focus");
-        };
-        anchorElement.addEventListener("focus", onfocus);
-        addTeardown(() => {
-          anchorElement.removeEventListener("focus", onfocus);
-        });
-      }
-      anchorElement.callout = callout;
+        if (anchorElement.hasAttribute("data-callout-stay-on-focus")) {
+          return;
+        }
+        close("target_element_focus");
+      };
+      anchorElement.addEventListener("focus", onfocus);
       addTeardown(() => {
-        delete anchorElement.callout;
+        anchorElement.removeEventListener("focus", onfocus);
       });
     }
-  } else {
-    // No anchor element - center in viewport without arrow
-    centerCalloutInViewport(calloutElement);
-    callout.updatePosition = () => {};
+    anchorElement.callout = callout;
+    addTeardown(() => {
+      delete anchorElement.callout;
+    });
+  }
+
+  positioning: {
+    let positioner;
+    let strategy;
+    const determine = () => {
+      if (!anchorElement) {
+        return "centered";
+      }
+      // Check if anchor element is too big to reasonably position callout relative to it
+      const anchorRect = anchorElement.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const anchorTooBig = anchorRect.height > viewportHeight - 50;
+      if (anchorTooBig) {
+        return "centered";
+      }
+      return "anchored";
+    };
+    const updatePositioner = () => {
+      const newStrategy = determine(anchorElement);
+      if (newStrategy === strategy) {
+        return;
+      }
+      positioner?.stop();
+      if (strategy === "centered") {
+        positioner = centerCalloutInViewport(calloutElement);
+      } else {
+        positioner = stickCalloutToAnchor(calloutElement, anchorElement);
+      }
+    };
+    updatePositioner();
+    addTeardown(() => {
+      positioner.stop();
+    });
+    auto_update_positioner: {
+      const handleResize = () => {
+        updatePositioner();
+      };
+      window.addEventListener("resize", handleResize);
+      addTeardown(() => {
+        window.removeEventListener("resize", handleResize);
+      });
+    }
   }
 
   update(message, { level });
@@ -443,6 +455,51 @@ const createCalloutElement = () => {
   return calloutElement;
 };
 
+const centerCalloutInViewport = (calloutElement) => {
+  // Set up initial styles for centered positioning
+  const calloutBoxElement = calloutElement.querySelector(".navi_callout_box");
+  const calloutFrameElement = calloutElement.querySelector(
+    ".navi_callout_frame",
+  );
+
+  // Remove any margins and set frame positioning for no arrow
+  calloutBoxElement.style.marginTop = "";
+  calloutBoxElement.style.marginBottom = "";
+  calloutBoxElement.style.borderWidth = `${BORDER_WIDTH}px`;
+  calloutFrameElement.style.left = `-${BORDER_WIDTH}px`;
+  calloutFrameElement.style.right = `-${BORDER_WIDTH}px`;
+  calloutFrameElement.style.top = `-${BORDER_WIDTH}px`;
+  calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
+
+  // Generate simple rectangle SVG without arrow and position in center
+  const updateCenteredPosition = () => {
+    const { width, height } = calloutElement.getBoundingClientRect();
+    calloutFrameElement.innerHTML = generateSvgWithoutArrow(width, height);
+
+    // Center in viewport
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const left = (viewportWidth - width) / 2;
+    const top = (viewportHeight - height) / 2;
+
+    calloutStyleController.set(calloutElement, {
+      opacity: 1,
+      transform: {
+        translateX: left,
+        translateY: top,
+      },
+    });
+  };
+
+  // Initial positioning
+  updateCenteredPosition();
+
+  // Return positioning function for dynamic updates
+  return {
+    update: updateCenteredPosition,
+    stop: () => {},
+  };
+};
 const stickCalloutToAnchor = (
   calloutElement,
   anchorElement,
@@ -612,7 +669,7 @@ const stickCalloutToAnchor = (
   });
 
   return {
-    updatePosition: anchorVisibleRectEffect.check,
+    update: anchorVisibleRectEffect.check,
     stop: () => {
       calloutSizeChangeObserver.disconnect();
       anchorVisibleRectEffect.disconnect();
@@ -661,57 +718,6 @@ const escapeHtml = (string) => {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
-};
-
-const centerCalloutInViewport = (calloutElement) => {
-  // Set up initial styles for centered positioning
-  const calloutBoxElement = calloutElement.querySelector(".navi_callout_box");
-  const calloutFrameElement = calloutElement.querySelector(
-    ".navi_callout_frame",
-  );
-
-  // Remove any margins and set frame positioning for no arrow
-  calloutBoxElement.style.marginTop = "";
-  calloutBoxElement.style.marginBottom = "";
-  calloutBoxElement.style.borderWidth = `${BORDER_WIDTH}px`;
-  calloutFrameElement.style.left = `-${BORDER_WIDTH}px`;
-  calloutFrameElement.style.right = `-${BORDER_WIDTH}px`;
-  calloutFrameElement.style.top = `-${BORDER_WIDTH}px`;
-  calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
-
-  // Generate simple rectangle SVG without arrow
-  const updateCenteredPosition = () => {
-    const { width, height } = calloutElement.getBoundingClientRect();
-    calloutFrameElement.innerHTML = generateSvgWithoutArrow(width, height);
-
-    // Center in viewport
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const left = (viewportWidth - width) / 2;
-    const top = (viewportHeight - height) / 2;
-
-    calloutStyleController.set(calloutElement, {
-      opacity: 1,
-      transform: {
-        translateX: left,
-        translateY: top,
-      },
-    });
-  };
-
-  // Initial positioning
-  updateCenteredPosition();
-
-  // Update position on window resize
-  const handleResize = () => {
-    updateCenteredPosition();
-  };
-  window.addEventListener("resize", handleResize);
-
-  // Return cleanup function (though it's not used in current implementation)
-  return () => {
-    window.removeEventListener("resize", handleResize);
-  };
 };
 
 /**
