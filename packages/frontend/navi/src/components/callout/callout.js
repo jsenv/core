@@ -103,15 +103,6 @@ export const openCallout = (
   const calloutId = `navi_callout_${Date.now()}`;
   calloutElement.id = calloutId;
   calloutStyleController.set(calloutElement, { opacity: 0 });
-  addLevelEffect(() => {
-    calloutElement.setAttribute("data-level", level);
-    if (level === "info") {
-      calloutElement.setAttribute("role", "status");
-    } else {
-      calloutElement.setAttribute("role", "alert");
-    }
-  });
-
   const update = (newMessage, options = {}) => {
     // Connect callout with target element for accessibility
     if (options.level && options.level !== callout.level) {
@@ -130,12 +121,6 @@ export const openCallout = (
     }
     calloutMessageElement.innerHTML = newMessage;
   };
-
-  document.body.appendChild(calloutElement);
-  addTeardown(() => {
-    calloutElement.remove();
-  });
-
   close_on_click_outside: {
     const handleClickOutside = (event) => {
       if (!closeOnClickOutside) {
@@ -166,6 +151,18 @@ export const openCallout = (
     element: calloutElement,
     update,
     close,
+  });
+  addLevelEffect(() => {
+    calloutElement.setAttribute("data-level", level);
+    if (level === "info") {
+      calloutElement.setAttribute("role", "status");
+    } else {
+      calloutElement.setAttribute("role", "alert");
+    }
+  });
+  document.body.appendChild(calloutElement);
+  addTeardown(() => {
+    calloutElement.remove();
   });
 
   if (anchorElement) {
@@ -272,6 +269,7 @@ export const openCallout = (
         window.removeEventListener("resize", handleResize);
       });
     }
+    callout.updatePosition = () => positioner.update();
   }
 
   update(message, { level });
