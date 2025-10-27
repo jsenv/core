@@ -124,8 +124,6 @@ export const openCallout = (
       const iframe = document.createElement("iframe");
       iframe.style.border = "none";
       iframe.style.width = "100%";
-      iframe.style.minHeight = "200px";
-      iframe.style.maxHeight = "400px";
       iframe.style.backgroundColor = "white";
       iframe.srcdoc = newMessage;
 
@@ -395,8 +393,6 @@ import.meta.css = /* css */ `
     .navi_callout_message iframe {
       display: block;
       margin: 0;
-      border: 1px solid #ddd;
-      border-radius: 4px;
     }
     .navi_callout_close_button_column {
       display: flex;
