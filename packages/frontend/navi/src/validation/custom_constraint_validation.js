@@ -27,7 +27,7 @@
  * - Validation messages that follow the input element and adapt to viewport
  */
 
-import { openValidationMessage } from "../components/callout/validation_message.js";
+import { openCallout } from "../components/callout/callout.js";
 import {
   DISABLED_CONSTRAINT,
   MAX_CONSTRAINT,
@@ -373,7 +373,7 @@ export const installCustomConstraintValidation = (
     const elementTarget =
       failedConstraintInfo.target || elementReceivingValidationMessage;
 
-    validationInterface.validationMessage = openValidationMessage(
+    validationInterface.validationMessage = openCallout(
       elementTarget,
       failedConstraintInfo.message,
       {

@@ -219,7 +219,7 @@ const validationMessageTemplate = /* html */ `
 const validationMessageStyleController =
   createStyleController("validation_message");
 
-export const openValidationMessage = (
+export const openCallout = (
   targetElement,
   message,
   {
