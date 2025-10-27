@@ -370,13 +370,12 @@ export const installCustomConstraintValidation = (
       closeElementValidationMessage("cleanup");
     };
 
-    const elementTarget =
+    const anchorElement =
       failedConstraintInfo.target || elementReceivingValidationMessage;
-
     validationInterface.validationMessage = openCallout(
       failedConstraintInfo.message,
       {
-        anchors: elementTarget,
+        anchorElement,
         level: failedConstraintInfo.level,
         closeOnClickOutside: failedConstraintInfo.closeOnClickOutside,
         onClose: () => {
