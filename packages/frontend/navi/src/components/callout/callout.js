@@ -457,6 +457,9 @@ const centerCalloutInViewport = (calloutElement) => {
   const calloutFrameElement = calloutElement.querySelector(
     ".navi_callout_frame",
   );
+  const calloutMessageElement = calloutElement.querySelector(
+    ".navi_callout_message",
+  );
 
   // Remove any margins and set frame positioning for no arrow
   calloutBoxElement.style.marginTop = "";
@@ -469,14 +472,38 @@ const centerCalloutInViewport = (calloutElement) => {
 
   // Generate simple rectangle SVG without arrow and position in center
   const updateCenteredPosition = () => {
-    const { width, height } = calloutElement.getBoundingClientRect();
-    calloutFrameElement.innerHTML = generateSvgWithoutArrow(width, height);
+    // Reset styles to measure natural size
+    calloutMessageElement.style.maxHeight = "";
+    calloutMessageElement.style.overflowY = "";
+
+    const { height } = calloutElement.getBoundingClientRect();
+
+    // Handle content overflow when viewport is too small
+    const viewportHeight = window.innerHeight;
+    const maxAllowedHeight = viewportHeight - 40; // Leave some margin from viewport edges
+
+    if (height > maxAllowedHeight) {
+      // Calculate available space for content
+      let spaceAvailableForContent = maxAllowedHeight;
+      spaceAvailableForContent -= BORDER_WIDTH * 2;
+      spaceAvailableForContent -= 16; // padding * 2
+
+      calloutMessageElement.style.maxHeight = `${spaceAvailableForContent}px`;
+      calloutMessageElement.style.overflowY = "scroll";
+    }
+
+    // Get final dimensions after potential overflow adjustments
+    const { width: finalWidth, height: finalHeight } =
+      calloutElement.getBoundingClientRect();
+    calloutFrameElement.innerHTML = generateSvgWithoutArrow(
+      finalWidth,
+      finalHeight,
+    );
 
     // Center in viewport
     const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const left = (viewportWidth - width) / 2;
-    const top = (viewportHeight - height) / 2;
+    const left = (viewportWidth - finalWidth) / 2;
+    const top = (viewportHeight - finalHeight) / 2;
 
     calloutStyleController.set(calloutElement, {
       opacity: 1,
