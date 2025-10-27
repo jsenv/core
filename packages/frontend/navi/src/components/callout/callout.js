@@ -98,22 +98,22 @@ import.meta.css = /* css */ `
       color: white;
     }
 
-    .navi_message[data-level="info"] .border_path {
+    .navi_callout_message[data-level="info"] .border_path {
       fill: var(--navi-info-color);
     }
-    .navi_message[data-level="info"] .jsenv_validation_message_icon {
+    .navi_callout_message[data-level="info"] .jsenv_validation_message_icon {
       background-color: var(--navi-info-color);
     }
-    .navi_message[data-level="warning"] .border_path {
+    .navi_callout_message[data-level="warning"] .border_path {
       fill: var(--navi-warning-color);
     }
-    .navi_message[data-level="warning"] .jsenv_validation_message_icon {
+    .navi_callout_message[data-level="warning"] .jsenv_validation_message_icon {
       background-color: var(--navi-warning-color);
     }
-    .navi_message[data-level="error"] .border_path {
+    .navi_callout_message[data-level="error"] .border_path {
       fill: var(--navi-error-color);
     }
-    .navi_message[data-level="error"] .jsenv_validation_message_icon {
+    .navi_callout_message[data-level="error"] .jsenv_validation_message_icon {
       background-color: var(--navi-error-color);
     }
 
@@ -278,7 +278,7 @@ export const openCallout = (
   allowWheelThrough(jsenvValidationMessage, targetElement);
 
   // Connect validation message with target element for accessibility
-  const validationMessageId = `navi_message-${Date.now()}`;
+  const validationMessageId = `navi_callout_message-${Date.now()}`;
   jsenvValidationMessage.id = validationMessageId;
   targetElement.setAttribute("aria-invalid", "true");
   targetElement.setAttribute("aria-errormessage", validationMessageId);
@@ -526,7 +526,7 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
 const createValidationMessage = () => {
   const div = document.createElement("div");
   div.innerHTML = validationMessageTemplate;
-  const validationMessage = div.querySelector(".navi_message");
+  const validationMessage = div.querySelector(".navi_callout_message");
   return validationMessage;
 };
 

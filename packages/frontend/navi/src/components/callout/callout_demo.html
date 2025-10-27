@@ -7,11 +7,11 @@
     <link rel="icon" href="data:," />
     <style>
       body {
+        min-height: 300vh; /* Make page scrollable */
         margin: 0;
         padding: 20px;
         font-family: Arial, sans-serif;
         background: linear-gradient(45deg, #f0f8ff, #e6f3ff);
-        min-height: 300vh; /* Make page scrollable */
       }
 
       .container {
@@ -29,14 +29,14 @@
 
       .target-element {
         display: inline-block;
+        margin: 10px;
         padding: 12px 20px;
-        background: #4caf50;
         color: white;
+        font-size: 16px;
+        background: #4caf50;
         border: none;
         border-radius: 4px;
         cursor: pointer;
-        margin: 10px;
-        font-size: 16px;
       }
 
       .target-element:hover {
@@ -44,7 +44,14 @@
       }
 
       .spacer {
+        display: flex;
         height: 200px;
+        margin: 40px 0;
+        align-items: center;
+        justify-content: center;
+        color: #666;
+        font-weight: bold;
+        font-size: 18px;
         background: repeating-linear-gradient(
           45deg,
           transparent,
@@ -52,44 +59,37 @@
           rgba(0, 0, 0, 0.1) 20px,
           rgba(0, 0, 0, 0.1) 40px
         );
-        margin: 40px 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #666;
-        font-weight: bold;
-        font-size: 18px;
       }
 
       .scroll-instruction {
         position: fixed;
         top: 10px;
         right: 10px;
-        background: #333;
-        color: white;
-        padding: 10px;
-        border-radius: 4px;
-        font-size: 14px;
         z-index: 1000;
+        padding: 10px;
+        color: white;
+        font-size: 14px;
+        background: #333;
+        border-radius: 4px;
       }
 
       .scrollable-container {
-        height: 300px;
         width: 100%;
-        overflow: auto;
+        height: 300px;
+        padding: 20px;
+        background: #f9f9f9;
         border: 2px solid #ddd;
         border-radius: 8px;
-        background: #f9f9f9;
-        padding: 20px;
+        overflow: auto;
       }
 
       .scrollable-content {
-        height: 600px;
-        width: 800px;
         display: flex;
+        width: 800px;
+        height: 600px;
         flex-direction: column;
-        justify-content: space-around;
         align-items: center;
+        justify-content: space-around;
         background: repeating-linear-gradient(
           45deg,
           transparent,
@@ -176,15 +176,15 @@
     </div>
 
     <script type="module">
-      import { openValidationMessage } from "../validation_message.js";
+      import { openCallout } from "@jsenv/navi";
 
       // Auto-open validation message on page load
       window.addEventListener("load", () => {
         const autoTarget = document.getElementById("auto-target");
-        openValidationMessage(
-          autoTarget,
+        openCallout(
           `This is a very long validation message that was opened automatically when the page loaded. <strong>Try scrolling both horizontally and vertically</strong> within the container to see how the validation message follows the target element! This message is intentionally made very long to test how the positioning system handles messages that exceed the visible area of their container. The message should properly position itself even when parts of it would normally be clipped by the container boundaries. You can scroll in any direction - up, down, left, right - to test the robustness of the positioning algorithm. This lengthy content helps verify that the validation message system can handle edge cases where the message content is larger than the available viewport space within scrollable containers.`,
           {
+            anchor: autoTarget,
             level: "warning",
             debug: true,
             canClickThrough: true,
