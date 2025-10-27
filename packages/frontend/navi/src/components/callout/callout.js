@@ -230,12 +230,13 @@ export const openCallout = (
   };
 
   // Create and add validation message to document
-  const jsenvValidationMessage = createValidationMessage();
-  const jsenvValidationMessageContent = jsenvValidationMessage.querySelector(
+  const calloutElement = createCalloutElement();
+  const jsenvValidationMessageContent = calloutElement.querySelector(
     ".navi_callout_message",
   );
-  const jsenvValidationMessageCloseButton =
-    jsenvValidationMessage.querySelector(".navi_callout_close_button");
+  const jsenvValidationMessageCloseButton = calloutElement.querySelector(
+    ".navi_callout_close_button",
+  );
   jsenvValidationMessageCloseButton.onclick = () => {
     close("click_close_button");
   };
@@ -252,27 +253,27 @@ export const openCallout = (
       newMessage += `<pre class="navi_callout_error_stack">${escapeHtml(error.stack)}</pre>`;
     }
 
-    jsenvValidationMessage.setAttribute("data-level", level);
+    calloutElement.setAttribute("data-level", level);
     jsenvValidationMessageContent.innerHTML = newMessage;
   };
   update(message, { level });
 
-  calloutStyleController.set(jsenvValidationMessage, { opacity: 0 });
+  calloutStyleController.set(calloutElement, { opacity: 0 });
 
-  allowWheelThrough(jsenvValidationMessage, targetElement);
+  allowWheelThrough(calloutElement, targetElement);
 
   // Connect validation message with target element for accessibility
   const validationMessageId = `navi_callout${Date.now()}`;
-  jsenvValidationMessage.id = validationMessageId;
+  calloutElement.id = validationMessageId;
 
   if (level === "info") {
-    jsenvValidationMessage.setAttribute("role", "status");
+    calloutElement.setAttribute("role", "status");
     targetElement.setAttribute("aria-describedby", validationMessageId);
     addTeardown(() => {
       targetElement.removeAttribute("aria-describedby");
     });
   } else {
-    jsenvValidationMessage.setAttribute("role", "alert");
+    calloutElement.setAttribute("role", "alert");
     targetElement.setAttribute("aria-errormessage", validationMessageId);
     targetElement.setAttribute("aria-invalid", "true");
     addTeardown(() => {
@@ -290,13 +291,13 @@ export const openCallout = (
     targetElement.style.removeProperty("--callout-color");
   });
 
-  document.body.appendChild(jsenvValidationMessage);
+  document.body.appendChild(calloutElement);
   addTeardown(() => {
-    jsenvValidationMessage.remove();
+    calloutElement.remove();
   });
 
   const positionFollower = stickValidationMessageToTarget(
-    jsenvValidationMessage,
+    calloutElement,
     targetElement,
     {
       debug,
@@ -334,8 +335,8 @@ export const openCallout = (
 
       const clickTarget = event.target;
       if (
-        clickTarget === jsenvValidationMessage ||
-        jsenvValidationMessage.contains(clickTarget)
+        clickTarget === calloutElement ||
+        calloutElement.contains(clickTarget)
       ) {
         return;
       }
@@ -353,17 +354,17 @@ export const openCallout = (
     });
   }
 
-  const validationMessage = {
-    jsenvValidationMessage,
+  const callout = {
+    calloutElement,
     update,
     close,
     updatePosition: positionFollower.updatePosition,
   };
-  targetElement.jsenvValidationMessage = validationMessage;
+  targetElement.callout = callout;
   addTeardown(() => {
-    delete targetElement.jsenvValidationMessage;
+    delete targetElement.callout;
   });
-  return validationMessage;
+  return callout;
 };
 
 /**
@@ -521,7 +522,7 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
  * @param {string} content - HTML content for the validation message
  * @returns {HTMLElement} - The validation message element
  */
-const createValidationMessage = () => {
+const createCalloutElement = () => {
   const div = document.createElement("div");
   div.innerHTML = calloutTemplate;
   const calloutElement = div.firstElementChild;
