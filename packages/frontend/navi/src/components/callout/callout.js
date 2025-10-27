@@ -38,16 +38,7 @@ import.meta.css = /* css */ `
       --navi-callout-background-color: white;
     }
 
-    /* Ensure the validation message CANNOT cause overflow */
-    /* might be important to ensure it cannot create scrollbars in the document */
-    /* When measuring the size it should take */
     .navi_callout {
-      position: fixed;
-      inset: 0;
-      overflow: hidden;
-    }
-
-    .navi_callout_message {
       position: absolute;
       top: 0;
       left: 0;
@@ -98,22 +89,22 @@ import.meta.css = /* css */ `
       color: white;
     }
 
-    .navi_callout_message[data-level="info"] .border_path {
+    .navi_callout[data-level="info"] .border_path {
       fill: var(--navi-info-color);
     }
-    .navi_callout_message[data-level="info"] .jsenv_validation_message_icon {
+    .navi_callout[data-level="info"] .jsenv_validation_message_icon {
       background-color: var(--navi-info-color);
     }
-    .navi_callout_message[data-level="warning"] .border_path {
+    .navi_callout[data-level="warning"] .border_path {
       fill: var(--navi-warning-color);
     }
-    .navi_callout_message[data-level="warning"] .jsenv_validation_message_icon {
+    .navi_callout[data-level="warning"] .jsenv_validation_message_icon {
       background-color: var(--navi-warning-color);
     }
-    .navi_callout_message[data-level="error"] .border_path {
+    .navi_callout[data-level="error"] .border_path {
       fill: var(--navi-error-color);
     }
-    .navi_callout_message[data-level="error"] .jsenv_validation_message_icon {
+    .navi_callout[data-level="error"] .jsenv_validation_message_icon {
       background-color: var(--navi-error-color);
     }
 
@@ -167,41 +158,39 @@ import.meta.css = /* css */ `
 
 // HTML template for the validation message
 const calloutTemplate = /* html */ `
-<div class="navi_callout">
-    <div class="navi_callout_message" role="alert" aria-live="assertive">
-      <div class="jsenv_validation_message_body_wrapper">
-        <div class="jsenv_validation_message_border"></div>
-        <div class="jsenv_validation_message_body">
-          <div class="jsenv_validation_message_icon">
+  <div class="navi_callout">
+    <div class="jsenv_validation_message_body_wrapper">
+      <div class="jsenv_validation_message_border"></div>
+      <div class="jsenv_validation_message_body">
+        <div class="jsenv_validation_message_icon">
+          <svg
+            class="jsenv_validation_message_exclamation_svg"
+            viewBox="0 0 125 300"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              fill="currentColor"
+              d="m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z"
+            />
+          </svg>
+        </div>
+        <div class="jsenv_validation_message_content">Default message</div>
+        <div class="jsenv_validation_message_close_button_column">
+          <button class="jsenv_validation_message_close_button">
             <svg
-              class="jsenv_validation_message_exclamation_svg"
-              viewBox="0 0 125 300"
+              class="close_svg"
+              viewBox="0 0 24 24"
+              fill="none"
               xmlns="http://www.w3.org/2000/svg"
             >
               <path
+                fill-rule="evenodd"
+                clip-rule="evenodd"
+                d="M5.29289 5.29289C5.68342 4.90237 6.31658 4.90237 6.70711 5.29289L12 10.5858L17.2929 5.29289C17.6834 4.90237 18.3166 4.90237 18.7071 5.29289C19.0976 5.68342 19.0976 6.31658 18.7071 6.70711L13.4142 12L18.7071 17.2929C19.0976 17.6834 19.0976 18.3166 18.7071 18.7071C18.3166 19.0976 17.6834 19.0976 17.2929 18.7071L12 13.4142L6.70711 18.7071C6.31658 19.0976 5.68342 19.0976 5.29289 18.7071C4.90237 18.3166 4.90237 17.6834 5.29289 17.2929L10.5858 12L5.29289 6.70711C4.90237 6.31658 4.90237 5.68342 5.29289 5.29289Z"
                 fill="currentColor"
-                d="m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z"
               />
             </svg>
-          </div>
-          <div class="jsenv_validation_message_content">Default message</div>
-          <div class="jsenv_validation_message_close_button_column">
-            <button class="jsenv_validation_message_close_button">
-              <svg
-                class="close_svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  fill-rule="evenodd"
-                  clip-rule="evenodd"
-                  d="M5.29289 5.29289C5.68342 4.90237 6.31658 4.90237 6.70711 5.29289L12 10.5858L17.2929 5.29289C17.6834 4.90237 18.3166 4.90237 18.7071 5.29289C19.0976 5.68342 19.0976 6.31658 18.7071 6.70711L13.4142 12L18.7071 17.2929C19.0976 17.6834 19.0976 18.3166 18.7071 18.7071C18.3166 19.0976 17.6834 19.0976 17.2929 18.7071L12 13.4142L6.70711 18.7071C6.31658 19.0976 5.68342 19.0976 5.29289 18.7071C4.90237 18.3166 4.90237 17.6834 5.29289 17.2929L10.5858 12L5.29289 6.70711C4.90237 6.31658 4.90237 5.68342 5.29289 5.29289Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </button>
-          </div>
+          </button>
         </div>
       </div>
     </div>
@@ -284,7 +273,7 @@ export const openCallout = (
   allowWheelThrough(jsenvValidationMessage, targetElement);
 
   // Connect validation message with target element for accessibility
-  const validationMessageId = `navi_callout_message_${Date.now()}`;
+  const validationMessageId = `navi_callout${Date.now()}`;
   jsenvValidationMessage.id = validationMessageId;
 
   if (level === "info") {
@@ -546,8 +535,8 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
 const createValidationMessage = () => {
   const div = document.createElement("div");
   div.innerHTML = calloutTemplate;
-  const validationMessage = div.querySelector(".navi_callout_message");
-  return validationMessage;
+  const calloutElement = div.firstElementChild;
+  return calloutElement;
 };
 
 const stickValidationMessageToTarget = (validationMessage, targetElement) => {
