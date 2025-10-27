@@ -689,7 +689,8 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
     Q${BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} ${innerRadius + BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH}
   `;
 
-  return /*html */ `<svg
+  return /* html */ `
+    <svg
       width="${adjustedWidth}"
       height="${adjustedHeight}"
       viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
@@ -764,7 +765,8 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
     Q${BORDER_WIDTH},${BORDER_WIDTH} ${innerRadius + BORDER_WIDTH},${BORDER_WIDTH}
   `;
 
-  return /*html */ `<svg
+  return /* html */ `
+    <svg
       width="${adjustedWidth}"
       height="${adjustedHeight}"
       viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
