@@ -16,7 +16,7 @@ import {
  * - Positions above or below target element based on available space
  * - Follows target element during scrolling and resizing
  * - Automatically hides when target element is not visible
- * - Arrow points at the target element
+ * - Arrow automatically shows when pointing at a valid anchor element
  * - Centers in viewport when no anchor element provided or anchor is too big
  */
 
@@ -28,7 +28,6 @@ import {
  * @param {string} [options.level="warning"] - Callout level: "info" | "warning" | "error"
  * @param {Function} [options.onClose] - Callback when callout is closed
  * @param {boolean} [options.closeOnClickOutside] - Whether to close on outside clicks (defaults to true for "info" level)
- * @param {boolean} [options.arrow=true] - Whether to show the arrow pointing to the anchor element (ignored when centered in viewport)
  * @param {boolean} [options.debug=false] - Enable debug logging
  * @returns {Object} - Callout object with properties:
  *   - {Function} close - Function to close the callout
@@ -51,7 +50,6 @@ export const openCallout = (
     level = "warning",
     onClose,
     closeOnClickOutside = level === "info",
-    arrow = true,
     debug = false,
   } = {},
 ) => {
@@ -194,6 +192,7 @@ export const openCallout = (
       centerCalloutInViewport(calloutElement);
       callout.updatePosition = () => {};
     } else {
+      // We have a valid anchor that we can point to - use arrow
       allowWheelThrough(calloutElement, anchorElement);
       anchorElement.setAttribute("data-callout", calloutId);
       addTeardown(() => {
@@ -228,7 +227,7 @@ export const openCallout = (
         const positionFollower = stickCalloutToAnchor(
           calloutElement,
           anchorElement,
-          { arrow },
+          { arrow: true }, // We have a valid anchor, so show arrow
         );
         callout.updatePosition = positionFollower.updatePosition;
         addTeardown(() => {
