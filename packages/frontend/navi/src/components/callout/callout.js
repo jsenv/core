@@ -35,10 +35,7 @@ const ARROW_SPACING = 8;
 import.meta.css = /* css */ `
   @layer navi {
     :root {
-      --navi-info-color: #2196f3;
-      --navi-warning-color: #ff9800;
-      --navi-error-color: #f44336;
-      --navi-validation-message-background-color: white;
+      --navi-callout-background-color: white;
     }
 
     /* Ensure the validation message CANNOT cause overflow */
@@ -137,7 +134,7 @@ import.meta.css = /* css */ `
     }
 
     .background_path {
-      fill: var(--navi-validation-message-background-color);
+      fill: var(--navi-callout-background-color);
     }
 
     .jsenv_validation_message_close_button_column {

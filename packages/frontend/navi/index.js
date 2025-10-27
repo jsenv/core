@@ -1,3 +1,5 @@
+import "./src/navi_css_vars.js";
+
 // actions
 export { createAction, rerunActions, updateActions } from "./src/actions.js";
 export { useRunOnMount } from "./src/components/action_execution/use_run_on_mount.js";

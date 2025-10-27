@@ -23,7 +23,6 @@ import {
   ReportDisabledOnLabelContext,
   ReportReadOnlyOnLabelContext,
 } from "./label.jsx";
-import "./navi_css_vars.js";
 import { useActionEvents } from "./use_action_events.js";
 import {
   DisabledContext,
