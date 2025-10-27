@@ -40,13 +40,10 @@ export const openCallout = (
   message,
   {
     anchorElement,
-    // "info" | "warning" | "error"
-    // "info": polite announcement
-    // -> "This element cannot be modified"
-    // "warning": expected failure, requires user attention, likely acitonable
-    // -> "field is required"
-    // "error": unexpected failure, requires user attention, might not be actionable
-    // -> "Server error"
+    // Level determines visual styling and behavior:
+    // "info" - polite announcement (e.g., "This element cannot be modified")
+    // "warning" - expected failure requiring user action (e.g., "Field is required")
+    // "error" - unexpected failure, may not be actionable (e.g., "Server error")
     level = "warning",
     onClose,
     closeOnClickOutside = level === "info",
@@ -498,11 +495,14 @@ const centerCalloutInViewport = (calloutElement) => {
     stop: () => {},
   };
 };
-const stickCalloutToAnchor = (
-  calloutElement,
-  anchorElement,
-  { arrow = true } = {},
-) => {
+
+/**
+ * Positions a callout relative to an anchor element with an arrow pointing to it
+ * @param {HTMLElement} calloutElement - The callout element to position
+ * @param {HTMLElement} anchorElement - The anchor element to stick to
+ * @returns {Object} - Object with update and stop functions
+ */
+const stickCalloutToAnchor = (calloutElement, anchorElement) => {
   // Get references to callout parts
   const calloutBoxElement = calloutElement.querySelector(".navi_callout_box");
   const calloutFrameElement = calloutElement.querySelector(
@@ -546,55 +546,53 @@ const stickCalloutToAnchor = (
         minLeft: 1,
       });
 
-      // Calculate arrow position to point at anchorElement element (if arrow is enabled)
+      // Calculate arrow position to point at anchorElement element
       let arrowLeftPosOnCallout;
-      if (arrow) {
-        // Determine arrow target position based on attribute
-        const arrowPositionAttribute = anchorElement.getAttribute(
-          "data-callout-arrow-x",
-        );
-        let arrowAnchorLeft;
-        if (arrowPositionAttribute === "center") {
-          // Target the center of the anchorElement element
-          arrowAnchorLeft = (anchorLeft + anchorRight) / 2;
-        } else {
-          const anchorBorderSizes = getBorderSizes(anchorElement);
-          // Default behavior: target the left edge of the anchorElement element (after borders)
-          arrowAnchorLeft = anchorLeft + anchorBorderSizes.left;
-        }
-
-        // Calculate arrow position within the callout
-        if (calloutLeft < arrowAnchorLeft) {
-          // Callout is left of the target point, move arrow right
-          const diff = arrowAnchorLeft - calloutLeft;
-          arrowLeftPosOnCallout = diff;
-        } else if (calloutLeft + calloutWidth < arrowAnchorLeft) {
-          // Edge case: target point is beyond right edge of callout
-          arrowLeftPosOnCallout = calloutWidth - ARROW_WIDTH;
-        } else {
-          // Target point is within callout width
-          arrowLeftPosOnCallout = arrowAnchorLeft - calloutLeft;
-        }
-
-        // Ensure arrow stays within callout bounds with some padding
-        const minArrowPos = CORNER_RADIUS + ARROW_WIDTH / 2 + ARROW_SPACING;
-        const maxArrowPos = calloutWidth - minArrowPos;
-        arrowLeftPosOnCallout = Math.max(
-          minArrowPos,
-          Math.min(arrowLeftPosOnCallout, maxArrowPos),
-        );
+      // Determine arrow target position based on attribute
+      const arrowPositionAttribute = anchorElement.getAttribute(
+        "data-callout-arrow-x",
+      );
+      let arrowAnchorLeft;
+      if (arrowPositionAttribute === "center") {
+        // Target the center of the anchorElement element
+        arrowAnchorLeft = (anchorLeft + anchorRight) / 2;
+      } else {
+        const anchorBorderSizes = getBorderSizes(anchorElement);
+        // Default behavior: target the left edge of the anchorElement element (after borders)
+        arrowAnchorLeft = anchorLeft + anchorBorderSizes.left;
       }
+
+      // Calculate arrow position within the callout
+      if (calloutLeft < arrowAnchorLeft) {
+        // Callout is left of the target point, move arrow right
+        const diff = arrowAnchorLeft - calloutLeft;
+        arrowLeftPosOnCallout = diff;
+      } else if (calloutLeft + calloutWidth < arrowAnchorLeft) {
+        // Edge case: target point is beyond right edge of callout
+        arrowLeftPosOnCallout = calloutWidth - ARROW_WIDTH;
+      } else {
+        // Target point is within callout width
+        arrowLeftPosOnCallout = arrowAnchorLeft - calloutLeft;
+      }
+
+      // Ensure arrow stays within callout bounds with some padding
+      const minArrowPos = CORNER_RADIUS + ARROW_WIDTH / 2 + ARROW_SPACING;
+      const maxArrowPos = calloutWidth - minArrowPos;
+      arrowLeftPosOnCallout = Math.max(
+        minArrowPos,
+        Math.min(arrowLeftPosOnCallout, maxArrowPos),
+      );
 
       // Force content overflow when there is not enough space to display
       // the entirety of the callout
       const spaceAvailable =
         position === "below" ? spaceBelowTarget : spaceAboveTarget;
       let spaceAvailableForContent = spaceAvailable;
-      spaceAvailableForContent -= arrow ? ARROW_HEIGHT : 0;
+      spaceAvailableForContent -= ARROW_HEIGHT;
       spaceAvailableForContent -= BORDER_WIDTH * 2;
       spaceAvailableForContent -= 16; // padding * 2
       let contentHeight = calloutHeight;
-      contentHeight -= arrow ? ARROW_HEIGHT : 0;
+      contentHeight -= ARROW_HEIGHT;
       contentHeight -= BORDER_WIDTH * 2;
       contentHeight -= 16; // padding * 2
       const spaceRemainingAfterContent =
@@ -609,36 +607,27 @@ const stickCalloutToAnchor = (
       }
 
       const { width, height } = calloutElement.getBoundingClientRect();
-      if (arrow) {
-        if (position === "above") {
-          // Position above target element
-          calloutBoxElement.style.marginTop = "";
-          calloutBoxElement.style.marginBottom = `${ARROW_HEIGHT}px`;
-          calloutFrameElement.style.top = `-${BORDER_WIDTH}px`;
-          calloutFrameElement.style.bottom = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
-          calloutFrameElement.innerHTML = generateSvgWithBottomArrow(
-            width,
-            height,
-            arrowLeftPosOnCallout,
-          );
-        } else {
-          calloutBoxElement.style.marginTop = `${ARROW_HEIGHT}px`;
-          calloutBoxElement.style.marginBottom = "";
-          calloutFrameElement.style.top = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
-          calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
-          calloutFrameElement.innerHTML = generateSvgWithTopArrow(
-            width,
-            height,
-            arrowLeftPosOnCallout,
-          );
-        }
-      } else {
-        // No arrow - just a simple rectangle
+      if (position === "above") {
+        // Position above target element
         calloutBoxElement.style.marginTop = "";
-        calloutBoxElement.style.marginBottom = "";
+        calloutBoxElement.style.marginBottom = `${ARROW_HEIGHT}px`;
         calloutFrameElement.style.top = `-${BORDER_WIDTH}px`;
+        calloutFrameElement.style.bottom = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
+        calloutFrameElement.innerHTML = generateSvgWithBottomArrow(
+          width,
+          height,
+          arrowLeftPosOnCallout,
+        );
+      } else {
+        calloutBoxElement.style.marginTop = `${ARROW_HEIGHT}px`;
+        calloutBoxElement.style.marginBottom = "";
+        calloutFrameElement.style.top = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
         calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
-        calloutFrameElement.innerHTML = generateSvgWithoutArrow(width, height);
+        calloutFrameElement.innerHTML = generateSvgWithTopArrow(
+          width,
+          height,
+          arrowLeftPosOnCallout,
+        );
       }
 
       calloutElement.setAttribute("data-position", position);
