@@ -225,6 +225,8 @@ export const openCallout = (
     });
   }
 
+  update(message, { level });
+
   positioning: {
     let positioner;
     let strategy;
@@ -247,11 +249,12 @@ export const openCallout = (
         return;
       }
       positioner?.stop();
-      if (strategy === "centered") {
+      if (newStrategy === "centered") {
         positioner = centerCalloutInViewport(calloutElement);
       } else {
         positioner = stickCalloutToAnchor(calloutElement, anchorElement);
       }
+      strategy = newStrategy;
     };
     updatePositioner();
     addTeardown(() => {
@@ -268,8 +271,6 @@ export const openCallout = (
     }
     callout.updatePosition = () => positioner.update();
   }
-
-  update(message, { level });
 
   return callout;
 };
@@ -877,22 +878,22 @@ const generateSvgWithoutArrow = (width, height) => {
       aria-hidden="true"
     >
       <rect
+        class="navi_callout_border"
         x="0"
         y="0"
         width="${width}"
         height="${height}"
         rx="${CORNER_RADIUS}"
         ry="${CORNER_RADIUS}"
-        class="navi_callout_border"
       />
       <rect
+        class="navi_callout_background"
         x="${BORDER_WIDTH}"
         y="${BORDER_WIDTH}"
         width="${width - BORDER_WIDTH * 2}"
         height="${height - BORDER_WIDTH * 2}"
         rx="${Math.max(0, CORNER_RADIUS - BORDER_WIDTH)}"
         ry="${Math.max(0, CORNER_RADIUS - BORDER_WIDTH)}"
-        class="navi_callout_background"
       />
     </svg>`;
 };
