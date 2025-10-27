@@ -154,12 +154,12 @@ lorsqu'on zoom le comportement semble étrange
     <div style="background: red; width: 2000px; height: 1px"></div>
     <div style="background: blue; height: 400px"></div>
     <script type="module">
-      import { openValidationMessage } from "../validation_message.js";
+      import { openCallout } from "../../components/callout/callout.js";
 
       const inputs = document.querySelectorAll("input");
       for (const input of inputs) {
         input.addEventListener("focus", () => {
-          openValidationMessage(input, "Veuillez respecter le format requis.");
+          openCallout(input, "Veuillez respecter le format requis.");
         });
       }
 

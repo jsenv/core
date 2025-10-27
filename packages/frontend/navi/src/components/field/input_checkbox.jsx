@@ -249,7 +249,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
       readOnly={innerReadOnly}
       disabled={innerDisabled}
       required={innerRequired}
-      data-validation-message-arrow-x="center"
+      data-callout-arrow-x="center"
       onClick={(e) => {
         if (innerReadOnly) {
           e.preventDefault();

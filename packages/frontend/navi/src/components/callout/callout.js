@@ -8,7 +8,7 @@ import {
 } from "@jsenv/dom";
 
 /**
- * A validation message component that mimics native browser validation messages.
+ * A callout component that mimics native browser validation messages.
  * Features:
  * - Positions above or below target element based on available space
  * - Follows target element during scrolling and resizing
@@ -17,15 +17,15 @@ import {
  */
 
 /**
- * Shows a validation message attached to the specified element
- * @param {HTMLElement} targetElement - Element the validation message should follow
- * @param {string} message - HTML content for the validation message
+ * Shows a callout attached to the specified element
+ * @param {HTMLElement} targetElement - Element the callout should follow
+ * @param {string} message - HTML content for the callout
  * @param {Object} options - Configuration options
  * @param {boolean} options.scrollIntoView - Whether to scroll the target element into view
- * @returns {Function} - Function to hide and remove the validation message
+ * @returns {Function} - Function to hide and remove the callout
  */
 
-// Configuration parameters for validation message appearance
+// Configuration parameters for callout appearance
 const BORDER_WIDTH = 1;
 const CORNER_RADIUS = 3;
 const ARROW_WIDTH = 16;
@@ -147,7 +147,7 @@ import.meta.css = /* css */ `
   }
 `;
 
-// HTML template for the validation message
+// HTML template for the callout
 const calloutTemplate = /* html */ `
   <div class="navi_callout">
     <div class="navi_callout_box">
@@ -237,7 +237,7 @@ export const openCallout = (
     teardown(reason);
   };
 
-  // Create and add validation message to document
+  // Create and add callout to document
   const calloutElement = createCalloutElement();
   const calloutMessageElement = calloutElement.querySelector(
     ".navi_callout_message",
@@ -266,7 +266,7 @@ export const openCallout = (
     }
   };
   const update = (newMessage, options = {}) => {
-    // Connect validation message with target element for accessibility
+    // Connect callout with target element for accessibility
     if (options.level && options.level !== callout.level) {
       calloutElement.setAttribute("data-level", level);
       if (callout.level) {
@@ -325,7 +325,7 @@ export const openCallout = (
         // error messages must be explicitely closed by the user
         return;
       }
-      if (targetElement.hasAttribute("data-validation-message-stay-on-focus")) {
+      if (targetElement.hasAttribute("data-callout-stay-on-focus")) {
         return;
       }
       close("target_element_focus");
@@ -377,9 +377,9 @@ export const openCallout = (
 };
 
 /**
- * Generates SVG path for validation message with arrow on top
- * @param {number} width - Validation message width
- * @param {number} height - Validation message height
+ * Generates SVG path for callout with arrow on top
+ * @param {number} width - Callout width
+ * @param {number} height - Callout height
  * @param {number} arrowPosition - Horizontal position of arrow
  * @returns {string} - SVG markup
  */
@@ -452,9 +452,9 @@ const generateSvgWithTopArrow = (width, height, arrowPosition) => {
 };
 
 /**
- * Generates SVG path for validation message with arrow on bottom
- * @param {number} width - Validation message width
- * @param {number} height - Validation message height
+ * Generates SVG path for callout with arrow on bottom
+ * @param {number} width - Callout width
+ * @param {number} height - Callout height
  * @param {number} arrowPosition - Horizontal position of arrow
  * @returns {string} - SVG markup
  */
@@ -527,9 +527,9 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
 };
 
 /**
- * Creates a new validation message element with specified content
- * @param {string} content - HTML content for the validation message
- * @returns {HTMLElement} - The validation message element
+ * Creates a new callout element with specified content
+ * @param {string} content - HTML content for the callout
+ * @returns {HTMLElement} - The callout element
  */
 const createCalloutElement = () => {
   const div = document.createElement("div");
@@ -539,7 +539,7 @@ const createCalloutElement = () => {
 };
 
 const stickCalloutToAnchor = (calloutElement, anchorElement) => {
-  // Get references to validation message parts
+  // Get references to callout parts
   const calloutBoxElement = calloutElement.querySelector(".navi_callout_box");
   const calloutFrameElement = calloutElement.querySelector(
     ".navi_callout_frame",
@@ -586,7 +586,7 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
       let arrowLeftPosOnCallout;
       // Determine arrow target position based on attribute
       const arrowPositionAttribute = anchorElement.getAttribute(
-        "data-validation-message-arrow-x",
+        "data-callout-arrow-x",
       );
       let arrowAnchorLeft;
       if (arrowPositionAttribute === "center") {
@@ -598,20 +598,20 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
         arrowAnchorLeft = anchorLeft + anchorBorderSizes.left;
       }
 
-      // Calculate arrow position within the validation message
+      // Calculate arrow position within the callout
       if (calloutLeft < arrowAnchorLeft) {
-        // Validation message is left of the target point, move arrow right
+        // Callout is left of the target point, move arrow right
         const diff = arrowAnchorLeft - calloutLeft;
         arrowLeftPosOnCallout = diff;
       } else if (calloutLeft + calloutWidth < arrowAnchorLeft) {
-        // Edge case: target point is beyond right edge of validation message
+        // Edge case: target point is beyond right edge of callout
         arrowLeftPosOnCallout = calloutWidth - ARROW_WIDTH;
       } else {
-        // Target point is within validation message width
+        // Target point is within callout width
         arrowLeftPosOnCallout = arrowAnchorLeft - calloutLeft;
       }
 
-      // Ensure arrow stays within validation message bounds with some padding
+      // Ensure arrow stays within callout bounds with some padding
       const minArrowPos = CORNER_RADIUS + ARROW_WIDTH / 2 + ARROW_SPACING;
       const maxArrowPos = calloutWidth - minArrowPos;
       arrowLeftPosOnCallout = Math.max(
@@ -620,7 +620,7 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
       );
 
       // Force content overflow when there is not enough space to display
-      // the entirety of the validation message
+      // the entirety of the callout
       const spaceAvailable =
         position === "below" ? spaceBelowTarget : spaceAboveTarget;
       let spaceAvailableForContent = spaceAvailable;

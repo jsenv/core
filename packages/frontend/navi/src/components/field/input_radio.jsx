@@ -299,7 +299,7 @@ const InputRadioBasic = forwardRef((props, ref) => {
       checked={checked}
       disabled={innerDisabled}
       required={innerRequired}
-      data-validation-message-arrow-x="center"
+      data-callout-arrow-x="center"
       onClick={(e) => {
         if (innerReadOnly) {
           e.preventDefault();

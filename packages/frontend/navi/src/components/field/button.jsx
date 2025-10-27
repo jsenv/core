@@ -230,7 +230,7 @@ const ButtonBasic = forwardRef((props, ref) => {
       data-readonly={innerReadOnly ? "" : undefined}
       data-readonly-silent={innerLoading ? "" : undefined}
       data-disabled={innerDisabled ? "" : undefined}
-      data-validation-message-arrow-x="center"
+      data-callout-arrow-x="center"
       aria-busy={innerLoading}
     >
       <LoaderBackground
