@@ -2,6 +2,7 @@ import {
   allowWheelThrough,
   createPubSub,
   createStyleController,
+  createValueEffect,
   getBorderSizes,
   getFirstVisuallyVisibleAncestor,
   getVisuallyVisibleInfo,
@@ -53,16 +54,6 @@ export const openCallout = (
     debug = false,
   } = {},
 ) => {
-  const anchorVisuallyVisibleInfo = getVisuallyVisibleInfo(anchorElement, {
-    countOffscreenAsVisible: true,
-  });
-  if (!anchorVisuallyVisibleInfo.visible) {
-    console.warn(
-      `anchor element is not visually visible (${anchorVisuallyVisibleInfo.reason}) -> will be anchored to first visually visible ancestor`,
-    );
-    anchorElement = getFirstVisuallyVisibleAncestor(anchorElement);
-  }
-
   const callout = {
     opened: true,
     close: null,
@@ -75,7 +66,8 @@ export const openCallout = (
   };
 
   if (debug) {
-    console.debug("open callout on", anchorElement, {
+    console.debug("open callout", {
+      anchorElement,
       message,
       level,
     });
@@ -92,6 +84,11 @@ export const openCallout = (
     callout.opened = false;
     teardown(reason);
   };
+  if (onClose) {
+    addTeardown(onClose);
+  }
+
+  const [updateLevel, addLevelEffect] = createValueEffect(undefined);
 
   // Create and add callout to document
   const calloutElement = createCalloutElement();
@@ -107,40 +104,20 @@ export const openCallout = (
   const calloutId = `navi_callout_${Date.now()}`;
   calloutElement.id = calloutId;
   calloutStyleController.set(calloutElement, { opacity: 0 });
-  allowWheelThrough(calloutElement, anchorElement);
-  anchorElement.setAttribute("data-callout", calloutId);
-  addTeardown(() => {
-    anchorElement.removeAttribute("data-callout");
+  addLevelEffect(() => {
+    calloutElement.setAttribute("data-level", level);
+    if (level === "info") {
+      calloutElement.setAttribute("role", "status");
+    } else {
+      calloutElement.setAttribute("role", "alert");
+    }
   });
 
-  const resetAccessibilityAttributes = () => {
-    if (callout.level === "info") {
-      anchorElement.removeAttribute("aria-describedby");
-    } else {
-      anchorElement.removeAttribute("aria-errormessage");
-      anchorElement.removeAttribute("aria-invalid");
-    }
-  };
   const update = (newMessage, options = {}) => {
     // Connect callout with target element for accessibility
     if (options.level && options.level !== callout.level) {
-      calloutElement.setAttribute("data-level", level);
-      if (callout.level) {
-        resetAccessibilityAttributes();
-      }
-      if (level === "info") {
-        calloutElement.setAttribute("role", "status");
-        anchorElement.setAttribute("aria-describedby", calloutId);
-      } else {
-        calloutElement.setAttribute("role", "alert");
-        anchorElement.setAttribute("aria-errormessage", calloutId);
-        anchorElement.setAttribute("aria-invalid", "true");
-      }
-      anchorElement.style.setProperty(
-        "--callout-color",
-        `var(--navi-${level}-color)`,
-      );
       callout.level = level;
+      updateLevel(level);
     }
 
     if (options.closeOnClickOutside) {
@@ -154,43 +131,11 @@ export const openCallout = (
     }
     calloutMessageElement.innerHTML = newMessage;
   };
-  update(message, { level });
-  addTeardown(() => {
-    resetAccessibilityAttributes();
-    anchorElement.style.removeProperty("--callout-color");
-  });
 
   document.body.appendChild(calloutElement);
   addTeardown(() => {
     calloutElement.remove();
   });
-
-  const positionFollower = stickCalloutToAnchor(calloutElement, anchorElement, {
-    arrow,
-  });
-  addTeardown(() => {
-    positionFollower.stop();
-  });
-
-  if (onClose) {
-    addTeardown(onClose);
-  }
-  close_on_target_focus: {
-    const onfocus = () => {
-      if (level === "error") {
-        // error messages must be explicitely closed by the user
-        return;
-      }
-      if (anchorElement.hasAttribute("data-callout-stay-on-focus")) {
-        return;
-      }
-      close("target_element_focus");
-    };
-    anchorElement.addEventListener("focus", onfocus);
-    addTeardown(() => {
-      anchorElement.removeEventListener("focus", onfocus);
-    });
-  }
 
   close_on_click_outside: {
     const handleClickOutside = (event) => {
@@ -218,17 +163,92 @@ export const openCallout = (
       document.removeEventListener("click", handleClickOutside, true);
     });
   }
-
   Object.assign(callout, {
     element: calloutElement,
     update,
     close,
-    updatePosition: positionFollower.updatePosition,
   });
-  anchorElement.callout = callout;
-  addTeardown(() => {
-    delete anchorElement.callout;
-  });
+
+  if (anchorElement) {
+    const anchorVisuallyVisibleInfo = getVisuallyVisibleInfo(anchorElement, {
+      countOffscreenAsVisible: true,
+    });
+    if (!anchorVisuallyVisibleInfo.visible) {
+      console.warn(
+        `anchor element is not visually visible (${anchorVisuallyVisibleInfo.reason}) -> will be anchored to first visually visible ancestor`,
+      );
+      anchorElement = getFirstVisuallyVisibleAncestor(anchorElement);
+    }
+
+    allowWheelThrough(calloutElement, anchorElement);
+    anchorElement.setAttribute("data-callout", calloutId);
+    addTeardown(() => {
+      anchorElement.removeAttribute("data-callout");
+    });
+
+    addLevelEffect(() => {
+      anchorElement.style.setProperty(
+        "--callout-color",
+        `var(--navi-${level}-color)`,
+      );
+      return () => {
+        anchorElement.style.removeProperty("--callout-color");
+      };
+    });
+    addLevelEffect((level) => {
+      if (level === "info") {
+        anchorElement.setAttribute("aria-describedby", calloutId);
+        return () => {
+          anchorElement.removeAttribute("aria-describedby");
+        };
+      }
+      anchorElement.setAttribute("aria-errormessage", calloutId);
+      anchorElement.setAttribute("aria-invalid", "true");
+      return () => {
+        anchorElement.removeAttribute("aria-errormessage");
+        anchorElement.removeAttribute("aria-invalid");
+      };
+    });
+
+    stick_to_anchor: {
+      const positionFollower = stickCalloutToAnchor(
+        calloutElement,
+        anchorElement,
+        { arrow },
+      );
+      callout.updatePosition = positionFollower.updatePosition;
+      addTeardown(() => {
+        positionFollower.stop();
+      });
+    }
+
+    close_on_anchor_focus: {
+      const onfocus = () => {
+        if (level === "error") {
+          // error messages must be explicitely closed by the user
+          return;
+        }
+        if (anchorElement.hasAttribute("data-callout-stay-on-focus")) {
+          return;
+        }
+        close("target_element_focus");
+      };
+      anchorElement.addEventListener("focus", onfocus);
+      addTeardown(() => {
+        anchorElement.removeEventListener("focus", onfocus);
+      });
+    }
+    anchorElement.callout = callout;
+    addTeardown(() => {
+      delete anchorElement.callout;
+    });
+  } else {
+    callout.updatePosition = () => {};
+    calloutStyleController.set(calloutElement, { opacity: 1 });
+  }
+
+  update(message, { level });
+
   return callout;
 };
 
