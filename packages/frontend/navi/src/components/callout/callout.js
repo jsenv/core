@@ -570,10 +570,10 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
       calloutElement.parentNode.appendChild(calloutElementClone);
       const {
         position,
-        left: validationMessageLeft,
-        top: validationMessageTop,
-        width: validationMessageWidth,
-        height: validationMessageHeight,
+        left: calloutLeft,
+        top: calloutTop,
+        width: calloutWidth,
+        height: calloutHeight,
         spaceAboveTarget,
         spaceBelowTarget,
       } = pickPositionRelativeTo(calloutElementClone, anchorElement, {
@@ -588,35 +588,32 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
       const arrowPositionAttribute = anchorElement.getAttribute(
         "data-validation-message-arrow-x",
       );
-      let arrowTargetLeft;
+      let arrowAnchorLeft;
       if (arrowPositionAttribute === "center") {
         // Target the center of the anchor element
-        arrowTargetLeft = (anchorLeft + anchorRight) / 2;
+        arrowAnchorLeft = (anchorLeft + anchorRight) / 2;
       } else {
         const anchorBorderSizes = getBorderSizes(anchorElement);
         // Default behavior: target the left edge of the anchor element (after borders)
-        arrowTargetLeft = anchorLeft + anchorBorderSizes.left;
+        arrowAnchorLeft = anchorLeft + anchorBorderSizes.left;
       }
 
       // Calculate arrow position within the validation message
-      if (validationMessageLeft < arrowTargetLeft) {
+      if (calloutLeft < arrowAnchorLeft) {
         // Validation message is left of the target point, move arrow right
-        const diff = arrowTargetLeft - validationMessageLeft;
+        const diff = arrowAnchorLeft - calloutLeft;
         arrowLeftPosOnCallout = diff;
-      } else if (
-        validationMessageLeft + validationMessageWidth <
-        arrowTargetLeft
-      ) {
+      } else if (calloutLeft + calloutWidth < arrowAnchorLeft) {
         // Edge case: target point is beyond right edge of validation message
-        arrowLeftPosOnCallout = validationMessageWidth - ARROW_WIDTH;
+        arrowLeftPosOnCallout = calloutWidth - ARROW_WIDTH;
       } else {
         // Target point is within validation message width
-        arrowLeftPosOnCallout = arrowTargetLeft - validationMessageLeft;
+        arrowLeftPosOnCallout = arrowAnchorLeft - calloutLeft;
       }
 
       // Ensure arrow stays within validation message bounds with some padding
       const minArrowPos = CORNER_RADIUS + ARROW_WIDTH / 2 + ARROW_SPACING;
-      const maxArrowPos = validationMessageWidth - minArrowPos;
+      const maxArrowPos = calloutWidth - minArrowPos;
       arrowLeftPosOnCallout = Math.max(
         minArrowPos,
         Math.min(arrowLeftPosOnCallout, maxArrowPos),
@@ -630,7 +627,7 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
       spaceAvailableForContent -= ARROW_HEIGHT;
       spaceAvailableForContent -= BORDER_WIDTH * 2;
       spaceAvailableForContent -= 16; // padding * 2
-      let contentHeight = validationMessageHeight;
+      let contentHeight = calloutHeight;
       contentHeight -= ARROW_HEIGHT;
       contentHeight -= BORDER_WIDTH * 2;
       contentHeight -= 16; // padding * 2
@@ -673,8 +670,8 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
       calloutStyleController.set(calloutElement, {
         opacity: visibilityRatio ? 1 : 0,
         transform: {
-          translateX: validationMessageLeft,
-          translateY: validationMessageTop,
+          translateX: calloutLeft,
+          translateY: calloutTop,
         },
       });
       calloutElementClone.remove();
