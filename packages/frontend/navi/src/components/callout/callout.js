@@ -220,9 +220,9 @@ const validationMessageStyleController =
   createStyleController("validation_message");
 
 export const openCallout = (
-  targetElement,
   message,
   {
+    anchor: targetElement,
     level = "warning",
     onClose,
     closeOnClickOutside = level === "info",

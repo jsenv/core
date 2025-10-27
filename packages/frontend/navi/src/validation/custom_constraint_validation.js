@@ -374,9 +374,9 @@ export const installCustomConstraintValidation = (
       failedConstraintInfo.target || elementReceivingValidationMessage;
 
     validationInterface.validationMessage = openCallout(
-      elementTarget,
       failedConstraintInfo.message,
       {
+        anchors: elementTarget,
         level: failedConstraintInfo.level,
         closeOnClickOutside: failedConstraintInfo.closeOnClickOutside,
         onClose: () => {
