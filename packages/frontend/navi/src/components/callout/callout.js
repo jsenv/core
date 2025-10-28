@@ -48,6 +48,7 @@ export const openCallout = (
     level = "warning",
     onClose,
     closeOnClickOutside = level === "info",
+    hideErrorStack,
     debug = false,
   } = {},
 ) => {
@@ -115,7 +116,9 @@ export const openCallout = (
     if (Error.isError(newMessage)) {
       const error = newMessage;
       newMessage = error.message;
-      newMessage += `<pre class="navi_callout_error_stack">${escapeHtml(error.stack)}</pre>`;
+      if (!hideErrorStack && error.stack) {
+        newMessage += `<pre class="navi_callout_error_stack">${escapeHtml(String(error.stack))}</pre>`;
+      }
     }
 
     // Check if the message is a full HTML document (starts with DOCTYPE)

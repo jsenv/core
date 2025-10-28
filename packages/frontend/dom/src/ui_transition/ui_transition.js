@@ -58,10 +58,9 @@ import { createGroupTransitionController } from "../transition/group_transition.
 
 import.meta.css = /* css */ `
   .ui_transition_container {
+    position: relative;
     display: inline-flex;
     flex: 1;
-    position: relative;
-    overflow: hidden;
   }
 
   .ui_transition_outer_wrapper {
@@ -70,7 +69,6 @@ import.meta.css = /* css */ `
   }
 
   .ui_transition_measure_wrapper {
-    overflow: hidden;
     display: inline-flex;
     flex: 1;
   }

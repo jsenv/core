@@ -8350,10 +8350,9 @@ const getInnerWidth = (element) => {
 installImportMetaCss(import.meta);
 import.meta.css = /* css */ `
   .ui_transition_container {
+    position: relative;
     display: inline-flex;
     flex: 1;
-    position: relative;
-    overflow: hidden;
   }
 
   .ui_transition_outer_wrapper {
@@ -8362,7 +8361,6 @@ import.meta.css = /* css */ `
   }
 
   .ui_transition_measure_wrapper {
-    overflow: hidden;
     display: inline-flex;
     flex: 1;
   }
@@ -11804,7 +11802,9 @@ const openCallout = (
     if (Error.isError(newMessage)) {
       const error = newMessage;
       newMessage = error.message;
-      newMessage += `<pre class="navi_callout_error_stack">${escapeHtml(error.stack)}</pre>`;
+      if (error.stack) {
+        newMessage += `<pre class="navi_callout_error_stack">${escapeHtml(error.stack)}</pre>`;
+      }
     }
 
     // Check if the message is a full HTML document (starts with DOCTYPE)
@@ -11813,8 +11813,6 @@ const openCallout = (
       const iframe = document.createElement("iframe");
       iframe.style.border = "none";
       iframe.style.width = "100%";
-      iframe.style.minHeight = "200px";
-      iframe.style.maxHeight = "400px";
       iframe.style.backgroundColor = "white";
       iframe.srcdoc = newMessage;
 
@@ -12084,8 +12082,6 @@ import.meta.css = /* css */ `
     .navi_callout_message iframe {
       display: block;
       margin: 0;
-      border: 1px solid #ddd;
-      border-radius: 4px;
     }
     .navi_callout_close_button_column {
       display: flex;
