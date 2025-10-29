@@ -15,6 +15,8 @@ export const mergeStyles = (stylesA, stylesB, context = "js") => {
   }
   const result = {};
   const aKeys = Object.keys(stylesA);
+  // in case stylesB is a string we first parse it
+  stylesB = normalizeStyles(stylesB, context);
   const bKeyToVisitSet = new Set(Object.keys(stylesB));
   for (const aKey of aKeys) {
     const bHasKey = bKeyToVisitSet.has(aKey);
@@ -26,7 +28,7 @@ export const mergeStyles = (stylesA, stylesB, context = "js") => {
     }
   }
   for (const bKey of bKeyToVisitSet) {
-    result[bKey] = normalizeStyle(stylesB[bKey], bKey, context);
+    result[bKey] = stylesB[bKey];
   }
   return result;
 };
