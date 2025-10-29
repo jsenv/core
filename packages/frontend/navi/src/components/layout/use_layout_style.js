@@ -203,11 +203,11 @@ export const useLayoutStyle = (props) => {
     delete props.expandX;
     if (expandX) {
       if (flexDirection === "row") {
-        expansionStyle.flexGrow = 1;        // Grow horizontally in row
+        expansionStyle.flexGrow = 1; // Grow horizontally in row
       } else if (flexDirection === "column") {
-        expansionStyle.width = "100%";      // Take full width in column
+        expansionStyle.width = "100%"; // Take full width in column
       } else {
-        expansionStyle.width = "100%";      // Take full width outside flex
+        expansionStyle.width = "100%"; // Take full width outside flex
       }
     }
   }
@@ -217,11 +217,11 @@ export const useLayoutStyle = (props) => {
     delete props.expandY;
     if (expandY) {
       if (flexDirection === "row") {
-        expansionStyle.height = "100%";     // Take full height in row
+        expansionStyle.height = "100%"; // Take full height in row
       } else if (flexDirection === "column") {
-        expansionStyle.flexGrow = 1;        // Grow vertically in column
+        expansionStyle.flexGrow = 1; // Grow vertically in column
       } else {
-        expansionStyle.height = "100%";     // Take full height outside flex
+        expansionStyle.height = "100%"; // Take full height outside flex
       }
     }
   }
