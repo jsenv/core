@@ -1,7 +1,43 @@
+/**
+ * Layout Style Hook
+ *
+ * This hook processes layout-related props and converts them into CSS styles.
+ * It handles spacing (margin/padding), alignment (alignX/alignY), and expansion behavior.
+ * The hook is context-aware and adapts behavior based on flex direction.
+ *
+ * Key features:
+ * - Spacing: margin/padding with X/Y shortcuts and directional variants
+ * - Alignment: alignX/alignY using align-self and auto margins
+ * - Expansion: expand prop for taking remaining space (flexGrow or width: 100%)
+ * - Context-aware: behavior changes based on FlexDirectionContext (row/column/none)
+ */
+
 import { useContext } from "preact/hooks";
 
 import { FlexDirectionContext } from "./layout_context.jsx";
 
+/**
+ * Converts layout props into CSS styles
+ * @param {Object} props - Component props containing layout properties
+ * @param {string|number} [props.margin] - All-sides margin
+ * @param {string|number} [props.marginX] - Horizontal margin (left + right)
+ * @param {string|number} [props.marginY] - Vertical margin (top + bottom)
+ * @param {string|number} [props.marginLeft] - Left margin
+ * @param {string|number} [props.marginRight] - Right margin
+ * @param {string|number} [props.marginTop] - Top margin
+ * @param {string|number} [props.marginBottom] - Bottom margin
+ * @param {string|number} [props.padding] - All-sides padding
+ * @param {string|number} [props.paddingX] - Horizontal padding (left + right)
+ * @param {string|number} [props.paddingY] - Vertical padding (top + bottom)
+ * @param {string|number} [props.paddingLeft] - Left padding
+ * @param {string|number} [props.paddingRight] - Right padding
+ * @param {string|number} [props.paddingTop] - Top padding
+ * @param {string|number} [props.paddingBottom] - Bottom padding
+ * @param {"start"|"center"|"end"|"stretch"} [props.alignX] - Horizontal alignment
+ * @param {"start"|"center"|"end"|"stretch"} [props.alignY] - Vertical alignment
+ * @param {boolean} [props.expand] - Whether element should expand to fill available space
+ * @returns {Object} CSS style object
+ */
 export const useLayoutStyle = (props) => {
   const flexDirection = useContext(FlexDirectionContext);
 
