@@ -224,10 +224,25 @@
               </FlexRow>
             </section>
 
+            <section className="demo-section">
+              <h3>5. Real-World Example: Button with alignX</h3>
+
+              <FlexRow
+                gap="10px"
+                style={{ background: "#f5f5f5", padding: "10px" }}
+              >
+                <DemoBox>Content</DemoBox>
+                <DemoBox>More content</DemoBox>
+                <Button alignX="end" alignY="center">
+                  Action Button
+                </Button>
+              </FlexRow>
+            </section>
+
             <h2>FlexRow + FlexItem</h2>
 
             <section className="demo-section">
-              <h3>5. FlexItem Basic Usage</h3>
+              <h3>6. FlexItem Basic Usage</h3>
 
               <FlexRow gap="10px">
                 <FlexItem>
@@ -243,7 +258,7 @@
             </section>
 
             <section className="demo-section">
-              <h3>6. FlexItem with Growth</h3>
+              <h3>7. FlexItem with Growth</h3>
 
               <FlexRow gap="10px">
                 <FlexItem>
@@ -261,7 +276,7 @@
             <h2>FlexColumn</h2>
 
             <section className="demo-section">
-              <h3>10. Basic FlexColumn</h3>
+              <h3>8. Basic FlexColumn</h3>
               <FlexColumn style={{ height: "200px" }}>
                 <DemoBox>Item 1</DemoBox>
                 <DemoBox>Item 2</DemoBox>
@@ -270,7 +285,7 @@
             </section>
 
             <section className="demo-section">
-              <h3>11. FlexColumn with Gap</h3>
+              <h3>9. FlexColumn with Gap</h3>
               <FlexColumn gap="15px" style={{ height: "200px" }}>
                 <DemoBox>Item 1</DemoBox>
                 <DemoBox>Item 2</DemoBox>
@@ -279,7 +294,7 @@
             </section>
 
             <section className="demo-section">
-              <h3>12. FlexColumn with Horizontal Alignment</h3>
+              <h3>10. FlexColumn with Horizontal Alignment</h3>
 
               <h4>alignX="start"</h4>
               <FlexColumn
@@ -347,7 +362,7 @@
             </section>
 
             <section className="demo-section">
-              <h3>12.5. FlexColumn with Vertical Alignment (alignY)</h3>
+              <h3>11. FlexColumn with Vertical Alignment (alignY)</h3>
 
               <h4>alignY="start" (default)</h4>
               <FlexColumn
@@ -436,22 +451,7 @@
             </p>
 
             <section className="demo-section">
-              <h3>8. Real-World Example: Button with alignX</h3>
-
-              <FlexRow
-                gap="10px"
-                style={{ background: "#f5f5f5", padding: "10px" }}
-              >
-                <DemoBox>Content</DemoBox>
-                <DemoBox>More content</DemoBox>
-                <Button alignX="end" alignY="center">
-                  Action Button
-                </Button>
-              </FlexRow>
-            </section>
-
-            <section className="demo-section">
-              <h3>15. FlexItem Individual Alignment in Rows</h3>
+              <h3>12. FlexItem Individual Alignment in Rows</h3>
 
               <h4>FlexItem alignX in Row</h4>
               <FlexRow
@@ -500,7 +500,7 @@
             </section>
 
             <section className="demo-section">
-              <h3>16. FlexItem Individual Alignment in Columns</h3>
+              <h3>13. FlexItem Individual Alignment in Columns</h3>
 
               <h4>FlexItem alignX in Column</h4>
               <FlexColumn
@@ -552,7 +552,7 @@
             </section>
 
             <section className="demo-section">
-              <h3>17. FlexItem Practical Examples - Column Layout</h3>
+              <h3>14. FlexItem Practical Examples - Column Layout</h3>
 
               <h4>Single item pushed to bottom</h4>
               <FlexColumn
@@ -588,7 +588,7 @@
             </section>
 
             <section className="demo-section">
-              <h3>18. When to Use FlexItem Alignment</h3>
+              <h3>15. When to Use FlexItem Alignment</h3>
               <p style={{ marginBottom: "15px", fontSize: "14px" }}>
                 FlexItem alignment is useful when you need exceptions to the
                 container's alignment:
