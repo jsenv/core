@@ -1,3 +1,5 @@
+import { withPropsStyle } from "../props_composition/with_props_style.js";
+
 import.meta.css = /* css */ `
   :root {
     --navi-icon-align-y: center;
@@ -21,9 +23,29 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const Text = ({ children, ...rest }) => {
+export const Text = ({
+  children,
+  color,
+  bold,
+  italic,
+  underline,
+  style,
+  ...rest
+}) => {
   return (
-    <span {...rest} className="navi_text">
+    <span
+      {...rest}
+      className="navi_text"
+      style={withPropsStyle(
+        {
+          color,
+          fontWeight: bold ? "bold" : undefined,
+          fontStyle: italic ? "italic" : undefined,
+          textDecoration: underline ? "underline" : undefined,
+        },
+        style,
+      )}
+    >
       {children}
     </span>
   );

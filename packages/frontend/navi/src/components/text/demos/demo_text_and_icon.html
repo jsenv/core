@@ -160,20 +160,6 @@
                     <SearchIcon />
                   </Icon>
                 </Text>
-
-                <Text>
-                  Favorites
-                  <Icon>
-                    <StarIcon />
-                  </Icon>
-                </Text>
-
-                <Text>
-                  Liked
-                  <Icon>
-                    <HeartIcon />
-                  </Icon>
-                </Text>
               </div>
             </section>
 
@@ -204,6 +190,32 @@
                     <SettingsIcon />
                   </Icon>
                   Two on the left
+                </Text>
+
+                <Text>
+                  Two on the right
+                  <Icon>
+                    <StarIcon />
+                  </Icon>
+                  <Icon>
+                    <HeartIcon />
+                  </Icon>
+                </Text>
+
+                <Text>
+                  <Icon>
+                    <HomeIcon />
+                  </Icon>
+                  <Icon>
+                    <UserIcon />
+                  </Icon>
+                  Two on the left and right
+                  <Icon>
+                    <StarIcon />
+                  </Icon>
+                  <Icon>
+                    <HeartIcon />
+                  </Icon>
                 </Text>
               </div>
             </section>
@@ -312,44 +324,6 @@
                     Search Files
                   </Text>
                 </button>
-
-                <button
-                  style={{
-                    padding: "10px 15px",
-                    border: "none",
-                    borderRadius: "4px",
-                    background: "#007bff",
-                    color: "white",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                  }}
-                >
-                  <Text>
-                    <Icon>
-                      <UserIcon />
-                    </Icon>
-                    Create Account
-                  </Text>
-                </button>
-
-                <button
-                  style={{
-                    padding: "10px 15px",
-                    border: "1px solid #dc3545",
-                    borderRadius: "4px",
-                    background: "transparent",
-                    color: "#dc3545",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                  }}
-                >
-                  <Text>
-                    <Icon>
-                      <HeartIcon />
-                    </Icon>
-                    Add to Favorites
-                  </Text>
-                </button>
               </div>
             </section>
 
@@ -374,20 +348,6 @@
                       cursor: "pointer",
                       padding: "8px 12px",
                       borderRadius: "4px",
-                      transition: "background-color 0.2s",
-                    }}
-                  >
-                    <Icon>
-                      <HomeIcon />
-                    </Icon>
-                    Dashboard
-                  </Text>
-
-                  <Text
-                    style={{
-                      cursor: "pointer",
-                      padding: "8px 12px",
-                      borderRadius: "4px",
                       background: "#007bff",
                       color: "white",
                     }}
@@ -397,19 +357,6 @@
                     </Icon>
                     Users
                   </Text>
-
-                  <Text
-                    style={{
-                      cursor: "pointer",
-                      padding: "8px 12px",
-                      borderRadius: "4px",
-                    }}
-                  >
-                    <Icon>
-                      <SettingsIcon />
-                    </Icon>
-                    Settings
-                  </Text>
                 </div>
               </nav>
             </section>
@@ -418,41 +365,50 @@
               <h2>Inline Text with Icons</h2>
               <p style={{ fontSize: "16px", lineHeight: "1.6" }}>
                 Welcome to our platform! Click on the{" "}
-                <Text>
+                <Text bold>
                   <Icon>
                     <HomeIcon />
                   </Icon>
                   home
                 </Text>{" "}
                 button to return to the dashboard, or visit your{" "}
-                <Text>
+                <Text italic>
                   <Icon>
                     <UserIcon />
                   </Icon>
                   profile
                 </Text>{" "}
                 to update your settings. Don't forget to{" "}
-                <Text>
+                <Text underline>
                   <Icon>
                     <StarIcon />
                   </Icon>
                   star
                 </Text>{" "}
                 your favorite items and{" "}
-                <Text>
+                <Text bold italic>
                   <Icon>
                     <HeartIcon />
                   </Icon>
                   like
                 </Text>{" "}
                 the content you enjoy. Use the{" "}
-                <Text>
+                <Text bold underline>
                   <Icon>
                     <SearchIcon />
                   </Icon>
                   search
                 </Text>{" "}
-                feature to find what you're looking for quickly.
+                feature to find what you're looking for quickly. You can also
+                combine{" "}
+                <Text italic underline>
+                  multiple styles
+                </Text>{" "}
+                together for{" "}
+                <Text bold italic underline>
+                  maximum emphasis
+                </Text>
+                !
               </p>
             </section>
           </div>
