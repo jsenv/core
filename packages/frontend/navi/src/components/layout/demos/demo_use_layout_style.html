@@ -88,11 +88,18 @@
             <div className="demo-container">
               <h3>3. Input with Expand outside Flex context</h3>
               <div className="visual-container">
-                <div style={{ width: "300px", border: "1px solid #ccc", padding: "10px" }}>
+                <div
+                  style={{
+                    width: "300px",
+                    border: "1px solid #ccc",
+                    padding: "10px",
+                  }}
+                >
                   <Input placeholder="Normal input" />
-                  <br /><br />
-                  <Input 
-                    placeholder="Expanding input (should take full width)" 
+                  <br />
+                  <br />
+                  <Input
+                    placeholder="Expanding input (should take full width)"
                     expand
                   />
                 </div>
@@ -132,23 +139,14 @@
               <h3>7. Directional Margins and Padding</h3>
               <div className="visual-container">
                 <FlexColumn gap="5px">
-                  <Input 
-                    placeholder="marginLeft: 20px" 
-                    marginLeft="20px"
-                  />
-                  <Input 
-                    placeholder="marginRight: 30px" 
-                    marginRight="30px"
-                  />
-                  <Input 
-                    placeholder="marginTop: 15px, marginBottom: 25px" 
+                  <Input placeholder="marginLeft: 20px" marginLeft="20px" />
+                  <Input placeholder="marginRight: 30px" marginRight="30px" />
+                  <Input
+                    placeholder="marginTop: 15px, marginBottom: 25px"
                     marginTop="15px"
                     marginBottom="25px"
                   />
-                  <Input 
-                    placeholder="paddingLeft: 25px" 
-                    paddingLeft="25px"
-                  />
+                  <Input placeholder="paddingLeft: 25px" paddingLeft="25px" />
                 </FlexColumn>
               </div>
             </div>
@@ -170,8 +168,8 @@
               <div className="visual-container">
                 <FlexRow gap="10px">
                   <Button>Label</Button>
-                  <Input 
-                    placeholder="Margin + Expand" 
+                  <Input
+                    placeholder="Margin + Expand"
                     expand
                     marginY="5px"
                     paddingX="15px"
@@ -186,20 +184,26 @@
               <div className="visual-container">
                 <FlexColumn gap="15px">
                   <FlexRow gap="10px">
-                    <label style={{ minWidth: "80px", alignSelf: "center" }}>Name:</label>
+                    <label style={{ minWidth: "80px", alignSelf: "center" }}>
+                      Name:
+                    </label>
                     <Input placeholder="Enter your name" expand />
                   </FlexRow>
-                  
+
                   <FlexRow gap="10px">
-                    <label style={{ minWidth: "80px", alignSelf: "center" }}>Email:</label>
+                    <label style={{ minWidth: "80px", alignSelf: "center" }}>
+                      Email:
+                    </label>
                     <Input placeholder="Enter your email" expand />
                     <Button>Verify</Button>
                   </FlexRow>
-                  
+
                   <FlexRow gap="10px">
-                    <label style={{ minWidth: "80px", alignSelf: "center" }}>Message:</label>
-                    <Input 
-                      placeholder="Enter your message" 
+                    <label style={{ minWidth: "80px", alignSelf: "center" }}>
+                      Message:
+                    </label>
+                    <Input
+                      placeholder="Enter your message"
                       expand
                       paddingY="10px"
                     />
