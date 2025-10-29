@@ -14,6 +14,7 @@ import { FormActionContext } from "../action_execution/form_context.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
+import { useConsumAlignProps } from "../layout/flex.jsx";
 import { consumeSpacingProps } from "../layout/spacing.jsx";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { withPropsClassName } from "../props_composition/with_props_class_name.js";
@@ -211,7 +212,8 @@ const ButtonBasic = forwardRef((props, ref) => {
 
     // visual
     appearance = "navi",
-    alignX = "start",
+    alignX,
+    alignY,
     discrete,
     className,
     style,
@@ -243,18 +245,7 @@ const ButtonBasic = forwardRef((props, ref) => {
   const innerStyle = withPropsStyle(
     {
       ...consumeSpacingProps(rest),
-      ...(alignX === "start"
-        ? {}
-        : alignX === "center"
-          ? {
-              alignSelf: "center",
-              marginLeft: "auto",
-              marginRight: "auto",
-            }
-          : {
-              alignSelf: "end",
-              marginLeft: "auto",
-            }),
+      ...useConsumAlignProps({ alignX, alignY }),
     },
     style,
   );
