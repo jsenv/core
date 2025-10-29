@@ -24,25 +24,36 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const Text = ({
-  color,
-  bold,
-  italic,
-  underline,
-  size,
-  style,
-  children,
-  ...rest
-}) => {
+export const useTypographyStyle = (props) => {
+  const color = props.color;
+  const bold = props.bold;
+  const italic = props.italic;
+  const underline = props.underline;
+  const size = props.size;
+  delete props.color;
+  delete props.bold;
+  delete props.italic;
+  delete props.underline;
+  delete props.size;
+  return {
+    color,
+    fontWeight: bold ? "bold" : bold === undefined ? undefined : "normal",
+    fontStyle: italic ? "italic" : italic === undefined ? undefined : "normal",
+    fontSize: size,
+    textDecoration: underline
+      ? "underline"
+      : underline === undefined
+        ? undefined
+        : "none",
+  };
+};
+
+export const Text = ({ style, children, ...rest }) => {
   const { all } = useLayoutStyle(rest);
   const innerStyle = withPropsStyle(
     {
       ...all,
-      color,
-      fontWeight: bold ? "bold" : undefined,
-      fontStyle: italic ? "italic" : undefined,
-      fontSize: size,
-      textDecoration: underline ? "underline" : undefined,
+      ...useTypographyStyle(rest),
     },
     style,
   );
@@ -54,13 +65,12 @@ export const Text = ({
   );
 };
 
-export const Icon = ({ color, size, style, children, ...rest }) => {
+export const Icon = ({ style, children, ...rest }) => {
   const { all } = useLayoutStyle(rest);
   const innerStyle = withPropsStyle(
     {
       ...all,
-      color,
-      fontSize: size,
+      ...useTypographyStyle(rest),
     },
     style,
   );

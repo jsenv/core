@@ -22668,7 +22668,6 @@ const SelectControlled = forwardRef((props, ref) => {
   const selectElement = jsx("select", {
     className: "navi_select",
     ref: innerRef,
-    "data-field": "",
     "data-readonly": readOnly && !disabled ? "" : undefined,
     onKeyDown: e => {
       if (readOnly) {
@@ -24296,48 +24295,123 @@ const createSelectionKeyboardShortcuts = (selectionController, {
 };
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
+  :root {
+    --navi-icon-align-y: center;
+  }
+
+  .navi_text {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.1em;
+  }
+
+  .navi_icon {
+    --align-y: var(--navi-icon-align-y, center);
+
+    display: inline-flex;
+    width: 1em;
+    height: 1em;
+    flex-shrink: 0;
+    align-self: var(--align-y);
+    line-height: 1em;
+  }
+`;
+const useTypographyStyle = props => {
+  const color = props.color;
+  const bold = props.bold;
+  const italic = props.italic;
+  const underline = props.underline;
+  const size = props.size;
+  delete props.color;
+  delete props.bold;
+  delete props.italic;
+  delete props.underline;
+  delete props.size;
+  return {
+    color,
+    fontWeight: bold ? "bold" : bold === undefined ? undefined : "normal",
+    fontStyle: italic ? "italic" : italic === undefined ? undefined : "normal",
+    fontSize: size,
+    textDecoration: underline ? "underline" : underline === undefined ? undefined : "none"
+  };
+};
+const Text = ({
+  style,
+  children,
+  ...rest
+}) => {
+  const {
+    all
+  } = useLayoutStyle(rest);
+  const innerStyle = withPropsStyle({
+    ...all,
+    ...useTypographyStyle(rest)
+  }, style);
+  return jsx("span", {
+    ...rest,
+    className: "navi_text",
+    style: innerStyle,
+    children: children
+  });
+};
+const Icon = ({
+  style,
+  children,
+  ...rest
+}) => {
+  const {
+    all
+  } = useLayoutStyle(rest);
+  const innerStyle = withPropsStyle({
+    ...all,
+    ...useTypographyStyle(rest)
+  }, style);
+  return jsx("span", {
+    ...rest,
+    className: "navi_icon",
+    style: innerStyle,
+    children: children
+  });
+};
+
+installImportMetaCss(import.meta);import.meta.css = /* css */`
   .navi_link {
     border-radius: 2px;
   }
-
+  /* Focus */
   .navi_link:focus {
     position: relative;
     z-index: 1; /* Ensure focus outline is above other elements */
   }
-
-  .navi_link[data-readonly] > *,
-  .navi_link[inert] > * {
-    opacity: 0.5;
+  /* Visited */
+  .navi_link[data-visited] {
+    color: light-dark(#6a1b9a, #ab47bc);
   }
-
-  .navi_link[inert] {
-    pointer-events: none;
-  }
-
+  /* Selected */
   .navi_link[aria-selected] {
     position: relative;
   }
-
+  .navi_link[aria-selected="true"] {
+    background-color: light-dark(#bbdefb, #2563eb);
+  }
   .navi_link[aria-selected] input[type="checkbox"] {
     position: absolute;
     opacity: 0;
   }
-
-  /* Visual feedback for selected state */
-  .navi_link[aria-selected="true"] {
-    background-color: light-dark(#bbdefb, #2563eb);
-  }
-
+  /* Active */
   .navi_link[data-active] {
     font-weight: bold;
   }
-
-  .navi_link[data-visited] {
-    color: light-dark(#6a1b9a, #ab47bc);
+  /* Readonly */
+  .navi_link[data-readonly] > * {
+    opacity: 0.5;
   }
-
-  .navi_link[data-no-text-decoration] {
-    text-decoration: none;
+  /* Disabled */
+  .navi_link[inert] {
+    pointer-events: none;
+  }
+  .navi_link[inert] > * {
+    opacity: 0.5;
   }
 `;
 const Link = forwardRef((props, ref) => {
@@ -24389,7 +24463,10 @@ const LinkPlain = forwardRef((props, ref) => {
   const {
     all
   } = useLayoutStyle(rest);
-  const innerStyle = withPropsStyle(all, style);
+  const innerStyle = withPropsStyle({
+    ...all,
+    ...useTypographyStyle(rest)
+  }, style);
   return jsx(LoadableInlineElement, {
     loading: loading,
     color: "light-dark(#355fcc, #3b82f6)",
@@ -24401,7 +24478,7 @@ const LinkPlain = forwardRef((props, ref) => {
       style: innerStyle,
       "aria-busy": loading,
       inert: disabled,
-      "data-field": "",
+      "data-disabled": disabled ? "" : undefined,
       "data-readonly": readOnly ? "" : undefined,
       "data-active": active ? "" : undefined,
       "data-visited": visited || isVisited ? "" : undefined,
@@ -28210,79 +28287,6 @@ const Overflow = ({
         children: children
       }), afterContent]
     })
-  });
-};
-
-installImportMetaCss(import.meta);import.meta.css = /* css */`
-  :root {
-    --navi-icon-align-y: center;
-  }
-
-  .navi_text {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.1em;
-  }
-
-  .navi_icon {
-    --align-y: var(--navi-icon-align-y, center);
-
-    display: inline-flex;
-    width: 1em;
-    height: 1em;
-    flex-shrink: 0;
-    align-self: var(--align-y);
-    line-height: 1em;
-  }
-`;
-const Text = ({
-  color,
-  bold,
-  italic,
-  underline,
-  size,
-  style,
-  children,
-  ...rest
-}) => {
-  const {
-    all
-  } = useLayoutStyle(rest);
-  const innerStyle = withPropsStyle({
-    ...all,
-    color,
-    fontWeight: bold ? "bold" : undefined,
-    fontStyle: italic ? "italic" : undefined,
-    fontSize: size,
-    textDecoration: underline ? "underline" : undefined
-  }, style);
-  return jsx("span", {
-    ...rest,
-    className: "navi_text",
-    style: innerStyle,
-    children: children
-  });
-};
-const Icon = ({
-  color,
-  size,
-  style,
-  children,
-  ...rest
-}) => {
-  const {
-    all
-  } = useLayoutStyle(rest);
-  const innerStyle = withPropsStyle({
-    ...all,
-    color,
-    fontSize: size
-  }, style);
-  return jsx("span", {
-    ...rest,
-    className: "navi_icon",
-    style: innerStyle,
-    children: children
   });
 };
 

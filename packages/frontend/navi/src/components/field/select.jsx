@@ -37,7 +37,6 @@ const SelectControlled = forwardRef((props, ref) => {
     <select
       className="navi_select"
       ref={innerRef}
-      data-field=""
       data-readonly={readOnly && !disabled ? "" : undefined}
       onKeyDown={(e) => {
         if (readOnly) {

@@ -20,6 +20,7 @@ import {
   SelectionContext,
   useSelectableElement,
 } from "../selection/selection.jsx";
+import { useTypographyStyle } from "../text/text.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 
 /*
@@ -35,45 +36,40 @@ import.meta.css = /* css */ `
   .navi_link {
     border-radius: 2px;
   }
-
+  /* Focus */
   .navi_link:focus {
     position: relative;
     z-index: 1; /* Ensure focus outline is above other elements */
   }
-
-  .navi_link[data-readonly] > *,
-  .navi_link[inert] > * {
-    opacity: 0.5;
+  /* Visited */
+  .navi_link[data-visited] {
+    color: light-dark(#6a1b9a, #ab47bc);
   }
-
-  .navi_link[inert] {
-    pointer-events: none;
-  }
-
+  /* Selected */
   .navi_link[aria-selected] {
     position: relative;
   }
-
+  .navi_link[aria-selected="true"] {
+    background-color: light-dark(#bbdefb, #2563eb);
+  }
   .navi_link[aria-selected] input[type="checkbox"] {
     position: absolute;
     opacity: 0;
   }
-
-  /* Visual feedback for selected state */
-  .navi_link[aria-selected="true"] {
-    background-color: light-dark(#bbdefb, #2563eb);
-  }
-
+  /* Active */
   .navi_link[data-active] {
     font-weight: bold;
   }
-
-  .navi_link[data-visited] {
-    color: light-dark(#6a1b9a, #ab47bc);
+  /* Readonly */
+  .navi_link[data-readonly] > * {
+    opacity: 0.5;
   }
-
-  .navi_link[data-no-text-decoration] {
-    text-decoration: none;
+  /* Disabled */
+  .navi_link[inert] {
+    pointer-events: none;
+  }
+  .navi_link[inert] > * {
+    opacity: 0.5;
   }
 `;
 
@@ -122,7 +118,13 @@ const LinkPlain = forwardRef((props, ref) => {
 
   const innerClassName = withPropsClassName("navi_link", className);
   const { all } = useLayoutStyle(rest);
-  const innerStyle = withPropsStyle(all, style);
+  const innerStyle = withPropsStyle(
+    {
+      ...all,
+      ...useTypographyStyle(rest),
+    },
+    style,
+  );
 
   return (
     <LoadableInlineElement
@@ -137,7 +139,7 @@ const LinkPlain = forwardRef((props, ref) => {
         style={innerStyle}
         aria-busy={loading}
         inert={disabled}
-        data-field=""
+        data-disabled={disabled ? "" : undefined}
         data-readonly={readOnly ? "" : undefined}
         data-active={active ? "" : undefined}
         data-visited={visited || isVisited ? "" : undefined}
