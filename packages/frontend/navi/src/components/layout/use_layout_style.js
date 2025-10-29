@@ -35,7 +35,8 @@ import { FlexDirectionContext } from "./layout_context.jsx";
  * @param {string|number} [props.paddingBottom] - Bottom padding
  * @param {"start"|"center"|"end"|"stretch"} [props.alignX] - Horizontal alignment
  * @param {"start"|"center"|"end"|"stretch"} [props.alignY] - Vertical alignment
- * @param {boolean} [props.expand] - Whether element should expand to fill available space
+ * @param {boolean} [props.expandX] - Whether element should expand horizontally to fill available space
+ * @param {boolean} [props.expandY] - Whether element should expand vertically to fill available space
  * @returns {Object} Object with categorized styles: { margin, padding, alignment, expansion, all }
  */
 export const useLayoutStyle = (props) => {
@@ -197,16 +198,30 @@ export const useLayoutStyle = (props) => {
     }
   }
 
-  expand: {
-    const expand = props.expand;
-    delete props.expand;
-    if (expand) {
+  expandX: {
+    const expandX = props.expandX;
+    delete props.expandX;
+    if (expandX) {
       if (flexDirection === "row") {
-        expansionStyle.flexGrow = 1;
+        expansionStyle.flexGrow = 1;        // Grow horizontally in row
       } else if (flexDirection === "column") {
-        expansionStyle.flexGrow = 1;
+        expansionStyle.width = "100%";      // Take full width in column
       } else {
-        expansionStyle.width = "100%";
+        expansionStyle.width = "100%";      // Take full width outside flex
+      }
+    }
+  }
+
+  expandY: {
+    const expandY = props.expandY;
+    delete props.expandY;
+    if (expandY) {
+      if (flexDirection === "row") {
+        expansionStyle.height = "100%";     // Take full height in row
+      } else if (flexDirection === "column") {
+        expansionStyle.flexGrow = 1;        // Grow vertically in column
+      } else {
+        expansionStyle.height = "100%";     // Take full height outside flex
       }
     }
   }
