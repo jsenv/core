@@ -316,6 +316,9 @@ const pxProperties = [
   "borderTopRightRadius",
   "borderBottomLeftRadius",
   "borderBottomRightRadius",
+  "gap",
+  "rowGap",
+  "columnGap",
 ];
 
 // Properties that need deg units
@@ -435,11 +438,65 @@ const normalizeNumber = (value, context, unit, propertyName) => {
 
 // Normalize styles for DOM application
 const normalizeStyles = (styles, context = "js") => {
+  if (typeof styles === "string") {
+    styles = parseStyleString(styles);
+    return styles;
+  }
   const normalized = {};
-  for (const [key, value] of Object.entries(styles)) {
+  for (const key of Object.keys(styles)) {
+    const value = styles[key];
     normalized[key] = normalizeStyle(value, key, context);
   }
   return normalized;
+};
+
+/**
+ * Parses a CSS style string into a style object.
+ * Handles CSS properties with proper camelCase conversion.
+ *
+ * @param {string} styleString - CSS style string like "color: red; font-size: 14px;"
+ * @returns {object} Style object with camelCase properties
+ */
+const parseStyleString = (styleString, context = "js") => {
+  const style = {};
+
+  if (!styleString || typeof styleString !== "string") {
+    return style;
+  }
+
+  // Split by semicolon and process each declaration
+  const declarations = styleString.split(";");
+
+  for (let declaration of declarations) {
+    declaration = declaration.trim();
+    if (!declaration) continue;
+
+    const colonIndex = declaration.indexOf(":");
+    if (colonIndex === -1) continue;
+
+    const property = declaration.slice(0, colonIndex).trim();
+    const value = declaration.slice(colonIndex + 1).trim();
+
+    if (property && value) {
+      // CSS custom properties (starting with --) should NOT be converted to camelCase
+      if (property.startsWith("--")) {
+        style[property] = normalizeStyle(value, property, context);
+      } else {
+        // Convert kebab-case to camelCase (e.g., "font-size" -> "fontSize")
+        const camelCaseProperty = property.replace(
+          /-([a-z])/g,
+          (match, letter) => letter.toUpperCase(),
+        );
+        style[camelCaseProperty] = normalizeStyle(
+          value,
+          camelCaseProperty,
+          context,
+        );
+      }
+    }
+  }
+
+  return style;
 };
 
 // Convert transform object to CSS string
@@ -602,14 +659,27 @@ const parseSimple2DMatrix = (a, b, c, d, e, f) => {
 };
 
 // Merge two style objects, handling special cases like transform
-const mergeStyles = (stylesA, stylesB) => {
-  const result = { ...stylesA };
-  for (const key of Object.keys(stylesB)) {
-    if (key === "transform") {
-      result[key] = mergeOneStyle(stylesA[key], stylesB[key], key);
+const mergeStyles = (stylesA, stylesB, context = "js") => {
+  if (!stylesA) {
+    return normalizeStyles(stylesB, context);
+  }
+  if (!stylesB) {
+    return normalizeStyles(stylesA, context);
+  }
+  const result = {};
+  const aKeys = Object.keys(stylesA);
+  const bKeyToVisitSet = new Set(Object.keys(stylesB));
+  for (const aKey of aKeys) {
+    const bHasKey = bKeyToVisitSet.has(aKey);
+    if (bHasKey) {
+      bKeyToVisitSet.delete(aKey);
+      result[aKey] = mergeOneStyle(stylesA[aKey], stylesB[aKey], aKey, context);
     } else {
-      result[key] = stylesB[key];
+      result[aKey] = normalizeStyle(stylesA[aKey], aKey, context);
     }
+  }
+  for (const bKey of bKeyToVisitSet) {
+    result[bKey] = normalizeStyle(stylesB[bKey], bKey, context);
   }
   return result;
 };
@@ -772,9 +842,9 @@ const createStyleController = (name = "anonymous") => {
       throw new Error("styles must be an object");
     }
 
-    const normalizedStylesToSet = normalizeStyles(stylesToSet, "js");
     const elementData = elementWeakMap.get(element);
     if (!elementData) {
+      const normalizedStylesToSet = normalizeStyles(stylesToSet, "js");
       const animation = createAnimationForStyles(
         element,
         normalizedStylesToSet,
@@ -789,7 +859,7 @@ const createStyleController = (name = "anonymous") => {
     }
 
     const { styles, animation } = elementData;
-    const mergedStyles = mergeStyles(styles, normalizedStylesToSet);
+    const mergedStyles = mergeStyles(styles, stylesToSet);
     elementData.styles = mergedStyles;
     updateAnimationStyles(animation, mergedStyles);
   };
@@ -10478,10 +10548,9 @@ const useResizeStatus = (elementRef, { as = "number" } = {}) => {
 installImportMetaCss(import.meta);
 import.meta.css = /* css */ `
   .ui_transition_container {
+    position: relative;
     display: inline-flex;
     flex: 1;
-    position: relative;
-    overflow: hidden;
   }
 
   .ui_transition_outer_wrapper {
@@ -10490,7 +10559,6 @@ import.meta.css = /* css */ `
   }
 
   .ui_transition_measure_wrapper {
-    overflow: hidden;
     display: inline-flex;
     flex: 1;
   }
@@ -11911,4 +11979,4 @@ const crossFade = {
   },
 };
 
-export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, addWillChange, allowWheelThrough, canInterceptKeys, captureScrollState, createDragGestureController, createDragToMoveGestureController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findFocusable, getAvailableHeight, getAvailableWidth, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getInnerHeight, getInnerWidth, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getPaddingSizes, getPositionedParent, getPreferedColorScheme, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getVisuallyVisibleInfo, getWidth, initFlexDetailsSet, initFocusGroup, initPositionSticky, initUITransition, isScrollable, parseCSSColor, pickLightOrDark, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, resolveCSSColor, resolveCSSSize, setAttribute, setAttributes, setStyles, startDragToResizeGesture, stickyAsRelativeCoords, stringifyCSSColor, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };
+export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, addWillChange, allowWheelThrough, canInterceptKeys, captureScrollState, createDragGestureController, createDragToMoveGestureController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findFocusable, getAvailableHeight, getAvailableWidth, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getInnerHeight, getInnerWidth, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getPaddingSizes, getPositionedParent, getPreferedColorScheme, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getVisuallyVisibleInfo, getWidth, initFlexDetailsSet, initFocusGroup, initPositionSticky, initUITransition, isScrollable, mergeStyles, normalizeStyles, parseCSSColor, pickLightOrDark, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, resolveCSSColor, resolveCSSSize, setAttribute, setAttributes, setStyles, startDragToResizeGesture, stickyAsRelativeCoords, stringifyCSSColor, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };
