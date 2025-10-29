@@ -20636,12 +20636,17 @@ const parseStyleString = (styleString) => {
     const value = declaration.slice(colonIndex + 1).trim();
 
     if (property && value) {
-      // Convert kebab-case to camelCase (e.g., "font-size" -> "fontSize")
-      const camelCaseProperty = property.replace(/-([a-z])/g, (match, letter) =>
-        letter.toUpperCase(),
-      );
-
-      style[camelCaseProperty] = value;
+      // CSS custom properties (starting with --) should NOT be converted to camelCase
+      if (property.startsWith("--")) {
+        style[property] = value;
+      } else {
+        // Convert kebab-case to camelCase (e.g., "font-size" -> "fontSize")
+        const camelCaseProperty = property.replace(
+          /-([a-z])/g,
+          (match, letter) => letter.toUpperCase(),
+        );
+        style[camelCaseProperty] = value;
+      }
     }
   }
 
