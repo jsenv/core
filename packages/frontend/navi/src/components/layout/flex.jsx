@@ -80,6 +80,10 @@ export const useConsumAlignProps = (props) => {
       style.alignSelf = alignY;
     }
     // For row, alignX uses auto margins for positioning
+    // NOTE: Auto margins only work effectively for positioning individual items.
+    // When multiple adjacent items have the same auto margin alignment (e.g., alignX="end"),
+    // only the first item will be positioned as expected because subsequent items
+    // will be positioned relative to the previous item's margins, not the container edge.
     if (alignX !== undefined) {
       if (alignX === "start") {
         style.marginRight = "auto";
@@ -97,6 +101,8 @@ export const useConsumAlignProps = (props) => {
       style.alignSelf = alignX;
     }
     // For column, alignY uses auto margins for positioning
+    // NOTE: Same auto margin limitation applies - multiple adjacent items with
+    // the same alignY won't all position relative to container edges.
     if (alignY !== undefined) {
       if (alignY === "start") {
         style.marginBottom = "auto";

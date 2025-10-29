@@ -25,7 +25,7 @@
     <script type="module" jsenv-type="module/jsx">
       /* eslint-disable no-unused-vars */
       import { render } from "preact";
-      import { FlexRow, FlexColumn, FlexItem } from "../flex.jsx";
+      import { FlexRow, FlexColumn, FlexItem, Button } from "@jsenv/navi";
 
       const DemoBox = ({ children, ...props }) => (
         <div className="demo-box" {...props}>
@@ -275,6 +275,19 @@
                 <FlexItem alignX="end">
                   <DemoBox>Pushed to end</DemoBox>
                 </FlexItem>
+              </FlexRow>
+            </section>
+
+            <section className="demo-section">
+              <h3>10. Real-World Example: Button with alignX</h3>
+
+              <FlexRow
+                gap="10px"
+                style={{ background: "#f5f5f5", padding: "10px" }}
+              >
+                <DemoBox>Content</DemoBox>
+                <DemoBox>More content</DemoBox>
+                <Button alignX="end">Action Button</Button>
               </FlexRow>
             </section>
 

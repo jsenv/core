@@ -93,7 +93,11 @@ export { TextAndCount } from "./src/components/text/text_and_count.jsx";
 // Callout, dialogs, ...
 export { openCallout } from "./src/components/callout/callout.js";
 // Layout
-export { FlexColumn, FlexRow } from "./src/components/layout/flex.jsx";
+export {
+  FlexColumn,
+  FlexItem,
+  FlexRow,
+} from "./src/components/layout/flex.jsx";
 export { Spacing } from "./src/components/layout/spacing.jsx";
 
 // Validation
