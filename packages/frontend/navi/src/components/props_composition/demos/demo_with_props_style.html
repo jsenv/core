@@ -2,7 +2,16 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>withPropsStyle Demo - Simple</title>
+    <title>withPropsStyle Demo - Minimalist</title>
+    <style>
+      button {
+        padding: 12px 20px;
+        font-family: system-ui, sans-serif;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+    </style>
   </head>
   <body>
     <div id="app"></div>
@@ -11,17 +20,11 @@
       import { render } from "preact";
       import { withPropsStyle } from "../with_props_style.js";
 
-      // Simple button component
       const Button = ({ style, children, ...rest }) => (
         <button
           style={withPropsStyle(
             {
-              padding: "12px 20px",
-              borderRadius: "4px",
-              border: "1px solid #ccc",
-              backgroundColor: "#f8f9fa",
-              cursor: "pointer",
-              fontFamily: "system-ui, sans-serif",
+              backgroundColor: "var(--background-color, #f8f9fa)",
             },
             style,
           )}
@@ -31,101 +34,30 @@
         </button>
       );
 
-      // Component using CSS variables
-      const ThemedBox = ({ style, children, ...rest }) => (
-        <div
-          style={withPropsStyle(
-            {
-              padding: "20px",
-              borderRadius: "8px",
-              backgroundColor: "var(--box-color, #e3f2fd)",
-              border: "2px solid var(--border-color, #90caf9)",
-              color: "var(--text-color, #1565c0)",
-            },
-            style,
-          )}
-          {...rest}
-        >
-          {children}
-        </div>
-      );
-
       const Demo = () => {
         return (
-          <div
-            style={{
-              padding: "20px",
-              fontFamily: "system-ui, sans-serif",
-              maxWidth: "600px",
-            }}
-          >
+          <div style={{ padding: "20px", fontFamily: "system-ui, sans-serif" }}>
             <h1>withPropsStyle Demo</h1>
 
-            <section style={{ marginBottom: "30px" }}>
-              <h2>Background Color Control</h2>
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+              <Button>Default</Button>
 
-              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                <Button>Default Button</Button>
+              <Button style={{ backgroundColor: "#007bff" }}>
+                Direct override
+              </Button>
 
-                <Button style={{ backgroundColor: "#007bff" }}>
-                  Object: Blue
-                </Button>
+              <Button style="background-color: #28a745;">
+                String override
+              </Button>
 
-                <Button style="background-color: #28a745;">
-                  String: Green
-                </Button>
+              <Button style={{ "--background-color": "#dc3545" }}>
+                CSS var override
+              </Button>
 
-                <Button style={{ backgroundColor: "#dc3545", color: "white" }}>
-                  Object: Red + White Text
-                </Button>
-
-                <Button style="background-color: #ffc107; color: black;">
-                  String: Yellow + Black Text
-                </Button>
-              </div>
-            </section>
-
-            <section>
-              <h2>CSS Variables Control</h2>
-
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "15px",
-                }}
-              >
-                <ThemedBox>Default themed box with CSS variables</ThemedBox>
-
-                <ThemedBox
-                  style={{
-                    "--box-color": "#ffebee",
-                    "--border-color": "#f44336",
-                    "--text-color": "#c62828",
-                  }}
-                >
-                  Object: Red theme via CSS variables
-                </ThemedBox>
-
-                <ThemedBox style="--box-color: #e8f5e8; --border-color: #4caf50; --text-color: #2e7d32;">
-                  String: Green theme via CSS variables
-                </ThemedBox>
-
-                <ThemedBox
-                  style={{
-                    "--box-color": "#fff3e0",
-                    "--border-color": "#ff9800",
-                    "padding": "30px",
-                  }}
-                >
-                  Object: Orange theme + custom padding override
-                </ThemedBox>
-
-                <ThemedBox style="--box-color: #f3e5f5; --border-color: #9c27b0; --text-color: #6a1b9a; border-radius: 16px;">
-                  String: Purple theme + border-radius override
-                </ThemedBox>
-              </div>
-            </section>
+              <Button style="--background-color: #ffc107;">
+                String CSS var
+              </Button>
+            </div>
           </div>
         );
       };
