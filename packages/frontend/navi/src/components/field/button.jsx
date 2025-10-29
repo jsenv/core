@@ -14,8 +14,7 @@ import { FormActionContext } from "../action_execution/form_context.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
-import { useConsumAlignProps } from "../layout/flex.jsx";
-import { consumeSpacingProps } from "../layout/spacing.jsx";
+import { useLayoutStyle } from "../layout/use_layout_style.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { withPropsClassName } from "../props_composition/with_props_class_name.js";
 import { withPropsStyle } from "../props_composition/with_props_style.js";
@@ -212,10 +211,6 @@ const ButtonBasic = forwardRef((props, ref) => {
 
     // visual
     appearance = "navi",
-    alignX,
-    alignY,
-    grow,
-    width = grow ? "100%" : undefined,
     discrete,
     className,
     style,
@@ -244,14 +239,7 @@ const ButtonBasic = forwardRef((props, ref) => {
     appearance === "navi" ? "navi_button" : undefined,
     className,
   );
-  const innerStyle = withPropsStyle(
-    {
-      width,
-      ...consumeSpacingProps(rest),
-      ...useConsumAlignProps({ alignX, alignY }),
-    },
-    style,
-  );
+  const innerStyle = withPropsStyle(useLayoutStyle(rest), style);
 
   return (
     <button

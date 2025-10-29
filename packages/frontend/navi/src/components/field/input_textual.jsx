@@ -31,7 +31,7 @@ import { useConstraints } from "../../validation/hooks/use_constraints.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
-import { consumeSpacingProps } from "../layout/spacing.jsx";
+import { useLayoutStyle } from "../layout/use_layout_style.js";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { withPropsClassName } from "../props_composition/with_props_class_name.js";
 import { withPropsStyle } from "../props_composition/with_props_style.js";
@@ -170,9 +170,6 @@ const InputTextualBasic = forwardRef((props, ref) => {
     // visual
     appearance = "navi",
     accentColor,
-    grow,
-    width = grow ? "100%" : undefined,
-    height,
     className,
     style,
 
@@ -200,14 +197,7 @@ const InputTextualBasic = forwardRef((props, ref) => {
     appearance === "navi" ? "navi_input" : undefined,
     className,
   );
-  const innerStyle = withPropsStyle(
-    {
-      width,
-      height,
-      ...consumeSpacingProps(rest),
-    },
-    style,
-  );
+  const innerStyle = withPropsStyle(useLayoutStyle(rest), style);
   const inputTextual = (
     <input
       {...rest}
@@ -258,8 +248,6 @@ const InputTextualBasic = forwardRef((props, ref) => {
         "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
       }}
       color="var(--accent-color)"
-      width={width}
-      height={height}
       inset={-1}
     >
       {inputTextual}

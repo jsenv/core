@@ -8,7 +8,7 @@ import {
 
 import { useConstraints } from "../../validation/hooks/use_constraints.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import { consumeSpacingProps } from "../layout/spacing.jsx";
+import { useLayoutStyle } from "../layout/use_layout_style.js";
 import {
   LoadableInlineElement,
   LoaderBackground,
@@ -375,7 +375,7 @@ const NaviRadio = ({
   const innerStyle = withPropsStyle(
     {
       ...(accentColor ? { "--accent-color": accentColor } : {}),
-      ...consumeSpacingProps(rest),
+      ...useLayoutStyle(rest),
     },
     style,
   );

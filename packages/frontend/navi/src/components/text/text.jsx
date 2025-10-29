@@ -1,4 +1,4 @@
-import { consumeSpacingProps } from "../layout/spacing.jsx";
+import { useLayoutStyle } from "../layout/use_layout_style.js";
 import { withPropsStyle } from "../props_composition/with_props_style.js";
 
 import.meta.css = /* css */ `
@@ -31,28 +31,15 @@ export const Text = ({
   italic,
   underline,
   style,
-  alignX,
   ...rest
 }) => {
   const innerStyle = withPropsStyle(
     {
+      ...useLayoutStyle(rest),
       color,
       fontWeight: bold ? "bold" : undefined,
       fontStyle: italic ? "italic" : undefined,
       textDecoration: underline ? "underline" : undefined,
-      ...consumeSpacingProps(rest),
-      ...(alignX === "start"
-        ? {}
-        : alignX === "center"
-          ? {
-              alignSelf: "center",
-              marginLeft: "auto",
-              marginRight: "auto",
-            }
-          : {
-              alignSelf: "end",
-              marginLeft: "auto",
-            }),
     },
     style,
   );
