@@ -88,6 +88,7 @@ export { FontSizedSvg } from "./src/components/svg/font_sized_svg.jsx";
 export { IconAndText } from "./src/components/svg/icon_and_text.jsx";
 export { SVGMaskOverlay } from "./src/components/svg/svg_mask_overlay.jsx";
 export { Overflow } from "./src/components/text/overflow.jsx";
+export { Icon, Text } from "./src/components/text/text.jsx";
 export { TextAndCount } from "./src/components/text/text_and_count.jsx";
 // Callout, dialogs, ...
 export { openCallout } from "./src/components/callout/callout.js";
