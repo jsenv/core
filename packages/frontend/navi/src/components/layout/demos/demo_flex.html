@@ -61,7 +61,7 @@
             <section className="demo-section">
               <h3>3. FlexRow with Horizontal Alignment (alignX)</h3>
 
-              <h4>alignX="start"</h4>
+              <h4>alignX="start" (default)</h4>
               <FlexRow
                 alignX="start"
                 gap="10px"
@@ -155,7 +155,7 @@
                 <DemoBox>Short</DemoBox>
               </FlexRow>
 
-              <h4>alignY="center" (default)</h4>
+              <h4>alignY="center"</h4>
               <FlexRow
                 alignY="center"
                 gap="10px"
@@ -186,6 +186,21 @@
                 <DemoBox style={{ height: "60px", lineHeight: "60px" }}>
                   Tall Item
                 </DemoBox>
+                <DemoBox>Short</DemoBox>
+              </FlexRow>
+
+              <h4>alignY="stretch" (default)</h4>
+              <FlexRow
+                alignY="stretch"
+                gap="10px"
+                style={{
+                  height: "80px",
+                  background: "#e1f5fe",
+                  padding: "10px",
+                }}
+              >
+                <DemoBox>Short</DemoBox>
+                <DemoBox style={{ lineHeight: "60px" }}>Tall Item</DemoBox>
                 <DemoBox>Short</DemoBox>
               </FlexRow>
             </section>
@@ -407,7 +422,7 @@
                 <DemoBox>Short</DemoBox>
               </FlexColumn>
 
-              <h4>alignX="center" (default)</h4>
+              <h4>alignX="center"</h4>
               <FlexColumn
                 alignX="center"
                 gap="10px"
@@ -438,12 +453,28 @@
                 <DemoBox style={{ width: "200px" }}>Wide Item</DemoBox>
                 <DemoBox>Short</DemoBox>
               </FlexColumn>
+
+              <h4>alignX="stretch" (default)</h4>
+              <FlexColumn
+                alignX="stretch"
+                gap="10px"
+                style={{
+                  height: "150px",
+                  width: "300px",
+                  background: "#e1f5fe",
+                  padding: "10px",
+                }}
+              >
+                <DemoBox>Short</DemoBox>
+                <DemoBox>Wide Item</DemoBox>
+                <DemoBox>Short</DemoBox>
+              </FlexColumn>
             </section>
 
             <section className="demo-section">
               <h3>12.5. FlexColumn with Vertical Alignment (alignY)</h3>
 
-              <h4>alignY="start"</h4>
+              <h4>alignY="start" (default)</h4>
               <FlexColumn
                 alignY="start"
                 gap="10px"
