@@ -27,9 +27,10 @@ import.meta.css = /* css */ `
 
 const FlexDirectionContext = createContext();
 
-export const FlexRow = ({ alignY, gap, style, children, ...rest }) => {
+export const FlexRow = ({ alignX, alignY, gap, style, children, ...rest }) => {
   const innerStyle = withPropsStyle(
     {
+      justifyContent: alignX,
       alignItems: alignY,
       gap,
       ...consumeSpacingProps(rest),
@@ -45,10 +46,18 @@ export const FlexRow = ({ alignY, gap, style, children, ...rest }) => {
     </div>
   );
 };
-export const FlexColumn = ({ alignX, gap, style, children, ...rest }) => {
+export const FlexColumn = ({
+  alignX,
+  alignY,
+  gap,
+  style,
+  children,
+  ...rest
+}) => {
   const innerStyle = withPropsStyle(
     {
       alignItems: alignX,
+      justifyContent: alignY,
       gap,
       ...consumeSpacingProps(rest),
     },

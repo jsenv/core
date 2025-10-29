@@ -113,6 +113,121 @@
               </FlexRow>
             </section>
 
+            <section className="demo-section">
+              <h3>3.5. FlexRow with Horizontal Alignment (alignX)</h3>
+
+              <h4>alignX="start"</h4>
+              <FlexRow
+                alignX="start"
+                gap="10px"
+                style={{
+                  width: "400px",
+                  background: "#fff3e0",
+                  padding: "10px",
+                }}
+              >
+                <DemoBox>Item 1</DemoBox>
+                <DemoBox>Item 2</DemoBox>
+                <DemoBox>Item 3</DemoBox>
+              </FlexRow>
+
+              <h4>alignX="center"</h4>
+              <FlexRow
+                alignX="center"
+                gap="10px"
+                style={{
+                  width: "400px",
+                  background: "#e8f5e8",
+                  padding: "10px",
+                }}
+              >
+                <DemoBox>Item 1</DemoBox>
+                <DemoBox>Item 2</DemoBox>
+                <DemoBox>Item 3</DemoBox>
+              </FlexRow>
+
+              <h4>alignX="end"</h4>
+              <FlexRow
+                alignX="end"
+                gap="10px"
+                style={{
+                  width: "400px",
+                  background: "#ffebee",
+                  padding: "10px",
+                }}
+              >
+                <DemoBox>Item 1</DemoBox>
+                <DemoBox>Item 2</DemoBox>
+                <DemoBox>Item 3</DemoBox>
+              </FlexRow>
+
+              <h4>alignX="space-between"</h4>
+              <FlexRow
+                alignX="space-between"
+                style={{
+                  width: "400px",
+                  background: "#e3f2fd",
+                  padding: "10px",
+                }}
+              >
+                <DemoBox>Item 1</DemoBox>
+                <DemoBox>Item 2</DemoBox>
+                <DemoBox>Item 3</DemoBox>
+              </FlexRow>
+
+              <h4>alignX="space-around"</h4>
+              <FlexRow
+                alignX="space-around"
+                style={{
+                  width: "400px",
+                  background: "#f3e5f5",
+                  padding: "10px",
+                }}
+              >
+                <DemoBox>Item 1</DemoBox>
+                <DemoBox>Item 2</DemoBox>
+                <DemoBox>Item 3</DemoBox>
+              </FlexRow>
+            </section>
+
+            <section className="demo-section">
+              <h3>3.6. FlexRow with Combined Alignment</h3>
+
+              <h4>alignX="space-between" + alignY="start"</h4>
+              <FlexRow
+                alignX="space-between"
+                alignY="start"
+                style={{
+                  width: "400px",
+                  height: "80px",
+                  background: "#fff8e1",
+                  padding: "10px",
+                }}
+              >
+                <DemoBox>Start</DemoBox>
+                <DemoBox style={{ height: "60px", lineHeight: "60px" }}>
+                  Tall Center
+                </DemoBox>
+                <DemoBox>End</DemoBox>
+              </FlexRow>
+
+              <h4>alignX="center" + alignY="end"</h4>
+              <FlexRow
+                alignX="center"
+                alignY="end"
+                style={{
+                  width: "400px",
+                  height: "80px",
+                  background: "#e8f5e8",
+                  padding: "10px",
+                }}
+              >
+                <DemoBox>Item 1</DemoBox>
+                <DemoBox>Item 2</DemoBox>
+                <DemoBox>Item 3</DemoBox>
+              </FlexRow>
+            </section>
+
             <h2>FlexRow + FlexItem</h2>
 
             <section className="demo-section">
@@ -360,6 +475,109 @@
                 <DemoBox>Short</DemoBox>
                 <DemoBox style={{ width: "200px" }}>Wide Item</DemoBox>
                 <DemoBox>Short</DemoBox>
+              </FlexColumn>
+            </section>
+
+            <section className="demo-section">
+              <h3>12.5. FlexColumn with Vertical Alignment (alignY)</h3>
+
+              <h4>alignY="start"</h4>
+              <FlexColumn
+                alignY="start"
+                gap="10px"
+                style={{
+                  height: "200px",
+                  width: "300px",
+                  background: "#fff3e0",
+                  padding: "10px",
+                }}
+              >
+                <DemoBox>Item 1</DemoBox>
+                <DemoBox>Item 2</DemoBox>
+                <DemoBox>Item 3</DemoBox>
+              </FlexColumn>
+
+              <h4>alignY="center"</h4>
+              <FlexColumn
+                alignY="center"
+                gap="10px"
+                style={{
+                  height: "200px",
+                  width: "300px",
+                  background: "#e8f5e8",
+                  padding: "10px",
+                }}
+              >
+                <DemoBox>Item 1</DemoBox>
+                <DemoBox>Item 2</DemoBox>
+                <DemoBox>Item 3</DemoBox>
+              </FlexColumn>
+
+              <h4>alignY="end"</h4>
+              <FlexColumn
+                alignY="end"
+                gap="10px"
+                style={{
+                  height: "200px",
+                  width: "300px",
+                  background: "#ffebee",
+                  padding: "10px",
+                }}
+              >
+                <DemoBox>Item 1</DemoBox>
+                <DemoBox>Item 2</DemoBox>
+                <DemoBox>Item 3</DemoBox>
+              </FlexColumn>
+
+              <h4>alignY="space-between"</h4>
+              <FlexColumn
+                alignY="space-between"
+                style={{
+                  height: "200px",
+                  width: "300px",
+                  background: "#e3f2fd",
+                  padding: "10px",
+                }}
+              >
+                <DemoBox>Item 1</DemoBox>
+                <DemoBox>Item 2</DemoBox>
+                <DemoBox>Item 3</DemoBox>
+              </FlexColumn>
+            </section>
+
+            <section className="demo-section">
+              <h3>12.6. FlexColumn with Combined Alignment</h3>
+
+              <h4>alignX="start" + alignY="space-between"</h4>
+              <FlexColumn
+                alignX="start"
+                alignY="space-between"
+                style={{
+                  height: "200px",
+                  width: "300px",
+                  background: "#fff8e1",
+                  padding: "10px",
+                }}
+              >
+                <DemoBox>Top Left</DemoBox>
+                <DemoBox style={{ width: "200px" }}>Wide Center</DemoBox>
+                <DemoBox>Bottom Left</DemoBox>
+              </FlexColumn>
+
+              <h4>alignX="end" + alignY="center"</h4>
+              <FlexColumn
+                alignX="end"
+                alignY="center"
+                style={{
+                  height: "200px",
+                  width: "300px",
+                  background: "#e8f5e8",
+                  padding: "10px",
+                }}
+              >
+                <DemoBox>Item 1</DemoBox>
+                <DemoBox>Item 2</DemoBox>
+                <DemoBox>Item 3</DemoBox>
               </FlexColumn>
             </section>
 
