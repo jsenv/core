@@ -121,6 +121,7 @@ const FormWithAction = forwardRef((props, ref) => {
     action,
     method,
     actionErrorEffect = "show_validation_message", // "show_validation_message" or "throw"
+    errorMapping,
     onActionPrevented,
     onActionStart,
     onActionAbort,
@@ -135,6 +136,7 @@ const FormWithAction = forwardRef((props, ref) => {
   const [actionBoundToUIState] = useActionBoundToOneParam(action, uiState);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
+    errorMapping,
   });
   const { actionPending, actionRequester: formActionRequester } =
     useRequestedActionStatus(innerRef);

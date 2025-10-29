@@ -48,7 +48,7 @@ export const openCallout = (
     level = "warning",
     onClose,
     closeOnClickOutside = level === "info",
-    hideErrorStack,
+    showErrorStack,
     debug = false,
   } = {},
 ) => {
@@ -116,7 +116,7 @@ export const openCallout = (
     if (Error.isError(newMessage)) {
       const error = newMessage;
       newMessage = error.message;
-      if (!hideErrorStack && error.stack) {
+      if (showErrorStack && error.stack) {
         newMessage += `<pre class="navi_callout_error_stack">${escapeHtml(String(error.stack))}</pre>`;
       }
     }

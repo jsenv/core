@@ -11,6 +11,7 @@ export const useExecuteAction = (
   elementRef,
   {
     errorEffect = "show_validation_message", // "show_validation_message" or "throw"
+    errorMapping,
   } = {},
 ) => {
   // see https://medium.com/trabe/catching-asynchronous-errors-in-react-using-error-boundaries-5e8a5fd7b971
@@ -28,7 +29,8 @@ export const useExecuteAction = (
   const validationMessageTargetRef = useRef(null);
   const addErrorMessage = (error) => {
     const validationMessageTarget = validationMessageTargetRef.current;
-    addCustomMessage(validationMessageTarget, "action_error", error, {
+    const errorMapped = errorMapping ? errorMapping(error) : error;
+    addCustomMessage(validationMessageTarget, "action_error", errorMapped, {
       // This error should not prevent <form> submission
       // so whenever user tries to submit the form the error is cleared
       // (Hitting enter key, clicking on submit button, etc. would allow to re-submit the form in error state)

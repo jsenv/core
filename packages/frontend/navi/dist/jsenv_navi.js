@@ -11735,7 +11735,7 @@ const openCallout = (
     level = "warning",
     onClose,
     closeOnClickOutside = level === "info",
-    hideErrorStack,
+    showErrorStack,
     debug = false,
   } = {},
 ) => {
@@ -11803,7 +11803,7 @@ const openCallout = (
     if (Error.isError(newMessage)) {
       const error = newMessage;
       newMessage = error.message;
-      if (!hideErrorStack && error.stack) {
+      if (showErrorStack && error.stack) {
         newMessage += `<pre class="navi_callout_error_stack">${escapeHtml(String(error.stack))}</pre>`;
       }
     }
@@ -13766,6 +13766,7 @@ const useExecuteAction = (
   elementRef,
   {
     errorEffect = "show_validation_message", // "show_validation_message" or "throw"
+    errorMapping,
   } = {},
 ) => {
   // see https://medium.com/trabe/catching-asynchronous-errors-in-react-using-error-boundaries-5e8a5fd7b971
@@ -13783,7 +13784,8 @@ const useExecuteAction = (
   const validationMessageTargetRef = useRef(null);
   const addErrorMessage = (error) => {
     const validationMessageTarget = validationMessageTargetRef.current;
-    addCustomMessage(validationMessageTarget, "action_error", error, {
+    const errorMapped = errorMapping ? errorMapping(error) : error;
+    addCustomMessage(validationMessageTarget, "action_error", errorMapped, {
       // This error should not prevent <form> submission
       // so whenever user tries to submit the form the error is cleared
       // (Hitting enter key, clicking on submit button, etc. would allow to re-submit the form in error state)
@@ -18594,74 +18596,84 @@ const parseStyleString = (styleString) => {
 };
 
 const consumeSpacingProps = props => {
-  const consume = name => {
-    if (Object.hasOwn(props, name)) {
-      const value = props[name];
-      delete props[name];
-      return value;
-    }
-    return undefined;
-  };
-  const margin = consume("margin");
-  const marginX = consume("marginX");
-  const marginY = consume("marginY");
-  const marginLeft = consume("marginLeft");
-  const marginRight = consume("marginRight");
-  const marginTop = consume("marginTop");
-  const marginBottom = consume("marginBottom");
   const style = {};
-  if (margin !== undefined) {
-    style.margin = margin;
+  {
+    const margin = props.margin;
+    const marginX = props.marginX;
+    const marginY = props.marginY;
+    const marginLeft = props.marginLeft;
+    const marginRight = props.marginRight;
+    const marginTop = props.marginTop;
+    const marginBottom = props.marginBottom;
+    delete props.margin;
+    delete props.marginX;
+    delete props.marginY;
+    delete props.marginLeft;
+    delete props.marginRight;
+    delete props.marginTop;
+    delete props.marginBottom;
+    if (margin !== undefined) {
+      style.margin = margin;
+    }
+    if (marginLeft !== undefined) {
+      style.marginLeft = marginLeft;
+    } else if (marginX !== undefined) {
+      style.marginLeft = marginX;
+    }
+    if (marginRight !== undefined) {
+      style.marginRight = marginRight;
+    } else if (marginX !== undefined) {
+      style.marginRight = marginX;
+    }
+    if (marginTop !== undefined) {
+      style.marginTop = marginTop;
+    } else if (marginY !== undefined) {
+      style.marginTop = marginY;
+    }
+    if (marginBottom !== undefined) {
+      style.marginBottom = marginBottom;
+    } else if (marginY !== undefined) {
+      style.marginBottom = marginY;
+    }
   }
-  if (marginLeft !== undefined) {
-    style.marginLeft = marginLeft;
-  } else if (marginX !== undefined) {
-    style.marginLeft = marginX;
-  }
-  if (marginRight !== undefined) {
-    style.marginRight = marginRight;
-  } else if (marginX !== undefined) {
-    style.marginRight = marginX;
-  }
-  if (marginTop !== undefined) {
-    style.marginTop = marginTop;
-  } else if (marginY !== undefined) {
-    style.marginTop = marginY;
-  }
-  if (marginBottom !== undefined) {
-    style.marginBottom = marginBottom;
-  } else if (marginY !== undefined) {
-    style.marginBottom = marginY;
-  }
-  const padding = consume("padding");
-  const paddingX = consume("paddingX");
-  const paddingY = consume("paddingY");
-  const paddingLeft = consume("paddingLeft");
-  const paddingRight = consume("paddingRight");
-  const paddingTop = consume("paddingTop");
-  const paddingBottom = consume("paddingBottom");
-  if (padding !== undefined) {
-    style.padding = padding;
-  }
-  if (paddingLeft !== undefined) {
-    style.paddingLeft = paddingLeft;
-  } else if (paddingX !== undefined) {
-    style.paddingLeft = paddingX;
-  }
-  if (paddingRight !== undefined) {
-    style.paddingRight = paddingRight;
-  } else if (paddingX !== undefined) {
-    style.paddingRight = paddingX;
-  }
-  if (paddingTop !== undefined) {
-    style.paddingTop = paddingTop;
-  } else if (paddingY !== undefined) {
-    style.paddingTop = paddingY;
-  }
-  if (paddingBottom !== undefined) {
-    style.paddingBottom = paddingBottom;
-  } else if (paddingY !== undefined) {
-    style.paddingBottom = paddingY;
+  {
+    const padding = props.padding;
+    const paddingX = props.paddingX;
+    const paddingY = props.paddingY;
+    const paddingLeft = props.paddingLeft;
+    const paddingRight = props.paddingRight;
+    const paddingTop = props.paddingTop;
+    const paddingBottom = props.paddingBottom;
+    delete props.padding;
+    delete props.paddingX;
+    delete props.paddingY;
+    delete props.paddingLeft;
+    delete props.paddingRight;
+    delete props.paddingTop;
+    delete props.paddingBottom;
+    if (padding !== undefined) {
+      style.padding = padding;
+    }
+    if (paddingLeft !== undefined) {
+      style.paddingLeft = paddingLeft;
+    } else if (paddingX !== undefined) {
+      style.paddingLeft = paddingX;
+    }
+    if (paddingRight !== undefined) {
+      style.paddingRight = paddingRight;
+    } else if (paddingX !== undefined) {
+      style.paddingRight = paddingX;
+    }
+    if (paddingTop !== undefined) {
+      style.paddingTop = paddingTop;
+    } else if (paddingY !== undefined) {
+      style.paddingTop = paddingY;
+    }
+    if (paddingBottom !== undefined) {
+      style.paddingBottom = paddingBottom;
+    } else if (paddingY !== undefined) {
+      style.paddingBottom = paddingY;
+    }
   }
   return style;
 };
@@ -21352,6 +21364,153 @@ const Editable = forwardRef((props, ref) => {
   });
 });
 
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .navi_flex_row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0;
+  }
+
+  .navi_flex_column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+
+  .navi_flex_item {
+    flex-shrink: 0;
+  }
+`;
+const FlexDirectionContext = createContext();
+const FlexRow = ({
+  alignY,
+  gap,
+  style,
+  children,
+  ...rest
+}) => {
+  const innerStyle = withPropsStyle({
+    alignItems: alignY,
+    gap,
+    ...consumeSpacingProps(rest)
+  }, style);
+  return jsx("div", {
+    ...rest,
+    className: "navi_flex_row",
+    style: innerStyle,
+    children: jsx(FlexDirectionContext.Provider, {
+      value: "row",
+      children: children
+    })
+  });
+};
+const FlexColumn = ({
+  alignX,
+  gap,
+  style,
+  children,
+  ...rest
+}) => {
+  const innerStyle = withPropsStyle({
+    alignItems: alignX,
+    gap,
+    ...consumeSpacingProps(rest)
+  }, style);
+  return jsx("div", {
+    ...rest,
+    className: "navi_flex_column",
+    style: innerStyle,
+    children: jsx(FlexDirectionContext.Provider, {
+      value: "column",
+      children: children
+    })
+  });
+};
+const useConsumAlignProps = props => {
+  const flexDirection = useContext(FlexDirectionContext);
+  const alignX = props.alignX;
+  const alignY = props.alignY;
+  delete props.alignX;
+  delete props.alignY;
+  const style = {};
+  if (flexDirection === "row") {
+    // In row direction: alignX controls justify-content, alignY controls align-self
+    // Default alignY is "center" from CSS, so only set alignSelf when different
+    if (alignY !== undefined && alignY !== "center") {
+      style.alignSelf = alignY;
+    }
+    // For row, alignX uses auto margins for positioning
+    // NOTE: Auto margins only work effectively for positioning individual items.
+    // When multiple adjacent items have the same auto margin alignment (e.g., alignX="end"),
+    // only the first item will be positioned as expected because subsequent items
+    // will be positioned relative to the previous item's margins, not the container edge.
+    if (alignX !== undefined) {
+      if (alignX === "start") {
+        style.marginRight = "auto";
+      } else if (alignX === "end") {
+        style.marginLeft = "auto";
+      } else if (alignX === "center") {
+        style.marginLeft = "auto";
+        style.marginRight = "auto";
+      }
+    }
+  } else if (flexDirection === "column") {
+    // In column direction: alignX controls align-self, alignY uses auto margins
+    // Default alignX is "center" from CSS, so only set alignSelf when different
+    if (alignX !== undefined && alignX !== "center") {
+      style.alignSelf = alignX;
+    }
+    // For column, alignY uses auto margins for positioning
+    // NOTE: Same auto margin limitation applies - multiple adjacent items with
+    // the same alignY won't all position relative to container edges.
+    if (alignY !== undefined) {
+      if (alignY === "start") {
+        style.marginBottom = "auto";
+      } else if (alignY === "end") {
+        style.marginTop = "auto";
+      } else if (alignY === "center") {
+        style.marginTop = "auto";
+        style.marginBottom = "auto";
+      }
+    }
+  }
+  return style;
+};
+const FlexItem = ({
+  alignX,
+  alignY,
+  grow,
+  shrink,
+  className,
+  style,
+  children,
+  ...rest
+}) => {
+  const flexDirection = useContext(FlexDirectionContext);
+  if (!flexDirection) {
+    console.warn("FlexItem must be used within a FlexRow or FlexColumn component.");
+  }
+  const innerClassName = withPropsClassName("navi_flex_item", className);
+  const alignStyle = useConsumAlignProps({
+    alignX,
+    alignY
+  });
+  const innerStyle = withPropsStyle({
+    flexGrow: grow ? 1 : undefined,
+    flexShrink: shrink ? 1 : undefined,
+    ...consumeSpacingProps(rest),
+    ...alignStyle
+  }, style);
+  return jsx("div", {
+    ...rest,
+    className: innerClassName,
+    style: innerStyle,
+    children: children
+  });
+};
+
 const useFormEvents = (
   elementRef,
   {
@@ -21573,7 +21732,8 @@ const ButtonBasic = forwardRef((props, ref) => {
     autoFocus,
     // visual
     appearance = "navi",
-    alignX = "start",
+    alignX,
+    alignY,
     discrete,
     className,
     style,
@@ -21599,13 +21759,9 @@ const ButtonBasic = forwardRef((props, ref) => {
   const innerClassName = withPropsClassName(appearance === "navi" ? "navi_button" : undefined, className);
   const innerStyle = withPropsStyle({
     ...consumeSpacingProps(rest),
-    ...(alignX === "start" ? {} : alignX === "center" ? {
-      alignSelf: "center",
-      marginLeft: "auto",
-      marginRight: "auto"
-    } : {
-      alignSelf: "end",
-      marginLeft: "auto"
+    ...useConsumAlignProps({
+      alignX,
+      alignY
     })
   }, style);
   return jsx("button", {
@@ -22171,6 +22327,7 @@ const FormWithAction = forwardRef((props, ref) => {
     method,
     actionErrorEffect = "show_validation_message",
     // "show_validation_message" or "throw"
+    errorMapping,
     onActionPrevented,
     onActionStart,
     onActionAbort,
@@ -22184,7 +22341,8 @@ const FormWithAction = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
   const [actionBoundToUIState] = useActionBoundToOneParam(action, uiState);
   const executeAction = useExecuteAction(innerRef, {
-    errorEffect: actionErrorEffect
+    errorEffect: actionErrorEffect,
+    errorMapping
   });
   const {
     actionPending,
@@ -28212,4 +28370,4 @@ const useDependenciesDiff = (inputs) => {
   return diffRef.current;
 };
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Button, Checkbox, CheckboxList, Col, Colgroup, Details, Editable, ErrorBoundaryContext, FontSizedSvg, Form, Icon, IconAndText, Input, Label, Link, LinkWithIcon, Overflow, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, Select, SelectionContext, Spacing, SummaryMarker, Tab, TabList, Table, TableCell, Tbody, Text, TextAndCount, Thead, Tr, UITransition, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, defineRoutes, enableDebugActions, enableDebugOnDocumentLoading, goBack, goForward, goTo, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, Button, Checkbox, CheckboxList, Col, Colgroup, Details, Editable, ErrorBoundaryContext, FlexColumn, FlexItem, FlexRow, FontSizedSvg, Form, Icon, IconAndText, Input, Label, Link, LinkWithIcon, Overflow, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, Select, SelectionContext, Spacing, SummaryMarker, Tab, TabList, Table, TableCell, Tbody, Text, TextAndCount, Thead, Tr, UITransition, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, defineRoutes, enableDebugActions, enableDebugOnDocumentLoading, goBack, goForward, goTo, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, valueInLocalStorage };
