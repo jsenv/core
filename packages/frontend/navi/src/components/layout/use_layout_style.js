@@ -198,30 +198,35 @@ export const useLayoutStyle = (props) => {
     }
   }
 
-  expandX: {
-    const expandX = props.expandX;
-    delete props.expandX;
-    if (expandX) {
-      if (flexDirection === "row") {
-        expansionStyle.flexGrow = 1; // Grow horizontally in row
-      } else if (flexDirection === "column") {
-        expansionStyle.width = "100%"; // Take full width in column
-      } else {
-        expansionStyle.width = "100%"; // Take full width outside flex
+  expand: {
+    const expand = props.expand;
+    delete props.expand;
+
+    expandX: {
+      const expandX = props.expandX || expand;
+      delete props.expandX;
+      if (expandX) {
+        if (flexDirection === "row") {
+          expansionStyle.flexGrow = 1; // Grow horizontally in row
+        } else if (flexDirection === "column") {
+          expansionStyle.width = "100%"; // Take full width in column
+        } else {
+          expansionStyle.width = "100%"; // Take full width outside flex
+        }
       }
     }
-  }
 
-  expandY: {
-    const expandY = props.expandY;
-    delete props.expandY;
-    if (expandY) {
-      if (flexDirection === "row") {
-        expansionStyle.height = "100%"; // Take full height in row
-      } else if (flexDirection === "column") {
-        expansionStyle.flexGrow = 1; // Grow vertically in column
-      } else {
-        expansionStyle.height = "100%"; // Take full height outside flex
+    expandY: {
+      const expandY = props.expandY || expand;
+      delete props.expandY;
+      if (expandY) {
+        if (flexDirection === "row") {
+          expansionStyle.height = "100%"; // Take full height in row
+        } else if (flexDirection === "column") {
+          expansionStyle.flexGrow = 1; // Grow vertically in column
+        } else {
+          expansionStyle.height = "100%"; // Take full height outside flex
+        }
       }
     }
   }
