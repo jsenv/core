@@ -179,16 +179,84 @@
               <FlexRow
                 gap="10px"
                 style={{
-                  width: "600px",
                   background: "#f3e5f5",
                   padding: "10px",
                 }}
               >
-                <FlexItem style={{ width: "150px" }}>
+                <FlexItem>
                   <DemoBox>Default</DemoBox>
                 </FlexItem>
-                <FlexItem alignX="end" style={{ width: "150px" }}>
+                <FlexItem alignX="start">
+                  <DemoBox>alignX="start"</DemoBox>
+                </FlexItem>
+                <FlexItem alignX="center">
+                  <DemoBox>alignX="center"</DemoBox>
+                </FlexItem>
+                <FlexItem alignX="end">
                   <DemoBox>alignX="end"</DemoBox>
+                </FlexItem>
+              </FlexRow>
+            </section>
+
+            <section className="demo-section">
+              <h3>8. Auto Margin Examples</h3>
+
+              <h4>Single item pushed to end</h4>
+              <FlexRow
+                gap="10px"
+                style={{ background: "#fff3e0", padding: "10px" }}
+              >
+                <DemoBox>Item 1</DemoBox>
+                <DemoBox>Item 2</DemoBox>
+                <FlexItem alignX="end">
+                  <DemoBox>Pushed to end</DemoBox>
+                </FlexItem>
+              </FlexRow>
+
+              <h4>Single item centered</h4>
+              <FlexRow
+                gap="10px"
+                style={{ background: "#e8f5e8", padding: "10px" }}
+              >
+                <DemoBox>Item 1</DemoBox>
+                <FlexItem alignX="center">
+                  <DemoBox>Centered</DemoBox>
+                </FlexItem>
+                <DemoBox>Item 3</DemoBox>
+              </FlexRow>
+
+              <h4>Multiple items with different alignments</h4>
+              <FlexRow
+                gap="10px"
+                style={{ background: "#ffebee", padding: "10px" }}
+              >
+                <FlexItem alignX="start">
+                  <DemoBox>Start</DemoBox>
+                </FlexItem>
+                <DemoBox>Normal</DemoBox>
+                <FlexItem alignX="center">
+                  <DemoBox>Center</DemoBox>
+                </FlexItem>
+                <DemoBox>Normal</DemoBox>
+                <FlexItem alignX="end">
+                  <DemoBox>End</DemoBox>
+                </FlexItem>
+              </FlexRow>
+            </section>
+
+            <section className="demo-section">
+              <h3>9. Combined Growth and Alignment</h3>
+
+              <FlexRow
+                gap="10px"
+                style={{ background: "#e1f5fe", padding: "10px" }}
+              >
+                <DemoBox>Fixed</DemoBox>
+                <FlexItem grow>
+                  <DemoBox>Grows</DemoBox>
+                </FlexItem>
+                <FlexItem alignX="end">
+                  <DemoBox>Pushed to end</DemoBox>
                 </FlexItem>
               </FlexRow>
             </section>

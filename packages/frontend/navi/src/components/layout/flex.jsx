@@ -79,24 +79,33 @@ export const useConsumAlignProps = (props) => {
     if (alignY !== undefined && alignY !== "center") {
       style.alignSelf = alignY;
     }
-    // For row, alignX doesn't have a meaningful default for justifySelf
+    // For row, alignX uses auto margins for positioning
     if (alignX !== undefined) {
-      style.justifySelf = alignX;
       if (alignX === "start") {
         style.marginRight = "auto";
       } else if (alignX === "end") {
         style.marginLeft = "auto";
+      } else if (alignX === "center") {
+        style.marginLeft = "auto";
+        style.marginRight = "auto";
       }
     }
   } else if (flexDirection === "column") {
-    // In column direction: alignX controls align-self, alignY controls justify-content
+    // In column direction: alignX controls align-self, alignY uses auto margins
     // Default alignX is "center" from CSS, so only set alignSelf when different
     if (alignX !== undefined && alignX !== "center") {
       style.alignSelf = alignX;
     }
-    // For column, alignY doesn't have a meaningful default for justifySelf
+    // For column, alignY uses auto margins for positioning
     if (alignY !== undefined) {
-      style.justifySelf = alignY;
+      if (alignY === "start") {
+        style.marginBottom = "auto";
+      } else if (alignY === "end") {
+        style.marginTop = "auto";
+      } else if (alignY === "center") {
+        style.marginTop = "auto";
+        style.marginBottom = "auto";
+      }
     }
   }
 
