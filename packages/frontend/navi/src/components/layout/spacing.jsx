@@ -1,68 +1,45 @@
 import { withPropsStyle } from "../props_composition/with_props_style.js";
 
 export const consumeSpacingProps = (props) => {
+  const consume = (name) => {
+    if (Object.hasOwn(props, name)) {
+      const value = props[name];
+      delete props[name];
+      return value;
+    }
+    return undefined;
+  };
+  const margin = consume("margin");
+  const marginX = consume("marginX");
+  const marginY = consume("marginY");
+  const marginLeft = consume("marginLeft");
+  const marginRight = consume("marginRight");
+  const marginTop = consume("marginTop");
+  const marginBottom = consume("marginBottom");
+
   const style = {};
-
-  // Handle margin props
-  if (Object.hasOwn(props, "margin")) {
-    style.margin = props.margin;
-    delete props.margin;
+  if (margin !== undefined) {
+    style.margin = margin;
   }
-
-  // Handle margin directions with fallbacks
-  let effectiveMarginLeft;
-  let effectiveMarginRight;
-  let effectiveMarginTop;
-  let effectiveMarginBottom;
-
-  if (Object.hasOwn(props, "marginLeft")) {
-    effectiveMarginLeft = props.marginLeft;
-    delete props.marginLeft;
-  } else if (Object.hasOwn(props, "marginX")) {
-    effectiveMarginLeft = props.marginX;
+  if (marginLeft !== undefined) {
+    style.marginLeft = marginLeft;
+  } else if (marginX !== undefined) {
+    style.marginLeft = marginX;
   }
-
-  if (Object.hasOwn(props, "marginRight")) {
-    effectiveMarginRight = props.marginRight;
-    delete props.marginRight;
-  } else if (Object.hasOwn(props, "marginX")) {
-    effectiveMarginRight = props.marginX;
+  if (marginRight !== undefined) {
+    style.marginRight = marginRight;
+  } else if (marginX !== undefined) {
+    style.marginRight = marginX;
   }
-
-  if (Object.hasOwn(props, "marginTop")) {
-    effectiveMarginTop = props.marginTop;
-    delete props.marginTop;
-  } else if (Object.hasOwn(props, "marginY")) {
-    effectiveMarginTop = props.marginY;
+  if (marginTop !== undefined) {
+    style.marginTop = marginTop;
+  } else if (marginY !== undefined) {
+    style.marginTop = marginY;
   }
-
-  if (Object.hasOwn(props, "marginBottom")) {
-    effectiveMarginBottom = props.marginBottom;
-    delete props.marginBottom;
-  } else if (Object.hasOwn(props, "marginY")) {
-    effectiveMarginBottom = props.marginY;
-  }
-
-  // Delete marginX/marginY after processing specific directions
-  if (Object.hasOwn(props, "marginX")) {
-    delete props.marginX;
-  }
-  if (Object.hasOwn(props, "marginY")) {
-    delete props.marginY;
-  }
-
-  // Apply effective margin values
-  if (effectiveMarginLeft !== undefined) {
-    style.marginLeft = effectiveMarginLeft;
-  }
-  if (effectiveMarginRight !== undefined) {
-    style.marginRight = effectiveMarginRight;
-  }
-  if (effectiveMarginTop !== undefined) {
-    style.marginTop = effectiveMarginTop;
-  }
-  if (effectiveMarginBottom !== undefined) {
-    style.marginBottom = effectiveMarginBottom;
+  if (marginBottom !== undefined) {
+    style.marginBottom = marginBottom;
+  } else if (marginY !== undefined) {
+    style.marginBottom = marginY;
   }
 
   // Handle padding props
