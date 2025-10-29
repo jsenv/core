@@ -21196,11 +21196,15 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_button {
       position: relative;
-      display: inline-block;
+      display: inline-flex;
+      width: fit-content;
+      height: fit-content;
       padding: 0;
       background: none;
       border: none;
+      border-radius: inherit;
       outline: none;
+      cursor: pointer;
 
       --border-width: 1px;
       --outline-width: 1px;
@@ -21294,6 +21298,9 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       --color: var(--color-readonly);
     }
     /* Disabled */
+    .navi_button[data-disabled] {
+      cursor: default;
+    }
     .navi_button[data-disabled] .navi_button_content {
       --border-color: var(--border-color-disabled);
       --background-color: var(--background-color-disabled);
@@ -21355,6 +21362,8 @@ const ButtonBasic = forwardRef((props, ref) => {
     constraints = [],
     autoFocus,
     appearance = "navi",
+    alignX = "start",
+    style,
     discrete,
     children,
     ...rest
@@ -21375,10 +21384,18 @@ const ButtonBasic = forwardRef((props, ref) => {
   } else {
     buttonChildren = children;
   }
+  const innerStyle = {
+    ...style
+  };
+  if (alignX !== "start") {
+    innerStyle["align-self"] = alignX === "center" ? "center" : "flex-end";
+  }
   return jsx("button", {
     ...rest,
     ref: innerRef,
     className: appearance === "navi" ? "navi_button" : undefined,
+    style: innerStyle,
+    disabled: innerDisabled,
     "data-discrete": discrete ? "" : undefined,
     "data-readonly": innerReadOnly ? "" : undefined,
     "data-readonly-silent": innerLoading ? "" : undefined,
@@ -27636,12 +27653,14 @@ const useSignalSync = (value, initialValue = value) => {
 const FontSizedSvg = ({
   width = "1em",
   height = "1em",
+  style,
   children,
   ...props
 }) => {
   return jsx("span", {
     ...props,
     style: {
+      ...style,
       display: "flex",
       alignItems: "center",
       width,
@@ -27804,6 +27823,63 @@ const Overflow = ({
 };
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
+  :root {
+    --navi-icon-align-y: center;
+  }
+
+  .navi_text {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.1em;
+  }
+
+  .navi_icon {
+    --align-y: var(--navi-icon-align-y, center);
+
+    display: inline-flex;
+    width: 1em;
+    height: 1em;
+    flex-shrink: 0;
+    align-self: var(--align-y);
+    line-height: 1em;
+  }
+`;
+const Text = ({
+  children,
+  ...rest
+}) => {
+  return jsx("span", {
+    ...rest,
+    className: "navi_text",
+    children: children
+  });
+};
+const alignYMapping = {
+  start: "flex-start",
+  center: "center",
+  end: "flex-end"
+};
+const Icon = ({
+  alignY,
+  style,
+  children,
+  ...rest
+}) => {
+  const innerStyle = {
+    ...style
+  };
+  if (alignY !== "center") {
+    innerStyle["--align-y"] = alignYMapping[alignY];
+  }
+  return jsx("span", {
+    ...rest,
+    className: "navi_icon",
+    style: innerStyle,
+    children: children
+  });
+};
+
+installImportMetaCss(import.meta);import.meta.css = /* css */`
   .text_and_count {
     display: flex;
     align-items: center;
@@ -27912,4 +27988,4 @@ const useDependenciesDiff = (inputs) => {
   return diffRef.current;
 };
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Button, Checkbox, CheckboxList, Col, Colgroup, Details, Editable, ErrorBoundaryContext, FontSizedSvg, Form, IconAndText, Input, Label, Link, LinkWithIcon, Overflow, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, Select, SelectionContext, SummaryMarker, Tab, TabList, Table, TableCell, Tbody, TextAndCount, Thead, Tr, UITransition, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, defineRoutes, enableDebugActions, enableDebugOnDocumentLoading, goBack, goForward, goTo, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, Button, Checkbox, CheckboxList, Col, Colgroup, Details, Editable, ErrorBoundaryContext, FontSizedSvg, Form, Icon, IconAndText, Input, Label, Link, LinkWithIcon, Overflow, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, Select, SelectionContext, SummaryMarker, Tab, TabList, Table, TableCell, Tbody, Text, TextAndCount, Thead, Tr, UITransition, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, defineRoutes, enableDebugActions, enableDebugOnDocumentLoading, goBack, goForward, goTo, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, valueInLocalStorage };

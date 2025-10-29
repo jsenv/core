@@ -207,6 +207,8 @@ const ButtonBasic = forwardRef((props, ref) => {
     constraints = [],
     autoFocus,
     appearance = "navi",
+    alignX = "start",
+    style,
     discrete,
     children,
     ...rest
@@ -228,11 +230,17 @@ const ButtonBasic = forwardRef((props, ref) => {
     buttonChildren = children;
   }
 
+  const innerStyle = { ...style };
+  if (alignX !== "start") {
+    innerStyle["align-self"] = alignX === "center" ? "center" : "flex-end";
+  }
+
   return (
     <button
       {...rest}
       ref={innerRef}
       className={appearance === "navi" ? "navi_button" : undefined}
+      style={innerStyle}
       disabled={innerDisabled}
       data-discrete={discrete ? "" : undefined}
       data-readonly={innerReadOnly ? "" : undefined}
