@@ -372,10 +372,11 @@ const NaviRadio = ({
     return initCustomField(ref.current, inputRef.current);
   }, []);
 
+  const { all } = useLayoutStyle(rest);
   const innerStyle = withPropsStyle(
     {
+      ...all,
       ...(accentColor ? { "--accent-color": accentColor } : {}),
-      ...useLayoutStyle(rest),
     },
     style,
   );

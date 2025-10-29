@@ -33,9 +33,10 @@ export const Text = ({
   style,
   ...rest
 }) => {
+  const { all } = useLayoutStyle(rest);
   const innerStyle = withPropsStyle(
     {
-      ...useLayoutStyle(rest),
+      ...all,
       color,
       fontWeight: bold ? "bold" : undefined,
       fontStyle: italic ? "italic" : undefined,

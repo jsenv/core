@@ -121,7 +121,8 @@ const LinkPlain = forwardRef((props, ref) => {
   useDimColorWhen(innerRef, shouldDimColor);
 
   const innerClassName = withPropsClassName("navi_link", className);
-  const innerStyle = withPropsStyle(useLayoutStyle(rest), style);
+  const { all } = useLayoutStyle(rest);
+  const innerStyle = withPropsStyle(all, style);
 
   return (
     <LoadableInlineElement

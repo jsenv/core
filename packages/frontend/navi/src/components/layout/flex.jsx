@@ -24,14 +24,15 @@ import.meta.css = /* css */ `
 `;
 
 export const FlexRow = ({ alignX, alignY, gap, style, children, ...rest }) => {
+  const { all } = useLayoutStyle(rest);
   const innerStyle = withPropsStyle(
     {
+      ...all,
       // Only set justifyContent if it's not the default "start"
       justifyContent: alignX !== "start" ? alignX : undefined,
       // Only set alignItems if it's not the default "stretch"
       alignItems: alignY !== "stretch" ? alignY : undefined,
       gap,
-      ...useLayoutStyle(rest),
     },
     style,
   );
@@ -52,14 +53,15 @@ export const FlexColumn = ({
   children,
   ...rest
 }) => {
+  const { all } = useLayoutStyle(rest);
   const innerStyle = withPropsStyle(
     {
+      ...all,
       // Only set alignItems if it's not the default "stretch"
       alignItems: alignX !== "stretch" ? alignX : undefined,
       // Only set justifyContent if it's not the default "start"
       justifyContent: alignY !== "start" ? alignY : undefined,
       gap,
-      ...useLayoutStyle(rest),
     },
     style,
   );
@@ -76,7 +78,7 @@ export const FlexColumn = ({
 export const FlexItem = ({
   shrink,
   className,
-  grow,
+  expand,
   style,
   children,
   ...rest
@@ -89,11 +91,12 @@ export const FlexItem = ({
   }
 
   const innerClassName = withPropsClassName("navi_flex_item", className);
+  const { all } = useLayoutStyle(rest);
   const innerStyle = withPropsStyle(
     {
-      flexGrow: grow ? 1 : undefined,
+      ...all,
+      flexGrow: expand ? 1 : undefined,
       flexShrink: shrink ? 1 : undefined,
-      ...useLayoutStyle(rest),
     },
     style,
   );

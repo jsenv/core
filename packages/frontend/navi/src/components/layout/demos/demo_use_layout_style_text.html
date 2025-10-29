@@ -1,0 +1,423 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>useLayoutStyle Demo - Text</title>
+    <style>
+      .demo-container {
+        margin-bottom: 30px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+      }
+
+      .demo-box {
+        min-width: 60px;
+        padding: 10px;
+        text-align: center;
+        background: #e3f2fd;
+        border: 1px solid #90caf9;
+        border-radius: 4px;
+      }
+
+      .visual-container {
+        background: #fff3e0;
+        border: 2px dashed #ff9800;
+        padding: 10px;
+        margin: 10px 0;
+      }
+
+      .text-showcase {
+        background: #f5f5f5;
+        border: 1px solid #ddd;
+        padding: 15px;
+        margin: 10px 0;
+        border-radius: 4px;
+      }
+
+      h3 {
+        margin-top: 0;
+      }
+
+      /* Helper to visualize the container boundaries */
+      .bounded {
+        width: 400px;
+        height: 100px;
+        background: #f0f4ff;
+        border: 1px solid #6366f1;
+        padding: 10px;
+      }
+
+      /* Helper to show text boundaries */
+      .text-boundary {
+        border: 1px dashed #999;
+        display: inline-block;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      /* eslint-disable no-unused-vars */
+      import { render } from "preact";
+      import { FlexRow, FlexColumn, Text, Button } from "@jsenv/navi";
+
+      const DemoBox = ({ children, ...props }) => (
+        <div className="demo-box" {...props}>
+          {children}
+        </div>
+      );
+
+      const Demo = () => {
+        return (
+          <div style={{ padding: "20px", fontFamily: "system-ui, sans-serif" }}>
+            <h1>useLayoutStyle Demo - Text Elements</h1>
+            <p>
+              Testing spacing (margin/padding), alignment, and expand behavior
+              specifically with Text components in various layout contexts.
+            </p>
+
+            <div className="demo-container">
+              <h3>1. Text with Expand in FlexRow</h3>
+              <div className="visual-container">
+                <FlexRow gap="10px">
+                  <DemoBox>Start</DemoBox>
+                  <Text expand style={{ background: "#e8f5e8", padding: "10px" }}>
+                    This text expands to fill available horizontal space
+                  </Text>
+                  <DemoBox>End</DemoBox>
+                </FlexRow>
+              </div>
+            </div>
+
+            <div className="demo-container">
+              <h3>2. Text with Expand in FlexColumn</h3>
+              <div className="visual-container">
+                <FlexColumn gap="10px" style={{ height: "200px" }}>
+                  <Text style={{ background: "#fff3e0", padding: "10px" }}>
+                    Fixed text at top
+                  </Text>
+                  <Text expand style={{ background: "#e8f5e8", padding: "10px" }}>
+                    This text expands vertically to fill available space
+                  </Text>
+                  <Text style={{ background: "#fff3e0", padding: "10px" }}>
+                    Fixed text at bottom
+                  </Text>
+                </FlexColumn>
+              </div>
+            </div>
+
+            <div className="demo-container">
+              <h3>3. Text with Expand outside Flex context</h3>
+              <div className="visual-container">
+                <div style={{ width: "300px", border: "1px solid #ccc", padding: "10px" }}>
+                  <Text style={{ background: "#fff3e0", padding: "5px" }}>
+                    Normal text width
+                  </Text>
+                  <br /><br />
+                  <Text expand style={{ background: "#e8f5e8", padding: "5px" }}>
+                    Expanding text (should take full width)
+                  </Text>
+                </div>
+              </div>
+            </div>
+
+            <div className="demo-container">
+              <h3>4. Text Spacing - Margins</h3>
+              <div className="visual-container">
+                <div className="text-showcase">
+                  <Text margin="15px" style={{ background: "#e3f2fd", padding: "5px" }}>
+                    Text with margin all sides
+                  </Text>
+                  <br />
+                  <Text marginX="25px" style={{ background: "#f3e5f5", padding: "5px" }}>
+                    Text with marginX only
+                  </Text>
+                  <br />
+                  <Text marginY="20px" style={{ background: "#e8f5e8", padding: "5px" }}>
+                    Text with marginY only
+                  </Text>
+                  <br />
+                  <Text marginLeft="40px" style={{ background: "#fff3e0", padding: "5px" }}>
+                    Text with marginLeft only
+                  </Text>
+                </div>
+              </div>
+            </div>
+
+            <div className="demo-container">
+              <h3>5. Text Spacing - Padding</h3>
+              <div className="visual-container">
+                <div className="text-showcase">
+                  <Text style={{ background: "#e3f2fd", border: "1px solid #90caf9" }}>
+                    Default padding
+                  </Text>
+                  <br /><br />
+                  <Text padding="20px" style={{ background: "#f3e5f5", border: "1px solid #ce93d8" }}>
+                    Extra padding all sides
+                  </Text>
+                  <br /><br />
+                  <Text paddingX="30px" style={{ background: "#e8f5e8", border: "1px solid #81c784" }}>
+                    PaddingX only
+                  </Text>
+                  <br /><br />
+                  <Text paddingY="15px" style={{ background: "#fff3e0", border: "1px solid #ffb74d" }}>
+                    PaddingY only
+                  </Text>
+                </div>
+              </div>
+            </div>
+
+            <div className="demo-container">
+              <h3>6. Text AlignX Test: FlexRow + alignX="end"</h3>
+              <div className="visual-container">
+                <div className="bounded">
+                  <FlexRow gap="10px" style={{ height: "100%" }}>
+                    <Text style={{ background: "#e3f2fd", padding: "5px" }}>
+                      Default position
+                    </Text>
+                    <Text alignX="end" style={{ background: "#f3e5f5", padding: "5px" }}>
+                      Pushed to end
+                    </Text>
+                  </FlexRow>
+                </div>
+              </div>
+            </div>
+
+            <div className="demo-container">
+              <h3>7. Text Labels and Content Layout</h3>
+              <div className="visual-container">
+                <FlexColumn gap="15px">
+                  <FlexRow gap="10px">
+                    <Text style={{ minWidth: "80px", fontWeight: "bold" }}>Name:</Text>
+                    <Text expand style={{ background: "#f5f5f5", padding: "8px" }}>
+                      John Doe
+                    </Text>
+                  </FlexRow>
+                  
+                  <FlexRow gap="10px">
+                    <Text style={{ minWidth: "80px", fontWeight: "bold" }}>Email:</Text>
+                    <Text expand style={{ background: "#f5f5f5", padding: "8px" }}>
+                      john.doe@example.com
+                    </Text>
+                    <Button>Edit</Button>
+                  </FlexRow>
+                  
+                  <FlexRow gap="10px">
+                    <Text style={{ minWidth: "80px", fontWeight: "bold" }}>Status:</Text>
+                    <Text 
+                      expand 
+                      style={{ 
+                        background: "#e8f5e8", 
+                        padding: "8px",
+                        color: "#2e7d32"
+                      }}
+                    >
+                      Active
+                    </Text>
+                  </FlexRow>
+                </FlexColumn>
+              </div>
+            </div>
+
+            <div className="demo-container">
+              <h3>8. Text in Card Layout</h3>
+              <div className="visual-container">
+                <div style={{ 
+                  border: "1px solid #ddd", 
+                  borderRadius: "8px", 
+                  padding: "20px",
+                  width: "350px" 
+                }}>
+                  <FlexRow gap="15px" style={{ marginBottom: "15px" }}>
+                    <Text style={{ fontSize: "20px", fontWeight: "bold" }}>
+                      Article Title
+                    </Text>
+                    <Text alignX="end" style={{ fontSize: "12px", color: "#666" }}>
+                      2 min read
+                    </Text>
+                  </FlexRow>
+                  
+                  <Text 
+                    style={{ 
+                      lineHeight: "1.6", 
+                      color: "#555",
+                      marginBottom: "15px"
+                    }}
+                  >
+                    This is the article content that can expand and flow naturally. 
+                    It demonstrates how text components work with layout props.
+                  </Text>
+                  
+                  <FlexRow gap="10px">
+                    <Text style={{ fontSize: "12px", color: "#999" }}>
+                      Published: Oct 29, 2025
+                    </Text>
+                    <Text alignX="end" style={{ fontSize: "12px", color: "#666" }}>
+                      By Author Name
+                    </Text>
+                  </FlexRow>
+                </div>
+              </div>
+            </div>
+
+            <div className="demo-container">
+              <h3>9. Text Navigation and Breadcrumbs</h3>
+              <div className="visual-container">
+                <FlexColumn gap="15px">
+                  <FlexRow gap="10px">
+                    <Text style={{ fontWeight: "bold" }}>Home</Text>
+                    <Text>/</Text>
+                    <Text style={{ fontWeight: "bold" }}>Products</Text>
+                    <Text>/</Text>
+                    <Text>Current Page</Text>
+                    <Text alignX="end" style={{ fontSize: "12px", color: "#666" }}>
+                      Help
+                    </Text>
+                  </FlexRow>
+                  
+                  <FlexRow gap="15px">
+                    <Text expand style={{ fontSize: "18px", fontWeight: "bold" }}>
+                      Page Title
+                    </Text>
+                    <Text alignX="end" style={{ fontSize: "12px" }}>
+                      Last updated: Today
+                    </Text>
+                  </FlexRow>
+                </FlexColumn>
+              </div>
+            </div>
+
+            <div className="demo-container">
+              <h3>10. Text with Mixed Alignment</h3>
+              <div className="visual-container">
+                <FlexColumn gap="10px">
+                  <FlexRow gap="10px">
+                    <Text style={{ background: "#e3f2fd", padding: "8px" }}>
+                      Default (start)
+                    </Text>
+                    <Text alignX="center" style={{ background: "#f3e5f5", padding: "8px" }}>
+                      Centered
+                    </Text>
+                    <Text alignX="end" style={{ background: "#e8f5e8", padding: "8px" }}>
+                      End aligned
+                    </Text>
+                  </FlexRow>
+                  
+                  <FlexRow gap="10px">
+                    <Text expand style={{ background: "#fff3e0", padding: "8px" }}>
+                      Expanding text that fills remaining space
+                    </Text>
+                    <Text alignX="end" style={{ background: "#ffebee", padding: "8px" }}>
+                      Fixed end
+                    </Text>
+                  </FlexRow>
+                </FlexColumn>
+              </div>
+            </div>
+
+            <div className="demo-container">
+              <h3>11. Text in Message/Chat Layout</h3>
+              <div className="visual-container">
+                <FlexColumn gap="10px" style={{ width: "400px" }}>
+                  <FlexRow gap="10px">
+                    <Text 
+                      style={{ 
+                        background: "#e3f2fd", 
+                        padding: "10px", 
+                        borderRadius: "12px",
+                        maxWidth: "70%" 
+                      }}
+                    >
+                      Hello! This is a message from the left side.
+                    </Text>
+                  </FlexRow>
+                  
+                  <FlexRow gap="10px">
+                    <Text alignX="end"
+                      style={{ 
+                        background: "#e8f5e8", 
+                        padding: "10px", 
+                        borderRadius: "12px",
+                        maxWidth: "70%" 
+                      }}
+                    >
+                      This message is aligned to the right side.
+                    </Text>
+                  </FlexRow>
+                  
+                  <FlexRow gap="10px">
+                    <Text 
+                      style={{ 
+                        background: "#fff3e0", 
+                        padding: "10px", 
+                        borderRadius: "12px",
+                        maxWidth: "70%" 
+                      }}
+                    >
+                      Another left message with some longer content to show wrapping.
+                    </Text>
+                  </FlexRow>
+                </FlexColumn>
+              </div>
+            </div>
+
+            <div className="demo-container">
+              <h3>12. Combined Text Styling and Layout</h3>
+              <div className="visual-container">
+                <FlexColumn gap="15px">
+                  <Text 
+                    bold 
+                    marginBottom="10px"
+                    style={{ fontSize: "24px" }}
+                  >
+                    Main Heading
+                  </Text>
+                  
+                  <FlexRow gap="15px">
+                    <Text 
+                      italic 
+                      marginRight="20px"
+                      style={{ color: "#666" }}
+                    >
+                      Subtitle
+                    </Text>
+                    <Text alignX="end" style={{ fontSize: "12px" }}>
+                      Metadata
+                    </Text>
+                  </FlexRow>
+                  
+                  <Text 
+                    paddingX="15px"
+                    paddingY="10px"
+                    style={{ 
+                      background: "#f8f9fa", 
+                      borderLeft: "4px solid #007bff",
+                      fontStyle: "italic" 
+                    }}
+                  >
+                    This is a quote or highlighted text with custom padding and styling.
+                  </Text>
+                  
+                  <FlexRow gap="10px">
+                    <Text underline style={{ color: "#007bff" }}>
+                      Link text
+                    </Text>
+                    <Text expand style={{ textAlign: "center" }}>
+                      Centered expanding content
+                    </Text>
+                    <Text bold style={{ color: "#dc3545" }}>
+                      Important
+                    </Text>
+                  </FlexRow>
+                </FlexColumn>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      render(<Demo />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
