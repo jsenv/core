@@ -1,14 +1,32 @@
-import { parseCSSTransform, stringifyCSSTransform } from "./style_parsing.js";
+import {
+  normalizeStyle,
+  normalizeStyles,
+  parseCSSTransform,
+  stringifyCSSTransform,
+} from "./style_parsing.js";
 
 // Merge two style objects, handling special cases like transform
-export const mergeStyles = (stylesA, stylesB) => {
+export const mergeStyles = (stylesA, stylesB, context = "js") => {
+  if (!stylesA) {
+    return normalizeStyles(stylesB, context);
+  }
+  if (!stylesB) {
+    return normalizeStyles(stylesA, context);
+  }
   const result = { ...stylesA };
-  for (const key of Object.keys(stylesB)) {
-    if (key === "transform") {
-      result[key] = mergeOneStyle(stylesA[key], stylesB[key], key);
+  const aKeys = Object.keys(stylesA);
+  const bKeyToVisitSet = new Set(Object.keys(stylesB));
+  for (const aKey of aKeys) {
+    const bHasKey = bKeyToVisitSet.has(aKey);
+    if (bHasKey) {
+      bKeyToVisitSet.delete(aKey);
+      result[aKey] = mergeOneStyle(stylesA[aKey], stylesB[aKey], aKey, context);
     } else {
-      result[key] = stylesB[key];
+      result[aKey] = normalizeStyle(stylesA[aKey], aKey, context);
     }
+  }
+  for (const bKey of bKeyToVisitSet) {
+    result[bKey] = normalizeStyle(stylesB[bKey], bKey, context);
   }
   return result;
 };

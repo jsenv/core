@@ -5,8 +5,10 @@ export { createValueEffect } from "./src/value_effect.js";
 
 // style
 export { addWillChange, getStyle, setStyles } from "./src/style/dom_styles.js";
+export { mergeStyles } from "./src/style/style_composition.js";
 export { createStyleController } from "./src/style/style_controller.js";
 export { getDefaultStyles } from "./src/style/style_default.js";
+export { normalizeStyles } from "./src/style/style_parsing.js";
 
 // attributes
 export { addAttributeEffect } from "./src/attr/add_attribute_effect.js";

@@ -34,6 +34,9 @@ const pxProperties = [
   "borderTopRightRadius",
   "borderBottomLeftRadius",
   "borderBottomRightRadius",
+  "gap",
+  "rowGap",
+  "columnGap",
 ];
 
 // Properties that need deg units
@@ -153,11 +156,64 @@ const normalizeNumber = (value, context, unit, propertyName) => {
 
 // Normalize styles for DOM application
 export const normalizeStyles = (styles, context = "js") => {
+  if (typeof styles === "string") {
+    styles = parseStyleString(styles);
+    return styles;
+  }
   const normalized = {};
   for (const [key, value] of Object.entries(styles)) {
     normalized[key] = normalizeStyle(value, key, context);
   }
   return normalized;
+};
+
+/**
+ * Parses a CSS style string into a style object.
+ * Handles CSS properties with proper camelCase conversion.
+ *
+ * @param {string} styleString - CSS style string like "color: red; font-size: 14px;"
+ * @returns {object} Style object with camelCase properties
+ */
+export const parseStyleString = (styleString, context = "js") => {
+  const style = {};
+
+  if (!styleString || typeof styleString !== "string") {
+    return style;
+  }
+
+  // Split by semicolon and process each declaration
+  const declarations = styleString.split(";");
+
+  for (let declaration of declarations) {
+    declaration = declaration.trim();
+    if (!declaration) continue;
+
+    const colonIndex = declaration.indexOf(":");
+    if (colonIndex === -1) continue;
+
+    const property = declaration.slice(0, colonIndex).trim();
+    const value = declaration.slice(colonIndex + 1).trim();
+
+    if (property && value) {
+      // CSS custom properties (starting with --) should NOT be converted to camelCase
+      if (property.startsWith("--")) {
+        style[property] = normalizeStyle(value, property, context);
+      } else {
+        // Convert kebab-case to camelCase (e.g., "font-size" -> "fontSize")
+        const camelCaseProperty = property.replace(
+          /-([a-z])/g,
+          (match, letter) => letter.toUpperCase(),
+        );
+        style[camelCaseProperty] = normalizeStyle(
+          value,
+          camelCaseProperty,
+          context,
+        );
+      }
+    }
+  }
+
+  return style;
 };
 
 // Convert transform object to CSS string
