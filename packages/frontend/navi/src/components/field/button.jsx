@@ -197,11 +197,6 @@ export const Button = forwardRef((props, ref) => {
   });
 });
 
-const alignXMapping = {
-  start: undefined,
-  center: "center",
-  end: "flex-end",
-};
 const ButtonBasic = forwardRef((props, ref) => {
   const contextLoading = useContext(LoadingContext);
   const contextLoadingElement = useContext(LoadingElementContext);
@@ -248,7 +243,18 @@ const ButtonBasic = forwardRef((props, ref) => {
   const innerStyle = withPropsStyle(
     {
       ...consumeSpacingProps(rest),
-      "align-self": alignXMapping[alignX],
+      ...(alignX === "start"
+        ? {}
+        : alignX === "center"
+          ? {
+              alignSelf: "center",
+              marginLeft: "auto",
+              marginRight: "auto",
+            }
+          : {
+              alignSelf: "end",
+              marginRight: "auto",
+            }),
     },
     style,
   );
