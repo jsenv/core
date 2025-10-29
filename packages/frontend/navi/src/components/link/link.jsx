@@ -12,7 +12,10 @@ import { useConstraints } from "../../validation/hooks/use_constraints.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useRequestedActionStatus } from "../field/use_action_events.js";
 import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
+import { useLayoutStyle } from "../layout/use_layout_style.js";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
+import { withPropsClassName } from "../props_composition/with_props_class_name.js";
+import { withPropsStyle } from "../props_composition/with_props_style.js";
 import {
   SelectionContext,
   useSelectableElement,
@@ -90,7 +93,6 @@ const LinkBasic = forwardRef((props, ref) => {
 });
 const LinkPlain = forwardRef((props, ref) => {
   const {
-    className = "",
     loading,
     readOnly,
     disabled,
@@ -103,6 +105,10 @@ const LinkPlain = forwardRef((props, ref) => {
     onClick,
     onKeyDown,
     href,
+
+    // visual
+    className,
+    style,
     ...rest
   } = props;
   const innerRef = useRef();
@@ -114,6 +120,9 @@ const LinkPlain = forwardRef((props, ref) => {
   const shouldDimColor = readOnly || disabled;
   useDimColorWhen(innerRef, shouldDimColor);
 
+  const innerClassName = withPropsClassName("navi_link", className);
+  const innerStyle = withPropsStyle(useLayoutStyle(rest), style);
+
   return (
     <LoadableInlineElement
       loading={loading}
@@ -123,7 +132,8 @@ const LinkPlain = forwardRef((props, ref) => {
         {...rest}
         ref={innerRef}
         href={href}
-        className={["navi_link", ...className.split(" ")].join(" ")}
+        className={innerClassName}
+        style={innerStyle}
         aria-busy={loading}
         inert={disabled}
         data-field=""
