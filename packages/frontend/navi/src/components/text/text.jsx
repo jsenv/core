@@ -25,12 +25,13 @@ import.meta.css = /* css */ `
 `;
 
 export const Text = ({
-  children,
   color,
   bold,
   italic,
   underline,
+  size,
   style,
+  children,
   ...rest
 }) => {
   const { all } = useLayoutStyle(rest);
@@ -40,6 +41,7 @@ export const Text = ({
       color,
       fontWeight: bold ? "bold" : undefined,
       fontStyle: italic ? "italic" : undefined,
+      fontSize: size,
       textDecoration: underline ? "underline" : undefined,
     },
     style,
@@ -52,16 +54,16 @@ export const Text = ({
   );
 };
 
-const alignYMapping = {
-  start: "flex-start",
-  center: "center",
-  end: "flex-end",
-};
-export const Icon = ({ alignY, style, children, ...rest }) => {
-  const innerStyle = { ...style };
-  if (alignY !== "center") {
-    innerStyle["--align-y"] = alignYMapping[alignY];
-  }
+export const Icon = ({ color, size, style, children, ...rest }) => {
+  const { all } = useLayoutStyle(rest);
+  const innerStyle = withPropsStyle(
+    {
+      ...all,
+      color,
+      fontSize: size,
+    },
+    style,
+  );
 
   return (
     <span {...rest} className="navi_icon" style={innerStyle}>

@@ -25,6 +25,8 @@ import {
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
+import { useLayoutStyle } from "../layout/use_layout_style.js";
+import { withPropsStyle } from "../props_composition/with_props_style.js";
 import { collectFormElementValues } from "./collect_form_element_values.js";
 import {
   useActionEvents,
@@ -75,7 +77,7 @@ export const Form = forwardRef((props, ref) => {
 
 const FormBasic = forwardRef((props, ref) => {
   const uiStateController = useContext(UIStateControllerContext);
-  const { readOnly, loading, children, ...rest } = props;
+  const { readOnly, loading, style, children, ...rest } = props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
@@ -90,10 +92,14 @@ const FormBasic = forwardRef((props, ref) => {
     return { loading };
   }, [loading]);
 
+  const { all } = useLayoutStyle(rest);
+  const innerStyle = withPropsStyle(all, style);
+
   return (
     <form
       {...rest}
       ref={innerRef}
+      style={innerStyle}
       onReset={(e) => {
         // browser would empty all fields to their default values (likely empty/unchecked)
         // we want to reset to the last known external state instead

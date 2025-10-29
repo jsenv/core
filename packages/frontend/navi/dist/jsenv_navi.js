@@ -18611,7 +18611,8 @@ const FlexDirectionContext = createContext();
  * @param {string|number} [props.paddingBottom] - Bottom padding
  * @param {"start"|"center"|"end"|"stretch"} [props.alignX] - Horizontal alignment
  * @param {"start"|"center"|"end"|"stretch"} [props.alignY] - Vertical alignment
- * @param {boolean} [props.expand] - Whether element should expand to fill available space
+ * @param {boolean} [props.expandX] - Whether element should expand horizontally to fill available space
+ * @param {boolean} [props.expandY] - Whether element should expand vertically to fill available space
  * @returns {Object} Object with categorized styles: { margin, padding, alignment, expansion, all }
  */
 const useLayoutStyle = (props) => {
@@ -18776,13 +18777,32 @@ const useLayoutStyle = (props) => {
   {
     const expand = props.expand;
     delete props.expand;
-    if (expand) {
-      if (flexDirection === "row") {
-        expansionStyle.flexGrow = 1;
-      } else if (flexDirection === "column") {
-        expansionStyle.flexGrow = 1;
-      } else {
-        expansionStyle.width = "100%";
+
+    {
+      const expandX = props.expandX || expand;
+      delete props.expandX;
+      if (expandX) {
+        if (flexDirection === "row") {
+          expansionStyle.flexGrow = 1; // Grow horizontally in row
+        } else if (flexDirection === "column") {
+          expansionStyle.width = "100%"; // Take full width in column
+        } else {
+          expansionStyle.width = "100%"; // Take full width outside flex
+        }
+      }
+    }
+
+    {
+      const expandY = props.expandY || expand;
+      delete props.expandY;
+      if (expandY) {
+        if (flexDirection === "row") {
+          expansionStyle.height = "100%"; // Take full height in row
+        } else if (flexDirection === "column") {
+          expansionStyle.flexGrow = 1; // Grow vertically in column
+        } else {
+          expansionStyle.height = "100%"; // Take full height outside flex
+        }
       }
     }
   }
@@ -22276,6 +22296,7 @@ const FormBasic = forwardRef((props, ref) => {
   const {
     readOnly,
     loading,
+    style,
     children,
     ...rest
   } = props;
@@ -22292,9 +22313,14 @@ const FormBasic = forwardRef((props, ref) => {
       loading
     };
   }, [loading]);
+  const {
+    all
+  } = useLayoutStyle(rest);
+  const innerStyle = withPropsStyle(all, style);
   return jsx("form", {
     ...rest,
     ref: innerRef,
+    style: innerStyle,
     onReset: e => {
       // browser would empty all fields to their default values (likely empty/unchecked)
       // we want to reset to the last known external state instead
@@ -28210,12 +28236,13 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   }
 `;
 const Text = ({
-  children,
   color,
   bold,
   italic,
   underline,
+  size,
   style,
+  children,
   ...rest
 }) => {
   const {
@@ -28226,6 +28253,7 @@ const Text = ({
     color,
     fontWeight: bold ? "bold" : undefined,
     fontStyle: italic ? "italic" : undefined,
+    fontSize: size,
     textDecoration: underline ? "underline" : undefined
   }, style);
   return jsx("span", {
@@ -28235,23 +28263,21 @@ const Text = ({
     children: children
   });
 };
-const alignYMapping = {
-  start: "flex-start",
-  center: "center",
-  end: "flex-end"
-};
 const Icon = ({
-  alignY,
+  color,
+  size,
   style,
   children,
   ...rest
 }) => {
-  const innerStyle = {
-    ...style
-  };
-  if (alignY !== "center") {
-    innerStyle["--align-y"] = alignYMapping[alignY];
-  }
+  const {
+    all
+  } = useLayoutStyle(rest);
+  const innerStyle = withPropsStyle({
+    ...all,
+    color,
+    fontSize: size
+  }, style);
   return jsx("span", {
     ...rest,
     className: "navi_icon",
