@@ -59,62 +59,7 @@
             </section>
 
             <section className="demo-section">
-              <h3>3. FlexRow with Vertical Alignment</h3>
-
-              <h4>alignY="start"</h4>
-              <FlexRow
-                alignY="start"
-                gap="10px"
-                style={{
-                  height: "80px",
-                  background: "#fff3e0",
-                  padding: "10px",
-                }}
-              >
-                <DemoBox>Short</DemoBox>
-                <DemoBox style={{ height: "60px", lineHeight: "60px" }}>
-                  Tall Item
-                </DemoBox>
-                <DemoBox>Short</DemoBox>
-              </FlexRow>
-
-              <h4>alignY="center" (default)</h4>
-              <FlexRow
-                alignY="center"
-                gap="10px"
-                style={{
-                  height: "80px",
-                  background: "#e8f5e8",
-                  padding: "10px",
-                }}
-              >
-                <DemoBox>Short</DemoBox>
-                <DemoBox style={{ height: "60px", lineHeight: "60px" }}>
-                  Tall Item
-                </DemoBox>
-                <DemoBox>Short</DemoBox>
-              </FlexRow>
-
-              <h4>alignY="end"</h4>
-              <FlexRow
-                alignY="end"
-                gap="10px"
-                style={{
-                  height: "80px",
-                  background: "#ffebee",
-                  padding: "10px",
-                }}
-              >
-                <DemoBox>Short</DemoBox>
-                <DemoBox style={{ height: "60px", lineHeight: "60px" }}>
-                  Tall Item
-                </DemoBox>
-                <DemoBox>Short</DemoBox>
-              </FlexRow>
-            </section>
-
-            <section className="demo-section">
-              <h3>3.5. FlexRow with Horizontal Alignment (alignX)</h3>
+              <h3>3. FlexRow with Horizontal Alignment (alignX)</h3>
 
               <h4>alignX="start"</h4>
               <FlexRow
@@ -191,47 +136,64 @@
             </section>
 
             <section className="demo-section">
-              <h3>3.6. FlexRow with Combined Alignment</h3>
+              <h3>4. FlexRow with Vertical Alignment (alignY)</h3>
 
-              <h4>alignX="space-between" + alignY="start"</h4>
+              <h4>alignY="start"</h4>
               <FlexRow
-                alignX="space-between"
                 alignY="start"
+                gap="10px"
                 style={{
-                  width: "400px",
                   height: "80px",
-                  background: "#fff8e1",
+                  background: "#fff3e0",
                   padding: "10px",
                 }}
               >
-                <DemoBox>Start</DemoBox>
+                <DemoBox>Short</DemoBox>
                 <DemoBox style={{ height: "60px", lineHeight: "60px" }}>
-                  Tall Center
+                  Tall Item
                 </DemoBox>
-                <DemoBox>End</DemoBox>
+                <DemoBox>Short</DemoBox>
               </FlexRow>
 
-              <h4>alignX="center" + alignY="end"</h4>
+              <h4>alignY="center" (default)</h4>
               <FlexRow
-                alignX="center"
-                alignY="end"
+                alignY="center"
+                gap="10px"
                 style={{
-                  width: "400px",
                   height: "80px",
                   background: "#e8f5e8",
                   padding: "10px",
                 }}
               >
-                <DemoBox>Item 1</DemoBox>
-                <DemoBox>Item 2</DemoBox>
-                <DemoBox>Item 3</DemoBox>
+                <DemoBox>Short</DemoBox>
+                <DemoBox style={{ height: "60px", lineHeight: "60px" }}>
+                  Tall Item
+                </DemoBox>
+                <DemoBox>Short</DemoBox>
+              </FlexRow>
+
+              <h4>alignY="end"</h4>
+              <FlexRow
+                alignY="end"
+                gap="10px"
+                style={{
+                  height: "80px",
+                  background: "#ffebee",
+                  padding: "10px",
+                }}
+              >
+                <DemoBox>Short</DemoBox>
+                <DemoBox style={{ height: "60px", lineHeight: "60px" }}>
+                  Tall Item
+                </DemoBox>
+                <DemoBox>Short</DemoBox>
               </FlexRow>
             </section>
 
             <h2>FlexRow + FlexItem</h2>
 
             <section className="demo-section">
-              <h3>4. FlexItem Basic Usage</h3>
+              <h3>5. FlexItem Basic Usage</h3>
 
               <FlexRow gap="10px">
                 <FlexItem>
@@ -247,7 +209,7 @@
             </section>
 
             <section className="demo-section">
-              <h3>5. FlexItem with Growth</h3>
+              <h3>6. FlexItem with Growth</h3>
 
               <FlexRow gap="10px">
                 <FlexItem>
@@ -258,32 +220,6 @@
                 </FlexItem>
                 <FlexItem>
                   <DemoBox>Fixed</DemoBox>
-                </FlexItem>
-              </FlexRow>
-            </section>
-
-            <section className="demo-section">
-              <h3>6. FlexItem with alignY</h3>
-
-              <FlexRow
-                gap="10px"
-                style={{
-                  height: "100px",
-                  background: "#e1f5fe",
-                  padding: "10px",
-                }}
-              >
-                <FlexItem>
-                  <DemoBox>Default (center)</DemoBox>
-                </FlexItem>
-                <FlexItem alignY="start">
-                  <DemoBox>alignY="start"</DemoBox>
-                </FlexItem>
-                <FlexItem alignY="end">
-                  <DemoBox>alignY="end"</DemoBox>
-                </FlexItem>
-                <FlexItem alignY="stretch">
-                  <DemoBox style={{ height: "100%" }}>alignY="stretch"</DemoBox>
                 </FlexItem>
               </FlexRow>
             </section>
@@ -314,7 +250,33 @@
             </section>
 
             <section className="demo-section">
-              <h3>8. Auto Margin Examples</h3>
+              <h3>8. FlexItem with alignY</h3>
+
+              <FlexRow
+                gap="10px"
+                style={{
+                  height: "100px",
+                  background: "#e1f5fe",
+                  padding: "10px",
+                }}
+              >
+                <FlexItem>
+                  <DemoBox>Default (center)</DemoBox>
+                </FlexItem>
+                <FlexItem alignY="start">
+                  <DemoBox>alignY="start"</DemoBox>
+                </FlexItem>
+                <FlexItem alignY="end">
+                  <DemoBox>alignY="end"</DemoBox>
+                </FlexItem>
+                <FlexItem alignY="stretch">
+                  <DemoBox style={{ height: "100%" }}>alignY="stretch"</DemoBox>
+                </FlexItem>
+              </FlexRow>
+            </section>
+
+            <section className="demo-section">
+              <h3>9. Auto Margin Examples</h3>
 
               <h4>Single item pushed to end</h4>
               <FlexRow
@@ -536,42 +498,6 @@
                   height: "200px",
                   width: "300px",
                   background: "#e3f2fd",
-                  padding: "10px",
-                }}
-              >
-                <DemoBox>Item 1</DemoBox>
-                <DemoBox>Item 2</DemoBox>
-                <DemoBox>Item 3</DemoBox>
-              </FlexColumn>
-            </section>
-
-            <section className="demo-section">
-              <h3>12.6. FlexColumn with Combined Alignment</h3>
-
-              <h4>alignX="start" + alignY="space-between"</h4>
-              <FlexColumn
-                alignX="start"
-                alignY="space-between"
-                style={{
-                  height: "200px",
-                  width: "300px",
-                  background: "#fff8e1",
-                  padding: "10px",
-                }}
-              >
-                <DemoBox>Top Left</DemoBox>
-                <DemoBox style={{ width: "200px" }}>Wide Center</DemoBox>
-                <DemoBox>Bottom Left</DemoBox>
-              </FlexColumn>
-
-              <h4>alignX="end" + alignY="center"</h4>
-              <FlexColumn
-                alignX="end"
-                alignY="center"
-                style={{
-                  height: "200px",
-                  width: "300px",
-                  background: "#e8f5e8",
                   padding: "10px",
                 }}
               >
