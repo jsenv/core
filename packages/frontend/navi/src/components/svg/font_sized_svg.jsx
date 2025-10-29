@@ -23,6 +23,7 @@
 export const FontSizedSvg = ({
   width = "1em",
   height = "1em",
+  style,
   children,
   ...props
 }) => {
@@ -30,6 +31,7 @@ export const FontSizedSvg = ({
     <span
       {...props}
       style={{
+        ...style,
         display: "flex",
         alignItems: "center",
         width,

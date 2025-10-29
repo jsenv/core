@@ -40,11 +40,15 @@ import.meta.css = /* css */ `
   @layer navi {
     .navi_button {
       position: relative;
-      display: inline-block;
+      display: inline-flex;
+      width: fit-content;
+      height: fit-content;
       padding: 0;
       background: none;
       border: none;
+      border-radius: inherit;
       outline: none;
+      cursor: pointer;
 
       --border-width: 1px;
       --outline-width: 1px;
@@ -138,6 +142,9 @@ import.meta.css = /* css */ `
       --color: var(--color-readonly);
     }
     /* Disabled */
+    .navi_button[data-disabled] {
+      cursor: default;
+    }
     .navi_button[data-disabled] .navi_button_content {
       --border-color: var(--border-color-disabled);
       --background-color: var(--background-color-disabled);
@@ -226,6 +233,7 @@ const ButtonBasic = forwardRef((props, ref) => {
       {...rest}
       ref={innerRef}
       className={appearance === "navi" ? "navi_button" : undefined}
+      disabled={innerDisabled}
       data-discrete={discrete ? "" : undefined}
       data-readonly={innerReadOnly ? "" : undefined}
       data-readonly-silent={innerLoading ? "" : undefined}
