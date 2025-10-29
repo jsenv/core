@@ -170,7 +170,8 @@ const InputTextualBasic = forwardRef((props, ref) => {
     // visual
     appearance = "navi",
     accentColor,
-    width,
+    grow,
+    width = grow ? "100%" : undefined,
     height,
     className,
     style,

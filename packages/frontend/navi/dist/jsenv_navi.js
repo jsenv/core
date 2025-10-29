@@ -21373,14 +21373,12 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   .navi_flex_row {
     display: flex;
     flex-direction: row;
-    align-items: center;
     gap: 0;
   }
 
   .navi_flex_column {
     display: flex;
     flex-direction: column;
-    align-items: center;
     gap: 0;
   }
 
@@ -21390,6 +21388,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
 `;
 const FlexDirectionContext = createContext();
 const FlexRow = ({
+  alignX,
   alignY,
   gap,
   style,
@@ -21397,7 +21396,10 @@ const FlexRow = ({
   ...rest
 }) => {
   const innerStyle = withPropsStyle({
-    alignItems: alignY,
+    // Only set justifyContent if it's not the default "start"
+    justifyContent: alignX !== "start" ? alignX : undefined,
+    // Only set alignItems if it's not the default "stretch"
+    alignItems: alignY !== "stretch" ? alignY : undefined,
     gap,
     ...consumeSpacingProps(rest)
   }, style);
@@ -21413,13 +21415,17 @@ const FlexRow = ({
 };
 const FlexColumn = ({
   alignX,
+  alignY,
   gap,
   style,
   children,
   ...rest
 }) => {
   const innerStyle = withPropsStyle({
-    alignItems: alignX,
+    // Only set alignItems if it's not the default "stretch"
+    alignItems: alignX !== "stretch" ? alignX : undefined,
+    // Only set justifyContent if it's not the default "start"
+    justifyContent: alignY !== "start" ? alignY : undefined,
     gap,
     ...consumeSpacingProps(rest)
   }, style);
@@ -21442,8 +21448,7 @@ const useConsumAlignProps = props => {
   const style = {};
   if (flexDirection === "row") {
     // In row direction: alignX controls justify-content, alignY controls align-self
-    // Default alignY is "center" from CSS, so only set alignSelf when different
-    if (alignY !== undefined && alignY !== "center") {
+    if (alignY !== undefined && alignY !== "start") {
       style.alignSelf = alignY;
     }
     // For row, alignX uses auto margins for positioning
@@ -21463,8 +21468,7 @@ const useConsumAlignProps = props => {
     }
   } else if (flexDirection === "column") {
     // In column direction: alignX controls align-self, alignY uses auto margins
-    // Default alignX is "center" from CSS, so only set alignSelf when different
-    if (alignX !== undefined && alignX !== "center") {
+    if (alignX !== undefined && alignX !== "start") {
       style.alignSelf = alignX;
     }
     // For column, alignY uses auto margins for positioning

@@ -214,6 +214,8 @@ const ButtonBasic = forwardRef((props, ref) => {
     appearance = "navi",
     alignX,
     alignY,
+    grow,
+    width = grow ? "100%" : undefined,
     discrete,
     className,
     style,
@@ -244,6 +246,7 @@ const ButtonBasic = forwardRef((props, ref) => {
   );
   const innerStyle = withPropsStyle(
     {
+      width,
       ...consumeSpacingProps(rest),
       ...useConsumAlignProps({ alignX, alignY }),
     },
