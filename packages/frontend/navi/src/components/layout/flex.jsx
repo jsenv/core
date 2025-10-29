@@ -86,8 +86,7 @@ export const useConsumAlignProps = (props) => {
 
   if (flexDirection === "row") {
     // In row direction: alignX controls justify-content, alignY controls align-self
-    // Default alignY is "center" from CSS, so only set alignSelf when different
-    if (alignY !== undefined && alignY !== "center") {
+    if (alignY !== undefined && alignY !== "start") {
       style.alignSelf = alignY;
     }
     // For row, alignX uses auto margins for positioning
@@ -107,8 +106,7 @@ export const useConsumAlignProps = (props) => {
     }
   } else if (flexDirection === "column") {
     // In column direction: alignX controls align-self, alignY uses auto margins
-    // Default alignX is "center" from CSS, so only set alignSelf when different
-    if (alignX !== undefined && alignX !== "center") {
+    if (alignX !== undefined && alignX !== "start") {
       style.alignSelf = alignX;
     }
     // For column, alignY uses auto margins for positioning
