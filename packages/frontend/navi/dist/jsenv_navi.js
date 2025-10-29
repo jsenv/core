@@ -11735,6 +11735,7 @@ const openCallout = (
     level = "warning",
     onClose,
     closeOnClickOutside = level === "info",
+    hideErrorStack,
     debug = false,
   } = {},
 ) => {
@@ -11802,8 +11803,8 @@ const openCallout = (
     if (Error.isError(newMessage)) {
       const error = newMessage;
       newMessage = error.message;
-      if (error.stack) {
-        newMessage += `<pre class="navi_callout_error_stack">${escapeHtml(error.stack)}</pre>`;
+      if (!hideErrorStack && error.stack) {
+        newMessage += `<pre class="navi_callout_error_stack">${escapeHtml(String(error.stack))}</pre>`;
       }
     }
 
@@ -16758,6 +16759,14 @@ let baseUrl = window.location.origin;
 const setBaseUrl = (value) => {
   baseUrl = new URL(value, window.location).href;
 };
+
+const encodedSymbol = Symbol("encoded_uri_component");
+const encodedURIComponent = (value) => {
+  return {
+    [encodedSymbol]: true,
+    value,
+  };
+};
 const NO_PARAMS = { [SYMBOL_IDENTITY]: Symbol("no_params") };
 // Controls what happens to actions when their route becomes inactive:
 // 'abort' - Cancel the action immediately when route deactivates
@@ -17033,10 +17042,17 @@ const createRoute = (urlPatternInput) => {
   const buildRelativeUrl = (params = {}) => {
     let relativeUrl = urlPatternInput;
 
+    const encode = (value) => {
+      if (value && value[encodedSymbol]) {
+        return value.value;
+      }
+      return encodeURIComponent(value);
+    };
+
     // Replace named parameters (:param and {param})
     for (const key of Object.keys(params)) {
       const value = params[key];
-      const encodedValue = encodeURIComponent(value);
+      const encodedValue = encode(value);
       relativeUrl = relativeUrl.replace(`:${key}`, encodedValue);
       relativeUrl = relativeUrl.replace(`{${key}}`, encodedValue);
     }
@@ -17051,9 +17067,8 @@ const createRoute = (urlPatternInput) => {
       let wildcardIndex = 0;
       relativeUrl = relativeUrl.replace(/\*/g, () => {
         const paramKey = wildcardIndex.toString();
-        const replacement = params[paramKey]
-          ? encodeURIComponent(params[paramKey])
-          : "*";
+        const paramValue = params[paramKey];
+        const replacement = paramValue ? encode(paramValue) : "*";
         wildcardIndex++;
         return replacement;
       });
@@ -27883,4 +27898,4 @@ const useDependenciesDiff = (inputs) => {
   return diffRef.current;
 };
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Button, Checkbox, CheckboxList, Col, Colgroup, Details, Editable, ErrorBoundaryContext, FontSizedSvg, Form, IconAndText, Input, Label, Link, LinkWithIcon, Overflow, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, Select, SelectionContext, SummaryMarker, Tab, TabList, Table, TableCell, Tbody, TextAndCount, Thead, Tr, UITransition, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, defineRoutes, enableDebugActions, enableDebugOnDocumentLoading, goBack, goForward, goTo, isCellSelected, isColumnSelected, isRowSelected, openCallout, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, Button, Checkbox, CheckboxList, Col, Colgroup, Details, Editable, ErrorBoundaryContext, FontSizedSvg, Form, IconAndText, Input, Label, Link, LinkWithIcon, Overflow, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, Select, SelectionContext, SummaryMarker, Tab, TabList, Table, TableCell, Tbody, TextAndCount, Thead, Tr, UITransition, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, defineRoutes, enableDebugActions, enableDebugOnDocumentLoading, encodedURIComponent, goBack, goForward, goTo, isCellSelected, isColumnSelected, isRowSelected, openCallout, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, valueInLocalStorage };

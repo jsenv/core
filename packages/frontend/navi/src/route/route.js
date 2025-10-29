@@ -13,6 +13,14 @@ export const setBaseUrl = (value) => {
   baseUrl = new URL(value, window.location).href;
 };
 
+const encodedSymbol = Symbol("encoded_uri_component");
+export const encodedURIComponent = (value) => {
+  return {
+    [encodedSymbol]: true,
+    value,
+  };
+};
+
 const DEBUG = false;
 const NO_PARAMS = { [SYMBOL_IDENTITY]: Symbol("no_params") };
 // Controls what happens to actions when their route becomes inactive:
@@ -301,10 +309,17 @@ const createRoute = (urlPatternInput) => {
   const buildRelativeUrl = (params = {}) => {
     let relativeUrl = urlPatternInput;
 
+    const encode = (value) => {
+      if (value && value[encodedSymbol]) {
+        return value.value;
+      }
+      return encodeURIComponent(value);
+    };
+
     // Replace named parameters (:param and {param})
     for (const key of Object.keys(params)) {
       const value = params[key];
-      const encodedValue = encodeURIComponent(value);
+      const encodedValue = encode(value);
       relativeUrl = relativeUrl.replace(`:${key}`, encodedValue);
       relativeUrl = relativeUrl.replace(`{${key}}`, encodedValue);
     }
@@ -319,9 +334,8 @@ const createRoute = (urlPatternInput) => {
       let wildcardIndex = 0;
       relativeUrl = relativeUrl.replace(/\*/g, () => {
         const paramKey = wildcardIndex.toString();
-        const replacement = params[paramKey]
-          ? encodeURIComponent(params[paramKey])
-          : "*";
+        const paramValue = params[paramKey];
+        const replacement = paramValue ? encode(paramValue) : "*";
         wildcardIndex++;
         return replacement;
       });

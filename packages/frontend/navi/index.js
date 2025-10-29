@@ -12,7 +12,7 @@ export { useStateArray } from "./src/components/use_state_array.js";
 export { resource } from "./src/store/resource_graph.js";
 export { valueInLocalStorage } from "./src/store/value_in_local_storage.js";
 
-// integration with browser (and routing)
+// routing
 export {
   actionIntegratedVia,
   goBack,
@@ -24,7 +24,12 @@ export {
 } from "./src/browser_integration/browser_integration.js";
 export { useDocumentState } from "./src/browser_integration/document_state_signal.js";
 export { useDocumentUrl } from "./src/browser_integration/document_url_signal.js";
-export { defineRoutes, setBaseUrl, useRouteStatus } from "./src/route/route.js";
+export {
+  defineRoutes,
+  encodedURIComponent,
+  setBaseUrl,
+  useRouteStatus,
+} from "./src/route/route.js";
 
 // Components
 export { ActionRenderer } from "./src/components/action_renderer.jsx";
