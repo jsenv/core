@@ -9,14 +9,12 @@ import.meta.css = /* css */ `
   .navi_flex_row {
     display: flex;
     flex-direction: row;
-    align-items: center;
     gap: 0;
   }
 
   .navi_flex_column {
     display: flex;
     flex-direction: column;
-    align-items: center;
     gap: 0;
   }
 
@@ -30,7 +28,8 @@ const FlexDirectionContext = createContext();
 export const FlexRow = ({ alignX, alignY, gap, style, children, ...rest }) => {
   const innerStyle = withPropsStyle(
     {
-      justifyContent: alignX,
+      // Only set justifyContent if it's not the default "start"
+      justifyContent: alignX !== "start" ? alignX : undefined,
       alignItems: alignY,
       gap,
       ...consumeSpacingProps(rest),
@@ -57,7 +56,8 @@ export const FlexColumn = ({
   const innerStyle = withPropsStyle(
     {
       alignItems: alignX,
-      justifyContent: alignY,
+      // Only set justifyContent if it's not the default "start"
+      justifyContent: alignY !== "start" ? alignY : undefined,
       gap,
       ...consumeSpacingProps(rest),
     },
