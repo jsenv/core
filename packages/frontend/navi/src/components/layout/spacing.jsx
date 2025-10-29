@@ -4,7 +4,7 @@ export const consumeSpacingProps = (props) => {
   const style = {};
 
   // Handle margin props
-  if ("margin" in props) {
+  if (Object.hasOwn(props, "margin")) {
     style.margin = props.margin;
     delete props.margin;
   }
@@ -15,39 +15,39 @@ export const consumeSpacingProps = (props) => {
   let effectiveMarginTop;
   let effectiveMarginBottom;
 
-  if ("marginLeft" in props) {
+  if (Object.hasOwn(props, "marginLeft")) {
     effectiveMarginLeft = props.marginLeft;
     delete props.marginLeft;
-  } else if ("marginX" in props) {
+  } else if (Object.hasOwn(props, "marginX")) {
     effectiveMarginLeft = props.marginX;
   }
 
-  if ("marginRight" in props) {
+  if (Object.hasOwn(props, "marginRight")) {
     effectiveMarginRight = props.marginRight;
     delete props.marginRight;
-  } else if ("marginX" in props) {
+  } else if (Object.hasOwn(props, "marginX")) {
     effectiveMarginRight = props.marginX;
   }
 
-  if ("marginTop" in props) {
+  if (Object.hasOwn(props, "marginTop")) {
     effectiveMarginTop = props.marginTop;
     delete props.marginTop;
-  } else if ("marginY" in props) {
+  } else if (Object.hasOwn(props, "marginY")) {
     effectiveMarginTop = props.marginY;
   }
 
-  if ("marginBottom" in props) {
+  if (Object.hasOwn(props, "marginBottom")) {
     effectiveMarginBottom = props.marginBottom;
     delete props.marginBottom;
-  } else if ("marginY" in props) {
+  } else if (Object.hasOwn(props, "marginY")) {
     effectiveMarginBottom = props.marginY;
   }
 
   // Delete marginX/marginY after processing specific directions
-  if ("marginX" in props) {
+  if (Object.hasOwn(props, "marginX")) {
     delete props.marginX;
   }
-  if ("marginY" in props) {
+  if (Object.hasOwn(props, "marginY")) {
     delete props.marginY;
   }
 
@@ -66,7 +66,7 @@ export const consumeSpacingProps = (props) => {
   }
 
   // Handle padding props
-  if ("padding" in props) {
+  if (Object.hasOwn(props, "padding")) {
     style.padding = props.padding;
     delete props.padding;
   }
@@ -77,39 +77,39 @@ export const consumeSpacingProps = (props) => {
   let effectivePaddingTop;
   let effectivePaddingBottom;
 
-  if ("paddingLeft" in props) {
+  if (Object.hasOwn(props, "paddingLeft")) {
     effectivePaddingLeft = props.paddingLeft;
     delete props.paddingLeft;
-  } else if ("paddingX" in props) {
+  } else if (Object.hasOwn(props, "paddingX")) {
     effectivePaddingLeft = props.paddingX;
   }
 
-  if ("paddingRight" in props) {
+  if (Object.hasOwn(props, "paddingRight")) {
     effectivePaddingRight = props.paddingRight;
     delete props.paddingRight;
-  } else if ("paddingX" in props) {
+  } else if (Object.hasOwn(props, "paddingX")) {
     effectivePaddingRight = props.paddingX;
   }
 
-  if ("paddingTop" in props) {
+  if (Object.hasOwn(props, "paddingTop")) {
     effectivePaddingTop = props.paddingTop;
     delete props.paddingTop;
-  } else if ("paddingY" in props) {
+  } else if (Object.hasOwn(props, "paddingY")) {
     effectivePaddingTop = props.paddingY;
   }
 
-  if ("paddingBottom" in props) {
+  if (Object.hasOwn(props, "paddingBottom")) {
     effectivePaddingBottom = props.paddingBottom;
     delete props.paddingBottom;
-  } else if ("paddingY" in props) {
+  } else if (Object.hasOwn(props, "paddingY")) {
     effectivePaddingBottom = props.paddingY;
   }
 
   // Delete paddingX/paddingY after processing specific directions
-  if ("paddingX" in props) {
+  if (Object.hasOwn(props, "paddingX")) {
     delete props.paddingX;
   }
-  if ("paddingY" in props) {
+  if (Object.hasOwn(props, "paddingY")) {
     delete props.paddingY;
   }
 
