@@ -16760,10 +16760,10 @@ const setBaseUrl = (value) => {
   baseUrl = new URL(value, window.location).href;
 };
 
-const encodedSymbol = Symbol("encoded_uri_component");
-const encodedURIComponent = (value) => {
+const rawUrlPartSymbol = Symbol("raw_url_part");
+const rawUrlPart = (value) => {
   return {
-    [encodedSymbol]: true,
+    [rawUrlPartSymbol]: true,
     value,
   };
 };
@@ -17041,10 +17041,16 @@ const createRoute = (urlPatternInput) => {
 
   const buildRelativeUrl = (params = {}) => {
     let relativeUrl = urlPatternInput;
+    let hasRawUrlPartWithInvalidChars = false;
 
     const encode = (value) => {
-      if (value && value[encodedSymbol]) {
-        return value.value;
+      if (value && value[rawUrlPartSymbol]) {
+        const rawValue = value.value;
+        // Check if raw value contains invalid URL characters
+        if (/[\s<>{}|\\^`]/.test(rawValue)) {
+          hasRawUrlPartWithInvalidChars = true;
+        }
+        return rawValue;
       }
       return encodeURIComponent(value);
     };
@@ -17074,14 +17080,22 @@ const createRoute = (urlPatternInput) => {
       });
     }
 
-    return relativeUrl;
+    return {
+      relativeUrl,
+      hasRawUrlPartWithInvalidChars,
+    };
   };
   const buildUrl = (params = {}) => {
-    let relativeUrl = buildRelativeUrl(params);
-    if (relativeUrl[0] === "/") {
-      relativeUrl = relativeUrl.slice(1);
+    const { relativeUrl, hasRawUrlPartWithInvalidChars } =
+      buildRelativeUrl(params);
+    let processedRelativeUrl = relativeUrl;
+    if (processedRelativeUrl[0] === "/") {
+      processedRelativeUrl = processedRelativeUrl.slice(1);
     }
-    const url = new URL(relativeUrl, baseUrl).href;
+    if (hasRawUrlPartWithInvalidChars) {
+      return `${baseUrl}/${processedRelativeUrl}`;
+    }
+    const url = new URL(processedRelativeUrl, baseUrl).href;
     return url;
   };
   route.buildUrl = buildUrl;
@@ -17091,7 +17105,7 @@ const createRoute = (urlPatternInput) => {
   const visitedSignal = signal(false);
   const relativeUrlSignal = computed(() => {
     const params = paramsSignal.value;
-    const relativeUrl = buildRelativeUrl(params);
+    const { relativeUrl } = buildRelativeUrl(params);
     return relativeUrl;
   });
   const disposeRelativeUrlEffect = effect(() => {
@@ -27898,4 +27912,4 @@ const useDependenciesDiff = (inputs) => {
   return diffRef.current;
 };
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Button, Checkbox, CheckboxList, Col, Colgroup, Details, Editable, ErrorBoundaryContext, FontSizedSvg, Form, IconAndText, Input, Label, Link, LinkWithIcon, Overflow, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, Select, SelectionContext, SummaryMarker, Tab, TabList, Table, TableCell, Tbody, TextAndCount, Thead, Tr, UITransition, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, defineRoutes, enableDebugActions, enableDebugOnDocumentLoading, encodedURIComponent, goBack, goForward, goTo, isCellSelected, isColumnSelected, isRowSelected, openCallout, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, Button, Checkbox, CheckboxList, Col, Colgroup, Details, Editable, ErrorBoundaryContext, FontSizedSvg, Form, IconAndText, Input, Label, Link, LinkWithIcon, Overflow, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, Select, SelectionContext, SummaryMarker, Tab, TabList, Table, TableCell, Tbody, TextAndCount, Thead, Tr, UITransition, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, defineRoutes, enableDebugActions, enableDebugOnDocumentLoading, goBack, goForward, goTo, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, valueInLocalStorage };

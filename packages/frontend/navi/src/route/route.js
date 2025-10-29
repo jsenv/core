@@ -13,10 +13,10 @@ export const setBaseUrl = (value) => {
   baseUrl = new URL(value, window.location).href;
 };
 
-const encodedSymbol = Symbol("encoded_uri_component");
-export const encodedURIComponent = (value) => {
+const rawUrlPartSymbol = Symbol("raw_url_part");
+export const rawUrlPart = (value) => {
   return {
-    [encodedSymbol]: true,
+    [rawUrlPartSymbol]: true,
     value,
   };
 };
@@ -306,15 +306,18 @@ const createRoute = (urlPatternInput) => {
   };
   routePrivatePropertiesMap.set(route, routePrivateProperties);
 
-  const buildRelativeUrl = (params = {}, { skipEncoding } = {}) => {
+  const buildRelativeUrl = (params = {}) => {
     let relativeUrl = urlPatternInput;
+    let hasRawUrlPartWithInvalidChars = false;
 
     const encode = (value) => {
-      if (value && value[encodedSymbol]) {
-        return value.value;
-      }
-      if (skipEncoding) {
-        return value;
+      if (value && value[rawUrlPartSymbol]) {
+        const rawValue = value.value;
+        // Check if raw value contains invalid URL characters
+        if (/[\s<>{}|\\^`]/.test(rawValue)) {
+          hasRawUrlPartWithInvalidChars = true;
+        }
+        return rawValue;
       }
       return encodeURIComponent(value);
     };
@@ -344,14 +347,22 @@ const createRoute = (urlPatternInput) => {
       });
     }
 
-    return relativeUrl;
+    return {
+      relativeUrl,
+      hasRawUrlPartWithInvalidChars,
+    };
   };
-  const buildUrl = (params = {}, { skipEncoding } = {}) => {
-    let relativeUrl = buildRelativeUrl(params, { skipEncoding });
-    if (relativeUrl[0] === "/") {
-      relativeUrl = relativeUrl.slice(1);
+  const buildUrl = (params = {}) => {
+    const { relativeUrl, hasRawUrlPartWithInvalidChars } =
+      buildRelativeUrl(params);
+    let processedRelativeUrl = relativeUrl;
+    if (processedRelativeUrl[0] === "/") {
+      processedRelativeUrl = processedRelativeUrl.slice(1);
     }
-    const url = new URL(relativeUrl, baseUrl).href;
+    if (hasRawUrlPartWithInvalidChars) {
+      return `${baseUrl}/${processedRelativeUrl}`;
+    }
+    const url = new URL(processedRelativeUrl, baseUrl).href;
     return url;
   };
   route.buildUrl = buildUrl;
@@ -361,7 +372,7 @@ const createRoute = (urlPatternInput) => {
   const visitedSignal = signal(false);
   const relativeUrlSignal = computed(() => {
     const params = paramsSignal.value;
-    const relativeUrl = buildRelativeUrl(params);
+    const { relativeUrl } = buildRelativeUrl(params);
     return relativeUrl;
   });
   const disposeRelativeUrlEffect = effect(() => {

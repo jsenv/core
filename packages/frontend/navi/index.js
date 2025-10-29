@@ -26,7 +26,7 @@ export { useDocumentState } from "./src/browser_integration/document_state_signa
 export { useDocumentUrl } from "./src/browser_integration/document_url_signal.js";
 export {
   defineRoutes,
-  encodedURIComponent,
+  rawUrlPart,
   setBaseUrl,
   useRouteStatus,
 } from "./src/route/route.js";
