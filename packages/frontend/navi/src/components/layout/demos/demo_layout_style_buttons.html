@@ -64,33 +64,118 @@
             </p>
 
             <div className="demo-container">
-              <h3>1. Button with Expand in FlexRow</h3>
+              <h3>1. Button ExpandX - Horizontal Expansion Only</h3>
               <div className="visual-container">
+                <h4>In FlexRow (grows horizontally)</h4>
                 <FlexRow gap="10px">
                   <Button>Fixed</Button>
-                  <Button expand>Expanding Button</Button>
+                  <Button expandX>ExpandX Button</Button>
                   <Button>Fixed</Button>
                 </FlexRow>
-              </div>
-            </div>
 
-            <div className="demo-container">
-              <h3>2. Button with Expand in FlexColumn</h3>
-              <div className="visual-container">
-                <FlexColumn gap="10px" style={{ height: "200px" }}>
-                  <Button>Fixed Button</Button>
-                  <Button expand>Expanding Button (height)</Button>
-                  <Button>Fixed Button</Button>
+                <h4>In FlexColumn (takes full width)</h4>
+                <FlexColumn gap="10px" style={{ height: "150px" }}>
+                  <Button>Normal Width</Button>
+                  <Button expandX>Full Width Button</Button>
+                  <Button>Normal Width</Button>
                 </FlexColumn>
               </div>
             </div>
 
             <div className="demo-container">
-              <h3>3. Button with Expand outside Flex context</h3>
+              <h3>2. Button ExpandY - Vertical Expansion Only</h3>
+              <div className="visual-container">
+                <h4>In FlexRow (takes full height)</h4>
+                <FlexRow gap="10px" style={{ height: "100px" }}>
+                  <Button>Normal Height</Button>
+                  <Button expandY>Full Height Button</Button>
+                  <Button>Normal Height</Button>
+                </FlexRow>
+
+                <h4>In FlexColumn (grows vertically)</h4>
+                <FlexColumn gap="10px" style={{ height: "200px" }}>
+                  <Button>Fixed</Button>
+                  <Button expandY>ExpandY Button</Button>
+                  <Button>Fixed</Button>
+                </FlexColumn>
+              </div>
+            </div>
+
+            <div className="demo-container">
+              <h3>3. Button ExpandX + ExpandY - Both Axes</h3>
+              <div className="visual-container">
+                <h4>In FlexRow (grows horizontally, full height)</h4>
+                <FlexRow gap="10px" style={{ height: "80px" }}>
+                  <Button>Fixed</Button>
+                  <Button expandX expandY>
+                    Both Axes
+                  </Button>
+                  <Button>Fixed</Button>
+                </FlexRow>
+
+                <h4>In FlexColumn (full width, grows vertically)</h4>
+                <FlexColumn gap="10px" style={{ height: "150px" }}>
+                  <Button>Fixed</Button>
+                  <Button expandX expandY>
+                    Both Axes
+                  </Button>
+                  <Button>Fixed</Button>
+                </FlexColumn>
+              </div>
+            </div>
+
+            <div className="demo-container">
+              <h3>4. Precise Control Comparison</h3>
+              <div className="visual-container">
+                <FlexColumn gap="15px">
+                  <div>
+                    <h4>FlexRow with different expansions</h4>
+                    <FlexRow
+                      gap="10px"
+                      style={{
+                        height: "60px",
+                        background: "#f8f9fa",
+                        padding: "10px",
+                      }}
+                    >
+                      <Button>No Expand</Button>
+                      <Button expandX>ExpandX Only</Button>
+                      <Button expandY>ExpandY Only</Button>
+                      <Button expandX expandY>
+                        Both
+                      </Button>
+                    </FlexRow>
+                  </div>
+
+                  <div>
+                    <h4>FlexColumn with different expansions</h4>
+                    <FlexColumn
+                      gap="10px"
+                      style={{
+                        height: "200px",
+                        background: "#f8f9fa",
+                        padding: "10px",
+                      }}
+                    >
+                      <Button>No Expand</Button>
+                      <Button expandX>ExpandX Only</Button>
+                      <Button expandY>ExpandY Only</Button>
+                      <Button expandX expandY>
+                        Both
+                      </Button>
+                    </FlexColumn>
+                  </div>
+                </FlexColumn>
+              </div>
+            </div>
+
+            <div className="demo-container">
+              <h3>5. Outside Flex Context</h3>
               <div className="visual-container">
                 <div
                   style={{
                     width: "300px",
+                    height: "150px",
                     border: "1px solid #ccc",
                     padding: "10px",
                   }}
@@ -98,26 +183,32 @@
                   <Button>Normal Button</Button>
                   <br />
                   <br />
-                  <Button expand>
-                    Expanding Button (should take full width)
+                  <Button expandX>ExpandX (full width)</Button>
+                  <br />
+                  <br />
+                  <Button expandY>ExpandY (full height)</Button>
+                  <br />
+                  <br />
+                  <Button expandX expandY>
+                    Both (full width & height)
                   </Button>
                 </div>
               </div>
             </div>
 
             <div className="demo-container">
-              <h3>4. Multiple Expand Buttons</h3>
+              <h3>6. Multiple Expand Buttons</h3>
               <div className="visual-container">
                 <FlexRow gap="10px">
-                  <Button expand>Expand 1</Button>
-                  <Button expand>Expand 2</Button>
-                  <Button expand>Expand 3</Button>
+                  <Button expandX>ExpandX 1</Button>
+                  <Button expandX>ExpandX 2</Button>
+                  <Button expandX>ExpandX 3</Button>
                 </FlexRow>
               </div>
             </div>
 
             <div className="demo-container">
-              <h3>5. Button Spacing - Margins</h3>
+              <h3>7. Button Spacing - Margins</h3>
               <div className="visual-container">
                 <FlexColumn gap="5px">
                   <Button margin="10px">Margin All Sides</Button>
@@ -143,7 +234,7 @@
             </div>
 
             <div className="demo-container">
-              <h3>7. Button AlignX Test: FlexRow + alignX="end"</h3>
+              <h3>8. Button AlignX Test: FlexRow + alignX="end"</h3>
               <div className="visual-container">
                 <div className="bounded">
                   <FlexRow gap="10px" style={{ height: "100%" }}>
@@ -155,12 +246,12 @@
             </div>
 
             <div className="demo-container">
-              <h3>8. Combined Spacing and Expand</h3>
+              <h3>9. Combined Spacing and ExpandX</h3>
               <div className="visual-container">
                 <FlexRow gap="10px">
                   <Button>Label</Button>
-                  <Button expand marginY="5px" paddingX="20px">
-                    Margin + Padding + Expand
+                  <Button expandX marginY="5px" paddingX="20px">
+                    Margin + Padding + ExpandX
                   </Button>
                   <Button>End</Button>
                 </FlexRow>
@@ -168,20 +259,20 @@
             </div>
 
             <div className="demo-container">
-              <h3>9. Button Toolbar Layout</h3>
+              <h3>10. Button Toolbar Layout</h3>
               <div className="visual-container">
                 <FlexRow gap="10px">
                   <Button>New</Button>
                   <Button>Open</Button>
                   <Button>Save</Button>
-                  <Button expand>Status Message Area</Button>
+                  <Button expandX>Status Message Area</Button>
                   <Button alignX="end">Settings</Button>
                 </FlexRow>
               </div>
             </div>
 
             <div className="demo-container">
-              <h3>10. Button Group with Various Alignments</h3>
+              <h3>11. Button Group with Various Alignments</h3>
               <div className="visual-container">
                 <FlexColumn gap="10px">
                   <FlexRow gap="10px">
@@ -191,7 +282,7 @@
                   </FlexRow>
 
                   <FlexRow gap="10px">
-                    <Button expand>Primary Action</Button>
+                    <Button expandX>Primary Action</Button>
                     <Button>Cancel</Button>
                   </FlexRow>
 
@@ -204,7 +295,7 @@
             </div>
 
             <div className="demo-container">
-              <h3>11. Card Layout with Button Actions</h3>
+              <h3>12. Card Layout with Button Actions</h3>
               <div className="visual-container">
                 <div
                   style={{
@@ -220,7 +311,7 @@
                   </p>
 
                   <FlexRow gap="10px">
-                    <Button expand>Primary Action</Button>
+                    <Button expandX>Primary Action</Button>
                     <Button alignX="end">More</Button>
                   </FlexRow>
                 </div>
@@ -228,12 +319,12 @@
             </div>
 
             <div className="demo-container">
-              <h3>12. Navigation Button Layout</h3>
+              <h3>13. Navigation Button Layout</h3>
               <div className="visual-container">
                 <FlexColumn gap="15px">
                   <FlexRow gap="10px">
                     <Button>Home</Button>
-                    <Button expand>Current Page Title</Button>
+                    <Button expandX>Current Page Title</Button>
                     <Button alignX="end">Profile</Button>
                   </FlexRow>
 
