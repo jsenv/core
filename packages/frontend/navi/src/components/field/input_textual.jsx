@@ -31,7 +31,7 @@ import { useConstraints } from "../../validation/hooks/use_constraints.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
-import { getStyleForSpacingProps } from "../layout/spacing.jsx";
+import { consumeSpacingProps } from "../layout/spacing.jsx";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { withPropsClassName } from "../props_composition/with_props_class_name.js";
 import { withPropsStyle } from "../props_composition/with_props_style.js";
@@ -203,7 +203,7 @@ const InputTextualBasic = forwardRef((props, ref) => {
     {
       width,
       height,
-      ...getStyleForSpacingProps(rest),
+      ...consumeSpacingProps(rest),
     },
     style,
   );

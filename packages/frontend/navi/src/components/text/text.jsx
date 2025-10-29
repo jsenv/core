@@ -1,4 +1,4 @@
-import { getStyleForSpacingProps } from "../layout/spacing.jsx";
+import { consumeSpacingProps } from "../layout/spacing.jsx";
 import { withPropsStyle } from "../props_composition/with_props_style.js";
 
 import.meta.css = /* css */ `
@@ -39,7 +39,7 @@ export const Text = ({
       fontWeight: bold ? "bold" : undefined,
       fontStyle: italic ? "italic" : undefined,
       textDecoration: underline ? "underline" : undefined,
-      ...getStyleForSpacingProps(rest),
+      ...consumeSpacingProps(rest),
     },
     style,
   );

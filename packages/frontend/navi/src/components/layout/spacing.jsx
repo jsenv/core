@@ -42,66 +42,36 @@ export const consumeSpacingProps = (props) => {
     style.marginBottom = marginY;
   }
 
-  // Handle padding props
-  if (Object.hasOwn(props, "padding")) {
-    style.padding = props.padding;
-    delete props.padding;
-  }
+  const padding = consume("padding");
+  const paddingX = consume("paddingX");
+  const paddingY = consume("paddingY");
+  const paddingLeft = consume("paddingLeft");
+  const paddingRight = consume("paddingRight");
+  const paddingTop = consume("paddingTop");
+  const paddingBottom = consume("paddingBottom");
 
-  // Handle padding directions with fallbacks
-  let effectivePaddingLeft;
-  let effectivePaddingRight;
-  let effectivePaddingTop;
-  let effectivePaddingBottom;
-
-  if (Object.hasOwn(props, "paddingLeft")) {
-    effectivePaddingLeft = props.paddingLeft;
-    delete props.paddingLeft;
-  } else if (Object.hasOwn(props, "paddingX")) {
-    effectivePaddingLeft = props.paddingX;
+  if (padding !== undefined) {
+    style.padding = padding;
   }
-
-  if (Object.hasOwn(props, "paddingRight")) {
-    effectivePaddingRight = props.paddingRight;
-    delete props.paddingRight;
-  } else if (Object.hasOwn(props, "paddingX")) {
-    effectivePaddingRight = props.paddingX;
+  if (paddingLeft !== undefined) {
+    style.paddingLeft = paddingLeft;
+  } else if (paddingX !== undefined) {
+    style.paddingLeft = paddingX;
   }
-
-  if (Object.hasOwn(props, "paddingTop")) {
-    effectivePaddingTop = props.paddingTop;
-    delete props.paddingTop;
-  } else if (Object.hasOwn(props, "paddingY")) {
-    effectivePaddingTop = props.paddingY;
+  if (paddingRight !== undefined) {
+    style.paddingRight = paddingRight;
+  } else if (paddingX !== undefined) {
+    style.paddingRight = paddingX;
   }
-
-  if (Object.hasOwn(props, "paddingBottom")) {
-    effectivePaddingBottom = props.paddingBottom;
-    delete props.paddingBottom;
-  } else if (Object.hasOwn(props, "paddingY")) {
-    effectivePaddingBottom = props.paddingY;
+  if (paddingTop !== undefined) {
+    style.paddingTop = paddingTop;
+  } else if (paddingY !== undefined) {
+    style.paddingTop = paddingY;
   }
-
-  // Delete paddingX/paddingY after processing specific directions
-  if (Object.hasOwn(props, "paddingX")) {
-    delete props.paddingX;
-  }
-  if (Object.hasOwn(props, "paddingY")) {
-    delete props.paddingY;
-  }
-
-  // Apply effective padding values
-  if (effectivePaddingLeft !== undefined) {
-    style.paddingLeft = effectivePaddingLeft;
-  }
-  if (effectivePaddingRight !== undefined) {
-    style.paddingRight = effectivePaddingRight;
-  }
-  if (effectivePaddingTop !== undefined) {
-    style.paddingTop = effectivePaddingTop;
-  }
-  if (effectivePaddingBottom !== undefined) {
-    style.paddingBottom = effectivePaddingBottom;
+  if (paddingBottom !== undefined) {
+    style.paddingBottom = paddingBottom;
+  } else if (paddingY !== undefined) {
+    style.paddingBottom = paddingY;
   }
 
   return style;

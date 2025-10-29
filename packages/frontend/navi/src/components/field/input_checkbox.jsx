@@ -13,7 +13,7 @@ import { useConstraints } from "../../validation/hooks/use_constraints.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
-import { getStyleForSpacingProps } from "../layout/spacing.jsx";
+import { consumeSpacingProps } from "../layout/spacing.jsx";
 import {
   LoadableInlineElement,
   LoaderBackground,
@@ -336,7 +336,7 @@ const NaviCheckbox = ({
   const innerStyle = withPropsStyle(
     {
       ...(accentColor ? { "--accent-color": accentColor } : {}),
-      ...getStyleForSpacingProps(rest),
+      ...consumeSpacingProps(rest),
     },
     style,
   );
