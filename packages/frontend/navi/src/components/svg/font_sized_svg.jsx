@@ -20,6 +20,20 @@
  * - Useful for inline icons that should respect the parent's font-size
  */
 
+import { withPropsStyle } from "../props_composition/with_props_style.js";
+
+import.meta.css = /* css */ `
+  .navi_font_sized_svg {
+    display: flex;
+    width: 1em;
+    height: 1em;
+    flex-shrink: 0;
+    align-items: center;
+    justify-self: center;
+    line-height: 1em;
+  }
+`;
+
 export const FontSizedSvg = ({
   width = "1em",
   height = "1em",
@@ -30,16 +44,14 @@ export const FontSizedSvg = ({
   return (
     <span
       {...props}
-      style={{
-        ...style,
-        display: "flex",
-        alignItems: "center",
-        width,
-        height,
-        justifySelf: "center",
-        lineHeight: "1em",
-        flexShrink: 0,
-      }}
+      className="navi_font_sized_svg"
+      style={withPropsStyle(
+        {
+          width: width === "1em" ? undefined : width,
+          height: height === "1em" ? undefined : height,
+        },
+        style,
+      )}
     >
       {children}
     </span>
