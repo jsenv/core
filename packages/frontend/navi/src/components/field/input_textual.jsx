@@ -88,6 +88,8 @@ import.meta.css = /* css */ `
       --color: currentColor;
       --color-readonly: color-mix(in srgb, currentColor 60%, transparent);
       --color-disabled: var(--color-readonly);
+
+      width: 100%;
       color: var(--color);
 
       background-color: var(--background-color);
@@ -197,7 +199,8 @@ const InputTextualBasic = forwardRef((props, ref) => {
     appearance === "navi" ? "navi_input" : undefined,
     className,
   );
-  const innerStyle = withPropsStyle(useLayoutStyle(rest), style);
+  const { margin, padding, alignment, expansion } = useLayoutStyle(rest);
+  const innerStyle = withPropsStyle(padding, style);
   const inputTextual = (
     <input
       {...rest}
@@ -245,6 +248,9 @@ const InputTextualBasic = forwardRef((props, ref) => {
     <LoadableInlineElement
       loading={innerLoading}
       style={{
+        ...margin,
+        ...alignment,
+        ...expansion,
         "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
       }}
       color="var(--accent-color)"

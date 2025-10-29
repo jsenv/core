@@ -36,12 +36,15 @@ import { FlexDirectionContext } from "./layout_context.jsx";
  * @param {"start"|"center"|"end"|"stretch"} [props.alignX] - Horizontal alignment
  * @param {"start"|"center"|"end"|"stretch"} [props.alignY] - Vertical alignment
  * @param {boolean} [props.expand] - Whether element should expand to fill available space
- * @returns {Object} CSS style object
+ * @returns {Object} Object with categorized styles: { margin, padding, alignment, expansion, all }
  */
 export const useLayoutStyle = (props) => {
   const flexDirection = useContext(FlexDirectionContext);
 
-  const style = {};
+  const marginStyle = {};
+  const paddingStyle = {};
+  const alignmentStyle = {};
+  const expansionStyle = {};
 
   spacing: {
     outer_spacing: {
@@ -61,27 +64,27 @@ export const useLayoutStyle = (props) => {
       delete props.marginBottom;
 
       if (margin !== undefined) {
-        style.margin = margin;
+        marginStyle.margin = margin;
       }
       if (marginLeft !== undefined) {
-        style.marginLeft = marginLeft;
+        marginStyle.marginLeft = marginLeft;
       } else if (marginX !== undefined) {
-        style.marginLeft = marginX;
+        marginStyle.marginLeft = marginX;
       }
       if (marginRight !== undefined) {
-        style.marginRight = marginRight;
+        marginStyle.marginRight = marginRight;
       } else if (marginX !== undefined) {
-        style.marginRight = marginX;
+        marginStyle.marginRight = marginX;
       }
       if (marginTop !== undefined) {
-        style.marginTop = marginTop;
+        marginStyle.marginTop = marginTop;
       } else if (marginY !== undefined) {
-        style.marginTop = marginY;
+        marginStyle.marginTop = marginY;
       }
       if (marginBottom !== undefined) {
-        style.marginBottom = marginBottom;
+        marginStyle.marginBottom = marginBottom;
       } else if (marginY !== undefined) {
-        style.marginBottom = marginY;
+        marginStyle.marginBottom = marginY;
       }
     }
     inner_spacing: {
@@ -101,27 +104,27 @@ export const useLayoutStyle = (props) => {
       delete props.paddingBottom;
 
       if (padding !== undefined) {
-        style.padding = padding;
+        paddingStyle.padding = padding;
       }
       if (paddingLeft !== undefined) {
-        style.paddingLeft = paddingLeft;
+        paddingStyle.paddingLeft = paddingLeft;
       } else if (paddingX !== undefined) {
-        style.paddingLeft = paddingX;
+        paddingStyle.paddingLeft = paddingX;
       }
       if (paddingRight !== undefined) {
-        style.paddingRight = paddingRight;
+        paddingStyle.paddingRight = paddingRight;
       } else if (paddingX !== undefined) {
-        style.paddingRight = paddingX;
+        paddingStyle.paddingRight = paddingX;
       }
       if (paddingTop !== undefined) {
-        style.paddingTop = paddingTop;
+        paddingStyle.paddingTop = paddingTop;
       } else if (paddingY !== undefined) {
-        style.paddingTop = paddingY;
+        paddingStyle.paddingTop = paddingY;
       }
       if (paddingBottom !== undefined) {
-        style.paddingBottom = paddingBottom;
+        paddingStyle.paddingBottom = paddingBottom;
       } else if (paddingY !== undefined) {
-        style.paddingBottom = paddingY;
+        paddingStyle.paddingBottom = paddingY;
       }
     }
   }
@@ -136,7 +139,7 @@ export const useLayoutStyle = (props) => {
     if (flexDirection === "row") {
       // In row direction: alignX controls justify-content, alignY controls align-self
       if (alignY !== undefined && alignY !== "start") {
-        style.alignSelf = alignY;
+        alignmentStyle.alignSelf = alignY;
       }
       // For row, alignX uses auto margins for positioning
       // NOTE: Auto margins only work effectively for positioning individual items.
@@ -145,51 +148,51 @@ export const useLayoutStyle = (props) => {
       // will be positioned relative to the previous item's margins, not the container edge.
       if (alignX !== undefined) {
         if (alignX === "start") {
-          style.marginRight = "auto";
+          alignmentStyle.marginRight = "auto";
         } else if (alignX === "end") {
-          style.marginLeft = "auto";
+          alignmentStyle.marginLeft = "auto";
         } else if (alignX === "center") {
-          style.marginLeft = "auto";
-          style.marginRight = "auto";
+          alignmentStyle.marginLeft = "auto";
+          alignmentStyle.marginRight = "auto";
         }
       }
     } else if (flexDirection === "column") {
       // In column direction: alignX controls align-self, alignY uses auto margins
       if (alignX !== undefined && alignX !== "start") {
-        style.alignSelf = alignX;
+        alignmentStyle.alignSelf = alignX;
       }
       // For column, alignY uses auto margins for positioning
       // NOTE: Same auto margin limitation applies - multiple adjacent items with
       // the same alignY won't all position relative to container edges.
       if (alignY !== undefined) {
         if (alignY === "start") {
-          style.marginBottom = "auto";
+          alignmentStyle.marginBottom = "auto";
         } else if (alignY === "end") {
-          style.marginTop = "auto";
+          alignmentStyle.marginTop = "auto";
         } else if (alignY === "center") {
-          style.marginTop = "auto";
-          style.marginBottom = "auto";
+          alignmentStyle.marginTop = "auto";
+          alignmentStyle.marginBottom = "auto";
         }
       }
     }
     // non flex
     else {
       if (alignX === "start") {
-        style.marginRight = "auto";
+        alignmentStyle.marginRight = "auto";
       } else if (alignX === "center") {
-        style.marginLeft = "auto";
-        style.marginRight = "auto";
+        alignmentStyle.marginLeft = "auto";
+        alignmentStyle.marginRight = "auto";
       } else if (alignX === "end") {
-        style.marginLeft = "auto";
+        alignmentStyle.marginLeft = "auto";
       }
 
       if (alignY === "start") {
-        style.marginBottom = "auto";
+        alignmentStyle.marginBottom = "auto";
       } else if (alignY === "center") {
-        style.marginTop = "auto";
-        style.marginBottom = "auto";
+        alignmentStyle.marginTop = "auto";
+        alignmentStyle.marginBottom = "auto";
       } else if (alignY === "end") {
-        style.marginTop = "auto";
+        alignmentStyle.marginTop = "auto";
       }
     }
   }
@@ -199,14 +202,28 @@ export const useLayoutStyle = (props) => {
     delete props.expand;
     if (expand) {
       if (flexDirection === "row") {
-        style.flexGrow = 1;
+        expansionStyle.flexGrow = 1;
       } else if (flexDirection === "column") {
-        style.flexGrow = 1;
+        expansionStyle.flexGrow = 1;
       } else {
-        style.width = "100%";
+        expansionStyle.width = "100%";
       }
     }
   }
 
-  return style;
+  // Merge all styles for convenience
+  const allStyles = {
+    ...marginStyle,
+    ...paddingStyle,
+    ...alignmentStyle,
+    ...expansionStyle,
+  };
+
+  return {
+    margin: marginStyle,
+    padding: paddingStyle,
+    alignment: alignmentStyle,
+    expansion: expansionStyle,
+    all: allStyles,
+  };
 };
