@@ -1,3 +1,4 @@
+import { getStyleForSpacingProps } from "../layout/spacing.jsx";
 import { withPropsStyle } from "../props_composition/with_props_style.js";
 
 import.meta.css = /* css */ `
@@ -32,20 +33,19 @@ export const Text = ({
   style,
   ...rest
 }) => {
+  const innerStyle = withPropsStyle(
+    {
+      color,
+      fontWeight: bold ? "bold" : undefined,
+      fontStyle: italic ? "italic" : undefined,
+      textDecoration: underline ? "underline" : undefined,
+      ...getStyleForSpacingProps(rest),
+    },
+    style,
+  );
+
   return (
-    <span
-      {...rest}
-      className="navi_text"
-      style={withPropsStyle(
-        {
-          color,
-          fontWeight: bold ? "bold" : undefined,
-          fontStyle: italic ? "italic" : undefined,
-          textDecoration: underline ? "underline" : undefined,
-        },
-        style,
-      )}
-    >
+    <span {...rest} className="navi_text" style={innerStyle}>
       {children}
     </span>
   );

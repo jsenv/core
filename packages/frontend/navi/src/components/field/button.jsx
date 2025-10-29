@@ -14,6 +14,7 @@ import { FormActionContext } from "../action_execution/form_context.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
+import { getStyleForSpacingProps } from "../layout/spacing.jsx";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { withPropsClassName } from "../props_composition/with_props_class_name.js";
 import { withPropsStyle } from "../props_composition/with_props_style.js";
@@ -241,6 +242,7 @@ const ButtonBasic = forwardRef((props, ref) => {
   }
 
   const innerStyle = {
+    ...getStyleForSpacingProps(rest),
     "align-self": alignXMapping[alignX],
   };
 

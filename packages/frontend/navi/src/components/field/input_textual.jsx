@@ -31,6 +31,7 @@ import { useConstraints } from "../../validation/hooks/use_constraints.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
+import { getStyleForSpacingProps } from "../layout/spacing.jsx";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { withPropsClassName } from "../props_composition/with_props_class_name.js";
 import { withPropsStyle } from "../props_composition/with_props_style.js";
@@ -194,19 +195,24 @@ const InputTextualBasic = forwardRef((props, ref) => {
   });
   useConstraints(innerRef, constraints);
 
-  const innerStyle = {
-    width,
-    height,
-  };
+  const innerClassName = withPropsClassName(
+    appearance === "navi" ? "navi_input" : undefined,
+    className,
+  );
+  const innerStyle = withPropsStyle(
+    {
+      width,
+      height,
+      ...getStyleForSpacingProps(rest),
+    },
+    style,
+  );
   const inputTextual = (
     <input
       {...rest}
       ref={innerRef}
-      className={withPropsClassName(
-        appearance === "navi" ? "navi_input" : undefined,
-        className,
-      )}
-      style={withPropsStyle(innerStyle, style)}
+      className={innerClassName}
+      style={innerStyle}
       type={type}
       data-value={uiState}
       value={innerValue}

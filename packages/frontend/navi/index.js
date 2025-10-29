@@ -92,6 +92,8 @@ export { Icon, Text } from "./src/components/text/text.jsx";
 export { TextAndCount } from "./src/components/text/text_and_count.jsx";
 // Callout, dialogs, ...
 export { openCallout } from "./src/components/callout/callout.js";
+// Layout
+export { Spacing } from "./src/components/layout/spacing.jsx";
 
 // Validation
 export { createUniqueValueConstraint } from "./src/validation/constraints/create_unique_value_constraint.js";

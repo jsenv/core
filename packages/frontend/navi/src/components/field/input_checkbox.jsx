@@ -13,10 +13,12 @@ import { useConstraints } from "../../validation/hooks/use_constraints.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
+import { getStyleForSpacingProps } from "../layout/spacing.jsx";
 import {
   LoadableInlineElement,
   LoaderBackground,
 } from "../loader/loader_background.jsx";
+import { withPropsStyle } from "../props_composition/with_props_style.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { initCustomField } from "./custom_field.js";
 import {
@@ -331,15 +333,20 @@ const NaviCheckbox = ({
     return initCustomField(ref.current, inputRef.current);
   }, []);
 
+  const innerStyle = withPropsStyle(
+    {
+      ...(accentColor ? { "--accent-color": accentColor } : {}),
+      ...getStyleForSpacingProps(rest),
+    },
+    style,
+  );
+
   return (
     <div
       {...rest}
       ref={ref}
       className="navi_checkbox"
-      style={{
-        ...(accentColor ? { "--accent-color": accentColor } : {}),
-        ...style,
-      }}
+      style={innerStyle}
       data-readonly={readOnly ? "" : undefined}
       data-disabled={disabled ? "" : undefined}
     >
