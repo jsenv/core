@@ -88,6 +88,7 @@ import.meta.css = /* css */ `
     .navi_button_content {
       position: relative;
       display: inline-flex;
+      width: 100%;
       padding-top: var(--padding-y);
       padding-right: var(--padding-x);
       padding-bottom: var(--padding-y);
@@ -239,7 +240,8 @@ const ButtonBasic = forwardRef((props, ref) => {
     appearance === "navi" ? "navi_button" : undefined,
     className,
   );
-  const innerStyle = withPropsStyle(useLayoutStyle(rest), style);
+  const { all } = useLayoutStyle(rest);
+  const innerStyle = withPropsStyle(all, style);
 
   return (
     <button
