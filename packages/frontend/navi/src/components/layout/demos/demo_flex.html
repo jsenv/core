@@ -38,8 +38,10 @@
           <div style={{ padding: "20px", fontFamily: "system-ui, sans-serif" }}>
             <h1>Flex Layout Demo</h1>
 
+            <h2>FlexRow</h2>
+
             <section className="demo-section">
-              <h2>1. Basic FlexRow</h2>
+              <h3>1. Basic FlexRow</h3>
               <FlexRow>
                 <DemoBox>Item 1</DemoBox>
                 <DemoBox>Item 2</DemoBox>
@@ -48,7 +50,7 @@
             </section>
 
             <section className="demo-section">
-              <h2>2. FlexRow with Gap</h2>
+              <h3>2. FlexRow with Gap</h3>
               <FlexRow gap="15px">
                 <DemoBox>Item 1</DemoBox>
                 <DemoBox>Item 2</DemoBox>
@@ -57,9 +59,9 @@
             </section>
 
             <section className="demo-section">
-              <h2>3. FlexRow with Vertical Alignment</h2>
+              <h3>3. FlexRow with Vertical Alignment</h3>
 
-              <h3>alignY="start"</h3>
+              <h4>alignY="start"</h4>
               <FlexRow
                 alignY="start"
                 gap="10px"
@@ -76,7 +78,7 @@
                 <DemoBox>Short</DemoBox>
               </FlexRow>
 
-              <h3>alignY="center" (default)</h3>
+              <h4>alignY="center" (default)</h4>
               <FlexRow
                 alignY="center"
                 gap="10px"
@@ -93,7 +95,7 @@
                 <DemoBox>Short</DemoBox>
               </FlexRow>
 
-              <h3>alignY="end"</h3>
+              <h4>alignY="end"</h4>
               <FlexRow
                 alignY="end"
                 gap="10px"
@@ -111,8 +113,10 @@
               </FlexRow>
             </section>
 
+            <h2>FlexRow + FlexItem</h2>
+
             <section className="demo-section">
-              <h2>4. FlexItem Basic Usage</h2>
+              <h3>4. FlexItem Basic Usage</h3>
 
               <FlexRow gap="10px">
                 <FlexItem>
@@ -128,7 +132,7 @@
             </section>
 
             <section className="demo-section">
-              <h2>5. FlexItem with Growth</h2>
+              <h3>5. FlexItem with Growth</h3>
 
               <FlexRow gap="10px">
                 <FlexItem>
@@ -144,7 +148,7 @@
             </section>
 
             <section className="demo-section">
-              <h2>6. FlexItem with Individual Alignment</h2>
+              <h3>6. FlexItem with Individual Alignment</h3>
 
               <FlexRow
                 gap="10px"
