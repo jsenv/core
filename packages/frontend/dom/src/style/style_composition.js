@@ -13,7 +13,7 @@ export const mergeStyles = (stylesA, stylesB, context = "js") => {
   if (!stylesB) {
     return normalizeStyles(stylesA, context);
   }
-  const result = { ...stylesA };
+  const result = {};
   const aKeys = Object.keys(stylesA);
   const bKeyToVisitSet = new Set(Object.keys(stylesB));
   for (const aKey of aKeys) {

@@ -94,9 +94,9 @@ export const createStyleController = (name = "anonymous") => {
       throw new Error("styles must be an object");
     }
 
-    const normalizedStylesToSet = normalizeStyles(stylesToSet, "js");
     const elementData = elementWeakMap.get(element);
     if (!elementData) {
+      const normalizedStylesToSet = normalizeStyles(stylesToSet, "js");
       const animation = createAnimationForStyles(
         element,
         normalizedStylesToSet,
@@ -111,7 +111,7 @@ export const createStyleController = (name = "anonymous") => {
     }
 
     const { styles, animation } = elementData;
-    const mergedStyles = mergeStyles(styles, normalizedStylesToSet);
+    const mergedStyles = mergeStyles(styles, stylesToSet);
     elementData.styles = mergedStyles;
     updateAnimationStyles(animation, mergedStyles);
   };
