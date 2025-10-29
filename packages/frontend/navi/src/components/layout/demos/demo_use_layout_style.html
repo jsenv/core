@@ -64,25 +64,7 @@
             </p>
 
             <div className="demo-container">
-              <h3>1. Basic Spacing - Input with margins</h3>
-              <div className="visual-container">
-                <Input placeholder="Default input" margin="10px" />
-                <Input placeholder="MarginX only" marginX="20px" />
-                <Input placeholder="MarginY only" marginY="15px" />
-              </div>
-            </div>
-
-            <div className="demo-container">
-              <h3>2. Input with Padding</h3>
-              <div className="visual-container">
-                <Input placeholder="Default padding" />
-                <Input placeholder="Extra padding" padding="20px" />
-                <Input placeholder="PaddingX only" paddingX="30px" />
-              </div>
-            </div>
-
-            <div className="demo-container">
-              <h3>3. Input with Expand in FlexRow</h3>
+              <h3>1. Input with Expand in FlexRow</h3>
               <div className="visual-container">
                 <FlexRow gap="10px">
                   <Button>Start</Button>
@@ -93,7 +75,7 @@
             </div>
 
             <div className="demo-container">
-              <h3>4. Input with Expand in FlexColumn</h3>
+              <h3>2. Input with Expand in FlexColumn</h3>
               <div className="visual-container">
                 <FlexColumn gap="10px" style={{ height: "200px" }}>
                   <Input placeholder="Fixed input" />
@@ -104,20 +86,13 @@
             </div>
 
             <div className="demo-container">
-              <h3>5. Input with Expand outside Flex context</h3>
+              <h3>3. Input with Expand outside Flex context</h3>
               <div className="visual-container">
-                <div
-                  style={{
-                    width: "300px",
-                    border: "1px solid #ccc",
-                    padding: "10px",
-                  }}
-                >
+                <div style={{ width: "300px", border: "1px solid #ccc", padding: "10px" }}>
                   <Input placeholder="Normal input" />
-                  <br />
-                  <br />
-                  <Input
-                    placeholder="Expanding input (should take full width)"
+                  <br /><br />
+                  <Input 
+                    placeholder="Expanding input (should take full width)" 
                     expand
                   />
                 </div>
@@ -125,121 +100,7 @@
             </div>
 
             <div className="demo-container">
-              <h3>6. Combined Spacing and Expand</h3>
-              <div className="visual-container">
-                <FlexRow gap="10px">
-                  <Button>Label</Button>
-                  <Input
-                    placeholder="Margin + Expand"
-                    expand
-                    marginY="5px"
-                    paddingX="15px"
-                  />
-                  <Button>Action</Button>
-                </FlexRow>
-              </div>
-            </div>
-
-            <div className="demo-container">
-              <h3>7. Input Alignment Tests</h3>
-
-              <h4>AlignX in Row (auto margin behavior)</h4>
-              <div className="bounded">
-                <FlexRow gap="10px" style={{ height: "100%" }}>
-                  <Input placeholder="Default" />
-                  <Input placeholder="Center" alignX="center" />
-                  <Input placeholder="End" alignX="end" />
-                </FlexRow>
-              </div>
-
-              <h4>AlignY in Row (align-self behavior)</h4>
-              <div className="bounded">
-                <FlexRow gap="10px" style={{ height: "100%" }}>
-                  <Input placeholder="Default" />
-                  <Input placeholder="Start" alignY="start" />
-                  <Input placeholder="Center" alignY="center" />
-                  <Input placeholder="End" alignY="end" />
-                </FlexRow>
-              </div>
-            </div>
-
-            <div className="demo-container">
-              <h3>8. Column Alignment Tests</h3>
-
-              <h4>AlignX in Column (align-self behavior)</h4>
-              <div
-                style={{
-                  width: "300px",
-                  height: "150px",
-                  border: "1px solid #6366f1",
-                  padding: "10px",
-                }}
-              >
-                <FlexColumn gap="10px" style={{ height: "100%" }}>
-                  <Input placeholder="Default" />
-                  <Input placeholder="Start" alignX="start" />
-                  <Input placeholder="Center" alignX="center" />
-                  <Input placeholder="End" alignX="end" />
-                </FlexColumn>
-              </div>
-
-              <h4>AlignY in Column (auto margin behavior)</h4>
-              <div
-                style={{
-                  width: "300px",
-                  height: "200px",
-                  border: "1px solid #6366f1",
-                  padding: "10px",
-                }}
-              >
-                <FlexColumn gap="10px" style={{ height: "100%" }}>
-                  <Input placeholder="Default" />
-                  <Input placeholder="Center" alignY="center" />
-                  <Input placeholder="End" alignY="end" />
-                </FlexColumn>
-              </div>
-            </div>
-
-            <div className="demo-container">
-              <h3>9. Complex Layout: Form with Expand</h3>
-              <div className="visual-container">
-                <FlexColumn gap="15px">
-                  <FlexRow gap="10px">
-                    <label style={{ minWidth: "80px", alignSelf: "center" }}>
-                      Name:
-                    </label>
-                    <Input placeholder="Enter your name" expand />
-                  </FlexRow>
-
-                  <FlexRow gap="10px">
-                    <label style={{ minWidth: "80px", alignSelf: "center" }}>
-                      Email:
-                    </label>
-                    <Input placeholder="Enter your email" expand />
-                    <Button>Verify</Button>
-                  </FlexRow>
-
-                  <FlexRow gap="10px">
-                    <label style={{ minWidth: "80px", alignSelf: "center" }}>
-                      Message:
-                    </label>
-                    <Input
-                      placeholder="Enter your message"
-                      expand
-                      paddingY="10px"
-                    />
-                  </FlexRow>
-
-                  <FlexRow gap="10px" alignX="end">
-                    <Button>Cancel</Button>
-                    <Button>Submit</Button>
-                  </FlexRow>
-                </FlexColumn>
-              </div>
-            </div>
-
-            <div className="demo-container">
-              <h3>10. Edge Case: Multiple Expand Elements</h3>
+              <h3>4. Multiple Expand Elements</h3>
               <div className="visual-container">
                 <FlexRow gap="10px">
                   <Input placeholder="Expand 1" expand />
@@ -250,17 +111,104 @@
             </div>
 
             <div className="demo-container">
-              <h3>11. Directional Margins and Padding</h3>
+              <h3>5. Basic Spacing - Input with margins</h3>
+              <div className="visual-container">
+                <Input placeholder="Default input" margin="10px" />
+                <Input placeholder="MarginX only" marginX="20px" />
+                <Input placeholder="MarginY only" marginY="15px" />
+              </div>
+            </div>
+
+            <div className="demo-container">
+              <h3>6. Input with Padding</h3>
+              <div className="visual-container">
+                <Input placeholder="Default padding" />
+                <Input placeholder="Extra padding" padding="20px" />
+                <Input placeholder="PaddingX only" paddingX="30px" />
+              </div>
+            </div>
+
+            <div className="demo-container">
+              <h3>7. Directional Margins and Padding</h3>
               <div className="visual-container">
                 <FlexColumn gap="5px">
-                  <Input placeholder="marginLeft: 20px" marginLeft="20px" />
-                  <Input placeholder="marginRight: 30px" marginRight="30px" />
-                  <Input
-                    placeholder="marginTop: 15px, marginBottom: 25px"
+                  <Input 
+                    placeholder="marginLeft: 20px" 
+                    marginLeft="20px"
+                  />
+                  <Input 
+                    placeholder="marginRight: 30px" 
+                    marginRight="30px"
+                  />
+                  <Input 
+                    placeholder="marginTop: 15px, marginBottom: 25px" 
                     marginTop="15px"
                     marginBottom="25px"
                   />
-                  <Input placeholder="paddingLeft: 25px" paddingLeft="25px" />
+                  <Input 
+                    placeholder="paddingLeft: 25px" 
+                    paddingLeft="25px"
+                  />
+                </FlexColumn>
+              </div>
+            </div>
+
+            <div className="demo-container">
+              <h3>8. AlignX Test: FlexRow + alignX="end"</h3>
+              <div className="visual-container">
+                <div className="bounded">
+                  <FlexRow gap="10px" style={{ height: "100%" }}>
+                    <Input placeholder="Default" />
+                    <Input placeholder="Pushed to end" alignX="end" />
+                  </FlexRow>
+                </div>
+              </div>
+            </div>
+
+            <div className="demo-container">
+              <h3>9. Combined Spacing and Expand</h3>
+              <div className="visual-container">
+                <FlexRow gap="10px">
+                  <Button>Label</Button>
+                  <Input 
+                    placeholder="Margin + Expand" 
+                    expand
+                    marginY="5px"
+                    paddingX="15px"
+                  />
+                  <Button>Action</Button>
+                </FlexRow>
+              </div>
+            </div>
+
+            <div className="demo-container">
+              <h3>10. Complex Layout: Form with Expand</h3>
+              <div className="visual-container">
+                <FlexColumn gap="15px">
+                  <FlexRow gap="10px">
+                    <label style={{ minWidth: "80px", alignSelf: "center" }}>Name:</label>
+                    <Input placeholder="Enter your name" expand />
+                  </FlexRow>
+                  
+                  <FlexRow gap="10px">
+                    <label style={{ minWidth: "80px", alignSelf: "center" }}>Email:</label>
+                    <Input placeholder="Enter your email" expand />
+                    <Button>Verify</Button>
+                  </FlexRow>
+                  
+                  <FlexRow gap="10px">
+                    <label style={{ minWidth: "80px", alignSelf: "center" }}>Message:</label>
+                    <Input 
+                      placeholder="Enter your message" 
+                      expand
+                      paddingY="10px"
+                    />
+                  </FlexRow>
+
+                  <FlexRow gap="10px" alignX="end">
+                    <Button>Cancel</Button>
+                    <Button>Submit</Button>
+                  </FlexRow>
                 </FlexColumn>
               </div>
             </div>
