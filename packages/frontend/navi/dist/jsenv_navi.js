@@ -18575,124 +18575,233 @@ const useConstraints = (elementRef, constraints, targetSelector) => {
   }, constraints);
 };
 
-/**
- * Merges a component's base style with style received from props.
- * Automatically normalizes style values (e.g., adds "px" units where needed).
- *
- * ```jsx
- * const MyButton = ({ style, children }) => (
- *   <button style={withPropsStyle({ padding: 10 }, style)}>
- *     {children}
- *   </button>
- * );
- *
- * // Usage:
- * <MyButton style={{ color: 'red', fontSize: 14 }} />
- * <MyButton style="color: blue; margin: 5px;" />
- * <MyButton /> // Just base styles
- * ```
- *
- * @param {string|object} baseStyle - The component's base style (string or object)
- * @param {string|object} [styleFromProps] - Additional style from props (optional)
- * @returns {object} The merged and normalized style object
- */
-const withPropsStyle = (baseStyle, styleFromProps) => {
-  return mergeStyles(baseStyle, styleFromProps, "css");
-};
+const FlexDirectionContext = createContext();
 
-const consumeSpacingProps = props => {
-  const style = {};
+/**
+ * Layout Style Hook
+ *
+ * This hook processes layout-related props and converts them into CSS styles.
+ * It handles spacing (margin/padding), alignment (alignX/alignY), and expansion behavior.
+ * The hook is context-aware and adapts behavior based on flex direction.
+ *
+ * Key features:
+ * - Spacing: margin/padding with X/Y shortcuts and directional variants
+ * - Alignment: alignX/alignY using align-self and auto margins
+ * - Expansion: expand prop for taking remaining space (flexGrow or width: 100%)
+ * - Context-aware: behavior changes based on FlexDirectionContext (row/column/none)
+ */
+
+
+/**
+ * Converts layout props into CSS styles
+ * @param {Object} props - Component props containing layout properties
+ * @param {string|number} [props.margin] - All-sides margin
+ * @param {string|number} [props.marginX] - Horizontal margin (left + right)
+ * @param {string|number} [props.marginY] - Vertical margin (top + bottom)
+ * @param {string|number} [props.marginLeft] - Left margin
+ * @param {string|number} [props.marginRight] - Right margin
+ * @param {string|number} [props.marginTop] - Top margin
+ * @param {string|number} [props.marginBottom] - Bottom margin
+ * @param {string|number} [props.padding] - All-sides padding
+ * @param {string|number} [props.paddingX] - Horizontal padding (left + right)
+ * @param {string|number} [props.paddingY] - Vertical padding (top + bottom)
+ * @param {string|number} [props.paddingLeft] - Left padding
+ * @param {string|number} [props.paddingRight] - Right padding
+ * @param {string|number} [props.paddingTop] - Top padding
+ * @param {string|number} [props.paddingBottom] - Bottom padding
+ * @param {"start"|"center"|"end"|"stretch"} [props.alignX] - Horizontal alignment
+ * @param {"start"|"center"|"end"|"stretch"} [props.alignY] - Vertical alignment
+ * @param {boolean} [props.expand] - Whether element should expand to fill available space
+ * @returns {Object} Object with categorized styles: { margin, padding, alignment, expansion, all }
+ */
+const useLayoutStyle = (props) => {
+  const flexDirection = useContext(FlexDirectionContext);
+
+  const marginStyle = {};
+  const paddingStyle = {};
+  const alignmentStyle = {};
+  const expansionStyle = {};
+
   {
-    const margin = props.margin;
-    const marginX = props.marginX;
-    const marginY = props.marginY;
-    const marginLeft = props.marginLeft;
-    const marginRight = props.marginRight;
-    const marginTop = props.marginTop;
-    const marginBottom = props.marginBottom;
-    delete props.margin;
-    delete props.marginX;
-    delete props.marginY;
-    delete props.marginLeft;
-    delete props.marginRight;
-    delete props.marginTop;
-    delete props.marginBottom;
-    if (margin !== undefined) {
-      style.margin = margin;
+    {
+      const margin = props.margin;
+      const marginX = props.marginX;
+      const marginY = props.marginY;
+      const marginLeft = props.marginLeft;
+      const marginRight = props.marginRight;
+      const marginTop = props.marginTop;
+      const marginBottom = props.marginBottom;
+      delete props.margin;
+      delete props.marginX;
+      delete props.marginY;
+      delete props.marginLeft;
+      delete props.marginRight;
+      delete props.marginTop;
+      delete props.marginBottom;
+
+      if (margin !== undefined) {
+        marginStyle.margin = margin;
+      }
+      if (marginLeft !== undefined) {
+        marginStyle.marginLeft = marginLeft;
+      } else if (marginX !== undefined) {
+        marginStyle.marginLeft = marginX;
+      }
+      if (marginRight !== undefined) {
+        marginStyle.marginRight = marginRight;
+      } else if (marginX !== undefined) {
+        marginStyle.marginRight = marginX;
+      }
+      if (marginTop !== undefined) {
+        marginStyle.marginTop = marginTop;
+      } else if (marginY !== undefined) {
+        marginStyle.marginTop = marginY;
+      }
+      if (marginBottom !== undefined) {
+        marginStyle.marginBottom = marginBottom;
+      } else if (marginY !== undefined) {
+        marginStyle.marginBottom = marginY;
+      }
     }
-    if (marginLeft !== undefined) {
-      style.marginLeft = marginLeft;
-    } else if (marginX !== undefined) {
-      style.marginLeft = marginX;
-    }
-    if (marginRight !== undefined) {
-      style.marginRight = marginRight;
-    } else if (marginX !== undefined) {
-      style.marginRight = marginX;
-    }
-    if (marginTop !== undefined) {
-      style.marginTop = marginTop;
-    } else if (marginY !== undefined) {
-      style.marginTop = marginY;
-    }
-    if (marginBottom !== undefined) {
-      style.marginBottom = marginBottom;
-    } else if (marginY !== undefined) {
-      style.marginBottom = marginY;
+    {
+      const padding = props.padding;
+      const paddingX = props.paddingX;
+      const paddingY = props.paddingY;
+      const paddingLeft = props.paddingLeft;
+      const paddingRight = props.paddingRight;
+      const paddingTop = props.paddingTop;
+      const paddingBottom = props.paddingBottom;
+      delete props.padding;
+      delete props.paddingX;
+      delete props.paddingY;
+      delete props.paddingLeft;
+      delete props.paddingRight;
+      delete props.paddingTop;
+      delete props.paddingBottom;
+
+      if (padding !== undefined) {
+        paddingStyle.padding = padding;
+      }
+      if (paddingLeft !== undefined) {
+        paddingStyle.paddingLeft = paddingLeft;
+      } else if (paddingX !== undefined) {
+        paddingStyle.paddingLeft = paddingX;
+      }
+      if (paddingRight !== undefined) {
+        paddingStyle.paddingRight = paddingRight;
+      } else if (paddingX !== undefined) {
+        paddingStyle.paddingRight = paddingX;
+      }
+      if (paddingTop !== undefined) {
+        paddingStyle.paddingTop = paddingTop;
+      } else if (paddingY !== undefined) {
+        paddingStyle.paddingTop = paddingY;
+      }
+      if (paddingBottom !== undefined) {
+        paddingStyle.paddingBottom = paddingBottom;
+      } else if (paddingY !== undefined) {
+        paddingStyle.paddingBottom = paddingY;
+      }
     }
   }
+
   {
-    const padding = props.padding;
-    const paddingX = props.paddingX;
-    const paddingY = props.paddingY;
-    const paddingLeft = props.paddingLeft;
-    const paddingRight = props.paddingRight;
-    const paddingTop = props.paddingTop;
-    const paddingBottom = props.paddingBottom;
-    delete props.padding;
-    delete props.paddingX;
-    delete props.paddingY;
-    delete props.paddingLeft;
-    delete props.paddingRight;
-    delete props.paddingTop;
-    delete props.paddingBottom;
-    if (padding !== undefined) {
-      style.padding = padding;
+    const alignX = props.alignX;
+    const alignY = props.alignY;
+    delete props.alignX;
+    delete props.alignY;
+
+    // flex
+    if (flexDirection === "row") {
+      // In row direction: alignX controls justify-content, alignY controls align-self
+      if (alignY !== undefined && alignY !== "start") {
+        alignmentStyle.alignSelf = alignY;
+      }
+      // For row, alignX uses auto margins for positioning
+      // NOTE: Auto margins only work effectively for positioning individual items.
+      // When multiple adjacent items have the same auto margin alignment (e.g., alignX="end"),
+      // only the first item will be positioned as expected because subsequent items
+      // will be positioned relative to the previous item's margins, not the container edge.
+      if (alignX !== undefined) {
+        if (alignX === "start") {
+          alignmentStyle.marginRight = "auto";
+        } else if (alignX === "end") {
+          alignmentStyle.marginLeft = "auto";
+        } else if (alignX === "center") {
+          alignmentStyle.marginLeft = "auto";
+          alignmentStyle.marginRight = "auto";
+        }
+      }
+    } else if (flexDirection === "column") {
+      // In column direction: alignX controls align-self, alignY uses auto margins
+      if (alignX !== undefined && alignX !== "start") {
+        alignmentStyle.alignSelf = alignX;
+      }
+      // For column, alignY uses auto margins for positioning
+      // NOTE: Same auto margin limitation applies - multiple adjacent items with
+      // the same alignY won't all position relative to container edges.
+      if (alignY !== undefined) {
+        if (alignY === "start") {
+          alignmentStyle.marginBottom = "auto";
+        } else if (alignY === "end") {
+          alignmentStyle.marginTop = "auto";
+        } else if (alignY === "center") {
+          alignmentStyle.marginTop = "auto";
+          alignmentStyle.marginBottom = "auto";
+        }
+      }
     }
-    if (paddingLeft !== undefined) {
-      style.paddingLeft = paddingLeft;
-    } else if (paddingX !== undefined) {
-      style.paddingLeft = paddingX;
-    }
-    if (paddingRight !== undefined) {
-      style.paddingRight = paddingRight;
-    } else if (paddingX !== undefined) {
-      style.paddingRight = paddingX;
-    }
-    if (paddingTop !== undefined) {
-      style.paddingTop = paddingTop;
-    } else if (paddingY !== undefined) {
-      style.paddingTop = paddingY;
-    }
-    if (paddingBottom !== undefined) {
-      style.paddingBottom = paddingBottom;
-    } else if (paddingY !== undefined) {
-      style.paddingBottom = paddingY;
+    // non flex
+    else {
+      if (alignX === "start") {
+        alignmentStyle.marginRight = "auto";
+      } else if (alignX === "center") {
+        alignmentStyle.marginLeft = "auto";
+        alignmentStyle.marginRight = "auto";
+      } else if (alignX === "end") {
+        alignmentStyle.marginLeft = "auto";
+      }
+
+      if (alignY === "start") {
+        alignmentStyle.marginBottom = "auto";
+      } else if (alignY === "center") {
+        alignmentStyle.marginTop = "auto";
+        alignmentStyle.marginBottom = "auto";
+      } else if (alignY === "end") {
+        alignmentStyle.marginTop = "auto";
+      }
     }
   }
-  return style;
-};
-const Spacing = ({
-  style,
-  children,
-  ...rest
-}) => {
-  const styleForSpacing = consumeSpacingProps(rest);
-  return jsx("div", {
-    ...rest,
-    style: withPropsStyle(styleForSpacing, style),
-    children: children
-  });
+
+  {
+    const expand = props.expand;
+    delete props.expand;
+    if (expand) {
+      if (flexDirection === "row") {
+        expansionStyle.flexGrow = 1;
+      } else if (flexDirection === "column") {
+        expansionStyle.flexGrow = 1;
+      } else {
+        expansionStyle.width = "100%";
+      }
+    }
+  }
+
+  // Merge all styles for convenience
+  const allStyles = {
+    ...marginStyle,
+    ...paddingStyle,
+    ...alignmentStyle,
+    ...expansionStyle,
+  };
+
+  return {
+    margin: marginStyle,
+    padding: paddingStyle,
+    alignment: alignmentStyle,
+    expansion: expansionStyle,
+    all: allStyles,
+  };
 };
 
 const useNetworkSpeed = () => {
@@ -19267,6 +19376,31 @@ const LoaderBackgroundBasic = ({
       })
     }), children]
   });
+};
+
+/**
+ * Merges a component's base style with style received from props.
+ * Automatically normalizes style values (e.g., adds "px" units where needed).
+ *
+ * ```jsx
+ * const MyButton = ({ style, children }) => (
+ *   <button style={withPropsStyle({ padding: 10 }, style)}>
+ *     {children}
+ *   </button>
+ * );
+ *
+ * // Usage:
+ * <MyButton style={{ color: 'red', fontSize: 14 }} />
+ * <MyButton style="color: blue; margin: 5px;" />
+ * <MyButton /> // Just base styles
+ * ```
+ *
+ * @param {string|object} baseStyle - The component's base style (string or object)
+ * @param {string|object} [styleFromProps] - Additional style from props (optional)
+ * @returns {object} The merged and normalized style object
+ */
+const withPropsStyle = (baseStyle, styleFromProps) => {
+  return mergeStyles(baseStyle, styleFromProps, "css");
 };
 
 // autoFocus does not work so we focus in a useLayoutEffect,
@@ -20246,11 +20380,14 @@ const NaviCheckbox = ({
   useLayoutEffect(() => {
     return initCustomField(ref.current, inputRef.current);
   }, []);
+  const {
+    all
+  } = useLayoutStyle(rest);
   const innerStyle = withPropsStyle({
+    ...all,
     ...(accentColor ? {
       "--accent-color": accentColor
-    } : {}),
-    ...consumeSpacingProps(rest)
+    } : {})
   }, style);
   return jsxs("div", {
     ...rest,
@@ -20671,11 +20808,14 @@ const NaviRadio = ({
   useLayoutEffect(() => {
     return initCustomField(ref.current, inputRef.current);
   }, []);
+  const {
+    all
+  } = useLayoutStyle(rest);
   const innerStyle = withPropsStyle({
+    ...all,
     ...(accentColor ? {
       "--accent-color": accentColor
-    } : {}),
-    ...consumeSpacingProps(rest)
+    } : {})
   }, style);
   return jsxs("span", {
     ...rest,
@@ -20795,6 +20935,8 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       --color: currentColor;
       --color-readonly: color-mix(in srgb, currentColor 60%, transparent);
       --color-disabled: var(--color-readonly);
+
+      width: 100%;
       color: var(--color);
 
       background-color: var(--background-color);
@@ -20873,8 +21015,6 @@ const InputTextualBasic = forwardRef((props, ref) => {
     // visual
     appearance = "navi",
     accentColor,
-    width,
-    height,
     className,
     style,
     ...rest
@@ -20893,11 +21033,13 @@ const InputTextualBasic = forwardRef((props, ref) => {
   });
   useConstraints(innerRef, constraints);
   const innerClassName = withPropsClassName(appearance === "navi" ? "navi_input" : undefined, className);
-  const innerStyle = withPropsStyle({
-    width,
-    height,
-    ...consumeSpacingProps(rest)
-  }, style);
+  const {
+    margin,
+    padding,
+    alignment,
+    expansion
+  } = useLayoutStyle(rest);
+  const innerStyle = withPropsStyle(padding, style);
   const inputTextual = jsx("input", {
     ...rest,
     ref: innerRef,
@@ -20942,11 +21084,12 @@ const InputTextualBasic = forwardRef((props, ref) => {
   return jsx(LoadableInlineElement, {
     loading: innerLoading,
     style: {
+      ...margin,
+      ...alignment,
+      ...expansion,
       "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)"
     },
     color: "var(--accent-color)",
-    width: width,
-    height: height,
     inset: -1,
     children: inputTextual
   });
@@ -21369,157 +21512,6 @@ const Editable = forwardRef((props, ref) => {
   });
 });
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
-  .navi_flex_row {
-    display: flex;
-    flex-direction: row;
-    gap: 0;
-  }
-
-  .navi_flex_column {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-  }
-
-  .navi_flex_item {
-    flex-shrink: 0;
-  }
-`;
-const FlexDirectionContext = createContext();
-const FlexRow = ({
-  alignX,
-  alignY,
-  gap,
-  style,
-  children,
-  ...rest
-}) => {
-  const innerStyle = withPropsStyle({
-    // Only set justifyContent if it's not the default "start"
-    justifyContent: alignX !== "start" ? alignX : undefined,
-    // Only set alignItems if it's not the default "stretch"
-    alignItems: alignY !== "stretch" ? alignY : undefined,
-    gap,
-    ...consumeSpacingProps(rest)
-  }, style);
-  return jsx("div", {
-    ...rest,
-    className: "navi_flex_row",
-    style: innerStyle,
-    children: jsx(FlexDirectionContext.Provider, {
-      value: "row",
-      children: children
-    })
-  });
-};
-const FlexColumn = ({
-  alignX,
-  alignY,
-  gap,
-  style,
-  children,
-  ...rest
-}) => {
-  const innerStyle = withPropsStyle({
-    // Only set alignItems if it's not the default "stretch"
-    alignItems: alignX !== "stretch" ? alignX : undefined,
-    // Only set justifyContent if it's not the default "start"
-    justifyContent: alignY !== "start" ? alignY : undefined,
-    gap,
-    ...consumeSpacingProps(rest)
-  }, style);
-  return jsx("div", {
-    ...rest,
-    className: "navi_flex_column",
-    style: innerStyle,
-    children: jsx(FlexDirectionContext.Provider, {
-      value: "column",
-      children: children
-    })
-  });
-};
-const useConsumAlignProps = props => {
-  const flexDirection = useContext(FlexDirectionContext);
-  const alignX = props.alignX;
-  const alignY = props.alignY;
-  delete props.alignX;
-  delete props.alignY;
-  const style = {};
-  if (flexDirection === "row") {
-    // In row direction: alignX controls justify-content, alignY controls align-self
-    if (alignY !== undefined && alignY !== "start") {
-      style.alignSelf = alignY;
-    }
-    // For row, alignX uses auto margins for positioning
-    // NOTE: Auto margins only work effectively for positioning individual items.
-    // When multiple adjacent items have the same auto margin alignment (e.g., alignX="end"),
-    // only the first item will be positioned as expected because subsequent items
-    // will be positioned relative to the previous item's margins, not the container edge.
-    if (alignX !== undefined) {
-      if (alignX === "start") {
-        style.marginRight = "auto";
-      } else if (alignX === "end") {
-        style.marginLeft = "auto";
-      } else if (alignX === "center") {
-        style.marginLeft = "auto";
-        style.marginRight = "auto";
-      }
-    }
-  } else if (flexDirection === "column") {
-    // In column direction: alignX controls align-self, alignY uses auto margins
-    if (alignX !== undefined && alignX !== "start") {
-      style.alignSelf = alignX;
-    }
-    // For column, alignY uses auto margins for positioning
-    // NOTE: Same auto margin limitation applies - multiple adjacent items with
-    // the same alignY won't all position relative to container edges.
-    if (alignY !== undefined) {
-      if (alignY === "start") {
-        style.marginBottom = "auto";
-      } else if (alignY === "end") {
-        style.marginTop = "auto";
-      } else if (alignY === "center") {
-        style.marginTop = "auto";
-        style.marginBottom = "auto";
-      }
-    }
-  }
-  return style;
-};
-const FlexItem = ({
-  alignX,
-  alignY,
-  grow,
-  shrink,
-  className,
-  style,
-  children,
-  ...rest
-}) => {
-  const flexDirection = useContext(FlexDirectionContext);
-  if (!flexDirection) {
-    console.warn("FlexItem must be used within a FlexRow or FlexColumn component.");
-  }
-  const innerClassName = withPropsClassName("navi_flex_item", className);
-  const alignStyle = useConsumAlignProps({
-    alignX,
-    alignY
-  });
-  const innerStyle = withPropsStyle({
-    flexGrow: grow ? 1 : undefined,
-    flexShrink: shrink ? 1 : undefined,
-    ...consumeSpacingProps(rest),
-    ...alignStyle
-  }, style);
-  return jsx("div", {
-    ...rest,
-    className: innerClassName,
-    style: innerStyle,
-    children: children
-  });
-};
-
 const useFormEvents = (
   elementRef,
   {
@@ -21620,6 +21612,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     .navi_button_content {
       position: relative;
       display: inline-flex;
+      width: 100%;
       padding-top: var(--padding-y);
       padding-right: var(--padding-x);
       padding-bottom: var(--padding-y);
@@ -21741,8 +21734,6 @@ const ButtonBasic = forwardRef((props, ref) => {
     autoFocus,
     // visual
     appearance = "navi",
-    alignX,
-    alignY,
     discrete,
     className,
     style,
@@ -21766,13 +21757,10 @@ const ButtonBasic = forwardRef((props, ref) => {
     buttonChildren = children;
   }
   const innerClassName = withPropsClassName(appearance === "navi" ? "navi_button" : undefined, className);
-  const innerStyle = withPropsStyle({
-    ...consumeSpacingProps(rest),
-    ...useConsumAlignProps({
-      alignX,
-      alignY
-    })
-  }, style);
+  const {
+    all
+  } = useLayoutStyle(rest);
+  const innerStyle = withPropsStyle(all, style);
   return jsx("button", {
     ...rest,
     ref: innerRef,
@@ -24347,7 +24335,6 @@ const LinkBasic = forwardRef((props, ref) => {
 });
 const LinkPlain = forwardRef((props, ref) => {
   const {
-    className = "",
     loading,
     readOnly,
     disabled,
@@ -24360,6 +24347,9 @@ const LinkPlain = forwardRef((props, ref) => {
     onClick,
     onKeyDown,
     href,
+    // visual
+    className,
+    style,
     ...rest
   } = props;
   const innerRef = useRef();
@@ -24369,6 +24359,11 @@ const LinkPlain = forwardRef((props, ref) => {
   useConstraints(innerRef, constraints);
   const shouldDimColor = readOnly || disabled;
   useDimColorWhen(innerRef, shouldDimColor);
+  const innerClassName = withPropsClassName("navi_link", className);
+  const {
+    all
+  } = useLayoutStyle(rest);
+  const innerStyle = withPropsStyle(all, style);
   return jsx(LoadableInlineElement, {
     loading: loading,
     color: "light-dark(#355fcc, #3b82f6)",
@@ -24376,7 +24371,8 @@ const LinkPlain = forwardRef((props, ref) => {
       ...rest,
       ref: innerRef,
       href: href,
-      className: ["navi_link", ...className.split(" ")].join(" "),
+      className: innerClassName,
+      style: innerStyle,
       "aria-busy": loading,
       inert: disabled,
       "data-field": "",
@@ -28220,23 +28216,17 @@ const Text = ({
   italic,
   underline,
   style,
-  alignX,
   ...rest
 }) => {
+  const {
+    all
+  } = useLayoutStyle(rest);
   const innerStyle = withPropsStyle({
+    ...all,
     color,
     fontWeight: bold ? "bold" : undefined,
     fontStyle: italic ? "italic" : undefined,
-    textDecoration: underline ? "underline" : undefined,
-    ...consumeSpacingProps(rest),
-    ...(alignX === "start" ? {} : alignX === "center" ? {
-      alignSelf: "center",
-      marginLeft: "auto",
-      marginRight: "auto"
-    } : {
-      alignSelf: "end",
-      marginLeft: "auto"
-    })
+    textDecoration: underline ? "underline" : undefined
   }, style);
   return jsx("span", {
     ...rest,
@@ -28299,6 +28289,129 @@ const TextAndCount = ({
       className: "label",
       children: text
     })
+  });
+};
+
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .navi_flex_row {
+    display: flex;
+    flex-direction: row;
+    gap: 0;
+  }
+
+  .navi_flex_column {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .navi_flex_item {
+    flex-shrink: 0;
+  }
+`;
+const FlexRow = ({
+  alignX,
+  alignY,
+  gap,
+  style,
+  children,
+  ...rest
+}) => {
+  const {
+    all
+  } = useLayoutStyle(rest);
+  const innerStyle = withPropsStyle({
+    ...all,
+    // Only set justifyContent if it's not the default "start"
+    justifyContent: alignX !== "start" ? alignX : undefined,
+    // Only set alignItems if it's not the default "stretch"
+    alignItems: alignY !== "stretch" ? alignY : undefined,
+    gap
+  }, style);
+  return jsx("div", {
+    ...rest,
+    className: "navi_flex_row",
+    style: innerStyle,
+    children: jsx(FlexDirectionContext.Provider, {
+      value: "row",
+      children: children
+    })
+  });
+};
+const FlexColumn = ({
+  alignX,
+  alignY,
+  gap,
+  style,
+  children,
+  ...rest
+}) => {
+  const {
+    all
+  } = useLayoutStyle(rest);
+  const innerStyle = withPropsStyle({
+    ...all,
+    // Only set alignItems if it's not the default "stretch"
+    alignItems: alignX !== "stretch" ? alignX : undefined,
+    // Only set justifyContent if it's not the default "start"
+    justifyContent: alignY !== "start" ? alignY : undefined,
+    gap
+  }, style);
+  return jsx("div", {
+    ...rest,
+    className: "navi_flex_column",
+    style: innerStyle,
+    children: jsx(FlexDirectionContext.Provider, {
+      value: "column",
+      children: children
+    })
+  });
+};
+const FlexItem = ({
+  shrink,
+  className,
+  expand,
+  style,
+  children,
+  ...rest
+}) => {
+  const flexDirection = useContext(FlexDirectionContext);
+  if (!flexDirection) {
+    console.warn("FlexItem must be used within a FlexRow or FlexColumn component.");
+  }
+  const innerClassName = withPropsClassName("navi_flex_item", className);
+  const {
+    all
+  } = useLayoutStyle(rest);
+  const innerStyle = withPropsStyle({
+    ...all,
+    flexGrow: expand ? 1 : undefined,
+    flexShrink: shrink ? 1 : undefined
+  }, style);
+  return jsx("div", {
+    ...rest,
+    className: innerClassName,
+    style: innerStyle,
+    children: children
+  });
+};
+
+const Spacing = ({
+  style,
+  children,
+  ...rest
+}) => {
+  const {
+    padding,
+    margin
+  } = useLayoutStyle(rest);
+  return jsx("div", {
+    ...rest,
+    style: withPropsStyle({
+      ...margin,
+      ...padding
+    }, style),
+    children: children
   });
 };
 
