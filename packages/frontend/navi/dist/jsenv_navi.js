@@ -823,20 +823,15 @@ const normalizeNumber = (value, context, unit, propertyName) => {
     return value;
   }
   if (typeof value === "string") {
-    if (value === "auto") {
-      return "auto";
+    // For js context, only convert px values to numbers
+    if (unit === "px" && value.endsWith("px")) {
+      const numericValue = parseFloat(value);
+      if (!isNaN(numericValue)) {
+        return numericValue;
+      }
     }
-    if (value === "none") {
-      return "none";
-    }
-    const numericValue = parseFloat(value);
-    if (isNaN(numericValue)) {
-      console.warn(
-        `"${propertyName}": ${value} cannot be converted to number, returning value as-is.`,
-      );
-      return value;
-    }
-    return numericValue;
+    // Keep all other strings as-is (including %, em, rem, auto, none, etc.)
+    return value;
   }
   return value;
 };
