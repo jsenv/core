@@ -125,7 +125,6 @@ import.meta.css = /* css */ `
     /* Active */
     .navi_button[data-active] .navi_button_content {
       --outline-color: var(--border-color-active);
-      --background-color: none;
       transform: scale(0.9);
     }
     .navi_button[data-active] .navi_button_shadow {
