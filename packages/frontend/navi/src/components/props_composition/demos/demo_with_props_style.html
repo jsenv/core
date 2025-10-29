@@ -39,25 +39,38 @@
           <div style={{ padding: "20px", fontFamily: "system-ui, sans-serif" }}>
             <h1>withPropsStyle Demo</h1>
 
-            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-              <Button>Default</Button>
+            <section style={{ marginBottom: "30px" }}>
+              <h2>1. Default Button</h2>
+              <div>
+                <Button>Default</Button>
+              </div>
+            </section>
 
-              <Button style={{ backgroundColor: "#007bff" }}>
-                Direct override
-              </Button>
+            <section style={{ marginBottom: "30px" }}>
+              <h2>2. Override via style + background-color</h2>
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                <Button style={{ backgroundColor: "#007bff" }}>
+                  Object notation
+                </Button>
 
-              <Button style="background-color: #28a745;">
-                String override
-              </Button>
+                <Button style="background-color: #28a745;">
+                  String notation
+                </Button>
+              </div>
+            </section>
 
-              <Button style={{ "--background-color": "#dc3545" }}>
-                CSS var override object
-              </Button>
+            <section>
+              <h2>3. Override via style + CSS var</h2>
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                <Button style={{ "--background-color": "#dc3545" }}>
+                  Object notation
+                </Button>
 
-              <Button style="--background-color: #ffc107;">
-                CSS var override string
-              </Button>
-            </div>
+                <Button style="--background-color: #ffc107;">
+                  String notation
+                </Button>
+              </div>
+            </section>
           </div>
         );
       };
