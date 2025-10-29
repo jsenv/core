@@ -16,7 +16,7 @@ import.meta.css = /* css */ `
     width: 1em;
     height: 1em;
     flex-shrink: 0;
-    align-self: center;
+    align-self: var(--align-y);
     line-height: 1em;
   }
 `;
@@ -29,10 +29,15 @@ export const Text = ({ children, ...rest }) => {
   );
 };
 
-export const Icon = ({ alignY = "center", style, children, ...rest }) => {
+const alignYMapping = {
+  start: "flex-start",
+  center: "center",
+  end: "flex-end",
+};
+export const Icon = ({ alignY, style, children, ...rest }) => {
   const innerStyle = { ...style };
   if (alignY !== "center") {
-    innerStyle["--align-y"] = alignY;
+    innerStyle["--align-y"] = alignYMapping[alignY];
   }
 
   return (
