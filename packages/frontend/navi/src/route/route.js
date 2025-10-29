@@ -306,12 +306,15 @@ const createRoute = (urlPatternInput) => {
   };
   routePrivatePropertiesMap.set(route, routePrivateProperties);
 
-  const buildRelativeUrl = (params = {}) => {
+  const buildRelativeUrl = (params = {}, { skipEncoding } = {}) => {
     let relativeUrl = urlPatternInput;
 
     const encode = (value) => {
       if (value && value[encodedSymbol]) {
         return value.value;
+      }
+      if (skipEncoding) {
+        return value;
       }
       return encodeURIComponent(value);
     };
@@ -343,8 +346,8 @@ const createRoute = (urlPatternInput) => {
 
     return relativeUrl;
   };
-  const buildUrl = (params = {}) => {
-    let relativeUrl = buildRelativeUrl(params);
+  const buildUrl = (params = {}, { skipEncoding } = {}) => {
+    let relativeUrl = buildRelativeUrl(params, { skipEncoding });
     if (relativeUrl[0] === "/") {
       relativeUrl = relativeUrl.slice(1);
     }
