@@ -95,6 +95,10 @@ export const jsenvPluginProtocolFile = ({
           return null;
         }
         const { firstReference } = urlInfo;
+        if (!firstReference) {
+          console.warn("No firstReference for", urlInfo.url);
+          return null;
+        }
         let { fsStat } = firstReference;
         if (!fsStat) {
           fsStat = readEntryStatSync(urlInfo.url, { nullIfNotFound: true });
@@ -123,6 +127,9 @@ export const jsenvPluginProtocolFile = ({
           return null;
         }
         const { firstReference } = urlInfo;
+        if (!firstReference) {
+          return null;
+        }
         let { fsStat } = firstReference;
         if (!fsStat) {
           fsStat = readEntryStatSync(urlInfo.url, { nullIfNotFound: true });
