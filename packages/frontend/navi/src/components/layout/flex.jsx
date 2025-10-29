@@ -71,7 +71,27 @@ export const useConsumAlignProps = (props) => {
   delete props.alignY;
 
   const style = {};
-  if (alignX !== "start") {
+
+  if (flexDirection === "row") {
+    // In row direction: alignX controls justify-content, alignY controls align-self
+    // Default alignY is "center" from CSS, so only set alignSelf when different
+    if (alignY !== undefined && alignY !== "center") {
+      style.alignSelf = alignY;
+    }
+    // For row, alignX doesn't have a meaningful default for justifySelf
+    if (alignX !== undefined) {
+      style.justifySelf = alignX;
+    }
+  } else if (flexDirection === "column") {
+    // In column direction: alignX controls align-self, alignY controls justify-content
+    // Default alignX is "center" from CSS, so only set alignSelf when different
+    if (alignX !== undefined && alignX !== "center") {
+      style.alignSelf = alignX;
+    }
+    // For column, alignY doesn't have a meaningful default for justifySelf
+    if (alignY !== undefined) {
+      style.justifySelf = alignY;
+    }
   }
 
   return style;
