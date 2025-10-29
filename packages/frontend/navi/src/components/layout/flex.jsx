@@ -1,6 +1,7 @@
 import { createContext } from "preact";
 import { useContext } from "preact/hooks";
 
+import { withPropsClassName } from "../props_composition/with_props_class_name.js";
 import { withPropsStyle } from "../props_composition/with_props_style.js";
 import { consumeSpacingProps } from "./spacing.jsx";
 
@@ -101,6 +102,7 @@ export const FlexItem = ({
   alignY,
   grow,
   shrink,
+  className,
   style,
   children,
   ...rest
@@ -112,6 +114,7 @@ export const FlexItem = ({
     );
   }
 
+  const innerClassName = withPropsClassName("navi_flex_item", className);
   const alignStyle = useConsumAlignProps({ alignX, alignY });
   const innerStyle = withPropsStyle(
     {
@@ -124,7 +127,7 @@ export const FlexItem = ({
   );
 
   return (
-    <div {...rest} className="navi_flex_item" style={innerStyle}>
+    <div {...rest} className={innerClassName} style={innerStyle}>
       {children}
     </div>
   );

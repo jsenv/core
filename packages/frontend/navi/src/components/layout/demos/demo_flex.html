@@ -40,7 +40,6 @@
 
             <section className="demo-section">
               <h2>1. Basic FlexRow</h2>
-              <p>Default FlexRow with no props:</p>
               <FlexRow>
                 <DemoBox>Item 1</DemoBox>
                 <DemoBox>Item 2</DemoBox>
@@ -50,7 +49,6 @@
 
             <section className="demo-section">
               <h2>2. FlexRow with Gap</h2>
-              <p>Adding space between items:</p>
               <FlexRow gap="15px">
                 <DemoBox>Item 1</DemoBox>
                 <DemoBox>Item 2</DemoBox>
@@ -60,7 +58,6 @@
 
             <section className="demo-section">
               <h2>3. FlexRow with Vertical Alignment</h2>
-              <p>Different alignY values:</p>
 
               <h3>alignY="start"</h3>
               <FlexRow
@@ -115,24 +112,7 @@
             </section>
 
             <section className="demo-section">
-              <h2>4. FlexRow with Spacing Props</h2>
-              <p>Using margin and padding props:</p>
-
-              <FlexRow
-                gap="10px"
-                margin="20px"
-                padding="15px"
-                style={{ background: "#f3e5f5" }}
-              >
-                <DemoBox>With Margin</DemoBox>
-                <DemoBox>And Padding</DemoBox>
-                <DemoBox>Applied</DemoBox>
-              </FlexRow>
-            </section>
-
-            <section className="demo-section">
-              <h2>5. FlexItem Basic Usage</h2>
-              <p>FlexItems inside FlexRow:</p>
+              <h2>4. FlexItem Basic Usage</h2>
 
               <FlexRow gap="10px">
                 <FlexItem>
@@ -148,8 +128,7 @@
             </section>
 
             <section className="demo-section">
-              <h2>6. FlexItem with Growth</h2>
-              <p>Using grow prop to fill available space:</p>
+              <h2>5. FlexItem with Growth</h2>
 
               <FlexRow gap="10px">
                 <FlexItem>
@@ -165,8 +144,7 @@
             </section>
 
             <section className="demo-section">
-              <h2>7. FlexItem with Individual Alignment</h2>
-              <p>FlexItems can override the container's alignment:</p>
+              <h2>6. FlexItem with Individual Alignment</h2>
 
               <FlexRow
                 gap="10px"
@@ -187,57 +165,6 @@
                 </FlexItem>
                 <FlexItem alignY="stretch">
                   <DemoBox style={{ height: "100%" }}>alignY="stretch"</DemoBox>
-                </FlexItem>
-              </FlexRow>
-            </section>
-
-            <section className="demo-section">
-              <h2>8. FlexItem with Spacing</h2>
-              <p>FlexItems with their own margin and padding:</p>
-
-              <FlexRow
-                gap="5px"
-                style={{ background: "#fff8e1", padding: "10px" }}
-              >
-                <FlexItem
-                  margin="10px"
-                  padding="15px"
-                  style={{ background: "#ffcc02" }}
-                >
-                  <DemoBox style={{ background: "white" }}>
-                    With Margin & Padding
-                  </DemoBox>
-                </FlexItem>
-                <FlexItem marginLeft="20px" paddingX="25px">
-                  <DemoBox>Custom Spacing</DemoBox>
-                </FlexItem>
-                <FlexItem>
-                  <DemoBox>Normal</DemoBox>
-                </FlexItem>
-              </FlexRow>
-            </section>
-
-            <section className="demo-section">
-              <h2>9. Complex Example</h2>
-              <p>Combining multiple features:</p>
-
-              <FlexRow
-                gap="15px"
-                alignY="start"
-                padding="20px"
-                style={{ background: "#f1f8e9" }}
-              >
-                <FlexItem>
-                  <DemoBox>Fixed Item</DemoBox>
-                </FlexItem>
-                <FlexItem grow paddingX="10px">
-                  <DemoBox>Growing item with padding</DemoBox>
-                </FlexItem>
-                <FlexItem alignY="end">
-                  <DemoBox>Bottom aligned</DemoBox>
-                </FlexItem>
-                <FlexItem margin="10px">
-                  <DemoBox>With margin</DemoBox>
                 </FlexItem>
               </FlexRow>
             </section>
