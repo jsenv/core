@@ -20528,6 +20528,126 @@ const InputRadioWithAction = () => {
 };
 const InputRadioInsideForm = InputRadio;
 
+/**
+ * Merges a component's base className with className received from props.
+ *
+ * ```jsx
+ * const MyButton = ({ className, children }) => (
+ *   <button className={withPropsClassName("btn", className)}>
+ *     {children}
+ *   </button>
+ * );
+ *
+ * // Usage:
+ * <MyButton className="primary large" /> // Results in "btn primary large"
+ * <MyButton /> // Results in "btn"
+ * ```
+ *
+ * @param {string} baseClassName - The component's base CSS class name
+ * @param {string} [classNameFromProps] - Additional className from props (optional)
+ * @returns {string} The merged className string
+ */
+const withPropsClassName = (baseClassName, classNameFromProps) => {
+  if (!classNameFromProps) {
+    return baseClassName;
+  }
+
+  // Trim and normalize whitespace from the props className
+  const trimmedPropsClassName = classNameFromProps.trim();
+  if (!trimmedPropsClassName) {
+    return baseClassName;
+  }
+
+  // Normalize multiple spaces to single spaces and combine
+  const normalizedPropsClassName = trimmedPropsClassName.replace(/\s+/g, " ");
+  if (!baseClassName) {
+    return normalizedPropsClassName;
+  }
+  return `${baseClassName} ${normalizedPropsClassName}`;
+};
+
+/**
+ * Merges a component's base style with style received from props.
+ *
+ * ```jsx
+ * const MyButton = ({ style, children }) => (
+ *   <button style={withPropsStyle({ padding: '10px' }, style)}>
+ *     {children}
+ *   </button>
+ * );
+ *
+ * // Usage:
+ * <MyButton style={{ color: 'red', fontSize: '14px' }} />
+ * <MyButton style="color: blue; margin: 5px;" />
+ * <MyButton /> // Just base styles
+ * ```
+ *
+ * @param {string|object} baseStyle - The component's base style (string or object)
+ * @param {string|object} [styleFromProps] - Additional style from props (optional)
+ * @returns {object} The merged style object
+ */
+const withPropsStyle = (baseStyle, styleFromProps) => {
+  if (!styleFromProps) {
+    return baseStyle;
+  }
+  if (!baseStyle) {
+    return styleFromProps;
+  }
+
+  // Parse base style to object if it's a string
+  const parsedBaseStyle =
+    typeof baseStyle === "string"
+      ? parseStyleString(baseStyle)
+      : baseStyle || {};
+  // Parse props style to object if it's a string
+  const parsedPropsStyle =
+    typeof styleFromProps === "string"
+      ? parseStyleString(styleFromProps)
+      : styleFromProps;
+  // Merge styles with props taking priority
+  return { ...parsedBaseStyle, ...parsedPropsStyle };
+};
+
+/**
+ * Parses a CSS style string into a style object.
+ * Handles CSS properties with proper camelCase conversion.
+ *
+ * @param {string} styleString - CSS style string like "color: red; font-size: 14px;"
+ * @returns {object} Style object with camelCase properties
+ */
+const parseStyleString = (styleString) => {
+  const style = {};
+
+  if (!styleString || typeof styleString !== "string") {
+    return style;
+  }
+
+  // Split by semicolon and process each declaration
+  const declarations = styleString.split(";");
+
+  for (let declaration of declarations) {
+    declaration = declaration.trim();
+    if (!declaration) continue;
+
+    const colonIndex = declaration.indexOf(":");
+    if (colonIndex === -1) continue;
+
+    const property = declaration.slice(0, colonIndex).trim();
+    const value = declaration.slice(colonIndex + 1).trim();
+
+    if (property && value) {
+      // Convert kebab-case to camelCase (e.g., "font-size" -> "fontSize")
+      const camelCaseProperty = property.replace(/-([a-z])/g, (match, letter) =>
+        letter.toUpperCase(),
+      );
+
+      style[camelCaseProperty] = value;
+    }
+  }
+
+  return style;
+};
+
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_input {
@@ -20641,11 +20761,13 @@ const InputTextualBasic = forwardRef((props, ref) => {
     autoFocus,
     autoFocusVisible,
     autoSelect,
+    // visual
     appearance = "navi",
     accentColor,
-    style,
     width,
     height,
+    className,
+    style,
     ...rest
   } = props;
   const innerRef = useRef();
@@ -20662,19 +20784,14 @@ const InputTextualBasic = forwardRef((props, ref) => {
   });
   useConstraints(innerRef, constraints);
   const innerStyle = {
-    ...style
+    width,
+    height
   };
-  if (width !== undefined) {
-    innerStyle.width = width;
-  }
-  if (height !== undefined) {
-    innerStyle.height = height;
-  }
   const inputTextual = jsx("input", {
     ...rest,
     ref: innerRef,
-    className: appearance === "navi" ? "navi_input" : undefined,
-    style: innerStyle,
+    className: withPropsClassName(appearance === "navi" ? "navi_input" : undefined, className),
+    style: withPropsStyle(innerStyle, style),
     type: type,
     "data-value": uiState,
     value: innerValue,
@@ -21350,6 +21467,11 @@ const Button = forwardRef((props, ref) => {
     WithActionInsideForm: ButtonWithActionInsideForm
   });
 });
+const alignXMapping = {
+  start: undefined,
+  center: "center",
+  end: "flex-end"
+};
 const ButtonBasic = forwardRef((props, ref) => {
   const contextLoading = useContext(LoadingContext);
   const contextLoadingElement = useContext(LoadingElementContext);
@@ -21361,10 +21483,12 @@ const ButtonBasic = forwardRef((props, ref) => {
     loading,
     constraints = [],
     autoFocus,
+    // visual
     appearance = "navi",
     alignX = "start",
-    style,
     discrete,
+    className,
+    style,
     children,
     ...rest
   } = props;
@@ -21385,16 +21509,13 @@ const ButtonBasic = forwardRef((props, ref) => {
     buttonChildren = children;
   }
   const innerStyle = {
-    ...style
+    "align-self": alignXMapping[alignX]
   };
-  if (alignX !== "start") {
-    innerStyle["align-self"] = alignX === "center" ? "center" : "flex-end";
-  }
   return jsx("button", {
     ...rest,
     ref: innerRef,
-    className: appearance === "navi" ? "navi_button" : undefined,
-    style: innerStyle,
+    className: withPropsClassName(appearance === "navi" ? "navi_button" : undefined, className),
+    style: withPropsStyle(innerStyle, style),
     disabled: innerDisabled,
     "data-discrete": discrete ? "" : undefined,
     "data-readonly": innerReadOnly ? "" : undefined,

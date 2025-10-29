@@ -32,6 +32,8 @@ import { renderActionableComponent } from "../action_execution/render_actionable
 import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
+import { withPropsClassName } from "../props_composition/with_props_class_name.js";
+import { withPropsStyle } from "../props_composition/with_props_style.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { initCustomField } from "./custom_field.js";
 import { ReportReadOnlyOnLabelContext } from "./label.jsx";
@@ -163,11 +165,15 @@ const InputTextualBasic = forwardRef((props, ref) => {
     autoFocus,
     autoFocusVisible,
     autoSelect,
+
+    // visual
     appearance = "navi",
     accentColor,
-    style,
     width,
     height,
+    className,
+    style,
+
     ...rest
   } = props;
   const innerRef = useRef();
@@ -188,19 +194,19 @@ const InputTextualBasic = forwardRef((props, ref) => {
   });
   useConstraints(innerRef, constraints);
 
-  const innerStyle = { ...style };
-  if (width !== undefined) {
-    innerStyle.width = width;
-  }
-  if (height !== undefined) {
-    innerStyle.height = height;
-  }
+  const innerStyle = {
+    width,
+    height,
+  };
   const inputTextual = (
     <input
       {...rest}
       ref={innerRef}
-      className={appearance === "navi" ? "navi_input" : undefined}
-      style={innerStyle}
+      className={withPropsClassName(
+        appearance === "navi" ? "navi_input" : undefined,
+        className,
+      )}
+      style={withPropsStyle(innerStyle, style)}
       type={type}
       data-value={uiState}
       value={innerValue}

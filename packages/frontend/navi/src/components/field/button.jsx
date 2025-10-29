@@ -15,6 +15,8 @@ import { renderActionableComponent } from "../action_execution/render_actionable
 import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
+import { withPropsClassName } from "../props_composition/with_props_class_name.js";
+import { withPropsStyle } from "../props_composition/with_props_style.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { initCustomField } from "./custom_field.js";
 import { useActionEvents } from "./use_action_events.js";
@@ -195,6 +197,11 @@ export const Button = forwardRef((props, ref) => {
   });
 });
 
+const alignXMapping = {
+  start: undefined,
+  center: "center",
+  end: "flex-end",
+};
 const ButtonBasic = forwardRef((props, ref) => {
   const contextLoading = useContext(LoadingContext);
   const contextLoadingElement = useContext(LoadingElementContext);
@@ -206,10 +213,14 @@ const ButtonBasic = forwardRef((props, ref) => {
     loading,
     constraints = [],
     autoFocus,
+
+    // visual
     appearance = "navi",
     alignX = "start",
-    style,
     discrete,
+    className,
+    style,
+
     children,
     ...rest
   } = props;
@@ -230,17 +241,19 @@ const ButtonBasic = forwardRef((props, ref) => {
     buttonChildren = children;
   }
 
-  const innerStyle = { ...style };
-  if (alignX !== "start") {
-    innerStyle["align-self"] = alignX === "center" ? "center" : "flex-end";
-  }
+  const innerStyle = {
+    "align-self": alignXMapping[alignX],
+  };
 
   return (
     <button
       {...rest}
       ref={innerRef}
-      className={appearance === "navi" ? "navi_button" : undefined}
-      style={innerStyle}
+      className={withPropsClassName(
+        appearance === "navi" ? "navi_button" : undefined,
+        className,
+      )}
+      style={withPropsStyle(innerStyle, style)}
       disabled={innerDisabled}
       data-discrete={discrete ? "" : undefined}
       data-readonly={innerReadOnly ? "" : undefined}

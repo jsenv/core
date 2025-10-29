@@ -30,5 +30,8 @@ export const withPropsClassName = (baseClassName, classNameFromProps) => {
 
   // Normalize multiple spaces to single spaces and combine
   const normalizedPropsClassName = trimmedPropsClassName.replace(/\s+/g, " ");
+  if (!baseClassName) {
+    return normalizedPropsClassName;
+  }
   return `${baseClassName} ${normalizedPropsClassName}`;
 };
