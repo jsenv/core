@@ -30,7 +30,8 @@ export const FlexRow = ({ alignX, alignY, gap, style, children, ...rest }) => {
     {
       // Only set justifyContent if it's not the default "start"
       justifyContent: alignX !== "start" ? alignX : undefined,
-      alignItems: alignY,
+      // Only set alignItems if it's not the default "stretch"
+      alignItems: alignY !== "stretch" ? alignY : undefined,
       gap,
       ...consumeSpacingProps(rest),
     },
@@ -55,7 +56,8 @@ export const FlexColumn = ({
 }) => {
   const innerStyle = withPropsStyle(
     {
-      alignItems: alignX,
+      // Only set alignItems if it's not the default "stretch"
+      alignItems: alignX !== "stretch" ? alignX : undefined,
       // Only set justifyContent if it's not the default "start"
       justifyContent: alignY !== "start" ? alignY : undefined,
       gap,

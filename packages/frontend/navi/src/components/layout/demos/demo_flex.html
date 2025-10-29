@@ -240,58 +240,7 @@
             </section>
 
             <section className="demo-section">
-              <h3>7. FlexItem with alignX</h3>
-
-              <FlexRow
-                gap="10px"
-                style={{
-                  background: "#f3e5f5",
-                  padding: "10px",
-                }}
-              >
-                <FlexItem>
-                  <DemoBox>Default</DemoBox>
-                </FlexItem>
-                <FlexItem alignX="start">
-                  <DemoBox>alignX="start"</DemoBox>
-                </FlexItem>
-                <FlexItem alignX="center">
-                  <DemoBox>alignX="center"</DemoBox>
-                </FlexItem>
-                <FlexItem alignX="end">
-                  <DemoBox>alignX="end"</DemoBox>
-                </FlexItem>
-              </FlexRow>
-            </section>
-
-            <section className="demo-section">
-              <h3>8. FlexItem with alignY</h3>
-
-              <FlexRow
-                gap="10px"
-                style={{
-                  height: "100px",
-                  background: "#e1f5fe",
-                  padding: "10px",
-                }}
-              >
-                <FlexItem>
-                  <DemoBox>Default (center)</DemoBox>
-                </FlexItem>
-                <FlexItem alignY="start">
-                  <DemoBox>alignY="start"</DemoBox>
-                </FlexItem>
-                <FlexItem alignY="end">
-                  <DemoBox>alignY="end"</DemoBox>
-                </FlexItem>
-                <FlexItem alignY="stretch">
-                  <DemoBox style={{ height: "100%" }}>alignY="stretch"</DemoBox>
-                </FlexItem>
-              </FlexRow>
-            </section>
-
-            <section className="demo-section">
-              <h3>9. Auto Margin Examples</h3>
+              <h3>7. Auto Margin Examples</h3>
 
               <h4>Single item pushed to end</h4>
               <FlexRow
@@ -371,7 +320,7 @@
             </section>
 
             <section className="demo-section">
-              <h3>10. Real-World Example: Button with alignX</h3>
+              <h3>8. Real-World Example: Button with alignX</h3>
 
               <FlexRow
                 gap="10px"
@@ -539,61 +488,7 @@
             </section>
 
             <section className="demo-section">
-              <h3>13. FlexItem with alignX in Column</h3>
-
-              <FlexColumn
-                gap="10px"
-                style={{
-                  height: "200px",
-                  width: "300px",
-                  background: "#f3e5f5",
-                  padding: "10px",
-                }}
-              >
-                <FlexItem>
-                  <DemoBox>Default</DemoBox>
-                </FlexItem>
-                <FlexItem alignX="start">
-                  <DemoBox>alignX="start"</DemoBox>
-                </FlexItem>
-                <FlexItem alignX="center">
-                  <DemoBox>alignX="center"</DemoBox>
-                </FlexItem>
-                <FlexItem alignX="end">
-                  <DemoBox>alignX="end"</DemoBox>
-                </FlexItem>
-              </FlexColumn>
-            </section>
-
-            <section className="demo-section">
-              <h3>14. FlexItem with alignY in Column</h3>
-
-              <FlexColumn
-                gap="10px"
-                style={{
-                  height: "300px",
-                  width: "200px",
-                  background: "#e1f5fe",
-                  padding: "10px",
-                }}
-              >
-                <FlexItem>
-                  <DemoBox>Default</DemoBox>
-                </FlexItem>
-                <FlexItem alignY="start">
-                  <DemoBox>alignY="start"</DemoBox>
-                </FlexItem>
-                <FlexItem alignY="center">
-                  <DemoBox>alignY="center"</DemoBox>
-                </FlexItem>
-                <FlexItem alignY="end">
-                  <DemoBox>alignY="end"</DemoBox>
-                </FlexItem>
-              </FlexColumn>
-            </section>
-
-            <section className="demo-section">
-              <h3>15. Column Auto Margin Examples</h3>
+              <h3>13. Column Auto Margin Examples</h3>
 
               <h4>Single item pushed to bottom</h4>
               <FlexColumn
@@ -650,7 +545,7 @@
             </section>
 
             <section className="demo-section">
-              <h3>16. Combined Growth and Alignment in Column</h3>
+              <h3>14. Combined Growth and Alignment in Column</h3>
 
               <FlexColumn
                 gap="10px"
@@ -669,6 +564,157 @@
                 <FlexItem alignY="end">
                   <DemoBox>Pushed to bottom</DemoBox>
                 </FlexItem>
+              </FlexColumn>
+            </section>
+
+            <h2>FlexItem Individual Alignment</h2>
+            <p style={{ marginBottom: "20px", padding: "15px", background: "#fff3e0", borderRadius: "6px", fontSize: "14px" }}>
+              <strong>Note:</strong> The examples below show how individual FlexItem components can override 
+              the container's alignment. However, <strong>in most cases, you should use the FlexRow/FlexColumn 
+              alignX and alignY props instead</strong>, as they control all items at once and are more efficient. 
+              FlexItem alignment is useful for special cases where you need one or two items to behave differently 
+              from the rest.
+            </p>
+
+            <section className="demo-section">
+              <h3>15. FlexItem Individual Alignment in Rows</h3>
+
+              <h4>FlexItem alignX in Row</h4>
+              <FlexRow
+                gap="10px"
+                style={{
+                  background: "#f3e5f5",
+                  padding: "10px",
+                }}
+              >
+                <FlexItem>
+                  <DemoBox>Default</DemoBox>
+                </FlexItem>
+                <FlexItem alignX="start">
+                  <DemoBox>alignX="start"</DemoBox>
+                </FlexItem>
+                <FlexItem alignX="center">
+                  <DemoBox>alignX="center"</DemoBox>
+                </FlexItem>
+                <FlexItem alignX="end">
+                  <DemoBox>alignX="end"</DemoBox>
+                </FlexItem>
+              </FlexRow>
+
+              <h4>FlexItem alignY in Row</h4>
+              <FlexRow
+                gap="10px"
+                style={{
+                  height: "100px",
+                  background: "#e1f5fe",
+                  padding: "10px",
+                }}
+              >
+                <FlexItem>
+                  <DemoBox>Default</DemoBox>
+                </FlexItem>
+                <FlexItem alignY="start">
+                  <DemoBox>alignY="start"</DemoBox>
+                </FlexItem>
+                <FlexItem alignY="end">
+                  <DemoBox>alignY="end"</DemoBox>
+                </FlexItem>
+                <FlexItem alignY="stretch">
+                  <DemoBox style={{ height: "100%" }}>alignY="stretch"</DemoBox>
+                </FlexItem>
+              </FlexRow>
+            </section>
+
+            <section className="demo-section">
+              <h3>16. FlexItem Individual Alignment in Columns</h3>
+
+              <h4>FlexItem alignX in Column</h4>
+              <FlexColumn
+                gap="10px"
+                style={{
+                  height: "200px",
+                  width: "300px",
+                  background: "#f3e5f5",
+                  padding: "10px",
+                }}
+              >
+                <FlexItem>
+                  <DemoBox>Default</DemoBox>
+                </FlexItem>
+                <FlexItem alignX="start">
+                  <DemoBox>alignX="start"</DemoBox>
+                </FlexItem>
+                <FlexItem alignX="center">
+                  <DemoBox>alignX="center"</DemoBox>
+                </FlexItem>
+                <FlexItem alignX="end">
+                  <DemoBox>alignX="end"</DemoBox>
+                </FlexItem>
+              </FlexColumn>
+
+              <h4>FlexItem alignY in Column</h4>
+              <FlexColumn
+                gap="10px"
+                style={{
+                  height: "300px",
+                  width: "200px",
+                  background: "#e1f5fe",
+                  padding: "10px",
+                }}
+              >
+                <FlexItem>
+                  <DemoBox>Default</DemoBox>
+                </FlexItem>
+                <FlexItem alignY="start">
+                  <DemoBox>alignY="start"</DemoBox>
+                </FlexItem>
+                <FlexItem alignY="center">
+                  <DemoBox>alignY="center"</DemoBox>
+                </FlexItem>
+                <FlexItem alignY="end">
+                  <DemoBox>alignY="end"</DemoBox>
+                </FlexItem>
+              </FlexColumn>
+            </section>
+
+            <section className="demo-section">
+              <h3>17. When to Use FlexItem Alignment</h3>
+              <p style={{ marginBottom: "15px", fontSize: "14px" }}>
+                FlexItem alignment is useful when you need exceptions to the container's alignment:
+              </p>
+
+              <h4>Example: Most items centered, one pushed to end</h4>
+              <FlexRow
+                alignX="center"
+                gap="10px"
+                style={{
+                  background: "#fff8e1",
+                  padding: "10px",
+                }}
+              >
+                <DemoBox>Centered</DemoBox>
+                <DemoBox>Centered</DemoBox>
+                <FlexItem alignX="end">
+                  <DemoBox>Pushed to end</DemoBox>
+                </FlexItem>
+              </FlexRow>
+
+              <h4>Example: Most items aligned start, one centered</h4>
+              <FlexColumn
+                alignX="start"
+                gap="10px"
+                style={{
+                  height: "200px",
+                  width: "300px",
+                  background: "#e8f5e8",
+                  padding: "10px",
+                }}
+              >
+                <DemoBox>Left aligned</DemoBox>
+                <FlexItem alignX="center">
+                  <DemoBox>Centered exception</DemoBox>
+                </FlexItem>
+                <DemoBox>Left aligned</DemoBox>
               </FlexColumn>
             </section>
           </div>
