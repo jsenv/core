@@ -31,6 +31,7 @@ export const Text = ({
   italic,
   underline,
   style,
+  alignX,
   ...rest
 }) => {
   const innerStyle = withPropsStyle(
@@ -40,6 +41,18 @@ export const Text = ({
       fontStyle: italic ? "italic" : undefined,
       textDecoration: underline ? "underline" : undefined,
       ...consumeSpacingProps(rest),
+      ...(alignX === "start"
+        ? {}
+        : alignX === "center"
+          ? {
+              alignSelf: "center",
+              marginLeft: "auto",
+              marginRight: "auto",
+            }
+          : {
+              alignSelf: "end",
+              marginLeft: "auto",
+            }),
     },
     style,
   );

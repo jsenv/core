@@ -253,7 +253,7 @@ const ButtonBasic = forwardRef((props, ref) => {
             }
           : {
               alignSelf: "end",
-              marginRight: "auto",
+              marginLeft: "auto",
             }),
     },
     style,

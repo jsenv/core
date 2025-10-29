@@ -21605,7 +21605,7 @@ const ButtonBasic = forwardRef((props, ref) => {
       marginRight: "auto"
     } : {
       alignSelf: "end",
-      marginRight: "auto"
+      marginLeft: "auto"
     })
   }, style);
   return jsx("button", {
@@ -28053,6 +28053,7 @@ const Text = ({
   italic,
   underline,
   style,
+  alignX,
   ...rest
 }) => {
   const innerStyle = withPropsStyle({
@@ -28060,7 +28061,15 @@ const Text = ({
     fontWeight: bold ? "bold" : undefined,
     fontStyle: italic ? "italic" : undefined,
     textDecoration: underline ? "underline" : undefined,
-    ...consumeSpacingProps(rest)
+    ...consumeSpacingProps(rest),
+    ...(alignX === "start" ? {} : alignX === "center" ? {
+      alignSelf: "center",
+      marginLeft: "auto",
+      marginRight: "auto"
+    } : {
+      alignSelf: "end",
+      marginLeft: "auto"
+    })
   }, style);
   return jsx("span", {
     ...rest,
