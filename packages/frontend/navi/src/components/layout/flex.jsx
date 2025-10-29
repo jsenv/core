@@ -82,6 +82,11 @@ export const useConsumAlignProps = (props) => {
     // For row, alignX doesn't have a meaningful default for justifySelf
     if (alignX !== undefined) {
       style.justifySelf = alignX;
+      if (alignX === "start") {
+        style.marginRight = "auto";
+      } else if (alignX === "end") {
+        style.marginLeft = "auto";
+      }
     }
   } else if (flexDirection === "column") {
     // In column direction: alignX controls align-self, alignY controls justify-content

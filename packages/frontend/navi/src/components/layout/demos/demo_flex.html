@@ -148,7 +148,7 @@
             </section>
 
             <section className="demo-section">
-              <h3>6. FlexItem with Individual Alignment</h3>
+              <h3>6. FlexItem with alignY</h3>
 
               <FlexRow
                 gap="10px"
@@ -169,6 +169,26 @@
                 </FlexItem>
                 <FlexItem alignY="stretch">
                   <DemoBox style={{ height: "100%" }}>alignY="stretch"</DemoBox>
+                </FlexItem>
+              </FlexRow>
+            </section>
+
+            <section className="demo-section">
+              <h3>7. FlexItem with alignX</h3>
+
+              <FlexRow
+                gap="10px"
+                style={{
+                  width: "600px",
+                  background: "#f3e5f5",
+                  padding: "10px",
+                }}
+              >
+                <FlexItem style={{ width: "150px" }}>
+                  <DemoBox>Default</DemoBox>
+                </FlexItem>
+                <FlexItem alignX="end" style={{ width: "150px" }}>
+                  <DemoBox>alignX="end"</DemoBox>
                 </FlexItem>
               </FlexRow>
             </section>
