@@ -500,7 +500,7 @@ export const installCustomConstraintValidation = (
       if (keydownEvent.defaultPrevented) {
         return;
       }
-      if (element.type !== "INPUT") {
+      if (element.tagName !== "INPUT") {
         return;
       }
       if (keydownEvent.key !== "Enter") {

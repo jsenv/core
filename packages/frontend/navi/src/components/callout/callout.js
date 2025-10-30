@@ -86,7 +86,9 @@ export const openCallout = (
     addTeardown(onClose);
   }
 
-  const [updateLevel, addLevelEffect] = createValueEffect(undefined);
+  const [updateLevel, addLevelEffect, cleanupLevelEffects] =
+    createValueEffect(undefined);
+  addTeardown(cleanupLevelEffects);
 
   // Create and add callout to document
   const calloutElement = createCalloutElement();

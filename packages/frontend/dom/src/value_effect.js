@@ -1,21 +1,25 @@
 export const createValueEffect = (value) => {
   const callbackSet = new Set();
-  const previousValueCleanupSet = new Set();
+  const valueCleanupSet = new Set();
+
+  const cleanup = () => {
+    for (const valueCleanup of valueCleanupSet) {
+      valueCleanup();
+    }
+    valueCleanupSet.clear();
+  };
 
   const updateValue = (newValue) => {
     if (newValue === value) {
       return;
     }
-    for (const cleanup of previousValueCleanupSet) {
-      cleanup();
-    }
-    previousValueCleanupSet.clear();
+    cleanup();
     const oldValue = value;
     value = newValue;
     for (const callback of callbackSet) {
       const returnValue = callback(newValue, oldValue);
       if (typeof returnValue === "function") {
-        previousValueCleanupSet.add(returnValue);
+        valueCleanupSet.add(returnValue);
       }
     }
   };
@@ -27,5 +31,5 @@ export const createValueEffect = (value) => {
     };
   };
 
-  return [updateValue, addEffect];
+  return [updateValue, addEffect, cleanup];
 };
