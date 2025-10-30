@@ -520,22 +520,26 @@ const createPubSub = (clearOnPublish = false) => {
 
 const createValueEffect = (value) => {
   const callbackSet = new Set();
-  const previousValueCleanupSet = new Set();
+  const valueCleanupSet = new Set();
+
+  const cleanup = () => {
+    for (const valueCleanup of valueCleanupSet) {
+      valueCleanup();
+    }
+    valueCleanupSet.clear();
+  };
 
   const updateValue = (newValue) => {
     if (newValue === value) {
       return;
     }
-    for (const cleanup of previousValueCleanupSet) {
-      cleanup();
-    }
-    previousValueCleanupSet.clear();
+    cleanup();
     const oldValue = value;
     value = newValue;
     for (const callback of callbackSet) {
       const returnValue = callback(newValue, oldValue);
       if (typeof returnValue === "function") {
-        previousValueCleanupSet.add(returnValue);
+        valueCleanupSet.add(returnValue);
       }
     }
   };
@@ -547,7 +551,7 @@ const createValueEffect = (value) => {
     };
   };
 
-  return [updateValue, addEffect];
+  return [updateValue, addEffect, cleanup];
 };
 
 // https://github.com/davidtheclark/tabbable/blob/master/index.js
@@ -11840,7 +11844,9 @@ const openCallout = (
     addTeardown(onClose);
   }
 
-  const [updateLevel, addLevelEffect] = createValueEffect(undefined);
+  const [updateLevel, addLevelEffect, cleanupLevelEffects] =
+    createValueEffect(undefined);
+  addTeardown(cleanupLevelEffects);
 
   // Create and add callout to document
   const calloutElement = createCalloutElement();
@@ -12814,10 +12820,25 @@ const REQUIRED_CONSTRAINT = {
           : undefined,
       };
     }
-    if (!element.value) {
-      return requiredMessage || `Veuillez remplir ce champ.`;
+    if (element.value) {
+      return null;
     }
-    return null;
+    if (requiredMessage) {
+      return requiredMessage;
+    }
+    if (element.type === "password") {
+      return element.hasAttribute("data-same-as")
+        ? `Veuillez confirmer le mot de passe.`
+        : `Veuillez saisir un mot de passe.`;
+    }
+    if (element.type === "email") {
+      return element.hasAttribute("data-same-as")
+        ? `Veuillez confirmer l'adresse e-mail`
+        : `Veuillez saisir une adresse e-mail.`;
+    }
+    return element.hasAttribute("data-same-as")
+      ? `Veuillez confirmer le champ précédent`
+      : `Veuillez remplir ce champ.`;
   },
 };
 const PATTERN_CONSTRAINT = {
@@ -12832,19 +12853,19 @@ const PATTERN_CONSTRAINT = {
       return null;
     }
     const regex = new RegExp(pattern);
-    if (!regex.test(value)) {
-      const patternMessage = input.getAttribute("data-pattern-message");
-      if (patternMessage) {
-        return patternMessage;
-      }
-      let message = `Veuillez respecter le format requis.`;
-      const title = input.title;
-      if (title) {
-        message += `<br />${title}`;
-      }
-      return message;
+    if (regex.test(value)) {
+      return null;
     }
-    return null;
+    const patternMessage = input.getAttribute("data-pattern-message");
+    if (patternMessage) {
+      return patternMessage;
+    }
+    let message = `Veuillez respecter le format requis.`;
+    const title = input.title;
+    if (title) {
+      message += `<br />${title}`;
+    }
+    return message;
   },
 };
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/email#validation
@@ -12892,10 +12913,11 @@ const MIN_LENGTH_CONSTRAINT = {
       return null;
     }
     if (valueLength < minLength) {
+      const thisField = generateThisFieldText(element);
       if (valueLength === 1) {
-        return `Ce champ doit contenir au moins ${minLength} caractère (il contient actuellement un seul caractère).`;
+        return `${thisField} doit contenir au moins ${minLength} caractère (il contient actuellement un seul caractère).`;
       }
-      return `Ce champ doit contenir au moins ${minLength} caractères (il contient actuellement ${valueLength} caractères).`;
+      return `${thisField} doit contenir au moins ${minLength} caractères (il contient actuellement ${valueLength} caractères).`;
     }
     return null;
   },
@@ -12908,6 +12930,14 @@ const INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET = new Set([
   "email",
   "password",
 ]);
+
+const generateThisFieldText = (field) => {
+  return field.type === "password"
+    ? "Ce mot de passe"
+    : field.type === "email"
+      ? "Cette adresse e-mail"
+      : "Ce champ";
+};
 
 const MAX_LENGTH_CONSTRAINT = {
   name: "max_length",
@@ -12928,7 +12958,8 @@ const MAX_LENGTH_CONSTRAINT = {
     const value = element.value;
     const valueLength = value.length;
     if (valueLength > maxLength) {
-      return `Ce champ doit contenir au maximum ${maxLength} caractères (il contient actuellement ${valueLength} caractères).`;
+      const thisField = generateThisFieldText(element);
+      return `${thisField} doit contenir au maximum ${maxLength} caractères (il contient actuellement ${valueLength} caractères).`;
     }
     return null;
   },
@@ -13097,6 +13128,154 @@ const READONLY_CONSTRAINT = {
   },
 };
 
+const SAME_AS_CONSTRAINT = {
+  name: "same_as",
+  check: (element) => {
+    const sameAs = element.getAttribute("data-same-as");
+    if (!sameAs) {
+      return null;
+    }
+
+    const otherElement = document.querySelector(sameAs);
+    if (!otherElement) {
+      console.warn(
+        `Same as constraint: could not find element for selector ${sameAs}`,
+      );
+      return null;
+    }
+
+    const value = element.value;
+    const otherValue = otherElement.value;
+    if (value === "" || otherValue === "") {
+      // don't validate if one of the two values is empty
+      return null;
+    }
+
+    if (value === otherValue) {
+      return null;
+    }
+
+    const message = element.getAttribute("data-same-as-message");
+    if (message) {
+      return message;
+    }
+
+    const type = element.type;
+    if (type === "password") {
+      return `Ce mot de passe doit être identique au précédent.`;
+    }
+    if (type === "email") {
+      return `Cette adresse e-mail doit être identique a la précédente.`;
+    }
+    return `Ce champ doit être identique au précédent.`;
+  },
+};
+
+const listenInputChange = (input, callback) => {
+  const [teardown, addTeardown] = createPubSub();
+
+  let valueAtInteraction;
+  const oninput = () => {
+    valueAtInteraction = undefined;
+  };
+  const onkeydown = (e) => {
+    if (e.key === "Enter") {
+      /**
+       * Browser trigger a "change" event right after the enter is pressed
+       * if the input value has changed.
+       * We need to prevent the next change event otherwise we would request action twice
+       */
+      valueAtInteraction = input.value;
+    }
+    if (e.key === "Escape") {
+      /**
+       * Browser trigger a "change" event right after the escape is pressed
+       * if the input value has changed.
+       * We need to prevent the next change event otherwise we would request action when
+       * we actually want to cancel
+       */
+      valueAtInteraction = input.value;
+    }
+  };
+  const onchange = (e) => {
+    if (
+      valueAtInteraction !== undefined &&
+      e.target.value === valueAtInteraction
+    ) {
+      valueAtInteraction = undefined;
+      return;
+    }
+    callback(e);
+  };
+  input.addEventListener("input", oninput);
+  input.addEventListener("keydown", onkeydown);
+  input.addEventListener("change", onchange);
+  addTeardown(() => {
+    input.removeEventListener("input", oninput);
+    input.removeEventListener("keydown", onkeydown);
+    input.removeEventListener("change", onchange);
+  });
+
+  {
+    // Handle programmatic value changes that don't trigger browser change events
+    //
+    // Problem: When input values are set programmatically (not by user typing),
+    // browsers don't fire the 'change' event. However, our application logic
+    // still needs to detect these changes.
+    //
+    // Example scenario:
+    // 1. User starts editing (letter key pressed, value set programmatically)
+    // 2. User doesn't type anything additional (this is the key part)
+    // 3. User clicks outside to finish editing
+    // 4. Without this code, no change event would fire despite the fact that the input value did change from its original state
+    //
+    // This distinction is crucial because:
+    //
+    // - If the user typed additional text after the initial programmatic value,
+    //   the browser would fire change events normally
+    // - But when they don't type anything else, the browser considers it as "no user interaction"
+    //   even though the programmatic initial value represents a meaningful change
+    //
+    // We achieve this by checking if the input value has changed between focus and blur without any user interaction
+    // if yes we fire the callback because input value did change
+    let valueAtStart = input.value;
+    let interacted = false;
+
+    const onfocus = () => {
+      interacted = false;
+      valueAtStart = input.value;
+    };
+    const oninput = (e) => {
+      if (!e.isTrusted) {
+        // non trusted "input" events will be ignored by the browser when deciding to fire "change" event
+        // we ignore them too
+        return;
+      }
+      interacted = true;
+    };
+    const onblur = (e) => {
+      if (interacted) {
+        return;
+      }
+      if (valueAtStart === input.value) {
+        return;
+      }
+      callback(e);
+    };
+
+    input.addEventListener("focus", onfocus);
+    input.addEventListener("input", oninput);
+    input.addEventListener("blur", onblur);
+    addTeardown(() => {
+      input.removeEventListener("focus", onfocus);
+      input.removeEventListener("input", oninput);
+      input.removeEventListener("blur", onblur);
+    });
+  }
+
+  return teardown;
+};
+
 /**
  * Custom form validation implementation
  *
@@ -13133,9 +13312,9 @@ const requestAction = (
   target,
   action,
   {
+    actionOrigin,
     event,
     requester = target,
-    actionOrigin,
     method = "rerun",
     meta = {},
     confirmMessage,
@@ -13205,12 +13384,8 @@ const requestAction = (
     // Single element validation case
     isValid = validationInterface.checkValidity({ fromRequestAction: true });
     if (!isValid) {
-      if (event) {
-        event.preventDefault();
-      }
       validationInterface.reportValidity();
     }
-
     elementForConfirmation = target;
     elementForDispatch = target;
   }
@@ -13247,6 +13422,15 @@ const requestAction = (
   return true;
 };
 
+const forwardActionRequested = (e, action, target = e.target) => {
+  requestAction(target, action, {
+    actionOrigin: e.detail?.actionOrigin,
+    event: e.detail?.event || e,
+    requester: e.detail?.requester,
+    meta: e.detail?.meta,
+  });
+};
+
 const closeValidationMessage = (element, reason) => {
   const validationInterface = element.__validationInterface__;
   if (!validationInterface) {
@@ -13259,6 +13443,7 @@ const closeValidationMessage = (element, reason) => {
   return validationMessage.close(reason);
 };
 
+const formInstrumentedWeakSet = new WeakSet();
 const installCustomConstraintValidation = (
   element,
   elementReceivingValidationMessage = element,
@@ -13277,20 +13462,25 @@ const installCustomConstraintValidation = (
     validationMessage: null,
   };
 
-  const cleanupCallbackSet = new Set();
+  const [teardown, addTeardown] = createPubSub();
   {
     const uninstall = () => {
-      for (const cleanupCallback of cleanupCallbackSet) {
-        cleanupCallback();
-      }
-      cleanupCallbackSet.clear();
+      teardown();
     };
     validationInterface.uninstall = uninstall;
   }
 
+  const isForm = element.tagName === "FORM";
+  if (isForm) {
+    formInstrumentedWeakSet.add(element);
+    addTeardown(() => {
+      formInstrumentedWeakSet.delete(element);
+    });
+  }
+
   {
     element.__validationInterface__ = validationInterface;
-    cleanupCallbackSet.add(() => {
+    addTeardown(() => {
       delete element.__validationInterface__;
     });
   }
@@ -13299,7 +13489,6 @@ const installCustomConstraintValidation = (
     const cancelEvent = new CustomEvent("cancel", options);
     element.dispatchEvent(cancelEvent);
   };
-
   const closeElementValidationMessage = (reason) => {
     if (validationInterface.validationMessage) {
       validationInterface.validationMessage.close(reason);
@@ -13319,6 +13508,7 @@ const installCustomConstraintValidation = (
   constraintSet.add(MIN_CONSTRAINT);
   constraintSet.add(MAX_CONSTRAINT);
   constraintSet.add(READONLY_CONSTRAINT);
+  constraintSet.add(SAME_AS_CONSTRAINT);
   {
     validationInterface.registerConstraint = (constraint) => {
       if (typeof constraint === "function") {
@@ -13337,6 +13527,8 @@ const installCustomConstraintValidation = (
   let failedConstraintInfo = null;
   const validityInfoMap = new Map();
 
+  const hasTitleAttribute = element.hasAttribute("title");
+
   const resetValidity = ({ fromRequestAction } = {}) => {
     if (fromRequestAction && failedConstraintInfo) {
       for (const [key, customMessage] of customMessageMap) {
@@ -13354,7 +13546,7 @@ const installCustomConstraintValidation = (
     validityInfoMap.clear();
     failedConstraintInfo = null;
   };
-  cleanupCallbackSet.add(resetValidity);
+  addTeardown(resetValidity);
 
   const checkValidity = ({ fromRequestAction, skipReadonly } = {}) => {
     resetValidity({ fromRequestAction });
@@ -13399,7 +13591,16 @@ const installCustomConstraintValidation = (
       validityInfoMap.set(constraint, failedConstraintInfo);
     }
 
-    if (!failedConstraintInfo) {
+    if (failedConstraintInfo) {
+      if (!hasTitleAttribute) {
+        // when a constraint is failing browser displays that constraint message if the element has no title attribute.
+        // We want to do the same with our message (overriding the browser in the process to get better messages)
+        element.setAttribute("title", failedConstraintInfo.message);
+      }
+    } else {
+      if (!hasTitleAttribute) {
+        element.removeAttribute("title");
+      }
       closeElementValidationMessage("becomes_valid");
     }
 
@@ -13425,9 +13626,9 @@ const installCustomConstraintValidation = (
     if (!skipFocus) {
       element.focus();
     }
-    const closeOnCleanup = () => {
+    const removeCloseOnCleanup = addTeardown(() => {
       closeElementValidationMessage("cleanup");
-    };
+    });
 
     const anchorElement =
       failedConstraintInfo.target || elementReceivingValidationMessage;
@@ -13438,7 +13639,7 @@ const installCustomConstraintValidation = (
         level: failedConstraintInfo.level,
         closeOnClickOutside: failedConstraintInfo.closeOnClickOutside,
         onClose: () => {
-          cleanupCallbackSet.delete(closeOnCleanup);
+          removeCloseOnCleanup();
           validationInterface.validationMessage = null;
           if (failedConstraintInfo) {
             failedConstraintInfo.reportStatus = "closed";
@@ -13450,7 +13651,6 @@ const installCustomConstraintValidation = (
       },
     );
     failedConstraintInfo.reportStatus = "reported";
-    cleanupCallbackSet.add(closeOnCleanup);
   };
   validationInterface.checkValidity = checkValidity;
   validationInterface.reportValidity = reportValidity;
@@ -13485,7 +13685,7 @@ const installCustomConstraintValidation = (
         reportValidity();
       }
     };
-    cleanupCallbackSet.add(() => {
+    addTeardown(() => {
       customMessageMap.clear();
     });
     Object.assign(validationInterface, {
@@ -13494,6 +13694,7 @@ const installCustomConstraintValidation = (
     });
   }
 
+  checkValidity();
   {
     const oninput = () => {
       customMessageMap.clear();
@@ -13501,7 +13702,7 @@ const installCustomConstraintValidation = (
       checkValidity();
     };
     element.addEventListener("input", oninput);
-    cleanupCallbackSet.add(() => {
+    addTeardown(() => {
       element.removeEventListener("input", oninput);
     });
   }
@@ -13513,13 +13714,7 @@ const installCustomConstraintValidation = (
       checkValidity();
     };
     element.addEventListener("actionend", onactionend);
-    if (element.form) {
-      element.form.addEventListener("actionend", onactionend);
-      cleanupCallbackSet.add(() => {
-        element.form.removeEventListener("actionend", onactionend);
-      });
-    }
-    cleanupCallbackSet.add(() => {
+    addTeardown(() => {
       element.removeEventListener("actionend", onactionend);
     });
   }
@@ -13529,37 +13724,119 @@ const installCustomConstraintValidation = (
     element.reportValidity = () => {
       reportValidity();
     };
-    cleanupCallbackSet.add(() => {
+    addTeardown(() => {
       element.reportValidity = nativeReportValidity;
     });
   }
 
-  {
-    const onRequestSubmit = (form, e) => {
-      if (form !== element.form && form !== element) {
+  request_on_enter: {
+    if (element.tagName !== "INPUT") {
+      // maybe we want it too for checkboxes etc, we'll see
+      break request_on_enter;
+    }
+    const onkeydown = (keydownEvent) => {
+      if (keydownEvent.defaultPrevented) {
         return;
       }
-
-      const requestSubmitCustomEvent = new CustomEvent("requestsubmit", {
-        cancelable: true,
-        detail: { cause: e },
-      });
-      form.dispatchEvent(requestSubmitCustomEvent);
-      if (requestSubmitCustomEvent.defaultPrevented) {
-        e.preventDefault();
+      if (keydownEvent.key !== "Enter") {
+        return;
       }
+      if (element.hasAttribute("data-action")) {
+        if (wouldKeydownSubmitForm(keydownEvent)) {
+          keydownEvent.preventDefault();
+        }
+        dispatchActionRequestedCustomEvent(element, {
+          event: keydownEvent,
+          requester: element,
+        });
+        return;
+      }
+      const { form } = element;
+      if (!form) {
+        return;
+      }
+      keydownEvent.preventDefault();
+      dispatchActionRequestedCustomEvent(form, {
+        event: keydownEvent,
+        requester: getFirstButtonSubmittingForm(form) || element,
+      });
     };
-    requestSubmitCallbackSet.add(onRequestSubmit);
-    cleanupCallbackSet.add(() => {
-      requestSubmitCallbackSet.delete(onRequestSubmit);
+    element.addEventListener("keydown", onkeydown);
+    addTeardown(() => {
+      element.removeEventListener("keydown", onkeydown);
+    });
+  }
+
+  {
+    const onclick = (clickEvent) => {
+      if (clickEvent.defaultPrevented) {
+        return;
+      }
+      if (element.tagName !== "BUTTON") {
+        return;
+      }
+      if (element.hasAttribute("data-action")) {
+        if (wouldClickSubmitForm(clickEvent)) {
+          clickEvent.preventDefault();
+        }
+        dispatchActionRequestedCustomEvent(element, {
+          event: clickEvent,
+          requester: element,
+        });
+        return;
+      }
+      const { form } = element;
+      if (!form) {
+        return;
+      }
+      if (wouldClickSubmitForm(clickEvent)) {
+        clickEvent.preventDefault();
+      }
+      dispatchActionRequestedCustomEvent(form, {
+        event: clickEvent,
+        requester: element,
+      });
+    };
+    element.addEventListener("click", onclick);
+    addTeardown(() => {
+      element.removeEventListener("click", onclick);
+    });
+  }
+
+  request_on_input_change: {
+    const isInput =
+      element.tagName === "INPUT" || element.tagName === "TEXTAREA";
+    if (!isInput) {
+      break request_on_input_change;
+    }
+    const stop = listenInputChange(element, (e) => {
+      if (element.hasAttribute("data-action")) {
+        dispatchActionRequestedCustomEvent(element, {
+          event: e,
+          requester: element,
+        });
+        return;
+      }
+      const { form } = element;
+      if (!form) {
+        return;
+      }
+      dispatchActionRequestedCustomEvent(form, {
+        event: e,
+        requester: element,
+      });
+    });
+    addTeardown(() => {
+      stop();
     });
   }
 
   execute_on_form_submit: {
-    const form = element.form || element.tagName === "FORM" ? element : null;
-    if (!form) {
+    if (!isForm) {
       break execute_on_form_submit;
     }
+    // We will dispatch "action" when "submit" occurs (code called from.submit() to bypass validation)
+    const form = element;
     const removeListener = addEventListener(form, "submit", (e) => {
       e.preventDefault();
       const actionCustomEvent = new CustomEvent("action", {
@@ -13568,12 +13845,14 @@ const installCustomConstraintValidation = (
           event: e,
           method: "rerun",
           requester: form,
-          meta: {},
+          meta: {
+            isSubmit: true,
+          },
         },
       });
       form.dispatchEvent(actionCustomEvent);
     });
-    cleanupCallbackSet.add(() => {
+    addTeardown(() => {
       removeListener();
     });
   }
@@ -13587,7 +13866,7 @@ const installCustomConstraintValidation = (
       }
     };
     element.addEventListener("keydown", onkeydown);
-    cleanupCallbackSet.add(() => {
+    addTeardown(() => {
       element.removeEventListener("keydown", onkeydown);
     });
   }
@@ -13595,7 +13874,11 @@ const installCustomConstraintValidation = (
   {
     const onblur = () => {
       if (element.value === "") {
-        dispatchCancelCustomEvent({ detail: { reason: "blur_empty" } });
+        dispatchCancelCustomEvent({
+          detail: {
+            reason: "blur_empty",
+          },
+        });
         return;
       }
       // if we have failed constraint, we cancel too
@@ -13610,7 +13893,7 @@ const installCustomConstraintValidation = (
       }
     };
     element.addEventListener("blur", onblur);
-    cleanupCallbackSet.add(() => {
+    addTeardown(() => {
       element.removeEventListener("blur", onblur);
     });
   }
@@ -13618,22 +13901,105 @@ const installCustomConstraintValidation = (
   return validationInterface;
 };
 
-// https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
+const wouldClickSubmitForm = (clickEvent) => {
+  if (clickEvent.defaultPrevented) {
+    return false;
+  }
+  const clickTarget = clickEvent.target;
+  const { form } = clickTarget;
+  if (!form) {
+    return false;
+  }
+  const button = clickTarget.closest("button");
+  if (!button) {
+    return false;
+  }
+  const wouldSubmitFormByType =
+    button.type === "submit" || button.type === "image";
+  if (wouldSubmitFormByType) {
+    return true;
+  }
+  if (button.type) {
+    return false;
+  }
+  if (getFirstButtonSubmittingForm(form)) {
+    // an other button is explicitly submitting the form, this one would not submit it
+    return false;
+  }
+  // this is the only button inside the form without type attribute, so it defaults to type="submit"
+  return true;
+};
+const getFirstButtonSubmittingForm = (form) => {
+  return form.querySelector(
+    `button[type="submit"], input[type="submit"], input[type="image"]`,
+  );
+};
 
-const requestSubmitCallbackSet = new Set();
+const wouldKeydownSubmitForm = (keydownEvent) => {
+  if (keydownEvent.defaultPrevented) {
+    return false;
+  }
+  const keydownTarget = keydownEvent.target;
+  const { form } = keydownTarget;
+  if (!form) {
+    return false;
+  }
+  if (keydownEvent.key !== "Enter") {
+    return false;
+  }
+  const isTextInput =
+    keydownTarget.tagName === "INPUT" || keydownTarget.tagName === "TEXTAREA";
+  if (!isTextInput) {
+    return false;
+  }
+  return true;
+};
+
+const dispatchActionRequestedCustomEvent = (
+  fieldOrForm,
+  { actionOrigin = "action_prop", event, requester },
+) => {
+  const actionRequestedCustomEvent = new CustomEvent("actionrequested", {
+    cancelable: true,
+    detail: {
+      actionOrigin,
+      event,
+      requester,
+    },
+  });
+  fieldOrForm.dispatchEvent(actionRequestedCustomEvent);
+};
+// https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
 const requestSubmit = HTMLFormElement.prototype.requestSubmit;
 HTMLFormElement.prototype.requestSubmit = function (submitter) {
-  let prevented = false;
-  const preventDefault = () => {
-    prevented = true;
-  };
-  for (const requestSubmitCallback of requestSubmitCallbackSet) {
-    requestSubmitCallback(this, { submitter, preventDefault });
-  }
-  if (prevented) {
+  const form = this;
+  const isInstrumented = formInstrumentedWeakSet.has(form);
+  if (!isInstrumented) {
+    requestSubmit.call(form, submitter);
     return;
   }
-  requestSubmit.call(this, submitter);
+  const programmaticEvent = new CustomEvent("programmatic_requestsubmit", {
+    cancelable: true,
+    detail: {
+      submitter,
+    },
+  });
+  dispatchActionRequestedCustomEvent(form, {
+    event: programmaticEvent,
+    requester: submitter,
+  });
+
+  // When all fields are valid calling the native requestSubmit would let browser go through the
+  // standard form validation steps leading to form submission.
+  // We don't want that because we have our own action system to handle forms
+  // If we did that the form submission would happen in parallel of our action system
+  // and because we listen to "submit" event to dispatch "action" event
+  // we would end up with two actions being executed.
+  //
+  // In case we have discrepencies in our implementation compared to the browser standard
+  // this also prevent the native validation message to show up.
+
+  // requestSubmit.call(this, submitter);
 };
 
 // const submit = HTMLFormElement.prototype.submit;
@@ -14381,10 +14747,10 @@ const useKeyboardShortcuts = (
           }
           const { action } = shortcutCandidate;
           return requestAction(element, action, {
+            actionOrigin: "keyboard_shortcut",
             event: keyboardEvent,
             requester: document.activeElement,
             confirmMessage: shortcutCandidate.confirmMessage,
-            actionOrigin: "keyboard_shortcut",
             meta: {
               shortcut: shortcutCandidate,
             },
@@ -18276,33 +18642,33 @@ const SummaryMarker = ({
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   .navi_details {
-    display: flex;
-    flex-direction: column;
     position: relative;
     z-index: 1;
+    display: flex;
     flex-shrink: 0;
+    flex-direction: column;
   }
 
   .navi_details > summary {
-    flex-shrink: 0;
-    cursor: pointer;
     display: flex;
+    flex-shrink: 0;
     flex-direction: column;
+    cursor: pointer;
     user-select: none;
   }
   .summary_body {
     display: flex;
+    width: 100%;
     flex-direction: row;
     align-items: center;
-    width: 100%;
     gap: 0.2em;
   }
   .summary_label {
     display: flex;
-    flex: 1;
-    gap: 0.2em;
-    align-items: center;
     padding-right: 10px;
+    flex: 1;
+    align-items: center;
+    gap: 0.2em;
   }
 
   .navi_details > summary:focus {
@@ -18477,7 +18843,6 @@ const DetailsWithAction = forwardRef((props, ref) => {
       const isOpen = toggleEvent.newState === "open";
       if (isOpen) {
         requestAction(toggleEvent.target, effectiveAction, {
-          actionOrigin: "action_prop",
           event: toggleEvent,
           method: "run"
         });
@@ -20490,8 +20855,7 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
     loading: loading || actionLoading,
     onChange: e => {
       requestAction(e.target, actionBoundToUIState, {
-        event: e,
-        actionOrigin: "action_prop"
+        event: e
       });
       onChange?.(e);
     }
@@ -21127,8 +21491,6 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     cancelOnBlurInvalid,
     cancelOnEscape,
     actionErrorEffect,
-    onInput,
-    onKeyDown,
     ...rest
   } = props;
   const innerRef = useRef(null);
@@ -21139,17 +21501,6 @@ const InputTextualWithAction = forwardRef((props, ref) => {
   } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect
-  });
-  const valueAtInteractionRef = useRef(null);
-  useOnInputChange(innerRef, e => {
-    if (valueAtInteractionRef.current !== null && e.target.value === valueAtInteractionRef.current) {
-      valueAtInteractionRef.current = null;
-      return;
-    }
-    requestAction(e.target, boundAction, {
-      event: e,
-      actionOrigin: "action_prop"
-    });
   });
   // here updating the input won't call the associated action
   // (user have to blur or press enter for this to happen)
@@ -21171,15 +21522,11 @@ const InputTextualWithAction = forwardRef((props, ref) => {
         if (!cancelOnEscape) {
           return;
         }
-        /**
-         * Browser trigger a "change" event right after the escape is pressed
-         * if the input value has changed.
-         * We need to prevent the next change event otherwise we would request action when
-         * we actually want to cancel
-         */
-        valueAtInteractionRef.current = e.target.value;
       }
       onCancel?.(e, reason);
+    },
+    onRequested: e => {
+      forwardActionRequested(e, boundAction);
     },
     onPrevented: onActionPrevented,
     onAction: executeAction,
@@ -21191,33 +21538,11 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     "data-action": boundAction.name,
     ...rest,
     ref: innerRef,
-    loading: loading || actionLoading,
-    onInput: e => {
-      valueAtInteractionRef.current = null;
-      onInput?.(e);
-    },
-    onKeyDown: e => {
-      if (e.key !== "Enter") {
-        return;
-      }
-      e.preventDefault();
-      /**
-       * Browser trigger a "change" event right after the enter is pressed
-       * if the input value has changed.
-       * We need to prevent the next change event otherwise we would request action twice
-       */
-      valueAtInteractionRef.current = e.target.value;
-      requestAction(e.target, boundAction, {
-        event: e,
-        actionOrigin: "action_prop"
-      });
-      onKeyDown?.(e);
-    }
+    loading: loading || actionLoading
   });
 });
 const InputTextualInsideForm = forwardRef((props, ref) => {
   const {
-    onKeyDown,
     // We destructure formContext to avoid passing it to the underlying input element
     // eslint-disable-next-line no-unused-vars
     formContext,
@@ -21225,94 +21550,10 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
   } = props;
   return jsx(InputTextualBasic, {
     ...rest,
-    ref: ref,
-    onKeyDown: e => {
-      if (e.key === "Enter") {
-        const inputElement = e.target;
-        const {
-          form
-        } = inputElement;
-        const formSubmitButton = form.querySelector("button[type='submit'], input[type='submit'], input[type='image']");
-        e.preventDefault();
-        form.dispatchEvent(new CustomEvent("actionrequested", {
-          detail: {
-            requester: formSubmitButton ? formSubmitButton : inputElement,
-            event: e,
-            meta: {
-              isSubmit: true
-            },
-            actionOrigin: "action_prop"
-          }
-        }));
-      }
-      onKeyDown?.(e);
-    }
+    ref: ref
   });
 });
-const useOnInputChange = (inputRef, callback) => {
-  // we must use a custom event listener because preact bind onChange to onInput for compat with react
-  useEffect(() => {
-    const input = inputRef.current;
-    input.addEventListener("change", callback);
-    return () => {
-      input.removeEventListener("change", callback);
-    };
-  }, [callback]);
 
-  // Handle programmatic value changes that don't trigger browser change events
-  //
-  // Problem: When input values are set programmatically (not by user typing),
-  // browsers don't fire the 'change' event. However, our application logic
-  // still needs to detect these changes.
-  //
-  // Example scenario:
-  // 1. User starts editing (letter key pressed, value set programmatically)
-  // 2. User doesn't type anything additional (this is the key part)
-  // 3. User clicks outside to finish editing
-  // 4. Without this code, no change event would fire despite the fact that the input value did change from its original state
-  //
-  // This distinction is crucial because:
-  //
-  // - If the user typed additional text after the initial programmatic value,
-  //   the browser would fire change events normally
-  // - But when they don't type anything else, the browser considers it as "no user interaction"
-  //   even though the programmatic initial value represents a meaningful change
-  const valueAtStartRef = useRef();
-  const interactedRef = useRef(false);
-  useLayoutEffect(() => {
-    const input = inputRef.current;
-    valueAtStartRef.current = input.value;
-    const onfocus = () => {
-      interactedRef.current = false;
-      valueAtStartRef.current = input.value;
-    };
-    const oninput = e => {
-      if (!e.isTrusted) {
-        // non trusted "input" events will be ignored by the browser when deciding to fire "change" event
-        // we ignore them too
-        return;
-      }
-      interactedRef.current = true;
-    };
-    const onblur = e => {
-      if (interactedRef.current) {
-        return;
-      }
-      if (valueAtStartRef.current === input.value) {
-        return;
-      }
-      callback(e);
-    };
-    input.addEventListener("focus", onfocus);
-    input.addEventListener("input", oninput);
-    input.addEventListener("blur", onblur);
-    return () => {
-      input.removeEventListener("focus", onfocus);
-      input.removeEventListener("input", oninput);
-      input.removeEventListener("blur", onblur);
-    };
-  }, []);
-};
 // As explained in https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/datetime-local#setting_timezones
 // datetime-local does not support timezones
 const convertToLocalTimezone = dateTimeString => {
@@ -21536,6 +21777,7 @@ const useFormEvents = (
   elementRef,
   {
     onFormReset,
+    onFormActionRequested,
     onFormActionPrevented,
     onFormActionStart,
     onFormActionAbort,
@@ -21544,6 +21786,7 @@ const useFormEvents = (
   },
 ) => {
   onFormReset = useStableCallback(onFormReset);
+  onFormActionRequested = useStableCallback(onFormActionRequested);
   onFormActionPrevented = useStableCallback(onFormActionPrevented);
   onFormActionStart = useStableCallback(onFormActionStart);
   onFormActionAbort = useStableCallback(onFormActionAbort);
@@ -21567,6 +21810,7 @@ const useFormEvents = (
     }
     return addManyEventListeners(form, {
       reset: onFormReset,
+      actionrequested: onFormActionRequested,
       actionprevented: onFormActionPrevented,
       actionstart: onFormActionStart,
       actionabort: onFormActionAbort,
@@ -21575,6 +21819,7 @@ const useFormEvents = (
     });
   }, [
     onFormReset,
+    onFormActionRequested,
     onFormActionPrevented,
     onFormActionStart,
     onFormActionAbort,
@@ -21821,7 +22066,6 @@ const ButtonWithAction = forwardRef((props, ref) => {
   const {
     action,
     loading,
-    onClick,
     actionErrorEffect,
     onActionPrevented,
     onActionStart,
@@ -21839,22 +22083,15 @@ const ButtonWithAction = forwardRef((props, ref) => {
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect
   });
+  const innerLoading = loading || actionLoading;
   useActionEvents(innerRef, {
     onPrevented: onActionPrevented,
+    onRequested: e => forwardActionRequested(e, boundAction),
     onAction: executeAction,
     onStart: onActionStart,
     onError: onActionError,
     onEnd: onActionEnd
   });
-  const handleClick = event => {
-    event.preventDefault();
-    const button = innerRef.current;
-    requestAction(button, boundAction, {
-      event,
-      actionOrigin: "action_prop"
-    });
-  };
-  const innerLoading = loading || actionLoading;
   return jsx(ButtonBasic
   // put data-action first to help find it in devtools
   , {
@@ -21862,10 +22099,6 @@ const ButtonWithAction = forwardRef((props, ref) => {
     ...rest,
     ref: innerRef,
     loading: innerLoading,
-    onClick: event => {
-      handleClick(event);
-      onClick?.(event);
-    },
     children: children
   });
 });
@@ -21874,7 +22107,6 @@ const ButtonInsideForm = forwardRef((props, ref) => {
     // eslint-disable-next-line no-unused-vars
     formContext,
     type,
-    onClick,
     children,
     loading,
     readOnly,
@@ -21882,50 +22114,14 @@ const ButtonInsideForm = forwardRef((props, ref) => {
   } = props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
-  const wouldSubmitFormByType = type === "submit" || type === "image";
   const innerLoading = loading;
   const innerReadOnly = readOnly;
-  const handleClick = event => {
-    const buttonElement = innerRef.current;
-    const {
-      form
-    } = buttonElement;
-    let wouldSubmitForm = wouldSubmitFormByType;
-    if (!wouldSubmitForm && type === undefined) {
-      const formSubmitButton = form.querySelector("button[type='submit'], input[type='submit'], input[type='image']");
-      const wouldSubmitFormBecauseSingleButtonWithoutType = !formSubmitButton;
-      wouldSubmitForm = wouldSubmitFormBecauseSingleButtonWithoutType;
-    }
-    if (!wouldSubmitForm) {
-      if (buttonElement.hasAttribute("data-readonly")) {
-        event.preventDefault();
-      }
-      return;
-    }
-    // prevent default behavior that would submit the form
-    // we want to go through the action execution process (with validation and all)
-    event.preventDefault();
-    form.dispatchEvent(new CustomEvent("actionrequested", {
-      detail: {
-        requester: buttonElement,
-        event,
-        meta: {
-          isSubmit: true
-        },
-        actionOrigin: "action_prop"
-      }
-    }));
-  };
   return jsx(ButtonBasic, {
     ...rest,
     ref: innerRef,
     type: type,
     loading: innerLoading,
     readOnly: innerReadOnly,
-    onClick: event => {
-      handleClick(event);
-      onClick?.(event);
-    },
     children: children
   });
 });
@@ -21939,7 +22135,6 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
     action,
     loading,
     children,
-    onClick,
     onActionPrevented,
     onActionStart,
     onActionAbort,
@@ -21988,16 +22183,8 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
     ref: innerRef,
     type: type,
     loading: innerLoading,
-    onClick: event => {
-      const button = innerRef.current;
-      const form = button.form;
-      event.preventDefault();
-      requestAction(form, actionBoundToFormParams, {
-        event,
-        requester: button,
-        actionOrigin: "action_prop"
-      });
-      onClick?.(event);
+    onactionrequested: e => {
+      forwardActionRequested(e, actionBoundToFormParams, e.target.form);
     },
     children: children
   });
@@ -22148,8 +22335,7 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
       const checkbox = event.target;
       requestAction(checkboxList, boundAction, {
         event,
-        requester: checkbox,
-        actionOrigin: "action_prop"
+        requester: checkbox
       });
     },
     loading: loading || actionLoading,
@@ -22374,13 +22560,7 @@ const FormWithAction = forwardRef((props, ref) => {
   useActionEvents(innerRef, {
     onPrevented: onActionPrevented,
     onRequested: e => {
-      const form = innerRef.current;
-      requestAction(form, actionBoundToUIState, {
-        requester: e.detail?.requester,
-        event: e.detail?.event || e,
-        meta: e.detail?.meta,
-        actionOrigin: e.detail?.actionOrigin
-      });
+      forwardActionRequested(e, actionBoundToUIState);
     },
     onAction: e => {
       const form = innerRef.current;
@@ -22416,15 +22596,6 @@ const FormWithAction = forwardRef((props, ref) => {
     ...rest,
     ref: innerRef,
     loading: innerLoading,
-    onrequestsubmit: e => {
-      // prevent "submit" event that would be dispatched by the browser after form.requestSubmit()
-      // (not super important because our <form> listen the "action" and do does preventDefault on "submit")
-      e.preventDefault();
-      requestAction(e.target, actionBoundToUIState, {
-        event: e,
-        actionOrigin: "action_prop"
-      });
-    },
     children: jsx(FormActionContext.Provider, {
       value: actionBoundToUIState,
       children: jsx(LoadingElementContext.Provider, {
@@ -22591,8 +22762,7 @@ const RadioListWithAction = forwardRef((props, ref) => {
       const radioListContainer = innerRef.current;
       requestAction(radioListContainer, boundAction, {
         event: e,
-        requester: radio,
-        actionOrigin: "action_prop"
+        requester: radio
       });
     },
     loading: loading || actionLoading,
@@ -22800,8 +22970,7 @@ const SelectWithAction = forwardRef((props, ref) => {
       const optionSelected = select.querySelector(`option[value="${selectedValue}"]`);
       requestAction(radioListContainer, boundAction, {
         event,
-        requester: optionSelected,
-        actionOrigin: "action_prop"
+        requester: optionSelected
       });
     },
     ...rest,
@@ -28522,4 +28691,4 @@ const useDependenciesDiff = (inputs) => {
   return diffRef.current;
 };
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Button, Checkbox, CheckboxList, Col, Colgroup, Details, Editable, ErrorBoundaryContext, FlexColumn, FlexItem, FlexRow, FontSizedSvg, Form, Icon, IconAndText, Input, Label, Link, LinkWithIcon, Overflow, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, Select, SelectionContext, Spacing, SummaryMarker, Tab, TabList, Table, TableCell, Tbody, Text, TextAndCount, Thead, Tr, UITransition, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, defineRoutes, enableDebugActions, enableDebugOnDocumentLoading, goBack, goForward, goTo, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, Button, Checkbox, CheckboxList, Col, Colgroup, Details, Editable, ErrorBoundaryContext, FlexColumn, FlexItem, FlexRow, FontSizedSvg, Form, Icon, IconAndText, Input, Label, Link, LinkWithIcon, Overflow, Radio, RadioList, Route, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, Select, SelectionContext, Spacing, SummaryMarker, Tab, TabList, Table, TableCell, Tbody, Text, TextAndCount, Thead, Tr, UITransition, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, defineRoutes, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, valueInLocalStorage };
