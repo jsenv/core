@@ -424,7 +424,6 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
       loading={loading || actionLoading}
       onChange={(e) => {
         requestAction(e.target, actionBoundToUIState, {
-          actionOrigin: "action_prop",
           event: e,
         });
         onChange?.(e);

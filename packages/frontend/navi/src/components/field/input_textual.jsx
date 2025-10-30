@@ -307,7 +307,9 @@ const InputTextualWithAction = forwardRef((props, ref) => {
       }
       onCancel?.(e, reason);
     },
-    onRequested: (e) => forwardActionRequested(e, boundAction),
+    onRequested: (e) => {
+      forwardActionRequested(e, boundAction);
+    },
     onPrevented: onActionPrevented,
     onAction: executeAction,
     onStart: onActionStart,

@@ -65,9 +65,9 @@ export const requestAction = (
   target,
   action,
   {
+    actionOrigin,
     event,
     requester = target,
-    actionOrigin,
     method = "rerun",
     meta = {},
     confirmMessage,
@@ -194,7 +194,7 @@ export const requestAction = (
 
 export const forwardActionRequested = (e, action, target = e.target) => {
   requestAction(target, action, {
-    actionOrigin: e.detail?.actionOrigin || "action_prop",
+    actionOrigin: e.detail?.actionOrigin,
     event: e.detail?.event || e,
     requester: e.detail?.requester,
     meta: e.detail?.meta,
@@ -587,7 +587,7 @@ export const installCustomConstraintValidation = (
     if (!isInput) {
       break request_on_input_change;
     }
-    listenInputChange(element, (e) => {
+    const stop = listenInputChange(element, (e) => {
       if (element.hasAttribute("data-action")) {
         dispatchActionRequestedCustomEvent(element, {
           event: e,
@@ -603,6 +603,9 @@ export const installCustomConstraintValidation = (
         event: e,
         requester: element,
       });
+    });
+    addTeardown(() => {
+      stop();
     });
   }
 
@@ -733,15 +736,19 @@ const wouldKeydownSubmitForm = (keydownEvent) => {
   return true;
 };
 
-const dispatchActionRequestedCustomEvent = (form, { event, requester }) => {
+const dispatchActionRequestedCustomEvent = (
+  fieldOrForm,
+  { actionOrigin = "action_prop", event, requester },
+) => {
   const actionRequestedCustomEvent = new CustomEvent("actionrequested", {
     cancelable: true,
     detail: {
+      actionOrigin,
       event,
       requester,
     },
   });
-  form.dispatchEvent(actionRequestedCustomEvent);
+  fieldOrForm.dispatchEvent(actionRequestedCustomEvent);
 };
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
 const requestSubmit = HTMLFormElement.prototype.requestSubmit;

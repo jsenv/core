@@ -230,7 +230,6 @@ const DetailsWithAction = forwardRef((props, ref) => {
         const isOpen = toggleEvent.newState === "open";
         if (isOpen) {
           requestAction(toggleEvent.target, effectiveAction, {
-            actionOrigin: "action_prop",
             event: toggleEvent,
             method: "run",
           });
