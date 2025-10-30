@@ -152,10 +152,10 @@ const FormWithAction = forwardRef((props, ref) => {
     onRequested: (e) => {
       const form = innerRef.current;
       requestAction(form, actionBoundToUIState, {
-        requester: e.detail?.requester,
-        event: e.detail?.event || e,
-        meta: e.detail?.meta,
         actionOrigin: e.detail?.actionOrigin,
+        event: e.detail?.event || e,
+        requester: e.detail?.requester,
+        meta: e.detail?.meta,
       });
     },
     onAction: (e) => {
@@ -196,11 +196,15 @@ const FormWithAction = forwardRef((props, ref) => {
       loading={innerLoading}
       onrequestsubmit={(e) => {
         // prevent "submit" event that would be dispatched by the browser after form.requestSubmit()
-        // (not super important because our <form> listen the "action" and do does preventDefault on "submit")
+        // we MUST do this to prevent the form submission
         e.preventDefault();
         requestAction(e.target, actionBoundToUIState, {
-          event: e,
           actionOrigin: "action_prop",
+          event: e.detail.cause || e,
+          requester: e.detail.submitter,
+          meta: {
+            isSubmit: true,
+          },
         });
       }}
     >

@@ -170,9 +170,9 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
         const checkboxList = innerRef.current;
         const checkbox = event.target;
         requestAction(checkboxList, boundAction, {
+          actionOrigin: "action_prop",
           event,
           requester: checkbox,
-          actionOrigin: "action_prop",
         });
       }}
       loading={loading || actionLoading}

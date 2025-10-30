@@ -27,6 +27,19 @@
  * - Validation messages that follow the input element and adapt to viewport
  */
 
+/**
+ * To enable this API one have to call installCustomConstraintValidation(element)
+ * on the <form> and every element within the <form> (<input>, <button>, etc.)
+ * (In practice this is done automatically by jsx components in navi package)
+ *
+ * Once installed code must now listen to specific action events on the <form>
+ * (not "submit" but "actionrequested" most notably)
+ *
+ * There is one way to fully bypass validation which is to call form.submit()
+ * just like you could do with the native validation API to bypass validation.
+ * We keep this behavior on purpose but in practice you always want to go through the form validation process
+ */
+
 import { createPubSub } from "@jsenv/dom";
 import { openCallout } from "../components/callout/callout.js";
 import {
@@ -134,12 +147,8 @@ export const requestAction = (
     // Single element validation case
     isValid = validationInterface.checkValidity({ fromRequestAction: true });
     if (!isValid) {
-      if (event) {
-        event.preventDefault();
-      }
       validationInterface.reportValidity();
     }
-
     elementForConfirmation = target;
     elementForDispatch = target;
   }
@@ -202,6 +211,7 @@ export const checkValidity = (element) => {
   return validationInterface.checkValidity();
 };
 
+const formInstrumentedWeakSet = new WeakSet();
 export const installCustomConstraintValidation = (
   element,
   elementReceivingValidationMessage = element,
@@ -228,6 +238,14 @@ export const installCustomConstraintValidation = (
     validationInterface.uninstall = uninstall;
   }
 
+  const isForm = element.tagName === "FORM";
+  if (isForm) {
+    formInstrumentedWeakSet.add(element);
+    addTeardown(() => {
+      formInstrumentedWeakSet.delete(element);
+    });
+  }
+
   expose_as_node_property: {
     element.__validationInterface__ = validationInterface;
     addTeardown(() => {
@@ -239,7 +257,6 @@ export const installCustomConstraintValidation = (
     const cancelEvent = new CustomEvent("cancel", options);
     element.dispatchEvent(cancelEvent);
   };
-
   const closeElementValidationMessage = (reason) => {
     if (validationInterface.validationMessage) {
       validationInterface.validationMessage.close(reason);
@@ -453,12 +470,6 @@ export const installCustomConstraintValidation = (
       checkValidity();
     };
     element.addEventListener("actionend", onactionend);
-    if (element.form) {
-      element.form.addEventListener("actionend", onactionend);
-      addTeardown(() => {
-        element.form.removeEventListener("actionend", onactionend);
-      });
-    }
     addTeardown(() => {
       element.removeEventListener("actionend", onactionend);
     });
@@ -474,32 +485,46 @@ export const installCustomConstraintValidation = (
     });
   }
 
-  dispatch_request_submit_call_on_form: {
-    const onRequestSubmit = (form, e) => {
-      if (form !== element.form && form !== element) {
+  request_submit_via_enter: {
+    const onkeydown = (e) => {
+      const { form } = element;
+      if (!form) {
         return;
       }
-
+      if (element.type !== "INPUT") {
+        return;
+      }
+      if (e.key !== "Enter") {
+        return;
+      }
+      const formSubmitButton = form.querySelector(
+        `button[type="submit"], input[type="submit"], input[type="image"]`,
+      );
       const requestSubmitCustomEvent = new CustomEvent("requestsubmit", {
         cancelable: true,
-        detail: { cause: e },
+        detail: {
+          cause: e,
+          submitter: formSubmitButton ? formSubmitButton : element,
+        },
       });
       form.dispatchEvent(requestSubmitCustomEvent);
       if (requestSubmitCustomEvent.defaultPrevented) {
+        // prevent the native <form> submission done by the browser after "enter" inside a <form>
         e.preventDefault();
       }
     };
-    requestSubmitCallbackSet.add(onRequestSubmit);
+    element.addEventListener("keydown", onkeydown);
     addTeardown(() => {
-      requestSubmitCallbackSet.delete(onRequestSubmit);
+      element.removeEventListener("keydown", onkeydown);
     });
   }
 
   execute_on_form_submit: {
-    const form = element.form || element.tagName === "FORM" ? element : null;
-    if (!form) {
+    if (!isForm) {
       break execute_on_form_submit;
     }
+    // We will dispatch "action" when "submit" occurs (code called from.submit() to bypass validation)
+    const form = element;
     const removeListener = addEventListener(form, "submit", (e) => {
       e.preventDefault();
       if (debug) {
@@ -511,7 +536,9 @@ export const installCustomConstraintValidation = (
           event: e,
           method: "rerun",
           requester: form,
-          meta: {},
+          meta: {
+            isSubmit: true,
+          },
         },
       });
       form.dispatchEvent(actionCustomEvent);
@@ -563,17 +590,25 @@ export const installCustomConstraintValidation = (
 
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
 
-const requestSubmitCallbackSet = new Set();
 const requestSubmit = HTMLFormElement.prototype.requestSubmit;
 HTMLFormElement.prototype.requestSubmit = function (submitter) {
-  let prevented = false;
-  const preventDefault = () => {
-    prevented = true;
-  };
-  for (const requestSubmitCallback of requestSubmitCallbackSet) {
-    requestSubmitCallback(this, { submitter, preventDefault });
+  const form = this;
+  const isInstrumented = formInstrumentedWeakSet.has(form);
+  if (!isInstrumented) {
+    requestSubmit.call(form, submitter);
+    return;
   }
-  if (prevented) {
+
+  const requestSubmitCustomEvent = new CustomEvent("requestsubmit", {
+    cancelable: true,
+    detail: {
+      cause: new CustomEvent("programmatic_requestsubmit"),
+      submitter,
+    },
+  });
+  form.dispatchEvent(requestSubmitCustomEvent);
+  if (requestSubmitCustomEvent.defaultPrevented) {
+    // prevent the native form submission done by the browser for node.requestSubmit()
     return;
   }
   requestSubmit.call(this, submitter);

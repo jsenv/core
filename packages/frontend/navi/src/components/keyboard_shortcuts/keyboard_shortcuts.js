@@ -165,10 +165,10 @@ export const useKeyboardShortcuts = (
           }
           const { action } = shortcutCandidate;
           return requestAction(element, action, {
+            actionOrigin: "keyboard_shortcut",
             event: keyboardEvent,
             requester: document.activeElement,
             confirmMessage: shortcutCandidate.confirmMessage,
-            actionOrigin: "keyboard_shortcut",
             meta: {
               shortcut: shortcutCandidate,
             },

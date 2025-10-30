@@ -16,33 +16,33 @@ import { SummaryMarker } from "./summary_marker.jsx";
 
 import.meta.css = /* css */ `
   .navi_details {
-    display: flex;
-    flex-direction: column;
     position: relative;
     z-index: 1;
+    display: flex;
     flex-shrink: 0;
+    flex-direction: column;
   }
 
   .navi_details > summary {
-    flex-shrink: 0;
-    cursor: pointer;
     display: flex;
+    flex-shrink: 0;
     flex-direction: column;
+    cursor: pointer;
     user-select: none;
   }
   .summary_body {
     display: flex;
+    width: 100%;
     flex-direction: row;
     align-items: center;
-    width: 100%;
     gap: 0.2em;
   }
   .summary_label {
     display: flex;
-    flex: 1;
-    gap: 0.2em;
-    align-items: center;
     padding-right: 10px;
+    flex: 1;
+    align-items: center;
+    gap: 0.2em;
   }
 
   .navi_details > summary:focus {

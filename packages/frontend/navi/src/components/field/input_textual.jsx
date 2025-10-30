@@ -296,8 +296,8 @@ const InputTextualWithAction = forwardRef((props, ref) => {
       return;
     }
     requestAction(e.target, boundAction, {
-      event: e,
       actionOrigin: "action_prop",
+      event: e,
     });
   });
   // here updating the input won't call the associated action
@@ -361,8 +361,8 @@ const InputTextualWithAction = forwardRef((props, ref) => {
          */
         valueAtInteractionRef.current = e.target.value;
         requestAction(e.target, boundAction, {
-          event: e,
           actionOrigin: "action_prop",
+          event: e,
         });
         onKeyDown?.(e);
       }}
@@ -371,40 +371,13 @@ const InputTextualWithAction = forwardRef((props, ref) => {
 });
 const InputTextualInsideForm = forwardRef((props, ref) => {
   const {
-    onKeyDown,
     // We destructure formContext to avoid passing it to the underlying input element
     // eslint-disable-next-line no-unused-vars
     formContext,
     ...rest
   } = props;
 
-  return (
-    <InputTextualBasic
-      {...rest}
-      ref={ref}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          const inputElement = e.target;
-          const { form } = inputElement;
-          const formSubmitButton = form.querySelector(
-            "button[type='submit'], input[type='submit'], input[type='image']",
-          );
-          e.preventDefault();
-          form.dispatchEvent(
-            new CustomEvent("actionrequested", {
-              detail: {
-                requester: formSubmitButton ? formSubmitButton : inputElement,
-                event: e,
-                meta: { isSubmit: true },
-                actionOrigin: "action_prop",
-              },
-            }),
-          );
-        }
-        onKeyDown?.(e);
-      }}
-    />
-  );
+  return <InputTextualBasic {...rest} ref={ref} />;
 });
 
 const useOnInputChange = (inputRef, callback) => {

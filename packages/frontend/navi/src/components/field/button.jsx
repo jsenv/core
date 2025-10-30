@@ -313,8 +313,8 @@ const ButtonWithAction = forwardRef((props, ref) => {
     event.preventDefault();
     const button = innerRef.current;
     requestAction(button, boundAction, {
-      event,
       actionOrigin: "action_prop",
+      event,
     });
   };
   const innerLoading = loading || actionLoading;
@@ -473,9 +473,9 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
         const form = button.form;
         event.preventDefault();
         requestAction(form, actionBoundToFormParams, {
+          actionOrigin: "action_prop",
           event,
           requester: button,
-          actionOrigin: "action_prop",
         });
         onClick?.(event);
       }}

@@ -193,9 +193,9 @@ const SelectWithAction = forwardRef((props, ref) => {
           `option[value="${selectedValue}"]`,
         );
         requestAction(radioListContainer, boundAction, {
+          actionOrigin: "action_prop",
           event,
           requester: optionSelected,
-          actionOrigin: "action_prop",
         });
       }}
       {...rest}
