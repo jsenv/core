@@ -42,7 +42,7 @@
         border-color: #dc3545;
       }
 
-      button {
+      .demo-container button {
         padding: 10px 20px;
         color: white;
         font-size: 14px;
@@ -52,11 +52,11 @@
         cursor: pointer;
       }
 
-      button:hover {
+      .demo-container button:hover {
         background: #0056b3;
       }
 
-      button:disabled {
+      .demo-container button:disabled {
         background: #6c757d;
         cursor: not-allowed;
       }
@@ -104,7 +104,12 @@
         <h3>Password Confirmation Form</h3>
         <div class="form-container">
           <form id="passwordForm">
-            <input name="username" value="demo_user" style="display: none" />
+            <input
+              name="username"
+              value="demo_user"
+              autocomplete="username"
+              style="display: none"
+            />
 
             <div class="form-group">
               <label for="password">Password:</label>

@@ -510,7 +510,7 @@ export const installCustomConstraintValidation = (
         if (wouldKeydownSubmitForm(keydownEvent)) {
           keydownEvent.preventDefault();
         }
-        dispatchRequestActionCustomEvent(element, {
+        dispatchActionRequestedCustomEvent(element, {
           event: keydownEvent,
           requester: element,
         });
@@ -521,7 +521,7 @@ export const installCustomConstraintValidation = (
         return;
       }
       keydownEvent.preventDefault();
-      dispatchRequestActionCustomEvent(element, {
+      dispatchActionRequestedCustomEvent(element, {
         event: keydownEvent,
         requester: getFirstButtonSubmittingForm(form) || element,
       });
@@ -544,7 +544,7 @@ export const installCustomConstraintValidation = (
         if (wouldClickSubmitForm(clickEvent)) {
           clickEvent.preventDefault();
         }
-        dispatchRequestActionCustomEvent(element, {
+        dispatchActionRequestedCustomEvent(element, {
           event: clickEvent,
           requester: element,
         });
@@ -557,7 +557,7 @@ export const installCustomConstraintValidation = (
       if (wouldClickSubmitForm(clickEvent)) {
         clickEvent.preventDefault();
       }
-      dispatchRequestActionCustomEvent(form, {
+      dispatchActionRequestedCustomEvent(form, {
         event: clickEvent,
         requester: element,
       });
@@ -576,7 +576,7 @@ export const installCustomConstraintValidation = (
     }
     listenInputChange(element, (e) => {
       if (element.hasAttribute("data-action")) {
-        dispatchRequestActionCustomEvent(element, {
+        dispatchActionRequestedCustomEvent(element, {
           event: e,
           requester: element,
         });
@@ -586,7 +586,7 @@ export const installCustomConstraintValidation = (
       if (!form) {
         return;
       }
-      dispatchRequestActionCustomEvent(form, {
+      dispatchActionRequestedCustomEvent(form, {
         event: e,
         requester: element,
       });
@@ -720,19 +720,15 @@ const wouldKeydownSubmitForm = (keydownEvent) => {
   return true;
 };
 
-const dispatchRequestActionCustomEvent = (form, { event, requester }) => {
-  const requestActionCustomEvent = new CustomEvent("requestaction", {
+const dispatchActionRequestedCustomEvent = (form, { event, requester }) => {
+  const actionRequestedCustomEvent = new CustomEvent("actionrequested", {
     cancelable: true,
     detail: {
       event,
       requester,
     },
   });
-  form.dispatchEvent(requestActionCustomEvent);
-  if (requestActionCustomEvent.defaultPrevented) {
-    // prevent the native <form> submission done by the browser after "enter" inside a <form>
-    event.preventDefault();
-  }
+  form.dispatchEvent(actionRequestedCustomEvent);
 };
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
 const requestSubmit = HTMLFormElement.prototype.requestSubmit;
@@ -743,15 +739,13 @@ HTMLFormElement.prototype.requestSubmit = function (submitter) {
     requestSubmit.call(form, submitter);
     return;
   }
-
   const programmaticEvent = new CustomEvent("programmatic_requestsubmit", {
     cancelable: true,
     detail: {
       submitter,
     },
   });
-
-  dispatchRequestActionCustomEvent(form, {
+  dispatchActionRequestedCustomEvent(form, {
     event: programmaticEvent,
     requester: submitter,
   });
