@@ -27,6 +27,7 @@
  * - Validation messages that follow the input element and adapt to viewport
  */
 
+import { createPubSub } from "@jsenv/dom";
 import { openCallout } from "../components/callout/callout.js";
 import {
   DISABLED_CONSTRAINT,
@@ -219,20 +220,17 @@ export const installCustomConstraintValidation = (
     validationMessage: null,
   };
 
-  const cleanupCallbackSet = new Set();
+  const [teardown, addTeardown] = createPubSub();
   cleanup: {
     const uninstall = () => {
-      for (const cleanupCallback of cleanupCallbackSet) {
-        cleanupCallback();
-      }
-      cleanupCallbackSet.clear();
+      teardown();
     };
     validationInterface.uninstall = uninstall;
   }
 
   expose_as_node_property: {
     element.__validationInterface__ = validationInterface;
-    cleanupCallbackSet.add(() => {
+    addTeardown(() => {
       delete element.__validationInterface__;
     });
   }
@@ -297,7 +295,7 @@ export const installCustomConstraintValidation = (
     validityInfoMap.clear();
     failedConstraintInfo = null;
   };
-  cleanupCallbackSet.add(resetValidity);
+  addTeardown(resetValidity);
 
   const checkValidity = ({ fromRequestAction, skipReadonly } = {}) => {
     resetValidity({ fromRequestAction });
@@ -368,9 +366,9 @@ export const installCustomConstraintValidation = (
     if (!skipFocus) {
       element.focus();
     }
-    const closeOnCleanup = () => {
+    const removeCloseOnCleanup = addTeardown(() => {
       closeElementValidationMessage("cleanup");
-    };
+    });
 
     const anchorElement =
       failedConstraintInfo.target || elementReceivingValidationMessage;
@@ -381,7 +379,7 @@ export const installCustomConstraintValidation = (
         level: failedConstraintInfo.level,
         closeOnClickOutside: failedConstraintInfo.closeOnClickOutside,
         onClose: () => {
-          cleanupCallbackSet.delete(closeOnCleanup);
+          removeCloseOnCleanup();
           validationInterface.validationMessage = null;
           if (failedConstraintInfo) {
             failedConstraintInfo.reportStatus = "closed";
@@ -393,7 +391,6 @@ export const installCustomConstraintValidation = (
       },
     );
     failedConstraintInfo.reportStatus = "reported";
-    cleanupCallbackSet.add(closeOnCleanup);
   };
   validationInterface.checkValidity = checkValidity;
   validationInterface.reportValidity = reportValidity;
@@ -428,7 +425,7 @@ export const installCustomConstraintValidation = (
         reportValidity();
       }
     };
-    cleanupCallbackSet.add(() => {
+    addTeardown(() => {
       customMessageMap.clear();
     });
     Object.assign(validationInterface, {
@@ -444,7 +441,7 @@ export const installCustomConstraintValidation = (
       checkValidity();
     };
     element.addEventListener("input", oninput);
-    cleanupCallbackSet.add(() => {
+    addTeardown(() => {
       element.removeEventListener("input", oninput);
     });
   }
@@ -458,11 +455,11 @@ export const installCustomConstraintValidation = (
     element.addEventListener("actionend", onactionend);
     if (element.form) {
       element.form.addEventListener("actionend", onactionend);
-      cleanupCallbackSet.add(() => {
+      addTeardown(() => {
         element.form.removeEventListener("actionend", onactionend);
       });
     }
-    cleanupCallbackSet.add(() => {
+    addTeardown(() => {
       element.removeEventListener("actionend", onactionend);
     });
   }
@@ -472,7 +469,7 @@ export const installCustomConstraintValidation = (
     element.reportValidity = () => {
       reportValidity();
     };
-    cleanupCallbackSet.add(() => {
+    addTeardown(() => {
       element.reportValidity = nativeReportValidity;
     });
   }
@@ -493,7 +490,7 @@ export const installCustomConstraintValidation = (
       }
     };
     requestSubmitCallbackSet.add(onRequestSubmit);
-    cleanupCallbackSet.add(() => {
+    addTeardown(() => {
       requestSubmitCallbackSet.delete(onRequestSubmit);
     });
   }
@@ -519,7 +516,7 @@ export const installCustomConstraintValidation = (
       });
       form.dispatchEvent(actionCustomEvent);
     });
-    cleanupCallbackSet.add(() => {
+    addTeardown(() => {
       removeListener();
     });
   }
@@ -533,7 +530,7 @@ export const installCustomConstraintValidation = (
       }
     };
     element.addEventListener("keydown", onkeydown);
-    cleanupCallbackSet.add(() => {
+    addTeardown(() => {
       element.removeEventListener("keydown", onkeydown);
     });
   }
@@ -556,7 +553,7 @@ export const installCustomConstraintValidation = (
       }
     };
     element.addEventListener("blur", onblur);
-    cleanupCallbackSet.add(() => {
+    addTeardown(() => {
       element.removeEventListener("blur", onblur);
     });
   }
