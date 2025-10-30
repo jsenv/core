@@ -37,6 +37,6 @@ export const SAME_AS_CONSTRAINT = {
     if (type === "email") {
       return `Cette adresse e-mail doit être identique a la précédente.`;
     }
-    return `Ce champ doit être identique au champ précédent.`;
+    return `Ce champ doit être identique au précédent.`;
   },
 };

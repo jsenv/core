@@ -78,12 +78,18 @@ export const REQUIRED_CONSTRAINT = {
       return requiredMessage;
     }
     if (element.type === "password") {
-      return `Veuillez saisir un mot de passe.`;
+      return element.hasAttribute("data-same-as")
+        ? `Veuillez confirmer le mot de passe.`
+        : `Veuillez saisir un mot de passe.`;
     }
     if (element.type === "email") {
-      return `Veuillez saisir une adresse e-mail.`;
+      return element.hasAttribute("data-same-as")
+        ? `Veuillez confirmer l'adresse e-mail`
+        : `Veuillez saisir une adresse e-mail.`;
     }
-    return `Veuillez remplir ce champ.`;
+    return element.hasAttribute("data-same-as")
+      ? `Veuillez confirmer le champ précédent`
+      : `Veuillez remplir ce champ.`;
   },
 };
 export const PATTERN_CONSTRAINT = {
