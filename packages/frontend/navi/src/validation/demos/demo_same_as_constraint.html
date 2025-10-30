@@ -1,0 +1,245 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Same As Constraint Demo - Password Confirmation</title>
+    <style>
+      .demo-container {
+        max-width: 500px;
+        margin-bottom: 30px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 5px;
+        color: #333;
+        font-weight: bold;
+      }
+
+      input[type="password"] {
+        box-sizing: border-box;
+        width: 100%;
+        padding: 10px;
+        font-size: 14px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+
+      input[type="password"]:focus {
+        border-color: #007bff;
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+      }
+
+      input[type="password"]:invalid {
+        border-color: #dc3545;
+      }
+
+      button {
+        padding: 10px 20px;
+        color: white;
+        font-size: 14px;
+        background: #007bff;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: #0056b3;
+      }
+
+      button:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+      }
+
+      .validation-info {
+        margin-top: 20px;
+        padding: 15px;
+        font-size: 14px;
+        background: #e9ecef;
+        border-radius: 4px;
+      }
+
+      .success-message {
+        margin-top: 15px;
+        padding: 10px;
+        color: #155724;
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        border-radius: 4px;
+      }
+
+      .form-container {
+        padding: 20px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+      }
+
+      h3 {
+        margin-top: 0;
+        color: #495057;
+      }
+    </style>
+  </head>
+  <body>
+    <div style="padding: 20px; font-family: system-ui, sans-serif">
+      <h1>Same As Constraint Demo - Password Confirmation</h1>
+      <p>
+        This demo shows how the <code>data-same-as</code> attribute validates
+        that two password fields contain identical values when submitting a
+        form.
+      </p>
+
+      <div class="demo-container">
+        <h3>Password Confirmation Form</h3>
+        <div class="form-container">
+          <form id="passwordForm">
+            <div class="form-group">
+              <label for="password">Password:</label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                required
+                minlength="6"
+                placeholder="Enter your password"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="confirmPassword">Confirm Password:</label>
+              <input
+                type="password"
+                id="confirmPassword"
+                name="confirmPassword"
+                required
+                data-same-as="#password"
+                placeholder="Confirm your password"
+              />
+            </div>
+
+            <button type="submit">Create Account</button>
+          </form>
+
+          <div
+            id="successMessage"
+            class="success-message"
+            style="display: none"
+          >
+            ✅ Form submitted successfully! Passwords match.
+          </div>
+        </div>
+
+        <div class="validation-info">
+          <h4>How it works:</h4>
+          <ul>
+            <li>
+              <strong>data-same-as="#password"</strong> - Links the confirm
+              password field to the original password field
+            </li>
+            <li>Validation triggers when you try to submit the form</li>
+            <li>If passwords don't match, a validation message appears</li>
+            <li>
+              The default message for password fields is: "Ce mot de passe doit
+              être identique au précédent."
+            </li>
+            <li>Form submission is prevented until passwords match</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="demo-container">
+        <h3>Test Scenarios</h3>
+        <div class="validation-info">
+          <h4>Try these test cases:</h4>
+          <ol>
+            <li>
+              <strong>Empty fields</strong>: Click submit with empty passwords
+              (required validation triggers first)
+            </li>
+            <li>
+              <strong>Short password</strong>: Enter less than 6 characters
+              (minlength validation)
+            </li>
+            <li>
+              <strong>Mismatched passwords</strong>: Enter different passwords
+              and click submit
+            </li>
+            <li>
+              <strong>Matching passwords</strong>: Enter identical passwords to
+              see successful submission
+            </li>
+            <li>
+              <strong>Real-time feedback</strong>: Type in one field, then the
+              other, then submit
+            </li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      import { installCustomConstraintValidation } from "../custom_constraint_validation.js";
+      import { SAME_AS_CONSTRAINT } from "../constraints/same_as_constraint.js";
+
+      // Install validation on the form and its inputs
+      const form = document.getElementById("passwordForm");
+      const passwordInput = document.getElementById("password");
+      const confirmPasswordInput = document.getElementById("confirmPassword");
+      const successMessage = document.getElementById("successMessage");
+
+      // Install custom constraint validation on the form
+      const formValidation = installCustomConstraintValidation(form);
+
+      // Install validation on inputs and register the same_as constraint
+      installCustomConstraintValidation(passwordInput);
+      installCustomConstraintValidation(confirmPasswordInput);
+
+      // Handle form submission
+      form.addEventListener("action", (event) => {
+        console.log("Form action event triggered:", event.detail);
+
+        // Simulate successful form submission
+        successMessage.style.display = "block";
+        form.reset();
+
+        // Hide success message after 3 seconds
+        setTimeout(() => {
+          successMessage.style.display = "none";
+        }, 3000);
+      });
+
+      // Handle validation prevention
+      form.addEventListener("actionprevented", (event) => {
+        console.log(
+          "Form submission prevented due to validation:",
+          event.detail,
+        );
+        successMessage.style.display = "none";
+      });
+
+      // Add some debugging
+      passwordInput.addEventListener("input", () => {
+        console.log("Password value:", passwordInput.value);
+      });
+
+      confirmPasswordInput.addEventListener("input", () => {
+        console.log("Confirm password value:", confirmPasswordInput.value);
+      });
+
+      console.log("Same As Constraint Demo initialized");
+      console.log("Form validation interface:", formValidation);
+      console.log("SAME_AS_CONSTRAINT:", SAME_AS_CONSTRAINT);
+    </script>
+  </body>
+</html>

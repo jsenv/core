@@ -40,6 +40,7 @@ import {
   TYPE_NUMBER_CONSTRAINT,
 } from "./constraints/native_constraints.js";
 import { READONLY_CONSTRAINT } from "./constraints/readonly_constraint.js";
+import { SAME_AS_CONSTRAINT } from "./constraints/same_as_constraint.js";
 
 let debug = false;
 
@@ -260,6 +261,7 @@ export const installCustomConstraintValidation = (
   constraintSet.add(MIN_CONSTRAINT);
   constraintSet.add(MAX_CONSTRAINT);
   constraintSet.add(READONLY_CONSTRAINT);
+  constraintSet.add(SAME_AS_CONSTRAINT);
   register_constraint: {
     validationInterface.registerConstraint = (constraint) => {
       if (typeof constraint === "function") {
