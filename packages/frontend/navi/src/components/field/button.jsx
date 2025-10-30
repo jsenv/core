@@ -341,7 +341,6 @@ const ButtonInsideForm = forwardRef((props, ref) => {
     // eslint-disable-next-line no-unused-vars
     formContext,
     type,
-    onClick,
     children,
     loading,
     readOnly,
@@ -350,40 +349,8 @@ const ButtonInsideForm = forwardRef((props, ref) => {
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  const wouldSubmitFormByType = type === "submit" || type === "image";
   const innerLoading = loading;
   const innerReadOnly = readOnly;
-  const handleClick = (event) => {
-    const buttonElement = innerRef.current;
-    const { form } = buttonElement;
-    let wouldSubmitForm = wouldSubmitFormByType;
-    if (!wouldSubmitForm && type === undefined) {
-      const formSubmitButton = form.querySelector(
-        "button[type='submit'], input[type='submit'], input[type='image']",
-      );
-      const wouldSubmitFormBecauseSingleButtonWithoutType = !formSubmitButton;
-      wouldSubmitForm = wouldSubmitFormBecauseSingleButtonWithoutType;
-    }
-    if (!wouldSubmitForm) {
-      if (buttonElement.hasAttribute("data-readonly")) {
-        event.preventDefault();
-      }
-      return;
-    }
-    // prevent default behavior that would submit the form
-    // we want to go through the action execution process (with validation and all)
-    event.preventDefault();
-    form.dispatchEvent(
-      new CustomEvent("actionrequested", {
-        detail: {
-          requester: buttonElement,
-          event,
-          meta: { isSubmit: true },
-          actionOrigin: "action_prop",
-        },
-      }),
-    );
-  };
 
   return (
     <ButtonBasic
@@ -392,10 +359,6 @@ const ButtonInsideForm = forwardRef((props, ref) => {
       type={type}
       loading={innerLoading}
       readOnly={innerReadOnly}
-      onClick={(event) => {
-        handleClick(event);
-        onClick?.(event);
-      }}
     >
       {children}
     </ButtonBasic>

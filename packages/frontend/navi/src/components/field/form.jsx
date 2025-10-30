@@ -200,7 +200,7 @@ const FormWithAction = forwardRef((props, ref) => {
         e.preventDefault();
         requestAction(e.target, actionBoundToUIState, {
           actionOrigin: "action_prop",
-          event: e.detail.cause || e,
+          event: e.detail.event || e,
           requester: e.detail.submitter,
           meta: {
             isSubmit: true,
