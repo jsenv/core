@@ -305,6 +305,8 @@ export const installCustomConstraintValidation = (
   let failedConstraintInfo = null;
   const validityInfoMap = new Map();
 
+  const hasTitleAttribute = element.hasAttribute("title");
+
   const resetValidity = ({ fromRequestAction } = {}) => {
     if (fromRequestAction && failedConstraintInfo) {
       for (const [key, customMessage] of customMessageMap) {
@@ -367,7 +369,16 @@ export const installCustomConstraintValidation = (
       validityInfoMap.set(constraint, failedConstraintInfo);
     }
 
-    if (!failedConstraintInfo) {
+    if (failedConstraintInfo) {
+      if (!hasTitleAttribute) {
+        // when a constraint is failing browser displays that constraint message if the element has no title attribute.
+        // We want to do the same with our message (overriding the browser in the process to get better messages)
+        element.setAttribute("title", failedConstraintInfo.message);
+      }
+    } else {
+      if (!hasTitleAttribute) {
+        element.removeAttribute("title");
+      }
       closeElementValidationMessage("becomes_valid");
     }
 
@@ -461,6 +472,7 @@ export const installCustomConstraintValidation = (
     });
   }
 
+  checkValidity();
   close_and_check_on_input: {
     const oninput = () => {
       customMessageMap.clear();
