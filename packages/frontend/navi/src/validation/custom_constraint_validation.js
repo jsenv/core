@@ -508,11 +508,12 @@ export const installCustomConstraintValidation = (
   }
 
   request_on_enter: {
+    if (element.tagName !== "INPUT") {
+      // maybe we want it too for checkboxes etc, we'll see
+      break request_on_enter;
+    }
     const onkeydown = (keydownEvent) => {
       if (keydownEvent.defaultPrevented) {
-        return;
-      }
-      if (element.tagName !== "INPUT") {
         return;
       }
       if (keydownEvent.key !== "Enter") {
@@ -533,7 +534,7 @@ export const installCustomConstraintValidation = (
         return;
       }
       keydownEvent.preventDefault();
-      dispatchActionRequestedCustomEvent(element, {
+      dispatchActionRequestedCustomEvent(form, {
         event: keydownEvent,
         requester: getFirstButtonSubmittingForm(form) || element,
       });

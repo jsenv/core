@@ -71,10 +71,19 @@ export const REQUIRED_CONSTRAINT = {
           : undefined,
       };
     }
-    if (!element.value) {
-      return requiredMessage || `Veuillez remplir ce champ.`;
+    if (element.value) {
+      return null;
     }
-    return null;
+    if (requiredMessage) {
+      return requiredMessage;
+    }
+    if (element.type === "password") {
+      return `Veuillez saisir un mot de passe.`;
+    }
+    if (element.type === "email") {
+      return `Veuillez saisir une adresse e-mail.`;
+    }
+    return `Veuillez remplir ce champ.`;
   },
 };
 export const PATTERN_CONSTRAINT = {
@@ -89,19 +98,19 @@ export const PATTERN_CONSTRAINT = {
       return null;
     }
     const regex = new RegExp(pattern);
-    if (!regex.test(value)) {
-      const patternMessage = input.getAttribute("data-pattern-message");
-      if (patternMessage) {
-        return patternMessage;
-      }
-      let message = `Veuillez respecter le format requis.`;
-      const title = input.title;
-      if (title) {
-        message += `<br />${title}`;
-      }
-      return message;
+    if (regex.test(value)) {
+      return null;
     }
-    return null;
+    const patternMessage = input.getAttribute("data-pattern-message");
+    if (patternMessage) {
+      return patternMessage;
+    }
+    let message = `Veuillez respecter le format requis.`;
+    const title = input.title;
+    if (title) {
+      message += `<br />${title}`;
+    }
+    return message;
   },
 };
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/email#validation
@@ -149,10 +158,11 @@ export const MIN_LENGTH_CONSTRAINT = {
       return null;
     }
     if (valueLength < minLength) {
+      const thisField = generateThisFieldText(element);
       if (valueLength === 1) {
-        return `Ce champ doit contenir au moins ${minLength} caractère (il contient actuellement un seul caractère).`;
+        return `${thisField} doit contenir au moins ${minLength} caractère (il contient actuellement un seul caractère).`;
       }
-      return `Ce champ doit contenir au moins ${minLength} caractères (il contient actuellement ${valueLength} caractères).`;
+      return `${thisField} doit contenir au moins ${minLength} caractères (il contient actuellement ${valueLength} caractères).`;
     }
     return null;
   },
@@ -165,6 +175,14 @@ const INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET = new Set([
   "email",
   "password",
 ]);
+
+const generateThisFieldText = (field) => {
+  return field.type === "password"
+    ? "Ce mot de passe"
+    : field.type === "email"
+      ? "Cette adresse e-mail"
+      : "Ce champ";
+};
 
 export const MAX_LENGTH_CONSTRAINT = {
   name: "max_length",
@@ -185,7 +203,8 @@ export const MAX_LENGTH_CONSTRAINT = {
     const value = element.value;
     const valueLength = value.length;
     if (valueLength > maxLength) {
-      return `Ce champ doit contenir au maximum ${maxLength} caractères (il contient actuellement ${valueLength} caractères).`;
+      const thisField = generateThisFieldText(element);
+      return `${thisField} doit contenir au maximum ${maxLength} caractères (il contient actuellement ${valueLength} caractères).`;
     }
     return null;
   },
