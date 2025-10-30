@@ -107,6 +107,11 @@ export {
   addCustomMessage,
   removeCustomMessage,
 } from "./src/validation/custom_message.js";
+// advanced constraint validation functions
+export {
+  forwardActionRequested,
+  installCustomConstraintValidation,
+} from "./src/validation/custom_constraint_validation.js";
 
 // Other
 export { useDependenciesDiff } from "./src/components/use_dependencies_diff.js";

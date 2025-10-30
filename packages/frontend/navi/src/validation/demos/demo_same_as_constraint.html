@@ -104,6 +104,8 @@
         <h3>Password Confirmation Form</h3>
         <div class="form-container">
           <form id="passwordForm">
+            <input name="username" value="demo_user" style="display: none" />
+
             <div class="form-group">
               <label for="password">Password:</label>
               <input
@@ -113,6 +115,7 @@
                 required
                 minlength="6"
                 placeholder="Enter your password"
+                autocomplete="new-password"
               />
             </div>
 
@@ -125,6 +128,7 @@
                 required
                 data-same-as="#password"
                 placeholder="Confirm your password"
+                autocomplete="new-password"
               />
             </div>
 
@@ -189,21 +193,29 @@
     </div>
 
     <script type="module">
-      import { installCustomConstraintValidation } from "../custom_constraint_validation.js";
-      import { SAME_AS_CONSTRAINT } from "../constraints/same_as_constraint.js";
+      import {
+        installCustomConstraintValidation,
+        forwardActionRequested,
+      } from "@jsenv/navi";
 
       // Install validation on the form and its inputs
       const form = document.getElementById("passwordForm");
       const passwordInput = document.getElementById("password");
       const confirmPasswordInput = document.getElementById("confirmPassword");
       const successMessage = document.getElementById("successMessage");
+      const submitButton = form.querySelector("button");
 
       // Install custom constraint validation on the form
-      const formValidation = installCustomConstraintValidation(form);
-
-      // Install validation on inputs and register the same_as constraint
+      installCustomConstraintValidation(form);
       installCustomConstraintValidation(passwordInput);
       installCustomConstraintValidation(confirmPasswordInput);
+      installCustomConstraintValidation(submitButton);
+
+      form.addEventListener("actionrequested", (e) => {
+        forwardActionRequested(e, () => {
+          // noop
+        });
+      });
 
       // Handle form submission
       form.addEventListener("action", (event) => {
@@ -236,10 +248,6 @@
       confirmPasswordInput.addEventListener("input", () => {
         console.log("Confirm password value:", confirmPasswordInput.value);
       });
-
-      console.log("Same As Constraint Demo initialized");
-      console.log("Form validation interface:", formValidation);
-      console.log("SAME_AS_CONSTRAINT:", SAME_AS_CONSTRAINT);
     </script>
   </body>
 </html>
