@@ -8,7 +8,7 @@ import {
 
 import { getActionPrivateProperties } from "../../action_private_properties.js";
 import { useActionStatus } from "../../use_action_status.js";
-import { requestAction } from "../../validation/custom_constraint_validation.js";
+import { forwardActionRequested } from "../../validation/custom_constraint_validation.js";
 import { useConstraints } from "../../validation/hooks/use_constraints.js";
 import { FormActionContext } from "../action_execution/form_context.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
@@ -285,7 +285,6 @@ const ButtonWithAction = forwardRef((props, ref) => {
   const {
     action,
     loading,
-    onClick,
     actionErrorEffect,
     onActionPrevented,
     onActionStart,
@@ -302,22 +301,16 @@ const ButtonWithAction = forwardRef((props, ref) => {
     errorEffect: actionErrorEffect,
   });
 
+  const innerLoading = loading || actionLoading;
+
   useActionEvents(innerRef, {
     onPrevented: onActionPrevented,
+    onRequested: (e) => forwardActionRequested(e, boundAction),
     onAction: executeAction,
     onStart: onActionStart,
     onError: onActionError,
     onEnd: onActionEnd,
   });
-  const handleClick = (event) => {
-    event.preventDefault();
-    const button = innerRef.current;
-    requestAction(button, boundAction, {
-      actionOrigin: "action_prop",
-      event,
-    });
-  };
-  const innerLoading = loading || actionLoading;
 
   return (
     <ButtonBasic
@@ -326,10 +319,6 @@ const ButtonWithAction = forwardRef((props, ref) => {
       {...rest}
       ref={innerRef}
       loading={innerLoading}
-      onClick={(event) => {
-        handleClick(event);
-        onClick?.(event);
-      }}
     >
       {children}
     </ButtonBasic>
@@ -374,7 +363,6 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
     action,
     loading,
     children,
-    onClick,
     onActionPrevented,
     onActionStart,
     onActionAbort,
@@ -431,16 +419,8 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
       ref={innerRef}
       type={type}
       loading={innerLoading}
-      onClick={(event) => {
-        const button = innerRef.current;
-        const form = button.form;
-        event.preventDefault();
-        requestAction(form, actionBoundToFormParams, {
-          actionOrigin: "action_prop",
-          event,
-          requester: button,
-        });
-        onClick?.(event);
+      onactionrequested={(e) => {
+        forwardActionRequested(e, actionBoundToFormParams, e.target.form);
       }}
     >
       {children}

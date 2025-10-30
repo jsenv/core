@@ -7,6 +7,7 @@ export const useFormEvents = (
   elementRef,
   {
     onFormReset,
+    onFormActionRequested,
     onFormActionPrevented,
     onFormActionStart,
     onFormActionAbort,
@@ -15,6 +16,7 @@ export const useFormEvents = (
   },
 ) => {
   onFormReset = useStableCallback(onFormReset);
+  onFormActionRequested = useStableCallback(onFormActionRequested);
   onFormActionPrevented = useStableCallback(onFormActionPrevented);
   onFormActionStart = useStableCallback(onFormActionStart);
   onFormActionAbort = useStableCallback(onFormActionAbort);
@@ -38,6 +40,7 @@ export const useFormEvents = (
     }
     return addManyEventListeners(form, {
       reset: onFormReset,
+      actionrequested: onFormActionRequested,
       actionprevented: onFormActionPrevented,
       actionstart: onFormActionStart,
       actionabort: onFormActionAbort,
@@ -46,6 +49,7 @@ export const useFormEvents = (
     });
   }, [
     onFormReset,
+    onFormActionRequested,
     onFormActionPrevented,
     onFormActionStart,
     onFormActionAbort,

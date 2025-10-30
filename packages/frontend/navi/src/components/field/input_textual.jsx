@@ -19,14 +19,13 @@
 import { forwardRef } from "preact/compat";
 import {
   useContext,
-  useEffect,
   useImperativeHandle,
   useLayoutEffect,
   useRef,
 } from "preact/hooks";
 
 import { useActionStatus } from "../../use_action_status.js";
-import { requestAction } from "../../validation/custom_constraint_validation.js";
+import { forwardActionRequested } from "../../validation/custom_constraint_validation.js";
 import { useConstraints } from "../../validation/hooks/use_constraints.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useActionBoundToOneParam } from "../action_execution/use_action.js";
@@ -274,8 +273,6 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     cancelOnBlurInvalid,
     cancelOnEscape,
     actionErrorEffect,
-    onInput,
-    onKeyDown,
     ...rest
   } = props;
   const innerRef = useRef(null);
@@ -284,21 +281,6 @@ const InputTextualWithAction = forwardRef((props, ref) => {
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
-  });
-  const valueAtInteractionRef = useRef(null);
-
-  useOnInputChange(innerRef, (e) => {
-    if (
-      valueAtInteractionRef.current !== null &&
-      e.target.value === valueAtInteractionRef.current
-    ) {
-      valueAtInteractionRef.current = null;
-      return;
-    }
-    requestAction(e.target, boundAction, {
-      actionOrigin: "action_prop",
-      event: e,
-    });
   });
   // here updating the input won't call the associated action
   // (user have to blur or press enter for this to happen)
@@ -322,16 +304,10 @@ const InputTextualWithAction = forwardRef((props, ref) => {
         if (!cancelOnEscape) {
           return;
         }
-        /**
-         * Browser trigger a "change" event right after the escape is pressed
-         * if the input value has changed.
-         * We need to prevent the next change event otherwise we would request action when
-         * we actually want to cancel
-         */
-        valueAtInteractionRef.current = e.target.value;
       }
       onCancel?.(e, reason);
     },
+    onRequested: (e) => forwardActionRequested(e, boundAction),
     onPrevented: onActionPrevented,
     onAction: executeAction,
     onStart: onActionStart,
@@ -345,27 +321,6 @@ const InputTextualWithAction = forwardRef((props, ref) => {
       {...rest}
       ref={innerRef}
       loading={loading || actionLoading}
-      onInput={(e) => {
-        valueAtInteractionRef.current = null;
-        onInput?.(e);
-      }}
-      onKeyDown={(e) => {
-        if (e.key !== "Enter") {
-          return;
-        }
-        e.preventDefault();
-        /**
-         * Browser trigger a "change" event right after the enter is pressed
-         * if the input value has changed.
-         * We need to prevent the next change event otherwise we would request action twice
-         */
-        valueAtInteractionRef.current = e.target.value;
-        requestAction(e.target, boundAction, {
-          actionOrigin: "action_prop",
-          event: e,
-        });
-        onKeyDown?.(e);
-      }}
     />
   );
 });
@@ -380,73 +335,6 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
   return <InputTextualBasic {...rest} ref={ref} />;
 });
 
-const useOnInputChange = (inputRef, callback) => {
-  // we must use a custom event listener because preact bind onChange to onInput for compat with react
-  useEffect(() => {
-    const input = inputRef.current;
-    input.addEventListener("change", callback);
-    return () => {
-      input.removeEventListener("change", callback);
-    };
-  }, [callback]);
-
-  // Handle programmatic value changes that don't trigger browser change events
-  //
-  // Problem: When input values are set programmatically (not by user typing),
-  // browsers don't fire the 'change' event. However, our application logic
-  // still needs to detect these changes.
-  //
-  // Example scenario:
-  // 1. User starts editing (letter key pressed, value set programmatically)
-  // 2. User doesn't type anything additional (this is the key part)
-  // 3. User clicks outside to finish editing
-  // 4. Without this code, no change event would fire despite the fact that the input value did change from its original state
-  //
-  // This distinction is crucial because:
-  //
-  // - If the user typed additional text after the initial programmatic value,
-  //   the browser would fire change events normally
-  // - But when they don't type anything else, the browser considers it as "no user interaction"
-  //   even though the programmatic initial value represents a meaningful change
-  const valueAtStartRef = useRef();
-  const interactedRef = useRef(false);
-  useLayoutEffect(() => {
-    const input = inputRef.current;
-    valueAtStartRef.current = input.value;
-
-    const onfocus = () => {
-      interactedRef.current = false;
-      valueAtStartRef.current = input.value;
-    };
-    const oninput = (e) => {
-      if (!e.isTrusted) {
-        // non trusted "input" events will be ignored by the browser when deciding to fire "change" event
-        // we ignore them too
-        return;
-      }
-      interactedRef.current = true;
-    };
-    const onblur = (e) => {
-      if (interactedRef.current) {
-        return;
-      }
-      if (valueAtStartRef.current === input.value) {
-        return;
-      }
-      callback(e);
-    };
-
-    input.addEventListener("focus", onfocus);
-    input.addEventListener("input", oninput);
-    input.addEventListener("blur", onblur);
-
-    return () => {
-      input.removeEventListener("focus", onfocus);
-      input.removeEventListener("input", oninput);
-      input.removeEventListener("blur", onblur);
-    };
-  }, []);
-};
 // As explained in https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/datetime-local#setting_timezones
 // datetime-local does not support timezones
 const convertToLocalTimezone = (dateTimeString) => {

@@ -55,6 +55,7 @@ import {
 } from "./constraints/native_constraints.js";
 import { READONLY_CONSTRAINT } from "./constraints/readonly_constraint.js";
 import { SAME_AS_CONSTRAINT } from "./constraints/same_as_constraint.js";
+import { listenInputChange } from "./input_change_effect.js";
 
 let debug = false;
 
@@ -189,6 +190,15 @@ export const requestAction = (
   }
   elementForDispatch.dispatchEvent(actionCustomEvent);
   return true;
+};
+
+export const forwardActionRequested = (e, action, target = e.target) => {
+  requestAction(target, action, {
+    actionOrigin: e.detail?.actionOrigin || "action_prop",
+    event: e.detail?.event || e,
+    requester: e.detail?.requester,
+    meta: e.detail?.meta,
+  });
 };
 
 export const closeValidationMessage = (element, reason) => {
@@ -485,10 +495,9 @@ export const installCustomConstraintValidation = (
     });
   }
 
-  request_submit_via_enter: {
+  request_on_enter: {
     const onkeydown = (keydownEvent) => {
-      const { form } = element;
-      if (!form) {
+      if (keydownEvent.defaultPrevented) {
         return;
       }
       if (element.type !== "INPUT") {
@@ -497,12 +506,24 @@ export const installCustomConstraintValidation = (
       if (keydownEvent.key !== "Enter") {
         return;
       }
-      const formSubmitButton = form.querySelector(
-        `button[type="submit"], input[type="submit"], input[type="image"]`,
-      );
-      dispatchRequestSubmitCustomEvent(form, {
+      if (element.hasAttribute("data-action")) {
+        if (wouldKeydownSubmitForm(keydownEvent)) {
+          keydownEvent.preventDefault();
+        }
+        dispatchRequestActionCustomEvent(element, {
+          event: keydownEvent,
+          requester: element,
+        });
+        return;
+      }
+      const { form } = element;
+      if (!form) {
+        return;
+      }
+      keydownEvent.preventDefault();
+      dispatchRequestActionCustomEvent(element, {
         event: keydownEvent,
-        submitter: formSubmitButton || element,
+        requester: getFirstButtonSubmittingForm(form) || element,
       });
     };
     element.addEventListener("keydown", onkeydown);
@@ -511,40 +532,64 @@ export const installCustomConstraintValidation = (
     });
   }
 
-  request_submit_via_click: {
+  request_on_button_click: {
     const onclick = (clickEvent) => {
-      const { form } = element;
-      if (!form) {
+      if (clickEvent.defaultPrevented) {
         return;
       }
       if (element.tagName !== "BUTTON") {
         return;
       }
-      const button = element;
-      const wouldSubmitFormByType =
-        button.type === "submit" || button.type === "image";
-      let wouldSubmitForm = wouldSubmitFormByType;
-      if (!wouldSubmitForm && !button.type) {
-        const formSubmitButton = form.querySelector(
-          `button[type="submit"], input[type="submit"], input[type="image"]`,
-        );
-        const wouldSubmitFormBecauseSingleButtonWithoutType = !formSubmitButton;
-        wouldSubmitForm = wouldSubmitFormBecauseSingleButtonWithoutType;
-      }
-      if (!wouldSubmitForm) {
-        if (button.hasAttribute("data-readonly")) {
+      if (element.hasAttribute("data-action")) {
+        if (wouldClickSubmitForm(clickEvent)) {
           clickEvent.preventDefault();
         }
+        dispatchRequestActionCustomEvent(element, {
+          event: clickEvent,
+          requester: element,
+        });
         return;
       }
-      dispatchRequestSubmitCustomEvent(form, {
+      const { form } = element;
+      if (!form) {
+        return;
+      }
+      if (wouldClickSubmitForm(clickEvent)) {
+        clickEvent.preventDefault();
+      }
+      dispatchRequestActionCustomEvent(form, {
         event: clickEvent,
-        submitter: button,
+        requester: element,
       });
     };
     element.addEventListener("click", onclick);
     addTeardown(() => {
       element.removeEventListener("click", onclick);
+    });
+  }
+
+  request_on_input_change: {
+    const isInput =
+      element.tagName === "INPUT" || element.tagName === "TEXTAREA";
+    if (!isInput) {
+      break request_on_input_change;
+    }
+    listenInputChange(element, (e) => {
+      if (element.hasAttribute("data-action")) {
+        dispatchRequestActionCustomEvent(element, {
+          event: e,
+          requester: element,
+        });
+        return;
+      }
+      const { form } = element;
+      if (!form) {
+        return;
+      }
+      dispatchRequestActionCustomEvent(form, {
+        event: e,
+        requester: element,
+      });
     });
   }
 
@@ -594,7 +639,11 @@ export const installCustomConstraintValidation = (
   cancel_on_blur: {
     const onblur = () => {
       if (element.value === "") {
-        dispatchCancelCustomEvent({ detail: { reason: "blur_empty" } });
+        dispatchCancelCustomEvent({
+          detail: {
+            reason: "blur_empty",
+          },
+        });
         return;
       }
       // if we have failed constraint, we cancel too
@@ -617,21 +666,74 @@ export const installCustomConstraintValidation = (
   return validationInterface;
 };
 
-const dispatchRequestSubmitCustomEvent = (form, { event, submitter }) => {
-  const requestSubmitCustomEvent = new CustomEvent("requestsubmit", {
+const wouldClickSubmitForm = (clickEvent) => {
+  if (clickEvent.defaultPrevented) {
+    return false;
+  }
+  const clickTarget = clickEvent.target;
+  const { form } = clickTarget;
+  if (!form) {
+    return false;
+  }
+  const button = clickTarget.closest("button");
+  if (!button) {
+    return false;
+  }
+  const wouldSubmitFormByType =
+    button.type === "submit" || button.type === "image";
+  if (wouldSubmitFormByType) {
+    return true;
+  }
+  if (button.type) {
+    return false;
+  }
+  if (getFirstButtonSubmittingForm(form)) {
+    // an other button is explicitly submitting the form, this one would not submit it
+    return false;
+  }
+  // this is the only button inside the form without type attribute, so it defaults to type="submit"
+  return true;
+};
+const getFirstButtonSubmittingForm = (form) => {
+  return form.querySelector(
+    `button[type="submit"], input[type="submit"], input[type="image"]`,
+  );
+};
+
+const wouldKeydownSubmitForm = (keydownEvent) => {
+  if (keydownEvent.defaultPrevented) {
+    return false;
+  }
+  const keydownTarget = keydownEvent.target;
+  const { form } = keydownTarget;
+  if (!form) {
+    return false;
+  }
+  if (keydownEvent.key !== "Enter") {
+    return false;
+  }
+  const isTextInput =
+    keydownTarget.tagName === "INPUT" || keydownTarget.tagName === "TEXTAREA";
+  if (!isTextInput) {
+    return false;
+  }
+  return true;
+};
+
+const dispatchRequestActionCustomEvent = (form, { event, requester }) => {
+  const requestActionCustomEvent = new CustomEvent("requestaction", {
     cancelable: true,
     detail: {
       event,
-      submitter,
+      requester,
     },
   });
-  form.dispatchEvent(requestSubmitCustomEvent);
-  if (requestSubmitCustomEvent.defaultPrevented) {
+  form.dispatchEvent(requestActionCustomEvent);
+  if (requestActionCustomEvent.defaultPrevented) {
     // prevent the native <form> submission done by the browser after "enter" inside a <form>
     event.preventDefault();
   }
 };
-
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
 const requestSubmit = HTMLFormElement.prototype.requestSubmit;
 HTMLFormElement.prototype.requestSubmit = function (submitter) {
@@ -643,22 +745,28 @@ HTMLFormElement.prototype.requestSubmit = function (submitter) {
   }
 
   const programmaticEvent = new CustomEvent("programmatic_requestsubmit", {
+    cancelable: true,
     detail: {
       submitter,
     },
   });
-  dispatchRequestSubmitCustomEvent(form, {
+
+  dispatchRequestActionCustomEvent(form, {
     event: programmaticEvent,
-    submitter,
+    requester: submitter,
   });
-  if (programmaticEvent.defaultPrevented) {
-    // do not call the native requestSubmit that would trigger the native form submission and cause one of thw two:
-    // - Display the native browser validation message if our implementation if not 100% perfectly aligned with the browser
-    // - More importantly would let browser actually submit the form because all is valid which we don't want: we want
-    //   to go trough our action events system.
-    return;
-  }
-  requestSubmit.call(this, submitter);
+
+  // When all fields are valid calling the native requestSubmit would let browser go through the
+  // standard form validation steps leading to form submission.
+  // We don't want that because we have our own action system to handle forms
+  // If we did that the form submission would happen in parallel of our action system
+  // and because we listen to "submit" event to dispatch "action" event
+  // we would end up with two actions being executed.
+  //
+  // In case we have discrepencies in our implementation compared to the browser standard
+  // this also prevent the native validation message to show up.
+
+  // requestSubmit.call(this, submitter);
 };
 
 // const submit = HTMLFormElement.prototype.submit;

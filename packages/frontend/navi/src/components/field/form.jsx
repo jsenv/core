@@ -16,7 +16,7 @@
 import { forwardRef } from "preact/compat";
 import { useContext, useImperativeHandle, useMemo, useRef } from "preact/hooks";
 
-import { requestAction } from "../../validation/custom_constraint_validation.js";
+import { forwardActionRequested } from "../../validation/custom_constraint_validation.js";
 import { useConstraints } from "../../validation/hooks/use_constraints.js";
 import {
   FormActionContext,
@@ -150,13 +150,7 @@ const FormWithAction = forwardRef((props, ref) => {
   useActionEvents(innerRef, {
     onPrevented: onActionPrevented,
     onRequested: (e) => {
-      const form = innerRef.current;
-      requestAction(form, actionBoundToUIState, {
-        actionOrigin: e.detail?.actionOrigin,
-        event: e.detail?.event || e,
-        requester: e.detail?.requester,
-        meta: e.detail?.meta,
-      });
+      forwardActionRequested(e, actionBoundToUIState);
     },
     onAction: (e) => {
       const form = innerRef.current;
@@ -194,19 +188,6 @@ const FormWithAction = forwardRef((props, ref) => {
       {...rest}
       ref={innerRef}
       loading={innerLoading}
-      onrequestsubmit={(e) => {
-        // prevent "submit" event that would be dispatched by the browser after form.requestSubmit()
-        // we MUST do this to prevent the form submission
-        e.preventDefault();
-        requestAction(e.target, actionBoundToUIState, {
-          actionOrigin: "action_prop",
-          event: e.detail.event || e,
-          requester: e.detail.submitter,
-          meta: {
-            isSubmit: true,
-          },
-        });
-      }}
     >
       <FormActionContext.Provider value={actionBoundToUIState}>
         <LoadingElementContext.Provider value={formActionRequester}>

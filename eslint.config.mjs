@@ -26,6 +26,10 @@ export default [
   {
     rules: {
       "no-debugger": ["off"],
+      "jsenv/no-unknown-params": [
+        "warn",
+        { maxImportDepth: 2, reportAllUnknownParams: true },
+      ],
     },
   },
   {
