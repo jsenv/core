@@ -8,7 +8,6 @@ import {
 
 import { useConstraints } from "../../validation/hooks/use_constraints.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import { useLayoutStyle } from "../layout/use_layout_style.js";
 import {
   LoadableInlineElement,
   LoaderBackground,
@@ -363,7 +362,7 @@ const NaviRadio = ({
   accentColor,
   readOnly,
   disabled,
-  style,
+
   children,
   ...rest
 }) => {
@@ -372,18 +371,16 @@ const NaviRadio = ({
     return initCustomField(ref.current, inputRef.current);
   }, []);
 
-  const { all } = useLayoutStyle(rest);
-  const innerStyle = withPropsStyle(
-    {
-      ...all,
+  const [remainingProps, innerStyle] = withPropsStyle(rest, {
+    base: {
       ...(accentColor ? { "--accent-color": accentColor } : {}),
     },
-    style,
-  );
+    layout: true,
+  });
 
   return (
     <span
-      {...rest}
+      {...remainingProps}
       ref={ref}
       className="navi_radio"
       style={innerStyle}

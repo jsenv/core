@@ -13,7 +13,6 @@ import { useConstraints } from "../../validation/hooks/use_constraints.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
-import { useLayoutStyle } from "../layout/use_layout_style.js";
 import {
   LoadableInlineElement,
   LoaderBackground,
@@ -313,7 +312,6 @@ const NaviCheckbox = ({
   readOnly,
   disabled,
   inputRef,
-  style,
   children,
   ...rest
 }) => {
@@ -333,18 +331,16 @@ const NaviCheckbox = ({
     return initCustomField(ref.current, inputRef.current);
   }, []);
 
-  const { all } = useLayoutStyle(rest);
-  const innerStyle = withPropsStyle(
-    {
-      ...all,
+  const [remainingProps, innerStyle] = withPropsStyle(rest, {
+    base: {
       ...(accentColor ? { "--accent-color": accentColor } : {}),
     },
-    style,
-  );
+    layout: true,
+  });
 
   return (
     <div
-      {...rest}
+      {...remainingProps}
       ref={ref}
       className="navi_checkbox"
       style={innerStyle}

@@ -1,19 +1,12 @@
 import { withPropsStyle } from "../props_composition/with_props_style.js";
-import { useLayoutStyle } from "./use_layout_style.js";
 
-export const Spacing = ({ style, children, ...rest }) => {
-  const { padding, margin } = useLayoutStyle(rest);
+export const Spacing = ({ children, ...rest }) => {
+  const [remainingProps, innerStyle] = withPropsStyle(rest, {
+    spacing: true,
+  });
+
   return (
-    <div
-      {...rest}
-      style={withPropsStyle(
-        {
-          ...margin,
-          ...padding,
-        },
-        style,
-      )}
-    >
+    <div {...remainingProps} style={innerStyle}>
       {children}
     </div>
   );

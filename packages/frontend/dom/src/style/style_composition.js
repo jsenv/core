@@ -33,6 +33,29 @@ export const mergeStyles = (stylesA, stylesB, context = "js") => {
   return result;
 };
 
+export const appendStyles = (
+  stylesAObject,
+  stylesBNormalized,
+  context = "js",
+) => {
+  const aKeys = Object.keys(stylesAObject);
+  const bKeys = Object.keys(stylesBNormalized);
+  for (const bKey of bKeys) {
+    const aHasKey = aKeys.includes(bKey);
+    if (aHasKey) {
+      stylesAObject[bKey] = mergeOneStyle(
+        stylesAObject[bKey],
+        stylesBNormalized[bKey],
+        bKey,
+        context,
+      );
+    } else {
+      stylesAObject[bKey] = stylesBNormalized[bKey];
+    }
+  }
+  return stylesAObject;
+};
+
 // Merge a single style property value with an existing value
 export const mergeOneStyle = (
   existingValue,

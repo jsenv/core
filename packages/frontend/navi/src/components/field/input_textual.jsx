@@ -30,7 +30,6 @@ import { useConstraints } from "../../validation/hooks/use_constraints.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
-import { useLayoutStyle } from "../layout/use_layout_style.js";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { withPropsClassName } from "../props_composition/with_props_class_name.js";
 import { withPropsStyle } from "../props_composition/with_props_style.js";
@@ -172,7 +171,6 @@ const InputTextualBasic = forwardRef((props, ref) => {
     appearance = "navi",
     accentColor,
     className,
-    style,
 
     ...rest
   } = props;
@@ -198,14 +196,24 @@ const InputTextualBasic = forwardRef((props, ref) => {
     appearance === "navi" ? "navi_input" : undefined,
     className,
   );
-  const { margin, padding, alignment, expansion } = useLayoutStyle(rest);
-  const innerStyle = withPropsStyle(padding, style);
+  const [remainingProps, wrapperStyle, inputStyle] = withPropsStyle(
+    rest,
+    {
+      base: {
+        "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
+      },
+      layout: true,
+    },
+    {
+      spacing: true,
+    },
+  );
   const inputTextual = (
     <input
-      {...rest}
+      {...remainingProps}
       ref={innerRef}
       className={innerClassName}
-      style={innerStyle}
+      style={inputStyle}
       type={type}
       data-value={uiState}
       value={innerValue}
@@ -246,12 +254,7 @@ const InputTextualBasic = forwardRef((props, ref) => {
   return (
     <LoadableInlineElement
       loading={innerLoading}
-      style={{
-        ...margin,
-        ...alignment,
-        ...expansion,
-        "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
-      }}
+      style={wrapperStyle}
       color="var(--accent-color)"
       inset={-1}
     >

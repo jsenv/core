@@ -1,3 +1,4 @@
+/* eslint-disable jsenv/no-unknown-params */
 import { forwardRef } from "preact/compat";
 import {
   useContext,
@@ -12,7 +13,6 @@ import { useConstraints } from "../../validation/hooks/use_constraints.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useRequestedActionStatus } from "../field/use_action_events.js";
 import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
-import { useLayoutStyle } from "../layout/use_layout_style.js";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { withPropsClassName } from "../props_composition/with_props_class_name.js";
 import { withPropsStyle } from "../props_composition/with_props_style.js";
@@ -20,7 +20,6 @@ import {
   SelectionContext,
   useSelectableElement,
 } from "../selection/selection.jsx";
-import { useTypographyStyle } from "../text/text.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 
 /*
@@ -104,7 +103,6 @@ const LinkPlain = forwardRef((props, ref) => {
 
     // visual
     className,
-    style,
     ...rest
   } = props;
   const innerRef = useRef();
@@ -117,14 +115,10 @@ const LinkPlain = forwardRef((props, ref) => {
   useDimColorWhen(innerRef, shouldDimColor);
 
   const innerClassName = withPropsClassName("navi_link", className);
-  const { all } = useLayoutStyle(rest);
-  const innerStyle = withPropsStyle(
-    {
-      ...all,
-      ...useTypographyStyle(rest),
-    },
-    style,
-  );
+  const [remainingProps, innerStyle] = withPropsStyle(rest, {
+    layout: true,
+    typo: true,
+  });
 
   return (
     <LoadableInlineElement
@@ -132,7 +126,7 @@ const LinkPlain = forwardRef((props, ref) => {
       color="light-dark(#355fcc, #3b82f6)"
     >
       <a
-        {...rest}
+        {...remainingProps}
         ref={innerRef}
         href={href}
         className={innerClassName}

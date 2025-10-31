@@ -37,21 +37,21 @@ import.meta.css = /* css */ `
 export const FontSizedSvg = ({
   width = "1em",
   height = "1em",
-  style,
   children,
-  ...props
+  ...rest
 }) => {
+  const [remainingProps, innerStyle] = withPropsStyle(rest, {
+    base: {
+      width: width === "1em" ? undefined : width,
+      height: height === "1em" ? undefined : height,
+    },
+  });
+
   return (
     <span
-      {...props}
+      {...remainingProps}
       className="navi_font_sized_svg"
-      style={withPropsStyle(
-        {
-          width: width === "1em" ? undefined : width,
-          height: height === "1em" ? undefined : height,
-        },
-        style,
-      )}
+      style={innerStyle}
     >
       {children}
     </span>
