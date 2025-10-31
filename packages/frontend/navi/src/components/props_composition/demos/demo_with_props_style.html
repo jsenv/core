@@ -20,10 +20,11 @@
       import { render } from "preact";
       import { withPropsStyle } from "../with_props_style.js";
 
-      const Button = ({ children, ...rest }) => {
+      const Button = ({ children, backgroundColor, ...rest }) => {
         const [remainingProps, innerStyle] = withPropsStyle(rest, {
           base: {
-            backgroundColor: "var(--background-color, #f8f9fa)",
+            "--background-color": backgroundColor,
+            "backgroundColor": "var(--background-color, #f8f9fa)",
           },
         });
         return (
@@ -42,6 +43,7 @@
               <h2>1. Default Button</h2>
               <div>
                 <Button>Default</Button>
+                <Button backgroundColor="red">Default</Button>
               </div>
             </section>
 

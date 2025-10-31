@@ -333,7 +333,7 @@ const NaviCheckbox = ({
 
   const [remainingProps, innerStyle] = withPropsStyle(rest, {
     base: {
-      ...(accentColor ? { "--accent-color": accentColor } : {}),
+      "--accent-color": accentColor,
     },
     layout: true,
   });
