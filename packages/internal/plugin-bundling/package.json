@@ -31,6 +31,7 @@
     "rollup": "4.52.5"
   },
   "devDependencies": {
+    "@jsenv/filesystem": "../../tooling/filesystem",
     "@jsenv/snapshot": "../../tooling/snapshot"
   },
   "peerDependencies": {
