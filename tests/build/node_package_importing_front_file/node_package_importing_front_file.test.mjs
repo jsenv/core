@@ -7,11 +7,13 @@ const run = async () => {
     buildDirectoryUrl: import.meta.resolve("./build/"),
     entryPoints: {
       "./index.js": {
+        buildRelativeUrl: "./index_after_build.js",
         mode: "package",
         runtimeCompat: { node: "20.0" },
       },
       "./client/file.js": {
-        runtimeCompat: { chrome: "90.0" },
+        buildRelativeUrl: "./client/dir/file.js",
+        runtimeCompat: { chrome: "89" },
       },
     },
   });
