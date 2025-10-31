@@ -595,14 +595,6 @@ export const installCustomConstraintValidation = (
         });
         return;
       }
-      const { form } = element;
-      if (!form) {
-        return;
-      }
-      dispatchActionRequestedCustomEvent(form, {
-        event: e,
-        requester: element,
-      });
     });
     addTeardown(() => {
       stop();

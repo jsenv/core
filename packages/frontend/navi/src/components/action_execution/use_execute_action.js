@@ -28,9 +28,25 @@ export const useExecuteAction = (
 
   const validationMessageTargetRef = useRef(null);
   const addErrorMessage = (error) => {
-    const validationMessageTarget = validationMessageTargetRef.current;
-    const errorMapped = errorMapping ? errorMapping(error) : error;
-    addCustomMessage(validationMessageTarget, "action_error", errorMapped, {
+    let calloutAnchor = validationMessageTargetRef.current;
+    let message;
+    if (errorMapping) {
+      const errorMappingResult = errorMapping(error);
+      if (typeof errorMappingResult === "string") {
+        message = errorMappingResult;
+      } else if (Error.isError(errorMappingResult)) {
+        message = errorMappingResult;
+      } else if (
+        typeof errorMappingResult === "object" &&
+        errorMappingResult !== null
+      ) {
+        message = errorMappingResult.message || error.message;
+        calloutAnchor = errorMappingResult.target || calloutAnchor;
+      }
+    } else {
+      message = error;
+    }
+    addCustomMessage(calloutAnchor, "action_error", message, {
       // This error should not prevent <form> submission
       // so whenever user tries to submit the form the error is cleared
       // (Hitting enter key, clicking on submit button, etc. would allow to re-submit the form in error state)
