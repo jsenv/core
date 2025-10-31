@@ -151,6 +151,9 @@ const normalizeNumber = (value, context, unit, propertyName) => {
 
 // Normalize styles for DOM application
 export const normalizeStyles = (styles, context = "js") => {
+  if (!styles) {
+    return {};
+  }
   if (typeof styles === "string") {
     styles = parseStyleString(styles);
     return styles;

@@ -20,19 +20,18 @@
       import { render } from "preact";
       import { withPropsStyle } from "../with_props_style.js";
 
-      const Button = ({ style, children, ...rest }) => (
-        <button
-          style={withPropsStyle(
-            {
-              backgroundColor: "var(--background-color, #f8f9fa)",
-            },
-            style,
-          )}
-          {...rest}
-        >
-          {children}
-        </button>
-      );
+      const Button = ({ children, ...rest }) => {
+        const [remainingProps, innerStyle] = withPropsStyle(rest, {
+          base: {
+            backgroundColor: "var(--background-color, #f8f9fa)",
+          },
+        });
+        return (
+          <button style={innerStyle} {...remainingProps}>
+            {children}
+          </button>
+        );
+      };
 
       const Demo = () => {
         return (

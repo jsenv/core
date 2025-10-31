@@ -249,7 +249,9 @@ export const withPropsStyle = (
         : "none";
   }
   props_styles: {
-    propStyles = normalizeStyles(style, "css");
+    if (style) {
+      propStyles = normalizeStyles(style, "css");
+    }
   }
 
   const firstConfigStyle = {};
