@@ -1,0 +1,8 @@
+{
+  "name": "bar",
+  "private": true,
+  "main": "./bar.js",
+  "dependencies": {
+    "foo": "../foo"
+  }
+}

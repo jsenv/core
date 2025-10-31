@@ -6,7 +6,7 @@ const run = async ({ runtimeCompat, bundling }) => {
     sourceDirectoryUrl: import.meta.resolve("./client/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
     entryPoints: {
-      "./index.js": {
+      "./packages/bar/bar.js": {
         mode: "package",
         runtimeCompat,
         bundling,
