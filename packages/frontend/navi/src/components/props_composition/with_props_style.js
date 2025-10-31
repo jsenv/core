@@ -256,24 +256,22 @@ export const withPropsStyle = (
         typeof size === "string" ? typoSizes[size] || size : size;
       typoStyles.fontSize = sizeValue;
     }
-    if (thin === false && bold === false) {
-      typoStyles.fontWeight = "normal";
-    } else if (thin && bold === undefined) {
-      typoStyles.fontWeight = "thin";
-    } else if (bold) {
+    if (bold) {
       typoStyles.fontWeight = "bold";
+    } else if (thin) {
+      typoStyles.fontWeight = "thin";
     } else if (thin === false || bold === false) {
       typoStyles.fontWeight = "normal";
     }
-    if (italic === false) {
-      typoStyles.fontStyle = "normal";
-    } else if (italic) {
+    if (italic) {
       typoStyles.fontStyle = "italic";
+    } else if (italic === false) {
+      typoStyles.fontStyle = "normal";
     }
-    if (underline === false) {
-      typoStyles.textDecoration = "none";
-    } else if (underline) {
+    if (underline) {
       typoStyles.textDecoration = "underline";
+    } else if (underline === false) {
+      typoStyles.textDecoration = "none";
     }
     typoStyles.color = color;
   }
