@@ -2956,6 +2956,7 @@ const createKitchen = ({
   dev = false,
   build = false,
   runtimeCompat,
+  mode,
 
   ignore,
   ignoreProtocol = "remove",
@@ -3005,7 +3006,10 @@ const createKitchen = ({
   }
 
   if (packageDependencies === "auto") {
-    packageDependencies = build && nodeRuntimeEnabled ? "ignore" : "include";
+    packageDependencies =
+      build && (nodeRuntimeEnabled || mode === "package")
+        ? "ignore"
+        : "include";
   }
 
   const kitchen = {
@@ -7854,10 +7858,10 @@ const jsenvPluginNodeRuntime = ({ runtimeCompat }) => {
 
 const jsenvPluginImportMetaCss = () => {
   const importMetaCssClientFileUrl = import.meta.resolve(
-    "../js/import_meta_css.js",
+    "../client/import_meta_css/import_meta_css.js",
   );
   const importMetaCssBuildFileUrl = import.meta.resolve(
-    "../js/import_meta_css_build.js",
+    "../client/import_meta_css/import_meta_css_build.js",
   );
 
   return {
@@ -8890,7 +8894,7 @@ const jsenvPluginRibbon = ({
 
 
 const jsenvPluginDropToOpen = () => {
-  const clientFileUrl = import.meta.resolve("../js/drop_to_open.js");
+  const clientFileUrl = import.meta.resolve("../client/drop_to_open/drop_to_open.js");
   return {
     name: "jsenv:drop_to_open",
     appliesDuring: "dev",

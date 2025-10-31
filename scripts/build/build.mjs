@@ -53,6 +53,18 @@ await build({
       buildRelativeUrl: "./client/html_syntax_error/html_syntax_error.html",
       runtimeCompat: clientRuntimeCompat,
     },
+    "./src/plugins/drop_to_open/client/drop_to_open.js": {
+      buildRelativeUrl: "./client/drop_to_open/drop_to_open.js",
+      runtimeCompat: clientRuntimeCompat,
+    },
+    "./src/plugins/import_meta_css/client/import_meta_css.js": {
+      buildRelativeUrl: "./client/import_meta_css/import_meta_css.js",
+      runtimeCompat: clientRuntimeCompat,
+    },
+    "./src/plugins/import_meta_css/client/import_meta_css_build.js": {
+      buildRelativeUrl: "./client/import_meta_css/import_meta_css_build.js",
+      runtimeCompat: clientRuntimeCompat,
+    },
     "./src/plugins/import_meta_hot/client/import_meta_hot.js": {
       buildRelativeUrl: "./client/import_meta_hot/import_meta_hot.js",
       runtimeCompat: clientRuntimeCompat,
