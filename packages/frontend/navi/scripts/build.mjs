@@ -7,12 +7,10 @@ await build({
   entryPoints: {
     "./index.js": {
       buildRelativeUrl: "./jsenv_navi.js",
+      mode: "package",
       runtimeCompat: {
         chrome: "90",
       },
-      minification: false,
-      preserveComments: true, // JSDoc comments are useful when people use the built file as reference
-      versioning: false,
       ignore: {
         "file://**/node_modules/": true,
         "file://**/node_modules/@jsenv/": false,
