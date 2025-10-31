@@ -3387,7 +3387,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
             `no plugin has handled url during "fetchUrlContent" hook -> url will be ignored`,
             {
               "url": urlInfo.url,
-              "url reference trace": urlInfo.firstReference.trace.message,
+              "url reference trace": urlInfo.firstReference?.trace.message,
             },
           ),
         );
@@ -6908,6 +6908,10 @@ const jsenvPluginProtocolFile = ({
           return null;
         }
         const { firstReference } = urlInfo;
+        if (!firstReference) {
+          console.warn("No firstReference for", urlInfo.url);
+          return null;
+        }
         let { fsStat } = firstReference;
         if (!fsStat) {
           fsStat = readEntryStatSync(urlInfo.url, { nullIfNotFound: true });
@@ -6936,6 +6940,9 @@ const jsenvPluginProtocolFile = ({
           return null;
         }
         const { firstReference } = urlInfo;
+        if (!firstReference) {
+          return null;
+        }
         let { fsStat } = firstReference;
         if (!fsStat) {
           fsStat = readEntryStatSync(urlInfo.url, { nullIfNotFound: true });
