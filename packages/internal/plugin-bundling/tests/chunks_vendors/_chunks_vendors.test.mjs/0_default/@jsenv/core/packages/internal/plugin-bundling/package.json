@@ -1,0 +1,44 @@
+{
+  "name": "@jsenv/plugin-bundling",
+  "version": "2.10.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/related/plugin-bundling"
+  },
+  "license": "MIT",
+  "sideEffects": [
+    "./tests/chunks_vendors/snapshots/0_default/jsenv_plugin_bundling_node_modules.js",
+    "./tests/chunks_vendors/snapshots/1_vendors/vendors.js",
+    "./tests/chunks_vendors/build/jsenv_plugin_bundling_node_modules.js"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/main.js"
+    },
+    "./*": "./*"
+  },
+  "files": [
+    "/src/"
+  ],
+  "dependencies": {
+    "@jsenv/humanize": "1.6.0",
+    "@jsenv/node-esm-resolution": "1.2.8",
+    "@jsenv/sourcemap": "1.3.10",
+    "@jsenv/url-meta": "8.5.7",
+    "@jsenv/urls": "2.9.1",
+    "lightningcss": "1.30.2",
+    "rollup": "4.52.5"
+  },
+  "devDependencies": {
+    "@jsenv/filesystem": "../../tooling/filesystem",
+    "@jsenv/snapshot": "../../tooling/snapshot"
+  },
+  "peerDependencies": {
+    "@jsenv/core": "*"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

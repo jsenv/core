@@ -39,6 +39,7 @@ export const createKitchen = ({
   dev = false,
   build = false,
   runtimeCompat,
+  mode,
 
   ignore,
   ignoreProtocol = "remove",
@@ -88,7 +89,10 @@ export const createKitchen = ({
   }
 
   if (packageDependencies === "auto") {
-    packageDependencies = build && nodeRuntimeEnabled ? "ignore" : "include";
+    packageDependencies =
+      build && (nodeRuntimeEnabled || mode === "package")
+        ? "ignore"
+        : "include";
   }
 
   const kitchen = {

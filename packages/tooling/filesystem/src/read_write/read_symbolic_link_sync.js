@@ -9,7 +9,13 @@ import { assertAndNormalizeFileUrl } from "../path_and_url/file_url_validation.j
 
 export const readSymbolicLinkSync = (url) => {
   const symbolicLinkUrl = assertAndNormalizeFileUrl(url);
-  const resolvedPath = readlinkSync(new URL(symbolicLinkUrl));
+  const resolvedPath = readlinkSync(
+    new URL(
+      symbolicLinkUrl.endsWith("/")
+        ? symbolicLinkUrl.slice(0, -1)
+        : symbolicLinkUrl,
+    ),
+  );
   return isFileSystemPath(resolvedPath)
     ? fileSystemPathToUrl(resolvedPath)
     : resolvedPath.replace(/\\/g, "/"); // replace back slashes with slashes

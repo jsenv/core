@@ -13,8 +13,8 @@
     "email": "dmaillard06@gmail.com"
   },
   "sideEffects": [
-    "./dist/jsenv_navi.js",
-    "./src/navi_css_vars.js"
+    "./src/navi_css_vars.js",
+    "./dist/jsenv_navi.js"
   ],
   "type": "module",
   "exports": {
@@ -25,9 +25,7 @@
     "./*": "./*"
   },
   "files": [
-    "/dist/",
-    "/src/",
-    "/index.js"
+    "/dist/"
   ],
   "scripts": {
     "build": "node ./scripts/build.mjs",

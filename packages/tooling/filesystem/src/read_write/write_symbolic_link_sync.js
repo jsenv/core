@@ -28,9 +28,20 @@ export const writeSymbolicLinkSync = ({
   type,
   allowUseless = false,
   allowOverwrite = false,
+  throwWhenTargetNotFound = true,
 }) => {
   const fromUrl = assertAndNormalizeFileUrl(from);
   const toInfo = getToInfo(to, fromUrl);
+  if (throwWhenTargetNotFound) {
+    const toStats = readEntryStatSync(toInfo.url, {
+      nullIfNotFound: true,
+    });
+    if (toStats === null) {
+      throw new Error(
+        `symbolic link target not found: ${toInfo.url} (from: ${fromUrl})`,
+      );
+    }
+  }
   // Node.js doc at https://nodejs.org/api/fs.html#fssymlinktarget-path-type-callback
   // states the following:
   // "If the type argument is not set, Node.js will autodetect

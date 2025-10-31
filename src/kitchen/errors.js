@@ -303,6 +303,11 @@ const detailsFromFirstReference = (reference) => {
   ) {
     return {};
   }
+  if (referenceInProject.type === "entry_point") {
+    return {
+      "first reference": referenceInProject.trace.message,
+    };
+  }
   return {
     "first reference in project": `${referenceInProject.trace.url}:${referenceInProject.trace.line}:${referenceInProject.trace.column}`,
   };

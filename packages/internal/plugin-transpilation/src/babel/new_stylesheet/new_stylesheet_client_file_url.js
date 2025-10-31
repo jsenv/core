@@ -1,4 +1,3 @@
-export const newStylesheetClientFileUrl = new URL(
+export const newStylesheetClientFileUrl = import.meta.resolve(
   "./client/new_stylesheet.js",
-  import.meta.url,
-).href;
+);

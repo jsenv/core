@@ -1,57 +1,51 @@
 import { build } from "@jsenv/core";
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
-const test = async ({ name, ...params }) => {
-  const snapshotDirectoryUrl = new URL(`./snapshots/${name}/`, import.meta.url);
-  const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+const run = async ({ runtimeCompat, bundling }) => {
   await build({
-    logs: { level: "warn" },
     sourceDirectoryUrl: import.meta.resolve("./client/"),
-    buildDirectoryUrl: snapshotDirectoryUrl,
-    outDirectoryUrl: import.meta.resolve("./.jsenv/"),
+    buildDirectoryUrl: import.meta.resolve("./build/"),
     entryPoints: {
       "./main.html": {
-        ...params,
+        minification: false,
+        runtimeCompat,
+        bundling,
       },
     },
   });
-  directorySnapshot.compare();
 };
 
-await test({
-  name: "0_default",
-  runtimeCompat: { chrome: "90" },
-  minification: false,
-});
-
-await test({
-  name: "1_vendors",
-  runtimeCompat: { chrome: "90" },
-  bundling: {
-    js_module: {
-      chunks: {
-        vendors: {
-          "file://**/node_modules/": true,
-          "./a.js": true,
+await snapshotBuildTests(import.meta.url, ({ test }) => {
+  test("0_default", () =>
+    run({
+      runtimeCompat: { chrome: "90" },
+    }));
+  test("1_vendors", () =>
+    run({
+      runtimeCompat: { chrome: "90" },
+      bundling: {
+        js_module: {
+          chunks: {
+            vendors: {
+              "file://**/node_modules/": true,
+              "./a.js": true,
+            },
+          },
         },
       },
-    },
-  },
-  minification: false,
-});
-
-await test({
-  name: "2_vendors_and_js_module_fallback",
-  runtimeCompat: { chrome: "88" },
-  bundling: {
-    js_module: {
-      chunks: {
-        vendors: {
-          "file://**/node_modules/": true,
-          "./a.js": true,
+    }));
+  test("2_vendors_and_js_module_fallback", () =>
+    run({
+      runtimeCompat: { chrome: "88" },
+      bundling: {
+        js_module: {
+          chunks: {
+            vendors: {
+              "file://**/node_modules/": true,
+              "./a.js": true,
+            },
+          },
         },
       },
-    },
-  },
-  minification: false,
+    }));
 });

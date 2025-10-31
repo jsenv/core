@@ -17,6 +17,15 @@
 
 This page explains how to use jsenv to build **packages** (libraries, utilities, etc.) rather than complete applications. Unlike building web applications covered in [C) Build](../c_build/c_build.md), package builds are designed to create reusable modules that can be consumed by other projects.
 
+## Package Mode
+
+When building packages, jsenv provides a special `mode: "package"` configuration that automatically sets appropriate defaults for package builds:
+
+- **No minification** - Keeps code readable for debugging and inspection
+- **No versioning** - Packages don't need cache-busting URLs
+- **Preserves comments** - Maintains JSDoc and other important comments
+- **Relative base URLs** - Uses `"./"` instead of `"/"` for better portability
+
 ## Package Build Types
 
 When building a package, you need to consider your target runtime environment:
@@ -43,6 +52,7 @@ await build({
   entryPoints: {
     "./index.js": {
       buildRelativeUrl: "./my-package.js",
+      mode: "package",
       // Exclude all node_modules
       ignore: {
         "file://**/node_modules/": true,
@@ -95,11 +105,10 @@ await build({
   entryPoints: {
     "./src/index.js": {
       buildRelativeUrl: "./index.js",
+      mode: "package",
       runtimeCompat: {
         node: "18.0.0", // Target minimum Node.js version
       },
-      minification: true,
-      bundling: true, // Bundle dependencies into single file
       ignore: {
         "file://**/node_modules/": true, // Exclude dependencies
       },
@@ -122,13 +131,13 @@ await build({
   entryPoints: {
     "./src/index.js": {
       buildRelativeUrl: "./browser.js",
+      mode: "package",
       runtimeCompat: {
         chrome: "64",
         edge: "79",
         firefox: "67",
         safari: "11.3",
       },
-      bundling: true,
       ignore: {
         "file://**/node_modules/": true,
       },
@@ -160,10 +169,10 @@ await build({
     // Node.js build
     "./src/index.js": {
       buildRelativeUrl: "./node.js",
+      mode: "package",
       runtimeCompat: {
         node: "18.0.0",
       },
-      format: "esm",
       ignore: {
         "file://**/node_modules/": true,
       },
@@ -171,6 +180,7 @@ await build({
     // Browser build
     "./src/index.js": {
       buildRelativeUrl: "./browser.js",
+      mode: "package",
       runtimeCompat: {
         chrome: "64",
         edge: "79",
@@ -207,21 +217,6 @@ Configure your package.json to support both environments:
 
 ## Advanced Package Configuration
 
-### Preserving Comments and JSDoc
-
-Useful for packages consumed by developers:
-
-```js
-entryPoints: {
-  "./src/index.js": {
-    buildRelativeUrl: "./index.js",
-    minification: false, // Keep readable
-    preserveComments: true, // Preserve JSDoc
-    versioning: false, // No cache busting for packages
-  },
-},
-```
-
 ### Conditional Builds
 
 Build different versions based on conditions:
@@ -232,8 +227,9 @@ const isProduction = process.env.NODE_ENV === "production";
 entryPoints: {
   "./src/index.js": {
     buildRelativeUrl: "./index.js",
-    minification: isProduction,
-    bundling: isProduction,
+    mode: "package", // Sets package-appropriate defaults
+    // Override defaults when needed
+    minification: isProduction ? true : false,
     sourceMap: !isProduction,
   },
 },

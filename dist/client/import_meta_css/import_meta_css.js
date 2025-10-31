@@ -1,14 +1,11 @@
-import "file:///Users/dmail/Documents/dev/jsenv/core/packages/internal/plugin-transpilation/src/babel/new_stylesheet/client/new_stylesheet.js";
-
-const installImportMetaCss = importMeta => {
+const installImportMetaCss = (importMeta) => {
   let cssText = "";
-  let stylesheet = new CSSStyleSheet({
-    baseUrl: importMeta.url
-  });
+  let stylesheet = new CSSStyleSheet({ baseUrl: importMeta.url });
   let adopted = false;
+
   const css = {
     toString: () => cssText,
-    update: value => {
+    update: (value) => {
       cssText = value;
       cssText += `
 /* sourceURL=${importMeta.url} */
@@ -17,17 +14,23 @@ const installImportMetaCss = importMeta => {
     },
     inject: () => {
       if (!adopted) {
-        document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
+        document.adoptedStyleSheets = [
+          ...document.adoptedStyleSheets,
+          stylesheet,
+        ];
         adopted = true;
       }
     },
     remove: () => {
       if (adopted) {
-        document.adoptedStyleSheets = document.adoptedStyleSheets.filter(s => s !== stylesheet);
+        document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
+          (s) => s !== stylesheet,
+        );
         adopted = false;
       }
-    }
+    },
   };
+
   Object.defineProperty(importMeta, "css", {
     get() {
       return css;
@@ -35,8 +38,9 @@ const installImportMetaCss = importMeta => {
     set(value) {
       css.update(value);
       css.inject();
-    }
+    },
   });
+
   return css.remove;
 };
 
