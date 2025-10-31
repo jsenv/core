@@ -1,3 +1,13 @@
+/**
+ *
+ * A investigere et faire
+ *
+ * - on veut pouvoir avoir plusieurs routes qui match
+ * - on veut pouvoir dire, si aucune autre route match idéalement
+ * - on veut surement qu'une route match peu importe les query params
+ *
+ */
+
 import { batch, computed, effect, signal } from "@preact/signals";
 import { createAction } from "../actions.js";
 import {
@@ -306,7 +316,10 @@ const createRoute = (urlPatternInput) => {
   };
   routePrivatePropertiesMap.set(route, routePrivateProperties);
 
-  const buildRelativeUrl = (params = {}) => {
+  const buildRelativeUrl = (
+    params = {},
+    { extraParamEffect = "inject_as_search_param" } = {},
+  ) => {
     let relativeUrl = urlPatternInput;
     let hasRawUrlPartWithInvalidChars = false;
 
@@ -322,12 +335,20 @@ const createRoute = (urlPatternInput) => {
       return encodeURIComponent(value);
     };
 
+    const keys = Object.keys(params);
+    const extraParamSet = new Set(keys);
+
     // Replace named parameters (:param and {param})
-    for (const key of Object.keys(params)) {
+    for (const key of keys) {
       const value = params[key];
       const encodedValue = encode(value);
+      const beforeReplace = relativeUrl;
       relativeUrl = relativeUrl.replace(`:${key}`, encodedValue);
       relativeUrl = relativeUrl.replace(`{${key}}`, encodedValue);
+      // If the URL changed, no need to inject this param
+      if (relativeUrl !== beforeReplace) {
+        extraParamSet.delete(key);
+      }
     }
 
     // Handle wildcards: if the pattern ends with /*? (optional wildcard)
@@ -341,10 +362,35 @@ const createRoute = (urlPatternInput) => {
       relativeUrl = relativeUrl.replace(/\*/g, () => {
         const paramKey = wildcardIndex.toString();
         const paramValue = params[paramKey];
+        if (paramValue) {
+          extraParamSet.delete(paramKey);
+        }
         const replacement = paramValue ? encode(paramValue) : "*";
         wildcardIndex++;
         return replacement;
       });
+    }
+
+    // Add remaining parameters as search params
+    if (extraParamSet.size > 0) {
+      if (extraParamEffect === "inject_as_search_param") {
+        const searchParams = new URLSearchParams();
+        for (const key of extraParamSet) {
+          const value = params[key];
+          if (value !== undefined && value !== null) {
+            searchParams.append(key, value);
+          }
+        }
+        const searchString = searchParams.toString();
+        if (searchString) {
+          relativeUrl += (relativeUrl.includes("?") ? "&" : "?") + searchString;
+        }
+      } else if (extraParamEffect === "warn") {
+        console.warn(
+          `Unknown parameters given to "${urlPatternInput}":`,
+          Array.from(extraParamSet),
+        );
+      }
     }
 
     return {
