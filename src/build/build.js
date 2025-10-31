@@ -903,6 +903,7 @@ export const build = async ({
 
 const entryPointDefaultParams = {
   buildRelativeUrl: undefined,
+  mode: undefined,
   runtimeCompat: defaultRuntimeCompat,
   plugins: [],
   mappings: undefined,
@@ -956,6 +957,7 @@ const prepareEntryPointBuild = async (
 ) => {
   let {
     buildRelativeUrl,
+    mode,
     runtimeCompat,
     plugins,
     mappings,
@@ -1030,7 +1032,7 @@ const prepareEntryPointBuild = async (
       assetsDirectory = `${assetsDirectory}/`;
     }
     if (entryPointParams.base === undefined) {
-      base = someEntryPointUseNode ? "./" : "/";
+      base = mode === "package" || someEntryPointUseNode ? "./" : "/";
     }
     if (entryPointParams.bundling === undefined) {
       bundling = true;
@@ -1039,13 +1041,21 @@ const prepareEntryPointBuild = async (
       bundling = {};
     }
     if (entryPointParams.minification === undefined) {
-      minification = !someEntryPointUseNode;
+      if (mode === "package" || someEntryPointUseNode) {
+        minification = false;
+      } else {
+        minification = true;
+      }
     }
     if (minification === true) {
       minification = {};
     }
     if (entryPointParams.versioning === undefined) {
-      versioning = !someEntryPointUseNode;
+      if (mode === "package" || someEntryPointUseNode) {
+        versioning = false;
+      } else {
+        versioning = true;
+      }
     }
     if (entryPointParams.versioningMethod === undefined) {
       versioningMethod = entryPointDefaultParams.versioningMethod;
@@ -1054,7 +1064,9 @@ const prepareEntryPointBuild = async (
       assetManifest = versioningMethod === "filename";
     }
     if (entryPointParams.preserveComments === undefined) {
-      preserveComments = someEntryPointUseNode;
+      if (mode === "package" || someEntryPointUseNode) {
+        preserveComments = true;
+      }
     }
   }
 
