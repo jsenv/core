@@ -84,6 +84,8 @@ export const withPropsStyle = (
     thin,
     italic,
     underline,
+    underlineStyle,
+    underlineColor,
     color,
     // props not related to styling
     ...remainingProps
@@ -272,6 +274,12 @@ export const withPropsStyle = (
       typoStyles.textDecoration = "underline";
     } else if (underline === false) {
       typoStyles.textDecoration = "none";
+    }
+    if (underlineStyle) {
+      typoStyles.textDecorationStyle = underlineStyle;
+    }
+    if (underlineColor) {
+      typoStyles.textDecorationColor = underlineColor;
     }
     typoStyles.color = color;
   }
