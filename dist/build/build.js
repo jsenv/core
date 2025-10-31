@@ -433,6 +433,11 @@ const detailsFromFirstReference = (reference) => {
   ) {
     return {};
   }
+  if (referenceInProject.type === "entry_point") {
+    return {
+      "first reference": referenceInProject.trace.message,
+    };
+  }
   return {
     "first reference in project": `${referenceInProject.trace.url}:${referenceInProject.trace.line}:${referenceInProject.trace.column}`,
   };
@@ -12306,6 +12311,11 @@ const prepareEntryPointBuild = async (
     if (entryPointParams.preserveComments === undefined) {
       if (mode === "package" || someEntryPointUseNode) {
         preserveComments = true;
+      }
+    }
+    if (entryPointParams.sourcemaps === undefined) {
+      if (mode === "package") {
+        sourcemaps = "file";
       }
     }
   }
