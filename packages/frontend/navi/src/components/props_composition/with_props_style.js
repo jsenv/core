@@ -79,11 +79,12 @@ export const withPropsStyle = (
     expandX = expand,
     expandY = expand,
     // typo props
-    color,
+    size,
     bold,
+    thin,
     italic,
     underline,
-    size,
+    color,
     // props not related to styling
     ...remainingProps
   } = props;
@@ -249,27 +250,31 @@ export const withPropsStyle = (
       break typo_styles;
     }
     typoStyles = {};
-    typoStyles.color = color;
-    typoStyles.fontWeight = bold
-      ? "bold"
-      : bold === undefined
-        ? undefined
-        : "normal";
-    typoStyles.fontStyle = italic
-      ? "italic"
-      : italic === undefined
-        ? undefined
-        : "normal";
+
     if (size) {
       const sizeValue =
         typeof size === "string" ? typoSizes[size] || size : size;
       typoStyles.fontSize = sizeValue;
     }
-    typoStyles.textDecoration = underline
-      ? "underline"
-      : underline === undefined
-        ? undefined
-        : "none";
+    if (thin === false) {
+      typoStyles.fontWeight = "normal";
+    }
+    if (bold === false) {
+      typoStyles.fontWeight = "normal";
+    } else if (bold) {
+      typoStyles.fontWeight = "bold";
+    }
+    if (italic === false) {
+      typoStyles.fontStyle = "normal";
+    } else if (italic) {
+      typoStyles.fontStyle = "italic";
+    }
+    if (underline === false) {
+      typoStyles.textDecoration = "none";
+    } else if (underline) {
+      typoStyles.textDecoration = "underline";
+    }
+    typoStyles.color = color;
   }
   props_styles: {
     if (!style && !hasRemainingConfig) {
