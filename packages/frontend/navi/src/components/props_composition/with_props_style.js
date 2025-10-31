@@ -88,15 +88,20 @@ export const withPropsStyle = (
     ...remainingProps
   } = props;
 
-  const marginStyles = {};
-  const paddingStyles = {};
-  const alignmentStyles = {};
-  const expansionStyles = {};
-  const typoStyles = {};
-  let propStyles = {};
+  const hasRemainingConfig = remainingConfig.length > 0;
+  let marginStyles;
+  let paddingStyles;
+  let alignmentStyles;
+  let expansionStyles;
+  let typoStyles;
+  let propStyles;
 
   spacing_styles: {
+    if (!spacing && !hasRemainingConfig) {
+      break spacing_styles;
+    }
     outer_spacing: {
+      marginStyles = {};
       if (margin !== undefined) {
         marginStyles.margin = margin;
       }
@@ -122,6 +127,7 @@ export const withPropsStyle = (
       }
     }
     inner_spacing: {
+      paddingStyles = {};
       if (padding !== undefined) {
         paddingStyles.padding = padding;
       }
@@ -148,6 +154,11 @@ export const withPropsStyle = (
     }
   }
   alignment_styles: {
+    if (!align && !hasRemainingConfig) {
+      break alignment_styles;
+    }
+    alignmentStyles = {};
+
     // flex
     if (flexDirection === "row") {
       // In row direction: alignX controls justify-content, alignY controls align-self
@@ -210,6 +221,10 @@ export const withPropsStyle = (
     }
   }
   expansion_styles: {
+    if (!expansion && !hasRemainingConfig) {
+      break expansion_styles;
+    }
+    expansionStyles = {};
     if (expandX) {
       if (flexDirection === "row") {
         expansionStyles.flexGrow = 1; // Grow horizontally in row
@@ -230,6 +245,10 @@ export const withPropsStyle = (
     }
   }
   typo_styles: {
+    if (!typo && !hasRemainingConfig) {
+      break typo_styles;
+    }
+    typoStyles = {};
     typoStyles.color = color;
     typoStyles.fontWeight = bold
       ? "bold"
@@ -249,9 +268,10 @@ export const withPropsStyle = (
         : "none";
   }
   props_styles: {
-    if (style) {
-      propStyles = normalizeStyles(style, "css");
+    if (!style && !hasRemainingConfig) {
+      break props_styles;
     }
+    propStyles = style ? normalizeStyles(style, "css") : {};
   }
 
   const firstConfigStyle = {};
