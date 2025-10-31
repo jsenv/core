@@ -1,4 +1,4 @@
-# [0_default](../../workspace_dep_chunk.test.mjs#L31)
+# [0_default](../../workspace_dep_chunk.test.mjs#L34)
 
 ```js
 run({
@@ -6,7 +6,7 @@ run({
 })
 ```
 
-# 1/2 write 2 files into "./build/packages/bar/"
+# 1/2 write 4 files into "./build/packages/bar/"
 
 see [./build/packages/bar/](./build/packages/bar/)
 

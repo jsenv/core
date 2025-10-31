@@ -1068,6 +1068,11 @@ const prepareEntryPointBuild = async (
         preserveComments = true;
       }
     }
+    if (entryPointParams.sourcemaps === undefined) {
+      if (mode === "package") {
+        sourcemaps = "file";
+      }
+    }
   }
 
   const buildOperation = Abort.startOperation();
