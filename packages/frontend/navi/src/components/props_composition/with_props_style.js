@@ -256,13 +256,14 @@ export const withPropsStyle = (
         typeof size === "string" ? typoSizes[size] || size : size;
       typoStyles.fontSize = sizeValue;
     }
-    if (thin === false) {
+    if (thin === false && bold === false) {
       typoStyles.fontWeight = "normal";
-    }
-    if (bold === false) {
-      typoStyles.fontWeight = "normal";
+    } else if (thin && bold === undefined) {
+      typoStyles.fontWeight = "thin";
     } else if (bold) {
       typoStyles.fontWeight = "bold";
+    } else if (thin === false || bold === false) {
+      typoStyles.fontWeight = "normal";
     }
     if (italic === false) {
       typoStyles.fontStyle = "normal";
