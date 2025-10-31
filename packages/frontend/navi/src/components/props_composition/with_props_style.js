@@ -106,53 +106,54 @@ export const withPropsStyle = (
     outer_spacing: {
       marginStyles = {};
       if (margin !== undefined) {
-        marginStyles.margin = margin;
+        marginStyles.margin = spacingSizes[margin] || margin;
       }
       if (marginLeft !== undefined) {
-        marginStyles.marginLeft = marginLeft;
+        marginStyles.marginLeft = spacingSizes[marginLeft] || marginLeft;
       } else if (marginX !== undefined) {
-        marginStyles.marginLeft = marginX;
+        marginStyles.marginLeft = spacingSizes[marginX] || marginX;
       }
       if (marginRight !== undefined) {
-        marginStyles.marginRight = marginRight;
+        marginStyles.marginRight = spacingSizes[marginRight] || marginRight;
       } else if (marginX !== undefined) {
-        marginStyles.marginRight = marginX;
+        marginStyles.marginRight = spacingSizes[marginX] || marginX;
       }
       if (marginTop !== undefined) {
-        marginStyles.marginTop = marginTop;
+        marginStyles.marginTop = spacingSizes[marginTop] || marginTop;
       } else if (marginY !== undefined) {
-        marginStyles.marginTop = marginY;
+        marginStyles.marginTop = spacingSizes[marginY] || marginY;
       }
       if (marginBottom !== undefined) {
-        marginStyles.marginBottom = marginBottom;
+        marginStyles.marginBottom = spacingSizes[marginBottom] || marginBottom;
       } else if (marginY !== undefined) {
-        marginStyles.marginBottom = marginY;
+        marginStyles.marginBottom = spacingSizes[marginY] || marginY;
       }
     }
     inner_spacing: {
       paddingStyles = {};
       if (padding !== undefined) {
-        paddingStyles.padding = padding;
+        paddingStyles.padding = spacingSizes[padding] || padding;
       }
       if (paddingLeft !== undefined) {
-        paddingStyles.paddingLeft = paddingLeft;
+        paddingStyles.paddingLeft = spacingSizes[paddingLeft] || paddingLeft;
       } else if (paddingX !== undefined) {
-        paddingStyles.paddingLeft = paddingX;
+        paddingStyles.paddingLeft = spacingSizes[paddingX] || paddingX;
       }
       if (paddingRight !== undefined) {
-        paddingStyles.paddingRight = paddingRight;
+        paddingStyles.paddingRight = spacingSizes[paddingRight] || paddingRight;
       } else if (paddingX !== undefined) {
-        paddingStyles.paddingRight = paddingX;
+        paddingStyles.paddingRight = spacingSizes[paddingX] || paddingX;
       }
       if (paddingTop !== undefined) {
-        paddingStyles.paddingTop = paddingTop;
+        paddingStyles.paddingTop = spacingSizes[paddingTop] || paddingTop;
       } else if (paddingY !== undefined) {
-        paddingStyles.paddingTop = paddingY;
+        paddingStyles.paddingTop = spacingSizes[paddingY] || paddingY;
       }
       if (paddingBottom !== undefined) {
-        paddingStyles.paddingBottom = paddingBottom;
+        paddingStyles.paddingBottom =
+          spacingSizes[paddingBottom] || paddingBottom;
       } else if (paddingY !== undefined) {
-        paddingStyles.paddingBottom = paddingY;
+        paddingStyles.paddingBottom = spacingSizes[paddingY] || paddingY;
       }
     }
   }
@@ -338,7 +339,10 @@ export const withPropsStyle = (
   return result;
 };
 
-const typoSizes = {
+// Unified design scale using t-shirt sizes with rem units for accessibility.
+// This scale is used for both typography and spacing to create visual harmony
+// and consistent proportions throughout the design system.
+export const tshirtSizeToCSSValues = {
   xxs: "0.625rem", // 0.625 = 10px at 16px base (smaller than before for more range)
   xs: "0.75rem", // 0.75 = 12px at 16px base
   sm: "0.875rem", // 0.875 = 14px at 16px base
@@ -347,3 +351,9 @@ const typoSizes = {
   xl: "1.25rem", // 1.25 = 20px at 16px base
   xxl: "1.5rem", // 1.5 = 24px at 16px base
 };
+
+// Typography and spacing use the same scale for consistent visual rhythm.
+// When text size is "lg", using "lg" spacing creates naturally proportioned layouts.
+// All values scale with user font preferences for better accessibility.
+const typoSizes = tshirtSizeToCSSValues;
+const spacingSizes = tshirtSizeToCSSValues;

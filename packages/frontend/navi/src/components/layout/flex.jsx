@@ -1,7 +1,10 @@
 import { useContext } from "preact/hooks";
 
 import { withPropsClassName } from "../props_composition/with_props_class_name.js";
-import { withPropsStyle } from "../props_composition/with_props_style.js";
+import {
+  tshirtSizeToCSSValues,
+  withPropsStyle,
+} from "../props_composition/with_props_style.js";
 import { FlexDirectionContext } from "./layout_context.jsx";
 
 import.meta.css = /* css */ `
@@ -49,7 +52,7 @@ export const FlexColumn = ({ alignX, alignY, gap, children, ...rest }) => {
       alignItems: alignX !== "stretch" ? alignX : undefined,
       // Only set justifyContent if it's not the default "start"
       justifyContent: alignY !== "start" ? alignY : undefined,
-      gap,
+      gap: tshirtSizeToCSSValues[gap] || gap,
     },
   });
 
