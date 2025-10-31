@@ -87,31 +87,60 @@ import { jsenvPluginMappings } from "./jsenv_plugin_mappings.js";
  * @param {string|url} params.buildDirectoryUrl
  *        Directory where optimized files will be written
  * @param {object} params.entryPoints
- *        Object where keys are paths to source files and values are their future name in the build directory.
- *        Keys are relative to sourceDirectoryUrl
- * @param {object} params.runtimeCompat
- *        Code generated will be compatible with these runtimes
- * @param {string} [params.assetsDirectory]
- *        Directory where asset files will be written. By default sibling to the entry build file.
- * @param {string|url} [params.base=""]
- *        Urls in build file contents will be prefixed with this string
- * @param {boolean|object} [params.bundling=true]
- *        Reduce number of files written in the build directory
- *  @param {boolean|object} [params.minification=true]
- *        Minify the content of files written into the build directory
- * @param {boolean} [params.versioning=true]
- *        Use versioning on files written in the build directory
- * @param {('search_param'|'filename')} [params.versioningMethod="search_param"]
- *        Controls how url are versioned in the build directory
- * @param {('none'|'inline'|'file'|'programmatic')} [params.sourcemaps="none"]
- *        Generate sourcemaps in the build directory
- * @param {('error'|'copy'|'preserve')|function} [params.directoryReferenceEffect="error"]
- *        What to do when a reference leads to a directory on the filesystem
+ *        Object where keys are paths to source files and values are configuration objects for each entry point.
+ *        Keys are relative to sourceDirectoryUrl or bare specifiers
+ * @param {object} [params.logs]
+ *        Configuration for build logging
+ * @param {string|url} [params.outDirectoryUrl]
+ *        Directory for temporary build files and cache
+ * @param {object} [params.buildDirectoryCleanPatterns]
+ *        Patterns for files to clean from build directory before building (defaults to all files)
+ * @param {boolean} [params.returnBuildInlineContents]
+ *        Whether to return inline contents in the result
+ * @param {boolean} [params.returnBuildManifest]
+ *        Whether to return build manifest in the result
+ * @param {boolean} [params.returnBuildFileVersions]
+ *        Whether to return file versions in the result
+ * @param {AbortSignal} [params.signal]
+ *        Signal to abort the build process
+ * @param {boolean} [params.handleSIGINT=true]
+ *        Whether to handle SIGINT for graceful shutdown
+ * @param {boolean} [params.writeOnFileSystem=true]
+ *        Whether to write build files to the filesystem
+ * @param {boolean} [params.watch=false]
+ *        Whether to enable watch mode for continuous building
+ * @param {object} [params.sourceFilesConfig]
+ *        Configuration for source file watching
+ * @param {number} [params.cooldownBetweenFileEvents]
+ *        Cooldown time between file change events in watch mode
+ *
+ * Entry point configuration (values in params.entryPoints):
+ * @param {string} [entryPoint.buildRelativeUrl]
+ *        Relative URL where this entry point will be written in the build directory
+ * @param {object} [entryPoint.runtimeCompat]
+ *        Runtime compatibility configuration for this entry point
+ * @param {string} [entryPoint.assetsDirectory]
+ *        Directory where asset files will be written for this entry point
+ * @param {string|url} [entryPoint.base]
+ *        Base URL prefix for references in this entry point
+ * @param {boolean|object} [entryPoint.bundling=true]
+ *        Whether to enable bundling for this entry point
+ * @param {boolean|object} [entryPoint.minification=true]
+ *        Whether to enable minification for this entry point
+ * @param {boolean} [entryPoint.versioning=true]
+ *        Whether to enable versioning for this entry point
+ * @param {('search_param'|'filename')} [entryPoint.versioningMethod]
+ *        How URLs are versioned for this entry point (defaults to "search_param")
+ * @param {('none'|'inline'|'file'|'programmatic')} [entryPoint.sourcemaps]
+ *        Sourcemap generation strategy for this entry point (defaults to "none")
+ *
  * @return {Promise<Object>} buildReturnValue
- * @return {Promise<Object>} buildReturnValue.buildInlineContents
- *        Contains content that is inline into build files
- * @return {Promise<Object>} buildReturnValue.buildManifest
- *        Map build file paths without versioning to versioned file paths
+ * @return {Promise<Object>} [buildReturnValue.buildInlineContents]
+ *        Contents that are inlined into build files (if returnBuildInlineContents is true)
+ * @return {Promise<Object>} [buildReturnValue.buildManifest]
+ *        Map of build file paths without versioning to versioned file paths (if returnBuildManifest is true)
+ * @return {Promise<Object>} [buildReturnValue.buildFileVersions]
+ *        Version information for build files (if returnBuildFileVersions is true)
  */
 export const build = async ({
   sourceDirectoryUrl,
