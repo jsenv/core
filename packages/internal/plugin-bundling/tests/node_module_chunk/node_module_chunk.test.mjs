@@ -7,14 +7,12 @@ const run = async ({ runtimeCompat, bundling }) => {
     buildDirectoryUrl: import.meta.resolve("./build/"),
     entryPoints: {
       "./index.js": {
-        minification: false,
+        mode: "package",
         runtimeCompat,
         bundling,
-        versioning: false,
         ignore: {
           "file://**/node_modules/": false,
         },
-        base: "./",
       },
     },
   });

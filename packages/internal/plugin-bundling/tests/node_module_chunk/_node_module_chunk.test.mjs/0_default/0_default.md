@@ -1,4 +1,4 @@
-# [0_default](../../node_module_chunk.test.mjs#L24)
+# [0_default](../../node_module_chunk.test.mjs#L22)
 
 ```js
 run({
