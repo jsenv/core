@@ -97,7 +97,8 @@ await executeTestPlan({
             ) ||
             fileRelativeUrl.endsWith("react_build.test.mjs") ||
             fileRelativeUrl.endsWith("react_refresh.test.mjs") ||
-            fileRelativeUrl.endsWith("toolbar_basic.test.mjs")
+            fileRelativeUrl.endsWith("toolbar_basic.test.mjs") ||
+            fileRelativeUrl.endsWith("react_dev.test.mjs")
           ) {
             return 90_000;
           }
