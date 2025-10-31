@@ -3,7 +3,7 @@ import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effect
 
 const run = async () => {
   await build({
-    sourceDirectoryUrl: import.meta.resolve("./client/"),
+    sourceDirectoryUrl: import.meta.resolve("./source/"),
     buildDirectoryUrl: import.meta.resolve("./build/"),
     entryPoints: {
       "./index.js": {
@@ -11,7 +11,7 @@ const run = async () => {
         mode: "package",
         runtimeCompat: { node: "20.0" },
       },
-      "./client/file.js": {
+      "./node_modules/foo/client/file.js": {
         buildRelativeUrl: "./client/dir/file.js",
         runtimeCompat: { chrome: "89" },
       },
