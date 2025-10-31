@@ -260,7 +260,11 @@ export const withPropsStyle = (
       : italic === undefined
         ? undefined
         : "normal";
-    typoStyles.fontSize = size;
+    if (size) {
+      const sizeValue =
+        typeof size === "string" ? typoSizes[size] || size : size;
+      typoStyles.fontSize = sizeValue;
+    }
     typoStyles.textDecoration = underline
       ? "underline"
       : underline === undefined
@@ -320,4 +324,14 @@ export const withPropsStyle = (
     result.push(configStyle);
   }
   return result;
+};
+
+const typoSizes = {
+  xxs: "0.625rem", // 0.625 = 10px at 16px base (smaller than before for more range)
+  xs: "0.75rem", // 0.75 = 12px at 16px base
+  sm: "0.875rem", // 0.875 = 14px at 16px base
+  md: "1rem", // 1 = 16px at 16px base (base font size)
+  lg: "1.125rem", // 1.125 = 18px at 16px base
+  xl: "1.25rem", // 1.25 = 20px at 16px base
+  xxl: "1.5rem", // 1.5 = 24px at 16px base
 };
