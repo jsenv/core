@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Suspense test</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      /* eslint-disable no-unused-vars */
+      import { render } from "preact";
+      import { Suspense } from "preact/compat";
+      import { useRef } from "preact/hooks";
+
+      const App = () => {
+        return (
+          <div>
+            <h1>Suspense Test</h1>
+            <Suspense fallback={<div>Loading...</div>}>
+              <Child />
+              Loaded
+            </Suspense>
+          </div>
+        );
+      };
+
+      const Child = () => {
+        const promiseRef = useRef();
+        if (!promiseRef.current) {
+          promiseRef.current = new Promise((resolve) =>
+            setTimeout(resolve, 1_000),
+          );
+        }
+        use(promiseRef.current);
+
+        return <div>This is content inside Suspense.</div>;
+      };
+
+      const use = (promise) => {
+        throw promise;
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
