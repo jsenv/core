@@ -1,5 +1,5 @@
 import { createContext } from "preact";
-import { useContext, useState } from "preact/hooks";
+import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 // import { ActionRenderer } from "../components/action_renderer.jsx";
 import { useContentKey } from "../components/ui_transition.jsx";
@@ -23,10 +23,8 @@ const WithRoute = ({ route, children }) => {
   // Register this route and its active status with parent
   if (RouteComponent) {
     RouteComponent.registerChildRoute(route);
-    RouteComponent.reportChildStatus?.(route, active);
+    RouteComponent.reportChildStatus(route, active);
   }
-
-  console.log({ active, url });
 
   return (
     <RouteComponentContext.Provider value={null}>
@@ -36,17 +34,12 @@ const WithRoute = ({ route, children }) => {
 };
 
 const WithoutRoute = ({ children }) => {
-  const [discoveredRoutes, setDiscoveredRoutes] = useState(new Set());
+  const discoveredRouteSetRef = useRef(new Set());
   const [activeRoutes, setActiveRoutes] = useState(new Set());
+  const hasRenderedOnceRef = useRef(false);
 
   const registerChildRoute = (route) => {
-    setDiscoveredRoutes((prevRoutes) => {
-      const newRoutes = new Set(prevRoutes);
-      if (!newRoutes.has(route)) {
-        newRoutes.add(route);
-      }
-      return newRoutes;
-    });
+    discoveredRouteSetRef.current.add(route);
   };
 
   const reportChildStatus = (route, isActive) => {
@@ -61,8 +54,23 @@ const WithoutRoute = ({ children }) => {
     });
   };
 
-  // Render children if no routes discovered yet, or if at least one route is active
-  const shouldRender = discoveredRoutes.size === 0 || activeRoutes.size > 0;
+  // Check after render if we have discovered any routes
+  useLayoutEffect(() => {
+    const discoveredRouteSet = discoveredRouteSetRef.current;
+    hasRenderedOnceRef.current = true;
+    if (discoveredRouteSet.size === 0) {
+      console.warn(
+        "Route component without 'route' prop was rendered but no child Route components were discovered. " +
+          "This Route wrapper will always render its children. " +
+          "Either add a 'route' prop or ensure child Route components are present.",
+      );
+    }
+  }, []);
+
+  // Render children if:
+  // 1. First render (to allow route discovery)
+  // 2. At least one child route is active
+  const shouldRender = !hasRenderedOnceRef.current || activeRoutes.size > 0;
 
   return (
     <RouteComponentContext.Provider
