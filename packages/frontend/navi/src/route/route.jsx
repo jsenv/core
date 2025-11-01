@@ -1,5 +1,11 @@
 import { createContext } from "preact";
-import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
+import {
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "preact/hooks";
 
 // import { ActionRenderer } from "../components/action_renderer.jsx";
 import { useContentKey } from "../components/ui_transition.jsx";
@@ -53,6 +59,12 @@ const WithoutRoute = ({ children }) => {
       return newActive;
     });
   };
+  const contextValue = useMemo(() => {
+    return {
+      registerChildRoute,
+      reportChildStatus,
+    };
+  }, []);
 
   // Check after render if we have discovered any routes
   useLayoutEffect(() => {
@@ -60,9 +72,9 @@ const WithoutRoute = ({ children }) => {
     hasRenderedOnceRef.current = true;
     if (discoveredRouteSet.size === 0) {
       console.warn(
-        "Route component without 'route' prop was rendered but no child Route components were discovered. " +
-          "This Route wrapper will always render its children. " +
-          "Either add a 'route' prop or ensure child Route components are present.",
+        `Route component without 'route' prop was rendered but no child Route components were discovered. ` +
+          `This Route wrapper will always render its children. ` +
+          `Either add a 'route' prop or ensure child Route components are present.`,
       );
     }
   }, []);
@@ -73,9 +85,7 @@ const WithoutRoute = ({ children }) => {
   const shouldRender = !hasRenderedOnceRef.current || activeRoutes.size > 0;
 
   return (
-    <RouteComponentContext.Provider
-      value={{ registerChildRoute, reportChildStatus }}
-    >
+    <RouteComponentContext.Provider value={contextValue}>
       {shouldRender ? children : null}
     </RouteComponentContext.Provider>
   );
