@@ -1,10 +1,12 @@
 ```jsx
-import { route, Route } from "@jsenv/navi";
+import { setupRoutes, Route } from "@jsenv/navi";
 
-// Routes can be created individually as needed
-const HOME_ROUTE = route("/");
-const LOGIN_ROUTE = route("/login");
-const FORGOT_PASSWORD_ROUTE = route("/forgot_password");
+// Define all routes at once, but get individual exports for discoverability
+export const { HOME_ROUTE, LOGIN_ROUTE, FORGOT_PASSWORD_ROUTE } = setupRoutes({
+  HOME_ROUTE: "/",
+  LOGIN_ROUTE: "/login",
+  FORGOT_PASSWORD_ROUTE: "/forgot_password",
+});
 
 export const App = () => {
   return (
