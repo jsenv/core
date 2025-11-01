@@ -21,16 +21,20 @@ export const Route = ({ route, children }) => {
 };
 
 const ParentRoute = ({ children }) => {
-  const [hasActiveRoute, setHasActiveRoute] = useState(false);
+  const [, forceRender] = useState({});
   const discoveredRouteMapRef = useRef(new Map()); // Map<route, unsubscribe>
   const hasRenderedOnceRef = useRef(false);
 
-  const updateActiveState = () => {
+  const hasActiveRoute = () => {
     const discoveredRouteMap = discoveredRouteMapRef.current;
-    const hasAnyActive = Array.from(discoveredRouteMap.keys()).some(
-      (route) => route.active,
-    );
-    setHasActiveRoute(hasAnyActive);
+    return Array.from(discoveredRouteMap.keys()).some((route) => route.active);
+  };
+
+  const updateActiveState = () => {
+    // Only trigger re-render after first render is complete
+    if (hasRenderedOnceRef.current) {
+      forceRender({});
+    }
   };
 
   const registerChildRoute = (route) => {
@@ -45,14 +49,12 @@ const ParentRoute = ({ children }) => {
     const unsubscribe = subscribeRouteStatus(route, updateActiveState);
     discoveredRouteMap.set(route, unsubscribe);
 
-    // Update state immediately
-    updateActiveState();
+    // No state update during first render - let it complete naturally
   };
 
   const contextValue = useMemo(() => {
     return {
       registerChildRoute,
-      reportChildStatus: () => {}, // No-op since we handle status ourselves
     };
   }, []);
 
@@ -72,7 +74,7 @@ const ParentRoute = ({ children }) => {
   // Render children if:
   // 1. First render (to allow route discovery)
   // 2. At least one child route is active
-  const shouldRender = !hasRenderedOnceRef.current || hasActiveRoute;
+  const shouldRender = !hasRenderedOnceRef.current || hasActiveRoute();
 
   return (
     <RouteComponentContext.Provider value={contextValue}>
