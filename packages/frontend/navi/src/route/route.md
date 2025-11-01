@@ -122,7 +122,7 @@ export const App = () => {
 ```jsx
 // Wrap routes in ErrorBoundary to handle failures
 <ErrorBoundary
-  fallback={({ error, resetError }) => (
+  fallback={(error, { resetError }) => (
     <div>
       <p>Error: {error.message}</p>
       <button onClick={resetError}>Retry</button>
@@ -139,14 +139,7 @@ export const App = () => {
 
 ```jsx
 // Wrap routes in Suspense to show loading states
-<Suspense
-  fallback={
-    <div className="loading">
-      <Spinner />
-      <p>Loading data...</p>
-    </div>
-  }
->
+<Suspense fallback={<p>Loading...</p>}>
   <Route route={DASHBOARD_ROUTE} action={loadDashboardData}>
     {(dashboardData) => <Dashboard data={dashboardData} />}
   </Route>
