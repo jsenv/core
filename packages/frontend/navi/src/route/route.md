@@ -77,9 +77,14 @@ Les routes peuvent également être associées à de la logique avant même que 
 
 Sans cette séparation, vous devriez recréer des helpers ou dupliquer la logique de construction d'URL.
 
-### 2. **Lisibilité et discoverabilité**
+### 2. **Définition centralisée, utilisation distribuée**
 
-Se contenter de définir les routes sans bruit superflu améliore la lisibilité. De plus, on voit clairement quelles routes chaque fichier utilise :
+- **`setupRoutes()`** : Toutes les routes doivent être définies en une seule fois pour que le système de routing puisse fonctionner correctement (matching d'URL, navigation, etc.)
+- **`<Route>`** : Les composants peuvent importer et utiliser uniquement les routes dont ils ont besoin
+
+### 3. **Discoverabilité grâce aux exports nommés**
+
+L'utilisation d'exports nommés permet de voir clairement quelles routes chaque fichier utilise :
 
 ```jsx
 // ✅ On voit clairement quelles routes ce fichier utilise
@@ -89,8 +94,3 @@ import { HOME_ROUTE, PROFILE_ROUTE } from "./routes.js";
 import { ROUTES } from "./routes.js";
 // ROUTES.home, ROUTES.profile utilisés quelque part...
 ```
-
-### 3. **Définition centralisée, utilisation distribuée**
-
-- **`setupRoutes()`** : Toutes les routes doivent être définies en une seule fois pour que le système de routing puisse fonctionner correctement (matching d'URL, navigation, etc.)
-- **`<Route>`** : Les composants peuvent importer et utiliser uniquement les routes dont ils ont besoin
