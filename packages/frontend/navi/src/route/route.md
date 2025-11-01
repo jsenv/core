@@ -32,20 +32,24 @@ export const {
 
 ```jsx
 // 2. Route usage (in components)
-import { Route } from "@jsenv/navi";
+import { Routes, Route } from "@jsenv/navi";
 import { HOME_ROUTE, LOGIN_ROUTE, FORGOT_PASSWORD_ROUTE } from "./routes.js";
 
 export const App = () => {
   return (
-    <>
-      <Route route={HOME_ROUTE}>Homepage</Route>
-      <Route>
-        <div>
-          <Route route={LOGIN_ROUTE}>Login</Route>
-          <Route route={FORGOT_PASSWORD_ROUTE}>Forgot password</Route>
-        </div>
+    <Routes>
+      <Route route={HOME_ROUTE} element={"Homepage"} />
+      <Route
+        element={
+          <div>
+            <Route.Slot />
+          </div>
+        }
+      >
+        <Route route={LOGIN_ROUTE} element="Login" />
+        <Route route={FORGOT_PASSWORD_ROUTE} element="Forgot password" />
       </Route>
-    </>
+    </Routes>
   );
 };
 ```
