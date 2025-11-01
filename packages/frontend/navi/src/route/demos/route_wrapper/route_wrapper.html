@@ -41,9 +41,12 @@
   <body>
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
+      /* eslint-disable no-unused-vars */
       import { render } from "preact";
-      import { setupRoutes } from "./route.js";
-      import { Route } from "./route.jsx";
+      import { useState } from "preact/hooks";
+      import { RouteLink } from "../../route_link.jsx";
+      import { setupRoutes } from "../../route.js";
+      import { Route } from "../../route.jsx";
 
       const { HOME_ROUTE, LOGIN_ROUTE, FORGOT_PASSWORD_ROUTE, PROFILE_ROUTE } =
         setupRoutes({
@@ -55,64 +58,18 @@
 
       // Test App
       const App = () => {
-        const [url, setUrl] = useState(window.location.href);
-
-        const navigate = (newUrl) => {
-          setUrl(newUrl);
-          setCurrentUrl(newUrl);
-          window.location.hash = newUrl;
-        };
-
         return (
           <div>
             <h1>Route System Test</h1>
 
             {/* Navigation */}
             <div className="nav">
-              <a
-                href="#"
-                className={url === "#/" ? "active" : ""}
-                onClick={(e) => {
-                  e.preventDefault();
-                  navigate("#/");
-                }}
-              >
-                Home
-              </a>
-              <a
-                href="#"
-                className={url === "#/login" ? "active" : ""}
-                onClick={(e) => {
-                  e.preventDefault();
-                  navigate("#/login");
-                }}
-              >
-                Login
-              </a>
-              <a
-                href="#"
-                className={url === "#/forgot" ? "active" : ""}
-                onClick={(e) => {
-                  e.preventDefault();
-                  navigate("#/forgot");
-                }}
-              >
-                Forgot Password
-              </a>
-              <a
-                href="#"
-                className={url === "#/profile" ? "active" : ""}
-                onClick={(e) => {
-                  e.preventDefault();
-                  navigate("#/profile");
-                }}
-              >
-                Profile
-              </a>
-            </div>
-
-            <div className="debug">
-              <strong>Current URL:</strong> {url}
+              <RouteLink route={HOME_ROUTE}>Home</RouteLink>
+              <RouteLink route={LOGIN_ROUTE}>Login</RouteLink>
+              <RouteLink route={FORGOT_PASSWORD_ROUTE}>
+                Forgot password
+              </RouteLink>
+              <RouteLink route={PROFILE_ROUTE}>Profile</RouteLink>
             </div>
 
             {/* Test Cases */}
