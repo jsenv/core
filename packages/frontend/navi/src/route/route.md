@@ -49,19 +49,21 @@ export const App = () => {
 
 ## Pourquoi cette séparation ?
 
-### 1. **Définition centralisée des routes**
-
-#### Raison technique forte:
+### 1. **Contrainte technique incontournable**
 
 Toutes les routes doivent être définies en une seule fois pour que le système de routing puisse fonctionner correctement (matching d'URL, navigation, etc.).
 
-#### Effet de bord stylé:
+### 2. **Choix d'architecture : découper définition et utilisation**
 
-1. **Une vision épurée de la totalité des routes** - Toutes les routes de l'application sont visibles d'un coup d'œil sans bruit superflu
+En plus de cette contrainte technique, nous faisons le choix de séparer la définition des routes de leur utilisation dans l'UI. Cette séparation apporte plusieurs avantages :
 
-#### Ce qui permet:
+#### **Vision épurée**
 
-2. **Utilisation en dehors de l'UI** - Les objets routes peuvent être utilisés partout dans l'application :
+Toutes les routes de l'application sont visibles d'un coup d'œil sans bruit superflu.
+
+#### **Utilisation en dehors de l'UI**
+
+Les objets routes peuvent être utilisés partout dans l'application :
 
 ```jsx
 // Navigation programmatique
@@ -85,7 +87,9 @@ const isUserOnAuthPage = (currentUrl) => {
 
 Les routes peuvent également être associées à de la logique avant même que les composants JSX soient impliqués. Cela permettra d'implémenter du préchargement de composants et de données, des optimisations de performance, etc.
 
-##### Et en plus comme on utilise des export nommés on directement quelles routes chaque fichier utilise :
+#### **Discoverabilité grâce aux exports nommés**
+
+En utilisant des exports nommés, on voit directement quelles routes chaque fichier utilise :
 
 ```jsx
 // ✅ On voit clairement quelles routes ce fichier utilise
