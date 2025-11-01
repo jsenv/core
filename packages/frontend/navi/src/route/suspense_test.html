@@ -12,7 +12,7 @@
       /* eslint-disable no-unused-vars */
       import { render } from "preact";
       import { Suspense } from "preact/compat";
-      import { useRef } from "preact/hooks";
+      import { useState, useRef } from "preact/hooks";
 
       const App = () => {
         return (
@@ -20,26 +20,57 @@
             <h1>Suspense Test</h1>
             <Suspense fallback={<div>Loading...</div>}>
               <Child />
-              Loaded
+              <p>Content below Suspense.</p>
             </Suspense>
           </div>
         );
       };
 
+      // This pattern is based on Preact's official test examples
       const Child = () => {
-        const promiseRef = useRef();
+        const promiseRef = useRef(null);
+
+        // Create the promise only once and store it in ref
         if (!promiseRef.current) {
-          promiseRef.current = new Promise((resolve) =>
-            setTimeout(resolve, 1_000),
-          );
+          promiseRef.current = new Promise((resolve) => {
+            setTimeout(() => {
+              resolve();
+            }, 300);
+          });
         }
+
         use(promiseRef.current);
 
+        // If resolved, render the content
         return <div>This is content inside Suspense.</div>;
       };
 
       const use = (promise) => {
-        throw promise;
+        let prom;
+        let settled;
+        let rejected;
+        let rejectReason;
+
+        const promiseRef = useRef(null);
+        if (!promiseRef.current) {
+          promise.then(
+            (v) => {
+              settled = true;
+            },
+            (e) => {
+              rejectReason = e;
+              settled = true;
+              rejected = true;
+            },
+          );
+
+          if (rejected) {
+            throw rejectReason;
+          }
+          if (!settled) {
+            throw promise;
+          }
+        }
       };
 
       render(<App />, document.getElementById("app"));
