@@ -1,4 +1,3 @@
-import { createPubSub } from "@jsenv/dom";
 import { createContext } from "preact";
 import {
   useContext,
@@ -22,12 +21,32 @@ export const Route = ({ route, children }) => {
 };
 
 const ParentRoute = ({ children }) => {
-  const discoveredRouteSetRef = useRef(new Set());
   const [hasActiveRoute, setHasActiveRoute] = useState(false);
+  const discoveredRouteMapRef = useRef(new Map()); // Map<route, unsubscribe>
   const hasRenderedOnceRef = useRef(false);
 
+  const updateActiveState = () => {
+    const discoveredRouteMap = discoveredRouteMapRef.current;
+    const hasAnyActive = Array.from(discoveredRouteMap.keys()).some(
+      (route) => route.active,
+    );
+    setHasActiveRoute(hasAnyActive);
+  };
+
   const registerChildRoute = (route) => {
-    discoveredRouteSetRef.current.add(route);
+    const discoveredRouteMap = discoveredRouteMapRef.current;
+
+    // Skip if already registered
+    if (discoveredRouteMap.has(route)) {
+      return;
+    }
+
+    // Subscribe immediately when route is discovered
+    const unsubscribe = subscribeRouteStatus(route, updateActiveState);
+    discoveredRouteMap.set(route, unsubscribe);
+
+    // Update state immediately
+    updateActiveState();
   };
 
   const contextValue = useMemo(() => {
@@ -37,41 +56,16 @@ const ParentRoute = ({ children }) => {
     };
   }, []);
 
-  // Subscribe to all discovered routes after first render
+  // Clean up subscriptions on unmount
   useLayoutEffect(() => {
-    const discoveredRouteSet = discoveredRouteSetRef.current;
     hasRenderedOnceRef.current = true;
 
-    if (discoveredRouteSet.size === 0) {
-      console.warn(
-        `Route component without 'route' prop was rendered but no child Route components were discovered. ` +
-          `This Route wrapper will always render its children. ` +
-          `Either add a 'route' prop or ensure child Route components are present.`,
-      );
-      return null;
-    }
-
-    // Subscribe to each discovered route
-    const [teardown, addTeardown] = createPubSub();
-    const activeRouteSet = new Set();
-    for (const route of discoveredRouteSet) {
-      if (route.active) {
-        activeRouteSet.add(route);
-      }
-      const unsubscribe = subscribeRouteStatus(route, () => {
-        if (route.active) {
-          activeRouteSet.add(route);
-        } else {
-          activeRouteSet.delete(route);
-        }
-        const hasActiveRoute = activeRouteSet.size > 0;
-        setHasActiveRoute(hasActiveRoute);
-      });
-      addTeardown(unsubscribe);
-    }
-    setHasActiveRoute(activeRouteSet.size > 0);
     return () => {
-      teardown();
+      const discoveredRouteMap = discoveredRouteMapRef.current;
+      for (const unsubscribe of discoveredRouteMap.values()) {
+        unsubscribe();
+      }
+      discoveredRouteMap.clear();
     };
   }, []);
 
