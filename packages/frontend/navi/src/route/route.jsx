@@ -15,117 +15,116 @@ export const Routes = ({ children }) => {
 
 const RouteAncestorContext = createContext(null);
 const RouteSlotContext = createContext(null);
+
+// Subscription à la route prop
+// const routeIsActiveRef = useRef(false);
+// const routeRef = useRef();
+// if (routeRef.current !== route) {
+//   routeRef.current = route;
+//   if (!route) {
+//     routeIsActiveRef.current = false;
+//   } else {
+//     routeIsActiveRef.current = route.active;
+//     subscribeRouteStatus(route, () => {
+//       routeIsActiveRef.current = route.active;
+//       forceRender();
+//     });
+//   }
+// }
+
 export const Route = ({ route, element, children }) => {
   const routeAncestor = useContext(RouteAncestorContext);
   if (routeAncestor) {
     routeAncestor.registerChildRoute(route, { element });
   }
 
-  let routeIsActive;
-  route_from_props: {
-    const forceRender = useForceRender();
-    const routeIsActiveRef = useRef(false);
-    const routeRef = useRef();
-    if (routeRef.current !== route) {
-      routeRef.current = route;
-      if (!route) {
-        routeIsActiveRef.current = false;
-      } else {
-        routeIsActiveRef.current = route.active;
-        subscribeRouteStatus(route, () => {
-          routeIsActiveRef.current = route.active;
+  const hasDiscoveredRef = useRef(false);
+  const activeNestedRouteInfoRef = useRef(null);
+  const forceRender = useForceRender();
+  if (!hasDiscoveredRef.current && children) {
+    return (
+      <NestedRouteDiscovery
+        onDiscoveryComplete={(activeRouteInfo) => {
+          hasDiscoveredRef.current = true;
+          activeNestedRouteInfoRef.current = activeRouteInfo;
           forceRender();
-        });
-      }
-    }
-    routeIsActive = routeIsActiveRef.current;
+        }}
+        onActiveRouteChange={(activeRouteInfo) => {
+          activeNestedRouteInfoRef.current = activeRouteInfo;
+          forceRender();
+        }}
+      >
+        {children}
+      </NestedRouteDiscovery>
+    );
   }
 
-  const nestedActiveRouteRef = useRef(null);
-  const discoveredRouteMapRef = useRef(new Map()); // Map<route, { element, unsubscribe}>
-  const discoveredRouteMap = discoveredRouteMapRef.current;
-  route_from_children: {
-    const forceRender = useForceRender();
-    const hasRenderedOnceRef = useRef(false);
-
-    const onRouteDiscovered = (route, { element }) => {
-      console.log("discovered", route.url);
-      // Add to discovered routes
-      const unsubscribe = subscribeRouteStatus(route, () => {
-        onRouteStatusChange(route);
-      });
-      discoveredRouteMap.set(route, { element, unsubscribe });
-      // Add to active set if route is currently active
-      if (route.active) {
-        nestedActiveRouteRef.current = route;
-      }
-    };
-    const onRouteBecomesActive = (route) => {
-      console.log("route becomes active", route.url);
-      if (nestedActiveRouteRef.current === route) {
-        return;
-      }
-      nestedActiveRouteRef.current = route;
-      forceRender();
-    };
-    const onRouteBecomesInactive = (route) => {
-      if (nestedActiveRouteRef.current === route) {
-        nestedActiveRouteRef.current = null;
-        forceRender();
-      }
-    };
-    const onRouteStatusChange = (route) => {
-      if (route.active) {
-        onRouteBecomesActive(route);
-      } else {
-        onRouteBecomesInactive(route);
-      }
-    };
-
-    const registerChildRoute = (route, { element }) => {
-      // Skip if already registered
-      if (discoveredRouteMap.has(route)) {
-        return;
-      }
-      onRouteDiscovered(route, { element });
-    };
-    const contextValue = useMemo(() => {
-      return {
-        registerChildRoute,
-      };
-    }, []);
-
-    useLayoutEffect(() => {
-      hasRenderedOnceRef.current = true;
-      forceRender();
-      return () => {
-        for (const { unsubscribe } of discoveredRouteMap.values()) {
-          unsubscribe();
-        }
-        discoveredRouteMap.clear();
-      };
-    }, []);
-
-    <RouteAncestorContext.Provider value={contextValue}>
-      {children}
-    </RouteAncestorContext.Provider>;
-  }
-
-  const nestedActiveRoute = nestedActiveRouteRef.current;
-  const active = Boolean(routeIsActive || nestedActiveRoute);
-  console.log(route?.url, { routeIsActive, active });
+  // Phase de rendu normal
+  const activeNestedRouteInfo = activeNestedRouteInfoRef.current;
+  const active = Boolean(activeNestedRouteInfo);
   if (!active) {
     return null;
   }
-  const routeSlot = nestedActiveRoute
-    ? discoveredRouteMap.get(nestedActiveRoute).element
-    : null;
+
+  const routeSlot = activeNestedRouteInfo.element;
   return (
     <RouteSlotContext.Provider value={routeSlot}>
       {element}
     </RouteSlotContext.Provider>
   );
 };
+const NestedRouteDiscovery = ({
+  children,
+  onDiscoveryComplete,
+  onActiveRouteChange,
+}) => {
+  const discoveredRouteMapRef = useRef(new Map());
+  const discoveredRouteMap = discoveredRouteMapRef.current;
+  const activeNestedRouteInfoRef = useRef(null);
+
+  const registerChildRoute = (route, { element }) => {
+    if (discoveredRouteMap.has(route)) {
+      return;
+    }
+    discoveredRouteMap.set(route, { element });
+    if (route.active) {
+      activeNestedRouteInfoRef.current = { route, element };
+    }
+  };
+
+  const contextValue = useMemo(() => {
+    return { registerChildRoute };
+  }, []);
+
+  useLayoutEffect(() => {
+    discoveredRouteMapRef.current = discoveredRouteMap;
+    for (const [route] of discoveredRouteMap) {
+      subscribeRouteStatus(route, () => {
+        if (route.active) {
+          const previousInfo = activeNestedRouteInfoRef.current;
+          const currentInfo = {
+            route,
+            element: discoveredRouteMap.get(route).element,
+          };
+          activeNestedRouteInfoRef.current = currentInfo;
+          onActiveRouteChange(currentInfo, previousInfo);
+        } else if (activeNestedRouteInfoRef.current?.route === route) {
+          const previousInfo = activeNestedRouteInfoRef.current;
+          activeNestedRouteInfoRef.current = null;
+          onActiveRouteChange(null, previousInfo);
+        }
+      });
+    }
+    onDiscoveryComplete(activeNestedRouteInfoRef.current);
+  }, []);
+
+  return (
+    <RouteAncestorContext.Provider value={contextValue}>
+      {children}
+    </RouteAncestorContext.Provider>
+  );
+};
+
 export const RouteSlot = () => {
   const routeSlot = useContext(RouteSlotContext);
   if (!routeSlot) {
