@@ -15,7 +15,6 @@
  */
 
 import { batch, computed, effect, signal } from "@preact/signals";
-import { createAction } from "../actions.js";
 import {
   SYMBOL_IDENTITY,
   compareTwoJsValues,
@@ -618,30 +617,21 @@ export const setOnRouteDefined = (v) => {
 // at any given time (url can be shared, reloaded, etc..)
 // Later I'll consider adding ability to have dynamic import into the mix
 // (An async function returning an action)
-export const defineRoutes = (routeDefinition) => {
+export const setupRoutes = (routeDefinition) => {
   // Clean up existing routes
   for (const route of routeSet) {
     route.cleanup();
   }
   routeSet.clear();
 
-  const routeArray = [];
+  const routes = {};
   for (const key of Object.keys(routeDefinition)) {
     const value = routeDefinition[key];
-    const route = createRoute(key);
-    if (value && value.isAction) {
-      route.bindAction(value);
-    } else if (typeof value === "function") {
-      const actionFromFunction = createAction(value);
-      route.bindAction(actionFromFunction);
-    } else if (value) {
-      route.bindAction(value);
-    }
-    routeArray.push(route);
+    const route = createRoute(value);
+    routes[key] = route;
   }
   onRouteDefined();
-
-  return routeArray;
+  return routes;
 };
 
 // unit test exports

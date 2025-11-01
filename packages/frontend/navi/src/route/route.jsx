@@ -17,22 +17,25 @@ export const Route = ({ route, children }) => {
 const WithRoute = ({ route, children }) => {
   const RouteComponent = useContext(RouteComponentContext);
 
-  if (RouteComponent && route) {
-    RouteComponent.registerChildRoute(route);
-  }
-
   const { active, url } = useRouteStatus(route);
   useContentKey(url, active);
 
+  // Register this route and its active status with parent
+  if (RouteComponent && route) {
+    RouteComponent.registerChildRoute(route);
+    RouteComponent.reportChildStatus?.(route, active);
+  }
+
   return (
     <RouteComponentContext.Provider value={route}>
-      {children}
+      {active ? children : null}
     </RouteComponentContext.Provider>
   );
 };
 
 const WithoutRoute = ({ children }) => {
   const [discoveredRoutes, setDiscoveredRoutes] = useState(new Set());
+  const [activeRoutes, setActiveRoutes] = useState(new Set());
 
   const registerChildRoute = (route) => {
     setDiscoveredRoutes((prevRoutes) => {
@@ -44,16 +47,25 @@ const WithoutRoute = ({ children }) => {
     });
   };
 
-  // Check if any discovered route is currently active
-  const activeRoutes = Array.from(discoveredRoutes).filter((route) => {
-    const { active } = useRouteStatus(route);
-    return active;
-  });
+  const reportChildStatus = (route, isActive) => {
+    setActiveRoutes((prevActive) => {
+      const newActive = new Set(prevActive);
+      if (isActive) {
+        newActive.add(route);
+      } else {
+        newActive.delete(route);
+      }
+      return newActive;
+    });
+  };
 
-  const shouldRender = discoveredRoutes.size === 0 || activeRoutes.length > 0;
+  // Render children if no routes discovered yet, or if at least one route is active
+  const shouldRender = discoveredRoutes.size === 0 || activeRoutes.size > 0;
 
   return (
-    <RouteComponentContext.Provider value={{ registerChildRoute }}>
+    <RouteComponentContext.Provider
+      value={{ registerChildRoute, reportChildStatus }}
+    >
       {shouldRender ? children : null}
     </RouteComponentContext.Provider>
   );
