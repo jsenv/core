@@ -21,18 +21,38 @@ export const Route = ({ route, children }) => {
 };
 
 const ParentRoute = ({ children }) => {
-  const [, forceRender] = useState({});
+  const [, forceRender] = useState(null);
   const discoveredRouteMapRef = useRef(new Map()); // Map<route, unsubscribe>
+  const activeRoutesSetRef = useRef(new Set()); // Set<route> - tracks which routes are currently active
   const hasRenderedOnceRef = useRef(false);
 
-  const hasActiveRoute = () => {
+  const updateActiveRouteSet = () => {
     const discoveredRouteMap = discoveredRouteMapRef.current;
-    return Array.from(discoveredRouteMap.keys()).some((route) => route.active);
+    const activeRoutesSet = activeRoutesSetRef.current;
+
+    // Clear and rebuild the active routes set
+    activeRoutesSet.clear();
+    for (const route of discoveredRouteMap.keys()) {
+      if (route.active) {
+        activeRoutesSet.add(route);
+      }
+    }
   };
 
   const updateActiveState = () => {
+    const previouslyHadActiveRoutes = activeRoutesSetRef.current.size > 0;
+
+    // Update the active routes set
+    updateActiveRouteSet();
+
+    const currentlyHasActiveRoutes = activeRoutesSetRef.current.size > 0;
+
     // Only trigger re-render after first render is complete
-    if (hasRenderedOnceRef.current) {
+    // AND if the "has active routes" state actually changed
+    if (
+      hasRenderedOnceRef.current &&
+      previouslyHadActiveRoutes !== currentlyHasActiveRoutes
+    ) {
       forceRender({});
     }
   };
@@ -49,7 +69,8 @@ const ParentRoute = ({ children }) => {
     const unsubscribe = subscribeRouteStatus(route, updateActiveState);
     discoveredRouteMap.set(route, unsubscribe);
 
-    // No state update during first render - let it complete naturally
+    // Update active routes set during discovery (but don't trigger re-render during first render)
+    updateActiveRouteSet();
   };
 
   const contextValue = useMemo(() => {
@@ -68,13 +89,17 @@ const ParentRoute = ({ children }) => {
         unsubscribe();
       }
       discoveredRouteMap.clear();
+      activeRoutesSetRef.current.clear();
     };
   }, []);
 
   // Render children if:
-  // 1. First render (to allow route discovery)
+  // 1. First render (to allow route discovery) - isFirstRenderToDiscoverNestedRoutes
   // 2. At least one child route is active
-  const shouldRender = !hasRenderedOnceRef.current || hasActiveRoute();
+  const isFirstRenderToDiscoverNestedRoutes = !hasRenderedOnceRef.current;
+  const hasActiveNestedRoutes = activeRoutesSetRef.current.size > 0;
+  const shouldRender =
+    isFirstRenderToDiscoverNestedRoutes || hasActiveNestedRoutes;
 
   return (
     <RouteComponentContext.Provider value={contextValue}>
