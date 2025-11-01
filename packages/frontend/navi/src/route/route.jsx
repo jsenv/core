@@ -23,7 +23,7 @@ export const Route = ({ route, element, children }) => {
 
   let routeIsActive;
   route_from_props: {
-    const [, forceRender] = useState(null);
+    const forceRender = useForceRender();
     const routeIsActiveRef = useRef(false);
     const routeRef = useRef();
     if (routeRef.current !== route) {
@@ -34,7 +34,7 @@ export const Route = ({ route, element, children }) => {
         routeIsActiveRef.current = route.active;
         subscribeRouteStatus(route, () => {
           routeIsActiveRef.current = route.active;
-          forceRender({});
+          forceRender();
         });
       }
     }
@@ -45,8 +45,7 @@ export const Route = ({ route, element, children }) => {
   const discoveredRouteMapRef = useRef(new Map()); // Map<route, { element, unsubscribe}>
   const discoveredRouteMap = discoveredRouteMapRef.current;
   route_from_children: {
-    const [, forceRender] = useState(null);
-
+    const forceRender = useForceRender();
     const hasRenderedOnceRef = useRef(false);
 
     const onRouteDiscovered = (route, { element }) => {
@@ -65,7 +64,7 @@ export const Route = ({ route, element, children }) => {
         return;
       }
       nestedActiveRouteRef.current = route;
-      forceRender({});
+      forceRender();
     };
     const onRouteBecomesInactive = (route) => {
       if (nestedActiveRouteRef.current === route) {
@@ -96,6 +95,7 @@ export const Route = ({ route, element, children }) => {
 
     useLayoutEffect(() => {
       hasRenderedOnceRef.current = true;
+      forceRender({});
       return () => {
         for (const { unsubscribe } of discoveredRouteMap.values()) {
           unsubscribe();
@@ -131,3 +131,8 @@ export const RouteSlot = () => {
   return <>{routeSlot}</>;
 };
 Route.Slot = RouteSlot;
+
+const useForceRender = () => {
+  const [, setState] = useState(null);
+  return () => setState({});
+};
