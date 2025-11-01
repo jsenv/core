@@ -41,7 +41,8 @@ const WithRoute = ({ route, children }) => {
 
 const WithoutRoute = ({ children }) => {
   const discoveredRouteSetRef = useRef(new Set());
-  const [activeRoutes, setActiveRoutes] = useState(new Set());
+  const activeRoutesRef = useRef(new Set());
+  const [hasActiveRoute, setHasActiveRoute] = useState(false);
   const hasRenderedOnceRef = useRef(false);
 
   const registerChildRoute = (route) => {
@@ -49,15 +50,15 @@ const WithoutRoute = ({ children }) => {
   };
 
   const reportChildStatus = (route, isActive) => {
-    setActiveRoutes((prevActive) => {
-      const newActive = new Set(prevActive);
-      if (isActive) {
-        newActive.add(route);
-      } else {
-        newActive.delete(route);
-      }
-      return newActive;
-    });
+    const activeRoutes = activeRoutesRef.current;
+    
+    if (isActive) {
+      activeRoutes.add(route);
+    } else {
+      activeRoutes.delete(route);
+    }
+    
+    setHasActiveRoute(activeRoutes.size > 0);
   };
   const contextValue = useMemo(() => {
     return {
@@ -82,7 +83,7 @@ const WithoutRoute = ({ children }) => {
   // Render children if:
   // 1. First render (to allow route discovery)
   // 2. At least one child route is active
-  const shouldRender = !hasRenderedOnceRef.current || activeRoutes.size > 0;
+  const shouldRender = !hasRenderedOnceRef.current || hasActiveRoute;
 
   return (
     <RouteComponentContext.Provider value={contextValue}>
