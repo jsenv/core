@@ -26,51 +26,60 @@
         );
       };
 
+      const promise = new Promise((r) => {
+        setTimeout(r, 300);
+      });
+
       // This pattern is based on Preact's official test examples
       const Child = () => {
-        const promiseRef = useRef(null);
+        console.debug("Child component rendering");
 
-        // Create the promise only once and store it in ref
-        if (!promiseRef.current) {
-          promiseRef.current = new Promise((resolve) => {
-            setTimeout(() => {
-              resolve();
-            }, 300);
-          });
-        }
-
-        use(promiseRef.current);
+        console.debug("About to call use()");
+        const result = use(promise);
+        console.debug("use() returned:", result);
 
         // If resolved, render the content
+        console.debug("Rendering content");
         return <div>This is content inside Suspense.</div>;
       };
-
       const use = (promise) => {
-        let prom;
-        let settled;
-        let rejected;
-        let rejectReason;
+        console.debug("use() called");
 
-        const promiseRef = useRef(null);
-        if (!promiseRef.current) {
+        const settledRef = useRef(false);
+        const rejectedRef = useRef(false);
+        const valueRef = useRef(null);
+        const reasonRef = useRef(null);
+        const promiseTrackedRef = useRef(null);
+
+        if (!promiseTrackedRef.current) {
+          promiseTrackedRef.current = true;
+          console.debug("Creating new promise tracking");
           promise.then(
             (v) => {
-              settled = true;
+              console.debug("Promise resolved with value:", v);
+              settledRef.current = true;
+              valueRef.current = true;
             },
             (e) => {
-              rejectReason = e;
-              settled = true;
-              rejected = true;
+              console.debug("Promise rejected with error:", e);
+              reasonRef.current = e;
+              settledRef.current = true;
+              rejectedRef.current = true;
             },
           );
-
-          if (rejected) {
-            throw rejectReason;
-          }
-          if (!settled) {
-            throw promise;
-          }
         }
+
+        if (!settledRef.current) {
+          throw promise;
+        }
+
+        if (!rejectedRef.current) {
+          console.debug("Promise not settled, throwing promise");
+          throw reasonRef.current;
+        }
+
+        console.debug("Promise settled, returning value:", valueRef.current);
+        return valueRef.current;
       };
 
       render(<App />, document.getElementById("app"));
