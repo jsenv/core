@@ -25,11 +25,13 @@ export {
 export { useDocumentState } from "./src/browser_integration/document_state_signal.js";
 export { useDocumentUrl } from "./src/browser_integration/document_url_signal.js";
 export {
-  defineRoutes,
   rawUrlPart,
   setBaseUrl,
+  setupRoutes,
   useRouteStatus,
 } from "./src/route/route.js";
+export { Route } from "./src/route/route.jsx";
+export { RouteLink } from "./src/route/route_link.jsx";
 
 // Components
 export { ActionRenderer } from "./src/components/action_renderer.jsx";
@@ -52,7 +54,6 @@ export { Radio, RadioList } from "./src/components/field/radio_list.jsx";
 export { Select } from "./src/components/field/select.jsx";
 export { ActiveKeyboardShortcuts } from "./src/components/keyboard_shortcuts/active_keyboard_shortcuts.jsx";
 export { Link } from "./src/components/link/link.jsx";
-export { Route } from "./src/components/route.jsx";
 export {
   SelectionContext,
   createSelectionKeyboardShortcuts,

@@ -44,9 +44,7 @@
       /* eslint-disable no-unused-vars */
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { RouteLink } from "../../route_link.jsx";
-      import { setupRoutes } from "../../route.js";
-      import { Route } from "../../route.jsx";
+      import { RouteLink, setupRoutes, Route } from "@jsenv/navi";
 
       const { HOME_ROUTE, LOGIN_ROUTE, FORGOT_PASSWORD_ROUTE, PROFILE_ROUTE } =
         setupRoutes({
@@ -72,51 +70,6 @@
               <RouteLink route={PROFILE_ROUTE}>Profile</RouteLink>
             </div>
 
-            {/* Test Cases */}
-            <h2>Test Case 1: Simple Routes</h2>
-            <div className="route-wrapper">
-              <Route route={HOME_ROUTE}>
-                <h3>🏠 Homepage Content</h3>
-                <p>This is the homepage!</p>
-              </Route>
-
-              <Route route={PROFILE_ROUTE}>
-                <h3>👤 Profile Content</h3>
-                <p>This is the profile page!</p>
-              </Route>
-            </div>
-
-            <h2>Test Case 2: Route Without Route Prop (Wrapper)</h2>
-            <div className="route-wrapper">
-              <Route>
-                <div style="background: #e6f3ff; padding: 15px; border-radius: 5px;">
-                  <h3>🔐 Auth Section</h3>
-                  <p>
-                    This wrapper should only render when one of the auth routes
-                    is active:
-                  </p>
-
-                  <Route route={LOGIN_ROUTE}>
-                    <div style="background: #fff; padding: 10px; margin: 10px 0; border: 1px solid #ddd;">
-                      <h4>Login Form</h4>
-                      <p>Enter your credentials here</p>
-                    </div>
-                  </Route>
-
-                  <Route route={FORGOT_PASSWORD_ROUTE}>
-                    <div style="background: #fff; padding: 10px; margin: 10px 0; border: 1px solid #ddd;">
-                      <h4>Password Reset</h4>
-                      <p>Reset your password here</p>
-                    </div>
-                  </Route>
-
-                  <p>
-                    <em>End of auth section</em>
-                  </p>
-                </div>
-              </Route>
-            </div>
-
             <h2>Expected Behavior</h2>
             <ul>
               <li>
@@ -136,6 +89,48 @@
               </li>
             </ul>
           </div>
+        );
+      };
+
+      const Routes = () => {
+        return (
+          <>
+            <Route route={HOME_ROUTE}>
+              <h3>🏠 Homepage Content</h3>
+              <p>This is the homepage!</p>
+            </Route>
+            <Route route={PROFILE_ROUTE}>
+              <h3>👤 Profile Content</h3>
+              <p>This is the profile page!</p>
+            </Route>
+            <Route>
+              <div style="background: #e6f3ff; padding: 15px; border-radius: 5px;">
+                <h3>🔐 Auth Section</h3>
+                <p>
+                  This wrapper should only render when one of the auth routes is
+                  active:
+                </p>
+
+                <Route route={LOGIN_ROUTE}>
+                  <div style="background: #fff; padding: 10px; margin: 10px 0; border: 1px solid #ddd;">
+                    <h4>Login Form</h4>
+                    <p>Enter your credentials here</p>
+                  </div>
+                </Route>
+
+                <Route route={FORGOT_PASSWORD_ROUTE}>
+                  <div style="background: #fff; padding: 10px; margin: 10px 0; border: 1px solid #ddd;">
+                    <h4>Password Reset</h4>
+                    <p>Reset your password here</p>
+                  </div>
+                </Route>
+
+                <p>
+                  <em>End of auth section</em>
+                </p>
+              </div>
+            </Route>
+          </>
         );
       };
 

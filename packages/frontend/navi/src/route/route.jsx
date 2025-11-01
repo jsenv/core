@@ -21,13 +21,13 @@ const WithRoute = ({ route, children }) => {
   useContentKey(url, active);
 
   // Register this route and its active status with parent
-  if (RouteComponent && route) {
+  if (RouteComponent) {
     RouteComponent.registerChildRoute(route);
     RouteComponent.reportChildStatus?.(route, active);
   }
 
   return (
-    <RouteComponentContext.Provider value={route}>
+    <RouteComponentContext.Provider value={null}>
       {active ? children : null}
     </RouteComponentContext.Provider>
   );
