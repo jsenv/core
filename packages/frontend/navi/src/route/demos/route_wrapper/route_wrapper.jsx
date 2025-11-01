@@ -78,54 +78,67 @@ export const App = () => {
 
       <main>
         <Routes>
-          <Route route={HOME_ROUTE}>
-            <div style="background: #e8f5e8; padding: 15px; border-radius: 5px;">
-              <h3>🏠 Homepage Content</h3>
-              <ComponentTracker name="HomePage" color="#28a745" />
-              <p>This is the homepage!</p>
-            </div>
-          </Route>
+          <Route
+            route={HOME_ROUTE}
+            element={
+              <div style="background: #e8f5e8; padding: 15px; border-radius: 5px;">
+                <h3>🏠 Homepage Content</h3>
+                <ComponentTracker name="HomePage" color="#28a745" />
+                <p>This is the homepage!</p>
+              </div>
+            }
+          />
+          <Route
+            route={PROFILE_ROUTE}
+            element={
+              <div style="background: #e3f2fd; padding: 15px; border-radius: 5px;">
+                <h3>👤 Profile Content</h3>
+                <ComponentTracker name="ProfilePage" color="#2196f3" />
 
-          <Route route={PROFILE_ROUTE}>
-            <div style="background: #e3f2fd; padding: 15px; border-radius: 5px;">
-              <h3>👤 Profile Content</h3>
-              <ComponentTracker name="ProfilePage" color="#2196f3" />
+                <p>This is the profile page!</p>
+              </div>
+            }
+          />
+          <Route
+            element={
+              <div style="background: #e6f3ff; padding: 15px; border-radius: 5px;">
+                <h3>🔐 Auth Section Wrapper</h3>
+                <ComponentTracker name="AuthWrapper" color="#17a2b8" />
+                <p>
+                  This wrapper should only render when one of the auth routes is
+                  active:
+                </p>
 
-              <p>This is the profile page!</p>
-            </div>
-          </Route>
+                <Route.Slot />
 
-          <Route>
-            <div style="background: #e6f3ff; padding: 15px; border-radius: 5px;">
-              <h3>🔐 Auth Section Wrapper</h3>
-              <ComponentTracker name="AuthWrapper" color="#17a2b8" />
-              <p>
-                This wrapper should only render when one of the auth routes is
-                active:
-              </p>
-
-              <Route route={LOGIN_ROUTE}>
+                <p>
+                  <em>End of auth section</em>
+                </p>
+              </div>
+            }
+          >
+            <Route
+              route={LOGIN_ROUTE}
+              element={
                 <div style="background: #fff3cd; padding: 10px; margin: 10px 0; border: 1px solid #ffc107;">
                   <h4>Login Form</h4>
                   <ComponentTracker name="LoginForm" color="#ffc107" />
 
                   <p>Enter your credentials here</p>
                 </div>
-              </Route>
-
-              <Route route={FORGOT_PASSWORD_ROUTE}>
+              }
+            />
+            <Route
+              route={FORGOT_PASSWORD_ROUTE}
+              element={
                 <div style="background: #f8d7da; padding: 10px; margin: 10px 0; border: 1px solid #dc3545;">
                   <h4>Password Reset</h4>
                   <ComponentTracker name="ForgotForm" color="#dc3545" />
 
                   <p>Reset your password here</p>
                 </div>
-              </Route>
-
-              <p>
-                <em>End of auth section</em>
-              </p>
-            </div>
+              }
+            />
           </Route>
         </Routes>
       </main>
