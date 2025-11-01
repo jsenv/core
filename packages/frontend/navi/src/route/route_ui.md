@@ -13,14 +13,16 @@ const loadUserProfile = async ({ userId }) => {
 
 export const App = () => {
   return (
-    <Route route={PROFILE_ROUTE} action={loadUserProfile}>
-      {(userData) => (
+    <Route
+      route={PROFILE_ROUTE}
+      action={loadUserProfile}
+      element={(userData) => (
         <div>
           <h1>{userData.name}</h1>
           <p>{userData.email}</p>
         </div>
       )}
-    </Route>
+    />
   );
 };
 ```
@@ -33,9 +35,11 @@ Wrap routes in Suspense to show loading states
 import { Suspense } from "preact/compat";
 
 <Suspense fallback={<p>Loading...</p>}>
-  <Route route={DASHBOARD_ROUTE} action={loadDashboardData}>
-    {(dashboardData) => <Dashboard data={dashboardData} />}
-  </Route>
+  <Route
+    route={DASHBOARD_ROUTE}
+    action={loadDashboardData}
+    element={(dashboardData) => <Dashboard data={dashboardData} />}
+  />
 </Suspense>;
 ```
 
@@ -54,8 +58,10 @@ import { ErrorBoundary } from "@jsenv/navi";
     </div>
   )}
 >
-  <Route route={API_ROUTE} action={riskyApiCall}>
-    {(data) => <ApiData data={data} />}
-  </Route>
+  <Route
+    route={API_ROUTE}
+    action={riskyApiCall}
+    element={(data) => <ApiData data={data} />}
+  />
 </ErrorBoundary>;
 ```
