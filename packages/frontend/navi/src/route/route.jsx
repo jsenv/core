@@ -33,7 +33,7 @@ const WithRoute = ({ route, children }) => {
 
 const WithoutRoute = ({ children }) => {
   const [discoveredRoutes, setDiscoveredRoutes] = useState(new Set());
-  
+
   const registerChildRoute = (route) => {
     setDiscoveredRoutes((prevRoutes) => {
       const newRoutes = new Set(prevRoutes);
@@ -45,7 +45,7 @@ const WithoutRoute = ({ children }) => {
   };
 
   // Check if any discovered route is currently active
-  const activeRoutes = Array.from(discoveredRoutes).filter(route => {
+  const activeRoutes = Array.from(discoveredRoutes).filter((route) => {
     const { active } = useRouteStatus(route);
     return active;
   });
