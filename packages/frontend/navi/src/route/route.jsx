@@ -51,13 +51,13 @@ const WithoutRoute = ({ children }) => {
 
   const reportChildStatus = (route, isActive) => {
     const activeRoutes = activeRoutesRef.current;
-    
+
     if (isActive) {
       activeRoutes.add(route);
     } else {
       activeRoutes.delete(route);
     }
-    
+
     setHasActiveRoute(activeRoutes.size > 0);
   };
   const contextValue = useMemo(() => {
