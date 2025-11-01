@@ -1,5 +1,9 @@
 # Routes API
 
+## Technical requirement
+
+All routes must be defined at once for the routing system to work correctly (URL matching, navigation, etc.).
+
 ## Overview
 
 The routing API is divided into two distinct parts:
@@ -48,21 +52,7 @@ export const App = () => {
 
 ## Why this separation?
 
-### 1. **Technical requirement**
-
-All routes must be defined at once for the routing system to work correctly (URL matching, navigation, etc.).
-
-### 2. **Architectural choice: separating definition from usage**
-
-Beyond this technical requirement, we choose to separate route definition from their UI usage. This separation provides several benefits:
-
-#### **Clean overview of all routes**
-
-All application routes are visible at a glance without superfluous noise. This gives developers a clear map of the entire application structure in one place.
-
-#### **Route usage outside of UI components**
-
-Route objects can be used anywhere in the application, not just in components:
+This separation is an architectural choice to enable usage of route outside of UI components:
 
 ```jsx
 // Programmatic navigation
@@ -85,6 +75,12 @@ const isUserOnAuthPage = (currentUrl) => {
 ```
 
 Routes can also be associated with logic before JSX components are even involved. This will enable implementing component preloading, data prefetching, performance optimizations, etc.
+
+## More stuff
+
+#### **Clean overview of all routes**
+
+All application routes are visible at a glance without superfluous noise. This gives developers a clear map of the entire application structure in one place.
 
 #### **Discoverability through named exports**
 
