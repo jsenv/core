@@ -26,62 +26,64 @@
         );
       };
 
-      const promise = new Promise((r) => {
-        setTimeout(r, 300);
-      });
+      // Create a use(promise) hook following the official Preact pattern
+      function use(promise) {
+        // We need to track promise state per promise instance
+        // Use a WeakMap to associate state with each promise
+        if (!use._promiseStates) {
+          use._promiseStates = new WeakMap();
+        }
 
-      // This pattern is based on Preact's official test examples
-      const Child = () => {
-        console.debug("Child component rendering");
+        let state = use._promiseStates.get(promise);
 
-        console.debug("About to call use()");
-        const result = use(promise);
-        console.debug("use() returned:", result);
+        if (!state) {
+          // Initialize state for this promise
+          state = { data: null, error: null, settled: false };
+          use._promiseStates.set(promise, state);
 
-        // If resolved, render the content
-        console.debug("Rendering content");
-        return <div>This is content inside Suspense.</div>;
-      };
-      const use = (promise) => {
-        console.debug("use() called");
-
-        const settledRef = useRef(false);
-        const rejectedRef = useRef(false);
-        const valueRef = useRef(null);
-        const reasonRef = useRef(null);
-        const promiseTrackedRef = useRef(null);
-
-        if (!promiseTrackedRef.current) {
-          promiseTrackedRef.current = true;
-          console.debug("Creating new promise tracking");
+          // Set up promise resolution
           promise.then(
-            (v) => {
-              console.debug("Promise resolved with value:", v);
-              settledRef.current = true;
-              valueRef.current = true;
+            (data) => {
+              state.data = data;
+              state.settled = true;
             },
-            (e) => {
-              console.debug("Promise rejected with error:", e);
-              reasonRef.current = e;
-              settledRef.current = true;
-              rejectedRef.current = true;
+            (error) => {
+              state.error = error;
+              state.settled = true;
             },
           );
         }
 
-        if (!settledRef.current) {
+        if (state.error) {
+          throw state.error;
+        }
+
+        if (!state.settled) {
           throw promise;
         }
 
-        if (!rejectedRef.current) {
-          console.debug("Promise not settled, throwing promise");
-          throw reasonRef.current;
-        }
+        return state.data;
+      }
 
-        console.debug("Promise settled, returning value:", valueRef.current);
-        return valueRef.current;
+      // Create the second promise OUTSIDE the component to avoid recreating it
+      const promise2 = new Promise((resolve) => {
+        setTimeout(() => {
+          resolve("Hook data loaded!");
+        }, 500);
+      });
+
+      // Test both approaches
+      const Child = () => {
+        // Test 2: Using the use(promise) hook
+        const result2 = use(promise2);
+
+        // If both resolved, render the content
+        return (
+          <div>
+            <div>Use Hook: {result2}</div>
+          </div>
+        );
       };
-
       render(<App />, document.getElementById("app"));
     </script>
   </body>
