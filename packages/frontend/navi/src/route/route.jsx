@@ -35,36 +35,26 @@ const ParentRoute = ({ children }) => {
       onRouteStatusChange(route);
     });
     discoveredRouteMap.set(route, unsubscribe);
-
     // Add to active set if route is currently active
     if (route.active) {
       activeRoutesSet.add(route);
     }
   };
-
   const onRouteBecomesActive = (route) => {
     const activeRoutesSet = activeRoutesSetRef.current;
     const wasEmpty = activeRoutesSet.size === 0;
-
     activeRoutesSet.add(route);
-
     // If we went from 0 to 1 active route, trigger re-render
-    if (wasEmpty && hasRenderedOnceRef.current) {
+    if (wasEmpty) {
       forceRender({});
     }
   };
   const onRouteBecomesInactive = (route) => {
     const activeRoutesSet = activeRoutesSetRef.current;
     const hadActiveRoutes = activeRoutesSet.size > 0;
-
     activeRoutesSet.delete(route);
-
     // If we went from having active routes to none, trigger re-render
-    if (
-      hadActiveRoutes &&
-      activeRoutesSet.size === 0 &&
-      hasRenderedOnceRef.current
-    ) {
+    if (hadActiveRoutes && activeRoutesSet.size === 0) {
       forceRender({});
     }
   };
@@ -79,12 +69,10 @@ const ParentRoute = ({ children }) => {
 
   const registerChildRoute = (route) => {
     const discoveredRouteMap = discoveredRouteMapRef.current;
-
     // Skip if already registered
     if (discoveredRouteMap.has(route)) {
       return;
     }
-
     onRouteDiscovered(route);
   };
 
