@@ -3,8 +3,14 @@
  * A investigere et faire
  *
  * - on veut pouvoir avoir plusieurs routes qui match
- * - on veut pouvoir dire, si aucune autre route match idéalement
- * - on veut surement qu'une route match peu importe les query params
+ *
+ * Donc pour si aucune autre match on va juste avoir une route statique NO_MATCH_ROUTE
+ * c'est plus simple
+ *
+ * Les routes vont match peu importe les query param ca y'a rien a faire de spécial
+ *
+ * Et on a deja plusieurs route aui peuvent match. Le souci c'est lapi Route.jsx qu'il faut réfléchir
+ *
  *
  */
 
