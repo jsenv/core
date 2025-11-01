@@ -177,9 +177,8 @@ const ParentRoute = ({ children }) => {
 
   if (isFirstRenderToDiscoverNestedRoutes) {
     // Enable discovery mode - components render but no DOM operations
-    if (discoveryContext) {
-      discoveryContext.startDiscovery();
-    }
+
+    discoveryContext.startDiscovery();
 
     const vnode = (
       <RouteComponentContext.Provider value={contextValue}>
@@ -188,14 +187,12 @@ const ParentRoute = ({ children }) => {
     );
 
     // After discovery, evaluate which routes are active and mark their vnodes
-    if (discoveryContext) {
-      // Check if we have any active routes
-      if (hasActiveNestedRoutes) {
-        // Mark this vnode as allowed for DOM insertion
-        allowedVNodeSet.add(vnode);
-      }
-      discoveryContext.finishDiscoveryAndEvaluate();
+    // Check if we have any active routes
+    if (hasActiveNestedRoutes) {
+      // Mark this vnode as allowed for DOM insertion
+      allowedVNodeSet.add(vnode);
     }
+    discoveryContext.finishDiscoveryAndEvaluate();
 
     return vnode;
   }
@@ -227,7 +224,7 @@ const RegularRoute = ({ route, children }) => {
   );
 
   // During discovery phase, mark this vnode as allowed if route is active
-  if (discoveryContext?.discoveryPhase === "discovering" && active) {
+  if (discoveryContext.discoveryPhase === "discovering" && active) {
     allowedVNodeSet.add(vnode);
   }
 
