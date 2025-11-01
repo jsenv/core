@@ -52,7 +52,7 @@ export const App = () => {
 
 ## Why this separation?
 
-This separation is an architectural choice to enable usage of route outside of UI components:
+This separation is an architectural choice in order to be able to use route outside of UI components:
 
 ```jsx
 // Programmatic navigation
@@ -76,7 +76,7 @@ const isUserOnAuthPage = (currentUrl) => {
 
 Routes can also be associated with logic before JSX components are even involved. This will enable implementing component preloading, data prefetching, performance optimizations, etc.
 
-## More stuff
+## Other architectural choices
 
 #### **Clean overview of all routes**
 
