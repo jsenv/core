@@ -1,4 +1,4 @@
-import { createContext, options } from "preact";
+import { createContext } from "preact";
 import {
   useContext,
   useLayoutEffect,
@@ -9,224 +9,139 @@ import {
 
 // import { ActionRenderer } from "../components/action_renderer.jsx";
 import { useContentKey } from "../components/ui_transition.jsx";
-import { subscribeRouteStatus, useRouteStatus } from "./route.js";
-
-// Store original commit function
-const originalCommit = options.commit;
-let currentDiscoverySession = null;
-let allowedVNodeSet = new WeakSet(); // VNodes that are allowed to be committed to DOM
-
-// Intercept DOM commits during discovery phase
-options.commit = (vnode, commitQueue) => {
-  if (!currentDiscoverySession) {
-    // Normal operation
-    if (originalCommit) {
-      originalCommit(vnode, commitQueue);
-    }
-    return;
-  }
-
-  // During discovery: only allow commits for vnodes of active routes
-  if (allowedVNodeSet.has(vnode)) {
-    if (originalCommit) {
-      originalCommit(vnode, commitQueue);
-    }
-  }
-  // Skip commits for inactive route vnodes
-};
-
-const RouteComponentContext = createContext();
-const DiscoveryContext = createContext(null);
+import { subscribeRouteStatus } from "./route.js";
 
 export const Routes = ({ children }) => {
-  const [discoveryPhase, setDiscoveryPhase] = useState("discovering"); // 'discovering' | 'evaluating' | 'complete'
-  const discoverySessionRef = useRef(Symbol("discovery-session"));
-  const discoveredRoutesRef = useRef(new Set());
+  return <>{children}</>;
+};
 
-  const registerDiscoveredRoute = (route) => {
-    discoveredRoutesRef.current.add(route);
-  };
+const RouteAncestorContext = createContext(null);
+const RouteSlotContext = createContext(null);
+export const Route = ({ route, element, children }) => {
+  const routeSetRef = useRef(new Set());
+  const routeSet = routeSetRef.current;
 
-  const startDiscovery = () => {
-    currentDiscoverySession = discoverySessionRef.current;
-    allowedVNodeSet = new WeakSet();
-    setDiscoveryPhase("discovering");
-  };
+  let routeIsActive;
+  route_from_props: {
+    const [, forceRender] = useState(null);
+    const routeIsActiveRef = useRef(false);
+    const routeRef = useRef();
+    if (routeRef.current !== route) {
+      const previousRoute = routeRef.current;
+      if (previousRoute) {
+        routeSet.delete(previousRoute);
+      }
+      if (!route) {
+        routeIsActiveRef.current = false;
+      } else {
+        routeSet.add(route);
+        routeIsActiveRef.current = route.active;
+        subscribeRouteStatus(route, () => {
+          routeIsActiveRef.current = route.active;
+          forceRender({});
+        });
+      }
+      routeRef.current = route;
+    }
+    routeIsActive = routeIsActiveRef.current;
+  }
 
-  const finishDiscoveryAndEvaluate = () => {
-    // Discovery complete, now evaluate which routes are active
-    setDiscoveryPhase("evaluating");
+  let hasActiveNestedRoute = false;
+  const activeRouteSetRef = useRef(new Set()); // Set<route> - tracks which routes are currently active
+  const activeRouteSet = activeRouteSetRef.current;
+  route_from_children: {
+    const [, forceRender] = useState(null);
+    const discoveredRouteMapRef = useRef(new Map()); // Map<route, unsubscribe>
+    const discoveredRouteMap = discoveredRouteMapRef.current;
+    const hasRenderedOnceRef = useRef(false);
 
-    // Mark vnodes of active routes as allowed
-    const discoveredRoutes = Array.from(discoveredRoutesRef.current);
-    for (const route of discoveredRoutes) {
+    const onRouteDiscovered = (route) => {
+      routeSet.add(route);
+      // Add to discovered routes
+      const unsubscribe = subscribeRouteStatus(route, () => {
+        onRouteStatusChange(route);
+      });
+      discoveredRouteMap.set(route, unsubscribe);
+      // Add to active set if route is currently active
       if (route.active) {
-        // We need a way to mark the vnodes of this route as allowed...
-        // This is the tricky part
+        activeRouteSet.add(route);
       }
-    }
+    };
+    const onRouteBecomesActive = (route) => {
+      const wasEmpty = activeRouteSet.size === 0;
+      activeRouteSet.add(route);
+      // If we went from 0 to 1 active route, trigger re-render
+      if (wasEmpty) {
+        forceRender({});
+      }
+    };
+    const onRouteBecomesInactive = (route) => {
+      const hadActiveRoutes = activeRouteSet.size > 0;
+      activeRouteSet.delete(route);
+      // If we went from having active routes to none, trigger re-render
+      if (hadActiveRoutes && activeRouteSet.size === 0) {
+        forceRender({});
+      }
+    };
+    const onRouteStatusChange = (route) => {
+      if (route.active) {
+        onRouteBecomesActive(route);
+      } else {
+        onRouteBecomesInactive(route);
+      }
+    };
 
-    setDiscoveryPhase("complete");
-    currentDiscoverySession = null;
-  };
+    const registerChildRoute = (route) => {
+      // Skip if already registered
+      if (discoveredRouteMap.has(route)) {
+        return;
+      }
+      onRouteDiscovered(route);
+    };
+    const contextValue = useMemo(() => {
+      return {
+        registerChildRoute,
+      };
+    }, []);
 
-  const discoveryContextValue = useMemo(
-    () => ({
-      startDiscovery,
-      finishDiscoveryAndEvaluate,
-      registerDiscoveredRoute,
-      discoveryPhase,
-    }),
-    [discoveryPhase],
-  );
+    useLayoutEffect(() => {
+      hasRenderedOnceRef.current = true;
 
-  return (
-    <DiscoveryContext.Provider value={discoveryContextValue}>
+      return () => {
+        for (const unsubscribe of discoveredRouteMap.values()) {
+          unsubscribe();
+        }
+        discoveredRouteMap.clear();
+        activeRouteSet.clear();
+      };
+    }, []);
+
+    <RouteAncestorContext.Provider value={contextValue}>
       {children}
-    </DiscoveryContext.Provider>
-  );
-};
-
-export const Route = ({ route, children }) => {
-  if (!route) {
-    return <ParentRoute>{children}</ParentRoute>;
-  }
-  return <RegularRoute route={route}>{children}</RegularRoute>;
-};
-
-const ParentRoute = ({ children }) => {
-  const [, forceRender] = useState(null);
-  const discoveredRouteMapRef = useRef(new Map()); // Map<route, unsubscribe>
-  const activeRoutesSetRef = useRef(new Set()); // Set<route> - tracks which routes are currently active
-  const hasRenderedOnceRef = useRef(false);
-  const discoveryContext = useContext(DiscoveryContext);
-
-  const onRouteDiscovered = (route) => {
-    const discoveredRouteMap = discoveredRouteMapRef.current;
-    const activeRoutesSet = activeRoutesSetRef.current;
-
-    // Add to discovered routes
-    const unsubscribe = subscribeRouteStatus(route, () => {
-      onRouteStatusChange(route);
-    });
-    discoveredRouteMap.set(route, unsubscribe);
-    // Add to active set if route is currently active
-    if (route.active) {
-      activeRoutesSet.add(route);
-    }
-  };
-  const onRouteBecomesActive = (route) => {
-    const activeRoutesSet = activeRoutesSetRef.current;
-    const wasEmpty = activeRoutesSet.size === 0;
-    activeRoutesSet.add(route);
-    // If we went from 0 to 1 active route, trigger re-render
-    if (wasEmpty) {
-      forceRender({});
-    }
-  };
-  const onRouteBecomesInactive = (route) => {
-    const activeRoutesSet = activeRoutesSetRef.current;
-    const hadActiveRoutes = activeRoutesSet.size > 0;
-    activeRoutesSet.delete(route);
-    // If we went from having active routes to none, trigger re-render
-    if (hadActiveRoutes && activeRoutesSet.size === 0) {
-      forceRender({});
-    }
-  };
-
-  const onRouteStatusChange = (route) => {
-    if (route.active) {
-      onRouteBecomesActive(route);
-    } else {
-      onRouteBecomesInactive(route);
-    }
-  };
-
-  const registerChildRoute = (route) => {
-    const discoveredRouteMap = discoveredRouteMapRef.current;
-    // Skip if already registered
-    if (discoveredRouteMap.has(route)) {
-      return;
-    }
-    onRouteDiscovered(route);
-  };
-
-  const contextValue = useMemo(() => {
-    return {
-      registerChildRoute,
-    };
-  }, []);
-
-  // Clean up subscriptions on unmount
-  useLayoutEffect(() => {
-    hasRenderedOnceRef.current = true;
-
-    return () => {
-      const discoveredRouteMap = discoveredRouteMapRef.current;
-      for (const unsubscribe of discoveredRouteMap.values()) {
-        unsubscribe();
-      }
-      discoveredRouteMap.clear();
-      activeRoutesSetRef.current.clear();
-    };
-  }, []);
-
-  // Discovery phase: render children but prevent DOM commits
-  const isFirstRenderToDiscoverNestedRoutes = !hasRenderedOnceRef.current;
-  const hasActiveNestedRoutes = activeRoutesSetRef.current.size > 0;
-
-  if (isFirstRenderToDiscoverNestedRoutes) {
-    // Enable discovery mode - components render but no DOM operations
-
-    discoveryContext.startDiscovery();
-
-    const vnode = (
-      <RouteComponentContext.Provider value={contextValue}>
-        {children}
-      </RouteComponentContext.Provider>
-    );
-
-    // After discovery, evaluate which routes are active and mark their vnodes
-    // Check if we have any active routes
-    if (hasActiveNestedRoutes) {
-      // Mark this vnode as allowed for DOM insertion
-      allowedVNodeSet.add(vnode);
-    }
-    discoveryContext.finishDiscoveryAndEvaluate();
-
-    return vnode;
+    </RouteAncestorContext.Provider>;
   }
 
-  // Normal phase: render conditionally based on active routes
+  const active = routeIsActive || hasActiveNestedRoute;
+  // mais pas sur que ce soit suffisant parce que pour la route principale
+  // il faudrait subscribe a l'url (si elle existe)
+  // tandis que pour les routes enfants on peut se contenter du url pattern input
+  const routeIdentifier = Array.from(routeSet).map((r) => r.url);
+  useContentKey(routeIdentifier, active);
+
+  if (!active) {
+    return null;
+  }
   return (
-    <RouteComponentContext.Provider value={contextValue}>
-      {hasActiveNestedRoutes ? children : null}
-    </RouteComponentContext.Provider>
+    <RouteSlotContext.Provider value={children}>
+      {element}
+    </RouteSlotContext.Provider>
   );
 };
-
-const RegularRoute = ({ route, children }) => {
-  const RouteComponent = useContext(RouteComponentContext);
-  const discoveryContext = useContext(DiscoveryContext);
-
-  const { active, url } = useRouteStatus(route);
-  useContentKey(url, active);
-
-  // Register this route with parent for discovery
-  if (RouteComponent) {
-    RouteComponent.registerChildRoute(route);
+export const RouteSlot = () => {
+  const routeSlot = useContext(RouteSlotContext);
+  if (!routeSlot) {
+    return <p>RouteSlot not inside a Route</p>;
   }
-
-  const vnode = (
-    <RouteComponentContext.Provider value={null}>
-      {active ? children : null}
-    </RouteComponentContext.Provider>
-  );
-
-  // During discovery phase, mark this vnode as allowed if route is active
-  if (discoveryContext.discoveryPhase === "discovering" && active) {
-    allowedVNodeSet.add(vnode);
-  }
-
-  return vnode;
+  return <>{routeSlot}</>;
 };
+Route.Slot = RouteSlot;
