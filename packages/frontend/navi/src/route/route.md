@@ -1,14 +1,14 @@
 # Routes API
 
-## Vue d'ensemble
+## Overview
 
-L'API de routing se divise en deux parties distinctes :
+The routing API is divided into two distinct parts:
 
-1. **`setupRoutes()`** - Définit toutes les routes de l'application
-2. **`<Route>`** - Utilise les routes pour afficher du contenu conditionnel
+1. **`setupRoutes()`** - Defines all application routes
+2. **`<Route>`** - Uses routes to display conditional content
 
 ```jsx
-// 1. Definition des routes (généralement dans routes.js)
+// 1. Route definition (typically in routes.js)
 import { setupRoutes } from "@jsenv/navi";
 
 export const {
@@ -22,13 +22,12 @@ export const {
   AUTH_ROUTE: "/auth/",
   LOGIN_ROUTE: "/auth/login",
   FORGOT_PASSWORD_ROUTE: "/auth/forgot_password",
-
   ONE_MORE_ROUTE: "/one_more/",
 });
 ```
 
 ```jsx
-// 2. Utilisation des routes (dans les composants)
+// 2. Route usage (in components)
 import { Route } from "@jsenv/navi";
 import { HOME_ROUTE, LOGIN_ROUTE, FORGOT_PASSWORD_ROUTE } from "./routes.js";
 
@@ -47,55 +46,54 @@ export const App = () => {
 };
 ```
 
-## Pourquoi cette séparation ?
+## Why this separation?
 
-### 1. **Contrainte technique incontournable**
+### 1. **Technical requirement**
 
-Toutes les routes doivent être définies en une seule fois pour que le système de routing puisse fonctionner correctement (matching d'URL, navigation, etc.).
+All routes must be defined at once for the routing system to work correctly (URL matching, navigation, etc.).
 
-### 2. **Choix d'architecture : découper définition et utilisation**
+### 2. **Architectural choice: separating definition from usage**
 
-En plus de cette contrainte technique, nous faisons le choix de séparer la définition des routes de leur utilisation dans l'UI. Cette séparation apporte plusieurs avantages :
+Beyond this technical requirement, we choose to separate route definition from their UI usage. This separation provides several benefits:
 
-#### **Vision épurée**
+#### **Clean overview of all routes**
 
-Toutes les routes de l'application sont visibles d'un coup d'œil sans bruit superflu.
+All application routes are visible at a glance without superfluous noise. This gives developers a clear map of the entire application structure in one place.
 
-#### **Utilisation en dehors de l'UI**
+#### **Route usage outside of UI components**
 
-Les objets routes peuvent être utilisés partout dans l'application :
+Route objects can be used anywhere in the application, not just in components:
 
 ```jsx
-// Navigation programmatique
+// Programmatic navigation
 import { LOGIN_ROUTE, PROFILE_ROUTE } from "./routes.js";
 
-// Redirection après login
+// Redirect after login
 const redirectAfterLogin = () => {
   window.location.href = PROFILE_ROUTE.buildUrl({ userId: "123" });
 };
 
-// Construction d'URLs pour des liens
+// URL construction for links
 const shareProfileLink = (userId) => {
   return PROFILE_ROUTE.buildUrl({ userId });
 };
 
-// Validation de routes dans du code métier
+// Route validation in business logic
 const isUserOnAuthPage = (currentUrl) => {
   return LOGIN_ROUTE.matches(currentUrl);
 };
 ```
 
-Les routes peuvent également être associées à de la logique avant même que les composants JSX soient impliqués. Cela permettra d'implémenter du préchargement de composants et de données, des optimisations de performance, etc.
+Routes can also be associated with logic before JSX components are even involved. This will enable implementing component preloading, data prefetching, performance optimizations, etc.
 
-#### **Discoverabilité grâce aux exports nommés**
+#### **Discoverability through named exports**
 
-En utilisant des exports nommés, on voit directement quelles routes chaque fichier utilise :
+Using named exports makes it immediately clear which routes each file uses:
 
 ```jsx
-// ✅ On voit clairement quelles routes ce fichier utilise
+// ✅ Clearly shows which routes this file uses
 import { HOME_ROUTE, PROFILE_ROUTE } from "./routes.js";
 
-// ❌ Impossible de savoir quelles routes sont utilisées
+// ❌ Have to read the file to know which routes are used
 import { ROUTES } from "./routes.js";
-// ROUTES.home, ROUTES.profile utilisés quelque part...
 ```
