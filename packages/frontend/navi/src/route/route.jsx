@@ -49,6 +49,7 @@ export const Route = ({ route, element, children }) => {
     const hasRenderedOnceRef = useRef(false);
 
     const onRouteDiscovered = (route, { element }) => {
+      console.log("discovered", route.url);
       // Add to discovered routes
       const unsubscribe = subscribeRouteStatus(route, () => {
         onRouteStatusChange(route);
@@ -60,6 +61,7 @@ export const Route = ({ route, element, children }) => {
       }
     };
     const onRouteBecomesActive = (route) => {
+      console.log("route becomes active", route.url);
       if (nestedActiveRouteRef.current === route) {
         return;
       }
@@ -69,7 +71,7 @@ export const Route = ({ route, element, children }) => {
     const onRouteBecomesInactive = (route) => {
       if (nestedActiveRouteRef.current === route) {
         nestedActiveRouteRef.current = null;
-        forceRender({});
+        forceRender();
       }
     };
     const onRouteStatusChange = (route) => {
@@ -95,7 +97,7 @@ export const Route = ({ route, element, children }) => {
 
     useLayoutEffect(() => {
       hasRenderedOnceRef.current = true;
-      forceRender({});
+      forceRender();
       return () => {
         for (const { unsubscribe } of discoveredRouteMap.values()) {
           unsubscribe();
@@ -110,7 +112,8 @@ export const Route = ({ route, element, children }) => {
   }
 
   const nestedActiveRoute = nestedActiveRouteRef.current;
-  const active = routeIsActive || nestedActiveRoute;
+  const active = Boolean(routeIsActive || nestedActiveRoute);
+  console.log(route?.url, { routeIsActive, active });
   if (!active) {
     return null;
   }
