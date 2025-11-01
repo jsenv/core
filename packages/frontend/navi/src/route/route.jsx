@@ -10,7 +10,7 @@ import {
 
 // import { ActionRenderer } from "../components/action_renderer.jsx";
 import { useContentKey } from "../components/ui_transition.jsx";
-import { useRouteStatus } from "./route.js";
+import { subscribeRouteStatus, useRouteStatus } from "./route.js";
 
 const RouteComponentContext = createContext();
 
@@ -53,19 +53,23 @@ const ParentRoute = ({ children }) => {
 
     // Subscribe to each discovered route
     const [teardown, addTeardown] = createPubSub();
-    // Initial check
-    const hasAnyActive = Array.from(discoveredRouteSet).some((r) => r.active);
-    setHasActiveRoute(hasAnyActive);
+    const activeRouteSet = new Set();
     for (const route of discoveredRouteSet) {
-      const unsubscribe = route.subscribe(() => {
-        // Check if any route is active
-        const hasAnyActive = Array.from(discoveredRouteSet).some(
-          (r) => r.active,
-        );
-        setHasActiveRoute(hasAnyActive);
+      if (route.active) {
+        activeRouteSet.add(route);
+      }
+      const unsubscribe = subscribeRouteStatus(route, () => {
+        if (route.active) {
+          activeRouteSet.add(route);
+        } else {
+          activeRouteSet.delete(route);
+        }
+        const hasActiveRoute = activeRouteSet.size > 0;
+        setHasActiveRoute(hasActiveRoute);
       });
       addTeardown(unsubscribe);
     }
+    setHasActiveRoute(activeRouteSet.size > 0);
     return () => {
       teardown();
     };

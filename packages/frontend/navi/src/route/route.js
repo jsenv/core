@@ -591,6 +591,17 @@ export const useRouteStatus = (route) => {
     visited,
   };
 };
+export const subscribeRouteStatus = (route, callback) => {
+  let isFirst = false;
+  return effect(() => {
+    const status = useRouteStatus(route);
+    if (isFirst) {
+      isFirst = false;
+    } else {
+      callback(status);
+    }
+  });
+};
 
 let browserIntegration;
 export const setBrowserIntegration = (integration) => {
