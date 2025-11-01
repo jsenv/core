@@ -23,7 +23,7 @@
           <div>
             <h1>Suspense Test</h1>
             <Suspense fallback={<div>Loading...</div>}>
-              <Child />
+              <ChildLoadingFor500Ms />
               <p>Content below Suspense.</p>
             </Suspense>
           </div>
@@ -31,18 +31,13 @@
       };
 
       // Create the second promise OUTSIDE the component to avoid recreating it
-      const promise2 = new Promise((resolve) => {
+      const promiseResolvedAfter500 = new Promise((resolve) => {
         setTimeout(() => {
           resolve("Hook data loaded!");
         }, 500);
       });
-
-      // Test both approaches
-      const Child = () => {
-        // Test 2: Using the use(promise) hook
-        const result2 = use(promise2);
-
-        // If both resolved, render the content
+      const ChildLoadingFor500Ms = () => {
+        const result2 = use(promiseResolvedAfter500);
         return (
           <div>
             <div>Use Hook: {result2}</div>
