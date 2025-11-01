@@ -26,6 +26,8 @@ const WithRoute = ({ route, children }) => {
     RouteComponent.reportChildStatus?.(route, active);
   }
 
+  console.log({ active, url });
+
   return (
     <RouteComponentContext.Provider value={null}>
       {active ? children : null}
