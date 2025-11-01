@@ -65,8 +65,36 @@ import { ROUTES } from "./routes.js";
 // ROUTES.home, ROUTES.profile utilisés quelque part...
 ```
 
-### 4. **Séparation des responsabilités**
+### 3. **Utilisation des routes en dehors de l'UI**
 
-- **Configuration** (setupRoutes) vs **Utilisation** (Route component)
-- Les routes peuvent être définies dans un fichier dédié
-- Les composants restent focalisés sur leur logique d'affichage
+Les objets routes peuvent être utilisés partout dans l'application, pas seulement dans les composants :
+
+```jsx
+// Navigation programmatique
+import { LOGIN_ROUTE, PROFILE_ROUTE } from "./routes.js";
+
+// Redirection après login
+const redirectAfterLogin = () => {
+  window.location.href = PROFILE_ROUTE.buildUrl({ userId: "123" });
+};
+
+// Construction d'URLs pour des liens
+const shareProfileLink = (userId) => {
+  return PROFILE_ROUTE.buildUrl({ userId });
+};
+
+// Validation de routes dans du code métier
+const isUserOnAuthPage = (currentUrl) => {
+  return LOGIN_ROUTE.matches(currentUrl);
+};
+```
+
+Sans cette séparation, vous devriez recréer des helpers ou dupliquer la logique de construction d'URL.
+
+### 4. **Préchargement et logique pré-UI**
+
+Les routes peuvent être associées à de la logique avant même que les composants JSX soient impliqués. Cela permettra d'implémenter du préchargement de composants et de données, des optimisations de performance, etc.
+
+### 5. **Vision globale de l'application**
+
+Avoir toutes les routes définies au même endroit donne une vision simple et complète de la structure de navigation de l'application.
