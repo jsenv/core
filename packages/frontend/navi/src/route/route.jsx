@@ -14,6 +14,7 @@ export const Routes = ({ children }) => {
 };
 
 const RouteAncestorContext = createContext(null);
+const RouteSlotContext = createContext(null);
 
 export const Route = ({ route, element, children }) => {
   const routeAncestor = useContext(RouteAncestorContext);
@@ -68,10 +69,11 @@ export const Route = ({ route, element, children }) => {
   const activeNestedRouteInfo = activeNestedRouteInfoRef.current;
   if (activeNestedRouteInfo) {
     const routeSlot = activeNestedRouteInfo.element;
-    if (typeof element === "function") {
-      return element(routeSlot);
-    }
-    return element;
+    return (
+      <RouteSlotContext.Provider value={routeSlot}>
+        {element}
+      </RouteSlotContext.Provider>
+    );
   }
   return null;
 };
@@ -126,6 +128,15 @@ const NestedRouteDiscovery = ({
     </RouteAncestorContext.Provider>
   );
 };
+
+export const RouteSlot = () => {
+  const routeSlot = useContext(RouteSlotContext);
+  if (!routeSlot) {
+    return <p>RouteSlot not inside a Route</p>;
+  }
+  return <>{routeSlot}</>;
+};
+Route.Slot = RouteSlot;
 
 const useForceRender = () => {
   const [, setState] = useState(null);

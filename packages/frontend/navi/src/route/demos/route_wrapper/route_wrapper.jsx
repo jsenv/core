@@ -100,7 +100,7 @@ export const App = () => {
             }
           />
           <Route
-            element={(slot) => (
+            element={
               <div style="background: #e6f3ff; padding: 15px; border-radius: 5px;">
                 <h3>🔐 Auth Section Wrapper</h3>
                 <ComponentTracker name="AuthWrapper" color="#17a2b8" />
@@ -109,13 +109,13 @@ export const App = () => {
                   active:
                 </p>
 
-                {slot}
+                <Route.Slot />
 
                 <p>
                   <em>End of auth section</em>
                 </p>
               </div>
-            )}
+            }
           >
             <Route
               route={LOGIN_ROUTE}

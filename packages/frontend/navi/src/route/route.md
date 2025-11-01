@@ -39,7 +39,13 @@ export const App = () => {
   return (
     <Routes>
       <Route route={HOME_ROUTE} element={"Homepage"} />
-      <Route element={(slot) => <div>{slot}</div>}>
+      <Route
+        element={
+          <div>
+            <Route.Slot />
+          </div>
+        }
+      >
         <Route route={LOGIN_ROUTE} element="Login" />
         <Route route={FORGOT_PASSWORD_ROUTE} element="Forgot password" />
       </Route>
