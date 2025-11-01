@@ -16,31 +16,32 @@ export const Routes = ({ children }) => {
 const RouteAncestorContext = createContext(null);
 const RouteSlotContext = createContext(null);
 
-// Subscription à la route prop
-// const routeIsActiveRef = useRef(false);
-// const routeRef = useRef();
-// if (routeRef.current !== route) {
-//   routeRef.current = route;
-//   if (!route) {
-//     routeIsActiveRef.current = false;
-//   } else {
-//     routeIsActiveRef.current = route.active;
-//     subscribeRouteStatus(route, () => {
-//       routeIsActiveRef.current = route.active;
-//       forceRender();
-//     });
-//   }
-// }
-
 export const Route = ({ route, element, children }) => {
   const routeAncestor = useContext(RouteAncestorContext);
   if (routeAncestor) {
     routeAncestor.registerChildRoute(route, { element });
   }
 
+  const forceRender = useForceRender();
+
+  // Subscription à la route prop
+  const routeIsActiveRef = useRef(false);
+  const routeRef = useRef();
+  if (routeRef.current !== route) {
+    routeRef.current = route;
+    if (!route) {
+      routeIsActiveRef.current = false;
+    } else {
+      routeIsActiveRef.current = route.active;
+      subscribeRouteStatus(route, () => {
+        routeIsActiveRef.current = route.active;
+        forceRender();
+      });
+    }
+  }
+
   const hasDiscoveredRef = useRef(false);
   const activeNestedRouteInfoRef = useRef(null);
-  const forceRender = useForceRender();
   if (!hasDiscoveredRef.current && children) {
     return (
       <NestedRouteDiscovery
@@ -61,12 +62,12 @@ export const Route = ({ route, element, children }) => {
 
   // Phase de rendu normal
   const activeNestedRouteInfo = activeNestedRouteInfoRef.current;
-  const active = Boolean(activeNestedRouteInfo);
+  const active = routeIsActiveRef.current || Boolean(activeNestedRouteInfo);
   if (!active) {
     return null;
   }
 
-  const routeSlot = activeNestedRouteInfo.element;
+  const routeSlot = activeNestedRouteInfo?.element;
   return (
     <RouteSlotContext.Provider value={routeSlot}>
       {element}
