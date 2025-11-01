@@ -49,23 +49,7 @@ export const App = () => {
 
 ## Pourquoi cette séparation ?
 
-### 1. **Définition centralisée, utilisation distribuée**
-
-- **`setupRoutes()`** : Toutes les routes doivent être définies en une seule fois pour que le système de routing puisse fonctionner correctement (matching d'URL, navigation, etc.)
-- **`<Route>`** : Les composants peuvent importer et utiliser uniquement les routes dont ils ont besoin
-
-### 2. **Discoverabilité des dépendances**
-
-```jsx
-// ✅ On voit clairement quelles routes ce fichier utilise
-import { HOME_ROUTE, PROFILE_ROUTE } from "./routes.js";
-
-// ❌ Impossible de savoir quelles routes sont utilisées
-import { ROUTES } from "./routes.js";
-// ROUTES.home, ROUTES.profile utilisés quelque part...
-```
-
-### 3. **Utilisation des routes en dehors de l'UI**
+### 1. **Utilisation des routes en dehors de l'UI et logique pré-UI**
 
 Les objets routes peuvent être utilisés partout dans l'application, pas seulement dans les composants :
 
@@ -89,12 +73,26 @@ const isUserOnAuthPage = (currentUrl) => {
 };
 ```
 
+Les routes peuvent également être associées à de la logique avant même que les composants JSX soient impliqués. Cela permettra d'implémenter du préchargement de composants et de données, des optimisations de performance, etc.
+
 Sans cette séparation, vous devriez recréer des helpers ou dupliquer la logique de construction d'URL.
 
-### 4. **Préchargement et logique pré-UI**
-
-Les routes peuvent être associées à de la logique avant même que les composants JSX soient impliqués. Cela permettra d'implémenter du préchargement de composants et de données, des optimisations de performance, etc.
-
-### 5. **Vision globale de l'application**
+### 2. **Vision globale de l'application**
 
 Avoir toutes les routes définies au même endroit donne une vision simple et complète de la structure de navigation de l'application.
+
+### 3. **Définition centralisée, utilisation distribuée**
+
+- **`setupRoutes()`** : Toutes les routes doivent être définies en une seule fois pour que le système de routing puisse fonctionner correctement (matching d'URL, navigation, etc.)
+- **`<Route>`** : Les composants peuvent importer et utiliser uniquement les routes dont ils ont besoin
+
+### 4. **Discoverabilité des dépendances**
+
+```jsx
+// ✅ On voit clairement quelles routes ce fichier utilise
+import { HOME_ROUTE, PROFILE_ROUTE } from "./routes.js";
+
+// ❌ Impossible de savoir quelles routes sont utilisées
+import { ROUTES } from "./routes.js";
+// ROUTES.home, ROUTES.profile utilisés quelque part...
+```
