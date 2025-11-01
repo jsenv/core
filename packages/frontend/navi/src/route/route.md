@@ -50,6 +50,109 @@ export const App = () => {
 };
 ```
 
+## Data Loading with Routes
+
+Routes can load data asynchronously using the `action` prop. This enables data fetching that integrates seamlessly with Suspense and Error Boundary patterns:
+
+```jsx
+import { Suspense } from "preact/compat";
+import { ErrorBoundary } from "@jsenv/navi";
+
+// Data loading function
+const loadUserProfile = async ({ userId }) => {
+  const response = await fetch(`/api/users/${userId}`);
+  if (!response.ok) {
+    throw new Error("Failed to load user profile");
+  }
+  return response.json();
+};
+
+export const App = () => {
+  return (
+    <ErrorBoundary fallback={<div>Something went wrong</div>}>
+      <Suspense fallback={<div>Loading...</div>}>
+        <Route route={PROFILE_ROUTE} action={loadUserProfile}>
+          {(userData) => (
+            <div>
+              <h1>{userData.name}</h1>
+              <p>{userData.email}</p>
+            </div>
+          )}
+        </Route>
+      </Suspense>
+    </ErrorBoundary>
+  );
+};
+```
+
+### Data Loading Patterns
+
+#### **Basic Data Loading**
+
+```jsx
+// Simple data fetch
+<Route
+  route={USERS_ROUTE}
+  action={async () => {
+    const response = await fetch("/api/users");
+    return response.json();
+  }}
+>
+  {(users) => <UserList users={users} />}
+</Route>
+```
+
+#### **Route Parameters in Data Loading**
+
+```jsx
+// Using route parameters for data fetching
+<Route
+  route={USER_DETAIL_ROUTE} // e.g., "/users/:userId"
+  action={async ({ userId }) => {
+    const response = await fetch(`/api/users/${userId}`);
+    return response.json();
+  }}
+>
+  {(user) => <UserProfile user={user} />}
+</Route>
+```
+
+#### **Error Handling**
+
+```jsx
+// Wrap routes in ErrorBoundary to handle failures
+<ErrorBoundary
+  fallback={({ error, resetError }) => (
+    <div>
+      <p>Error: {error.message}</p>
+      <button onClick={resetError}>Retry</button>
+    </div>
+  )}
+>
+  <Route route={API_ROUTE} action={riskyApiCall}>
+    {(data) => <ApiData data={data} />}
+  </Route>
+</ErrorBoundary>
+```
+
+#### **Loading States**
+
+```jsx
+// Wrap routes in Suspense to show loading states
+<Suspense
+  fallback={
+    <div className="loading">
+      <Spinner />
+      <p>Loading data...</p>
+    </div>
+  }
+>
+  <Route route={DASHBOARD_ROUTE} action={loadDashboardData}>
+    {(dashboardData) => <Dashboard data={dashboardData} />}
+  </Route>
+</Suspense>
+```
+
 ## Why this separation?
 
 This separation is an architectural choice in order to be able to use route outside of UI components:

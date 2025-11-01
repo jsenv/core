@@ -13,6 +13,10 @@
       import { render } from "preact";
       import { Suspense } from "preact/compat";
       import { useState, useRef } from "preact/hooks";
+      import { use } from "./use.js";
+      import { ErrorBoundary } from "./error_boundary.jsx";
+
+      // A tester maintenant: quid lorsqu'une erreur est throw?
 
       const App = () => {
         return (
@@ -25,45 +29,6 @@
           </div>
         );
       };
-
-      // Create a use(promise) hook following the official Preact pattern
-      function use(promise) {
-        // We need to track promise state per promise instance
-        // Use a WeakMap to associate state with each promise
-        if (!use._promiseStates) {
-          use._promiseStates = new WeakMap();
-        }
-
-        let state = use._promiseStates.get(promise);
-
-        if (!state) {
-          // Initialize state for this promise
-          state = { data: null, error: null, settled: false };
-          use._promiseStates.set(promise, state);
-
-          // Set up promise resolution
-          promise.then(
-            (data) => {
-              state.data = data;
-              state.settled = true;
-            },
-            (error) => {
-              state.error = error;
-              state.settled = true;
-            },
-          );
-        }
-
-        if (state.error) {
-          throw state.error;
-        }
-
-        if (!state.settled) {
-          throw promise;
-        }
-
-        return state.data;
-      }
 
       // Create the second promise OUTSIDE the component to avoid recreating it
       const promise2 = new Promise((resolve) => {
