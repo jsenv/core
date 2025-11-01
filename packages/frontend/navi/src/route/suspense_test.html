@@ -35,7 +35,7 @@
             <section>
               <h2>Test 2: Error after 300ms (with ErrorBoundary)</h2>
               <ErrorBoundary
-                fallback={({ error, resetError }) => (
+                fallback={(error, { resetError }) => (
                   <div style="color: red; border: 1px solid red; padding: 10px; margin: 10px 0;">
                     <strong>Error caught:</strong> {error.message}
                     <br />
