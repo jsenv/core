@@ -26,34 +26,54 @@ const ParentRoute = ({ children }) => {
   const activeRoutesSetRef = useRef(new Set()); // Set<route> - tracks which routes are currently active
   const hasRenderedOnceRef = useRef(false);
 
-  const updateActiveRouteSet = () => {
+  const onRouteDiscovered = (route) => {
     const discoveredRouteMap = discoveredRouteMapRef.current;
     const activeRoutesSet = activeRoutesSetRef.current;
 
-    // Clear and rebuild the active routes set
-    activeRoutesSet.clear();
-    for (const route of discoveredRouteMap.keys()) {
-      if (route.active) {
-        activeRoutesSet.add(route);
-      }
+    // Add to discovered routes
+    const unsubscribe = subscribeRouteStatus(route, () => {
+      onRouteStatusChange(route);
+    });
+    discoveredRouteMap.set(route, unsubscribe);
+
+    // Add to active set if route is currently active
+    if (route.active) {
+      activeRoutesSet.add(route);
     }
   };
 
-  const updateActiveState = () => {
-    const previouslyHadActiveRoutes = activeRoutesSetRef.current.size > 0;
+  const onRouteBecomesActive = (route) => {
+    const activeRoutesSet = activeRoutesSetRef.current;
+    const wasEmpty = activeRoutesSet.size === 0;
 
-    // Update the active routes set
-    updateActiveRouteSet();
+    activeRoutesSet.add(route);
 
-    const currentlyHasActiveRoutes = activeRoutesSetRef.current.size > 0;
+    // If we went from 0 to 1 active route, trigger re-render
+    if (wasEmpty && hasRenderedOnceRef.current) {
+      forceRender({});
+    }
+  };
+  const onRouteBecomesInactive = (route) => {
+    const activeRoutesSet = activeRoutesSetRef.current;
+    const hadActiveRoutes = activeRoutesSet.size > 0;
 
-    // Only trigger re-render after first render is complete
-    // AND if the "has active routes" state actually changed
+    activeRoutesSet.delete(route);
+
+    // If we went from having active routes to none, trigger re-render
     if (
-      hasRenderedOnceRef.current &&
-      previouslyHadActiveRoutes !== currentlyHasActiveRoutes
+      hadActiveRoutes &&
+      activeRoutesSet.size === 0 &&
+      hasRenderedOnceRef.current
     ) {
       forceRender({});
+    }
+  };
+
+  const onRouteStatusChange = (route) => {
+    if (route.active) {
+      onRouteBecomesActive(route);
+    } else {
+      onRouteBecomesInactive(route);
     }
   };
 
@@ -65,12 +85,7 @@ const ParentRoute = ({ children }) => {
       return;
     }
 
-    // Subscribe immediately when route is discovered
-    const unsubscribe = subscribeRouteStatus(route, updateActiveState);
-    discoveredRouteMap.set(route, unsubscribe);
-
-    // Update active routes set during discovery (but don't trigger re-render during first render)
-    updateActiveRouteSet();
+    onRouteDiscovered(route);
   };
 
   const contextValue = useMemo(() => {
