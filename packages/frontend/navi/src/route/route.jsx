@@ -124,19 +124,11 @@ const ActiveRouteManager = ({
   );
 };
 
-const subscribeRouteActive = (route, callback) => {
-  const subscribeMethod = route.isComposite
-    ? route.subscribeActiveInfo
-    : (callback) => route.subscribeStatus(callback);
-  return subscribeMethod(() => {
-    callback();
-  });
-};
 const getActiveInfo = (candidate) => {
   return candidate.route.active ? candidate : null;
 };
 const subscribeActiveInfo = (candidate, callback) => {
-  return subscribeRouteActive(candidate.route, () => {
+  return candidate.route.subscribeStatus(() => {
     callback(getActiveInfo(candidate));
   });
 };
@@ -168,8 +160,7 @@ const initRouteObserver = ({
     return;
   }
 
-  const [publishCompositeActiveInfo, subscribeCompositeActiveInfo] =
-    createPubSub();
+  const [publishCompositeStatus, subscribeCompositeStatus] = createPubSub();
   const patterns = Array.from(candidateSet, (c) => c.route.urlPattern).join(
     ", ",
   );
@@ -177,7 +168,7 @@ const initRouteObserver = ({
     urlPattern: `composite(${patterns})`,
     isComposite: true,
     active: false,
-    subscribeActiveInfo: subscribeCompositeActiveInfo,
+    subscribeStatus: subscribeCompositeStatus,
     toString: () => `composite(${candidateSet.size} candidates)`,
   };
   const getActiveCandidateInfo = () => {
@@ -213,7 +204,7 @@ const initRouteObserver = ({
     activeInfo = initialActiveInfo;
   }
   subscribeGlobalActiveInfo((current, previous) => {
-    publishCompositeActiveInfo(current, previous);
+    publishCompositeStatus(current, previous);
     onActiveRouteChange(current, previous);
   });
   if (registerChildRouteFromContext) {
