@@ -126,6 +126,7 @@ const ActiveRouteManager = ({
   }
 
   if (routeFromProps) {
+    console.debug(`📍 addCandidate from props: ${routeFromProps}`);
     addCandidate(routeFromProps, elementFromProps, "props");
   }
 

@@ -40,19 +40,12 @@ const ComponentTracker = ({ name, color = "#333", children }) => {
 };
 
 // Routes setup with nested structure
-const {
-  HOME_ROUTE,
-  ADMIN_USERS_LIST_ROUTE,
-  ADMIN_USERS_CREATE_ROUTE,
-  ADMIN_SETTINGS_GENERAL_ROUTE,
-  ADMIN_SETTINGS_SECURITY_ROUTE,
-} = setupRoutes({
-  HOME_ROUTE: "home",
-  ADMIN_USERS_LIST_ROUTE: "admin/users/list",
-  ADMIN_USERS_CREATE_ROUTE: "admin/users/create",
-  ADMIN_SETTINGS_GENERAL_ROUTE: "admin/settings/general",
-  ADMIN_SETTINGS_SECURITY_ROUTE: "admin/settings/security",
-});
+const { HOME_ROUTE, ADMIN_USERS_LIST_ROUTE, ADMIN_USERS_CREATE_ROUTE } =
+  setupRoutes({
+    HOME_ROUTE: "home",
+    ADMIN_USERS_LIST_ROUTE: "admin/users/list",
+    ADMIN_USERS_CREATE_ROUTE: "admin/users/create",
+  });
 
 export const App = () => {
   console.debug("🚀 App component rendering...");
@@ -84,12 +77,6 @@ export const App = () => {
         <hr />
         <RouteLink route={ADMIN_USERS_LIST_ROUTE}>👥 Users List</RouteLink>
         <RouteLink route={ADMIN_USERS_CREATE_ROUTE}>➕ Create User</RouteLink>
-        <RouteLink route={ADMIN_SETTINGS_GENERAL_ROUTE}>
-          ⚙️ General Settings
-        </RouteLink>
-        <RouteLink route={ADMIN_SETTINGS_SECURITY_ROUTE}>
-          🔒 Security Settings
-        </RouteLink>
       </div>
 
       <main>
@@ -184,76 +171,6 @@ export const App = () => {
                       <input type="email" placeholder="Email" />
                       <button type="button">Create User</button>
                     </form>
-                  </div>
-                }
-              />
-            </Route>
-
-            {/* LEVEL 2: Settings section wrapper */}
-            <Route
-              element={
-                <div
-                  style="background: #ffeaa7; padding: 15px; border-radius: 6px; border: 2px solid #fdcb6e;"
-                  className="level-2"
-                >
-                  <h3>⚙️ Settings Section (Level 2)</h3>
-                  <ComponentTracker name="SettingsWrapper" color="#fdcb6e" />
-                  <p>Application settings:</p>
-                  <div style="border: 1px dashed #fdcb6e; padding: 10px; margin: 10px 0;">
-                    <Route.Slot />
-                  </div>
-                </div>
-              }
-            >
-              {/* LEVEL 3: Specific settings pages */}
-              <Route
-                route={ADMIN_SETTINGS_GENERAL_ROUTE}
-                element={
-                  <div
-                    style="background: #d1ecf1; padding: 10px; border-radius: 4px;"
-                    className="level-3"
-                  >
-                    <h4>🔧 General Settings (Level 3)</h4>
-                    <ComponentTracker
-                      name="GeneralSettingsPage"
-                      color="#17a2b8"
-                    />
-                    <p>General application configuration.</p>
-                    <div>
-                      <label>
-                        <input type="checkbox" /> Enable notifications
-                      </label>
-                      <br />
-                      <label>
-                        <input type="checkbox" /> Dark mode
-                      </label>
-                    </div>
-                  </div>
-                }
-              />
-
-              <Route
-                route={ADMIN_SETTINGS_SECURITY_ROUTE}
-                element={
-                  <div
-                    style="background: #f8d7da; padding: 10px; border-radius: 4px;"
-                    className="level-3"
-                  >
-                    <h4>🔒 Security Settings (Level 3)</h4>
-                    <ComponentTracker
-                      name="SecuritySettingsPage"
-                      color="#dc3545"
-                    />
-                    <p>Security and authentication settings.</p>
-                    <div>
-                      <label>
-                        <input type="checkbox" /> Two-factor authentication
-                      </label>
-                      <br />
-                      <label>
-                        <input type="checkbox" /> Session timeout
-                      </label>
-                    </div>
                   </div>
                 }
               />
