@@ -9,7 +9,7 @@
  * On aura ptet besoin d'un useRouteData au lieu de passer par un element qui est une fonction
  * pour que react ne re-render pas tout
  *
- * 4. Exposer loading et error lorsque route action se produit.
+ * 4. Utiliser use() pour compar Suspense et ErrorBoundary lorsque route action se produit.
  *
  * 5. Tester le code splitting avec .lazy + import dynamique
  * pour les elements des routes
@@ -158,5 +158,5 @@ Route.Slot = RouteSlot;
 
 const useForceRender = () => {
   const [, setState] = useState(null);
-  return () => setState({});
+  return () => setState(NaN);
 };
