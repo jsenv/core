@@ -82,20 +82,24 @@ const ActiveRouteManager = ({
   const activeInfoRef = useRef(null);
   const registerChildRouteFromContext = useContext(RegisterChildRouteContext);
 
+  const subscribeRouteActive = (route, activeInfo, callback) => {
+    if (route.isComposite) {
+      return route.subscribeActiveInfo(() => {
+        callback(route.active ? activeInfo : null);
+      });
+    }
+    return subscribeRouteStatus(route, () => {
+      callback(route.active ? activeInfo : null);
+    });
+  };
+
   const candidateSet = new Set();
   const addCandidate = (route, element, origin) => {
     const getActiveInfo = () => {
       return route.active ? { element, origin } : null;
     };
     const subscribeActiveInfo = (callback) => {
-      if (route.isComposite) {
-        return route.subscribeActiveInfo(() => {
-          callback(getActiveInfo());
-        });
-      }
-      return subscribeRouteStatus(route, () => {
-        callback(getActiveInfo());
-      });
+      return subscribeRouteActive(route, { element, origin }, callback);
     };
     candidateSet.add({
       getActiveInfo,
