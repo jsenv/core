@@ -91,7 +91,7 @@ export const App = () => {
             }
           />
           <Route
-            route={AUTH_ROUTE}
+            // route={AUTH_ROUTE}
             element={
               <div
                 id="auth_layout"

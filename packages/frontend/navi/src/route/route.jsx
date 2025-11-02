@@ -101,9 +101,8 @@ const ActiveRouteManager = ({
 }) => {
   const registerChildRouteFromContext = useContext(RegisterChildRouteContext);
 
-  console.debug(
-    `🏗️ ActiveRouteManager for ${routeFromProps?.urlPattern || "wrapper"}: #${getElementId(elementFromProps)}`,
-  );
+  const elementId = getElementId(elementFromProps);
+  console.debug(`🏗️ ActiveRouteManager for ${elementId}`);
 
   const candidateSet = new Set();
   const addCandidate = (route, element, origin) => {
@@ -114,15 +113,12 @@ const ActiveRouteManager = ({
     });
   };
   const registerChildRoute = (childRoute, childElement) => {
-    console.debug(
-      `${routeFromProps?.urlPattern || "wrapper"}.registerChildRoute(${childRoute.urlPattern})`,
-    );
+    const childElementId = getElementId(childElement);
+    console.debug(`${elementId}.registerChildRoute(${childElementId})`);
     addCandidate(childRoute, childElement, "children");
   };
   if (children) {
-    console.group(
-      `👶 Discovery of ${routeFromProps ? routeFromProps.urlPattern : "wrapper"} child routes`,
-    );
+    console.group(`👶 Discovery of ${elementId} children`);
   }
   if (routeFromProps) {
     addCandidate(routeFromProps, elementFromProps, "props");
@@ -164,11 +160,11 @@ const initRouteObserver = ({
   registerChildRouteFromContext,
 }) => {
   const candidateElements = Array.from(candidateSet)
-    .map((c) => `#${getElementId(c.element)}`)
+    .map((c) => getElementId(c.element))
     .join(", ");
 
   console.log(
-    `🔍 initRouteObserver, parentElementId: #${getElementId(element)}, candidate elements: ${candidateElements}`,
+    `🔍 initRouteObserver, parentElementId: ${getElementId(element)}, candidate elements: ${candidateElements}`,
   );
 
   if (candidateSet.size === 0) {
@@ -209,11 +205,11 @@ const initRouteObserver = ({
   // }
 
   const [publishCompositeStatus, subscribeCompositeStatus] = createPubSub();
-  const patterns = Array.from(candidateSet, (c) => c.route.urlPattern).join(
-    ", ",
-  );
+  const candidateElementIds = Array.from(candidateSet, (c) =>
+    getElementId(c.element),
+  ).join(", ");
   const compositeRoute = {
-    urlPattern: `composite(${patterns})`,
+    urlPattern: `composite(${candidateElementIds})`,
     isComposite: true,
     active: false,
     subscribeStatus: subscribeCompositeStatus,
@@ -273,7 +269,7 @@ const initRouteObserver = ({
         return unsubscribe;
       }, []);
 
-      console.log(`🎁 Composite wrappedElement for ${patterns}:`, {
+      console.log(`🎁 Composite wrappedElement for ${candidateElementIds}:`, {
         wrapperElementId: getElementId(element),
         slotElementId: getElementId(slotContent),
         slotContent,
@@ -285,7 +281,7 @@ const initRouteObserver = ({
         </SlotContext.Provider>
       );
     };
-    wrappedElement.id = `[${getElementId(element)} with slot one of ${candidateElements}]`;
+    wrappedElement.id = `[${getElementId(element)} with slot one of ${candidateElementIds}]`;
     registerChildRouteFromContext(compositeRoute, wrappedElement);
   }
   onDiscoveryComplete(activeInfo);
