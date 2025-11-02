@@ -133,29 +133,23 @@ const ActiveRouteManager = ({
 
     // Fonction de subscription globale qui coordonne toutes les routes
     const subscribeGlobalActiveInfo = (callback) => {
-      // État partagé entre toutes les subscriptions
-      const state = { currentGlobalActiveInfo: activeInfoRef.current };
+      const unsubscribeFunctions = [];
 
-      const createSubscriptionHandler = (sharedState) => {
-        return () => {
-          // Recalculer l'état global à chaque changement individuel
+      for (const candidate of candidateSet) {
+        // Utiliser directement candidate.subscribeActiveInfo qui utilise déjà subscribeRouteActive
+        const unsubscribe = candidate.subscribeActiveInfo(() => {
+          // Recalculer l'état global à chaque changement
           const newGlobalActiveInfo = getGlobalActiveInfo();
+          const currentGlobalActiveInfo = activeInfoRef.current;
 
           // Ne déclencher le callback que si l'état global a vraiment changé
-          if (newGlobalActiveInfo !== sharedState.currentGlobalActiveInfo) {
-            const previous = sharedState.currentGlobalActiveInfo;
-            sharedState.currentGlobalActiveInfo = newGlobalActiveInfo;
+          if (newGlobalActiveInfo !== currentGlobalActiveInfo) {
             activeInfoRef.current = newGlobalActiveInfo;
             compositeRoute.active = Boolean(newGlobalActiveInfo);
-            callback(newGlobalActiveInfo, previous);
+            callback(newGlobalActiveInfo, currentGlobalActiveInfo);
           }
-        };
-      };
+        });
 
-      const unsubscribeFunctions = [];
-      for (const candidate of candidateSet) {
-        const handler = createSubscriptionHandler(state);
-        const unsubscribe = candidate.subscribeActiveInfo(handler);
         unsubscribeFunctions.push(unsubscribe);
       }
 
