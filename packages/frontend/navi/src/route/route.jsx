@@ -107,13 +107,14 @@ const ActiveRouteManager = ({
     };
     candidateSet.add({
       route,
+      element,
       getActiveInfo,
       subscribeActiveInfo,
     });
   };
   const registerChildRoute = (childRoute, childElement) => {
     console.debug(
-      `${routeFromProps.urlPattern}.registerChildRoute(${childRoute.urlPattern})`,
+      `${routeFromProps?.urlPattern || "wrapper"}.registerChildRoute(${childRoute.urlPattern})`,
     );
     addCandidate(childRoute, childElement, "children");
   };
@@ -165,7 +166,6 @@ const ActiveRouteManager = ({
       subscribeActiveInfo: subscribeCompositeActiveInfo,
       toString: () => `composite(${candidateSet.size} candidates)`,
     };
-
     const getActiveCandidateInfo = () => {
       for (const candidate of candidateSet) {
         const info = candidate.getActiveInfo();
@@ -198,7 +198,6 @@ const ActiveRouteManager = ({
         unsubscribeFunctions.forEach((fn) => fn());
       };
     };
-
     const initialActiveInfo = getActiveCandidateInfo();
     if (initialActiveInfo) {
       compositeRoute.active = true;
@@ -210,6 +209,11 @@ const ActiveRouteManager = ({
     subscribeCompositeActiveInfo((current, previous) => {
       onActiveRouteChange(current, previous);
     });
+
+    if (registerChildRouteFromContext) {
+      registerChildRouteFromContext(compositeRoute, elementFromProps);
+    }
+
     onDiscoveryComplete(activeInfoRef.current);
   }, []);
 
