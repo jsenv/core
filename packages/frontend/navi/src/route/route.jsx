@@ -59,12 +59,7 @@ export const Route = ({ route, element, children }) => {
   if (!activeRouteInfo) {
     return null;
   }
-  if (activeRouteInfo.origin === "props") {
-    return element;
-  }
-
-  const activeNestedRouteElement = activeRouteInfo.element;
-  return activeNestedRouteElement;
+  return activeRouteInfo.element;
 };
 
 const RegisterChildRouteContext = createContext(null);
@@ -155,8 +150,8 @@ const initRouteObserver = ({
     if (registerChildRouteFromContext) {
       const wrappedElement = () => {
         return (
-          <SlotContext.Provider value={null}>
-            {soleCandidate.element}
+          <SlotContext.Provider value={soleCandidate.element}>
+            {element}
           </SlotContext.Provider>
         );
       };
