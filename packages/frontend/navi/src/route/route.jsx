@@ -82,7 +82,6 @@ const ActiveRouteManager = ({
   onActiveRouteChange,
   children,
 }) => {
-  const activeInfoRef = useRef(null);
   const registerChildRouteFromContext = useContext(RegisterChildRouteContext);
 
   const subscribeRouteActive = (route, callback) => {
@@ -126,7 +125,6 @@ const ActiveRouteManager = ({
   }
 
   if (routeFromProps) {
-    console.debug(`📍 addCandidate from props: ${routeFromProps}`);
     addCandidate(routeFromProps, elementFromProps, "props");
   }
 
@@ -134,80 +132,13 @@ const ActiveRouteManager = ({
     if (children) {
       console.groupEnd();
     }
-
-    if (candidateSet.size === 0) {
-      onDiscoveryComplete(null);
-      return;
-    }
-    if (candidateSet.size === 1) {
-      const soleCandidate = candidateSet.values().next().value;
-      activeInfoRef.current = soleCandidate.getActiveInfo();
-      soleCandidate.subscribeActiveInfo((newActiveInfo) => {
-        const currentActiveInfo = activeInfoRef.current;
-        activeInfoRef.current = newActiveInfo;
-        onActiveRouteChange(newActiveInfo, currentActiveInfo);
-      });
-      if (registerChildRouteFromContext) {
-        registerChildRouteFromContext(
-          soleCandidate.route,
-          soleCandidate.element,
-        );
-      }
-      onDiscoveryComplete(activeInfoRef.current);
-      return;
-    }
-
-    const [publishCompositeActiveInfo, subscribeCompositeActiveInfo] =
-      createPubSub();
-    const patterns = Array.from(candidateSet, (c) => c.route.urlPattern).join(
-      ", ",
-    );
-    const compositeRoute = {
-      urlPattern: `composite(${patterns})`,
-      isComposite: true,
-      active: false,
-      subscribeActiveInfo: subscribeCompositeActiveInfo,
-      toString: () => `composite(${candidateSet.size} candidates)`,
-    };
-    const getActiveCandidateInfo = () => {
-      for (const candidate of candidateSet) {
-        const info = candidate.getActiveInfo();
-        if (info) return info;
-      }
-      return null;
-    };
-    const subscribeGlobalActiveInfo = (callback) => {
-      const [teardown, addTeardown] = createPubSub();
-      for (const candidate of candidateSet) {
-        const unsubscribe = candidate.subscribeActiveInfo(() => {
-          const previousActiveCandidateInfo = activeInfoRef.current;
-          const newActiveCandidateInfo = getActiveCandidateInfo();
-          if (newActiveCandidateInfo !== previousActiveCandidateInfo) {
-            activeInfoRef.current = newActiveCandidateInfo;
-            compositeRoute.active = Boolean(newActiveCandidateInfo);
-            callback(newActiveCandidateInfo, previousActiveCandidateInfo);
-          }
-        });
-        addTeardown(unsubscribe);
-      }
-      return () => {
-        teardown();
-      };
-    };
-    const initialActiveInfo = getActiveCandidateInfo();
-    if (initialActiveInfo) {
-      compositeRoute.active = true;
-      activeInfoRef.current = initialActiveInfo;
-    }
-    subscribeGlobalActiveInfo((current, previous) => {
-      publishCompositeActiveInfo(current, previous);
-      onActiveRouteChange(current, previous);
+    initRouteObserver({
+      candidateSet,
+      element: elementFromProps,
+      onDiscoveryComplete,
+      onActiveRouteChange,
+      registerChildRouteFromContext,
     });
-    if (registerChildRouteFromContext) {
-      registerChildRouteFromContext(compositeRoute, elementFromProps);
-    }
-
-    onDiscoveryComplete(activeInfoRef.current);
   }, []);
 
   return (
@@ -215,6 +146,87 @@ const ActiveRouteManager = ({
       {children}
     </RegisterChildRouteContext.Provider>
   );
+};
+
+const initRouteObserver = ({
+  candidateSet,
+  element,
+  onDiscoveryComplete,
+  onActiveRouteChange,
+  registerChildRouteFromContext,
+}) => {
+  if (candidateSet.size === 0) {
+    onDiscoveryComplete(null);
+    return;
+  }
+  if (candidateSet.size === 1) {
+    let activeInfo;
+    const soleCandidate = candidateSet.values().next().value;
+    activeInfo = soleCandidate.getActiveInfo();
+    soleCandidate.subscribeActiveInfo((newActiveInfo) => {
+      const currentActiveInfo = activeInfo;
+      activeInfo = newActiveInfo;
+      onActiveRouteChange(newActiveInfo, currentActiveInfo);
+    });
+    if (registerChildRouteFromContext) {
+      registerChildRouteFromContext(soleCandidate.route, soleCandidate.element);
+    }
+    onDiscoveryComplete(activeInfo);
+    return;
+  }
+
+  const [publishCompositeActiveInfo, subscribeCompositeActiveInfo] =
+    createPubSub();
+  const patterns = Array.from(candidateSet, (c) => c.route.urlPattern).join(
+    ", ",
+  );
+  const compositeRoute = {
+    urlPattern: `composite(${patterns})`,
+    isComposite: true,
+    active: false,
+    subscribeActiveInfo: subscribeCompositeActiveInfo,
+    toString: () => `composite(${candidateSet.size} candidates)`,
+  };
+  const getActiveCandidateInfo = () => {
+    for (const candidate of candidateSet) {
+      const info = candidate.getActiveInfo();
+      if (info) return info;
+    }
+    return null;
+  };
+  let activeInfo;
+  const subscribeGlobalActiveInfo = (callback) => {
+    const [teardown, addTeardown] = createPubSub();
+    for (const candidate of candidateSet) {
+      // eslint-disable-next-line no-loop-func
+      const unsubscribe = candidate.subscribeActiveInfo(() => {
+        const previousActiveCandidateInfo = activeInfo;
+        const newActiveCandidateInfo = getActiveCandidateInfo();
+        if (newActiveCandidateInfo !== previousActiveCandidateInfo) {
+          activeInfo = newActiveCandidateInfo;
+          compositeRoute.active = Boolean(newActiveCandidateInfo);
+          callback(newActiveCandidateInfo, previousActiveCandidateInfo);
+        }
+      });
+      addTeardown(unsubscribe);
+    }
+    return () => {
+      teardown();
+    };
+  };
+  const initialActiveInfo = getActiveCandidateInfo();
+  if (initialActiveInfo) {
+    compositeRoute.active = true;
+    activeInfo = initialActiveInfo;
+  }
+  subscribeGlobalActiveInfo((current, previous) => {
+    publishCompositeActiveInfo(current, previous);
+    onActiveRouteChange(current, previous);
+  });
+  if (registerChildRouteFromContext) {
+    registerChildRouteFromContext(compositeRoute, element);
+  }
+  onDiscoveryComplete(activeInfo);
 };
 
 export const RouteSlot = () => {
