@@ -68,16 +68,8 @@ export const Route = ({ route, element, children }) => {
 
   // The slot content is the active child element, if any
   const slotContent = activeRouteInfo.slotElement || null;
-
-  console.log(`🎯 Route.render ${route?.urlPattern}:`, {
-    elementId: getElementId(element),
-    slotElementId: getElementId(slotContent),
-    activeRoute: activeRouteInfo.route?.urlPattern,
-  });
-
   console.log(
-    `📄 Returning JSX element for ${route?.urlPattern}:`,
-    getElementId(element),
+    `📄 Returning JSX element for ${getElementId(element)} with slot set to ${getElementId(slotContent)}`,
   );
   return (
     <SlotContext.Provider value={slotContent}>{element}</SlotContext.Provider>
@@ -277,7 +269,7 @@ const initRouteObserver = ({
     onActiveRouteChange(current, previous);
   });
   if (registerChildRouteFromContext) {
-    const wrappedElement = () => {
+    const WrappedElement = () => {
       const [slotContent, setSlotContent] = useState(
         activeInfoRef.current?.element || null,
       );
@@ -301,8 +293,8 @@ const initRouteObserver = ({
         </SlotContext.Provider>
       );
     };
-    wrappedElement.id = `[${getElementId(element)} with slot one of ${candidateElementIds}]`;
-    registerChildRouteFromContext(compositeRoute, wrappedElement);
+    WrappedElement.id = `[${getElementId(element)} with slot one of ${candidateElementIds}]`;
+    registerChildRouteFromContext(compositeRoute, WrappedElement);
   }
   onDiscoveryComplete(activeInfo);
 };
