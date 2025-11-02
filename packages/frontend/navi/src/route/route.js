@@ -272,6 +272,7 @@ const routePrivatePropertiesMap = new Map();
 const getRoutePrivateProperties = (route) => {
   return routePrivatePropertiesMap.get(route);
 };
+
 const createRoute = (urlPatternInput) => {
   const cleanupCallbackSet = new Set();
   const cleanup = () => {

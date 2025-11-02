@@ -75,60 +75,66 @@ const ActiveRouteManager = ({
   onActiveRouteChange,
   children,
 }) => {
-  const activeRouteInfoRef = useRef(null);
+  const activeInfoRef = useRef(null);
   const registerChildRouteFromContext = useContext(RegisterChildRouteContext);
-  const childRouteCacheSet = new Set();
-  const registerChildRoute = (cacheKey, childRoute, childElement) => {
-    if (childRouteCacheSet.has(cacheKey)) {
-      return;
-    }
-    childRouteCacheSet.add(cacheKey);
-    candidateSet.add({
-      route: childRoute,
-      element: childElement,
-      origin: "children",
-    });
-  };
 
   const candidateSet = new Set();
   if (routeFromProps) {
+    const getActiveInfo = () => {
+      return routeFromProps.active
+        ? { element: elementFromProps, origin: "props" }
+        : null;
+    };
     candidateSet.add({
-      route: routeFromProps,
-      element: elementFromProps,
-      origin: "props",
+      getActiveInfo,
+      subscribeActiveInfo: (callback) => {
+        return subscribeRouteStatus(routeFromProps, () => {
+          callback(getActiveInfo());
+        });
+      },
     });
   }
+  const registerChildRoute = (getActiveInfo, subscribeActiveInfo) => {
+    candidateSet.add({
+      getActiveInfo,
+      subscribeActiveInfo,
+    });
+  };
 
   useLayoutEffect(() => {
-    const compositeRoute = createCompositeRoute(
-      Array.from(candidateSet, (info) => info.route),
-    );
-    for (const info of candidateSet) {
-      const { route } = info;
-      if (route.active) {
-        activeRouteInfoRef.current = info;
-      }
-      subscribeRouteStatus(route, () => {
-        const activeRouteInfo = activeRouteInfoRef.current;
-        if (route.active) {
-          const currentInfo = info;
-          activeRouteInfoRef.current = currentInfo;
-          onActiveRouteChange(currentInfo, activeRouteInfo);
-        } else if (activeRouteInfo && activeRouteInfo.route === route) {
-          activeRouteInfoRef.current = null;
-          onActiveRouteChange(null, activeRouteInfo);
+    const getActiveInfo = () => {
+      for (const candidate of candidateSet) {
+        const activeInfo = candidate.getActiveInfo();
+        if (activeInfo) {
+          return activeInfo;
         }
-      });
-    }
+      }
+      return null;
+    };
+    const subscribeActiveInfo = (callback) => {
+      for (const candidate of candidateSet) {
+        candidate.subscribeActiveInfo((activeInfo) => {
+          const currentActiveInfo = activeInfoRef.current;
+          if (activeInfo) {
+            activeInfoRef.current = activeInfo;
+            callback(activeInfo, currentActiveInfo);
+          } else if (currentActiveInfo) {
+            activeInfoRef.current = null;
+            callback(null, currentActiveInfo);
+          }
+        });
+      }
+    };
+
+    activeInfoRef.current = getActiveInfo();
+    subscribeActiveInfo((current, previous) => {
+      onActiveRouteChange(current, previous);
+    });
 
     if (registerChildRouteFromContext) {
-      registerChildRouteFromContext(
-        compositeRoute,
-        compositeRoute,
-        elementFromProps,
-      );
+      registerChildRouteFromContext(getActiveInfo, subscribeActiveInfo);
     }
-    onDiscoveryComplete(activeRouteInfoRef.current);
+    onDiscoveryComplete(activeInfoRef.current);
   }, []);
 
   return (
