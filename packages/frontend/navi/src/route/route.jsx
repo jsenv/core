@@ -163,12 +163,12 @@ const initRouteObserver = ({
   onActiveRouteChange,
   registerChildRouteFromContext,
 }) => {
+  const candidateElements = Array.from(candidateSet)
+    .map((c) => `#${getElementId(c.element)}`)
+    .join(", ");
+
   console.log(
-    `🔍 initRouteObserver, parentElementId: #${getElementId(element)}, candidate elements: ${Array.from(
-      candidateSet,
-    )
-      .map((c) => `#${getElementId(c.element)}`)
-      .join(", ")}`,
+    `🔍 initRouteObserver, parentElementId: #${getElementId(element)}, candidate elements: ${candidateElements}`,
   );
 
   if (candidateSet.size === 0) {
@@ -285,7 +285,7 @@ const initRouteObserver = ({
         </SlotContext.Provider>
       );
     };
-    wrappedElement.id = getElementId(element);
+    wrappedElement.id = `[${getElementId(element)} with slot one of ${candidateElements}]`;
     registerChildRouteFromContext(compositeRoute, wrappedElement);
   }
   onDiscoveryComplete(activeInfo);
@@ -307,7 +307,7 @@ const getElementId = (element) => {
   }
   if (typeof element === "function") {
     if (element.id) {
-      return `[${element.id} with slot]`;
+      return element.id;
     }
     return "[function]";
   }
