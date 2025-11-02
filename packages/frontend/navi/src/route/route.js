@@ -3,7 +3,9 @@
  *
  */
 
+import { createPubSub } from "@jsenv/dom";
 import { batch, computed, effect, signal } from "@preact/signals";
+
 import {
   SYMBOL_IDENTITY,
   compareTwoJsValues,
@@ -107,15 +109,13 @@ export const updateRoutes = (
       newActive,
       newParams,
     } of routeMatchInfoSet) {
-      const { activeSignal, paramsSignal, visitedSignal } =
-        routePrivateProperties;
+      const { updateStatus } = routePrivateProperties;
       const visited = isVisited(route.url);
-      activeSignal.value = newActive;
-      paramsSignal.value = newParams;
-      visitedSignal.value = visited;
-      route.active = newActive;
-      route.params = newParams;
-      route.visited = visited;
+      updateStatus({
+        active: newActive,
+        params: newParams,
+        visited,
+      });
       if (newActive) {
         activeRouteSet.add(route);
       }
@@ -282,6 +282,7 @@ const createRoute = (urlPatternInput) => {
     cleanupCallbackSet.clear();
   };
 
+  const [publishStatus, subscribeStatus] = createPubSub();
   const route = {
     urlPattern: urlPatternInput,
     isRoute: true,
@@ -297,6 +298,7 @@ const createRoute = (urlPatternInput) => {
       return `route "${urlPatternInput}"`;
     },
     replaceParams: undefined,
+    subscribeStatus,
   };
   routeSet.add(route);
 
@@ -308,6 +310,27 @@ const createRoute = (urlPatternInput) => {
     relativeUrlSignal: null,
     urlSignal: null,
     optionalParamKeySet: null,
+    updateStatus: ({ active, params, visited }) => {
+      let someChange = false;
+      activeSignal.value = active;
+      paramsSignal.value = params;
+      visitedSignal.value = visited;
+      if (route.active !== active) {
+        route.active = active;
+        someChange = true;
+      }
+      if (route.params !== params) {
+        route.params = params;
+        someChange = true;
+      }
+      if (route.visited !== visited) {
+        route.visited = visited;
+        someChange = true;
+      }
+      if (someChange) {
+        publishStatus({ active, params, visited });
+      }
+    },
   };
   routePrivatePropertiesMap.set(route, routePrivateProperties);
 
@@ -580,17 +603,6 @@ export const useRouteStatus = (route) => {
     params,
     visited,
   };
-};
-export const subscribeRouteStatus = (route, callback) => {
-  let isFirst = false;
-  return effect(() => {
-    const status = useRouteStatus(route);
-    if (isFirst) {
-      isFirst = false;
-    } else {
-      callback(status);
-    }
-  });
 };
 
 let browserIntegration;

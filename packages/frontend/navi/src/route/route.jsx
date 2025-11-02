@@ -23,7 +23,6 @@ import { createPubSub } from "@jsenv/dom";
 import { createContext } from "preact";
 import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
-import { subscribeRouteStatus } from "./route.js";
 import { useForceRender } from "./use_force_render.js";
 
 export const Routes = ({ children }) => {
@@ -128,7 +127,7 @@ const ActiveRouteManager = ({
 const subscribeRouteActive = (route, callback) => {
   const subscribeMethod = route.isComposite
     ? route.subscribeActiveInfo
-    : (callback) => subscribeRouteStatus(route, callback);
+    : (callback) => route.subscribeStatus(callback);
   return subscribeMethod(() => {
     callback();
   });
