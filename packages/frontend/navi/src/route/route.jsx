@@ -39,20 +39,20 @@ const SlotContext = createContext(null);
 export const Route = ({ route, element, children }) => {
   const forceRender = useForceRender();
   const hasDiscoveredRef = useRef(false);
-  const activeRouteInfoRef = useRef(null);
+  const activeInfoRef = useRef(null);
 
   if (!hasDiscoveredRef.current) {
     return (
       <ActiveRouteManager
         route={route}
         element={element}
-        onDiscoveryComplete={(activeRouteInfo) => {
+        onDiscoveryComplete={(activeInfo) => {
           hasDiscoveredRef.current = true;
-          activeRouteInfoRef.current = activeRouteInfo;
+          activeInfoRef.current = activeInfo;
           forceRender();
         }}
-        onActiveRouteChange={(activeRouteInfo) => {
-          activeRouteInfoRef.current = activeRouteInfo;
+        onActiveRouteChange={(activeInfo) => {
+          activeInfoRef.current = activeInfo;
           forceRender();
         }}
       >
@@ -61,19 +61,12 @@ export const Route = ({ route, element, children }) => {
     );
   }
 
-  const activeRouteInfo = activeRouteInfoRef.current;
-  if (!activeRouteInfo) {
+  const activeInfo = activeInfoRef.current;
+  if (!activeInfo) {
     return null;
   }
-
-  // The slot content is the active child element, if any
-  const slotContent = activeRouteInfo.slotElement;
-  console.log(
-    `📄 Returning JSX element for ${getElementId(element)} with slot set to ${getElementId(slotContent)}`,
-  );
-  return (
-    <SlotContext.Provider value={slotContent}>{element}</SlotContext.Provider>
-  );
+  const Element = activeInfo.Element;
+  return <Element />;
 };
 
 const RegisterChildRouteContext = createContext(null);
@@ -82,14 +75,14 @@ const RegisterChildRouteContext = createContext(null);
 So no need to cleanup things or whatever we know and ensure that 
 it's executed once for the entier app lifecycle */
 const ActiveRouteManager = ({
-  route: routeFromProps,
-  element: elementFromProps,
+  route,
+  element,
   onDiscoveryComplete,
   onActiveRouteChange,
   children,
 }) => {
   const registerChildRouteFromContext = useContext(RegisterChildRouteContext);
-  const elementId = getElementId(elementFromProps);
+  const elementId = getElementId(element);
   const candidateSet = new Set();
   const registerChildRoute = (childRoute, childElement) => {
     const childElementId = getElementId(childElement);
@@ -103,8 +96,8 @@ const ActiveRouteManager = ({
   useLayoutEffect(() => {
     console.groupEnd();
     initRouteObserver({
-      route: routeFromProps,
-      element: elementFromProps,
+      route,
+      element,
       candidateSet,
       onDiscoveryComplete,
       onActiveRouteChange,
@@ -127,17 +120,14 @@ const initRouteObserver = ({
   onActiveRouteChange,
   registerChildRouteFromContext,
 }) => {
-  const candidateElements = Array.from(candidateSet)
-    .map((c) => getElementId(c.element))
-    .join(", ");
-
-  console.log(
-    `🔍 initRouteObserver, parentElementId: ${getElementId(element)}, candidate elements: ${candidateElements}`,
-  );
-  const [publishCompositeStatus, subscribeCompositeStatus] = createPubSub();
+  const elementId = getElementId(element);
   const candidateElementIds = Array.from(candidateSet, (c) =>
     getElementId(c.element),
   ).join(", ");
+  console.log(
+    `🔍 initRouteObserver ${elementId}, candidates: ${candidateElementIds}`,
+  );
+  const [publishCompositeStatus, subscribeCompositeStatus] = createPubSub();
   const compositeRoute = {
     urlPattern: `composite(${candidateElementIds})`,
     isComposite: true,
@@ -145,6 +135,7 @@ const initRouteObserver = ({
     subscribeStatus: subscribeCompositeStatus,
     toString: () => `composite(${candidateSet.size} candidates)`,
   };
+
   const getActiveInfo = route
     ? () => {
         if (!route.active) {
@@ -157,15 +148,15 @@ const initRouteObserver = ({
           if (candidate.route.active) {
             return {
               route,
-              element,
+              Element: WrappedElement,
               slotElement: candidate.element,
             };
           }
         }
         return {
           route,
-          element,
-          slotElement: null, // TODO: this is where we'll could put a route with fallback property later on
+          Element: WrappedElement,
+          slotElement: null, // TODO: this is where we'll could put a route with fallback/otherwise property later on
         };
       }
     : () => {
@@ -174,7 +165,7 @@ const initRouteObserver = ({
           if (candidate.route.active) {
             return {
               route: candidate.route,
-              element,
+              Element: WrappedElement,
               slotElement: candidate.element,
             };
           }
@@ -210,41 +201,35 @@ const initRouteObserver = ({
     compositeRoute.active = true;
     activeInfo = initialActiveInfo;
   }
-
   // Create a ref to share activeInfo with the wrapped component
   const activeInfoRef = { current: activeInfo };
-
   subscribeGlobalActiveInfo((current, previous) => {
     activeInfoRef.current = current;
     publishCompositeStatus(current, previous);
     onActiveRouteChange(current, previous);
   });
-  if (registerChildRouteFromContext) {
-    const WrappedElement = () => {
-      const [slotContent, setSlotContent] = useState(
-        activeInfoRef.current?.element || null,
-      );
 
-      useEffect(() => {
-        const unsubscribe = subscribeGlobalActiveInfo((current) => {
-          setSlotContent(current?.element || null);
-        });
-        return unsubscribe;
-      }, []);
-
-      console.log(`🎁 Composite wrappedElement for ${candidateElementIds}:`, {
-        wrapperElementId: getElementId(element),
-        slotElementId: getElementId(slotContent),
-        slotContent,
+  const WrappedElement = () => {
+    const [slotContent, setSlotContent] = useState(
+      activeInfoRef.current?.element || null,
+    );
+    useEffect(() => {
+      const unsubscribe = subscribeGlobalActiveInfo((activeInfo) => {
+        setSlotContent(activeInfo?.element || null);
       });
+      return unsubscribe;
+    }, []);
 
-      return (
-        <SlotContext.Provider value={slotContent}>
-          {element}
-        </SlotContext.Provider>
-      );
-    };
-    WrappedElement.id = `[${getElementId(element)} with slot one of ${candidateElementIds}]`;
+    console.log(
+      `📄 Returning JSX element for ${getElementId(element)} with slot set to ${getElementId(slotContent)}`,
+    );
+    return (
+      <SlotContext.Provider value={slotContent}>{element}</SlotContext.Provider>
+    );
+  };
+  WrappedElement.id = `[${getElementId(element)} with slot one of ${candidateElementIds}]`;
+
+  if (registerChildRouteFromContext) {
     registerChildRouteFromContext(compositeRoute, WrappedElement);
   }
   onDiscoveryComplete(activeInfo);
