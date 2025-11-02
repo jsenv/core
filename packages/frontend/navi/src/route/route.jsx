@@ -21,7 +21,7 @@
 
 import { createPubSub } from "@jsenv/dom";
 import { createContext } from "preact";
-import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
+import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { useForceRender } from "./use_force_render.js";
 
@@ -29,17 +29,11 @@ export const Routes = ({ children }) => {
   return <>{children}</>;
 };
 
-const LocalSlotContextContext = createContext(null);
-
+const SlotContext = createContext(null);
 export const Route = ({ route, element, children }) => {
   const forceRender = useForceRender();
   const hasDiscoveredRef = useRef(false);
   const activeRouteInfoRef = useRef(null);
-
-  // Create a local context for this route's slot - unique per Route instance
-  const localSlotContext = useMemo(() => createContext(null), []);
-  const contextId = useMemo(() => Math.random().toString(36), []);
-  console.log(`Route ${route?.urlPattern} context ID:`, contextId);
 
   if (!hasDiscoveredRef.current) {
     return (
@@ -66,33 +60,11 @@ export const Route = ({ route, element, children }) => {
     return null;
   }
   if (activeRouteInfo.origin === "props") {
-    return (
-      <LocalSlotContextContext.Provider value={localSlotContext}>
-        <localSlotContext.Provider value={null}>
-          {element}
-        </localSlotContext.Provider>
-      </LocalSlotContextContext.Provider>
-    );
+    return element;
   }
 
   const activeNestedRouteElement = activeRouteInfo.element;
-  console.log(
-    `render ${route?.urlPattern} contextId:${contextId}`,
-    "activeRouteInfo:",
-    activeRouteInfo,
-    "activeNestedRouteElement:",
-    activeNestedRouteElement,
-  );
-
-  return (
-    <LocalSlotContextContext.Provider
-      value={{ context: localSlotContext, id: contextId }}
-    >
-      <localSlotContext.Provider value={activeNestedRouteElement}>
-        {element}
-      </localSlotContext.Provider>
-    </LocalSlotContextContext.Provider>
-  );
+  return activeNestedRouteElement;
 };
 
 const RegisterChildRouteContext = createContext(null);
@@ -108,6 +80,7 @@ const ActiveRouteManager = ({
   children,
 }) => {
   const registerChildRouteFromContext = useContext(RegisterChildRouteContext);
+
   const candidateSet = new Set();
   const addCandidate = (route, element, origin) => {
     candidateSet.add({
@@ -180,7 +153,14 @@ const initRouteObserver = ({
       onActiveRouteChange(newActiveInfo, currentActiveInfo);
     });
     if (registerChildRouteFromContext) {
-      registerChildRouteFromContext(soleCandidate.route, soleCandidate.element);
+      const wrappedElement = () => {
+        return (
+          <SlotContext.Provider value={null}>
+            {soleCandidate.element}
+          </SlotContext.Provider>
+        );
+      };
+      registerChildRouteFromContext(soleCandidate.route, wrappedElement);
     }
     onDiscoveryComplete(activeInfo);
     return;
@@ -234,21 +214,20 @@ const initRouteObserver = ({
     onActiveRouteChange(current, previous);
   });
   if (registerChildRouteFromContext) {
-    registerChildRouteFromContext(compositeRoute, element);
+    const wrappedElement = () => {
+      return (
+        <SlotContext.Provider value={null}>{element}</SlotContext.Provider>
+      );
+    };
+    registerChildRouteFromContext(compositeRoute, wrappedElement);
   }
   onDiscoveryComplete(activeInfo);
 };
 
 export const RouteSlot = () => {
-  const localSlotInfo = useContext(LocalSlotContextContext);
-  console.log("RouteSlot localSlotInfo:", localSlotInfo?.id, localSlotInfo);
-  if (!localSlotInfo) {
-    return <p>RouteSlot not inside a Route</p>;
-  }
-  const routeSlot = useContext(localSlotInfo.context);
-  console.log(`RouteSlot contextId:${localSlotInfo.id} routeSlot:`, routeSlot);
+  const routeSlot = useContext(SlotContext);
   if (!routeSlot) {
-    return null;
+    return <p>RouteSlot must be used inside a Route</p>;
   }
   return routeSlot;
 };
