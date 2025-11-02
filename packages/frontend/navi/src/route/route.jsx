@@ -122,8 +122,8 @@ const ActiveRouteManager = ({
       subscribeActiveInfo: subscribeCompositeActiveInfo,
     };
 
-    // Fonction qui calcule l'état actif global
-    const getGlobalActiveInfo = () => {
+    // Fonction qui calcule l'état actif parmi les candidates
+    const getActiveCandidateInfo = () => {
       for (const candidate of candidateSet) {
         const info = candidate.getActiveInfo();
         if (info) return info;
@@ -138,15 +138,15 @@ const ActiveRouteManager = ({
       for (const candidate of candidateSet) {
         // Utiliser directement candidate.subscribeActiveInfo qui utilise déjà subscribeRouteActive
         const unsubscribe = candidate.subscribeActiveInfo(() => {
-          // Recalculer l'état global à chaque changement
-          const newGlobalActiveInfo = getGlobalActiveInfo();
-          const currentGlobalActiveInfo = activeInfoRef.current;
+          // Recalculer l'état actif parmi les candidates à chaque changement
+          const newActiveCandidateInfo = getActiveCandidateInfo();
+          const currentActiveCandidateInfo = activeInfoRef.current;
 
-          // Ne déclencher le callback que si l'état global a vraiment changé
-          if (newGlobalActiveInfo !== currentGlobalActiveInfo) {
-            activeInfoRef.current = newGlobalActiveInfo;
-            compositeRoute.active = Boolean(newGlobalActiveInfo);
-            callback(newGlobalActiveInfo, currentGlobalActiveInfo);
+          // Ne déclencher le callback que si l'état a vraiment changé
+          if (newActiveCandidateInfo !== currentActiveCandidateInfo) {
+            activeInfoRef.current = newActiveCandidateInfo;
+            compositeRoute.active = Boolean(newActiveCandidateInfo);
+            callback(newActiveCandidateInfo, currentActiveCandidateInfo);
           }
         });
 
@@ -159,7 +159,7 @@ const ActiveRouteManager = ({
     };
 
     // Initialiser l'état
-    const initialActiveInfo = getGlobalActiveInfo();
+    const initialActiveInfo = getActiveCandidateInfo();
     if (initialActiveInfo) {
       compositeRoute.active = true;
       activeInfoRef.current = initialActiveInfo;
