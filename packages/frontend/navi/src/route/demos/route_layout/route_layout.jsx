@@ -80,7 +80,10 @@ export const App = () => {
           <Route
             route={HOME_ROUTE}
             element={
-              <div style="background: #e8f5e8; padding: 15px; border-radius: 5px;">
+              <div
+                id="home"
+                style="background: #e8f5e8; padding: 15px; border-radius: 5px;"
+              >
                 <h3>🏠 Homepage Content</h3>
                 <ComponentTracker name="HomePage" color="#28a745" />
                 <p>This is the homepage!</p>

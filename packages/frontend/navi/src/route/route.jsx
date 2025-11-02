@@ -102,12 +102,7 @@ const ActiveRouteManager = ({
   const registerChildRouteFromContext = useContext(RegisterChildRouteContext);
 
   console.debug(
-    `🏗️ ActiveRouteManager for ${routeFromProps?.urlPattern || "wrapper"}:`,
-    {
-      elementId: getElementId(elementFromProps),
-      elementType: typeof elementFromProps,
-      hasChildren: Boolean(children),
-    },
+    `🏗️ ActiveRouteManager for ${routeFromProps?.urlPattern || "wrapper"}: #${getElementId(elementFromProps)}`,
   );
 
   const candidateSet = new Set();
@@ -183,38 +178,38 @@ const initRouteObserver = ({
     onDiscoveryComplete(null);
     return;
   }
-  if (candidateSet.size === 1) {
-    let activeInfo;
-    const soleCandidate = candidateSet.values().next().value;
-    activeInfo = getActiveInfo(soleCandidate);
-    subscribeActiveInfo(soleCandidate, (newActiveInfo) => {
-      const currentActiveInfo = activeInfo;
-      activeInfo = newActiveInfo;
-      onActiveRouteChange(newActiveInfo, currentActiveInfo);
-    });
-    // Only register with parent if this route doesn't have children
-    if (registerChildRouteFromContext && soleCandidate.origin !== "props") {
-      const wrappedElement = () => {
-        console.log(
-          `🎁 wrappedElement for ${soleCandidate.route.urlPattern}:`,
-          {
-            parentElementId: getElementId(element),
-            childElementId: getElementId(soleCandidate.element),
-            childElement: soleCandidate.element,
-          },
-        );
+  // if (candidateSet.size === 1) {
+  //   let activeInfo;
+  //   const soleCandidate = candidateSet.values().next().value;
+  //   activeInfo = getActiveInfo(soleCandidate);
+  //   subscribeActiveInfo(soleCandidate, (newActiveInfo) => {
+  //     const currentActiveInfo = activeInfo;
+  //     activeInfo = newActiveInfo;
+  //     onActiveRouteChange(newActiveInfo, currentActiveInfo);
+  //   });
+  //   // Only register with parent if this route doesn't have children
+  //   if (registerChildRouteFromContext) {
+  //     const wrappedElement = () => {
+  //       console.log(
+  //         `🎁 wrappedElement for ${soleCandidate.route.urlPattern}:`,
+  //         {
+  //           parentElementId: getElementId(element),
+  //           childElementId: getElementId(soleCandidate.element),
+  //           childElement: soleCandidate.element,
+  //         },
+  //       );
 
-        return (
-          <SlotContext.Provider value={soleCandidate.element}>
-            {element}
-          </SlotContext.Provider>
-        );
-      };
-      registerChildRouteFromContext(soleCandidate.route, wrappedElement);
-    }
-    onDiscoveryComplete(activeInfo);
-    return;
-  }
+  //       return (
+  //         <SlotContext.Provider value={soleCandidate.element}>
+  //           {element}
+  //         </SlotContext.Provider>
+  //       );
+  //     };
+  //     registerChildRouteFromContext(soleCandidate.route, wrappedElement);
+  //   }
+  //   onDiscoveryComplete(activeInfo);
+  //   return;
+  // }
 
   const [publishCompositeStatus, subscribeCompositeStatus] = createPubSub();
   const patterns = Array.from(candidateSet, (c) => c.route.urlPattern).join(
@@ -309,8 +304,15 @@ Route.Slot = RouteSlot;
 
 // Extract element ID for logging
 const getElementId = (element) => {
-  if (typeof element === "function") return "[function]";
-  if (element?.props?.id) return element.props.id;
+  if (!element) {
+    return String(element);
+  }
+  if (typeof element === "function") {
+    return "[function]";
+  }
+  if (element?.props?.id) {
+    return element.props.id;
+  }
   if (element?.type === "div" && element?.props?.children?.[0]) {
     return element.props.children[0].toString().slice(0, 20);
   }
