@@ -17,133 +17,121 @@
  */
 
 import { createContext } from "preact";
-import {
-  useContext,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
 
 import { subscribeRouteStatus } from "./route.js";
+import { useForceRender } from "./use_force_render.js";
 
 export const Routes = ({ children }) => {
   return <>{children}</>;
 };
 
-const RouteAncestorContext = createContext(null);
 const RouteSlotContext = createContext(null);
 
 export const Route = ({ route, element, children }) => {
-  const routeAncestor = useContext(RouteAncestorContext);
-  if (routeAncestor) {
-    routeAncestor.registerChildRoute(route, { element });
-  }
-
   const forceRender = useForceRender();
-
-  // Subscription à la route prop
-  const routeIsActiveRef = useRef(false);
-  const routeRef = useRef();
-  if (routeRef.current !== route) {
-    routeRef.current = route;
-    if (!route) {
-      routeIsActiveRef.current = false;
-    } else {
-      routeIsActiveRef.current = route.active;
-      subscribeRouteStatus(route, () => {
-        routeIsActiveRef.current = route.active;
-        forceRender();
-      });
-    }
-  }
-
   const hasDiscoveredRef = useRef(false);
-  const activeNestedRouteInfoRef = useRef(null);
-  if (!hasDiscoveredRef.current && children) {
+  const activeRouteInfoRef = useRef(null);
+  if (!hasDiscoveredRef.current) {
     return (
-      <NestedRouteDiscovery
+      <ActiveRouteManager
+        route={route}
+        element={element}
         onDiscoveryComplete={(activeRouteInfo) => {
           hasDiscoveredRef.current = true;
-          activeNestedRouteInfoRef.current = activeRouteInfo;
+          activeRouteInfoRef.current = activeRouteInfo;
           forceRender();
         }}
         onActiveRouteChange={(activeRouteInfo) => {
-          activeNestedRouteInfoRef.current = activeRouteInfo;
+          activeRouteInfoRef.current = activeRouteInfo;
           forceRender();
         }}
       >
         {children}
-      </NestedRouteDiscovery>
+      </ActiveRouteManager>
     );
   }
-
-  // Phase de rendu normal
-  const routePropIsActive = routeIsActiveRef.current;
-  if (routePropIsActive) {
+  const activeRouteInfo = activeRouteInfoRef.current;
+  if (!activeRouteInfo) {
+    return null;
+  }
+  if (activeRouteInfo.origin === "props") {
     return element;
   }
-
-  const activeNestedRouteInfo = activeNestedRouteInfoRef.current;
-  if (activeNestedRouteInfo) {
-    const routeSlot = activeNestedRouteInfo.element;
-    return (
-      <RouteSlotContext.Provider value={routeSlot}>
-        {element}
-      </RouteSlotContext.Provider>
-    );
-  }
-  return null;
+  const activeNestedRouteElement = activeRouteInfo.element;
+  return (
+    <RouteSlotContext.Provider value={activeNestedRouteElement}>
+      {element}
+    </RouteSlotContext.Provider>
+  );
 };
-const NestedRouteDiscovery = ({
-  children,
+
+const RegisterChildRouteContext = createContext(null);
+const ActiveRouteManager = ({
+  route: routeFromProps,
+  element: elementFromProps,
   onDiscoveryComplete,
   onActiveRouteChange,
+  children,
 }) => {
-  const discoveredRouteMapRef = useRef(new Map());
-  const discoveredRouteMap = discoveredRouteMapRef.current;
-  const activeNestedRouteInfoRef = useRef(null);
-
-  const registerChildRoute = (route, { element }) => {
-    if (discoveredRouteMap.has(route)) {
+  const activeRouteInfoRef = useRef(null);
+  const registerChildRouteFromContext = useContext(RegisterChildRouteContext);
+  const childRouteCacheSet = new Set();
+  const registerChildRoute = useMemo((cacheKey, childProps) => {
+    if (childRouteCacheSet.has(cacheKey)) {
       return;
     }
-    discoveredRouteMap.set(route, { element });
-    if (route.active) {
-      activeNestedRouteInfoRef.current = { route, element };
-    }
-  };
-
-  const contextValue = useMemo(() => {
-    return { registerChildRoute };
+    childRouteCacheSet.add(cacheKey);
+    candidateSet.add({
+      childProps,
+      origin: "children",
+    });
   }, []);
 
+  const candidateSet = new Set();
+  if (routeFromProps) {
+    candidateSet.add({
+      route: routeFromProps,
+      element: elementFromProps,
+      origin: "props",
+    });
+  }
+
   useLayoutEffect(() => {
-    discoveredRouteMapRef.current = discoveredRouteMap;
-    for (const [route] of discoveredRouteMap) {
+    for (const info of candidateSet) {
+      const { route } = info;
+      if (route.active) {
+        activeRouteInfoRef.current = info;
+      }
       subscribeRouteStatus(route, () => {
+        const activeRouteInfo = activeRouteInfoRef.current;
         if (route.active) {
-          const previousInfo = activeNestedRouteInfoRef.current;
-          const currentInfo = {
-            route,
-            element: discoveredRouteMap.get(route).element,
-          };
-          activeNestedRouteInfoRef.current = currentInfo;
-          onActiveRouteChange(currentInfo, previousInfo);
-        } else if (activeNestedRouteInfoRef.current?.route === route) {
-          const previousInfo = activeNestedRouteInfoRef.current;
-          activeNestedRouteInfoRef.current = null;
-          onActiveRouteChange(null, previousInfo);
+          const currentInfo = info;
+          activeRouteInfoRef.current = currentInfo;
+          onActiveRouteChange(currentInfo, activeRouteInfo);
+        } else if (activeRouteInfo && activeRouteInfo.route === route) {
+          activeRouteInfoRef.current = null;
+          onActiveRouteChange(null, activeRouteInfo);
         }
       });
     }
-    onDiscoveryComplete(activeNestedRouteInfoRef.current);
+    if (registerChildRouteFromContext) {
+      if (routeFromProps) {
+        registerChildRouteFromContext(routeFromProps, {
+          route: routeFromProps,
+          element: elementFromProps,
+        });
+      } else {
+        // we need a custom route object that is the combination of all these routes we have here
+      }
+    }
+    onDiscoveryComplete(activeRouteInfoRef.current);
   }, []);
 
   return (
-    <RouteAncestorContext.Provider value={contextValue}>
+    <RegisterChildRouteContext.Provider value={registerChildRoute}>
       {children}
-    </RouteAncestorContext.Provider>
+    </RegisterChildRouteContext.Provider>
   );
 };
 
@@ -155,8 +143,3 @@ export const RouteSlot = () => {
   return <>{routeSlot}</>;
 };
 Route.Slot = RouteSlot;
-
-const useForceRender = () => {
-  const [, setState] = useState(null);
-  return () => setState(NaN);
-};
