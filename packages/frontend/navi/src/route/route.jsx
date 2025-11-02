@@ -17,7 +17,7 @@
  */
 
 import { createContext } from "preact";
-import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
+import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { subscribeRouteStatus } from "./route.js";
 import { useForceRender } from "./use_force_render.js";
@@ -67,6 +67,7 @@ export const Route = ({ route, element, children }) => {
 };
 
 const RegisterChildRouteContext = createContext(null);
+
 const ActiveRouteManager = ({
   route: routeFromProps,
   element: elementFromProps,
@@ -77,7 +78,7 @@ const ActiveRouteManager = ({
   const activeRouteInfoRef = useRef(null);
   const registerChildRouteFromContext = useContext(RegisterChildRouteContext);
   const childRouteCacheSet = new Set();
-  const registerChildRoute = useMemo((cacheKey, childRoute, childElement) => {
+  const registerChildRoute = (cacheKey, childRoute, childElement) => {
     if (childRouteCacheSet.has(cacheKey)) {
       return;
     }
@@ -87,7 +88,7 @@ const ActiveRouteManager = ({
       element: childElement,
       origin: "children",
     });
-  }, []);
+  };
 
   const candidateSet = new Set();
   if (routeFromProps) {
@@ -99,6 +100,9 @@ const ActiveRouteManager = ({
   }
 
   useLayoutEffect(() => {
+    const compositeRoute = createCompositeRoute(
+      Array.from(candidateSet, (info) => info.route),
+    );
     for (const info of candidateSet) {
       const { route } = info;
       if (route.active) {
@@ -116,16 +120,13 @@ const ActiveRouteManager = ({
         }
       });
     }
+
     if (registerChildRouteFromContext) {
-      if (routeFromProps) {
-        registerChildRouteFromContext(routeFromProps, {
-          route: routeFromProps,
-          element: elementFromProps,
-        });
-      } else {
-        // we need a custom route object that is the combination of all these routes we have here
-        // this object must be usable by the code line 104 to 117
-      }
+      registerChildRouteFromContext(
+        compositeRoute,
+        compositeRoute,
+        elementFromProps,
+      );
     }
     onDiscoveryComplete(activeRouteInfoRef.current);
   }, []);
