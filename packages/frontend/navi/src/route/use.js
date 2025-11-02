@@ -1,5 +1,9 @@
+import { useState } from "preact/hooks";
+
 const promiseStateWeakMap = new WeakMap();
 export const use = (promise) => {
+  const [, setState] = useState(null);
+
   let promiseState = promiseStateWeakMap.get(promise);
   if (!promiseState) {
     promiseState = {
@@ -12,6 +16,7 @@ export const use = (promise) => {
       (data) => {
         promiseState.data = data;
         promiseState.settled = true;
+        setState(NaN);
       },
       (error) => {
         promiseState.error = error;
