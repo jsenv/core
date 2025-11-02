@@ -176,18 +176,19 @@ const initRouteObserver = ({
 
   const updateActiveInfo = () => {
     const newActiveInfo = getActiveInfo();
+    const active = Boolean(newActiveInfo);
+    compositeRoute.active = active;
     activeRouteSignal.value = newActiveInfo?.route;
     activeSlotElementSignal.value = newActiveInfo?.slotElement;
-    compositeRoute.active = Boolean(newActiveInfo);
-    onActiveInfoChange(
-      newActiveInfo
-        ? {
-            route: activeRouteSignal.value,
-            slotElement: activeSlotElementSignal.value,
-            ElementWithSlot,
-          }
-        : null,
-    );
+    if (active) {
+      onActiveInfoChange({
+        route: activeRouteSignal.value,
+        slotElement: activeSlotElementSignal.value,
+        ElementWithSlot,
+      });
+    } else {
+      onActiveInfoChange(null);
+    }
   };
   const onChange = () => {
     updateActiveInfo();
@@ -206,11 +207,12 @@ const initRouteObserver = ({
 };
 
 export const RouteSlot = () => {
-  const routeSlot = useContext(SlotContext);
-  if (!routeSlot) {
+  const SlotElement = useContext(SlotContext);
+  if (!SlotElement) {
     return <p>RouteSlot must be used inside a Route</p>;
   }
-  return routeSlot;
+  console.log("rendering", getElementId(SlotElement));
+  return <SlotElement />;
 };
 Route.Slot = RouteSlot;
 
