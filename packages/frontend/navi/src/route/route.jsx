@@ -96,6 +96,7 @@ const ActiveRouteManager = ({
 
   const candidateSet = new Set();
   const addCandidate = (route, element, origin) => {
+    console.debug(`📍 addCandidate: ${route} (${origin})`);
     const getActiveInfo = () => {
       return route.active ? { element, origin } : null;
     };
@@ -110,11 +111,16 @@ const ActiveRouteManager = ({
     });
   };
   const registerChildRoute = (childRoute, childElement) => {
+    console.debug(`👶 registerChildRoute: ${childRoute}`);
     addCandidate(childRoute, childElement, "children");
   };
   if (routeFromProps) {
+    console.debug(`🎯 routeFromProps: ${routeFromProps}`);
     addCandidate(routeFromProps, elementFromProps, "props");
     if (registerChildRouteFromContext) {
+      console.debug(
+        `⬆️ registerChildRouteFromContext: ${routeFromProps} → parent`,
+      );
       registerChildRouteFromContext(routeFromProps, elementFromProps);
     }
   }
@@ -125,6 +131,7 @@ const ActiveRouteManager = ({
       isComposite: true,
       active: false,
       subscribeActiveInfo: subscribeCompositeActiveInfo,
+      toString: () => `composite(${candidateSet.size} candidates)`,
     };
 
     // Fonction qui calcule l'état actif parmi les candidates
@@ -180,6 +187,10 @@ const ActiveRouteManager = ({
     });
 
     if (registerChildRouteFromContext) {
+      console.debug(`🔗 Creating composite route: ${compositeRoute}`);
+      console.debug(
+        `⬆️ registerChildRouteFromContext: ${compositeRoute} → parent`,
+      );
       registerChildRouteFromContext(compositeRoute, elementFromProps);
     }
     onDiscoveryComplete(activeInfoRef.current);
