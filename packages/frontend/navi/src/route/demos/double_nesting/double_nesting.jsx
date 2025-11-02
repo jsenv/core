@@ -50,13 +50,16 @@ export const App = () => {
       <main>
         <Routes>
           {/* Simple routes (no nesting) */}
-          <Route route={HOME_ROUTE} element={<div>🏠 Homepage</div>} />
+          <Route
+            route={HOME_ROUTE}
+            element={<div id="home-element">🏠 Homepage</div>}
+          />
 
           {/* LEVEL 1: Admin wrapper - wraps all admin routes */}
           <Route
             route={ADMIN_ROUTE}
             element={
-              <div>
+              <div id="admin-element">
                 🛡️ Admin Panel
                 <Route.Slot />
               </div>
@@ -66,7 +69,7 @@ export const App = () => {
             <Route
               route={ADMIN_USERS_ROUTE}
               element={
-                <div>
+                <div id="users-element">
                   👥 Users Section
                   <Route.Slot />
                 </div>
@@ -75,12 +78,12 @@ export const App = () => {
               {/* LEVEL 3: Specific user pages */}
               <Route
                 route={ADMIN_USERS_LIST_ROUTE}
-                element={<div>📋 Users List</div>}
+                element={<div id="users-list-element">📋 Users List</div>}
               />
 
               <Route
                 route={ADMIN_USERS_CREATE_ROUTE}
-                element={<div>➕ Create User</div>}
+                element={<div id="users-create-element">➕ Create User</div>}
               />
             </Route>
           </Route>

@@ -65,9 +65,19 @@ export const Route = ({ route, element, children }) => {
   if (!activeRouteInfo) {
     return null;
   }
-  const ElementWithSlot = activeRouteInfo.element;
-  console.log("render", route.urlPattern, activeRouteInfo.element);
-  return <ElementWithSlot />;
+  const elementToRender = activeRouteInfo.element;
+
+  console.log(`🎯 Route.render ${route?.urlPattern}:`, {
+    elementId: getElementId(elementToRender),
+    elementType: typeof elementToRender,
+    element: elementToRender,
+  });
+
+  // If it's a function component, call it. If it's JSX, return it directly
+  if (typeof elementToRender === "function") {
+    return <elementToRender />;
+  }
+  return elementToRender;
 };
 
 const RegisterChildRouteContext = createContext(null);
@@ -157,8 +167,19 @@ const initRouteObserver = ({
     });
     if (registerChildRouteFromContext) {
       const wrappedElement = () => {
+        console.log(
+          `🎁 wrappedElement for ${soleCandidate.route.urlPattern}:`,
+          {
+            wrapperElementId: getElementId(element),
+            slotElementId: getElementId(soleCandidate.element),
+            slotElement: soleCandidate.element,
+          },
+        );
+
         return (
-          <SlotContext.Provider value={null}>{element}</SlotContext.Provider>
+          <SlotContext.Provider value={soleCandidate.element}>
+            {element}
+          </SlotContext.Provider>
         );
       };
       registerChildRouteFromContext(soleCandidate.route, wrappedElement);
@@ -251,3 +272,13 @@ export const RouteSlot = () => {
   return routeSlot;
 };
 Route.Slot = RouteSlot;
+
+// Extract element ID for logging
+const getElementId = (element) => {
+  if (typeof element === "function") return "[function]";
+  if (element?.props?.id) return element.props.id;
+  if (element?.type === "div" && element?.props?.children?.[0]) {
+    return element.props.children[0].toString().slice(0, 20);
+  }
+  return "[unknown]";
+};
