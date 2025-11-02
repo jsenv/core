@@ -169,41 +169,36 @@ const initRouteObserver = ({
       <SlotContext.Provider value={slotElement}>{element}</SlotContext.Provider>
     );
   };
-  ElementWithSlot.id = `[${getElementId(element)} with slot one of ${candidateElementIds}]`;
+  ElementWithSlot.id =
+    candidateSet.size === 0
+      ? `${getElementId(element)} without slot`
+      : `[${getElementId(element)} with slot one of ${candidateElementIds}]`;
 
   const updateActiveInfo = () => {
     const newActiveInfo = getActiveInfo();
     activeRouteSignal.value = newActiveInfo?.route;
     activeSlotElementSignal.value = newActiveInfo?.slotElement;
     compositeRoute.active = Boolean(newActiveInfo);
-    onActiveInfoChange({
-      route: activeRouteSignal.value,
-      slotElement: activeSlotElementSignal.value,
-      ElementWithSlot,
-    });
+    onActiveInfoChange(
+      newActiveInfo
+        ? {
+            route: activeRouteSignal.value,
+            slotElement: activeSlotElementSignal.value,
+            ElementWithSlot,
+          }
+        : null,
+    );
   };
-  const subscribeGlobalActiveInfo = (callback) => {
-    const [teardown, addTeardown] = createPubSub();
-    const onChange = () => {
-      updateActiveInfo();
-      callback();
-    };
-    if (route) {
-      const unsubscribe = route.subscribeStatus(onChange);
-      addTeardown(unsubscribe);
-    }
-    for (const candidate of candidateSet) {
-      const unsubscribe = candidate.route.subscribeStatus(onChange);
-      addTeardown(unsubscribe);
-    }
-    return () => {
-      teardown();
-    };
+  const onChange = () => {
+    updateActiveInfo();
+    publishCompositeStatus();
   };
-  subscribeGlobalActiveInfo((current, previous) => {
-    publishCompositeStatus(current, previous);
-    onActiveInfoChange(current, previous);
-  });
+  if (route) {
+    route.subscribeStatus(onChange);
+  }
+  for (const candidate of candidateSet) {
+    candidate.route.subscribeStatus(onChange);
+  }
   if (registerChildRouteFromContext) {
     registerChildRouteFromContext(compositeRoute, ElementWithSlot);
   }
