@@ -16,6 +16,7 @@
  *
  */
 
+import { createPubSub } from "@jsenv/dom";
 import { createContext } from "preact";
 import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
@@ -79,60 +80,63 @@ const ActiveRouteManager = ({
   const registerChildRouteFromContext = useContext(RegisterChildRouteContext);
 
   const candidateSet = new Set();
-  if (routeFromProps) {
+  const addCandidate = (route, element, origin) => {
     const getActiveInfo = () => {
-      return routeFromProps.active
-        ? { element: elementFromProps, origin: "props" }
-        : null;
+      return route.active ? { element, origin } : null;
     };
-    candidateSet.add({
-      getActiveInfo,
-      subscribeActiveInfo: (callback) => {
-        return subscribeRouteStatus(routeFromProps, () => {
+    const subscribeActiveInfo = (callback) => {
+      if (route.isComposite) {
+        return route.subscribeActiveInfo(() => {
           callback(getActiveInfo());
         });
-      },
-    });
-  }
-  const registerChildRoute = (getActiveInfo, subscribeActiveInfo) => {
+      }
+      return subscribeRouteStatus(route, () => {
+        callback(getActiveInfo());
+      });
+    };
     candidateSet.add({
       getActiveInfo,
       subscribeActiveInfo,
     });
   };
+  const registerChildRoute = (childRoute, childElement) => {
+    addCandidate(childRoute, childElement, "children");
+  };
+  if (routeFromProps) {
+    addCandidate(routeFromProps, elementFromProps, "props");
+  }
 
   useLayoutEffect(() => {
-    const getActiveInfo = () => {
-      for (const candidate of candidateSet) {
-        const activeInfo = candidate.getActiveInfo();
-        if (activeInfo) {
-          return activeInfo;
-        }
-      }
-      return null;
-    };
-    const subscribeActiveInfo = (callback) => {
-      for (const candidate of candidateSet) {
-        candidate.subscribeActiveInfo((activeInfo) => {
-          const currentActiveInfo = activeInfoRef.current;
-          if (activeInfo) {
-            activeInfoRef.current = activeInfo;
-            callback(activeInfo, currentActiveInfo);
-          } else if (currentActiveInfo) {
-            activeInfoRef.current = null;
-            callback(null, currentActiveInfo);
-          }
-        });
-      }
+    const [publishCompositeActiveInfo, subscribeCompositeActiveInfo] =
+      createPubSub();
+    const compositeRoute = {
+      isComposite: true,
+      active: false,
+      subscribeActiveInfo: subscribeCompositeActiveInfo,
     };
 
-    activeInfoRef.current = getActiveInfo();
-    subscribeActiveInfo((current, previous) => {
+    for (const candidate of candidateSet) {
+      const activeInfo = candidate.getActiveInfo();
+      if (activeInfo) {
+        compositeRoute.active = true;
+        activeInfoRef.current = activeInfo;
+      }
+      candidate.subscribeActiveInfo((activeInfo) => {
+        const currentActiveInfo = activeInfoRef.current;
+        if (activeInfo) {
+          activeInfoRef.current = activeInfo;
+          publishCompositeActiveInfo(activeInfo, currentActiveInfo);
+        } else if (currentActiveInfo) {
+          activeInfoRef.current = null;
+          publishCompositeActiveInfo(null, currentActiveInfo);
+        }
+      });
+    }
+    subscribeCompositeActiveInfo((current, previous) => {
       onActiveRouteChange(current, previous);
     });
-
     if (registerChildRouteFromContext) {
-      registerChildRouteFromContext(getActiveInfo, subscribeActiveInfo);
+      registerChildRouteFromContext(compositeRoute, elementFromProps);
     }
     onDiscoveryComplete(activeInfoRef.current);
   }, []);
