@@ -21,7 +21,7 @@
 
 import { createPubSub } from "@jsenv/dom";
 import { createContext } from "preact";
-import { useContext, useLayoutEffect, useRef } from "preact/hooks";
+import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
 
 import { useForceRender } from "./use_force_render.js";
 
@@ -29,12 +29,16 @@ export const Routes = ({ children }) => {
   return <>{children}</>;
 };
 
-const RouteSlotContext = createContext(null);
+const LocalSlotContextContext = createContext(null);
 
 export const Route = ({ route, element, children }) => {
   const forceRender = useForceRender();
   const hasDiscoveredRef = useRef(false);
   const activeRouteInfoRef = useRef(null);
+
+  // Create a local context for this route's slot - unique per Route instance
+  const localSlotContext = useMemo(() => createContext(null), []);
+
   if (!hasDiscoveredRef.current) {
     return (
       <ActiveRouteManager
@@ -61,18 +65,22 @@ export const Route = ({ route, element, children }) => {
   }
   if (activeRouteInfo.origin === "props") {
     return (
-      <RouteSlotContext.Provider value={null}>
-        {element}
-      </RouteSlotContext.Provider>
+      <LocalSlotContextContext.Provider value={localSlotContext}>
+        <localSlotContext.Provider value={null}>
+          {element}
+        </localSlotContext.Provider>
+      </LocalSlotContextContext.Provider>
     );
   }
 
   const activeNestedRouteElement = activeRouteInfo.element;
   console.log(`render ${route.urlPattern}`, activeNestedRouteElement);
   return (
-    <RouteSlotContext.Provider value={activeNestedRouteElement}>
-      {element}
-    </RouteSlotContext.Provider>
+    <LocalSlotContextContext.Provider value={localSlotContext}>
+      <localSlotContext.Provider value={activeNestedRouteElement}>
+        {element}
+      </localSlotContext.Provider>
+    </LocalSlotContextContext.Provider>
   );
 };
 
@@ -221,9 +229,13 @@ const initRouteObserver = ({
 };
 
 export const RouteSlot = () => {
-  const routeSlot = useContext(RouteSlotContext);
-  if (!routeSlot) {
+  const localSlotContext = useContext(LocalSlotContextContext);
+  if (!localSlotContext) {
     return <p>RouteSlot not inside a Route</p>;
+  }
+  const routeSlot = useContext(localSlotContext);
+  if (!routeSlot) {
+    return null;
   }
   console.log("render", routeSlot);
   return routeSlot;
