@@ -117,18 +117,42 @@ const ActiveRouteManager = ({
     );
     addCandidate(childRoute, childElement, "children");
   };
-  if (routeFromProps) {
-    addCandidate(routeFromProps, elementFromProps, "props");
-    if (registerChildRouteFromContext) {
-      registerChildRouteFromContext(routeFromProps, elementFromProps);
-    }
-  }
 
   if (children) {
     console.group(`👶 Discovery of ${routeFromProps.urlPattern} child routes`);
   }
 
+  if (routeFromProps) {
+    addCandidate(routeFromProps, elementFromProps, "props");
+  }
+
   useLayoutEffect(() => {
+    if (children) {
+      console.groupEnd();
+    }
+
+    if (candidateSet.size === 0) {
+      onDiscoveryComplete(null);
+      return;
+    }
+    if (candidateSet.size === 1) {
+      const soleCandidate = candidateSet.values().next().value;
+      activeInfoRef.current = soleCandidate.getActiveInfo();
+      soleCandidate.subscribeActiveInfo((newActiveInfo) => {
+        const currentActiveInfo = activeInfoRef.current;
+        activeInfoRef.current = newActiveInfo;
+        onActiveRouteChange(newActiveInfo, currentActiveInfo);
+      });
+      if (registerChildRouteFromContext) {
+        registerChildRouteFromContext(
+          soleCandidate.route,
+          soleCandidate.element,
+        );
+      }
+      onDiscoveryComplete(activeInfoRef.current);
+      return;
+    }
+
     const [publishCompositeActiveInfo, subscribeCompositeActiveInfo] =
       createPubSub();
     const patterns = Array.from(candidateSet, (c) => c.route.urlPattern).join(
@@ -142,7 +166,6 @@ const ActiveRouteManager = ({
       toString: () => `composite(${candidateSet.size} candidates)`,
     };
 
-    // Fonction qui calcule l'état actif parmi les candidates
     const getActiveCandidateInfo = () => {
       for (const candidate of candidateSet) {
         const info = candidate.getActiveInfo();
@@ -150,8 +173,6 @@ const ActiveRouteManager = ({
       }
       return null;
     };
-
-    // Fonction de subscription globale qui coordonne toutes les routes
     const subscribeGlobalActiveInfo = (callback) => {
       const unsubscribeFunctions = [];
 
@@ -178,30 +199,17 @@ const ActiveRouteManager = ({
       };
     };
 
-    // Initialiser l'état
     const initialActiveInfo = getActiveCandidateInfo();
     if (initialActiveInfo) {
       compositeRoute.active = true;
       activeInfoRef.current = initialActiveInfo;
     }
-
-    // S'abonner aux changements globaux
     subscribeGlobalActiveInfo((current, previous) => {
       publishCompositeActiveInfo(current, previous);
     });
-
     subscribeCompositeActiveInfo((current, previous) => {
       onActiveRouteChange(current, previous);
     });
-
-    if (registerChildRouteFromContext) {
-      registerChildRouteFromContext(compositeRoute, elementFromProps);
-    }
-
-    if (children) {
-      console.groupEnd();
-    }
-
     onDiscoveryComplete(activeInfoRef.current);
   }, []);
 
