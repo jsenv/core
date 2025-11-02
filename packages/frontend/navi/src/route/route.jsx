@@ -38,6 +38,8 @@ export const Route = ({ route, element, children }) => {
 
   // Create a local context for this route's slot - unique per Route instance
   const localSlotContext = useMemo(() => createContext(null), []);
+  const contextId = useMemo(() => Math.random().toString(36), []);
+  console.log(`Route ${route?.urlPattern} context ID:`, contextId);
 
   if (!hasDiscoveredRef.current) {
     return (
@@ -74,9 +76,18 @@ export const Route = ({ route, element, children }) => {
   }
 
   const activeNestedRouteElement = activeRouteInfo.element;
-  console.log(`render ${route.urlPattern}`, activeNestedRouteElement);
+  console.log(
+    `render ${route?.urlPattern} contextId:${contextId}`,
+    "activeRouteInfo:",
+    activeRouteInfo,
+    "activeNestedRouteElement:",
+    activeNestedRouteElement,
+  );
+
   return (
-    <LocalSlotContextContext.Provider value={localSlotContext}>
+    <LocalSlotContextContext.Provider
+      value={{ context: localSlotContext, id: contextId }}
+    >
       <localSlotContext.Provider value={activeNestedRouteElement}>
         {element}
       </localSlotContext.Provider>
@@ -229,15 +240,16 @@ const initRouteObserver = ({
 };
 
 export const RouteSlot = () => {
-  const localSlotContext = useContext(LocalSlotContextContext);
-  if (!localSlotContext) {
+  const localSlotInfo = useContext(LocalSlotContextContext);
+  console.log("RouteSlot localSlotInfo:", localSlotInfo?.id, localSlotInfo);
+  if (!localSlotInfo) {
     return <p>RouteSlot not inside a Route</p>;
   }
-  const routeSlot = useContext(localSlotContext);
+  const routeSlot = useContext(localSlotInfo.context);
+  console.log(`RouteSlot contextId:${localSlotInfo.id} routeSlot:`, routeSlot);
   if (!routeSlot) {
     return null;
   }
-  console.log("render", routeSlot);
   return routeSlot;
 };
 Route.Slot = RouteSlot;
