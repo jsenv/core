@@ -119,7 +119,6 @@ const ActiveRouteManager = ({
     initRouteObserver({
       candidateSet,
       element: elementFromProps,
-      route: routeFromProps,
       onDiscoveryComplete,
       onActiveRouteChange,
       registerChildRouteFromContext,
@@ -145,7 +144,6 @@ const subscribeActiveInfo = (candidate, callback) => {
 const initRouteObserver = ({
   candidateSet,
   element,
-  route,
   onDiscoveryComplete,
   onActiveRouteChange,
   registerChildRouteFromContext,
@@ -207,30 +205,39 @@ const initRouteObserver = ({
     toString: () => `composite(${candidateSet.size} candidates)`,
   };
   const getActiveCandidateInfo = () => {
-    // Find the active candidate among our children
-    const activeCandidate = Array.from(candidateSet).find(
+    // First check if our own route is active (route from props)
+    const ownCandidate = Array.from(candidateSet).find(
+      (candidate) => candidate.origin === "props" && candidate.route.active,
+    );
+
+    if (ownCandidate) {
+      // Find if any child is also active
+      const activeChildCandidate = Array.from(candidateSet).find(
+        (candidate) =>
+          candidate.origin === "children" && candidate.route.active,
+      );
+
+      return {
+        route: ownCandidate.route,
+        element: ownCandidate.element,
+        slotElement: activeChildCandidate ? activeChildCandidate.element : null,
+      };
+    }
+
+    // If our own route is not active, find the active child
+    const activeChildCandidate = Array.from(candidateSet).find(
       (candidate) => candidate.route.active,
     );
 
-    if (!activeCandidate) {
+    if (!activeChildCandidate) {
       return null;
-    }
-
-    // If we have a route from props, this means we are a route with children
-    // We should render our own element with the active child in the slot
-    if (route) {
-      return {
-        route,
-        element,
-        slotElement: activeCandidate.element,
-      };
     }
 
     // If we don't have a route from props, we're just a wrapper
     // Pass through the active child
     return {
-      route: activeCandidate.route,
-      element: activeCandidate.element,
+      route: activeChildCandidate.route,
+      element: activeChildCandidate.element,
       slotElement: null,
     };
   };
