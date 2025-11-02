@@ -65,7 +65,9 @@ export const Route = ({ route, element, children }) => {
   if (!activeRouteInfo) {
     return null;
   }
-  return activeRouteInfo.element;
+  const ElementWithSlot = activeRouteInfo.element;
+  console.log("render", route.urlPattern, activeRouteInfo.element);
+  return <ElementWithSlot />;
 };
 
 const RegisterChildRouteContext = createContext(null);
@@ -156,9 +158,7 @@ const initRouteObserver = ({
     if (registerChildRouteFromContext) {
       const wrappedElement = () => {
         return (
-          <SlotContext.Provider value={soleCandidate.element}>
-            {element}
-          </SlotContext.Provider>
+          <SlotContext.Provider value={null}>{element}</SlotContext.Provider>
         );
       };
       registerChildRouteFromContext(soleCandidate.route, wrappedElement);
