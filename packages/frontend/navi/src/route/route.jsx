@@ -69,6 +69,9 @@ export const Route = ({ route, element, children }) => {
 
 const RegisterChildRouteContext = createContext(null);
 
+/* This component is ensure to be rendered once
+So no need to cleanup things or whatever we know and ensure that 
+it's executed once for the entier app lifecycle */
 const ActiveRouteManager = ({
   route: routeFromProps,
   element: elementFromProps,
