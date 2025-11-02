@@ -120,23 +120,60 @@ const ActiveRouteManager = ({
       subscribeActiveInfo: subscribeCompositeActiveInfo,
     };
 
-    for (const candidate of candidateSet) {
-      const activeInfo = candidate.getActiveInfo();
-      if (activeInfo) {
-        compositeRoute.active = true;
-        activeInfoRef.current = activeInfo;
+    // Fonction qui calcule l'état actif global
+    const getGlobalActiveInfo = () => {
+      for (const candidate of candidateSet) {
+        const info = candidate.getActiveInfo();
+        if (info) return info;
       }
-      candidate.subscribeActiveInfo((activeInfo) => {
-        const currentActiveInfo = activeInfoRef.current;
-        if (activeInfo) {
-          activeInfoRef.current = activeInfo;
-          publishCompositeActiveInfo(activeInfo, currentActiveInfo);
-        } else if (currentActiveInfo) {
-          activeInfoRef.current = null;
-          publishCompositeActiveInfo(null, currentActiveInfo);
-        }
-      });
+      return null;
+    };
+
+    // Fonction de subscription globale qui coordonne toutes les routes
+    const subscribeGlobalActiveInfo = (callback) => {
+      // État partagé entre toutes les subscriptions
+      const state = { currentGlobalActiveInfo: activeInfoRef.current };
+
+      const createSubscriptionHandler = (sharedState) => {
+        return () => {
+          // Recalculer l'état global à chaque changement individuel
+          const newGlobalActiveInfo = getGlobalActiveInfo();
+
+          // Ne déclencher le callback que si l'état global a vraiment changé
+          if (newGlobalActiveInfo !== sharedState.currentGlobalActiveInfo) {
+            const previous = sharedState.currentGlobalActiveInfo;
+            sharedState.currentGlobalActiveInfo = newGlobalActiveInfo;
+            activeInfoRef.current = newGlobalActiveInfo;
+            compositeRoute.active = Boolean(newGlobalActiveInfo);
+            callback(newGlobalActiveInfo, previous);
+          }
+        };
+      };
+
+      const unsubscribeFunctions = [];
+      for (const candidate of candidateSet) {
+        const handler = createSubscriptionHandler(state);
+        const unsubscribe = candidate.subscribeActiveInfo(handler);
+        unsubscribeFunctions.push(unsubscribe);
+      }
+
+      return () => {
+        unsubscribeFunctions.forEach((fn) => fn());
+      };
+    };
+
+    // Initialiser l'état
+    const initialActiveInfo = getGlobalActiveInfo();
+    if (initialActiveInfo) {
+      compositeRoute.active = true;
+      activeInfoRef.current = initialActiveInfo;
     }
+
+    // S'abonner aux changements globaux
+    subscribeGlobalActiveInfo((current, previous) => {
+      publishCompositeActiveInfo(current, previous);
+    });
+
     subscribeCompositeActiveInfo((current, previous) => {
       onActiveRouteChange(current, previous);
     });
