@@ -177,11 +177,8 @@ const ActiveRouteManager = ({
       const [teardown, addTeardown] = createPubSub();
       for (const candidate of candidateSet) {
         const unsubscribe = candidate.subscribeActiveInfo(() => {
-          // Recalculer l'état actif parmi les candidates à chaque changement
           const previousActiveCandidateInfo = activeInfoRef.current;
           const newActiveCandidateInfo = getActiveCandidateInfo();
-
-          // Ne déclencher le callback que si l'état a vraiment changé
           if (newActiveCandidateInfo !== previousActiveCandidateInfo) {
             activeInfoRef.current = newActiveCandidateInfo;
             compositeRoute.active = Boolean(newActiveCandidateInfo);
@@ -201,11 +198,8 @@ const ActiveRouteManager = ({
     }
     subscribeGlobalActiveInfo((current, previous) => {
       publishCompositeActiveInfo(current, previous);
-    });
-    subscribeCompositeActiveInfo((current, previous) => {
       onActiveRouteChange(current, previous);
     });
-
     if (registerChildRouteFromContext) {
       registerChildRouteFromContext(compositeRoute, elementFromProps);
     }
