@@ -90,7 +90,10 @@ export const App = () => {
           <Route
             route={AUTH_ROUTE}
             element={
-              <div style="background: #e6f3ff; padding: 15px; border-radius: 5px;">
+              <div
+                id="auth_layout"
+                style="background: #e6f3ff; padding: 15px; border-radius: 5px;"
+              >
                 <h3>🔐 Auth Section Wrapper</h3>
                 <ComponentTracker name="AuthWrapper" color="#17a2b8" />
                 <p>
@@ -109,7 +112,10 @@ export const App = () => {
             <Route
               route={LOGIN_ROUTE}
               element={
-                <div style="background: #fff3cd; padding: 10px; margin: 10px 0; border: 1px solid #ffc107;">
+                <div
+                  id="login"
+                  style="background: #fff3cd; padding: 10px; margin: 10px 0; border: 1px solid #ffc107;"
+                >
                   <h4>Login Form</h4>
                   <ComponentTracker name="LoginForm" color="#ffc107" />
 
@@ -120,7 +126,10 @@ export const App = () => {
             <Route
               route={FORGOT_PASSWORD_ROUTE}
               element={
-                <div style="background: #f8d7da; padding: 10px; margin: 10px 0; border: 1px solid #dc3545;">
+                <div
+                  id="forgot_password"
+                  style="background: #f8d7da; padding: 10px; margin: 10px 0; border: 1px solid #dc3545;"
+                >
                   <h4>Password Reset</h4>
                   <ComponentTracker name="ForgotForm" color="#dc3545" />
 

@@ -75,8 +75,15 @@ export const Route = ({ route, element, children }) => {
 
   // If it's a function component, call it. If it's JSX, return it directly
   if (typeof elementToRender === "function") {
-    return <elementToRender />;
+    console.log(`🔧 Calling function component for ${route?.urlPattern}`);
+    const FunctionElement = elementToRender;
+    return <FunctionElement />;
   }
+
+  console.log(
+    `📄 Returning JSX element for ${route?.urlPattern}:`,
+    getElementId(elementToRender),
+  );
   return elementToRender;
 };
 
@@ -252,6 +259,12 @@ const initRouteObserver = ({
         });
         return unsubscribe;
       }, []);
+
+      console.log(`🎁 Composite wrappedElement for ${patterns}:`, {
+        wrapperElementId: getElementId(element),
+        slotElementId: getElementId(slotContent),
+        slotContent,
+      });
 
       return (
         <SlotContext.Provider value={slotContent}>
