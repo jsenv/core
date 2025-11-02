@@ -51,7 +51,7 @@ export const Route = ({ route, element, children }) => {
           activeInfoRef.current = activeInfo;
           forceRender();
         }}
-        onActiveRouteChange={(activeInfo) => {
+        onActiveInfoChange={(activeInfo) => {
           activeInfoRef.current = activeInfo;
           forceRender();
         }}
@@ -78,7 +78,7 @@ const ActiveRouteManager = ({
   route,
   element,
   onDiscoveryComplete,
-  onActiveRouteChange,
+  onActiveInfoChange,
   children,
 }) => {
   const registerChildRouteFromContext = useContext(RegisterChildRouteContext);
@@ -100,7 +100,7 @@ const ActiveRouteManager = ({
       element,
       candidateSet,
       onDiscoveryComplete,
-      onActiveRouteChange,
+      onActiveInfoChange,
       registerChildRouteFromContext,
     });
   }, []);
@@ -117,7 +117,7 @@ const initRouteObserver = ({
   element,
   candidateSet,
   onDiscoveryComplete,
-  onActiveRouteChange,
+  onActiveInfoChange,
   registerChildRouteFromContext,
 }) => {
   const elementId = getElementId(element);
@@ -203,7 +203,7 @@ const initRouteObserver = ({
   subscribeGlobalActiveInfo((current, previous) => {
     activeInfoRef.current = current;
     publishCompositeStatus(current, previous);
-    onActiveRouteChange(current, previous);
+    onActiveInfoChange(current, previous);
   });
 
   const WrappedElement = () => {
