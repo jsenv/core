@@ -65,26 +65,23 @@ export const Route = ({ route, element, children }) => {
   if (!activeRouteInfo) {
     return null;
   }
-  const elementToRender = activeRouteInfo.element;
+
+  // The slot content is the active child element, if any
+  const slotContent = activeRouteInfo.slotElement || null;
 
   console.log(`🎯 Route.render ${route?.urlPattern}:`, {
-    elementId: getElementId(elementToRender),
-    elementType: typeof elementToRender,
-    element: elementToRender,
+    elementId: getElementId(element),
+    slotElementId: getElementId(slotContent),
+    activeRoute: activeRouteInfo.route?.urlPattern,
   });
-
-  // If it's a function component, call it. If it's JSX, return it directly
-  if (typeof elementToRender === "function") {
-    console.log(`🔧 Calling function component for ${route?.urlPattern}`);
-    const FunctionElement = elementToRender;
-    return <FunctionElement />;
-  }
 
   console.log(
     `📄 Returning JSX element for ${route?.urlPattern}:`,
-    getElementId(elementToRender),
+    getElementId(element),
   );
-  return elementToRender;
+  return (
+    <SlotContext.Provider value={slotContent}>{element}</SlotContext.Provider>
+  );
 };
 
 const RegisterChildRouteContext = createContext(null);
@@ -130,6 +127,7 @@ const ActiveRouteManager = ({
     initRouteObserver({
       candidateSet,
       element: elementFromProps,
+      route: routeFromProps,
       onDiscoveryComplete,
       onActiveRouteChange,
       registerChildRouteFromContext,
@@ -155,6 +153,7 @@ const subscribeActiveInfo = (candidate, callback) => {
 const initRouteObserver = ({
   candidateSet,
   element,
+  route,
   onDiscoveryComplete,
   onActiveRouteChange,
   registerChildRouteFromContext,
@@ -216,11 +215,32 @@ const initRouteObserver = ({
     toString: () => `composite(${candidateSet.size} candidates)`,
   };
   const getActiveCandidateInfo = () => {
-    for (const candidate of candidateSet) {
-      const info = getActiveInfo(candidate);
-      if (info) return info;
+    // Find the active candidate among our children
+    const activeCandidate = Array.from(candidateSet).find(
+      (candidate) => candidate.route.active,
+    );
+
+    if (!activeCandidate) {
+      return null;
     }
-    return null;
+
+    // If we have a route from props, this means we are a route with children
+    // We should render our own element with the active child in the slot
+    if (route) {
+      return {
+        route,
+        element,
+        slotElement: activeCandidate.element,
+      };
+    }
+
+    // If we don't have a route from props, we're just a wrapper
+    // Pass through the active child
+    return {
+      route: activeCandidate.route,
+      element: activeCandidate.element,
+      slotElement: null,
+    };
   };
   let activeInfo;
   const subscribeGlobalActiveInfo = (callback) => {
