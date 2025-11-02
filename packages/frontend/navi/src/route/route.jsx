@@ -77,13 +77,14 @@ const ActiveRouteManager = ({
   const activeRouteInfoRef = useRef(null);
   const registerChildRouteFromContext = useContext(RegisterChildRouteContext);
   const childRouteCacheSet = new Set();
-  const registerChildRoute = useMemo((cacheKey, childProps) => {
+  const registerChildRoute = useMemo((cacheKey, childRoute, childElement) => {
     if (childRouteCacheSet.has(cacheKey)) {
       return;
     }
     childRouteCacheSet.add(cacheKey);
     candidateSet.add({
-      childProps,
+      route: childRoute,
+      element: childElement,
       origin: "children",
     });
   }, []);
@@ -123,6 +124,7 @@ const ActiveRouteManager = ({
         });
       } else {
         // we need a custom route object that is the combination of all these routes we have here
+        // this object must be usable by the code line 104 to 117
       }
     }
     onDiscoveryComplete(activeRouteInfoRef.current);
