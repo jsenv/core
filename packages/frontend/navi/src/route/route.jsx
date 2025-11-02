@@ -112,7 +112,7 @@ const ActiveRouteManager = ({
   };
   const registerChildRoute = (childRoute, childElement) => {
     console.debug(
-      `"${routeFromProps.urlPattern}".registerChildRoute("${childRoute.urlPattern}")`,
+      `${routeFromProps.urlPattern}.registerChildRoute(${childRoute.urlPattern})`,
     );
     addCandidate(childRoute, childElement, "children");
   };
@@ -130,7 +130,9 @@ const ActiveRouteManager = ({
   useLayoutEffect(() => {
     const [publishCompositeActiveInfo, subscribeCompositeActiveInfo] =
       createPubSub();
+    const patterns = Array.from(candidateSet, (c) => c.urlPattern).join(", ");
     const compositeRoute = {
+      urlPattern: `composite(${patterns})`,
       isComposite: true,
       active: false,
       subscribeActiveInfo: subscribeCompositeActiveInfo,
