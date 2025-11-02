@@ -174,28 +174,24 @@ const ActiveRouteManager = ({
       return null;
     };
     const subscribeGlobalActiveInfo = (callback) => {
-      const unsubscribeFunctions = [];
-
+      const [teardown, addTeardown] = createPubSub();
       for (const candidate of candidateSet) {
-        // Utiliser directement candidate.subscribeActiveInfo qui utilise déjà subscribeRouteActive
         const unsubscribe = candidate.subscribeActiveInfo(() => {
           // Recalculer l'état actif parmi les candidates à chaque changement
+          const previousActiveCandidateInfo = activeInfoRef.current;
           const newActiveCandidateInfo = getActiveCandidateInfo();
-          const currentActiveCandidateInfo = activeInfoRef.current;
 
           // Ne déclencher le callback que si l'état a vraiment changé
-          if (newActiveCandidateInfo !== currentActiveCandidateInfo) {
+          if (newActiveCandidateInfo !== previousActiveCandidateInfo) {
             activeInfoRef.current = newActiveCandidateInfo;
             compositeRoute.active = Boolean(newActiveCandidateInfo);
-            callback(newActiveCandidateInfo, currentActiveCandidateInfo);
+            callback(newActiveCandidateInfo, previousActiveCandidateInfo);
           }
         });
-
-        unsubscribeFunctions.push(unsubscribe);
+        addTeardown(unsubscribe);
       }
-
       return () => {
-        unsubscribeFunctions.forEach((fn) => fn());
+        teardown();
       };
     };
     const initialActiveInfo = getActiveCandidateInfo();
