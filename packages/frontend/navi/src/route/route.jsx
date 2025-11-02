@@ -120,7 +120,9 @@ const ActiveRouteManager = ({
   };
 
   if (children) {
-    console.group(`👶 Discovery of ${routeFromProps.urlPattern} child routes`);
+    console.group(
+      `👶 Discovery of ${routeFromProps ? routeFromProps.urlPattern : "wrapper"} child routes`,
+    );
   }
 
   if (routeFromProps) {

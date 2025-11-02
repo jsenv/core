@@ -46,14 +46,12 @@ const {
   ADMIN_USERS_CREATE_ROUTE,
   ADMIN_SETTINGS_GENERAL_ROUTE,
   ADMIN_SETTINGS_SECURITY_ROUTE,
-  PROFILE_ROUTE,
 } = setupRoutes({
-  HOME_ROUTE: "/",
-  ADMIN_USERS_LIST_ROUTE: "/admin/users/list",
-  ADMIN_USERS_CREATE_ROUTE: "/admin/users/create",
-  ADMIN_SETTINGS_GENERAL_ROUTE: "/admin/settings/general",
-  ADMIN_SETTINGS_SECURITY_ROUTE: "/admin/settings/security",
-  PROFILE_ROUTE: "/profile",
+  HOME_ROUTE: "home",
+  ADMIN_USERS_LIST_ROUTE: "admin/users/list",
+  ADMIN_USERS_CREATE_ROUTE: "admin/users/create",
+  ADMIN_SETTINGS_GENERAL_ROUTE: "admin/settings/general",
+  ADMIN_SETTINGS_SECURITY_ROUTE: "admin/settings/security",
 });
 
 export const App = () => {
@@ -83,7 +81,6 @@ export const App = () => {
       {/* Navigation */}
       <div className="nav">
         <RouteLink route={HOME_ROUTE}>🏠 Home</RouteLink>
-        <RouteLink route={PROFILE_ROUTE}>👤 Profile</RouteLink>
         <hr />
         <RouteLink route={ADMIN_USERS_LIST_ROUTE}>👥 Users List</RouteLink>
         <RouteLink route={ADMIN_USERS_CREATE_ROUTE}>➕ Create User</RouteLink>
@@ -108,20 +105,6 @@ export const App = () => {
                 <h3>🏠 Homepage</h3>
                 <ComponentTracker name="HomePage" color="#28a745" />
                 <p>Welcome to the homepage!</p>
-              </div>
-            }
-          />
-
-          <Route
-            route={PROFILE_ROUTE}
-            element={
-              <div
-                style="background: #e3f2fd; padding: 15px; border-radius: 5px;"
-                className="level-1"
-              >
-                <h3>👤 Profile Page</h3>
-                <ComponentTracker name="ProfilePage" color="#2196f3" />
-                <p>Your profile information.</p>
               </div>
             }
           />
