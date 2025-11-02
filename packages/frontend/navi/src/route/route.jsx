@@ -54,14 +54,21 @@ export const Route = ({ route, element, children }) => {
       </ActiveRouteManager>
     );
   }
+
   const activeRouteInfo = activeRouteInfoRef.current;
   if (!activeRouteInfo) {
     return null;
   }
   if (activeRouteInfo.origin === "props") {
-    return element;
+    return (
+      <RouteSlotContext.Provider value={null}>
+        {element}
+      </RouteSlotContext.Provider>
+    );
   }
+
   const activeNestedRouteElement = activeRouteInfo.element;
+  console.log(`render ${route.urlPattern}`, activeNestedRouteElement);
   return (
     <RouteSlotContext.Provider value={activeNestedRouteElement}>
       {element}
@@ -218,6 +225,7 @@ export const RouteSlot = () => {
   if (!routeSlot) {
     return <p>RouteSlot not inside a Route</p>;
   }
-  return <>{routeSlot}</>;
+  console.log("render", routeSlot);
+  return routeSlot;
 };
 Route.Slot = RouteSlot;
