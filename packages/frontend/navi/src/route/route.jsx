@@ -113,7 +113,7 @@ const ActiveRouteManager = ({
   const registerChildRoute = (childRoute, childElement) => {
     console.debug(`👶 registerChildRoute: ${childRoute}`);
     addCandidate(childRoute, childElement, "children");
-  };
+  }
   if (routeFromProps) {
     console.debug(`🎯 routeFromProps: ${routeFromProps}`);
     addCandidate(routeFromProps, elementFromProps, "props");
@@ -124,6 +124,11 @@ const ActiveRouteManager = ({
       registerChildRouteFromContext(routeFromProps, elementFromProps);
     }
   }
+  
+  if (children) {
+    console.group(`👶 Discovering children routes`);
+  }
+  
   useLayoutEffect(() => {
     const [publishCompositeActiveInfo, subscribeCompositeActiveInfo] =
       createPubSub();
@@ -193,6 +198,11 @@ const ActiveRouteManager = ({
       );
       registerChildRouteFromContext(compositeRoute, elementFromProps);
     }
+    
+    if (children) {
+      console.groupEnd();
+    }
+    
     onDiscoveryComplete(activeInfoRef.current);
   }, []);
 
