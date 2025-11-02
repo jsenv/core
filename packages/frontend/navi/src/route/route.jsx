@@ -83,32 +83,12 @@ const ActiveRouteManager = ({
   children,
 }) => {
   const registerChildRouteFromContext = useContext(RegisterChildRouteContext);
-
-  const subscribeRouteActive = (route, callback) => {
-    const subscribeMethod = route.isComposite
-      ? route.subscribeActiveInfo
-      : (callback) => subscribeRouteStatus(route, callback);
-    return subscribeMethod(() => {
-      callback();
-    });
-  };
-
   const candidateSet = new Set();
   const addCandidate = (route, element, origin) => {
-    // console.debug(`📍 addCandidate: ${route.urlPattern || route} (${origin})`);
-    const getActiveInfo = () => {
-      return route.active ? { element, origin } : null;
-    };
-    const subscribeActiveInfo = (callback) => {
-      return subscribeRouteActive(route, () => {
-        callback(getActiveInfo());
-      });
-    };
     candidateSet.add({
       route,
       element,
-      getActiveInfo,
-      subscribeActiveInfo,
+      origin,
     });
   };
   const registerChildRoute = (childRoute, childElement) => {
@@ -117,17 +97,14 @@ const ActiveRouteManager = ({
     );
     addCandidate(childRoute, childElement, "children");
   };
-
   if (children) {
     console.group(
       `👶 Discovery of ${routeFromProps ? routeFromProps.urlPattern : "wrapper"} child routes`,
     );
   }
-
   if (routeFromProps) {
     addCandidate(routeFromProps, elementFromProps, "props");
   }
-
   useLayoutEffect(() => {
     if (children) {
       console.groupEnd();
@@ -148,6 +125,23 @@ const ActiveRouteManager = ({
   );
 };
 
+const subscribeRouteActive = (route, callback) => {
+  const subscribeMethod = route.isComposite
+    ? route.subscribeActiveInfo
+    : (callback) => subscribeRouteStatus(route, callback);
+  return subscribeMethod(() => {
+    callback();
+  });
+};
+const getActiveInfo = (candidate) => {
+  return candidate.route.active ? candidate : null;
+};
+const subscribeActiveInfo = (candidate, callback) => {
+  return subscribeRouteActive(candidate.route, () => {
+    callback(getActiveInfo(candidate));
+  });
+};
+
 const initRouteObserver = ({
   candidateSet,
   element,
@@ -162,8 +156,8 @@ const initRouteObserver = ({
   if (candidateSet.size === 1) {
     let activeInfo;
     const soleCandidate = candidateSet.values().next().value;
-    activeInfo = soleCandidate.getActiveInfo();
-    soleCandidate.subscribeActiveInfo((newActiveInfo) => {
+    activeInfo = getActiveInfo(soleCandidate);
+    subscribeActiveInfo(soleCandidate, (newActiveInfo) => {
       const currentActiveInfo = activeInfo;
       activeInfo = newActiveInfo;
       onActiveRouteChange(newActiveInfo, currentActiveInfo);
@@ -189,7 +183,7 @@ const initRouteObserver = ({
   };
   const getActiveCandidateInfo = () => {
     for (const candidate of candidateSet) {
-      const info = candidate.getActiveInfo();
+      const info = getActiveInfo(candidate);
       if (info) return info;
     }
     return null;
@@ -199,7 +193,7 @@ const initRouteObserver = ({
     const [teardown, addTeardown] = createPubSub();
     for (const candidate of candidateSet) {
       // eslint-disable-next-line no-loop-func
-      const unsubscribe = candidate.subscribeActiveInfo(() => {
+      const unsubscribe = subscribeActiveInfo(candidate, () => {
         const previousActiveCandidateInfo = activeInfo;
         const newActiveCandidateInfo = getActiveCandidateInfo();
         if (newActiveCandidateInfo !== previousActiveCandidateInfo) {
