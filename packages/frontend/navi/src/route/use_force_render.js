@@ -3,7 +3,8 @@ import { signal } from "@preact/signals";
 const renderSignal = signal(null);
 
 const forceRender = () => {
-  renderSignal.value = NaN; // force re-render
+  // later try with NaN
+  renderSignal.value = {}; // force re-render
 };
 
 export const useForceRender = () => {
