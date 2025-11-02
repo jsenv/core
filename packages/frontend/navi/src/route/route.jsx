@@ -104,8 +104,10 @@ const ActiveRouteManager = ({
   };
   if (routeFromProps) {
     addCandidate(routeFromProps, elementFromProps, "props");
+    if (registerChildRouteFromContext) {
+      registerChildRouteFromContext(routeFromProps, elementFromProps);
+    }
   }
-
   useLayoutEffect(() => {
     const [publishCompositeActiveInfo, subscribeCompositeActiveInfo] =
       createPubSub();
@@ -135,6 +137,7 @@ const ActiveRouteManager = ({
     subscribeCompositeActiveInfo((current, previous) => {
       onActiveRouteChange(current, previous);
     });
+
     if (registerChildRouteFromContext) {
       registerChildRouteFromContext(compositeRoute, elementFromProps);
     }
