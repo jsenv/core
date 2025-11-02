@@ -56,8 +56,8 @@ export const Route = ({ route, element, children }) => {
   if (!activeInfo) {
     return null;
   }
-  const { RouteElement } = activeInfo;
-  return <RouteElement />;
+  const { ActiveElement } = activeInfo;
+  return <ActiveElement />;
 };
 
 const RegisterChildRouteContext = createContext(null);
@@ -74,12 +74,12 @@ const ActiveRouteManager = ({
   const registerChildRouteFromContext = useContext(RegisterChildRouteContext);
   const elementId = getElementId(element);
   const candidateSet = new Set();
-  const registerChildRoute = (childRoute, childElement) => {
-    const childElementId = getElementId(childElement);
+  const registerChildRoute = (childRoute, ChildActiveElement) => {
+    const childElementId = getElementId(ChildActiveElement);
     console.debug(`${elementId}.registerChildRoute(${childElementId})`);
     candidateSet.add({
       route: childRoute,
-      element: childElement,
+      ActiveElement: ChildActiveElement,
     });
   };
   console.group(`👶 Discovery of ${elementId}`);
@@ -110,7 +110,7 @@ const initRouteObserver = ({
 }) => {
   const elementId = getElementId(element);
   const candidateElementIds = Array.from(candidateSet, (c) =>
-    getElementId(c.element),
+    getElementId(c.ActiveElement),
   ).join(", ");
   console.log(
     `🔍 initRouteObserver ${elementId}, candidates: ${candidateElementIds}`,
@@ -136,13 +136,13 @@ const initRouteObserver = ({
           if (candidate.route.active) {
             return {
               route,
-              slotElement: candidate.element,
+              ChildActiveElement: candidate.ActiveElement,
             };
           }
         }
         return {
           route,
-          slotElement: null, // TODO: this is where we'll could put a route with fallback/otherwise property later on
+          ChildActiveElement: null, // TODO: this is where we'll could put a route with fallback/otherwise property later on
         };
       }
     : () => {
@@ -151,7 +151,7 @@ const initRouteObserver = ({
           if (candidate.route.active) {
             return {
               route: candidate.route,
-              slotElement: candidate.element,
+              ChildActiveElement: candidate.ActiveElement,
             };
           }
         }
@@ -159,17 +159,19 @@ const initRouteObserver = ({
       };
 
   const activeRouteSignal = signal();
-  const activeSlotElementSignal = signal();
-  const RouteElement = () => {
-    const slotElement = activeSlotElementSignal.value;
+  const SlotActiveElementSignal = signal();
+  const ActiveElement = () => {
+    const SlotActiveElement = SlotActiveElementSignal.value;
     console.log(
-      `📄 Returning JSX element for ${getElementId(element)} with slot set to ${getElementId(slotElement)}`,
+      `📄 Returning JSX element for ${getElementId(element)} with slot set to ${getElementId(SlotActiveElement)}`,
     );
     return (
-      <SlotContext.Provider value={slotElement}>{element}</SlotContext.Provider>
+      <SlotContext.Provider value={SlotActiveElement}>
+        {element}
+      </SlotContext.Provider>
     );
   };
-  RouteElement.id =
+  ActiveElement.id =
     candidateSet.size === 0
       ? `${getElementId(element)} without slot`
       : `[${getElementId(element)} with slot one of ${candidateElementIds}]`;
@@ -178,17 +180,18 @@ const initRouteObserver = ({
     const newActiveInfo = getActiveInfo();
     if (newActiveInfo) {
       compositeRoute.active = true;
-      activeRouteSignal.value = newActiveInfo.route;
-      activeSlotElementSignal.value = newActiveInfo.slotElement;
+      const { route, ChildActiveElement } = newActiveInfo;
+      activeRouteSignal.value = route;
+      SlotActiveElementSignal.value = ChildActiveElement;
       onActiveInfoChange({
         route: newActiveInfo.route,
-        slotElement: newActiveInfo.slotElement,
-        RouteElement,
+        ActiveElement,
+        SlotActiveElement: ChildActiveElement,
       });
     } else {
       compositeRoute.active = false;
       activeRouteSignal.value = null;
-      activeSlotElementSignal.value = null;
+      SlotActiveElementSignal.value = null;
       onActiveInfoChange(null);
     }
   };
@@ -203,7 +206,7 @@ const initRouteObserver = ({
     candidate.route.subscribeStatus(onChange);
   }
   if (registerChildRouteFromContext) {
-    registerChildRouteFromContext(compositeRoute, RouteElement);
+    registerChildRouteFromContext(compositeRoute, ActiveElement);
   }
   updateActiveInfo();
 };
