@@ -96,7 +96,7 @@ const ActiveRouteManager = ({
 
   const candidateSet = new Set();
   const addCandidate = (route, element, origin) => {
-    // console.debug(`📍 addCandidate: ${route} (${origin})`);
+    // console.debug(`📍 addCandidate: ${route.urlPattern || route} (${origin})`);
     const getActiveInfo = () => {
       return route.active ? { element, origin } : null;
     };
