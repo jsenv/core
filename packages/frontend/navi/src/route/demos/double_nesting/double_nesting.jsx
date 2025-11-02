@@ -40,12 +40,19 @@ const ComponentTracker = ({ name, color = "#333", children }) => {
 };
 
 // Routes setup with nested structure
-const { HOME_ROUTE, ADMIN_USERS_LIST_ROUTE, ADMIN_USERS_CREATE_ROUTE } =
-  setupRoutes({
-    HOME_ROUTE: "home",
-    ADMIN_USERS_LIST_ROUTE: "admin/users/list",
-    ADMIN_USERS_CREATE_ROUTE: "admin/users/create",
-  });
+const {
+  HOME_ROUTE,
+  ADMIN_ROUTE,
+  ADMIN_USERS_ROUTE,
+  ADMIN_USERS_LIST_ROUTE,
+  ADMIN_USERS_CREATE_ROUTE,
+} = setupRoutes({
+  HOME_ROUTE: "home",
+  ADMIN_ROUTE: "admin/",
+  ADMIN_USERS_ROUTE: "admin/users/",
+  ADMIN_USERS_LIST_ROUTE: "admin/users/list",
+  ADMIN_USERS_CREATE_ROUTE: "admin/users/create",
+});
 
 export const App = () => {
   console.debug("🚀 App component rendering...");
@@ -98,6 +105,7 @@ export const App = () => {
 
           {/* LEVEL 1: Admin wrapper - wraps all admin routes */}
           <Route
+            route={ADMIN_ROUTE}
             element={
               <div
                 style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 2px solid #6c757d;"
@@ -122,6 +130,7 @@ export const App = () => {
           >
             {/* LEVEL 2: Users section wrapper */}
             <Route
+              route={ADMIN_USERS_ROUTE}
               element={
                 <div
                   style="background: #d4edda; padding: 15px; border-radius: 6px; border: 2px solid #28a745;"
