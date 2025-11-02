@@ -125,7 +125,7 @@ const ActiveRouteManager = ({
   }
 
   if (children) {
-    console.group(`👶 Discovering children routes`);
+    console.group(`👶 Discovery of ${routeFromProps.urlPattern} child routes`);
   }
 
   useLayoutEffect(() => {
@@ -195,7 +195,6 @@ const ActiveRouteManager = ({
     });
 
     if (registerChildRouteFromContext) {
-      console.debug(`🔗 Creating composite route: ${compositeRoute}`);
       registerChildRouteFromContext(compositeRoute, elementFromProps);
     }
 
