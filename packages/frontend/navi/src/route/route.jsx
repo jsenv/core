@@ -106,6 +106,7 @@ const ActiveRouteManager = ({
       });
     };
     candidateSet.add({
+      route,
       getActiveInfo,
       subscribeActiveInfo,
     });
@@ -130,7 +131,9 @@ const ActiveRouteManager = ({
   useLayoutEffect(() => {
     const [publishCompositeActiveInfo, subscribeCompositeActiveInfo] =
       createPubSub();
-    const patterns = Array.from(candidateSet, (c) => c.urlPattern).join(", ");
+    const patterns = Array.from(candidateSet, (c) => c.route.urlPattern).join(
+      ", ",
+    );
     const compositeRoute = {
       urlPattern: `composite(${patterns})`,
       isComposite: true,
