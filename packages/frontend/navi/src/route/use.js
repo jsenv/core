@@ -1,8 +1,8 @@
-import { useState } from "preact/hooks";
+import { useForceRender } from "./use_force_render.js";
 
 const promiseStateWeakMap = new WeakMap();
 export const use = (promise) => {
-  const [, setState] = useState(null);
+  const forceRender = useForceRender();
 
   let promiseState = promiseStateWeakMap.get(promise);
   if (!promiseState) {
@@ -16,7 +16,7 @@ export const use = (promise) => {
       (data) => {
         promiseState.data = data;
         promiseState.settled = true;
-        setState(NaN);
+        forceRender();
       },
       (error) => {
         promiseState.error = error;
