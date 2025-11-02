@@ -165,7 +165,7 @@ const initRouteObserver = ({
         return {
           route,
           element,
-          slotElement: null, // TODO: this is where we'll put the index candidate later on
+          slotElement: null, // TODO: this is where we'll could put a route with fallback property later on
         };
       }
     : () => {
