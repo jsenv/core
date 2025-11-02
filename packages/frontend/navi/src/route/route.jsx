@@ -192,13 +192,14 @@ const initRouteObserver = ({
       activeInfo = newActiveInfo;
       onActiveRouteChange(newActiveInfo, currentActiveInfo);
     });
-    if (registerChildRouteFromContext) {
+    // Only register with parent if this route doesn't have children
+    if (registerChildRouteFromContext && soleCandidate.origin !== "props") {
       const wrappedElement = () => {
         console.log(
           `🎁 wrappedElement for ${soleCandidate.route.urlPattern}:`,
           {
-            parentElementId: getElementId(element), // This should be auth_layout
-            childElementId: getElementId(soleCandidate.element), // This should be forgot_password
+            parentElementId: getElementId(element),
+            childElementId: getElementId(soleCandidate.element),
             childElement: soleCandidate.element,
           },
         );
