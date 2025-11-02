@@ -285,6 +285,7 @@ const initRouteObserver = ({
         </SlotContext.Provider>
       );
     };
+    wrappedElement.id = getElementId(element);
     registerChildRouteFromContext(compositeRoute, wrappedElement);
   }
   onDiscoveryComplete(activeInfo);
@@ -305,6 +306,9 @@ const getElementId = (element) => {
     return String(element);
   }
   if (typeof element === "function") {
+    if (element.id) {
+      return `[${element.id} with slot]`;
+    }
     return "[function]";
   }
   if (element?.props?.id) {
