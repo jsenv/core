@@ -56,8 +56,8 @@ export const Route = ({ route, element, children }) => {
   if (!activeInfo) {
     return null;
   }
-  const ElementWithSlot = activeInfo.ElementWithSlot;
-  return <ElementWithSlot />;
+  const { RouteElement } = activeInfo;
+  return <RouteElement />;
 };
 
 const RegisterChildRouteContext = createContext(null);
@@ -160,7 +160,7 @@ const initRouteObserver = ({
 
   const activeRouteSignal = signal();
   const activeSlotElementSignal = signal();
-  const ElementWithSlot = () => {
+  const RouteElement = () => {
     const slotElement = activeSlotElementSignal.value;
     console.log(
       `📄 Returning JSX element for ${getElementId(element)} with slot set to ${getElementId(slotElement)}`,
@@ -169,24 +169,26 @@ const initRouteObserver = ({
       <SlotContext.Provider value={slotElement}>{element}</SlotContext.Provider>
     );
   };
-  ElementWithSlot.id =
+  RouteElement.id =
     candidateSet.size === 0
       ? `${getElementId(element)} without slot`
       : `[${getElementId(element)} with slot one of ${candidateElementIds}]`;
 
   const updateActiveInfo = () => {
     const newActiveInfo = getActiveInfo();
-    const active = Boolean(newActiveInfo);
-    compositeRoute.active = active;
-    activeRouteSignal.value = newActiveInfo?.route;
-    activeSlotElementSignal.value = newActiveInfo?.slotElement;
-    if (active) {
+    if (newActiveInfo) {
+      compositeRoute.active = true;
+      activeRouteSignal.value = newActiveInfo.route;
+      activeSlotElementSignal.value = newActiveInfo.slotElement;
       onActiveInfoChange({
-        route: activeRouteSignal.value,
-        slotElement: activeSlotElementSignal.value,
-        ElementWithSlot,
+        route: newActiveInfo.route,
+        slotElement: newActiveInfo.slotElement,
+        RouteElement,
       });
     } else {
+      compositeRoute.active = false;
+      activeRouteSignal.value = null;
+      activeSlotElementSignal.value = null;
       onActiveInfoChange(null);
     }
   };
@@ -201,7 +203,7 @@ const initRouteObserver = ({
     candidate.route.subscribeStatus(onChange);
   }
   if (registerChildRouteFromContext) {
-    registerChildRouteFromContext(compositeRoute, ElementWithSlot);
+    registerChildRouteFromContext(compositeRoute, RouteElement);
   }
   updateActiveInfo();
 };
