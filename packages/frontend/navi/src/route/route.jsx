@@ -148,14 +148,12 @@ const initRouteObserver = ({
           if (candidate.route.active) {
             return {
               route,
-              Element: WrappedElement,
               slotElement: candidate.element,
             };
           }
         }
         return {
           route,
-          Element: WrappedElement,
           slotElement: null, // TODO: this is where we'll could put a route with fallback/otherwise property later on
         };
       }
@@ -165,7 +163,6 @@ const initRouteObserver = ({
           if (candidate.route.active) {
             return {
               route: candidate.route,
-              Element: WrappedElement,
               slotElement: candidate.element,
             };
           }
@@ -211,11 +208,11 @@ const initRouteObserver = ({
 
   const WrappedElement = () => {
     const [slotContent, setSlotContent] = useState(
-      activeInfoRef.current?.element || null,
+      activeInfoRef.current?.slotElement || null,
     );
     useEffect(() => {
       const unsubscribe = subscribeGlobalActiveInfo((activeInfo) => {
-        setSlotContent(activeInfo?.element || null);
+        setSlotContent(activeInfo?.slotElement || null);
       });
       return unsubscribe;
     }, []);
