@@ -163,16 +163,13 @@ const initRouteObserver = ({
   onActiveRouteChange,
   registerChildRouteFromContext,
 }) => {
-  console.log("🔍 initRouteObserver", {
-    candidateCount: candidateSet.size,
-    candidates: Array.from(candidateSet).map((c) => ({
-      pattern: c.route.urlPattern,
-      active: c.route.active,
-      elementId: getElementId(c.element),
-      origin: c.origin,
-    })),
-    parentElementId: getElementId(element),
-  });
+  console.log(
+    `🔍 initRouteObserver, parentElementId: #${getElementId(element)}, candidate elements: ${Array.from(
+      candidateSet,
+    )
+      .map((c) => `#${getElementId(c.element)}`)
+      .join(", ")}`,
+  );
 
   if (candidateSet.size === 0) {
     onDiscoveryComplete(null);
