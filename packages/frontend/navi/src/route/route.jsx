@@ -111,16 +111,14 @@ const ActiveRouteManager = ({
     });
   };
   const registerChildRoute = (childRoute, childElement) => {
-    console.debug(`👶 registerChildRoute: ${childRoute}`);
+    console.debug(
+      `"${routeFromProps.urlPattern}".registerChildRoute("${childRoute.urlPattern}")`,
+    );
     addCandidate(childRoute, childElement, "children");
   };
   if (routeFromProps) {
-    // console.debug(`🎯 routeFromProps: ${routeFromProps}`);
     addCandidate(routeFromProps, elementFromProps, "props");
     if (registerChildRouteFromContext) {
-      console.debug(
-        `⬆️ registerChildRouteFromContext: ${routeFromProps} → parent`,
-      );
       registerChildRouteFromContext(routeFromProps, elementFromProps);
     }
   }
@@ -193,9 +191,6 @@ const ActiveRouteManager = ({
 
     if (registerChildRouteFromContext) {
       console.debug(`🔗 Creating composite route: ${compositeRoute}`);
-      console.debug(
-        `⬆️ registerChildRouteFromContext: ${compositeRoute} → parent`,
-      );
       registerChildRouteFromContext(compositeRoute, elementFromProps);
     }
 
