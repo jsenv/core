@@ -96,7 +96,7 @@ const ActiveRouteManager = ({
 
   const candidateSet = new Set();
   const addCandidate = (route, element, origin) => {
-    console.debug(`📍 addCandidate: ${route} (${origin})`);
+    // console.debug(`📍 addCandidate: ${route} (${origin})`);
     const getActiveInfo = () => {
       return route.active ? { element, origin } : null;
     };
@@ -115,7 +115,7 @@ const ActiveRouteManager = ({
     addCandidate(childRoute, childElement, "children");
   };
   if (routeFromProps) {
-    console.debug(`🎯 routeFromProps: ${routeFromProps}`);
+    // console.debug(`🎯 routeFromProps: ${routeFromProps}`);
     addCandidate(routeFromProps, elementFromProps, "props");
     if (registerChildRouteFromContext) {
       console.debug(

@@ -39,12 +39,12 @@ const ComponentTracker = ({ name, color = "#333", children }) => {
   );
 };
 
-const { HOME_ROUTE, LOGIN_ROUTE, FORGOT_PASSWORD_ROUTE, PROFILE_ROUTE } =
+const { HOME_ROUTE, AUTH_ROUTE, LOGIN_ROUTE, FORGOT_PASSWORD_ROUTE } =
   setupRoutes({
     HOME_ROUTE: "home",
-    LOGIN_ROUTE: "login",
-    FORGOT_PASSWORD_ROUTE: "forgot",
-    PROFILE_ROUTE: "profile",
+    AUTH_ROUTE: "auth",
+    LOGIN_ROUTE: "auth/login",
+    FORGOT_PASSWORD_ROUTE: "auth/forgot",
   });
 
 // Test App
@@ -73,7 +73,6 @@ export const App = () => {
         <RouteLink route={HOME_ROUTE}>Home</RouteLink>
         <RouteLink route={LOGIN_ROUTE}>Login</RouteLink>
         <RouteLink route={FORGOT_PASSWORD_ROUTE}>Forgot password</RouteLink>
-        <RouteLink route={PROFILE_ROUTE}>Profile</RouteLink>
       </div>
 
       <main>
@@ -89,17 +88,7 @@ export const App = () => {
             }
           />
           <Route
-            route={PROFILE_ROUTE}
-            element={
-              <div style="background: #e3f2fd; padding: 15px; border-radius: 5px;">
-                <h3>👤 Profile Content</h3>
-                <ComponentTracker name="ProfilePage" color="#2196f3" />
-
-                <p>This is the profile page!</p>
-              </div>
-            }
-          />
-          <Route
+            route={AUTH_ROUTE}
             element={
               <div style="background: #e6f3ff; padding: 15px; border-radius: 5px;">
                 <h3>🔐 Auth Section Wrapper</h3>
