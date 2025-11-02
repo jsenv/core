@@ -1,6 +1,9 @@
 /**
  *
  * 1. tenter un double nesting pour voir si ca marche bien
+ *
+ * 2. Besoin de la prop index pour render dans le slot du parent
+ *
  * 2. Connecter une version simple (pas le double nesting) avec un UI transition pour voir le comportemenet
  * Notons qu'il faut restaurer le concept de content key pour que les transitions fonctionnent bien
  * donc il faudras qu'on voit cela
@@ -82,12 +85,12 @@ const ActiveRouteManager = ({
   const activeInfoRef = useRef(null);
   const registerChildRouteFromContext = useContext(RegisterChildRouteContext);
 
-  const subscribeRouteActive = (route, activeInfo, callback) => {
+  const subscribeRouteActive = (route, callback) => {
     const subscribeMethod = route.isComposite
       ? route.subscribeActiveInfo
       : (callback) => subscribeRouteStatus(route, callback);
     return subscribeMethod(() => {
-      callback(route.active ? activeInfo : null);
+      callback();
     });
   };
 
@@ -97,7 +100,9 @@ const ActiveRouteManager = ({
       return route.active ? { element, origin } : null;
     };
     const subscribeActiveInfo = (callback) => {
-      return subscribeRouteActive(route, { element, origin }, callback);
+      return subscribeRouteActive(route, () => {
+        callback(getActiveInfo());
+      });
     };
     candidateSet.add({
       getActiveInfo,
