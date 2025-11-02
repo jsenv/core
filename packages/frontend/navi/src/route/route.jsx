@@ -21,7 +21,13 @@
 
 import { createPubSub } from "@jsenv/dom";
 import { createContext } from "preact";
-import { useContext, useLayoutEffect, useRef } from "preact/hooks";
+import {
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "preact/hooks";
 
 import { useForceRender } from "./use_force_render.js";
 
@@ -204,14 +210,32 @@ const initRouteObserver = ({
     compositeRoute.active = true;
     activeInfo = initialActiveInfo;
   }
+
+  // Create a ref to share activeInfo with the wrapped component
+  const activeInfoRef = { current: activeInfo };
+
   subscribeGlobalActiveInfo((current, previous) => {
+    activeInfoRef.current = current;
     publishCompositeStatus(current, previous);
     onActiveRouteChange(current, previous);
   });
   if (registerChildRouteFromContext) {
     const wrappedElement = () => {
+      const [slotContent, setSlotContent] = useState(
+        activeInfoRef.current?.element || null,
+      );
+
+      useEffect(() => {
+        const unsubscribe = subscribeGlobalActiveInfo((current) => {
+          setSlotContent(current?.element || null);
+        });
+        return unsubscribe;
+      }, []);
+
       return (
-        <SlotContext.Provider value={null}>{element}</SlotContext.Provider>
+        <SlotContext.Provider value={slotContent}>
+          {element}
+        </SlotContext.Provider>
       );
     };
     registerChildRouteFromContext(compositeRoute, wrappedElement);
