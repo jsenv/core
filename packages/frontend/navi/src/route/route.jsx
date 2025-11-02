@@ -101,6 +101,15 @@ const ActiveRouteManager = ({
 }) => {
   const registerChildRouteFromContext = useContext(RegisterChildRouteContext);
 
+  console.debug(
+    `🏗️ ActiveRouteManager for ${routeFromProps?.urlPattern || "wrapper"}:`,
+    {
+      elementId: getElementId(elementFromProps),
+      elementType: typeof elementFromProps,
+      hasChildren: Boolean(children),
+    },
+  );
+
   const candidateSet = new Set();
   const addCandidate = (route, element, origin) => {
     candidateSet.add({
@@ -159,6 +168,17 @@ const initRouteObserver = ({
   onActiveRouteChange,
   registerChildRouteFromContext,
 }) => {
+  console.log("🔍 initRouteObserver", {
+    candidateCount: candidateSet.size,
+    candidates: Array.from(candidateSet).map((c) => ({
+      pattern: c.route.urlPattern,
+      active: c.route.active,
+      elementId: getElementId(c.element),
+      origin: c.origin,
+    })),
+    parentElementId: getElementId(element),
+  });
+
   if (candidateSet.size === 0) {
     onDiscoveryComplete(null);
     return;
@@ -177,9 +197,9 @@ const initRouteObserver = ({
         console.log(
           `🎁 wrappedElement for ${soleCandidate.route.urlPattern}:`,
           {
-            wrapperElementId: getElementId(element),
-            slotElementId: getElementId(soleCandidate.element),
-            slotElement: soleCandidate.element,
+            parentElementId: getElementId(element), // This should be auth_layout
+            childElementId: getElementId(soleCandidate.element), // This should be forgot_password
+            childElement: soleCandidate.element,
           },
         );
 
