@@ -89,39 +89,19 @@ const ActiveRouteManager = ({
   children,
 }) => {
   const registerChildRouteFromContext = useContext(RegisterChildRouteContext);
-
   const elementId = getElementId(elementFromProps);
-  console.debug(`🏗️ ActiveRouteManager for ${elementId}`);
-
   const candidateSet = new Set();
-  const addCandidate = (route, element, origin) => {
-    candidateSet.add({
-      route,
-      element,
-      origin,
-    });
-  };
   const registerChildRoute = (childRoute, childElement) => {
     const childElementId = getElementId(childElement);
     console.debug(`${elementId}.registerChildRoute(${childElementId})`);
-    addCandidate(childRoute, childElement, "children");
-  };
-  if (children) {
-    console.group(`👶 Discovery of ${elementId} children`);
-  }
-  if (routeFromProps) {
-    console.debug(`➕ Adding ${elementId} as props candidate:`, {
-      urlPattern: routeFromProps.urlPattern,
-      active: routeFromProps.active,
+    candidateSet.add({
+      route: childRoute,
+      element: childElement,
     });
-    addCandidate(routeFromProps, elementFromProps, "props");
-  } else {
-    console.debug(`❌ No routeFromProps for ${elementId}`);
-  }
+  };
+  console.group(`👶 Discovery of ${elementId}`);
   useLayoutEffect(() => {
-    if (children) {
-      console.groupEnd();
-    }
+    console.groupEnd();
     initRouteObserver({
       route: routeFromProps,
       element: elementFromProps,
@@ -139,15 +119,6 @@ const ActiveRouteManager = ({
   );
 };
 
-const getActiveInfo = (candidate) => {
-  return candidate.route.active ? candidate : null;
-};
-const subscribeActiveInfo = (candidate, callback) => {
-  return candidate.route.subscribeStatus(() => {
-    callback(getActiveInfo(candidate));
-  });
-};
-
 const initRouteObserver = ({
   route,
   element,
@@ -163,11 +134,6 @@ const initRouteObserver = ({
   console.log(
     `🔍 initRouteObserver, parentElementId: ${getElementId(element)}, candidate elements: ${candidateElements}`,
   );
-
-  if (candidateSet.size === 0) {
-    onDiscoveryComplete(null);
-    return;
-  }
   const [publishCompositeStatus, subscribeCompositeStatus] = createPubSub();
   const candidateElementIds = Array.from(candidateSet, (c) =>
     getElementId(c.element),
@@ -179,58 +145,60 @@ const initRouteObserver = ({
     subscribeStatus: subscribeCompositeStatus,
     toString: () => `composite(${candidateSet.size} candidates)`,
   };
-  const getActiveInfo = () => {
-    if (route && !route.active) {
-      // we have a route and it does not match no need to go further
-      return null;
-    }
-    if (route) {
-      // we have a route and it is active (it matches)
-      // we search the first active child to put it in the slot
-      for (const candidate of candidateSet) {
-        if (candidate.route === route) {
-          continue;
+  const getActiveInfo = route
+    ? () => {
+        if (!route.active) {
+          // we have a route and it does not match no need to go further
+          return null;
         }
-        if (candidate.route.active) {
-          return {
-            route,
-            element,
-            slotElement: candidate.element,
-          };
+        // we have a route and it is active (it matches)
+        // we search the first active child to put it in the slot
+        for (const candidate of candidateSet) {
+          if (candidate.route.active) {
+            return {
+              route,
+              element,
+              slotElement: candidate.element,
+            };
+          }
         }
-      }
-      return {
-        route,
-        element,
-        slotElement: null,
-      };
-    }
-    // we don't have a route, do we have an active child?
-    for (const candidate of candidateSet) {
-      if (candidate.route.active) {
         return {
-          route: candidate.route,
+          route,
           element,
-          slotElement: candidate.element,
+          slotElement: null, // TODO: this is where we'll put the index candidate later on
         };
       }
-    }
-    return null;
-  };
+    : () => {
+        // we don't have a route, do we have an active child?
+        for (const candidate of candidateSet) {
+          if (candidate.route.active) {
+            return {
+              route: candidate.route,
+              element,
+              slotElement: candidate.element,
+            };
+          }
+        }
+        return null;
+      };
   let activeInfo;
   const subscribeGlobalActiveInfo = (callback) => {
     const [teardown, addTeardown] = createPubSub();
+    const onChange = () => {
+      const previousActiveInfo = activeInfo;
+      const newActiveInfo = getActiveInfo();
+      if (newActiveInfo !== previousActiveInfo) {
+        activeInfo = newActiveInfo;
+        compositeRoute.active = Boolean(newActiveInfo);
+        callback(newActiveInfo, previousActiveInfo);
+      }
+    };
+    if (route) {
+      const unsubscribe = route.subscribeStatus(onChange);
+      addTeardown(unsubscribe);
+    }
     for (const candidate of candidateSet) {
-      // eslint-disable-next-line no-loop-func
-      const unsubscribe = subscribeActiveInfo(candidate, () => {
-        const previousActiveInfo = activeInfo;
-        const newActiveInfo = getActiveInfo();
-        if (newActiveInfo !== previousActiveInfo) {
-          activeInfo = newActiveInfo;
-          compositeRoute.active = Boolean(newActiveInfo);
-          callback(newActiveInfo, previousActiveInfo);
-        }
-      });
+      const unsubscribe = candidate.route.subscribeStatus(onChange);
       addTeardown(unsubscribe);
     }
     return () => {
