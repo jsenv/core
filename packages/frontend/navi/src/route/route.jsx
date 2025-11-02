@@ -83,12 +83,10 @@ const ActiveRouteManager = ({
   const registerChildRouteFromContext = useContext(RegisterChildRouteContext);
 
   const subscribeRouteActive = (route, activeInfo, callback) => {
-    if (route.isComposite) {
-      return route.subscribeActiveInfo(() => {
-        callback(route.active ? activeInfo : null);
-      });
-    }
-    return subscribeRouteStatus(route, () => {
+    const subscribeMethod = route.isComposite
+      ? route.subscribeActiveInfo
+      : (callback) => subscribeRouteStatus(route, callback);
+    return subscribeMethod(() => {
       callback(route.active ? activeInfo : null);
     });
   };
