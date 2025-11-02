@@ -67,7 +67,7 @@ export const Route = ({ route, element, children }) => {
   }
 
   // The slot content is the active child element, if any
-  const slotContent = activeRouteInfo.slotElement || null;
+  const slotContent = activeRouteInfo.slotElement;
   console.log(
     `📄 Returning JSX element for ${getElementId(element)} with slot set to ${getElementId(slotContent)}`,
   );
@@ -110,15 +110,22 @@ const ActiveRouteManager = ({
     console.group(`👶 Discovery of ${elementId} children`);
   }
   if (routeFromProps) {
+    console.debug(`➕ Adding ${elementId} as props candidate:`, {
+      urlPattern: routeFromProps.urlPattern,
+      active: routeFromProps.active,
+    });
     addCandidate(routeFromProps, elementFromProps, "props");
+  } else {
+    console.debug(`❌ No routeFromProps for ${elementId}`);
   }
   useLayoutEffect(() => {
     if (children) {
       console.groupEnd();
     }
     initRouteObserver({
-      candidateSet,
+      route: routeFromProps,
       element: elementFromProps,
+      candidateSet,
       onDiscoveryComplete,
       onActiveRouteChange,
       registerChildRouteFromContext,
@@ -142,8 +149,9 @@ const subscribeActiveInfo = (candidate, callback) => {
 };
 
 const initRouteObserver = ({
-  candidateSet,
+  route,
   element,
+  candidateSet,
   onDiscoveryComplete,
   onActiveRouteChange,
   registerChildRouteFromContext,
@@ -160,39 +168,6 @@ const initRouteObserver = ({
     onDiscoveryComplete(null);
     return;
   }
-  // if (candidateSet.size === 1) {
-  //   let activeInfo;
-  //   const soleCandidate = candidateSet.values().next().value;
-  //   activeInfo = getActiveInfo(soleCandidate);
-  //   subscribeActiveInfo(soleCandidate, (newActiveInfo) => {
-  //     const currentActiveInfo = activeInfo;
-  //     activeInfo = newActiveInfo;
-  //     onActiveRouteChange(newActiveInfo, currentActiveInfo);
-  //   });
-  //   // Only register with parent if this route doesn't have children
-  //   if (registerChildRouteFromContext) {
-  //     const wrappedElement = () => {
-  //       console.log(
-  //         `🎁 wrappedElement for ${soleCandidate.route.urlPattern}:`,
-  //         {
-  //           parentElementId: getElementId(element),
-  //           childElementId: getElementId(soleCandidate.element),
-  //           childElement: soleCandidate.element,
-  //         },
-  //       );
-
-  //       return (
-  //         <SlotContext.Provider value={soleCandidate.element}>
-  //           {element}
-  //         </SlotContext.Provider>
-  //       );
-  //     };
-  //     registerChildRouteFromContext(soleCandidate.route, wrappedElement);
-  //   }
-  //   onDiscoveryComplete(activeInfo);
-  //   return;
-  // }
-
   const [publishCompositeStatus, subscribeCompositeStatus] = createPubSub();
   const candidateElementIds = Array.from(candidateSet, (c) =>
     getElementId(c.element),
@@ -204,42 +179,43 @@ const initRouteObserver = ({
     subscribeStatus: subscribeCompositeStatus,
     toString: () => `composite(${candidateSet.size} candidates)`,
   };
-  const getActiveCandidateInfo = () => {
-    // First check if our own route is active (route from props)
-    const ownCandidate = Array.from(candidateSet).find(
-      (candidate) => candidate.origin === "props" && candidate.route.active,
-    );
-
-    if (ownCandidate) {
-      // Find if any child is also active
-      const activeChildCandidate = Array.from(candidateSet).find(
-        (candidate) =>
-          candidate.origin === "children" && candidate.route.active,
-      );
-
-      return {
-        route: ownCandidate.route,
-        element: ownCandidate.element,
-        slotElement: activeChildCandidate ? activeChildCandidate.element : null,
-      };
-    }
-
-    // If our own route is not active, find the active child
-    const activeChildCandidate = Array.from(candidateSet).find(
-      (candidate) => candidate.route.active,
-    );
-
-    if (!activeChildCandidate) {
+  const getActiveInfo = () => {
+    if (route && !route.active) {
+      // we have a route and it does not match no need to go further
       return null;
     }
-
-    // If we don't have a route from props, we're just a wrapper
-    // Pass through the active child
-    return {
-      route: activeChildCandidate.route,
-      element: activeChildCandidate.element,
-      slotElement: null,
-    };
+    if (route) {
+      // we have a route and it is active (it matches)
+      // we search the first active child to put it in the slot
+      for (const candidate of candidateSet) {
+        if (candidate.route === route) {
+          continue;
+        }
+        if (candidate.route.active) {
+          return {
+            route,
+            element,
+            slotElement: candidate.element,
+          };
+        }
+      }
+      return {
+        route,
+        element,
+        slotElement: null,
+      };
+    }
+    // we don't have a route, do we have an active child?
+    for (const candidate of candidateSet) {
+      if (candidate.route.active) {
+        return {
+          route: candidate.route,
+          element,
+          slotElement: candidate.element,
+        };
+      }
+    }
+    return null;
   };
   let activeInfo;
   const subscribeGlobalActiveInfo = (callback) => {
@@ -247,12 +223,12 @@ const initRouteObserver = ({
     for (const candidate of candidateSet) {
       // eslint-disable-next-line no-loop-func
       const unsubscribe = subscribeActiveInfo(candidate, () => {
-        const previousActiveCandidateInfo = activeInfo;
-        const newActiveCandidateInfo = getActiveCandidateInfo();
-        if (newActiveCandidateInfo !== previousActiveCandidateInfo) {
-          activeInfo = newActiveCandidateInfo;
-          compositeRoute.active = Boolean(newActiveCandidateInfo);
-          callback(newActiveCandidateInfo, previousActiveCandidateInfo);
+        const previousActiveInfo = activeInfo;
+        const newActiveInfo = getActiveInfo();
+        if (newActiveInfo !== previousActiveInfo) {
+          activeInfo = newActiveInfo;
+          compositeRoute.active = Boolean(newActiveInfo);
+          callback(newActiveInfo, previousActiveInfo);
         }
       });
       addTeardown(unsubscribe);
@@ -261,7 +237,7 @@ const initRouteObserver = ({
       teardown();
     };
   };
-  const initialActiveInfo = getActiveCandidateInfo();
+  const initialActiveInfo = getActiveInfo();
   if (initialActiveInfo) {
     compositeRoute.active = true;
     activeInfo = initialActiveInfo;

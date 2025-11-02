@@ -39,13 +39,17 @@ const ComponentTracker = ({ name, color = "#333", children }) => {
   );
 };
 
-const { HOME_ROUTE, AUTH_ROUTE, LOGIN_ROUTE, FORGOT_PASSWORD_ROUTE } =
-  setupRoutes({
-    HOME_ROUTE: "home",
-    AUTH_ROUTE: "auth",
-    LOGIN_ROUTE: "auth/login",
-    FORGOT_PASSWORD_ROUTE: "auth/forgot",
-  });
+const {
+  HOME_ROUTE,
+  // AUTH_ROUTE,
+  LOGIN_ROUTE,
+  FORGOT_PASSWORD_ROUTE,
+} = setupRoutes({
+  HOME_ROUTE: "home",
+  AUTH_ROUTE: "auth",
+  LOGIN_ROUTE: "auth/login",
+  FORGOT_PASSWORD_ROUTE: "auth/forgot",
+});
 
 // Test App
 export const App = () => {
