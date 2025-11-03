@@ -50,10 +50,6 @@ import {
 import { createGroupTransitionController } from "../transition/group_transition.js";
 
 import.meta.css = /* css */ `
-  .ui_transition_container[data-transition] {
-    overflow: hidden;
-  }
-
   .ui_transition_container,
   .ui_transition_outer_wrapper,
   .ui_transition_measure_wrapper,
@@ -61,6 +57,10 @@ import.meta.css = /* css */ `
     display: inline-flex;
     width: 100%;
     height: 100%;
+  }
+
+  .ui_transition_measure_wrapper[data-transition-translate-x] {
+    overflow: hidden;
   }
 
   .ui_transition_container,
@@ -460,15 +460,11 @@ export const initUITransition = (container) => {
       newElement = firstChild ? measureWrapper : null;
     }
 
-    container.setAttribute("data-transition", "");
     return {
       oldChild,
       cleanup,
       oldElement,
       newElement,
-      onTeardown: () => {
-        container.removeAttribute("data-transition");
-      },
     };
   };
 
