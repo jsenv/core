@@ -85,11 +85,15 @@ const DEBUG = {
 };
 
 // Utility function to format content key states consistently for debug logs
-const formatContentKeyState = (contentKey, hasChild, hasTextNode = false) => {
+const formatContentKeyState = (
+  contentKey,
+  hasChildren,
+  hasTextNode = false,
+) => {
   if (hasTextNode) {
     return "[text]";
   }
-  if (!hasChild) {
+  if (!hasChildren) {
     return "[empty]";
   }
   if (contentKey === null || contentKey === undefined) {
@@ -176,7 +180,7 @@ export const initUITransition = (container) => {
 
   // Child state
   let lastContentKey = null;
-  let previousChild = null;
+  let previousChildNodes = null;
   let isContentPhase = false; // Current state: true when showing content phase (loading/error)
   let wasContentPhase = false; // Previous state for comparison
 
@@ -405,40 +409,43 @@ export const initUITransition = (container) => {
   const setupTransition = ({
     isPhaseTransition = false,
     overlay,
-    existingOldContents,
-    needsOldChildClone,
-    previousChild,
-    firstChild,
+    needsOldChildNodesClone,
+    previousChildNodes,
+    childNodes,
     attributeToRemove = [],
   }) => {
-    let oldChild = null;
     let cleanup = () => {};
-    const currentTransitionElement = existingOldContents[0];
+    let elementToImpact;
 
-    if (currentTransitionElement) {
-      oldChild = currentTransitionElement;
+    if (overlay.chilNodes.length > 0) {
+      elementToImpact = overlay.firstChild;
+      cleanup = () => elementToImpact.remove();
+
       debug(
         "transition",
         `Continuing from current ${isPhaseTransition ? "phase" : "content"} transition element`,
       );
-      cleanup = () => oldChild.remove();
-    } else if (needsOldChildClone) {
+    } else if (needsOldChildNodesClone) {
       overlay.innerHTML = "";
 
-      // Clone the individual element for the transition
-      oldChild = previousChild.cloneNode(true);
-
-      // Remove specified attributes
-      attributeToRemove.forEach((attr) => oldChild.removeAttribute(attr));
-
-      oldChild.setAttribute("data-ui-transition-old", "");
-      overlay.appendChild(oldChild);
+      const cloneContainer = document.createElement("div");
+      cloneContainer.style.display = "contents";
+      for (const previousChildNode of previousChildNodes) {
+        const previousChildClone = previousChildNode.cloneNode(true);
+        for (const attrToRemove of attributeToRemove) {
+          previousChildClone.removeAttribute(attrToRemove);
+        }
+        previousChildClone.setAttribute("data-ui-transition-clone", "");
+        cloneContainer.appendChild(previousChildClone);
+      }
+      elementToImpact = cloneContainer;
+      overlay.appendChild(elementToImpact);
+      cleanup = () => elementToImpact.remove();
       debug(
         "transition",
         `Cloned previous child for ${isPhaseTransition ? "phase" : "content"} transition:`,
-        getElementSignature(previousChild),
+        getElementSignature(previousChildNodes),
       );
-      cleanup = () => oldChild.remove();
     } else {
       overlay.innerHTML = "";
       debug(
@@ -454,16 +461,15 @@ export const initUITransition = (container) => {
     let newElement;
     if (isPhaseTransition) {
       // Phase transitions work on individual elements
-      oldElement = oldChild;
-      newElement = firstChild;
+      oldElement = elementToImpact;
+      newElement = slot;
     } else {
       // Content transitions work at container level and can outlive content phase changes
-      oldElement = oldChild ? overlay : null;
-      newElement = firstChild ? measureWrapper : null;
+      oldElement = previousChildNodes.legnth ? elementToImpact : null;
+      newElement = childNodes.length ? measureWrapper : null;
     }
 
     return {
-      oldChild,
       cleanup,
       oldElement,
       newElement,
@@ -483,102 +489,75 @@ export const initUITransition = (container) => {
 
     try {
       isUpdating = true;
-      const firstChild = slot.children[0] || null;
-      const childUIName = firstChild?.getAttribute("data-ui-name");
+      const childNodes = Array.from(slot.childNodes);
       if (localDebug.transition) {
         const updateLabel =
-          childUIName ||
-          (firstChild ? getElementSignature(firstChild) : "cleared/empty");
+          childNodes.length === 0
+            ? "cleared/empty"
+            : childNodes.length === 1
+              ? getElementSignature(childNodes[0])
+              : getElementSignature(slot);
         console.group(`UI Update: ${updateLabel} (reason: ${reason})`);
       }
 
-      // Check for text nodes in the slot (not supported)
-      const hasTextNode = Array.from(slot.childNodes).some(
-        (node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim(),
-      );
-      if (hasTextNode) {
-        console.warn(
-          "UI Transition: Text nodes in transition slots are not supported. Please wrap text content in an element.",
-          { slot, textContent: slot.textContent.trim() },
-        );
-      }
-
-      // Check for multiple elements in the slot (not supported yet)
-      const hasMultipleElements = slot.children.length > 1;
-      if (hasMultipleElements) {
-        console.warn(
-          "UI Transition: Multiple elements in transition slots are not supported yet. Please use a single container element.",
-          { slot, elementCount: slot.children.length },
-        );
-      }
+      // Determine transition scenarios early for early registration check
+      // Prepare phase info early so logging can be unified (even for early return)
+      wasContentPhase = isContentPhase;
+      const hadChild = previousChildNodes.length > 0;
+      const hasChild = childNodes.length > 0;
 
       // Prefer data-content-key on child, fallback to slot
       let currentContentKey = null;
       let slotContentKey = slot.getAttribute("data-content-key");
-      let childContentKey = firstChild?.getAttribute("data-content-key");
+      let childContentKey;
+
+      if (childNodes.length === 0) {
+        childContentKey = null;
+        isContentPhase = true; // empty (no child) is treated as content phase
+      } else {
+        for (const childNode of childNodes) {
+          if (childNode.nodeType === Node.TEXT_NODE) {
+          } else if (childNode.hasAttribute("data-content-key")) {
+            childContentKey = childNode.getAttribute("data-content-key");
+          } else if (childNode.hasAttribute("data-content-phase")) {
+            isContentPhase = true;
+          }
+        }
+      }
       if (childContentKey && slotContentKey) {
         console.warn(
-          "Both data-content-key found on child and ui_transition_slot. Using child value.",
-          { childContentKey, slotContentKey },
+          `Slot and slot child both have a [data-content-key]. Slot is ${slotContentKey} and child is ${childContentKey}, using the child.`,
         );
       }
       currentContentKey = childContentKey || slotContentKey || null;
-
-      // Determine transition scenarios early for early registration check
-      const hadChild = previousChild !== null;
-      const hasChild = firstChild !== null;
-
-      // Check for text nodes in previous state (reconstruct from previousChild)
-      const hadTextNode =
-        previousChild && previousChild.nodeType === Node.TEXT_NODE;
-
       // Compute formatted content key states ONCE per mutation (requirement: max 2 calls)
       const previousContentKeyState = formatContentKeyState(
         lastContentKey,
         hadChild,
-        hadTextNode,
       );
       const currentContentKeyState = formatContentKeyState(
         currentContentKey,
         hasChild,
-        hasTextNode,
       );
-
       // Track previous key before any potential early registration update
       const prevKeyBeforeRegistration = lastContentKey;
-
-      // Prepare phase info early so logging can be unified (even for early return)
-      wasContentPhase = isContentPhase;
-      isContentPhase = firstChild
-        ? firstChild.hasAttribute("data-content-phase")
-        : true; // empty (no child) is treated as content phase
-
       const previousIsContentPhase = !hadChild || wasContentPhase;
       const currentIsContentPhase = !hasChild || isContentPhase;
 
-      // Early conceptual registration path: empty slot, text nodes, or multiple elements (no visual transition)
-      const shouldGiveUpEarlyAndJustRegister =
-        (!hadChild && !hasChild && !hasTextNode) ||
-        hasTextNode ||
-        hasMultipleElements;
+      // Early conceptual registration path: empty slot
+      const shouldGiveUpEarlyAndJustRegister = !hadChild && !hasChild;
       let earlyAction = null;
       if (shouldGiveUpEarlyAndJustRegister) {
-        if (hasTextNode) {
-          earlyAction = "text_nodes_unsupported";
-        } else if (hasMultipleElements) {
-          earlyAction = "multiple_elements_unsupported";
+        const prevKey = prevKeyBeforeRegistration;
+        const keyChanged = prevKey !== currentContentKey;
+        if (!keyChanged) {
+          earlyAction = "unchanged";
+        } else if (prevKey === null && currentContentKey !== null) {
+          earlyAction = "registered";
+        } else if (prevKey !== null && currentContentKey === null) {
+          earlyAction = "cleared";
         } else {
-          const prevKey = prevKeyBeforeRegistration;
-          const keyChanged = prevKey !== currentContentKey;
-          if (!keyChanged) {
-            earlyAction = "unchanged";
-          } else if (prevKey === null && currentContentKey !== null) {
-            earlyAction = "registered";
-          } else if (prevKey !== null && currentContentKey === null) {
-            earlyAction = "cleared";
-          } else {
-            earlyAction = "changed";
-          }
+          earlyAction = "changed";
         }
         // Will update lastContentKey after unified logging
       }
@@ -629,7 +608,7 @@ export const initUITransition = (container) => {
 
       // Handle resize observation
       stopResizeObserver();
-      if (firstChild && !isContentPhase) {
+      if (hasChild && !isContentPhase) {
         startResizeObserver();
         debug("size", "Observing child resize");
       }
@@ -655,11 +634,7 @@ export const initUITransition = (container) => {
 
       // Content key change when either slot or child has data-content-key and it changed
       let shouldDoContentTransition = false;
-      if (
-        (slot.getAttribute("data-content-key") ||
-          firstChild?.getAttribute("data-content-key")) &&
-        lastContentKey !== null
-      ) {
+      if (currentContentKey && lastContentKey !== null) {
         shouldDoContentTransition = currentContentKey !== lastContentKey;
       }
 
@@ -743,7 +718,7 @@ export const initUITransition = (container) => {
         }
 
         // Register state and mark initial population done
-        previousChild = firstChild;
+        previousChildNodes = childNodes;
         lastContentKey = currentContentKey;
         hasPopulatedOnce = true;
         if (localDebug.transition) {
@@ -816,11 +791,7 @@ export const initUITransition = (container) => {
           shouldDoContentTransitionIncludingPopulation &&
           !preserveOnlyContentTransition
         ) {
-          const existingOldContents = contentOverlay.querySelectorAll(
-            "[data-ui-transition-old]",
-          );
           const animationProgress = activeContentTransition?.progress || 0;
-
           if (animationProgress > 0) {
             debug(
               "transition",
@@ -834,7 +805,6 @@ export const initUITransition = (container) => {
           const canContinueSmoothly =
             activeContentTransitionType === newTransitionType &&
             activeContentTransition;
-
           if (canContinueSmoothly) {
             debug(
               "transition",
@@ -855,11 +825,8 @@ export const initUITransition = (container) => {
             activeContentTransition.cancel();
           }
 
-          const needsOldChildClone =
-            (contentChange || becomesEmpty) &&
-            previousChild &&
-            !existingOldContents[0];
-
+          const needsOldChildNodesClone =
+            (contentChange || becomesEmpty) && hadChild;
           const duration = parseInt(
             container.getAttribute("data-content-transition-duration") ||
               CONTENT_TRANSITION_DURATION,
@@ -872,10 +839,9 @@ export const initUITransition = (container) => {
             setupTransition({
               isPhaseTransition: false,
               overlay: contentOverlay,
-              existingOldContents,
-              needsOldChildClone,
-              previousChild,
-              firstChild,
+              needsOldChildNodesClone,
+              previousChildNodes,
+              childNodes,
               attributeToRemove: ["data-content-key"],
             });
 
@@ -896,7 +862,6 @@ export const initUITransition = (container) => {
 
           activeContentTransition = applyTransition(
             transitionController,
-            firstChild,
             setupContentTransition,
             {
               duration,
@@ -938,12 +903,7 @@ export const initUITransition = (container) => {
         if (shouldDoPhaseTransition) {
           const phaseTransitionType =
             container.getAttribute("data-phase-transition") || PHASE_TRANSITION;
-
-          const existingOldPhaseContents = phaseOverlay.querySelectorAll(
-            "[data-ui-transition-old]",
-          );
           const phaseAnimationProgress = activePhaseTransition?.progress || 0;
-
           if (phaseAnimationProgress > 0) {
             debug(
               "transition",
@@ -973,10 +933,7 @@ export const initUITransition = (container) => {
           }
 
           const needsOldPhaseClone =
-            (becomesEmpty || becomesPopulated || phaseChange) &&
-            previousChild &&
-            !existingOldPhaseContents[0];
-
+            (becomesEmpty || becomesPopulated || phaseChange) && hadChild;
           const phaseDuration = parseInt(
             container.getAttribute("data-phase-transition-duration") ||
               PHASE_TRANSITION_DURATION,
@@ -986,10 +943,9 @@ export const initUITransition = (container) => {
             setupTransition({
               isPhaseTransition: true,
               overlay: phaseOverlay,
-              existingOldContents: existingOldPhaseContents,
-              needsOldChildClone: needsOldPhaseClone,
-              previousChild,
-              firstChild,
+              needsOldChildNodesClone: needsOldPhaseClone,
+              previousChildNodes,
+              childNodes,
               attributeToRemove: ["data-content-key", "data-content-phase"],
             });
 
@@ -1011,7 +967,6 @@ export const initUITransition = (container) => {
 
           activePhaseTransition = applyTransition(
             transitionController,
-            firstChild,
             setupPhaseTransition,
             {
               duration: phaseDuration,
@@ -1037,7 +992,7 @@ export const initUITransition = (container) => {
       }
 
       // Store current child for next transition
-      previousChild = firstChild;
+      previousChildNodes = childNodes;
       lastContentKey = currentContentKey;
       if (becomesPopulated) {
         hasPopulatedOnce = true;
@@ -1167,7 +1122,6 @@ export const initUITransition = (container) => {
 
 const applyTransition = (
   transitionController,
-  newChild,
   setupTransition,
   {
     type,

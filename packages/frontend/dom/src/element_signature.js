@@ -58,6 +58,16 @@
  * getElementSignature(null) // Returns: "null"
  */
 export const getElementSignature = (element) => {
+  if (Array.isArray(element)) {
+    if (element.length === 0) {
+      return "empty";
+    }
+    if (element.length === 1) {
+      return getElementSignature(element[0]);
+    }
+    const parent = element[0].parentNode;
+    return `${getElementSignature(parent)} children`;
+  }
   if (!element) {
     return String(element);
   }
