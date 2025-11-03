@@ -1,12 +1,16 @@
 /**
  *
- * 1. tenter un double nesting pour voir si ca marche bien
- *
- * 2. Besoin de la prop index pour render dans le slot du parent
  *
  * 2. Connecter une version simple (pas le double nesting) avec un UI transition pour voir le comportemenet
  * Notons qu'il faut restaurer le concept de content key pour que les transitions fonctionnent bien
  * donc il faudras qu'on voit cela
+ *
+ * . Refactor les actions pour qu'elles utilisent use. Ce qui va ouvrir la voie pour
+ * Suspense et ErrorBoundary sur tous les composants utilisant des actions
+ *
+ * . Tester le code splitting avec .lazy + import dynamique
+ * pour les elements des routes
+ *
  * 3. Ajouter la possibilite d'avoir des action sur les routes
  * Tester juste les data pour commencer
  * On aura ptet besoin d'un useRouteData au lieu de passer par un element qui est une fonction
@@ -14,8 +18,6 @@
  *
  * 4. Utiliser use() pour compar Suspense et ErrorBoundary lorsque route action se produit.
  *
- * 5. Tester le code splitting avec .lazy + import dynamique
- * pour les elements des routes
  *
  */
 
