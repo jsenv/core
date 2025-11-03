@@ -6,8 +6,8 @@
     <style>
       body {
         margin: 0;
-        font-family: system-ui;
         padding: 20px;
+        font-family: system-ui;
       }
 
       .controls {
@@ -28,24 +28,25 @@
       }
 
       .description {
+        margin: 8px 0;
         color: #666;
         font-size: 0.9em;
-        margin: 8px 0;
       }
 
       /* Test content styles */
       #transition-box {
-        border: 2px solid #666;
         /* padding: 16px; */
         width: 300px;
         margin-top: 20px;
+        border: 2px solid #666;
       }
 
       .test-content {
-        padding: 20px;
-        background: #f0f0f0;
+        width: 100%;
         margin: 8px 0;
+        padding: 20px;
         text-align: center;
+        background: #f0f0f0;
       }
 
       .test-content.loading {
@@ -128,30 +129,31 @@
       </div>
     </div>
 
-    <div
-      id="transition-box"
-      class="ui_transition_container"
-      data-size-transition
-      data-content-transition="slide-left"
-      data-content-transition-duration="3000"
-      data-phase-transition="cross-fade"
-      data-phase-transition-duration="300"
-    >
-      <div class="ui_transition_outer_wrapper">
-        <div class="ui_transition_measure_wrapper">
-          <div class="ui_transition_slot">
-            <div
-              class="test-content content"
-              data-content-key="a"
-              data-ui-name="a-content"
-            >
-              Initial Content
+    <div id="transition-box">
+      <div
+        class="ui_transition_container"
+        data-size-transition
+        data-content-transition="slide-left"
+        data-content-transition-duration="3000"
+        data-phase-transition="cross-fade"
+        data-phase-transition-duration="300"
+      >
+        <div class="ui_transition_outer_wrapper">
+          <div class="ui_transition_measure_wrapper">
+            <div class="ui_transition_slot">
+              <div
+                class="test-content content"
+                data-content-key="a"
+                data-ui-name="a-content"
+              >
+                Initial Content
+              </div>
             </div>
+            <div class="ui_transition_phase_overlay"></div>
           </div>
-          <div class="ui_transition_phase_overlay"></div>
         </div>
+        <div class="ui_transition_content_overlay"></div>
       </div>
-      <div class="ui_transition_content_overlay"></div>
     </div>
 
     <div id="debug-info"></div>
@@ -177,7 +179,7 @@
       const changeToSlideButton = document.getElementById("change-to-slide");
       const resetButton = document.getElementById("reset");
 
-      let uiTransition = initUITransition(box);
+      let uiTransition = initUITransition(box.firstElementChild);
 
       // Update duration when input changes
       durationInput.addEventListener("change", () => {

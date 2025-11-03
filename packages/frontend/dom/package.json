@@ -26,9 +26,7 @@
     "./resize": "./src/size/resize.js"
   },
   "files": [
-    "/dist/",
-    "/src/",
-    "/index.js"
+    "/dist/"
   ],
   "scripts": {
     "build": "node ./scripts/build.mjs",

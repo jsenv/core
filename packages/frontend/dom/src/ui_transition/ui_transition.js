@@ -55,8 +55,8 @@ import.meta.css = /* css */ `
   .ui_transition_measure_wrapper,
   .ui_transition_slot {
     display: inline-flex;
-    width: fit-content;
-    height: fit-content;
+    width: 100%;
+    height: 100%;
   }
 
   .ui_transition_container,
@@ -127,17 +127,6 @@ export const initUITransition = (container) => {
   let contentOverlay = container.querySelector(
     ".ui_transition_content_overlay",
   );
-
-  if (!phaseOverlay) {
-    phaseOverlay = document.createElement("div");
-    phaseOverlay.className = "ui_transition_phase_overlay";
-    measureWrapper.appendChild(phaseOverlay);
-  }
-  if (!contentOverlay) {
-    contentOverlay = document.createElement("div");
-    contentOverlay.className = "ui_transition_content_overlay";
-    container.appendChild(contentOverlay);
-  }
 
   if (
     !outerWrapper ||
@@ -438,6 +427,7 @@ export const initUITransition = (container) => {
 
       oldChild.setAttribute("data-ui-transition-old", "");
       overlay.appendChild(oldChild);
+      debugger;
       debug(
         "transition",
         `Cloned previous child for ${isPhaseTransition ? "phase" : "content"} transition:`,
