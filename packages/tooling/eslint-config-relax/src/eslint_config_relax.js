@@ -39,6 +39,7 @@ export const eslintConfigRelax = ({
   reactVersion = "detect",
   reactVersionForPreact = "19.2.0",
   importResolutionLogLevel,
+  importResolutionDevConditions = [],
 
   browserFiles = [],
   browserAndNodeFiles = [],
@@ -149,7 +150,12 @@ export const eslintConfigRelax = ({
         "import-x/resolver": {
           "@jsenv/eslint-import-resolver": {
             rootDirectoryUrl: String(rootDirectoryUrl),
-            packageConditions: ["node", "development", "dev:*", "import"],
+            packageConditions: [
+              "node",
+              "development",
+              ...importResolutionDevConditions,
+              "import",
+            ],
             logLevel: importResolutionLogLevel,
           },
         },
@@ -169,7 +175,11 @@ export const eslintConfigRelax = ({
         "import-x/resolver": {
           "@jsenv/eslint-import-resolver": {
             rootDirectoryUrl: String(rootDirectoryUrl),
-            packageConditions: ["node", "development", "dev:*"],
+            packageConditions: [
+              "node",
+              "development",
+              ...importResolutionDevConditions,
+            ],
             logLevel: importResolutionLogLevel,
           },
         },
@@ -262,7 +272,12 @@ export const eslintConfigRelax = ({
         "import-x/resolver": {
           "@jsenv/eslint-import-resolver": {
             rootDirectoryUrl: browserDirectoryUrl || rootDirectoryUrl,
-            packageConditions: ["browser", "development", "dev:*", "import"],
+            packageConditions: [
+              "browser",
+              "development",
+              ...importResolutionDevConditions,
+              "import",
+            ],
             logLevel: importResolutionLogLevel,
           },
         },
