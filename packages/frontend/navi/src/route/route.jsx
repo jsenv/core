@@ -26,8 +26,12 @@ import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { useForceRender } from "./use_force_render.js";
 
-export const Routes = ({ children }) => {
-  return <>{children}</>;
+const RootElement = () => {
+  return <Route.Slot />;
+};
+
+export const Routes = ({ element = RootElement, children }) => {
+  return <Route element={element}>{children}</Route>;
 };
 
 const SlotContext = createContext(null);
@@ -184,6 +188,14 @@ const initRouteObserver = ({
     console.log(
       `📄 Returning JSX element for ${getElementId(element)} with slot set to ${getElementId(SlotActiveElement)}`,
     );
+    if (typeof element === "function") {
+      const Element = element;
+      return (
+        <SlotContext.Provider value={SlotActiveElement}>
+          <Element />
+        </SlotContext.Provider>
+      );
+    }
     return (
       <SlotContext.Provider value={SlotActiveElement}>
         {element}
