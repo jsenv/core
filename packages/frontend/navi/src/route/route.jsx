@@ -26,7 +26,7 @@ import { signal } from "@preact/signals";
 import { createContext } from "preact";
 import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
-// import { useContentKey } from "../components/ui_transition.jsx";
+import { useContentKey } from "../components/ui_transition.jsx";
 import { useForceRender } from "./use_force_render.js";
 
 const RootElement = () => {
@@ -187,6 +187,8 @@ const initRouteObserver = ({
   const activeRouteSignal = signal();
   const SlotActiveElementSignal = signal();
   const ActiveElement = () => {
+    useContentKey(activeRouteSignal.value.urlPattern);
+
     const SlotActiveElement = SlotActiveElementSignal.value;
     console.log(
       `📄 Returning JSX element for ${getElementSignature(element)} with slot set to ${getElementSignature(SlotActiveElement)}`,

@@ -123,7 +123,7 @@ export const App = () => {
                   active:
                 </p>
 
-                <UITransition>
+                <UITransition debugTransition>
                   <Route.Slot />
                 </UITransition>
 

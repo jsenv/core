@@ -163,7 +163,7 @@ export const UITransition = ({
 export const useContentKey = (key) => {
   const contentKey = useContext(ContentKeyContext);
   const keyRef = useRef();
-  if (keyRef.current !== key) {
+  if (keyRef.current !== key && contentKey) {
     const previousKey = keyRef.current;
     keyRef.current = key;
     if (previousKey) {
