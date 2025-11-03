@@ -89,6 +89,7 @@
       }
 
       .error-state {
+        width: 100%;
         color: #d32f2f;
         text-align: center;
       }
@@ -286,14 +287,16 @@
           transitions. Use the controls on the left to trigger various content
           lifecycle and navigation scenarios.
         </p>
-        <div id="content-box" class="ui_transition_container">
-          <div class="ui_transition_outer_wrapper">
-            <div class="ui_transition_measure_wrapper">
-              <div class="ui_transition_slot"></div>
-              <div class="ui_transition_phase_overlay"></div>
+        <div id="content-box">
+          <div class="ui_transition_container">
+            <div class="ui_transition_outer_wrapper">
+              <div class="ui_transition_measure_wrapper">
+                <div class="ui_transition_slot"></div>
+                <div class="ui_transition_phase_overlay"></div>
+              </div>
             </div>
+            <div class="ui_transition_content_overlay"></div>
           </div>
-          <div class="ui_transition_content_overlay"></div>
         </div>
       </div>
     </div>
@@ -302,7 +305,7 @@
       import { initUITransition } from "../ui_transition.js";
 
       const contentBox = document.getElementById("content-box");
-      let uiTransition = initUITransition(contentBox);
+      let uiTransition = initUITransition(contentBox.firstElementChild);
 
       const createState = (type, options = {}) => {
         const {
@@ -379,7 +382,7 @@
         }
 
         // Reinstall the maintainSize functionality
-        uiTransition = initUITransition(contentBox);
+        uiTransition = initUITransition(contentBox.firstElementChild);
 
         // Reset active button state
         activeButton.classList.remove("active");
