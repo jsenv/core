@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-explorer",
-  "version": "1.0.75",
+  "version": "1.0.76",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
@@ -28,7 +28,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/filesystem": "4.15.7"
+    "@jsenv/filesystem": "4.15.8"
   },
   "devDependencies": {
     "@jsenv/core": "../../../"

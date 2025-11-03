@@ -28,11 +28,11 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/database": "0.0.2",
+    "@jsenv/database": "0.0.3",
     "@jsenv/dom": "0.6.0",
-    "@jsenv/navi": "0.11.0",
+    "@jsenv/navi": "0.11.1",
     "@jsenv/sigi": "0.1.2",
-    "@jsenv/urls": "2.9.1",
+    "@jsenv/urls": "2.9.2",
     "@tanstack/table-core": "8.21.3",
     "jsonwebtoken": "9.0.2",
     "postgres": "3.4.7"

@@ -2055,3 +2055,4 @@ const createTaskLog = (
 };
 
 export { ANSI, UNICODE, createCallOrderer, createDetailedMessage, createDynamicLog, createLogger, createTaskLog, distributePercentages, errorToHTML, errorToMarkdown, formatError, generateContentFrame, humanize, humanizeDuration, humanizeEllapsedTime, humanizeFileSize, humanizeMemory, humanizeMethodSymbol, preNewLineAndIndentation, prefixFirstAndIndentRemainingLines, renderBigSection, renderDetails, renderNamedSections, renderSection, startSpinner, wrapNewLineAndIndentation };
+//# sourceMappingURL=jsenv_humanize_node.js.map

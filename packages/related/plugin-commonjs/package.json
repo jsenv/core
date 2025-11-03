@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-commonjs",
-  "version": "2.11.5",
+  "version": "2.11.6",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
@@ -19,11 +19,11 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/filesystem": "4.15.7",
-    "@jsenv/humanize": "1.6.0",
-    "@jsenv/node-esm-resolution": "1.2.8",
+    "@jsenv/filesystem": "4.15.8",
+    "@jsenv/humanize": "1.7.0",
+    "@jsenv/node-esm-resolution": "1.2.9",
     "@jsenv/url-meta": "8.5.7",
-    "@jsenv/urls": "2.9.1",
+    "@jsenv/urls": "2.9.2",
     "@rollup/plugin-commonjs": "28.0.8",
     "@rollup/plugin-json": "6.1.0",
     "@rollup/plugin-node-resolve": "16.0.3",

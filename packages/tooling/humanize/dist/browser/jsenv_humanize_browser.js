@@ -1,18 +1,26 @@
 const createDetailedMessage = (message, details = {}) => {
-  let text = "".concat(message);
+  let text = `${message}`;
   const namedSectionsText = renderNamedSections(details);
   if (namedSectionsText) {
-    text += "\n".concat(namedSectionsText);
+    text += `
+${namedSectionsText}`;
   }
   return text;
 };
-const renderNamedSections = namedSections => {
+
+const renderNamedSections = (namedSections) => {
   let text = "";
   let keys = Object.keys(namedSections);
   for (const key of keys) {
     const isLastKey = key === keys[keys.length - 1];
     const value = namedSections[key];
-    text += "--- ".concat(key, " ---\n").concat(Array.isArray(value) ? value.join("\n") : value);
+    text += `--- ${key} ---
+${
+  Array.isArray(value)
+    ? value.join(`
+`)
+    : value
+}`;
     if (!isLastKey) {
       text += "\n";
     }
@@ -23,6 +31,7 @@ const renderNamedSections = namedSections => {
 // https://github.com/Marak/colors.js/blob/master/lib/styles.js
 // https://stackoverflow.com/a/75985833/2634179
 const RESET = "\x1b[0m";
+
 const RED = "red";
 const GREEN = "green";
 const YELLOW = "yellow";
@@ -32,6 +41,7 @@ const CYAN = "cyan";
 const GREY = "grey";
 const WHITE = "white";
 const BLACK = "black";
+
 const TEXT_COLOR_ANSI_CODES = {
   [RED]: "\x1b[31m",
   [GREEN]: "\x1b[32m",
@@ -41,7 +51,7 @@ const TEXT_COLOR_ANSI_CODES = {
   [CYAN]: "\x1b[36m",
   [GREY]: "\x1b[90m",
   [WHITE]: "\x1b[37m",
-  [BLACK]: "\x1b[30m"
+  [BLACK]: "\x1b[30m",
 };
 const BACKGROUND_COLOR_ANSI_CODES = {
   [RED]: "\x1b[41m",
@@ -52,13 +62,13 @@ const BACKGROUND_COLOR_ANSI_CODES = {
   [CYAN]: "\x1b[46m",
   [GREY]: "\x1b[100m",
   [WHITE]: "\x1b[47m",
-  [BLACK]: "\x1b[40m"
+  [BLACK]: "\x1b[40m",
 };
-const createAnsi = ({
-  supported
-}) => {
+
+const createAnsi = ({ supported }) => {
   const ANSI = {
     supported,
+
     RED,
     GREEN,
     YELLOW,
@@ -83,7 +93,7 @@ const createAnsi = ({
       if (!ansiEscapeCodeForTextColor) {
         return text;
       }
-      return "".concat(ansiEscapeCodeForTextColor).concat(text).concat(RESET);
+      return `${ansiEscapeCodeForTextColor}${text}${RESET}`;
     },
     backgroundColor: (text, color) => {
       if (!ANSI.supported) {
@@ -96,12 +106,14 @@ const createAnsi = ({
         // cannot set background color of blank chars
         return text;
       }
-      const ansiEscapeCodeForBackgroundColor = BACKGROUND_COLOR_ANSI_CODES[color];
+      const ansiEscapeCodeForBackgroundColor =
+        BACKGROUND_COLOR_ANSI_CODES[color];
       if (!ansiEscapeCodeForBackgroundColor) {
         return text;
       }
-      return "".concat(ansiEscapeCodeForBackgroundColor).concat(text).concat(RESET);
+      return `${ansiEscapeCodeForBackgroundColor}${text}${RESET}`;
     },
+
     BOLD: "\x1b[1m",
     UNDERLINE: "\x1b[4m",
     STRIKE: "\x1b[9m",
@@ -117,47 +129,43 @@ const createAnsi = ({
         return text;
       }
       const ansiEscapeCodeForEffect = effect;
-      return "".concat(ansiEscapeCodeForEffect).concat(text).concat(RESET);
-    }
+      return `${ansiEscapeCodeForEffect}${text}${RESET}`;
+    },
   };
+
   return ANSI;
 };
 
-const ANSI = createAnsi({
-  supported: true
-});
+const ANSI = createAnsi({ supported: true });
 
 // see also https://github.com/sindresorhus/figures
 
-const createUnicode = ({
-  supported,
-  ANSI
-}) => {
+const createUnicode = ({ supported, ANSI }) => {
   const UNICODE = {
     supported,
     get COMMAND_RAW() {
-      return UNICODE.supported ? "\u276F" : ">";
+      return UNICODE.supported ? `❯` : `>`;
     },
     get OK_RAW() {
-      return UNICODE.supported ? "\u2714" : "\u221A";
+      return UNICODE.supported ? `✔` : `√`;
     },
     get FAILURE_RAW() {
-      return UNICODE.supported ? "\u2716" : "\xD7";
+      return UNICODE.supported ? `✖` : `×`;
     },
     get DEBUG_RAW() {
-      return UNICODE.supported ? "\u25C6" : "\u2666";
+      return UNICODE.supported ? `◆` : `♦`;
     },
     get INFO_RAW() {
-      return UNICODE.supported ? "\u2139" : "i";
+      return UNICODE.supported ? `ℹ` : `i`;
     },
     get WARNING_RAW() {
-      return UNICODE.supported ? "\u26A0" : "\u203C";
+      return UNICODE.supported ? `⚠` : `‼`;
     },
     get CIRCLE_CROSS_RAW() {
-      return UNICODE.supported ? "\u24E7" : "(\xD7)";
+      return UNICODE.supported ? `ⓧ` : `(×)`;
     },
     get CIRCLE_DOTTED_RAW() {
-      return UNICODE.supported ? "\u25CC" : "*";
+      return UNICODE.supported ? `◌` : `*`;
     },
     get COMMAND() {
       return ANSI.color(UNICODE.COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
@@ -181,26 +189,24 @@ const createUnicode = ({
       return ANSI.color(UNICODE.CIRCLE_CROSS_RAW, ANSI.RED);
     },
     get ELLIPSIS() {
-      return UNICODE.supported ? "\u2026" : "...";
-    }
+      return UNICODE.supported ? `…` : `...`;
+    },
   };
   return UNICODE;
 };
 
 const UNICODE = createUnicode({
   supported: true,
-  ANSI
+  ANSI,
 });
 
-const inspectBoolean = value => value.toString();
+const inspectBoolean = (value) => value.toString();
 
 const inspectNull = () => "null";
 
 // https://github.com/sindresorhus/eslint-plugin-unicorn/blob/main/rules/numeric-separators-style.js
 
-const inspectNumber = (value, {
-  numericSeparator
-}) => {
+const inspectNumber = (value, { numericSeparator }) => {
   if (isNegativeZero(value)) {
     return "-0";
   }
@@ -223,66 +229,65 @@ const inspectNumber = (value, {
     number,
     mark = "",
     sign = "",
-    power = ""
-  } = numberString.match(/^(?<number>.*?)(?:(?<mark>e)(?<sign>[+-])?(?<power>\d+))?$/i).groups;
+    power = "",
+  } = numberString.match(
+    /^(?<number>.*?)(?:(?<mark>e)(?<sign>[+-])?(?<power>\d+))?$/i,
+  ).groups;
   const numberWithSeparators = formatNumber(number);
   const powerWithSeparators = addSeparator(power, {
     minimumDigits: 5,
-    groupLength: 3
+    groupLength: 3,
   });
-  return "".concat(numberWithSeparators).concat(mark).concat(sign).concat(powerWithSeparators);
+  return `${numberWithSeparators}${mark}${sign}${powerWithSeparators}`;
 };
 
 // Use this and instead of Object.is(value, -0)
 // because in some corner cases firefox returns false
 // for Object.is(-0, -0)
-const isNegativeZero = value => {
+const isNegativeZero = (value) => {
   return value === 0 && 1 / value === -Infinity;
 };
-const formatNumber = numberString => {
+
+const formatNumber = (numberString) => {
   const parts = numberString.split(".");
   const [integer, fractional] = parts;
+
   if (parts.length === 2) {
     const integerWithSeparators = addSeparator(integer, {
       minimumDigits: 5,
-      groupLength: 3
+      groupLength: 3,
     });
-    return "".concat(integerWithSeparators, ".").concat(fractional);
+    return `${integerWithSeparators}.${fractional}`;
   }
+
   return addSeparator(integer, {
     minimumDigits: 5,
-    groupLength: 3
+    groupLength: 3,
   });
 };
-const addSeparator = (numberString, {
-  minimumDigits,
-  groupLength
-}) => {
+
+const addSeparator = (numberString, { minimumDigits, groupLength }) => {
   if (numberString[0] === "-") {
-    return "-".concat(groupDigits(numberString.slice(1), {
+    return `-${groupDigits(numberString.slice(1), {
       minimumDigits,
-      groupLength
-    }));
+      groupLength,
+    })}`;
   }
-  return groupDigits(numberString, {
-    minimumDigits,
-    groupLength
-  });
+  return groupDigits(numberString, { minimumDigits, groupLength });
 };
-const groupDigits = (digits, {
-  minimumDigits,
-  groupLength
-}) => {
+
+const groupDigits = (digits, { minimumDigits, groupLength }) => {
   const digitCount = digits.length;
   if (digitCount < minimumDigits) {
     return digits;
   }
+
   let digitsWithSeparator = digits.slice(-groupLength);
   let remainingDigits = digits.slice(0, -groupLength);
   while (remainingDigits.length) {
     const group = remainingDigits.slice(-groupLength);
     remainingDigits = remainingDigits.slice(0, -groupLength);
-    digitsWithSeparator = "".concat(group, "_").concat(digitsWithSeparator);
+    digitsWithSeparator = `${group}_${digitsWithSeparator}`;
   }
   return digitsWithSeparator;
 };
@@ -301,46 +306,50 @@ const groupDigits = (digits, {
 //   return parts.join("_");
 // };
 
-const DOUBLE_QUOTE = "\"";
-const SINGLE_QUOTE = "'";
+const DOUBLE_QUOTE = `"`;
+const SINGLE_QUOTE = `'`;
 const BACKTICK = "`";
-const inspectString = (value, {
-  quote = "auto",
-  canUseTemplateString = false,
-  preserveLineBreaks = false,
-  quoteDefault = DOUBLE_QUOTE
-} = {}) => {
-  quote = quote === "auto" ? determineQuote(value, {
-    canUseTemplateString,
-    quoteDefault
-  }) : quote;
+
+const inspectString = (
+  value,
+  {
+    quote = "auto",
+    canUseTemplateString = false,
+    preserveLineBreaks = false,
+    quoteDefault = DOUBLE_QUOTE,
+  } = {},
+) => {
+  quote =
+    quote === "auto"
+      ? determineQuote(value, { canUseTemplateString, quoteDefault })
+      : quote;
   if (quote === BACKTICK) {
-    return "`".concat(escapeTemplateStringSpecialCharacters(value), "`");
+    return `\`${escapeTemplateStringSpecialCharacters(value)}\``;
   }
-  return surroundStringWith(value, {
-    quote,
-    preserveLineBreaks
-  });
+  return surroundStringWith(value, { quote, preserveLineBreaks });
 };
 
 // https://github.com/mgenware/string-to-template-literal/blob/main/src/main.ts#L1
-const escapeTemplateStringSpecialCharacters = string => {
+const escapeTemplateStringSpecialCharacters = (string) => {
   string = String(string);
   let i = 0;
   let escapedString = "";
   while (i < string.length) {
     const char = string[i];
     i++;
-    escapedString += isTemplateStringSpecialChar(char) ? "\\".concat(char) : char;
+    escapedString += isTemplateStringSpecialChar(char) ? `\\${char}` : char;
   }
   return escapedString;
 };
-const isTemplateStringSpecialChar = char => templateStringSpecialChars.indexOf(char) > -1;
+
+const isTemplateStringSpecialChar = (char) =>
+  templateStringSpecialChars.indexOf(char) > -1;
 const templateStringSpecialChars = ["\\", "`", "$"];
-const determineQuote = (string, {
-  canUseTemplateString,
-  quoteDefault = DOUBLE_QUOTE
-} = {}) => {
+
+const determineQuote = (
+  string,
+  { canUseTemplateString, quoteDefault = DOUBLE_QUOTE } = {},
+) => {
   const containsDoubleQuote = string.includes(DOUBLE_QUOTE);
   if (!containsDoubleQuote) {
     return DOUBLE_QUOTE;
@@ -365,18 +374,29 @@ const determineQuote = (string, {
   }
   return quoteDefault;
 };
-const inspectChar = (char, {
-  quote,
-  preserveLineBreaks
-}) => {
+
+const inspectChar = (char, { quote, preserveLineBreaks }) => {
   const point = char.charCodeAt(0);
   if (preserveLineBreaks && (char === "\n" || char === "\r")) {
     return char;
   }
-  if (char === quote || point === 92 || point < 32 || point > 126 && point < 160 ||
-  // line separators
-  point === 8232 || point === 8233) {
-    const replacement = char === quote ? "\\".concat(quote) : point === 8232 ? "\\u2028" : point === 8233 ? "\\u2029" : meta[point];
+  if (
+    char === quote ||
+    point === 92 ||
+    point < 32 ||
+    (point > 126 && point < 160) ||
+    // line separators
+    point === 8232 ||
+    point === 8233
+  ) {
+    const replacement =
+      char === quote
+        ? `\\${quote}`
+        : point === 8232
+          ? "\\u2028"
+          : point === 8233
+            ? "\\u2029"
+            : meta[point];
     return replacement;
   }
   return char;
@@ -386,25 +406,19 @@ const inspectChar = (char, {
 // https://github.com/jsenv/jsenv-inspect/blob/bb11de3adf262b68f71ed82b0a37d4528dd42229/src/internal/string.js#L3
 // https://github.com/joliss/js-string-escape/blob/master/index.js
 // http://javascript.crockford.com/remedial.html
-const surroundStringWith = (string, {
-  quote,
-  preserveLineBreaks
-}) => {
+const surroundStringWith = (string, { quote, preserveLineBreaks }) => {
   let result = "";
   let last = 0;
   const lastIndex = string.length;
   let i = 0;
   while (i < lastIndex) {
     const char = string[i];
-    const replacement = inspectChar(char, {
-      quote,
-      preserveLineBreaks
-    });
+    const replacement = inspectChar(char, { quote, preserveLineBreaks });
     if (char !== replacement) {
       if (last === i) {
         result += replacement;
       } else {
-        result += "".concat(string.slice(last, i)).concat(replacement);
+        result += `${string.slice(last, i)}${replacement}`;
       }
       last = i + 1;
     }
@@ -413,69 +427,62 @@ const surroundStringWith = (string, {
   if (last !== lastIndex) {
     result += string.slice(last);
   }
-  return "".concat(quote).concat(result).concat(quote);
+  return `${quote}${result}${quote}`;
 };
 
 // prettier-ignore
-const meta = ['\\x00', '\\x01', '\\x02', '\\x03', '\\x04', '\\x05', '\\x06', '\\x07',
-// x07
-'\\b', '\\t', '\\n', '\\x0B', '\\f', '\\r', '\\x0E', '\\x0F',
-// x0F
-'\\x10', '\\x11', '\\x12', '\\x13', '\\x14', '\\x15', '\\x16', '\\x17',
-// x17
-'\\x18', '\\x19', '\\x1A', '\\x1B', '\\x1C', '\\x1D', '\\x1E', '\\x1F',
-// x1F
-'', '', '', '', '', '', '', "\\'", '', '', '', '', '', '', '', '',
-// x2F
-'', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-// x3F
-'', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-// x4F
-'', '', '', '', '', '', '', '', '', '', '', '', '\\\\', '', '', '',
-// x5F
-'', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-// x6F
-'', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '\\x7F',
-// x7F
-'\\x80', '\\x81', '\\x82', '\\x83', '\\x84', '\\x85', '\\x86', '\\x87',
-// x87
-'\\x88', '\\x89', '\\x8A', '\\x8B', '\\x8C', '\\x8D', '\\x8E', '\\x8F',
-// x8F
-'\\x90', '\\x91', '\\x92', '\\x93', '\\x94', '\\x95', '\\x96', '\\x97',
-// x97
-'\\x98', '\\x99', '\\x9A', '\\x9B', '\\x9C', '\\x9D', '\\x9E', '\\x9F' // x9F
+const meta = [
+  '\\x00', '\\x01', '\\x02', '\\x03', '\\x04', '\\x05', '\\x06', '\\x07', // x07
+  '\\b', '\\t', '\\n', '\\x0B', '\\f', '\\r', '\\x0E', '\\x0F',           // x0F
+  '\\x10', '\\x11', '\\x12', '\\x13', '\\x14', '\\x15', '\\x16', '\\x17', // x17
+  '\\x18', '\\x19', '\\x1A', '\\x1B', '\\x1C', '\\x1D', '\\x1E', '\\x1F', // x1F
+  '', '', '', '', '', '', '', "\\'", '', '', '', '', '', '', '', '',      // x2F
+  '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',         // x3F
+  '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',         // x4F
+  '', '', '', '', '', '', '', '', '', '', '', '', '\\\\', '', '', '',     // x5F
+  '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',         // x6F
+  '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '\\x7F',    // x7F
+  '\\x80', '\\x81', '\\x82', '\\x83', '\\x84', '\\x85', '\\x86', '\\x87', // x87
+  '\\x88', '\\x89', '\\x8A', '\\x8B', '\\x8C', '\\x8D', '\\x8E', '\\x8F', // x8F
+  '\\x90', '\\x91', '\\x92', '\\x93', '\\x94', '\\x95', '\\x96', '\\x97', // x97
+  '\\x98', '\\x99', '\\x9A', '\\x9B', '\\x9C', '\\x9D', '\\x9E', '\\x9F', // x9F
 ];
 
-const inspectSymbol = (value, {
-  nestedHumanize,
-  parenthesis
-}) => {
+const inspectSymbol = (value, { nestedHumanize, parenthesis }) => {
   const symbolDescription = symbolToDescription(value);
-  const symbolDescriptionSource = symbolDescription ? nestedHumanize(symbolDescription) : "";
-  const symbolSource = "Symbol(".concat(symbolDescriptionSource, ")");
-  if (parenthesis) return "".concat(symbolSource);
+  const symbolDescriptionSource = symbolDescription
+    ? nestedHumanize(symbolDescription)
+    : "";
+  const symbolSource = `Symbol(${symbolDescriptionSource})`;
+
+  if (parenthesis) return `${symbolSource}`;
   return symbolSource;
 };
-const symbolToDescription = "description" in Symbol.prototype ? symbol => symbol.description : symbol => {
-  const toStringResult = symbol.toString();
-  const openingParenthesisIndex = toStringResult.indexOf("(");
-  const closingParenthesisIndex = toStringResult.indexOf(")");
-  const symbolDescription = toStringResult.slice(openingParenthesisIndex + 1, closingParenthesisIndex);
-  return symbolDescription;
-};
+
+const symbolToDescription =
+  "description" in Symbol.prototype
+    ? (symbol) => symbol.description
+    : (symbol) => {
+        const toStringResult = symbol.toString();
+        const openingParenthesisIndex = toStringResult.indexOf("(");
+        const closingParenthesisIndex = toStringResult.indexOf(")");
+        const symbolDescription = toStringResult.slice(
+          openingParenthesisIndex + 1,
+          closingParenthesisIndex,
+        );
+        return symbolDescription;
+      };
 
 const inspectUndefined = () => "undefined";
 
-const inspectBigInt = value => {
-  return "".concat(value, "n");
+const inspectBigInt = (value) => {
+  return `${value}n`;
 };
 
-const prefixFirstAndIndentRemainingLines = (text, {
-  prefix,
-  indentation,
-  trimLines,
-  trimLastLine
-}) => {
+const prefixFirstAndIndentRemainingLines = (
+  text,
+  { prefix, indentation, trimLines, trimLastLine },
+) => {
   const lines = text.split(/\r?\n/);
   const firstLine = lines.shift();
   if (indentation === undefined) {
@@ -485,42 +492,40 @@ const prefixFirstAndIndentRemainingLines = (text, {
       indentation = "";
     }
   }
-  let result = prefix ? "".concat(prefix, " ").concat(firstLine) : firstLine;
+  let result = prefix ? `${prefix} ${firstLine}` : firstLine;
   let i = 0;
   while (i < lines.length) {
     const line = trimLines ? lines[i].trim() : lines[i];
     i++;
-    result += line.length ? "\n".concat(indentation).concat(line) : trimLastLine && i === lines.length ? "" : "\n";
+    result += line.length
+      ? `\n${indentation}${line}`
+      : trimLastLine && i === lines.length
+        ? ""
+        : `\n`;
   }
   return result;
 };
-const preNewLineAndIndentation = (value, {
-  depth = 0,
-  indentUsingTab,
-  indentSize
-}) => {
-  return "".concat(newLineAndIndent({
+
+const preNewLineAndIndentation = (
+  value,
+  { depth = 0, indentUsingTab, indentSize },
+) => {
+  return `${newLineAndIndent({
     count: depth + 1,
     useTabs: indentUsingTab,
-    size: indentSize
-  })).concat(value);
+    size: indentSize,
+  })}${value}`;
 };
-const postNewLineAndIndentation = ({
-  depth,
-  indentUsingTab,
-  indentSize
-}) => {
+
+const postNewLineAndIndentation = ({ depth, indentUsingTab, indentSize }) => {
   return newLineAndIndent({
     count: depth,
     useTabs: indentUsingTab,
-    size: indentSize
+    size: indentSize,
   });
 };
-const newLineAndIndent = ({
-  count,
-  useTabs,
-  size
-}) => {
+
+const newLineAndIndent = ({ count, useTabs, size }) => {
   if (useTabs) {
     // eslint-disable-next-line prefer-template
     return "\n" + "\t".repeat(count);
@@ -528,118 +533,116 @@ const newLineAndIndent = ({
   // eslint-disable-next-line prefer-template
   return "\n" + " ".repeat(count * size);
 };
-const wrapNewLineAndIndentation = (value, {
-  depth = 0,
-  indentUsingTab,
-  indentSize
-}) => {
-  return "".concat(preNewLineAndIndentation(value, {
+
+const wrapNewLineAndIndentation = (
+  value,
+  { depth = 0, indentUsingTab, indentSize },
+) => {
+  return `${preNewLineAndIndentation(value, {
     depth,
     indentUsingTab,
-    indentSize
-  })).concat(postNewLineAndIndentation({
-    depth,
-    indentUsingTab,
-    indentSize
-  }));
+    indentSize,
+  })}${postNewLineAndIndentation({ depth, indentUsingTab, indentSize })}`;
 };
 
-const inspectConstructor = (value, {
-  parenthesis,
-  useNew
-}) => {
+const inspectConstructor = (value, { parenthesis, useNew }) => {
   let formattedString = value;
   if (parenthesis) {
-    formattedString = "(".concat(value, ")");
+    formattedString = `(${value})`;
   }
   if (useNew) {
-    formattedString = "new ".concat(formattedString);
+    formattedString = `new ${formattedString}`;
   }
   return formattedString;
 };
 
-const inspectArray = (value, {
-  seen = [],
-  nestedHumanize,
-  depth,
-  indentUsingTab,
-  indentSize,
-  parenthesis,
-  useNew
-}) => {
+const inspectArray = (
+  value,
+  {
+    seen = [],
+    nestedHumanize,
+    depth,
+    indentUsingTab,
+    indentSize,
+    parenthesis,
+    useNew,
+  },
+) => {
   if (seen.indexOf(value) > -1) {
     return "Symbol.for('circular')";
   }
   seen.push(value);
+
   let valuesSource = "";
   let i = 0;
   const j = value.length;
+
   while (i < j) {
-    const valueSource = value.hasOwnProperty(i) ? nestedHumanize(value[i], {
-      seen
-    }) : "";
+    const valueSource = value.hasOwnProperty(i)
+      ? nestedHumanize(value[i], { seen })
+      : "";
     if (i === 0) {
       valuesSource += valueSource;
     } else {
-      valuesSource += ",".concat(preNewLineAndIndentation(valueSource, {
+      valuesSource += `,${preNewLineAndIndentation(valueSource, {
         depth,
         indentUsingTab,
-        indentSize
-      }));
+        indentSize,
+      })}`;
     }
     i++;
   }
+
   let arraySource;
   if (valuesSource.length) {
     arraySource = wrapNewLineAndIndentation(valuesSource, {
       depth,
       indentUsingTab,
-      indentSize
+      indentSize,
     });
   } else {
     arraySource = "";
   }
-  arraySource = "[".concat(arraySource, "]");
-  return inspectConstructor(arraySource, {
-    parenthesis,
-    useNew
-  });
+
+  arraySource = `[${arraySource}]`;
+
+  return inspectConstructor(arraySource, { parenthesis, useNew });
 };
 
-const inspectBigIntObject = (value, {
-  nestedHumanize
-}) => {
+const inspectBigIntObject = (value, { nestedHumanize }) => {
   const bigIntSource = nestedHumanize(value.valueOf());
-  return "BigInt(".concat(bigIntSource, ")");
+
+  return `BigInt(${bigIntSource})`;
 };
 
-const inspectBooleanObject = (value, {
-  nestedHumanize,
-  useNew,
-  parenthesis
-}) => {
+const inspectBooleanObject = (
+  value,
+  { nestedHumanize, useNew, parenthesis },
+) => {
   const booleanSource = nestedHumanize(value.valueOf());
-  return inspectConstructor("Boolean(".concat(booleanSource, ")"), {
+  return inspectConstructor(`Boolean(${booleanSource})`, {
     useNew,
-    parenthesis
+    parenthesis,
   });
 };
 
-const inspectError = (error, {
-  nestedHumanize,
-  useNew,
-  parenthesis
-}) => {
+const inspectError = (
+  error,
+  { nestedHumanize, useNew, parenthesis },
+) => {
   const messageSource = nestedHumanize(error.message);
-  const errorSource = inspectConstructor("".concat(errorToConstructorName(error), "(").concat(messageSource, ")"), {
-    useNew,
-    parenthesis
-  });
+
+  const errorSource = inspectConstructor(
+    `${errorToConstructorName(error)}(${messageSource})`,
+    {
+      useNew,
+      parenthesis,
+    },
+  );
   return errorSource;
 };
-const errorToConstructorName = ({
-  name
-}) => {
+
+const errorToConstructorName = ({ name }) => {
   if (derivedErrorNameArray.includes(name)) {
     return name;
   }
@@ -647,148 +650,153 @@ const errorToConstructorName = ({
 };
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error#Error_types
-const derivedErrorNameArray = ["EvalError", "RangeError", "ReferenceError", "SyntaxError", "TypeError", "URIError"];
+const derivedErrorNameArray = [
+  "EvalError",
+  "RangeError",
+  "ReferenceError",
+  "SyntaxError",
+  "TypeError",
+  "URIError",
+];
 
-const inspectDate = (value, {
-  nestedHumanize,
-  useNew,
-  parenthesis
-}) => {
+const inspectDate = (value, { nestedHumanize, useNew, parenthesis }) => {
   const dateSource = nestedHumanize(value.valueOf(), {
-    numericSeparator: false
+    numericSeparator: false,
   });
-  return inspectConstructor("Date(".concat(dateSource, ")"), {
-    useNew,
-    parenthesis
-  });
+  return inspectConstructor(`Date(${dateSource})`, { useNew, parenthesis });
 };
 
-const inspectFunction = (value, {
-  showFunctionBody,
-  parenthesis,
-  depth
-}) => {
+const inspectFunction = (
+  value,
+  { showFunctionBody, parenthesis, depth },
+) => {
   let functionSource;
   if (showFunctionBody) {
     functionSource = value.toString();
   } else {
     const isArrowFunction = value.prototype === undefined;
-    const head = isArrowFunction ? "() =>" : "function ".concat(depth === 0 ? value.name : "", "()");
-    functionSource = "".concat(head, " {/* hidden */}");
+    const head = isArrowFunction
+      ? "() =>"
+      : `function ${depth === 0 ? value.name : ""}()`;
+    functionSource = `${head} {/* hidden */}`;
   }
+
   if (parenthesis) {
-    return "(".concat(functionSource, ")");
+    return `(${functionSource})`;
   }
   return functionSource;
 };
 
-const inspectNumberObject = (value, {
-  nestedHumanize,
-  useNew,
-  parenthesis
-}) => {
+const inspectNumberObject = (
+  value,
+  { nestedHumanize, useNew, parenthesis },
+) => {
   const numberSource = nestedHumanize(value.valueOf());
-  return inspectConstructor("Number(".concat(numberSource, ")"), {
-    useNew,
-    parenthesis
-  });
+  return inspectConstructor(`Number(${numberSource})`, { useNew, parenthesis });
 };
 
-const inspectObject = (value, {
-  nestedHumanize,
-  seen = [],
-  depth,
-  indentUsingTab,
-  indentSize,
-  objectConstructor,
-  parenthesis,
-  useNew
-}) => {
+const inspectObject = (
+  value,
+  {
+    nestedHumanize,
+    seen = [],
+    depth,
+    indentUsingTab,
+    indentSize,
+    objectConstructor,
+    parenthesis,
+    useNew,
+  },
+) => {
   if (seen.indexOf(value) > -1) return "Symbol.for('circular')";
+
   seen.push(value);
+
   const propertySourceArray = [];
-  Object.getOwnPropertyNames(value).forEach(propertyName => {
+  Object.getOwnPropertyNames(value).forEach((propertyName) => {
     const propertyNameAsNumber = parseInt(propertyName, 10);
-    const propertyNameSource = nestedHumanize(Number.isInteger(propertyNameAsNumber) ? propertyNameAsNumber : propertyName);
+    const propertyNameSource = nestedHumanize(
+      Number.isInteger(propertyNameAsNumber)
+        ? propertyNameAsNumber
+        : propertyName,
+    );
     propertySourceArray.push({
       nameOrSymbolSource: propertyNameSource,
-      valueSource: nestedHumanize(value[propertyName], {
-        seen
-      })
+      valueSource: nestedHumanize(value[propertyName], { seen }),
     });
   });
-  Object.getOwnPropertySymbols(value).forEach(symbol => {
+  Object.getOwnPropertySymbols(value).forEach((symbol) => {
     propertySourceArray.push({
-      nameOrSymbolSource: "[".concat(nestedHumanize(symbol), "]"),
-      valueSource: nestedHumanize(value[symbol], {
-        seen
-      })
+      nameOrSymbolSource: `[${nestedHumanize(symbol)}]`,
+      valueSource: nestedHumanize(value[symbol], { seen }),
     });
   });
+
   let propertiesSource = "";
-  propertySourceArray.forEach(({
-    nameOrSymbolSource,
-    valueSource
-  }, index) => {
+  propertySourceArray.forEach(({ nameOrSymbolSource, valueSource }, index) => {
     if (index === 0) {
-      propertiesSource += "".concat(nameOrSymbolSource, ": ").concat(valueSource);
+      propertiesSource += `${nameOrSymbolSource}: ${valueSource}`;
     } else {
-      propertiesSource += ",".concat(preNewLineAndIndentation("".concat(nameOrSymbolSource, ": ").concat(valueSource), {
-        depth,
-        indentUsingTab,
-        indentSize
-      }));
+      propertiesSource += `,${preNewLineAndIndentation(
+        `${nameOrSymbolSource}: ${valueSource}`,
+        {
+          depth,
+          indentUsingTab,
+          indentSize,
+        },
+      )}`;
     }
   });
+
   let objectSource;
   if (propertiesSource.length) {
-    objectSource = "".concat(wrapNewLineAndIndentation(propertiesSource, {
+    objectSource = `${wrapNewLineAndIndentation(propertiesSource, {
       depth,
       indentUsingTab,
-      indentSize
-    }));
+      indentSize,
+    })}`;
   } else {
     objectSource = "";
   }
+
   if (objectConstructor) {
-    objectSource = "Object({".concat(objectSource, "})");
+    objectSource = `Object({${objectSource}})`;
   } else {
-    objectSource = "{".concat(objectSource, "}");
+    objectSource = `{${objectSource}}`;
   }
-  return inspectConstructor(objectSource, {
-    parenthesis,
-    useNew
-  });
+
+  return inspectConstructor(objectSource, { parenthesis, useNew });
 };
 
-const inspectRegExp = value => value.toString();
+const inspectRegExp = (value) => value.toString();
 
-const inspectStringObject = (value, {
-  nestedHumanize,
-  useNew,
-  parenthesis
-}) => {
+const inspectStringObject = (
+  value,
+  { nestedHumanize, useNew, parenthesis },
+) => {
   const stringSource = nestedHumanize(value.valueOf());
-  return inspectConstructor("String(".concat(stringSource, ")"), {
-    useNew,
-    parenthesis
-  });
+
+  return inspectConstructor(`String(${stringSource})`, { useNew, parenthesis });
 };
 
 // tslint:disable:ordered-imports
 
-const humanize = (value, {
-  parenthesis = false,
-  quote = "auto",
-  canUseTemplateString = true,
-  useNew = false,
-  objectConstructor = false,
-  showFunctionBody = false,
-  indentUsingTab = false,
-  indentSize = 2,
-  numericSeparator = true,
-  preserveLineBreaks = false
-} = {}) => {
+
+const humanize = (
+  value,
+  {
+    parenthesis = false,
+    quote = "auto",
+    canUseTemplateString = true,
+    useNew = false,
+    objectConstructor = false,
+    showFunctionBody = false,
+    indentUsingTab = false,
+    indentSize = 2,
+    numericSeparator = true,
+    preserveLineBreaks = false,
+  } = {},
+) => {
   const scopedHumanize = (scopedValue, scopedOptions) => {
     const options = {
       ...scopedOptions,
@@ -796,12 +804,13 @@ const humanize = (value, {
         return scopedHumanize(nestedValue, {
           ...scopedOptions,
           depth: scopedOptions.depth + 1,
-          ...nestedOptions
+          ...nestedOptions,
         });
-      }
+      },
     };
     return humanizeValue(scopedValue, options);
   };
+
   return scopedHumanize(value, {
     parenthesis,
     quote,
@@ -813,10 +822,12 @@ const humanize = (value, {
     indentSize,
     numericSeparator,
     preserveLineBreaks,
-    depth: 0
+    depth: 0,
   });
 };
+
 const humanizeMethodSymbol = Symbol.for("inspect");
+
 const humanizeValue = (value, options) => {
   const customHumanize = value && value[humanizeMethodSymbol];
   if (customHumanize) {
@@ -832,12 +843,16 @@ const humanizeValue = (value, options) => {
   if (compositeStringifier) {
     return compositeStringifier(value, options);
   }
-  return inspectConstructor("".concat(compositeType, "(").concat(inspectObject(value, options), ")"), {
-    ...options,
-    parenthesis: false
-  });
+  return inspectConstructor(
+    `${compositeType}(${inspectObject(value, options)})`,
+    {
+      ...options,
+      parenthesis: false,
+    },
+  );
 };
-const primitiveTypeFromValue = value => {
+
+const primitiveTypeFromValue = (value) => {
   if (value === null) {
     return "null";
   }
@@ -854,9 +869,9 @@ const primitiveStringifiers = {
   string: inspectString,
   symbol: inspectSymbol,
   undefined: inspectUndefined,
-  bigint: inspectBigInt
+  bigint: inspectBigInt,
 };
-const compositeTypeFromObject = object => {
+const compositeTypeFromObject = (object) => {
   if (typeof object === "object" && Object.getPrototypeOf(object) === null) {
     return "Object";
   }
@@ -872,9 +887,8 @@ const compositeTypeFromObject = object => {
   }
   return tagName;
 };
-const {
-  toString
-} = Object.prototype;
+const { toString } = Object.prototype;
+
 const compositeStringifiers = {
   Array: inspectArray,
   BigInt: inspectBigIntObject,
@@ -885,40 +899,45 @@ const compositeStringifiers = {
   Number: inspectNumberObject,
   Object: inspectObject,
   RegExp: inspectRegExp,
-  String: inspectStringObject
+  String: inspectStringObject,
 };
 
-const getPrecision = number => {
+const getPrecision = (number) => {
   if (Math.floor(number) === number) return 0;
   const [, decimals] = number.toString().split(".");
   return decimals.length || 0;
 };
-const setRoundedPrecision = (number, {
-  decimals = 1,
-  decimalsWhenSmall = decimals
-} = {}) => {
+
+const setRoundedPrecision = (
+  number,
+  { decimals = 1, decimalsWhenSmall = decimals } = {},
+) => {
   return setDecimalsPrecision(number, {
     decimals,
     decimalsWhenSmall,
-    transform: Math.round
+    transform: Math.round,
   });
 };
-const setPrecision = (number, {
-  decimals = 1,
-  decimalsWhenSmall = decimals
-} = {}) => {
+
+const setPrecision = (
+  number,
+  { decimals = 1, decimalsWhenSmall = decimals } = {},
+) => {
   return setDecimalsPrecision(number, {
     decimals,
     decimalsWhenSmall,
-    transform: parseInt
+    transform: parseInt,
   });
 };
-const setDecimalsPrecision = (number, {
-  transform,
-  decimals,
-  // max decimals for number in [-Infinity, -1[]1, Infinity]
-  decimalsWhenSmall // max decimals for number in [-1,1]
-} = {}) => {
+
+const setDecimalsPrecision = (
+  number,
+  {
+    transform,
+    decimals, // max decimals for number in [-Infinity, -1[]1, Infinity]
+    decimalsWhenSmall, // max decimals for number in [-1,1]
+  } = {},
+) => {
   if (number === 0) {
     return 0;
   }
@@ -957,35 +976,34 @@ const setDecimalsPrecision = (number, {
 //   return numberTruncated
 // }
 
-const humanizeEllapsedTime = (ms, {
-  short
-} = {}) => {
+const humanizeEllapsedTime = (ms, { short } = {}) => {
   if (ms < 1000) {
     return short ? "0s" : "0 second";
   }
-  const {
-    primary,
-    remaining
-  } = parseMs(ms);
+  const { primary, remaining } = parseMs(ms);
   if (!remaining) {
     return inspectEllapsedUnit(primary, short);
   }
-  return "".concat(inspectEllapsedUnit(primary, short), " and ").concat(inspectEllapsedUnit(remaining, short));
+  return `${inspectEllapsedUnit(primary, short)} and ${inspectEllapsedUnit(
+    remaining,
+    short,
+  )}`;
 };
 const inspectEllapsedUnit = (unit, short) => {
-  const count = unit.name === "second" ? Math.floor(unit.count) : Math.round(unit.count);
+  const count =
+    unit.name === "second" ? Math.floor(unit.count) : Math.round(unit.count);
   let name = unit.name;
   if (short) {
     name = unitShort[name];
     if (count <= 1) {
-      return "".concat(count).concat(name);
+      return `${count}${name}`;
     }
-    return "".concat(count).concat(name, "s");
+    return `${count}${name}s`;
   }
   if (count <= 1) {
-    return "".concat(count, " ").concat(name);
+    return `${count} ${name}`;
   }
-  return "".concat(count, " ").concat(name, "s");
+  return `${count} ${name}s`;
 };
 const unitShort = {
   year: "y",
@@ -994,13 +1012,13 @@ const unitShort = {
   day: "d",
   hour: "h",
   minute: "m",
-  second: "s"
+  second: "s",
 };
-const humanizeDuration = (ms, {
-  short,
-  rounded = true,
-  decimals
-} = {}) => {
+
+const humanizeDuration = (
+  ms,
+  { short, rounded = true, decimals } = {},
+) => {
   // ignore ms below meaningfulMs so that:
   // humanizeDuration(0.5) -> "0 second"
   // humanizeDuration(1.1) -> "0.001 second" (and not "0.0011 second")
@@ -1011,62 +1029,55 @@ const humanizeDuration = (ms, {
   if (ms < 1) {
     return short ? "0s" : "0 second";
   }
-  const {
-    primary,
-    remaining
-  } = parseMs(ms);
+  const { primary, remaining } = parseMs(ms);
   if (!remaining) {
     return humanizeDurationUnit(primary, {
-      decimals: decimals === undefined ? primary.name === "second" ? 1 : 0 : decimals,
+      decimals:
+        decimals === undefined ? (primary.name === "second" ? 1 : 0) : decimals,
       short,
-      rounded
+      rounded,
     });
   }
-  return "".concat(humanizeDurationUnit(primary, {
+  return `${humanizeDurationUnit(primary, {
     decimals: decimals === undefined ? 0 : decimals,
     short,
-    rounded
-  }), " and ").concat(humanizeDurationUnit(remaining, {
+    rounded,
+  })} and ${humanizeDurationUnit(remaining, {
     decimals: decimals === undefined ? 0 : decimals,
     short,
-    rounded
-  }));
+    rounded,
+  })}`;
 };
-const humanizeDurationUnit = (unit, {
-  decimals,
-  short,
-  rounded
-}) => {
-  const count = rounded ? setRoundedPrecision(unit.count, {
-    decimals
-  }) : setPrecision(unit.count, {
-    decimals
-  });
+const humanizeDurationUnit = (unit, { decimals, short, rounded }) => {
+  const count = rounded
+    ? setRoundedPrecision(unit.count, { decimals })
+    : setPrecision(unit.count, { decimals });
   let name = unit.name;
   if (short) {
     name = unitShort[name];
-    return "".concat(count).concat(name);
+    return `${count}${name}`;
   }
   if (count <= 1) {
-    return "".concat(count, " ").concat(name);
+    return `${count} ${name}`;
   }
-  return "".concat(count, " ").concat(name, "s");
+  return `${count} ${name}s`;
 };
 const MS_PER_UNITS = {
-  year: 31557600000,
-  month: 2629000000,
-  week: 604800000,
-  day: 86400000,
-  hour: 3600000,
-  minute: 60000,
-  second: 1000
+  year: 31_557_600_000,
+  month: 2_629_000_000,
+  week: 604_800_000,
+  day: 86_400_000,
+  hour: 3_600_000,
+  minute: 60_000,
+  second: 1000,
 };
-const parseMs = ms => {
+
+const parseMs = (ms) => {
   const unitNames = Object.keys(MS_PER_UNITS);
   const smallestUnitName = unitNames[unitNames.length - 1];
   let firstUnitName = smallestUnitName;
   let firstUnitCount = ms / MS_PER_UNITS[smallestUnitName];
-  const firstUnitIndex = unitNames.findIndex(unitName => {
+  const firstUnitIndex = unitNames.findIndex((unitName) => {
     if (unitName === smallestUnitName) {
       return false;
     }
@@ -1083,8 +1094,8 @@ const parseMs = ms => {
     return {
       primary: {
         name: firstUnitName,
-        count: firstUnitCount
-      }
+        count: firstUnitCount,
+      },
     };
   }
   const remainingMs = ms - firstUnitCount * MS_PER_UNITS[firstUnitName];
@@ -1098,51 +1109,42 @@ const parseMs = ms => {
     return {
       primary: {
         name: firstUnitName,
-        count: firstUnitCount
-      }
+        count: firstUnitCount,
+      },
     };
   }
   // - 1 year and 1 month is great
   return {
     primary: {
       name: firstUnitName,
-      count: firstUnitCount
+      count: firstUnitCount,
     },
     remaining: {
       name: remainingUnitName,
-      count: remainingUnitCount
-    }
+      count: remainingUnitCount,
+    },
   };
 };
 
-const humanizeFileSize = (numberOfBytes, {
-  decimals,
-  short
-} = {}) => {
-  return inspectBytes(numberOfBytes, {
-    decimals,
-    short
-  });
+const humanizeFileSize = (numberOfBytes, { decimals, short } = {}) => {
+  return inspectBytes(numberOfBytes, { decimals, short });
 };
-const humanizeMemory = (metricValue, {
-  decimals,
-  short
-} = {}) => {
-  return inspectBytes(metricValue, {
-    decimals,
-    fixedDecimals: true,
-    short
-  });
+
+const humanizeMemory = (metricValue, { decimals, short } = {}) => {
+  return inspectBytes(metricValue, { decimals, fixedDecimals: true, short });
 };
-const inspectBytes = (number, {
-  fixedDecimals = false,
-  decimals,
-  short
-} = {}) => {
+
+const inspectBytes = (
+  number,
+  { fixedDecimals = false, decimals, short } = {},
+) => {
   if (number === 0) {
-    return "0 B";
+    return `0 B`;
   }
-  const exponent = Math.min(Math.floor(Math.log10(number) / 3), BYTE_UNITS.length - 1);
+  const exponent = Math.min(
+    Math.floor(Math.log10(number) / 3),
+    BYTE_UNITS.length - 1,
+  );
   const unitNumber = number / Math.pow(1000, exponent);
   const unitName = BYTE_UNITS[exponent];
   if (decimals === undefined) {
@@ -1154,41 +1156,43 @@ const inspectBytes = (number, {
   }
   const unitNumberRounded = setRoundedPrecision(unitNumber, {
     decimals,
-    decimalsWhenSmall: 1
+    decimalsWhenSmall: 1,
   });
-  const value = fixedDecimals ? unitNumberRounded.toFixed(decimals) : unitNumberRounded;
+  const value = fixedDecimals
+    ? unitNumberRounded.toFixed(decimals)
+    : unitNumberRounded;
   if (short) {
-    return "".concat(value).concat(unitName);
+    return `${value}${unitName}`;
   }
-  return "".concat(value, " ").concat(unitName);
+  return `${value} ${unitName}`;
 };
+
 const BYTE_UNITS = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
 
-const distributePercentages = (namedNumbers, {
-  maxPrecisionHint = 2
-} = {}) => {
+const distributePercentages = (
+  namedNumbers,
+  { maxPrecisionHint = 2 } = {},
+) => {
   const numberNames = Object.keys(namedNumbers);
   if (numberNames.length === 0) {
     return {};
   }
   if (numberNames.length === 1) {
     const firstNumberName = numberNames[0];
-    return {
-      [firstNumberName]: "100 %"
-    };
+    return { [firstNumberName]: "100 %" };
   }
-  const numbers = numberNames.map(name => namedNumbers[name]);
+  const numbers = numberNames.map((name) => namedNumbers[name]);
   const total = numbers.reduce((sum, value) => sum + value, 0);
-  const ratios = numbers.map(number => number / total);
+  const ratios = numbers.map((number) => number / total);
   const percentages = {};
   ratios.pop();
   ratios.forEach((ratio, index) => {
     const percentage = ratio * 100;
     percentages[numberNames[index]] = percentage;
   });
-  const lowestPercentage = 1 / Math.pow(10, maxPrecisionHint) * 100;
+  const lowestPercentage = (1 / Math.pow(10, maxPrecisionHint)) * 100;
   let precision = 0;
-  Object.keys(percentages).forEach(name => {
+  Object.keys(percentages).forEach((name) => {
     const percentage = percentages[name];
     if (percentage < lowestPercentage) {
       // check the amout of meaningful decimals
@@ -1201,33 +1205,36 @@ const distributePercentages = (namedNumbers, {
     }
   });
   let remainingPercentage = 100;
-  Object.keys(percentages).forEach(name => {
+
+  Object.keys(percentages).forEach((name) => {
     const percentage = percentages[name];
     const percentageAllocated = setRoundedPrecision(percentage, {
-      decimals: precision
+      decimals: precision,
     });
     remainingPercentage -= percentageAllocated;
     percentages[name] = percentageAllocated;
   });
   const lastName = numberNames[numberNames.length - 1];
   percentages[lastName] = setRoundedPrecision(remainingPercentage, {
-    decimals: precision
+    decimals: precision,
   });
   return percentages;
 };
 
-const formatDefault = v => v;
+const formatDefault = (v) => v;
+
 const generateContentFrame = ({
   content,
   line,
   column,
+
   linesAbove = 3,
   linesBelow = 0,
   lineMaxWidth = 120,
   lineNumbersOnTheLeft = true,
   lineMarker = true,
   columnMarker = true,
-  format = formatDefault
+  format = formatDefault,
 } = {}) => {
   const lineStrings = content.split(/\r?\n/);
   if (line === 0) line = 1;
@@ -1236,6 +1243,7 @@ const generateContentFrame = ({
     column = 1;
   }
   if (column === 0) column = 1;
+
   let lineStartIndex = line - 1 - linesAbove;
   if (lineStartIndex < 0) {
     lineStartIndex = 0;
@@ -1252,6 +1260,7 @@ const generateContentFrame = ({
     lineMarker = false; // useless because last line
   }
   let lineIndex = lineStartIndex;
+
   let columnsBefore;
   let columnsAfter;
   if (column > lineMaxWidth) {
@@ -1262,6 +1271,7 @@ const generateContentFrame = ({
     columnsAfter = lineMaxWidth;
   }
   let columnMarkerIndex = column - 1 - columnsBefore;
+
   let source = "";
   while (lineIndex <= lineEndIndex) {
     const lineString = lineStrings[lineIndex];
@@ -1269,18 +1279,19 @@ const generateContentFrame = ({
     const isLastLine = lineIndex === lineEndIndex;
     const isMainLine = lineNumber === line;
     lineIndex++;
+
     {
       if (lineMarker) {
         if (isMainLine) {
-          source += "".concat(format(">", "marker_line"), " ");
+          source += `${format(">", "marker_line")} `;
         } else {
           source += "  ";
         }
       }
       if (lineNumbersOnTheLeft) {
         // fill with spaces to ensure if line moves from 7,8,9 to 10 the display is still great
-        const asideSource = "".concat(fillLeft(lineNumber, lineEndIndex + 1), " |");
-        source += "".concat(format(asideSource, "line_number_aside"), " ");
+        const asideSource = `${fillLeft(lineNumber, lineEndIndex + 1)} |`;
+        source += `${format(asideSource, "line_number_aside")} `;
       }
     }
     {
@@ -1289,17 +1300,18 @@ const generateContentFrame = ({
         end: columnsAfter,
         prefix: "…",
         suffix: "…",
-        format
+        format,
       });
     }
     {
       if (columnMarker && isMainLine) {
-        source += "\n";
+        source += `\n`;
         if (lineMarker) {
           source += "  ";
         }
         if (lineNumbersOnTheLeft) {
-          const asideSpaces = "".concat(fillLeft(lineNumber, lineEndIndex + 1), " | ").length;
+          const asideSpaces = `${fillLeft(lineNumber, lineEndIndex + 1)} | `
+            .length;
           source += " ".repeat(asideSpaces);
         }
         source += " ".repeat(columnMarkerIndex);
@@ -1312,24 +1324,23 @@ const generateContentFrame = ({
   }
   return source;
 };
-const truncateLine = (line, {
-  start,
-  end,
-  prefix,
-  suffix,
-  format
-}) => {
+
+const truncateLine = (line, { start, end, prefix, suffix, format }) => {
   const lastIndex = line.length;
+
   if (line.length === 0) {
     // don't show any ellipsis if the line is empty
     // because it's not truncated in that case
     return "";
   }
+
   const startTruncated = start > 0;
   const endTruncated = lastIndex > end;
+
   let from = startTruncated ? start + prefix.length : start;
   let to = endTruncated ? end - suffix.length : end;
   if (to > lastIndex) to = lastIndex;
+
   if (start >= lastIndex || from === to) {
     return "";
   }
@@ -1342,16 +1353,20 @@ const truncateLine = (line, {
     return "";
   }
   if (startTruncated && endTruncated) {
-    return "".concat(format(prefix, "marker_overflow_left")).concat(result).concat(format(suffix, "marker_overflow_right"));
+    return `${format(prefix, "marker_overflow_left")}${result}${format(
+      suffix,
+      "marker_overflow_right",
+    )}`;
   }
   if (startTruncated) {
-    return "".concat(format(prefix, "marker_overflow_left")).concat(result);
+    return `${format(prefix, "marker_overflow_left")}${result}`;
   }
   if (endTruncated) {
-    return "".concat(result).concat(format(suffix, "marker_overflow_right"));
+    return `${result}${format(suffix, "marker_overflow_right")}`;
   }
   return result;
 };
+
 const fillLeft = (value, biggestValue, char = " ") => {
   const width = String(value).length;
   const biggestWidth = String(biggestValue).length;
@@ -1368,8 +1383,9 @@ const createCallOrderer = () => {
   const queue = [];
   const callWhenPreviousExecutionAreDone = (executionIndex, callback) => {
     if (queue[executionIndex]) {
-      throw new Error("".concat(executionIndex, " already used"));
+      throw new Error(`${executionIndex} already used`);
     }
+
     let allBeforeAreDone = true;
     if (executionIndex > 0) {
       let beforeIndex = executionIndex - 1;
@@ -1403,26 +1419,43 @@ const createCallOrderer = () => {
   return callWhenPreviousExecutionAreDone;
 };
 
-const errorToMarkdown = error => {
-  const errorIsAPrimitive = error === null || typeof error !== "object" && typeof error !== "function";
+const errorToMarkdown = (error) => {
+  const errorIsAPrimitive =
+    error === null ||
+    (typeof error !== "object" && typeof error !== "function");
+
   if (errorIsAPrimitive) {
-    return "```js\n".concat(error, "\n```");
+    return `\`\`\`js
+${error}
+\`\`\``;
   }
-  return "```\n".concat(error.stack, "\n```");
+  return `\`\`\`
+${error.stack}
+\`\`\``;
 };
 
-const errorToHTML = error => {
-  const errorIsAPrimitive = error === null || typeof error !== "object" && typeof error !== "function";
+const errorToHTML = (error) => {
+  const errorIsAPrimitive =
+    error === null ||
+    (typeof error !== "object" && typeof error !== "function");
+
   if (errorIsAPrimitive) {
     if (typeof error === "string") {
-      return "<pre>".concat(escapeHtml(error), "</pre>");
+      return `<pre>${escapeHtml(error)}</pre>`;
     }
-    return "<pre>".concat(JSON.stringify(error, null, "  "), "</pre>");
+    return `<pre>${JSON.stringify(error, null, "  ")}</pre>`;
   }
-  return "<pre>".concat(escapeHtml(error.stack), "</pre>");
+  return `<pre>${escapeHtml(error.stack)}</pre>`;
 };
-const escapeHtml = string => {
-  return string.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+
+const escapeHtml = (string) => {
+  return string
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 };
 
 export { ANSI, UNICODE, createCallOrderer, createDetailedMessage, distributePercentages, errorToHTML, errorToMarkdown, generateContentFrame, humanize, humanizeDuration, humanizeEllapsedTime, humanizeFileSize, humanizeMemory, humanizeMethodSymbol, preNewLineAndIndentation, prefixFirstAndIndentRemainingLines, wrapNewLineAndIndentation };
+//# sourceMappingURL=jsenv_humanize_browser.js.map

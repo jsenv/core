@@ -5,17 +5,14 @@ await build({
   buildDirectoryUrl: import.meta.resolve("../dist/"),
   entryPoints: {
     "./main_node.js": {
+      mode: "package",
       buildRelativeUrl: "./node/jsenv_humanize_node.js",
       runtimeCompat: { node: "20" },
     },
     "./main_browser.js": {
+      mode: "package",
       buildRelativeUrl: "./browser/jsenv_humanize_browser.js",
-      runtimeCompat: {
-        chrome: "64",
-        edge: "79",
-        firefox: "67",
-        safari: "11.3",
-      },
+      runtimeCompat: { chrome: "90" },
       minification: false,
       versioning: false,
     },
