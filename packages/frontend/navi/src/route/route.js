@@ -341,7 +341,11 @@ const createRoute = (urlPatternInput) => {
     let relativeUrl = urlPatternInput;
     let hasRawUrlPartWithInvalidChars = false;
 
-    const encode = (value) => {
+    // Encode parameter values for URL usage, with special handling for raw URL parts.
+    // When a parameter is wrapped with rawUrlPart(), it bypasses encoding and is
+    // inserted as-is into the URL. This allows including pre-encoded values or
+    // special characters that should not be percent-encoded.
+    const encodeParamValue = (value) => {
       if (value && value[rawUrlPartSymbol]) {
         const rawValue = value.value;
         // Check if raw value contains invalid URL characters
@@ -359,7 +363,7 @@ const createRoute = (urlPatternInput) => {
     // Replace named parameters (:param and {param})
     for (const key of keys) {
       const value = params[key];
-      const encodedValue = encode(value);
+      const encodedValue = encodeParamValue(value);
       const beforeReplace = relativeUrl;
       relativeUrl = relativeUrl.replace(`:${key}`, encodedValue);
       relativeUrl = relativeUrl.replace(`{${key}}`, encodedValue);
@@ -383,7 +387,7 @@ const createRoute = (urlPatternInput) => {
         if (paramValue) {
           extraParamSet.delete(paramKey);
         }
-        const replacement = paramValue ? encode(paramValue) : "*";
+        const replacement = paramValue ? encodeParamValue(paramValue) : "*";
         wildcardIndex++;
         return replacement;
       });
@@ -392,15 +396,17 @@ const createRoute = (urlPatternInput) => {
     // Add remaining parameters as search params
     if (extraParamSet.size > 0) {
       if (extraParamEffect === "inject_as_search_param") {
-        const searchParams = new URLSearchParams();
+        const searchParamPairs = [];
         for (const key of extraParamSet) {
           const value = params[key];
           if (value !== undefined && value !== null) {
-            searchParams.append(key, value);
+            const encodedKey = encodeURIComponent(key);
+            const encodedValue = encodeParamValue(value);
+            searchParamPairs.push(`${encodedKey}=${encodedValue}`);
           }
         }
-        const searchString = searchParams.toString();
-        if (searchString) {
+        if (searchParamPairs.length > 0) {
+          const searchString = searchParamPairs.join("&");
           relativeUrl += (relativeUrl.includes("?") ? "&" : "?") + searchString;
         }
       } else if (extraParamEffect === "warn") {
@@ -416,6 +422,25 @@ const createRoute = (urlPatternInput) => {
       hasRawUrlPartWithInvalidChars,
     };
   };
+
+  /**
+   * Builds a complete URL for this route with the given parameters.
+   *
+   * Takes parameters and substitutes them into the route's URL pattern,
+   * automatically URL-encoding values unless wrapped with rawUrlPart().
+   * Extra parameters not in the pattern are added as search parameters.
+   *
+   * @param {Object} params - Parameters to substitute into the URL pattern
+   * @returns {string} Complete URL with base URL and encoded parameters
+   *
+   * @example
+   * // For a route with pattern "/items/:id"
+   * // Normal parameter encoding
+   * route.buildUrl({ id: "hello world" }) // → "https://example.com/items/hello%20world"
+   * // Raw parameter (no encoding)
+   * route.buildUrl({ id: rawUrlPart("hello world") }) // → "https://example.com/items/hello world"
+   *
+   */
   const buildUrl = (params = {}) => {
     const { relativeUrl, hasRawUrlPartWithInvalidChars } =
       buildRelativeUrl(params);
