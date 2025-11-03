@@ -31,7 +31,7 @@ export const Routes = ({ children }) => {
 };
 
 const SlotContext = createContext(null);
-export const Route = ({ route, element, children }) => {
+export const Route = ({ element, route, fallback, children }) => {
   const forceRender = useForceRender();
   const hasDiscoveredRef = useRef(false);
   const activeInfoRef = useRef(null);
@@ -39,8 +39,9 @@ export const Route = ({ route, element, children }) => {
   if (!hasDiscoveredRef.current) {
     return (
       <ActiveRouteManager
-        route={route}
         element={element}
+        route={route}
+        fallback={fallback}
         onActiveInfoChange={(activeInfo) => {
           hasDiscoveredRef.current = true;
           activeInfoRef.current = activeInfo;
@@ -66,28 +67,35 @@ const RegisterChildRouteContext = createContext(null);
 So no need to cleanup things or whatever we know and ensure that 
 it's executed once for the entier app lifecycle */
 const ActiveRouteManager = ({
-  route,
   element,
+  route,
+  fallback,
   onActiveInfoChange,
   children,
 }) => {
   const registerChildRouteFromContext = useContext(RegisterChildRouteContext);
   const elementId = getElementId(element);
   const candidateSet = new Set();
-  const registerChildRoute = (childRoute, ChildActiveElement) => {
+  const registerChildRoute = (
+    ChildActiveElement,
+    childRoute,
+    childFallback,
+  ) => {
     const childElementId = getElementId(ChildActiveElement);
     console.debug(`${elementId}.registerChildRoute(${childElementId})`);
     candidateSet.add({
-      route: childRoute,
       ActiveElement: ChildActiveElement,
+      route: childRoute,
+      fallback: childFallback,
     });
   };
   console.group(`👶 Discovery of ${elementId}`);
   useLayoutEffect(() => {
     console.groupEnd();
     initRouteObserver({
-      route,
       element,
+      route,
+      fallback,
       candidateSet,
       onActiveInfoChange,
       registerChildRouteFromContext,
@@ -102,8 +110,9 @@ const ActiveRouteManager = ({
 };
 
 const initRouteObserver = ({
-  route,
   element,
+  route,
+  fallback,
   candidateSet,
   onActiveInfoChange,
   registerChildRouteFromContext,
@@ -124,6 +133,21 @@ const initRouteObserver = ({
     toString: () => `composite(${candidateSet.size} candidates)`,
   };
 
+  const findActiveCandidate = () => {
+    let fallbackCandidate = null;
+    for (const candidate of candidateSet) {
+      if (candidate.route.active) {
+        return {
+          ChildActiveElement: candidate.ActiveElement,
+          route,
+        };
+      }
+      if (candidate.fallback) {
+        fallbackCandidate = candidate;
+      }
+    }
+    return fallbackCandidate;
+  };
   const getActiveInfo = route
     ? () => {
         if (!route.active) {
@@ -132,28 +156,20 @@ const initRouteObserver = ({
         }
         // we have a route and it is active (it matches)
         // we search the first active child to put it in the slot
-        for (const candidate of candidateSet) {
-          if (candidate.route.active) {
-            return {
-              route,
-              ChildActiveElement: candidate.ActiveElement,
-            };
-          }
+        const activeCandidate = findActiveCandidate();
+        if (activeCandidate) {
+          return activeCandidate;
         }
         return {
+          ChildActiveElement: null,
           route,
-          ChildActiveElement: null, // TODO: this is where we'll could put a route with fallback/otherwise property later on
         };
       }
     : () => {
         // we don't have a route, do we have an active child?
-        for (const candidate of candidateSet) {
-          if (candidate.route.active) {
-            return {
-              route: candidate.route,
-              ChildActiveElement: candidate.ActiveElement,
-            };
-          }
+        const activeCandidate = findActiveCandidate();
+        if (activeCandidate) {
+          return activeCandidate;
         }
         return null;
       };
@@ -206,7 +222,7 @@ const initRouteObserver = ({
     candidate.route.subscribeStatus(onChange);
   }
   if (registerChildRouteFromContext) {
-    registerChildRouteFromContext(compositeRoute, ActiveElement);
+    registerChildRouteFromContext(ActiveElement, compositeRoute, fallback);
   }
   updateActiveInfo();
 };
