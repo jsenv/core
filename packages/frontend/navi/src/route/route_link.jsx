@@ -1,12 +1,13 @@
+import { Link } from "../components/link/link.jsx";
 import { useRouteStatus } from "./route.js";
 
-export const RouteLink = ({ route, routeParams, children }) => {
+export const RouteLink = ({ route, routeParams, children, ...rest }) => {
   const { active } = useRouteStatus(route);
   const url = route.buildUrl(routeParams);
 
   return (
-    <a href={url} data-active={active ? "" : undefined}>
+    <Link {...rest} href={url} active={active ? "" : undefined}>
       {children}
-    </a>
+    </Link>
   );
 };
