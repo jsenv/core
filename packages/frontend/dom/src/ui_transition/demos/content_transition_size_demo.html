@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
   <head>
-    <title>Smooth height transition demo</title>
+    <title>Content size transition demo</title>
     <style>
       body {
         margin: 0;
@@ -20,9 +20,12 @@
 
       /* The element we'll apply the smooth transition to */
       #dynamic-content {
+        display: flex;
         width: 300px;
         margin: 20px 0;
         padding: 16px;
+        flex-direction: column;
+        align-items: center;
         background: white;
         border: 2px solid #666;
         /* we'll handle height transitions in JS */
@@ -48,7 +51,6 @@
       }
 
       .content {
-        width: 100%;
         background: lightblue;
       }
     </style>
@@ -85,10 +87,14 @@
       const { slot } = initUITransition(dynamicContent.firstElementChild);
 
       document.querySelector("#go_to_a").addEventListener("click", () => {
-        slot.innerHTML = `<div class="content" data-content-key="a">a</div>`;
+        slot.innerHTML = `<div class="content" data-content-key="a">
+          <div width="100%">a</div>
+        </div>`;
       });
       document.querySelector("#go_to_b").addEventListener("click", () => {
-        slot.innerHTML = `<div class="content" style="background-color: green" data-content-key="b">b</div>`;
+        slot.innerHTML = `<div class="content" style="background-color: green" data-content-key="b">
+          <div>b</div>
+        </div>`;
       });
     </script>
   </body>
