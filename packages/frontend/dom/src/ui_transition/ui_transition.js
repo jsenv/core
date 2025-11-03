@@ -50,6 +50,10 @@ import {
 import { createGroupTransitionController } from "../transition/group_transition.js";
 
 import.meta.css = /* css */ `
+  .ui_transition_container[data-transition] {
+    overflow: hidden;
+  }
+
   .ui_transition_container,
   .ui_transition_outer_wrapper,
   .ui_transition_measure_wrapper,
@@ -427,7 +431,6 @@ export const initUITransition = (container) => {
 
       oldChild.setAttribute("data-ui-transition-old", "");
       overlay.appendChild(oldChild);
-      debugger;
       debug(
         "transition",
         `Cloned previous child for ${isPhaseTransition ? "phase" : "content"} transition:`,
@@ -457,11 +460,15 @@ export const initUITransition = (container) => {
       newElement = firstChild ? measureWrapper : null;
     }
 
+    container.setAttribute("data-transition", "");
     return {
       oldChild,
       cleanup,
       oldElement,
       newElement,
+      onTeardown: () => {
+        container.removeAttribute("data-transition");
+      },
     };
   };
 
@@ -889,7 +896,7 @@ export const initUITransition = (container) => {
             }
           }
 
-          activeContentTransition = animateTransition(
+          activeContentTransition = applyTransition(
             transitionController,
             firstChild,
             setupContentTransition,
@@ -1004,7 +1011,7 @@ export const initUITransition = (container) => {
             `Starting phase transition: ${fromPhase} → ${toPhase}`,
           );
 
-          activePhaseTransition = animateTransition(
+          activePhaseTransition = applyTransition(
             transitionController,
             firstChild,
             setupPhaseTransition,
@@ -1116,7 +1123,6 @@ export const initUITransition = (container) => {
     characterData: false,
   });
 
-  // Return API
   return {
     slot,
 
@@ -1161,7 +1167,7 @@ export const initUITransition = (container) => {
   };
 };
 
-const animateTransition = (
+const applyTransition = (
   transitionController,
   newChild,
   setupTransition,
@@ -1185,7 +1191,7 @@ const animateTransition = (
     return null;
   }
 
-  const { cleanup, oldElement, newElement } = setupTransition();
+  const { cleanup, oldElement, newElement, onTeardown } = setupTransition();
   // Use precomputed content key states (expected to be provided by caller)
   const fromContentKey = fromContentKeyState;
   const toContentKey = toContentKeyState;
@@ -1215,6 +1221,7 @@ const animateTransition = (
   if (transitions.length === 0) {
     debug("transition", "No transitions to animate, cleaning up immediately");
     cleanup();
+    onTeardown?.();
     onComplete?.();
     return null;
   }
@@ -1223,6 +1230,7 @@ const animateTransition = (
     onFinish: () => {
       groupTransition.cancel();
       cleanup();
+      onTeardown?.();
       onComplete?.();
     },
   });
