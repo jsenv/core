@@ -21,7 +21,7 @@
  *
  */
 
-import { createPubSub } from "@jsenv/dom";
+import { createPubSub, getElementSignature } from "@jsenv/dom";
 import { signal } from "@preact/signals";
 import { createContext } from "preact";
 import { useContext, useLayoutEffect, useRef } from "preact/hooks";
@@ -81,14 +81,14 @@ const ActiveRouteManager = ({
   children,
 }) => {
   const registerChildRouteFromContext = useContext(RegisterChildRouteContext);
-  const elementId = getElementId(element);
+  const elementId = getElementSignature(element);
   const candidateSet = new Set();
   const registerChildRoute = (
     ChildActiveElement,
     childRoute,
     childFallback,
   ) => {
-    const childElementId = getElementId(ChildActiveElement);
+    const childElementId = getElementSignature(ChildActiveElement);
     console.debug(`${elementId}.registerChildRoute(${childElementId})`);
     candidateSet.add({
       ActiveElement: ChildActiveElement,
@@ -124,9 +124,9 @@ const initRouteObserver = ({
   onActiveInfoChange,
   registerChildRouteFromContext,
 }) => {
-  const elementId = getElementId(element);
+  const elementId = getElementSignature(element);
   const candidateElementIds = Array.from(candidateSet, (c) =>
-    getElementId(c.ActiveElement),
+    getElementSignature(c.ActiveElement),
   ).join(", ");
   console.log(
     `🔍 initRouteObserver ${elementId}, candidates: ${candidateElementIds}`,
@@ -189,7 +189,7 @@ const initRouteObserver = ({
   const ActiveElement = () => {
     const SlotActiveElement = SlotActiveElementSignal.value;
     console.log(
-      `📄 Returning JSX element for ${getElementId(element)} with slot set to ${getElementId(SlotActiveElement)}`,
+      `📄 Returning JSX element for ${getElementSignature(element)} with slot set to ${getElementSignature(SlotActiveElement)}`,
     );
     if (typeof element === "function") {
       const Element = element;
@@ -205,10 +205,10 @@ const initRouteObserver = ({
       </SlotContext.Provider>
     );
   };
-  ActiveElement.id =
+  ActiveElement.underlyingElementId =
     candidateSet.size === 0
-      ? `${getElementId(element)} without slot`
-      : `[${getElementId(element)} with slot one of ${candidateElementIds}]`;
+      ? `${getElementSignature(element)} without slot`
+      : `[${getElementSignature(element)} with slot one of ${candidateElementIds}]`;
 
   const updateActiveInfo = () => {
     const newActiveInfo = getActiveInfo();
@@ -250,27 +250,6 @@ export const RouteSlot = () => {
   if (!SlotElement) {
     return <p>RouteSlot must be used inside a Route</p>;
   }
-  console.log("rendering", getElementId(SlotElement));
   return <SlotElement />;
 };
 Route.Slot = RouteSlot;
-
-// Extract element ID for logging
-const getElementId = (element) => {
-  if (!element) {
-    return String(element);
-  }
-  if (typeof element === "function") {
-    if (element.id) {
-      return element.id;
-    }
-    return "[function]";
-  }
-  if (element?.props?.id) {
-    return element.props.id;
-  }
-  if (element?.type === "div" && element?.props?.children?.[0]) {
-    return element.props.children[0].toString().slice(0, 20);
-  }
-  return "[unknown]";
-};

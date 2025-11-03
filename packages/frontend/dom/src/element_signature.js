@@ -1,34 +1,90 @@
 /**
- * Generates a unique signature for a DOM element that can be used for identification in logs.
+ * Generates a unique signature for various types of elements that can be used for identification in logs.
  *
- * The returned signature is a valid CSS selector that combines the element's tag name,
- * ID (if present), and class names (if present). This makes it easy to copy-paste
- * the signature into browser dev tools to locate the element in the DOM.
+ * This function handles different types of elements and returns an appropriate identifier:
+ * - For DOM elements: Creates a CSS selector using tag name, data-ui-name, ID, classes, or parent hierarchy
+ * - For React/Preact elements (JSX): Returns JSX-like representation with type and props
+ * - For functions: Returns the function's ID property or "[function]"
+ * - For null/undefined: Returns the string representation
  *
- * @param {HTMLElement} element - The DOM element to generate a signature for
- * @returns {string} A CSS selector string in the format "tagname#id.class1.class2"
+ * The returned signature for DOM elements is a valid CSS selector that can be copy-pasted
+ * into browser dev tools to locate the element in the DOM.
+ *
+ * @param {HTMLElement|Object|Function|null|undefined} element - The element to generate a signature for
+ * @returns {string} A unique identifier string in various formats depending on element type
  *
  * @example
- * // For <div id="main" class="container active">
- * getElementSignature(element) // Returns: "div#main.container.active"
+ * // For DOM element with data-ui-name
+ * // <div data-ui-name="header">
+ * getElementSignature(element) // Returns: "div[data-ui-name=\"header\"]"
  *
  * @example
- * // For <button class="btn primary">
+ * // For DOM element with ID
+ * // <div id="main" class="container active">
+ * getElementSignature(element) // Returns: "div#main"
+ *
+ * @example
+ * // For DOM element with classes only
+ * // <button class="btn primary">
  * getElementSignature(element) // Returns: "button.btn.primary"
  *
  * @example
- * // For <span id="label">
- * getElementSignature(element) // Returns: "span#label"
+ * // For DOM element without distinguishing features (uses parent hierarchy)
+ * // <p> inside <section id="content">
+ * getElementSignature(element) // Returns: "section#content > p"
  *
  * @example
- * // For <p> (no id or classes)
- * getElementSignature(element) // Returns: "p"
+ * // For React/Preact element with props
+ * // <MyComponent id="widget" />
+ * getElementSignature(element) // Returns: "<MyComponent id=\"widget\" />"
+ *
+ * @example
+ * // For function with ID
+ * const myFunction = () => {}; myFunction.id = "myHandler";
+ * getElementSignature(myFunction) // Returns: "myHandler"
+ *
+ * @example
+ * // For null/undefined
+ * getElementSignature(null) // Returns: "null"
  */
 export const getElementSignature = (element) => {
+  if (!element) {
+    return String(element);
+  }
+  if (typeof element === "function") {
+    const functionName = element.name;
+    const functionLabel = functionName
+      ? `function ${functionName}`
+      : "function";
+    const underlyingElementId = element.underlyingElementId;
+    if (underlyingElementId) {
+      return `[${functionLabel} for ${underlyingElementId}]`;
+    }
+    return `[${functionLabel}]`;
+  }
+  if (element.props) {
+    const type = element.type;
+    const id = element.props.id;
+    if (id) {
+      return `<${type} id="${id}" />`;
+    }
+    return `<${type} />`;
+  }
+
   const tagName = element.tagName.toLowerCase();
-  const id = element.id ? `#${element.id}` : "";
-  const className = element.className
-    ? `.${element.className.split(" ").join(".")}`
-    : "";
-  return `${tagName}${id}${className}`;
+  const dataUIName = element.getAttribute("data-ui-name");
+  if (dataUIName) {
+    return `${tagName}[data-ui-name="${dataUIName}"]`;
+  }
+  const elementId = element.id;
+  if (elementId) {
+    return `${tagName}#${elementId}`;
+  }
+  const className = element.className;
+  if (className) {
+    return `${tagName}.${className.split(" ").join(".")}`;
+  }
+
+  const parentSignature = getElementSignature(element.parentElement);
+  return `${parentSignature} > ${tagName}`;
 };

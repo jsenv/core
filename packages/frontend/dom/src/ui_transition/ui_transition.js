@@ -41,6 +41,7 @@
  * - Independent content updates in the slot without affecting ongoing animations
  */
 
+import { getElementSignature } from "../element_signature.js";
 import { getHeight } from "../size/get_height.js";
 import { getInnerWidth } from "../size/get_inner_width.js";
 import { getWidth } from "../size/get_width.js";
@@ -461,7 +462,7 @@ export const initUITransition = (container) => {
       debug(
         "transition",
         `Cloned previous child for ${isPhaseTransition ? "phase" : "content"} transition:`,
-        previousChild.getAttribute("data-ui-name") || "unnamed",
+        getElementSignature(previousChild),
       );
       cleanup = () => oldChild.remove();
     } else {
@@ -513,7 +514,7 @@ export const initUITransition = (container) => {
       if (localDebug.transition) {
         const updateLabel =
           childUIName ||
-          (firstChild ? "data-ui-name not specified" : "cleared/empty");
+          (firstChild ? getElementSignature(firstChild) : "cleared/empty");
         console.group(`UI Update: ${updateLabel} (reason: ${reason})`);
       }
 
@@ -1117,7 +1118,7 @@ export const initUITransition = (container) => {
           debug(
             "transition",
             `Attribute change detected: ${attributeName} on`,
-            target.getAttribute("data-ui-name") || "element",
+            getElementSignature(target),
           );
         }
       }
