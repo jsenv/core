@@ -91,7 +91,7 @@ const FormBasic = forwardRef((props, ref) => {
     return { loading };
   }, [loading]);
 
-  const [innerStyle, remainingProps] = withPropsStyle(rest, {
+  const [remainingProps, innerStyle] = withPropsStyle(rest, {
     layout: true,
   });
 

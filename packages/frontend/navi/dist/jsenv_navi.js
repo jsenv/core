@@ -9372,6 +9372,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     display: inline-flex;
     width: fit-content;
     height: fit-content;
+    flex-direction: inherit;
     /* min-width: 100%; */
     /* min-height: 100%; */
     border-radius: inherit;
@@ -14756,7 +14757,7 @@ const FormBasic = forwardRef((props, ref) => {
       loading
     };
   }, [loading]);
-  const [innerStyle, remainingProps] = withPropsStyle(rest, {
+  const [remainingProps, innerStyle] = withPropsStyle(rest, {
     layout: true
   });
   return jsx("form", {
