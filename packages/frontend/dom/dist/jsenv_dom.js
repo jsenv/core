@@ -10287,34 +10287,21 @@ const useResizeStatus = (elementRef, { as = "number" } = {}) => {
 
 installImportMetaCss(import.meta);
 import.meta.css = /* css */ `
-  .ui_transition_container {
-    position: relative;
+  .ui_transition_container,
+  .ui_transition_outer_wrapper,
+  .ui_transition_measure_wrapper,
+  .ui_transition_slot {
     display: inline-flex;
-    flex: 1;
+    width: fit-content;
+    height: fit-content;
   }
 
-  .ui_transition_outer_wrapper {
-    display: inline-flex;
-    flex: 1;
-  }
-
-  .ui_transition_measure_wrapper {
-    display: inline-flex;
-    flex: 1;
-  }
-
+  .ui_transition_container,
   .ui_transition_slot {
     position: relative;
-    display: inline-flex;
-    flex: 1;
   }
 
-  .ui_transition_phase_overlay {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-  }
-
+  .ui_transition_phase_overlay,
   .ui_transition_content_overlay {
     position: absolute;
     inset: 0;

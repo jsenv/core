@@ -13,7 +13,7 @@ import { useConstraints } from "../../validation/hooks/use_constraints.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useRequestedActionStatus } from "../field/use_action_events.js";
 import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
-import { LoadableInlineElement } from "../loader/loader_background.jsx";
+import { LoaderBackground } from "../loader/loader_background.jsx";
 import { withPropsClassName } from "../props_composition/with_props_class_name.js";
 import { withPropsStyle } from "../props_composition/with_props_style.js";
 import {
@@ -121,43 +121,40 @@ const LinkPlain = forwardRef((props, ref) => {
   });
 
   return (
-    <LoadableInlineElement
-      loading={loading}
-      color="light-dark(#355fcc, #3b82f6)"
+    <a
+      {...remainingProps}
+      ref={innerRef}
+      href={href}
+      className={innerClassName}
+      style={innerStyle}
+      aria-busy={loading}
+      inert={disabled}
+      data-disabled={disabled ? "" : undefined}
+      data-readonly={readOnly ? "" : undefined}
+      data-active={active ? "" : undefined}
+      data-visited={visited || isVisited ? "" : undefined}
+      onClick={(e) => {
+        closeValidationMessage(e.target, "click");
+        if (readOnly) {
+          e.preventDefault();
+          return;
+        }
+        onClick?.(e);
+      }}
+      onKeyDown={(e) => {
+        if (spaceToClick && e.key === " ") {
+          e.preventDefault(); // Prevent page scroll
+          if (!readOnly && !disabled) {
+            e.target.click();
+          }
+        }
+        onKeyDown?.(e);
+      }}
     >
-      <a
-        {...remainingProps}
-        ref={innerRef}
-        href={href}
-        className={innerClassName}
-        style={innerStyle}
-        aria-busy={loading}
-        inert={disabled}
-        data-disabled={disabled ? "" : undefined}
-        data-readonly={readOnly ? "" : undefined}
-        data-active={active ? "" : undefined}
-        data-visited={visited || isVisited ? "" : undefined}
-        onClick={(e) => {
-          closeValidationMessage(e.target, "click");
-          if (readOnly) {
-            e.preventDefault();
-            return;
-          }
-          onClick?.(e);
-        }}
-        onKeyDown={(e) => {
-          if (spaceToClick && e.key === " ") {
-            e.preventDefault(); // Prevent page scroll
-            if (!readOnly && !disabled) {
-              e.target.click();
-            }
-          }
-          onKeyDown?.(e);
-        }}
-      >
+      <LoaderBackground loading={loading} color="light-dark(#355fcc, #3b82f6)">
         {children}
-      </a>
-    </LoadableInlineElement>
+      </LoaderBackground>
+    </a>
   );
 });
 const LinkWithSelection = forwardRef((props, ref) => {

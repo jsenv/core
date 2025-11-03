@@ -1,34 +1,26 @@
 /**
  * Required HTML structure for UI transitions with smooth size and phase/content animations:
  *
- * <div class="ui_transition_container"
- *      data-size-transition              <!-- Optional: enable size animations -->
- *      data-size-transition-duration     <!-- Optional: size transition duration, default 300ms -->
- *      data-content-transition           <!-- Content transition type: cross-fade, slide-left -->
- *      data-content-transition-duration  <!-- Content transition duration -->
- *      data-phase-transition             <!-- Phase transition type: cross-fade only -->
- *      data-phase-transition-duration    <!-- Phase transition duration -->
+ * <div
+ *   class="ui_transition_container"   <!-- Main container with relative positioning and overflow hidden -->
+ *   data-size-transition              <!-- Optional: enable size animations -->
+ *   data-size-transition-duration     <!-- Optional: size transition duration, default 300ms -->
+ *   data-content-transition           <!-- Content transition type: cross-fade, slide-left -->
+ *   data-content-transition-duration  <!-- Content transition duration -->
+ *   data-phase-transition             <!-- Phase transition type: cross-fade only -->
+ *   data-phase-transition-duration    <!-- Phase transition duration -->
  * >
- *   <!-- Main container with relative positioning and overflow hidden -->
- *
- *   <div class="ui_transition_outer_wrapper">
- *     <!-- Size animation target: width/height constraints are applied here during transitions -->
- *
- *     <div class="ui_transition_measure_wrapper">
- *       <!-- Content measurement layer: ResizeObserver watches this to detect natural content size changes -->
- *
- *       <div class="ui_transition_slot" data-content-key>
- *         <!-- Content slot: actual content is inserted here via children -->
- *       </div>
- *
- *       <div class="ui_transition_phase_overlay">
- *         <!-- Phase transition overlay: clone old content phase is positioned here for content phase transitions (loading/error) -->
- *       </div>
+ *   <div class="ui_transition_outer_wrapper"> <!-- Size animation target: width/height constraints are applied here during transitions -->
+ *     <div class="ui_transition_measure_wrapper"> <!-- Content measurement layer: ResizeObserver watches this to detect natural content size changes -->
+ *       <div class="ui_transition_slot" data-content-key></div> <!-- Content slot: actual content is here -->
+ *       <div class="ui_transition_phase_overlay"> <!-- Used to transition to new phase: crossfade to new phase -->
+ *         <!-- Clone of ".ui_transition_slot" children for phase transition -->
+ *      </div>
  *     </div>
  *   </div>
  *
- *   <div class="ui_transition_content_overlay">
- *     <!-- Content transition overlay: cloned old content is positioned here for slide/fade animations -->
+ *   <div class="ui_transition_content_overlay"> <!-- Used to transition to new content: crossfade/slide to new content -->
+ *     <!-- Clone of ".ui_transition_slot" children for content transition -->
  *   </div>
  * </div>
  *
@@ -58,34 +50,21 @@ import {
 import { createGroupTransitionController } from "../transition/group_transition.js";
 
 import.meta.css = /* css */ `
-  .ui_transition_container {
-    position: relative;
+  .ui_transition_container,
+  .ui_transition_outer_wrapper,
+  .ui_transition_measure_wrapper,
+  .ui_transition_slot {
     display: inline-flex;
-    flex: 1;
+    width: fit-content;
+    height: fit-content;
   }
 
-  .ui_transition_outer_wrapper {
-    display: inline-flex;
-    flex: 1;
-  }
-
-  .ui_transition_measure_wrapper {
-    display: inline-flex;
-    flex: 1;
-  }
-
+  .ui_transition_container,
   .ui_transition_slot {
     position: relative;
-    display: inline-flex;
-    flex: 1;
   }
 
-  .ui_transition_phase_overlay {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-  }
-
+  .ui_transition_phase_overlay,
   .ui_transition_content_overlay {
     position: absolute;
     inset: 0;

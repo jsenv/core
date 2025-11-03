@@ -24,6 +24,8 @@ import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 import { useContentKey } from "../components/ui_transition.jsx";
 import { useForceRender } from "./use_force_render.js";
 
+const DEBUG = false;
+
 const RootElement = () => {
   return <Route.Slot />;
 };
@@ -84,16 +86,22 @@ const ActiveRouteManager = ({
     childFallback,
   ) => {
     const childElementId = getElementSignature(ChildActiveElement);
-    console.debug(`${elementId}.registerChildRoute(${childElementId})`);
+    if (DEBUG) {
+      console.debug(`${elementId}.registerChildRoute(${childElementId})`);
+    }
     candidateSet.add({
       ActiveElement: ChildActiveElement,
       route: childRoute,
       fallback: childFallback,
     });
   };
-  console.group(`👶 Discovery of ${elementId}`);
+  if (DEBUG) {
+    console.group(`👶 Discovery of ${elementId}`);
+  }
   useLayoutEffect(() => {
-    console.groupEnd();
+    if (DEBUG) {
+      console.groupEnd();
+    }
     initRouteObserver({
       element,
       route,
@@ -123,9 +131,11 @@ const initRouteObserver = ({
   const candidateElementIds = Array.from(candidateSet, (c) =>
     getElementSignature(c.ActiveElement),
   ).join(", ");
-  console.log(
-    `🔍 initRouteObserver ${elementId}, candidates: ${candidateElementIds}`,
-  );
+  if (DEBUG) {
+    console.log(
+      `🔍 initRouteObserver ${elementId}, candidates: ${candidateElementIds}`,
+    );
+  }
   const [publishCompositeStatus, subscribeCompositeStatus] = createPubSub();
   const compositeRoute = {
     urlPattern: `composite(${candidateElementIds})`,
@@ -183,11 +193,7 @@ const initRouteObserver = ({
   const SlotActiveElementSignal = signal();
   const ActiveElement = () => {
     useContentKey(activeRouteSignal.value.urlPattern);
-
     const SlotActiveElement = SlotActiveElementSignal.value;
-    console.log(
-      `📄 Returning JSX element for ${getElementSignature(element)} with slot set to ${getElementSignature(SlotActiveElement)}`,
-    );
     if (typeof element === "function") {
       const Element = element;
       return (

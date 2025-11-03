@@ -8765,20 +8765,17 @@ const ActiveRouteManager = ({
   children
 }) => {
   const registerChildRouteFromContext = useContext(RegisterChildRouteContext);
-  const elementId = getElementSignature(element);
+  getElementSignature(element);
   const candidateSet = new Set();
   const registerChildRoute = (ChildActiveElement, childRoute, childFallback) => {
-    const childElementId = getElementSignature(ChildActiveElement);
-    console.debug(`${elementId}.registerChildRoute(${childElementId})`);
+    getElementSignature(ChildActiveElement);
     candidateSet.add({
       ActiveElement: ChildActiveElement,
       route: childRoute,
       fallback: childFallback
     });
   };
-  console.group(`👶 Discovery of ${elementId}`);
   useLayoutEffect(() => {
-    console.groupEnd();
     initRouteObserver({
       element,
       route,
@@ -8801,9 +8798,8 @@ const initRouteObserver = ({
   onActiveInfoChange,
   registerChildRouteFromContext
 }) => {
-  const elementId = getElementSignature(element);
+  getElementSignature(element);
   const candidateElementIds = Array.from(candidateSet, c => getElementSignature(c.ActiveElement)).join(", ");
-  console.log(`🔍 initRouteObserver ${elementId}, candidates: ${candidateElementIds}`);
   const [publishCompositeStatus, subscribeCompositeStatus] = createPubSub();
   const compositeRoute = {
     urlPattern: `composite(${candidateElementIds})`,
@@ -8858,7 +8854,6 @@ const initRouteObserver = ({
   const ActiveElement = () => {
     useContentKey(activeRouteSignal.value.urlPattern);
     const SlotActiveElement = SlotActiveElementSignal.value;
-    console.log(`📄 Returning JSX element for ${getElementSignature(element)} with slot set to ${getElementSignature(SlotActiveElement)}`);
     if (typeof element === "function") {
       const Element = element;
       return jsx(SlotContext.Provider, {
@@ -11530,38 +11525,38 @@ const LinkPlain = forwardRef((props, ref) => {
     layout: true,
     typo: true
   });
-  return jsx(LoadableInlineElement, {
-    loading: loading,
-    color: "light-dark(#355fcc, #3b82f6)",
-    children: jsx("a", {
-      ...remainingProps,
-      ref: innerRef,
-      href: href,
-      className: innerClassName,
-      style: innerStyle,
-      "aria-busy": loading,
-      inert: disabled,
-      "data-disabled": disabled ? "" : undefined,
-      "data-readonly": readOnly ? "" : undefined,
-      "data-active": active ? "" : undefined,
-      "data-visited": visited || isVisited ? "" : undefined,
-      onClick: e => {
-        closeValidationMessage(e.target, "click");
-        if (readOnly) {
-          e.preventDefault();
-          return;
+  return jsx("a", {
+    ...remainingProps,
+    ref: innerRef,
+    href: href,
+    className: innerClassName,
+    style: innerStyle,
+    "aria-busy": loading,
+    inert: disabled,
+    "data-disabled": disabled ? "" : undefined,
+    "data-readonly": readOnly ? "" : undefined,
+    "data-active": active ? "" : undefined,
+    "data-visited": visited || isVisited ? "" : undefined,
+    onClick: e => {
+      closeValidationMessage(e.target, "click");
+      if (readOnly) {
+        e.preventDefault();
+        return;
+      }
+      onClick?.(e);
+    },
+    onKeyDown: e => {
+      if (spaceToClick && e.key === " ") {
+        e.preventDefault(); // Prevent page scroll
+        if (!readOnly && !disabled) {
+          e.target.click();
         }
-        onClick?.(e);
-      },
-      onKeyDown: e => {
-        if (spaceToClick && e.key === " ") {
-          e.preventDefault(); // Prevent page scroll
-          if (!readOnly && !disabled) {
-            e.target.click();
-          }
-        }
-        onKeyDown?.(e);
-      },
+      }
+      onKeyDown?.(e);
+    },
+    children: jsx(LoaderBackground, {
+      loading: loading,
+      color: "light-dark(#355fcc, #3b82f6)",
       children: children
     })
   });
@@ -11672,6 +11667,9 @@ const RouteLink = ({
   children,
   ...rest
 }) => {
+  if (!route) {
+    throw new Error("RouteLink: route prop is required");
+  }
   const {
     active
   } = useRouteStatus(route);
