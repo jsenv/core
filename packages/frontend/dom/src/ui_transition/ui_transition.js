@@ -180,7 +180,7 @@ export const initUITransition = (container) => {
 
   // Child state
   let lastContentKey = null;
-  let previousChildNodes = null;
+  let previousChildNodes = [];
   let isContentPhase = false; // Current state: true when showing content phase (loading/error)
   let wasContentPhase = false; // Previous state for comparison
 
@@ -417,7 +417,7 @@ export const initUITransition = (container) => {
     let cleanup = () => {};
     let elementToImpact;
 
-    if (overlay.chilNodes.length > 0) {
+    if (overlay.childNodes.length > 0) {
       elementToImpact = overlay.firstChild;
       cleanup = () => elementToImpact.remove();
 
