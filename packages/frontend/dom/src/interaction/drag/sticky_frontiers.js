@@ -1,5 +1,5 @@
+import { getElementSignature } from "../../element_signature.js";
 import { getScrollRelativeRect } from "../../position/dom_coords.js";
-import { getElementSelector } from "../element_log.js";
 
 export const applyStickyFrontiersToAutoScrollArea = (
   autoScrollArea,
@@ -127,9 +127,9 @@ const createStickyFrontierOnAxis = (
     const hasOpposite = frontier.hasAttribute(oppositeAttrName);
     // Check if element has both sides (invalid)
     if (hasPrimary && hasOpposite) {
-      const elementSelector = getElementSelector(frontier);
+      const elementSignature = getElementSignature(frontier);
       console.warn(
-        `Sticky frontier element (${elementSelector}) has both ${primarySide} and ${oppositeSide} attributes. 
+        `Sticky frontier element (${elementSignature}) has both ${primarySide} and ${oppositeSide} attributes. 
   A sticky frontier should only have one side attribute.`,
       );
       continue;
@@ -152,7 +152,7 @@ const createStickyFrontierOnAxis = (
       element: frontier,
       side: hasPrimary ? primarySide : oppositeSide,
       bounds: frontierBounds,
-      name: `sticky_frontier_${hasPrimary ? primarySide : oppositeSide} (${getElementSelector(frontier)})`,
+      name: `sticky_frontier_${hasPrimary ? primarySide : oppositeSide} (${getElementSignature(frontier)})`,
     };
     matchingStickyFrontiers.push(stickyFrontierObject);
   }

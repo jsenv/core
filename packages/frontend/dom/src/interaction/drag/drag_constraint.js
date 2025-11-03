@@ -1,8 +1,8 @@
+import { getElementSignature } from "../../element_signature.js";
 import {
   addScrollToRect,
   getScrollRelativeRect,
 } from "../../position/dom_coords.js";
-import { getElementSelector } from "../element_log.js";
 import { setupConstraintFeedbackLine } from "./constraint_feedback_line.js";
 import { setupDragDebugMarkers } from "./drag_debug_markers.js";
 
@@ -333,7 +333,7 @@ const createObstacleConstraintsFromQuerySelector = (
 
         // obstacleBounds are already in scrollable-relative coordinates, no conversion needed
         const obstacleObject = createObstacleContraint(obstacleBounds, {
-          name: `${obstacleBounds.isSticky ? "sticky " : ""}obstacle (${getElementSelector(obstacle)})`,
+          name: `${obstacleBounds.isSticky ? "sticky " : ""}obstacle (${getElementSignature(obstacle)})`,
           element: obstacle,
         });
         return obstacleObject;
