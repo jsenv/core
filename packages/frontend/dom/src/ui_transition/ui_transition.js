@@ -53,7 +53,9 @@ import.meta.css = /* css */ `
   .ui_transition_container,
   .ui_transition_outer_wrapper,
   .ui_transition_measure_wrapper,
-  .ui_transition_slot {
+  .ui_transition_slot,
+  .ui_transition_phase_overlay,
+  .ui_transition_content_overlay {
     display: inline-flex;
     width: 100%;
     height: 100%;
