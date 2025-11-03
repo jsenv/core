@@ -4,7 +4,7 @@
  * This function handles different types of elements and returns an appropriate identifier:
  * - For DOM elements: Creates a CSS selector using tag name, data-ui-name, ID, classes, or parent hierarchy
  * - For React/Preact elements (JSX): Returns JSX-like representation with type and props
- * - For functions: Returns the function's ID property or "[function]"
+ * - For functions: Returns function name and optional underlying element reference in brackets
  * - For null/undefined: Returns the string representation
  *
  * The returned signature for DOM elements is a valid CSS selector that can be copy-pasted
@@ -16,7 +16,7 @@
  * @example
  * // For DOM element with data-ui-name
  * // <div data-ui-name="header">
- * getElementSignature(element) // Returns: "div[data-ui-name=\"header\"]"
+ * getElementSignature(element) // Returns: `div[data-ui-name="header"]`
  *
  * @example
  * // For DOM element with ID
@@ -36,12 +36,22 @@
  * @example
  * // For React/Preact element with props
  * // <MyComponent id="widget" />
- * getElementSignature(element) // Returns: "<MyComponent id=\"widget\" />"
+ * getElementSignature(element) // Returns: `<MyComponent id="widget" />`
  *
  * @example
- * // For function with ID
- * const myFunction = () => {}; myFunction.id = "myHandler";
- * getElementSignature(myFunction) // Returns: "myHandler"
+ * // For named function with underlying element reference
+ * const MyComponent = () => {}; MyComponent.underlyingElementId = "div#main";
+ * getElementSignature(MyComponent) // Returns: "[function MyComponent for div#main]"
+ *
+ * @example
+ * // For anonymous function without underlying element
+ * const anonymousFunc = () => {};
+ * getElementSignature(anonymousFunc) // Returns: "[function]"
+ *
+ * @example
+ * // For named function without underlying element
+ * function namedHandler() {}
+ * getElementSignature(namedHandler) // Returns: "[function namedHandler]"
  *
  * @example
  * // For null/undefined
