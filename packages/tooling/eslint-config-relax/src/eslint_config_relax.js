@@ -1,3 +1,6 @@
+// TODO: ideally when any dev package condition result in a file not found we should
+// warn and fallback to other conditions
+
 import babelParser from "@babel/eslint-parser";
 import jsenvPlugin from "@jsenv/eslint-plugin";
 import { urlToRelativeUrl } from "@jsenv/urls";
