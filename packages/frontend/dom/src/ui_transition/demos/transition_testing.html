@@ -86,7 +86,7 @@
           <input
             type="number"
             id="transition-duration"
-            value="3000"
+            value="2000"
             min="100"
             step="100"
             style="width: 80px"
@@ -138,6 +138,7 @@
         data-content-transition-duration="3000"
         data-phase-transition="cross-fade"
         data-phase-transition-duration="300"
+        data-debug-transition
       >
         <div class="ui_transition_outer_wrapper">
           <div class="ui_transition_measure_wrapper">
@@ -180,24 +181,27 @@
       const changeToSlideButton = document.getElementById("change-to-slide");
       const resetButton = document.getElementById("reset");
 
-      let uiTransition = initUITransition(box.firstElementChild);
+      const uiTransitionRoot = box.firstElementChild;
+      let uiTransition = initUITransition(uiTransitionRoot);
 
       // Update duration when input changes
       durationInput.addEventListener("change", () => {
-        box.dataset.contentTransitionDuration = durationInput.value;
+        uiTransitionRoot.dataset.contentTransitionDuration =
+          durationInput.value;
       });
 
       phaseDurationInput.addEventListener("change", () => {
-        box.dataset.phaseTransitionDuration = phaseDurationInput.value;
+        uiTransitionRoot.dataset.phaseTransitionDuration =
+          phaseDurationInput.value;
       });
 
       // Update transition types when selects change
       contentTypeSelect.addEventListener("change", () => {
-        box.dataset.contentTransition = contentTypeSelect.value;
+        uiTransitionRoot.dataset.contentTransition = contentTypeSelect.value;
       });
 
       phaseTypeSelect.addEventListener("change", () => {
-        box.dataset.phaseTransition = phaseTypeSelect.value;
+        uiTransitionRoot.dataset.phaseTransition = phaseTypeSelect.value;
       });
 
       function updateDebugInfo() {
@@ -209,10 +213,10 @@
             isPaused: state.isPaused,
             contentTransitionInProgress: state.contentTransitionInProgress,
             phaseTransitionInProgress: state.phaseTransitionInProgress,
-            contentDuration: box.dataset.contentTransitionDuration,
-            phaseDuration: box.dataset.phaseTransitionDuration,
-            contentType: box.dataset.contentTransition,
-            phaseType: box.dataset.phaseTransition,
+            contentDuration: uiTransitionRoot.dataset.contentTransitionDuration,
+            phaseDuration: uiTransitionRoot.dataset.phaseTransitionDuration,
+            contentType: uiTransitionRoot.dataset.contentTransition,
+            phaseType: uiTransitionRoot.dataset.phaseTransition,
           },
           null,
           2,
@@ -299,7 +303,7 @@
 
       changeToFadeButton.addEventListener("click", () => {
         // Change transition type to cross-fade mid-animation
-        box.dataset.contentTransition = "cross-fade";
+        uiTransitionRoot.dataset.contentTransition = "cross-fade";
 
         // Trigger content change to see smooth transition type change
         setContent(`
@@ -314,7 +318,7 @@
 
       changeToSlideButton.addEventListener("click", () => {
         // Change transition type back to slide-left mid-animation
-        box.dataset.contentTransition = "slide-left";
+        uiTransitionRoot.dataset.contentTransition = "slide-left";
 
         // Trigger content change to see smooth transition type change
         setContent(`
@@ -339,7 +343,7 @@
           </div>
         `);
 
-        uiTransition = initUITransition(box);
+        uiTransition = initUITransition(uiTransitionRoot);
 
         // Reset buttons
         startButton.disabled = false;
