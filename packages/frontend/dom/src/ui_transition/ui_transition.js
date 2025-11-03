@@ -114,6 +114,7 @@ export const initUITransition = (container) => {
     ...DEBUG,
     transition: container.hasAttribute("data-debug-transition"),
   };
+  const debugClones = container.hasAttribute("data-debug-clones");
 
   const debug = (type, ...args) => {
     if (localDebug[type]) {
@@ -418,29 +419,34 @@ export const initUITransition = (container) => {
     let elementToImpact;
 
     if (overlay.childNodes.length > 0) {
-      elementToImpact = overlay.firstChild;
-      cleanup = () => elementToImpact.remove();
-
+      elementToImpact = overlay;
+      cleanup = () => {
+        if (!debugClones) {
+          overlay.innerHTML = "";
+        }
+      };
       debug(
         "transition",
         `Continuing from current ${isPhaseTransition ? "phase" : "content"} transition element`,
       );
     } else if (needsOldChildNodesClone) {
       overlay.innerHTML = "";
-
-      const cloneContainer = document.createElement("div");
-      cloneContainer.style.display = "contents";
       for (const previousChildNode of previousChildNodes) {
         const previousChildClone = previousChildNode.cloneNode(true);
-        for (const attrToRemove of attributeToRemove) {
-          previousChildClone.removeAttribute(attrToRemove);
+        if (previousChildClone.nodeType !== Node.TEXT_NODE) {
+          for (const attrToRemove of attributeToRemove) {
+            previousChildClone.removeAttribute(attrToRemove);
+          }
+          previousChildClone.setAttribute("data-ui-transition-clone", "");
         }
-        previousChildClone.setAttribute("data-ui-transition-clone", "");
-        cloneContainer.appendChild(previousChildClone);
+        overlay.appendChild(previousChildClone);
       }
-      elementToImpact = cloneContainer;
-      overlay.appendChild(elementToImpact);
-      cleanup = () => elementToImpact.remove();
+      elementToImpact = overlay;
+      cleanup = () => {
+        if (!debugClones) {
+          overlay.innerHTML = "";
+        }
+      };
       debug(
         "transition",
         `Cloned previous child for ${isPhaseTransition ? "phase" : "content"} transition:`,
@@ -465,7 +471,7 @@ export const initUITransition = (container) => {
       newElement = slot;
     } else {
       // Content transitions work at container level and can outlive content phase changes
-      oldElement = previousChildNodes.legnth ? elementToImpact : null;
+      oldElement = previousChildNodes.length ? elementToImpact : null;
       newElement = childNodes.length ? measureWrapper : null;
     }
 
