@@ -111,18 +111,21 @@ Hello, this is some initial content.</textarea
       // Test helpers
       const presetContents = {
         small: `<div class="content-block">Small content</div>`,
-        medium: `
+        medium: `<div>
           <div class="content-block">Medium content</div>
           <div class="content-block">With multiple blocks</div>
           <div class="content-block">To test transitions</div>
+          </div>
         `,
         large: `
+        <div>
           <div class="content-block">Large content</div>
           <div class="content-block">With many blocks</div>
           <div class="content-block">To properly test</div>
           <div class="content-block">How the transitions work</div>
           <div class="content-block">With varying amounts of content</div>
           <div class="content-block">And different heights</div>
+          </div>
         `,
       };
 
