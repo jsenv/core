@@ -100,7 +100,11 @@ export const normalizeStyle = (value, propertyName, context = "js") => {
     // If value is a CSS transform string, parse it first to extract the specific property
     if (typeof value === "string") {
       if (value === "none") {
-        return undefined;
+        if (transformProperty.startsWith("scale")) {
+          return 1;
+        }
+        // translate, rotate, skew
+        return 0;
       }
       const parsedTransform = parseCSSTransform(value);
       return parsedTransform?.[transformProperty];
