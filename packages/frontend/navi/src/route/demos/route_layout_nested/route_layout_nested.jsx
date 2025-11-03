@@ -9,8 +9,8 @@ const {
   ADMIN_USERS_CREATE_ROUTE,
 } = setupRoutes({
   HOME_ROUTE: "home",
-  ADMIN_ROUTE: "admin/",
-  ADMIN_USERS_ROUTE: "admin/users/",
+  ADMIN_ROUTE: "admin/*",
+  ADMIN_USERS_ROUTE: "admin/users/*",
   ADMIN_USERS_LIST_ROUTE: "admin/users/list",
   ADMIN_USERS_CREATE_ROUTE: "admin/users/create",
 });
