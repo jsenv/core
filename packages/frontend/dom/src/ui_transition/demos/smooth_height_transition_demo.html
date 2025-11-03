@@ -10,8 +10,8 @@
 
       .controls {
         padding: 20px;
-        border-bottom: 1px solid #ccc;
         background: #f5f5f5;
+        border-bottom: 1px solid #ccc;
       }
 
       .demo-container {
@@ -20,19 +20,19 @@
 
       /* The element we'll apply the smooth transition to */
       #dynamic-content {
+        width: 300px;
+        margin: 20px 0;
+        padding: 16px;
         background: white;
         border: 2px solid #666;
-        padding: 16px;
-        margin: 20px 0;
-        width: 300px;
         /* we'll handle height transitions in JS */
       }
 
       /* Some preset content styles for testing */
       .content-block {
-        background: #f0f0f0;
         margin: 8px 0;
         padding: 12px;
+        background: #f0f0f0;
       }
 
       button {
@@ -69,15 +69,18 @@ Hello, this is some initial content.</textarea
     </div>
 
     <div class="demo-container">
-      <div id="dynamic-content" class="ui-transition-container">
-        <div class="ui-transition-outer-wrapper">
-          <div class="ui-transition-measure-wrapper">
-            <div class="ui-transition-slot">
-              <div class="content-block">Initial content block</div>
+      <div id="dynamic-content">
+        <div class="ui_transition_container" data-size-transition>
+          <div class="ui_transition_outer_wrapper">
+            <div class="ui_transition_measure_wrapper">
+              <div class="ui_transition_slot">
+                <div class="content-block">Initial content block</div>
+              </div>
+              <div class="ui_transition_phase_overlay"></div>
             </div>
           </div>
+          <div class="ui_transition_content_overlay"></div>
         </div>
-        <div class="ui-transition-overlay"></div>
       </div>
     </div>
 
@@ -85,7 +88,7 @@ Hello, this is some initial content.</textarea
       import { initUITransition } from "../ui_transition.js";
 
       const dynamicContent = document.getElementById("dynamic-content");
-      const { slot } = initUITransition(dynamicContent);
+      const { slot } = initUITransition(dynamicContent.firstElementChild);
 
       // Setup event listeners
       document
