@@ -1,4 +1,10 @@
-import { Route, RouteLink, Routes, setupRoutes } from "@jsenv/navi";
+import {
+  Route,
+  RouteLink,
+  Routes,
+  setupRoutes,
+  UITransition,
+} from "@jsenv/navi";
 import { useLayoutEffect } from "preact/hooks";
 
 // External state to track renders across mount/unmount cycles
@@ -117,7 +123,9 @@ export const App = () => {
                   active:
                 </p>
 
-                <Route.Slot />
+                <UITransition>
+                  <Route.Slot />
+                </UITransition>
 
                 <p>
                   <em>End of auth section</em>
