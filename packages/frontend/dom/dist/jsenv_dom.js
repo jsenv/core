@@ -8317,7 +8317,7 @@ const createTransition = ({
       transition.value = value;
       transition.timing = isLast ? "end" : isFirstUpdate ? "start" : "progress";
       isFirstUpdate = false;
-      executionLifecycle.update(transition);
+      executionLifecycle.update?.(transition);
       executeUpdateCallbacks(transition);
     },
 
@@ -8339,8 +8339,8 @@ const createTransition = ({
     cancel: () => {
       if (executionLifecycle) {
         lifecycle.cancel(transition);
-        executionLifecycle.teardown();
-        executionLifecycle.restore();
+        executionLifecycle.teardown?.();
+        executionLifecycle.restore?.();
       }
       resume = null;
       playState = "idle";
@@ -8357,7 +8357,7 @@ const createTransition = ({
       }
       // "running" or "paused"
       lifecycle.finish(transition);
-      executionLifecycle.teardown();
+      executionLifecycle.teardown?.();
       resume = null;
       playState = "finished";
       executeFinishCallbacks();
@@ -8589,9 +8589,6 @@ const createHeightTransition = (element, to, options) => {
           teardown: () => {
             transitionStyleController.delete(element, "height");
           },
-          restore: () => {
-            transitionStyleController.delete(element, "height");
-          },
         };
       },
     },
@@ -8614,9 +8611,6 @@ const createWidthTransition = (element, to, options) => {
             transitionStyleController.set(element, { width: value });
           },
           teardown: () => {
-            transitionStyleController.delete(element, "width");
-          },
-          restore: () => {
             transitionStyleController.delete(element, "width");
           },
         };
@@ -8643,9 +8637,6 @@ const createOpacityTransition = (element, to, options = {}) => {
           teardown: () => {
             transitionStyleController.delete(element, "opacity");
           },
-          restore: () => {
-            transitionStyleController.delete(element, "opacity");
-          },
         };
       },
     },
@@ -8653,9 +8644,10 @@ const createOpacityTransition = (element, to, options = {}) => {
   return opacityTransition;
 };
 
-const createTranslateXTransition = (element, to, options) => {
+const createTranslateXTransition = (element, to, options = {}) => {
+  const { setup, ...rest } = options;
   const translateXTransition = createTimelineTransition({
-    ...options,
+    ...rest,
     constructor: createTranslateXTransition,
     key: element,
     to,
@@ -8663,6 +8655,7 @@ const createTranslateXTransition = (element, to, options) => {
     isVisual: true,
     lifecycle: {
       setup: () => {
+        const teardown = setup?.();
         return {
           from: getTranslateX(element),
           update: ({ value }) => {
@@ -8673,9 +8666,7 @@ const createTranslateXTransition = (element, to, options) => {
             });
           },
           teardown: () => {
-            transitionStyleController.delete(element, "transform.translateX");
-          },
-          restore: () => {
+            teardown?.();
             transitionStyleController.delete(element, "transform.translateX");
           },
         };
@@ -10276,15 +10267,24 @@ const useResizeStatus = (elementRef, { as = "number" } = {}) => {
 
 installImportMetaCss(import.meta);
 import.meta.css = /* css */ `
+  .ui_transition_container[data-transition-overflow] {
+    overflow: hidden;
+  }
+
   .ui_transition_container,
   .ui_transition_outer_wrapper,
   .ui_transition_measure_wrapper,
   .ui_transition_slot,
   .ui_transition_phase_overlay,
   .ui_transition_content_overlay {
-    display: inline-flex;
-    width: 100%;
-    height: 100%;
+    display: flex;
+    width: fit-content;
+    min-width: 100%;
+    height: fit-content;
+    min-height: 100%;
+    flex-direction: inherit;
+    align-items: inherit;
+    justify-content: inherit;
   }
 
   .ui_transition_measure_wrapper[data-transition-translate-x] {
@@ -10374,6 +10374,39 @@ const initUITransition = (container) => {
   ) {
     console.error("Missing required ui-transition structure");
     return { cleanup: () => {} };
+  }
+
+  const [teardown, addTeardown] = createPubSub();
+
+  {
+    const transitionOverflowSet = new Set();
+    const updateTransitionOverflowAttribute = () => {
+      if (transitionOverflowSet.size > 0) {
+        container.setAttribute("data-transition-overflow", "");
+      } else {
+        container.removeAttribute("data-transition-overflow");
+      }
+    };
+    const onOverflowStart = (event) => {
+      transitionOverflowSet.add(event.detail.transitionId);
+      updateTransitionOverflowAttribute();
+    };
+    const onOverflowEnd = (event) => {
+      transitionOverflowSet.delete(event.detail.transitionId);
+      updateTransitionOverflowAttribute();
+    };
+    container.addEventListener("ui_transition_overflow_start", onOverflowStart);
+    container.addEventListener("ui_transition_overflow_end", onOverflowEnd);
+    addTeardown(() => {
+      container.removeEventListener(
+        "ui_transition_overflow_start",
+        onOverflowStart,
+      );
+      container.removeEventListener(
+        "ui_transition_overflow_end",
+        onOverflowEnd,
+      );
+    });
   }
 
   const transitionController = createGroupTransitionController();
@@ -11312,6 +11345,7 @@ const initUITransition = (container) => {
     slot,
 
     cleanup: () => {
+      teardown();
       mutationObserver.disconnect();
       stopResizeObserver();
       if (sizeTransition) {
@@ -11443,6 +11477,8 @@ const slideLeft = {
 
       return [
         createTranslateXTransition(oldElement, to, {
+          setup: () =>
+            notifyTransitionOverflow(newElement, "slide_out_old_content"),
           from,
           duration,
           startProgress,
@@ -11464,6 +11500,8 @@ const slideLeft = {
       debug("transition", "Slide in from empty:", { from, to });
       return [
         createTranslateXTransition(newElement, to, {
+          setup: () =>
+            notifyTransitionOverflow(newElement, "slice_in_new_content"),
           from,
           duration,
           startProgress,
@@ -11516,6 +11554,8 @@ const slideLeft = {
     // Slide old content out
     transitions.push(
       createTranslateXTransition(oldElement, -containerWidth, {
+        setup: () =>
+          notifyTransitionOverflow(newElement, "slide_out_old_content"),
         from: oldContentPosition,
         duration,
         startProgress,
@@ -11528,6 +11568,8 @@ const slideLeft = {
     // Slide new content in
     transitions.push(
       createTranslateXTransition(newElement, naturalNewPosition, {
+        setup: () =>
+          notifyTransitionOverflow(newElement, "slide_in_new_content"),
         from: effectiveFromPosition,
         duration,
         startProgress,
@@ -11649,6 +11691,31 @@ const crossFade = {
       }),
     ];
   },
+};
+
+const dispatchTransitionOverflowStartCustomEvent = (element, transitionId) => {
+  const customEvent = new CustomEvent("ui_transition_overflow_start", {
+    bubbles: true,
+    detail: {
+      transitionId,
+    },
+  });
+  element.dispatchEvent(customEvent);
+};
+const dispatchTransitionOverflowEndCustomEvent = (element, transitionId) => {
+  const customEvent = new CustomEvent("ui_transition_overflow_end", {
+    bubbles: true,
+    detail: {
+      transitionId,
+    },
+  });
+  element.dispatchEvent(customEvent);
+};
+const notifyTransitionOverflow = (element, transitionId) => {
+  dispatchTransitionOverflowStartCustomEvent(element, transitionId);
+  return () => {
+    dispatchTransitionOverflowEndCustomEvent(element, transitionId);
+  };
 };
 
 export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, addWillChange, allowWheelThrough, appendStyles, canInterceptKeys, captureScrollState, createDragGestureController, createDragToMoveGestureController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findFocusable, getAvailableHeight, getAvailableWidth, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getInnerHeight, getInnerWidth, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getPaddingSizes, getPositionedParent, getPreferedColorScheme, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateY, getVisuallyVisibleInfo, getWidth, initFlexDetailsSet, initFocusGroup, initPositionSticky, initUITransition, isScrollable, mergeStyles, normalizeStyles, parseCSSColor, pickLightOrDark, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, resolveCSSColor, resolveCSSSize, setAttribute, setAttributes, setStyles, startDragToResizeGesture, stickyAsRelativeCoords, stringifyCSSColor, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };

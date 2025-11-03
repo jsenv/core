@@ -9369,22 +9369,24 @@ const RectangleLoadingSvg = ({
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   .navi_inline_wrapper {
     position: relative;
-    width: fit-content;
     display: inline-flex;
+    width: fit-content;
     height: fit-content;
+    /* min-width: 100%; */
+    /* min-height: 100%; */
     border-radius: inherit;
     cursor: inherit;
   }
 
   .navi_loading_rectangle_wrapper {
-    pointer-events: none;
     position: absolute;
+    top: var(--rectangle-top, 0);
+    right: var(--rectangle-right, 0);
+    bottom: var(--rectangle-bottom, 0);
+    left: var(--rectangle-left, 0);
     z-index: 1;
     opacity: 0;
-    top: var(--rectangle-top, 0);
-    left: var(--rectangle-left, 0);
-    bottom: var(--rectangle-bottom, 0);
-    right: var(--rectangle-right, 0);
+    pointer-events: none;
   }
   .navi_loading_rectangle_wrapper[data-visible] {
     opacity: 1;

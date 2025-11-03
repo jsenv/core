@@ -27,9 +27,6 @@ export const createHeightTransition = (element, to, options) => {
           teardown: () => {
             transitionStyleController.delete(element, "height");
           },
-          restore: () => {
-            transitionStyleController.delete(element, "height");
-          },
         };
       },
     },
@@ -52,9 +49,6 @@ export const createWidthTransition = (element, to, options) => {
             transitionStyleController.set(element, { width: value });
           },
           teardown: () => {
-            transitionStyleController.delete(element, "width");
-          },
-          restore: () => {
             transitionStyleController.delete(element, "width");
           },
         };
@@ -81,9 +75,6 @@ export const createOpacityTransition = (element, to, options = {}) => {
           teardown: () => {
             transitionStyleController.delete(element, "opacity");
           },
-          restore: () => {
-            transitionStyleController.delete(element, "opacity");
-          },
         };
       },
     },
@@ -91,9 +82,10 @@ export const createOpacityTransition = (element, to, options = {}) => {
   return opacityTransition;
 };
 
-export const createTranslateXTransition = (element, to, options) => {
+export const createTranslateXTransition = (element, to, options = {}) => {
+  const { setup, ...rest } = options;
   const translateXTransition = createTimelineTransition({
-    ...options,
+    ...rest,
     constructor: createTranslateXTransition,
     key: element,
     to,
@@ -101,6 +93,7 @@ export const createTranslateXTransition = (element, to, options) => {
     isVisual: true,
     lifecycle: {
       setup: () => {
+        const teardown = setup?.();
         return {
           from: getTranslateX(element),
           update: ({ value }) => {
@@ -111,9 +104,7 @@ export const createTranslateXTransition = (element, to, options) => {
             });
           },
           teardown: () => {
-            transitionStyleController.delete(element, "transform.translateX");
-          },
-          restore: () => {
+            teardown?.();
             transitionStyleController.delete(element, "transform.translateX");
           },
         };

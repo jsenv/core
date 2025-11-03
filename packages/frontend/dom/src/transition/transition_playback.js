@@ -111,7 +111,7 @@ export const createTransition = ({
       transition.value = value;
       transition.timing = isLast ? "end" : isFirstUpdate ? "start" : "progress";
       isFirstUpdate = false;
-      executionLifecycle.update(transition);
+      executionLifecycle.update?.(transition);
       executeUpdateCallbacks(transition);
     },
 
@@ -133,8 +133,8 @@ export const createTransition = ({
     cancel: () => {
       if (executionLifecycle) {
         lifecycle.cancel(transition);
-        executionLifecycle.teardown();
-        executionLifecycle.restore();
+        executionLifecycle.teardown?.();
+        executionLifecycle.restore?.();
       }
       resume = null;
       playState = "idle";
@@ -151,7 +151,7 @@ export const createTransition = ({
       }
       // "running" or "paused"
       lifecycle.finish(transition);
-      executionLifecycle.teardown();
+      executionLifecycle.teardown?.();
       resume = null;
       playState = "finished";
       executeFinishCallbacks();

@@ -34,6 +34,7 @@
  */
 
 import { getElementSignature } from "../element_signature.js";
+import { createPubSub } from "../pub_sub.js";
 import { getHeight } from "../size/get_height.js";
 import { getInnerWidth } from "../size/get_inner_width.js";
 import { getWidth } from "../size/get_width.js";
@@ -49,15 +50,26 @@ import {
 import { createGroupTransitionController } from "../transition/group_transition.js";
 
 import.meta.css = /* css */ `
+  .ui_transition_container[data-transition-overflow] {
+    overflow: hidden;
+  }
+
   .ui_transition_container,
   .ui_transition_outer_wrapper,
   .ui_transition_measure_wrapper,
   .ui_transition_slot,
   .ui_transition_phase_overlay,
   .ui_transition_content_overlay {
-    display: inline-flex;
-    width: 100%;
-    height: 100%;
+    display: flex;
+    width: fit-content;
+    min-width: 100%;
+    height: fit-content;
+    min-height: 100%;
+    flex-direction: inherit;
+    align-items: inherit;
+    justify-content: inherit;
+    border-radius: inherit;
+    cursor: inherit;
   }
 
   .ui_transition_measure_wrapper[data-transition-translate-x] {
@@ -147,6 +159,39 @@ export const initUITransition = (container) => {
   ) {
     console.error("Missing required ui-transition structure");
     return { cleanup: () => {} };
+  }
+
+  const [teardown, addTeardown] = createPubSub();
+
+  update_transition_overflow_attribute: {
+    const transitionOverflowSet = new Set();
+    const updateTransitionOverflowAttribute = () => {
+      if (transitionOverflowSet.size > 0) {
+        container.setAttribute("data-transition-overflow", "");
+      } else {
+        container.removeAttribute("data-transition-overflow");
+      }
+    };
+    const onOverflowStart = (event) => {
+      transitionOverflowSet.add(event.detail.transitionId);
+      updateTransitionOverflowAttribute();
+    };
+    const onOverflowEnd = (event) => {
+      transitionOverflowSet.delete(event.detail.transitionId);
+      updateTransitionOverflowAttribute();
+    };
+    container.addEventListener("ui_transition_overflow_start", onOverflowStart);
+    container.addEventListener("ui_transition_overflow_end", onOverflowEnd);
+    addTeardown(() => {
+      container.removeEventListener(
+        "ui_transition_overflow_start",
+        onOverflowStart,
+      );
+      container.removeEventListener(
+        "ui_transition_overflow_end",
+        onOverflowEnd,
+      );
+    });
   }
 
   const transitionController = createGroupTransitionController();
@@ -1085,6 +1130,7 @@ export const initUITransition = (container) => {
     slot,
 
     cleanup: () => {
+      teardown();
       mutationObserver.disconnect();
       stopResizeObserver();
       if (sizeTransition) {
@@ -1216,6 +1262,8 @@ const slideLeft = {
 
       return [
         createTranslateXTransition(oldElement, to, {
+          setup: () =>
+            notifyTransitionOverflow(newElement, "slide_out_old_content"),
           from,
           duration,
           startProgress,
@@ -1237,6 +1285,8 @@ const slideLeft = {
       debug("transition", "Slide in from empty:", { from, to });
       return [
         createTranslateXTransition(newElement, to, {
+          setup: () =>
+            notifyTransitionOverflow(newElement, "slice_in_new_content"),
           from,
           duration,
           startProgress,
@@ -1289,6 +1339,8 @@ const slideLeft = {
     // Slide old content out
     transitions.push(
       createTranslateXTransition(oldElement, -containerWidth, {
+        setup: () =>
+          notifyTransitionOverflow(newElement, "slide_out_old_content"),
         from: oldContentPosition,
         duration,
         startProgress,
@@ -1301,6 +1353,8 @@ const slideLeft = {
     // Slide new content in
     transitions.push(
       createTranslateXTransition(newElement, naturalNewPosition, {
+        setup: () =>
+          notifyTransitionOverflow(newElement, "slide_in_new_content"),
         from: effectiveFromPosition,
         duration,
         startProgress,
@@ -1422,4 +1476,29 @@ const crossFade = {
       }),
     ];
   },
+};
+
+const dispatchTransitionOverflowStartCustomEvent = (element, transitionId) => {
+  const customEvent = new CustomEvent("ui_transition_overflow_start", {
+    bubbles: true,
+    detail: {
+      transitionId,
+    },
+  });
+  element.dispatchEvent(customEvent);
+};
+const dispatchTransitionOverflowEndCustomEvent = (element, transitionId) => {
+  const customEvent = new CustomEvent("ui_transition_overflow_end", {
+    bubbles: true,
+    detail: {
+      transitionId,
+    },
+  });
+  element.dispatchEvent(customEvent);
+};
+const notifyTransitionOverflow = (element, transitionId) => {
+  dispatchTransitionOverflowStartCustomEvent(element, transitionId);
+  return () => {
+    dispatchTransitionOverflowEndCustomEvent(element, transitionId);
+  };
 };
