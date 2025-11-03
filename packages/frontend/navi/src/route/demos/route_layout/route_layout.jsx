@@ -39,13 +39,19 @@ const ComponentTracker = ({ name, color = "#333", children }) => {
   );
 };
 
-const { HOME_ROUTE, AUTH_ROUTE, LOGIN_ROUTE, FORGOT_PASSWORD_ROUTE } =
-  setupRoutes({
-    HOME_ROUTE: "home",
-    AUTH_ROUTE: "auth/*",
-    LOGIN_ROUTE: "auth/login",
-    FORGOT_PASSWORD_ROUTE: "auth/forgot",
-  });
+const {
+  HOME_ROUTE,
+  AUTH_ROUTE,
+  AUTH_INDEX_ROUTE,
+  LOGIN_ROUTE,
+  FORGOT_PASSWORD_ROUTE,
+} = setupRoutes({
+  HOME_ROUTE: "home",
+  AUTH_ROUTE: "auth/*",
+  AUTH_INDEX_ROUTE: "auth/",
+  LOGIN_ROUTE: "auth/login",
+  FORGOT_PASSWORD_ROUTE: "auth/forgot",
+});
 
 // Test App
 export const App = () => {
@@ -71,6 +77,7 @@ export const App = () => {
       {/* Navigation */}
       <div className="nav">
         <RouteLink route={HOME_ROUTE}>Home</RouteLink>
+        <RouteLink route={AUTH_INDEX_ROUTE}>Auth index</RouteLink>
         <RouteLink route={LOGIN_ROUTE}>Login</RouteLink>
         <RouteLink route={FORGOT_PASSWORD_ROUTE}>Forgot password</RouteLink>
       </div>
@@ -112,6 +119,7 @@ export const App = () => {
               </div>
             }
           >
+            <Route route={AUTH_INDEX_ROUTE} element={<div>Auth index</div>} />
             <Route
               route={LOGIN_ROUTE}
               element={
