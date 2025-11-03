@@ -36,7 +36,13 @@
 
 import { initUITransition } from "@jsenv/dom";
 import { createContext } from "preact";
-import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
+import {
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "preact/hooks";
 
 const ContentKeyContext = createContext();
 
@@ -53,6 +59,44 @@ export const UITransition = ({
   ...props
 }) => {
   const [contentKeyFromContext, setContentKeyFromContext] = useState();
+  const contentKeyContextValue = useMemo(() => {
+    const keySet = new Set();
+    const onKeySetChange = () => {
+      setContentKeyFromContext(Array.from(keySet).join("|"));
+    };
+    const update = (key, newKey) => {
+      if (!keySet.has(key)) {
+        console.warn(
+          `UITransition: trying to update a key that does not exist: ${key}`,
+        );
+        return;
+      }
+      keySet.delete(key);
+      keySet.add(newKey);
+      onKeySetChange();
+    };
+    const add = (key) => {
+      if (!key) {
+        return;
+      }
+      if (keySet.has(key)) {
+        return;
+      }
+      keySet.add(key);
+      onKeySetChange();
+    };
+    const remove = (key) => {
+      if (!key) {
+        return;
+      }
+      if (!keySet.has(key)) {
+        return;
+      }
+      keySet.delete(key);
+      onKeySetChange();
+    };
+    return { add, update, remove };
+  }, []);
   const effectiveContentKey = contentKey || contentKeyFromContext;
 
   const ref = useRef();
@@ -64,7 +108,7 @@ export const UITransition = ({
   }, []);
 
   return (
-    <ContentKeyContext.Provider value={setContentKeyFromContext}>
+    <ContentKeyContext.Provider value={contentKeyContextValue}>
       <div
         ref={ref}
         {...props}
@@ -104,25 +148,36 @@ export const UITransition = ({
   );
 };
 
-export const useContentKey = (key, enabled) => {
-  const setKey = useContext(ContentKeyContext);
-  if (setKey && enabled) {
-    setKey(key);
+/**
+ * The goal of this hook is to allow a component to set a "content key"
+ * Meaning all content within the component is identified by that key
+ *
+ * When the key changes, UITransition will be able to detect that and consider the content
+ * as changed even if the component is still the same
+ *
+ * This is used by <Route> to set the content key to the route path
+ * When the route becomes inactive it will call useContentKey(undefined)
+ * And if a sibling route becones active it will call useContentKey with its own path
+ *
+ */
+export const useContentKey = (key) => {
+  const contentKey = useContext(ContentKeyContext);
+  const keyRef = useRef();
+  if (keyRef.current !== key && contentKey) {
+    const previousKey = keyRef.current;
+    keyRef.current = key;
+    if (previousKey) {
+      contentKey.update(previousKey, key);
+    } else {
+      contentKey.add(key);
+    }
   }
   useLayoutEffect(() => {
-    if (!setKey || !enabled) {
+    if (!contentKey) {
       return null;
     }
     return () => {
-      setKey((v) => {
-        if (v !== key) {
-          // the current key is different from the one we set
-          // it means another component set it in the meantime
-          // we should not clear it
-          return v;
-        }
-        return undefined;
-      });
+      contentKey.remove(keyRef.current);
     };
-  }, [enabled]);
+  }, []);
 };

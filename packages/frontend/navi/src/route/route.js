@@ -1,5 +1,11 @@
+/**
+ *
+ *
+ */
+
+import { createPubSub } from "@jsenv/dom";
 import { batch, computed, effect, signal } from "@preact/signals";
-import { createAction } from "../actions.js";
+
 import {
   SYMBOL_IDENTITY,
   compareTwoJsValues,
@@ -103,15 +109,13 @@ export const updateRoutes = (
       newActive,
       newParams,
     } of routeMatchInfoSet) {
-      const { activeSignal, paramsSignal, visitedSignal } =
-        routePrivateProperties;
+      const { updateStatus } = routePrivateProperties;
       const visited = isVisited(route.url);
-      activeSignal.value = newActive;
-      paramsSignal.value = newParams;
-      visitedSignal.value = visited;
-      route.active = newActive;
-      route.params = newParams;
-      route.visited = visited;
+      updateStatus({
+        active: newActive,
+        params: newParams,
+        visited,
+      });
       if (newActive) {
         activeRouteSet.add(route);
       }
@@ -268,6 +272,7 @@ const routePrivatePropertiesMap = new Map();
 const getRoutePrivateProperties = (route) => {
   return routePrivatePropertiesMap.get(route);
 };
+
 const createRoute = (urlPatternInput) => {
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
@@ -277,6 +282,7 @@ const createRoute = (urlPatternInput) => {
     cleanupCallbackSet.clear();
   };
 
+  const [publishStatus, subscribeStatus] = createPubSub();
   const route = {
     urlPattern: urlPatternInput,
     isRoute: true,
@@ -292,6 +298,7 @@ const createRoute = (urlPatternInput) => {
       return `route "${urlPatternInput}"`;
     },
     replaceParams: undefined,
+    subscribeStatus,
   };
   routeSet.add(route);
 
@@ -303,10 +310,34 @@ const createRoute = (urlPatternInput) => {
     relativeUrlSignal: null,
     urlSignal: null,
     optionalParamKeySet: null,
+    updateStatus: ({ active, params, visited }) => {
+      let someChange = false;
+      activeSignal.value = active;
+      paramsSignal.value = params;
+      visitedSignal.value = visited;
+      if (route.active !== active) {
+        route.active = active;
+        someChange = true;
+      }
+      if (route.params !== params) {
+        route.params = params;
+        someChange = true;
+      }
+      if (route.visited !== visited) {
+        route.visited = visited;
+        someChange = true;
+      }
+      if (someChange) {
+        publishStatus({ active, params, visited });
+      }
+    },
   };
   routePrivatePropertiesMap.set(route, routePrivateProperties);
 
-  const buildRelativeUrl = (params = {}) => {
+  const buildRelativeUrl = (
+    params = {},
+    { extraParamEffect = "inject_as_search_param" } = {},
+  ) => {
     let relativeUrl = urlPatternInput;
     let hasRawUrlPartWithInvalidChars = false;
 
@@ -322,12 +353,20 @@ const createRoute = (urlPatternInput) => {
       return encodeURIComponent(value);
     };
 
+    const keys = Object.keys(params);
+    const extraParamSet = new Set(keys);
+
     // Replace named parameters (:param and {param})
-    for (const key of Object.keys(params)) {
+    for (const key of keys) {
       const value = params[key];
       const encodedValue = encode(value);
+      const beforeReplace = relativeUrl;
       relativeUrl = relativeUrl.replace(`:${key}`, encodedValue);
       relativeUrl = relativeUrl.replace(`{${key}}`, encodedValue);
+      // If the URL changed, no need to inject this param
+      if (relativeUrl !== beforeReplace) {
+        extraParamSet.delete(key);
+      }
     }
 
     // Handle wildcards: if the pattern ends with /*? (optional wildcard)
@@ -341,10 +380,35 @@ const createRoute = (urlPatternInput) => {
       relativeUrl = relativeUrl.replace(/\*/g, () => {
         const paramKey = wildcardIndex.toString();
         const paramValue = params[paramKey];
+        if (paramValue) {
+          extraParamSet.delete(paramKey);
+        }
         const replacement = paramValue ? encode(paramValue) : "*";
         wildcardIndex++;
         return replacement;
       });
+    }
+
+    // Add remaining parameters as search params
+    if (extraParamSet.size > 0) {
+      if (extraParamEffect === "inject_as_search_param") {
+        const searchParams = new URLSearchParams();
+        for (const key of extraParamSet) {
+          const value = params[key];
+          if (value !== undefined && value !== null) {
+            searchParams.append(key, value);
+          }
+        }
+        const searchString = searchParams.toString();
+        if (searchString) {
+          relativeUrl += (relativeUrl.includes("?") ? "&" : "?") + searchString;
+        }
+      } else if (extraParamEffect === "warn") {
+        console.warn(
+          `Unknown parameters given to "${urlPatternInput}":`,
+          Array.from(extraParamSet),
+        );
+      }
     }
 
     return {
@@ -566,30 +630,21 @@ export const setOnRouteDefined = (v) => {
 // at any given time (url can be shared, reloaded, etc..)
 // Later I'll consider adding ability to have dynamic import into the mix
 // (An async function returning an action)
-export const defineRoutes = (routeDefinition) => {
+export const setupRoutes = (routeDefinition) => {
   // Clean up existing routes
   for (const route of routeSet) {
     route.cleanup();
   }
   routeSet.clear();
 
-  const routeArray = [];
+  const routes = {};
   for (const key of Object.keys(routeDefinition)) {
     const value = routeDefinition[key];
-    const route = createRoute(key);
-    if (value && value.isAction) {
-      route.bindAction(value);
-    } else if (typeof value === "function") {
-      const actionFromFunction = createAction(value);
-      route.bindAction(actionFromFunction);
-    } else if (value) {
-      route.bindAction(value);
-    }
-    routeArray.push(route);
+    const route = createRoute(value);
+    routes[key] = route;
   }
   onRouteDefined();
-
-  return routeArray;
+  return routes;
 };
 
 // unit test exports

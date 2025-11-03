@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Suspense test</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      /* eslint-disable no-unused-vars */
+      import { render } from "preact";
+      import { Suspense } from "preact/compat";
+      import { useState, useRef } from "preact/hooks";
+      import { use } from "./use.js";
+      import { ErrorBoundary } from "./error_boundary.jsx";
+
+      // A tester maintenant: quid lorsqu'une erreur est throw?
+
+      const App = () => {
+        return (
+          <div>
+            <h1>Suspense Test</h1>
+
+            {/* Test 1: Successful loading after 500ms */}
+            <section>
+              <h2>Test 1: Success after 500ms</h2>
+              <Suspense fallback={<div>Loading...</div>}>
+                <ChildLoadingFor500Ms />
+              </Suspense>
+            </section>
+
+            {/* Test 2: Error after 300ms with ErrorBoundary */}
+            <section>
+              <h2>Test 2: Error after 300ms (with ErrorBoundary)</h2>
+              <ErrorBoundary
+                fallback={(error, { resetError }) => (
+                  <div style="color: red; border: 1px solid red; padding: 10px; margin: 10px 0;">
+                    <strong>Error caught:</strong> {error.message}
+                    <br />
+                    <button onClick={resetError}>Reset</button>
+                  </div>
+                )}
+              >
+                <Suspense fallback={<div>Loading error test...</div>}>
+                  <ChildThrowingErrorAfter300Ms />
+                </Suspense>
+              </ErrorBoundary>
+            </section>
+          </div>
+        );
+      };
+
+      // Create the second promise OUTSIDE the component to avoid recreating it
+      const promiseResolvedAfter500 = new Promise((resolve) => {
+        setTimeout(() => {
+          resolve("Hook data loaded!");
+        }, 500);
+      });
+
+      // Create a promise that rejects after 300ms
+      const promiseRejectedAfter300 = new Promise((resolve, reject) => {
+        setTimeout(() => {
+          reject(new Error("Failed to load data after 300ms"));
+        }, 300);
+      });
+
+      const ChildLoadingFor500Ms = () => {
+        const result = use(promiseResolvedAfter500);
+        return (
+          <div>
+            <div>Use Hook: {result}</div>
+          </div>
+        );
+      };
+
+      const ChildThrowingErrorAfter300Ms = () => {
+        const result = use(promiseRejectedAfter300);
+        return (
+          <div>
+            <div>This should not render because promise rejects</div>
+          </div>
+        );
+      };
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

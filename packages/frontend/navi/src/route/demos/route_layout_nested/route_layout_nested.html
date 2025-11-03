@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Route Double Nesting Test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      body {
+        margin: 20px;
+        font-family: system-ui, sans-serif;
+        line-height: 1.5;
+      }
+      .nav {
+        margin: 10px 0;
+        padding: 10px;
+        background: #f5f5f5;
+        border-radius: 5px;
+      }
+      .nav a {
+        display: inline-block;
+        margin-right: 10px;
+        margin-bottom: 5px;
+        padding: 5px 10px;
+        color: white;
+        text-decoration: none;
+        background: #007bff;
+        border-radius: 3px;
+      }
+      .nav a:hover {
+        background: #0056b3;
+      }
+      .debug {
+        margin: 15px 0;
+        padding: 15px;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+      }
+      .debug h3 {
+        margin-top: 0;
+      }
+      .level-1 {
+        border-left: 4px solid #007bff;
+      }
+      .level-2 {
+        border-left: 4px solid #28a745;
+      }
+      .level-3 {
+        border-left: 4px solid #ffc107;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      // eslint-disable-next-line no-unused-vars
+      import { App } from "./route_layout_nested.jsx";
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
