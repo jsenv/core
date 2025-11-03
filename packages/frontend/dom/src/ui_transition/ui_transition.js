@@ -37,14 +37,13 @@ import { getElementSignature } from "../element_signature.js";
 import { getHeight } from "../size/get_height.js";
 import { getInnerWidth } from "../size/get_inner_width.js";
 import { getWidth } from "../size/get_width.js";
+import { getOpacity, getTranslateX } from "../style/style_controller.js";
 import {
   createHeightTransition,
   createOpacityTransition,
   createTranslateXTransition,
   createWidthTransition,
-  getOpacity,
   getOpacityWithoutTransition,
-  getTranslateX,
   getTranslateXWithoutTransition,
 } from "../transition/dom_transition.js";
 import { createGroupTransitionController } from "../transition/group_transition.js";

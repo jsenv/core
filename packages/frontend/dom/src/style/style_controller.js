@@ -82,6 +82,21 @@ const onElementControllerRemoved = (element, controller) => {
   }
 };
 
+/**
+ * Creates a style controller that can safely manage CSS styles on DOM elements.
+ *
+ * Uses Web Animations API to override styles without touching inline styles,
+ * allowing multiple controllers to work together and providing intelligent transform composition.
+ *
+ * @param {string} [name="anonymous"] - Debug name for the controller
+ * @returns {Object} Controller with methods: set, get, delete, getUnderlyingValue, commit, clear, clearAll
+ *
+ * @example
+ * const controller = createStyleController("myFeature");
+ * controller.set(element, { opacity: 0.5, transform: { translateX: 100 } });
+ * controller.getUnderlyingValue(element, "opacity"); // Read value without controller influence
+ * controller.clearAll(); // Cleanup
+ */
 export const createStyleController = (name = "anonymous") => {
   // Store element data for this controller: element -> { styles, animation }
   const elementWeakMap = new WeakMap();
@@ -342,4 +357,42 @@ const updateAnimationStyles = (animation, styles) => {
   animation.effect.setKeyframes([cssStyles]);
   animation.play();
   animation.pause();
+};
+
+const dormantStyleController = createStyleController("dormant");
+export const getOpacity = (
+  element,
+  styleControllerToIgnore = dormantStyleController,
+) => {
+  return styleControllerToIgnore.getUnderlyingValue(element, "opacity");
+};
+export const getTranslateX = (
+  element,
+  styleControllerToIgnore = dormantStyleController,
+) => {
+  return styleControllerToIgnore.getUnderlyingValue(
+    element,
+    "transform.translateX",
+  );
+};
+export const getTranslateY = (
+  element,
+  styleControllerToIgnore = dormantStyleController,
+) => {
+  return styleControllerToIgnore.getUnderlyingValue(
+    element,
+    "transform.translateY",
+  );
+};
+export const getWidth = (
+  element,
+  styleControllerToIgnore = dormantStyleController,
+) => {
+  return styleControllerToIgnore.getUnderlyingValue(element, "rect.width");
+};
+export const getHeight = (
+  element,
+  styleControllerToIgnore = dormantStyleController,
+) => {
+  return styleControllerToIgnore.getUnderlyingValue(element, "rect.height");
 };

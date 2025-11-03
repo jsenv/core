@@ -1,10 +1,12 @@
 import { elementToOwnerWindow } from "../utils.js";
 
-export const getComputedStyle = (element) =>
-  elementToOwnerWindow(element).getComputedStyle(element);
+export const getComputedStyle = (element) => {
+  return elementToOwnerWindow(element).getComputedStyle(element);
+};
 
-export const getStyle = (element, name) =>
-  getComputedStyle(element).getPropertyValue(name);
+export const getStyle = (element, name) => {
+  return getComputedStyle(element).getPropertyValue(name);
+};
 
 const isCamelCase = (str) => {
   // Check if string contains lowercase letter followed by uppercase letter (camelCase pattern)
