@@ -1,0 +1,95 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Smooth height transition demo</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui;
+      }
+
+      .controls {
+        padding: 20px;
+        background: #f5f5f5;
+        border-bottom: 1px solid #ccc;
+      }
+
+      .demo-container {
+        padding: 20px;
+      }
+
+      /* The element we'll apply the smooth transition to */
+      #dynamic-content {
+        width: 300px;
+        margin: 20px 0;
+        padding: 16px;
+        background: white;
+        border: 2px solid #666;
+        /* we'll handle height transitions in JS */
+      }
+
+      /* Some preset content styles for testing */
+      .content-block {
+        margin: 8px 0;
+        padding: 12px;
+        background: #f0f0f0;
+      }
+
+      button {
+        margin: 0 8px 8px 0;
+        padding: 8px 16px;
+      }
+
+      textarea {
+        display: block;
+        width: 300px;
+        height: 100px;
+        margin: 8px 0;
+      }
+
+      .content {
+        width: 100%;
+        background: lightblue;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="controls">
+      <h3>Test Controls</h3>
+      <div>
+        <button id="go_to_a">A</button>
+        <button id="go_to_b">B</button>
+      </div>
+    </div>
+
+    <div class="demo-container">
+      <div id="dynamic-content">
+        <div class="ui_transition_container" data-size-transition>
+          <div class="ui_transition_outer_wrapper">
+            <div class="ui_transition_measure_wrapper">
+              <div class="ui_transition_slot">
+                <div>Initial content</div>
+              </div>
+              <div class="ui_transition_phase_overlay"></div>
+            </div>
+          </div>
+          <div class="ui_transition_content_overlay"></div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      import { initUITransition } from "../ui_transition.js";
+
+      const dynamicContent = document.getElementById("dynamic-content");
+      const { slot } = initUITransition(dynamicContent.firstElementChild);
+
+      document.querySelector("#go_to_a").addEventListener("click", () => {
+        slot.innerHTML = `<div class="content" data-content-key="a">a</div>`;
+      });
+      document.querySelector("#go_to_b").addEventListener("click", () => {
+        slot.innerHTML = `<div class="content" style="background-color: green" data-content-key="b">b</div>`;
+      });
+    </script>
+  </body>
+</html>
