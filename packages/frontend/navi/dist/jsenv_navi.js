@@ -1,3 +1,4 @@
+import { installImportMetaCss } from "./jsenv_navi_side_effects.js";
 import { createIterableWeakSet, createPubSub, createValueEffect, createStyleController, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, activeElementSignal, canInterceptKeys, initUITransition, getElementSignature, resolveCSSSize, normalizeStyles, appendStyles, findBefore, findAfter, initFocusGroup, elementIsFocusable, pickLightOrDark, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { effect, signal, computed, batch, useSignal } from "@preact/signals";
@@ -5,42 +6,6 @@ import { useEffect, useRef, useCallback, useContext, useState, useLayoutEffect, 
 import { createContext, createRef, toChildArray, cloneElement } from "preact";
 import { jsx, jsxs, Fragment } from "preact/jsx-runtime";
 import { forwardRef, createPortal } from "preact/compat";
-
-const installImportMetaCss = (importMeta) => {
-  const stylesheet = new CSSStyleSheet({ baseUrl: importMeta.url });
-
-  let called = false;
-  // eslint-disable-next-line accessor-pairs
-  Object.defineProperty(importMeta, "css", {
-    configurable: true,
-    set(value) {
-      if (called) {
-        throw new Error("import.meta.css setter can only be called once");
-      }
-      called = true;
-      stylesheet.replaceSync(value);
-      document.adoptedStyleSheets = [
-        ...document.adoptedStyleSheets,
-        stylesheet,
-      ];
-    },
-  });
-};
-
-installImportMetaCss(import.meta);import.meta.css = /* css */ `
-  @layer navi {
-    :root {
-      --navi-background-color-readonly: #d3d3d3;
-      --navi-color-readonly: grey;
-      --navi-background-color-disabled: #d3d3d3;
-      --navi-color-disabled: #eeeeee;
-
-      --navi-info-color: #2196f3;
-      --navi-warning-color: #ff9800;
-      --navi-error-color: #f44336;
-    }
-  }
-`;
 
 const actionPrivatePropertiesWeakMap = new WeakMap();
 const getActionPrivateProperties = (action) => {
@@ -7682,7 +7647,11 @@ const createRoute = (urlPatternInput) => {
     let relativeUrl = urlPatternInput;
     let hasRawUrlPartWithInvalidChars = false;
 
-    const encode = (value) => {
+    // Encode parameter values for URL usage, with special handling for raw URL parts.
+    // When a parameter is wrapped with rawUrlPart(), it bypasses encoding and is
+    // inserted as-is into the URL. This allows including pre-encoded values or
+    // special characters that should not be percent-encoded.
+    const encodeParamValue = (value) => {
       if (value && value[rawUrlPartSymbol]) {
         const rawValue = value.value;
         // Check if raw value contains invalid URL characters
@@ -7700,7 +7669,7 @@ const createRoute = (urlPatternInput) => {
     // Replace named parameters (:param and {param})
     for (const key of keys) {
       const value = params[key];
-      const encodedValue = encode(value);
+      const encodedValue = encodeParamValue(value);
       const beforeReplace = relativeUrl;
       relativeUrl = relativeUrl.replace(`:${key}`, encodedValue);
       relativeUrl = relativeUrl.replace(`{${key}}`, encodedValue);
@@ -7724,7 +7693,7 @@ const createRoute = (urlPatternInput) => {
         if (paramValue) {
           extraParamSet.delete(paramKey);
         }
-        const replacement = paramValue ? encode(paramValue) : "*";
+        const replacement = paramValue ? encodeParamValue(paramValue) : "*";
         wildcardIndex++;
         return replacement;
       });
@@ -7733,15 +7702,17 @@ const createRoute = (urlPatternInput) => {
     // Add remaining parameters as search params
     if (extraParamSet.size > 0) {
       if (extraParamEffect === "inject_as_search_param") {
-        const searchParams = new URLSearchParams();
+        const searchParamPairs = [];
         for (const key of extraParamSet) {
           const value = params[key];
           if (value !== undefined && value !== null) {
-            searchParams.append(key, value);
+            const encodedKey = encodeURIComponent(key);
+            const encodedValue = encodeParamValue(value);
+            searchParamPairs.push(`${encodedKey}=${encodedValue}`);
           }
         }
-        const searchString = searchParams.toString();
-        if (searchString) {
+        if (searchParamPairs.length > 0) {
+          const searchString = searchParamPairs.join("&");
           relativeUrl += (relativeUrl.includes("?") ? "&" : "?") + searchString;
         }
       } else if (extraParamEffect === "warn") {
@@ -7757,6 +7728,25 @@ const createRoute = (urlPatternInput) => {
       hasRawUrlPartWithInvalidChars,
     };
   };
+
+  /**
+   * Builds a complete URL for this route with the given parameters.
+   *
+   * Takes parameters and substitutes them into the route's URL pattern,
+   * automatically URL-encoding values unless wrapped with rawUrlPart().
+   * Extra parameters not in the pattern are added as search parameters.
+   *
+   * @param {Object} params - Parameters to substitute into the URL pattern
+   * @returns {string} Complete URL with base URL and encoded parameters
+   *
+   * @example
+   * // For a route with pattern "/items/:id"
+   * // Normal parameter encoding
+   * route.buildUrl({ id: "hello world" }) // → "https://example.com/items/hello%20world"
+   * // Raw parameter (no encoding)
+   * route.buildUrl({ id: rawUrlPart("hello world") }) // → "https://example.com/items/hello world"
+   *
+   */
   const buildUrl = (params = {}) => {
     const { relativeUrl, hasRawUrlPartWithInvalidChars } =
       buildRelativeUrl(params);
@@ -8806,18 +8796,23 @@ const initRouteObserver = ({
     isComposite: true,
     active: false,
     subscribeStatus: subscribeCompositeStatus,
-    toString: () => `composite(${candidateSet.size} candidates)`
+    toString: () => `composite(${candidateSet.size} candidates)`,
+    routeFromProps: route,
+    elementFromProps: element
   };
   const findActiveChildInfo = () => {
     let fallbackInfo = null;
     for (const candidate of candidateSet) {
-      if (candidate.route.active) {
+      if (candidate.route?.active) {
         return {
           ChildActiveElement: candidate.ActiveElement,
           route: candidate.route
         };
       }
-      if (candidate.fallback) {
+      // fallback without route can match when no other route matches.
+      // This is useful solely for "catch all" fallback used on the <Routes>
+      // otherwise a fallback would always match and make the parent route always active
+      if (candidate.fallback && !candidate.route.routeFromProps) {
         fallbackInfo = {
           ChildActiveElement: candidate.ActiveElement,
           route: candidate.route
@@ -8852,7 +8847,8 @@ const initRouteObserver = ({
   const activeRouteSignal = signal();
   const SlotActiveElementSignal = signal();
   const ActiveElement = () => {
-    useContentKey(activeRouteSignal.value.urlPattern);
+    const activeRoute = activeRouteSignal.value;
+    useContentKey(activeRoute?.urlPattern);
     const SlotActiveElement = SlotActiveElementSignal.value;
     if (typeof element === "function") {
       const Element = element;

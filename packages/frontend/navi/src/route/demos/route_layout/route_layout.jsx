@@ -47,7 +47,7 @@ const ComponentTracker = ({ name, color = "#333", children }) => {
 
 const {
   HOME_ROUTE,
-  AUTH_ROUTE,
+  AUTH_ANY_ROUTE,
   AUTH_INDEX_ROUTE,
   LOGIN_ROUTE,
   FORGOT_PASSWORD_ROUTE,
@@ -55,7 +55,7 @@ const {
   NO_MATCH_ROUTE,
 } = setupRoutes({
   HOME_ROUTE: "home",
-  AUTH_ROUTE: "auth/*",
+  AUTH_ANY_ROUTE: "auth/*",
   AUTH_INDEX_ROUTE: "auth/",
   LOGIN_ROUTE: "auth/login",
   FORGOT_PASSWORD_ROUTE: "auth/forgot",
@@ -110,7 +110,7 @@ export const App = () => {
             }
           />
           <Route
-            route={AUTH_ROUTE}
+            // route={AUTH_ROUTE}
             element={
               <div
                 id="auth_layout"
@@ -133,7 +133,10 @@ export const App = () => {
               </div>
             }
           >
-            <Route route={AUTH_INDEX_ROUTE} element={<div>Auth index</div>} />
+            <Route
+              route={AUTH_INDEX_ROUTE}
+              element={<div id="auth_index">Auth index</div>}
+            />
             <Route
               route={LOGIN_ROUTE}
               element={
@@ -164,10 +167,16 @@ export const App = () => {
             />
             <Route
               fallback
-              element={<div>No matching auth route found.</div>}
+              route={AUTH_ANY_ROUTE}
+              element={
+                <div id="auth_fallback">No matching auth route found.</div>
+              }
             />
           </Route>
-          <Route fallback element={<div>404 - Page Not Found</div>} />
+          <Route
+            fallback
+            element={<div id="root_fallback">404 - Page Not Found</div>}
+          />
         </Routes>
       </main>
 

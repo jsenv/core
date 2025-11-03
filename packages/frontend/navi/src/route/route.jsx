@@ -143,18 +143,23 @@ const initRouteObserver = ({
     active: false,
     subscribeStatus: subscribeCompositeStatus,
     toString: () => `composite(${candidateSet.size} candidates)`,
+    routeFromProps: route,
+    elementFromProps: element,
   };
 
   const findActiveChildInfo = () => {
     let fallbackInfo = null;
     for (const candidate of candidateSet) {
-      if (candidate.route.active) {
+      if (candidate.route?.active) {
         return {
           ChildActiveElement: candidate.ActiveElement,
           route: candidate.route,
         };
       }
-      if (candidate.fallback) {
+      // fallback without route can match when no other route matches.
+      // This is useful solely for "catch all" fallback used on the <Routes>
+      // otherwise a fallback would always match and make the parent route always active
+      if (candidate.fallback && !candidate.route.routeFromProps) {
         fallbackInfo = {
           ChildActiveElement: candidate.ActiveElement,
           route: candidate.route,
@@ -192,7 +197,8 @@ const initRouteObserver = ({
   const activeRouteSignal = signal();
   const SlotActiveElementSignal = signal();
   const ActiveElement = () => {
-    useContentKey(activeRouteSignal.value.urlPattern);
+    const activeRoute = activeRouteSignal.value;
+    useContentKey(activeRoute?.urlPattern);
     const SlotActiveElement = SlotActiveElementSignal.value;
     if (typeof element === "function") {
       const Element = element;

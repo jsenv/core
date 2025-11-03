@@ -16,6 +16,15 @@ await build({
         "file://**/node_modules/@jsenv/": false,
       },
       plugins: [jsenvPluginPreact()],
+      bundling: {
+        js_module: {
+          chunks: {
+            jsenv_navi_side_effects: {
+              "./src/navi_css_vars.js": true,
+            },
+          },
+        },
+      },
     },
   },
 });

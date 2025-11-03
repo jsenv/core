@@ -1,0 +1,14 @@
+{
+  "version": 3,
+  "file": "jsenv_navi_side_effects.js",
+  "sources": [
+    "../../../../src/plugins/import_meta_css/client/import_meta_css_build.js",
+    "../src/navi_css_vars.js"
+  ],
+  "sourcesContent": [
+    "export const installImportMetaCss = (importMeta) => {\n  const stylesheet = new CSSStyleSheet({ baseUrl: importMeta.url });\n\n  let called = false;\n  // eslint-disable-next-line accessor-pairs\n  Object.defineProperty(importMeta, \"css\", {\n    configurable: true,\n    set(value) {\n      if (called) {\n        throw new Error(\"import.meta.css setter can only be called once\");\n      }\n      called = true;\n      stylesheet.replaceSync(value);\n      document.adoptedStyleSheets = [\n        ...document.adoptedStyleSheets,\n        stylesheet,\n      ];\n    },\n  });\n};\n",
+    "import.meta.css = /* css */ `\n  @layer navi {\n    :root {\n      --navi-background-color-readonly: #d3d3d3;\n      --navi-color-readonly: grey;\n      --navi-background-color-disabled: #d3d3d3;\n      --navi-color-disabled: #eeeeee;\n\n      --navi-info-color: #2196f3;\n      --navi-warning-color: #ff9800;\n      --navi-error-color: #f44336;\n    }\n  }\n`;\n"
+  ],
+  "names": [],
+  "mappings": "AAAY,MAAC,oBAAoB,GAAG,CAAC,UAAU,KAAK;AACpD,EAAE,MAAM,UAAU,GAAG,IAAI,aAAa,CAAC,EAAE,OAAO,EAAE,UAAU,CAAC,GAAG,EAAE,CAAC;;AAEnE,EAAE,IAAI,MAAM,GAAG,KAAK;AACpB;AACA,EAAE,MAAM,CAAC,cAAc,CAAC,UAAU,EAAE,KAAK,EAAE;AAC3C,IAAI,YAAY,EAAE,IAAI;AACtB,IAAI,GAAG,CAAC,KAAK,EAAE;AACf,MAAM,IAAI,MAAM,EAAE;AAClB,QAAQ,MAAM,IAAI,KAAK,CAAC,gDAAgD,CAAC;AACzE,MAAM;AACN,MAAM,MAAM,GAAG,IAAI;AACnB,MAAM,UAAU,CAAC,WAAW,CAAC,KAAK,CAAC;AACnC,MAAM,QAAQ,CAAC,kBAAkB,GAAG;AACpC,QAAQ,GAAG,QAAQ,CAAC,kBAAkB;AACtC,QAAQ,UAAU;AAClB,OAAO;AACP,IAAI,CAAC;AACL,GAAG,CAAC;AACJ;;ACnB+J,oBAAoB,CAAC,MAAM,CAAC,IAAI,EAA4E,MAAM,CAAC,IAAI,CAAC,GAAG,aAAa;AACvS;AACA;AACA;AACA;AACA;AACA;;AAEA;AACA;AACA;AACA;AACA;AACA,CAAC;;;;"
+}

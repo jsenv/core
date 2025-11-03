@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/navi",
-  "version": "0.11.6",
+  "version": "0.11.7",
   "description": "Library of components including navigation to create frontend applications",
   "repository": {
     "type": "git",
@@ -14,7 +14,7 @@
   },
   "sideEffects": [
     "./src/navi_css_vars.js",
-    "./dist/jsenv_navi.js"
+    "./dist/jsenv_navi_side_effects.js"
   ],
   "type": "module",
   "exports": {
