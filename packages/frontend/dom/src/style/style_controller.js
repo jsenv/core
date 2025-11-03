@@ -153,11 +153,27 @@ export const createStyleController = (name = "anonymous") => {
       return;
     }
     const { styles, animation } = elementData;
-    const hasStyle = Object.hasOwn(styles, propertyName);
-    if (!hasStyle) {
-      return;
+    if (propertyName.startsWith("transform.")) {
+      const transformProp = propertyName.slice("transform.".length);
+      const transformObject = styles.transform;
+      if (!transformObject) {
+        return;
+      }
+      const hasTransformProp = Object.hasOwn(transformObject, transformProp);
+      if (!hasTransformProp) {
+        return;
+      }
+      delete transformObject[transformProp];
+      if (Object.keys(transformObject).length === 0) {
+        delete styles.transform;
+      }
+    } else {
+      const hasStyle = Object.hasOwn(styles, propertyName);
+      if (!hasStyle) {
+        return;
+      }
+      delete styles[propertyName];
     }
-    delete styles[propertyName];
     const isEmpty = Object.keys(styles).length === 0;
     // Clean up empty controller
     if (isEmpty) {
