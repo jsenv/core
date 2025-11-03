@@ -1,6 +1,107 @@
 import { signal, effect } from "@preact/signals";
 import { useState, useLayoutEffect } from "preact/hooks";
 
+/**
+ * Generates a unique signature for various types of elements that can be used for identification in logs.
+ *
+ * This function handles different types of elements and returns an appropriate identifier:
+ * - For DOM elements: Creates a CSS selector using tag name, data-ui-name, ID, classes, or parent hierarchy
+ * - For React/Preact elements (JSX): Returns JSX-like representation with type and props
+ * - For functions: Returns function name and optional underlying element reference in brackets
+ * - For null/undefined: Returns the string representation
+ *
+ * The returned signature for DOM elements is a valid CSS selector that can be copy-pasted
+ * into browser dev tools to locate the element in the DOM.
+ *
+ * @param {HTMLElement|Object|Function|null|undefined} element - The element to generate a signature for
+ * @returns {string} A unique identifier string in various formats depending on element type
+ *
+ * @example
+ * // For DOM element with data-ui-name
+ * // <div data-ui-name="header">
+ * getElementSignature(element) // Returns: `div[data-ui-name="header"]`
+ *
+ * @example
+ * // For DOM element with ID
+ * // <div id="main" class="container active">
+ * getElementSignature(element) // Returns: "div#main"
+ *
+ * @example
+ * // For DOM element with classes only
+ * // <button class="btn primary">
+ * getElementSignature(element) // Returns: "button.btn.primary"
+ *
+ * @example
+ * // For DOM element without distinguishing features (uses parent hierarchy)
+ * // <p> inside <section id="content">
+ * getElementSignature(element) // Returns: "section#content > p"
+ *
+ * @example
+ * // For React/Preact element with props
+ * // <MyComponent id="widget" />
+ * getElementSignature(element) // Returns: `<MyComponent id="widget" />`
+ *
+ * @example
+ * // For named function with underlying element reference
+ * const MyComponent = () => {}; MyComponent.underlyingElementId = "div#main";
+ * getElementSignature(MyComponent) // Returns: "[function MyComponent for div#main]"
+ *
+ * @example
+ * // For anonymous function without underlying element
+ * const anonymousFunc = () => {};
+ * getElementSignature(anonymousFunc) // Returns: "[function]"
+ *
+ * @example
+ * // For named function without underlying element
+ * function namedHandler() {}
+ * getElementSignature(namedHandler) // Returns: "[function namedHandler]"
+ *
+ * @example
+ * // For null/undefined
+ * getElementSignature(null) // Returns: "null"
+ */
+const getElementSignature = (element) => {
+  if (!element) {
+    return String(element);
+  }
+  if (typeof element === "function") {
+    const functionName = element.name;
+    const functionLabel = functionName
+      ? `function ${functionName}`
+      : "function";
+    const underlyingElementId = element.underlyingElementId;
+    if (underlyingElementId) {
+      return `[${functionLabel} for ${underlyingElementId}]`;
+    }
+    return `[${functionLabel}]`;
+  }
+  if (element.props) {
+    const type = element.type;
+    const id = element.props.id;
+    if (id) {
+      return `<${type} id="${id}" />`;
+    }
+    return `<${type} />`;
+  }
+
+  const tagName = element.tagName.toLowerCase();
+  const dataUIName = element.getAttribute("data-ui-name");
+  if (dataUIName) {
+    return `${tagName}[data-ui-name="${dataUIName}"]`;
+  }
+  const elementId = element.id;
+  if (elementId) {
+    return `${tagName}#${elementId}`;
+  }
+  const className = element.className;
+  if (className) {
+    return `${tagName}.${className.split(" ").join(".")}`;
+  }
+
+  const parentSignature = getElementSignature(element.parentElement);
+  return `${parentSignature} > ${tagName}`;
+};
+
 const createIterableWeakSet = () => {
   const objectWeakRefSet = new Set();
 
@@ -438,7 +539,7 @@ const normalizeNumber = (value, context, unit, propertyName) => {
 // Normalize styles for DOM application
 const normalizeStyles = (styles, context = "js") => {
   if (!styles) {
-    return {}
+    return {};
   }
   if (typeof styles === "string") {
     styles = parseStyleString(styles);
@@ -686,6 +787,29 @@ const mergeStyles = (stylesA, stylesB, context = "js") => {
     result[bKey] = stylesB[bKey];
   }
   return result;
+};
+
+const appendStyles = (
+  stylesAObject,
+  stylesBNormalized,
+  context = "js",
+) => {
+  const aKeys = Object.keys(stylesAObject);
+  const bKeys = Object.keys(stylesBNormalized);
+  for (const bKey of bKeys) {
+    const aHasKey = aKeys.includes(bKey);
+    if (aHasKey) {
+      stylesAObject[bKey] = mergeOneStyle(
+        stylesAObject[bKey],
+        stylesBNormalized[bKey],
+        bKey,
+        context,
+      );
+    } else {
+      stylesAObject[bKey] = stylesBNormalized[bKey];
+    }
+  }
+  return stylesAObject;
 };
 
 // Merge a single style property value with an existing value
@@ -5294,15 +5418,6 @@ const getScrollport = (scrollBox, scrollContainer) => {
   };
 };
 
-const getElementSelector = (element) => {
-  const tagName = element.tagName.toLowerCase();
-  const id = element.id ? `#${element.id}` : "";
-  const className = element.className
-    ? `.${element.className.split(" ").join(".")}`
-    : "";
-  return `${tagName}${id}${className}`;
-};
-
 installImportMetaCss(import.meta);const setupConstraintFeedbackLine = () => {
   const constraintFeedbackLine = createConstraintFeedbackLine();
 
@@ -6328,7 +6443,7 @@ const createObstacleConstraintsFromQuerySelector = (
 
         // obstacleBounds are already in scrollable-relative coordinates, no conversion needed
         const obstacleObject = createObstacleContraint(obstacleBounds, {
-          name: `${obstacleBounds.isSticky ? "sticky " : ""}obstacle (${getElementSelector(obstacle)})`,
+          name: `${obstacleBounds.isSticky ? "sticky " : ""}obstacle (${getElementSignature(obstacle)})`,
           element: obstacle,
         });
         return obstacleObject;
@@ -6606,9 +6721,9 @@ const createStickyFrontierOnAxis = (
     const hasOpposite = frontier.hasAttribute(oppositeAttrName);
     // Check if element has both sides (invalid)
     if (hasPrimary && hasOpposite) {
-      const elementSelector = getElementSelector(frontier);
+      const elementSignature = getElementSignature(frontier);
       console.warn(
-        `Sticky frontier element (${elementSelector}) has both ${primarySide} and ${oppositeSide} attributes. 
+        `Sticky frontier element (${elementSignature}) has both ${primarySide} and ${oppositeSide} attributes. 
   A sticky frontier should only have one side attribute.`,
       );
       continue;
@@ -6631,7 +6746,7 @@ const createStickyFrontierOnAxis = (
       element: frontier,
       side: hasPrimary ? primarySide : oppositeSide,
       bounds: frontierBounds,
-      name: `sticky_frontier_${hasPrimary ? primarySide : oppositeSide} (${getElementSelector(frontier)})`,
+      name: `sticky_frontier_${hasPrimary ? primarySide : oppositeSide} (${getElementSignature(frontier)})`,
     };
     matchingStickyFrontiers.push(stickyFrontierObject);
   }
@@ -10576,7 +10691,7 @@ const initUITransition = (container) => {
       debug(
         "transition",
         `Cloned previous child for ${isPhaseTransition ? "phase" : "content"} transition:`,
-        previousChild.getAttribute("data-ui-name") || "unnamed",
+        getElementSignature(previousChild),
       );
       cleanup = () => oldChild.remove();
     } else {
@@ -10628,7 +10743,7 @@ const initUITransition = (container) => {
       if (localDebug.transition) {
         const updateLabel =
           childUIName ||
-          (firstChild ? "data-ui-name not specified" : "cleared/empty");
+          (firstChild ? getElementSignature(firstChild) : "cleared/empty");
         console.group(`UI Update: ${updateLabel} (reason: ${reason})`);
       }
 
@@ -11232,7 +11347,7 @@ const initUITransition = (container) => {
           debug(
             "transition",
             `Attribute change detected: ${attributeName} on`,
-            target.getAttribute("data-ui-name") || "element",
+            getElementSignature(target),
           );
         }
       }
@@ -11604,4 +11719,4 @@ const crossFade = {
   },
 };
 
-export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, addWillChange, allowWheelThrough, canInterceptKeys, captureScrollState, createDragGestureController, createDragToMoveGestureController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findFocusable, getAvailableHeight, getAvailableWidth, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getInnerHeight, getInnerWidth, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getPaddingSizes, getPositionedParent, getPreferedColorScheme, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getVisuallyVisibleInfo, getWidth, initFlexDetailsSet, initFocusGroup, initPositionSticky, initUITransition, isScrollable, mergeStyles, normalizeStyles, parseCSSColor, pickLightOrDark, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, resolveCSSColor, resolveCSSSize, setAttribute, setAttributes, setStyles, startDragToResizeGesture, stickyAsRelativeCoords, stringifyCSSColor, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };
+export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, addWillChange, allowWheelThrough, appendStyles, canInterceptKeys, captureScrollState, createDragGestureController, createDragToMoveGestureController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findFocusable, getAvailableHeight, getAvailableWidth, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getInnerHeight, getInnerWidth, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getPaddingSizes, getPositionedParent, getPreferedColorScheme, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getVisuallyVisibleInfo, getWidth, initFlexDetailsSet, initFocusGroup, initPositionSticky, initUITransition, isScrollable, mergeStyles, normalizeStyles, parseCSSColor, pickLightOrDark, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, resolveCSSColor, resolveCSSSize, setAttribute, setAttributes, setStyles, startDragToResizeGesture, stickyAsRelativeCoords, stringifyCSSColor, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };

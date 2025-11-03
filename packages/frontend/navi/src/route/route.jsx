@@ -1,10 +1,5 @@
 /**
  *
- *
- * 2. Connecter une version simple (pas le double nesting) avec un UI transition pour voir le comportemenet
- * Notons qu'il faut restaurer le concept de content key pour que les transitions fonctionnent bien
- * donc il faudras qu'on voit cela
- *
  * . Refactor les actions pour qu'elles utilisent use. Ce qui va ouvrir la voie pour
  * Suspense et ErrorBoundary sur tous les composants utilisant des actions
  *
