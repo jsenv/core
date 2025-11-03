@@ -118,38 +118,55 @@ export const normalizeStyle = (value, propertyName, context = "js") => {
   }
 
   if (pxProperties.includes(propertyName)) {
-    return normalizeNumber(value, context, "px", propertyName);
+    return normalizeNumber(value, {
+      propertyName,
+      unit: "px",
+      preferedType: context === "js" ? "number" : "string",
+    });
   }
   if (degProperties.includes(propertyName)) {
-    return normalizeNumber(value, context, "deg", propertyName);
+    return normalizeNumber(value, {
+      propertyName,
+      unit: "deg",
+      preferedType: "string",
+    });
   }
   if (unitlessProperties.includes(propertyName)) {
-    return normalizeNumber(value, context, "", propertyName);
+    return normalizeNumber(value, {
+      propertyName,
+      unit: "",
+      preferedType: context === "js" ? "number" : "string",
+    });
   }
 
   return value;
 };
-const normalizeNumber = (value, context, unit, propertyName) => {
-  if (context === "css") {
-    if (typeof value === "number") {
-      if (isNaN(value)) {
-        console.warn(`NaN found for "${propertyName}"`);
-      }
-      return `${value}${unit}`;
-    }
-    return value;
-  }
+const normalizeNumber = (value, { unit, propertyName, preferedType }) => {
   if (typeof value === "string") {
-    // For js context, only convert px values to numbers
-    if (unit === "px" && value.endsWith("px")) {
+    // Keep strings as-is (including %, em, rem, auto, none, etc.)
+    if (preferedType === "string") {
+      return value;
+    }
+    // convert to number if possible (font-size: "12px" -> fontSize:12, opacity: "0.5" -> opacity: 0.5)
+    if (!unit || value.endsWith(unit)) {
       const numericValue = parseFloat(value);
       if (!isNaN(numericValue)) {
         return numericValue;
       }
     }
-    // Keep all other strings as-is (including %, em, rem, auto, none, etc.)
     return value;
   }
+  if (typeof value === "number") {
+    if (isNaN(value)) {
+      console.warn(`NaN found for "${propertyName}"`);
+    }
+    if (preferedType === "number") {
+      return value;
+    }
+    // convert to string with unit
+    return `${value}${unit}`;
+  }
+
   return value;
 };
 
