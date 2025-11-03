@@ -9777,14 +9777,14 @@ const withPropsStyle = (
     expandX = expand,
     expandY = expand,
     // typo props
-    size,
-    bold,
-    thin,
-    italic,
-    underline,
-    underlineStyle,
-    underlineColor,
-    color,
+    textSize,
+    textBold,
+    textThin,
+    textItalic,
+    textUnderline,
+    textUnderlineStyle,
+    textUnderlineColor,
+    textColor,
     // props not related to styling
     ...remainingProps
   } = props;
@@ -9952,35 +9952,37 @@ const withPropsStyle = (
     }
     typoStyles = {};
 
-    if (size) {
-      const sizeValue =
-        typeof size === "string" ? typoSizes[size] || size : size;
-      typoStyles.fontSize = sizeValue;
+    if (textSize) {
+      const fontSize =
+        typeof textSize === "string"
+          ? typoSizes[textSize] || textSize
+          : textSize;
+      typoStyles.fontSize = fontSize;
     }
-    if (bold) {
+    if (textBold) {
       typoStyles.fontWeight = "bold";
-    } else if (thin) {
+    } else if (textThin) {
       typoStyles.fontWeight = "thin";
-    } else if (thin === false || bold === false) {
+    } else if (textThin === false || textBold === false) {
       typoStyles.fontWeight = "normal";
     }
-    if (italic) {
+    if (textItalic) {
       typoStyles.fontStyle = "italic";
-    } else if (italic === false) {
+    } else if (textItalic === false) {
       typoStyles.fontStyle = "normal";
     }
-    if (underline) {
+    if (textUnderline) {
       typoStyles.textDecoration = "underline";
-    } else if (underline === false) {
+    } else if (textUnderline === false) {
       typoStyles.textDecoration = "none";
     }
-    if (underlineStyle) {
-      typoStyles.textDecorationStyle = underlineStyle;
+    if (textUnderlineStyle) {
+      typoStyles.textDecorationStyle = textUnderlineStyle;
     }
-    if (underlineColor) {
-      typoStyles.textDecorationColor = underlineColor;
+    if (textUnderlineColor) {
+      typoStyles.textDecorationColor = textUnderlineColor;
     }
-    typoStyles.color = color;
+    typoStyles.color = textColor;
   }
   props_styles: {
     if (!style && !hasRemainingConfig) {
