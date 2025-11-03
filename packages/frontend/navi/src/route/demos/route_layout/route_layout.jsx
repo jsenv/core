@@ -45,12 +45,14 @@ const {
   AUTH_INDEX_ROUTE,
   LOGIN_ROUTE,
   FORGOT_PASSWORD_ROUTE,
+  NO_MATCH_AUTH_ROUTE,
 } = setupRoutes({
   HOME_ROUTE: "home",
   AUTH_ROUTE: "auth/*",
   AUTH_INDEX_ROUTE: "auth/",
   LOGIN_ROUTE: "auth/login",
   FORGOT_PASSWORD_ROUTE: "auth/forgot",
+  NO_MATCH_AUTH_ROUTE: "auth/no_match",
 });
 
 // Test App
@@ -80,6 +82,7 @@ export const App = () => {
         <RouteLink route={AUTH_INDEX_ROUTE}>Auth index</RouteLink>
         <RouteLink route={LOGIN_ROUTE}>Login</RouteLink>
         <RouteLink route={FORGOT_PASSWORD_ROUTE}>Forgot password</RouteLink>
+        <RouteLink route={NO_MATCH_AUTH_ROUTE}>No match auth</RouteLink>
       </div>
 
       <main>
@@ -147,6 +150,10 @@ export const App = () => {
                   <p>Reset your password here</p>
                 </div>
               }
+            />
+            <Route
+              fallback
+              element={<div>No matching auth route found.</div>}
             />
           </Route>
         </Routes>

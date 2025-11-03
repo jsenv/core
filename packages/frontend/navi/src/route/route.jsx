@@ -133,20 +133,23 @@ const initRouteObserver = ({
     toString: () => `composite(${candidateSet.size} candidates)`,
   };
 
-  const findActiveCandidate = () => {
-    let fallbackCandidate = null;
+  const findActiveChildInfo = () => {
+    let fallbackInfo = null;
     for (const candidate of candidateSet) {
       if (candidate.route.active) {
         return {
           ChildActiveElement: candidate.ActiveElement,
-          route,
+          route: candidate.route,
         };
       }
       if (candidate.fallback) {
-        fallbackCandidate = candidate;
+        fallbackInfo = {
+          ChildActiveElement: candidate.ActiveElement,
+          route: candidate.route,
+        };
       }
     }
-    return fallbackCandidate;
+    return fallbackInfo;
   };
   const getActiveInfo = route
     ? () => {
@@ -156,9 +159,9 @@ const initRouteObserver = ({
         }
         // we have a route and it is active (it matches)
         // we search the first active child to put it in the slot
-        const activeCandidate = findActiveCandidate();
-        if (activeCandidate) {
-          return activeCandidate;
+        const activeChildInfo = findActiveChildInfo();
+        if (activeChildInfo) {
+          return activeChildInfo;
         }
         return {
           ChildActiveElement: null,
@@ -167,9 +170,9 @@ const initRouteObserver = ({
       }
     : () => {
         // we don't have a route, do we have an active child?
-        const activeCandidate = findActiveCandidate();
-        if (activeCandidate) {
-          return activeCandidate;
+        const activeChildInfo = findActiveChildInfo();
+        if (activeChildInfo) {
+          return activeChildInfo;
         }
         return null;
       };
