@@ -84,7 +84,8 @@ import.meta.css = /* css */ `
       );
 
       --color: currentColor;
-      --color-readonly: color-mix(in srgb, currentColor 60%, transparent);
+      --color-dimmed: color-mix(in srgb, currentColor 60%, transparent);
+      --color-readonly: var(--color-dimmed);
       --color-disabled: var(--color-readonly);
 
       width: 100%;
@@ -101,6 +102,15 @@ import.meta.css = /* css */ `
       outline-color: var(--border-color);
       outline-offset: calc(-1 * (var(--border-width)));
     }
+    .navi_input::placeholder {
+      color: var(--color-dimmed);
+    }
+    .navi_input:-internal-autofill-selected {
+      /* Webkit is putting some nasty styles after automplete that look as follow */
+      /* input:-internal-autofill-selected { color: FieldText !important; } */
+      /* Fortunately we can override it as follow */
+      -webkit-text-fill-color: var(--color) !important;
+    }
     /* Focus */
     .navi_input[data-focus] {
       border-color: var(--outline-color);
@@ -110,16 +120,13 @@ import.meta.css = /* css */ `
     }
     /* Readonly */
     .navi_input[data-readonly] {
-      color: var(--color-readonly);
+      --color: var(--color-readonly);
       background-color: var(--background-color-readonly);
       outline-color: var(--border-color-readonly);
     }
-    .navi_input[data-readonly]::placeholder {
-      color: var(--color-readonly);
-    }
     /* Disabled */
     .navi_input[data-disabled] {
-      color: var(--color-disabled);
+      --color: var(--color-disabled);
       background-color: var(--background-color-disabled);
       outline-color: var(--border-color-disabled);
     }
