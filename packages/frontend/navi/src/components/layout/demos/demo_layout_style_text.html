@@ -4,6 +4,10 @@
     <meta charset="utf-8" />
     <title>useLayoutStyle Demo - Text</title>
     <style>
+      * {
+        box-sizing: border-box;
+      }
+
       .demo-container {
         margin-bottom: 30px;
         padding: 20px;
@@ -60,7 +64,7 @@
     <script type="module" jsenv-type="module/jsx">
       /* eslint-disable no-unused-vars */
       import { render } from "preact";
-      import { FlexRow, FlexColumn, Text, Button } from "@jsenv/navi";
+      import { Box, Text, Button } from "@jsenv/navi";
 
       const DemoBox = ({ children, ...props }) => (
         <div className="demo-box" {...props}>
@@ -78,25 +82,22 @@
             </p>
 
             <div className="demo-container">
-              <h3>1. Text with Expand in FlexRow</h3>
+              <h3>1. Text with Expand in row</h3>
               <div className="visual-container">
-                <FlexRow gap="10px">
+                <Box flow="row" gap="10px">
                   <DemoBox>Start</DemoBox>
-                  <Text
-                    expand
-                    style={{ background: "#e8f5e8", padding: "10px" }}
-                  >
+                  <Text expand padding="sm" background="#e8f5e8">
                     This text expands to fill available horizontal space
                   </Text>
                   <DemoBox>End</DemoBox>
-                </FlexRow>
+                </Box>
               </div>
             </div>
 
             <div className="demo-container">
-              <h3>2. Text with Expand in FlexColumn</h3>
+              <h3>2. Text with Expand in column</h3>
               <div className="visual-container">
-                <FlexColumn gap="10px" style={{ height: "200px" }}>
+                <Box flow="col" gap="10px" height="200">
                   <Text style={{ background: "#fff3e0", padding: "10px" }}>
                     Fixed text at top
                   </Text>
@@ -109,7 +110,7 @@
                   <Text style={{ background: "#fff3e0", padding: "10px" }}>
                     Fixed text at bottom
                   </Text>
-                </FlexColumn>
+                </Box>
               </div>
             </div>
 
@@ -223,10 +224,10 @@
             </div>
 
             <div className="demo-container">
-              <h3>6. Text AlignX Test: FlexRow + alignX="end"</h3>
+              <h3>6. Text AlignX Test: row + alignX="end"</h3>
               <div className="visual-container">
                 <div className="bounded">
-                  <FlexRow gap="10px" style={{ height: "100%" }}>
+                  <Box flow="row" gap="10px" style={{ height: "100%" }}>
                     <Text style={{ background: "#e3f2fd", padding: "5px" }}>
                       Default position
                     </Text>
@@ -236,7 +237,7 @@
                     >
                       Pushed to end
                     </Text>
-                  </FlexRow>
+                  </Box>
                 </div>
               </div>
             </div>
@@ -244,8 +245,8 @@
             <div className="demo-container">
               <h3>7. Text Labels and Content Layout</h3>
               <div className="visual-container">
-                <FlexColumn gap="15px">
-                  <FlexRow gap="10px">
+                <Box flow="col" gap="15px">
+                  <Box flow="row" gap="10px">
                     <Text style={{ minWidth: "80px", fontWeight: "bold" }}>
                       Name:
                     </Text>
@@ -255,9 +256,9 @@
                     >
                       John Doe
                     </Text>
-                  </FlexRow>
+                  </Box>
 
-                  <FlexRow gap="10px">
+                  <Box flow="row" gap="10px">
                     <Text style={{ minWidth: "80px", fontWeight: "bold" }}>
                       Email:
                     </Text>
@@ -268,9 +269,9 @@
                       john.doe@example.com
                     </Text>
                     <Button>Edit</Button>
-                  </FlexRow>
+                  </Box>
 
-                  <FlexRow gap="10px">
+                  <Box flow="row" gap="10px">
                     <Text style={{ minWidth: "80px", fontWeight: "bold" }}>
                       Status:
                     </Text>
@@ -284,8 +285,8 @@
                     >
                       Active
                     </Text>
-                  </FlexRow>
-                </FlexColumn>
+                  </Box>
+                </Box>
               </div>
             </div>
 
@@ -300,7 +301,7 @@
                     width: "350px",
                   }}
                 >
-                  <FlexRow gap="15px" style={{ marginBottom: "15px" }}>
+                  <Box flow="row" gap="15px" style={{ marginBottom: "15px" }}>
                     <Text style={{ fontSize: "20px", fontWeight: "bold" }}>
                       Article Title
                     </Text>
@@ -310,7 +311,7 @@
                     >
                       2 min read
                     </Text>
-                  </FlexRow>
+                  </Box>
 
                   <Text
                     style={{
@@ -324,7 +325,7 @@
                     layout props.
                   </Text>
 
-                  <FlexRow gap="10px">
+                  <Box flow="row" gap="10px">
                     <Text style={{ fontSize: "12px", color: "#999" }}>
                       Published: Oct 29, 2025
                     </Text>
@@ -334,7 +335,7 @@
                     >
                       By Author Name
                     </Text>
-                  </FlexRow>
+                  </Box>
                 </div>
               </div>
             </div>
@@ -342,8 +343,8 @@
             <div className="demo-container">
               <h3>9. Text Navigation and Breadcrumbs</h3>
               <div className="visual-container">
-                <FlexColumn gap="15px">
-                  <FlexRow gap="10px">
+                <Box flow="col" gap="15px">
+                  <Box flow="row" gap="10px">
                     <Text style={{ fontWeight: "bold" }}>Home</Text>
                     <Text>/</Text>
                     <Text style={{ fontWeight: "bold" }}>Products</Text>
@@ -355,9 +356,9 @@
                     >
                       Help
                     </Text>
-                  </FlexRow>
+                  </Box>
 
-                  <FlexRow gap="15px">
+                  <Box flow="row" gap="15px">
                     <Text
                       expand
                       style={{ fontSize: "18px", fontWeight: "bold" }}
@@ -367,16 +368,16 @@
                     <Text alignX="end" style={{ fontSize: "12px" }}>
                       Last updated: Today
                     </Text>
-                  </FlexRow>
-                </FlexColumn>
+                  </Box>
+                </Box>
               </div>
             </div>
 
             <div className="demo-container">
               <h3>10. Text with Mixed Alignment</h3>
               <div className="visual-container">
-                <FlexColumn gap="10px">
-                  <FlexRow gap="10px">
+                <Box flow="col" gap="10px">
+                  <Box flow="row" gap="10px">
                     <Text style={{ background: "#e3f2fd", padding: "8px" }}>
                       Default (start)
                     </Text>
@@ -392,9 +393,9 @@
                     >
                       End aligned
                     </Text>
-                  </FlexRow>
+                  </Box>
 
-                  <FlexRow gap="10px">
+                  <Box flow="row" gap="10px">
                     <Text
                       expand
                       style={{ background: "#fff3e0", padding: "8px" }}
@@ -407,16 +408,16 @@
                     >
                       Fixed end
                     </Text>
-                  </FlexRow>
-                </FlexColumn>
+                  </Box>
+                </Box>
               </div>
             </div>
 
             <div className="demo-container">
               <h3>11. Text in Message/Chat Layout</h3>
               <div className="visual-container">
-                <FlexColumn gap="10px" style={{ width: "400px" }}>
-                  <FlexRow gap="10px">
+                <Box flow="col" gap="10px" style={{ width: "400px" }}>
+                  <Box flow="row" gap="10px">
                     <Text
                       style={{
                         background: "#e3f2fd",
@@ -427,9 +428,9 @@
                     >
                       Hello! This is a message from the left side.
                     </Text>
-                  </FlexRow>
+                  </Box>
 
-                  <FlexRow gap="10px">
+                  <Box flow="row" gap="10px">
                     <Text
                       alignX="end"
                       style={{
@@ -441,9 +442,9 @@
                     >
                       This message is aligned to the right side.
                     </Text>
-                  </FlexRow>
+                  </Box>
 
-                  <FlexRow gap="10px">
+                  <Box flow="row" gap="10px">
                     <Text
                       style={{
                         background: "#fff3e0",
@@ -455,27 +456,27 @@
                       Another left message with some longer content to show
                       wrapping.
                     </Text>
-                  </FlexRow>
-                </FlexColumn>
+                  </Box>
+                </Box>
               </div>
             </div>
 
             <div className="demo-container">
               <h3>12. Combined Text Styling and Layout</h3>
               <div className="visual-container">
-                <FlexColumn gap="15px">
+                <Box flow="col" gap="15px">
                   <Text bold marginBottom="10px" style={{ fontSize: "24px" }}>
                     Main Heading
                   </Text>
 
-                  <FlexRow gap="15px">
+                  <Box flow="row" gap="15px">
                     <Text italic marginRight="20px" style={{ color: "#666" }}>
                       Subtitle
                     </Text>
                     <Text alignX="end" style={{ fontSize: "12px" }}>
                       Metadata
                     </Text>
-                  </FlexRow>
+                  </Box>
 
                   <Text
                     paddingX="15px"
@@ -490,7 +491,7 @@
                     styling.
                   </Text>
 
-                  <FlexRow gap="10px">
+                  <Box flow="row" gap="10px">
                     <Text underline style={{ color: "#007bff" }}>
                       Link text
                     </Text>
@@ -500,8 +501,8 @@
                     <Text bold style={{ color: "#dc3545" }}>
                       Important
                     </Text>
-                  </FlexRow>
-                </FlexColumn>
+                  </Box>
+                </Box>
               </div>
             </div>
           </div>
