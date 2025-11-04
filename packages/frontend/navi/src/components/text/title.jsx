@@ -1,8 +1,8 @@
 import { withPropsStyle } from "../props_composition/with_props_style.js";
 
 export const Title = ({ children, as = "h1", ...rest }) => {
-  if (rest.bold === undefined) {
-    rest.bold = true;
+  if (rest.textBold === undefined) {
+    rest.textBold = true;
   }
   const [remainingProps, innerStyle] = withPropsStyle(rest, {
     layout: true,

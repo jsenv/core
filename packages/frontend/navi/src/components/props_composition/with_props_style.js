@@ -370,10 +370,11 @@ export const withPropsStyle = (
       visualStyles.borderBottom = borderBottom;
     }
     if (borderWidth !== undefined) {
-      visualStyles.borderWidth = borderWidth;
+      visualStyles.borderWidth = sizeSpacingScale[borderWidth] || borderWidth;
     }
     if (borderRadius !== undefined) {
-      visualStyles.borderRadius = borderRadius;
+      visualStyles.borderRadius =
+        sizeSpacingScale[borderRadius] || borderRadius;
     }
     if (borderColor !== undefined) {
       visualStyles.borderColor = borderColor;

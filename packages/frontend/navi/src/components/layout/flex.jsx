@@ -25,7 +25,15 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const FlexRow = ({ alignX, alignY, gap, children, ...rest }) => {
+export const FlexRow = ({
+  className,
+  alignX,
+  alignY,
+  gap,
+  children,
+  ...rest
+}) => {
+  const innerClassName = withPropsClassName("navi_flex_row", className);
   const [remainingProps, innerStyle] = withPropsStyle(rest, {
     base: {
       // Only set justifyContent if it's not the default "start"
@@ -38,14 +46,22 @@ export const FlexRow = ({ alignX, alignY, gap, children, ...rest }) => {
   });
 
   return (
-    <div {...remainingProps} className="navi_flex_row" style={innerStyle}>
+    <div {...remainingProps} className={innerClassName} style={innerStyle}>
       <FlexDirectionContext.Provider value="row">
         {children}
       </FlexDirectionContext.Provider>
     </div>
   );
 };
-export const FlexColumn = ({ alignX, alignY, gap, children, ...rest }) => {
+export const FlexColumn = ({
+  className,
+  alignX,
+  alignY,
+  gap,
+  children,
+  ...rest
+}) => {
+  const innerClassName = withPropsClassName("navi_flex_column", className);
   const [remainingProps, innerStyle] = withPropsStyle(rest, {
     base: {
       // Only set alignItems if it's not the default "stretch"
@@ -57,7 +73,7 @@ export const FlexColumn = ({ alignX, alignY, gap, children, ...rest }) => {
   });
 
   return (
-    <div {...remainingProps} className="navi_flex_column" style={innerStyle}>
+    <div {...remainingProps} className={innerClassName} style={innerStyle}>
       <FlexDirectionContext.Provider value="column">
         {children}
       </FlexDirectionContext.Provider>
@@ -72,7 +88,6 @@ export const FlexItem = ({ shrink, className, expand, children, ...rest }) => {
       "FlexItem must be used within a FlexRow or FlexColumn component.",
     );
   }
-
   const innerClassName = withPropsClassName("navi_flex_item", className);
   const [remainingProps, innerStyle] = withPropsStyle(rest, {
     base: {
