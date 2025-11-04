@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>useLayoutStyle Demo</title>
+    <title>Demo - Layout on input</title>
     <style>
       .demo-container {
         margin-bottom: 30px;
@@ -46,7 +46,7 @@
     <script type="module" jsenv-type="module/jsx">
       /* eslint-disable no-unused-vars */
       import { render } from "preact";
-      import { FlexRow, FlexColumn, Input, Button } from "@jsenv/navi";
+      import { Box, Input, Button } from "@jsenv/navi";
 
       const DemoBox = ({ children, ...props }) => (
         <div className="demo-box" {...props}>
@@ -64,24 +64,24 @@
             </p>
 
             <div className="demo-container">
-              <h3>1. Input with Expand in FlexRow</h3>
+              <h3>1. Input with Expand in row</h3>
               <div className="visual-container">
-                <FlexRow gap="10px">
+                <Box flow="col" gap="10px">
                   <Button>Start</Button>
                   <Input placeholder="Expanding input" expandX />
                   <Button>End</Button>
-                </FlexRow>
+                </Box>
               </div>
             </div>
 
             <div className="demo-container">
-              <h3>2. Input with Expand in FlexColumn</h3>
+              <h3>2. Input with Expand in column</h3>
               <div className="visual-container">
-                <FlexColumn gap="10px" style={{ height: "200px" }}>
+                <Box flow="row" gap="10px" style={{ height: "200px" }}>
                   <Input placeholder="Fixed input" />
                   <Input placeholder="Expanding input (height)" expandY />
                   <Input placeholder="Fixed input" />
-                </FlexColumn>
+                </Box>
               </div>
             </div>
 
@@ -109,11 +109,11 @@
             <div className="demo-container">
               <h3>4. Multiple Expand Elements</h3>
               <div className="visual-container">
-                <FlexRow gap="10px">
+                <Box flow="col" gap="10px">
                   <Input placeholder="Expand 1" expand />
                   <Input placeholder="Expand 2" expand />
                   <Input placeholder="Expand 3" expand />
-                </FlexRow>
+                </Box>
               </div>
             </div>
 
@@ -138,7 +138,7 @@
             <div className="demo-container">
               <h3>7. Directional Margins and Padding</h3>
               <div className="visual-container">
-                <FlexColumn gap="5px">
+                <Box flow="row" gap="5px">
                   <Input placeholder="marginLeft: 20px" marginLeft="20px" />
                   <Input placeholder="marginRight: 30px" marginRight="30px" />
                   <Input
@@ -147,18 +147,18 @@
                     marginBottom="25px"
                   />
                   <Input placeholder="paddingLeft: 25px" paddingLeft="25px" />
-                </FlexColumn>
+                </Box>
               </div>
             </div>
 
             <div className="demo-container">
-              <h3>8. AlignX Test: FlexRow + alignX="end"</h3>
+              <h3>8. AlignX Test: row + alignX="end"</h3>
               <div className="visual-container">
                 <div className="bounded">
-                  <FlexRow gap="10px" style={{ height: "100%" }}>
+                  <Box flow="col" gap="10px" style={{ height: "100%" }}>
                     <Input placeholder="Default" />
                     <Input placeholder="Pushed to end" alignX="end" />
-                  </FlexRow>
+                  </Box>
                 </div>
               </div>
             </div>
@@ -166,7 +166,7 @@
             <div className="demo-container">
               <h3>9. Combined Spacing and Expand</h3>
               <div className="visual-container">
-                <FlexRow gap="10px">
+                <Box flow="col" gap="10px">
                   <Button>Label</Button>
                   <Input
                     placeholder="Margin + Expand"
@@ -175,30 +175,30 @@
                     paddingX="15px"
                   />
                   <Button>Action</Button>
-                </FlexRow>
+                </Box>
               </div>
             </div>
 
             <div className="demo-container">
               <h3>10. Complex Layout: Form with Expand</h3>
               <div className="visual-container">
-                <FlexColumn gap="15px">
-                  <FlexRow gap="10px">
+                <Box flow="row" gap="15px">
+                  <Box flow="col" gap="10px">
                     <label style={{ minWidth: "80px", alignSelf: "center" }}>
                       Name:
                     </label>
                     <Input placeholder="Enter your name" expand />
-                  </FlexRow>
+                  </Box>
 
-                  <FlexRow gap="10px">
+                  <Box flow="col" gap="10px">
                     <label style={{ minWidth: "80px", alignSelf: "center" }}>
                       Email:
                     </label>
                     <Input placeholder="Enter your email" expand />
                     <Button>Verify</Button>
-                  </FlexRow>
+                  </Box>
 
-                  <FlexRow gap="10px">
+                  <Box flow="col" gap="10px">
                     <label style={{ minWidth: "80px", alignSelf: "center" }}>
                       Message:
                     </label>
@@ -207,13 +207,13 @@
                       expand
                       paddingY="10px"
                     />
-                  </FlexRow>
+                  </Box>
 
-                  <FlexRow gap="10px" alignX="end">
+                  <Box flow="col" gap="10px" alignX="end">
                     <Button>Cancel</Button>
                     <Button>Submit</Button>
-                  </FlexRow>
-                </FlexColumn>
+                  </Box>
+                </Box>
               </div>
             </div>
           </div>
