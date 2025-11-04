@@ -113,8 +113,6 @@ const LinkPlain = forwardRef((props, ref) => {
     blankTargetIcon,
     anchorIcon,
     icon,
-    currentIcon,
-    iconWhenHovered,
     ...rest
   } = props;
   const innerRef = useRef();
@@ -165,12 +163,6 @@ const LinkPlain = forwardRef((props, ref) => {
     innerIcon = icon;
   }
 
-  let innerIconWhenHovered;
-  if (iconWhenHovered === undefined) {
-    innerIconWhenHovered =
-      currentIcon && targetIsCurrent ? <CurrentLinkSvg /> : null;
-  }
-
   return (
     <a
       {...remainingProps}
@@ -189,6 +181,7 @@ const LinkPlain = forwardRef((props, ref) => {
       data-external={targetIsSameSite ? undefined : ""}
       data-internal={targetIsSameSite ? "" : undefined}
       data-anchor={targetIsAnchor ? "" : undefined}
+      data-current={targetIsCurrent ? "" : undefined}
       onClick={(e) => {
         closeValidationMessage(e.target, "click");
         if (readOnly) {
@@ -210,14 +203,18 @@ const LinkPlain = forwardRef((props, ref) => {
       <LoaderBackground loading={loading} color="light-dark(#355fcc, #3b82f6)">
         {children}
         {innerIcon && <Icon>{innerIcon}</Icon>}
-        {innerIconWhenHovered && <Icon>{innerIconWhenHovered}</Icon>}
       </LoaderBackground>
     </a>
   );
 });
 const BlankTargetLinkSvg = () => {
   return (
-    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <svg
+      viewBox="0 0 24 24"
+      width="100%"
+      height="100%"
+      xmlns="http://www.w3.org/2000/svg"
+    >
       <path
         d="M10.0002 5H8.2002C7.08009 5 6.51962 5 6.0918 5.21799C5.71547 5.40973 5.40973 5.71547 5.21799 6.0918C5 6.51962 5 7.08009 5 8.2002V15.8002C5 16.9203 5 17.4801 5.21799 17.9079C5.40973 18.2842 5.71547 18.5905 6.0918 18.7822C6.5192 19 7.07899 19 8.19691 19H15.8031C16.921 19 17.48 19 17.9074 18.7822C18.2837 18.5905 18.5905 18.2839 18.7822 17.9076C19 17.4802 19 16.921 19 15.8031V14M20 9V4M20 4H15M20 4L13 11"
         stroke="currentColor"
@@ -231,7 +228,12 @@ const BlankTargetLinkSvg = () => {
 };
 const AnchorLinkSvg = () => {
   return (
-    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <svg
+      viewBox="0 0 24 24"
+      width="100%"
+      height="100%"
+      xmlns="http://www.w3.org/2000/svg"
+    >
       <path
         d="M13.2218 3.32234C15.3697 1.17445 18.8521 1.17445 21 3.32234C23.1479 5.47022 23.1479 8.95263 21 11.1005L17.4645 14.636C15.3166 16.7839 11.8342 16.7839 9.6863 14.636C9.48752 14.4373 9.30713 14.2271 9.14514 14.0075C8.90318 13.6796 8.97098 13.2301 9.25914 12.9419C9.73221 12.4688 10.5662 12.6561 11.0245 13.1435C11.0494 13.1699 11.0747 13.196 11.1005 13.2218C12.4673 14.5887 14.6834 14.5887 16.0503 13.2218L19.5858 9.6863C20.9526 8.31947 20.9526 6.10339 19.5858 4.73655C18.219 3.36972 16.0029 3.36972 14.636 4.73655L13.5754 5.79721C13.1849 6.18774 12.5517 6.18774 12.1612 5.79721C11.7706 5.40669 11.7706 4.77352 12.1612 4.383L13.2218 3.32234Z"
         fill="currentColor"
@@ -243,7 +245,7 @@ const AnchorLinkSvg = () => {
     </svg>
   );
 };
-const CurrentLinkSvg = () => {
+export const CurrentLinkSvg = () => {
   return (
     <svg
       viewBox="0 0 16 16"
