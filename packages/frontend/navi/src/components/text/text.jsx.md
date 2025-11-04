@@ -66,10 +66,14 @@ Icons can be positioned before, after, or between text content:
 
 ### Icon Alignment
 
-Control vertical alignment of icons relative to text:
+The Text component provides intelligent icon alignment that automatically positions icons perfectly with text content, even within complex paragraph layouts. This smart alignment ensures icons always look naturally integrated with the text baseline.
+
+**Multiline Behavior**: When text within a `box` goes multiline, the icon stays vertically centered to the first line of text by default. This maintains clean alignment and readability. While you can control this with the `alignY` prop on the icon, the default behavior is typically the most visually appealing.
+
+**Important Layout Consideration**: Using `box={true}` creates a flexbox container, which affects how text flows when multiple `box` elements are adjacent. In narrow containers, multiple `box` texts can arrange themselves in columns rather than flowing naturally as a continuous sentence. This is why `box` should be reserved for short phrases or used sparingly in paragraph text.
 
 ```jsx
-// Default alignment (baseline)
+// Smart default alignment - icon aligns perfectly with text baseline
 <Text box>
   <Icon>
     <StarSvg />
@@ -77,7 +81,36 @@ Control vertical alignment of icons relative to text:
   Default alignment
 </Text>
 
-// Center aligned
+// When text wraps, icon stays aligned to first line
+<Box width="120px">
+  <Text box>
+    <Icon>
+      <DocumentSvg />
+    </Icon>
+    Long filename that wraps to multiple lines
+  </Text>
+</Box>
+
+// Good example: Short text+icon pairs work perfectly in paragraphs
+<Paragraph widht="200px">
+  Welcome! Click the{" "}
+  <Text box>
+    <Icon>
+      <HomeSvg />
+    </Icon>
+    home
+  </Text>
+  {" "}button or visit your{" "}
+  <Text box>
+    <Icon>
+      <UserSvg />
+    </Icon>
+    profile
+    </Text>
+  {" "}to get started.
+</Paragraph>
+
+// Center aligned (less common, but available)
 <Text box>
   <Icon alignY="center">
     <StarSvg />
@@ -85,7 +118,7 @@ Control vertical alignment of icons relative to text:
   Center aligned icon
 </Text>
 
-// Bottom aligned
+// Bottom aligned (rarely used)
 <Text box>
   <Icon alignY="end">
     <StarSvg />
@@ -93,6 +126,8 @@ Control vertical alignment of icons relative to text:
   Bottom aligned icon
 </Text>
 ```
+
+**Best Practice**: Reserve `box={true}` for short, cohesive phrases like "Download File", "New Message", or "Settings". For longer content or when multiple icon+text combinations appear in the same paragraph, consider using icons as separate elements or be mindful of the layout behavior in narrow containers.
 
 ### Styled Icons
 
