@@ -1,4 +1,4 @@
-import { TextOverflow } from "@jsenv/navi";
+import { Spacing, TextOverflow } from "@jsenv/navi";
 import { useState } from "preact/hooks";
 
 export const App = () => {
@@ -16,14 +16,12 @@ export const App = () => {
       {/* Basic Usage */}
       <section>
         <h2>Basic Text Overflow</h2>
-        <div
-          style={{ width: "200px", border: "1px solid #ccc", padding: "8px" }}
-        >
+        <Spacing width="200" border="1px solid #ccc" padding="sm">
           <TextOverflow>
             This is a very long text that should be truncated with ellipsis when
             it overflows
           </TextOverflow>
-        </div>
+        </Spacing>
       </section>
 
       {/* With After Content */}
@@ -107,51 +105,6 @@ export const App = () => {
             </div>
             <TextOverflow as="span">
               This is rendered as a span element with overflow
-            </TextOverflow>
-          </div>
-        </div>
-      </section>
-
-      {/* With Typography Props */}
-      <section>
-        <h2>With Typography Styling</h2>
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <div
-            style={{ width: "250px", border: "1px solid #ccc", padding: "8px" }}
-          >
-            <div
-              style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}
-            >
-              Bold text
-            </div>
-            <TextOverflow textBold textColor="blue">
-              This is bold blue text that will overflow with ellipsis
-            </TextOverflow>
-          </div>
-
-          <div
-            style={{ width: "250px", border: "1px solid #ccc", padding: "8px" }}
-          >
-            <div
-              style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}
-            >
-              Large italic text
-            </div>
-            <TextOverflow textSize="lg" textItalic textColor="green">
-              This is large italic green text with overflow handling
-            </TextOverflow>
-          </div>
-
-          <div
-            style={{ width: "250px", border: "1px solid #ccc", padding: "8px" }}
-          >
-            <div
-              style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}
-            >
-              Small text
-            </div>
-            <TextOverflow textSize="sm" textColor="#666">
-              This is small gray text that demonstrates overflow behavior
             </TextOverflow>
           </div>
         </div>

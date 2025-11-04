@@ -43,7 +43,7 @@ export const TextOverflow = ({
   return (
     <TagName className={innerClassName} style={innerStyle} {...remainingProps}>
       <span className="navi_text_overflow_wrapper">
-        <span style="navi_text_overflow_text">{children}</span>
+        <span className="navi_text_overflow_text">{children}</span>
         {afterContent}
       </span>
     </TagName>

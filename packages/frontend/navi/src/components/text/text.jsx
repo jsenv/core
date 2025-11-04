@@ -43,6 +43,7 @@ export const Text = ({ className, children, ...rest }) => {
   );
 };
 
+// TODO: add an ellpsis prop
 export const TextLine = ({ children, ...rest }) => {
   return (
     <Text {...rest} data-line="">
