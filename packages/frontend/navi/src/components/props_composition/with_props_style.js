@@ -91,7 +91,11 @@ export const withPropsStyle = (
     expandX = expand,
     expandY = expand,
     width,
+    minWidth,
+    maxWidth,
     height,
+    minHeight,
+    maxHeight,
 
     // typo props
     textSize,
@@ -286,6 +290,12 @@ export const withPropsStyle = (
     } else if (width !== undefined) {
       sizeStyles.width = normalizeStyle(width, "width", "css");
     }
+    if (minWidth !== undefined) {
+      sizeStyles.minWidth = normalizeStyle(minWidth, "minWidth", "css");
+    }
+    if (maxWidth !== undefined) {
+      sizeStyles.maxWidth = normalizeStyle(maxWidth, "maxWidth", "css");
+    }
     if (expandY) {
       if (flexDirection === "row") {
         sizeStyles.height = "100%"; // Take full height in row
@@ -296,6 +306,12 @@ export const withPropsStyle = (
       }
     } else if (height !== undefined) {
       sizeStyles.height = normalizeStyle(height, "height", "css");
+    }
+    if (minHeight !== undefined) {
+      sizeStyles.minHeight = normalizeStyle(minHeight, "minHeight", "css");
+    }
+    if (maxHeight !== undefined) {
+      sizeStyles.maxHeight = normalizeStyle(maxHeight, "maxHeight", "css");
     }
   }
   typo_styles: {

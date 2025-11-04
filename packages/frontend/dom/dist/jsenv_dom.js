@@ -518,6 +518,11 @@ const isKeyword = (value) => {
   return cssKeywordSet.has(value);
 };
 
+// url(
+// linear-gradient(
+// radial-gradient(
+// ...
+const STARTS_WITH_CSS_IMAGE_FUNCTION_REGEX = /^[a-z-]+\(/;
 // Normalize a single style value
 const normalizeStyle = (value, propertyName, context = "js") => {
   if (propertyName === "transform") {
@@ -569,6 +574,19 @@ const normalizeStyle = (value, propertyName, context = "js") => {
     }
     // never supposed to happen, the value given is neither string nor object
     return undefined;
+  }
+
+  if (propertyName === "backgroundImage") {
+    if (context === "css") {
+      if (
+        typeof value === "string" &&
+        !isKeyword(value) &&
+        !STARTS_WITH_CSS_IMAGE_FUNCTION_REGEX.test(value)
+      ) {
+        return `url(${value})`;
+      }
+    }
+    return value;
   }
 
   if (pxProperties.includes(propertyName)) {

@@ -9842,7 +9842,11 @@ const withPropsStyle = (
     expandX = expand,
     expandY = expand,
     width,
+    minWidth,
+    maxWidth,
     height,
+    minHeight,
+    maxHeight,
 
     // typo props
     textSize,
@@ -10037,6 +10041,12 @@ const withPropsStyle = (
     } else if (width !== undefined) {
       sizeStyles.width = normalizeStyle(width, "width", "css");
     }
+    if (minWidth !== undefined) {
+      sizeStyles.minWidth = normalizeStyle(minWidth, "minWidth", "css");
+    }
+    if (maxWidth !== undefined) {
+      sizeStyles.maxWidth = normalizeStyle(maxWidth, "maxWidth", "css");
+    }
     if (expandY) {
       if (flexDirection === "row") {
         sizeStyles.height = "100%"; // Take full height in row
@@ -10047,6 +10057,12 @@ const withPropsStyle = (
       }
     } else if (height !== undefined) {
       sizeStyles.height = normalizeStyle(height, "height", "css");
+    }
+    if (minHeight !== undefined) {
+      sizeStyles.minHeight = normalizeStyle(minHeight, "minHeight", "css");
+    }
+    if (maxHeight !== undefined) {
+      sizeStyles.maxHeight = normalizeStyle(maxHeight, "maxHeight", "css");
     }
   }
   typo_styles: {
@@ -19294,6 +19310,16 @@ const Paragraph = ({
   });
 };
 
+const Svg = props => {
+  const [remainingProps, innerStyle] = withPropsStyle(props, {
+    spacing: true
+  });
+  return jsx("svg", {
+    style: innerStyle,
+    ...remainingProps
+  });
+};
+
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   .text_and_count {
     display: flex;
@@ -19540,5 +19566,5 @@ const useDependenciesDiff = (inputs) => {
   return diffRef.current;
 };
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Button, Checkbox, CheckboxList, Col, Colgroup, Details, Editable, ErrorBoundaryContext, FlexColumn, FlexItem, FlexRow, FontSizedSvg, Form, Icon, IconAndText, Image, Input, Label, Link, LinkWithIcon, Overflow, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, Select, SelectionContext, Spacing, SummaryMarker, Tab, TabList, Table, TableCell, Tbody, Text, TextAndCount, Thead, Title, Tr, UITransition, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, Button, Checkbox, CheckboxList, Col, Colgroup, Details, Editable, ErrorBoundaryContext, FlexColumn, FlexItem, FlexRow, FontSizedSvg, Form, Icon, IconAndText, Image, Input, Label, Link, LinkWithIcon, Overflow, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, Select, SelectionContext, Spacing, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, TextAndCount, Thead, Title, Tr, UITransition, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map

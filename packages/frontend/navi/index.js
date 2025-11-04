@@ -91,6 +91,7 @@ export { SVGMaskOverlay } from "./src/components/svg/svg_mask_overlay.jsx";
 export { Image } from "./src/components/text/image.jsx";
 export { Overflow } from "./src/components/text/overflow.jsx";
 export { Paragraph } from "./src/components/text/paragraph.jsx";
+export { Svg } from "./src/components/text/svg.jsx";
 export { Icon, Text } from "./src/components/text/text.jsx";
 export { TextAndCount } from "./src/components/text/text_and_count.jsx";
 export { Title } from "./src/components/text/title.jsx";
