@@ -1,6 +1,7 @@
 import { withPropsStyle } from "../props_composition/with_props_style.js";
 
-export const Title = ({ children, as = "h1", ...rest }) => {
+export const Title = ({ as = "h1", children, ...rest }) => {
+  const HeadingTag = as;
   if (rest.textBold === undefined) {
     rest.textBold = true;
   }
@@ -8,8 +9,6 @@ export const Title = ({ children, as = "h1", ...rest }) => {
     layout: true,
     typo: true,
   });
-
-  const HeadingTag = as;
 
   return (
     <HeadingTag {...remainingProps} style={innerStyle}>
