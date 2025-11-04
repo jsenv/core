@@ -107,6 +107,7 @@ export const withPropsStyle = (
     textUnderlineColor,
     textColor,
     textShadow,
+    textLineHeight,
 
     // visual props
     boxShadow,
@@ -353,6 +354,13 @@ export const withPropsStyle = (
     }
     if (textShadow) {
       typoStyles.textShadow = textShadow;
+    }
+    if (textLineHeight !== undefined) {
+      typoStyles.lineHeight = normalizeStyle(
+        sizeTypoScale[textLineHeight] || textLineHeight,
+        "lineHeight",
+        "css",
+      );
     }
     typoStyles.color = textColor;
   }

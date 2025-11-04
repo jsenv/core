@@ -1,15 +1,15 @@
-import { Overflow } from "./overflow.jsx";
+import { TextOverflow } from "./text_overflow.jsx";
 
 import.meta.css = /* css */ `
-  .text_and_count {
+  .navi_text_and_count {
     display: flex;
+    flex: 1;
     align-items: center;
     gap: 3px;
-    flex: 1;
     white-space: nowrap;
   }
 
-  .count {
+  .navi_count {
     position: relative;
     top: -1px;
     color: rgba(28, 43, 52, 0.4);
@@ -18,11 +18,11 @@ import.meta.css = /* css */ `
 
 export const TextAndCount = ({ text, count }) => {
   return (
-    <Overflow
-      className="text_and_count"
-      afterContent={count > 0 && <span className="count">({count})</span>}
+    <TextOverflow
+      className="navi_text_and_count"
+      afterContent={count > 0 && <span className="navi_count">({count})</span>}
     >
-      <span className="label">{text}</span>
-    </Overflow>
+      {text}
+    </TextOverflow>
   );
 };

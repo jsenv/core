@@ -3,21 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <title>Text and Icon Demo</title>
-    <script type="importmap">
-      {
-        "imports": {
-          "preact": "https://esm.sh/preact@10.22.0",
-          "preact/": "https://esm.sh/preact@10.22.0/"
-        }
-      }
-    </script>
   </head>
   <body>
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       /* eslint-disable no-unused-vars */
-      import { Text, Icon } from "../text.jsx";
+      import { Text, Icon, FlexColumn, Spacing } from "@jsenv/navi";
 
       // Sample SVG icons
       const HomeIcon = () => (
@@ -113,15 +105,9 @@
           >
             <h1>Text and Icon Combinations</h1>
 
-            <section style={{ marginBottom: "40px" }}>
+            <Spacing as="section" marginBottom="xl">
               <h2>Basic Icon + Text</h2>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "10px",
-                }}
-              >
+              <FlexColumn gap="sm">
                 <Text>
                   <Icon>
                     <HomeIcon />
@@ -142,36 +128,24 @@
                   </Icon>
                   Settings
                 </Text>
-              </div>
-            </section>
+              </FlexColumn>
+            </Spacing>
 
-            <section style={{ marginBottom: "40px" }}>
+            <Spacing as="section" marginBottom="xl">
               <h2>Text + Icon (Reversed Order)</h2>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "10px",
-                }}
-              >
+              <FlexColumn gap="sm">
                 <Text>
                   Search
                   <Icon>
                     <SearchIcon />
                   </Icon>
                 </Text>
-              </div>
-            </section>
+              </FlexColumn>
+            </Spacing>
 
             <section style={{ marginBottom: "40px" }}>
               <h2>Multiple Icons</h2>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "10px",
-                }}
-              >
+              <FlexColumn gap="sm">
                 <Text>
                   <Icon>
                     <HomeIcon />
@@ -217,85 +191,73 @@
                     <HeartIcon />
                   </Icon>
                 </Text>
-              </div>
+              </FlexColumn>
             </section>
 
             <section style={{ marginBottom: "40px" }}>
               <h2>Different Font Sizes</h2>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "15px",
-                }}
-              >
-                <Text style={{ fontSize: "12px" }}>
+              <FlexColumn gap="sm">
+                <Text textSize="sm">
                   <Icon>
                     <HomeIcon />
                   </Icon>
                   Small text with icon
                 </Text>
 
-                <Text style={{ fontSize: "16px" }}>
+                <Text>
                   <Icon>
                     <UserIcon />
                   </Icon>
                   Normal text with icon
                 </Text>
 
-                <Text style={{ fontSize: "24px" }}>
+                <Text textSize="lg">
                   <Icon>
                     <SettingsIcon />
                   </Icon>
                   Large text with icon
                 </Text>
 
-                <Text style={{ fontSize: "32px" }}>
+                <Text textSize="xl">
                   <Icon>
                     <StarIcon />
                   </Icon>
                   Extra large text
                 </Text>
-              </div>
+              </FlexColumn>
             </section>
 
             <section style={{ marginBottom: "40px" }}>
               <h2>Colored Examples</h2>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "10px",
-                }}
-              >
-                <Text style={{ color: "blue" }}>
+              <FlexColumn gap="sm">
+                <Text textColor="blue">
                   <Icon>
                     <HomeIcon />
                   </Icon>
                   Blue home link
                 </Text>
 
-                <Text style={{ color: "green" }}>
+                <Text textColor="green">
                   <Icon>
                     <UserIcon />
                   </Icon>
                   Green user profile
                 </Text>
 
-                <Text style={{ color: "red" }}>
+                <Text textColor="red">
                   <Icon>
                     <HeartIcon />
                   </Icon>
                   Red heart favorite
                 </Text>
 
-                <Text style={{ color: "purple" }}>
+                <Text textColor="purple">
                   <Icon>
                     <StarIcon />
                   </Icon>
                   Purple star rating
                 </Text>
-              </div>
+              </FlexColumn>
             </section>
 
             <section style={{ marginBottom: "40px" }}>
@@ -365,35 +327,35 @@
               <h2>Inline Text with Icons</h2>
               <p style={{ fontSize: "16px", lineHeight: "1.6" }}>
                 Welcome to our platform! Click on the{" "}
-                <Text bold>
+                <Text textBold>
                   <Icon>
                     <HomeIcon />
                   </Icon>
                   home
                 </Text>{" "}
                 button to return to the dashboard, or visit your{" "}
-                <Text italic>
+                <Text textItalic>
                   <Icon>
                     <UserIcon />
                   </Icon>
                   profile
                 </Text>{" "}
                 to update your settings. Don't forget to{" "}
-                <Text underline>
+                <Text textUnderline>
                   <Icon>
                     <StarIcon />
                   </Icon>
                   star
                 </Text>{" "}
                 your favorite items and{" "}
-                <Text bold italic>
+                <Text textBold textItalic>
                   <Icon>
                     <HeartIcon />
                   </Icon>
                   like
                 </Text>{" "}
                 the content you enjoy. Use the{" "}
-                <Text bold underline>
+                <Text textBold textUnderline>
                   <Icon>
                     <SearchIcon />
                   </Icon>
@@ -401,11 +363,11 @@
                 </Text>{" "}
                 feature to find what you're looking for quickly. You can also
                 combine{" "}
-                <Text italic underline>
+                <Text textItalic textUnderline>
                   multiple styles
                 </Text>{" "}
                 together for{" "}
-                <Text bold italic underline>
+                <Text textBold textItalic textUnderline>
                   maximum emphasis
                 </Text>
                 !

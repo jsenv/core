@@ -1,14 +1,14 @@
 import { withPropsStyle } from "../props_composition/with_props_style.js";
 
-export const Spacing = ({ children, ...rest }) => {
+export const Spacing = ({ as = "div", children, ...rest }) => {
+  const TagName = as;
   const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    spacing: true,
-    size: true,
+    layout: true,
   });
 
   return (
-    <div {...remainingProps} style={innerStyle}>
+    <TagName {...remainingProps} style={innerStyle}>
       {children}
-    </div>
+    </TagName>
   );
 };

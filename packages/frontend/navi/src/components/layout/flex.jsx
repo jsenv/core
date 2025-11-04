@@ -26,6 +26,7 @@ import.meta.css = /* css */ `
 `;
 
 export const FlexRow = ({
+  as = "div",
   className,
   alignX,
   alignY,
@@ -45,15 +46,17 @@ export const FlexRow = ({
     layout: true,
   });
 
+  const TagName = as;
   return (
-    <div {...remainingProps} className={innerClassName} style={innerStyle}>
+    <TagName {...remainingProps} className={innerClassName} style={innerStyle}>
       <FlexDirectionContext.Provider value="row">
         {children}
       </FlexDirectionContext.Provider>
-    </div>
+    </TagName>
   );
 };
 export const FlexColumn = ({
+  as = "div",
   className,
   alignX,
   alignY,
@@ -61,6 +64,7 @@ export const FlexColumn = ({
   children,
   ...rest
 }) => {
+  const TagName = as;
   const innerClassName = withPropsClassName("navi_flex_column", className);
   const [remainingProps, innerStyle] = withPropsStyle(rest, {
     base: {
@@ -74,15 +78,23 @@ export const FlexColumn = ({
   });
 
   return (
-    <div {...remainingProps} className={innerClassName} style={innerStyle}>
+    <TagName {...remainingProps} className={innerClassName} style={innerStyle}>
       <FlexDirectionContext.Provider value="column">
         {children}
       </FlexDirectionContext.Provider>
-    </div>
+    </TagName>
   );
 };
 
-export const FlexItem = ({ shrink, className, expand, children, ...rest }) => {
+export const FlexItem = ({
+  as = "div",
+  shrink,
+  className,
+  expand,
+  children,
+  ...rest
+}) => {
+  const TagName = as;
   const flexDirection = useContext(FlexDirectionContext);
   if (!flexDirection) {
     console.warn(
@@ -99,8 +111,8 @@ export const FlexItem = ({ shrink, className, expand, children, ...rest }) => {
   });
 
   return (
-    <div {...remainingProps} className={innerClassName} style={innerStyle}>
+    <TagName {...remainingProps} className={innerClassName} style={innerStyle}>
       {children}
-    </div>
+    </TagName>
   );
 };
