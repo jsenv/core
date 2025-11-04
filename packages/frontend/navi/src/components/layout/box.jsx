@@ -31,11 +31,11 @@ export const Box = ({
         ? {
             display: "flex",
             flexDirection: "column",
-            // Only set alignItems if it's not the default "stretch"
-            alignItems: contentAlignX !== "stretch" ? contentAlignX : undefined,
-            // Only set justifyContent if it's not the default "start"
+            // Set if not the default ("stretch")
+            alignItems: contentAlignX === "stretch" ? undefined : contentAlignX,
+            // set if not the default ("start")
             justifyContent:
-              contentAlignY !== "start" ? contentAlignY : undefined,
+              contentAlignY === "start" ? undefined : contentAlignY,
             gap: resolveSpacingSize(contentGap, "gap"),
           }
         : {}),
@@ -43,7 +43,7 @@ export const Box = ({
         ? {
             display: "flex",
             flexDirection: "row",
-            // set if not the default ("start")
+            // Set if not the default ("start")
             justifyContent:
               contentAlignX === "start" ? undefined : contentAlignX,
             // set if not the default ("stretch")

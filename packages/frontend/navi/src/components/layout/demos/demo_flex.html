@@ -202,7 +202,7 @@
                 <DemoBox>Short</DemoBox>
               </Box>
 
-              <h4>contentAlignY="stretch" (default)</h4>
+              <h4>contentAlignY undefined</h4>
               <Box
                 flow="col"
                 contentAlignY="stretch"
@@ -220,205 +220,199 @@
             <section className="demo-section">
               <h3>5. Real-World Example: Button with alignX</h3>
 
-              <FlexRow
-                gap="10px"
-                style={{ background: "#f5f5f5", padding: "10px" }}
+              <Box
+                flow="col"
+                contentGap="10px"
+                padding="sm"
+                background="#f5f5f5"
               >
                 <DemoBox>Content</DemoBox>
                 <DemoBox>More content</DemoBox>
                 <Button alignX="end" alignY="center">
                   Action Button
                 </Button>
-              </FlexRow>
+              </Box>
             </section>
 
-            <h2>FlexRow + FlexItem</h2>
+            <h2>Col nested</h2>
 
             <section className="demo-section">
-              <h3>6. FlexItem Basic Usage</h3>
+              <h3>6. Basic Usage</h3>
 
-              <FlexRow gap="10px">
-                <FlexItem>
+              <Box flow="col" contentGap="10px">
+                <Box>
                   <DemoBox>FlexItem 1</DemoBox>
-                </FlexItem>
-                <FlexItem>
+                </Box>
+                <Box>
                   <DemoBox>FlexItem 2</DemoBox>
-                </FlexItem>
-                <FlexItem>
+                </Box>
+                <Box>
                   <DemoBox>FlexItem 3</DemoBox>
-                </FlexItem>
-              </FlexRow>
+                </Box>
+              </Box>
             </section>
 
             <section className="demo-section">
-              <h3>7. FlexItem with Growth</h3>
+              <h3>7. Growth</h3>
 
-              <FlexRow gap="10px">
-                <FlexItem>
+              <Box flow="col" contentGap="10px">
+                <Box>
                   <DemoBox>Fixed</DemoBox>
-                </FlexItem>
-                <FlexItem grow>
+                </Box>
+                <Box expand>
                   <DemoBox>Grows to fill</DemoBox>
-                </FlexItem>
-                <FlexItem>
+                </Box>
+                <Box>
                   <DemoBox>Fixed</DemoBox>
-                </FlexItem>
-              </FlexRow>
+                </Box>
+              </Box>
             </section>
 
-            <h2>FlexColumn</h2>
+            <h2>Rows</h2>
 
             <section className="demo-section">
-              <h3>8. Basic FlexColumn</h3>
-              <FlexColumn style={{ height: "200px" }}>
+              <h3>8. Basic Rows</h3>
+              <Box flow="row" height="200">
                 <DemoBox>Item 1</DemoBox>
                 <DemoBox>Item 2</DemoBox>
                 <DemoBox>Item 3</DemoBox>
-              </FlexColumn>
+              </Box>
             </section>
 
             <section className="demo-section">
-              <h3>9. FlexColumn with Gap</h3>
-              <FlexColumn gap="15px" style={{ height: "200px" }}>
+              <h3>9. Rows with spacing</h3>
+              <Box flow="row" contentGap="md" height="200">
                 <DemoBox>Item 1</DemoBox>
                 <DemoBox>Item 2</DemoBox>
                 <DemoBox>Item 3</DemoBox>
-              </FlexColumn>
+              </Box>
             </section>
 
             <section className="demo-section">
-              <h3>10. FlexColumn with Horizontal Alignment</h3>
+              <h3>10. Rows with contentAlignX</h3>
 
-              <h4>alignX="start"</h4>
-              <FlexColumn
-                alignX="start"
-                gap="sm"
+              <h4>contentAlignX="start"</h4>
+              <Box
+                flow="row"
+                contentAlignX="start"
+                contentGap="sm"
                 padding="sm"
-                style={{
-                  height: "150px",
-                  width: "300px",
-                  background: "#fff3e0",
-                }}
+                width="300"
+                height="150"
+                background="#fff3e0"
               >
                 <DemoBox>Short</DemoBox>
                 <DemoBox style={{ width: "200px" }}>Wide Item</DemoBox>
                 <DemoBox>Short</DemoBox>
-              </FlexColumn>
+              </Box>
 
-              <h4>alignX="center"</h4>
-              <FlexColumn
-                alignX="center"
-                gap="10px"
-                style={{
-                  height: "150px",
-                  width: "300px",
-                  background: "#e8f5e8",
-                  padding: "10px",
-                }}
+              <h4>contentAlignX="center"</h4>
+              <Box
+                flow="row"
+                contentAlignX="center"
+                contentGap="sm"
+                padding="sm"
+                width="300"
+                height="150"
+                background="#e8f5e8"
               >
                 <DemoBox>Short</DemoBox>
                 <DemoBox style={{ width: "200px" }}>Wide Item</DemoBox>
                 <DemoBox>Short</DemoBox>
-              </FlexColumn>
+              </Box>
 
-              <h4>alignX="end"</h4>
-              <FlexColumn
-                alignX="end"
-                gap="10px"
-                style={{
-                  height: "150px",
-                  width: "300px",
-                  background: "#ffebee",
-                  padding: "10px",
-                }}
+              <h4>contentAlignX="end"</h4>
+              <Box
+                flow="row"
+                contentAlignX="end"
+                contentGap="sm"
+                padding="sm"
+                width="300"
+                height="150"
+                background="#ffebee"
               >
                 <DemoBox>Short</DemoBox>
                 <DemoBox style={{ width: "200px" }}>Wide Item</DemoBox>
                 <DemoBox>Short</DemoBox>
-              </FlexColumn>
+              </Box>
 
-              <h4>alignX="stretch" (default)</h4>
-              <FlexColumn
-                alignX="stretch"
-                gap="10px"
-                style={{
-                  height: "150px",
-                  width: "300px",
-                  background: "#e1f5fe",
-                  padding: "10px",
-                }}
+              <h4>contentAlignX undefined</h4>
+              <Box
+                flow="row"
+                contentGap="sm"
+                padding="sm"
+                width="300"
+                height="150"
+                background="#e1f5fe"
               >
                 <DemoBox>Short</DemoBox>
                 <DemoBox>Wide Item</DemoBox>
                 <DemoBox>Short</DemoBox>
-              </FlexColumn>
+              </Box>
             </section>
 
             <section className="demo-section">
-              <h3>11. FlexColumn with Vertical Alignment (alignY)</h3>
+              <h3>11. Row with contentAlignY</h3>
 
-              <h4>alignY="start" (default)</h4>
-              <FlexColumn
-                alignY="start"
-                gap="10px"
-                style={{
-                  height: "200px",
-                  width: "300px",
-                  background: "#fff3e0",
-                  padding: "10px",
-                }}
+              <h4>contentAlignY="start" (default)</h4>
+              <Box
+                flow="row"
+                contentAlignY="start"
+                contentGap="sm"
+                width="300"
+                height="200"
+                padding="sm"
+                background="#fff3e0"
               >
                 <DemoBox>Short</DemoBox>
                 <DemoBox style={{ width: "200px" }}>Wide Item</DemoBox>
                 <DemoBox>Short</DemoBox>
-              </FlexColumn>
+              </Box>
 
-              <h4>alignY="center"</h4>
-              <FlexColumn
-                alignY="center"
-                gap="10px"
-                style={{
-                  height: "200px",
-                  width: "300px",
-                  background: "#e8f5e8",
-                  padding: "10px",
-                }}
+              <h4>contentAlignY="center"</h4>
+              <Box
+                flow="row"
+                contentAlignY="center"
+                contentGap="sm"
+                width="300"
+                height="200"
+                padding="sm"
+                background="#e8f5e8"
               >
                 <DemoBox>Short</DemoBox>
                 <DemoBox style={{ width: "200px" }}>Wide Item</DemoBox>
                 <DemoBox>Short</DemoBox>
-              </FlexColumn>
+              </Box>
 
-              <h4>alignY="end"</h4>
-              <FlexColumn
-                alignY="end"
-                gap="10px"
-                style={{
-                  height: "200px",
-                  width: "300px",
-                  background: "#ffebee",
-                  padding: "10px",
-                }}
+              <h4>contentAlignY="end"</h4>
+              <Box
+                flow="row"
+                contentAlignY="end"
+                contentGap="sm"
+                width="300"
+                height="200"
+                padding="sm"
+                background="#ffebee"
               >
                 <DemoBox>Short</DemoBox>
                 <DemoBox style={{ width: "200px" }}>Wide Item</DemoBox>
                 <DemoBox>Short</DemoBox>
-              </FlexColumn>
+              </Box>
 
-              <h4>alignY="space-between"</h4>
-              <FlexColumn
-                alignY="space-between"
-                style={{
-                  height: "200px",
-                  width: "300px",
-                  background: "#e3f2fd",
-                  padding: "10px",
-                }}
+              <h4>contentAlignY="space-between"</h4>
+              <Box
+                flow="row"
+                contentAlignY="space-between"
+                contentGap="sm"
+                width="300"
+                height="200"
+                padding="sm"
+                background="#e3f2fd"
               >
                 <DemoBox>Short</DemoBox>
                 <DemoBox style={{ width: "200px" }}>Wide Item</DemoBox>
                 <DemoBox>Short</DemoBox>
-              </FlexColumn>
+              </Box>
             </section>
 
             <h2>FlexItem Individual Alignment</h2>
@@ -444,140 +438,126 @@
             </p>
 
             <section className="demo-section">
-              <h3>12. FlexItem Individual Alignment in Rows</h3>
-
-              <h4>FlexItem alignX in Row</h4>
-              <FlexRow
-                gap="10px"
-                style={{
-                  background: "#f3e5f5",
-                  padding: "10px",
-                }}
-              >
-                <FlexItem>
+              <h3>Box alignX in col</h3>
+              <Box flow="col" contentGap="sm" padding="sm" background="#f3e5f5">
+                <Box>
                   <DemoBox>Default</DemoBox>
-                </FlexItem>
-                <FlexItem alignX="start">
+                </Box>
+                <Box alignX="start">
                   <DemoBox>alignX="start"</DemoBox>
-                </FlexItem>
-                <FlexItem alignX="center">
+                </Box>
+                <Box alignX="center">
                   <DemoBox>alignX="center"</DemoBox>
-                </FlexItem>
-                <FlexItem alignX="end">
+                </Box>
+                <Box alignX="end">
                   <DemoBox>alignX="end"</DemoBox>
-                </FlexItem>
-              </FlexRow>
+                </Box>
+              </Box>
 
-              <h4>FlexItem alignY in Row</h4>
-              <FlexRow
-                gap="10px"
-                style={{
-                  height: "100px",
-                  background: "#e1f5fe",
-                  padding: "10px",
-                }}
+              <h3>Box alignY in col</h3>
+              <Box
+                flow="col"
+                contentGap="10px"
+                height="100"
+                background="#e1f5fe"
+                padding="sm"
+                style="box-sizing: border-box"
               >
-                <FlexItem>
+                <Box>
                   <DemoBox>Default</DemoBox>
-                </FlexItem>
-                <FlexItem alignY="start">
+                </Box>
+                <Box alignY="start">
                   <DemoBox>alignY="start"</DemoBox>
-                </FlexItem>
-                <FlexItem alignY="end">
+                </Box>
+                <Box alignY="end">
                   <DemoBox>alignY="end"</DemoBox>
-                </FlexItem>
-                <FlexItem alignY="stretch">
-                  <DemoBox style={{ height: "100%" }}>alignY="stretch"</DemoBox>
-                </FlexItem>
-              </FlexRow>
+                </Box>
+                <Box expandY>
+                  <DemoBox style={{ height: "100%" }}>expandY</DemoBox>
+                </Box>
+              </Box>
             </section>
 
             <section className="demo-section">
-              <h3>13. FlexItem Individual Alignment in Columns</h3>
-
-              <h4>FlexItem alignX in Column</h4>
-              <FlexColumn
-                gap="10px"
-                style={{
-                  height: "200px",
-                  width: "300px",
-                  background: "#f3e5f5",
-                  padding: "10px",
-                }}
+              <h3>Box alignX in row</h3>
+              <Box
+                flow="row"
+                contentGap="sm"
+                width="300"
+                height="200"
+                padding="sm"
+                background="#f3e5f5"
               >
-                <FlexItem>
+                <Box>
                   <DemoBox>Default</DemoBox>
-                </FlexItem>
-                <FlexItem alignX="start">
+                </Box>
+                <Box alignX="start">
                   <DemoBox>alignX="start"</DemoBox>
-                </FlexItem>
-                <FlexItem alignX="center">
+                </Box>
+                <Box alignX="center">
                   <DemoBox>alignX="center"</DemoBox>
-                </FlexItem>
-                <FlexItem alignX="end">
+                </Box>
+                <Box alignX="end">
                   <DemoBox>alignX="end"</DemoBox>
-                </FlexItem>
-              </FlexColumn>
+                </Box>
+              </Box>
 
               <h4>FlexItem alignY in Column</h4>
-              <FlexColumn
-                gap="10px"
-                style={{
-                  height: "300px",
-                  width: "200px",
-                  background: "#e1f5fe",
-                  padding: "10px",
-                }}
+              <Box
+                flow="row"
+                contentGap="sm"
+                width="300"
+                height="300"
+                padding="sm"
+                background="#e1f5fe"
               >
-                <FlexItem>
+                <Box>
                   <DemoBox>Default</DemoBox>
-                </FlexItem>
-                <FlexItem alignY="start">
+                </Box>
+                <Box alignY="start">
                   <DemoBox>alignY="start"</DemoBox>
-                </FlexItem>
-                <FlexItem alignY="center">
+                </Box>
+                <Box alignY="center">
                   <DemoBox>alignY="center"</DemoBox>
-                </FlexItem>
-                <FlexItem alignY="end">
+                </Box>
+                <Box alignY="end">
                   <DemoBox>alignY="end"</DemoBox>
-                </FlexItem>
-              </FlexColumn>
+                </Box>
+              </Box>
             </section>
 
             <section className="demo-section">
-              <h3>14. FlexItem Practical Examples - Column Layout</h3>
+              <h3>14. Box Practical Examples - Row layout</h3>
 
               <h4>Single item pushed to bottom</h4>
-              <FlexColumn
-                gap="10px"
-                style={{
-                  height: "200px",
-                  background: "#fff3e0",
-                  padding: "10px",
-                }}
+              <Box
+                flow="row"
+                contentGap="sm"
+                height="200"
+                padding="sm"
+                background="#e1f5fe"
               >
                 <DemoBox>Item 1</DemoBox>
                 <DemoBox>Item 2</DemoBox>
-                <FlexItem alignY="end">
+                <Box alignY="end">
                   <DemoBox>Pushed to bottom</DemoBox>
-                </FlexItem>
-              </FlexColumn>
+                </Box>
+              </Box>
 
               <h4>Item centered vertically</h4>
-              <FlexColumn
-                gap="10px"
-                style={{
-                  height: "200px",
-                  background: "#e8f5e8",
-                  padding: "10px",
-                }}
+              <Box
+                flow="row"
+                contentGap="sm"
+                height="200"
+                padding="sm"
+                background="#e8f5e8"
               >
                 <DemoBox>Item 1</DemoBox>
-                <FlexItem alignY="center">
+                <Box alignY="center">
                   <DemoBox>Centered</DemoBox>
-                </FlexItem>
+                </Box>
                 <DemoBox>Item 3</DemoBox>
-              </FlexColumn>
+              </Box>
             </section>
 
             <section className="demo-section">
@@ -588,38 +568,36 @@
               </p>
 
               <h4>Example: Most items start, one pushed to end</h4>
-              <FlexRow
-                alignX="start"
-                gap="10px"
-                style={{
-                  background: "#fff8e1",
-                  padding: "10px",
-                }}
+              <Box
+                flow="col"
+                contentAlignX="start"
+                contentGap="sm"
+                padding="sm"
+                background="#fff8e1"
               >
                 <DemoBox>Start</DemoBox>
                 <DemoBox>Start</DemoBox>
-                <FlexItem alignX="end">
+                <Box alignX="end">
                   <DemoBox>Pushed to end</DemoBox>
-                </FlexItem>
-              </FlexRow>
+                </Box>
+              </Box>
 
               <h4>Example: Most items aligned start, one centered</h4>
-              <FlexColumn
-                alignX="start"
-                gap="10px"
-                style={{
-                  height: "200px",
-                  width: "300px",
-                  background: "#e8f5e8",
-                  padding: "10px",
-                }}
+              <Box
+                flow="row"
+                contentAlignX="start"
+                contentGap="sm"
+                height="200"
+                width="300"
+                background="#e8f5e8"
+                padding="sm"
               >
                 <DemoBox>Left aligned</DemoBox>
-                <FlexItem alignX="center">
+                <Box alignX="center">
                   <DemoBox>Centered exception</DemoBox>
-                </FlexItem>
+                </Box>
                 <DemoBox>Left aligned</DemoBox>
-              </FlexColumn>
+              </Box>
             </section>
           </div>
         );

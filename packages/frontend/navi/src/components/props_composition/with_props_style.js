@@ -216,7 +216,7 @@ export const withPropsStyle = (
     alignmentStyles = {};
 
     // flex
-    if (boxFlow === "column") {
+    if (boxFlow === "col") {
       // In row direction: alignX controls justify-content, alignY controls align-self
       if (alignY !== undefined && alignY !== "start") {
         alignmentStyles.alignSelf = alignY;
@@ -238,7 +238,7 @@ export const withPropsStyle = (
       }
     } else if (boxFlow === "row") {
       // In column direction: alignX controls align-self, alignY uses auto margins
-      if (alignX !== undefined && alignX !== "start") {
+      if (alignX !== undefined && alignX !== "stretch") {
         alignmentStyles.alignSelf = alignX;
       }
       // For column, alignY uses auto margins for positioning
