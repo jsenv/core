@@ -1,8 +1,16 @@
 import { createContext } from "preact";
-import { useContext, useMemo, useState } from "preact/hooks";
+import { useContext, useState } from "preact/hooks";
 
 import { withPropsClassName } from "../props_composition/with_props_class_name.js";
 import { withPropsStyle } from "../props_composition/with_props_style.js";
+
+/*
+// TODO: will become a badge or something to display a counter
+.navi_count {
+    position: relative;
+    top: -1px;
+    color: rgba(28, 43, 52, 0.4);
+  } */
 
 import.meta.css = /* css */ `
   :root {
@@ -22,12 +30,6 @@ import.meta.css = /* css */ `
     align-items: baseline;
     gap: 0.1em;
     white-space: nowrap;
-  }
-
-  .navi_count {
-    position: relative;
-    top: -1px;
-    color: rgba(28, 43, 52, 0.4);
   }
 
   .navi_text_overflow {
@@ -54,68 +56,74 @@ import.meta.css = /* css */ `
   }
 `;
 
-const OverflowIndicatorContext = createContext(null);
-export const Text = ({ className, children, overflowProtected, ...rest }) => {
-  const setOverflowIndicator = useContext(OverflowIndicatorContext);
-  const innerClassName = withPropsClassName("navi_text", className);
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    layout: true,
-    typo: true,
-  });
-  const text = (
-    <span className={innerClassName} style={innerStyle} {...remainingProps}>
-      {children}
-    </span>
-  );
-  setOverflowIndicator?.(overflowProtected ? text : null);
-  return text;
+const OverflowPinnedElementContext = createContext(null);
+export const Text = (props) => {
+  const { overflowEllipsis, ...rest } = props;
+  if (overflowEllipsis) {
+    return <TextOverflow {...rest} />;
+  }
+  if (props.overflowPinned) {
+    return <TextOverflowPinned {...props} />;
+  }
+  return <TextBasic {...props} />;
 };
-
-export const TextOverflow = ({ as = "div", className, children, ...rest }) => {
+const TextOverflow = ({ as = "div", className, children, ...rest }) => {
   const TagName = as;
   const innerClassName = withPropsClassName("navi_text_overflow", className);
   const [remainingProps, innerStyle] = withPropsStyle(rest, {
     layout: true,
     typo: true,
   });
-  const [OverflowProtectedText, setOverflowProtectedText] = useState(null);
-  const setOverflowProtectedTextWrapper = useMemo((value) => {
-    return setOverflowProtectedText(() => value);
-  }, []);
+  const [OverflowPinnedElement, setOverflowPinnedElement] = useState(null);
 
   return (
     <TagName className={innerClassName} style={innerStyle} {...remainingProps}>
       <span className="navi_text_overflow_wrapper">
         <span className="navi_text_overflow_text">
-          <OverflowIndicatorContext.Provider
-            value={setOverflowProtectedTextWrapper}
+          <OverflowPinnedElementContext.Provider
+            value={setOverflowPinnedElement}
           >
             {children}
-          </OverflowIndicatorContext.Provider>
+          </OverflowPinnedElementContext.Provider>
         </span>
-        {OverflowProtectedText}
+        {OverflowPinnedElement}
       </span>
     </TagName>
   );
 };
-
-export const TextLine = ({ children, ...rest }) => {
-  return (
-    <Text {...rest} data-line="">
-      {children}
-    </Text>
-  );
+const TextOverflowPinned = ({ overflowPinned, ...props }) => {
+  const setOverflowPinnedElement = useContext(OverflowPinnedElementContext);
+  const text = <Text {...props}></Text>;
+  if (!setOverflowPinnedElement) {
+    console.warn(
+      "<Text overflowPinned> declared outside a <Text overflowEllipsis>",
+    );
+    return text;
+  }
+  if (overflowPinned) {
+    setOverflowPinnedElement(text);
+    return null;
+  }
+  setOverflowPinnedElement(null);
+  return text;
 };
-Text.Line = TextLine;
+const TextBasic = ({ as = "span", className, children, line, ...rest }) => {
+  const TagName = as;
+  const innerClassName = withPropsClassName("navi_text", className);
+  const [remainingProps, innerStyle] = withPropsStyle(rest, {
+    layout: true,
+    typo: true,
+  });
 
-export const TextAndCount = ({ children, count, ...rest }) => {
   return (
-    <TextOverflow
-      {...rest}
-      afterContent={count > 0 && <span className="navi_count">({count})</span>}
+    <TagName
+      className={innerClassName}
+      style={innerStyle}
+      data-line={line ? "" : undefined}
+      {...remainingProps}
     >
       {children}
-    </TextOverflow>
+    </TagName>
   );
 };
 

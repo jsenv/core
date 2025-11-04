@@ -1,4 +1,4 @@
-import { Spacing, TextOverflow } from "@jsenv/navi";
+import { Spacing, Text } from "@jsenv/navi";
 import { useState } from "preact/hooks";
 
 export const App = () => {
@@ -17,24 +17,25 @@ export const App = () => {
       <section>
         <h2>Basic Text Overflow</h2>
         <Spacing width="200" border="1px solid #ccc" padding="sm">
-          <TextOverflow>
+          <Text overflowEllipsis>
             This is a very long text that should be truncated with ellipsis when
             it overflows
-          </TextOverflow>
+          </Text>
         </Spacing>
       </section>
 
       {/* With After Content */}
       <section>
-        <h2>With After Content</h2>
+        <h2>With Pinned Content</h2>
         <div
           style={{ width: "250px", border: "1px solid #ccc", padding: "8px" }}
         >
-          <TextOverflow
-            afterContent={<span style={{ color: "#666" }}>(modified)</span>}
-          >
+          <Text overflowEllipsis>
             This text has additional content after it that stays visible
-          </TextOverflow>
+            <Text overflowPinned textColor="#666">
+              (modified)
+            </Text>
+          </Text>
         </div>
       </section>
 
@@ -56,10 +57,10 @@ export const App = () => {
               >
                 Width: {width}px
               </div>
-              <TextOverflow>
+              <Text overflowEllipsis>
                 Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
                 eiusmod tempor
-              </TextOverflow>
+              </Text>
             </div>
           ))}
         </div>
@@ -77,9 +78,9 @@ export const App = () => {
             >
               as=&quot;div&quot; (default)
             </div>
-            <TextOverflow>
+            <Text overflowEllipsis>
               This is rendered as a div element with overflow handling
-            </TextOverflow>
+            </Text>
           </div>
 
           <div
@@ -90,9 +91,9 @@ export const App = () => {
             >
               as=&quot;p&quot;
             </div>
-            <TextOverflow as="p">
+            <Text as="p" overflowEllipsis>
               This is rendered as a paragraph element with overflow
-            </TextOverflow>
+            </Text>
           </div>
 
           <div
@@ -103,9 +104,9 @@ export const App = () => {
             >
               as=&quot;span&quot;
             </div>
-            <TextOverflow as="span">
+            <Text as="span" overflowEllipsis>
               This is rendered as a span element with overflow
-            </TextOverflow>
+            </Text>
           </div>
         </div>
       </section>
@@ -122,13 +123,9 @@ export const App = () => {
             >
               With padding and margin
             </div>
-            <TextOverflow
-              padding="sm"
-              margin="xs"
-              style={{ backgroundColor: "#f0f0f0" }}
-            >
+            <Text padding="sm" margin="xs" backgroundColor="#f0f0f0">
               Text with padding and margin that will overflow properly
-            </TextOverflow>
+            </Text>
           </div>
 
           <div
@@ -139,23 +136,21 @@ export const App = () => {
             >
               With border and background
             </div>
-            <TextOverflow
+            <Text
               padding="sm"
-              style={{
-                backgroundColor: "#e3f2fd",
-                border: "1px solid #2196f3",
-                borderRadius: "4px",
-              }}
+              backgroundColor="#e3f2fd"
+              border="1px solid #2196f3"
+              borderRadius="4px"
             >
               Styled text container with overflow handling and visual styling
-            </TextOverflow>
+            </Text>
           </div>
         </div>
       </section>
 
       {/* Complex After Content */}
       <section>
-        <h2>Complex After Content</h2>
+        <h2>Complex Pinned Content</h2>
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <div
             style={{ width: "280px", border: "1px solid #ccc", padding: "8px" }}
@@ -165,13 +160,12 @@ export const App = () => {
             >
               With icon after
             </div>
-            <TextOverflow
-              afterContent={
-                <span style={{ color: "#f44336", fontSize: "14px" }}>⚠️</span>
-              }
-            >
+            <Text overflowEllipsis>
               Important message that might be too long to display fully
-            </TextOverflow>
+              <Text overflowPinned textColor="#f44336" textSize="sm">
+                ⚠️
+              </Text>
+            </Text>
           </div>
 
           <div
@@ -182,19 +176,18 @@ export const App = () => {
             >
               With multiple elements after
             </div>
-            <TextOverflow
-              afterContent={
+            <Text overflowEllipsis>
+              Document title with attachment count and icon that demonstrates
+              overflow
+              <Text overflowPinned>
                 <div
                   style={{ display: "flex", gap: "4px", alignItems: "center" }}
                 >
                   <span style={{ fontSize: "12px", color: "#666" }}>(3)</span>
                   <span style={{ fontSize: "14px" }}>📎</span>
                 </div>
-              }
-            >
-              Document title with attachment count and icon that demonstrates
-              overflow
-            </TextOverflow>
+              </Text>
+            </Text>
           </div>
         </div>
       </section>
@@ -233,13 +226,10 @@ const InteractiveWidthDemo = () => {
           padding: "12px",
         }}
       >
-        <TextOverflow
-          afterContent={<span style={{ color: "#666" }}>✓</span>}
-          textBold
-        >
+        <Text afterContent={<span style={{ color: "#666" }}>✓</span>} textBold>
           Resize me to see how the text overflow behavior adapts to different
           container widths
-        </TextOverflow>
+        </Text>
       </div>
     </div>
   );
