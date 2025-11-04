@@ -1,4 +1,4 @@
-import { Spacing, Text } from "@jsenv/navi";
+import { Count, Spacing, Text } from "@jsenv/navi";
 import { useState } from "preact/hooks";
 
 export const App = () => {
@@ -27,15 +27,28 @@ export const App = () => {
       {/* With After Content */}
       <section>
         <h2>With Pinned Content</h2>
-        <div
-          style={{ width: "250px", border: "1px solid #ccc", padding: "8px" }}
-        >
-          <Text overflowEllipsis>
-            This text has additional content after it that stays visible
-            <Text overflowPinned textColor="#666">
-              (modified)
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <div
+            style={{ width: "250px", border: "1px solid #ccc", padding: "8px" }}
+          >
+            <Text overflowEllipsis>
+              This text has additional content after it that stays visible
+              <Text overflowPinned textColor="#666">
+                (modified)
+              </Text>
             </Text>
-          </Text>
+          </div>
+
+          <div
+            style={{ width: "250px", border: "1px solid #ccc", padding: "8px" }}
+          >
+            <Text overflowEllipsis>
+              Text with count that is too long to be displayed entirely
+              <Text overflowPinned textColor="#4caf50">
+                <Count>10</Count>
+              </Text>
+            </Text>
+          </div>
         </div>
       </section>
 
