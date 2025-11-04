@@ -107,7 +107,7 @@ const TextOverflowPinned = ({ overflowPinned, ...props }) => {
 const TextBasic = ({
   as = "span",
   className,
-  box,
+  box = false,
   gap = "xxs",
   children,
   ...rest
@@ -129,7 +129,7 @@ const TextBasic = ({
       data-box={box ? "" : undefined}
       {...remainingProps}
     >
-      <InlineFlexContext.Provider value={box}>
+      <InlineFlexContext.Provider value={Boolean(box)}>
         {children}
       </InlineFlexContext.Provider>
     </TagName>
