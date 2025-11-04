@@ -544,6 +544,9 @@ const normalizeNumber = (value, { unit, propertyName, preferedType }) => {
   if (typeof value === "string") {
     // Keep strings as-is (including %, em, rem, auto, none, etc.)
     if (preferedType === "string") {
+      if (unit && !value.endsWith(unit)) {
+        return `${value}${unit}`;
+      }
       return value;
     }
     // convert to number if possible (font-size: "12px" -> fontSize:12, opacity: "0.5" -> opacity: 0.5)
@@ -570,12 +573,19 @@ const normalizeNumber = (value, { unit, propertyName, preferedType }) => {
 };
 
 // Normalize styles for DOM application
-const normalizeStyles = (styles, context = "js") => {
+const normalizeStyles = (styles, context = "js", mutate = false) => {
   if (!styles) {
-    return {};
+    return mutate ? styles : {};
   }
   if (typeof styles === "string") {
     styles = parseStyleString(styles);
+    return styles;
+  }
+  if (mutate) {
+    for (const key of Object.keys(styles)) {
+      const value = styles[key];
+      styles[key] = normalizeStyle(value, key, context);
+    }
     return styles;
   }
   const normalized = {};
@@ -10285,6 +10295,8 @@ import.meta.css = /* css */ `
     flex-direction: inherit;
     align-items: inherit;
     justify-content: inherit;
+    border-radius: inherit;
+    cursor: inherit;
   }
 
   .ui_transition_measure_wrapper[data-transition-translate-x] {
@@ -11718,4 +11730,4 @@ const notifyTransitionOverflow = (element, transitionId) => {
   };
 };
 
-export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, addWillChange, allowWheelThrough, appendStyles, canInterceptKeys, captureScrollState, createDragGestureController, createDragToMoveGestureController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findFocusable, getAvailableHeight, getAvailableWidth, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getInnerHeight, getInnerWidth, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getPaddingSizes, getPositionedParent, getPreferedColorScheme, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateY, getVisuallyVisibleInfo, getWidth, initFlexDetailsSet, initFocusGroup, initPositionSticky, initUITransition, isScrollable, mergeStyles, normalizeStyles, parseCSSColor, pickLightOrDark, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, resolveCSSColor, resolveCSSSize, setAttribute, setAttributes, setStyles, startDragToResizeGesture, stickyAsRelativeCoords, stringifyCSSColor, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };
+export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, addWillChange, allowWheelThrough, appendStyles, canInterceptKeys, captureScrollState, createDragGestureController, createDragToMoveGestureController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findFocusable, getAvailableHeight, getAvailableWidth, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getInnerHeight, getInnerWidth, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getPaddingSizes, getPositionedParent, getPreferedColorScheme, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateY, getVisuallyVisibleInfo, getWidth, initFlexDetailsSet, initFocusGroup, initPositionSticky, initUITransition, isScrollable, mergeStyles, normalizeStyle, normalizeStyles, parseCSSColor, pickLightOrDark, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, resolveCSSColor, resolveCSSSize, setAttribute, setAttributes, setStyles, startDragToResizeGesture, stickyAsRelativeCoords, stringifyCSSColor, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };

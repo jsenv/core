@@ -1,5 +1,5 @@
 import { installImportMetaCss } from "./jsenv_navi_side_effects.js";
-import { createIterableWeakSet, createPubSub, createValueEffect, createStyleController, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, activeElementSignal, canInterceptKeys, initUITransition, getElementSignature, resolveCSSSize, normalizeStyles, appendStyles, findBefore, findAfter, initFocusGroup, elementIsFocusable, pickLightOrDark, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { createIterableWeakSet, createPubSub, createValueEffect, createStyleController, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, activeElementSignal, canInterceptKeys, initUITransition, getElementSignature, resolveCSSSize, normalizeStyles, normalizeStyle, appendStyles, findBefore, findAfter, initFocusGroup, elementIsFocusable, pickLightOrDark, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { effect, signal, computed, batch, useSignal } from "@preact/signals";
 import { useEffect, useRef, useCallback, useContext, useState, useLayoutEffect, useMemo, useImperativeHandle, useErrorBoundary, useId } from "preact/hooks";
@@ -9921,6 +9921,7 @@ const withPropsStyle = (
       } else if (marginY !== undefined) {
         marginStyles.marginBottom = sizeSpacingScale[marginY] || marginY;
       }
+      normalizeStyles(marginStyles, "css", true);
     }
     {
       paddingStyles = {};
@@ -9950,6 +9951,7 @@ const withPropsStyle = (
       } else if (paddingY !== undefined) {
         paddingStyles.paddingBottom = sizeSpacingScale[paddingY] || paddingY;
       }
+      normalizeStyles(paddingStyles, "css", true);
     }
   }
   alignment_styles: {
@@ -10033,7 +10035,7 @@ const withPropsStyle = (
         sizeStyles.width = "100%"; // Take full width outside flex
       }
     } else if (width !== undefined) {
-      sizeStyles.width = width;
+      sizeStyles.width = normalizeStyle(width, "width", "css");
     }
     if (expandY) {
       if (flexDirection === "row") {
@@ -10044,7 +10046,7 @@ const withPropsStyle = (
         sizeStyles.height = "100%"; // Take full height outside flex
       }
     } else if (height !== undefined) {
-      sizeStyles.height = height;
+      sizeStyles.height = normalizeStyle(height, "height", "css");
     }
   }
   typo_styles: {
@@ -10058,7 +10060,7 @@ const withPropsStyle = (
         typeof textSize === "string"
           ? sizeTypoScale[textSize] || textSize
           : textSize;
-      typoStyles.fontSize = fontSize;
+      typoStyles.fontSize = normalizeStyle(fontSize, "fontSize", "css");
     }
     if (textBold) {
       typoStyles.fontWeight = "bold";
@@ -10121,11 +10123,18 @@ const withPropsStyle = (
       visualStyles.borderBottom = borderBottom;
     }
     if (borderWidth !== undefined) {
-      visualStyles.borderWidth = sizeSpacingScale[borderWidth] || borderWidth;
+      visualStyles.borderWidth = normalizeStyle(
+        sizeSpacingScale[borderWidth] || borderWidth,
+        "borderWidth",
+        "css",
+      );
     }
     if (borderRadius !== undefined) {
-      visualStyles.borderRadius =
-        sizeSpacingScale[borderRadius] || borderRadius;
+      visualStyles.borderRadius = normalizeStyle(
+        sizeSpacingScale[borderRadius] || borderRadius,
+        "borderRadius",
+        "css",
+      );
     }
     if (borderColor !== undefined) {
       visualStyles.borderColor = borderColor;
@@ -19239,6 +19248,16 @@ const SVGMaskOverlay = ({
   });
 };
 
+const Image = props => {
+  const [remainingProps, innerStyle] = withPropsStyle(props, {
+    spacing: true
+  });
+  return jsx("img", {
+    style: innerStyle,
+    ...remainingProps
+  });
+};
+
 const Overflow = ({
   className,
   children,
@@ -19521,5 +19540,5 @@ const useDependenciesDiff = (inputs) => {
   return diffRef.current;
 };
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Button, Checkbox, CheckboxList, Col, Colgroup, Details, Editable, ErrorBoundaryContext, FlexColumn, FlexItem, FlexRow, FontSizedSvg, Form, Icon, IconAndText, Input, Label, Link, LinkWithIcon, Overflow, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, Select, SelectionContext, Spacing, SummaryMarker, Tab, TabList, Table, TableCell, Tbody, Text, TextAndCount, Thead, Title, Tr, UITransition, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, Button, Checkbox, CheckboxList, Col, Colgroup, Details, Editable, ErrorBoundaryContext, FlexColumn, FlexItem, FlexRow, FontSizedSvg, Form, Icon, IconAndText, Image, Input, Label, Link, LinkWithIcon, Overflow, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, Select, SelectionContext, Spacing, SummaryMarker, Tab, TabList, Table, TableCell, Tbody, Text, TextAndCount, Thead, Title, Tr, UITransition, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map

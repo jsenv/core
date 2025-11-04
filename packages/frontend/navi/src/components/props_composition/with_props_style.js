@@ -1,4 +1,4 @@
-import { appendStyles, normalizeStyles } from "@jsenv/dom";
+import { appendStyles, normalizeStyle, normalizeStyles } from "@jsenv/dom";
 import { useContext } from "preact/hooks";
 
 import { FlexDirectionContext } from "../layout/layout_context.jsx";
@@ -170,6 +170,7 @@ export const withPropsStyle = (
       } else if (marginY !== undefined) {
         marginStyles.marginBottom = sizeSpacingScale[marginY] || marginY;
       }
+      normalizeStyles(marginStyles, "css", true);
     }
     inner_spacing: {
       paddingStyles = {};
@@ -199,6 +200,7 @@ export const withPropsStyle = (
       } else if (paddingY !== undefined) {
         paddingStyles.paddingBottom = sizeSpacingScale[paddingY] || paddingY;
       }
+      normalizeStyles(paddingStyles, "css", true);
     }
   }
   alignment_styles: {
@@ -282,7 +284,7 @@ export const withPropsStyle = (
         sizeStyles.width = "100%"; // Take full width outside flex
       }
     } else if (width !== undefined) {
-      sizeStyles.width = width;
+      sizeStyles.width = normalizeStyle(width, "width", "css");
     }
     if (expandY) {
       if (flexDirection === "row") {
@@ -293,7 +295,7 @@ export const withPropsStyle = (
         sizeStyles.height = "100%"; // Take full height outside flex
       }
     } else if (height !== undefined) {
-      sizeStyles.height = height;
+      sizeStyles.height = normalizeStyle(height, "height", "css");
     }
   }
   typo_styles: {
@@ -307,7 +309,7 @@ export const withPropsStyle = (
         typeof textSize === "string"
           ? sizeTypoScale[textSize] || textSize
           : textSize;
-      typoStyles.fontSize = fontSize;
+      typoStyles.fontSize = normalizeStyle(fontSize, "fontSize", "css");
     }
     if (textBold) {
       typoStyles.fontWeight = "bold";
@@ -370,11 +372,18 @@ export const withPropsStyle = (
       visualStyles.borderBottom = borderBottom;
     }
     if (borderWidth !== undefined) {
-      visualStyles.borderWidth = sizeSpacingScale[borderWidth] || borderWidth;
+      visualStyles.borderWidth = normalizeStyle(
+        sizeSpacingScale[borderWidth] || borderWidth,
+        "borderWidth",
+        "css",
+      );
     }
     if (borderRadius !== undefined) {
-      visualStyles.borderRadius =
-        sizeSpacingScale[borderRadius] || borderRadius;
+      visualStyles.borderRadius = normalizeStyle(
+        sizeSpacingScale[borderRadius] || borderRadius,
+        "borderRadius",
+        "css",
+      );
     }
     if (borderColor !== undefined) {
       visualStyles.borderColor = borderColor;

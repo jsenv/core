@@ -145,6 +145,9 @@ const normalizeNumber = (value, { unit, propertyName, preferedType }) => {
   if (typeof value === "string") {
     // Keep strings as-is (including %, em, rem, auto, none, etc.)
     if (preferedType === "string") {
+      if (unit && !value.endsWith(unit)) {
+        return `${value}${unit}`;
+      }
       return value;
     }
     // convert to number if possible (font-size: "12px" -> fontSize:12, opacity: "0.5" -> opacity: 0.5)
@@ -171,12 +174,19 @@ const normalizeNumber = (value, { unit, propertyName, preferedType }) => {
 };
 
 // Normalize styles for DOM application
-export const normalizeStyles = (styles, context = "js") => {
+export const normalizeStyles = (styles, context = "js", mutate = false) => {
   if (!styles) {
-    return {};
+    return mutate ? styles : {};
   }
   if (typeof styles === "string") {
     styles = parseStyleString(styles);
+    return styles;
+  }
+  if (mutate) {
+    for (const key of Object.keys(styles)) {
+      const value = styles[key];
+      styles[key] = normalizeStyle(value, key, context);
+    }
     return styles;
   }
   const normalized = {};

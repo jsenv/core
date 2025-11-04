@@ -15,7 +15,7 @@ export {
   getTranslateY,
 } from "./src/style/style_controller.js";
 export { getDefaultStyles } from "./src/style/style_default.js";
-export { normalizeStyles } from "./src/style/style_parsing.js";
+export { normalizeStyle, normalizeStyles } from "./src/style/style_parsing.js";
 
 // attributes
 export { addAttributeEffect } from "./src/attr/add_attribute_effect.js";
