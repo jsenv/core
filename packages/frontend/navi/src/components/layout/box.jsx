@@ -118,3 +118,12 @@ export const Box = ({
     </TagName>
   );
 };
+
+const BoxFlowCol = (props) => {
+  return <Box flow="col" {...props} />;
+};
+const BoxFlowRow = (props) => {
+  return <Box flow="row" {...props} />;
+};
+Box.col = BoxFlowCol;
+Box.row = BoxFlowRow;

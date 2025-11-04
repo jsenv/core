@@ -9,15 +9,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       /* eslint-disable no-unused-vars */
-      import {
-        Text,
-        Paragraph,
-        Icon,
-        FlexColumn,
-        Spacing,
-        Title,
-        Link,
-      } from "@jsenv/navi";
+      import { Text, Paragraph, Icon, Box, Title, Link } from "@jsenv/navi";
 
       const Demo = () => {
         return (
@@ -31,9 +23,9 @@
           >
             <Title as="h1">Text and Icon Combinations</Title>
 
-            <Spacing as="section" marginBottom="xl">
+            <Box as="section" style={{ marginBottom: "32px" }}>
               <Title as="h2">Basic Icon + Text</Title>
-              <FlexColumn gap="sm">
+              <Box flow="row" contentGap="12px">
                 <Text box>
                   <Icon>
                     <HomeSvg />
@@ -54,16 +46,16 @@
                   </Icon>
                   Settings
                 </Text>
-              </FlexColumn>
-            </Spacing>
+              </Box>
+            </Box>
 
-            <Spacing as="section" marginBottom="xl">
+            <Box as="section" style={{ marginBottom: "32px" }}>
               <Title as="h2">Icon + Text + Link Combinations</Title>
-              <FlexColumn gap="lg">
+              <Box flow="row" contentGap="24px">
                 {/* Container width variations */}
                 <div>
                   <Title as="h3">Container Width Variations</Title>
-                  <FlexColumn gap="lg">
+                  <Box flow="row" contentGap="24px">
                     {/* 500px container */}
                     <div>
                       <div
@@ -77,7 +69,7 @@
                         500px Container
                       </div>
 
-                      <FlexColumn gap="sm">
+                      <Box flow="row" contentGap="12px">
                         <div
                           style={{
                             width: "500px",
@@ -164,7 +156,7 @@
                             </Text>
                           </Text>
                         </div>
-                      </FlexColumn>
+                      </Box>
                     </div>
 
                     {/* 300px container */}
@@ -180,7 +172,7 @@
                         300px Container
                       </div>
 
-                      <FlexColumn gap="sm">
+                      <Box flow="row" contentGap="12px">
                         <div
                           style={{
                             width: "300px",
@@ -267,15 +259,15 @@
                             </Text>
                           </Text>
                         </div>
-                      </FlexColumn>
+                      </Box>
                     </div>
-                  </FlexColumn>
+                  </Box>
                 </div>
 
                 {/* Icon position variations */}
                 <div>
                   <Title as="h3">Icon Position Variations</Title>
-                  <FlexColumn gap="md">
+                  <Box flow="row" contentGap="16px">
                     <div
                       style={{
                         width: "300px",
@@ -356,12 +348,12 @@
                         </Icon>
                       </Text>
                     </div>
-                  </FlexColumn>
+                  </Box>
                 </div>
-              </FlexColumn>
-            </Spacing>
+              </Box>
+            </Box>
 
-            <Spacing as="section" marginBottom="xl">
+            <Box as="section" style={{ marginBottom: "32px" }}>
               <Title as="h2">Inline Text with Icons</Title>
               <p style={{ fontSize: "16px", lineHeight: "1.6" }}>
                 Welcome to our platform! Click on the{" "}
@@ -410,11 +402,11 @@
                 </Text>
                 !
               </p>
-            </Spacing>
+            </Box>
 
-            <Spacing as="section" marginBottom="xl">
+            <Box as="section" style={{ marginBottom: "32px" }}>
               <Title as="h2">Different Font Sizes</Title>
-              <FlexColumn gap="sm">
+              <Box flow="row" contentGap="12px">
                 <Text box textSize="sm">
                   <Icon>
                     <HomeSvg />
@@ -442,24 +434,24 @@
                   </Icon>
                   Extra large text
                 </Text>
-              </FlexColumn>
-            </Spacing>
+              </Box>
+            </Box>
 
-            <Spacing as="section" marginBottom="xl">
+            <Box as="section" style={{ marginBottom: "32px" }}>
               <h2>Text + Icon (Reversed Order)</h2>
-              <FlexColumn gap="sm">
+              <Box flow="row" contentGap="12px">
                 <Text box>
                   Search
                   <Icon>
                     <SearchSvg />
                   </Icon>
                 </Text>
-              </FlexColumn>
-            </Spacing>
+              </Box>
+            </Box>
 
             <section style={{ marginBottom: "40px" }}>
               <h2>Multiple Icons</h2>
-              <FlexColumn gap="sm">
+              <Box flow="row" contentGap="12px">
                 <Text box>
                   <Icon>
                     <HomeSvg />
@@ -505,12 +497,12 @@
                     <HeartSvg />
                   </Icon>
                 </Text>
-              </FlexColumn>
+              </Box>
             </section>
 
             <section style={{ marginBottom: "40px" }}>
               <h2>Colored Examples</h2>
-              <FlexColumn gap="sm">
+              <Box flow="row" contentGap="12px">
                 <Text box textColor="blue">
                   <Icon>
                     <HomeSvg />
@@ -538,7 +530,7 @@
                   </Icon>
                   Purple star rating
                 </Text>
-              </FlexColumn>
+              </Box>
             </section>
 
             <section style={{ marginBottom: "40px" }}>
