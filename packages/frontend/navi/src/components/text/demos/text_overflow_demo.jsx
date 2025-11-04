@@ -197,6 +197,127 @@ export const App = () => {
         <h2>Interactive Width Control</h2>
         <InteractiveWidthDemo />
       </section>
+
+      {/* Multiline Text Overflow Testing */}
+      <section>
+        <h2>Multiline Text Overflow Behavior</h2>
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {/* Test 1: Text with line breaks */}
+          <div
+            style={{ width: "200px", border: "1px solid #ccc", padding: "8px" }}
+          >
+            <div
+              style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}
+            >
+              Text with line breaks
+            </div>
+            <Text overflowEllipsis>
+              First line of text{"\n"}
+              Second line of text{"\n"}
+              Third line that should overflow
+            </Text>
+          </div>
+
+          {/* Test 2: Text without white-space: nowrap */}
+          <div
+            style={{ width: "200px", border: "1px solid #ccc", padding: "8px" }}
+          >
+            <div
+              style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}
+            >
+              Without nowrap constraint
+            </div>
+            <Text overflowEllipsis style={{ whiteSpace: "normal" }}>
+              This is a very long text that should wrap to multiple lines
+              instead of being truncated with ellipsis. Let&apos;s see how it
+              behaves.
+            </Text>
+          </div>
+
+          {/* Test 3: Multiple lines with height constraint */}
+          <div
+            style={{
+              width: "200px",
+              height: "60px",
+              border: "1px solid #ccc",
+              padding: "8px",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}
+            >
+              Height constrained container
+            </div>
+            <Text overflowEllipsis style={{ whiteSpace: "normal" }}>
+              This text is in a height-constrained container. It should wrap to
+              multiple lines but the container itself has overflow hidden to see
+              how it interacts with the text overflow behavior.
+            </Text>
+          </div>
+
+          {/* Test 4: Multiline with pinned content */}
+          <div
+            style={{ width: "250px", border: "1px solid #ccc", padding: "8px" }}
+          >
+            <div
+              style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}
+            >
+              Multiline with pinned content
+            </div>
+            <Text overflowEllipsis style={{ whiteSpace: "normal" }}>
+              This is a longer text that will wrap to multiple lines and we want
+              to see how the pinned content behaves in this scenario.
+              <Text overflowPinned textColor="red">
+                [PINNED]
+              </Text>
+            </Text>
+          </div>
+
+          {/* Test 5: CSS line-clamp simulation */}
+          <div
+            style={{ width: "200px", border: "1px solid #ccc", padding: "8px" }}
+          >
+            <div
+              style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}
+            >
+              Line-clamp style (experimental)
+            </div>
+            <Text
+              overflowEllipsis
+              style={{
+                whiteSpace: "normal",
+                display: "-webkit-box",
+                WebkitLineClamp: "3",
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              }}
+            >
+              This text should be clamped to exactly 3 lines with ellipsis at
+              the end of the third line. Let&apos;s see if this CSS approach
+              works with our text overflow component.
+              <Text overflowPinned textColor="blue">
+                [END]
+              </Text>
+            </Text>
+          </div>
+
+          {/* Test 6: Very long single word */}
+          <div
+            style={{ width: "150px", border: "1px solid #ccc", padding: "8px" }}
+          >
+            <div
+              style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}
+            >
+              Single long word
+            </div>
+            <Text overflowEllipsis>
+              Supercalifragilisticexpialidocious-word-that-cannot-be-broken
+              <Text overflowPinned>!</Text>
+            </Text>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };

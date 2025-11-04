@@ -4,14 +4,6 @@ import { useContext, useState } from "preact/hooks";
 import { withPropsClassName } from "../props_composition/with_props_class_name.js";
 import { withPropsStyle } from "../props_composition/with_props_style.js";
 
-/*
-// TODO: will become a badge or something to display a counter
-.navi_count {
-    position: relative;
-    top: -1px;
-    color: rgba(28, 43, 52, 0.4);
-  } */
-
 import.meta.css = /* css */ `
   :root {
     --navi-icon-align-y: center;
