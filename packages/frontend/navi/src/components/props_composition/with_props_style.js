@@ -106,54 +106,57 @@ export const withPropsStyle = (
     outer_spacing: {
       marginStyles = {};
       if (margin !== undefined) {
-        marginStyles.margin = spacingSizes[margin] || margin;
+        marginStyles.margin = sizeSpacingScale[margin] || margin;
       }
       if (marginLeft !== undefined) {
-        marginStyles.marginLeft = spacingSizes[marginLeft] || marginLeft;
+        marginStyles.marginLeft = sizeSpacingScale[marginLeft] || marginLeft;
       } else if (marginX !== undefined) {
-        marginStyles.marginLeft = spacingSizes[marginX] || marginX;
+        marginStyles.marginLeft = sizeSpacingScale[marginX] || marginX;
       }
       if (marginRight !== undefined) {
-        marginStyles.marginRight = spacingSizes[marginRight] || marginRight;
+        marginStyles.marginRight = sizeSpacingScale[marginRight] || marginRight;
       } else if (marginX !== undefined) {
-        marginStyles.marginRight = spacingSizes[marginX] || marginX;
+        marginStyles.marginRight = sizeSpacingScale[marginX] || marginX;
       }
       if (marginTop !== undefined) {
-        marginStyles.marginTop = spacingSizes[marginTop] || marginTop;
+        marginStyles.marginTop = sizeSpacingScale[marginTop] || marginTop;
       } else if (marginY !== undefined) {
-        marginStyles.marginTop = spacingSizes[marginY] || marginY;
+        marginStyles.marginTop = sizeSpacingScale[marginY] || marginY;
       }
       if (marginBottom !== undefined) {
-        marginStyles.marginBottom = spacingSizes[marginBottom] || marginBottom;
+        marginStyles.marginBottom =
+          sizeSpacingScale[marginBottom] || marginBottom;
       } else if (marginY !== undefined) {
-        marginStyles.marginBottom = spacingSizes[marginY] || marginY;
+        marginStyles.marginBottom = sizeSpacingScale[marginY] || marginY;
       }
     }
     inner_spacing: {
       paddingStyles = {};
       if (padding !== undefined) {
-        paddingStyles.padding = spacingSizes[padding] || padding;
+        paddingStyles.padding = sizeSpacingScale[padding] || padding;
       }
       if (paddingLeft !== undefined) {
-        paddingStyles.paddingLeft = spacingSizes[paddingLeft] || paddingLeft;
+        paddingStyles.paddingLeft =
+          sizeSpacingScale[paddingLeft] || paddingLeft;
       } else if (paddingX !== undefined) {
-        paddingStyles.paddingLeft = spacingSizes[paddingX] || paddingX;
+        paddingStyles.paddingLeft = sizeSpacingScale[paddingX] || paddingX;
       }
       if (paddingRight !== undefined) {
-        paddingStyles.paddingRight = spacingSizes[paddingRight] || paddingRight;
+        paddingStyles.paddingRight =
+          sizeSpacingScale[paddingRight] || paddingRight;
       } else if (paddingX !== undefined) {
-        paddingStyles.paddingRight = spacingSizes[paddingX] || paddingX;
+        paddingStyles.paddingRight = sizeSpacingScale[paddingX] || paddingX;
       }
       if (paddingTop !== undefined) {
-        paddingStyles.paddingTop = spacingSizes[paddingTop] || paddingTop;
+        paddingStyles.paddingTop = sizeSpacingScale[paddingTop] || paddingTop;
       } else if (paddingY !== undefined) {
-        paddingStyles.paddingTop = spacingSizes[paddingY] || paddingY;
+        paddingStyles.paddingTop = sizeSpacingScale[paddingY] || paddingY;
       }
       if (paddingBottom !== undefined) {
         paddingStyles.paddingBottom =
-          spacingSizes[paddingBottom] || paddingBottom;
+          sizeSpacingScale[paddingBottom] || paddingBottom;
       } else if (paddingY !== undefined) {
-        paddingStyles.paddingBottom = spacingSizes[paddingY] || paddingY;
+        paddingStyles.paddingBottom = sizeSpacingScale[paddingY] || paddingY;
       }
     }
   }
@@ -257,7 +260,7 @@ export const withPropsStyle = (
     if (textSize) {
       const fontSize =
         typeof textSize === "string"
-          ? typoSizes[textSize] || textSize
+          ? sizeTypoScale[textSize] || textSize
           : textSize;
       typoStyles.fontSize = fontSize;
     }
@@ -342,9 +345,18 @@ export const withPropsStyle = (
 };
 
 // Unified design scale using t-shirt sizes with rem units for accessibility.
-// This scale is used for both typography and spacing to create visual harmony
+// This scale is used for spacing to create visual harmony
 // and consistent proportions throughout the design system.
-export const tshirtSizeToCSSValues = {
+export const sizeSpacingScale = {
+  xxs: "0.125rem", // 0.125 = 2px at 16px base
+  xs: "0.25rem", // 0.25 = 4px at 16px base
+  sm: "0.5rem", // 0.5 = 8px at 16px base
+  md: "1rem", // 1 = 16px at 16px base (base font size)
+  lg: "1.5rem", // 1.5 = 24px at 16px base
+  xl: "2rem", // 2 = 32px at 16px base
+  xxl: "3rem", // 3 = 48px at 16px base
+};
+export const sizeTypoScale = {
   xxs: "0.625rem", // 0.625 = 10px at 16px base (smaller than before for more range)
   xs: "0.75rem", // 0.75 = 12px at 16px base
   sm: "0.875rem", // 0.875 = 14px at 16px base
@@ -353,9 +365,3 @@ export const tshirtSizeToCSSValues = {
   xl: "1.25rem", // 1.25 = 20px at 16px base
   xxl: "1.5rem", // 1.5 = 24px at 16px base
 };
-
-// Typography and spacing use the same scale for consistent visual rhythm.
-// When text size is "lg", using "lg" spacing creates naturally proportioned layouts.
-// All values scale with user font preferences for better accessibility.
-const typoSizes = tshirtSizeToCSSValues;
-const spacingSizes = tshirtSizeToCSSValues;

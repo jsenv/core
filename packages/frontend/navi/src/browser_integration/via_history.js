@@ -1,8 +1,10 @@
 import { signal } from "@preact/signals";
+
 import { setActionDispatcher } from "../actions.js";
 import { executeWithCleanup } from "../utils/execute_with_cleanup.js";
 import { updateDocumentState } from "./document_state_signal.js";
 import { documentUrlSignal, updateDocumentUrl } from "./document_url_signal.js";
+import { getLinkTargetInfo } from "./link_target_info.js";
 
 export const setupBrowserIntegrationViaHistory = ({
   applyActions,
@@ -123,20 +125,18 @@ export const setupBrowserIntegrationViaHistory = ({
       if (!linkElement) {
         return;
       }
-      const href = linkElement.href;
-      if (!href || !href.startsWith(window.location.origin)) {
-        return;
-      }
       if (linkElement.hasAttribute("data-readonly")) {
         return;
       }
-      // Ignore anchor navigation (same page, different hash)
-      const currentUrl = new URL(window.location.href);
-      const targetUrl = new URL(href);
+      const href = linkElement.href;
+      const { targetIsEmpty, targetIsSameOrigin, targetIsAnchor } =
+        getLinkTargetInfo(href);
       if (
-        currentUrl.pathname === targetUrl.pathname &&
-        currentUrl.search === targetUrl.search &&
-        targetUrl.hash !== ""
+        targetIsEmpty ||
+        // Let link to other origins be handled by the browser
+        !targetIsSameOrigin ||
+        // Ignore anchor navigation (same page, different hash)
+        targetIsAnchor
       ) {
         return;
       }
