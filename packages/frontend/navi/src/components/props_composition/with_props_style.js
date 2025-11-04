@@ -51,14 +51,16 @@ import { FlexDirectionContext } from "../layout/layout_context.jsx";
  */
 export const withPropsStyle = (
   props,
-  { base, layout, spacing = layout, align = layout, expansion = layout, typo },
+  { base, layout, spacing = layout, align = layout, size = layout, typo },
   ...remainingConfig
 ) => {
   const flexDirection = useContext(FlexDirectionContext);
   const {
     // style from props
     style,
+
     // layout props
+    // layout/spacing
     margin,
     marginX,
     marginY,
@@ -73,11 +75,16 @@ export const withPropsStyle = (
     paddingRight,
     paddingTop,
     paddingBottom,
+    // layout/alignment
     alignX,
     alignY,
+    // layout/size
     expand,
     expandX = expand,
     expandY = expand,
+    width,
+    height,
+
     // typo props
     textSize,
     textBold,
@@ -95,7 +102,7 @@ export const withPropsStyle = (
   let marginStyles;
   let paddingStyles;
   let alignmentStyles;
-  let expansionStyles;
+  let sizeStyles;
   let typoStyles;
   let propStyles;
 
@@ -227,28 +234,32 @@ export const withPropsStyle = (
       }
     }
   }
-  expansion_styles: {
-    if (!expansion && !hasRemainingConfig) {
-      break expansion_styles;
+  size_styles: {
+    if (!size && !hasRemainingConfig) {
+      break size_styles;
     }
-    expansionStyles = {};
+    sizeStyles = {};
     if (expandX) {
       if (flexDirection === "row") {
-        expansionStyles.flexGrow = 1; // Grow horizontally in row
+        sizeStyles.flexGrow = 1; // Grow horizontally in row
       } else if (flexDirection === "column") {
-        expansionStyles.width = "100%"; // Take full width in column
+        sizeStyles.width = "100%"; // Take full width in column
       } else {
-        expansionStyles.width = "100%"; // Take full width outside flex
+        sizeStyles.width = "100%"; // Take full width outside flex
       }
+    } else if (width !== undefined) {
+      sizeStyles.width = width;
     }
     if (expandY) {
       if (flexDirection === "row") {
-        expansionStyles.height = "100%"; // Take full height in row
+        sizeStyles.height = "100%"; // Take full height in row
       } else if (flexDirection === "column") {
-        expansionStyles.flexGrow = 1; // Grow vertically in column
+        sizeStyles.flexGrow = 1; // Grow vertically in column
       } else {
-        expansionStyles.height = "100%"; // Take full height outside flex
+        sizeStyles.height = "100%"; // Take full height outside flex
       }
+    } else if (height !== undefined) {
+      sizeStyles.height = height;
     }
   }
   typo_styles: {
@@ -306,8 +317,8 @@ export const withPropsStyle = (
   if (align) {
     Object.assign(firstConfigStyle, alignmentStyles);
   }
-  if (expansion) {
-    Object.assign(firstConfigStyle, expansionStyles);
+  if (size) {
+    Object.assign(firstConfigStyle, sizeStyles);
   }
   if (typo) {
     Object.assign(firstConfigStyle, typoStyles);
@@ -330,8 +341,8 @@ export const withPropsStyle = (
     if (config.align || config.layout) {
       Object.assign(configStyle, alignmentStyles);
     }
-    if (config.expansion || config.layout) {
-      Object.assign(configStyle, expansionStyles);
+    if (config.size || config.layout) {
+      Object.assign(configStyle, sizeStyles);
     }
     if (config.typo) {
       Object.assign(configStyle, typoStyles);
