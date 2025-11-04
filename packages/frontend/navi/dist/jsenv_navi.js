@@ -8107,6 +8107,62 @@ const updateDocumentUrl = (value) => {
   documentUrlSignal.value = value;
 };
 
+const getLinkTargetInfo = (href) => {
+  href = String(href);
+
+  if (!href || href.trim() === "") {
+    return {
+      targetIsEmpty: true,
+      targetIsCurrent: false,
+      targetIsAnchor: false,
+      targetIsSameOrigin: true,
+      targetIsSameSite: true,
+    };
+  }
+
+  const currentUrl = new URL(window.location.href);
+  const targetUrl = new URL(href, window.location.href);
+
+  let targetIsCurrent = false;
+  {
+    targetIsCurrent = currentUrl.href === targetUrl.href;
+  }
+  let targetIsAnchor = false;
+  {
+    if (
+      currentUrl.pathname === targetUrl.pathname &&
+      currentUrl.search === targetUrl.search &&
+      targetUrl.hash !== ""
+    ) {
+      targetIsAnchor = true;
+    }
+  }
+  let targetIsSameOrigin = false;
+  {
+    const currentOrigin = currentUrl.origin;
+    const targetOrigin = targetUrl.origin;
+    targetIsSameOrigin = currentOrigin === targetOrigin;
+  }
+  let targetIsSameSite = false;
+  {
+    const baseDomain = (hostname) => {
+      const parts = hostname.split(".").slice(-2);
+      return parts.join(".");
+    };
+    const currentDomain = baseDomain(currentUrl.hostname);
+    const targetDomain = baseDomain(targetUrl.hostname);
+    targetIsSameSite = currentDomain === targetDomain;
+  }
+
+  return {
+    targetIsEmpty: false,
+    targetIsCurrent,
+    targetIsAnchor,
+    targetIsSameOrigin,
+    targetIsSameSite,
+  };
+};
+
 const setupBrowserIntegrationViaHistory = ({
   applyActions,
   applyRouting,
@@ -8226,20 +8282,18 @@ const setupBrowserIntegrationViaHistory = ({
       if (!linkElement) {
         return;
       }
-      const href = linkElement.href;
-      if (!href || !href.startsWith(window.location.origin)) {
-        return;
-      }
       if (linkElement.hasAttribute("data-readonly")) {
         return;
       }
-      // Ignore anchor navigation (same page, different hash)
-      const currentUrl = new URL(window.location.href);
-      const targetUrl = new URL(href);
+      const href = linkElement.href;
+      const { targetIsEmpty, targetIsSameOrigin, targetIsAnchor } =
+        getLinkTargetInfo(href);
       if (
-        currentUrl.pathname === targetUrl.pathname &&
-        currentUrl.search === targetUrl.search &&
-        targetUrl.hash !== ""
+        targetIsEmpty ||
+        // Let link to other origins be handled by the browser
+        !targetIsSameOrigin ||
+        // Ignore anchor navigation (same page, different hash)
+        targetIsAnchor
       ) {
         return;
       }
@@ -9803,54 +9857,57 @@ const withPropsStyle = (
     {
       marginStyles = {};
       if (margin !== undefined) {
-        marginStyles.margin = spacingSizes[margin] || margin;
+        marginStyles.margin = sizeSpacingScale[margin] || margin;
       }
       if (marginLeft !== undefined) {
-        marginStyles.marginLeft = spacingSizes[marginLeft] || marginLeft;
+        marginStyles.marginLeft = sizeSpacingScale[marginLeft] || marginLeft;
       } else if (marginX !== undefined) {
-        marginStyles.marginLeft = spacingSizes[marginX] || marginX;
+        marginStyles.marginLeft = sizeSpacingScale[marginX] || marginX;
       }
       if (marginRight !== undefined) {
-        marginStyles.marginRight = spacingSizes[marginRight] || marginRight;
+        marginStyles.marginRight = sizeSpacingScale[marginRight] || marginRight;
       } else if (marginX !== undefined) {
-        marginStyles.marginRight = spacingSizes[marginX] || marginX;
+        marginStyles.marginRight = sizeSpacingScale[marginX] || marginX;
       }
       if (marginTop !== undefined) {
-        marginStyles.marginTop = spacingSizes[marginTop] || marginTop;
+        marginStyles.marginTop = sizeSpacingScale[marginTop] || marginTop;
       } else if (marginY !== undefined) {
-        marginStyles.marginTop = spacingSizes[marginY] || marginY;
+        marginStyles.marginTop = sizeSpacingScale[marginY] || marginY;
       }
       if (marginBottom !== undefined) {
-        marginStyles.marginBottom = spacingSizes[marginBottom] || marginBottom;
+        marginStyles.marginBottom =
+          sizeSpacingScale[marginBottom] || marginBottom;
       } else if (marginY !== undefined) {
-        marginStyles.marginBottom = spacingSizes[marginY] || marginY;
+        marginStyles.marginBottom = sizeSpacingScale[marginY] || marginY;
       }
     }
     {
       paddingStyles = {};
       if (padding !== undefined) {
-        paddingStyles.padding = spacingSizes[padding] || padding;
+        paddingStyles.padding = sizeSpacingScale[padding] || padding;
       }
       if (paddingLeft !== undefined) {
-        paddingStyles.paddingLeft = spacingSizes[paddingLeft] || paddingLeft;
+        paddingStyles.paddingLeft =
+          sizeSpacingScale[paddingLeft] || paddingLeft;
       } else if (paddingX !== undefined) {
-        paddingStyles.paddingLeft = spacingSizes[paddingX] || paddingX;
+        paddingStyles.paddingLeft = sizeSpacingScale[paddingX] || paddingX;
       }
       if (paddingRight !== undefined) {
-        paddingStyles.paddingRight = spacingSizes[paddingRight] || paddingRight;
+        paddingStyles.paddingRight =
+          sizeSpacingScale[paddingRight] || paddingRight;
       } else if (paddingX !== undefined) {
-        paddingStyles.paddingRight = spacingSizes[paddingX] || paddingX;
+        paddingStyles.paddingRight = sizeSpacingScale[paddingX] || paddingX;
       }
       if (paddingTop !== undefined) {
-        paddingStyles.paddingTop = spacingSizes[paddingTop] || paddingTop;
+        paddingStyles.paddingTop = sizeSpacingScale[paddingTop] || paddingTop;
       } else if (paddingY !== undefined) {
-        paddingStyles.paddingTop = spacingSizes[paddingY] || paddingY;
+        paddingStyles.paddingTop = sizeSpacingScale[paddingY] || paddingY;
       }
       if (paddingBottom !== undefined) {
         paddingStyles.paddingBottom =
-          spacingSizes[paddingBottom] || paddingBottom;
+          sizeSpacingScale[paddingBottom] || paddingBottom;
       } else if (paddingY !== undefined) {
-        paddingStyles.paddingBottom = spacingSizes[paddingY] || paddingY;
+        paddingStyles.paddingBottom = sizeSpacingScale[paddingY] || paddingY;
       }
     }
   }
@@ -9954,7 +10011,7 @@ const withPropsStyle = (
     if (textSize) {
       const fontSize =
         typeof textSize === "string"
-          ? typoSizes[textSize] || textSize
+          ? sizeTypoScale[textSize] || textSize
           : textSize;
       typoStyles.fontSize = fontSize;
     }
@@ -10039,9 +10096,18 @@ const withPropsStyle = (
 };
 
 // Unified design scale using t-shirt sizes with rem units for accessibility.
-// This scale is used for both typography and spacing to create visual harmony
+// This scale is used for spacing to create visual harmony
 // and consistent proportions throughout the design system.
-const tshirtSizeToCSSValues = {
+const sizeSpacingScale = {
+  xxs: "0.125rem", // 0.125 = 2px at 16px base
+  xs: "0.25rem", // 0.25 = 4px at 16px base
+  sm: "0.5rem", // 0.5 = 8px at 16px base
+  md: "1rem", // 1 = 16px at 16px base (base font size)
+  lg: "1.5rem", // 1.5 = 24px at 16px base
+  xl: "2rem", // 2 = 32px at 16px base
+  xxl: "3rem", // 3 = 48px at 16px base
+};
+const sizeTypoScale = {
   xxs: "0.625rem", // 0.625 = 10px at 16px base (smaller than before for more range)
   xs: "0.75rem", // 0.75 = 12px at 16px base
   sm: "0.875rem", // 0.875 = 14px at 16px base
@@ -10050,12 +10116,6 @@ const tshirtSizeToCSSValues = {
   xl: "1.25rem", // 1.25 = 20px at 16px base
   xxl: "1.5rem", // 1.5 = 24px at 16px base
 };
-
-// Typography and spacing use the same scale for consistent visual rhythm.
-// When text size is "lg", using "lg" spacing creates naturally proportioned layouts.
-// All values scale with user font preferences for better accessibility.
-const typoSizes = tshirtSizeToCSSValues;
-const spacingSizes = tshirtSizeToCSSValues;
 
 const DEBUG = {
   registration: false,
@@ -11343,6 +11403,59 @@ const createSelectionKeyboardShortcuts = (selectionController, {
   }];
 };
 
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  :root {
+    --navi-icon-align-y: center;
+  }
+
+  .navi_text {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.1em;
+  }
+
+  .navi_icon {
+    --align-y: var(--navi-icon-align-y, center);
+
+    display: inline-flex;
+    width: 1em;
+    height: 1em;
+    flex-shrink: 0;
+    align-self: var(--align-y);
+    line-height: 1em;
+  }
+`;
+const Text = ({
+  children,
+  ...rest
+}) => {
+  const [remainingProps, innerStyle] = withPropsStyle(rest, {
+    layout: true,
+    typo: true
+  });
+  return jsx("span", {
+    ...remainingProps,
+    className: "navi_text",
+    style: innerStyle,
+    children: children
+  });
+};
+const Icon = ({
+  children,
+  ...rest
+}) => {
+  const [remainingProps, innerStyle] = withPropsStyle(rest, {
+    layout: true,
+    typo: true
+  });
+  return jsx("span", {
+    ...remainingProps,
+    className: "navi_icon",
+    style: innerStyle,
+    children: children
+  });
+};
+
 // autoFocus does not work so we focus in a useLayoutEffect,
 // see https://github.com/preactjs/preact/issues/1255
 
@@ -11439,6 +11552,9 @@ const useAutoFocus = (
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   .navi_link {
+    position: relative;
+    display: inline-flex;
+    gap: 0.1em;
     border-radius: 2px;
   }
   /* Focus */
@@ -11510,8 +11626,13 @@ const LinkPlain = forwardRef((props, ref) => {
     onClick,
     onKeyDown,
     href,
+    target,
+    rel,
     // visual
     className,
+    blankTargetIcon,
+    anchorIcon,
+    icon,
     ...rest
   } = props;
   const innerRef = useRef();
@@ -11526,18 +11647,43 @@ const LinkPlain = forwardRef((props, ref) => {
     layout: true,
     typo: true
   });
+  const {
+    targetIsSameSite,
+    targetIsAnchor,
+    targetIsCurrent
+  } = getLinkTargetInfo(href);
+  const innerTarget = target === undefined ? targetIsSameSite ? "_self" : "_blank" : target;
+  const innerRel = rel === undefined ? targetIsSameSite ? undefined : "noopener noreferrer" : rel;
+  let innerIcon;
+  if (icon === undefined) {
+    const innerBlankTargetIcon = blankTargetIcon === undefined ? innerTarget === "_blank" : blankTargetIcon;
+    const innerAnchorIcon = anchorIcon === undefined ? targetIsAnchor : anchorIcon;
+    if (innerBlankTargetIcon) {
+      innerIcon = innerBlankTargetIcon === true ? jsx(BlankTargetLinkSvg, {}) : innerBlankTargetIcon;
+    } else if (innerAnchorIcon) {
+      innerIcon = innerAnchorIcon === true ? jsx(AnchorLinkSvg, {}) : anchorIcon;
+    }
+  } else {
+    innerIcon = icon;
+  }
   return jsx("a", {
     ...remainingProps,
     ref: innerRef,
-    href: href,
     className: innerClassName,
     style: innerStyle,
+    href: href,
+    rel: innerRel,
+    target: innerTarget === "_self" ? undefined : target,
     "aria-busy": loading,
     inert: disabled,
     "data-disabled": disabled ? "" : undefined,
     "data-readonly": readOnly ? "" : undefined,
     "data-active": active ? "" : undefined,
     "data-visited": visited || isVisited ? "" : undefined,
+    "data-external": targetIsSameSite ? undefined : "",
+    "data-internal": targetIsSameSite ? "" : undefined,
+    "data-anchor": targetIsAnchor ? "" : undefined,
+    "data-current": targetIsCurrent ? "" : undefined,
     onClick: e => {
       closeValidationMessage(e.target, "click");
       if (readOnly) {
@@ -11555,13 +11701,46 @@ const LinkPlain = forwardRef((props, ref) => {
       }
       onKeyDown?.(e);
     },
-    children: jsx(LoaderBackground, {
+    children: jsxs(LoaderBackground, {
       loading: loading,
       color: "light-dark(#355fcc, #3b82f6)",
-      children: children
+      children: [children, innerIcon && jsx(Icon, {
+        children: innerIcon
+      })]
     })
   });
 });
+const BlankTargetLinkSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 24 24",
+    width: "100%",
+    height: "100%",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: jsx("path", {
+      d: "M10.0002 5H8.2002C7.08009 5 6.51962 5 6.0918 5.21799C5.71547 5.40973 5.40973 5.71547 5.21799 6.0918C5 6.51962 5 7.08009 5 8.2002V15.8002C5 16.9203 5 17.4801 5.21799 17.9079C5.40973 18.2842 5.71547 18.5905 6.0918 18.7822C6.5192 19 7.07899 19 8.19691 19H15.8031C16.921 19 17.48 19 17.9074 18.7822C18.2837 18.5905 18.5905 18.2839 18.7822 17.9076C19 17.4802 19 16.921 19 15.8031V14M20 9V4M20 4H15M20 4L13 11",
+      stroke: "currentColor",
+      fill: "none",
+      "stroke-width": "2",
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round"
+    })
+  });
+};
+const AnchorLinkSvg = () => {
+  return jsxs("svg", {
+    viewBox: "0 0 24 24",
+    width: "100%",
+    height: "100%",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: [jsx("path", {
+      d: "M13.2218 3.32234C15.3697 1.17445 18.8521 1.17445 21 3.32234C23.1479 5.47022 23.1479 8.95263 21 11.1005L17.4645 14.636C15.3166 16.7839 11.8342 16.7839 9.6863 14.636C9.48752 14.4373 9.30713 14.2271 9.14514 14.0075C8.90318 13.6796 8.97098 13.2301 9.25914 12.9419C9.73221 12.4688 10.5662 12.6561 11.0245 13.1435C11.0494 13.1699 11.0747 13.196 11.1005 13.2218C12.4673 14.5887 14.6834 14.5887 16.0503 13.2218L19.5858 9.6863C20.9526 8.31947 20.9526 6.10339 19.5858 4.73655C18.219 3.36972 16.0029 3.36972 14.636 4.73655L13.5754 5.79721C13.1849 6.18774 12.5517 6.18774 12.1612 5.79721C11.7706 5.40669 11.7706 4.77352 12.1612 4.383L13.2218 3.32234Z",
+      fill: "currentColor"
+    }), jsx("path", {
+      d: "M6.85787 9.6863C8.90184 7.64233 12.2261 7.60094 14.3494 9.42268C14.7319 9.75083 14.7008 10.3287 14.3444 10.685C13.9253 11.1041 13.2317 11.0404 12.7416 10.707C11.398 9.79292 9.48593 9.88667 8.27209 11.1005L4.73655 14.636C3.36972 16.0029 3.36972 18.219 4.73655 19.5858C6.10339 20.9526 8.31947 20.9526 9.6863 19.5858L10.747 18.5251C11.1375 18.1346 11.7706 18.1346 12.1612 18.5251C12.5517 18.9157 12.5517 19.5488 12.1612 19.9394L11.1005 21C8.95263 23.1479 5.47022 23.1479 3.32234 21C1.17445 18.8521 1.17445 15.3697 3.32234 13.2218L6.85787 9.6863Z",
+      fill: "currentColor"
+    })]
+  });
+};
 const LinkWithSelection = forwardRef((props, ref) => {
   const {
     selection,
@@ -18971,54 +19150,19 @@ const Overflow = ({
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
-  :root {
-    --navi-icon-align-y: center;
-  }
-
-  .navi_text {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.1em;
-  }
-
-  .navi_icon {
-    --align-y: var(--navi-icon-align-y, center);
-
-    display: inline-flex;
-    width: 1em;
-    height: 1em;
-    flex-shrink: 0;
-    align-self: var(--align-y);
-    line-height: 1em;
-  }
-`;
-const Text = ({
+const Paragraph = ({
   children,
   ...rest
 }) => {
+  if (rest.marginTop === undefined) {
+    rest.marginTop = "md";
+  }
   const [remainingProps, innerStyle] = withPropsStyle(rest, {
     layout: true,
     typo: true
   });
-  return jsx("span", {
+  return jsx("p", {
     ...remainingProps,
-    className: "navi_text",
-    style: innerStyle,
-    children: children
-  });
-};
-const Icon = ({
-  children,
-  ...rest
-}) => {
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    layout: true,
-    typo: true
-  });
-  return jsx("span", {
-    ...remainingProps,
-    className: "navi_icon",
     style: innerStyle,
     children: children
   });
@@ -19053,6 +19197,26 @@ const TextAndCount = ({
       className: "label",
       children: text
     })
+  });
+};
+
+const Title = ({
+  children,
+  as = "h1",
+  ...rest
+}) => {
+  if (rest.bold === undefined) {
+    rest.bold = true;
+  }
+  const [remainingProps, innerStyle] = withPropsStyle(rest, {
+    layout: true,
+    typo: true
+  });
+  const HeadingTag = as;
+  return jsx(HeadingTag, {
+    ...remainingProps,
+    style: innerStyle,
+    children: children
   });
 };
 
@@ -19113,7 +19277,7 @@ const FlexColumn = ({
       alignItems: alignX !== "stretch" ? alignX : undefined,
       // Only set justifyContent if it's not the default "start"
       justifyContent: alignY !== "start" ? alignY : undefined,
-      gap: tshirtSizeToCSSValues[gap] || gap
+      gap: sizeSpacingScale[gap] || gap
     }
   });
   return jsx("div", {
@@ -19244,5 +19408,5 @@ const useDependenciesDiff = (inputs) => {
   return diffRef.current;
 };
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Button, Checkbox, CheckboxList, Col, Colgroup, Details, Editable, ErrorBoundaryContext, FlexColumn, FlexItem, FlexRow, FontSizedSvg, Form, Icon, IconAndText, Input, Label, Link, LinkWithIcon, Overflow, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, Select, SelectionContext, Spacing, SummaryMarker, Tab, TabList, Table, TableCell, Tbody, Text, TextAndCount, Thead, Tr, UITransition, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, Button, Checkbox, CheckboxList, Col, Colgroup, Details, Editable, ErrorBoundaryContext, FlexColumn, FlexItem, FlexRow, FontSizedSvg, Form, Icon, IconAndText, Input, Label, Link, LinkWithIcon, Overflow, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, Select, SelectionContext, Spacing, SummaryMarker, Tab, TabList, Table, TableCell, Tbody, Text, TextAndCount, Thead, Title, Tr, UITransition, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map
