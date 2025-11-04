@@ -107,7 +107,7 @@ const LinkPlain = forwardRef((props, ref) => {
 
     // visual
     className,
-    externalIcon,
+    blankTargetIcon,
     anchorIcon,
     icon,
     currentIcon,
@@ -142,17 +142,19 @@ const LinkPlain = forwardRef((props, ref) => {
 
   let innerIcon;
   if (icon === undefined) {
-    let innerExternalIcon = externalIcon;
-    if (externalIcon === undefined && innerTarget === "_blank") {
-      innerExternalIcon = true;
-    }
-    let innerAnchorIcon = anchorIcon;
-    if (anchorIcon === undefined && targetIsAnchor) {
-      innerAnchorIcon = true;
-    }
-    if (innerExternalIcon) {
+    const innerBlankTargetIcon =
+      blankTargetIcon === undefined
+        ? innerTarget === "_blank"
+        : blankTargetIcon;
+    const innerAnchorIcon =
+      anchorIcon === undefined ? targetIsAnchor : anchorIcon;
+    if (innerBlankTargetIcon) {
       innerIcon =
-        innerExternalIcon === true ? <ExternalLinkSvg /> : innerExternalIcon;
+        innerBlankTargetIcon === true ? (
+          <BlankTargetLinkSvg />
+        ) : (
+          innerBlankTargetIcon
+        );
     } else if (innerAnchorIcon) {
       innerIcon = innerAnchorIcon === true ? <AnchorLinkSvg /> : anchorIcon;
     }
@@ -210,7 +212,7 @@ const LinkPlain = forwardRef((props, ref) => {
     </a>
   );
 });
-const ExternalLinkSvg = () => {
+const BlankTargetLinkSvg = () => {
   return (
     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
       <path
