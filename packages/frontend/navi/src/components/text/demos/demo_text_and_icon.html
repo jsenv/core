@@ -58,221 +58,224 @@
             </Spacing>
 
             <Spacing as="section" marginBottom="xl">
-              <Title as="h2">Large text</Title>
+              <Title as="h2">Icon + Text + Link Combinations</Title>
               <FlexColumn gap="lg">
-                {/* Test avec différentes largeurs de wrapper */}
+                {/* Container width variations */}
                 <div>
-                  <Title as="h3">Different container widths</Title>
+                  <Title as="h3">Container Width Variations</Title>
                   <FlexColumn gap="lg">
-                    {/* 500px width avec tests alignY */}
+                    {/* 500px container */}
                     <div>
                       <div
                         style={{
                           fontSize: "14px",
                           fontWeight: "bold",
                           color: "#333",
-                          marginBottom: "8px",
+                          marginBottom: "12px",
                         }}
                       >
-                        Width: 500px - alignY tests (no diff expected)
+                        500px Container
                       </div>
 
-                      {/* Default alignment */}
-                      <div
-                        style={{
-                          width: "500px",
-                          border: "1px solid #ccc",
-                          padding: "8px",
-                          marginBottom: "8px",
-                        }}
-                      >
+                      <FlexColumn gap="sm">
                         <div
                           style={{
-                            fontSize: "12px",
-                            color: "#666",
-                            marginBottom: "4px",
+                            width: "500px",
+                            border: "1px solid #ccc",
+                            padding: "8px",
                           }}
                         >
-                          Default alignment
-                        </div>
-                        <Text inlineFlex>
-                          <Icon textColor="green">
-                            <CheckSvg />
-                          </Icon>
-                          <Text>
-                            Un lien de réinitialisation a été envoyé à{" "}
-                            <Link href="dmail@gmail.com">dmail@gmail.com</Link>
+                          <div
+                            style={{
+                              fontSize: "12px",
+                              color: "#666",
+                              marginBottom: "4px",
+                            }}
+                          >
+                            Default
+                          </div>
+                          <Text inlineFlex>
+                            <Icon textColor="green">
+                              <CheckSvg />
+                            </Icon>
+                            <Text>
+                              Un lien de réinitialisation a été envoyé à{" "}
+                              <Link href="dmail@gmail.com">
+                                dmail@gmail.com
+                              </Link>
+                            </Text>
                           </Text>
-                        </Text>
-                      </div>
+                        </div>
 
-                      {/* alignY="end" */}
-                      <div
-                        style={{
-                          width: "500px",
-                          border: "1px solid #ccc",
-                          padding: "8px",
-                          marginBottom: "8px",
-                        }}
-                      >
                         <div
                           style={{
-                            fontSize: "12px",
-                            color: "#666",
-                            marginBottom: "4px",
+                            width: "500px",
+                            border: "1px solid #ccc",
+                            padding: "8px",
                           }}
                         >
-                          alignY="end"
-                        </div>
-                        <Text inlineFlex>
-                          <Icon textColor="green" alignY="end">
-                            <CheckSvg />
-                          </Icon>
-                          <Text>
-                            Un lien de réinitialisation a été envoyé à{" "}
-                            <Link href="dmail@gmail.com">dmail@gmail.com</Link>
+                          <div
+                            style={{
+                              fontSize: "12px",
+                              color: "#666",
+                              marginBottom: "4px",
+                            }}
+                          >
+                            alignY="center"
+                          </div>
+                          <Text inlineFlex>
+                            <Icon textColor="green" alignY="center">
+                              <CheckSvg />
+                            </Icon>
+                            <Text>
+                              Un lien de réinitialisation a été envoyé à{" "}
+                              <Link href="dmail@gmail.com">
+                                dmail@gmail.com
+                              </Link>
+                            </Text>
                           </Text>
-                        </Text>
-                      </div>
+                        </div>
 
-                      {/* alignY="center" */}
-                      <div
-                        style={{
-                          width: "500px",
-                          border: "1px solid #ccc",
-                          padding: "8px",
-                        }}
-                      >
                         <div
                           style={{
-                            fontSize: "12px",
-                            color: "#666",
-                            marginBottom: "4px",
+                            width: "500px",
+                            border: "1px solid #ccc",
+                            padding: "8px",
                           }}
                         >
-                          alignY="center"
-                        </div>
-                        <Text inlineFlex>
-                          <Icon textColor="green" alignY="center">
-                            <CheckSvg />
-                          </Icon>
-                          <Text>
-                            Un lien de réinitialisation a été envoyé à{" "}
-                            <Link href="dmail@gmail.com">dmail@gmail.com</Link>
+                          <div
+                            style={{
+                              fontSize: "12px",
+                              color: "#666",
+                              marginBottom: "4px",
+                            }}
+                          >
+                            alignY="end"
+                          </div>
+                          <Text inlineFlex>
+                            <Icon textColor="green" alignY="end">
+                              <CheckSvg />
+                            </Icon>
+                            <Text>
+                              Un lien de réinitialisation a été envoyé à{" "}
+                              <Link href="dmail@gmail.com">
+                                dmail@gmail.com
+                              </Link>
+                            </Text>
                           </Text>
-                        </Text>
-                      </div>
+                        </div>
+                      </FlexColumn>
                     </div>
 
-                    {/* 300px width avec tests alignY */}
+                    {/* 300px container */}
                     <div>
                       <div
                         style={{
                           fontSize: "14px",
                           fontWeight: "bold",
                           color: "#333",
-                          marginBottom: "8px",
+                          marginBottom: "12px",
                         }}
                       >
-                        Width: 300px - alignY tests (icon should be
-                        start/center/end)
+                        300px Container
                       </div>
 
-                      {/* Default alignment */}
-                      <div
-                        style={{
-                          width: "300px",
-                          border: "1px solid #ccc",
-                          padding: "8px",
-                          marginBottom: "8px",
-                        }}
-                      >
+                      <FlexColumn gap="sm">
                         <div
                           style={{
-                            fontSize: "12px",
-                            color: "#666",
-                            marginBottom: "4px",
+                            width: "300px",
+                            border: "1px solid #ccc",
+                            padding: "8px",
                           }}
                         >
-                          Default alignment
-                        </div>
-                        <Text inlineFlex>
-                          <Icon textColor="green">
-                            <CheckSvg />
-                          </Icon>
-                          <Text>
-                            Un lien de réinitialisation a été envoyé à{" "}
-                            <Link href="dmail@gmail.com">dmail@gmail.com</Link>
+                          <div
+                            style={{
+                              fontSize: "12px",
+                              color: "#666",
+                              marginBottom: "4px",
+                            }}
+                          >
+                            Default
+                          </div>
+                          <Text inlineFlex>
+                            <Icon textColor="green">
+                              <CheckSvg />
+                            </Icon>
+                            <Text>
+                              Un lien de réinitialisation a été envoyé à{" "}
+                              <Link href="dmail@gmail.com">
+                                dmail@gmail.com
+                              </Link>
+                            </Text>
                           </Text>
-                        </Text>
-                      </div>
+                        </div>
 
-                      {/* alignY="end" */}
-                      <div
-                        style={{
-                          width: "300px",
-                          border: "1px solid #ccc",
-                          padding: "8px",
-                          marginBottom: "8px",
-                        }}
-                      >
                         <div
                           style={{
-                            fontSize: "12px",
-                            color: "#666",
-                            marginBottom: "4px",
+                            width: "300px",
+                            border: "1px solid #ccc",
+                            padding: "8px",
                           }}
                         >
-                          alignY="end"
-                        </div>
-                        <Text inlineFlex>
-                          <Icon textColor="green" alignY="end">
-                            <CheckSvg />
-                          </Icon>
-                          <Text>
-                            Un lien de réinitialisation a été envoyé à{" "}
-                            <Link href="dmail@gmail.com">dmail@gmail.com</Link>
+                          <div
+                            style={{
+                              fontSize: "12px",
+                              color: "#666",
+                              marginBottom: "4px",
+                            }}
+                          >
+                            alignY="center"
+                          </div>
+                          <Text inlineFlex>
+                            <Icon textColor="green" alignY="center">
+                              <CheckSvg />
+                            </Icon>
+                            <Text>
+                              Un lien de réinitialisation a été envoyé à{" "}
+                              <Link href="dmail@gmail.com">
+                                dmail@gmail.com
+                              </Link>
+                            </Text>
                           </Text>
-                        </Text>
-                      </div>
+                        </div>
 
-                      {/* alignY="center" */}
-                      <div
-                        style={{
-                          width: "300px",
-                          border: "1px solid #ccc",
-                          padding: "8px",
-                        }}
-                      >
                         <div
                           style={{
-                            fontSize: "12px",
-                            color: "#666",
-                            marginBottom: "4px",
+                            width: "300px",
+                            border: "1px solid #ccc",
+                            padding: "8px",
                           }}
                         >
-                          alignY="center"
-                        </div>
-                        <Text inlineFlex>
-                          <Icon textColor="green" alignY="center">
-                            <CheckSvg />
-                          </Icon>
-                          <Text>
-                            Un lien de réinitialisation a été envoyé à{" "}
-                            <Link href="dmail@gmail.com">dmail@gmail.com</Link>
+                          <div
+                            style={{
+                              fontSize: "12px",
+                              color: "#666",
+                              marginBottom: "4px",
+                            }}
+                          >
+                            alignY="end"
+                          </div>
+                          <Text inlineFlex>
+                            <Icon textColor="green" alignY="end">
+                              <CheckSvg />
+                            </Icon>
+                            <Text>
+                              Un lien de réinitialisation a été envoyé à{" "}
+                              <Link href="dmail@gmail.com">
+                                dmail@gmail.com
+                              </Link>
+                            </Text>
                           </Text>
-                        </Text>
-                      </div>
+                        </div>
+                      </FlexColumn>
                     </div>
                   </FlexColumn>
                 </div>
-                {/* Test avec icône à droite */}
+
+                {/* Icon position variations */}
                 <div>
-                  <Title as="h3">
-                    Width 300px icon on the right + alignY tests
-                  </Title>
+                  <Title as="h3">Icon Position Variations</Title>
                   <FlexColumn gap="md">
-                    {/* Icône à droite, alignement par défaut */}
                     <div
                       style={{
                         width: "300px",
@@ -287,7 +290,7 @@
                           marginBottom: "4px",
                         }}
                       >
-                        Icon on right (default alignment)
+                        Icon on right - Default
                       </div>
                       <Text inlineFlex>
                         <Text>
@@ -300,7 +303,6 @@
                       </Text>
                     </div>
 
-                    {/* Icône à droite, alignY="center" */}
                     <div
                       style={{
                         width: "300px",
@@ -315,7 +317,7 @@
                           marginBottom: "4px",
                         }}
                       >
-                        Icon on right with alignY="center"
+                        Icon on right - alignY="center"
                       </div>
                       <Text inlineFlex>
                         <Text>
@@ -328,7 +330,6 @@
                       </Text>
                     </div>
 
-                    {/* Icône à droite, alignY="end" */}
                     <div
                       style={{
                         width: "300px",
@@ -343,7 +344,7 @@
                           marginBottom: "4px",
                         }}
                       >
-                        Icon on right with alignY="end"
+                        Icon on right - alignY="end"
                       </div>
                       <Text inlineFlex>
                         <Text>
