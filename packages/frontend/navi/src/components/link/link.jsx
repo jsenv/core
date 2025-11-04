@@ -37,8 +37,6 @@ import { useAutoFocus } from "../use_auto_focus.js";
 import.meta.css = /* css */ `
   .navi_link {
     position: relative;
-    display: inline-flex;
-    gap: 0.1em;
     border-radius: 2px;
   }
   /* Focus */

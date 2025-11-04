@@ -323,11 +323,7 @@ export const withPropsStyle = (
     typoStyles = {};
 
     if (textSize) {
-      const fontSize =
-        typeof textSize === "string"
-          ? sizeTypoScale[textSize] || textSize
-          : textSize;
-      typoStyles.fontSize = normalizeStyle(fontSize, "fontSize", "css");
+      typoStyles.fontSize = resolveTypoSize(textSize, "fontSize");
     }
     if (textBold) {
       typoStyles.fontWeight = "bold";
@@ -356,11 +352,7 @@ export const withPropsStyle = (
       typoStyles.textShadow = textShadow;
     }
     if (textLineHeight !== undefined) {
-      typoStyles.lineHeight = normalizeStyle(
-        sizeTypoScale[textLineHeight] || textLineHeight,
-        "lineHeight",
-        "css",
-      );
+      typoStyles.lineHeight = resolveTypoSize(textLineHeight, "lineHeight");
     }
     typoStyles.color = textColor;
   }
@@ -488,21 +480,36 @@ export const withPropsStyle = (
 // Unified design scale using t-shirt sizes with rem units for accessibility.
 // This scale is used for spacing to create visual harmony
 // and consistent proportions throughout the design system.
-export const sizeSpacingScale = {
-  xxs: "0.125rem", // 0.125 = 2px at 16px base
-  xs: "0.25rem", // 0.25 = 4px at 16px base
-  sm: "0.5rem", // 0.5 = 8px at 16px base
-  md: "1rem", // 1 = 16px at 16px base (base font size)
-  lg: "1.5rem", // 1.5 = 24px at 16px base
-  xl: "2rem", // 2 = 32px at 16px base
-  xxl: "3rem", // 3 = 48px at 16px base
+const sizeSpacingScale = {
+  xxs: "0.125em", // 0.125 = 2px at 16px base
+  xs: "0.25em", // 0.25 = 4px at 16px base
+  sm: "0.5em", // 0.5 = 8px at 16px base
+  md: "1em", // 1 = 16px at 16px base (base font size)
+  lg: "1.5em", // 1.5 = 24px at 16px base
+  xl: "2em", // 2 = 32px at 16px base
+  xxl: "3em", // 3 = 48px at 16px base
 };
-export const sizeTypoScale = {
-  xxs: "0.625rem", // 0.625 = 10px at 16px base (smaller than before for more range)
-  xs: "0.75rem", // 0.75 = 12px at 16px base
-  sm: "0.875rem", // 0.875 = 14px at 16px base
-  md: "1rem", // 1 = 16px at 16px base (base font size)
-  lg: "1.125rem", // 1.125 = 18px at 16px base
-  xl: "1.25rem", // 1.25 = 20px at 16px base
-  xxl: "1.5rem", // 1.5 = 24px at 16px base
+export const resolveSpacingSize = (
+  size,
+  property = "padding",
+  context = "css",
+) => {
+  return normalizeStyle(sizeSpacingScale[size] || size, property, context);
+};
+
+const sizeTypoScale = {
+  xxs: "0.625em", // 0.625 = 10px at 16px base (smaller than before for more range)
+  xs: "0.75em", // 0.75 = 12px at 16px base
+  sm: "0.875em", // 0.875 = 14px at 16px base
+  md: "1em", // 1 = 16px at 16px base (base font size)
+  lg: "1.125em", // 1.125 = 18px at 16px base
+  xl: "1.25em", // 1.25 = 20px at 16px base
+  xxl: "1.5em", // 1.5 = 24px at 16px base
+};
+export const resolveTypoSize = (
+  size,
+  property = "fontSize",
+  context = "css",
+) => {
+  return normalizeStyle(sizeTypoScale[size] || size, property, context);
 };

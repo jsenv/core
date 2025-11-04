@@ -2,7 +2,7 @@ import { useContext } from "preact/hooks";
 
 import { withPropsClassName } from "../props_composition/with_props_class_name.js";
 import {
-  sizeSpacingScale,
+  resolveSpacingSize,
   withPropsStyle,
 } from "../props_composition/with_props_style.js";
 import { FlexDirectionContext } from "./layout_context.jsx";
@@ -41,7 +41,7 @@ export const FlexRow = ({
       justifyContent: alignX !== "start" ? alignX : undefined,
       // Only set alignItems if it's not the default "stretch"
       alignItems: alignY !== "stretch" ? alignY : undefined,
-      gap: sizeSpacingScale[gap] || gap,
+      gap: resolveSpacingSize(gap, "gap"),
     },
     layout: true,
   });
@@ -72,7 +72,7 @@ export const FlexColumn = ({
       alignItems: alignX !== "stretch" ? alignX : undefined,
       // Only set justifyContent if it's not the default "start"
       justifyContent: alignY !== "start" ? alignY : undefined,
-      gap: sizeSpacingScale[gap] || gap,
+      gap: resolveSpacingSize(gap, "gap"),
     },
     layout: true,
   });
