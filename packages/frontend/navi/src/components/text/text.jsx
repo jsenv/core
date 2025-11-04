@@ -13,13 +13,20 @@ import.meta.css = /* css */ `
     --navi-icon-align-y: center;
   }
 
+  .navi_text[data-box] {
+    display: inline-flex;
+  }
+
+  .navi_text_repositioner {
+    display: inline-flex;
+    vertical-align: top;
+  }
+
   .navi_icon {
     position: relative;
     width: 1em;
     height: 1em;
     height: 1lh;
-    flex-shrink: 0;
-    vertical-align: middle;
   }
 
   .navi_text_overflow {
@@ -109,7 +116,6 @@ const TextBasic = ({
   const innerClassName = withPropsClassName("navi_text", className);
   const [remainingProps, innerStyle] = withPropsStyle(rest, {
     base: {
-      display: inlineFlex ? "inline-flex" : undefined,
       gap: inlineFlex ? resolveSpacingSize(gap, "gap") : undefined,
     },
     layout: true,
@@ -117,7 +123,12 @@ const TextBasic = ({
   });
 
   const text = (
-    <TagName className={innerClassName} style={innerStyle} {...remainingProps}>
+    <TagName
+      className={innerClassName}
+      style={innerStyle}
+      data-box={inlineFlex ? "" : undefined}
+      {...remainingProps}
+    >
       <InlineFlexContext.Provider value={inlineFlex}>
         {children}
       </InlineFlexContext.Provider>
@@ -125,9 +136,7 @@ const TextBasic = ({
   );
 
   if (inlineFlex) {
-    return (
-      <span style="display: inline-flex; vertical-align: top;">{text}</span>
-    );
+    return <span className="navi_text_repositioner">{text}</span>;
   }
 
   return text;
