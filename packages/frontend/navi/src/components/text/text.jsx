@@ -126,7 +126,7 @@ const TextBasic = ({
 
   if (inlineFlex) {
     return (
-      <span style="display: inline-block; vertical-align: top;">{text}</span>
+      <span style="display: inline-flex; vertical-align: top;">{text}</span>
     );
   }
 
