@@ -9,14 +9,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       /* eslint-disable no-unused-vars */
-      import {
-        Text,
-        Icon,
-        FlexColumn,
-        Spacing,
-        Title,
-        TextLine,
-      } from "@jsenv/navi";
+      import { Text, Icon, FlexColumn, Spacing, Title } from "@jsenv/navi";
 
       const Demo = () => {
         return (
@@ -33,84 +26,84 @@
             <Spacing as="section" marginBottom="xl">
               <Title as="h2">Basic Icon + Text</Title>
               <FlexColumn gap="sm">
-                <TextLine>
+                <Text line>
                   <Icon>
-                    <HomeIcon />
+                    <HomeSvg />
                   </Icon>
                   Home
-                </TextLine>
+                </Text>
 
-                <TextLine>
+                <Text line>
                   <Icon>
-                    <UserIcon />
+                    <UserSvg />
                   </Icon>
                   Profile
-                </TextLine>
+                </Text>
 
-                <TextLine>
+                <Text line>
                   <Icon>
-                    <SettingsIcon />
+                    <SettingsSvg />
                   </Icon>
                   Settings
-                </TextLine>
+                </Text>
               </FlexColumn>
             </Spacing>
 
             <Spacing as="section" marginBottom="xl">
               <Title as="h2">Large text and overflow</Title>
               <FlexColumn gap="sm">
-                <Text.Line>
+                <Text line>
                   This is a very long text that might overflow the container
                   <Icon>
                     <StarIcon />
                   </Icon>
-                </Text.Line>
+                </Text>
 
-                <Text.Line>
+                <Text line>
                   This is a very long text that might overflow the container
                   <Icon>
                     <HeartIcon />
                   </Icon>
-                </Text.Line>
+                </Text>
               </FlexColumn>
             </Spacing>
 
             <Spacing as="section" marginBottom="xl">
               <h2>Text + Icon (Reversed Order)</h2>
               <FlexColumn gap="sm">
-                <Text.Line>
+                <Text line>
                   Search
                   <Icon>
-                    <SearchIcon />
+                    <SearchSvg />
                   </Icon>
-                </Text.Line>
+                </Text>
               </FlexColumn>
             </Spacing>
 
             <section style={{ marginBottom: "40px" }}>
               <h2>Multiple Icons</h2>
               <FlexColumn gap="sm">
-                <Text.Line>
+                <Text line>
                   <Icon>
-                    <HomeIcon />
+                    <HomeSvg />
                   </Icon>
                   Left and right
                   <Icon>
                     <StarIcon />
                   </Icon>
-                </Text.Line>
+                </Text>
 
-                <Text.Line>
+                <Text line>
                   <Icon>
-                    <UserIcon />
+                    <UserSvg />
                   </Icon>
                   <Icon>
-                    <SettingsIcon />
+                    <SettingsSvg />
                   </Icon>
                   Two on the left
-                </Text.Line>
+                </Text>
 
-                <Text.Line>
+                <Text line>
                   Two on the right
                   <Icon>
                     <StarIcon />
@@ -118,14 +111,14 @@
                   <Icon>
                     <HeartIcon />
                   </Icon>
-                </Text.Line>
+                </Text>
 
-                <Text.Line>
+                <Text line>
                   <Icon>
-                    <HomeIcon />
+                    <HomeSvg />
                   </Icon>
                   <Icon>
-                    <UserIcon />
+                    <UserSvg />
                   </Icon>
                   Two on the left and right
                   <Icon>
@@ -134,7 +127,7 @@
                   <Icon>
                     <HeartIcon />
                   </Icon>
-                </Text.Line>
+                </Text>
               </FlexColumn>
             </section>
 
@@ -143,21 +136,21 @@
               <FlexColumn gap="sm">
                 <Text textSize="sm">
                   <Icon>
-                    <HomeIcon />
+                    <HomeSvg />
                   </Icon>
                   Small text with icon
                 </Text>
 
                 <Text>
                   <Icon>
-                    <UserIcon />
+                    <UserSvg />
                   </Icon>
                   Normal text with icon
                 </Text>
 
                 <Text textSize="lg">
                   <Icon>
-                    <SettingsIcon />
+                    <SettingsSvg />
                   </Icon>
                   Large text with icon
                 </Text>
@@ -176,14 +169,14 @@
               <FlexColumn gap="sm">
                 <Text textColor="blue">
                   <Icon>
-                    <HomeIcon />
+                    <HomeSvg />
                   </Icon>
                   Blue home link
                 </Text>
 
                 <Text textColor="green">
                   <Icon>
-                    <UserIcon />
+                    <UserSvg />
                   </Icon>
                   Green user profile
                 </Text>
@@ -225,7 +218,7 @@
                 >
                   <Text>
                     <Icon>
-                      <SearchIcon />
+                      <SearchSvg />
                     </Icon>
                     Search Files
                   </Text>
@@ -259,7 +252,7 @@
                     }}
                   >
                     <Icon>
-                      <UserIcon />
+                      <UserSvg />
                     </Icon>
                     Users
                   </Text>
@@ -273,14 +266,14 @@
                 Welcome to our platform! Click on the{" "}
                 <Text textBold>
                   <Icon>
-                    <HomeIcon />
+                    <HomeSvg />
                   </Icon>
                   home
                 </Text>{" "}
                 button to return to the dashboard, or visit your{" "}
                 <Text textItalic>
                   <Icon>
-                    <UserIcon />
+                    <UserSvg />
                   </Icon>
                   profile
                 </Text>{" "}
@@ -301,7 +294,7 @@
                 the content you enjoy. Use the{" "}
                 <Text textBold textUnderline>
                   <Icon>
-                    <SearchIcon />
+                    <SearchSvg />
                   </Icon>
                   search
                 </Text>{" "}
@@ -321,7 +314,7 @@
         );
       };
 
-      const HomeIcon = () => (
+      const HomeSvg = () => (
         <svg
           viewBox="0 0 24 24"
           width="100%"
@@ -332,7 +325,7 @@
         </svg>
       );
 
-      const UserIcon = () => (
+      const UserSvg = () => (
         <svg
           viewBox="0 0 24 24"
           width="100%"
@@ -346,7 +339,7 @@
         </svg>
       );
 
-      const SettingsIcon = () => (
+      const SettingsSvg = () => (
         <svg
           viewBox="0 0 24 24"
           width="100%"
@@ -360,7 +353,7 @@
         </svg>
       );
 
-      const SearchIcon = () => (
+      const SearchSvg = () => (
         <svg
           viewBox="0 0 24 24"
           width="100%"
