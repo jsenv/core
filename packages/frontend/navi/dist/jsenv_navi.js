@@ -9802,14 +9802,24 @@ const FlexDirectionContext = createContext();
  */
 const withPropsStyle = (
   props,
-  { base, layout, spacing = layout, align = layout, expansion = layout, typo },
+  {
+    base,
+    layout,
+    spacing = layout,
+    align = layout,
+    size = layout,
+    typo,
+    visual = true,
+  },
   ...remainingConfig
 ) => {
   const flexDirection = useContext(FlexDirectionContext);
   const {
     // style from props
     style,
+
     // layout props
+    // layout/spacing
     margin,
     marginX,
     marginY,
@@ -9824,11 +9834,16 @@ const withPropsStyle = (
     paddingRight,
     paddingTop,
     paddingBottom,
+    // layout/alignment
     alignX,
     alignY,
+    // layout/size
     expand,
     expandX = expand,
     expandY = expand,
+    width,
+    height,
+
     // typo props
     textSize,
     textBold,
@@ -9838,18 +9853,44 @@ const withPropsStyle = (
     textUnderlineStyle,
     textUnderlineColor,
     textColor,
+    textShadow,
+
+    // visual props
+    boxShadow,
+    background,
+    backgroundColor,
+    backgroundImage,
+    border,
+    borderWidth,
+    borderRadius,
+    borderColor,
+    borderStyle,
+    borderTop,
+    borderLeft,
+    borderRight,
+    borderBottom,
+    opacity,
+    filter,
+
     // props not related to styling
     ...remainingProps
   } = props;
 
   const hasRemainingConfig = remainingConfig.length > 0;
+  let propStyles;
   let marginStyles;
   let paddingStyles;
   let alignmentStyles;
-  let expansionStyles;
+  let sizeStyles;
   let typoStyles;
-  let propStyles;
+  let visualStyles;
 
+  props_styles: {
+    if (!style && !hasRemainingConfig) {
+      break props_styles;
+    }
+    propStyles = style ? normalizeStyles(style, "css") : {};
+  }
   spacing_styles: {
     if (!spacing && !hasRemainingConfig) {
       break spacing_styles;
@@ -9978,28 +10019,32 @@ const withPropsStyle = (
       }
     }
   }
-  expansion_styles: {
-    if (!expansion && !hasRemainingConfig) {
-      break expansion_styles;
+  size_styles: {
+    if (!size && !hasRemainingConfig) {
+      break size_styles;
     }
-    expansionStyles = {};
+    sizeStyles = {};
     if (expandX) {
       if (flexDirection === "row") {
-        expansionStyles.flexGrow = 1; // Grow horizontally in row
+        sizeStyles.flexGrow = 1; // Grow horizontally in row
       } else if (flexDirection === "column") {
-        expansionStyles.width = "100%"; // Take full width in column
+        sizeStyles.width = "100%"; // Take full width in column
       } else {
-        expansionStyles.width = "100%"; // Take full width outside flex
+        sizeStyles.width = "100%"; // Take full width outside flex
       }
+    } else if (width !== undefined) {
+      sizeStyles.width = width;
     }
     if (expandY) {
       if (flexDirection === "row") {
-        expansionStyles.height = "100%"; // Take full height in row
+        sizeStyles.height = "100%"; // Take full height in row
       } else if (flexDirection === "column") {
-        expansionStyles.flexGrow = 1; // Grow vertically in column
+        sizeStyles.flexGrow = 1; // Grow vertically in column
       } else {
-        expansionStyles.height = "100%"; // Take full height outside flex
+        sizeStyles.height = "100%"; // Take full height outside flex
       }
+    } else if (height !== undefined) {
+      sizeStyles.height = height;
     }
   }
   typo_styles: {
@@ -10038,13 +10083,61 @@ const withPropsStyle = (
     if (textUnderlineColor) {
       typoStyles.textDecorationColor = textUnderlineColor;
     }
+    if (textShadow) {
+      typoStyles.textShadow = textShadow;
+    }
     typoStyles.color = textColor;
   }
-  props_styles: {
-    if (!style && !hasRemainingConfig) {
-      break props_styles;
+  visual_styles: {
+    if (!visual && !hasRemainingConfig) {
+      break visual_styles;
     }
-    propStyles = style ? normalizeStyles(style, "css") : {};
+    visualStyles = {};
+    if (boxShadow !== undefined) {
+      visualStyles.boxShadow = boxShadow;
+    }
+    if (background !== undefined) {
+      visualStyles.background = background;
+    }
+    if (backgroundColor !== undefined) {
+      visualStyles.backgroundColor = backgroundColor;
+    }
+    if (backgroundImage !== undefined) {
+      visualStyles.backgroundImage = backgroundImage;
+    }
+    if (border !== undefined) {
+      visualStyles.border = border;
+    }
+    if (borderTop !== undefined) {
+      visualStyles.borderTop = borderTop;
+    }
+    if (borderLeft !== undefined) {
+      visualStyles.borderLeft = borderLeft;
+    }
+    if (borderRight !== undefined) {
+      visualStyles.borderRight = borderRight;
+    }
+    if (borderBottom !== undefined) {
+      visualStyles.borderBottom = borderBottom;
+    }
+    if (borderWidth !== undefined) {
+      visualStyles.borderWidth = borderWidth;
+    }
+    if (borderRadius !== undefined) {
+      visualStyles.borderRadius = borderRadius;
+    }
+    if (borderColor !== undefined) {
+      visualStyles.borderColor = borderColor;
+    }
+    if (borderStyle !== undefined) {
+      visualStyles.borderStyle = borderStyle;
+    }
+    if (opacity !== undefined) {
+      visualStyles.opacity = opacity;
+    }
+    if (filter !== undefined) {
+      visualStyles.filter = filter;
+    }
   }
 
   const firstConfigStyle = {};
@@ -10057,11 +10150,14 @@ const withPropsStyle = (
   if (align) {
     Object.assign(firstConfigStyle, alignmentStyles);
   }
-  if (expansion) {
-    Object.assign(firstConfigStyle, expansionStyles);
+  if (size) {
+    Object.assign(firstConfigStyle, sizeStyles);
   }
   if (typo) {
     Object.assign(firstConfigStyle, typoStyles);
+  }
+  if (visual) {
+    Object.assign(firstConfigStyle, visualStyles);
   }
   if (style) {
     appendStyles(firstConfigStyle, propStyles, "css");
@@ -10081,11 +10177,14 @@ const withPropsStyle = (
     if (config.align || config.layout) {
       Object.assign(configStyle, alignmentStyles);
     }
-    if (config.expansion || config.layout) {
-      Object.assign(configStyle, expansionStyles);
+    if (config.size || config.layout) {
+      Object.assign(configStyle, sizeStyles);
     }
     if (config.typo) {
       Object.assign(configStyle, typoStyles);
+    }
+    if (config.visual || config.visual === undefined) {
+      Object.assign(configStyle, visualStyles);
     }
     if (config.style) {
       appendStyles(configStyle, propStyles, "css");
@@ -19250,7 +19349,7 @@ const FlexRow = ({
       justifyContent: alignX !== "start" ? alignX : undefined,
       // Only set alignItems if it's not the default "stretch"
       alignItems: alignY !== "stretch" ? alignY : undefined,
-      gap
+      gap: sizeSpacingScale[gap] || gap
     },
     layout: true
   });
