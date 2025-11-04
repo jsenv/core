@@ -1,4 +1,4 @@
-import { Count, Spacing, Text } from "@jsenv/navi";
+import { Count, FlexColumn, Spacing, Text } from "@jsenv/navi";
 import { useState } from "preact/hooks";
 
 export const App = () => {
@@ -222,7 +222,7 @@ export const App = () => {
             <div
               style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}
             >
-              Text with line breaks
+              Text with line breaks (\\n not respected by default)
             </div>
             <Text overflowEllipsis>
               First line of text{"\n"}
@@ -231,103 +231,26 @@ export const App = () => {
             </Text>
           </div>
 
-          {/* Test 2: Text without white-space: nowrap */}
+          {/* Test 2: Vertical alignment test */}
           <div
-            style={{ width: "200px", border: "1px solid #ccc", padding: "8px" }}
+            style={{ width: "300px", border: "1px solid #ccc", padding: "8px" }}
           >
             <div
               style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}
             >
-              Without nowrap constraint
+              Vertical alignment comparison
             </div>
-            <Text overflowEllipsis style={{ whiteSpace: "normal" }}>
-              This is a very long text that should wrap to multiple lines
-              instead of being truncated with ellipsis. Let&apos;s see how it
-              behaves.
-            </Text>
-          </div>
-
-          {/* Test 3: Multiple lines with height constraint */}
-          <div
-            style={{
-              width: "200px",
-              height: "60px",
-              border: "1px solid #ccc",
-              padding: "8px",
-              overflow: "hidden",
-            }}
-          >
-            <div
-              style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}
-            >
-              Height constrained container
-            </div>
-            <Text overflowEllipsis style={{ whiteSpace: "normal" }}>
-              This text is in a height-constrained container. It should wrap to
-              multiple lines but the container itself has overflow hidden to see
-              how it interacts with the text overflow behavior.
-            </Text>
-          </div>
-
-          {/* Test 4: Multiline with pinned content */}
-          <div
-            style={{ width: "250px", border: "1px solid #ccc", padding: "8px" }}
-          >
-            <div
-              style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}
-            >
-              Multiline with pinned content
-            </div>
-            <Text overflowEllipsis style={{ whiteSpace: "normal" }}>
-              This is a longer text that will wrap to multiple lines and we want
-              to see how the pinned content behaves in this scenario.
-              <Text overflowPinned textColor="red">
-                [PINNED]
+            <FlexColumn style={{ lineHeight: "100px" }}>
+              <Text overflowEllipsis style={{ maxWidth: "200px" }}>
+                Just a long line of text that would get overflowed.
               </Text>
-            </Text>
-          </div>
-
-          {/* Test 5: CSS line-clamp simulation */}
-          <div
-            style={{ width: "200px", border: "1px solid #ccc", padding: "8px" }}
-          >
-            <div
-              style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}
-            >
-              Line-clamp style (experimental)
-            </div>
-            <Text
-              overflowEllipsis
-              style={{
-                whiteSpace: "normal",
-                display: "-webkit-box",
-                WebkitLineClamp: "3",
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden",
-              }}
-            >
-              This text should be clamped to exactly 3 lines with ellipsis at
-              the end of the third line. Let&apos;s see if this CSS approach
-              works with our text overflow component.
-              <Text overflowPinned textColor="blue">
-                [END]
+              <Text
+                overflowEllipsis
+                style={{ maxWidth: "200px", verticalAlign: "top" }}
+              >
+                Just a long line of text that would get overflowed.
               </Text>
-            </Text>
-          </div>
-
-          {/* Test 6: Very long single word */}
-          <div
-            style={{ width: "150px", border: "1px solid #ccc", padding: "8px" }}
-          >
-            <div
-              style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}
-            >
-              Single long word
-            </div>
-            <Text overflowEllipsis>
-              Supercalifragilisticexpialidocious-word-that-cannot-be-broken
-              <Text overflowPinned>!</Text>
-            </Text>
+            </FlexColumn>
           </div>
         </div>
       </section>
