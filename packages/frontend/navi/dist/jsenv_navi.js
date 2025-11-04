@@ -9864,6 +9864,7 @@ const withPropsStyle = (
     background,
     backgroundColor,
     backgroundImage,
+    backgroundSize,
     border,
     borderWidth,
     borderRadius,
@@ -10121,7 +10122,14 @@ const withPropsStyle = (
       visualStyles.backgroundColor = backgroundColor;
     }
     if (backgroundImage !== undefined) {
-      visualStyles.backgroundImage = backgroundImage;
+      visualStyles.backgroundImage = normalizeStyle(
+        backgroundImage,
+        "backgroundImage",
+        "css",
+      );
+    }
+    if (backgroundSize !== undefined) {
+      visualStyles.backgroundSize = backgroundSize;
     }
     if (border !== undefined) {
       visualStyles.border = border;
