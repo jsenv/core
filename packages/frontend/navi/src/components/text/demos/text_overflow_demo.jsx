@@ -283,9 +283,12 @@ const InteractiveWidthDemo = () => {
           padding: "12px",
         }}
       >
-        <Text afterContent={<span style={{ color: "#666" }}>✓</span>} textBold>
+        <Text overflowEllipsis textBold>
           Resize me to see how the text overflow behavior adapts to different
           container widths
+          <Text overflowPinned textColor="#666">
+            ✓
+          </Text>
         </Text>
       </div>
     </div>
