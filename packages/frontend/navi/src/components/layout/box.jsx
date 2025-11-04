@@ -7,21 +7,7 @@ import {
 } from "../props_composition/with_props_style.js";
 import { BoxFlowContext } from "./layout_context.jsx";
 
-import.meta.css = /* css */ `
-  .navi_box[data-flow="col"] {
-    display: flex;
-    flex-direction: row;
-    gap: 0;
-  }
-  .navi_box[data-flow="row"] {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-  }
-  .navi_box[data-flow="inline"] {
-    display: inline-flex;
-  }
-`;
+import.meta.css = /* css */ ``;
 
 export const Box = ({
   as = "div",
@@ -43,6 +29,8 @@ export const Box = ({
     base: {
       ...(flow === "row"
         ? {
+            display: "flex",
+            flexDirection: "column",
             // Only set alignItems if it's not the default "stretch"
             alignItems: contentAlignX !== "stretch" ? contentAlignX : undefined,
             // Only set justifyContent if it's not the default "start"
@@ -53,15 +41,21 @@ export const Box = ({
         : {}),
       ...(flow === "col"
         ? {
-            // Only set alignItems if it's not the default "stretch"
-            alignItems: contentAlignX !== "stretch" ? contentAlignX : undefined,
-            // Only set justifyContent if it's not the default "start"
+            display: "flex",
+            flexDirection: "row",
+            // set if not the default ("start")
             justifyContent:
-              contentAlignY !== "start" ? contentAlignY : undefined,
+              contentAlignX === "start" ? undefined : contentAlignX,
+            // set if not the default ("stretch")
+            alignItems: contentAlignY === "stretch" ? undefined : contentAlignY,
             gap: resolveSpacingSize(contentGap, "gap"),
           }
         : {}),
-      ...(flow === "inline" ? {} : {}),
+      ...(flow === "inline"
+        ? {
+            display: "inline-flex",
+          }
+        : {}),
 
       flexShrink: shrink ? 1 : contextBoxFlow ? 0 : undefined,
       flexGrow: contextBoxFlow && expand ? 1 : undefined,
