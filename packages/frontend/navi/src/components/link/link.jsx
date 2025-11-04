@@ -114,7 +114,7 @@ const LinkPlain = forwardRef((props, ref) => {
     blankTargetIcon,
     anchorIcon,
     icon,
-    pointerDefaultWhenCurrent,
+    cursorDefaultWhenCurrent,
     ...rest
   } = props;
   const innerRef = useRef();
@@ -134,7 +134,7 @@ const LinkPlain = forwardRef((props, ref) => {
   const [remainingProps, innerStyle] = withPropsStyle(rest, {
     base: {
       cursor:
-        pointerDefaultWhenCurrent && targetIsCurrent ? "default" : undefined,
+        cursorDefaultWhenCurrent && targetIsCurrent ? "default" : undefined,
     },
     layout: true,
     typo: true,
