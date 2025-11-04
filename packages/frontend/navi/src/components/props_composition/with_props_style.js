@@ -102,12 +102,24 @@ export const withPropsStyle = (
     textUnderlineStyle,
     textUnderlineColor,
     textColor,
+    textShadow,
 
     // visual props
+    boxShadow,
     background,
     backgroundColor,
+    backgroundImage,
     border,
+    borderWidth,
+    borderRadius,
     borderColor,
+    borderStyle,
+    borderTop,
+    borderLeft,
+    borderRight,
+    borderBottom,
+    opacity,
+    filter,
 
     // props not related to styling
     ...remainingProps
@@ -320,6 +332,9 @@ export const withPropsStyle = (
     if (textUnderlineColor) {
       typoStyles.textDecorationColor = textUnderlineColor;
     }
+    if (textShadow) {
+      typoStyles.textShadow = textShadow;
+    }
     typoStyles.color = textColor;
   }
   visual_styles: {
@@ -327,17 +342,50 @@ export const withPropsStyle = (
       break visual_styles;
     }
     visualStyles = {};
+    if (boxShadow !== undefined) {
+      visualStyles.boxShadow = boxShadow;
+    }
     if (background !== undefined) {
       visualStyles.background = background;
     }
     if (backgroundColor !== undefined) {
       visualStyles.backgroundColor = backgroundColor;
     }
+    if (backgroundImage !== undefined) {
+      visualStyles.backgroundImage = backgroundImage;
+    }
     if (border !== undefined) {
       visualStyles.border = border;
     }
+    if (borderTop !== undefined) {
+      visualStyles.borderTop = borderTop;
+    }
+    if (borderLeft !== undefined) {
+      visualStyles.borderLeft = borderLeft;
+    }
+    if (borderRight !== undefined) {
+      visualStyles.borderRight = borderRight;
+    }
+    if (borderBottom !== undefined) {
+      visualStyles.borderBottom = borderBottom;
+    }
+    if (borderWidth !== undefined) {
+      visualStyles.borderWidth = borderWidth;
+    }
+    if (borderRadius !== undefined) {
+      visualStyles.borderRadius = borderRadius;
+    }
     if (borderColor !== undefined) {
       visualStyles.borderColor = borderColor;
+    }
+    if (borderStyle !== undefined) {
+      visualStyles.borderStyle = borderStyle;
+    }
+    if (opacity !== undefined) {
+      visualStyles.opacity = opacity;
+    }
+    if (filter !== undefined) {
+      visualStyles.filter = filter;
     }
   }
 
