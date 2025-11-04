@@ -97,12 +97,7 @@ export { Title } from "./src/components/text/title.jsx";
 // Callout, dialogs, ...
 export { openCallout } from "./src/components/callout/callout.js";
 // Layout
-export {
-  FlexColumn,
-  FlexItem,
-  FlexRow,
-} from "./src/components/layout/flex.jsx";
-export { Spacing } from "./src/components/layout/spacing.jsx";
+export { Box } from "./src/components/layout/box.jsx";
 
 // Validation
 export { createUniqueValueConstraint } from "./src/validation/constraints/create_unique_value_constraint.js";

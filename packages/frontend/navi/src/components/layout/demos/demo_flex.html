@@ -29,7 +29,7 @@
     <script type="module" jsenv-type="module/jsx">
       /* eslint-disable no-unused-vars */
       import { render } from "preact";
-      import { FlexRow, FlexColumn, FlexItem, Button } from "@jsenv/navi";
+      import { Box, Button } from "@jsenv/navi";
 
       const DemoBox = ({ children, ...props }) => (
         <div className="demo-box" {...props}>
@@ -37,121 +37,118 @@
         </div>
       );
 
+      const FlexRow = () => {};
+      const FlexColumn = () => {};
+      const FlexItem = () => {};
+
       const Demo = () => {
         return (
           <div style={{ padding: "20px", fontFamily: "system-ui, sans-serif" }}>
-            <h1>Flex Layout Demo</h1>
-
-            <h2>FlexRow</h2>
+            <h1>Column Layout Demo</h1>
 
             <section className="demo-section">
-              <h3>1. Basic FlexRow</h3>
-              <FlexRow backgroundImage="./bird.webp">
+              <h3>1. 3 rows</h3>
+              <Box flow="col" backgroundImage="./bird.webp">
                 <DemoBox>Item 1</DemoBox>
                 <DemoBox>Item 2</DemoBox>
                 <DemoBox>Item 3</DemoBox>
-              </FlexRow>
+              </Box>
             </section>
 
             <section className="demo-section">
-              <h3>2. FlexRow with Gap</h3>
-              <FlexRow gap="md">
+              <h3>2. 3 rows with gap</h3>
+              <Box flow="col" contentGap="md">
                 <DemoBox>Item 1</DemoBox>
                 <DemoBox>Item 2</DemoBox>
                 <DemoBox>Item 3</DemoBox>
-              </FlexRow>
+              </Box>
             </section>
 
             <section className="demo-section">
-              <h3>3. FlexRow with Horizontal Alignment (alignX)</h3>
+              <h3>3. With Horizontal Alignment (alignX)</h3>
 
               <h4>alignX="start" (default)</h4>
-              <FlexRow
+              <Box
+                flow="col"
                 alignX="start"
-                gap="sm"
+                contentGap="sm"
                 width="400"
                 height="80"
                 padding="sm"
-                style={{
-                  background: "#fff3e0",
-                }}
+                backgroundColor="#fff3e0"
               >
                 <DemoBox>Short</DemoBox>
                 <DemoBox style={{ height: "60px", lineHeight: "60px" }}>
                   Tall Item
                 </DemoBox>
                 <DemoBox>Short</DemoBox>
-              </FlexRow>
+              </Box>
 
               <h4>alignX="center"</h4>
-              <FlexRow
-                alignX="center"
-                gap="10px"
-                style={{
-                  width: "400px",
-                  height: "80px",
-                  background: "#e8f5e8",
-                  padding: "10px",
-                }}
+              <Box
+                flow="col"
+                contentAlignX="center"
+                contentGap="10px"
+                width="400"
+                height="80"
+                padding="sm"
+                backgroundColor="#e8f5e8"
               >
                 <DemoBox>Short</DemoBox>
                 <DemoBox style={{ height: "60px", lineHeight: "60px" }}>
                   Tall Item
                 </DemoBox>
                 <DemoBox>Short</DemoBox>
-              </FlexRow>
+              </Box>
 
               <h4>alignX="end"</h4>
-              <FlexRow
-                alignX="end"
-                gap="10px"
-                style={{
-                  width: "400px",
-                  height: "80px",
-                  background: "#ffebee",
-                  padding: "10px",
-                }}
+              <Box
+                flow="col"
+                contentAlignX="end"
+                contentGap="10px"
+                width="400"
+                height="80"
+                padding="sm"
+                background="#ffebee"
               >
                 <DemoBox>Short</DemoBox>
                 <DemoBox style={{ height: "60px", lineHeight: "60px" }}>
                   Tall Item
                 </DemoBox>
                 <DemoBox>Short</DemoBox>
-              </FlexRow>
+              </Box>
 
               <h4>alignX="space-between"</h4>
-              <FlexRow
-                alignX="space-between"
-                style={{
-                  width: "400px",
-                  height: "80px",
-                  background: "#e3f2fd",
-                  padding: "10px",
-                }}
+              <Box
+                flow="col"
+                contentAlignX="space-between"
+                width="400"
+                height="80"
+                padding="sm"
+                background="#e3f2fd"
               >
                 <DemoBox>Short</DemoBox>
                 <DemoBox style={{ height: "60px", lineHeight: "60px" }}>
                   Tall Item
                 </DemoBox>
                 <DemoBox>Short</DemoBox>
-              </FlexRow>
+              </Box>
 
               <h4>alignX="space-around"</h4>
-              <FlexRow
-                alignX="space-around"
-                style={{
-                  width: "400px",
-                  height: "80px",
-                  background: "#f3e5f5",
-                  padding: "10px",
-                }}
+              <Box
+                flow="col"
+                contentAlignX="space-around"
+                width="400"
+                height="80"
+                padding="sm"
+                background="#f3e5f5"
               >
                 <DemoBox>Short</DemoBox>
                 <DemoBox style={{ height: "60px", lineHeight: "60px" }}>
                   Tall Item
                 </DemoBox>
                 <DemoBox>Short</DemoBox>
-              </FlexRow>
+              </Box>
             </section>
 
             <section className="demo-section">

@@ -1,10 +1,7 @@
 import { appendStyles, normalizeStyle, normalizeStyles } from "@jsenv/dom";
 import { useContext } from "preact/hooks";
 
-import {
-  FlexDirectionContext,
-  InlineFlexContext,
-} from "../layout/layout_context.jsx";
+import { BoxFlowContext } from "../layout/layout_context.jsx";
 
 /**
  * Processes component props to extract and generate styles for layout, spacing, alignment, expansion, and typography.
@@ -65,8 +62,7 @@ export const withPropsStyle = (
   },
   ...remainingConfig
 ) => {
-  const flexDirection = useContext(FlexDirectionContext);
-  const inlineFlex = useContext(InlineFlexContext);
+  const boxFlow = useContext(BoxFlowContext);
   const {
     // style from props
     style,
@@ -220,7 +216,7 @@ export const withPropsStyle = (
     alignmentStyles = {};
 
     // flex
-    if (flexDirection === "row") {
+    if (boxFlow === "column") {
       // In row direction: alignX controls justify-content, alignY controls align-self
       if (alignY !== undefined && alignY !== "start") {
         alignmentStyles.alignSelf = alignY;
@@ -240,7 +236,7 @@ export const withPropsStyle = (
           alignmentStyles.marginRight = "auto";
         }
       }
-    } else if (flexDirection === "column") {
+    } else if (boxFlow === "row") {
       // In column direction: alignX controls align-self, alignY uses auto margins
       if (alignX !== undefined && alignX !== "start") {
         alignmentStyles.alignSelf = alignX;
@@ -258,7 +254,7 @@ export const withPropsStyle = (
           alignmentStyles.marginBottom = "auto";
         }
       }
-    } else if (inlineFlex) {
+    } else if (boxFlow === "inline") {
       if (alignY !== undefined && alignY !== "start") {
         alignmentStyles.alignSelf = alignY;
       }
@@ -290,9 +286,9 @@ export const withPropsStyle = (
     }
     sizeStyles = {};
     if (expandX) {
-      if (flexDirection === "row") {
+      if (boxFlow === "col") {
         sizeStyles.flexGrow = 1; // Grow horizontally in row
-      } else if (flexDirection === "column") {
+      } else if (boxFlow === "row") {
         sizeStyles.width = "100%"; // Take full width in column
       } else {
         sizeStyles.width = "100%"; // Take full width outside flex
@@ -307,10 +303,10 @@ export const withPropsStyle = (
       sizeStyles.maxWidth = normalizeStyle(maxWidth, "maxWidth", "css");
     }
     if (expandY) {
-      if (flexDirection === "row") {
-        sizeStyles.height = "100%"; // Take full height in row
-      } else if (flexDirection === "column") {
-        sizeStyles.flexGrow = 1; // Grow vertically in column
+      if (boxFlow === "col") {
+        sizeStyles.height = "100%"; // Make column full height
+      } else if (boxFlow === "row") {
+        sizeStyles.flexGrow = 1; // Make row full height
       } else {
         sizeStyles.height = "100%"; // Take full height outside flex
       }
@@ -360,7 +356,7 @@ export const withPropsStyle = (
       typoStyles.textShadow = textShadow;
     }
     if (textLineHeight !== undefined) {
-      typoStyles.lineHeight = resolveTypoSize(textLineHeight, "lineHeight");
+      typoStyles.textLineHeight = resolveTypoSize(textLineHeight, "lineHeight");
     }
     typoStyles.color = textColor;
   }

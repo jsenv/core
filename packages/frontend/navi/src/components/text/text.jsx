@@ -1,7 +1,7 @@
 import { createContext } from "preact";
 import { useContext, useState } from "preact/hooks";
 
-import { InlineFlexContext } from "../layout/layout_context.jsx";
+import { BoxFlowContext } from "../layout/layout_context.jsx";
 import { withPropsClassName } from "../props_composition/with_props_class_name.js";
 import {
   resolveSpacingSize,
@@ -129,9 +129,9 @@ const TextBasic = ({
       data-box={box ? "" : undefined}
       {...remainingProps}
     >
-      <InlineFlexContext.Provider value={Boolean(box)}>
+      <BoxFlowContext.Provider value={box ? "inline" : null}>
         {children}
-      </InlineFlexContext.Provider>
+      </BoxFlowContext.Provider>
     </TagName>
   );
 
