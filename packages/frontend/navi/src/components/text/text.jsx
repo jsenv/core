@@ -107,7 +107,7 @@ const TextOverflowPinned = ({ overflowPinned, ...props }) => {
 const TextBasic = ({
   as = "span",
   className,
-  inlineFlex,
+  box,
   gap = "xxs",
   children,
   ...rest
@@ -116,7 +116,7 @@ const TextBasic = ({
   const innerClassName = withPropsClassName("navi_text", className);
   const [remainingProps, innerStyle] = withPropsStyle(rest, {
     base: {
-      gap: inlineFlex ? resolveSpacingSize(gap, "gap") : undefined,
+      gap: box ? resolveSpacingSize(gap, "gap") : undefined,
     },
     layout: true,
     typo: true,
@@ -126,19 +126,18 @@ const TextBasic = ({
     <TagName
       className={innerClassName}
       style={innerStyle}
-      data-box={inlineFlex ? "" : undefined}
+      data-box={box ? "" : undefined}
       {...remainingProps}
     >
-      <InlineFlexContext.Provider value={inlineFlex}>
+      <InlineFlexContext.Provider value={box}>
         {children}
       </InlineFlexContext.Provider>
     </TagName>
   );
 
-  if (inlineFlex) {
+  if (box) {
     return <span className="navi_text_repositioner">{text}</span>;
   }
-
   return text;
 };
 
