@@ -463,6 +463,61 @@ const unitlessProperties = [
   "scaleZ",
 ];
 
+// Well-known CSS units and keywords that indicate a value already has proper formatting
+const cssSizeUnitSet = new Set([
+  "px",
+  "em",
+  "rem",
+  "ex",
+  "ch",
+  "vw",
+  "vh",
+  "vmin",
+  "vmax",
+  "cm",
+  "mm",
+  "in",
+  "pt",
+  "pc",
+]);
+const cssUnitSet = new Set([
+  ...cssSizeUnitSet,
+  "%",
+  // Angle units
+  "deg",
+  "rad",
+  "grad",
+  "turn",
+  // Time units
+  "s",
+  "ms",
+  // Frequency units
+  "Hz",
+  "kHz",
+]);
+const cssKeywordSet = new Set([
+  // Keywords that shouldn't get units
+  "auto",
+  "none",
+  "inherit",
+  "initial",
+  "unset",
+  "revert",
+]);
+
+// Check if value already has a unit or is a keyword
+const hasUnit = (value) => {
+  for (const cssUnit of cssUnitSet) {
+    if (value.endsWith(cssUnit)) {
+      return true;
+    }
+  }
+  return false;
+};
+const isKeyword = (value) => {
+  return cssKeywordSet.has(value);
+};
+
 // Normalize a single style value
 const normalizeStyle = (value, propertyName, context = "js") => {
   if (propertyName === "transform") {
@@ -544,7 +599,7 @@ const normalizeNumber = (value, { unit, propertyName, preferedType }) => {
   if (typeof value === "string") {
     // Keep strings as-is (including %, em, rem, auto, none, etc.)
     if (preferedType === "string") {
-      if (unit && !value.endsWith(unit)) {
+      if (unit && !hasUnit(value) && !isKeyword(value)) {
         return `${value}${unit}`;
       }
       return value;
