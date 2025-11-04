@@ -1,15 +1,22 @@
 import { Link } from "../components/link/link.jsx";
 import { useRouteStatus } from "./route.js";
 
-export const RouteLink = ({ route, routeParams, children, ...rest }) => {
+export const RouteLink = ({
+  route,
+  routeParams,
+  active,
+  children,
+  ...rest
+}) => {
   if (!route) {
-    throw new Error("RouteLink: route prop is required");
+    throw new Error("route prop is required");
   }
-  const { active } = useRouteStatus(route);
+  const routeStatus = useRouteStatus(route);
   const url = route.buildUrl(routeParams);
+  const innerActive = active || routeStatus.active;
 
   return (
-    <Link {...rest} href={url} active={active ? "" : undefined}>
+    <Link {...rest} href={url} active={innerActive}>
       {children}
     </Link>
   );

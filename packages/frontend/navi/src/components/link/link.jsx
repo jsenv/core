@@ -7,6 +7,7 @@ import {
   useRef,
 } from "preact/hooks";
 
+import { useDocumentUrl } from "../../browser_integration/document_url_signal.js";
 import { getLinkTargetInfo } from "../../browser_integration/link_target_info.js";
 import { useIsVisited } from "../../browser_integration/use_is_visited.js";
 import { closeValidationMessage } from "../../validation/custom_constraint_validation.js";
@@ -113,6 +114,7 @@ const LinkPlain = forwardRef((props, ref) => {
     blankTargetIcon,
     anchorIcon,
     icon,
+    pointerDefaultWhenCurrent,
     ...rest
   } = props;
   const innerRef = useRef();
@@ -123,15 +125,21 @@ const LinkPlain = forwardRef((props, ref) => {
   useConstraints(innerRef, constraints);
   const shouldDimColor = readOnly || disabled;
   useDimColorWhen(innerRef, shouldDimColor);
+  // subscribe to document url to re-render and re-compute getLinkTargetInfo
+  useDocumentUrl();
+  const { targetIsSameSite, targetIsAnchor, targetIsCurrent } =
+    getLinkTargetInfo(href);
 
   const innerClassName = withPropsClassName("navi_link", className);
   const [remainingProps, innerStyle] = withPropsStyle(rest, {
+    base: {
+      cursor:
+        pointerDefaultWhenCurrent && targetIsCurrent ? "default" : undefined,
+    },
     layout: true,
     typo: true,
   });
 
-  const { targetIsSameSite, targetIsAnchor, targetIsCurrent } =
-    getLinkTargetInfo(href);
   const innerTarget =
     target === undefined ? (targetIsSameSite ? "_self" : "_blank") : target;
   const innerRel =

@@ -11766,6 +11766,7 @@ const LinkPlain = forwardRef((props, ref) => {
     blankTargetIcon,
     anchorIcon,
     icon,
+    pointerDefaultWhenCurrent,
     ...rest
   } = props;
   const innerRef = useRef();
@@ -11775,16 +11776,21 @@ const LinkPlain = forwardRef((props, ref) => {
   useConstraints(innerRef, constraints);
   const shouldDimColor = readOnly || disabled;
   useDimColorWhen(innerRef, shouldDimColor);
-  const innerClassName = withPropsClassName("navi_link", className);
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    layout: true,
-    typo: true
-  });
+  // subscribe to document url to re-render and re-compute getLinkTargetInfo
+  useDocumentUrl();
   const {
     targetIsSameSite,
     targetIsAnchor,
     targetIsCurrent
   } = getLinkTargetInfo(href);
+  const innerClassName = withPropsClassName("navi_link", className);
+  const [remainingProps, innerStyle] = withPropsStyle(rest, {
+    base: {
+      cursor: pointerDefaultWhenCurrent && targetIsCurrent ? "default" : undefined
+    },
+    layout: true,
+    typo: true
+  });
   const innerTarget = target === undefined ? targetIsSameSite ? "_self" : "_blank" : target;
   const innerRel = rel === undefined ? targetIsSameSite ? undefined : "noopener noreferrer" : rel;
   let innerIcon;
@@ -11977,20 +11983,20 @@ const LinkWithAction = forwardRef((props, ref) => {
 const RouteLink = ({
   route,
   routeParams,
+  active,
   children,
   ...rest
 }) => {
   if (!route) {
-    throw new Error("RouteLink: route prop is required");
+    throw new Error("route prop is required");
   }
-  const {
-    active
-  } = useRouteStatus(route);
+  const routeStatus = useRouteStatus(route);
   const url = route.buildUrl(routeParams);
+  const innerActive = active || routeStatus.active;
   return jsx(Link, {
     ...rest,
     href: url,
-    active: active ? "" : undefined,
+    active: innerActive,
     children: children
   });
 };
@@ -19488,7 +19494,7 @@ const Spacing = ({
 }) => {
   const [remainingProps, innerStyle] = withPropsStyle(rest, {
     spacing: true,
-    visual: true
+    size: true
   });
   return jsx("div", {
     ...remainingProps,
