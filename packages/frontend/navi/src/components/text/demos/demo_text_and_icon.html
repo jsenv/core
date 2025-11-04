@@ -9,7 +9,15 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       /* eslint-disable no-unused-vars */
-      import { Text, Icon, FlexColumn, Spacing, Title } from "@jsenv/navi";
+      import {
+        Text,
+        Paragraph,
+        Icon,
+        FlexColumn,
+        Spacing,
+        Title,
+        Link,
+      } from "@jsenv/navi";
 
       const Demo = () => {
         return (
@@ -17,8 +25,8 @@
             style={{
               padding: "20px",
               fontFamily: "system-ui, sans-serif",
-              lineHeight: "1.6",
               maxWidth: "800px",
+              lineHeight: "1.6",
             }}
           >
             <Title as="h1">Text and Icon Combinations</Title>
@@ -26,21 +34,21 @@
             <Spacing as="section" marginBottom="xl">
               <Title as="h2">Basic Icon + Text</Title>
               <FlexColumn gap="sm">
-                <Text line>
+                <Text inlineFlex>
                   <Icon>
                     <HomeSvg />
                   </Icon>
                   Home
                 </Text>
 
-                <Text line>
+                <Text inlineFlex>
                   <Icon>
                     <UserSvg />
                   </Icon>
                   Profile
                 </Text>
 
-                <Text line>
+                <Text inlineFlex>
                   <Icon>
                     <SettingsSvg />
                   </Icon>
@@ -49,20 +57,30 @@
               </FlexColumn>
             </Spacing>
 
+            <Text inlineFlex>
+              <Icon textColor="green">
+                <CheckSvg />
+              </Icon>
+              <Text>
+                Un lien de réinitialisation a été envoyé à{" "}
+                <Link href="dmail@gmail.com">dmail@gmail.com</Link>
+              </Text>
+            </Text>
+
             <Spacing as="section" marginBottom="xl">
               <Title as="h2">Large text and overflow</Title>
               <FlexColumn gap="sm">
-                <Text line>
+                <Text inlineFlex>
                   This is a very long text that might overflow the container
                   <Icon>
-                    <StarIcon />
+                    <StarSvg />
                   </Icon>
                 </Text>
 
-                <Text line>
+                <Text inlineFlex>
                   This is a very long text that might overflow the container
                   <Icon>
-                    <HeartIcon />
+                    <HeartSvg />
                   </Icon>
                 </Text>
               </FlexColumn>
@@ -71,7 +89,7 @@
             <Spacing as="section" marginBottom="xl">
               <h2>Text + Icon (Reversed Order)</h2>
               <FlexColumn gap="sm">
-                <Text line>
+                <Text inlineFlex>
                   Search
                   <Icon>
                     <SearchSvg />
@@ -83,17 +101,17 @@
             <section style={{ marginBottom: "40px" }}>
               <h2>Multiple Icons</h2>
               <FlexColumn gap="sm">
-                <Text line>
+                <Text inlineFlex>
                   <Icon>
                     <HomeSvg />
                   </Icon>
                   Left and right
                   <Icon>
-                    <StarIcon />
+                    <StarSvg />
                   </Icon>
                 </Text>
 
-                <Text line>
+                <Text inlineFlex>
                   <Icon>
                     <UserSvg />
                   </Icon>
@@ -103,17 +121,17 @@
                   Two on the left
                 </Text>
 
-                <Text line>
+                <Text inlineFlex>
                   Two on the right
                   <Icon>
-                    <StarIcon />
+                    <StarSvg />
                   </Icon>
                   <Icon>
-                    <HeartIcon />
+                    <HeartSvg />
                   </Icon>
                 </Text>
 
-                <Text line>
+                <Text inlineFlex>
                   <Icon>
                     <HomeSvg />
                   </Icon>
@@ -122,10 +140,10 @@
                   </Icon>
                   Two on the left and right
                   <Icon>
-                    <StarIcon />
+                    <StarSvg />
                   </Icon>
                   <Icon>
-                    <HeartIcon />
+                    <HeartSvg />
                   </Icon>
                 </Text>
               </FlexColumn>
@@ -134,30 +152,30 @@
             <section style={{ marginBottom: "40px" }}>
               <h2>Different Font Sizes</h2>
               <FlexColumn gap="sm">
-                <Text textSize="sm">
+                <Text inlineFlex textSize="sm">
                   <Icon>
                     <HomeSvg />
                   </Icon>
                   Small text with icon
                 </Text>
 
-                <Text>
+                <Text inlineFlex>
                   <Icon>
                     <UserSvg />
                   </Icon>
                   Normal text with icon
                 </Text>
 
-                <Text textSize="lg">
+                <Text inlineFlex textSize="lg">
                   <Icon>
                     <SettingsSvg />
                   </Icon>
                   Large text with icon
                 </Text>
 
-                <Text textSize="xl">
+                <Text inlineFlex textSize="xl">
                   <Icon>
-                    <StarIcon />
+                    <StarSvg />
                   </Icon>
                   Extra large text
                 </Text>
@@ -167,30 +185,30 @@
             <section style={{ marginBottom: "40px" }}>
               <h2>Colored Examples</h2>
               <FlexColumn gap="sm">
-                <Text textColor="blue">
+                <Text inlineFlex textColor="blue">
                   <Icon>
                     <HomeSvg />
                   </Icon>
                   Blue home link
                 </Text>
 
-                <Text textColor="green">
+                <Text inlineFlex textColor="green">
                   <Icon>
                     <UserSvg />
                   </Icon>
                   Green user profile
                 </Text>
 
-                <Text textColor="red">
+                <Text inlineFlex textColor="red">
                   <Icon>
-                    <HeartIcon />
+                    <HeartSvg />
                   </Icon>
                   Red heart favorite
                 </Text>
 
-                <Text textColor="purple">
+                <Text inlineFlex textColor="purple">
                   <Icon>
-                    <StarIcon />
+                    <StarSvg />
                   </Icon>
                   Purple star rating
                 </Text>
@@ -216,7 +234,7 @@
                     fontSize: "14px",
                   }}
                 >
-                  <Text>
+                  <Text inlineFlex>
                     <Icon>
                       <SearchSvg />
                     </Icon>
@@ -243,6 +261,7 @@
                   }}
                 >
                   <Text
+                    inlineFlex
                     style={{
                       cursor: "pointer",
                       padding: "8px 12px",
@@ -264,35 +283,35 @@
               <h2>Inline Text with Icons</h2>
               <p style={{ fontSize: "16px", lineHeight: "1.6" }}>
                 Welcome to our platform! Click on the{" "}
-                <Text textBold>
+                <Text inlineFlex textBold>
                   <Icon>
                     <HomeSvg />
                   </Icon>
                   home
                 </Text>{" "}
                 button to return to the dashboard, or visit your{" "}
-                <Text textItalic>
+                <Text inlineFlex textItalic>
                   <Icon>
                     <UserSvg />
                   </Icon>
                   profile
                 </Text>{" "}
                 to update your settings. Don't forget to{" "}
-                <Text textUnderline>
+                <Text inlineFlex textUnderline>
                   <Icon>
-                    <StarIcon />
+                    <StarSvg />
                   </Icon>
                   star
                 </Text>{" "}
                 your favorite items and{" "}
-                <Text textBold textItalic>
+                <Text inlineFlex textBold textItalic>
                   <Icon>
-                    <HeartIcon />
+                    <HeartSvg />
                   </Icon>
                   like
                 </Text>{" "}
                 the content you enjoy. Use the{" "}
-                <Text textBold textUnderline>
+                <Text inlineFlex textBold textUnderline>
                   <Icon>
                     <SearchSvg />
                   </Icon>
@@ -300,11 +319,11 @@
                 </Text>{" "}
                 feature to find what you're looking for quickly. You can also
                 combine{" "}
-                <Text textItalic textUnderline>
+                <Text inlineFlex textItalic textUnderline>
                   multiple styles
                 </Text>{" "}
                 together for{" "}
-                <Text textBold textItalic textUnderline>
+                <Text inlineFlex textBold textItalic textUnderline>
                   maximum emphasis
                 </Text>
                 !
@@ -367,7 +386,7 @@
         </svg>
       );
 
-      const StarIcon = () => (
+      const StarSvg = () => (
         <svg
           viewBox="0 0 24 24"
           width="100%"
@@ -381,7 +400,23 @@
         </svg>
       );
 
-      const HeartIcon = () => (
+      const CheckSvg = () => {
+        return (
+          <svg
+            viewBox="0 0 64 64"
+            width="100%"
+            height="100%"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M56.103,16.824l-33.296,33.297l-14.781,-14.78l2.767,-2.767l11.952,11.952l30.53,-30.53c0.943,0.943 1.886,1.886 2.828,2.828Z"
+              fill="currentColor"
+            />
+          </svg>
+        );
+      };
+
+      const HeartSvg = () => (
         <svg
           viewBox="0 0 24 24"
           width="100%"

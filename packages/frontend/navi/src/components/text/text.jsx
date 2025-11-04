@@ -1,8 +1,12 @@
 import { createContext } from "preact";
 import { useContext, useState } from "preact/hooks";
 
+import { InlineFlexContext } from "../layout/layout_context.jsx";
 import { withPropsClassName } from "../props_composition/with_props_class_name.js";
-import { withPropsStyle } from "../props_composition/with_props_style.js";
+import {
+  resolveSpacingSize,
+  withPropsStyle,
+} from "../props_composition/with_props_style.js";
 
 import.meta.css = /* css */ `
   :root {
@@ -10,18 +14,12 @@ import.meta.css = /* css */ `
   }
 
   .navi_icon {
-    display: inline-flex;
+    position: relative;
     width: 1em;
     height: 1em;
+    height: 1lh;
     flex-shrink: 0;
-    line-height: 1em;
-  }
-
-  .navi_text[data-line] {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.1em;
-    white-space: nowrap;
+    vertical-align: middle;
   }
 
   .navi_text_overflow {
@@ -99,31 +97,44 @@ const TextOverflowPinned = ({ overflowPinned, ...props }) => {
   setOverflowPinnedElement(null);
   return text;
 };
-const TextBasic = ({ as = "span", className, children, line, ...rest }) => {
+const TextBasic = ({
+  as = "span",
+  className,
+  inlineFlex,
+  gap = "xxs",
+  children,
+  ...rest
+}) => {
   const TagName = as;
   const innerClassName = withPropsClassName("navi_text", className);
   const [remainingProps, innerStyle] = withPropsStyle(rest, {
+    base: {
+      display: inlineFlex ? "inline-flex" : undefined,
+      gap: inlineFlex ? resolveSpacingSize(gap, "gap") : undefined,
+    },
     layout: true,
     typo: true,
   });
 
-  return (
-    <TagName
-      className={innerClassName}
-      style={innerStyle}
-      data-line={line ? "" : undefined}
-      {...remainingProps}
-    >
-      {children}
+  const text = (
+    <TagName className={innerClassName} style={innerStyle} {...remainingProps}>
+      <InlineFlexContext.Provider value={inlineFlex}>
+        {children}
+      </InlineFlexContext.Provider>
     </TagName>
   );
+
+  if (inlineFlex) {
+    return (
+      <span style="display: inline-block; vertical-align: top;">{text}</span>
+    );
+  }
+
+  return text;
 };
 
 export const Icon = ({ className, children, ...rest }) => {
   const innerClassName = withPropsClassName("navi_icon", className);
-  if (rest.alignY === undefined) {
-    rest.alignY = "center";
-  }
   const [remainingProps, innerStyle] = withPropsStyle(rest, {
     layout: true,
     typo: true,

@@ -1,7 +1,10 @@
 import { appendStyles, normalizeStyle, normalizeStyles } from "@jsenv/dom";
 import { useContext } from "preact/hooks";
 
-import { FlexDirectionContext } from "../layout/layout_context.jsx";
+import {
+  FlexDirectionContext,
+  InlineFlexContext,
+} from "../layout/layout_context.jsx";
 
 /**
  * Processes component props to extract and generate styles for layout, spacing, alignment, expansion, and typography.
@@ -63,6 +66,7 @@ export const withPropsStyle = (
   ...remainingConfig
 ) => {
   const flexDirection = useContext(FlexDirectionContext);
+  const inlineFlex = useContext(InlineFlexContext);
   const {
     // style from props
     style,
@@ -253,6 +257,10 @@ export const withPropsStyle = (
           alignmentStyles.marginTop = "auto";
           alignmentStyles.marginBottom = "auto";
         }
+      }
+    } else if (inlineFlex) {
+      if (alignY !== undefined && alignY !== "start") {
+        alignmentStyles.alignSelf = alignY;
       }
     }
     // non flex
