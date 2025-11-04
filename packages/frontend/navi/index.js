@@ -88,6 +88,7 @@ export { LinkWithIcon } from "./src/components/link/link_with_icon.jsx";
 export { FontSizedSvg } from "./src/components/svg/font_sized_svg.jsx";
 export { IconAndText } from "./src/components/svg/icon_and_text.jsx";
 export { SVGMaskOverlay } from "./src/components/svg/svg_mask_overlay.jsx";
+export { Image } from "./src/components/text/image.jsx";
 export { Overflow } from "./src/components/text/overflow.jsx";
 export { Paragraph } from "./src/components/text/paragraph.jsx";
 export { Icon, Text } from "./src/components/text/text.jsx";
