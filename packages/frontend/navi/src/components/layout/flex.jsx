@@ -70,6 +70,7 @@ export const FlexColumn = ({
       justifyContent: alignY !== "start" ? alignY : undefined,
       gap: sizeSpacingScale[gap] || gap,
     },
+    layout: true,
   });
 
   return (

@@ -10121,10 +10121,11 @@ const withPropsStyle = (
       visualStyles.borderBottom = borderBottom;
     }
     if (borderWidth !== undefined) {
-      visualStyles.borderWidth = borderWidth;
+      visualStyles.borderWidth = sizeSpacingScale[borderWidth] || borderWidth;
     }
     if (borderRadius !== undefined) {
-      visualStyles.borderRadius = borderRadius;
+      visualStyles.borderRadius =
+        sizeSpacingScale[borderRadius] || borderRadius;
     }
     if (borderColor !== undefined) {
       visualStyles.borderColor = borderColor;
@@ -13857,7 +13858,8 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       );
 
       --color: currentColor;
-      --color-readonly: color-mix(in srgb, currentColor 60%, transparent);
+      --color-dimmed: color-mix(in srgb, currentColor 60%, transparent);
+      --color-readonly: var(--color-dimmed);
       --color-disabled: var(--color-readonly);
 
       width: 100%;
@@ -13874,6 +13876,15 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       outline-color: var(--border-color);
       outline-offset: calc(-1 * (var(--border-width)));
     }
+    .navi_input::placeholder {
+      color: var(--color-dimmed);
+    }
+    .navi_input:-internal-autofill-selected {
+      /* Webkit is putting some nasty styles after automplete that look as follow */
+      /* input:-internal-autofill-selected { color: FieldText !important; } */
+      /* Fortunately we can override it as follow */
+      -webkit-text-fill-color: var(--color) !important;
+    }
     /* Focus */
     .navi_input[data-focus] {
       border-color: var(--outline-color);
@@ -13883,16 +13894,13 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     }
     /* Readonly */
     .navi_input[data-readonly] {
-      color: var(--color-readonly);
+      --color: var(--color-readonly);
       background-color: var(--background-color-readonly);
       outline-color: var(--border-color-readonly);
     }
-    .navi_input[data-readonly]::placeholder {
-      color: var(--color-readonly);
-    }
     /* Disabled */
     .navi_input[data-disabled] {
-      color: var(--color-disabled);
+      --color: var(--color-disabled);
       background-color: var(--background-color-disabled);
       outline-color: var(--border-color-disabled);
     }
@@ -19304,8 +19312,8 @@ const Title = ({
   as = "h1",
   ...rest
 }) => {
-  if (rest.bold === undefined) {
-    rest.bold = true;
+  if (rest.textBold === undefined) {
+    rest.textBold = true;
   }
   const [remainingProps, innerStyle] = withPropsStyle(rest, {
     layout: true,
@@ -19337,12 +19345,14 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   }
 `;
 const FlexRow = ({
+  className,
   alignX,
   alignY,
   gap,
   children,
   ...rest
 }) => {
+  const innerClassName = withPropsClassName("navi_flex_row", className);
   const [remainingProps, innerStyle] = withPropsStyle(rest, {
     base: {
       // Only set justifyContent if it's not the default "start"
@@ -19355,7 +19365,7 @@ const FlexRow = ({
   });
   return jsx("div", {
     ...remainingProps,
-    className: "navi_flex_row",
+    className: innerClassName,
     style: innerStyle,
     children: jsx(FlexDirectionContext.Provider, {
       value: "row",
@@ -19364,12 +19374,14 @@ const FlexRow = ({
   });
 };
 const FlexColumn = ({
+  className,
   alignX,
   alignY,
   gap,
   children,
   ...rest
 }) => {
+  const innerClassName = withPropsClassName("navi_flex_column", className);
   const [remainingProps, innerStyle] = withPropsStyle(rest, {
     base: {
       // Only set alignItems if it's not the default "stretch"
@@ -19377,11 +19389,12 @@ const FlexColumn = ({
       // Only set justifyContent if it's not the default "start"
       justifyContent: alignY !== "start" ? alignY : undefined,
       gap: sizeSpacingScale[gap] || gap
-    }
+    },
+    layout: true
   });
   return jsx("div", {
     ...remainingProps,
-    className: "navi_flex_column",
+    className: innerClassName,
     style: innerStyle,
     children: jsx(FlexDirectionContext.Provider, {
       value: "column",
@@ -19421,7 +19434,8 @@ const Spacing = ({
   ...rest
 }) => {
   const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    spacing: true
+    spacing: true,
+    visual: true
   });
   return jsx("div", {
     ...remainingProps,
