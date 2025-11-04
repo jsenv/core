@@ -32,7 +32,7 @@ export const FlexRow = ({ alignX, alignY, gap, children, ...rest }) => {
       justifyContent: alignX !== "start" ? alignX : undefined,
       // Only set alignItems if it's not the default "stretch"
       alignItems: alignY !== "stretch" ? alignY : undefined,
-      gap,
+      gap: sizeSpacingScale[gap] || gap,
     },
     layout: true,
   });

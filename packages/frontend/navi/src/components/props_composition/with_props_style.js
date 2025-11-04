@@ -51,7 +51,15 @@ import { FlexDirectionContext } from "../layout/layout_context.jsx";
  */
 export const withPropsStyle = (
   props,
-  { base, layout, spacing = layout, align = layout, size = layout, typo },
+  {
+    base,
+    layout,
+    spacing = layout,
+    align = layout,
+    size = layout,
+    typo,
+    visual = true,
+  },
   ...remainingConfig
 ) => {
   const flexDirection = useContext(FlexDirectionContext);
@@ -94,18 +102,32 @@ export const withPropsStyle = (
     textUnderlineStyle,
     textUnderlineColor,
     textColor,
+
+    // visual props
+    background,
+    backgroundColor,
+    border,
+    borderColor,
+
     // props not related to styling
     ...remainingProps
   } = props;
 
   const hasRemainingConfig = remainingConfig.length > 0;
+  let propStyles;
   let marginStyles;
   let paddingStyles;
   let alignmentStyles;
   let sizeStyles;
   let typoStyles;
-  let propStyles;
+  let visualStyles;
 
+  props_styles: {
+    if (!style && !hasRemainingConfig) {
+      break props_styles;
+    }
+    propStyles = style ? normalizeStyles(style, "css") : {};
+  }
   spacing_styles: {
     if (!spacing && !hasRemainingConfig) {
       break spacing_styles;
@@ -300,11 +322,23 @@ export const withPropsStyle = (
     }
     typoStyles.color = textColor;
   }
-  props_styles: {
-    if (!style && !hasRemainingConfig) {
-      break props_styles;
+  visual_styles: {
+    if (!visual && !hasRemainingConfig) {
+      break visual_styles;
     }
-    propStyles = style ? normalizeStyles(style, "css") : {};
+    visualStyles = {};
+    if (background !== undefined) {
+      visualStyles.background = background;
+    }
+    if (backgroundColor !== undefined) {
+      visualStyles.backgroundColor = backgroundColor;
+    }
+    if (border !== undefined) {
+      visualStyles.border = border;
+    }
+    if (borderColor !== undefined) {
+      visualStyles.borderColor = borderColor;
+    }
   }
 
   const firstConfigStyle = {};
@@ -322,6 +356,9 @@ export const withPropsStyle = (
   }
   if (typo) {
     Object.assign(firstConfigStyle, typoStyles);
+  }
+  if (visual) {
+    Object.assign(firstConfigStyle, visualStyles);
   }
   if (style) {
     appendStyles(firstConfigStyle, propStyles, "css");
@@ -346,6 +383,9 @@ export const withPropsStyle = (
     }
     if (config.typo) {
       Object.assign(configStyle, typoStyles);
+    }
+    if (config.visual || config.visual === undefined) {
+      Object.assign(configStyle, visualStyles);
     }
     if (config.style) {
       appendStyles(configStyle, propStyles, "css");
