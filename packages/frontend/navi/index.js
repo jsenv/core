@@ -96,8 +96,8 @@ export {
   Text,
   TextAndCount,
   TextLine,
+  TextOverflow,
 } from "./src/components/text/text.jsx";
-export { TextOverflow } from "./src/components/text/text_overflow.jsx";
 export { Title } from "./src/components/text/title.jsx";
 // Callout, dialogs, ...
 export { openCallout } from "./src/components/callout/callout.js";
