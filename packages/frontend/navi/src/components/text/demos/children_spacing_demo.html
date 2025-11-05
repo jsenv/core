@@ -2,14 +2,14 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Text childrenSpacing Demo</title>
+    <title>Text Auto-Spacing Demo</title>
   </head>
   <body>
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       /* eslint-disable no-unused-vars */
-      import { Text, Icon } from "@jsenv/navi";
+      import { Text } from "@jsenv/navi";
 
       const Demo = () => {
         return (
@@ -19,41 +19,62 @@
               fontFamily: "system-ui, sans-serif",
             }}
           >
-            <h1>Text childrenSpacing Demo</h1>
+            <h1>Text Auto-Spacing Demo</h1>
+            <p>
+              <strong>New behavior:</strong> Text components now automatically
+              add spacing between children by default!
+            </p>
 
-            {/* Basic Example */}
+            {/* Basic Example - Default behavior */}
             <section style={{ marginBottom: "30px" }}>
-              <h2>Basic childrenSpacing</h2>
+              <h2>✨ Default Auto-Spacing (New!)</h2>
               <div
                 style={{ display: "flex", gap: "20px", marginBottom: "20px" }}
               >
                 <div>
-                  <h3>Without childrenSpacing</h3>
-                  <div style={{ border: "1px solid #ccc", padding: "8px" }}>
+                  <h3>Before (manual spacing)</h3>
+                  <div
+                    style={{
+                      border: "1px solid #ccc",
+                      padding: "8px",
+                      backgroundColor: "#f9f9f9",
+                    }}
+                  >
+                    <Text preserveChildrenSpacing>
+                      <strong>Hello</strong> <em>beautiful</em>{" "}
+                      <span>world!</span>
+                    </Text>
+                  </div>
+                  <small style={{ color: "#666" }}>
+                    Required manual {`{" "}`} spacing
+                  </small>
+                </div>
+
+                <div>
+                  <h3>Now (automatic spacing) 🎉</h3>
+                  <div
+                    style={{
+                      border: "1px solid #ccc",
+                      padding: "8px",
+                      backgroundColor: "#e8f5e8",
+                    }}
+                  >
                     <Text>
                       <strong>Hello</strong>
                       <em>beautiful</em>
                       <span>world!</span>
                     </Text>
                   </div>
-                </div>
-
-                <div>
-                  <h3>With childrenSpacing</h3>
-                  <div style={{ border: "1px solid #ccc", padding: "8px" }}>
-                    <Text childrenSpacing>
-                      <strong>Hello</strong>
-                      <em>beautiful</em>
-                      <span>world!</span>
-                    </Text>
-                  </div>
+                  <small style={{ color: "#666" }}>
+                    No manual spacing needed!
+                  </small>
                 </div>
               </div>
             </section>
 
             {/* Navigation Breadcrumb Example */}
             <section style={{ marginBottom: "30px" }}>
-              <h2>Navigation Breadcrumb Use Case</h2>
+              <h2>Navigation Breadcrumb (Clean Code)</h2>
               <div
                 style={{
                   border: "1px solid #ccc",
@@ -61,7 +82,7 @@
                   marginBottom: "20px",
                 }}
               >
-                <Text childrenSpacing textColor="#666">
+                <Text textColor="#666">
                   <Text as="a" href="#" textColor="blue">
                     Products
                   </Text>
@@ -79,11 +100,14 @@
                   </Text>
                 </Text>
               </div>
+              <small style={{ color: "#666" }}>
+                Clean JSX without manual spacing!
+              </small>
             </section>
 
             {/* Mixed Content Example */}
             <section style={{ marginBottom: "30px" }}>
-              <h2>Mixed Content</h2>
+              <h2>Status Dashboard</h2>
               <div
                 style={{
                   border: "1px solid #ccc",
@@ -91,7 +115,7 @@
                   marginBottom: "20px",
                 }}
               >
-                <Text childrenSpacing>
+                <Text>
                   <span>Status:</span>
                   <Text textBold textColor="green">
                     ✓ Online
@@ -108,34 +132,145 @@
               </div>
             </section>
 
-            {/* Comparison with manual spacing */}
+            {/* When you need NO spacing */}
             <section style={{ marginBottom: "30px" }}>
-              <h2>Comparison: childrenSpacing vs Manual Spacing</h2>
+              <h2>🔧 When You Need No Spacing (preserveChildrenSpacing)</h2>
+              <p>
+                Sometimes you want elements to be "collé sans espace" or control
+                spacing manually:
+              </p>
+
               <div
                 style={{ display: "flex", gap: "20px", marginBottom: "20px" }}
               >
                 <div>
-                  <h3>Manual spacing (verbose)</h3>
+                  <h3>Default (with auto-spacing)</h3>
                   <div style={{ border: "1px solid #ccc", padding: "8px" }}>
                     <Text>
-                      <strong>Name:</strong> <span>John Doe</span>{" "}
-                      <span>•</span> <strong>Age:</strong> <span>30</span>
+                      <span>Price:</span>
+                      <strong>$</strong>
+                      <span>29</span>
+                      <span>.99</span>
                     </Text>
                   </div>
+                  <small style={{ color: "#666" }}>
+                    Spaces everywhere → "Price: $ 29 .99"
+                  </small>
                 </div>
 
                 <div>
-                  <h3>childrenSpacing (clean)</h3>
+                  <h3>preserveChildrenSpacing={`{true}`}</h3>
                   <div style={{ border: "1px solid #ccc", padding: "8px" }}>
-                    <Text childrenSpacing>
-                      <strong>Name:</strong>
-                      <span>John Doe</span>
-                      <span>•</span>
-                      <strong>Age:</strong>
-                      <span>30</span>
+                    <Text preserveChildrenSpacing>
+                      <span>Price:</span> <strong>$</strong>
+                      <span>29</span>
+                      <span>.99</span>
                     </Text>
                   </div>
+                  <small style={{ color: "#666" }}>
+                    Manual control → "Price: $29.99"
+                  </small>
                 </div>
+              </div>
+
+              {/* Another example with tags */}
+              <div style={{ marginTop: "20px" }}>
+                <h3>Example: HTML-like tags without spacing</h3>
+                <div style={{ display: "flex", gap: "20px" }}>
+                  <div>
+                    <h4>Default (unwanted spaces)</h4>
+                    <div style={{ border: "1px solid #ccc", padding: "8px" }}>
+                      <Text>
+                        <span>&lt;</span>
+                        <strong>div</strong>
+                        <span>&gt;</span>
+                        <span>content</span>
+                        <span>&lt;/</span>
+                        <strong>div</strong>
+                        <span>&gt;</span>
+                      </Text>
+                    </div>
+                    <small style={{ color: "#666" }}>
+                      Result: "<div> content </div>"
+                    </small>
+                  </div>
+
+                  <div>
+                    <h4>preserveChildrenSpacing (clean)</h4>
+                    <div style={{ border: "1px solid #ccc", padding: "8px" }}>
+                      <Text preserveChildrenSpacing>
+                        <span>&lt;</span>
+                        <strong>div</strong>
+                        <span>&gt;</span>
+                        <span>content</span>
+                        <span>&lt;/</span>
+                        <strong>div</strong>
+                        <span>&gt;</span>
+                      </Text>
+                    </div>
+                    <small style={{ color: "#666" }}>
+                      Result: "&lt;div&gt;content&lt;/div&gt;"
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Migration guide */}
+            <section
+              style={{
+                marginBottom: "30px",
+                padding: "20px",
+                backgroundColor: "#f0f8ff",
+                border: "1px solid #cce7ff",
+              }}
+            >
+              <h2>📝 Migration Guide</h2>
+              <div style={{ marginBottom: "15px" }}>
+                <h3>Before (old API):</h3>
+                <pre
+                  style={{
+                    backgroundColor: "#fff",
+                    padding: "10px",
+                    border: "1px solid #ddd",
+                  }}
+                >
+                  {`<Text childrenSpacing>
+  <strong>Hello</strong>
+  <span>world</span>
+</Text>`}
+                </pre>
+              </div>
+              <div style={{ marginBottom: "15px" }}>
+                <h3>Now (default behavior):</h3>
+                <pre
+                  style={{
+                    backgroundColor: "#fff",
+                    padding: "10px",
+                    border: "1px solid #ddd",
+                  }}
+                >
+                  {`<Text>
+  <strong>Hello</strong>
+  <span>world</span>
+</Text>`}
+                </pre>
+              </div>
+              <div>
+                <h3>When you need manual control:</h3>
+                <pre
+                  style={{
+                    backgroundColor: "#fff",
+                    padding: "10px",
+                    border: "1px solid #ddd",
+                  }}
+                >
+                  {`<Text preserveChildrenSpacing>
+  <strong>Hello</strong>
+  {" "}
+  <span>world</span>
+</Text>`}
+                </pre>
               </div>
             </section>
           </div>
