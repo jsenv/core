@@ -260,6 +260,36 @@ export function checkParameterChaining(
     }
   }
 
+  // When parameter is not found through specific propagation logic,
+  // check if the chain ends with a function that can accept any properties
+  if (bestChain.length > 1) {
+    const lastFunctionName = bestChain[bestChain.length - 1];
+    const lastFunctionDef = functionDefinitions.get(lastFunctionName);
+
+    if (lastFunctionDef) {
+      const lastFunctionNode = lastFunctionDef.node || lastFunctionDef;
+
+      // Check if last function has a simple parameter that accepts any properties
+      if (
+        lastFunctionNode &&
+        lastFunctionNode.params &&
+        lastFunctionNode.params.length > 0
+      ) {
+        const firstParam = lastFunctionNode.params[0];
+
+        if (firstParam.type === "Identifier") {
+          // Check if this param accepts any props (same logic as existing non-JSX code)
+          if (acceptsAnyObjectProperty(firstParam.name, lastFunctionNode)) {
+            debug(
+              `Parameter '${paramName}' accepted because chain ends with function that accepts any properties`,
+            );
+            return { found: true, chain: bestChain };
+          }
+        }
+      }
+    }
+  }
+
   // When parameter is not found, preserve the longest chain we built during analysis
   // This allows error reporting to attribute the rejection to the correct function
   return { found: false, chain: bestChain };
