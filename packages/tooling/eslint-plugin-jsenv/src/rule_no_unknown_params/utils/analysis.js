@@ -231,7 +231,11 @@ export function analyzeCallExpression(
   for (let i = 0; i < params.length; i++) {
     const param = params[i];
     const arg = node.arguments[i];
-    if (param.type !== "ObjectPattern" || !arg || arg.type !== "ObjectExpression") {
+    if (
+      param.type !== "ObjectPattern" ||
+      !arg ||
+      arg.type !== "ObjectExpression"
+    ) {
       continue;
     }
     handleObjectPatternUnknownProps({
@@ -674,19 +678,26 @@ function handleObjectPatternUnknownProps({
   const hasRestElement = param.properties.some((p) => p.type === "RestElement");
   if (hasRestElement) {
     const isOnlyRestParam =
-      param.properties.length === 1 && param.properties[0].type === "RestElement";
+      param.properties.length === 1 &&
+      param.properties[0].type === "RestElement";
     if (isOnlyRestParam) {
       return; // accepts any params
     }
     const explicitProps = new Set(
       param.properties
-        .filter((p) => p.type === "Property" && p.key && p.key.type === "Identifier")
+        .filter(
+          (p) => p.type === "Property" && p.key && p.key.type === "Identifier",
+        )
         .map((p) => p.key.name),
     );
     const restParam = param.properties.find((p) => p.type === "RestElement");
     const restParamName = restParam ? restParam.argument.name : null;
     const isRestPropagated = restParamName
-      ? isRestParameterPropagated(functionDef, restParamName, functionDefinitions)
+      ? isRestParameterPropagated(
+          functionDef,
+          restParamName,
+          functionDefinitions,
+        )
       : false;
     if (!isRestPropagated) return;
 
@@ -775,7 +786,8 @@ function reportIfUnknown({
   const { messageId, data, autofixes } = errorMessage;
   const fixes = [];
   if (autofixes.remove) fixes.push((fixer) => createRemove(fixer));
-  if (autofixes.rename) fixes.push((fixer) => createRename(fixer, autofixes.rename));
+  if (autofixes.rename)
+    fixes.push((fixer) => createRename(fixer, autofixes.rename));
   const suggestionEntries = [];
   if (autofixes.rename && fixes[1]) {
     if (autofixes.remove && fixes[0]) {
