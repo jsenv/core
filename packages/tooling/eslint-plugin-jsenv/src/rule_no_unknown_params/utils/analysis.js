@@ -315,55 +315,22 @@ export function analyzeJSXElement(
         if (IGNORED_JSX_PROPS.has(attrName)) {
           continue;
         }
-
-        const errorMessage = generateErrorMessage(
-          attrName,
-          componentName,
-          [], // No chain for components with no params
+        reportUnknownParam({
+          name: attrName,
+          entryNode: attr,
+          chain: [], // No chaining for this scenario
+          createRemove: (fixer) => createJSXRemoveFix(fixer, attr),
+          createRename: (fixer, newName) =>
+            createJSXRenameFix(fixer, attr, newName),
           functionDef,
+          functionName: componentName,
+          functionDefWrapper,
           functionDefinitions,
-          givenAttrs,
-          context.getFilename(),
+          context,
           maxChainDepth,
-          functionDefWrapper.sourceFile,
           options,
-        );
-        // Skip reporting if generateErrorMessage returns null (filtered out as non-typo)
-        if (!errorMessage) {
-          continue;
-        }
-        const { messageId, data, autofixes } = errorMessage;
-
-        const fixes = [];
-        if (autofixes.remove) {
-          fixes.push((fixer) => createJSXRemoveFix(fixer, attr));
-        }
-        if (autofixes.rename) {
-          fixes.push((fixer) =>
-            createJSXRenameFix(fixer, attr, autofixes.rename),
-          );
-        }
-
-        // Only provide suggestions if we have a good rename candidate
-        const shouldSuggest = fixes.length > 1 && autofixes.rename;
-
-        context.report({
-          node: attr,
-          messageId,
-          data,
-          fix: fixes.length > 0 ? fixes[0] : undefined,
-          suggest: shouldSuggest
-            ? [
-                {
-                  desc: `Remove '${attrName}'`,
-                  fix: fixes[0],
-                },
-                {
-                  desc: `Rename '${attrName}' to '${autofixes.rename}'`,
-                  fix: fixes[1],
-                },
-              ]
-            : undefined,
+          givenNames: givenAttrs,
+          allowChainRemovalSuggestion: false, // preserve previous behaviour
         });
       }
     }
@@ -420,70 +387,25 @@ export function analyzeJSXElement(
           );
 
           if (!chainResult.found) {
-            const errorMessage = generateErrorMessage(
-              attrName,
-              componentName,
-              [], // No chain for components with no params
+            // Preserve previous behaviour: ignore actual chain for JSX identifier propagation
+            // so messageId stays without chain unless rename candidate.
+            reportUnknownParam({
+              name: attrName,
+              entryNode: attr,
+              chain: [], // keep message simple
+              chainForSuggestion: chainResult.chain, // use actual chain length for suggestion decision
+              createRemove: (fixer) => createJSXRemoveFix(fixer, attr),
+              createRename: (fixer, newName) =>
+                createJSXRenameFix(fixer, attr, newName),
               functionDef,
+              functionName: componentName,
+              functionDefWrapper,
               functionDefinitions,
-              givenAttrs,
-              context.getFilename(),
+              context,
               maxChainDepth,
-              functionDefWrapper.sourceFile,
               options,
-            );
-            // Skip reporting if generateErrorMessage returns null (filtered out as non-typo)
-            if (!errorMessage) {
-              continue;
-            }
-            const { messageId, data, autofixes, forceRemovalSuggestion } =
-              errorMessage;
-
-            const fixes = [];
-            if (autofixes.remove) {
-              fixes.push((fixer) => createJSXRemoveFix(fixer, attr));
-            }
-            if (autofixes.rename) {
-              fixes.push((fixer) =>
-                createJSXRenameFix(fixer, attr, autofixes.rename),
-              );
-            }
-
-            // Always provide a remove suggestion when removal is possible.
-            // Provide a rename suggestion only when we have a confident rename candidate.
-            const suggestionEntries = [];
-            // Only add removal suggestion if we are in a chaining scenario OR we also have a rename
-            // (so that other tests keep previous behaviour)
-            if (autofixes.rename && fixes[1]) {
-              if (autofixes.remove && fixes[0]) {
-                suggestionEntries.push({
-                  desc: `Remove '${attrName}'`,
-                  fix: fixes[0],
-                });
-              }
-              suggestionEntries.push({
-                desc: `Rename '${attrName}' to '${autofixes.rename}'`,
-                fix: fixes[1],
-              });
-            } else if (
-              (chainResult.chain && chainResult.chain.length > 0) ||
-              forceRemovalSuggestion
-            ) {
-              if (autofixes.remove && fixes[0]) {
-                suggestionEntries.push({
-                  desc: `Remove '${attrName}'`,
-                  fix: fixes[0],
-                });
-              }
-            }
-
-            context.report({
-              node: attr,
-              messageId,
-              data,
-              fix: fixes.length > 0 ? fixes[0] : undefined,
-              suggest:
-                suggestionEntries.length > 0 ? suggestionEntries : undefined,
+              givenNames: givenAttrs,
+              allowChainRemovalSuggestion: true,
             });
           }
         }
@@ -563,66 +485,24 @@ export function analyzeJSXElement(
           );
 
           if (!chainResult.found) {
-            const errorMessage = generateErrorMessage(
-              attrName,
-              componentName,
-              [], // No chain for components with no params
+            // Preserve previous behaviour: ignore actual chain for rest param JSX propagation
+            reportUnknownParam({
+              name: attrName,
+              entryNode: attr,
+              chain: [], // keep message simple
+              chainForSuggestion: chainResult.chain,
+              createRemove: (fixer) => createJSXRemoveFix(fixer, attr),
+              createRename: (fixer, newName) =>
+                createJSXRenameFix(fixer, attr, newName),
               functionDef,
+              functionName: componentName,
+              functionDefWrapper,
               functionDefinitions,
-              givenAttrs,
-              context.getFilename(),
+              context,
               maxChainDepth,
-              functionDefWrapper.sourceFile,
               options,
-            );
-            // Skip reporting if generateErrorMessage returns null (filtered out as non-typo)
-            if (!errorMessage) {
-              continue;
-            }
-            const { messageId, data, autofixes, forceRemovalSuggestion } =
-              errorMessage;
-
-            const fixes = [];
-            if (autofixes.remove) {
-              fixes.push((fixer) => createJSXRemoveFix(fixer, attr));
-            }
-            if (autofixes.rename) {
-              fixes.push((fixer) =>
-                createJSXRenameFix(fixer, attr, autofixes.rename),
-              );
-            }
-
-            const suggestionEntries = [];
-            if (autofixes.rename && fixes[1]) {
-              if (autofixes.remove && fixes[0]) {
-                suggestionEntries.push({
-                  desc: `Remove '${attrName}'`,
-                  fix: fixes[0],
-                });
-              }
-              suggestionEntries.push({
-                desc: `Rename '${attrName}' to '${autofixes.rename}'`,
-                fix: fixes[1],
-              });
-            } else if (
-              (chainResult.chain && chainResult.chain.length > 0) ||
-              forceRemovalSuggestion
-            ) {
-              if (autofixes.remove && fixes[0]) {
-                suggestionEntries.push({
-                  desc: `Remove '${attrName}'`,
-                  fix: fixes[0],
-                });
-              }
-            }
-
-            context.report({
-              node: attr,
-              messageId,
-              data,
-              fix: fixes.length > 0 ? fixes[0] : undefined,
-              suggest:
-                suggestionEntries.length > 0 ? suggestionEntries : undefined,
+              givenNames: givenAttrs,
+              allowChainRemovalSuggestion: true,
             });
           }
         }
@@ -777,11 +657,48 @@ function reportIfUnknown({
     maxChainDepth,
   );
   if (chainResult.found) return;
+  reportUnknownParam({
+    name,
+    entryNode,
+    chain: chainResult.chain,
+    createRemove,
+    createRename,
+    functionDef,
+    functionName,
+    functionDefWrapper,
+    functionDefinitions,
+    context,
+    maxChainDepth,
+    options,
+    givenNames,
+    allowChainRemovalSuggestion: false,
+  });
+}
 
+// Centralized reporting logic for unknown params to remove duplication.
+// allowChainRemovalSuggestion preserves older behaviour where removal suggestion
+// is only shown (without rename) for chaining scenarios (or forced removal).
+function reportUnknownParam({
+  name,
+  entryNode,
+  chain, // chain used for message generation
+  chainForSuggestion = chain, // can differ to keep messageId simple while still allowing chain-based suggestions
+  createRemove,
+  createRename,
+  functionDef,
+  functionName,
+  functionDefWrapper,
+  functionDefinitions,
+  context,
+  maxChainDepth,
+  options,
+  givenNames,
+  allowChainRemovalSuggestion,
+}) {
   const errorMessage = generateErrorMessage(
     name,
     functionName,
-    chainResult.chain,
+    chain,
     functionDef,
     functionDefinitions,
     givenNames,
@@ -805,8 +722,15 @@ function reportIfUnknown({
       desc: `Rename '${name}' to '${autofixes.rename}'`,
       fix: fixes[1],
     });
-  } else if (forceRemovalSuggestion && autofixes.remove && fixes[0]) {
-    suggestionEntries.push({ desc: `Remove '${name}'`, fix: fixes[0] });
+  } else if (
+    (allowChainRemovalSuggestion &&
+      chainForSuggestion &&
+      chainForSuggestion.length > 0) ||
+    forceRemovalSuggestion
+  ) {
+    if (autofixes.remove && fixes[0]) {
+      suggestionEntries.push({ desc: `Remove '${name}'`, fix: fixes[0] });
+    }
   }
   context.report({
     node: entryNode,
