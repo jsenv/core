@@ -295,6 +295,12 @@ export function collectChainParameters(
     const { targetFunctionDef } = propagation;
     // Handle both wrapped format and direct node format for backward compatibility
     const targetFunctionNode = targetFunctionDef?.node || targetFunctionDef;
+    
+    // Skip if target function node is not available
+    if (!targetFunctionNode) {
+      continue;
+    }
+    
     const targetParams = collectChainParameters(
       targetFunctionNode,
       functionDefinitions,
