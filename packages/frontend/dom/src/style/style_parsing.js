@@ -23,7 +23,7 @@ const pxProperties = [
   "borderBottomWidth",
   "borderLeftWidth",
   "fontSize",
-  "lineHeight",
+  // lineHeight intentionally excluded - it should remain unitless when no unit is specified
   "letterSpacing",
   "wordSpacing",
   "translateX",
@@ -62,6 +62,7 @@ const unitlessProperties = [
   "scaleX",
   "scaleY",
   "scaleZ",
+  "lineHeight", // Special case: unitless lineHeight is a multiplier relative to font-size
 ];
 
 // Well-known CSS units and keywords that indicate a value already has proper formatting

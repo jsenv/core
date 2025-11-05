@@ -1,4 +1,4 @@
-import { createContext } from "preact";
+import { createContext, toChildArray } from "preact";
 import { useContext, useRef, useState } from "preact/hooks";
 
 import { BoxFlowContext } from "../layout/layout_context.jsx";
@@ -118,6 +118,7 @@ const TextBasic = ({
   noWrap,
   foregroundColor,
   foregroundElement,
+  childrenGap,
   children,
   ...rest
 }) => {
@@ -145,7 +146,7 @@ const TextBasic = ({
       {...remainingProps}
     >
       <BoxFlowContext.Provider value={box ? "inline" : null}>
-        {children}
+        {applyGapToChildren(children, childrenGap)}
         {/* https://jsfiddle.net/v5xzJ/4/ */}
         {hasForeground && (
           <span
@@ -163,6 +164,34 @@ const TextBasic = ({
     return <span className="navi_text_repositioner">{text}</span>;
   }
   return text;
+};
+
+const applyGapToChildren = (children, childrenGap) => {
+  if (!childrenGap) {
+    return children;
+  }
+  if (!children) {
+    return children;
+  }
+  const childArray = toChildArray(children);
+  const childCount = childArray.length;
+  if (childCount <= 1) {
+    return children;
+  }
+
+  let separator = " ";
+  const childrenWithGap = [];
+  let i = 0;
+  while (true) {
+    const child = childArray[i];
+    childrenWithGap.push(child);
+    i++;
+    if (i === childCount) {
+      break;
+    }
+    childrenWithGap.push(separator);
+  }
+  return childrenWithGap;
 };
 
 export const Icon = ({ charWidth = 2, children, ...rest }) => {

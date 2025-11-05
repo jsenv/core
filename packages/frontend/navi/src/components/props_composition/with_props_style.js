@@ -356,7 +356,7 @@ export const withPropsStyle = (
       typoStyles.textShadow = textShadow;
     }
     if (textLineHeight !== undefined) {
-      typoStyles.textLineHeight = resolveTypoSize(textLineHeight, "lineHeight");
+      typoStyles.lineHeight = resolveTypoSize(textLineHeight, "lineHeight");
     }
     typoStyles.color = textColor;
   }
