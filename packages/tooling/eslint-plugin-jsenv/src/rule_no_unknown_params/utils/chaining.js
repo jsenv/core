@@ -243,11 +243,6 @@ export function collectChainParameters(
   visited = new Set(),
   maxChainDepth = 40,
 ) {
-  // Safety check - if functionDef is null/undefined, return empty set
-  if (!functionDef) {
-    return new Set();
-  }
-
   // Check depth limit to prevent memory issues
   if (visited.size >= maxChainDepth) {
     return new Set();
@@ -289,14 +284,18 @@ export function collectChainParameters(
     const { targetFunctionDef } = propagation;
     // Handle both wrapped format and direct node format for backward compatibility
     const targetFunctionNode = targetFunctionDef?.node || targetFunctionDef;
-    const targetParams = collectChainParameters(
-      targetFunctionNode,
-      functionDefinitions,
-      visited,
-      maxChainDepth,
-    );
-    for (const param of targetParams) {
-      allParams.add(param);
+
+    // Skip null/undefined function nodes to prevent TypeError
+    if (targetFunctionNode) {
+      const targetParams = collectChainParameters(
+        targetFunctionNode,
+        functionDefinitions,
+        visited,
+        maxChainDepth,
+      );
+      for (const param of targetParams) {
+        allParams.add(param);
+      }
     }
   }
 

@@ -39,40 +39,101 @@ export const Usage = () => {
   ],
   invalid: [
     {
+      name: "JSX component with unknown prop",
       options: [{ reportAllUnknownParams: true }],
-      code: `
-export const Component = (props) => {
-  return <OtherComponent {...props} />;
-};
-
-const OtherComponent = ({ param }) => {
-  return param;
+      code: `const Component = ({ used }) => {
+  return <div>{used}</div>;
 };
 
 export const Usage = () => {
-  return <Component param="test" />;
-};
-      `,
-      output: `
-export const Component = (props) => {
-  return <OtherComponent {...props} />;
-};
-
-const OtherComponent = ({ param }) => {
-  return param;
+  return <Component used="value" unused="bad" />;
+};`,
+      output: `const Component = ({ used }) => {
+  return <div>{used}</div>;
 };
 
 export const Usage = () => {
-  return <Component  />;
-};
-      `,
+  return <Component used="value"  />;
+};`,
       errors: [
         {
-          messageId: "not_found_param",
+          messageId: "not_found_param_with_suggestions",
           data: {
-            param: "param",
+            param: "unused",
             func: "Component",
+            suggestions: "used",
           },
+          suggestions: [
+            {
+              desc: "Remove 'unused'",
+              output: `const Component = ({ used }) => {
+  return <div>{used}</div>;
+};
+
+export const Usage = () => {
+  return <Component used="value"  />;
+};`,
+            },
+            {
+              desc: "Rename 'unused' to 'used'",
+              output: `const Component = ({ used }) => {
+  return <div>{used}</div>;
+};
+
+export const Usage = () => {
+  return <Component used="value" used="bad" />;
+};`,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      name: "JSX spreading should work with 2-level chain",
+      options: [{ reportAllUnknownParams: true }],
+      code: `const FormattedText = (props) => {
+  return <Text {...props} />;
+};
+const Text = ({ a, b }) => {
+  return <span>{a} {b}</span>;
+};
+
+export const Usage = () => {
+  return <FormattedText a="hello" b="world" c="unused" />;
+};`,
+      output: `const FormattedText = (props) => {
+  return <Text {...props} />;
+};
+const Text = ({ a, b }) => {
+  return <span>{a} {b}</span>;
+};
+
+export const Usage = () => {
+  return <FormattedText a="hello" b="world"  />;
+};`,
+      errors: [
+        {
+          messageId: "not_found_param_with_suggestions",
+          data: {
+            param: "c",
+            func: "FormattedText",
+            suggestions: "a, b",
+          },
+          suggestions: [
+            {
+              desc: "Remove 'c'",
+              output: `const FormattedText = (props) => {
+  return <Text {...props} />;
+};
+const Text = ({ a, b }) => {
+  return <span>{a} {b}</span>;
+};
+
+export const Usage = () => {
+  return <FormattedText a="hello" b="world"  />;
+};`,
+            },
+          ],
         },
       ],
     },
