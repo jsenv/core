@@ -260,9 +260,8 @@ const ButtonBasic = forwardRef((props, ref) => {
         loading={innerLoading}
         inset={-1}
         color="light-dark(#355fcc, #3b82f6)"
-      >
-        {buttonChildren}
-      </LoaderBackground>
+      />
+      {buttonChildren}
     </button>
   );
 });

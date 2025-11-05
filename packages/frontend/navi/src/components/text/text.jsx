@@ -139,8 +139,16 @@ const TextBasic = ({
   return text;
 };
 
-export const Icon = ({ charWidth = 2, children, ...rest }) => {
-  const invisibleText = "0".repeat(charWidth);
+export const Icon = ({
+  charWidth = 1,
+  // 0 (zéro) is the real char width
+  // but 2 zéros gives too big icons
+  // while 1 "W" gives a nice result
+  baseChar = "W",
+  children,
+  ...rest
+}) => {
+  const invisibleText = baseChar.repeat(charWidth);
 
   return (
     <Text {...rest} className="navi_icon" foregroundElement={children}>

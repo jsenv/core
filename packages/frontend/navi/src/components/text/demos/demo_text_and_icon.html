@@ -403,51 +403,61 @@
                   borderRadius: "8px",
                 }}
               >
-                <Link href="#home" textColor="blue">
-                  <Icon>
-                    <HomeSvg />
-                  </Icon>
-                  Go to Homepage
-                </Link>
+                <div>
+                  <Link href="#home" textColor="blue">
+                    Go to Homepage
+                  </Link>
+                </div>
 
-                <Link href="#profile" textColor="green">
-                  <Icon>
-                    <UserSvg />
-                  </Icon>
-                  View Profile
-                </Link>
+                <div>
+                  <Link href="#profile" textColor="green">
+                    <Icon>
+                      <UserSvg />
+                    </Icon>
+                    <Text>View Profile</Text>
+                  </Link>
+                </div>
 
-                <Link href="#search" textColor="purple">
-                  <Icon>
-                    <SearchSvg />
-                  </Icon>
-                  Search Documentation
-                </Link>
+                <div>
+                  <Link href="#search" textColor="purple">
+                    <Icon>
+                      <SearchSvg />
+                    </Icon>
+                    Search Documentation
+                  </Link>
+                </div>
 
-                <Link href="#settings" textColor="orange">
-                  <Icon>
-                    <SettingsSvg />
-                  </Icon>
-                  Open Settings
-                </Link>
+                <div>
+                  <Link href="#settings" textColor="orange">
+                    <Icon>
+                      <SettingsSvg />
+                    </Icon>
+                    Open Settings
+                  </Link>
+                </div>
 
-                <Link href="#favorites" textColor="red">
-                  <Icon>
-                    <HeartSvg />
-                  </Icon>
-                  My Favorites
-                </Link>
+                <div>
+                  <Link href="#favorites" textColor="red">
+                    <Icon>
+                      <HeartSvg />
+                    </Icon>
+                    <Text>My Favorites</Text>
+                  </Link>
+                </div>
 
-                <Link
-                  href="https://example.com"
-                  textColor="gray"
-                  target="_blank"
-                >
-                  <Icon>
-                    <BlankTargetLinkSvg />
-                  </Icon>
-                  External Link
-                </Link>
+                <div>
+                  <Text
+                    as="a"
+                    href="https://example.com"
+                    textColor="gray"
+                    target="_blank"
+                  >
+                    <Icon>
+                      <BlankTargetLinkSvg />
+                    </Icon>
+                    External Link
+                  </Text>
+                </div>
               </div>
             </Box>
           </div>

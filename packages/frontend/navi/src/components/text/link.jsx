@@ -206,10 +206,12 @@ const LinkPlain = forwardRef((props, ref) => {
         onKeyDown?.(e);
       }}
     >
-      <LoaderBackground loading={loading} color="light-dark(#355fcc, #3b82f6)">
-        {applyContentSpacingOnTextChildren(children, contentSpacing)}
-        {innerIcon && <Icon>{innerIcon}</Icon>}
-      </LoaderBackground>
+      <LoaderBackground
+        loading={loading}
+        color="light-dark(#355fcc, #3b82f6)"
+      />
+      {applyContentSpacingOnTextChildren(children, contentSpacing)}
+      {innerIcon && <Icon>{innerIcon}</Icon>}
     </a>
   );
 });

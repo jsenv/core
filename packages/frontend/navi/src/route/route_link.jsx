@@ -1,4 +1,4 @@
-import { Link } from "../components/link/link.jsx";
+import { Link } from "../components/text/link.jsx";
 import { useRouteStatus } from "./route.js";
 
 export const RouteLink = ({
