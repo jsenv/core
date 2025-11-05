@@ -1,0 +1,148 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Text childrenSpacing Demo</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      /* eslint-disable no-unused-vars */
+      import { Text, Icon } from "@jsenv/navi";
+
+      const Demo = () => {
+        return (
+          <div
+            style={{
+              padding: "20px",
+              fontFamily: "system-ui, sans-serif",
+            }}
+          >
+            <h1>Text childrenSpacing Demo</h1>
+
+            {/* Basic Example */}
+            <section style={{ marginBottom: "30px" }}>
+              <h2>Basic childrenSpacing</h2>
+              <div
+                style={{ display: "flex", gap: "20px", marginBottom: "20px" }}
+              >
+                <div>
+                  <h3>Without childrenSpacing</h3>
+                  <div style={{ border: "1px solid #ccc", padding: "8px" }}>
+                    <Text>
+                      <strong>Hello</strong>
+                      <em>beautiful</em>
+                      <span>world!</span>
+                    </Text>
+                  </div>
+                </div>
+
+                <div>
+                  <h3>With childrenSpacing</h3>
+                  <div style={{ border: "1px solid #ccc", padding: "8px" }}>
+                    <Text childrenSpacing>
+                      <strong>Hello</strong>
+                      <em>beautiful</em>
+                      <span>world!</span>
+                    </Text>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Navigation Breadcrumb Example */}
+            <section style={{ marginBottom: "30px" }}>
+              <h2>Navigation Breadcrumb Use Case</h2>
+              <div
+                style={{
+                  border: "1px solid #ccc",
+                  padding: "12px",
+                  marginBottom: "20px",
+                }}
+              >
+                <Text childrenSpacing textColor="#666">
+                  <Text as="a" href="#" textColor="blue">
+                    Products
+                  </Text>
+                  <span>/</span>
+                  <Text as="a" href="#" textColor="blue">
+                    Electronics
+                  </Text>
+                  <span>/</span>
+                  <Text as="a" href="#" textColor="blue">
+                    Smartphones
+                  </Text>
+                  <span>/</span>
+                  <Text textBold textColor="black">
+                    iPhone 15
+                  </Text>
+                </Text>
+              </div>
+            </section>
+
+            {/* Mixed Content Example */}
+            <section style={{ marginBottom: "30px" }}>
+              <h2>Mixed Content</h2>
+              <div
+                style={{
+                  border: "1px solid #ccc",
+                  padding: "12px",
+                  marginBottom: "20px",
+                }}
+              >
+                <Text childrenSpacing>
+                  <span>Status:</span>
+                  <Text textBold textColor="green">
+                    ✓ Online
+                  </Text>
+                  <span>•</span>
+                  <span>Users:</span>
+                  <Text textBold textColor="blue">
+                    1,234
+                  </Text>
+                  <span>•</span>
+                  <span>Updated:</span>
+                  <Text textColor="#666">2 min ago</Text>
+                </Text>
+              </div>
+            </section>
+
+            {/* Comparison with manual spacing */}
+            <section style={{ marginBottom: "30px" }}>
+              <h2>Comparison: childrenSpacing vs Manual Spacing</h2>
+              <div
+                style={{ display: "flex", gap: "20px", marginBottom: "20px" }}
+              >
+                <div>
+                  <h3>Manual spacing (verbose)</h3>
+                  <div style={{ border: "1px solid #ccc", padding: "8px" }}>
+                    <Text>
+                      <strong>Name:</strong> <span>John Doe</span>{" "}
+                      <span>•</span> <strong>Age:</strong> <span>30</span>
+                    </Text>
+                  </div>
+                </div>
+
+                <div>
+                  <h3>childrenSpacing (clean)</h3>
+                  <div style={{ border: "1px solid #ccc", padding: "8px" }}>
+                    <Text childrenSpacing>
+                      <strong>Name:</strong>
+                      <span>John Doe</span>
+                      <span>•</span>
+                      <strong>Age:</strong>
+                      <span>30</span>
+                    </Text>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        );
+      };
+
+      render(<Demo />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
