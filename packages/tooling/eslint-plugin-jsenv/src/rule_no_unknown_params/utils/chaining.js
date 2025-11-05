@@ -2,7 +2,7 @@ import { debug } from "../debug.js";
 import { analyzeParameterPropagation } from "./parameter_analysis.js";
 
 // Helper function to check if a parameter is used at all in the function body
-function acceptsAnyObjectProperty(paramName, functionDef) {
+export function acceptsAnyObjectProperty(paramName, functionDef) {
   let found = false;
 
   function traverse(node) {

@@ -4,7 +4,7 @@ import {
   createRemoveFix,
   createRenameFix,
 } from "./autofix.js";
-import { checkParameterChaining } from "./chaining.js";
+import { checkParameterChaining, acceptsAnyObjectProperty } from "./chaining.js";
 import { generateErrorMessage } from "./messages.js";
 import { isRestParameterPropagated } from "./parameter_analysis.js";
 
@@ -609,6 +609,32 @@ export function analyzeJSXElement(
           );
 
           if (!chainResult.found) {
+            // If parameter not found in chain, check if chain ends with a function
+            // that can accept any properties (simple parameter)
+            let canAcceptAnyProps = false;
+            
+            if (chainResult.chain && chainResult.chain.length > 1) {
+              const lastFunctionName = chainResult.chain[chainResult.chain.length - 1];
+              const lastFunctionDef = functionDefinitions.get(lastFunctionName);
+              
+              if (lastFunctionDef) {
+                const lastFunctionNode = lastFunctionDef.node || lastFunctionDef;
+                
+                // Check if last function has a simple parameter that accepts any properties
+                if (lastFunctionNode && lastFunctionNode.params && lastFunctionNode.params.length > 0) {
+                  const firstParam = lastFunctionNode.params[0];
+                  
+                  if (firstParam.type === "Identifier") {
+                    // Check if this param accepts any props
+                    canAcceptAnyProps = acceptsAnyObjectProperty(firstParam.name, lastFunctionNode);
+                  }
+                }
+              }
+            }
+            
+            if (canAcceptAnyProps) {
+              continue; // Skip error generation
+            }
             const errorMessage = generateErrorMessage(
               attrName,
               componentName,
