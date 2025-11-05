@@ -13,6 +13,19 @@ import.meta.css = /* css */ `
     --navi-icon-align-y: center;
   }
 
+  .navi_text {
+    position: relative;
+  }
+
+  .navi_text[data-has-foreground] {
+    display: inline-block;
+  }
+
+  .navi_text_foreground {
+    position: absolute;
+    inset: 0;
+  }
+
   .navi_text[data-box] {
     display: inline-flex;
   }
@@ -20,13 +33,6 @@ import.meta.css = /* css */ `
   .navi_text_repositioner {
     display: inline-flex;
     vertical-align: top;
-  }
-
-  .navi_icon {
-    position: relative;
-    width: 1em;
-    height: 1em;
-    height: 1lh;
   }
 
   .navi_text_overflow {
@@ -50,6 +56,10 @@ import.meta.css = /* css */ `
     max-width: 100%;
     text-overflow: ellipsis;
     overflow: hidden;
+  }
+
+  .navi_icon {
+    margin-right: ${resolveSpacingSize("xxs", "margin")};
   }
 `;
 
@@ -109,6 +119,9 @@ const TextBasic = ({
   className,
   box = false,
   gap = "xxs",
+  noWrap,
+  foregroundColor,
+  foregroundElement,
   children,
   ...rest
 }) => {
@@ -117,20 +130,33 @@ const TextBasic = ({
   const [remainingProps, innerStyle] = withPropsStyle(rest, {
     base: {
       gap: box ? resolveSpacingSize(gap, "gap") : undefined,
+      whiteSpace: noWrap ? "nowrap" : undefined,
     },
     layout: true,
     typo: true,
   });
+
+  const hasForeground = Boolean(foregroundElement || foregroundColor);
 
   const text = (
     <TagName
       className={innerClassName}
       style={innerStyle}
       data-box={box ? "" : undefined}
+      data-has-foreground={hasForeground ? "" : undefined}
       {...remainingProps}
     >
       <BoxFlowContext.Provider value={box ? "inline" : null}>
         {children}
+        {/* https://jsfiddle.net/v5xzJ/4/ */}
+        {hasForeground && (
+          <span
+            className="navi_text_foreground"
+            style={{ backgroundColor: foregroundColor }}
+          >
+            {foregroundElement}
+          </span>
+        )}
       </BoxFlowContext.Provider>
     </TagName>
   );
@@ -141,16 +167,13 @@ const TextBasic = ({
   return text;
 };
 
-export const Icon = ({ className, children, ...rest }) => {
-  const innerClassName = withPropsClassName("navi_icon", className);
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    layout: true,
-    typo: true,
-  });
+export const Icon = ({ charWidth = 2, children, ...rest }) => {
+  const invisibleText = "0".repeat(charWidth);
 
   return (
-    <span className={innerClassName} style={innerStyle} {...remainingProps}>
-      {children}
-    </span>
+    // eslint-disable-next-line jsenv/no-unknown-params
+    <Text {...rest} className="navi_icon" foregroundElement={children}>
+      <span style="opacity: 0">{invisibleText}</span>
+    </Text>
   );
 };

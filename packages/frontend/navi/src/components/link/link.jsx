@@ -113,6 +113,7 @@ const LinkPlain = forwardRef((props, ref) => {
     anchorIcon,
     icon,
     cursorDefaultWhenCurrent,
+    noWrap,
     ...rest
   } = props;
   const innerRef = useRef();
@@ -133,6 +134,7 @@ const LinkPlain = forwardRef((props, ref) => {
     base: {
       cursor:
         cursorDefaultWhenCurrent && targetIsCurrent ? "default" : undefined,
+      whiteSpace: noWrap ? "nowrap" : undefined,
     },
     layout: true,
     typo: true,
