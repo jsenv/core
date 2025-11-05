@@ -9,7 +9,21 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       /* eslint-disable no-unused-vars */
-      import { Text } from "@jsenv/navi";
+      import { Text, Icon } from "@jsenv/navi";
+
+      const StarSvg = () => (
+        <svg
+          viewBox="0 0 24 24"
+          width="100%"
+          height="100%"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+            fill="currentColor"
+          />
+        </svg>
+      );
 
       const Demo = () => {
         return (
@@ -276,6 +290,82 @@
                   </div>
                 </div>
               </div>
+            </section>
+
+            {/* Bonnes pratiques & cas du soulignement */}
+            <section style={{ marginBottom: "30px" }}>
+              <h2>🧠 Bonnes pratiques : soulignement & espace auto</h2>
+              <p>
+                Quand <code>Text</code> ajoute automatiquement un espace entre
+                ses enfants, appliquer <code>textUnderline</code> (ou
+                <code>underline</code>) sur le conteneur peut surprendre :
+                l&apos;espace inséré est aussi souligné. Il faut déplacer le
+                soulignement sur le sous-élément qui doit réellement
+                l&apos;avoir.
+              </p>
+              <div
+                style={{ display: "flex", gap: "20px", marginBottom: "20px" }}
+              >
+                <div style={{ flex: 1 }}>
+                  <h3>❌ Soulignement sur le conteneur</h3>
+                  <div
+                    style={{
+                      border: "1px solid #ccc",
+                      padding: "8px",
+                      backgroundColor: "#fee",
+                    }}
+                  >
+                    <Text noWrap textUnderline>
+                      <Icon>
+                        <StarSvg />
+                      </Icon>
+                      star
+                    </Text>
+                  </div>
+                  <small style={{ color: "#666" }}>
+                    L&apos;espace auto entre l&apos;icône et le mot est aussi
+                    souligné.
+                  </small>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <h3>✅ Soulignement ciblé uniquement sur le mot</h3>
+                  <div
+                    style={{
+                      border: "1px solid #ccc",
+                      padding: "8px",
+                      backgroundColor: "#efe",
+                    }}
+                  >
+                    <Text noWrap>
+                      <Icon>
+                        <StarSvg />
+                      </Icon>
+                      <Text textUnderline>star</Text>
+                    </Text>
+                  </div>
+                  <small style={{ color: "#666" }}>
+                    Seul le mot est souligné, l&apos;espace auto reste propre.
+                  </small>
+                </div>
+              </div>
+              <p style={{ color: "#666", fontSize: "0.9em" }}>
+                Astuce&nbsp;: L&apos;espace auto est conceptuellement un enfant.
+                En soulignant le parent, tous ses enfants (y compris
+                l&apos;espace) héritent du style. Pour éviter ça, appliquez le
+                soulignement seulement sur le sous-<code>Text</code> qui
+                contient le texte à souligner.
+              </p>
+              <pre
+                style={{
+                  background: "#f7f7f7",
+                  padding: "10px",
+                  borderRadius: "4px",
+                  fontSize: "12px",
+                  overflowX: "auto",
+                }}
+              >
+                {`// Mauvais\n<Text noWrap textUnderline>\n  <Icon><StarSvg /></Icon>\n  star\n</Text>\n\n// Bon\n<Text noWrap>\n  <Icon><StarSvg /></Icon>\n  <Text underline>star</Text>\n</Text>`}
+              </pre>
             </section>
           </div>
         );
