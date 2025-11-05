@@ -27,21 +27,21 @@
             <Box as="section" marginBottom="xl">
               <Title as="h2">Basic Icon + Text</Title>
               <Box layoutRow contentGap="sm" style="line-height: 3;">
-                <Text>
+                <Text childrenSpacing>
                   <Icon>
                     <HomeSvg />
                   </Icon>
                   Home
                 </Text>
 
-                <Text>
+                <Text childrenSpacing>
                   <Icon>
                     <UserSvg />
                   </Icon>
                   Profile
                 </Text>
 
-                <Text>
+                <Text childrenSpacing>
                   <Icon>
                     <SettingsSvg />
                   </Icon>
@@ -52,52 +52,43 @@
 
             <Box as="section" marginBottom="xl">
               <Title as="h2">Inline Text with Icons</Title>
-              <Paragraph style={{ fontSize: "16px", lineHeight: "1.6" }}>
+              <Paragraph childrenSpacing textSize="16" textLineHeight="1.6">
                 Welcome to our platform! Click on the
-                <Text textBold noWrap>
+                <Text childrenSpacing textBold noWrap>
                   <Icon>
                     <HomeSvg />
                   </Icon>
                   home
                 </Text>
                 button to return to the dashboard, or visit your
-                <Text textItalic noWrap>
+                <Text childrenSpacing textItalic noWrap>
                   <Icon>
                     <UserSvg />
                   </Icon>
                   profile
                 </Text>
                 to update your settings. Don't forget to
-                <Text textUnderline noWrap>
+                <Text childrenSpacing textUnderline noWrap>
                   <Icon>
                     <StarSvg />
                   </Icon>
                   star
                 </Text>
                 your favorite items and
-                <Text textBold textItalic noWrap>
+                <Text childrenSpacing textBold textItalic noWrap>
                   <Icon>
                     <HeartSvg />
                   </Icon>
                   like
                 </Text>
                 the content you enjoy. Use the
-                <Text textBold textUnderline noWrap>
+                <Text childrenSpacing textBold textUnderline noWrap>
                   <Icon>
                     <SearchSvg />
                   </Icon>
                   search
                 </Text>
-                feature to find what you're looking for quickly. You can also
-                combine
-                <Text textItalic textUnderline noWrap>
-                  multiple styles
-                </Text>
-                together for
-                <Text textBold textItalic textUnderline noWrap>
-                  maximum emphasis
-                </Text>
-                !
+                feature to find what you're looking for quickly.
               </Paragraph>
             </Box>
 

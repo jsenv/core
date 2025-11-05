@@ -118,7 +118,7 @@ const TextBasic = ({
   noWrap,
   foregroundColor,
   foregroundElement,
-  childrenGap,
+  childrenSpacing,
   children,
   ...rest
 }) => {
@@ -146,7 +146,7 @@ const TextBasic = ({
       {...remainingProps}
     >
       <BoxFlowContext.Provider value={box ? "inline" : null}>
-        {applyGapToChildren(children, childrenGap)}
+        {childrenSpacing ? injectSpaceBetweenChildren(children) : children}
         {/* https://jsfiddle.net/v5xzJ/4/ */}
         {hasForeground && (
           <span
@@ -166,10 +166,34 @@ const TextBasic = ({
   return text;
 };
 
-const applyGapToChildren = (children, childrenGap) => {
-  if (!childrenGap) {
-    return children;
+export const Icon = ({ charWidth = 2, children, ...rest }) => {
+  const invisibleText = "0".repeat(charWidth);
+
+  return (
+    // eslint-disable-next-line jsenv/no-unknown-params
+    <Text {...rest} className="navi_icon" foregroundElement={children}>
+      <span style="opacity: 0">{invisibleText}</span>
+    </Text>
+  );
+};
+
+export const Paragraph = ({ childrenSpacing, children, ...rest }) => {
+  if (rest.marginTop === undefined) {
+    rest.marginTop = "md";
   }
+  const [remainingProps, innerStyle] = withPropsStyle(rest, {
+    layout: true,
+    typo: true,
+  });
+
+  return (
+    <p {...remainingProps} style={innerStyle}>
+      {childrenSpacing ? injectSpaceBetweenChildren(children) : children}
+    </p>
+  );
+};
+
+const injectSpaceBetweenChildren = (children) => {
   if (!children) {
     return children;
   }
@@ -178,7 +202,6 @@ const applyGapToChildren = (children, childrenGap) => {
   if (childCount <= 1) {
     return children;
   }
-
   let separator = " ";
   const childrenWithGap = [];
   let i = 0;
@@ -192,47 +215,4 @@ const applyGapToChildren = (children, childrenGap) => {
     childrenWithGap.push(separator);
   }
   return childrenWithGap;
-};
-
-export const Icon = ({ charWidth = 2, children, ...rest }) => {
-  const invisibleText = "0".repeat(charWidth);
-
-  return (
-    // eslint-disable-next-line jsenv/no-unknown-params
-    <Text {...rest} className="navi_icon" foregroundElement={children}>
-      <span style="opacity: 0">{invisibleText}</span>
-    </Text>
-  );
-};
-
-// const getSpaceWidth = (element) => {
-//   const computedStyle = window.getComputedStyle(element);
-//   const span = document.createElement("span");
-//   const fontSize = computedStyle.fontSize;
-//   const fontFamily = computedStyle.fontFamily;
-//   span.style.fontSize = fontSize;
-//   span.style.fontFamily = fontFamily;
-//   span.style.visibility = "hidden";
-//   span.style.position = "absolute";
-//   span.textContent = "\u00A0";
-//   document.body.appendChild(span);
-//   const width = span.offsetWidth;
-//   document.body.removeChild(span);
-//   return width;
-// };
-
-export const Paragraph = ({ children, ...rest }) => {
-  if (rest.marginTop === undefined) {
-    rest.marginTop = "md";
-  }
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    layout: true,
-    typo: true,
-  });
-
-  return (
-    <p {...remainingProps} style={innerStyle}>
-      {children}
-    </p>
-  );
 };
