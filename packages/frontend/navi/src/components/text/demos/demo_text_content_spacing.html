@@ -292,22 +292,19 @@
               </div>
             </section>
 
-            {/* Bonnes pratiques & cas du soulignement */}
+            {/* Best practices with underline and auto-spacing */}
             <section style={{ marginBottom: "30px" }}>
-              <h2>🧠 Bonnes pratiques : soulignement & espace auto</h2>
+              <h2>⚠️ Underline + Auto-Spacing Gotcha</h2>
               <p>
-                Quand <code>Text</code> ajoute automatiquement un espace entre
-                ses enfants, appliquer <code>textUnderline</code> (ou
-                <code>underline</code>) sur le conteneur peut surprendre :
-                l&apos;espace inséré est aussi souligné. Il faut déplacer le
-                soulignement sur le sous-élément qui doit réellement
-                l&apos;avoir.
+                When using <code>textUnderline</code> on a Text container with
+                auto-spacing, the inserted space gets underlined too. Move the
+                underline to the specific text element instead.
               </p>
               <div
                 style={{ display: "flex", gap: "20px", marginBottom: "20px" }}
               >
                 <div style={{ flex: 1 }}>
-                  <h3>❌ Soulignement sur le conteneur</h3>
+                  <h3>❌ Underline on container</h3>
                   <div
                     style={{
                       border: "1px solid #ccc",
@@ -323,12 +320,11 @@
                     </Text>
                   </div>
                   <small style={{ color: "#666" }}>
-                    L&apos;espace auto entre l&apos;icône et le mot est aussi
-                    souligné.
+                    Auto-space between icon and text is also underlined
                   </small>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <h3>✅ Soulignement ciblé uniquement sur le mot</h3>
+                  <h3>✅ Underline only the text</h3>
                   <div
                     style={{
                       border: "1px solid #ccc",
@@ -344,17 +340,10 @@
                     </Text>
                   </div>
                   <small style={{ color: "#666" }}>
-                    Seul le mot est souligné, l&apos;espace auto reste propre.
+                    Clean underline, auto-space stays normal
                   </small>
                 </div>
               </div>
-              <p style={{ color: "#666", fontSize: "0.9em" }}>
-                Astuce&nbsp;: L&apos;espace auto est conceptuellement un enfant.
-                En soulignant le parent, tous ses enfants (y compris
-                l&apos;espace) héritent du style. Pour éviter ça, appliquez le
-                soulignement seulement sur le sous-<code>Text</code> qui
-                contient le texte à souligner.
-              </p>
               <pre
                 style={{
                   background: "#f7f7f7",
@@ -364,7 +353,7 @@
                   overflowX: "auto",
                 }}
               >
-                {`// Mauvais\n<Text noWrap textUnderline>\n  <Icon><StarSvg /></Icon>\n  star\n</Text>\n\n// Bon\n<Text noWrap>\n  <Icon><StarSvg /></Icon>\n  <Text underline>star</Text>\n</Text>`}
+                {`// Mauvais\n<Text noWrap textUnderline>\n  <Icon><StarSvg /></Icon>\n  star\n</Text>\n\n// Bon\n<Text noWrap>\n  <Icon><StarSvg /></Icon>\n  <Text textUnderline>star</Text>\n</Text>`}
               </pre>
             </section>
           </div>
