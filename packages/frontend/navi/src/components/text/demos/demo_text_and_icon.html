@@ -10,7 +10,15 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       /* eslint-disable no-unused-vars */
-      import { Text, Paragraph, Icon, Box, Title, Link } from "@jsenv/navi";
+      import {
+        Text,
+        Paragraph,
+        Icon,
+        Box,
+        Title,
+        Link,
+        Button,
+      } from "@jsenv/navi";
 
       const Demo = () => {
         return (
@@ -323,70 +331,6 @@
               </Box>
             </Box>
 
-            <Box as="section" marginBottom="xl">
-              <h2>Interactive Buttons</h2>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "10px",
-                }}
-              >
-                <button
-                  style={{
-                    padding: "10px 15px",
-                    border: "1px solid #ccc",
-                    borderRadius: "4px",
-                    background: "white",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                  }}
-                >
-                  <Text>
-                    <Icon>
-                      <SearchSvg />
-                    </Icon>
-                    Search Files
-                  </Text>
-                </button>
-              </div>
-            </Box>
-
-            <Box as="section" marginBottom="xl">
-              <h2>Navigation Menu Style</h2>
-              <nav
-                style={{
-                  background: "#f8f9fa",
-                  padding: "20px",
-                  borderRadius: "8px",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "15px",
-                  }}
-                >
-                  <Text
-                    box
-                    style={{
-                      cursor: "pointer",
-                      padding: "8px 12px",
-                      borderRadius: "4px",
-                      background: "#007bff",
-                      color: "white",
-                    }}
-                  >
-                    <Icon>
-                      <UserSvg />
-                    </Icon>
-                    Users
-                  </Text>
-                </div>
-              </nav>
-            </Box>
-
             {/* Icons in links */}
             <Box as="section" marginBottom="xl">
               <h2>Icons in Links</h2>
@@ -474,23 +418,21 @@
                 borderRadius="sm"
                 contentAlignX="start"
               >
-                <button
-                  style={{
-                    padding: "12px 16px",
-                    border: "2px solid #007bff",
-                    borderRadius: "6px",
-                    background: "#007bff",
-                    color: "white",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                  }}
+                <Button
+                  paddingX="sm"
+                  paddingY="md"
+                  background="#007bff"
+                  textColor="white"
+                  textSize="sm"
+                  border="2px solid #007bff"
+                  borderRadius="sm"
                   onMouseOver={(e) => {
-                    e.target.closest("button").style.background = "#0056b3";
-                    e.target.closest("button").style.borderColor = "#0056b3";
+                    // e.target.closest("button").style.background = "#0056b3";
+                    // e.target.closest("button").style.borderColor = "#0056b3";
                   }}
                   onMouseOut={(e) => {
-                    e.target.closest("button").style.background = "#007bff";
-                    e.target.closest("button").style.borderColor = "#007bff";
+                    // e.target.closest("button").style.background = "#007bff";
+                    // e.target.closest("button").style.borderColor = "#007bff";
                   }}
                 >
                   <Text>
@@ -499,7 +441,7 @@
                     </Icon>
                     Search Files
                   </Text>
-                </button>
+                </Button>
 
                 <button
                   style={{

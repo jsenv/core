@@ -55,6 +55,8 @@ export const withPropsStyle = (
     base,
     layout,
     spacing = layout,
+    outerSpacing = spacing,
+    innerSpacing = spacing,
     align = layout,
     size = layout,
     typo,
@@ -439,8 +441,11 @@ export const withPropsStyle = (
   if (base) {
     Object.assign(firstConfigStyle, base);
   }
-  if (spacing) {
-    Object.assign(firstConfigStyle, marginStyles, paddingStyles);
+  if (outerSpacing) {
+    Object.assign(firstConfigStyle, marginStyles);
+  }
+  if (innerSpacing) {
+    Object.assign(firstConfigStyle, paddingStyles);
   }
   if (align) {
     Object.assign(firstConfigStyle, alignmentStyles);
@@ -466,8 +471,11 @@ export const withPropsStyle = (
     } else if (typeof config.base === "object") {
       Object.assign(configStyle, config.base);
     }
-    if (config.spacing || config.layout) {
-      Object.assign(configStyle, marginStyles, paddingStyles);
+    if (config.outerSpacing || config.spacing || config.layout) {
+      Object.assign(configStyle, marginStyles);
+    }
+    if (config.innerSpacing || config.spacing || config.layout) {
+      Object.assign(configStyle, paddingStyles);
     }
     if (config.align || config.layout) {
       Object.assign(configStyle, alignmentStyles);

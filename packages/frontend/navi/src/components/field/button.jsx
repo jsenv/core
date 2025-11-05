@@ -227,20 +227,33 @@ const ButtonBasic = forwardRef((props, ref) => {
   const innerReadOnly = readOnly || contextReadOnly || innerLoading;
   const innerDisabled = disabled || contextDisabled;
 
-  let buttonChildren;
-  if (appearance === "navi") {
-    buttonChildren = <NaviButton buttonRef={innerRef}>{children}</NaviButton>;
-  } else {
-    buttonChildren = children;
-  }
-
   const innerClassName = withPropsClassName(
     appearance === "navi" ? "navi_button" : undefined,
     className,
   );
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    layout: true,
-  });
+  const [remainingProps, innerStyle, naviButtonStyle] = withPropsStyle(
+    rest,
+    {
+      layout: true,
+      visual: false,
+      innerSpacing: false,
+    },
+    {
+      visual: true,
+      innerSpacing: true,
+    },
+  );
+
+  let buttonChildren;
+  if (appearance === "navi") {
+    buttonChildren = (
+      <NaviButton buttonRef={innerRef} style={naviButtonStyle}>
+        {children}
+      </NaviButton>
+    );
+  } else {
+    buttonChildren = children;
+  }
 
   return (
     <button
@@ -265,14 +278,14 @@ const ButtonBasic = forwardRef((props, ref) => {
     </button>
   );
 });
-const NaviButton = ({ buttonRef, children }) => {
+const NaviButton = ({ buttonRef, children, ...rest }) => {
   const ref = useRef();
   useLayoutEffect(() => {
     return initCustomField(buttonRef.current, buttonRef.current);
   }, []);
 
   return (
-    <span ref={ref} className="navi_button_content">
+    <span ref={ref} className="navi_button_content" {...rest}>
       {children}
       <span className="navi_button_shadow"></span>
     </span>
