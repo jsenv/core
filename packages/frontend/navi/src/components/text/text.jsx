@@ -118,7 +118,7 @@ const TextBasic = ({
   noWrap,
   foregroundColor,
   foregroundElement,
-  childrenSpacing = " ",
+  contentSpacing = " ",
   children,
   ...rest
 }) => {
@@ -146,9 +146,9 @@ const TextBasic = ({
       {...remainingProps}
     >
       <BoxFlowContext.Provider value={box ? "inline" : null}>
-        {childrenSpacing === "pre"
+        {contentSpacing === "pre"
           ? children
-          : injectSpaceBetweenChildren(children, childrenSpacing)}
+          : injectSpaceBetweenChildren(children, contentSpacing)}
         {/* https://jsfiddle.net/v5xzJ/4/ */}
         {hasForeground && (
           <span
@@ -179,7 +179,7 @@ export const Icon = ({ charWidth = 2, children, ...rest }) => {
   );
 };
 
-export const Paragraph = ({ childrenSpacing = " ", children, ...rest }) => {
+export const Paragraph = ({ contentSpacing = " ", children, ...rest }) => {
   if (rest.marginTop === undefined) {
     rest.marginTop = "md";
   }
@@ -190,9 +190,9 @@ export const Paragraph = ({ childrenSpacing = " ", children, ...rest }) => {
 
   return (
     <p {...remainingProps} style={innerStyle}>
-      {childrenSpacing === "pre"
+      {contentSpacing === "pre"
         ? children
-        : injectSpaceBetweenChildren(children, childrenSpacing)}
+        : injectSpaceBetweenChildren(children, contentSpacing)}
     </p>
   );
 };

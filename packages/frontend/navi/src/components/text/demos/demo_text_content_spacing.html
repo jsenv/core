@@ -21,14 +21,14 @@
           >
             <h1>Text Auto-Spacing Demo</h1>
             <p>
-              <strong>Great news!</strong> Text components now automatically add
-              spacing between children by default! No more verbose manual
-              spacing with {`{" "}`} everywhere.
+              Text components automatically add spacing between children by
+              default. This eliminates verbose manual spacing with {`{" "}`}{" "}
+              everywhere.
             </p>
 
             {/* Default behavior showcase */}
             <section style={{ marginBottom: "30px" }}>
-              <h2>🎉 Auto-Spacing is Great!</h2>
+              <h2>🎉 Auto-Spacing by Default</h2>
               <p>
                 Most of the time, you want spaces between elements -
                 auto-spacing saves you from verbose manual spacing:
@@ -37,7 +37,7 @@
                 style={{ display: "flex", gap: "20px", marginBottom: "20px" }}
               >
                 <div>
-                  <h3>Before (verbose manual spacing)</h3>
+                  <h3>Manual spacing (verbose)</h3>
                   <div
                     style={{
                       border: "1px solid #ccc",
@@ -45,7 +45,7 @@
                       backgroundColor: "#f9f9f9",
                     }}
                   >
-                    <Text childrenSpacing="pre">
+                    <Text contentSpacing="pre">
                       <strong>Hello</strong> <em>beautiful</em>{" "}
                       <span>world!</span>
                     </Text>
@@ -56,7 +56,7 @@
                 </div>
 
                 <div>
-                  <h3>Now (clean and automatic)</h3>
+                  <h3>Automatic spacing (pleasant and automatic)</h3>
                   <div
                     style={{
                       border: "1px solid #ccc",
@@ -84,7 +84,7 @@
               <div style={{ marginBottom: "20px" }}>
                 <h3>Breadcrumb Navigation</h3>
                 <div style={{ border: "1px solid #ccc", padding: "8px" }}>
-                  <Text childrenSpacing=" / " textColor="#666">
+                  <Text contentSpacing={<span> / </span>} textColor="#666">
                     <Text as="a" href="#" textColor="blue">
                       Products
                     </Text>
@@ -99,13 +99,13 @@
                     </Text>
                   </Text>
                 </div>
-                <small style={{ color: "#666" }}>childrenSpacing=" / "</small>
+                <small style={{ color: "#666" }}>contentSpacing=" / "</small>
               </div>
 
               <div style={{ marginBottom: "20px" }}>
                 <h3>Status Dashboard</h3>
                 <div style={{ border: "1px solid #ccc", padding: "8px" }}>
-                  <Text childrenSpacing=" • ">
+                  <Text contentSpacing=" • ">
                     <span>
                       Status:{" "}
                       <Text textBold textColor="green">
@@ -123,13 +123,13 @@
                     </span>
                   </Text>
                 </div>
-                <small style={{ color: "#666" }}>childrenSpacing=" • "</small>
+                <small style={{ color: "#666" }}>contentSpacing=" • "</small>
               </div>
 
               <div style={{ marginBottom: "20px" }}>
                 <h3>Tag List</h3>
                 <div style={{ border: "1px solid #ccc", padding: "8px" }}>
-                  <Text childrenSpacing=", ">
+                  <Text contentSpacing=", ">
                     <span
                       style={{
                         backgroundColor: "#e1f5fe",
@@ -159,16 +159,16 @@
                     </span>
                   </Text>
                 </div>
-                <small style={{ color: "#666" }}>childrenSpacing=", "</small>
+                <small style={{ color: "#666" }}>contentSpacing=", "</small>
               </div>
             </section>
 
-            {/* When you need to opt-out */}
+            {/* When you need exact control */}
             <section style={{ marginBottom: "30px" }}>
-              <h2>🔧 When You Need to Opt-Out (childrenSpacing="pre")</h2>
+              <h2>🔧 When You Need Exact Control (contentSpacing="pre")</h2>
               <p>
                 Sometimes you need exact control over spacing - here's when to
-                use childrenSpacing="pre":
+                use contentSpacing="pre":
               </p>
 
               <div style={{ marginBottom: "20px" }}>
@@ -202,7 +202,7 @@
                   </div>
 
                   <div>
-                    <h4>✅ childrenSpacing="pre"</h4>
+                    <h4>✅ contentSpacing="pre"</h4>
                     <div
                       style={{
                         border: "1px solid #ccc",
@@ -210,7 +210,7 @@
                         backgroundColor: "#efe",
                       }}
                     >
-                      <Text childrenSpacing="pre">
+                      <Text contentSpacing="pre">
                         <span style={{ color: "blue" }}>Java</span>
                         <span style={{ color: "orange", fontWeight: "bold" }}>
                           Script
@@ -255,7 +255,7 @@
                   </div>
 
                   <div>
-                    <h4>✅ childrenSpacing="pre"</h4>
+                    <h4>✅ contentSpacing="pre"</h4>
                     <div
                       style={{
                         border: "1px solid #ccc",
@@ -263,7 +263,7 @@
                         backgroundColor: "#efe",
                       }}
                     >
-                      <Text childrenSpacing="pre">
+                      <Text contentSpacing="pre">
                         <span>Price: </span>
                         <strong style={{ color: "green" }}>$</strong>
                         <span style={{ fontSize: "1.2em" }}>29</span>
