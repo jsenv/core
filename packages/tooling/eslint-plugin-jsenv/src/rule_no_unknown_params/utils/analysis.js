@@ -227,227 +227,34 @@ export function analyzeCallExpression(
   const params = functionDef.params;
   if (params.length === 0 || node.arguments.length === 0) return;
 
-  // Check each parameter that has object destructuring
+  // Reuse shared object pattern analysis logic
   for (let i = 0; i < params.length; i++) {
     const param = params[i];
     const arg = node.arguments[i];
-
-    // Only check ObjectPattern parameters
-    if (param.type !== "ObjectPattern") {
+    if (param.type !== "ObjectPattern" || !arg || arg.type !== "ObjectExpression") {
       continue;
     }
-
-    // Only check ObjectExpression arguments
-    if (!arg || arg.type !== "ObjectExpression") {
-      continue;
-    }
-
-    // Check if this ObjectPattern has a rest element (...rest)
-    const hasRestElement = param.properties.some(
-      (p) => p.type === "RestElement",
-    );
-
-    // If there's a rest element, we need to check chaining to see if rest properties are actually used
-    if (hasRestElement) {
-      // Special case: if the rest parameter is the ONLY parameter `{ ...params }`,
-      // then this function accepts any parameters, similar to `(params) => ...`
-      const isOnlyRestParam =
-        param.properties.length === 1 &&
-        param.properties[0].type === "RestElement";
-      if (isOnlyRestParam) {
-        // Function signature like `({ ...params })` should accept any parameters
-        continue;
-      }
-
-      // Get explicitly declared parameters (not in rest)
-      const explicitProps = new Set(
-        param.properties
-          .filter(
-            (p) =>
-              p.type === "Property" && p.key && p.key.type === "Identifier",
-          )
-          .map((p) => p.key.name),
-      );
-
-      // Get the rest parameter name for direct usage check
-      const restParam = param.properties.find((p) => p.type === "RestElement");
-      const restParamName = restParam ? restParam.argument.name : null;
-
-      // Check if rest parameter is propagated to other functions
-      const isRestPropagated = restParamName
-        ? isRestParameterPropagated(
-            functionDef,
-            restParamName,
-            functionDefinitions,
-          )
-        : false;
-
-      // If rest is not propagated anywhere, we can't track parameter usage
-      if (!isRestPropagated) {
-        // Let no-unused-vars handle unused rest params
-        continue;
-      }
-
-      // Collect all given parameters
-      const givenParams = arg.properties
+    handleObjectPatternUnknownProps({
+      param,
+      objectEntries: arg.properties
         .filter((p) => p.key && p.key.type === "Identifier")
-        .map((p) => p.key.name);
-
-      // Check properties that would go into rest
-      for (const prop of arg.properties) {
-        if (prop.key && prop.key.type === "Identifier") {
-          const keyName = prop.key.name;
-          if (!explicitProps.has(keyName)) {
-            // This property goes into rest - check if it's used in chaining
-            const chainResult = checkParameterChaining(
-              keyName,
-              functionDef,
-              functionDefinitions,
-              new Set(),
-              [],
-              maxChainDepth,
-            );
-
-            if (!chainResult.found) {
-              const errorMessage = generateErrorMessage(
-                keyName,
-                funcName,
-                chainResult.chain,
-                functionDef,
-                functionDefinitions,
-                givenParams,
-                context.getFilename(),
-                maxChainDepth,
-                functionDefWrapper.sourceFile,
-                options,
-              );
-
-              // Skip reporting if generateErrorMessage returns null (filtered out as non-typo)
-              if (!errorMessage) {
-                continue;
-              }
-
-              const { messageId, data, autofixes } = errorMessage;
-
-              const fixes = [];
-              if (autofixes.remove) {
-                fixes.push((fixer) => createRemoveFix(fixer, prop));
-              }
-              if (autofixes.rename) {
-                fixes.push((fixer) =>
-                  createRenameFix(fixer, prop, autofixes.rename),
-                );
-              }
-
-              // Only provide suggestions if we have a good rename candidate
-              const shouldSuggest = fixes.length > 1 && autofixes.rename;
-
-              context.report({
-                node: prop,
-                messageId,
-                data,
-                fix: fixes.length > 0 ? fixes[0] : undefined,
-                suggest: shouldSuggest
-                  ? [
-                      {
-                        desc: `Remove '${keyName}'`,
-                        fix: fixes[0],
-                      },
-                      {
-                        desc: `Rename '${keyName}' to '${autofixes.rename}'`,
-                        fix: fixes[1],
-                      },
-                    ]
-                  : undefined,
-              });
-            }
-          }
-        }
-      }
-      continue;
-    }
-
-    const allowedProps = new Set(
-      param.properties
-        .map((p) => (p.key && p.key.type === "Identifier" ? p.key.name : null))
-        .filter((name) => name !== null),
-    );
-
-    // Collect all given parameters
-    const givenParams = arg.properties
-      .filter((p) => p.key && p.key.type === "Identifier")
-      .map((p) => p.key.name);
-
-    for (const prop of arg.properties) {
-      if (prop.key && prop.key.type === "Identifier") {
-        const keyName = prop.key.name;
-        if (!allowedProps.has(keyName)) {
-          // Check if this parameter is used through function chaining
-          const chainResult = checkParameterChaining(
-            keyName,
-            functionDef,
-            functionDefinitions,
-            new Set(),
-            [],
-            maxChainDepth,
-          );
-
-          if (!chainResult.found) {
-            const errorMessage = generateErrorMessage(
-              keyName,
-              funcName,
-              chainResult.chain,
-              functionDef,
-              functionDefinitions,
-              givenParams,
-              context.getFilename(),
-              maxChainDepth,
-              functionDefWrapper.sourceFile,
-              options,
-            );
-
-            // Skip reporting if generateErrorMessage returns null (filtered out as non-typo)
-            if (!errorMessage) {
-              continue;
-            }
-
-            const { messageId, data, autofixes } = errorMessage;
-
-            const fixes = [];
-            if (autofixes.remove) {
-              fixes.push((fixer) => createRemoveFix(fixer, prop));
-            }
-            if (autofixes.rename) {
-              fixes.push((fixer) =>
-                createRenameFix(fixer, prop, autofixes.rename),
-              );
-            }
-
-            // Only provide suggestions if we have a good rename candidate
-            const shouldSuggest = fixes.length > 1 && autofixes.rename;
-
-            context.report({
-              node: prop,
-              messageId,
-              data,
-              fix: fixes.length > 0 ? fixes[0] : undefined,
-              suggest: shouldSuggest
-                ? [
-                    {
-                      desc: `Remove '${keyName}'`,
-                      fix: fixes[0],
-                    },
-                    {
-                      desc: `Rename '${keyName}' to '${autofixes.rename}'`,
-                      fix: fixes[1],
-                    },
-                  ]
-                : undefined,
-            });
-          }
-        }
-      }
-    }
+        .map((p) => ({
+          node: p,
+          name: p.key.name,
+          createRemove: (fixer) => createRemoveFix(fixer, p),
+          createRename: (fixer, newName) => createRenameFix(fixer, p, newName),
+        })),
+      functionDef,
+      functionName: funcName,
+      functionDefWrapper,
+      functionDefinitions,
+      context,
+      maxChainDepth,
+      options,
+      givenNames: arg.properties
+        .filter((p) => p.key && p.key.type === "Identifier")
+        .map((p) => p.key.name),
+    });
   }
 }
 
@@ -667,7 +474,8 @@ export function analyzeJSXElement(
               messageId,
               data,
               fix: fixes.length > 0 ? fixes[0] : undefined,
-              suggest: suggestionEntries.length > 0 ? suggestionEntries : undefined,
+              suggest:
+                suggestionEntries.length > 0 ? suggestionEntries : undefined,
             });
           }
         }
@@ -801,7 +609,8 @@ export function analyzeJSXElement(
               messageId,
               data,
               fix: fixes.length > 0 ? fixes[0] : undefined,
-              suggest: suggestionEntries.length > 0 ? suggestionEntries : undefined,
+              suggest:
+                suggestionEntries.length > 0 ? suggestionEntries : undefined,
             });
           }
         }
@@ -810,106 +619,178 @@ export function analyzeJSXElement(
     return;
   }
 
-  // Handle regular props (no rest element)
+  // Delegate to shared handler for regular props case
+  handleObjectPatternUnknownProps({
+    param,
+    objectEntries: openingElement.attributes
+      .filter(
+        (attr) =>
+          attr.type === "JSXAttribute" &&
+          attr.name &&
+          attr.name.type === "JSXIdentifier" &&
+          !IGNORED_JSX_PROPS.has(attr.name.name),
+      )
+      .map((attr) => ({
+        node: attr,
+        name: attr.name.name,
+        createRemove: (fixer) => createJSXRemoveFix(fixer, attr),
+        createRename: (fixer, newName) =>
+          createJSXRenameFix(fixer, attr, newName),
+      })),
+    functionDef,
+    functionName: componentName,
+    functionDefWrapper,
+    functionDefinitions,
+    context,
+    maxChainDepth,
+    options,
+    givenNames: openingElement.attributes
+      .filter(
+        (attr) =>
+          attr.type === "JSXAttribute" &&
+          attr.name &&
+          attr.name.type === "JSXIdentifier" &&
+          !IGNORED_JSX_PROPS.has(attr.name.name),
+      )
+      .map((attr) => attr.name.name),
+  });
+}
+
+// Shared logic for object pattern parameter unknown property reporting (JSX & call expressions)
+function handleObjectPatternUnknownProps({
+  param,
+  objectEntries,
+  functionDef,
+  functionName,
+  functionDefWrapper,
+  functionDefinitions,
+  context,
+  maxChainDepth,
+  options,
+  givenNames,
+}) {
+  if (objectEntries.length === 0) return;
+
+  const hasRestElement = param.properties.some((p) => p.type === "RestElement");
+  if (hasRestElement) {
+    const isOnlyRestParam =
+      param.properties.length === 1 && param.properties[0].type === "RestElement";
+    if (isOnlyRestParam) {
+      return; // accepts any params
+    }
+    const explicitProps = new Set(
+      param.properties
+        .filter((p) => p.type === "Property" && p.key && p.key.type === "Identifier")
+        .map((p) => p.key.name),
+    );
+    const restParam = param.properties.find((p) => p.type === "RestElement");
+    const restParamName = restParam ? restParam.argument.name : null;
+    const isRestPropagated = restParamName
+      ? isRestParameterPropagated(functionDef, restParamName, functionDefinitions)
+      : false;
+    if (!isRestPropagated) return;
+
+    for (const entry of objectEntries) {
+      if (explicitProps.has(entry.name)) continue; // goes into explicit part
+      reportIfUnknown({
+        name: entry.name,
+        entryNode: entry.node,
+        createRemove: entry.createRemove,
+        createRename: entry.createRename,
+        functionDef,
+        functionName,
+        functionDefWrapper,
+        functionDefinitions,
+        context,
+        maxChainDepth,
+        options,
+        givenNames,
+      });
+    }
+    return;
+  }
+
   const allowedProps = new Set(
     param.properties
       .map((p) => (p.key && p.key.type === "Identifier" ? p.key.name : null))
       .filter((name) => name !== null),
   );
 
-  // Collect all given JSX attributes
-  const givenAttrs = openingElement.attributes
-    .filter(
-      (attr) =>
-        attr.type === "JSXAttribute" &&
-        attr.name &&
-        attr.name.type === "JSXIdentifier",
-    )
-    .map((attr) => attr.name.name);
-
-  for (const attr of openingElement.attributes) {
-    if (
-      attr.type === "JSXAttribute" &&
-      attr.name &&
-      attr.name.type === "JSXIdentifier"
-    ) {
-      const attrName = attr.name.name;
-
-      // Skip React/JSX built-in props
-      if (IGNORED_JSX_PROPS.has(attrName)) {
-        continue;
-      }
-
-      if (!allowedProps.has(attrName)) {
-        // Check if this parameter is used through function chaining
-        const chainResult = checkParameterChaining(
-          attrName,
-          functionDef,
-          functionDefinitions,
-          new Set(),
-          [],
-          maxChainDepth,
-        );
-
-        if (!chainResult.found) {
-          const errorMessage = generateErrorMessage(
-            attrName,
-            componentName,
-            [], // No chain for components with no params
-            functionDef,
-            functionDefinitions,
-            givenAttrs,
-            context.getFilename(),
-            maxChainDepth,
-            functionDefWrapper.sourceFile,
-            options,
-          );
-          // Skip reporting if generateErrorMessage returns null (filtered out as non-typo)
-          if (!errorMessage) {
-            continue;
-          }
-          const { messageId, data, autofixes } = errorMessage;
-
-          const fixes = [];
-          if (autofixes.remove) {
-            fixes.push((fixer) => createJSXRemoveFix(fixer, attr));
-          }
-          if (autofixes.rename) {
-            fixes.push((fixer) =>
-              createJSXRenameFix(fixer, attr, autofixes.rename),
-            );
-          }
-
-          const suggestionEntries = [];
-          if (autofixes.rename && fixes[1]) {
-            if (autofixes.remove && fixes[0]) {
-              suggestionEntries.push({
-                desc: `Remove '${attrName}'`,
-                fix: fixes[0],
-              });
-            }
-            suggestionEntries.push({
-              desc: `Rename '${attrName}' to '${autofixes.rename}'`,
-              fix: fixes[1],
-            });
-          } else if (chainResult.chain && chainResult.chain.length > 0) {
-            if (autofixes.remove && fixes[0]) {
-              suggestionEntries.push({
-                desc: `Remove '${attrName}'`,
-                fix: fixes[0],
-              });
-            }
-          }
-
-          context.report({
-            node: attr,
-            messageId,
-            data,
-            fix: fixes.length > 0 ? fixes[0] : undefined,
-            suggest: suggestionEntries.length > 0 ? suggestionEntries : undefined,
-          });
-        }
-      }
-    }
+  for (const entry of objectEntries) {
+    if (allowedProps.has(entry.name)) continue;
+    reportIfUnknown({
+      name: entry.name,
+      entryNode: entry.node,
+      createRemove: entry.createRemove,
+      createRename: entry.createRename,
+      functionDef,
+      functionName,
+      functionDefWrapper,
+      functionDefinitions,
+      context,
+      maxChainDepth,
+      options,
+      givenNames,
+    });
   }
+}
+
+function reportIfUnknown({
+  name,
+  entryNode,
+  createRemove,
+  createRename,
+  functionDef,
+  functionName,
+  functionDefWrapper,
+  functionDefinitions,
+  context,
+  maxChainDepth,
+  options,
+  givenNames,
+}) {
+  const chainResult = checkParameterChaining(
+    name,
+    functionDef,
+    functionDefinitions,
+    new Set(),
+    [],
+    maxChainDepth,
+  );
+  if (chainResult.found) return;
+
+  const errorMessage = generateErrorMessage(
+    name,
+    functionName,
+    chainResult.chain,
+    functionDef,
+    functionDefinitions,
+    givenNames,
+    context.getFilename(),
+    maxChainDepth,
+    functionDefWrapper.sourceFile,
+    options,
+  );
+  if (!errorMessage) return;
+  const { messageId, data, autofixes } = errorMessage;
+  const fixes = [];
+  if (autofixes.remove) fixes.push((fixer) => createRemove(fixer));
+  if (autofixes.rename) fixes.push((fixer) => createRename(fixer, autofixes.rename));
+  const suggestionEntries = [];
+  if (autofixes.rename && fixes[1]) {
+    if (autofixes.remove && fixes[0]) {
+      suggestionEntries.push({ desc: `Remove '${name}'`, fix: fixes[0] });
+    }
+    suggestionEntries.push({
+      desc: `Rename '${name}' to '${autofixes.rename}'`,
+      fix: fixes[1],
+    });
+  }
+  context.report({
+    node: entryNode,
+    messageId,
+    data,
+    fix: fixes.length > 0 ? fixes[0] : undefined,
+    suggest: suggestionEntries.length > 0 ? suggestionEntries : undefined,
+  });
 }
