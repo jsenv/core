@@ -348,6 +348,15 @@ const BoxComponent = (
 };
 
 export const Box = forwardRef(BoxComponent);
+export const Layout = ({ row, column, ...rest }) => {
+  if (row) {
+    return <Box layoutRow {...rest} />;
+  }
+  if (column) {
+    return <Box layoutColumn {...rest} />;
+  }
+  return <Box {...rest} />;
+};
 
 Box.div = (props) => {
   return <Box NodeName="div" {...props} />;

@@ -393,21 +393,17 @@
                 Icons work seamlessly within Link components, maintaining proper
                 spacing and hover effects:
               </p>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "15px",
-                  padding: "20px",
-                  background: "#f8f9fa",
-                  borderRadius: "8px",
-                }}
+              <Box
+                layoutRow
+                contentSpacing="md"
+                padding="md"
+                backround="#f8f9fa"
+                borderRadius="sm"
+                contentAlignX="start"
               >
-                <div>
-                  <Link href="#home" textColor="blue">
-                    Go to Homepage
-                  </Link>
-                </div>
+                <Link href="#home" textColor="blue">
+                  Go to Homepage
+                </Link>
 
                 <div>
                   <Link href="#profile" textColor="green">
@@ -458,7 +454,187 @@
                     External Link
                   </Text>
                 </div>
-              </div>
+              </Box>
+            </Box>
+
+            <Box as="section" marginBottom="xl">
+              <h2>Icons in Buttons</h2>
+              <p>
+                Icons enhance button functionality and provide visual context
+                for actions:
+              </p>
+
+              <Box
+                layoutRow
+                contentSpacing="md"
+                padding="md"
+                backround="#f8f9fa"
+                borderRadius="sm"
+                contentAlignX="start"
+              >
+                <button
+                  style={{
+                    padding: "12px 16px",
+                    border: "2px solid #007bff",
+                    borderRadius: "6px",
+                    background: "#007bff",
+                    color: "white",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                  }}
+                  onMouseOver={(e) => {
+                    e.target.closest("button").style.background = "#0056b3";
+                    e.target.closest("button").style.borderColor = "#0056b3";
+                  }}
+                  onMouseOut={(e) => {
+                    e.target.closest("button").style.background = "#007bff";
+                    e.target.closest("button").style.borderColor = "#007bff";
+                  }}
+                >
+                  <Text>
+                    <Icon>
+                      <SearchSvg />
+                    </Icon>
+                    Search Files
+                  </Text>
+                </button>
+
+                <button
+                  style={{
+                    padding: "12px 16px",
+                    border: "2px solid #28a745",
+                    borderRadius: "6px",
+                    background: "#28a745",
+                    color: "white",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                  }}
+                  onMouseOver={(e) => {
+                    e.target.closest("button").style.background = "#1e7e34";
+                    e.target.closest("button").style.borderColor = "#1e7e34";
+                  }}
+                  onMouseOut={(e) => {
+                    e.target.closest("button").style.background = "#28a745";
+                    e.target.closest("button").style.borderColor = "#28a745";
+                  }}
+                >
+                  <Text>
+                    <Icon>
+                      <CheckSvg />
+                    </Icon>
+                    Save Changes
+                  </Text>
+                </button>
+
+                <button
+                  style={{
+                    padding: "12px 16px",
+                    border: "2px solid #6c757d",
+                    borderRadius: "6px",
+                    background: "#6c757d",
+                    color: "white",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                  }}
+                  onMouseOver={(e) => {
+                    e.target.closest("button").style.background = "#545b62";
+                    e.target.closest("button").style.borderColor = "#545b62";
+                  }}
+                  onMouseOut={(e) => {
+                    e.target.closest("button").style.background = "#6c757d";
+                    e.target.closest("button").style.borderColor = "#6c757d";
+                  }}
+                >
+                  <Text>
+                    <Icon>
+                      <SettingsSvg />
+                    </Icon>
+                    Configure
+                  </Text>
+                </button>
+
+                <button
+                  style={{
+                    padding: "12px 16px",
+                    border: "2px solid #dc3545",
+                    borderRadius: "6px",
+                    background: "white",
+                    color: "#dc3545",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                  }}
+                  onMouseOver={(e) => {
+                    e.target.closest("button").style.background = "#dc3545";
+                    e.target.closest("button").style.color = "white";
+                  }}
+                  onMouseOut={(e) => {
+                    e.target.closest("button").style.background = "white";
+                    e.target.closest("button").style.color = "#dc3545";
+                  }}
+                >
+                  <Text>
+                    <Icon>
+                      <HeartSvg />
+                    </Icon>
+                    Add to Favorites
+                  </Text>
+                </button>
+
+                <button
+                  style={{
+                    padding: "8px 12px",
+                    border: "1px solid #ccc",
+                    borderRadius: "4px",
+                    background: "white",
+                    color: "#666",
+                    cursor: "pointer",
+                    fontSize: "12px",
+                  }}
+                  onMouseOver={(e) => {
+                    e.target.closest("button").style.background = "#f8f9fa";
+                    e.target.closest("button").style.borderColor = "#adb5bd";
+                  }}
+                  onMouseOut={(e) => {
+                    e.target.closest("button").style.background = "white";
+                    e.target.closest("button").style.borderColor = "#ccc";
+                  }}
+                >
+                  <Text>
+                    <Icon charWidth={1.5}>
+                      <HomeSvg />
+                    </Icon>
+                    Home
+                  </Text>
+                </button>
+
+                <button
+                  style={{
+                    padding: "10px 14px",
+                    border: "2px solid #ffc107",
+                    borderRadius: "6px",
+                    background: "#ffc107",
+                    color: "#212529",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                  }}
+                  onMouseOver={(e) => {
+                    e.target.closest("button").style.background = "#e0a800";
+                    e.target.closest("button").style.borderColor = "#e0a800";
+                  }}
+                  onMouseOut={(e) => {
+                    e.target.closest("button").style.background = "#ffc107";
+                    e.target.closest("button").style.borderColor = "#ffc107";
+                  }}
+                >
+                  <Text>
+                    <Icon>
+                      <StarSvg />
+                    </Icon>
+                    Rate this
+                  </Text>
+                </button>
+              </Box>
             </Box>
           </div>
         );
