@@ -57,7 +57,9 @@ import.meta.css = /* css */ ``;
 
 export const Box = ({
   as = "div",
-  flow,
+  layoutRow,
+  layoutColumn,
+  layoutInline,
   contentAlignX,
   contentAlignY,
   contentGap,
@@ -67,13 +69,17 @@ export const Box = ({
   children,
   ...rest
 }) => {
-  const contextBoxFlow = useContext(BoxFlowContext);
+  const layoutFromContext = useContext(BoxFlowContext);
+  const insideFlexContainer =
+    layoutFromContext === "row" ||
+    layoutFromContext === "column" ||
+    layoutFromContext === "inline";
 
   const TagName = as;
   const innerClassName = withPropsClassName("navi_box", className);
   const [remainingProps, innerStyle] = withPropsStyle(rest, {
     base: {
-      ...(flow === "row"
+      ...(layoutRow
         ? {
             display: "flex",
             flexDirection: "column",
@@ -85,7 +91,7 @@ export const Box = ({
             gap: resolveSpacingSize(contentGap, "gap"),
           }
         : {}),
-      ...(flow === "col"
+      ...(layoutColumn
         ? {
             display: "flex",
             flexDirection: "row",
@@ -97,35 +103,33 @@ export const Box = ({
             gap: resolveSpacingSize(contentGap, "gap"),
           }
         : {}),
-      ...(flow === "inline"
+      ...(layoutInline
         ? {
             display: "inline-flex",
           }
         : {}),
 
-      flexShrink: shrink ? 1 : contextBoxFlow ? 0 : undefined,
-      flexGrow: contextBoxFlow && expand ? 1 : undefined,
+      flexShrink: shrink ? 1 : insideFlexContainer ? 0 : undefined,
+      flexGrow: insideFlexContainer && expand ? 1 : undefined,
     },
     layout: true,
   });
 
   return (
-    <TagName
-      className={innerClassName}
-      style={innerStyle}
-      data-flow={flow}
-      {...remainingProps}
-    >
-      <BoxFlowContext.Provider value={flow}>{children}</BoxFlowContext.Provider>
+    <TagName className={innerClassName} style={innerStyle} {...remainingProps}>
+      <BoxFlowContext.Provider
+        value={
+          layoutRow
+            ? "row"
+            : layoutColumn
+              ? "column"
+              : layoutInline
+                ? "inline"
+                : undefined
+        }
+      >
+        {children}
+      </BoxFlowContext.Provider>
     </TagName>
   );
 };
-
-const BoxFlowCol = (props) => {
-  return <Box layoutColumn {...props} />;
-};
-const BoxFlowRow = (props) => {
-  return <Box layoutRow {...props} />;
-};
-Box.col = BoxFlowCol;
-Box.row = BoxFlowRow;
