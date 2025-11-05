@@ -118,6 +118,21 @@ export const Usage = () => {
             param: "c",
             func: "FormattedText",
           },
+          suggestions: [
+            {
+              desc: "Remove 'c'",
+              output: `const FormattedText = (props) => {
+  return <Text {...props} />;
+};
+const Text = ({ a, b }) => {
+  return <span>{a} {b}</span>;
+};
+
+export const Usage = () => {
+  return <FormattedText a="hello" b="world"  />;
+};`,
+            },
+          ],
         },
       ],
     },

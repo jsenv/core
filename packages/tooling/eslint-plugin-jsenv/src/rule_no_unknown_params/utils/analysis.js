@@ -637,26 +637,37 @@ export function analyzeJSXElement(
               );
             }
 
-            // Only provide suggestions if we have a good rename candidate
-            const shouldSuggest = fixes.length > 1 && autofixes.rename;
+            // Always provide a remove suggestion when removal is possible.
+            // Provide a rename suggestion only when we have a confident rename candidate.
+            const suggestionEntries = [];
+            // Only add removal suggestion if we are in a chaining scenario OR we also have a rename
+            // (so that other tests keep previous behaviour)
+            if (autofixes.rename && fixes[1]) {
+              if (autofixes.remove && fixes[0]) {
+                suggestionEntries.push({
+                  desc: `Remove '${attrName}'`,
+                  fix: fixes[0],
+                });
+              }
+              suggestionEntries.push({
+                desc: `Rename '${attrName}' to '${autofixes.rename}'`,
+                fix: fixes[1],
+              });
+            } else if (chainResult.chain && chainResult.chain.length > 0) {
+              if (autofixes.remove && fixes[0]) {
+                suggestionEntries.push({
+                  desc: `Remove '${attrName}'`,
+                  fix: fixes[0],
+                });
+              }
+            }
 
             context.report({
               node: attr,
               messageId,
               data,
               fix: fixes.length > 0 ? fixes[0] : undefined,
-              suggest: shouldSuggest
-                ? [
-                    {
-                      desc: `Remove '${attrName}'`,
-                      fix: fixes[0],
-                    },
-                    {
-                      desc: `Rename '${attrName}' to '${autofixes.rename}'`,
-                      fix: fixes[1],
-                    },
-                  ]
-                : undefined,
+              suggest: suggestionEntries.length > 0 ? suggestionEntries : undefined,
             });
           }
         }
@@ -764,26 +775,33 @@ export function analyzeJSXElement(
               );
             }
 
-            // Only provide suggestions if we have a good rename candidate
-            const shouldSuggest = fixes.length > 1 && autofixes.rename;
+            const suggestionEntries = [];
+            if (autofixes.rename && fixes[1]) {
+              if (autofixes.remove && fixes[0]) {
+                suggestionEntries.push({
+                  desc: `Remove '${attrName}'`,
+                  fix: fixes[0],
+                });
+              }
+              suggestionEntries.push({
+                desc: `Rename '${attrName}' to '${autofixes.rename}'`,
+                fix: fixes[1],
+              });
+            } else if (chainResult.chain && chainResult.chain.length > 0) {
+              if (autofixes.remove && fixes[0]) {
+                suggestionEntries.push({
+                  desc: `Remove '${attrName}'`,
+                  fix: fixes[0],
+                });
+              }
+            }
 
             context.report({
               node: attr,
               messageId,
               data,
               fix: fixes.length > 0 ? fixes[0] : undefined,
-              suggest: shouldSuggest
-                ? [
-                    {
-                      desc: `Remove '${attrName}'`,
-                      fix: fixes[0],
-                    },
-                    {
-                      desc: `Rename '${attrName}' to '${autofixes.rename}'`,
-                      fix: fixes[1],
-                    },
-                  ]
-                : undefined,
+              suggest: suggestionEntries.length > 0 ? suggestionEntries : undefined,
             });
           }
         }
@@ -862,26 +880,33 @@ export function analyzeJSXElement(
             );
           }
 
-          // Only provide suggestions if we have a good rename candidate
-          const shouldSuggest = fixes.length > 1 && autofixes.rename;
+          const suggestionEntries = [];
+          if (autofixes.rename && fixes[1]) {
+            if (autofixes.remove && fixes[0]) {
+              suggestionEntries.push({
+                desc: `Remove '${attrName}'`,
+                fix: fixes[0],
+              });
+            }
+            suggestionEntries.push({
+              desc: `Rename '${attrName}' to '${autofixes.rename}'`,
+              fix: fixes[1],
+            });
+          } else if (chainResult.chain && chainResult.chain.length > 0) {
+            if (autofixes.remove && fixes[0]) {
+              suggestionEntries.push({
+                desc: `Remove '${attrName}'`,
+                fix: fixes[0],
+              });
+            }
+          }
 
           context.report({
             node: attr,
             messageId,
             data,
             fix: fixes.length > 0 ? fixes[0] : undefined,
-            suggest: shouldSuggest
-              ? [
-                  {
-                    desc: `Remove '${attrName}'`,
-                    fix: fixes[0],
-                  },
-                  {
-                    desc: `Rename '${attrName}' to '${autofixes.rename}'`,
-                    fix: fixes[1],
-                  },
-                ]
-              : undefined,
+            suggest: suggestionEntries.length > 0 ? suggestionEntries : undefined,
           });
         }
       }

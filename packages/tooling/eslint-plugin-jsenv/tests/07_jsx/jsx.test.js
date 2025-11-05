@@ -203,6 +203,21 @@ export const App = () => {
           messageId: "not_found_param",
           data: { param: "extra", func: "Some" },
           type: "JSXAttribute",
+          suggestions: [
+            {
+              desc: "Remove 'extra'",
+              output: `const Some = (props) => {
+  return <Thing {...props} />;
+};
+const Thing = ({ knownProp }) => {
+  return <div>{knownProp}</div>;
+};
+
+export const App = () => {
+  return <Some knownProp="value"  />;
+};`,
+            },
+          ],
         },
       ],
     },
