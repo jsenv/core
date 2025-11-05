@@ -108,6 +108,7 @@ export const withPropsStyle = (
     textColor,
     textShadow,
     textLineHeight,
+    noWrap,
 
     // visual props
     boxShadow,
@@ -357,6 +358,9 @@ export const withPropsStyle = (
     }
     if (textLineHeight !== undefined) {
       typoStyles.lineHeight = resolveTypoSize(textLineHeight, "lineHeight");
+    }
+    if (noWrap) {
+      typoStyles.whiteSpace = "nowrap";
     }
     typoStyles.color = textColor;
   }

@@ -1,12 +1,8 @@
 import { createContext, toChildArray } from "preact";
 import { useContext, useRef, useState } from "preact/hooks";
 
-import { BoxFlowContext } from "../layout/layout_context.jsx";
 import { withPropsClassName } from "../props_composition/with_props_class_name.js";
-import {
-  resolveSpacingSize,
-  withPropsStyle,
-} from "../props_composition/with_props_style.js";
+import { withPropsStyle } from "../props_composition/with_props_style.js";
 
 import.meta.css = /* css */ `
   :root {
@@ -24,15 +20,6 @@ import.meta.css = /* css */ `
   .navi_text_foreground {
     position: absolute;
     inset: 0;
-  }
-
-  .navi_text[data-box] {
-    display: inline-flex;
-  }
-
-  .navi_text_repositioner {
-    display: inline-flex;
-    vertical-align: top;
   }
 
   .navi_text_overflow {
@@ -113,9 +100,6 @@ const TextOverflowPinned = ({ overflowPinned, ...props }) => {
 const TextBasic = ({
   as = "span",
   className,
-  box = false,
-  gap = "xxs",
-  noWrap,
   foregroundColor,
   foregroundElement,
   contentSpacing = " ",
@@ -125,10 +109,6 @@ const TextBasic = ({
   const TagName = as;
   const innerClassName = withPropsClassName("navi_text", className);
   const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    base: {
-      gap: box ? resolveSpacingSize(gap, "gap") : undefined,
-      whiteSpace: noWrap ? "nowrap" : undefined,
-    },
     layout: true,
     typo: true,
   });
@@ -141,30 +121,21 @@ const TextBasic = ({
       ref={ref}
       className={innerClassName}
       style={innerStyle}
-      data-box={box ? "" : undefined}
       data-has-foreground={hasForeground ? "" : undefined}
       {...remainingProps}
     >
-      <BoxFlowContext.Provider value={box ? "inline" : null}>
-        {contentSpacing === "pre"
-          ? children
-          : injectSpaceBetweenChildren(children, contentSpacing)}
-        {/* https://jsfiddle.net/v5xzJ/4/ */}
-        {hasForeground && (
-          <span
-            className="navi_text_foreground"
-            style={{ backgroundColor: foregroundColor }}
-          >
-            {foregroundElement}
-          </span>
-        )}
-      </BoxFlowContext.Provider>
+      {applyContentSpacingOnTextChildren(children, contentSpacing)}
+      {/* https://jsfiddle.net/v5xzJ/4/ */}
+      {hasForeground && (
+        <span
+          className="navi_text_foreground"
+          style={{ backgroundColor: foregroundColor }}
+        >
+          {foregroundElement}
+        </span>
+      )}
     </TagName>
   );
-
-  if (box) {
-    return <span className="navi_text_repositioner">{text}</span>;
-  }
   return text;
 };
 
@@ -189,14 +160,16 @@ export const Paragraph = ({ contentSpacing = " ", children, ...rest }) => {
 
   return (
     <p {...remainingProps} style={innerStyle}>
-      {contentSpacing === "pre"
-        ? children
-        : injectSpaceBetweenChildren(children, contentSpacing)}
+      {applyContentSpacingOnTextChildren(children, contentSpacing)}
     </p>
   );
 };
 
-const injectSpaceBetweenChildren = (children, separator = " ") => {
+export const applyContentSpacingOnTextChildren = (children, contentSpacing) => {
+  if (contentSpacing === "pre") {
+    return children;
+  }
+
   if (!children) {
     return children;
   }
@@ -214,7 +187,7 @@ const injectSpaceBetweenChildren = (children, separator = " ") => {
     if (i === childCount) {
       break;
     }
-    childrenWithGap.push(separator);
+    childrenWithGap.push(contentSpacing);
   }
   return childrenWithGap;
 };

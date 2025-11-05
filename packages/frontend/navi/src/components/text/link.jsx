@@ -21,8 +21,8 @@ import {
   SelectionContext,
   useSelectableElement,
 } from "../selection/selection.jsx";
-import { Icon } from "../text/text.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
+import { Icon, applyContentSpacingOnTextChildren } from "./text.jsx";
 
 /*
  * Apply opacity to child content, not the link element itself.
@@ -94,7 +94,6 @@ const LinkPlain = forwardRef((props, ref) => {
     loading,
     readOnly,
     disabled,
-    children,
     autoFocus,
     active,
     visited,
@@ -112,7 +111,8 @@ const LinkPlain = forwardRef((props, ref) => {
     anchorIcon,
     icon,
     cursorDefaultWhenCurrent,
-    noWrap,
+    contentSpacing = " ",
+    children,
     ...rest
   } = props;
   const innerRef = useRef();
@@ -133,7 +133,6 @@ const LinkPlain = forwardRef((props, ref) => {
     base: {
       cursor:
         cursorDefaultWhenCurrent && targetIsCurrent ? "default" : undefined,
-      whiteSpace: noWrap ? "nowrap" : undefined,
     },
     layout: true,
     typo: true,
@@ -208,7 +207,7 @@ const LinkPlain = forwardRef((props, ref) => {
       }}
     >
       <LoaderBackground loading={loading} color="light-dark(#355fcc, #3b82f6)">
-        {children}
+        {applyContentSpacingOnTextChildren(children, contentSpacing)}
         {innerIcon && <Icon>{innerIcon}</Icon>}
       </LoaderBackground>
     </a>

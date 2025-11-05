@@ -53,7 +53,6 @@ export { Label } from "./src/components/field/label.jsx";
 export { Radio, RadioList } from "./src/components/field/radio_list.jsx";
 export { Select } from "./src/components/field/select.jsx";
 export { ActiveKeyboardShortcuts } from "./src/components/keyboard_shortcuts/active_keyboard_shortcuts.jsx";
-export { Link } from "./src/components/link/link.jsx";
 export {
   SelectionContext,
   createSelectionKeyboardShortcuts,
@@ -84,12 +83,15 @@ export { Tab, TabList } from "./src/components/tablist/tablist.jsx";
 export { UITransition } from "./src/components/ui_transition.jsx";
 export { useSignalSync } from "./src/components/use_signal_sync.js";
 // Text and icons
-export { LinkWithIcon } from "./src/components/link/link_with_icon.jsx";
 export { FontSizedSvg } from "./src/components/svg/font_sized_svg.jsx";
 export { IconAndText } from "./src/components/svg/icon_and_text.jsx";
 export { SVGMaskOverlay } from "./src/components/svg/svg_mask_overlay.jsx";
 export { Count } from "./src/components/text/badge.jsx";
 export { Image } from "./src/components/text/image.jsx";
+// Link can be used to wrap other things than text BUT it's most of the time used to wrap text
+// So they naturally belong to text stuff
+export { Link } from "./src/components/text/link.jsx";
+export { LinkWithIcon } from "./src/components/text/link_with_icon.jsx";
 export { Svg } from "./src/components/text/svg.jsx";
 export { Icon, Paragraph, Text } from "./src/components/text/text.jsx";
 export { Title } from "./src/components/text/title.jsx";

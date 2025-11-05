@@ -386,6 +386,70 @@
                 </div>
               </nav>
             </Box>
+
+            <Box as="section" marginBottom="xl">
+              <h2>Icons in Links</h2>
+              <p>
+                Icons work seamlessly within Link components, maintaining proper
+                spacing and hover effects:
+              </p>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "15px",
+                  padding: "20px",
+                  background: "#f8f9fa",
+                  borderRadius: "8px",
+                }}
+              >
+                <Link href="#home" textColor="blue">
+                  <Icon>
+                    <HomeSvg />
+                  </Icon>
+                  Go to Homepage
+                </Link>
+
+                <Link href="#profile" textColor="green">
+                  <Icon>
+                    <UserSvg />
+                  </Icon>
+                  View Profile
+                </Link>
+
+                <Link href="#search" textColor="purple">
+                  <Icon>
+                    <SearchSvg />
+                  </Icon>
+                  Search Documentation
+                </Link>
+
+                <Link href="#settings" textColor="orange">
+                  <Icon>
+                    <SettingsSvg />
+                  </Icon>
+                  Open Settings
+                </Link>
+
+                <Link href="#favorites" textColor="red">
+                  <Icon>
+                    <HeartSvg />
+                  </Icon>
+                  My Favorites
+                </Link>
+
+                <Link
+                  href="https://example.com"
+                  textColor="gray"
+                  target="_blank"
+                >
+                  <Icon>
+                    <BlankTargetLinkSvg />
+                  </Icon>
+                  External Link
+                </Link>
+              </div>
+            </Box>
           </div>
         );
       };
