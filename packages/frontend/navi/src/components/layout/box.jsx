@@ -62,7 +62,7 @@ export const Box = ({
   layoutInline,
   contentAlignX,
   contentAlignY,
-  contentGap,
+  contentSpacing,
   shrink,
   expand,
   className,
@@ -88,7 +88,7 @@ export const Box = ({
             // set if not the default ("start")
             justifyContent:
               contentAlignY === "start" ? undefined : contentAlignY,
-            gap: resolveSpacingSize(contentGap, "gap"),
+            gap: resolveSpacingSize(contentSpacing, "gap"),
           }
         : {}),
       ...(layoutColumn
@@ -100,7 +100,7 @@ export const Box = ({
               contentAlignX === "start" ? undefined : contentAlignX,
             // set if not the default ("stretch")
             alignItems: contentAlignY === "stretch" ? undefined : contentAlignY,
-            gap: resolveSpacingSize(contentGap, "gap"),
+            gap: resolveSpacingSize(contentSpacing, "gap"),
           }
         : {}),
       ...(layoutInline
@@ -113,6 +113,7 @@ export const Box = ({
       flexGrow: insideFlexContainer && expand ? 1 : undefined,
     },
     layout: true,
+    typo: true,
   });
 
   return (

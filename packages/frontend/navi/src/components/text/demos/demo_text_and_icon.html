@@ -26,22 +26,22 @@
 
             <Box as="section" marginBottom="xl">
               <Title as="h2">Basic Icon + Text</Title>
-              <Box layoutRow contentGap="sm" style="line-height: 3;">
-                <Text childrenSpacing>
+              <Box layoutRow contentSpacing="sm" textLineHeight="3">
+                <Text>
                   <Icon>
                     <HomeSvg />
                   </Icon>
                   Home
                 </Text>
 
-                <Text childrenSpacing>
+                <Text>
                   <Icon>
                     <UserSvg />
                   </Icon>
                   Profile
                 </Text>
 
-                <Text childrenSpacing>
+                <Text>
                   <Icon>
                     <SettingsSvg />
                   </Icon>
@@ -52,37 +52,37 @@
 
             <Box as="section" marginBottom="xl">
               <Title as="h2">Inline Text with Icons</Title>
-              <Paragraph childrenSpacing textSize="16" textLineHeight="1.6">
+              <Paragraph textSize="16" textLineHeight="1.6">
                 Welcome to our platform! Click on the
-                <Text childrenSpacing textBold noWrap>
+                <Text textBold noWrap>
                   <Icon>
                     <HomeSvg />
                   </Icon>
                   home
                 </Text>
                 button to return to the dashboard, or visit your
-                <Text childrenSpacing textItalic noWrap>
+                <Text textItalic noWrap>
                   <Icon>
                     <UserSvg />
                   </Icon>
                   profile
                 </Text>
                 to update your settings. Don't forget to
-                <Text childrenSpacing textUnderline noWrap>
+                <Text textUnderline noWrap>
                   <Icon>
                     <StarSvg />
                   </Icon>
                   star
                 </Text>
                 your favorite items and
-                <Text childrenSpacing textBold textItalic noWrap>
+                <Text textBold textItalic noWrap>
                   <Icon>
                     <HeartSvg />
                   </Icon>
                   like
                 </Text>
                 the content you enjoy. Use the
-                <Text childrenSpacing textBold textUnderline noWrap>
+                <Text textBold textUnderline noWrap>
                   <Icon>
                     <SearchSvg />
                   </Icon>
@@ -94,11 +94,11 @@
 
             <Box as="section" marginBottom="xl">
               <Title as="h2">Icon + Text + Link Combinations</Title>
-              <Box layoutRow contentGap="lg">
+              <Box layoutRow contentSpacing="lg">
                 {/* Container width variations */}
                 <div>
                   <Title as="h3">Container Width Variations</Title>
-                  <Box layoutRow contentGap="lg">
+                  <Box layoutRow contentSpacing="lg">
                     {/* 500px container */}
                     <div>
                       <div
@@ -112,7 +112,7 @@
                         500px Container
                       </div>
 
-                      <Box layoutRow contentGap="sm">
+                      <Box layoutRow contentSpacing="sm">
                         <div
                           style={{
                             width: "500px",
@@ -130,7 +130,7 @@
                             Default
                           </div>
                           <Text>
-                            <Icon textColor="green" marginRight="xxs">
+                            <Icon textColor="green">
                               <CheckSvg />
                             </Icon>
                             Un lien de réinitialisation a été envoyé à{" "}
@@ -158,7 +158,7 @@
                         300px Container
                       </div>
 
-                      <Box layoutRow contentGap="sm">
+                      <Box layoutRow contentSpacing="sm">
                         <div
                           style={{
                             width: "300px",
@@ -176,7 +176,7 @@
                             Default
                           </div>
                           <Text>
-                            <Icon textColor="green" marginRight="xxs">
+                            <Icon textColor="green">
                               <CheckSvg />
                             </Icon>
                             Un lien de réinitialisation a été envoyé à{" "}
@@ -191,7 +191,7 @@
                 {/* Icon position variations */}
                 <div>
                   <Title as="h3">Icon Position Variations</Title>
-                  <Box layoutRow contentGap="md">
+                  <Box layoutRow contentSpacing="md">
                     <div
                       style={{
                         width: "300px",
@@ -279,7 +279,7 @@
 
             <Box as="section" marginBottom="xl">
               <Title as="h2">Different Font Sizes</Title>
-              <Box layoutRow contentGap="sm">
+              <Box layoutRow contentSpacing="sm">
                 <Text box textSize="sm">
                   <Icon>
                     <HomeSvg />
@@ -312,7 +312,7 @@
 
             <Box as="section" marginBottom="xl">
               <h2>Text + Icon (Reversed Order)</h2>
-              <Box layoutRow contentGap="sm">
+              <Box layoutRow contentSpacing="sm">
                 <Text box>
                   Search
                   <Icon>
@@ -324,7 +324,7 @@
 
             <Box as="section" marginBottom="xl">
               <h2>Multiple Icons</h2>
-              <Box layoutRow contentGap="sm">
+              <Box layoutRow contentSpacing="sm">
                 <Text box>
                   <Icon>
                     <HomeSvg />
@@ -375,7 +375,7 @@
 
             <Box as="section" marginBottom="xl">
               <h2>Colored Examples</h2>
-              <Box layoutRow contentGap="sm">
+              <Box layoutRow contentSpacing="sm">
                 <Text box textColor="blue">
                   <Icon>
                     <HomeSvg />
