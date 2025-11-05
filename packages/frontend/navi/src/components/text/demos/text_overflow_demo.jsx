@@ -3,7 +3,7 @@ import { useState } from "preact/hooks";
 
 export const App = () => {
   return (
-    <Box flow="row" contentGap="24px" padding="20px">
+    <Box layoutRow contentGap="24px" padding="20px">
       <h1>TextOverflow Component Demo</h1>
 
       {/* Basic Usage */}
@@ -20,7 +20,7 @@ export const App = () => {
       {/* With After Content */}
       <section>
         <h2>With Pinned Content</h2>
-        <Box flow="row" contentGap="12px">
+        <Box layoutRow contentGap="12px">
           <div
             style={{ width: "250px", border: "1px solid #ccc", padding: "8px" }}
           >
@@ -48,7 +48,7 @@ export const App = () => {
       {/* Different Container Sizes */}
       <section>
         <h2>Different Container Widths</h2>
-        <Box flow="row" contentGap="12px">
+        <Box layoutRow contentGap="12px">
           {[150, 200, 300, 400].map((width) => (
             <div
               key={width}
@@ -75,7 +75,7 @@ export const App = () => {
       {/* Different HTML Tags */}
       <section>
         <h2>Different HTML Elements</h2>
-        <Box flow="row" contentGap="12px">
+        <Box layoutRow contentGap="12px">
           <div
             style={{ width: "200px", border: "1px solid #ccc", padding: "8px" }}
           >
@@ -120,7 +120,7 @@ export const App = () => {
       {/* With Layout Props */}
       <section>
         <h2>With Layout Props</h2>
-        <Box flow="row" contentGap="12px">
+        <Box layoutRow contentGap="12px">
           <div
             style={{ width: "300px", border: "1px solid #ccc", padding: "8px" }}
           >
@@ -157,7 +157,7 @@ export const App = () => {
       {/* Complex After Content */}
       <section>
         <h2>Complex Pinned Content</h2>
-        <Box flow="row" contentGap="12px">
+        <Box layoutRow contentGap="12px">
           <div
             style={{ width: "280px", border: "1px solid #ccc", padding: "8px" }}
           >
@@ -207,7 +207,7 @@ export const App = () => {
       {/* Multiline Text Overflow Testing */}
       <section>
         <h2>Multiline Text Overflow Behavior</h2>
-        <Box flow="row" contentGap="16px">
+        <Box layoutRow contentGap="16px">
           {/* Test 1: Text with line breaks */}
           <div
             style={{ width: "200px", border: "1px solid #ccc", padding: "8px" }}
@@ -233,7 +233,7 @@ export const App = () => {
             >
               Vertical alignment comparison
             </div>
-            <Box flow="row" style={{ lineHeight: "100px" }}>
+            <Box layoutRow style={{ lineHeight: "100px" }}>
               <Text overflowEllipsis style={{ maxWidth: "200px" }}>
                 Just a long line of text that would get overflowed.
               </Text>
@@ -255,8 +255,8 @@ const InteractiveWidthDemo = () => {
   const [width, setWidth] = useState(200);
 
   return (
-    <Box flow="row" contentGap="12px">
-      <Box flow="col" contentGap="12px" style={{ alignItems: "center" }}>
+    <Box layoutRow contentGap="12px">
+      <Box layoutColumn contentGap="12px" style={{ alignItems: "center" }}>
         <label htmlFor="width-slider">Container Width: {width}px</label>
         <input
           id="width-slider"

@@ -5,10 +5,11 @@
  * addresses the cognitive complexity of CSS Flexbox. By default, it's a regular
  * div that can be controlled via styling props (mostly spacing).
  *
- * ## Flow Direction (Intuitive Layout)
+ * ## Layout Direction (Intuitive Layout)
  *
- * - `flow="row"` makes all children visually appear as ROWS (stacked vertically)
- * - `flow="col"` makes all children visually appear as COLUMNS (arranged horizontally)
+ * - `layoutRow` makes all children visually appear as ROWS (stacked vertically)
+ * - `layoutColumn` makes all children visually appear as COLUMNS (arranged horizontally)
+ * - `layoutInline` creates an inline-flex container
  *
  * This is the opposite of CSS flex-direction, which forces our brain to think in
  * reverse of what we want to obtain. CSS flex-direction is technically correct but
@@ -19,14 +20,15 @@
  * - flex-direction: column → children flow vertically
  *
  * Box component mental model (more intuitive):
- * - flow="row" → children become visual rows (vertical stacking)
- * - flow="col" → children become visual columns (horizontal arrangement)
+ * - layoutRow → children become visual rows (vertical stacking)
+ * - layoutColumn → children become visual columns (horizontal arrangement)
+ * - layoutInline → inline flex container for inline layout contexts
  *
  * ## Human-Friendly Alignment
  *
  * Instead of CSS's justify-content/align-items which depend on flex-direction context:
- * - `contentAlignX` controls horizontal alignment regardless of flow direction
- * - `contentAlignY` controls vertical alignment regardless of flow direction
+ * - `contentAlignX` controls horizontal alignment regardless of layout direction
+ * - `contentAlignY` controls vertical alignment regardless of layout direction
  *
  * This eliminates the mental overhead of remembering which axis is "main" vs "cross"
  * depending on the flex direction.
@@ -120,10 +122,10 @@ export const Box = ({
 };
 
 const BoxFlowCol = (props) => {
-  return <Box flow="col" {...props} />;
+  return <Box layoutColumn {...props} />;
 };
 const BoxFlowRow = (props) => {
-  return <Box flow="row" {...props} />;
+  return <Box layoutRow {...props} />;
 };
 Box.col = BoxFlowCol;
 Box.row = BoxFlowRow;

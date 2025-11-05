@@ -48,7 +48,7 @@
 
             <section className="demo-section">
               <h3>1. 3 rows</h3>
-              <Box flow="col" backgroundImage="./bird.webp">
+              <Box layoutColumn backgroundImage="./bird.webp">
                 <DemoBox>Item 1</DemoBox>
                 <DemoBox>Item 2</DemoBox>
                 <DemoBox>Item 3</DemoBox>
@@ -57,7 +57,7 @@
 
             <section className="demo-section">
               <h3>2. 3 rows with gap</h3>
-              <Box flow="col" contentGap="md">
+              <Box layoutColumn contentGap="md">
                 <DemoBox>Item 1</DemoBox>
                 <DemoBox>Item 2</DemoBox>
                 <DemoBox>Item 3</DemoBox>
@@ -69,7 +69,7 @@
 
               <h4>contentAlignX="start" (default)</h4>
               <Box
-                flow="col"
+                layoutColumn
                 alignX="start"
                 contentGap="sm"
                 width="400"
@@ -86,7 +86,7 @@
 
               <h4>contentAlignX="center"</h4>
               <Box
-                flow="col"
+                layoutColumn
                 contentAlignX="center"
                 contentGap="10px"
                 width="400"
@@ -103,7 +103,7 @@
 
               <h4>contentAlignX="end"</h4>
               <Box
-                flow="col"
+                layoutColumn
                 contentAlignX="end"
                 contentGap="10px"
                 width="400"
@@ -120,7 +120,7 @@
 
               <h4>contentAlignX="space-between"</h4>
               <Box
-                flow="col"
+                layoutColumn
                 contentAlignX="space-between"
                 width="400"
                 height="80"
@@ -136,7 +136,7 @@
 
               <h4>contentAlignX="space-around"</h4>
               <Box
-                flow="col"
+                layoutColumn
                 contentAlignX="space-around"
                 width="400"
                 height="80"
@@ -156,7 +156,7 @@
 
               <h4>contentAlignY="start"</h4>
               <Box
-                flow="col"
+                layoutColumn
                 contentAlignY="start"
                 contentGap="sm"
                 height="80"
@@ -172,7 +172,7 @@
 
               <h4>contentAlignY="center"</h4>
               <Box
-                flow="col"
+                layoutColumn
                 contentAlignY="center"
                 contentGap="sm"
                 height="80"
@@ -188,7 +188,7 @@
 
               <h4>contentAlignY="end"</h4>
               <Box
-                flow="col"
+                layoutColumn
                 contentAlignY="end"
                 contentGap="sm"
                 height="80"
@@ -204,7 +204,7 @@
 
               <h4>contentAlignY undefined</h4>
               <Box
-                flow="col"
+                layoutColumn
                 contentAlignY="stretch"
                 contentGap="sm"
                 height="80"
@@ -221,7 +221,7 @@
               <h3>5. Real-World Example: Button with alignX</h3>
 
               <Box
-                flow="col"
+                layoutColumn
                 contentGap="10px"
                 padding="sm"
                 background="#f5f5f5"
@@ -239,7 +239,7 @@
             <section className="demo-section">
               <h3>6. Basic Usage</h3>
 
-              <Box flow="col" contentGap="10px">
+              <Box layoutColumn contentGap="10px">
                 <Box>
                   <DemoBox>FlexItem 1</DemoBox>
                 </Box>
@@ -255,7 +255,7 @@
             <section className="demo-section">
               <h3>7. Growth</h3>
 
-              <Box flow="col" contentGap="10px">
+              <Box layoutColumn contentGap="10px">
                 <Box>
                   <DemoBox>Fixed</DemoBox>
                 </Box>
@@ -272,7 +272,7 @@
 
             <section className="demo-section">
               <h3>8. Basic Rows</h3>
-              <Box flow="row" height="200">
+              <Box layoutRow height="200">
                 <DemoBox>Item 1</DemoBox>
                 <DemoBox>Item 2</DemoBox>
                 <DemoBox>Item 3</DemoBox>
@@ -281,7 +281,7 @@
 
             <section className="demo-section">
               <h3>9. Rows with spacing</h3>
-              <Box flow="row" contentGap="md" height="200">
+              <Box layoutRow contentGap="md" height="200">
                 <DemoBox>Item 1</DemoBox>
                 <DemoBox>Item 2</DemoBox>
                 <DemoBox>Item 3</DemoBox>
@@ -293,7 +293,7 @@
 
               <h4>contentAlignX="start"</h4>
               <Box
-                flow="row"
+                layoutRow
                 contentAlignX="start"
                 contentGap="sm"
                 padding="sm"
@@ -308,7 +308,7 @@
 
               <h4>contentAlignX="center"</h4>
               <Box
-                flow="row"
+                layoutRow
                 contentAlignX="center"
                 contentGap="sm"
                 padding="sm"
@@ -323,7 +323,7 @@
 
               <h4>contentAlignX="end"</h4>
               <Box
-                flow="row"
+                layoutRow
                 contentAlignX="end"
                 contentGap="sm"
                 padding="sm"
@@ -338,7 +338,7 @@
 
               <h4>contentAlignX undefined</h4>
               <Box
-                flow="row"
+                layoutRow
                 contentGap="sm"
                 padding="sm"
                 width="300"
@@ -356,7 +356,7 @@
 
               <h4>contentAlignY="start" (default)</h4>
               <Box
-                flow="row"
+                layoutRow
                 contentAlignY="start"
                 contentGap="sm"
                 width="300"
@@ -371,7 +371,7 @@
 
               <h4>contentAlignY="center"</h4>
               <Box
-                flow="row"
+                layoutRow
                 contentAlignY="center"
                 contentGap="sm"
                 width="300"
@@ -386,7 +386,7 @@
 
               <h4>contentAlignY="end"</h4>
               <Box
-                flow="row"
+                layoutRow
                 contentAlignY="end"
                 contentGap="sm"
                 width="300"
@@ -401,7 +401,7 @@
 
               <h4>contentAlignY="space-between"</h4>
               <Box
-                flow="row"
+                layoutRow
                 contentAlignY="space-between"
                 contentGap="sm"
                 width="300"
@@ -439,7 +439,7 @@
 
             <section className="demo-section">
               <h3>Box alignX in col</h3>
-              <Box flow="col" contentGap="sm" padding="sm" background="#f3e5f5">
+              <Box layoutColumn contentGap="sm" padding="sm" background="#f3e5f5">
                 <Box>
                   <DemoBox>Default</DemoBox>
                 </Box>
@@ -456,7 +456,7 @@
 
               <h3>Box alignY in col</h3>
               <Box
-                flow="col"
+                layoutColumn
                 contentGap="10px"
                 height="100"
                 background="#e1f5fe"
@@ -481,7 +481,7 @@
             <section className="demo-section">
               <h3>Box alignX in row</h3>
               <Box
-                flow="row"
+                layoutRow
                 contentGap="sm"
                 width="300"
                 height="200"
@@ -504,7 +504,7 @@
 
               <h4>FlexItem alignY in Column</h4>
               <Box
-                flow="row"
+                layoutRow
                 contentGap="sm"
                 width="300"
                 height="300"
@@ -531,7 +531,7 @@
 
               <h4>Single item pushed to bottom</h4>
               <Box
-                flow="row"
+                layoutRow
                 contentGap="sm"
                 height="200"
                 padding="sm"
@@ -546,7 +546,7 @@
 
               <h4>Item centered vertically</h4>
               <Box
-                flow="row"
+                layoutRow
                 contentGap="sm"
                 height="200"
                 padding="sm"
@@ -569,7 +569,7 @@
 
               <h4>Example: Most items start, one pushed to end</h4>
               <Box
-                flow="col"
+                layoutColumn
                 contentAlignX="start"
                 contentGap="sm"
                 padding="sm"
@@ -584,7 +584,7 @@
 
               <h4>Example: Most items aligned start, one centered</h4>
               <Box
-                flow="row"
+                layoutRow
                 contentAlignX="start"
                 contentGap="sm"
                 height="200"

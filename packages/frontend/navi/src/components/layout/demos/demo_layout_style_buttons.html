@@ -67,14 +67,14 @@
               <h3>1. Button ExpandX - Horizontal Expansion Only</h3>
               <div className="visual-container">
                 <h4>Buttons in columns (grows horizontally)</h4>
-                <Box flow="col" contentGap="10px">
+                <Box layoutColumn contentGap="10px">
                   <Button>Fixed</Button>
                   <Button expandX>ExpandX Button</Button>
                   <Button>Fixed</Button>
                 </Box>
 
                 <h4>Buttons in rows (takes full width)</h4>
-                <Box flow="row" contentGap="10px" height="150px">
+                <Box layoutRow contentGap="10px" height="150px">
                   <Button>Normal Width</Button>
                   <Button expandX>Full Width Button</Button>
                   <Button>Normal Width</Button>
@@ -86,14 +86,14 @@
               <h3>2. Button ExpandY - Vertical Expansion Only</h3>
               <div className="visual-container">
                 <h4>Buttons in columns (takes full height)</h4>
-                <Box flow="col" contentGap="10px" height="100px">
+                <Box layoutColumn contentGap="10px" height="100px">
                   <Button>Normal Height</Button>
                   <Button expandY>Full Height Button</Button>
                   <Button>Normal Height</Button>
                 </Box>
 
                 <h4>Buttons in rows (grows vertically)</h4>
-                <Box flow="row" contentGap="10px" height="200px">
+                <Box layoutRow contentGap="10px" height="200px">
                   <Button>Fixed</Button>
                   <Button expandY>ExpandY Button</Button>
                   <Button>Fixed</Button>
@@ -105,7 +105,7 @@
               <h3>3. Button ExpandX + ExpandY - Both Axes</h3>
               <div className="visual-container">
                 <h4>Buttons in columns (grows horizontally, full height)</h4>
-                <Box flow="col" contentGap="10px" height="80px">
+                <Box layoutColumn contentGap="10px" height="80px">
                   <Button>Fixed</Button>
                   <Button expandX expandY>
                     Both Axes
@@ -114,7 +114,7 @@
                 </Box>
 
                 <h4>Buttons in rows (full width, grows vertically)</h4>
-                <Box flow="row" contentGap="10px" height="150px">
+                <Box layoutRow contentGap="10px" height="150px">
                   <Button>Fixed</Button>
                   <Button expandX expandY>
                     Both Axes
@@ -127,11 +127,11 @@
             <div className="demo-container">
               <h3>4. Precise Control Comparison</h3>
               <div className="visual-container">
-                <Box flow="row" contentGap="15px">
+                <Box layoutRow contentGap="15px">
                   <div>
                     <h4>Buttons in columns with different expansions</h4>
                     <Box
-                      flow="col"
+                      layoutColumn
                       contentGap="10px"
                       height="60px"
                       style={{
@@ -151,7 +151,7 @@
                   <div>
                     <h4>Buttons in rows with different expansions</h4>
                     <Box
-                      flow="row"
+                      layoutRow
                       contentGap="10px"
                       height="200px"
                       style={{
@@ -201,7 +201,7 @@
             <div className="demo-container">
               <h3>6. Multiple Expand Buttons</h3>
               <div className="visual-container">
-                <Box flow="col" contentGap="10px">
+                <Box layoutColumn contentGap="10px">
                   <Button expandX>ExpandX 1</Button>
                   <Button expandX>ExpandX 2</Button>
                   <Button expandX>ExpandX 3</Button>
@@ -212,7 +212,7 @@
             <div className="demo-container">
               <h3>7. Button Spacing - Margins</h3>
               <div className="visual-container">
-                <Box flow="row" contentGap="5px">
+                <Box layoutRow contentGap="5px">
                   <Button margin="10px">Margin All Sides</Button>
                   <Button marginX="20px">MarginX Only</Button>
                   <Button marginY="15px">MarginY Only</Button>
@@ -225,7 +225,7 @@
             <div className="demo-container">
               <h3>8. Button Spacing - Padding</h3>
               <div className="visual-container">
-                <Box flow="row" contentGap="5px">
+                <Box layoutRow contentGap="5px">
                   <Button>Default Padding</Button>
                   <Button padding="20px">Extra Padding</Button>
                   <Button paddingX="30px">PaddingX Only</Button>
@@ -239,7 +239,7 @@
               <h3>9. Button AlignX Test: row + alignX="end"</h3>
               <div className="visual-container">
                 <div className="bounded">
-                  <Box flow="col" contentGap="10px" style={{ height: "100%" }}>
+                  <Box layoutColumn contentGap="10px" style={{ height: "100%" }}>
                     <Button>Default</Button>
                     <Button alignX="end">Pushed to End</Button>
                   </Box>
@@ -250,7 +250,7 @@
             <div className="demo-container">
               <h3>10. Combined Spacing and ExpandX</h3>
               <div className="visual-container">
-                <Box flow="col" contentGap="10px">
+                <Box layoutColumn contentGap="10px">
                   <Button>Label</Button>
                   <Button expandX marginY="5px" paddingX="20px">
                     Margin + Padding + ExpandX
@@ -263,7 +263,7 @@
             <div className="demo-container">
               <h3>11. Button Toolbar Layout</h3>
               <div className="visual-container">
-                <Box flow="col" contentGap="10px">
+                <Box layoutColumn contentGap="10px">
                   <Button>New</Button>
                   <Button>Open</Button>
                   <Button>Save</Button>
@@ -276,19 +276,19 @@
             <div className="demo-container">
               <h3>12. Button Group with Various Alignments</h3>
               <div className="visual-container">
-                <Box flow="row" contentGap="10px">
-                  <Box flow="col" contentGap="10px">
+                <Box layoutRow contentGap="10px">
+                  <Box layoutColumn contentGap="10px">
                     <Button>Start</Button>
                     <Button alignX="center">Center</Button>
                     <Button alignX="end">End</Button>
                   </Box>
 
-                  <Box flow="col" contentGap="10px">
+                  <Box layoutColumn contentGap="10px">
                     <Button expandX>Primary Action</Button>
                     <Button>Cancel</Button>
                   </Box>
 
-                  <Box flow="col" contentGap="10px" alignX="end">
+                  <Box layoutColumn contentGap="10px" alignX="end">
                     <Button>Back</Button>
                     <Button>Next</Button>
                   </Box>
@@ -314,7 +314,7 @@
                       action.
                     </p>
 
-                    <Box flow="col" contentGap="10px">
+                    <Box layoutColumn contentGap="10px">
                       <Button expandX>Primary Action</Button>
                       <Button alignX="end">More</Button>
                     </Box>
@@ -325,20 +325,20 @@
               <div className="demo-container">
                 <h3>14. Navigation Button Layout</h3>
                 <div className="visual-container">
-                  <Box flow="row" contentGap="15px">
-                    <Box flow="col" contentGap="10px">
+                  <Box layoutRow contentGap="15px">
+                    <Box layoutColumn contentGap="10px">
                       <Button>Home</Button>
                       <Button expandX>Current Page Title</Button>
                       <Button alignX="end">Profile</Button>
                     </Box>
 
-                    <Box flow="col" contentGap="10px" alignX="center">
+                    <Box layoutColumn contentGap="10px" alignX="center">
                       <Button marginX="5px">Tab 1</Button>
                       <Button marginX="5px">Tab 2</Button>
                       <Button marginX="5px">Tab 3</Button>
                     </Box>
 
-                    <Box flow="col" contentGap="10px" alignX="space-between">
+                    <Box layoutColumn contentGap="10px" alignX="space-between">
                       <Button>Previous</Button>
                       <Button>Next</Button>
                     </Box>

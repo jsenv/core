@@ -92,23 +92,21 @@ The Text component provides intelligent icon alignment that automatically positi
 </Box>
 
 // Good example: Short text+icon pairs work perfectly in paragraphs
-<Paragraph widht="200px">
-  Welcome! Click the{" "}
-  <Text box>
-    <Icon>
-      <HomeSvg />
-    </Icon>
-    home
-  </Text>
-  {" "}button or visit your{" "}
-  <Text box>
-    <Icon>
-      <UserSvg />
-    </Icon>
-    profile
-    </Text>
-  {" "}to get started.
-</Paragraph>
+<Box width="200px">
+  <p>
+    Welcome! Click the{" "}
+    <Text box>
+      <Icon><HomeSvg /></Icon>
+      home
+    </Text>{" "}
+    button or visit your{" "}
+    <Text box>
+      <Icon><UserSvg /></Icon>
+      profile
+    </Text>{" "}
+    to get started.
+  </p>
+</Box>
 
 // Center aligned (less common, but available)
 <Text box>

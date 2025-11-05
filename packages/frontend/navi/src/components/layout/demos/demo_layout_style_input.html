@@ -66,7 +66,7 @@
             <div className="demo-container">
               <h3>1. Input with Expand in row</h3>
               <div className="visual-container">
-                <Box flow="col" gap="10px">
+                <Box layoutColumn gap="10px">
                   <Button>Start</Button>
                   <Input placeholder="Expanding input" expandX />
                   <Button>End</Button>
@@ -77,7 +77,7 @@
             <div className="demo-container">
               <h3>2. Input with Expand in column</h3>
               <div className="visual-container">
-                <Box flow="row" gap="10px" style={{ height: "200px" }}>
+                <Box layoutRow gap="10px" style={{ height: "200px" }}>
                   <Input placeholder="Fixed input" />
                   <Input placeholder="Expanding input (height)" expandY />
                   <Input placeholder="Fixed input" />
@@ -109,7 +109,7 @@
             <div className="demo-container">
               <h3>4. Multiple Expand Elements</h3>
               <div className="visual-container">
-                <Box flow="col" gap="10px">
+                <Box layoutColumn gap="10px">
                   <Input placeholder="Expand 1" expand />
                   <Input placeholder="Expand 2" expand />
                   <Input placeholder="Expand 3" expand />
@@ -138,7 +138,7 @@
             <div className="demo-container">
               <h3>7. Directional Margins and Padding</h3>
               <div className="visual-container">
-                <Box flow="row" gap="5px">
+                <Box layoutRow gap="5px">
                   <Input placeholder="marginLeft: 20px" marginLeft="20px" />
                   <Input placeholder="marginRight: 30px" marginRight="30px" />
                   <Input
@@ -155,7 +155,7 @@
               <h3>8. AlignX Test: row + alignX="end"</h3>
               <div className="visual-container">
                 <div className="bounded">
-                  <Box flow="col" gap="10px" style={{ height: "100%" }}>
+                  <Box layoutColumn gap="10px" style={{ height: "100%" }}>
                     <Input placeholder="Default" />
                     <Input placeholder="Pushed to end" alignX="end" />
                   </Box>
@@ -166,7 +166,7 @@
             <div className="demo-container">
               <h3>9. Combined Spacing and Expand</h3>
               <div className="visual-container">
-                <Box flow="col" gap="10px">
+                <Box layoutColumn gap="10px">
                   <Button>Label</Button>
                   <Input
                     placeholder="Margin + Expand"
@@ -182,15 +182,15 @@
             <div className="demo-container">
               <h3>10. Complex Layout: Form with Expand</h3>
               <div className="visual-container">
-                <Box flow="row" gap="15px">
-                  <Box flow="col" gap="10px">
+                <Box layoutRow gap="15px">
+                  <Box layoutColumn gap="10px">
                     <label style={{ minWidth: "80px", alignSelf: "center" }}>
                       Name:
                     </label>
                     <Input placeholder="Enter your name" expand />
                   </Box>
 
-                  <Box flow="col" gap="10px">
+                  <Box layoutColumn gap="10px">
                     <label style={{ minWidth: "80px", alignSelf: "center" }}>
                       Email:
                     </label>
@@ -198,7 +198,7 @@
                     <Button>Verify</Button>
                   </Box>
 
-                  <Box flow="col" gap="10px">
+                  <Box layoutColumn gap="10px">
                     <label style={{ minWidth: "80px", alignSelf: "center" }}>
                       Message:
                     </label>
@@ -209,7 +209,7 @@
                     />
                   </Box>
 
-                  <Box flow="col" gap="10px" alignX="end">
+                  <Box layoutColumn gap="10px" alignX="end">
                     <Button>Cancel</Button>
                     <Button>Submit</Button>
                   </Box>
