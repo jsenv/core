@@ -21,16 +21,13 @@
           >
             <h1>Text Auto-Spacing Demo</h1>
             <p>
-              <strong>New behavior:</strong> Text components now automatically
-              add spacing between children by default!
+              <strong>New behavior:</strong> Text components now automatically add spacing between children by default!
             </p>
 
             {/* Basic Example - Default behavior */}
             <section style={{ marginBottom: "30px" }}>
               <h2>✨ Default Auto-Spacing (New!)</h2>
-              <div
-                style={{ display: "flex", gap: "20px", marginBottom: "20px" }}
-              >
+              <div style={{ display: "flex", gap: "20px", marginBottom: "20px" }}>
                 <div>
                   <h3>Before (manual spacing)</h3>
                   <div
@@ -40,8 +37,11 @@
                       backgroundColor: "#f9f9f9",
                     }}
                   >
-                    <Text preserveChildrenSpacing>
-                      <strong>Hello</strong> <em>beautiful</em>{" "}
+                    <Text childrenSpacing="pre">
+                      <strong>Hello</strong>
+                      {" "}
+                      <em>beautiful</em>
+                      {" "}
                       <span>world!</span>
                     </Text>
                   </div>
@@ -74,7 +74,7 @@
 
             {/* Navigation Breadcrumb Example */}
             <section style={{ marginBottom: "30px" }}>
-              <h2>Navigation Breadcrumb (Clean Code)</h2>
+              <h2>Custom Separator (Breadcrumb Example)</h2>
               <div
                 style={{
                   border: "1px solid #ccc",
@@ -82,26 +82,23 @@
                   marginBottom: "20px",
                 }}
               >
-                <Text textColor="#666">
+                <Text childrenSpacing=" / " textColor="#666">
                   <Text as="a" href="#" textColor="blue">
                     Products
                   </Text>
-                  <span>/</span>
                   <Text as="a" href="#" textColor="blue">
                     Electronics
                   </Text>
-                  <span>/</span>
                   <Text as="a" href="#" textColor="blue">
                     Smartphones
                   </Text>
-                  <span>/</span>
                   <Text textBold textColor="black">
                     iPhone 15
                   </Text>
                 </Text>
               </div>
               <small style={{ color: "#666" }}>
-                Clean JSX without manual spacing!
+                Using custom separator: childrenSpacing=" / "
               </small>
             </section>
 
@@ -115,34 +112,23 @@
                   marginBottom: "20px",
                 }}
               >
-                <Text>
-                  <span>Status:</span>
-                  <Text textBold textColor="green">
-                    ✓ Online
-                  </Text>
-                  <span>•</span>
-                  <span>Users:</span>
-                  <Text textBold textColor="blue">
-                    1,234
-                  </Text>
-                  <span>•</span>
-                  <span>Updated:</span>
-                  <Text textColor="#666">2 min ago</Text>
+                <Text childrenSpacing=" • ">
+                  <span>Status: <Text textBold textColor="green">✓ Online</Text></span>
+                  <span>Users: <Text textBold textColor="blue">1,234</Text></span>
+                  <span>Updated: <Text textColor="#666">2 min ago</Text></span>
                 </Text>
               </div>
+              <small style={{ color: "#666" }}>
+                Using bullet separator: childrenSpacing=" • "
+              </small>
             </section>
 
             {/* When you need NO spacing */}
             <section style={{ marginBottom: "30px" }}>
-              <h2>🔧 When You Need No Spacing (preserveChildrenSpacing)</h2>
-              <p>
-                Sometimes you want elements to be "collé sans espace" or control
-                spacing manually:
-              </p>
-
-              <div
-                style={{ display: "flex", gap: "20px", marginBottom: "20px" }}
-              >
+              <h2>🔧 Exact Control (childrenSpacing="pre")</h2>
+              <p>When you need to preserve manual spacing or have elements without gaps:</p>
+              
+              <div style={{ display: "flex", gap: "20px", marginBottom: "20px" }}>
                 <div>
                   <h3>Default (with auto-spacing)</h3>
                   <div style={{ border: "1px solid #ccc", padding: "8px" }}>
@@ -153,124 +139,63 @@
                       <span>.99</span>
                     </Text>
                   </div>
-                  <small style={{ color: "#666" }}>
-                    Spaces everywhere → "Price: $ 29 .99"
-                  </small>
+                  <small style={{ color: "#666" }}>Result: "Price: $ 29 .99"</small>
                 </div>
 
                 <div>
-                  <h3>preserveChildrenSpacing={`{true}`}</h3>
+                  <h3>childrenSpacing="pre"</h3>
                   <div style={{ border: "1px solid #ccc", padding: "8px" }}>
-                    <Text preserveChildrenSpacing>
-                      <span>Price:</span> <strong>$</strong>
+                    <Text childrenSpacing="pre">
+                      <span>Price:</span>
+                      {" "}
+                      <strong>$</strong>
                       <span>29</span>
                       <span>.99</span>
                     </Text>
                   </div>
-                  <small style={{ color: "#666" }}>
-                    Manual control → "Price: $29.99"
-                  </small>
-                </div>
-              </div>
-
-              {/* Another example with tags */}
-              <div style={{ marginTop: "20px" }}>
-                <h3>Example: HTML-like tags without spacing</h3>
-                <div style={{ display: "flex", gap: "20px" }}>
-                  <div>
-                    <h4>Default (unwanted spaces)</h4>
-                    <div style={{ border: "1px solid #ccc", padding: "8px" }}>
-                      <Text>
-                        <span>&lt;</span>
-                        <strong>div</strong>
-                        <span>&gt;</span>
-                        <span>content</span>
-                        <span>&lt;/</span>
-                        <strong>div</strong>
-                        <span>&gt;</span>
-                      </Text>
-                    </div>
-                    <small style={{ color: "#666" }}>
-                      Result: "<div> content </div>"
-                    </small>
-                  </div>
-
-                  <div>
-                    <h4>preserveChildrenSpacing (clean)</h4>
-                    <div style={{ border: "1px solid #ccc", padding: "8px" }}>
-                      <Text preserveChildrenSpacing>
-                        <span>&lt;</span>
-                        <strong>div</strong>
-                        <span>&gt;</span>
-                        <span>content</span>
-                        <span>&lt;/</span>
-                        <strong>div</strong>
-                        <span>&gt;</span>
-                      </Text>
-                    </div>
-                    <small style={{ color: "#666" }}>
-                      Result: "&lt;div&gt;content&lt;/div&gt;"
-                    </small>
-                  </div>
+                  <small style={{ color: "#666" }}>Result: "Price: $29.99"</small>
                 </div>
               </div>
             </section>
 
-            {/* Migration guide */}
-            <section
-              style={{
-                marginBottom: "30px",
-                padding: "20px",
-                backgroundColor: "#f0f8ff",
-                border: "1px solid #cce7ff",
-              }}
-            >
-              <h2>📝 Migration Guide</h2>
+            {/* More examples */}
+            <section style={{ marginBottom: "30px" }}>
+              <h2>More Custom Separators</h2>
+              
               <div style={{ marginBottom: "15px" }}>
-                <h3>Before (old API):</h3>
-                <pre
-                  style={{
-                    backgroundColor: "#fff",
-                    padding: "10px",
-                    border: "1px solid #ddd",
-                  }}
-                >
-                  {`<Text childrenSpacing>
-  <strong>Hello</strong>
-  <span>world</span>
-</Text>`}
-                </pre>
+                <h3>Arrow Navigation</h3>
+                <div style={{ border: "1px solid #ccc", padding: "8px" }}>
+                  <Text childrenSpacing=" → ">
+                    <span>Home</span>
+                    <span>Dashboard</span>
+                    <span>Settings</span>
+                  </Text>
+                </div>
+                <small style={{ color: "#666" }}>childrenSpacing=" → "</small>
               </div>
+
               <div style={{ marginBottom: "15px" }}>
-                <h3>Now (default behavior):</h3>
-                <pre
-                  style={{
-                    backgroundColor: "#fff",
-                    padding: "10px",
-                    border: "1px solid #ddd",
-                  }}
-                >
-                  {`<Text>
-  <strong>Hello</strong>
-  <span>world</span>
-</Text>`}
-                </pre>
+                <h3>Pipe Separator</h3>
+                <div style={{ border: "1px solid #ccc", padding: "8px" }}>
+                  <Text childrenSpacing=" | ">
+                    <Text as="a" href="#" textColor="blue">Home</Text>
+                    <Text as="a" href="#" textColor="blue">About</Text>
+                    <Text as="a" href="#" textColor="blue">Contact</Text>
+                  </Text>
+                </div>
+                <small style={{ color: "#666" }}>childrenSpacing=" | "</small>
               </div>
+
               <div>
-                <h3>When you need manual control:</h3>
-                <pre
-                  style={{
-                    backgroundColor: "#fff",
-                    padding: "10px",
-                    border: "1px solid #ddd",
-                  }}
-                >
-                  {`<Text preserveChildrenSpacing>
-  <strong>Hello</strong>
-  {" "}
-  <span>world</span>
-</Text>`}
-                </pre>
+                <h3>Tag List</h3>
+                <div style={{ border: "1px solid #ccc", padding: "8px" }}>
+                  <Text childrenSpacing=", ">
+                    <span style={{ backgroundColor: "#e1f5fe", padding: "2px 6px", borderRadius: "3px" }}>React</span>
+                    <span style={{ backgroundColor: "#e8f5e8", padding: "2px 6px", borderRadius: "3px" }}>JavaScript</span>
+                    <span style={{ backgroundColor: "#fff3e0", padding: "2px 6px", borderRadius: "3px" }}>CSS</span>
+                  </Text>
+                </div>
+                <small style={{ color: "#666" }}>childrenSpacing=", "</small>
               </div>
             </section>
           </div>
