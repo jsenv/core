@@ -47,7 +47,6 @@
 import { forwardRef } from "preact/compat";
 import { useContext } from "preact/hooks";
 
-import { withPropsClassName } from "../props_composition/with_props_class_name.js";
 import {
   resolveSpacingSize,
   withPropsStyle,
@@ -67,7 +66,6 @@ export const Box = forwardRef((props, ref) => {
     contentSpacing,
     shrink,
     expand,
-    className,
     children,
     ...rest
   } = props;
@@ -79,7 +77,6 @@ export const Box = forwardRef((props, ref) => {
     layoutFromContext === "inline";
 
   const TagName = as;
-  const innerClassName = withPropsClassName("navi_box", className);
   const [remainingProps, innerStyle] = withPropsStyle(rest, {
     base: {
       ...(layoutRow
@@ -119,12 +116,7 @@ export const Box = forwardRef((props, ref) => {
   });
 
   return (
-    <TagName
-      ref={ref}
-      className={innerClassName}
-      style={innerStyle}
-      {...remainingProps}
-    >
+    <TagName ref={ref} style={innerStyle} {...remainingProps}>
       <BoxFlowContext.Provider
         value={
           layoutRow

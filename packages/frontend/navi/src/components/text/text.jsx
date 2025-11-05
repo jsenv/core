@@ -1,6 +1,7 @@
 import { createContext, toChildArray } from "preact";
-import { useContext, useRef, useState } from "preact/hooks";
+import { useContext, useState } from "preact/hooks";
 
+import { Box } from "../layout/box.jsx";
 import { withPropsClassName } from "../props_composition/with_props_class_name.js";
 import { withPropsStyle } from "../props_composition/with_props_style.js";
 
@@ -99,30 +100,23 @@ const TextOverflowPinned = ({ overflowPinned, ...props }) => {
 };
 const TextBasic = ({
   as = "span",
-  className,
   foregroundColor,
   foregroundElement,
   contentSpacing = " ",
+  className,
+  box,
   children,
   ...rest
 }) => {
-  const TagName = as;
   const innerClassName = withPropsClassName("navi_text", className);
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    layout: true,
-    typo: true,
-  });
-
   const hasForeground = Boolean(foregroundElement || foregroundColor);
-
-  const ref = useRef();
   const text = (
-    <TagName
-      ref={ref}
+    <Box
+      {...rest}
       className={innerClassName}
-      style={innerStyle}
+      layoutInline={box ? true : undefined}
+      as={as}
       data-has-foreground={hasForeground ? "" : undefined}
-      {...remainingProps}
     >
       {applyContentSpacingOnTextChildren(children, contentSpacing)}
       {/* https://jsfiddle.net/v5xzJ/4/ */}
@@ -134,7 +128,7 @@ const TextBasic = ({
           {foregroundElement}
         </span>
       )}
-    </TagName>
+    </Box>
   );
   return text;
 };
@@ -161,15 +155,11 @@ export const Paragraph = ({ contentSpacing = " ", children, ...rest }) => {
   if (rest.marginTop === undefined) {
     rest.marginTop = "md";
   }
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    layout: true,
-    typo: true,
-  });
 
   return (
-    <p {...remainingProps} style={innerStyle}>
+    <Box as="p" {...rest}>
       {applyContentSpacingOnTextChildren(children, contentSpacing)}
-    </p>
+    </Box>
   );
 };
 

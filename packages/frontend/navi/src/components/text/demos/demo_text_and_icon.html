@@ -197,28 +197,28 @@
             <Box as="section" marginBottom="xl">
               <Title as="h2">Different Font Sizes</Title>
               <Box layoutRow contentSpacing="sm">
-                <Text box textSize="sm">
+                <Text textSize="sm">
                   <Icon>
                     <HomeSvg />
                   </Icon>
                   Small text with icon
                 </Text>
 
-                <Text box>
+                <Text>
                   <Icon>
                     <UserSvg />
                   </Icon>
                   Normal text with icon
                 </Text>
 
-                <Text box textSize="lg">
+                <Text textSize="lg">
                   <Icon>
                     <SettingsSvg />
                   </Icon>
                   Large text with icon
                 </Text>
 
-                <Text box textSize="xl">
+                <Text textSize="xl">
                   <Icon>
                     <StarSvg />
                   </Icon>
@@ -230,7 +230,7 @@
             <Box as="section" marginBottom="xl">
               <h2>Text + Icon (Reversed Order)</h2>
               <Box layoutRow contentSpacing="sm">
-                <Text box>
+                <Text>
                   Search
                   <Icon>
                     <SearchSvg />
@@ -242,7 +242,7 @@
             <Box as="section" marginBottom="xl">
               <h2>Multiple Icons</h2>
               <Box layoutRow contentSpacing="sm">
-                <Text box>
+                <Text>
                   <Icon>
                     <HomeSvg />
                   </Icon>
@@ -252,7 +252,7 @@
                   </Icon>
                 </Text>
 
-                <Text box>
+                <Text>
                   <Icon>
                     <UserSvg />
                   </Icon>
@@ -262,7 +262,7 @@
                   Two on the left
                 </Text>
 
-                <Text box>
+                <Text>
                   Two on the right
                   <Icon>
                     <StarSvg />
@@ -272,7 +272,7 @@
                   </Icon>
                 </Text>
 
-                <Text box>
+                <Text>
                   <Icon>
                     <HomeSvg />
                   </Icon>
@@ -293,28 +293,28 @@
             <Box as="section" marginBottom="xl">
               <h2>Colored Examples</h2>
               <Box layoutRow contentSpacing="sm">
-                <Text box textColor="blue">
+                <Text textColor="blue">
                   <Icon>
                     <HomeSvg />
                   </Icon>
                   Blue home link
                 </Text>
 
-                <Text box textColor="green">
+                <Text textColor="green">
                   <Icon>
                     <UserSvg />
                   </Icon>
                   Green user profile
                 </Text>
 
-                <Text box textColor="red">
+                <Text textColor="red">
                   <Icon>
                     <HeartSvg />
                   </Icon>
                   Red heart favorite
                 </Text>
 
-                <Text box textColor="purple">
+                <Text textColor="purple">
                   <Icon>
                     <StarSvg />
                   </Icon>
@@ -342,7 +342,7 @@
                     fontSize: "14px",
                   }}
                 >
-                  <Text box>
+                  <Text>
                     <Icon>
                       <SearchSvg />
                     </Icon>
@@ -387,6 +387,7 @@
               </nav>
             </Box>
 
+            {/* Icons in links */}
             <Box as="section" marginBottom="xl">
               <h2>Icons in Links</h2>
               <p>
@@ -457,6 +458,7 @@
               </Box>
             </Box>
 
+            {/* Icons in buttons */}
             <Box as="section" marginBottom="xl">
               <h2>Icons in Buttons</h2>
               <p>
@@ -637,6 +639,7 @@
               </Box>
             </Box>
 
+            {/* Show an exanple where a link is used to wrap an svg */}
             <Box as="section">
               <Link box marginTop="sm" width="80" height="auto">
                 <svg viewBox="0 0 100 50">
