@@ -21,18 +21,23 @@
           >
             <h1>Text Auto-Spacing Demo</h1>
             <p>
-              <strong>New behavior:</strong> Text components now automatically
-              add spacing between children by default!
+              <strong>Great news!</strong> Text components now automatically add
+              spacing between children by default! No more verbose manual
+              spacing with {`{" "}`} everywhere.
             </p>
 
-            {/* Basic Example - Default behavior */}
+            {/* Default behavior showcase */}
             <section style={{ marginBottom: "30px" }}>
-              <h2>✨ Default Auto-Spacing (New!)</h2>
+              <h2>🎉 Auto-Spacing is Great!</h2>
+              <p>
+                Most of the time, you want spaces between elements -
+                auto-spacing saves you from verbose manual spacing:
+              </p>
               <div
                 style={{ display: "flex", gap: "20px", marginBottom: "20px" }}
               >
                 <div>
-                  <h3>Before (manual spacing)</h3>
+                  <h3>Before (verbose manual spacing)</h3>
                   <div
                     style={{
                       border: "1px solid #ccc",
@@ -46,12 +51,12 @@
                     </Text>
                   </div>
                   <small style={{ color: "#666" }}>
-                    Required manual {`{" "}`} spacing
+                    Required manual {`{" "}`} everywhere
                   </small>
                 </div>
 
                 <div>
-                  <h3>Now (automatic spacing) 🎉</h3>
+                  <h3>Now (clean and automatic)</h3>
                   <div
                     style={{
                       border: "1px solid #ccc",
@@ -66,152 +71,62 @@
                     </Text>
                   </div>
                   <small style={{ color: "#666" }}>
-                    No manual spacing needed!
+                    Clean JSX, automatic spacing!
                   </small>
                 </div>
               </div>
             </section>
 
-            {/* Navigation Breadcrumb Example */}
+            {/* Custom separators */}
             <section style={{ marginBottom: "30px" }}>
-              <h2>Custom Separator (Breadcrumb Example)</h2>
-              <div
-                style={{
-                  border: "1px solid #ccc",
-                  padding: "12px",
-                  marginBottom: "20px",
-                }}
-              >
-                <Text childrenSpacing=" / " textColor="#666">
-                  <Text as="a" href="#" textColor="blue">
-                    Products
-                  </Text>
-                  <Text as="a" href="#" textColor="blue">
-                    Electronics
-                  </Text>
-                  <Text as="a" href="#" textColor="blue">
-                    Smartphones
-                  </Text>
-                  <Text textBold textColor="black">
-                    iPhone 15
-                  </Text>
-                </Text>
-              </div>
-              <small style={{ color: "#666" }}>
-                Using custom separator: childrenSpacing=" / "
-              </small>
-            </section>
+              <h2>🎨 Custom Separators</h2>
 
-            {/* Mixed Content Example */}
-            <section style={{ marginBottom: "30px" }}>
-              <h2>Status Dashboard</h2>
-              <div
-                style={{
-                  border: "1px solid #ccc",
-                  padding: "12px",
-                  marginBottom: "20px",
-                }}
-              >
-                <Text childrenSpacing=" • ">
-                  <span>
-                    Status:{" "}
-                    <Text textBold textColor="green">
-                      ✓ Online
-                    </Text>
-                  </span>
-                  <span>
-                    Users:{" "}
-                    <Text textBold textColor="blue">
-                      1,234
-                    </Text>
-                  </span>
-                  <span>
-                    Updated: <Text textColor="#666">2 min ago</Text>
-                  </span>
-                </Text>
-              </div>
-              <small style={{ color: "#666" }}>
-                Using bullet separator: childrenSpacing=" • "
-              </small>
-            </section>
-
-            {/* When you need NO spacing */}
-            <section style={{ marginBottom: "30px" }}>
-              <h2>🔧 Exact Control (childrenSpacing="pre")</h2>
-              <p>
-                When you need to preserve manual spacing or have elements
-                without gaps:
-              </p>
-
-              <div
-                style={{ display: "flex", gap: "20px", marginBottom: "20px" }}
-              >
-                <div>
-                  <h3>Default (with auto-spacing)</h3>
-                  <div style={{ border: "1px solid #ccc", padding: "8px" }}>
-                    <Text>
-                      <span>Price:</span>
-                      <strong>$</strong>
-                      <span>29</span>
-                      <span>.99</span>
-                    </Text>
-                  </div>
-                  <small style={{ color: "#666" }}>
-                    Result: "Price: $ 29 .99"
-                  </small>
-                </div>
-
-                <div>
-                  <h3>childrenSpacing="pre"</h3>
-                  <div style={{ border: "1px solid #ccc", padding: "8px" }}>
-                    <Text childrenSpacing="pre">
-                      <span>Price:</span> <strong>$</strong>
-                      <span>29</span>
-                      <span>.99</span>
-                    </Text>
-                  </div>
-                  <small style={{ color: "#666" }}>
-                    Result: "Price: $29.99"
-                  </small>
-                </div>
-              </div>
-            </section>
-
-            {/* More examples */}
-            <section style={{ marginBottom: "30px" }}>
-              <h2>More Custom Separators</h2>
-
-              <div style={{ marginBottom: "15px" }}>
-                <h3>Arrow Navigation</h3>
+              <div style={{ marginBottom: "20px" }}>
+                <h3>Breadcrumb Navigation</h3>
                 <div style={{ border: "1px solid #ccc", padding: "8px" }}>
-                  <Text childrenSpacing=" → ">
-                    <span>Home</span>
-                    <span>Dashboard</span>
-                    <span>Settings</span>
+                  <Text childrenSpacing=" / " textColor="#666">
+                    <Text as="a" href="#" textColor="blue">
+                      Products
+                    </Text>
+                    <Text as="a" href="#" textColor="blue">
+                      Electronics
+                    </Text>
+                    <Text as="a" href="#" textColor="blue">
+                      Smartphones
+                    </Text>
+                    <Text textBold textColor="black">
+                      iPhone 15
+                    </Text>
                   </Text>
                 </div>
-                <small style={{ color: "#666" }}>childrenSpacing=" → "</small>
+                <small style={{ color: "#666" }}>childrenSpacing=" / "</small>
               </div>
 
-              <div style={{ marginBottom: "15px" }}>
-                <h3>Pipe Separator</h3>
+              <div style={{ marginBottom: "20px" }}>
+                <h3>Status Dashboard</h3>
                 <div style={{ border: "1px solid #ccc", padding: "8px" }}>
-                  <Text childrenSpacing=" | ">
-                    <Text as="a" href="#" textColor="blue">
-                      Home
-                    </Text>
-                    <Text as="a" href="#" textColor="blue">
-                      About
-                    </Text>
-                    <Text as="a" href="#" textColor="blue">
-                      Contact
-                    </Text>
+                  <Text childrenSpacing=" • ">
+                    <span>
+                      Status:{" "}
+                      <Text textBold textColor="green">
+                        ✓ Online
+                      </Text>
+                    </span>
+                    <span>
+                      Users:{" "}
+                      <Text textBold textColor="blue">
+                        1,234
+                      </Text>
+                    </span>
+                    <span>
+                      Updated: <Text textColor="#666">2 min ago</Text>
+                    </span>
                   </Text>
                 </div>
-                <small style={{ color: "#666" }}>childrenSpacing=" | "</small>
+                <small style={{ color: "#666" }}>childrenSpacing=" • "</small>
               </div>
 
-              <div>
+              <div style={{ marginBottom: "20px" }}>
                 <h3>Tag List</h3>
                 <div style={{ border: "1px solid #ccc", padding: "8px" }}>
                   <Text childrenSpacing=", ">
@@ -245,6 +160,121 @@
                   </Text>
                 </div>
                 <small style={{ color: "#666" }}>childrenSpacing=", "</small>
+              </div>
+            </section>
+
+            {/* When you need to opt-out */}
+            <section style={{ marginBottom: "30px" }}>
+              <h2>🔧 When You Need to Opt-Out (childrenSpacing="pre")</h2>
+              <p>
+                Sometimes you need exact control over spacing - here's when to
+                use childrenSpacing="pre":
+              </p>
+
+              <div style={{ marginBottom: "20px" }}>
+                <h3>✨ Styling Parts of a Word</h3>
+                <p>
+                  When styling different parts of a word, you want them to stick
+                  together:
+                </p>
+                <div
+                  style={{ display: "flex", gap: "20px", marginBottom: "20px" }}
+                >
+                  <div>
+                    <h4>❌ Default (unwanted spaces)</h4>
+                    <div
+                      style={{
+                        border: "1px solid #ccc",
+                        padding: "8px",
+                        backgroundColor: "#fee",
+                      }}
+                    >
+                      <Text>
+                        <span style={{ color: "blue" }}>Java</span>
+                        <span style={{ color: "orange", fontWeight: "bold" }}>
+                          Script
+                        </span>
+                      </Text>
+                    </div>
+                    <small style={{ color: "#666" }}>
+                      Result: "Java Script" (unwanted space!)
+                    </small>
+                  </div>
+
+                  <div>
+                    <h4>✅ childrenSpacing="pre"</h4>
+                    <div
+                      style={{
+                        border: "1px solid #ccc",
+                        padding: "8px",
+                        backgroundColor: "#efe",
+                      }}
+                    >
+                      <Text childrenSpacing="pre">
+                        <span style={{ color: "blue" }}>Java</span>
+                        <span style={{ color: "orange", fontWeight: "bold" }}>
+                          Script
+                        </span>
+                      </Text>
+                    </div>
+                    <small style={{ color: "#666" }}>
+                      Result: "JavaScript" (perfect!)
+                    </small>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: "20px" }}>
+                <h3>💰 Price Display</h3>
+                <p>
+                  When different parts of content need to be in separate
+                  elements but should display without gaps:
+                </p>
+                <div
+                  style={{ display: "flex", gap: "20px", marginBottom: "20px" }}
+                >
+                  <div>
+                    <h4>❌ Default (unwanted spaces)</h4>
+                    <div
+                      style={{
+                        border: "1px solid #ccc",
+                        padding: "8px",
+                        backgroundColor: "#fee",
+                      }}
+                    >
+                      <Text>
+                        <span>Price:</span>
+                        <strong style={{ color: "green" }}>$</strong>
+                        <span style={{ fontSize: "1.2em" }}>29</span>
+                        <span style={{ fontSize: "0.8em" }}>.99</span>
+                      </Text>
+                    </div>
+                    <small style={{ color: "#666" }}>
+                      Result: "Price: $ 29 .99" (broken formatting)
+                    </small>
+                  </div>
+
+                  <div>
+                    <h4>✅ childrenSpacing="pre"</h4>
+                    <div
+                      style={{
+                        border: "1px solid #ccc",
+                        padding: "8px",
+                        backgroundColor: "#efe",
+                      }}
+                    >
+                      <Text childrenSpacing="pre">
+                        <span>Price: </span>
+                        <strong style={{ color: "green" }}>$</strong>
+                        <span style={{ fontSize: "1.2em" }}>29</span>
+                        <span style={{ fontSize: "0.8em" }}>.99</span>
+                      </Text>
+                    </div>
+                    <small style={{ color: "#666" }}>
+                      Result: "Price: $29.99" (clean formatting)
+                    </small>
+                  </div>
+                </div>
               </div>
             </section>
           </div>
