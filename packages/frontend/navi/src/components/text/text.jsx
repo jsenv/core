@@ -60,6 +60,13 @@ import.meta.css = /* css */ `
 
   .navi_icon {
     margin-right: ${resolveSpacingSize("xxs", "margin")};
+    margin-left: ${resolveSpacingSize("xxs", "margin")};
+  }
+  .navi_icon:first-child {
+    margin-left: 0;
+  }
+  .navi_icon:last-child {
+    margin-right: 0;
   }
 `;
 
