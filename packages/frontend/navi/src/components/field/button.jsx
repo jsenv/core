@@ -14,6 +14,7 @@ import { FormActionContext } from "../action_execution/form_context.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
+import { Box } from "../layout/box.jsx";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { withPropsClassName } from "../props_composition/with_props_class_name.js";
 import { withPropsStyle } from "../props_composition/with_props_style.js";
@@ -256,8 +257,9 @@ const ButtonBasic = forwardRef((props, ref) => {
   }
 
   return (
-    <button
+    <Box
       {...remainingProps}
+      as="button"
       ref={innerRef}
       className={innerClassName}
       style={innerStyle}
@@ -275,7 +277,7 @@ const ButtonBasic = forwardRef((props, ref) => {
         color="light-dark(#355fcc, #3b82f6)"
       />
       {buttonChildren}
-    </button>
+    </Box>
   );
 });
 const NaviButton = ({ buttonRef, children, ...rest }) => {
