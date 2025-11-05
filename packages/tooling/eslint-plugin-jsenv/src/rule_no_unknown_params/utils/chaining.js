@@ -243,24 +243,18 @@ export function collectChainParameters(
   visited = new Set(),
   maxChainDepth = 40,
 ) {
+  // Safety check - if functionDef is null/undefined, return empty set
+  if (!functionDef) {
+    return new Set();
+  }
+
   // Check depth limit to prevent memory issues
   if (visited.size >= maxChainDepth) {
     return new Set();
   }
 
-  // Safe key generation for different function types
-  let functionKey = "anonymous";
-  if (functionDef.id?.name) {
-    // Function declaration: function name() {}
-    functionKey = functionDef.id.name;
-  } else if (functionDef.parent?.id?.name) {
-    // Variable declarator: const name = () => {}
-    functionKey = functionDef.parent.id.name;
-  } else if (functionDef.key?.name) {
-    // Object method: { name() {} }
-    functionKey = functionDef.key.name;
-  }
-
+  const functionKey =
+    functionDef.id?.name || functionDef.parent?.id?.name || "anonymous";
   if (visited.has(functionKey)) {
     return new Set();
   }
@@ -295,12 +289,6 @@ export function collectChainParameters(
     const { targetFunctionDef } = propagation;
     // Handle both wrapped format and direct node format for backward compatibility
     const targetFunctionNode = targetFunctionDef?.node || targetFunctionDef;
-    
-    // Skip if target function node is not available
-    if (!targetFunctionNode) {
-      continue;
-    }
-    
     const targetParams = collectChainParameters(
       targetFunctionNode,
       functionDefinitions,

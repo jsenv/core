@@ -28,18 +28,17 @@ export const Main = ({ a, ...props }) => {
 };
 
 const Text = ({ b }) => {
-  console.log(b);
+  return b;
 };
 
 export const Usage = () => {
-  return <Main b={true} />;
+  return <Main a="test" b="value" />;
 };
       `,
     },
   ],
   invalid: [
     {
-      name: "FAILING: non-destructured parameter case",
       options: [{ reportAllUnknownParams: true }],
       code: `
 export const Component = (props) => {
