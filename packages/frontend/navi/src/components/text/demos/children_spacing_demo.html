@@ -21,13 +21,16 @@
           >
             <h1>Text Auto-Spacing Demo</h1>
             <p>
-              <strong>New behavior:</strong> Text components now automatically add spacing between children by default!
+              <strong>New behavior:</strong> Text components now automatically
+              add spacing between children by default!
             </p>
 
             {/* Basic Example - Default behavior */}
             <section style={{ marginBottom: "30px" }}>
               <h2>✨ Default Auto-Spacing (New!)</h2>
-              <div style={{ display: "flex", gap: "20px", marginBottom: "20px" }}>
+              <div
+                style={{ display: "flex", gap: "20px", marginBottom: "20px" }}
+              >
                 <div>
                   <h3>Before (manual spacing)</h3>
                   <div
@@ -38,10 +41,7 @@
                     }}
                   >
                     <Text childrenSpacing="pre">
-                      <strong>Hello</strong>
-                      {" "}
-                      <em>beautiful</em>
-                      {" "}
+                      <strong>Hello</strong> <em>beautiful</em>{" "}
                       <span>world!</span>
                     </Text>
                   </div>
@@ -113,9 +113,21 @@
                 }}
               >
                 <Text childrenSpacing=" • ">
-                  <span>Status: <Text textBold textColor="green">✓ Online</Text></span>
-                  <span>Users: <Text textBold textColor="blue">1,234</Text></span>
-                  <span>Updated: <Text textColor="#666">2 min ago</Text></span>
+                  <span>
+                    Status:{" "}
+                    <Text textBold textColor="green">
+                      ✓ Online
+                    </Text>
+                  </span>
+                  <span>
+                    Users:{" "}
+                    <Text textBold textColor="blue">
+                      1,234
+                    </Text>
+                  </span>
+                  <span>
+                    Updated: <Text textColor="#666">2 min ago</Text>
+                  </span>
                 </Text>
               </div>
               <small style={{ color: "#666" }}>
@@ -126,9 +138,14 @@
             {/* When you need NO spacing */}
             <section style={{ marginBottom: "30px" }}>
               <h2>🔧 Exact Control (childrenSpacing="pre")</h2>
-              <p>When you need to preserve manual spacing or have elements without gaps:</p>
-              
-              <div style={{ display: "flex", gap: "20px", marginBottom: "20px" }}>
+              <p>
+                When you need to preserve manual spacing or have elements
+                without gaps:
+              </p>
+
+              <div
+                style={{ display: "flex", gap: "20px", marginBottom: "20px" }}
+              >
                 <div>
                   <h3>Default (with auto-spacing)</h3>
                   <div style={{ border: "1px solid #ccc", padding: "8px" }}>
@@ -139,21 +156,23 @@
                       <span>.99</span>
                     </Text>
                   </div>
-                  <small style={{ color: "#666" }}>Result: "Price: $ 29 .99"</small>
+                  <small style={{ color: "#666" }}>
+                    Result: "Price: $ 29 .99"
+                  </small>
                 </div>
 
                 <div>
                   <h3>childrenSpacing="pre"</h3>
                   <div style={{ border: "1px solid #ccc", padding: "8px" }}>
                     <Text childrenSpacing="pre">
-                      <span>Price:</span>
-                      {" "}
-                      <strong>$</strong>
+                      <span>Price:</span> <strong>$</strong>
                       <span>29</span>
                       <span>.99</span>
                     </Text>
                   </div>
-                  <small style={{ color: "#666" }}>Result: "Price: $29.99"</small>
+                  <small style={{ color: "#666" }}>
+                    Result: "Price: $29.99"
+                  </small>
                 </div>
               </div>
             </section>
@@ -161,7 +180,7 @@
             {/* More examples */}
             <section style={{ marginBottom: "30px" }}>
               <h2>More Custom Separators</h2>
-              
+
               <div style={{ marginBottom: "15px" }}>
                 <h3>Arrow Navigation</h3>
                 <div style={{ border: "1px solid #ccc", padding: "8px" }}>
@@ -178,9 +197,15 @@
                 <h3>Pipe Separator</h3>
                 <div style={{ border: "1px solid #ccc", padding: "8px" }}>
                   <Text childrenSpacing=" | ">
-                    <Text as="a" href="#" textColor="blue">Home</Text>
-                    <Text as="a" href="#" textColor="blue">About</Text>
-                    <Text as="a" href="#" textColor="blue">Contact</Text>
+                    <Text as="a" href="#" textColor="blue">
+                      Home
+                    </Text>
+                    <Text as="a" href="#" textColor="blue">
+                      About
+                    </Text>
+                    <Text as="a" href="#" textColor="blue">
+                      Contact
+                    </Text>
                   </Text>
                 </div>
                 <small style={{ color: "#666" }}>childrenSpacing=" | "</small>
@@ -190,9 +215,33 @@
                 <h3>Tag List</h3>
                 <div style={{ border: "1px solid #ccc", padding: "8px" }}>
                   <Text childrenSpacing=", ">
-                    <span style={{ backgroundColor: "#e1f5fe", padding: "2px 6px", borderRadius: "3px" }}>React</span>
-                    <span style={{ backgroundColor: "#e8f5e8", padding: "2px 6px", borderRadius: "3px" }}>JavaScript</span>
-                    <span style={{ backgroundColor: "#fff3e0", padding: "2px 6px", borderRadius: "3px" }}>CSS</span>
+                    <span
+                      style={{
+                        backgroundColor: "#e1f5fe",
+                        padding: "2px 6px",
+                        borderRadius: "3px",
+                      }}
+                    >
+                      React
+                    </span>
+                    <span
+                      style={{
+                        backgroundColor: "#e8f5e8",
+                        padding: "2px 6px",
+                        borderRadius: "3px",
+                      }}
+                    >
+                      JavaScript
+                    </span>
+                    <span
+                      style={{
+                        backgroundColor: "#fff3e0",
+                        padding: "2px 6px",
+                        borderRadius: "3px",
+                      }}
+                    >
+                      CSS
+                    </span>
                   </Text>
                 </div>
                 <small style={{ color: "#666" }}>childrenSpacing=", "</small>

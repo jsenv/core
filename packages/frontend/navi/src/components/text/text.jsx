@@ -179,11 +179,7 @@ export const Icon = ({ charWidth = 2, children, ...rest }) => {
   );
 };
 
-export const Paragraph = ({
-  childrenSpacing = " ",
-  children,
-  ...rest
-}) => {
+export const Paragraph = ({ childrenSpacing = " ", children, ...rest }) => {
   if (rest.marginTop === undefined) {
     rest.marginTop = "md";
   }
