@@ -172,7 +172,6 @@ export const Icon = ({ charWidth = 2, children, ...rest }) => {
   const invisibleText = "0".repeat(charWidth);
 
   return (
-    // eslint-disable-next-line jsenv/no-unknown-params
     <Text {...rest} className="navi_icon" foregroundElement={children}>
       <span style="opacity: 0">{invisibleText}</span>
     </Text>

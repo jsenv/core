@@ -1,4 +1,3 @@
-/* eslint-disable jsenv/no-unknown-params */
 import { forwardRef } from "preact/compat";
 import {
   useContext,
