@@ -98,7 +98,12 @@ export { Title } from "./src/components/text/title.jsx";
 // Callout, dialogs, ...
 export { openCallout } from "./src/components/callout/callout.js";
 // Layout
-export { Box } from "./src/components/layout/box.jsx";
+export {
+  // Box is meant to be used everytime we don't want to create a specific layout for the content
+  Box,
+  // Layout is a more semantic version of Box when we want to express layout intention (row/column/inline)
+  Layout,
+} from "./src/components/layout/box.jsx";
 
 // Validation
 export { createUniqueValueConstraint } from "./src/validation/constraints/create_unique_value_constraint.js";

@@ -44,6 +44,7 @@
  * without requiring separate CSS classes or inline styles.
  */
 
+import { forwardRef } from "preact/compat";
 import { useContext } from "preact/hooks";
 
 import { withPropsClassName } from "../props_composition/with_props_class_name.js";
@@ -55,20 +56,22 @@ import { BoxFlowContext } from "./layout_context.jsx";
 
 import.meta.css = /* css */ ``;
 
-export const Box = ({
-  as = "div",
-  layoutRow,
-  layoutColumn,
-  layoutInline,
-  contentAlignX,
-  contentAlignY,
-  contentSpacing,
-  shrink,
-  expand,
-  className,
-  children,
-  ...rest
-}) => {
+export const Box = forwardRef((props, ref) => {
+  const {
+    as = "div",
+    layoutRow,
+    layoutColumn,
+    layoutInline,
+    contentAlignX,
+    contentAlignY,
+    contentSpacing,
+    shrink,
+    expand,
+    className,
+    children,
+    ...rest
+  } = props;
+
   const layoutFromContext = useContext(BoxFlowContext);
   const insideFlexContainer =
     layoutFromContext === "row" ||
@@ -116,7 +119,12 @@ export const Box = ({
   });
 
   return (
-    <TagName className={innerClassName} style={innerStyle} {...remainingProps}>
+    <TagName
+      ref={ref}
+      className={innerClassName}
+      style={innerStyle}
+      {...remainingProps}
+    >
       <BoxFlowContext.Provider
         value={
           layoutRow
@@ -132,4 +140,14 @@ export const Box = ({
       </BoxFlowContext.Provider>
     </TagName>
   );
+});
+
+export const Layout = ({ row, column, ...rest }) => {
+  if (row) {
+    return <Box layoutRow {...rest} />;
+  }
+  if (column) {
+    return <Box layoutColumn {...rest} />;
+  }
+  return <Box {...rest} />;
 };
