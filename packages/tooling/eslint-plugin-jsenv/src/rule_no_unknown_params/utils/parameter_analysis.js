@@ -151,6 +151,49 @@ export function analyzeParameterPropagation(functionDef, functionDefinitions) {
       }
     }
 
+    // Look for JSX elements with spread attributes
+    if (
+      node.type === "JSXElement" &&
+      node.openingElement &&
+      node.openingElement.name &&
+      node.openingElement.name.type === "JSXIdentifier"
+    ) {
+      const componentName = node.openingElement.name.name;
+      const calledComponent = functionDefinitions.get(componentName);
+
+      debug(
+        `Found JSX element ${componentName}, component exists: ${Boolean(calledComponent)}, isExternal: ${calledComponent?.isExternal || false}`,
+      );
+
+      // Check for spread attributes
+      for (const attr of node.openingElement.attributes) {
+        if (
+          attr.type === "JSXSpreadAttribute" &&
+          attr.argument &&
+          attr.argument.type === "Identifier"
+        ) {
+          // Resolve variable name back to original through renaming chain
+          const originalName = resolveToOriginalVariable(
+            attr.argument.name,
+            renamingMap,
+          );
+
+          debug(
+            `Found JSX spread propagation: ${componentName} <- [${originalName}]`,
+          );
+
+          propagations.push({
+            targetFunction: componentName,
+            targetFunctionDef: calledComponent,
+            argumentIndex: 0, // JSX props are typically the first parameter
+            spreadElements: [originalName],
+            directProperties: [],
+            isJSXSpread: true,
+          });
+        }
+      }
+    }
+
     // Traverse child nodes
     for (const key in node) {
       if (key === "parent") continue;

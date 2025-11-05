@@ -17,7 +17,7 @@
     "@babel/plugin-syntax-import-attributes": "7.27.1",
     "@jsenv/assert": "4.5.4",
     "@jsenv/core": "40.11.1",
-    "@jsenv/eslint-config-relax": "1.7.4",
+    "@jsenv/eslint-config-relax": "1.7.5",
     "@jsenv/plugin-bundling": "2.10.2",
     "@jsenv/plugin-minification": "1.7.2",
     "@jsenv/test": "3.7.13",
