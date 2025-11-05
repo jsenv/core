@@ -196,14 +196,9 @@ const Thing = ({ knownProp }) => {
 };
 
 export const App = () => {
-  return <Some   />;
+  return <Some knownProp="value"  />;
 };`,
       errors: [
-        {
-          messageId: "not_found_param",
-          data: { param: "knownProp", func: "Some" },
-          type: "JSXAttribute",
-        },
         {
           messageId: "not_found_param",
           data: { param: "extra", func: "Some" },

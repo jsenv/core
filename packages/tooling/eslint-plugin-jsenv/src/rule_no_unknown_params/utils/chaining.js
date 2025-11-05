@@ -97,6 +97,35 @@ export function checkParameterChaining(
     const functionParams = functionDef.params;
 
     for (const param of functionParams) {
+      // Handle simple parameter (e.g., props) that is spread to another function
+      if (param.type === "Identifier" && spreadElements.includes(param.name)) {
+        debug(
+          `Simple parameter '${param.name}' is being spread, using collectChainParameters`,
+        );
+
+        // Handle both wrapped format and direct node format for backward compatibility
+        const targetFunctionNode = targetFunctionDef?.node || targetFunctionDef;
+
+        if (targetFunctionNode) {
+          // Use collectChainParameters to get all parameters accepted by the target chain
+          const chainParams = collectChainParameters(
+            targetFunctionNode,
+            functionDefinitions,
+            new Set(visited),
+            maxChainDepth,
+          );
+
+          debug(
+            `collectChainParameters returned: [${Array.from(chainParams).join(", ")}]`,
+          );
+
+          if (chainParams.has(paramName)) {
+            debug(`Parameter '${paramName}' found in chain parameters`);
+            return { found: true, chain: currentChain };
+          }
+        }
+      }
+
       if (param.type === "ObjectPattern") {
         for (const prop of param.properties) {
           if (
@@ -281,20 +310,42 @@ export function collectChainParameters(
   );
 
   for (const propagation of propagations) {
-    const { targetFunctionDef } = propagation;
+    const { targetFunctionDef, spreadElements } = propagation;
     // Handle both wrapped format and direct node format for backward compatibility
     const targetFunctionNode = targetFunctionDef?.node || targetFunctionDef;
-
-    // Skip null/undefined function nodes to prevent TypeError
     if (targetFunctionNode) {
+      // Check if any simple parameters are being spread
+      let hasSimpleParamSpread = false;
+      if (functionDef.params) {
+        for (const param of functionDef.params) {
+          if (
+            param.type === "Identifier" &&
+            spreadElements.includes(param.name)
+          ) {
+            hasSimpleParamSpread = true;
+            break;
+          }
+        }
+      }
+
       const targetParams = collectChainParameters(
         targetFunctionNode,
         functionDefinitions,
         visited,
         maxChainDepth,
       );
-      for (const param of targetParams) {
-        allParams.add(param);
+
+      // If we have simple param spread, add all target params
+      // Otherwise, only add params that would be in rest elements (existing logic)
+      if (hasSimpleParamSpread) {
+        for (const param of targetParams) {
+          allParams.add(param);
+        }
+      } else {
+        // Existing logic for rest elements would go here
+        for (const param of targetParams) {
+          allParams.add(param);
+        }
       }
     }
   }

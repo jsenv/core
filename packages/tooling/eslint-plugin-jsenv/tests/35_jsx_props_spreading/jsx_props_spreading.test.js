@@ -113,27 +113,11 @@ export const Usage = () => {
 };`,
       errors: [
         {
-          messageId: "not_found_param_with_suggestions",
+          messageId: "not_found_param",
           data: {
             param: "c",
             func: "FormattedText",
-            suggestions: "a, b",
           },
-          suggestions: [
-            {
-              desc: "Remove 'c'",
-              output: `const FormattedText = (props) => {
-  return <Text {...props} />;
-};
-const Text = ({ a, b }) => {
-  return <span>{a} {b}</span>;
-};
-
-export const Usage = () => {
-  return <FormattedText a="hello" b="world"  />;
-};`,
-            },
-          ],
         },
       ],
     },
