@@ -127,6 +127,7 @@ export const withPropsStyle = (
     borderBottom,
     opacity,
     filter,
+    cursor,
 
     // props not related to styling
     ...remainingProps
@@ -428,6 +429,9 @@ export const withPropsStyle = (
     }
     if (filter !== undefined) {
       visualStyles.filter = filter;
+    }
+    if (cursor !== undefined) {
+      visualStyles.cursor = cursor;
     }
   }
 

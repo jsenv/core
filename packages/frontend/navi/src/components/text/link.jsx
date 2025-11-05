@@ -14,9 +14,8 @@ import { useConstraints } from "../../validation/hooks/use_constraints.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useRequestedActionStatus } from "../field/use_action_events.js";
 import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
+import { Box } from "../layout/box.jsx";
 import { LoaderBackground } from "../loader/loader_background.jsx";
-import { withPropsClassName } from "../props_composition/with_props_class_name.js";
-import { withPropsStyle } from "../props_composition/with_props_style.js";
 import {
   SelectionContext,
   useSelectableElement,
@@ -106,7 +105,8 @@ const LinkPlain = forwardRef((props, ref) => {
     rel,
 
     // visual
-    className,
+    box,
+    cursor,
     blankTargetIcon,
     anchorIcon,
     icon,
@@ -127,16 +127,6 @@ const LinkPlain = forwardRef((props, ref) => {
   useDocumentUrl();
   const { targetIsSameSite, targetIsAnchor, targetIsCurrent } =
     getLinkTargetInfo(href);
-
-  const innerClassName = withPropsClassName("navi_link", className);
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    base: {
-      cursor:
-        cursorDefaultWhenCurrent && targetIsCurrent ? "default" : undefined,
-    },
-    layout: true,
-    typo: true,
-  });
 
   const innerTarget =
     target === undefined ? (targetIsSameSite ? "_self" : "_blank") : target;
@@ -170,11 +160,19 @@ const LinkPlain = forwardRef((props, ref) => {
   }
 
   return (
-    <a
-      {...remainingProps}
+    <Box
+      as="a"
+      layout={box ? "inline" : undefined}
       ref={innerRef}
-      className={innerClassName}
-      style={innerStyle}
+      className="navi_link"
+      data-box={box ? "" : undefined}
+      cursor={
+        cursor === undefined
+          ? cursorDefaultWhenCurrent && targetIsCurrent
+            ? "default"
+            : undefined
+          : cursor
+      }
       href={href}
       rel={innerRel}
       target={innerTarget === "_self" ? undefined : target}
@@ -205,6 +203,7 @@ const LinkPlain = forwardRef((props, ref) => {
         }
         onKeyDown?.(e);
       }}
+      {...rest}
     >
       <LoaderBackground
         loading={loading}
@@ -212,7 +211,7 @@ const LinkPlain = forwardRef((props, ref) => {
       />
       {applyContentSpacingOnTextChildren(children, contentSpacing)}
       {innerIcon && <Icon>{innerIcon}</Icon>}
-    </a>
+    </Box>
   );
 });
 const BlankTargetLinkSvg = () => {

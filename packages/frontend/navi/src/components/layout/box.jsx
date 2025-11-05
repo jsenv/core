@@ -108,7 +108,6 @@ export const Box = ({
             display: "inline-flex",
           }
         : {}),
-
       flexShrink: shrink ? 1 : insideFlexContainer ? 0 : undefined,
       flexGrow: insideFlexContainer && expand ? 1 : undefined,
     },
