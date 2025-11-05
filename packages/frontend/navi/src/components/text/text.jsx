@@ -1,5 +1,5 @@
 import { createContext } from "preact";
-import { useContext, useState } from "preact/hooks";
+import { useContext, useRef, useState } from "preact/hooks";
 
 import { BoxFlowContext } from "../layout/layout_context.jsx";
 import { withPropsClassName } from "../props_composition/with_props_class_name.js";
@@ -56,17 +56,6 @@ import.meta.css = /* css */ `
     max-width: 100%;
     text-overflow: ellipsis;
     overflow: hidden;
-  }
-
-  .navi_icon {
-    margin-right: ${resolveSpacingSize("xxs", "margin")};
-    margin-left: ${resolveSpacingSize("xxs", "margin")};
-  }
-  .navi_icon:first-child {
-    margin-left: 0;
-  }
-  .navi_icon:last-child {
-    margin-right: 0;
   }
 `;
 
@@ -145,8 +134,10 @@ const TextBasic = ({
 
   const hasForeground = Boolean(foregroundElement || foregroundColor);
 
+  const ref = useRef();
   const text = (
     <TagName
+      ref={ref}
       className={innerClassName}
       style={innerStyle}
       data-box={box ? "" : undefined}
@@ -182,5 +173,37 @@ export const Icon = ({ charWidth = 2, children, ...rest }) => {
     <Text {...rest} className="navi_icon" foregroundElement={children}>
       <span style="opacity: 0">{invisibleText}</span>
     </Text>
+  );
+};
+
+// const getSpaceWidth = (element) => {
+//   const computedStyle = window.getComputedStyle(element);
+//   const span = document.createElement("span");
+//   const fontSize = computedStyle.fontSize;
+//   const fontFamily = computedStyle.fontFamily;
+//   span.style.fontSize = fontSize;
+//   span.style.fontFamily = fontFamily;
+//   span.style.visibility = "hidden";
+//   span.style.position = "absolute";
+//   span.textContent = "\u00A0";
+//   document.body.appendChild(span);
+//   const width = span.offsetWidth;
+//   document.body.removeChild(span);
+//   return width;
+// };
+
+export const Paragraph = ({ children, ...rest }) => {
+  if (rest.marginTop === undefined) {
+    rest.marginTop = "md";
+  }
+  const [remainingProps, innerStyle] = withPropsStyle(rest, {
+    layout: true,
+    typo: true,
+  });
+
+  return (
+    <p {...remainingProps} style={innerStyle}>
+      {children}
+    </p>
   );
 };
