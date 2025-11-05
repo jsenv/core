@@ -57,11 +57,10 @@ export const Usage = () => {
 };`,
       errors: [
         {
-          messageId: "not_found_param_with_suggestions",
+          messageId: "not_found_param",
           data: {
             param: "unused",
             func: "Component",
-            suggestions: "used",
           },
           suggestions: [
             {
@@ -72,16 +71,6 @@ export const Usage = () => {
 
 export const Usage = () => {
   return <Component used="value"  />;
-};`,
-            },
-            {
-              desc: "Rename 'unused' to 'used'",
-              output: `const Component = ({ used }) => {
-  return <div>{used}</div>;
-};
-
-export const Usage = () => {
-  return <Component used="value" used="bad" />;
 };`,
             },
           ],

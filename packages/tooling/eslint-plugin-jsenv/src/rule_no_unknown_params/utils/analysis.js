@@ -436,7 +436,8 @@ export function analyzeJSXElement(
             if (!errorMessage) {
               continue;
             }
-            const { messageId, data, autofixes } = errorMessage;
+            const { messageId, data, autofixes, forceRemovalSuggestion } =
+              errorMessage;
 
             const fixes = [];
             if (autofixes.remove) {
@@ -464,7 +465,10 @@ export function analyzeJSXElement(
                 desc: `Rename '${attrName}' to '${autofixes.rename}'`,
                 fix: fixes[1],
               });
-            } else if (chainResult.chain && chainResult.chain.length > 0) {
+            } else if (
+              (chainResult.chain && chainResult.chain.length > 0) ||
+              forceRemovalSuggestion
+            ) {
               if (autofixes.remove && fixes[0]) {
                 suggestionEntries.push({
                   desc: `Remove '${attrName}'`,
@@ -575,7 +579,8 @@ export function analyzeJSXElement(
             if (!errorMessage) {
               continue;
             }
-            const { messageId, data, autofixes } = errorMessage;
+            const { messageId, data, autofixes, forceRemovalSuggestion } =
+              errorMessage;
 
             const fixes = [];
             if (autofixes.remove) {
@@ -599,7 +604,10 @@ export function analyzeJSXElement(
                 desc: `Rename '${attrName}' to '${autofixes.rename}'`,
                 fix: fixes[1],
               });
-            } else if (chainResult.chain && chainResult.chain.length > 0) {
+            } else if (
+              (chainResult.chain && chainResult.chain.length > 0) ||
+              forceRemovalSuggestion
+            ) {
               if (autofixes.remove && fixes[0]) {
                 suggestionEntries.push({
                   desc: `Remove '${attrName}'`,
@@ -783,7 +791,7 @@ function reportIfUnknown({
     options,
   );
   if (!errorMessage) return;
-  const { messageId, data, autofixes } = errorMessage;
+  const { messageId, data, autofixes, forceRemovalSuggestion } = errorMessage;
   const fixes = [];
   if (autofixes.remove) fixes.push((fixer) => createRemove(fixer));
   if (autofixes.rename)
@@ -797,6 +805,8 @@ function reportIfUnknown({
       desc: `Rename '${name}' to '${autofixes.rename}'`,
       fix: fixes[1],
     });
+  } else if (forceRemovalSuggestion && autofixes.remove && fixes[0]) {
+    suggestionEntries.push({ desc: `Remove '${name}'`, fix: fixes[0] });
   }
   context.report({
     node: entryNode,

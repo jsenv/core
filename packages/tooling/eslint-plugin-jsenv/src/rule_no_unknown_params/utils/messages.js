@@ -108,6 +108,20 @@ export function generateErrorMessage(
     rename: isSuperfluous ? null : bestSuggestion, // Skip rename for superfluous, only suggest rename if we have a good similarity match
   };
 
+  // If the best suggestion would create a duplicate (already present), suppress rename
+  let forceRemovalSuggestion = false;
+  if (autofixes.rename && givenParams.includes(autofixes.rename)) {
+    autofixes.rename = null;
+    // We had a suggestion but it's unusable (duplicate). We still want a removal suggestion exposed.
+    forceRemovalSuggestion = true;
+    // Also remove it from suggestions array so messageId does not become *_with_suggestions
+    for (let i = suggestions.length - 1; i >= 0; i--) {
+      if (givenParams.includes(suggestions[i])) {
+        suggestions.splice(i, 1);
+      }
+    }
+  }
+
   if (chain.length === 0) {
     // Simple case - no chain
     if (suggestions.length > 0) {
@@ -126,6 +140,7 @@ export function generateErrorMessage(
         messageId,
         data,
         autofixes,
+        forceRemovalSuggestion,
       };
     }
 
@@ -143,6 +158,7 @@ export function generateErrorMessage(
       messageId,
       data,
       autofixes,
+      forceRemovalSuggestion,
     };
   }
 
@@ -179,6 +195,7 @@ export function generateErrorMessage(
       messageId,
       data,
       autofixes,
+      forceRemovalSuggestion,
     };
   }
 
@@ -200,6 +217,7 @@ export function generateErrorMessage(
       messageId,
       data,
       autofixes,
+      forceRemovalSuggestion,
     };
   }
 
@@ -214,5 +232,6 @@ export function generateErrorMessage(
     messageId,
     data,
     autofixes,
+    forceRemovalSuggestion,
   };
 }
