@@ -18,6 +18,7 @@ import { Box } from "../layout/box.jsx";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { withPropsClassName } from "../props_composition/with_props_class_name.js";
 import { withPropsStyle } from "../props_composition/with_props_style.js";
+import { applyContentSpacingOnTextChildren } from "../text/text.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { initCustomField } from "./custom_field.js";
 import { useActionEvents } from "./use_action_events.js";
@@ -82,13 +83,12 @@ import.meta.css = /* css */ `
       --background-color-disabled: var(--background-color);
 
       --color: currentColor;
+      --color-hover: var(--color);
       --color-readonly: color-mix(in srgb, currentColor 30%, transparent);
       --color-disabled: var(--color-readonly);
     }
     .navi_button_content {
       position: relative;
-      display: inline-flex;
-      width: 100%;
       padding-top: var(--padding-y);
       padding-right: var(--padding-x);
       padding-bottom: var(--padding-y);
@@ -121,6 +121,7 @@ import.meta.css = /* css */ `
     }
     /* Hover */
     .navi_button[data-hover] .navi_button_content {
+      --color: var(--color-hover);
       --border-color: var(--border-color-hover);
       --background-color: var(--background-color-hover);
     }
@@ -214,6 +215,7 @@ const ButtonBasic = forwardRef((props, ref) => {
     appearance = "navi",
     discrete,
     className,
+    contentSpacing = " ",
 
     children,
     ...rest
@@ -244,16 +246,19 @@ const ButtonBasic = forwardRef((props, ref) => {
       innerSpacing: true,
     },
   );
-
+  const innerChildren = applyContentSpacingOnTextChildren(
+    children,
+    contentSpacing,
+  );
   let buttonChildren;
   if (appearance === "navi") {
     buttonChildren = (
       <NaviButton buttonRef={innerRef} style={naviButtonStyle}>
-        {children}
+        {innerChildren}
       </NaviButton>
     );
   } else {
-    buttonChildren = children;
+    buttonChildren = innerChildren;
   }
 
   return (

@@ -61,6 +61,7 @@ export const withPropsStyle = (
     size = layout,
     typo,
     visual = true,
+    interaction,
   },
   ...remainingConfig
 ) => {
@@ -131,6 +132,20 @@ export const withPropsStyle = (
     filter,
     cursor,
 
+    // interaction props
+    backgroundColorWhileHover,
+    backgroundColorWhileActive,
+    backgroundColorWhileReadonly,
+    backgroundColorWhileDisabled,
+    borderColorWhileHover,
+    borderColorWhileActive,
+    borderColorWhileReadOnly,
+    borderColorWhileDisabled,
+    textColorWhileHover,
+    textColorWhileActive,
+    textColorWhileReadOnly,
+    textColorWhileDisabled,
+
     // props not related to styling
     ...remainingProps
   } = props;
@@ -143,6 +158,7 @@ export const withPropsStyle = (
   let sizeStyles;
   let typoStyles;
   let visualStyles;
+  let interactionStyles;
 
   props_styles: {
     if (!style && !hasRemainingConfig) {
@@ -434,6 +450,15 @@ export const withPropsStyle = (
     }
     if (cursor !== undefined) {
       visualStyles.cursor = cursor;
+    }
+  }
+  interaction_styles: {
+    if (!interaction && !hasRemainingConfig) {
+      break interaction_styles;
+    }
+    interactionStyles = {};
+    if (backgroundColorWhileHover) {
+      interactionStyles["--background-color-hover"] = backgroundColorWhileHover;
     }
   }
 
