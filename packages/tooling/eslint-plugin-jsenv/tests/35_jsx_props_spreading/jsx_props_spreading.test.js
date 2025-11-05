@@ -38,6 +38,44 @@ export const Usage = () => {
     },
   ],
   invalid: [
-    // Pas de cas invalid pour l'instant - le fix est complet
+    {
+      name: "FAILING: non-destructured parameter case",
+      options: [{ reportAllUnknownParams: true }],
+      code: `
+export const Component = (props) => {
+  return <OtherComponent {...props} />;
+};
+
+const OtherComponent = ({ param }) => {
+  return param;
+};
+
+export const Usage = () => {
+  return <Component param="test" />;
+};
+      `,
+      output: `
+export const Component = (props) => {
+  return <OtherComponent {...props} />;
+};
+
+const OtherComponent = ({ param }) => {
+  return param;
+};
+
+export const Usage = () => {
+  return <Component  />;
+};
+      `,
+      errors: [
+        {
+          messageId: "not_found_param",
+          data: {
+            param: "param",
+            func: "Component",
+          },
+        },
+      ],
+    },
   ],
 });

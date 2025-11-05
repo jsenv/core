@@ -248,8 +248,19 @@ export function collectChainParameters(
     return new Set();
   }
 
-  const functionKey =
-    functionDef.id?.name || functionDef.parent?.id?.name || "anonymous";
+  // Safe key generation for different function types
+  let functionKey = "anonymous";
+  if (functionDef.id?.name) {
+    // Function declaration: function name() {}
+    functionKey = functionDef.id.name;
+  } else if (functionDef.parent?.id?.name) {
+    // Variable declarator: const name = () => {}
+    functionKey = functionDef.parent.id.name;
+  } else if (functionDef.key?.name) {
+    // Object method: { name() {} }
+    functionKey = functionDef.key.name;
+  }
+
   if (visited.has(functionKey)) {
     return new Set();
   }
