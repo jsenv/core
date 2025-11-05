@@ -161,11 +161,10 @@ const LinkPlain = forwardRef((props, ref) => {
 
   return (
     <Box
-      as="a"
-      layout={box ? "inline" : undefined}
       ref={innerRef}
       className="navi_link"
-      data-box={box ? "" : undefined}
+      as="a"
+      layoutInline={box ? true : undefined}
       cursor={
         cursor === undefined
           ? cursorDefaultWhenCurrent && targetIsCurrent
