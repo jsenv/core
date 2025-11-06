@@ -9,7 +9,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       /* eslint-disable no-unused-vars */
-      import { Text, Icon } from "@jsenv/navi";
+      import { Text, Icon, Link } from "@jsenv/navi";
 
       const StarSvg = () => (
         <svg
@@ -24,6 +24,26 @@
           />
         </svg>
       );
+
+      const BlankTargetLinkSvg = () => {
+        return (
+          <svg
+            viewBox="0 0 24 24"
+            width="100%"
+            height="100%"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M10.0002 5H8.2002C7.08009 5 6.51962 5 6.0918 5.21799C5.71547 5.40973 5.40973 5.71547 5.21799 6.0918C5 6.51962 5 7.08009 5 8.2002V15.8002C5 16.9203 5 17.4801 5.21799 17.9079C5.40973 18.2842 5.71547 18.5905 6.0918 18.7822C6.5192 19 7.07899 19 8.19691 19H15.8031C16.921 19 17.48 19 17.9074 18.7822C18.2837 18.5905 18.5905 18.2839 18.7822 17.9076C19 17.4802 19 16.921 19 15.8031V14M20 9V4M20 4H15M20 4L13 11"
+              stroke="currentColor"
+              fill="none"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        );
+      };
 
       const Demo = () => {
         return (
@@ -296,6 +316,12 @@
             <section style={{ marginBottom: "30px" }}>
               <h2>⚠️ Underline + Auto-Spacing Gotcha</h2>
               <p>
+                <strong>Important:</strong> This issue is unrelated to spacing -
+                whether you use auto spacing or manual spacing, text underline
+                will cause trouble. This section is just here to help with
+                underline best practices.
+              </p>
+              <p>
                 When using <code>textUnderline</code> on a Text container with
                 auto-spacing, the inserted space gets underlined too. Move the
                 underline to the specific text element instead.
@@ -344,6 +370,57 @@
                   </small>
                 </div>
               </div>
+
+              <h3>Special Case: Links with Icons</h3>
+              <p>
+                For Links containing icons, you need to disable underline on the
+                Link and add it back on the text:
+              </p>
+              <div
+                style={{ display: "flex", gap: "20px", marginBottom: "20px" }}
+              >
+                <div style={{ flex: 1 }}>
+                  <h4>❌ Underline on Link with icon</h4>
+                  <div
+                    style={{
+                      border: "1px solid #ccc",
+                      padding: "8px",
+                      backgroundColor: "#fee",
+                    }}
+                  >
+                    <Link href="mailto:dmail@gmail.com">
+                      <Text>dmail@gmail.com</Text>
+                      <Icon>
+                        <BlankTargetLinkSvg />
+                      </Icon>
+                    </Link>
+                  </div>
+                  <small style={{ color: "#666" }}>
+                    Icon gets underlined too
+                  </small>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <h4>✅ Disable Link underline, add it to text</h4>
+                  <div
+                    style={{
+                      border: "1px solid #ccc",
+                      padding: "8px",
+                      backgroundColor: "#efe",
+                    }}
+                  >
+                    <Link href="mailto:dmail@gmail.com" textUnderline={false}>
+                      <Text textUnderline>dmail@gmail.com</Text>
+                      <Icon>
+                        <BlankTargetLinkSvg />
+                      </Icon>
+                    </Link>
+                  </div>
+                  <small style={{ color: "#666" }}>
+                    Clean underline, icon stays normal
+                  </small>
+                </div>
+              </div>
+
               <pre
                 style={{
                   background: "#f7f7f7",
@@ -353,7 +430,7 @@
                   overflowX: "auto",
                 }}
               >
-                {`// Mauvais\n<Text noWrap textUnderline>\n  <Icon><StarSvg /></Icon>\n  star\n</Text>\n\n// Bon\n<Text noWrap>\n  <Icon><StarSvg /></Icon>\n  <Text textUnderline>star</Text>\n</Text>`}
+                {`// Bad - Icon + Text underline\n<Text noWrap textUnderline>\n  <Icon><StarSvg /></Icon>\n  star\n</Text>\n\n// Good - Only text underlined\n<Text noWrap>\n  <Icon><StarSvg /></Icon>\n  <Text textUnderline>star</Text>\n</Text>\n\n// Bad - Link with icon, underline on everything\n<Link href="mailto:dmail@gmail.com">\n  <Text>dmail@gmail.com</Text>\n  <Icon><BlankTargetLinkSvg /></Icon>\n</Link>\n\n// Good - Disable Link underline, add to text only\n<Link href="mailto:dmail@gmail.com" textUnderline={false}>\n  <Text textUnderline>dmail@gmail.com</Text>\n  <Icon><BlankTargetLinkSvg /></Icon>\n</Link>`}
               </pre>
             </section>
           </div>
