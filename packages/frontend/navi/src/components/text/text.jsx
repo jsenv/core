@@ -14,6 +14,10 @@ import.meta.css = /* css */ `
     position: relative;
   }
 
+  .navi_char_slot_invisible {
+    opacity: 0;
+  }
+
   .navi_text[data-has-foreground] {
     display: inline-block;
   }
@@ -133,22 +137,33 @@ const TextBasic = ({
   return text;
 };
 
-export const Icon = ({
+export const CharSlot = ({
   charWidth = 1,
   // 0 (zéro) is the real char width
   // but 2 zéros gives too big icons
   // while 1 "W" gives a nice result
   baseChar = "W",
+  "aria-label": ariaLabel,
+  role,
+  decorative = false,
   children,
   ...rest
 }) => {
   const invisibleText = baseChar.repeat(charWidth);
+  const ariaProps = decorative
+    ? { "aria-hidden": "true" }
+    : { role, "aria-label": ariaLabel };
 
   return (
-    <Text {...rest} className="navi_icon" foregroundElement={children}>
-      <span style="opacity: 0">{invisibleText}</span>
+    <Text {...rest} {...ariaProps} foregroundElement={children}>
+      <span className="navi_char_slot_invisible" aria-hidden="true">
+        {invisibleText}
+      </span>
     </Text>
   );
+};
+export const Icon = (props) => {
+  return <CharSlot decorative {...props} />;
 };
 
 export const Paragraph = ({ contentSpacing = " ", children, ...rest }) => {

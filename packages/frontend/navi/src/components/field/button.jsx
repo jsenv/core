@@ -1,10 +1,4 @@
-import { forwardRef } from "preact/compat";
-import {
-  useContext,
-  useImperativeHandle,
-  useLayoutEffect,
-  useRef,
-} from "preact/hooks";
+import { useContext, useRef } from "preact/hooks";
 
 import { getActionPrivateProperties } from "../../action_private_properties.js";
 import { useActionStatus } from "../../use_action_status.js";
@@ -17,13 +11,8 @@ import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { Box } from "../layout/box.jsx";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { withPropsClassName } from "../props_composition/with_props_class_name.js";
-import {
-  applyStyles,
-  withPropsStyle,
-} from "../props_composition/with_props_style.js";
 import { applyContentSpacingOnTextChildren } from "../text/text.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
-import { initCustomField } from "./custom_field.js";
 import { useActionEvents } from "./use_action_events.js";
 import { useFormEvents } from "./use_form_events.js";
 import {
@@ -221,16 +210,34 @@ import.meta.css = /* css */ `
     }
   }
 `;
-export const Button = forwardRef((props, ref) => {
-  return renderActionableComponent(props, ref, {
+export const Button = (props) => {
+  return renderActionableComponent(props, {
     Basic: ButtonBasic,
     WithAction: ButtonWithAction,
     InsideForm: ButtonInsideForm,
     WithActionInsideForm: ButtonWithActionInsideForm,
   });
-});
+};
 
-const ButtonBasic = forwardRef((props, ref) => {
+const ButtonPseudoClasses = [
+  ":hover",
+  ":active",
+  ":focus",
+  ":focus-visible",
+  ":read-only",
+  ":disabled",
+  ":-navi-loading",
+];
+const ButtonPseudoElements = ["::-navi-loader"];
+const ButtonManagedByCSSVars = {
+  outlineWidth: "--outline-width",
+  borderWidth: "--border-width",
+  borderRadius: "--border-radius",
+  backgroundColor: "--background-color",
+  borderColor: "--border-color",
+  textColor: "--color",
+};
+const ButtonBasic = (props) => {
   const contextLoading = useContext(LoadingContext);
   const contextLoadingElement = useContext(LoadingElementContext);
   const contextReadOnly = useContext(ReadOnlyContext);
@@ -247,114 +254,53 @@ const ButtonBasic = forwardRef((props, ref) => {
     className,
     contentSpacing = " ",
 
-    // for demo purposes
-    focusVisible,
-
     children,
     ...rest
   } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
+  const ref = useRef();
 
-  useAutoFocus(innerRef, autoFocus);
-  useConstraints(innerRef, constraints);
+  useAutoFocus(ref, autoFocus);
+  useConstraints(ref, constraints);
   const innerLoading =
-    loading || (contextLoading && contextLoadingElement === innerRef.current);
+    loading || (contextLoading && contextLoadingElement === ref.current);
   const innerReadOnly = readOnly || contextReadOnly || innerLoading;
   const innerDisabled = disabled || contextDisabled;
-
   const innerClassName = withPropsClassName("navi_button", className);
-  const [remainingProps, buttonStyle, contentStyle, pseudoStyles] =
-    withPropsStyle(
-      rest,
-      {
-        layout: true,
-        visual: false,
-        innerSpacing: false,
-        typo: true,
-        managedByCSSVars: {
-          outlineWidth: "--outline-width",
-          borderWidth: "--border-width",
-          borderRadius: "--border-radius",
-          backgroundColor: "--background-color",
-          borderColor: "--border-color",
-          textColor: "--color",
-        },
-        pseudoClasses: [
-          ":hover",
-          ":active",
-          ":focus",
-          ":focus-visible",
-          ":read-only",
-          ":disabled",
-          ":-navi-loading",
-        ],
-        pseudoElements: ["::-navi-loader"],
-      },
-      {
-        visual: true,
-        interaction: true,
-        innerSpacing: true,
-      },
-    );
-
   const contentRef = useRef();
-  useLayoutEffect(() => {
-    const button = innerRef.current;
-    const buttonContent = contentRef.current;
-    return initCustomField(button, buttonContent, {
-      readOnly: innerReadOnly,
-      disabled: innerDisabled,
-      loading: innerLoading,
-      focusVisible,
-      effect: (pseudoStates) => {
-        applyStyles(button, buttonStyle);
-        applyStyles(buttonContent, contentStyle, pseudoStyles, pseudoStates);
-      },
-    });
-  }, [
-    focusVisible,
-    innerReadOnly,
-    innerDisabled,
-    innerLoading,
-    buttonStyle,
-    contentStyle,
-    pseudoStyles,
-  ]);
-  const innerChildren = applyContentSpacingOnTextChildren(
-    children,
-    contentSpacing,
-  );
-  const buttonContent = (
-    <span ref={contentRef} className="navi_button_content">
-      {innerChildren}
-      <span className="navi_button_shadow"></span>
-    </span>
-  );
 
   return (
     <Box
-      {...remainingProps}
+      {...rest}
       as="button"
-      ref={innerRef}
+      ref={ref}
       className={innerClassName}
-      disabled={innerDisabled}
       data-discrete={discrete ? "" : undefined}
       data-readonly-silent={innerLoading ? "" : undefined}
       data-callout-arrow-x="center"
       aria-busy={innerLoading}
+      // style management
+      contentRef={contentRef}
+      pseudoClasses={ButtonPseudoClasses}
+      pseudoElements={ButtonPseudoElements}
+      managedByCSSVars={ButtonManagedByCSSVars}
+      disabled={innerDisabled}
+      readOnly={innerReadOnly}
+      loading={innerLoading}
     >
       <LoaderBackground
         loading={innerLoading}
         inset={-1}
         color="light-dark(#355fcc, #3b82f6)"
       />
-      {buttonContent}
+      <span ref={contentRef} className="navi_button_content">
+        {applyContentSpacingOnTextChildren(children, contentSpacing)}
+        <span className="navi_button_shadow"></span>
+      </span>
     </Box>
   );
-});
+};
 
-const ButtonWithAction = forwardRef((props, ref) => {
+const ButtonWithAction = (props) => {
   const {
     action,
     loading,
@@ -366,17 +312,16 @@ const ButtonWithAction = forwardRef((props, ref) => {
     children,
     ...rest
   } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
+  const ref = useRef();
   const boundAction = useAction(action);
   const { loading: actionLoading } = useActionStatus(boundAction);
-  const executeAction = useExecuteAction(innerRef, {
+  const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect,
   });
 
   const innerLoading = loading || actionLoading;
 
-  useActionEvents(innerRef, {
+  useActionEvents(ref, {
     onPrevented: onActionPrevented,
     onRequested: (e) => forwardActionRequested(e, boundAction),
     onAction: executeAction,
@@ -390,15 +335,14 @@ const ButtonWithAction = forwardRef((props, ref) => {
       // put data-action first to help find it in devtools
       data-action={boundAction.name}
       {...rest}
-      ref={innerRef}
+      ref={ref}
       loading={innerLoading}
     >
       {children}
     </ButtonBasic>
   );
-});
-
-const ButtonInsideForm = forwardRef((props, ref) => {
+};
+const ButtonInsideForm = (props) => {
   const {
     // eslint-disable-next-line no-unused-vars
     formContext,
@@ -408,16 +352,12 @@ const ButtonInsideForm = forwardRef((props, ref) => {
     readOnly,
     ...rest
   } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-
   const innerLoading = loading;
   const innerReadOnly = readOnly;
 
   return (
     <ButtonBasic
       {...rest}
-      ref={innerRef}
       type={type}
       loading={innerLoading}
       readOnly={innerReadOnly}
@@ -425,9 +365,8 @@ const ButtonInsideForm = forwardRef((props, ref) => {
       {children}
     </ButtonBasic>
   );
-});
-
-const ButtonWithActionInsideForm = forwardRef((props, ref) => {
+};
+const ButtonWithActionInsideForm = (props) => {
   const formAction = useContext(FormActionContext);
   const {
     // eslint-disable-next-line no-unused-vars
@@ -451,13 +390,12 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
     );
   }
   const formParamsSignal = getActionPrivateProperties(formAction).paramsSignal;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
+  const ref = useRef();
   const actionBoundToFormParams = useAction(action, formParamsSignal);
   const { loading: actionLoading } = useActionStatus(actionBoundToFormParams);
 
   const innerLoading = loading || actionLoading;
-  useFormEvents(innerRef, {
+  useFormEvents(ref, {
     onFormActionPrevented: (e) => {
       if (e.detail.action === actionBoundToFormParams) {
         onActionPrevented?.(e);
@@ -489,7 +427,7 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
     <ButtonBasic
       data-action={actionBoundToFormParams.name}
       {...rest}
-      ref={innerRef}
+      ref={ref}
       type={type}
       loading={innerLoading}
       onactionrequested={(e) => {
@@ -499,4 +437,4 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
       {children}
     </ButtonBasic>
   );
-});
+};

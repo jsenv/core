@@ -52,6 +52,7 @@ import {
   withPropsStyle,
 } from "../props_composition/with_props_style.js";
 import { BoxLayoutContext } from "./layout_context.jsx";
+import { initPseudoStyles } from "./pseudo_styles.js";
 
 export const Box = (props) => {
   const {
@@ -64,6 +65,10 @@ export const Box = (props) => {
     contentSpacing,
     shrink,
     expand,
+
+    // style management
+    contentRef,
+
     children,
     ...rest
   } = props;
@@ -74,8 +79,11 @@ export const Box = (props) => {
     layoutFromContext === "column" ||
     layoutFromContext === "inline";
 
+  const ref = useRef();
   const TagName = as;
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
+  const remainingProps = useBoxStyle(rest, {
+    boxRef: ref,
+    contentRef,
     base: {
       ...(layoutRow
         ? {
@@ -109,20 +117,10 @@ export const Box = (props) => {
       flexShrink: shrink ? 1 : insideFlexContainer ? 0 : undefined,
       flexGrow: insideFlexContainer && expand ? 1 : undefined,
     },
-    layout: true,
-    typo: true,
   });
-  const ref = useRef();
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) {
-      return;
-    }
-    applyStyles(el, innerStyle);
-  }, [innerStyle]);
 
   return (
-    <TagName ref={ref} style={innerStyle} {...remainingProps}>
+    <TagName ref={ref} {...remainingProps}>
       <BoxLayoutContext.Provider
         value={
           layoutRow
@@ -138,6 +136,93 @@ export const Box = (props) => {
       </BoxLayoutContext.Provider>
     </TagName>
   );
+};
+
+const useBoxStyle = (props, { boxRef, contentRef, base }) => {
+  const {
+    pseudoClasses,
+    pseudoElements,
+    managedByCSSVars,
+    disabled,
+    readOnly,
+    loading,
+    focusVisible,
+    ...rest
+  } = props;
+
+  if (!contentRef) {
+    const [remainingProps, innerStyle, pseudoStyles] = withPropsStyle(rest, {
+      pseudoClasses,
+      pseudoElements,
+      managedByCSSVars,
+      base,
+      layout: true,
+      typo: true,
+    });
+    useLayoutEffect(() => {
+      const el = boxRef.current;
+      if (!el) {
+        return;
+      }
+      initPseudoStyles(
+        el,
+        {
+          disabled,
+          readOnly,
+          loading,
+          focusVisible,
+        },
+        {
+          effect: (state) => {
+            applyStyles(el, innerStyle, pseudoStyles, state);
+          },
+        },
+      );
+    }, [innerStyle, pseudoStyles, disabled, readOnly, loading, focusVisible]);
+    return remainingProps;
+  }
+
+  const [remainingProps, innerStyle, contentStyle, pseudoStyles] =
+    withPropsStyle(
+      rest,
+      {
+        managedByCSSVars,
+        pseudoClasses,
+        pseudoElements,
+        base,
+        layout: true,
+        typo: true,
+        innerSpacing: false,
+        visual: false,
+      },
+      {
+        innerSpacing: true,
+        visual: true,
+      },
+    );
+  useLayoutEffect(() => {
+    const el = boxRef.current;
+    const contentEl = contentRef.current;
+    if (!el || !contentEl) {
+      return;
+    }
+    initPseudoStyles(
+      el,
+      {
+        disabled,
+        readOnly,
+        loading,
+        focusVisible,
+      },
+      {
+        effect: (state) => {
+          applyStyles(el, innerStyle);
+          applyStyles(contentEl, contentStyle, pseudoStyles, state);
+        },
+      },
+    );
+  }, [innerStyle, pseudoStyles, disabled, readOnly, loading, focusVisible]);
+  return remainingProps;
 };
 
 export const Layout = ({ row, column, ...rest }) => {

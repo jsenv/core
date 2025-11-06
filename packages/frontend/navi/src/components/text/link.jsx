@@ -88,6 +88,16 @@ const LinkBasic = forwardRef((props, ref) => {
   }
   return <LinkPlain ref={ref} {...props} />;
 });
+const LinkPseudoClasses = [
+  ":hover",
+  ":active",
+  ":focus",
+  ":focus-visible",
+  ":read-only",
+  ":disabled",
+  ":-navi-loading",
+];
+const LinkPseudoElements = [":-navi-loader"];
 const LinkPlain = forwardRef((props, ref) => {
   const {
     loading,
@@ -165,13 +175,6 @@ const LinkPlain = forwardRef((props, ref) => {
       className="navi_link"
       as="a"
       layoutInline={box ? true : undefined}
-      cursor={
-        cursor === undefined
-          ? cursorDefaultWhenCurrent && targetIsCurrent
-            ? "default"
-            : undefined
-          : cursor
-      }
       href={href}
       rel={innerRel}
       target={innerTarget === "_self" ? undefined : target}
@@ -202,6 +205,8 @@ const LinkPlain = forwardRef((props, ref) => {
         }
         onKeyDown?.(e);
       }}
+      pseudoClasses={LinkPseudoClasses}
+      pseudoElements={LinkPseudoElements}
       {...rest}
     >
       <LoaderBackground

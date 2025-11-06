@@ -93,7 +93,12 @@ export { Image } from "./src/components/text/image.jsx";
 export { Link } from "./src/components/text/link.jsx";
 export { LinkWithIcon } from "./src/components/text/link_with_icon.jsx";
 export { Svg } from "./src/components/text/svg.jsx";
-export { Icon, Paragraph, Text } from "./src/components/text/text.jsx";
+export {
+  CharSlot,
+  Icon,
+  Paragraph,
+  Text,
+} from "./src/components/text/text.jsx";
 export { Title } from "./src/components/text/title.jsx";
 // Callout, dialogs, ...
 export { openCallout } from "./src/components/callout/callout.js";
