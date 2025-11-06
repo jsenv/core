@@ -101,7 +101,7 @@ const LinkPseudoClasses = [
 ];
 const LinkPseudoElements = [":-navi-loader"];
 const LinkManagedByCSSVars = {
-  textColor: "--color",
+  color: "--color",
 };
 const LinkPlain = (props) => {
   const {

@@ -235,7 +235,7 @@ const ButtonManagedByCSSVars = {
   borderRadius: "--border-radius",
   backgroundColor: "--background-color",
   borderColor: "--border-color",
-  textColor: "--color",
+  color: "--color",
 };
 const ButtonBasic = (props) => {
   const contextLoading = useContext(LoadingContext);
