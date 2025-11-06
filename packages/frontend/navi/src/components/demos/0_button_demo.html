@@ -143,17 +143,24 @@
                 </Layout>
               </fieldset>
               <fieldset>
-                <legend>Read-only</legend>
+                <legend>:readonly</legend>
                 <Layout row contentSpacing="sm" contentAlignX="start">
                   <Button readOnly>Text</Button>
                   <button data-readonly>Text</button>
                 </Layout>
               </fieldset>
               <fieldset>
-                <legend>Disabled</legend>
+                <legend>:disabled</legend>
                 <Layout row contentSpacing="sm" contentAlignX="start">
                   <Button disabled>Text</Button>
                   <button disabled>Text</button>
+                </Layout>
+              </fieldset>
+              <fieldset>
+                <legend>:focus-visible</legend>
+                <Layout row contentSpacing="sm" contentAlignX="start">
+                  <Button data-focus-visible>Text</Button>
+                  <button autofocus>Text</button>
                 </Layout>
               </fieldset>
             </Layout>
@@ -181,7 +188,6 @@
               <legend>Loading Examples</legend>
               <Layout row contentSpacing="sm" contentAlignX="start">
                 <Button loading>Loading button</Button>
-                <button>Loading button</button>
               </Layout>
             </fieldset>
 

@@ -275,7 +275,11 @@ const ButtonBasic = forwardRef((props, ref) => {
   let buttonChildren;
   if (appearance === "navi") {
     buttonChildren = (
-      <NaviButton buttonRef={innerRef} style={naviButtonStyle}>
+      <NaviButton
+        buttonRef={innerRef}
+        style={naviButtonStyle}
+        data-focus-visible={remainingProps["data-focus-visible"]}
+      >
         {innerChildren}
       </NaviButton>
     );
@@ -309,9 +313,12 @@ const ButtonBasic = forwardRef((props, ref) => {
 });
 const NaviButton = ({ buttonRef, children, ...rest }) => {
   const ref = useRef();
+  const observeFocusVisible = !rest["data-focus-visible"];
   useLayoutEffect(() => {
-    return initCustomField(buttonRef.current, buttonRef.current);
-  }, []);
+    return initCustomField(buttonRef.current, buttonRef.current, {
+      observeFocus: observeFocusVisible,
+    });
+  }, [observeFocusVisible]);
 
   return (
     <span ref={ref} className="navi_button_content" {...rest}>

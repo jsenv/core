@@ -1,6 +1,10 @@
 import { createPubSub } from "@jsenv/dom";
 
-export const initCustomField = (customField, field) => {
+export const initCustomField = (
+  customField,
+  field,
+  { observeFocus = true } = {},
+) => {
   const [teardown, addTeardown] = createPubSub();
 
   const addEventListener = (element, eventType, listener) => {
@@ -20,15 +24,18 @@ export const initCustomField = (customField, field) => {
     const hover = field.matches(":hover");
     const active = field.matches(":active");
     const checked = field.matches(":checked");
-    const focus = field.matches(":focus");
-    const focusVisible = field.matches(":focus-visible");
+
     const valid = field.matches(":valid");
     const invalid = field.matches(":invalid");
     updateBooleanAttribute(`data-hover`, hover);
     updateBooleanAttribute(`data-active`, active);
     updateBooleanAttribute(`data-checked`, checked);
-    updateBooleanAttribute(`data-focus`, focus);
-    updateBooleanAttribute(`data-focus-visible`, focusVisible);
+    if (observeFocus) {
+      const focus = field.matches(":focus");
+      const focusVisible = field.matches(":focus-visible");
+      updateBooleanAttribute(`data-focus`, focus);
+      updateBooleanAttribute(`data-focus-visible`, focusVisible);
+    }
     updateBooleanAttribute(`data-valid`, valid);
     updateBooleanAttribute(`data-invalid`, invalid);
   };
