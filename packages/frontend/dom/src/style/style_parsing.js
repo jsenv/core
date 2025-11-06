@@ -16,7 +16,6 @@ const pxPropertySet = new Set([
   "paddingRight",
   "paddingBottom",
   "paddingLeft",
-  "border",
   "borderWidth",
   "borderTopWidth",
   "borderRightWidth",

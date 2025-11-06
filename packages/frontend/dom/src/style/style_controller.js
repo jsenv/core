@@ -356,8 +356,12 @@ export const createStyleController = (name = "anonymous") => {
   return controller;
 };
 
+const getStyleForKeyframe = (styles) => {
+  const cssStyles = normalizeStyles(styles, "css");
+  return cssStyles;
+};
 const createAnimationForStyles = (element, styles, id) => {
-  const cssStylesToSet = normalizeStyles(styles, "css");
+  const cssStylesToSet = getStyleForKeyframe(styles);
   const animation = element.animate([cssStylesToSet], {
     duration: 0,
     fill: "forwards",
@@ -369,7 +373,7 @@ const createAnimationForStyles = (element, styles, id) => {
 };
 
 const updateAnimationStyles = (animation, styles) => {
-  const cssStyles = normalizeStyles(styles, "css");
+  const cssStyles = getStyleForKeyframe(styles);
   animation.effect.setKeyframes([cssStyles]);
   animation.play();
   animation.pause();
