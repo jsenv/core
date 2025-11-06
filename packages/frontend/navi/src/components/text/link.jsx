@@ -53,7 +53,8 @@ import.meta.css = /* css */ `
   }
   /* Active */
   .navi_link[data-active] {
-    font-weight: bold;
+    /* Redefine it otherwise [data-visited] prevails */
+    color: red;
   }
   /* Readonly */
   .navi_link[data-readonly] > * {
