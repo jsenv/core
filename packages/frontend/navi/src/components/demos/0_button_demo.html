@@ -114,7 +114,7 @@
       import { render } from "preact";
       import { useState } from "preact/hooks";
       /* eslint-disable no-unused-vars */
-      import { Button, Layout } from "@jsenv/navi";
+      import { Button, Layout, Icon } from "@jsenv/navi";
 
       const App = () => {
         return (
@@ -245,12 +245,38 @@
 
               <div className="variation-item">
                 <p className="variation-label">Danger (Red background)</p>
-                <Button backgroundColor="#dc3545">Danger</Button>
+                <Button backgroundColor="#dc3545" textColor="white">
+                  Danger
+                </Button>
               </div>
 
               <div className="variation-item">
-                <p className="variation-label">Custom text color</p>
-                <Button textColor="#6f42c1">Purple text</Button>
+                <p className="variation-label">Icon + hover + colors</p>
+                <Button
+                  backgroundColor="white"
+                  textColor="#dc3545"
+                  pseudo={{
+                    ":hover": {
+                      backgroundColor: "#dc3545",
+                      textColor: "white",
+                    },
+                  }}
+                >
+                  <Icon>
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="100%"
+                      height="100%"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M22 6.7a7 7 0 0 0-9.9 0L12 6.8l-.1-.1a7 7 0 0 0-9.9 9.9l.1.1L12 24l9.9-7.3.1-.1a7 7 0 0 0 0-9.9z"
+                        fill="currentColor"
+                      />
+                    </svg>
+                  </Icon>
+                  Add to Favorites
+                </Button>
               </div>
 
               <div className="variation-item">
