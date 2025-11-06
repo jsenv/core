@@ -57,48 +57,63 @@ import.meta.css = /* css */ `
       outline: none;
       cursor: pointer;
 
-      --border-width: 1px;
       --outline-width: 1px;
+      --border-width: 1px;
+      --border-radius: 2px;
       --padding-x: 6px;
       --padding-y: 1px;
-
       --outline-color: light-dark(#4476ff, #3b82f6);
-
-      --border-radius: 2px;
-      --border-color: light-dark(#767676, #8e8e93);
-      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
-      --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
-      --border-color-readonly: color-mix(
-        in srgb,
-        var(--border-color) 30%,
-        white
-      );
-      --border-color-disabled: var(--border-color-readonly);
-
       --background-color: light-dark(#f3f4f6, #2d3748);
-      --background-color-hover: color-mix(
-        in srgb,
-        var(--background-color) 95%,
-        black
-      );
-      --background-color-readonly: var(--background-color);
-      --background-color-disabled: var(--background-color);
-
+      --border-color: light-dark(#767676, #8e8e93);
       --color: currentColor;
-      --color-hover: var(--color);
-      --color-readonly: color-mix(in srgb, var(--color) 30%, transparent);
-      --color-disabled: var(--color-readonly);
     }
     .navi_button_content {
       /* Internal css vars are the one controlling final values */
       /* allowing to override them on interactions (like hover, disabled, etc.) */
       --x-outline-width: var(--outline-width);
-      --x-outline-color: var(--outline-color);
-      --x-background-color: var(--background-color);
       --x-border-radius: var(--border-radius);
       --x-border-width: var(--border-width);
-      --x-border-color: var(--border-color);
       --x-outer-width: calc(var(--x-border-width) + var(--x-outline-width));
+
+      --x-outline-color: var(--outline-color);
+      --x-background-color: var(--background-color);
+      --x-border-color: var(--border-color);
+      --x-color: var(--color);
+
+      --x-background-color-hover: var(
+        --background-color-hover,
+        color-mix(in srgb, var(--background-color) 95%, black)
+      );
+      --x-background-color-readonly: var(
+        --background-color-readonly,
+        var(--x-background-color)
+      );
+      --x-background-color-disabled: var(
+        --background-color-disabled,
+        var(--background-color)
+      );
+      --x-border-color-hover: var(
+        --border-color-hover,
+        color-mix(in srgb, var(--border-color) 70%, black)
+      );
+      --x-border-color-active: var(
+        --border-color-active,
+        color-mix(in srgb, var(--border-color) 90%, black)
+      );
+      --x-border-color-readonly: var(
+        --border-color-readonly,
+        color-mix(in srgb, var(--border-color) 30%, white)
+      );
+      --x-border-color-disabled: var(
+        --border-color-disabled,
+        var(--x-border-color-readonly)
+      );
+      --x-color-hover: var(--color-hover, var(--x-color));
+      --x-color-readonly: var(
+        --color-readonly,
+        color-mix(in srgb, var(--color) 30%, transparent)
+      );
+      --x-color-disabled: var(--color-disabled, var(--x-color-readonly));
 
       position: relative;
       padding-top: var(--padding-top, var(--padding-y));
@@ -127,9 +142,9 @@ import.meta.css = /* css */ `
     }
     /* Hover */
     .navi_button[data-hover] .navi_button_content {
-      --x-color: var(--color-hover);
-      --x-border-color: var(--border-color-hover);
-      --x-background-color: var(--background-color-hover);
+      --x-color: var(--x-color-hover);
+      --x-border-color: var(--x-border-color-hover);
+      --x-background-color: var(--x-background-color-hover);
     }
     /* Focus */
     .navi_button[data-focus-visible] .navi_button_content {
@@ -139,7 +154,7 @@ import.meta.css = /* css */ `
     }
     /* Active */
     .navi_button[data-active] .navi_button_content {
-      --x-outline-color: var(--border-color-active);
+      --x-outline-color: var(--x-border-color-active);
       transform: scale(0.9);
     }
     .navi_button[data-active] .navi_button_shadow {
@@ -152,10 +167,10 @@ import.meta.css = /* css */ `
     }
     /* Readonly */
     .navi_button[data-readonly] .navi_button_content {
-      --x-border-color: var(--border-color-disabled);
-      --x-outline-color: var(--border-color-readonly);
-      --x-background-color: var(--background-color-readonly);
-      --x-color: var(--color-readonly);
+      --x-border-color: var(--x-border-color-disabled);
+      --x-outline-color: var(--x-border-color-readonly);
+      --x-background-color: var(--x-background-color-readonly);
+      --x-color: var(--x-color-readonly);
     }
     /* Disabled */
     .navi_button[data-disabled] {
@@ -163,9 +178,9 @@ import.meta.css = /* css */ `
       cursor: default;
     }
     .navi_button[data-disabled] .navi_button_content {
-      --x-border-color: var(--border-color-disabled);
-      --x-background-color: var(--background-color-disabled);
-      --x-color: var(--color-disabled);
+      --x-border-color: var(--x-border-color-disabled);
+      --x-background-color: var(--x-background-color-disabled);
+      --x-color: var(--x-color-disabled);
       transform: none; /* no active effect */
     }
     .navi_button[data-disabled] .navi_button_shadow {
@@ -182,7 +197,7 @@ import.meta.css = /* css */ `
       --x-border-color: transparent;
     }
     .navi_button[data-discrete][data-hover] .navi_button_content {
-      --x-border-color: var(--border-color-hover);
+      --x-border-color: var(--x-border-color-hover);
     }
     .navi_button[data-discrete][data-readonly] .navi_button_content {
       --x-border-color: transparent;
@@ -253,6 +268,7 @@ const ButtonBasic = forwardRef((props, ref) => {
       layout: true,
       visual: false,
       innerSpacing: false,
+      typo: true,
       managedByCSSVars: {
         outlineWidth: "--outline-width",
         borderWidth: "--border-width",
