@@ -125,17 +125,17 @@ import.meta.css = /* css */ `
       border-radius: inherit;
       pointer-events: none;
     }
-    /* Focus */
-    .navi_button[data-focus-visible] .navi_button_content {
-      --x-border-color: var(--x-outline-color);
-      outline-width: var(--x-outer-width);
-      outline-offset: calc(-1 * var(--x-outer-width));
-    }
     /* Hover */
     .navi_button[data-hover] .navi_button_content {
       --x-color: var(--color-hover);
       --x-border-color: var(--border-color-hover);
       --x-background-color: var(--background-color-hover);
+    }
+    /* Focus */
+    .navi_button[data-focus-visible] .navi_button_content {
+      --x-border-color: var(--x-outline-color);
+      outline-width: var(--x-outer-width);
+      outline-offset: calc(-1 * var(--x-outer-width));
     }
     /* Active */
     .navi_button[data-active] .navi_button_content {
