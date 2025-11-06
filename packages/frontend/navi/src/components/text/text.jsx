@@ -118,6 +118,7 @@ const TextBasic = ({
       layoutInline={box ? true : undefined}
       as={as}
       data-has-foreground={hasForeground ? "" : undefined}
+      baseStyle={{ whiteSpace: "pre-wrap" }}
     >
       {applyContentSpacingOnTextChildren(children, contentSpacing)}
       {/* https://jsfiddle.net/v5xzJ/4/ */}

@@ -68,6 +68,7 @@ export const Box = (props) => {
     expand,
     baseClassName,
     className,
+    baseStyle,
 
     // style management
     contentSelector,
@@ -88,6 +89,7 @@ export const Box = (props) => {
     ref,
     contentSelector,
     base: {
+      ...baseStyle,
       ...(layoutRow
         ? {
             display: "flex",

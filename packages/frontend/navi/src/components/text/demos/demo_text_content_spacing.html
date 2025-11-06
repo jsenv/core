@@ -494,70 +494,35 @@
             <section id="multiline-behavior" style={{ marginBottom: "30px" }}>
               <h2>🔄 Multiline Behavior Testing</h2>
               <p>
-                Testing how auto-spacing behaves with line breaks and multiple
-                sentences. The issue: spaces might be added where they shouldn't
-                be.
+                Testing how auto-spacing behaves when children array contains
+                strings with whitespace. The fix should prevent adding spaces
+                when children start/end with whitespace.
               </p>
 
               <div style={{ marginBottom: "20px" }}>
-                <h3>Case 1: Simple line breaks</h3>
+                <h3>
+                  Case 1: Child ending with newline + child starting normal
+                </h3>
                 <div
                   style={{ display: "flex", gap: "20px", marginBottom: "20px" }}
                 >
                   <div style={{ flex: 1 }}>
-                    <h4>Default auto-spacing</h4>
-                    <div
-                      style={{
-                        border: "1px solid #ccc",
-                        padding: "8px",
-                        backgroundColor: "#f9f9f9",
-                        whiteSpace: "pre-wrap",
-                      }}
-                    >
-                      <Text debug>
-                        First line.{"\n"}Second line.{"\n"}Third line.
-                      </Text>
-                    </div>
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <h4>Manual control (contentSpacing="pre")</h4>
+                    <h4>Default auto-spacing (fixed)</h4>
                     <div
                       style={{
                         border: "1px solid #ccc",
                         padding: "8px",
                         backgroundColor: "#e8f5e8",
-                        whiteSpace: "pre-wrap",
-                      }}
-                    >
-                      <Text contentSpacing="pre">
-                        {"First line.\nSecond line.\nThird line."}
-                      </Text>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ marginBottom: "20px" }}>
-                <h3>Case 2: Multiple text nodes with line breaks</h3>
-                <div
-                  style={{ display: "flex", gap: "20px", marginBottom: "20px" }}
-                >
-                  <div style={{ flex: 1 }}>
-                    <h4>Default auto-spacing</h4>
-                    <div
-                      style={{
-                        border: "1px solid #ccc",
-                        padding: "8px",
-                        backgroundColor: "#f9f9f9",
-                        whiteSpace: "pre-wrap",
                       }}
                     >
                       <Text>
-                        <span>First sentence.</span>
-                        {"\nSecond sentence on new line."}
-                        <span>{"\nThird sentence."}</span>
+                        First line.{"\n"}
+                        Second line.
                       </Text>
                     </div>
+                    <small style={{ color: "#666" }}>
+                      No space added between children (first ends with \n)
+                    </small>
                   </div>
                   <div style={{ flex: 1 }}>
                     <h4>Manual control</h4>
@@ -565,46 +530,93 @@
                       style={{
                         border: "1px solid #ccc",
                         padding: "8px",
-                        backgroundColor: "#e8f5e8",
-                        whiteSpace: "pre-wrap",
+                        backgroundColor: "#f0f0f0",
                       }}
                     >
                       <Text contentSpacing="pre">
-                        <span>First sentence.</span>
-                        {"\nSecond sentence on new line."}
-                        <span>{"\nThird sentence."}</span>
+                        First line.{"\n"}
+                        Second line.
                       </Text>
                     </div>
+                    <small style={{ color: "#666" }}>
+                      Expected result (no auto spacing)
+                    </small>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: "20px" }}>
+                <h3>Case 2: Child ending normal + child starting with space</h3>
+                <div
+                  style={{ display: "flex", gap: "20px", marginBottom: "20px" }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <h4>Default auto-spacing (fixed)</h4>
+                    <div
+                      style={{
+                        border: "1px solid #ccc",
+                        padding: "8px",
+                        backgroundColor: "#e8f5e8",
+                      }}
+                    >
+                      <Text>
+                        {"Hello"}
+                        {" world!"}
+                      </Text>
+                    </div>
+                    <small style={{ color: "#666" }}>
+                      No space added (second child starts with space)
+                    </small>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h4>Manual control</h4>
+                    <div
+                      style={{
+                        border: "1px solid #ccc",
+                        padding: "8px",
+                        backgroundColor: "#f0f0f0",
+                      }}
+                    >
+                      <Text contentSpacing="pre">
+                        {"Hello"}
+                        {" world!"}
+                      </Text>
+                    </div>
+                    <small style={{ color: "#666" }}>Expected result</small>
                   </div>
                 </div>
               </div>
 
               <div style={{ marginBottom: "20px" }}>
                 <h3>
-                  Case 3: Mixed content (text + styled elements + line breaks)
+                  Case 3: Complex mixed children with whitespace boundaries
                 </h3>
                 <div
                   style={{ display: "flex", gap: "20px", marginBottom: "20px" }}
                 >
                   <div style={{ flex: 1 }}>
-                    <h4>Default auto-spacing</h4>
+                    <h4>Default auto-spacing (fixed)</h4>
                     <div
                       style={{
                         border: "1px solid #ccc",
                         padding: "8px",
-                        backgroundColor: "#f9f9f9",
-                        whiteSpace: "pre-wrap",
+                        backgroundColor: "#e8f5e8",
                       }}
                     >
                       <Text>
-                        <strong>Important:</strong>
-                        {"\nThis is the first paragraph."}
-                        {"\n\nThis is the second paragraph with "}
-                        <em>emphasis</em>
-                        {" text."}
-                        {"\n\nFinal paragraph here."}
+                        <strong>Title:</strong>
+                        {"\n"}
+                        {"Paragraph one here."}
+                        {"\n\n"}
+                        <em>Paragraph two</em>
+                        {" continues here."}
+                        {"\n"}
+                        {"Final line."}
                       </Text>
                     </div>
+                    <small style={{ color: "#666" }}>
+                      Spaces only added where needed (not around \n)
+                    </small>
                   </div>
                   <div style={{ flex: 1 }}>
                     <h4>Manual control</h4>
@@ -612,121 +624,69 @@
                       style={{
                         border: "1px solid #ccc",
                         padding: "8px",
-                        backgroundColor: "#e8f5e8",
-                        whiteSpace: "pre-wrap",
+                        backgroundColor: "#f0f0f0",
                       }}
                     >
                       <Text contentSpacing="pre">
-                        <strong>Important:</strong>
-                        {"\nThis is the first paragraph."}
-                        {"\n\nThis is the second paragraph with "}
-                        <em>emphasis</em>
-                        {" text."}
-                        {"\n\nFinal paragraph here."}
+                        <strong>Title:</strong>
+                        {"\n"}
+                        {"Paragraph one here."}
+                        {"\n\n"}
+                        <em>Paragraph two</em>
+                        {" continues here."}
+                        {"\n"}
+                        {"Final line."}
                       </Text>
                     </div>
+                    <small style={{ color: "#666" }}>Expected result</small>
                   </div>
                 </div>
               </div>
 
               <div style={{ marginBottom: "20px" }}>
-                <h3>Case 4: Poetry/code-like content</h3>
+                <h3>Case 4: Normal children (should still get auto-spacing)</h3>
                 <div
                   style={{ display: "flex", gap: "20px", marginBottom: "20px" }}
                 >
                   <div style={{ flex: 1 }}>
-                    <h4>Default auto-spacing</h4>
-                    <div
-                      style={{
-                        border: "1px solid #ccc",
-                        padding: "8px",
-                        backgroundColor: "#f9f9f9",
-                        whiteSpace: "pre-wrap",
-                        fontFamily: "monospace",
-                      }}
-                    >
-                      <Text>
-                        <span>
-                          function example() {"{"}
-                          {"\n  return "}
-                          <strong>true</strong>
-                          {";"}
-                          {"\n}"}
-                        </span>
-                      </Text>
-                    </div>
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <h4>Manual control</h4>
+                    <h4>Default auto-spacing (should work)</h4>
                     <div
                       style={{
                         border: "1px solid #ccc",
                         padding: "8px",
                         backgroundColor: "#e8f5e8",
-                        whiteSpace: "pre-wrap",
-                        fontFamily: "monospace",
-                      }}
-                    >
-                      <Text contentSpacing="pre">
-                        <span>
-                          function example() {"{"}
-                          {"\n  return "}
-                          <strong>true</strong>
-                          {";"}
-                          {"\n}"}
-                        </span>
-                      </Text>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ marginBottom: "20px" }}>
-                <h3>Case 5: Real-world example (email content)</h3>
-                <div
-                  style={{ display: "flex", gap: "20px", marginBottom: "20px" }}
-                >
-                  <div style={{ flex: 1 }}>
-                    <h4>Default auto-spacing</h4>
-                    <div
-                      style={{
-                        border: "1px solid #ccc",
-                        padding: "8px",
-                        backgroundColor: "#f9f9f9",
-                        whiteSpace: "pre-wrap",
                       }}
                     >
                       <Text>
-                        <strong>Subject: Project Update</strong>
-                        {"\n\nHi team,"}
-                        {"\n\nThe project is going well."}
-                        <em>Please review</em>
-                        {" the attached documents."}
-                        {"\n\nBest regards,"}
-                        {"\nJohn"}
+                        <strong>Bold</strong>
+                        {"normal"}
+                        <em>italic</em>
+                        {"end"}
                       </Text>
                     </div>
+                    <small style={{ color: "#666" }}>
+                      Normal spacing should be added between all children
+                    </small>
                   </div>
                   <div style={{ flex: 1 }}>
-                    <h4>Manual control</h4>
+                    <h4>Manual spacing</h4>
                     <div
                       style={{
                         border: "1px solid #ccc",
                         padding: "8px",
-                        backgroundColor: "#e8f5e8",
-                        whiteSpace: "pre-wrap",
+                        backgroundColor: "#f0f0f0",
                       }}
                     >
                       <Text contentSpacing="pre">
-                        <strong>Subject: Project Update</strong>
-                        {"\n\nHi team,"}
-                        {"\n\nThe project is going well."}
-                        <em>Please review</em>
-                        {" the attached documents."}
-                        {"\n\nBest regards,"}
-                        {"\nJohn"}
+                        <strong>Bold</strong>
+                        {" normal "}
+                        <em>italic</em>
+                        {" end"}
                       </Text>
                     </div>
+                    <small style={{ color: "#666" }}>
+                      Manual spaces for comparison
+                    </small>
                   </div>
                 </div>
               </div>
@@ -734,9 +694,11 @@
               <p
                 style={{ color: "#666", fontSize: "14px", fontStyle: "italic" }}
               >
-                Expected behavior: Auto-spacing should NOT add spaces around
-                line breaks (\n). Only add spaces between actual separate
-                elements that don't start/end with whitespace.
+                <strong>Fix explanation:</strong> The
+                applyContentSpacingOnTextChildren function now checks if
+                adjacent children start/end with whitespace characters (space,
+                newline, tab, etc.) and skips adding contentSpacing in those
+                cases, while preserving normal auto-spacing for regular content.
               </p>
             </section>
           </div>
