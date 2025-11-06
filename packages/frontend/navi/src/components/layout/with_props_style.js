@@ -222,6 +222,7 @@ const TYPO_PROPS = {
   textLineHeight: applyOnCSSProp("lineHeight"),
   textColor: applyOnCSSProp("color"),
   noWrap: applyToCssPropWhenTruthy("whiteSpace", "nowrap", "normal"),
+  pre: applyToCssPropWhenTruthy("whiteSpace", "pre", "normal"),
 };
 const VISUAL_PROPS = {
   boxShadow: PASS_THROUGH,

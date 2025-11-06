@@ -236,7 +236,7 @@ export const App = () => {
               <Text overflowEllipsis>
                 Just a long line of text that would get overflowed.
               </Text>
-              <Text overflowEllipsis style={{ verticalAlign: "top" }}>
+              <Text overflowEllipsis>
                 Just a long line of text that would get overflowed.
               </Text>
             </Box>

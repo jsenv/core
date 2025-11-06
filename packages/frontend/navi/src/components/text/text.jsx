@@ -54,6 +54,8 @@ export const Text = (props) => {
 const TextOverflow = ({
   as = "div",
   contentSpacing = " ",
+  noWrap,
+  pre = !noWrap,
   children,
   ...rest
 }) => {
@@ -65,7 +67,8 @@ const TextOverflow = ({
       as={as}
       layoutColumn
       expandX
-      noWrap
+      pre={pre}
+      nowWrap={noWrap}
       contentSpacing="pre"
       style="text-overflow: ellipsis; overflow: hidden; flex-wrap: wrap;"
     >
