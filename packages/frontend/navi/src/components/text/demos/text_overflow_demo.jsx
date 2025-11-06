@@ -226,7 +226,7 @@ export const App = () => {
 
           {/* Test 2: Vertical alignment test */}
           <div
-            style={{ width: "300px", border: "1px solid #ccc", padding: "8px" }}
+            style={{ width: "200px", border: "1px solid #ccc", padding: "8px" }}
           >
             <div
               style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}
@@ -234,13 +234,10 @@ export const App = () => {
               Vertical alignment comparison
             </div>
             <Box layoutRow textLineHeight="100px">
-              <Text overflowEllipsis style={{ maxWidth: "200px" }}>
+              <Text overflowEllipsis>
                 Just a long line of text that would get overflowed.
               </Text>
-              <Text
-                overflowEllipsis
-                style={{ maxWidth: "200px", verticalAlign: "top" }}
-              >
+              <Text overflowEllipsis style={{ verticalAlign: "top" }}>
                 Just a long line of text that would get overflowed.
               </Text>
             </Box>

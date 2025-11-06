@@ -62,6 +62,9 @@ export const Text = (props) => {
   }
   return <TextBasic {...props} />;
 };
+// TODO: voir si on peut passer par Box ici ou quelque chose en tous cas
+// en gros c'est du text en noWrap ellipsis display flex (pourquoi display flex?)
+// TODO: tester si c'est compatible avec le truc qui met des espaces
 const TextOverflow = ({ as = "div", className, children, ...rest }) => {
   const TagName = as;
   const innerClassName = withPropsClassName("navi_text_overflow", className);
