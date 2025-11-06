@@ -1,10 +1,4 @@
-import { forwardRef } from "preact/compat";
-import {
-  useContext,
-  useImperativeHandle,
-  useLayoutEffect,
-  useRef,
-} from "preact/hooks";
+import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { useDocumentUrl } from "../../browser_integration/document_url_signal.js";
 import { getLinkTargetInfo } from "../../browser_integration/link_target_info.js";
@@ -74,20 +68,20 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const Link = forwardRef((props, ref) => {
-  return renderActionableComponent(props, ref, {
+export const Link = (props) => {
+  return renderActionableComponent(props, {
     Basic: LinkBasic,
     WithAction: LinkWithAction,
   });
-});
+};
 
-const LinkBasic = forwardRef((props, ref) => {
+const LinkBasic = (props) => {
   const selectionContext = useContext(SelectionContext);
   if (selectionContext) {
-    return <LinkWithSelection ref={ref} {...props} />;
+    return <LinkWithSelection {...props} />;
   }
-  return <LinkPlain ref={ref} {...props} />;
-});
+  return <LinkPlain {...props} />;
+};
 const LinkPseudoClasses = [
   ":hover",
   ":active",
@@ -98,7 +92,7 @@ const LinkPseudoClasses = [
   ":-navi-loading",
 ];
 const LinkPseudoElements = [":-navi-loader"];
-const LinkPlain = forwardRef((props, ref) => {
+const LinkPlain = (props) => {
   const {
     loading,
     readOnly,
@@ -113,26 +107,24 @@ const LinkPlain = forwardRef((props, ref) => {
     href,
     target,
     rel,
+    ref = useRef(),
 
     // visual
     box,
-    cursor,
     blankTargetIcon,
     anchorIcon,
     icon,
-    cursorDefaultWhenCurrent,
     contentSpacing = " ",
     children,
+
     ...rest
   } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
   const isVisited = useIsVisited(href);
 
-  useAutoFocus(innerRef, autoFocus);
-  useConstraints(innerRef, constraints);
+  useAutoFocus(ref, autoFocus);
+  useConstraints(ref, constraints);
   const shouldDimColor = readOnly || disabled;
-  useDimColorWhen(innerRef, shouldDimColor);
+  useDimColorWhen(ref, shouldDimColor);
   // subscribe to document url to re-render and re-compute getLinkTargetInfo
   useDocumentUrl();
   const { targetIsSameSite, targetIsAnchor, targetIsCurrent } =
@@ -171,7 +163,7 @@ const LinkPlain = forwardRef((props, ref) => {
 
   return (
     <Box
-      ref={innerRef}
+      ref={ref}
       className="navi_link"
       as="a"
       layoutInline={box ? true : undefined}
@@ -217,7 +209,7 @@ const LinkPlain = forwardRef((props, ref) => {
       {innerIcon && <Icon>{innerIcon}</Icon>}
     </Box>
   );
-});
+};
 const BlankTargetLinkSvg = () => {
   return (
     <svg
@@ -272,27 +264,20 @@ export const CurrentLinkSvg = () => {
   );
 };
 
-const LinkWithSelection = forwardRef((props, ref) => {
+const LinkWithSelection = (props) => {
   const { selection, selectionController } = useContext(SelectionContext);
-  const { value = props.href, children, ...rest } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-  const { selected } = useSelectableElement(innerRef, {
+  const { value = props.href, children, ref = useRef(), ...rest } = props;
+  const { selected } = useSelectableElement(ref, {
     selection,
     selectionController,
   });
 
   return (
-    <LinkPlain
-      {...rest}
-      ref={innerRef}
-      data-value={value}
-      aria-selected={selected}
-    >
+    <LinkPlain {...rest} ref={ref} data-value={value} aria-selected={selected}>
       {children}
     </LinkPlain>
   );
-});
+};
 
 /*
  * Custom hook to apply semi-transparent color when an element should be dimmed.
@@ -331,7 +316,7 @@ const useDimColorWhen = (elementRef, shouldDim) => {
   });
 };
 
-const LinkWithAction = forwardRef((props, ref) => {
+const LinkWithAction = (props) => {
   const {
     shortcuts = [],
     readOnly,
@@ -342,14 +327,13 @@ const LinkWithAction = forwardRef((props, ref) => {
     onActionEnd,
     children,
     loading,
+    ref = useRef(),
     ...rest
   } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-  const { actionPending } = useRequestedActionStatus(innerRef);
+  const { actionPending } = useRequestedActionStatus(ref);
   const innerLoading = Boolean(loading || actionPending);
 
-  useKeyboardShortcuts(innerRef, shortcuts, {
+  useKeyboardShortcuts(ref, shortcuts, {
     onActionPrevented,
     onActionStart,
     onActionAbort,
@@ -360,7 +344,7 @@ const LinkWithAction = forwardRef((props, ref) => {
   return (
     <LinkBasic
       {...rest}
-      ref={innerRef}
+      ref={ref}
       loading={innerLoading}
       readOnly={readOnly || actionPending}
       data-readonly-silent={actionPending && !readOnly ? "" : undefined}
@@ -370,4 +354,4 @@ const LinkWithAction = forwardRef((props, ref) => {
       {children}
     </LinkBasic>
   );
-});
+};
