@@ -98,7 +98,11 @@ const normalizeTypoStyle = (value, property = "fontSize") => {
   const cssSize = sizeTypoScale[value];
   return cssSize || normalizeStyle(value, property, "css");
 };
-const PASS_THROUGH = {};
+const normalizeCssStyle = (value, property) => {
+  return normalizeStyle(value, property, "css");
+};
+
+const PASS_THROUGH = { name: "pass_through" };
 const applyOnCSSProp = (cssStyle) => {
   return (value) => {
     return { [cssStyle]: value };
@@ -291,7 +295,7 @@ const generateStyleGroup = (
   PROPS_GROUP,
   props,
   styleContext,
-  normalizer = normalizeStyle,
+  normalizer = normalizeCssStyle,
 ) => {
   const styleGroup = {};
   for (const propName of Object.keys(PROPS_GROUP)) {
@@ -308,7 +312,7 @@ const generateStyleGroup = (
 const generateStyleWithoutGroup = (
   props,
   styleContext,
-  normalizer = normalizeStyle,
+  normalizer = normalizeCssStyle,
 ) => {
   const styleWithoutGroup = {};
   for (const propName of Object.keys(props)) {
