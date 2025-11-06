@@ -40,8 +40,73 @@
               everywhere.
             </p>
 
+            {/* Table of Contents */}
+            <section
+              style={{
+                marginBottom: "30px",
+                padding: "15px",
+                backgroundColor: "#f8f9fa",
+                borderRadius: "6px",
+                border: "1px solid #e9ecef",
+              }}
+            >
+              <h2 style={{ margin: "0 0 15px 0", fontSize: "1.2rem" }}>
+                📋 Table of Contents
+              </h2>
+              <nav>
+                <ol
+                  style={{
+                    margin: 0,
+                    paddingLeft: "20px",
+                    lineHeight: "1.6",
+                  }}
+                >
+                  <li>
+                    <a
+                      href="#auto-spacing"
+                      style={{ textDecoration: "none", color: "#007bff" }}
+                    >
+                      🎉 Auto-Spacing by Default
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="#custom-separators"
+                      style={{ textDecoration: "none", color: "#007bff" }}
+                    >
+                      🎨 Custom Separators
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="#exact-control"
+                      style={{ textDecoration: "none", color: "#007bff" }}
+                    >
+                      🔧 When You Need Exact Control
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="#underline-gotcha"
+                      style={{ textDecoration: "none", color: "#007bff" }}
+                    >
+                      ⚠️ Underline + Auto-Spacing Gotcha
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="#multiline-behavior"
+                      style={{ textDecoration: "none", color: "#007bff" }}
+                    >
+                      🔄 Multiline Behavior Testing
+                    </a>
+                  </li>
+                </ol>
+              </nav>
+            </section>
+
             {/* Default behavior showcase */}
-            <section style={{ marginBottom: "30px" }}>
+            <section id="auto-spacing" style={{ marginBottom: "30px" }}>
               <h2>🎉 Auto-Spacing by Default</h2>
               <p>
                 Most of the time, you want spaces between elements -
@@ -92,7 +157,7 @@
             </section>
 
             {/* Custom separators */}
-            <section style={{ marginBottom: "30px" }}>
+            <section id="custom-separators" style={{ marginBottom: "30px" }}>
               <h2>🎨 Custom Separators</h2>
 
               <div style={{ marginBottom: "20px" }}>
@@ -178,7 +243,7 @@
             </section>
 
             {/* When you need exact control */}
-            <section style={{ marginBottom: "30px" }}>
+            <section id="exact-control" style={{ marginBottom: "30px" }}>
               <h2>🔧 When You Need Exact Control (contentSpacing="pre")</h2>
               <p>
                 Sometimes you need exact control over spacing - here's when to
@@ -293,7 +358,7 @@
             </section>
 
             {/* Best practices with underline and auto-spacing */}
-            <section style={{ marginBottom: "30px" }}>
+            <section id="underline-gotcha" style={{ marginBottom: "30px" }}>
               <h2>⚠️ Underline + Auto-Spacing Gotcha</h2>
               <p>
                 When using <code>textUnderline</code> on a Text container, any
@@ -438,6 +503,254 @@
               >
                 {`// Bad - Link with icon, underline on everything\n<Link href="./user-profile">\n  <Icon><StarSvg /></Icon>\n  <Icon><StarSvg /></Icon>\n  <Text>Go to profile</Text>\n  <Icon><StarSvg /></Icon>\n  <Icon><StarSvg /></Icon>\n</Link>\n\n// Good - Disable Link underline, add to text only\n<Link href="./user-profile" textUnderline={false}>\n  <Icon><StarSvg /></Icon>\n  <Icon><StarSvg /></Icon>\n  <Text textUnderline>Go to profile</Text>\n  <Icon><StarSvg /></Icon>\n  <Icon><StarSvg /></Icon>\n</Link>`}
               </pre>
+            </section>
+
+            {/* Multiline behavior testing */}
+            <section id="multiline-behavior" style={{ marginBottom: "30px" }}>
+              <h2>🔄 Multiline Behavior Testing</h2>
+              <p>
+                Testing how auto-spacing behaves with line breaks and multiple
+                sentences. The issue: spaces might be added where they shouldn't
+                be.
+              </p>
+
+              <div style={{ marginBottom: "20px" }}>
+                <h3>Case 1: Simple line breaks</h3>
+                <div
+                  style={{ display: "flex", gap: "20px", marginBottom: "20px" }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <h4>Default auto-spacing</h4>
+                    <div
+                      style={{
+                        border: "1px solid #ccc",
+                        padding: "8px",
+                        backgroundColor: "#f9f9f9",
+                        whiteSpace: "pre-wrap",
+                      }}
+                    >
+                      <Text>{"First line.\nSecond line.\nThird line."}</Text>
+                    </div>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h4>Manual control (contentSpacing="pre")</h4>
+                    <div
+                      style={{
+                        border: "1px solid #ccc",
+                        padding: "8px",
+                        backgroundColor: "#e8f5e8",
+                        whiteSpace: "pre-wrap",
+                      }}
+                    >
+                      <Text contentSpacing="pre">
+                        {"First line.\nSecond line.\nThird line."}
+                      </Text>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: "20px" }}>
+                <h3>Case 2: Multiple text nodes with line breaks</h3>
+                <div
+                  style={{ display: "flex", gap: "20px", marginBottom: "20px" }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <h4>Default auto-spacing</h4>
+                    <div
+                      style={{
+                        border: "1px solid #ccc",
+                        padding: "8px",
+                        backgroundColor: "#f9f9f9",
+                        whiteSpace: "pre-wrap",
+                      }}
+                    >
+                      <Text>
+                        <span>First sentence.</span>
+                        {"\nSecond sentence on new line."}
+                        <span>{"\nThird sentence."}</span>
+                      </Text>
+                    </div>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h4>Manual control</h4>
+                    <div
+                      style={{
+                        border: "1px solid #ccc",
+                        padding: "8px",
+                        backgroundColor: "#e8f5e8",
+                        whiteSpace: "pre-wrap",
+                      }}
+                    >
+                      <Text contentSpacing="pre">
+                        <span>First sentence.</span>
+                        {"\nSecond sentence on new line."}
+                        <span>{"\nThird sentence."}</span>
+                      </Text>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: "20px" }}>
+                <h3>
+                  Case 3: Mixed content (text + styled elements + line breaks)
+                </h3>
+                <div
+                  style={{ display: "flex", gap: "20px", marginBottom: "20px" }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <h4>Default auto-spacing</h4>
+                    <div
+                      style={{
+                        border: "1px solid #ccc",
+                        padding: "8px",
+                        backgroundColor: "#f9f9f9",
+                        whiteSpace: "pre-wrap",
+                      }}
+                    >
+                      <Text>
+                        <strong>Important:</strong>
+                        {"\nThis is the first paragraph."}
+                        {"\n\nThis is the second paragraph with "}
+                        <em>emphasis</em>
+                        {" text."}
+                        {"\n\nFinal paragraph here."}
+                      </Text>
+                    </div>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h4>Manual control</h4>
+                    <div
+                      style={{
+                        border: "1px solid #ccc",
+                        padding: "8px",
+                        backgroundColor: "#e8f5e8",
+                        whiteSpace: "pre-wrap",
+                      }}
+                    >
+                      <Text contentSpacing="pre">
+                        <strong>Important:</strong>
+                        {"\nThis is the first paragraph."}
+                        {"\n\nThis is the second paragraph with "}
+                        <em>emphasis</em>
+                        {" text."}
+                        {"\n\nFinal paragraph here."}
+                      </Text>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: "20px" }}>
+                <h3>Case 4: Poetry/code-like content</h3>
+                <div
+                  style={{ display: "flex", gap: "20px", marginBottom: "20px" }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <h4>Default auto-spacing</h4>
+                    <div
+                      style={{
+                        border: "1px solid #ccc",
+                        padding: "8px",
+                        backgroundColor: "#f9f9f9",
+                        whiteSpace: "pre-wrap",
+                        fontFamily: "monospace",
+                      }}
+                    >
+                      <Text>
+                        <span>
+                          function example() {"{"}
+                          {"\n  return "}
+                          <strong>true</strong>
+                          {";"}
+                          {"\n}"}
+                        </span>
+                      </Text>
+                    </div>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h4>Manual control</h4>
+                    <div
+                      style={{
+                        border: "1px solid #ccc",
+                        padding: "8px",
+                        backgroundColor: "#e8f5e8",
+                        whiteSpace: "pre-wrap",
+                        fontFamily: "monospace",
+                      }}
+                    >
+                      <Text contentSpacing="pre">
+                        <span>
+                          function example() {"{"}
+                          {"\n  return "}
+                          <strong>true</strong>
+                          {";"}
+                          {"\n}"}
+                        </span>
+                      </Text>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: "20px" }}>
+                <h3>Case 5: Real-world example (email content)</h3>
+                <div
+                  style={{ display: "flex", gap: "20px", marginBottom: "20px" }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <h4>Default auto-spacing</h4>
+                    <div
+                      style={{
+                        border: "1px solid #ccc",
+                        padding: "8px",
+                        backgroundColor: "#f9f9f9",
+                        whiteSpace: "pre-wrap",
+                      }}
+                    >
+                      <Text>
+                        <strong>Subject: Project Update</strong>
+                        {"\n\nHi team,"}
+                        {"\n\nThe project is going well."}
+                        <em>Please review</em>
+                        {" the attached documents."}
+                        {"\n\nBest regards,"}
+                        {"\nJohn"}
+                      </Text>
+                    </div>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h4>Manual control</h4>
+                    <div
+                      style={{
+                        border: "1px solid #ccc",
+                        padding: "8px",
+                        backgroundColor: "#e8f5e8",
+                        whiteSpace: "pre-wrap",
+                      }}
+                    >
+                      <Text contentSpacing="pre">
+                        <strong>Subject: Project Update</strong>
+                        {"\n\nHi team,"}
+                        {"\n\nThe project is going well."}
+                        <em>Please review</em>
+                        {" the attached documents."}
+                        {"\n\nBest regards,"}
+                        {"\nJohn"}
+                      </Text>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <p
+                style={{ color: "#666", fontSize: "14px", fontStyle: "italic" }}
+              >
+                Expected behavior: Auto-spacing should NOT add spaces around
+                line breaks (\n). Only add spaces between actual separate
+                elements that don't start/end with whitespace.
+              </p>
             </section>
           </div>
         );
