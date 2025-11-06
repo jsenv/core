@@ -247,6 +247,9 @@ const ButtonBasic = forwardRef((props, ref) => {
     className,
     contentSpacing = " ",
 
+    // for demo purposes
+    focusVisible,
+
     children,
     ...rest
   } = props;
@@ -284,6 +287,7 @@ const ButtonBasic = forwardRef((props, ref) => {
           ":focus-visible",
           ":read-only",
           ":disabled",
+          ":-navi-loading",
         ],
         pseudoElements: ["::-navi-loader"],
       },
@@ -294,19 +298,29 @@ const ButtonBasic = forwardRef((props, ref) => {
       },
     );
 
-  const dataFocusVisibleProp = remainingProps["data-focus-visible"];
   const contentRef = useRef();
   useLayoutEffect(() => {
     const button = innerRef.current;
     const buttonContent = contentRef.current;
     return initCustomField(button, buttonContent, {
-      skipFocus: dataFocusVisibleProp,
+      readOnly: innerReadOnly,
+      disabled: innerDisabled,
+      loading: innerLoading,
+      focusVisible,
       effect: (pseudoStates) => {
         applyStyles(button, buttonStyle);
         applyStyles(buttonContent, contentStyle, pseudoStyles, pseudoStates);
       },
     });
-  }, [buttonStyle, contentStyle, pseudoStyles, dataFocusVisibleProp]);
+  }, [
+    focusVisible,
+    innerReadOnly,
+    innerDisabled,
+    innerLoading,
+    buttonStyle,
+    contentStyle,
+    pseudoStyles,
+  ]);
   const innerChildren = applyContentSpacingOnTextChildren(
     children,
     contentSpacing,
@@ -318,10 +332,6 @@ const ButtonBasic = forwardRef((props, ref) => {
     </span>
   );
 
-  if (rest.pseudo) {
-    console.log(pseudoStyles);
-  }
-
   return (
     <Box
       {...remainingProps}
@@ -330,9 +340,7 @@ const ButtonBasic = forwardRef((props, ref) => {
       className={innerClassName}
       disabled={innerDisabled}
       data-discrete={discrete ? "" : undefined}
-      data-readonly={innerReadOnly ? "" : undefined}
       data-readonly-silent={innerLoading ? "" : undefined}
-      data-disabled={innerDisabled ? "" : undefined}
       data-callout-arrow-x="center"
       aria-busy={innerLoading}
     >

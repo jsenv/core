@@ -278,45 +278,85 @@ const VISUAL_PROPS = {
   filter: PASS_THROUGH,
   cursor: PASS_THROUGH,
 };
+const All_PROPS = {
+  ...OUTER_SPACING_PROPS,
+  ...INNER_SPACING_PROPS,
+  ...SIZE_PROPS,
+  ...ALIGNEMENT_PROPS,
+  ...TYPO_PROPS,
+  ...VISUAL_PROPS,
+};
 
 const generateStyleGroup = (
-  model,
-  styleGroupInfo,
+  PROPS_GROUP,
+  props,
+  styleContext,
   normalizer = normalizeStyle,
 ) => {
   const styleGroup = {};
-  const { props, managedByCSSVars } = styleGroupInfo;
-  for (const propName of Object.keys(model)) {
-    const propValue = props[propName];
-    if (propValue === undefined) {
-      continue;
-    }
-    const getStyle = model[propName];
-    if (getStyle === PASS_THROUGH) {
-      const cssValue = normalizer(propValue, propName);
-      const cssVar = managedByCSSVars[propName];
-      if (cssVar) {
-        styleGroup[cssVar] = cssValue;
-      } else {
-        styleGroup[propName] = cssValue;
-      }
-      continue;
-    }
-    const values = getStyle(propValue, styleGroupInfo);
-    if (!values) {
-      continue;
-    }
-    for (const key of Object.keys(values)) {
-      const cssValue = normalizer(values[key], key);
-      const cssVar = managedByCSSVars[key];
-      if (cssVar) {
-        styleGroup[cssVar] = cssValue;
-      } else {
-        styleGroup[key] = cssValue;
-      }
-    }
+  for (const propName of Object.keys(PROPS_GROUP)) {
+    assignStyle(
+      styleGroup,
+      props[propName],
+      propName,
+      styleContext,
+      normalizer,
+    );
   }
   return styleGroup;
+};
+const generateStyleWithoutGroup = (
+  props,
+  styleContext,
+  normalizer = normalizeStyle,
+) => {
+  const styleWithoutGroup = {};
+  for (const propName of Object.keys(props)) {
+    assignStyle(
+      styleWithoutGroup,
+      props[propName],
+      propName,
+      styleContext,
+      normalizer,
+    );
+  }
+  return styleWithoutGroup;
+};
+const assignStyle = (
+  styleObject,
+  propValue,
+  propName,
+  styleContext,
+  normalizer,
+) => {
+  if (propValue === undefined) {
+    return;
+  }
+  const { managedByCSSVars } = styleContext;
+  const getStyle = All_PROPS[propName];
+  if (getStyle === PASS_THROUGH) {
+    const cssValue = normalizer(propValue, propName);
+    const cssVar = managedByCSSVars[propName];
+    if (cssVar) {
+      styleObject[cssVar] = cssValue;
+    } else {
+      styleObject[propName] = cssValue;
+    }
+    return;
+  }
+  const values = getStyle(propValue, styleContext);
+  if (!values) {
+    return;
+  }
+  for (const key of Object.keys(values)) {
+    const cssValue = normalizer(values[key], key);
+    const cssVar = managedByCSSVars[key];
+    if (cssVar) {
+      styleObject[cssVar] = cssValue;
+    } else {
+      styleObject[key] = cssValue;
+    }
+  }
 };
 
 export const withPropsStyle = (
@@ -426,8 +466,7 @@ export const withPropsStyle = (
   let visualStyles;
   let pseudoNamedStyles = {};
 
-  const styleGroupInfo = {
-    props,
+  const styleContext = {
     boxLayout,
     managedByCSSVars,
   };
@@ -444,12 +483,14 @@ export const withPropsStyle = (
     }
     marginStyles = generateStyleGroup(
       OUTER_SPACING_PROPS,
-      styleGroupInfo,
+      props,
+      styleContext,
       normalizeSpacingStyle,
     );
     paddingStyles = generateStyleGroup(
       INNER_SPACING_PROPS,
-      styleGroupInfo,
+      props,
+      styleContext,
       normalizeSpacingStyle,
     );
   }
@@ -457,13 +498,13 @@ export const withPropsStyle = (
     if (!size && !hasRemainingConfig) {
       break size_styles;
     }
-    sizeStyles = generateStyleGroup(SIZE_PROPS, styleGroupInfo);
+    sizeStyles = generateStyleGroup(SIZE_PROPS, props, styleContext);
   }
   alignment_styles: {
     if (!align && !hasRemainingConfig) {
       break alignment_styles;
     }
-    alignmentStyles = generateStyleGroup(ALIGNEMENT_PROPS, styleGroupInfo);
+    alignmentStyles = generateStyleGroup(ALIGNEMENT_PROPS, props, styleContext);
   }
   typo_styles: {
     if (!typo && !hasRemainingConfig) {
@@ -471,7 +512,8 @@ export const withPropsStyle = (
     }
     typoStyles = generateStyleGroup(
       TYPO_PROPS,
-      styleGroupInfo,
+      props,
+      styleContext,
       normalizeTypoStyle,
     );
   }
@@ -479,7 +521,7 @@ export const withPropsStyle = (
     if (!visual && !hasRemainingConfig) {
       break visual_styles;
     }
-    visualStyles = generateStyleGroup(VISUAL_PROPS, styleGroupInfo);
+    visualStyles = generateStyleGroup(VISUAL_PROPS, props, styleContext);
   }
   pseudo_styles: {
     if (!pseudo) {
@@ -494,15 +536,10 @@ export const withPropsStyle = (
         if (!pseudoClassStyleFromProps) {
           continue;
         }
-        const pseudoClassStyles = {};
-        for (const styleProp of Object.keys(pseudoClassStyleFromProps)) {
-          const styleValue = pseudoClassStyleFromProps[styleProp];
-          pseudoClassStyles[styleProp] = normalizeStyle(
-            styleValue,
-            styleProp,
-            "css",
-          );
-        }
+        const pseudoClassStyles = generateStyleWithoutGroup(
+          pseudoClassStyleFromProps,
+          styleContext,
+        );
         pseudoNamedStyles[pseudoClass] = pseudoClassStyles;
       }
     }
@@ -515,15 +552,10 @@ export const withPropsStyle = (
         if (!pseudoElementStyleFromProps) {
           continue;
         }
-        const pseudoElementStyles = {};
-        for (const styleProp of Object.keys(pseudoElementStyleFromProps)) {
-          const styleValue = pseudoElementStyleFromProps[styleProp];
-          pseudoElementStyles[styleProp] = normalizeStyle(
-            styleValue,
-            styleProp,
-            "css",
-          );
-        }
+        const pseudoElementStyles = generateStyleWithoutGroup(
+          pseudoElementStyleFromProps,
+          styleContext,
+        );
         pseudoNamedStyles[pseudoElement] = pseudoElementStyles;
       }
     }

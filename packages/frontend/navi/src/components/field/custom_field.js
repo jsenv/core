@@ -3,7 +3,7 @@ import { createPubSub } from "@jsenv/dom";
 export const initCustomField = (
   customField,
   field,
-  { effect, skipFocus } = {},
+  { focusVisible, readOnly, loading, disabled, effect } = {},
 ) => {
   const [teardown, addTeardown] = createPubSub();
 
@@ -16,7 +16,11 @@ export const initCustomField = (
   let state;
   const applyStateOnAttribute = (value, key) => {
     const attributeName =
-      key === "focusVisible" ? "data-focus-visible" : `data-${key}`;
+      key === ":focus-visible"
+        ? "data-focus-visible"
+        : key === ":-navi-loading"
+          ? "data-loading"
+          : `data-${key.slice(1)}`;
     if (value) {
       customField.setAttribute(attributeName, "");
     } else {
@@ -24,28 +28,22 @@ export const initCustomField = (
     }
   };
   const checkPseudoClasses = () => {
-    const hover = field.matches(":hover");
-    const active = field.matches(":active");
-    const checked = field.matches(":checked");
-    const valid = field.matches(":valid");
-    const invalid = field.matches(":invalid");
-    const focus = field.matches(":focus");
-    const focusVisible = field.matches(":focus-visible");
     const newState = {
-      hover,
-      active,
-      checked,
-      valid,
-      invalid,
-      focus,
-      focusVisible,
+      ":hover": field.matches(":hover"),
+      ":active": field.matches(":active"),
+      ":checked": field.matches(":checked"),
+      ":focus": field.matches(":focus"),
+      ":focus-visible": field.matches(":focus-visible") || focusVisible,
+      ":disabled": disabled,
+      ":readonly": readOnly,
+      ":valid": field.matches(":valid"),
+      ":invalid": field.matches(":invalid"),
+      ":-navi-loading": loading,
     };
     let someChange = false;
     for (const key of Object.keys(newState)) {
       if (!state || newState[key] !== state[key]) {
-        if (!skipFocus || !key.includes("focus")) {
-          applyStateOnAttribute(newState[key], key);
-        }
+        applyStateOnAttribute(newState[key], key);
         someChange = true;
       }
     }
