@@ -215,6 +215,8 @@ const ALIGNEMENT_PROPS = {
     }
     return undefined;
   },
+  left: PASS_THROUGH,
+  top: PASS_THROUGH,
 };
 const TYPO_PROPS = {
   textSize: applyOnCSSProp("fontSize"),
@@ -337,6 +339,8 @@ export const withPropsStyle = (
     // layout/alignment
     alignX,
     alignY,
+    left,
+    top,
     // layout/size
     expand,
     expandX = expand,

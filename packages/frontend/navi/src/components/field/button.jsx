@@ -261,36 +261,46 @@ const ButtonBasic = forwardRef((props, ref) => {
   const innerDisabled = disabled || contextDisabled;
 
   const innerClassName = withPropsClassName("navi_button", className);
-  const [remainingProps, buttonStyle, contentStyle] = withPropsStyle(
-    rest,
-    {
-      layout: true,
-      visual: false,
-      innerSpacing: false,
-      typo: true,
-      managedByCSSVars: {
-        outlineWidth: "--outline-width",
-        borderWidth: "--border-width",
-        borderRadius: "--border-radius",
-        backgroundColor: "--background-color",
-        borderColor: "--border-color",
-        textColor: "--color",
+  const [remainingProps, buttonStyle, contentStyle, pseudoStyles] =
+    withPropsStyle(
+      rest,
+      {
+        layout: true,
+        visual: false,
+        innerSpacing: false,
+        typo: true,
+        managedByCSSVars: {
+          outlineWidth: "--outline-width",
+          borderWidth: "--border-width",
+          borderRadius: "--border-radius",
+          backgroundColor: "--background-color",
+          borderColor: "--border-color",
+          textColor: "--color",
+        },
+        pseudoClasses: [
+          ":hover",
+          ":active",
+          ":focus",
+          ":focus-visible",
+          ":read-only",
+          ":disabled",
+        ],
+        pseudoElements: ["::-navi-loader"],
       },
-    },
-    {
-      visual: true,
-      interaction: true,
-      innerSpacing: true,
-    },
-  );
+      {
+        visual: true,
+        interaction: true,
+        innerSpacing: true,
+      },
+    );
 
-  const observeFocusVisible = !remainingProps["data-focus-visible"];
+  const dataFocusVisibleProp = remainingProps["data-focus-visible"];
   const contentRef = useRef();
   useLayoutEffect(() => {
     return initCustomField(innerRef.current, contentRef.current, {
-      observeFocus: observeFocusVisible,
+      skipFocus: dataFocusVisibleProp,
     });
-  }, [observeFocusVisible]);
+  }, [dataFocusVisibleProp]);
   const innerChildren = applyContentSpacingOnTextChildren(
     children,
     contentSpacing,
@@ -301,6 +311,10 @@ const ButtonBasic = forwardRef((props, ref) => {
       <span className="navi_button_shadow"></span>
     </span>
   );
+
+  if (rest.pseudo) {
+    console.log(pseudoStyles);
+  }
 
   useNaviStyle(innerRef, buttonStyle);
   useNaviStyle(contentRef, contentStyle);

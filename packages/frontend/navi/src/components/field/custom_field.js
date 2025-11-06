@@ -3,7 +3,7 @@ import { createPubSub } from "@jsenv/dom";
 export const initCustomField = (
   customField,
   field,
-  { observeFocus = true } = {},
+  { effect, skipFocus } = {},
 ) => {
   const [teardown, addTeardown] = createPubSub();
 
@@ -13,8 +13,11 @@ export const initCustomField = (
       element.removeEventListener(eventType, listener);
     });
   };
-  const updateBooleanAttribute = (attributeName, isPresent) => {
-    if (isPresent) {
+  let state;
+  const applyStateOnAttribute = (value, key) => {
+    const attributeName =
+      key === "focusVisible" ? "data-focus-visible" : `data-${key}`;
+    if (value) {
       customField.setAttribute(attributeName, "");
     } else {
       customField.removeAttribute(attributeName);
@@ -24,20 +27,34 @@ export const initCustomField = (
     const hover = field.matches(":hover");
     const active = field.matches(":active");
     const checked = field.matches(":checked");
-
     const valid = field.matches(":valid");
     const invalid = field.matches(":invalid");
-    updateBooleanAttribute(`data-hover`, hover);
-    updateBooleanAttribute(`data-active`, active);
-    updateBooleanAttribute(`data-checked`, checked);
-    if (observeFocus) {
-      const focus = field.matches(":focus");
-      const focusVisible = field.matches(":focus-visible");
-      updateBooleanAttribute(`data-focus`, focus);
-      updateBooleanAttribute(`data-focus-visible`, focusVisible);
+    const focus = field.matches(":focus");
+    const focusVisible = field.matches(":focus-visible");
+    const newState = {
+      hover,
+      active,
+      checked,
+      valid,
+      invalid,
+      focus,
+      focusVisible,
+    };
+    let someChange = false;
+    for (const key of Object.keys(newState)) {
+      if (!state || newState[key] !== state[key]) {
+        if (!skipFocus || !key.includes("focus")) {
+          applyStateOnAttribute(newState[key], key);
+        }
+
+        someChange = true;
+      }
     }
-    updateBooleanAttribute(`data-valid`, valid);
-    updateBooleanAttribute(`data-invalid`, invalid);
+    if (!someChange) {
+      return;
+    }
+    effect?.(newState, state);
+    state = newState;
   };
 
   // :hover
@@ -101,6 +118,7 @@ export const initCustomField = (
     addEventListener(field, "input", checkPseudoClasses);
   }
 
+  checkPseudoClasses();
   // just in case + catch use forcing them in chrome devtools
   const interval = setInterval(() => {
     checkPseudoClasses();
