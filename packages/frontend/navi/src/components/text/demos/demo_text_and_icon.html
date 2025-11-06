@@ -427,9 +427,13 @@
                   textSize="sm"
                   borderWidth="2"
                   borderStyle="solid"
-                  borderRadius="sm"
-                  backgroundColorWhileHover="#0056b3"
-                  borderColorWhileHover="#0056b3"
+                  borderRadius="5"
+                  pseudo={{
+                    ":hover": {
+                      backgroundColor: "#0056b3",
+                      borderColor: "#0056b3",
+                    },
+                  }}
                 >
                   <Icon>
                     <SearchSvg />
