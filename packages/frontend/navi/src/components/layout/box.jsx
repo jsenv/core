@@ -44,16 +44,16 @@
  * without requiring separate CSS classes or inline styles.
  */
 
-import { forwardRef } from "preact/compat";
-import { useContext } from "preact/hooks";
+import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import {
+  applyStyles,
   resolveSpacingSize,
   withPropsStyle,
 } from "../props_composition/with_props_style.js";
 import { BoxLayoutContext } from "./layout_context.jsx";
 
-export const Box = forwardRef((props, ref) => {
+export const Box = (props) => {
   const {
     as = "div",
     layoutRow,
@@ -112,6 +112,14 @@ export const Box = forwardRef((props, ref) => {
     layout: true,
     typo: true,
   });
+  const ref = useRef();
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return;
+    }
+    applyStyles(el, innerStyle);
+  }, [innerStyle]);
 
   return (
     <TagName ref={ref} style={innerStyle} {...remainingProps}>
@@ -130,7 +138,7 @@ export const Box = forwardRef((props, ref) => {
       </BoxLayoutContext.Provider>
     </TagName>
   );
-});
+};
 
 export const Layout = ({ row, column, ...rest }) => {
   if (row) {
