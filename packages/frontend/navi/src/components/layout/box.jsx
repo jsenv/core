@@ -51,9 +51,7 @@ import {
   resolveSpacingSize,
   withPropsStyle,
 } from "../props_composition/with_props_style.js";
-import { BoxFlowContext } from "./layout_context.jsx";
-
-import.meta.css = /* css */ ``;
+import { BoxLayoutContext } from "./layout_context.jsx";
 
 export const Box = forwardRef((props, ref) => {
   const {
@@ -70,7 +68,7 @@ export const Box = forwardRef((props, ref) => {
     ...rest
   } = props;
 
-  const layoutFromContext = useContext(BoxFlowContext);
+  const layoutFromContext = useContext(BoxLayoutContext);
   const insideFlexContainer =
     layoutFromContext === "row" ||
     layoutFromContext === "column" ||
@@ -117,7 +115,7 @@ export const Box = forwardRef((props, ref) => {
 
   return (
     <TagName ref={ref} style={innerStyle} {...remainingProps}>
-      <BoxFlowContext.Provider
+      <BoxLayoutContext.Provider
         value={
           layoutRow
             ? "row"
@@ -129,7 +127,7 @@ export const Box = forwardRef((props, ref) => {
         }
       >
         {children}
-      </BoxFlowContext.Provider>
+      </BoxLayoutContext.Provider>
     </TagName>
   );
 });

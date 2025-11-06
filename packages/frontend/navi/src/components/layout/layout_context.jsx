@@ -1,3 +1,3 @@
 import { createContext } from "preact";
 
-export const BoxFlowContext = createContext();
+export const BoxLayoutContext = createContext();

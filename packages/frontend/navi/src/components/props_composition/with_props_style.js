@@ -1,7 +1,7 @@
 import { appendStyles, normalizeStyle, normalizeStyles } from "@jsenv/dom";
 import { useContext } from "preact/hooks";
 
-import { BoxFlowContext } from "../layout/layout_context.jsx";
+import { BoxLayoutContext } from "../layout/layout_context.jsx";
 
 /**
  * Processes component props to extract and generate styles for layout, spacing, alignment, expansion, and typography.
@@ -54,9 +54,11 @@ const normalizeSpacingStyle = (value, property = "padding") => {
   const cssSize = sizeSpacingScale[value];
   return cssSize || normalizeStyle(value, property, "css");
 };
-const APPLY_SAME = (value, { propName }) => {
-  return { [propName]: value };
+const normalizeTypoStyle = (value, property = "fontSize") => {
+  const cssSize = sizeTypoScale[value];
+  return cssSize || normalizeStyle(value, property, "css");
 };
+const PASS_THROUGH = {};
 const applyOnCSSProp = (cssStyle) => {
   return (value) => {
     return { [cssStyle]: value };
@@ -70,100 +72,206 @@ const applyOnTwoCSSProps = (cssStyleA, cssStyleB) => {
     };
   };
 };
+const applyToCssPropWhenTruthy = (
+  cssProp,
+  cssPropValue,
+  cssPropValueOtherwise,
+) => {
+  return (value) => {
+    if (!value) {
+      if (cssPropValueOtherwise === undefined) {
+        return null;
+      }
+      if (value === undefined) {
+        return null;
+      }
+      return { [cssProp]: cssPropValueOtherwise };
+    }
+    return { [cssProp]: cssPropValue };
+  };
+};
+
 const OUTER_SPACING_PROPS = {
-  margin: APPLY_SAME,
-  marginLeft: APPLY_SAME,
-  marginRight: APPLY_SAME,
-  marginTop: APPLY_SAME,
-  marginBottom: APPLY_SAME,
+  margin: PASS_THROUGH,
+  marginLeft: PASS_THROUGH,
+  marginRight: PASS_THROUGH,
+  marginTop: PASS_THROUGH,
+  marginBottom: PASS_THROUGH,
   marginX: applyOnTwoCSSProps("marginLeft", "marginRight"),
   marginY: applyOnTwoCSSProps("marginTop", "marginBottom"),
 };
 const INNER_SPACING_PROPS = {
-  padding: APPLY_SAME,
-  paddingLeft: APPLY_SAME,
-  paddingRight: APPLY_SAME,
-  paddingTop: APPLY_SAME,
-  paddingBottom: APPLY_SAME,
+  padding: PASS_THROUGH,
+  paddingLeft: PASS_THROUGH,
+  paddingRight: PASS_THROUGH,
+  paddingTop: PASS_THROUGH,
+  paddingBottom: PASS_THROUGH,
   paddingX: applyOnTwoCSSProps("paddingLeft", "paddingRight"),
   paddingY: applyOnTwoCSSProps("paddingTop", "paddingBottom"),
 };
 const SIZE_PROPS = {
-  width: APPLY_SAME,
-  minWidth: APPLY_SAME,
-  maxWidth: APPLY_SAME,
-  height: APPLY_SAME,
-  minHeight: APPLY_SAME,
-  maxHeight: APPLY_SAME,
+  width: PASS_THROUGH,
+  minWidth: PASS_THROUGH,
+  maxWidth: PASS_THROUGH,
+  height: PASS_THROUGH,
+  minHeight: PASS_THROUGH,
+  maxHeight: PASS_THROUGH,
   // apply after width/height to override if both are set
-  expandX: (value, { boxFlow }) => {
+  expandX: (value, { boxLayout }) => {
     if (!value) {
       return null;
     }
-    if (boxFlow === "column") {
+    if (boxLayout === "column") {
       return { flexGrow: 1 }; // Grow horizontally in row
     }
-    if (boxFlow === "row") {
+    if (boxLayout === "row") {
       return { width: "100%" }; // Take full width in column
     }
     return { width: "100%" }; // Take full width outside flex
   },
-  expandY: (value, { boxFlow }) => {
+  expandY: (value, { boxLayout }) => {
     if (!value) {
       return null;
     }
-    if (boxFlow === "col") {
+    if (boxLayout === "column") {
       return { height: "100%" }; // Make column full height
     }
-    if (boxFlow === "row") {
+    if (boxLayout === "row") {
       return { flexGrow: 1 }; // Make row full height
     }
     return { height: "100%" }; // Take full height outside flex
   },
 };
 const ALIGNEMENT_PROPS = {
-  alignX: (value, { boxFlow }) => {
-    // For row, alignX uses auto margins for positioning
-    // NOTE: Auto margins only work effectively for positioning individual items.
-    // When multiple adjacent items have the same auto margin alignment (e.g., alignX="end"),
-    // only the first item will be positioned as expected because subsequent items
-    // will be positioned relative to the previous item's margins, not the container edge.
+  // For row, alignX uses auto margins for positioning
+  // NOTE: Auto margins only work effectively for positioning individual items.
+  // When multiple adjacent items have the same auto margin alignment (e.g., alignX="end"),
+  // only the first item will be positioned as expected because subsequent items
+  // will be positioned relative to the previous item's margins, not the container edge.
+  alignX: (value, { boxLayout }) => {
     if (value === "start") {
-      if (boxFlow === "row") {
-        return {
-          alignSelf: "start",
-        };
+      if (boxLayout === "row") {
+        return { alignSelf: "start" };
       }
-      return {
-        marginRight: "auto",
-      };
+      return { marginRight: "auto" };
     }
     if (value === "end") {
-      return {
-        marginLeft: "auto",
-      };
+      if (boxLayout === "row") {
+        return { alignSelf: "end" };
+      }
+      return { marginLeft: "auto" };
     }
     if (value === "center") {
-      return {
-        marginLeft: "auto",
-        marginRight: "auto",
-      };
+      if (boxLayout === "row") {
+        return { alignSelf: "center" };
+      }
+      return { marginLeft: "auto", marginRight: "auto" };
+    }
+    if (boxLayout === "row" && value !== "stretch") {
+      return { alignSelf: value };
     }
     return undefined;
   },
-  alignY: (value) => {},
+  alignY: (value, { boxLayout }) => {
+    if (value === "start") {
+      if (boxLayout === "column") {
+        return undefined; // this is the default
+      }
+      if (boxLayout === "inline") {
+        return undefined; // this is the default
+      }
+      return { marginBottom: "auto" };
+    }
+    if (value === "center") {
+      if (boxLayout === "column") {
+        return { alignSelf: "center" };
+      }
+      if (boxLayout === "inline") {
+        return { alignSelf: "center" };
+      }
+      return { marginTop: "auto", marginBottom: "auto" };
+    }
+    if (value === "end") {
+      if (boxLayout === "inline") {
+        return { alignSelf: "end" };
+      }
+      return { marginTop: "auto" };
+    }
+    return undefined;
+  },
+};
+const TYPO_PROPS = {
+  textSize: applyOnCSSProp("fontSize"),
+  textBold: applyToCssPropWhenTruthy("fontWeight", "bold", "normal"),
+  textThin: applyToCssPropWhenTruthy("fontWeight", "thin", "normal"),
+  textItalic: applyToCssPropWhenTruthy("fontStyle", "italic", "normal"),
+  textUnderline: applyToCssPropWhenTruthy(
+    "textDecoration",
+    "underline",
+    "none",
+  ),
+  textUnderlineStyle: applyOnCSSProp("textDecorationStyle"),
+  textUnderlineColor: applyOnCSSProp("textDecorationColor"),
+  textShadow: PASS_THROUGH,
+  textLineHeight: applyOnCSSProp("lineHeight"),
+  textColor: applyOnCSSProp("color"),
+  noWrap: applyToCssPropWhenTruthy("whiteSpace", "nowrap", "normal"),
+};
+const VISUAL_PROPS = {
+  boxShadow: PASS_THROUGH,
+  background: PASS_THROUGH,
+  backgroundColor: PASS_THROUGH,
+  backgroundImage: PASS_THROUGH,
+  backgroundSize: PASS_THROUGH,
+  border: PASS_THROUGH,
+  borderTop: PASS_THROUGH,
+  borderLeft: PASS_THROUGH,
+  borderRight: PASS_THROUGH,
+  borderBottom: PASS_THROUGH,
+  borderWidth: PASS_THROUGH,
+  borderRadius: PASS_THROUGH,
+  borderColor: PASS_THROUGH,
+  borderStyle: PASS_THROUGH,
+  opacity: PASS_THROUGH,
+  filter: PASS_THROUGH,
+  cursor: PASS_THROUGH,
 };
 
-const generateStyleGroup = (model, props, normalizer = normalizeStyle) => {
+const generateStyleGroup = (
+  model,
+  styleGroupInfo,
+  normalizer = normalizeStyle,
+) => {
   const styleGroup = {};
+  const { props, managedByCSSVars } = styleGroupInfo;
   for (const propName of Object.keys(model)) {
     const propValue = props[propName];
     if (propValue === undefined) {
       continue;
     }
-    const values = model[propName](propValue);
+    const getStyle = model[propName];
+    if (getStyle === PASS_THROUGH) {
+      const cssValue = normalizer(propValue, propName);
+      const cssVar = managedByCSSVars[propName];
+      if (cssVar) {
+        styleGroup[cssVar] = cssValue;
+      } else {
+        styleGroup[propName] = cssValue;
+      }
+      continue;
+    }
+    const values = getStyle(propValue, styleGroupInfo);
+    if (!values) {
+      continue;
+    }
     for (const key of Object.keys(values)) {
-      styleGroup[key] = normalizer(values[key], key);
+      const cssValue = normalizer(values[key], key);
+      const cssVar = managedByCSSVars[key];
+      if (cssVar) {
+        styleGroup[cssVar] = cssValue;
+      } else {
+        styleGroup[key] = cssValue;
+      }
     }
   }
   return styleGroup;
@@ -184,11 +292,12 @@ export const withPropsStyle = (
 
     pseudoClasses,
     pseudoElements,
-    managedByCSSVars,
+    managedByCSSVars = {},
   },
   ...remainingConfig
 ) => {
-  const boxFlow = useContext(BoxFlowContext);
+  const boxLayout = useContext(BoxLayoutContext);
+  /* eslint-disable no-unused-vars */
   const {
     // style from props
     style,
@@ -261,6 +370,7 @@ export const withPropsStyle = (
     // props not related to styling
     ...remainingProps
   } = props;
+  /* eslint-enable no-unused-vars */
 
   const hasRemainingConfig = remainingConfig.length > 0;
   let propStyles;
@@ -271,6 +381,12 @@ export const withPropsStyle = (
   let typoStyles;
   let visualStyles;
   let pseudoNamedStyles = {};
+
+  const styleGroupInfo = {
+    props,
+    boxLayout,
+    managedByCSSVars,
+  };
 
   props_styles: {
     if (!style && !hasRemainingConfig) {
@@ -284,12 +400,12 @@ export const withPropsStyle = (
     }
     marginStyles = generateStyleGroup(
       OUTER_SPACING_PROPS,
-      props,
+      styleGroupInfo,
       normalizeSpacingStyle,
     );
     paddingStyles = generateStyleGroup(
       INNER_SPACING_PROPS,
-      props,
+      styleGroupInfo,
       normalizeSpacingStyle,
     );
   }
@@ -297,131 +413,29 @@ export const withPropsStyle = (
     if (!size && !hasRemainingConfig) {
       break size_styles;
     }
-    sizeStyles = generateStyleGroup(SIZE_PROPS, props);
+    sizeStyles = generateStyleGroup(SIZE_PROPS, styleGroupInfo);
   }
   alignment_styles: {
     if (!align && !hasRemainingConfig) {
       break alignment_styles;
     }
-    alignmentStyles = generateStyleGroup(ALIGNEMENT_PROPS, props);
+    alignmentStyles = generateStyleGroup(ALIGNEMENT_PROPS, styleGroupInfo);
   }
-
   typo_styles: {
     if (!typo && !hasRemainingConfig) {
       break typo_styles;
     }
-    typoStyles = {};
-
-    if (textSize) {
-      typoStyles.fontSize = resolveTypoSize(textSize, "fontSize");
-    }
-    if (textBold) {
-      typoStyles.fontWeight = "bold";
-    } else if (textThin) {
-      typoStyles.fontWeight = "thin";
-    } else if (textThin === false || textBold === false) {
-      typoStyles.fontWeight = "normal";
-    }
-    if (textItalic) {
-      typoStyles.fontStyle = "italic";
-    } else if (textItalic === false) {
-      typoStyles.fontStyle = "normal";
-    }
-    if (textUnderline) {
-      typoStyles.textDecoration = "underline";
-    } else if (textUnderline === false) {
-      typoStyles.textDecoration = "none";
-    }
-    if (textUnderlineStyle) {
-      typoStyles.textDecorationStyle = textUnderlineStyle;
-    }
-    if (textUnderlineColor) {
-      typoStyles.textDecorationColor = textUnderlineColor;
-    }
-    if (textShadow) {
-      typoStyles.textShadow = textShadow;
-    }
-    if (textLineHeight !== undefined) {
-      typoStyles.lineHeight = resolveTypoSize(textLineHeight, "lineHeight");
-    }
-    if (noWrap) {
-      typoStyles.whiteSpace = "nowrap";
-    }
-    typoStyles.color = textColor;
+    typoStyles = generateStyleGroup(
+      TYPO_PROPS,
+      styleGroupInfo,
+      normalizeTypoStyle,
+    );
   }
   visual_styles: {
     if (!visual && !hasRemainingConfig) {
       break visual_styles;
     }
-    visualStyles = {};
-    if (boxShadow !== undefined) {
-      visualStyles.boxShadow = boxShadow;
-    }
-    if (background !== undefined) {
-      visualStyles.background = background;
-    }
-    if (backgroundColor !== undefined) {
-      const cssVar = managedByCSSVars[backgroundColor];
-      if (cssVar) {
-        visualStyles[cssVar] = backgroundColor;
-      } else {
-        visualStyles.backgroundColor = backgroundColor;
-      }
-    }
-    if (backgroundImage !== undefined) {
-      visualStyles.backgroundImage = normalizeStyle(
-        backgroundImage,
-        "backgroundImage",
-        "css",
-      );
-    }
-    if (backgroundSize !== undefined) {
-      visualStyles.backgroundSize = backgroundSize;
-    }
-    if (border !== undefined) {
-      visualStyles.border = border;
-    }
-    if (borderTop !== undefined) {
-      visualStyles.borderTop = borderTop;
-    }
-    if (borderLeft !== undefined) {
-      visualStyles.borderLeft = borderLeft;
-    }
-    if (borderRight !== undefined) {
-      visualStyles.borderRight = borderRight;
-    }
-    if (borderBottom !== undefined) {
-      visualStyles.borderBottom = borderBottom;
-    }
-    if (borderWidth !== undefined) {
-      visualStyles.borderWidth = normalizeStyle(
-        sizeSpacingScale[borderWidth] || borderWidth,
-        "borderWidth",
-        "css",
-      );
-    }
-    if (borderRadius !== undefined) {
-      visualStyles.borderRadius = normalizeStyle(
-        sizeSpacingScale[borderRadius] || borderRadius,
-        "borderRadius",
-        "css",
-      );
-    }
-    if (borderColor !== undefined) {
-      visualStyles.borderColor = borderColor;
-    }
-    if (borderStyle !== undefined) {
-      visualStyles.borderStyle = borderStyle;
-    }
-    if (opacity !== undefined) {
-      visualStyles.opacity = opacity;
-    }
-    if (filter !== undefined) {
-      visualStyles.filter = filter;
-    }
-    if (cursor !== undefined) {
-      visualStyles.cursor = cursor;
-    }
+    visualStyles = generateStyleGroup(VISUAL_PROPS, styleGroupInfo);
   }
   pseudo_styles: {
     if (!pseudo) {
