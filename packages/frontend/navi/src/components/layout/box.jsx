@@ -118,20 +118,17 @@ export const Box = (props) => {
       flexGrow: insideFlexContainer && expand ? 1 : undefined,
     },
   });
+  const layout = layoutRow
+    ? "row"
+    : layoutColumn
+      ? "column"
+      : layoutInline
+        ? "inline"
+        : undefined;
 
   return (
     <TagName ref={ref} {...remainingProps}>
-      <BoxLayoutContext.Provider
-        value={
-          layoutRow
-            ? "row"
-            : layoutColumn
-              ? "column"
-              : layoutInline
-                ? "inline"
-                : undefined
-        }
-      >
+      <BoxLayoutContext.Provider value={layout}>
         {children}
       </BoxLayoutContext.Provider>
     </TagName>
@@ -167,6 +164,7 @@ const useBoxStyle = (props, { boxRef, contentRef, base }) => {
       initPseudoStyles(
         el,
         {
+          pseudoClasses,
           disabled,
           readOnly,
           loading,
@@ -225,7 +223,9 @@ const useBoxStyle = (props, { boxRef, contentRef, base }) => {
   return remainingProps;
 };
 
-export const Layout = ({ row, column, ...rest }) => {
+export const Layout = (props) => {
+  const { row, column, ...rest } = props;
+
   if (row) {
     return <Box layoutRow {...rest} />;
   }

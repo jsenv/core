@@ -1,121 +1,236 @@
 import { createPubSub } from "@jsenv/dom";
 
+const PSEUDO_CLASSES = {
+  ":hover": {
+    setup: (el, callback) => {
+      el.addEventListener("mouseenter", callback);
+      el.addEventListener("mouseleave", callback);
+      return () => {
+        el.removeEventListener("mouseenter", callback);
+        el.removeEventListener("mouseleave", callback);
+      };
+    },
+    test: (el) => el.matches(":hover"),
+    add: (el) => {
+      el.setAttribute("data-hover", "");
+    },
+    remove: (el) => {
+      el.removeAttribute("data-hover");
+    },
+  },
+  ":active": {
+    setup: (el, callback) => {
+      el.addEventListener("mousedown", callback);
+      document.addEventListener("mouseup", callback);
+      return () => {
+        el.removeEventListener("mousedown", callback);
+        document.removeEventListener("mouseup", callback);
+      };
+    },
+    test: (el) => el.matches(":active"),
+    add: (el) => {
+      el.setAttribute("data-active", "");
+    },
+    remove: (el) => {
+      el.removeAttribute("data-active");
+    },
+  },
+  ":checked": {
+    setup: (el, callback) => {
+      if (el.type === "checkbox") {
+        // Listen to user interactions
+        el.addEventListener("input", callback);
+        // Intercept programmatic changes to .checked property
+        const originalDescriptor = Object.getOwnPropertyDescriptor(
+          HTMLInputElement.prototype,
+          "checked",
+        );
+        Object.defineProperty(el, "checked", {
+          get: originalDescriptor.get,
+          set(value) {
+            originalDescriptor.set.call(this, value);
+            callback();
+          },
+          configurable: true,
+        });
+        return () => {
+          // Restore original property descriptor
+          Object.defineProperty(el, "checked", originalDescriptor);
+          el.removeEventListener("input", callback);
+        };
+      }
+      if (el.type === "radio") {
+        // Listen to changes on the radio group
+        const radioSet =
+          el.closest("[data-radio-list], fieldset, form") || document;
+        radioSet.addEventListener("input", callback);
+
+        // Intercept programmatic changes to .checked property
+        const originalDescriptor = Object.getOwnPropertyDescriptor(
+          HTMLInputElement.prototype,
+          "checked",
+        );
+        Object.defineProperty(el, "checked", {
+          get: originalDescriptor.get,
+          set(value) {
+            originalDescriptor.set.call(this, value);
+            callback();
+          },
+          configurable: true,
+        });
+        return () => {
+          radioSet.removeEventListener("input", callback);
+          // Restore original property descriptor
+          Object.defineProperty(el, "checked", originalDescriptor);
+        };
+      }
+      if (el.tagName === "INPUT") {
+        el.addEventListener("input", callback);
+        return () => {
+          el.removeEventListener("input", callback);
+        };
+      }
+      return () => {};
+    },
+    test: (el) => el.matches(":checked"),
+    add: (el) => {
+      el.setAttribute("data-checked", "");
+    },
+    remove: (el) => {
+      el.removeAttribute("data-checked");
+    },
+  },
+  ":focus": {
+    setup: (el, callback) => {
+      el.addEventListener("focusin", callback);
+      el.addEventListener("focusout", callback);
+      return () => {
+        el.removeEventListener("focusin", callback);
+        el.removeEventListener("focusout", callback);
+      };
+    },
+    test: (el) => el.matches(":focus"),
+    add: (el) => {
+      el.setAttribute("data-focus", "");
+    },
+    remove: (el) => {
+      el.removeAttribute("data-focus");
+    },
+  },
+  ":focus-visible": {
+    setup: (el, callback) => {
+      document.addEventListener(document, "keydown", callback);
+      document.addEventListener(document, "keyup", callback);
+      return () => {
+        document.removeEventListener(document, "keydown", callback);
+        document.removeEventListener(document, "keyup", callback);
+      };
+    },
+    test: (el, props) => el.matches(":focus-visible") || props.focusVisible,
+    add: (el) => {
+      el.setAttribute("data-focus-visible", "");
+    },
+    remove: (el) => {
+      el.removeAttribute("data-focus-visible");
+    },
+  },
+  ":disabled": {
+    test: (el, props) => props.disabled,
+    add: (el) => {
+      el.setAttribute("data-disabled", "");
+    },
+    remove: (el) => {
+      el.removeAttribute("data-disabled");
+    },
+  },
+  ":readonly": {
+    test: (el, props) => props.readOnly,
+    add: (el) => {
+      el.setAttribute("data-readonly", "");
+    },
+    remove: (el) => {
+      el.removeAttribute("data-readonly");
+    },
+  },
+  ":valid": {
+    test: (el) => el.matches(":valid"),
+    add: (el) => {
+      el.setAttribute("data-valid", "");
+    },
+    remove: (el) => {
+      el.removeAttribute("data-valid");
+    },
+  },
+  ":invalid": {
+    test: (el) => el.matches(":invalid"),
+    add: (el) => {
+      el.setAttribute("data-invalid", "");
+    },
+    remove: (el) => {
+      el.removeAttribute("data-invalid");
+    },
+  },
+  ":-navi-loading": {
+    test: (el, props) => props.loading,
+    add: (el) => {
+      el.setAttribute("data-loading", "");
+    },
+    remove: (el) => {
+      el.removeAttribute("data-loading");
+    },
+  },
+};
+
 export const initPseudoStyles = (
   element,
-  { readOnly, disabled, loading, focusVisible },
-  { elementReceivingAttributes = element, effect } = {},
+  { readOnly, disabled, loading, focusVisible, pseudoClasses },
+  { effect } = {},
 ) => {
+  if (!pseudoClasses || pseudoClasses.length === 0) {
+    effect?.();
+    return () => {};
+  }
+
   const [teardown, addTeardown] = createPubSub();
 
-  const addEventListener = (element, eventType, listener) => {
-    element.addEventListener(eventType, listener);
-    return addTeardown(() => {
-      element.removeEventListener(eventType, listener);
-    });
-  };
   let state;
-  const applyStateOnAttribute = (value, key) => {
-    const attributeName =
-      key === ":focus-visible"
-        ? "data-focus-visible"
-        : key === ":-navi-loading"
-          ? "data-loading"
-          : `data-${key.slice(1)}`;
-    if (value) {
-      elementReceivingAttributes.setAttribute(attributeName, "");
-    } else {
-      elementReceivingAttributes.removeAttribute(attributeName);
-    }
-  };
   const checkPseudoClasses = () => {
-    const newState = {
-      ":hover": element.matches(":hover"),
-      ":active": element.matches(":active"),
-      ":checked": element.matches(":checked"),
-      ":focus": element.matches(":focus"),
-      ":focus-visible": element.matches(":focus-visible") || focusVisible,
-      ":disabled": disabled,
-      ":readonly": readOnly,
-      ":valid": element.matches(":valid"),
-      ":invalid": element.matches(":invalid"),
-      ":-navi-loading": loading,
-    };
     let someChange = false;
-    for (const key of Object.keys(newState)) {
-      if (!state || newState[key] !== state[key]) {
-        applyStateOnAttribute(newState[key], key);
+    const currentState = {};
+    for (const pseudoClass of pseudoClasses) {
+      const pseudoClassDefinition = PSEUDO_CLASSES[pseudoClass];
+      const currentValue = pseudoClassDefinition.test(element, {
+        disabled,
+        readOnly,
+        loading,
+        focusVisible,
+      });
+      currentState[pseudoClass] = currentValue;
+      const oldValue = state ? state[pseudoClass] : undefined;
+      if (oldValue !== currentValue) {
         someChange = true;
+        if (currentValue) {
+          pseudoClassDefinition.add(element);
+        } else {
+          pseudoClassDefinition.remove(element);
+        }
       }
     }
     if (!someChange) {
       return;
     }
-    effect?.(newState, state);
-    state = newState;
+    effect?.(currentState, state);
+    state = currentState;
   };
 
-  // :hover
-  addEventListener(element, "mouseenter", checkPseudoClasses);
-  addEventListener(element, "mouseleave", checkPseudoClasses);
-  // :active
-  addEventListener(element, "mousedown", checkPseudoClasses);
-  addEventListener(document, "mouseup", checkPseudoClasses);
-  // :focus
-  addEventListener(element, "focusin", checkPseudoClasses);
-  addEventListener(element, "focusout", checkPseudoClasses);
-  // :focus-visible
-  addEventListener(document, "keydown", checkPseudoClasses);
-  addEventListener(document, "keyup", checkPseudoClasses);
-  checked: {
-    if (element.type === "checkbox") {
-      // Listen to user interactions
-      addEventListener(element, "input", checkPseudoClasses);
-
-      // Intercept programmatic changes to .checked property
-      const originalDescriptor = Object.getOwnPropertyDescriptor(
-        HTMLInputElement.prototype,
-        "checked",
-      );
-      Object.defineProperty(element, "checked", {
-        get: originalDescriptor.get,
-        set(value) {
-          originalDescriptor.set.call(this, value);
-          checkPseudoClasses();
-        },
-        configurable: true,
-      });
-      addTeardown(() => {
-        // Restore original property descriptor
-        Object.defineProperty(element, "checked", originalDescriptor);
-      });
-    } else if (element.type === "radio") {
-      // Listen to changes on the radio group
-      const radioSet =
-        element.closest("[data-radio-list], fieldset, form") || document;
-      addEventListener(radioSet, "input", checkPseudoClasses);
-
-      // Intercept programmatic changes to .checked property
-      const originalDescriptor = Object.getOwnPropertyDescriptor(
-        HTMLInputElement.prototype,
-        "checked",
-      );
-      Object.defineProperty(element, "checked", {
-        get: originalDescriptor.get,
-        set(value) {
-          originalDescriptor.set.call(this, value);
-          checkPseudoClasses();
-        },
-        configurable: true,
-      });
-      addTeardown(() => {
-        // Restore original property descriptor
-        Object.defineProperty(element, "checked", originalDescriptor);
-      });
-    } else if (element.tagName === "INPUT") {
-      addEventListener(element, "input", checkPseudoClasses);
-    }
+  for (const pseudoClass of pseudoClasses) {
+    const pseudoClassDefinition = PSEUDO_CLASSES[pseudoClass];
+    const { setup } = pseudoClassDefinition;
+    const cleanup = setup(element, () => {
+      checkPseudoClasses();
+    });
+    addTeardown(cleanup);
   }
-
   checkPseudoClasses();
   // just in case + catch use forcing them in chrome devtools
   const interval = setInterval(() => {
