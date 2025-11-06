@@ -136,7 +136,7 @@ export const Box = (props) => {
 };
 
 const useBoxStyle = (props, { boxRef, contentRef, base }) => {
-  const {
+  let {
     pseudoClasses,
     pseudoElements,
     managedByCSSVars,
@@ -146,6 +146,10 @@ const useBoxStyle = (props, { boxRef, contentRef, base }) => {
     focusVisible,
     ...rest
   } = props;
+  if (!pseudoClasses && rest.pseudo) {
+    // <Box pseudo={{ ":hover": { backgroundColor: "red" } }}> would watch :hover
+    pseudoClasses = Object.keys(rest.pseudo);
+  }
 
   if (!contentRef) {
     const [remainingProps, innerStyle, pseudoStyles] = withPropsStyle(rest, {
@@ -164,7 +168,6 @@ const useBoxStyle = (props, { boxRef, contentRef, base }) => {
       initPseudoStyles(
         el,
         {
-          pseudo: rest.pseudo,
           pseudoClasses,
           disabled,
           readOnly,
