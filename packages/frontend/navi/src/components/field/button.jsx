@@ -83,7 +83,7 @@ import.meta.css = /* css */ `
 
       --color: currentColor;
       --color-hover: var(--color);
-      --color-readonly: color-mix(in srgb, currentColor 30%, transparent);
+      --color-readonly: color-mix(in srgb, var(--color) 30%, transparent);
       --color-disabled: var(--color-readonly);
     }
     .navi_button_content {
@@ -156,6 +156,7 @@ import.meta.css = /* css */ `
     }
     /* Disabled */
     .navi_button[data-disabled] {
+      color: unset;
       cursor: default;
     }
     .navi_button[data-disabled] .navi_button_content {
