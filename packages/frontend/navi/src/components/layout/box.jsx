@@ -47,12 +47,15 @@
 import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import {
-  applyStyles,
   resolveSpacingSize,
   withPropsStyle,
 } from "../props_composition/with_props_style.js";
 import { BoxLayoutContext } from "./layout_context.jsx";
-import { initPseudoStyles } from "./pseudo_styles.js";
+import {
+  applyPseudoStyles,
+  applyStyles,
+  initPseudoStyles,
+} from "./pseudo_styles.js";
 
 export const Box = (props) => {
   const {
@@ -67,9 +70,10 @@ export const Box = (props) => {
     expand,
 
     // style management
-    contentRef,
+    contentSelector,
 
     children,
+    ref = useRef(),
     ...rest
   } = props;
 
@@ -79,11 +83,10 @@ export const Box = (props) => {
     layoutFromContext === "column" ||
     layoutFromContext === "inline";
 
-  const ref = useRef();
   const TagName = as;
   const remainingProps = useBoxStyle(rest, {
-    boxRef: ref,
-    contentRef,
+    ref,
+    contentSelector,
     base: {
       ...(layoutRow
         ? {
@@ -135,7 +138,7 @@ export const Box = (props) => {
   );
 };
 
-const useBoxStyle = (props, { boxRef, contentRef, base }) => {
+const useBoxStyle = (props, { ref, contentSelector, base }) => {
   let {
     pseudoClasses,
     pseudoElements,
@@ -153,7 +156,7 @@ const useBoxStyle = (props, { boxRef, contentRef, base }) => {
   }
 
   let initProps;
-  if (contentRef) {
+  if (contentSelector) {
     initProps = () => {
       const [remainingProps, innerStyle, contentStyle, pseudoStyles] =
         withPropsStyle(
@@ -175,13 +178,19 @@ const useBoxStyle = (props, { boxRef, contentRef, base }) => {
         );
       return [
         remainingProps,
-        (state) => {
-          const el = boxRef.current;
+        () => {
+          const el = ref.current;
+          const contentEl = el.querySelector(contentSelector);
           applyStyles(el, innerStyle);
-
-          const contentEl = contentRef.current;
           if (contentEl) {
-            applyStyles(contentEl, contentStyle, pseudoStyles, state);
+            applyStyles(contentEl, contentStyle);
+          }
+        },
+        (state) => {
+          const el = ref.current;
+          const contentEl = el.querySelector(contentSelector);
+          if (contentEl) {
+            applyPseudoStyles(contentEl, state, pseudoStyles);
           }
         },
       ];
@@ -198,22 +207,32 @@ const useBoxStyle = (props, { boxRef, contentRef, base }) => {
       });
       return [
         remainingProps,
+        () => {
+          const el = ref.current;
+          applyStyles(el, innerStyle);
+        },
         (state) => {
-          const el = boxRef.current;
-          applyStyles(el, innerStyle, pseudoStyles, state);
+          const el = ref.current;
+          applyPseudoStyles(el, state, pseudoStyles);
         },
       ];
     };
   }
 
-  const [remainingProps, effect] = initProps();
+  const [remainingProps, updateStyle, updatePseudoStyles] = initProps();
   useLayoutEffect(() => {
-    const el = boxRef.current;
+    const el = ref.current;
     if (!el) {
-      console.log("here");
       return;
     }
-    console.log(el, pseudoClasses);
+    updateStyle(el);
+  }, [updateStyle]);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return;
+    }
+    console.log(el.tagName);
     initPseudoStyles(
       el,
       {
@@ -224,18 +243,10 @@ const useBoxStyle = (props, { boxRef, contentRef, base }) => {
         focusVisible,
       },
       {
-        effect,
+        effect: updatePseudoStyles,
       },
     );
-  }, [
-    disabled,
-    readOnly,
-    loading,
-    focusVisible,
-    effect,
-    contentRef?.current,
-    boxRef.current,
-  ]);
+  }, [disabled, readOnly, loading, focusVisible, updatePseudoStyles]);
 
   return remainingProps;
 };

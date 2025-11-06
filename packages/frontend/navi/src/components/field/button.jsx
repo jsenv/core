@@ -255,9 +255,9 @@ const ButtonBasic = (props) => {
     contentSpacing = " ",
 
     children,
+    ref = useRef(),
     ...rest
   } = props;
-  const ref = useRef();
 
   useAutoFocus(ref, autoFocus);
   useConstraints(ref, constraints);
@@ -266,7 +266,6 @@ const ButtonBasic = (props) => {
   const innerReadOnly = readOnly || contextReadOnly || innerLoading;
   const innerDisabled = disabled || contextDisabled;
   const innerClassName = withPropsClassName("navi_button", className);
-  const contentRef = useRef();
 
   return (
     <Box
@@ -279,7 +278,7 @@ const ButtonBasic = (props) => {
       data-callout-arrow-x="center"
       aria-busy={innerLoading}
       // style management
-      contentRef={contentRef}
+      contentSelector=".navi_button_content"
       pseudoClasses={ButtonPseudoClasses}
       pseudoElements={ButtonPseudoElements}
       managedByCSSVars={ButtonManagedByCSSVars}
@@ -292,7 +291,7 @@ const ButtonBasic = (props) => {
         inset={-1}
         color="light-dark(#355fcc, #3b82f6)"
       />
-      <span ref={contentRef} className="navi_button_content">
+      <span className="navi_button_content">
         {applyContentSpacingOnTextChildren(children, contentSpacing)}
         <span className="navi_button_shadow"></span>
       </span>

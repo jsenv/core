@@ -1,9 +1,4 @@
-import {
-  appendStyles,
-  createStyleController,
-  normalizeStyle,
-  normalizeStyles,
-} from "@jsenv/dom";
+import { appendStyles, normalizeStyle, normalizeStyles } from "@jsenv/dom";
 import { useContext } from "preact/hooks";
 
 import { BoxLayoutContext } from "../layout/layout_context.jsx";
@@ -54,41 +49,6 @@ import { BoxLayoutContext } from "../layout/layout_context.jsx";
  * @param {boolean} [remainingConfig.style] - Include styles from props in this config
  * @returns {array} [remainingProps, mainStyle, ...additionalStyles] - Non-style props and style objects
  */
-
-const naviStyleController = createStyleController("navi");
-const pseudoStyleControllers = {
-  ":hover": createStyleController("navi:hover"),
-  ":active": createStyleController("navi:active"),
-  ":checked": createStyleController("navi:checked"),
-  ":disabled": createStyleController("navi:disabled"),
-  ":focus": createStyleController("navi:focus"),
-  ":focus-visible": createStyleController("navi:focus-visible"),
-  ":valid": createStyleController("navi:valid"),
-  ":invalid": createStyleController("navi:invalid"),
-  ":read-only": createStyleController("navi:read-only"),
-  ":visited": createStyleController("navi:visited"),
-  "::-navi-loader": createStyleController("navi::-navi-loader"),
-};
-
-export const applyStyles = (element, style, pseudoStyles, pseudoStates) => {
-  naviStyleController.set(element, style);
-  if (pseudoStyles) {
-    for (const pseudoName of Object.keys(pseudoStyles)) {
-      const stylesToApply = pseudoStyles[pseudoName];
-      const pseudoStyleController = pseudoStyleControllers[pseudoName];
-      if (pseudoName.startsWith("::")) {
-        pseudoStyleController.set(element, stylesToApply);
-        continue;
-      }
-      const shouldApply = pseudoStates[pseudoName];
-      if (shouldApply) {
-        pseudoStyleController.set(element, stylesToApply);
-      } else {
-        pseudoStyleController.clear(element);
-      }
-    }
-  }
-};
 
 const normalizeSpacingStyle = (value, property = "padding") => {
   const cssSize = sizeSpacingScale[value];

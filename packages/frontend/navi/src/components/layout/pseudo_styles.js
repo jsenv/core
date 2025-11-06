@@ -1,4 +1,4 @@
-import { createPubSub } from "@jsenv/dom";
+import { createPubSub, createStyleController } from "@jsenv/dom";
 
 const PSEUDO_CLASSES = {
   ":hover": {
@@ -119,11 +119,11 @@ const PSEUDO_CLASSES = {
   },
   ":focus-visible": {
     setup: (el, callback) => {
-      document.addEventListener(document, "keydown", callback);
-      document.addEventListener(document, "keyup", callback);
+      document.addEventListener("keydown", callback);
+      document.addEventListener("keyup", callback);
       return () => {
-        document.removeEventListener(document, "keydown", callback);
-        document.removeEventListener(document, "keyup", callback);
+        document.removeEventListener("keydown", callback);
+        document.removeEventListener("keyup", callback);
       };
     },
     test: (el, props) => el.matches(":focus-visible") || props.focusVisible,
@@ -143,7 +143,7 @@ const PSEUDO_CLASSES = {
       el.removeAttribute("data-disabled");
     },
   },
-  ":readonly": {
+  ":read-only": {
     test: (el, props) => props.readOnly,
     add: (el) => {
       el.setAttribute("data-readonly", "");
@@ -223,17 +223,18 @@ export const initPseudoStyles = (
     state = currentState;
   };
 
-  console.log(element.tagName);
-  if (element.tagName === "BUTTON") {
-    debugger;
-  }
   for (const pseudoClass of pseudoClasses) {
     const pseudoClassDefinition = PSEUDO_CLASSES[pseudoClass];
+    if (!pseudoClassDefinition) {
+      throw new Error(`Unknown pseudo class: ${pseudoClass}`);
+    }
     const { setup } = pseudoClassDefinition;
-    const cleanup = setup(element, () => {
-      checkPseudoClasses();
-    });
-    addTeardown(cleanup);
+    if (setup) {
+      const cleanup = setup(element, () => {
+        checkPseudoClasses();
+      });
+      addTeardown(cleanup);
+    }
   }
   checkPseudoClasses();
   // just in case + catch use forcing them in chrome devtools
@@ -245,4 +246,41 @@ export const initPseudoStyles = (
   });
 
   return teardown;
+};
+const naviStyleController = createStyleController("navi");
+// by creating the style controller after the navi one we ensure it overrides (animation played on top of each other)
+const pseudoStyleControllers = {
+  ":hover": createStyleController("navi:hover"),
+  ":active": createStyleController("navi:active"),
+  ":checked": createStyleController("navi:checked"),
+  ":disabled": createStyleController("navi:disabled"),
+  ":focus": createStyleController("navi:focus"),
+  ":focus-visible": createStyleController("navi:focus-visible"),
+  ":valid": createStyleController("navi:valid"),
+  ":invalid": createStyleController("navi:invalid"),
+  ":read-only": createStyleController("navi:read-only"),
+  ":visited": createStyleController("navi:visited"),
+  "::-navi-loader": createStyleController("navi::-navi-loader"),
+};
+export const applyStyles = (element, style) => {
+  naviStyleController.set(element, style);
+};
+export const applyPseudoStyles = (element, pseudoStates, pseudoStyles) => {
+  if (!pseudoStyles) {
+    return;
+  }
+  for (const pseudoName of Object.keys(pseudoStyles)) {
+    const stylesToApply = pseudoStyles[pseudoName];
+    const pseudoStyleController = pseudoStyleControllers[pseudoName];
+    if (pseudoName.startsWith("::")) {
+      pseudoStyleController.set(element, stylesToApply);
+      continue;
+    }
+    const shouldApply = pseudoStates[pseudoName];
+    if (shouldApply) {
+      pseudoStyleController.set(element, stylesToApply);
+    } else {
+      pseudoStyleController.clear(element);
+    }
+  }
 };
