@@ -7,191 +7,107 @@
     <title>Button Demo</title>
     <style>
       body {
-        max-width: 1400px;
-        min-height: 100vh;
+        max-width: 1000px;
         margin: 0 auto;
         padding: 20px;
         font-family:
           -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: #f5f5f5;
       }
 
       h1 {
         margin-bottom: 30px;
-        color: white;
-        font-size: 2.5rem;
+        color: #333;
+        font-size: 2rem;
         text-align: center;
-        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
       }
 
-      .demo-grid {
-        display: grid;
-        margin-bottom: 30px;
-        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-        gap: 20px;
-      }
-
-      .demo-card {
-        padding: 25px;
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 20px;
         background: white;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 12px;
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-        transition:
-          transform 0.2s ease,
-          box-shadow 0.2s ease;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
 
-      .demo-card:hover {
-        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
-        transform: translateY(-2px);
-      }
-
-      .demo-title {
-        display: flex;
+      .demo-section h2 {
         margin: 0 0 20px 0;
+        color: #333;
+        font-size: 1.4rem;
+        border-bottom: 2px solid #ddd;
         padding-bottom: 10px;
-        align-items: center;
-        gap: 10px;
-        color: #2c3e50;
-        font-weight: 600;
-        font-size: 1.3rem;
-        border-bottom: 3px solid #667eea;
       }
 
-      .demo-title::before {
-        font-size: 1.2rem;
-        content: "🔘";
-      }
-
-      .state-row {
-        display: flex;
+      fieldset {
         margin: 15px 0;
         padding: 15px;
-        align-items: center;
-        gap: 20px;
-        background: #f8f9fa;
-        border: 1px solid #e9ecef;
-        border-radius: 8px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
       }
 
-      .state-label {
-        min-width: 100px;
+      legend {
+        padding: 0 10px;
+        color: #555;
+        font-weight: 500;
+      }
+
+      .button-group {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+      }
+
+      .comparison-section {
+        margin-top: 20px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-left: 4px solid #007bff;
+        border-radius: 4px;
+      }
+
+      .comparison-title {
+        margin: 0 0 15px 0;
         color: #495057;
         font-weight: 500;
         font-size: 0.9rem;
       }
 
-      .button-examples {
+      .comparison-group {
         display: flex;
-        flex: 1;
-        align-items: center;
         gap: 15px;
-      }
-
-      .comparison {
-        margin-top: 15px;
-        padding: 12px;
-        background: #fff3cd;
-        border-left: 4px solid #ffc107;
-        border-radius: 6px;
+        align-items: center;
+        margin: 10px 0;
       }
 
       .comparison-label {
-        display: block;
-        margin-bottom: 10px;
-        color: #856404;
-        font-weight: 500;
+        min-width: 80px;
+        color: #666;
         font-size: 0.85rem;
-      }
-
-      .native-example {
-        display: inline-block;
-        margin-right: 15px;
       }
 
       .variation-grid {
         display: grid;
-        margin: 15px 0;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 15px;
+        margin: 15px 0;
       }
 
       .variation-item {
-        display: flex;
         padding: 15px;
-        flex-direction: column;
-        align-items: center;
-        gap: 10px;
         text-align: center;
         background: #f8f9fa;
-        border-radius: 8px;
+        border-radius: 6px;
       }
 
       .variation-label {
-        margin: 0;
-        color: #495057;
-        font-weight: 500;
+        margin: 0 0 10px 0;
+        color: #666;
         font-size: 0.85rem;
-      }
-
-      .prop-control-demo {
-        grid-column: 1 / -1;
-        color: white;
-        background: linear-gradient(45deg, #ff6b6b 0%, #feca57 100%);
-      }
-
-      .prop-control-demo .demo-title {
-        color: white;
-        border-bottom-color: #ffffff;
-      }
-
-      .control-section {
-        display: flex;
-        margin: 15px 0;
-        padding: 15px;
-        align-items: center;
-        gap: 15px;
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 8px;
-      }
-
-      .control-toggle {
-        padding: 8px 16px;
-        color: white;
-        font-weight: 500;
-        font-size: 0.9rem;
-        background: rgba(255, 255, 255, 0.1);
-        border: 2px solid rgba(255, 255, 255, 0.3);
-        border-radius: 6px;
-        transition: all 0.2s ease;
-        cursor: pointer;
-      }
-
-      .control-toggle:hover {
-        background: rgba(255, 255, 255, 0.2);
-      }
-
-      @media (max-width: 768px) {
-        .demo-grid {
-          grid-template-columns: 1fr;
-        }
-
-        .state-row {
-          flex-direction: column;
-          align-items: stretch;
-          gap: 10px;
-        }
-
-        .button-examples {
-          justify-content: center;
-        }
       }
     </style>
   </head>
   <body>
-    <h1>🔘 Button Demo</h1>
+    <h1>Button Demo</h1>
     <div id="root"></div>
 
     <script type="module" jsenv-type="module/jsx">
@@ -202,7 +118,7 @@
 
       const App = () => {
         return (
-          <div className="demo-grid">
+          <div>
             <BasicStatesDemo />
             <LoadingStateDemo />
             <SizeVariationsDemo />
@@ -215,50 +131,38 @@
 
       const BasicStatesDemo = () => {
         return (
-          <div className="demo-card">
-            <h3 className="demo-title">Basic Button States</h3>
+          <div className="demo-section">
+            <h2>Basic Button States</h2>
 
-            <div className="state-row">
-              <span className="state-label">Normal:</span>
-              <div className="button-examples">
-                <Button>Click me</Button>
+            <fieldset>
+              <legend>Button States</legend>
+              <div className="button-group">
+                <Button>Default</Button>
+                <Button readOnly>Read-only</Button>
+                <Button disabled>Disabled</Button>
               </div>
-            </div>
+            </fieldset>
 
-            <div className="comparison">
-              <span className="comparison-label">Native comparison:</span>
-              <button className="native-example">Click me</button>
-            </div>
-
-            <div className="state-row">
-              <span className="state-label">Read-only:</span>
-              <div className="button-examples">
-                <Button readOnly>Read-only button</Button>
+            <div className="comparison-section">
+              <p className="comparison-title">Native comparison:</p>
+              
+              <div className="comparison-group">
+                <span className="comparison-label">Default:</span>
+                <button>Default</button>
               </div>
-            </div>
-
-            <div className="comparison">
-              <span className="comparison-label">Native comparison:</span>
-              <button className="native-example" data-readonly>
-                Read-only button
-              </button>
-              <small style={{ color: "#666" }}>
-                (Native doesn't have read-only, this is just data attribute)
-              </small>
-            </div>
-
-            <div className="state-row">
-              <span className="state-label">Disabled:</span>
-              <div className="button-examples">
-                <Button disabled>Disabled button</Button>
+              
+              <div className="comparison-group">
+                <span className="comparison-label">Read-only:</span>
+                <button data-readonly>Read-only</button>
+                <small style={{ color: "#666", marginLeft: "10px" }}>
+                  (Native doesn't have read-only state)
+                </small>
               </div>
-            </div>
-
-            <div className="comparison">
-              <span className="comparison-label">Native comparison:</span>
-              <button className="native-example" disabled>
-                Disabled button
-              </button>
+              
+              <div className="comparison-group">
+                <span className="comparison-label">Disabled:</span>
+                <button disabled>Disabled</button>
+              </div>
             </div>
           </div>
         );
@@ -266,18 +170,18 @@
 
       const LoadingStateDemo = () => {
         return (
-          <div className="demo-card">
-            <h3 className="demo-title">Loading State</h3>
+          <div className="demo-section">
+            <h2>Loading State</h2>
 
-            <div className="state-row">
-              <span className="state-label">Loading:</span>
-              <div className="button-examples">
+            <fieldset>
+              <legend>Loading Examples</legend>
+              <div className="button-group">
                 <Button loading>Loading button</Button>
                 <Button loading disabled>
                   Loading + Disabled
                 </Button>
               </div>
-            </div>
+            </fieldset>
 
             <p style={{ color: "#666", fontSize: "0.9rem", margin: "10px 0" }}>
               The loading state is unique to our Button component. It shows a
@@ -290,8 +194,8 @@
 
       const SizeVariationsDemo = () => {
         return (
-          <div className="demo-card">
-            <h3 className="demo-title">Size Variations</h3>
+          <div className="demo-section">
+            <h2>Size Variations</h2>
 
             <div className="variation-grid">
               <div className="variation-item">
@@ -327,8 +231,8 @@
 
       const ColorVariationsDemo = () => {
         return (
-          <div className="demo-card">
-            <h3 className="demo-title">Color Variations</h3>
+          <div className="demo-section">
+            <h2>Color Variations</h2>
 
             <div className="variation-grid">
               <div className="variation-item">
@@ -351,15 +255,9 @@
               </div>
 
               <div className="variation-item">
-                <p className="variation-label">Custom border</p>
-                <Button
-                  style={{
-                    "--background-color": "transparent",
-                    "--border-color": "#6f42c1",
-                    "--color": "#6f42c1",
-                  }}
-                >
-                  Outline
+                <p className="variation-label">Custom text</p>
+                <Button style={{ "--color": "#6f42c1" }}>
+                  Purple text
                 </Button>
               </div>
             </div>
@@ -369,20 +267,20 @@
 
       const DiscreteVariantDemo = () => {
         return (
-          <div className="demo-card">
-            <h3 className="demo-title">Discrete Variant</h3>
+          <div className="demo-section">
+            <h2>Discrete Variant</h2>
 
-            <div className="state-row">
-              <span className="state-label">Normal vs Discrete:</span>
-              <div className="button-examples">
+            <fieldset>
+              <legend>Normal vs Discrete</legend>
+              <div className="button-group">
                 <Button>Regular Button</Button>
                 <Button discrete>Discrete Button</Button>
               </div>
-            </div>
+            </fieldset>
 
-            <div className="state-row">
-              <span className="state-label">Discrete states:</span>
-              <div className="button-examples">
+            <fieldset>
+              <legend>Discrete States</legend>
+              <div className="button-group">
                 <Button discrete>Normal</Button>
                 <Button discrete readOnly>
                   Read-only
@@ -394,7 +292,7 @@
                   Loading
                 </Button>
               </div>
-            </div>
+            </fieldset>
 
             <p style={{ color: "#666", fontSize: "0.9rem", margin: "10px 0" }}>
               Discrete buttons have minimal styling and blend better with
@@ -412,72 +310,80 @@
         const [discrete, setDiscrete] = useState(false);
 
         return (
-          <div className="demo-card prop-control-demo">
-            <h3 className="demo-title">Interactive Controls</h3>
+          <div className="demo-section">
+            <h2>Interactive Controls</h2>
 
-            <div className="control-section">
-              <span style={{ color: "white", fontWeight: "500" }}>States:</span>
-              <button
-                className="control-toggle"
-                style={{
-                  background: loading
-                    ? "rgba(255,255,255,0.9)"
-                    : "rgba(255,255,255,0.1)",
-                  color: loading ? "#333" : "white",
-                }}
-                onClick={() => setLoading(!loading)}
-              >
-                Loading: {loading ? "ON" : "OFF"}
-              </button>
-              <button
-                className="control-toggle"
-                style={{
-                  background: disabled
-                    ? "rgba(255,255,255,0.9)"
-                    : "rgba(255,255,255,0.1)",
-                  color: disabled ? "#333" : "white",
-                }}
-                onClick={() => setDisabled(!disabled)}
-              >
-                Disabled: {disabled ? "ON" : "OFF"}
-              </button>
-              <button
-                className="control-toggle"
-                style={{
-                  background: readOnly
-                    ? "rgba(255,255,255,0.9)"
-                    : "rgba(255,255,255,0.1)",
-                  color: readOnly ? "#333" : "white",
-                }}
-                onClick={() => setReadOnly(!readOnly)}
-              >
-                Read-only: {readOnly ? "ON" : "OFF"}
-              </button>
-              <button
-                className="control-toggle"
-                style={{
-                  background: discrete
-                    ? "rgba(255,255,255,0.9)"
-                    : "rgba(255,255,255,0.1)",
-                  color: discrete ? "#333" : "white",
-                }}
-                onClick={() => setDiscrete(!discrete)}
-              >
-                Discrete: {discrete ? "ON" : "OFF"}
-              </button>
-            </div>
+            <fieldset>
+              <legend>Toggle States</legend>
+              <div className="button-group">
+                <button
+                  style={{
+                    padding: "8px 16px",
+                    background: loading ? "#007bff" : "#f8f9fa",
+                    color: loading ? "white" : "#333",
+                    border: "1px solid #ddd",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setLoading(!loading)}
+                >
+                  Loading: {loading ? "ON" : "OFF"}
+                </button>
+                <button
+                  style={{
+                    padding: "8px 16px",
+                    background: disabled ? "#007bff" : "#f8f9fa",
+                    color: disabled ? "white" : "#333",
+                    border: "1px solid #ddd",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setDisabled(!disabled)}
+                >
+                  Disabled: {disabled ? "ON" : "OFF"}
+                </button>
+                <button
+                  style={{
+                    padding: "8px 16px",
+                    background: readOnly ? "#007bff" : "#f8f9fa",
+                    color: readOnly ? "white" : "#333",
+                    border: "1px solid #ddd",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setReadOnly(!readOnly)}
+                >
+                  Read-only: {readOnly ? "ON" : "OFF"}
+                </button>
+                <button
+                  style={{
+                    padding: "8px 16px",
+                    background: discrete ? "#007bff" : "#f8f9fa",
+                    color: discrete ? "white" : "#333",
+                    border: "1px solid #ddd",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setDiscrete(!discrete)}
+                >
+                  Discrete: {discrete ? "ON" : "OFF"}
+                </button>
+              </div>
+            </fieldset>
 
-            <div className="control-section">
-              <span style={{ color: "white", fontWeight: "500" }}>Result:</span>
-              <Button
-                loading={loading}
-                disabled={disabled}
-                readOnly={readOnly}
-                discrete={discrete}
-              >
-                Interactive Button
-              </Button>
-            </div>
+            <fieldset>
+              <legend>Result</legend>
+              <div className="button-group">
+                <Button
+                  loading={loading}
+                  disabled={disabled}
+                  readOnly={readOnly}
+                  discrete={discrete}
+                >
+                  Interactive Button
+                </Button>
+              </div>
+            </fieldset>
           </div>
         );
       };
