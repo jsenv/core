@@ -346,35 +346,40 @@
                 borderRadius="sm"
                 contentAlignX="start"
               >
-                <Link href="#home" textColor="blue">
-                  Go to Homepage
-                </Link>
+                <Link href="#home">Go to Homepage</Link>
 
                 <div>
-                  <Link href="#profile" textColor="green">
+                  <Link href="#profile" textUnderline={false} textColor="green">
                     <Icon>
                       <UserSvg />
                     </Icon>
-                    <Text>View Profile</Text>
+                    <Text textUnderline>View Profile</Text>
                   </Link>
                 </div>
 
                 <div>
-                  <Link href="#search" textColor="purple">
+                  <Link
+                    href="#search"
+                    textUnderline={false}
+                    anchorIcon={false}
+                    textColor="purple"
+                  >
                     <Icon>
                       <SearchSvg />
                     </Icon>
-                    Search Documentation
+                    <Text textUnderline>Search Documentation</Text>
                   </Link>
                 </div>
 
+                {/* An other solution: put icon outside the link
+                  (This means it's not clickable) */}
                 <div>
-                  <Link href="#settings" textColor="orange">
+                  <Text noWrap textColor="orange">
                     <Icon>
                       <SettingsSvg />
                     </Icon>
-                    Open Settings
-                  </Link>
+                    <Link href="#settings">Open Settings</Link>
+                  </Text>
                 </div>
 
                 <div>
@@ -386,17 +391,19 @@
                   </Link>
                 </div>
 
+                {/* We create a link with <Text> just to test but this is not recommended */}
                 <div>
                   <Text
                     as="a"
                     href="https://example.com"
                     textColor="gray"
                     target="_blank"
+                    textUnderline={false}
                   >
                     <Icon>
                       <BlankTargetLinkSvg />
                     </Icon>
-                    External Link
+                    <Text textUnderline>External Link</Text>
                   </Text>
                 </div>
               </Box>

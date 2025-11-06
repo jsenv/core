@@ -223,6 +223,7 @@ const TYPO_PROPS = {
   textColor: applyOnCSSProp("color"),
   noWrap: applyToCssPropWhenTruthy("whiteSpace", "nowrap", "normal"),
   pre: applyToCssPropWhenTruthy("whiteSpace", "pre", "normal"),
+  preWrap: applyToCssPropWhenTruthy("whiteSpace", "pre-wrap", "normal"),
 };
 const VISUAL_PROPS = {
   boxShadow: PASS_THROUGH,

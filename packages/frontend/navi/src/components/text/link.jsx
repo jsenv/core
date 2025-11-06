@@ -29,6 +29,7 @@ import { Icon, applyContentSpacingOnTextChildren } from "./text.jsx";
 import.meta.css = /* css */ `
   .navi_link {
     position: relative;
+    color: inherit;
     border-radius: 2px;
   }
   /* Focus */
