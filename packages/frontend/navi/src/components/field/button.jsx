@@ -56,7 +56,6 @@ import.meta.css = /* css */ `
 
       --border-width: 1px;
       --outline-width: 1px;
-      --outer-width: calc(var(--border-width) + var(--outline-width));
       --padding-x: 6px;
       --padding-y: 1px;
 
@@ -88,48 +87,56 @@ import.meta.css = /* css */ `
       --color-disabled: var(--color-readonly);
     }
     .navi_button_content {
+      /* Internal css vars are the one controlling final values */
+      /* allowing to override them on interactions (like hover, disabled, etc.) */
+      --x-outline-width: var(--outline-width);
+      --x-outline-color: var(--outline-color);
+      --x-background-color: var(--background-color);
+      --x-border-radius: var(--border-radius);
+      --x-border-width: var(--border-width);
+      --x-border-color: var(--border-color);
+      --x-outer-width: calc(var(--x-border-width) + var(--x-outline-width));
+
       position: relative;
-      padding-top: var(--padding-y);
-      padding-right: var(--padding-x);
-      padding-bottom: var(--padding-y);
-      padding-left: var(--padding-x);
-      color: var(--color);
-      background-color: var(--navi-bg-color);
-      border-width: var(--outer-width);
+      padding-top: var(--padding-top, var(--padding-y));
+      padding-right: var(--padding-right, var(--padding-x));
+      padding-bottom: var(--padding-bottom, var(--padding-y));
+      padding-left: var(--padding-left, var(--padding-x));
+      color: var(--x-color);
+      background-color: var(--x-background-color);
+      border-width: var(--x-outer-width);
       border-style: solid;
       border-color: transparent;
-      border-radius: var(--border-radius);
-      outline-width: var(--border-width);
+      border-radius: var(--x-border-radius);
+      outline-width: var(--x-border-width);
       outline-style: solid;
-      outline-color: var(--border-color);
-      outline-offset: calc(-1 * (var(--border-width)));
+      outline-color: var(--x-border-color);
+      outline-offset: calc(-1 * (var(--x-border-width)));
       transition-property: transform;
       transition-duration: 0.15s;
       transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-
-      --navi-bg-color: var(--background-color);
     }
     .navi_button_shadow {
       position: absolute;
-      inset: calc(-1 * var(--outer-width));
+      inset: calc(-1 * var(--x-outer-width));
       border-radius: inherit;
       pointer-events: none;
     }
     /* Focus */
     .navi_button[data-focus-visible] .navi_button_content {
-      --border-color: var(--outline-color);
-      outline-width: var(--outer-width);
-      outline-offset: calc(-1 * var(--outer-width));
+      --x-border-color: var(--x-outline-color);
+      outline-width: var(--x-outer-width);
+      outline-offset: calc(-1 * var(--x-outer-width));
     }
     /* Hover */
     .navi_button[data-hover] .navi_button_content {
-      --color: var(--color-hover);
-      --border-color: var(--border-color-hover);
-      --navi-bg-color: var(--background-color-hover);
+      --x-color: var(--color-hover);
+      --x-border-color: var(--border-color-hover);
+      --x-background-color: var(--background-color-hover);
     }
     /* Active */
     .navi_button[data-active] .navi_button_content {
-      --outline-color: var(--border-color-active);
+      --x-outline-color: var(--border-color-active);
       transform: scale(0.9);
     }
     .navi_button[data-active] .navi_button_shadow {
@@ -142,19 +149,19 @@ import.meta.css = /* css */ `
     }
     /* Readonly */
     .navi_button[data-readonly] .navi_button_content {
-      --border-color: var(--border-color-disabled);
-      --outline-color: var(--border-color-readonly);
-      --background-color: var(--background-color-readonly);
-      --color: var(--color-readonly);
+      --x-border-color: var(--border-color-disabled);
+      --x-outline-color: var(--border-color-readonly);
+      --x-background-color: var(--background-color-readonly);
+      --x-color: var(--color-readonly);
     }
     /* Disabled */
     .navi_button[data-disabled] {
       cursor: default;
     }
     .navi_button[data-disabled] .navi_button_content {
-      --border-color: var(--border-color-disabled);
-      --background-color: var(--background-color-disabled);
-      --color: var(--color-disabled);
+      --x-border-color: var(--border-color-disabled);
+      --x-background-color: var(--background-color-disabled);
+      --x-color: var(--color-disabled);
       transform: none; /* no active effect */
     }
     .navi_button[data-disabled] .navi_button_shadow {
@@ -162,22 +169,22 @@ import.meta.css = /* css */ `
     }
     /* Callout (info, warning, error) */
     .navi_button[data-callout] .navi_button_content {
-      --border-color: var(--callout-color);
+      --x-border-color: var(--callout-color);
     }
 
     /* Discrete variant */
     .navi_button[data-discrete] .navi_button_content {
-      --background-color: transparent;
-      --border-color: transparent;
+      --x-background-color: transparent;
+      --x-border-color: transparent;
     }
     .navi_button[data-discrete][data-hover] .navi_button_content {
-      --border-color: var(--border-color-hover);
+      --x-border-color: var(--border-color-hover);
     }
     .navi_button[data-discrete][data-readonly] .navi_button_content {
-      --border-color: transparent;
+      --x-border-color: transparent;
     }
     .navi_button[data-discrete][data-disabled] .navi_button_content {
-      --border-color: transparent;
+      --x-border-color: transparent;
     }
     button[data-discrete] {
       background-color: transparent;
@@ -242,6 +249,11 @@ const ButtonBasic = forwardRef((props, ref) => {
       layout: true,
       visual: false,
       innerSpacing: false,
+      managedByCSSVars: {
+        backgroundColor: "--background-color",
+        borderColor: "--border-color",
+        textColor: "--color",
+      },
     },
     {
       visual: true,

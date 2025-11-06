@@ -32,10 +32,10 @@
 
       .demo-section h2 {
         margin: 0 0 20px 0;
+        padding-bottom: 10px;
         color: #333;
         font-size: 1.4rem;
         border-bottom: 2px solid #ddd;
-        padding-bottom: 10px;
       }
 
       fieldset {
@@ -53,8 +53,8 @@
 
       .button-group {
         display: flex;
-        gap: 15px;
         align-items: center;
+        gap: 15px;
       }
 
       .comparison-section {
@@ -74,9 +74,9 @@
 
       .comparison-group {
         display: flex;
-        gap: 15px;
-        align-items: center;
         margin: 10px 0;
+        align-items: center;
+        gap: 15px;
       }
 
       .comparison-label {
@@ -87,9 +87,9 @@
 
       .variation-grid {
         display: grid;
+        margin: 15px 0;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 15px;
-        margin: 15px 0;
       }
 
       .variation-item {
@@ -143,27 +143,24 @@
               </div>
             </fieldset>
 
-            <div className="comparison-section">
-              <p className="comparison-title">Native comparison:</p>
-              
-              <div className="comparison-group">
-                <span className="comparison-label">Default:</span>
+            <fieldset>
+              <legend>Native Comparison</legend>
+              <div className="button-group">
                 <button>Default</button>
-              </div>
-              
-              <div className="comparison-group">
-                <span className="comparison-label">Read-only:</span>
                 <button data-readonly>Read-only</button>
-                <small style={{ color: "#666", marginLeft: "10px" }}>
-                  (Native doesn't have read-only state)
-                </small>
-              </div>
-              
-              <div className="comparison-group">
-                <span className="comparison-label">Disabled:</span>
                 <button disabled>Disabled</button>
               </div>
-            </div>
+              <small
+                style={{
+                  color: "#666",
+                  fontSize: "0.85rem",
+                  marginTop: "10px",
+                  display: "block",
+                }}
+              >
+                Note: Native buttons don't have a read-only state
+              </small>
+            </fieldset>
           </div>
         );
       };
@@ -256,9 +253,7 @@
 
               <div className="variation-item">
                 <p className="variation-label">Custom text</p>
-                <Button style={{ "--color": "#6f42c1" }}>
-                  Purple text
-                </Button>
+                <Button style={{ "--color": "#6f42c1" }}>Purple text</Button>
               </div>
             </div>
           </div>
