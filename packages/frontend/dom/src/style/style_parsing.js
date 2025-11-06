@@ -240,6 +240,11 @@ const normalizeNumber = (value, { unit, propertyName, preferedType }) => {
     if (preferedType === "number") {
       return value;
     }
+    if (propertyName === "linHeight") {
+      // When line height is converted to a number it means
+      // it was in pixels, we must restore the unit
+      return `${value}px`;
+    }
     // convert to string with unit
     return `${value}${unit}`;
   }

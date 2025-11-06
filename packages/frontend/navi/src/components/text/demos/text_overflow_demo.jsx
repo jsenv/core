@@ -1,9 +1,9 @@
-import { Box, Count, Text } from "@jsenv/navi";
+import { Box, Count, Layout, Text } from "@jsenv/navi";
 import { useState } from "preact/hooks";
 
 export const App = () => {
   return (
-    <Box layoutRow contentSpacing="24px" padding="20px">
+    <Layout row contentSpacing="24px" padding="20px">
       <h1>TextOverflow Component Demo</h1>
 
       {/* Basic Usage */}
@@ -20,7 +20,7 @@ export const App = () => {
       {/* With After Content */}
       <section>
         <h2>With Pinned Content</h2>
-        <Box layoutRow contentSpacing="12px">
+        <Layout row contentSpacing="12px">
           <div
             style={{ width: "250px", border: "1px solid #ccc", padding: "8px" }}
           >
@@ -42,13 +42,13 @@ export const App = () => {
               </Text>
             </Text>
           </div>
-        </Box>
+        </Layout>
       </section>
 
       {/* Different Container Sizes */}
       <section>
         <h2>Different Container Widths</h2>
-        <Box layoutRow contentSpacing="12px">
+        <Layout row contentSpacing="12px">
           {[150, 200, 300, 400].map((width) => (
             <div
               key={width}
@@ -69,13 +69,13 @@ export const App = () => {
               </Text>
             </div>
           ))}
-        </Box>
+        </Layout>
       </section>
 
       {/* Different HTML Tags */}
       <section>
         <h2>Different HTML Elements</h2>
-        <Box layoutRow contentSpacing="12px">
+        <Layout row contentSpacing="12px">
           <div
             style={{ width: "200px", border: "1px solid #ccc", padding: "8px" }}
           >
@@ -114,13 +114,13 @@ export const App = () => {
               This is rendered as a span element with overflow
             </Text>
           </div>
-        </Box>
+        </Layout>
       </section>
 
       {/* With Layout Props */}
       <section>
         <h2>With Layout Props</h2>
-        <Box layoutRow contentSpacing="12px">
+        <Layout row contentSpacing="12px" style="box-decoration-break: clone">
           <div
             style={{ width: "300px", border: "1px solid #ccc", padding: "8px" }}
           >
@@ -151,13 +151,13 @@ export const App = () => {
               Styled text container with overflow handling and visual styling
             </Text>
           </div>
-        </Box>
+        </Layout>
       </section>
 
       {/* Complex After Content */}
       <section>
         <h2>Complex Pinned Content</h2>
-        <Box layoutRow contentSpacing="12px">
+        <Layout row contentSpacing="12px">
           <div
             style={{ width: "280px", border: "1px solid #ccc", padding: "8px" }}
           >
@@ -195,7 +195,7 @@ export const App = () => {
               </Text>
             </Text>
           </div>
-        </Box>
+        </Layout>
       </section>
 
       {/* Interactive Examples */}
@@ -207,7 +207,7 @@ export const App = () => {
       {/* Multiline Text Overflow Testing */}
       <section>
         <h2>Multiline Text Overflow Behavior</h2>
-        <Box layoutRow contentSpacing="16px">
+        <Layout row contentSpacing="16px">
           {/* Test 1: Text with line breaks */}
           <div
             style={{ width: "200px", border: "1px solid #ccc", padding: "8px" }}
@@ -233,7 +233,7 @@ export const App = () => {
             >
               Vertical alignment comparison
             </div>
-            <Box layoutRow style={{ lineHeight: "100px" }}>
+            <Box layoutRow textLineHeight="100px">
               <Text overflowEllipsis style={{ maxWidth: "200px" }}>
                 Just a long line of text that would get overflowed.
               </Text>
@@ -245,9 +245,9 @@ export const App = () => {
               </Text>
             </Box>
           </div>
-        </Box>
+        </Layout>
       </section>
-    </Box>
+    </Layout>
   );
 };
 
@@ -255,8 +255,8 @@ const InteractiveWidthDemo = () => {
   const [width, setWidth] = useState(200);
 
   return (
-    <Box layoutRow contentSpacing="12px">
-      <Box layoutColumn contentSpacing="12px" style={{ alignItems: "center" }}>
+    <Layout row contentSpacing="12px">
+      <Layout column contentSpacing="12px" contentAlignY="center">
         <label htmlFor="width-slider">Container Width: {width}px</label>
         <input
           id="width-slider"
@@ -267,15 +267,9 @@ const InteractiveWidthDemo = () => {
           onChange={(e) => setWidth(Number(e.target.value))}
           style={{ width: "200px" }}
         />
-      </Box>
+      </Layout>
 
-      <Box
-        style={{
-          width: `${width}px`,
-          border: "2px solid #2196f3",
-          padding: "12px",
-        }}
-      >
+      <Layout width={width} border="2px solid #2196f3" padding="sm">
         <Text overflowEllipsis textBold>
           Resize me to see how the text overflow behavior adapts to different
           container widths
@@ -283,7 +277,7 @@ const InteractiveWidthDemo = () => {
             ✓
           </Text>
         </Text>
-      </Box>
-    </Box>
+      </Layout>
+    </Layout>
   );
 };

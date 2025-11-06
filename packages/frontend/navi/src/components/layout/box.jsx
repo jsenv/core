@@ -232,7 +232,6 @@ const useBoxStyle = (props, { ref, contentSelector, base }) => {
     if (!el) {
       return;
     }
-    console.log(el.tagName);
     initPseudoStyles(
       el,
       {
