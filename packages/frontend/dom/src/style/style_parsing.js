@@ -205,6 +205,13 @@ export const normalizeStyle = (value, propertyName, context = "js") => {
         return value;
       }
     }
+    if (context === "css") {
+      if (typeof value === "number") {
+        // When line height is converted to a number it means
+        // it was in pixels, we must restore the unit
+        return `${value}px`;
+      }
+    }
     return value;
   }
 
@@ -256,11 +263,6 @@ const normalizeNumber = (value, { unit, propertyName, preferedType }) => {
     }
     if (preferedType === "number") {
       return value;
-    }
-    if (propertyName === "lineHeight") {
-      // When line height is converted to a number it means
-      // it was in pixels, we must restore the unit
-      return `${value}px`;
     }
     // convert to string with unit
     return `${value}${unit}`;
