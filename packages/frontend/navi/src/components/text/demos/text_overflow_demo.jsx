@@ -1,53 +1,91 @@
-import { Box, Count, Layout, Text } from "@jsenv/navi";
+import { Box, Count, Icon, Layout, Text } from "@jsenv/navi";
 import { useState } from "preact/hooks";
 
 export const App = () => {
   return (
-    <Layout row contentSpacing="24px" padding="20px">
-      <h1>TextOverflow Component Demo</h1>
+    <div
+      style={{
+        padding: "20px",
+        fontFamily: "system-ui, sans-serif",
+        maxWidth: "900px",
+        lineHeight: "1.5",
+      }}
+    >
+      <h1>Text Overflow Demo</h1>
 
-      {/* Basic Usage */}
       <section>
-        <h2>Basic Text Overflow</h2>
-        <Box width="200" border="1px solid #ccc" padding="sm">
+        <h2>Basic</h2>
+        <Box width="220" border="1px solid #ccc" padding="sm">
           <Text overflowEllipsis>
             This is a very long text that should be truncated with ellipsis when
-            it overflows
+            it overflows this small container.
           </Text>
         </Box>
       </section>
 
-      {/* With After Content */}
       <section>
-        <h2>With Pinned Content</h2>
-        <Layout row contentSpacing="12px">
-          <div
-            style={{ width: "250px", border: "1px solid #ccc", padding: "8px" }}
-          >
+        <h2>Pinned Content</h2>
+        <Layout row contentSpacing="16px">
+          <Box width="260" border="1px solid #ccc" padding="sm">
             <Text overflowEllipsis>
-              This text has additional content after it that stays visible
+              This text has extra info that stays visible
               <Text overflowPinned textColor="#666">
                 (modified)
               </Text>
             </Text>
-          </div>
-
-          <div
-            style={{ width: "250px", border: "1px solid #ccc", padding: "8px" }}
-          >
+          </Box>
+          <Box width="260" border="1px solid #ccc" padding="sm">
             <Text overflowEllipsis>
-              Text with count that is too long to be displayed entirely
+              Text with a dynamic count that is long and will overflow
               <Text overflowPinned textColor="#4caf50">
                 <Count>10</Count>
               </Text>
             </Text>
-          </div>
+          </Box>
         </Layout>
       </section>
 
-      {/* Different Container Sizes */}
+      {/* New section showing icons & styled text with auto spacing */}
       <section>
-        <h2>Different Container Widths</h2>
+        <h2>Icons & Styled Text</h2>
+        <p style={{ color: "#555", fontSize: "14px" }}>
+          Inline icons and styled fragments inside an overflow ellipsis will
+          auto-space correctly while the pinned part stays visible.
+        </p>
+        <Layout row contentSpacing="16px">
+          <Box width="300" border="1px solid #ccc" padding="sm">
+            <Text overflowEllipsis>
+              <Icon>
+                <StarSvg />
+              </Icon>
+              <Text textBold>Important</Text> notification about a process
+              currently running with status
+              <Icon>
+                <StarSvg />
+              </Icon>
+              <Text textItalic>active</Text>
+              <Text overflowPinned textColor="#666">
+                (live)
+              </Text>
+            </Text>
+          </Box>
+          <Box width="180" border="1px solid #ccc" padding="sm">
+            <Text overflowEllipsis>
+              <Icon>
+                <StarSvg />
+              </Icon>
+              <Text textUnderline>Truncated</Text> sequence showcasing icon
+              spacing with styled parts
+              <Text overflowPinned textColor="#666">
+                (ok)
+              </Text>
+            </Text>
+          </Box>
+        </Layout>
+      </section>
+
+      <section>
+        <h2>Container Widths</h2>
         <Layout row contentSpacing="12px">
           {[150, 200, 300, 400].map((width) => (
             <div
@@ -72,9 +110,8 @@ export const App = () => {
         </Layout>
       </section>
 
-      {/* Different HTML Tags */}
       <section>
-        <h2>Different HTML Elements</h2>
+        <h2>HTML Elements</h2>
         <Layout row contentSpacing="12px">
           <div
             style={{ width: "200px", border: "1px solid #ccc", padding: "8px" }}
@@ -117,44 +154,8 @@ export const App = () => {
         </Layout>
       </section>
 
-      {/* With Layout Props */}
-      <section>
-        <h2>With Layout Props</h2>
-        <Layout row contentSpacing="12px" style="box-decoration-break: clone">
-          <div
-            style={{ width: "300px", border: "1px solid #ccc", padding: "8px" }}
-          >
-            <div
-              style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}
-            >
-              With padding and margin
-            </div>
-            <Text padding="sm" margin="xs" backgroundColor="#f0f0f0">
-              Text with padding and margin that will overflow properly
-            </Text>
-          </div>
+      {/* Removed 'With Layout Props' section for clarity */}
 
-          <div
-            style={{ width: "250px", border: "1px solid #ccc", padding: "8px" }}
-          >
-            <div
-              style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}
-            >
-              With border and background
-            </div>
-            <Text
-              padding="sm"
-              backgroundColor="#e3f2fd"
-              border="1px solid #2196f3"
-              borderRadius="4px"
-            >
-              Styled text container with overflow handling and visual styling
-            </Text>
-          </div>
-        </Layout>
-      </section>
-
-      {/* Complex After Content */}
       <section>
         <h2>Complex Pinned Content</h2>
         <Layout row contentSpacing="12px">
@@ -198,15 +199,13 @@ export const App = () => {
         </Layout>
       </section>
 
-      {/* Interactive Examples */}
       <section>
-        <h2>Interactive Width Control</h2>
+        <h2>Interactive Width</h2>
         <InteractiveWidthDemo />
       </section>
 
-      {/* Multiline Text Overflow Testing */}
       <section>
-        <h2>Multiline Text Overflow Behavior</h2>
+        <h2>Multiline Behavior</h2>
         <Layout row contentSpacing="16px">
           {/* Test 1: Text with line breaks */}
           <div
@@ -244,7 +243,7 @@ export const App = () => {
           </div>
         </Layout>
       </section>
-    </Layout>
+    </div>
   );
 };
 
@@ -278,3 +277,18 @@ const InteractiveWidthDemo = () => {
     </Layout>
   );
 };
+
+// Simple star icon reused in examples
+const StarSvg = () => (
+  <svg
+    viewBox="0 0 24 24"
+    width="100%"
+    height="100%"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+      fill="currentColor"
+    />
+  </svg>
+);
