@@ -94,7 +94,7 @@ import.meta.css = /* css */ `
       padding-bottom: var(--padding-y);
       padding-left: var(--padding-x);
       color: var(--color);
-      background-color: var(--background-color);
+      background-color: var(--navi-bg-color);
       border-width: var(--outer-width);
       border-style: solid;
       border-color: transparent;
@@ -106,6 +106,8 @@ import.meta.css = /* css */ `
       transition-property: transform;
       transition-duration: 0.15s;
       transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+
+      --navi-bg-color: var(--background-color);
     }
     .navi_button_shadow {
       position: absolute;
@@ -123,7 +125,7 @@ import.meta.css = /* css */ `
     .navi_button[data-hover] .navi_button_content {
       --color: var(--color-hover);
       --border-color: var(--border-color-hover);
-      --background-color: var(--background-color-hover);
+      --navi-bg-color: var(--background-color-hover);
     }
     /* Active */
     .navi_button[data-active] .navi_button_content {
@@ -243,6 +245,7 @@ const ButtonBasic = forwardRef((props, ref) => {
     },
     {
       visual: true,
+      interaction: true,
       innerSpacing: true,
     },
   );

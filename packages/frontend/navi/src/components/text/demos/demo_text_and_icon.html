@@ -421,19 +421,15 @@
                 <Button
                   paddingX="lg"
                   paddingY="md"
-                  background="#007bff"
+                  backgroundColor="#007bff"
+                  borderColor="#007bff"
                   textColor="white"
                   textSize="sm"
-                  border="2px solid #007bff"
+                  borderWidth="2"
+                  borderStyle="solid"
                   borderRadius="sm"
-                  onMouseOver={(e) => {
-                    // e.target.closest("button").style.background = "#0056b3";
-                    // e.target.closest("button").style.borderColor = "#0056b3";
-                  }}
-                  onMouseOut={(e) => {
-                    // e.target.closest("button").style.background = "#007bff";
-                    // e.target.closest("button").style.borderColor = "#007bff";
-                  }}
+                  backgroundColorWhileHover="#0056b3"
+                  borderColorWhileHover="#0056b3"
                 >
                   <Icon>
                     <SearchSvg />

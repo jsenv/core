@@ -457,9 +457,55 @@ export const withPropsStyle = (
       break interaction_styles;
     }
     interactionStyles = {};
-    if (backgroundColorWhileHover) {
+    if (backgroundColor) {
+      delete visualStyles.backgroundColor;
+      interactionStyles["--background-color"] = backgroundColor;
+    }
+    if (borderColor) {
+      delete visualStyles.borderColor;
+      interactionStyles["--border-color"] = borderColor;
+    }
+
+    if (backgroundColorWhileHover !== undefined) {
       interactionStyles["--background-color-hover"] = backgroundColorWhileHover;
     }
+    if (backgroundColorWhileActive !== undefined) {
+      interactionStyles["--background-color-active"] =
+        backgroundColorWhileActive;
+    }
+    if (backgroundColorWhileReadonly !== undefined) {
+      interactionStyles["--background-color-readonly"] =
+        backgroundColorWhileReadonly;
+    }
+    if (backgroundColorWhileDisabled !== undefined) {
+      interactionStyles["--background-color-disabled"] =
+        backgroundColorWhileDisabled;
+    }
+    if (borderColorWhileHover !== undefined) {
+      interactionStyles["--border-color-hover"] = borderColorWhileHover;
+    }
+    if (borderColorWhileActive !== undefined) {
+      interactionStyles["--border-color-active"] = borderColorWhileActive;
+    }
+    if (borderColorWhileReadOnly !== undefined) {
+      interactionStyles["--border-color-readonly"] = borderColorWhileReadOnly;
+    }
+    if (borderColorWhileDisabled !== undefined) {
+      interactionStyles["--border-color-disabled"] = borderColorWhileDisabled;
+    }
+    if (textColorWhileHover !== undefined) {
+      interactionStyles["--text-color-hover"] = textColorWhileHover;
+    }
+    if (textColorWhileActive !== undefined) {
+      interactionStyles["--text-color-active"] = textColorWhileActive;
+    }
+    if (textColorWhileReadOnly !== undefined) {
+      interactionStyles["--text-color-readonly"] = textColorWhileReadOnly;
+    }
+    if (textColorWhileDisabled !== undefined) {
+      interactionStyles["--text-color-disabled"] = textColorWhileDisabled;
+    }
+    normalizeStyles(interactionStyles, "css", true);
   }
 
   const firstConfigStyle = {};
@@ -483,6 +529,9 @@ export const withPropsStyle = (
   }
   if (visual) {
     Object.assign(firstConfigStyle, visualStyles);
+  }
+  if (interaction) {
+    Object.assign(firstConfigStyle, interactionStyles);
   }
   if (style) {
     appendStyles(firstConfigStyle, propStyles, "css");
@@ -513,6 +562,9 @@ export const withPropsStyle = (
     }
     if (config.visual || config.visual === undefined) {
       Object.assign(configStyle, visualStyles);
+    }
+    if (config.interaction) {
+      Object.assign(configStyle, interactionStyles);
     }
     if (config.style) {
       appendStyles(configStyle, propStyles, "css");
