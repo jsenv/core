@@ -18,7 +18,7 @@ import { Box } from "../layout/box.jsx";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { withPropsClassName } from "../props_composition/with_props_class_name.js";
 import {
-  useNaviStyle,
+  applyStyles,
   withPropsStyle,
 } from "../props_composition/with_props_style.js";
 import { applyContentSpacingOnTextChildren } from "../text/text.jsx";
@@ -297,10 +297,16 @@ const ButtonBasic = forwardRef((props, ref) => {
   const dataFocusVisibleProp = remainingProps["data-focus-visible"];
   const contentRef = useRef();
   useLayoutEffect(() => {
-    return initCustomField(innerRef.current, contentRef.current, {
+    const button = innerRef.current;
+    const buttonContent = contentRef.current;
+    return initCustomField(button, buttonContent, {
       skipFocus: dataFocusVisibleProp,
+      effect: (pseudoStates) => {
+        applyStyles(button, buttonStyle);
+        applyStyles(buttonContent, contentStyle, pseudoStyles, pseudoStates);
+      },
     });
-  }, [dataFocusVisibleProp]);
+  }, [buttonStyle, contentStyle, pseudoStyles, dataFocusVisibleProp]);
   const innerChildren = applyContentSpacingOnTextChildren(
     children,
     contentSpacing,
@@ -315,9 +321,6 @@ const ButtonBasic = forwardRef((props, ref) => {
   if (rest.pseudo) {
     console.log(pseudoStyles);
   }
-
-  useNaviStyle(innerRef, buttonStyle);
-  useNaviStyle(contentRef, contentStyle);
 
   return (
     <Box

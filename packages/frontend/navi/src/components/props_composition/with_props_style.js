@@ -4,7 +4,7 @@ import {
   normalizeStyle,
   normalizeStyles,
 } from "@jsenv/dom";
-import { useContext, useLayoutEffect } from "preact/hooks";
+import { useContext } from "preact/hooks";
 
 import { BoxLayoutContext } from "../layout/layout_context.jsx";
 
@@ -56,14 +56,38 @@ import { BoxLayoutContext } from "../layout/layout_context.jsx";
  */
 
 const naviStyleController = createStyleController("navi");
-export const useNaviStyle = (ref, style) => {
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) {
-      return;
+const pseudoStyleControllers = {
+  ":hover": createStyleController("navi:hover"),
+  ":active": createStyleController("navi:active"),
+  ":checked": createStyleController("navi:checked"),
+  ":disabled": createStyleController("navi:disabled"),
+  ":focus": createStyleController("navi:focus"),
+  ":focus-visible": createStyleController("navi:focus-visible"),
+  ":valid": createStyleController("navi:valid"),
+  ":invalid": createStyleController("navi:invalid"),
+  ":read-only": createStyleController("navi:read-only"),
+  ":visited": createStyleController("navi:visited"),
+  "::-navi-loader": createStyleController("navi::-navi-loader"),
+};
+
+export const applyStyles = (element, style, pseudoStyles, pseudoStates) => {
+  naviStyleController.set(element, style);
+  if (pseudoStyles) {
+    for (const pseudoName of Object.keys(pseudoStyles)) {
+      const stylesToApply = pseudoStyles[pseudoName];
+      const pseudoStyleController = pseudoStyleControllers[pseudoName];
+      if (pseudoName.startsWith("::")) {
+        pseudoStyleController.set(element, stylesToApply);
+        continue;
+      }
+      const shouldApply = pseudoStates[pseudoName];
+      if (shouldApply) {
+        pseudoStyleController.set(element, stylesToApply);
+      } else {
+        pseudoStyleController.clear(element);
+      }
     }
-    naviStyleController.set(el, style);
-  }, [style]);
+  }
 };
 
 const normalizeSpacingStyle = (value, property = "padding") => {
@@ -479,8 +503,7 @@ export const withPropsStyle = (
             "css",
           );
         }
-        const key = pseudoClass.slice(1); // ":hover" -> "hover"
-        pseudoNamedStyles[key] = pseudoClassStyles;
+        pseudoNamedStyles[pseudoClass] = pseudoClassStyles;
       }
     }
     pseudo_elements: {
@@ -501,9 +524,7 @@ export const withPropsStyle = (
             "css",
           );
         }
-        // "::-navi-loader" -> "-navi-loader"
-        const key = pseudoElement.slice(3);
-        pseudoNamedStyles[key] = pseudoElementStyles;
+        pseudoNamedStyles[pseudoElement] = pseudoElementStyles;
       }
     }
   }

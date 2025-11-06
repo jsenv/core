@@ -46,7 +46,6 @@ export const initCustomField = (
         if (!skipFocus || !key.includes("focus")) {
           applyStateOnAttribute(newState[key], key);
         }
-
         someChange = true;
       }
     }
