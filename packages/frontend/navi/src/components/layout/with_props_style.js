@@ -1,7 +1,7 @@
 import { appendStyles, normalizeStyle, normalizeStyles } from "@jsenv/dom";
 import { useContext } from "preact/hooks";
 
-import { BoxLayoutContext } from "../layout/layout_context.jsx";
+import { BoxLayoutContext } from "./layout_context.jsx";
 
 /**
  * Processes component props to extract and generate styles for layout, spacing, alignment, expansion, and typography.
