@@ -49,6 +49,126 @@ import { BoxFlowContext } from "../layout/layout_context.jsx";
  * @param {boolean} [remainingConfig.style] - Include styles from props in this config
  * @returns {array} [remainingProps, mainStyle, ...additionalStyles] - Non-style props and style objects
  */
+
+const normalizeSpacingStyle = (value, property = "padding") => {
+  const cssSize = sizeSpacingScale[value];
+  return cssSize || normalizeStyle(value, property, "css");
+};
+const APPLY_SAME = (value, { propName }) => {
+  return { [propName]: value };
+};
+const applyOnCSSProp = (cssStyle) => {
+  return (value) => {
+    return { [cssStyle]: value };
+  };
+};
+const applyOnTwoCSSProps = (cssStyleA, cssStyleB) => {
+  return (value) => {
+    return {
+      [cssStyleA]: value,
+      [cssStyleB]: value,
+    };
+  };
+};
+const OUTER_SPACING_PROPS = {
+  margin: APPLY_SAME,
+  marginLeft: APPLY_SAME,
+  marginRight: APPLY_SAME,
+  marginTop: APPLY_SAME,
+  marginBottom: APPLY_SAME,
+  marginX: applyOnTwoCSSProps("marginLeft", "marginRight"),
+  marginY: applyOnTwoCSSProps("marginTop", "marginBottom"),
+};
+const INNER_SPACING_PROPS = {
+  padding: APPLY_SAME,
+  paddingLeft: APPLY_SAME,
+  paddingRight: APPLY_SAME,
+  paddingTop: APPLY_SAME,
+  paddingBottom: APPLY_SAME,
+  paddingX: applyOnTwoCSSProps("paddingLeft", "paddingRight"),
+  paddingY: applyOnTwoCSSProps("paddingTop", "paddingBottom"),
+};
+const SIZE_PROPS = {
+  width: APPLY_SAME,
+  minWidth: APPLY_SAME,
+  maxWidth: APPLY_SAME,
+  height: APPLY_SAME,
+  minHeight: APPLY_SAME,
+  maxHeight: APPLY_SAME,
+  // apply after width/height to override if both are set
+  expandX: (value, { boxFlow }) => {
+    if (!value) {
+      return null;
+    }
+    if (boxFlow === "column") {
+      return { flexGrow: 1 }; // Grow horizontally in row
+    }
+    if (boxFlow === "row") {
+      return { width: "100%" }; // Take full width in column
+    }
+    return { width: "100%" }; // Take full width outside flex
+  },
+  expandY: (value, { boxFlow }) => {
+    if (!value) {
+      return null;
+    }
+    if (boxFlow === "col") {
+      return { height: "100%" }; // Make column full height
+    }
+    if (boxFlow === "row") {
+      return { flexGrow: 1 }; // Make row full height
+    }
+    return { height: "100%" }; // Take full height outside flex
+  },
+};
+const ALIGNEMENT_PROPS = {
+  alignX: (value, { boxFlow }) => {
+    // For row, alignX uses auto margins for positioning
+    // NOTE: Auto margins only work effectively for positioning individual items.
+    // When multiple adjacent items have the same auto margin alignment (e.g., alignX="end"),
+    // only the first item will be positioned as expected because subsequent items
+    // will be positioned relative to the previous item's margins, not the container edge.
+    if (value === "start") {
+      if (boxFlow === "row") {
+        return {
+          alignSelf: "start",
+        };
+      }
+      return {
+        marginRight: "auto",
+      };
+    }
+    if (value === "end") {
+      return {
+        marginLeft: "auto",
+      };
+    }
+    if (value === "center") {
+      return {
+        marginLeft: "auto",
+        marginRight: "auto",
+      };
+    }
+    return undefined;
+  },
+  alignY: (value) => {},
+};
+
+const generateStyleGroup = (model, props, normalizer = normalizeStyle) => {
+  const styleGroup = {};
+  for (const propName of Object.keys(model)) {
+    const propValue = props[propName];
+    if (propValue === undefined) {
+      continue;
+    }
+    const values = model[propName](propValue);
+    for (const key of Object.keys(values)) {
+      styleGroup[key] = normalizer(values[key], key);
+    }
+  }
+  return styleGroup;
+};
+
 export const withPropsStyle = (
   props,
   {
@@ -61,7 +181,10 @@ export const withPropsStyle = (
     size = layout,
     typo,
     visual = true,
-    interaction,
+
+    pseudoClasses,
+    pseudoElements,
+    managedByCSSVars,
   },
   ...remainingConfig
 ) => {
@@ -132,19 +255,8 @@ export const withPropsStyle = (
     filter,
     cursor,
 
-    // interaction props
-    backgroundColorWhileHover,
-    backgroundColorWhileActive,
-    backgroundColorWhileReadonly,
-    backgroundColorWhileDisabled,
-    borderColorWhileHover,
-    borderColorWhileActive,
-    borderColorWhileReadOnly,
-    borderColorWhileDisabled,
-    textColorWhileHover,
-    textColorWhileActive,
-    textColorWhileReadOnly,
-    textColorWhileDisabled,
+    // pseudo class props
+    pseudo,
 
     // props not related to styling
     ...remainingProps
@@ -158,7 +270,7 @@ export const withPropsStyle = (
   let sizeStyles;
   let typoStyles;
   let visualStyles;
-  let interactionStyles;
+  let pseudoNamedStyles = {};
 
   props_styles: {
     if (!style && !hasRemainingConfig) {
@@ -170,176 +282,30 @@ export const withPropsStyle = (
     if (!spacing && !hasRemainingConfig) {
       break spacing_styles;
     }
-    outer_spacing: {
-      marginStyles = {};
-      if (margin !== undefined) {
-        marginStyles.margin = sizeSpacingScale[margin] || margin;
-      }
-      if (marginLeft !== undefined) {
-        marginStyles.marginLeft = sizeSpacingScale[marginLeft] || marginLeft;
-      } else if (marginX !== undefined) {
-        marginStyles.marginLeft = sizeSpacingScale[marginX] || marginX;
-      }
-      if (marginRight !== undefined) {
-        marginStyles.marginRight = sizeSpacingScale[marginRight] || marginRight;
-      } else if (marginX !== undefined) {
-        marginStyles.marginRight = sizeSpacingScale[marginX] || marginX;
-      }
-      if (marginTop !== undefined) {
-        marginStyles.marginTop = sizeSpacingScale[marginTop] || marginTop;
-      } else if (marginY !== undefined) {
-        marginStyles.marginTop = sizeSpacingScale[marginY] || marginY;
-      }
-      if (marginBottom !== undefined) {
-        marginStyles.marginBottom =
-          sizeSpacingScale[marginBottom] || marginBottom;
-      } else if (marginY !== undefined) {
-        marginStyles.marginBottom = sizeSpacingScale[marginY] || marginY;
-      }
-      normalizeStyles(marginStyles, "css", true);
-    }
-    inner_spacing: {
-      paddingStyles = {};
-      if (padding !== undefined) {
-        paddingStyles.padding = sizeSpacingScale[padding] || padding;
-      }
-      if (paddingLeft !== undefined) {
-        paddingStyles.paddingLeft =
-          sizeSpacingScale[paddingLeft] || paddingLeft;
-      } else if (paddingX !== undefined) {
-        paddingStyles.paddingLeft = sizeSpacingScale[paddingX] || paddingX;
-      }
-      if (paddingRight !== undefined) {
-        paddingStyles.paddingRight =
-          sizeSpacingScale[paddingRight] || paddingRight;
-      } else if (paddingX !== undefined) {
-        paddingStyles.paddingRight = sizeSpacingScale[paddingX] || paddingX;
-      }
-      if (paddingTop !== undefined) {
-        paddingStyles.paddingTop = sizeSpacingScale[paddingTop] || paddingTop;
-      } else if (paddingY !== undefined) {
-        paddingStyles.paddingTop = sizeSpacingScale[paddingY] || paddingY;
-      }
-      if (paddingBottom !== undefined) {
-        paddingStyles.paddingBottom =
-          sizeSpacingScale[paddingBottom] || paddingBottom;
-      } else if (paddingY !== undefined) {
-        paddingStyles.paddingBottom = sizeSpacingScale[paddingY] || paddingY;
-      }
-      normalizeStyles(paddingStyles, "css", true);
-    }
-  }
-  alignment_styles: {
-    if (!align && !hasRemainingConfig) {
-      break alignment_styles;
-    }
-    alignmentStyles = {};
-
-    // flex
-    if (boxFlow === "col") {
-      // In row direction: alignX controls justify-content, alignY controls align-self
-      if (alignY !== undefined && alignY !== "start") {
-        alignmentStyles.alignSelf = alignY;
-      }
-      // For row, alignX uses auto margins for positioning
-      // NOTE: Auto margins only work effectively for positioning individual items.
-      // When multiple adjacent items have the same auto margin alignment (e.g., alignX="end"),
-      // only the first item will be positioned as expected because subsequent items
-      // will be positioned relative to the previous item's margins, not the container edge.
-      if (alignX !== undefined) {
-        if (alignX === "start") {
-          alignmentStyles.marginRight = "auto";
-        } else if (alignX === "end") {
-          alignmentStyles.marginLeft = "auto";
-        } else if (alignX === "center") {
-          alignmentStyles.marginLeft = "auto";
-          alignmentStyles.marginRight = "auto";
-        }
-      }
-    } else if (boxFlow === "row") {
-      // In column direction: alignX controls align-self, alignY uses auto margins
-      if (alignX !== undefined && alignX !== "stretch") {
-        alignmentStyles.alignSelf = alignX;
-      }
-      // For column, alignY uses auto margins for positioning
-      // NOTE: Same auto margin limitation applies - multiple adjacent items with
-      // the same alignY won't all position relative to container edges.
-      if (alignY !== undefined) {
-        if (alignY === "start") {
-          alignmentStyles.marginBottom = "auto";
-        } else if (alignY === "end") {
-          alignmentStyles.marginTop = "auto";
-        } else if (alignY === "center") {
-          alignmentStyles.marginTop = "auto";
-          alignmentStyles.marginBottom = "auto";
-        }
-      }
-    } else if (boxFlow === "inline") {
-      if (alignY !== undefined && alignY !== "start") {
-        alignmentStyles.alignSelf = alignY;
-      }
-    }
-    // non flex
-    else {
-      if (alignX === "start") {
-        alignmentStyles.marginRight = "auto";
-      } else if (alignX === "center") {
-        alignmentStyles.marginLeft = "auto";
-        alignmentStyles.marginRight = "auto";
-      } else if (alignX === "end") {
-        alignmentStyles.marginLeft = "auto";
-      }
-
-      if (alignY === "start") {
-        alignmentStyles.marginBottom = "auto";
-      } else if (alignY === "center") {
-        alignmentStyles.marginTop = "auto";
-        alignmentStyles.marginBottom = "auto";
-      } else if (alignY === "end") {
-        alignmentStyles.marginTop = "auto";
-      }
-    }
+    marginStyles = generateStyleGroup(
+      OUTER_SPACING_PROPS,
+      props,
+      normalizeSpacingStyle,
+    );
+    paddingStyles = generateStyleGroup(
+      INNER_SPACING_PROPS,
+      props,
+      normalizeSpacingStyle,
+    );
   }
   size_styles: {
     if (!size && !hasRemainingConfig) {
       break size_styles;
     }
-    sizeStyles = {};
-    if (expandX) {
-      if (boxFlow === "col") {
-        sizeStyles.flexGrow = 1; // Grow horizontally in row
-      } else if (boxFlow === "row") {
-        sizeStyles.width = "100%"; // Take full width in column
-      } else {
-        sizeStyles.width = "100%"; // Take full width outside flex
-      }
-    } else if (width !== undefined) {
-      sizeStyles.width = normalizeStyle(width, "width", "css");
-    }
-    if (minWidth !== undefined) {
-      sizeStyles.minWidth = normalizeStyle(minWidth, "minWidth", "css");
-    }
-    if (maxWidth !== undefined) {
-      sizeStyles.maxWidth = normalizeStyle(maxWidth, "maxWidth", "css");
-    }
-    if (expandY) {
-      if (boxFlow === "col") {
-        sizeStyles.height = "100%"; // Make column full height
-      } else if (boxFlow === "row") {
-        sizeStyles.flexGrow = 1; // Make row full height
-      } else {
-        sizeStyles.height = "100%"; // Take full height outside flex
-      }
-    } else if (height !== undefined) {
-      sizeStyles.height = normalizeStyle(height, "height", "css");
-    }
-    if (minHeight !== undefined) {
-      sizeStyles.minHeight = normalizeStyle(minHeight, "minHeight", "css");
-    }
-    if (maxHeight !== undefined) {
-      sizeStyles.maxHeight = normalizeStyle(maxHeight, "maxHeight", "css");
-    }
+    sizeStyles = generateStyleGroup(SIZE_PROPS, props);
   }
+  alignment_styles: {
+    if (!align && !hasRemainingConfig) {
+      break alignment_styles;
+    }
+    alignmentStyles = generateStyleGroup(ALIGNEMENT_PROPS, props);
+  }
+
   typo_styles: {
     if (!typo && !hasRemainingConfig) {
       break typo_styles;
@@ -395,7 +361,12 @@ export const withPropsStyle = (
       visualStyles.background = background;
     }
     if (backgroundColor !== undefined) {
-      visualStyles.backgroundColor = backgroundColor;
+      const cssVar = managedByCSSVars[backgroundColor];
+      if (cssVar) {
+        visualStyles[cssVar] = backgroundColor;
+      } else {
+        visualStyles.backgroundColor = backgroundColor;
+      }
     }
     if (backgroundImage !== undefined) {
       visualStyles.backgroundImage = normalizeStyle(
@@ -452,60 +423,55 @@ export const withPropsStyle = (
       visualStyles.cursor = cursor;
     }
   }
-  interaction_styles: {
-    if (!interaction && !hasRemainingConfig) {
-      break interaction_styles;
+  pseudo_styles: {
+    if (!pseudo) {
+      break pseudo_styles;
     }
-    interactionStyles = {};
-    if (backgroundColor) {
-      delete visualStyles.backgroundColor;
-      interactionStyles["--background-color"] = backgroundColor;
+    pseudo_classes: {
+      if (!pseudoClasses) {
+        break pseudo_classes;
+      }
+      for (const pseudoClass of pseudoClasses) {
+        const pseudoClassStyleFromProps = pseudo[pseudoClass];
+        if (!pseudoClassStyleFromProps) {
+          continue;
+        }
+        const pseudoClassStyles = {};
+        for (const styleProp of Object.keys(pseudoClassStyleFromProps)) {
+          const styleValue = pseudoClassStyleFromProps[styleProp];
+          pseudoClassStyles[styleProp] = normalizeStyle(
+            styleValue,
+            styleProp,
+            "css",
+          );
+        }
+        const key = pseudoClass.slice(1); // ":hover" -> "hover"
+        pseudoNamedStyles[key] = pseudoClassStyles;
+      }
     }
-    if (borderColor) {
-      delete visualStyles.borderColor;
-      interactionStyles["--border-color"] = borderColor;
+    pseudo_elements: {
+      if (!pseudoElements) {
+        break pseudo_elements;
+      }
+      for (const pseudoElement of pseudoElements) {
+        const pseudoElementStyleFromProps = pseudo[pseudoElement];
+        if (!pseudoElementStyleFromProps) {
+          continue;
+        }
+        const pseudoElementStyles = {};
+        for (const styleProp of Object.keys(pseudoElementStyleFromProps)) {
+          const styleValue = pseudoElementStyleFromProps[styleProp];
+          pseudoElementStyles[styleProp] = normalizeStyle(
+            styleValue,
+            styleProp,
+            "css",
+          );
+        }
+        // "::-navi-loader" -> "-navi-loader"
+        const key = pseudoElement.slice(3);
+        pseudoNamedStyles[key] = pseudoElementStyles;
+      }
     }
-
-    if (backgroundColorWhileHover !== undefined) {
-      interactionStyles["--background-color-hover"] = backgroundColorWhileHover;
-    }
-    if (backgroundColorWhileActive !== undefined) {
-      interactionStyles["--background-color-active"] =
-        backgroundColorWhileActive;
-    }
-    if (backgroundColorWhileReadonly !== undefined) {
-      interactionStyles["--background-color-readonly"] =
-        backgroundColorWhileReadonly;
-    }
-    if (backgroundColorWhileDisabled !== undefined) {
-      interactionStyles["--background-color-disabled"] =
-        backgroundColorWhileDisabled;
-    }
-    if (borderColorWhileHover !== undefined) {
-      interactionStyles["--border-color-hover"] = borderColorWhileHover;
-    }
-    if (borderColorWhileActive !== undefined) {
-      interactionStyles["--border-color-active"] = borderColorWhileActive;
-    }
-    if (borderColorWhileReadOnly !== undefined) {
-      interactionStyles["--border-color-readonly"] = borderColorWhileReadOnly;
-    }
-    if (borderColorWhileDisabled !== undefined) {
-      interactionStyles["--border-color-disabled"] = borderColorWhileDisabled;
-    }
-    if (textColorWhileHover !== undefined) {
-      interactionStyles["--text-color-hover"] = textColorWhileHover;
-    }
-    if (textColorWhileActive !== undefined) {
-      interactionStyles["--text-color-active"] = textColorWhileActive;
-    }
-    if (textColorWhileReadOnly !== undefined) {
-      interactionStyles["--text-color-readonly"] = textColorWhileReadOnly;
-    }
-    if (textColorWhileDisabled !== undefined) {
-      interactionStyles["--text-color-disabled"] = textColorWhileDisabled;
-    }
-    normalizeStyles(interactionStyles, "css", true);
   }
 
   const firstConfigStyle = {};
@@ -530,14 +496,10 @@ export const withPropsStyle = (
   if (visual) {
     Object.assign(firstConfigStyle, visualStyles);
   }
-  if (interaction) {
-    Object.assign(firstConfigStyle, interactionStyles);
-  }
   if (style) {
     appendStyles(firstConfigStyle, propStyles, "css");
   }
   const result = [remainingProps, firstConfigStyle];
-
   for (const config of remainingConfig) {
     const configStyle = {};
     if (config.base === true) {
@@ -563,14 +525,12 @@ export const withPropsStyle = (
     if (config.visual || config.visual === undefined) {
       Object.assign(configStyle, visualStyles);
     }
-    if (config.interaction) {
-      Object.assign(configStyle, interactionStyles);
-    }
     if (config.style) {
       appendStyles(configStyle, propStyles, "css");
     }
     result.push(configStyle);
   }
+  result.push(pseudoNamedStyles);
   return result;
 };
 

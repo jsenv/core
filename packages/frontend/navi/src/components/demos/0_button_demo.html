@@ -27,7 +27,7 @@
       .demo-grid {
         display: grid;
         margin-bottom: 30px;
-        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
         gap: 20px;
       }
 
@@ -64,79 +64,75 @@
         content: "🔘";
       }
 
-      .button-row {
+      .state-row {
         display: flex;
         margin: 15px 0;
-        padding: 12px;
+        padding: 15px;
         align-items: center;
-        gap: 15px;
+        gap: 20px;
         background: #f8f9fa;
         border: 1px solid #e9ecef;
         border-radius: 8px;
-        transition: background 0.2s ease;
       }
 
-      .button-row:hover {
-        background: #e8f4f8;
-      }
-
-      .button-container {
-        display: flex;
-        min-width: 0;
-        flex: 1;
-        align-items: center;
-        gap: 10px;
-      }
-
-      .toggle-button {
-        padding: 8px 16px;
-        flex-shrink: 0;
-        color: white;
+      .state-label {
+        min-width: 100px;
+        color: #495057;
         font-weight: 500;
         font-size: 0.9rem;
-        white-space: nowrap;
-        background: linear-gradient(45deg, #667eea, #764ba2);
-        border: none;
-        border-radius: 6px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        transition: all 0.2s ease;
-        cursor: pointer;
       }
 
-      .toggle-button:hover {
-        background: linear-gradient(45deg, #5a6fd8, #6b3fa0);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        transform: translateY(-1px);
+      .button-examples {
+        display: flex;
+        flex: 1;
+        align-items: center;
+        gap: 15px;
       }
 
       .comparison {
-        display: flex;
         margin-top: 15px;
         padding: 12px;
-        flex-direction: column;
-        gap: 8px;
         background: #fff3cd;
         border-left: 4px solid #ffc107;
         border-radius: 6px;
       }
 
       .comparison-label {
-        margin-bottom: 5px;
+        display: block;
+        margin-bottom: 10px;
         color: #856404;
         font-weight: 500;
         font-size: 0.85rem;
       }
 
-      .native-examples {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
+      .native-example {
+        display: inline-block;
+        margin-right: 15px;
       }
 
-      .native-examples button {
-        padding: 8px 16px;
-        align-self: flex-start;
-        font-size: 0.9rem;
+      .variation-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin: 15px 0;
+      }
+
+      .variation-item {
+        display: flex;
+        padding: 15px;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        text-align: center;
+        background: #f8f9fa;
+        border-radius: 8px;
+      }
+
+      .variation-label {
+        margin: 0;
+        color: #495057;
+        font-size: 0.85rem;
+        font-weight: 500;
       }
 
       .prop-control-demo {
@@ -150,83 +146,22 @@
         border-bottom-color: #ffffff;
       }
 
-      .prop-control-demo .demo-title::before {
-        content: "🎛️";
-      }
-
-      .prop-controls {
-        display: grid;
-        margin-bottom: 25px;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 15px;
-      }
-
-      .prop-select-group {
-        padding: 15px;
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 8px;
-      }
-
-      .prop-select-label {
-        display: block;
-        margin-bottom: 8px;
-        font-weight: 500;
-        font-size: 0.95rem;
-      }
-
-      .prop-select {
-        width: 100%;
-        padding: 8px 12px;
-        color: #333;
-        font-size: 0.9rem;
-        background: white;
-        border: none;
-        border-radius: 6px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        cursor: pointer;
-      }
-
-      .state-controls {
-        margin-bottom: 20px;
-        padding: 15px;
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 8px;
-      }
-
-      .state-controls h4 {
-        margin: 0 0 15px 0;
-        color: white;
-        font-size: 1rem;
-      }
-
-      .control-row {
+      .control-section {
         display: flex;
-        margin-bottom: 10px;
-        flex-wrap: wrap;
-        gap: 15px;
-      }
-
-      .control-group {
-        display: flex;
-        min-width: 100px;
-        padding: 12px;
-        flex-direction: column;
+        margin: 15px 0;
+        padding: 15px;
         align-items: center;
-        gap: 8px;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        gap: 15px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
         border-radius: 8px;
       }
 
       .control-toggle {
-        min-width: 80px;
         padding: 8px 16px;
         color: white;
         font-weight: 500;
-        font-size: 0.85rem;
-        text-align: center;
+        font-size: 0.9rem;
         background: rgba(255, 255, 255, 0.1);
         border: 2px solid rgba(255, 255, 255, 0.3);
         border-radius: 6px;
@@ -234,53 +169,8 @@
         cursor: pointer;
       }
 
-      .control-toggle.active {
-        color: #333;
-        background: rgba(255, 255, 255, 0.9);
-        border-color: white;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-      }
-
       .control-toggle:hover {
         background: rgba(255, 255, 255, 0.2);
-        border-color: rgba(255, 255, 255, 0.5);
-      }
-
-      .control-toggle.active:hover {
-        background: white;
-      }
-
-      .control-label {
-        margin: 0;
-        color: white;
-        font-size: 0.9rem;
-      }
-
-      .button-test-grid {
-        display: grid;
-        padding: 20px;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 15px;
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 8px;
-      }
-
-      .button-test-item {
-        display: flex;
-        padding: 15px;
-        flex-direction: column;
-        align-items: center;
-        gap: 10px;
-        text-align: center;
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 6px;
-      }
-
-      .button-label {
-        margin-bottom: 8px;
-        color: white;
-        font-size: 0.9rem;
       }
 
       @media (max-width: 768px) {
@@ -288,414 +178,304 @@
           grid-template-columns: 1fr;
         }
 
-        h1 {
-          font-size: 2rem;
-        }
-
-        .button-row {
+        .state-row {
           flex-direction: column;
           align-items: stretch;
           gap: 10px;
+        }
+
+        .button-examples {
+          justify-content: center;
         }
       }
     </style>
   </head>
   <body>
-    <h1>🔘 Interactive Button Demo</h1>
+    <h1>🔘 Button Demo</h1>
     <div id="root"></div>
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import {
-        // eslint-disable-next-line no-unused-vars
-        Button,
-      } from "@jsenv/navi";
+      /* eslint-disable no-unused-vars */
+      import { Button } from "@jsenv/navi";
 
-      // eslint-disable-next-line no-unused-vars
       const App = () => {
         return (
           <div className="demo-grid">
-            <LoadingDemo />
-            <ReadOnlyDemo />
-            <DisabledDemo />
+            <BasicStatesDemo />
+            <LoadingStateDemo />
             <SizeVariationsDemo />
-            <DiscreteDemo />
-            <PropControlDemo />
+            <ColorVariationsDemo />
+            <DiscreteVariantDemo />
+            <InteractiveDemo />
           </div>
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
-      const LoadingDemo = () => {
-        const [loading, setLoading] = useState(false);
-
+      const BasicStatesDemo = () => {
         return (
           <div className="demo-card">
-            <h3 className="demo-title">Loading States</h3>
+            <h3 className="demo-title">Basic Button States</h3>
 
-            <div className="button-row">
-              <div className="button-container">
-                <Button loading={loading}>Loading Button</Button>
+            <div className="state-row">
+              <span className="state-label">Normal:</span>
+              <div className="button-examples">
+                <Button>Click me</Button>
               </div>
-              <button
-                className="toggle-button"
-                onClick={() => setLoading(!loading)}
-              >
-                {loading ? "Stop Loading" : "Start Loading"}
-              </button>
             </div>
 
             <div className="comparison">
               <span className="comparison-label">Native comparison:</span>
-              <div className="native-examples">
-                <button disabled={loading}>
-                  {loading ? "Loading..." : "Standard Button"}
-                </button>
+              <button className="native-example">Click me</button>
+            </div>
+
+            <div className="state-row">
+              <span className="state-label">Read-only:</span>
+              <div className="button-examples">
+                <Button readOnly>Read-only button</Button>
               </div>
+            </div>
+
+            <div className="comparison">
+              <span className="comparison-label">Native comparison:</span>
+              <button className="native-example" data-readonly>
+                Read-only button
+              </button>
+              <small style={{ color: "#666" }}>
+                (Native doesn't have read-only, this is just data attribute)
+              </small>
+            </div>
+
+            <div className="state-row">
+              <span className="state-label">Disabled:</span>
+              <div className="button-examples">
+                <Button disabled>Disabled button</Button>
+              </div>
+            </div>
+
+            <div className="comparison">
+              <span className="comparison-label">Native comparison:</span>
+              <button className="native-example" disabled>
+                Disabled button
+              </button>
             </div>
           </div>
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
-      const ReadOnlyDemo = () => {
-        const [loading, setLoading] = useState(false);
-
+      const LoadingStateDemo = () => {
         return (
           <div className="demo-card">
-            <h3 className="demo-title">Read-Only State</h3>
+            <h3 className="demo-title">Loading State</h3>
 
-            <div className="button-row">
-              <div className="button-container">
-                <Button loading={loading} readOnly>
-                  Read-Only Button
+            <div className="state-row">
+              <span className="state-label">Loading:</span>
+              <div className="button-examples">
+                <Button loading>Loading button</Button>
+                <Button loading disabled>
+                  Loading + Disabled
                 </Button>
               </div>
-              <button
-                className="toggle-button"
-                onClick={() => setLoading(!loading)}
-              >
-                Toggle Loading
-              </button>
             </div>
 
-            <div className="comparison">
-              <span className="comparison-label">Native comparison:</span>
-              <div className="native-examples">
-                <button data-readonly>Native Read-Only</button>
-              </div>
-            </div>
+            <p style={{ color: "#666", fontSize: "0.9rem", margin: "10px 0" }}>
+              The loading state is unique to our Button component. It shows a
+              spinner while maintaining the button's original size and preventing
+              interaction.
+            </p>
           </div>
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
-      const DisabledDemo = () => {
-        const [loading, setLoading] = useState(false);
-
-        return (
-          <div className="demo-card">
-            <h3 className="demo-title">Disabled State</h3>
-
-            <div className="button-row">
-              <div className="button-container">
-                <Button loading={loading} disabled>
-                  Disabled Button
-                </Button>
-              </div>
-              <button
-                className="toggle-button"
-                onClick={() => setLoading(!loading)}
-              >
-                Toggle Loading
-              </button>
-            </div>
-
-            <div className="comparison">
-              <span className="comparison-label">Native comparison:</span>
-              <div className="native-examples">
-                <button disabled>Native Disabled</button>
-              </div>
-            </div>
-          </div>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
       const SizeVariationsDemo = () => {
-        const [loading, setLoading] = useState(false);
-
         return (
           <div className="demo-card">
             <h3 className="demo-title">Size Variations</h3>
 
-            <div className="button-row">
-              <div className="button-container">
-                <Button loading={loading}>Short</Button>
+            <div className="variation-grid">
+              <div className="variation-item">
+                <p className="variation-label">Short</p>
+                <Button>OK</Button>
               </div>
-            </div>
 
-            <div className="button-row">
-              <div className="button-container">
-                <Button loading={loading}>
-                  This button is quite large but loader speed should be
-                  consistent
-                </Button>
+              <div className="variation-item">
+                <p className="variation-label">Medium</p>
+                <Button>Save Changes</Button>
               </div>
-            </div>
 
-            <div className="button-row">
-              <div className="button-container">
+              <div className="variation-item">
+                <p className="variation-label">Long text</p>
+                <Button>This is a very long button text</Button>
+              </div>
+
+              <div className="variation-item">
+                <p className="variation-label">Custom padding</p>
                 <Button
-                  loading={loading}
                   style={{
-                    "--border-width": "8px",
-                    "--padding-x": "12px",
-                    "--padding-y": "24px",
+                    "--padding-x": "30px",
+                    "--padding-y": "15px",
                   }}
                 >
-                  Thick Border Button
+                  Large
                 </Button>
-              </div>
-              <button
-                className="toggle-button"
-                onClick={() => setLoading(!loading)}
-              >
-                {loading ? "Stop Loading" : "Start Loading"}
-              </button>
-            </div>
-
-            <div className="comparison">
-              <span className="comparison-label">Note:</span>
-              <div className="native-examples">
-                <small style={{ color: "#666" }}>
-                  Loading animation speed should be consistent regardless of
-                  button size
-                </small>
               </div>
             </div>
           </div>
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
-      const DiscreteDemo = () => {
-        const [loading, setLoading] = useState(false);
-
+      const ColorVariationsDemo = () => {
         return (
           <div className="demo-card">
-            <h3 className="demo-title">Discrete Buttons</h3>
+            <h3 className="demo-title">Color Variations</h3>
 
-            <div className="button-row">
-              <div className="button-container">
-                <Button discrete loading={loading}>
-                  Discrete Button
-                </Button>
-                <span style={{ fontSize: "0.9rem", color: "#666" }}>
-                  Subtle, minimal styling
-                </span>
+            <div className="variation-grid">
+              <div className="variation-item">
+                <p className="variation-label">Default</p>
+                <Button>Default</Button>
               </div>
-              <button
-                className="toggle-button"
-                onClick={() => setLoading(!loading)}
-              >
-                {loading ? "Stop Loading" : "Start Loading"}
-              </button>
-            </div>
 
-            <div className="button-row">
-              <div className="button-container">
-                <Button discrete disabled>
-                  Disabled Discrete
-                </Button>
-                <span style={{ fontSize: "0.9rem", color: "#666" }}>
-                  Disabled state
-                </span>
-              </div>
-            </div>
-
-            <div className="button-row">
-              <div className="button-container">
-                <Button discrete readOnly>
-                  Read-Only Discrete
-                </Button>
-                <span style={{ fontSize: "0.9rem", color: "#666" }}>
-                  Read-only state
-                </span>
-              </div>
-            </div>
-
-            <div className="comparison">
-              <span className="comparison-label">Comparison:</span>
-              <div
-                style={{
-                  display: "flex",
-                  gap: "15px",
-                  alignItems: "center",
-                  marginTop: "10px",
-                }}
-              >
-                <Button appearance="default" loading={loading}>
-                  Regular Button
-                </Button>
-                <Button appearance="default" discrete loading={loading}>
-                  Discrete Button
+              <div className="variation-item">
+                <p className="variation-label">Custom background</p>
+                <Button style={{ "--background-color": "#28a745" }}>
+                  Success
                 </Button>
               </div>
-              <div className="native-examples">
-                <small style={{ color: "#666" }}>
-                  Discrete buttons have minimal styling and blend better with
-                  content. They're perfect for secondary actions or when you
-                  want less visual emphasis.
-                </small>
+
+              <div className="variation-item">
+                <p className="variation-label">Custom color</p>
+                <Button style={{ "--background-color": "#dc3545" }}>
+                  Danger
+                </Button>
+              </div>
+
+              <div className="variation-item">
+                <p className="variation-label">Custom border</p>
+                <Button
+                  style={{
+                    "--background-color": "transparent",
+                    "--border-color": "#6f42c1",
+                    "--color": "#6f42c1",
+                  }}
+                >
+                  Outline
+                </Button>
               </div>
             </div>
           </div>
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
-      const PropControlDemo = () => {
+      const DiscreteVariantDemo = () => {
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Discrete Variant</h3>
+
+            <div className="state-row">
+              <span className="state-label">Normal vs Discrete:</span>
+              <div className="button-examples">
+                <Button>Regular Button</Button>
+                <Button discrete>Discrete Button</Button>
+              </div>
+            </div>
+
+            <div className="state-row">
+              <span className="state-label">Discrete states:</span>
+              <div className="button-examples">
+                <Button discrete>Normal</Button>
+                <Button discrete readOnly>
+                  Read-only
+                </Button>
+                <Button discrete disabled>
+                  Disabled
+                </Button>
+                <Button discrete loading>
+                  Loading
+                </Button>
+              </div>
+            </div>
+
+            <p style={{ color: "#666", fontSize: "0.9rem", margin: "10px 0" }}>
+              Discrete buttons have minimal styling and blend better with content.
+              Perfect for secondary actions or when you want less visual emphasis.
+            </p>
+          </div>
+        );
+      };
+
+      const InteractiveDemo = () => {
         const [loading, setLoading] = useState(false);
         const [disabled, setDisabled] = useState(false);
         const [readOnly, setReadOnly] = useState(false);
-        const [buttonText, setButtonText] = useState("Custom Button");
-        const [buttonType, setButtonType] = useState("button");
-
-        const textOptions = [
-          "Custom Button",
-          "Click Me!",
-          "Submit Form",
-          "Save Changes",
-          "Long Button Text Example",
-          "🚀 With Emoji",
-        ];
-
-        const typeOptions = [
-          { name: "button", value: "button" },
-          { name: "submit", value: "submit" },
-          { name: "reset", value: "reset" },
-        ];
+        const [discrete, setDiscrete] = useState(false);
 
         return (
           <div className="demo-card prop-control-demo">
-            <h3 className="demo-title">Interactive Prop Controller</h3>
+            <h3 className="demo-title">Interactive Controls</h3>
 
-            <div className="prop-controls">
-              <div className="prop-select-group">
-                <label className="prop-select-label">Button Text:</label>
-                <select
-                  value={buttonText}
-                  onChange={(e) => setButtonText(e.target.value)}
-                  className="prop-select"
-                >
-                  {textOptions.map((text) => (
-                    <option key={text} value={text}>
-                      {text}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="prop-select-group">
-                <label className="prop-select-label">Button Type:</label>
-                <select
-                  value={buttonType}
-                  onChange={(e) => setButtonType(e.target.value)}
-                  className="prop-select"
-                >
-                  {typeOptions.map(({ name, value }) => (
-                    <option key={value} value={value}>
-                      {name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div className="control-section">
+              <span style={{ color: "white", fontWeight: "500" }}>States:</span>
+              <button
+                className="control-toggle"
+                style={{
+                  background: loading
+                    ? "rgba(255,255,255,0.9)"
+                    : "rgba(255,255,255,0.1)",
+                  color: loading ? "#333" : "white",
+                }}
+                onClick={() => setLoading(!loading)}
+              >
+                Loading: {loading ? "ON" : "OFF"}
+              </button>
+              <button
+                className="control-toggle"
+                style={{
+                  background: disabled
+                    ? "rgba(255,255,255,0.9)"
+                    : "rgba(255,255,255,0.1)",
+                  color: disabled ? "#333" : "white",
+                }}
+                onClick={() => setDisabled(!disabled)}
+              >
+                Disabled: {disabled ? "ON" : "OFF"}
+              </button>
+              <button
+                className="control-toggle"
+                style={{
+                  background: readOnly
+                    ? "rgba(255,255,255,0.9)"
+                    : "rgba(255,255,255,0.1)",
+                  color: readOnly ? "#333" : "white",
+                }}
+                onClick={() => setReadOnly(!readOnly)}
+              >
+                Read-only: {readOnly ? "ON" : "OFF"}
+              </button>
+              <button
+                className="control-toggle"
+                style={{
+                  background: discrete
+                    ? "rgba(255,255,255,0.9)"
+                    : "rgba(255,255,255,0.1)",
+                  color: discrete ? "#333" : "white",
+                }}
+                onClick={() => setDiscrete(!discrete)}
+              >
+                Discrete: {discrete ? "ON" : "OFF"}
+              </button>
             </div>
 
-            <div className="state-controls">
-              <h4>Button Properties:</h4>
-              <div className="control-row">
-                <div className="control-group">
-                  <button
-                    className={`control-toggle ${loading ? "active" : ""}`}
-                    onClick={() => setLoading(!loading)}
-                  >
-                    {loading ? "true" : "false"}
-                  </button>
-                  <span className="control-label">loading</span>
-                </div>
-
-                <div className="control-group">
-                  <button
-                    className={`control-toggle ${disabled ? "active" : ""}`}
-                    onClick={() => setDisabled(!disabled)}
-                  >
-                    {disabled ? "true" : "false"}
-                  </button>
-                  <span className="control-label">disabled</span>
-                </div>
-
-                <div className="control-group">
-                  <button
-                    className={`control-toggle ${readOnly ? "active" : ""}`}
-                    onClick={() => setReadOnly(!readOnly)}
-                  >
-                    {readOnly ? "true" : "false"}
-                  </button>
-                  <span className="control-label">readOnly</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="button-test-grid">
-              <div className="button-test-item">
-                <span className="button-label">Custom Button Component</span>
-                <Button
-                  type={buttonType}
-                  loading={loading}
-                  disabled={disabled}
-                  readOnly={readOnly}
-                >
-                  {buttonText}
-                </Button>
-              </div>
-
-              <div className="button-test-item">
-                <span className="button-label">Native Button</span>
-                <button
-                  type={buttonType}
-                  disabled={disabled || loading}
-                  data-readonly={readOnly}
-                >
-                  {loading ? "Loading..." : buttonText}
-                </button>
-              </div>
-            </div>
-
-            <div
-              style={{
-                marginTop: "20px",
-                padding: "15px",
-                background: "rgba(255,255,255,0.1)",
-                borderRadius: "8px",
-              }}
-            >
-              <strong>Current Configuration:</strong>
-              <br />
-              <small>
-                type: "{buttonType}" | loading: {loading ? "true" : "false"} |
-                disabled: {disabled ? "true" : "false"} | readOnly:{" "}
-                {readOnly ? "true" : "false"}
-              </small>
-              <br />
-              <br />
-              <small>
-                Use the controls above to test different property combinations.
-                Compare how the custom Button component behaves versus a native
-                button.
-              </small>
+            <div className="control-section">
+              <span style={{ color: "white", fontWeight: "500" }}>Result:</span>
+              <Button
+                loading={loading}
+                disabled={disabled}
+                readOnly={readOnly}
+                discrete={discrete}
+              >
+                Interactive Button
+              </Button>
             </div>
           </div>
         );
