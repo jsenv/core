@@ -25,26 +25,6 @@
         </svg>
       );
 
-      const BlankTargetLinkSvg = () => {
-        return (
-          <svg
-            viewBox="0 0 24 24"
-            width="100%"
-            height="100%"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M10.0002 5H8.2002C7.08009 5 6.51962 5 6.0918 5.21799C5.71547 5.40973 5.40973 5.71547 5.21799 6.0918C5 6.51962 5 7.08009 5 8.2002V15.8002C5 16.9203 5 17.4801 5.21799 17.9079C5.40973 18.2842 5.71547 18.5905 6.0918 18.7822C6.5192 19 7.07899 19 8.19691 19H15.8031C16.921 19 17.48 19 17.9074 18.7822C18.2837 18.5905 18.5905 18.2839 18.7822 17.9076C19 17.4802 19 16.921 19 15.8031V14M20 9V4M20 4H15M20 4L13 11"
-              stroke="currentColor"
-              fill="none"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-        );
-      };
-
       const Demo = () => {
         return (
           <div
@@ -316,15 +296,10 @@
             <section style={{ marginBottom: "30px" }}>
               <h2>⚠️ Underline + Auto-Spacing Gotcha</h2>
               <p>
-                <strong>Important:</strong> This issue is unrelated to spacing -
-                whether you use auto spacing or manual spacing, text underline
-                will cause trouble. This section is just here to help with
-                underline best practices.
-              </p>
-              <p>
-                When using <code>textUnderline</code> on a Text container with
-                auto-spacing, the inserted space gets underlined too. Move the
-                underline to the specific text element instead.
+                When using <code>textUnderline</code> on a Text container, any
+                spacing (auto-inserted or manually put) between text and icon
+                will be underlined which might be undesired. Move the underline
+                to the specific text element instead.
               </p>
               <div
                 style={{ display: "flex", gap: "20px", marginBottom: "20px" }}
@@ -346,7 +321,7 @@
                     </Text>
                   </div>
                   <small style={{ color: "#666" }}>
-                    Auto-space between icon and text is also underlined
+                    Space between icon and text is also underlined
                   </small>
                 </div>
                 <div style={{ flex: 1 }}>
@@ -366,15 +341,15 @@
                     </Text>
                   </div>
                   <small style={{ color: "#666" }}>
-                    Clean underline, auto-space stays normal
+                    Clean underline, spacing stays normal
                   </small>
                 </div>
               </div>
 
-              <h3>Special Case: Links with Icons</h3>
+              <h3>Links with Icons</h3>
               <p>
-                For Links containing icons, you need to disable underline on the
-                Link and add it back on the text:
+                The same principle applies to Links containing icons. Disable
+                underline on the Link and add it back on the text:
               </p>
               <div
                 style={{ display: "flex", gap: "20px", marginBottom: "20px" }}
@@ -388,10 +363,10 @@
                       backgroundColor: "#fee",
                     }}
                   >
-                    <Link href="mailto:dmail@gmail.com">
-                      <Text>dmail@gmail.com</Text>
+                    <Link href="mailto:user@example.com">
+                      <Text>user@example.com</Text>
                       <Icon>
-                        <BlankTargetLinkSvg />
+                        <StarSvg />
                       </Icon>
                     </Link>
                   </div>
@@ -408,10 +383,10 @@
                       backgroundColor: "#efe",
                     }}
                   >
-                    <Link href="mailto:dmail@gmail.com" textUnderline={false}>
-                      <Text textUnderline>dmail@gmail.com</Text>
+                    <Link href="mailto:user@example.com" textUnderline={false}>
+                      <Text textUnderline>user@example.com</Text>
                       <Icon>
-                        <BlankTargetLinkSvg />
+                        <StarSvg />
                       </Icon>
                     </Link>
                   </div>
@@ -430,7 +405,7 @@
                   overflowX: "auto",
                 }}
               >
-                {`// Bad - Icon + Text underline\n<Text noWrap textUnderline>\n  <Icon><StarSvg /></Icon>\n  star\n</Text>\n\n// Good - Only text underlined\n<Text noWrap>\n  <Icon><StarSvg /></Icon>\n  <Text textUnderline>star</Text>\n</Text>\n\n// Bad - Link with icon, underline on everything\n<Link href="mailto:dmail@gmail.com">\n  <Text>dmail@gmail.com</Text>\n  <Icon><BlankTargetLinkSvg /></Icon>\n</Link>\n\n// Good - Disable Link underline, add to text only\n<Link href="mailto:dmail@gmail.com" textUnderline={false}>\n  <Text textUnderline>dmail@gmail.com</Text>\n  <Icon><BlankTargetLinkSvg /></Icon>\n</Link>`}
+                {`// Bad - Icon + Text underline\n<Text noWrap textUnderline>\n  <Icon><StarSvg /></Icon>\n  star\n</Text>\n\n// Good - Only text underlined\n<Text noWrap>\n  <Icon><StarSvg /></Icon>\n  <Text textUnderline>star</Text>\n</Text>\n\n// Bad - Link with icon, underline on everything\n<Link href="mailto:user@example.com">\n  <Text>user@example.com</Text>\n  <Icon><StarSvg /></Icon>\n</Link>\n\n// Good - Disable Link underline, add to text only\n<Link href="mailto:user@example.com" textUnderline={false}>\n  <Text textUnderline>user@example.com</Text>\n  <Icon><StarSvg /></Icon>\n</Link>`}
               </pre>
             </section>
           </div>
