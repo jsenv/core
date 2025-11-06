@@ -164,6 +164,7 @@ const useBoxStyle = (props, { boxRef, contentRef, base }) => {
       initPseudoStyles(
         el,
         {
+          pseudo: rest.pseudo,
           pseudoClasses,
           disabled,
           readOnly,

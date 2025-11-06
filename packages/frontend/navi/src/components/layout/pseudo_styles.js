@@ -183,12 +183,17 @@ const PSEUDO_CLASSES = {
 
 export const initPseudoStyles = (
   element,
-  { readOnly, disabled, loading, focusVisible, pseudoClasses },
+  { pseudoClasses, pseudo, readOnly, disabled, loading, focusVisible },
   { effect } = {},
 ) => {
   if (!pseudoClasses || pseudoClasses.length === 0) {
-    effect?.();
-    return () => {};
+    const pseudoClassesUsed = pseudo ? Object.keys(pseudo) : [];
+    if (pseudoClassesUsed.length === 0) {
+      effect?.();
+      return () => {};
+    }
+    // <Box pseudo={{ ":hover": { backgroundColor: "red" } }}> would trigger watching :hover
+    pseudoClasses = pseudoClassesUsed;
   }
 
   const [teardown, addTeardown] = createPubSub();
