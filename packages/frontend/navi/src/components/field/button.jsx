@@ -17,7 +17,10 @@ import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { Box } from "../layout/box.jsx";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { withPropsClassName } from "../props_composition/with_props_class_name.js";
-import { withPropsStyle } from "../props_composition/with_props_style.js";
+import {
+  useNaviStyle,
+  withPropsStyle,
+} from "../props_composition/with_props_style.js";
 import { applyContentSpacingOnTextChildren } from "../text/text.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { initCustomField } from "./custom_field.js";
@@ -240,7 +243,6 @@ const ButtonBasic = forwardRef((props, ref) => {
     autoFocus,
 
     // visual
-    appearance = "navi",
     discrete,
     className,
     contentSpacing = " ",
@@ -258,11 +260,8 @@ const ButtonBasic = forwardRef((props, ref) => {
   const innerReadOnly = readOnly || contextReadOnly || innerLoading;
   const innerDisabled = disabled || contextDisabled;
 
-  const innerClassName = withPropsClassName(
-    appearance === "navi" ? "navi_button" : undefined,
-    className,
-  );
-  const [remainingProps, innerStyle, naviButtonStyle] = withPropsStyle(
+  const innerClassName = withPropsClassName("navi_button", className);
+  const [remainingProps, buttonStyle, contentStyle] = withPropsStyle(
     rest,
     {
       layout: true,
@@ -284,24 +283,27 @@ const ButtonBasic = forwardRef((props, ref) => {
       innerSpacing: true,
     },
   );
+
+  const observeFocusVisible = !remainingProps["data-focus-visible"];
+  const contentRef = useRef();
+  useLayoutEffect(() => {
+    return initCustomField(innerRef.current, contentRef.current, {
+      observeFocus: observeFocusVisible,
+    });
+  }, [observeFocusVisible]);
   const innerChildren = applyContentSpacingOnTextChildren(
     children,
     contentSpacing,
   );
-  let buttonChildren;
-  if (appearance === "navi") {
-    buttonChildren = (
-      <NaviButton
-        buttonRef={innerRef}
-        style={naviButtonStyle}
-        data-focus-visible={remainingProps["data-focus-visible"]}
-      >
-        {innerChildren}
-      </NaviButton>
-    );
-  } else {
-    buttonChildren = innerChildren;
-  }
+  const buttonContent = (
+    <span ref={contentRef} className="navi_button_content">
+      {innerChildren}
+      <span className="navi_button_shadow"></span>
+    </span>
+  );
+
+  useNaviStyle(innerRef, buttonStyle);
+  useNaviStyle(contentRef, contentStyle);
 
   return (
     <Box
@@ -309,7 +311,6 @@ const ButtonBasic = forwardRef((props, ref) => {
       as="button"
       ref={innerRef}
       className={innerClassName}
-      style={innerStyle}
       disabled={innerDisabled}
       data-discrete={discrete ? "" : undefined}
       data-readonly={innerReadOnly ? "" : undefined}
@@ -323,26 +324,10 @@ const ButtonBasic = forwardRef((props, ref) => {
         inset={-1}
         color="light-dark(#355fcc, #3b82f6)"
       />
-      {buttonChildren}
+      {buttonContent}
     </Box>
   );
 });
-const NaviButton = ({ buttonRef, children, ...rest }) => {
-  const ref = useRef();
-  const observeFocusVisible = !rest["data-focus-visible"];
-  useLayoutEffect(() => {
-    return initCustomField(buttonRef.current, buttonRef.current, {
-      observeFocus: observeFocusVisible,
-    });
-  }, [observeFocusVisible]);
-
-  return (
-    <span ref={ref} className="navi_button_content" {...rest}>
-      {children}
-      <span className="navi_button_shadow"></span>
-    </span>
-  );
-};
 
 const ButtonWithAction = forwardRef((props, ref) => {
   const {

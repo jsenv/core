@@ -1,5 +1,10 @@
-import { appendStyles, normalizeStyle, normalizeStyles } from "@jsenv/dom";
-import { useContext } from "preact/hooks";
+import {
+  appendStyles,
+  createStyleController,
+  normalizeStyle,
+  normalizeStyles,
+} from "@jsenv/dom";
+import { useContext, useLayoutEffect } from "preact/hooks";
 
 import { BoxLayoutContext } from "../layout/layout_context.jsx";
 
@@ -49,6 +54,17 @@ import { BoxLayoutContext } from "../layout/layout_context.jsx";
  * @param {boolean} [remainingConfig.style] - Include styles from props in this config
  * @returns {array} [remainingProps, mainStyle, ...additionalStyles] - Non-style props and style objects
  */
+
+const naviStyleController = createStyleController("navi");
+export const useNaviStyle = (ref, style) => {
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return;
+    }
+    naviStyleController.set(el, style);
+  }, [style]);
+};
 
 const normalizeSpacingStyle = (value, property = "padding") => {
   const cssSize = sizeSpacingScale[value];
