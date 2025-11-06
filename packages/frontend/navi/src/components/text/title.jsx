@@ -1,4 +1,4 @@
-import { withPropsStyle } from "../props_composition/with_props_style.js";
+import { withPropsStyle } from "../layout/with_props_style.js";
 
 export const Title = ({ as = "h1", children, ...rest }) => {
   const HeadingTag = as;

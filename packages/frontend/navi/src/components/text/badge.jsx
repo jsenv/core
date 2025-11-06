@@ -1,5 +1,5 @@
-import { withPropsClassName } from "../props_composition/with_props_class_name.js";
-import { withPropsStyle } from "../props_composition/with_props_style.js";
+import { withPropsClassName } from "../layout/with_props_class_name.js";
+import { withPropsStyle } from "../layout/with_props_style.js";
 
 import.meta.css = /* css */ `
   .navi_count {

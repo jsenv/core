@@ -13,11 +13,11 @@ import { useConstraints } from "../../validation/hooks/use_constraints.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
+import { withPropsStyle } from "../layout/with_props_style.js";
 import {
   LoadableInlineElement,
   LoaderBackground,
 } from "../loader/loader_background.jsx";
-import { withPropsStyle } from "../props_composition/with_props_style.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { initCustomField } from "./custom_field.js";
 import {

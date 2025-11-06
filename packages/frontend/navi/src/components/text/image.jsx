@@ -1,4 +1,4 @@
-import { withPropsStyle } from "../props_composition/with_props_style.js";
+import { withPropsStyle } from "../layout/with_props_style.js";
 
 export const Image = (props) => {
   const [remainingProps, innerStyle] = withPropsStyle(props, {

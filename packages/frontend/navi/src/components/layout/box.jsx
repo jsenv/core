@@ -46,17 +46,14 @@
 
 import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
-import { withPropsClassName } from "../props_composition/with_props_class_name.js";
-import {
-  resolveSpacingSize,
-  withPropsStyle,
-} from "../props_composition/with_props_style.js";
 import { BoxLayoutContext } from "./layout_context.jsx";
 import {
   applyPseudoStyles,
   applyStyles,
   initPseudoStyles,
 } from "./pseudo_styles.js";
+import { withPropsClassName } from "./with_props_class_name.js";
+import { resolveSpacingSize, withPropsStyle } from "./with_props_style.js";
 
 export const Box = (props) => {
   const {

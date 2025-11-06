@@ -25,7 +25,7 @@ import {
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
-import { withPropsStyle } from "../props_composition/with_props_style.js";
+import { withPropsStyle } from "../layout/with_props_style.js";
 import { collectFormElementValues } from "./collect_form_element_values.js";
 import {
   useActionEvents,
