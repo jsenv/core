@@ -1,5 +1,5 @@
 // Properties that need px units
-const pxProperties = [
+const pxPropertySet = new Set([
   "width",
   "height",
   "top",
@@ -37,10 +37,10 @@ const pxProperties = [
   "gap",
   "rowGap",
   "columnGap",
-];
+]);
 
 // Properties that need deg units
-const degProperties = [
+const degPropertySet = new Set([
   "rotate",
   "rotateX",
   "rotateY",
@@ -48,10 +48,10 @@ const degProperties = [
   "skew",
   "skewX",
   "skewY",
-];
+]);
 
 // Properties that should remain unitless
-const unitlessProperties = [
+const unitlessPropertySet = new Set([
   "opacity",
   "zIndex",
   "flexGrow",
@@ -62,8 +62,7 @@ const unitlessProperties = [
   "scaleX",
   "scaleY",
   "scaleZ",
-  "lineHeight", // Special case: unitless lineHeight is a multiplier relative to font-size
-];
+]);
 
 // Well-known CSS units and keywords that indicate a value already has proper formatting
 const cssSizeUnitSet = new Set([
@@ -107,15 +106,16 @@ const cssKeywordSet = new Set([
   "revert",
 ]);
 
-// Check if value already has a unit or is a keyword
-const hasUnit = (value) => {
+const getUnit = (value) => {
   for (const cssUnit of cssUnitSet) {
     if (value.endsWith(cssUnit)) {
-      return true;
+      return cssUnit;
     }
   }
-  return false;
+  return "";
 };
+// Check if value already has a unit
+const isUnitless = (value) => getUnit(value) === "";
 const isKeyword = (value) => {
   return cssKeywordSet.has(value);
 };
@@ -191,21 +191,38 @@ export const normalizeStyle = (value, propertyName, context = "js") => {
     return value;
   }
 
-  if (pxProperties.includes(propertyName)) {
+  if (propertyName === "lineHeight") {
+    if (context === "js") {
+      if (typeof value === "string") {
+        const unit = getUnit(value);
+        if (unit === "px") {
+          const float = parseFloat(value);
+          return float;
+        }
+        if (unit === "") {
+          return `${value}em`;
+        }
+        return value;
+      }
+    }
+    return value;
+  }
+
+  if (pxPropertySet.has(propertyName)) {
     return normalizeNumber(value, {
       propertyName,
       unit: "px",
       preferedType: context === "js" ? "number" : "string",
     });
   }
-  if (degProperties.includes(propertyName)) {
+  if (degPropertySet.has(propertyName)) {
     return normalizeNumber(value, {
       propertyName,
       unit: "deg",
       preferedType: "string",
     });
   }
-  if (unitlessProperties.includes(propertyName)) {
+  if (unitlessPropertySet.has(propertyName)) {
     return normalizeNumber(value, {
       propertyName,
       unit: "",
@@ -219,7 +236,7 @@ const normalizeNumber = (value, { unit, propertyName, preferedType }) => {
   if (typeof value === "string") {
     // Keep strings as-is (including %, em, rem, auto, none, etc.)
     if (preferedType === "string") {
-      if (unit && !hasUnit(value) && !isKeyword(value)) {
+      if (unit && isUnitless(value) && !isKeyword(value)) {
         return `${value}${unit}`;
       }
       return value;

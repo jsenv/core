@@ -130,7 +130,14 @@ export const Box = (props) => {
         : undefined;
 
   return (
-    <TagName ref={ref} {...remainingProps}>
+    <TagName
+      ref={ref}
+      // put some data attributes that helps in devtools
+      data-layout-row={as === "div" && layoutRow ? "" : undefined}
+      data-layout-column={as === "div" && layoutColumn ? "" : undefined}
+      data-layout-inline={as === "div" && layoutInline ? "" : undefined}
+      {...remainingProps}
+    >
       <BoxLayoutContext.Provider value={layout}>
         {children}
       </BoxLayoutContext.Provider>
