@@ -114,7 +114,7 @@
       import { render } from "preact";
       import { useState } from "preact/hooks";
       /* eslint-disable no-unused-vars */
-      import { Button } from "@jsenv/navi";
+      import { Button, Layout } from "@jsenv/navi";
 
       const App = () => {
         return (
@@ -134,33 +134,40 @@
           <div className="demo-section">
             <h2>Basic Button States</h2>
 
-            <fieldset>
-              <legend>Button States</legend>
-              <div className="button-group">
-                <Button>Default</Button>
-                <Button readOnly>Read-only</Button>
-                <Button disabled>Disabled</Button>
-              </div>
-            </fieldset>
+            <Layout column contentSpacing="sm">
+              <fieldset>
+                <legend>Default</legend>
+                <Layout row contentSpacing="sm" contentAlignX="start">
+                  <Button>Text</Button>
+                  <button>Text</button>
+                </Layout>
+              </fieldset>
+              <fieldset>
+                <legend>Read-only</legend>
+                <Layout row contentSpacing="sm" contentAlignX="start">
+                  <Button readOnly>Text</Button>
+                  <button data-readonly>Text</button>
+                </Layout>
+              </fieldset>
+              <fieldset>
+                <legend>Disabled</legend>
+                <Layout row contentSpacing="sm" contentAlignX="start">
+                  <Button disabled>Text</Button>
+                  <button disabled>Text</button>
+                </Layout>
+              </fieldset>
+            </Layout>
 
-            <fieldset>
-              <legend>Native Comparison</legend>
-              <div className="button-group">
-                <button>Default</button>
-                <button data-readonly>Read-only</button>
-                <button disabled>Disabled</button>
-              </div>
-              <small
-                style={{
-                  color: "#666",
-                  fontSize: "0.85rem",
-                  marginTop: "10px",
-                  display: "block",
-                }}
-              >
-                Note: Native buttons don't have a read-only state
-              </small>
-            </fieldset>
+            <small
+              style={{
+                color: "#666",
+                fontSize: "0.85rem",
+                marginTop: "10px",
+                display: "block",
+              }}
+            >
+              Note: Native buttons don't have a read-only state
+            </small>
           </div>
         );
       };
@@ -172,9 +179,10 @@
 
             <fieldset>
               <legend>Loading Examples</legend>
-              <div className="button-group">
+              <Layout row contentSpacing="sm" contentAlignX="start">
                 <Button loading>Loading button</Button>
-              </div>
+                <button>Loading button</button>
+              </Layout>
             </fieldset>
 
             <p style={{ color: "#666", fontSize: "0.9rem", margin: "10px 0" }}>
@@ -209,12 +217,7 @@
 
               <div className="variation-item">
                 <p className="variation-label">Custom padding</p>
-                <Button
-                  style={{
-                    "--padding-x": "30px",
-                    "--padding-y": "15px",
-                  }}
-                >
+                <Button paddingX="xl" paddingY="md">
                   Large
                 </Button>
               </div>

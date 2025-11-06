@@ -44,10 +44,13 @@ import.meta.css = /* css */ `
   @layer navi {
     .navi_button {
       position: relative;
-      display: inline-flex;
+      display: flex;
       width: fit-content;
       height: fit-content;
       padding: 0;
+      flex-direction: inherit;
+      align-items: inherit;
+      justify-content: inherit;
       background: none;
       border: none;
       border-radius: inherit;
@@ -251,6 +254,9 @@ const ButtonBasic = forwardRef((props, ref) => {
       visual: false,
       innerSpacing: false,
       managedByCSSVars: {
+        outlineWidth: "--outline-width",
+        borderWidth: "--border-width",
+        borderRadius: "--border-radius",
         backgroundColor: "--background-color",
         borderColor: "--border-color",
         textColor: "--color",
