@@ -159,6 +159,7 @@ const useBoxStyle = (props, { ref, contentSelector, base }) => {
     readOnly,
     loading,
     focusVisible,
+    visited,
     ...rest
   } = props;
 
@@ -248,16 +249,17 @@ const useBoxStyle = (props, { ref, contentSelector, base }) => {
       el,
       {
         pseudoClasses,
+        effect: updatePseudoStyles,
+      },
+      {
         disabled,
         readOnly,
         loading,
         focusVisible,
-      },
-      {
-        effect: updatePseudoStyles,
+        visited,
       },
     );
-  }, [disabled, readOnly, loading, focusVisible, updatePseudoStyles]);
+  }, [disabled, readOnly, loading, focusVisible, visited, updatePseudoStyles]);
 
   return remainingProps;
 };

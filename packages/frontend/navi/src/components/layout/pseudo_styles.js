@@ -27,12 +27,21 @@ const PSEUDO_CLASSES = {
         document.removeEventListener("mouseup", callback);
       };
     },
-    test: (el) => el.matches(":active"),
+    test: (el, props) => props.active || el.matches(":active"),
     add: (el) => {
       el.setAttribute("data-active", "");
     },
     remove: (el) => {
       el.removeAttribute("data-active");
+    },
+  },
+  ":visited": {
+    test: (el, props) => props.visited,
+    add: (el) => {
+      el.setAttribute("data-visited", "");
+    },
+    remove: (el) => {
+      el.removeAttribute("data-visited");
     },
   },
   ":checked": {
@@ -183,8 +192,13 @@ const PSEUDO_CLASSES = {
 
 export const initPseudoStyles = (
   element,
-  { pseudoClasses, readOnly, disabled, loading, focusVisible },
-  { effect } = {},
+  { pseudoClasses, effect },
+  // disabled,
+  // readOnly,
+  // loading,
+  // focusVisible,
+  // visited,
+  stateProps,
 ) => {
   if (!pseudoClasses || pseudoClasses.length === 0) {
     effect?.();
@@ -199,12 +213,7 @@ export const initPseudoStyles = (
     const currentState = {};
     for (const pseudoClass of pseudoClasses) {
       const pseudoClassDefinition = PSEUDO_CLASSES[pseudoClass];
-      const currentValue = pseudoClassDefinition.test(element, {
-        disabled,
-        readOnly,
-        loading,
-        focusVisible,
-      });
+      const currentValue = pseudoClassDefinition.test(element, stateProps);
       currentState[pseudoClass] = currentValue;
       const oldValue = state ? state[pseudoClass] : undefined;
       if (oldValue !== currentValue) {

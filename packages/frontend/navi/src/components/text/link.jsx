@@ -29,8 +29,13 @@ import { Icon, applyContentSpacingOnTextChildren } from "./text.jsx";
 import.meta.css = /* css */ `
   .navi_link {
     position: relative;
-    color: inherit;
     border-radius: 2px;
+
+    --x-color: var(--color, inherit);
+    --x-color-visited: var(--color-visited, light-dark(#6a1b9a, #ab47bc));
+    --x-color-active: var(--color-active, red);
+
+    color: var(--x-color);
   }
   /* Focus */
   .navi_link:focus {
@@ -39,7 +44,7 @@ import.meta.css = /* css */ `
   }
   /* Visited */
   .navi_link[data-visited] {
-    color: light-dark(#6a1b9a, #ab47bc);
+    --x-color: var(--x-color-visited);
   }
   /* Selected */
   .navi_link[aria-selected] {
@@ -55,7 +60,7 @@ import.meta.css = /* css */ `
   /* Active */
   .navi_link[data-active] {
     /* Redefine it otherwise [data-visited] prevails */
-    color: red;
+    --x-color: var(--x-color-active);
   }
   /* Readonly */
   .navi_link[data-readonly] > * {
@@ -91,17 +96,19 @@ const LinkPseudoClasses = [
   ":focus-visible",
   ":read-only",
   ":disabled",
+  ":visited",
   ":-navi-loading",
 ];
 const LinkPseudoElements = [":-navi-loader"];
+const LinkManagedByCSSVars = {
+  textColor: "--color",
+};
 const LinkPlain = (props) => {
   const {
     loading,
     readOnly,
     disabled,
     autoFocus,
-    active,
-    visited,
     spaceToClick = true,
     constraints = [],
     onClick,
@@ -109,6 +116,7 @@ const LinkPlain = (props) => {
     href,
     target,
     rel,
+    visited,
     ref = useRef(),
 
     // visual
@@ -122,6 +130,7 @@ const LinkPlain = (props) => {
     ...rest
   } = props;
   const isVisited = useIsVisited(href);
+  const innerVisited = visited || isVisited;
 
   useAutoFocus(ref, autoFocus);
   useConstraints(ref, constraints);
@@ -165,19 +174,20 @@ const LinkPlain = (props) => {
 
   return (
     <Box
+      {...rest}
       ref={ref}
-      className="navi_link"
+      baseClassName="navi_link"
       as="a"
       layoutInline={box ? true : undefined}
       href={href}
       rel={innerRel}
       target={innerTarget === "_self" ? undefined : target}
+      readOnly={readOnly}
+      disabled={disabled}
+      loading={loading}
+      visited={innerVisited}
       aria-busy={loading}
       inert={disabled}
-      data-disabled={disabled ? "" : undefined}
-      data-readonly={readOnly ? "" : undefined}
-      data-active={active ? "" : undefined}
-      data-visited={visited || isVisited ? "" : undefined}
       data-external={targetIsSameSite ? undefined : ""}
       data-internal={targetIsSameSite ? "" : undefined}
       data-anchor={targetIsAnchor ? "" : undefined}
@@ -201,7 +211,7 @@ const LinkPlain = (props) => {
       }}
       pseudoClasses={LinkPseudoClasses}
       pseudoElements={LinkPseudoElements}
-      {...rest}
+      managedByCSSVars={LinkManagedByCSSVars}
     >
       <LoaderBackground
         loading={loading}
