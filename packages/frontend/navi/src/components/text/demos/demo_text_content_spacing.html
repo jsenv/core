@@ -346,6 +346,19 @@
                 </div>
               </div>
 
+              <pre
+                style={{
+                  background: "#f7f7f7",
+                  padding: "10px",
+                  borderRadius: "4px",
+                  fontSize: "12px",
+                  overflowX: "auto",
+                  marginBottom: "20px",
+                }}
+              >
+                {`// Bad - Icon + Text underline\n<Text noWrap textUnderline>\n  <Icon><StarSvg /></Icon>\n  star\n</Text>\n\n// Good - Only text underlined\n<Text noWrap>\n  <Icon><StarSvg /></Icon>\n  <Text textUnderline>star</Text>\n</Text>`}
+              </pre>
+
               <h3>Links with Icons</h3>
               <p>
                 The same principle applies to Links containing icons. Disable
@@ -364,14 +377,23 @@
                     }}
                   >
                     <Link href="./user-profile">
+                      <Icon>
+                        <StarSvg />
+                      </Icon>
+                      <Icon>
+                        <StarSvg />
+                      </Icon>
                       <Text>Go to profile</Text>
+                      <Icon>
+                        <StarSvg />
+                      </Icon>
                       <Icon>
                         <StarSvg />
                       </Icon>
                     </Link>
                   </div>
                   <small style={{ color: "#666" }}>
-                    Icon gets underlined too
+                    Spaces between icons and text gets underlined
                   </small>
                 </div>
                 <div style={{ flex: 1 }}>
@@ -384,7 +406,16 @@
                     }}
                   >
                     <Link href="./user-profile" textUnderline={false}>
+                      <Icon>
+                        <StarSvg />
+                      </Icon>
+                      <Icon>
+                        <StarSvg />
+                      </Icon>
                       <Text textUnderline>Go to profile</Text>
+                      <Icon>
+                        <StarSvg />
+                      </Icon>
                       <Icon>
                         <StarSvg />
                       </Icon>
@@ -396,21 +427,6 @@
                 </div>
               </div>
 
-              <h4>Code examples for Icon + Text:</h4>
-              <pre
-                style={{
-                  background: "#f7f7f7",
-                  padding: "10px",
-                  borderRadius: "4px",
-                  fontSize: "12px",
-                  overflowX: "auto",
-                  marginBottom: "15px",
-                }}
-              >
-                {`// Bad - Icon + Text underline\n<Text noWrap textUnderline>\n  <Icon><StarSvg /></Icon>\n  star\n</Text>\n\n// Good - Only text underlined\n<Text noWrap>\n  <Icon><StarSvg /></Icon>\n  <Text textUnderline>star</Text>\n</Text>`}
-              </pre>
-
-              <h4>Code examples for Link + Icon:</h4>
               <pre
                 style={{
                   background: "#f7f7f7",
@@ -420,7 +436,7 @@
                   overflowX: "auto",
                 }}
               >
-                {`// Bad - Link with icon, underline on everything\n<Link href="./user-profile">\n  <Text>Go to profile</Text>\n  <Icon><StarSvg /></Icon>\n</Link>\n\n// Good - Disable Link underline, add to text only\n<Link href="./user-profile" textUnderline={false}>\n  <Text textUnderline>Go to profile</Text>\n  <Icon><StarSvg /></Icon>\n</Link>`}
+                {`// Bad - Link with icon, underline on everything\n<Link href="./user-profile">\n  <Icon><StarSvg /></Icon>\n  <Icon><StarSvg /></Icon>\n  <Text>Go to profile</Text>\n  <Icon><StarSvg /></Icon>\n  <Icon><StarSvg /></Icon>\n</Link>\n\n// Good - Disable Link underline, add to text only\n<Link href="./user-profile" textUnderline={false}>\n  <Icon><StarSvg /></Icon>\n  <Icon><StarSvg /></Icon>\n  <Text textUnderline>Go to profile</Text>\n  <Icon><StarSvg /></Icon>\n  <Icon><StarSvg /></Icon>\n</Link>`}
               </pre>
             </section>
           </div>
