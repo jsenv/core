@@ -266,6 +266,9 @@ export const normalizeStyles = (styles, context = "js", mutate = false) => {
   const normalized = {};
   for (const key of Object.keys(styles)) {
     const value = styles[key];
+    if (value === undefined) {
+      continue;
+    }
     normalized[key] = normalizeStyle(value, key, context);
   }
   return normalized;

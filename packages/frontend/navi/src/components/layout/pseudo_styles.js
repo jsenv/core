@@ -223,6 +223,10 @@ export const initPseudoStyles = (
     state = currentState;
   };
 
+  console.log(element.tagName);
+  if (element.tagName === "BUTTON") {
+    debugger;
+  }
   for (const pseudoClass of pseudoClasses) {
     const pseudoClassDefinition = PSEUDO_CLASSES[pseudoClass];
     const { setup } = pseudoClassDefinition;

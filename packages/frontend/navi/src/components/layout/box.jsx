@@ -146,84 +146,97 @@ const useBoxStyle = (props, { boxRef, contentRef, base }) => {
     focusVisible,
     ...rest
   } = props;
+
   if (!pseudoClasses && rest.pseudo) {
     // <Box pseudo={{ ":hover": { backgroundColor: "red" } }}> would watch :hover
     pseudoClasses = Object.keys(rest.pseudo);
   }
 
-  if (!contentRef) {
-    const [remainingProps, innerStyle, pseudoStyles] = withPropsStyle(rest, {
-      pseudoClasses,
-      pseudoElements,
-      managedByCSSVars,
-      base,
-      layout: true,
-      typo: true,
-    });
-    useLayoutEffect(() => {
-      const el = boxRef.current;
-      if (!el) {
-        return;
-      }
-      initPseudoStyles(
-        el,
-        {
-          pseudoClasses,
-          disabled,
-          readOnly,
-          loading,
-          focusVisible,
-        },
-        {
-          effect: (state) => {
-            applyStyles(el, innerStyle, pseudoStyles, state);
+  let initProps;
+  if (contentRef) {
+    initProps = () => {
+      const [remainingProps, innerStyle, contentStyle, pseudoStyles] =
+        withPropsStyle(
+          rest,
+          {
+            managedByCSSVars,
+            pseudoClasses,
+            pseudoElements,
+            base,
+            layout: true,
+            typo: true,
+            innerSpacing: false,
+            visual: false,
           },
-        },
-      );
-    }, [innerStyle, pseudoStyles, disabled, readOnly, loading, focusVisible]);
-    return remainingProps;
-  }
+          {
+            innerSpacing: true,
+            visual: true,
+          },
+        );
+      return [
+        remainingProps,
+        (state) => {
+          const el = boxRef.current;
+          applyStyles(el, innerStyle);
 
-  const [remainingProps, innerStyle, contentStyle, pseudoStyles] =
-    withPropsStyle(
-      rest,
-      {
+          const contentEl = contentRef.current;
+          if (contentEl) {
+            applyStyles(contentEl, contentStyle, pseudoStyles, state);
+          }
+        },
+      ];
+    };
+  } else {
+    initProps = () => {
+      const [remainingProps, innerStyle, pseudoStyles] = withPropsStyle(rest, {
         managedByCSSVars,
         pseudoClasses,
         pseudoElements,
         base,
         layout: true,
         typo: true,
-        innerSpacing: false,
-        visual: false,
-      },
-      {
-        innerSpacing: true,
-        visual: true,
-      },
-    );
+      });
+      return [
+        remainingProps,
+        (state) => {
+          const el = boxRef.current;
+          applyStyles(el, innerStyle, pseudoStyles, state);
+        },
+      ];
+    };
+  }
+
+  const [remainingProps, effect] = initProps();
   useLayoutEffect(() => {
     const el = boxRef.current;
-    const contentEl = contentRef.current;
-    if (!el || !contentEl) {
+    if (!el) {
+      console.log("here");
       return;
     }
+    console.log(el, pseudoClasses);
     initPseudoStyles(
       el,
       {
+        pseudoClasses,
         disabled,
         readOnly,
         loading,
         focusVisible,
       },
       {
-        effect: (state) => {
-          applyStyles(el, innerStyle);
-          applyStyles(contentEl, contentStyle, pseudoStyles, state);
-        },
+        effect,
       },
     );
-  }, [innerStyle, pseudoStyles, disabled, readOnly, loading, focusVisible]);
+  }, [
+    disabled,
+    readOnly,
+    loading,
+    focusVisible,
+    effect,
+    contentRef?.current,
+    boxRef.current,
+  ]);
+
   return remainingProps;
 };
 
