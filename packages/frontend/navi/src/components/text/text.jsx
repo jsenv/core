@@ -1,9 +1,8 @@
+/* eslint-disable jsenv/no-unknown-params */
 import { createContext, toChildArray } from "preact";
 import { useContext, useState } from "preact/hooks";
 
 import { Box } from "../layout/box.jsx";
-import { withPropsClassName } from "../props_composition/with_props_class_name.js";
-import { withPropsStyle } from "../props_composition/with_props_style.js";
 
 import.meta.css = /* css */ `
   :root {
@@ -25,16 +24,6 @@ import.meta.css = /* css */ `
   .navi_text_foreground {
     position: absolute;
     inset: 0;
-  }
-
-  .navi_text_overflow {
-    display: flex;
-    box-sizing: border-box;
-    width: 100%;
-    flex-wrap: wrap;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    overflow: hidden;
   }
 
   .navi_text_overflow_wrapper {
@@ -62,31 +51,35 @@ export const Text = (props) => {
   }
   return <TextBasic {...props} />;
 };
-// TODO: voir si on peut passer par Box ici ou quelque chose en tous cas
-// en gros c'est du text en noWrap ellipsis display flex (pourquoi display flex?)
-// TODO: tester si c'est compatible avec le truc qui met des espaces
-const TextOverflow = ({ as = "div", className, children, ...rest }) => {
-  const TagName = as;
-  const innerClassName = withPropsClassName("navi_text_overflow", className);
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    layout: true,
-    typo: true,
-  });
+const TextOverflow = ({
+  as = "div",
+  contentSpacing = " ",
+  children,
+  ...rest
+}) => {
   const [OverflowPinnedElement, setOverflowPinnedElement] = useState(null);
 
   return (
-    <TagName className={innerClassName} style={innerStyle} {...remainingProps}>
+    <Text
+      {...rest}
+      as={as}
+      layoutColumn
+      expandX
+      noWrap
+      contentSpacing="pre"
+      style="text-overflow: ellipsis; overflow: hidden; flex-wrap: wrap;"
+    >
       <span className="navi_text_overflow_wrapper">
         <span className="navi_text_overflow_text">
           <OverflowPinnedElementContext.Provider
             value={setOverflowPinnedElement}
           >
-            {children}
+            {applyContentSpacingOnTextChildren(children, contentSpacing)}
           </OverflowPinnedElementContext.Provider>
         </span>
         {OverflowPinnedElement}
       </span>
-    </TagName>
+    </Text>
   );
 };
 const TextOverflowPinned = ({ overflowPinned, ...props }) => {
@@ -110,17 +103,15 @@ const TextBasic = ({
   foregroundColor,
   foregroundElement,
   contentSpacing = " ",
-  className,
   box,
   children,
   ...rest
 }) => {
-  const innerClassName = withPropsClassName("navi_text", className);
   const hasForeground = Boolean(foregroundElement || foregroundColor);
   const text = (
     <Box
       {...rest}
-      className={innerClassName}
+      baseClassName="navi_text"
       layoutInline={box ? true : undefined}
       as={as}
       data-has-foreground={hasForeground ? "" : undefined}

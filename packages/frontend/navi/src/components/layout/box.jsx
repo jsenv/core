@@ -46,6 +46,7 @@
 
 import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
+import { withPropsClassName } from "../props_composition/with_props_class_name.js";
 import {
   resolveSpacingSize,
   withPropsStyle,
@@ -68,6 +69,8 @@ export const Box = (props) => {
     contentSpacing,
     shrink,
     expand,
+    baseClassName,
+    className,
 
     // style management
     contentSelector,
@@ -129,9 +132,12 @@ export const Box = (props) => {
         ? "inline"
         : undefined;
 
+  const innerClassName = withPropsClassName(baseClassName, className);
+
   return (
     <TagName
       ref={ref}
+      className={innerClassName}
       // put some data attributes that helps in devtools
       data-layout-row={as === "div" && layoutRow ? "" : undefined}
       data-layout-column={as === "div" && layoutColumn ? "" : undefined}
