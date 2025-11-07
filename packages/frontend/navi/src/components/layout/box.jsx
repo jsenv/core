@@ -289,10 +289,12 @@ const useBoxStyle = (
     if (!el) {
       return null;
     }
+    // const wrapperEl = wrapperSelector ? el.closest(wrapperSelector) : null;
     return initPseudoStyles(el, {
       pseudoClasses,
       pseudoState,
       effect: updateStyle,
+      // elementToImpact: wrapperEl || el,
     });
   }, [pseudoClasses, pseudoState, updateStyle]);
 

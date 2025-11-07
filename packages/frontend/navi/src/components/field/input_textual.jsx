@@ -276,6 +276,7 @@ const InputTextualBasic = (props) => {
         uiStateController.setUIState(e.detail.value, e);
       }}
       // style management
+      baseClassName="navi_input"
       baseStyle={{
         "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
       }}

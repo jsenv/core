@@ -175,13 +175,9 @@ export const initPseudoStyles = (
   element,
   {
     pseudoClasses,
-    // disabled,
-    // readOnly,
-    // loading,
-    // focusVisible,
-    // visited,
-    pseudoState,
+    pseudoState, // ":disabled", ":read-only", ":-navi-loading", etc...
     effect,
+    elementToImpact = element,
   },
 ) => {
   if (!pseudoClasses || pseudoClasses.length === 0) {
@@ -217,14 +213,13 @@ export const initPseudoStyles = (
         const { attribute, add, remove } = pseudoClassDefinition;
         if (currentValue) {
           if (attribute) {
-            element.setAttribute(attribute, "");
+            elementToImpact.setAttribute(attribute, "");
           }
           add?.(element);
         } else {
           if (attribute) {
-            element.removeAttribute(attribute);
+            elementToImpact.removeAttribute(attribute);
           }
-
           remove?.(element);
         }
       }
