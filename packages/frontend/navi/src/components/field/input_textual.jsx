@@ -16,7 +16,7 @@
  * - <InputRadio /> for type="radio"
  */
 
-import { useContext, useLayoutEffect, useRef } from "preact/hooks";
+import { useContext, useRef } from "preact/hooks";
 
 import { useActionStatus } from "../../use_action_status.js";
 import { forwardActionRequested } from "../../validation/custom_constraint_validation.js";
@@ -24,11 +24,10 @@ import { useConstraints } from "../../validation/hooks/use_constraints.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
-import { withPropsClassName } from "../layout/with_props_class_name.js";
+import { Box } from "../layout/box.jsx";
 import { withPropsStyle } from "../layout/with_props_style.js";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
-import { initCustomField } from "./custom_field.js";
 import { ReportReadOnlyOnLabelContext } from "./label.jsx";
 import { useActionEvents } from "./use_action_events.js";
 import {
@@ -169,9 +168,7 @@ const InputTextualBasic = (props) => {
     autoSelect,
 
     // visual
-    appearance = "navi",
     accentColor,
-    className,
 
     ref = useRef(),
 
@@ -193,10 +190,6 @@ const InputTextualBasic = (props) => {
   });
   useConstraints(ref, constraints);
 
-  const innerClassName = withPropsClassName(
-    appearance === "navi" ? "navi_input" : undefined,
-    className,
-  );
   const [remainingProps, wrapperStyle, inputStyle] = withPropsStyle(
     rest,
     {
@@ -210,18 +203,18 @@ const InputTextualBasic = (props) => {
     },
   );
   const inputTextual = (
-    <input
+    <Box
       {...remainingProps}
+      as="input"
       ref={ref}
-      className={innerClassName}
       style={inputStyle}
       type={type}
       data-value={uiState}
       value={innerValue}
-      readOnly={innerReadOnly}
-      disabled={innerDisabled}
-      data-readOnly={innerReadOnly ? "" : undefined}
-      data-disabled={innerDisabled ? "" : undefined}
+      pseudoState={{
+        ":read-only": innerReadOnly,
+        ":disabled": innerDisabled,
+      }}
       onInput={(e) => {
         let inputValue;
         if (type === "number") {
@@ -234,20 +227,14 @@ const InputTextualBasic = (props) => {
         uiStateController.setUIState(inputValue, e);
         onInput?.(e);
       }}
-      // eslint-disable-next-line react/no-unknown-property
       onresetuistate={(e) => {
         uiStateController.resetUIState(e);
       }}
-      // eslint-disable-next-line react/no-unknown-property
       onsetuistate={(e) => {
         uiStateController.setUIState(e.detail.value, e);
       }}
     />
   );
-
-  useLayoutEffect(() => {
-    return initCustomField(ref.current, ref.current);
-  }, []);
 
   if (type === "hidden") {
     return inputTextual;

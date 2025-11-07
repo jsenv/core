@@ -114,6 +114,26 @@ export const PSEUDO_CLASSES = {
   },
   ":disabled": {
     attribute: "data-disabled",
+    add: (el) => {
+      if (
+        el.tagName === "BUTTON" ||
+        el.tagName === "INPUT" ||
+        el.tagName === "SELECT" ||
+        el.tagName === "TEXTAREA"
+      ) {
+        el.disabled = true;
+      }
+    },
+    remove: (el) => {
+      if (
+        el.tagName === "BUTTON" ||
+        el.tagName === "INPUT" ||
+        el.tagName === "SELECT" ||
+        el.tagName === "TEXTAREA"
+      ) {
+        el.disabled = false;
+      }
+    },
   },
   ":read-only": {
     attribute: "data-readonly",
@@ -174,13 +194,18 @@ export const initPseudoStyles = (
       const oldValue = state ? state[pseudoClass] : undefined;
       if (oldValue !== currentValue) {
         someChange = true;
-        const { attribute } = pseudoClassDefinition;
-        if (attribute) {
-          if (currentValue) {
+        const { attribute, add, remove } = pseudoClassDefinition;
+        if (currentValue) {
+          if (attribute) {
             element.setAttribute(attribute, "");
-          } else {
+          }
+          add?.(element);
+        } else {
+          if (attribute) {
             element.removeAttribute(attribute);
           }
+
+          remove?.(element);
         }
       }
     }
