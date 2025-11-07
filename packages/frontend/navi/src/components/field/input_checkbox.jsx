@@ -52,26 +52,25 @@ import.meta.css = /* css */ `
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: white;
       --accent-color: light-dark(#4476ff, #3b82f6);
-      /* --color: currentColor; */
+      --color: currentColor;
       --checkmark-color: var(--navi-checkmark-color);
 
+      /* Hover */
+      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
+      /* Readonly */
       --border-color-readonly: color-mix(
         in srgb,
         var(--border-color) 30%,
         white
       );
-      --border-color-disabled: var(--border-color-readonly);
-      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
       --border-color-checked-readonly: #d3d3d3;
+      --background-color-checked-readonly: grey;
+      --checkmark-color-readonly: grey;
+      /* Disabled */
+      --border-color-disabled: var(--border-color-readonly);
       --border-color-checked-disabled: #d3d3d3;
-      --background-color-checked-readonly: var(
-        --navi-background-color-readonly
-      );
-      --background-color-checked-disabled: var(
-        --navi-background-color-disabled
-      );
-      --checkmark-color-readonly: var(--navi-color-readonly);
-      --checkmark-color-disabled: var(--navi-color-disabled);
+      --background-color-checked-disabled: #d3d3d3;
+      --checkmark-color-disabled: #eeeeee;
     }
     .navi_checkbox input {
       position: absolute;

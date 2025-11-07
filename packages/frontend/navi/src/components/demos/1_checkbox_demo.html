@@ -7,743 +7,477 @@
     <title>Checkbox Demo</title>
     <style>
       body {
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        max-width: 1400px;
+        max-width: 1000px;
         margin: 0 auto;
         padding: 20px;
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        min-height: 100vh;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f5f5f5;
       }
 
       h1 {
+        margin-bottom: 30px;
+        color: #333;
+        font-size: 2rem;
         text-align: center;
-        color: #2c3e50;
-        margin-bottom: 30px;
-        font-size: 2.5rem;
-        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
       }
 
-      .demo-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-        gap: 20px;
-        margin-bottom: 30px;
-      }
-
-      .demo-card {
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 20px;
         background: white;
-        border-radius: 12px;
-        padding: 25px;
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-        border: 1px solid #e1e8ed;
-        transition:
-          transform 0.2s ease,
-          box-shadow 0.2s ease;
-      }
-
-      .demo-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
-      }
-
-      .demo-title {
-        color: #2c3e50;
-        margin: 0 0 20px 0;
-        font-size: 1.3rem;
-        font-weight: 600;
-        border-bottom: 3px solid #3498db;
-        padding-bottom: 10px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-
-      .demo-title::before {
-        content: "✨";
-        font-size: 1.2rem;
-      }
-
-      .checkbox-row {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-        margin: 15px 0;
-        padding: 12px;
-        background: #f8f9fa;
         border-radius: 8px;
-        border: 1px solid #e9ecef;
-        transition: background 0.2s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
 
-      .checkbox-row:hover {
-        background: #e8f4f8;
+      .demo-section h2 {
+        margin: 0 0 20px 0;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.4rem;
+        border-bottom: 2px solid #ddd;
       }
 
-      .checkbox-label {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 1rem;
-        color: #495057;
-        cursor: pointer;
-        flex: 1;
-        min-width: 0;
-      }
-
-      .toggle-button {
-        padding: 8px 16px;
-        background: linear-gradient(45deg, #3498db, #2980b9);
-        color: white;
-        border: none;
+      fieldset {
+        margin: 15px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
         border-radius: 6px;
-        cursor: pointer;
-        font-size: 0.9rem;
+      }
+
+      legend {
+        padding: 0 10px;
+        color: #555;
         font-weight: 500;
-        transition: all 0.2s ease;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        flex-shrink: 0;
         white-space: nowrap;
       }
 
-      .toggle-button:hover {
-        background: linear-gradient(45deg, #2980b9, #1f6591);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: 15px;
       }
 
-      .comparison {
+      .comparison-section {
+        margin-top: 20px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-left: 4px solid #007bff;
+        border-radius: 4px;
+      }
+
+      .comparison-title {
+        margin: 0 0 15px 0;
+        color: #495057;
+        font-weight: 500;
+        font-size: 0.9rem;
+      }
+
+      .comparison-group {
         display: flex;
-        flex-direction: column;
-        gap: 8px;
-        margin-top: 15px;
-        padding: 12px;
-        background: #fff3cd;
-        border-radius: 6px;
-        border-left: 4px solid #ffc107;
+        margin: 10px 0;
+        align-items: center;
+        gap: 15px;
       }
 
       .comparison-label {
-        font-size: 0.85rem;
-        color: #856404;
-        font-weight: 500;
-        margin-bottom: 5px;
-      }
-
-      .native-examples {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
-
-      .native-examples label {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 0.9rem;
-        color: #495057;
-      }
-
-      .prop-control-demo {
-        grid-column: 1 / -1;
-        background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
-        color: white;
-      }
-
-      .prop-control-demo .demo-title {
-        color: white;
-        border-bottom-color: #ffffff;
-      }
-
-      .prop-control-demo .demo-title::before {
-        content: "�️";
-      }
-
-      .color-controls {
-        margin-bottom: 25px;
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 15px;
-      }
-
-      .color-select-group {
-        background: rgba(255, 255, 255, 0.1);
-        padding: 15px;
-        border-radius: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-      }
-
-      .color-select-label {
-        display: block;
-        margin-bottom: 8px;
-        font-weight: 500;
-        font-size: 0.95rem;
-      }
-
-      .color-select {
-        width: 100%;
-        padding: 8px 12px;
-        border: none;
-        border-radius: 6px;
-        background: white;
-        color: #333;
-        font-size: 0.9rem;
-        cursor: pointer;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      }
-
-      .state-controls {
-        background: rgba(255, 255, 255, 0.1);
-        padding: 15px;
-        border-radius: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        margin-bottom: 20px;
-      }
-
-      .state-controls h4 {
-        margin: 0 0 15px 0;
-        font-size: 1rem;
-        color: white;
-      }
-
-      .control-row {
-        display: flex;
-        gap: 15px;
-        flex-wrap: wrap;
-        margin-bottom: 10px;
-      }
-
-      .control-group {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-        background: rgba(255, 255, 255, 0.05);
-        padding: 12px;
-        border-radius: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        min-width: 100px;
-      }
-
-      .control-toggle {
-        padding: 8px 16px;
-        border: 2px solid rgba(255, 255, 255, 0.3);
-        background: rgba(255, 255, 255, 0.1);
-        color: white;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 0.85rem;
-        font-weight: 500;
-        transition: all 0.2s ease;
         min-width: 80px;
-        text-align: center;
+        color: #666;
+        font-size: 0.85rem;
       }
 
-      .control-toggle.active {
-        background: rgba(255, 255, 255, 0.9);
-        color: #333;
-        border-color: white;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-      }
-
-      .control-toggle:hover {
-        background: rgba(255, 255, 255, 0.2);
-        border-color: rgba(255, 255, 255, 0.5);
-      }
-
-      .control-toggle.active:hover {
-        background: white;
-      }
-
-      .control-label {
-        font-size: 0.9rem;
-        color: white;
-        margin: 0;
-      }
-
-      .accent-checkbox-grid {
+      .variation-grid {
         display: grid;
+        margin: 15px 0;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 15px;
-        background: rgba(255, 255, 255, 0.1);
-        padding: 20px;
-        border-radius: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
       }
 
-      .accent-checkbox-item {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 10px;
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 6px;
-        font-size: 0.95rem;
-      }
-
-      /* Custom styles override section */
-      .my_styles .navi_checkbox {
-        --accent-color: green;
-        --width: 20px;
-        --height: 20px;
-      }
-      .my_styles .navi_checkbox[data-hover] {
-        --accent-color: yellow;
-      }
-
-      .custom-styles-demo {
-        margin-top: 30px;
-      }
-
-      .custom-styles-test {
-        background: rgba(255, 255, 255, 0.1);
-        padding: 20px;
-        border-radius: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        margin: 15px 0;
-      }
-
-      .custom-styles-test h4 {
-        margin-top: 0;
-        color: #2c3e50;
-        font-size: 1.1rem;
-      }
-
-      .custom-styles-comparison {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-        margin-top: 15px;
-      }
-
-      .comparison-item {
-        background: rgba(255, 255, 255, 0.05);
+      .variation-item {
         padding: 15px;
+        text-align: center;
+        background: #f8f9fa;
         border-radius: 6px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
       }
 
-      .comparison-item h5 {
-        margin-top: 0;
-        margin-bottom: 10px;
-        color: #34495e;
+      .variation-label {
+        margin: 0 0 10px 0;
+        color: #666;
+        font-size: 0.85rem;
+      }
+
+      .states-section {
+        margin: 20px 0;
+      }
+
+      .states-title {
+        margin: 0 0 15px 0;
+        padding: 8px 12px;
+        color: #495057;
+        font-weight: 600;
+        font-size: 0.95rem;
+        text-align: center;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+      }
+
+      .enhanced-states-title {
+        color: #1565c0;
+        background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+        border-color: #2196f3;
+      }
+
+      .states-description {
+        margin: 10px 0 15px 0;
+        padding: 10px 15px;
+        color: #666;
+        font-style: italic;
         font-size: 0.9rem;
-      }
-
-      @media (max-width: 768px) {
-        .demo-grid {
-          grid-template-columns: 1fr;
-        }
-
-        h1 {
-          font-size: 2rem;
-        }
-
-        .checkbox-row {
-          flex-direction: column;
-          align-items: stretch;
-          gap: 10px;
-        }
+        background: #f8f9fa;
+        border-left: 4px solid #007bff;
+        border-radius: 0 4px 4px 0;
       }
     </style>
   </head>
   <body>
-    <h1>🎛️ Interactive Checkbox Demo</h1>
+    <h1>Checkbox Demo</h1>
     <div id="root"></div>
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import {
-        // eslint-disable-next-line no-unused-vars
-        Input,
-        // eslint-disable-next-line no-unused-vars
-        Label,
-      } from "@jsenv/navi";
+      /* eslint-disable no-unused-vars */
+      import { Input, Layout, Label } from "@jsenv/navi";
 
-      // eslint-disable-next-line no-unused-vars
       const App = () => {
         return (
-          <div className="demo-grid">
-            <LoadingDemo />
-            <ReadOnlyDemo />
-            <DisabledDemo />
-            <PropControlDemo />
-            <CustomStylesDemo />
+          <div>
+            <BasicStatesDemo />
+            <TypeVariationsDemo />
+            <InteractiveDemo />
           </div>
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
-      const LoadingDemo = () => {
-        const [loading, setLoading] = useState(false);
-
+      const BasicStatesDemo = () => {
         return (
-          <div className="demo-card">
-            <h3 className="demo-title">Loading States</h3>
+          <div className="demo-section">
+            <h2>Checkbox States</h2>
 
-            <div className="checkbox-row">
-              <Label className="checkbox-label">
-                <Input type="checkbox" name="loading-demo" loading={loading} />
-                Loading Checkbox
-              </Label>
-              <button
-                className="toggle-button"
-                onClick={() => setLoading(!loading)}
-              >
-                {loading ? "Stop Loading" : "Start Loading"}
-              </button>
-            </div>
-
-            <div className="comparison">
-              <span className="comparison-label">Native comparison:</span>
-              <div className="native-examples">
-                <label>
-                  <input type="checkbox" name="native-loading" />
-                  Standard Checkbox
-                </label>
-              </div>
-            </div>
-          </div>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const ReadOnlyDemo = () => {
-        const [loadingUnchecked, setLoadingUnchecked] = useState(false);
-        const [loadingChecked, setLoadingChecked] = useState(false);
-
-        return (
-          <div className="demo-card">
-            <h3 className="demo-title">Read-Only States</h3>
-
-            <div className="checkbox-row">
-              <Label className="checkbox-label">
-                <Input
-                  type="checkbox"
-                  name="readonly-unchecked"
-                  readOnly
-                  loading={loadingUnchecked}
-                />
-                Read-only (Unchecked)
-              </Label>
-              <button
-                className="toggle-button"
-                onClick={() => setLoadingUnchecked(!loadingUnchecked)}
-              >
-                Toggle Loading
-              </button>
-            </div>
-
-            <div className="checkbox-row">
-              <Label className="checkbox-label">
-                <Input
-                  type="checkbox"
-                  name="readonly-checked"
-                  readOnly
-                  checked
-                  loading={loadingChecked}
-                />
-                Read-only (Checked)
-              </Label>
-              <button
-                className="toggle-button"
-                onClick={() => setLoadingChecked(!loadingChecked)}
-              >
-                Toggle Loading
-              </button>
-            </div>
-
-            <div className="comparison">
-              <span className="comparison-label">Native comparison:</span>
-              <div className="native-examples">
-                <label>
-                  <input type="checkbox" readOnly />
-                  Native Read-only (Unchecked)
-                </label>
-                <label>
-                  <input type="checkbox" readOnly checked />
-                  Native Read-only (Checked)
-                </label>
-              </div>
-            </div>
-          </div>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const DisabledDemo = () => {
-        const [loadingUnchecked, setLoadingUnchecked] = useState(false);
-        const [loadingChecked, setLoadingChecked] = useState(false);
-
-        return (
-          <div className="demo-card">
-            <h3 className="demo-title">Disabled States</h3>
-
-            <div className="checkbox-row">
-              <Label className="checkbox-label">
-                <Input
-                  type="checkbox"
-                  name="disabled-unchecked"
-                  disabled
-                  loading={loadingUnchecked}
-                />
-                Disabled (Unchecked)
-              </Label>
-              <button
-                className="toggle-button"
-                onClick={() => setLoadingUnchecked(!loadingUnchecked)}
-              >
-                Toggle Loading
-              </button>
-            </div>
-
-            <div className="checkbox-row">
-              <Label className="checkbox-label">
-                <Input
-                  type="checkbox"
-                  name="disabled-checked"
-                  disabled
-                  checked
-                  loading={loadingChecked}
-                />
-                Disabled (Checked)
-              </Label>
-              <button
-                className="toggle-button"
-                onClick={() => setLoadingChecked(!loadingChecked)}
-              >
-                Toggle Loading
-              </button>
-            </div>
-
-            <div className="comparison">
-              <span className="comparison-label">Native comparison:</span>
-              <div className="native-examples">
-                <label>
-                  <input type="checkbox" disabled />
-                  Native Disabled (Unchecked)
-                </label>
-                <label>
-                  <input type="checkbox" disabled checked />
-                  Native Disabled (Checked)
-                </label>
-              </div>
-            </div>
-          </div>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const PropControlDemo = () => {
-        const [accentColor, setAccentColor] = useState(undefined);
-        const [isChecked, setIsChecked] = useState(true);
-        const [isDisabled, setIsDisabled] = useState(false);
-        const [isReadOnly, setIsReadOnly] = useState(false);
-        const [isLoading, setIsLoading] = useState(false);
-
-        const colorOptions = [
-          { name: "Default (blue)", value: "default" },
-          { name: "Orange", value: "#ff8c00" },
-          { name: "Green", value: "#28a745" },
-          { name: "Purple", value: "#6f42c1" },
-          { name: "Red", value: "#dc3545" },
-          { name: "Pink", value: "#e83e8c" },
-          { name: "Teal", value: "#20c997" },
-        ];
-
-        return (
-          <div className="demo-card prop-control-demo">
-            <h3 className="demo-title">Interactive Prop Controller</h3>
-
-            <div className="color-controls">
-              <div className="color-select-group">
-                <label className="color-select-label">Accent Color:</label>
-                <select
-                  value={accentColor}
-                  onChange={(e) => {
-                    setAccentColor(
-                      e.target.value === "default" ? undefined : e.target.value,
-                    );
-                  }}
-                  className="color-select"
-                >
-                  {colorOptions.map(({ name, value }) => (
-                    <option key={value} value={value}>
-                      {name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="state-controls">
-              <h4>Checkbox Properties:</h4>
-              <div className="control-row">
-                <div className="control-group">
-                  <button
-                    className={`control-toggle ${isChecked ? "active" : ""}`}
-                    onClick={() => setIsChecked(!isChecked)}
-                  >
-                    {isChecked ? "Checked" : "Unchecked"}
-                  </button>
-                  <span className="control-label">checked</span>
-                </div>
-
-                <div className="control-group">
-                  <button
-                    className={`control-toggle ${isDisabled ? "active" : ""}`}
-                    onClick={() => setIsDisabled(!isDisabled)}
-                  >
-                    {isDisabled ? "true" : "false"}
-                  </button>
-                  <span className="control-label">disabled</span>
-                </div>
-
-                <div className="control-group">
-                  <button
-                    className={`control-toggle ${isReadOnly ? "active" : ""}`}
-                    onClick={() => setIsReadOnly(!isReadOnly)}
-                  >
-                    {isReadOnly ? "true" : "false"}
-                  </button>
-                  <span className="control-label">readOnly</span>
-                </div>
-
-                <div className="control-group">
-                  <button
-                    className={`control-toggle ${isLoading ? "active" : ""}`}
-                    onClick={() => setIsLoading(!isLoading)}
-                  >
-                    {isLoading ? "true" : "false"}
-                  </button>
-                  <span className="control-label">loading</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="accent-checkbox-grid">
-              <div className="accent-checkbox-item">
-                <Label className="checkbox-label">
-                  <Input
-                    type="checkbox"
-                    name="accent-test-checkbox"
-                    checked={isChecked}
-                    onUIStateChange={(v) => setIsChecked(Boolean(v))}
-                    disabled={isDisabled}
-                    readOnly={isReadOnly}
-                    loading={isLoading}
-                    accentColor={accentColor}
-                  />
-                  Test Checkbox
-                </Label>
-              </div>
-
-              <div className="accent-checkbox-item">
-                <Label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={(e) => setIsChecked(e.target.checked)}
-                    disabled={isDisabled}
-                    readOnly={isReadOnly}
-                    style={{ accentColor }}
-                  />
-                  Native Comparison
-                </Label>
-              </div>
-            </div>
-
-            <div
-              style={{
-                marginTop: "20px",
-                padding: "15px",
-                background: "rgba(255,255,255,0.1)",
-                borderRadius: "8px",
-              }}
-            >
-              <strong>Current Configuration:</strong>
-              <br />
-              <small>
-                checked: {isChecked ? "true" : "false"} | disabled:{" "}
-                {isDisabled ? "true" : "false"} | readOnly:{" "}
-                {isReadOnly ? "true" : "false"} | loading:{" "}
-                {isLoading ? "true" : "false"} | accentColor: {accentColor}
-              </small>
-              <br />
-              <br />
-              <small>
-                Use the toggle buttons above to test different property
-                combinations. Compare how the custom Input component behaves
-                versus a native checkbox.
-              </small>
-            </div>
-          </div>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const CustomStylesDemo = () => {
-        return (
-          <div className="custom-styles-demo">
-            <h2 style={{ color: "#2c3e50", marginBottom: "20px" }}>
-              Ability to Override with Custom Styles
-            </h2>
-
-            <div className="custom-styles-test">
-              <h4>Accent Color Override Test</h4>
-              <p>
-                Testing if CSS <code>accent-color</code> property can override
-                the component's styling:
+            <div className="states-section">
+              <div className="states-title">Standard HTML Checkbox States</div>
+              <p className="states-description">
+                These states work exactly like native HTML checkboxes, with
+                enhanced styling and consistent behavior.
               </p>
 
-              <div className="custom-styles-comparison">
-                <div className="comparison-item">
-                  <h5>Default Checkbox</h5>
-                  <Label className="checkbox-label">
-                    <Input
-                      type="checkbox"
-                      name="default-checkbox"
-                      defaultChecked={true}
-                    />
-                    Default styling
-                  </Label>
-                </div>
+              <Layout column contentSpacing="sm">
+                <fieldset>
+                  <legend>Default (unchecked)</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input type="checkbox" />
+                      Navi Checkbox
+                    </Label>
+                    <label>
+                      <input type="checkbox" />
+                      Native Checkbox
+                    </label>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>Checked</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input type="checkbox" checked />
+                      Navi Checkbox
+                    </Label>
+                    <label>
+                      <input type="checkbox" checked />
+                      Native Checkbox
+                    </label>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>:disabled</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input type="checkbox" disabled />
+                      Navi Checkbox
+                    </Label>
+                    <label>
+                      <input type="checkbox" disabled />
+                      Native Checkbox
+                    </label>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>:disabled + checked</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input type="checkbox" disabled checked />
+                      Navi Checkbox
+                    </Label>
+                    <label>
+                      <input type="checkbox" disabled checked />
+                      Native Checkbox
+                    </label>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>:focus-visible</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input
+                        type="checkbox"
+                        pseudoState={{ ":focus-visible": true }}
+                      />
+                      Navi Checkbox
+                    </Label>
+                    <label>
+                      <input type="checkbox" autoFocus />
+                      Native Checkbox
+                    </label>
+                  </Layout>
+                </fieldset>
+              </Layout>
+            </div>
 
-                <div className="comparison-item my_styles">
-                  <h5>Custom Styled Checkbox (.my_styles)</h5>
-                  <Label className="checkbox-label">
-                    <Input
-                      type="checkbox"
-                      name="custom-styled-checkbox"
-                      defaultChecked={true}
-                    />
-                    Should be green accent
-                  </Label>
-                </div>
+            <div className="states-section">
+              <div className="states-title enhanced-states-title">
+                Enhanced Navi States
               </div>
+              <p className="states-description">
+                These additional states provide enhanced UX patterns not
+                available in standard HTML checkboxes.
+              </p>
+
+              <Layout column contentSpacing="sm">
+                <fieldset>
+                  <legend>Loading state</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input type="checkbox" loading />
+                      Loading Checkbox
+                    </Label>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>Loading + checked</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input type="checkbox" loading checked />
+                      Loading Checked
+                    </Label>
+                  </Layout>
+                </fieldset>
+              </Layout>
 
               <div
                 style={{
                   marginTop: "15px",
                   padding: "10px",
-                  background: "rgba(255,255,255,0.1)",
+                  background: "#f8f9fa",
                   borderRadius: "4px",
+                  fontSize: "0.85rem",
+                  color: "#666",
                 }}
               >
-                <p
-                  style={{
-                    marginTop: "10px",
-                    fontSize: "0.9em",
-                    color: "#666",
-                  }}
-                >
-                  If the custom styling works, the checkbox on the right should
-                  have a green accent color instead of the component's default
-                  accent color.
-                </p>
+                <strong>Enhanced State Explanations:</strong>
+                <ul style={{ margin: "5px 0", paddingLeft: "20px" }}>
+                  <li>
+                    <strong>Loading:</strong> Shows a spinner while allowing the
+                    checkbox to remain interactive
+                  </li>
+                </ul>
               </div>
             </div>
+          </div>
+        );
+      };
+
+      const TypeVariationsDemo = () => {
+        const [fruits, setFruits] = useState({
+          apple: true,
+          banana: false,
+          orange: true,
+          grape: false,
+        });
+
+        const handleFruitChange = (fruit) => {
+          setFruits((prev) => ({
+            ...prev,
+            [fruit]: !prev[fruit],
+          }));
+        };
+
+        return (
+          <div className="demo-section">
+            <h2>Interactive Examples</h2>
+
+            <div className="variation-grid">
+              <div className="variation-item">
+                <p className="variation-label">Fruit Selection</p>
+                <Layout column contentSpacing="xs">
+                  {Object.entries(fruits).map(([fruit, checked]) => (
+                    <Label key={fruit}>
+                      <Input
+                        type="checkbox"
+                        checked={checked}
+                        onUIStateChange={() => handleFruitChange(fruit)}
+                      />
+                      {fruit.charAt(0).toUpperCase() + fruit.slice(1)}
+                    </Label>
+                  ))}
+                </Layout>
+              </div>
+
+              <div className="variation-item">
+                <p className="variation-label">Settings Panel</p>
+                <Layout column contentSpacing="xs">
+                  <Label>
+                    <Input type="checkbox" checked />
+                    Enable notifications
+                  </Label>
+                  <Label>
+                    <Input type="checkbox" />
+                    Auto-save changes
+                  </Label>
+                  <Label>
+                    <Input type="checkbox" checked />
+                    Show advanced options
+                  </Label>
+                  <Label>
+                    <Input type="checkbox" disabled />
+                    Premium feature (disabled)
+                  </Label>
+                </Layout>
+              </div>
+
+              <div className="variation-item">
+                <p className="variation-label">Terms & Conditions</p>
+                <Layout column contentSpacing="xs">
+                  <Label>
+                    <Input type="checkbox" />I agree to the Terms of Service
+                  </Label>
+                  <Label>
+                    <Input type="checkbox" />
+                    Subscribe to newsletter
+                  </Label>
+                  <Label>
+                    <Input type="checkbox" checked />
+                    Remember my preferences
+                  </Label>
+                </Layout>
+              </div>
+
+              <div className="variation-item">
+                <p className="variation-label">Loading States</p>
+                <Layout column contentSpacing="xs">
+                  <Label>
+                    <Input type="checkbox" loading />
+                    Syncing settings...
+                  </Label>
+                  <Label>
+                    <Input type="checkbox" loading checked />
+                    Saving preferences...
+                  </Label>
+                  <Label>
+                    <Input type="checkbox" />
+                    Ready to sync
+                  </Label>
+                </Layout>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const InteractiveDemo = () => {
+        const [loading, setLoading] = useState(false);
+        const [disabled, setDisabled] = useState(false);
+        const [checked, setChecked] = useState(false);
+
+        return (
+          <div className="demo-section">
+            <h2>Interactive Controls</h2>
+
+            <fieldset>
+              <legend>Toggle States</legend>
+              <Layout row contentSpacing="sm" contentAlignX="start" contentWrap>
+                <button
+                  style={{
+                    padding: "8px 16px",
+                    background: loading ? "#007bff" : "#f8f9fa",
+                    color: loading ? "white" : "#333",
+                    border: "1px solid #ddd",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setLoading(!loading)}
+                >
+                  Loading: {loading ? "ON" : "OFF"}
+                </button>
+                <button
+                  style={{
+                    padding: "8px 16px",
+                    background: disabled ? "#007bff" : "#f8f9fa",
+                    color: disabled ? "white" : "#333",
+                    border: "1px solid #ddd",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setDisabled(!disabled)}
+                >
+                  Disabled: {disabled ? "ON" : "OFF"}
+                </button>
+                <button
+                  style={{
+                    padding: "8px 16px",
+                    background: checked ? "#007bff" : "#f8f9fa",
+                    color: checked ? "white" : "#333",
+                    border: "1px solid #ddd",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setChecked(!checked)}
+                >
+                  Checked: {checked ? "ON" : "OFF"}
+                </button>
+              </Layout>
+            </fieldset>
+
+            <fieldset>
+              <legend>Result</legend>
+              <Layout column contentSpacing="sm">
+                <Label>
+                  <Input
+                    type="checkbox"
+                    loading={loading}
+                    disabled={disabled}
+                    checked={checked}
+                    onUIStateChange={setChecked}
+                  />
+                  Interactive Checkbox
+                </Label>
+                <div
+                  style={{
+                    marginTop: "10px",
+                    padding: "8px",
+                    fontSize: "0.8rem",
+                    fontFamily: "monospace",
+                    background: "#f8f9fa",
+                    border: "1px solid #dee2e6",
+                    borderRadius: "4px",
+                  }}
+                >
+                  State: checked={checked ? "true" : "false"} | loading=
+                  {loading ? "true" : "false"} | disabled=
+                  {disabled ? "true" : "false"}
+                </div>
+              </Layout>
+            </fieldset>
           </div>
         );
       };
