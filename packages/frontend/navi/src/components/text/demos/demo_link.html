@@ -62,15 +62,15 @@
 
               <Box layoutRow contentSpacing="lg">
                 <div>
-                  <h3>No Icons (Default)</h3>
+                  <h3>Special Protocol Icons</h3>
                   <Box layoutColumn contentSpacing="sm">
-                    <Link href="/relative">Relative link</Link>
-                    <Link href="#fragment">Fragment link</Link>
-                    <Link href="mailto:test@example.com">Email link</Link>
                     <Link href="tel:+1234567890">Phone link</Link>
+                    <Link href="sms:+1234567890">SMS link</Link>
+                    <Link href="mailto:test@example.com">Email link</Link>
+                    <Link href="https://github.com/jsenv/core">GitHub link</Link>
                   </Box>
                   <p style={{ fontSize: "14px", color: "#666" }}>
-                    Regular internal links don't get icons
+                    Special protocols and GitHub get custom icons
                   </p>
                 </div>
 
@@ -80,7 +80,7 @@
                     <Link href="https://example.com">
                       External link (auto target="_blank")
                     </Link>
-                    <Link href="https://github.com" target="_blank">
+                    <Link href="https://docs.example.com" target="_blank">
                       External with explicit target
                     </Link>
                     <Link href="/internal" target="_blank">
@@ -88,22 +88,21 @@
                     </Link>
                   </Box>
                   <p style={{ fontSize: "14px", color: "#666" }}>
-                    External URLs automatically get target="_blank" and an icon
+                    External URLs get target="_blank" and external link icon
                   </p>
                 </div>
 
                 <div>
-                  <h3>Icon Control</h3>
+                  <h3>No Icons / Anchor Links</h3>
                   <Box layoutColumn contentSpacing="sm">
+                    <Link href="/relative">Relative link</Link>
+                    <Link href="#fragment">Fragment link (anchor icon)</Link>
                     <Link href="https://example.com" anchorIcon={false}>
                       External without icon
                     </Link>
-                    <Link href="/internal" target="_blank" anchorIcon={false}>
-                      Target blank without icon
-                    </Link>
                   </Box>
                   <p style={{ fontSize: "14px", color: "#666" }}>
-                    Use anchorIcon={false} to disable automatic icons
+                    Internal links have no icons, fragments get anchor icon
                   </p>
                 </div>
               </Box>
@@ -225,6 +224,9 @@
                     </Link>
                     <Link href="mailto:test@example.com" color="purple">
                       Email link
+                    </Link>
+                    <Link href="https://github.com/jsenv/core" color="gray">
+                      GitHub repository
                     </Link>
                   </Box>
                 </div>
