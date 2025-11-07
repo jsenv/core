@@ -230,6 +230,11 @@ const InputCheckboxBasic = (props) => {
   const reportReadOnlyOnLabel = useContext(ReportReadOnlyOnLabelContext);
   const reportDisabledOnLabel = useContext(ReportDisabledOnLabelContext);
   const {
+    /* eslint-disable no-unused-vars */
+    type,
+    defaultChecked,
+    /* eslint-enable no-unused-vars */
+
     name,
     readOnly,
     disabled,
