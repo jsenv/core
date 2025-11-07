@@ -182,6 +182,43 @@ export const InputCheckbox = (props) => {
   );
 };
 
+const CheckboxManagedByCSSVars = {
+  "outlineWidth": "--outline-width",
+  "borderWidth": "--border-width",
+  "borderRadius": "--border-radius",
+  "backgroundColor": "--background-color",
+  "borderColor": "--border-color",
+  "color": "--color",
+  ":hover": {
+    backgroundColor: "--background-color-hover",
+    borderColor: "--border-color-hover",
+    color: "--color-hover",
+  },
+  ":active": {
+    borderColor: "--border-color-active",
+  },
+  ":read-only": {
+    backgroundColor: "--background-color-readonly",
+    borderColor: "--border-color-readonly",
+    color: "--color-readonly",
+  },
+  ":disabled": {
+    backgroundColor: "--background-color-disabled",
+    borderColor: "--border-color-disabled",
+    color: "--color-disabled",
+  },
+};
+const CheckboxPseudoClasses = [
+  ":hover",
+  ":active",
+  ":focus",
+  ":focus-visible",
+  ":read-only",
+  ":disabled",
+  ":checked",
+  ":-navi-loading",
+];
+const CheckboxPseudoElements = ["::-navi-loader", "::-navi-checkmark"];
 const InputCheckboxBasic = (props) => {
   const contextFieldName = useContext(FieldNameContext);
   const contextReadOnly = useContext(ReadOnlyContext);
@@ -273,6 +310,12 @@ const InputCheckboxBasic = (props) => {
       {...rest}
       ref={ref}
       baseClassName="navi_checkbox"
+      baseStyle={{
+        "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
+      }}
+      managedByCSSVars={CheckboxManagedByCSSVars}
+      pseudoClasses={CheckboxPseudoClasses}
+      pseudoElements={CheckboxPseudoElements}
       basePseudoState={{
         ":read-only": innerReadOnly,
         ":disabled": innerDisabled,
