@@ -9,6 +9,8 @@ import.meta.css = /* css */ `
       --navi-info-color: #2196f3;
       --navi-warning-color: #ff9800;
       --navi-error-color: #f44336;
+
+      --navi-loader-color: light-dark(#355fcc, #3b82f6);
     }
   }
 `;

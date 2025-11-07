@@ -306,7 +306,7 @@ const ButtonBasic = (props) => {
       <LoaderBackground
         loading={innerLoading}
         inset={-1}
-        color="light-dark(#355fcc, #3b82f6)"
+        color="var(--navi-loader-color)"
       />
       <span className="navi_button_content">
         {applyContentSpacingOnTextChildren(children, contentSpacing)}

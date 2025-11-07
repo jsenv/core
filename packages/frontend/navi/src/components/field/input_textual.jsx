@@ -299,8 +299,7 @@ const InputTextualBasic = (props) => {
   return (
     <LoadableInlineElement
       loading={innerLoading}
-      // style={wrapperStyle}
-      color="var(--accent-color)"
+      color="var(--navi-loader-color)"
       inset={-1}
     >
       {inputTextual}
