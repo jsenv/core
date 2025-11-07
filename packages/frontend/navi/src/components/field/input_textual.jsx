@@ -16,13 +16,7 @@
  * - <InputRadio /> for type="radio"
  */
 
-import { forwardRef } from "preact/compat";
-import {
-  useContext,
-  useImperativeHandle,
-  useLayoutEffect,
-  useRef,
-} from "preact/hooks";
+import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { useActionStatus } from "../../use_action_status.js";
 import { forwardActionRequested } from "../../validation/custom_constraint_validation.js";
@@ -137,11 +131,11 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const InputTextual = forwardRef((props, ref) => {
+export const InputTextual = (props) => {
   const uiStateController = useUIStateController(props, "input");
   const uiState = useUIState(uiStateController);
 
-  const input = renderActionableComponent(props, ref, {
+  const input = renderActionableComponent(props, {
     Basic: InputTextualBasic,
     WithAction: InputTextualWithAction,
     InsideForm: InputTextualInsideForm,
@@ -151,9 +145,9 @@ export const InputTextual = forwardRef((props, ref) => {
       <UIStateContext.Provider value={uiState}>{input}</UIStateContext.Provider>
     </UIStateControllerContext.Provider>
   );
-});
+};
 
-const InputTextualBasic = forwardRef((props, ref) => {
+const InputTextualBasic = (props) => {
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
   const contextLoading = useContext(LoadingContext);
@@ -179,25 +173,25 @@ const InputTextualBasic = forwardRef((props, ref) => {
     accentColor,
     className,
 
+    ref = useRef(),
+
     ...rest
   } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
 
   const innerValue =
     type === "datetime-local" ? convertToLocalTimezone(uiState) : uiState;
   const innerLoading =
-    loading || (contextLoading && contextLoadingElement === innerRef.current);
+    loading || (contextLoading && contextLoadingElement === ref.current);
   const innerReadOnly =
     readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
   const innerDisabled = disabled || contextDisabled;
   // infom any <label> parent of our readOnly state
   reportReadOnlyOnLabel?.(innerReadOnly);
-  useAutoFocus(innerRef, autoFocus, {
+  useAutoFocus(ref, autoFocus, {
     autoFocusVisible,
     autoSelect,
   });
-  useConstraints(innerRef, constraints);
+  useConstraints(ref, constraints);
 
   const innerClassName = withPropsClassName(
     appearance === "navi" ? "navi_input" : undefined,
@@ -218,7 +212,7 @@ const InputTextualBasic = forwardRef((props, ref) => {
   const inputTextual = (
     <input
       {...remainingProps}
-      ref={innerRef}
+      ref={ref}
       className={innerClassName}
       style={inputStyle}
       type={type}
@@ -252,7 +246,7 @@ const InputTextualBasic = forwardRef((props, ref) => {
   );
 
   useLayoutEffect(() => {
-    return initCustomField(innerRef.current, innerRef.current);
+    return initCustomField(ref.current, ref.current);
   }, []);
 
   if (type === "hidden") {
@@ -268,9 +262,9 @@ const InputTextualBasic = forwardRef((props, ref) => {
       {inputTextual}
     </LoadableInlineElement>
   );
-});
+};
 
-const InputTextualWithAction = forwardRef((props, ref) => {
+const InputTextualWithAction = (props) => {
   const uiState = useContext(UIStateContext);
   const {
     action,
@@ -283,20 +277,19 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     cancelOnBlurInvalid,
     cancelOnEscape,
     actionErrorEffect,
+    ref = useRef(),
     ...rest
   } = props;
-  const innerRef = useRef(null);
-  useImperativeHandle(ref, () => innerRef.current);
   const [boundAction] = useActionBoundToOneParam(action, uiState);
   const { loading: actionLoading } = useActionStatus(boundAction);
-  const executeAction = useExecuteAction(innerRef, {
+  const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect,
   });
   // here updating the input won't call the associated action
   // (user have to blur or press enter for this to happen)
   // so we can keep the ui state on cancel/abort/error and let user decide
   // to update ui state or retry via blur/enter as is
-  useActionEvents(innerRef, {
+  useActionEvents(ref, {
     onCancel: (e, reason) => {
       if (reason.startsWith("blur_invalid")) {
         if (!cancelOnBlurInvalid) {
@@ -331,12 +324,12 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     <InputTextualBasic
       data-action={boundAction.name}
       {...rest}
-      ref={innerRef}
+      ref={ref}
       loading={loading || actionLoading}
     />
   );
-});
-const InputTextualInsideForm = forwardRef((props, ref) => {
+};
+const InputTextualInsideForm = (props) => {
   const {
     // We destructure formContext to avoid passing it to the underlying input element
     // eslint-disable-next-line no-unused-vars
@@ -344,8 +337,8 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
     ...rest
   } = props;
 
-  return <InputTextualBasic {...rest} ref={ref} />;
-});
+  return <InputTextualBasic {...rest} />;
+};
 
 // As explained in https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/datetime-local#setting_timezones
 // datetime-local does not support timezones
