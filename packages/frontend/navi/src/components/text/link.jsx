@@ -141,7 +141,6 @@ const LinkPlain = (props) => {
     href,
     target,
     rel,
-    visited,
     ref = useRef(),
 
     // visual
@@ -154,8 +153,7 @@ const LinkPlain = (props) => {
 
     ...rest
   } = props;
-  const isVisited = useIsVisited(href);
-  const innerVisited = visited || isVisited;
+  const visited = useIsVisited(href);
 
   useAutoFocus(ref, autoFocus);
   useConstraints(ref, constraints);
@@ -215,7 +213,7 @@ const LinkPlain = (props) => {
       basePseudoState={{
         ":read-only": readOnly,
         ":disabled": disabled,
-        ":visited": innerVisited,
+        ":visited": visited,
         ":-navi-loading": loading,
         ":-navi-internal-link": targetIsSameSite,
         ":-navi-external-link": !targetIsSameSite,

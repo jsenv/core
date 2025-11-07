@@ -3,7 +3,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Link States Demo</title>
+    <title>Link Demo</title>
   </head>
   <body>
     <div id="app"></div>
@@ -24,129 +24,32 @@
           >
             <Title as="h1">Link States and Variations</Title>
 
-            {/* Basic Links */}
-            <Box as="section" marginBottom="xl">
-              <Title as="h2">Basic Links</Title>
-              <p>
-                Comparison between native HTML links and Link component with
-                different states and behaviors.
-              </p>
+            <section style="margin-bottom: 40px;">
+              <h2>Basic Links</h2>
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <Link href="#default">Default link</Link>
 
-              <Box layoutRow contentSpacing="xl">
-                {/* Native Links */}
-                <div>
-                  <Title as="h3">Native HTML Links</Title>
-                  <Box layoutColumn contentSpacing="md">
-                    <div>
-                      <h4>Default states</h4>
-                      <Box layoutColumn contentSpacing="sm">
-                        <a href="#basic">Normal link</a>
-                        <a href="#basic" style={{ textDecoration: "none" }}>
-                          Link without underline
-                        </a>
-                        <a
-                          href="#basic"
-                          onMouseOver={(e) => {
-                            e.target.style.color = "#0056b3";
-                            e.target.style.textDecoration = "underline";
-                          }}
-                          onMouseOut={(e) => {
-                            e.target.style.color = "";
-                            e.target.style.textDecoration = "";
-                          }}
-                        >
-                          Link with hover effect
-                        </a>
-                        <a href="#basic" style={{ color: "#6c757d" }}>
-                          Disabled-looking link
-                        </a>
-                      </Box>
-                    </div>
+                <Link href="#active" pseudoState={{ ":active": true }}>
+                  Active link
+                </Link>
 
-                    <div>
-                      <h4>Visited state simulation</h4>
-                      <Box layoutColumn contentSpacing="sm">
-                        <a href="#" style={{ color: "#6f42c1" }}>
-                          Visited link (simulated)
-                        </a>
-                        <a
-                          href="#"
-                          style={{ color: "#6f42c1", textDecoration: "none" }}
-                        >
-                          Visited without underline
-                        </a>
-                      </Box>
-                    </div>
+                <Link href="#visited" pseudoState={{ ":visited": true }}>
+                  Visited link
+                </Link>
 
-                    <div>
-                      <h4>External links</h4>
-                      <Box layoutColumn contentSpacing="sm">
-                        <a href="https://example.com" target="_blank">
-                          External link (new tab)
-                        </a>
-                        <a
-                          href="https://example.com"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          External with security
-                        </a>
-                      </Box>
-                    </div>
-                  </Box>
-                </div>
+                <Link href="#readonly" readOnly>
+                  Read-only link
+                </Link>
 
-                {/* Link Component */}
-                <div>
-                  <Title as="h3">Link Component</Title>
-                  <Box layoutColumn contentSpacing="md">
-                    <div>
-                      <h4>Default states</h4>
-                      <Box layoutColumn contentSpacing="sm">
-                        <Link href="#basic">Normal link</Link>
-                        <Link href="#basic" underline={false}>
-                          Link without underline
-                        </Link>
-                        <Link href="#basic" color="blue">
-                          Blue link with hover
-                        </Link>
-                        <Link href="#basic" color="gray">
-                          Disabled-looking link
-                        </Link>
-                      </Box>
-                    </div>
+                <Link href="#disabled" disabled>
+                  Disabled link
+                </Link>
 
-                    <div>
-                      <h4>Different colors</h4>
-                      <Box layoutColumn contentSpacing="sm">
-                        <Link href="#" color="purple">
-                          Purple link
-                        </Link>
-                        <Link href="#" color="green" underline={false}>
-                          Green without underline
-                        </Link>
-                      </Box>
-                    </div>
-
-                    <div>
-                      <h4>External links</h4>
-                      <Box layoutColumn contentSpacing="sm">
-                        <Link href="https://example.com" target="_blank">
-                          External link (auto icon)
-                        </Link>
-                        <Link
-                          href="https://example.com"
-                          target="_blank"
-                          anchorIcon={false}
-                        >
-                          External without icon
-                        </Link>
-                      </Box>
-                    </div>
-                  </Box>
-                </div>
-              </Box>
-            </Box>
+                <Link href="#loading" loading readOnly>
+                  Loading link
+                </Link>
+              </div>
+            </section>
 
             {/* Colored Links */}
             <Box as="section" marginBottom="xl">
