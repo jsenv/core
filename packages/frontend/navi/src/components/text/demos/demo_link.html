@@ -213,14 +213,29 @@
                 <div>
                   <h3>Hover Effects</h3>
                   <Layout column contentSpacing="sm">
-                    <Link href="#hover" color="blue">
-                      Hover for color change
+                    <Link
+                      href="./hover"
+                      color="blue"
+                      pseudoStyle={{ ":hover": { color: "green" } }}
+                      preventDefault
+                    >
+                      Hover becomes green
                     </Link>
-                    <Link href="#hover" color="green" underline={false}>
-                      <Text>Hover shows underline</Text>
+                    <Link
+                      href="./hover"
+                      color="green"
+                      underline={false}
+                      pseudoStyle={{ ":hover": { underline: true } }}
+                      preventDefault
+                    >
+                      Hover shows underline
                     </Link>
-                    <Link href="#hover" color="red">
-                      Hover with red color
+                    <Link
+                      href="./hover"
+                      preventDefault
+                      style={"--color-hover: yellow;"}
+                    >
+                      Hover color (using css vars)
                     </Link>
                   </Layout>
                 </div>

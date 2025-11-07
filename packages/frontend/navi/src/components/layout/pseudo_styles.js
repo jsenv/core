@@ -217,6 +217,9 @@ export const initPseudoStyles = (
 };
 
 export const applyStyle = (element, style, pseudoState, pseudoStyles) => {
+  if (!element) {
+    return;
+  }
   updateStyle(element, getStyleToApply(style, pseudoState, pseudoStyles));
 };
 

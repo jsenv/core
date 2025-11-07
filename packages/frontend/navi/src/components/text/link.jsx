@@ -32,13 +32,29 @@ import.meta.css = /* css */ `
     position: relative;
     border-radius: 2px;
 
-    --x-color: var(--color, rgb(0, 0, 238));
-    --x-color-visited: var(--color-visited, light-dark(#6a1b9a, #ab47bc));
-    --x-color-active: var(--color-active, red);
-    --x-cursor: var(--cursor, pointer);
+    --color: rgb(0, 0, 238);
+    --color-visited: light-dark(#6a1b9a, #ab47bc);
+    --color-active: red;
+    --text-decoration: underline;
+    --text-decoration-hover: underline;
+    --cursor: pointer;
+
+    --x-color: var(--color);
+    --x-color-hover: var(--color-hover, var(--color));
+    --x-color-visited: var(--color-visited);
+    --x-color-active: var(--color-active);
+    --x-text-decoration: var(--text-decoration);
+    --x-text-decoration-hover: var(--text-decoration-hover,);
+    --x-cursor: var(--cursor);
 
     color: var(--x-color);
+    text-decoration: var(--x-text-decoration);
     cursor: var(--x-cursor);
+  }
+  /* Hover */
+  .navi_link[data-hover] {
+    --x-color: var(--x-color-hover);
+    --x-text-decoration: var(--x-text-decoration-hover);
   }
   /* Focus */
   .navi_link[data-focus] {
@@ -81,6 +97,7 @@ import.meta.css = /* css */ `
 const LinkManagedByCSSVars = {
   color: "--color",
   cursor: "--cursor",
+  textDecoration: "--text-decoration",
 };
 const LinkPseudoClasses = [
   ":hover",
