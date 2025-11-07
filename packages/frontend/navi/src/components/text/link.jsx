@@ -9,6 +9,7 @@ import { renderActionableComponent } from "../action_execution/render_actionable
 import { useRequestedActionStatus } from "../field/use_action_events.js";
 import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
 import { Box } from "../layout/box.jsx";
+import { PSEUDO_CLASSES } from "../layout/pseudo_styles.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import {
   SelectionContext,
@@ -34,11 +35,13 @@ import.meta.css = /* css */ `
     --x-color: var(--color, inherit);
     --x-color-visited: var(--color-visited, light-dark(#6a1b9a, #ab47bc));
     --x-color-active: var(--color-active, red);
+    --x-cursor: var(--cursor, pointer);
 
     color: var(--x-color);
+    cursor: var(--x-cursor);
   }
   /* Focus */
-  .navi_link:focus {
+  .navi_link[data-focus] {
     position: relative;
     z-index: 1; /* Ensure focus outline is above other elements */
   }
@@ -67,13 +70,48 @@ import.meta.css = /* css */ `
     opacity: 0.5;
   }
   /* Disabled */
-  .navi_link[inert] {
+  .navi_link[data-disabled] {
     pointer-events: none;
   }
-  .navi_link[inert] > * {
+  .navi_link[data-disabled] > * {
     opacity: 0.5;
   }
 `;
+
+const LinkManagedByCSSVars = {
+  color: "--color",
+  cursor: "--cursor",
+};
+const LinkPseudoClasses = [
+  ":hover",
+  ":active",
+  ":focus",
+  ":focus-visible",
+  ":read-only",
+  ":disabled",
+  ":visited",
+  ":-navi-loading",
+  ":-navi-internal-link",
+  ":-navi-external-link",
+  ":-navi-anchor-link",
+  ":-navi-current-link",
+];
+const LinkPseudoElements = ["::-navi-loader"];
+
+Object.assign(PSEUDO_CLASSES, {
+  ":-navi-internal-link": {
+    attribute: "data-internal-link",
+  },
+  ":-navi-external-link": {
+    attribute: "data-external-link",
+  },
+  ":-navi-anchor-link": {
+    attribute: "data-anchor-link",
+  },
+  ":-navi-current-link": {
+    attribute: "data-current-link",
+  },
+});
 
 export const Link = (props) => {
   return renderActionableComponent(props, {
@@ -89,20 +127,7 @@ const LinkBasic = (props) => {
   }
   return <LinkPlain {...props} />;
 };
-const LinkPseudoClasses = [
-  ":hover",
-  ":active",
-  ":focus",
-  ":focus-visible",
-  ":read-only",
-  ":disabled",
-  ":visited",
-  ":-navi-loading",
-];
-const LinkPseudoElements = [":-navi-loader"];
-const LinkManagedByCSSVars = {
-  color: "--color",
-};
+
 const LinkPlain = (props) => {
   const {
     loading,
@@ -182,16 +207,21 @@ const LinkPlain = (props) => {
       href={href}
       rel={innerRel}
       target={innerTarget === "_self" ? undefined : target}
-      readOnly={readOnly}
-      disabled={disabled}
-      loading={loading}
-      visited={innerVisited}
       aria-busy={loading}
       inert={disabled}
-      data-external={targetIsSameSite ? undefined : ""}
-      data-internal={targetIsSameSite ? "" : undefined}
-      data-anchor={targetIsAnchor ? "" : undefined}
-      data-current={targetIsCurrent ? "" : undefined}
+      managedByCSSVars={LinkManagedByCSSVars}
+      pseudoClasses={LinkPseudoClasses}
+      pseudoElements={LinkPseudoElements}
+      pseudoState={{
+        ":read-only": readOnly,
+        ":disabled": disabled,
+        ":visited": innerVisited,
+        ":-navi-loading": loading,
+        ":-navi-internal-link": targetIsSameSite,
+        ":-navi-external-link": !targetIsSameSite,
+        ":-navi-anchor-link": targetIsAnchor,
+        ":-navi-current-link": targetIsCurrent,
+      }}
       onClick={(e) => {
         closeValidationMessage(e.target, "click");
         if (readOnly) {
@@ -209,9 +239,6 @@ const LinkPlain = (props) => {
         }
         onKeyDown?.(e);
       }}
-      pseudoClasses={LinkPseudoClasses}
-      pseudoElements={LinkPseudoElements}
-      managedByCSSVars={LinkManagedByCSSVars}
     >
       <LoaderBackground
         loading={loading}

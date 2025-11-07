@@ -158,7 +158,11 @@ export const initPseudoStyles = (
     for (const pseudoClass of pseudoClasses) {
       const pseudoClassDefinition = PSEUDO_CLASSES[pseudoClass];
       let currentValue;
-      if (Object.hasOwn(pseudoState, pseudoClass)) {
+      if (
+        pseudoState &&
+        Object.hasOwn(pseudoState, pseudoClass) &&
+        pseudoState[pseudoClass] !== undefined
+      ) {
         currentValue = pseudoState[pseudoClass];
       } else {
         const { test } = pseudoClassDefinition;
@@ -211,21 +215,12 @@ export const initPseudoStyles = (
 
   return teardown;
 };
-const naviStyleController = createStyleController("navi");
 // by creating the style controller after the navi one we ensure it overrides (animation played on top of each other)
-const pseudoStyleControllers = {
-  ":hover": createStyleController("navi:hover"),
-  ":active": createStyleController("navi:active"),
-  ":checked": createStyleController("navi:checked"),
-  ":disabled": createStyleController("navi:disabled"),
-  ":focus": createStyleController("navi:focus"),
-  ":focus-visible": createStyleController("navi:focus-visible"),
-  ":valid": createStyleController("navi:valid"),
-  ":invalid": createStyleController("navi:invalid"),
-  ":read-only": createStyleController("navi:read-only"),
-  ":visited": createStyleController("navi:visited"),
-  "::-navi-loader": createStyleController("navi::-navi-loader"),
-};
+const naviStyleController = createStyleController("navi");
+const pseudoStateStyleController = createStyleController("navi_pseudo_state");
+const pseudoElementStyleController = createStyleController(
+  "navi_pseudo_element",
+);
 export const applyStyles = (element, style) => {
   naviStyleController.set(element, style);
 };
@@ -235,16 +230,15 @@ export const applyPseudoStyles = (element, pseudoStates, pseudoStyles) => {
   }
   for (const pseudoName of Object.keys(pseudoStyles)) {
     const stylesToApply = pseudoStyles[pseudoName];
-    const pseudoStyleController = pseudoStyleControllers[pseudoName];
     if (pseudoName.startsWith("::")) {
-      pseudoStyleController.set(element, stylesToApply);
+      pseudoElementStyleController.set(element, stylesToApply);
       continue;
     }
     const shouldApply = pseudoStates[pseudoName];
     if (shouldApply) {
-      pseudoStyleController.set(element, stylesToApply);
+      pseudoStateStyleController.set(element, stylesToApply);
     } else {
-      pseudoStyleController.clear(element);
+      pseudoStateStyleController.clear(element);
     }
   }
 };

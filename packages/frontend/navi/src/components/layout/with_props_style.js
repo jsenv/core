@@ -113,7 +113,7 @@ const INNER_SPACING_PROPS = {
   paddingX: applyOnTwoCSSProps("paddingLeft", "paddingRight"),
   paddingY: applyOnTwoCSSProps("paddingTop", "paddingBottom"),
 };
-const SIZE_PROPS = {
+const DIMENSION_PROPS = {
   width: PASS_THROUGH,
   minWidth: PASS_THROUGH,
   maxWidth: PASS_THROUGH,
@@ -207,20 +207,17 @@ const ALIGNEMENT_PROPS = {
   top: PASS_THROUGH,
 };
 const TYPO_PROPS = {
-  textSize: applyOnCSSProp("fontSize"),
-  textBold: applyToCssPropWhenTruthy("fontWeight", "bold", "normal"),
-  textThin: applyToCssPropWhenTruthy("fontWeight", "thin", "normal"),
-  textItalic: applyToCssPropWhenTruthy("fontStyle", "italic", "normal"),
-  textUnderline: applyToCssPropWhenTruthy(
-    "textDecoration",
-    "underline",
-    "none",
-  ),
-  textUnderlineStyle: applyOnCSSProp("textDecorationStyle"),
-  textUnderlineColor: applyOnCSSProp("textDecorationColor"),
+  size: applyOnCSSProp("fontSize"),
+  fontSize: PASS_THROUGH,
+  bold: applyToCssPropWhenTruthy("fontWeight", "bold", "normal"),
+  think: applyToCssPropWhenTruthy("fontWeight", "thin", "normal"),
+  italic: applyToCssPropWhenTruthy("fontStyle", "italic", "normal"),
+  underline: applyToCssPropWhenTruthy("textDecoration", "underline", "none"),
+  underlineStyle: applyOnCSSProp("textDecorationStyle"),
+  underlineColor: applyOnCSSProp("textDecorationColor"),
   textShadow: PASS_THROUGH,
-  textLineHeight: applyOnCSSProp("lineHeight"),
-  textColor: applyOnCSSProp("color"),
+  lineHeight: PASS_THROUGH,
+  color: PASS_THROUGH,
   noWrap: applyToCssPropWhenTruthy("whiteSpace", "nowrap", "normal"),
   pre: applyToCssPropWhenTruthy("whiteSpace", "pre", "normal"),
   preWrap: applyToCssPropWhenTruthy("whiteSpace", "pre-wrap", "normal"),
@@ -247,7 +244,7 @@ const VISUAL_PROPS = {
 const All_PROPS = {
   ...OUTER_SPACING_PROPS,
   ...INNER_SPACING_PROPS,
-  ...SIZE_PROPS,
+  ...DIMENSION_PROPS,
   ...ALIGNEMENT_PROPS,
   ...TYPO_PROPS,
   ...VISUAL_PROPS,
@@ -328,19 +325,22 @@ const assignStyle = (
 export const withPropsStyle = (
   props,
   {
+    // some global configuration
+    managedByCSSVars = {},
+    pseudoClasses,
+    pseudoElements,
+    pseudoStyle,
+
+    // first config that will be returned
     base,
     layout,
     spacing = layout,
     outerSpacing = spacing,
     innerSpacing = spacing,
     align = layout,
-    size = layout,
+    dimension = layout,
     typo,
     visual = true,
-
-    pseudoClasses,
-    pseudoElements,
-    managedByCSSVars = {},
   },
   ...remainingConfig
 ) => {
@@ -383,16 +383,16 @@ export const withPropsStyle = (
     maxHeight,
 
     // typo props
-    textSize,
-    textBold,
-    textThin,
-    textItalic,
-    textUnderline,
-    textUnderlineStyle,
-    textUnderlineColor,
-    textColor,
+    size,
+    bold,
+    thin,
+    italic,
+    underline,
+    underlineStyle,
+    underlineColor,
+    color,
     textShadow,
-    textLineHeight,
+    lineHeight,
     noWrap,
 
     // visual props
@@ -414,9 +414,6 @@ export const withPropsStyle = (
     filter,
     cursor,
 
-    // pseudo class props
-    pseudo,
-
     // props not related to styling
     ...remainingProps
   } = props;
@@ -427,7 +424,7 @@ export const withPropsStyle = (
   let marginStyles;
   let paddingStyles;
   let alignmentStyles;
-  let sizeStyles;
+  let dimensionStyles;
   let typoStyles;
   let visualStyles;
   let pseudoNamedStyles = {};
@@ -460,11 +457,11 @@ export const withPropsStyle = (
       normalizeSpacingStyle,
     );
   }
-  size_styles: {
-    if (!size && !hasRemainingConfig) {
-      break size_styles;
+  dimension_styles: {
+    if (!dimension && !hasRemainingConfig) {
+      break dimension_styles;
     }
-    sizeStyles = generateStyleGroup(SIZE_PROPS, props, styleContext);
+    dimensionStyles = generateStyleGroup(DIMENSION_PROPS, props, styleContext);
   }
   alignment_styles: {
     if (!align && !hasRemainingConfig) {
@@ -490,7 +487,7 @@ export const withPropsStyle = (
     visualStyles = generateStyleGroup(VISUAL_PROPS, props, styleContext);
   }
   pseudo_styles: {
-    if (!pseudo) {
+    if (!pseudoStyle) {
       break pseudo_styles;
     }
     pseudo_classes: {
@@ -498,7 +495,7 @@ export const withPropsStyle = (
         break pseudo_classes;
       }
       for (const pseudoClass of pseudoClasses) {
-        const pseudoClassStyleFromProps = pseudo[pseudoClass];
+        const pseudoClassStyleFromProps = pseudoStyle[pseudoClass];
         if (!pseudoClassStyleFromProps) {
           continue;
         }
@@ -514,7 +511,7 @@ export const withPropsStyle = (
         break pseudo_elements;
       }
       for (const pseudoElement of pseudoElements) {
-        const pseudoElementStyleFromProps = pseudo[pseudoElement];
+        const pseudoElementStyleFromProps = pseudoStyle[pseudoElement];
         if (!pseudoElementStyleFromProps) {
           continue;
         }
@@ -540,8 +537,8 @@ export const withPropsStyle = (
   if (align) {
     Object.assign(firstConfigStyle, alignmentStyles);
   }
-  if (size) {
-    Object.assign(firstConfigStyle, sizeStyles);
+  if (dimension) {
+    Object.assign(firstConfigStyle, dimensionStyles);
   }
   if (typo) {
     Object.assign(firstConfigStyle, typoStyles);
@@ -569,8 +566,8 @@ export const withPropsStyle = (
     if (config.align || config.layout) {
       Object.assign(configStyle, alignmentStyles);
     }
-    if (config.size || config.layout) {
-      Object.assign(configStyle, sizeStyles);
+    if (config.dimension || config.layout) {
+      Object.assign(configStyle, dimensionStyles);
     }
     if (config.typo) {
       Object.assign(configStyle, typoStyles);

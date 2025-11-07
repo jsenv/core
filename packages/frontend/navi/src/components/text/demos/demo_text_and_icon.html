@@ -34,7 +34,7 @@
 
             <Box as="section" marginBottom="xl">
               <Title as="h2">Basic Icon + Text</Title>
-              <Box layoutRow contentSpacing="sm" textLineHeight="3">
+              <Box layoutRow contentSpacing="sm" lineHeight="3">
                 <Text>
                   <Icon>
                     <HomeSvg />
@@ -60,34 +60,34 @@
 
             <Box as="section" marginBottom="xl">
               <Title as="h2">Inline Text with Icons</Title>
-              <Paragraph textSize="16" textLineHeight="1.6">
+              <Paragraph size="16" lineHeight="1.6">
                 Welcome to our platform! Click on the
                 <Text noWrap>
                   <Icon>
                     <HomeSvg />
                   </Icon>
-                  <Text textBold>home</Text>
+                  <Text bold>home</Text>
                 </Text>
                 button to return to the dashboard, or visit your
                 <Text noWrap>
                   <Icon>
                     <UserSvg />
                   </Icon>
-                  <Text textItalic>profile</Text>
+                  <Text italic>profile</Text>
                 </Text>
                 to update your settings. Don't forget to
                 <Text noWrap>
                   <Icon>
                     <StarSvg />
                   </Icon>
-                  <Text textUnderline>star</Text>
+                  <Text underline>star</Text>
                 </Text>
                 your favorite items and
                 <Text noWrap>
                   <Icon>
                     <HeartSvg />
                   </Icon>
-                  <Text textBold textItalic>
+                  <Text bold italic>
                     like
                   </Text>
                 </Text>
@@ -96,7 +96,7 @@
                   <Icon>
                     <SearchSvg />
                   </Icon>
-                  <Text textBold textUnderline>
+                  <Text bold underline>
                     search
                   </Text>
                 </Text>
@@ -142,12 +142,12 @@
                             Default
                           </div>
                           <Text>
-                            <Icon textColor="green">
+                            <Icon color="green">
                               <CheckSvg />
                             </Icon>
                             Un lien de réinitialisation a été envoyé à
-                            <Link href="dmail@gmail.com" textUnderline={false}>
-                              <Text textUnderline>dmail@gmail.com</Text>
+                            <Link href="dmail@gmail.com" underline={false}>
+                              <Text underline>dmail@gmail.com</Text>
                               <Icon>
                                 <BlankTargetLinkSvg />
                               </Icon>
@@ -188,10 +188,10 @@
                             Default
                           </div>
                           <Text>
-                            <Icon textColor="green">
+                            <Icon color="green">
                               <CheckSvg />
                             </Icon>
-                            Un lien de réinitialisation a été envoyé à{" "}
+                            Un lien de réinitialisation a été envoyé à
                             <Link href="dmail@gmail.com">dmail@gmail.com</Link>
                           </Text>
                         </div>
@@ -205,7 +205,7 @@
             <Box as="section" marginBottom="xl">
               <Title as="h2">Different Font Sizes</Title>
               <Box layoutRow contentSpacing="sm">
-                <Text textSize="sm">
+                <Text size="sm">
                   <Icon>
                     <HomeSvg />
                   </Icon>
@@ -219,14 +219,14 @@
                   Normal text with icon
                 </Text>
 
-                <Text textSize="lg">
+                <Text size="lg">
                   <Icon>
                     <SettingsSvg />
                   </Icon>
                   Large text with icon
                 </Text>
 
-                <Text textSize="xl">
+                <Text size="xl">
                   <Icon>
                     <StarSvg />
                   </Icon>
@@ -349,32 +349,32 @@
                 <Link href="#home">Go to Homepage</Link>
 
                 <div>
-                  <Link href="#profile" textUnderline={false} textColor="green">
+                  <Link href="#profile" underline={false} color="green">
                     <Icon>
                       <UserSvg />
                     </Icon>
-                    <Text textUnderline>View Profile</Text>
+                    <Text underline>View Profile</Text>
                   </Link>
                 </div>
 
                 <div>
                   <Link
                     href="#search"
-                    textUnderline={false}
+                    underline={false}
                     anchorIcon={false}
                     textColor="purple"
                   >
                     <Icon>
                       <SearchSvg />
                     </Icon>
-                    <Text textUnderline>Search Documentation</Text>
+                    <Text underline>Search Documentation</Text>
                   </Link>
                 </div>
 
                 {/* An other solution: put icon outside the link
                   (This means it's not clickable) */}
                 <div>
-                  <Text noWrap textColor="orange">
+                  <Text noWrap color="orange">
                     <Icon>
                       <SettingsSvg />
                     </Icon>
@@ -383,7 +383,7 @@
                 </div>
 
                 <div>
-                  <Link href="#favorites" textColor="red">
+                  <Link href="#favorites" color="red">
                     <Icon>
                       <HeartSvg />
                     </Icon>

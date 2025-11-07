@@ -71,6 +71,11 @@ export const Box = (props) => {
     baseStyle,
 
     // style management
+    managedByCSSVars,
+    pseudoState,
+    pseudoClasses,
+    pseudoElements,
+    pseudoStyle,
     contentSelector,
 
     children,
@@ -87,6 +92,11 @@ export const Box = (props) => {
   const TagName = as;
   const remainingProps = useBoxStyle(rest, {
     ref,
+    managedByCSSVars,
+    pseudoState,
+    pseudoClasses,
+    pseudoElements,
+    pseudoStyle,
     contentSelector,
     base: {
       ...baseStyle,
@@ -150,22 +160,22 @@ export const Box = (props) => {
   );
 };
 
-const useBoxStyle = (props, { ref, contentSelector, base }) => {
-  let {
+const useBoxStyle = (
+  props,
+  {
+    ref,
+    managedByCSSVars,
+    contentSelector,
+    pseudoState,
     pseudoClasses,
     pseudoElements,
-    managedByCSSVars,
-    disabled,
-    readOnly,
-    loading,
-    focusVisible,
-    visited,
-    ...rest
-  } = props;
-
-  if (!pseudoClasses && rest.pseudo) {
+    pseudoStyle,
+    base,
+  },
+) => {
+  if (!pseudoClasses && pseudoState) {
     // <Box pseudo={{ ":hover": { backgroundColor: "red" } }}> would watch :hover
-    pseudoClasses = Object.keys(rest.pseudo);
+    pseudoClasses = Object.keys(pseudoState);
   }
 
   let initProps;
@@ -173,11 +183,12 @@ const useBoxStyle = (props, { ref, contentSelector, base }) => {
     initProps = () => {
       const [remainingProps, innerStyle, contentStyle, pseudoStyles] =
         withPropsStyle(
-          rest,
+          props,
           {
             managedByCSSVars,
             pseudoClasses,
             pseudoElements,
+            pseudoStyle,
             base,
             layout: true,
             typo: true,
@@ -210,10 +221,11 @@ const useBoxStyle = (props, { ref, contentSelector, base }) => {
     };
   } else {
     initProps = () => {
-      const [remainingProps, innerStyle, pseudoStyles] = withPropsStyle(rest, {
+      const [remainingProps, innerStyle, pseudoStyles] = withPropsStyle(props, {
         managedByCSSVars,
         pseudoClasses,
         pseudoElements,
+        pseudoStyle,
         base,
         layout: true,
         typo: true,
@@ -245,21 +257,12 @@ const useBoxStyle = (props, { ref, contentSelector, base }) => {
     if (!el) {
       return;
     }
-    initPseudoStyles(
-      el,
-      {
-        pseudoClasses,
-        effect: updatePseudoStyles,
-      },
-      {
-        disabled,
-        readOnly,
-        loading,
-        focusVisible,
-        visited,
-      },
-    );
-  }, [disabled, readOnly, loading, focusVisible, visited, updatePseudoStyles]);
+    initPseudoStyles(el, {
+      pseudoClasses,
+      pseudoState,
+      effect: updatePseudoStyles,
+    });
+  }, [pseudoClasses, pseudoState, updatePseudoStyles]);
 
   return remainingProps;
 };
