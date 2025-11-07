@@ -1,7 +1,8 @@
 import { createPubSub, createStyleController } from "@jsenv/dom";
 
-const PSEUDO_CLASSES = {
+export const PSEUDO_CLASSES = {
   ":hover": {
+    attribute: "data-hover",
     setup: (el, callback) => {
       el.addEventListener("mouseenter", callback);
       el.addEventListener("mouseleave", callback);
@@ -11,14 +12,9 @@ const PSEUDO_CLASSES = {
       };
     },
     test: (el) => el.matches(":hover"),
-    add: (el) => {
-      el.setAttribute("data-hover", "");
-    },
-    remove: (el) => {
-      el.removeAttribute("data-hover");
-    },
   },
   ":active": {
+    attribute: "data-active",
     setup: (el, callback) => {
       el.addEventListener("mousedown", callback);
       document.addEventListener("mouseup", callback);
@@ -27,24 +23,13 @@ const PSEUDO_CLASSES = {
         document.removeEventListener("mouseup", callback);
       };
     },
-    test: (el, props) => props.active || el.matches(":active"),
-    add: (el) => {
-      el.setAttribute("data-active", "");
-    },
-    remove: (el) => {
-      el.removeAttribute("data-active");
-    },
+    test: (el) => el.matches(":active"),
   },
   ":visited": {
-    test: (el, props) => props.visited,
-    add: (el) => {
-      el.setAttribute("data-visited", "");
-    },
-    remove: (el) => {
-      el.removeAttribute("data-visited");
-    },
+    attribute: "data-visited",
   },
   ":checked": {
+    attribute: "data-checked",
     setup: (el, callback) => {
       if (el.type === "checkbox") {
         // Listen to user interactions
@@ -102,14 +87,9 @@ const PSEUDO_CLASSES = {
       return () => {};
     },
     test: (el) => el.matches(":checked"),
-    add: (el) => {
-      el.setAttribute("data-checked", "");
-    },
-    remove: (el) => {
-      el.removeAttribute("data-checked");
-    },
   },
   ":focus": {
+    attribute: "data-focus",
     setup: (el, callback) => {
       el.addEventListener("focusin", callback);
       el.addEventListener("focusout", callback);
@@ -119,14 +99,9 @@ const PSEUDO_CLASSES = {
       };
     },
     test: (el) => el.matches(":focus"),
-    add: (el) => {
-      el.setAttribute("data-focus", "");
-    },
-    remove: (el) => {
-      el.removeAttribute("data-focus");
-    },
   },
   ":focus-visible": {
+    attribute: "data-focus-visible",
     setup: (el, callback) => {
       document.addEventListener("keydown", callback);
       document.addEventListener("keyup", callback);
@@ -135,70 +110,39 @@ const PSEUDO_CLASSES = {
         document.removeEventListener("keyup", callback);
       };
     },
-    test: (el, props) => el.matches(":focus-visible") || props.focusVisible,
-    add: (el) => {
-      el.setAttribute("data-focus-visible", "");
-    },
-    remove: (el) => {
-      el.removeAttribute("data-focus-visible");
-    },
+    test: (el) => el.matches(":focus-visible"),
   },
   ":disabled": {
-    test: (el, props) => props.disabled,
-    add: (el) => {
-      el.setAttribute("data-disabled", "");
-    },
-    remove: (el) => {
-      el.removeAttribute("data-disabled");
-    },
+    attribute: "data-disabled",
   },
   ":read-only": {
-    test: (el, props) => props.readOnly,
-    add: (el) => {
-      el.setAttribute("data-readonly", "");
-    },
-    remove: (el) => {
-      el.removeAttribute("data-readonly");
-    },
+    attribute: "data-readonly",
   },
   ":valid": {
+    attribute: "data-valid",
     test: (el) => el.matches(":valid"),
-    add: (el) => {
-      el.setAttribute("data-valid", "");
-    },
-    remove: (el) => {
-      el.removeAttribute("data-valid");
-    },
   },
   ":invalid": {
+    attribute: "data-invalid",
     test: (el) => el.matches(":invalid"),
-    add: (el) => {
-      el.setAttribute("data-invalid", "");
-    },
-    remove: (el) => {
-      el.removeAttribute("data-invalid");
-    },
   },
   ":-navi-loading": {
-    test: (el, props) => props.loading,
-    add: (el) => {
-      el.setAttribute("data-loading", "");
-    },
-    remove: (el) => {
-      el.removeAttribute("data-loading");
-    },
+    attribute: "data-loading",
   },
 };
 
 export const initPseudoStyles = (
   element,
-  { pseudoClasses, effect },
-  // disabled,
-  // readOnly,
-  // loading,
-  // focusVisible,
-  // visited,
-  stateProps,
+  {
+    pseudoClasses,
+    // disabled,
+    // readOnly,
+    // loading,
+    // focusVisible,
+    // visited,
+    pseudoState,
+    effect,
+  },
 ) => {
   if (!pseudoClasses || pseudoClasses.length === 0) {
     effect?.();
@@ -213,15 +157,26 @@ export const initPseudoStyles = (
     const currentState = {};
     for (const pseudoClass of pseudoClasses) {
       const pseudoClassDefinition = PSEUDO_CLASSES[pseudoClass];
-      const currentValue = pseudoClassDefinition.test(element, stateProps);
+      let currentValue;
+      if (Object.hasOwn(pseudoState, pseudoClass)) {
+        currentValue = pseudoState[pseudoClass];
+      } else {
+        const { test } = pseudoClassDefinition;
+        if (test) {
+          currentValue = test(element, pseudoState);
+        }
+      }
       currentState[pseudoClass] = currentValue;
       const oldValue = state ? state[pseudoClass] : undefined;
       if (oldValue !== currentValue) {
         someChange = true;
-        if (currentValue) {
-          pseudoClassDefinition.add(element);
-        } else {
-          pseudoClassDefinition.remove(element);
+        const { attribute } = pseudoClassDefinition;
+        if (attribute) {
+          if (currentValue) {
+            element.setAttribute(attribute, "");
+          } else {
+            element.removeAttribute(attribute);
+          }
         }
       }
     }
