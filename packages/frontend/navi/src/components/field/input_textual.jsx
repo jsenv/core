@@ -200,6 +200,7 @@ const InputTextualBasic = (props) => {
       baseStyle={{
         "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
       }}
+      wrapperSelector=".navi_inline_wrapper"
       pseudoState={{
         ":read-only": innerReadOnly,
         ":disabled": innerDisabled,

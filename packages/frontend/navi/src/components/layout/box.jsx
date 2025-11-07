@@ -225,37 +225,39 @@ const useBoxStyle = (
       ];
     };
   } else if (wrapperSelector) {
-    const [remainingProps, innerStyle, wrapperStyle, pseudoStyles] =
-      withPropsStyle(
-        props,
-        {
-          managedByCSSVars,
-          pseudoClasses,
-          pseudoElements,
-          pseudoStyle,
-          base,
-          outerSpacing: true,
-          align: true,
-          typo: true,
-        },
-        {
-          innerSpacing: true,
-          dimension: true,
-          visual: true,
-        },
-      );
-    return [
-      remainingProps,
-      (state) => {
-        const el = ref.current;
-        applyStyle(el, innerStyle);
+    initProps = () => {
+      const [remainingProps, innerStyle, wrapperStyle, pseudoStyles] =
+        withPropsStyle(
+          props,
+          {
+            managedByCSSVars,
+            pseudoClasses,
+            pseudoElements,
+            pseudoStyle,
+            base,
+            outerSpacing: true,
+            align: true,
+            typo: true,
+          },
+          {
+            innerSpacing: true,
+            dimension: true,
+            visual: true,
+          },
+        );
+      return [
+        remainingProps,
+        (state) => {
+          const el = ref.current;
+          applyStyle(el, innerStyle);
 
-        const wrapperEl = el.closest(wrapperSelector);
-        if (wrapperEl) {
-          applyStyle(wrapperEl, wrapperStyle, state, pseudoStyles);
-        }
-      },
-    ];
+          const wrapperEl = el.closest(wrapperSelector);
+          if (wrapperEl) {
+            applyStyle(wrapperEl, wrapperStyle, state, pseudoStyles);
+          }
+        },
+      ];
+    };
   } else {
     initProps = () => {
       const [remainingProps, innerStyle, pseudoStyles] = withPropsStyle(props, {
