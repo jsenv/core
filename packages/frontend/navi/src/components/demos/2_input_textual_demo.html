@@ -331,27 +331,28 @@
           <div className="demo-section">
             <h2>Size Variations</h2>
 
-            <div className="variation-grid">
-              <div className="variation-item">
-                <p className="variation-label">Default Size</p>
-                <Input placeholder="Default input" />
-              </div>
-
-              <div className="variation-item">
-                <p className="variation-label">Custom Padding</p>
-                <Input placeholder="Large input" paddingX="lg" paddingY="md" />
-              </div>
-
-              <div className="variation-item">
-                <p className="variation-label">Custom Width</p>
-                <Input placeholder="Wide input" width="300px" />
-              </div>
-
-              <div className="variation-item">
-                <p className="variation-label">Full Width</p>
-                <Input placeholder="Full width" width="100%" />
-              </div>
-            </div>
+            <Layout row contentSpacing="sm">
+              <Layout column contentSpacing="sm">
+                <div className="variation-item">
+                  <p className="variation-label">Custom Padding</p>
+                  <Input
+                    placeholder="Large input"
+                    paddingX="lg"
+                    paddingY="md"
+                  />
+                </div>
+                <div className="variation-item">
+                  <p className="variation-label">Width 200</p>
+                  <Input placeholder="Wide input" width="200px" />
+                </div>
+              </Layout>
+              <Layout row>
+                <div className="variation-item">
+                  <p className="variation-label">Full Width</p>
+                  <Input placeholder="Full width" expandX />
+                </div>
+              </Layout>
+            </Layout>
           </div>
         );
       };
