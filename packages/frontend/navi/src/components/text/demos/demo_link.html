@@ -10,7 +10,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       /* eslint-disable no-unused-vars */
-      import { Text, Link, Icon, Box, Title } from "@jsenv/navi";
+      import { Text, Link, Icon, Box, Title, Layout } from "@jsenv/navi";
 
       const Demo = () => {
         return (
@@ -79,35 +79,39 @@
                 <div>
                   <h3>External Links</h3>
                   <Box layoutColumn contentSpacing="sm">
-                    <Link href="https://example.com">External site</Link>
-                    <Link href="https://docs.example.com">Documentation</Link>
-                    <Link href="https://example.com" target="_self">
-                      No icon (explicit target)
-                    </Link>
+                    <Link href="https://example.com">Documentation</Link>
                   </Box>
                   <p style={{ fontSize: "14px", color: "#666" }}>
                     External links get an icon by default. You can disable it by
                     explicitly setting target="_self".
                   </p>
+                  <Link href="https://example.com" target="_self">
+                    Documentation
+                  </Link>
                 </div>
 
                 <div>
                   <h3>Internal Links</h3>
-                  <Box layoutColumn contentSpacing="sm">
-                    <Link href="/relative">Internal page</Link>
+                  <Layout column contentSpacing="sm">
+                    <Link href="/relative">Settings</Link>
+                  </Layout>
+                  <p style={{ fontSize: "14px", color: "#666" }}>
+                    Internal links have no icon by default. Using
+                    target="_blank" adds an icon..
+                  </p>
+                  <Layout column>
                     <Link href="/page" target="_blank">
                       Open in new tab
                     </Link>
-                    <Link href="#fragment">Section anchor</Link>
-                    <Link href="#section" anchorIcon={false}>
-                      No anchor icon
-                    </Link>
-                  </Box>
-                  <p style={{ fontSize: "14px", color: "#666" }}>
-                    Internal links have no icon by default. Opening in new tab
-                    adds an icon. Same-document anchors get an anchor icon (can
-                    be disabled with anchorIcon={false}).
+                  </Layout>
+                  <p>
+                    Same-document anchors get an anchor icon (can be disabled
+                    with anchorIcon={false})
                   </p>
+                  <Link href="#fragment">Section anchor</Link>
+                  <Link href="#section" anchorIcon={false}>
+                    Section anchor
+                  </Link>
                 </div>
               </Box>
             </Box>
@@ -148,29 +152,6 @@
                     </Link>
                   </Box>
                 </div>
-
-                <div>
-                  <h3>Styling Variations</h3>
-                  <Box layoutColumn contentSpacing="sm">
-                    <Link href="#style" color="blue" underline={false}>
-                      Blue without underline
-                    </Link>
-                    <Link href="#style" color="green">
-                      <Text bold>Bold green link</Text>
-                    </Link>
-                    <Link href="#style" color="red" underline={false}>
-                      <Text italic>Italic red link</Text>
-                    </Link>
-                    <Link href="#style" color="purple">
-                      <Text bold italic>
-                        Bold italic purple
-                      </Text>
-                    </Link>
-                    <Link href="#style" color="orange" underline={false}>
-                      <Text underline>Orange with manual underline</Text>
-                    </Link>
-                  </Box>
-                </div>
               </Box>
             </Box>
 
@@ -193,30 +174,6 @@
                     </Link>
                     <Link href="#hover" color="red">
                       Hover with red color
-                    </Link>
-                  </Box>
-                </div>
-
-                <div>
-                  <h3>Special Cases</h3>
-                  <Box layoutColumn contentSpacing="sm">
-                    <Link href="#" color="gray">
-                      Disabled link (no action)
-                    </Link>
-                    <Link href="#fragment" color="orange">
-                      Fragment link
-                    </Link>
-                    <Link href="tel:+1234567890" color="green">
-                      Phone link
-                    </Link>
-                    <Link href="sms:+1234567890" color="blue">
-                      SMS link
-                    </Link>
-                    <Link href="mailto:test@example.com" color="purple">
-                      Email link
-                    </Link>
-                    <Link href="https://github.com/jsenv/core" color="gray">
-                      GitHub repository
                     </Link>
                   </Box>
                 </div>
