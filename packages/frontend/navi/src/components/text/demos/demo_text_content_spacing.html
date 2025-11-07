@@ -346,7 +346,7 @@
             <section id="underline-gotcha" style={{ marginBottom: "30px" }}>
               <h2>⚠️ Underline + Auto-Spacing Gotcha</h2>
               <p>
-                When using <code>textUnderline</code> on a Text container, any
+                When using <code>underline</code> on a Text container, any
                 spacing (auto-inserted or manually put) between text and icon
                 will be underlined which might be undesired. Move the underline
                 to the specific text element instead.
@@ -363,7 +363,7 @@
                       backgroundColor: "#fee",
                     }}
                   >
-                    <Text noWrap textUnderline>
+                    <Text noWrap underline>
                       <Icon>
                         <StarSvg />
                       </Icon>
@@ -387,7 +387,7 @@
                       <Icon>
                         <StarSvg />
                       </Icon>
-                      <Text textUnderline>star</Text>
+                      <Text underline>star</Text>
                     </Text>
                   </div>
                   <small style={{ color: "#666" }}>
@@ -406,7 +406,7 @@
                   marginBottom: "20px",
                 }}
               >
-                {`// Bad - Icon + Text underline\n<Text noWrap textUnderline>\n  <Icon><StarSvg /></Icon>\n  star\n</Text>\n\n// Good - Only text underlined\n<Text noWrap>\n  <Icon><StarSvg /></Icon>\n  <Text textUnderline>star</Text>\n</Text>`}
+                {`// Bad - Icon + Text underline\n<Text noWrap underline>\n  <Icon><StarSvg /></Icon>\n  star\n</Text>\n\n// Good - Only text underlined\n<Text noWrap>\n  <Icon><StarSvg /></Icon>\n  <Text underline>star</Text>\n</Text>`}
               </pre>
 
               <h3>Links with Icons</h3>
@@ -455,14 +455,14 @@
                       backgroundColor: "#efe",
                     }}
                   >
-                    <Link href="./user-profile" textUnderline={false}>
+                    <Link href="./user-profile" underline={false}>
                       <Icon>
                         <StarSvg />
                       </Icon>
                       <Icon>
                         <StarSvg />
                       </Icon>
-                      <Text textUnderline>Go to profile</Text>
+                      <Text underline>Go to profile</Text>
                       <Icon>
                         <StarSvg />
                       </Icon>
@@ -486,7 +486,7 @@
                   overflowX: "auto",
                 }}
               >
-                {`// Bad - Link with icon, underline on everything\n<Link href="./user-profile">\n  <Icon><StarSvg /></Icon>\n  <Icon><StarSvg /></Icon>\n  <Text>Go to profile</Text>\n  <Icon><StarSvg /></Icon>\n  <Icon><StarSvg /></Icon>\n</Link>\n\n// Good - Disable Link underline, add to text only\n<Link href="./user-profile" textUnderline={false}>\n  <Icon><StarSvg /></Icon>\n  <Icon><StarSvg /></Icon>\n  <Text textUnderline>Go to profile</Text>\n  <Icon><StarSvg /></Icon>\n  <Icon><StarSvg /></Icon>\n</Link>`}
+                {`// Bad - Link with icon, underline on everything\n<Link href="./user-profile">\n  <Icon><StarSvg /></Icon>\n  <Icon><StarSvg /></Icon>\n  <Text>Go to profile</Text>\n  <Icon><StarSvg /></Icon>\n  <Icon><StarSvg /></Icon>\n</Link>\n\n// Good - Disable Link underline, add to text only\n<Link href="./user-profile" underline={false}>\n  <Icon><StarSvg /></Icon>\n  <Icon><StarSvg /></Icon>\n  <Text underline>Go to profile</Text>\n  <Icon><StarSvg /></Icon>\n  <Icon><StarSvg /></Icon>\n</Link>`}
               </pre>
             </section>
 
