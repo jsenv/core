@@ -92,9 +92,10 @@ export const Box = (props) => {
     contentSelector,
 
     children,
-    ref = useRef(),
     ...rest
   } = props;
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
 
   const layoutFromContext = useContext(BoxLayoutContext);
   const insideFlexContainer =

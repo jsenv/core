@@ -271,9 +271,10 @@ const ButtonBasic = (props) => {
     contentSpacing = " ",
 
     children,
-    ref = useRef(),
     ...rest
   } = props;
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
 
   useAutoFocus(ref, autoFocus);
   useConstraints(ref, constraints);
@@ -328,7 +329,8 @@ const ButtonWithAction = (props) => {
     children,
     ...rest
   } = props;
-  const ref = useRef();
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   const boundAction = useAction(action);
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(ref, {
@@ -398,6 +400,8 @@ const ButtonWithActionInsideForm = (props) => {
     onActionEnd,
     ...rest
   } = props;
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   const hasEffectOnForm =
     type === "submit" || type === "reset" || type === "image";
   if (import.meta.dev && hasEffectOnForm) {
@@ -406,7 +410,6 @@ const ButtonWithActionInsideForm = (props) => {
     );
   }
   const formParamsSignal = getActionPrivateProperties(formAction).paramsSignal;
-  const ref = useRef();
   const actionBoundToFormParams = useAction(action, formParamsSignal);
   const { loading: actionLoading } = useActionStatus(actionBoundToFormParams);
 

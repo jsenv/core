@@ -25,7 +25,6 @@ import { renderActionableComponent } from "../action_execution/render_actionable
 import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { Box } from "../layout/box.jsx";
-import { withPropsStyle } from "../layout/with_props_style.js";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { ReportReadOnlyOnLabelContext } from "./label.jsx";
@@ -170,10 +169,10 @@ const InputTextualBasic = (props) => {
     // visual
     accentColor,
 
-    ref = useRef(),
-
     ...rest
   } = props;
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
 
   const innerValue =
     type === "datetime-local" ? convertToLocalTimezone(uiState) : uiState;
@@ -190,27 +189,17 @@ const InputTextualBasic = (props) => {
   });
   useConstraints(ref, constraints);
 
-  const [remainingProps, wrapperStyle, inputStyle] = withPropsStyle(
-    rest,
-    {
-      base: {
-        "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
-      },
-      layout: true,
-    },
-    {
-      spacing: true,
-    },
-  );
   const inputTextual = (
     <Box
-      {...remainingProps}
+      {...rest}
       as="input"
       ref={ref}
-      style={inputStyle}
       type={type}
       data-value={uiState}
       value={innerValue}
+      baseStyle={{
+        "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
+      }}
       pseudoState={{
         ":read-only": innerReadOnly,
         ":disabled": innerDisabled,
@@ -242,7 +231,7 @@ const InputTextualBasic = (props) => {
   return (
     <LoadableInlineElement
       loading={innerLoading}
-      style={wrapperStyle}
+      // style={wrapperStyle}
       color="var(--accent-color)"
       inset={-1}
     >
@@ -264,9 +253,10 @@ const InputTextualWithAction = (props) => {
     cancelOnBlurInvalid,
     cancelOnEscape,
     actionErrorEffect,
-    ref = useRef(),
     ...rest
   } = props;
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   const [boundAction] = useActionBoundToOneParam(action, uiState);
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(ref, {
