@@ -245,7 +245,7 @@
 
               <div className="variation-item">
                 <p className="variation-label">Danger (Red background)</p>
-                <Button backgroundColor="#dc3545" textColor="white">
+                <Button backgroundColor="#dc3545" color="white">
                   Danger
                 </Button>
               </div>
@@ -254,11 +254,11 @@
                 <p className="variation-label">Icon + hover + colors</p>
                 <Button
                   backgroundColor="white"
-                  textColor="#dc3545"
-                  pseudo={{
+                  color="#dc3545"
+                  pseudoStyle={{
                     ":hover": {
                       backgroundColor: "#dc3545",
-                      textColor: "white",
+                      color: "white",
                     },
                   }}
                 >
@@ -282,9 +282,9 @@
               <div className="variation-item">
                 <p className="variation-label">Outline style</p>
                 <Button
-                  backgroundColor="transparent"
-                  textColor="#007bff"
                   borderColor="#007bff"
+                  backgroundColor="transparent"
+                  color="#007bff"
                 >
                   Outline
                 </Button>
