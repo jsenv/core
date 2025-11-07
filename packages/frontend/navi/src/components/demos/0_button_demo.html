@@ -104,6 +104,39 @@
         color: #666;
         font-size: 0.85rem;
       }
+
+      .states-section {
+        margin: 20px 0;
+      }
+
+      .states-title {
+        margin: 0 0 15px 0;
+        padding: 8px 12px;
+        color: #495057;
+        font-weight: 600;
+        font-size: 0.95rem;
+        text-align: center;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+      }
+
+      .enhanced-states-title {
+        color: #1565c0;
+        background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+        border-color: #2196f3;
+      }
+
+      .states-description {
+        margin: 10px 0 15px 0;
+        padding: 10px 15px;
+        color: #666;
+        font-style: italic;
+        font-size: 0.9rem;
+        background: #f8f9fa;
+        border-left: 4px solid #007bff;
+        border-radius: 0 4px 4px 0;
+      }
     </style>
   </head>
   <body>
@@ -131,79 +164,96 @@
       const BasicStatesDemo = () => {
         return (
           <div className="demo-section">
-            <h2>Basic Button States</h2>
+            <h2>Button States</h2>
 
-            <Layout row contentSpacing="sm">
+            <div className="states-section">
+              <div className="states-title">Standard HTML Button States</div>
+              <p className="states-description">
+                These states work exactly like native HTML buttons, with
+                enhanced styling and consistent behavior.
+              </p>
+
               <Layout column contentSpacing="sm">
                 <fieldset>
                   <legend>Default</legend>
                   <Layout row contentSpacing="sm" contentAlignX="start">
-                    <Button>Text</Button>
-                    <button>Text</button>
+                    <Button>Click Me</Button>
+                    <button>Click Me</button>
                   </Layout>
                 </fieldset>
                 <fieldset>
                   <legend>:disabled</legend>
                   <Layout row contentSpacing="sm" contentAlignX="start">
-                    <Button disabled>Text</Button>
-                    <button disabled>Text</button>
+                    <Button disabled>Disabled</Button>
+                    <button disabled>Disabled</button>
                   </Layout>
                 </fieldset>
                 <fieldset>
                   <legend style="white-space: nowrap">:focus-visible</legend>
                   <Layout row contentSpacing="sm" contentAlignX="start">
                     <Button pseudoState={{ ":focus-visible": true }}>
-                      Text
+                      Focused
                     </Button>
-                    <button autofocus>Text</button>
+                    <button autofocus>Focused</button>
                   </Layout>
                 </fieldset>
               </Layout>
+            </div>
 
-              <p>Navi special button state: readOnly</p>
+            <div className="states-section">
+              <div className="states-title enhanced-states-title">
+                Enhanced Navi States
+              </div>
+              <p className="states-description">
+                These additional states provide enhanced UX patterns not
+                available in standard HTML buttons.
+              </p>
 
               <Layout column contentSpacing="sm">
                 <fieldset>
                   <legend>:read-only</legend>
                   <Layout row contentSpacing="sm" contentAlignX="start">
-                    <Button readOnly>Text</Button>
+                    <Button readOnly>Read-only Button</Button>
                   </Layout>
+                  <small
+                    style={{
+                      color: "#666",
+                      fontSize: "0.85rem",
+                      marginTop: "5px",
+                      display: "block",
+                    }}
+                  >
+                    Visually indicates the button cannot be interacted with, but
+                    remains focusable for accessibility
+                  </small>
                 </fieldset>
                 <fieldset>
                   <legend>:read-only + :focus-visible</legend>
                   <Layout row contentSpacing="sm" contentAlignX="start">
                     <Button readOnly pseudoState={{ ":focus-visible": true }}>
-                      Text
+                      Focused Read-only
                     </Button>
                   </Layout>
                 </fieldset>
-              </Layout>
-
-              <p>Navi special button state: loading</p>
-
-              <div className="demo-section">
-                <h2>Loading State</h2>
-
                 <fieldset>
-                  <legend>Loading Examples</legend>
+                  <legend>Loading state</legend>
                   <Layout row contentSpacing="sm" contentAlignX="start">
-                    <Button loading>Loading button</Button>
+                    <Button loading>Processing...</Button>
                   </Layout>
+                  <small
+                    style={{
+                      color: "#666",
+                      fontSize: "0.85rem",
+                      marginTop: "5px",
+                      display: "block",
+                    }}
+                  >
+                    Shows a spinner while maintaining the button's size and
+                    preventing interaction
+                  </small>
                 </fieldset>
-
-                <p
-                  style={{
-                    color: "#666",
-                    fontSize: "0.9rem",
-                    margin: "10px 0",
-                  }}
-                >
-                  The loading state is unique to our Button component. It shows
-                  a spinner while maintaining the button's original size and
-                  preventing interaction.
-                </p>
-              </div>
-            </Layout>
+              </Layout>
+            </div>
           </div>
         );
       };

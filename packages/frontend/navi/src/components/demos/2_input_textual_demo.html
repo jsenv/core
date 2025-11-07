@@ -121,6 +121,39 @@
         font-style: italic;
         content: "(empty)";
       }
+
+      .states-section {
+        margin: 20px 0;
+      }
+
+      .states-title {
+        margin: 0 0 15px 0;
+        padding: 8px 12px;
+        color: #495057;
+        font-weight: 600;
+        font-size: 0.95rem;
+        text-align: center;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+      }
+
+      .enhanced-states-title {
+        color: #1565c0;
+        background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+        border-color: #2196f3;
+      }
+
+      .states-description {
+        margin: 10px 0 15px 0;
+        padding: 10px 15px;
+        color: #666;
+        font-style: italic;
+        font-size: 0.9rem;
+        background: #f8f9fa;
+        border-left: 4px solid #007bff;
+        border-radius: 0 4px 4px 0;
+      }
     </style>
   </head>
   <body>
@@ -137,7 +170,6 @@
         return (
           <div>
             <BasicStatesDemo />
-            <LoadingStateDemo />
             <TypeVariationsDemo />
             <SizeVariationsDemo />
             <ValueHandlingDemo />
@@ -147,99 +179,126 @@
       };
 
       const BasicStatesDemo = () => {
-        return (
-          <div className="demo-section">
-            <h2>Basic Input States</h2>
-
-            <Layout column contentSpacing="sm">
-              <fieldset>
-                <legend>Default</legend>
-                <Layout row contentSpacing="sm" contentAlignX="start">
-                  <Input placeholder="Enter text..." />
-                  <input placeholder="Enter text..." />
-                </Layout>
-              </fieldset>
-              <fieldset>
-                <legend>:readonly</legend>
-                <Layout row contentSpacing="sm" contentAlignX="start">
-                  <Input id="readonly" readOnly placeholder="Enter text..." />
-                  <input readOnly placeholder="Enter text..." />
-                </Layout>
-              </fieldset>
-              <fieldset>
-                <legend>:disabled</legend>
-                <Layout row contentSpacing="sm" contentAlignX="start">
-                  <Input disabled placeholder="Enter text..." />
-                  <input disabled placeholder="Enter text..." />
-                </Layout>
-              </fieldset>
-              <fieldset>
-                <legend style="white-space: nowrap">:focus-visible</legend>
-                <Layout row contentSpacing="sm" contentAlignX="start">
-                  <Input
-                    placeholder="Enter text..."
-                    pseudoState={{ ":focus-visible": true }}
-                  />
-                  <input placeholder="Enter text..." autoFocus />
-                </Layout>
-              </fieldset>
-            </Layout>
-
-            <small
-              style={{
-                color: "#666",
-                fontSize: "0.85rem",
-                marginTop: "10px",
-                display: "block",
-              }}
-            >
-              Note: Our Input component becomes read-only when no
-              onUIStateChange handler is provided
-            </small>
-          </div>
-        );
-      };
-
-      const LoadingStateDemo = () => {
+        const [loadingValue, setLoadingValue] = useState("Sample text");
         const [loading, setLoading] = useState(false);
-        const [value, setValue] = useState("Sample text");
 
         return (
           <div className="demo-section">
-            <h2>Loading State</h2>
+            <h2>Input States</h2>
 
-            <fieldset>
-              <legend>Loading Examples</legend>
+            <div className="states-section">
+              <div className="states-title">Standard HTML Input States</div>
+              <p className="states-description">
+                These states work exactly like native HTML inputs, with enhanced
+                styling and consistent behavior.
+              </p>
+
               <Layout column contentSpacing="sm">
-                <Layout row contentSpacing="sm" contentAlignX="start">
-                  <Input
-                    loading={loading}
-                    value={value}
-                    onUIStateChange={setValue}
-                    placeholder="Type while loading..."
-                  />
-                  <button
-                    onClick={() => setLoading(!loading)}
+                <fieldset>
+                  <legend>Default</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Input placeholder="Type here..." />
+                    <input placeholder="Type here..." />
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>:disabled</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Input disabled placeholder="Disabled input" />
+                    <input disabled placeholder="Disabled input" />
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend style="white-space: nowrap">:focus-visible</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Input
+                      placeholder="Focus me"
+                      pseudoState={{ ":focus-visible": true }}
+                    />
+                    <input placeholder="Focus me" autoFocus />
+                  </Layout>
+                </fieldset>
+              </Layout>
+            </div>
+
+            <div className="states-section">
+              <div className="states-title enhanced-states-title">
+                Enhanced Navi States
+              </div>
+              <p className="states-description">
+                These additional states provide enhanced UX patterns with
+                automatic behavior and better user feedback.
+              </p>
+
+              <Layout column contentSpacing="sm">
+                <fieldset>
+                  <legend>:read-only (automatic)</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Input value="Read-only content" />
+                  </Layout>
+                  <small
                     style={{
-                      padding: "8px 16px",
-                      background: "#007bff",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: "pointer",
+                      color: "#666",
+                      fontSize: "0.85rem",
+                      marginTop: "5px",
+                      display: "block",
                     }}
                   >
-                    {loading ? "Stop Loading" : "Start Loading"}
-                  </button>
-                </Layout>
-                <div className="value-display">Current value: "{value}"</div>
+                    Automatically becomes read-only when no onUIStateChange
+                    handler is provided
+                  </small>
+                </fieldset>
+                <fieldset>
+                  <legend>:read-only + :focus-visible</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Input
+                      value="Focused read-only content"
+                      pseudoState={{ ":focus-visible": true }}
+                    />
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>Loading state (interactive)</legend>
+                  <Layout column contentSpacing="sm">
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Input
+                        loading={loading}
+                        value={loadingValue}
+                        onUIStateChange={setLoadingValue}
+                        placeholder="Type while loading..."
+                      />
+                      <button
+                        onClick={() => setLoading(!loading)}
+                        style={{
+                          padding: "8px 16px",
+                          background: "#007bff",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "4px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        {loading ? "Stop Loading" : "Start Loading"}
+                      </button>
+                    </Layout>
+                    <div className="value-display">
+                      Current value: "{loadingValue}"
+                    </div>
+                  </Layout>
+                  <small
+                    style={{
+                      color: "#666",
+                      fontSize: "0.85rem",
+                      marginTop: "5px",
+                      display: "block",
+                    }}
+                  >
+                    Shows a spinner while allowing continued interaction and
+                    value updates
+                  </small>
+                </fieldset>
               </Layout>
-            </fieldset>
-
-            <p style={{ color: "#666", fontSize: "0.9rem", margin: "10px 0" }}>
-              The loading state shows a spinner while allowing continued
-              interaction. The input remains functional during loading states.
-            </p>
+            </div>
           </div>
         );
       };
