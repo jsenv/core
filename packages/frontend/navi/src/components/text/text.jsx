@@ -11,6 +11,7 @@ import.meta.css = /* css */ `
 
   .navi_text {
     position: relative;
+    color: inherit;
   }
 
   .navi_char_slot_invisible {

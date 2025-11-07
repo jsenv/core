@@ -301,28 +301,28 @@
             <Box as="section" marginBottom="xl">
               <h2>Colored Examples</h2>
               <Box layoutRow contentSpacing="sm">
-                <Text textColor="blue">
+                <Text color="blue">
                   <Icon>
                     <HomeSvg />
                   </Icon>
                   Blue home link
                 </Text>
 
-                <Text textColor="green">
+                <Text color="green">
                   <Icon>
                     <UserSvg />
                   </Icon>
                   Green user profile
                 </Text>
 
-                <Text textColor="red">
+                <Text color="red">
                   <Icon>
                     <HeartSvg />
                   </Icon>
                   Red heart favorite
                 </Text>
 
-                <Text textColor="purple">
+                <Text color="purple">
                   <Icon>
                     <StarSvg />
                   </Icon>
@@ -396,14 +396,14 @@
                   <Text
                     as="a"
                     href="https://example.com"
-                    textColor="gray"
                     target="_blank"
-                    textUnderline={false}
+                    color="gray"
+                    underline={false}
                   >
                     <Icon>
                       <BlankTargetLinkSvg />
                     </Icon>
-                    <Text textUnderline>External Link</Text>
+                    <Text underline>External Link</Text>
                   </Text>
                 </div>
               </Box>
@@ -435,7 +435,7 @@
                   borderWidth="2"
                   borderStyle="solid"
                   borderRadius="5"
-                  pseudo={{
+                  pseudoStyle={{
                     ":hover": {
                       backgroundColor: "#0056b3",
                       borderColor: "#0056b3",
