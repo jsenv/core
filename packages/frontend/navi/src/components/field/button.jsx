@@ -58,6 +58,8 @@ import.meta.css = /* css */ `
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: light-dark(#f3f4f6, #2d3748);
       --color: currentColor;
+    }
+    .navi_button_content {
       /* Hover */
       --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
       --background-color-hover: color-mix(
@@ -80,8 +82,7 @@ import.meta.css = /* css */ `
       --border-color-disabled: var(--border-color-readonly);
       --background-color-disabled: var(--background-color-readonly);
       --color-disabled: var(--color-readonly);
-    }
-    .navi_button_content {
+
       /* Internal css vars are the one controlling final values */
       /* allowing to override them on interactions (like hover, disabled, etc.) */
       --x-outline-width: var(--outline-width);
