@@ -200,10 +200,13 @@
                   </Layout>
                 </fieldset>
                 <fieldset>
-                  <legend>:disabled</legend>
+                  <legend>:focus-visible</legend>
                   <Layout row contentSpacing="sm" contentAlignX="start">
-                    <Input disabled placeholder="Disabled input" />
-                    <input disabled placeholder="Disabled input" />
+                    <Input
+                      placeholder="Focus me"
+                      pseudoState={{ ":focus-visible": true }}
+                    />
+                    <input placeholder="Focus me" autoFocus />
                   </Layout>
                 </fieldset>
                 <fieldset>
@@ -214,13 +217,10 @@
                   </Layout>
                 </fieldset>
                 <fieldset>
-                  <legend>:focus-visible</legend>
+                  <legend>:disabled</legend>
                   <Layout row contentSpacing="sm" contentAlignX="start">
-                    <Input
-                      placeholder="Focus me"
-                      pseudoState={{ ":focus-visible": true }}
-                    />
-                    <input placeholder="Focus me" autoFocus />
+                    <Input disabled placeholder="Disabled input" />
+                    <input disabled placeholder="Disabled input" />
                   </Layout>
                 </fieldset>
               </Layout>

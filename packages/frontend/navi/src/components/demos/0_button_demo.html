@@ -183,19 +183,19 @@
                   </Layout>
                 </fieldset>
                 <fieldset>
-                  <legend>:disabled</legend>
-                  <Layout row contentSpacing="sm" contentAlignX="start">
-                    <Button disabled>Disabled</Button>
-                    <button disabled>Disabled</button>
-                  </Layout>
-                </fieldset>
-                <fieldset>
                   <legend>:focus-visible</legend>
                   <Layout row contentSpacing="sm" contentAlignX="start">
                     <Button pseudoState={{ ":focus-visible": true }}>
                       Focused
                     </Button>
                     <button autofocus>Focused</button>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>:disabled</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Button disabled>Disabled</Button>
+                    <button disabled>Disabled</button>
                   </Layout>
                 </fieldset>
               </Layout>
