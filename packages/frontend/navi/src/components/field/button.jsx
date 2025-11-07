@@ -136,12 +136,6 @@ import.meta.css = /* css */ `
       --x-background-color: var(--x-background-color-hover);
       --x-color: var(--x-color-hover);
     }
-    /* Focus */
-    .navi_button[data-focus-visible] .navi_button_content {
-      outline-width: var(--x-outer-width);
-      outline-offset: calc(-1 * var(--x-outer-width));
-      --x-border-color: var(--x-outline-color);
-    }
     /* Active */
     .navi_button[data-active] .navi_button_content {
       --x-outline-color: var(--x-border-color-active);
@@ -157,10 +151,15 @@ import.meta.css = /* css */ `
     }
     /* Readonly */
     .navi_button[data-readonly] .navi_button_content {
-      --x-outline-color: var(--x-border-color-readonly);
       --x-border-color: var(--x-border-color-readonly);
       --x-background-color: var(--x-background-color-readonly);
       --x-color: var(--x-color-readonly);
+    }
+    /* Focus */
+    .navi_button[data-focus-visible] .navi_button_content {
+      outline-width: var(--x-outer-width);
+      outline-offset: calc(-1 * var(--x-outer-width));
+      --x-border-color: var(--x-outline-color);
     }
     /* Disabled */
     .navi_button[data-disabled] {

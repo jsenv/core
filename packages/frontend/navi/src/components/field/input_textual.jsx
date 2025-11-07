@@ -80,10 +80,10 @@ import.meta.css = /* css */ `
       --border-color-disabled: var(--border-color-readonly);
       --background-color-disabled: color-mix(
         in srgb,
-        var(--background-color) 60%,
-        transparent
+        var(--background-color) 95%,
+        grey
       );
-      --color-disabled: var(--color-readonly);
+      --color-disabled: color-mix(in srgb, var(--color) 95%, grey);
 
       --x-outline-width: var(--outline-width);
       --x-border-radius: var(--border-radius);
@@ -128,19 +128,18 @@ import.meta.css = /* css */ `
       /* Fortunately we can override it as follow */
       -webkit-text-fill-color: var(--x-color) !important;
     }
+    /* Readonly */
+    .navi_input[data-readonly] {
+      --x-border-color: var(--x-border-color-readonly);
+      --x-background-color: var(--x-background-color-readonly);
+      --x-color: var(--x-color-readonly);
+    }
     /* Focus */
     .navi_input[data-focus],
     .navi_input[data-focus-visible] {
       outline-width: var(--x-outer-width);
       outline-offset: calc(-1 * var(--x-outer-width));
       --x-border-color: var(--x-outline-color);
-    }
-    /* Readonly */
-    .navi_input[data-readonly] {
-      --x-outline-color: var(--x-border-color-readonly);
-      --x-border-color: var(--x-border-color-readonly);
-      --x-background-color: var(--x-background-color-readonly);
-      --x-color: var(--x-color-readonly);
     }
     /* Disabled */
     .navi_input[data-disabled] {

@@ -120,7 +120,6 @@
         return (
           <div>
             <BasicStatesDemo />
-            <LoadingStateDemo />
             <SizeVariationsDemo />
             <ColorVariationsDemo />
             <DiscreteVariantDemo />
@@ -134,68 +133,77 @@
           <div className="demo-section">
             <h2>Basic Button States</h2>
 
-            <Layout column contentSpacing="sm">
-              <fieldset>
-                <legend>Default</legend>
-                <Layout row contentSpacing="sm" contentAlignX="start">
-                  <Button>Text</Button>
-                  <button>Text</button>
-                </Layout>
-              </fieldset>
-              <fieldset>
-                <legend>:readonly</legend>
-                <Layout row contentSpacing="sm" contentAlignX="start">
-                  <Button readOnly>Text</Button>
-                  <button data-readonly>Text</button>
-                </Layout>
-              </fieldset>
-              <fieldset>
-                <legend>:disabled</legend>
-                <Layout row contentSpacing="sm" contentAlignX="start">
-                  <Button disabled>Text</Button>
-                  <button disabled>Text</button>
-                </Layout>
-              </fieldset>
-              <fieldset>
-                <legend style="white-space: nowrap">:focus-visible</legend>
-                <Layout row contentSpacing="sm" contentAlignX="start">
-                  <Button pseudoState={{ ":focus-visible": true }}>Text</Button>
-                  <button autofocus>Text</button>
-                </Layout>
-              </fieldset>
-            </Layout>
-
-            <small
-              style={{
-                color: "#666",
-                fontSize: "0.85rem",
-                marginTop: "10px",
-                display: "block",
-              }}
-            >
-              Note: Native buttons don't have a read-only state
-            </small>
-          </div>
-        );
-      };
-
-      const LoadingStateDemo = () => {
-        return (
-          <div className="demo-section">
-            <h2>Loading State</h2>
-
-            <fieldset>
-              <legend>Loading Examples</legend>
-              <Layout row contentSpacing="sm" contentAlignX="start">
-                <Button loading>Loading button</Button>
+            <Layout row contentSpacing="sm">
+              <Layout column contentSpacing="sm">
+                <fieldset>
+                  <legend>Default</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Button>Text</Button>
+                    <button>Text</button>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>:disabled</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Button disabled>Text</Button>
+                    <button disabled>Text</button>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend style="white-space: nowrap">:focus-visible</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Button pseudoState={{ ":focus-visible": true }}>
+                      Text
+                    </Button>
+                    <button autofocus>Text</button>
+                  </Layout>
+                </fieldset>
               </Layout>
-            </fieldset>
 
-            <p style={{ color: "#666", fontSize: "0.9rem", margin: "10px 0" }}>
-              The loading state is unique to our Button component. It shows a
-              spinner while maintaining the button's original size and
-              preventing interaction.
-            </p>
+              <p>Navi special button state: readOnly</p>
+
+              <Layout column contentSpacing="sm">
+                <fieldset>
+                  <legend>:read-only</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Button readOnly>Text</Button>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>:read-only + :focus-visible</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Button readOnly pseudoState={{ ":focus-visible": true }}>
+                      Text
+                    </Button>
+                  </Layout>
+                </fieldset>
+              </Layout>
+
+              <p>Navi special button state: loading</p>
+
+              <div className="demo-section">
+                <h2>Loading State</h2>
+
+                <fieldset>
+                  <legend>Loading Examples</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Button loading>Loading button</Button>
+                  </Layout>
+                </fieldset>
+
+                <p
+                  style={{
+                    color: "#666",
+                    fontSize: "0.9rem",
+                    margin: "10px 0",
+                  }}
+                >
+                  The loading state is unique to our Button component. It shows
+                  a spinner while maintaining the button's original size and
+                  preventing interaction.
+                </p>
+              </div>
+            </Layout>
           </div>
         );
       };
