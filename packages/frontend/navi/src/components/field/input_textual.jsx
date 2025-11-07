@@ -43,6 +43,7 @@ import {
 import.meta.css = /* css */ `
   @layer navi {
     .navi_input {
+      box-sizing: border-box;
       --border-radius: 2px;
       --border-width: 1px;
       --outline-width: 1px;
@@ -56,7 +57,7 @@ import.meta.css = /* css */ `
       --background-color: white;
       --color: currentColor;
       --color-dimmed: color-mix(in srgb, currentColor 60%, transparent);
-      --placeholer-color: var(--color-dimmed);
+      --placeholder-color: var(--color-dimmed);
       /* Hover */
       --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
       --background-color-hover: color-mix(
@@ -119,7 +120,7 @@ import.meta.css = /* css */ `
       outline-offset: calc(-1 * (var(--x-border-width)));
     }
     .navi_input::placeholder {
-      color: var(--placeholer-color);
+      color: var(--placeholder-color);
     }
     .navi_input:-internal-autofill-selected {
       /* Webkit is putting some nasty styles after automplete that look as follow */
@@ -280,7 +281,7 @@ const InputTextualBasic = (props) => {
       baseStyle={{
         "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
       }}
-      wrapperSelector=".navi_inline_wrapper"
+      // wrapperSelector=".navi_inline_wrapper"
       managedByCSSVars={InputManagedByCSSVars}
       pseudoClasses={InputPseudoClasses}
       pseudoElements={InputPseudoElements}
