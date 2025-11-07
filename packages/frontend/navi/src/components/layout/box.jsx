@@ -245,9 +245,9 @@ const useBoxStyle = (
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) {
-      return;
+      return null;
     }
-    initPseudoStyles(el, {
+    return initPseudoStyles(el, {
       pseudoClasses,
       pseudoState,
       effect: updateStyle,

@@ -9,7 +9,6 @@ import { renderActionableComponent } from "../action_execution/render_actionable
 import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { Box } from "../layout/box.jsx";
-import { withPropsClassName } from "../layout/with_props_class_name.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { applyContentSpacingOnTextChildren } from "../text/text.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
@@ -54,10 +53,33 @@ import.meta.css = /* css */ `
       --border-radius: 2px;
       --padding-x: 6px;
       --padding-y: 1px;
+      /* default */
       --outline-color: light-dark(#4476ff, #3b82f6);
-      --background-color: light-dark(#f3f4f6, #2d3748);
       --border-color: light-dark(#767676, #8e8e93);
+      --background-color: light-dark(#f3f4f6, #2d3748);
       --color: currentColor;
+      /* Hover */
+      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
+      --background-color-hover: color-mix(
+        in srgb,
+        var(--background-color) 95%,
+        black
+      );
+      --color-hover: var(--color);
+      /* Active */
+      --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
+      /* Readonly */
+      --border-color-readonly: color-mix(
+        in srgb,
+        var(--border-color) 30%,
+        white
+      );
+      --background-color-readonly: var(--background-color);
+      --color-readonly: color-mix(in srgb, var(--color) 30%, transparent);
+      /* Disabled */
+      --border-color-disabled: var(--border-color-readonly);
+      --background-color-disabled: var(--background-color-readonly);
+      --color-disabled: var(--color-readonly);
     }
     .navi_button_content {
       /* Internal css vars are the one controlling final values */
@@ -68,44 +90,19 @@ import.meta.css = /* css */ `
       --x-outer-width: calc(var(--x-border-width) + var(--x-outline-width));
 
       --x-outline-color: var(--outline-color);
-      --x-background-color: var(--background-color);
       --x-border-color: var(--border-color);
+      --x-background-color: var(--background-color);
       --x-color: var(--color);
-
-      --x-background-color-hover: var(
-        --background-color-hover,
-        color-mix(in srgb, var(--background-color) 95%, black)
-      );
-      --x-background-color-readonly: var(
-        --background-color-readonly,
-        var(--x-background-color)
-      );
-      --x-background-color-disabled: var(
-        --background-color-disabled,
-        var(--background-color)
-      );
-      --x-border-color-hover: var(
-        --border-color-hover,
-        color-mix(in srgb, var(--border-color) 70%, black)
-      );
-      --x-border-color-active: var(
-        --border-color-active,
-        color-mix(in srgb, var(--border-color) 90%, black)
-      );
-      --x-border-color-readonly: var(
-        --border-color-readonly,
-        color-mix(in srgb, var(--border-color) 30%, white)
-      );
-      --x-border-color-disabled: var(
-        --border-color-disabled,
-        var(--x-border-color-readonly)
-      );
-      --x-color-hover: var(--color-hover, var(--x-color));
-      --x-color-readonly: var(
-        --color-readonly,
-        color-mix(in srgb, var(--color) 30%, transparent)
-      );
-      --x-color-disabled: var(--color-disabled, var(--x-color-readonly));
+      --x-border-color-hover: var(--border-color-hover);
+      --x-background-color-hover: var(--background-color-hover);
+      --x-color-hover: var(--color-hover);
+      --x-border-color-active: var(--border-color-active);
+      --x-border-color-readonly: var(--border-color-readonly);
+      --x-background-color-readonly: var(--background-color-readonly);
+      --x-color-readonly: var(--color-readonly);
+      --x-border-color-disabled: var(--border-color-disabled);
+      --x-background-color-disabled: var(--background-color-disabled);
+      --x-color-disabled: var(--color-disabled);
 
       position: relative;
       padding-top: var(--padding-top, var(--padding-y));
@@ -134,15 +131,15 @@ import.meta.css = /* css */ `
     }
     /* Hover */
     .navi_button[data-hover] .navi_button_content {
-      --x-color: var(--x-color-hover);
       --x-border-color: var(--x-border-color-hover);
       --x-background-color: var(--x-background-color-hover);
+      --x-color: var(--x-color-hover);
     }
     /* Focus */
     .navi_button[data-focus-visible] .navi_button_content {
-      --x-border-color: var(--x-outline-color);
       outline-width: var(--x-outer-width);
       outline-offset: calc(-1 * var(--x-outer-width));
+      --x-border-color: var(--x-outline-color);
     }
     /* Active */
     .navi_button[data-active] .navi_button_content {
@@ -159,8 +156,8 @@ import.meta.css = /* css */ `
     }
     /* Readonly */
     .navi_button[data-readonly] .navi_button_content {
-      --x-border-color: var(--x-border-color-disabled);
       --x-outline-color: var(--x-border-color-readonly);
+      --x-border-color: var(--x-border-color-readonly);
       --x-background-color: var(--x-background-color-readonly);
       --x-color: var(--x-color-readonly);
     }
@@ -219,6 +216,14 @@ export const Button = (props) => {
   });
 };
 
+const ButtonManagedByCSSVars = {
+  outlineWidth: "--outline-width",
+  borderWidth: "--border-width",
+  borderRadius: "--border-radius",
+  backgroundColor: "--background-color",
+  borderColor: "--border-color",
+  color: "--color",
+};
 const ButtonPseudoClasses = [
   ":hover",
   ":active",
@@ -229,14 +234,7 @@ const ButtonPseudoClasses = [
   ":-navi-loading",
 ];
 const ButtonPseudoElements = ["::-navi-loader"];
-const ButtonManagedByCSSVars = {
-  outlineWidth: "--outline-width",
-  borderWidth: "--border-width",
-  borderRadius: "--border-radius",
-  backgroundColor: "--background-color",
-  borderColor: "--border-color",
-  color: "--color",
-};
+
 const ButtonBasic = (props) => {
   const contextLoading = useContext(LoadingContext);
   const contextLoadingElement = useContext(LoadingElementContext);
@@ -251,7 +249,6 @@ const ButtonBasic = (props) => {
 
     // visual
     discrete,
-    className,
     contentSpacing = " ",
 
     children,
@@ -265,26 +262,27 @@ const ButtonBasic = (props) => {
     loading || (contextLoading && contextLoadingElement === ref.current);
   const innerReadOnly = readOnly || contextReadOnly || innerLoading;
   const innerDisabled = disabled || contextDisabled;
-  const innerClassName = withPropsClassName("navi_button", className);
 
   return (
     <Box
       {...rest}
       as="button"
       ref={ref}
-      className={innerClassName}
+      baseClassName="navi_button"
       data-discrete={discrete ? "" : undefined}
       data-readonly-silent={innerLoading ? "" : undefined}
       data-callout-arrow-x="center"
       aria-busy={innerLoading}
       // style management
-      contentSelector=".navi_button_content"
+      managedByCSSVars={ButtonManagedByCSSVars}
       pseudoClasses={ButtonPseudoClasses}
       pseudoElements={ButtonPseudoElements}
-      managedByCSSVars={ButtonManagedByCSSVars}
-      disabled={innerDisabled}
-      readOnly={innerReadOnly}
-      loading={innerLoading}
+      basePseudoState={{
+        ":read-only": innerReadOnly,
+        ":disabled": innerDisabled,
+        ":-navi-loading": innerLoading,
+      }}
+      contentSelector=".navi_button_content"
     >
       <LoaderBackground
         loading={innerLoading}
