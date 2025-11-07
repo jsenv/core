@@ -51,10 +51,71 @@
               </div>
             </section>
 
-            {/* Colored Links */}
+            {/* Automatic Icon Behavior */}
             <Box as="section" marginBottom="xl">
-              <Title as="h2">Colored Links</Title>
-              <p>Links with different color schemes and styling variations.</p>
+              <Title as="h2">Automatic Icon Behavior</Title>
+              <p>
+                Links automatically add icons based on their target and
+                behavior. This provides visual cues to users about what to
+                expect when clicking the link.
+              </p>
+
+              <Box layoutRow contentSpacing="lg">
+                <div>
+                  <h3>No Icons (Default)</h3>
+                  <Box layoutColumn contentSpacing="sm">
+                    <Link href="/relative">Relative link</Link>
+                    <Link href="#fragment">Fragment link</Link>
+                    <Link href="mailto:test@example.com">Email link</Link>
+                    <Link href="tel:+1234567890">Phone link</Link>
+                  </Box>
+                  <p style={{ fontSize: "14px", color: "#666" }}>
+                    Regular internal links don't get icons
+                  </p>
+                </div>
+
+                <div>
+                  <h3>Automatic External Icons</h3>
+                  <Box layoutColumn contentSpacing="sm">
+                    <Link href="https://example.com">
+                      External link (auto target="_blank")
+                    </Link>
+                    <Link href="https://github.com" target="_blank">
+                      External with explicit target
+                    </Link>
+                    <Link href="/internal" target="_blank">
+                      Internal link with target="_blank"
+                    </Link>
+                  </Box>
+                  <p style={{ fontSize: "14px", color: "#666" }}>
+                    External URLs automatically get target="_blank" and an icon
+                  </p>
+                </div>
+
+                <div>
+                  <h3>Icon Control</h3>
+                  <Box layoutColumn contentSpacing="sm">
+                    <Link href="https://example.com" anchorIcon={false}>
+                      External without icon
+                    </Link>
+                    <Link href="/internal" target="_blank" anchorIcon={false}>
+                      Target blank without icon
+                    </Link>
+                  </Box>
+                  <p style={{ fontSize: "14px", color: "#666" }}>
+                    Use anchorIcon={false} to disable automatic icons
+                  </p>
+                </div>
+              </Box>
+            </Box>
+
+            {/* Colors and Sizes Combined */}
+            <Box as="section" marginBottom="xl">
+              <Title as="h2">Colors and Sizes</Title>
+              <p>
+                Links with different color schemes, styling variations, and size
+                options.
+              </p>
 
               <Box layoutRow contentSpacing="lg">
                 <div>
@@ -82,186 +143,42 @@
                 </div>
 
                 <div>
-                  <h3>Colored Without Underlines</h3>
+                  <h3>Different Sizes</h3>
                   <Box layoutColumn contentSpacing="sm">
-                    <Link href="#color" color="blue" underline={false}>
-                      Blue link
+                    <Link href="#size" color="blue">
+                      <Text size="sm">Small blue link</Text>
                     </Link>
-                    <Link href="#color" color="green" underline={false}>
-                      Green link
+                    <Link href="#size" color="green">
+                      Normal green link
                     </Link>
-                    <Link href="#color" color="red" underline={false}>
-                      Red link
+                    <Link href="#size" color="red">
+                      <Text size="lg">Large red link</Text>
                     </Link>
-                    <Link href="#color" color="purple" underline={false}>
-                      Purple link
-                    </Link>
-                    <Link href="#color" color="orange" underline={false}>
-                      Orange link
-                    </Link>
-                    <Link href="#color" color="gray" underline={false}>
-                      Gray link
+                    <Link href="#size" color="purple">
+                      <Text size="xl">Extra large purple</Text>
                     </Link>
                   </Box>
                 </div>
 
                 <div>
-                  <h3>Mixed Styles</h3>
+                  <h3>Styling Variations</h3>
                   <Box layoutColumn contentSpacing="sm">
-                    <Link href="#color" color="blue">
-                      <Text bold>Bold blue link</Text>
+                    <Link href="#style" color="blue" underline={false}>
+                      Blue without underline
                     </Link>
-                    <Link href="#color" color="green" underline={false}>
-                      <Text italic>Italic green link</Text>
+                    <Link href="#style" color="green">
+                      <Text bold>Bold green link</Text>
                     </Link>
-                    <Link href="#color" color="red">
+                    <Link href="#style" color="red" underline={false}>
+                      <Text italic>Italic red link</Text>
+                    </Link>
+                    <Link href="#style" color="purple">
                       <Text bold italic>
-                        Bold italic red
+                        Bold italic purple
                       </Text>
                     </Link>
-                    <Link href="#color" color="purple" underline={false}>
-                      <Text underline>Purple with underline</Text>
-                    </Link>
-                  </Box>
-                </div>
-              </Box>
-            </Box>
-
-            {/* Links with Icons */}
-            <Box as="section" marginBottom="xl">
-              <Title as="h2">Links with Icons</Title>
-              <p>
-                Links enhanced with icons for better visual communication and
-                user experience.
-              </p>
-
-              <Box layoutRow contentSpacing="lg">
-                <div>
-                  <h3>Icon + Text Links</h3>
-                  <Box layoutColumn contentSpacing="sm">
-                    <Link href="#home" color="blue">
-                      <Icon>
-                        <HomeSvg />
-                      </Icon>
-                      Go to Homepage
-                    </Link>
-
-                    <Link href="#profile" color="green" underline={false}>
-                      <Icon>
-                        <UserSvg />
-                      </Icon>
-                      <Text underline>View Profile</Text>
-                    </Link>
-
-                    <Link href="#search" color="purple">
-                      <Icon>
-                        <SearchSvg />
-                      </Icon>
-                      Search Documentation
-                    </Link>
-
-                    <Link href="#settings" color="gray">
-                      <Icon>
-                        <SettingsSvg />
-                      </Icon>
-                      Open Settings
-                    </Link>
-
-                    <Link href="#favorites" color="red">
-                      <Icon>
-                        <HeartSvg />
-                      </Icon>
-                      My Favorites
-                    </Link>
-                  </Box>
-                </div>
-
-                <div>
-                  <h3>External Links with Icons</h3>
-                  <Box layoutColumn contentSpacing="sm">
-                    <Link
-                      href="https://github.com"
-                      target="_blank"
-                      color="blue"
-                    >
-                      <Icon>
-                        <GithubSvg />
-                      </Icon>
-                      GitHub Repository
-                    </Link>
-
-                    <Link
-                      href="https://docs.example.com"
-                      target="_blank"
-                      color="green"
-                      anchorIcon={false}
-                    >
-                      <Icon>
-                        <BookSvg />
-                      </Icon>
-                      Documentation
-                      <Icon>
-                        <ExternalLinkSvg />
-                      </Icon>
-                    </Link>
-
-                    <Link
-                      href="https://npmjs.com"
-                      target="_blank"
-                      color="red"
-                      underline={false}
-                    >
-                      <Icon>
-                        <PackageSvg />
-                      </Icon>
-                      <Text underline>NPM Package</Text>
-                    </Link>
-
-                    <Link href="mailto:contact@example.com" color="purple">
-                      <Icon>
-                        <EmailSvg />
-                      </Icon>
-                      Send Email
-                    </Link>
-                  </Box>
-                </div>
-
-                <div>
-                  <h3>Icon-Only Links</h3>
-                  <Box layoutColumn contentSpacing="sm">
-                    <Link href="#home" color="blue" title="Go to Homepage">
-                      <Icon>
-                        <HomeSvg />
-                      </Icon>
-                    </Link>
-
-                    <Link href="#profile" color="green" title="View Profile">
-                      <Icon>
-                        <UserSvg />
-                      </Icon>
-                    </Link>
-
-                    <Link href="#search" color="purple" title="Search">
-                      <Icon>
-                        <SearchSvg />
-                      </Icon>
-                    </Link>
-
-                    <Link href="#settings" color="gray" title="Settings">
-                      <Icon>
-                        <SettingsSvg />
-                      </Icon>
-                    </Link>
-
-                    <Link
-                      href="https://github.com"
-                      target="_blank"
-                      color="blue"
-                      title="GitHub"
-                    >
-                      <Icon>
-                        <GithubSvg />
-                      </Icon>
+                    <Link href="#style" color="orange" underline={false}>
+                      <Text underline>Orange with manual underline</Text>
                     </Link>
                   </Box>
                 </div>
@@ -286,28 +203,7 @@
                       <Text>Hover shows underline</Text>
                     </Link>
                     <Link href="#hover" color="red">
-                      <Icon>
-                        <StarSvg />
-                      </Icon>
-                      Icon + text hover
-                    </Link>
-                  </Box>
-                </div>
-
-                <div>
-                  <h3>Different Sizes</h3>
-                  <Box layoutColumn contentSpacing="sm">
-                    <Link href="#size" color="blue">
-                      <Text size="sm">Small link</Text>
-                    </Link>
-                    <Link href="#size" color="green">
-                      Normal link
-                    </Link>
-                    <Link href="#size" color="red">
-                      <Text size="lg">Large link</Text>
-                    </Link>
-                    <Link href="#size" color="purple">
-                      <Text size="xl">Extra large link</Text>
+                      Hover with red color
                     </Link>
                   </Box>
                 </div>
@@ -322,16 +218,13 @@
                       Fragment link
                     </Link>
                     <Link href="tel:+1234567890" color="green">
-                      <Icon>
-                        <PhoneSvg />
-                      </Icon>
                       Phone link
                     </Link>
                     <Link href="sms:+1234567890" color="blue">
-                      <Icon>
-                        <MessageSvg />
-                      </Icon>
                       SMS link
+                    </Link>
+                    <Link href="mailto:test@example.com" color="purple">
+                      Email link
                     </Link>
                   </Box>
                 </div>
@@ -340,194 +233,6 @@
           </div>
         );
       };
-
-      // SVG Icons
-      const HomeSvg = () => (
-        <svg
-          viewBox="0 0 24 24"
-          width="100%"
-          height="100%"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path d="M9 22v-7h6v7h6v-10h3L12 1 0 12h3v10z" fill="currentColor" />
-        </svg>
-      );
-
-      const UserSvg = () => (
-        <svg
-          viewBox="0 0 24 24"
-          width="100%"
-          height="100%"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12 12c2.8 0 5-2.2 5-5s-2.2-5-5-5-5 2.2-5 5 2.2 5 5 5zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"
-            fill="currentColor"
-          />
-        </svg>
-      );
-
-      const SettingsSvg = () => (
-        <svg
-          viewBox="0 0 24 24"
-          width="100%"
-          height="100%"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M19.4,13c0.1-0.3,0.1-0.7,0.1-1s0-0.7-0.1-1l2.1-1.6c0.2-0.1,0.2-0.4,0.1-0.6l-2-3.5c-0.1-0.2-0.4-0.3-0.6-0.2l-2.5,1c-0.5-0.4-1.1-0.7-1.7-1l-0.4-2.6c0-0.2-0.2-0.4-0.5-0.4h-4c-0.2,0-0.4,0.1-0.5,0.4L9.4,5.1C8.8,5.4,8.2,5.7,7.7,6.1l-2.5-1c-0.2-0.1-0.5,0-0.6,0.2l-2,3.5C2.5,9,2.6,9.3,2.8,9.4L4.9,11c-0.1,0.3-0.1,0.7-0.1,1s0,0.7,0.1,1l-2.1,1.6c-0.2,0.1-0.2,0.4-0.1,0.6l2,3.5c0.1,0.2,0.4,0.3,0.6,0.2l2.5-1c0.5,0.4,1.1,0.7,1.7,1l0.4,2.6c0,0.2,0.2,0.4,0.5,0.4h4c0.2,0,0.4-0.1,0.5-0.4l0.4-2.6c0.6-0.3,1.2-0.6,1.7-1l2.5,1c0.2,0.1,0.5,0,0.6-0.2l2-3.5c0.1-0.2,0-0.5-0.1-0.6L19.4,13z M12,15.5c-1.9,0-3.5-1.6-3.5-3.5s1.6-3.5,3.5-3.5s3.5,1.6,3.5,3.5S13.9,15.5,12,15.5z"
-            fill="currentColor"
-          />
-        </svg>
-      );
-
-      const SearchSvg = () => (
-        <svg
-          viewBox="0 0 24 24"
-          width="100%"
-          height="100%"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M15.5 14h-.8l-.3-.3c1.4-1.6 2.3-3.7 2.3-6C16.7 3.6 13.1 0 8.7 0S0.7 3.6 0.7 7.7s3.6 7.7 8 7.7c2.3 0 4.4-.9 6-2.3l.3.3v.8L21 20.2 22.2 19l-6.7-5zm-6.8 0C5.6 14 2.7 11.1 2.7 7.7S5.6 1.4 8.7 1.4s6 2.9 6 6.3-2.7 6.3-6 6.3z"
-            fill="currentColor"
-          />
-        </svg>
-      );
-
-      const StarSvg = () => (
-        <svg
-          viewBox="0 0 24 24"
-          width="100%"
-          height="100%"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12 0l3.8 7.7L24 9l-6 5.9 1.4 8.4L12 18.8l-7.4 4.5L6 14.9 0 9l8.2-1.3L12 0z"
-            fill="currentColor"
-          />
-        </svg>
-      );
-
-      const HeartSvg = () => (
-        <svg
-          viewBox="0 0 24 24"
-          width="100%"
-          height="100%"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M22 6.7a7 7 0 0 0-9.9 0L12 6.8l-.1-.1a7 7 0 0 0-9.9 9.9l.1.1L12 24l9.9-7.3.1-.1a7 7 0 0 0 0-9.9z"
-            fill="currentColor"
-          />
-        </svg>
-      );
-
-      const GithubSvg = () => (
-        <svg
-          viewBox="0 0 24 24"
-          width="100%"
-          height="100%"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.5-1.4-1.3-1.8-1.3-1.8-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.7-.3-5.4-1.3-5.4-6 0-1.3.5-2.4 1.2-3.2 0-.4-.5-1.7.1-3.5 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C15.3 2.8 16.3 3.1 16.3 3.1c.6 1.8.2 3.1.1 3.5.8.8 1.2 1.9 1.2 3.2 0 4.8-2.7 5.7-5.5 6 .4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3"
-            fill="currentColor"
-          />
-        </svg>
-      );
-
-      const BookSvg = () => (
-        <svg
-          viewBox="0 0 24 24"
-          width="100%"
-          height="100%"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.05C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zm0 13.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z"
-            fill="currentColor"
-          />
-        </svg>
-      );
-
-      const ExternalLinkSvg = () => (
-        <svg
-          viewBox="0 0 24 24"
-          width="100%"
-          height="100%"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M10.0002 5H8.2002C7.08009 5 6.51962 5 6.0918 5.21799C5.71547 5.40973 5.40973 5.71547 5.21799 6.0918C5 6.51962 5 7.08009 5 8.2002V15.8002C5 16.9203 5 17.4801 5.21799 17.9079C5.40973 18.2842 5.71547 18.5905 6.0918 18.7822C6.5192 19 7.07899 19 8.19691 19H15.8031C16.921 19 17.48 19 17.9074 18.7822C18.2837 18.5905 18.5905 18.2839 18.7822 17.9076C19 17.4802 19 16.921 19 15.8031V14M20 9V4M20 4H15M20 4L13 11"
-            stroke="currentColor"
-            fill="none"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      );
-
-      const PackageSvg = () => (
-        <svg
-          viewBox="0 0 24 24"
-          width="100%"
-          height="100%"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M12.89 3.17L22 8.78v6.44L12.89 20.83 3.78 15.22V8.78L12.89 3.17zM12.89 1L1 7.5V16.5L12.89 23 24.78 16.5V7.5L12.89 1z"
-            fill="currentColor"
-          />
-          <path
-            d="M12.89 23V14.17L22 8.78v6.44L12.89 20.83z"
-            fill="currentColor"
-          />
-        </svg>
-      );
-
-      const EmailSvg = () => (
-        <svg
-          viewBox="0 0 24 24"
-          width="100%"
-          height="100%"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"
-            fill="currentColor"
-          />
-        </svg>
-      );
-
-      const PhoneSvg = () => (
-        <svg
-          viewBox="0 0 24 24"
-          width="100%"
-          height="100%"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"
-            fill="currentColor"
-          />
-        </svg>
-      );
-
-      const MessageSvg = () => (
-        <svg
-          viewBox="0 0 24 24"
-          width="100%"
-          height="100%"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM18 14H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"
-            fill="currentColor"
-          />
-        </svg>
-      );
 
       render(<Demo />, document.getElementById("app"));
     </script>

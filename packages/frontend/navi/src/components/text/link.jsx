@@ -32,7 +32,7 @@ import.meta.css = /* css */ `
     position: relative;
     border-radius: 2px;
 
-    --x-color: var(--color, inherit);
+    --x-color: var(--color, rgb(0, 0, 238));
     --x-color-visited: var(--color-visited, light-dark(#6a1b9a, #ab47bc));
     --x-color-active: var(--color-active, red);
     --x-cursor: var(--cursor, pointer);
