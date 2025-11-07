@@ -141,7 +141,7 @@ const LinkPlain = (props) => {
     href,
     target,
     rel,
-    ref = useRef(),
+    preventDefault,
 
     // visual
     box,
@@ -149,6 +149,8 @@ const LinkPlain = (props) => {
     anchorIcon,
     icon,
     contentSpacing = " ",
+
+    ref = useRef(),
     children,
 
     ...rest
@@ -233,6 +235,9 @@ const LinkPlain = (props) => {
         ":-navi-current-link": targetIsCurrent,
       }}
       onClick={(e) => {
+        if (preventDefault) {
+          e.preventDefault();
+        }
         closeValidationMessage(e.target, "click");
         if (readOnly) {
           e.preventDefault();

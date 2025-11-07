@@ -121,6 +121,9 @@ export const setupBrowserIntegrationViaHistory = ({
         // Ignore clicks with meta key (e.g. open in new tab)
         return;
       }
+      if (e.defaultPrevented) {
+        return;
+      }
       const linkElement = e.target.closest("a");
       if (!linkElement) {
         return;
