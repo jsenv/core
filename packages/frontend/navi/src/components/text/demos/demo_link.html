@@ -29,23 +29,31 @@
               <div style="display: flex; flex-direction: column; gap: 12px;">
                 <Link href="#default">Default link</Link>
 
-                <Link href="#active" pseudoState={{ ":active": true }}>
+                <Link
+                  href="./active"
+                  pseudoState={{ ":active": true }}
+                  preventDefault
+                >
                   Active link
                 </Link>
 
-                <Link href="#visited" pseudoState={{ ":visited": true }}>
+                <Link
+                  href="./visited"
+                  pseudoState={{ ":visited": true }}
+                  preventDefault
+                >
                   Visited link
                 </Link>
 
-                <Link href="#readonly" readOnly>
+                <Link href="./readonly" readOnly preventDefault>
                   Read-only link
                 </Link>
 
-                <Link href="#disabled" disabled>
+                <Link href="./disabled" disabled preventDefault>
                   Disabled link
                 </Link>
 
-                <Link href="#loading" loading readOnly>
+                <Link href="./loading" loading readOnly preventDefault>
                   Loading link
                 </Link>
               </div>

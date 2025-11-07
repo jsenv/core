@@ -260,7 +260,7 @@ const LinkPlain = (props) => {
         color="light-dark(#355fcc, #3b82f6)"
       />
       {applyContentSpacingOnTextChildren(children, contentSpacing)}
-      {innerIcon && <Icon>{innerIcon}</Icon>}
+      {innerIcon && <Icon marginLeft="xxs">{innerIcon}</Icon>}
     </Box>
   );
 };
