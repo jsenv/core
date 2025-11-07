@@ -43,88 +43,112 @@ import {
 import.meta.css = /* css */ `
   @layer navi {
     .navi_input {
+      --border-radius: 2px;
       --border-width: 1px;
       --outline-width: 1px;
       --outer-width: calc(var(--border-width) + var(--outline-width));
       --padding-x: 6px;
       --padding-y: 1px;
 
+      /* Default */
       --outline-color: light-dark(#4476ff, #3b82f6);
-
-      --border-radius: 2px;
       --border-color: light-dark(#767676, #8e8e93);
-      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
-      --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
-      --border-color-readonly: color-mix(
-        in srgb,
-        var(--border-color) 45%,
-        transparent
-      );
-      --border-color-disabled: var(--border-color-readonly);
-
       --background-color: white;
+      --color: currentColor;
+      --color-dimmed: color-mix(in srgb, currentColor 60%, transparent);
+      --placeholer-color: var(--color-dimmed);
+      /* Hover */
+      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
       --background-color-hover: color-mix(
         in srgb,
         var(--background-color) 95%,
         black
       );
+      --color-hover: var(--color);
+      /* Active */
+      --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
+      /* Readonly */
+      --border-color-readonly: color-mix(
+        in srgb,
+        var(--border-color) 45%,
+        transparent
+      );
       --background-color-readonly: var(--background-color);
+      --color-readonly: var(--color-dimmed);
+      /* Disabled */
+      --border-color-disabled: var(--border-color-readonly);
       --background-color-disabled: color-mix(
         in srgb,
         var(--background-color) 60%,
         transparent
       );
-
-      --color: currentColor;
-      --color-dimmed: color-mix(in srgb, currentColor 60%, transparent);
-      --color-readonly: var(--color-dimmed);
       --color-disabled: var(--color-readonly);
 
-      width: 100%;
-      color: var(--color);
+      --x-outline-width: var(--outline-width);
+      --x-border-radius: var(--border-radius);
+      --x-border-width: var(--border-width);
+      --x-outer-width: calc(var(--x-border-width) + var(--x-outline-width));
 
-      background-color: var(--background-color);
-      border-width: var(--outer-width);
-      border-width: var(--outer-width);
+      --x-outline-color: var(--outline-color);
+      --x-border-color: var(--border-color);
+      --x-background-color: var(--background-color);
+      --x-color: var(--color);
+      --x-border-color-hover: var(--border-color-hover);
+      --x-background-color-hover: var(--background-color-hover);
+      --x-color-hover: var(--color-hover);
+      --x-border-color-active: var(--border-color-active);
+      --x-border-color-readonly: var(--border-color-readonly);
+      --x-background-color-readonly: var(--background-color-readonly);
+      --x-color-readonly: var(--color-readonly);
+      --x-border-color-disabled: var(--border-color-disabled);
+      --x-background-color-disabled: var(--background-color-disabled);
+      --x-color-disabled: var(--color-disabled);
+
+      width: 100%;
+      color: var(--x-color);
+
+      background-color: var(--x-background-color);
+      border-width: var(--x-outer-width);
+      border-width: var(--x-outer-width);
       border-style: solid;
       border-color: transparent;
-      border-radius: var(--border-radius);
-      outline-width: var(--border-width);
+      border-radius: var(--x-border-radius);
+      outline-width: var(--x-border-width);
       outline-style: solid;
-      outline-color: var(--border-color);
-      outline-offset: calc(-1 * (var(--border-width)));
+      outline-color: var(--x-border-color);
+      outline-offset: calc(-1 * (var(--x-border-width)));
     }
     .navi_input::placeholder {
-      color: var(--color-dimmed);
+      color: var(--placeholer-color);
     }
     .navi_input:-internal-autofill-selected {
       /* Webkit is putting some nasty styles after automplete that look as follow */
       /* input:-internal-autofill-selected { color: FieldText !important; } */
       /* Fortunately we can override it as follow */
-      -webkit-text-fill-color: var(--color) !important;
+      -webkit-text-fill-color: var(--x-color) !important;
     }
     /* Focus */
     .navi_input[data-focus] {
-      border-color: var(--outline-color);
-      outline-width: var(--outer-width);
-      outline-color: var(--outline-color);
-      outline-offset: calc(-1 * var(--outer-width));
+      outline-width: var(--x-outer-width);
+      outline-offset: calc(-1 * var(--x-outer-width));
+      --x-border-color: var(--x-outline-color);
     }
     /* Readonly */
     .navi_input[data-readonly] {
-      --color: var(--color-readonly);
-      background-color: var(--background-color-readonly);
-      outline-color: var(--border-color-readonly);
+      --x-outline-color: var(--x-border-color-readonly);
+      --x-border-color: var(--x-border-color-readonly);
+      --x-background-color: var(--x-background-color-readonly);
+      --x-color: var(--x-color-readonly);
     }
     /* Disabled */
     .navi_input[data-disabled] {
-      --color: var(--color-disabled);
-      background-color: var(--background-color-disabled);
-      outline-color: var(--border-color-disabled);
+      --x-border-color: var(--x-border-color-disabled);
+      --x-background-color: var(--x-background-color-disabled);
+      --x-color: var(--x-color-disabled);
     }
     /* Callout (info, warning, error) */
     .navi_input[data-callout] {
-      border-color: var(--callout-color);
+      --x-border-color: var(--callout-color);
     }
   }
 `;
@@ -145,7 +169,32 @@ export const InputTextual = (props) => {
   );
 };
 
-const InputManagedByCSSVars = {};
+const InputManagedByCSSVars = {
+  "outlineWidth": "--outline-width",
+  "borderWidth": "--border-width",
+  "borderRadius": "--border-radius",
+  "backgroundColor": "--background-color",
+  "borderColor": "--border-color",
+  "color": "--color",
+  ":hover": {
+    backgroundColor: "--background-color-hover",
+    borderColor: "--border-color-hover",
+    color: "--color-hover",
+  },
+  ":active": {
+    borderColor: "--border-color-active",
+  },
+  ":read-only": {
+    backgroundColor: "--background-color-readonly",
+    borderColor: "--border-color-readonly",
+    color: "--color-readonly",
+  },
+  ":disabled": {
+    backgroundColor: "--background-color-disabled",
+    borderColor: "--border-color-disabled",
+    color: "--color-disabled",
+  },
+};
 const InputPseudoClasses = [
   ":hover",
   ":active",

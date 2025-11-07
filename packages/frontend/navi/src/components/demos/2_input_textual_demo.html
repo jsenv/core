@@ -162,25 +162,25 @@
               <fieldset>
                 <legend>:readonly</legend>
                 <Layout row contentSpacing="sm" contentAlignX="start">
-                  <Input value="Read-only content" />
-                  <input readOnly value="Read-only content" />
+                  <Input placeholder="Enter text..." />
+                  <input readOnly placeholder="Enter text..." />
                 </Layout>
               </fieldset>
               <fieldset>
                 <legend>:disabled</legend>
                 <Layout row contentSpacing="sm" contentAlignX="start">
-                  <Input disabled placeholder="Disabled input" />
-                  <input disabled placeholder="Disabled input" />
+                  <Input disabled placeholder="Enter text..." />
+                  <input disabled placeholder="Enter text..." />
                 </Layout>
               </fieldset>
               <fieldset>
                 <legend style="white-space: nowrap">:focus-visible</legend>
                 <Layout row contentSpacing="sm" contentAlignX="start">
                   <Input
-                    placeholder="Focus me"
+                    placeholder="Enter text..."
                     pseudoState={{ ":focus-visible": true }}
                   />
-                  <input placeholder="Focus me" autoFocus />
+                  <input placeholder="Enter text..." autoFocus />
                 </Layout>
               </fieldset>
             </Layout>
