@@ -129,7 +129,8 @@ import.meta.css = /* css */ `
       -webkit-text-fill-color: var(--x-color) !important;
     }
     /* Focus */
-    .navi_input[data-focus] {
+    .navi_input[data-focus],
+    .navi_input[data-focus-visible] {
       outline-width: var(--x-outer-width);
       outline-offset: calc(-1 * var(--x-outer-width));
       --x-border-color: var(--x-outline-color);
