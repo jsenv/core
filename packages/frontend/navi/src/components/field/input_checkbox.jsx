@@ -245,7 +245,6 @@ const InputCheckboxBasic = (props) => {
   } = props;
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
-
   const innerName = name || contextFieldName;
   const innerDisabled = disabled || contextDisabled;
   const innerRequired = required || contextRequired;

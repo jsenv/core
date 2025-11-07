@@ -154,7 +154,6 @@
         return (
           <div>
             <BasicStatesDemo />
-            <TypeVariationsDemo />
             <InteractiveDemo />
           </div>
         );
@@ -178,50 +177,11 @@
                   <Layout row contentSpacing="sm" contentAlignX="start">
                     <Label>
                       <Input type="checkbox" />
-                      Navi Checkbox
+                      Navi
                     </Label>
                     <label>
                       <input type="checkbox" />
-                      Native Checkbox
-                    </label>
-                  </Layout>
-                </fieldset>
-                <fieldset>
-                  <legend>Checked</legend>
-                  <Layout row contentSpacing="sm" contentAlignX="start">
-                    <Label>
-                      <Input type="checkbox" checked />
-                      Navi Checkbox
-                    </Label>
-                    <label>
-                      <input type="checkbox" checked />
-                      Native Checkbox
-                    </label>
-                  </Layout>
-                </fieldset>
-                <fieldset>
-                  <legend>:disabled</legend>
-                  <Layout row contentSpacing="sm" contentAlignX="start">
-                    <Label>
-                      <Input type="checkbox" disabled />
-                      Navi Checkbox
-                    </Label>
-                    <label>
-                      <input type="checkbox" disabled />
-                      Native Checkbox
-                    </label>
-                  </Layout>
-                </fieldset>
-                <fieldset>
-                  <legend>:disabled + checked</legend>
-                  <Layout row contentSpacing="sm" contentAlignX="start">
-                    <Label>
-                      <Input type="checkbox" disabled checked />
-                      Navi Checkbox
-                    </Label>
-                    <label>
-                      <input type="checkbox" disabled checked />
-                      Native Checkbox
+                      Native
                     </label>
                   </Layout>
                 </fieldset>
@@ -233,11 +193,51 @@
                         type="checkbox"
                         pseudoState={{ ":focus-visible": true }}
                       />
-                      Navi Checkbox
+                      Navi
                     </Label>
                     <label>
-                      <input type="checkbox" autoFocus />
-                      Native Checkbox
+                      <input type="checkbox" autofocus />
+                      Native
+                    </label>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>:checked</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input type="checkbox" defaultChecked />
+                      Navi
+                    </Label>
+                    <label>
+                      <input type="checkbox" checked />
+                      Native
+                    </label>
+                  </Layout>
+                </fieldset>
+
+                <fieldset>
+                  <legend>:disabled</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input type="checkbox" disabled />
+                      Navi
+                    </Label>
+                    <label>
+                      <input type="checkbox" disabled />
+                      Native
+                    </label>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>:disabled + checked</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input type="checkbox" disabled defaultChecked />
+                      Navi
+                    </Label>
+                    <label>
+                      <input type="checkbox" disabled checked />
+                      Native
                     </label>
                   </Layout>
                 </fieldset>
@@ -291,103 +291,6 @@
                     checkbox to remain interactive
                   </li>
                 </ul>
-              </div>
-            </div>
-          </div>
-        );
-      };
-
-      const TypeVariationsDemo = () => {
-        const [fruits, setFruits] = useState({
-          apple: true,
-          banana: false,
-          orange: true,
-          grape: false,
-        });
-
-        const handleFruitChange = (fruit) => {
-          setFruits((prev) => ({
-            ...prev,
-            [fruit]: !prev[fruit],
-          }));
-        };
-
-        return (
-          <div className="demo-section">
-            <h2>Interactive Examples</h2>
-
-            <div className="variation-grid">
-              <div className="variation-item">
-                <p className="variation-label">Fruit Selection</p>
-                <Layout column contentSpacing="xs">
-                  {Object.entries(fruits).map(([fruit, checked]) => (
-                    <Label key={fruit}>
-                      <Input
-                        type="checkbox"
-                        checked={checked}
-                        onUIStateChange={() => handleFruitChange(fruit)}
-                      />
-                      {fruit.charAt(0).toUpperCase() + fruit.slice(1)}
-                    </Label>
-                  ))}
-                </Layout>
-              </div>
-
-              <div className="variation-item">
-                <p className="variation-label">Settings Panel</p>
-                <Layout column contentSpacing="xs">
-                  <Label>
-                    <Input type="checkbox" checked />
-                    Enable notifications
-                  </Label>
-                  <Label>
-                    <Input type="checkbox" />
-                    Auto-save changes
-                  </Label>
-                  <Label>
-                    <Input type="checkbox" checked />
-                    Show advanced options
-                  </Label>
-                  <Label>
-                    <Input type="checkbox" disabled />
-                    Premium feature (disabled)
-                  </Label>
-                </Layout>
-              </div>
-
-              <div className="variation-item">
-                <p className="variation-label">Terms & Conditions</p>
-                <Layout column contentSpacing="xs">
-                  <Label>
-                    <Input type="checkbox" />I agree to the Terms of Service
-                  </Label>
-                  <Label>
-                    <Input type="checkbox" />
-                    Subscribe to newsletter
-                  </Label>
-                  <Label>
-                    <Input type="checkbox" checked />
-                    Remember my preferences
-                  </Label>
-                </Layout>
-              </div>
-
-              <div className="variation-item">
-                <p className="variation-label">Loading States</p>
-                <Layout column contentSpacing="xs">
-                  <Label>
-                    <Input type="checkbox" loading />
-                    Syncing settings...
-                  </Label>
-                  <Label>
-                    <Input type="checkbox" loading checked />
-                    Saving preferences...
-                  </Label>
-                  <Label>
-                    <Input type="checkbox" />
-                    Ready to sync
-                  </Label>
-                </Layout>
               </div>
             </div>
           </div>
