@@ -7,172 +7,119 @@
     <title>Input Textual Demo</title>
     <style>
       body {
-        max-width: 1400px;
+        max-width: 1000px;
         margin: 0 auto;
         padding: 20px;
         font-family:
           -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        background-color: #f8f9fa;
+        background: #f5f5f5;
       }
 
       h1 {
         margin-bottom: 30px;
         color: #333;
+        font-size: 2rem;
         text-align: center;
       }
 
-      .demo-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-        gap: 20px;
-      }
-
-      .demo-card {
+      .demo-section {
+        margin-bottom: 40px;
         padding: 20px;
         background: white;
-        border: 1px solid #e1e8ed;
         border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
 
-      .demo-card.loading-demo {
-        background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+      .demo-section h2 {
+        margin: 0 0 20px 0;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.4rem;
+        border-bottom: 2px solid #ddd;
       }
 
-      .demo-card.readonly-demo {
-        background: linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%);
-      }
-
-      .demo-card.disabled-demo {
-        background: linear-gradient(135deg, #f1f8e9 0%, #e8f5e8 100%);
-      }
-
-      .demo-title {
-        margin-top: 0;
-        margin-bottom: 15px;
-        padding-bottom: 8px;
-        color: #2c3e50;
-        font-weight: 600;
-        font-size: 18px;
-        border-bottom: 2px solid #3498db;
-      }
-
-      .native-comparison {
-        display: grid;
+      fieldset {
         margin: 15px 0;
-        grid-template-columns: 1fr 1fr;
-        gap: 15px;
-      }
-
-      .native-demo {
         padding: 15px;
-        background: #f8f9fa;
-        border: 1px solid #dee2e6;
+        border: 1px solid #ddd;
         border-radius: 6px;
       }
 
-      .native-demo h4 {
-        margin-top: 0;
-        margin-bottom: 10px;
-        color: #495057;
-        font-weight: 500;
-        font-size: 14px;
-      }
-
-      .control-group {
-        margin-bottom: 15px;
-      }
-
-      label {
-        display: block;
-        margin-bottom: 5px;
+      legend {
+        padding: 0 10px;
         color: #555;
         font-weight: 500;
       }
 
-      .result-display {
-        min-height: 20px;
-        margin-top: 15px;
-        padding: 12px;
+      .input-group {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .comparison-section {
+        margin-top: 20px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-left: 4px solid #007bff;
+        border-radius: 4px;
+      }
+
+      .comparison-title {
+        margin: 0 0 15px 0;
         color: #495057;
-        font-size: 13px;
-        font-family:
-          "SF Mono", "Monaco", "Inconsolata", "Fira Code", "Fira Mono",
-          "Droid Sans Mono", "Courier New", monospace;
-        white-space: pre-wrap;
+        font-weight: 500;
+        font-size: 0.9rem;
+      }
+
+      .comparison-group {
+        display: flex;
+        margin: 10px 0;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .comparison-label {
+        min-width: 80px;
+        color: #666;
+        font-size: 0.85rem;
+      }
+
+      .variation-grid {
+        display: grid;
+        margin: 15px 0;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+      }
+
+      .variation-item {
+        padding: 15px;
+        text-align: center;
+        background: #f8f9fa;
+        border-radius: 6px;
+      }
+
+      .variation-label {
+        margin: 0 0 10px 0;
+        color: #666;
+        font-size: 0.85rem;
+      }
+
+      .value-display {
+        min-height: 20px;
+        margin-top: 10px;
+        padding: 8px;
+        font-size: 0.8rem;
+        font-family: monospace;
         background: #f8f9fa;
         border: 1px solid #dee2e6;
         border-radius: 4px;
       }
 
-      .result-success {
-        color: #155724;
-        background: #d4edda;
-        border-color: #c3e6cb;
-      }
-
-      .result-error {
-        color: #721c24;
-        background: #f8d7da;
-        border-color: #f5c6cb;
-      }
-
-      .result-loading {
-        color: #0c5460;
-        background: #d1ecf1;
-        border-color: #bee5eb;
-        animation: pulse 1.5s ease-in-out infinite;
-      }
-
-      @keyframes pulse {
-        0%,
-        100% {
-          opacity: 1;
-        }
-        50% {
-          opacity: 0.7;
-        }
-      }
-
-      .button-group {
-        display: flex;
-        margin-top: 12px;
-        flex-wrap: wrap;
-        gap: 8px;
-      }
-
-      button {
-        box-sizing: border-box;
-        padding: 6px 12px;
-        color: white;
-        font-size: 14px;
-        background: #3498db;
-        border: 1px solid #3498db;
-        border-radius: 4px;
-        transition: all 0.2s ease;
-        cursor: pointer;
-      }
-
-      button:hover {
-        background: #2980b9;
-        border-color: #2980b9;
-      }
-
-      button:disabled {
-        background: #95a5a6;
-        border-color: #95a5a6;
-        cursor: not-allowed;
-      }
-
-      @media (max-width: 768px) {
-        .demo-grid {
-          grid-template-columns: 1fr;
-        }
-
-        .native-comparison {
-          grid-template-columns: 1fr;
-          gap: 10px;
-        }
+      .value-display:empty::before {
+        color: #999;
+        font-style: italic;
+        content: "(empty)";
       }
     </style>
   </head>
@@ -183,100 +130,342 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      // eslint-disable-next-line no-unused-vars
-      import { Input } from "@jsenv/navi";
+      /* eslint-disable no-unused-vars */
+      import { Input, Layout } from "@jsenv/navi";
 
-      // eslint-disable-next-line no-unused-vars
       const App = () => {
         return (
-          <div className="demo-grid">
-            <LoadingDemo />
-            <ReadOnlyDemo />
-            <DisabledDemo />
+          <div>
+            <BasicStatesDemo />
+            <LoadingStateDemo />
+            <TypeVariationsDemo />
+            <SizeVariationsDemo />
+            <ValueHandlingDemo />
+            <InteractiveDemo />
           </div>
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
-      const LoadingDemo = () => {
-        const [value, setValue] = useState();
+      const BasicStatesDemo = () => {
+        return (
+          <div className="demo-section">
+            <h2>Basic Input States</h2>
+
+            <Layout column contentSpacing="sm">
+              <fieldset>
+                <legend>Default</legend>
+                <Layout row contentSpacing="sm" contentAlignX="start">
+                  <Input placeholder="Enter text..." />
+                  <input placeholder="Enter text..." />
+                </Layout>
+              </fieldset>
+              <fieldset>
+                <legend>:readonly</legend>
+                <Layout row contentSpacing="sm" contentAlignX="start">
+                  <Input value="Read-only content" />
+                  <input readOnly value="Read-only content" />
+                </Layout>
+              </fieldset>
+              <fieldset>
+                <legend>:disabled</legend>
+                <Layout row contentSpacing="sm" contentAlignX="start">
+                  <Input disabled placeholder="Disabled input" />
+                  <input disabled placeholder="Disabled input" />
+                </Layout>
+              </fieldset>
+              <fieldset>
+                <legend style="white-space: nowrap">:focus-visible</legend>
+                <Layout row contentSpacing="sm" contentAlignX="start">
+                  <Input
+                    placeholder="Focus me"
+                    pseudoState={{ ":focus-visible": true }}
+                  />
+                  <input placeholder="Focus me" autoFocus />
+                </Layout>
+              </fieldset>
+            </Layout>
+
+            <small
+              style={{
+                color: "#666",
+                fontSize: "0.85rem",
+                marginTop: "10px",
+                display: "block",
+              }}
+            >
+              Note: Our Input component becomes read-only when no
+              onUIStateChange handler is provided
+            </small>
+          </div>
+        );
+      };
+
+      const LoadingStateDemo = () => {
         const [loading, setLoading] = useState(false);
+        const [value, setValue] = useState("Sample text");
 
         return (
-          <div className="demo-card loading-demo">
-            <h3 className="demo-title">💫 Loading State</h3>
-            <div className="control-group">
-              <h4>@jsenv/navi Input</h4>
-              <Input
-                loading={loading}
-                value={value}
-                name="email"
-                onUIStateChange={setValue}
-                placeholder="Enter some text..."
-              />
-            </div>
-            <div className="control-group">
-              <h4>Native HTML Input</h4>
-              <input placeholder="Enter some text..." />
-            </div>
-            <div className="button-group">
-              <button onClick={() => setLoading(!loading)}>
-                {loading ? "Stop Loading" : "Start Loading"}
-              </button>
+          <div className="demo-section">
+            <h2>Loading State</h2>
+
+            <fieldset>
+              <legend>Loading Examples</legend>
+              <Layout column contentSpacing="sm">
+                <Layout row contentSpacing="sm" contentAlignX="start">
+                  <Input
+                    loading={loading}
+                    value={value}
+                    onUIStateChange={setValue}
+                    placeholder="Type while loading..."
+                  />
+                  <button
+                    onClick={() => setLoading(!loading)}
+                    style={{
+                      padding: "8px 16px",
+                      background: "#007bff",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {loading ? "Stop Loading" : "Start Loading"}
+                  </button>
+                </Layout>
+                <div className="value-display">Current value: "{value}"</div>
+              </Layout>
+            </fieldset>
+
+            <p style={{ color: "#666", fontSize: "0.9rem", margin: "10px 0" }}>
+              The loading state shows a spinner while allowing continued
+              interaction. The input remains functional during loading states.
+            </p>
+          </div>
+        );
+      };
+
+      const TypeVariationsDemo = () => {
+        const [emailValue, setEmailValue] = useState("user@example.com");
+        const [passwordValue, setPasswordValue] = useState("secret123");
+        const [urlValue, setUrlValue] = useState("https://example.com");
+        const [numberValue, setNumberValue] = useState("42");
+
+        return (
+          <div className="demo-section">
+            <h2>Input Types</h2>
+
+            <div className="variation-grid">
+              <div className="variation-item">
+                <p className="variation-label">Email</p>
+                <Input
+                  type="email"
+                  value={emailValue}
+                  onUIStateChange={setEmailValue}
+                  placeholder="user@example.com"
+                />
+                <div className="value-display">{emailValue}</div>
+              </div>
+
+              <div className="variation-item">
+                <p className="variation-label">Password</p>
+                <Input
+                  type="password"
+                  value={passwordValue}
+                  onUIStateChange={setPasswordValue}
+                  placeholder="Enter password"
+                />
+                <div className="value-display">{passwordValue}</div>
+              </div>
+
+              <div className="variation-item">
+                <p className="variation-label">URL</p>
+                <Input
+                  type="url"
+                  value={urlValue}
+                  onUIStateChange={setUrlValue}
+                  placeholder="https://example.com"
+                />
+                <div className="value-display">{urlValue}</div>
+              </div>
+
+              <div className="variation-item">
+                <p className="variation-label">Number</p>
+                <Input
+                  type="number"
+                  value={numberValue}
+                  onUIStateChange={setNumberValue}
+                  placeholder="Enter number"
+                />
+                <div className="value-display">{numberValue}</div>
+              </div>
             </div>
           </div>
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
-      const ReadOnlyDemo = () => {
-        // not giving onValueChange param makes it read-only
-        const [loading, setLoading] = useState(false);
-
+      const SizeVariationsDemo = () => {
         return (
-          <div className="demo-card readonly-demo">
-            <h3 className="demo-title">🔒 Read-only State</h3>
-            <div className="control-group">
-              <h4>@jsenv/navi Read-only</h4>
-              <Input value="This is read-only content" loading={loading} />
-            </div>
-            <div className="control-group">
-              <h4>Native Read-only</h4>
-              <input readOnly value="This is read-only content" />
-            </div>
-            <div className="button-group">
-              <button onClick={() => setLoading(!loading)}>
-                {loading ? "Stop Loading" : "Start Loading"}
-              </button>
+          <div className="demo-section">
+            <h2>Size Variations</h2>
+
+            <div className="variation-grid">
+              <div className="variation-item">
+                <p className="variation-label">Default Size</p>
+                <Input placeholder="Default input" />
+              </div>
+
+              <div className="variation-item">
+                <p className="variation-label">Custom Padding</p>
+                <Input placeholder="Large input" paddingX="lg" paddingY="md" />
+              </div>
+
+              <div className="variation-item">
+                <p className="variation-label">Custom Width</p>
+                <Input placeholder="Wide input" width="300px" />
+              </div>
+
+              <div className="variation-item">
+                <p className="variation-label">Full Width</p>
+                <Input placeholder="Full width" width="100%" />
+              </div>
             </div>
           </div>
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
-      const DisabledDemo = () => {
-        const [loading, setLoading] = useState(false);
+      const ValueHandlingDemo = () => {
+        const [controlledValue, setControlledValue] = useState("Controlled");
+        const [uncontrolledValue, setUncontrolledValue] = useState("");
 
         return (
-          <div className="demo-card disabled-demo">
-            <h3 className="demo-title">🚫 Disabled State</h3>
-            <div className="control-group">
-              <h4>@jsenv/navi Disabled</h4>
-              <Input
-                disabled
-                loading={loading}
-                placeholder="Disabled input..."
-              />
-            </div>
-            <div className="control-group">
-              <h4>Native Disabled</h4>
-              <input disabled placeholder="Disabled input..." />
-            </div>
-            <div className="button-group">
-              <button onClick={() => setLoading(!loading)}>
-                {loading ? "Stop Loading" : "Start Loading"}
-              </button>
-            </div>
+          <div className="demo-section">
+            <h2>Value Handling</h2>
+
+            <fieldset>
+              <legend>Controlled vs Uncontrolled</legend>
+              <Layout column contentSpacing="sm">
+                <Layout row contentSpacing="sm" contentAlignX="start">
+                  <div>
+                    <label style={{ fontSize: "0.9rem", marginBottom: "5px" }}>
+                      Controlled (with value prop)
+                    </label>
+                    <Input
+                      value={controlledValue}
+                      onUIStateChange={setControlledValue}
+                      placeholder="Controlled input"
+                    />
+                    <div className="value-display">{controlledValue}</div>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "0.9rem", marginBottom: "5px" }}>
+                      Uncontrolled (defaultValue)
+                    </label>
+                    <Input
+                      defaultValue="Default text"
+                      onUIStateChange={setUncontrolledValue}
+                      placeholder="Uncontrolled input"
+                    />
+                    <div className="value-display">{uncontrolledValue}</div>
+                  </div>
+                </Layout>
+              </Layout>
+            </fieldset>
+
+            <fieldset>
+              <legend>Read-only Behavior</legend>
+              <Layout column contentSpacing="sm">
+                <p
+                  style={{
+                    color: "#666",
+                    fontSize: "0.9rem",
+                    margin: "0 0 10px 0",
+                  }}
+                >
+                  Without onUIStateChange handler, Input becomes read-only
+                  automatically
+                </p>
+                <Input value="This is read-only (no handler)" />
+              </Layout>
+            </fieldset>
+          </div>
+        );
+      };
+
+      const InteractiveDemo = () => {
+        const [value, setValue] = useState("Interactive input");
+        const [loading, setLoading] = useState(false);
+        const [disabled, setDisabled] = useState(false);
+        const [type, setType] = useState("text");
+
+        return (
+          <div className="demo-section">
+            <h2>Interactive Controls</h2>
+
+            <fieldset>
+              <legend>Toggle States</legend>
+              <Layout row contentSpacing="sm" contentAlignX="start" contentWrap>
+                <button
+                  style={{
+                    padding: "8px 16px",
+                    background: loading ? "#007bff" : "#f8f9fa",
+                    color: loading ? "white" : "#333",
+                    border: "1px solid #ddd",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setLoading(!loading)}
+                >
+                  Loading: {loading ? "ON" : "OFF"}
+                </button>
+                <button
+                  style={{
+                    padding: "8px 16px",
+                    background: disabled ? "#007bff" : "#f8f9fa",
+                    color: disabled ? "white" : "#333",
+                    border: "1px solid #ddd",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setDisabled(!disabled)}
+                >
+                  Disabled: {disabled ? "ON" : "OFF"}
+                </button>
+                <select
+                  value={type}
+                  onChange={(e) => setType(e.target.value)}
+                  style={{
+                    padding: "8px 16px",
+                    border: "1px solid #ddd",
+                    borderRadius: "4px",
+                    background: "white",
+                  }}
+                >
+                  <option value="text">Text</option>
+                  <option value="email">Email</option>
+                  <option value="password">Password</option>
+                  <option value="url">URL</option>
+                  <option value="number">Number</option>
+                </select>
+              </Layout>
+            </fieldset>
+
+            <fieldset>
+              <legend>Result</legend>
+              <Layout column contentSpacing="sm">
+                <Input
+                  type={type}
+                  loading={loading}
+                  disabled={disabled}
+                  value={value}
+                  onUIStateChange={setValue}
+                  placeholder="Interactive input..."
+                />
+                <div className="value-display">
+                  Value: "{value}" | Type: {type} | Loading:{" "}
+                  {loading ? "Yes" : "No"} | Disabled: {disabled ? "Yes" : "No"}
+                </div>
+              </Layout>
+            </fieldset>
           </div>
         );
       };

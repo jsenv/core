@@ -145,6 +145,17 @@ export const InputTextual = (props) => {
   );
 };
 
+const InputManagedByCSSVars = {};
+const InputPseudoClasses = [
+  ":hover",
+  ":active",
+  ":focus",
+  ":focus-visible",
+  ":read-only",
+  ":disabled",
+  ":-navi-loading",
+];
+const InputPseudoElements = ["::-navi-loader"];
 const InputTextualBasic = (props) => {
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
@@ -197,14 +208,6 @@ const InputTextualBasic = (props) => {
       type={type}
       data-value={uiState}
       value={innerValue}
-      baseStyle={{
-        "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
-      }}
-      wrapperSelector=".navi_inline_wrapper"
-      pseudoState={{
-        ":read-only": innerReadOnly,
-        ":disabled": innerDisabled,
-      }}
       onInput={(e) => {
         let inputValue;
         if (type === "number") {
@@ -222,6 +225,19 @@ const InputTextualBasic = (props) => {
       }}
       onsetuistate={(e) => {
         uiStateController.setUIState(e.detail.value, e);
+      }}
+      // style management
+      baseStyle={{
+        "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
+      }}
+      wrapperSelector=".navi_inline_wrapper"
+      managedByCSSVars={InputManagedByCSSVars}
+      pseudoClasses={InputPseudoClasses}
+      pseudoElements={InputPseudoElements}
+      basePseudoState={{
+        ":read-only": innerReadOnly,
+        ":disabled": innerDisabled,
+        ":-navi-loading": innerLoading,
       }}
     />
   );
