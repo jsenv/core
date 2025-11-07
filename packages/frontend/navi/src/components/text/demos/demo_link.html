@@ -64,45 +64,49 @@
                 <div>
                   <h3>Special Protocol Icons</h3>
                   <Box layoutColumn contentSpacing="sm">
-                    <Link href="tel:+1234567890">Phone link</Link>
-                    <Link href="sms:+1234567890">SMS link</Link>
-                    <Link href="mailto:test@example.com">Email link</Link>
-                    <Link href="https://github.com/jsenv/core">GitHub link</Link>
+                    <Link href="tel:+1234567890">Call now</Link>
+                    <Link href="sms:+1234567890">Send message</Link>
+                    <Link href="mailto:test@example.com">Contact us</Link>
+                    <Link href="https://github.com/jsenv/core">
+                      View source
+                    </Link>
                   </Box>
                   <p style={{ fontSize: "14px", color: "#666" }}>
-                    Special protocols and GitHub get custom icons
+                    Special protocols and GitHub automatically get custom icons
                   </p>
                 </div>
 
                 <div>
-                  <h3>Automatic External Icons</h3>
+                  <h3>External Links</h3>
                   <Box layoutColumn contentSpacing="sm">
-                    <Link href="https://example.com">
-                      External link (auto target="_blank")
-                    </Link>
-                    <Link href="https://docs.example.com" target="_blank">
-                      External with explicit target
-                    </Link>
-                    <Link href="/internal" target="_blank">
-                      Internal link with target="_blank"
+                    <Link href="https://example.com">External site</Link>
+                    <Link href="https://docs.example.com">Documentation</Link>
+                    <Link href="https://example.com" target="_self">
+                      No icon (explicit target)
                     </Link>
                   </Box>
                   <p style={{ fontSize: "14px", color: "#666" }}>
-                    External URLs get target="_blank" and external link icon
+                    External links get an icon by default. You can disable it by
+                    explicitly setting target="_self".
                   </p>
                 </div>
 
                 <div>
-                  <h3>No Icons / Anchor Links</h3>
+                  <h3>Internal Links</h3>
                   <Box layoutColumn contentSpacing="sm">
-                    <Link href="/relative">Relative link</Link>
-                    <Link href="#fragment">Fragment link (anchor icon)</Link>
-                    <Link href="https://example.com" anchorIcon={false}>
-                      External without icon
+                    <Link href="/relative">Internal page</Link>
+                    <Link href="/page" target="_blank">
+                      Open in new tab
+                    </Link>
+                    <Link href="#fragment">Section anchor</Link>
+                    <Link href="#section" anchorIcon={false}>
+                      No anchor icon
                     </Link>
                   </Box>
                   <p style={{ fontSize: "14px", color: "#666" }}>
-                    Internal links have no icons, fragments get anchor icon
+                    Internal links have no icon by default. Opening in new tab
+                    adds an icon. Same-document anchors get an anchor icon (can
+                    be disabled with anchorIcon={false}).
                   </p>
                 </div>
               </Box>
@@ -118,43 +122,25 @@
 
               <Box layoutRow contentSpacing="lg">
                 <div>
-                  <h3>Standard Colors</h3>
+                  <h3>Colors and Sizes</h3>
                   <Box layoutColumn contentSpacing="sm">
                     <Link href="#color" color="blue">
-                      Blue link
+                      <Text size="sm">Small blue</Text>
                     </Link>
                     <Link href="#color" color="green">
-                      Green link
+                      Normal green
                     </Link>
                     <Link href="#color" color="red">
-                      Red link
+                      <Text size="lg">Large red</Text>
                     </Link>
                     <Link href="#color" color="purple">
-                      Purple link
+                      <Text size="xl">Extra large purple</Text>
                     </Link>
                     <Link href="#color" color="orange">
                       Orange link
                     </Link>
                     <Link href="#color" color="gray">
                       Gray link
-                    </Link>
-                  </Box>
-                </div>
-
-                <div>
-                  <h3>Different Sizes</h3>
-                  <Box layoutColumn contentSpacing="sm">
-                    <Link href="#size" color="blue">
-                      <Text size="sm">Small blue link</Text>
-                    </Link>
-                    <Link href="#size" color="green">
-                      Normal green link
-                    </Link>
-                    <Link href="#size" color="red">
-                      <Text size="lg">Large red link</Text>
-                    </Link>
-                    <Link href="#size" color="purple">
-                      <Text size="xl">Extra large purple</Text>
                     </Link>
                   </Box>
                 </div>
