@@ -6,7 +6,7 @@ import {
 } from "./style_parsing.js";
 
 // Merge two style objects, handling special cases like transform
-export const mergeStyles = (stylesA, stylesB, context = "js") => {
+export const mergeTwoStyles = (stylesA, stylesB, context = "js") => {
   if (!stylesA) {
     return normalizeStyles(stylesB, context);
   }

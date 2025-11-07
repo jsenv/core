@@ -1,4 +1,4 @@
-import { createPubSub, createStyleController } from "@jsenv/dom";
+import { createPubSub, mergeTwoStyles } from "@jsenv/dom";
 
 export const PSEUDO_CLASSES = {
   ":hover": {
@@ -215,30 +215,58 @@ export const initPseudoStyles = (
 
   return teardown;
 };
-// by creating the style controller after the navi one we ensure it overrides (animation played on top of each other)
-const naviStyleController = createStyleController("navi");
-const pseudoStateStyleController = createStyleController("navi_pseudo_state");
-const pseudoElementStyleController = createStyleController(
-  "navi_pseudo_element",
-);
-export const applyStyles = (element, style) => {
-  naviStyleController.set(element, style);
+
+export const applyStyle = (element, style, pseudoState, pseudoStyles) => {
+  updateStyle(element, getStyleToApply(style, pseudoState, pseudoStyles));
 };
-export const applyPseudoStyles = (element, pseudoStates, pseudoStyles) => {
-  if (!pseudoStyles) {
-    return;
+
+const getStyleToApply = (styles, pseudoState, pseudoStyles) => {
+  if (!pseudoState || !pseudoStyles) {
+    return styles;
   }
+
+  const styleToAddSet = new Set();
   for (const pseudoName of Object.keys(pseudoStyles)) {
     const stylesToApply = pseudoStyles[pseudoName];
     if (pseudoName.startsWith("::")) {
-      pseudoElementStyleController.set(element, stylesToApply);
+      styleToAddSet.add(stylesToApply);
       continue;
     }
-    const shouldApply = pseudoStates[pseudoName];
-    if (shouldApply) {
-      pseudoStateStyleController.set(element, stylesToApply);
-    } else {
-      pseudoStateStyleController.clear(element);
+    const shouldApply = pseudoState[pseudoName];
+    if (!shouldApply) {
+      continue;
     }
+    styleToAddSet.add(stylesToApply);
   }
+  if (styleToAddSet.size === 0) {
+    return styles;
+  }
+  let style = styles;
+  for (const styleToAdd of styleToAddSet) {
+    style = mergeTwoStyles(style, styleToAdd);
+  }
+  return style;
+};
+
+const styleKeySetWeakMap = new WeakMap();
+const updateStyle = (element, style) => {
+  const previousStyleKeySet = styleKeySetWeakMap.get(element);
+  const styleKeySet = new Set(Object.keys(style));
+  if (!previousStyleKeySet) {
+    for (const key of styleKeySet) {
+      element.style[key] = style[key];
+    }
+    styleKeySetWeakMap.set(element, styleKeySet);
+    return;
+  }
+  const toDeleteKeySet = new Set(previousStyleKeySet);
+  for (const key of styleKeySet) {
+    toDeleteKeySet.delete(key);
+    element.style.setProperty(key, style[key]);
+  }
+  for (const toDeleteKey of toDeleteKeySet) {
+    element.style.removeProperty(toDeleteKey);
+  }
+  styleKeySetWeakMap.set(element, styleKeySet);
+  return;
 };

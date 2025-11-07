@@ -47,11 +47,7 @@
 import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { BoxLayoutContext } from "./layout_context.jsx";
-import {
-  applyPseudoStyles,
-  applyStyles,
-  initPseudoStyles,
-} from "./pseudo_styles.js";
+import { applyStyle, initPseudoStyles } from "./pseudo_styles.js";
 import { withPropsClassName } from "./with_props_class_name.js";
 import { resolveSpacingSize, withPropsStyle } from "./with_props_style.js";
 
@@ -206,19 +202,13 @@ const useBoxStyle = (
         );
       return [
         remainingProps,
-        () => {
-          const el = ref.current;
-          const contentEl = el.querySelector(contentSelector);
-          applyStyles(el, innerStyle);
-          if (contentEl) {
-            applyStyles(contentEl, contentStyle);
-          }
-        },
         (state) => {
           const el = ref.current;
+          applyStyle(el, innerStyle);
+
           const contentEl = el.querySelector(contentSelector);
           if (contentEl) {
-            applyPseudoStyles(contentEl, state, pseudoStyles);
+            applyStyle(contentEl, contentStyle, state, pseudoStyles);
           }
         },
       ];
@@ -236,26 +226,15 @@ const useBoxStyle = (
       });
       return [
         remainingProps,
-        () => {
-          const el = ref.current;
-          applyStyles(el, innerStyle);
-        },
         (state) => {
           const el = ref.current;
-          applyPseudoStyles(el, state, pseudoStyles);
+          applyStyle(el, innerStyle, state, pseudoStyles);
         },
       ];
     };
   }
 
-  const [remainingProps, updateStyle, updatePseudoStyles] = initProps();
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) {
-      return;
-    }
-    updateStyle(el);
-  }, [updateStyle]);
+  const [remainingProps, updateStyle] = initProps();
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) {
@@ -264,9 +243,9 @@ const useBoxStyle = (
     initPseudoStyles(el, {
       pseudoClasses,
       pseudoState,
-      effect: updatePseudoStyles,
+      effect: updateStyle,
     });
-  }, [pseudoClasses, pseudoState, updatePseudoStyles]);
+  }, [pseudoClasses, pseudoState, updateStyle]);
 
   return remainingProps;
 };

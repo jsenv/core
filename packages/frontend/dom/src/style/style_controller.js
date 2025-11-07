@@ -56,7 +56,7 @@
  * Multiple controllers can safely manage the same element without conflicts.
  */
 
-import { mergeOneStyle, mergeStyles } from "./style_composition.js";
+import { mergeOneStyle, mergeTwoStyles } from "./style_composition.js";
 import { normalizeStyle, normalizeStyles } from "./style_parsing.js";
 
 // Global registry to track which controllers are managing each element's styles
@@ -126,7 +126,7 @@ export const createStyleController = (name = "anonymous") => {
     }
 
     const { styles, animation } = elementData;
-    const mergedStyles = mergeStyles(styles, stylesToSet);
+    const mergedStyles = mergeTwoStyles(styles, stylesToSet);
     elementData.styles = mergedStyles;
     updateAnimationStyles(animation, mergedStyles);
   };
