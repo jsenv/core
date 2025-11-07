@@ -268,9 +268,9 @@ const generateStyleGroup = (
   }
   return styleGroup;
 };
-const generateStyleWithoutGroup = (
+const generatePseudoStyle = (
   props,
-  styleContext,
+  pseudoStyleContext,
   normalizer = normalizeCssStyle,
 ) => {
   const styleWithoutGroup = {};
@@ -279,7 +279,7 @@ const generateStyleWithoutGroup = (
       styleWithoutGroup,
       props[propName],
       propName,
-      styleContext,
+      pseudoStyleContext,
       normalizer,
     );
   }
@@ -499,9 +499,13 @@ export const withPropsStyle = (
         if (!pseudoClassStyleFromProps) {
           continue;
         }
-        const pseudoClassStyles = generateStyleWithoutGroup(
+        const pseudoClassStyles = generatePseudoStyle(
           pseudoClassStyleFromProps,
-          styleContext,
+          {
+            ...styleContext,
+            managedByCSSVars: managedByCSSVars[pseudoClass],
+            pseudoName: pseudoClass,
+          },
         );
         pseudoNamedStyles[pseudoClass] = pseudoClassStyles;
       }
@@ -515,9 +519,13 @@ export const withPropsStyle = (
         if (!pseudoElementStyleFromProps) {
           continue;
         }
-        const pseudoElementStyles = generateStyleWithoutGroup(
+        const pseudoElementStyles = generatePseudoStyle(
           pseudoElementStyleFromProps,
-          styleContext,
+          {
+            ...styleContext,
+            managedByCSSVars: managedByCSSVars[pseudoElement],
+            pseudoName: pseudoElement,
+          },
         );
         pseudoNamedStyles[pseudoElement] = pseudoElementStyles;
       }

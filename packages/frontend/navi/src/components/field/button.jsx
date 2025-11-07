@@ -217,12 +217,30 @@ export const Button = (props) => {
 };
 
 const ButtonManagedByCSSVars = {
-  outlineWidth: "--outline-width",
-  borderWidth: "--border-width",
-  borderRadius: "--border-radius",
-  backgroundColor: "--background-color",
-  borderColor: "--border-color",
-  color: "--color",
+  "outlineWidth": "--outline-width",
+  "borderWidth": "--border-width",
+  "borderRadius": "--border-radius",
+  "backgroundColor": "--background-color",
+  "borderColor": "--border-color",
+  "color": "--color",
+  ":hover": {
+    backgroundColor: "--background-color-hover",
+    borderColor: "--border-color-hover",
+    color: "--color-hover",
+  },
+  ":active": {
+    borderColor: "--border-color-active",
+  },
+  ":read-only": {
+    backgroundColor: "--background-color-readonly",
+    borderColor: "--border-color-readonly",
+    color: "--color-readonly",
+  },
+  ":disabled": {
+    backgroundColor: "--background-color-disabled",
+    borderColor: "--border-color-disabled",
+    color: "--color-disabled",
+  },
 };
 const ButtonPseudoClasses = [
   ":hover",
