@@ -26,8 +26,10 @@
 
             <section style="margin-bottom: 40px;">
               <h2>Basic Links</h2>
-              <div style="display: flex; flex-direction: column; gap: 12px;">
-                <Link href="#default">Default link</Link>
+              <Layout row contentSpacing="sm" contentAlignX="start">
+                <Link href="./default" preventDefault>
+                  Default link
+                </Link>
 
                 <Link
                   href="./active"
@@ -56,7 +58,7 @@
                 <Link href="./loading" loading readOnly preventDefault>
                   Loading link
                 </Link>
-              </div>
+              </Layout>
             </section>
 
             {/* Automatic Icon Behavior */}
