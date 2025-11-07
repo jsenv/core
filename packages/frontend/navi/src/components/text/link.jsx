@@ -212,7 +212,7 @@ const LinkPlain = (props) => {
       managedByCSSVars={LinkManagedByCSSVars}
       pseudoClasses={LinkPseudoClasses}
       pseudoElements={LinkPseudoElements}
-      pseudoState={{
+      basePseudoState={{
         ":read-only": readOnly,
         ":disabled": disabled,
         ":visited": innerVisited,

@@ -72,7 +72,8 @@ export const Box = (props) => {
 
     // style management
     managedByCSSVars,
-    pseudoState,
+    basePseudoState,
+    pseudoState, // for demo purposes it's possible to control pseudo state from props
     pseudoClasses,
     pseudoElements,
     pseudoStyle,
@@ -93,7 +94,10 @@ export const Box = (props) => {
   const remainingProps = useBoxStyle(rest, {
     ref,
     managedByCSSVars,
-    pseudoState,
+    pseudoState:
+      basePseudoState && pseudoState
+        ? { ...basePseudoState, ...pseudoState }
+        : basePseudoState,
     pseudoClasses,
     pseudoElements,
     pseudoStyle,
