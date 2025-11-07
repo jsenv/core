@@ -49,6 +49,7 @@
         padding: 0 10px;
         color: #555;
         font-weight: 500;
+        white-space: nowrap;
       }
 
       .input-group {
@@ -179,9 +180,6 @@
       };
 
       const BasicStatesDemo = () => {
-        const [loadingValue, setLoadingValue] = useState("Sample text");
-        const [loading, setLoading] = useState(false);
-
         return (
           <div className="demo-section">
             <h2>Input States</h2>
@@ -209,7 +207,14 @@
                   </Layout>
                 </fieldset>
                 <fieldset>
-                  <legend style="white-space: nowrap">:focus-visible</legend>
+                  <legend>:read-only</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Input value="Read-only content" />
+                    <input readOnly value="Read-only content" />
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>:focus-visible</legend>
                   <Layout row contentSpacing="sm" contentAlignX="start">
                     <Input
                       placeholder="Focus me"
@@ -226,78 +231,37 @@
                 Enhanced Navi States
               </div>
               <p className="states-description">
-                These additional states provide enhanced UX patterns with
-                automatic behavior and better user feedback.
+                These additional states provide enhanced UX patterns not
+                available in standard HTML inputs.
               </p>
 
               <Layout column contentSpacing="sm">
                 <fieldset>
-                  <legend>:read-only (automatic)</legend>
+                  <legend>Loading state</legend>
                   <Layout row contentSpacing="sm" contentAlignX="start">
-                    <Input value="Read-only content" />
+                    <Input loading placeholder="Loading input..." />
                   </Layout>
-                  <small
-                    style={{
-                      color: "#666",
-                      fontSize: "0.85rem",
-                      marginTop: "5px",
-                      display: "block",
-                    }}
-                  >
-                    Automatically becomes read-only when no onUIStateChange
-                    handler is provided
-                  </small>
-                </fieldset>
-                <fieldset>
-                  <legend>:read-only + :focus-visible</legend>
-                  <Layout row contentSpacing="sm" contentAlignX="start">
-                    <Input
-                      value="Focused read-only content"
-                      pseudoState={{ ":focus-visible": true }}
-                    />
-                  </Layout>
-                </fieldset>
-                <fieldset>
-                  <legend>Loading state (interactive)</legend>
-                  <Layout column contentSpacing="sm">
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Input
-                        loading={loading}
-                        value={loadingValue}
-                        onUIStateChange={setLoadingValue}
-                        placeholder="Type while loading..."
-                      />
-                      <button
-                        onClick={() => setLoading(!loading)}
-                        style={{
-                          padding: "8px 16px",
-                          background: "#007bff",
-                          color: "white",
-                          border: "none",
-                          borderRadius: "4px",
-                          cursor: "pointer",
-                        }}
-                      >
-                        {loading ? "Stop Loading" : "Start Loading"}
-                      </button>
-                    </Layout>
-                    <div className="value-display">
-                      Current value: "{loadingValue}"
-                    </div>
-                  </Layout>
-                  <small
-                    style={{
-                      color: "#666",
-                      fontSize: "0.85rem",
-                      marginTop: "5px",
-                      display: "block",
-                    }}
-                  >
-                    Shows a spinner while allowing continued interaction and
-                    value updates
-                  </small>
                 </fieldset>
               </Layout>
+
+              <div
+                style={{
+                  marginTop: "15px",
+                  padding: "10px",
+                  background: "#f8f9fa",
+                  borderRadius: "4px",
+                  fontSize: "0.85rem",
+                  color: "#666",
+                }}
+              >
+                <strong>Enhanced State Explanations:</strong>
+                <ul style={{ margin: "5px 0", paddingLeft: "20px" }}>
+                  <li>
+                    <strong>Loading:</strong> Shows a spinner while allowing
+                    continued interaction and value updates
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
         );

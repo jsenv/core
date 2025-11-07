@@ -49,6 +49,7 @@
         padding: 0 10px;
         color: #555;
         font-weight: 500;
+        white-space: nowrap;
       }
 
       .button-group {
@@ -189,7 +190,7 @@
                   </Layout>
                 </fieldset>
                 <fieldset>
-                  <legend style="white-space: nowrap">:focus-visible</legend>
+                  <legend>:focus-visible</legend>
                   <Layout row contentSpacing="sm" contentAlignX="start">
                     <Button pseudoState={{ ":focus-visible": true }}>
                       Focused
@@ -215,17 +216,6 @@
                   <Layout row contentSpacing="sm" contentAlignX="start">
                     <Button readOnly>Read-only Button</Button>
                   </Layout>
-                  <small
-                    style={{
-                      color: "#666",
-                      fontSize: "0.85rem",
-                      marginTop: "5px",
-                      display: "block",
-                    }}
-                  >
-                    Visually indicates the button cannot be interacted with, but
-                    remains focusable for accessibility
-                  </small>
                 </fieldset>
                 <fieldset>
                   <legend>:read-only + :focus-visible</legend>
@@ -240,19 +230,32 @@
                   <Layout row contentSpacing="sm" contentAlignX="start">
                     <Button loading>Processing...</Button>
                   </Layout>
-                  <small
-                    style={{
-                      color: "#666",
-                      fontSize: "0.85rem",
-                      marginTop: "5px",
-                      display: "block",
-                    }}
-                  >
-                    Shows a spinner while maintaining the button's size and
-                    preventing interaction
-                  </small>
                 </fieldset>
               </Layout>
+
+              <div
+                style={{
+                  marginTop: "15px",
+                  padding: "10px",
+                  background: "#f8f9fa",
+                  borderRadius: "4px",
+                  fontSize: "0.85rem",
+                  color: "#666",
+                }}
+              >
+                <strong>Enhanced State Explanations:</strong>
+                <ul style={{ margin: "5px 0", paddingLeft: "20px" }}>
+                  <li>
+                    <strong>Read-only:</strong> Visually indicates the button
+                    cannot be interacted with, but remains focusable for
+                    accessibility
+                  </li>
+                  <li>
+                    <strong>Loading:</strong> Shows a spinner while maintaining
+                    the button's size and preventing interaction
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
         );
