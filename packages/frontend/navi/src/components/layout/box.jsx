@@ -89,7 +89,7 @@ export const Box = (props) => {
     pseudoClasses,
     pseudoElements,
     pseudoStyle,
-    contentSelector,
+    visualSelector,
     wrapperSelector,
 
     children,
@@ -115,7 +115,7 @@ export const Box = (props) => {
     pseudoClasses,
     pseudoElements,
     pseudoStyle,
-    contentSelector,
+    visualSelector,
     wrapperSelector,
     base: {
       ...baseStyle,
@@ -175,7 +175,7 @@ const useBoxStyle = (
   {
     ref,
     managedByCSSVars,
-    contentSelector,
+    visualSelector,
     wrapperSelector,
     pseudoState,
     pseudoClasses,
@@ -190,7 +190,7 @@ const useBoxStyle = (
   }
 
   let initProps;
-  if (contentSelector) {
+  if (visualSelector) {
     initProps = () => {
       const [remainingProps, innerStyle, contentStyle, pseudoStyles] =
         withPropsStyle(
@@ -217,9 +217,9 @@ const useBoxStyle = (
           const el = ref.current;
           applyStyle(el, innerStyle);
 
-          const contentEl = el.querySelector(contentSelector);
-          if (contentEl) {
-            applyStyle(contentEl, contentStyle, state, pseudoStyles);
+          const visualEl = el.querySelector(visualSelector);
+          if (visualEl) {
+            applyStyle(visualEl, contentStyle, state, pseudoStyles);
           }
         },
       ];
