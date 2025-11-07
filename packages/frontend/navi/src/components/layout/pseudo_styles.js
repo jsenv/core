@@ -137,6 +137,26 @@ export const PSEUDO_CLASSES = {
   },
   ":read-only": {
     attribute: "data-readonly",
+    add: (el) => {
+      if (
+        el.tagName === "BUTTON" ||
+        el.tagName === "INPUT" ||
+        el.tagName === "SELECT" ||
+        el.tagName === "TEXTAREA"
+      ) {
+        el.readOnly = true;
+      }
+    },
+    remove: (el) => {
+      if (
+        el.tagName === "BUTTON" ||
+        el.tagName === "INPUT" ||
+        el.tagName === "SELECT" ||
+        el.tagName === "TEXTAREA"
+      ) {
+        el.readOnly = false;
+      }
+    },
   },
   ":valid": {
     attribute: "data-valid",
