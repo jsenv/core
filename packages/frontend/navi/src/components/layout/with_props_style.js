@@ -129,21 +129,21 @@ const DIMENSION_PROPS = {
       return { flexGrow: 1 }; // Grow horizontally in row
     }
     if (boxLayout === "row") {
-      return { width: "100%" }; // Take full width in column
+      return { minWidth: "100%" }; // Take full width in column
     }
-    return { width: "100%" }; // Take full width outside flex
+    return { minWidth: "100%" }; // Take full width outside flex
   },
   expandY: (value, { boxLayout }) => {
     if (!value) {
       return null;
     }
     if (boxLayout === "column") {
-      return { height: "100%" }; // Make column full height
+      return { minHeight: "100%" }; // Make column full height
     }
     if (boxLayout === "row") {
       return { flexGrow: 1 }; // Make row full height
     }
-    return { height: "100%" }; // Take full height outside flex
+    return { minHeight: "100%" }; // Take full height outside flex
   },
 };
 const ALIGNEMENT_PROPS = {

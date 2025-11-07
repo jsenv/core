@@ -1,7 +1,8 @@
 import { resolveCSSSize } from "@jsenv/dom";
-import { createPortal, forwardRef } from "preact/compat";
+import { createPortal } from "preact/compat";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 
+import { Box } from "../layout/box.jsx";
 import { useDebounceTrue } from "../use_debounce_true.js";
 import { RectangleLoading } from "./rectangle_loading.jsx";
 
@@ -33,7 +34,7 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const LoadableInlineElement = forwardRef((props, ref) => {
+export const LoadableInlineElement = (props) => {
   const {
     // background props
     loading,
@@ -46,23 +47,12 @@ export const LoadableInlineElement = forwardRef((props, ref) => {
     spacingBottom,
     spacingRight,
     // other props
-    width,
-    height,
     children,
     ...rest
   } = props;
 
   return (
-    <span
-      {...rest}
-      ref={ref}
-      className="navi_inline_wrapper"
-      style={{
-        ...rest.style,
-        ...(width ? { width } : {}),
-        ...(height ? { height } : {}),
-      }}
-    >
+    <Box {...rest} as="span" layoutInline baseClassName="navi_inline_wrapper">
       <LoaderBackground
         {...{
           loading,
@@ -77,9 +67,9 @@ export const LoadableInlineElement = forwardRef((props, ref) => {
         }}
       />
       {children}
-    </span>
+    </Box>
   );
-});
+};
 
 export const LoaderBackground = ({
   loading,

@@ -301,6 +301,7 @@ const InputTextualBasic = (props) => {
       loading={innerLoading}
       color="var(--navi-loader-color)"
       inset={-1}
+      expandX={props.expandX}
     >
       {inputTextual}
     </LoadableInlineElement>
