@@ -51,6 +51,22 @@ import { applyStyle, initPseudoStyles } from "./pseudo_styles.js";
 import { withPropsClassName } from "./with_props_class_name.js";
 import { resolveSpacingSize, withPropsStyle } from "./with_props_style.js";
 
+import.meta.css = /* css */ `
+  [data-layout-row] {
+    display: flex;
+    flex-direction: column;
+  }
+
+  [data-layout-column] {
+    display: flex;
+    flex-direction: "row";
+  }
+
+  [data-layout-inline] {
+    display: inline-flex;
+  }
+`;
+
 export const Box = (props) => {
   const {
     as = "div",
@@ -102,8 +118,6 @@ export const Box = (props) => {
       ...baseStyle,
       ...(layoutRow
         ? {
-            display: "flex",
-            flexDirection: "column",
             // Set if not the default ("stretch")
             alignItems: contentAlignX === "stretch" ? undefined : contentAlignX,
             // set if not the default ("start")
@@ -114,8 +128,6 @@ export const Box = (props) => {
         : {}),
       ...(layoutColumn
         ? {
-            display: "flex",
-            flexDirection: "row",
             // Set if not the default ("start")
             justifyContent:
               contentAlignX === "start" ? undefined : contentAlignX,
@@ -124,11 +136,7 @@ export const Box = (props) => {
             gap: resolveSpacingSize(contentSpacing, "gap"),
           }
         : {}),
-      ...(layoutInline
-        ? {
-            display: "inline-flex",
-          }
-        : {}),
+      ...(layoutInline ? {} : {}),
       flexShrink: shrink ? 1 : insideFlexContainer ? 0 : undefined,
       flexGrow: insideFlexContainer && expand ? 1 : undefined,
     },
@@ -147,7 +155,6 @@ export const Box = (props) => {
     <TagName
       ref={ref}
       className={innerClassName}
-      // put some data attributes that helps in devtools
       data-layout-row={as === "div" && layoutRow ? "" : undefined}
       data-layout-column={as === "div" && layoutColumn ? "" : undefined}
       data-layout-inline={as === "div" && layoutInline ? "" : undefined}

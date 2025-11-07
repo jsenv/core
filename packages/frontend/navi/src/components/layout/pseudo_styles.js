@@ -254,7 +254,11 @@ const updateStyle = (element, style) => {
   const styleKeySet = new Set(Object.keys(style));
   if (!previousStyleKeySet) {
     for (const key of styleKeySet) {
-      element.style[key] = style[key];
+      if (key.startsWith("--")) {
+        element.style.setProperty(key, style[key]);
+      } else {
+        element.style[key] = style[key];
+      }
     }
     styleKeySetWeakMap.set(element, styleKeySet);
     return;
@@ -262,7 +266,11 @@ const updateStyle = (element, style) => {
   const toDeleteKeySet = new Set(previousStyleKeySet);
   for (const key of styleKeySet) {
     toDeleteKeySet.delete(key);
-    element.style.setProperty(key, style[key]);
+    if (key.startsWith("--")) {
+      element.style.setProperty(key, style[key]);
+    } else {
+      element.style[key] = style[key];
+    }
   }
   for (const toDeleteKey of toDeleteKeySet) {
     element.style.removeProperty(toDeleteKey);
