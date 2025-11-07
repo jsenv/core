@@ -18,6 +18,15 @@ import.meta.css = /* css */ `
     opacity: 0;
   }
 
+  .navi_icon {
+    display: flex;
+    aspect-ratio: 1 / 1;
+    height: 100%;
+    max-height: 1em;
+    align-items: center;
+    justify-content: center;
+  }
+
   .navi_text[data-has-foreground] {
     display: inline-block;
   }
@@ -25,6 +34,9 @@ import.meta.css = /* css */ `
   .navi_text_foreground {
     position: absolute;
     inset: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .navi_text_overflow_wrapper {
@@ -160,8 +172,12 @@ export const CharSlot = ({
     </Text>
   );
 };
-export const Icon = (props) => {
-  return <CharSlot decorative {...props} />;
+export const Icon = ({ children, ...props }) => {
+  return (
+    <CharSlot decorative {...props}>
+      <span className="navi_icon">{children}</span>
+    </CharSlot>
+  );
 };
 
 export const Paragraph = ({ contentSpacing = " ", children, ...rest }) => {
