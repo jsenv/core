@@ -333,14 +333,12 @@ export const withPropsStyle = (
 
     // first config that will be returned
     base,
-    layout,
-    spacing = layout,
-    outerSpacing = spacing,
-    innerSpacing = spacing,
-    align = layout,
-    dimension = layout,
+    outerSpacing,
+    innerSpacing,
+    align,
+    dimension,
     typo,
-    visual = true,
+    visual,
   },
   ...remainingConfig
 ) => {
@@ -440,16 +438,15 @@ export const withPropsStyle = (
     }
     propStyles = style ? normalizeStyles(style, "css") : {};
   }
-  spacing_styles: {
-    if (!spacing && !hasRemainingConfig) {
-      break spacing_styles;
-    }
+  if (outerSpacing || hasRemainingConfig) {
     marginStyles = generateStyleGroup(
       OUTER_SPACING_PROPS,
       props,
       styleContext,
       normalizeSpacingStyle,
     );
+  }
+  if (innerSpacing || hasRemainingConfig) {
     paddingStyles = generateStyleGroup(
       INNER_SPACING_PROPS,
       props,
@@ -565,22 +562,22 @@ export const withPropsStyle = (
     } else if (typeof config.base === "object") {
       Object.assign(configStyle, config.base);
     }
-    if (config.outerSpacing || config.spacing || config.layout) {
+    if (config.outerSpacing) {
       Object.assign(configStyle, marginStyles);
     }
-    if (config.innerSpacing || config.spacing || config.layout) {
+    if (config.innerSpacing) {
       Object.assign(configStyle, paddingStyles);
     }
-    if (config.align || config.layout) {
+    if (config.align) {
       Object.assign(configStyle, alignmentStyles);
     }
-    if (config.dimension || config.layout) {
+    if (config.dimension) {
       Object.assign(configStyle, dimensionStyles);
     }
     if (config.typo) {
       Object.assign(configStyle, typoStyles);
     }
-    if (config.visual || config.visual === undefined) {
+    if (config.visual) {
       Object.assign(configStyle, visualStyles);
     }
     if (config.style) {

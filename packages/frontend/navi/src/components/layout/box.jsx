@@ -90,6 +90,7 @@ export const Box = (props) => {
     pseudoElements,
     pseudoStyle,
     contentSelector,
+    wrapperSelector,
 
     children,
     ...rest
@@ -115,6 +116,7 @@ export const Box = (props) => {
     pseudoElements,
     pseudoStyle,
     contentSelector,
+    wrapperSelector,
     base: {
       ...baseStyle,
       ...(layoutRow
@@ -174,6 +176,7 @@ const useBoxStyle = (
     ref,
     managedByCSSVars,
     contentSelector,
+    wrapperSelector,
     pseudoState,
     pseudoClasses,
     pseudoElements,
@@ -198,10 +201,10 @@ const useBoxStyle = (
             pseudoElements,
             pseudoStyle,
             base,
-            layout: true,
+            outerSpacing: true,
+            align: true,
+            dimension: true,
             typo: true,
-            innerSpacing: false,
-            visual: false,
           },
           {
             innerSpacing: true,
@@ -221,6 +224,38 @@ const useBoxStyle = (
         },
       ];
     };
+  } else if (wrapperSelector) {
+    const [remainingProps, innerStyle, wrapperStyle, pseudoStyles] =
+      withPropsStyle(
+        props,
+        {
+          managedByCSSVars,
+          pseudoClasses,
+          pseudoElements,
+          pseudoStyle,
+          base,
+          outerSpacing: true,
+          align: true,
+          typo: true,
+        },
+        {
+          innerSpacing: true,
+          dimension: true,
+          visual: true,
+        },
+      );
+    return [
+      remainingProps,
+      (state) => {
+        const el = ref.current;
+        applyStyle(el, innerStyle);
+
+        const wrapperEl = el.closest(wrapperSelector);
+        if (wrapperEl) {
+          applyStyle(wrapperEl, wrapperStyle, state, pseudoStyles);
+        }
+      },
+    ];
   } else {
     initProps = () => {
       const [remainingProps, innerStyle, pseudoStyles] = withPropsStyle(props, {
@@ -229,8 +264,12 @@ const useBoxStyle = (
         pseudoElements,
         pseudoStyle,
         base,
-        layout: true,
+        outerSpacing: true,
+        innerSpacing: true,
+        align: true,
+        dimension: true,
         typo: true,
+        visual: true,
       });
       return [
         remainingProps,
