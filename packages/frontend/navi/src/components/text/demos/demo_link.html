@@ -60,17 +60,17 @@
                 expect when clicking the link.
               </p>
 
-              <Box layoutRow contentSpacing="lg">
+              <Layout row contentSpacing="lg">
                 <div>
                   <h3>Special Protocol Icons</h3>
-                  <Box layoutColumn contentSpacing="sm">
+                  <Layout column contentSpacing="sm">
                     <Link href="tel:+1234567890">Call now</Link>
                     <Link href="sms:+1234567890">Send message</Link>
                     <Link href="mailto:test@example.com">Contact us</Link>
                     <Link href="https://github.com/jsenv/core">
                       View source
                     </Link>
-                  </Box>
+                  </Layout>
                   <p style={{ fontSize: "14px", color: "#666" }}>
                     Special protocols and GitHub automatically get custom icons
                   </p>
@@ -78,42 +78,79 @@
 
                 <div>
                   <h3>External Links</h3>
-                  <Box layoutColumn contentSpacing="sm">
+                  <Layout column contentSpacing="sm">
                     <Link href="https://example.com">Documentation</Link>
-                  </Box>
+                  </Layout>
                   <p style={{ fontSize: "14px", color: "#666" }}>
-                    External links get an icon by default. You can disable it by
-                    explicitly setting target="_self".
+                    External links get an icon by default.
                   </p>
-                  <Link href="https://example.com" target="_self">
-                    Documentation
-                  </Link>
+                  <p
+                    style={{
+                      fontSize: "12px",
+                      color: "#888",
+                      fontStyle: "italic",
+                    }}
+                  >
+                    Opt-out: Use target="_self" to disable the icon
+                  </p>
+                  <Layout column contentSpacing="xs">
+                    <Link href="https://example.com" target="_self">
+                      Documentation (no icon)
+                    </Link>
+                  </Layout>
                 </div>
 
                 <div>
                   <h3>Internal Links</h3>
                   <Layout column contentSpacing="sm">
-                    <Link href="/relative">Settings</Link>
+                    <Link href="/settings">Settings</Link>
                   </Layout>
                   <p style={{ fontSize: "14px", color: "#666" }}>
-                    Internal links have no icon by default. Using
-                    target="_blank" adds an icon..
+                    Internal links have no icon by default.
                   </p>
-                  <Layout column>
-                    <Link href="/page" target="_blank">
-                      Open in new tab
+                  <p
+                    style={{
+                      fontSize: "12px",
+                      color: "#888",
+                      fontStyle: "italic",
+                    }}
+                  >
+                    Opt-in: Use target="_blank" to add an icon
+                  </p>
+                  <Layout column contentSpacing="xs">
+                    <Link href="/settings" target="_blank">
+                      Settings (new tab)
                     </Link>
                   </Layout>
-                  <p>
-                    Same-document anchors get an anchor icon (can be disabled
-                    with anchorIcon={false})
+
+                  <p
+                    style={{
+                      fontSize: "14px",
+                      color: "#666",
+                      marginTop: "12px",
+                    }}
+                  >
+                    Same-document anchors get an anchor icon.
                   </p>
-                  <Link href="#fragment">Section anchor</Link>
-                  <Link href="#section" anchorIcon={false}>
-                    Section anchor
-                  </Link>
+                  <Layout column contentSpacing="xs">
+                    <Link href="#section">Go to section</Link>
+                  </Layout>
+                  <p
+                    style={{
+                      fontSize: "12px",
+                      color: "#888",
+                      fontStyle: "italic",
+                    }}
+                  >
+                    Opt-out: Use anchorIcon={false} to disable
+                  </p>
+                  <Layout column contentSpacing="xs">
+                    <Link href="#section" anchorIcon={false}>
+                      Go to section (no icon)
+                    </Link>
+                  </Layout>
                 </div>
-              </Box>
+              </Layout>
             </Box>
 
             {/* Colors and Sizes Combined */}
@@ -124,10 +161,10 @@
                 options.
               </p>
 
-              <Box layoutRow contentSpacing="lg">
+              <Layout row contentSpacing="lg">
                 <div>
                   <h3>Colors and Sizes</h3>
-                  <Box layoutColumn contentSpacing="sm">
+                  <Layout column contentSpacing="sm">
                     <Link href="./blue" preventDefault color="blue" size="sm">
                       Small blue
                     </Link>
@@ -140,7 +177,7 @@
                       color="orange"
                       size="lg"
                     >
-                      Large red
+                      Large orange
                     </Link>
                     <Link
                       href="./purple"
@@ -150,9 +187,9 @@
                     >
                       Extra large purple
                     </Link>
-                  </Box>
+                  </Layout>
                 </div>
-              </Box>
+              </Layout>
             </Box>
 
             {/* Interactive States */}
@@ -162,10 +199,10 @@
                 Links demonstrating different interactive behaviors and states.
               </p>
 
-              <Box layoutRow contentSpacing="lg">
+              <Layout row contentSpacing="lg">
                 <div>
                   <h3>Hover Effects</h3>
-                  <Box layoutColumn contentSpacing="sm">
+                  <Layout column contentSpacing="sm">
                     <Link href="#hover" color="blue">
                       Hover for color change
                     </Link>
@@ -175,9 +212,9 @@
                     <Link href="#hover" color="red">
                       Hover with red color
                     </Link>
-                  </Box>
+                  </Layout>
                 </div>
-              </Box>
+              </Layout>
             </Box>
           </div>
         );
