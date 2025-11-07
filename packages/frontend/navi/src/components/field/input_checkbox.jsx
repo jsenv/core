@@ -1,11 +1,5 @@
 import { pickLightOrDark } from "@jsenv/dom";
-import { forwardRef } from "preact/compat";
-import {
-  useContext,
-  useImperativeHandle,
-  useLayoutEffect,
-  useRef,
-} from "preact/hooks";
+import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { useActionStatus } from "../../use_action_status.js";
 import { requestAction } from "../../validation/custom_constraint_validation.js";
@@ -13,13 +7,9 @@ import { useConstraints } from "../../validation/hooks/use_constraints.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
-import { withPropsStyle } from "../layout/with_props_style.js";
-import {
-  LoadableInlineElement,
-  LoaderBackground,
-} from "../loader/loader_background.jsx";
+import { Box } from "../layout/box.jsx";
+import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
-import { initCustomField } from "./custom_field.js";
 import {
   ReportDisabledOnLabelContext,
   ReportReadOnlyOnLabelContext,
@@ -167,7 +157,7 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const InputCheckbox = forwardRef((props, ref) => {
+export const InputCheckbox = (props) => {
   const { value = "on" } = props;
   const uiStateController = useUIStateController(props, "checkbox", {
     statePropName: "checked",
@@ -178,7 +168,7 @@ export const InputCheckbox = forwardRef((props, ref) => {
   });
   const uiState = useUIState(uiStateController);
 
-  const checkbox = renderActionableComponent(props, ref, {
+  const checkbox = renderActionableComponent(props, {
     Basic: InputCheckboxBasic,
     WithAction: InputCheckboxWithAction,
     InsideForm: InputCheckboxInsideForm,
@@ -190,9 +180,9 @@ export const InputCheckbox = forwardRef((props, ref) => {
       </UIStateContext.Provider>
     </UIStateControllerContext.Provider>
   );
-});
+};
 
-const InputCheckboxBasic = forwardRef((props, ref) => {
+const InputCheckboxBasic = (props) => {
   const contextFieldName = useContext(FieldNameContext);
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
@@ -212,39 +202,32 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
 
     autoFocus,
     constraints = [],
-    appeareance = "navi", // "navi" or "default"
     accentColor,
     onClick,
     onInput,
-    style,
     ...rest
   } = props;
-  const innerRef = useRef(null);
-  useImperativeHandle(ref, () => innerRef.current);
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
 
   const innerName = name || contextFieldName;
   const innerDisabled = disabled || contextDisabled;
   const innerRequired = required || contextRequired;
   const innerLoading =
-    loading || (contextLoading && loadingElement === innerRef.current);
+    loading || (contextLoading && loadingElement === ref.current);
   const innerReadOnly =
     readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
   reportReadOnlyOnLabel?.(innerReadOnly);
   reportDisabledOnLabel?.(innerDisabled);
-  useAutoFocus(innerRef, autoFocus);
-  useConstraints(innerRef, constraints);
+  useAutoFocus(ref, autoFocus);
+  useConstraints(ref, constraints);
 
   const checked = Boolean(uiState);
-  const actionName = rest["data-action"];
-  if (actionName) {
-    delete rest["data-action"];
-  }
   const inputCheckbox = (
     <input
       {...rest}
-      ref={innerRef}
+      ref={ref}
       type="checkbox"
-      style={appeareance === "default" ? style : undefined}
       name={innerName}
       checked={checked}
       readOnly={innerReadOnly}
@@ -273,49 +256,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
       }}
     />
   );
-  const loaderProps = {
-    loading: innerLoading,
-    inset: -1,
-    style: {
-      "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
-    },
-    color: "var(--accent-color)",
-  };
-  if (appeareance === "navi") {
-    return (
-      <NaviCheckbox
-        data-action={actionName}
-        inputRef={innerRef}
-        accentColor={accentColor}
-        readOnly={readOnly}
-        disabled={innerDisabled}
-        style={style}
-      >
-        <LoaderBackground
-          {...loaderProps}
-          targetSelector=".navi_checkbox_field"
-        >
-          {inputCheckbox}
-        </LoaderBackground>
-      </NaviCheckbox>
-    );
-  }
 
-  return (
-    <LoadableInlineElement {...loaderProps} data-action={actionName}>
-      {inputCheckbox}
-    </LoadableInlineElement>
-  );
-});
-const NaviCheckbox = ({
-  accentColor,
-  readOnly,
-  disabled,
-  inputRef,
-  children,
-  ...rest
-}) => {
-  const ref = useRef();
   useLayoutEffect(() => {
     const naviCheckbox = ref.current;
     const colorPicked = pickLightOrDark(
@@ -327,27 +268,23 @@ const NaviCheckbox = ({
     naviCheckbox.style.setProperty("--checkmark-color", colorPicked);
   }, [accentColor]);
 
-  useLayoutEffect(() => {
-    return initCustomField(ref.current, inputRef.current);
-  }, []);
-
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    base: {
-      "--accent-color": accentColor,
-    },
-    layout: true,
-  });
-
   return (
-    <div
-      {...remainingProps}
+    <Box
+      {...rest}
       ref={ref}
-      className="navi_checkbox"
-      style={innerStyle}
-      data-readonly={readOnly ? "" : undefined}
-      data-disabled={disabled ? "" : undefined}
+      baseClassName="navi_checkbox"
+      basePseudoState={{
+        ":read-only": innerReadOnly,
+        ":disabled": innerDisabled,
+        ":-navi-loading": innerLoading,
+      }}
     >
-      {children}
+      <LoaderBackground
+        loading={innerLoading}
+        inset={-1}
+        color="var(--navi-loader-color)"
+      />
+      {inputCheckbox}
       <div className="navi_checkbox_field">
         <svg
           viewBox="0 0 12 12"
@@ -357,11 +294,11 @@ const NaviCheckbox = ({
           <path d="M10.5 2L4.5 9L1.5 5.5" fill="none" strokeWidth="2" />
         </svg>
       </div>
-    </div>
+    </Box>
   );
 };
 
-const InputCheckboxWithAction = forwardRef((props, ref) => {
+const InputCheckboxWithAction = (props) => {
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
   const {
@@ -377,18 +314,18 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
     loading,
     ...rest
   } = props;
-  const innerRef = useRef(null);
-  useImperativeHandle(ref, () => innerRef.current);
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   const [actionBoundToUIState] = useActionBoundToOneParam(action, uiState);
   const { loading: actionLoading } = useActionStatus(actionBoundToUIState);
-  const executeAction = useExecuteAction(innerRef, {
+  const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect,
   });
 
   // In this situation updating the ui state === calling associated action
   // so cance/abort/error have to revert the ui state to the one before user interaction
   // to show back the real state of the checkbox (not the one user tried to set)
-  useActionEvents(innerRef, {
+  useActionEvents(ref, {
     onCancel: (e, reason) => {
       if (reason === "blur_invalid") {
         return;
@@ -416,7 +353,7 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
     <InputCheckboxBasic
       data-action={actionBoundToUIState.name}
       {...rest}
-      ref={innerRef}
+      ref={ref}
       loading={loading || actionLoading}
       onChange={(e) => {
         requestAction(e.target, actionBoundToUIState, {
@@ -426,5 +363,5 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
       }}
     />
   );
-});
+};
 const InputCheckboxInsideForm = InputCheckboxBasic;
