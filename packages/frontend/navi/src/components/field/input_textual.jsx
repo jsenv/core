@@ -98,21 +98,11 @@ import.meta.css = /* css */ `
       --x-border-radius: var(--border-radius);
       --x-border-width: var(--border-width);
       --x-outer-width: calc(var(--x-border-width) + var(--x-outline-width));
-
       --x-outline-color: var(--outline-color);
       --x-border-color: var(--border-color);
       --x-background-color: var(--background-color);
       --x-color: var(--color);
-      --x-border-color-hover: var(--border-color-hover);
-      --x-background-color-hover: var(--background-color-hover);
-      --x-color-hover: var(--color-hover);
-      --x-border-color-active: var(--border-color-active);
-      --x-border-color-readonly: var(--border-color-readonly);
-      --x-background-color-readonly: var(--background-color-readonly);
-      --x-color-readonly: var(--color-readonly);
-      --x-border-color-disabled: var(--border-color-disabled);
-      --x-background-color-disabled: var(--background-color-disabled);
-      --x-color-disabled: var(--color-disabled);
+      --x-placeholder-color: var(--placeholder-color);
     }
 
     .navi_input .navi_native_field {
@@ -134,9 +124,8 @@ import.meta.css = /* css */ `
       outline-color: var(--x-border-color);
       outline-offset: calc(-1 * (var(--x-border-width)));
     }
-
     .navi_input .navi_native_field::placeholder {
-      color: var(--placeholder-color);
+      color: var(--x-placeholder-color);
     }
     .navi_input .navi_native_field:-internal-autofill-selected {
       /* Webkit is putting some nasty styles after automplete that look as follow */
@@ -146,9 +135,9 @@ import.meta.css = /* css */ `
     }
     /* Readonly */
     .navi_input[data-readonly] {
-      --x-border-color: var(--x-border-color-readonly);
-      --x-background-color: var(--x-background-color-readonly);
-      --x-color: var(--x-color-readonly);
+      --x-border-color: var(--border-color-readonly);
+      --x-background-color: var(--background-color-readonly);
+      --x-color: var(--color-readonly);
     }
     /* Focus */
     .navi_input[data-focus] .navi_native_field,
@@ -159,9 +148,9 @@ import.meta.css = /* css */ `
     }
     /* Disabled */
     .navi_input[data-disabled] {
-      --x-border-color: var(--x-border-color-disabled);
-      --x-background-color: var(--x-background-color-disabled);
-      --x-color: var(--x-color-disabled);
+      --x-border-color: var(--border-color-disabled);
+      --x-background-color: var(--background-color-disabled);
+      --x-color: var(--color-disabled);
     }
     /* Callout (info, warning, error) */
     .navi_input[data-callout] {
