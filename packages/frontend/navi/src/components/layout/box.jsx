@@ -201,7 +201,7 @@ const useBoxStyle = (
   let initProps;
   if (visualSelector) {
     initProps = () => {
-      const [remainingProps, innerStyle, contentStyle, pseudoStyles] =
+      const [remainingProps, boxStyle, visualStyle, pseudoStyles] =
         withPropsStyle(
           props,
           {
@@ -223,19 +223,19 @@ const useBoxStyle = (
       return [
         remainingProps,
         (state) => {
-          const box = ref.current;
-          applyStyle(box, innerStyle);
+          const boxEl = ref.current;
+          applyStyle(boxEl, boxStyle);
 
-          const visualEl = box.querySelector(visualSelector);
+          const visualEl = boxEl.querySelector(visualSelector);
           if (visualEl) {
-            applyStyle(visualEl, contentStyle, state, pseudoStyles);
+            applyStyle(visualEl, visualStyle, state, pseudoStyles);
           }
         },
       ];
     };
   } else if (pseudoStateSelector) {
     initProps = () => {
-      const [remainingProps, innerStyle, wrapperStyle, pseudoStyles] =
+      const [remainingProps, boxStyle, pseudoElStyle, pseudoStyles] =
         withPropsStyle(
           props,
           {
@@ -257,19 +257,19 @@ const useBoxStyle = (
       return [
         remainingProps,
         (state) => {
-          const box = ref.current;
-          applyStyle(box, innerStyle);
+          const boxEl = ref.current;
+          applyStyle(boxEl, boxStyle);
 
-          const pseudoEl = box.querySelector(pseudoStateSelector);
+          const pseudoEl = boxEl.querySelector(pseudoStateSelector);
           if (pseudoEl) {
-            applyStyle(pseudoEl, wrapperStyle, state, pseudoStyles);
+            applyStyle(pseudoEl, pseudoElStyle, state, pseudoStyles);
           }
         },
       ];
     };
   } else {
     initProps = () => {
-      const [remainingProps, innerStyle, pseudoStyles] = withPropsStyle(props, {
+      const [remainingProps, boxStyle, pseudoStyles] = withPropsStyle(props, {
         managedByCSSVars,
         pseudoClasses,
         pseudoElements,
@@ -285,8 +285,8 @@ const useBoxStyle = (
       return [
         remainingProps,
         (state) => {
-          const box = ref.current;
-          applyStyle(box, innerStyle, state, pseudoStyles);
+          const boxEl = ref.current;
+          applyStyle(boxEl, boxStyle, state, pseudoStyles);
         },
       ];
     };
@@ -294,18 +294,18 @@ const useBoxStyle = (
 
   const [remainingProps, updateStyle] = initProps();
   useLayoutEffect(() => {
-    const box = ref.current;
-    if (!box) {
+    const boxEl = ref.current;
+    if (!boxEl) {
       return null;
     }
     const pseudoStateEl = pseudoStateSelector
-      ? box.querySelector(pseudoStateSelector)
-      : box;
+      ? boxEl.querySelector(pseudoStateSelector)
+      : boxEl;
     return initPseudoStyles(pseudoStateEl, {
       pseudoClasses,
       pseudoState,
       effect: updateStyle,
-      elementToImpact: box,
+      elementToImpact: boxEl,
     });
   }, [pseudoClasses, pseudoState, updateStyle]);
 
