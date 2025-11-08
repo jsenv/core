@@ -1,7 +1,4 @@
-import { appendStyles, normalizeStyle, normalizeStyles } from "@jsenv/dom";
-import { useContext } from "preact/hooks";
-
-import { BoxLayoutContext } from "./layout_context.jsx";
+import { normalizeStyle } from "@jsenv/dom";
 
 /**
  * Processes component props to extract and generate styles for layout, spacing, alignment, expansion, and typography.
@@ -146,7 +143,7 @@ const DIMENSION_PROPS = {
     return { minHeight: "100%" }; // Take full height outside flex
   },
 };
-const ALIGNEMENT_PROPS = {
+const POSITION_PROPS = {
   // For row, alignX uses auto margins for positioning
   // NOTE: Auto margins only work effectively for positioning individual items.
   // When multiple adjacent items have the same auto margin alignment (e.g., alignX="end"),
@@ -245,12 +242,82 @@ const All_PROPS = {
   ...OUTER_SPACING_PROPS,
   ...INNER_SPACING_PROPS,
   ...DIMENSION_PROPS,
-  ...ALIGNEMENT_PROPS,
+  ...POSITION_PROPS,
   ...TYPO_PROPS,
   ...VISUAL_PROPS,
 };
 
-const generateStyleGroup = (
+export const generateVisualStyle = (props, styleContext) =>
+  generateStyleGroup(VISUAL_PROPS, props, styleContext);
+
+export const generateMarginStyles = (props, styleContext) =>
+  generateStyleGroup(
+    OUTER_SPACING_PROPS,
+    props,
+    styleContext,
+    normalizeSpacingStyle,
+  );
+export const generatePaddingStyles = (props, styleContext) =>
+  generateStyleGroup(
+    INNER_SPACING_PROPS,
+    props,
+    styleContext,
+    normalizeSpacingStyle,
+  );
+export const generateDimensionStyles = (props, styleContext) =>
+  generateStyleGroup(DIMENSION_PROPS, props, styleContext);
+export const generatePositionStyles = (props, styleContext) =>
+  generateStyleGroup(POSITION_PROPS, props, styleContext);
+export const generateTypoStyles = (props, styleContext) =>
+  generateStyleGroup(TYPO_PROPS, props, styleContext, normalizeTypoStyle);
+export const generateVisualStyles = (props, styleContext) =>
+  generateStyleGroup(VISUAL_PROPS, props, styleContext);
+export const generatePseudoNamedStyles = (props, styleContext) => {
+  const { pseudoStyle, pseudoClasses, pseudoElements, managedByCSSVars } =
+    styleContext;
+
+  const pseudoNamedStyles = {};
+  pseudo_classes: {
+    if (!pseudoClasses) {
+      break pseudo_classes;
+    }
+    for (const pseudoClass of pseudoClasses) {
+      const pseudoClassStyleFromProps = pseudoStyle[pseudoClass];
+      if (!pseudoClassStyleFromProps) {
+        continue;
+      }
+      const pseudoClassStyles = generatePseudoStyle(pseudoClassStyleFromProps, {
+        ...styleContext,
+        managedByCSSVars: managedByCSSVars[pseudoClass],
+        pseudoName: pseudoClass,
+      });
+      pseudoNamedStyles[pseudoClass] = pseudoClassStyles;
+    }
+  }
+  pseudo_elements: {
+    if (!pseudoElements) {
+      break pseudo_elements;
+    }
+    for (const pseudoElement of pseudoElements) {
+      const pseudoElementStyleFromProps = pseudoStyle[pseudoElement];
+      if (!pseudoElementStyleFromProps) {
+        continue;
+      }
+      const pseudoElementStyles = generatePseudoStyle(
+        pseudoElementStyleFromProps,
+        {
+          ...styleContext,
+          managedByCSSVars: managedByCSSVars[pseudoElement],
+          pseudoName: pseudoElement,
+        },
+      );
+      pseudoNamedStyles[pseudoElement] = pseudoElementStyles;
+    }
+  }
+  return pseudoNamedStyles;
+};
+
+export const generateStyleGroup = (
   PROPS_GROUP,
   props,
   styleContext,
@@ -268,7 +335,7 @@ const generateStyleGroup = (
   }
   return styleGroup;
 };
-const generatePseudoStyle = (
+export const generatePseudoStyle = (
   props,
   pseudoStyleContext,
   normalizer = normalizeCssStyle,
@@ -320,273 +387,6 @@ const assignStyle = (
       styleObject[key] = cssValue;
     }
   }
-};
-
-export const withPropsStyle = (
-  props,
-  {
-    // some global configuration
-    managedByCSSVars = {},
-    pseudoClasses,
-    pseudoElements,
-    pseudoStyle,
-
-    // first config that will be returned
-    base,
-    outerSpacing,
-    innerSpacing,
-    align,
-    dimension,
-    typo,
-    visual,
-  },
-  ...remainingConfig
-) => {
-  const boxLayout = useContext(BoxLayoutContext);
-  /* eslint-disable no-unused-vars */
-  const {
-    // style from props
-    style,
-
-    // layout props
-    // layout/spacing
-    margin,
-    marginX,
-    marginY,
-    marginLeft,
-    marginRight,
-    marginTop,
-    marginBottom,
-    padding,
-    paddingX,
-    paddingY,
-    paddingLeft,
-    paddingRight,
-    paddingTop,
-    paddingBottom,
-    // layout/alignment
-    alignX,
-    alignY,
-    left,
-    top,
-    // layout/size
-    expand,
-    expandX = expand,
-    expandY = expand,
-    width,
-    minWidth,
-    maxWidth,
-    height,
-    minHeight,
-    maxHeight,
-
-    // typo props
-    size,
-    bold,
-    thin,
-    italic,
-    underline,
-    underlineStyle,
-    underlineColor,
-    color,
-    textShadow,
-    lineHeight,
-    noWrap,
-
-    // visual props
-    boxShadow,
-    background,
-    backgroundColor,
-    backgroundImage,
-    backgroundSize,
-    border,
-    borderWidth,
-    borderRadius,
-    borderColor,
-    borderStyle,
-    borderTop,
-    borderLeft,
-    borderRight,
-    borderBottom,
-    opacity,
-    filter,
-    cursor,
-
-    // props not related to styling
-    ...remainingProps
-  } = props;
-  /* eslint-enable no-unused-vars */
-
-  const hasRemainingConfig = remainingConfig.length > 0;
-  let propStyles;
-  let marginStyles;
-  let paddingStyles;
-  let alignmentStyles;
-  let dimensionStyles;
-  let typoStyles;
-  let visualStyles;
-  let pseudoNamedStyles = {};
-
-  const styleContext = {
-    boxLayout,
-    managedByCSSVars,
-  };
-
-  props_styles: {
-    if (!style && !hasRemainingConfig) {
-      break props_styles;
-    }
-    propStyles = style ? normalizeStyles(style, "css") : {};
-  }
-  if (outerSpacing || hasRemainingConfig) {
-    marginStyles = generateStyleGroup(
-      OUTER_SPACING_PROPS,
-      props,
-      styleContext,
-      normalizeSpacingStyle,
-    );
-  }
-  if (innerSpacing || hasRemainingConfig) {
-    paddingStyles = generateStyleGroup(
-      INNER_SPACING_PROPS,
-      props,
-      styleContext,
-      normalizeSpacingStyle,
-    );
-  }
-  dimension_styles: {
-    if (!dimension && !hasRemainingConfig) {
-      break dimension_styles;
-    }
-    dimensionStyles = generateStyleGroup(DIMENSION_PROPS, props, styleContext);
-  }
-  alignment_styles: {
-    if (!align && !hasRemainingConfig) {
-      break alignment_styles;
-    }
-    alignmentStyles = generateStyleGroup(ALIGNEMENT_PROPS, props, styleContext);
-  }
-  typo_styles: {
-    if (!typo && !hasRemainingConfig) {
-      break typo_styles;
-    }
-    typoStyles = generateStyleGroup(
-      TYPO_PROPS,
-      props,
-      styleContext,
-      normalizeTypoStyle,
-    );
-  }
-  visual_styles: {
-    if (!visual && !hasRemainingConfig) {
-      break visual_styles;
-    }
-    visualStyles = generateStyleGroup(VISUAL_PROPS, props, styleContext);
-  }
-  pseudo_styles: {
-    if (!pseudoStyle) {
-      break pseudo_styles;
-    }
-    pseudo_classes: {
-      if (!pseudoClasses) {
-        break pseudo_classes;
-      }
-      for (const pseudoClass of pseudoClasses) {
-        const pseudoClassStyleFromProps = pseudoStyle[pseudoClass];
-        if (!pseudoClassStyleFromProps) {
-          continue;
-        }
-        const pseudoClassStyles = generatePseudoStyle(
-          pseudoClassStyleFromProps,
-          {
-            ...styleContext,
-            managedByCSSVars: managedByCSSVars[pseudoClass],
-            pseudoName: pseudoClass,
-          },
-        );
-        pseudoNamedStyles[pseudoClass] = pseudoClassStyles;
-      }
-    }
-    pseudo_elements: {
-      if (!pseudoElements) {
-        break pseudo_elements;
-      }
-      for (const pseudoElement of pseudoElements) {
-        const pseudoElementStyleFromProps = pseudoStyle[pseudoElement];
-        if (!pseudoElementStyleFromProps) {
-          continue;
-        }
-        const pseudoElementStyles = generatePseudoStyle(
-          pseudoElementStyleFromProps,
-          {
-            ...styleContext,
-            managedByCSSVars: managedByCSSVars[pseudoElement],
-            pseudoName: pseudoElement,
-          },
-        );
-        pseudoNamedStyles[pseudoElement] = pseudoElementStyles;
-      }
-    }
-  }
-
-  const firstConfigStyle = {};
-  if (base) {
-    Object.assign(firstConfigStyle, base);
-  }
-  if (outerSpacing) {
-    Object.assign(firstConfigStyle, marginStyles);
-  }
-  if (innerSpacing) {
-    Object.assign(firstConfigStyle, paddingStyles);
-  }
-  if (align) {
-    Object.assign(firstConfigStyle, alignmentStyles);
-  }
-  if (dimension) {
-    Object.assign(firstConfigStyle, dimensionStyles);
-  }
-  if (typo) {
-    Object.assign(firstConfigStyle, typoStyles);
-  }
-  if (visual) {
-    Object.assign(firstConfigStyle, visualStyles);
-  }
-  if (style) {
-    appendStyles(firstConfigStyle, propStyles, "css");
-  }
-  const result = [remainingProps, firstConfigStyle];
-  for (const config of remainingConfig) {
-    const configStyle = {};
-    if (config.base === true) {
-      Object.assign(configStyle, base);
-    } else if (typeof config.base === "object") {
-      Object.assign(configStyle, config.base);
-    }
-    if (config.outerSpacing) {
-      Object.assign(configStyle, marginStyles);
-    }
-    if (config.innerSpacing) {
-      Object.assign(configStyle, paddingStyles);
-    }
-    if (config.align) {
-      Object.assign(configStyle, alignmentStyles);
-    }
-    if (config.dimension) {
-      Object.assign(configStyle, dimensionStyles);
-    }
-    if (config.typo) {
-      Object.assign(configStyle, typoStyles);
-    }
-    if (config.visual) {
-      Object.assign(configStyle, visualStyles);
-    }
-    if (config.style) {
-      appendStyles(configStyle, propStyles, "css");
-    }
-    result.push(configStyle);
-  }
-  result.push(pseudoNamedStyles);
-  return result;
 };
 
 // Unified design scale using t-shirt sizes with rem units for accessibility.

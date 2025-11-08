@@ -44,12 +44,22 @@
  * without requiring separate CSS classes or inline styles.
  */
 
-import { useContext, useLayoutEffect, useRef } from "preact/hooks";
+import { appendStyles, normalizeStyles } from "@jsenv/dom";
+import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
+import {
+  generateDimensionStyles,
+  generateMarginStyles,
+  generatePaddingStyles,
+  generatePositionStyles,
+  generatePseudoNamedStyles,
+  generateTypoStyles,
+  generateVisualStyles,
+  resolveSpacingSize,
+} from "./box_style_util.js";
 import { BoxLayoutContext } from "./layout_context.jsx";
 import { applyStyle, initPseudoStyles } from "./pseudo_styles.js";
 import { withPropsClassName } from "./with_props_class_name.js";
-import { resolveSpacingSize, withPropsStyle } from "./with_props_style.js";
 
 import.meta.css = /* css */ `
   [data-layout-row] {
@@ -76,8 +86,6 @@ export const Box = (props) => {
     contentAlignX,
     contentAlignY,
     contentSpacing,
-    shrink,
-    expand,
     baseClassName,
     className,
     baseStyle,
@@ -114,19 +122,114 @@ export const Box = (props) => {
     layoutFromContext === "inline";
 
   const TagName = as;
-  const remainingProps = useBoxStyle(rest, {
-    ref,
-    managedByCSSVars,
-    pseudoState:
+  const layout = layoutRow
+    ? "row"
+    : layoutColumn
+      ? "column"
+      : layoutInline
+        ? "inline"
+        : undefined;
+  const innerClassName = withPropsClassName(baseClassName, className);
+
+  let remainingProps;
+  styling: {
+    const boxLayout = useContext(BoxLayoutContext);
+    const innerPseudoState =
       basePseudoState && pseudoState
         ? { ...basePseudoState, ...pseudoState }
-        : basePseudoState,
-    pseudoClasses,
-    pseudoElements,
-    pseudoStyle,
-    visualSelector,
-    pseudoStateSelector,
-    base: {
+        : basePseudoState;
+    const innerPseudoClasses =
+      pseudoClasses ||
+      // <Box pseudo={{ ":hover": { backgroundColor: "red" } }}> would enable ":hover"
+      // even if not part of the pseudoClasses enabled for this component
+      pseudoState
+        ? Object.keys(pseudoState)
+        : undefined;
+    const styleContext = {
+      boxLayout,
+      managedByCSSVars,
+      pseudoState: innerPseudoState,
+      pseudoClasses: innerPseudoClasses,
+      pseudoElements,
+      pseudoStyle,
+    };
+    /* eslint-disable no-unused-vars */
+    const {
+      // style from props
+      style,
+
+      // layout props
+      // layout/spacing
+      margin,
+      marginX,
+      marginY,
+      marginLeft,
+      marginRight,
+      marginTop,
+      marginBottom,
+      padding,
+      paddingX,
+      paddingY,
+      paddingLeft,
+      paddingRight,
+      paddingTop,
+      paddingBottom,
+      // layout/position
+      alignX,
+      alignY,
+      left,
+      top,
+      // layout/size
+      shrink,
+      expand,
+      expandX = expand,
+      expandY = expand,
+      width,
+      minWidth,
+      maxWidth,
+      height,
+      minHeight,
+      maxHeight,
+
+      // typo props
+      size,
+      bold,
+      thin,
+      italic,
+      underline,
+      underlineStyle,
+      underlineColor,
+      color,
+      textShadow,
+      lineHeight,
+      noWrap,
+
+      // visual props
+      boxShadow,
+      background,
+      backgroundColor,
+      backgroundImage,
+      backgroundSize,
+      border,
+      borderWidth,
+      borderRadius,
+      borderColor,
+      borderStyle,
+      borderTop,
+      borderLeft,
+      borderRight,
+      borderBottom,
+      opacity,
+      filter,
+      cursor,
+
+      // props not related to styling
+      ...nonStylingProps
+    } = rest;
+    /* eslint-enable no-unused-vars */
+    remainingProps = nonStylingProps;
+
+    const base = {
       ...baseStyle,
       ...(layoutRow
         ? {
@@ -151,17 +254,94 @@ export const Box = (props) => {
       ...(layoutInline ? {} : {}),
       flexShrink: shrink ? 1 : insideFlexContainer ? 0 : undefined,
       flexGrow: insideFlexContainer && expand ? 1 : undefined,
-    },
-  });
-  const layout = layoutRow
-    ? "row"
-    : layoutColumn
-      ? "column"
-      : layoutInline
-        ? "inline"
-        : undefined;
+    };
+    const propStyles = style ? normalizeStyles(style, "css") : {};
+    const marginStyles = generateMarginStyles(props, styleContext);
+    const paddingStyles = generatePaddingStyles(props, styleContext);
+    const dimensionStyles = generateDimensionStyles(props, styleContext);
+    const positionStyles = generatePositionStyles(props, styleContext);
+    const typoStyles = generateTypoStyles(props, styleContext);
+    const visualStyles = generateVisualStyles(props, styleContext);
+    const pseudoNamedStyles = generatePseudoNamedStyles(props, styleContext);
 
-  const innerClassName = withPropsClassName(baseClassName, className);
+    const boxStyle = {};
+    let secondaryStyle;
+    if (base) {
+      Object.assign(boxStyle, base);
+    }
+
+    if (visualSelector) {
+      Object.assign(boxStyle, marginStyles);
+      Object.assign(boxStyle, positionStyles);
+      Object.assign(boxStyle, dimensionStyles);
+      Object.assign(boxStyle, typoStyles);
+      // visual el get padding and visual styles
+      secondaryStyle = {};
+      Object.assign(secondaryStyle, paddingStyles);
+      Object.assign(secondaryStyle, visualStyles);
+    } else if (pseudoStateSelector) {
+      // for now box get all the styles too
+      secondaryStyle = {};
+      Object.assign(boxStyle, marginStyles);
+      Object.assign(boxStyle, positionStyles);
+      Object.assign(boxStyle, dimensionStyles);
+      Object.assign(boxStyle, typoStyles);
+      Object.assign(boxStyle, paddingStyles);
+      Object.assign(boxStyle, visualStyles);
+    } else {
+      // box get all the styles
+      Object.assign(boxStyle, marginStyles);
+      Object.assign(boxStyle, positionStyles);
+      Object.assign(boxStyle, dimensionStyles);
+      Object.assign(boxStyle, typoStyles);
+      Object.assign(secondaryStyle, paddingStyles);
+      Object.assign(secondaryStyle, visualStyles);
+    }
+
+    if (style) {
+      appendStyles(boxStyle, propStyles, "css");
+    }
+
+    const updateStyle = useCallback(
+      (state) => {
+        const boxEl = ref.current;
+        applyStyle(boxEl, boxStyle);
+
+        if (pseudoStateSelector) {
+          const pseudoEl = boxEl.querySelector(pseudoStateSelector);
+          if (pseudoEl) {
+            applyStyle(pseudoEl, secondaryStyle, state, pseudoNamedStyles);
+          }
+        } else if (visualSelector) {
+          const visualEl = boxEl.querySelector(visualSelector);
+          if (visualEl) {
+            applyStyle(visualEl, secondaryStyle, state, pseudoNamedStyles);
+          }
+        }
+      },
+      [visualSelector, boxStyle, secondaryStyle, pseudoNamedStyles],
+    );
+    useLayoutEffect(() => {
+      const boxEl = ref.current;
+      if (!boxEl) {
+        return null;
+      }
+      const pseudoStateEl = pseudoStateSelector
+        ? boxEl.querySelector(pseudoStateSelector)
+        : boxEl;
+      return initPseudoStyles(pseudoStateEl, {
+        pseudoClasses: innerPseudoClasses,
+        pseudoState: innerPseudoState,
+        effect: updateStyle,
+        elementToImpact: boxEl,
+      });
+    }, [
+      pseudoStateSelector,
+      innerPseudoClasses,
+      innerPseudoState,
+      updateStyle,
+    ]);
+  }
 
   return (
     <TagName
@@ -179,146 +359,15 @@ export const Box = (props) => {
   );
 };
 
-const useBoxStyle = (
-  props,
-  {
-    ref,
-    managedByCSSVars,
-    visualSelector,
-    pseudoStateSelector,
-    pseudoState,
-    pseudoClasses,
-    pseudoElements,
-    pseudoStyle,
-    base,
-  },
-) => {
-  if (!pseudoClasses && pseudoState) {
-    // <Box pseudo={{ ":hover": { backgroundColor: "red" } }}> would watch :hover
-    pseudoClasses = Object.keys(pseudoState);
-  }
-
-  let initProps;
-  if (visualSelector) {
-    initProps = () => {
-      const [remainingProps, boxStyle, visualStyle, pseudoStyles] =
-        withPropsStyle(
-          props,
-          {
-            managedByCSSVars,
-            pseudoClasses,
-            pseudoElements,
-            pseudoStyle,
-            base,
-            outerSpacing: true,
-            align: true,
-            dimension: true,
-            typo: true,
-          },
-          {
-            innerSpacing: true,
-            visual: true,
-          },
-        );
-      return [
-        remainingProps,
-        (state) => {
-          const boxEl = ref.current;
-          applyStyle(boxEl, boxStyle);
-
-          const visualEl = boxEl.querySelector(visualSelector);
-          if (visualEl) {
-            applyStyle(visualEl, visualStyle, state, pseudoStyles);
-          }
-        },
-      ];
-    };
-  } else if (pseudoStateSelector) {
-    initProps = () => {
-      const [remainingProps, boxStyle, pseudoElStyle, pseudoStyles] =
-        withPropsStyle(
-          props,
-          {
-            managedByCSSVars,
-            pseudoClasses,
-            pseudoElements,
-            pseudoStyle,
-            base,
-            outerSpacing: true,
-            align: true,
-            typo: true,
-          },
-          {
-            innerSpacing: true,
-            dimension: true,
-            visual: true,
-          },
-        );
-      return [
-        remainingProps,
-        (state) => {
-          const boxEl = ref.current;
-          applyStyle(boxEl, boxStyle);
-
-          const pseudoEl = boxEl.querySelector(pseudoStateSelector);
-          if (pseudoEl) {
-            applyStyle(pseudoEl, pseudoElStyle, state, pseudoStyles);
-          }
-        },
-      ];
-    };
-  } else {
-    initProps = () => {
-      const [remainingProps, boxStyle, pseudoStyles] = withPropsStyle(props, {
-        managedByCSSVars,
-        pseudoClasses,
-        pseudoElements,
-        pseudoStyle,
-        base,
-        outerSpacing: true,
-        innerSpacing: true,
-        align: true,
-        dimension: true,
-        typo: true,
-        visual: true,
-      });
-      return [
-        remainingProps,
-        (state) => {
-          const boxEl = ref.current;
-          applyStyle(boxEl, boxStyle, state, pseudoStyles);
-        },
-      ];
-    };
-  }
-
-  const [remainingProps, updateStyle] = initProps();
-  useLayoutEffect(() => {
-    const boxEl = ref.current;
-    if (!boxEl) {
-      return null;
-    }
-    const pseudoStateEl = pseudoStateSelector
-      ? boxEl.querySelector(pseudoStateSelector)
-      : boxEl;
-    return initPseudoStyles(pseudoStateEl, {
-      pseudoClasses,
-      pseudoState,
-      effect: updateStyle,
-      elementToImpact: boxEl,
-    });
-  }, [pseudoClasses, pseudoState, updateStyle]);
-
-  return remainingProps;
-};
-
 export const Layout = (props) => {
   const { row, column, ...rest } = props;
 
   if (row) {
+    // eslint-disable-next-line jsenv/no-unknown-params
     return <Box layoutRow {...rest} />;
   }
   if (column) {
+    // eslint-disable-next-line jsenv/no-unknown-params
     return <Box layoutColumn {...rest} />;
   }
   return <Box {...rest} />;
