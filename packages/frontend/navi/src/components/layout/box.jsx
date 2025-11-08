@@ -107,7 +107,6 @@ export const Box = (props) => {
     visualSelector,
     // pseudoStateSelector convey the following:
     // The box contains content that holds pseudoState
-    // TOBE IMPLEMENTED
     // -> introduced for <Input /> with a wrapped for loading, checkboxes, etc
     pseudoStateSelector,
     hasChildFunction,
@@ -313,21 +312,23 @@ export const Box = (props) => {
     const boxStyle = baseStyles;
     let secondaryStyle;
     if (visualSelector) {
+      // box will get margin, position, dimension, typo
       Object.assign(boxStyle, marginStyles);
       Object.assign(boxStyle, positionStyles);
       Object.assign(boxStyle, dimensionStyles);
       Object.assign(boxStyle, typoStyles);
-      // visual el get padding and visual styles
+      // visual element will get padding and visual
       secondaryStyle = {};
       Object.assign(secondaryStyle, paddingStyles);
       Object.assign(secondaryStyle, visualStyles);
     } else if (pseudoStateSelector) {
-      // for now box get all the styles too
-      secondaryStyle = {};
+      // box will get margin, position, dimension, typo
       Object.assign(boxStyle, marginStyles);
       Object.assign(boxStyle, positionStyles);
       Object.assign(boxStyle, dimensionStyles);
       Object.assign(boxStyle, typoStyles);
+      // visual element will get padding and visual
+      secondaryStyle = {};
       Object.assign(boxStyle, paddingStyles);
       Object.assign(boxStyle, visualStyles);
     } else {
