@@ -229,7 +229,7 @@
                   </Layout>
                 </fieldset>
                 <fieldset>
-                  <legend>:disabled + checked</legend>
+                  <legend>:disabled:checked</legend>
                   <Layout row contentSpacing="sm" contentAlignX="start">
                     <Label>
                       <Input type="checkbox" disabled defaultChecked />
@@ -255,20 +255,38 @@
 
               <Layout column contentSpacing="sm">
                 <fieldset>
-                  <legend>Loading state</legend>
+                  <legend>:read-only</legend>
                   <Layout row contentSpacing="sm" contentAlignX="start">
                     <Label>
-                      <Input type="checkbox" loading />
-                      Loading Checkbox
+                      <Input type="checkbox" readOnly />
+                      Read-only
                     </Label>
                   </Layout>
                 </fieldset>
                 <fieldset>
-                  <legend>Loading + checked</legend>
+                  <legend>:read-only:checked</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input type="checkbox" readOnly checked />
+                      Read-only
+                    </Label>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>:-navi-loading</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input type="checkbox" loading />
+                      Loading
+                    </Label>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>:-navi-loading:checked</legend>
                   <Layout row contentSpacing="sm" contentAlignX="start">
                     <Label>
                       <Input type="checkbox" loading checked />
-                      Loading Checked
+                      Loading
                     </Label>
                   </Layout>
                 </fieldset>
@@ -286,6 +304,11 @@
               >
                 <strong>Enhanced State Explanations:</strong>
                 <ul style={{ margin: "5px 0", paddingLeft: "20px" }}>
+                  <li>
+                    <strong>Read-only:</strong> Visually indicates the checkbox
+                    cannot be interacted with, but remains focusable for
+                    accessibility
+                  </li>
                   <li>
                     <strong>Loading:</strong> Shows a spinner while allowing the
                     checkbox to remain interactive
