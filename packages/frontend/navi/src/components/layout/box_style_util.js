@@ -280,7 +280,7 @@ export const assignStyle = (
   propValue,
   propName,
   styleContext,
-  normalizer,
+  normalizer = normalizeCssStyle,
 ) => {
   if (propValue === undefined) {
     return;
@@ -313,6 +313,9 @@ export const assignStyle = (
 };
 
 export const generatePseudoNamedStyles = (pseudoStyle, styleContext) => {
+  if (!pseudoStyle) {
+    return null;
+  }
   const { pseudoClasses, pseudoElements, managedByCSSVars } = styleContext;
 
   const pseudoNamedStyles = {};

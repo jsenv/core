@@ -143,9 +143,7 @@ export const Box = (props) => {
       pseudoClasses ||
       // <Box pseudo={{ ":hover": { backgroundColor: "red" } }}> would enable ":hover"
       // even if not part of the pseudoClasses enabled for this component
-      pseudoState
-        ? Object.keys(pseudoState)
-        : undefined;
+      (pseudoState ? Object.keys(pseudoState) : undefined);
     const styleContext = {
       boxLayout,
       managedByCSSVars,
