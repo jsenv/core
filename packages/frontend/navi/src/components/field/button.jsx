@@ -89,21 +89,10 @@ import.meta.css = /* css */ `
       --x-border-radius: var(--border-radius);
       --x-border-width: var(--border-width);
       --x-outer-width: calc(var(--x-border-width) + var(--x-outline-width));
-
       --x-outline-color: var(--outline-color);
       --x-border-color: var(--border-color);
       --x-background-color: var(--background-color);
       --x-color: var(--color);
-      --x-border-color-hover: var(--border-color-hover);
-      --x-background-color-hover: var(--background-color-hover);
-      --x-color-hover: var(--color-hover);
-      --x-border-color-active: var(--border-color-active);
-      --x-border-color-readonly: var(--border-color-readonly);
-      --x-background-color-readonly: var(--background-color-readonly);
-      --x-color-readonly: var(--color-readonly);
-      --x-border-color-disabled: var(--border-color-disabled);
-      --x-background-color-disabled: var(--background-color-disabled);
-      --x-color-disabled: var(--color-disabled);
 
       position: relative;
       padding-top: var(--padding-top, var(--padding-y, var(--padding)));
@@ -132,13 +121,13 @@ import.meta.css = /* css */ `
     }
     /* Hover */
     .navi_button[data-hover] .navi_button_content {
-      --x-border-color: var(--x-border-color-hover);
-      --x-background-color: var(--x-background-color-hover);
-      --x-color: var(--x-color-hover);
+      --x-border-color: var(--border-color-hover);
+      --x-background-color: var(--background-color-hover);
+      --x-color: var(--color-hover);
     }
     /* Active */
     .navi_button[data-active] .navi_button_content {
-      --x-outline-color: var(--x-border-color-active);
+      --x-outline-color: var(--border-color-active);
       transform: scale(0.9);
     }
     .navi_button[data-active] .navi_button_shadow {
@@ -151,9 +140,9 @@ import.meta.css = /* css */ `
     }
     /* Readonly */
     .navi_button[data-readonly] .navi_button_content {
-      --x-border-color: var(--x-border-color-readonly);
-      --x-background-color: var(--x-background-color-readonly);
-      --x-color: var(--x-color-readonly);
+      --x-border-color: var(--border-color-readonly);
+      --x-background-color: var(--background-color-readonly);
+      --x-color: var(--color-readonly);
     }
     /* Focus */
     .navi_button[data-focus-visible] .navi_button_content {
@@ -167,9 +156,9 @@ import.meta.css = /* css */ `
       cursor: default;
     }
     .navi_button[data-disabled] .navi_button_content {
-      --x-border-color: var(--x-border-color-disabled);
-      --x-background-color: var(--x-background-color-disabled);
-      --x-color: var(--x-color-disabled);
+      --x-border-color: var(--border-color-disabled);
+      --x-background-color: var(--background-color-disabled);
+      --x-color: var(--color-disabled);
       transform: none; /* no active effect */
     }
     .navi_button[data-disabled] .navi_button_shadow {
@@ -186,24 +175,13 @@ import.meta.css = /* css */ `
       --x-border-color: transparent;
     }
     .navi_button[data-discrete][data-hover] .navi_button_content {
-      --x-border-color: var(--x-border-color-hover);
+      --x-border-color: var(--border-color-hover);
     }
     .navi_button[data-discrete][data-readonly] .navi_button_content {
       --x-border-color: transparent;
     }
     .navi_button[data-discrete][data-disabled] .navi_button_content {
       --x-border-color: transparent;
-    }
-    button[data-discrete] {
-      background-color: transparent;
-      border-color: transparent;
-    }
-    button[data-discrete]:hover {
-      border-color: revert;
-    }
-    button[data-discrete][data-readonly],
-    button[data-discrete][data-disabled] {
-      border-color: transparent;
     }
   }
 `;
