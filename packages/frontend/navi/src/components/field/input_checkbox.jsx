@@ -29,6 +29,10 @@ import {
   useUIStateController,
 } from "./use_ui_state_controller.js";
 
+// to finish: la couleur du checkmark: faire un exemple navi/natif
+// avec le constraste de couleur
+// et voir comment la checkbox se comporte au hover
+
 import.meta.css = /* css */ `
   @layer navi {
     :root {
@@ -56,7 +60,7 @@ import.meta.css = /* css */ `
       );
 
       /* Hover */
-      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
+      --border-color-hover: color-mix(in srgb, var(--border-color) 60%, black);
       /* Readonly */
       --border-color-readonly: color-mix(
         in srgb,
