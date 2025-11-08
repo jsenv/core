@@ -115,7 +115,7 @@ import.meta.css = /* css */ `
       --x-color-disabled: var(--color-disabled);
     }
 
-    .navi_input_field {
+    .navi_native_input {
       box-sizing: border-box;
       width: 100%;
       padding-top: var(--padding-top, var(--padding-y, var(--padding)));
@@ -135,10 +135,10 @@ import.meta.css = /* css */ `
       outline-offset: calc(-1 * (var(--x-border-width)));
     }
 
-    .navi_input_field::placeholder {
+    .navi_native_input::placeholder {
       color: var(--placeholder-color);
     }
-    .navi_input_field:-internal-autofill-selected {
+    .navi_native_input:-internal-autofill-selected {
       /* Webkit is putting some nasty styles after automplete that look as follow */
       /* input:-internal-autofill-selected { color: FieldText !important; } */
       /* Fortunately we can override it as follow */
@@ -151,8 +151,8 @@ import.meta.css = /* css */ `
       --x-color: var(--x-color-readonly);
     }
     /* Focus */
-    .navi_input[data-focus] .navi_input_field,
-    .navi_input[data-focus-visible] .navi_input_field {
+    .navi_input[data-focus] .navi_native_input,
+    .navi_input[data-focus-visible] .navi_native_input {
       outline-width: var(--x-outer-width);
       outline-offset: calc(-1 * var(--x-outer-width));
       --x-border-color: var(--x-outline-color);
@@ -298,7 +298,7 @@ const InputTextualBasic = (props) => {
         uiStateController.setUIState(e.detail.value, e);
       }}
       // style management
-      baseClassName="navi_input_field"
+      baseClassName="navi_native_input"
     />
   );
   const renderInputMemoized = useCallback(renderInput, [
@@ -317,7 +317,7 @@ const InputTextualBasic = (props) => {
         "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
       }}
       managedByCSSVars={InputManagedByCSSVars}
-      pseudoStateSelector=".navi_input_field"
+      pseudoStateSelector=".navi_native_input"
       basePseudoState={{
         ":read-only": innerReadOnly,
         ":disabled": innerDisabled,
