@@ -139,21 +139,27 @@ export const PSEUDO_CLASSES = {
     attribute: "data-readonly",
     add: (el) => {
       if (
-        el.tagName === "BUTTON" ||
         el.tagName === "INPUT" ||
         el.tagName === "SELECT" ||
         el.tagName === "TEXTAREA"
       ) {
+        if (el.type === "checkbox" || el.type === "radio") {
+          // there is no readOnly for checkboxes/radios
+          return;
+        }
         el.readOnly = true;
       }
     },
     remove: (el) => {
       if (
-        el.tagName === "BUTTON" ||
         el.tagName === "INPUT" ||
         el.tagName === "SELECT" ||
         el.tagName === "TEXTAREA"
       ) {
+        if (el.type === "checkbox" || el.type === "radio") {
+          // there is no readOnly for checkboxes/radios
+          return;
+        }
         el.readOnly = false;
       }
     },
