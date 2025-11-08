@@ -64,14 +64,14 @@ import.meta.css = /* css */ `
         var(--border-color) 30%,
         white
       );
-      --border-color-checked-readonly: #d3d3d3;
-      --background-color-checked-readonly: grey;
       --checkmark-color-readonly: grey;
+      --border-color-readonly-checked: #d3d3d3;
+      --background-color-readonly-checked: grey;
       /* Disabled */
       --border-color-disabled: var(--border-color-readonly);
-      --border-color-checked-disabled: #d3d3d3;
-      --background-color-checked-disabled: #d3d3d3;
       --checkmark-color-disabled: #eeeeee;
+      --border-color-disabled-checked: #d3d3d3;
+      --background-color-disabled-checked: #d3d3d3;
 
       --x-border-radius: var(--border-radius);
       --x-outline-offset: var(--outline-offset);
@@ -144,11 +144,11 @@ import.meta.css = /* css */ `
       --x-border-color: var(--border-color-readonly);
       --x-background-color: var(--background-color-readonly);
     }
-    .navi_checkbox[data-checked][data-readonly] {
-      --x-border-color: var(--border-color-checked-readonly);
-      --x-background-color: var(--background-color-checked-readonly);
+    .navi_checkbox[data-readonly][data-checked] {
+      --x-border-color: var(--border-color-readonly-checked);
+      --x-background-color: var(--background-color-readonly-checked);
     }
-    .navi_checkbox[data-checked][data-readonly] {
+    .navi_checkbox[data-readonly][data-checked] {
       --x-checkmark-color: var(--checkmark-color-readonly);
     }
     /* Disabled */
@@ -156,11 +156,11 @@ import.meta.css = /* css */ `
       --x-border-color: var(--border-color-disabled);
       --x-background-color: var(--background-color-disabled);
     }
-    .navi_checkbox[data-checked][data-disabled] {
-      --x-border-color: var(--border-color-checked-disabled);
-      --x-background-color: var(--background-color-checked-disabled);
+    .navi_checkbox[data-disabled][data-checked] {
+      --x-border-color: var(--border-color-disabled-checked);
+      --x-background-color: var(--background-color-disabled-checked);
     }
-    .navi_checkbox[data-checked][data-disabled] {
+    .navi_checkbox[data-disabled][data-checked] {
       --x-checkmark-color: var(--checkmark-color-disabled);
     }
   }
