@@ -285,6 +285,9 @@ export const assignStyle = (
     return;
   }
   const { managedByCSSVars } = styleContext;
+  if (!managedByCSSVars) {
+    throw new Error("managedByCSSVars is required in styleContext");
+  }
   const getStyle = All_PROPS[propName];
   if (getStyle === PASS_THROUGH) {
     const cssValue = normalizer(propValue, propName);

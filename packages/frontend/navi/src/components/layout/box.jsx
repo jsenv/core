@@ -76,6 +76,7 @@ import.meta.css = /* css */ `
 
 const PSEUDO_CLASSES_DEFAULT = [":hover", ":active"];
 const PSEUDO_ELEMENTS_DEFAULT = [];
+const MANAGED_BY_CSS_VARS_DEFAULT = {};
 export const Box = (props) => {
   const {
     as = "div",
@@ -93,7 +94,7 @@ export const Box = (props) => {
     style,
     shrink,
     expand,
-    managedByCSSVars,
+    managedByCSSVars = MANAGED_BY_CSS_VARS_DEFAULT,
     basePseudoState,
     pseudoState, // for demo purposes it's possible to control pseudo state from props
     pseudoClasses = PSEUDO_CLASSES_DEFAULT,

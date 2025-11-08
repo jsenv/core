@@ -305,7 +305,7 @@ const ButtonBasic = (props) => {
         ":disabled": innerDisabled,
         ":-navi-loading": innerLoading,
       }}
-      contentSelector=".navi_button_content"
+      visualSelector=".navi_button_content"
     >
       <LoaderBackground
         loading={innerLoading}
