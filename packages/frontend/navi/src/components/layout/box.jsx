@@ -251,7 +251,10 @@ export const Box = (props) => {
       for (const key of Object.keys(pseudoStyle)) {
         const pseudoStyleContext = {
           ...styleContext,
-          managedByCSSVars: managedByCSSVars[key],
+          managedByCSSVars: {
+            ...managedByCSSVars,
+            ...managedByCSSVars[key],
+          },
           pseudoName: key,
         };
 

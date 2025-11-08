@@ -106,10 +106,10 @@ import.meta.css = /* css */ `
       --x-color-disabled: var(--color-disabled);
 
       position: relative;
-      padding-top: var(--padding-top, var(--padding-y));
-      padding-right: var(--padding-right, var(--padding-x));
-      padding-bottom: var(--padding-bottom, var(--padding-y));
-      padding-left: var(--padding-left, var(--padding-x));
+      padding-top: var(--padding-top, var(--padding-y), var(--padding));
+      padding-right: var(--padding-right, var(--padding-x), var(--padding));
+      padding-bottom: var(--padding-bottom, var(--padding-y), var(--padding));
+      padding-left: var(--padding-left, var(--padding-x), var(--padding));
       color: var(--x-color);
       background-color: var(--x-background-color);
       border-width: var(--x-outer-width);
@@ -220,6 +220,10 @@ const ButtonManagedByCSSVars = {
   "outlineWidth": "--outline-width",
   "borderWidth": "--border-width",
   "borderRadius": "--border-radius",
+  "paddingTop": "--padding-top",
+  "paddingRight": "--padding-right",
+  "paddingBottom": "--padding-bottom",
+  "paddingLeft": "--padding-left",
   "backgroundColor": "--background-color",
   "borderColor": "--border-color",
   "color": "--color",
