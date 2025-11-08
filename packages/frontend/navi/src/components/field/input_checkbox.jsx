@@ -60,9 +60,9 @@ import.meta.css = /* css */ `
         var(--border-color) 30%,
         white
       );
-      --checkmark-color-readonly: grey;
       --border-color-readonly-checked: #d3d3d3;
       --background-color-readonly-checked: grey;
+      --checkmark-color-readonly: #eeeeee;
       /* Disabled */
       --border-color-disabled: var(--border-color-readonly);
       --checkmark-color-disabled: #eeeeee;
@@ -150,8 +150,6 @@ import.meta.css = /* css */ `
   .navi_checkbox[data-readonly][data-checked] {
     --x-border-color: var(--border-color-readonly-checked);
     --x-background-color: var(--background-color-readonly-checked);
-  }
-  .navi_checkbox[data-readonly][data-checked] {
     --x-checkmark-color: var(--checkmark-color-readonly);
   }
   /* Disabled */
@@ -162,8 +160,6 @@ import.meta.css = /* css */ `
   .navi_checkbox[data-disabled][data-checked] {
     --x-border-color: var(--border-color-disabled-checked);
     --x-background-color: var(--background-color-disabled-checked);
-  }
-  .navi_checkbox[data-disabled][data-checked] {
     --x-checkmark-color: var(--checkmark-color-disabled);
   }
 `;
