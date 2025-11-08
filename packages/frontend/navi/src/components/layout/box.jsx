@@ -48,13 +48,11 @@ import { appendStyles, normalizeStyles } from "@jsenv/dom";
 import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import {
-  generateDimensionStyles,
-  generateMarginStyles,
-  generatePaddingStyles,
-  generatePositionStyles,
+  assignStyle,
   generatePseudoNamedStyles,
-  generateTypoStyles,
-  generateVisualStyles,
+  getStylePropGroup,
+  normalizeSpacingStyle,
+  normalizeTypoStyle,
   resolveSpacingSize,
 } from "./box_style_util.js";
 import { BoxLayoutContext } from "./layout_context.jsx";
@@ -91,6 +89,9 @@ export const Box = (props) => {
     baseStyle,
 
     // style management
+    style,
+    shrink,
+    expand,
     managedByCSSVars,
     basePseudoState,
     pseudoState, // for demo purposes it's possible to control pseudo state from props
@@ -131,7 +132,7 @@ export const Box = (props) => {
         : undefined;
   const innerClassName = withPropsClassName(baseClassName, className);
 
-  let remainingProps;
+  const remainingProps = {};
   styling: {
     const boxLayout = useContext(BoxLayoutContext);
     const innerPseudoState =
@@ -151,85 +152,9 @@ export const Box = (props) => {
       pseudoState: innerPseudoState,
       pseudoClasses: innerPseudoClasses,
       pseudoElements,
-      pseudoStyle,
     };
-    /* eslint-disable no-unused-vars */
-    const {
-      // style from props
-      style,
 
-      // layout props
-      // layout/spacing
-      margin,
-      marginX,
-      marginY,
-      marginLeft,
-      marginRight,
-      marginTop,
-      marginBottom,
-      padding,
-      paddingX,
-      paddingY,
-      paddingLeft,
-      paddingRight,
-      paddingTop,
-      paddingBottom,
-      // layout/position
-      alignX,
-      alignY,
-      left,
-      top,
-      // layout/size
-      shrink,
-      expand,
-      expandX = expand,
-      expandY = expand,
-      width,
-      minWidth,
-      maxWidth,
-      height,
-      minHeight,
-      maxHeight,
-
-      // typo props
-      size,
-      bold,
-      thin,
-      italic,
-      underline,
-      underlineStyle,
-      underlineColor,
-      color,
-      textShadow,
-      lineHeight,
-      noWrap,
-
-      // visual props
-      boxShadow,
-      background,
-      backgroundColor,
-      backgroundImage,
-      backgroundSize,
-      border,
-      borderWidth,
-      borderRadius,
-      borderColor,
-      borderStyle,
-      borderTop,
-      borderLeft,
-      borderRight,
-      borderBottom,
-      opacity,
-      filter,
-      cursor,
-
-      // props not related to styling
-      ...nonStylingProps
-    } = rest;
-    /* eslint-enable no-unused-vars */
-    remainingProps = nonStylingProps;
-
-    const base = {
+    const baseStyles = {
       ...baseStyle,
       ...(layoutRow
         ? {
@@ -252,24 +177,83 @@ export const Box = (props) => {
           }
         : {}),
       ...(layoutInline ? {} : {}),
-      flexShrink: shrink ? 1 : insideFlexContainer ? 0 : undefined,
-      flexGrow: insideFlexContainer && expand ? 1 : undefined,
     };
-    const propStyles = style ? normalizeStyles(style, "css") : {};
-    const marginStyles = generateMarginStyles(props, styleContext);
-    const paddingStyles = generatePaddingStyles(props, styleContext);
-    const dimensionStyles = generateDimensionStyles(props, styleContext);
-    const positionStyles = generatePositionStyles(props, styleContext);
-    const typoStyles = generateTypoStyles(props, styleContext);
-    const visualStyles = generateVisualStyles(props, styleContext);
-    const pseudoNamedStyles = generatePseudoNamedStyles(props, styleContext);
-
-    const boxStyle = {};
-    let secondaryStyle;
-    if (base) {
-      Object.assign(boxStyle, base);
+    const marginStyles = {};
+    const paddingStyles = {};
+    const dimensionStyles = {};
+    const positionStyles = {};
+    const typoStyles = {};
+    const visualStyles = {};
+    const stylingKeyCandidateArray = Object.keys(rest);
+    const remainingPropKeys = [];
+    for (const key of stylingKeyCandidateArray) {
+      const group = getStylePropGroup(key);
+      if (group === "margin") {
+        assignStyle(
+          marginStyles,
+          rest[key],
+          key,
+          styleContext,
+          normalizeSpacingStyle,
+        );
+        continue;
+      }
+      if (group === "padding") {
+        assignStyle(
+          paddingStyles,
+          rest[key],
+          key,
+          styleContext,
+          normalizeSpacingStyle,
+        );
+        continue;
+      }
+      if (group === "dimension") {
+        assignStyle(dimensionStyles, rest[key], key, styleContext);
+        continue;
+      }
+      if (group === "position") {
+        assignStyle(positionStyles, rest[key], key, styleContext);
+        continue;
+      }
+      if (group === "typo") {
+        assignStyle(
+          typoStyles,
+          rest[key],
+          key,
+          styleContext,
+          normalizeTypoStyle,
+        );
+        continue;
+      }
+      if (group === "visual") {
+        assignStyle(visualStyles, rest[key], key, styleContext);
+        continue;
+      }
+      remainingPropKeys.push(key);
+      remainingProps[key] = rest[key];
     }
 
+    const pseudoNamedStyles = generatePseudoNamedStyles(
+      pseudoStyle,
+      styleContext,
+    );
+
+    if (insideFlexContainer) {
+      baseStyles.flexShrink = shrink ? 1 : 0;
+      baseStyles.flexGrow = expand ? 1 : undefined;
+    } else {
+      if (expand) {
+        assignStyle(dimensionStyles, true, "expandX", styleContext);
+        assignStyle(dimensionStyles, true, "expandY", styleContext);
+      }
+      if (shrink) {
+        // can we do something, does it have a meaning here?
+      }
+    }
+
+    const boxStyle = baseStyles;
+    let secondaryStyle;
     if (visualSelector) {
       Object.assign(boxStyle, marginStyles);
       Object.assign(boxStyle, positionStyles);
@@ -294,14 +278,16 @@ export const Box = (props) => {
       Object.assign(boxStyle, positionStyles);
       Object.assign(boxStyle, dimensionStyles);
       Object.assign(boxStyle, typoStyles);
-      Object.assign(secondaryStyle, paddingStyles);
-      Object.assign(secondaryStyle, visualStyles);
+      Object.assign(boxStyle, paddingStyles);
+      Object.assign(boxStyle, visualStyles);
     }
-
     if (style) {
-      appendStyles(boxStyle, propStyles, "css");
+      const styleFromProp = normalizeStyles(style, "css");
+      appendStyles(boxStyle, styleFromProp, "css");
     }
 
+    // idéalement chaque style utilise un useMemo ou que sais-je
+    // mais pour l'instant osef
     const updateStyle = useCallback(
       (state) => {
         const boxEl = ref.current;
@@ -347,13 +333,13 @@ export const Box = (props) => {
     <TagName
       ref={ref}
       className={innerClassName}
-      data-layout-row={as === "div" && layoutRow ? "" : undefined}
-      data-layout-column={as === "div" && layoutColumn ? "" : undefined}
-      data-layout-inline={as === "div" && layoutInline ? "" : undefined}
-      {...remainingProps}
+      data-layout-row={layoutRow ? "" : undefined}
+      data-layout-column={layoutColumn ? "" : undefined}
+      data-layout-inline={layoutInline ? "" : undefined}
+      {...(pseudoStateSelector ? undefined : remainingProps)}
     >
       <BoxLayoutContext.Provider value={layout}>
-        {children}
+        {pseudoStateSelector ? children(remainingProps) : children}
       </BoxLayoutContext.Provider>
     </TagName>
   );
@@ -363,11 +349,9 @@ export const Layout = (props) => {
   const { row, column, ...rest } = props;
 
   if (row) {
-    // eslint-disable-next-line jsenv/no-unknown-params
     return <Box layoutRow {...rest} />;
   }
   if (column) {
-    // eslint-disable-next-line jsenv/no-unknown-params
     return <Box layoutColumn {...rest} />;
   }
   return <Box {...rest} />;

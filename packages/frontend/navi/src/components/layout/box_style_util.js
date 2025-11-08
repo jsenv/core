@@ -47,15 +47,15 @@ import { normalizeStyle } from "@jsenv/dom";
  * @returns {array} [remainingProps, mainStyle, ...additionalStyles] - Non-style props and style objects
  */
 
-const normalizeSpacingStyle = (value, property = "padding") => {
+export const normalizeSpacingStyle = (value, property = "padding") => {
   const cssSize = sizeSpacingScale[value];
   return cssSize || normalizeStyle(value, property, "css");
 };
-const normalizeTypoStyle = (value, property = "fontSize") => {
+export const normalizeTypoStyle = (value, property = "fontSize") => {
   const cssSize = sizeTypoScale[value];
   return cssSize || normalizeStyle(value, property, "css");
 };
-const normalizeCssStyle = (value, property) => {
+export const normalizeCssStyle = (value, property) => {
   return normalizeStyle(value, property, "css");
 };
 
@@ -247,34 +247,73 @@ const All_PROPS = {
   ...VISUAL_PROPS,
 };
 
-export const generateVisualStyle = (props, styleContext) =>
-  generateStyleGroup(VISUAL_PROPS, props, styleContext);
+const OUTER_SPACING_PROP_NAME_SET = new Set(Object.keys(OUTER_SPACING_PROPS));
+const INNER_SPACING_PROP_NAME_SET = new Set(Object.keys(INNER_SPACING_PROPS));
+const DIMENSION_PROP_NAME_SET = new Set(Object.keys(DIMENSION_PROPS));
+const POSITION_PROP_NAME_SET = new Set(Object.keys(POSITION_PROPS));
+const TYPO_PROP_NAME_SET = new Set(Object.keys(TYPO_PROPS));
+const VISUAL_PROP_NAME_SET = new Set(Object.keys(VISUAL_PROPS));
 
-export const generateMarginStyles = (props, styleContext) =>
-  generateStyleGroup(
-    OUTER_SPACING_PROPS,
-    props,
-    styleContext,
-    normalizeSpacingStyle,
-  );
-export const generatePaddingStyles = (props, styleContext) =>
-  generateStyleGroup(
-    INNER_SPACING_PROPS,
-    props,
-    styleContext,
-    normalizeSpacingStyle,
-  );
-export const generateDimensionStyles = (props, styleContext) =>
-  generateStyleGroup(DIMENSION_PROPS, props, styleContext);
-export const generatePositionStyles = (props, styleContext) =>
-  generateStyleGroup(POSITION_PROPS, props, styleContext);
-export const generateTypoStyles = (props, styleContext) =>
-  generateStyleGroup(TYPO_PROPS, props, styleContext, normalizeTypoStyle);
-export const generateVisualStyles = (props, styleContext) =>
-  generateStyleGroup(VISUAL_PROPS, props, styleContext);
-export const generatePseudoNamedStyles = (props, styleContext) => {
-  const { pseudoStyle, pseudoClasses, pseudoElements, managedByCSSVars } =
-    styleContext;
+export const getStylePropGroup = (name) => {
+  if (OUTER_SPACING_PROP_NAME_SET.has(name)) {
+    return "margin";
+  }
+  if (INNER_SPACING_PROP_NAME_SET.has(name)) {
+    return "padding";
+  }
+  if (DIMENSION_PROP_NAME_SET.has(name)) {
+    return "dimension";
+  }
+  if (POSITION_PROP_NAME_SET.has(name)) {
+    return "position";
+  }
+  if (TYPO_PROP_NAME_SET.has(name)) {
+    return "typo";
+  }
+  if (VISUAL_PROP_NAME_SET.has(name)) {
+    return "visual";
+  }
+  return null;
+};
+export const assignStyle = (
+  styleObject,
+  propValue,
+  propName,
+  styleContext,
+  normalizer,
+) => {
+  if (propValue === undefined) {
+    return;
+  }
+  const { managedByCSSVars } = styleContext;
+  const getStyle = All_PROPS[propName];
+  if (getStyle === PASS_THROUGH) {
+    const cssValue = normalizer(propValue, propName);
+    const cssVar = managedByCSSVars[propName];
+    if (cssVar) {
+      styleObject[cssVar] = cssValue;
+    } else {
+      styleObject[propName] = cssValue;
+    }
+    return;
+  }
+  const values = getStyle(propValue, styleContext);
+  if (!values) {
+    return;
+  }
+  for (const key of Object.keys(values)) {
+    const cssValue = normalizer(values[key], key);
+    const cssVar = managedByCSSVars[key];
+    if (cssVar) {
+      styleObject[cssVar] = cssValue;
+    } else {
+      styleObject[key] = cssValue;
+    }
+  }
+};
+
+export const generatePseudoNamedStyles = (pseudoStyle, styleContext) => {
+  const { pseudoClasses, pseudoElements, managedByCSSVars } = styleContext;
 
   const pseudoNamedStyles = {};
   pseudo_classes: {
@@ -316,26 +355,7 @@ export const generatePseudoNamedStyles = (props, styleContext) => {
   }
   return pseudoNamedStyles;
 };
-
-export const generateStyleGroup = (
-  PROPS_GROUP,
-  props,
-  styleContext,
-  normalizer = normalizeCssStyle,
-) => {
-  const styleGroup = {};
-  for (const propName of Object.keys(PROPS_GROUP)) {
-    assignStyle(
-      styleGroup,
-      props[propName],
-      propName,
-      styleContext,
-      normalizer,
-    );
-  }
-  return styleGroup;
-};
-export const generatePseudoStyle = (
+const generatePseudoStyle = (
   props,
   pseudoStyleContext,
   normalizer = normalizeCssStyle,
@@ -351,42 +371,6 @@ export const generatePseudoStyle = (
     );
   }
   return styleWithoutGroup;
-};
-const assignStyle = (
-  styleObject,
-  propValue,
-  propName,
-  styleContext,
-  normalizer,
-) => {
-  if (propValue === undefined) {
-    return;
-  }
-  const { managedByCSSVars } = styleContext;
-  const getStyle = All_PROPS[propName];
-  if (getStyle === PASS_THROUGH) {
-    const cssValue = normalizer(propValue, propName);
-    const cssVar = managedByCSSVars[propName];
-    if (cssVar) {
-      styleObject[cssVar] = cssValue;
-    } else {
-      styleObject[propName] = cssValue;
-    }
-    return;
-  }
-  const values = getStyle(propValue, styleContext);
-  if (!values) {
-    return;
-  }
-  for (const key of Object.keys(values)) {
-    const cssValue = normalizer(values[key], key);
-    const cssVar = managedByCSSVars[key];
-    if (cssVar) {
-      styleObject[cssVar] = cssValue;
-    } else {
-      styleObject[key] = cssValue;
-    }
-  }
 };
 
 // Unified design scale using t-shirt sizes with rem units for accessibility.

@@ -283,40 +283,47 @@ const InputTextualBasic = (props) => {
       }}
       pseudoClasses={InputPseudoClasses}
       pseudoElements={InputPseudoElements}
+      {...rest}
     >
-      <LoaderBackground
-        loading={innerLoading}
-        color="var(--navi-loader-color)"
-        inset={-1}
-      />
-      <Box
-        {...rest}
-        as="input"
-        ref={ref}
-        type={type}
-        data-value={uiState}
-        value={innerValue}
-        onInput={(e) => {
-          let inputValue;
-          if (type === "number") {
-            inputValue = e.target.valueAsNumber;
-          } else if (type === "datetime-local") {
-            inputValue = convertToUTCTimezone(e.target.value);
-          } else {
-            inputValue = e.target.value;
-          }
-          uiStateController.setUIState(inputValue, e);
-          onInput?.(e);
-        }}
-        onresetuistate={(e) => {
-          uiStateController.resetUIState(e);
-        }}
-        onsetuistate={(e) => {
-          uiStateController.setUIState(e.detail.value, e);
-        }}
-        // style management
-        baseClassName="navi_input_field"
-      />
+      {(remainingProps) => {
+        return (
+          <>
+            <LoaderBackground
+              loading={innerLoading}
+              color="var(--navi-loader-color)"
+              inset={-1}
+            />
+            <Box
+              {...remainingProps}
+              as="input"
+              ref={ref}
+              type={type}
+              data-value={uiState}
+              value={innerValue}
+              onInput={(e) => {
+                let inputValue;
+                if (type === "number") {
+                  inputValue = e.target.valueAsNumber;
+                } else if (type === "datetime-local") {
+                  inputValue = convertToUTCTimezone(e.target.value);
+                } else {
+                  inputValue = e.target.value;
+                }
+                uiStateController.setUIState(inputValue, e);
+                onInput?.(e);
+              }}
+              onresetuistate={(e) => {
+                uiStateController.resetUIState(e);
+              }}
+              onsetuistate={(e) => {
+                uiStateController.setUIState(e.detail.value, e);
+              }}
+              // style management
+              baseClassName="navi_input_field"
+            />
+          </>
+        );
+      }}
     </Box>
   );
 };
