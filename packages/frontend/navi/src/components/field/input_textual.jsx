@@ -25,7 +25,7 @@ import { renderActionableComponent } from "../action_execution/render_actionable
 import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { Box } from "../layout/box.jsx";
-import { LoadableInlineElement } from "../loader/loader_background.jsx";
+import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { ReportReadOnlyOnLabelContext } from "./label.jsx";
 import { useActionEvents } from "./use_action_events.js";
@@ -43,7 +43,15 @@ import {
 import.meta.css = /* css */ `
   @layer navi {
     .navi_input {
+      position: relative;
+      display: inline-flex;
       box-sizing: border-box;
+      width: fit-content;
+      height: fit-content;
+      flex-direction: inherit;
+      border-radius: inherit;
+      cursor: inherit;
+
       --border-radius: 2px;
       --border-width: 1px;
       --outline-width: 1px;
@@ -104,7 +112,9 @@ import.meta.css = /* css */ `
       --x-border-color-disabled: var(--border-color-disabled);
       --x-background-color-disabled: var(--background-color-disabled);
       --x-color-disabled: var(--color-disabled);
+    }
 
+    .navi_input_field {
       width: 100%;
       color: var(--x-color);
 
@@ -119,10 +129,11 @@ import.meta.css = /* css */ `
       outline-color: var(--x-border-color);
       outline-offset: calc(-1 * (var(--x-border-width)));
     }
-    .navi_input::placeholder {
+
+    .navi_input_field::placeholder {
       color: var(--placeholder-color);
     }
-    .navi_input:-internal-autofill-selected {
+    .navi_input_field:-internal-autofill-selected {
       /* Webkit is putting some nasty styles after automplete that look as follow */
       /* input:-internal-autofill-selected { color: FieldText !important; } */
       /* Fortunately we can override it as follow */
@@ -135,8 +146,8 @@ import.meta.css = /* css */ `
       --x-color: var(--x-color-readonly);
     }
     /* Focus */
-    .navi_input[data-focus],
-    .navi_input[data-focus-visible] {
+    .navi_input[data-focus] .navi_input_field,
+    .navi_input[data-focus-visible] .navi_input_field {
       outline-width: var(--x-outer-width);
       outline-offset: calc(-1 * var(--x-outer-width));
       --x-border-color: var(--x-outline-color);
@@ -250,61 +261,62 @@ const InputTextualBasic = (props) => {
   });
   useConstraints(ref, constraints);
 
-  const inputTextual = (
+  // if (type === "hidden") {
+  //   return inputTextual;
+  // }
+
+  return (
     <Box
-      {...rest}
-      as="input"
-      ref={ref}
-      type={type}
-      data-value={uiState}
-      value={innerValue}
-      onInput={(e) => {
-        let inputValue;
-        if (type === "number") {
-          inputValue = e.target.valueAsNumber;
-        } else if (type === "datetime-local") {
-          inputValue = convertToUTCTimezone(e.target.value);
-        } else {
-          inputValue = e.target.value;
-        }
-        uiStateController.setUIState(inputValue, e);
-        onInput?.(e);
-      }}
-      onresetuistate={(e) => {
-        uiStateController.resetUIState(e);
-      }}
-      onsetuistate={(e) => {
-        uiStateController.setUIState(e.detail.value, e);
-      }}
-      // style management
+      as="span"
+      expandX={props.expandX}
       baseClassName="navi_input"
       baseStyle={{
         "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
       }}
-      // wrapperSelector=".navi_inline_wrapper"
       managedByCSSVars={InputManagedByCSSVars}
-      pseudoClasses={InputPseudoClasses}
-      pseudoElements={InputPseudoElements}
+      pseudoStateSelector=".navi_input_field"
       basePseudoState={{
         ":read-only": innerReadOnly,
         ":disabled": innerDisabled,
         ":-navi-loading": innerLoading,
       }}
-    />
-  );
-
-  if (type === "hidden") {
-    return inputTextual;
-  }
-  return (
-    <LoadableInlineElement
-      loading={innerLoading}
-      color="var(--navi-loader-color)"
-      inset={-1}
-      expandX={props.expandX}
+      pseudoClasses={InputPseudoClasses}
+      pseudoElements={InputPseudoElements}
     >
-      {inputTextual}
-    </LoadableInlineElement>
+      <LoaderBackground
+        loading={innerLoading}
+        color="var(--navi-loader-color)"
+        inset={-1}
+      />
+      <Box
+        {...rest}
+        as="input"
+        ref={ref}
+        type={type}
+        data-value={uiState}
+        value={innerValue}
+        onInput={(e) => {
+          let inputValue;
+          if (type === "number") {
+            inputValue = e.target.valueAsNumber;
+          } else if (type === "datetime-local") {
+            inputValue = convertToUTCTimezone(e.target.value);
+          } else {
+            inputValue = e.target.value;
+          }
+          uiStateController.setUIState(inputValue, e);
+          onInput?.(e);
+        }}
+        onresetuistate={(e) => {
+          uiStateController.resetUIState(e);
+        }}
+        onsetuistate={(e) => {
+          uiStateController.setUIState(e.detail.value, e);
+        }}
+        // style management
+        baseClassName="navi_input_field"
+      />
+    </Box>
   );
 };
 

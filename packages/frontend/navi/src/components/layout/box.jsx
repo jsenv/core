@@ -89,8 +89,17 @@ export const Box = (props) => {
     pseudoClasses,
     pseudoElements,
     pseudoStyle,
+    // visualSelector convey the following:
+    // The box itself is visually "invisible", one of its descendant is responsible for visual representation
+    // - Some styles will be used on the box itself (for instance margins)
+    // - Some styles will be used on the visual element (for instance paddings, backgroundColor)
+    // -> introduced for <Button /> with transform:scale on press
     visualSelector,
-    wrapperSelector,
+    // pseudoStateSelector convey the following:
+    // The box contains content that holds pseudoState
+    // TOBE IMPLEMENTED
+    // -> introduced for <Input /> with a wrapped for loading, checkboxes, etc
+    pseudoStateSelector,
 
     children,
     ...rest
@@ -116,7 +125,7 @@ export const Box = (props) => {
     pseudoElements,
     pseudoStyle,
     visualSelector,
-    wrapperSelector,
+    pseudoStateSelector,
     base: {
       ...baseStyle,
       ...(layoutRow
@@ -176,7 +185,7 @@ const useBoxStyle = (
     ref,
     managedByCSSVars,
     visualSelector,
-    wrapperSelector,
+    pseudoStateSelector,
     pseudoState,
     pseudoClasses,
     pseudoElements,
@@ -224,7 +233,7 @@ const useBoxStyle = (
         },
       ];
     };
-  } else if (wrapperSelector) {
+  } else if (pseudoStateSelector) {
     initProps = () => {
       const [remainingProps, innerStyle, wrapperStyle, pseudoStyles] =
         withPropsStyle(
@@ -251,9 +260,9 @@ const useBoxStyle = (
           const el = ref.current;
           applyStyle(el, innerStyle);
 
-          const wrapperEl = el.closest(wrapperSelector);
-          if (wrapperEl) {
-            applyStyle(wrapperEl, wrapperStyle, state, pseudoStyles);
+          const pseudoEl = el.closest(pseudoStateSelector);
+          if (pseudoEl) {
+            applyStyle(pseudoEl, wrapperStyle, state, pseudoStyles);
           }
         },
       ];
@@ -289,12 +298,14 @@ const useBoxStyle = (
     if (!el) {
       return null;
     }
-    // const wrapperEl = wrapperSelector ? el.closest(wrapperSelector) : null;
-    return initPseudoStyles(el, {
+    const pseudoStateEl = pseudoStateSelector
+      ? el.querySelector(pseudoStateSelector)
+      : null;
+    return initPseudoStyles(pseudoStateEl, {
       pseudoClasses,
       pseudoState,
       effect: updateStyle,
-      // elementToImpact: wrapperEl || el,
+      elementToImpact: el,
     });
   }, [pseudoClasses, pseudoState, updateStyle]);
 
