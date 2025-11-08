@@ -50,7 +50,10 @@ import.meta.css = /* css */ `
       --background-color: white;
       --accent-color: light-dark(#4476ff, #3b82f6);
       --color: currentColor;
-      --checkmark-color: var(--navi-checkmark-color);
+      --checkmark-color: var(
+        --accent-color,
+        var(--navi-checkmark-color, var(--color))
+      );
 
       /* Hover */
       --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
