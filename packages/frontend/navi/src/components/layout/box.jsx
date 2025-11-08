@@ -172,7 +172,27 @@ export const Box = (props) => {
         : {}),
       ...(layoutInline ? {} : {}),
     };
-    const styleDeps = [visualSelector, pseudoStateSelector];
+    const styleDeps = [
+      // Layout and alignment props
+      boxLayout,
+      contentAlignX,
+      contentAlignY,
+      contentSpacing,
+
+      // Flex/sizing props
+      shrink,
+      expand,
+      insideFlexContainer,
+
+      // Style context dependencies
+      managedByCSSVars,
+      pseudoClasses,
+      pseudoElements,
+
+      // Selectors
+      visualSelector,
+      pseudoStateSelector,
+    ];
     const marginStyles = {};
     const paddingStyles = {};
     const dimensionStyles = {};
@@ -237,6 +257,7 @@ export const Box = (props) => {
 
         // pseudo class
         if (key.startsWith(":")) {
+          styleDeps.push(key);
           const pseudoClassStyles = {};
           const pseudoClassStyle = pseudoStyle[key];
           for (const pseudoClassStyleKey of Object.keys(pseudoClassStyle)) {
@@ -254,6 +275,7 @@ export const Box = (props) => {
         }
         // pseudo element
         if (key.startsWith("::")) {
+          styleDeps.push(key);
           const pseudoElementStyles = {};
           const pseudoElementStyle = pseudoStyle[key];
           for (const pseudoElementStyleKey of Object.keys(pseudoElementStyle)) {
@@ -317,6 +339,7 @@ export const Box = (props) => {
       Object.assign(boxStyle, visualStyles);
     }
     if (style) {
+      // TODO: add style to styleDeps
       const styleFromProp = normalizeStyles(style, "css");
       appendStyles(boxStyle, styleFromProp, "css");
     }
