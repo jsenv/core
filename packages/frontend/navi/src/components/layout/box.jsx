@@ -49,7 +49,6 @@ import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import {
   assignStyle,
-  generatePseudoNamedStyles,
   getStylePropGroup,
   normalizeSpacingStyle,
   normalizeTypoStyle,
@@ -75,6 +74,8 @@ import.meta.css = /* css */ `
   }
 `;
 
+const PSEUDO_CLASSES_DEFAULT = [":hover", ":active"];
+const PSEUDO_ELEMENTS_DEFAULT = [];
 export const Box = (props) => {
   const {
     as = "div",
@@ -95,8 +96,8 @@ export const Box = (props) => {
     managedByCSSVars,
     basePseudoState,
     pseudoState, // for demo purposes it's possible to control pseudo state from props
-    pseudoClasses,
-    pseudoElements,
+    pseudoClasses = PSEUDO_CLASSES_DEFAULT,
+    pseudoElements = PSEUDO_ELEMENTS_DEFAULT,
     pseudoStyle,
     // visualSelector convey the following:
     // The box itself is visually "invisible", one of its descendant is responsible for visual representation
@@ -139,16 +140,11 @@ export const Box = (props) => {
       basePseudoState && pseudoState
         ? { ...basePseudoState, ...pseudoState }
         : basePseudoState;
-    const innerPseudoClasses =
-      pseudoClasses ||
-      // <Box pseudo={{ ":hover": { backgroundColor: "red" } }}> would enable ":hover"
-      // even if not part of the pseudoClasses enabled for this component
-      (pseudoState ? Object.keys(pseudoState) : undefined);
     const styleContext = {
       boxLayout,
       managedByCSSVars,
       pseudoState: innerPseudoState,
-      pseudoClasses: innerPseudoClasses,
+      pseudoClasses,
       pseudoElements,
     };
 
@@ -176,6 +172,7 @@ export const Box = (props) => {
         : {}),
       ...(layoutInline ? {} : {}),
     };
+    const styleDeps = [visualSelector, pseudoStateSelector];
     const marginStyles = {};
     const paddingStyles = {};
     const dimensionStyles = {};
@@ -186,10 +183,17 @@ export const Box = (props) => {
     const remainingPropKeys = [];
     for (const key of stylingKeyCandidateArray) {
       const group = getStylePropGroup(key);
+      const value = rest[key];
+      if (!group) {
+        remainingPropKeys.push(key);
+        remainingProps[key] = value;
+        continue;
+      }
+      styleDeps.push(value);
       if (group === "margin") {
         assignStyle(
           marginStyles,
-          rest[key],
+          value,
           key,
           styleContext,
           normalizeSpacingStyle,
@@ -199,7 +203,7 @@ export const Box = (props) => {
       if (group === "padding") {
         assignStyle(
           paddingStyles,
-          rest[key],
+          value,
           key,
           styleContext,
           normalizeSpacingStyle,
@@ -207,35 +211,68 @@ export const Box = (props) => {
         continue;
       }
       if (group === "dimension") {
-        assignStyle(dimensionStyles, rest[key], key, styleContext);
+        assignStyle(dimensionStyles, value, key, styleContext);
         continue;
       }
       if (group === "position") {
-        assignStyle(positionStyles, rest[key], key, styleContext);
+        assignStyle(positionStyles, value, key, styleContext);
         continue;
       }
       if (group === "typo") {
-        assignStyle(
-          typoStyles,
-          rest[key],
-          key,
-          styleContext,
-          normalizeTypoStyle,
-        );
+        assignStyle(typoStyles, value, key, styleContext, normalizeTypoStyle);
         continue;
       }
-      if (group === "visual") {
-        assignStyle(visualStyles, rest[key], key, styleContext);
-        continue;
-      }
-      remainingPropKeys.push(key);
-      remainingProps[key] = rest[key];
+      // "visual"
+      assignStyle(visualStyles, value, key, styleContext);
     }
 
-    const pseudoNamedStyles = generatePseudoNamedStyles(
-      pseudoStyle,
-      styleContext,
-    );
+    const pseudoNamedStyles = {};
+    if (pseudoStyle) {
+      for (const key of Object.keys(pseudoStyle)) {
+        const pseudoStyleContext = {
+          ...styleContext,
+          managedByCSSVars: managedByCSSVars[key],
+          pseudoName: key,
+        };
+
+        // pseudo class
+        if (key.startsWith(":")) {
+          const pseudoClassStyles = {};
+          const pseudoClassStyle = pseudoStyle[key];
+          for (const pseudoClassStyleKey of Object.keys(pseudoClassStyle)) {
+            const pseudoClassStyleValue = pseudoClassStyle[pseudoClassStyleKey];
+            styleDeps.push(pseudoClassStyleValue);
+            assignStyle(
+              pseudoClassStyles,
+              pseudoClassStyleValue,
+              pseudoClassStyleKey,
+              pseudoStyleContext,
+            );
+          }
+          pseudoNamedStyles[key] = pseudoClassStyles;
+          continue;
+        }
+        // pseudo element
+        if (key.startsWith("::")) {
+          const pseudoElementStyles = {};
+          const pseudoElementStyle = pseudoStyle[key];
+          for (const pseudoElementStyleKey of Object.keys(pseudoElementStyle)) {
+            const pseudoElementStyleValue =
+              pseudoElementStyle[pseudoElementStyleKey];
+            styleDeps.push(pseudoElementStyleValue);
+            assignStyle(
+              pseudoElementStyles,
+              pseudoElementStyleValue,
+              pseudoElementStyleKey,
+              pseudoStyleContext,
+            );
+          }
+          pseudoNamedStyles[key] = pseudoElementStyles;
+          continue;
+        }
+        console.warn(`unsupported pseudo style key "${key}"`);
+      }
+    }
 
     if (insideFlexContainer) {
       baseStyles.flexShrink = shrink ? 1 : 0;
@@ -284,27 +321,22 @@ export const Box = (props) => {
       appendStyles(boxStyle, styleFromProp, "css");
     }
 
-    // idéalement chaque style utilise un useMemo ou que sais-je
-    // mais pour l'instant osef
-    const updateStyle = useCallback(
-      (state) => {
-        const boxEl = ref.current;
-        applyStyle(boxEl, boxStyle);
+    const updateStyle = useCallback((state) => {
+      const boxEl = ref.current;
+      applyStyle(boxEl, boxStyle);
 
-        if (pseudoStateSelector) {
-          const pseudoEl = boxEl.querySelector(pseudoStateSelector);
-          if (pseudoEl) {
-            applyStyle(pseudoEl, secondaryStyle, state, pseudoNamedStyles);
-          }
-        } else if (visualSelector) {
-          const visualEl = boxEl.querySelector(visualSelector);
-          if (visualEl) {
-            applyStyle(visualEl, secondaryStyle, state, pseudoNamedStyles);
-          }
+      if (pseudoStateSelector) {
+        const pseudoEl = boxEl.querySelector(pseudoStateSelector);
+        if (pseudoEl) {
+          applyStyle(pseudoEl, secondaryStyle, state, pseudoNamedStyles);
         }
-      },
-      [visualSelector, boxStyle, secondaryStyle, pseudoNamedStyles],
-    );
+      } else if (visualSelector) {
+        const visualEl = boxEl.querySelector(visualSelector);
+        if (visualEl) {
+          applyStyle(visualEl, secondaryStyle, state, pseudoNamedStyles);
+        }
+      }
+    }, styleDeps);
     useLayoutEffect(() => {
       const boxEl = ref.current;
       if (!boxEl) {
@@ -314,17 +346,12 @@ export const Box = (props) => {
         ? boxEl.querySelector(pseudoStateSelector)
         : boxEl;
       return initPseudoStyles(pseudoStateEl, {
-        pseudoClasses: innerPseudoClasses,
+        pseudoClasses,
         pseudoState: innerPseudoState,
         effect: updateStyle,
         elementToImpact: boxEl,
       });
-    }, [
-      pseudoStateSelector,
-      innerPseudoClasses,
-      innerPseudoState,
-      updateStyle,
-    ]);
+    }, [pseudoStateSelector, pseudoClasses, innerPseudoState, updateStyle]);
   }
 
   return (
