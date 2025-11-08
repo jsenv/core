@@ -110,6 +110,7 @@ export const Box = (props) => {
     // TOBE IMPLEMENTED
     // -> introduced for <Input /> with a wrapped for loading, checkboxes, etc
     pseudoStateSelector,
+    hasChildFunction,
 
     children,
     ...rest
@@ -382,6 +383,24 @@ export const Box = (props) => {
     }, [pseudoStateSelector, pseudoClasses, innerPseudoState, updateStyle]);
   }
 
+  // When hasChildFunction is used it means
+  // Some/all the children needs to access remainingProps
+  // to render and will provide a function to do so.
+  let innerChildren;
+  if (hasChildFunction) {
+    if (Array.isArray(children)) {
+      innerChildren = children.map((child) =>
+        typeof child === "function" ? child(remainingProps) : child,
+      );
+    } else if (typeof children === "function") {
+      innerChildren = children(remainingProps);
+    } else {
+      innerChildren = children;
+    }
+  } else {
+    innerChildren = children;
+  }
+
   return (
     <TagName
       ref={ref}
@@ -392,7 +411,7 @@ export const Box = (props) => {
       {...(pseudoStateSelector ? undefined : remainingProps)}
     >
       <BoxLayoutContext.Provider value={layout}>
-        {pseudoStateSelector ? children(remainingProps) : children}
+        {innerChildren}
       </BoxLayoutContext.Provider>
     </TagName>
   );

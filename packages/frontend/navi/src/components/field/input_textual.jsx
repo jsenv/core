@@ -16,7 +16,7 @@
  * - <InputRadio /> for type="radio"
  */
 
-import { useContext, useRef } from "preact/hooks";
+import { useCallback, useContext, useRef } from "preact/hooks";
 
 import { useActionStatus } from "../../use_action_status.js";
 import { forwardActionRequested } from "../../validation/custom_constraint_validation.js";
@@ -27,6 +27,7 @@ import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { Box } from "../layout/box.jsx";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
+import { useStableCallback } from "../use_stable_callback.js";
 import { ReportReadOnlyOnLabelContext } from "./label.jsx";
 import { useActionEvents } from "./use_action_events.js";
 import {
@@ -262,9 +263,43 @@ const InputTextualBasic = (props) => {
   });
   useConstraints(ref, constraints);
 
-  // if (type === "hidden") {
-  //   return inputTextual;
-  // }
+  const innerOnInput = useStableCallback(onInput);
+  const renderInput = (remainingProps) => (
+    <Box
+      {...remainingProps}
+      as="input"
+      ref={ref}
+      type={type}
+      data-value={uiState}
+      value={innerValue}
+      onInput={(e) => {
+        let inputValue;
+        if (type === "number") {
+          inputValue = e.target.valueAsNumber;
+        } else if (type === "datetime-local") {
+          inputValue = convertToUTCTimezone(e.target.value);
+        } else {
+          inputValue = e.target.value;
+        }
+        uiStateController.setUIState(inputValue, e);
+        innerOnInput?.(e);
+      }}
+      onresetuistate={(e) => {
+        uiStateController.resetUIState(e);
+      }}
+      onsetuistate={(e) => {
+        uiStateController.setUIState(e.detail.value, e);
+      }}
+      // style management
+      baseClassName="navi_input_field"
+    />
+  );
+  const renderInputMemoized = useCallback(renderInput, [
+    type,
+    uiState,
+    innerValue,
+    innerOnInput,
+  ]);
 
   return (
     <Box
@@ -283,47 +318,15 @@ const InputTextualBasic = (props) => {
       }}
       pseudoClasses={InputPseudoClasses}
       pseudoElements={InputPseudoElements}
+      hasChildFunction
       {...rest}
     >
-      {(remainingProps) => {
-        return (
-          <>
-            <LoaderBackground
-              loading={innerLoading}
-              color="var(--navi-loader-color)"
-              inset={-1}
-            />
-            <Box
-              {...remainingProps}
-              as="input"
-              ref={ref}
-              type={type}
-              data-value={uiState}
-              value={innerValue}
-              onInput={(e) => {
-                let inputValue;
-                if (type === "number") {
-                  inputValue = e.target.valueAsNumber;
-                } else if (type === "datetime-local") {
-                  inputValue = convertToUTCTimezone(e.target.value);
-                } else {
-                  inputValue = e.target.value;
-                }
-                uiStateController.setUIState(inputValue, e);
-                onInput?.(e);
-              }}
-              onresetuistate={(e) => {
-                uiStateController.resetUIState(e);
-              }}
-              onsetuistate={(e) => {
-                uiStateController.setUIState(e.detail.value, e);
-              }}
-              // style management
-              baseClassName="navi_input_field"
-            />
-          </>
-        );
-      }}
+      <LoaderBackground
+        loading={innerLoading}
+        color="var(--navi-loader-color)"
+        inset={-1}
+      />
+      {renderInputMemoized}
     </Box>
   );
 };
