@@ -338,10 +338,15 @@ export const Box = (props) => {
       Object.assign(boxStyle, paddingStyles);
       Object.assign(boxStyle, visualStyles);
     }
-    if (style) {
-      // TODO: add style to styleDeps
-      const styleFromProp = normalizeStyles(style, "css");
-      appendStyles(boxStyle, styleFromProp, "css");
+    if (typeof style === "string") {
+      appendStyles(boxStyle, normalizeStyles(style, "css"), "css");
+      styleDeps.push(style); // impact box style -> add to deps
+    } else if (style && typeof style === "object") {
+      for (const key of Object.keys(style)) {
+        const stylePropValue = style[key];
+        assignStyle(boxStyle, stylePropValue, key, styleContext);
+        styleDeps.push(stylePropValue); // impact box style -> add to deps
+      }
     }
 
     const updateStyle = useCallback((state) => {

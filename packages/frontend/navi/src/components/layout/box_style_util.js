@@ -246,7 +246,6 @@ const All_PROPS = {
   ...TYPO_PROPS,
   ...VISUAL_PROPS,
 };
-
 const OUTER_SPACING_PROP_NAME_SET = new Set(Object.keys(OUTER_SPACING_PROPS));
 const INNER_SPACING_PROP_NAME_SET = new Set(Object.keys(INNER_SPACING_PROPS));
 const DIMENSION_PROP_NAME_SET = new Set(Object.keys(DIMENSION_PROPS));
