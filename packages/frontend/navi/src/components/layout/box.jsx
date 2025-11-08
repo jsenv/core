@@ -74,7 +74,7 @@ import.meta.css = /* css */ `
   }
 `;
 
-const PSEUDO_CLASSES_DEFAULT = [":hover", ":active"];
+const PSEUDO_CLASSES_DEFAULT = [];
 const PSEUDO_ELEMENTS_DEFAULT = [];
 const MANAGED_BY_CSS_VARS_DEFAULT = {};
 export const Box = (props) => {
@@ -371,6 +371,31 @@ export const Box = (props) => {
         }
       }
     }, styleDeps);
+
+    const finalStyleDeps = [pseudoStateSelector, innerPseudoState, updateStyle];
+    // By default ":hover", ":active" are not tracked.
+    // But is code explicitely do something like:
+    // pseudoStyle={{ ":hover": { backgroundColor: "red" } }}
+    // then we'll track ":hover" state changes even for basic elements like <div>
+    let innerPseudoClasses;
+    if (pseudoStyle) {
+      innerPseudoClasses = [...pseudoClasses];
+      if (pseudoClasses !== PSEUDO_CLASSES_DEFAULT) {
+        finalStyleDeps.push(...pseudoClasses);
+      }
+      for (const key of Object.keys(pseudoStyle)) {
+        if (key.startsWith(":") && !innerPseudoClasses.includes(key)) {
+          innerPseudoClasses.push(key);
+          finalStyleDeps.push(key);
+        }
+      }
+    } else {
+      innerPseudoClasses = pseudoClasses;
+      if (pseudoClasses !== PSEUDO_CLASSES_DEFAULT) {
+        finalStyleDeps.push(...pseudoClasses);
+      }
+    }
+
     useLayoutEffect(() => {
       const boxEl = ref.current;
       if (!boxEl) {
@@ -380,12 +405,12 @@ export const Box = (props) => {
         ? boxEl.querySelector(pseudoStateSelector)
         : boxEl;
       return initPseudoStyles(pseudoStateEl, {
-        pseudoClasses,
+        pseudoClasses: innerPseudoClasses,
         pseudoState: innerPseudoState,
         effect: updateStyle,
         elementToImpact: boxEl,
       });
-    }, [pseudoStateSelector, pseudoClasses, innerPseudoState, updateStyle]);
+    }, finalStyleDeps);
   }
 
   // When hasChildFunction is used it means
