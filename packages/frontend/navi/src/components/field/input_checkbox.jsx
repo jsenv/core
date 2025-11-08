@@ -75,6 +75,7 @@ import.meta.css = /* css */ `
     position: relative;
     display: inline-flex;
     box-sizing: content-box;
+    margin: 3px 3px 3px 4px;
 
     --x-border-radius: var(--border-radius);
     --x-outline-offset: var(--outline-offset);
@@ -102,7 +103,6 @@ import.meta.css = /* css */ `
     box-sizing: border-box;
     width: var(--x-width);
     height: var(--x-height);
-    margin: 3px 3px 3px 4px;
     background-color: var(--x-background-color);
     border-width: var(--x-border-width);
     border-style: solid;
