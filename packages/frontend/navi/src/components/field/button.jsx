@@ -34,20 +34,6 @@ import {
 import.meta.css = /* css */ `
   @layer navi {
     .navi_button {
-      position: relative;
-      display: flex;
-      width: fit-content;
-      height: fit-content;
-      padding: 0;
-      flex-direction: inherit;
-      align-items: inherit;
-      justify-content: inherit;
-      background: none;
-      border: none;
-      border-radius: inherit;
-      outline: none;
-      cursor: pointer;
-
       --outline-width: 1px;
       --border-width: 1px;
       --border-radius: 2px;
@@ -58,8 +44,7 @@ import.meta.css = /* css */ `
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: light-dark(#f3f4f6, #2d3748);
       --color: currentColor;
-    }
-    .navi_button_content {
+
       /* Hover */
       --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
       --background-color-hover: color-mix(
@@ -95,10 +80,25 @@ import.meta.css = /* css */ `
       --x-color: var(--color);
 
       position: relative;
+      display: flex;
+      width: fit-content;
+      height: fit-content;
+      padding: 0;
+      flex-direction: inherit;
+      align-items: inherit;
+      justify-content: inherit;
+      background: none;
+      border: none;
+      border-radius: inherit;
+      outline: none;
+      cursor: pointer;
+    }
+    .navi_button_content {
+      position: relative;
       padding-top: var(--padding-top, var(--padding-y, var(--padding)));
       padding-right: var(--padding-right, var(--padding-x, var(--padding)));
       padding-bottom: var(--padding-bottom, var(--padding-y, var(--padding)));
-      padding-left: var(--padding-left, var(--padding-x,, var(--padding)));
+      padding-left: var(--padding-left, var(--padding-x, var(--padding)));
       color: var(--x-color);
       background-color: var(--x-background-color);
       border-width: var(--x-outer-width);
@@ -119,15 +119,18 @@ import.meta.css = /* css */ `
       border-radius: inherit;
       pointer-events: none;
     }
+
     /* Hover */
-    .navi_button[data-hover] .navi_button_content {
+    .navi_button[data-hover] {
       --x-border-color: var(--border-color-hover);
       --x-background-color: var(--background-color-hover);
       --x-color: var(--color-hover);
     }
     /* Active */
-    .navi_button[data-active] .navi_button_content {
+    .navi_button[data-active] {
       --x-outline-color: var(--border-color-active);
+    }
+    .navi_button[data-active] .navi_button_content {
       transform: scale(0.9);
     }
     .navi_button[data-active] .navi_button_shadow {
@@ -139,52 +142,58 @@ import.meta.css = /* css */ `
         inset -2px 0 4px rgba(0, 0, 0, 0.1);
     }
     /* Readonly */
-    .navi_button[data-readonly] .navi_button_content {
+    .navi_button[data-readonly] {
       --x-border-color: var(--border-color-readonly);
       --x-background-color: var(--background-color-readonly);
       --x-color: var(--color-readonly);
     }
     /* Focus */
+    .navi_button[data-focus-visible] {
+      --x-border-color: var(--x-outline-color);
+    }
     .navi_button[data-focus-visible] .navi_button_content {
       outline-width: var(--x-outer-width);
       outline-offset: calc(-1 * var(--x-outer-width));
-      --x-border-color: var(--x-outline-color);
     }
     /* Disabled */
     .navi_button[data-disabled] {
       color: unset;
       cursor: default;
     }
-    .navi_button[data-disabled] .navi_button_content {
+    .navi_button[data-disabled] {
       --x-border-color: var(--border-color-disabled);
       --x-background-color: var(--background-color-disabled);
       --x-color: var(--color-disabled);
-      transform: none; /* no active effect */
+    }
+    /* no active effect */
+    .navi_button[data-disabled] .navi_button_content {
+      transform: none;
     }
     .navi_button[data-disabled] .navi_button_shadow {
       box-shadow: none;
     }
     /* Callout (info, warning, error) */
-    .navi_button[data-callout] .navi_button_content {
+    .navi_button[data-callout] {
       --x-border-color: var(--callout-color);
     }
 
     /* Discrete variant */
-    .navi_button[data-discrete] .navi_button_content {
+    .navi_button[data-discrete] {
       --x-background-color: transparent;
       --x-border-color: transparent;
     }
-    .navi_button[data-discrete][data-hover] .navi_button_content {
+    .navi_button[data-discrete][data-hover] {
       --x-border-color: var(--border-color-hover);
     }
-    .navi_button[data-discrete][data-readonly] .navi_button_content {
+    .navi_button[data-discrete][data-readonly] {
       --x-border-color: transparent;
     }
-    .navi_button[data-discrete][data-disabled] .navi_button_content {
+    .navi_button[data-discrete][data-disabled] {
       --x-border-color: transparent;
     }
   }
 `;
+
 export const Button = (props) => {
   return renderActionableComponent(props, {
     Basic: ButtonBasic,
