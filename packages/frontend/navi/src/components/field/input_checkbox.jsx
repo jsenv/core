@@ -72,8 +72,10 @@ import.meta.css = /* css */ `
       --border-color-checked-disabled: #d3d3d3;
       --background-color-checked-disabled: #d3d3d3;
       --checkmark-color-disabled: #eeeeee;
+
+      --x-border-width: var(--border-width);
     }
-    .navi_checkbox input {
+    .navi_checkbox .navi_native_field {
       position: absolute;
       inset: 0;
       margin: 0;
@@ -82,7 +84,7 @@ import.meta.css = /* css */ `
       opacity: 0;
       cursor: inherit;
     }
-    .navi_checkbox_field {
+    .navi_checkbox .navi_native_field {
       display: inline-flex;
       box-sizing: border-box;
       width: var(--width);
@@ -294,7 +296,7 @@ const InputCheckboxBasic = (props) => {
         uiStateController.setUIState(e.detail.value, e);
       }}
       // style
-      baseClassName="navi_input_field"
+      baseClassName="navi_native_field"
     />
   );
   const renderCheckboxMemoized = useCallback(renderCheckbox, [
@@ -323,7 +325,7 @@ const InputCheckboxBasic = (props) => {
       baseStyle={{
         "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
       }}
-      pseudoStateSelector=".navi_input_field"
+      pseudoStateSelector=".navi_native_field"
       managedByCSSVars={CheckboxManagedByCSSVars}
       pseudoClasses={CheckboxPseudoClasses}
       pseudoElements={CheckboxPseudoElements}
