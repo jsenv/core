@@ -266,8 +266,9 @@ const InputCheckboxBasic = (props) => {
   const checked = Boolean(uiState);
   const innerOnInput = useStableCallback(onInput);
   const renderCheckbox = (remainingProps) => (
-    <input
+    <Box
       {...remainingProps}
+      as="input"
       ref={ref}
       type="checkbox"
       name={innerName}
@@ -286,14 +287,14 @@ const InputCheckboxBasic = (props) => {
         uiStateController.setUIState(checkboxIsChecked, e);
         innerOnInput?.(e);
       }}
-      // eslint-disable-next-line react/no-unknown-property
       onresetuistate={(e) => {
         uiStateController.resetUIState(e);
       }}
-      // eslint-disable-next-line react/no-unknown-property
       onsetuistate={(e) => {
         uiStateController.setUIState(e.detail.value, e);
       }}
+      // style
+      baseClassName="navi_input_field"
     />
   );
   const renderCheckboxMemoized = useCallback(renderCheckbox, [
@@ -322,6 +323,7 @@ const InputCheckboxBasic = (props) => {
       baseStyle={{
         "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
       }}
+      pseudoStateSelector=".navi_input_field"
       managedByCSSVars={CheckboxManagedByCSSVars}
       pseudoClasses={CheckboxPseudoClasses}
       pseudoElements={CheckboxPseudoElements}
