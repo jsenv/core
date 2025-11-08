@@ -1,5 +1,5 @@
 import { pickLightOrDark } from "@jsenv/dom";
-import { useContext, useLayoutEffect, useRef } from "preact/hooks";
+import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { useActionStatus } from "../../use_action_status.js";
 import { requestAction } from "../../validation/custom_constraint_validation.js";
@@ -10,6 +10,7 @@ import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { Box } from "../layout/box.jsx";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
+import { useStableCallback } from "../use_stable_callback.js";
 import {
   ReportDisabledOnLabelContext,
   ReportReadOnlyOnLabelContext,
@@ -263,15 +264,14 @@ const InputCheckboxBasic = (props) => {
   useConstraints(ref, constraints);
 
   const checked = Boolean(uiState);
-  const inputCheckbox = (
+  const innerOnInput = useStableCallback(onInput);
+  const renderCheckbox = (remainingProps) => (
     <input
-      {...rest}
+      {...remainingProps}
       ref={ref}
       type="checkbox"
       name={innerName}
       checked={checked}
-      readOnly={innerReadOnly}
-      disabled={innerDisabled}
       required={innerRequired}
       data-callout-arrow-x="center"
       onClick={(e) => {
@@ -284,7 +284,7 @@ const InputCheckboxBasic = (props) => {
         const checkbox = e.target;
         const checkboxIsChecked = checkbox.checked;
         uiStateController.setUIState(checkboxIsChecked, e);
-        onInput?.(e);
+        innerOnInput?.(e);
       }}
       // eslint-disable-next-line react/no-unknown-property
       onresetuistate={(e) => {
@@ -296,6 +296,12 @@ const InputCheckboxBasic = (props) => {
       }}
     />
   );
+  const renderCheckboxMemoized = useCallback(renderCheckbox, [
+    innerName,
+    checked,
+    innerRequired,
+    innerOnInput,
+  ]);
 
   useLayoutEffect(() => {
     const naviCheckbox = ref.current;
@@ -324,13 +330,14 @@ const InputCheckboxBasic = (props) => {
         ":disabled": innerDisabled,
         ":-navi-loading": innerLoading,
       }}
+      hasChildFunction
     >
       <LoaderBackground
         loading={innerLoading}
         inset={-1}
         color="var(--navi-loader-color)"
       />
-      {inputCheckbox}
+      {renderCheckboxMemoized}
       <div className="navi_checkbox_field">
         <svg
           viewBox="0 0 12 12"
