@@ -223,10 +223,10 @@ const useBoxStyle = (
       return [
         remainingProps,
         (state) => {
-          const el = ref.current;
-          applyStyle(el, innerStyle);
+          const box = ref.current;
+          applyStyle(box, innerStyle);
 
-          const visualEl = el.querySelector(visualSelector);
+          const visualEl = box.querySelector(visualSelector);
           if (visualEl) {
             applyStyle(visualEl, contentStyle, state, pseudoStyles);
           }
@@ -257,10 +257,10 @@ const useBoxStyle = (
       return [
         remainingProps,
         (state) => {
-          const el = ref.current;
-          applyStyle(el, innerStyle);
+          const box = ref.current;
+          applyStyle(box, innerStyle);
 
-          const pseudoEl = el.closest(pseudoStateSelector);
+          const pseudoEl = box.querySelector(pseudoStateSelector);
           if (pseudoEl) {
             applyStyle(pseudoEl, wrapperStyle, state, pseudoStyles);
           }
@@ -285,8 +285,8 @@ const useBoxStyle = (
       return [
         remainingProps,
         (state) => {
-          const el = ref.current;
-          applyStyle(el, innerStyle, state, pseudoStyles);
+          const box = ref.current;
+          applyStyle(box, innerStyle, state, pseudoStyles);
         },
       ];
     };
@@ -294,18 +294,18 @@ const useBoxStyle = (
 
   const [remainingProps, updateStyle] = initProps();
   useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) {
+    const box = ref.current;
+    if (!box) {
       return null;
     }
     const pseudoStateEl = pseudoStateSelector
-      ? el.querySelector(pseudoStateSelector)
-      : null;
+      ? box.querySelector(pseudoStateSelector)
+      : box;
     return initPseudoStyles(pseudoStateEl, {
       pseudoClasses,
       pseudoState,
       effect: updateStyle,
-      elementToImpact: el,
+      elementToImpact: box,
     });
   }, [pseudoClasses, pseudoState, updateStyle]);
 

@@ -115,6 +115,7 @@ import.meta.css = /* css */ `
     }
 
     .navi_input_field {
+      box-sizing: border-box;
       width: 100%;
       color: var(--x-color);
 
