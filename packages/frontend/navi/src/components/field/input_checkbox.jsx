@@ -36,9 +36,9 @@ import {
 import.meta.css = /* css */ `
   @layer navi {
     :root {
+      --navi-checkbox-color: light-dark(#4476ff, #3b82f6);
       --navi-checkmark-color-light: white;
       --navi-checkmark-color-dark: rgb(55, 55, 55);
-      --navi-checkmark-color: var(--navi-checkmark-light-color);
     }
 
     .navi_checkbox {
@@ -52,11 +52,12 @@ import.meta.css = /* css */ `
       --outline-color: light-dark(#4476ff, #3b82f6);
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: white;
-      --color: light-dark(#4476ff, #3b82f6); /* light-dark(#355fcc, #4476ff) */
-      --checkmark-color: var(--color, var(--navi-checkmark-color));
-      --color-mix-light: white;
-      --color-mix-dark: black;
-      --color-mix: var(--color-mix-dark);
+      --color: var(--navi-checkbox-color);
+      --color-mix-light: black;
+      --color-mix-dark: white;
+
+      --color-mix: var(--color-mix-light);
+      --checkmark-color: var(--navi-checkmark-color-light);
 
       /* Hover */
       --border-color-hover: color-mix(in srgb, var(--border-color) 60%, black);
@@ -84,6 +85,11 @@ import.meta.css = /* css */ `
       --checkmark-color-disabled: #eeeeee;
       --border-color-disabled-checked: #d3d3d3;
       --background-color-disabled-checked: #d3d3d3;
+    }
+
+    .navi_checkbox[data-dark] {
+      --color-mix: var(--color-mix-dark);
+      --checkmark-color: var(--navi-checkmark-color-dark);
     }
   }
 
@@ -334,13 +340,19 @@ const InputCheckboxBasic = (props) => {
 
   useLayoutEffect(() => {
     const naviCheckbox = ref.current;
+    const lightColor = "var(--navi-checkmark-color-light)";
+    const darkColor = "var(--navi-checkmark-color-dark)";
     const colorPicked = pickLightOrDark(
       naviCheckbox,
       "var(--color)",
-      "var(--navi-checkmark-color-light)",
-      "var(--navi-checkmark-color-dark)",
+      lightColor,
+      darkColor,
     );
-    naviCheckbox.style.setProperty("--checkmark-color", colorPicked);
+    if (colorPicked === lightColor) {
+      naviCheckbox.removeAttribute("data-dark");
+    } else {
+      naviCheckbox.setAttribute("data-dark", "");
+    }
   }, [color]);
 
   return (
