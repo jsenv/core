@@ -32,7 +32,6 @@ import {
 // to finish: la couleur du checkmark: faire un exemple navi/natif
 // avec le constraste de couleur
 // et voir comment la checkbox se comporte au hover/checked aussi au passage
-// idéalement on peut controler la couleur avec color,accentColor ou les css vars?
 
 import.meta.css = /* css */ `
   @layer navi {
@@ -53,12 +52,8 @@ import.meta.css = /* css */ `
       --outline-color: light-dark(#4476ff, #3b82f6);
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: white;
-      --accent-color: light-dark(#4476ff, #3b82f6);
-      --color: currentColor;
-      --checkmark-color: var(
-        --accent-color,
-        var(--navi-checkmark-color, var(--color))
-      );
+      --color: light-dark(#4476ff, #3b82f6); /* light-dark(#355fcc, #4476ff) */
+      --checkmark-color: var(--color, var(--navi-checkmark-color));
 
       /* Hover */
       --border-color-hover: color-mix(in srgb, var(--border-color) 60%, black);
@@ -94,7 +89,7 @@ import.meta.css = /* css */ `
     --x-outline-color: var(--outline-color);
     --x-background-color: var(--background-color);
     --x-border-color: var(--border-color);
-    --x-accent-color: var(--accent-color);
+    --x-color: var(--color);
     --x-checkmark-color: var(--checkmark-color);
   }
   .navi_checkbox .navi_native_field {
@@ -146,8 +141,8 @@ import.meta.css = /* css */ `
   }
   /* Checked */
   .navi_checkbox[data-checked] {
-    --x-background-color: var(--x-accent-color);
-    --x-border-color: var(--x-accent-color);
+    --x-background-color: var(--x-color-color);
+    --x-border-color: var(--x-color-color);
   }
   /* Readonly */
   .navi_checkbox[data-readonly],
@@ -259,9 +254,10 @@ const InputCheckboxBasic = (props) => {
 
     autoFocus,
     constraints = [],
-    accentColor,
     onClick,
     onInput,
+
+    color,
     ...rest
   } = props;
   const defaultRef = useRef();
@@ -310,6 +306,7 @@ const InputCheckboxBasic = (props) => {
       }}
       // style
       baseClassName="navi_native_field"
+      color={color}
     />
   );
   const renderCheckboxMemoized = useCallback(renderCheckbox, [
@@ -323,21 +320,18 @@ const InputCheckboxBasic = (props) => {
     const naviCheckbox = ref.current;
     const colorPicked = pickLightOrDark(
       naviCheckbox,
-      "var(--accent-color)",
+      "var(--color)",
       "var(--navi-checkmark-color-light)",
       "var(--navi-checkmark-color-dark)",
     );
     naviCheckbox.style.setProperty("--checkmark-color", colorPicked);
-  }, [accentColor]);
+  }, [color]);
 
   return (
     <Box
       {...rest}
       ref={ref}
       baseClassName="navi_checkbox"
-      baseStyle={{
-        "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
-      }}
       pseudoStateSelector=".navi_native_field"
       managedByCSSVars={CheckboxManagedByCSSVars}
       pseudoClasses={CheckboxPseudoClasses}
