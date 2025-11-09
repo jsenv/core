@@ -377,6 +377,7 @@ const InputRadioBasic = (props) => {
         loading={innerLoading}
         inset={-1}
         targetSelector=".navi_radio_field"
+        color="var(--navi-loader-color)"
       />
       {renderRadioMemoized}
       <span className="navi_radio_field">
