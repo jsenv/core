@@ -274,18 +274,31 @@ const getStyleToApply = (styles, pseudoState, pseudoNamedStyles) => {
     return styles;
   }
 
+  const isMatching = (pseudoKey) => {
+    if (pseudoKey.startsWith("::")) {
+      const nextColonIndex = pseudoKey.indexOf(":", 2);
+      if (nextColonIndex === -1) {
+        return true;
+      }
+      return pseudoKey.slice(0, nextColonIndex);
+    }
+    const nextColonIndex = pseudoKey.indexOf(":", 1);
+    if (nextColonIndex === -1) {
+      return pseudoState[pseudoKey];
+    }
+    // Handle compound pseudo-states like ":checked:disabled"
+    return pseudoKey
+      .slice(1)
+      .split(":")
+      .every((state) => pseudoState[state]);
+  };
+
   const styleToAddSet = new Set();
   for (const pseudoKey of Object.keys(pseudoNamedStyles)) {
-    const stylesToApply = pseudoNamedStyles[pseudoKey];
-    if (pseudoKey.startsWith("::")) {
+    if (isMatching(pseudoKey)) {
+      const stylesToApply = pseudoNamedStyles[pseudoKey];
       styleToAddSet.add(stylesToApply);
-      continue;
     }
-    const shouldApply = pseudoState[pseudoKey];
-    if (!shouldApply) {
-      continue;
-    }
-    styleToAddSet.add(stylesToApply);
   }
   if (styleToAddSet.size === 0) {
     return styles;
