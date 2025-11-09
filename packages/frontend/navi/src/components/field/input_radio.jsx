@@ -43,8 +43,8 @@ import.meta.css = /* css */ `
       --radiomark-color: var(--color);
       --border-color-checked: var(--color);
 
-      --color-mix-light: black;
-      --color-mix-dark: white;
+      --color-mix-light: white;
+      --color-mix-dark: black;
       --color-mix: var(--color-mix-light);
 
       /* Hover */
