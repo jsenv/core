@@ -479,6 +479,137 @@
                   </Layout>
                 </fieldset>
               </Layout>
+
+              <div className="enhanced-states-title">
+                Orange Color - Checked States
+              </div>
+              <p className="states-description">
+                How the orange color renders across different checked states,
+                comparing Navi enhancements with native equivalents.
+              </p>
+
+              <Layout column contentSpacing="sm">
+                <fieldset>
+                  <legend>:checked</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-orange-checked-navi"
+                        value="1"
+                        color="#f39c12"
+                        defaultValue
+                      />
+                      Navi
+                    </Label>
+                    <label>
+                      <input
+                        type="radio"
+                        name="demo-orange-checked-native"
+                        value="1"
+                        style={{ accentColor: "#f39c12" }}
+                        defaultChecked
+                      />
+                      Native
+                    </label>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>:focus-visible:checked</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-orange-focus-checked-navi"
+                        value="1"
+                        color="#f39c12"
+                        defaultValue
+                        pseudoState={{ ":focus-visible": true }}
+                      />
+                      Navi
+                    </Label>
+                    <label>
+                      <input
+                        type="radio"
+                        name="demo-orange-focus-checked-native"
+                        value="1"
+                        style={{ accentColor: "#f39c12" }}
+                        defaultChecked
+                        autofocus
+                      />
+                      Native
+                    </label>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>:disabled:checked</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-orange-disabled-checked-navi"
+                        value="1"
+                        color="#f39c12"
+                        defaultValue
+                        disabled
+                      />
+                      Navi
+                    </Label>
+                    <label>
+                      <input
+                        type="radio"
+                        name="demo-orange-disabled-checked-native"
+                        value="1"
+                        style={{ accentColor: "#f39c12" }}
+                        defaultChecked
+                        disabled
+                      />
+                      Native
+                    </label>
+                  </Layout>
+                </fieldset>
+              </Layout>
+              <Layout column contentSpacing="sm">
+                <fieldset>
+                  <legend>:read-only:checked</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-orange-readonly-checked-navi"
+                        value="1"
+                        color="#f39c12"
+                        defaultValue
+                        readOnly
+                      />
+                      Navi
+                    </Label>
+                    <div style={{ color: "#999", fontStyle: "italic" }}>
+                      (Native: N/A)
+                    </div>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>:read-only:-navi-loading:checked</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-orange-readonly-loading-checked-navi"
+                        value="1"
+                        color="#f39c12"
+                        defaultValue
+                        readOnly
+                        loading
+                      />
+                      Navi
+                    </Label>
+                    <div style={{ color: "#999", fontStyle: "italic" }}>
+                      (Native: N/A)
+                    </div>
+                  </Layout>
+                </fieldset>
+              </Layout>
             </div>
           </div>
         );
