@@ -60,5 +60,6 @@ export const resolveColorLuminance = (color, element) => {
   if (!resolvedColor) {
     return undefined;
   }
-  return getLuminance(resolvedColor);
+  const [r, g, b] = resolvedColor;
+  return getLuminance(r, g, b);
 };

@@ -43,8 +43,8 @@ import.meta.css = /* css */ `
       --radiomark-color: var(--color);
       --border-color-checked: var(--color);
 
-      --color-mix-light: black;
-      --color-mix-dark: white;
+      --color-mix-light: white;
+      --color-mix-dark: black;
       --color-mix: var(--color-mix-light);
 
       /* Hover */
@@ -375,7 +375,6 @@ const InputRadioBasic = (props) => {
   useLayoutEffect(() => {
     const naviRadio = ref.current;
     const luminance = resolveColorLuminance("var(--color)", naviRadio);
-    naviRadio.setAttribute("data-luminance", luminance);
     if (luminance < 0.3) {
       naviRadio.setAttribute("data-dark", "");
     } else {
