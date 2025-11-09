@@ -275,7 +275,6 @@ const InputCheckboxBasic = (props) => {
   useConstraints(ref, constraints);
 
   const checked = Boolean(uiState);
-  console.log({ checked });
   const innerOnInput = useStableCallback(onInput);
   const renderCheckbox = (remainingProps) => (
     <Box
@@ -307,7 +306,6 @@ const InputCheckboxBasic = (props) => {
       }}
       // style
       baseClassName="navi_native_field"
-      color={color}
     />
   );
   const renderCheckboxMemoized = useCallback(renderCheckbox, [
@@ -342,6 +340,7 @@ const InputCheckboxBasic = (props) => {
         ":disabled": innerDisabled,
         ":-navi-loading": innerLoading,
       }}
+      color={color}
       hasChildFunction
     >
       <LoaderBackground

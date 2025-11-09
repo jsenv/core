@@ -1,6 +1,7 @@
 import { createContext } from "preact";
-import { forwardRef } from "preact/compat";
-import { useImperativeHandle, useRef, useState } from "preact/hooks";
+import { useState } from "preact/hooks";
+
+import { Box } from "../layout/box.jsx";
 
 import.meta.css = /* css */ `
   @layer navi {
@@ -19,10 +20,8 @@ import.meta.css = /* css */ `
 export const ReportReadOnlyOnLabelContext = createContext();
 export const ReportDisabledOnLabelContext = createContext();
 
-export const Label = forwardRef((props, ref) => {
+export const Label = (props) => {
   const { readOnly, disabled, children, ...rest } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
 
   const [inputReadOnly, setInputReadOnly] = useState(false);
   const innerReadOnly = readOnly || inputReadOnly;
@@ -30,17 +29,17 @@ export const Label = forwardRef((props, ref) => {
   const innerDisabled = disabled || inputDisabled;
 
   return (
-    <label
-      ref={innerRef}
+    <Box
+      as="label"
+      {...rest}
       data-readonly={innerReadOnly ? "" : undefined}
       data-disabled={innerDisabled ? "" : undefined}
-      {...rest}
     >
       <ReportReadOnlyOnLabelContext.Provider value={setInputReadOnly}>
         <ReportDisabledOnLabelContext.Provider value={setInputDisabled}>
           {children}
         </ReportDisabledOnLabelContext.Provider>
       </ReportReadOnlyOnLabelContext.Provider>
-    </label>
+    </Box>
   );
-});
+};
