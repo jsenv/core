@@ -342,10 +342,10 @@ const InputCheckboxBasic = (props) => {
     const lightColor = "var(--navi-checkmark-color-light)";
     const darkColor = "var(--navi-checkmark-color-dark)";
     const colorPicked = pickLightOrDark(
-      naviCheckbox,
       "var(--color)",
       lightColor,
       darkColor,
+      naviCheckbox,
     );
     if (colorPicked === lightColor) {
       naviCheckbox.removeAttribute("data-dark");

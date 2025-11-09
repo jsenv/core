@@ -1,4 +1,4 @@
-import { isLight } from "@jsenv/dom";
+import { resolveColorLuminance } from "@jsenv/dom";
 import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { useConstraints } from "../../validation/hooks/use_constraints.js";
@@ -374,10 +374,10 @@ const InputRadioBasic = (props) => {
 
   useLayoutEffect(() => {
     const naviRadio = ref.current;
-    if (isLight(naviRadio, "var(--color)")) {
-      naviRadio.removeAttribute("data-dark");
-    } else {
+    if (resolveColorLuminance("var(--color)", naviRadio) < 0.3) {
       naviRadio.setAttribute("data-dark", "");
+    } else {
+      naviRadio.removeAttribute("data-dark");
     }
   }, [color]);
 

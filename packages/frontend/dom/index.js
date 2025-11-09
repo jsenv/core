@@ -30,7 +30,10 @@ export {
   prefersDarkColors,
   prefersLightColors,
 } from "./src/color/color_scheme.js";
-export { isLight, pickLightOrDark } from "./src/color/light_or_dark.js";
+export {
+  pickLightOrDark,
+  resolveColorLuminance,
+} from "./src/color/light_or_dark.js";
 export { resolveCSSColor } from "./src/color/resolve_css_color.js";
 
 // traversal
