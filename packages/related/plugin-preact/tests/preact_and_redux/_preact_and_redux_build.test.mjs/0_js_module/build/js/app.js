@@ -1,4 +1,4 @@
-import { useSelector, useDispatch, y, u } from "/vendors.js";
+import { useSelector, useDispatch, _, u } from "/vendors.js";
 
 const increment = () => {
   return {
@@ -21,7 +21,7 @@ const App = ({
 }) => {
   const counterValue = useSelector(counterValueSelector);
   const dispatch = useDispatch();
-  y(() => {
+  _(() => {
     onRender();
   }, []);
   return u("p", {

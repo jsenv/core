@@ -1,12 +1,12 @@
 System.register([__v__("/jsenv_plugin_preact_node_modules.js")], function (_export, _context) {
   "use strict";
 
-  var useSelector, useDispatch, y, u, increment, decrement, counterValueSelector, App;
+  var useSelector, useDispatch, _, u, increment, decrement, counterValueSelector, App;
   return {
     setters: [function (_buildJsenv_plugin_preact_node_modulesJs) {
       useSelector = _buildJsenv_plugin_preact_node_modulesJs.useSelector;
       useDispatch = _buildJsenv_plugin_preact_node_modulesJs.useDispatch;
-      y = _buildJsenv_plugin_preact_node_modulesJs.y;
+      _ = _buildJsenv_plugin_preact_node_modulesJs._;
       u = _buildJsenv_plugin_preact_node_modulesJs.u;
     }],
     execute: function () {
@@ -28,7 +28,7 @@ System.register([__v__("/jsenv_plugin_preact_node_modules.js")], function (_expo
       }) => {
         const counterValue = useSelector(counterValueSelector);
         const dispatch = useDispatch();
-        y(() => {
+        _(() => {
           onRender();
         }, []);
         return u("p", {
