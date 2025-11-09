@@ -34,36 +34,38 @@ import.meta.css = /* css */ `
       --outline-width: 2px;
       --width: 13px;
       --height: 13px;
+
       --outline-color: light-dark(#4476ff, #3b82f6);
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: white;
-      --accent-color: var(--navi-radiomark-color);
-      --mark-color: var(--accent-color);
-
-      --accent-color-checked: color-mix(
+      --border-color-checked: var(--color);
+      --radiomark-color: var(--color);
+      --radiomark-color-checked: color-mix(
         in srgb,
         var(--accent-color) 70%,
         black
       );
 
+      /* Hover */
+      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
+      --border-color-checked-hover: var(--accent-color-checked);
+      --border-color-checked-readonly: #d3d3d3;
+      --radiomark-color-hover: var(--accent-color-checked);
+      /* Readonly */
       --border-color-readonly: color-mix(
         in srgb,
         var(--border-color) 30%,
         white
       );
-      --border-color-disabled: var(--border-color-readonly);
-      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
-      --border-color-checked: var(--accent-color);
-      --border-color-checked-hover: var(--accent-color-checked);
-      --border-color-checked-readonly: #d3d3d3;
-      --border-color-checked-disabled: #d3d3d3;
       --background-color-readonly: var(--background-color);
+      --radiomark-color-readonly: grey;
+      --background-color-readonly-checked: #d3d3d3;
+      /* Disabled */
+      --border-color-disabled: var(--border-color-readonly);
       --background-color-disabled: var(--background-color);
-      --background-color-checked-readonly: #d3d3d3;
-      --background-color-checked-disabled: var(--background-color);
-      --mark-color-hover: var(--accent-color-checked);
-      --mark-color-readonly: grey;
-      --mark-color-disabled: #eeeeee;
+      --radiomark-color-disabled: #eeeeee;
+      --border-color-checked-disabled: #d3d3d3;
+      --background-color-disabled-checked: var(--background-color);
     }
   }
 
@@ -71,6 +73,20 @@ import.meta.css = /* css */ `
     position: relative;
     display: inline-flex;
     box-sizing: content-box;
+    margin-top: 3px;
+    margin-right: 3px;
+    margin-left: 5px;
+
+    --x-outline-offset: var(--outline-offset);
+    --x-outline-width: var(--outline-width);
+    --x-border-width: var(--border-width);
+    --x-width: var(--width);
+    --x-height: var(--height);
+    --x-outline-color: var(--outline-color);
+    --x-background-color: var(--background-color);
+    --x-border-color: var(--border-color);
+    --x-color: var(--color);
+    --x-radiomark-color: var(--radiomark-color);
   }
   .navi_radio .navi_native_field {
     position: absolute;
@@ -82,31 +98,29 @@ import.meta.css = /* css */ `
   }
   .navi_radio .navi_radio_field {
     display: inline-flex;
-    width: var(--width);
-    height: var(--height);
-    margin-top: 3px;
-    margin-right: 3px;
-    margin-left: 5px;
+    box-sizing: border-box;
+    width: var(--x-width);
+    height: var(--x-height);
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    outline-width: var(--outline-width);
+    outline-width: var(--x-outline-width);
     outline-style: none;
-    outline-color: var(--outline-color);
-    outline-offset: var(--outline-offset);
+    outline-color: var(--x-outline-color);
+    outline-offset: var(--x-outline-offset);
   }
   .navi_radio_field svg {
     overflow: visible;
   }
   .navi_radio_border {
-    fill: var(--background-color);
-    stroke: var(--border-color);
+    fill: var(--x-background-color);
+    stroke: var(--x-border-color);
   }
   .navi_radio_marker {
     width: 100%;
     height: 100%;
     opacity: 0;
-    fill: var(--mark-color);
+    fill: var(--x-radiomark-color);
     transform: scale(0.3);
     transform-origin: center;
     pointer-events: none;
@@ -129,54 +143,44 @@ import.meta.css = /* css */ `
     outline-style: solid;
   }
   /* Hover */
-  .navi_radio[data-hover] .navi_radio_border {
-    stroke: var(--border-color-hover);
-  }
-  .navi_radio[data-hover] .navi_radio_marker {
-    fill: var(--mark-color-hover);
+  .navi_radio[data-hover] {
+    --x-border-color: var(--border-color-hover);
+    --x-radiomark-color: var(--radiomark-color-hover);
   }
   /* Checked */
-  .navi_radio[data-checked] .navi_radio_border {
-    stroke: var(--border-color-checked);
+  .navi_radio[data-checked] {
+    --x-border-color: var(--border-color-checked);
   }
   .navi_radio[data-checked] .navi_radio_marker {
     opacity: 1;
     transform: scale(1);
   }
-  .navi_radio[data-hover][data-checked] .navi_radio_border {
-    stroke: var(--border-color-checked-hover);
+  .navi_radio[data-hover][data-checked] {
+    --x-border-color: var(--border-color-hover-checked);
   }
   /* Readonly */
-  .navi_radio[data-readonly] .navi_radio_border {
-    fill: var(--background-color-readonly);
-    stroke: var(--border-color-readonly);
-  }
-  .navi_radio[data-readonly] .navi_radio_marker {
-    fill: var(--mark-color-readonly);
+  .navi_radio[data-readonly] {
+    --x-background-color: var(--background-color-readonly);
+    --x-border-color: var(--border-color-readonly);
+    --x-radiomark-color: var(--radiomark-color-readonly);
   }
   .navi_radio[data-readonly] .navi_radio_dashed_border {
     display: none;
   }
-  .navi_radio[data-checked][data-readonly] .navi_radio_border {
-    fill: var(--background-color-checked-readonly);
-    stroke: var(--border-color-checked-readonly);
-  }
-  .navi_radio[data-checked][data-readonly] .navi_radio_marker {
-    fill: var(--mark-color-readonly);
+  .navi_radio[data-readonly][data-checked] {
+    --x-background-color: var(--background-color-readonly-checked);
+    --x-border-color: var(--border-color-readonly-checked);
+    --x-radiomark-color: var(--radiomark-color-readonly);
   }
   /* Disabled */
-  .navi_radio[data-disabled] .navi_radio_border {
-    fill: var(--background-color-disabled);
-    stroke: var(--border-color-disabled);
+  .navi_radio[data-disabled] {
+    --x-background-color: var(--background-color-disabled);
+    --x-border-color: var(--border-color-disabled);
+    --x-radiomark-color: var(--radiomark-color-disabled);
   }
-  .navi_radio[data-disabled] .navi_radio_marker {
-    fill: var(--mark-color-disabled);
-  }
-  .navi_radio[data-hover][data-checked][data-disabled] .navi_radio_border {
-    stroke: var(--border-color-disabled);
-  }
-  .navi_radio[data-checked][data-disabled] .navi_radio_marker {
-    fill: var(--mark-color-disabled);
+  .navi_radio[data-disabled][data-checked] {
+    --x-border-color: var(--border-color-disabled);
+    --x-radiomark-color: var(--radiomark-color-disabled);
   }
 `;
 

@@ -134,7 +134,6 @@ import.meta.css = /* css */ `
     outline-style: none;
     outline-color: var(--x-outline-color);
     outline-offset: var(--x-outline-offset);
-    /* color: var(--color); */
   }
   .navi_checkbox_marker {
     width: 100%;
