@@ -262,26 +262,26 @@ export const initPseudoStyles = (
   return teardown;
 };
 
-export const applyStyle = (element, style, pseudoState, pseudoStyles) => {
+export const applyStyle = (element, style, pseudoState, pseudoNamedStyles) => {
   if (!element) {
     return;
   }
-  updateStyle(element, getStyleToApply(style, pseudoState, pseudoStyles));
+  updateStyle(element, getStyleToApply(style, pseudoState, pseudoNamedStyles));
 };
 
-const getStyleToApply = (styles, pseudoState, pseudoStyles) => {
-  if (!pseudoState || !pseudoStyles) {
+const getStyleToApply = (styles, pseudoState, pseudoNamedStyles) => {
+  if (!pseudoState || !pseudoNamedStyles) {
     return styles;
   }
 
   const styleToAddSet = new Set();
-  for (const pseudoName of Object.keys(pseudoStyles)) {
-    const stylesToApply = pseudoStyles[pseudoName];
-    if (pseudoName.startsWith("::")) {
+  for (const pseudoKey of Object.keys(pseudoNamedStyles)) {
+    const stylesToApply = pseudoNamedStyles[pseudoKey];
+    if (pseudoKey.startsWith("::")) {
       styleToAddSet.add(stylesToApply);
       continue;
     }
-    const shouldApply = pseudoState[pseudoName];
+    const shouldApply = pseudoState[pseudoKey];
     if (!shouldApply) {
       continue;
     }

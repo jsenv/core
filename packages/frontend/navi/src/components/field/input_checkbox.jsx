@@ -31,7 +31,8 @@ import {
 
 // to finish: la couleur du checkmark: faire un exemple navi/natif
 // avec le constraste de couleur
-// et voir comment la checkbox se comporte au hover
+// et voir comment la checkbox se comporte au hover/checked aussi au passage
+// idéalement on peut controler la couleur avec color,accentColor ou les css vars?
 
 import.meta.css = /* css */ `
   @layer navi {
