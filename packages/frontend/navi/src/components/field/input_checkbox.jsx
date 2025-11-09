@@ -54,9 +54,22 @@ import.meta.css = /* css */ `
       --background-color: white;
       --color: light-dark(#4476ff, #3b82f6); /* light-dark(#355fcc, #4476ff) */
       --checkmark-color: var(--color, var(--navi-checkmark-color));
+      --color-mix-light: white;
+      --color-mix-dark: black;
+      --color-mix: var(--color-mix-dark);
 
       /* Hover */
       --border-color-hover: color-mix(in srgb, var(--border-color) 60%, black);
+      --border-color-hover-checked: color-mix(
+        in srgb,
+        var(--color) 80%,
+        var(--color-mix)
+      );
+      --background-color-hover-checked: color-mix(
+        in srgb,
+        var(--color) 80%,
+        var(--color-mix)
+      );
       /* Readonly */
       --border-color-readonly: color-mix(
         in srgb,
@@ -138,6 +151,10 @@ import.meta.css = /* css */ `
   /* Hover */
   .navi_checkbox[data-hover] {
     --x-border-color: var(--border-color-hover);
+  }
+  .navi_checkbox[data-hover][data-checked] {
+    --x-border-color: var(--border-color-hover-checked);
+    --x-background-color: var(--background-color-hover-checked);
   }
   /* Checked */
   .navi_checkbox[data-checked] {
