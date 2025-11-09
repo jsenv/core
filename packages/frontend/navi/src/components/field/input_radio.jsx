@@ -39,14 +39,21 @@ import.meta.css = /* css */ `
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: white;
       --color: var(--navi-radiomark-color);
-      --radiomark-color: var(--navi-radiomark-color);
-      --border-color-checked: var(--color);
+      --radiomark-color: var(--color);
+
+      --color-mix-light: black;
+      --color-mix-dark: white;
+      --color-mix: var(--color-mix-light);
 
       /* Hover */
-      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
-      --radiomark-color-hover: var(--accent-color-checked);
-      --border-color-checked-hover: var(--accent-color-checked);
-      --border-color-readonly-checked: #d3d3d3;
+      --border-color-hover: color-mix(in srgb, var(--border-color) 60%, black);
+      --border-color-hover-checked: color-mix(
+        in srgb,
+        var(--color) 80%,
+        var(--color-mix)
+      );
+      --radiomark-color-hover: var(--color);
+      --border-color-hover-checked: var(--color);
       /* Readonly */
       --border-color-readonly: color-mix(
         in srgb,
@@ -55,6 +62,7 @@ import.meta.css = /* css */ `
       );
       --background-color-readonly: var(--background-color);
       --radiomark-color-readonly: grey;
+      --border-color-readonly-checked: #d3d3d3;
       --background-color-readonly-checked: #d3d3d3;
       /* Disabled */
       --border-color-disabled: var(--border-color-readonly);
@@ -151,8 +159,8 @@ import.meta.css = /* css */ `
     opacity: 1;
     transform: scale(1);
   }
-  .navi_radio[data-checked][data-hover] {
-    --x-border-color: var(--border-color-checked-hover);
+  .navi_radio[data-hover][data-checked] {
+    --x-border-color: var(--border-color-hover-checked);
   }
   /* Readonly */
   .navi_radio[data-readonly] {

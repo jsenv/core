@@ -158,7 +158,7 @@ import.meta.css = /* css */ `
   .navi_checkbox[data-hover] {
     --x-border-color: var(--border-color-hover);
   }
-  .navi_checkbox[data-hover][data-checked] {
+  .navi_checkbox[data-checked][data-hover] {
     --x-border-color: var(--border-color-hover-checked);
     --x-background-color: var(--background-color-hover-checked);
   }
