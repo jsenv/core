@@ -148,281 +148,172 @@
               <div className="states-title">Standard HTML Radio States</div>
               <p className="states-description">
                 These states work exactly like native HTML radio buttons, with
-                enhanced styling and consistent behavior. Radio buttons work in
-                groups where only one can be selected.
+                enhanced styling and consistent behavior. Here we show
+                individual radios to focus on their appearance and behavior.
               </p>
 
               <Layout column contentSpacing="sm">
                 <fieldset>
-                  <legend>Default group (none selected)</legend>
-                  <Layout column contentSpacing="xs">
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-default-navi"
-                          value="1"
-                        />
-                        Navi Option 1
-                      </Label>
-                      <label>
-                        <input
-                          type="radio"
-                          name="demo-default-native"
-                          value="1"
-                        />
-                        Native Option 1
-                      </label>
-                    </Layout>
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-default-navi"
-                          value="2"
-                        />
-                        Navi Option 2
-                      </Label>
-                      <label>
-                        <input
-                          type="radio"
-                          name="demo-default-native"
-                          value="2"
-                        />
-                        Native Option 2
-                      </label>
-                    </Layout>
+                  <legend>Default (unchecked)</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input type="radio" name="demo-default-navi" value="1" />
+                      Navi
+                    </Label>
+                    <label>
+                      <input
+                        type="radio"
+                        name="demo-default-native"
+                        value="1"
+                      />
+                      Native
+                    </label>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>:focus-visible</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-focus-navi"
+                        value="1"
+                        pseudoState={{ ":focus-visible": true }}
+                      />
+                      Navi
+                    </Label>
+                    <label>
+                      <input
+                        type="radio"
+                        name="demo-focus-native"
+                        value="1"
+                        autofocus
+                      />
+                      Native
+                    </label>
                   </Layout>
                 </fieldset>
                 <fieldset>
                   <legend>:checked</legend>
-                  <Layout column contentSpacing="xs">
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-checked-navi"
-                          value="1"
-                          defaultChecked
-                        />
-                        Navi Option 1
-                      </Label>
-                      <label>
-                        <input
-                          type="radio"
-                          name="demo-checked-native"
-                          value="1"
-                          checked
-                        />
-                        Native Option 1
-                      </label>
-                    </Layout>
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-checked-navi"
-                          value="2"
-                        />
-                        Navi Option 2
-                      </Label>
-                      <label>
-                        <input
-                          type="radio"
-                          name="demo-checked-native"
-                          value="2"
-                        />
-                        Native Option 2
-                      </label>
-                    </Layout>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-checked-navi"
+                        value="1"
+                        defaultChecked
+                      />
+                      Navi
+                    </Label>
+                    <label>
+                      <input
+                        type="radio"
+                        name="demo-checked-native"
+                        value="1"
+                        checked
+                      />
+                      Native
+                    </label>
                   </Layout>
                 </fieldset>
 
                 <fieldset>
                   <legend>:disabled</legend>
-                  <Layout column contentSpacing="xs">
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-disabled-navi"
-                          value="1"
-                          disabled
-                        />
-                        Navi Option 1
-                      </Label>
-                      <label>
-                        <input
-                          type="radio"
-                          name="demo-disabled-native"
-                          value="1"
-                          disabled
-                        />
-                        Native Option 1
-                      </label>
-                    </Layout>
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-disabled-navi"
-                          value="2"
-                          disabled
-                        />
-                        Navi Option 2
-                      </Label>
-                      <label>
-                        <input
-                          type="radio"
-                          name="demo-disabled-native"
-                          value="2"
-                          disabled
-                        />
-                        Native Option 2
-                      </label>
-                    </Layout>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-disabled-navi"
+                        value="1"
+                        disabled
+                      />
+                      Navi
+                    </Label>
+                    <label>
+                      <input
+                        type="radio"
+                        name="demo-disabled-native"
+                        value="1"
+                        disabled
+                      />
+                      Native
+                    </label>
                   </Layout>
                 </fieldset>
 
                 <fieldset>
                   <legend>:checked + :disabled</legend>
-                  <Layout column contentSpacing="xs">
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-checked-disabled-navi"
-                          value="1"
-                          checked
-                          disabled
-                        />
-                        Navi Option 1
-                      </Label>
-                      <label>
-                        <input
-                          type="radio"
-                          name="demo-checked-disabled-native"
-                          value="1"
-                          checked
-                          disabled
-                        />
-                        Native Option 1
-                      </label>
-                    </Layout>
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-checked-disabled-navi"
-                          value="2"
-                          disabled
-                        />
-                        Navi Option 2
-                      </Label>
-                      <label>
-                        <input
-                          type="radio"
-                          name="demo-checked-disabled-native"
-                          value="2"
-                          disabled
-                        />
-                        Native Option 2
-                      </label>
-                    </Layout>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-checked-disabled-navi"
+                        value="1"
+                        checked
+                        disabled
+                      />
+                      Navi
+                    </Label>
+                    <label>
+                      <input
+                        type="radio"
+                        name="demo-checked-disabled-native"
+                        value="1"
+                        checked
+                        disabled
+                      />
+                      Native
+                    </label>
                   </Layout>
                 </fieldset>
 
                 <fieldset>
                   <legend>:read-only</legend>
-                  <Layout column contentSpacing="xs">
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-readonly-navi"
-                          value="1"
-                          readOnly
-                        />
-                        Navi Option 1
-                      </Label>
-                      <label>
-                        <input
-                          type="radio"
-                          name="demo-readonly-native"
-                          value="1"
-                          readOnly
-                        />
-                        Native Option 1
-                      </label>
-                    </Layout>
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-readonly-navi"
-                          value="2"
-                          readOnly
-                        />
-                        Navi Option 2
-                      </Label>
-                      <label>
-                        <input
-                          type="radio"
-                          name="demo-readonly-native"
-                          value="2"
-                          readOnly
-                        />
-                        Native Option 2
-                      </label>
-                    </Layout>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-readonly-navi"
+                        value="1"
+                        readOnly
+                      />
+                      Navi
+                    </Label>
+                    <label>
+                      <input
+                        type="radio"
+                        name="demo-readonly-native"
+                        value="1"
+                        readOnly
+                      />
+                      Native
+                    </label>
                   </Layout>
                 </fieldset>
 
                 <fieldset>
                   <legend>:checked + :read-only</legend>
-                  <Layout column contentSpacing="xs">
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-checked-readonly-navi"
-                          value="1"
-                          checked
-                          readOnly
-                        />
-                        Navi Option 1
-                      </Label>
-                      <label>
-                        <input
-                          type="radio"
-                          name="demo-checked-readonly-native"
-                          value="1"
-                          checked
-                          readOnly
-                        />
-                        Native Option 1
-                      </label>
-                    </Layout>
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-checked-readonly-navi"
-                          value="2"
-                          readOnly
-                        />
-                        Navi Option 2
-                      </Label>
-                      <label>
-                        <input
-                          type="radio"
-                          name="demo-checked-readonly-native"
-                          value="2"
-                          readOnly
-                        />
-                        Native Option 2
-                      </label>
-                    </Layout>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-checked-readonly-navi"
+                        value="1"
+                        checked
+                        readOnly
+                      />
+                      Navi
+                    </Label>
+                    <label>
+                      <input
+                        type="radio"
+                        name="demo-checked-readonly-native"
+                        value="1"
+                        checked
+                        readOnly
+                      />
+                      Native
+                    </label>
                   </Layout>
                 </fieldset>
               </Layout>
@@ -436,112 +327,60 @@
               <Layout column contentSpacing="sm">
                 <fieldset>
                   <legend>:read-only</legend>
-                  <Layout column contentSpacing="xs">
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-enhanced-readonly"
-                          value="1"
-                          readOnly
-                        />
-                        Read-only Option 1
-                      </Label>
-                    </Layout>
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-enhanced-readonly"
-                          value="2"
-                          readOnly
-                        />
-                        Read-only Option 2
-                      </Label>
-                    </Layout>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-enhanced-readonly"
+                        value="1"
+                        readOnly
+                      />
+                      Read-only Radio
+                    </Label>
                   </Layout>
                 </fieldset>
                 <fieldset>
                   <legend>:read-only + checked</legend>
-                  <Layout column contentSpacing="xs">
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-enhanced-readonly-checked"
-                          value="1"
-                          readOnly
-                          checked
-                        />
-                        Read-only Checked
-                      </Label>
-                    </Layout>
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-enhanced-readonly-checked"
-                          value="2"
-                          readOnly
-                        />
-                        Read-only Option 2
-                      </Label>
-                    </Layout>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-enhanced-readonly-checked"
+                        value="1"
+                        readOnly
+                        checked
+                      />
+                      Read-only Checked
+                    </Label>
                   </Layout>
                 </fieldset>
                 <fieldset>
                   <legend>Loading state</legend>
-                  <Layout column contentSpacing="xs">
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-loading"
-                          value="1"
-                          loading
-                        />
-                        Loading Option 1
-                      </Label>
-                    </Layout>
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-loading"
-                          value="2"
-                          loading
-                        />
-                        Loading Option 2
-                      </Label>
-                    </Layout>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-loading"
+                        value="1"
+                        loading
+                      />
+                      Loading Radio
+                    </Label>
                   </Layout>
                 </fieldset>
                 <fieldset>
                   <legend>Loading + checked</legend>
-                  <Layout column contentSpacing="xs">
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-loading-checked"
-                          value="1"
-                          loading
-                          checked
-                        />
-                        Loading Checked
-                      </Label>
-                    </Layout>
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-loading-checked"
-                          value="2"
-                          loading
-                        />
-                        Loading Option 2
-                      </Label>
-                    </Layout>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-loading-checked"
+                        value="1"
+                        loading
+                        checked
+                      />
+                      Loading Checked
+                    </Label>
                   </Layout>
                 </fieldset>
               </Layout>
@@ -590,278 +429,146 @@
               <Layout column contentSpacing="sm">
                 <fieldset>
                   <legend>Purple Theme</legend>
-                  <Layout column contentSpacing="xs">
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-purple-navi"
-                          value="1"
-                          style={{ accentColor: "#8b5cf6" }}
-                        />
-                        Navi Option 1
-                      </Label>
-                      <label>
-                        <input
-                          type="radio"
-                          name="demo-purple-native"
-                          value="1"
-                          style={{ accentColor: "#8b5cf6" }}
-                        />
-                        Native Option 1
-                      </label>
-                    </Layout>
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-purple-navi"
-                          value="2"
-                          style={{ accentColor: "#8b5cf6" }}
-                        />
-                        Navi Option 2
-                      </Label>
-                      <label>
-                        <input
-                          type="radio"
-                          name="demo-purple-native"
-                          value="2"
-                          style={{ accentColor: "#8b5cf6" }}
-                        />
-                        Native Option 2
-                      </label>
-                    </Layout>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-purple-navi"
+                        value="1"
+                        style={{ accentColor: "#8b5cf6" }}
+                      />
+                      Navi
+                    </Label>
+                    <label>
+                      <input
+                        type="radio"
+                        name="demo-purple-native"
+                        value="1"
+                        style={{ accentColor: "#8b5cf6" }}
+                      />
+                      Native
+                    </label>
                   </Layout>
                 </fieldset>
                 <fieldset>
                   <legend>Purple Theme (checked)</legend>
-                  <Layout column contentSpacing="xs">
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-purple-checked-navi"
-                          value="1"
-                          checked
-                          style={{ accentColor: "#8b5cf6" }}
-                        />
-                        Navi Option 1
-                      </Label>
-                      <label>
-                        <input
-                          type="radio"
-                          name="demo-purple-checked-native"
-                          value="1"
-                          checked
-                          style={{ accentColor: "#8b5cf6" }}
-                        />
-                        Native Option 1
-                      </label>
-                    </Layout>
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-purple-checked-navi"
-                          value="2"
-                          style={{ accentColor: "#8b5cf6" }}
-                        />
-                        Navi Option 2
-                      </Label>
-                      <label>
-                        <input
-                          type="radio"
-                          name="demo-purple-checked-native"
-                          value="2"
-                          style={{ accentColor: "#8b5cf6" }}
-                        />
-                        Native Option 2
-                      </label>
-                    </Layout>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-purple-checked-navi"
+                        value="1"
+                        checked
+                        style={{ accentColor: "#8b5cf6" }}
+                      />
+                      Navi
+                    </Label>
+                    <label>
+                      <input
+                        type="radio"
+                        name="demo-purple-checked-native"
+                        value="1"
+                        checked
+                        style={{ accentColor: "#8b5cf6" }}
+                      />
+                      Native
+                    </label>
                   </Layout>
                 </fieldset>
                 <fieldset>
                   <legend>Green Theme</legend>
-                  <Layout column contentSpacing="xs">
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-green-navi"
-                          value="1"
-                          style={{ accentColor: "#10b981" }}
-                        />
-                        Navi Option 1
-                      </Label>
-                      <label>
-                        <input
-                          type="radio"
-                          name="demo-green-native"
-                          value="1"
-                          style={{ accentColor: "#10b981" }}
-                        />
-                        Native Option 1
-                      </label>
-                    </Layout>
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-green-navi"
-                          value="2"
-                          style={{ accentColor: "#10b981" }}
-                        />
-                        Navi Option 2
-                      </Label>
-                      <label>
-                        <input
-                          type="radio"
-                          name="demo-green-native"
-                          value="2"
-                          style={{ accentColor: "#10b981" }}
-                        />
-                        Native Option 2
-                      </label>
-                    </Layout>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-green-navi"
+                        value="1"
+                        style={{ accentColor: "#10b981" }}
+                      />
+                      Navi
+                    </Label>
+                    <label>
+                      <input
+                        type="radio"
+                        name="demo-green-native"
+                        value="1"
+                        style={{ accentColor: "#10b981" }}
+                      />
+                      Native
+                    </label>
                   </Layout>
                 </fieldset>
                 <fieldset>
                   <legend>Green Theme (checked)</legend>
-                  <Layout column contentSpacing="xs">
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-green-checked-navi"
-                          value="1"
-                          checked
-                          style={{ accentColor: "#10b981" }}
-                        />
-                        Navi Option 1
-                      </Label>
-                      <label>
-                        <input
-                          type="radio"
-                          name="demo-green-checked-native"
-                          value="1"
-                          checked
-                          style={{ accentColor: "#10b981" }}
-                        />
-                        Native Option 1
-                      </label>
-                    </Layout>
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-green-checked-navi"
-                          value="2"
-                          style={{ accentColor: "#10b981" }}
-                        />
-                        Navi Option 2
-                      </Label>
-                      <label>
-                        <input
-                          type="radio"
-                          name="demo-green-checked-native"
-                          value="2"
-                          style={{ accentColor: "#10b981" }}
-                        />
-                        Native Option 2
-                      </label>
-                    </Layout>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-green-checked-navi"
+                        value="1"
+                        checked
+                        style={{ accentColor: "#10b981" }}
+                      />
+                      Navi
+                    </Label>
+                    <label>
+                      <input
+                        type="radio"
+                        name="demo-green-checked-native"
+                        value="1"
+                        checked
+                        style={{ accentColor: "#10b981" }}
+                      />
+                      Native
+                    </label>
                   </Layout>
                 </fieldset>
                 <fieldset>
                   <legend>Dark Theme</legend>
-                  <Layout column contentSpacing="xs">
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-dark-navi"
-                          value="1"
-                          style={{ accentColor: "#374151" }}
-                        />
-                        Navi Option 1
-                      </Label>
-                      <label>
-                        <input
-                          type="radio"
-                          name="demo-dark-native"
-                          value="1"
-                          style={{ accentColor: "#374151" }}
-                        />
-                        Native Option 1
-                      </label>
-                    </Layout>
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-dark-navi"
-                          value="2"
-                          style={{ accentColor: "#374151" }}
-                        />
-                        Navi Option 2
-                      </Label>
-                      <label>
-                        <input
-                          type="radio"
-                          name="demo-dark-native"
-                          value="2"
-                          style={{ accentColor: "#374151" }}
-                        />
-                        Native Option 2
-                      </label>
-                    </Layout>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-dark-navi"
+                        value="1"
+                        style={{ accentColor: "#374151" }}
+                      />
+                      Navi
+                    </Label>
+                    <label>
+                      <input
+                        type="radio"
+                        name="demo-dark-native"
+                        value="1"
+                        style={{ accentColor: "#374151" }}
+                      />
+                      Native
+                    </label>
                   </Layout>
                 </fieldset>
                 <fieldset>
                   <legend>Dark Theme (checked)</legend>
-                  <Layout column contentSpacing="xs">
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-dark-checked-navi"
-                          value="1"
-                          checked
-                          style={{ accentColor: "#374151" }}
-                        />
-                        Navi Option 1
-                      </Label>
-                      <label>
-                        <input
-                          type="radio"
-                          name="demo-dark-checked-native"
-                          value="1"
-                          checked
-                          style={{ accentColor: "#374151" }}
-                        />
-                        Native Option 1
-                      </label>
-                    </Layout>
-                    <Layout row contentSpacing="sm" contentAlignX="start">
-                      <Label>
-                        <Input
-                          type="radio"
-                          name="demo-dark-checked-navi"
-                          value="2"
-                          style={{ accentColor: "#374151" }}
-                        />
-                        Navi Option 2
-                      </Label>
-                      <label>
-                        <input
-                          type="radio"
-                          name="demo-dark-checked-native"
-                          value="2"
-                          style={{ accentColor: "#374151" }}
-                        />
-                        Native Option 2
-                      </label>
-                    </Layout>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input
+                        type="radio"
+                        name="demo-dark-checked-navi"
+                        value="1"
+                        checked
+                        style={{ accentColor: "#374151" }}
+                      />
+                      Navi
+                    </Label>
+                    <label>
+                      <input
+                        type="radio"
+                        name="demo-dark-checked-native"
+                        value="1"
+                        checked
+                        style={{ accentColor: "#374151" }}
+                      />
+                      Native
+                    </label>
                   </Layout>
                 </fieldset>
               </Layout>
@@ -900,7 +607,7 @@
       const InteractiveDemo = () => {
         const [loading, setLoading] = useState(false);
         const [disabled, setDisabled] = useState(false);
-        const [selectedValue, setSelectedValue] = useState("option1");
+        const [checked, setChecked] = useState(false);
 
         return (
           <div className="demo-section">
@@ -921,53 +628,31 @@
                 >
                   Disabled: {disabled ? "ON" : "OFF"}
                 </button>
+                <button
+                  className={`control-button ${checked ? "active" : ""}`}
+                  onClick={() => !disabled && setChecked(!checked)}
+                >
+                  Checked: {checked ? "ON" : "OFF"}
+                </button>
               </Layout>
             </fieldset>
 
             <fieldset>
-              <legend>Interactive Radio Group</legend>
+              <legend>Interactive Radio</legend>
               <Layout column contentSpacing="sm">
                 <Label>
                   <Input
                     type="radio"
                     name="interactive-demo"
                     value="option1"
-                    checked={selectedValue === "option1"}
-                    onUIStateChange={(checked) => {
-                      if (checked && !disabled) setSelectedValue("option1");
+                    checked={checked}
+                    onUIStateChange={(newChecked) => {
+                      if (!disabled) setChecked(newChecked);
                     }}
                     loading={loading}
                     disabled={disabled}
                   />
-                  Interactive Radio 1
-                </Label>
-                <Label>
-                  <Input
-                    type="radio"
-                    name="interactive-demo"
-                    value="option2"
-                    checked={selectedValue === "option2"}
-                    onUIStateChange={(checked) => {
-                      if (checked && !disabled) setSelectedValue("option2");
-                    }}
-                    loading={loading}
-                    disabled={disabled}
-                  />
-                  Interactive Radio 2
-                </Label>
-                <Label>
-                  <Input
-                    type="radio"
-                    name="interactive-demo"
-                    value="option3"
-                    checked={selectedValue === "option3"}
-                    onUIStateChange={(checked) => {
-                      if (checked && !disabled) setSelectedValue("option3");
-                    }}
-                    loading={loading}
-                    disabled={disabled}
-                  />
-                  Interactive Radio 3
+                  Interactive Radio
                 </Label>
                 <div
                   style={{
@@ -980,7 +665,7 @@
                     borderRadius: "4px",
                   }}
                 >
-                  State: selectedValue="{selectedValue}" | loading=
+                  State: checked={checked ? "true" : "false"} | loading=
                   {loading ? "true" : "false"} | disabled=
                   {disabled ? "true" : "false"}
                 </div>
