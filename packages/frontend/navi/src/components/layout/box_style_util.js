@@ -289,7 +289,11 @@ export const assignStyle = (
     throw new Error("managedByCSSVars is required in styleContext");
   }
   const getStyle = All_PROPS[propName];
-  if (getStyle === PASS_THROUGH) {
+  if (
+    getStyle === PASS_THROUGH ||
+    // style not listed can be passed through as-is (accentColor, zIndex, ...)
+    getStyle === undefined
+  ) {
     const cssValue = normalizer(propValue, propName);
     const cssVar = managedByCSSVars[propName];
     if (cssVar) {

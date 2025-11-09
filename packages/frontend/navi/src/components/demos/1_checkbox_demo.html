@@ -148,12 +148,13 @@
       import { render } from "preact";
       import { useState } from "preact/hooks";
       /* eslint-disable no-unused-vars */
-      import { Input, Layout, Label } from "@jsenv/navi";
+      import { Input, Layout, Label, Box } from "@jsenv/navi";
 
       const App = () => {
         return (
           <div>
             <BasicStatesDemo />
+            <ColorDemo />
             <InteractiveDemo />
           </div>
         );
@@ -172,8 +173,8 @@
               </p>
 
               <Layout column contentSpacing="sm">
-                <fieldset>
-                  <legend>Default (unchecked)</legend>
+                <Box as="fieldset" width="100">
+                  <legend>Default</legend>
                   <Layout row contentSpacing="sm" contentAlignX="start">
                     <Label>
                       <Input type="checkbox" />
@@ -184,8 +185,8 @@
                       Native
                     </label>
                   </Layout>
-                </fieldset>
-                <fieldset>
+                </Box>
+                <Box as="fieldset" width="200">
                   <legend>:focus-visible</legend>
                   <Layout row contentSpacing="sm" contentAlignX="start">
                     <Label>
@@ -200,22 +201,8 @@
                       Native
                     </label>
                   </Layout>
-                </fieldset>
-                <fieldset>
-                  <legend>:checked</legend>
-                  <Layout row contentSpacing="sm" contentAlignX="start">
-                    <Label>
-                      <Input type="checkbox" defaultChecked />
-                      Navi
-                    </Label>
-                    <label>
-                      <input type="checkbox" checked />
-                      Native
-                    </label>
-                  </Layout>
-                </fieldset>
-
-                <fieldset>
+                </Box>
+                <Box as="fieldset" width="150">
                   <legend>:disabled</legend>
                   <Layout row contentSpacing="sm" contentAlignX="start">
                     <Label>
@@ -227,8 +214,42 @@
                       Native
                     </label>
                   </Layout>
-                </fieldset>
-                <fieldset>
+                </Box>
+              </Layout>
+              <Layout column contentSpacing="sm">
+                <Box as="fieldset" width="100">
+                  <legend>:checked</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input type="checkbox" defaultChecked />
+                      Navi
+                    </Label>
+                    <label>
+                      <input type="checkbox" checked />
+                      Native
+                    </label>
+                  </Layout>
+                </Box>
+
+                <Box as="fieldset" width="200">
+                  <legend>:focus-visible:checked</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input
+                        type="checkbox"
+                        defaultChecked
+                        pseudoState={{ ":focus-visible": true }}
+                      />
+                      Navi
+                    </Label>
+                    <label>
+                      <input type="checkbox" autofocus />
+                      Native
+                    </label>
+                  </Layout>
+                </Box>
+
+                <Box as="fieldset" width="150">
                   <legend>:disabled:checked</legend>
                   <Layout row contentSpacing="sm" contentAlignX="start">
                     <Label>
@@ -240,7 +261,7 @@
                       Native
                     </label>
                   </Layout>
-                </fieldset>
+                </Box>
               </Layout>
             </div>
 
@@ -312,6 +333,172 @@
                   <li>
                     <strong>Loading:</strong> Shows a spinner while allowing the
                     checkbox to remain interactive
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const ColorDemo = () => {
+        return (
+          <div className="demo-section">
+            <h2>Custom Colors</h2>
+
+            <div className="states-section">
+              <div className="states-title">Custom Color Themes</div>
+              <p className="states-description">
+                Checkbox color can be customized and will maintain colors
+                constrast. Like the native version in modern browsers.
+              </p>
+
+              <Layout column contentSpacing="sm">
+                <fieldset>
+                  <legend>Purple Theme</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input
+                        type="checkbox"
+                        style={{ accentColor: "#8b5cf6" }}
+                      />
+                      Navi
+                    </Label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        style={{ accentColor: "#8b5cf6" }}
+                      />
+                      Native
+                    </label>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>Purple Theme (checked)</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input
+                        type="checkbox"
+                        checked
+                        style={{ accentColor: "#8b5cf6" }}
+                      />
+                      Navi
+                    </Label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked
+                        style={{ accentColor: "#8b5cf6" }}
+                      />
+                      Native
+                    </label>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>Green Theme</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input
+                        type="checkbox"
+                        style={{ accentColor: "#10b981" }}
+                      />
+                      Navi
+                    </Label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        style={{ accentColor: "#10b981" }}
+                      />
+                      Native
+                    </label>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>Green Theme (checked)</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input
+                        type="checkbox"
+                        checked
+                        style={{ accentColor: "#10b981" }}
+                      />
+                      Navi
+                    </Label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked
+                        style={{ accentColor: "#10b981" }}
+                      />
+                      Native
+                    </label>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>Dark Theme</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input
+                        type="checkbox"
+                        style={{ accentColor: "#374151" }}
+                      />
+                      Navi
+                    </Label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        style={{ accentColor: "#374151" }}
+                      />
+                      Native
+                    </label>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>Dark Theme (checked)</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input
+                        type="checkbox"
+                        checked
+                        style={{ accentColor: "#374151" }}
+                      />
+                      Navi
+                    </Label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked
+                        style={{ accentColor: "#374151" }}
+                      />
+                      Native
+                    </label>
+                  </Layout>
+                </fieldset>
+              </Layout>
+
+              <div
+                style={{
+                  marginTop: "15px",
+                  padding: "10px",
+                  background: "#f8f9fa",
+                  borderRadius: "4px",
+                  fontSize: "0.85rem",
+                  color: "#666",
+                }}
+              >
+                <strong>Color Customization:</strong>
+                <ul style={{ margin: "5px 0", paddingLeft: "20px" }}>
+                  <li>
+                    <strong>accent-color:</strong> CSS property that changes the
+                    checkbox color in modern browsers
+                  </li>
+                  <li>
+                    <strong>Native Support:</strong> Works on both native
+                    checkboxes and enhanced Navi components
+                  </li>
+                  <li>
+                    <strong>Accessibility:</strong> Colors should maintain
+                    sufficient contrast for readability
                   </li>
                 </ul>
               </div>
