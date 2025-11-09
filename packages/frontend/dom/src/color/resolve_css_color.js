@@ -49,6 +49,11 @@ export const resolveCSSColor = (color, element, context = "js") => {
     }
   }
 
+  if (color.startsWith("--")) {
+    console.warn(`found "${color}". Use "var(${color})" instead.`);
+    return null;
+  }
+
   // Parse the resolved color and return in the requested format
   const rgba = parseCSSColor(resolvedColor);
 
