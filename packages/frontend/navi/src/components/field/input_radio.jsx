@@ -1,3 +1,4 @@
+import { pickLightOrDark } from "@jsenv/dom";
 import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { useConstraints } from "../../validation/hooks/use_constraints.js";
@@ -40,6 +41,7 @@ import.meta.css = /* css */ `
       --background-color: white;
       --color: var(--navi-radiomark-color);
       --radiomark-color: var(--color);
+      --border-color-checked: var(--color);
 
       --color-mix-light: black;
       --color-mix-dark: white;
@@ -52,8 +54,11 @@ import.meta.css = /* css */ `
         var(--color) 80%,
         var(--color-mix)
       );
-      --radiomark-color-hover: var(--color);
-      --border-color-hover-checked: var(--color);
+      --radiomark-color-hover: color-mix(
+        in srgb,
+        var(--color) 80%,
+        var(--color-mix)
+      );
       /* Readonly */
       --border-color-readonly: color-mix(
         in srgb,
@@ -70,6 +75,10 @@ import.meta.css = /* css */ `
       --radiomark-color-disabled: #d3d3d3;
       --border-color-checked-disabled: #d3d3d3;
       --background-color-disabled-checked: var(--background-color);
+    }
+
+    .navi_checkbox[data-dark] {
+      --color-mix: var(--color-mix-dark);
     }
   }
 
@@ -362,6 +371,23 @@ const InputRadioBasic = (props) => {
     checked,
     innerRequired,
   ]);
+
+  useLayoutEffect(() => {
+    const naviRadio = ref.current;
+    const lightColor = "white";
+    const darkColor = "black";
+    const colorPicked = pickLightOrDark(
+      naviRadio,
+      "var(--color)",
+      darkColor,
+      lightColor,
+    );
+    if (colorPicked === lightColor) {
+      naviRadio.removeAttribute("data-dark");
+    } else {
+      naviRadio.setAttribute("data-dark", "");
+    }
+  }, [color]);
 
   return (
     <Box
