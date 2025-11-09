@@ -60,7 +60,7 @@ const compositeColor = (foreground, background) => {
  * @param {number} b - Blue component (0-255)
  * @returns {number} Relative luminance (0-1)
  */
-const getLuminance = (r, g, b) => {
+export const getLuminance = (r, g, b) => {
   const [rs, gs, bs] = [r, g, b].map((c) => {
     c = c / 255;
     return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);

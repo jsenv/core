@@ -1,4 +1,4 @@
-import { pickLightOrDark } from "@jsenv/dom";
+import { getLuminance, parseCSSColor } from "@jsenv/dom";
 import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { useConstraints } from "../../validation/hooks/use_constraints.js";
@@ -77,7 +77,7 @@ import.meta.css = /* css */ `
       --background-color-disabled-checked: var(--background-color);
     }
 
-    .navi_checkbox[data-dark] {
+    .navi_radio[data-dark] {
       --color-mix: var(--color-mix-dark);
     }
   }
@@ -374,18 +374,28 @@ const InputRadioBasic = (props) => {
 
   useLayoutEffect(() => {
     const naviRadio = ref.current;
-    const lightColor = "white";
-    const darkColor = "black";
-    const colorPicked = pickLightOrDark(
-      naviRadio,
-      "var(--color)",
-      darkColor,
-      lightColor,
-    );
-    if (colorPicked === lightColor) {
-      naviRadio.removeAttribute("data-dark");
-    } else {
-      naviRadio.setAttribute("data-dark", "");
+
+    // Get the computed color value
+    const computedStyle = getComputedStyle(naviRadio);
+    const actualColor = computedStyle.getPropertyValue("--color").trim();
+
+    // Parse the color and extract RGB values
+    const parsedColor = parseCSSColor(actualColor);
+    if (parsedColor && parsedColor.length >= 3) {
+      const [r, g, b] = parsedColor;
+
+      // Calculate relative luminance using the existing getLuminance function
+      const luminance = getLuminance(r, g, b);
+
+      // If luminance > 0.5, color is light (should be darkened)
+      // If luminance <= 0.5, color is dark (should be lightened)
+      if (luminance > 0.5) {
+        // Light color: darken on hover (use black for mixing)
+        naviRadio.removeAttribute("data-dark");
+      } else {
+        // Dark color: lighten on hover (use white for mixing)
+        naviRadio.setAttribute("data-dark", "");
+      }
     }
   }, [color]);
 
