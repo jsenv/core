@@ -1,5 +1,5 @@
-import { render } from "/js/preact.module.js";
-import { jsx as _jsx } from "/js/jsxRuntime.module.js";
+import { render } from "/js/preact.mjs";
+import { jsx as _jsx } from "/js/jsxRuntime.mjs";
 const {
   App
 } = await import(__v__("/js/app.js"));

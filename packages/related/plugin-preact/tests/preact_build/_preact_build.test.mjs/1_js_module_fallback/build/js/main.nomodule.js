@@ -19,15 +19,15 @@ function _await(value, then, direct) {
   }
   return then ? value.then(then) : value;
 }
-System.register([__v__("/js/preact.module.nomodule.js"), __v__("/js/jsxRuntime.module.nomodule.js")], function (_export, _context) {
+System.register([__v__("/js/preact.nomodule.mjs"), __v__("/js/jsxRuntime.nomodule.mjs")], function (_export, _context) {
   "use strict";
 
   var render, _jsx, _await$import, App;
   return {
-    setters: [function (_node_modulesPreactDistPreactModuleJs) {
-      render = _node_modulesPreactDistPreactModuleJs.render;
-    }, function (_node_modulesPreactJsxRuntimeDistJsxRuntimeModuleJs) {
-      _jsx = _node_modulesPreactJsxRuntimeDistJsxRuntimeModuleJs.jsx;
+    setters: [function (_node_modulesPreactDistPreactMjs) {
+      render = _node_modulesPreactDistPreactMjs.render;
+    }, function (_node_modulesPreactJsxRuntimeDistJsxRuntimeMjs) {
+      _jsx = _node_modulesPreactJsxRuntimeDistJsxRuntimeMjs.jsx;
     }],
     execute: async function () {
       return _await(_context.import(__v__("/js/app.nomodule.js")), function (_context$import) {

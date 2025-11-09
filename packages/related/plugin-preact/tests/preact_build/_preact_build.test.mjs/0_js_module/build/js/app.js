@@ -1,4 +1,4 @@
-import { jsx as _jsx } from "/js/jsxRuntime.module.js";
+import { jsx as _jsx } from "/js/jsxRuntime.mjs";
 export const App = () => {
   return _jsx("span", {
     children: "Hello world"

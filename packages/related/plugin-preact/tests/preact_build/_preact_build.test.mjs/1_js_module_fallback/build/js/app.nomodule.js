@@ -1,10 +1,10 @@
-System.register([__v__("/js/jsxRuntime.module.nomodule.js")], function (_export, _context) {
+System.register([__v__("/js/jsxRuntime.nomodule.mjs")], function (_export, _context) {
   "use strict";
 
   var _jsx, App;
   return {
-    setters: [function (_node_modulesPreactJsxRuntimeDistJsxRuntimeModuleJs) {
-      _jsx = _node_modulesPreactJsxRuntimeDistJsxRuntimeModuleJs.jsx;
+    setters: [function (_node_modulesPreactJsxRuntimeDistJsxRuntimeMjs) {
+      _jsx = _node_modulesPreactJsxRuntimeDistJsxRuntimeMjs.jsx;
     }],
     execute: function () {
       _export("App", App = () => {
