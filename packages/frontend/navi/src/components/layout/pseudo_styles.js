@@ -280,7 +280,9 @@ const getStyleToApply = (styles, pseudoState, pseudoNamedStyles) => {
       if (nextColonIndex === -1) {
         return true;
       }
-      return pseudoKey.slice(0, nextColonIndex);
+      // Handle pseudo-elements with states like "::-navi-loader:checked:disabled"
+      const pseudoStatesString = pseudoKey.slice(nextColonIndex);
+      return isMatching(pseudoStatesString);
     }
     const nextColonIndex = pseudoKey.indexOf(":", 1);
     if (nextColonIndex === -1) {
