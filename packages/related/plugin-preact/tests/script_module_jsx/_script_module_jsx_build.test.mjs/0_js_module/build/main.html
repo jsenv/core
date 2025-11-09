@@ -7,9 +7,9 @@
     <script type="importmap">
       {
         "imports": {
-          "/js/preact.module.js": "/js/preact.module.js?v=83989835",
-          "/js/hooks.module.js": "/js/hooks.module.js?v=27b9f25f",
-          "/js/jsxRuntime.module.js": "/js/jsxRuntime.module.js?v=36b2b30e"
+          "/js/preact.mjs": "/js/preact.mjs?v=f8d4246b",
+          "/js/hooks.mjs": "/js/hooks.mjs?v=eb756799",
+          "/js/jsxRuntime.mjs": "/js/jsxRuntime.mjs?v=5ea42ac0"
         }
       }
     </script>
@@ -21,11 +21,11 @@
       window.resultPromise = new Promise((resolve) => {
         window.resolveResultPromise = resolve;
       });</script>
-    <script type="module" jsenv-type="module/jsx">import { render } from "/js/preact.module.js";
-import { useEffect } from "/js/hooks.module.js";
+    <script type="module" jsenv-type="module/jsx">import { render } from "/js/preact.mjs";
+import { useEffect } from "/js/hooks.mjs";
 
 
-import { jsx as _jsx } from "/js/jsxRuntime.module.js";
+import { jsx as _jsx } from "/js/jsxRuntime.mjs";
 const App = ({
   onFirstRender
 }) => {

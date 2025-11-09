@@ -7,9 +7,9 @@
     <script>
       ;(function() {
         var __versionMappings__ = {
-          "/js/preact.module.nomodule.js": "/js/preact.module.nomodule.js?v=fe723049",
-          "/js/hooks.module.nomodule.js": "/js/hooks.module.nomodule.js?v=47c2430b",
-          "/js/jsxRuntime.module.nomodule.js": "/js/jsxRuntime.module.nomodule.js?v=45dd28e7"
+          "/js/preact.nomodule.mjs": "/js/preact.nomodule.mjs?v=b2eb558a",
+          "/js/hooks.nomodule.mjs": "/js/hooks.nomodule.mjs?v=3936e132",
+          "/js/jsxRuntime.nomodule.mjs": "/js/jsxRuntime.nomodule.mjs?v=d05cc8e8"
         };
         window.__v__ = function (specifier) {
           return __versionMappings__[specifier] || specifier
@@ -475,17 +475,17 @@
       window.resultPromise = new Promise((resolve) => {
         window.resolveResultPromise = resolve;
       });</script>
-    <script jsenv-type="module/jsx">System.register([__v__("/js/preact.module.nomodule.js"), __v__("/js/hooks.module.nomodule.js"), __v__("/js/jsxRuntime.module.nomodule.js")], function (_export, _context) {
+    <script jsenv-type="module/jsx">System.register([__v__("/js/preact.nomodule.mjs"), __v__("/js/hooks.nomodule.mjs"), __v__("/js/jsxRuntime.nomodule.mjs")], function (_export, _context) {
   "use strict";
 
   var render, useEffect, _jsx, App;
   return {
-    setters: [function (_node_modulesPreactDistPreactModuleJs) {
-      render = _node_modulesPreactDistPreactModuleJs.render;
-    }, function (_node_modulesPreactHooksDistHooksModuleJs) {
-      useEffect = _node_modulesPreactHooksDistHooksModuleJs.useEffect;
-    }, function (_node_modulesPreactJsxRuntimeDistJsxRuntimeModuleJs) {
-      _jsx = _node_modulesPreactJsxRuntimeDistJsxRuntimeModuleJs.jsx;
+    setters: [function (_node_modulesPreactDistPreactMjs) {
+      render = _node_modulesPreactDistPreactMjs.render;
+    }, function (_node_modulesPreactHooksDistHooksMjs) {
+      useEffect = _node_modulesPreactHooksDistHooksMjs.useEffect;
+    }, function (_node_modulesPreactJsxRuntimeDistJsxRuntimeMjs) {
+      _jsx = _node_modulesPreactJsxRuntimeDistJsxRuntimeMjs.jsx;
     }],
     execute: function () {
       App = ({
