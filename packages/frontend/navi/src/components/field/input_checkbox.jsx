@@ -82,6 +82,7 @@ import.meta.css = /* css */ `
       --checkmark-color-readonly: #eeeeee;
       /* Disabled */
       --border-color-disabled: var(--border-color-readonly);
+      --background-color-disabled: rgba(248, 248, 248, 0.7);
       --checkmark-color-disabled: #eeeeee;
       --border-color-disabled-checked: #d3d3d3;
       --background-color-disabled-checked: #d3d3d3;

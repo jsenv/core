@@ -58,7 +58,7 @@ import.meta.css = /* css */ `
       --background-color-readonly-checked: #d3d3d3;
       /* Disabled */
       --border-color-disabled: var(--border-color-readonly);
-      --background-color-disabled: var(--background-color);
+      --background-color-disabled: rgba(248, 248, 248, 0.7);
       --radiomark-color-disabled: #d3d3d3;
       --border-color-checked-disabled: #d3d3d3;
       --background-color-disabled-checked: var(--background-color);
