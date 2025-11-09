@@ -1,20 +1,11 @@
-import { forwardRef } from "preact/compat";
-import {
-  useContext,
-  useImperativeHandle,
-  useLayoutEffect,
-  useRef,
-} from "preact/hooks";
+import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { useConstraints } from "../../validation/hooks/use_constraints.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import { withPropsStyle } from "../layout/with_props_style.js";
-import {
-  LoadableInlineElement,
-  LoaderBackground,
-} from "../loader/loader_background.jsx";
+import { Box } from "../layout/box.jsx";
+import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
-import { initCustomField } from "./custom_field.js";
+import { useStableCallback } from "../use_stable_callback.js";
 import {
   ReportDisabledOnLabelContext,
   ReportReadOnlyOnLabelContext,
@@ -192,7 +183,7 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const InputRadio = forwardRef((props, ref) => {
+export const InputRadio = (props) => {
   const { value = "on" } = props;
   const uiStateController = useUIStateController(props, "radio", {
     statePropName: "checked",
@@ -202,7 +193,7 @@ export const InputRadio = forwardRef((props, ref) => {
   });
   const uiState = useUIState(uiStateController);
 
-  const radio = renderActionableComponent(props, ref, {
+  const radio = renderActionableComponent(props, {
     Basic: InputRadioBasic,
     WithAction: InputRadioWithAction,
     InsideForm: InputRadioInsideForm,
@@ -212,9 +203,46 @@ export const InputRadio = forwardRef((props, ref) => {
       <UIStateContext.Provider value={uiState}>{radio}</UIStateContext.Provider>
     </UIStateControllerContext.Provider>
   );
-});
+};
 
-const InputRadioBasic = forwardRef((props, ref) => {
+const RadioManagedByCSSVars = {
+  "outlineWidth": "--outline-width",
+  "borderWidth": "--border-width",
+  "borderRadius": "--border-radius",
+  "backgroundColor": "--background-color",
+  "borderColor": "--border-color",
+  "color": "--color",
+  ":hover": {
+    backgroundColor: "--background-color-hover",
+    borderColor: "--border-color-hover",
+    color: "--color-hover",
+  },
+  ":active": {
+    borderColor: "--border-color-active",
+  },
+  ":read-only": {
+    backgroundColor: "--background-color-readonly",
+    borderColor: "--border-color-readonly",
+    color: "--color-readonly",
+  },
+  ":disabled": {
+    backgroundColor: "--background-color-disabled",
+    borderColor: "--border-color-disabled",
+    color: "--color-disabled",
+  },
+};
+const RadioPseudoClasses = [
+  ":hover",
+  ":active",
+  ":focus",
+  ":focus-visible",
+  ":read-only",
+  ":disabled",
+  ":checked",
+  ":-navi-loading",
+];
+const RadioPseudoElements = ["::-navi-loader", "::-navi-radiomark"];
+const InputRadioBasic = (props) => {
   const contextName = useContext(FieldNameContext);
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
@@ -226,44 +254,45 @@ const InputRadioBasic = forwardRef((props, ref) => {
   const reportReadOnlyOnLabel = useContext(ReportReadOnlyOnLabelContext);
   const reportDisabledOnLabel = useContext(ReportDisabledOnLabelContext);
   const {
+    /* eslint-disable no-unused-vars */
+    type,
+    /* eslint-enable no-unused-vars */
+
     name,
     readOnly,
     disabled,
     required,
     loading,
-
     autoFocus,
     constraints = [],
-
-    appeareance = "navi", // "navi" or "default"
-    accentColor,
     onClick,
     onInput,
-    style,
+
+    color,
     ...rest
   } = props;
-  const innerRef = useRef(null);
-  useImperativeHandle(ref, () => innerRef.current);
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
 
   const innerName = name || contextName;
   const innerDisabled = disabled || contextDisabled;
   const innerRequired = required || contextRequired;
   const innerLoading =
-    loading || (contextLoading && contextLoadingElement === innerRef.current);
+    loading || (contextLoading && contextLoadingElement === ref.current);
   const innerReadOnly =
     readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
 
   reportReadOnlyOnLabel?.(innerReadOnly);
   reportDisabledOnLabel?.(innerDisabled);
-  useAutoFocus(innerRef, autoFocus);
-  useConstraints(innerRef, constraints);
+  useAutoFocus(ref, autoFocus);
+  useConstraints(ref, constraints);
   const checked = Boolean(uiState);
   // we must first dispatch an event to inform all other radios they where unchecked
   // this way each other radio uiStateController knows thery are unchecked
   // we do this on "input"
   // but also when we are becoming checked from outside (hence the useLayoutEffect)
   const updateOtherRadiosInGroup = () => {
-    const thisRadio = innerRef.current;
+    const thisRadio = ref.current;
     const radioList = thisRadio.closest("[data-radio-list]");
     if (!radioList) {
       return;
@@ -286,108 +315,73 @@ const InputRadioBasic = forwardRef((props, ref) => {
     }
   }, [checked]);
 
-  const actionName = rest["data-action"];
-  if (actionName) {
-    delete rest["data-action"];
-  }
-  const inputRadio = (
-    <input
-      {...rest}
-      ref={innerRef}
+  const innerOnInput = useStableCallback((e) => {
+    const radio = e.target;
+    const radioIsChecked = radio.checked;
+    if (radioIsChecked) {
+      updateOtherRadiosInGroup();
+    }
+    uiStateController.setUIState(radioIsChecked, e);
+    onInput?.(e);
+  });
+  const innerOnClick = useStableCallback((e) => {
+    if (innerReadOnly) {
+      e.preventDefault();
+    }
+    onClick?.(e);
+  });
+  const renderRadio = (radioProps) => (
+    <Box
+      {...radioProps}
+      as="input"
+      ref={ref}
       type="radio"
-      style={appeareance === "default" ? style : undefined}
       name={innerName}
       checked={checked}
       disabled={innerDisabled}
       required={innerRequired}
+      baseClassName="navi_native_field"
       data-callout-arrow-x="center"
-      onClick={(e) => {
-        if (innerReadOnly) {
-          e.preventDefault();
-        }
-        onClick?.(e);
-      }}
-      onInput={(e) => {
-        const radio = e.target;
-        const radioIsChecked = radio.checked;
-        if (radioIsChecked) {
-          updateOtherRadiosInGroup();
-        }
-        uiStateController.setUIState(radioIsChecked, e);
-        onInput?.(e);
-      }}
-      // eslint-disable-next-line react/no-unknown-property
+      onClick={innerOnClick}
+      onInput={innerOnInput}
       onresetuistate={(e) => {
         uiStateController.resetUIState(e);
       }}
-      // eslint-disable-next-line react/no-unknown-property
       onsetuistate={(e) => {
         uiStateController.setUIState(e.detail.value, e);
       }}
     />
   );
-  const loaderProps = {
-    loading: innerLoading,
-    inset: -1,
-    style: {
-      "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
-    },
-    color: "var(--accent-color)",
-  };
-  if (appeareance === "navi") {
-    return (
-      <NaviRadio
-        data-action={actionName}
-        inputRef={innerRef}
-        accentColor={accentColor}
-        readOnly={innerReadOnly}
-        disabled={innerDisabled}
-        style={style}
-      >
-        <LoaderBackground {...loaderProps} targetSelector=".navi_radio_field">
-          {inputRadio}
-        </LoaderBackground>
-      </NaviRadio>
-    );
-  }
+  const renderRadioMemoized = useCallback(renderRadio, [
+    innerName,
+    checked,
+    innerRequired,
+  ]);
 
   return (
-    <LoadableInlineElement {...loaderProps} data-action={actionName}>
-      {inputRadio}
-    </LoadableInlineElement>
-  );
-});
-const NaviRadio = ({
-  inputRef,
-  accentColor,
-  readOnly,
-  disabled,
-
-  children,
-  ...rest
-}) => {
-  const ref = useRef();
-  useLayoutEffect(() => {
-    return initCustomField(ref.current, inputRef.current);
-  }, []);
-
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    base: {
-      "--accent-color": accentColor,
-    },
-    layout: true,
-  });
-
-  return (
-    <span
-      {...remainingProps}
+    <Box
+      as="span"
+      {...rest}
       ref={ref}
-      className="navi_radio"
-      style={innerStyle}
-      data-readonly={readOnly ? "" : undefined}
-      data-disabled={disabled ? "" : undefined}
+      baseClassName="navi_radio"
+      pseudoStateSelector=".navi_native_field"
+      managedByCSSVars={RadioManagedByCSSVars}
+      pseudoClasses={RadioPseudoClasses}
+      pseudoElements={RadioPseudoElements}
+      basePseudoState={{
+        ":read-only": innerReadOnly,
+        ":disabled": innerDisabled,
+        ":-navi-loading": innerLoading,
+      }}
+      color={color}
+      hasChildFunction
     >
-      {children}
+      <LoaderBackground
+        loading={innerLoading}
+        inset={-1}
+        targetSelector=".navi_radio_field"
+      />
+      {renderRadioMemoized}
       <span className="navi_radio_field">
         <svg
           viewBox="0 0 12 12"
@@ -416,7 +410,7 @@ const NaviRadio = ({
           <circle className="navi_radio_marker" cx="6" cy="6" r="3.5" />
         </svg>
       </span>
-    </span>
+    </Box>
   );
 };
 

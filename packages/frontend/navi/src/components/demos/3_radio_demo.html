@@ -7,868 +7,990 @@
     <title>Radio Demo</title>
     <style>
       body {
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        max-width: 1400px;
+        max-width: 1000px;
         margin: 0 auto;
         padding: 20px;
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        min-height: 100vh;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f5f5f5;
       }
 
       h1 {
+        margin-bottom: 30px;
+        color: #333;
+        font-size: 2rem;
         text-align: center;
-        color: #2c3e50;
-        margin-bottom: 30px;
-        font-size: 2.5rem;
-        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
       }
 
-      .demo-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-        gap: 20px;
-        margin-bottom: 30px;
-      }
-
-      .demo-card {
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 20px;
         background: white;
-        border-radius: 12px;
-        padding: 25px;
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-        border: 1px solid #e1e8ed;
-        transition:
-          transform 0.2s ease,
-          box-shadow 0.2s ease;
-      }
-
-      .demo-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
-      }
-
-      .demo-title {
-        color: #2c3e50;
-        margin: 0 0 20px 0;
-        font-size: 1.3rem;
-        font-weight: 600;
-        border-bottom: 3px solid #e74c3c;
-        padding-bottom: 10px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-
-      .demo-title::before {
-        content: "🔘";
-        font-size: 1.2rem;
-      }
-
-      .radio-row {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-        margin: 15px 0;
-        padding: 12px;
-        background: #f8f9fa;
         border-radius: 8px;
-        border: 1px solid #e9ecef;
-        transition: background 0.2s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
 
-      .radio-row:hover {
-        background: #e8f4f8;
+      .demo-section h2 {
+        margin: 0 0 20px 0;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.4rem;
+        border-bottom: 2px solid #ddd;
       }
 
-      .radio-label {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 1rem;
-        color: #495057;
-        flex: 1;
-        min-width: 0;
-      }
-
-      .toggle-button {
-        padding: 8px 16px;
-        background: linear-gradient(45deg, #e74c3c, #c0392b);
-        color: white;
-        border: none;
+      fieldset {
+        margin: 15px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
         border-radius: 6px;
-        cursor: pointer;
-        font-size: 0.9rem;
+      }
+
+      legend {
+        padding: 0 10px;
+        color: #555;
         font-weight: 500;
-        transition: all 0.2s ease;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        flex-shrink: 0;
         white-space: nowrap;
       }
 
-      .toggle-button:hover {
-        background: linear-gradient(45deg, #c0392b, #a93226);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      .states-section {
+        margin-bottom: 30px;
       }
 
-      .comparison {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        margin-top: 15px;
-        padding: 12px;
-        background: #fff3cd;
-        border-radius: 6px;
-        border-left: 4px solid #ffc107;
-      }
-
-      .comparison-label {
-        font-size: 0.85rem;
-        color: #856404;
-        font-weight: 500;
-        margin-bottom: 5px;
-      }
-
-      .native-examples {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
-
-      .native-examples label {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 0.9rem;
-        color: #495057;
-      }
-
-      .prop-control-demo {
-        grid-column: 1 / -1;
-        background: linear-gradient(45deg, #e74c3c 0%, #c0392b 100%);
-        color: white;
-      }
-
-      .prop-control-demo .demo-title {
-        color: white;
-        border-bottom-color: #ffffff;
-      }
-
-      .prop-control-demo .demo-title::before {
-        content: "🎛️";
-      }
-
-      .color-controls {
-        margin-bottom: 25px;
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 15px;
-      }
-
-      .color-select-group {
-        background: rgba(255, 255, 255, 0.1);
-        padding: 15px;
-        border-radius: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-      }
-
-      .color-select-label {
-        display: block;
+      .states-title {
         margin-bottom: 8px;
-        font-weight: 500;
-        font-size: 0.95rem;
-      }
-
-      .color-select {
-        width: 100%;
-        padding: 8px 12px;
-        border: none;
-        border-radius: 6px;
-        background: white;
         color: #333;
-        font-size: 0.9rem;
-        cursor: pointer;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      }
-
-      .state-controls {
-        background: rgba(255, 255, 255, 0.1);
-        padding: 15px;
-        border-radius: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        margin-bottom: 20px;
-      }
-
-      .state-controls h4 {
-        margin-top: 0;
-        margin-bottom: 15px;
+        font-weight: 600;
         font-size: 1.1rem;
       }
 
-      .state-toggles {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 10px;
-      }
-
-      .state-toggle {
-        background: rgba(255, 255, 255, 0.9);
+      .enhanced-states-title {
+        margin: 30px 0 8px 0;
         color: #333;
-        border: none;
-        padding: 10px 15px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 0.9rem;
-        font-weight: 500;
-        transition: all 0.2s ease;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        font-weight: 600;
+        font-size: 1.1rem;
       }
 
-      .state-toggle:hover {
-        background: white;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-      }
-
-      .state-toggle.active {
-        background: #ffffff;
-        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+      .states-description {
+        margin-bottom: 20px;
+        color: #666;
+        line-height: 1.5;
       }
 
       .radio-group {
         display: flex;
         flex-direction: column;
+        gap: 8px;
+      }
+
+      .interactive-controls {
+        display: flex;
+        margin: 20px 0;
+        flex-wrap: wrap;
         gap: 10px;
-        margin: 15px 0;
-        padding: 15px;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
       }
 
-      .radio-group h4 {
-        margin: 0 0 10px 0;
-        font-size: 1rem;
-        color: white;
-      }
-
-      .custom-styles-test {
-        background: rgba(255, 255, 255, 0.9);
+      .control-button {
+        padding: 8px 16px;
         color: #333;
-        padding: 20px;
-        border-radius: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        margin: 15px 0;
-      }
-
-      .custom-styles-test h4 {
-        margin-top: 0;
-        color: #2c3e50;
-        font-size: 1.1rem;
-      }
-
-      .custom-styles-comparison {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-        margin-top: 15px;
-      }
-
-      .comparison-item {
-        background: rgba(255, 255, 255, 0.05);
-        padding: 15px;
-        border-radius: 6px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-      }
-
-      .comparison-item h5 {
-        margin-top: 0;
-        margin-bottom: 10px;
-        color: #34495e;
         font-size: 0.9rem;
+        background: #f8f9fa;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+        cursor: pointer;
       }
 
-      @media (max-width: 768px) {
-        .demo-grid {
-          grid-template-columns: 1fr;
-        }
+      .control-button:hover {
+        background: #e9ecef;
+      }
 
-        h1 {
-          font-size: 2rem;
-        }
+      .control-button.active {
+        color: white;
+        background: #007bff;
+        border-color: #007bff;
+      }
 
-        .radio-row {
-          flex-direction: column;
-          align-items: stretch;
-          gap: 10px;
-        }
+      code {
+        padding: 2px 6px;
+        font-size: 0.9em;
+        font-family: "Consolas", "Monaco", "Courier New", monospace;
+        background: #f8f9fa;
+        border-radius: 3px;
       }
     </style>
   </head>
   <body>
-    <h1>🔘 Interactive Radio Demo</h1>
+    <h1>Radio Demo</h1>
     <div id="root"></div>
 
     <script type="module" jsenv-type="module/jsx">
+      /* eslint-disable no-unused-vars */
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import {
-        // eslint-disable-next-line no-unused-vars
-        Input,
-        // eslint-disable-next-line no-unused-vars
-        Label,
-      } from "@jsenv/navi";
+      import { Input, Layout, Label } from "@jsenv/navi";
 
-      // eslint-disable-next-line no-unused-vars
       const App = () => {
         return (
-          <div className="demo-grid">
-            <LoadingDemo />
-            <ReadOnlyDemo />
-            <DisabledDemo />
-            <PropControlDemo />
-            <CustomStylesDemo />
+          <div>
+            <BasicStatesDemo />
+            <ColorDemo />
+            <InteractiveDemo />
           </div>
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
-      const LoadingDemo = () => {
+      const BasicStatesDemo = () => {
+        return (
+          <div className="demo-section">
+            <h2>Radio States</h2>
+
+            <div className="states-section">
+              <div className="states-title">Standard HTML Radio States</div>
+              <p className="states-description">
+                These states work exactly like native HTML radio buttons, with
+                enhanced styling and consistent behavior. Radio buttons work in
+                groups where only one can be selected.
+              </p>
+
+              <Layout column contentSpacing="sm">
+                <fieldset>
+                  <legend>Default group (none selected)</legend>
+                  <Layout column contentSpacing="xs">
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-default-navi"
+                          value="1"
+                        />
+                        Navi Option 1
+                      </Label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="demo-default-native"
+                          value="1"
+                        />
+                        Native Option 1
+                      </label>
+                    </Layout>
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-default-navi"
+                          value="2"
+                        />
+                        Navi Option 2
+                      </Label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="demo-default-native"
+                          value="2"
+                        />
+                        Native Option 2
+                      </label>
+                    </Layout>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>:checked</legend>
+                  <Layout column contentSpacing="xs">
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-checked-navi"
+                          value="1"
+                          defaultChecked
+                        />
+                        Navi Option 1
+                      </Label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="demo-checked-native"
+                          value="1"
+                          checked
+                        />
+                        Native Option 1
+                      </label>
+                    </Layout>
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-checked-navi"
+                          value="2"
+                        />
+                        Navi Option 2
+                      </Label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="demo-checked-native"
+                          value="2"
+                        />
+                        Native Option 2
+                      </label>
+                    </Layout>
+                  </Layout>
+                </fieldset>
+
+                <fieldset>
+                  <legend>:disabled</legend>
+                  <Layout column contentSpacing="xs">
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-disabled-navi"
+                          value="1"
+                          disabled
+                        />
+                        Navi Option 1
+                      </Label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="demo-disabled-native"
+                          value="1"
+                          disabled
+                        />
+                        Native Option 1
+                      </label>
+                    </Layout>
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-disabled-navi"
+                          value="2"
+                          disabled
+                        />
+                        Navi Option 2
+                      </Label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="demo-disabled-native"
+                          value="2"
+                          disabled
+                        />
+                        Native Option 2
+                      </label>
+                    </Layout>
+                  </Layout>
+                </fieldset>
+
+                <fieldset>
+                  <legend>:checked + :disabled</legend>
+                  <Layout column contentSpacing="xs">
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-checked-disabled-navi"
+                          value="1"
+                          checked
+                          disabled
+                        />
+                        Navi Option 1
+                      </Label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="demo-checked-disabled-native"
+                          value="1"
+                          checked
+                          disabled
+                        />
+                        Native Option 1
+                      </label>
+                    </Layout>
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-checked-disabled-navi"
+                          value="2"
+                          disabled
+                        />
+                        Navi Option 2
+                      </Label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="demo-checked-disabled-native"
+                          value="2"
+                          disabled
+                        />
+                        Native Option 2
+                      </label>
+                    </Layout>
+                  </Layout>
+                </fieldset>
+
+                <fieldset>
+                  <legend>:read-only</legend>
+                  <Layout column contentSpacing="xs">
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-readonly-navi"
+                          value="1"
+                          readOnly
+                        />
+                        Navi Option 1
+                      </Label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="demo-readonly-native"
+                          value="1"
+                          readOnly
+                        />
+                        Native Option 1
+                      </label>
+                    </Layout>
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-readonly-navi"
+                          value="2"
+                          readOnly
+                        />
+                        Navi Option 2
+                      </Label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="demo-readonly-native"
+                          value="2"
+                          readOnly
+                        />
+                        Native Option 2
+                      </label>
+                    </Layout>
+                  </Layout>
+                </fieldset>
+
+                <fieldset>
+                  <legend>:checked + :read-only</legend>
+                  <Layout column contentSpacing="xs">
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-checked-readonly-navi"
+                          value="1"
+                          checked
+                          readOnly
+                        />
+                        Navi Option 1
+                      </Label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="demo-checked-readonly-native"
+                          value="1"
+                          checked
+                          readOnly
+                        />
+                        Native Option 1
+                      </label>
+                    </Layout>
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-checked-readonly-navi"
+                          value="2"
+                          readOnly
+                        />
+                        Navi Option 2
+                      </Label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="demo-checked-readonly-native"
+                          value="2"
+                          readOnly
+                        />
+                        Native Option 2
+                      </label>
+                    </Layout>
+                  </Layout>
+                </fieldset>
+              </Layout>
+
+              <div className="enhanced-states-title">Enhanced Navi States</div>
+              <p className="states-description">
+                Additional states provided by the Navi component system that
+                aren't available in standard HTML.
+              </p>
+
+              <Layout column contentSpacing="sm">
+                <fieldset>
+                  <legend>:read-only</legend>
+                  <Layout column contentSpacing="xs">
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-enhanced-readonly"
+                          value="1"
+                          readOnly
+                        />
+                        Read-only Option 1
+                      </Label>
+                    </Layout>
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-enhanced-readonly"
+                          value="2"
+                          readOnly
+                        />
+                        Read-only Option 2
+                      </Label>
+                    </Layout>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>:read-only + checked</legend>
+                  <Layout column contentSpacing="xs">
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-enhanced-readonly-checked"
+                          value="1"
+                          readOnly
+                          checked
+                        />
+                        Read-only Checked
+                      </Label>
+                    </Layout>
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-enhanced-readonly-checked"
+                          value="2"
+                          readOnly
+                        />
+                        Read-only Option 2
+                      </Label>
+                    </Layout>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>Loading state</legend>
+                  <Layout column contentSpacing="xs">
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-loading"
+                          value="1"
+                          loading
+                        />
+                        Loading Option 1
+                      </Label>
+                    </Layout>
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-loading"
+                          value="2"
+                          loading
+                        />
+                        Loading Option 2
+                      </Label>
+                    </Layout>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>Loading + checked</legend>
+                  <Layout column contentSpacing="xs">
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-loading-checked"
+                          value="1"
+                          loading
+                          checked
+                        />
+                        Loading Checked
+                      </Label>
+                    </Layout>
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-loading-checked"
+                          value="2"
+                          loading
+                        />
+                        Loading Option 2
+                      </Label>
+                    </Layout>
+                  </Layout>
+                </fieldset>
+              </Layout>
+
+              <div
+                style={{
+                  marginTop: "15px",
+                  padding: "10px",
+                  background: "#f8f9fa",
+                  borderRadius: "4px",
+                  fontSize: "0.85rem",
+                  color: "#666",
+                }}
+              >
+                <strong>Enhanced State Explanations:</strong>
+                <ul style={{ margin: "5px 0", paddingLeft: "20px" }}>
+                  <li>
+                    <strong>Read-only:</strong> Visually indicates the radio
+                    cannot be interacted with, but remains focusable for
+                    accessibility
+                  </li>
+                  <li>
+                    <strong>Loading:</strong> Shows a spinner while allowing the
+                    radio to remain interactive
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const ColorDemo = () => {
+        return (
+          <div className="demo-section">
+            <h2>Custom Colors</h2>
+
+            <div className="states-section">
+              <div className="states-title">Custom Color Themes</div>
+              <p className="states-description">
+                Modern browsers support the <code>accent-color</code> CSS
+                property to customize radio colors while maintaining
+                accessibility.
+              </p>
+
+              <Layout column contentSpacing="sm">
+                <fieldset>
+                  <legend>Purple Theme</legend>
+                  <Layout column contentSpacing="xs">
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-purple-navi"
+                          value="1"
+                          style={{ accentColor: "#8b5cf6" }}
+                        />
+                        Navi Option 1
+                      </Label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="demo-purple-native"
+                          value="1"
+                          style={{ accentColor: "#8b5cf6" }}
+                        />
+                        Native Option 1
+                      </label>
+                    </Layout>
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-purple-navi"
+                          value="2"
+                          style={{ accentColor: "#8b5cf6" }}
+                        />
+                        Navi Option 2
+                      </Label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="demo-purple-native"
+                          value="2"
+                          style={{ accentColor: "#8b5cf6" }}
+                        />
+                        Native Option 2
+                      </label>
+                    </Layout>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>Purple Theme (checked)</legend>
+                  <Layout column contentSpacing="xs">
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-purple-checked-navi"
+                          value="1"
+                          checked
+                          style={{ accentColor: "#8b5cf6" }}
+                        />
+                        Navi Option 1
+                      </Label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="demo-purple-checked-native"
+                          value="1"
+                          checked
+                          style={{ accentColor: "#8b5cf6" }}
+                        />
+                        Native Option 1
+                      </label>
+                    </Layout>
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-purple-checked-navi"
+                          value="2"
+                          style={{ accentColor: "#8b5cf6" }}
+                        />
+                        Navi Option 2
+                      </Label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="demo-purple-checked-native"
+                          value="2"
+                          style={{ accentColor: "#8b5cf6" }}
+                        />
+                        Native Option 2
+                      </label>
+                    </Layout>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>Green Theme</legend>
+                  <Layout column contentSpacing="xs">
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-green-navi"
+                          value="1"
+                          style={{ accentColor: "#10b981" }}
+                        />
+                        Navi Option 1
+                      </Label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="demo-green-native"
+                          value="1"
+                          style={{ accentColor: "#10b981" }}
+                        />
+                        Native Option 1
+                      </label>
+                    </Layout>
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-green-navi"
+                          value="2"
+                          style={{ accentColor: "#10b981" }}
+                        />
+                        Navi Option 2
+                      </Label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="demo-green-native"
+                          value="2"
+                          style={{ accentColor: "#10b981" }}
+                        />
+                        Native Option 2
+                      </label>
+                    </Layout>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>Green Theme (checked)</legend>
+                  <Layout column contentSpacing="xs">
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-green-checked-navi"
+                          value="1"
+                          checked
+                          style={{ accentColor: "#10b981" }}
+                        />
+                        Navi Option 1
+                      </Label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="demo-green-checked-native"
+                          value="1"
+                          checked
+                          style={{ accentColor: "#10b981" }}
+                        />
+                        Native Option 1
+                      </label>
+                    </Layout>
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-green-checked-navi"
+                          value="2"
+                          style={{ accentColor: "#10b981" }}
+                        />
+                        Navi Option 2
+                      </Label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="demo-green-checked-native"
+                          value="2"
+                          style={{ accentColor: "#10b981" }}
+                        />
+                        Native Option 2
+                      </label>
+                    </Layout>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>Dark Theme</legend>
+                  <Layout column contentSpacing="xs">
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-dark-navi"
+                          value="1"
+                          style={{ accentColor: "#374151" }}
+                        />
+                        Navi Option 1
+                      </Label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="demo-dark-native"
+                          value="1"
+                          style={{ accentColor: "#374151" }}
+                        />
+                        Native Option 1
+                      </label>
+                    </Layout>
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-dark-navi"
+                          value="2"
+                          style={{ accentColor: "#374151" }}
+                        />
+                        Navi Option 2
+                      </Label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="demo-dark-native"
+                          value="2"
+                          style={{ accentColor: "#374151" }}
+                        />
+                        Native Option 2
+                      </label>
+                    </Layout>
+                  </Layout>
+                </fieldset>
+                <fieldset>
+                  <legend>Dark Theme (checked)</legend>
+                  <Layout column contentSpacing="xs">
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-dark-checked-navi"
+                          value="1"
+                          checked
+                          style={{ accentColor: "#374151" }}
+                        />
+                        Navi Option 1
+                      </Label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="demo-dark-checked-native"
+                          value="1"
+                          checked
+                          style={{ accentColor: "#374151" }}
+                        />
+                        Native Option 1
+                      </label>
+                    </Layout>
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Label>
+                        <Input
+                          type="radio"
+                          name="demo-dark-checked-navi"
+                          value="2"
+                          style={{ accentColor: "#374151" }}
+                        />
+                        Navi Option 2
+                      </Label>
+                      <label>
+                        <input
+                          type="radio"
+                          name="demo-dark-checked-native"
+                          value="2"
+                          style={{ accentColor: "#374151" }}
+                        />
+                        Native Option 2
+                      </label>
+                    </Layout>
+                  </Layout>
+                </fieldset>
+              </Layout>
+
+              <div
+                style={{
+                  marginTop: "15px",
+                  padding: "10px",
+                  background: "#f8f9fa",
+                  borderRadius: "4px",
+                  fontSize: "0.85rem",
+                  color: "#666",
+                }}
+              >
+                <strong>Color Customization:</strong>
+                <ul style={{ margin: "5px 0", paddingLeft: "20px" }}>
+                  <li>
+                    <strong>accent-color:</strong> CSS property that changes the
+                    radio color in modern browsers
+                  </li>
+                  <li>
+                    <strong>Native Support:</strong> Works on both native radios
+                    and enhanced Navi components
+                  </li>
+                  <li>
+                    <strong>Accessibility:</strong> Colors should maintain
+                    sufficient contrast for readability
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const InteractiveDemo = () => {
         const [loading, setLoading] = useState(false);
+        const [disabled, setDisabled] = useState(false);
         const [selectedValue, setSelectedValue] = useState("option1");
 
         return (
-          <div className="demo-card">
-            <h3 className="demo-title">Loading States</h3>
+          <div className="demo-section">
+            <h2>Interactive Controls</h2>
 
-            <div className="radio-group">
-              <h4>Radio Group (Loading: {loading ? "Yes" : "No"})</h4>
-              <Label className="radio-label">
-                <Input
-                  type="radio"
-                  name="loading-demo"
-                  value="option1"
-                  checked={selectedValue === "option1"}
-                  onUIStateChange={(checked) => {
-                    if (checked) {
-                      setSelectedValue("option1");
-                    }
-                  }}
-                  loading={loading}
-                />
-                Option 1
-              </Label>
-              <Label className="radio-label">
-                <Input
-                  type="radio"
-                  name="loading-demo"
-                  value="option2"
-                  checked={selectedValue === "option2"}
-                  onUIStateChange={(checked) => {
-                    if (checked) {
-                      setSelectedValue("option2");
-                    }
-                  }}
-                  loading={loading}
-                />
-                Option 2
-              </Label>
-              <Label className="radio-label">
-                <Input
-                  type="radio"
-                  name="loading-demo"
-                  value="option3"
-                  checked={selectedValue === "option3"}
-                  onUIStateChange={(checked) => {
-                    if (checked) {
-                      setSelectedValue("option3");
-                    }
-                  }}
-                  loading={loading}
-                />
-                Option 3
-              </Label>
-            </div>
-
-            <button
-              className="toggle-button"
-              onClick={() => setLoading(!loading)}
-            >
-              {loading ? "Stop Loading" : "Start Loading"}
-            </button>
-
-            <div className="comparison">
-              <span className="comparison-label">Native comparison:</span>
-              <div className="native-examples">
-                <label>
-                  <input type="radio" name="native-loading" value="1" />
-                  Native Radio 1
-                </label>
-                <label>
-                  <input type="radio" name="native-loading" value="2" />
-                  Native Radio 2
-                </label>
-                <label>
-                  <input type="radio" name="native-loading" value="3" />
-                  Native Radio 3
-                </label>
-              </div>
-            </div>
-          </div>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const ReadOnlyDemo = () => {
-        const [readOnly, setReadOnly] = useState(true);
-        const [selectedValue, setSelectedValue] = useState("option2");
-
-        return (
-          <div className="demo-card">
-            <h3 className="demo-title">Read-Only States</h3>
-
-            <div className="radio-group">
-              <h4>Radio Group (Read-only: {readOnly ? "Yes" : "No"})</h4>
-              <Label className="radio-label">
-                <Input
-                  type="radio"
-                  name="readonly-demo"
-                  value="option1"
-                  checked={selectedValue === "option1"}
-                  onChange={() => !readOnly && setSelectedValue("option1")}
-                  readOnly={readOnly}
-                />
-                Option 1
-              </Label>
-              <Label className="radio-label">
-                <Input
-                  type="radio"
-                  name="readonly-demo"
-                  value="option2"
-                  checked={selectedValue === "option2"}
-                  onChange={() => !readOnly && setSelectedValue("option2")}
-                  readOnly={readOnly}
-                />
-                Option 2 (Initially Selected)
-              </Label>
-              <Label className="radio-label">
-                <Input
-                  type="radio"
-                  name="readonly-demo"
-                  value="option3"
-                  checked={selectedValue === "option3"}
-                  onChange={() => !readOnly && setSelectedValue("option3")}
-                  readOnly={readOnly}
-                />
-                Option 3
-              </Label>
-            </div>
-
-            <button
-              className="toggle-button"
-              onClick={() => setReadOnly(!readOnly)}
-            >
-              {readOnly ? "Make Editable" : "Make Read-Only"}
-            </button>
-
-            <div className="comparison">
-              <span className="comparison-label">Native comparison:</span>
-              <div className="native-examples">
-                <label>
-                  <input
-                    type="radio"
-                    name="native-readonly"
-                    value="1"
-                    readOnly
-                  />
-                  Native Read-Only Radio 1
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    name="native-readonly"
-                    value="2"
-                    readOnly
-                    checked
-                  />
-                  Native Read-Only Radio 2
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    name="native-readonly"
-                    value="3"
-                    readOnly
-                  />
-                  Native Read-Only Radio 3
-                </label>
-              </div>
-            </div>
-          </div>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const DisabledDemo = () => {
-        const [disabled, setDisabled] = useState(true);
-
-        return (
-          <div className="demo-card">
-            <h3 className="demo-title">Disabled States</h3>
-
-            <div className="radio-group">
-              <h4>Radio Group (Disabled: {disabled ? "Yes" : "No"})</h4>
-              <Label className="radio-label">
-                <Input
-                  type="radio"
-                  name="disabled-demo"
-                  value="option1"
-                  checked={true}
-                  onUIStateChange={() => {}}
-                  disabled={disabled}
-                />
-                Option 1 (Initially Selected)
-              </Label>
-              <Label className="radio-label">
-                <Input
-                  type="radio"
-                  name="disabled-demo"
-                  value="option2"
-                  disabled={disabled}
-                />
-                Option 2
-              </Label>
-              <Label className="radio-label">
-                <Input
-                  type="radio"
-                  name="disabled-demo"
-                  value="option3"
-                  disabled={disabled}
-                />
-                Option 3
-              </Label>
-            </div>
-
-            <button
-              className="toggle-button"
-              onClick={() => setDisabled(!disabled)}
-            >
-              {disabled ? "Enable Radios" : "Disable Radios"}
-            </button>
-
-            <div className="comparison">
-              <span className="comparison-label">Native comparison:</span>
-              <div className="native-examples">
-                <label>
-                  <input
-                    type="radio"
-                    name="native-disabled"
-                    value="1"
-                    disabled
-                    checked
-                  />
-                  Native Disabled Radio 1
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    name="native-disabled"
-                    value="2"
-                    disabled
-                  />
-                  Native Disabled Radio 2
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    name="native-disabled"
-                    value="3"
-                    disabled
-                  />
-                  Native Disabled Radio 3
-                </label>
-              </div>
-            </div>
-          </div>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const PropControlDemo = () => {
-        const [radiomarkColor, setRadiomarkColor] = useState("#e74c3c");
-        const [borderColor, setBorderColor] = useState("#767676");
-        const [backgroundColor, setBackgroundColor] = useState("#ffffff");
-        const [loading, setLoading] = useState(false);
-        const [readOnly, setReadOnly] = useState(false);
-        const [disabled, setDisabled] = useState(false);
-        const [selectedValue, setSelectedValue] = useState("option2");
-
-        return (
-          <div className="demo-card prop-control-demo">
-            <h3 className="demo-title">Property Controls</h3>
-
-            <div className="color-controls">
-              <div className="color-select-group">
-                <label className="color-select-label">Radiomark Color:</label>
-                <select
-                  className="color-select"
-                  value={radiomarkColor}
-                  onChange={(e) => setRadiomarkColor(e.target.value)}
-                >
-                  <option value="#e74c3c">Red (Default)</option>
-                  <option value="#3498db">Blue</option>
-                  <option value="#2ecc71">Green</option>
-                  <option value="#f39c12">Orange</option>
-                  <option value="#9b59b6">Purple</option>
-                  <option value="#1abc9c">Teal</option>
-                  <option value="#34495e">Dark Gray</option>
-                </select>
-              </div>
-
-              <div className="color-select-group">
-                <label className="color-select-label">Border Color:</label>
-                <select
-                  className="color-select"
-                  value={borderColor}
-                  onChange={(e) => setBorderColor(e.target.value)}
-                >
-                  <option value="#767676">Gray (Default)</option>
-                  <option value="#e74c3c">Red</option>
-                  <option value="#3498db">Blue</option>
-                  <option value="#2ecc71">Green</option>
-                  <option value="#34495e">Dark</option>
-                  <option value="#95a5a6">Light Gray</option>
-                </select>
-              </div>
-
-              <div className="color-select-group">
-                <label className="color-select-label">Background Color:</label>
-                <select
-                  className="color-select"
-                  value={backgroundColor}
-                  onChange={(e) => setBackgroundColor(e.target.value)}
-                >
-                  <option value="#ffffff">White (Default)</option>
-                  <option value="#ecf0f1">Light Gray</option>
-                  <option value="#bdc3c7">Medium Gray</option>
-                  <option value="#f8f9fa">Off White</option>
-                  <option value="#fff5f5">Light Pink</option>
-                  <option value="#f0f8ff">Light Blue</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="state-controls">
-              <h4>State Controls:</h4>
-              <div className="state-toggles">
+            <fieldset>
+              <legend>Toggle States</legend>
+              <Layout row contentSpacing="sm" contentAlignX="start" contentWrap>
                 <button
-                  className={`state-toggle ${loading ? "active" : ""}`}
+                  className={`control-button ${loading ? "active" : ""}`}
                   onClick={() => setLoading(!loading)}
                 >
-                  {loading ? "Stop Loading" : "Start Loading"}
+                  Loading: {loading ? "ON" : "OFF"}
                 </button>
                 <button
-                  className={`state-toggle ${readOnly ? "active" : ""}`}
-                  onClick={() => setReadOnly(!readOnly)}
-                >
-                  {readOnly ? "Make Editable" : "Make Read-Only"}
-                </button>
-                <button
-                  className={`state-toggle ${disabled ? "active" : ""}`}
+                  className={`control-button ${disabled ? "active" : ""}`}
                   onClick={() => setDisabled(!disabled)}
                 >
-                  {disabled ? "Enable" : "Disable"}
+                  Disabled: {disabled ? "ON" : "OFF"}
                 </button>
-              </div>
-            </div>
+              </Layout>
+            </fieldset>
 
-            <div
-              className="radio-group"
-              style={{
-                "--navi-radiomark-color": radiomarkColor,
-                "--border-color": borderColor,
-                "--background-color": backgroundColor,
-              }}
-            >
-              <h4>Customized Radio Group</h4>
-              <Label className="radio-label">
-                <Input
-                  type="radio"
-                  name="prop-control-demo"
-                  value="option1"
-                  checked={selectedValue === "option1"}
-                  onChange={() =>
-                    !readOnly && !disabled && setSelectedValue("option1")
-                  }
-                  loading={loading}
-                  readOnly={readOnly}
-                  disabled={disabled}
-                />
-                Option 1
-              </Label>
-              <Label className="radio-label">
-                <Input
-                  type="radio"
-                  name="prop-control-demo"
-                  value="option2"
-                  checked={selectedValue === "option2"}
-                  onChange={() =>
-                    !readOnly && !disabled && setSelectedValue("option2")
-                  }
-                  loading={loading}
-                  readOnly={readOnly}
-                  disabled={disabled}
-                />
-                Option 2 (Initially Selected)
-              </Label>
-              <Label className="radio-label">
-                <Input
-                  type="radio"
-                  name="prop-control-demo"
-                  value="option3"
-                  checked={selectedValue === "option3"}
-                  onChange={() =>
-                    !readOnly && !disabled && setSelectedValue("option3")
-                  }
-                  loading={loading}
-                  readOnly={readOnly}
-                  disabled={disabled}
-                />
-                Option 3
-              </Label>
-            </div>
-
-            <div className="custom-styles-test">
-              <h4>Current CSS Custom Properties:</h4>
-              <pre style={{ fontSize: "0.8rem", lineHeight: "1.4" }}>
-                {`--navi-radiomark-color: ${radiomarkColor};
---border-color: ${borderColor};  
---background-color: ${backgroundColor};`}
-              </pre>
-            </div>
+            <fieldset>
+              <legend>Interactive Radio Group</legend>
+              <Layout column contentSpacing="sm">
+                <Label>
+                  <Input
+                    type="radio"
+                    name="interactive-demo"
+                    value="option1"
+                    checked={selectedValue === "option1"}
+                    onUIStateChange={(checked) => {
+                      if (checked && !disabled) setSelectedValue("option1");
+                    }}
+                    loading={loading}
+                    disabled={disabled}
+                  />
+                  Interactive Radio 1
+                </Label>
+                <Label>
+                  <Input
+                    type="radio"
+                    name="interactive-demo"
+                    value="option2"
+                    checked={selectedValue === "option2"}
+                    onUIStateChange={(checked) => {
+                      if (checked && !disabled) setSelectedValue("option2");
+                    }}
+                    loading={loading}
+                    disabled={disabled}
+                  />
+                  Interactive Radio 2
+                </Label>
+                <Label>
+                  <Input
+                    type="radio"
+                    name="interactive-demo"
+                    value="option3"
+                    checked={selectedValue === "option3"}
+                    onUIStateChange={(checked) => {
+                      if (checked && !disabled) setSelectedValue("option3");
+                    }}
+                    loading={loading}
+                    disabled={disabled}
+                  />
+                  Interactive Radio 3
+                </Label>
+                <div
+                  style={{
+                    marginTop: "10px",
+                    padding: "8px",
+                    fontSize: "0.8rem",
+                    fontFamily: "monospace",
+                    background: "#f8f9fa",
+                    border: "1px solid #dee2e6",
+                    borderRadius: "4px",
+                  }}
+                >
+                  State: selectedValue="{selectedValue}" | loading=
+                  {loading ? "true" : "false"} | disabled=
+                  {disabled ? "true" : "false"}
+                </div>
+              </Layout>
+            </fieldset>
           </div>
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
-      const CustomStylesDemo = () => {
-        const [selectedValue1, setSelectedValue1] = useState("small");
-        const [selectedValue2, setSelectedValue2] = useState("medium");
-
-        return (
-          <div className="demo-card">
-            <h3 className="demo-title">Custom Styles</h3>
-
-            <div className="custom-styles-comparison">
-              <div className="comparison-item">
-                <h5>Small Radio Buttons</h5>
-                <div
-                  className="radio-group"
-                  style={{
-                    "--width": "10px",
-                    "--height": "10px",
-                    "--navi-radiomark-color": "#3498db",
-                  }}
-                >
-                  <Label className="radio-label">
-                    <Input
-                      type="radio"
-                      name="small-radios"
-                      value="small"
-                      checked={selectedValue1 === "small"}
-                      onChange={() => setSelectedValue1("small")}
-                    />
-                    Small Option
-                  </Label>
-                  <Label className="radio-label">
-                    <Input
-                      type="radio"
-                      name="small-radios"
-                      value="medium"
-                      checked={selectedValue1 === "medium"}
-                      onChange={() => setSelectedValue1("medium")}
-                    />
-                    Medium Option
-                  </Label>
-                  <Label className="radio-label">
-                    <Input
-                      type="radio"
-                      name="small-radios"
-                      value="large"
-                      checked={selectedValue1 === "large"}
-                      onChange={() => setSelectedValue1("large")}
-                    />
-                    Large Option
-                  </Label>
-                </div>
-              </div>
-
-              <div className="comparison-item">
-                <h5>Large Radio Buttons</h5>
-                <div
-                  className="radio-group"
-                  style={{
-                    "--width": "20px",
-                    "--height": "20px",
-                    "--navi-radiomark-color": "#e74c3c",
-                  }}
-                >
-                  <Label className="radio-label">
-                    <Input
-                      type="radio"
-                      name="large-radios"
-                      value="small"
-                      checked={selectedValue2 === "small"}
-                      onChange={() => setSelectedValue2("small")}
-                    />
-                    Small Option
-                  </Label>
-                  <Label className="radio-label">
-                    <Input
-                      type="radio"
-                      name="large-radios"
-                      value="medium"
-                      checked={selectedValue2 === "medium"}
-                      onChange={() => setSelectedValue2("medium")}
-                    />
-                    Medium Option
-                  </Label>
-                  <Label className="radio-label">
-                    <Input
-                      type="radio"
-                      name="large-radios"
-                      value="large"
-                      checked={selectedValue2 === "large"}
-                      onChange={() => setSelectedValue2("large")}
-                    />
-                    Large Option
-                  </Label>
-                </div>
-              </div>
-            </div>
-
-            <div className="comparison">
-              <span className="comparison-label">Native comparison:</span>
-              <div className="native-examples">
-                <label>
-                  <input type="radio" name="native-custom" value="1" />
-                  Native Radio 1
-                </label>
-                <label>
-                  <input type="radio" name="native-custom" value="2" />
-                  Native Radio 2
-                </label>
-                <label>
-                  <input type="radio" name="native-custom" value="3" />
-                  Native Radio 3
-                </label>
-              </div>
-            </div>
-          </div>
-        );
-      };
-
-      render(<App />, document.getElementById("root"));
+      render(<App />, document.querySelector("#root"));
     </script>
   </body>
 </html>

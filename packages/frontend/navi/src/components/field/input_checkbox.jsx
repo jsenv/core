@@ -298,44 +298,43 @@ const InputCheckboxBasic = (props) => {
   useConstraints(ref, constraints);
 
   const checked = Boolean(uiState);
-  const innerOnInput = useStableCallback(onInput);
-  const renderCheckbox = (remainingProps) => (
+  const innerOnClick = useStableCallback((e) => {
+    if (innerReadOnly) {
+      e.preventDefault();
+    }
+    onClick?.(e);
+  });
+  const innerOnInput = useStableCallback((e) => {
+    const checkbox = e.target;
+    const checkboxIsChecked = checkbox.checked;
+    uiStateController.setUIState(checkboxIsChecked, e);
+    onInput?.(e);
+  });
+  const renderCheckbox = (checkboxProps) => (
     <Box
-      {...remainingProps}
+      {...checkboxProps}
       as="input"
       ref={ref}
       type="checkbox"
       name={innerName}
       checked={checked}
       required={innerRequired}
+      baseClassName="navi_native_field"
       data-callout-arrow-x="center"
-      onClick={(e) => {
-        if (innerReadOnly) {
-          e.preventDefault();
-        }
-        onClick?.(e);
-      }}
-      onInput={(e) => {
-        const checkbox = e.target;
-        const checkboxIsChecked = checkbox.checked;
-        uiStateController.setUIState(checkboxIsChecked, e);
-        innerOnInput?.(e);
-      }}
+      onClick={innerOnClick}
+      onInput={innerOnInput}
       onresetuistate={(e) => {
         uiStateController.resetUIState(e);
       }}
       onsetuistate={(e) => {
         uiStateController.setUIState(e.detail.value, e);
       }}
-      // style
-      baseClassName="navi_native_field"
     />
   );
   const renderCheckboxMemoized = useCallback(renderCheckbox, [
     innerName,
     checked,
     innerRequired,
-    innerOnInput,
   ]);
 
   useLayoutEffect(() => {
@@ -357,6 +356,7 @@ const InputCheckboxBasic = (props) => {
 
   return (
     <Box
+      as="span"
       {...rest}
       ref={ref}
       baseClassName="navi_checkbox"
