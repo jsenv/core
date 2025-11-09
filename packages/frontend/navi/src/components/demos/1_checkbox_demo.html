@@ -275,7 +275,7 @@
               </p>
 
               <Layout column contentSpacing="sm">
-                <fieldset>
+                <Box as="fieldset" width="200">
                   <legend>:read-only</legend>
                   <Layout row contentSpacing="sm" contentAlignX="start">
                     <Label>
@@ -283,17 +283,8 @@
                       Read-only
                     </Label>
                   </Layout>
-                </fieldset>
-                <fieldset>
-                  <legend>:read-only:checked</legend>
-                  <Layout row contentSpacing="sm" contentAlignX="start">
-                    <Label>
-                      <Input type="checkbox" readOnly checked />
-                      Read-only
-                    </Label>
-                  </Layout>
-                </fieldset>
-                <fieldset>
+                </Box>
+                <Box as="fieldset" width="200">
                   <legend>:-navi-loading</legend>
                   <Layout row contentSpacing="sm" contentAlignX="start">
                     <Label>
@@ -301,8 +292,19 @@
                       Loading
                     </Label>
                   </Layout>
-                </fieldset>
-                <fieldset>
+                </Box>
+              </Layout>
+              <Layout column contentSpacing="sm">
+                <Box as="fieldset" width="200">
+                  <legend>:read-only:checked</legend>
+                  <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Label>
+                      <Input type="checkbox" readOnly checked />
+                      Read-only
+                    </Label>
+                  </Layout>
+                </Box>
+                <Box as="fieldset" width="200">
                   <legend>:-navi-loading:checked</legend>
                   <Layout row contentSpacing="sm" contentAlignX="start">
                     <Label>
@@ -310,7 +312,7 @@
                       Loading
                     </Label>
                   </Layout>
-                </fieldset>
+                </Box>
               </Layout>
 
               <div
