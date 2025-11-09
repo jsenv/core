@@ -38,19 +38,15 @@ import.meta.css = /* css */ `
       --outline-color: light-dark(#4476ff, #3b82f6);
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: white;
+      --color: var(--navi-radiomark-color);
+      --radiomark-color: var(--navi-radiomark-color);
       --border-color-checked: var(--color);
-      --radiomark-color: var(--color);
-      --radiomark-color-checked: color-mix(
-        in srgb,
-        var(--accent-color) 70%,
-        black
-      );
 
       /* Hover */
       --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
-      --border-color-checked-hover: var(--accent-color-checked);
-      --border-color-checked-readonly: #d3d3d3;
       --radiomark-color-hover: var(--accent-color-checked);
+      --border-color-checked-hover: var(--accent-color-checked);
+      --border-color-readonly-checked: #d3d3d3;
       /* Readonly */
       --border-color-readonly: color-mix(
         in srgb,
@@ -63,7 +59,7 @@ import.meta.css = /* css */ `
       /* Disabled */
       --border-color-disabled: var(--border-color-readonly);
       --background-color-disabled: var(--background-color);
-      --radiomark-color-disabled: #eeeeee;
+      --radiomark-color-disabled: #d3d3d3;
       --border-color-checked-disabled: #d3d3d3;
       --background-color-disabled-checked: var(--background-color);
     }
@@ -155,8 +151,8 @@ import.meta.css = /* css */ `
     opacity: 1;
     transform: scale(1);
   }
-  .navi_radio[data-hover][data-checked] {
-    --x-border-color: var(--border-color-hover-checked);
+  .navi_radio[data-checked][data-hover] {
+    --x-border-color: var(--border-color-checked-hover);
   }
   /* Readonly */
   .navi_radio[data-readonly] {

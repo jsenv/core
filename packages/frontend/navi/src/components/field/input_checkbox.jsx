@@ -53,11 +53,11 @@ import.meta.css = /* css */ `
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: white;
       --color: var(--navi-checkbox-color);
+      --checkmark-color: var(--navi-checkmark-color-light);
+
       --color-mix-light: black;
       --color-mix-dark: white;
-
       --color-mix: var(--color-mix-light);
-      --checkmark-color: var(--navi-checkmark-color-light);
 
       /* Hover */
       --border-color-hover: color-mix(in srgb, var(--border-color) 60%, black);
