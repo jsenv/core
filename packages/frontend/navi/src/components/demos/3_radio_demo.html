@@ -216,29 +216,6 @@
                     </label>
                   </Layout>
                 </Box>
-                <Box as="fieldset" width="150">
-                  <legend>:read-only</legend>
-                  <Layout row contentSpacing="sm" contentAlignX="start">
-                    <Label>
-                      <Input
-                        type="radio"
-                        name="demo-readonly-navi"
-                        value="1"
-                        readOnly
-                      />
-                      Navi
-                    </Label>
-                    <label>
-                      <input
-                        type="radio"
-                        name="demo-readonly-native"
-                        value="1"
-                        readOnly
-                      />
-                      Native
-                    </label>
-                  </Layout>
-                </Box>
               </Layout>
               <Layout column contentSpacing="sm">
                 <Box as="fieldset" width="100">
@@ -249,7 +226,7 @@
                         type="radio"
                         name="demo-checked-navi"
                         value="1"
-                        defaultChecked
+                        defaultValue
                       />
                       Navi
                     </Label>
@@ -272,7 +249,7 @@
                         type="radio"
                         name="demo-focus-checked-navi"
                         value="1"
-                        defaultChecked
+                        defaultValue
                         pseudoState={{ ":focus-visible": true }}
                       />
                       Navi
@@ -290,14 +267,14 @@
                   </Layout>
                 </Box>
                 <Box as="fieldset" width="150">
-                  <legend>:checked:disabled</legend>
+                  <legend>:disabled:checked</legend>
                   <Layout row contentSpacing="sm" contentAlignX="start">
                     <Label>
                       <Input
                         type="radio"
                         name="demo-checked-disabled-navi"
                         value="1"
-                        checked
+                        defaultValue
                         disabled
                       />
                       Navi
@@ -309,31 +286,6 @@
                         value="1"
                         checked
                         disabled
-                      />
-                      Native
-                    </label>
-                  </Layout>
-                </Box>
-                <Box as="fieldset" width="150">
-                  <legend>:checked:read-only</legend>
-                  <Layout row contentSpacing="sm" contentAlignX="start">
-                    <Label>
-                      <Input
-                        type="radio"
-                        name="demo-checked-readonly-navi"
-                        value="1"
-                        checked
-                        readOnly
-                      />
-                      Navi
-                    </Label>
-                    <label>
-                      <input
-                        type="radio"
-                        name="demo-checked-readonly-native"
-                        value="1"
-                        checked
-                        readOnly
                       />
                       Native
                     </label>
@@ -358,12 +310,12 @@
                         value="1"
                         readOnly
                       />
-                      Read-only Radio
+                      Read-only
                     </Label>
                   </Layout>
                 </Box>
                 <Box as="fieldset" width="200">
-                  <legend>Loading state</legend>
+                  <legend>:-navi-loading</legend>
                   <Layout row contentSpacing="sm" contentAlignX="start">
                     <Label>
                       <Input
@@ -372,7 +324,7 @@
                         value="1"
                         loading
                       />
-                      Loading Radio
+                      Loading
                     </Label>
                   </Layout>
                 </Box>
@@ -389,12 +341,12 @@
                         readOnly
                         checked
                       />
-                      Read-only Checked
+                      Read-only
                     </Label>
                   </Layout>
                 </Box>
                 <Box as="fieldset" width="200">
-                  <legend>Loading:checked</legend>
+                  <legend>:-navi-loading:checked</legend>
                   <Layout row contentSpacing="sm" contentAlignX="start">
                     <Label>
                       <Input
@@ -404,7 +356,7 @@
                         loading
                         checked
                       />
-                      Loading Checked
+                      Loading
                     </Label>
                   </Layout>
                 </Box>
