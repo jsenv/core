@@ -141,8 +141,8 @@ import.meta.css = /* css */ `
   }
   /* Checked */
   .navi_checkbox[data-checked] {
-    --x-background-color: var(--x-color-color);
-    --x-border-color: var(--x-color-color);
+    --x-background-color: var(--x-color);
+    --x-border-color: var(--x-color);
   }
   /* Readonly */
   .navi_checkbox[data-readonly],
@@ -275,6 +275,7 @@ const InputCheckboxBasic = (props) => {
   useConstraints(ref, constraints);
 
   const checked = Boolean(uiState);
+  console.log({ checked });
   const innerOnInput = useStableCallback(onInput);
   const renderCheckbox = (remainingProps) => (
     <Box
