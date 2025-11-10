@@ -7,39 +7,39 @@
     <title>ActionRenderer with UITransition Demo</title>
     <style>
       body {
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         max-width: 800px;
         margin: 0 auto;
         padding: 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         background: #f5f5f5;
       }
       .demo-container {
+        margin: 20px 0;
+        padding: 20px;
         background: white;
         border-radius: 8px;
-        padding: 20px;
-        margin: 20px 0;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
       .demo-title {
         margin-top: 0;
+        padding-bottom: 10px;
         color: #333;
         border-bottom: 2px solid #007acc;
-        padding-bottom: 10px;
       }
       .control-panel {
         display: flex;
-        gap: 10px;
         margin: 20px 0;
         flex-wrap: wrap;
+        gap: 10px;
       }
       .control-panel button {
         padding: 8px 16px;
+        background: #f8f9fa;
         border: 1px solid #ddd;
         border-radius: 4px;
-        background: #f8f9fa;
-        cursor: pointer;
         transition: background-color 0.2s;
+        cursor: pointer;
       }
       .control-panel button:hover {
         background: #e9ecef;
@@ -50,20 +50,20 @@
       }
       .content-area {
         min-height: 100px;
+        margin: 20px 0;
+        padding: 20px;
         border: 2px dashed #ddd;
         border-radius: 4px;
-        padding: 20px;
-        margin: 20px 0;
       }
       .loading-spinner {
         display: inline-block;
         width: 20px;
         height: 20px;
+        margin-right: 10px;
         border: 3px solid #f3f3f3;
         border-top: 3px solid #007acc;
         border-radius: 50%;
         animation: spin 1s linear infinite;
-        margin-right: 10px;
       }
       @keyframes spin {
         0% {
@@ -75,31 +75,31 @@
       }
       .success-content {
         padding: 20px;
+        color: #155724;
         background: #d4edda;
         border: 1px solid #c3e6cb;
         border-radius: 4px;
-        color: #155724;
       }
       .error-content {
         padding: 20px;
+        color: #721c24;
         background: #f8d7da;
         border: 1px solid #f5c6cb;
         border-radius: 4px;
-        color: #721c24;
       }
       .info-content {
         padding: 20px;
+        color: #0c5460;
         background: #d1ecf1;
         border: 1px solid #bee5eb;
         border-radius: 4px;
-        color: #0c5460;
       }
       .config-section {
+        margin: 10px 0;
+        padding: 15px;
         background: #f8f9fa;
         border: 1px solid #e9ecef;
         border-radius: 4px;
-        padding: 15px;
-        margin: 10px 0;
       }
       .config-section h4 {
         margin-top: 0;
@@ -107,8 +107,8 @@
       }
       .checkbox-group {
         display: flex;
-        gap: 20px;
         flex-wrap: wrap;
+        gap: 20px;
       }
       .checkbox-group label {
         display: flex;
@@ -122,8 +122,8 @@
       }
       .config-section .description {
         margin: 8px 0 0 0;
-        font-size: 0.9em;
         color: #666;
+        font-size: 0.9em;
         line-height: 1.4;
       }
     </style>
@@ -142,13 +142,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import {
-        createAction,
-        // eslint-disable-next-line no-unused-vars
-        ActionRenderer,
-        // eslint-disable-next-line no-unused-vars
-        UITransition,
-      } from "@jsenv/navi";
+      import { createAction, ActionRenderer, UITransition } from "@jsenv/navi";
 
       const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 

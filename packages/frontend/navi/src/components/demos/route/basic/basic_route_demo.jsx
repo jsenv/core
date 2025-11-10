@@ -1,8 +1,8 @@
 import {
   ActionRenderer,
   createAction,
-  defineRoutes,
   enableDebugActions,
+  setupRoutes,
   // enableDebugOnDocumentLoading,
   useActionStatus,
   useRouteStatus,
@@ -22,7 +22,7 @@ const loadPageAction = createAction(
     name: "loadPage",
   },
 );
-const [pageRoute] = defineRoutes({ "page/:pageName": loadPageAction });
+const [PAGE_ROUTE] = setupRoutes({ PAGE_ROUTE: "page/:pageName" });
 const loadPageFromUrlAction = pageRoute.action;
 
 const RouteStatus = ({ route }) => {
@@ -138,8 +138,8 @@ const ActionStatus = ({ action }) => {
 };
 
 const App = () => {
-  const pageAUrl = pageRoute.buildUrl({ pageName: "a" });
-  const pageBUrl = pageRoute.buildUrl({ pageName: "b" });
+  const pageAUrl = PAGE_ROUTE.buildUrl({ pageName: "a" });
+  const pageBUrl = PAGE_ROUTE.buildUrl({ pageName: "b" });
 
   return (
     <>
@@ -195,7 +195,7 @@ const App = () => {
       <div style={{ padding: "0 20px" }}>
         <h1>Routing Demo</h1>
 
-        <RouteStatus route={pageRoute} />
+        <RouteStatus route={PAGE_ROUTE} />
         <ActionStatus action={loadPageFromUrlAction} />
 
         <main

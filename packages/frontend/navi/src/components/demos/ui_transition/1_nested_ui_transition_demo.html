@@ -6,61 +6,61 @@
     <title>Nested UITransition Demo (Pages & Sub Pages)</title>
     <style>
       body {
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         max-width: 940px;
         margin: 0 auto;
         padding: 24px 24px 160px;
-        background: #f5f7fa;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         line-height: 1.45;
+        background: #f5f7fa;
       }
       h1 {
         margin-top: 0;
       }
       .note {
+        padding: 10px 14px;
+        color: #664d03;
+        font-size: 14px;
         background: #fff3cd;
         border: 1px solid #ffe69c;
-        color: #664d03;
-        padding: 10px 14px;
         border-radius: 6px;
-        font-size: 14px;
       }
       .controls,
       .sub-controls {
         display: flex;
+        margin: 16px 0 8px;
         flex-wrap: wrap;
         gap: 8px;
-        margin: 16px 0 8px;
       }
       button {
-        cursor: pointer;
-        padding: 8px 14px;
-        border-radius: 4px;
-        border: 1px solid #d0d7de;
-        background: #fff;
-        font: inherit;
         display: inline-flex;
+        padding: 8px 14px;
         align-items: center;
         gap: 6px;
+        font: inherit;
+        background: #fff;
+        border: 1px solid #d0d7de;
+        border-radius: 4px;
         transition:
           background 0.15s,
           box-shadow 0.15s;
+        cursor: pointer;
       }
       button:hover {
         background: #f0f2f4;
       }
       button.active {
-        background: #0969da;
         color: #fff;
+        background: #0969da;
         border-color: #0969da;
       }
       .outer-transition-container {
         position: relative;
+        margin-top: 24px;
+        padding: 20px 22px 40px;
         background: #ffffff;
         border: 2px solid #2684ff44;
         border-radius: 8px;
-        padding: 20px 22px 40px;
-        margin-top: 24px;
         overflow: hidden; /* so slide-left stays clean */
       }
       .page-root {
@@ -71,17 +71,17 @@
         /* visual differences per page set in inline style */
       }
       .page-title {
-        margin: 0;
-        font-size: 20px;
         display: flex;
+        margin: 0;
         align-items: center;
         gap: 6px;
+        font-size: 20px;
       }
       .nested-transition-container {
         position: relative;
-        border: 2px dashed #6f42c144;
-        background: #faf9ff;
         padding: 16px 18px 24px;
+        background: #faf9ff;
+        border: 2px dashed #6f42c144;
         border-radius: 6px;
         overflow: hidden; /* cross-fade stays confined */
       }
@@ -96,10 +96,10 @@
       }
       .legend {
         display: flex;
+        margin-top: 10px;
         flex-wrap: wrap;
         gap: 12px;
         font-size: 12px;
-        margin-top: 10px;
       }
       .legend span {
         display: inline-flex;
@@ -107,10 +107,10 @@
         gap: 4px;
       }
       .box {
+        display: inline-block;
         width: 14px;
         height: 14px;
         border-radius: 3px;
-        display: inline-block;
       }
       .box.outer {
         background: #2684ff22;
@@ -121,21 +121,21 @@
         border: 1px solid #6f42c1;
       }
       .info {
-        font-size: 13px;
-        color: #555;
         margin-top: 6px;
+        color: #555;
+        font-size: 13px;
       }
       .size-diff-block {
         padding: 12px 14px;
-        border-radius: 4px;
+        font-size: 14px;
         background: linear-gradient(105deg, #e0f2ff, #f1f8ff);
         border: 1px solid #b6d9ff;
-        font-size: 14px;
+        border-radius: 4px;
       }
       .footer-note {
         margin-top: 60px;
-        font-size: 12px;
         color: #666;
+        font-size: 12px;
         text-align: center;
       }
     </style>
@@ -164,10 +164,8 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      // eslint-disable-next-line no-unused-vars
       import { UITransition } from "@jsenv/navi";
 
-      // eslint-disable-next-line no-unused-vars
       const Page = ({ pageKey }) => {
         const [sectionIndex, setSectionIndex] = useState(0);
 
