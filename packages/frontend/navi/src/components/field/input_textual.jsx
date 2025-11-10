@@ -48,7 +48,7 @@ import.meta.css = /* css */ `
       --border-width: 1px;
       --outline-width: 1px;
       --outer-width: calc(var(--border-width) + var(--outline-width));
-      --padding-x: 6px;
+      --padding-x: 2px;
       --padding-y: 1px;
 
       /* Default */
