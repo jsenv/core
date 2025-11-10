@@ -7,14 +7,14 @@ import { applyContentSpacingOnTextChildren } from "./text.jsx";
 import.meta.css = /* css */ `
   @layer navi {
     .navi_message_box {
-      --background-color-info: rgb(234, 246, 252);
-      --color-info: rgb(9, 83, 191);
-      --background-color-success: rgb(65, 196, 100);
-      --color-success: rgb(42, 126, 65);
-      --background-color-warning: rgb(249, 157, 2);
-      --color-warning: rgb(222, 95, 12);
-      --background-color-error: rgb(235, 54, 75);
-      --color-error: rgb(188, 43, 60);
+      --background-color-info: #eaf6fc;
+      --color-info: #376cc2;
+      --background-color-success: #ecf9ef;
+      --color-success: #50c464;
+      --background-color-warning: #fdf6e3;
+      --color-warning: #f19c05;
+      --background-color-error: #fcebed;
+      --color-error: #eb364b;
     }
   }
 
@@ -48,6 +48,7 @@ Object.assign(PSEUDO_CLASSES, {
     attribute: "data-level",
   },
 });
+const MessageBoxPseudoClasses = [":-navi-message-level"];
 
 export const MessageBoxLevelContext = createContext();
 
@@ -65,6 +66,7 @@ export const MessageBox = ({
       {...rest}
       baseClassName="navi_message_box"
       padding={padding}
+      pseudoClasses={MessageBoxPseudoClasses}
       pseudoState={{
         ":-navi-message-level": level,
       }}
