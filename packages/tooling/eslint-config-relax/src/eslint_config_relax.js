@@ -317,6 +317,17 @@ export const eslintConfigRelax = ({
     {
       files: ["**/*.html"],
       plugins: { html },
+      rules: {
+        // Ignore JSX components (start with uppercase)
+        // https://github.com/BenoitZugmeyer/eslint-plugin-html/issues/295
+        "no-unused-vars": [
+          rulesRelax["no-unused-vars"][0],
+          {
+            ...rulesRelax["no-unused-vars"][1],
+            varsIgnorePattern: "^[A-Z]",
+          },
+        ],
+      },
       settings: {
         "html/javascript-mime-types": [
           "text/javascript",

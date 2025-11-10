@@ -26,13 +26,13 @@
         border-radius: 4px;
       }
       .status.success {
-        background-color: #d4edda;
         color: #155724;
+        background-color: #d4edda;
         border: 1px solid #c3e6cb;
       }
       .status.error {
-        background-color: #f8d7da;
         color: #721c24;
+        background-color: #f8d7da;
         border: 1px solid #f5c6cb;
       }
       .validation-errors {
@@ -55,12 +55,12 @@
         color: #495057;
       }
       .form-params pre {
-        background-color: #e9ecef;
+        margin: 0;
         padding: 10px;
+        font-size: 14px;
+        background-color: #e9ecef;
         border-radius: 4px;
         overflow-x: auto;
-        margin: 0;
-        font-size: 14px;
       }
     </style>
   </head>
@@ -70,16 +70,8 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import {
-        // eslint-disable-next-line no-unused-vars
-        Input,
-        // eslint-disable-next-line no-unused-vars
-        Form,
-        // eslint-disable-next-line no-unused-vars
-        Button,
-      } from "@jsenv/navi";
+      import { Form, Button } from "@jsenv/navi";
 
-      // eslint-disable-next-line no-unused-vars
       const App = () => {
         return (
           <div>
@@ -89,7 +81,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const MultiFieldValidationTest = () => {
         const [submitStatus, setSubmitStatus] = useState(null);
         const [validationErrors, setValidationErrors] = useState([]);
