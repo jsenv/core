@@ -37,8 +37,6 @@ import.meta.css = /* css */ `
       --outline-width: 1px;
       --border-width: 1px;
       --border-radius: 2px;
-      --padding-x: 6px;
-      --padding-y: 1px;
       /* default */
       --outline-color: light-dark(#4476ff, #3b82f6);
       --border-color: light-dark(#767676, #8e8e93);
@@ -98,10 +96,13 @@ import.meta.css = /* css */ `
   }
   .navi_button_content {
     position: relative;
-    padding-top: var(--padding-top, var(--padding-y, var(--padding)));
-    padding-right: var(--padding-right, var(--padding-x, var(--padding)));
-    padding-bottom: var(--padding-bottom, var(--padding-y, var(--padding)));
-    padding-left: var(--padding-left, var(--padding-x, var(--padding)));
+    padding-top: var(--padding-top, var(--padding-y, var(--padding, 1px)));
+    padding-right: var(--padding-right, var(--padding-x, var(--padding, 6px)));
+    padding-bottom: var(
+      --padding-bottom,
+      var(--padding-y, var(--padding, 1px))
+    );
+    padding-left: var(--padding-left, var(--padding-x, var(--padding, 6px)));
     color: var(--x-color);
     background-color: var(--x-background-color);
     border-width: var(--x-outer-width);
