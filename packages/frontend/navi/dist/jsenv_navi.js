@@ -12512,15 +12512,23 @@ const CharSlot = ({
 };
 const Icon = ({
   box,
+  href,
   children,
   ...props
 }) => {
+  const innerChildren = href ? jsx("svg", {
+    width: "100%",
+    height: "100%",
+    children: jsx("use", {
+      href: href
+    })
+  }) : children;
   if (box) {
     return jsx(Box, {
       layoutInline: true,
       layoutColumn: true,
       ...props,
-      children: children
+      children: innerChildren
     });
   }
   return jsx(CharSlot, {
@@ -12528,7 +12536,7 @@ const Icon = ({
     ...props,
     children: jsx("span", {
       className: "navi_icon",
-      children: children
+      children: innerChildren
     })
   });
 };
@@ -20293,7 +20301,142 @@ const Image = props => {
   });
 };
 
+const Code = ({
+  contentSpacing = " ",
+  children,
+  ...rest
+}) => {
+  return jsx(Box, {
+    ...rest,
+    as: "code",
+    children: applyContentSpacingOnTextChildren(children, contentSpacing)
+  });
+};
+
 const LinkWithIcon = () => {};
+
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  @layer navi {
+    .navi_message_box {
+      --background-color-info: #eaf6fc;
+      --color-info: #376cc2;
+      --background-color-success: #ecf9ef;
+      --color-success: #50c464;
+      --background-color-warning: #fdf6e3;
+      --color-warning: #f19c05;
+      --background-color-error: #fcebed;
+      --color-error: #eb364b;
+    }
+  }
+
+  .navi_message_box {
+    --x-background-color: var(--background-color-info);
+    --x-color: var(--color-info);
+    /* color: var(--x-color); */
+    background-color: var(--x-background-color);
+  }
+
+  .navi_message_box[data-level="info"] {
+    --x-background-color: var(--background-color-info);
+    --x-color: var(--color-info);
+  }
+  .navi_message_box[data-level="success"] {
+    --x-background-color: var(--background-color-success);
+    --x-color: var(--color-success);
+  }
+  .navi_message_box[data-level="warning"] {
+    --x-background-color: var(--background-color-warning);
+    --x-color: var(--color-warning);
+  }
+  .navi_message_box[data-level="error"] {
+    --x-background-color: var(--background-color-error);
+    --x-color: var(--color-error);
+  }
+
+  .navi_message_box[data-left-stripe] {
+    border-left: 6px solid var(--x-color);
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+  }
+`;
+Object.assign(PSEUDO_CLASSES, {
+  ":-navi-info": {
+    add: el => {
+      el.setAttribute("data-level", "info");
+    },
+    remove: el => {
+      if (el.getAttribute("data-level") === "info") {
+        el.removeAttribute("data-level");
+      }
+    }
+  },
+  ":-navi-success": {
+    add: el => {
+      el.setAttribute("data-level", "success");
+    },
+    remove: el => {
+      if (el.getAttribute("data-level") === "success") {
+        el.removeAttribute("data-level");
+      }
+    }
+  },
+  ":-navi-warning": {
+    add: el => {
+      el.setAttribute("data-level", "warning");
+    },
+    remove: el => {
+      if (el.getAttribute("data-level") === "warning") {
+        el.removeAttribute("data-level");
+      }
+    }
+  },
+  ":-navi-error": {
+    add: el => {
+      el.setAttribute("data-level", "error");
+    },
+    remove: el => {
+      if (el.getAttribute("data-level") === "error") {
+        el.removeAttribute("data-level");
+      }
+    }
+  }
+});
+const MessageBoxPseudoClasses = [":-navi-info", ":-navi-success", ":-navi-warning", ":-navi-error"];
+const MessageBoxLevelContext = createContext();
+const MessageBoxReportTitleChildContext = createContext();
+const MessageBox = ({
+  level = "info",
+  padding = "sm",
+  contentSpacing = " ",
+  leftStripe,
+  children,
+  ...rest
+}) => {
+  const [hasTitleChild, setHasTitleChild] = useState(false);
+  const innerLeftStripe = leftStripe === undefined ? hasTitleChild : leftStripe;
+  return jsx(Box, {
+    as: "div",
+    role: level === "info" ? "status" : "alert",
+    "data-left-stripe": innerLeftStripe ? "" : undefined,
+    ...rest,
+    baseClassName: "navi_message_box",
+    padding: padding,
+    pseudoClasses: MessageBoxPseudoClasses,
+    basePseudoState: {
+      ":-navi-info": level === "info",
+      ":-navi-success": level === "success",
+      ":-navi-warning": level === "warning",
+      ":-navi-error": level === "error"
+    },
+    children: jsx(MessageBoxLevelContext.Provider, {
+      value: level,
+      children: jsx(MessageBoxReportTitleChildContext.Provider, {
+        value: setHasTitleChild,
+        children: applyContentSpacingOnTextChildren(children, contentSpacing)
+      })
+    })
+  });
+};
 
 const Svg = props => {
   return jsx(Box, {
@@ -20303,16 +20446,29 @@ const Svg = props => {
 };
 
 const Title = ({
-  as = "h1",
+  as,
   bold = true,
   contentSpacing = " ",
+  color,
   children,
+  marginTop,
+  marginBottom,
   ...rest
 }) => {
+  const messageBoxLevel = useContext(MessageBoxLevelContext);
+  const reportTitleToMessageBox = useContext(MessageBoxReportTitleChildContext);
+  const innerColor = color === undefined ? messageBoxLevel ? `var(--x-color)` : undefined : color;
+  const innerAs = as === undefined ? messageBoxLevel ? "h4" : "h1" : as;
+  reportTitleToMessageBox?.(true);
+  const innerMarginTop = marginTop === undefined ? messageBoxLevel ? "0" : undefined : marginTop;
+  const innerMarginBottom = marginBottom === undefined ? messageBoxLevel ? "8px" : undefined : marginBottom;
   return jsx(Box, {
     ...rest,
-    as: as,
+    as: innerAs,
     bold: bold,
+    color: innerColor,
+    marginTop: innerMarginTop,
+    marginBottom: innerMarginBottom,
     children: applyContentSpacingOnTextChildren(children, contentSpacing)
   });
 };
@@ -20394,5 +20550,5 @@ const useDependenciesDiff = (inputs) => {
   return diffRef.current;
 };
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Box, Button, CharSlot, Checkbox, CheckboxList, Col, Colgroup, Count, Details, Editable, ErrorBoundaryContext, FontSizedSvg, Form, Icon, IconAndText, Image, Input, Label, Layout, Link, LinkWithIcon, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, Select, SelectionContext, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, Box, Button, CharSlot, Checkbox, CheckboxList, Code, Col, Colgroup, Count, Details, Editable, ErrorBoundaryContext, FontSizedSvg, Form, Icon, IconAndText, Image, Input, Label, Layout, Link, LinkWithIcon, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, Select, SelectionContext, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map
