@@ -83,7 +83,7 @@ import.meta.css = /* css */ `
     --x-color: var(--color);
 
     position: relative;
-    display: flex;
+    box-sizing: border-box;
     width: fit-content;
     height: fit-content;
     padding: 0;
@@ -98,12 +98,10 @@ import.meta.css = /* css */ `
   }
   .navi_button_content {
     position: relative;
-    display: inline-flex;
     padding-top: var(--padding-top, var(--padding-y, var(--padding)));
     padding-right: var(--padding-right, var(--padding-x, var(--padding)));
     padding-bottom: var(--padding-bottom, var(--padding-y, var(--padding)));
     padding-left: var(--padding-left, var(--padding-x, var(--padding)));
-    flex: 1;
     color: var(--x-color);
     background-color: var(--x-background-color);
     border-width: var(--x-outer-width);
@@ -300,12 +298,13 @@ const ButtonBasic = (props) => {
       {...rest}
       as="button"
       ref={ref}
-      baseClassName="navi_button"
       data-discrete={discrete ? "" : undefined}
       data-readonly-silent={innerLoading ? "" : undefined}
       data-callout-arrow-x="center"
       aria-busy={innerLoading}
       // style management
+      baseClassName="navi_button"
+      layoutColumn
       managedByCSSVars={ButtonManagedByCSSVars}
       pseudoClasses={ButtonPseudoClasses}
       pseudoElements={ButtonPseudoElements}

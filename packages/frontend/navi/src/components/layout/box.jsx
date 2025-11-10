@@ -192,9 +192,31 @@ export const Box = (props) => {
     const stylingKeyCandidateArray = Object.keys(rest);
     const remainingPropKeys = [];
     for (const key of stylingKeyCandidateArray) {
-      const group = getStylePropGroup(key);
       const value = rest[key];
-      if (!group) {
+      const group = getStylePropGroup(key);
+      let isRemainingProp = false;
+
+      if (visualSelector) {
+        if (key === "expandX") {
+          // copy the expandX to the visual element props
+          remainingPropKeys.push(key);
+          remainingProps[key] = value;
+          isRemainingProp = false;
+        } else if (key === "contentAlignX" || key === "contentAlignY") {
+          remainingPropKeys.push(key);
+          remainingProps[key] = value;
+          isRemainingProp = false;
+        }
+        // padding forwarded to the visual element
+        // content alignement and spacing forwarded to the content element
+        else if (group === "padding") {
+          isRemainingProp = true;
+        }
+      } else {
+        isRemainingProp = !group;
+      }
+
+      if (isRemainingProp) {
         remainingPropKeys.push(key);
         remainingProps[key] = value;
         continue;
