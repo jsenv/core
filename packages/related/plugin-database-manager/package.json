@@ -29,8 +29,8 @@
   },
   "dependencies": {
     "@jsenv/database": "0.0.3",
-    "@jsenv/dom": "0.7.4",
-    "@jsenv/navi": "0.11.20",
+    "@jsenv/dom": "0.8.0",
+    "@jsenv/navi": "0.12.0",
     "@jsenv/sigi": "0.1.2",
     "@jsenv/urls": "2.9.2",
     "@tanstack/table-core": "8.21.3",
@@ -40,7 +40,7 @@
   "devDependencies": {
     "@jsenv/core": "../../../",
     "@jsenv/plugin-preact": "../../related/plugin-preact",
-    "@preact/signals": "2.3.2",
+    "@preact/signals": "2.4.0",
     "preact": "11.0.0-beta.0"
   },
   "publishConfig": {

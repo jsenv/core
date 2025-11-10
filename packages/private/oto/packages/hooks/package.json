@@ -2,6 +2,6 @@
   "name": "hooks",
   "private": true,
   "dependencies": {
-    "preact": "10.27.2"
+    "preact": "11.0.0-beta.0"
   }
 }

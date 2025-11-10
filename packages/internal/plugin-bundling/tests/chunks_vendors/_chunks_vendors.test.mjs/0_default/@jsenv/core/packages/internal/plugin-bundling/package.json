@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-bundling",
-  "version": "2.10.2",
+  "version": "2.10.3",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
@@ -29,7 +29,7 @@
     "@jsenv/url-meta": "8.5.7",
     "@jsenv/urls": "2.9.2",
     "lightningcss": "1.30.2",
-    "rollup": "4.52.5"
+    "rollup": "4.53.2"
   },
   "devDependencies": {
     "@jsenv/filesystem": "../../tooling/filesystem",
