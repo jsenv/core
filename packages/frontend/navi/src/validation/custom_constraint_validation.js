@@ -554,7 +554,7 @@ export const installCustomConstraintValidation = (
         return;
       }
       if (element.hasAttribute("data-action")) {
-        if (wouldClickSubmitForm(clickEvent)) {
+        if (wouldButtonClickSubmitForm(element, clickEvent)) {
           clickEvent.preventDefault();
         }
         dispatchActionRequestedCustomEvent(element, {
@@ -567,7 +567,10 @@ export const installCustomConstraintValidation = (
       if (!form) {
         return;
       }
-      if (wouldClickSubmitForm(clickEvent)) {
+      if (element.type === "reset") {
+        return;
+      }
+      if (wouldButtonClickSubmitForm(element, clickEvent)) {
         clickEvent.preventDefault();
       }
       dispatchActionRequestedCustomEvent(form, {
@@ -674,16 +677,14 @@ export const installCustomConstraintValidation = (
   return validationInterface;
 };
 
-const wouldClickSubmitForm = (clickEvent) => {
+const wouldButtonClickSubmitForm = (button, clickEvent) => {
   if (clickEvent.defaultPrevented) {
     return false;
   }
-  const clickTarget = clickEvent.target.closest("button");
-  const { form } = clickTarget;
+  const { form } = button;
   if (!form) {
     return false;
   }
-  const button = clickTarget.closest("button");
   if (!button) {
     return false;
   }
