@@ -169,17 +169,26 @@ export const CharSlot = ({
     </Text>
   );
 };
-export const Icon = ({ box, children, ...props }) => {
+export const Icon = ({ box, href, children, ...props }) => {
+  const innerChildren = href ? (
+    <svg width="100%" height="100%">
+      <use href={href} />
+    </svg>
+  ) : (
+    children
+  );
+
   if (box) {
     return (
       <Box layoutInline layoutColumn {...props}>
-        {children}
+        {innerChildren}
       </Box>
     );
   }
+
   return (
     <CharSlot decorative {...props}>
-      <span className="navi_icon">{children}</span>
+      <span className="navi_icon">{innerChildren}</span>
     </CharSlot>
   );
 };
