@@ -50,6 +50,7 @@ import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 import {
   assignStyle,
   getStylePropGroup,
+  INNER_SPACING_PROP_NAME_SET,
   normalizeSpacingStyle,
   normalizeTypoStyle,
 } from "./box_style_util.js";
@@ -82,6 +83,16 @@ import.meta.css = /* css */ `
 const PSEUDO_CLASSES_DEFAULT = [];
 const PSEUDO_ELEMENTS_DEFAULT = [];
 const MANAGED_BY_CSS_VARS_DEFAULT = {};
+const FORWARDED_TO_VISUAL_CHILD_PROP_SET = new Set([
+  "expandX",
+  "expandY",
+  "contentAlignX",
+  "contentAlignY",
+]);
+const DELEGATED_TO_VISUAL_CHILD_PROP_SET = new Set([
+  ...INNER_SPACING_PROP_NAME_SET,
+]);
+
 export const Box = (props) => {
   const {
     as = "div",
@@ -197,19 +208,11 @@ export const Box = (props) => {
       let isRemainingProp = false;
 
       if (visualSelector) {
-        if (key === "expandX") {
-          // copy the expandX to the visual element props
+        if (FORWARDED_TO_VISUAL_CHILD_PROP_SET.has(key)) {
           remainingPropKeys.push(key);
           remainingProps[key] = value;
           isRemainingProp = false;
-        } else if (key === "contentAlignX" || key === "contentAlignY") {
-          remainingPropKeys.push(key);
-          remainingProps[key] = value;
-          isRemainingProp = false;
-        }
-        // padding forwarded to the visual element
-        // content alignement and spacing forwarded to the content element
-        else if (group === "padding") {
+        } else if (DELEGATED_TO_VISUAL_CHILD_PROP_SET.has(key)) {
           isRemainingProp = true;
         }
       } else {

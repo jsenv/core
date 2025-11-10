@@ -45,7 +45,7 @@
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { Box, Input, Button } from "@jsenv/navi";
+      import { Box, Input, Button, Layout } from "@jsenv/navi";
 
       const DemoBox = ({ children, ...props }) => (
         <div className="demo-box" {...props}>
@@ -66,11 +66,20 @@
               <h3>1. Button ExpandX - Horizontal Expansion Only</h3>
               <div className="visual-container">
                 <h4>Buttons in columns (grows horizontally)</h4>
-                <Box layoutColumn contentSpacing="sm">
-                  <Button>Fixed</Button>
-                  <Button expandX>ExpandX Button</Button>
-                  <Button>Fixed</Button>
-                </Box>
+                <Layout row contentSpacing="sm">
+                  <Layout column contentSpacing="sm">
+                    <Button>Fixed</Button>
+                    <Button expandX>ExpandX Button</Button>
+                    <Button>Fixed</Button>
+                  </Layout>
+                  <Layout column contentSpacing="sm">
+                    <Button>Fixed</Button>
+                    <Button expandX contentAlignX="center">
+                      ExpandX centered
+                    </Button>
+                    <Button>Fixed</Button>
+                  </Layout>
+                </Layout>
 
                 <h4>Buttons in rows (takes full width)</h4>
                 <Box layoutRow contentSpacing="sm" height="150px">
@@ -90,16 +99,28 @@
                 <h4>Buttons in columns (takes full height)</h4>
                 <Box layoutColumn contentSpacing="10px" height="100px">
                   <Button>Normal Height</Button>
-                  <Button expandY>Full Height Button</Button>
+                  <Button expandY>Full Height</Button>
+                  <Button expandY contentAlignY="center">
+                    Full Height centered
+                  </Button>
                   <Button>Normal Height</Button>
                 </Box>
 
                 <h4>Buttons in rows (grows vertically)</h4>
-                <Box layoutRow contentSpacing="10px" height="200px">
-                  <Button>Fixed</Button>
-                  <Button expandY>ExpandY Button</Button>
-                  <Button>Fixed</Button>
-                </Box>
+                <Layout column contentSpacing="sm">
+                  <Layout row contentSpacing="sm" height="200px">
+                    <Button>Fixed</Button>
+                    <Button expandY>ExpandY</Button>
+                    <Button>Fixed</Button>
+                  </Layout>
+                  <Layout row contentSpacing="sm" height="200px">
+                    <Button>Fixed</Button>
+                    <Button expandY contentAlignY="center">
+                      ExpandY centered
+                    </Button>
+                    <Button>Fixed</Button>
+                  </Layout>
+                </Layout>
               </div>
             </div>
 
@@ -109,7 +130,12 @@
                 <h4>Buttons in columns (grows horizontally, full height)</h4>
                 <Box layoutColumn contentSpacing="10px" height="80px">
                   <Button>Fixed</Button>
-                  <Button expandX expandY>
+                  <Button
+                    expandX
+                    expandY
+                    contentAlignX="center"
+                    contentAlignY="center"
+                  >
                     Both Axes
                   </Button>
                   <Button>Fixed</Button>
@@ -118,7 +144,12 @@
                 <h4>Buttons in rows (full width, grows vertically)</h4>
                 <Box layoutRow contentSpacing="10px" height="150px">
                   <Button>Fixed</Button>
-                  <Button expandX expandY>
+                  <Button
+                    expandX
+                    expandY
+                    contentAlignX="center"
+                    contentAlignY="center"
+                  >
                     Both Axes
                   </Button>
                   <Button>Fixed</Button>
@@ -286,7 +317,7 @@
                   <Box layoutColumn contentSpacing="10px">
                     <Button>Start</Button>
                     <Button alignX="center">Center</Button>
-                    <Button alignX="end">End</Button>
+                    <Button>End</Button>
                   </Box>
 
                   <Box layoutColumn contentSpacing="10px">
