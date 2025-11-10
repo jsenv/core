@@ -69,7 +69,7 @@
           <div className="demo-section">
             <h2>Basic MessageBox Examples</h2>
 
-            <Layout column contentSpacing="md">
+            <Layout row contentSpacing="md">
               <div className="message-example">
                 <h3>Info Level</h3>
                 <MessageBox level="info">
@@ -103,13 +103,14 @@
           <div className="demo-section">
             <h2>MessageBox with Title Examples</h2>
 
-            <Layout column contentSpacing="md">
+            <Layout row contentSpacing="md">
               <div className="message-example">
                 <h3>Info with Title</h3>
                 <MessageBox level="info">
                   <Title as="h4">Important Information</Title>
-                  This MessageBox includes a title for better organization. The{" "}
-                  <Code>Title</Code> component automatically inherits the
+                  This MessageBox includes a title for better organization.
+                  <br />
+                  The <Code>Title</Code> component automatically inherits the
                   appropriate color based on the message level.
                 </MessageBox>
               </div>

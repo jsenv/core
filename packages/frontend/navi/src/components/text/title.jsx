@@ -16,7 +16,7 @@ export const Title = ({
   const innerColor =
     color === undefined
       ? messageBoxLevel
-        ? `var(--navi-${messageBoxLevel}-color)`
+        ? `var(--x-color)`
         : undefined
       : color;
 

@@ -6,6 +6,7 @@ import.meta.css = /* css */ `
       --navi-background-color-disabled: #d3d3d3;
       --navi-color-disabled: #eeeeee;
 
+      --navi-success-color: #4caf50;
       --navi-info-color: #2196f3;
       --navi-warning-color: #ff9800;
       --navi-error-color: #f44336;
