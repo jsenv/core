@@ -177,6 +177,7 @@ export const PSEUDO_CLASSES = {
   },
 };
 
+const EMPTY_STATE = {};
 export const initPseudoStyles = (
   element,
   {
@@ -187,7 +188,7 @@ export const initPseudoStyles = (
   },
 ) => {
   if (!pseudoClasses || pseudoClasses.length === 0) {
-    effect?.();
+    effect?.(EMPTY_STATE);
     return () => {};
   }
 

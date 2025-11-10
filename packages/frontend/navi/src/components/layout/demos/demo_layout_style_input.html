@@ -128,9 +128,11 @@
             <div className="demo-container">
               <h3>6. Input with Padding</h3>
               <div className="visual-container">
-                <Input placeholder="Default padding" />
-                <Input placeholder="Extra padding" padding="20px" />
-                <Input placeholder="PaddingX only" paddingX="30px" />
+                <Layout column contentSpacing="xs">
+                  <Input placeholder="Default padding" />
+                  <Input placeholder="Extra padding" padding="md" />
+                  <Input placeholder="PaddingX only" paddingX="xl" />
+                </Layout>
               </div>
             </div>
 

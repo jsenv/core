@@ -217,7 +217,7 @@ export const Box = (props) => {
 
     for (const key of stylingKeyCandidateArray) {
       const value = rest[key];
-      assignStyleFromProp(key, value, boxStyles, styleContext);
+      assignStyleFromProp(value, key, boxStyles, styleContext);
     }
 
     const pseudoNamedStyles = {};
