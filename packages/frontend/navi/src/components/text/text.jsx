@@ -177,13 +177,14 @@ export const Icon = ({ children, ...props }) => {
   );
 };
 
-export const Paragraph = ({ contentSpacing = " ", children, ...rest }) => {
-  if (rest.marginTop === undefined) {
-    rest.marginTop = "md";
-  }
-
+export const Paragraph = ({
+  contentSpacing = " ",
+  marginTop = "md",
+  children,
+  ...rest
+}) => {
   return (
-    <Box as="p" {...rest}>
+    <Box marginTop={marginTop} {...rest} as="p">
       {applyContentSpacingOnTextChildren(children, contentSpacing)}
     </Box>
   );

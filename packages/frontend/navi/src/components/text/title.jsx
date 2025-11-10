@@ -1,18 +1,16 @@
-import { withPropsStyle } from "../layout/with_props_style.js";
+import { Box } from "../layout/box.jsx";
+import { applyContentSpacingOnTextChildren } from "./text.jsx";
 
-export const Title = ({ as = "h1", children, ...rest }) => {
-  const HeadingTag = as;
-  if (rest.textBold === undefined) {
-    rest.textBold = true;
-  }
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    layout: true,
-    typo: true,
-  });
-
+export const Title = ({
+  as = "h1",
+  bold = true,
+  contentSpacing = " ",
+  children,
+  ...rest
+}) => {
   return (
-    <HeadingTag {...remainingProps} style={innerStyle}>
-      {children}
-    </HeadingTag>
+    <Box {...rest} as={as} bold={bold}>
+      {applyContentSpacingOnTextChildren(children, contentSpacing)}
+    </Box>
   );
 };
