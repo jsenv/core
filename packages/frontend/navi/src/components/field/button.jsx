@@ -286,7 +286,6 @@ const ButtonBasic = (props) => {
         as="span"
         baseClassName="navi_button_content"
         layoutInline
-        layoutColumn
       >
         {innerChildren}
         <span className="navi_button_shadow"></span>
