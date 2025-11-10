@@ -81,7 +81,7 @@ export {
 export { useCellsAndColumns } from "./src/components/table/use_cells_and_columns.js";
 // Table end
 export { Tab, TabList } from "./src/components/tablist/tablist.jsx";
-export { UITransition } from "./src/components/ui_transition.jsx";
+export { UITransition } from "./src/components/ui_transition/ui_transition.jsx";
 export { useSignalSync } from "./src/components/use_signal_sync.js";
 // Text and icons
 export { FontSizedSvg } from "./src/components/svg/font_sized_svg.jsx";
