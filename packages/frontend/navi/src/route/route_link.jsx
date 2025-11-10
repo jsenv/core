@@ -16,7 +16,13 @@ export const RouteLink = ({
   const innerActive = active || routeStatus.active;
 
   return (
-    <Link {...rest} href={url} active={innerActive}>
+    <Link
+      {...rest}
+      href={url}
+      pseudoState={{
+        ":active": innerActive,
+      }}
+    >
       {children}
     </Link>
   );

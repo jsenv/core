@@ -12,16 +12,13 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState, useRef } from "preact/hooks";
-
       import {
-        // eslint-disable-next-line no-unused-vars
         Link,
         useSelectionController,
-        // eslint-disable-next-line no-unused-vars
         SelectionContext,
+        Layout,
       } from "@jsenv/navi";
 
-      // eslint-disable-next-line no-unused-vars
       const App = () => {
         return (
           <div style="padding: 20px; font-family: system-ui, sans-serif; max-width: 800px;">
@@ -29,14 +26,24 @@
 
             <section style="margin-bottom: 40px;">
               <h2>Basic Links</h2>
-              <div style="display: flex; flex-direction: column; gap: 12px;">
+              <Layout row contentSpacing="sm" contentAlignX="start">
                 <Link href="#default">Default link</Link>
 
-                <Link href="#active" active>
+                <Link
+                  href="#active"
+                  pseudoState={{
+                    ":active": true,
+                  }}
+                >
                   Active link
                 </Link>
 
-                <Link href="#visited" visited>
+                <Link
+                  href="#visited"
+                  pseudoState={{
+                    ":visited": true,
+                  }}
+                >
                   Visited link
                 </Link>
 
@@ -51,7 +58,7 @@
                 <Link href="#loading" loading readOnly>
                   Loading link
                 </Link>
-              </div>
+              </Layout>
             </section>
 
             <section style="margin-bottom: 40px;">
@@ -112,7 +119,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const SelectableLinkDemo = () => {
         const [selection, setSelection] = useState([]);
         const linkContainerRef = useRef(null);

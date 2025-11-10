@@ -9381,6 +9381,7 @@ const VISUAL_PROPS = {
   cursor: PASS_THROUGH,
 };
 const CONTENT_PROPS = {
+  contentAlign: applyOnTwoProps("contentAlignX", "contentAlignY"),
   contentAlignX: (value, { layout }) => {
     if (layout === "row" || layout === "inline-row") {
       if (value === "stretch") {
@@ -10717,18 +10718,6 @@ const RectangleLoadingSvg = ({
 };
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
-  .navi_inline_wrapper {
-    position: relative;
-    display: inline-flex;
-    width: fit-content;
-    height: fit-content;
-    flex-direction: inherit;
-    /* min-width: 100%; */
-    /* min-height: 100%; */
-    border-radius: inherit;
-    cursor: inherit;
-  }
-
   .navi_loading_rectangle_wrapper {
     position: absolute;
     top: var(--rectangle-top, 0);
@@ -12723,10 +12712,11 @@ const LinkPlain = props => {
     anchorIcon,
     icon,
     contentSpacing = " ",
-    ref = useRef(),
     children,
     ...rest
   } = props;
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   const visited = useIsVisited(href);
   useAutoFocus(ref, autoFocus);
   useConstraints(ref, constraints);
@@ -12917,9 +12907,10 @@ const LinkWithSelection = props => {
   const {
     value = props.href,
     children,
-    ref = useRef(),
     ...rest
   } = props;
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   const {
     selected
   } = useSelectableElement(ref, {
@@ -12981,9 +12972,10 @@ const LinkWithAction = props => {
     onActionEnd,
     children,
     loading,
-    ref = useRef(),
     ...rest
   } = props;
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   const {
     actionPending
   } = useRequestedActionStatus(ref);
@@ -13559,10 +13551,12 @@ const Label = props => {
   const [inputDisabled, setInputDisabled] = useState(false);
   const innerDisabled = disabled || inputDisabled;
   return jsx(Box, {
-    as: "label",
     ...rest,
-    "data-readonly": innerReadOnly ? "" : undefined,
-    "data-disabled": innerDisabled ? "" : undefined,
+    as: "label",
+    basePseudoState: {
+      readOnly: innerReadOnly,
+      disabled: innerDisabled
+    },
     children: jsx(ReportReadOnlyOnLabelContext.Provider, {
       value: setInputReadOnly,
       children: jsx(ReportDisabledOnLabelContext.Provider, {
@@ -20284,20 +20278,18 @@ const Count = ({
 };
 
 const Image = props => {
-  const [remainingProps, innerStyle] = withPropsStyle();
-  return jsx("img", {
-    style: innerStyle,
-    ...remainingProps
+  return jsx(Box, {
+    ...props,
+    as: "img"
   });
 };
 
 const LinkWithIcon = () => {};
 
 const Svg = props => {
-  const [remainingProps, innerStyle] = withPropsStyle();
-  return jsx("svg", {
-    style: innerStyle,
-    ...remainingProps
+  return jsx(Box, {
+    ...props,
+    as: "svg"
   });
 };
 
