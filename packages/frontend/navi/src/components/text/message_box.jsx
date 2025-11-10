@@ -51,11 +51,53 @@ import.meta.css = /* css */ `
 `;
 
 Object.assign(PSEUDO_CLASSES, {
-  ":-navi-message-level": {
-    attribute: "data-level",
+  ":-navi-info": {
+    add: (el) => {
+      el.setAttribute("data-level", "info");
+    },
+    remove: (el) => {
+      if (el.getAttribute("data-level") === "info") {
+        el.removeAttribute("data-level");
+      }
+    },
+  },
+  ":-navi-success": {
+    add: (el) => {
+      el.setAttribute("data-level", "success");
+    },
+    remove: (el) => {
+      if (el.getAttribute("data-level") === "success") {
+        el.removeAttribute("data-level");
+      }
+    },
+  },
+  ":-navi-warning": {
+    add: (el) => {
+      el.setAttribute("data-level", "warning");
+    },
+    remove: (el) => {
+      if (el.getAttribute("data-level") === "warning") {
+        el.removeAttribute("data-level");
+      }
+    },
+  },
+  ":-navi-error": {
+    add: (el) => {
+      el.setAttribute("data-level", "error");
+    },
+    remove: (el) => {
+      if (el.getAttribute("data-level") === "error") {
+        el.removeAttribute("data-level");
+      }
+    },
   },
 });
-const MessageBoxPseudoClasses = [":-navi-message-level"];
+const MessageBoxPseudoClasses = [
+  ":-navi-info",
+  ":-navi-success",
+  ":-navi-warning",
+  ":-navi-error",
+];
 
 export const MessageBoxLevelContext = createContext();
 export const MessageBoxReportTitleChildContext = createContext();
@@ -81,7 +123,10 @@ export const MessageBox = ({
       padding={padding}
       pseudoClasses={MessageBoxPseudoClasses}
       basePseudoState={{
-        ":-navi-message-level": level,
+        ":-navi-info": level === "info",
+        ":-navi-success": level === "success",
+        ":-navi-warning": level === "warning",
+        ":-navi-error": level === "error",
       }}
     >
       <MessageBoxLevelContext.Provider value={level}>
