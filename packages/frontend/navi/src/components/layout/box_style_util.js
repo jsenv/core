@@ -356,6 +356,8 @@ export const HANDLED_BY_VISUAL_CHILD_PROP_SET = new Set([
   ...CONTENT_PROP_NAME_SET,
 ]);
 export const COPIED_ON_VISUAL_CHILD_PROP_SET = new Set([
+  "expand",
+  "shrink",
   "expandX",
   "expandY",
   "contentAlignX",
