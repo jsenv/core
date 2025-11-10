@@ -122,7 +122,6 @@ export const Box = (props) => {
     ...rest
   } = props;
   const defaultRef = useRef();
-
   const ref = props.ref || defaultRef;
   const TagName = as;
 
@@ -177,7 +176,7 @@ export const Box = (props) => {
     if (baseStyle) {
       for (const key of baseStyle) {
         const value = baseStyle[key];
-        styleDeps.push(key, value);
+        styleDeps.push(value);
         assignStyle(boxStyles, value, key, styleContext);
       }
     }
@@ -360,7 +359,7 @@ export const Box = (props) => {
       data-layout-inline={layoutInline ? "" : undefined}
       data-layout-row={layoutRow ? "" : undefined}
       data-layout-column={layoutColumn ? "" : undefined}
-      {...(pseudoStateSelector ? undefined : remainingProps)}
+      {...(hasChildFunction ? undefined : remainingProps)}
     >
       <BoxLayoutContext.Provider value={layout}>
         {innerChildren}
