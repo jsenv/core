@@ -77,6 +77,26 @@
       import { useState } from "preact/hooks";
       import { UITransition } from "../ui_transition.jsx";
 
+      const SmallRectangle = () => (
+        <div className="rectangle-small" data-content-key="small">
+          Small
+          <br />
+          150×250px
+          <br />
+          with border
+        </div>
+      );
+
+      const LargeRectangle = () => (
+        <div className="rectangle-large" data-content-key="large">
+          Large
+          <br />
+          300×400px
+          <br />
+          no border
+        </div>
+      );
+
       const App = () => {
         const [currentContent, setCurrentContent] = useState("small");
 
@@ -102,21 +122,9 @@
                 transitionDuration={300}
               >
                 {currentContent === "small" ? (
-                  <div className="rectangle-small" data-content-key="small">
-                    Small
-                    <br />
-                    150×250px
-                    <br />
-                    with border
-                  </div>
+                  <SmallRectangle />
                 ) : (
-                  <div className="rectangle-large" data-content-key="large">
-                    Large
-                    <br />
-                    300×400px
-                    <br />
-                    no border
-                  </div>
+                  <LargeRectangle />
                 )}
               </UITransition>
             </div>
