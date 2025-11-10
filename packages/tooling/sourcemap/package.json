@@ -14,7 +14,7 @@
     "./*": "./*"
   },
   "dependencies": {
-    "@jsenv/urls": "2.9.2",
+    "@jsenv/urls": "2.9.3",
     "magic-string": "0.30.21",
     "source-map-js": "1.2.1"
   },

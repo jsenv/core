@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/cli",
-  "version": "0.3.70",
+  "version": "0.3.71",
   "description": "Command Line Interface for jsenv",
   "repository": {
     "type": "git",
@@ -21,8 +21,8 @@
     "./template-*/**"
   ],
   "dependencies": {
-    "@jsenv/humanize": "1.7.0",
-    "@jsenv/urls": "2.9.2",
+    "@jsenv/humanize": "1.7.1",
+    "@jsenv/urls": "2.9.3",
     "prompts": "2.4.2"
   },
   "engines": {
