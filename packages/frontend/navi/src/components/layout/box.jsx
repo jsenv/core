@@ -182,29 +182,42 @@ export const Box = (props) => {
     }
     const stylingKeyCandidateArray = Object.keys(rest);
     const remainingPropKeys = [];
+
+    const assignStyleFromProp = (
+      propValue,
+      propName,
+      stylesTarget,
+      context,
+    ) => {
+      const propEffect = getPropEffect(propName);
+
+      if (propEffect === "forward" || propEffect === "style_and_forward") {
+        if (stylesTarget === boxStyles) {
+          remainingPropKeys.push(propName);
+          remainingProps[propName] = propValue;
+        }
+        if (propEffect === "forward") {
+          return;
+        }
+      }
+      styleDeps.push(propValue);
+      assignStyle(stylesTarget, propValue, propName, context);
+    };
+    const getPropEffect = (propName) => {
+      if (visualSelector) {
+        if (HANDLED_BY_VISUAL_CHILD_PROP_SET.has(propName)) {
+          return "forward";
+        }
+        if (COPIED_ON_VISUAL_CHILD_PROP_SET.has(propName)) {
+          return "style_and_forward";
+        }
+      }
+      return isStyleProp(propName) ? "style" : "forward";
+    };
+
     for (const key of stylingKeyCandidateArray) {
       const value = rest[key];
-      let propEffect;
-      if (visualSelector) {
-        if (HANDLED_BY_VISUAL_CHILD_PROP_SET.has(key)) {
-          propEffect = "forward";
-        } else if (COPIED_ON_VISUAL_CHILD_PROP_SET.has(key)) {
-          propEffect = "style_and_forward";
-        } else {
-          propEffect = isStyleProp(key) ? "style" : "forward";
-        }
-      } else {
-        propEffect = isStyleProp(key) ? "style" : "forward";
-      }
-      if (propEffect === "forward" || propEffect === "style_and_forward") {
-        remainingPropKeys.push(key);
-        remainingProps[key] = value;
-        if (propEffect === "forward") {
-          continue;
-        }
-      }
-      styleDeps.push(value);
-      assignStyle(boxStyles, value, key, styleContext);
+      assignStyleFromProp(key, value, boxStyles, styleContext);
     }
 
     const pseudoNamedStyles = {};
@@ -226,11 +239,10 @@ export const Box = (props) => {
           const pseudoClassStyle = pseudoStyle[key];
           for (const pseudoClassStyleKey of Object.keys(pseudoClassStyle)) {
             const pseudoClassStyleValue = pseudoClassStyle[pseudoClassStyleKey];
-            styleDeps.push(pseudoClassStyleValue);
-            assignStyle(
-              pseudoClassStyles,
+            assignStyleFromProp(
               pseudoClassStyleValue,
               pseudoClassStyleKey,
+              pseudoClassStyles,
               pseudoStyleContext,
             );
           }
@@ -245,11 +257,10 @@ export const Box = (props) => {
           for (const pseudoElementStyleKey of Object.keys(pseudoElementStyle)) {
             const pseudoElementStyleValue =
               pseudoElementStyle[pseudoElementStyleKey];
-            styleDeps.push(pseudoElementStyleValue);
-            assignStyle(
-              pseudoElementStyles,
+            assignStyleFromProp(
               pseudoElementStyleValue,
               pseudoElementStyleKey,
+              pseudoElementStyles,
               pseudoStyleContext,
             );
           }
@@ -258,6 +269,10 @@ export const Box = (props) => {
         }
         console.warn(`unsupported pseudo style key "${key}"`);
       }
+
+      remainingPropKeys.push("pseudoStyle");
+      remainingProps.pseudoStyle = pseudoStyle;
+      // TODO: we should also pass pseudoState right?
     }
 
     if (typeof style === "string") {
@@ -273,26 +288,8 @@ export const Box = (props) => {
 
     const updateStyle = useCallback((state) => {
       const boxEl = ref.current;
-
-      if (pseudoStateSelector) {
-        applyStyle(boxEl, boxStyles);
-        const pseudoEl = boxEl.querySelector(pseudoStateSelector);
-        if (pseudoEl) {
-          applyStyle(pseudoEl, null, state, pseudoNamedStyles);
-        }
-        return;
-      }
-      if (visualSelector) {
-        applyStyle(boxEl, boxStyles);
-        const visualEl = boxEl.querySelector(visualSelector);
-        if (visualEl) {
-          applyStyle(visualEl, null, state, pseudoNamedStyles);
-        }
-        return;
-      }
       applyStyle(boxEl, boxStyles, state, pseudoNamedStyles);
     }, styleDeps);
-
     const finalStyleDeps = [pseudoStateSelector, innerPseudoState, updateStyle];
     // By default ":hover", ":active" are not tracked.
     // But is code explicitely do something like:
@@ -316,7 +313,6 @@ export const Box = (props) => {
         finalStyleDeps.push(...pseudoClasses);
       }
     }
-
     useLayoutEffect(() => {
       const boxEl = ref.current;
       if (!boxEl) {

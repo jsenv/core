@@ -257,36 +257,39 @@ const InputTextualBasic = (props) => {
   useConstraints(ref, constraints);
 
   const innerOnInput = useStableCallback(onInput);
-  const renderInput = (inputProps) => (
-    <Box
-      {...inputProps}
-      as="input"
-      ref={ref}
-      type={type}
-      data-value={uiState}
-      value={innerValue}
-      onInput={(e) => {
-        let inputValue;
-        if (type === "number") {
-          inputValue = e.target.valueAsNumber;
-        } else if (type === "datetime-local") {
-          inputValue = convertToUTCTimezone(e.target.value);
-        } else {
-          inputValue = e.target.value;
-        }
-        uiStateController.setUIState(inputValue, e);
-        innerOnInput?.(e);
-      }}
-      onresetuistate={(e) => {
-        uiStateController.resetUIState(e);
-      }}
-      onsetuistate={(e) => {
-        uiStateController.setUIState(e.detail.value, e);
-      }}
-      // style management
-      baseClassName="navi_native_input"
-    />
-  );
+  const renderInput = (inputProps) => {
+    return (
+      <Box
+        {...inputProps}
+        as="input"
+        ref={ref}
+        type={type}
+        data-value={uiState}
+        value={innerValue}
+        onInput={(e) => {
+          let inputValue;
+          if (type === "number") {
+            inputValue = e.target.valueAsNumber;
+          } else if (type === "datetime-local") {
+            inputValue = convertToUTCTimezone(e.target.value);
+          } else {
+            inputValue = e.target.value;
+          }
+          uiStateController.setUIState(inputValue, e);
+          innerOnInput?.(e);
+        }}
+        onresetuistate={(e) => {
+          uiStateController.resetUIState(e);
+        }}
+        onsetuistate={(e) => {
+          uiStateController.setUIState(e.detail.value, e);
+        }}
+        // style management
+        baseClassName="navi_native_input"
+      />
+    );
+  };
+
   const renderInputMemoized = useCallback(renderInput, [
     type,
     uiState,
