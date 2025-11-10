@@ -26,10 +26,6 @@ import {
 
 import.meta.css = /* css */ `
   @layer navi {
-    :root {
-      --navi-radiomark-color: light-dark(#4476ff, #3b82f6);
-    }
-
     .navi_radio {
       --outline-offset: 1px;
       --outline-width: 2px;
@@ -39,7 +35,7 @@ import.meta.css = /* css */ `
       --outline-color: light-dark(#4476ff, #3b82f6);
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: white;
-      --color: var(--navi-radiomark-color);
+      --color: light-dark(#4476ff, #3b82f6);
       --radiomark-color: var(--color);
       --border-color-checked: var(--color);
 

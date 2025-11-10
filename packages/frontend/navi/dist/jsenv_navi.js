@@ -2199,121 +2199,122 @@ const ARROW_SPACING = 8;
 
 import.meta.css = /* css */ `
   @layer navi {
-    :root {
-      --navi-callout-background-color: white;
-      --navi-callout-padding: 8px;
-    }
-
     .navi_callout {
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 1;
-      display: block;
-      height: auto;
-      opacity: 0;
-      /* will be positioned with transform: translate */
-      transition: opacity 0.2s ease-in-out;
-      overflow: visible;
+      --background-color: white;
+      --padding: 8px;
     }
+  }
 
-    .navi_callout_frame {
-      position: absolute;
-      filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
-      pointer-events: none;
-    }
-    .navi_callout[data-level="info"] .navi_callout_border {
-      fill: var(--navi-info-color);
-    }
-    .navi_callout[data-level="warning"] .navi_callout_border {
-      fill: var(--navi-warning-color);
-    }
-    .navi_callout[data-level="error"] .navi_callout_border {
-      fill: var(--navi-error-color);
-    }
-    .navi_callout_frame svg {
-      position: absolute;
-      inset: 0;
-      overflow: visible;
-    }
-    .navi_callout_background {
-      fill: var(--navi-callout-background-color);
-    }
+  .navi_callout {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    display: block;
+    height: auto;
+    opacity: 0;
+    /* will be positioned with transform: translate */
+    transition: opacity 0.2s ease-in-out;
+    overflow: visible;
 
-    .navi_callout_box {
-      position: relative;
-      border-style: solid;
-      border-color: transparent;
-    }
-    .navi_callout_body {
-      position: relative;
-      display: flex;
-      max-width: 47vw;
-      padding: var(--navi-callout-padding);
-      flex-direction: row;
-      gap: 10px;
-    }
-    .navi_callout_icon {
-      display: flex;
-      width: 22px;
-      height: 22px;
-      flex-shrink: 0;
-      align-items: center;
-      align-self: flex-start;
-      justify-content: center;
-      border-radius: 2px;
-    }
-    .navi_callout_icon_svg {
-      width: 16px;
-      height: 12px;
-      color: white;
-    }
-    .navi_callout[data-level="info"] .navi_callout_icon {
-      background-color: var(--navi-info-color);
-    }
-    .navi_callout[data-level="warning"] .navi_callout_icon {
-      background-color: var(--navi-warning-color);
-    }
-    .navi_callout[data-level="error"] .navi_callout_icon {
-      background-color: var(--navi-error-color);
-    }
-    .navi_callout_message {
-      min-width: 0;
-      align-self: center;
-      word-break: break-word;
-      overflow-wrap: anywhere;
-    }
-    .navi_callout_message iframe {
-      display: block;
-      margin: 0;
-    }
-    .navi_callout_close_button_column {
-      display: flex;
-      height: 22px;
-    }
-    .navi_callout_close_button {
-      width: 1em;
-      height: 1em;
-      padding: 0;
-      align-self: center;
-      color: currentColor;
-      font-size: inherit;
-      background: none;
-      border: none;
-      border-radius: 0.2em;
-      cursor: pointer;
-    }
-    .navi_callout_close_button:hover {
-      background: rgba(0, 0, 0, 0.1);
-    }
-    .navi_callout_close_button_svg {
-      width: 100%;
-      height: 100%;
-    }
-    .navi_callout_error_stack {
-      max-height: 200px;
-      overflow: auto;
-    }
+    --x-border-color: var(--x-level-color);
+    --x-icon-color: var(--x-level-color);
+    --x-background-color: var(--background-color);
+  }
+
+  .navi_callout_frame {
+    position: absolute;
+    filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
+    pointer-events: none;
+  }
+  .navi_callout .navi_callout_border {
+    fill: var(--x-border-color);
+  }
+  .navi_callout[data-level="info"] {
+    --x-level-color: var(--navi-info-color);
+  }
+  .navi_callout[data-level="warning"] {
+    --x-level-color: var(--navi-warning-color);
+  }
+  .navi_callout[data-level="error"] {
+    --x-level-color: var(--navi-error-color);
+  }
+
+  .navi_callout_frame svg {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+  }
+  .navi_callout_background {
+    fill: var(--x-background-color);
+  }
+
+  .navi_callout_box {
+    position: relative;
+    border-style: solid;
+    border-color: transparent;
+  }
+  .navi_callout_body {
+    position: relative;
+    display: flex;
+    max-width: 47vw;
+    padding: var(--padding);
+    flex-direction: row;
+    gap: 10px;
+  }
+  .navi_callout_icon {
+    display: flex;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    align-items: center;
+    align-self: flex-start;
+    justify-content: center;
+    background-color: var(--x-icon-color);
+    border-radius: 2px;
+  }
+  .navi_callout_icon_svg {
+    width: 16px;
+    height: 12px;
+    color: white;
+  }
+
+  .navi_callout_message {
+    min-width: 0;
+    align-self: center;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+  .navi_callout_message iframe {
+    display: block;
+    margin: 0;
+  }
+  .navi_callout_close_button_column {
+    display: flex;
+    height: 22px;
+  }
+  .navi_callout_close_button {
+    width: 1em;
+    height: 1em;
+    padding: 0;
+    align-self: center;
+    color: currentColor;
+    font-size: inherit;
+    background: none;
+    border: none;
+    border-radius: 0.2em;
+    cursor: pointer;
+  }
+  .navi_callout_close_button:hover {
+    background: rgba(0, 0, 0, 0.1);
+  }
+  .navi_callout_close_button_svg {
+    width: 100%;
+    height: 100%;
+  }
+  .navi_callout_error_stack {
+    max-height: 200px;
+    overflow: auto;
   }
 `;
 
@@ -12510,9 +12511,18 @@ const CharSlot = ({
   });
 };
 const Icon = ({
+  box,
   children,
   ...props
 }) => {
+  if (box) {
+    return jsx(Box, {
+      layoutInline: true,
+      layoutColumn: true,
+      ...props,
+      children: children
+    });
+  }
   return jsx(CharSlot, {
     decorative: true,
     ...props,
@@ -13002,7 +13012,6 @@ const LinkWithAction = props => {
 const RouteLink = ({
   route,
   routeParams,
-  active,
   children,
   ...rest
 }) => {
@@ -13011,11 +13020,13 @@ const RouteLink = ({
   }
   const routeStatus = useRouteStatus(route);
   const url = route.buildUrl(routeParams);
-  const innerActive = active || routeStatus.active;
+  const routeIsActive = routeStatus.active;
   return jsx(Link, {
     ...rest,
     href: url,
-    active: innerActive,
+    pseudoState: {
+      ":-navi-current-link": routeIsActive
+    },
     children: children
   });
 };
@@ -14027,12 +14038,6 @@ const useUIState = (uiStateController) => {
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
-    :root {
-      --navi-checkbox-color: light-dark(#4476ff, #3b82f6);
-      --navi-checkmark-color-light: white;
-      --navi-checkmark-color-dark: rgb(55, 55, 55);
-    }
-
     .navi_checkbox {
       --outline-offset: 1px;
       --outline-width: 2px;
@@ -14044,8 +14049,10 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       --outline-color: light-dark(#4476ff, #3b82f6);
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: white;
-      --color: var(--navi-checkbox-color);
-      --checkmark-color: var(--navi-checkmark-color-light);
+      --color: light-dark(#4476ff, #3b82f6);
+      --checkmark-color-light: white;
+      --checkmark-color-dark: rgb(55, 55, 55);
+      --checkmark-color: var(--checkmark-color-light);
 
       --color-mix-light: black;
       --color-mix-dark: white;
@@ -14309,8 +14316,8 @@ const InputCheckboxBasic = props => {
   const renderCheckboxMemoized = useCallback(renderCheckbox, [innerName, checked, innerRequired]);
   useLayoutEffect(() => {
     const naviCheckbox = ref.current;
-    const lightColor = "var(--navi-checkmark-color-light)";
-    const darkColor = "var(--navi-checkmark-color-dark)";
+    const lightColor = "var(--checkmark-color-light)";
+    const darkColor = "var(--checkmark-color-dark)";
     const colorPicked = pickLightOrDark("var(--color)", lightColor, darkColor, naviCheckbox);
     if (colorPicked === lightColor) {
       naviCheckbox.removeAttribute("data-dark");
@@ -14422,10 +14429,6 @@ const InputCheckboxInsideForm = InputCheckboxBasic;
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
-    :root {
-      --navi-radiomark-color: light-dark(#4476ff, #3b82f6);
-    }
-
     .navi_radio {
       --outline-offset: 1px;
       --outline-width: 2px;
@@ -14435,7 +14438,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       --outline-color: light-dark(#4476ff, #3b82f6);
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: white;
-      --color: var(--navi-radiomark-color);
+      --color: light-dark(#4476ff, #3b82f6);
       --radiomark-color: var(--color);
       --border-color-checked: var(--color);
 
@@ -17575,9 +17578,11 @@ const ROW_MAX_HEIGHT = 100;
 const COLUMN_MIN_WIDTH = 50;
 const COLUMN_MAX_WIDTH = 500;
 import.meta.css = /* css */`
-  body {
-    --table-resizer-handle-color: #063b7c;
-    --table-resizer-color: #387ec9;
+  @layer navi {
+    .navi_table {
+      --table-resizer-handle-color: #063b7c;
+      --table-resizer-color: #387ec9;
+    }
   }
 
   .navi_table_cell {
@@ -17593,10 +17598,10 @@ import.meta.css = /* css */`
   }
   .navi_table_cell_resize_handle[data-left],
   .navi_table_cell_resize_handle[data-right] {
-    cursor: ew-resize;
     top: 0;
     bottom: 0;
     width: 8px;
+    cursor: ew-resize;
   }
   .navi_table_cell_resize_handle[data-left] {
     left: 0;
@@ -17607,10 +17612,10 @@ import.meta.css = /* css */`
 
   .navi_table_cell_resize_handle[data-top],
   .navi_table_cell_resize_handle[data-bottom] {
-    cursor: ns-resize;
-    left: 0;
     right: 0;
+    left: 0;
     height: 8px;
+    cursor: ns-resize;
   }
   .navi_table_cell_resize_handle[data-top] {
     top: 0;
@@ -17620,25 +17625,25 @@ import.meta.css = /* css */`
   }
 
   .navi_table_column_resizer {
-    pointer-events: none;
     position: absolute;
+    top: var(--table-visual-top);
     left: var(--table-column-resizer-left);
     width: 10px;
-    top: var(--table-visual-top);
     height: var(--table-visual-height);
     opacity: 0;
+    pointer-events: none;
   }
   .navi_table_column_resize_handle {
     position: absolute;
-    height: 100%;
     top: 50%;
-    transform: translateY(-50%);
-    border-radius: 15px;
-    background: var(--table-resizer-handle-color);
     /* opacity: 0.5; */
     width: 5px;
+    height: 100%;
     height: 26px;
     max-height: 80%;
+    background: var(--table-resizer-handle-color);
+    border-radius: 15px;
+    transform: translateY(-50%);
   }
   .navi_table_column_resize_handle[data-left] {
     left: 2px;
@@ -17649,16 +17654,16 @@ import.meta.css = /* css */`
   .navi_table_column_resize_handle_container {
     position: absolute;
     top: 0;
-    left: -10px;
     right: 0;
+    left: -10px;
     height: var(--table-cell-height);
   }
   .navi_table_column_resizer_line {
     position: absolute;
     top: 0;
     bottom: 0;
-    width: 5px;
     left: -3px;
+    width: 5px;
     background: var(--table-resizer-color);
     opacity: 0;
     transition: opacity 0.1s ease;
@@ -17675,25 +17680,25 @@ import.meta.css = /* css */`
   }
 
   .navi_table_row_resizer {
-    pointer-events: none;
     position: absolute;
+    top: var(--table-row-resizer-top);
     left: var(--table-visual-left);
     width: var(--table-visual-width);
-    top: var(--table-row-resizer-top);
     height: 10px;
     opacity: 0;
+    pointer-events: none;
   }
   .navi_table_row_resize_handle {
     position: absolute;
-    width: 100%;
     left: 50%;
-    transform: translateX(-50%);
-    border-radius: 15px;
-    background: var(--table-resizer-handle-color);
+    width: 100%;
     /* opacity: 0.5; */
     width: 26px;
-    height: 5px;
     max-width: 80%;
+    height: 5px;
+    background: var(--table-resizer-handle-color);
+    border-radius: 15px;
+    transform: translateX(-50%);
   }
   .navi_table_row_resize_handle[data-top] {
     top: 2px;
@@ -17703,17 +17708,17 @@ import.meta.css = /* css */`
   }
   .navi_table_row_resize_handle_container {
     position: absolute;
-    left: 0;
     top: -10px;
     bottom: 0;
+    left: 0;
     width: var(--table-cell-width);
   }
   .navi_table_row_resizer_line {
     position: absolute;
-    left: 0;
-    right: 0;
-    height: 5px;
     top: -3px;
+    right: 0;
+    left: 0;
+    height: 5px;
     background: var(--table-resizer-color);
     opacity: 0;
     transition: opacity 0.1s ease;
@@ -18195,9 +18200,14 @@ const findPreviousTableRow = currentRow => {
 };
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
-  body {
-    --selection-border-color: #0078d4;
-    --selection-background-color: #eaf1fd;
+  @layer navi {
+    .navi_table {
+      --selection-border-color: var(--navi-selection-border-color, #0078d4);
+      --selection-background-color: var(
+        --navi-selection-background-color,
+        #eaf1fd
+      );
+    }
   }
 
   .navi_table_cell[aria-selected="true"] {
@@ -18761,10 +18771,12 @@ const useTableStickyContextValue = ({
 };
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
-  body {
-    --sticky-frontier-color: #c0c0c0;
-    --sticky-frontier-size: 12px;
-    --sticky-frontier-ghost-size: 8px;
+  @layer navi {
+    .navi_table {
+      --sticky-frontier-color: #c0c0c0;
+      --sticky-frontier-size: 12px;
+      --sticky-frontier-ghost-size: 8px;
+    }
   }
 
   .navi_table_cell[data-sticky-top] {
@@ -18799,9 +18811,9 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   }
 
   .navi_table_sticky_frontier[data-left] {
+    top: calc(var(--table-visual-top) + var(--sticky-group-top));
     left: calc(var(--table-visual-left) + var(--sticky-group-left));
     width: var(--sticky-frontier-size);
-    top: calc(var(--table-visual-top) + var(--sticky-group-top));
     height: calc(var(--table-visual-height) - var(--sticky-group-top));
     background: linear-gradient(
       to right,
@@ -18811,9 +18823,9 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   }
 
   .navi_table_sticky_frontier[data-top] {
+    top: calc(var(--table-visual-top) + var(--sticky-group-top));
     left: calc(var(--table-visual-left) + var(--sticky-group-left));
     width: calc(var(--table-visual-width) - var(--sticky-group-left));
-    top: calc(var(--table-visual-top) + var(--sticky-group-top));
     height: var(--sticky-frontier-size);
     background: linear-gradient(
       to bottom,
@@ -18825,8 +18837,8 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   .navi_table_sticky_frontier_ghost,
   .navi_table_sticky_frontier_preview {
     position: absolute;
-    pointer-events: none;
     opacity: 0;
+    pointer-events: none;
   }
   .navi_table_sticky_frontier_ghost {
     z-index: ${Z_INDEX_STICKY_FRONTIER_GHOST};
@@ -20139,8 +20151,6 @@ const useSignalSync = (value, initialValue = value) => {
   return signal;
 };
 
-const withPropsStyle = () => {};
-
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   .navi_font_sized_svg {
     display: flex;
@@ -20153,16 +20163,13 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   }
 `;
 const FontSizedSvg = ({
-  width = "1em",
-  height = "1em",
   children,
   ...rest
 }) => {
-  const [remainingProps, innerStyle] = withPropsStyle();
-  return jsx("span", {
-    ...remainingProps,
-    className: "navi_font_sized_svg",
-    style: innerStyle,
+  return jsx(Box, {
+    ...rest,
+    as: "span",
+    baseClassName: "navi_font_sized_svg",
     children: children
   });
 };

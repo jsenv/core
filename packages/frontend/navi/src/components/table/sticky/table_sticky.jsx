@@ -21,10 +21,12 @@ import {
 import { TableStickyContext } from "./table_sticky.js";
 
 import.meta.css = /* css */ `
-  body {
-    --sticky-frontier-color: #c0c0c0;
-    --sticky-frontier-size: 12px;
-    --sticky-frontier-ghost-size: 8px;
+  @layer navi {
+    .navi_table {
+      --sticky-frontier-color: #c0c0c0;
+      --sticky-frontier-size: 12px;
+      --sticky-frontier-ghost-size: 8px;
+    }
   }
 
   .navi_table_cell[data-sticky-top] {
@@ -59,9 +61,9 @@ import.meta.css = /* css */ `
   }
 
   .navi_table_sticky_frontier[data-left] {
+    top: calc(var(--table-visual-top) + var(--sticky-group-top));
     left: calc(var(--table-visual-left) + var(--sticky-group-left));
     width: var(--sticky-frontier-size);
-    top: calc(var(--table-visual-top) + var(--sticky-group-top));
     height: calc(var(--table-visual-height) - var(--sticky-group-top));
     background: linear-gradient(
       to right,
@@ -71,9 +73,9 @@ import.meta.css = /* css */ `
   }
 
   .navi_table_sticky_frontier[data-top] {
+    top: calc(var(--table-visual-top) + var(--sticky-group-top));
     left: calc(var(--table-visual-left) + var(--sticky-group-left));
     width: calc(var(--table-visual-width) - var(--sticky-group-left));
-    top: calc(var(--table-visual-top) + var(--sticky-group-top));
     height: var(--sticky-frontier-size);
     background: linear-gradient(
       to bottom,
@@ -85,8 +87,8 @@ import.meta.css = /* css */ `
   .navi_table_sticky_frontier_ghost,
   .navi_table_sticky_frontier_preview {
     position: absolute;
-    pointer-events: none;
     opacity: 0;
+    pointer-events: none;
   }
   .navi_table_sticky_frontier_ghost {
     z-index: ${Z_INDEX_STICKY_FRONTIER_GHOST};

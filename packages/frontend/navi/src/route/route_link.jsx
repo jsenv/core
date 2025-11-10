@@ -14,7 +14,7 @@ export const RouteLink = ({ route, routeParams, children, ...rest }) => {
       {...rest}
       href={url}
       pseudoState={{
-        ":-navi-current": routeIsActive,
+        ":-navi-current-link": routeIsActive,
       }}
     >
       {children}

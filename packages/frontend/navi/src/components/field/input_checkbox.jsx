@@ -35,12 +35,6 @@ import {
 
 import.meta.css = /* css */ `
   @layer navi {
-    :root {
-      --navi-checkbox-color: light-dark(#4476ff, #3b82f6);
-      --navi-checkmark-color-light: white;
-      --navi-checkmark-color-dark: rgb(55, 55, 55);
-    }
-
     .navi_checkbox {
       --outline-offset: 1px;
       --outline-width: 2px;
@@ -52,8 +46,10 @@ import.meta.css = /* css */ `
       --outline-color: light-dark(#4476ff, #3b82f6);
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: white;
-      --color: var(--navi-checkbox-color);
-      --checkmark-color: var(--navi-checkmark-color-light);
+      --color: light-dark(#4476ff, #3b82f6);
+      --checkmark-color-light: white;
+      --checkmark-color-dark: rgb(55, 55, 55);
+      --checkmark-color: var(--checkmark-color-light);
 
       --color-mix-light: black;
       --color-mix-dark: white;
@@ -339,8 +335,8 @@ const InputCheckboxBasic = (props) => {
 
   useLayoutEffect(() => {
     const naviCheckbox = ref.current;
-    const lightColor = "var(--navi-checkmark-color-light)";
-    const darkColor = "var(--navi-checkmark-color-dark)";
+    const lightColor = "var(--checkmark-color-light)";
+    const darkColor = "var(--checkmark-color-dark)";
     const colorPicked = pickLightOrDark(
       "var(--color)",
       lightColor,

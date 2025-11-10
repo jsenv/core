@@ -20,7 +20,7 @@
  * - Useful for inline icons that should respect the parent's font-size
  */
 
-import { withPropsStyle } from "../layout/with_props_style.js";
+import { Box } from "../layout/box.jsx";
 
 import.meta.css = /* css */ `
   .navi_font_sized_svg {
@@ -34,26 +34,10 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const FontSizedSvg = ({
-  width = "1em",
-  height = "1em",
-  children,
-  ...rest
-}) => {
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    base: {
-      width: width === "1em" ? undefined : width,
-      height: height === "1em" ? undefined : height,
-    },
-  });
-
+export const FontSizedSvg = ({ children, ...rest }) => {
   return (
-    <span
-      {...remainingProps}
-      className="navi_font_sized_svg"
-      style={innerStyle}
-    >
+    <Box {...rest} as="span" baseClassName="navi_font_sized_svg">
       {children}
-    </span>
+    </Box>
   );
 };

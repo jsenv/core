@@ -169,7 +169,14 @@ export const CharSlot = ({
     </Text>
   );
 };
-export const Icon = ({ children, ...props }) => {
+export const Icon = ({ box, children, ...props }) => {
+  if (box) {
+    return (
+      <Box layoutInline layoutColumn {...props}>
+        {children}
+      </Box>
+    );
+  }
   return (
     <CharSlot decorative {...props}>
       <span className="navi_icon">{children}</span>

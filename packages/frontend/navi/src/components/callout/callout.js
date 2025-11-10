@@ -311,121 +311,122 @@ const ARROW_SPACING = 8;
 
 import.meta.css = /* css */ `
   @layer navi {
-    :root {
-      --navi-callout-background-color: white;
-      --navi-callout-padding: 8px;
-    }
-
     .navi_callout {
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 1;
-      display: block;
-      height: auto;
-      opacity: 0;
-      /* will be positioned with transform: translate */
-      transition: opacity 0.2s ease-in-out;
-      overflow: visible;
+      --background-color: white;
+      --padding: 8px;
     }
+  }
 
-    .navi_callout_frame {
-      position: absolute;
-      filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
-      pointer-events: none;
-    }
-    .navi_callout[data-level="info"] .navi_callout_border {
-      fill: var(--navi-info-color);
-    }
-    .navi_callout[data-level="warning"] .navi_callout_border {
-      fill: var(--navi-warning-color);
-    }
-    .navi_callout[data-level="error"] .navi_callout_border {
-      fill: var(--navi-error-color);
-    }
-    .navi_callout_frame svg {
-      position: absolute;
-      inset: 0;
-      overflow: visible;
-    }
-    .navi_callout_background {
-      fill: var(--navi-callout-background-color);
-    }
+  .navi_callout {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    display: block;
+    height: auto;
+    opacity: 0;
+    /* will be positioned with transform: translate */
+    transition: opacity 0.2s ease-in-out;
+    overflow: visible;
 
-    .navi_callout_box {
-      position: relative;
-      border-style: solid;
-      border-color: transparent;
-    }
-    .navi_callout_body {
-      position: relative;
-      display: flex;
-      max-width: 47vw;
-      padding: var(--navi-callout-padding);
-      flex-direction: row;
-      gap: 10px;
-    }
-    .navi_callout_icon {
-      display: flex;
-      width: 22px;
-      height: 22px;
-      flex-shrink: 0;
-      align-items: center;
-      align-self: flex-start;
-      justify-content: center;
-      border-radius: 2px;
-    }
-    .navi_callout_icon_svg {
-      width: 16px;
-      height: 12px;
-      color: white;
-    }
-    .navi_callout[data-level="info"] .navi_callout_icon {
-      background-color: var(--navi-info-color);
-    }
-    .navi_callout[data-level="warning"] .navi_callout_icon {
-      background-color: var(--navi-warning-color);
-    }
-    .navi_callout[data-level="error"] .navi_callout_icon {
-      background-color: var(--navi-error-color);
-    }
-    .navi_callout_message {
-      min-width: 0;
-      align-self: center;
-      word-break: break-word;
-      overflow-wrap: anywhere;
-    }
-    .navi_callout_message iframe {
-      display: block;
-      margin: 0;
-    }
-    .navi_callout_close_button_column {
-      display: flex;
-      height: 22px;
-    }
-    .navi_callout_close_button {
-      width: 1em;
-      height: 1em;
-      padding: 0;
-      align-self: center;
-      color: currentColor;
-      font-size: inherit;
-      background: none;
-      border: none;
-      border-radius: 0.2em;
-      cursor: pointer;
-    }
-    .navi_callout_close_button:hover {
-      background: rgba(0, 0, 0, 0.1);
-    }
-    .navi_callout_close_button_svg {
-      width: 100%;
-      height: 100%;
-    }
-    .navi_callout_error_stack {
-      max-height: 200px;
-      overflow: auto;
-    }
+    --x-border-color: var(--x-level-color);
+    --x-icon-color: var(--x-level-color);
+    --x-background-color: var(--background-color);
+  }
+
+  .navi_callout_frame {
+    position: absolute;
+    filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
+    pointer-events: none;
+  }
+  .navi_callout .navi_callout_border {
+    fill: var(--x-border-color);
+  }
+  .navi_callout[data-level="info"] {
+    --x-level-color: var(--navi-info-color);
+  }
+  .navi_callout[data-level="warning"] {
+    --x-level-color: var(--navi-warning-color);
+  }
+  .navi_callout[data-level="error"] {
+    --x-level-color: var(--navi-error-color);
+  }
+
+  .navi_callout_frame svg {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+  }
+  .navi_callout_background {
+    fill: var(--x-background-color);
+  }
+
+  .navi_callout_box {
+    position: relative;
+    border-style: solid;
+    border-color: transparent;
+  }
+  .navi_callout_body {
+    position: relative;
+    display: flex;
+    max-width: 47vw;
+    padding: var(--padding);
+    flex-direction: row;
+    gap: 10px;
+  }
+  .navi_callout_icon {
+    display: flex;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    align-items: center;
+    align-self: flex-start;
+    justify-content: center;
+    background-color: var(--x-icon-color);
+    border-radius: 2px;
+  }
+  .navi_callout_icon_svg {
+    width: 16px;
+    height: 12px;
+    color: white;
+  }
+
+  .navi_callout_message {
+    min-width: 0;
+    align-self: center;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+  .navi_callout_message iframe {
+    display: block;
+    margin: 0;
+  }
+  .navi_callout_close_button_column {
+    display: flex;
+    height: 22px;
+  }
+  .navi_callout_close_button {
+    width: 1em;
+    height: 1em;
+    padding: 0;
+    align-self: center;
+    color: currentColor;
+    font-size: inherit;
+    background: none;
+    border: none;
+    border-radius: 0.2em;
+    cursor: pointer;
+  }
+  .navi_callout_close_button:hover {
+    background: rgba(0, 0, 0, 0.1);
+  }
+  .navi_callout_close_button_svg {
+    width: 100%;
+    height: 100%;
+  }
+  .navi_callout_error_stack {
+    max-height: 200px;
+    overflow: auto;
   }
 `;
 

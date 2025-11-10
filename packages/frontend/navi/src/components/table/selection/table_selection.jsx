@@ -3,9 +3,14 @@ import { useLayoutEffect } from "preact/hooks";
 import { useSelectionController } from "../../selection/selection.jsx";
 
 import.meta.css = /* css */ `
-  body {
-    --selection-border-color: #0078d4;
-    --selection-background-color: #eaf1fd;
+  @layer navi {
+    .navi_table {
+      --selection-border-color: var(--navi-selection-border-color, #0078d4);
+      --selection-background-color: var(
+        --navi-selection-background-color,
+        #eaf1fd
+      );
+    }
   }
 
   .navi_table_cell[aria-selected="true"] {
