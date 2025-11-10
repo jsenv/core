@@ -1,4 +1,5 @@
 import { createContext } from "preact";
+import { useState } from "preact/hooks";
 
 import { Box } from "../layout/box.jsx";
 import { PSEUDO_CLASSES } from "../layout/pseudo_styles.js";
@@ -41,6 +42,12 @@ import.meta.css = /* css */ `
     --x-background-color: var(--background-color-error);
     --x-color: var(--color-error);
   }
+
+  .navi_message_box[data-left-stripe] {
+    border-left: 6px solid var(--x-color);
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+  }
 `;
 
 Object.assign(PSEUDO_CLASSES, {
@@ -51,18 +58,24 @@ Object.assign(PSEUDO_CLASSES, {
 const MessageBoxPseudoClasses = [":-navi-message-level"];
 
 export const MessageBoxLevelContext = createContext();
+export const MessageBoxReportTitleChildContext = createContext();
 
 export const MessageBox = ({
   level = "info",
   padding = "sm",
   contentSpacing = " ",
+  leftStripe,
   children,
   ...rest
 }) => {
+  const [hasTitleChild, setHasTitleChild] = useState(false);
+  const innerLeftStripe = leftStripe === undefined ? hasTitleChild : leftStripe;
+
   return (
     <Box
       as="div"
       role={level === "info" ? "status" : "alert"}
+      data-left-stripe={innerLeftStripe ? "" : undefined}
       {...rest}
       baseClassName="navi_message_box"
       padding={padding}
@@ -72,7 +85,9 @@ export const MessageBox = ({
       }}
     >
       <MessageBoxLevelContext.Provider value={level}>
-        {applyContentSpacingOnTextChildren(children, contentSpacing)}
+        <MessageBoxReportTitleChildContext.Provider value={setHasTitleChild}>
+          {applyContentSpacingOnTextChildren(children, contentSpacing)}
+        </MessageBoxReportTitleChildContext.Provider>
       </MessageBoxLevelContext.Provider>
     </Box>
   );
