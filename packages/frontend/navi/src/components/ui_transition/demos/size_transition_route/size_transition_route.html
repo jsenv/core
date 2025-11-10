@@ -83,11 +83,18 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { Routes, Route, Link } from "@jsenv/navi";
+      import {
+        Routes,
+        Route,
+        RouteLink,
+        setupRoutes,
+        UITransition,
+      } from "@jsenv/navi";
 
-      import { UITransition } from "../../ui_transition.jsx";
-
-      const {SMALL_ROUTE, LARGE_ROUTE} =
+      const { SMALL_ROUTE, LARGE_ROUTE } = setupRoutes({
+        SMALL_ROUTE: "small",
+        LARGE_ROUTE: "large",
+      });
 
       const SmallRectangle = () => (
         <div className="rectangle-small">
@@ -109,46 +116,47 @@
         </div>
       );
 
-      const App = () => {
+      const MainLayout = () => {
         return (
-          <Router>
-            <div>
-              <h1>UITransition Size Demo with Routes</h1>
+          <div>
+            <h1>UITransition Size Demo with Routes</h1>
 
-              <div className="controls">
-                <p>Test size transitions between routes:</p>
-                <Link href="/small">Small Rectangle (150×250px)</Link>
-                <Link href="/large">Large Rectangle (300×400px)</Link>
-              </div>
+            <div className="controls">
+              <p>Test size transitions between routes:</p>
+              <RouteLink route={SMALL_ROUTE}>Small Rectangle</RouteLink>
+              <RouteLink route={LARGE_ROUTE}>Large Rectangle</RouteLink>
+            </div>
 
-              <div className="demo-container">
-                <UITransition
-                  sizeTransition
-                  sizeTransitionDuration={400}
-                  transitionType="cross-fade"
-                  transitionDuration={300}
-                >
-                  <div className="white-wrapper">
-                    <Route pattern="/small">
-                      <SmallRectangle />
-                    </Route>
-                    <Route pattern="/large">
-                      <LargeRectangle />
-                    </Route>
-                    <Route pattern="/" exact>
-                      <SmallRectangle />
-                    </Route>
-                  </div>
+            <div className="demo-container">
+              <div className="white-wrapper">
+                <UITransition sizeTransition sizeTransitionDuration={400}>
+                  <Route.Slot />
                 </UITransition>
               </div>
             </div>
-          </Router>
+          </div>
         );
       };
 
-      // Render the app
-      const root = document.getElementById("root");
-      render(<App />, root);
+      const Router = () => {
+        return (
+          <Routes element={MainLayout}>
+            <Route element={<SmallRectangle />} route={SMALL_ROUTE} />
+            <Route element={<LargeRectangle />} route={LARGE_ROUTE} />
+            <Route element={<div>Coucou</div>} fallback />
+          </Routes>
+        );
+      };
+
+      const App = () => {
+        return (
+          <div>
+            <Router />
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
     </script>
   </body>
 </html>
