@@ -107,9 +107,8 @@ import.meta.css = /* css */ `
     --x-placeholder-color: var(--placeholder-color);
   }
 
-  .navi_input .navi_native_field {
+  .navi_input .navi_native_input {
     box-sizing: border-box;
-    width: 100%;
     padding-top: var(--padding-top, var(--padding-y, var(--padding)));
     padding-right: var(--padding-right, var(--padding-x, var(--padding)));
     padding-bottom: var(--padding-bottom, var(--padding-y, var(--padding)));
@@ -126,10 +125,10 @@ import.meta.css = /* css */ `
     outline-color: var(--x-border-color);
     outline-offset: calc(-1 * (var(--x-border-width)));
   }
-  .navi_input .navi_native_field::placeholder {
+  .navi_input .navi_native_input::placeholder {
     color: var(--x-placeholder-color);
   }
-  .navi_input .navi_native_field:-internal-autofill-selected {
+  .navi_input .navi_native_input:-internal-autofill-selected {
     /* Webkit is putting some nasty styles after automplete that look as follow */
     /* input:-internal-autofill-selected { color: FieldText !important; } */
     /* Fortunately we can override it as follow */
@@ -142,8 +141,8 @@ import.meta.css = /* css */ `
     --x-color: var(--color-readonly);
   }
   /* Focus */
-  .navi_input[data-focus] .navi_native_field,
-  .navi_input[data-focus-visible] .navi_native_field {
+  .navi_input[data-focus] .navi_native_input,
+  .navi_input[data-focus-visible] .navi_native_input {
     outline-width: var(--x-outer-width);
     outline-offset: calc(-1 * var(--x-outer-width));
     --x-border-color: var(--x-outline-color);
@@ -285,7 +284,7 @@ const InputTextualBasic = (props) => {
         uiStateController.setUIState(e.detail.value, e);
       }}
       // style management
-      baseClassName="navi_native_field"
+      baseClassName="navi_native_input"
     />
   );
   const renderInputMemoized = useCallback(renderInput, [
@@ -302,8 +301,8 @@ const InputTextualBasic = (props) => {
       layoutColumn
       baseClassName="navi_input"
       managedByCSSVars={InputManagedByCSSVars}
-      pseudoStateSelector=".navi_native_field"
-      visualSelector=".navi_native_field"
+      pseudoStateSelector=".navi_native_input"
+      visualSelector=".navi_native_input"
       basePseudoState={{
         ":read-only": innerReadOnly,
         ":disabled": innerDisabled,

@@ -199,16 +199,19 @@ export const Box = (props) => {
       const group = getStylePropGroup(key);
       let isRemainingProp = false;
 
-      if (visualSelector) {
-        if (FORWARDED_TO_VISUAL_CHILD_PROP_SET.has(key)) {
-          remainingPropKeys.push(key);
-          remainingProps[key] = value;
-          isRemainingProp = false;
-        } else if (DELEGATED_TO_VISUAL_CHILD_PROP_SET.has(key)) {
-          isRemainingProp = true;
+      if (group) {
+        isRemainingProp = false;
+        if (visualSelector) {
+          if (FORWARDED_TO_VISUAL_CHILD_PROP_SET.has(key)) {
+            // both this box and child box will use the prop
+            remainingPropKeys.push(key);
+            remainingProps[key] = value;
+          } else if (DELEGATED_TO_VISUAL_CHILD_PROP_SET.has(key)) {
+            isRemainingProp = true;
+          }
         }
       } else {
-        isRemainingProp = !group;
+        isRemainingProp = true;
       }
 
       if (isRemainingProp) {
