@@ -70,7 +70,7 @@ import.meta.css = /* css */ `
 
   [data-layout-column] {
     display: flex;
-    flex-direction: "row";
+    flex-direction: row;
   }
 
   [data-layout-row] > *,
@@ -190,7 +190,9 @@ export const Box = (props) => {
       context,
     ) => {
       const propEffect = getPropEffect(propName);
-
+      if (propEffect === "ignore") {
+        return;
+      }
       if (propEffect === "forward" || propEffect === "style_and_forward") {
         if (stylesTarget === boxStyles) {
           remainingPropKeys.push(propName);
@@ -204,6 +206,11 @@ export const Box = (props) => {
       assignStyle(stylesTarget, propValue, propName, context);
     };
     const getPropEffect = (propName) => {
+      if (propName === "ref") {
+        // some props not destructured but that are neither
+        // style props, nor should be forwarded to the child
+        return "ignore";
+      }
       if (visualSelector) {
         if (HANDLED_BY_VISUAL_CHILD_PROP_SET.has(propName)) {
           return "forward";

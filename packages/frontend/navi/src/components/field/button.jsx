@@ -279,18 +279,20 @@ const ButtonBasic = (props) => {
     children,
     contentSpacing,
   );
-  const renderButtonContent = (buttonProps) => (
-    <Box
-      {...buttonProps}
-      as="span"
-      baseClassName="navi_button_content"
-      layoutInline
-      layoutColumn
-    >
-      {innerChildren}
-      <span className="navi_button_shadow"></span>
-    </Box>
-  );
+  const renderButtonContent = (buttonProps) => {
+    return (
+      <Box
+        {...buttonProps}
+        as="span"
+        baseClassName="navi_button_content"
+        layoutInline
+        layoutColumn
+      >
+        {innerChildren}
+        <span className="navi_button_shadow"></span>
+      </Box>
+    );
+  };
   const renderButtonContentMemoized = useCallback(renderButtonContent, []);
 
   return (
