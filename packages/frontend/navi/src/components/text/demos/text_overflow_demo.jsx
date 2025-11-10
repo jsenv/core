@@ -29,7 +29,7 @@ export const App = () => {
           <Box width="260" border="1px solid #ccc" padding="sm">
             <Text overflowEllipsis>
               This text has extra info that stays visible
-              <Text overflowPinned textColor="#666">
+              <Text overflowPinned color="#666">
                 (modified)
               </Text>
             </Text>
@@ -37,7 +37,7 @@ export const App = () => {
           <Box width="260" border="1px solid #ccc" padding="sm">
             <Text overflowEllipsis>
               Text with a dynamic count that is long and will overflow
-              <Text overflowPinned textColor="#4caf50">
+              <Text overflowPinned color="#4caf50">
                 <Count>10</Count>
               </Text>
             </Text>
@@ -55,7 +55,7 @@ export const App = () => {
         <Layout row contentSpacing="16px">
           <Box width="300" border="1px solid #ccc" padding="sm">
             <Text overflowEllipsis>
-              <Icon>
+              <Icon color="orange">
                 <StarSvg />
               </Icon>
               <Text textBold>Important</Text> notification about a process
@@ -64,7 +64,7 @@ export const App = () => {
                 <StarSvg />
               </Icon>
               <Text textItalic>active</Text>
-              <Text overflowPinned textColor="#666">
+              <Text overflowPinned color="#666">
                 (live)
               </Text>
             </Text>
@@ -76,7 +76,7 @@ export const App = () => {
               </Icon>
               <Text textUnderline>Truncated</Text> sequence showcasing icon
               spacing with styled parts
-              <Text overflowPinned textColor="#666">
+              <Text overflowPinned color="#666">
                 (ok)
               </Text>
             </Text>
@@ -169,7 +169,7 @@ export const App = () => {
             </div>
             <Text overflowEllipsis>
               Important message that might be too long to display fully
-              <Text overflowPinned textColor="#f44336" textSize="sm">
+              <Text overflowPinned color="#f44336" size="sm">
                 ⚠️
               </Text>
             </Text>
@@ -232,7 +232,7 @@ export const App = () => {
             >
               Vertical alignment comparison
             </div>
-            <Box layoutRow textLineHeight="100px">
+            <Box layoutRow lineHeight="100px">
               <Text overflowEllipsis>
                 Just a long line of text that would get overflowed.
               </Text>

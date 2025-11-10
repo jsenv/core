@@ -1,5 +1,4 @@
-import { withPropsClassName } from "../layout/with_props_class_name.js";
-import { withPropsStyle } from "../layout/with_props_style.js";
+import { Box } from "../layout/box.jsx";
 
 import.meta.css = /* css */ `
   .navi_count {
@@ -9,16 +8,10 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const Count = ({ className, children, ...rest }) => {
-  const innerClassName = withPropsClassName("navi_text_overflow", className);
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    layout: true,
-    typo: true,
-  });
-
+export const Count = ({ children, ...rest }) => {
   return (
-    <span className={innerClassName} style={innerStyle} {...remainingProps}>
+    <Box as="span" baseClassName=".navi_count" {...rest}>
       ({children})
-    </span>
+    </Box>
   );
 };

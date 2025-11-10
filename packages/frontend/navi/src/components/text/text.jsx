@@ -74,7 +74,7 @@ const TextOverflow = ({
     <Text
       {...rest}
       as={as}
-      layoutColumn
+      box
       expandX
       pre={pre}
       nowWrap={noWrap}
@@ -184,7 +184,7 @@ export const Paragraph = ({
   ...rest
 }) => {
   return (
-    <Box marginTop={marginTop} {...rest} as="p">
+    <Box {...rest} as="p" marginTop={marginTop}>
       {applyContentSpacingOnTextChildren(children, contentSpacing)}
     </Box>
   );
