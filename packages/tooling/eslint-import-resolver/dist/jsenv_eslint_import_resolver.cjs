@@ -288,12 +288,44 @@ platform === 'Android'
 	|| globalThis.navigator?.userAgent?.includes(' Android ') === true
 	|| globalThis.process?.platform === 'android';
 
+const ESC = '\u001B[';
+
 !isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
-!isBrowser && process$1.platform === 'win32';
+const isWindows$2 = !isBrowser && process$1.platform === 'win32';
+!isBrowser && (process$1.env.TERM?.startsWith('screen') || process$1.env.TERM?.startsWith('tmux') || process$1.env.TMUX !== undefined);
 
 isBrowser ? () => {
 	throw new Error('`process.cwd()` only works in Node.js, not the browser.');
 } : process$1.cwd;
+const eraseScreen = ESC + '2J';
+
+const isOldWindows = () => {
+	if (isBrowser || !isWindows$2) {
+		return false;
+	}
+
+	const parts = os.release().split('.');
+	const major = Number(parts[0]);
+	const build = Number(parts[2] ?? 0);
+
+	if (major < 10) {
+		return true;
+	}
+
+	if (major === 10 && build < 10_586) {
+		return true;
+	}
+
+	return false;
+};
+
+isOldWindows()
+	? `${eraseScreen}${ESC}0f`
+	// 1. Erases the screen (Only done in case `2` is not supported)
+	// 2. Erases the whole screen including scrollback buffer
+	// 3. Moves cursor to the top-left position
+	// More info: https://www.real-world-systems.com/docs/ANSIcode.html
+	: `${eraseScreen}${ESC}3J${ESC}H`;
 
 // https://github.com/Marak/colors.js/blob/master/lib/styles.js
 // https://stackoverflow.com/a/75985833/2634179
@@ -1998,13 +2030,13 @@ const applyPackageResolve = (packageSpecifier, resolutionContext) => {
       : resolvePackageSymlink(packageDirectoryFacadeUrl);
     const packageJson = readPackageJson(packageDirectoryUrl);
     if (packageJson !== null) {
-      const { exports } = packageJson;
-      if (exports !== null && exports !== undefined) {
+      const { exports: exports$1 } = packageJson;
+      if (exports$1 !== null && exports$1 !== undefined) {
         return applyPackageExportsResolution(packageSubpath, {
           ...resolutionContext,
           packageDirectoryUrl,
           packageJson,
-          exports,
+          exports: exports$1,
         });
       }
     }
@@ -2031,8 +2063,8 @@ const applyPackageSelfResolution = (packageSubpath, resolutionContext) => {
   if (packageJson.name !== packageName) {
     return undefined;
   }
-  const { exports } = packageJson;
-  if (!exports) {
+  const { exports: exports$1 } = packageJson;
+  if (!exports$1) {
     const subpathResolution = applyLegacySubpathResolution(packageSubpath, {
       ...resolutionContext,
       packageDirectoryUrl,

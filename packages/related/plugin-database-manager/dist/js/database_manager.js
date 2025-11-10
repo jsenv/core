@@ -1,4 +1,4 @@
-import { d, u, useSignal, D, A, F, d$1, _, q, k, E, b, T, G } from "../jsenv_plugin_database_manager_node_modules.js";
+import { d, u, useSignal, M, F, T, h, A, b, k, E, O, q, F$1 } from "../jsenv_plugin_database_manager_node_modules.js";
 import { initFlexDetailsSet, startDragToResizeGesture, getInnerWidth, getWidth, initPositionSticky } from "@jsenv/dom";
 import { useEditionController, Overflow, createUniqueValueConstraint, FontSizedSvg, Input, SINGLE_SPACE_CONSTRAINT, useSignalSync, Editable, useSelectionController, useKeyboardShortcuts, createSelectionKeyboardShortcuts, Details, Button, valueInLocalStorage, SVGMaskOverlay, resource, useActionData, setBaseUrl, defineRoutes, createAction, useRouteStatus, LinkWithIcon, TextAndCount, IconAndText, useRunOnMount, Form, Select, Label, ErrorBoundaryContext, Route, useNavState, Table, TabList, Tab, UITransition } from "@jsenv/navi";
 
@@ -524,7 +524,7 @@ const EnterNameIconSvg = ({
   });
 };
 
-const ExplorerItemList = D((props, ref) => {
+const ExplorerItemList = M((props, ref) => {
   const {
     idKey,
     nameKey,
@@ -538,10 +538,10 @@ const ExplorerItemList = D((props, ref) => {
     useCreateItemAction,
     stopCreatingNew
   } = props;
-  const innerRef = A();
-  F(ref, () => innerRef.current);
+  const innerRef = F();
+  T(ref, () => innerRef.current);
   const itemSelectionSignal = useSignal([]);
-  const [deletedItems, setDeletedItems] = d$1([]);
+  const [deletedItems, setDeletedItems] = h([]);
   const deleteManyAction = useDeleteManyItemAction?.(itemSelectionSignal);
   const selection = itemSelectionSignal.value;
   const selectionLength = selection.length;
@@ -648,7 +648,7 @@ const createExplorerGroupController = (id, {
     detailsOnToggle
   };
 };
-const ExplorerGroup = D((props, ref) => {
+const ExplorerGroup = M((props, ref) => {
   const {
     controller,
     detailsAction,
@@ -667,18 +667,18 @@ const ExplorerGroup = D((props, ref) => {
     resizable,
     ...rest
   } = props;
-  const innerRef = A();
-  F(ref, () => innerRef.current);
-  _(() => {
+  const innerRef = F();
+  T(ref, () => innerRef.current);
+  A(() => {
     setTimeout(() => {
       innerRef.current.setAttribute("data-details-toggle-animation", "");
     });
   }, []);
-  const [isCreatingNew, setIsCreatingNew] = d$1(false);
-  const startCreatingNew = q(() => {
+  const [isCreatingNew, setIsCreatingNew] = h(false);
+  const startCreatingNew = b(() => {
     setIsCreatingNew(true);
   }, [setIsCreatingNew]);
-  const stopCreatingNew = q(({
+  const stopCreatingNew = b(({
     shouldRestoreFocus
   }) => {
     if (shouldRestoreFocus) {
@@ -687,7 +687,7 @@ const ExplorerGroup = D((props, ref) => {
     setIsCreatingNew(false);
   }, [setIsCreatingNew]);
   const heightSetting = controller.useHeightSetting();
-  const createButtonRef = A(null);
+  const createButtonRef = F(null);
   return u(k, {
     children: [resizable && u("div", {
       "data-resize-handle": controller.id,
@@ -2217,9 +2217,9 @@ const Explorer = () => {
   });
 };
 const ExplorerBody = () => {
-  const flexDetailsSetRef = A();
-  const [resizableDetailsIdSet, setResizableDetailsIdSet] = d$1(new Set());
-  _(() => {
+  const flexDetailsSetRef = F();
+  const [resizableDetailsIdSet, setResizableDetailsIdSet] = h(new Set());
+  A(() => {
     const flexDetailsSet = initFlexDetailsSet(flexDetailsSetRef.current, {
       onResizableDetailsChange: resizableDetailsIdSet => {
         setResizableDetailsIdSet(new Set(resizableDetailsIdSet));
@@ -2282,10 +2282,10 @@ const setAsideWidth = width => {
 const Aside = ({
   children
 }) => {
-  const asideRef = A(null);
+  const asideRef = F(null);
   const widthSetting = useAsideWidth();
-  const [resizeWidth, resizeWidthSetter] = d$1(null);
-  const resizeWidthRef = A(resizeWidth);
+  const [resizeWidth, resizeWidthSetter] = h(null);
+  const resizeWidthRef = F(resizeWidth);
   resizeWidthRef.current = resizeWidth;
   const resizing = resizeWidth !== null;
   return u("aside", {
@@ -2378,11 +2378,11 @@ const DatabaseFieldset = ({
 const RoleField = ({
   role
 }) => {
-  const [editing, setEditing] = d$1(false);
-  const startEditing = q(() => {
+  const [editing, setEditing] = h(false);
+  const startEditing = b(() => {
     setEditing(true);
   }, []);
-  const stopEditing = q(() => {
+  const stopEditing = b(() => {
     setEditing(false);
   }, []);
   return u(Label, {
@@ -2574,7 +2574,7 @@ const Page = ({
   children,
   ...props
 }) => {
-  const [error, resetError] = b();
+  const [error, resetError] = O();
   return u(ErrorBoundaryContext.Provider, {
     value: resetError,
     children: [error && u(PageError, {
@@ -2607,8 +2607,8 @@ const PageHead = ({
   spacingBottom,
   ...rest
 }) => {
-  const headerRef = A(null);
-  _(() => {
+  const headerRef = F(null);
+  A(() => {
     return initPositionSticky(headerRef.current);
   }, []);
   return u("header", {
@@ -2796,7 +2796,7 @@ const RoleGroupMemberList = ({
 }) => {
   const memberList = role.members;
   const [navState] = useNavState("group_member_list_opened");
-  const [isAdding, isAddingSetter] = d$1(navState);
+  const [isAdding, isAddingSetter] = h(navState);
   return u("div", {
     children: [u("h2", {
       style: "gap: 10px; display: flex; align-items: center;",
@@ -2991,7 +2991,7 @@ const TableData = ({
   table,
   rows
 }) => {
-  const tableRef = A(null);
+  const tableRef = F(null);
   const tableName = table.tablename;
   const createRow = TABLE_ROW.POST.bindParams({
     tablename: tableName
@@ -3001,7 +3001,7 @@ const TableData = ({
   } = table.meta;
 
   // Stable column definitions - only recreate when schema changes
-  const columns = T(() => {
+  const columns = q(() => {
     return schemaColumns.map((column, index) => {
       const columnName = column.column_name;
       const columnIndex = index + 1; // +1 because number column is first
@@ -3028,7 +3028,7 @@ const TableData = ({
   }, [schemaColumns]); // Only depend on schema, not dynamic state
 
   const data = rows;
-  const [selection, setSelection] = d$1([]);
+  const [selection, setSelection] = h([]);
   return u("div", {
     children: [u(Table, {
       ref: tableRef,
@@ -3203,4 +3203,4 @@ const App = () => {
     })]
   });
 };
-G(u(App, {}), document.querySelector("#root"));
+F$1(u(App, {}), document.querySelector("#root"));

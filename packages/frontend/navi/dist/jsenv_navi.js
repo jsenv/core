@@ -1,11 +1,11 @@
 import { installImportMetaCss } from "./jsenv_navi_side_effects.js";
-import { createIterableWeakSet, createPubSub, createValueEffect, createStyleController, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, activeElementSignal, canInterceptKeys, initUITransition, getElementSignature, resolveCSSSize, normalizeStyles, normalizeStyle, appendStyles, findBefore, findAfter, initFocusGroup, elementIsFocusable, pickLightOrDark, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { createIterableWeakSet, createPubSub, createValueEffect, createStyleController, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, activeElementSignal, canInterceptKeys, initUITransition, getElementSignature, normalizeStyle, mergeTwoStyles, appendStyles, normalizeStyles, resolveCSSSize, findBefore, findAfter, initFocusGroup, elementIsFocusable, pickLightOrDark, resolveColorLuminance, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { effect, signal, computed, batch, useSignal } from "@preact/signals";
-import { useEffect, useRef, useCallback, useContext, useState, useLayoutEffect, useMemo, useImperativeHandle, useErrorBoundary, useId } from "preact/hooks";
-import { createContext, createRef, toChildArray, cloneElement } from "preact";
+import { useEffect, useRef, useCallback, useContext, useState, useLayoutEffect, useMemo, useErrorBoundary, useImperativeHandle, useId } from "preact/hooks";
+import { createContext, toChildArray, createRef, cloneElement } from "preact";
 import { jsx, jsxs, Fragment } from "preact/jsx-runtime";
-import { forwardRef, createPortal } from "preact/compat";
+import { createPortal, forwardRef } from "preact/compat";
 
 const actionPrivatePropertiesWeakMap = new WeakMap();
 const getActionPrivateProperties = (action) => {
@@ -3906,7 +3906,7 @@ const installCustomConstraintValidation = (
         return;
       }
       if (element.hasAttribute("data-action")) {
-        if (wouldClickSubmitForm(clickEvent)) {
+        if (wouldButtonClickSubmitForm(element, clickEvent)) {
           clickEvent.preventDefault();
         }
         dispatchActionRequestedCustomEvent(element, {
@@ -3919,7 +3919,10 @@ const installCustomConstraintValidation = (
       if (!form) {
         return;
       }
-      if (wouldClickSubmitForm(clickEvent)) {
+      if (element.type === "reset") {
+        return;
+      }
+      if (wouldButtonClickSubmitForm(element, clickEvent)) {
         clickEvent.preventDefault();
       }
       dispatchActionRequestedCustomEvent(form, {
@@ -4023,16 +4026,14 @@ const installCustomConstraintValidation = (
   return validationInterface;
 };
 
-const wouldClickSubmitForm = (clickEvent) => {
+const wouldButtonClickSubmitForm = (button, clickEvent) => {
   if (clickEvent.defaultPrevented) {
     return false;
   }
-  const clickTarget = clickEvent.target;
-  const { form } = clickTarget;
+  const { form } = button;
   if (!form) {
     return false;
   }
-  const button = clickTarget.closest("button");
   if (!button) {
     return false;
   }
@@ -8278,6 +8279,9 @@ const setupBrowserIntegrationViaHistory = ({
         // Ignore clicks with meta key (e.g. open in new tab)
         return;
       }
+      if (e.defaultPrevented) {
+        return;
+      }
       const linkElement = e.target.closest("a");
       if (!linkElement) {
         return;
@@ -9068,7 +9072,7 @@ const FormContext = createContext();
 
 const FormActionContext = createContext();
 
-const renderActionableComponent = (props, ref, {
+const renderActionableComponent = (props, {
   Basic,
   WithAction,
   InsideForm,
@@ -9085,25 +9089,1321 @@ const renderActionableComponent = (props, ref, {
     if (considerInsideForm && WithActionInsideForm) {
       return jsx(WithActionInsideForm, {
         formContext: formContext,
-        ref: ref,
         ...props
       });
     }
     return jsx(WithAction, {
-      ref: ref,
       ...props
     });
   }
   if (considerInsideForm && InsideForm) {
     return jsx(InsideForm, {
       formContext: formContext,
-      ref: ref,
       ...props
     });
   }
   return jsx(Basic, {
-    ref: ref,
     ...props
+  });
+};
+
+/**
+ * Processes component props to extract and generate styles for layout, spacing, alignment, expansion, and typography.
+ * Returns remaining props and styled objects based on configuration.
+ *
+ * ```jsx
+ * const MyButton = (props) => {
+ *   const [remainingProps, style] = withPropsStyle(props, {
+ *     base: { padding: 10, backgroundColor: 'blue' },
+ *     layout: true, // Enable spacing, alignment, and expansion props
+ *     typo: true,   // Enable typography props
+ *   });
+ *   return <button style={style} {...remainingProps}>{props.children}</button>;
+ * };
+ *
+ * // Usage:
+ * <MyButton margin={10} expandX alignX="center" color="white">Click me</MyButton>
+ * <MyButton paddingX={20} bold style={{ border: '1px solid red' }}>Bold button</MyButton>
+ * ```
+ *
+ * ## Advanced: Multiple Style Objects
+ *
+ * You can generate additional style objects with different configurations:
+ *
+ * ```jsx
+ * const [remainingProps, mainStyle, layoutOnlyStyle] = withPropsStyle(props, {
+ *   base: { color: 'blue' },
+ *   layout: true,
+ *   typo: true,
+ * }, {
+ *   layout: true,  // Second style object with only layout styles
+ * });
+ * ```
+ *
+ * @param {object} props - Component props including style and layout props
+ * @param {object} config - Main configuration for which style categories to process
+ * @param {string|object} [config.base] - Base styles to apply first
+ * @param {boolean} [config.layout] - Enable all layout props (shorthand for spacing, align, expansion)
+ * @param {boolean} [config.spacing] - Enable margin/padding props
+ * @param {boolean} [config.align] - Enable alignment props (alignX, alignY)
+ * @param {boolean} [config.expansion] - Enable expansion props (expandX, expandY)
+ * @param {boolean} [config.typo] - Enable typography props (color, bold, italic, etc.)
+ * @param {...object} remainingConfig - Additional configuration objects for generating separate style objects
+ * @param {boolean|object} [remainingConfig.base] - Include base styles (true for main base, or custom base object)
+ * @param {boolean} [remainingConfig.style] - Include styles from props in this config
+ * @returns {array} [remainingProps, mainStyle, ...additionalStyles] - Non-style props and style objects
+ */
+
+const normalizeSpacingStyle = (value, property = "padding") => {
+  const cssSize = sizeSpacingScale[value];
+  return cssSize || normalizeStyle(value, property, "css");
+};
+const normalizeTypoStyle = (value, property = "fontSize") => {
+  const cssSize = sizeTypoScale[value];
+  return cssSize || normalizeStyle(value, property, "css");
+};
+const normalizeCssStyle = (value, property) => {
+  return normalizeStyle(value, property, "css");
+};
+
+const PASS_THROUGH = { name: "pass_through" };
+const applyOnCSSProp = (cssStyle) => {
+  return (value) => {
+    return { [cssStyle]: value };
+  };
+};
+const applyOnTwoCSSProps = (cssStyleA, cssStyleB) => {
+  return (value) => {
+    return {
+      [cssStyleA]: value,
+      [cssStyleB]: value,
+    };
+  };
+};
+const applyToCssPropWhenTruthy = (
+  cssProp,
+  cssPropValue,
+  cssPropValueOtherwise,
+) => {
+  return (value) => {
+    if (!value) {
+      if (cssPropValueOtherwise === undefined) {
+        return null;
+      }
+      if (value === undefined) {
+        return null;
+      }
+      return { [cssProp]: cssPropValueOtherwise };
+    }
+    return { [cssProp]: cssPropValue };
+  };
+};
+const applyOnTwoProps = (propA, propB) => {
+  return (value, context) => {
+    const firstProp = All_PROPS[propA];
+    const secondProp = All_PROPS[propB];
+    const firstPropResult = firstProp(value, context);
+    const secondPropResult = secondProp(value, context);
+    if (firstPropResult && secondPropResult) {
+      return {
+        ...firstPropResult,
+        ...secondPropResult,
+      };
+    }
+    return firstPropResult || secondPropResult;
+  };
+};
+
+const OUTER_SPACING_PROPS = {
+  margin: PASS_THROUGH,
+  marginLeft: PASS_THROUGH,
+  marginRight: PASS_THROUGH,
+  marginTop: PASS_THROUGH,
+  marginBottom: PASS_THROUGH,
+  marginX: applyOnTwoCSSProps("marginLeft", "marginRight"),
+  marginY: applyOnTwoCSSProps("marginTop", "marginBottom"),
+};
+const INNER_SPACING_PROPS = {
+  padding: PASS_THROUGH,
+  paddingLeft: PASS_THROUGH,
+  paddingRight: PASS_THROUGH,
+  paddingTop: PASS_THROUGH,
+  paddingBottom: PASS_THROUGH,
+  paddingX: applyOnTwoCSSProps("paddingLeft", "paddingRight"),
+  paddingY: applyOnTwoCSSProps("paddingTop", "paddingBottom"),
+};
+const DIMENSION_PROPS = {
+  width: PASS_THROUGH,
+  minWidth: PASS_THROUGH,
+  maxWidth: PASS_THROUGH,
+  height: PASS_THROUGH,
+  minHeight: PASS_THROUGH,
+  maxHeight: PASS_THROUGH,
+  expand: applyOnTwoProps("expandX", "expandY"),
+  shrink: applyOnTwoProps("shrinkX", "shrinkY"),
+  // apply after width/height to override if both are set
+  expandX: (value, { parentLayout }) => {
+    if (!value) {
+      return null;
+    }
+    if (parentLayout === "column" || parentLayout === "inline-column") {
+      return { flexGrow: 1 }; // Grow horizontally in row
+    }
+    if (parentLayout === "row") {
+      return { minWidth: "100%" }; // Take full width in column
+    }
+    return { minWidth: "100%" }; // Take full width outside flex
+  },
+  expandY: (value, { parentLayout }) => {
+    if (!value) {
+      return null;
+    }
+    if (parentLayout === "column") {
+      return { minHeight: "100%" }; // Make column full height
+    }
+    if (parentLayout === "row" || parentLayout === "inline-row") {
+      return { flexGrow: 1 }; // Make row full height
+    }
+    return { minHeight: "100%" }; // Take full height outside flex
+  },
+  shrinkX: (value, { parentLayout }) => {
+    if (!value) {
+      return null;
+    }
+    if (parentLayout === "row" || parentLayout === "inline-row") {
+      return { flexShrink: 1 };
+    }
+    return { maxWidth: "100%" };
+  },
+  shrinkY: (value, { parentLayout }) => {
+    if (!value) {
+      return null;
+    }
+    if (parentLayout === "column" || parentLayout === "inline-column") {
+      return { flexShrink: 1 };
+    }
+    return { maxHeight: "100%" };
+  },
+};
+const POSITION_PROPS = {
+  // For row, alignX uses auto margins for positioning
+  // NOTE: Auto margins only work effectively for positioning individual items.
+  // When multiple adjacent items have the same auto margin alignment (e.g., alignX="end"),
+  // only the first item will be positioned as expected because subsequent items
+  // will be positioned relative to the previous item's margins, not the container edge.
+  alignX: (value, { parentLayout }) => {
+    const insideRowLayout =
+      parentLayout === "row" || parentLayout === "inline-row";
+
+    if (value === "start") {
+      if (insideRowLayout) {
+        return { alignSelf: "start" };
+      }
+      return { marginRight: "auto" };
+    }
+    if (value === "end") {
+      if (insideRowLayout) {
+        return { alignSelf: "end" };
+      }
+      return { marginLeft: "auto" };
+    }
+    if (value === "center") {
+      if (insideRowLayout) {
+        return { alignSelf: "center" };
+      }
+      return { marginLeft: "auto", marginRight: "auto" };
+    }
+    if (insideRowLayout && value !== "stretch") {
+      return { alignSelf: value };
+    }
+    return undefined;
+  },
+  alignY: (value, { parentLayout }) => {
+    const inlineColumnLayout =
+      parentLayout === "column" || parentLayout === "inline-column";
+
+    if (value === "start") {
+      if (inlineColumnLayout) {
+        return undefined; // this is the default
+      }
+      return { marginBottom: "auto" };
+    }
+    if (value === "center") {
+      if (inlineColumnLayout) {
+        return { alignSelf: "center" };
+      }
+      return { marginTop: "auto", marginBottom: "auto" };
+    }
+    if (value === "end") {
+      if (inlineColumnLayout) {
+        return { alignSelf: "end" };
+      }
+      return { marginTop: "auto" };
+    }
+    return undefined;
+  },
+  left: PASS_THROUGH,
+  top: PASS_THROUGH,
+};
+const TYPO_PROPS = {
+  size: applyOnCSSProp("fontSize"),
+  fontSize: PASS_THROUGH,
+  bold: applyToCssPropWhenTruthy("fontWeight", "bold", "normal"),
+  think: applyToCssPropWhenTruthy("fontWeight", "thin", "normal"),
+  italic: applyToCssPropWhenTruthy("fontStyle", "italic", "normal"),
+  underline: applyToCssPropWhenTruthy("textDecoration", "underline", "none"),
+  underlineStyle: applyOnCSSProp("textDecorationStyle"),
+  underlineColor: applyOnCSSProp("textDecorationColor"),
+  textShadow: PASS_THROUGH,
+  lineHeight: PASS_THROUGH,
+  color: PASS_THROUGH,
+  noWrap: applyToCssPropWhenTruthy("whiteSpace", "nowrap", "normal"),
+  pre: applyToCssPropWhenTruthy("whiteSpace", "pre", "normal"),
+  preWrap: applyToCssPropWhenTruthy("whiteSpace", "pre-wrap", "normal"),
+};
+const VISUAL_PROPS = {
+  boxShadow: PASS_THROUGH,
+  background: PASS_THROUGH,
+  backgroundColor: PASS_THROUGH,
+  backgroundImage: PASS_THROUGH,
+  backgroundSize: PASS_THROUGH,
+  border: PASS_THROUGH,
+  borderTop: PASS_THROUGH,
+  borderLeft: PASS_THROUGH,
+  borderRight: PASS_THROUGH,
+  borderBottom: PASS_THROUGH,
+  borderWidth: PASS_THROUGH,
+  borderRadius: PASS_THROUGH,
+  borderColor: PASS_THROUGH,
+  borderStyle: PASS_THROUGH,
+  opacity: PASS_THROUGH,
+  filter: PASS_THROUGH,
+  cursor: PASS_THROUGH,
+};
+const CONTENT_PROPS = {
+  contentAlignX: (value, { layout }) => {
+    if (layout === "row" || layout === "inline-row") {
+      if (value === "stretch") {
+        return undefined; // this is the default
+      }
+      return { alignItems: value };
+    }
+    if (layout === "column" || layout === "inline-column") {
+      if (value === "start") {
+        return undefined; // this is the default
+      }
+      return { justifyContent: value };
+    }
+    if (layout === "inline-block" || layout === "table-cell") {
+      if (value === "start") {
+        return undefined; // this is the default
+      }
+      return { textAlign: value };
+    }
+    return undefined;
+  },
+  contentAlignY: (value, { layout }) => {
+    if (layout === "row" || layout === "inline-row") {
+      if (value === "start") {
+        return undefined;
+      }
+      return {
+        justifyContent: value,
+      };
+    }
+    if (layout === "column" || layout === "inline-column") {
+      if (value === "stretch") {
+        return undefined;
+      }
+      return { alignItems: value };
+    }
+    if (layout === "inline-block" || layout === "table-cell") {
+      if (value === "start") {
+        return undefined;
+      }
+      return { verticalAlign: value };
+    }
+    return undefined;
+  },
+  contentSpacing: (value, { layout }) => {
+    if (
+      layout === "row" ||
+      layout === "column"
+      // layout === "inline-row" ||
+      // layout === "inline-column"
+    ) {
+      return {
+        gap: resolveSpacingSize(value, "gap"),
+      };
+    }
+    return undefined;
+  },
+};
+const All_PROPS = {
+  ...OUTER_SPACING_PROPS,
+  ...INNER_SPACING_PROPS,
+  ...DIMENSION_PROPS,
+  ...POSITION_PROPS,
+  ...TYPO_PROPS,
+  ...VISUAL_PROPS,
+  ...CONTENT_PROPS,
+};
+const OUTER_SPACING_PROP_NAME_SET = new Set(Object.keys(OUTER_SPACING_PROPS));
+const INNER_SPACING_PROP_NAME_SET = new Set(Object.keys(INNER_SPACING_PROPS));
+const DIMENSION_PROP_NAME_SET = new Set(Object.keys(DIMENSION_PROPS));
+const POSITION_PROP_NAME_SET = new Set(Object.keys(POSITION_PROPS));
+const TYPO_PROP_NAME_SET = new Set(Object.keys(TYPO_PROPS));
+const VISUAL_PROP_NAME_SET = new Set(Object.keys(VISUAL_PROPS));
+const CONTENT_PROP_NAME_SET = new Set(Object.keys(CONTENT_PROPS));
+const STYLE_PROP_NAME_SET = new Set(Object.keys(All_PROPS));
+
+const HANDLED_BY_VISUAL_CHILD_PROP_SET = new Set([
+  ...INNER_SPACING_PROP_NAME_SET,
+  ...VISUAL_PROP_NAME_SET,
+  ...CONTENT_PROP_NAME_SET,
+]);
+const COPIED_ON_VISUAL_CHILD_PROP_SET = new Set([
+  "expand",
+  "shrink",
+  "expandX",
+  "expandY",
+  "contentAlignX",
+  "contentAlignY",
+]);
+
+const isStyleProp = (name) => STYLE_PROP_NAME_SET.has(name);
+
+const getStylePropGroup = (name) => {
+  if (OUTER_SPACING_PROP_NAME_SET.has(name)) {
+    return "margin";
+  }
+  if (INNER_SPACING_PROP_NAME_SET.has(name)) {
+    return "padding";
+  }
+  if (DIMENSION_PROP_NAME_SET.has(name)) {
+    return "dimension";
+  }
+  if (POSITION_PROP_NAME_SET.has(name)) {
+    return "position";
+  }
+  if (TYPO_PROP_NAME_SET.has(name)) {
+    return "typo";
+  }
+  if (VISUAL_PROP_NAME_SET.has(name)) {
+    return "visual";
+  }
+  if (CONTENT_PROP_NAME_SET.has(name)) {
+    return "content";
+  }
+  return null;
+};
+const getNormalizer = (key) => {
+  const group = getStylePropGroup(key);
+  if (group === "margin" || group === "padding") {
+    return normalizeSpacingStyle;
+  }
+  if (group === "typo") {
+    return normalizeTypoStyle;
+  }
+  return normalizeCssStyle;
+};
+
+const assignStyle = (
+  styleObject,
+  propValue,
+  propName,
+  styleContext,
+  normalizer = getNormalizer(propName),
+) => {
+  if (propValue === undefined) {
+    return;
+  }
+  const { managedByCSSVars } = styleContext;
+  if (!managedByCSSVars) {
+    throw new Error("managedByCSSVars is required in styleContext");
+  }
+  const getStyle = All_PROPS[propName];
+  if (
+    getStyle === PASS_THROUGH ||
+    // style not listed can be passed through as-is (accentColor, zIndex, ...)
+    getStyle === undefined
+  ) {
+    const cssValue = normalizer(propValue, propName);
+    const cssVar = managedByCSSVars[propName];
+    if (cssVar) {
+      styleObject[cssVar] = cssValue;
+    } else {
+      styleObject[propName] = cssValue;
+    }
+    return;
+  }
+  const values = getStyle(propValue, styleContext);
+  if (!values) {
+    return;
+  }
+  for (const key of Object.keys(values)) {
+    const value = values[key];
+    const cssValue = normalizer(value, key);
+    const cssVar = managedByCSSVars[key];
+    if (cssVar) {
+      styleObject[cssVar] = cssValue;
+    } else {
+      styleObject[key] = cssValue;
+    }
+  }
+};
+
+// Unified design scale using t-shirt sizes with rem units for accessibility.
+// This scale is used for spacing to create visual harmony
+// and consistent proportions throughout the design system.
+const sizeSpacingScale = {
+  xxs: "0.125em", // 0.125 = 2px at 16px base
+  xs: "0.25em", // 0.25 = 4px at 16px base
+  sm: "0.5em", // 0.5 = 8px at 16px base
+  md: "1em", // 1 = 16px at 16px base (base font size)
+  lg: "1.5em", // 1.5 = 24px at 16px base
+  xl: "2em", // 2 = 32px at 16px base
+  xxl: "3em", // 3 = 48px at 16px base
+};
+const resolveSpacingSize = (
+  size,
+  property = "padding",
+  context = "css",
+) => {
+  return normalizeStyle(sizeSpacingScale[size] || size, property, context);
+};
+
+const sizeTypoScale = {
+  xxs: "0.625em", // 0.625 = 10px at 16px base (smaller than before for more range)
+  xs: "0.75em", // 0.75 = 12px at 16px base
+  sm: "0.875em", // 0.875 = 14px at 16px base
+  md: "1em", // 1 = 16px at 16px base (base font size)
+  lg: "1.125em", // 1.125 = 18px at 16px base
+  xl: "1.25em", // 1.25 = 20px at 16px base
+  xxl: "1.5em", // 1.5 = 24px at 16px base
+};
+
+const DEFAULT_DISPLAY_BY_TAG_NAME = {
+  "inline": new Set([
+    "a",
+    "abbr",
+    "b",
+    "bdi",
+    "bdo",
+    "br",
+    "button",
+    "cite",
+    "code",
+    "dfn",
+    "em",
+    "i",
+    "kbd",
+    "label",
+    "mark",
+    "q",
+    "s",
+    "samp",
+    "small",
+    "span",
+    "strong",
+    "sub",
+    "sup",
+    "time",
+    "u",
+    "var",
+    "wbr",
+    "area",
+    "audio",
+    "img",
+    "map",
+    "track",
+    "video",
+    "embed",
+    "iframe",
+    "object",
+    "picture",
+    "portal",
+    "source",
+    "svg",
+    "math",
+    "input",
+    "meter",
+    "output",
+    "progress",
+    "select",
+    "textarea",
+  ]),
+  "block": new Set([
+    "address",
+    "article",
+    "aside",
+    "blockquote",
+    "div",
+    "dl",
+    "fieldset",
+    "figure",
+    "footer",
+    "form",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "header",
+    "hr",
+    "main",
+    "nav",
+    "ol",
+    "p",
+    "pre",
+    "section",
+    "table",
+    "ul",
+    "video",
+    "canvas",
+    "details",
+    "dialog",
+    "dd",
+    "dt",
+    "figcaption",
+    "li",
+    "summary",
+    "caption",
+    "colgroup",
+    "tbody",
+    "td",
+    "tfoot",
+    "th",
+    "thead",
+    "tr",
+  ]),
+  "inline-block": new Set([
+    "button",
+    "input",
+    "select",
+    "textarea",
+    "img",
+    "video",
+    "audio",
+    "canvas",
+    "embed",
+    "iframe",
+    "object",
+  ]),
+  "table-cell": new Set(["td", "th"]),
+  "table-row": new Set(["tr"]),
+  "list-item": new Set(["li"]),
+  "none": new Set([
+    "head",
+    "meta",
+    "title",
+    "link",
+    "style",
+    "script",
+    "noscript",
+    "template",
+    "slot",
+  ]),
+};
+
+// Create a reverse map for quick lookup: tagName -> display value
+const TAG_NAME_TO_DEFAULT_DISPLAY = new Map();
+for (const display of Object.keys(DEFAULT_DISPLAY_BY_TAG_NAME)) {
+  const displayTagnameSet = DEFAULT_DISPLAY_BY_TAG_NAME[display];
+  for (const tagName of displayTagnameSet) {
+    TAG_NAME_TO_DEFAULT_DISPLAY.set(tagName, display);
+  }
+}
+
+/**
+ * Get the default CSS display value for a given HTML tag name
+ * @param {string} tagName - The HTML tag name (case-insensitive)
+ * @returns {string} The default display value ("block", "inline", "inline-block", etc.) or "inline" as fallback
+ * @example
+ * getDefaultDisplay("div")      // "block"
+ * getDefaultDisplay("span")     // "inline"
+ * getDefaultDisplay("img")      // "inline-block"
+ * getDefaultDisplay("unknown")  // "inline" (fallback)
+ */
+const getDefaultDisplay = (tagName) => {
+  const normalizedTagName = tagName.toLowerCase();
+  return TAG_NAME_TO_DEFAULT_DISPLAY.get(normalizedTagName) || "inline";
+};
+
+const BoxLayoutContext = createContext();
+
+const PSEUDO_CLASSES = {
+  ":hover": {
+    attribute: "data-hover",
+    setup: (el, callback) => {
+      el.addEventListener("mouseenter", callback);
+      el.addEventListener("mouseleave", callback);
+      return () => {
+        el.removeEventListener("mouseenter", callback);
+        el.removeEventListener("mouseleave", callback);
+      };
+    },
+    test: (el) => el.matches(":hover"),
+  },
+  ":active": {
+    attribute: "data-active",
+    setup: (el, callback) => {
+      el.addEventListener("mousedown", callback);
+      document.addEventListener("mouseup", callback);
+      return () => {
+        el.removeEventListener("mousedown", callback);
+        document.removeEventListener("mouseup", callback);
+      };
+    },
+    test: (el) => el.matches(":active"),
+  },
+  ":visited": {
+    attribute: "data-visited",
+  },
+  ":checked": {
+    attribute: "data-checked",
+    setup: (el, callback) => {
+      if (el.type === "checkbox") {
+        // Listen to user interactions
+        el.addEventListener("input", callback);
+        // Intercept programmatic changes to .checked property
+        const originalDescriptor = Object.getOwnPropertyDescriptor(
+          HTMLInputElement.prototype,
+          "checked",
+        );
+        Object.defineProperty(el, "checked", {
+          get: originalDescriptor.get,
+          set(value) {
+            originalDescriptor.set.call(this, value);
+            callback();
+          },
+          configurable: true,
+        });
+        return () => {
+          // Restore original property descriptor
+          Object.defineProperty(el, "checked", originalDescriptor);
+          el.removeEventListener("input", callback);
+        };
+      }
+      if (el.type === "radio") {
+        // Listen to changes on the radio group
+        const radioSet =
+          el.closest("[data-radio-list], fieldset, form") || document;
+        radioSet.addEventListener("input", callback);
+
+        // Intercept programmatic changes to .checked property
+        const originalDescriptor = Object.getOwnPropertyDescriptor(
+          HTMLInputElement.prototype,
+          "checked",
+        );
+        Object.defineProperty(el, "checked", {
+          get: originalDescriptor.get,
+          set(value) {
+            originalDescriptor.set.call(this, value);
+            callback();
+          },
+          configurable: true,
+        });
+        return () => {
+          radioSet.removeEventListener("input", callback);
+          // Restore original property descriptor
+          Object.defineProperty(el, "checked", originalDescriptor);
+        };
+      }
+      if (el.tagName === "INPUT") {
+        el.addEventListener("input", callback);
+        return () => {
+          el.removeEventListener("input", callback);
+        };
+      }
+      return () => {};
+    },
+    test: (el) => el.matches(":checked"),
+  },
+  ":focus": {
+    attribute: "data-focus",
+    setup: (el, callback) => {
+      el.addEventListener("focusin", callback);
+      el.addEventListener("focusout", callback);
+      return () => {
+        el.removeEventListener("focusin", callback);
+        el.removeEventListener("focusout", callback);
+      };
+    },
+    test: (el) => el.matches(":focus"),
+  },
+  ":focus-visible": {
+    attribute: "data-focus-visible",
+    setup: (el, callback) => {
+      document.addEventListener("keydown", callback);
+      document.addEventListener("keyup", callback);
+      return () => {
+        document.removeEventListener("keydown", callback);
+        document.removeEventListener("keyup", callback);
+      };
+    },
+    test: (el) => el.matches(":focus-visible"),
+  },
+  ":disabled": {
+    attribute: "data-disabled",
+    add: (el) => {
+      if (
+        el.tagName === "BUTTON" ||
+        el.tagName === "INPUT" ||
+        el.tagName === "SELECT" ||
+        el.tagName === "TEXTAREA"
+      ) {
+        el.disabled = true;
+      }
+    },
+    remove: (el) => {
+      if (
+        el.tagName === "BUTTON" ||
+        el.tagName === "INPUT" ||
+        el.tagName === "SELECT" ||
+        el.tagName === "TEXTAREA"
+      ) {
+        el.disabled = false;
+      }
+    },
+  },
+  ":read-only": {
+    attribute: "data-readonly",
+    add: (el) => {
+      if (
+        el.tagName === "INPUT" ||
+        el.tagName === "SELECT" ||
+        el.tagName === "TEXTAREA"
+      ) {
+        if (el.type === "checkbox" || el.type === "radio") {
+          // there is no readOnly for checkboxes/radios
+          return;
+        }
+        el.readOnly = true;
+      }
+    },
+    remove: (el) => {
+      if (
+        el.tagName === "INPUT" ||
+        el.tagName === "SELECT" ||
+        el.tagName === "TEXTAREA"
+      ) {
+        if (el.type === "checkbox" || el.type === "radio") {
+          // there is no readOnly for checkboxes/radios
+          return;
+        }
+        el.readOnly = false;
+      }
+    },
+  },
+  ":valid": {
+    attribute: "data-valid",
+    test: (el) => el.matches(":valid"),
+  },
+  ":invalid": {
+    attribute: "data-invalid",
+    test: (el) => el.matches(":invalid"),
+  },
+  ":-navi-loading": {
+    attribute: "data-loading",
+  },
+};
+
+const EMPTY_STATE = {};
+const initPseudoStyles = (
+  element,
+  {
+    pseudoClasses,
+    pseudoState, // ":disabled", ":read-only", ":-navi-loading", etc...
+    effect,
+    elementToImpact = element,
+  },
+) => {
+  if (!pseudoClasses || pseudoClasses.length === 0) {
+    effect?.(EMPTY_STATE);
+    return () => {};
+  }
+
+  const [teardown, addTeardown] = createPubSub();
+
+  let state;
+  const checkPseudoClasses = () => {
+    let someChange = false;
+    const currentState = {};
+    for (const pseudoClass of pseudoClasses) {
+      const pseudoClassDefinition = PSEUDO_CLASSES[pseudoClass];
+      let currentValue;
+      if (
+        pseudoState &&
+        Object.hasOwn(pseudoState, pseudoClass) &&
+        pseudoState[pseudoClass] !== undefined
+      ) {
+        currentValue = pseudoState[pseudoClass];
+      } else {
+        const { test } = pseudoClassDefinition;
+        if (test) {
+          currentValue = test(element, pseudoState);
+        }
+      }
+      currentState[pseudoClass] = currentValue;
+      const oldValue = state ? state[pseudoClass] : undefined;
+      if (oldValue !== currentValue) {
+        someChange = true;
+        const { attribute, add, remove } = pseudoClassDefinition;
+        if (currentValue) {
+          if (attribute) {
+            elementToImpact.setAttribute(attribute, "");
+          }
+          add?.(element);
+        } else {
+          if (attribute) {
+            elementToImpact.removeAttribute(attribute);
+          }
+          remove?.(element);
+        }
+      }
+    }
+    if (!someChange) {
+      return;
+    }
+    effect?.(currentState, state);
+    state = currentState;
+  };
+
+  for (const pseudoClass of pseudoClasses) {
+    const pseudoClassDefinition = PSEUDO_CLASSES[pseudoClass];
+    if (!pseudoClassDefinition) {
+      throw new Error(`Unknown pseudo class: ${pseudoClass}`);
+    }
+    const { setup } = pseudoClassDefinition;
+    if (setup) {
+      const cleanup = setup(element, () => {
+        checkPseudoClasses();
+      });
+      addTeardown(cleanup);
+    }
+  }
+  checkPseudoClasses();
+  // just in case + catch use forcing them in chrome devtools
+  const interval = setInterval(() => {
+    checkPseudoClasses();
+  }, 300);
+  addTeardown(() => {
+    clearInterval(interval);
+  });
+
+  return teardown;
+};
+
+const applyStyle = (element, style, pseudoState, pseudoNamedStyles) => {
+  if (!element) {
+    return;
+  }
+  updateStyle(element, getStyleToApply(style, pseudoState, pseudoNamedStyles));
+};
+
+const getStyleToApply = (styles, pseudoState, pseudoNamedStyles) => {
+  if (!pseudoState || !pseudoNamedStyles) {
+    return styles;
+  }
+
+  const isMatching = (pseudoKey) => {
+    if (pseudoKey.startsWith("::")) {
+      const nextColonIndex = pseudoKey.indexOf(":", 2);
+      if (nextColonIndex === -1) {
+        return true;
+      }
+      // Handle pseudo-elements with states like "::-navi-loader:checked:disabled"
+      const pseudoStatesString = pseudoKey.slice(nextColonIndex);
+      return isMatching(pseudoStatesString);
+    }
+    const nextColonIndex = pseudoKey.indexOf(":", 1);
+    if (nextColonIndex === -1) {
+      return pseudoState[pseudoKey];
+    }
+    // Handle compound pseudo-states like ":checked:disabled"
+    return pseudoKey
+      .slice(1)
+      .split(":")
+      .every((state) => pseudoState[state]);
+  };
+
+  const styleToAddSet = new Set();
+  for (const pseudoKey of Object.keys(pseudoNamedStyles)) {
+    if (isMatching(pseudoKey)) {
+      const stylesToApply = pseudoNamedStyles[pseudoKey];
+      styleToAddSet.add(stylesToApply);
+    }
+  }
+  if (styleToAddSet.size === 0) {
+    return styles;
+  }
+  let style = styles || {};
+  for (const styleToAdd of styleToAddSet) {
+    style = mergeTwoStyles(style, styleToAdd);
+  }
+  return style;
+};
+
+const styleKeySetWeakMap = new WeakMap();
+const updateStyle = (element, style) => {
+  const previousStyleKeySet = styleKeySetWeakMap.get(element);
+  const styleKeySet = new Set(style ? Object.keys(style) : []);
+  if (!previousStyleKeySet) {
+    for (const key of styleKeySet) {
+      if (key.startsWith("--")) {
+        element.style.setProperty(key, style[key]);
+      } else {
+        element.style[key] = style[key];
+      }
+    }
+    styleKeySetWeakMap.set(element, styleKeySet);
+    return;
+  }
+  const toDeleteKeySet = new Set(previousStyleKeySet);
+  for (const key of styleKeySet) {
+    toDeleteKeySet.delete(key);
+    if (key.startsWith("--")) {
+      element.style.setProperty(key, style[key]);
+    } else {
+      element.style[key] = style[key];
+    }
+  }
+  for (const toDeleteKey of toDeleteKeySet) {
+    element.style.removeProperty(toDeleteKey);
+  }
+  styleKeySetWeakMap.set(element, styleKeySet);
+  return;
+};
+
+/**
+ * Merges a component's base className with className received from props.
+ *
+ * ```jsx
+ * const MyButton = ({ className, children }) => (
+ *   <button className={withPropsClassName("btn", className)}>
+ *     {children}
+ *   </button>
+ * );
+ *
+ * // Usage:
+ * <MyButton className="primary large" /> // Results in "btn primary large"
+ * <MyButton /> // Results in "btn"
+ * ```
+ *
+ * @param {string} baseClassName - The component's base CSS class name
+ * @param {string} [classNameFromProps] - Additional className from props (optional)
+ * @returns {string} The merged className string
+ */
+const withPropsClassName = (baseClassName, classNameFromProps) => {
+  if (!classNameFromProps) {
+    return baseClassName;
+  }
+
+  // Trim and normalize whitespace from the props className
+  const trimmedPropsClassName = classNameFromProps.trim();
+  if (!trimmedPropsClassName) {
+    return baseClassName;
+  }
+
+  // Normalize multiple spaces to single spaces and combine
+  const normalizedPropsClassName = trimmedPropsClassName.replace(/\s+/g, " ");
+  if (!baseClassName) {
+    return normalizedPropsClassName;
+  }
+  return `${baseClassName} ${normalizedPropsClassName}`;
+};
+
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  [data-layout-inline] {
+    display: inline;
+  }
+
+  [data-layout-row] {
+    display: flex;
+    flex-direction: column;
+  }
+
+  [data-layout-column] {
+    display: flex;
+    flex-direction: row;
+  }
+
+  [data-layout-row] > *,
+  [data-layout-column] > * {
+    flex-shrink: 0;
+  }
+
+  [data-layout-inline][data-layout-row],
+  [data-layout-inline][data-layout-column] {
+    display: inline-flex;
+  }
+`;
+const PSEUDO_CLASSES_DEFAULT = [];
+const PSEUDO_ELEMENTS_DEFAULT = [];
+const MANAGED_BY_CSS_VARS_DEFAULT = {};
+const Box = props => {
+  const {
+    as = "div",
+    layoutRow,
+    layoutColumn,
+    layoutInline,
+    baseClassName,
+    className,
+    baseStyle,
+    // style management
+    style,
+    managedByCSSVars = MANAGED_BY_CSS_VARS_DEFAULT,
+    basePseudoState,
+    pseudoState,
+    // for demo purposes it's possible to control pseudo state from props
+    pseudoClasses = PSEUDO_CLASSES_DEFAULT,
+    pseudoElements = PSEUDO_ELEMENTS_DEFAULT,
+    pseudoStyle,
+    // visualSelector convey the following:
+    // The box itself is visually "invisible", one of its descendant is responsible for visual representation
+    // - Some styles will be used on the box itself (for instance margins)
+    // - Some styles will be used on the visual element (for instance paddings, backgroundColor)
+    // -> introduced for <Button /> with transform:scale on press
+    visualSelector,
+    // pseudoStateSelector convey the following:
+    // The box contains content that holds pseudoState
+    // -> introduced for <Input /> with a wrapped for loading, checkboxes, etc
+    pseudoStateSelector,
+    hasChildFunction,
+    children,
+    ...rest
+  } = props;
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
+  const TagName = as;
+  let layout;
+  if (layoutInline) {
+    if (layoutRow) {
+      layout = "inline-row";
+    } else if (layoutColumn) {
+      layout = "inline-column";
+    } else {
+      layout = "inline";
+    }
+  } else if (layoutRow) {
+    layout = "row";
+  } else if (layoutColumn) {
+    layout = "column";
+  } else {
+    layout = getDefaultDisplay(TagName);
+  }
+  const innerClassName = withPropsClassName(baseClassName, className);
+  const remainingProps = {};
+  {
+    const parentLayout = useContext(BoxLayoutContext);
+    const innerPseudoState = basePseudoState && pseudoState ? {
+      ...basePseudoState,
+      ...pseudoState
+    } : basePseudoState;
+    const styleContext = {
+      parentLayout,
+      layout,
+      managedByCSSVars,
+      pseudoState: innerPseudoState,
+      pseudoClasses,
+      pseudoElements
+    };
+    const styleDeps = [
+    // Layout and alignment props
+    parentLayout, layout,
+    // Style context dependencies
+    managedByCSSVars, pseudoClasses, pseudoElements,
+    // Selectors
+    visualSelector, pseudoStateSelector];
+    const boxStyles = {};
+    if (baseStyle) {
+      for (const key of baseStyle) {
+        const value = baseStyle[key];
+        styleDeps.push(value);
+        assignStyle(boxStyles, value, key, styleContext);
+      }
+    }
+    const stylingKeyCandidateArray = Object.keys(rest);
+    const assignStyleFromProp = (propValue, propName, stylesTarget, context) => {
+      const propEffect = getPropEffect(propName);
+      if (propEffect === "ignore") {
+        return;
+      }
+      if (propEffect === "forward" || propEffect === "style_and_forward") {
+        if (stylesTarget === boxStyles) {
+          remainingProps[propName] = propValue;
+        }
+        if (propEffect === "forward") {
+          return;
+        }
+      }
+      styleDeps.push(propValue);
+      assignStyle(stylesTarget, propValue, propName, context);
+    };
+    const getPropEffect = propName => {
+      if (visualSelector) {
+        if (HANDLED_BY_VISUAL_CHILD_PROP_SET.has(propName)) {
+          return "forward";
+        }
+        if (COPIED_ON_VISUAL_CHILD_PROP_SET.has(propName)) {
+          return "style_and_forward";
+        }
+      }
+      return isStyleProp(propName) ? "style" : "forward";
+    };
+    for (const key of stylingKeyCandidateArray) {
+      if (key === "ref") {
+        // some props not destructured but that are neither
+        // style props, nor should be forwarded to the child
+        continue;
+      }
+      const value = rest[key];
+      assignStyleFromProp(value, key, boxStyles, styleContext);
+    }
+    const pseudoNamedStyles = {};
+    if (pseudoStyle) {
+      for (const key of Object.keys(pseudoStyle)) {
+        const pseudoStyleContext = {
+          ...styleContext,
+          managedByCSSVars: {
+            ...managedByCSSVars,
+            ...managedByCSSVars[key]
+          },
+          pseudoName: key
+        };
+
+        // pseudo class
+        if (key.startsWith(":")) {
+          styleDeps.push(key);
+          const pseudoClassStyles = {};
+          const pseudoClassStyle = pseudoStyle[key];
+          for (const pseudoClassStyleKey of Object.keys(pseudoClassStyle)) {
+            const pseudoClassStyleValue = pseudoClassStyle[pseudoClassStyleKey];
+            assignStyleFromProp(pseudoClassStyleValue, pseudoClassStyleKey, pseudoClassStyles, pseudoStyleContext);
+          }
+          pseudoNamedStyles[key] = pseudoClassStyles;
+          continue;
+        }
+        // pseudo element
+        if (key.startsWith("::")) {
+          styleDeps.push(key);
+          const pseudoElementStyles = {};
+          const pseudoElementStyle = pseudoStyle[key];
+          for (const pseudoElementStyleKey of Object.keys(pseudoElementStyle)) {
+            const pseudoElementStyleValue = pseudoElementStyle[pseudoElementStyleKey];
+            assignStyleFromProp(pseudoElementStyleValue, pseudoElementStyleKey, pseudoElementStyles, pseudoStyleContext);
+          }
+          pseudoNamedStyles[key] = pseudoElementStyles;
+          continue;
+        }
+        console.warn(`unsupported pseudo style key "${key}"`);
+      }
+      remainingProps.pseudoStyle = pseudoStyle;
+      // TODO: we should also pass pseudoState right?
+    }
+    if (typeof style === "string") {
+      appendStyles(boxStyles, normalizeStyles(style, "css"), "css");
+      styleDeps.push(style); // impact box style -> add to deps
+    } else if (style && typeof style === "object") {
+      for (const key of Object.keys(style)) {
+        const stylePropValue = style[key];
+        assignStyle(boxStyles, stylePropValue, key, styleContext);
+        styleDeps.push(stylePropValue); // impact box style -> add to deps
+      }
+    }
+    const updateStyle = useCallback(state => {
+      const boxEl = ref.current;
+      applyStyle(boxEl, boxStyles, state, pseudoNamedStyles);
+    }, styleDeps);
+    const finalStyleDeps = [pseudoStateSelector, innerPseudoState, updateStyle];
+    // By default ":hover", ":active" are not tracked.
+    // But is code explicitely do something like:
+    // pseudoStyle={{ ":hover": { backgroundColor: "red" } }}
+    // then we'll track ":hover" state changes even for basic elements like <div>
+    let innerPseudoClasses;
+    if (pseudoStyle) {
+      innerPseudoClasses = [...pseudoClasses];
+      if (pseudoClasses !== PSEUDO_CLASSES_DEFAULT) {
+        finalStyleDeps.push(...pseudoClasses);
+      }
+      for (const key of Object.keys(pseudoStyle)) {
+        if (key.startsWith(":") && !innerPseudoClasses.includes(key)) {
+          innerPseudoClasses.push(key);
+          finalStyleDeps.push(key);
+        }
+      }
+    } else {
+      innerPseudoClasses = pseudoClasses;
+      if (pseudoClasses !== PSEUDO_CLASSES_DEFAULT) {
+        finalStyleDeps.push(...pseudoClasses);
+      }
+    }
+    useLayoutEffect(() => {
+      const boxEl = ref.current;
+      if (!boxEl) {
+        return null;
+      }
+      const pseudoStateEl = pseudoStateSelector ? boxEl.querySelector(pseudoStateSelector) : boxEl;
+      return initPseudoStyles(pseudoStateEl, {
+        pseudoClasses: innerPseudoClasses,
+        pseudoState: innerPseudoState,
+        effect: updateStyle,
+        elementToImpact: boxEl
+      });
+    }, finalStyleDeps);
+  }
+
+  // When hasChildFunction is used it means
+  // Some/all the children needs to access remainingProps
+  // to render and will provide a function to do so.
+  let innerChildren;
+  if (hasChildFunction) {
+    if (Array.isArray(children)) {
+      innerChildren = children.map(child => typeof child === "function" ? child(remainingProps) : child);
+    } else if (typeof children === "function") {
+      innerChildren = children(remainingProps);
+    } else {
+      innerChildren = children;
+    }
+  } else {
+    innerChildren = children;
+  }
+  const shouldForwardAllToChild = visualSelector && pseudoStateSelector;
+  return jsx(TagName, {
+    ref: ref,
+    className: innerClassName,
+    "data-layout-inline": layoutInline ? "" : undefined,
+    "data-layout-row": layoutRow ? "" : undefined,
+    "data-layout-column": layoutColumn ? "" : undefined,
+    ...(shouldForwardAllToChild ? undefined : remainingProps),
+    children: jsx(BoxLayoutContext.Provider, {
+      value: layout,
+      children: innerChildren
+    })
+  });
+};
+const Layout = props => {
+  const {
+    row,
+    column,
+    ...rest
+  } = props;
+  if (row) {
+    return jsx(Box, {
+      layoutRow: true,
+      ...rest
+    });
+  }
+  if (column) {
+    return jsx(Box, {
+      layoutColumn: true,
+      ...rest
+    });
+  }
+  return jsx(Box, {
+    ...rest
   });
 };
 
@@ -9443,50 +10743,6 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     opacity: 1;
   }
 `;
-const LoadableInlineElement = forwardRef((props, ref) => {
-  const {
-    // background props
-    loading,
-    containerRef,
-    targetSelector,
-    color,
-    inset,
-    spacingTop,
-    spacingLeft,
-    spacingBottom,
-    spacingRight,
-    // other props
-    width,
-    height,
-    children,
-    ...rest
-  } = props;
-  return jsxs("span", {
-    ...rest,
-    ref: ref,
-    className: "navi_inline_wrapper",
-    style: {
-      ...rest.style,
-      ...(width ? {
-        width
-      } : {}),
-      ...(height ? {
-        height
-      } : {})
-    },
-    children: [jsx(LoaderBackground, {
-      loading,
-      containerRef,
-      targetSelector,
-      color,
-      inset,
-      spacingTop,
-      spacingLeft,
-      spacingBottom,
-      spacingRight
-    }), children]
-  });
-});
 const LoaderBackground = ({
   loading,
   containerRef,
@@ -9712,542 +10968,6 @@ const LoaderBackgroundBasic = ({
       })
     }), children]
   });
-};
-
-/**
- * Merges a component's base className with className received from props.
- *
- * ```jsx
- * const MyButton = ({ className, children }) => (
- *   <button className={withPropsClassName("btn", className)}>
- *     {children}
- *   </button>
- * );
- *
- * // Usage:
- * <MyButton className="primary large" /> // Results in "btn primary large"
- * <MyButton /> // Results in "btn"
- * ```
- *
- * @param {string} baseClassName - The component's base CSS class name
- * @param {string} [classNameFromProps] - Additional className from props (optional)
- * @returns {string} The merged className string
- */
-const withPropsClassName = (baseClassName, classNameFromProps) => {
-  if (!classNameFromProps) {
-    return baseClassName;
-  }
-
-  // Trim and normalize whitespace from the props className
-  const trimmedPropsClassName = classNameFromProps.trim();
-  if (!trimmedPropsClassName) {
-    return baseClassName;
-  }
-
-  // Normalize multiple spaces to single spaces and combine
-  const normalizedPropsClassName = trimmedPropsClassName.replace(/\s+/g, " ");
-  if (!baseClassName) {
-    return normalizedPropsClassName;
-  }
-  return `${baseClassName} ${normalizedPropsClassName}`;
-};
-
-const FlexDirectionContext = createContext();
-
-/**
- * Processes component props to extract and generate styles for layout, spacing, alignment, expansion, and typography.
- * Returns remaining props and styled objects based on configuration.
- *
- * ```jsx
- * const MyButton = (props) => {
- *   const [remainingProps, style] = withPropsStyle(props, {
- *     base: { padding: 10, backgroundColor: 'blue' },
- *     layout: true, // Enable spacing, alignment, and expansion props
- *     typo: true,   // Enable typography props
- *   });
- *   return <button style={style} {...remainingProps}>{props.children}</button>;
- * };
- *
- * // Usage:
- * <MyButton margin={10} expandX alignX="center" color="white">Click me</MyButton>
- * <MyButton paddingX={20} bold style={{ border: '1px solid red' }}>Bold button</MyButton>
- * ```
- *
- * ## Advanced: Multiple Style Objects
- *
- * You can generate additional style objects with different configurations:
- *
- * ```jsx
- * const [remainingProps, mainStyle, layoutOnlyStyle] = withPropsStyle(props, {
- *   base: { color: 'blue' },
- *   layout: true,
- *   typo: true,
- * }, {
- *   layout: true,  // Second style object with only layout styles
- * });
- * ```
- *
- * @param {object} props - Component props including style and layout props
- * @param {object} config - Main configuration for which style categories to process
- * @param {string|object} [config.base] - Base styles to apply first
- * @param {boolean} [config.layout] - Enable all layout props (shorthand for spacing, align, expansion)
- * @param {boolean} [config.spacing] - Enable margin/padding props
- * @param {boolean} [config.align] - Enable alignment props (alignX, alignY)
- * @param {boolean} [config.expansion] - Enable expansion props (expandX, expandY)
- * @param {boolean} [config.typo] - Enable typography props (color, bold, italic, etc.)
- * @param {...object} remainingConfig - Additional configuration objects for generating separate style objects
- * @param {boolean|object} [remainingConfig.base] - Include base styles (true for main base, or custom base object)
- * @param {boolean} [remainingConfig.style] - Include styles from props in this config
- * @returns {array} [remainingProps, mainStyle, ...additionalStyles] - Non-style props and style objects
- */
-const withPropsStyle = (
-  props,
-  {
-    base,
-    layout,
-    spacing = layout,
-    align = layout,
-    size = layout,
-    typo,
-    visual = true,
-  },
-  ...remainingConfig
-) => {
-  const flexDirection = useContext(FlexDirectionContext);
-  const {
-    // style from props
-    style,
-
-    // layout props
-    // layout/spacing
-    margin,
-    marginX,
-    marginY,
-    marginLeft,
-    marginRight,
-    marginTop,
-    marginBottom,
-    padding,
-    paddingX,
-    paddingY,
-    paddingLeft,
-    paddingRight,
-    paddingTop,
-    paddingBottom,
-    // layout/alignment
-    alignX,
-    alignY,
-    // layout/size
-    expand,
-    expandX = expand,
-    expandY = expand,
-    width,
-    minWidth,
-    maxWidth,
-    height,
-    minHeight,
-    maxHeight,
-
-    // typo props
-    textSize,
-    textBold,
-    textThin,
-    textItalic,
-    textUnderline,
-    textUnderlineStyle,
-    textUnderlineColor,
-    textColor,
-    textShadow,
-
-    // visual props
-    boxShadow,
-    background,
-    backgroundColor,
-    backgroundImage,
-    backgroundSize,
-    border,
-    borderWidth,
-    borderRadius,
-    borderColor,
-    borderStyle,
-    borderTop,
-    borderLeft,
-    borderRight,
-    borderBottom,
-    opacity,
-    filter,
-
-    // props not related to styling
-    ...remainingProps
-  } = props;
-
-  const hasRemainingConfig = remainingConfig.length > 0;
-  let propStyles;
-  let marginStyles;
-  let paddingStyles;
-  let alignmentStyles;
-  let sizeStyles;
-  let typoStyles;
-  let visualStyles;
-
-  props_styles: {
-    if (!style && !hasRemainingConfig) {
-      break props_styles;
-    }
-    propStyles = style ? normalizeStyles(style, "css") : {};
-  }
-  spacing_styles: {
-    if (!spacing && !hasRemainingConfig) {
-      break spacing_styles;
-    }
-    {
-      marginStyles = {};
-      if (margin !== undefined) {
-        marginStyles.margin = sizeSpacingScale[margin] || margin;
-      }
-      if (marginLeft !== undefined) {
-        marginStyles.marginLeft = sizeSpacingScale[marginLeft] || marginLeft;
-      } else if (marginX !== undefined) {
-        marginStyles.marginLeft = sizeSpacingScale[marginX] || marginX;
-      }
-      if (marginRight !== undefined) {
-        marginStyles.marginRight = sizeSpacingScale[marginRight] || marginRight;
-      } else if (marginX !== undefined) {
-        marginStyles.marginRight = sizeSpacingScale[marginX] || marginX;
-      }
-      if (marginTop !== undefined) {
-        marginStyles.marginTop = sizeSpacingScale[marginTop] || marginTop;
-      } else if (marginY !== undefined) {
-        marginStyles.marginTop = sizeSpacingScale[marginY] || marginY;
-      }
-      if (marginBottom !== undefined) {
-        marginStyles.marginBottom =
-          sizeSpacingScale[marginBottom] || marginBottom;
-      } else if (marginY !== undefined) {
-        marginStyles.marginBottom = sizeSpacingScale[marginY] || marginY;
-      }
-      normalizeStyles(marginStyles, "css", true);
-    }
-    {
-      paddingStyles = {};
-      if (padding !== undefined) {
-        paddingStyles.padding = sizeSpacingScale[padding] || padding;
-      }
-      if (paddingLeft !== undefined) {
-        paddingStyles.paddingLeft =
-          sizeSpacingScale[paddingLeft] || paddingLeft;
-      } else if (paddingX !== undefined) {
-        paddingStyles.paddingLeft = sizeSpacingScale[paddingX] || paddingX;
-      }
-      if (paddingRight !== undefined) {
-        paddingStyles.paddingRight =
-          sizeSpacingScale[paddingRight] || paddingRight;
-      } else if (paddingX !== undefined) {
-        paddingStyles.paddingRight = sizeSpacingScale[paddingX] || paddingX;
-      }
-      if (paddingTop !== undefined) {
-        paddingStyles.paddingTop = sizeSpacingScale[paddingTop] || paddingTop;
-      } else if (paddingY !== undefined) {
-        paddingStyles.paddingTop = sizeSpacingScale[paddingY] || paddingY;
-      }
-      if (paddingBottom !== undefined) {
-        paddingStyles.paddingBottom =
-          sizeSpacingScale[paddingBottom] || paddingBottom;
-      } else if (paddingY !== undefined) {
-        paddingStyles.paddingBottom = sizeSpacingScale[paddingY] || paddingY;
-      }
-      normalizeStyles(paddingStyles, "css", true);
-    }
-  }
-  alignment_styles: {
-    if (!align && !hasRemainingConfig) {
-      break alignment_styles;
-    }
-    alignmentStyles = {};
-
-    // flex
-    if (flexDirection === "row") {
-      // In row direction: alignX controls justify-content, alignY controls align-self
-      if (alignY !== undefined && alignY !== "start") {
-        alignmentStyles.alignSelf = alignY;
-      }
-      // For row, alignX uses auto margins for positioning
-      // NOTE: Auto margins only work effectively for positioning individual items.
-      // When multiple adjacent items have the same auto margin alignment (e.g., alignX="end"),
-      // only the first item will be positioned as expected because subsequent items
-      // will be positioned relative to the previous item's margins, not the container edge.
-      if (alignX !== undefined) {
-        if (alignX === "start") {
-          alignmentStyles.marginRight = "auto";
-        } else if (alignX === "end") {
-          alignmentStyles.marginLeft = "auto";
-        } else if (alignX === "center") {
-          alignmentStyles.marginLeft = "auto";
-          alignmentStyles.marginRight = "auto";
-        }
-      }
-    } else if (flexDirection === "column") {
-      // In column direction: alignX controls align-self, alignY uses auto margins
-      if (alignX !== undefined && alignX !== "start") {
-        alignmentStyles.alignSelf = alignX;
-      }
-      // For column, alignY uses auto margins for positioning
-      // NOTE: Same auto margin limitation applies - multiple adjacent items with
-      // the same alignY won't all position relative to container edges.
-      if (alignY !== undefined) {
-        if (alignY === "start") {
-          alignmentStyles.marginBottom = "auto";
-        } else if (alignY === "end") {
-          alignmentStyles.marginTop = "auto";
-        } else if (alignY === "center") {
-          alignmentStyles.marginTop = "auto";
-          alignmentStyles.marginBottom = "auto";
-        }
-      }
-    }
-    // non flex
-    else {
-      if (alignX === "start") {
-        alignmentStyles.marginRight = "auto";
-      } else if (alignX === "center") {
-        alignmentStyles.marginLeft = "auto";
-        alignmentStyles.marginRight = "auto";
-      } else if (alignX === "end") {
-        alignmentStyles.marginLeft = "auto";
-      }
-
-      if (alignY === "start") {
-        alignmentStyles.marginBottom = "auto";
-      } else if (alignY === "center") {
-        alignmentStyles.marginTop = "auto";
-        alignmentStyles.marginBottom = "auto";
-      } else if (alignY === "end") {
-        alignmentStyles.marginTop = "auto";
-      }
-    }
-  }
-  size_styles: {
-    if (!size && !hasRemainingConfig) {
-      break size_styles;
-    }
-    sizeStyles = {};
-    if (expandX) {
-      if (flexDirection === "row") {
-        sizeStyles.flexGrow = 1; // Grow horizontally in row
-      } else if (flexDirection === "column") {
-        sizeStyles.width = "100%"; // Take full width in column
-      } else {
-        sizeStyles.width = "100%"; // Take full width outside flex
-      }
-    } else if (width !== undefined) {
-      sizeStyles.width = normalizeStyle(width, "width", "css");
-    }
-    if (minWidth !== undefined) {
-      sizeStyles.minWidth = normalizeStyle(minWidth, "minWidth", "css");
-    }
-    if (maxWidth !== undefined) {
-      sizeStyles.maxWidth = normalizeStyle(maxWidth, "maxWidth", "css");
-    }
-    if (expandY) {
-      if (flexDirection === "row") {
-        sizeStyles.height = "100%"; // Take full height in row
-      } else if (flexDirection === "column") {
-        sizeStyles.flexGrow = 1; // Grow vertically in column
-      } else {
-        sizeStyles.height = "100%"; // Take full height outside flex
-      }
-    } else if (height !== undefined) {
-      sizeStyles.height = normalizeStyle(height, "height", "css");
-    }
-    if (minHeight !== undefined) {
-      sizeStyles.minHeight = normalizeStyle(minHeight, "minHeight", "css");
-    }
-    if (maxHeight !== undefined) {
-      sizeStyles.maxHeight = normalizeStyle(maxHeight, "maxHeight", "css");
-    }
-  }
-  typo_styles: {
-    if (!typo && !hasRemainingConfig) {
-      break typo_styles;
-    }
-    typoStyles = {};
-
-    if (textSize) {
-      const fontSize =
-        typeof textSize === "string"
-          ? sizeTypoScale[textSize] || textSize
-          : textSize;
-      typoStyles.fontSize = normalizeStyle(fontSize, "fontSize", "css");
-    }
-    if (textBold) {
-      typoStyles.fontWeight = "bold";
-    } else if (textThin) {
-      typoStyles.fontWeight = "thin";
-    } else if (textThin === false || textBold === false) {
-      typoStyles.fontWeight = "normal";
-    }
-    if (textItalic) {
-      typoStyles.fontStyle = "italic";
-    } else if (textItalic === false) {
-      typoStyles.fontStyle = "normal";
-    }
-    if (textUnderline) {
-      typoStyles.textDecoration = "underline";
-    } else if (textUnderline === false) {
-      typoStyles.textDecoration = "none";
-    }
-    if (textUnderlineStyle) {
-      typoStyles.textDecorationStyle = textUnderlineStyle;
-    }
-    if (textUnderlineColor) {
-      typoStyles.textDecorationColor = textUnderlineColor;
-    }
-    if (textShadow) {
-      typoStyles.textShadow = textShadow;
-    }
-    typoStyles.color = textColor;
-  }
-  visual_styles: {
-    if (!visual && !hasRemainingConfig) {
-      break visual_styles;
-    }
-    visualStyles = {};
-    if (boxShadow !== undefined) {
-      visualStyles.boxShadow = boxShadow;
-    }
-    if (background !== undefined) {
-      visualStyles.background = background;
-    }
-    if (backgroundColor !== undefined) {
-      visualStyles.backgroundColor = backgroundColor;
-    }
-    if (backgroundImage !== undefined) {
-      visualStyles.backgroundImage = normalizeStyle(
-        backgroundImage,
-        "backgroundImage",
-        "css",
-      );
-    }
-    if (backgroundSize !== undefined) {
-      visualStyles.backgroundSize = backgroundSize;
-    }
-    if (border !== undefined) {
-      visualStyles.border = border;
-    }
-    if (borderTop !== undefined) {
-      visualStyles.borderTop = borderTop;
-    }
-    if (borderLeft !== undefined) {
-      visualStyles.borderLeft = borderLeft;
-    }
-    if (borderRight !== undefined) {
-      visualStyles.borderRight = borderRight;
-    }
-    if (borderBottom !== undefined) {
-      visualStyles.borderBottom = borderBottom;
-    }
-    if (borderWidth !== undefined) {
-      visualStyles.borderWidth = normalizeStyle(
-        sizeSpacingScale[borderWidth] || borderWidth,
-        "borderWidth",
-        "css",
-      );
-    }
-    if (borderRadius !== undefined) {
-      visualStyles.borderRadius = normalizeStyle(
-        sizeSpacingScale[borderRadius] || borderRadius,
-        "borderRadius",
-        "css",
-      );
-    }
-    if (borderColor !== undefined) {
-      visualStyles.borderColor = borderColor;
-    }
-    if (borderStyle !== undefined) {
-      visualStyles.borderStyle = borderStyle;
-    }
-    if (opacity !== undefined) {
-      visualStyles.opacity = opacity;
-    }
-    if (filter !== undefined) {
-      visualStyles.filter = filter;
-    }
-  }
-
-  const firstConfigStyle = {};
-  if (base) {
-    Object.assign(firstConfigStyle, base);
-  }
-  if (spacing) {
-    Object.assign(firstConfigStyle, marginStyles, paddingStyles);
-  }
-  if (align) {
-    Object.assign(firstConfigStyle, alignmentStyles);
-  }
-  if (size) {
-    Object.assign(firstConfigStyle, sizeStyles);
-  }
-  if (typo) {
-    Object.assign(firstConfigStyle, typoStyles);
-  }
-  if (visual) {
-    Object.assign(firstConfigStyle, visualStyles);
-  }
-  if (style) {
-    appendStyles(firstConfigStyle, propStyles, "css");
-  }
-  const result = [remainingProps, firstConfigStyle];
-
-  for (const config of remainingConfig) {
-    const configStyle = {};
-    if (config.base === true) {
-      Object.assign(configStyle, base);
-    } else if (typeof config.base === "object") {
-      Object.assign(configStyle, config.base);
-    }
-    if (config.spacing || config.layout) {
-      Object.assign(configStyle, marginStyles, paddingStyles);
-    }
-    if (config.align || config.layout) {
-      Object.assign(configStyle, alignmentStyles);
-    }
-    if (config.size || config.layout) {
-      Object.assign(configStyle, sizeStyles);
-    }
-    if (config.typo) {
-      Object.assign(configStyle, typoStyles);
-    }
-    if (config.visual || config.visual === undefined) {
-      Object.assign(configStyle, visualStyles);
-    }
-    if (config.style) {
-      appendStyles(configStyle, propStyles, "css");
-    }
-    result.push(configStyle);
-  }
-  return result;
-};
-
-// Unified design scale using t-shirt sizes with rem units for accessibility.
-// This scale is used for spacing to create visual harmony
-// and consistent proportions throughout the design system.
-const sizeSpacingScale = {
-  xxs: "0.125rem", // 0.125 = 2px at 16px base
-  xs: "0.25rem", // 0.25 = 4px at 16px base
-  sm: "0.5rem", // 0.5 = 8px at 16px base
-  md: "1rem", // 1 = 16px at 16px base (base font size)
-  lg: "1.5rem", // 1.5 = 24px at 16px base
-  xl: "2rem", // 2 = 32px at 16px base
-  xxl: "3rem", // 3 = 48px at 16px base
-};
-const sizeTypoScale = {
-  xxs: "0.625rem", // 0.625 = 10px at 16px base (smaller than before for more range)
-  xs: "0.75rem", // 0.75 = 12px at 16px base
-  sm: "0.875rem", // 0.875 = 14px at 16px base
-  md: "1rem", // 1 = 16px at 16px base (base font size)
-  lg: "1.125rem", // 1.125 = 18px at 16px base
-  xl: "1.25rem", // 1.25 = 20px at 16px base
-  xxl: "1.5rem", // 1.5 = 24px at 16px base
 };
 
 const DEBUG = {
@@ -11536,59 +12256,6 @@ const createSelectionKeyboardShortcuts = (selectionController, {
   }];
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
-  :root {
-    --navi-icon-align-y: center;
-  }
-
-  .navi_text {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.1em;
-  }
-
-  .navi_icon {
-    --align-y: var(--navi-icon-align-y, center);
-
-    display: inline-flex;
-    width: 1em;
-    height: 1em;
-    flex-shrink: 0;
-    align-self: var(--align-y);
-    line-height: 1em;
-  }
-`;
-const Text = ({
-  children,
-  ...rest
-}) => {
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    layout: true,
-    typo: true
-  });
-  return jsx("span", {
-    ...remainingProps,
-    className: "navi_text",
-    style: innerStyle,
-    children: children
-  });
-};
-const Icon = ({
-  children,
-  ...rest
-}) => {
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    layout: true,
-    typo: true
-  });
-  return jsx("span", {
-    ...remainingProps,
-    className: "navi_icon",
-    style: innerStyle,
-    children: children
-  });
-};
-
 // autoFocus does not work so we focus in a useLayoutEffect,
 // see https://github.com/preactjs/preact/issues/1255
 
@@ -11684,20 +12351,291 @@ const useAutoFocus = (
 };
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .navi_text {
+    position: relative;
+    color: inherit;
+  }
+
+  .navi_char_slot_invisible {
+    opacity: 0;
+  }
+
+  .navi_icon {
+    display: flex;
+    aspect-ratio: 1 / 1;
+    height: 100%;
+    max-height: 1em;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .navi_text[data-has-foreground] {
+    display: inline-block;
+  }
+
+  .navi_text_foreground {
+    position: absolute;
+    inset: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .navi_text_overflow_wrapper {
+    display: flex;
+    width: 0;
+    flex-grow: 1;
+    gap: 0.3em;
+  }
+
+  .navi_text_overflow_text {
+    max-width: 100%;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+`;
+const OverflowPinnedElementContext = createContext(null);
+const Text = props => {
+  const {
+    overflowEllipsis,
+    ...rest
+  } = props;
+  if (overflowEllipsis) {
+    return jsx(TextOverflow, {
+      ...rest
+    });
+  }
+  if (props.overflowPinned) {
+    return jsx(TextOverflowPinned, {
+      ...props
+    });
+  }
+  return jsx(TextBasic, {
+    ...props
+  });
+};
+const TextOverflow = ({
+  as = "div",
+  contentSpacing = " ",
+  noWrap,
+  pre = !noWrap,
+  children,
+  ...rest
+}) => {
+  const [OverflowPinnedElement, setOverflowPinnedElement] = useState(null);
+  return jsx(Text, {
+    ...rest,
+    as: as,
+    box: true,
+    expandX: true,
+    pre: pre,
+    nowWrap: noWrap,
+    contentSpacing: "pre",
+    style: "text-overflow: ellipsis; overflow: hidden; flex-wrap: wrap;",
+    children: jsxs("span", {
+      className: "navi_text_overflow_wrapper",
+      children: [jsx("span", {
+        className: "navi_text_overflow_text",
+        children: jsx(OverflowPinnedElementContext.Provider, {
+          value: setOverflowPinnedElement,
+          children: applyContentSpacingOnTextChildren(children, contentSpacing)
+        })
+      }), OverflowPinnedElement]
+    })
+  });
+};
+const TextOverflowPinned = ({
+  overflowPinned,
+  ...props
+}) => {
+  const setOverflowPinnedElement = useContext(OverflowPinnedElementContext);
+  const text = jsx(Text, {
+    ...props
+  });
+  if (!setOverflowPinnedElement) {
+    console.warn("<Text overflowPinned> declared outside a <Text overflowEllipsis>");
+    return text;
+  }
+  if (overflowPinned) {
+    setOverflowPinnedElement(text);
+    return null;
+  }
+  setOverflowPinnedElement(null);
+  return text;
+};
+const TextBasic = ({
+  as = "span",
+  foregroundColor,
+  foregroundElement,
+  contentSpacing = " ",
+  box,
+  children,
+  ...rest
+}) => {
+  const hasForeground = Boolean(foregroundElement || foregroundColor);
+  const text = jsxs(Box, {
+    ...rest,
+    baseClassName: "navi_text",
+    as: as,
+    layoutInline: true,
+    layoutColumn: box ? true : undefined,
+    "data-has-foreground": hasForeground ? "" : undefined,
+    children: [applyContentSpacingOnTextChildren(children, contentSpacing), hasForeground && jsx("span", {
+      className: "navi_text_foreground",
+      style: {
+        backgroundColor: foregroundColor
+      },
+      children: foregroundElement
+    })]
+  });
+  return text;
+};
+const CharSlot = ({
+  charWidth = 1,
+  // 0 (zéro) is the real char width
+  // but 2 zéros gives too big icons
+  // while 1 "W" gives a nice result
+  baseChar = "W",
+  "aria-label": ariaLabel,
+  role,
+  decorative = false,
+  children,
+  ...rest
+}) => {
+  const invisibleText = baseChar.repeat(charWidth);
+  const ariaProps = decorative ? {
+    "aria-hidden": "true"
+  } : {
+    role,
+    "aria-label": ariaLabel
+  };
+  return jsx(Text, {
+    ...rest,
+    ...ariaProps,
+    foregroundElement: children,
+    children: jsx("span", {
+      className: "navi_char_slot_invisible",
+      "aria-hidden": "true",
+      children: invisibleText
+    })
+  });
+};
+const Icon = ({
+  children,
+  ...props
+}) => {
+  return jsx(CharSlot, {
+    decorative: true,
+    ...props,
+    children: jsx("span", {
+      className: "navi_icon",
+      children: children
+    })
+  });
+};
+const Paragraph = ({
+  contentSpacing = " ",
+  marginTop = "md",
+  children,
+  ...rest
+}) => {
+  return jsx(Box, {
+    ...rest,
+    as: "p",
+    marginTop: marginTop,
+    children: applyContentSpacingOnTextChildren(children, contentSpacing)
+  });
+};
+const applyContentSpacingOnTextChildren = (children, contentSpacing) => {
+  if (contentSpacing === "pre") {
+    return children;
+  }
+  if (!children) {
+    return children;
+  }
+  const childArray = toChildArray(children);
+  const childCount = childArray.length;
+  if (childCount <= 1) {
+    return children;
+  }
+
+  // Helper function to check if a value ends with whitespace
+  const endsWithWhitespace = value => {
+    if (typeof value === "string") {
+      return /\s$/.test(value);
+    }
+    return false;
+  };
+
+  // Helper function to check if a value starts with whitespace
+  const startsWithWhitespace = value => {
+    if (typeof value === "string") {
+      return /^\s/.test(value);
+    }
+    return false;
+  };
+  const childrenWithGap = [];
+  let i = 0;
+  while (true) {
+    const child = childArray[i];
+    childrenWithGap.push(child);
+    i++;
+    if (i === childCount) {
+      break;
+    }
+
+    // Check if we should skip adding contentSpacing
+    const currentChild = childArray[i - 1];
+    const nextChild = childArray[i];
+    const shouldSkipSpacing = endsWithWhitespace(currentChild) || startsWithWhitespace(nextChild);
+    if (!shouldSkipSpacing) {
+      childrenWithGap.push(contentSpacing);
+    }
+  }
+  return childrenWithGap;
+};
+
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  @layer navi {
+    .navi_link {
+      --color: rgb(0, 0, 238);
+      --color-visited: light-dark(#6a1b9a, #ab47bc);
+      --color-active: red;
+      --text-decoration: underline;
+      --text-decoration-hover: underline;
+      --cursor: pointer;
+    }
+  }
+
   .navi_link {
     position: relative;
-    display: inline-flex;
-    gap: 0.1em;
     border-radius: 2px;
+
+    --x-color: var(--color);
+    --x-color-hover: var(--color-hover, var(--color));
+    --x-color-visited: var(--color-visited);
+    --x-color-active: var(--color-active);
+    --x-text-decoration: var(--text-decoration);
+    --x-text-decoration-hover: var(--text-decoration-hover,);
+    --x-cursor: var(--cursor);
+
+    color: var(--x-color);
+    text-decoration: var(--x-text-decoration);
+    cursor: var(--x-cursor);
+  }
+  /* Hover */
+  .navi_link[data-hover] {
+    --x-color: var(--x-color-hover);
+    --x-text-decoration: var(--x-text-decoration-hover);
   }
   /* Focus */
-  .navi_link:focus {
+  .navi_link[data-focus] {
     position: relative;
     z-index: 1; /* Ensure focus outline is above other elements */
   }
   /* Visited */
   .navi_link[data-visited] {
-    color: light-dark(#6a1b9a, #ab47bc);
+    --x-color: var(--x-color-visited);
   }
   /* Selected */
   .navi_link[aria-selected] {
@@ -11712,48 +12650,65 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   }
   /* Active */
   .navi_link[data-active] {
-    font-weight: bold;
+    /* Redefine it otherwise [data-visited] prevails */
+    --x-color: var(--x-color-active);
   }
   /* Readonly */
   .navi_link[data-readonly] > * {
     opacity: 0.5;
   }
   /* Disabled */
-  .navi_link[inert] {
+  .navi_link[data-disabled] {
     pointer-events: none;
   }
-  .navi_link[inert] > * {
+  .navi_link[data-disabled] > * {
     opacity: 0.5;
   }
 `;
-const Link = forwardRef((props, ref) => {
-  return renderActionableComponent(props, ref, {
+const LinkManagedByCSSVars = {
+  color: "--color",
+  cursor: "--cursor",
+  textDecoration: "--text-decoration"
+};
+const LinkPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":visited", ":-navi-loading", ":-navi-internal-link", ":-navi-external-link", ":-navi-anchor-link", ":-navi-current-link"];
+const LinkPseudoElements = ["::-navi-loader"];
+Object.assign(PSEUDO_CLASSES, {
+  ":-navi-internal-link": {
+    attribute: "data-internal-link"
+  },
+  ":-navi-external-link": {
+    attribute: "data-external-link"
+  },
+  ":-navi-anchor-link": {
+    attribute: "data-anchor-link"
+  },
+  ":-navi-current-link": {
+    attribute: "data-current-link"
+  }
+});
+const Link = props => {
+  return renderActionableComponent(props, {
     Basic: LinkBasic,
     WithAction: LinkWithAction
   });
-});
-const LinkBasic = forwardRef((props, ref) => {
+};
+const LinkBasic = props => {
   const selectionContext = useContext(SelectionContext);
   if (selectionContext) {
     return jsx(LinkWithSelection, {
-      ref: ref,
       ...props
     });
   }
   return jsx(LinkPlain, {
-    ref: ref,
     ...props
   });
-});
-const LinkPlain = forwardRef((props, ref) => {
+};
+const LinkPlain = props => {
   const {
     loading,
     readOnly,
     disabled,
-    children,
     autoFocus,
-    active,
-    visited,
     spaceToClick = true,
     constraints = [],
     onClick,
@@ -11761,21 +12716,22 @@ const LinkPlain = forwardRef((props, ref) => {
     href,
     target,
     rel,
+    preventDefault,
     // visual
-    className,
+    box,
     blankTargetIcon,
     anchorIcon,
     icon,
-    cursorDefaultWhenCurrent,
+    contentSpacing = " ",
+    ref = useRef(),
+    children,
     ...rest
   } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-  const isVisited = useIsVisited(href);
-  useAutoFocus(innerRef, autoFocus);
-  useConstraints(innerRef, constraints);
+  const visited = useIsVisited(href);
+  useAutoFocus(ref, autoFocus);
+  useConstraints(ref, constraints);
   const shouldDimColor = readOnly || disabled;
-  useDimColorWhen(innerRef, shouldDimColor);
+  useDimColorWhen(ref, shouldDimColor);
   // subscribe to document url to re-render and re-compute getLinkTargetInfo
   useDocumentUrl();
   const {
@@ -11783,47 +12739,63 @@ const LinkPlain = forwardRef((props, ref) => {
     targetIsAnchor,
     targetIsCurrent
   } = getLinkTargetInfo(href);
-  const innerClassName = withPropsClassName("navi_link", className);
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    base: {
-      cursor: cursorDefaultWhenCurrent && targetIsCurrent ? "default" : undefined
-    },
-    layout: true,
-    typo: true
-  });
   const innerTarget = target === undefined ? targetIsSameSite ? "_self" : "_blank" : target;
   const innerRel = rel === undefined ? targetIsSameSite ? undefined : "noopener noreferrer" : rel;
   let innerIcon;
   if (icon === undefined) {
-    const innerBlankTargetIcon = blankTargetIcon === undefined ? innerTarget === "_blank" : blankTargetIcon;
-    const innerAnchorIcon = anchorIcon === undefined ? targetIsAnchor : anchorIcon;
-    if (innerBlankTargetIcon) {
-      innerIcon = innerBlankTargetIcon === true ? jsx(BlankTargetLinkSvg, {}) : innerBlankTargetIcon;
-    } else if (innerAnchorIcon) {
-      innerIcon = innerAnchorIcon === true ? jsx(AnchorLinkSvg, {}) : anchorIcon;
+    // Check for special protocol or domain-specific icons first
+    if (href?.startsWith("tel:")) {
+      innerIcon = jsx(PhoneSvg, {});
+    } else if (href?.startsWith("sms:")) {
+      innerIcon = jsx(SmsSvg, {});
+    } else if (href?.startsWith("mailto:")) {
+      innerIcon = jsx(EmailSvg, {});
+    } else if (href?.includes("github.com")) {
+      innerIcon = jsx(GithubSvg, {});
+    } else {
+      // Fall back to default icon logic
+      const innerBlankTargetIcon = blankTargetIcon === undefined ? innerTarget === "_blank" : blankTargetIcon;
+      const innerAnchorIcon = anchorIcon === undefined ? targetIsAnchor : anchorIcon;
+      if (innerBlankTargetIcon) {
+        innerIcon = innerBlankTargetIcon === true ? jsx(BlankTargetLinkSvg, {}) : innerBlankTargetIcon;
+      } else if (innerAnchorIcon) {
+        innerIcon = innerAnchorIcon === true ? jsx(AnchorLinkSvg, {}) : anchorIcon;
+      }
     }
   } else {
     innerIcon = icon;
   }
-  return jsx("a", {
-    ...remainingProps,
-    ref: innerRef,
-    className: innerClassName,
-    style: innerStyle,
+  return jsxs(Box, {
+    ...rest,
+    ref: ref,
+    as: "a",
     href: href,
     rel: innerRel,
     target: innerTarget === "_self" ? undefined : target,
     "aria-busy": loading,
-    inert: disabled,
-    "data-disabled": disabled ? "" : undefined,
-    "data-readonly": readOnly ? "" : undefined,
-    "data-active": active ? "" : undefined,
-    "data-visited": visited || isVisited ? "" : undefined,
-    "data-external": targetIsSameSite ? undefined : "",
-    "data-internal": targetIsSameSite ? "" : undefined,
-    "data-anchor": targetIsAnchor ? "" : undefined,
-    "data-current": targetIsCurrent ? "" : undefined,
+    inert: disabled
+    // Visual
+    ,
+    baseClassName: "navi_link",
+    layoutInline: true,
+    layoutColumn: box ? true : undefined,
+    managedByCSSVars: LinkManagedByCSSVars,
+    pseudoClasses: LinkPseudoClasses,
+    pseudoElements: LinkPseudoElements,
+    basePseudoState: {
+      ":read-only": readOnly,
+      ":disabled": disabled,
+      ":visited": visited,
+      ":-navi-loading": loading,
+      ":-navi-internal-link": targetIsSameSite,
+      ":-navi-external-link": !targetIsSameSite,
+      ":-navi-anchor-link": targetIsAnchor,
+      ":-navi-current-link": targetIsCurrent
+    },
     onClick: e => {
+      if (preventDefault) {
+        e.preventDefault();
+      }
       closeValidationMessage(e.target, "click");
       if (readOnly) {
         e.preventDefault();
@@ -11840,15 +12812,15 @@ const LinkPlain = forwardRef((props, ref) => {
       }
       onKeyDown?.(e);
     },
-    children: jsxs(LoaderBackground, {
+    children: [jsx(LoaderBackground, {
       loading: loading,
-      color: "light-dark(#355fcc, #3b82f6)",
-      children: [children, innerIcon && jsx(Icon, {
-        children: innerIcon
-      })]
-    })
+      color: "light-dark(#355fcc, #3b82f6)"
+    }), applyContentSpacingOnTextChildren(children, contentSpacing), innerIcon && jsx(Icon, {
+      marginLeft: "xxs",
+      children: innerIcon
+    })]
   });
-});
+};
 const BlankTargetLinkSvg = () => {
   return jsx("svg", {
     viewBox: "0 0 24 24",
@@ -11880,7 +12852,64 @@ const AnchorLinkSvg = () => {
     })]
   });
 };
-const LinkWithSelection = forwardRef((props, ref) => {
+const PhoneSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 24 24",
+    width: "100%",
+    height: "100%",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: jsx("path", {
+      d: "M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z",
+      fill: "currentColor"
+    })
+  });
+};
+const SmsSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 24 24",
+    width: "100%",
+    height: "100%",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: jsx("path", {
+      d: "M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM18 14H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z",
+      fill: "currentColor"
+    })
+  });
+};
+const EmailSvg = () => {
+  return jsxs("svg", {
+    viewBox: "0 0 24 24",
+    width: "100%",
+    height: "100%",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: [jsx("path", {
+      d: "M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z",
+      fill: "none",
+      stroke: "currentColor",
+      "stroke-width": "2"
+    }), jsx("path", {
+      d: "m2 6 8 5 2 1.5 2-1.5 8-5",
+      fill: "none",
+      stroke: "currentColor",
+      "stroke-width": "2",
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round"
+    })]
+  });
+};
+const GithubSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 24 24",
+    width: "100%",
+    height: "100%",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: jsx("path", {
+      d: "M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z",
+      fill: "currentColor"
+    })
+  });
+};
+const LinkWithSelection = props => {
   const {
     selection,
     selectionController
@@ -11888,24 +12917,23 @@ const LinkWithSelection = forwardRef((props, ref) => {
   const {
     value = props.href,
     children,
+    ref = useRef(),
     ...rest
   } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
   const {
     selected
-  } = useSelectableElement(innerRef, {
+  } = useSelectableElement(ref, {
     selection,
     selectionController
   });
   return jsx(LinkPlain, {
     ...rest,
-    ref: innerRef,
+    ref: ref,
     "data-value": value,
     "aria-selected": selected,
     children: children
   });
-});
+};
 
 /*
  * Custom hook to apply semi-transparent color when an element should be dimmed.
@@ -11942,7 +12970,7 @@ const useDimColorWhen = (elementRef, shouldDim) => {
     }
   });
 };
-const LinkWithAction = forwardRef((props, ref) => {
+const LinkWithAction = props => {
   const {
     shortcuts = [],
     readOnly,
@@ -11953,15 +12981,14 @@ const LinkWithAction = forwardRef((props, ref) => {
     onActionEnd,
     children,
     loading,
+    ref = useRef(),
     ...rest
   } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
   const {
     actionPending
-  } = useRequestedActionStatus(innerRef);
+  } = useRequestedActionStatus(ref);
   const innerLoading = Boolean(loading || actionPending);
-  useKeyboardShortcuts(innerRef, shortcuts, {
+  useKeyboardShortcuts(ref, shortcuts, {
     onActionPrevented,
     onActionStart,
     onActionAbort,
@@ -11970,7 +12997,7 @@ const LinkWithAction = forwardRef((props, ref) => {
   });
   return jsx(LinkBasic, {
     ...rest,
-    ref: innerRef,
+    ref: ref,
     loading: innerLoading,
     readOnly: readOnly || actionPending,
     "data-readonly-silent": actionPending && !readOnly ? "" : undefined
@@ -11978,7 +13005,7 @@ const LinkWithAction = forwardRef((props, ref) => {
     "data-focus-visible": "",
     children: children
   });
-});
+};
 
 const RouteLink = ({
   route,
@@ -12326,10 +13353,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   }
 `;
 const Details = forwardRef((props, ref) => {
-  return renderActionableComponent(props, ref, {
-    Basic: DetailsBasic,
-    WithAction: DetailsWithAction
-  });
+  return renderActionableComponent(props, ref);
 });
 const DetailsBasic = forwardRef((props, ref) => {
   const {
@@ -12454,7 +13478,7 @@ const DetailsBasic = forwardRef((props, ref) => {
     }), children]
   });
 });
-const DetailsWithAction = forwardRef((props, ref) => {
+forwardRef((props, ref) => {
   const {
     action,
     loading,
@@ -12508,111 +13532,6 @@ const DetailsWithAction = forwardRef((props, ref) => {
   });
 });
 
-const initCustomField = (customField, field) => {
-  const [teardown, addTeardown] = createPubSub();
-
-  const addEventListener = (element, eventType, listener) => {
-    element.addEventListener(eventType, listener);
-    return addTeardown(() => {
-      element.removeEventListener(eventType, listener);
-    });
-  };
-  const updateBooleanAttribute = (attributeName, isPresent) => {
-    if (isPresent) {
-      customField.setAttribute(attributeName, "");
-    } else {
-      customField.removeAttribute(attributeName);
-    }
-  };
-  const checkPseudoClasses = () => {
-    const hover = field.matches(":hover");
-    const active = field.matches(":active");
-    const checked = field.matches(":checked");
-    const focus = field.matches(":focus");
-    const focusVisible = field.matches(":focus-visible");
-    const valid = field.matches(":valid");
-    const invalid = field.matches(":invalid");
-    updateBooleanAttribute(`data-hover`, hover);
-    updateBooleanAttribute(`data-active`, active);
-    updateBooleanAttribute(`data-checked`, checked);
-    updateBooleanAttribute(`data-focus`, focus);
-    updateBooleanAttribute(`data-focus-visible`, focusVisible);
-    updateBooleanAttribute(`data-valid`, valid);
-    updateBooleanAttribute(`data-invalid`, invalid);
-  };
-
-  // :hover
-  addEventListener(field, "mouseenter", checkPseudoClasses);
-  addEventListener(field, "mouseleave", checkPseudoClasses);
-  // :active
-  addEventListener(field, "mousedown", checkPseudoClasses);
-  addEventListener(document, "mouseup", checkPseudoClasses);
-  // :focus
-  addEventListener(field, "focusin", checkPseudoClasses);
-  addEventListener(field, "focusout", checkPseudoClasses);
-  // :focus-visible
-  addEventListener(document, "keydown", checkPseudoClasses);
-  addEventListener(document, "keyup", checkPseudoClasses);
-  // :checked
-  if (field.type === "checkbox") {
-    // Listen to user interactions
-    addEventListener(field, "input", checkPseudoClasses);
-
-    // Intercept programmatic changes to .checked property
-    const originalDescriptor = Object.getOwnPropertyDescriptor(
-      HTMLInputElement.prototype,
-      "checked",
-    );
-    Object.defineProperty(field, "checked", {
-      get: originalDescriptor.get,
-      set(value) {
-        originalDescriptor.set.call(this, value);
-        checkPseudoClasses();
-      },
-      configurable: true,
-    });
-    addTeardown(() => {
-      // Restore original property descriptor
-      Object.defineProperty(field, "checked", originalDescriptor);
-    });
-  } else if (field.type === "radio") {
-    // Listen to changes on the radio group
-    const radioSet =
-      field.closest("[data-radio-list], fieldset, form") || document;
-    addEventListener(radioSet, "input", checkPseudoClasses);
-
-    // Intercept programmatic changes to .checked property
-    const originalDescriptor = Object.getOwnPropertyDescriptor(
-      HTMLInputElement.prototype,
-      "checked",
-    );
-    Object.defineProperty(field, "checked", {
-      get: originalDescriptor.get,
-      set(value) {
-        originalDescriptor.set.call(this, value);
-        checkPseudoClasses();
-      },
-      configurable: true,
-    });
-    addTeardown(() => {
-      // Restore original property descriptor
-      Object.defineProperty(field, "checked", originalDescriptor);
-    });
-  } else if (field.tagName === "INPUT") {
-    addEventListener(field, "input", checkPseudoClasses);
-  }
-
-  // just in case + catch use forcing them in chrome devtools
-  const interval = setInterval(() => {
-    checkPseudoClasses();
-  }, 150);
-  addTeardown(() => {
-    clearInterval(interval);
-  });
-
-  return teardown;
-};
-
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
     label {
@@ -12628,24 +13547,22 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
 `;
 const ReportReadOnlyOnLabelContext = createContext();
 const ReportDisabledOnLabelContext = createContext();
-const Label = forwardRef((props, ref) => {
+const Label = props => {
   const {
     readOnly,
     disabled,
     children,
     ...rest
   } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
   const [inputReadOnly, setInputReadOnly] = useState(false);
   const innerReadOnly = readOnly || inputReadOnly;
   const [inputDisabled, setInputDisabled] = useState(false);
   const innerDisabled = disabled || inputDisabled;
-  return jsx("label", {
-    ref: innerRef,
+  return jsx(Box, {
+    as: "label",
+    ...rest,
     "data-readonly": innerReadOnly ? "" : undefined,
     "data-disabled": innerDisabled ? "" : undefined,
-    ...rest,
     children: jsx(ReportReadOnlyOnLabelContext.Provider, {
       value: setInputReadOnly,
       children: jsx(ReportDisabledOnLabelContext.Provider, {
@@ -12654,7 +13571,7 @@ const Label = forwardRef((props, ref) => {
       })
     })
   });
-});
+};
 
 const debugUIState = (...args) => {
 };
@@ -13117,16 +14034,12 @@ const useUIState = (uiStateController) => {
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
     :root {
+      --navi-checkbox-color: light-dark(#4476ff, #3b82f6);
       --navi-checkmark-color-light: white;
       --navi-checkmark-color-dark: rgb(55, 55, 55);
-      --navi-checkmark-color: var(--navi-checkmark-light-color);
     }
 
     .navi_checkbox {
-      position: relative;
-      display: inline-flex;
-      box-sizing: content-box;
-
       --outline-offset: 1px;
       --outline-width: 2px;
       --border-width: 1px;
@@ -13137,112 +14050,144 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       --outline-color: light-dark(#4476ff, #3b82f6);
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: white;
-      --accent-color: light-dark(#4476ff, #3b82f6);
-      /* --color: currentColor; */
-      --checkmark-color: var(--navi-checkmark-color);
+      --color: var(--navi-checkbox-color);
+      --checkmark-color: var(--navi-checkmark-color-light);
 
+      --color-mix-light: black;
+      --color-mix-dark: white;
+      --color-mix: var(--color-mix-light);
+
+      /* Hover */
+      --border-color-hover: color-mix(in srgb, var(--border-color) 60%, black);
+      --border-color-hover-checked: color-mix(
+        in srgb,
+        var(--color) 80%,
+        var(--color-mix)
+      );
+      --background-color-hover-checked: color-mix(
+        in srgb,
+        var(--color) 80%,
+        var(--color-mix)
+      );
+      /* Readonly */
       --border-color-readonly: color-mix(
         in srgb,
         var(--border-color) 30%,
         white
       );
+      --border-color-readonly-checked: #d3d3d3;
+      --background-color-readonly-checked: grey;
+      --checkmark-color-readonly: #eeeeee;
+      /* Disabled */
       --border-color-disabled: var(--border-color-readonly);
-      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
-      --border-color-checked-readonly: #d3d3d3;
-      --border-color-checked-disabled: #d3d3d3;
-      --background-color-checked-readonly: var(
-        --navi-background-color-readonly
-      );
-      --background-color-checked-disabled: var(
-        --navi-background-color-disabled
-      );
-      --checkmark-color-readonly: var(--navi-color-readonly);
-      --checkmark-color-disabled: var(--navi-color-disabled);
-    }
-    .navi_checkbox input {
-      position: absolute;
-      inset: 0;
-      margin: 0;
-      padding: 0;
-      border: none;
-      opacity: 0;
-      cursor: inherit;
-    }
-    .navi_checkbox_field {
-      display: inline-flex;
-      box-sizing: border-box;
-      width: var(--width);
-      height: var(--height);
-      margin: 3px 3px 3px 4px;
-      background-color: var(--background-color);
-      border-width: var(--border-width);
-      border-style: solid;
-      border-color: var(--border-color);
-      border-radius: var(--border-radius);
-      outline-width: var(--outline-width);
-
-      outline-style: none;
-
-      outline-color: var(--outline-color);
-      outline-offset: var(--outline-offset);
-      /* color: var(--color); */
-    }
-    .navi_checkbox_marker {
-      width: 100%;
-      height: 100%;
-      opacity: 0;
-      transform: scale(0.5);
-      transition: all 0.15s ease;
-      pointer-events: none;
+      --background-color-disabled: rgba(248, 248, 248, 0.7);
+      --checkmark-color-disabled: #eeeeee;
+      --border-color-disabled-checked: #d3d3d3;
+      --background-color-disabled-checked: #d3d3d3;
     }
 
-    /* Focus */
-    .navi_checkbox[data-focus-visible] .navi_checkbox_field {
-      outline-style: solid;
-    }
-    /* Hover */
-    .navi_checkbox[data-hover] .navi_checkbox_field {
-      --border-color: var(--border-color-hover);
-    }
-    /* Checked */
-    .navi_checkbox[data-checked] .navi_checkbox_field {
-      --background-color: var(--accent-color);
-      --border-color: var(--accent-color);
-    }
-    .navi_checkbox[data-checked] .navi_checkbox_marker {
-      opacity: 1;
-      stroke: var(--checkmark-color);
-      transform: scale(1);
-    }
-    /* Readonly */
-    .navi_checkbox[data-readonly] .navi_checkbox_field,
-    .navi_checkbox[data-readonly][data-hover] .navi_checkbox_field {
-      --border-color: var(--border-color-readonly);
-      --background-color: var(--background-color-readonly);
-    }
-    .navi_checkbox[data-checked][data-readonly] .navi_checkbox_field {
-      --background-color: var(--background-color-checked-readonly);
-      --border-color: var(--border-color-checked-readonly);
-    }
-    .navi_checkbox[data-checked][data-readonly] .navi_checkbox_marker {
-      stroke: var(--checkmark-color-readonly);
-    }
-    /* Disabled */
-    .navi_checkbox[data-disabled] .navi_checkbox_field {
-      --background-color: var(--background-color-disabled);
-      --border-color: var(--border-color-disabled);
-    }
-    .navi_checkbox[data-checked][data-disabled] .navi_checkbox_field {
-      --border-color: var(--border-color-checked-disabled);
-      --background-color: var(--background-color-checked-disabled);
-    }
-
-    .navi_checkbox[data-checked][data-disabled] .navi_checkbox_marker {
-      stroke: var(--checkmark-color-disabled);
+    .navi_checkbox[data-dark] {
+      --color-mix: var(--color-mix-dark);
+      --checkmark-color: var(--navi-checkmark-color-dark);
     }
   }
+
+  .navi_checkbox {
+    position: relative;
+    display: inline-flex;
+    box-sizing: content-box;
+    margin: 3px 3px 3px 4px;
+
+    --x-border-radius: var(--border-radius);
+    --x-outline-offset: var(--outline-offset);
+    --x-outline-width: var(--outline-width);
+    --x-border-width: var(--border-width);
+    --x-width: var(--width);
+    --x-height: var(--height);
+    --x-outline-color: var(--outline-color);
+    --x-background-color: var(--background-color);
+    --x-border-color: var(--border-color);
+    --x-color: var(--color);
+    --x-checkmark-color: var(--checkmark-color);
+  }
+  .navi_checkbox .navi_native_field {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+    opacity: 0;
+    cursor: inherit;
+  }
+  .navi_checkbox .navi_checkbox_field {
+    display: inline-flex;
+    box-sizing: border-box;
+    width: var(--x-width);
+    height: var(--x-height);
+    background-color: var(--x-background-color);
+    border-width: var(--x-border-width);
+    border-style: solid;
+    border-color: var(--x-border-color);
+    border-radius: var(--x-border-radius);
+    outline-width: var(--x-outline-width);
+    outline-style: none;
+    outline-color: var(--x-outline-color);
+    outline-offset: var(--x-outline-offset);
+  }
+  .navi_checkbox_marker {
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    stroke: var(--x-checkmark-color);
+    transform: scale(0.5);
+    transition: all 0.15s ease;
+    pointer-events: none;
+  }
+  .navi_checkbox[data-checked] .navi_checkbox_marker {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* Focus */
+  .navi_checkbox[data-focus-visible] .navi_checkbox_field {
+    outline-style: solid;
+  }
+  /* Hover */
+  .navi_checkbox[data-hover] {
+    --x-border-color: var(--border-color-hover);
+  }
+  .navi_checkbox[data-checked][data-hover] {
+    --x-border-color: var(--border-color-hover-checked);
+    --x-background-color: var(--background-color-hover-checked);
+  }
+  /* Checked */
+  .navi_checkbox[data-checked] {
+    --x-background-color: var(--x-color);
+    --x-border-color: var(--x-color);
+  }
+  /* Readonly */
+  .navi_checkbox[data-readonly],
+  .navi_checkbox[data-readonly][data-hover] {
+    --x-border-color: var(--border-color-readonly);
+    --x-background-color: var(--background-color-readonly);
+  }
+  .navi_checkbox[data-readonly][data-checked] {
+    --x-border-color: var(--border-color-readonly-checked);
+    --x-background-color: var(--background-color-readonly-checked);
+    --x-checkmark-color: var(--checkmark-color-readonly);
+  }
+  /* Disabled */
+  .navi_checkbox[data-disabled] {
+    --x-border-color: var(--border-color-disabled);
+    --x-background-color: var(--background-color-disabled);
+  }
+  .navi_checkbox[data-disabled][data-checked] {
+    --x-border-color: var(--border-color-disabled-checked);
+    --x-background-color: var(--background-color-disabled-checked);
+    --x-checkmark-color: var(--checkmark-color-disabled);
+  }
 `;
-const InputCheckbox = forwardRef((props, ref) => {
+const InputCheckbox = props => {
   const {
     value = "on"
   } = props;
@@ -13254,7 +14199,7 @@ const InputCheckbox = forwardRef((props, ref) => {
     getPropFromState: Boolean
   });
   const uiState = useUIState(uiStateController);
-  const checkbox = renderActionableComponent(props, ref, {
+  const checkbox = renderActionableComponent(props, {
     Basic: InputCheckboxBasic,
     WithAction: InputCheckboxWithAction,
     InsideForm: InputCheckboxInsideForm
@@ -13266,8 +14211,36 @@ const InputCheckbox = forwardRef((props, ref) => {
       children: checkbox
     })
   });
-});
-const InputCheckboxBasic = forwardRef((props, ref) => {
+};
+const CheckboxManagedByCSSVars = {
+  "outlineWidth": "--outline-width",
+  "borderWidth": "--border-width",
+  "borderRadius": "--border-radius",
+  "backgroundColor": "--background-color",
+  "borderColor": "--border-color",
+  "color": "--color",
+  ":hover": {
+    backgroundColor: "--background-color-hover",
+    borderColor: "--border-color-hover",
+    color: "--color-hover"
+  },
+  ":active": {
+    borderColor: "--border-color-active"
+  },
+  ":read-only": {
+    backgroundColor: "--background-color-readonly",
+    borderColor: "--border-color-readonly",
+    color: "--color-readonly"
+  },
+  ":disabled": {
+    backgroundColor: "--background-color-disabled",
+    borderColor: "--border-color-disabled",
+    color: "--color-disabled"
+  }
+};
+const CheckboxPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
+const CheckboxPseudoElements = ["::-navi-loader", "::-navi-checkmark"];
+const InputCheckboxBasic = props => {
   const contextFieldName = useContext(FieldNameContext);
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
@@ -13279,6 +14252,11 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
   const reportReadOnlyOnLabel = useContext(ReportReadOnlyOnLabelContext);
   const reportDisabledOnLabel = useContext(ReportDisabledOnLabelContext);
   const {
+    /* eslint-disable no-unused-vars */
+    type,
+    defaultChecked,
+    /* eslint-enable no-unused-vars */
+
     name,
     readOnly,
     disabled,
@@ -13286,124 +14264,87 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
     loading,
     autoFocus,
     constraints = [],
-    appeareance = "navi",
-    // "navi" or "default"
-    accentColor,
     onClick,
     onInput,
-    style,
+    color,
     ...rest
   } = props;
-  const innerRef = useRef(null);
-  useImperativeHandle(ref, () => innerRef.current);
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   const innerName = name || contextFieldName;
   const innerDisabled = disabled || contextDisabled;
   const innerRequired = required || contextRequired;
-  const innerLoading = loading || contextLoading && loadingElement === innerRef.current;
+  const innerLoading = loading || contextLoading && loadingElement === ref.current;
   const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
   reportReadOnlyOnLabel?.(innerReadOnly);
   reportDisabledOnLabel?.(innerDisabled);
-  useAutoFocus(innerRef, autoFocus);
-  useConstraints(innerRef, constraints);
+  useAutoFocus(ref, autoFocus);
+  useConstraints(ref, constraints);
   const checked = Boolean(uiState);
-  const actionName = rest["data-action"];
-  if (actionName) {
-    delete rest["data-action"];
-  }
-  const inputCheckbox = jsx("input", {
-    ...rest,
-    ref: innerRef,
+  const innerOnClick = useStableCallback(e => {
+    if (innerReadOnly) {
+      e.preventDefault();
+    }
+    onClick?.(e);
+  });
+  const innerOnInput = useStableCallback(e => {
+    const checkbox = e.target;
+    const checkboxIsChecked = checkbox.checked;
+    uiStateController.setUIState(checkboxIsChecked, e);
+    onInput?.(e);
+  });
+  const renderCheckbox = checkboxProps => jsx(Box, {
+    ...checkboxProps,
+    as: "input",
+    ref: ref,
     type: "checkbox",
-    style: appeareance === "default" ? style : undefined,
     name: innerName,
     checked: checked,
-    readOnly: innerReadOnly,
-    disabled: innerDisabled,
     required: innerRequired,
+    baseClassName: "navi_native_field",
     "data-callout-arrow-x": "center",
-    onClick: e => {
-      if (innerReadOnly) {
-        e.preventDefault();
-      }
-      onClick?.(e);
-    },
-    onInput: e => {
-      const checkbox = e.target;
-      const checkboxIsChecked = checkbox.checked;
-      uiStateController.setUIState(checkboxIsChecked, e);
-      onInput?.(e);
-    }
-    // eslint-disable-next-line react/no-unknown-property
-    ,
+    onClick: innerOnClick,
+    onInput: innerOnInput,
     onresetuistate: e => {
       uiStateController.resetUIState(e);
-    }
-    // eslint-disable-next-line react/no-unknown-property
-    ,
+    },
     onsetuistate: e => {
       uiStateController.setUIState(e.detail.value, e);
     }
   });
-  const loaderProps = {
-    loading: innerLoading,
-    inset: -1,
-    style: {
-      "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)"
-    },
-    color: "var(--accent-color)"
-  };
-  if (appeareance === "navi") {
-    return jsx(NaviCheckbox, {
-      "data-action": actionName,
-      inputRef: innerRef,
-      accentColor: accentColor,
-      readOnly: readOnly,
-      disabled: innerDisabled,
-      style: style,
-      children: jsx(LoaderBackground, {
-        ...loaderProps,
-        targetSelector: ".navi_checkbox_field",
-        children: inputCheckbox
-      })
-    });
-  }
-  return jsx(LoadableInlineElement, {
-    ...loaderProps,
-    "data-action": actionName,
-    children: inputCheckbox
-  });
-});
-const NaviCheckbox = ({
-  accentColor,
-  readOnly,
-  disabled,
-  inputRef,
-  children,
-  ...rest
-}) => {
-  const ref = useRef();
+  const renderCheckboxMemoized = useCallback(renderCheckbox, [innerName, checked, innerRequired]);
   useLayoutEffect(() => {
     const naviCheckbox = ref.current;
-    const colorPicked = pickLightOrDark(naviCheckbox, "var(--accent-color)", "var(--navi-checkmark-color-light)", "var(--navi-checkmark-color-dark)");
-    naviCheckbox.style.setProperty("--checkmark-color", colorPicked);
-  }, [accentColor]);
-  useLayoutEffect(() => {
-    return initCustomField(ref.current, inputRef.current);
-  }, []);
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    base: {
-      "--accent-color": accentColor
-    },
-    layout: true
-  });
-  return jsxs("div", {
-    ...remainingProps,
+    const lightColor = "var(--navi-checkmark-color-light)";
+    const darkColor = "var(--navi-checkmark-color-dark)";
+    const colorPicked = pickLightOrDark("var(--color)", lightColor, darkColor, naviCheckbox);
+    if (colorPicked === lightColor) {
+      naviCheckbox.removeAttribute("data-dark");
+    } else {
+      naviCheckbox.setAttribute("data-dark", "");
+    }
+  }, [color]);
+  return jsxs(Box, {
+    as: "span",
+    ...rest,
     ref: ref,
-    className: "navi_checkbox",
-    style: innerStyle,
-    "data-readonly": readOnly ? "" : undefined,
-    "data-disabled": disabled ? "" : undefined,
-    children: [children, jsx("div", {
+    baseClassName: "navi_checkbox",
+    pseudoStateSelector: ".navi_native_field",
+    managedByCSSVars: CheckboxManagedByCSSVars,
+    pseudoClasses: CheckboxPseudoClasses,
+    pseudoElements: CheckboxPseudoElements,
+    basePseudoState: {
+      ":read-only": innerReadOnly,
+      ":disabled": innerDisabled,
+      ":-navi-loading": innerLoading
+    },
+    color: color,
+    hasChildFunction: true,
+    children: [jsx(LoaderBackground, {
+      loading: innerLoading,
+      inset: -1,
+      color: "var(--navi-loader-color)"
+    }), renderCheckboxMemoized, jsx("div", {
       className: "navi_checkbox_field",
       children: jsx("svg", {
         viewBox: "0 0 12 12",
@@ -13418,7 +14359,7 @@ const NaviCheckbox = ({
     })]
   });
 };
-const InputCheckboxWithAction = forwardRef((props, ref) => {
+const InputCheckboxWithAction = props => {
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
   const {
@@ -13434,20 +14375,20 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
     loading,
     ...rest
   } = props;
-  const innerRef = useRef(null);
-  useImperativeHandle(ref, () => innerRef.current);
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   const [actionBoundToUIState] = useActionBoundToOneParam(action, uiState);
   const {
     loading: actionLoading
   } = useActionStatus(actionBoundToUIState);
-  const executeAction = useExecuteAction(innerRef, {
+  const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect
   });
 
   // In this situation updating the ui state === calling associated action
   // so cance/abort/error have to revert the ui state to the one before user interaction
   // to show back the real state of the checkbox (not the one user tried to set)
-  useActionEvents(innerRef, {
+  useActionEvents(ref, {
     onCancel: (e, reason) => {
       if (reason === "blur_invalid") {
         return;
@@ -13473,7 +14414,7 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
   return jsx(InputCheckboxBasic, {
     "data-action": actionBoundToUIState.name,
     ...rest,
-    ref: innerRef,
+    ref: ref,
     loading: loading || actionLoading,
     onChange: e => {
       requestAction(e.target, actionBoundToUIState, {
@@ -13482,7 +14423,7 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
       onChange?.(e);
     }
   });
-});
+};
 const InputCheckboxInsideForm = InputCheckboxBasic;
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
@@ -13492,10 +14433,6 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     }
 
     .navi_radio {
-      position: relative;
-      display: inline-flex;
-      box-sizing: content-box;
-
       --outline-offset: 1px;
       --outline-width: 2px;
       --width: 13px;
@@ -13504,147 +14441,164 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       --outline-color: light-dark(#4476ff, #3b82f6);
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: white;
-      --accent-color: var(--navi-radiomark-color);
-      --mark-color: var(--accent-color);
+      --color: var(--navi-radiomark-color);
+      --radiomark-color: var(--color);
+      --border-color-checked: var(--color);
 
-      /* light-dark(rgba(239, 239, 239, 0.3), rgba(59, 59, 59, 0.3)); */
-      --accent-color-checked: color-mix(
+      --color-mix-light: white;
+      --color-mix-dark: black;
+      --color-mix: var(--color-mix-light);
+
+      /* Hover */
+      --border-color-hover: color-mix(in srgb, var(--border-color) 60%, black);
+      --border-color-hover-checked: color-mix(
         in srgb,
-        var(--accent-color) 70%,
-        black
+        var(--color) 80%,
+        var(--color-mix)
       );
-
+      --radiomark-color-hover: color-mix(
+        in srgb,
+        var(--color) 80%,
+        var(--color-mix)
+      );
+      /* Readonly */
       --border-color-readonly: color-mix(
         in srgb,
         var(--border-color) 30%,
         white
       );
-      --border-color-disabled: var(--border-color-readonly);
-      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
-      --border-color-checked: var(--accent-color);
-      --border-color-checked-hover: var(--accent-color-checked);
-      --border-color-checked-readonly: #d3d3d3;
-      --border-color-checked-disabled: #d3d3d3;
       --background-color-readonly: var(--background-color);
-      --background-color-disabled: var(--background-color);
-      --background-color-checked-readonly: #d3d3d3;
-      --background-color-checked-disabled: var(--background-color);
-      --mark-color-hover: var(--accent-color-checked);
-      --mark-color-readonly: grey;
-      --mark-color-disabled: #eeeeee;
-    }
-    .navi_radio input {
-      position: absolute;
-      inset: 0;
-      margin: 0;
-      padding: 0;
-      opacity: 0;
-      cursor: inherit;
-    }
-    .navi_radio_field {
-      display: inline-flex;
-      width: var(--width);
-      height: var(--height);
-      margin-top: 3px;
-      margin-right: 3px;
-      margin-left: 5px;
-      align-items: center;
-      justify-content: center;
-      border-radius: 50%;
-      outline-width: var(--outline-width);
-
-      outline-style: none;
-
-      outline-color: var(--outline-color);
-
-      outline-offset: var(--outline-offset);
-    }
-    .navi_radio_field svg {
-      overflow: visible;
-    }
-    .navi_radio_border {
-      fill: var(--background-color);
-      stroke: var(--border-color);
-    }
-    .navi_radio_marker {
-      width: 100%;
-      height: 100%;
-      opacity: 0;
-      fill: var(--mark-color);
-      transform: scale(0.3);
-      transform-origin: center;
-      pointer-events: none;
-    }
-    .navi_radio_dashed_border {
-      display: none;
-    }
-    .navi_radio[data-transition] .navi_radio_marker {
-      transition: all 0.15s ease;
-    }
-    .navi_radio[data-transition] .navi_radio_dashed_border {
-      transition: all 0.15s ease;
-    }
-    .navi_radio[data-transition] .navi_radio_border {
-      transition: all 0.15s ease;
+      --radiomark-color-readonly: grey;
+      --border-color-readonly-checked: #d3d3d3;
+      --background-color-readonly-checked: #d3d3d3;
+      /* Disabled */
+      --border-color-disabled: var(--border-color-readonly);
+      --background-color-disabled: rgba(248, 248, 248, 0.7);
+      --radiomark-color-disabled: #d3d3d3;
+      --border-color-checked-disabled: #d3d3d3;
+      --background-color-disabled-checked: var(--background-color);
     }
 
-    /* Focus */
-    .navi_radio[data-focus-visible] .navi_radio_field {
-      outline-style: solid;
-    }
-    /* Hover */
-    .navi_radio[data-hover] .navi_radio_border {
-      stroke: var(--border-color-hover);
-    }
-    .navi_radio[data-hover] .navi_radio_marker {
-      fill: var(--mark-color-hover);
-    }
-    /* Checked */
-    .navi_radio[data-checked] .navi_radio_border {
-      stroke: var(--border-color-checked);
-    }
-    .navi_radio[data-checked] .navi_radio_marker {
-      opacity: 1;
-      transform: scale(1);
-    }
-    .navi_radio[data-hover][data-checked] .navi_radio_border {
-      stroke: var(--border-color-checked-hover);
-    }
-    /* Readonly */
-    .navi_radio[data-readonly] .navi_radio_border {
-      fill: var(--background-color-readonly);
-      stroke: var(--border-color-readonly);
-    }
-    .navi_radio[data-readonly] .navi_radio_marker {
-      fill: var(--mark-color-readonly);
-    }
-    .navi_radio[data-readonly] .navi_radio_dashed_border {
-      display: none;
-    }
-    .navi_radio[data-checked][data-readonly] .navi_radio_border {
-      fill: var(--background-color-checked-readonly);
-      stroke: var(--border-color-checked-readonly);
-    }
-    .navi_radio[data-checked][data-readonly] .navi_radio_marker {
-      fill: var(--mark-color-readonly);
-    }
-    /* Disabled */
-    .navi_radio[data-disabled] .navi_radio_border {
-      fill: var(--background-color-disabled);
-      stroke: var(--border-color-disabled);
-    }
-    .navi_radio[data-disabled] .navi_radio_marker {
-      fill: var(--mark-color-disabled);
-    }
-    .navi_radio[data-hover][data-checked][data-disabled] .navi_radio_border {
-      stroke: var(--border-color-disabled);
-    }
-    .navi_radio[data-checked][data-disabled] .navi_radio_marker {
-      fill: var(--mark-color-disabled);
+    .navi_radio[data-dark] {
+      --color-mix: var(--color-mix-dark);
     }
   }
+
+  .navi_radio {
+    position: relative;
+    display: inline-flex;
+    box-sizing: content-box;
+    margin-top: 3px;
+    margin-right: 3px;
+    margin-left: 5px;
+
+    --x-outline-offset: var(--outline-offset);
+    --x-outline-width: var(--outline-width);
+    --x-border-width: var(--border-width);
+    --x-width: var(--width);
+    --x-height: var(--height);
+    --x-outline-color: var(--outline-color);
+    --x-background-color: var(--background-color);
+    --x-border-color: var(--border-color);
+    --x-color: var(--color);
+    --x-radiomark-color: var(--radiomark-color);
+  }
+  .navi_radio .navi_native_field {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    padding: 0;
+    opacity: 0;
+    cursor: inherit;
+  }
+  .navi_radio .navi_radio_field {
+    display: inline-flex;
+    box-sizing: border-box;
+    width: var(--x-width);
+    height: var(--x-height);
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    outline-width: var(--x-outline-width);
+    outline-style: none;
+    outline-color: var(--x-outline-color);
+    outline-offset: var(--x-outline-offset);
+  }
+  .navi_radio_field svg {
+    overflow: visible;
+  }
+  .navi_radio_border {
+    fill: var(--x-background-color);
+    stroke: var(--x-border-color);
+  }
+  .navi_radio_marker {
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    fill: var(--x-radiomark-color);
+    transform: scale(0.3);
+    transform-origin: center;
+    pointer-events: none;
+  }
+  .navi_radio_dashed_border {
+    display: none;
+  }
+  .navi_radio[data-transition] .navi_radio_marker {
+    transition: all 0.15s ease;
+  }
+  .navi_radio[data-transition] .navi_radio_dashed_border {
+    transition: all 0.15s ease;
+  }
+  .navi_radio[data-transition] .navi_radio_border {
+    transition: all 0.15s ease;
+  }
+
+  /* Focus */
+  .navi_radio[data-focus-visible] .navi_radio_field {
+    outline-style: solid;
+  }
+  /* Hover */
+  .navi_radio[data-hover] {
+    --x-border-color: var(--border-color-hover);
+    --x-radiomark-color: var(--radiomark-color-hover);
+  }
+  /* Checked */
+  .navi_radio[data-checked] {
+    --x-border-color: var(--border-color-checked);
+  }
+  .navi_radio[data-checked] .navi_radio_marker {
+    opacity: 1;
+    transform: scale(1);
+  }
+  .navi_radio[data-hover][data-checked] {
+    --x-border-color: var(--border-color-hover-checked);
+  }
+  /* Readonly */
+  .navi_radio[data-readonly] {
+    --x-background-color: var(--background-color-readonly);
+    --x-border-color: var(--border-color-readonly);
+    --x-radiomark-color: var(--radiomark-color-readonly);
+  }
+  .navi_radio[data-readonly] .navi_radio_dashed_border {
+    display: none;
+  }
+  .navi_radio[data-readonly][data-checked] {
+    --x-background-color: var(--background-color-readonly-checked);
+    --x-border-color: var(--border-color-readonly-checked);
+    --x-radiomark-color: var(--radiomark-color-readonly);
+  }
+  /* Disabled */
+  .navi_radio[data-disabled] {
+    --x-background-color: var(--background-color-disabled);
+    --x-border-color: var(--border-color-disabled);
+    --x-radiomark-color: var(--radiomark-color-disabled);
+  }
+  .navi_radio[data-disabled][data-checked] {
+    --x-border-color: var(--border-color-disabled);
+    --x-radiomark-color: var(--radiomark-color-disabled);
+  }
 `;
-const InputRadio = forwardRef((props, ref) => {
+const InputRadio = props => {
   const {
     value = "on"
   } = props;
@@ -13655,7 +14609,7 @@ const InputRadio = forwardRef((props, ref) => {
     getPropFromState: Boolean
   });
   const uiState = useUIState(uiStateController);
-  const radio = renderActionableComponent(props, ref, {
+  const radio = renderActionableComponent(props, {
     Basic: InputRadioBasic,
     WithAction: InputRadioWithAction,
     InsideForm: InputRadioInsideForm
@@ -13667,8 +14621,36 @@ const InputRadio = forwardRef((props, ref) => {
       children: radio
     })
   });
-});
-const InputRadioBasic = forwardRef((props, ref) => {
+};
+const RadioManagedByCSSVars = {
+  "outlineWidth": "--outline-width",
+  "borderWidth": "--border-width",
+  "borderRadius": "--border-radius",
+  "backgroundColor": "--background-color",
+  "borderColor": "--border-color",
+  "color": "--color",
+  ":hover": {
+    backgroundColor: "--background-color-hover",
+    borderColor: "--border-color-hover",
+    color: "--color-hover"
+  },
+  ":active": {
+    borderColor: "--border-color-active"
+  },
+  ":read-only": {
+    backgroundColor: "--background-color-readonly",
+    borderColor: "--border-color-readonly",
+    color: "--color-readonly"
+  },
+  ":disabled": {
+    backgroundColor: "--background-color-disabled",
+    borderColor: "--border-color-disabled",
+    color: "--color-disabled"
+  }
+};
+const RadioPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
+const RadioPseudoElements = ["::-navi-loader", "::-navi-radiomark"];
+const InputRadioBasic = props => {
   const contextName = useContext(FieldNameContext);
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
@@ -13680,6 +14662,10 @@ const InputRadioBasic = forwardRef((props, ref) => {
   const reportReadOnlyOnLabel = useContext(ReportReadOnlyOnLabelContext);
   const reportDisabledOnLabel = useContext(ReportDisabledOnLabelContext);
   const {
+    /* eslint-disable no-unused-vars */
+    type,
+    /* eslint-enable no-unused-vars */
+
     name,
     readOnly,
     disabled,
@@ -13687,32 +14673,29 @@ const InputRadioBasic = forwardRef((props, ref) => {
     loading,
     autoFocus,
     constraints = [],
-    appeareance = "navi",
-    // "navi" or "default"
-    accentColor,
     onClick,
     onInput,
-    style,
+    color,
     ...rest
   } = props;
-  const innerRef = useRef(null);
-  useImperativeHandle(ref, () => innerRef.current);
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   const innerName = name || contextName;
   const innerDisabled = disabled || contextDisabled;
   const innerRequired = required || contextRequired;
-  const innerLoading = loading || contextLoading && contextLoadingElement === innerRef.current;
+  const innerLoading = loading || contextLoading && contextLoadingElement === ref.current;
   const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
   reportReadOnlyOnLabel?.(innerReadOnly);
   reportDisabledOnLabel?.(innerDisabled);
-  useAutoFocus(innerRef, autoFocus);
-  useConstraints(innerRef, constraints);
+  useAutoFocus(ref, autoFocus);
+  useConstraints(ref, constraints);
   const checked = Boolean(uiState);
   // we must first dispatch an event to inform all other radios they where unchecked
   // this way each other radio uiStateController knows thery are unchecked
   // we do this on "input"
   // but also when we are becoming checked from outside (hence the useLayoutEffect)
   const updateOtherRadiosInGroup = () => {
-    const thisRadio = innerRef.current;
+    const thisRadio = ref.current;
     const radioList = thisRadio.closest("[data-radio-list]");
     if (!radioList) {
       return;
@@ -13732,101 +14715,73 @@ const InputRadioBasic = forwardRef((props, ref) => {
       updateOtherRadiosInGroup();
     }
   }, [checked]);
-  const actionName = rest["data-action"];
-  if (actionName) {
-    delete rest["data-action"];
-  }
-  const inputRadio = jsx("input", {
-    ...rest,
-    ref: innerRef,
+  const innerOnInput = useStableCallback(e => {
+    const radio = e.target;
+    const radioIsChecked = radio.checked;
+    if (radioIsChecked) {
+      updateOtherRadiosInGroup();
+    }
+    uiStateController.setUIState(radioIsChecked, e);
+    onInput?.(e);
+  });
+  const innerOnClick = useStableCallback(e => {
+    if (innerReadOnly) {
+      e.preventDefault();
+    }
+    onClick?.(e);
+  });
+  const renderRadio = radioProps => jsx(Box, {
+    ...radioProps,
+    as: "input",
+    ref: ref,
     type: "radio",
-    style: appeareance === "default" ? style : undefined,
     name: innerName,
     checked: checked,
     disabled: innerDisabled,
     required: innerRequired,
+    baseClassName: "navi_native_field",
     "data-callout-arrow-x": "center",
-    onClick: e => {
-      if (innerReadOnly) {
-        e.preventDefault();
-      }
-      onClick?.(e);
-    },
-    onInput: e => {
-      const radio = e.target;
-      const radioIsChecked = radio.checked;
-      if (radioIsChecked) {
-        updateOtherRadiosInGroup();
-      }
-      uiStateController.setUIState(radioIsChecked, e);
-      onInput?.(e);
-    }
-    // eslint-disable-next-line react/no-unknown-property
-    ,
+    onClick: innerOnClick,
+    onInput: innerOnInput,
     onresetuistate: e => {
       uiStateController.resetUIState(e);
-    }
-    // eslint-disable-next-line react/no-unknown-property
-    ,
+    },
     onsetuistate: e => {
       uiStateController.setUIState(e.detail.value, e);
     }
   });
-  const loaderProps = {
-    loading: innerLoading,
-    inset: -1,
-    style: {
-      "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)"
-    },
-    color: "var(--accent-color)"
-  };
-  if (appeareance === "navi") {
-    return jsx(NaviRadio, {
-      "data-action": actionName,
-      inputRef: innerRef,
-      accentColor: accentColor,
-      readOnly: innerReadOnly,
-      disabled: innerDisabled,
-      style: style,
-      children: jsx(LoaderBackground, {
-        ...loaderProps,
-        targetSelector: ".navi_radio_field",
-        children: inputRadio
-      })
-    });
-  }
-  return jsx(LoadableInlineElement, {
-    ...loaderProps,
-    "data-action": actionName,
-    children: inputRadio
-  });
-});
-const NaviRadio = ({
-  inputRef,
-  accentColor,
-  readOnly,
-  disabled,
-  children,
-  ...rest
-}) => {
-  const ref = useRef();
+  const renderRadioMemoized = useCallback(renderRadio, [innerName, checked, innerRequired]);
   useLayoutEffect(() => {
-    return initCustomField(ref.current, inputRef.current);
-  }, []);
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    base: {
-      "--accent-color": accentColor
-    },
-    layout: true
-  });
-  return jsxs("span", {
-    ...remainingProps,
+    const naviRadio = ref.current;
+    const luminance = resolveColorLuminance("var(--color)", naviRadio);
+    if (luminance < 0.3) {
+      naviRadio.setAttribute("data-dark", "");
+    } else {
+      naviRadio.removeAttribute("data-dark");
+    }
+  }, [color]);
+  return jsxs(Box, {
+    as: "span",
+    ...rest,
     ref: ref,
-    className: "navi_radio",
-    style: innerStyle,
-    "data-readonly": readOnly ? "" : undefined,
-    "data-disabled": disabled ? "" : undefined,
-    children: [children, jsx("span", {
+    baseClassName: "navi_radio",
+    pseudoStateSelector: ".navi_native_field",
+    managedByCSSVars: RadioManagedByCSSVars,
+    pseudoClasses: RadioPseudoClasses,
+    pseudoElements: RadioPseudoElements,
+    basePseudoState: {
+      ":read-only": innerReadOnly,
+      ":disabled": innerDisabled,
+      ":-navi-loading": innerLoading
+    },
+    color: color,
+    hasChildFunction: true,
+    children: [jsx(LoaderBackground, {
+      loading: innerLoading,
+      inset: -1,
+      targetSelector: ".navi_radio_field",
+      color: "var(--navi-loader-color)"
+    }), renderRadioMemoized, jsx("span", {
       className: "navi_radio_field",
       children: jsxs("svg", {
         viewBox: "0 0 12 12",
@@ -13864,95 +14819,124 @@ const InputRadioInsideForm = InputRadio;
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_input {
+      --border-radius: 2px;
       --border-width: 1px;
       --outline-width: 1px;
       --outer-width: calc(var(--border-width) + var(--outline-width));
-      --padding-x: 6px;
+      --padding-x: 2px;
       --padding-y: 1px;
 
+      /* Default */
       --outline-color: light-dark(#4476ff, #3b82f6);
-
-      --border-radius: 2px;
       --border-color: light-dark(#767676, #8e8e93);
-      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
-      --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
-      --border-color-readonly: color-mix(
-        in srgb,
-        var(--border-color) 45%,
-        transparent
-      );
-      --border-color-disabled: var(--border-color-readonly);
-
       --background-color: white;
+      --color: currentColor;
+      --color-dimmed: color-mix(in srgb, currentColor 60%, transparent);
+      --placeholder-color: var(--color-dimmed);
+      /* Hover */
+      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
       --background-color-hover: color-mix(
         in srgb,
         var(--background-color) 95%,
         black
       );
-      --background-color-readonly: var(--background-color);
-      --background-color-disabled: color-mix(
+      --color-hover: var(--color);
+      /* Active */
+      --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
+      /* Readonly */
+      --border-color-readonly: color-mix(
         in srgb,
-        var(--background-color) 60%,
+        var(--border-color) 45%,
         transparent
       );
-
-      --color: currentColor;
-      --color-dimmed: color-mix(in srgb, currentColor 60%, transparent);
+      --background-color-readonly: var(--background-color);
       --color-readonly: var(--color-dimmed);
-      --color-disabled: var(--color-readonly);
-
-      width: 100%;
-      color: var(--color);
-
-      background-color: var(--background-color);
-      border-width: var(--outer-width);
-      border-width: var(--outer-width);
-      border-style: solid;
-      border-color: transparent;
-      border-radius: var(--border-radius);
-      outline-width: var(--border-width);
-      outline-style: solid;
-      outline-color: var(--border-color);
-      outline-offset: calc(-1 * (var(--border-width)));
-    }
-    .navi_input::placeholder {
-      color: var(--color-dimmed);
-    }
-    .navi_input:-internal-autofill-selected {
-      /* Webkit is putting some nasty styles after automplete that look as follow */
-      /* input:-internal-autofill-selected { color: FieldText !important; } */
-      /* Fortunately we can override it as follow */
-      -webkit-text-fill-color: var(--color) !important;
-    }
-    /* Focus */
-    .navi_input[data-focus] {
-      border-color: var(--outline-color);
-      outline-width: var(--outer-width);
-      outline-color: var(--outline-color);
-      outline-offset: calc(-1 * var(--outer-width));
-    }
-    /* Readonly */
-    .navi_input[data-readonly] {
-      --color: var(--color-readonly);
-      background-color: var(--background-color-readonly);
-      outline-color: var(--border-color-readonly);
-    }
-    /* Disabled */
-    .navi_input[data-disabled] {
-      --color: var(--color-disabled);
-      background-color: var(--background-color-disabled);
-      outline-color: var(--border-color-disabled);
-    }
-    /* Callout (info, warning, error) */
-    .navi_input[data-callout] {
-      border-color: var(--callout-color);
+      /* Disabled */
+      --border-color-disabled: var(--border-color-readonly);
+      --background-color-disabled: color-mix(
+        in srgb,
+        var(--background-color) 95%,
+        grey
+      );
+      --color-disabled: color-mix(in srgb, var(--color) 95%, grey);
     }
   }
+
+  .navi_input {
+    position: relative;
+    box-sizing: border-box;
+    width: fit-content;
+    height: fit-content;
+    flex-direction: inherit;
+    border-radius: inherit;
+    cursor: inherit;
+
+    --x-outline-width: var(--outline-width);
+    --x-border-radius: var(--border-radius);
+    --x-border-width: var(--border-width);
+    --x-outer-width: calc(var(--x-border-width) + var(--x-outline-width));
+    --x-outline-color: var(--outline-color);
+    --x-border-color: var(--border-color);
+    --x-background-color: var(--background-color);
+    --x-color: var(--color);
+    --x-placeholder-color: var(--placeholder-color);
+  }
+
+  .navi_input .navi_native_input {
+    box-sizing: border-box;
+    padding-top: var(--padding-top, var(--padding-y, var(--padding)));
+    padding-right: var(--padding-right, var(--padding-x, var(--padding)));
+    padding-bottom: var(--padding-bottom, var(--padding-y, var(--padding)));
+    padding-left: var(--padding-left, var(--padding-x, var(--padding)));
+    color: var(--x-color);
+    background-color: var(--x-background-color);
+    border-width: var(--x-outer-width);
+    border-width: var(--x-outer-width);
+    border-style: solid;
+    border-color: transparent;
+    border-radius: var(--x-border-radius);
+    outline-width: var(--x-border-width);
+    outline-style: solid;
+    outline-color: var(--x-border-color);
+    outline-offset: calc(-1 * (var(--x-border-width)));
+  }
+  .navi_input .navi_native_input::placeholder {
+    color: var(--x-placeholder-color);
+  }
+  .navi_input .navi_native_input:-internal-autofill-selected {
+    /* Webkit is putting some nasty styles after automplete that look as follow */
+    /* input:-internal-autofill-selected { color: FieldText !important; } */
+    /* Fortunately we can override it as follow */
+    -webkit-text-fill-color: var(--x-color) !important;
+  }
+  /* Readonly */
+  .navi_input[data-readonly] {
+    --x-border-color: var(--border-color-readonly);
+    --x-background-color: var(--background-color-readonly);
+    --x-color: var(--color-readonly);
+  }
+  /* Focus */
+  .navi_input[data-focus] .navi_native_input,
+  .navi_input[data-focus-visible] .navi_native_input {
+    outline-width: var(--x-outer-width);
+    outline-offset: calc(-1 * var(--x-outer-width));
+    --x-border-color: var(--x-outline-color);
+  }
+  /* Disabled */
+  .navi_input[data-disabled] {
+    --x-border-color: var(--border-color-disabled);
+    --x-background-color: var(--background-color-disabled);
+    --x-color: var(--color-disabled);
+  }
+  /* Callout (info, warning, error) */
+  .navi_input[data-callout] {
+    --x-border-color: var(--callout-color);
+  }
 `;
-const InputTextual = forwardRef((props, ref) => {
+const InputTextual = props => {
   const uiStateController = useUIStateController(props, "input");
   const uiState = useUIState(uiStateController);
-  const input = renderActionableComponent(props, ref, {
+  const input = renderActionableComponent(props, {
     Basic: InputTextualBasic,
     WithAction: InputTextualWithAction,
     InsideForm: InputTextualInsideForm
@@ -13964,8 +14948,40 @@ const InputTextual = forwardRef((props, ref) => {
       children: input
     })
   });
-});
-const InputTextualBasic = forwardRef((props, ref) => {
+};
+const InputManagedByCSSVars = {
+  "outlineWidth": "--outline-width",
+  "borderWidth": "--border-width",
+  "borderRadius": "--border-radius",
+  "paddingTop": "--padding-top",
+  "paddingRight": "--padding-right",
+  "paddingBottom": "--padding-bottom",
+  "paddingLeft": "--padding-left",
+  "backgroundColor": "--background-color",
+  "borderColor": "--border-color",
+  "color": "--color",
+  ":hover": {
+    backgroundColor: "--background-color-hover",
+    borderColor: "--border-color-hover",
+    color: "--color-hover"
+  },
+  ":active": {
+    borderColor: "--border-color-active"
+  },
+  ":read-only": {
+    backgroundColor: "--background-color-readonly",
+    borderColor: "--border-color-readonly",
+    color: "--color-readonly"
+  },
+  ":disabled": {
+    backgroundColor: "--background-color-disabled",
+    borderColor: "--border-color-disabled",
+    color: "--color-disabled"
+  }
+};
+const InputPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
+const InputPseudoElements = ["::-navi-loader"];
+const InputTextualBasic = props => {
   const contextReadOnly = useContext(ReadOnlyContext);
   const contextDisabled = useContext(DisabledContext);
   const contextLoading = useContext(LoadingContext);
@@ -13983,84 +14999,79 @@ const InputTextualBasic = forwardRef((props, ref) => {
     autoFocus,
     autoFocusVisible,
     autoSelect,
-    // visual
-    appearance = "navi",
-    accentColor,
-    className,
     ...rest
   } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   const innerValue = type === "datetime-local" ? convertToLocalTimezone(uiState) : uiState;
-  const innerLoading = loading || contextLoading && contextLoadingElement === innerRef.current;
+  const innerLoading = loading || contextLoading && contextLoadingElement === ref.current;
   const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
   const innerDisabled = disabled || contextDisabled;
   // infom any <label> parent of our readOnly state
   reportReadOnlyOnLabel?.(innerReadOnly);
-  useAutoFocus(innerRef, autoFocus, {
+  useAutoFocus(ref, autoFocus, {
     autoFocusVisible,
     autoSelect
   });
-  useConstraints(innerRef, constraints);
-  const innerClassName = withPropsClassName(appearance === "navi" ? "navi_input" : undefined, className);
-  const [remainingProps, wrapperStyle, inputStyle] = withPropsStyle(rest, {
-    base: {
-      "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)"
-    },
-    layout: true
-  }, {
-    spacing: true
-  });
-  const inputTextual = jsx("input", {
-    ...remainingProps,
-    ref: innerRef,
-    className: innerClassName,
-    style: inputStyle,
-    type: type,
-    "data-value": uiState,
-    value: innerValue,
-    readOnly: innerReadOnly,
-    disabled: innerDisabled,
-    "data-readOnly": innerReadOnly ? "" : undefined,
-    "data-disabled": innerDisabled ? "" : undefined,
-    onInput: e => {
-      let inputValue;
-      if (type === "number") {
-        inputValue = e.target.valueAsNumber;
-      } else if (type === "datetime-local") {
-        inputValue = convertToUTCTimezone(e.target.value);
-      } else {
-        inputValue = e.target.value;
+  useConstraints(ref, constraints);
+  const innerOnInput = useStableCallback(onInput);
+  const renderInput = inputProps => {
+    return jsx(Box, {
+      ...inputProps,
+      as: "input",
+      ref: ref,
+      type: type,
+      "data-value": uiState,
+      value: innerValue,
+      onInput: e => {
+        let inputValue;
+        if (type === "number") {
+          inputValue = e.target.valueAsNumber;
+        } else if (type === "datetime-local") {
+          inputValue = convertToUTCTimezone(e.target.value);
+        } else {
+          inputValue = e.target.value;
+        }
+        uiStateController.setUIState(inputValue, e);
+        innerOnInput?.(e);
+      },
+      onresetuistate: e => {
+        uiStateController.resetUIState(e);
+      },
+      onsetuistate: e => {
+        uiStateController.setUIState(e.detail.value, e);
       }
-      uiStateController.setUIState(inputValue, e);
-      onInput?.(e);
-    }
-    // eslint-disable-next-line react/no-unknown-property
-    ,
-    onresetuistate: e => {
-      uiStateController.resetUIState(e);
-    }
-    // eslint-disable-next-line react/no-unknown-property
-    ,
-    onsetuistate: e => {
-      uiStateController.setUIState(e.detail.value, e);
-    }
+      // style management
+      ,
+      baseClassName: "navi_native_input"
+    });
+  };
+  const renderInputMemoized = useCallback(renderInput, [type, uiState, innerValue, innerOnInput]);
+  return jsxs(Box, {
+    as: "span",
+    layoutInline: true,
+    layoutColumn: true,
+    baseClassName: "navi_input",
+    managedByCSSVars: InputManagedByCSSVars,
+    pseudoStateSelector: ".navi_native_input",
+    visualSelector: ".navi_native_input",
+    basePseudoState: {
+      ":read-only": innerReadOnly,
+      ":disabled": innerDisabled,
+      ":-navi-loading": innerLoading
+    },
+    pseudoClasses: InputPseudoClasses,
+    pseudoElements: InputPseudoElements,
+    hasChildFunction: true,
+    ...rest,
+    children: [jsx(LoaderBackground, {
+      loading: innerLoading,
+      color: "var(--navi-loader-color)",
+      inset: -1
+    }), renderInputMemoized]
   });
-  useLayoutEffect(() => {
-    return initCustomField(innerRef.current, innerRef.current);
-  }, []);
-  if (type === "hidden") {
-    return inputTextual;
-  }
-  return jsx(LoadableInlineElement, {
-    loading: innerLoading,
-    style: wrapperStyle,
-    color: "var(--accent-color)",
-    inset: -1,
-    children: inputTextual
-  });
-});
-const InputTextualWithAction = forwardRef((props, ref) => {
+};
+const InputTextualWithAction = props => {
   const uiState = useContext(UIStateContext);
   const {
     action,
@@ -14075,20 +15086,20 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     actionErrorEffect,
     ...rest
   } = props;
-  const innerRef = useRef(null);
-  useImperativeHandle(ref, () => innerRef.current);
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   const [boundAction] = useActionBoundToOneParam(action, uiState);
   const {
     loading: actionLoading
   } = useActionStatus(boundAction);
-  const executeAction = useExecuteAction(innerRef, {
+  const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect
   });
   // here updating the input won't call the associated action
   // (user have to blur or press enter for this to happen)
   // so we can keep the ui state on cancel/abort/error and let user decide
   // to update ui state or retry via blur/enter as is
-  useActionEvents(innerRef, {
+  useActionEvents(ref, {
     onCancel: (e, reason) => {
       if (reason.startsWith("blur_invalid")) {
         if (!cancelOnBlurInvalid) {
@@ -14119,11 +15130,11 @@ const InputTextualWithAction = forwardRef((props, ref) => {
   return jsx(InputTextualBasic, {
     "data-action": boundAction.name,
     ...rest,
-    ref: innerRef,
+    ref: ref,
     loading: loading || actionLoading
   });
-});
-const InputTextualInsideForm = forwardRef((props, ref) => {
+};
+const InputTextualInsideForm = props => {
   const {
     // We destructure formContext to avoid passing it to the underlying input element
     // eslint-disable-next-line no-unused-vars
@@ -14131,10 +15142,9 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
     ...rest
   } = props;
   return jsx(InputTextualBasic, {
-    ...rest,
-    ref: ref
+    ...rest
   });
-});
+};
 
 // As explained in https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/datetime-local#setting_timezones
 // datetime-local does not support timezones
@@ -14413,162 +15423,208 @@ const useFormEvents = (
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_button {
-      position: relative;
-      display: inline-flex;
-      width: fit-content;
-      height: fit-content;
-      padding: 0;
-      background: none;
-      border: none;
-      border-radius: inherit;
-      outline: none;
-      cursor: pointer;
-
-      --border-width: 1px;
       --outline-width: 1px;
-      --outer-width: calc(var(--border-width) + var(--outline-width));
+      --border-width: 1px;
+      --border-radius: 2px;
       --padding-x: 6px;
       --padding-y: 1px;
-
+      /* default */
       --outline-color: light-dark(#4476ff, #3b82f6);
-
-      --border-radius: 2px;
       --border-color: light-dark(#767676, #8e8e93);
-      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
-      --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
-      --border-color-readonly: color-mix(
-        in srgb,
-        var(--border-color) 30%,
-        white
-      );
-      --border-color-disabled: var(--border-color-readonly);
-
       --background-color: light-dark(#f3f4f6, #2d3748);
+      --color: currentColor;
+
+      /* Hover */
+      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
       --background-color-hover: color-mix(
         in srgb,
         var(--background-color) 95%,
         black
       );
+      --color-hover: var(--color);
+      /* Active */
+      --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
+      /* Readonly */
+      --border-color-readonly: color-mix(
+        in srgb,
+        var(--border-color) 30%,
+        white
+      );
       --background-color-readonly: var(--background-color);
-      --background-color-disabled: var(--background-color);
-
-      --color: currentColor;
-      --color-readonly: color-mix(in srgb, currentColor 30%, transparent);
+      --color-readonly: color-mix(in srgb, var(--color) 30%, transparent);
+      /* Disabled */
+      --border-color-disabled: var(--border-color-readonly);
+      --background-color-disabled: var(--background-color-readonly);
       --color-disabled: var(--color-readonly);
     }
-    .navi_button_content {
-      position: relative;
-      display: inline-flex;
-      width: 100%;
-      padding-top: var(--padding-y);
-      padding-right: var(--padding-x);
-      padding-bottom: var(--padding-y);
-      padding-left: var(--padding-x);
-      color: var(--color);
-      background-color: var(--background-color);
-      border-width: var(--outer-width);
-      border-style: solid;
-      border-color: transparent;
-      border-radius: var(--border-radius);
-      outline-width: var(--border-width);
-      outline-style: solid;
-      outline-color: var(--border-color);
-      outline-offset: calc(-1 * (var(--border-width)));
-      transition-property: transform;
-      transition-duration: 0.15s;
-      transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .navi_button_shadow {
-      position: absolute;
-      inset: calc(-1 * var(--outer-width));
-      border-radius: inherit;
-      pointer-events: none;
-    }
-    /* Focus */
-    .navi_button[data-focus-visible] .navi_button_content {
-      --border-color: var(--outline-color);
-      outline-width: var(--outer-width);
-      outline-offset: calc(-1 * var(--outer-width));
-    }
-    /* Hover */
-    .navi_button[data-hover] .navi_button_content {
-      --border-color: var(--border-color-hover);
-      --background-color: var(--background-color-hover);
-    }
-    /* Active */
-    .navi_button[data-active] .navi_button_content {
-      --outline-color: var(--border-color-active);
-      transform: scale(0.9);
-    }
-    .navi_button[data-active] .navi_button_shadow {
-      box-shadow:
-        inset 0 3px 6px rgba(0, 0, 0, 0.2),
-        inset 0 1px 2px rgba(0, 0, 0, 0.3),
-        inset 0 0 0 1px rgba(0, 0, 0, 0.1),
-        inset 2px 0 4px rgba(0, 0, 0, 0.1),
-        inset -2px 0 4px rgba(0, 0, 0, 0.1);
-    }
-    /* Readonly */
-    .navi_button[data-readonly] .navi_button_content {
-      --border-color: var(--border-color-disabled);
-      --outline-color: var(--border-color-readonly);
-      --background-color: var(--background-color-readonly);
-      --color: var(--color-readonly);
-    }
-    /* Disabled */
-    .navi_button[data-disabled] {
-      cursor: default;
-    }
-    .navi_button[data-disabled] .navi_button_content {
-      --border-color: var(--border-color-disabled);
-      --background-color: var(--background-color-disabled);
-      --color: var(--color-disabled);
-      transform: none; /* no active effect */
-    }
-    .navi_button[data-disabled] .navi_button_shadow {
-      box-shadow: none;
-    }
-    /* Callout (info, warning, error) */
-    .navi_button[data-callout] .navi_button_content {
-      --border-color: var(--callout-color);
-    }
+  }
 
-    /* Discrete variant */
-    .navi_button[data-discrete] .navi_button_content {
-      --background-color: transparent;
-      --border-color: transparent;
-    }
-    .navi_button[data-discrete][data-hover] .navi_button_content {
-      --border-color: var(--border-color-hover);
-    }
-    .navi_button[data-discrete][data-readonly] .navi_button_content {
-      --border-color: transparent;
-    }
-    .navi_button[data-discrete][data-disabled] .navi_button_content {
-      --border-color: transparent;
-    }
-    button[data-discrete] {
-      background-color: transparent;
-      border-color: transparent;
-    }
-    button[data-discrete]:hover {
-      border-color: revert;
-    }
-    button[data-discrete][data-readonly],
-    button[data-discrete][data-disabled] {
-      border-color: transparent;
-    }
+  .navi_button {
+    /* Internal css vars are the one controlling final values */
+    /* allowing to override them on interactions (like hover, disabled, etc.) */
+    --x-outline-width: var(--outline-width);
+    --x-border-radius: var(--border-radius);
+    --x-border-width: var(--border-width);
+    --x-outer-width: calc(var(--x-border-width) + var(--x-outline-width));
+    --x-outline-color: var(--outline-color);
+    --x-border-color: var(--border-color);
+    --x-background-color: var(--background-color);
+    --x-color: var(--color);
+
+    position: relative;
+    box-sizing: border-box;
+    width: fit-content;
+    height: fit-content;
+    padding: 0;
+    flex-direction: inherit;
+    align-items: inherit;
+    justify-content: inherit;
+    background: none;
+    border: none;
+    border-radius: inherit;
+    outline: none;
+    cursor: pointer;
+  }
+  .navi_button_content {
+    position: relative;
+    padding-top: var(--padding-top, var(--padding-y, var(--padding)));
+    padding-right: var(--padding-right, var(--padding-x, var(--padding)));
+    padding-bottom: var(--padding-bottom, var(--padding-y, var(--padding)));
+    padding-left: var(--padding-left, var(--padding-x, var(--padding)));
+    color: var(--x-color);
+    background-color: var(--x-background-color);
+    border-width: var(--x-outer-width);
+    border-style: solid;
+    border-color: transparent;
+    border-radius: var(--x-border-radius);
+    outline-width: var(--x-border-width);
+    outline-style: solid;
+    outline-color: var(--x-border-color);
+    outline-offset: calc(-1 * (var(--x-border-width)));
+    transition-property: transform;
+    transition-duration: 0.15s;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .navi_button_shadow {
+    position: absolute;
+    inset: calc(-1 * var(--x-outer-width));
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  /* Hover */
+  .navi_button[data-hover] {
+    --x-border-color: var(--border-color-hover);
+    --x-background-color: var(--background-color-hover);
+    --x-color: var(--color-hover);
+  }
+  /* Active */
+  .navi_button[data-active] {
+    --x-outline-color: var(--border-color-active);
+  }
+  .navi_button[data-active] .navi_button_content {
+    transform: scale(0.9);
+  }
+  .navi_button[data-active] .navi_button_shadow {
+    box-shadow:
+      inset 0 3px 6px rgba(0, 0, 0, 0.2),
+      inset 0 1px 2px rgba(0, 0, 0, 0.3),
+      inset 0 0 0 1px rgba(0, 0, 0, 0.1),
+      inset 2px 0 4px rgba(0, 0, 0, 0.1),
+      inset -2px 0 4px rgba(0, 0, 0, 0.1);
+  }
+  /* Readonly */
+  .navi_button[data-readonly] {
+    --x-border-color: var(--border-color-readonly);
+    --x-background-color: var(--background-color-readonly);
+    --x-color: var(--color-readonly);
+  }
+  /* Focus */
+  .navi_button[data-focus-visible] {
+    --x-border-color: var(--x-outline-color);
+  }
+  .navi_button[data-focus-visible] .navi_button_content {
+    outline-width: var(--x-outer-width);
+    outline-offset: calc(-1 * var(--x-outer-width));
+  }
+  /* Disabled */
+  .navi_button[data-disabled] {
+    color: unset;
+    cursor: default;
+  }
+  .navi_button[data-disabled] {
+    --x-border-color: var(--border-color-disabled);
+    --x-background-color: var(--background-color-disabled);
+    --x-color: var(--color-disabled);
+  }
+  /* no active effect */
+  .navi_button[data-disabled] .navi_button_content {
+    transform: none;
+  }
+  .navi_button[data-disabled] .navi_button_shadow {
+    box-shadow: none;
+  }
+  /* Callout (info, warning, error) */
+  .navi_button[data-callout] {
+    --x-border-color: var(--callout-color);
+  }
+
+  /* Discrete variant */
+  .navi_button[data-discrete] {
+    --x-background-color: transparent;
+    --x-border-color: transparent;
+  }
+  .navi_button[data-discrete][data-hover] {
+    --x-border-color: var(--border-color-hover);
+  }
+  .navi_button[data-discrete][data-readonly] {
+    --x-border-color: transparent;
+  }
+  .navi_button[data-discrete][data-disabled] {
+    --x-border-color: transparent;
   }
 `;
-const Button = forwardRef((props, ref) => {
-  return renderActionableComponent(props, ref, {
+const Button = props => {
+  return renderActionableComponent(props, {
     Basic: ButtonBasic,
     WithAction: ButtonWithAction,
     InsideForm: ButtonInsideForm,
     WithActionInsideForm: ButtonWithActionInsideForm
   });
-});
-const ButtonBasic = forwardRef((props, ref) => {
+};
+const ButtonManagedByCSSVars = {
+  "outlineWidth": "--outline-width",
+  "borderWidth": "--border-width",
+  "borderRadius": "--border-radius",
+  "paddingTop": "--padding-top",
+  "paddingRight": "--padding-right",
+  "paddingBottom": "--padding-bottom",
+  "paddingLeft": "--padding-left",
+  "backgroundColor": "--background-color",
+  "borderColor": "--border-color",
+  "color": "--color",
+  ":hover": {
+    backgroundColor: "--background-color-hover",
+    borderColor: "--border-color-hover",
+    color: "--color-hover"
+  },
+  ":active": {
+    borderColor: "--border-color-active"
+  },
+  ":read-only": {
+    backgroundColor: "--background-color-readonly",
+    borderColor: "--border-color-readonly",
+    color: "--color-readonly"
+  },
+  ":disabled": {
+    backgroundColor: "--background-color-disabled",
+    borderColor: "--border-color-disabled",
+    color: "--color-disabled"
+  }
+};
+const ButtonPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
+const ButtonPseudoElements = ["::-navi-loader"];
+const ButtonBasic = props => {
   const contextLoading = useContext(LoadingContext);
   const contextLoadingElement = useContext(LoadingElementContext);
   const contextReadOnly = useContext(ReadOnlyContext);
@@ -14580,69 +15636,62 @@ const ButtonBasic = forwardRef((props, ref) => {
     constraints = [],
     autoFocus,
     // visual
-    appearance = "navi",
     discrete,
-    className,
+    contentSpacing = " ",
     children,
     ...rest
   } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-  useAutoFocus(innerRef, autoFocus);
-  useConstraints(innerRef, constraints);
-  const innerLoading = loading || contextLoading && contextLoadingElement === innerRef.current;
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
+  useAutoFocus(ref, autoFocus);
+  useConstraints(ref, constraints);
+  const innerLoading = loading || contextLoading && contextLoadingElement === ref.current;
   const innerReadOnly = readOnly || contextReadOnly || innerLoading;
   const innerDisabled = disabled || contextDisabled;
-  let buttonChildren;
-  if (appearance === "navi") {
-    buttonChildren = jsx(NaviButton, {
-      buttonRef: innerRef,
-      children: children
+  const innerChildren = applyContentSpacingOnTextChildren(children, contentSpacing);
+  const renderButtonContent = buttonProps => {
+    return jsxs(Box, {
+      ...buttonProps,
+      as: "span",
+      baseClassName: "navi_button_content",
+      layoutInline: true,
+      children: [innerChildren, jsx("span", {
+        className: "navi_button_shadow"
+      })]
     });
-  } else {
-    buttonChildren = children;
-  }
-  const innerClassName = withPropsClassName(appearance === "navi" ? "navi_button" : undefined, className);
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    layout: true
-  });
-  return jsx("button", {
-    ...remainingProps,
-    ref: innerRef,
-    className: innerClassName,
-    style: innerStyle,
-    disabled: innerDisabled,
+  };
+  const renderButtonContentMemoized = useCallback(renderButtonContent, []);
+  return jsxs(Box, {
+    ...rest,
+    as: "button",
+    ref: ref,
     "data-discrete": discrete ? "" : undefined,
-    "data-readonly": innerReadOnly ? "" : undefined,
     "data-readonly-silent": innerLoading ? "" : undefined,
-    "data-disabled": innerDisabled ? "" : undefined,
     "data-callout-arrow-x": "center",
-    "aria-busy": innerLoading,
-    children: jsx(LoaderBackground, {
+    "aria-busy": innerLoading
+    // style management
+    ,
+    baseClassName: "navi_button",
+    layoutInline: true,
+    layoutColumn: true,
+    managedByCSSVars: ButtonManagedByCSSVars,
+    pseudoClasses: ButtonPseudoClasses,
+    pseudoElements: ButtonPseudoElements,
+    basePseudoState: {
+      ":read-only": innerReadOnly,
+      ":disabled": innerDisabled,
+      ":-navi-loading": innerLoading
+    },
+    visualSelector: ".navi_button_content",
+    hasChildFunction: true,
+    children: [jsx(LoaderBackground, {
       loading: innerLoading,
       inset: -1,
-      color: "light-dark(#355fcc, #3b82f6)",
-      children: buttonChildren
-    })
-  });
-});
-const NaviButton = ({
-  buttonRef,
-  children
-}) => {
-  const ref = useRef();
-  useLayoutEffect(() => {
-    return initCustomField(buttonRef.current, buttonRef.current);
-  }, []);
-  return jsxs("span", {
-    ref: ref,
-    className: "navi_button_content",
-    children: [children, jsx("span", {
-      className: "navi_button_shadow"
-    })]
+      color: "var(--navi-loader-color)"
+    }), renderButtonContentMemoized]
   });
 };
-const ButtonWithAction = forwardRef((props, ref) => {
+const ButtonWithAction = props => {
   const {
     action,
     loading,
@@ -14654,17 +15703,17 @@ const ButtonWithAction = forwardRef((props, ref) => {
     children,
     ...rest
   } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   const boundAction = useAction(action);
   const {
     loading: actionLoading
   } = useActionStatus(boundAction);
-  const executeAction = useExecuteAction(innerRef, {
+  const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect
   });
   const innerLoading = loading || actionLoading;
-  useActionEvents(innerRef, {
+  useActionEvents(ref, {
     onPrevented: onActionPrevented,
     onRequested: e => forwardActionRequested(e, boundAction),
     onAction: executeAction,
@@ -14677,12 +15726,12 @@ const ButtonWithAction = forwardRef((props, ref) => {
   , {
     "data-action": boundAction.name,
     ...rest,
-    ref: innerRef,
+    ref: ref,
     loading: innerLoading,
     children: children
   });
-});
-const ButtonInsideForm = forwardRef((props, ref) => {
+};
+const ButtonInsideForm = props => {
   const {
     // eslint-disable-next-line no-unused-vars
     formContext,
@@ -14692,20 +15741,17 @@ const ButtonInsideForm = forwardRef((props, ref) => {
     readOnly,
     ...rest
   } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
   const innerLoading = loading;
   const innerReadOnly = readOnly;
   return jsx(ButtonBasic, {
     ...rest,
-    ref: innerRef,
     type: type,
     loading: innerLoading,
     readOnly: innerReadOnly,
     children: children
   });
-});
-const ButtonWithActionInsideForm = forwardRef((props, ref) => {
+};
+const ButtonWithActionInsideForm = props => {
   const formAction = useContext(FormActionContext);
   const {
     // eslint-disable-next-line no-unused-vars
@@ -14722,15 +15768,15 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
     onActionEnd,
     ...rest
   } = props;
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   const formParamsSignal = getActionPrivateProperties(formAction).paramsSignal;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
   const actionBoundToFormParams = useAction(action, formParamsSignal);
   const {
     loading: actionLoading
   } = useActionStatus(actionBoundToFormParams);
   const innerLoading = loading || actionLoading;
-  useFormEvents(innerRef, {
+  useFormEvents(ref, {
     onFormActionPrevented: e => {
       if (e.detail.action === actionBoundToFormParams) {
         onActionPrevented?.(e);
@@ -14760,7 +15806,7 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
   return jsx(ButtonBasic, {
     "data-action": actionBoundToFormParams.name,
     ...rest,
-    ref: innerRef,
+    ref: ref,
     type: type,
     loading: innerLoading,
     onactionrequested: e => {
@@ -14768,7 +15814,7 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
     },
     children: children
   });
-});
+};
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
@@ -14792,11 +15838,7 @@ const CheckboxList = forwardRef((props, ref) => {
     }
   });
   const uiState = useUIState(uiStateController);
-  const checkboxList = renderActionableComponent(props, ref, {
-    Basic: CheckboxListBasic,
-    WithAction: CheckboxListWithAction,
-    InsideForm: CheckboxListInsideForm
-  });
+  const checkboxList = renderActionableComponent(props, ref);
   return jsx(UIStateControllerContext.Provider, {
     value: uiStateController,
     children: jsx(UIStateContext.Provider, {
@@ -14857,7 +15899,7 @@ const CheckboxListBasic = forwardRef((props, ref) => {
     })
   });
 });
-const CheckboxListWithAction = forwardRef((props, ref) => {
+forwardRef((props, ref) => {
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
   const {
@@ -14925,7 +15967,6 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
     })
   });
 });
-const CheckboxListInsideForm = CheckboxListBasic;
 
 const collectFormElementValues = (element) => {
   let formElements;
@@ -15025,7 +16066,7 @@ const getValue = (formElement) => {
  *    right now it's just logged to the console I need to see how we can achieve this
  */
 
-const Form = forwardRef((props, ref) => {
+const Form = props => {
   const uiStateController = useUIGroupStateController(props, "form", {
     childComponentType: "*",
     aggregateChildStates: childUIStateControllers => {
@@ -15045,7 +16086,7 @@ const Form = forwardRef((props, ref) => {
     }
   });
   const uiState = useUIState(uiStateController);
-  const form = renderActionableComponent(props, ref, {
+  const form = renderActionableComponent(props, {
     Basic: FormBasic,
     WithAction: FormWithAction
   });
@@ -15056,8 +16097,8 @@ const Form = forwardRef((props, ref) => {
       children: form
     })
   });
-});
-const FormBasic = forwardRef((props, ref) => {
+};
+const FormBasic = props => {
   const uiStateController = useContext(UIStateControllerContext);
   const {
     readOnly,
@@ -15065,26 +16106,23 @@ const FormBasic = forwardRef((props, ref) => {
     children,
     ...rest
   } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
 
   // instantiation validation to:
   // - receive "requestsubmit" custom event ensure submit is prevented
   // (and also execute action without validation if form.submit() is ever called)
-  useConstraints(innerRef, []);
+  useConstraints(ref, []);
   const innerReadOnly = readOnly || loading;
   const formContextValue = useMemo(() => {
     return {
       loading
     };
   }, [loading]);
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    layout: true
-  });
-  return jsx("form", {
-    ...remainingProps,
-    ref: innerRef,
-    style: innerStyle,
+  return jsx(Box, {
+    ...rest,
+    as: "form",
+    ref: ref,
     onReset: e => {
       // browser would empty all fields to their default values (likely empty/unchecked)
       // we want to reset to the last known external state instead
@@ -15105,8 +16143,8 @@ const FormBasic = forwardRef((props, ref) => {
       })
     })
   });
-});
-const FormWithAction = forwardRef((props, ref) => {
+};
+const FormWithAction = props => {
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
   const {
@@ -15124,24 +16162,24 @@ const FormWithAction = forwardRef((props, ref) => {
     children,
     ...rest
   } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   const [actionBoundToUIState] = useActionBoundToOneParam(action, uiState);
-  const executeAction = useExecuteAction(innerRef, {
+  const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect,
     errorMapping
   });
   const {
     actionPending,
     actionRequester: formActionRequester
-  } = useRequestedActionStatus(innerRef);
-  useActionEvents(innerRef, {
+  } = useRequestedActionStatus(ref);
+  useActionEvents(ref, {
     onPrevented: onActionPrevented,
     onRequested: e => {
       forwardActionRequested(e, actionBoundToUIState);
     },
     onAction: e => {
-      const form = innerRef.current;
+      const form = ref.current;
       const formElementValues = collectFormElementValues(form);
       uiStateController.setUIState(formElementValues, e);
       executeAction(e);
@@ -15172,7 +16210,7 @@ const FormWithAction = forwardRef((props, ref) => {
     "data-action": actionBoundToUIState.name,
     "data-method": action.meta?.httpVerb || method || "GET",
     ...rest,
-    ref: innerRef,
+    ref: ref,
     loading: innerLoading,
     children: jsx(FormActionContext.Provider, {
       value: actionBoundToUIState,
@@ -15182,7 +16220,7 @@ const FormWithAction = forwardRef((props, ref) => {
       })
     })
   });
-});
+};
 
 // const dispatchCustomEventOnFormAndFormElements = (type, options) => {
 //   const form = innerRef.current;
@@ -15217,11 +16255,7 @@ const RadioList = forwardRef((props, ref) => {
     }
   });
   const uiState = useUIState(uiStateController);
-  const radioList = renderActionableComponent(props, ref, {
-    Basic: RadioListBasic,
-    WithAction: RadioListWithAction,
-    InsideForm: RadioListInsideForm
-  });
+  const radioList = renderActionableComponent(props, ref);
   return jsx(UIStateControllerContext.Provider, {
     value: uiStateController,
     children: jsx(UIStateContext.Provider, {
@@ -15282,7 +16316,7 @@ const RadioListBasic = forwardRef((props, ref) => {
     })
   });
 });
-const RadioListWithAction = forwardRef((props, ref) => {
+forwardRef((props, ref) => {
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
   const {
@@ -15350,7 +16384,6 @@ const RadioListWithAction = forwardRef((props, ref) => {
     })
   });
 });
-const RadioListInsideForm = RadioListBasic;
 
 const useRefArray = (items, keyFromItem) => {
   const refMapRef = useRef(new Map());
@@ -15394,11 +16427,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   }
 `;
 const Select = forwardRef((props, ref) => {
-  const select = renderActionableComponent(props, ref, {
-    Basic: SelectBasic,
-    WithAction: SelectWithAction,
-    InsideForm: SelectInsideForm
-  });
+  const select = renderActionableComponent(props, ref);
   return select;
 });
 const SelectControlled = forwardRef((props, ref) => {
@@ -15451,7 +16480,7 @@ const SelectControlled = forwardRef((props, ref) => {
     children: selectElement
   });
 });
-const SelectBasic = forwardRef((props, ref) => {
+forwardRef((props, ref) => {
   const {
     value: initialValue,
     id,
@@ -15478,7 +16507,7 @@ const SelectBasic = forwardRef((props, ref) => {
     children: children
   });
 });
-const SelectWithAction = forwardRef((props, ref) => {
+forwardRef((props, ref) => {
   const {
     id,
     name,
@@ -15563,7 +16592,7 @@ const SelectWithAction = forwardRef((props, ref) => {
     })
   });
 });
-const SelectInsideForm = forwardRef((props, ref) => {
+forwardRef((props, ref) => {
   const {
     id,
     name,
@@ -19116,6 +20145,8 @@ const useSignalSync = (value, initialValue = value) => {
   return signal;
 };
 
+const withPropsStyle = () => {};
+
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   .navi_font_sized_svg {
     display: flex;
@@ -19133,57 +20164,12 @@ const FontSizedSvg = ({
   children,
   ...rest
 }) => {
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    base: {
-      width: width === "1em" ? undefined : width,
-      height: height === "1em" ? undefined : height
-    }
-  });
+  const [remainingProps, innerStyle] = withPropsStyle();
   return jsx("span", {
     ...remainingProps,
     className: "navi_font_sized_svg",
     style: innerStyle,
     children: children
-  });
-};
-
-installImportMetaCss(import.meta);import.meta.css = /* css */`
-  .link_with_icon {
-    white-space: nowrap;
-    align-items: center;
-    gap: 0.3em;
-    min-width: 0;
-    display: inline-flex;
-    flex-grow: 1;
-  }
-`;
-const LinkWithIcon = ({
-  icon,
-  isCurrent,
-  children,
-  className = "",
-  ...rest
-}) => {
-  return jsxs(Link, {
-    className: ["link_with_icon", ...className.split(" ")].join(" "),
-    ...rest,
-    children: [jsx(FontSizedSvg, {
-      children: icon
-    }), isCurrent && jsx(FontSizedSvg, {
-      children: jsx(CurrentSvg, {})
-    }), children]
-  });
-};
-const CurrentSvg = () => {
-  return jsx("svg", {
-    viewBox: "0 0 16 16",
-    width: "100%",
-    height: "100%",
-    xmlns: "http://www.w3.org/2000/svg",
-    children: jsx("path", {
-      d: "m 8 0 c -3.3125 0 -6 2.6875 -6 6 c 0.007812 0.710938 0.136719 1.414062 0.386719 2.078125 l -0.015625 -0.003906 c 0.636718 1.988281 3.78125 5.082031 5.625 6.929687 h 0.003906 v -0.003906 c 1.507812 -1.507812 3.878906 -3.925781 5.046875 -5.753906 c 0.261719 -0.414063 0.46875 -0.808594 0.585937 -1.171875 l -0.019531 0.003906 c 0.25 -0.664063 0.382813 -1.367187 0.386719 -2.078125 c 0 -3.3125 -2.683594 -6 -6 -6 z m 0 3.691406 c 1.273438 0 2.308594 1.035156 2.308594 2.308594 s -1.035156 2.308594 -2.308594 2.308594 c -1.273438 -0.003906 -2.304688 -1.035156 -2.304688 -2.308594 c -0.003906 -1.273438 1.03125 -2.304688 2.304688 -2.308594 z m 0 0",
-      fill: "#2e3436"
-    })
   });
 };
 
@@ -19278,228 +20264,55 @@ const SVGMaskOverlay = ({
   });
 };
 
-const Image = props => {
-  const [remainingProps, innerStyle] = withPropsStyle(props, {
-    spacing: true
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .navi_count {
+    position: relative;
+    top: -1px;
+    color: rgba(28, 43, 52, 0.4);
+  }
+`;
+const Count = ({
+  children,
+  ...rest
+}) => {
+  return jsxs(Box, {
+    as: "span",
+    baseClassName: ".navi_count",
+    ...rest,
+    children: ["(", children, ")"]
   });
+};
+
+const Image = props => {
+  const [remainingProps, innerStyle] = withPropsStyle();
   return jsx("img", {
     style: innerStyle,
     ...remainingProps
   });
 };
 
-const Overflow = ({
-  className,
-  children,
-  afterContent
-}) => {
-  return jsx("div", {
-    className: className,
-    style: "display: flex; flex-wrap: wrap; overflow: hidden; width: 100%; box-sizing: border-box; white-space: nowrap; text-overflow: ellipsis;",
-    children: jsxs("div", {
-      style: "display: flex; flex-grow: 1; width: 0; gap: 0.3em",
-      children: [jsx("div", {
-        style: "overflow: hidden; max-width: 100%; text-overflow: ellipsis;",
-        children: children
-      }), afterContent]
-    })
-  });
-};
-
-const Paragraph = ({
-  children,
-  ...rest
-}) => {
-  if (rest.marginTop === undefined) {
-    rest.marginTop = "md";
-  }
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    layout: true,
-    typo: true
-  });
-  return jsx("p", {
-    ...remainingProps,
-    style: innerStyle,
-    children: children
-  });
-};
+const LinkWithIcon = () => {};
 
 const Svg = props => {
-  const [remainingProps, innerStyle] = withPropsStyle(props, {
-    spacing: true
-  });
+  const [remainingProps, innerStyle] = withPropsStyle();
   return jsx("svg", {
     style: innerStyle,
     ...remainingProps
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
-  .text_and_count {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    flex: 1;
-    white-space: nowrap;
-  }
-
-  .count {
-    position: relative;
-    top: -1px;
-    color: rgba(28, 43, 52, 0.4);
-  }
-`;
-const TextAndCount = ({
-  text,
-  count
-}) => {
-  return jsx(Overflow, {
-    className: "text_and_count",
-    afterContent: count > 0 && jsxs("span", {
-      className: "count",
-      children: ["(", count, ")"]
-    }),
-    children: jsx("span", {
-      className: "label",
-      children: text
-    })
-  });
-};
-
 const Title = ({
-  children,
   as = "h1",
-  ...rest
-}) => {
-  if (rest.textBold === undefined) {
-    rest.textBold = true;
-  }
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    layout: true,
-    typo: true
-  });
-  const HeadingTag = as;
-  return jsx(HeadingTag, {
-    ...remainingProps,
-    style: innerStyle,
-    children: children
-  });
-};
-
-installImportMetaCss(import.meta);import.meta.css = /* css */`
-  .navi_flex_row {
-    display: flex;
-    flex-direction: row;
-    gap: 0;
-  }
-
-  .navi_flex_column {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-  }
-
-  .navi_flex_item {
-    flex-shrink: 0;
-  }
-`;
-const FlexRow = ({
-  className,
-  alignX,
-  alignY,
-  gap,
+  bold = true,
+  contentSpacing = " ",
   children,
   ...rest
 }) => {
-  const innerClassName = withPropsClassName("navi_flex_row", className);
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    base: {
-      // Only set justifyContent if it's not the default "start"
-      justifyContent: alignX !== "start" ? alignX : undefined,
-      // Only set alignItems if it's not the default "stretch"
-      alignItems: alignY !== "stretch" ? alignY : undefined,
-      gap: sizeSpacingScale[gap] || gap
-    },
-    layout: true
-  });
-  return jsx("div", {
-    ...remainingProps,
-    className: innerClassName,
-    style: innerStyle,
-    children: jsx(FlexDirectionContext.Provider, {
-      value: "row",
-      children: children
-    })
-  });
-};
-const FlexColumn = ({
-  className,
-  alignX,
-  alignY,
-  gap,
-  children,
-  ...rest
-}) => {
-  const innerClassName = withPropsClassName("navi_flex_column", className);
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    base: {
-      // Only set alignItems if it's not the default "stretch"
-      alignItems: alignX !== "stretch" ? alignX : undefined,
-      // Only set justifyContent if it's not the default "start"
-      justifyContent: alignY !== "start" ? alignY : undefined,
-      gap: sizeSpacingScale[gap] || gap
-    },
-    layout: true
-  });
-  return jsx("div", {
-    ...remainingProps,
-    className: innerClassName,
-    style: innerStyle,
-    children: jsx(FlexDirectionContext.Provider, {
-      value: "column",
-      children: children
-    })
-  });
-};
-const FlexItem = ({
-  shrink,
-  className,
-  expand,
-  children,
-  ...rest
-}) => {
-  const flexDirection = useContext(FlexDirectionContext);
-  if (!flexDirection) {
-    console.warn("FlexItem must be used within a FlexRow or FlexColumn component.");
-  }
-  const innerClassName = withPropsClassName("navi_flex_item", className);
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    base: {
-      flexGrow: expand ? 1 : undefined,
-      flexShrink: shrink ? 1 : undefined
-    },
-    layout: true
-  });
-  return jsx("div", {
-    ...remainingProps,
-    className: innerClassName,
-    style: innerStyle,
-    children: children
-  });
-};
-
-const Spacing = ({
-  children,
-  ...rest
-}) => {
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    spacing: true,
-    size: true
-  });
-  return jsx("div", {
-    ...remainingProps,
-    style: innerStyle,
-    children: children
+  return jsx(Box, {
+    ...rest,
+    as: as,
+    bold: bold,
+    children: applyContentSpacingOnTextChildren(children, contentSpacing)
   });
 };
 
@@ -19580,5 +20393,5 @@ const useDependenciesDiff = (inputs) => {
   return diffRef.current;
 };
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Button, Checkbox, CheckboxList, Col, Colgroup, Details, Editable, ErrorBoundaryContext, FlexColumn, FlexItem, FlexRow, FontSizedSvg, Form, Icon, IconAndText, Image, Input, Label, Link, LinkWithIcon, Overflow, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, Select, SelectionContext, Spacing, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, TextAndCount, Thead, Title, Tr, UITransition, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, Box, Button, CharSlot, Checkbox, CheckboxList, Col, Colgroup, Count, Details, Editable, ErrorBoundaryContext, FontSizedSvg, Form, Icon, IconAndText, Image, Input, Label, Layout, Link, LinkWithIcon, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, Select, SelectionContext, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map

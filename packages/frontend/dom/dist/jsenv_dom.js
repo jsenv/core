@@ -398,7 +398,7 @@ const setStyles = createSetMany$1(setStyle);
 const forceStyles = createSetMany$1(forceStyle);
 
 // Properties that need px units
-const pxProperties = [
+const pxPropertySet = new Set([
   "width",
   "height",
   "top",
@@ -415,14 +415,13 @@ const pxProperties = [
   "paddingRight",
   "paddingBottom",
   "paddingLeft",
-  "border",
   "borderWidth",
   "borderTopWidth",
   "borderRightWidth",
   "borderBottomWidth",
   "borderLeftWidth",
   "fontSize",
-  "lineHeight",
+  // lineHeight intentionally excluded - it should remain unitless when no unit is specified
   "letterSpacing",
   "wordSpacing",
   "translateX",
@@ -436,10 +435,10 @@ const pxProperties = [
   "gap",
   "rowGap",
   "columnGap",
-];
+]);
 
 // Properties that need deg units
-const degProperties = [
+const degPropertySet = new Set([
   "rotate",
   "rotateX",
   "rotateY",
@@ -447,10 +446,10 @@ const degProperties = [
   "skew",
   "skewX",
   "skewY",
-];
+]);
 
 // Properties that should remain unitless
-const unitlessProperties = [
+const unitlessPropertySet = new Set([
   "opacity",
   "zIndex",
   "flexGrow",
@@ -461,7 +460,7 @@ const unitlessProperties = [
   "scaleX",
   "scaleY",
   "scaleZ",
-];
+]);
 
 // Well-known CSS units and keywords that indicate a value already has proper formatting
 const cssSizeUnitSet = new Set([
@@ -505,15 +504,16 @@ const cssKeywordSet = new Set([
   "revert",
 ]);
 
-// Check if value already has a unit or is a keyword
-const hasUnit = (value) => {
+const getUnit = (value) => {
   for (const cssUnit of cssUnitSet) {
     if (value.endsWith(cssUnit)) {
-      return true;
+      return cssUnit;
     }
   }
-  return false;
+  return "";
 };
+// Check if value already has a unit
+const isUnitless = (value) => getUnit(value) === "";
 const isKeyword = (value) => {
   return cssKeywordSet.has(value);
 };
@@ -589,21 +589,45 @@ const normalizeStyle = (value, propertyName, context = "js") => {
     return value;
   }
 
-  if (pxProperties.includes(propertyName)) {
+  if (propertyName === "lineHeight") {
+    if (context === "js") {
+      if (typeof value === "string") {
+        const unit = getUnit(value);
+        if (unit === "px") {
+          const float = parseFloat(value);
+          return float;
+        }
+        if (unit === "") {
+          return `${value}em`;
+        }
+        return value;
+      }
+    }
+    if (context === "css") {
+      if (typeof value === "number") {
+        // When line height is converted to a number it means
+        // it was in pixels, we must restore the unit
+        return `${value}px`;
+      }
+    }
+    return value;
+  }
+
+  if (pxPropertySet.has(propertyName)) {
     return normalizeNumber(value, {
       propertyName,
       unit: "px",
       preferedType: context === "js" ? "number" : "string",
     });
   }
-  if (degProperties.includes(propertyName)) {
+  if (degPropertySet.has(propertyName)) {
     return normalizeNumber(value, {
       propertyName,
       unit: "deg",
       preferedType: "string",
     });
   }
-  if (unitlessProperties.includes(propertyName)) {
+  if (unitlessPropertySet.has(propertyName)) {
     return normalizeNumber(value, {
       propertyName,
       unit: "",
@@ -617,7 +641,7 @@ const normalizeNumber = (value, { unit, propertyName, preferedType }) => {
   if (typeof value === "string") {
     // Keep strings as-is (including %, em, rem, auto, none, etc.)
     if (preferedType === "string") {
-      if (unit && !hasUnit(value) && !isKeyword(value)) {
+      if (unit && isUnitless(value) && !isKeyword(value)) {
         return `${value}${unit}`;
       }
       return value;
@@ -664,6 +688,9 @@ const normalizeStyles = (styles, context = "js", mutate = false) => {
   const normalized = {};
   for (const key of Object.keys(styles)) {
     const value = styles[key];
+    if (value === undefined) {
+      continue;
+    }
     normalized[key] = normalizeStyle(value, key, context);
   }
   return normalized;
@@ -878,7 +905,7 @@ const parseSimple2DMatrix = (a, b, c, d, e, f) => {
 };
 
 // Merge two style objects, handling special cases like transform
-const mergeStyles = (stylesA, stylesB, context = "js") => {
+const mergeTwoStyles = (stylesA, stylesB, context = "js") => {
   if (!stylesA) {
     return normalizeStyles(stylesB, context);
   }
@@ -1118,7 +1145,7 @@ const createStyleController = (name = "anonymous") => {
     }
 
     const { styles, animation } = elementData;
-    const mergedStyles = mergeStyles(styles, stylesToSet);
+    const mergedStyles = mergeTwoStyles(styles, stylesToSet);
     elementData.styles = mergedStyles;
     updateAnimationStyles(animation, mergedStyles);
   };
@@ -1348,8 +1375,12 @@ const createStyleController = (name = "anonymous") => {
   return controller;
 };
 
+const getStyleForKeyframe = (styles) => {
+  const cssStyles = normalizeStyles(styles, "css");
+  return cssStyles;
+};
 const createAnimationForStyles = (element, styles, id) => {
-  const cssStylesToSet = normalizeStyles(styles, "css");
+  const cssStylesToSet = getStyleForKeyframe(styles);
   const animation = element.animate([cssStylesToSet], {
     duration: 0,
     fill: "forwards",
@@ -1361,7 +1392,7 @@ const createAnimationForStyles = (element, styles, id) => {
 };
 
 const updateAnimationStyles = (animation, styles) => {
-  const cssStyles = normalizeStyles(styles, "css");
+  const cssStyles = getStyleForKeyframe(styles);
   animation.effect.setKeyframes([cssStyles]);
   animation.play();
   animation.pause();
@@ -2149,6 +2180,11 @@ const resolveCSSColor = (color, element, context = "js") => {
     }
   }
 
+  if (color.startsWith("--")) {
+    console.warn(`found "${color}". Use "var(${color})" instead.`);
+    return null;
+  }
+
   // Parse the resolved color and return in the requested format
   const rgba = parseCSSColor(resolvedColor);
 
@@ -2161,18 +2197,24 @@ const resolveCSSColor = (color, element, context = "js") => {
 
 /**
  * Chooses between light and dark colors based on which provides better contrast against a background
- * @param {Element} element - DOM element to resolve CSS variables against
- * @param {string} backgroundColor - CSS color value (hex, rgb, hsl, CSS variable, etc.)
- * @param {string} lightColor - Light color option (typically for dark backgrounds)
- * @param {string} darkColor - Dark color option (typically for light backgrounds)
+ * @param {string} backgroundColor - CSS color value (hex, rgb, hsl, CSS variable, etc.) to test against
+ * @param {string} [lightColor="white"] - Light color option (typically for dark backgrounds)
+ * @param {string} [darkColor="black"] - Dark color option (typically for light backgrounds)
+ * @param {Element} [element] - DOM element to resolve CSS variables against
  * @returns {string} The color that provides better contrast (lightColor or darkColor)
+ * @example
+ * // Choose text color for a dark blue background
+ * pickLightOrDark("#1a202c") // returns "white"
+ *
+ * // Choose text color for a light background with CSS variable
+ * pickLightOrDark("var(--bg-color)", "white", "black", element) // returns "black" or "white"
  */
 
 const pickLightOrDark = (
-  element,
   backgroundColor,
   lightColor = "white",
   darkColor = "black",
+  element,
 ) => {
   const resolvedBgColor = resolveCSSColor(backgroundColor, element);
   const resolvedLightColor = resolveCSSColor(lightColor, element);
@@ -2190,6 +2232,31 @@ const pickLightOrDark = (
   const contrastWithDark = getContrastRatio(resolvedBgColor, resolvedDarkColor);
 
   return contrastWithLight > contrastWithDark ? lightColor : darkColor;
+};
+
+/**
+ * Resolves the luminance value of a CSS color
+ * @param {string} color - CSS color value (hex, rgb, hsl, CSS variable, etc.)
+ * @param {Element} [element] - DOM element to resolve CSS variables against
+ * @returns {number|undefined} Relative luminance (0-1) according to WCAG formula, or undefined if color cannot be resolved
+ * @example
+ * // Get luminance of a hex color
+ * resolveColorLuminance("#ff0000") // returns ~0.213 (red)
+ *
+ * // Get luminance of a CSS variable
+ * resolveColorLuminance("var(--primary-color)", element) // returns luminance value or undefined
+ *
+ * // Use for light/dark classification
+ * const luminance = resolveColorLuminance("#2ecc71");
+ * const isLight = luminance > 0.3; // true for light colors, false for dark
+ */
+const resolveColorLuminance = (color, element) => {
+  const resolvedColor = resolveCSSColor(color, element);
+  if (!resolvedColor) {
+    return undefined;
+  }
+  const [r, g, b] = resolvedColor;
+  return getLuminance(r, g, b);
 };
 
 const findAncestor = (node, predicate) => {
@@ -11803,4 +11870,4 @@ const notifyTransitionOverflow = (element, transitionId) => {
   };
 };
 
-export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, addWillChange, allowWheelThrough, appendStyles, canInterceptKeys, captureScrollState, createDragGestureController, createDragToMoveGestureController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findFocusable, getAvailableHeight, getAvailableWidth, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getInnerHeight, getInnerWidth, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getPaddingSizes, getPositionedParent, getPreferedColorScheme, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateY, getVisuallyVisibleInfo, getWidth, initFlexDetailsSet, initFocusGroup, initPositionSticky, initUITransition, isScrollable, mergeStyles, normalizeStyle, normalizeStyles, parseCSSColor, pickLightOrDark, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, resolveCSSColor, resolveCSSSize, setAttribute, setAttributes, setStyles, startDragToResizeGesture, stickyAsRelativeCoords, stringifyCSSColor, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };
+export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, addWillChange, allowWheelThrough, appendStyles, canInterceptKeys, captureScrollState, createDragGestureController, createDragToMoveGestureController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findFocusable, getAvailableHeight, getAvailableWidth, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getInnerHeight, getInnerWidth, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getPaddingSizes, getPositionedParent, getPreferedColorScheme, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateY, getVisuallyVisibleInfo, getWidth, initFlexDetailsSet, initFocusGroup, initPositionSticky, initUITransition, isScrollable, mergeTwoStyles, normalizeStyle, normalizeStyles, parseCSSColor, pickLightOrDark, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, resolveCSSColor, resolveCSSSize, resolveColorLuminance, setAttribute, setAttributes, setStyles, startDragToResizeGesture, stickyAsRelativeCoords, stringifyCSSColor, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };

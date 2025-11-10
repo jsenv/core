@@ -4121,13 +4121,13 @@ const applyPackageResolve = (packageSpecifier, resolutionContext) => {
       : resolvePackageSymlink(packageDirectoryFacadeUrl);
     const packageJson = readPackageJson(packageDirectoryUrl);
     if (packageJson !== null) {
-      const { exports } = packageJson;
-      if (exports !== null && exports !== undefined) {
+      const { exports: exports$1 } = packageJson;
+      if (exports$1 !== null && exports$1 !== undefined) {
         return applyPackageExportsResolution(packageSubpath, {
           ...resolutionContext,
           packageDirectoryUrl,
           packageJson,
-          exports,
+          exports: exports$1,
         });
       }
     }
@@ -4154,8 +4154,8 @@ const applyPackageSelfResolution = (packageSubpath, resolutionContext) => {
   if (packageJson.name !== packageName) {
     return undefined;
   }
-  const { exports } = packageJson;
-  if (!exports) {
+  const { exports: exports$1 } = packageJson;
+  if (!exports$1) {
     const subpathResolution = applyLegacySubpathResolution(packageSubpath, {
       ...resolutionContext,
       packageDirectoryUrl,
