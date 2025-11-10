@@ -91,6 +91,21 @@ const applyToCssPropWhenTruthy = (
     return { [cssProp]: cssPropValue };
   };
 };
+const applyOnTwoProps = (propA, propB) => {
+  return (value, context) => {
+    const firstProp = All_PROPS[propA];
+    const secondProp = All_PROPS[propB];
+    const firstPropResult = firstProp(value, context);
+    const secondPropResult = secondProp(value, context);
+    if (firstPropResult && secondPropResult) {
+      return {
+        ...firstPropResult,
+        ...secondPropResult,
+      };
+    }
+    return firstPropResult || secondPropResult;
+  };
+};
 
 const OUTER_SPACING_PROPS = {
   margin: PASS_THROUGH,
@@ -117,8 +132,8 @@ const DIMENSION_PROPS = {
   height: PASS_THROUGH,
   minHeight: PASS_THROUGH,
   maxHeight: PASS_THROUGH,
-  // expand: null, // TODO
-  // shrink: null, // TODO,
+  expand: applyOnTwoProps("expandX", "expandY"),
+  shrink: applyOnTwoProps("shrinkX", "shrinkY"),
   // apply after width/height to override if both are set
   expandX: (value, { parentLayout }) => {
     if (!value) {
