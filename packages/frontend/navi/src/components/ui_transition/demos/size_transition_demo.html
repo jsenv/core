@@ -53,7 +53,6 @@
         justify-content: center;
         color: #666;
         font-weight: bold;
-        background: white;
         border: 1px solid #999;
       }
 
@@ -65,7 +64,11 @@
         justify-content: center;
         color: #666;
         font-weight: bold;
+      }
+
+      .white-wrapper {
         background: white;
+        border-radius: 4px;
       }
     </style>
   </head>
@@ -115,18 +118,20 @@
             </div>
 
             <div className="demo-container">
-              <UITransition
-                sizeTransition
-                sizeTransitionDuration={400}
-                transitionType="cross-fade"
-                transitionDuration={300}
-              >
-                {currentContent === "small" ? (
-                  <SmallRectangle />
-                ) : (
-                  <LargeRectangle />
-                )}
-              </UITransition>
+              <div className="white-wrapper">
+                <UITransition
+                  sizeTransition
+                  sizeTransitionDuration={400}
+                  transitionType="cross-fade"
+                  transitionDuration={300}
+                >
+                  {currentContent === "small" ? (
+                    <SmallRectangle />
+                  ) : (
+                    <LargeRectangle />
+                  )}
+                </UITransition>
+              </div>
             </div>
           </div>
         );
