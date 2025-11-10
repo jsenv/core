@@ -1,0 +1,154 @@
+<!doctype html>
+<html>
+  <head>
+    <title>UITransition Size Demo with Routes</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        color: white;
+        font-family: system-ui;
+        background: #1a1a1a;
+      }
+
+      h1 {
+        margin: 0 0 20px 0;
+        color: white;
+      }
+
+      .controls {
+        margin-bottom: 30px;
+      }
+
+      .controls a {
+        display: inline-block;
+        margin: 0 8px 8px 0;
+        padding: 8px 16px;
+        color: white;
+        text-decoration: none;
+        background: #007acc;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      .controls a:hover {
+        background: #005a9e;
+      }
+
+      .controls a.active {
+        background: #4caf50;
+      }
+
+      .demo-container {
+        display: flex;
+        padding: 40px;
+        justify-content: center;
+        background: #2a2a2a;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      }
+
+      .rectangle-small {
+        display: flex;
+        width: 150px;
+        height: 250px;
+        align-items: center;
+        justify-content: center;
+        color: #666;
+        font-weight: bold;
+        border: 1px solid #999;
+      }
+
+      .rectangle-large {
+        display: flex;
+        width: 300px;
+        height: 400px;
+        align-items: center;
+        justify-content: center;
+        color: #666;
+        font-weight: bold;
+      }
+
+      .white-wrapper {
+        background: white;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { Routes, Route, Link } from "@jsenv/navi";
+
+      import { UITransition } from "../../ui_transition.jsx";
+
+      const {SMALL_ROUTE, LARGE_ROUTE} =
+
+      const SmallRectangle = () => (
+        <div className="rectangle-small">
+          Small
+          <br />
+          150×250px
+          <br />
+          with border
+        </div>
+      );
+
+      const LargeRectangle = () => (
+        <div className="rectangle-large">
+          Large
+          <br />
+          300×400px
+          <br />
+          no border
+        </div>
+      );
+
+      const App = () => {
+        return (
+          <Router>
+            <div>
+              <h1>UITransition Size Demo with Routes</h1>
+
+              <div className="controls">
+                <p>Test size transitions between routes:</p>
+                <Link href="/small">Small Rectangle (150×250px)</Link>
+                <Link href="/large">Large Rectangle (300×400px)</Link>
+              </div>
+
+              <div className="demo-container">
+                <UITransition
+                  sizeTransition
+                  sizeTransitionDuration={400}
+                  transitionType="cross-fade"
+                  transitionDuration={300}
+                >
+                  <div className="white-wrapper">
+                    <Route pattern="/small">
+                      <SmallRectangle />
+                    </Route>
+                    <Route pattern="/large">
+                      <LargeRectangle />
+                    </Route>
+                    <Route pattern="/" exact>
+                      <SmallRectangle />
+                    </Route>
+                  </div>
+                </UITransition>
+              </div>
+            </div>
+          </Router>
+        );
+      };
+
+      // Render the app
+      const root = document.getElementById("root");
+      render(<App />, root);
+    </script>
+  </body>
+</html>
