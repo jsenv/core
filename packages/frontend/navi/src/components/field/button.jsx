@@ -1,4 +1,4 @@
-import { useContext, useRef } from "preact/hooks";
+import { useCallback, useContext, useRef } from "preact/hooks";
 
 import { getActionPrivateProperties } from "../../action_private_properties.js";
 import { useActionStatus } from "../../use_action_status.js";
@@ -98,10 +98,12 @@ import.meta.css = /* css */ `
   }
   .navi_button_content {
     position: relative;
+    display: inline-flex;
     padding-top: var(--padding-top, var(--padding-y, var(--padding)));
     padding-right: var(--padding-right, var(--padding-x, var(--padding)));
     padding-bottom: var(--padding-bottom, var(--padding-y, var(--padding)));
     padding-left: var(--padding-left, var(--padding-x, var(--padding)));
+    flex: 1;
     color: var(--x-color);
     background-color: var(--x-background-color);
     border-width: var(--x-outer-width);
@@ -275,6 +277,24 @@ const ButtonBasic = (props) => {
   const innerReadOnly = readOnly || contextReadOnly || innerLoading;
   const innerDisabled = disabled || contextDisabled;
 
+  const innerChildren = applyContentSpacingOnTextChildren(
+    children,
+    contentSpacing,
+  );
+  const renderButtonContent = (buttonProps) => (
+    <Box
+      {...buttonProps}
+      as="span"
+      baseClassName="navi_button_content"
+      layoutInline
+      layoutColumn
+    >
+      {innerChildren}
+      <span className="navi_button_shadow"></span>
+    </Box>
+  );
+  const renderButtonContentMemoized = useCallback(renderButtonContent, []);
+
   return (
     <Box
       {...rest}
@@ -295,16 +315,14 @@ const ButtonBasic = (props) => {
         ":-navi-loading": innerLoading,
       }}
       visualSelector=".navi_button_content"
+      hasChildFunction
     >
       <LoaderBackground
         loading={innerLoading}
         inset={-1}
         color="var(--navi-loader-color)"
       />
-      <span className="navi_button_content">
-        {applyContentSpacingOnTextChildren(children, contentSpacing)}
-        <span className="navi_button_shadow"></span>
-      </span>
+      {renderButtonContentMemoized}
     </Box>
   );
 };

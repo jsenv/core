@@ -142,29 +142,30 @@ export const Box = (props) => {
 
   const remainingProps = {};
   styling: {
-    const boxLayout = useContext(BoxLayoutContext);
+    const parentLayout = useContext(BoxLayoutContext);
     const insideFlexContainer =
-      boxLayout === "row" ||
-      boxLayout === "column" ||
-      boxLayout === "inline-row" ||
-      boxLayout === "inline-column";
+      parentLayout === "row" ||
+      parentLayout === "column" ||
+      parentLayout === "inline-row" ||
+      parentLayout === "inline-column";
     const innerPseudoState =
       basePseudoState && pseudoState
         ? { ...basePseudoState, ...pseudoState }
         : basePseudoState;
     const styleContext = {
+      parentLayout,
       layout,
-      boxLayout,
       managedByCSSVars,
       pseudoState: innerPseudoState,
       pseudoClasses,
       pseudoElements,
     };
-
+    // idéalement on devrait aussi laisser passer certaines props ici
+    const contentStyleContext = styleContext;
     const baseStyles = baseStyle ? { ...baseStyle } : {};
     const styleDeps = [
       // Layout and alignment props
-      boxLayout,
+      parentLayout,
       layout,
 
       // Flex/sizing props
@@ -236,7 +237,7 @@ export const Box = (props) => {
         continue;
       }
       // "content"
-      assignStyle(contentStyles, value, key, styleContext);
+      assignStyle(contentStyles, value, key, contentStyleContext);
     }
 
     const pseudoNamedStyles = {};
@@ -313,11 +314,11 @@ export const Box = (props) => {
       Object.assign(boxStyle, positionStyles);
       Object.assign(boxStyle, dimensionStyles);
       Object.assign(boxStyle, typoStyles);
-      Object.assign(boxStyle, contentStyles);
       // visual element will get padding and visual
       secondaryStyle = {};
       Object.assign(secondaryStyle, paddingStyles);
       Object.assign(secondaryStyle, visualStyles);
+      Object.assign(secondaryStyle, contentStyles);
     } else if (pseudoStateSelector) {
       // box will get margin, position, dimension, typo
       Object.assign(boxStyle, marginStyles);

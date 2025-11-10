@@ -118,26 +118,26 @@ const DIMENSION_PROPS = {
   minHeight: PASS_THROUGH,
   maxHeight: PASS_THROUGH,
   // apply after width/height to override if both are set
-  expandX: (value, { boxLayout }) => {
+  expandX: (value, { parentLayout }) => {
     if (!value) {
       return null;
     }
-    if (boxLayout === "column") {
+    if (parentLayout === "column" || parentLayout === "inline-column") {
       return { flexGrow: 1 }; // Grow horizontally in row
     }
-    if (boxLayout === "row") {
+    if (parentLayout === "row") {
       return { minWidth: "100%" }; // Take full width in column
     }
     return { minWidth: "100%" }; // Take full width outside flex
   },
-  expandY: (value, { boxLayout }) => {
+  expandY: (value, { parentLayout }) => {
     if (!value) {
       return null;
     }
-    if (boxLayout === "column") {
+    if (parentLayout === "column") {
       return { minHeight: "100%" }; // Make column full height
     }
-    if (boxLayout === "row") {
+    if (parentLayout === "row" || parentLayout === "inline-row") {
       return { flexGrow: 1 }; // Make row full height
     }
     return { minHeight: "100%" }; // Take full height outside flex
@@ -149,8 +149,9 @@ const POSITION_PROPS = {
   // When multiple adjacent items have the same auto margin alignment (e.g., alignX="end"),
   // only the first item will be positioned as expected because subsequent items
   // will be positioned relative to the previous item's margins, not the container edge.
-  alignX: (value, { boxLayout }) => {
-    const insideRowLayout = boxLayout === "row" || boxLayout === "inline-row";
+  alignX: (value, { parentLayout }) => {
+    const insideRowLayout =
+      parentLayout === "row" || parentLayout === "inline-row";
 
     if (value === "start") {
       if (insideRowLayout) {
@@ -175,9 +176,9 @@ const POSITION_PROPS = {
     }
     return undefined;
   },
-  alignY: (value, { boxLayout }) => {
+  alignY: (value, { parentLayout }) => {
     const inlineColumnLayout =
-      boxLayout === "column" || boxLayout === "inline-column";
+      parentLayout === "column" || parentLayout === "inline-column";
 
     if (value === "start") {
       if (inlineColumnLayout) {
@@ -239,13 +240,13 @@ const VISUAL_PROPS = {
 };
 const CONTENT_PROPS = {
   contentAlignX: (value, { layout }) => {
-    if (layout === "row") {
+    if (layout === "row" || layout === "inline-row") {
       if (value === "stretch") {
         return undefined; // this is the default
       }
       return { alignItems: value };
     }
-    if (layout === "column") {
+    if (layout === "column" || layout === "inline-column") {
       if (value === "start") {
         return undefined; // this is the default
       }
