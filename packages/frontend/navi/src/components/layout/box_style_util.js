@@ -296,7 +296,7 @@ const CONTENT_PROPS = {
     return undefined;
   },
   contentAlignY: (value, { layout }) => {
-    if (layout === "row") {
+    if (layout === "row" || layout === "inline-row") {
       if (value === "start") {
         return undefined;
       }
@@ -304,7 +304,7 @@ const CONTENT_PROPS = {
         justifyContent: value,
       };
     }
-    if (layout === "column") {
+    if (layout === "column" || layout === "inline-column") {
       if (value === "stretch") {
         return undefined;
       }

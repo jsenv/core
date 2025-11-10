@@ -306,6 +306,7 @@ const ButtonBasic = (props) => {
       aria-busy={innerLoading}
       // style management
       baseClassName="navi_button"
+      layoutInline
       layoutColumn
       managedByCSSVars={ButtonManagedByCSSVars}
       pseudoClasses={ButtonPseudoClasses}
