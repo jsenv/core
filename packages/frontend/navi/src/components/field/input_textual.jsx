@@ -44,15 +44,6 @@ import {
 import.meta.css = /* css */ `
   @layer navi {
     .navi_input {
-      position: relative;
-      display: inline-flex;
-      box-sizing: border-box;
-      width: fit-content;
-      height: fit-content;
-      flex-direction: inherit;
-      border-radius: inherit;
-      cursor: inherit;
-
       --border-radius: 2px;
       --border-width: 1px;
       --outline-width: 1px;
@@ -93,69 +84,79 @@ import.meta.css = /* css */ `
         grey
       );
       --color-disabled: color-mix(in srgb, var(--color) 95%, grey);
+    }
+  }
 
-      --x-outline-width: var(--outline-width);
-      --x-border-radius: var(--border-radius);
-      --x-border-width: var(--border-width);
-      --x-outer-width: calc(var(--x-border-width) + var(--x-outline-width));
-      --x-outline-color: var(--outline-color);
-      --x-border-color: var(--border-color);
-      --x-background-color: var(--background-color);
-      --x-color: var(--color);
-      --x-placeholder-color: var(--placeholder-color);
-    }
+  .navi_input {
+    position: relative;
+    box-sizing: border-box;
+    width: fit-content;
+    height: fit-content;
+    flex-direction: inherit;
+    border-radius: inherit;
+    cursor: inherit;
 
-    .navi_input .navi_native_field {
-      box-sizing: border-box;
-      width: 100%;
-      padding-top: var(--padding-top, var(--padding-y, var(--padding)));
-      padding-right: var(--padding-right, var(--padding-x, var(--padding)));
-      padding-bottom: var(--padding-bottom, var(--padding-y, var(--padding)));
-      padding-left: var(--padding-left, var(--padding-x, var(--padding)));
-      color: var(--x-color);
-      background-color: var(--x-background-color);
-      border-width: var(--x-outer-width);
-      border-width: var(--x-outer-width);
-      border-style: solid;
-      border-color: transparent;
-      border-radius: var(--x-border-radius);
-      outline-width: var(--x-border-width);
-      outline-style: solid;
-      outline-color: var(--x-border-color);
-      outline-offset: calc(-1 * (var(--x-border-width)));
-    }
-    .navi_input .navi_native_field::placeholder {
-      color: var(--x-placeholder-color);
-    }
-    .navi_input .navi_native_field:-internal-autofill-selected {
-      /* Webkit is putting some nasty styles after automplete that look as follow */
-      /* input:-internal-autofill-selected { color: FieldText !important; } */
-      /* Fortunately we can override it as follow */
-      -webkit-text-fill-color: var(--x-color) !important;
-    }
-    /* Readonly */
-    .navi_input[data-readonly] {
-      --x-border-color: var(--border-color-readonly);
-      --x-background-color: var(--background-color-readonly);
-      --x-color: var(--color-readonly);
-    }
-    /* Focus */
-    .navi_input[data-focus] .navi_native_field,
-    .navi_input[data-focus-visible] .navi_native_field {
-      outline-width: var(--x-outer-width);
-      outline-offset: calc(-1 * var(--x-outer-width));
-      --x-border-color: var(--x-outline-color);
-    }
-    /* Disabled */
-    .navi_input[data-disabled] {
-      --x-border-color: var(--border-color-disabled);
-      --x-background-color: var(--background-color-disabled);
-      --x-color: var(--color-disabled);
-    }
-    /* Callout (info, warning, error) */
-    .navi_input[data-callout] {
-      --x-border-color: var(--callout-color);
-    }
+    --x-outline-width: var(--outline-width);
+    --x-border-radius: var(--border-radius);
+    --x-border-width: var(--border-width);
+    --x-outer-width: calc(var(--x-border-width) + var(--x-outline-width));
+    --x-outline-color: var(--outline-color);
+    --x-border-color: var(--border-color);
+    --x-background-color: var(--background-color);
+    --x-color: var(--color);
+    --x-placeholder-color: var(--placeholder-color);
+  }
+
+  .navi_input .navi_native_field {
+    box-sizing: border-box;
+    width: 100%;
+    padding-top: var(--padding-top, var(--padding-y, var(--padding)));
+    padding-right: var(--padding-right, var(--padding-x, var(--padding)));
+    padding-bottom: var(--padding-bottom, var(--padding-y, var(--padding)));
+    padding-left: var(--padding-left, var(--padding-x, var(--padding)));
+    color: var(--x-color);
+    background-color: var(--x-background-color);
+    border-width: var(--x-outer-width);
+    border-width: var(--x-outer-width);
+    border-style: solid;
+    border-color: transparent;
+    border-radius: var(--x-border-radius);
+    outline-width: var(--x-border-width);
+    outline-style: solid;
+    outline-color: var(--x-border-color);
+    outline-offset: calc(-1 * (var(--x-border-width)));
+  }
+  .navi_input .navi_native_field::placeholder {
+    color: var(--x-placeholder-color);
+  }
+  .navi_input .navi_native_field:-internal-autofill-selected {
+    /* Webkit is putting some nasty styles after automplete that look as follow */
+    /* input:-internal-autofill-selected { color: FieldText !important; } */
+    /* Fortunately we can override it as follow */
+    -webkit-text-fill-color: var(--x-color) !important;
+  }
+  /* Readonly */
+  .navi_input[data-readonly] {
+    --x-border-color: var(--border-color-readonly);
+    --x-background-color: var(--background-color-readonly);
+    --x-color: var(--color-readonly);
+  }
+  /* Focus */
+  .navi_input[data-focus] .navi_native_field,
+  .navi_input[data-focus-visible] .navi_native_field {
+    outline-width: var(--x-outer-width);
+    outline-offset: calc(-1 * var(--x-outer-width));
+    --x-border-color: var(--x-outline-color);
+  }
+  /* Disabled */
+  .navi_input[data-disabled] {
+    --x-border-color: var(--border-color-disabled);
+    --x-background-color: var(--background-color-disabled);
+    --x-color: var(--color-disabled);
+  }
+  /* Callout (info, warning, error) */
+  .navi_input[data-callout] {
+    --x-border-color: var(--callout-color);
   }
 `;
 
@@ -257,9 +258,9 @@ const InputTextualBasic = (props) => {
   useConstraints(ref, constraints);
 
   const innerOnInput = useStableCallback(onInput);
-  const renderInput = (remainingProps) => (
+  const renderInput = (inputProps) => (
     <Box
-      {...remainingProps}
+      {...inputProps}
       as="input"
       ref={ref}
       type={type}
@@ -297,7 +298,8 @@ const InputTextualBasic = (props) => {
   return (
     <Box
       as="span"
-      expandX={props.expandX}
+      layoutInline
+      layoutColumn
       baseClassName="navi_input"
       managedByCSSVars={InputManagedByCSSVars}
       pseudoStateSelector=".navi_native_field"
