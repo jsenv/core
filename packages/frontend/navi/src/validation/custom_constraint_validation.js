@@ -678,7 +678,7 @@ const wouldClickSubmitForm = (clickEvent) => {
   if (clickEvent.defaultPrevented) {
     return false;
   }
-  const clickTarget = clickEvent.target;
+  const clickTarget = clickEvent.target.closest("button");
   const { form } = clickTarget;
   if (!form) {
     return false;
