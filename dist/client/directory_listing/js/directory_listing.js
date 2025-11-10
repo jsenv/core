@@ -1,4 +1,4 @@
-import { G, u, C, k } from "../jsenv_core_node_modules.js";
+import { F, u, E, k } from "../jsenv_core_node_modules.js";
 
 const directoryIconUrl = new URL("../other/dir.png", import.meta.url).href;
 const fileIconUrl = new URL("../other/file.png", import.meta.url).href;
@@ -30,7 +30,7 @@ const updateDirectoryContentItems = value => {
   }
 };
 const DirectoryListing = () => {
-  const directoryItems = C(callback => {
+  const directoryItems = E(callback => {
     directoryItemsChangeCallbackSet.add(callback);
   }, () => {
     return directoryContentItems;
@@ -275,4 +275,4 @@ if (autoreload) {
     }
   };
 }
-G(u(DirectoryListing, {}), document.querySelector("#root"));
+F(u(DirectoryListing, {}), document.querySelector("#root"));
