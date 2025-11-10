@@ -125,6 +125,7 @@ const TextBasic = ({
       {...rest}
       baseClassName="navi_text"
       as={as}
+      layoutInline
       layoutColumn={box ? true : undefined}
       data-has-foreground={hasForeground ? "" : undefined}
     >

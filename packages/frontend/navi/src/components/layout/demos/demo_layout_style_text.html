@@ -62,9 +62,8 @@
   <body>
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
-      /* eslint-disable no-unused-vars */
       import { render } from "preact";
-      import { Box, Text, Button } from "@jsenv/navi";
+      import { Box, Text, Button, Layout } from "@jsenv/navi";
 
       const DemoBox = ({ children, ...props }) => (
         <div className="demo-box" {...props}>
@@ -117,25 +116,16 @@
             <div className="demo-container">
               <h3>3. Text with Expand outside Flex context</h3>
               <div className="visual-container">
-                <div
-                  style={{
-                    width: "300px",
-                    border: "1px solid #ccc",
-                    padding: "10px",
-                  }}
-                >
-                  <Text style={{ background: "#fff3e0", padding: "5px" }}>
-                    Normal text width
-                  </Text>
+                <Box width="300" padding="sm" border="1px solid #ccc">
+                  <Text background="#e8f5e8">Text default</Text>
+                  Some text after
                   <br />
                   <br />
-                  <Text
-                    expand
-                    style={{ background: "#e8f5e8", padding: "5px" }}
-                  >
-                    Expanding text (should take full width)
+                  <Text box expand background="#e8f5e8">
+                    Expanding text
                   </Text>
-                </div>
+                  Some text after
+                </Box>
               </div>
             </div>
 
@@ -143,33 +133,32 @@
               <h3>4. Text Spacing - Margins</h3>
               <div className="visual-container">
                 <div className="text-showcase">
-                  <Text
-                    margin="15px"
-                    style={{ background: "#e3f2fd", padding: "5px" }}
-                  >
-                    Text with margin all sides
-                  </Text>
-                  <br />
-                  <Text
-                    marginX="25px"
-                    style={{ background: "#f3e5f5", padding: "5px" }}
-                  >
-                    Text with marginX only
-                  </Text>
-                  <br />
-                  <Text
-                    marginY="20px"
-                    style={{ background: "#e8f5e8", padding: "5px" }}
-                  >
-                    Text with marginY only
-                  </Text>
-                  <br />
-                  <Text
-                    marginLeft="40px"
-                    style={{ background: "#fff3e0", padding: "5px" }}
-                  >
-                    Text with marginLeft only
-                  </Text>
+                  <Layout row contentSpacing="0">
+                    <Text
+                      margin="15px"
+                      style={{ background: "#e3f2fd", padding: "5px" }}
+                    >
+                      Text with margin all sides
+                    </Text>
+                    <Text
+                      marginX="25px"
+                      style={{ background: "#f3e5f5", padding: "5px" }}
+                    >
+                      Text with marginX only
+                    </Text>
+                    <Text
+                      marginY="20px"
+                      style={{ background: "#e8f5e8", padding: "5px" }}
+                    >
+                      Text with marginY only
+                    </Text>
+                    <Text
+                      marginLeft="40px"
+                      style={{ background: "#fff3e0", padding: "5px" }}
+                    >
+                      Text with marginLeft only
+                    </Text>
+                  </Layout>
                 </div>
               </div>
             </div>
@@ -178,47 +167,46 @@
               <h3>5. Text Spacing - Padding</h3>
               <div className="visual-container">
                 <div className="text-showcase">
-                  <Text
-                    style={{
-                      background: "#e3f2fd",
-                      border: "1px solid #90caf9",
-                    }}
-                  >
-                    Default padding
-                  </Text>
-                  <br />
-                  <br />
-                  <Text
-                    padding="20px"
-                    style={{
-                      background: "#f3e5f5",
-                      border: "1px solid #ce93d8",
-                    }}
-                  >
-                    Extra padding all sides
-                  </Text>
-                  <br />
-                  <br />
-                  <Text
-                    paddingX="30px"
-                    style={{
-                      background: "#e8f5e8",
-                      border: "1px solid #81c784",
-                    }}
-                  >
-                    PaddingX only
-                  </Text>
-                  <br />
-                  <br />
-                  <Text
-                    paddingY="15px"
-                    style={{
-                      background: "#fff3e0",
-                      border: "1px solid #ffb74d",
-                    }}
-                  >
-                    PaddingY only
-                  </Text>
+                  <Layout row contentSpacing="md">
+                    <Text
+                      style={{
+                        background: "#e3f2fd",
+                        border: "1px solid #90caf9",
+                      }}
+                    >
+                      Default padding
+                    </Text>
+
+                    <Text
+                      padding="20px"
+                      style={{
+                        background: "#f3e5f5",
+                        border: "1px solid #ce93d8",
+                      }}
+                    >
+                      Extra padding all sides
+                    </Text>
+
+                    <Text
+                      paddingX="30px"
+                      style={{
+                        background: "#e8f5e8",
+                        border: "1px solid #81c784",
+                      }}
+                    >
+                      PaddingX only
+                    </Text>
+
+                    <Text
+                      paddingY="15px"
+                      style={{
+                        background: "#fff3e0",
+                        border: "1px solid #ffb74d",
+                      }}
+                    >
+                      PaddingY only
+                    </Text>
+                  </Layout>
                 </div>
               </div>
             </div>
@@ -395,9 +383,10 @@
                     </Text>
                   </Box>
 
-                  <Box layoutColumn gap="10px">
+                  <Box layoutColumn contentSpacing="sm">
                     <Text
                       expand
+                      box
                       style={{ background: "#fff3e0", padding: "8px" }}
                     >
                       Expanding text that fills remaining space
