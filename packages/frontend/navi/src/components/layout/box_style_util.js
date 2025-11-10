@@ -117,6 +117,8 @@ const DIMENSION_PROPS = {
   height: PASS_THROUGH,
   minHeight: PASS_THROUGH,
   maxHeight: PASS_THROUGH,
+  // expand: null, // TODO
+  // shrink: null, // TODO,
   // apply after width/height to override if both are set
   expandX: (value, { parentLayout }) => {
     if (!value) {
@@ -141,6 +143,24 @@ const DIMENSION_PROPS = {
       return { flexGrow: 1 }; // Make row full height
     }
     return { minHeight: "100%" }; // Take full height outside flex
+  },
+  shrinkX: (value, { parentLayout }) => {
+    if (!value) {
+      return null;
+    }
+    if (parentLayout === "row" || parentLayout === "inline-row") {
+      return { flexShrink: 1 };
+    }
+    return { maxWidth: "100%" };
+  },
+  shrinkY: (value, { parentLayout }) => {
+    if (!value) {
+      return null;
+    }
+    if (parentLayout === "column" || parentLayout === "inline-column") {
+      return { flexShrink: 1 };
+    }
+    return { maxHeight: "100%" };
   },
 };
 const POSITION_PROPS = {
@@ -313,20 +333,23 @@ const POSITION_PROP_NAME_SET = new Set(Object.keys(POSITION_PROPS));
 const TYPO_PROP_NAME_SET = new Set(Object.keys(TYPO_PROPS));
 const VISUAL_PROP_NAME_SET = new Set(Object.keys(VISUAL_PROPS));
 const CONTENT_PROP_NAME_SET = new Set(Object.keys(CONTENT_PROPS));
+const STYLE_PROP_NAME_SET = new Set(Object.keys(All_PROPS));
 
-export const DELEGATED_TO_VISUAL_CHILD_PROP_SET = new Set([
+export const HANDLED_BY_VISUAL_CHILD_PROP_SET = new Set([
   ...INNER_SPACING_PROP_NAME_SET,
   ...VISUAL_PROP_NAME_SET,
   ...CONTENT_PROP_NAME_SET,
 ]);
-export const FORWARDED_TO_VISUAL_CHILD_PROP_SET = new Set([
+export const COPIED_ON_VISUAL_CHILD_PROP_SET = new Set([
   "expandX",
   "expandY",
   "contentAlignX",
   "contentAlignY",
 ]);
 
-export const getStylePropGroup = (name) => {
+export const isStyleProp = (name) => STYLE_PROP_NAME_SET.has(name);
+
+const getStylePropGroup = (name) => {
   if (OUTER_SPACING_PROP_NAME_SET.has(name)) {
     return "margin";
   }
@@ -350,12 +373,23 @@ export const getStylePropGroup = (name) => {
   }
   return null;
 };
+const getNormalizer = (key) => {
+  const group = getStylePropGroup(key);
+  if (group === "margin" || group === "padding") {
+    return normalizeSpacingStyle;
+  }
+  if (group === "typo") {
+    return normalizeTypoStyle;
+  }
+  return normalizeCssStyle;
+};
+
 export const assignStyle = (
   styleObject,
   propValue,
   propName,
   styleContext,
-  normalizer = normalizeCssStyle,
+  normalizer = getNormalizer(propName),
 ) => {
   if (propValue === undefined) {
     return;
@@ -384,7 +418,8 @@ export const assignStyle = (
     return;
   }
   for (const key of Object.keys(values)) {
-    const cssValue = normalizer(values[key], key);
+    const value = values[key];
+    const cssValue = normalizer(value, key);
     const cssVar = managedByCSSVars[key];
     if (cssVar) {
       styleObject[cssVar] = cssValue;

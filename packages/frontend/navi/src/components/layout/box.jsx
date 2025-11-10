@@ -49,11 +49,9 @@ import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import {
   assignStyle,
-  DELEGATED_TO_VISUAL_CHILD_PROP_SET,
-  FORWARDED_TO_VISUAL_CHILD_PROP_SET,
-  getStylePropGroup,
-  normalizeSpacingStyle,
-  normalizeTypoStyle,
+  COPIED_ON_VISUAL_CHILD_PROP_SET,
+  HANDLED_BY_VISUAL_CHILD_PROP_SET,
+  isStyleProp,
 } from "./box_style_util.js";
 import { getDefaultDisplay } from "./display_defaults.js";
 import { BoxLayoutContext } from "./layout_context.jsx";
@@ -73,6 +71,11 @@ import.meta.css = /* css */ `
   [data-layout-column] {
     display: flex;
     flex-direction: "row";
+  }
+
+  [data-layout-row] > *,
+  [data-layout-column] > * {
+    flex-shrink: 0;
   }
 
   [data-layout-inline][data-layout-row],
@@ -97,8 +100,6 @@ export const Box = (props) => {
 
     // style management
     style,
-    shrink,
-    expand,
     managedByCSSVars = MANAGED_BY_CSS_VARS_DEFAULT,
     basePseudoState,
     pseudoState, // for demo purposes it's possible to control pseudo state from props
@@ -146,11 +147,6 @@ export const Box = (props) => {
   const remainingProps = {};
   styling: {
     const parentLayout = useContext(BoxLayoutContext);
-    const insideFlexContainer =
-      parentLayout === "row" ||
-      parentLayout === "column" ||
-      parentLayout === "inline-row" ||
-      parentLayout === "inline-column";
     const innerPseudoState =
       basePseudoState && pseudoState
         ? { ...basePseudoState, ...pseudoState }
@@ -163,18 +159,10 @@ export const Box = (props) => {
       pseudoClasses,
       pseudoElements,
     };
-    // idéalement on devrait aussi laisser passer certaines props ici
-    const contentStyleContext = styleContext;
-    const baseStyles = baseStyle ? { ...baseStyle } : {};
     const styleDeps = [
       // Layout and alignment props
       parentLayout,
       layout,
-
-      // Flex/sizing props
-      shrink,
-      expand,
-      insideFlexContainer,
 
       // Style context dependencies
       managedByCSSVars,
@@ -185,79 +173,39 @@ export const Box = (props) => {
       visualSelector,
       pseudoStateSelector,
     ];
-    const marginStyles = {};
-    const paddingStyles = {};
-    const dimensionStyles = {};
-    const positionStyles = {};
-    const typoStyles = {};
-    const visualStyles = {};
-    const contentStyles = {};
+    const boxStyles = {};
+    if (baseStyle) {
+      for (const key of baseStyle) {
+        const value = baseStyle[key];
+        styleDeps.push(key, value);
+        assignStyle(boxStyles, value, key, styleContext);
+      }
+    }
     const stylingKeyCandidateArray = Object.keys(rest);
     const remainingPropKeys = [];
     for (const key of stylingKeyCandidateArray) {
       const value = rest[key];
-      const group = getStylePropGroup(key);
-      let isRemainingProp = false;
-
-      if (group) {
-        isRemainingProp = false;
-        if (visualSelector) {
-          if (FORWARDED_TO_VISUAL_CHILD_PROP_SET.has(key)) {
-            // both this box and child box will use the prop
-            remainingPropKeys.push(key);
-            remainingProps[key] = value;
-          } else if (DELEGATED_TO_VISUAL_CHILD_PROP_SET.has(key)) {
-            isRemainingProp = true;
-          }
+      let propEffect;
+      if (visualSelector) {
+        if (HANDLED_BY_VISUAL_CHILD_PROP_SET.has(key)) {
+          propEffect = "forward";
+        } else if (COPIED_ON_VISUAL_CHILD_PROP_SET.has(key)) {
+          propEffect = "style_and_forward";
+        } else {
+          propEffect = isStyleProp(key) ? "style" : "forward";
         }
       } else {
-        isRemainingProp = true;
+        propEffect = isStyleProp(key) ? "style" : "forward";
       }
-
-      if (isRemainingProp) {
+      if (propEffect === "forward" || propEffect === "style_and_forward") {
         remainingPropKeys.push(key);
         remainingProps[key] = value;
-        continue;
+        if (propEffect === "forward") {
+          continue;
+        }
       }
       styleDeps.push(value);
-      if (group === "margin") {
-        assignStyle(
-          marginStyles,
-          value,
-          key,
-          styleContext,
-          normalizeSpacingStyle,
-        );
-        continue;
-      }
-      if (group === "padding") {
-        assignStyle(
-          paddingStyles,
-          value,
-          key,
-          styleContext,
-          normalizeSpacingStyle,
-        );
-        continue;
-      }
-      if (group === "dimension") {
-        assignStyle(dimensionStyles, value, key, styleContext);
-        continue;
-      }
-      if (group === "position") {
-        assignStyle(positionStyles, value, key, styleContext);
-        continue;
-      }
-      if (group === "typo") {
-        assignStyle(typoStyles, value, key, styleContext, normalizeTypoStyle);
-        continue;
-      }
-      if (group === "visual") {
-        assignStyle(visualStyles, value, key, styleContext);
-        continue;
-      }
-      // "content"
-      assignStyle(contentStyles, value, key, contentStyleContext);
+      assignStyle(boxStyles, value, key, styleContext);
     }
 
     const pseudoNamedStyles = {};
@@ -313,35 +261,13 @@ export const Box = (props) => {
       }
     }
 
-    if (insideFlexContainer) {
-      baseStyles.flexShrink = shrink ? 1 : 0;
-      baseStyles.flexGrow = expand ? 1 : undefined;
-    } else {
-      if (expand) {
-        assignStyle(dimensionStyles, true, "expandX", styleContext);
-        assignStyle(dimensionStyles, true, "expandY", styleContext);
-      }
-      if (shrink) {
-        // can we do something, does it have a meaning here?
-      }
-    }
-
-    const boxStyle = baseStyles;
-    Object.assign(boxStyle, marginStyles);
-    Object.assign(boxStyle, positionStyles);
-    Object.assign(boxStyle, dimensionStyles);
-    Object.assign(boxStyle, typoStyles);
-    Object.assign(boxStyle, paddingStyles);
-    Object.assign(boxStyle, visualStyles);
-    Object.assign(boxStyle, contentStyles);
-
     if (typeof style === "string") {
-      appendStyles(boxStyle, normalizeStyles(style, "css"), "css");
+      appendStyles(boxStyles, normalizeStyles(style, "css"), "css");
       styleDeps.push(style); // impact box style -> add to deps
     } else if (style && typeof style === "object") {
       for (const key of Object.keys(style)) {
         const stylePropValue = style[key];
-        assignStyle(boxStyle, stylePropValue, key, styleContext);
+        assignStyle(boxStyles, stylePropValue, key, styleContext);
         styleDeps.push(stylePropValue); // impact box style -> add to deps
       }
     }
@@ -350,7 +276,7 @@ export const Box = (props) => {
       const boxEl = ref.current;
 
       if (pseudoStateSelector) {
-        applyStyle(boxEl, boxStyle);
+        applyStyle(boxEl, boxStyles);
         const pseudoEl = boxEl.querySelector(pseudoStateSelector);
         if (pseudoEl) {
           applyStyle(pseudoEl, null, state, pseudoNamedStyles);
@@ -358,14 +284,14 @@ export const Box = (props) => {
         return;
       }
       if (visualSelector) {
-        applyStyle(boxEl, boxStyle);
+        applyStyle(boxEl, boxStyles);
         const visualEl = boxEl.querySelector(visualSelector);
         if (visualEl) {
           applyStyle(visualEl, null, state, pseudoNamedStyles);
         }
         return;
       }
-      applyStyle(boxEl, boxStyle, state, pseudoNamedStyles);
+      applyStyle(boxEl, boxStyles, state, pseudoNamedStyles);
     }, styleDeps);
 
     const finalStyleDeps = [pseudoStateSelector, innerPseudoState, updateStyle];
