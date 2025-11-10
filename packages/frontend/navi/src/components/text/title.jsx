@@ -5,7 +5,7 @@ import { MessageBoxLevelContext } from "./message_box.jsx";
 import { applyContentSpacingOnTextChildren } from "./text.jsx";
 
 export const Title = ({
-  as = "h1",
+  as,
   bold = true,
   contentSpacing = " ",
   color,
@@ -19,9 +19,10 @@ export const Title = ({
         ? `var(--x-color)`
         : undefined
       : color;
+  const innerAs = as === undefined ? (messageBoxLevel ? "h4" : "h1") : as;
 
   return (
-    <Box {...rest} as={as} bold={bold} color={innerColor}>
+    <Box {...rest} as={innerAs} bold={bold} color={innerColor}>
       {applyContentSpacingOnTextChildren(children, contentSpacing)}
     </Box>
   );

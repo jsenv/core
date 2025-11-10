@@ -67,7 +67,7 @@ export const MessageBox = ({
       baseClassName="navi_message_box"
       padding={padding}
       pseudoClasses={MessageBoxPseudoClasses}
-      pseudoState={{
+      basePseudoState={{
         ":-navi-message-level": level,
       }}
     >
