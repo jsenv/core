@@ -87,6 +87,14 @@
               </div>
 
               <div className="message-example">
+                <h3>Success Level</h3>
+                <MessageBox level="success">
+                  This is a success message indicating that an operation
+                  completed successfully.
+                </MessageBox>
+              </div>
+
+              <div className="message-example">
                 <h3>Error Level</h3>
                 <MessageBox level="error">
                   This is an error message indicating that something went wrong
@@ -122,6 +130,15 @@
                   Please review the following warning carefully. This message
                   contains important information about{" "}
                   <Code>potential issues</Code> that may affect your workflow.
+                </MessageBox>
+              </div>
+
+              <div className="message-example">
+                <h3>Success with Title</h3>
+                <MessageBox level="success">
+                  <Title>Operation Successful</Title>
+                  Great! Your request has been processed successfully. All changes 
+                  have been saved and the <Code>system has been updated</Code> accordingly.
                 </MessageBox>
               </div>
 
