@@ -8555,6 +8555,27 @@ const useNavStateBasic = (id, initialValue, { debug } = {}) => {
 
 const useNavState = useNavStateBasic;
 
+const NEVER_SET = {};
+const useUrlSearchParam = (paramName) => {
+  const documentUrl = documentUrlSignal.value;
+  const searchParam = new URL(documentUrl).searchParams.get(paramName);
+  const valueRef = useRef(NEVER_SET);
+  const [value, setValue] = useState();
+  if (valueRef.current !== searchParam) {
+    valueRef.current = searchParam;
+    setValue(searchParam);
+  }
+
+  const setSearchParamValue = (newValue, { replace = true } = {}) => {
+    const newUrlObject = new URL(window.location.href);
+    newUrlObject.searchParams.set(paramName, newValue);
+    const newUrl = newUrlObject.href;
+    goTo(newUrl, { replace });
+  };
+
+  return [value, setSearchParamValue];
+};
+
 /**
  * UITransition
  *
@@ -20550,5 +20571,5 @@ const useDependenciesDiff = (inputs) => {
   return diffRef.current;
 };
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Box, Button, CharSlot, Checkbox, CheckboxList, Code, Col, Colgroup, Count, Details, Editable, ErrorBoundaryContext, FontSizedSvg, Form, Icon, IconAndText, Image, Input, Label, Layout, Link, LinkWithIcon, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, Select, SelectionContext, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, Box, Button, CharSlot, Checkbox, CheckboxList, Code, Col, Colgroup, Count, Details, Editable, ErrorBoundaryContext, FontSizedSvg, Form, Icon, IconAndText, Image, Input, Label, Layout, Link, LinkWithIcon, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, Select, SelectionContext, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useUrlSearchParam, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map
