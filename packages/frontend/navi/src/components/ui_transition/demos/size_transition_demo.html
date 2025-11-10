@@ -81,7 +81,7 @@
       <div id="transition-root"></div>
     </div>
 
-    <script type="module">
+    <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { UITransition } from "../ui_transition.jsx";
 
@@ -92,7 +92,7 @@
       const renderDemo = () => {
         render(
           <UITransition
-            sizeTransition={true}
+            sizeTransition
             sizeTransitionDuration={400}
             transitionType="cross-fade"
             transitionDuration={300}
