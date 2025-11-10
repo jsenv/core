@@ -50,7 +50,8 @@ import.meta.css = /* css */ `
       --outer-width: calc(var(--border-width) + var(--outline-width));
 
       /* Default */
-      --outline-color: light-dark(#4476ff, #3b82f6);
+      --outline-color: var(--navi-focus-outline-color);
+      --loader-color: var(--navi-loader-color);
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: white;
       --color: currentColor;
@@ -319,7 +320,7 @@ const InputTextualBasic = (props) => {
     >
       <LoaderBackground
         loading={innerLoading}
-        color="var(--navi-loader-color)"
+        color="var(--loader-color)"
         inset={-1}
       />
       {renderInputMemoized}

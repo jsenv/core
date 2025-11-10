@@ -38,7 +38,8 @@ import.meta.css = /* css */ `
       --border-width: 1px;
       --border-radius: 2px;
       /* default */
-      --outline-color: light-dark(#4476ff, #3b82f6);
+      --outline-color: var(--navi-focus-outline-color);
+      --loader-color: var(--navi-loader-color);
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: light-dark(#f3f4f6, #2d3748);
       --color: currentColor;
@@ -322,7 +323,7 @@ const ButtonBasic = (props) => {
       <LoaderBackground
         loading={innerLoading}
         inset={-1}
-        color="var(--navi-loader-color)"
+        color="var(--loader-color)"
       />
       {renderButtonContentMemoized}
     </Box>

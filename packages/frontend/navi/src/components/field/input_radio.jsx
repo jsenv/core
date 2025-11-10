@@ -32,7 +32,8 @@ import.meta.css = /* css */ `
       --width: 13px;
       --height: 13px;
 
-      --outline-color: light-dark(#4476ff, #3b82f6);
+      --outline-color: var(--navi-focus-outline-color);
+      --loader-color: var(--navi-loader-color);
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: white;
       --color: light-dark(#4476ff, #3b82f6);
@@ -400,7 +401,7 @@ const InputRadioBasic = (props) => {
         loading={innerLoading}
         inset={-1}
         targetSelector=".navi_radio_field"
-        color="var(--navi-loader-color)"
+        color="var(--loader-color)"
       />
       {renderRadioMemoized}
       <span className="navi_radio_field">

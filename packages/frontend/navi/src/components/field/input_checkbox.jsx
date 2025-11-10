@@ -43,7 +43,8 @@ import.meta.css = /* css */ `
       --width: 13px;
       --height: 13px;
 
-      --outline-color: light-dark(#4476ff, #3b82f6);
+      --outline-color: var(--navi-focus-outline-color);
+      --loader-color: var(--navi-loader-color);
       --border-color: light-dark(#767676, #8e8e93);
       --background-color: white;
       --color: light-dark(#4476ff, #3b82f6);
@@ -371,7 +372,7 @@ const InputCheckboxBasic = (props) => {
       <LoaderBackground
         loading={innerLoading}
         inset={-1}
-        color="var(--navi-loader-color)"
+        color="var(--loader-color)"
       />
       {renderCheckboxMemoized}
       <div className="navi_checkbox_field">
