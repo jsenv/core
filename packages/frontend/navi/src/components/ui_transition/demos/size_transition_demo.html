@@ -8,13 +8,14 @@
       body {
         margin: 0;
         padding: 20px;
+        color: white;
         font-family: system-ui;
-        background: #f5f5f5;
+        background: #1a1a1a;
       }
 
       h1 {
         margin: 0 0 20px 0;
-        color: #333;
+        color: white;
       }
 
       .controls {
@@ -39,9 +40,9 @@
         display: flex;
         padding: 40px;
         justify-content: center;
-        background: white;
+        background: #2a2a2a;
         border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
       }
 
       .rectangle-small {
@@ -69,69 +70,63 @@
     </style>
   </head>
   <body>
-    <h1>UITransition Size Demo</h1>
-
-    <div class="controls">
-      <p>Test size transitions between rectangles:</p>
-      <button id="show-small">Small Rectangle (150×250px)</button>
-      <button id="show-large">Large Rectangle (300×400px)</button>
-    </div>
-
-    <div class="demo-container">
-      <div id="transition-root"></div>
-    </div>
+    <div id="root"></div>
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useState } from "preact/hooks";
       import { UITransition } from "../ui_transition.jsx";
 
-      // Render the component
-      const root = document.getElementById("transition-root");
-      let currentContent = "small";
+      const App = () => {
+        const [currentContent, setCurrentContent] = useState("small");
 
-      const renderDemo = () => {
-        render(
-          <UITransition
-            sizeTransition
-            sizeTransitionDuration={400}
-            transitionType="cross-fade"
-            transitionDuration={300}
-          >
-            {currentContent === "small" ? (
-              <div className="rectangle-small" data-content-key="small">
-                Small
-                <br />
-                150×250px
-                <br />
-                with border
-              </div>
-            ) : (
-              <div className="rectangle-large" data-content-key="large">
-                Large
-                <br />
-                300×400px
-                <br />
-                no border
-              </div>
-            )}
-          </UITransition>,
-          root,
+        return (
+          <div>
+            <h1>UITransition Size Demo</h1>
+
+            <div className="controls">
+              <p>Test size transitions between rectangles:</p>
+              <button onClick={() => setCurrentContent("small")}>
+                Small Rectangle (150×250px)
+              </button>
+              <button onClick={() => setCurrentContent("large")}>
+                Large Rectangle (300×400px)
+              </button>
+            </div>
+
+            <div className="demo-container">
+              <UITransition
+                sizeTransition
+                sizeTransitionDuration={400}
+                transitionType="cross-fade"
+                transitionDuration={300}
+              >
+                {currentContent === "small" ? (
+                  <div className="rectangle-small" data-content-key="small">
+                    Small
+                    <br />
+                    150×250px
+                    <br />
+                    with border
+                  </div>
+                ) : (
+                  <div className="rectangle-large" data-content-key="large">
+                    Large
+                    <br />
+                    300×400px
+                    <br />
+                    no border
+                  </div>
+                )}
+              </UITransition>
+            </div>
+          </div>
         );
       };
 
-      // Initial render
-      renderDemo();
-
-      // Button event handlers
-      document.getElementById("show-small").addEventListener("click", () => {
-        currentContent = "small";
-        renderDemo();
-      });
-
-      document.getElementById("show-large").addEventListener("click", () => {
-        currentContent = "large";
-        renderDemo();
-      });
+      // Render the app
+      const root = document.getElementById("root");
+      render(<App />, root);
     </script>
   </body>
 </html>
