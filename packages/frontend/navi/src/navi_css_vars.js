@@ -1,3 +1,7 @@
+/**
+ * Regroup CSS vars that makes sense to share across all navi components.
+ */
+
 import.meta.css = /* css */ `
   @layer navi {
     :root {
