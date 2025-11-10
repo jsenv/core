@@ -236,9 +236,6 @@ const InputTextualBasic = (props) => {
     autoFocusVisible,
     autoSelect,
 
-    // visual
-    accentColor,
-
     ...rest
   } = props;
   const defaultRef = useRef();
@@ -302,11 +299,9 @@ const InputTextualBasic = (props) => {
       as="span"
       expandX={props.expandX}
       baseClassName="navi_input"
-      baseStyle={{
-        "--accent-color": accentColor || "light-dark(#355fcc, #4476ff)",
-      }}
       managedByCSSVars={InputManagedByCSSVars}
-      pseudoStateSelector="navi_native_field"
+      pseudoStateSelector=".navi_native_field"
+      visualSelector=".navi_native_field"
       basePseudoState={{
         ":read-only": innerReadOnly,
         ":disabled": innerDisabled,

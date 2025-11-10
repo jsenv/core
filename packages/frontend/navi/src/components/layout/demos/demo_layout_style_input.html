@@ -44,9 +44,8 @@
   <body>
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
-      /* eslint-disable no-unused-vars */
       import { render } from "preact";
-      import { Box, Input, Button } from "@jsenv/navi";
+      import { Box, Layout, Input, Button } from "@jsenv/navi";
 
       const DemoBox = ({ children, ...props }) => (
         <div className="demo-box" {...props}>
@@ -66,22 +65,22 @@
             <div className="demo-container">
               <h3>1. Input with Expand in row</h3>
               <div className="visual-container">
-                <Box layoutColumn gap="10px">
+                <Layout column contentSpacing="sm">
                   <Button>Start</Button>
                   <Input placeholder="Expanding input" expandX />
                   <Button>End</Button>
-                </Box>
+                </Layout>
               </div>
             </div>
 
             <div className="demo-container">
               <h3>2. Input with Expand in column</h3>
               <div className="visual-container">
-                <Box layoutRow gap="10px" style={{ height: "200px" }}>
+                <Layout row contentSpacing="sm" height="200">
                   <Input placeholder="Fixed input" />
                   <Input placeholder="Expanding input (height)" expandY />
                   <Input placeholder="Fixed input" />
-                </Box>
+                </Layout>
               </div>
             </div>
 

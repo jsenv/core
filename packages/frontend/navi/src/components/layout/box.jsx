@@ -49,8 +49,9 @@ import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import {
   assignStyle,
+  DELEGATED_TO_VISUAL_CHILD_PROP_SET,
+  FORWARDED_TO_VISUAL_CHILD_PROP_SET,
   getStylePropGroup,
-  INNER_SPACING_PROP_NAME_SET,
   normalizeSpacingStyle,
   normalizeTypoStyle,
 } from "./box_style_util.js";
@@ -83,15 +84,6 @@ import.meta.css = /* css */ `
 const PSEUDO_CLASSES_DEFAULT = [];
 const PSEUDO_ELEMENTS_DEFAULT = [];
 const MANAGED_BY_CSS_VARS_DEFAULT = {};
-const FORWARDED_TO_VISUAL_CHILD_PROP_SET = new Set([
-  "expandX",
-  "expandY",
-  "contentAlignX",
-  "contentAlignY",
-]);
-const DELEGATED_TO_VISUAL_CHILD_PROP_SET = new Set([
-  ...INNER_SPACING_PROP_NAME_SET,
-]);
 
 export const Box = (props) => {
   const {
@@ -332,39 +324,14 @@ export const Box = (props) => {
     }
 
     const boxStyle = baseStyles;
-    let secondaryStyle;
-    if (visualSelector) {
-      // box will get margin, position, dimension, typo
-      Object.assign(boxStyle, marginStyles);
-      Object.assign(boxStyle, positionStyles);
-      Object.assign(boxStyle, dimensionStyles);
-      Object.assign(boxStyle, typoStyles);
-      // visual element will get padding and visual
-      secondaryStyle = {};
-      Object.assign(secondaryStyle, paddingStyles);
-      Object.assign(secondaryStyle, visualStyles);
-      Object.assign(secondaryStyle, contentStyles);
-    } else if (pseudoStateSelector) {
-      // box will get margin, position, dimension, typo
-      Object.assign(boxStyle, marginStyles);
-      Object.assign(boxStyle, positionStyles);
-      Object.assign(boxStyle, dimensionStyles);
-      Object.assign(boxStyle, typoStyles);
-      Object.assign(boxStyle, contentStyles);
-      // visual element will get padding and visual
-      secondaryStyle = {};
-      Object.assign(boxStyle, paddingStyles);
-      Object.assign(boxStyle, visualStyles);
-    } else {
-      // box get all the styles
-      Object.assign(boxStyle, marginStyles);
-      Object.assign(boxStyle, positionStyles);
-      Object.assign(boxStyle, dimensionStyles);
-      Object.assign(boxStyle, typoStyles);
-      Object.assign(boxStyle, paddingStyles);
-      Object.assign(boxStyle, visualStyles);
-      Object.assign(boxStyle, contentStyles);
-    }
+    Object.assign(boxStyle, marginStyles);
+    Object.assign(boxStyle, positionStyles);
+    Object.assign(boxStyle, dimensionStyles);
+    Object.assign(boxStyle, typoStyles);
+    Object.assign(boxStyle, paddingStyles);
+    Object.assign(boxStyle, visualStyles);
+    Object.assign(boxStyle, contentStyles);
+
     if (typeof style === "string") {
       appendStyles(boxStyle, normalizeStyles(style, "css"), "css");
       styleDeps.push(style); // impact box style -> add to deps
@@ -378,19 +345,24 @@ export const Box = (props) => {
 
     const updateStyle = useCallback((state) => {
       const boxEl = ref.current;
-      applyStyle(boxEl, boxStyle);
 
       if (pseudoStateSelector) {
+        applyStyle(boxEl, boxStyle);
         const pseudoEl = boxEl.querySelector(pseudoStateSelector);
         if (pseudoEl) {
-          applyStyle(pseudoEl, secondaryStyle, state, pseudoNamedStyles);
+          applyStyle(pseudoEl, null, state, pseudoNamedStyles);
         }
-      } else if (visualSelector) {
+        return;
+      }
+      if (visualSelector) {
+        applyStyle(boxEl, boxStyle);
         const visualEl = boxEl.querySelector(visualSelector);
         if (visualEl) {
-          applyStyle(visualEl, secondaryStyle, state, pseudoNamedStyles);
+          applyStyle(visualEl, null, state, pseudoNamedStyles);
         }
+        return;
       }
+      applyStyle(boxEl, boxStyle, state, pseudoNamedStyles);
     }, styleDeps);
 
     const finalStyleDeps = [pseudoStateSelector, innerPseudoState, updateStyle];

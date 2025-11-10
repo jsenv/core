@@ -307,14 +307,24 @@ const All_PROPS = {
   ...CONTENT_PROPS,
 };
 const OUTER_SPACING_PROP_NAME_SET = new Set(Object.keys(OUTER_SPACING_PROPS));
-export const INNER_SPACING_PROP_NAME_SET = new Set(
-  Object.keys(INNER_SPACING_PROPS),
-);
+const INNER_SPACING_PROP_NAME_SET = new Set(Object.keys(INNER_SPACING_PROPS));
 const DIMENSION_PROP_NAME_SET = new Set(Object.keys(DIMENSION_PROPS));
 const POSITION_PROP_NAME_SET = new Set(Object.keys(POSITION_PROPS));
 const TYPO_PROP_NAME_SET = new Set(Object.keys(TYPO_PROPS));
 const VISUAL_PROP_NAME_SET = new Set(Object.keys(VISUAL_PROPS));
 const CONTENT_PROP_NAME_SET = new Set(Object.keys(CONTENT_PROPS));
+
+export const DELEGATED_TO_VISUAL_CHILD_PROP_SET = new Set([
+  ...INNER_SPACING_PROP_NAME_SET,
+  ...VISUAL_PROP_NAME_SET,
+  ...CONTENT_PROP_NAME_SET,
+]);
+export const FORWARDED_TO_VISUAL_CHILD_PROP_SET = new Set([
+  "expandX",
+  "expandY",
+  "contentAlignX",
+  "contentAlignY",
+]);
 
 export const getStylePropGroup = (name) => {
   if (OUTER_SPACING_PROP_NAME_SET.has(name)) {

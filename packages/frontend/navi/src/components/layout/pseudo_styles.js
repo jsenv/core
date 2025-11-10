@@ -305,7 +305,7 @@ const getStyleToApply = (styles, pseudoState, pseudoNamedStyles) => {
   if (styleToAddSet.size === 0) {
     return styles;
   }
-  let style = styles;
+  let style = styles || {};
   for (const styleToAdd of styleToAddSet) {
     style = mergeTwoStyles(style, styleToAdd);
   }
@@ -315,7 +315,7 @@ const getStyleToApply = (styles, pseudoState, pseudoNamedStyles) => {
 const styleKeySetWeakMap = new WeakMap();
 const updateStyle = (element, style) => {
   const previousStyleKeySet = styleKeySetWeakMap.get(element);
-  const styleKeySet = new Set(Object.keys(style));
+  const styleKeySet = new Set(style ? Object.keys(style) : []);
   if (!previousStyleKeySet) {
     for (const key of styleKeySet) {
       if (key.startsWith("--")) {
