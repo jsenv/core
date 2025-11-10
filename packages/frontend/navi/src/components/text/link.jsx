@@ -171,11 +171,12 @@ const LinkPlain = (props) => {
     icon,
     contentSpacing = " ",
 
-    ref = useRef(),
     children,
 
     ...rest
   } = props;
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   const visited = useIsVisited(href);
 
   useAutoFocus(ref, autoFocus);
@@ -418,7 +419,9 @@ export const CurrentLinkSvg = () => {
 
 const LinkWithSelection = (props) => {
   const { selection, selectionController } = useContext(SelectionContext);
-  const { value = props.href, children, ref = useRef(), ...rest } = props;
+  const { value = props.href, children, ...rest } = props;
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   const { selected } = useSelectableElement(ref, {
     selection,
     selectionController,
@@ -479,9 +482,10 @@ const LinkWithAction = (props) => {
     onActionEnd,
     children,
     loading,
-    ref = useRef(),
     ...rest
   } = props;
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   const { actionPending } = useRequestedActionStatus(ref);
   const innerLoading = Boolean(loading || actionPending);
 

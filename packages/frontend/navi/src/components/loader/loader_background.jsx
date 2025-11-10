@@ -2,23 +2,10 @@ import { resolveCSSSize } from "@jsenv/dom";
 import { createPortal } from "preact/compat";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 
-import { Box } from "../layout/box.jsx";
 import { useDebounceTrue } from "../use_debounce_true.js";
 import { RectangleLoading } from "./rectangle_loading.jsx";
 
 import.meta.css = /* css */ `
-  .navi_inline_wrapper {
-    position: relative;
-    display: inline-flex;
-    width: fit-content;
-    height: fit-content;
-    flex-direction: inherit;
-    /* min-width: 100%; */
-    /* min-height: 100%; */
-    border-radius: inherit;
-    cursor: inherit;
-  }
-
   .navi_loading_rectangle_wrapper {
     position: absolute;
     top: var(--rectangle-top, 0);
@@ -33,43 +20,6 @@ import.meta.css = /* css */ `
     opacity: 1;
   }
 `;
-
-export const LoadableInlineElement = (props) => {
-  const {
-    // background props
-    loading,
-    containerRef,
-    targetSelector,
-    color,
-    inset,
-    spacingTop,
-    spacingLeft,
-    spacingBottom,
-    spacingRight,
-    // other props
-    children,
-    ...rest
-  } = props;
-
-  return (
-    <Box {...rest} as="span" layoutInline baseClassName="navi_inline_wrapper">
-      <LoaderBackground
-        {...{
-          loading,
-          containerRef,
-          targetSelector,
-          color,
-          inset,
-          spacingTop,
-          spacingLeft,
-          spacingBottom,
-          spacingRight,
-        }}
-      />
-      {children}
-    </Box>
-  );
-};
 
 export const LoaderBackground = ({
   loading,

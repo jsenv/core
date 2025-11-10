@@ -274,6 +274,7 @@ const VISUAL_PROPS = {
   cursor: PASS_THROUGH,
 };
 const CONTENT_PROPS = {
+  contentAlign: applyOnTwoProps("contentAlignX", "contentAlignY"),
   contentAlignX: (value, { layout }) => {
     if (layout === "row" || layout === "inline-row") {
       if (value === "stretch") {

@@ -1,9 +1,5 @@
-import { withPropsStyle } from "../layout/with_props_style.js";
+import { Box } from "../layout/box.jsx";
 
 export const Svg = (props) => {
-  const [remainingProps, innerStyle] = withPropsStyle(props, {
-    spacing: true,
-  });
-
-  return <svg style={innerStyle} {...remainingProps} />;
+  return <Box {...props} as="svg" />;
 };

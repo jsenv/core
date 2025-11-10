@@ -30,10 +30,12 @@ export const Label = (props) => {
 
   return (
     <Box
-      as="label"
       {...rest}
-      data-readonly={innerReadOnly ? "" : undefined}
-      data-disabled={innerDisabled ? "" : undefined}
+      as="label"
+      basePseudoState={{
+        readOnly: innerReadOnly,
+        disabled: innerDisabled,
+      }}
     >
       <ReportReadOnlyOnLabelContext.Provider value={setInputReadOnly}>
         <ReportDisabledOnLabelContext.Provider value={setInputDisabled}>
