@@ -34,7 +34,6 @@
  * When `data-content-phase` changes for the same key, it animates phase transitions.
  */
 
-import { initUITransition } from "@jsenv/dom";
 import { createContext } from "preact";
 import {
   useContext,
@@ -43,6 +42,8 @@ import {
   useRef,
   useState,
 } from "preact/hooks";
+
+import { initUITransition } from "./ui_transition.js";
 
 const ContentKeyContext = createContext();
 

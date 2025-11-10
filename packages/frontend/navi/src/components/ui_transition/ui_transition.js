@@ -33,21 +33,22 @@
  * - Independent content updates in the slot without affecting ongoing animations
  */
 
-import { getElementSignature } from "../element_signature.js";
-import { createPubSub } from "../pub_sub.js";
-import { getHeight } from "../size/get_height.js";
-import { getInnerWidth } from "../size/get_inner_width.js";
-import { getWidth } from "../size/get_width.js";
-import { getOpacity, getTranslateX } from "../style/style_controller.js";
 import {
+  createGroupTransitionController,
   createHeightTransition,
   createOpacityTransition,
+  createPubSub,
   createTranslateXTransition,
   createWidthTransition,
+  getElementSignature,
+  getHeight,
+  getInnerWidth,
+  getOpacity,
   getOpacityWithoutTransition,
+  getTranslateX,
   getTranslateXWithoutTransition,
-} from "../transition/dom_transition.js";
-import { createGroupTransitionController } from "../transition/group_transition.js";
+  getWidth,
+} from "@jsenv/dom";
 
 import.meta.css = /* css */ `
   .ui_transition_container[data-transition-overflow] {

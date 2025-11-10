@@ -124,10 +124,12 @@ export {
   createOpacityTransition,
   createTranslateXTransition,
   createWidthTransition,
+  getOpacityWithoutTransition,
+  getTranslateXWithoutTransition,
 } from "./src/transition/dom_transition.js";
 export { EASING, cubicBezier } from "./src/transition/easing.js";
+export { createGroupTransitionController } from "./src/transition/group_transition.js";
 export {
   createTimelineTransition,
   createTransition,
 } from "./src/transition/transition_playback.js";
-export { initUITransition } from "./src/ui_transition/ui_transition.js";
