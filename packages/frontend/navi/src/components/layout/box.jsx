@@ -88,9 +88,6 @@ export const Box = (props) => {
     layoutRow,
     layoutColumn,
     layoutInline,
-    contentAlignX,
-    contentAlignY,
-    contentSpacing,
     baseClassName,
     className,
     baseStyle,
@@ -168,9 +165,7 @@ export const Box = (props) => {
     const styleDeps = [
       // Layout and alignment props
       boxLayout,
-      contentAlignX,
-      contentAlignY,
-      contentSpacing,
+      layout,
 
       // Flex/sizing props
       shrink,
