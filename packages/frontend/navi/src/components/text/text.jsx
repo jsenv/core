@@ -5,10 +5,6 @@ import { useContext, useState } from "preact/hooks";
 import { Box } from "../layout/box.jsx";
 
 import.meta.css = /* css */ `
-  :root {
-    --navi-icon-align-y: center;
-  }
-
   .navi_text {
     position: relative;
     color: inherit;
@@ -128,8 +124,8 @@ const TextBasic = ({
     <Box
       {...rest}
       baseClassName="navi_text"
-      layoutInline={box ? true : undefined}
       as={as}
+      layoutColumn={box ? true : undefined}
       data-has-foreground={hasForeground ? "" : undefined}
     >
       {applyContentSpacingOnTextChildren(children, contentSpacing)}

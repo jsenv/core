@@ -27,7 +27,6 @@
   <body>
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
-      /* eslint-disable no-unused-vars */
       import { render } from "preact";
       import { Box, Button } from "@jsenv/navi";
 
@@ -439,7 +438,12 @@
 
             <section className="demo-section">
               <h3>Box alignX in col</h3>
-              <Box layoutColumn contentSpacing="sm" padding="sm" background="#f3e5f5">
+              <Box
+                layoutColumn
+                contentSpacing="sm"
+                padding="sm"
+                background="#f3e5f5"
+              >
                 <Box>
                   <DemoBox>Default</DemoBox>
                 </Box>

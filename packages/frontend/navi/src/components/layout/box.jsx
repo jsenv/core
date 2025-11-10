@@ -52,13 +52,17 @@ import {
   getStylePropGroup,
   normalizeSpacingStyle,
   normalizeTypoStyle,
-  resolveSpacingSize,
 } from "./box_style_util.js";
+import { getDefaultDisplay } from "./display_defaults.js";
 import { BoxLayoutContext } from "./layout_context.jsx";
 import { applyStyle, initPseudoStyles } from "./pseudo_styles.js";
 import { withPropsClassName } from "./with_props_class_name.js";
 
 import.meta.css = /* css */ `
+  [data-layout-inline] {
+    display: inline;
+  }
+
   [data-layout-row] {
     display: flex;
     flex-direction: column;
@@ -69,7 +73,8 @@ import.meta.css = /* css */ `
     flex-direction: "row";
   }
 
-  [data-layout-inline] {
+  [data-layout-inline][data-layout-row],
+  [data-layout-inline][data-layout-column] {
     display: inline-flex;
   }
 `;
@@ -116,32 +121,42 @@ export const Box = (props) => {
     ...rest
   } = props;
   const defaultRef = useRef();
+
   const ref = props.ref || defaultRef;
-
-  const layoutFromContext = useContext(BoxLayoutContext);
-  const insideFlexContainer =
-    layoutFromContext === "row" ||
-    layoutFromContext === "column" ||
-    layoutFromContext === "inline";
-
   const TagName = as;
-  const layout = layoutRow
-    ? "row"
-    : layoutColumn
-      ? "column"
-      : layoutInline
-        ? "inline"
-        : undefined;
+
+  let layout;
+  if (layoutInline) {
+    if (layoutRow) {
+      layout = "inline-row";
+    } else if (layoutColumn) {
+      layout = "inline-column";
+    } else {
+      layout = "inline";
+    }
+  } else if (layoutRow) {
+    layout = "row";
+  } else if (layoutColumn) {
+    layout = "column";
+  } else {
+    layout = getDefaultDisplay(TagName);
+  }
   const innerClassName = withPropsClassName(baseClassName, className);
 
   const remainingProps = {};
   styling: {
     const boxLayout = useContext(BoxLayoutContext);
+    const insideFlexContainer =
+      boxLayout === "row" ||
+      boxLayout === "column" ||
+      boxLayout === "inline-row" ||
+      boxLayout === "inline-column";
     const innerPseudoState =
       basePseudoState && pseudoState
         ? { ...basePseudoState, ...pseudoState }
         : basePseudoState;
     const styleContext = {
+      layout,
       boxLayout,
       managedByCSSVars,
       pseudoState: innerPseudoState,
@@ -149,30 +164,7 @@ export const Box = (props) => {
       pseudoElements,
     };
 
-    const baseStyles = {
-      ...baseStyle,
-      ...(layoutRow
-        ? {
-            // Set if not the default ("stretch")
-            alignItems: contentAlignX === "stretch" ? undefined : contentAlignX,
-            // set if not the default ("start")
-            justifyContent:
-              contentAlignY === "start" ? undefined : contentAlignY,
-            gap: resolveSpacingSize(contentSpacing, "gap"),
-          }
-        : {}),
-      ...(layoutColumn
-        ? {
-            // Set if not the default ("start")
-            justifyContent:
-              contentAlignX === "start" ? undefined : contentAlignX,
-            // set if not the default ("stretch")
-            alignItems: contentAlignY === "stretch" ? undefined : contentAlignY,
-            gap: resolveSpacingSize(contentSpacing, "gap"),
-          }
-        : {}),
-      ...(layoutInline ? {} : {}),
-    };
+    const baseStyles = baseStyle ? { ...baseStyle } : {};
     const styleDeps = [
       // Layout and alignment props
       boxLayout,
@@ -200,6 +192,7 @@ export const Box = (props) => {
     const positionStyles = {};
     const typoStyles = {};
     const visualStyles = {};
+    const contentStyles = {};
     const stylingKeyCandidateArray = Object.keys(rest);
     const remainingPropKeys = [];
     for (const key of stylingKeyCandidateArray) {
@@ -243,8 +236,12 @@ export const Box = (props) => {
         assignStyle(typoStyles, value, key, styleContext, normalizeTypoStyle);
         continue;
       }
-      // "visual"
-      assignStyle(visualStyles, value, key, styleContext);
+      if (group === "visual") {
+        assignStyle(visualStyles, value, key, styleContext);
+        continue;
+      }
+      // "content"
+      assignStyle(contentStyles, value, key, styleContext);
     }
 
     const pseudoNamedStyles = {};
@@ -321,6 +318,7 @@ export const Box = (props) => {
       Object.assign(boxStyle, positionStyles);
       Object.assign(boxStyle, dimensionStyles);
       Object.assign(boxStyle, typoStyles);
+      Object.assign(boxStyle, contentStyles);
       // visual element will get padding and visual
       secondaryStyle = {};
       Object.assign(secondaryStyle, paddingStyles);
@@ -331,6 +329,7 @@ export const Box = (props) => {
       Object.assign(boxStyle, positionStyles);
       Object.assign(boxStyle, dimensionStyles);
       Object.assign(boxStyle, typoStyles);
+      Object.assign(boxStyle, contentStyles);
       // visual element will get padding and visual
       secondaryStyle = {};
       Object.assign(boxStyle, paddingStyles);
@@ -343,6 +342,7 @@ export const Box = (props) => {
       Object.assign(boxStyle, typoStyles);
       Object.assign(boxStyle, paddingStyles);
       Object.assign(boxStyle, visualStyles);
+      Object.assign(boxStyle, contentStyles);
     }
     if (typeof style === "string") {
       appendStyles(boxStyle, normalizeStyles(style, "css"), "css");
@@ -435,9 +435,9 @@ export const Box = (props) => {
     <TagName
       ref={ref}
       className={innerClassName}
+      data-layout-inline={layoutInline ? "" : undefined}
       data-layout-row={layoutRow ? "" : undefined}
       data-layout-column={layoutColumn ? "" : undefined}
-      data-layout-inline={layoutInline ? "" : undefined}
       {...(pseudoStateSelector ? undefined : remainingProps)}
     >
       <BoxLayoutContext.Provider value={layout}>

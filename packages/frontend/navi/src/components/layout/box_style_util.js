@@ -150,50 +150,49 @@ const POSITION_PROPS = {
   // only the first item will be positioned as expected because subsequent items
   // will be positioned relative to the previous item's margins, not the container edge.
   alignX: (value, { boxLayout }) => {
+    const insideRowLayout = boxLayout === "row" || boxLayout === "inline-row";
+
     if (value === "start") {
-      if (boxLayout === "row") {
+      if (insideRowLayout) {
         return { alignSelf: "start" };
       }
       return { marginRight: "auto" };
     }
     if (value === "end") {
-      if (boxLayout === "row") {
+      if (insideRowLayout) {
         return { alignSelf: "end" };
       }
       return { marginLeft: "auto" };
     }
     if (value === "center") {
-      if (boxLayout === "row") {
+      if (insideRowLayout) {
         return { alignSelf: "center" };
       }
       return { marginLeft: "auto", marginRight: "auto" };
     }
-    if (boxLayout === "row" && value !== "stretch") {
+    if (insideRowLayout && value !== "stretch") {
       return { alignSelf: value };
     }
     return undefined;
   },
   alignY: (value, { boxLayout }) => {
+    const inlineColumnLayout =
+      boxLayout === "column" || boxLayout === "inline-column";
+
     if (value === "start") {
-      if (boxLayout === "column") {
-        return undefined; // this is the default
-      }
-      if (boxLayout === "inline") {
+      if (inlineColumnLayout) {
         return undefined; // this is the default
       }
       return { marginBottom: "auto" };
     }
     if (value === "center") {
-      if (boxLayout === "column") {
-        return { alignSelf: "center" };
-      }
-      if (boxLayout === "inline") {
+      if (inlineColumnLayout) {
         return { alignSelf: "center" };
       }
       return { marginTop: "auto", marginBottom: "auto" };
     }
     if (value === "end") {
-      if (boxLayout === "inline") {
+      if (inlineColumnLayout) {
         return { alignSelf: "end" };
       }
       return { marginTop: "auto" };
@@ -238,6 +237,65 @@ const VISUAL_PROPS = {
   filter: PASS_THROUGH,
   cursor: PASS_THROUGH,
 };
+const CONTENT_PROPS = {
+  contentAlignX: (value, { layout }) => {
+    if (layout === "row") {
+      if (value === "stretch") {
+        return undefined; // this is the default
+      }
+      return { alignItems: value };
+    }
+    if (layout === "column") {
+      if (value === "start") {
+        return undefined; // this is the default
+      }
+      return { justifyContent: value };
+    }
+    if (layout === "inline-block" || layout === "table-cell") {
+      if (value === "start") {
+        return undefined; // this is the default
+      }
+      return { textAlign: value };
+    }
+    return undefined;
+  },
+  contentAlignY: (value, { layout }) => {
+    if (layout === "row") {
+      if (value === "start") {
+        return undefined;
+      }
+      return {
+        justifyContent: value,
+      };
+    }
+    if (layout === "column") {
+      if (value === "stretch") {
+        return undefined;
+      }
+      return { alignItems: value };
+    }
+    if (layout === "inline-block" || layout === "table-cell") {
+      if (value === "start") {
+        return undefined;
+      }
+      return { verticalAlign: value };
+    }
+    return undefined;
+  },
+  contentSpacing: (value, { layout }) => {
+    if (
+      layout === "row" ||
+      layout === "column"
+      // layout === "inline-row" ||
+      // layout === "inline-column"
+    ) {
+      return {
+        gap: resolveSpacingSize(value, "gap"),
+      };
+    }
+    return undefined;
+  },
+};
 const All_PROPS = {
   ...OUTER_SPACING_PROPS,
   ...INNER_SPACING_PROPS,
@@ -245,6 +303,7 @@ const All_PROPS = {
   ...POSITION_PROPS,
   ...TYPO_PROPS,
   ...VISUAL_PROPS,
+  ...CONTENT_PROPS,
 };
 const OUTER_SPACING_PROP_NAME_SET = new Set(Object.keys(OUTER_SPACING_PROPS));
 const INNER_SPACING_PROP_NAME_SET = new Set(Object.keys(INNER_SPACING_PROPS));
@@ -252,6 +311,7 @@ const DIMENSION_PROP_NAME_SET = new Set(Object.keys(DIMENSION_PROPS));
 const POSITION_PROP_NAME_SET = new Set(Object.keys(POSITION_PROPS));
 const TYPO_PROP_NAME_SET = new Set(Object.keys(TYPO_PROPS));
 const VISUAL_PROP_NAME_SET = new Set(Object.keys(VISUAL_PROPS));
+const CONTENT_PROP_NAME_SET = new Set(Object.keys(CONTENT_PROPS));
 
 export const getStylePropGroup = (name) => {
   if (OUTER_SPACING_PROP_NAME_SET.has(name)) {
@@ -271,6 +331,9 @@ export const getStylePropGroup = (name) => {
   }
   if (VISUAL_PROP_NAME_SET.has(name)) {
     return "visual";
+  }
+  if (CONTENT_PROP_NAME_SET.has(name)) {
+    return "content";
   }
   return null;
 };
