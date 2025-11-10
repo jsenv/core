@@ -28,16 +28,20 @@ import { Icon, applyContentSpacingOnTextChildren } from "./text.jsx";
  * This approach dims the content while preserving focus outline visibility.
  */
 import.meta.css = /* css */ `
+  @layer navi {
+    .navi_link {
+      --color: rgb(0, 0, 238);
+      --color-visited: light-dark(#6a1b9a, #ab47bc);
+      --color-active: red;
+      --text-decoration: underline;
+      --text-decoration-hover: underline;
+      --cursor: pointer;
+    }
+  }
+
   .navi_link {
     position: relative;
     border-radius: 2px;
-
-    --color: rgb(0, 0, 238);
-    --color-visited: light-dark(#6a1b9a, #ab47bc);
-    --color-active: red;
-    --text-decoration: underline;
-    --text-decoration-hover: underline;
-    --cursor: pointer;
 
     --x-color: var(--color);
     --x-color-hover: var(--color-hover, var(--color));
@@ -230,14 +234,16 @@ const LinkPlain = (props) => {
     <Box
       {...rest}
       ref={ref}
-      baseClassName="navi_link"
       as="a"
-      layoutInline={box ? true : undefined}
       href={href}
       rel={innerRel}
       target={innerTarget === "_self" ? undefined : target}
       aria-busy={loading}
       inert={disabled}
+      // Visual
+      baseClassName="navi_link"
+      layoutInline
+      layoutColumn={box ? true : undefined}
       managedByCSSVars={LinkManagedByCSSVars}
       pseudoClasses={LinkPseudoClasses}
       pseudoElements={LinkPseudoElements}

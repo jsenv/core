@@ -148,17 +148,11 @@
               <div style={{ marginBottom: "20px" }}>
                 <h3>Breadcrumb Navigation</h3>
                 <div style={{ border: "1px solid #ccc", padding: "8px" }}>
-                  <Text contentSpacing={<span> / </span>} textColor="#666">
-                    <Text as="a" href="#" textColor="blue">
-                      Products
-                    </Text>
-                    <Text as="a" href="#" textColor="blue">
-                      Electronics
-                    </Text>
-                    <Text as="a" href="#" textColor="blue">
-                      Smartphones
-                    </Text>
-                    <Text textBold textColor="black">
+                  <Text contentSpacing={<span> / </span>} color="#666">
+                    <Link href="#">Products</Link>
+                    <Link href="#">Electronics</Link>
+                    <Link href="#">Smartphones</Link>
+                    <Text bold color="black">
                       iPhone 15
                     </Text>
                   </Text>
@@ -170,21 +164,21 @@
                 <h3>Status Dashboard</h3>
                 <div style={{ border: "1px solid #ccc", padding: "8px" }}>
                   <Text contentSpacing=" • ">
-                    <span>
-                      Status:{" "}
-                      <Text textBold textColor="green">
+                    <Text>
+                      Status:
+                      <Text bold color="green">
                         ✓ Online
                       </Text>
-                    </span>
-                    <span>
-                      Users:{" "}
-                      <Text textBold textColor="blue">
+                    </Text>
+                    <Text>
+                      Users:
+                      <Text bold color="blue">
                         1,234
                       </Text>
-                    </span>
-                    <span>
-                      Updated: <Text textColor="#666">2 min ago</Text>
-                    </span>
+                    </Text>
+                    <Text>
+                      Updated: <Text color="#666">2 min ago</Text>
+                    </Text>
                   </Text>
                 </div>
                 <small style={{ color: "#666" }}>contentSpacing=" • "</small>
