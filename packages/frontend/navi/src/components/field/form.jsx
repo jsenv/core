@@ -13,8 +13,7 @@
  *    right now it's just logged to the console I need to see how we can achieve this
  */
 
-import { forwardRef } from "preact/compat";
-import { useContext, useImperativeHandle, useMemo, useRef } from "preact/hooks";
+import { useContext, useMemo, useRef } from "preact/hooks";
 
 import { forwardActionRequested } from "../../validation/custom_constraint_validation.js";
 import { useConstraints } from "../../validation/hooks/use_constraints.js";
@@ -25,7 +24,7 @@ import {
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
-import { withPropsStyle } from "../layout/with_props_style.js";
+import { Box } from "../layout/box.jsx";
 import { collectFormElementValues } from "./collect_form_element_values.js";
 import {
   useActionEvents,
@@ -42,7 +41,7 @@ import {
   useUIState,
 } from "./use_ui_state_controller.js";
 
-export const Form = forwardRef((props, ref) => {
+export const Form = (props) => {
   const uiStateController = useUIGroupStateController(props, "form", {
     childComponentType: "*",
     aggregateChildStates: (childUIStateControllers) => {
@@ -63,7 +62,7 @@ export const Form = forwardRef((props, ref) => {
   });
   const uiState = useUIState(uiStateController);
 
-  const form = renderActionableComponent(props, ref, {
+  const form = renderActionableComponent(props, {
     Basic: FormBasic,
     WithAction: FormWithAction,
   });
@@ -72,34 +71,28 @@ export const Form = forwardRef((props, ref) => {
       <UIStateContext.Provider value={uiState}>{form}</UIStateContext.Provider>
     </UIStateControllerContext.Provider>
   );
-});
+};
 
-const FormBasic = forwardRef((props, ref) => {
+const FormBasic = (props) => {
   const uiStateController = useContext(UIStateControllerContext);
   const { readOnly, loading, children, ...rest } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
 
   // instantiation validation to:
   // - receive "requestsubmit" custom event ensure submit is prevented
   // (and also execute action without validation if form.submit() is ever called)
-  useConstraints(innerRef, []);
-
+  useConstraints(ref, []);
   const innerReadOnly = readOnly || loading;
-
   const formContextValue = useMemo(() => {
     return { loading };
   }, [loading]);
 
-  const [remainingProps, innerStyle] = withPropsStyle(rest, {
-    layout: true,
-  });
-
   return (
-    <form
-      {...remainingProps}
-      ref={innerRef}
-      style={innerStyle}
+    <Box
+      {...rest}
+      as="form"
+      ref={ref}
       onReset={(e) => {
         // browser would empty all fields to their default values (likely empty/unchecked)
         // we want to reset to the last known external state instead
@@ -116,11 +109,11 @@ const FormBasic = forwardRef((props, ref) => {
           </LoadingContext.Provider>
         </ReadOnlyContext.Provider>
       </ParentUIStateControllerContext.Provider>
-    </form>
+    </Box>
   );
-});
+};
 
-const FormWithAction = forwardRef((props, ref) => {
+const FormWithAction = (props) => {
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
   const {
@@ -137,23 +130,23 @@ const FormWithAction = forwardRef((props, ref) => {
     children,
     ...rest
   } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
   const [actionBoundToUIState] = useActionBoundToOneParam(action, uiState);
-  const executeAction = useExecuteAction(innerRef, {
+  const executeAction = useExecuteAction(ref, {
     errorEffect: actionErrorEffect,
     errorMapping,
   });
   const { actionPending, actionRequester: formActionRequester } =
-    useRequestedActionStatus(innerRef);
+    useRequestedActionStatus(ref);
 
-  useActionEvents(innerRef, {
+  useActionEvents(ref, {
     onPrevented: onActionPrevented,
     onRequested: (e) => {
       forwardActionRequested(e, actionBoundToUIState);
     },
     onAction: (e) => {
-      const form = innerRef.current;
+      const form = ref.current;
       const formElementValues = collectFormElementValues(form);
       uiStateController.setUIState(formElementValues, e);
       executeAction(e);
@@ -186,7 +179,7 @@ const FormWithAction = forwardRef((props, ref) => {
       data-action={actionBoundToUIState.name}
       data-method={action.meta?.httpVerb || method || "GET"}
       {...rest}
-      ref={innerRef}
+      ref={ref}
       loading={innerLoading}
     >
       <FormActionContext.Provider value={actionBoundToUIState}>
@@ -196,7 +189,7 @@ const FormWithAction = forwardRef((props, ref) => {
       </FormActionContext.Provider>
     </FormBasic>
   );
-});
+};
 
 // const dispatchCustomEventOnFormAndFormElements = (type, options) => {
 //   const form = innerRef.current;
