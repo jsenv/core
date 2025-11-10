@@ -1,26 +1,20 @@
 import { Link } from "../components/text/link.jsx";
 import { useRouteStatus } from "./route.js";
 
-export const RouteLink = ({
-  route,
-  routeParams,
-  active,
-  children,
-  ...rest
-}) => {
+export const RouteLink = ({ route, routeParams, children, ...rest }) => {
   if (!route) {
     throw new Error("route prop is required");
   }
   const routeStatus = useRouteStatus(route);
   const url = route.buildUrl(routeParams);
-  const innerActive = active || routeStatus.active;
+  const routeIsActive = routeStatus.active;
 
   return (
     <Link
       {...rest}
       href={url}
       pseudoState={{
-        ":active": innerActive,
+        ":-navi-current": routeIsActive,
       }}
     >
       {children}

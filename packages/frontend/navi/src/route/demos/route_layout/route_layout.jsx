@@ -86,7 +86,9 @@ export const App = () => {
 
       {/* Navigation */}
       <div className="nav">
-        <RouteLink route={HOME_ROUTE}>Home</RouteLink>
+        <RouteLink box width="30" height="auto" route={HOME_ROUTE}>
+          <HomeSvg />
+        </RouteLink>
         <RouteLink route={NO_MATCH_ROUTE}>No match</RouteLink>
         <RouteLink route={AUTH_INDEX_ROUTE}>Auth index</RouteLink>
         <RouteLink route={LOGIN_ROUTE}>Login</RouteLink>
@@ -231,3 +233,14 @@ export const App = () => {
     </div>
   );
 };
+
+const HomeSvg = () => (
+  <svg
+    viewBox="0 0 24 24"
+    width="100%"
+    height="100%"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path d="M9 22v-7h6v7h6v-10h3L12 1 0 12h3v10z" fill="currentColor" />
+  </svg>
+);
