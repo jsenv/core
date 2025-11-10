@@ -206,11 +206,6 @@ export const Box = (props) => {
       assignStyle(stylesTarget, propValue, propName, context);
     };
     const getPropEffect = (propName) => {
-      if (propName === "ref") {
-        // some props not destructured but that are neither
-        // style props, nor should be forwarded to the child
-        return "ignore";
-      }
       if (visualSelector) {
         if (HANDLED_BY_VISUAL_CHILD_PROP_SET.has(propName)) {
           return "forward";
@@ -223,6 +218,11 @@ export const Box = (props) => {
     };
 
     for (const key of stylingKeyCandidateArray) {
+      if (key === "ref") {
+        // some props not destructured but that are neither
+        // style props, nor should be forwarded to the child
+        continue;
+      }
       const value = rest[key];
       assignStyleFromProp(value, key, boxStyles, styleContext);
     }
@@ -355,6 +355,8 @@ export const Box = (props) => {
     innerChildren = children;
   }
 
+  const shouldForwardAllToChild = visualSelector && pseudoStateSelector;
+
   return (
     <TagName
       ref={ref}
@@ -362,7 +364,7 @@ export const Box = (props) => {
       data-layout-inline={layoutInline ? "" : undefined}
       data-layout-row={layoutRow ? "" : undefined}
       data-layout-column={layoutColumn ? "" : undefined}
-      {...(hasChildFunction ? undefined : remainingProps)}
+      {...(shouldForwardAllToChild ? undefined : remainingProps)}
     >
       <BoxLayoutContext.Provider value={layout}>
         {innerChildren}
