@@ -1,6 +1,6 @@
 # Text Component
 
-The Text component is a powerful, flexible text rendering system that supports icons, overflow handling, and rich typography options. It's designed to handle complex text layouts with ease while maintaining excellent performance and accessibility.
+The Text component is a flexible text rendering system that supports icons, overflow handling, and rich typography options. It's designed to handle complex text layouts while maintaining excellent performance and accessibility.
 
 ## Basic Usage
 
@@ -10,49 +10,70 @@ import { Text } from "@jsenv/navi";
 // Simple text
 <Text>Hello world</Text>
 
-// With styling
-<Text textBold textColor="blue">Important message</Text>
+// With layout features
+<Text box>Text with layout capabilities</Text>
+
+// With styling (when used with Box props)
+<Text box bold color="blue">Important message</Text>
 ```
 
 ## Text with Icons
 
-One of the most powerful features is the ability to seamlessly integrate icons within text. The `box` prop is **required** when using icons to ensure proper positioning and alignment.
+The Text component seamlessly integrates with the Icon component for rich text layouts.
 
 ### Basic Icon Integration
 
 ```jsx
 import { Text, Icon } from "@jsenv/navi";
 
-<Text box>
+// Icon with text (automatic sizing and alignment)
+<Text>
   <Icon>
     <HomeSvg />
   </Icon>
   Go to Home
-</Text>;
+</Text>
+
+// Using box layout for more control
+<Text box>
+  <Icon>
+    <CheckSvg />
+  </Icon>
+  Task completed
+</Text>
 ```
 
-### Icon Positioning
+### Icon with SVG Sprites
 
-Icons can be positioned before, after, or between text content:
+Icons support the `href` prop for referencing SVG sprites:
+
+```jsx
+<Text>
+  <Icon href="#icon-home" />
+  Home
+</Text>
+```
+
+### Icon Positioning and Layout
 
 ```jsx
 // Icon before text
-<Text box>
-  <Icon textColor="green">
+<Text>
+  <Icon>
     <CheckSvg />
   </Icon>
   Task completed
 </Text>
 
 // Icon after text
-<Text box>
+<Text>
   Download file
   <Icon>
     <DownloadSvg />
   </Icon>
 </Text>
 
-// Multiple icons
+// Multiple icons with box layout
 <Text box>
   <Icon>
     <HomeSvg />
@@ -64,86 +85,17 @@ Icons can be positioned before, after, or between text content:
 </Text>
 ```
 
-### Icon Alignment
+### Icon Layout Control
 
-The Text component provides intelligent icon alignment that automatically positions icons perfectly with text content, even within complex paragraph layouts. This smart alignment ensures icons always look naturally integrated with the text baseline.
-
-**Multiline Behavior**: When text within a `box` goes multiline, the icon stays vertically centered to the first line of text by default. This maintains clean alignment and readability. While you can control this with the `alignY` prop on the icon, the default behavior is typically the most visually appealing.
-
-**Important Layout Consideration**: Using `box={true}` creates a flexbox container, which affects how text flows when multiple `box` elements are adjacent. In narrow containers, multiple `box` texts can arrange themselves in columns rather than flowing naturally as a continuous sentence. This is why `box` should be reserved for short phrases or used sparingly in paragraph text.
+Icons can use the `box` prop for advanced layout control:
 
 ```jsx
-// Smart default alignment - icon aligns perfectly with text baseline
-<Text box>
-  <Icon>
+// Icon with box layout for custom styling
+<Text>
+  <Icon box padding="xs" backgroundColor="blue">
     <StarSvg />
   </Icon>
-  Default alignment
-</Text>
-
-// When text wraps, icon stays aligned to first line
-<Box width="120px">
-  <Text box>
-    <Icon>
-      <DocumentSvg />
-    </Icon>
-    Long filename that wraps to multiple lines
-  </Text>
-</Box>
-
-// Good example: Short text+icon pairs work perfectly in paragraphs
-<Box width="200px">
-  <p>
-    Welcome! Click the{" "}
-    <Text box>
-      <Icon><HomeSvg /></Icon>
-      home
-    </Text>{" "}
-    button or visit your{" "}
-    <Text box>
-      <Icon><UserSvg /></Icon>
-      profile
-    </Text>{" "}
-    to get started.
-  </p>
-</Box>
-
-// Center aligned (less common, but available)
-<Text box>
-  <Icon alignY="center">
-    <StarSvg />
-  </Icon>
-  Center aligned icon
-</Text>
-
-// Bottom aligned (rarely used)
-<Text box>
-  <Icon alignY="end">
-    <StarSvg />
-  </Icon>
-  Bottom aligned icon
-</Text>
-```
-
-**Best Practice**: Reserve `box={true}` for short, cohesive phrases like "Download File", "New Message", or "Settings". For longer content or when multiple icon+text combinations appear in the same paragraph, consider using icons as separate elements or be mindful of the layout behavior in narrow containers.
-
-### Styled Icons
-
-Icons inherit text color by default but can be styled independently:
-
-```jsx
-<Text box textColor="blue">
-  <Icon textColor="red">
-    <HeartSvg />
-  </Icon>
-  Blue text with red heart
-</Text>
-
-<Text box>
-  <Icon textColor="green" textSize="lg">
-    <CheckSvg />
-  </Icon>
-  Large green checkmark
+  Featured item
 </Text>
 ```
 
@@ -170,7 +122,7 @@ The `overflowPinned` feature allows you to keep important content visible even w
 <Box width="250px">
   <Text overflowEllipsis>
     This long text will be truncated but the status remains visible
-    <Text overflowPinned textColor="#4caf50">
+    <Text overflowPinned color="#4caf50">
       ✓ Completed
     </Text>
   </Text>
@@ -179,14 +131,14 @@ The `overflowPinned` feature allows you to keep important content visible even w
 
 ### Pinned Content with Icons
 
-Combine pinned content with icons for rich, informative text:
+Combine pinned content with icons for rich, informative displays:
 
 ```jsx
 <Box width="300px">
-  <Text overflowEllipsis box>
+  <Text overflowEllipsis>
     Very long filename that might be truncated in narrow containers
     <Text overflowPinned>
-      <Icon textColor="blue">
+      <Icon>
         <FileSvg />
       </Icon>
     </Text>
@@ -194,7 +146,7 @@ Combine pinned content with icons for rich, informative text:
 </Box>
 ```
 
-### Pinned Counts and Badges
+### Pinned Counts and Status
 
 Perfect for displaying counts, badges, or status indicators:
 
@@ -202,20 +154,60 @@ Perfect for displaying counts, badges, or status indicators:
 <Box width="200px">
   <Text overflowEllipsis>
     Long conversation title that exceeds container width
-    <Text overflowPinned textColor="#666">
-      <Count>23</Count>
+    <Text overflowPinned color="#666">
+      (23 messages)
     </Text>
   </Text>
 </Box>
 ```
 
-## Advanced Examples
+## Content Spacing
+
+Control spacing between text elements with the `contentSpacing` prop:
+
+```jsx
+// Default spacing with space character
+<Text>
+  <Icon><StarSvg /></Icon>
+  Default spacing
+</Text>
+
+// Custom spacing
+<Text contentSpacing=" • ">
+  Item 1
+  Item 2
+  Item 3
+</Text>
+
+// Preserve exact spacing (useful for pre-formatted content)
+<Text contentSpacing="pre">
+  Exact   spacing   preserved
+</Text>
+```
+
+## Foreground Overlays
+
+Add foreground elements or colors over text content:
+
+```jsx
+// Foreground color overlay
+<Text foregroundColor="rgba(255, 0, 0, 0.3)">
+  Text with red overlay
+</Text>
+
+// Custom foreground element
+<Text foregroundElement={<Icon><CheckSvg /></Icon>}>
+  Text with check overlay
+</Text>
+```
+
+## Component Usage Examples
 
 ### Navigation Links with Icons
 
 ```jsx
-<Text box as="a" href="/profile">
-  <Icon textColor="blue">
+<Text as="a" href="/profile" box>
+  <Icon>
     <UserSvg />
   </Icon>
   My Profile
@@ -225,13 +217,11 @@ Perfect for displaying counts, badges, or status indicators:
 ### Status Messages
 
 ```jsx
-<Text box>
-  <Icon textColor="green" alignY="center">
+<Text>
+  <Icon>
     <CheckSvg />
   </Icon>
-  <Text>
-    Password reset link sent to <Text textBold>user@example.com</Text>
-  </Text>
+  Password reset link sent to user@example.com
 </Text>
 ```
 
@@ -239,12 +229,12 @@ Perfect for displaying counts, badges, or status indicators:
 
 ```jsx
 <Box width="300px">
-  <Text overflowEllipsis box>
-    <Icon textColor="blue">
+  <Text overflowEllipsis>
+    <Icon>
       <DocumentSvg />
     </Icon>
     very-long-filename-that-might-be-truncated.pdf
-    <Text overflowPinned textColor="#666">
+    <Text overflowPinned color="#666">
       2.4 MB
     </Text>
   </Text>
@@ -254,7 +244,7 @@ Perfect for displaying counts, badges, or status indicators:
 ### Interactive Elements
 
 ```jsx
-<Text box as="button" onClick={handleClick}>
+<Text as="button" box onClick={handleClick}>
   <Icon>
     <PlusSvg />
   </Icon>
@@ -262,52 +252,66 @@ Perfect for displaying counts, badges, or status indicators:
 </Text>
 ```
 
-## Typography Props
+## CharSlot Component
 
-The Text component supports comprehensive typography styling:
+The `CharSlot` component creates properly sized containers for icons and other elements:
 
 ```jsx
-// Size variations
-<Text textSize="xs">Extra small text</Text>
-<Text textSize="sm">Small text</Text>
-<Text textSize="md">Medium text (default)</Text>
-<Text textSize="lg">Large text</Text>
-<Text textSize="xl">Extra large text</Text>
+import { CharSlot } from "@jsenv/navi";
 
-// Weight and style
-<Text textBold>Bold text</Text>
-<Text textItalic>Italic text</Text>
-<Text textUnderline>Underlined text</Text>
+// Basic icon slot (1 character width)
+<CharSlot decorative>
+  <MyIcon />
+</CharSlot>
 
-// Colors
-<Text textColor="blue">Blue text</Text>
-<Text textColor="#ff6b6b">Custom color</Text>
+// Custom width slot
+<CharSlot charWidth={2} baseChar="W">
+  <WideIcon />
+</CharSlot>
 
-// Combinations
-<Text textBold textItalic textColor="red" textSize="lg">
-  Combined styles
-</Text>
+// With accessibility
+<CharSlot aria-label="Settings" role="img">
+  <SettingsIcon />
+</CharSlot>
 ```
 
-## Layout Props
+## Paragraph Component
 
-When using `box={true}`, the Text component supports layout properties:
+The `Paragraph` component provides semantic paragraph text with automatic spacing:
 
 ```jsx
-// Spacing
-<Text box gap="sm">
-  <Icon><StarSvg /></Icon>
-  Spaced content
-</Text>
+import { Paragraph } from "@jsenv/navi";
 
-// Alignment and expansion
-<Text box expandX alignX="center">
+<Paragraph>
+  This is a paragraph with proper spacing and text flow.
+  <Icon><StarSvg /></Icon>
+  Icons are automatically spaced correctly.
+</Paragraph>
+
+<Paragraph marginTop="lg" contentSpacing=" • ">
+  Custom spacing between elements
+</Paragraph>
+```
+
+## Typography with Box Props
+
+When using `box={true}`, the Text component supports Box layout and styling props:
+
+```jsx
+// Layout properties
+<Text box expandX alignX="center" gap="sm">
+  <Icon><StarSvg /></Icon>
   Centered expanding text
 </Text>
 
-// Margins and padding
-<Text box margin="md" padding="sm">
-  Text with spacing
+// Spacing and borders
+<Text box margin="md" padding="sm" border="1px solid #ccc">
+  Text with spacing and border
+</Text>
+
+// Background and styling
+<Text box backgroundColor="blue" color="white" borderRadius="md">
+  Styled text container
 </Text>
 ```
 
@@ -315,54 +319,87 @@ When using `box={true}`, the Text component supports layout properties:
 
 ### When to Use `box={true}`
 
-- **Always** when including icons within text
-- When you need layout control (spacing, alignment, expansion)
-- For interactive text elements (buttons, links with complex content)
+- When you need layout control (spacing, alignment, expansion, flex behavior)
+- For interactive text elements (buttons, links with complex styling)
+- When combining with Box layout props (margins, padding, backgrounds)
 
 ### Icon Guidelines
 
-- Use semantic icons that enhance meaning
-- Keep icon colors consistent with your design system
-- Consider icon alignment for different text sizes
-- Test icon visibility in different themes
+- Icons automatically size to match text and align properly
+- Use `href` prop for SVG sprite icons to improve performance
+- Icons inherit text color by default but can be styled independently with Box props when using `box={true}`
+- Use `CharSlot` for precise icon sizing and accessibility
 
 ### Overflow Handling
 
 - Use `overflowEllipsis` for content that might exceed container width
-- Reserve `overflowPinned` for truly important information (counts, status, actions)
+- Use `overflowPinned` for essential information that should always be visible
 - Test overflow behavior at different screen sizes
-- Ensure pinned content remains readable
+- Ensure pinned content remains readable and doesn't overwhelm the main text
+
+### Content Spacing
+
+- Default spacing with space character works for most use cases
+- Use `contentSpacing="pre"` to preserve exact whitespace formatting
+- Custom spacing characters can create lists or formatted displays
+- The spacing system automatically detects existing whitespace to avoid double spacing
 
 ### Accessibility
 
-- Provide meaningful alt text for decorative icons
-- Ensure sufficient color contrast for text and icons
+- Use `CharSlot` with proper ARIA attributes for meaningful icons
+- Set `decorative={true}` on `CharSlot` for purely visual icons
 - Use semantic HTML elements via the `as` prop when appropriate
-- Test with screen readers to ensure icon content is properly conveyed
+- Ensure sufficient color contrast for text and overlays
 
 ## Component API
 
 ### Text Props
 
-| Prop               | Type      | Default   | Description                                          |
-| ------------------ | --------- | --------- | ---------------------------------------------------- |
-| `as`               | `string`  | `"span"`  | HTML element to render                               |
-| `box`              | `boolean` | `false`   | Enable layout features and icon support              |
-| `gap`              | `string`  | `"xxs"`   | Spacing between inline elements (when box=true)      |
-| `overflowEllipsis` | `boolean` | `false`   | Enable text truncation with ellipsis                 |
-| `overflowPinned`   | `boolean` | `false`   | Keep this content visible when parent text overflows |
-| `textSize`         | `string`  | `"md"`    | Font size (xxs, xs, sm, md, lg, xl, xxl)             |
-| `textBold`         | `boolean` | `false`   | Bold font weight                                     |
-| `textItalic`       | `boolean` | `false`   | Italic font style                                    |
-| `textUnderline`    | `boolean` | `false`   | Underlined text                                      |
-| `textColor`        | `string`  | `inherit` | Text color                                           |
+| Prop                | Type      | Default  | Description                                          |
+| ------------------- | --------- | -------- | ---------------------------------------------------- |
+| `as`                | `string`  | `"span"` | HTML element to render                               |
+| `box`               | `boolean` | `false`  | Enable Box layout features and props                 |
+| `overflowEllipsis`  | `boolean` | `false`  | Enable text truncation with ellipsis                 |
+| `overflowPinned`    | `boolean` | `false`  | Keep this content visible when parent text overflows |
+| `contentSpacing`    | `string`  | `" "`    | Character(s) inserted between child elements         |
+| `foregroundColor`   | `string`  | -        | Background color for foreground overlay              |
+| `foregroundElement` | `element` | -        | Element to render as foreground overlay              |
+| `noWrap`            | `boolean` | `false`  | Prevent text wrapping (used with overflow)           |
+| `pre`               | `boolean` | -        | Preserve whitespace formatting                       |
+
+When `box={true}`, all Box component props are also available (layout, spacing, styling, etc.).
 
 ### Icon Props
 
-| Prop        | Type     | Default      | Description                                       |
-| ----------- | -------- | ------------ | ------------------------------------------------- |
-| `alignY`    | `string` | `"baseline"` | Vertical alignment (start, center, end, baseline) |
-| `textColor` | `string` | `inherit`    | Icon color                                        |
-| `textSize`  | `string` | `inherit`    | Icon size                                         |
+| Prop   | Type      | Default | Description                          |
+| ------ | --------- | ------- | ------------------------------------ |
+| `href` | `string`  | -       | SVG sprite reference (e.g., "#icon") |
+| `box`  | `boolean` | `false` | Enable Box layout features           |
 
-The Text component also supports all standard layout, spacing, and styling props when `box={true}` is used.
+When `box={false}` (default), Icon uses CharSlot and supports:
+
+- `charWidth`: Width in characters (default: 1)
+- `baseChar`: Character used for sizing (default: "W")
+- `decorative`: Mark as decorative for accessibility
+- `aria-label`, `role`: Accessibility attributes
+
+When `box={true}`, all Box component props are available.
+
+### CharSlot Props
+
+| Prop         | Type      | Default | Description                           |
+| ------------ | --------- | ------- | ------------------------------------- |
+| `charWidth`  | `number`  | `1`     | Width in character units              |
+| `baseChar`   | `string`  | `"W"`   | Character used for size calculation   |
+| `decorative` | `boolean` | `false` | Mark as decorative (adds aria-hidden) |
+| `aria-label` | `string`  | -       | Accessibility label                   |
+| `role`       | `string`  | -       | ARIA role                             |
+
+### Paragraph Props
+
+| Prop             | Type     | Default | Description                    |
+| ---------------- | -------- | ------- | ------------------------------ |
+| `contentSpacing` | `string` | `" "`   | Spacing between child elements |
+| `marginTop`      | `string` | `"md"`  | Top margin using spacing scale |
+
+Plus all Box component props for styling and layout.

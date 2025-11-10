@@ -8,6 +8,7 @@ import {
   getPaddingSizes,
   getVisuallyVisibleInfo,
   pickPositionRelativeTo,
+  resolveCSSColor,
   visibleRectEffect,
 } from "@jsenv/dom";
 
@@ -201,10 +202,11 @@ export const openCallout = (
     });
 
     addLevelEffect(() => {
-      anchorElement.style.setProperty(
-        "--callout-color",
-        `var(--navi-${level}-color)`,
+      const levelColor = resolveCSSColor(
+        `var(--${level}-color)`,
+        calloutElement,
       );
+      anchorElement.style.setProperty("--callout-color", levelColor);
       return () => {
         anchorElement.style.removeProperty("--callout-color");
       };
@@ -312,7 +314,13 @@ const ARROW_SPACING = 8;
 import.meta.css = /* css */ `
   @layer navi {
     .navi_callout {
+      --success-color: #4caf50;
+      --info-color: #2196f3;
+      --warning-color: #ff9800;
+      --error-color: #f44336;
+
       --background-color: white;
+      --icon-color: black;
       --padding: 8px;
     }
   }
@@ -330,8 +338,8 @@ import.meta.css = /* css */ `
     overflow: visible;
 
     --x-border-color: var(--x-level-color);
+    --x-background-color: var(--x-level-color);
     --x-icon-color: var(--x-level-color);
-    --x-background-color: var(--background-color);
   }
 
   .navi_callout_frame {
@@ -342,16 +350,6 @@ import.meta.css = /* css */ `
   .navi_callout .navi_callout_border {
     fill: var(--x-border-color);
   }
-  .navi_callout[data-level="info"] {
-    --x-level-color: var(--navi-info-color);
-  }
-  .navi_callout[data-level="warning"] {
-    --x-level-color: var(--navi-warning-color);
-  }
-  .navi_callout[data-level="error"] {
-    --x-level-color: var(--navi-error-color);
-  }
-
   .navi_callout_frame svg {
     position: absolute;
     inset: 0;
@@ -360,7 +358,6 @@ import.meta.css = /* css */ `
   .navi_callout_background {
     fill: var(--x-background-color);
   }
-
   .navi_callout_box {
     position: relative;
     border-style: solid;
@@ -427,6 +424,19 @@ import.meta.css = /* css */ `
   .navi_callout_error_stack {
     max-height: 200px;
     overflow: auto;
+  }
+
+  .navi_callout[data-level="success"] {
+    --x-level-color: var(--success-color);
+  }
+  .navi_callout[data-level="info"] {
+    --x-level-color: var(--info-color);
+  }
+  .navi_callout[data-level="warning"] {
+    --x-level-color: var(--warning-color);
+  }
+  .navi_callout[data-level="error"] {
+    --x-level-color: var(--error-color);
   }
 `;
 
