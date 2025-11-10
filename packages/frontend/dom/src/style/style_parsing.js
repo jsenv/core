@@ -1,7 +1,11 @@
-// Properties that need px units
+// Properties that can use px units
 const pxPropertySet = new Set([
   "width",
   "height",
+  "minWidth",
+  "maxWidth",
+  "minHeight",
+  "maxHeight",
   "top",
   "left",
   "right",

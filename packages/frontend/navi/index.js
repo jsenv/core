@@ -90,8 +90,10 @@ export { Count } from "./src/components/text/badge.jsx";
 export { Image } from "./src/components/text/image.jsx";
 // Link can be used to wrap other things than text BUT it's most of the time used to wrap text
 // So they naturally belong to text stuff
+export { Code } from "./src/components/text/code.jsx";
 export { Link } from "./src/components/text/link.jsx";
 export { LinkWithIcon } from "./src/components/text/link_with_icon.jsx";
+export { MessageBox } from "./src/components/text/message_box.jsx";
 export { Svg } from "./src/components/text/svg.jsx";
 export {
   CharSlot,

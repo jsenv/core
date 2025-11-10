@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MessageBox Demo</title>
+    <style>
+      body {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f5f5f5;
+      }
+
+      h1 {
+        margin-bottom: 30px;
+        color: #333;
+        font-size: 2rem;
+        text-align: center;
+      }
+
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .demo-section h2 {
+        margin: 0 0 20px 0;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.4rem;
+        border-bottom: 2px solid #ddd;
+      }
+
+      .message-example {
+        margin-bottom: 20px;
+      }
+
+      .message-example:last-child {
+        margin-bottom: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>MessageBox Demo</h1>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { MessageBox, Title, Code, Layout } from "@jsenv/navi";
+
+      const App = () => {
+        return (
+          <div>
+            <BasicMessageBoxDemo />
+            <MessageBoxWithTitleDemo />
+          </div>
+        );
+      };
+
+      const BasicMessageBoxDemo = () => {
+        return (
+          <div className="demo-section">
+            <h2>Basic MessageBox Examples</h2>
+
+            <Layout column contentSpacing="md">
+              <div className="message-example">
+                <h3>Info Level</h3>
+                <MessageBox level="info">
+                  This is an informational message to provide helpful context or
+                  status updates.
+                </MessageBox>
+              </div>
+
+              <div className="message-example">
+                <h3>Warning Level</h3>
+                <MessageBox level="warning">
+                  This is a warning message to alert users about potential
+                  issues or important considerations.
+                </MessageBox>
+              </div>
+
+              <div className="message-example">
+                <h3>Error Level</h3>
+                <MessageBox level="error">
+                  This is an error message indicating that something went wrong
+                  and requires attention.
+                </MessageBox>
+              </div>
+            </Layout>
+          </div>
+        );
+      };
+
+      const MessageBoxWithTitleDemo = () => {
+        return (
+          <div className="demo-section">
+            <h2>MessageBox with Title Examples</h2>
+
+            <Layout column contentSpacing="md">
+              <div className="message-example">
+                <h3>Info with Title</h3>
+                <MessageBox level="info">
+                  <Title as="h4">Important Information</Title>
+                  This MessageBox includes a title for better organization. The{" "}
+                  <Code>Title</Code> component automatically inherits the
+                  appropriate color based on the message level.
+                </MessageBox>
+              </div>
+
+              <div className="message-example">
+                <h3>Warning with Title</h3>
+                <MessageBox level="warning">
+                  <Title as="h4">Attention Required</Title>
+                  Please review the following warning carefully. This message
+                  contains important information about{" "}
+                  <Code>potential issues</Code> that may affect your workflow.
+                </MessageBox>
+              </div>
+
+              <div className="message-example">
+                <h3>Error with Title</h3>
+                <MessageBox level="error">
+                  <Title as="h4">Operation Failed</Title>
+                  An error has occurred during processing. Please check your
+                  input and try again. If the problem persists, contact support
+                  with the <Code>error details</Code>.
+                </MessageBox>
+              </div>
+
+              <div className="message-example">
+                <h3>Multi-paragraph Message</h3>
+                <MessageBox level="info">
+                  <Title as="h4">System Maintenance Notice</Title>
+                  Scheduled maintenance will occur tonight from 11 PM to 3 AM
+                  EST. During this time, some services may be temporarily
+                  unavailable. We apologize for any inconvenience and appreciate
+                  your patience as we improve our{" "}
+                  <Code>system performance</Code> and security.
+                </MessageBox>
+              </div>
+            </Layout>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>
