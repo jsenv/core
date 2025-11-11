@@ -88,6 +88,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import {
+        Link,
         Routes,
         Route,
         RouteLink,
@@ -127,13 +128,14 @@
 
             <div className="controls">
               <p>Test size transitions between routes:</p>
+              <Link href="./size_transition_route.html">Coucou</Link>
               <RouteLink route={SMALL_ROUTE}>Small Rectangle</RouteLink>
               <RouteLink route={LARGE_ROUTE}>Large Rectangle</RouteLink>
             </div>
 
             <div className="demo-container">
               <div className="white-wrapper">
-                <UITransition sizeTransition sizeTransitionDuration={400}>
+                <UITransition sizeTransition sizeTransitionDuration={4000}>
                   <Route.Slot />
                 </UITransition>
               </div>
