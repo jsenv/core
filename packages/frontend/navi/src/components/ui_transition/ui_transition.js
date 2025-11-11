@@ -498,14 +498,20 @@ export const initUITransition = (container) => {
         debug("transition", contentKeysSentence);
         debug("transition", `Decision: EARLY_RETURN (${earlyAction})`);
         lastContentKey = currentContentKey; // register new key for future transitions
-        if (localDebug.transition) {
-          console.groupEnd();
-        }
-        return; // abort further handling
-      }
+      } else {
+        // Delegate to mutation handler for full transition logic
+        handleChildSlotMutation(slotInfo, changeInfo);
 
-      // Delegate to mutation handler for full transition logic
-      handleChildSlotMutation(slotInfo, changeInfo);
+        // Commit state after transition handling
+        previousChildNodes = slotInfo.childNodes;
+        lastContentKey = slotInfo.contentKey;
+        if (
+          changeInfo.isInitialPopulationWithoutTransition ||
+          changeInfo.becomesPopulated
+        ) {
+          hasPopulatedOnce = true;
+        }
+      }
     } finally {
       isUpdating = false;
       if (localDebug.transition) {
@@ -727,7 +733,6 @@ export const initUITransition = (container) => {
       previousSlotInfo,
       becomesEmpty,
       becomesPopulated,
-      isInitialPopulationWithoutTransition,
       shouldDoContentTransition,
       shouldDoPhaseTransition,
       contentChange,
@@ -813,45 +818,24 @@ export const initUITransition = (container) => {
       );
     }
 
-    // Early return optimization: if no transition decision and we are not continuing
-    // an existing active content transition (animationProgress > 0), we can skip
-    // all transition setup logic below.
-    if (
-      decisions.length === 1 &&
-      decisions[0] === "NO TRANSITION" &&
-      activeContentTransition === null &&
-      activePhaseTransition === null
-    ) {
-      debug(
-        "transition",
-        `Early return: no transition or continuation required`,
-      );
-      // Still ensure size logic executes below (so do not return before size alignment)
-    }
-
-    // Handle initial population skip (first null → something): no content or size animations
-    if (isInitialPopulationWithoutTransition) {
+    // Initial population skip (first null → something): no content or size animations
+    if (changeInfo.isInitialPopulationWithoutTransition) {
       debug(
         "transition",
         "Initial population detected: skipping transitions (opt-in with data-initial-transition)",
       );
-
-      // Apply sizes instantly, no animation
+      const [newWidth, newHeight] = measureContentSize();
+      debug("size", `Measured size: ${newWidth}x${newHeight}`);
       if (isContentPhase) {
         applySizeConstraints(newWidth, newHeight);
       } else {
         updateNaturalContentSize(newWidth, newHeight);
         releaseConstraints("initial population - skip transitions");
       }
-
-      // Register state and mark initial population done
-      previousChildNodes = childNodes;
-      lastContentKey = currentContentKey;
-      hasPopulatedOnce = true;
-      return;
+      return; // state registration happens in triggerChildSlotMutation afterwards
     }
 
-    // Plan size transition upfront; execution will happen after content/phase transitions
+    // Plan size transition upfront (even if no animation decisions) so size alignment occurs
     let sizePlan = {
       action: "none",
       targetWidth: constrainedWidth,
@@ -1101,12 +1085,7 @@ export const initUITransition = (container) => {
       }
     }
 
-    // Store current child for next transition
-    previousChildNodes = childNodes;
-    lastContentKey = currentContentKey;
-    if (becomesPopulated) {
-      hasPopulatedOnce = true;
-    }
+    // (State registration moved to triggerChildSlotMutation)
 
     // Execute planned size action, unless holding size during a content transition
     if (!sizeHoldActive) {
