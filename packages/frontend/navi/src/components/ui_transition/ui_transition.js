@@ -243,7 +243,14 @@ export const initUITransition = (container) => {
         if (contentKey) {
           contentKeyFormatted = `[data-content-key="${contentKey}"]`;
         } else {
-          contentKeyFormatted = "[unkeyed]";
+          let onlyTextNodes = true;
+          for (const child of childNodes) {
+            if (child.nodeType !== Node.ELEMENT_NODE) {
+              onlyTextNodes = false;
+              break;
+            }
+          }
+          contentKeyFormatted = onlyTextNodes ? "[text]" : "[unkeyed]";
         }
         contentName = contentPhase ? "content-phase" : "content";
       } else {
@@ -275,7 +282,6 @@ export const initUITransition = (container) => {
       }
       try {
         const [slotInfo, changeInfo] = getSlotChangeInfo(reason);
-        // Open debug group early (so early return path can close it)
         if (localDebug.transition) {
           const { childNodes } = slotInfo;
           const updateLabel =
@@ -288,7 +294,7 @@ export const initUITransition = (container) => {
             `UI Update: ${updateLabel} (reason: ${changeInfo.reason})`,
           );
         }
-        if (changeInfo.shouldGiveUpEarlyAndJustRegister) {
+        if (changeInfo.isStateChangeOnly) {
         } else {
           publishChange(slotInfo, changeInfo);
           previousSlotInfo = slotInfo;
@@ -388,13 +394,15 @@ export const initUITransition = (container) => {
       const shouldDoContentTransitionIncludingPopulation =
         shouldDoContentTransition ||
         (becomesPopulated && !shouldDoPhaseTransition);
-      // Early registration logic moved here: nothing to transition if no previous and no current child
+      // nothing to transition if no previous and no current child
+      // (Either it's the initial call or just content-key changes but there is no child yet)
       const prevKeyBeforeRegistration = previousSlotInfo.contentKey;
-      const shouldGiveUpEarlyAndJustRegister = !hadChild && !hasChild;
-      if (shouldGiveUpEarlyAndJustRegister) {
+      const isStateChangeOnly = !hadChild && !hasChild;
+      if (isStateChangeOnly) {
         let earlyAction;
         const prevKey = prevKeyBeforeRegistration;
         const keyChanged = prevKey !== contentKey;
+        debugger;
         if (!keyChanged) {
           earlyAction = "unchanged";
         } else if (prevKey === null && contentKey) {
@@ -404,13 +412,8 @@ export const initUITransition = (container) => {
         } else {
           earlyAction = "changed";
         }
-        const conceptualPrevDisplay =
-          prevKeyBeforeRegistration === null
-            ? "[unkeyed]"
-            : `[data-content-key="${prevKeyBeforeRegistration}"]`;
-        const conceptualCurrentDisplay = contentKey
-          ? `[data-content-key="${contentKey}"]`
-          : "[unkeyed]";
+        const conceptualPrevDisplay = previousSlotInfo.contentKeyFormatted;
+        const conceptualCurrentDisplay = slotInfo.contentKeyFormatted;
         const contentKeysSentence = `Content key: ${conceptualPrevDisplay} → ${conceptualCurrentDisplay}`;
         debug("transition", contentKeysSentence);
         debug("transition", `Decision: EARLY_RETURN (${earlyAction})`);
@@ -428,7 +431,7 @@ export const initUITransition = (container) => {
         phaseChange,
         isTransitionLess,
         shouldDoContentTransitionIncludingPopulation,
-        shouldGiveUpEarlyAndJustRegister,
+        isStateChangeOnly,
       };
 
       return [slotInfo, changeInfo];
