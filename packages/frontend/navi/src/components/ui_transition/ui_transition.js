@@ -465,10 +465,46 @@ export const initUITransition = (container) => {
     let constrainedWidth = 0; // Current constrained dimensions (what outer wrapper is set to)
     let constrainedHeight = 0;
     let sizeTransition = null;
+
     let resizeObserver = null;
-    // Prevent reacting to our own constrained size changes while animating
+
     let suppressResizeObserver = false;
     let pendingResizeSync = false; // ensure one measurement after suppression ends
+    // Prevent reacting to our own constrained size changes while animating
+    const pauseResizeObserver = () => {
+      suppressResizeObserver = true;
+      return () => {
+        requestAnimationFrame(() => {
+          suppressResizeObserver = false;
+          if (pendingResizeSync) {
+            pendingResizeSync = false;
+            syncContentDimensions("size_change");
+          }
+        });
+      };
+    };
+    const stopResizeObserver = () => {
+      if (!resizeObserver) return;
+      resizeObserver.disconnect();
+      resizeObserver = null;
+    };
+    const startResizeObserver = () => {
+      resizeObserver = new ResizeObserver(() => {
+        if (!hasSizeTransitions) {
+          return;
+        }
+        if (suppressResizeObserver) {
+          pendingResizeSync = true;
+          debug("size", "Resize ignored (suppressed during size transition)");
+          return;
+        }
+        syncContentDimensions("size_change");
+      });
+      resizeObserver.observe(measureWrapper);
+    };
+    addTeardown(() => {
+      stopResizeObserver();
+    });
 
     // --------------------------------------------------------------------------
     // SIZE HELPERS (kept inline for now; candidates for extraction later)
@@ -489,35 +525,16 @@ export const initUITransition = (container) => {
       });
       updateNaturalContentSize(newWidth, newHeight);
       if (sizeTransition) {
-        if (newWidth !== constrainedWidth || newHeight !== constrainedHeight) {
+        updateToSize(newWidth, newHeight, {
           // we must force the latest constrained size because content has changed
           // and do not naturally take this dimensions anymore
           // so we must "force" this dimensions during the transition
-          outerWrapper.style.width = `${constrainedWidth}px`;
-          outerWrapper.style.height = `${constrainedHeight}px`;
-        }
-        updateToSize(newWidth, newHeight);
+          needConstraints: true,
+        });
       } else {
         constrainedWidth = newWidth;
         constrainedHeight = newHeight;
       }
-    };
-    const stopResizeObserver = () => {
-      if (!resizeObserver) return;
-      resizeObserver.disconnect();
-      resizeObserver = null;
-    };
-    const startResizeObserver = () => {
-      resizeObserver = new ResizeObserver(() => {
-        if (!hasSizeTransitions) return;
-        if (suppressResizeObserver) {
-          pendingResizeSync = true;
-          debug("size", "Resize ignored (suppressed during size transition)");
-          return;
-        }
-        syncContentDimensions("size_change");
-      });
-      resizeObserver.observe(measureWrapper);
     };
     const applySizeConstraints = (targetWidth, targetHeight) => {
       debug("size", "Applying size constraints:", {
@@ -550,7 +567,11 @@ export const initUITransition = (container) => {
         syncContentDimensions("size_change");
       }
     };
-    const updateToSize = (targetWidth, targetHeight) => {
+    const updateToSize = (
+      targetWidth,
+      targetHeight,
+      { needConstraints } = {},
+    ) => {
       if (
         constrainedWidth === targetWidth &&
         constrainedHeight === targetHeight
@@ -579,18 +600,10 @@ export const initUITransition = (container) => {
           width: `${constrainedWidth} → ${targetWidth}`,
           height: `${constrainedHeight} → ${targetHeight}`,
         });
-        suppressResizeObserver = true;
         outerWrapper.style.width = `${targetWidth}px`;
         outerWrapper.style.height = `${targetHeight}px`;
         constrainedWidth = targetWidth;
         constrainedHeight = targetHeight;
-        requestAnimationFrame(() => {
-          suppressResizeObserver = false;
-          if (pendingResizeSync) {
-            pendingResizeSync = false;
-            syncContentDimensions("size_change");
-          }
-        });
         return;
       }
       debug("size", "Animating size:", {
@@ -642,17 +655,15 @@ export const initUITransition = (container) => {
         );
       }
       if (transitions.length > 0) {
-        suppressResizeObserver = true;
+        const resumeResizeObserver = pauseResizeObserver();
+        if (needConstraints) {
+          outerWrapper.style.width = `${constrainedWidth}px`;
+          outerWrapper.style.height = `${constrainedHeight}px`;
+        }
         sizeTransition = transitionController.animate(transitions, {
           onFinish: () => {
             releaseSizeConstraints("animated size transition completed");
-            requestAnimationFrame(() => {
-              suppressResizeObserver = false;
-              if (pendingResizeSync) {
-                pendingResizeSync = false;
-                syncContentDimensions("size_change");
-              }
-            });
+            resumeResizeObserver();
           },
         });
         sizeTransition.play();
@@ -783,7 +794,6 @@ export const initUITransition = (container) => {
       sizeTransition?.play();
     });
     addTeardown(() => {
-      stopResizeObserver();
       sizeTransition?.cancel();
     });
   }
