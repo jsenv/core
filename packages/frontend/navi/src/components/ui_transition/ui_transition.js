@@ -97,11 +97,6 @@ const DEBUG = {
   transition_updates: false,
 };
 
-// ============================================================================
-// CONFIGURATION CONSTANTS
-// ----------------------------------------------------------------------------
-// Grouped here for quick overview & future extraction (e.g. to a config module)
-// ============================================================================
 const SIZE_TRANSITION_DURATION = 150; // Default size transition duration
 const SIZE_DIFF_EPSILON = 0.5; // Ignore size transition when difference below this (px)
 const CONTENT_TRANSITION = "cross-fade"; // Default content transition type
@@ -315,22 +310,7 @@ export const initUITransition = (container) => {
       }
     };
 
-    // ============================================================================
-    // SLOT CHANGE INFO FACTORY
-    // ----------------------------------------------------------------------------
-    // Provides a snapshot of current slot state (children, key, phase) along with
-    // previous state & derived change flags without mutating globals. The caller
-    // (handleChildSlotMutation) remains responsible for committing new state.
-    // ============================================================================
     let hasPopulatedOnce = false; // track if we've already populated once (null → something)
-    // ============================================================================
-    // CONTENT & PHASE STATE
-    // ----------------------------------------------------------------------------
-    // Tracks current content key, previous DOM nodes, and whether we're in a
-    // "content phase" (loading/error/null). This drives the decision tree for
-    // which transition(s) to perform.
-    // ============================================================================
-    // Child state
     const getSlotChangeInfo = (currentChildNodes, reason = "mutation") => {
       let childContentKey;
       let contentPhase;
@@ -454,14 +434,6 @@ export const initUITransition = (container) => {
 
   let onContentTransitionComplete;
   size_transition: {
-    // ============================================================================
-    // SIZE STATE & OBSERVATION
-    // ----------------------------------------------------------------------------
-    // Natural vs constrained dimensions. Constrained dimensions are applied
-    // during transitions (especially when data-size-transition is present).
-    // ResizeObserver measures natural content and drives size animations.
-    // ============================================================================
-    // Size state
     let hasSizeTransitions = container.hasAttribute("data-size-transition");
     let naturalContentWidth = 0; // Natural size of actual content (not loading/error states)
     let naturalContentHeight = 0;
@@ -809,12 +781,6 @@ export const initUITransition = (container) => {
   }
 
   content_transition: {
-    // ============================================================================
-    // TRANSITION STATE (content & phase animation bookkeeping)
-    // ----------------------------------------------------------------------------
-    // Tracks currently active transitions & pause state.
-    // ============================================================================
-    // Transition state
     let activeContentTransition = null;
     let activeContentTransitionType = null;
     let activePhaseTransition = null;
