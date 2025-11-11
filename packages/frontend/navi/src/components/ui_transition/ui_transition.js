@@ -622,6 +622,18 @@ export const initUITransition = (container) => {
         shouldDoContentTransition ||
         (becomesPopulated && !shouldDoPhaseTransition);
 
+      // Human-readable phase names for logging & transition description
+      const fromPhase = !hadChild
+        ? "null"
+        : previousSlotInfo && previousSlotInfo.contentPhase
+          ? "content-phase"
+          : "content";
+      const toPhase = !hasChild
+        ? "null"
+        : prospectiveContentPhase
+          ? "content-phase"
+          : "content";
+
       const slotInfo = {
         childNodes: currentChildNodes,
         contentKey: effectiveContentKey,
@@ -639,6 +651,8 @@ export const initUITransition = (container) => {
         phaseChange,
         preserveOnlyContentTransition,
         shouldDoContentTransitionIncludingPopulation,
+        fromPhase,
+        toPhase,
       };
       return [slotInfo, changeInfo];
     };
@@ -663,6 +677,8 @@ export const initUITransition = (container) => {
       phaseChange,
       preserveOnlyContentTransition,
       shouldDoContentTransitionIncludingPopulation,
+      fromPhase,
+      toPhase,
     } = changeInfo;
     const hadChild = previousSlotInfo
       ? previousSlotInfo.childNodes.length > 0
@@ -1039,17 +1055,6 @@ export const initUITransition = (container) => {
             childNodes,
             attributeToRemove: ["data-content-key", "data-content-phase"],
           });
-
-        const fromPhase = !hadChild
-          ? "null"
-          : wasContentPhase
-            ? "content-phase"
-            : "content";
-        const toPhase = !hasChild
-          ? "null"
-          : isContentPhase
-            ? "content-phase"
-            : "content";
 
         debug(
           "transition",
