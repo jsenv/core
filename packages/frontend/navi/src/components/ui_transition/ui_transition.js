@@ -811,7 +811,7 @@ export const initUITransition = (container) => {
     let activePhaseTransitionType = null;
 
     const updateContentTransitions = (slotInfo, changeInfo) => {
-      const { childNodes, contentKey: currentContentKey } = slotInfo;
+      const { childNodes, contentKey: currentContentKey, hasChild } = slotInfo;
       const {
         previousSlotInfo,
         becomesEmpty,
@@ -825,13 +825,12 @@ export const initUITransition = (container) => {
         fromPhase,
         toPhase,
       } = changeInfo;
+      const { hasChild: hadChild } = previousSlotInfo;
 
       const preserveOnlyContentTransition =
         nothingToDo && activeContentTransition !== null;
 
       const previousChildNodes = previousSlotInfo.childNodes;
-      const hadChild = previousSlotInfo.childNodes.length > 0;
-      const hasChild = childNodes.length > 0;
       const previousContentKeyState = formatContentKeyState(
         previousSlotInfo.contentKey,
         hadChild,
