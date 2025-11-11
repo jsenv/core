@@ -56,7 +56,7 @@ export const UITransition = ({
   transitionDuration,
   phaseTransitionType,
   phaseTransitionDuration,
-  debugTransition,
+  debugDetection,
   ...props
 }) => {
   const [contentKeyFromContext, setContentKeyFromContext] = useState();
@@ -128,7 +128,7 @@ export const UITransition = ({
         data-phase-transition-duration={
           phaseTransitionDuration ? phaseTransitionDuration : undefined
         }
-        data-debug-transition={debugTransition ? "" : undefined}
+        data-debug-detection={debugDetection ? "" : undefined}
       >
         <div className="ui_transition_outer_wrapper">
           <div className="ui_transition_measure_wrapper">
