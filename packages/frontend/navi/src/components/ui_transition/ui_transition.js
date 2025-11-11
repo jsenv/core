@@ -448,6 +448,63 @@ export const initUITransition = (container) => {
     }
     try {
       const [slotInfo, changeInfo] = getSlotChangeInfo(reason);
+      const { childNodes, contentKey: currentContentKey } = slotInfo; // contentPhase not needed here
+      const { previousSlotInfo } = changeInfo;
+
+      // Open debug group early (so early return path can close it)
+      if (localDebug.transition) {
+        const updateLabel =
+          childNodes.length === 0
+            ? "cleared/empty"
+            : childNodes.length === 1
+              ? getElementSignature(childNodes[0])
+              : getElementSignature(slot);
+        console.group(
+          `UI Update: ${updateLabel} (reason: ${changeInfo.reason})`,
+        );
+      }
+
+      // Early registration logic moved here: nothing to transition if no previous and no current child
+      const hadChild = previousSlotInfo
+        ? previousSlotInfo.childNodes.length > 0
+        : false;
+      const hasChild = childNodes.length > 0;
+      const prevKeyBeforeRegistration = previousSlotInfo
+        ? previousSlotInfo.contentKey
+        : null;
+      const shouldGiveUpEarlyAndJustRegister = !hadChild && !hasChild;
+      if (shouldGiveUpEarlyAndJustRegister) {
+        let earlyAction;
+        const prevKey = prevKeyBeforeRegistration;
+        const keyChanged = prevKey !== currentContentKey;
+        if (!keyChanged) {
+          earlyAction = "unchanged";
+        } else if (prevKey === null && currentContentKey !== null) {
+          earlyAction = "registered";
+        } else if (prevKey !== null && currentContentKey === null) {
+          earlyAction = "cleared";
+        } else {
+          earlyAction = "changed";
+        }
+        const conceptualPrevDisplay =
+          prevKeyBeforeRegistration === null
+            ? "[unkeyed]"
+            : `[data-content-key="${prevKeyBeforeRegistration}"]`;
+        const conceptualCurrentDisplay =
+          currentContentKey === null
+            ? "[unkeyed]"
+            : `[data-content-key="${currentContentKey}"]`;
+        const contentKeysSentence = `Content key: ${conceptualPrevDisplay} → ${conceptualCurrentDisplay}`;
+        debug("transition", contentKeysSentence);
+        debug("transition", `Decision: EARLY_RETURN (${earlyAction})`);
+        lastContentKey = currentContentKey; // register new key for future transitions
+        if (localDebug.transition) {
+          console.groupEnd();
+        }
+        return; // abort further handling
+      }
+
+      // Delegate to mutation handler for full transition logic
       handleChildSlotMutation(slotInfo, changeInfo);
     } finally {
       isUpdating = false;
@@ -679,18 +736,7 @@ export const initUITransition = (container) => {
       shouldDoContentTransitionIncludingPopulation,
       fromPhase,
       toPhase,
-      reason,
     } = changeInfo;
-
-    if (localDebug.transition) {
-      const updateLabel =
-        childNodes.length === 0
-          ? "cleared/empty"
-          : childNodes.length === 1
-            ? getElementSignature(childNodes[0])
-            : getElementSignature(slot);
-      console.group(`UI Update: ${updateLabel} (reason: ${reason})`);
-    }
 
     const hadChild = previousSlotInfo
       ? previousSlotInfo.childNodes.length > 0
@@ -705,49 +751,8 @@ export const initUITransition = (container) => {
       currentContentKey,
       hasChild,
     );
-    const prevKeyBeforeRegistration = previousSlotInfo
-      ? previousSlotInfo.contentKey
-      : null;
-
-    const shouldGiveUpEarlyAndJustRegister = !hadChild && !hasChild;
-    let earlyAction = null;
-    if (shouldGiveUpEarlyAndJustRegister) {
-      const prevKey = prevKeyBeforeRegistration;
-      const keyChanged = prevKey !== currentContentKey;
-      if (!keyChanged) {
-        earlyAction = "unchanged";
-      } else if (prevKey === null && currentContentKey !== null) {
-        earlyAction = "registered";
-      } else if (prevKey !== null && currentContentKey === null) {
-        earlyAction = "cleared";
-      } else {
-        earlyAction = "changed";
-      }
-    }
-    const conceptualPrevDisplay =
-      prevKeyBeforeRegistration === null
-        ? "[unkeyed]"
-        : `[data-content-key="${prevKeyBeforeRegistration}"]`;
-    const conceptualCurrentDisplay =
-      currentContentKey === null
-        ? "[unkeyed]"
-        : `[data-content-key="${currentContentKey}"]`;
-    const previousDisplay = shouldGiveUpEarlyAndJustRegister
-      ? conceptualPrevDisplay
-      : previousContentKeyState;
-    const currentDisplay = shouldGiveUpEarlyAndJustRegister
-      ? conceptualCurrentDisplay
-      : currentContentKeyState;
-    let contentKeysSentence = `Content key: ${previousDisplay} → ${currentDisplay}`;
+    let contentKeysSentence = `Content key: ${previousContentKeyState} → ${currentContentKeyState}`;
     debug("transition", contentKeysSentence);
-    if (shouldGiveUpEarlyAndJustRegister) {
-      debug("transition", `Decision: EARLY_RETURN (${earlyAction})`);
-      lastContentKey = currentContentKey;
-      if (localDebug.transition) {
-        console.groupEnd();
-      }
-      return;
-    }
     debug(
       "size",
       `Update triggered, size: ${constrainedWidth}x${constrainedHeight}`,
