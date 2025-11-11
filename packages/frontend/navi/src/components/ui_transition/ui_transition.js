@@ -96,24 +96,6 @@ const DEBUG = {
   transition_updates: false,
 };
 
-// Utility function to format content key states consistently for debug logs
-const formatContentKeyState = (
-  contentKey,
-  hasChildren,
-  hasTextNode = false,
-) => {
-  if (hasTextNode) {
-    return "[text]";
-  }
-  if (!hasChildren) {
-    return "[empty]";
-  }
-  if (contentKey === null || contentKey === undefined) {
-    return "[unkeyed]";
-  }
-  return `[data-content-key="${contentKey}"]`;
-};
-
 // ============================================================================
 // CONFIGURATION CONSTANTS
 // ----------------------------------------------------------------------------
@@ -255,22 +237,29 @@ export const initUITransition = (container) => {
   {
     const createSlotInfo = (childNodes, { contentKey, contentPhase }) => {
       const hasChild = childNodes.length > 0;
+      let contentKeyFormatted;
+      let contentName;
+      if (hasChild) {
+        if (contentKey) {
+          contentKeyFormatted = `[data-content-key="${contentKey}"]`;
+        } else {
+          contentKeyFormatted = "[unkeyed]";
+        }
+        contentName = contentPhase ? "content-phase" : "content";
+      } else {
+        contentKeyFormatted = "[empty]";
+        contentName = "null";
+      }
+
       return {
         childNodes,
-        hasChild: childNodes.length > 0,
         contentKey,
         contentPhase,
-        isContentPhase: Boolean(contentPhase),
 
-        contentKeyFormatted: formatContentKeyState(
-          contentKey,
-          childNodes.length > 0,
-        ),
-        contentName: hasChild
-          ? contentPhase
-            ? "content-phase"
-            : "content"
-          : "null",
+        hasChild: childNodes.length > 0,
+        contentKeyFormatted,
+        isContentPhase: Boolean(contentPhase),
+        contentName,
       };
     };
 
