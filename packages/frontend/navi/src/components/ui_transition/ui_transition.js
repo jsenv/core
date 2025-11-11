@@ -281,19 +281,17 @@ export const initUITransition = (container) => {
         return;
       }
       try {
-        const [slotInfo, changeInfo] = getSlotChangeInfo(reason);
+        const childNodes = Array.from(slot.childNodes);
         if (localDebug.transition) {
-          const { childNodes } = slotInfo;
           const updateLabel =
             childNodes.length === 0
               ? "cleared/empty"
               : childNodes.length === 1
                 ? getElementSignature(childNodes[0])
                 : getElementSignature(slot);
-          console.group(
-            `UI Update: ${updateLabel} (reason: ${changeInfo.reason})`,
-          );
+          console.group(`UI Update: ${updateLabel} (reason: ${reason})`);
         }
+        const [slotInfo, changeInfo] = getSlotChangeInfo(childNodes, reason);
         if (changeInfo.isStateChangeOnly) {
         } else {
           publishChange(slotInfo, changeInfo);
@@ -329,18 +327,16 @@ export const initUITransition = (container) => {
     // which transition(s) to perform.
     // ============================================================================
     // Child state
-    const getSlotChangeInfo = (reason = "mutation") => {
-      // Current child nodes snapshot
-      const currentChildNodes = Array.from(slot.childNodes);
-      // Local phase & key inference (do not mutate globals here)
-
-      let childContentKey = null;
-      let contentPhase = false;
+    const getSlotChangeInfo = (currentChildNodes, reason = "mutation") => {
+      let childContentKey;
+      let contentPhase;
       if (currentChildNodes.length === 0) {
         contentPhase = true; // empty treated as phase
       } else {
         for (const childNode of currentChildNodes) {
-          if (childNode.nodeType === Node.TEXT_NODE) continue;
+          if (childNode.nodeType === Node.TEXT_NODE) {
+            continue;
+          }
           if (childNode.hasAttribute("data-content-phase")) {
             const contentPhaseAttr =
               childNode.getAttribute("data-content-phase");
@@ -357,7 +353,7 @@ export const initUITransition = (container) => {
           `Slot and slot child both have a [data-content-key]. Slot is ${slotContentKey} and child is ${childContentKey}, using the child.`,
         );
       }
-      const contentKey = childContentKey || slotContentKey || null;
+      const contentKey = childContentKey || slotContentKey || undefined;
       const slotInfo = createSlotInfo(currentChildNodes, {
         contentKey,
         contentPhase,
@@ -369,7 +365,6 @@ export const initUITransition = (container) => {
       const becomesPopulated = !hadChild && hasChild;
       const isInitialPopulationWithoutTransition =
         becomesPopulated && !hasPopulatedOnce && !initialTransitionEnabled;
-
       const shouldDoContentTransition =
         contentKey &&
         previousSlotInfo.contentKey &&
@@ -396,25 +391,25 @@ export const initUITransition = (container) => {
         (becomesPopulated && !shouldDoPhaseTransition);
       // nothing to transition if no previous and no current child
       // (Either it's the initial call or just content-key changes but there is no child yet)
-      const prevKeyBeforeRegistration = previousSlotInfo.contentKey;
       const isStateChangeOnly = !hadChild && !hasChild;
       if (isStateChangeOnly) {
         let earlyAction;
-        const prevKey = prevKeyBeforeRegistration;
+        const prevKey = previousSlotInfo.contentKey;
         const keyChanged = prevKey !== contentKey;
-        debugger;
         if (!keyChanged) {
           earlyAction = "unchanged";
-        } else if (prevKey === null && contentKey) {
+        } else if (!prevKey && contentKey) {
           earlyAction = "registered";
-        } else if (prevKey !== null && contentKey) {
+        } else if (prevKey && contentKey) {
           earlyAction = "cleared";
         } else {
           earlyAction = "changed";
         }
         const conceptualPrevDisplay = previousSlotInfo.contentKeyFormatted;
         const conceptualCurrentDisplay = slotInfo.contentKeyFormatted;
-        const contentKeysSentence = `Content key: ${conceptualPrevDisplay} → ${conceptualCurrentDisplay}`;
+        const contentKeysSentence = keyChanged
+          ? `Content key: ${conceptualPrevDisplay} → ${conceptualCurrentDisplay}`
+          : `Content key unchanged: ${conceptualCurrentDisplay}`;
         debug("transition", contentKeysSentence);
         debug("transition", `Decision: EARLY_RETURN (${earlyAction})`);
       }
