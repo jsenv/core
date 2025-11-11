@@ -249,7 +249,6 @@ export const initUITransition = (container) => {
   // Child state
   let lastContentKey = null;
   let previousChildNodes = [];
-  let isContentPhase = false; // Current state: true when showing content phase (loading/error)
   let wasContentPhase = false; // Previous state for comparison
 
   // --------------------------------------------------------------------------
@@ -651,7 +650,7 @@ export const initUITransition = (container) => {
     const {
       childNodes,
       contentKey: currentContentKey,
-      contentPhase: prospectiveContentPhase,
+      contentPhase: isContentPhase,
     } = slotInfo;
     const {
       previousSlotInfo,
@@ -670,7 +669,6 @@ export const initUITransition = (container) => {
       : false;
     const hasChild = childNodes.length > 0;
     wasContentPhase = previousSlotInfo ? previousSlotInfo.contentPhase : false;
-    isContentPhase = prospectiveContentPhase;
     const previousContentKeyState = formatContentKeyState(
       previousSlotInfo ? previousSlotInfo.contentKey : null,
       hadChild,
