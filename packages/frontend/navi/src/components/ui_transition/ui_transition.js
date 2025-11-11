@@ -678,6 +678,7 @@ export const initUITransition = (container) => {
           reasonParts.push(`[${attr}] change`);
         }
       }
+      hasSizeTransitions = container.hasAttribute("data-size-transition");
       const reason = reasonParts.join("+");
       triggerChildSlotMutation(reason);
     });
@@ -693,7 +694,6 @@ export const initUITransition = (container) => {
   }
 
   const handleChildSlotMutation = (slotInfo, changeInfo) => {
-    hasSizeTransitions = container.hasAttribute("data-size-transition");
     const {
       childNodes,
       contentKey: currentContentKey,
