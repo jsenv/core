@@ -117,6 +117,7 @@ export const initUITransition = (container) => {
   const localDebug = {
     ...DEBUG,
     transition: container.hasAttribute("data-debug-transition"),
+    size: container.hasAttribute("data-debug-size"),
   };
   const debugClones = container.hasAttribute("data-debug-clones");
   const debug = (type, ...args) => {
