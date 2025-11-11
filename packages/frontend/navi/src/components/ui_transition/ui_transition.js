@@ -255,7 +255,10 @@ export const initUITransition = (container) => {
   // --------------------------------------------------------------------------
   // SIZE HELPERS (kept inline for now; candidates for extraction later)
   // --------------------------------------------------------------------------
-  const measureContentSize = () => [getWidth(measureWrapper), getHeight(measureWrapper)];
+  const measureContentSize = () => [
+    getWidth(measureWrapper),
+    getHeight(measureWrapper),
+  ];
   const updateContentDimensions = () => {
     const [newWidth, newHeight] = measureContentSize();
     debug("size", "Content size changed:", {
@@ -309,7 +312,8 @@ export const initUITransition = (container) => {
     }
   };
   const updateToSize = (targetWidth, targetHeight) => {
-    if (constrainedWidth === targetWidth && constrainedHeight === targetHeight) return;
+    if (constrainedWidth === targetWidth && constrainedHeight === targetHeight)
+      return;
     const shouldAnimate = container.hasAttribute("data-size-transition");
     const widthDiff = Math.abs(targetWidth - constrainedWidth);
     const heightDiff = Math.abs(targetHeight - constrainedHeight);
@@ -352,13 +356,17 @@ export const initUITransition = (container) => {
       height: `${constrainedHeight} → ${targetHeight}`,
     });
     const duration = parseInt(
-      container.getAttribute("data-size-transition-duration") || SIZE_TRANSITION_DURATION,
+      container.getAttribute("data-size-transition-duration") ||
+        SIZE_TRANSITION_DURATION,
     );
     outerWrapper.style.overflow = "hidden";
     const transitions = [];
     if (heightDiff <= SIZE_DIFF_EPSILON) {
       if (heightDiff > 0) {
-        debug("size", `Skip height transition (negligible diff ${heightDiff.toFixed(4)}px)`);
+        debug(
+          "size",
+          `Skip height transition (negligible diff ${heightDiff.toFixed(4)}px)`,
+        );
       }
       outerWrapper.style.height = `${targetHeight}px`;
       constrainedHeight = targetHeight;
@@ -374,7 +382,10 @@ export const initUITransition = (container) => {
     }
     if (widthDiff <= SIZE_DIFF_EPSILON) {
       if (widthDiff > 0) {
-        debug("size", `Skip width transition (negligible diff ${widthDiff.toFixed(4)}px)`);
+        debug(
+          "size",
+          `Skip width transition (negligible diff ${widthDiff.toFixed(4)}px)`,
+        );
       }
       outerWrapper.style.width = `${targetWidth}px`;
       constrainedWidth = targetWidth;
@@ -404,7 +415,10 @@ export const initUITransition = (container) => {
       });
       sizeTransition.play();
     } else {
-      debug("size", "No size transitions created (identical or negligible differences)");
+      debug(
+        "size",
+        "No size transitions created (identical or negligible differences)",
+      );
     }
   };
   const applySizeConstraints = (targetWidth, targetHeight) => {
