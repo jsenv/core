@@ -61,8 +61,9 @@ export const createWidthTransition = (element, to, options) => {
   return widthTransition;
 };
 export const createOpacityTransition = (element, to, options = {}) => {
+  const { setup, ...rest } = options;
   const opacityTransition = createTimelineTransition({
-    ...options,
+    ...rest,
     constructor: createOpacityTransition,
     key: element,
     to,
@@ -70,6 +71,7 @@ export const createOpacityTransition = (element, to, options = {}) => {
     isVisual: true,
     lifecycle: {
       setup: () => {
+        const teardown = setup?.();
         return {
           from: getOpacity(element),
           update: ({ value }) => {
@@ -77,6 +79,7 @@ export const createOpacityTransition = (element, to, options = {}) => {
           },
           teardown: () => {
             transitionStyleController.delete(element, "opacity");
+            teardown?.();
           },
         };
       },
@@ -84,7 +87,6 @@ export const createOpacityTransition = (element, to, options = {}) => {
   });
   return opacityTransition;
 };
-
 export const createTranslateXTransition = (element, to, options = {}) => {
   const { setup, ...rest } = options;
   const translateXTransition = createTimelineTransition({
@@ -107,8 +109,8 @@ export const createTranslateXTransition = (element, to, options = {}) => {
             });
           },
           teardown: () => {
-            teardown?.();
             transitionStyleController.delete(element, "transform.translateX");
+            teardown?.();
           },
         };
       },

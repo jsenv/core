@@ -51,7 +51,10 @@ import {
 } from "@jsenv/dom";
 
 import.meta.css = /* css */ `
-  .ui_transition_container[data-transition-overflow] {
+  .ui_transition_container[data-transition-running] {
+    /* When transition are running we need to put overflow: hidden */
+    /* Either because the transition slides */
+    /* Or when size transition are disabled because we need to immediatly crop old content when it's bigger than new content */
     overflow: hidden;
   }
 
@@ -71,10 +74,6 @@ import.meta.css = /* css */ `
     justify-content: inherit;
     border-radius: inherit;
     cursor: inherit;
-  }
-
-  .ui_transition_measure_wrapper[data-transition-translate-x] {
-    overflow: hidden;
   }
 
   .ui_transition_container,
@@ -433,8 +432,8 @@ export const initUITransition = (container) => {
   }
 
   let onContentTransitionComplete;
+  let hasSizeTransitions = container.hasAttribute("data-size-transition");
   size_transition: {
-    let hasSizeTransitions = container.hasAttribute("data-size-transition");
     let naturalContentWidth = 0; // Natural size of actual content (not loading/error states)
     let naturalContentHeight = 0;
     let constrainedWidth = 0; // Current constrained dimensions (what outer wrapper is set to)
@@ -1041,36 +1040,28 @@ export const initUITransition = (container) => {
     });
   }
 
-  update_transition_overflow_attribute: {
-    // TODO: ideally each ui_transition just have meta info indicating if it overflow or not
-    // instead of having a dedicated event
-    const transitionOverflowSet = new Set();
+  update_transition_running_attribute: {
+    const transitionSet = new Set();
     const updateTransitionOverflowAttribute = () => {
-      if (transitionOverflowSet.size > 0) {
-        container.setAttribute("data-transition-overflow", "");
+      if (transitionSet.size > 0) {
+        container.setAttribute("data-transition-running", "");
       } else {
-        container.removeAttribute("data-transition-overflow");
+        container.removeAttribute("data-transition-running");
       }
     };
-    const onOverflowStart = (event) => {
-      transitionOverflowSet.add(event.detail.transitionId);
+    const onTransitionStart = (event) => {
+      transitionSet.add(event.detail.id);
       updateTransitionOverflowAttribute();
     };
-    const onOverflowEnd = (event) => {
-      transitionOverflowSet.delete(event.detail.transitionId);
+    const onTransitionEnd = (event) => {
+      transitionSet.delete(event.detail.id);
       updateTransitionOverflowAttribute();
     };
-    container.addEventListener("ui_transition_overflow_start", onOverflowStart);
-    container.addEventListener("ui_transition_overflow_end", onOverflowEnd);
+    container.addEventListener("ui_transition_start", onTransitionStart);
+    container.addEventListener("ui_transition_end", onTransitionEnd);
     addTeardown(() => {
-      container.removeEventListener(
-        "ui_transition_overflow_start",
-        onOverflowStart,
-      );
-      container.removeEventListener(
-        "ui_transition_overflow_end",
-        onOverflowEnd,
-      );
+      container.removeEventListener("ui_transition_start", onTransitionStart);
+      container.removeEventListener("ui_transition_end", onTransitionEnd);
     });
   }
 
@@ -1213,6 +1204,7 @@ const applyTransition = (
 };
 
 const slideLeft = {
+  id: "ui_transition_slide_left",
   name: "slide-left",
   apply: (
     oldElement,
@@ -1234,7 +1226,11 @@ const slideLeft = {
       return [
         createTranslateXTransition(oldElement, to, {
           setup: () =>
-            notifyTransitionOverflow(newElement, "slide_out_old_content"),
+            notifyTransition(newElement, {
+              modelId: slideLeft.id,
+              canOverflow: true,
+              id: "slide_out_old_content",
+            }),
           from,
           duration,
           startProgress,
@@ -1257,7 +1253,11 @@ const slideLeft = {
       return [
         createTranslateXTransition(newElement, to, {
           setup: () =>
-            notifyTransitionOverflow(newElement, "slice_in_new_content"),
+            notifyTransition(newElement, {
+              modelId: slideLeft.id,
+              canOverflow: true,
+              id: "slide_in_new_content",
+            }),
           from,
           duration,
           startProgress,
@@ -1311,7 +1311,11 @@ const slideLeft = {
     transitions.push(
       createTranslateXTransition(oldElement, -containerWidth, {
         setup: () =>
-          notifyTransitionOverflow(newElement, "slide_out_old_content"),
+          notifyTransition(newElement, {
+            modelId: slideLeft.id,
+            canOverflow: true,
+            id: "slide_out_old_content",
+          }),
         from: oldContentPosition,
         duration,
         startProgress,
@@ -1325,7 +1329,11 @@ const slideLeft = {
     transitions.push(
       createTranslateXTransition(newElement, naturalNewPosition, {
         setup: () =>
-          notifyTransitionOverflow(newElement, "slide_in_new_content"),
+          notifyTransition(newElement, {
+            modelId: slideLeft.id,
+            canOverflow: true,
+            id: "slide_in_new_content",
+          }),
         from: effectiveFromPosition,
         duration,
         startProgress,
@@ -1343,6 +1351,7 @@ const slideLeft = {
 };
 
 const crossFade = {
+  id: "ui_transition_cross_fade",
   name: "cross-fade",
   apply: (
     oldElement,
@@ -1360,6 +1369,12 @@ const crossFade = {
       debug("content", "Fade out to empty:", { from, to });
       return [
         createOpacityTransition(oldElement, to, {
+          setup: () =>
+            notifyTransition(newElement, {
+              modelId: crossFade.id,
+              canOverflow: true,
+              id: "fade_out_old_content",
+            }),
           from,
           duration,
           startProgress,
@@ -1380,6 +1395,12 @@ const crossFade = {
       debug("content", "Fade in from empty:", { from, to });
       return [
         createOpacityTransition(newElement, to, {
+          setup: () =>
+            notifyTransition(newElement, {
+              modelId: crossFade.id,
+              canOverflow: true,
+              id: "fade_in_new_content",
+            }),
           from,
           duration,
           startProgress,
@@ -1421,6 +1442,12 @@ const crossFade = {
 
     return [
       createOpacityTransition(oldElement, 0, {
+        setup: () =>
+          notifyTransition(newElement, {
+            modelId: crossFade.id,
+            canOverflow: true,
+            id: "fade_out_old_content",
+          }),
         from: oldOpacity,
         duration,
         startProgress,
@@ -1435,6 +1462,12 @@ const crossFade = {
         },
       }),
       createOpacityTransition(newElement, newNaturalOpacity, {
+        setup: () =>
+          notifyTransition(newElement, {
+            modelId: crossFade.id,
+            canOverflow: true,
+            id: "fade_in_new_content",
+          }),
         from: effectiveFromOpacity,
         duration,
         startProgress: isPhaseTransition ? 0 : startProgress, // Phase transitions: new content always starts fresh
@@ -1449,27 +1482,23 @@ const crossFade = {
   },
 };
 
-const dispatchTransitionOverflowStartCustomEvent = (element, transitionId) => {
-  const customEvent = new CustomEvent("ui_transition_overflow_start", {
-    bubbles: true,
-    detail: {
-      transitionId,
-    },
-  });
-  element.dispatchEvent(customEvent);
-};
-const dispatchTransitionOverflowEndCustomEvent = (element, transitionId) => {
-  const customEvent = new CustomEvent("ui_transition_overflow_end", {
-    bubbles: true,
-    detail: {
-      transitionId,
-    },
-  });
-  element.dispatchEvent(customEvent);
-};
-const notifyTransitionOverflow = (element, transitionId) => {
-  dispatchTransitionOverflowStartCustomEvent(element, transitionId);
+const notifyTransition = (element, detail) => {
+  dispatchUITransitionStartCustomEvent(element, detail);
   return () => {
-    dispatchTransitionOverflowEndCustomEvent(element, transitionId);
+    dispatchUITransitionEndCustomEvent(element, detail);
   };
+};
+const dispatchUITransitionStartCustomEvent = (element, detail) => {
+  const customEvent = new CustomEvent("ui_transition_start", {
+    bubbles: true,
+    detail,
+  });
+  element.dispatchEvent(customEvent);
+};
+const dispatchUITransitionEndCustomEvent = (element, detail) => {
+  const customEvent = new CustomEvent("ui_transition_end", {
+    bubbles: true,
+    detail,
+  });
+  element.dispatchEvent(customEvent);
 };
