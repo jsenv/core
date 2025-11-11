@@ -351,7 +351,7 @@ export const initUITransition = (container) => {
               (previousIsContentPhase && currentIsContentPhase))));
       const contentChange = hadChild && hasChild && shouldDoContentTransition;
       const phaseChange = hadChild && hasChild && shouldDoPhaseTransition;
-      const nothingToDo =
+      const isTransitionLess =
         !shouldDoContentTransition &&
         !shouldDoPhaseTransition &&
         !becomesPopulated &&
@@ -397,7 +397,7 @@ export const initUITransition = (container) => {
         shouldDoPhaseTransition,
         contentChange,
         phaseChange,
-        nothingToDo,
+        isTransitionLess,
         shouldDoContentTransitionIncludingPopulation,
         shouldGiveUpEarlyAndJustRegister,
       };
@@ -813,14 +813,14 @@ export const initUITransition = (container) => {
         shouldDoPhaseTransition,
         contentChange,
         phaseChange,
-        nothingToDo,
+        isTransitionLess,
         shouldDoContentTransitionIncludingPopulation,
       } = changeInfo;
       const { hasChild: hadChild, contentName: toContentName } =
         previousSlotInfo;
 
       const preserveOnlyContentTransition =
-        nothingToDo && activeContentTransition !== null;
+        isTransitionLess && activeContentTransition !== null;
       const previousChildNodes = previousSlotInfo.childNodes;
       let contentKeysSentence = `Content key: ${previousSlotInfo.contentKeyFormatted} → ${slotInfo.contentKeyFormatted}`;
       debug("transition", contentKeysSentence);
