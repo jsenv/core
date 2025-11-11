@@ -194,6 +194,9 @@ export const jsenvPluginPreact = ({
               specifier: "@jsenv/plugin-preact/src/client/preact_refresh.js",
             });
             if (code.includes("__preact_refresh__")) {
+              // should never happen
+              // (was hapnning due to how dev server was generating file names in SPA mode causing inline content
+              // to be cooked twice)
               console.warn(
                 `Cannot inject preact refresh code in ${urlInfo.url} because it already contains __preact_refresh__ variable.`,
               );
