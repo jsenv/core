@@ -477,7 +477,11 @@ export const initUITransition = (container) => {
       getWidth(measureWrapper),
       getHeight(measureWrapper),
     ];
-    const updateContentDimensions = () => {
+    const syncContentDimensions = () => {
+      // the content has changed, the new content size might differ we need
+      // applySizeConstraints(constrainedWidth, constrainedHeight);
+      // outerWrapper.style.width = `${constrainedWidth}px`;
+      // outerWrapper.style.height = `${constrainedHeight}px`;
       const [newWidth, newHeight] = measureContentSize();
       debug("size", "Content size changed:", {
         width: `${naturalContentWidth} → ${newWidth}`,
@@ -485,7 +489,13 @@ export const initUITransition = (container) => {
       });
       updateNaturalContentSize(newWidth, newHeight);
       if (sizeTransition) {
-        debug("size", "Updating animation target:", newHeight);
+        if (newWidth !== constrainedWidth || newHeight !== constrainedHeight) {
+          // we must force the latest constrained size because content has changed
+          // and do not naturally take this dimensions anymore
+          // so we must "force" this dimensions during the transition
+          outerWrapper.style.width = `${constrainedWidth}px`;
+          outerWrapper.style.height = `${constrainedHeight}px`;
+        }
         updateToSize(newWidth, newHeight);
       } else {
         constrainedWidth = newWidth;
@@ -505,9 +515,20 @@ export const initUITransition = (container) => {
           debug("size", "Resize ignored (suppressed during size transition)");
           return;
         }
-        updateContentDimensions();
+        syncContentDimensions("size_change");
       });
       resizeObserver.observe(measureWrapper);
+    };
+    const applySizeConstraints = (targetWidth, targetHeight) => {
+      debug("size", "Applying size constraints:", {
+        width: `${constrainedWidth} → ${targetWidth}`,
+        height: `${constrainedHeight} → ${targetHeight}`,
+      });
+      outerWrapper.style.width = `${targetWidth}px`;
+      outerWrapper.style.height = `${targetHeight}px`;
+      outerWrapper.style.overflow = "hidden";
+      constrainedWidth = targetWidth;
+      constrainedHeight = targetHeight;
     };
     const releaseSizeConstraints = (reason) => {
       debug("size", `Releasing constraints (${reason})`);
@@ -526,7 +547,7 @@ export const initUITransition = (container) => {
       naturalContentHeight = afterHeight;
       if (!suppressResizeObserver && pendingResizeSync) {
         pendingResizeSync = false;
-        updateContentDimensions();
+        syncContentDimensions("size_change");
       }
     };
     const updateToSize = (targetWidth, targetHeight) => {
@@ -567,7 +588,7 @@ export const initUITransition = (container) => {
           suppressResizeObserver = false;
           if (pendingResizeSync) {
             pendingResizeSync = false;
-            updateContentDimensions();
+            syncContentDimensions("size_change");
           }
         });
         return;
@@ -629,7 +650,7 @@ export const initUITransition = (container) => {
               suppressResizeObserver = false;
               if (pendingResizeSync) {
                 pendingResizeSync = false;
-                updateContentDimensions();
+                syncContentDimensions("size_change");
               }
             });
           },
@@ -641,17 +662,6 @@ export const initUITransition = (container) => {
           "No size transitions created (identical or negligible differences)",
         );
       }
-    };
-    const applySizeConstraints = (targetWidth, targetHeight) => {
-      debug("size", "Applying size constraints:", {
-        width: `${constrainedWidth} → ${targetWidth}`,
-        height: `${constrainedHeight} → ${targetHeight}`,
-      });
-      outerWrapper.style.width = `${targetWidth}px`;
-      outerWrapper.style.height = `${targetHeight}px`;
-      outerWrapper.style.overflow = "hidden";
-      constrainedWidth = targetWidth;
-      constrainedHeight = targetHeight;
     };
     const updateNaturalContentSize = (newWidth, newHeight) => {
       debug("size", "Updating natural content size:", {
