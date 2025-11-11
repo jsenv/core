@@ -820,11 +820,14 @@ export const initUITransition = (container) => {
         shouldDoPhaseTransition,
         contentChange,
         phaseChange,
-        preserveOnlyContentTransition,
+        nothingToDo,
         shouldDoContentTransitionIncludingPopulation,
         fromPhase,
         toPhase,
       } = changeInfo;
+
+      const preserveOnlyContentTransition =
+        nothingToDo && activeContentTransition !== null;
 
       const previousChildNodes = previousSlotInfo.childNodes;
       const hadChild = previousSlotInfo.childNodes.length > 0;
