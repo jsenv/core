@@ -213,6 +213,31 @@ export const initUITransition = (container) => {
   const [publishChange, subscribeChange] = createPubSub();
   let triggerChildSlotMutation;
   {
+    const createSlotInfo = (childNodes, { contentKey, contentPhase }) => {
+      const hasChild = childNodes.length > 0;
+      return {
+        childNodes,
+        hasChild: childNodes.length > 0,
+        contentKey,
+        contentPhase,
+        isContentPhase: Boolean(contentPhase),
+
+        contentKeyFormatted: formatContentKeyState(
+          contentKey,
+          childNodes.length > 0,
+        ),
+        contentName: hasChild
+          ? contentPhase
+            ? "content-phase"
+            : "content"
+          : "null",
+      };
+    };
+
+    let previousSlotInfo = createSlotInfo([], {
+      contentKey: undefined,
+      contentPhase: undefined,
+    });
     let isUpdating = false;
     triggerChildSlotMutation = (reason) => {
       if (isUpdating) {
@@ -221,11 +246,9 @@ export const initUITransition = (container) => {
       }
       try {
         const [slotInfo, changeInfo] = getSlotChangeInfo(reason);
-        const { childNodes, contentKey: currentContentKey } = slotInfo; // contentPhase not needed here
-        const { previousSlotInfo } = changeInfo;
-
         // Open debug group early (so early return path can close it)
         if (localDebug.transition) {
+          const { childNodes } = slotInfo;
           const updateLabel =
             childNodes.length === 0
               ? "cleared/empty"
@@ -236,48 +259,13 @@ export const initUITransition = (container) => {
             `UI Update: ${updateLabel} (reason: ${changeInfo.reason})`,
           );
         }
-
-        // Early registration logic moved here: nothing to transition if no previous and no current child
-        const hadChild = previousSlotInfo.childNodes.length > 0;
-        const hasChild = childNodes.length > 0;
-        const prevKeyBeforeRegistration = previousSlotInfo.contentKey;
-        const shouldGiveUpEarlyAndJustRegister = !hadChild && !hasChild;
-        if (shouldGiveUpEarlyAndJustRegister) {
-          let earlyAction;
-          const prevKey = prevKeyBeforeRegistration;
-          const keyChanged = prevKey !== currentContentKey;
-          if (!keyChanged) {
-            earlyAction = "unchanged";
-          } else if (prevKey === null && currentContentKey !== null) {
-            earlyAction = "registered";
-          } else if (prevKey !== null && currentContentKey === null) {
-            earlyAction = "cleared";
-          } else {
-            earlyAction = "changed";
-          }
-          const conceptualPrevDisplay =
-            prevKeyBeforeRegistration === null
-              ? "[unkeyed]"
-              : `[data-content-key="${prevKeyBeforeRegistration}"]`;
-          const conceptualCurrentDisplay =
-            currentContentKey === null
-              ? "[unkeyed]"
-              : `[data-content-key="${currentContentKey}"]`;
-          const contentKeysSentence = `Content key: ${conceptualPrevDisplay} → ${conceptualCurrentDisplay}`;
-          debug("transition", contentKeysSentence);
-          debug("transition", `Decision: EARLY_RETURN (${earlyAction})`);
-          lastContentKey = currentContentKey; // register new key for future transitions
-        } else {
-          publishChange(slotInfo, changeInfo);
-          // Commit state after transition handling
-          previousChildNodes = slotInfo.childNodes;
-          lastContentKey = slotInfo.contentKey;
-          if (
-            changeInfo.isInitialPopulationWithoutTransition ||
-            changeInfo.becomesPopulated
-          ) {
-            hasPopulatedOnce = true;
-          }
+        publishChange(slotInfo, changeInfo);
+        previousSlotInfo = slotInfo;
+        if (
+          changeInfo.isInitialPopulationWithoutTransition ||
+          changeInfo.becomesPopulated
+        ) {
+          hasPopulatedOnce = true;
         }
       } finally {
         isUpdating = false;
@@ -286,6 +274,7 @@ export const initUITransition = (container) => {
         }
       }
     };
+
     // ============================================================================
     // SLOT CHANGE INFO FACTORY
     // ----------------------------------------------------------------------------
@@ -302,22 +291,22 @@ export const initUITransition = (container) => {
     // which transition(s) to perform.
     // ============================================================================
     // Child state
-    let lastContentKey = null;
-    let previousChildNodes = [];
-    let wasContentPhase = false; // Previous state for comparison
     const getSlotChangeInfo = (reason = "mutation") => {
       // Current child nodes snapshot
       const currentChildNodes = Array.from(slot.childNodes);
       // Local phase & key inference (do not mutate globals here)
-      let prospectiveContentPhase = false;
+
       let childContentKey = null;
+      let contentPhase = false;
       if (currentChildNodes.length === 0) {
-        prospectiveContentPhase = true; // empty treated as phase
+        contentPhase = true; // empty treated as phase
       } else {
         for (const childNode of currentChildNodes) {
           if (childNode.nodeType === Node.TEXT_NODE) continue;
           if (childNode.hasAttribute("data-content-phase")) {
-            prospectiveContentPhase = true;
+            const contentPhaseAttr =
+              childNode.getAttribute("data-content-phase");
+            contentPhase = contentPhaseAttr || true;
           }
           if (childNode.hasAttribute("data-content-key")) {
             childContentKey = childNode.getAttribute("data-content-key");
@@ -330,31 +319,25 @@ export const initUITransition = (container) => {
           `Slot and slot child both have a [data-content-key]. Slot is ${slotContentKey} and child is ${childContentKey}, using the child.`,
         );
       }
-      const effectiveContentKey = childContentKey || slotContentKey || null;
+      const contentKey = childContentKey || slotContentKey || null;
+      const slotInfo = createSlotInfo(currentChildNodes, {
+        contentKey,
+        contentPhase,
+      });
 
-      // Previous slot info snapshot (based on globals)
-      const previousSlotInfo = {
-        childNodes: previousChildNodes,
-        hasChild: previousChildNodes.length > 0,
-        contentKey: lastContentKey,
-        isContentPhase: wasContentPhase || (!previousChildNodes.length && true),
-      };
-
-      const hadChild = previousSlotInfo.childNodes.length > 0;
+      const hadChild = previousSlotInfo.hasChild;
       const hasChild = currentChildNodes.length > 0;
       const becomesEmpty = hadChild && !hasChild;
       const becomesPopulated = !hadChild && hasChild;
       const isInitialPopulationWithoutTransition =
         becomesPopulated && !hasPopulatedOnce && !initialTransitionEnabled;
 
-      // Content key change decision
-      let shouldDoContentTransition = false;
-      if (effectiveContentKey && lastContentKey !== null) {
-        shouldDoContentTransition = effectiveContentKey !== lastContentKey;
-      }
-
+      const shouldDoContentTransition =
+        contentKey &&
+        previousSlotInfo.contentKey &&
+        contentKey !== previousSlotInfo.contentKey;
       const previousIsContentPhase = !hadChild || previousSlotInfo.contentPhase;
-      const currentIsContentPhase = !hasChild || prospectiveContentPhase;
+      const currentIsContentPhase = !hasChild || contentPhase;
       const shouldDoPhaseTransition =
         !shouldDoContentTransition &&
         (becomesPopulated ||
@@ -363,39 +346,16 @@ export const initUITransition = (container) => {
             hasChild &&
             (previousIsContentPhase !== currentIsContentPhase ||
               (previousIsContentPhase && currentIsContentPhase))));
-
       const contentChange = hadChild && hasChild && shouldDoContentTransition;
       const phaseChange = hadChild && hasChild && shouldDoPhaseTransition;
-
       const nothingToDo =
         !shouldDoContentTransition &&
         !shouldDoPhaseTransition &&
         !becomesPopulated &&
         !becomesEmpty;
-
       const shouldDoContentTransitionIncludingPopulation =
         shouldDoContentTransition ||
         (becomesPopulated && !shouldDoPhaseTransition);
-
-      // Human-readable phase names for logging & transition description
-      const fromPhase = !hadChild
-        ? "null"
-        : previousSlotInfo.contentPhase
-          ? "content-phase"
-          : "content";
-
-      const slotInfo = {
-        childNodes: currentChildNodes,
-        hasChild: currentChildNodes.length > 0,
-        contentKey: effectiveContentKey,
-        isContentPhase: prospectiveContentPhase,
-      };
-
-      const toPhase = !hasChild
-        ? "null"
-        : prospectiveContentPhase
-          ? "content-phase"
-          : "content";
 
       const changeInfo = {
         reason,
@@ -409,9 +369,36 @@ export const initUITransition = (container) => {
         phaseChange,
         nothingToDo,
         shouldDoContentTransitionIncludingPopulation,
-        fromPhase,
-        toPhase,
       };
+
+      // Early registration logic moved here: nothing to transition if no previous and no current child
+      const prevKeyBeforeRegistration = previousSlotInfo.contentKey;
+      const shouldGiveUpEarlyAndJustRegister = !hadChild && !hasChild;
+      if (shouldGiveUpEarlyAndJustRegister) {
+        let earlyAction;
+        const prevKey = prevKeyBeforeRegistration;
+        const keyChanged = prevKey !== contentKey;
+        if (!keyChanged) {
+          earlyAction = "unchanged";
+        } else if (prevKey === null && contentKey) {
+          earlyAction = "registered";
+        } else if (prevKey !== null && contentKey) {
+          earlyAction = "cleared";
+        } else {
+          earlyAction = "changed";
+        }
+        const conceptualPrevDisplay =
+          prevKeyBeforeRegistration === null
+            ? "[unkeyed]"
+            : `[data-content-key="${prevKeyBeforeRegistration}"]`;
+        const conceptualCurrentDisplay = contentKey
+          ? `[data-content-key="${contentKey}"]`
+          : "[unkeyed]";
+        const contentKeysSentence = `Content key: ${conceptualPrevDisplay} → ${conceptualCurrentDisplay}`;
+        debug("transition", contentKeysSentence);
+        debug("transition", `Decision: EARLY_RETURN (${earlyAction})`);
+      }
+
       return [slotInfo, changeInfo];
     };
 
@@ -814,7 +801,7 @@ export const initUITransition = (container) => {
     let activePhaseTransitionType = null;
 
     const updateContentTransitions = (slotInfo, changeInfo) => {
-      const { childNodes, contentKey: currentContentKey, hasChild } = slotInfo;
+      const { childNodes, contentName: fromContentName } = slotInfo;
       const {
         previousSlotInfo,
         becomesEmpty,
@@ -825,24 +812,14 @@ export const initUITransition = (container) => {
         phaseChange,
         nothingToDo,
         shouldDoContentTransitionIncludingPopulation,
-        fromPhase,
-        toPhase,
       } = changeInfo;
-      const { hasChild: hadChild } = previousSlotInfo;
+      const { hasChild: hadChild, contentName: toContentName } =
+        previousSlotInfo;
 
       const preserveOnlyContentTransition =
         nothingToDo && activeContentTransition !== null;
-
       const previousChildNodes = previousSlotInfo.childNodes;
-      const previousContentKeyState = formatContentKeyState(
-        previousSlotInfo.contentKey,
-        hadChild,
-      );
-      const currentContentKeyState = formatContentKeyState(
-        currentContentKey,
-        hasChild,
-      );
-      let contentKeysSentence = `Content key: ${previousContentKeyState} → ${currentContentKeyState}`;
+      let contentKeysSentence = `Content key: ${previousSlotInfo.contentKeyFormatted} → ${slotInfo.contentKeyFormatted}`;
       debug("transition", contentKeysSentence);
 
       // Determine transition scenarios (hadChild/hasChild already computed above for logging)
@@ -962,8 +939,8 @@ export const initUITransition = (container) => {
             type,
             animationProgress,
             isPhaseTransition: false,
-            fromContentKeyState: previousContentKeyState,
-            toContentKeyState: currentContentKeyState,
+            previousSlotInfo,
+            slotInfo,
             onComplete: () => {
               activeContentTransition = null;
               activeContentTransitionType = null;
@@ -1035,7 +1012,7 @@ export const initUITransition = (container) => {
 
         debug(
           "transition",
-          `Starting phase transition: ${fromPhase} → ${toPhase}`,
+          `Starting transition: ${fromContentName} → ${toContentName}`,
         );
 
         activePhaseTransition = applyTransition(
@@ -1046,8 +1023,8 @@ export const initUITransition = (container) => {
             type: phaseTransitionType,
             animationProgress: phaseAnimationProgress,
             isPhaseTransition: true,
-            fromContentKeyState: previousContentKeyState,
-            toContentKeyState: currentContentKeyState,
+            previousSlotInfo,
+            slotInfo,
             onComplete: () => {
               activePhaseTransition = null;
               activePhaseTransitionType = null;
@@ -1191,8 +1168,8 @@ const applyTransition = (
     animationProgress = 0,
     isPhaseTransition,
     onComplete,
-    fromContentKeyState,
-    toContentKeyState,
+    previousSlotInfo,
+    slotInfo,
     debug,
   },
 ) => {
@@ -1207,8 +1184,8 @@ const applyTransition = (
 
   const { cleanup, oldElement, newElement, onTeardown } = setupTransition();
   // Use precomputed content key states (expected to be provided by caller)
-  const fromContentKey = fromContentKeyState;
-  const toContentKey = toContentKeyState;
+  const fromContentKey = previousSlotInfo.contentKeyFormatted;
+  const toContentKey = slotInfo.contentKeyFormatted;
 
   debug("transition", "Setting up animation:", {
     type,
