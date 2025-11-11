@@ -673,28 +673,21 @@ export const initUITransition = (container) => {
 
       debug(
         "size",
-        `Update triggered, size: ${constrainedWidth}x${constrainedHeight}`,
+        `updateSizeTransition(), current constrained size: ${constrainedWidth}x${constrainedHeight}`,
       );
       if (sizeTransition) {
         sizeTransition.cancel();
       }
-
-      const [newWidth, newHeight] = measureContentSize();
-      debug("size", `Measured size: ${newWidth}x${newHeight}`);
-      outerWrapper.style.width = `${constrainedWidth}px`;
-      outerWrapper.style.height = `${constrainedHeight}px`;
-
-      // Handle resize observation
       stopResizeObserver();
       if (hasChild && !isContentPhase) {
-        startResizeObserver();
         debug("size", "Observing child resize");
+        startResizeObserver();
       }
 
       // Initial population skip (first null → something): no content or size animations
       if (isInitialPopulationWithoutTransition) {
         const [newWidth, newHeight] = measureContentSize();
-        debug("size", `Measured size: ${newWidth}x${newHeight}`);
+        debug("size", `content size measured to: ${newWidth}x${newHeight}`);
         if (isContentPhase) {
           applySizeConstraints(newWidth, newHeight);
         } else {
@@ -703,6 +696,11 @@ export const initUITransition = (container) => {
         }
         return;
       }
+
+      const [newWidth, newHeight] = measureContentSize();
+      debug("size", `content size measured to: ${newWidth}x${newHeight}`);
+      outerWrapper.style.width = `${constrainedWidth}px`;
+      outerWrapper.style.height = `${constrainedHeight}px`;
 
       // If size transitions are disabled and the new content is smaller,
       // hold the previous size to avoid cropping during the content transition.
@@ -723,6 +721,7 @@ export const initUITransition = (container) => {
             );
           };
         }
+        releaseSizeConstraints("size transitions disabled - no size animation");
         return;
       }
 
