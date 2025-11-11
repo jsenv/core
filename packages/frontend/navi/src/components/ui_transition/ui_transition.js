@@ -428,6 +428,9 @@ export const initUITransition = (container) => {
       } else if (previousSlotInfo.contentKey !== slotInfo.contentKey) {
         let contentKeysSentence = `Content key: ${previousSlotInfo.contentKeyFormatted} → ${slotInfo.contentKeyFormatted}`;
         debug("detection", contentKeysSentence);
+      } else if (previousSlotInfo.contentPhase !== slotInfo.contentPhase) {
+        let contentPhasesSentence = `Content phase: ${previousSlotInfo.contentPhase} → ${slotInfo.contentPhase}`;
+        debug("detection", contentPhasesSentence);
       }
 
       const changeInfo = {
