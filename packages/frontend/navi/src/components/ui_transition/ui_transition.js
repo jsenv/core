@@ -483,6 +483,12 @@ export const initUITransition = (container) => {
         });
       };
     };
+    const disableResizeObserverBriefly = () => {
+      stopResizeObserver();
+      requestAnimationFrame(() => {
+        startResizeObserver();
+      });
+    };
     const stopResizeObserver = () => {
       if (!resizeObserver) return;
       resizeObserver.disconnect();
@@ -657,6 +663,7 @@ export const initUITransition = (container) => {
       if (transitions.length > 0) {
         const resumeResizeObserver = pauseResizeObserver();
         if (needConstraints) {
+          disableResizeObserverBriefly();
           outerWrapper.style.width = `${constrainedWidth}px`;
           outerWrapper.style.height = `${constrainedHeight}px`;
         }
