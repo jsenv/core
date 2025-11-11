@@ -536,7 +536,6 @@ export const initUITransition = (container) => {
       ) {
         return;
       }
-      const shouldAnimate = container.hasAttribute("data-size-transition");
       const widthDiff = Math.abs(targetWidth - constrainedWidth);
       const heightDiff = Math.abs(targetHeight - constrainedHeight);
       if (widthDiff <= SIZE_DIFF_EPSILON && heightDiff <= SIZE_DIFF_EPSILON) {
@@ -554,7 +553,7 @@ export const initUITransition = (container) => {
         );
         return;
       }
-      if (!shouldAnimate) {
+      if (!hasSizeTransitions) {
         debug("size", "Updating size instantly:", {
           width: `${constrainedWidth} → ${targetWidth}`,
           height: `${constrainedHeight} → ${targetHeight}`,
@@ -583,25 +582,6 @@ export const initUITransition = (container) => {
       );
       outerWrapper.style.overflow = "hidden";
       const transitions = [];
-      if (heightDiff <= SIZE_DIFF_EPSILON) {
-        if (heightDiff > 0) {
-          debug(
-            "size",
-            `Skip height transition (negligible diff ${heightDiff.toFixed(4)}px)`,
-          );
-        }
-        outerWrapper.style.height = `${targetHeight}px`;
-        constrainedHeight = targetHeight;
-      } else if (targetHeight !== constrainedHeight) {
-        transitions.push(
-          createHeightTransition(outerWrapper, targetHeight, {
-            duration,
-            onUpdate: ({ value }) => {
-              constrainedHeight = value;
-            },
-          }),
-        );
-      }
       if (widthDiff <= SIZE_DIFF_EPSILON) {
         if (widthDiff > 0) {
           debug(
@@ -617,6 +597,25 @@ export const initUITransition = (container) => {
             duration,
             onUpdate: ({ value }) => {
               constrainedWidth = value;
+            },
+          }),
+        );
+      }
+      if (heightDiff <= SIZE_DIFF_EPSILON) {
+        if (heightDiff > 0) {
+          debug(
+            "size",
+            `Skip height transition (negligible diff ${heightDiff.toFixed(4)}px)`,
+          );
+        }
+        outerWrapper.style.height = `${targetHeight}px`;
+        constrainedHeight = targetHeight;
+      } else if (targetHeight !== constrainedHeight) {
+        transitions.push(
+          createHeightTransition(outerWrapper, targetHeight, {
+            duration,
+            onUpdate: ({ value }) => {
+              constrainedHeight = value;
             },
           }),
         );
