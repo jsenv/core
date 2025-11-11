@@ -259,13 +259,16 @@ export const initUITransition = (container) => {
             `UI Update: ${updateLabel} (reason: ${changeInfo.reason})`,
           );
         }
-        publishChange(slotInfo, changeInfo);
-        previousSlotInfo = slotInfo;
-        if (
-          changeInfo.isInitialPopulationWithoutTransition ||
-          changeInfo.becomesPopulated
-        ) {
-          hasPopulatedOnce = true;
+        if (changeInfo.shouldGiveUpEarlyAndJustRegister) {
+        } else {
+          publishChange(slotInfo, changeInfo);
+          previousSlotInfo = slotInfo;
+          if (
+            changeInfo.isInitialPopulationWithoutTransition ||
+            changeInfo.becomesPopulated
+          ) {
+            hasPopulatedOnce = true;
+          }
         }
       } finally {
         isUpdating = false;
@@ -356,21 +359,6 @@ export const initUITransition = (container) => {
       const shouldDoContentTransitionIncludingPopulation =
         shouldDoContentTransition ||
         (becomesPopulated && !shouldDoPhaseTransition);
-
-      const changeInfo = {
-        reason,
-        previousSlotInfo,
-        becomesEmpty,
-        becomesPopulated,
-        isInitialPopulationWithoutTransition,
-        shouldDoContentTransition,
-        shouldDoPhaseTransition,
-        contentChange,
-        phaseChange,
-        nothingToDo,
-        shouldDoContentTransitionIncludingPopulation,
-      };
-
       // Early registration logic moved here: nothing to transition if no previous and no current child
       const prevKeyBeforeRegistration = previousSlotInfo.contentKey;
       const shouldGiveUpEarlyAndJustRegister = !hadChild && !hasChild;
@@ -398,6 +386,21 @@ export const initUITransition = (container) => {
         debug("transition", contentKeysSentence);
         debug("transition", `Decision: EARLY_RETURN (${earlyAction})`);
       }
+
+      const changeInfo = {
+        reason,
+        previousSlotInfo,
+        becomesEmpty,
+        becomesPopulated,
+        isInitialPopulationWithoutTransition,
+        shouldDoContentTransition,
+        shouldDoPhaseTransition,
+        contentChange,
+        phaseChange,
+        nothingToDo,
+        shouldDoContentTransitionIncludingPopulation,
+        shouldGiveUpEarlyAndJustRegister,
+      };
 
       return [slotInfo, changeInfo];
     };
