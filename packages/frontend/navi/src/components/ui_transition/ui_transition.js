@@ -231,25 +231,11 @@ export const initUITransition = (container) => {
   // Prevent reacting to our own constrained size changes while animating
   let suppressResizeObserver = false;
   let pendingResizeSync = false; // ensure one measurement after suppression ends
-
   // Handle size updates based on content state
-  let hasSizeTransitions = container.hasAttribute("data-size-transition");
   const initialTransitionEnabled = container.hasAttribute(
     "data-initial-transition",
   );
-  let hasPopulatedOnce = false; // track if we've already populated once (null → something)
-
-  // ============================================================================
-  // CONTENT & PHASE STATE
-  // ----------------------------------------------------------------------------
-  // Tracks current content key, previous DOM nodes, and whether we're in a
-  // "content phase" (loading/error/null). This drives the decision tree for
-  // which transition(s) to perform.
-  // ============================================================================
-  // Child state
-  let lastContentKey = null;
-  let previousChildNodes = [];
-  let wasContentPhase = false; // Previous state for comparison
+  let hasSizeTransitions = container.hasAttribute("data-size-transition");
 
   // --------------------------------------------------------------------------
   // SIZE HELPERS (kept inline for now; candidates for extraction later)
@@ -468,13 +454,9 @@ export const initUITransition = (container) => {
         }
 
         // Early registration logic moved here: nothing to transition if no previous and no current child
-        const hadChild = previousSlotInfo
-          ? previousSlotInfo.childNodes.length > 0
-          : false;
+        const hadChild = previousSlotInfo.childNodes.length > 0;
         const hasChild = childNodes.length > 0;
-        const prevKeyBeforeRegistration = previousSlotInfo
-          ? previousSlotInfo.contentKey
-          : null;
+        const prevKeyBeforeRegistration = previousSlotInfo.contentKey;
         const shouldGiveUpEarlyAndJustRegister = !hadChild && !hasChild;
         if (shouldGiveUpEarlyAndJustRegister) {
           let earlyAction;
@@ -527,6 +509,18 @@ export const initUITransition = (container) => {
     // previous state & derived change flags without mutating globals. The caller
     // (handleChildSlotMutation) remains responsible for committing new state.
     // ============================================================================
+    let hasPopulatedOnce = false; // track if we've already populated once (null → something)
+    // ============================================================================
+    // CONTENT & PHASE STATE
+    // ----------------------------------------------------------------------------
+    // Tracks current content key, previous DOM nodes, and whether we're in a
+    // "content phase" (loading/error/null). This drives the decision tree for
+    // which transition(s) to perform.
+    // ============================================================================
+    // Child state
+    let lastContentKey = null;
+    let previousChildNodes = [];
+    let wasContentPhase = false; // Previous state for comparison
     const getSlotChangeInfo = (reason = "mutation") => {
       // Current child nodes snapshot
       const currentChildNodes = Array.from(slot.childNodes);
@@ -555,18 +549,13 @@ export const initUITransition = (container) => {
       const effectiveContentKey = childContentKey || slotContentKey || null;
 
       // Previous slot info snapshot (based on globals)
-      const previousSlotInfo = previousChildNodes.length
-        ? {
-            childNodes: previousChildNodes,
-            contentKey: lastContentKey,
-            contentPhase:
-              wasContentPhase || (!previousChildNodes.length && true),
-          }
-        : null;
+      const previousSlotInfo = {
+        childNodes: previousChildNodes,
+        contentKey: lastContentKey,
+        contentPhase: wasContentPhase || (!previousChildNodes.length && true),
+      };
 
-      const hadChild = previousSlotInfo
-        ? previousSlotInfo.childNodes.length > 0
-        : false;
+      const hadChild = previousSlotInfo.childNodes.length > 0;
       const hasChild = currentChildNodes.length > 0;
       const becomesEmpty = hadChild && !hasChild;
       const becomesPopulated = !hadChild && hasChild;
@@ -579,8 +568,7 @@ export const initUITransition = (container) => {
         shouldDoContentTransition = effectiveContentKey !== lastContentKey;
       }
 
-      const previousIsContentPhase =
-        !hadChild || (previousSlotInfo ? previousSlotInfo.contentPhase : false);
+      const previousIsContentPhase = !hadChild || previousSlotInfo.contentPhase;
       const currentIsContentPhase = !hasChild || prospectiveContentPhase;
       const shouldDoPhaseTransition =
         !shouldDoContentTransition &&
@@ -608,7 +596,7 @@ export const initUITransition = (container) => {
       // Human-readable phase names for logging & transition description
       const fromPhase = !hadChild
         ? "null"
-        : previousSlotInfo && previousSlotInfo.contentPhase
+        : previousSlotInfo.contentPhase
           ? "content-phase"
           : "content";
       const toPhase = !hasChild
@@ -713,13 +701,11 @@ export const initUITransition = (container) => {
       toPhase,
     } = changeInfo;
 
-    const hadChild = previousSlotInfo
-      ? previousSlotInfo.childNodes.length > 0
-      : false;
+    const previousChildNodes = previousSlotInfo.childNodes;
+    const hadChild = previousSlotInfo.childNodes.length > 0;
     const hasChild = childNodes.length > 0;
-    wasContentPhase = previousSlotInfo ? previousSlotInfo.contentPhase : false;
     const previousContentKeyState = formatContentKeyState(
-      previousSlotInfo ? previousSlotInfo.contentKey : null,
+      previousSlotInfo.contentKey,
       hadChild,
     );
     const currentContentKeyState = formatContentKeyState(
