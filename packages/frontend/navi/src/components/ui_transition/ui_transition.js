@@ -448,6 +448,20 @@ export const initUITransition = (container) => {
   };
 
   let isUpdating = false;
+  const triggerChildSlotMutation = (reason) => {
+    if (isUpdating) {
+      debug("transition", "Preventing recursive update");
+      return;
+    }
+    try {
+      handleChildSlotMutation(reason);
+    } finally {
+      isUpdating = false;
+      if (localDebug.transition) {
+        console.groupEnd();
+      }
+    }
+  };
 
   // Shared transition setup function
   const setupTransition = ({
@@ -529,552 +543,536 @@ export const initUITransition = (container) => {
   [constrainedWidth, constrainedHeight] = measureContentSize();
 
   const handleChildSlotMutation = (reason = "mutation") => {
-    if (isUpdating) {
-      debug("transition", "Preventing recursive update");
+    hasSizeTransitions = container.hasAttribute("data-size-transition");
+
+    const childNodes = Array.from(slot.childNodes);
+    if (localDebug.transition) {
+      const updateLabel =
+        childNodes.length === 0
+          ? "cleared/empty"
+          : childNodes.length === 1
+            ? getElementSignature(childNodes[0])
+            : getElementSignature(slot);
+      console.group(`UI Update: ${updateLabel} (reason: ${reason})`);
+    }
+
+    // Determine transition scenarios early for early registration check
+    // Prepare phase info early so logging can be unified (even for early return)
+    wasContentPhase = isContentPhase;
+    const hadChild = previousChildNodes.length > 0;
+    const hasChild = childNodes.length > 0;
+
+    // Prefer data-content-key on child, fallback to slot
+    let currentContentKey = null;
+    let slotContentKey = slot.getAttribute("data-content-key");
+    let childContentKey;
+
+    if (childNodes.length === 0) {
+      childContentKey = null;
+      isContentPhase = true; // empty (no child) is treated as content phase
+    } else {
+      for (const childNode of childNodes) {
+        if (childNode.nodeType === Node.TEXT_NODE) {
+        } else if (childNode.hasAttribute("data-content-key")) {
+          childContentKey = childNode.getAttribute("data-content-key");
+        } else if (childNode.hasAttribute("data-content-phase")) {
+          isContentPhase = true;
+        }
+      }
+    }
+    if (childContentKey && slotContentKey) {
+      console.warn(
+        `Slot and slot child both have a [data-content-key]. Slot is ${slotContentKey} and child is ${childContentKey}, using the child.`,
+      );
+    }
+    currentContentKey = childContentKey || slotContentKey || null;
+    // Compute formatted content key states ONCE per mutation (requirement: max 2 calls)
+    const previousContentKeyState = formatContentKeyState(
+      lastContentKey,
+      hadChild,
+    );
+    const currentContentKeyState = formatContentKeyState(
+      currentContentKey,
+      hasChild,
+    );
+    // Track previous key before any potential early registration update
+    const prevKeyBeforeRegistration = lastContentKey;
+    const previousIsContentPhase = !hadChild || wasContentPhase;
+    const currentIsContentPhase = !hasChild || isContentPhase;
+
+    // Early conceptual registration path: empty slot
+    const shouldGiveUpEarlyAndJustRegister = !hadChild && !hasChild;
+    let earlyAction = null;
+    if (shouldGiveUpEarlyAndJustRegister) {
+      const prevKey = prevKeyBeforeRegistration;
+      const keyChanged = prevKey !== currentContentKey;
+      if (!keyChanged) {
+        earlyAction = "unchanged";
+      } else if (prevKey === null && currentContentKey !== null) {
+        earlyAction = "registered";
+      } else if (prevKey !== null && currentContentKey === null) {
+        earlyAction = "cleared";
+      } else {
+        earlyAction = "changed";
+      }
+      // Will update lastContentKey after unified logging
+    }
+
+    // Decide which representation to display for previous/current in early case
+    const conceptualPrevDisplay =
+      prevKeyBeforeRegistration === null
+        ? "[unkeyed]"
+        : `[data-content-key="${prevKeyBeforeRegistration}"]`;
+    const conceptualCurrentDisplay =
+      currentContentKey === null
+        ? "[unkeyed]"
+        : `[data-content-key="${currentContentKey}"]`;
+    const previousDisplay = shouldGiveUpEarlyAndJustRegister
+      ? conceptualPrevDisplay
+      : previousContentKeyState;
+    const currentDisplay = shouldGiveUpEarlyAndJustRegister
+      ? conceptualCurrentDisplay
+      : currentContentKeyState;
+
+    // Build a simple descriptive sentence
+    let contentKeysSentence = `Content key: ${previousDisplay} → ${currentDisplay}`;
+    debug("transition", contentKeysSentence);
+
+    if (shouldGiveUpEarlyAndJustRegister) {
+      // Log decision explicitly (was previously embedded)
+      debug("transition", `Decision: EARLY_RETURN (${earlyAction})`);
+      // Register new conceptual key & return early (skip rest of transition logic)
+      lastContentKey = currentContentKey;
+      if (localDebug.transition) {
+        console.groupEnd();
+      }
+      return;
+    }
+    debug(
+      "size",
+      `Update triggered, size: ${constrainedWidth}x${constrainedHeight}`,
+    );
+
+    if (sizeTransition) {
+      sizeTransition.cancel();
+    }
+
+    const [newWidth, newHeight] = measureContentSize();
+    debug("size", `Measured size: ${newWidth}x${newHeight}`);
+    outerWrapper.style.width = `${constrainedWidth}px`;
+    outerWrapper.style.height = `${constrainedHeight}px`;
+
+    // Handle resize observation
+    stopResizeObserver();
+    if (hasChild && !isContentPhase) {
+      startResizeObserver();
+      debug("size", "Observing child resize");
+    }
+
+    // Determine transition scenarios (hadChild/hasChild already computed above for logging)
+
+    /**
+     * Content Phase Logic: Why empty slots are treated as content phases
+     *
+     * When there is no child element (React component returns null), it is considered
+     * that the component does not render anything temporarily. This might be because:
+     * - The component is loading but does not have a loading state
+     * - The component has an error but does not have an error state
+     * - The component is conceptually unloaded (underlying content was deleted/is not accessible)
+     *
+     * This represents a phase of the given content: having nothing to display.
+     *
+     * We support transitions between different contents via the ability to set
+     * [data-content-key] on the ".ui_transition_slot". This is also useful when you want
+     * all children of a React component to inherit the same data-content-key without
+     * explicitly setting the attribute on each child element.
+     */
+
+    // Content key change when either slot or child has data-content-key and it changed
+    let shouldDoContentTransition = false;
+    if (currentContentKey && lastContentKey !== null) {
+      shouldDoContentTransition = currentContentKey !== lastContentKey;
+    }
+
+    const becomesEmpty = hadChild && !hasChild;
+    const becomesPopulated = !hadChild && hasChild;
+    const isInitialPopulationWithoutTransition =
+      becomesPopulated && !hasPopulatedOnce && !initialTransitionEnabled;
+
+    // Content phase change: any transition between content/content-phase/null except when slot key changes
+    // This includes: null→loading, loading→content, content→loading, loading→null, etc.
+    const shouldDoPhaseTransition =
+      !shouldDoContentTransition &&
+      (becomesPopulated ||
+        becomesEmpty ||
+        (hadChild &&
+          hasChild &&
+          (previousIsContentPhase !== currentIsContentPhase ||
+            (previousIsContentPhase && currentIsContentPhase))));
+
+    const contentChange = hadChild && hasChild && shouldDoContentTransition;
+    const phaseChange = hadChild && hasChild && shouldDoPhaseTransition;
+
+    // Determine if we only need to preserve an existing content transition (no new change)
+    const preserveOnlyContentTransition =
+      activeContentTransition !== null &&
+      !shouldDoContentTransition &&
+      !shouldDoPhaseTransition &&
+      !becomesPopulated &&
+      !becomesEmpty;
+
+    // Include becomesPopulated in content transition only if it's not a phase transition
+    const shouldDoContentTransitionIncludingPopulation =
+      shouldDoContentTransition ||
+      (becomesPopulated && !shouldDoPhaseTransition);
+
+    const decisions = [];
+    if (shouldDoContentTransition) decisions.push("CONTENT TRANSITION");
+    if (shouldDoPhaseTransition) decisions.push("PHASE TRANSITION");
+    if (preserveOnlyContentTransition)
+      decisions.push("PRESERVE CONTENT TRANSITION");
+    if (decisions.length === 0) decisions.push("NO TRANSITION");
+
+    debug("transition", `Decision: ${decisions.join(" + ")}`);
+    if (preserveOnlyContentTransition) {
+      const progress = (activeContentTransition.progress * 100).toFixed(1);
+      debug(
+        "transition",
+        `Preserving existing content transition (progress ${progress}%)`,
+      );
+    }
+
+    // Early return optimization: if no transition decision and we are not continuing
+    // an existing active content transition (animationProgress > 0), we can skip
+    // all transition setup logic below.
+    if (
+      decisions.length === 1 &&
+      decisions[0] === "NO TRANSITION" &&
+      activeContentTransition === null &&
+      activePhaseTransition === null
+    ) {
+      debug(
+        "transition",
+        `Early return: no transition or continuation required`,
+      );
+      // Still ensure size logic executes below (so do not return before size alignment)
+    }
+
+    // Handle initial population skip (first null → something): no content or size animations
+    if (isInitialPopulationWithoutTransition) {
+      debug(
+        "transition",
+        "Initial population detected: skipping transitions (opt-in with data-initial-transition)",
+      );
+
+      // Apply sizes instantly, no animation
+      if (isContentPhase) {
+        applySizeConstraints(newWidth, newHeight);
+      } else {
+        updateNaturalContentSize(newWidth, newHeight);
+        releaseConstraints("initial population - skip transitions");
+      }
+
+      // Register state and mark initial population done
+      previousChildNodes = childNodes;
+      lastContentKey = currentContentKey;
+      hasPopulatedOnce = true;
+      if (localDebug.transition) {
+        console.groupEnd();
+      }
       return;
     }
 
-    hasSizeTransitions = container.hasAttribute("data-size-transition");
+    // Plan size transition upfront; execution will happen after content/phase transitions
+    let sizePlan = {
+      action: "none",
+      targetWidth: constrainedWidth,
+      targetHeight: constrainedHeight,
+    };
 
-    try {
-      isUpdating = true;
-      const childNodes = Array.from(slot.childNodes);
-      if (localDebug.transition) {
-        const updateLabel =
-          childNodes.length === 0
-            ? "cleared/empty"
-            : childNodes.length === 1
-              ? getElementSignature(childNodes[0])
-              : getElementSignature(slot);
-        console.group(`UI Update: ${updateLabel} (reason: ${reason})`);
+    size_transition: {
+      const getTargetDimensions = () => {
+        if (!isContentPhase) {
+          return [newWidth, newHeight];
+        }
+        const shouldUseNewDimensions =
+          naturalContentWidth === 0 && naturalContentHeight === 0;
+        const targetWidth = shouldUseNewDimensions
+          ? newWidth
+          : naturalContentWidth || newWidth;
+        const targetHeight = shouldUseNewDimensions
+          ? newHeight
+          : naturalContentHeight || newHeight;
+        return [targetWidth, targetHeight];
+      };
+
+      const [targetWidth, targetHeight] = getTargetDimensions();
+      sizePlan.targetWidth = targetWidth;
+      sizePlan.targetHeight = targetHeight;
+
+      if (
+        targetWidth === constrainedWidth &&
+        targetHeight === constrainedHeight
+      ) {
+        debug("size", "No size change required");
+        // We'll handle potential constraint release in final section (if not holding)
+        break size_transition;
       }
 
-      // Determine transition scenarios early for early registration check
-      // Prepare phase info early so logging can be unified (even for early return)
-      wasContentPhase = isContentPhase;
-      const hadChild = previousChildNodes.length > 0;
-      const hasChild = childNodes.length > 0;
+      debug("size", "Size change needed:", {
+        width: `${constrainedWidth} → ${targetWidth}`,
+        height: `${constrainedHeight} → ${targetHeight}`,
+      });
 
-      // Prefer data-content-key on child, fallback to slot
-      let currentContentKey = null;
-      let slotContentKey = slot.getAttribute("data-content-key");
-      let childContentKey;
-
-      if (childNodes.length === 0) {
-        childContentKey = null;
-        isContentPhase = true; // empty (no child) is treated as content phase
+      if (isContentPhase) {
+        // Content phases (loading/error) always use size constraints for consistent sizing
+        sizePlan.action = hasSizeTransitions ? "animate" : "applyConstraints";
       } else {
-        for (const childNode of childNodes) {
-          if (childNode.nodeType === Node.TEXT_NODE) {
-          } else if (childNode.hasAttribute("data-content-key")) {
-            childContentKey = childNode.getAttribute("data-content-key");
-          } else if (childNode.hasAttribute("data-content-phase")) {
-            isContentPhase = true;
-          }
-        }
+        // Actual content: update natural content dimensions for future content phases
+        updateNaturalContentSize(targetWidth, targetHeight);
+        sizePlan.action = hasSizeTransitions ? "animate" : "release";
       }
-      if (childContentKey && slotContentKey) {
-        console.warn(
-          `Slot and slot child both have a [data-content-key]. Slot is ${slotContentKey} and child is ${childContentKey}, using the child.`,
-        );
-      }
-      currentContentKey = childContentKey || slotContentKey || null;
-      // Compute formatted content key states ONCE per mutation (requirement: max 2 calls)
-      const previousContentKeyState = formatContentKeyState(
-        lastContentKey,
-        hadChild,
-      );
-      const currentContentKeyState = formatContentKeyState(
-        currentContentKey,
-        hasChild,
-      );
-      // Track previous key before any potential early registration update
-      const prevKeyBeforeRegistration = lastContentKey;
-      const previousIsContentPhase = !hadChild || wasContentPhase;
-      const currentIsContentPhase = !hasChild || isContentPhase;
+    }
 
-      // Early conceptual registration path: empty slot
-      const shouldGiveUpEarlyAndJustRegister = !hadChild && !hasChild;
-      let earlyAction = null;
-      if (shouldGiveUpEarlyAndJustRegister) {
-        const prevKey = prevKeyBeforeRegistration;
-        const keyChanged = prevKey !== currentContentKey;
-        if (!keyChanged) {
-          earlyAction = "unchanged";
-        } else if (prevKey === null && currentContentKey !== null) {
-          earlyAction = "registered";
-        } else if (prevKey !== null && currentContentKey === null) {
-          earlyAction = "cleared";
-        } else {
-          earlyAction = "changed";
-        }
-        // Will update lastContentKey after unified logging
-      }
-
-      // Decide which representation to display for previous/current in early case
-      const conceptualPrevDisplay =
-        prevKeyBeforeRegistration === null
-          ? "[unkeyed]"
-          : `[data-content-key="${prevKeyBeforeRegistration}"]`;
-      const conceptualCurrentDisplay =
-        currentContentKey === null
-          ? "[unkeyed]"
-          : `[data-content-key="${currentContentKey}"]`;
-      const previousDisplay = shouldGiveUpEarlyAndJustRegister
-        ? conceptualPrevDisplay
-        : previousContentKeyState;
-      const currentDisplay = shouldGiveUpEarlyAndJustRegister
-        ? conceptualCurrentDisplay
-        : currentContentKeyState;
-
-      // Build a simple descriptive sentence
-      let contentKeysSentence = `Content key: ${previousDisplay} → ${currentDisplay}`;
-      debug("transition", contentKeysSentence);
-
-      if (shouldGiveUpEarlyAndJustRegister) {
-        // Log decision explicitly (was previously embedded)
-        debug("transition", `Decision: EARLY_RETURN (${earlyAction})`);
-        // Register new conceptual key & return early (skip rest of transition logic)
-        lastContentKey = currentContentKey;
-        if (localDebug.transition) {
-          console.groupEnd();
-        }
-        return;
-      }
-      debug(
-        "size",
-        `Update triggered, size: ${constrainedWidth}x${constrainedHeight}`,
-      );
-
-      if (sizeTransition) {
-        sizeTransition.cancel();
-      }
-
-      const [newWidth, newHeight] = measureContentSize();
-      debug("size", `Measured size: ${newWidth}x${newHeight}`);
-      outerWrapper.style.width = `${constrainedWidth}px`;
-      outerWrapper.style.height = `${constrainedHeight}px`;
-
-      // Handle resize observation
-      stopResizeObserver();
-      if (hasChild && !isContentPhase) {
-        startResizeObserver();
-        debug("size", "Observing child resize");
-      }
-
-      // Determine transition scenarios (hadChild/hasChild already computed above for logging)
-
-      /**
-       * Content Phase Logic: Why empty slots are treated as content phases
-       *
-       * When there is no child element (React component returns null), it is considered
-       * that the component does not render anything temporarily. This might be because:
-       * - The component is loading but does not have a loading state
-       * - The component has an error but does not have an error state
-       * - The component is conceptually unloaded (underlying content was deleted/is not accessible)
-       *
-       * This represents a phase of the given content: having nothing to display.
-       *
-       * We support transitions between different contents via the ability to set
-       * [data-content-key] on the ".ui_transition_slot". This is also useful when you want
-       * all children of a React component to inherit the same data-content-key without
-       * explicitly setting the attribute on each child element.
-       */
-
-      // Content key change when either slot or child has data-content-key and it changed
-      let shouldDoContentTransition = false;
-      if (currentContentKey && lastContentKey !== null) {
-        shouldDoContentTransition = currentContentKey !== lastContentKey;
-      }
-
-      const becomesEmpty = hadChild && !hasChild;
-      const becomesPopulated = !hadChild && hasChild;
-      const isInitialPopulationWithoutTransition =
-        becomesPopulated && !hasPopulatedOnce && !initialTransitionEnabled;
-
-      // Content phase change: any transition between content/content-phase/null except when slot key changes
-      // This includes: null→loading, loading→content, content→loading, loading→null, etc.
-      const shouldDoPhaseTransition =
-        !shouldDoContentTransition &&
-        (becomesPopulated ||
-          becomesEmpty ||
-          (hadChild &&
-            hasChild &&
-            (previousIsContentPhase !== currentIsContentPhase ||
-              (previousIsContentPhase && currentIsContentPhase))));
-
-      const contentChange = hadChild && hasChild && shouldDoContentTransition;
-      const phaseChange = hadChild && hasChild && shouldDoPhaseTransition;
-
-      // Determine if we only need to preserve an existing content transition (no new change)
-      const preserveOnlyContentTransition =
-        activeContentTransition !== null &&
-        !shouldDoContentTransition &&
-        !shouldDoPhaseTransition &&
-        !becomesPopulated &&
-        !becomesEmpty;
-
-      // Include becomesPopulated in content transition only if it's not a phase transition
-      const shouldDoContentTransitionIncludingPopulation =
-        shouldDoContentTransition ||
-        (becomesPopulated && !shouldDoPhaseTransition);
-
-      const decisions = [];
-      if (shouldDoContentTransition) decisions.push("CONTENT TRANSITION");
-      if (shouldDoPhaseTransition) decisions.push("PHASE TRANSITION");
-      if (preserveOnlyContentTransition)
-        decisions.push("PRESERVE CONTENT TRANSITION");
-      if (decisions.length === 0) decisions.push("NO TRANSITION");
-
-      debug("transition", `Decision: ${decisions.join(" + ")}`);
-      if (preserveOnlyContentTransition) {
-        const progress = (activeContentTransition.progress * 100).toFixed(1);
-        debug(
-          "transition",
-          `Preserving existing content transition (progress ${progress}%)`,
-        );
-      }
-
-      // Early return optimization: if no transition decision and we are not continuing
-      // an existing active content transition (animationProgress > 0), we can skip
-      // all transition setup logic below.
+    content_transition: {
+      // Handle content transitions (slide-left, cross-fade for content key changes)
       if (
         decisions.length === 1 &&
         decisions[0] === "NO TRANSITION" &&
         activeContentTransition === null &&
         activePhaseTransition === null
       ) {
-        debug(
-          "transition",
-          `Early return: no transition or continuation required`,
-        );
-        // Still ensure size logic executes below (so do not return before size alignment)
-      }
-
-      // Handle initial population skip (first null → something): no content or size animations
-      if (isInitialPopulationWithoutTransition) {
-        debug(
-          "transition",
-          "Initial population detected: skipping transitions (opt-in with data-initial-transition)",
-        );
-
-        // Apply sizes instantly, no animation
-        if (isContentPhase) {
-          applySizeConstraints(newWidth, newHeight);
-        } else {
-          updateNaturalContentSize(newWidth, newHeight);
-          releaseConstraints("initial population - skip transitions");
-        }
-
-        // Register state and mark initial population done
-        previousChildNodes = childNodes;
-        lastContentKey = currentContentKey;
-        hasPopulatedOnce = true;
-        if (localDebug.transition) {
-          console.groupEnd();
-        }
-        return;
-      }
-
-      // Plan size transition upfront; execution will happen after content/phase transitions
-      let sizePlan = {
-        action: "none",
-        targetWidth: constrainedWidth,
-        targetHeight: constrainedHeight,
-      };
-
-      size_transition: {
-        const getTargetDimensions = () => {
-          if (!isContentPhase) {
-            return [newWidth, newHeight];
-          }
-          const shouldUseNewDimensions =
-            naturalContentWidth === 0 && naturalContentHeight === 0;
-          const targetWidth = shouldUseNewDimensions
-            ? newWidth
-            : naturalContentWidth || newWidth;
-          const targetHeight = shouldUseNewDimensions
-            ? newHeight
-            : naturalContentHeight || newHeight;
-          return [targetWidth, targetHeight];
-        };
-
-        const [targetWidth, targetHeight] = getTargetDimensions();
-        sizePlan.targetWidth = targetWidth;
-        sizePlan.targetHeight = targetHeight;
-
-        if (
-          targetWidth === constrainedWidth &&
-          targetHeight === constrainedHeight
-        ) {
-          debug("size", "No size change required");
-          // We'll handle potential constraint release in final section (if not holding)
-          break size_transition;
-        }
-
-        debug("size", "Size change needed:", {
-          width: `${constrainedWidth} → ${targetWidth}`,
-          height: `${constrainedHeight} → ${targetHeight}`,
-        });
-
-        if (isContentPhase) {
-          // Content phases (loading/error) always use size constraints for consistent sizing
-          sizePlan.action = hasSizeTransitions ? "animate" : "applyConstraints";
-        } else {
-          // Actual content: update natural content dimensions for future content phases
-          updateNaturalContentSize(targetWidth, targetHeight);
-          sizePlan.action = hasSizeTransitions ? "animate" : "release";
-        }
-      }
-
-      content_transition: {
-        // Handle content transitions (slide-left, cross-fade for content key changes)
-        if (
-          decisions.length === 1 &&
-          decisions[0] === "NO TRANSITION" &&
-          activeContentTransition === null &&
-          activePhaseTransition === null
-        ) {
-          // Skip creating any new transitions entirely
-        } else if (
-          shouldDoContentTransitionIncludingPopulation &&
-          !preserveOnlyContentTransition
-        ) {
-          const animationProgress = activeContentTransition?.progress || 0;
-          if (animationProgress > 0) {
-            debug(
-              "transition",
-              `Preserving content transition progress: ${(animationProgress * 100).toFixed(1)}%`,
-            );
-          }
-
-          const newTransitionType =
-            container.getAttribute("data-content-transition") ||
-            CONTENT_TRANSITION;
-          const canContinueSmoothly =
-            activeContentTransitionType === newTransitionType &&
-            activeContentTransition;
-          if (canContinueSmoothly) {
-            debug(
-              "transition",
-              "Continuing with same content transition type (restarting due to actual change)",
-            );
-            activeContentTransition.cancel();
-          } else if (
-            activeContentTransition &&
-            activeContentTransitionType !== newTransitionType
-          ) {
-            debug(
-              "transition",
-              "Different content transition type, keeping both",
-              `${activeContentTransitionType} → ${newTransitionType}`,
-            );
-          } else if (activeContentTransition) {
-            debug("transition", "Cancelling current content transition");
-            activeContentTransition.cancel();
-          }
-
-          const needsOldChildNodesClone =
-            (contentChange || becomesEmpty) && hadChild;
-          const duration = parseInt(
-            container.getAttribute("data-content-transition-duration") ||
-              CONTENT_TRANSITION_DURATION,
-          );
-          const type =
-            container.getAttribute("data-content-transition") ||
-            CONTENT_TRANSITION;
-
-          const setupContentTransition = () =>
-            setupTransition({
-              isPhaseTransition: false,
-              overlay: contentOverlay,
-              needsOldChildNodesClone,
-              previousChildNodes,
-              childNodes,
-              attributeToRemove: ["data-content-key"],
-            });
-
-          // If size transitions are disabled and the new content is smaller,
-          // hold the previous size to avoid cropping during the transition.
-          if (!hasSizeTransitions) {
-            const willShrinkWidth = constrainedWidth > newWidth;
-            const willShrinkHeight = constrainedHeight > newHeight;
-            sizeHoldActive = willShrinkWidth || willShrinkHeight;
-            if (sizeHoldActive) {
-              debug(
-                "size",
-                `Holding previous size during content transition: ${constrainedWidth}x${constrainedHeight}`,
-              );
-              applySizeConstraints(constrainedWidth, constrainedHeight);
-            }
-          }
-
-          activeContentTransition = applyTransition(
-            transitionController,
-            setupContentTransition,
-            {
-              duration,
-              type,
-              animationProgress,
-              isPhaseTransition: false,
-              fromContentKeyState: previousContentKeyState,
-              toContentKeyState: currentContentKeyState,
-              onComplete: () => {
-                activeContentTransition = null;
-                activeContentTransitionType = null;
-                if (sizeHoldActive) {
-                  // Release the hold after the content transition completes
-                  releaseConstraints(
-                    "content transition completed - release size hold",
-                  );
-                  sizeHoldActive = false;
-                }
-              },
-              debug,
-            },
-          );
-
-          if (activeContentTransition) {
-            activeContentTransition.play();
-          }
-          activeContentTransitionType = type;
-        } else if (
-          !shouldDoContentTransition &&
-          !preserveOnlyContentTransition
-        ) {
-          // Clean up content overlay if no content transition needed and nothing to preserve
-          contentOverlay.innerHTML = "";
-          activeContentTransition = null;
-          activeContentTransitionType = null;
-        }
-
-        // Handle phase transitions (cross-fade for content phase changes)
-        if (shouldDoPhaseTransition) {
-          const phaseTransitionType =
-            container.getAttribute("data-phase-transition") || PHASE_TRANSITION;
-          const phaseAnimationProgress = activePhaseTransition?.progress || 0;
-          if (phaseAnimationProgress > 0) {
-            debug(
-              "transition",
-              `Preserving phase transition progress: ${(phaseAnimationProgress * 100).toFixed(1)}%`,
-            );
-          }
-
-          const canContinueSmoothly =
-            activePhaseTransitionType === phaseTransitionType &&
-            activePhaseTransition;
-
-          if (canContinueSmoothly) {
-            debug("transition", "Continuing with same phase transition type");
-            activePhaseTransition.cancel();
-          } else if (
-            activePhaseTransition &&
-            activePhaseTransitionType !== phaseTransitionType
-          ) {
-            debug(
-              "transition",
-              "Different phase transition type, keeping both",
-              `${activePhaseTransitionType} → ${phaseTransitionType}`,
-            );
-          } else if (activePhaseTransition) {
-            debug("transition", "Cancelling current phase transition");
-            activePhaseTransition.cancel();
-          }
-
-          const needsOldPhaseClone =
-            (becomesEmpty || becomesPopulated || phaseChange) && hadChild;
-          const phaseDuration = parseInt(
-            container.getAttribute("data-phase-transition-duration") ||
-              PHASE_TRANSITION_DURATION,
-          );
-
-          const setupPhaseTransition = () =>
-            setupTransition({
-              isPhaseTransition: true,
-              overlay: phaseOverlay,
-              needsOldChildNodesClone: needsOldPhaseClone,
-              previousChildNodes,
-              childNodes,
-              attributeToRemove: ["data-content-key", "data-content-phase"],
-            });
-
-          const fromPhase = !hadChild
-            ? "null"
-            : wasContentPhase
-              ? "content-phase"
-              : "content";
-          const toPhase = !hasChild
-            ? "null"
-            : isContentPhase
-              ? "content-phase"
-              : "content";
-
+        // Skip creating any new transitions entirely
+      } else if (
+        shouldDoContentTransitionIncludingPopulation &&
+        !preserveOnlyContentTransition
+      ) {
+        const animationProgress = activeContentTransition?.progress || 0;
+        if (animationProgress > 0) {
           debug(
             "transition",
-            `Starting phase transition: ${fromPhase} → ${toPhase}`,
+            `Preserving content transition progress: ${(animationProgress * 100).toFixed(1)}%`,
           );
-
-          activePhaseTransition = applyTransition(
-            transitionController,
-            setupPhaseTransition,
-            {
-              duration: phaseDuration,
-              type: phaseTransitionType,
-              animationProgress: phaseAnimationProgress,
-              isPhaseTransition: true,
-              fromContentKeyState: previousContentKeyState,
-              toContentKeyState: currentContentKeyState,
-              onComplete: () => {
-                activePhaseTransition = null;
-                activePhaseTransitionType = null;
-                debug("transition", "Phase transition complete");
-              },
-              debug,
-            },
-          );
-
-          if (activePhaseTransition) {
-            activePhaseTransition.play();
-          }
-          activePhaseTransitionType = phaseTransitionType;
         }
-      }
 
-      // Store current child for next transition
-      previousChildNodes = childNodes;
-      lastContentKey = currentContentKey;
-      if (becomesPopulated) {
-        hasPopulatedOnce = true;
-      }
-
-      // Execute planned size action, unless holding size during a content transition
-      if (!sizeHoldActive) {
-        if (
-          sizePlan.targetWidth === constrainedWidth &&
-          sizePlan.targetHeight === constrainedHeight
+        const newTransitionType =
+          container.getAttribute("data-content-transition") ||
+          CONTENT_TRANSITION;
+        const canContinueSmoothly =
+          activeContentTransitionType === newTransitionType &&
+          activeContentTransition;
+        if (canContinueSmoothly) {
+          debug(
+            "transition",
+            "Continuing with same content transition type (restarting due to actual change)",
+          );
+          activeContentTransition.cancel();
+        } else if (
+          activeContentTransition &&
+          activeContentTransitionType !== newTransitionType
         ) {
-          // no size changes planned; possibly release constraints
-          if (!isContentPhase) {
-            releaseConstraints("no size change needed");
-          }
-        } else if (sizePlan.action === "animate") {
-          updateToSize(sizePlan.targetWidth, sizePlan.targetHeight);
-        } else if (sizePlan.action === "applyConstraints") {
-          applySizeConstraints(sizePlan.targetWidth, sizePlan.targetHeight);
-        } else if (sizePlan.action === "release") {
-          releaseConstraints("actual content - no size transitions needed");
+          debug(
+            "transition",
+            "Different content transition type, keeping both",
+            `${activeContentTransitionType} → ${newTransitionType}`,
+          );
+        } else if (activeContentTransition) {
+          debug("transition", "Cancelling current content transition");
+          activeContentTransition.cancel();
         }
+
+        const needsOldChildNodesClone =
+          (contentChange || becomesEmpty) && hadChild;
+        const duration = parseInt(
+          container.getAttribute("data-content-transition-duration") ||
+            CONTENT_TRANSITION_DURATION,
+        );
+        const type =
+          container.getAttribute("data-content-transition") ||
+          CONTENT_TRANSITION;
+
+        const setupContentTransition = () =>
+          setupTransition({
+            isPhaseTransition: false,
+            overlay: contentOverlay,
+            needsOldChildNodesClone,
+            previousChildNodes,
+            childNodes,
+            attributeToRemove: ["data-content-key"],
+          });
+
+        // If size transitions are disabled and the new content is smaller,
+        // hold the previous size to avoid cropping during the transition.
+        if (!hasSizeTransitions) {
+          const willShrinkWidth = constrainedWidth > newWidth;
+          const willShrinkHeight = constrainedHeight > newHeight;
+          sizeHoldActive = willShrinkWidth || willShrinkHeight;
+          if (sizeHoldActive) {
+            debug(
+              "size",
+              `Holding previous size during content transition: ${constrainedWidth}x${constrainedHeight}`,
+            );
+            applySizeConstraints(constrainedWidth, constrainedHeight);
+          }
+        }
+
+        activeContentTransition = applyTransition(
+          transitionController,
+          setupContentTransition,
+          {
+            duration,
+            type,
+            animationProgress,
+            isPhaseTransition: false,
+            fromContentKeyState: previousContentKeyState,
+            toContentKeyState: currentContentKeyState,
+            onComplete: () => {
+              activeContentTransition = null;
+              activeContentTransitionType = null;
+              if (sizeHoldActive) {
+                // Release the hold after the content transition completes
+                releaseConstraints(
+                  "content transition completed - release size hold",
+                );
+                sizeHoldActive = false;
+              }
+            },
+            debug,
+          },
+        );
+
+        if (activeContentTransition) {
+          activeContentTransition.play();
+        }
+        activeContentTransitionType = type;
+      } else if (!shouldDoContentTransition && !preserveOnlyContentTransition) {
+        // Clean up content overlay if no content transition needed and nothing to preserve
+        contentOverlay.innerHTML = "";
+        activeContentTransition = null;
+        activeContentTransitionType = null;
       }
-    } finally {
-      isUpdating = false;
-      if (localDebug.transition) {
-        console.groupEnd();
+
+      // Handle phase transitions (cross-fade for content phase changes)
+      if (shouldDoPhaseTransition) {
+        const phaseTransitionType =
+          container.getAttribute("data-phase-transition") || PHASE_TRANSITION;
+        const phaseAnimationProgress = activePhaseTransition?.progress || 0;
+        if (phaseAnimationProgress > 0) {
+          debug(
+            "transition",
+            `Preserving phase transition progress: ${(phaseAnimationProgress * 100).toFixed(1)}%`,
+          );
+        }
+
+        const canContinueSmoothly =
+          activePhaseTransitionType === phaseTransitionType &&
+          activePhaseTransition;
+
+        if (canContinueSmoothly) {
+          debug("transition", "Continuing with same phase transition type");
+          activePhaseTransition.cancel();
+        } else if (
+          activePhaseTransition &&
+          activePhaseTransitionType !== phaseTransitionType
+        ) {
+          debug(
+            "transition",
+            "Different phase transition type, keeping both",
+            `${activePhaseTransitionType} → ${phaseTransitionType}`,
+          );
+        } else if (activePhaseTransition) {
+          debug("transition", "Cancelling current phase transition");
+          activePhaseTransition.cancel();
+        }
+
+        const needsOldPhaseClone =
+          (becomesEmpty || becomesPopulated || phaseChange) && hadChild;
+        const phaseDuration = parseInt(
+          container.getAttribute("data-phase-transition-duration") ||
+            PHASE_TRANSITION_DURATION,
+        );
+
+        const setupPhaseTransition = () =>
+          setupTransition({
+            isPhaseTransition: true,
+            overlay: phaseOverlay,
+            needsOldChildNodesClone: needsOldPhaseClone,
+            previousChildNodes,
+            childNodes,
+            attributeToRemove: ["data-content-key", "data-content-phase"],
+          });
+
+        const fromPhase = !hadChild
+          ? "null"
+          : wasContentPhase
+            ? "content-phase"
+            : "content";
+        const toPhase = !hasChild
+          ? "null"
+          : isContentPhase
+            ? "content-phase"
+            : "content";
+
+        debug(
+          "transition",
+          `Starting phase transition: ${fromPhase} → ${toPhase}`,
+        );
+
+        activePhaseTransition = applyTransition(
+          transitionController,
+          setupPhaseTransition,
+          {
+            duration: phaseDuration,
+            type: phaseTransitionType,
+            animationProgress: phaseAnimationProgress,
+            isPhaseTransition: true,
+            fromContentKeyState: previousContentKeyState,
+            toContentKeyState: currentContentKeyState,
+            onComplete: () => {
+              activePhaseTransition = null;
+              activePhaseTransitionType = null;
+              debug("transition", "Phase transition complete");
+            },
+            debug,
+          },
+        );
+
+        if (activePhaseTransition) {
+          activePhaseTransition.play();
+        }
+        activePhaseTransitionType = phaseTransitionType;
+      }
+    }
+
+    // Store current child for next transition
+    previousChildNodes = childNodes;
+    lastContentKey = currentContentKey;
+    if (becomesPopulated) {
+      hasPopulatedOnce = true;
+    }
+
+    // Execute planned size action, unless holding size during a content transition
+    if (!sizeHoldActive) {
+      if (
+        sizePlan.targetWidth === constrainedWidth &&
+        sizePlan.targetHeight === constrainedHeight
+      ) {
+        // no size changes planned; possibly release constraints
+        if (!isContentPhase) {
+          releaseConstraints("no size change needed");
+        }
+      } else if (sizePlan.action === "animate") {
+        updateToSize(sizePlan.targetWidth, sizePlan.targetHeight);
+      } else if (sizePlan.action === "applyConstraints") {
+        applySizeConstraints(sizePlan.targetWidth, sizePlan.targetHeight);
+      } else if (sizePlan.action === "release") {
+        releaseConstraints("actual content - no size transitions needed");
       }
     }
   };
 
   // Run once at init to process current slot content (warnings, sizing, transitions)
-  handleChildSlotMutation("init");
+  triggerChildSlotMutation("init");
 
   // Watch for child changes and attribute changes on children
   const mutationObserver = new MutationObserver((mutations) => {
@@ -1115,7 +1113,7 @@ export const initUITransition = (container) => {
       }
     }
     const reason = reasonParts.join("+");
-    handleChildSlotMutation(reason);
+    triggerChildSlotMutation(reason);
   });
 
   mutationObserver.observe(slot, {
