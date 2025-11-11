@@ -393,25 +393,29 @@ export const initUITransition = (container) => {
       // (Either it's the initial call or just content-key changes but there is no child yet)
       const isStateChangeOnly = !hadChild && !hasChild;
       if (isStateChangeOnly) {
-        let earlyAction;
         const prevKey = previousSlotInfo.contentKey;
-        const keyChanged = prevKey !== contentKey;
-        if (!keyChanged) {
-          earlyAction = "unchanged";
+        const keyIsTheSame = prevKey === contentKey;
+        if (keyIsTheSame) {
+          debug(
+            "transition",
+            `Childless change: no changes found -> do nothing and EARLY_RETURN`,
+          );
         } else if (!prevKey && contentKey) {
-          earlyAction = "registered";
-        } else if (prevKey && contentKey) {
-          earlyAction = "cleared";
+          debug(
+            "transition",
+            `Childless change: ${contentKey} added -> registering it and EARLY_RETURN`,
+          );
+        } else if (prevKey && !contentKey) {
+          debug(
+            "transition",
+            `Childless change: ${contentKey} removed -> registering it and EARLY_RETURN`,
+          );
         } else {
-          earlyAction = "changed";
+          debug(
+            "transition",
+            `Childless change: content key updated from ${prevKey} to ${contentKey} -> registering it and EARLY_RETURN`,
+          );
         }
-        const conceptualPrevDisplay = previousSlotInfo.contentKeyFormatted;
-        const conceptualCurrentDisplay = slotInfo.contentKeyFormatted;
-        const contentKeysSentence = keyChanged
-          ? `Content key: ${conceptualPrevDisplay} → ${conceptualCurrentDisplay}`
-          : `Content key unchanged: ${conceptualCurrentDisplay}`;
-        debug("transition", contentKeysSentence);
-        debug("transition", `Decision: EARLY_RETURN (${earlyAction})`);
       }
 
       const changeInfo = {
