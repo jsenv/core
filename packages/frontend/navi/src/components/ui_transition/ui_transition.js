@@ -383,11 +383,6 @@ export const initUITransition = (container) => {
         : previousSlotInfo.contentPhase
           ? "content-phase"
           : "content";
-      const toPhase = !hasChild
-        ? "null"
-        : prospectiveContentPhase
-          ? "content-phase"
-          : "content";
 
       const slotInfo = {
         childNodes: currentChildNodes,
@@ -395,6 +390,13 @@ export const initUITransition = (container) => {
         contentKey: effectiveContentKey,
         isContentPhase: prospectiveContentPhase,
       };
+
+      const toPhase = !hasChild
+        ? "null"
+        : prospectiveContentPhase
+          ? "content-phase"
+          : "content";
+
       const changeInfo = {
         reason,
         previousSlotInfo,
