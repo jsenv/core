@@ -114,11 +114,16 @@ const formatContentKeyState = (
   return `[data-content-key="${contentKey}"]`;
 };
 
+// ============================================================================
+// CONFIGURATION CONSTANTS
+// ----------------------------------------------------------------------------
+// Grouped here for quick overview & future extraction (e.g. to a config module)
+// ============================================================================
 const SIZE_TRANSITION_DURATION = 150; // Default size transition duration
 const SIZE_DIFF_EPSILON = 0.5; // Ignore size transition when difference below this (px)
 const CONTENT_TRANSITION = "cross-fade"; // Default content transition type
 const CONTENT_TRANSITION_DURATION = 300; // Default content transition duration
-const PHASE_TRANSITION = "cross-fade";
+const PHASE_TRANSITION = "cross-fade"; // Default phase transition type (only cross-fade supported)
 const PHASE_TRANSITION_DURATION = 300; // Default phase transition duration
 
 export const initUITransition = (container) => {
@@ -195,6 +200,11 @@ export const initUITransition = (container) => {
 
   const transitionController = createGroupTransitionController();
 
+  // ============================================================================
+  // TRANSITION STATE (content & phase animation bookkeeping)
+  // ----------------------------------------------------------------------------
+  // Tracks currently active transitions & pause state.
+  // ============================================================================
   // Transition state
   let activeContentTransition = null;
   let activeContentTransitionType = null;
@@ -202,6 +212,13 @@ export const initUITransition = (container) => {
   let activePhaseTransitionType = null;
   let isPaused = false;
 
+  // ============================================================================
+  // SIZE STATE & OBSERVATION
+  // ----------------------------------------------------------------------------
+  // Natural vs constrained dimensions. Constrained dimensions are applied
+  // during transitions (especially when data-size-transition is present).
+  // ResizeObserver measures natural content and drives size animations.
+  // ============================================================================
   // Size state
   let naturalContentWidth = 0; // Natural size of actual content (not loading/error states)
   let naturalContentHeight = 0;
@@ -222,25 +239,30 @@ export const initUITransition = (container) => {
   );
   let hasPopulatedOnce = false; // track if we've already populated once (null → something)
 
+  // ============================================================================
+  // CONTENT & PHASE STATE
+  // ----------------------------------------------------------------------------
+  // Tracks current content key, previous DOM nodes, and whether we're in a
+  // "content phase" (loading/error/null). This drives the decision tree for
+  // which transition(s) to perform.
+  // ============================================================================
   // Child state
   let lastContentKey = null;
   let previousChildNodes = [];
   let isContentPhase = false; // Current state: true when showing content phase (loading/error)
   let wasContentPhase = false; // Previous state for comparison
 
-  const measureContentSize = () => {
-    return [getWidth(measureWrapper), getHeight(measureWrapper)];
-  };
-
+  // --------------------------------------------------------------------------
+  // SIZE HELPERS (kept inline for now; candidates for extraction later)
+  // --------------------------------------------------------------------------
+  const measureContentSize = () => [getWidth(measureWrapper), getHeight(measureWrapper)];
   const updateContentDimensions = () => {
     const [newWidth, newHeight] = measureContentSize();
     debug("size", "Content size changed:", {
       width: `${naturalContentWidth} → ${newWidth}`,
       height: `${naturalContentHeight} → ${newHeight}`,
     });
-
     updateNaturalContentSize(newWidth, newHeight);
-
     if (sizeTransition) {
       debug("size", "Updating animation target:", newHeight);
       updateToSize(newWidth, newHeight);
@@ -249,19 +271,14 @@ export const initUITransition = (container) => {
       constrainedHeight = newHeight;
     }
   };
-
   const stopResizeObserver = () => {
-    if (resizeObserver) {
-      resizeObserver.disconnect();
-      resizeObserver = null;
-    }
+    if (!resizeObserver) return;
+    resizeObserver.disconnect();
+    resizeObserver = null;
   };
-
   const startResizeObserver = () => {
     resizeObserver = new ResizeObserver(() => {
-      if (!hasSizeTransitions) {
-        return;
-      }
+      if (!hasSizeTransitions) return;
       if (suppressResizeObserver) {
         pendingResizeSync = true;
         debug("size", "Resize ignored (suppressed during size transition)");
@@ -271,7 +288,6 @@ export const initUITransition = (container) => {
     });
     resizeObserver.observe(measureWrapper);
   };
-
   const releaseConstraints = (reason) => {
     debug("size", `Releasing constraints (${reason})`);
     const [beforeWidth, beforeHeight] = measureContentSize();
@@ -287,27 +303,17 @@ export const initUITransition = (container) => {
     constrainedHeight = afterHeight;
     naturalContentWidth = afterWidth;
     naturalContentHeight = afterHeight;
-    // Defer a sync if suppression just ended; actual dispatch will come from resize observer
     if (!suppressResizeObserver && pendingResizeSync) {
       pendingResizeSync = false;
       updateContentDimensions();
     }
   };
-
   const updateToSize = (targetWidth, targetHeight) => {
-    if (
-      constrainedWidth === targetWidth &&
-      constrainedHeight === targetHeight
-    ) {
-      return;
-    }
-
+    if (constrainedWidth === targetWidth && constrainedHeight === targetHeight) return;
     const shouldAnimate = container.hasAttribute("data-size-transition");
     const widthDiff = Math.abs(targetWidth - constrainedWidth);
     const heightDiff = Math.abs(targetHeight - constrainedHeight);
-
     if (widthDiff <= SIZE_DIFF_EPSILON && heightDiff <= SIZE_DIFF_EPSILON) {
-      // Both diffs negligible; just sync styles if changed and bail
       if (widthDiff > 0) {
         outerWrapper.style.width = `${targetWidth}px`;
         constrainedWidth = targetWidth;
@@ -322,9 +328,7 @@ export const initUITransition = (container) => {
       );
       return;
     }
-
     if (!shouldAnimate) {
-      // No size transitions - just update dimensions instantly
       debug("size", "Updating size instantly:", {
         width: `${constrainedWidth} → ${targetWidth}`,
         height: `${constrainedHeight} → ${targetHeight}`,
@@ -334,7 +338,6 @@ export const initUITransition = (container) => {
       outerWrapper.style.height = `${targetHeight}px`;
       constrainedWidth = targetWidth;
       constrainedHeight = targetHeight;
-      // allow any resize notifications to settle then re-enable
       requestAnimationFrame(() => {
         suppressResizeObserver = false;
         if (pendingResizeSync) {
@@ -344,29 +347,18 @@ export const initUITransition = (container) => {
       });
       return;
     }
-
-    // Animated size transition
     debug("size", "Animating size:", {
       width: `${constrainedWidth} → ${targetWidth}`,
       height: `${constrainedHeight} → ${targetHeight}`,
     });
-
     const duration = parseInt(
-      container.getAttribute("data-size-transition-duration") ||
-        SIZE_TRANSITION_DURATION,
+      container.getAttribute("data-size-transition-duration") || SIZE_TRANSITION_DURATION,
     );
-
     outerWrapper.style.overflow = "hidden";
     const transitions = [];
-
-    // heightDiff & widthDiff already computed earlier in updateToSize when deciding to skip entirely
     if (heightDiff <= SIZE_DIFF_EPSILON) {
-      // Treat as identical
       if (heightDiff > 0) {
-        debug(
-          "size",
-          `Skip height transition (negligible diff ${heightDiff.toFixed(4)}px)`,
-        );
+        debug("size", `Skip height transition (negligible diff ${heightDiff.toFixed(4)}px)`);
       }
       outerWrapper.style.height = `${targetHeight}px`;
       constrainedHeight = targetHeight;
@@ -380,13 +372,9 @@ export const initUITransition = (container) => {
         }),
       );
     }
-
     if (widthDiff <= SIZE_DIFF_EPSILON) {
       if (widthDiff > 0) {
-        debug(
-          "size",
-          `Skip width transition (negligible diff ${widthDiff.toFixed(4)}px)`,
-        );
+        debug("size", `Skip width transition (negligible diff ${widthDiff.toFixed(4)}px)`);
       }
       outerWrapper.style.width = `${targetWidth}px`;
       constrainedWidth = targetWidth;
@@ -400,13 +388,11 @@ export const initUITransition = (container) => {
         }),
       );
     }
-
     if (transitions.length > 0) {
       suppressResizeObserver = true;
       sizeTransition = transitionController.animate(transitions, {
         onFinish: () => {
           releaseConstraints("animated size transition completed");
-          // End suppression next frame to avoid RO loop warnings
           requestAnimationFrame(() => {
             suppressResizeObserver = false;
             if (pendingResizeSync) {
@@ -418,26 +404,20 @@ export const initUITransition = (container) => {
       });
       sizeTransition.play();
     } else {
-      debug(
-        "size",
-        "No size transitions created (identical or negligible differences)",
-      );
+      debug("size", "No size transitions created (identical or negligible differences)");
     }
   };
-
   const applySizeConstraints = (targetWidth, targetHeight) => {
     debug("size", "Applying size constraints:", {
       width: `${constrainedWidth} → ${targetWidth}`,
       height: `${constrainedHeight} → ${targetHeight}`,
     });
-
     outerWrapper.style.width = `${targetWidth}px`;
     outerWrapper.style.height = `${targetHeight}px`;
     outerWrapper.style.overflow = "hidden";
     constrainedWidth = targetWidth;
     constrainedHeight = targetHeight;
   };
-
   const updateNaturalContentSize = (newWidth, newHeight) => {
     debug("size", "Updating natural content size:", {
       width: `${naturalContentWidth} → ${newWidth}`,
