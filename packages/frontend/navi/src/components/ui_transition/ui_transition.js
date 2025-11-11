@@ -91,8 +91,9 @@ import.meta.css = /* css */ `
 `;
 
 const DEBUG = {
+  detection: false,
   size: false,
-  transition: false,
+  content: false,
   transition_updates: false,
 };
 
@@ -116,9 +117,11 @@ export const initUITransition = (container) => {
 
   const localDebug = {
     ...DEBUG,
-    transition: container.hasAttribute("data-debug-transition"),
+    detection: container.hasAttribute("data-debug-detection"),
     size: container.hasAttribute("data-debug-size"),
   };
+  const hasSomeDebugLogs =
+    localDebug.detection || localDebug.size || localDebug.content;
   const debugClones = container.hasAttribute("data-debug-clones");
   const debug = (type, ...args) => {
     if (localDebug[type]) {
@@ -174,7 +177,7 @@ export const initUITransition = (container) => {
         }
       };
       debug(
-        "transition",
+        "content",
         `Continuing from current ${isPhaseTransition ? "phase" : "content"} transition element`,
       );
     } else if (needsOldChildNodesClone) {
@@ -196,14 +199,14 @@ export const initUITransition = (container) => {
         }
       };
       debug(
-        "transition",
+        "content",
         `Cloned previous child for ${isPhaseTransition ? "phase" : "content"} transition:`,
         getElementSignature(previousChildNodes),
       );
     } else {
       overlay.innerHTML = "";
       debug(
-        "transition",
+        "content",
         `No old child to clone for ${isPhaseTransition ? "phase" : "content"} transition`,
       );
     }
@@ -278,12 +281,12 @@ export const initUITransition = (container) => {
     let isUpdating = false;
     triggerChildSlotMutation = (reason) => {
       if (isUpdating) {
-        debug("transition", "Preventing recursive update");
+        debug("detection", "Preventing recursive update");
         return;
       }
       try {
         const childNodes = Array.from(slot.childNodes);
-        if (localDebug.transition) {
+        if (hasSomeDebugLogs) {
           const updateLabel =
             childNodes.length === 0
               ? "cleared/empty"
@@ -306,7 +309,7 @@ export const initUITransition = (container) => {
         }
       } finally {
         isUpdating = false;
-        if (localDebug.transition) {
+        if (hasSomeDebugLogs) {
           console.groupEnd();
         }
       }
@@ -398,25 +401,33 @@ export const initUITransition = (container) => {
         const keyIsTheSame = prevKey === contentKey;
         if (keyIsTheSame) {
           debug(
-            "transition",
-            `Childless change: no changes found -> do nothing and EARLY_RETURN`,
+            "detection",
+            `Childless change: no changes found -> do nothing and skip transitions`,
           );
         } else if (!prevKey && contentKey) {
           debug(
-            "transition",
-            `Childless change: ${contentKey} added -> registering it and EARLY_RETURN`,
+            "detection",
+            `Childless change: ${contentKey} added -> registering it and skip transitions`,
           );
         } else if (prevKey && !contentKey) {
           debug(
-            "transition",
-            `Childless change: ${contentKey} removed -> registering it and EARLY_RETURN`,
+            "detection",
+            `Childless change: ${contentKey} removed -> registering it and skip transitions`,
           );
         } else {
           debug(
-            "transition",
-            `Childless change: content key updated from ${prevKey} to ${contentKey} -> registering it and EARLY_RETURN`,
+            "detection",
+            `Childless change: content key updated from ${prevKey} to ${contentKey} -> registering it and skip transitions`,
           );
         }
+      } else if (isInitialPopulationWithoutTransition) {
+        debug(
+          "detection",
+          "Initial population detected -> skipping transitions (opt-in with [data-initial-transition])",
+        );
+      } else if (previousSlotInfo.contentKey !== slotInfo.contentKey) {
+        let contentKeysSentence = `Content key: ${previousSlotInfo.contentKeyFormatted} → ${slotInfo.contentKeyFormatted}`;
+        debug("detection", contentKeysSentence);
       }
 
       const changeInfo = {
@@ -682,10 +693,6 @@ export const initUITransition = (container) => {
 
       // Initial population skip (first null → something): no content or size animations
       if (isInitialPopulationWithoutTransition) {
-        debug(
-          "transition",
-          "Initial population detected: skipping transitions (opt-in with data-initial-transition)",
-        );
         const [newWidth, newHeight] = measureContentSize();
         debug("size", `Measured size: ${newWidth}x${newHeight}`);
         if (isContentPhase) {
@@ -804,8 +811,6 @@ export const initUITransition = (container) => {
       const preserveOnlyContentTransition =
         isTransitionLess && activeContentTransition !== null;
       const previousChildNodes = previousSlotInfo.childNodes;
-      let contentKeysSentence = `Content key: ${previousSlotInfo.contentKeyFormatted} → ${slotInfo.contentKeyFormatted}`;
-      debug("transition", contentKeysSentence);
 
       // Determine transition scenarios (hadChild/hasChild already computed above for logging)
 
@@ -837,11 +842,11 @@ export const initUITransition = (container) => {
         decisions.push("PRESERVE CONTENT TRANSITION");
       if (decisions.length === 0) decisions.push("NO TRANSITION");
 
-      debug("transition", `Decision: ${decisions.join(" + ")}`);
+      debug("content", `Decision: ${decisions.join(" + ")}`);
       if (preserveOnlyContentTransition) {
         const progress = (activeContentTransition.progress * 100).toFixed(1);
         debug(
-          "transition",
+          "content",
           `Preserving existing content transition (progress ${progress}%)`,
         );
       }
@@ -865,7 +870,7 @@ export const initUITransition = (container) => {
         const animationProgress = activeContentTransition?.progress || 0;
         if (animationProgress > 0) {
           debug(
-            "transition",
+            "content",
             `Preserving content transition progress: ${(animationProgress * 100).toFixed(1)}%`,
           );
         }
@@ -878,7 +883,7 @@ export const initUITransition = (container) => {
           activeContentTransition;
         if (canContinueSmoothly) {
           debug(
-            "transition",
+            "content",
             "Continuing with same content transition type (restarting due to actual change)",
           );
           activeContentTransition.cancel();
@@ -887,12 +892,12 @@ export const initUITransition = (container) => {
           activeContentTransitionType !== newTransitionType
         ) {
           debug(
-            "transition",
+            "content",
             "Different content transition type, keeping both",
             `${activeContentTransitionType} → ${newTransitionType}`,
           );
         } else if (activeContentTransition) {
-          debug("transition", "Cancelling current content transition");
+          debug("content", "Cancelling current content transition");
           activeContentTransition.cancel();
         }
 
@@ -953,7 +958,7 @@ export const initUITransition = (container) => {
         const phaseAnimationProgress = activePhaseTransition?.progress || 0;
         if (phaseAnimationProgress > 0) {
           debug(
-            "transition",
+            "content",
             `Preserving phase transition progress: ${(phaseAnimationProgress * 100).toFixed(1)}%`,
           );
         }
@@ -963,19 +968,19 @@ export const initUITransition = (container) => {
           activePhaseTransition;
 
         if (canContinueSmoothly) {
-          debug("transition", "Continuing with same phase transition type");
+          debug("content", "Continuing with same phase transition type");
           activePhaseTransition.cancel();
         } else if (
           activePhaseTransition &&
           activePhaseTransitionType !== phaseTransitionType
         ) {
           debug(
-            "transition",
+            "content",
             "Different phase transition type, keeping both",
             `${activePhaseTransitionType} → ${phaseTransitionType}`,
           );
         } else if (activePhaseTransition) {
-          debug("transition", "Cancelling current phase transition");
+          debug("content", "Cancelling current phase transition");
           activePhaseTransition.cancel();
         }
 
@@ -997,7 +1002,7 @@ export const initUITransition = (container) => {
           });
 
         debug(
-          "transition",
+          "content",
           `Starting transition: ${fromContentName} → ${toContentName}`,
         );
 
@@ -1014,7 +1019,7 @@ export const initUITransition = (container) => {
             onComplete: () => {
               activePhaseTransition = null;
               activePhaseTransitionType = null;
-              debug("transition", "Phase transition complete");
+              debug("content", "Phase transition complete");
             },
             debug,
           },
@@ -1095,7 +1100,7 @@ export const initUITransition = (container) => {
           ) {
             attributeMutationSet.add(attributeName);
             debug(
-              "transition",
+              "detection",
               `Attribute change detected: ${attributeName} on`,
               getElementSignature(target),
             );
@@ -1182,7 +1187,7 @@ const applyTransition = (
   const fromContentKey = previousSlotInfo.contentKeyFormatted;
   const toContentKey = slotInfo.contentKeyFormatted;
 
-  debug("transition", "Setting up animation:", {
+  debug("content", "Setting up animation:", {
     type,
     from: fromContentKey,
     to: toContentKey,
@@ -1190,7 +1195,7 @@ const applyTransition = (
   });
 
   const remainingDuration = Math.max(100, duration * (1 - animationProgress));
-  debug("transition", `Animation duration: ${remainingDuration}ms`);
+  debug("content", `Animation duration: ${remainingDuration}ms`);
 
   const transitions = transitionType.apply(oldElement, newElement, {
     duration: remainingDuration,
@@ -1199,13 +1204,10 @@ const applyTransition = (
     debug,
   });
 
-  debug(
-    "transition",
-    `Created ${transitions.length} transition(s) for animation`,
-  );
+  debug("content", `Created ${transitions.length} transition(s) for animation`);
 
   if (transitions.length === 0) {
-    debug("transition", "No transitions to animate, cleaning up immediately");
+    debug("content", "No transitions to animate, cleaning up immediately");
     cleanup();
     onTeardown?.();
     onComplete?.();
@@ -1241,7 +1243,7 @@ const slideLeft = {
       const containerWidth = getInnerWidth(oldElement.parentElement);
       const from = currentPosition;
       const to = -containerWidth;
-      debug("transition", "Slide out to empty:", { from, to });
+      debug("content", "Slide out to empty:", { from, to });
 
       return [
         createTranslateXTransition(oldElement, to, {
@@ -1253,7 +1255,7 @@ const slideLeft = {
           onUpdate: ({ value, timing }) => {
             debug("transition_updates", "Slide out progress:", value);
             if (timing === "end") {
-              debug("transition", "Slide out complete");
+              debug("content", "Slide out complete");
             }
           },
         }),
@@ -1265,7 +1267,7 @@ const slideLeft = {
       const containerWidth = getInnerWidth(newElement.parentElement);
       const from = containerWidth; // Start from right edge for slide-in effect
       const to = getTranslateXWithoutTransition(newElement);
-      debug("transition", "Slide in from empty:", { from, to });
+      debug("content", "Slide in from empty:", { from, to });
       return [
         createTranslateXTransition(newElement, to, {
           setup: () =>
@@ -1276,7 +1278,7 @@ const slideLeft = {
           onUpdate: ({ value, timing }) => {
             debug("transition_updates", "Slide in progress:", value);
             if (timing === "end") {
-              debug("transition", "Slide in complete");
+              debug("content", "Slide in complete");
             }
           },
         }),
@@ -1299,7 +1301,7 @@ const slideLeft = {
     if (currentNewPosition !== 0 && naturalNewPosition === 0) {
       startNewPosition = currentNewPosition + containerWidth;
       debug(
-        "transition",
+        "content",
         "Calculated seamless position:",
         `${currentNewPosition} + ${containerWidth} = ${startNewPosition}`,
       );
@@ -1312,7 +1314,7 @@ const slideLeft = {
       ? containerWidth
       : startNewPosition;
 
-    debug("transition", "Slide transition:", {
+    debug("content", "Slide transition:", {
       oldContent: `${oldContentPosition} → ${-containerWidth}`,
       newContent: `${effectiveFromPosition} → ${naturalNewPosition}`,
     });
@@ -1344,7 +1346,7 @@ const slideLeft = {
         onUpdate: ({ value, timing }) => {
           debug("transition_updates", "New content slide in:", value);
           if (timing === "end") {
-            debug("transition", "Slide complete");
+            debug("content", "Slide complete");
           }
         },
       }),
@@ -1369,7 +1371,7 @@ const crossFade = {
       // Content -> Empty (fade out only)
       const from = getOpacity(oldElement);
       const to = 0;
-      debug("transition", "Fade out to empty:", { from, to });
+      debug("content", "Fade out to empty:", { from, to });
       return [
         createOpacityTransition(oldElement, to, {
           from,
@@ -1378,7 +1380,7 @@ const crossFade = {
           onUpdate: ({ value, timing }) => {
             debug("transition_updates", "Content fade out:", value.toFixed(3));
             if (timing === "end") {
-              debug("transition", "Fade out complete");
+              debug("content", "Fade out complete");
             }
           },
         }),
@@ -1389,7 +1391,7 @@ const crossFade = {
       // Empty -> Content (fade in only)
       const from = 0;
       const to = getOpacityWithoutTransition(newElement);
-      debug("transition", "Fade in from empty:", { from, to });
+      debug("content", "Fade in from empty:", { from, to });
       return [
         createOpacityTransition(newElement, to, {
           from,
@@ -1398,7 +1400,7 @@ const crossFade = {
           onUpdate: ({ value, timing }) => {
             debug("transition_updates", "Fade in progress:", value.toFixed(3));
             if (timing === "end") {
-              debug("transition", "Fade in complete");
+              debug("content", "Fade in complete");
             }
           },
         }),
@@ -1425,7 +1427,7 @@ const crossFade = {
       effectiveFromOpacity = hasOngoingTransition ? newOpacity : 0;
     }
 
-    debug("transition", "Cross-fade transition:", {
+    debug("content", "Cross-fade transition:", {
       oldOpacity: `${oldOpacity} → 0`,
       newOpacity: `${effectiveFromOpacity} → ${newNaturalOpacity}`,
       isPhaseTransition,
@@ -1453,7 +1455,7 @@ const crossFade = {
         onUpdate: ({ value, timing }) => {
           debug("transition_updates", "New content fade in:", value.toFixed(3));
           if (timing === "end") {
-            debug("transition", "Cross-fade complete");
+            debug("content", "Cross-fade complete");
           }
         },
       }),
