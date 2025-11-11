@@ -1109,43 +1109,35 @@ export const initUITransition = (container) => {
   triggerChildSlotMutation("init");
   observe_changes: {
     const mutationObserver = new MutationObserver((mutations) => {
-      let childListMutation = false;
-      const attributeMutationSet = new Set();
+      const reasonParts = [];
 
       for (const mutation of mutations) {
         if (mutation.type === "childList") {
-          childListMutation = true;
+          const added = mutation.addedNodes.length;
+          const removed = mutation.removedNodes.length;
+          if (added && removed) {
+            reasonParts.push(`addedNodes(${added}) removedNodes(${removed})`);
+          } else if (added) {
+            reasonParts.push(`addedNodes(${added})`);
+          } else {
+            reasonParts.push(`removedNodes(${removed})`);
+          }
           continue;
         }
         if (mutation.type === "attributes") {
-          const { attributeName, target } = mutation;
+          const { attributeName } = mutation;
           if (
             attributeName === "data-content-key" ||
             attributeName === "data-content-phase"
           ) {
-            attributeMutationSet.add(attributeName);
-            debug(
-              "detection",
-              `Attribute change detected: ${attributeName} on`,
-              getElementSignature(target),
-            );
+            reasonParts.push(`[${attributeName}] change`);
           }
         }
       }
 
-      if (!childListMutation && attributeMutationSet.size === 0) {
+      if (reasonParts.length === 0) {
         return;
       }
-      const reasonParts = [];
-      if (childListMutation) {
-        reasonParts.push("childList change");
-      }
-      if (attributeMutationSet.size) {
-        for (const attr of attributeMutationSet) {
-          reasonParts.push(`[${attr}] change`);
-        }
-      }
-
       const reason = reasonParts.join("+");
       triggerChildSlotMutation(reason);
     });

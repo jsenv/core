@@ -320,7 +320,7 @@
 
         const states = {
           loading: (uiKey) => `
-            <div class="loading-state ${tall ? "tall" : ""}" data-content-key="${uiKey}" data-content-phase data-ui-name="loading">
+            <div class="loading-state ${tall ? "tall" : ""}" data-content-key="${uiKey}" data-content-phase="loading" data-ui-name="loading">
               <div class="spinner"></div>
               <div>Loading...</div>
             </div>
@@ -356,7 +356,7 @@
           `;
           },
           error: (uiKey) => `
-            <div class="error-state ${tall ? "tall" : ""}" data-content-key="${uiKey}" data-content-phase data-ui-name="error">
+            <div class="error-state ${tall ? "tall" : ""}" data-content-key="${uiKey}" data-content-phase="error" data-ui-name="error">
               <div>⚠️</div>
               <div>An error occurred</div>
             </div>
