@@ -446,6 +446,7 @@ export const initUITransition = (container) => {
     };
   }
 
+  let onContentTransitionComplete;
   size_transition: {
     // ============================================================================
     // SIZE STATE & OBSERVATION
@@ -505,7 +506,7 @@ export const initUITransition = (container) => {
       });
       resizeObserver.observe(measureWrapper);
     };
-    const releaseConstraints = (reason) => {
+    const releaseSizeConstraints = (reason) => {
       debug("size", `Releasing constraints (${reason})`);
       const [beforeWidth, beforeHeight] = measureContentSize();
       outerWrapper.style.width = "";
@@ -621,7 +622,7 @@ export const initUITransition = (container) => {
         suppressResizeObserver = true;
         sizeTransition = transitionController.animate(transitions, {
           onFinish: () => {
-            releaseConstraints("animated size transition completed");
+            releaseSizeConstraints("animated size transition completed");
             requestAnimationFrame(() => {
               suppressResizeObserver = false;
               if (pendingResizeSync) {
@@ -699,7 +700,7 @@ export const initUITransition = (container) => {
           applySizeConstraints(newWidth, newHeight);
         } else {
           updateNaturalContentSize(newWidth, newHeight);
-          releaseConstraints("initial population - skip transitions");
+          releaseSizeConstraints("initial population - skip transitions");
         }
         return;
       }
@@ -716,13 +717,12 @@ export const initUITransition = (container) => {
             `Holding previous size during content transition: ${constrainedWidth}x${constrainedHeight}`,
           );
           applySizeConstraints(constrainedWidth, constrainedHeight);
-
-          // TODO: somehow listen to content transition to cell the code below
-          // I'll need a way to relaiably found the transition
-          // also we must remove that listener when not needed anymore (once it happended or teardown)
-          // releaseConstraints(
-          //   "content transition completed - release size hold",
-          // );
+          onContentTransitionComplete = () => {
+            onContentTransitionComplete = null;
+            releaseSizeConstraints(
+              "content transition completed - release size hold",
+            );
+          };
         }
         return;
       }
@@ -750,7 +750,7 @@ export const initUITransition = (container) => {
         debug("size", "No size change required");
         // no size changes planned; possibly release constraints
         if (!isContentPhase) {
-          releaseConstraints("no size change needed");
+          releaseSizeConstraints("no size change needed");
         }
         return;
       }
@@ -937,6 +937,7 @@ export const initUITransition = (container) => {
             onComplete: () => {
               activeContentTransition = null;
               activeContentTransitionType = null;
+              onContentTransitionComplete?.();
             },
             debug,
           },
