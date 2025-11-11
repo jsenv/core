@@ -551,8 +551,9 @@ export const initUITransition = (container) => {
       if (
         constrainedWidth === targetWidth &&
         constrainedHeight === targetHeight
-      )
+      ) {
         return;
+      }
       const shouldAnimate = container.hasAttribute("data-size-transition");
       const widthDiff = Math.abs(targetWidth - constrainedWidth);
       const heightDiff = Math.abs(targetHeight - constrainedHeight);
