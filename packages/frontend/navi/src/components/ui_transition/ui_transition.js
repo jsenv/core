@@ -122,22 +122,21 @@ const PHASE_TRANSITION = "cross-fade";
 const PHASE_TRANSITION_DURATION = 300; // Default phase transition duration
 
 export const initUITransition = (container) => {
+  if (!container.classList.contains("ui_transition_container")) {
+    console.error("Element must have ui_transition_container class");
+    return { cleanup: () => {} };
+  }
+
   const localDebug = {
     ...DEBUG,
     transition: container.hasAttribute("data-debug-transition"),
   };
   const debugClones = container.hasAttribute("data-debug-clones");
-
   const debug = (type, ...args) => {
     if (localDebug[type]) {
       console.debug(`[${type}]`, ...args);
     }
   };
-
-  if (!container.classList.contains("ui_transition_container")) {
-    console.error("Element must have ui_transition_container class");
-    return { cleanup: () => {} };
-  }
 
   const outerWrapper = container.querySelector(".ui_transition_outer_wrapper");
   const measureWrapper = container.querySelector(
@@ -150,7 +149,6 @@ export const initUITransition = (container) => {
   let contentOverlay = container.querySelector(
     ".ui_transition_content_overlay",
   );
-
   if (
     !outerWrapper ||
     !measureWrapper ||
