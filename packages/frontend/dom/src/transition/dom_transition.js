@@ -9,6 +9,9 @@ import { createTimelineTransition } from "./transition_playback.js";
 
 const transitionStyleController = createStyleController("transition");
 
+// TOOD: trigger transition events (navi_transition_start, navi_transition_end, navi_transition_cancel)
+// so that part sof the code can listen on them
+
 export const createHeightTransition = (element, to, options) => {
   const heightTransition = createTimelineTransition({
     ...options,

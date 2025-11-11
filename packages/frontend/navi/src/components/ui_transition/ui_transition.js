@@ -165,50 +165,90 @@ export const initUITransition = (container) => {
     return { cleanup: () => {} };
   }
 
-  const [teardown, addTeardown] = createPubSub();
-  const [publishPause, addPauseCallback] = createPubSub();
-  const [publishResume, addResumeCallback] = createPubSub();
-
-  update_transition_overflow_attribute: {
-    const transitionOverflowSet = new Set();
-    const updateTransitionOverflowAttribute = () => {
-      if (transitionOverflowSet.size > 0) {
-        container.setAttribute("data-transition-overflow", "");
-      } else {
-        container.removeAttribute("data-transition-overflow");
-      }
-    };
-    const onOverflowStart = (event) => {
-      transitionOverflowSet.add(event.detail.transitionId);
-      updateTransitionOverflowAttribute();
-    };
-    const onOverflowEnd = (event) => {
-      transitionOverflowSet.delete(event.detail.transitionId);
-      updateTransitionOverflowAttribute();
-    };
-    container.addEventListener("ui_transition_overflow_start", onOverflowStart);
-    container.addEventListener("ui_transition_overflow_end", onOverflowEnd);
-    addTeardown(() => {
-      container.removeEventListener(
-        "ui_transition_overflow_start",
-        onOverflowStart,
-      );
-      container.removeEventListener(
-        "ui_transition_overflow_end",
-        onOverflowEnd,
-      );
-    });
-  }
-
-  const transitionController = createGroupTransitionController();
   const state = {
     isPaused: false,
   };
-
-  // Handle size updates based on content state
   const initialTransitionEnabled = container.hasAttribute(
     "data-initial-transition",
   );
+  const transitionController = createGroupTransitionController();
+  const setupTransition = ({
+    isPhaseTransition = false,
+    overlay,
+    needsOldChildNodesClone,
+    previousChildNodes,
+    childNodes,
+    attributeToRemove = [],
+  }) => {
+    let cleanup = () => {};
+    let elementToImpact;
+
+    if (overlay.childNodes.length > 0) {
+      elementToImpact = overlay;
+      cleanup = () => {
+        if (!debugClones) {
+          overlay.innerHTML = "";
+        }
+      };
+      debug(
+        "transition",
+        `Continuing from current ${isPhaseTransition ? "phase" : "content"} transition element`,
+      );
+    } else if (needsOldChildNodesClone) {
+      overlay.innerHTML = "";
+      for (const previousChildNode of previousChildNodes) {
+        const previousChildClone = previousChildNode.cloneNode(true);
+        if (previousChildClone.nodeType !== Node.TEXT_NODE) {
+          for (const attrToRemove of attributeToRemove) {
+            previousChildClone.removeAttribute(attrToRemove);
+          }
+          previousChildClone.setAttribute("data-ui-transition-clone", "");
+        }
+        overlay.appendChild(previousChildClone);
+      }
+      elementToImpact = overlay;
+      cleanup = () => {
+        if (!debugClones) {
+          overlay.innerHTML = "";
+        }
+      };
+      debug(
+        "transition",
+        `Cloned previous child for ${isPhaseTransition ? "phase" : "content"} transition:`,
+        getElementSignature(previousChildNodes),
+      );
+    } else {
+      overlay.innerHTML = "";
+      debug(
+        "transition",
+        `No old child to clone for ${isPhaseTransition ? "phase" : "content"} transition`,
+      );
+    }
+
+    // Determine which elements to return based on transition type:
+    // - Phase transitions: operate on individual elements (cross-fade between specific elements)
+    // - Content transitions: operate at container level (slide entire containers, outlive content phases)
+    let oldElement;
+    let newElement;
+    if (isPhaseTransition) {
+      // Phase transitions work on individual elements
+      oldElement = elementToImpact;
+      newElement = slot;
+    } else {
+      // Content transitions work at container level and can outlive content phase changes
+      oldElement = previousChildNodes.length ? elementToImpact : null;
+      newElement = childNodes.length ? measureWrapper : null;
+    }
+
+    return {
+      cleanup,
+      oldElement,
+      newElement,
+    };
+  };
+  const [teardown, addTeardown] = createPubSub();
+  const [publishPause, addPauseCallback] = createPubSub();
+  const [publishResume, addResumeCallback] = createPubSub();
 
   const [publishChange, subscribeChange] = createPubSub();
   let triggerChildSlotMutation;
@@ -404,58 +444,6 @@ export const initUITransition = (container) => {
 
       return [slotInfo, changeInfo];
     };
-
-    // Watch for child changes and attribute changes on children
-    const mutationObserver = new MutationObserver((mutations) => {
-      let childListMutation = false;
-      const attributeMutationSet = new Set();
-
-      for (const mutation of mutations) {
-        if (mutation.type === "childList") {
-          childListMutation = true;
-          continue;
-        }
-        if (mutation.type === "attributes") {
-          const { attributeName, target } = mutation;
-          if (
-            attributeName === "data-content-key" ||
-            attributeName === "data-content-phase"
-          ) {
-            attributeMutationSet.add(attributeName);
-            debug(
-              "transition",
-              `Attribute change detected: ${attributeName} on`,
-              getElementSignature(target),
-            );
-          }
-        }
-      }
-
-      if (!childListMutation && attributeMutationSet.size === 0) {
-        return;
-      }
-      const reasonParts = [];
-      if (childListMutation) {
-        reasonParts.push("childList change");
-      }
-      if (attributeMutationSet.size) {
-        for (const attr of attributeMutationSet) {
-          reasonParts.push(`[${attr}] change`);
-        }
-      }
-
-      const reason = reasonParts.join("+");
-      triggerChildSlotMutation(reason);
-    });
-    mutationObserver.observe(slot, {
-      childList: true,
-      attributes: true,
-      attributeFilter: ["data-content-key", "data-content-phase"],
-      characterData: false,
-    });
-    addTeardown(() => {
-      mutationObserver.disconnect();
-    });
   }
 
   size_transition: {
@@ -718,7 +706,6 @@ export const initUITransition = (container) => {
 
       // If size transitions are disabled and the new content is smaller,
       // hold the previous size to avoid cropping during the content transition.
-      // (TODO: At the end of the content transition we'll have to release the constraint)
       if (!hasSizeTransitions) {
         const willShrinkWidth = constrainedWidth > newWidth;
         const willShrinkHeight = constrainedHeight > newHeight;
@@ -729,7 +716,10 @@ export const initUITransition = (container) => {
             `Holding previous size during content transition: ${constrainedWidth}x${constrainedHeight}`,
           );
           applySizeConstraints(constrainedWidth, constrainedHeight);
+
           // TODO: somehow listen to content transition to cell the code below
+          // I'll need a way to relaiably found the transition
+          // also we must remove that listener when not needed anymore (once it happended or teardown)
           // releaseConstraints(
           //   "content transition completed - release size hold",
           // );
@@ -1059,84 +1049,93 @@ export const initUITransition = (container) => {
     });
   }
 
-  // Shared transition setup function
-  const setupTransition = ({
-    isPhaseTransition = false,
-    overlay,
-    needsOldChildNodesClone,
-    previousChildNodes,
-    childNodes,
-    attributeToRemove = [],
-  }) => {
-    let cleanup = () => {};
-    let elementToImpact;
-
-    if (overlay.childNodes.length > 0) {
-      elementToImpact = overlay;
-      cleanup = () => {
-        if (!debugClones) {
-          overlay.innerHTML = "";
-        }
-      };
-      debug(
-        "transition",
-        `Continuing from current ${isPhaseTransition ? "phase" : "content"} transition element`,
-      );
-    } else if (needsOldChildNodesClone) {
-      overlay.innerHTML = "";
-      for (const previousChildNode of previousChildNodes) {
-        const previousChildClone = previousChildNode.cloneNode(true);
-        if (previousChildClone.nodeType !== Node.TEXT_NODE) {
-          for (const attrToRemove of attributeToRemove) {
-            previousChildClone.removeAttribute(attrToRemove);
-          }
-          previousChildClone.setAttribute("data-ui-transition-clone", "");
-        }
-        overlay.appendChild(previousChildClone);
+  update_transition_overflow_attribute: {
+    // TODO: ideally each ui_transition just have meta info indicating if it overflow or not
+    // instead of having a dedicated event
+    const transitionOverflowSet = new Set();
+    const updateTransitionOverflowAttribute = () => {
+      if (transitionOverflowSet.size > 0) {
+        container.setAttribute("data-transition-overflow", "");
+      } else {
+        container.removeAttribute("data-transition-overflow");
       }
-      elementToImpact = overlay;
-      cleanup = () => {
-        if (!debugClones) {
-          overlay.innerHTML = "";
-        }
-      };
-      debug(
-        "transition",
-        `Cloned previous child for ${isPhaseTransition ? "phase" : "content"} transition:`,
-        getElementSignature(previousChildNodes),
-      );
-    } else {
-      overlay.innerHTML = "";
-      debug(
-        "transition",
-        `No old child to clone for ${isPhaseTransition ? "phase" : "content"} transition`,
-      );
-    }
-
-    // Determine which elements to return based on transition type:
-    // - Phase transitions: operate on individual elements (cross-fade between specific elements)
-    // - Content transitions: operate at container level (slide entire containers, outlive content phases)
-    let oldElement;
-    let newElement;
-    if (isPhaseTransition) {
-      // Phase transitions work on individual elements
-      oldElement = elementToImpact;
-      newElement = slot;
-    } else {
-      // Content transitions work at container level and can outlive content phase changes
-      oldElement = previousChildNodes.length ? elementToImpact : null;
-      newElement = childNodes.length ? measureWrapper : null;
-    }
-
-    return {
-      cleanup,
-      oldElement,
-      newElement,
     };
-  };
+    const onOverflowStart = (event) => {
+      transitionOverflowSet.add(event.detail.transitionId);
+      updateTransitionOverflowAttribute();
+    };
+    const onOverflowEnd = (event) => {
+      transitionOverflowSet.delete(event.detail.transitionId);
+      updateTransitionOverflowAttribute();
+    };
+    container.addEventListener("ui_transition_overflow_start", onOverflowStart);
+    container.addEventListener("ui_transition_overflow_end", onOverflowEnd);
+    addTeardown(() => {
+      container.removeEventListener(
+        "ui_transition_overflow_start",
+        onOverflowStart,
+      );
+      container.removeEventListener(
+        "ui_transition_overflow_end",
+        onOverflowEnd,
+      );
+    });
+  }
 
-  // Run once at init to process current slot content (warnings, sizing, transitions)
+  // Run once at init to process current slot content
   triggerChildSlotMutation("init");
+  observe_changes: {
+    const mutationObserver = new MutationObserver((mutations) => {
+      let childListMutation = false;
+      const attributeMutationSet = new Set();
+
+      for (const mutation of mutations) {
+        if (mutation.type === "childList") {
+          childListMutation = true;
+          continue;
+        }
+        if (mutation.type === "attributes") {
+          const { attributeName, target } = mutation;
+          if (
+            attributeName === "data-content-key" ||
+            attributeName === "data-content-phase"
+          ) {
+            attributeMutationSet.add(attributeName);
+            debug(
+              "transition",
+              `Attribute change detected: ${attributeName} on`,
+              getElementSignature(target),
+            );
+          }
+        }
+      }
+
+      if (!childListMutation && attributeMutationSet.size === 0) {
+        return;
+      }
+      const reasonParts = [];
+      if (childListMutation) {
+        reasonParts.push("childList change");
+      }
+      if (attributeMutationSet.size) {
+        for (const attr of attributeMutationSet) {
+          reasonParts.push(`[${attr}] change`);
+        }
+      }
+
+      const reason = reasonParts.join("+");
+      triggerChildSlotMutation(reason);
+    });
+    mutationObserver.observe(slot, {
+      childList: true,
+      attributes: true,
+      attributeFilter: ["data-content-key", "data-content-phase"],
+      characterData: false,
+    });
+    addTeardown(() => {
+      mutationObserver.disconnect();
+    });
+  }
 
   return {
     slot,
