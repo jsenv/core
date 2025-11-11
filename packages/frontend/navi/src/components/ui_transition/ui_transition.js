@@ -447,7 +447,8 @@ export const initUITransition = (container) => {
       return;
     }
     try {
-      handleChildSlotMutation(reason);
+      const [slotInfo, changeInfo] = getSlotChangeInfo(reason);
+      handleChildSlotMutation(slotInfo, changeInfo);
     } finally {
       isUpdating = false;
       if (localDebug.transition) {
@@ -658,9 +659,8 @@ export const initUITransition = (container) => {
     };
   }
 
-  const handleChildSlotMutation = (reason = "mutation") => {
+  const handleChildSlotMutation = (slotInfo, changeInfo) => {
     hasSizeTransitions = container.hasAttribute("data-size-transition");
-    const [slotInfo, changeInfo] = getSlotChangeInfo(reason);
     const {
       childNodes,
       contentKey: currentContentKey,
@@ -679,7 +679,19 @@ export const initUITransition = (container) => {
       shouldDoContentTransitionIncludingPopulation,
       fromPhase,
       toPhase,
+      reason,
     } = changeInfo;
+
+    if (localDebug.transition) {
+      const updateLabel =
+        childNodes.length === 0
+          ? "cleared/empty"
+          : childNodes.length === 1
+            ? getElementSignature(childNodes[0])
+            : getElementSignature(slot);
+      console.group(`UI Update: ${updateLabel} (reason: ${reason})`);
+    }
+
     const hadChild = previousSlotInfo
       ? previousSlotInfo.childNodes.length > 0
       : false;
