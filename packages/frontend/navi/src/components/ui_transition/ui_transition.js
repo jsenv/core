@@ -639,6 +639,57 @@ export const initUITransition = (container) => {
       };
       return [slotInfo, changeInfo];
     };
+
+    // Watch for child changes and attribute changes on children
+    const mutationObserver = new MutationObserver((mutations) => {
+      let childListMutation = false;
+      const attributeMutationSet = new Set();
+
+      for (const mutation of mutations) {
+        if (mutation.type === "childList") {
+          childListMutation = true;
+          continue;
+        }
+        if (mutation.type === "attributes") {
+          const { attributeName, target } = mutation;
+          if (
+            attributeName === "data-content-key" ||
+            attributeName === "data-content-phase"
+          ) {
+            attributeMutationSet.add(attributeName);
+            debug(
+              "transition",
+              `Attribute change detected: ${attributeName} on`,
+              getElementSignature(target),
+            );
+          }
+        }
+      }
+
+      if (!childListMutation && attributeMutationSet.size === 0) {
+        return;
+      }
+      const reasonParts = [];
+      if (childListMutation) {
+        reasonParts.push("childList change");
+      }
+      if (attributeMutationSet.size) {
+        for (const attr of attributeMutationSet) {
+          reasonParts.push(`[${attr}] change`);
+        }
+      }
+      const reason = reasonParts.join("+");
+      triggerChildSlotMutation(reason);
+    });
+    mutationObserver.observe(slot, {
+      childList: true,
+      attributes: true,
+      attributeFilter: ["data-content-key", "data-content-phase"],
+      characterData: false,
+    });
+    addTeardown(() => {
+      mutationObserver.disconnect();
+    });
   }
 
   const handleChildSlotMutation = (slotInfo, changeInfo) => {
@@ -1105,65 +1156,14 @@ export const initUITransition = (container) => {
 
   // Initialize with current size
   [constrainedWidth, constrainedHeight] = measureContentSize();
-
   // Run once at init to process current slot content (warnings, sizing, transitions)
   triggerChildSlotMutation("init");
-
-  // Watch for child changes and attribute changes on children
-  const mutationObserver = new MutationObserver((mutations) => {
-    let childListMutation = false;
-    const attributeMutationSet = new Set();
-
-    for (const mutation of mutations) {
-      if (mutation.type === "childList") {
-        childListMutation = true;
-        continue;
-      }
-      if (mutation.type === "attributes") {
-        const { attributeName, target } = mutation;
-        if (
-          attributeName === "data-content-key" ||
-          attributeName === "data-content-phase"
-        ) {
-          attributeMutationSet.add(attributeName);
-          debug(
-            "transition",
-            `Attribute change detected: ${attributeName} on`,
-            getElementSignature(target),
-          );
-        }
-      }
-    }
-
-    if (!childListMutation && attributeMutationSet.size === 0) {
-      return;
-    }
-    const reasonParts = [];
-    if (childListMutation) {
-      reasonParts.push("childList change");
-    }
-    if (attributeMutationSet.size) {
-      for (const attr of attributeMutationSet) {
-        reasonParts.push(`[${attr}] change`);
-      }
-    }
-    const reason = reasonParts.join("+");
-    triggerChildSlotMutation(reason);
-  });
-
-  mutationObserver.observe(slot, {
-    childList: true,
-    attributes: true,
-    attributeFilter: ["data-content-key", "data-content-phase"],
-    characterData: false,
-  });
 
   return {
     slot,
 
     cleanup: () => {
       teardown();
-      mutationObserver.disconnect();
       stopResizeObserver();
       if (sizeTransition) {
         sizeTransition.cancel();
