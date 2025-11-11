@@ -848,9 +848,6 @@ export const initUITransition = (container) => {
       previousChildNodes = childNodes;
       lastContentKey = currentContentKey;
       hasPopulatedOnce = true;
-      if (localDebug.transition) {
-        console.groupEnd();
-      }
       return;
     }
 
