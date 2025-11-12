@@ -610,18 +610,20 @@ export const initUITransition = (container) => {
         applySizeConstraints(
           targetWidth,
           targetHeight,
-          "skip size animation (negligible diff)",
+          "skip transition (negligible diff)",
         );
         return;
       }
-      debug("size", "Animating size:", {
-        width: `${constrainedWidth} → ${targetWidth}`,
-        height: `${constrainedHeight} → ${targetHeight}`,
-      });
       const duration = parseInt(
         container.getAttribute("data-size-transition-duration") ||
           SIZE_TRANSITION_DURATION,
       );
+      debug("size", "prepare transition:", {
+        width: `${constrainedWidth} → ${targetWidth}`,
+        height: `${constrainedHeight} → ${targetHeight}`,
+        duration,
+      });
+
       const transitions = [];
       if (widthDiff === 0) {
         // nothing to do
@@ -675,22 +677,14 @@ export const initUITransition = (container) => {
           }),
         );
       }
-      if (transitions.length === 0) {
-        applySizeConstraints(
-          targetWidth,
-          targetHeight,
-          "no size transition created (identical or negligible diff)",
-        );
-        return;
-      }
       const release = applySizeConstraintsUntil(
         constrainedWidth,
         constrainedHeight,
-        "animating size",
+        "size transitioning",
       );
       sizeTransition = transitionController.animate(transitions, {
         onFinish: () => {
-          release("animated size transition completed");
+          release("size transition finished");
         },
       });
       sizeTransition.play();
