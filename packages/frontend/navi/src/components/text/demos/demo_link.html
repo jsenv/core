@@ -118,10 +118,10 @@
                     <legend>Default</legend>
                     <Layout row contentSpacing="sm" contentAlignX="start">
                       <Link href="./default" preventDefault>
-                        Default link
+                        Navi
                       </Link>
                       <a href="./default" onClick={(e) => e.preventDefault()}>
-                        Default link
+                        Native
                       </a>
                     </Layout>
                   </fieldset>
@@ -133,14 +133,10 @@
                         pseudoState={{ ":active": true }}
                         preventDefault
                       >
-                        Active link
+                        Navi
                       </Link>
-                      <a
-                        href="./active"
-                        style={{ color: "#dc143c" }}
-                        onClick={(e) => e.preventDefault()}
-                      >
-                        Active link
+                      <a href="./active" onClick={(e) => e.preventDefault()}>
+                        Native (click to see)
                       </a>
                     </Layout>
                   </fieldset>
@@ -152,14 +148,10 @@
                         pseudoState={{ ":visited": true }}
                         preventDefault
                       >
-                        Visited link
+                        Navi
                       </Link>
-                      <a
-                        href="./visited"
-                        style={{ color: "#800080" }}
-                        onClick={(e) => e.preventDefault()}
-                      >
-                        Visited link
+                      <a href="./visited" onClick={(e) => e.preventDefault()}>
+                        Native (can't be forced)
                       </a>
                     </Layout>
                   </fieldset>
