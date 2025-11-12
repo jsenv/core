@@ -39,13 +39,13 @@ import {
   createTranslateXTransition,
   createWidthTransition,
   getElementSignature,
-  getHeight,
+  getHeightWithoutTransition,
   getInnerWidth,
   getOpacity,
   getOpacityWithoutTransition,
   getTranslateX,
   getTranslateXWithoutTransition,
-  getWidth,
+  getWidthWithoutTransition,
 } from "@jsenv/dom";
 
 import.meta.css = /* css */ `
@@ -523,7 +523,10 @@ export const initUITransition = (container) => {
       });
     }
 
-    const measureContentSize = () => [getWidth(slot), getHeight(slot)];
+    const measureContentSize = () => [
+      getWidthWithoutTransition(slot),
+      getHeightWithoutTransition(slot),
+    ];
     const syncContentDimensions = () => {
       // check content dimensions to see if they changed and sync them
       const [currentWidth, currentHeight] = measureContentSize();
@@ -767,6 +770,7 @@ export const initUITransition = (container) => {
 
       const getTargetDimensions = () => {
         if (!isContentPhase) {
+          // Actual content: use its natural dimensions and update our natural content size
           return [newWidth, newHeight];
         }
         const shouldUseNewDimensions =
