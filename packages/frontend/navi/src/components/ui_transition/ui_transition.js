@@ -479,6 +479,7 @@ export const initUITransition = (container) => {
               );
               pendingResizeCount = 0;
               syncContentDimensions();
+              state = "observing";
             }
             if (state === "disconnected") {
               debug(
@@ -512,7 +513,13 @@ export const initUITransition = (container) => {
           }
           if (state === "paused") {
             pendingResizeCount++;
-            debug("size", "[resize observer] size change ignore (paused)");
+            const pauseReason =
+              Array.from(pauseReasonSet).join(", ") ||
+              "wait next frame to resume";
+            debug(
+              "size",
+              `[resize observer] size change ignore (${pauseReason})`,
+            );
             return;
           }
           debug("size", "[resize observer] size change detected");
