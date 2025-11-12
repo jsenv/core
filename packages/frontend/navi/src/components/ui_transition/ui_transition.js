@@ -522,9 +522,14 @@ export const initUITransition = (container) => {
             );
             return;
           }
-          debug("size", "[resize observer] size change detected");
+          if (localDebug.size) {
+            console.group("[resize observer] size change detected");
+          }
           isWithinResizeObserverTick = true;
           syncContentDimensions();
+          if (localDebug.size) {
+            console.groupEnd();
+          }
           requestAnimationFrame(() => {
             isWithinResizeObserverTick = false;
           });
