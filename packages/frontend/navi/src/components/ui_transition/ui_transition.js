@@ -573,9 +573,11 @@ export const initUITransition = (container) => {
         outerWrapper.style.height = `${height}px`;
         constrainedWidth = width;
         constrainedHeight = height;
-        contentOverlay.style.width = `${width}px`;
-        contentOverlay.style.height = `${height}px`;
       }
+      // force content overlay to take the right size
+      // (this way the content clone is not distorted by the new content size)
+      contentOverlay.style.width = `${width}px`;
+      contentOverlay.style.height = `${height}px`;
       return (reason) => {
         releaseSizeConstraints(reason);
         resumeResizeObserver(reason);
