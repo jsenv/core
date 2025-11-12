@@ -126,6 +126,25 @@
                     </Layout>
                   </fieldset>
                   <fieldset>
+                    <legend>:focus-visible</legend>
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Link
+                        href="./focus"
+                        pseudoState={{ ":focus-visible": true }}
+                        preventDefault
+                      >
+                        Navi
+                      </Link>
+                      <a
+                        href="./focus"
+                        autoFocus
+                        onClick={(e) => e.preventDefault()}
+                      >
+                        Native
+                      </a>
+                    </Layout>
+                  </fieldset>
+                  <fieldset>
                     <legend>:active</legend>
                     <Layout row contentSpacing="sm" contentAlignX="start">
                       <Link
@@ -136,7 +155,7 @@
                         Navi
                       </Link>
                       <a href="./active" onClick={(e) => e.preventDefault()}>
-                        Native (click to see)
+                        Native
                       </a>
                     </Layout>
                   </fieldset>
@@ -151,11 +170,31 @@
                         Navi
                       </Link>
                       <a href="./visited" onClick={(e) => e.preventDefault()}>
-                        Native (can't be forced)
+                        Native
                       </a>
                     </Layout>
                   </fieldset>
                 </Layout>
+
+                <div
+                  style={{
+                    marginTop: "15px",
+                    padding: "10px",
+                    background: "#f8f9fa",
+                    borderRadius: "4px",
+                    fontSize: "0.85rem",
+                    color: "#666",
+                  }}
+                >
+                  <strong>Note about :active and :visited states:</strong>
+                  <p style={{ margin: "5px 0", paddingLeft: "0" }}>
+                    In real browsers, :active and :visited states cannot be
+                    forced through JavaScript for security reasons. The examples
+                    above use pseudoState for demonstration in Navi links, while
+                    native links show these states only when actually clicked or
+                    visited.
+                  </p>
+                </div>
               </div>
 
               <div className="states-section">
