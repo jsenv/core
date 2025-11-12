@@ -574,9 +574,11 @@ export const initUITransition = (container) => {
       reason,
       releaseImmediatly = false,
     ) => {
-      const hasDiff =
-        constrainedWidth !== width || constrainedHeight !== height;
-      if (releaseImmediatly && !hasDiff) {
+      if (
+        releaseImmediatly &&
+        width === constrainedWidth &&
+        height === constrainedHeight
+      ) {
         return null;
       }
       // we want to pause either because we have a diff and don't want to trigger the resize observer
@@ -1092,6 +1094,7 @@ export const initUITransition = (container) => {
             onComplete: () => {
               activePhaseTransition = null;
               activePhaseTransitionType = null;
+              onContentTransitionComplete?.();
               debug("content", "Phase transition complete");
             },
             debug,
