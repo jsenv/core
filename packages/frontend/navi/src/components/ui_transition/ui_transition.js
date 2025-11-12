@@ -699,6 +699,9 @@ export const initUITransition = (container) => {
         "size transitioning",
       );
       sizeTransition = transitionController.animate(transitions, {
+        onCancel: () => {
+          release("size transition cancelled");
+        },
         onFinish: () => {
           release("size transition finished");
         },

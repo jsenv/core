@@ -25,9 +25,11 @@ export const createTransition = ({
   ...rest
 } = {}) => {
   const [updateCallbacks, executeUpdateCallbacks] = createCallbackController();
+  const [cancelCallbacks, executeCancelCallbacks] = createCallbackController();
   const [finishCallbacks, executeFinishCallbacks] = createCallbackController();
   const channels = {
     update: updateCallbacks,
+    cancel: cancelCallbacks,
     finish: finishCallbacks,
   };
   if (onUpdate) {
@@ -138,6 +140,7 @@ export const createTransition = ({
       }
       resume = null;
       playState = "idle";
+      executeCancelCallbacks();
     },
 
     finish: () => {
