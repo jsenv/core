@@ -30,6 +30,8 @@ import { Icon, applyContentSpacingOnTextChildren } from "./text.jsx";
 import.meta.css = /* css */ `
   @layer navi {
     .navi_link {
+      --border-radius: 2px;
+      --outline-color: var(--navi-focus-outline-color);
       --color: rgb(0, 0, 238);
       --color-visited: light-dark(#6a1b9a, #ab47bc);
       --color-active: red;
@@ -40,9 +42,6 @@ import.meta.css = /* css */ `
   }
 
   .navi_link {
-    position: relative;
-    border-radius: 2px;
-
     --x-color: var(--color);
     --x-color-hover: var(--color-hover, var(--color));
     --x-color-visited: var(--color-visited);
@@ -51,8 +50,11 @@ import.meta.css = /* css */ `
     --x-text-decoration-hover: var(--text-decoration-hover,);
     --x-cursor: var(--cursor);
 
+    position: relative;
     color: var(--x-color);
     text-decoration: var(--x-text-decoration);
+    border-radius: var(--border-radius);
+    outline-color: var(--outline-color);
     cursor: var(--x-cursor);
   }
   /* Hover */
@@ -64,6 +66,10 @@ import.meta.css = /* css */ `
   .navi_link[data-focus] {
     position: relative;
     z-index: 1; /* Ensure focus outline is above other elements */
+  }
+  .navi_link[data-focus-visible] {
+    outline-width: 2px;
+    outline-style: solid;
   }
   /* Visited */
   .navi_link[data-visited] {
@@ -99,9 +105,18 @@ import.meta.css = /* css */ `
 `;
 
 const LinkManagedByCSSVars = {
-  color: "--color",
-  cursor: "--cursor",
-  textDecoration: "--text-decoration",
+  "outlineColor": "--outline-color",
+  "borderRadius": "--border-radius",
+  "color": "--color",
+  "cursor": "--cursor",
+  "textDecoration": "--text-decoration",
+  ":hover": {
+    color: "--color-hover",
+    textDecoration: "--text-decoration-hover",
+  },
+  ":active": {
+    color: "--color-active",
+  },
 };
 const LinkPseudoClasses = [
   ":hover",
