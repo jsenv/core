@@ -523,7 +523,6 @@ export const initUITransition = (container) => {
       });
       outerWrapper.style.width = `${targetWidth}px`;
       outerWrapper.style.height = `${targetHeight}px`;
-      outerWrapper.style.overflow = "hidden";
       constrainedWidth = targetWidth;
       constrainedHeight = targetHeight;
     };
@@ -532,7 +531,6 @@ export const initUITransition = (container) => {
       const [beforeWidth, beforeHeight] = measureContentSize();
       outerWrapper.style.width = "";
       outerWrapper.style.height = "";
-      outerWrapper.style.overflow = "";
       const [afterWidth, afterHeight] = measureContentSize();
       debug("size", "Size after release:", {
         width: `${beforeWidth} → ${afterWidth}`,
@@ -594,7 +592,6 @@ export const initUITransition = (container) => {
         container.getAttribute("data-size-transition-duration") ||
           SIZE_TRANSITION_DURATION,
       );
-      outerWrapper.style.overflow = "hidden";
       const transitions = [];
       if (widthDiff <= SIZE_DIFF_EPSILON) {
         if (widthDiff > 0) {
@@ -608,6 +605,15 @@ export const initUITransition = (container) => {
       } else if (targetWidth !== constrainedWidth) {
         transitions.push(
           createWidthTransition(outerWrapper, targetWidth, {
+            setup: () =>
+              notifyTransition(outerWrapper, {
+                modelId: "ui_transition_width",
+                canOverflow: true,
+                id:
+                  targetWidth > constrainedWidth
+                    ? "grow_to_new_width"
+                    : "shrink_to_new_width",
+              }),
             duration,
             onUpdate: ({ value }) => {
               constrainedWidth = value;
@@ -627,6 +633,15 @@ export const initUITransition = (container) => {
       } else if (targetHeight !== constrainedHeight) {
         transitions.push(
           createHeightTransition(outerWrapper, targetHeight, {
+            setup: () =>
+              notifyTransition(outerWrapper, {
+                modelId: "ui_transition_height",
+                canOverflow: true,
+                id:
+                  targetHeight > constrainedHeight
+                    ? "grow_to_new_height"
+                    : "shrink_to_new_height",
+              }),
             duration,
             onUpdate: ({ value }) => {
               constrainedHeight = value;

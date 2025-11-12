@@ -9,12 +9,10 @@ import { createTimelineTransition } from "./transition_playback.js";
 
 const transitionStyleController = createStyleController("transition");
 
-// TOOD: trigger transition events (navi_transition_start, navi_transition_end, navi_transition_cancel)
-// so that part sof the code can listen on them
-
-export const createHeightTransition = (element, to, options) => {
+export const createHeightTransition = (element, to, options = {}) => {
+  const { setup, ...rest } = options;
   const heightTransition = createTimelineTransition({
-    ...options,
+    ...rest,
     constructor: createHeightTransition,
     key: element,
     to,
@@ -22,6 +20,7 @@ export const createHeightTransition = (element, to, options) => {
     minDiff: 10,
     lifecycle: {
       setup: () => {
+        const teardown = setup?.();
         return {
           from: getHeight(element),
           update: ({ value }) => {
@@ -29,6 +28,7 @@ export const createHeightTransition = (element, to, options) => {
           },
           teardown: () => {
             transitionStyleController.delete(element, "height");
+            teardown?.();
           },
         };
       },
@@ -36,9 +36,10 @@ export const createHeightTransition = (element, to, options) => {
   });
   return heightTransition;
 };
-export const createWidthTransition = (element, to, options) => {
+export const createWidthTransition = (element, to, options = {}) => {
+  const { setup, ...rest } = options;
   const widthTransition = createTimelineTransition({
-    ...options,
+    ...rest,
     constructor: createWidthTransition,
     key: element,
     to,
@@ -46,6 +47,7 @@ export const createWidthTransition = (element, to, options) => {
     isVisual: true,
     lifecycle: {
       setup: () => {
+        const teardown = setup?.();
         return {
           from: getWidth(element),
           update: ({ value }) => {
@@ -53,6 +55,7 @@ export const createWidthTransition = (element, to, options) => {
           },
           teardown: () => {
             transitionStyleController.delete(element, "width");
+            teardown?.();
           },
         };
       },

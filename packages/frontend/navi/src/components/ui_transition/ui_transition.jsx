@@ -50,7 +50,7 @@ const ContentKeyContext = createContext();
 export const UITransition = ({
   children,
   contentKey,
-  sizeTransition,
+  sizeTransition = true,
   sizeTransitionDuration,
   transitionType,
   transitionDuration,
