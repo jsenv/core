@@ -73,6 +73,13 @@ import.meta.css = /* css */ `
     cursor: inherit;
   }
 
+  .ui_transition_slot {
+    width: 100%;
+    min-width: fit-content;
+    height: 100%;
+    min-height: fit-content;
+  }
+
   .ui_transition_container,
   .ui_transition_slot {
     position: relative;
@@ -523,14 +530,18 @@ export const initUITransition = (container) => {
       });
     }
 
-    const measureContentSize = () => [
-      getWidthWithoutTransition(slot),
-      getHeightWithoutTransition(slot),
-    ];
+    const measureSlotSize = () => {
+      return [
+        getWidthWithoutTransition(slot),
+        getHeightWithoutTransition(slot),
+      ];
+    };
     const syncContentDimensions = () => {
       // check content dimensions to see if they changed and sync them
-      const [currentWidth, currentHeight] = measureContentSize();
-      updateNaturalContentSize(currentWidth, currentHeight);
+      const [currentWidth, currentHeight] = measureSlotSize();
+      if (!slotInfo.isContentPhase) {
+        updateNaturalContentSize(currentWidth, currentHeight);
+      }
       if (sizeTransition) {
         updateToSize(currentWidth, currentHeight);
       } else {
@@ -575,11 +586,14 @@ export const initUITransition = (container) => {
       applySizeConstraintsUntil(width, height, reason, true);
     };
     const releaseSizeConstraints = (reason) => {
+      if (slotInfo.isContentPhase) {
+        return;
+      }
       debug("size", `Releasing constraints (${reason})`);
-      const [beforeWidth, beforeHeight] = measureContentSize();
+      const [beforeWidth, beforeHeight] = measureSlotSize();
       outerWrapper.style.width = "";
       outerWrapper.style.height = "";
-      const [afterWidth, afterHeight] = measureContentSize();
+      const [afterWidth, afterHeight] = measureSlotSize();
       debug("size", "Size after release:", {
         width: `${beforeWidth} → ${afterWidth}`,
         height: `${beforeHeight} → ${afterHeight}`,
@@ -704,7 +718,7 @@ export const initUITransition = (container) => {
     };
 
     // Initialize with current size
-    [constrainedWidth, constrainedHeight] = measureContentSize();
+    [constrainedWidth, constrainedHeight] = measureSlotSize();
 
     const updateSizeTransition = () => {
       hasSizeTransitions = container.hasAttribute("data-size-transition");
@@ -718,7 +732,7 @@ export const initUITransition = (container) => {
 
       // Initial population skip (first null → something): no content or size animations
       if (isInitialPopulationWithoutTransition) {
-        const [newWidth, newHeight] = measureContentSize();
+        const [newWidth, newHeight] = measureSlotSize();
         debug("size", `content size measured to: ${newWidth}x${newHeight}`);
         if (isContentPhase) {
           applySizeConstraints(
@@ -733,80 +747,78 @@ export const initUITransition = (container) => {
         return;
       }
 
-      const [newWidth, newHeight] = measureContentSize();
-      debug("size", `content size measured to: ${newWidth}x${newHeight}`);
-      outerWrapper.style.width = `${constrainedWidth}px`;
-      outerWrapper.style.height = `${constrainedHeight}px`;
-
-      // If size transitions are disabled and the new content is smaller,
-      // hold the previous size to avoid cropping during the content transition.
-      if (!hasSizeTransitions) {
-        sizeTransition?.cancel();
-        const willShrinkWidth = constrainedWidth > newWidth;
-        const willShrinkHeight = constrainedHeight > newHeight;
-        const sizeHoldActive = willShrinkWidth || willShrinkHeight;
-        if (sizeHoldActive) {
+      let targetWidth;
+      let targetHeight;
+      if (isContentPhase) {
+        const shouldUseNewDimensions =
+          naturalContentWidth === 0 && naturalContentHeight === 0;
+        if (shouldUseNewDimensions) {
+          // we don't have any natural content dimensions yet, we can use the content phase dimensions for now
+          [targetWidth, targetHeight] = measureSlotSize();
           debug(
             "size",
-            `Holding previous size during content transition: ${constrainedWidth}x${constrainedHeight}`,
+            `content phase dimension measured to: ${targetWidth}x${targetHeight}`,
           );
-          applySizeConstraints(
-            constrainedWidth,
-            constrainedHeight,
-            "hold size for content transition",
+        } else {
+          // we don't care about the content phase dimension.
+          // the content dimensions prevails
+          targetWidth = naturalContentWidth;
+          targetHeight = naturalContentHeight;
+          debug(
+            "size",
+            `content phase using natural content size: ${naturalContentWidth}x${naturalContentHeight}`,
           );
-          onContentTransitionComplete = () => {
-            onContentTransitionComplete = null;
-            releaseSizeConstraints(
-              "content transition completed - release size hold",
-            );
-          };
         }
-        releaseSizeConstraints("size transitions disabled - no size animation");
+      } else {
+        outerWrapper.style.width = "";
+        outerWrapper.style.height = "";
+        const [slotNaturalWidth, slotNaturalHeight] = measureSlotSize();
+        outerWrapper.style.width = `${constrainedWidth}px`;
+        outerWrapper.style.height = `${constrainedHeight}px`;
+        updateNaturalContentSize(slotNaturalWidth, slotNaturalHeight);
+        targetWidth = slotNaturalWidth;
+        targetHeight = slotNaturalHeight;
+        debug(
+          "size",
+          `content size measured to: ${slotNaturalWidth}x${slotNaturalHeight}`,
+        );
+      }
+
+      // If size transitions are disabled hold the previous size to avoid cropping during the content transition.
+      if (!hasSizeTransitions) {
+        debug(
+          "size",
+          `Holding previous size during content transition: ${constrainedWidth}x${constrainedHeight}`,
+        );
+        applySizeConstraints(
+          constrainedWidth,
+          constrainedHeight,
+          "hold size for content transition",
+        );
+        sizeTransition?.cancel();
+        onContentTransitionComplete = () => {
+          onContentTransitionComplete = null;
+          releaseSizeConstraints(
+            "content transition completed - release size hold",
+          );
+        };
         return;
       }
 
-      const getTargetDimensions = () => {
-        if (!isContentPhase) {
-          // Actual content: use its natural dimensions and update our natural content size
-          return [newWidth, newHeight];
-        }
-        const shouldUseNewDimensions =
-          naturalContentWidth === 0 && naturalContentHeight === 0;
-        const targetWidth = shouldUseNewDimensions
-          ? newWidth
-          : naturalContentWidth || newWidth;
-        const targetHeight = shouldUseNewDimensions
-          ? newHeight
-          : naturalContentHeight || newHeight;
-        return [targetWidth, targetHeight];
-      };
-
-      const [targetWidth, targetHeight] = getTargetDimensions();
       if (
         targetWidth === constrainedWidth &&
         targetHeight === constrainedHeight
       ) {
         sizeTransition?.cancel();
         debug("size", "No size change required");
-        // no size changes planned; possibly release constraints
-        if (!isContentPhase) {
-          releaseSizeConstraints("no size change needed");
-        }
+        releaseSizeConstraints("no size change needed");
         return;
       }
       debug("size", "Size change needed:", {
         width: `${constrainedWidth} → ${targetWidth}`,
         height: `${constrainedHeight} → ${targetHeight}`,
       });
-      if (isContentPhase) {
-        // Content phases (loading/error) always use size constraints for consistent sizing
-        updateToSize(targetWidth, targetHeight);
-      } else {
-        // Actual content: update natural content dimensions for future content phases
-        updateNaturalContentSize(targetWidth, targetHeight);
-        updateToSize(targetWidth, targetHeight);
-      }
+      updateToSize(targetWidth, targetHeight);
     };
     subscribeChange(updateSizeTransition);
 
