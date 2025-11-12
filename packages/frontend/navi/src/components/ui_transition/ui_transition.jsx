@@ -50,13 +50,15 @@ const ContentKeyContext = createContext();
 export const UITransition = ({
   children,
   contentKey,
-  sizeTransition,
+  sizeTransition = true,
   sizeTransitionDuration,
   transitionType,
   transitionDuration,
   phaseTransitionType,
   phaseTransitionDuration,
-  debugTransition,
+  debugDetection,
+  debugSize,
+  debugBreakAfterClone,
   ...props
 }) => {
   const [contentKeyFromContext, setContentKeyFromContext] = useState();
@@ -128,20 +130,20 @@ export const UITransition = ({
         data-phase-transition-duration={
           phaseTransitionDuration ? phaseTransitionDuration : undefined
         }
-        data-debug-transition={debugTransition ? "" : undefined}
+        data-debug-detection={debugDetection ? "" : undefined}
+        data-debug-size={debugSize ? "" : undefined}
+        data-debug-break-after-clone={debugBreakAfterClone}
       >
         <div className="ui_transition_outer_wrapper">
-          <div className="ui_transition_measure_wrapper">
-            <div
-              className="ui_transition_slot"
-              data-content-key={
-                effectiveContentKey ? effectiveContentKey : undefined
-              }
-            >
-              {children}
-            </div>
-            <div className="ui_transition_phase_overlay"></div>
+          <div
+            className="ui_transition_slot"
+            data-content-key={
+              effectiveContentKey ? effectiveContentKey : undefined
+            }
+          >
+            {children}
           </div>
+          <div className="ui_transition_phase_overlay"></div>
         </div>
         <div className="ui_transition_content_overlay"></div>
       </div>

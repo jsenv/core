@@ -4,7 +4,7 @@
 run({ browserLauncher: firefox })
 ```
 
-# 1/2 write 20 files into "../../../../../"
+# 1/2 write 22 files into "../../../../../"
 
 see [./@jsenv/core/](./@jsenv/core/)
 

@@ -467,6 +467,7 @@ export const startDevServer = async ({
                 type: "http_request",
                 specifier: request.resource,
               });
+              reference.urlInfo.context.requestedUrl = requestedUrl;
               rootUrlInfo.context.request = null;
               rootUrlInfo.context.requestedUrl = null;
             }

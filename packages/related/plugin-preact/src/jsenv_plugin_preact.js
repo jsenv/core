@@ -193,17 +193,26 @@ export const jsenvPluginPreact = ({
               expectedType: "js_module",
               specifier: "@jsenv/plugin-preact/src/client/preact_refresh.js",
             });
-            const prelude = `import { installPreactRefresh } from ${
-              preactRefreshClientReference.generatedSpecifier
-            };
+            if (code.includes("__preact_refresh__")) {
+              // should never happen
+              // (was hapnning due to how dev server was generating file names in SPA mode causing inline content
+              // to be cooked twice)
+              console.warn(
+                `Cannot inject preact refresh code in ${urlInfo.url} because it already contains __preact_refresh__ variable.`,
+              );
+            } else {
+              const prelude = `import { installPreactRefresh } from ${
+                preactRefreshClientReference.generatedSpecifier
+              };
 const __preact_refresh__ = installPreactRefresh(${JSON.stringify(urlInfo.url)});
 `;
-            code = `${prelude.replace(/\n/g, "")}${code}`;
-            if (hasReg) {
-              code = `${code}
+              code = `${prelude.replace(/\n/g, "")}${code}`;
+              if (hasReg) {
+                code = `${code}
 
 __preact_refresh__.end();
 import.meta.hot.accept(__preact_refresh__.acceptCallback);`;
+              }
             }
           }
         }

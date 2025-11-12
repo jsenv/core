@@ -37,8 +37,25 @@ export const getUrlForContentInsideHtml = (node, htmlUrlInfo, reference) => {
   const { line, column, lineEnd, columnEnd } = getHtmlNodePosition(node, {
     preferOriginal: true,
   });
+  let url;
+  let htmlFileUrl = htmlUrlInfo.url;
+  const originalHtmFilelUrl = htmlUrlInfo.originalUrl;
+  if (originalHtmFilelUrl && originalHtmFilelUrl !== htmlFileUrl) {
+    if (
+      htmlUrlInfo.firstReference.type === "http_request" &&
+      htmlUrlInfo.firstReference.original.url !== htmlFileUrl
+    ) {
+      // html got redirected because of spa navigation
+      // we want to keep the original url as base for inline content
+      url = htmlFileUrl;
+    } else {
+      url = originalHtmFilelUrl;
+    }
+  } else {
+    url = htmlFileUrl;
+  }
   const inlineContentUrl = generateUrlForInlineContent({
-    url: htmlUrlInfo.originalUrl || htmlUrlInfo.url,
+    url,
     basename,
     extension,
     line,

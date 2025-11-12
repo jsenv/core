@@ -59,7 +59,8 @@
         justify-content: center;
         color: #666;
         font-weight: bold;
-        border: 1px solid #999;
+        background: yellow;
+        border-radius: inherit;
       }
 
       .rectangle-large {
@@ -70,6 +71,8 @@
         justify-content: center;
         color: #666;
         font-weight: bold;
+        background: red;
+        border-radius: inherit;
       }
 
       .white-wrapper {
@@ -79,6 +82,7 @@
         color: black;
         background: white;
         border-radius: 4px;
+        outline: 1px solid #999;
       }
     </style>
   </head>
@@ -86,8 +90,14 @@
     <div id="root"></div>
 
     <script type="module" jsenv-type="module/jsx">
+      // TODO: fix the size transition doing strange things when we navigate during transition
+      // 1. click large
+      // 2. before transition ends, click small
+      // 3. observe the small rectangle going too narrow instead of the natural content size (150x250)
+
       import { render } from "preact";
       import {
+        Link,
         Routes,
         Route,
         RouteLink,
@@ -127,13 +137,20 @@
 
             <div className="controls">
               <p>Test size transitions between routes:</p>
+              <Link href="./size_transition_route.html">Coucou</Link>
               <RouteLink route={SMALL_ROUTE}>Small Rectangle</RouteLink>
               <RouteLink route={LARGE_ROUTE}>Large Rectangle</RouteLink>
             </div>
 
             <div className="demo-container">
               <div className="white-wrapper">
-                <UITransition sizeTransition sizeTransitionDuration={400}>
+                <UITransition
+                  // sizeTransition
+                  sizeTransitionDuration={1000}
+                  debugDetection
+                  debugSize
+                  // debugBreakAfterClone="small"
+                >
                   <Route.Slot />
                 </UITransition>
               </div>
@@ -147,7 +164,7 @@
           <Routes element={MainLayout}>
             <Route element={<SmallRectangle />} route={SMALL_ROUTE} />
             <Route element={<LargeRectangle />} route={LARGE_ROUTE} />
-            <Route element={<div>Coucou</div>} fallback />
+            <Route element={"Coucou"} fallback />
           </Routes>
         );
       };

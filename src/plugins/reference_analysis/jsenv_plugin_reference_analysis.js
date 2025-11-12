@@ -48,7 +48,7 @@ const jsenvPluginInlineContentFetcher = () => {
        * BUT the last reference is the "http_request"
        * so it's more likely the before last reference that contains the latest version
        *
-       * BUT the is an exception when using supervisor as the before last reference
+       * BUT there is an exception when using supervisor as the before last reference
        * is the one fetched by the browser that is already cooked
        * we must re-cook from the original content, not from the already cooked content
        * Otherwise references are already resolved and

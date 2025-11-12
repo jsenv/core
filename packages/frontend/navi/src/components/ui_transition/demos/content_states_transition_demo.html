@@ -263,7 +263,7 @@
 
         <div class="separator"></div>
 
-        <details class="manual-control">
+        <details class="manual-control" open>
           <summary>Manual Control</summary>
           <div style="padding-top: 10px">
             <div>
@@ -288,12 +288,15 @@
           lifecycle and navigation scenarios.
         </p>
         <div id="content-box">
-          <div class="ui_transition_container">
+          <div
+            class="ui_transition_container"
+            data-debug-detection
+            data-debug-size
+            data-debug-content
+          >
             <div class="ui_transition_outer_wrapper">
-              <div class="ui_transition_measure_wrapper">
-                <div class="ui_transition_slot"></div>
-                <div class="ui_transition_phase_overlay"></div>
-              </div>
+              <div class="ui_transition_slot"></div>
+              <div class="ui_transition_phase_overlay"></div>
             </div>
             <div class="ui_transition_content_overlay"></div>
           </div>
@@ -316,7 +319,7 @@
 
         const states = {
           loading: (uiKey) => `
-            <div class="loading-state ${tall ? "tall" : ""}" data-content-key="${uiKey}" data-content-phase data-ui-name="loading">
+            <div class="loading-state ${tall ? "tall" : ""}" data-content-key="${uiKey}" data-content-phase="loading" data-ui-name="loading">
               <div class="spinner"></div>
               <div>Loading...</div>
             </div>
@@ -352,7 +355,7 @@
           `;
           },
           error: (uiKey) => `
-            <div class="error-state ${tall ? "tall" : ""}" data-content-key="${uiKey}" data-content-phase data-ui-name="error">
+            <div class="error-state ${tall ? "tall" : ""}" data-content-key="${uiKey}" data-content-phase="error" data-ui-name="error">
               <div>⚠️</div>
               <div>An error occurred</div>
             </div>

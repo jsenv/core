@@ -71,6 +71,13 @@ export const getElementSignature = (element) => {
   if (!element) {
     return String(element);
   }
+  if (typeof element === "string") {
+    return element === ""
+      ? "empty string"
+      : element.length > 10
+        ? `${element.slice(0, 10)}...`
+        : element;
+  }
   if (typeof element === "function") {
     const functionName = element.name;
     const functionLabel = functionName
@@ -81,6 +88,9 @@ export const getElementSignature = (element) => {
       return `[${functionLabel} for ${underlyingElementId}]`;
     }
     return `[${functionLabel}]`;
+  }
+  if (element.nodeType === Node.TEXT_NODE) {
+    return `#text(${getElementSignature(element.nodeValue)})`;
   }
   if (element.props) {
     const type = element.type;

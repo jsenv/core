@@ -4,12 +4,91 @@
   <head>
     <meta charset="utf-8" />
     <title>Link Demo</title>
+    <style>
+      body {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f5f5f5;
+      }
+
+      h1 {
+        margin-bottom: 30px;
+        color: #333;
+        font-size: 2rem;
+        text-align: center;
+      }
+
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .demo-section h2 {
+        margin: 0 0 20px 0;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.4rem;
+        border-bottom: 2px solid #ddd;
+      }
+
+      fieldset {
+        margin: 15px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+      }
+
+      legend {
+        padding: 0 10px;
+        color: #555;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+
+      .states-section {
+        margin: 20px 0;
+      }
+
+      .states-title {
+        margin: 0 0 15px 0;
+        padding: 8px 12px;
+        color: #495057;
+        font-weight: 600;
+        font-size: 0.95rem;
+        text-align: center;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+      }
+
+      .enhanced-states-title {
+        color: #1565c0;
+        background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+        border-color: #2196f3;
+      }
+
+      .states-description {
+        margin: 10px 0 15px 0;
+        padding: 10px 15px;
+        color: #666;
+        font-style: italic;
+        font-size: 0.9rem;
+        background: #f8f9fa;
+        border-left: 4px solid #007bff;
+        border-radius: 0 4px 4px 0;
+      }
+    </style>
   </head>
   <body>
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      /* eslint-disable no-unused-vars */
       import { Text, Link, Icon, Box, Title, Layout } from "@jsenv/navi";
 
       const Demo = () => {
@@ -24,42 +103,165 @@
           >
             <Title as="h1">Link States and Variations</Title>
 
-            <section style="margin-bottom: 40px;">
-              <h2>Basic Links</h2>
-              <Layout row contentSpacing="sm" contentAlignX="start">
-                <Link href="./default" preventDefault>
-                  Default link
-                </Link>
+            <div className="demo-section">
+              <h2>Link States</h2>
 
-                <Link
-                  href="./active"
-                  pseudoState={{ ":active": true }}
-                  preventDefault
+              <div className="states-section">
+                <div className="states-title">Standard HTML Link States</div>
+                <p className="states-description">
+                  These states work exactly like native HTML links, with
+                  enhanced styling and consistent behavior.
+                </p>
+
+                <Layout column contentSpacing="sm">
+                  <fieldset>
+                    <legend>Default</legend>
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Link href="./default" preventDefault>
+                        Navi
+                      </Link>
+                      <a href="./default" onClick={(e) => e.preventDefault()}>
+                        Native
+                      </a>
+                    </Layout>
+                  </fieldset>
+                  <fieldset>
+                    <legend>:focus-visible</legend>
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Link
+                        href="./focus"
+                        pseudoState={{ ":focus-visible": true }}
+                        preventDefault
+                      >
+                        Link text
+                      </Link>
+                      <a
+                        href="./focus"
+                        autoFocus
+                        onClick={(e) => e.preventDefault()}
+                      >
+                        Link text
+                      </a>
+                    </Layout>
+                  </fieldset>
+                  <fieldset>
+                    <legend>:active</legend>
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Link
+                        href="./active"
+                        pseudoState={{ ":active": true }}
+                        preventDefault
+                      >
+                        Link text
+                      </Link>
+                      <a href="./active" onClick={(e) => e.preventDefault()}>
+                        Link text
+                      </a>
+                    </Layout>
+                  </fieldset>
+                  <fieldset>
+                    <legend>:visited</legend>
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Link
+                        href="./visited"
+                        pseudoState={{ ":visited": true }}
+                        preventDefault
+                      >
+                        Link text
+                      </Link>
+                      <a href="./visited" onClick={(e) => e.preventDefault()}>
+                        Link text
+                      </a>
+                    </Layout>
+                  </fieldset>
+                </Layout>
+
+                <div
+                  style={{
+                    marginTop: "15px",
+                    padding: "10px",
+                    background: "#f8f9fa",
+                    borderRadius: "4px",
+                    fontSize: "0.85rem",
+                    color: "#666",
+                  }}
                 >
-                  Active link
-                </Link>
+                  <strong>Note about :active and :visited states:</strong>
+                  <p style={{ margin: "5px 0", paddingLeft: "0" }}>
+                    In real browsers, :active and :visited states cannot be
+                    forced through JavaScript for security reasons. The examples
+                    above use pseudoState for demonstration in Navi links, while
+                    native links show these states only when actually clicked or
+                    visited.
+                  </p>
+                </div>
+              </div>
 
-                <Link
-                  href="./visited"
-                  pseudoState={{ ":visited": true }}
-                  preventDefault
+              <div className="states-section">
+                <div className="states-title enhanced-states-title">
+                  Enhanced Navi States
+                </div>
+                <p className="states-description">
+                  These additional states provide enhanced UX patterns not
+                  available in standard HTML links.
+                </p>
+
+                <Layout column contentSpacing="sm">
+                  <fieldset>
+                    <legend>:read-only</legend>
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Link href="./readonly" readOnly preventDefault>
+                        Link text
+                      </Link>
+                    </Layout>
+                  </fieldset>
+                  <fieldset>
+                    <legend>:disabled</legend>
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Link href="./disabled" disabled preventDefault>
+                        Link text
+                      </Link>
+                    </Layout>
+                  </fieldset>
+                  <fieldset>
+                    <legend>:-navi-loading</legend>
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Link href="./loading" loading readOnly preventDefault>
+                        Link text
+                      </Link>
+                    </Layout>
+                  </fieldset>
+                </Layout>
+
+                <div
+                  style={{
+                    marginTop: "15px",
+                    padding: "10px",
+                    background: "#f8f9fa",
+                    borderRadius: "4px",
+                    fontSize: "0.85rem",
+                    color: "#666",
+                  }}
                 >
-                  Visited link
-                </Link>
-
-                <Link href="./readonly" readOnly preventDefault>
-                  Read-only link
-                </Link>
-
-                <Link href="./disabled" disabled preventDefault>
-                  Disabled link
-                </Link>
-
-                <Link href="./loading" loading readOnly preventDefault>
-                  Loading link
-                </Link>
-              </Layout>
-            </section>
+                  <strong>Enhanced State Explanations:</strong>
+                  <ul style={{ margin: "5px 0", paddingLeft: "20px" }}>
+                    <li>
+                      <strong>Read-only:</strong> Visually indicates the link
+                      cannot be clicked, but remains focusable for accessibility
+                    </li>
+                    <li>
+                      <strong>Disabled:</strong> Prevents all interaction and
+                      removes from tab order
+                    </li>
+                    <li>
+                      <strong>Loading:</strong> Shows a spinner while
+                      maintaining the link's accessibility and preventing
+                      navigation
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
 
             {/* Automatic Icon Behavior */}
             <Box as="section" marginBottom="xl">
@@ -71,21 +273,6 @@
               </p>
 
               <Layout row contentSpacing="lg">
-                <div>
-                  <h3>Special Protocol Icons</h3>
-                  <Layout column contentSpacing="sm">
-                    <Link href="tel:+1234567890">Call now</Link>
-                    <Link href="sms:+1234567890">Send message</Link>
-                    <Link href="mailto:test@example.com">Contact us</Link>
-                    <Link href="https://github.com/jsenv/core">
-                      View source
-                    </Link>
-                  </Layout>
-                  <p style={{ fontSize: "14px", color: "#666" }}>
-                    Special protocols and GitHub automatically get custom icons
-                  </p>
-                </div>
-
                 <div>
                   <h3>External Links</h3>
                   <Layout column contentSpacing="sm">
@@ -159,6 +346,21 @@
                       Go to section (no icon)
                     </Link>
                   </Layout>
+                </div>
+
+                <div>
+                  <h3>Special Protocol Icons</h3>
+                  <Layout column contentSpacing="sm">
+                    <Link href="tel:+1234567890">Call now</Link>
+                    <Link href="sms:+1234567890">Send message</Link>
+                    <Link href="mailto:test@example.com">Contact us</Link>
+                    <Link href="https://github.com/jsenv/core">
+                      View source
+                    </Link>
+                  </Layout>
+                  <p style={{ fontSize: "14px", color: "#666" }}>
+                    Special protocols and GitHub automatically get custom icons
+                  </p>
                 </div>
               </Layout>
             </Box>

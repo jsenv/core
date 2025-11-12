@@ -134,7 +134,7 @@ export const createGroupTransitionController = () => {
      * @returns {Object} Playback controller with play(), pause(), cancel(), etc.
      */
     animate: (transitions, options = {}) => {
-      const { onChange, onFinish } = options;
+      const { onChange, onCancel, onFinish } = options;
 
       if (transitions.length === 0) {
         // No transitions to animate, call onFinish immediately
@@ -147,7 +147,11 @@ export const createGroupTransitionController = () => {
           cancel: () => {},
           finish: () => {},
           playState: "idle",
-          channels: { update: { add: () => {} }, finish: { add: () => {} } },
+          channels: {
+            update: { add: () => {} },
+            cancel: { add: () => {} },
+            finish: { add: () => {} },
+          },
         };
       }
 
@@ -201,6 +205,7 @@ export const createGroupTransitionController = () => {
           playState: "running", // All are already running
           channels: {
             update: { add: () => {} }, // Update tracking already set up
+            cancel: { add: () => {} },
             finish: { add: () => {} },
           },
         };
@@ -222,6 +227,18 @@ export const createGroupTransitionController = () => {
 
           const isLast = transition.value >= 1; // isLast = value >= 1 (since group tracks 0-1)
           onChange(changeEntries, isLast);
+        });
+      }
+
+      if (onCancel) {
+        groupTransition.channels.cancel.add(() => {
+          const changeEntries = [...newTransitions, ...updatedTransitions].map(
+            (transition) => ({
+              transition,
+              value: transition.value,
+            }),
+          );
+          onCancel(changeEntries);
         });
       }
 
