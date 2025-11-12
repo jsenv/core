@@ -710,14 +710,11 @@ export const initUITransition = (container) => {
       hasSizeTransitions = container.hasAttribute("data-size-transition");
       const { isContentPhase } = slotInfo;
       const { isInitialPopulationWithoutTransition } = changeInfo;
-
       debug(
         "size",
         `updateSizeTransition(), current constrained size: ${constrainedWidth.toFixed(2)}x${constrainedHeight.toFixed(2)}`,
       );
-      if (sizeTransition) {
-        sizeTransition.cancel();
-      }
+      sizeTransition?.cancel();
 
       // Initial population skip (first null → something): no content or size animations
       if (isInitialPopulationWithoutTransition) {
@@ -744,6 +741,7 @@ export const initUITransition = (container) => {
       // If size transitions are disabled and the new content is smaller,
       // hold the previous size to avoid cropping during the content transition.
       if (!hasSizeTransitions) {
+        sizeTransition?.cancel();
         const willShrinkWidth = constrainedWidth > newWidth;
         const willShrinkHeight = constrainedHeight > newHeight;
         const sizeHoldActive = willShrinkWidth || willShrinkHeight;
@@ -789,6 +787,7 @@ export const initUITransition = (container) => {
         targetWidth === constrainedWidth &&
         targetHeight === constrainedHeight
       ) {
+        sizeTransition?.cancel();
         debug("size", "No size change required");
         // no size changes planned; possibly release constraints
         if (!isContentPhase) {
