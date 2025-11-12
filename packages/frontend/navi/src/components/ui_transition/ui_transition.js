@@ -118,6 +118,7 @@ export const initUITransition = (container) => {
     ...DEBUG,
     detection: container.hasAttribute("data-debug-detection"),
     size: container.hasAttribute("data-debug-size"),
+    content: container.hasAttribute("data-debug-content"),
   };
   const hasSomeDebugLogs =
     localDebug.detection || localDebug.size || localDebug.content;
@@ -711,7 +712,7 @@ export const initUITransition = (container) => {
       );
       sizeTransition = transitionController.animate(transitions, {
         onCancel: () => {
-          release("size transition cancelled");
+          // release("size transition cancelled");
         },
         onFinish: () => {
           release("size transition finished");
