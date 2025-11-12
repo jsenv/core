@@ -78,6 +78,7 @@ import.meta.css = /* css */ `
     min-width: fit-content;
     height: 100%;
     min-height: fit-content;
+    flex-direction: column;
   }
 
   .ui_transition_container,
@@ -575,16 +576,14 @@ export const initUITransition = (container) => {
       // we want to pause either because we have a diff and don't want to trigger the resize observer
       // or if we have no diff because we're about to do something that would trigger it (transition)
       const resumeResizeObserver = pauseResizeObserver(reason);
-      if (hasDiff) {
-        debug("size", `Applying size constraints (${reason})`, {
-          width: `${constrainedWidth} → ${width}`,
-          height: `${constrainedHeight} → ${height}`,
-        });
-        outerWrapper.style.width = `${width}px`;
-        outerWrapper.style.height = `${height}px`;
-        constrainedWidth = width;
-        constrainedHeight = height;
-      }
+      debug("size", `Applying size constraints (${reason})`, {
+        width: `${constrainedWidth} → ${width}`,
+        height: `${constrainedHeight} → ${height}`,
+      });
+      outerWrapper.style.width = `${width}px`;
+      outerWrapper.style.height = `${height}px`;
+      constrainedWidth = width;
+      constrainedHeight = height;
       // force content overlay to take the right size
       // (this way the content clone is not distorted by the new content size)
       contentOverlay.style.width = `${width}px`;
