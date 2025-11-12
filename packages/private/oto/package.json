@@ -23,7 +23,7 @@
   "dependencies": {
     "@jsenv/dom": "./packages/dom",
     "@jsenv/navi": "./packages/navi",
-    "@preact/signals": "2.4.0",
+    "@preact/signals": "2.5.0",
     "dom": "./packages/dom",
     "hooks": "./packages/hooks",
     "matrix": "./packages/matrix",

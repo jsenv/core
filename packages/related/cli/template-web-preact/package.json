@@ -22,7 +22,7 @@
     "@babel/plugin-transform-react-jsx": "7.27.1",
     "@jsenv/assert": "4.5.4",
     "@jsenv/core": "40.12.0",
-    "@jsenv/plugin-preact": "1.7.26",
+    "@jsenv/plugin-preact": "1.7.27",
     "@jsenv/plugin-bundling": "2.10.3",
     "@jsenv/plugin-minification": "1.7.3",
     "@jsenv/eslint-config-relax": "1.7.6",
