@@ -455,8 +455,10 @@ export const initUITransition = (container) => {
       const pauseReasonSet = new Set();
       let state = "disconnected"; // "disconnected" | "paused" | "observing"
       let calledWhilePaused = false;
+      let resumeAnimationFrame;
 
       pauseResizeObserver = (reason = "pause_requested") => {
+        cancelAnimationFrame(resumeAnimationFrame);
         pauseReasonSet.add(reason);
         if (isWithinResizeObserverTick) {
           if (resizeObserver) {
@@ -473,7 +475,7 @@ export const initUITransition = (container) => {
           if (pauseReasonSet.size > 0) {
             return;
           }
-          requestAnimationFrame(() => {
+          resumeAnimationFrame = requestAnimationFrame(() => {
             debug("size", `[resize observer] resume after "${reason}"`);
             if (calledWhilePaused) {
               calledWhilePaused = false;
