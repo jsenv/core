@@ -253,7 +253,7 @@ export const initUITransition = (container) => {
         } else {
           let onlyTextNodes = true;
           for (const child of childNodes) {
-            if (child.nodeType !== Node.ELEMENT_NODE) {
+            if (child.nodeType !== Node.TEXT_NODE) {
               onlyTextNodes = false;
               break;
             }
@@ -454,7 +454,7 @@ export const initUITransition = (container) => {
       let isWithinResizeObserverTick = false;
       const pauseReasonSet = new Set();
       let state = "disconnected"; // "disconnected" | "paused" | "observing"
-      let calledWhilePaused = false;
+      let pendingResizeCount = 0;
       let resumeAnimationFrame;
 
       pauseResizeObserver = (reason = "pause_requested") => {
@@ -477,12 +477,12 @@ export const initUITransition = (container) => {
           }
           resumeAnimationFrame = requestAnimationFrame(() => {
             debug("size", `[resize observer] resume after "${reason}"`);
-            if (calledWhilePaused) {
-              calledWhilePaused = false;
+            if (pendingResizeCount) {
               debug(
                 "size",
                 `[resize observer] was called while paused -> syncContentDimensions()`,
               );
+              pendingResizeCount = 0;
               syncContentDimensions();
             }
             if (state === "disconnected") {
@@ -516,7 +516,7 @@ export const initUITransition = (container) => {
             return;
           }
           if (state === "paused") {
-            calledWhilePaused = true;
+            pendingResizeCount++;
             debug("size", "[resize observer] size change ignore (paused)");
             return;
           }
@@ -1185,7 +1185,7 @@ export const initUITransition = (container) => {
       if (!state.isPaused) {
         return;
       }
-      state.isPaused = true;
+      state.isPaused = false;
       publishResume();
     },
     getState: () => state,
