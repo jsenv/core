@@ -896,11 +896,18 @@ export const initUITransition = (container) => {
       // We rely on the shouldDoContentTransition value coming from changeInfo.
 
       const decisions = [];
-      if (shouldDoContentTransition) decisions.push("CONTENT TRANSITION");
-      if (shouldDoPhaseTransition) decisions.push("PHASE TRANSITION");
-      if (preserveOnlyContentTransition)
+      if (shouldDoContentTransition) {
+        decisions.push("CONTENT TRANSITION");
+      }
+      if (shouldDoPhaseTransition) {
+        decisions.push("PHASE TRANSITION");
+      }
+      if (preserveOnlyContentTransition) {
         decisions.push("PRESERVE CONTENT TRANSITION");
-      if (decisions.length === 0) decisions.push("NO TRANSITION");
+      }
+      if (decisions.length === 0) {
+        decisions.push("NO TRANSITION");
+      }
 
       debug("content", `Decision: ${decisions.join(" + ")}`);
       if (preserveOnlyContentTransition) {
@@ -923,6 +930,7 @@ export const initUITransition = (container) => {
         activePhaseTransition === null
       ) {
         // Skip creating any new transitions entirely
+        onContentTransitionComplete?.();
       } else if (
         shouldDoContentTransitionIncludingPopulation &&
         !preserveOnlyContentTransition
