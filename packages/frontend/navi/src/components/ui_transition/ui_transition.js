@@ -568,19 +568,7 @@ export const initUITransition = (container) => {
         constrainedHeight = currentHeight;
       }
     };
-    const applySizeConstraintsUntil = (
-      width,
-      height,
-      reason,
-      releaseImmediatly = false,
-    ) => {
-      if (
-        releaseImmediatly &&
-        width === constrainedWidth &&
-        height === constrainedHeight
-      ) {
-        return null;
-      }
+    const applySizeConstraintsUntil = (width, height, reason) => {
       // we want to pause either because we have a diff and don't want to trigger the resize observer
       // or if we have no diff because we're about to do something that would trigger it (transition)
       const resumeResizeObserver = pauseResizeObserver(reason);
@@ -621,10 +609,9 @@ export const initUITransition = (container) => {
         width: `${beforeWidth} → ${afterWidth}`,
         height: `${beforeHeight} → ${afterHeight}`,
       });
+      updateNaturalContentSize(afterWidth, afterHeight);
       constrainedWidth = afterWidth;
       constrainedHeight = afterHeight;
-      naturalContentWidth = afterWidth;
-      naturalContentHeight = afterHeight;
       contentOverlay.style.width = ``;
       contentOverlay.style.height = ``;
     };
