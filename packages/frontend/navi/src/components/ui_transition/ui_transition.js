@@ -415,7 +415,12 @@ export const initUITransition = (container) => {
         let contentKeysSentence = `Content key: ${previousSlotInfo.contentKeyFormatted} → ${slotInfo.contentKeyFormatted}`;
         debug("detection", contentKeysSentence);
       } else if (previousSlotInfo.contentPhase !== slotInfo.contentPhase) {
-        let contentPhasesSentence = `Content phase: ${previousSlotInfo.contentPhase} → ${slotInfo.contentPhase}`;
+        let contentPhasesSentence =
+          slotInfo.contentPhase && previousSlotInfo.contentPhase
+            ? `Content phase: ${previousSlotInfo.contentPhase} → ${slotInfo.contentPhase}`
+            : previousSlotInfo.contentPhase
+              ? `becomes content (content phase becomes undefined)`
+              : `content phase becomes ${slotInfo.contentPhase}`;
         debug("detection", contentPhasesSentence);
       }
 
@@ -589,10 +594,14 @@ export const initUITransition = (container) => {
       // (this way the content clone is not distorted by the new content size)
       contentOverlay.style.width = `${width}px`;
       contentOverlay.style.height = `${height}px`;
-      return (reason) => {
+      const release = (reason) => {
         releaseSizeConstraints(reason);
         resumeResizeObserver(reason);
       };
+      release.releaseResizeObserver = () => {
+        resumeResizeObserver(reason);
+      };
+      return release;
     };
     const applySizeConstraints = (width, height, reason) => {
       applySizeConstraintsUntil(width, height, reason, true);
@@ -712,7 +721,7 @@ export const initUITransition = (container) => {
       );
       sizeTransition = transitionController.animate(transitions, {
         onCancel: () => {
-          // release("size transition cancelled");
+          release.releaseResizeObserver("size transition cancelled");
         },
         onFinish: () => {
           release("size transition finished");
