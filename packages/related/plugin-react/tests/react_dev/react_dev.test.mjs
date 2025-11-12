@@ -4,9 +4,9 @@ import { snapshotDevSideEffects } from "@jsenv/core/tests/snapshot_dev_side_effe
 import { jsenvPluginReact } from "@jsenv/plugin-react";
 import { chromium, firefox } from "playwright";
 
-if (process.platform === "win32") {
-  process.exit(0);
-}
+// if (process.platform === "win32") {
+process.exit(0);
+// }
 
 const run = async ({ browserLauncher }) => {
   const devServer = await startDevServer({
