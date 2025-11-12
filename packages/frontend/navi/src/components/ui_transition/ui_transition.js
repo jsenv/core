@@ -520,6 +520,7 @@ export const initUITransition = (container) => {
             debug("size", "[resize observer] size change ignore (paused)");
             return;
           }
+          debug("size", "[resize observer] size change detected");
           isWithinResizeObserverTick = true;
           syncContentDimensions();
           requestAnimationFrame(() => {
@@ -549,28 +550,39 @@ export const initUITransition = (container) => {
         constrainedHeight = currentHeight;
       }
     };
-    const applySizeConstraintsUntil = (width, height, reason) => {
-      if (constrainedWidth === width && constrainedHeight === height) {
-        return (reason) => releaseSizeConstraints(reason);
+    const applySizeConstraintsUntil = (
+      width,
+      height,
+      reason,
+      releaseImmediatly = false,
+    ) => {
+      const hasDiff =
+        constrainedWidth !== width || constrainedHeight !== height;
+      if (releaseImmediatly && !hasDiff) {
+        return null;
       }
+      // we want to pause either because we have a diff and don't want to trigger the resize observer
+      // or if we have no diff because we're about to do something that would trigger it (transition)
       const resumeResizeObserver = pauseResizeObserver(reason);
-      debug("size", `Applying size constraints (${reason})`, {
-        width: `${constrainedWidth} → ${width}`,
-        height: `${constrainedHeight} → ${height}`,
-      });
-      outerWrapper.style.width = `${width}px`;
-      outerWrapper.style.height = `${height}px`;
-      constrainedWidth = width;
-      constrainedHeight = height;
-      contentOverlay.style.width = `${width}px`;
-      contentOverlay.style.height = `${height}px`;
+      if (hasDiff) {
+        debug("size", `Applying size constraints (${reason})`, {
+          width: `${constrainedWidth} → ${width}`,
+          height: `${constrainedHeight} → ${height}`,
+        });
+        outerWrapper.style.width = `${width}px`;
+        outerWrapper.style.height = `${height}px`;
+        constrainedWidth = width;
+        constrainedHeight = height;
+        contentOverlay.style.width = `${width}px`;
+        contentOverlay.style.height = `${height}px`;
+      }
       return (reason) => {
         releaseSizeConstraints(reason);
         resumeResizeObserver(reason);
       };
     };
     const applySizeConstraints = (width, height, reason) => {
-      applySizeConstraintsUntil(width, height, reason)();
+      applySizeConstraintsUntil(width, height, reason, true);
     };
     const releaseSizeConstraints = (reason) => {
       debug("size", `Releasing constraints (${reason})`);
