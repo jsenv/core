@@ -4,9 +4,9 @@
 run({ browserLauncher: chromium })
 ```
 
-# 1/2 write 22 files into "../../../../../"
+# 1/2 write 7 files into "./.jsenv/chrome@141.00/"
 
-see [./@jsenv/core/](./@jsenv/core/)
+see [./.jsenv/chrome@141.00/](./.jsenv/chrome@141.00/)
 
 # 2/2 resolve
 
