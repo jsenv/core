@@ -117,6 +117,9 @@ export const initUITransition = (container) => {
   const hasSomeDebugLogs =
     localDebug.detection || localDebug.size || localDebug.content;
   const debugClones = container.hasAttribute("data-debug-clones");
+  const debugBreakAfterClone = container.getAttribute(
+    "data-debug-break-after-clone",
+  );
   const debug = (type, ...args) => {
     if (localDebug[type]) {
       console.debug(`[${type}]`, ...args);
@@ -158,6 +161,7 @@ export const initUITransition = (container) => {
     needsOldChildNodesClone,
     previousChildNodes,
     childNodes,
+    slotInfo,
     attributeToRemove = [],
   }) => {
     let cleanup = () => {};
@@ -197,6 +201,9 @@ export const initUITransition = (container) => {
         `Cloned previous child for ${isPhaseTransition ? "phase" : "content"} transition:`,
         getElementSignature(previousChildNodes),
       );
+      if (debugBreakAfterClone === slotInfo.contentKey) {
+        debugger;
+      }
     } else {
       overlay.innerHTML = "";
       debug(
@@ -926,6 +933,7 @@ export const initUITransition = (container) => {
             needsOldChildNodesClone,
             previousChildNodes,
             childNodes,
+            slotInfo,
             attributeToRemove: ["data-content-key"],
           });
 
@@ -1006,6 +1014,7 @@ export const initUITransition = (container) => {
             needsOldChildNodesClone: needsOldPhaseClone,
             previousChildNodes,
             childNodes,
+            slotInfo,
             attributeToRemove: ["data-content-key", "data-content-phase"],
           });
 
