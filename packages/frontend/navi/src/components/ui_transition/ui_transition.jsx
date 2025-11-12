@@ -135,17 +135,15 @@ export const UITransition = ({
         data-debug-break-after-clone={debugBreakAfterClone}
       >
         <div className="ui_transition_outer_wrapper">
-          <div className="ui_transition_measure_wrapper">
-            <div
-              className="ui_transition_slot"
-              data-content-key={
-                effectiveContentKey ? effectiveContentKey : undefined
-              }
-            >
-              {children}
-            </div>
-            <div className="ui_transition_phase_overlay"></div>
+          <div
+            className="ui_transition_slot"
+            data-content-key={
+              effectiveContentKey ? effectiveContentKey : undefined
+            }
+          >
+            {children}
           </div>
+          <div className="ui_transition_phase_overlay"></div>
         </div>
         <div className="ui_transition_content_overlay"></div>
       </div>

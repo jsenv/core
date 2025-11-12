@@ -11,11 +11,9 @@
  *   data-phase-transition-duration    <!-- Phase transition duration -->
  * >
  *   <div class="ui_transition_outer_wrapper"> <!-- Size animation target: width/height constraints are applied here during transitions -->
- *     <div class="ui_transition_measure_wrapper"> <!-- Content measurement layer: ResizeObserver watches this to detect natural content size changes -->
- *       <div class="ui_transition_slot" data-content-key></div> <!-- Content slot: actual content is here -->
- *       <div class="ui_transition_phase_overlay"> <!-- Used to transition to new phase: crossfade to new phase -->
- *         <!-- Clone of ".ui_transition_slot" children for phase transition -->
- *      </div>
+ *     <div class="ui_transition_slot" data-content-key></div> <!-- Content slot: actual content is here, ResizeObserver watches this to detect natural content size changes -->
+ *     <div class="ui_transition_phase_overlay"> <!-- Used to transition to new phase: crossfade to new phase -->
+ *       <!-- Clone of ".ui_transition_slot" children for phase transition -->
  *     </div>
  *   </div>
  *
@@ -27,7 +25,7 @@
  * This separation allows:
  * - Optional smooth size transitions by constraining outer-wrapper dimensions (when data-size-transition is present)
  * - Instant size updates by default
- * - Accurate content measurement via measure-wrapper ResizeObserver
+ * - Accurate content measurement via slot ResizeObserver
  * - Content transitions (slide, etc.) that operate at container level and can outlive content phase changes
  * - Phase transitions (cross-fade only) that operate on individual elements for loading/error states
  * - Independent content updates in the slot without affecting ongoing animations
@@ -60,7 +58,6 @@ import.meta.css = /* css */ `
 
   .ui_transition_container,
   .ui_transition_outer_wrapper,
-  .ui_transition_measure_wrapper,
   .ui_transition_slot,
   .ui_transition_phase_overlay,
   .ui_transition_content_overlay {
@@ -127,23 +124,14 @@ export const initUITransition = (container) => {
   };
 
   const outerWrapper = container.querySelector(".ui_transition_outer_wrapper");
-  const measureWrapper = container.querySelector(
-    ".ui_transition_measure_wrapper",
-  );
   const slot = container.querySelector(".ui_transition_slot");
-  const phaseOverlay = measureWrapper.querySelector(
+  const phaseOverlay = outerWrapper.querySelector(
     ".ui_transition_phase_overlay",
   );
   const contentOverlay = container.querySelector(
     ".ui_transition_content_overlay",
   );
-  if (
-    !outerWrapper ||
-    !measureWrapper ||
-    !slot ||
-    !phaseOverlay ||
-    !contentOverlay
-  ) {
+  if (!outerWrapper || !slot || !phaseOverlay || !contentOverlay) {
     console.error("Missing required ui-transition structure");
     return { cleanup: () => {} };
   }
@@ -224,7 +212,7 @@ export const initUITransition = (container) => {
     } else {
       // Content transitions work at container level and can outlive content phase changes
       oldElement = previousChildNodes.length ? elementToImpact : null;
-      newElement = childNodes.length ? measureWrapper : null;
+      newElement = childNodes.length ? slot : null;
     }
 
     return {
@@ -527,7 +515,7 @@ export const initUITransition = (container) => {
             isWithinResizeObserverTick = false;
           });
         });
-        resizeObserver.observe(measureWrapper);
+        resizeObserver.observe(slot);
       };
       startResizeObserver();
       addTeardown(() => {
@@ -535,10 +523,7 @@ export const initUITransition = (container) => {
       });
     }
 
-    const measureContentSize = () => [
-      getWidth(measureWrapper),
-      getHeight(measureWrapper),
-    ];
+    const measureContentSize = () => [getWidth(slot), getHeight(slot)];
     const syncContentDimensions = () => {
       // check content dimensions to see if they changed and sync them
       const [currentWidth, currentHeight] = measureContentSize();
