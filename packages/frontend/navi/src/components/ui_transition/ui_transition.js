@@ -725,7 +725,7 @@ export const initUITransition = (container) => {
 
       debug(
         "size",
-        `updateSizeTransition(), current constrained size: ${constrainedWidth}x${constrainedHeight}`,
+        `updateSizeTransition(), current constrained size: ${constrainedWidth.toFixed(2)}x${constrainedHeight.toFixed(2)}`,
       );
       if (sizeTransition) {
         sizeTransition.cancel();
