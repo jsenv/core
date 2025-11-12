@@ -459,8 +459,12 @@ export const initUITransition = (container) => {
       pauseResizeObserver = (reason = "pause_requested") => {
         pauseReasonSet.add(reason);
         if (isWithinResizeObserverTick) {
-          stopResizeObserver();
+          if (resizeObserver) {
+            debug("size", `[resize observer] stop while "${reason}"`);
+            stopResizeObserver();
+          }
         } else {
+          debug("size", `[resize observer] pause while "${reason}"`);
           // we keep the resize observer alive because we are not in a resize tick
           state = "paused";
         }
@@ -470,11 +474,20 @@ export const initUITransition = (container) => {
             return;
           }
           requestAnimationFrame(() => {
+            debug("size", `[resize observer] resume after "${reason}"`);
             if (calledWhilePaused) {
               calledWhilePaused = false;
+              debug(
+                "size",
+                `[resize observer] was called while paused -> syncContentDimensions()`,
+              );
               syncContentDimensions();
             }
             if (state === "disconnected") {
+              debug(
+                "size",
+                `[resize observer] was disconnected -> reconnect it`,
+              );
               startResizeObserver();
             }
           });
@@ -494,12 +507,15 @@ export const initUITransition = (container) => {
             return;
           }
           if (!slotInfo.hasChild || slotInfo.isContentPhase) {
-            debug("size", "Resize ignored (no child or content-phase)");
+            debug(
+              "size",
+              "[resize observer] size change ignored (no child or content-phase)",
+            );
             return;
           }
           if (state === "paused") {
             calledWhilePaused = true;
-            debug("size", "Resize ignored (suppressed during size transition)");
+            debug("size", "[resize observer] size change ignore (paused)");
             return;
           }
           isWithinResizeObserverTick = true;
@@ -531,12 +547,12 @@ export const initUITransition = (container) => {
         constrainedHeight = currentHeight;
       }
     };
-    const applySizeConstraintsUntil = (width, height) => {
+    const applySizeConstraintsUntil = (width, height, reason) => {
       if (constrainedWidth === width && constrainedHeight === height) {
-        return releaseSizeConstraints;
+        return (reason) => releaseSizeConstraints(reason);
       }
-      const resumeResizeObserver = pauseResizeObserver();
-      debug("size", "Applying size constraints:", {
+      const resumeResizeObserver = pauseResizeObserver(reason);
+      debug("size", `Applying size constraints (${reason})`, {
         width: `${constrainedWidth} → ${width}`,
         height: `${constrainedHeight} → ${height}`,
       });
@@ -548,11 +564,11 @@ export const initUITransition = (container) => {
       contentOverlay.style.height = `${height}px`;
       return (reason) => {
         releaseSizeConstraints(reason);
-        resumeResizeObserver();
+        resumeResizeObserver(reason);
       };
     };
-    const applySizeConstraints = (width, height) => {
-      applySizeConstraintsUntil(width, height)();
+    const applySizeConstraints = (width, height, reason) => {
+      applySizeConstraintsUntil(width, height, reason)();
     };
     const releaseSizeConstraints = (reason) => {
       debug("size", `Releasing constraints (${reason})`);
@@ -579,21 +595,21 @@ export const initUITransition = (container) => {
         return;
       }
       if (!hasSizeTransitions) {
-        debug("size", "size update without transition:", {
-          width: `${constrainedWidth} → ${targetWidth}`,
-          height: `${constrainedHeight} → ${targetHeight}`,
-        });
-        applySizeConstraints(targetWidth, targetHeight);
+        applySizeConstraints(
+          targetWidth,
+          targetHeight,
+          "size update without transition",
+        );
         return;
       }
       const widthDiff = Math.abs(targetWidth - constrainedWidth);
       const heightDiff = Math.abs(targetHeight - constrainedHeight);
       if (widthDiff <= SIZE_DIFF_EPSILON && heightDiff <= SIZE_DIFF_EPSILON) {
-        debug(
-          "size",
-          `Skip size animation entirely (diffs width:${widthDiff.toFixed(4)}px height:${heightDiff.toFixed(4)}px)`,
+        applySizeConstraints(
+          targetWidth,
+          targetHeight,
+          "skip size animation (negligible diff)",
         );
-        applySizeConstraints(targetWidth, targetHeight);
         return;
       }
       debug("size", "Animating size:", {
@@ -658,16 +674,17 @@ export const initUITransition = (container) => {
         );
       }
       if (transitions.length === 0) {
-        debug(
-          "size",
-          "No size transitions created (identical or negligible differences)",
+        applySizeConstraints(
+          targetWidth,
+          targetHeight,
+          "no size transition created (identical or negligible diff)",
         );
-        applySizeConstraints(targetWidth, targetHeight);
         return;
       }
       const release = applySizeConstraintsUntil(
         constrainedWidth,
         constrainedHeight,
+        "animating size",
       );
       sizeTransition = transitionController.animate(transitions, {
         onFinish: () => {
@@ -676,13 +693,16 @@ export const initUITransition = (container) => {
       });
       sizeTransition.play();
     };
-    const updateNaturalContentSize = (newWidth, newHeight) => {
+    const updateNaturalContentSize = (width, height) => {
+      if (width === naturalContentWidth && height === naturalContentHeight) {
+        return;
+      }
       debug("size", "Updating natural content size:", {
-        width: `${naturalContentWidth} → ${newWidth}`,
-        height: `${naturalContentHeight} → ${newHeight}`,
+        width: `${naturalContentWidth} → ${width}`,
+        height: `${naturalContentHeight} → ${height}`,
       });
-      naturalContentWidth = newWidth;
-      naturalContentHeight = newHeight;
+      naturalContentWidth = width;
+      naturalContentHeight = height;
     };
 
     // Initialize with current size
@@ -706,7 +726,11 @@ export const initUITransition = (container) => {
         const [newWidth, newHeight] = measureContentSize();
         debug("size", `content size measured to: ${newWidth}x${newHeight}`);
         if (isContentPhase) {
-          applySizeConstraints(newWidth, newHeight);
+          applySizeConstraints(
+            newWidth,
+            newHeight,
+            "content phase initial population",
+          );
         } else {
           updateNaturalContentSize(newWidth, newHeight);
           releaseSizeConstraints("initial population - skip transitions");
@@ -730,13 +754,16 @@ export const initUITransition = (container) => {
             "size",
             `Holding previous size during content transition: ${constrainedWidth}x${constrainedHeight}`,
           );
-          const release = applySizeConstraintsUntil(
+          applySizeConstraints(
             constrainedWidth,
             constrainedHeight,
+            "hold size for content transition",
           );
           onContentTransitionComplete = () => {
             onContentTransitionComplete = null;
-            release("content transition completed - release size hold");
+            releaseSizeConstraints(
+              "content transition completed - release size hold",
+            );
           };
         }
         releaseSizeConstraints("size transitions disabled - no size animation");
