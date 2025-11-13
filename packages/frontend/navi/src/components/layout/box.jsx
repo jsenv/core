@@ -87,6 +87,7 @@ import.meta.css = /* css */ `
 const PSEUDO_CLASSES_DEFAULT = [];
 const PSEUDO_ELEMENTS_DEFAULT = [];
 const MANAGED_BY_CSS_VARS_DEFAULT = {};
+const PSEUDO_STATE_DEFAULT = {};
 
 export const Box = (props) => {
   const {
@@ -146,18 +147,6 @@ export const Box = (props) => {
   const remainingProps = {};
   styling: {
     const parentLayout = useContext(BoxLayoutContext);
-    const innerPseudoState =
-      basePseudoState && pseudoState
-        ? { ...basePseudoState, ...pseudoState }
-        : basePseudoState;
-    const styleContext = {
-      parentLayout,
-      layout,
-      managedByCSSVars,
-      pseudoState: innerPseudoState,
-      pseudoClasses,
-      pseudoElements,
-    };
     const styleDeps = [
       // Layout and alignment props
       parentLayout,
@@ -172,6 +161,51 @@ export const Box = (props) => {
       visualSelector,
       pseudoStateSelector,
     ];
+    let innerPseudoState;
+    if (basePseudoState && pseudoState) {
+      innerPseudoState = {};
+      const baseStateKeys = Object.keys(basePseudoState);
+      const pseudoStateKeySet = new Set(Object.keys(pseudoState));
+      for (const key of baseStateKeys) {
+        if (pseudoStateKeySet.has(key)) {
+          pseudoStateKeySet.delete(key);
+          const value = pseudoState[key];
+          styleDeps.push(value);
+          innerPseudoState[key] = value;
+        } else {
+          const value = basePseudoState[key];
+          styleDeps.push(value);
+          innerPseudoState[key] = value;
+        }
+      }
+      for (const key of pseudoStateKeySet) {
+        const value = pseudoState[key];
+        styleDeps.push(value);
+        innerPseudoState[key] = value;
+      }
+    } else if (basePseudoState) {
+      innerPseudoState = basePseudoState;
+      for (const key of Object.keys(basePseudoState)) {
+        const value = basePseudoState[key];
+        styleDeps.push(value);
+      }
+    } else if (pseudoState) {
+      innerPseudoState = pseudoState;
+      for (const key of Object.keys(pseudoState)) {
+        const value = pseudoState[key];
+        styleDeps.push(value);
+      }
+    } else {
+      innerPseudoState = PSEUDO_STATE_DEFAULT;
+    }
+    const styleContext = {
+      parentLayout,
+      layout,
+      managedByCSSVars,
+      pseudoState: innerPseudoState,
+      pseudoClasses,
+      pseudoElements,
+    };
     const boxStyles = {};
     if (baseStyle) {
       for (const key of baseStyle) {

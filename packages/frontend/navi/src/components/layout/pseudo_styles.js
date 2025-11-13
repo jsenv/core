@@ -215,7 +215,7 @@ export const initPseudoStyles = (
       }
       currentState[pseudoClass] = currentValue;
       const oldValue = state ? state[pseudoClass] : undefined;
-      if (oldValue !== currentValue) {
+      if (oldValue !== currentValue || !state) {
         someChange = true;
         const { attribute, add, remove } = pseudoClassDefinition;
         if (currentValue) {
