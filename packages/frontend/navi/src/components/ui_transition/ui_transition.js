@@ -257,6 +257,45 @@ export const initUITransition = (container) => {
     return releaseOverlayContent;
   };
 
+  // Transition coordination - ensures cleanup only happens when all transitions are complete
+  // This prevents premature DOM cleanup when transitions have different durations
+  const activeTransitions = new Set(); // Track all active transitions
+  const pendingCleanups = new Map(); // Map of transition ID -> cleanup function
+
+  const registerTransition = (transitionId, cleanup) => {
+    activeTransitions.add(transitionId);
+    pendingCleanups.set(transitionId, cleanup);
+    debug(
+      "content",
+      `Registered transition ${transitionId} (${activeTransitions.size} active)`,
+    );
+
+    const finishTransition = () => {
+      activeTransitions.delete(transitionId);
+      debug(
+        "content",
+        `Finished transition ${transitionId} (${activeTransitions.size} remaining)`,
+      );
+
+      if (activeTransitions.size === 0) {
+        // All transitions are done - execute all pending cleanups
+        debug(
+          "content",
+          `All transitions complete - executing ${pendingCleanups.size} cleanups`,
+        );
+        for (const cleanup of pendingCleanups.values()) {
+          if (cleanup) cleanup();
+        }
+        pendingCleanups.clear();
+      } else {
+        // Store cleanup for later when all transitions are done
+        pendingCleanups.set(transitionId, cleanup);
+      }
+    };
+
+    return finishTransition;
+  };
+
   const setupTransition = (
     overlay,
     { needsOldChildNodesClone, requesterId = "content_transition" },
@@ -796,6 +835,11 @@ export const initUITransition = (container) => {
         );
       }
 
+      // Register this size transition for coordination
+      const finishSizeTransition = registerTransition("size_transition", () => {
+        sizeTransition?.cancel();
+      });
+
       sizeTransition = transitionController.animate(transitions, {
         onCancel: () => {
           release.releaseResizeObserver("size transition cancelled");
@@ -804,8 +848,10 @@ export const initUITransition = (container) => {
         onFinish: () => {
           release("size transition finished");
           releaseOverlayContent();
+          finishSizeTransition();
         },
       });
+
       sizeTransition.play();
     };
     const updateNaturalContentSize = (width, height) => {
@@ -1083,6 +1129,7 @@ export const initUITransition = (container) => {
             isPhaseTransition: false,
             previousSlotInfo,
             slotInfo,
+            registerTransition,
             onComplete: () => {
               activeContentTransition = null;
               activeContentTransitionType = null;
@@ -1163,6 +1210,7 @@ export const initUITransition = (container) => {
             isPhaseTransition: true,
             previousSlotInfo,
             slotInfo,
+            registerTransition,
             onComplete: () => {
               activePhaseTransition = null;
               activePhaseTransitionType = null;
@@ -1316,6 +1364,7 @@ const applyTransition = (
     onComplete,
     previousSlotInfo,
     slotInfo,
+    registerTransition,
     debug,
   },
 ) => {
@@ -1360,9 +1409,16 @@ const applyTransition = (
     return null;
   }
 
+  // Register this content/phase transition for coordination
+  const transitionId = isPhaseTransition
+    ? "phase_transition"
+    : "content_transition";
+  const finishContentTransition = registerTransition(transitionId, () => {
+    groupTransition?.cancel();
+  });
   const groupTransition = transitionController.animate(transitions, {
     onFinish: () => {
-      groupTransition.cancel();
+      finishContentTransition();
       cleanup();
       onTeardown?.();
       onComplete?.();
@@ -1643,9 +1699,6 @@ const crossFade = {
           debug("transition_updates", "New content fade in:", value.toFixed(3));
           if (timing === "end") {
             debug("content", "Cross-fade complete");
-            setTimeout(() => {
-              debugger;
-            }, 200);
           }
         },
       }),
