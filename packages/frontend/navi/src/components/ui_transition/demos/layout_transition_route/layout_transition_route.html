@@ -10,7 +10,6 @@
       }
 
       body {
-        width: 100vw;
         margin: 0;
         padding: 0;
         color: white;
@@ -41,10 +40,10 @@
         UITransition,
       } from "@jsenv/navi";
 
-      const { SMALL_ROUTE, LARGE_ROUTE, TALL_ROUTE } = setupRoutes({
-        SMALL_ROUTE: "",
-        LARGE_ROUTE: "large",
-        TALL_ROUTE: "tall",
+      const { FIT_ROUTE, VIEWPORT_ROUTE, VIEWPORT_TALL_ROUTE } = setupRoutes({
+        FIT_ROUTE: "",
+        VIEWPORT_ROUTE: "viewport",
+        VIEWPORT_TALL_ROUTE: "viewport_tall",
       });
 
       const RootLayout = () => {
@@ -99,7 +98,8 @@
           <Layout
             row
             width="100%"
-            minHeight="100vh"
+            minHeight="fit-content"
+            height="100%"
             padding="40"
             contentAlignX="center"
             contentAlignY="center"
@@ -112,53 +112,41 @@
         );
       };
 
-      const HomePage = () => (
+      const FitPage = () => (
         <FitContentLayout>
           <Layout row contentAlignX="center" gap="16">
             <div>300×250 with border</div>
-            <RouteLink route={LARGE_ROUTE}>Go to Large Page</RouteLink>
-            <RouteLink route={TALL_ROUTE}>
-              Go to Tall Page (scrollbars)
+            <RouteLink route={VIEWPORT_ROUTE}>Viewport page</RouteLink>
+            <RouteLink route={VIEWPORT_TALL_ROUTE}>
+              Tall Page (scrollbars)
             </RouteLink>
           </Layout>
         </FitContentLayout>
       );
 
-      const FirstPage = () => (
+      const ViewportPage = () => (
         <ViewportLayout>
           <Layout row contentAlignX="center" gap="16">
             <div>Full page no border</div>
-            <RouteLink route={SMALL_ROUTE}>Go to Homepage</RouteLink>
-            <RouteLink route={TALL_ROUTE}>
-              Go to Tall Page (scrollbars)
+            <RouteLink route={FIT_ROUTE}>Fit page</RouteLink>
+            <RouteLink route={VIEWPORT_TALL_ROUTE}>
+              Tall Page (scrollbars)
             </RouteLink>
           </Layout>
         </ViewportLayout>
       );
 
-      const TallPage = () => (
+      const ViewportTallPage = () => (
         <ViewportLayout>
           <Layout row contentAlignX="center" minHeight="150vh" gap="20">
             <div style="font-size: 18px; font-weight: bold;">
               Tall Page (150% viewport height)
             </div>
-            <div>
-              This page is taller than the viewport to test scrollbar behavior.
-            </div>
-            <div>
-              You should see vertical scrollbars when this page is active.
-            </div>
-            <div style="margin-top: 20px;">
-              Scroll down to see more content...
-            </div>
-            <div style="margin-top: 40px;">More content here...</div>
-            <div style="margin-top: 40px;">And even more content...</div>
-            <div style="margin-top: 40px;">Keep scrolling...</div>
-            <div style="margin-top: 40px;">Almost at the bottom...</div>
-            <div style="margin-top: 40px;">Navigation from here:</div>
             <Layout row gap="16">
-              <RouteLink route={SMALL_ROUTE}>Go to Homepage</RouteLink>
-              <RouteLink route={LARGE_ROUTE}>Go to Large Page</RouteLink>
+              <RouteLink route={FIT_ROUTE}>Fit page</RouteLink>
+              <RouteLink route={VIEWPORT_TALL_ROUTE}>
+                Tall Page (scrollbars)
+              </RouteLink>
             </Layout>
           </Layout>
         </ViewportLayout>
@@ -167,9 +155,9 @@
       const Router = () => {
         return (
           <Routes element={RootLayout}>
-            <Route element={<FirstPage />} route={LARGE_ROUTE} />
-            <Route element={<TallPage />} route={TALL_ROUTE} />
-            <Route element={<HomePage />} fallback />
+            <Route element={<ViewportPage />} route={VIEWPORT_ROUTE} />
+            <Route element={<ViewportTallPage />} route={VIEWPORT_TALL_ROUTE} />
+            <Route element={<FitPage />} fallback />
           </Routes>
         );
       };
