@@ -103,18 +103,21 @@
             contentAlignY="center"
             background="rgba(0, 0, 160, 0.5)"
           >
-            <Layout
-              id="route_slot_wrapper"
-              column
-              contentAlignX="center"
-              contentAlignY="center"
-              background="white"
-              borderRadius="8"
-              outline="5px solid orange"
-            >
-              <Route.Slot />
-            </Layout>
+            <Route.Slot />
           </Layout>
+        );
+      };
+      const RouteSlotWrapper = () => {
+        return (
+          <Layout
+            id="route_slot_wrapper"
+            column
+            contentAlignX="center"
+            contentAlignY="center"
+            background="white"
+            borderRadius="8"
+            outline="5px solid orange"
+          ></Layout>
         );
       };
       const FitContentLayout = ({ children }) => {
