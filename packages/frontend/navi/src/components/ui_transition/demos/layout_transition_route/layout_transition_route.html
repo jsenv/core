@@ -8,10 +8,15 @@
       * {
         box-sizing: border-box;
       }
-
       html,
-      body {
+      body,
+      #root {
+        width: 100%;
         height: 100%;
+      }
+
+      #root {
+        background: rgba(0, 0, 0, 0.5);
       }
 
       body {
@@ -47,12 +52,6 @@
         transform: translate(-50%, -50%) rotate(-45deg);
         pointer-events: none;
         content: "BODY";
-      }
-
-      #root {
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
       }
     </style>
   </head>
@@ -90,11 +89,11 @@
           <Layout as="nav" row contentSpacing="16" style="position: fixed;">
             <RouteLink route={FIT_ROUTE}>Fit</RouteLink>
             <RouteLink route={VIEWPORT_ROUTE}>Viewport</RouteLink>
-            <RouteLink route={VIEWPORT_TALL_ROUTE}>
-              Viewport y scrollbar
-            </RouteLink>
             <RouteLink route={VIEWPORT_WIDE_ROUTE}>
               Viewport x scrollbar
+            </RouteLink>
+            <RouteLink route={VIEWPORT_TALL_ROUTE}>
+              Viewport y scrollbar
             </RouteLink>
             <RouteLink route={VIEWPORT_LARGE_ROUTE}>
               Viewport xy scrollbars
@@ -108,44 +107,22 @@
           <Layout
             as="main"
             id="root_layout"
-            column
             width="100%"
-            minWidth="fit-content"
-            minHeight="fit-content"
             height="100%"
-            contentAlignX="center"
-            contentAlignY="center"
+            minWidth="fit-content"
             background="rgba(0, 0, 160, 0.5)"
           >
             <Route.Slot />
           </Layout>
         );
       };
-      const RouteSlotWrapper = () => {
-        return (
-          <Layout
-            id="route_slot_wrapper"
-            column
-            contentAlignX="center"
-            contentAlignY="center"
-            background="white"
-            borderRadius="8"
-            outline="5px solid orange"
-          ></Layout>
-        );
-      };
       const FitContentLayout = ({ children }) => {
         return (
           <Layout
             id="fit_content_layout"
-            row
             minWidth="300"
-            padding="40"
-            contentAlignX="center"
-            contentAlignY="center"
             borderRadius="inherit"
             borderRadius="8"
-            background="white"
             color="#666"
           >
             {children}
@@ -156,15 +133,11 @@
         return (
           <Layout
             id="viewport_layout"
-            row
             width="100%"
-            minHeight="fit-content"
             height="100%"
-            padding="40"
-            contentAlignX="center"
-            contentAlignY="center"
+            minWidth="fit-content"
+            row
             borderRadius="0"
-            background="white"
             color="#666"
           >
             {children}
@@ -184,10 +157,35 @@
           <Layout
             id="viewport_page"
             row
+            minWidth="100vw"
+            minHeight="100vh"
             contentAlignX="center"
             contentSpacing="16"
+            background="white"
+            padding="40"
           >
             Full page no border
+          </Layout>
+        </ViewportLayout>
+      );
+      const ViewportWidePage = () => (
+        <ViewportLayout>
+          <Layout
+            id="viewport_wide_page"
+            contentAlignX="start"
+            contentAlignY="center"
+            minWidth="150vw"
+            contentSpacing="20"
+            background="white"
+            padding="40"
+            color="blue"
+            size="lg"
+            bold
+          >
+            Wide Page (150% viewport width)
+            <div>Extra content to make sure scrolling is possible</div>
+            <div>Extra content to make sure scrolling is possible</div>
+            <div>Extra content to make sure scrolling is possible</div>
           </Layout>
         </ViewportLayout>
       );
@@ -195,33 +193,15 @@
         <ViewportLayout>
           <Layout
             id="viewport_tall_page"
-            row
-            contentAlignX="center"
             minHeight="150vh"
             contentSpacing="20"
+            background="white"
+            padding="40"
             color="red"
             size="lg"
             bold
           >
             Tall Page (150% viewport height)
-          </Layout>
-        </ViewportLayout>
-      );
-
-      const ViewportWidePage = () => (
-        <ViewportLayout>
-          <Layout
-            id="viewport_wide_page"
-            row
-            contentAlignX="start"
-            contentAlignY="center"
-            minWidth="150vw"
-            contentSpacing="20"
-            color="blue"
-            size="lg"
-            bold
-          >
-            Wide Page (150% viewport width)
           </Layout>
         </ViewportLayout>
       );
@@ -266,6 +246,20 @@
             <Nav />
             <Router />
           </>
+        );
+      };
+
+      const RouteSlotWrapper = () => {
+        return (
+          <Layout
+            id="route_slot_wrapper"
+            column
+            contentAlignX="center"
+            contentAlignY="center"
+            background="white"
+            borderRadius="8"
+            outline="5px solid orange"
+          ></Layout>
         );
       };
 
