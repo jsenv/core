@@ -58,7 +58,6 @@ import.meta.css = /* css */ `
 
   .ui_transition,
   .ui_transition_outer_wrapper,
-  .ui_transition_slot,
   .ui_transition_phase_overlay,
   .ui_transition_content_overlay {
     display: flex;
@@ -73,14 +72,14 @@ import.meta.css = /* css */ `
 
   .ui_transition_slot {
     width: 100%;
-    min-width: fit-content;
     height: 100%;
-    min-height: fit-content;
-    flex-direction: column;
   }
   .ui_transition[data-fluid] .ui_transition_slot {
-    max-width: fit-content;
-    max-height: fit-content;
+    width: auto;
+    height: auto;
+    align-self: start;
+    justify-self: start;
+    background: white;
   }
 
   .ui_transition,

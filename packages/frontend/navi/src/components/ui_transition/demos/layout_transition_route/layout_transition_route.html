@@ -134,6 +134,18 @@
         );
       };
 
+      // <Box
+      //         minWidth={fluid ? "auto" : "100%"}
+      //         minHeight={fluid ? "auto" : "100%"}
+      //         width="fit-content"
+      //         height="fit-content"
+      //         background="white"
+      //         borderRadius={fluid ? "8" : undefined}
+      //         border={fluid ? "5px solid orange" : "none"}
+      //         color="#666"
+      //       >
+      //       </Box>
+
       const RootLayout = () => {
         const info = useActiveRouteInfo();
         const fluid = info.meta?.layout === "fluid";
@@ -147,7 +159,7 @@
           >
             <UITransition
               // sizeTransition={false}
-              sizeTransitionDuration="3000"
+              sizeTransitionDuration="1000"
               debugDetection
               debugSize
               debugContent
@@ -155,18 +167,7 @@
               transitionDuration="800"
               fluid={fluid}
             >
-              <Box
-                minWidth={fluid ? "auto" : "100%"}
-                minHeight={fluid ? "auto" : "100%"}
-                width="fit-content"
-                height="fit-content"
-                background="white"
-                borderRadius={fluid ? "8" : undefined}
-                border={fluid ? "5px solid orange" : "none"}
-                color="#666"
-              >
-                <Route.Slot />
-              </Box>
+              <Route.Slot />
             </UITransition>
           </Layout>
         );
@@ -174,7 +175,15 @@
 
       const ViewportLayout = ({ children }) => {
         return (
-          <Box id="viewport_page" width="100%" height="100%" padding="40">
+          <Box
+            id="viewport_page"
+            minWidth="100%"
+            width="fit-content"
+            minHeight="100%"
+            height="fit-content"
+            padding="40"
+            background="lightblue"
+          >
             {children}
           </Box>
         );
@@ -186,7 +195,7 @@
           width="300"
           height="250"
           padding="40"
-          background="green"
+          // background="green"
         >
           300x250 with border
         </Box>
@@ -211,19 +220,21 @@
         </ViewportLayout>
       );
       const ViewportOverflowYPage = () => (
-        <Box
-          id="viewport_tall_page"
-          minHeight="150vh"
-          padding="40"
-          color="green"
-          size="lg"
-          bold
-        >
-          Tall Page (150% viewport height)
-          <div>Extra content to make sure scrolling is possible</div>
-          <div>Extra content to make sure scrolling is possible</div>
-          <div>Extra content to make sure scrolling is possible</div>
-        </Box>
+        <ViewportLayout>
+          <Box
+            id="viewport_tall_page"
+            minHeight="150vh"
+            padding="40"
+            color="green"
+            size="lg"
+            bold
+          >
+            Tall Page (150% viewport height)
+            <div>Extra content to make sure scrolling is possible</div>
+            <div>Extra content to make sure scrolling is possible</div>
+            <div>Extra content to make sure scrolling is possible</div>
+          </Box>
+        </ViewportLayout>
       );
       const ViewportOverflowXYPage = () => (
         <Box
