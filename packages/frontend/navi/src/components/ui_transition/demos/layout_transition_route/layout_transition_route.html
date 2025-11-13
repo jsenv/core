@@ -73,12 +73,14 @@
 
       const {
         FIT_ROUTE,
+        CENTERED_VIEWPORT_ROUTE,
         VIEWPORT_ROUTE,
         VIEWPORT_TALL_ROUTE,
         VIEWPORT_WIDE_ROUTE,
         VIEWPORT_LARGE_ROUTE,
       } = setupRoutes({
         FIT_ROUTE: "",
+        CENTERED_VIEWPORT_ROUTE: "centered_viewport",
         VIEWPORT_ROUTE: "viewport",
         VIEWPORT_TALL_ROUTE: "viewport_tall",
         VIEWPORT_WIDE_ROUTE: "viewport_wide",
@@ -88,7 +90,10 @@
       const Nav = () => {
         return (
           <Layout as="nav" row contentSpacing="16" style="position: fixed;">
-            <RouteLink route={FIT_ROUTE}>Fit</RouteLink>
+            <RouteLink route={FIT_ROUTE}>Centered fluid</RouteLink>
+            <RouteLink route={CENTERED_VIEWPORT_ROUTE}>
+              Centered viewport
+            </RouteLink>
             <RouteLink route={VIEWPORT_ROUTE}>Viewport</RouteLink>
             <RouteLink route={VIEWPORT_WIDE_ROUTE}>
               Viewport x scrollbar
@@ -164,6 +169,20 @@
           </Box>
         </CenteredLayout>
       );
+      const CenteredLayoutViewportPage = () => {
+        return (
+          <CenteredLayout>
+            <Box
+              id="viewport_page"
+              minWidth="100vw"
+              minHeight="100vh"
+              padding="40"
+            >
+              Full page no border
+            </Box>
+          </CenteredLayout>
+        );
+      };
       const ViewportPage = () => (
         <ViewportLayout>
           <Box
@@ -226,6 +245,10 @@
         return (
           <Routes element={RootLayout}>
             <Route element={<ViewportPage />} route={VIEWPORT_ROUTE} />
+            <Route
+              element={<CenteredLayoutViewportPage />}
+              route={CENTERED_VIEWPORT_ROUTE}
+            />
             <Route element={<ViewportTallPage />} route={VIEWPORT_TALL_ROUTE} />
             <Route element={<ViewportWidePage />} route={VIEWPORT_WIDE_ROUTE} />
             <Route
