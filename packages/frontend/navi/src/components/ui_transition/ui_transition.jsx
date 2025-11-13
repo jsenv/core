@@ -59,6 +59,7 @@ export const UITransition = ({
   debugDetection,
   debugSize,
   debugBreakAfterClone,
+  disabled,
   ...props
 }) => {
   const [contentKeyFromContext, setContentKeyFromContext] = useState();
@@ -104,11 +105,18 @@ export const UITransition = ({
 
   const ref = useRef();
   useLayoutEffect(() => {
+    if (disabled) {
+      return null;
+    }
     const uiTransition = initUITransition(ref.current);
     return () => {
       uiTransition.cleanup();
     };
-  }, []);
+  }, [disabled]);
+
+  if (disabled) {
+    return children;
+  }
 
   return (
     <ContentKeyContext.Provider value={contentKeyContextValue}>
