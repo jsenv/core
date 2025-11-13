@@ -71,10 +71,18 @@
         UITransition,
       } from "@jsenv/navi";
 
-      const { FIT_ROUTE, VIEWPORT_ROUTE, VIEWPORT_TALL_ROUTE } = setupRoutes({
+      const {
+        FIT_ROUTE,
+        VIEWPORT_ROUTE,
+        VIEWPORT_TALL_ROUTE,
+        VIEWPORT_WIDE_ROUTE,
+        VIEWPORT_LARGE_ROUTE,
+      } = setupRoutes({
         FIT_ROUTE: "",
         VIEWPORT_ROUTE: "viewport",
         VIEWPORT_TALL_ROUTE: "viewport_tall",
+        VIEWPORT_WIDE_ROUTE: "viewport_wide",
+        VIEWPORT_LARGE_ROUTE: "viewport_large",
       });
 
       const Nav = () => {
@@ -84,6 +92,12 @@
             <RouteLink route={VIEWPORT_ROUTE}>Viewport</RouteLink>
             <RouteLink route={VIEWPORT_TALL_ROUTE}>
               Viewport y scrollbar
+            </RouteLink>
+            <RouteLink route={VIEWPORT_WIDE_ROUTE}>
+              Viewport x scrollbar
+            </RouteLink>
+            <RouteLink route={VIEWPORT_LARGE_ROUTE}>
+              Viewport xy scrollbars
             </RouteLink>
           </Layout>
         );
@@ -194,11 +208,53 @@
         </ViewportLayout>
       );
 
+      const ViewportWidePage = () => (
+        <ViewportLayout>
+          <Layout
+            id="viewport_wide_page"
+            row
+            contentAlignX="start"
+            contentAlignY="center"
+            minWidth="150vw"
+            contentSpacing="20"
+            color="blue"
+            size="lg"
+            bold
+          >
+            Wide Page (150% viewport width)
+          </Layout>
+        </ViewportLayout>
+      );
+
+      const ViewportLargePage = () => (
+        <ViewportLayout>
+          <Layout
+            id="viewport_large_page"
+            column
+            contentAlignX="start"
+            contentAlignY="start"
+            minWidth="150vw"
+            minHeight="150vh"
+            contentSpacing="30"
+            color="purple"
+            size="lg"
+            bold
+          >
+            Large Page (150% viewport width AND height)
+          </Layout>
+        </ViewportLayout>
+      );
+
       const Router = () => {
         return (
           <Routes element={RootLayout}>
             <Route element={<ViewportPage />} route={VIEWPORT_ROUTE} />
             <Route element={<ViewportTallPage />} route={VIEWPORT_TALL_ROUTE} />
+            <Route element={<ViewportWidePage />} route={VIEWPORT_WIDE_ROUTE} />
+            <Route
+              element={<ViewportLargePage />}
+              route={VIEWPORT_LARGE_ROUTE}
+            />
             <Route element={<FitPage />} fallback />
           </Routes>
         );
