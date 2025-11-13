@@ -338,7 +338,13 @@ const updateStyle = (element, style) => {
     }
   }
   for (const toDeleteKey of toDeleteKeySet) {
-    element.style.removeProperty(toDeleteKey);
+    if (toDeleteKey.startsWith("--")) {
+      element.style.removeProperty(toDeleteKey);
+    } else {
+      // we can't use removeProperty because "toDeleteKey" is in camelCase
+      // e.g., backgroundColor (and it's safer to just let the browser do the conversion)
+      element.style[toDeleteKey] = "";
+    }
   }
   styleKeySetWeakMap.set(element, styleKeySet);
   return;
