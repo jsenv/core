@@ -137,40 +137,33 @@
       const RootLayout = () => {
         const info = useActiveRouteInfo();
         const fluid = info.meta?.layout === "fluid";
-        console.log(fluid);
         return (
           <Layout
             as="main"
             id="root_layout"
             width="100%"
             height="100%"
-            minWidth="fit-content"
-            minHeight="fit-content"
             background="rgba(0, 0, 160, 0.5)"
-            row={fluid ? true : undefined}
           >
-            <Layout
-              id="wrapper_layout"
-              {...(fluid
-                ? {
-                    width: "fit-content",
-                    height: "fit-content",
-                    alignX: "center",
-                    alignY: "center",
-                  }
-                : {
-                    minWidth: "100%",
-                    minHeight: "100%",
-                  })}
-              background="white"
-              // borderRadius="8"
-              // outline="5px solid orange"
-              color="#666"
+            <UITransition
+              disabled
+              sizeTransitionDuration="1000"
+              debugSize
+              debugContent
             >
-              <UITransition disabled>
+              <Box
+                minWidth={fluid ? "auto" : "100%"}
+                minHeight={fluid ? "auto" : "100%"}
+                width="fit-content"
+                height="fit-content"
+                background="white"
+                borderRadius={fluid ? "8" : undefined}
+                border={fluid ? "5px solid orange" : "none"}
+                color="#666"
+              >
                 <Route.Slot />
-              </UITransition>
-            </Layout>
+              </Box>
+            </UITransition>
           </Layout>
         );
       };
