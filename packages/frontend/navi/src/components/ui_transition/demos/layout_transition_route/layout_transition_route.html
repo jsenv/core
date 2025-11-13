@@ -146,12 +146,13 @@
             background="rgba(0, 0, 160, 0.5)"
           >
             <UITransition
+              // sizeTransition={false}
               sizeTransitionDuration="3000"
               debugDetection
               debugSize
               debugContent
               // transitionType="none"
-              // transitionDuration="3000"
+              transitionDuration="800"
               fluid={fluid}
             >
               <Box
@@ -180,7 +181,13 @@
       };
 
       const SmallPage = () => (
-        <Box id="fit_page" width="300" height="250" padding="40">
+        <Box
+          id="fit_page"
+          width="300"
+          height="250"
+          padding="40"
+          background="green"
+        >
           300x250 with border
         </Box>
       );

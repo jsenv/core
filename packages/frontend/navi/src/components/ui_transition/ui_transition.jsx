@@ -35,13 +35,7 @@
  */
 
 import { createContext } from "preact";
-import {
-  useContext,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
 
 import { initUITransition } from "./ui_transition.js";
 
@@ -64,11 +58,32 @@ export const UITransition = ({
   disabled,
   ...props
 }) => {
-  const [contentKeyFromContext, setContentKeyFromContext] = useState();
+  const contentKeyRef = useRef(contentKey);
+
+  const updateContentKey = () => {
+    const el = ref.current;
+    if (!el) {
+      return;
+    }
+    const value = contentKeyRef.current;
+    if (value) {
+      el.querySelector(".ui_transition_slot").setAttribute(
+        "data-content-key",
+        value,
+      );
+    } else {
+      el.querySelector(".ui_transition_slot").removeAttribute(
+        "data-content-key",
+      );
+    }
+  };
+
   const contentKeyContextValue = useMemo(() => {
     const keySet = new Set();
     const onKeySetChange = () => {
-      setContentKeyFromContext(Array.from(keySet).join("|"));
+      const contentKeyValue = Array.from(keySet).join("|");
+      contentKeyRef.current = contentKeyValue;
+      updateContentKey();
     };
     const update = (key, newKey) => {
       if (!keySet.has(key)) {
@@ -103,13 +118,13 @@ export const UITransition = ({
     };
     return { add, update, remove };
   }, []);
-  const effectiveContentKey = contentKey || contentKeyFromContext;
 
   const ref = useRef();
   useLayoutEffect(() => {
     if (disabled) {
       return null;
     }
+    updateContentKey();
     const uiTransition = initUITransition(ref.current);
     return () => {
       uiTransition.cleanup();
@@ -150,7 +165,7 @@ export const UITransition = ({
           <div
             className="ui_transition_slot"
             data-content-key={
-              effectiveContentKey ? effectiveContentKey : undefined
+              contentKeyRef.current ? contentKeyRef.current : undefined
             }
           >
             {children}
