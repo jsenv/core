@@ -99,8 +99,8 @@ const cssUnitSet = new Set([
   "Hz",
   "kHz",
 ]);
-const cssKeywordSet = new Set([
-  // Keywords that shouldn't get units
+// Global CSS keywords that apply to any property
+const globalCSSKeywordSet = new Set([
   "auto",
   "none",
   "inherit",
@@ -108,6 +108,29 @@ const cssKeywordSet = new Set([
   "unset",
   "revert",
 ]);
+const cssKeywordSet = new Set([
+  ...globalCSSKeywordSet,
+  // Size/dimension keywords for pxPropertySet properties
+  "fit-content",
+  "min-content",
+  "max-content",
+  // Font size keywords for fontSize
+  "medium",
+  "small",
+  "large",
+  "x-small",
+  "x-large",
+  "xx-small",
+  "xx-large",
+  "smaller",
+  "larger",
+  // Border width keywords for borderWidth properties
+  "thin",
+  "thick",
+  // Line height keyword (though lineHeight is handled specially)
+  "normal",
+]);
+const backgroundKeywordSet = new Set([...globalCSSKeywordSet]);
 
 const getUnit = (value) => {
   for (const cssUnit of cssUnitSet) {
@@ -185,7 +208,7 @@ export const normalizeStyle = (value, propertyName, context = "js") => {
     if (context === "css") {
       if (
         typeof value === "string" &&
-        !isKeyword(value) &&
+        !backgroundKeywordSet.has(value) &&
         !STARTS_WITH_CSS_IMAGE_FUNCTION_REGEX.test(value)
       ) {
         return `url(${value})`;
