@@ -170,6 +170,70 @@
               </TrackedBox>
             </div>
 
+            <div className="demo-section">
+              <h2>🎭 Hover Pseudo-Style Test</h2>
+              <p>
+                Test hover effects using pseudoStyle prop. The background should
+                change on hover without causing re-renders (pure CSS effect).
+              </p>
+
+              <div style={{ marginBottom: "16px" }}>
+                <strong>Hover Effects:</strong>
+                <p style={{ fontSize: "14px", color: "#666", margin: "8px 0" }}>
+                  ↓ Hover over the boxes below to see background color changes
+                </p>
+              </div>
+
+              <Box layoutColumn contentSpacing="16">
+                <TrackedBox
+                  background="lightcoral"
+                  pseudoStyle={{
+                    ":hover": {
+                      background: "red",
+                      transform: "scale(1.05)",
+                      transition: "all 0.2s ease",
+                    },
+                  }}
+                >
+                  Hover for red background + scale
+                </TrackedBox>
+
+                <TrackedBox
+                  background="lightgreen"
+                  pseudoStyle={{
+                    ":hover": {
+                      background: "green",
+                      borderColor: "darkgreen",
+                      transition: "all 0.3s ease",
+                    },
+                  }}
+                >
+                  Hover for green background + border
+                </TrackedBox>
+
+                <TrackedBox
+                  background="lightblue"
+                  pseudoStyle={{
+                    ":hover": {
+                      background: "blue",
+                      color: "white",
+                      borderRadius: "16px",
+                      transition: "all 0.2s ease",
+                    },
+                  }}
+                >
+                  Hover for blue + white text + rounded
+                </TrackedBox>
+              </Box>
+
+              <p
+                style={{ fontSize: "14px", color: "#666", margin: "16px 0 0" }}
+              >
+                ✅ Hover effects should not increment re-render counts (pure
+                CSS)
+              </p>
+            </div>
+
             <RenderOptimizationTest />
 
             <div className="demo-section">
