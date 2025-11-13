@@ -150,6 +150,11 @@ export const initUITransition = (container) => {
 
   let contentOverlayContentId;
   let phaseOverlayContentId;
+  // Reference counting for overlay content - ensures overlay content persists until all transitions complete
+  // This prevents visual issues when size transitions have longer durations than content transitions
+  const contentOverlayReferences = new Set(); // Set of requester IDs that need content overlay
+  const phaseOverlayReferences = new Set(); // Set of requester IDs that need phase overlay
+
   const setOverlayContent = (overlay, childNodes) => {
     const isPhaseTransition = overlay === phaseOverlay;
     const currentContentId = isPhaseTransition
@@ -204,8 +209,10 @@ export const initUITransition = (container) => {
     overlay.innerHTML = "";
     if (isPhaseTransition) {
       phaseOverlayContentId = null;
+      phaseOverlayReferences.clear();
     } else {
       contentOverlayContentId = null;
+      contentOverlayReferences.clear();
     }
     debug(
       "content",
@@ -214,12 +221,48 @@ export const initUITransition = (container) => {
     return () => {};
   };
 
-  const setupTransition = (overlay, { needsOldChildNodesClone }) => {
+  // Overlay reference management - allows multiple transitions to request overlay retention
+  const requestOverlayContent = (overlay, childNodes, requesterId) => {
     const isPhaseTransition = overlay === phaseOverlay;
-    const cleanup = setOverlayContent(
-      overlay,
-      needsOldChildNodesClone ? previousSlotInfo.childNodes : null,
+    const references = isPhaseTransition
+      ? phaseOverlayReferences
+      : contentOverlayReferences;
+
+    if (references.size === 0) {
+      // First requester - set up the overlay content
+      setOverlayContent(overlay, childNodes);
+    }
+
+    references.add(requesterId);
+    debug(
+      "content",
+      `Overlay content requested by ${requesterId} (${references.size} total references)`,
     );
+
+    const releaseOverlayContent = () => {
+      references.delete(requesterId);
+      debug(
+        "content",
+        `Overlay content released by ${requesterId} (${references.size} remaining references)`,
+      );
+
+      if (references.size === 0) {
+        // Last requester - clear the overlay
+        setOverlayContent(overlay, null);
+      }
+    };
+
+    return releaseOverlayContent;
+  };
+
+  const setupTransition = (
+    overlay,
+    { needsOldChildNodesClone, requesterId = "content_transition" },
+  ) => {
+    const isPhaseTransition = overlay === phaseOverlay;
+    const cleanup = needsOldChildNodesClone
+      ? requestOverlayContent(overlay, previousSlotInfo.childNodes, requesterId)
+      : () => {};
     const contentId = isPhaseTransition
       ? phaseOverlayContentId
       : contentOverlayContentId;
@@ -730,12 +773,32 @@ export const initUITransition = (container) => {
         constrainedHeight,
         "size transitioning",
       );
+
+      // Request overlay content retention during size transition if needed
+      let releaseOverlayContent = () => {};
+      if (
+        previousSlotInfo.hasChild &&
+        (changeInfo.shouldDoContentTransition ||
+          changeInfo.shouldDoPhaseTransition)
+      ) {
+        const overlay = changeInfo.shouldDoContentTransition
+          ? contentOverlay
+          : phaseOverlay;
+        releaseOverlayContent = requestOverlayContent(
+          overlay,
+          previousSlotInfo.childNodes,
+          "size_transition",
+        );
+      }
+
       sizeTransition = transitionController.animate(transitions, {
         onCancel: () => {
           release.releaseResizeObserver("size transition cancelled");
+          releaseOverlayContent();
         },
         onFinish: () => {
           release("size transition finished");
+          releaseOverlayContent();
         },
       });
       sizeTransition.play();
@@ -1000,7 +1063,10 @@ export const initUITransition = (container) => {
           CONTENT_TRANSITION;
 
         const setupContentTransition = () =>
-          setupTransition(contentOverlay, { needsOldChildNodesClone });
+          setupTransition(contentOverlay, {
+            needsOldChildNodesClone,
+            requesterId: "content_transition",
+          });
 
         activeContentTransition = applyTransition(
           transitionController,
@@ -1027,7 +1093,8 @@ export const initUITransition = (container) => {
         activeContentTransitionType = type;
       } else if (!shouldDoContentTransition && !preserveOnlyContentTransition) {
         // Clean up content overlay if no content transition needed and nothing to preserve
-        setOverlayContent(contentOverlay, null);
+        // Since we're not doing a content transition, any size transition may still need the overlay
+        // so we don't force clear it here - the reference system will handle cleanup when all requesters are done
       }
 
       // Handle phase transitions (cross-fade for content phase changes)
@@ -1073,6 +1140,7 @@ export const initUITransition = (container) => {
         const setupPhaseTransition = () =>
           setupTransition(phaseOverlay, {
             needsOldChildNodesClone: needsOldPhaseClone,
+            requesterId: "phase_transition",
           });
 
         debug(
