@@ -143,23 +143,16 @@
             <Layout
               id="centered_layout"
               row
-              width="100%"
-              height="100%"
+              minWidth="100%"
+              minHeight="100%"
+              background="white"
+              // borderRadius="8"
+              // outline="5px solid orange"
               color="#666"
             >
-              <Layout
-                alignX="center"
-                alignY="center"
-                width="100%"
-                height="100%"
-                background="white"
-                // borderRadius="8"
-                // outline="5px solid orange"
-              >
-                <UITransition disabled>
-                  <Route.Slot />
-                </UITransition>
-              </Layout>
+              <UITransition disabled>
+                <Route.Slot />
+              </UITransition>
             </Layout>
           </Layout>
         );
