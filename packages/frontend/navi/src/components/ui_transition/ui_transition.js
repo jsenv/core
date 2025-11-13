@@ -62,10 +62,8 @@ import.meta.css = /* css */ `
   .ui_transition_phase_overlay,
   .ui_transition_content_overlay {
     display: flex;
-    width: fit-content;
-    min-width: 100%;
-    height: fit-content;
-    min-height: 100%;
+    width: 100%;
+    height: 100%;
     flex-direction: inherit;
     align-items: inherit;
     justify-content: inherit;

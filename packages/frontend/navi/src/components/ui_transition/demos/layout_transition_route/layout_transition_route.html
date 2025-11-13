@@ -72,37 +72,58 @@
       } from "@jsenv/navi";
 
       const {
-        FIT_ROUTE,
-        CENTERED_VIEWPORT_ROUTE,
+        SMALL_ROUTE,
         VIEWPORT_ROUTE,
-        VIEWPORT_TALL_ROUTE,
-        VIEWPORT_WIDE_ROUTE,
-        VIEWPORT_LARGE_ROUTE,
+        VIEWPORT_OVERFLOW_X_ROUTE,
+        VIEWPORT_OVERFLOW_Y_ROUTE,
+        VIEWPORT_OVERFLOW_XY_ROUTE,
       } = setupRoutes({
-        FIT_ROUTE: "",
-        CENTERED_VIEWPORT_ROUTE: "centered_viewport",
+        SMALL_ROUTE: "",
         VIEWPORT_ROUTE: "viewport",
-        VIEWPORT_TALL_ROUTE: "viewport_tall",
-        VIEWPORT_WIDE_ROUTE: "viewport_wide",
-        VIEWPORT_LARGE_ROUTE: "viewport_large",
+        VIEWPORT_OVERFLOW_X_ROUTE: "viewport_overflow_x",
+        VIEWPORT_OVERFLOW_Y_ROUTE: "viewport_overflow_y",
+        VIEWPORT_OVERFLOW_XY_ROUTE: "viewport_overflow_xy",
       });
+
+      const Router = () => {
+        return (
+          <Routes element={RootLayout}>
+            <Route element={<ViewportPage />} route={VIEWPORT_ROUTE} />
+            <Route
+              element={<ViewportOverflowXPage />}
+              route={VIEWPORT_OVERFLOW_X_ROUTE}
+            />
+            <Route
+              element={<ViewportOverflowYPage />}
+              route={VIEWPORT_OVERFLOW_Y_ROUTE}
+            />
+            <Route
+              element={<ViewportOverflowXYPage />}
+              route={VIEWPORT_OVERFLOW_XY_ROUTE}
+            />
+            <Route element={<SmallPage />} fallback />
+          </Routes>
+        );
+      };
 
       const Nav = () => {
         return (
-          <Layout as="nav" row contentSpacing="16" style="position: fixed;">
-            <RouteLink route={FIT_ROUTE}>Centered fluid</RouteLink>
-            <RouteLink route={CENTERED_VIEWPORT_ROUTE}>
-              Centered viewport
-            </RouteLink>
+          <Layout
+            as="nav"
+            row
+            contentSpacing="16"
+            style="position: fixed; z-index: 1"
+          >
+            <RouteLink route={SMALL_ROUTE}>Small</RouteLink>
             <RouteLink route={VIEWPORT_ROUTE}>Viewport</RouteLink>
-            <RouteLink route={VIEWPORT_WIDE_ROUTE}>
-              Viewport x scrollbar
+            <RouteLink route={VIEWPORT_OVERFLOW_X_ROUTE}>
+              Viewport x overflow
             </RouteLink>
-            <RouteLink route={VIEWPORT_TALL_ROUTE}>
-              Viewport y scrollbar
+            <RouteLink route={VIEWPORT_OVERFLOW_Y_ROUTE}>
+              Viewport y overflow
             </RouteLink>
-            <RouteLink route={VIEWPORT_LARGE_ROUTE}>
-              Viewport xy scrollbars
+            <RouteLink route={VIEWPORT_OVERFLOW_XY_ROUTE}>
+              Viewport overflow xy
             </RouteLink>
           </Layout>
         );
@@ -119,23 +140,11 @@
             minHeight="fit-content"
             background="rgba(0, 0, 160, 0.5)"
           >
-            <Route.Slot />
-          </Layout>
-        );
-      };
-      const ViewportLayout = ({ children }) => {
-        return (
-          <Layout
-            id="viewport_layout"
-            width="100%"
-            height="100%"
-            minWidth="fit-content"
-            minHeight="fit-content"
-            borderRadius="0"
-            color="#666"
-            background="white"
-          >
-            {children}
+            <CenteredLayout>
+              <UITransition>
+                <Route.Slot />
+              </UITransition>
+            </CenteredLayout>
           </Layout>
         );
       };
@@ -154,7 +163,7 @@
               minWidth="300"
               background="white"
               borderRadius="8"
-              outline="5px solid orange"
+              // outline="5px solid orange"
             >
               {children}
             </Layout>
@@ -162,29 +171,13 @@
         );
       };
 
-      const FitPage = () => (
-        <CenteredLayout>
-          <Box id="fit_page" width="300" height="250" padding="40">
-            300x250 with border
-          </Box>
-        </CenteredLayout>
+      const SmallPage = () => (
+        <Box id="fit_page" width="300" height="250" padding="40">
+          300x250 with border
+        </Box>
       );
-      const CenteredLayoutViewportPage = () => {
+      const ViewportPage = () => {
         return (
-          <CenteredLayout>
-            <Box
-              id="viewport_page"
-              minWidth="100vw"
-              minHeight="100vh"
-              padding="40"
-            >
-              Full page no border
-            </Box>
-          </CenteredLayout>
-        );
-      };
-      const ViewportPage = () => (
-        <ViewportLayout>
           <Box
             id="viewport_page"
             minWidth="100vw"
@@ -193,70 +186,71 @@
           >
             Full page no border
           </Box>
-        </ViewportLayout>
+        );
+      };
+      const ViewportOverflowXPage = () => (
+        <Box
+          id="viewport_wide_page"
+          minWidth="150vw"
+          height="100vh"
+          padding="40"
+          color="blue"
+          size="lg"
+          bold
+        >
+          Wide Page (150% viewport width)
+          <div>Extra content to make sure scrolling is possible</div>
+          <div>Extra content to make sure scrolling is possible</div>
+          <div>Extra content to make sure scrolling is possible</div>
+        </Box>
       );
-      const ViewportWidePage = () => (
-        <ViewportLayout>
-          <Box
-            id="viewport_wide_page"
-            minWidth="150vw"
-            padding="40"
-            color="blue"
-            size="lg"
-            bold
-          >
-            Wide Page (150% viewport width)
-            <div>Extra content to make sure scrolling is possible</div>
-            <div>Extra content to make sure scrolling is possible</div>
-            <div>Extra content to make sure scrolling is possible</div>
-          </Box>
-        </ViewportLayout>
+      const ViewportOverflowYPage = () => (
+        <Box
+          id="viewport_tall_page"
+          minWidth="100vw"
+          minHeight="150vh"
+          padding="40"
+          color="green"
+          size="lg"
+          bold
+        >
+          Tall Page (150% viewport height)
+          <div>Extra content to make sure scrolling is possible</div>
+          <div>Extra content to make sure scrolling is possible</div>
+          <div>Extra content to make sure scrolling is possible</div>
+        </Box>
       );
-      const ViewportTallPage = () => (
-        <ViewportLayout>
-          <Box
-            id="viewport_tall_page"
-            minHeight="150vh"
-            padding="40"
-            color="red"
-            size="lg"
-            bold
-          >
-            Tall Page (150% viewport height)
-          </Box>
-        </ViewportLayout>
-      );
-      const ViewportLargePage = () => (
-        <ViewportLayout>
-          <Layout
-            id="viewport_large_page"
-            minWidth="150vw"
-            minHeight="150vh"
-            padding="40"
-            size="lg"
-            bold
-          >
-            Large Page (150% viewport width AND height)
-          </Layout>
-        </ViewportLayout>
+      const ViewportOverflowXYPage = () => (
+        <Box
+          id="viewport_tall_page"
+          minWidth="150vw"
+          minHeight="150vh"
+          padding="40"
+          color="green"
+          size="lg"
+          bold
+        >
+          Wide and tall Page (150% viewport width/height)
+          <div>Extra content to make sure scrolling is possible</div>
+          <div>Extra content to make sure scrolling is possible</div>
+          <div>Extra content to make sure scrolling is possible</div>
+        </Box>
       );
 
-      const Router = () => {
+      const ViewportLayout = ({ children }) => {
         return (
-          <Routes element={RootLayout}>
-            <Route element={<ViewportPage />} route={VIEWPORT_ROUTE} />
-            <Route
-              element={<CenteredLayoutViewportPage />}
-              route={CENTERED_VIEWPORT_ROUTE}
-            />
-            <Route element={<ViewportTallPage />} route={VIEWPORT_TALL_ROUTE} />
-            <Route element={<ViewportWidePage />} route={VIEWPORT_WIDE_ROUTE} />
-            <Route
-              element={<ViewportLargePage />}
-              route={VIEWPORT_LARGE_ROUTE}
-            />
-            <Route element={<FitPage />} fallback />
-          </Routes>
+          <Layout
+            id="viewport_layout"
+            width="100%"
+            height="100%"
+            minWidth="fit-content"
+            minHeight="fit-content"
+            borderRadius="0"
+            color="#666"
+            background="white"
+          >
+            {children}
+          </Layout>
         );
       };
 
@@ -266,20 +260,6 @@
             <Nav />
             <Router />
           </>
-        );
-      };
-
-      const RouteSlotWrapper = () => {
-        return (
-          <Layout
-            id="route_slot_wrapper"
-            column
-            contentAlignX="center"
-            contentAlignY="center"
-            background="white"
-            borderRadius="8"
-            outline="5px solid orange"
-          ></Layout>
         );
       };
 
