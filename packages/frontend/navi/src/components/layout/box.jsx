@@ -374,13 +374,13 @@ export const Box = (props) => {
 };
 
 export const Layout = (props) => {
-  const { row, column, ...rest } = props;
+  const { row, column, inline, ...rest } = props;
 
   if (row) {
-    return <Box layoutRow {...rest} />;
+    return <Box layoutRow layoutInline={inline} {...rest} />;
   }
   if (column) {
-    return <Box layoutColumn {...rest} />;
+    return <Box layoutColumn layoutInline={inline} {...rest} />;
   }
-  return <Box {...rest} />;
+  return <Box layoutInline={inline} {...rest} />;
 };
