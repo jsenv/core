@@ -131,10 +131,8 @@
         );
       };
 
-      const Demo = () => {
+      const BackgroundColorDemo = () => {
         const [boxBackground, setBoxBackground] = useState("red");
-        const [boxContent, setBoxContent] = useState("Box Content");
-
         const colors = [
           { name: "Red", value: "red" },
           { name: "Green", value: "green" },
@@ -145,29 +143,39 @@
         ];
 
         return (
+          <>
+            <h2>🎨 Background Color Control</h2>
+            <p>Change the background color and observe render count:</p>
+
+            <div style={{ marginBottom: "16px" }}>
+              <strong>Background Color:</strong>
+              {colors.map((color) => (
+                <button
+                  key={color.value}
+                  className={boxBackground === color.value ? "active" : ""}
+                  onClick={() => setBoxBackground(color.value)}
+                >
+                  {color.name}
+                </button>
+              ))}
+            </div>
+
+            <TrackedBox background={boxBackground}>
+              Background: {boxBackground}
+            </TrackedBox>
+          </>
+        );
+      };
+
+      const Demo = () => {
+        const [boxContent, setBoxContent] = useState("Box Content");
+
+        return (
           <div>
             <h1>Box Component - Background Colors & Render Count Demo</h1>
 
             <div className="demo-section">
-              <h2>🎨 Background Color Control</h2>
-              <p>Change the background color and observe render count:</p>
-
-              <div style={{ marginBottom: "16px" }}>
-                <strong>Background Color:</strong>
-                {colors.map((color) => (
-                  <button
-                    key={color.value}
-                    className={boxBackground === color.value ? "active" : ""}
-                    onClick={() => setBoxBackground(color.value)}
-                  >
-                    {color.name}
-                  </button>
-                ))}
-              </div>
-
-              <TrackedBox background={boxBackground}>
-                Background: {boxBackground}
-              </TrackedBox>
+              <BackgroundColorDemo />
             </div>
 
             <div className="demo-section">
