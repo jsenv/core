@@ -35,7 +35,8 @@ export const Routes = ({ element = RootElement, children }) => {
 };
 
 const SlotContext = createContext(null);
-export const Route = ({ element, route, fallback, children }) => {
+// const RouteInfoContext = createContext(null);
+export const Route = ({ element, route, fallback, meta, children }) => {
   const forceRender = useForceRender();
   const hasDiscoveredRef = useRef(false);
   const activeInfoRef = useRef(null);
@@ -46,6 +47,7 @@ export const Route = ({ element, route, fallback, children }) => {
         element={element}
         route={route}
         fallback={fallback}
+        meta={meta}
         onActiveInfoChange={(activeInfo) => {
           hasDiscoveredRef.current = true;
           activeInfoRef.current = activeInfo;
@@ -74,6 +76,7 @@ const ActiveRouteManager = ({
   element,
   route,
   fallback,
+  meta,
   onActiveInfoChange,
   children,
 }) => {
@@ -88,6 +91,7 @@ const ActiveRouteManager = ({
     ChildActiveElement,
     childRoute,
     childFallback,
+    childMeta,
   ) => {
     const childElementId = getElementSignature(ChildActiveElement);
     if (DEBUG) {
@@ -97,6 +101,7 @@ const ActiveRouteManager = ({
       ActiveElement: ChildActiveElement,
       route: childRoute,
       fallback: childFallback,
+      meta: childMeta,
     });
   };
   if (DEBUG) {
@@ -110,6 +115,7 @@ const ActiveRouteManager = ({
       element,
       route,
       fallback,
+      meta,
       candidateSet,
       onActiveInfoChange,
       registerChildRouteFromContext,
@@ -127,6 +133,7 @@ const initRouteObserver = ({
   element,
   route,
   fallback,
+  meta,
   candidateSet,
   onActiveInfoChange,
   registerChildRouteFromContext,
@@ -158,6 +165,7 @@ const initRouteObserver = ({
         return {
           ChildActiveElement: candidate.ActiveElement,
           route: candidate.route,
+          meta: candidate.meta,
         };
       }
       // fallback without route can match when no other route matches.
@@ -167,6 +175,7 @@ const initRouteObserver = ({
         fallbackInfo = {
           ChildActiveElement: candidate.ActiveElement,
           route: candidate.route,
+          meta: candidate.meta,
         };
       }
     }
@@ -187,6 +196,7 @@ const initRouteObserver = ({
         return {
           ChildActiveElement: null,
           route,
+          meta,
         };
       }
     : () => {
@@ -227,13 +237,13 @@ const initRouteObserver = ({
     const newActiveInfo = getActiveInfo();
     if (newActiveInfo) {
       compositeRoute.active = true;
-      const { route, ChildActiveElement } = newActiveInfo;
-      activeRouteSignal.value = route;
-      SlotActiveElementSignal.value = ChildActiveElement;
+      activeRouteSignal.value = newActiveInfo.route;
+      SlotActiveElementSignal.value = newActiveInfo.ChildActiveElement;
       onActiveInfoChange({
-        route: newActiveInfo.route,
         ActiveElement,
-        SlotActiveElement: ChildActiveElement,
+        SlotActiveElement: newActiveInfo.ActiveElement,
+        route: newActiveInfo.route,
+        meta: newActiveInfo.meta,
       });
     } else {
       compositeRoute.active = false;
@@ -253,7 +263,12 @@ const initRouteObserver = ({
     candidate.route.subscribeStatus(onChange);
   }
   if (registerChildRouteFromContext) {
-    registerChildRouteFromContext(ActiveElement, compositeRoute, fallback);
+    registerChildRouteFromContext(
+      ActiveElement,
+      compositeRoute,
+      fallback,
+      meta,
+    );
   }
   updateActiveInfo();
 };
