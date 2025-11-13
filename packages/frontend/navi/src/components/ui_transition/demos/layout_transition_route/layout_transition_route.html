@@ -140,33 +140,26 @@
             minHeight="fit-content"
             background="rgba(0, 0, 160, 0.5)"
           >
-            <CenteredLayout>
-              <UITransition disabled>
-                <Route.Slot />
-              </UITransition>
-            </CenteredLayout>
-          </Layout>
-        );
-      };
-      const CenteredLayout = ({ children }) => {
-        return (
-          <Layout
-            id="centered_layout"
-            row
-            width="100%"
-            height="100%"
-            color="#666"
-          >
             <Layout
-              alignX="center"
-              alignY="center"
+              id="centered_layout"
+              row
               width="100%"
               height="100%"
-              background="white"
-              // borderRadius="8"
-              // outline="5px solid orange"
+              color="#666"
             >
-              {children}
+              <Layout
+                alignX="center"
+                alignY="center"
+                width="100%"
+                height="100%"
+                background="white"
+                // borderRadius="8"
+                // outline="5px solid orange"
+              >
+                <UITransition disabled>
+                  <Route.Slot />
+                </UITransition>
+              </Layout>
             </Layout>
           </Layout>
         );
@@ -174,11 +167,9 @@
 
       const ViewportLayout = ({ children }) => {
         return (
-          <CenteredLayout>
-            <Box id="viewport_page" width="100%" height="100%" padding="40">
-              {children}
-            </Box>
-          </CenteredLayout>
+          <Box id="viewport_page" width="100%" height="100%" padding="40">
+            {children}
+          </Box>
         );
       };
 
