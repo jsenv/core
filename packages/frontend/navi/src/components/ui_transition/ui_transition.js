@@ -60,30 +60,27 @@ import.meta.css = /* css */ `
   .ui_transition_outer_wrapper,
   .ui_transition_phase_overlay,
   .ui_transition_content_overlay {
-    display: inline-flex;
     min-width: max-content;
     min-height: max-content;
-    flex-direction: inherit;
-    align-items: inherit;
-    justify-content: inherit;
-    border-radius: inherit;
     cursor: inherit;
   }
 
-  .ui_transition_slot {
-    min-width: max-content;
-    min-height: max-content;
-  }
+  .ui_transition[data-fluid],
+  .ui_transition[data-fluid] .ui_transition_outer_wrapper,
+  .ui_transition[data-fluid] .ui_transition_phase_overlay,
+  .ui_transition[data-fluid] .ui_transition_content_overlay,
   .ui_transition[data-fluid] .ui_transition_slot {
-    width: auto;
-    height: auto;
-    align-self: start;
-    justify-self: start;
+    width: 100%;
+    height: 100%;
   }
 
   .ui_transition,
   .ui_transition_slot {
     position: relative;
+  }
+
+  .ui_transition_slot {
+    display: inline-flex;
   }
 
   .ui_transition_phase_overlay,

@@ -8,26 +8,16 @@
       * {
         box-sizing: border-box;
       }
+
       html,
       body {
         width: 100%;
-        min-width: max-content;
         height: 100%;
-        min-height: max-content;
       }
 
       #root {
-        background: rgba(0, 0, 0, 0.5);
-      }
-
-      html,
-      body,
-      #root,
-      #root_layout {
         width: 100%;
-        min-width: max-content;
         height: 100%;
-        min-height: max-content;
       }
 
       body {
@@ -114,7 +104,7 @@
               route={VIEWPORT_OVERFLOW_XY_ROUTE}
             />
             <Route
-              meta={{ layout: "fluid" }}
+              meta={{ layout: "dialog" }}
               element={<SmallPage />}
               fallback
             />
@@ -145,67 +135,58 @@
         );
       };
 
-      // <Box
-      //         minWidth={fluid ? "auto" : "100%"}
-      //         minHeight={fluid ? "auto" : "100%"}
-      //         width="fit-content"
-      //         height="fit-content"
-      //         background="white"
-      //         borderRadius={fluid ? "8" : undefined}
-      //         border={fluid ? "5px solid orange" : "none"}
-      //         color="#666"
-      //       >
-      //       </Box>
-
       const RootLayout = () => {
         const info = useActiveRouteInfo();
         const fluid = info.meta?.layout === "fluid";
+        console.log(fluid);
         return (
-          <Layout
-            column
-            as="main"
-            id="root_layout"
-            width="100%"
-            height="100%"
-            minHeight="max-content"
-            background="rgba(0, 0, 160, 0.5)"
+          <UITransition
+            fluid
+            sizeTransition={false}
+            sizeTransitionDuration="1000"
+            debugDetection
+            debugSize
+            debugContent
+            // transitionType="none"
+            transitionDuration="800"
           >
-            <UITransition
-              // sizeTransition={false}
-              sizeTransitionDuration="1000"
-              debugDetection
-              debugSize
-              debugContent
-              // transitionType="none"
-              transitionDuration="800"
-              fluid={fluid}
-            >
-              <Route.Slot />
-            </UITransition>
-          </Layout>
+            <Route.Slot />
+          </UITransition>
         );
       };
 
+      const DialogLayout = ({ children }) => {
+        return (
+          <Box
+            id="dialog_layout"
+            width="300"
+            height="250"
+            padding="40"
+            margin="auto"
+            background="white"
+            color="#666"
+          >
+            {children}
+          </Box>
+        );
+      };
       const ViewportLayout = ({ children }) => {
         return (
           <Box
-            id="viewport_page"
+            id="viewport_layout"
             minWidth="100%"
             width="fit-content"
             minHeight="100%"
             height="fit-content"
             padding="40"
+            background="red"
           >
             {children}
           </Box>
         );
       };
 
-      const SmallPage = () => (
-        <Box id="fit_page" width="300" height="250" padding="40">
-          300x250 with border
-        </Box>
-      );
+      const SmallPage = () => <DialogLayout>300x250 with border</DialogLayout>;
       const ViewportPage = () => {
         return <ViewportLayout>Full page no border</ViewportLayout>;
       };
