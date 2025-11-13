@@ -60,8 +60,6 @@ import.meta.css = /* css */ `
   .ui_transition_outer_wrapper,
   .ui_transition_phase_overlay,
   .ui_transition_content_overlay {
-    min-width: max-content;
-    min-height: max-content;
     cursor: inherit;
   }
 
@@ -79,8 +77,9 @@ import.meta.css = /* css */ `
     position: relative;
   }
 
-  .ui_transition_slot {
-    display: inline-flex;
+  .ui_transition_slot,
+  .ui_transition_content_overlay {
+    /* display: inline-flex; */
   }
 
   .ui_transition_phase_overlay,
@@ -441,6 +440,9 @@ export const initUITransition = (container) => {
   let onContentTransitionComplete;
   let hasSizeTransitions = container.hasAttribute("data-size-transition");
   size_transition: {
+    const elementToResize = container;
+    let observeSize = container.hasAttribute("data-size-observer");
+
     let naturalContentWidth = 0; // Natural size of actual content (not loading/error states)
     let naturalContentHeight = 0;
     let constrainedWidth = 0; // Current constrained dimensions (what outer wrapper is set to)
@@ -526,6 +528,9 @@ export const initUITransition = (container) => {
             );
             return;
           }
+          if (!observeSize) {
+            return;
+          }
           if (localDebug.size) {
             console.group("[resize observer] size change detected");
           }
@@ -547,6 +552,13 @@ export const initUITransition = (container) => {
     }
 
     const measureSlotSize = () => {
+      if (container.hasAttribute("data-fluid")) {
+        const elementToMeasure = slot.firstElementChild || slot;
+        return [
+          getWidthWithoutTransition(elementToMeasure),
+          getHeightWithoutTransition(elementToMeasure),
+        ];
+      }
       return [
         getWidthWithoutTransition(slot),
         getHeightWithoutTransition(slot),
@@ -573,14 +585,10 @@ export const initUITransition = (container) => {
         width: `${constrainedWidth} → ${width}`,
         height: `${constrainedHeight} → ${height}`,
       });
-      outerWrapper.style.width = `${width}px`;
-      outerWrapper.style.height = `${height}px`;
+      elementToResize.style.width = `${width}px`;
+      elementToResize.style.height = `${height}px`;
       constrainedWidth = width;
       constrainedHeight = height;
-      // force content overlay to take the right size
-      // (this way the content clone is not distorted by the new content size)
-      contentOverlay.style.width = `${width}px`;
-      contentOverlay.style.height = `${height}px`;
       const release = (reason) => {
         releaseSizeConstraints(reason);
         resumeResizeObserver(reason);
@@ -599,8 +607,8 @@ export const initUITransition = (container) => {
       }
       debug("size", `Releasing constraints (${reason})`);
       const [beforeWidth, beforeHeight] = measureSlotSize();
-      outerWrapper.style.width = "";
-      outerWrapper.style.height = "";
+      elementToResize.style.width = "";
+      elementToResize.style.height = "";
       const [afterWidth, afterHeight] = measureSlotSize();
       debug("size", "Size after release:", {
         width: `${beforeWidth} → ${afterWidth}`,
@@ -609,8 +617,6 @@ export const initUITransition = (container) => {
       updateNaturalContentSize(afterWidth, afterHeight);
       constrainedWidth = afterWidth;
       constrainedHeight = afterHeight;
-      contentOverlay.style.width = ``;
-      contentOverlay.style.height = ``;
     };
     const updateToSize = (targetWidth, targetHeight) => {
       if (
@@ -657,9 +663,9 @@ export const initUITransition = (container) => {
         );
       } else {
         transitions.push(
-          createWidthTransition(outerWrapper, targetWidth, {
+          createWidthTransition(elementToResize, targetWidth, {
             setup: () =>
-              notifyTransition(outerWrapper, {
+              notifyTransition(elementToResize, {
                 modelId: "ui_transition_width",
                 // canOverflow: true,
                 id:
@@ -683,9 +689,9 @@ export const initUITransition = (container) => {
         );
       } else {
         transitions.push(
-          createHeightTransition(outerWrapper, targetHeight, {
+          createHeightTransition(elementToResize, targetHeight, {
             setup: () =>
-              notifyTransition(outerWrapper, {
+              notifyTransition(elementToResize, {
                 modelId: "ui_transition_height",
                 // canOverflow: true,
                 id:
@@ -780,11 +786,11 @@ export const initUITransition = (container) => {
           );
         }
       } else {
-        outerWrapper.style.width = "";
-        outerWrapper.style.height = "";
+        elementToResize.style.width = "";
+        elementToResize.style.height = "";
         const [slotNaturalWidth, slotNaturalHeight] = measureSlotSize();
-        outerWrapper.style.width = `${constrainedWidth}px`;
-        outerWrapper.style.height = `${constrainedHeight}px`;
+        elementToResize.style.width = `${constrainedWidth}px`;
+        elementToResize.style.height = `${constrainedHeight}px`;
         updateNaturalContentSize(slotNaturalWidth, slotNaturalHeight);
         targetWidth = slotNaturalWidth;
         targetHeight = slotNaturalHeight;

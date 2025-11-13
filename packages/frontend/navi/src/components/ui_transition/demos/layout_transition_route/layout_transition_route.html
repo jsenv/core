@@ -142,13 +142,14 @@
         return (
           <UITransition
             fluid
-            sizeTransition={false}
-            sizeTransitionDuration="1000"
+            // sizeTransition={false}
+            sizeTransitionDuration="3000"
             debugDetection
             debugSize
             debugContent
             // transitionType="none"
-            transitionDuration="800"
+            transitionDuration="3000"
+            debugBreakAfterClone="fallback"
           >
             <Route.Slot />
           </UITransition>
@@ -162,7 +163,7 @@
             width="300"
             height="250"
             padding="40"
-            margin="auto"
+            // margin="auto"
             background="white"
             color="#666"
           >
