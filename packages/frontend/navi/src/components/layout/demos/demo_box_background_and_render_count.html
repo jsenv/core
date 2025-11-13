@@ -1,0 +1,208 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Box Component - Background Colors & Render Count Demo</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+
+      button {
+        margin: 4px;
+        padding: 8px 16px;
+        font-family: inherit;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: #f0f0f0;
+      }
+
+      button.active {
+        color: white;
+        background: #007acc;
+        border-color: #007acc;
+      }
+
+      .demo-section {
+        margin-bottom: 30px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .render-counter {
+        margin: 8px 0;
+        padding: 8px 12px;
+        font-weight: bold;
+        background: #e8f4fd;
+        border-left: 4px solid #007acc;
+        border-radius: 4px;
+      }
+
+      .test-box {
+        margin: 16px 0;
+        transition: background-color 0.3s ease;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState, useRef } from "preact/hooks";
+      import { Box } from "../box.jsx";
+
+      // Tracked Box component that counts renders
+      const TrackedBox = ({ children, ...props }) => {
+        const renderCountRef = useRef(0);
+        renderCountRef.current += 1;
+
+        return (
+          <Box
+            className="test-box"
+            padding="20"
+            borderRadius="8"
+            border="2px solid #ddd"
+            minWidth="200"
+            minHeight="100"
+            contentAlignX="center"
+            contentAlignY="center"
+            {...props}
+          >
+            <div>
+              <div style={{ marginBottom: "8px" }}>{children}</div>
+              <div className="render-counter">
+                Renders: {renderCountRef.current}
+              </div>
+            </div>
+          </Box>
+        );
+      };
+
+      const Demo = () => {
+        const [boxBackground, setBoxBackground] = useState("red");
+        const [nonBoxProp, setNonBoxProp] = useState(0);
+        const [boxContent, setBoxContent] = useState("Box Content");
+
+        const colors = [
+          { name: "Red", value: "red" },
+          { name: "Green", value: "green" },
+          { name: "Blue", value: "blue" },
+          { name: "Orange", value: "orange" },
+          { name: "Purple", value: "purple" },
+          { name: "Transparent", value: "transparent" },
+        ];
+
+        return (
+          <div>
+            <h1>Box Component - Background Colors & Render Count Demo</h1>
+
+            <div className="demo-section">
+              <h2>🎨 Background Color Control</h2>
+              <p>Change the background color and observe render count:</p>
+
+              <div style={{ marginBottom: "16px" }}>
+                <strong>Background Color:</strong>
+                {colors.map((color) => (
+                  <button
+                    key={color.value}
+                    className={boxBackground === color.value ? "active" : ""}
+                    onClick={() => setBoxBackground(color.value)}
+                  >
+                    {color.name}
+                  </button>
+                ))}
+              </div>
+
+              <TrackedBox background={boxBackground}>
+                Background: {boxBackground}
+              </TrackedBox>
+            </div>
+
+            <div className="demo-section">
+              <h2>🔄 Render Optimization Test</h2>
+              <p>
+                Test that changing non-box props doesn't cause unnecessary
+                re-renders. The box should only re-render when its props change,
+                not when unrelated state changes.
+              </p>
+
+              <div style={{ marginBottom: "16px" }}>
+                <strong>Non-Box State:</strong>
+                <button onClick={() => setNonBoxProp((prev) => prev + 1)}>
+                  Increment Non-Box Prop ({nonBoxProp})
+                </button>
+                <p style={{ fontSize: "14px", color: "#666", margin: "8px 0" }}>
+                  ↑ This should NOT cause the box below to re-render
+                </p>
+              </div>
+
+              <TrackedBox background="lightblue">
+                This box should not re-render when non-box prop changes
+              </TrackedBox>
+            </div>
+
+            <div className="demo-section">
+              <h2>📝 Content Change Test</h2>
+              <p>
+                Change box content to verify it re-renders when children change:
+              </p>
+
+              <div style={{ marginBottom: "16px" }}>
+                <strong>Box Content:</strong>
+                <button onClick={() => setBoxContent("Hello World!")}>
+                  Set "Hello World!"
+                </button>
+                <button onClick={() => setBoxContent("Box Component")}>
+                  Set "Box Component"
+                </button>
+                <button onClick={() => setBoxContent("Dynamic Content")}>
+                  Set "Dynamic Content"
+                </button>
+              </div>
+
+              <TrackedBox background="lightgreen">{boxContent}</TrackedBox>
+            </div>
+
+            <div className="demo-section">
+              <h2>📊 Expected Behavior</h2>
+              <ul style={{ lineHeight: "1.6" }}>
+                <li>
+                  <strong>Background Color Changes:</strong> Should re-render
+                  the specific box
+                </li>
+                <li>
+                  <strong>Non-Box Prop Changes:</strong> Should NOT re-render
+                  any boxes
+                </li>
+                <li>
+                  <strong>Content Changes:</strong> Should re-render the
+                  specific box
+                </li>
+                <li>
+                  <strong>Multiple Boxes:</strong> Each box should have
+                  independent render counts
+                </li>
+                <li>
+                  <strong>Optimization:</strong> Render count should only
+                  increment when that specific box's props actually change
+                </li>
+              </ul>
+            </div>
+          </div>
+        );
+      };
+
+      render(<Demo />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
