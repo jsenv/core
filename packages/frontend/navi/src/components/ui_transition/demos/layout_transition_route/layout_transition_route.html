@@ -136,7 +136,7 @@
 
       const RootLayout = () => {
         const info = useActiveRouteInfo();
-        console.log(info.meta);
+        const fluid = info.meta?.layout === "fluid";
         return (
           <Layout
             as="main"
@@ -149,7 +149,6 @@
           >
             <Layout
               id="centered_layout"
-              row
               minWidth="100%"
               minHeight="100%"
               background="white"
