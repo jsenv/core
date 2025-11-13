@@ -65,6 +65,7 @@
         Link,
         Routes,
         Route,
+        Box,
         RouteLink,
         setupRoutes,
         UITransition,
@@ -110,6 +111,7 @@
             width="100%"
             height="100%"
             minWidth="fit-content"
+            minHeight="fit-content"
             background="rgba(0, 0, 160, 0.5)"
           >
             <Route.Slot />
@@ -124,6 +126,7 @@
             borderRadius="inherit"
             borderRadius="8"
             color="#666"
+            background="white"
           >
             {children}
           </Layout>
@@ -136,9 +139,10 @@
             width="100%"
             height="100%"
             minWidth="fit-content"
-            row
+            minHeight="fit-content"
             borderRadius="0"
             color="#666"
+            background="white"
           >
             {children}
           </Layout>
@@ -147,36 +151,28 @@
 
       const FitPage = () => (
         <FitContentLayout>
-          <Layout id="fit_page" row contentAlignX="center" contentSpacing="16">
+          <Box id="fit_page" width="300" height="250" padding="40">
             300x250 with border
-          </Layout>
+          </Box>
         </FitContentLayout>
       );
       const ViewportPage = () => (
         <ViewportLayout>
-          <Layout
+          <Box
             id="viewport_page"
-            row
             minWidth="100vw"
             minHeight="100vh"
-            contentAlignX="center"
-            contentSpacing="16"
-            background="white"
             padding="40"
           >
             Full page no border
-          </Layout>
+          </Box>
         </ViewportLayout>
       );
       const ViewportWidePage = () => (
         <ViewportLayout>
-          <Layout
+          <Box
             id="viewport_wide_page"
-            contentAlignX="start"
-            contentAlignY="center"
             minWidth="150vw"
-            contentSpacing="20"
-            background="white"
             padding="40"
             color="blue"
             size="lg"
@@ -186,37 +182,29 @@
             <div>Extra content to make sure scrolling is possible</div>
             <div>Extra content to make sure scrolling is possible</div>
             <div>Extra content to make sure scrolling is possible</div>
-          </Layout>
+          </Box>
         </ViewportLayout>
       );
       const ViewportTallPage = () => (
         <ViewportLayout>
-          <Layout
+          <Box
             id="viewport_tall_page"
             minHeight="150vh"
-            contentSpacing="20"
-            background="white"
             padding="40"
             color="red"
             size="lg"
             bold
           >
             Tall Page (150% viewport height)
-          </Layout>
+          </Box>
         </ViewportLayout>
       );
-
       const ViewportLargePage = () => (
         <ViewportLayout>
           <Layout
             id="viewport_large_page"
-            column
-            contentAlignX="start"
-            contentAlignY="start"
             minWidth="150vw"
             minHeight="150vh"
-            contentSpacing="30"
-            color="purple"
             size="lg"
             bold
           >
