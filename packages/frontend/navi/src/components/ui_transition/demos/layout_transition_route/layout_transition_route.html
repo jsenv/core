@@ -15,11 +15,38 @@
       }
 
       body {
+        position: relative;
         margin: 0;
         padding: 0;
         color: white;
         font-family: system-ui;
-        background: yellow;
+        background:
+          repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 100px,
+            rgba(0, 0, 0, 0.05) 100px,
+            rgba(0, 0, 0, 0.05) 200px
+          ),
+          linear-gradient(
+            45deg,
+            rgba(255, 255, 0, 0.8) 0%,
+            rgba(255, 255, 0, 0.6) 100%
+          );
+      }
+
+      body::before {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        z-index: -1;
+        color: rgba(0, 0, 0, 0.1);
+        font-weight: 900;
+        font-size: 8rem;
+        letter-spacing: 2rem;
+        transform: translate(-50%, -50%) rotate(-45deg);
+        pointer-events: none;
+        content: "BODY";
       }
 
       #root {
