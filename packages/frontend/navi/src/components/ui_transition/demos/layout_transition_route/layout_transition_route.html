@@ -16,8 +16,11 @@
       }
 
       #root {
+        display: inline-flex;
         width: 100%;
         height: 100%;
+        align-items: center;
+        justify-content: center;
       }
 
       body {
@@ -118,7 +121,7 @@
             as="nav"
             row
             contentSpacing="16"
-            style="position: fixed; z-index: 1"
+            style="position: fixed; z-index: 1; top: 0; left: 0;"
           >
             <RouteLink route={DIALOG_ROUTE}>Dialog</RouteLink>
             <RouteLink route={VIEWPORT_ROUTE}>Viewport</RouteLink>
@@ -143,13 +146,13 @@
           <UITransition
             fluid
             // sizeTransition={false}
-            sizeTransitionDuration="1000"
+            sizeTransitionDuration="10000"
             debugDetection
             debugSize
             debugContent
             // transitionType="none"
             transitionDuration="1000"
-            // debugBreakAfterClone="fallback"
+            // debugBreakAfterClone="viewport"
           >
             <Route.Slot />
           </UITransition>
@@ -158,23 +161,33 @@
 
       const DialogLayout = ({ children }) => {
         return (
-          <Box
-            id="dialog_layout"
-            width="300"
-            height="250"
-            padding="40"
-            // margin="auto"
-            background="white"
-            color="#666"
+          <Layout
+            row
+            contentAlignX="center"
+            contentAlignY="center"
+            height="100%"
+            width="100%"
           >
-            {children}
-          </Box>
+            <Box
+              id="dialog_layout"
+              data-transition-size
+              width="300"
+              height="250"
+              padding="40"
+              // margin="auto"
+              background="white"
+              color="#666"
+            >
+              {children}
+            </Box>
+          </Layout>
         );
       };
       const ViewportLayout = ({ children }) => {
         return (
           <Box
             id="viewport_layout"
+            data-transition-size
             minWidth="100%"
             width="fit-content"
             minHeight="100%"
@@ -182,7 +195,9 @@
             padding="40"
             background="red"
           >
-            {children}
+            <Box layoutRow contentAlignX="center" contentAlignY="center">
+              {children}
+            </Box>
           </Box>
         );
       };
@@ -225,20 +240,22 @@
         </ViewportLayout>
       );
       const ViewportOverflowXYPage = () => (
-        <Box
-          id="viewport_tall_page"
-          minWidth="150vw"
-          minHeight="150vh"
-          padding="40"
-          color="green"
-          size="lg"
-          bold
-        >
-          Wide and tall Page (150% viewport width/height)
-          <div>Extra content to make sure scrolling is possible</div>
-          <div>Extra content to make sure scrolling is possible</div>
-          <div>Extra content to make sure scrolling is possible</div>
-        </Box>
+        <ViewportLayout>
+          <Box
+            id="viewport_tall_page"
+            minWidth="150vw"
+            minHeight="150vh"
+            padding="40"
+            color="green"
+            size="lg"
+            bold
+          >
+            Wide and tall Page (150% viewport width/height)
+            <div>Extra content to make sure scrolling is possible</div>
+            <div>Extra content to make sure scrolling is possible</div>
+            <div>Extra content to make sure scrolling is possible</div>
+          </Box>
+        </ViewportLayout>
       );
 
       const App = () => {

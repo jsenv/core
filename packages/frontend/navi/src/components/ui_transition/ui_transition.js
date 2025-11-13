@@ -80,6 +80,8 @@ import.meta.css = /* css */ `
   .ui_transition_slot,
   .ui_transition_content_overlay {
     /* display: inline-flex; */
+    /* align-items: center; */
+    /* justify-content: center; */
   }
 
   .ui_transition_phase_overlay,
@@ -615,7 +617,10 @@ export const initUITransition = (container) => {
 
     const measureSlotSize = () => {
       if (container.hasAttribute("data-fluid")) {
-        const elementToMeasure = slot.firstElementChild || slot;
+        const elementToMeasure =
+          slot.querySelector("[data-transition-size]") ||
+          slot.firstElementChild ||
+          slot;
         return [
           getWidthWithoutTransition(elementToMeasure),
           getHeightWithoutTransition(elementToMeasure),
@@ -1630,11 +1635,17 @@ const crossFade = {
           }),
         from: effectiveFromOpacity,
         duration,
-        startProgress: isPhaseTransition ? 0 : startProgress, // Phase transitions: new content always starts fresh
+        startProgress: isPhaseTransition
+          ? // Phase transitions: new content always starts fresh
+            0
+          : startProgress,
         onUpdate: ({ value, timing }) => {
           debug("transition_updates", "New content fade in:", value.toFixed(3));
           if (timing === "end") {
             debug("content", "Cross-fade complete");
+            setTimeout(() => {
+              debugger;
+            }, 200);
           }
         },
       }),

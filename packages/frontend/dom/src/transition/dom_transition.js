@@ -10,7 +10,7 @@ import { createTimelineTransition } from "./transition_playback.js";
 const transitionStyleController = createStyleController("transition");
 
 export const createHeightTransition = (element, to, options = {}) => {
-  const { setup, ...rest } = options;
+  const { setup, finish, ...rest } = options;
   const heightTransition = createTimelineTransition({
     ...rest,
     constructor: createHeightTransition,
@@ -26,18 +26,21 @@ export const createHeightTransition = (element, to, options = {}) => {
           update: ({ value }) => {
             transitionStyleController.set(element, { height: value });
           },
-          teardown: () => {
+          restore: () => {
             transitionStyleController.delete(element, "height");
+          },
+          teardown: () => {
             teardown?.();
           },
         };
       },
+      finish,
     },
   });
   return heightTransition;
 };
 export const createWidthTransition = (element, to, options = {}) => {
-  const { setup, ...rest } = options;
+  const { setup, finish, ...rest } = options;
   const widthTransition = createTimelineTransition({
     ...rest,
     constructor: createWidthTransition,
@@ -53,18 +56,21 @@ export const createWidthTransition = (element, to, options = {}) => {
           update: ({ value }) => {
             transitionStyleController.set(element, { width: value });
           },
-          teardown: () => {
+          restore: () => {
             transitionStyleController.delete(element, "width");
+          },
+          teardown: () => {
             teardown?.();
           },
         };
       },
+      finish,
     },
   });
   return widthTransition;
 };
 export const createOpacityTransition = (element, to, options = {}) => {
-  const { setup, ...rest } = options;
+  const { setup, finish, ...rest } = options;
   const opacityTransition = createTimelineTransition({
     ...rest,
     constructor: createOpacityTransition,
@@ -80,18 +86,21 @@ export const createOpacityTransition = (element, to, options = {}) => {
           update: ({ value }) => {
             transitionStyleController.set(element, { opacity: value });
           },
-          teardown: () => {
+          restore: () => {
             transitionStyleController.delete(element, "opacity");
+          },
+          teardown: () => {
             teardown?.();
           },
         };
       },
+      finish,
     },
   });
   return opacityTransition;
 };
 export const createTranslateXTransition = (element, to, options = {}) => {
-  const { setup, ...rest } = options;
+  const { setup, finish, ...rest } = options;
   const translateXTransition = createTimelineTransition({
     ...rest,
     constructor: createTranslateXTransition,
@@ -111,12 +120,15 @@ export const createTranslateXTransition = (element, to, options = {}) => {
               },
             });
           },
-          teardown: () => {
+          restore: () => {
             transitionStyleController.delete(element, "transform.translateX");
+          },
+          teardown: () => {
             teardown?.();
           },
         };
       },
+      finish,
     },
   });
   return translateXTransition;
