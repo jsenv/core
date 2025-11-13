@@ -171,38 +171,44 @@
         );
       };
 
+      const ViewportLayout = ({ children }) => {
+        return (
+          <CenteredLayout>
+            <Box
+              id="viewport_page"
+              minWidth="100vw"
+              minHeight="100vh"
+              padding="40"
+            >
+              {children}
+            </Box>
+          </CenteredLayout>
+        );
+      };
+
       const SmallPage = () => (
         <Box id="fit_page" width="300" height="250" padding="40">
           300x250 with border
         </Box>
       );
       const ViewportPage = () => {
-        return (
-          <Box
-            id="viewport_page"
-            minWidth="100vw"
-            minHeight="100vh"
-            padding="40"
-          >
-            Full page no border
-          </Box>
-        );
+        return <ViewportLayout>Full page no border</ViewportLayout>;
       };
       const ViewportOverflowXPage = () => (
-        <Box
-          id="viewport_wide_page"
-          minWidth="150vw"
-          height="100vh"
-          padding="40"
-          color="blue"
-          size="lg"
-          bold
-        >
-          Wide Page (150% viewport width)
-          <div>Extra content to make sure scrolling is possible</div>
-          <div>Extra content to make sure scrolling is possible</div>
-          <div>Extra content to make sure scrolling is possible</div>
-        </Box>
+        <ViewportLayout>
+          <Box
+            id="viewport_wide_page"
+            minWidth="150vw"
+            color="blue"
+            size="lg"
+            bold
+          >
+            Wide Page (150% viewport width)
+            <div>Extra content to make sure scrolling is possible</div>
+            <div>Extra content to make sure scrolling is possible</div>
+            <div>Extra content to make sure scrolling is possible</div>
+          </Box>
+        </ViewportLayout>
       );
       const ViewportOverflowYPage = () => (
         <Box
@@ -236,23 +242,6 @@
           <div>Extra content to make sure scrolling is possible</div>
         </Box>
       );
-
-      const ViewportLayout = ({ children }) => {
-        return (
-          <Layout
-            id="viewport_layout"
-            width="100%"
-            height="100%"
-            minWidth="fit-content"
-            minHeight="fit-content"
-            borderRadius="0"
-            color="#666"
-            background="white"
-          >
-            {children}
-          </Layout>
-        );
-      };
 
       const App = () => {
         return (
