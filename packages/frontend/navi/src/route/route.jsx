@@ -77,6 +77,10 @@ const ActiveRouteManager = ({
   onActiveInfoChange,
   children,
 }) => {
+  if (route && fallback) {
+    throw new Error("Route cannot have both route and fallback props");
+  }
+
   const registerChildRouteFromContext = useContext(RegisterChildRouteContext);
   const elementId = getElementSignature(element);
   const candidateSet = new Set();

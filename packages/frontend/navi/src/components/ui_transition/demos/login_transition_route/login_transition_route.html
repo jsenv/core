@@ -1,0 +1,123 @@
+<!doctype html>
+<html>
+  <head>
+    <title>UITransition Size Demo with Routes</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        color: white;
+        font-family: system-ui;
+        background: #1a1a1a;
+      }
+
+      /* box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); */
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import {
+        Layout,
+        Link,
+        Routes,
+        Route,
+        RouteLink,
+        setupRoutes,
+        UITransition,
+      } from "@jsenv/navi";
+
+      const { SMALL_ROUTE, LARGE_ROUTE } = setupRoutes({
+        SMALL_ROUTE: "",
+        LARGE_ROUTE: "large",
+      });
+
+      const HomePage = () => (
+        <Layout
+          row
+          width="300"
+          height="250"
+          padding="40"
+          contentAlignX="center"
+          contentAlignY="center"
+          borderRadius="inherit"
+          borderRadius="8"
+          background="white"
+          color="#666"
+        >
+          300×250 with border
+          <RouteLink route={LARGE_ROUTE}>First page</RouteLink>
+        </Layout>
+      );
+
+      const FirstPage = () => (
+        <Layout
+          row
+          minWidth="100vw"
+          minHeight="100vh"
+          padding="40"
+          contentAlignX="center"
+          contentAlignY="center"
+          borderRadius="0"
+        >
+          Full page no border
+          <RouteLink route={SMALL_ROUTE}>Homepage</RouteLink>
+        </Layout>
+      );
+
+      const MainLayout = () => {
+        return (
+          <Layout
+            column
+            minWidth="100vw"
+            minHeight="100vh"
+            contentAlignX="center"
+            contentAlignY="center"
+            background="#2a2a2a"
+          >
+            <Layout
+              column
+              contentAlignX="center"
+              contentAlignY="center"
+              background="white"
+              borderRadius="8"
+              outline="5px solid orange"
+            >
+              <UITransition
+                // sizeTransition
+                sizeTransitionDuration={1000}
+                debugDetection
+                debugSize
+              >
+                <Route.Slot />
+              </UITransition>
+            </Layout>
+          </Layout>
+        );
+      };
+
+      const Router = () => {
+        return (
+          <Routes element={MainLayout}>
+            <Route element={<FirstPage />} route={LARGE_ROUTE} />
+            <Route element={<HomePage />} fallback />
+          </Routes>
+        );
+      };
+
+      const App = () => {
+        return <Router />;
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

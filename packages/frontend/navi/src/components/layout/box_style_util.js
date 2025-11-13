@@ -255,6 +255,11 @@ const TYPO_PROPS = {
   preWrap: applyToCssPropWhenTruthy("whiteSpace", "pre-wrap", "normal"),
 };
 const VISUAL_PROPS = {
+  outline: PASS_THROUGH,
+  outlineStyle: PASS_THROUGH,
+  outlineColor: PASS_THROUGH,
+  outlineWidth: PASS_THROUGH,
+  boxDecorationBreak: PASS_THROUGH,
   boxShadow: PASS_THROUGH,
   background: PASS_THROUGH,
   backgroundColor: PASS_THROUGH,
