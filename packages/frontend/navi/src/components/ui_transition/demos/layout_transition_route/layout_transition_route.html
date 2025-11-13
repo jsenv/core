@@ -9,6 +9,11 @@
         box-sizing: border-box;
       }
 
+      html,
+      body {
+        height: 100%;
+      }
+
       body {
         margin: 0;
         padding: 0;
@@ -19,7 +24,7 @@
 
       #root {
         width: 100%;
-        min-height: 100vh;
+        height: 100%;
       }
 
       /* box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); */
@@ -51,9 +56,10 @@
           <Layout
             column
             width="100%"
-            minHeight="100vh"
+            minHeight="fit-content"
+            height="100%"
             contentAlignX="center"
-            contentAlignY="center"
+            contentAlignY="start"
             background="#2a2a2a"
           >
             <Layout
@@ -64,14 +70,7 @@
               borderRadius="8"
               outline="5px solid orange"
             >
-              <UITransition
-                // sizeTransition
-                sizeTransitionDuration={1000}
-                debugDetection
-                debugSize
-              >
-                <Route.Slot />
-              </UITransition>
+              <Route.Slot />
             </Layout>
           </Layout>
         );
@@ -138,11 +137,17 @@
 
       const ViewportTallPage = () => (
         <ViewportLayout>
-          <Layout row contentAlignX="center" minHeight="150vh" gap="20">
+          <Layout
+            row
+            contentAlignX="center"
+            minHeight="150vh"
+            contentSpacing="20"
+            color="red"
+          >
             <div style="font-size: 18px; font-weight: bold;">
               Tall Page (150% viewport height)
             </div>
-            <Layout row gap="16">
+            <Layout row contentSpacing="16">
               <RouteLink route={FIT_ROUTE}>Fit page</RouteLink>
               <RouteLink route={VIEWPORT_TALL_ROUTE}>
                 Tall Page (scrollbars)
