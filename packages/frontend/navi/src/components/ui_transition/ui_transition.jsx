@@ -178,17 +178,17 @@ export const UITransition = ({
 export const useContentKey = (key) => {
   const contentKey = useContext(ContentKeyContext);
   const keyRef = useRef();
-  if (keyRef.current !== key && contentKey) {
+  if (keyRef.current !== key && contentKey !== undefined) {
     const previousKey = keyRef.current;
     keyRef.current = key;
-    if (previousKey) {
-      contentKey.update(previousKey, key);
-    } else {
+    if (previousKey === undefined) {
       contentKey.add(key);
+    } else {
+      contentKey.update(previousKey, key);
     }
   }
   useLayoutEffect(() => {
-    if (!contentKey) {
+    if (contentKey === undefined) {
       return null;
     }
     return () => {

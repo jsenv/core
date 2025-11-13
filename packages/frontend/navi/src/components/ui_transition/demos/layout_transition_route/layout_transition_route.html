@@ -73,13 +73,13 @@
       } from "@jsenv/navi";
 
       const {
-        SMALL_ROUTE,
+        DIALOG_ROUTE,
         VIEWPORT_ROUTE,
         VIEWPORT_OVERFLOW_X_ROUTE,
         VIEWPORT_OVERFLOW_Y_ROUTE,
         VIEWPORT_OVERFLOW_XY_ROUTE,
       } = setupRoutes({
-        SMALL_ROUTE: "",
+        DIALOG_ROUTE: "",
         VIEWPORT_ROUTE: "viewport",
         VIEWPORT_OVERFLOW_X_ROUTE: "viewport_overflow_x",
         VIEWPORT_OVERFLOW_Y_ROUTE: "viewport_overflow_y",
@@ -119,7 +119,7 @@
             contentSpacing="16"
             style="position: fixed; z-index: 1"
           >
-            <RouteLink route={SMALL_ROUTE}>Small</RouteLink>
+            <RouteLink route={DIALOG_ROUTE}>Dialog</RouteLink>
             <RouteLink route={VIEWPORT_ROUTE}>Viewport</RouteLink>
             <RouteLink route={VIEWPORT_OVERFLOW_X_ROUTE}>
               Viewport x overflow
@@ -146,7 +146,8 @@
             background="rgba(0, 0, 160, 0.5)"
           >
             <UITransition
-              sizeTransitionDuration="300"
+              sizeTransitionDuration="3000"
+              debugDetection
               debugSize
               debugContent
               // transitionType="none"

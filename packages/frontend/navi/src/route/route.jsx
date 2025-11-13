@@ -205,7 +205,13 @@ const initRouteObserver = ({
   const SlotActiveElementSignal = signal();
   const ActiveElement = () => {
     const activeRouteInfo = activeRouteInfoSignal.value;
-    useContentKey(activeRouteInfo?.route.urlPattern);
+    useContentKey(
+      activeRouteInfo
+        ? activeRouteInfo.route.urlPattern
+        : fallback
+          ? "fallback"
+          : undefined,
+    );
     const SlotActiveElement = SlotActiveElementSignal.value;
     if (typeof element === "function") {
       const Element = element;
