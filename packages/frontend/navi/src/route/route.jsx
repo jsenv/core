@@ -35,7 +35,7 @@ export const Routes = ({ element = RootElement, children }) => {
 };
 
 const SlotContext = createContext(null);
-// const RouteInfoContext = createContext(null);
+const RouteInfoContext = createContext(null);
 export const Route = ({ element, route, fallback, meta, children }) => {
   const forceRender = useForceRender();
   const hasDiscoveredRef = useRef(false);
@@ -162,21 +162,13 @@ const initRouteObserver = ({
     let fallbackInfo = null;
     for (const candidate of candidateSet) {
       if (candidate.route?.active) {
-        return {
-          ChildActiveElement: candidate.ActiveElement,
-          route: candidate.route,
-          meta: candidate.meta,
-        };
+        return candidate;
       }
       // fallback without route can match when no other route matches.
       // This is useful solely for "catch all" fallback used on the <Routes>
       // otherwise a fallback would always match and make the parent route always active
       if (candidate.fallback && !candidate.route.routeFromProps) {
-        fallbackInfo = {
-          ChildActiveElement: candidate.ActiveElement,
-          route: candidate.route,
-          meta: candidate.meta,
-        };
+        fallbackInfo = candidate;
       }
     }
     return fallbackInfo;
@@ -194,7 +186,7 @@ const initRouteObserver = ({
           return activeChildInfo;
         }
         return {
-          ChildActiveElement: null,
+          ActiveElement: null,
           route,
           meta,
         };
@@ -216,16 +208,14 @@ const initRouteObserver = ({
     const SlotActiveElement = SlotActiveElementSignal.value;
     if (typeof element === "function") {
       const Element = element;
-      return (
-        <SlotContext.Provider value={SlotActiveElement}>
-          <Element />
-        </SlotContext.Provider>
-      );
+      element = <Element />;
     }
     return (
-      <SlotContext.Provider value={SlotActiveElement}>
-        {element}
-      </SlotContext.Provider>
+      <RouteInfoContext.Provider value={activeRoute}>
+        <SlotContext.Provider value={SlotActiveElement}>
+          {element}
+        </SlotContext.Provider>
+      </RouteInfoContext.Provider>
     );
   };
   ActiveElement.underlyingElementId =
@@ -238,7 +228,7 @@ const initRouteObserver = ({
     if (newActiveInfo) {
       compositeRoute.active = true;
       activeRouteSignal.value = newActiveInfo.route;
-      SlotActiveElementSignal.value = newActiveInfo.ChildActiveElement;
+      SlotActiveElementSignal.value = newActiveInfo.ActiveElement;
       onActiveInfoChange({
         ActiveElement,
         SlotActiveElement: newActiveInfo.ActiveElement,
