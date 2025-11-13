@@ -221,8 +221,8 @@ export const initUITransition = (container) => {
       needsOldChildNodesClone ? previousSlotInfo.childNodes : null,
     );
     const contentId = isPhaseTransition
-      ? contentOverlayContentId
-      : phaseOverlayContentId;
+      ? phaseOverlayContentId
+      : contentOverlayContentId;
 
     // Determine which elements to return based on transition type:
     // - Phase transitions: operate on individual elements (cross-fade between specific elements)
