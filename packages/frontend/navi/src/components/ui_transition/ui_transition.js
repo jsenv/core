@@ -61,8 +61,8 @@ import.meta.css = /* css */ `
   .ui_transition_phase_overlay,
   .ui_transition_content_overlay {
     display: inline-flex;
-    min-width: 100%;
-    min-height: 100%;
+    min-width: max-content;
+    min-height: max-content;
     flex-direction: inherit;
     align-items: inherit;
     justify-content: inherit;
@@ -71,8 +71,8 @@ import.meta.css = /* css */ `
   }
 
   .ui_transition_slot {
-    width: 100%;
-    height: 100%;
+    min-width: max-content;
+    min-height: max-content;
   }
   .ui_transition[data-fluid] .ui_transition_slot {
     width: auto;
