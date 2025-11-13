@@ -88,9 +88,38 @@
         );
       };
 
+      // Separate component for render optimization test
+      const RenderOptimizationTest = () => {
+        const [nonBoxProp, setNonBoxProp] = useState(0);
+
+        return (
+          <div className="demo-section">
+            <h2>🔄 Render Optimization Test</h2>
+            <p>
+              Test that changing non-box props doesn't cause unnecessary
+              re-renders. The box should only re-render when its props change,
+              not when unrelated state changes.
+            </p>
+
+            <div style={{ marginBottom: "16px" }}>
+              <strong>Non-Box State:</strong>
+              <button onClick={() => setNonBoxProp((prev) => prev + 1)}>
+                Increment Non-Box Prop ({nonBoxProp})
+              </button>
+              <p style={{ fontSize: "14px", color: "#666", margin: "8px 0" }}>
+                ↑ This should NOT cause the box below to re-render
+              </p>
+            </div>
+
+            <TrackedBox background="lightblue">
+              This box should not re-render when non-box prop changes
+            </TrackedBox>
+          </div>
+        );
+      };
+
       const Demo = () => {
         const [boxBackground, setBoxBackground] = useState("red");
-        const [nonBoxProp, setNonBoxProp] = useState(0);
         const [boxContent, setBoxContent] = useState("Box Content");
 
         const colors = [
@@ -128,28 +157,7 @@
               </TrackedBox>
             </div>
 
-            <div className="demo-section">
-              <h2>🔄 Render Optimization Test</h2>
-              <p>
-                Test that changing non-box props doesn't cause unnecessary
-                re-renders. The box should only re-render when its props change,
-                not when unrelated state changes.
-              </p>
-
-              <div style={{ marginBottom: "16px" }}>
-                <strong>Non-Box State:</strong>
-                <button onClick={() => setNonBoxProp((prev) => prev + 1)}>
-                  Increment Non-Box Prop ({nonBoxProp})
-                </button>
-                <p style={{ fontSize: "14px", color: "#666", margin: "8px 0" }}>
-                  ↑ This should NOT cause the box below to re-render
-                </p>
-              </div>
-
-              <TrackedBox background="lightblue">
-                This box should not re-render when non-box prop changes
-              </TrackedBox>
-            </div>
+            <RenderOptimizationTest />
 
             <div className="demo-section">
               <h2>📝 Content Change Test</h2>
