@@ -235,7 +235,23 @@ export const createTimelineTransition = ({
 
   const timeChangeCallback = () => {
     const timelineCurrentTime = getTimelineCurrentTime();
-    const msElapsedSinceStart = timelineCurrentTime - transition.startTime;
+
+    // Detect frozen code (debugger, long pause) early
+    const timeSinceLastUpdate =
+      lastUpdateTime === -1
+        ? timelineCurrentTime - transition.baseTime
+        : timelineCurrentTime - lastUpdateTime;
+
+    if (timeSinceLastUpdate > 2000) {
+      // Code was frozen for more than 2s (e.g. debugger)
+      // Adjust baseTime to compensate for the freeze and update timing for next frame
+      const freezeDuration = timeSinceLastUpdate - transition.frameDuration;
+      transition.baseTime += freezeDuration;
+      lastUpdateTime = timelineCurrentTime;
+      return;
+    }
+
+    const msElapsedSinceStart = timelineCurrentTime - transition.baseTime;
     const msRemaining = transition.duration - msElapsedSinceStart;
 
     if (
@@ -250,10 +266,12 @@ export const createTimelineTransition = ({
       transition.finish();
       return;
     }
+
     if (lastUpdateTime === -1) {
       // First frame - always allow
     } else {
       const timeSinceLastUpdate = timelineCurrentTime - lastUpdateTime;
+
       // Allow rendering if we're within 3ms of the target frame duration
       // This prevents choppy animations when browser timing is slightly off
       const frameTimeTolerance = 3; // ms
@@ -288,6 +306,7 @@ export const createTimelineTransition = ({
   const transition = createTransition({
     ...options,
     startTime: null,
+    baseTime: null,
     progress: startProgress, // Initialize with start progress
     duration,
     easing,
@@ -302,7 +321,7 @@ export const createTimelineTransition = ({
       setup: (transition) => {
         // Handle timeline management
         lastUpdateTime = -1;
-        transition.startTime = getTimelineCurrentTime();
+        transition.baseTime = transition.startTime = getTimelineCurrentTime();
         // Calculate remaining frames based on remaining progress
         const remainingProgress = 1 - startProgress;
         const remainingDuration = transition.duration * remainingProgress;
@@ -318,7 +337,7 @@ export const createTimelineTransition = ({
         onTimelineNotNeeded();
         return () => {
           const pausedDuration = getTimelineCurrentTime() - pauseTime;
-          transition.startTime += pausedDuration;
+          transition.baseTime += pausedDuration;
           // Only adjust lastUpdateTime if it was set (not -1)
           if (lastUpdateTime !== -1) {
             lastUpdateTime += pausedDuration;
@@ -327,7 +346,7 @@ export const createTimelineTransition = ({
         };
       },
       updateTarget: (transition) => {
-        transition.startTime = getTimelineCurrentTime();
+        transition.baseTime = getTimelineCurrentTime();
         // Don't reset lastUpdateTime - we want visual continuity for smooth target updates
         // Recalculate remaining frames from current progress
         const remainingProgress = 1 - transition.progress;
