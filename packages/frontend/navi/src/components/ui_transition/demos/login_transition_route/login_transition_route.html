@@ -40,40 +40,7 @@
         LARGE_ROUTE: "large",
       });
 
-      const HomePage = () => (
-        <Layout
-          row
-          width="300"
-          height="250"
-          padding="40"
-          contentAlignX="center"
-          contentAlignY="center"
-          borderRadius="inherit"
-          borderRadius="8"
-          background="white"
-          color="#666"
-        >
-          300×250 with border
-          <RouteLink route={LARGE_ROUTE}>First page</RouteLink>
-        </Layout>
-      );
-
-      const FirstPage = () => (
-        <Layout
-          row
-          minWidth="100vw"
-          minHeight="100vh"
-          padding="40"
-          contentAlignX="center"
-          contentAlignY="center"
-          borderRadius="0"
-        >
-          Full page no border
-          <RouteLink route={SMALL_ROUTE}>Homepage</RouteLink>
-        </Layout>
-      );
-
-      const MainLayout = () => {
+      const RootLayout = () => {
         return (
           <Layout
             column
@@ -103,10 +70,57 @@
           </Layout>
         );
       };
+      const FitContentLayout = ({ children }) => {
+        return (
+          <Layout
+            row
+            minWidth="300"
+            padding="40"
+            contentAlignX="center"
+            contentAlignY="center"
+            borderRadius="inherit"
+            borderRadius="8"
+            background="white"
+            color="#666"
+          >
+            {children}
+          </Layout>
+        );
+      };
+      const ViewportLayout = ({ children }) => {
+        return (
+          <Layout
+            row
+            minWidth="100vw"
+            minHeight="100vh"
+            padding="40"
+            contentAlignX="center"
+            contentAlignY="center"
+            borderRadius="0"
+            background="white"
+          >
+            {children}
+          </Layout>
+        );
+      };
+
+      const HomePage = () => (
+        <FitContentLayout>
+          300×250 with border
+          <RouteLink route={LARGE_ROUTE}>First page</RouteLink>
+        </FitContentLayout>
+      );
+
+      const FirstPage = () => (
+        <ViewportLayout>
+          Full page no border
+          <RouteLink route={SMALL_ROUTE}>Homepage</RouteLink>
+        </ViewportLayout>
+      );
 
       const Router = () => {
         return (
-          <Routes element={MainLayout}>
+          <Routes element={RootLayout}>
             <Route element={<FirstPage />} route={LARGE_ROUTE} />
             <Route element={<HomePage />} fallback />
           </Routes>
