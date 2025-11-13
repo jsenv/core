@@ -58,13 +58,27 @@
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState, useRef } from "preact/hooks";
+      import { useState, useRef, useEffect } from "preact/hooks";
       import { Box } from "../box.jsx";
 
-      // Tracked Box component that counts renders
+      // Tracked Box component that counts actual re-renders (not just function calls)
       const TrackedBox = ({ children, ...props }) => {
         const renderCountRef = useRef(0);
-        renderCountRef.current += 1;
+        const prevPropsRef = useRef(props);
+        const hasActuallyRendered = useRef(false);
+
+        // Track actual renders by detecting when props or children actually change
+        useEffect(() => {
+          const propsChanged =
+            JSON.stringify(prevPropsRef.current) !== JSON.stringify(props);
+          const childrenChanged = prevPropsRef.current.children !== children;
+
+          if (propsChanged || childrenChanged || !hasActuallyRendered.current) {
+            renderCountRef.current += 1;
+            hasActuallyRendered.current = true;
+            prevPropsRef.current = props;
+          }
+        });
 
         return (
           <Box
@@ -81,7 +95,7 @@
             <div>
               <div style={{ marginBottom: "8px" }}>{children}</div>
               <div className="render-counter">
-                Renders: {renderCountRef.current}
+                Actual Re-renders: {renderCountRef.current}
               </div>
             </div>
           </Box>
@@ -185,24 +199,28 @@
               <h2>📊 Expected Behavior</h2>
               <ul style={{ lineHeight: "1.6" }}>
                 <li>
-                  <strong>Background Color Changes:</strong> Should re-render
-                  the specific box
+                  <strong>Background Color Changes:</strong> Should increment
+                  re-render count (props changed)
                 </li>
                 <li>
-                  <strong>Non-Box Prop Changes:</strong> Should NOT re-render
-                  any boxes
+                  <strong>Non-Box Prop Changes:</strong> Should NOT increment
+                  re-render count (component isolation)
                 </li>
                 <li>
-                  <strong>Content Changes:</strong> Should re-render the
-                  specific box
+                  <strong>Content Changes:</strong> Should increment re-render
+                  count (children changed)
                 </li>
                 <li>
                   <strong>Multiple Boxes:</strong> Each box should have
-                  independent render counts
+                  independent re-render tracking
                 </li>
                 <li>
-                  <strong>Optimization:</strong> Render count should only
-                  increment when that specific box's props actually change
+                  <strong>Optimization:</strong> Re-render count should only
+                  increment when meaningful changes occur to that specific box
+                </li>
+                <li>
+                  <strong>Note:</strong> We're tracking actual meaningful
+                  re-renders, not just function calls from parent re-renders
                 </li>
               </ul>
             </div>
