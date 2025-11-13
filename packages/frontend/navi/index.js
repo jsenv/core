@@ -31,7 +31,7 @@ export {
   setupRoutes,
   useRouteStatus,
 } from "./src/route/route.js";
-export { Route, Routes } from "./src/route/route.jsx";
+export { Route, Routes, useActiveRouteInfo } from "./src/route/route.jsx";
 export { RouteLink } from "./src/route/route_link.jsx";
 
 // Components

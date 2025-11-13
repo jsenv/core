@@ -69,6 +69,7 @@
         RouteLink,
         setupRoutes,
         UITransition,
+        useActiveRouteInfo,
       } from "@jsenv/navi";
 
       const {
@@ -88,11 +89,7 @@
       const Router = () => {
         return (
           <Routes element={RootLayout}>
-            <Route
-              element={<ViewportPage />}
-              meta={{ layout: "fluid" }}
-              route={VIEWPORT_ROUTE}
-            />
+            <Route element={<ViewportPage />} route={VIEWPORT_ROUTE} />
             <Route
               element={<ViewportOverflowXPage />}
               route={VIEWPORT_OVERFLOW_X_ROUTE}
@@ -105,7 +102,11 @@
               element={<ViewportOverflowXYPage />}
               route={VIEWPORT_OVERFLOW_XY_ROUTE}
             />
-            <Route element={<SmallPage />} fallback />
+            <Route
+              meta={{ layout: "fluid" }}
+              element={<SmallPage />}
+              fallback
+            />
           </Routes>
         );
       };
@@ -134,6 +135,8 @@
       };
 
       const RootLayout = () => {
+        const info = useActiveRouteInfo();
+        console.log(info.meta);
         return (
           <Layout
             as="main"

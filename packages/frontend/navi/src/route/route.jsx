@@ -36,6 +36,7 @@ export const Routes = ({ element = RootElement, children }) => {
 
 const SlotContext = createContext(null);
 const RouteInfoContext = createContext(null);
+export const useActiveRouteInfo = () => useContext(RouteInfoContext);
 export const Route = ({ element, route, fallback, meta, children }) => {
   const forceRender = useForceRender();
   const hasDiscoveredRef = useRef(false);
@@ -200,18 +201,18 @@ const initRouteObserver = ({
         return null;
       };
 
-  const activeRouteSignal = signal();
+  const activeRouteInfoSignal = signal();
   const SlotActiveElementSignal = signal();
   const ActiveElement = () => {
-    const activeRoute = activeRouteSignal.value;
-    useContentKey(activeRoute?.urlPattern);
+    const activeRouteInfo = activeRouteInfoSignal.value;
+    useContentKey(activeRouteInfo?.route.urlPattern);
     const SlotActiveElement = SlotActiveElementSignal.value;
     if (typeof element === "function") {
       const Element = element;
       element = <Element />;
     }
     return (
-      <RouteInfoContext.Provider value={activeRoute}>
+      <RouteInfoContext.Provider value={activeRouteInfo}>
         <SlotContext.Provider value={SlotActiveElement}>
           {element}
         </SlotContext.Provider>
@@ -227,7 +228,7 @@ const initRouteObserver = ({
     const newActiveInfo = getActiveInfo();
     if (newActiveInfo) {
       compositeRoute.active = true;
-      activeRouteSignal.value = newActiveInfo.route;
+      activeRouteInfoSignal.value = newActiveInfo;
       SlotActiveElementSignal.value = newActiveInfo.ActiveElement;
       onActiveInfoChange({
         ActiveElement,
@@ -237,7 +238,7 @@ const initRouteObserver = ({
       });
     } else {
       compositeRoute.active = false;
-      activeRouteSignal.value = null;
+      activeRouteInfoSignal.value = null;
       SlotActiveElementSignal.value = null;
       onActiveInfoChange(null);
     }
