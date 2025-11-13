@@ -77,11 +77,24 @@
         VIEWPORT_TALL_ROUTE: "viewport_tall",
       });
 
+      const Nav = () => {
+        return (
+          <Layout as="nav" row contentSpacing="16" style="position: fixed;">
+            <RouteLink route={FIT_ROUTE}>Fit</RouteLink>
+            <RouteLink route={VIEWPORT_ROUTE}>Viewport</RouteLink>
+            <RouteLink route={VIEWPORT_TALL_ROUTE}>
+              Viewport y scrollbar
+            </RouteLink>
+          </Layout>
+        );
+      };
+
       const RootLayout = () => {
         return (
           <Layout
             column
             width="100%"
+            minWidth="fit-content"
             minHeight="fit-content"
             height="100%"
             contentAlignX="center"
@@ -141,10 +154,6 @@
         <FitContentLayout>
           <Layout row contentAlignX="center" gap="16">
             <div>300×250 with border</div>
-            <RouteLink route={VIEWPORT_ROUTE}>Viewport page</RouteLink>
-            <RouteLink route={VIEWPORT_TALL_ROUTE}>
-              Tall Page (scrollbars)
-            </RouteLink>
           </Layout>
         </FitContentLayout>
       );
@@ -153,10 +162,6 @@
         <ViewportLayout>
           <Layout row contentAlignX="center" gap="16">
             <div>Full page no border</div>
-            <RouteLink route={FIT_ROUTE}>Fit page</RouteLink>
-            <RouteLink route={VIEWPORT_TALL_ROUTE}>
-              Tall Page (scrollbars)
-            </RouteLink>
           </Layout>
         </ViewportLayout>
       );
@@ -173,12 +178,6 @@
             <div style="font-size: 18px; font-weight: bold;">
               Tall Page (150% viewport height)
             </div>
-            <Layout row contentSpacing="16">
-              <RouteLink route={FIT_ROUTE}>Fit page</RouteLink>
-              <RouteLink route={VIEWPORT_TALL_ROUTE}>
-                Tall Page (scrollbars)
-              </RouteLink>
-            </Layout>
           </Layout>
         </ViewportLayout>
       );
@@ -194,7 +193,12 @@
       };
 
       const App = () => {
-        return <Router />;
+        return (
+          <>
+            <Nav />
+            <Router />
+          </>
+        );
       };
 
       render(<App />, document.querySelector("#root"));
