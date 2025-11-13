@@ -108,7 +108,12 @@ const globalCSSKeywordSet = new Set([
   "unset",
   "revert",
 ]);
-const cssKeywordSet = new Set([
+// Keywords that should NOT get automatic units when used with properties from:
+// - pxPropertySet (width, height, fontSize, etc.)
+// - degPropertySet (rotate, skew, etc.)
+// - unitlessPropertySet (opacity, zIndex, etc.)
+// This prevents auto-unit addition: e.g., width: "auto" stays "auto", not "autopx"
+const unitlessKeywordSet = new Set([
   ...globalCSSKeywordSet,
   // Size/dimension keywords for pxPropertySet properties
   "fit-content",
@@ -130,7 +135,14 @@ const cssKeywordSet = new Set([
   // Line height keyword (though lineHeight is handled specially)
   "normal",
 ]);
-const backgroundKeywordSet = new Set([...globalCSSKeywordSet]);
+// Keywords for backgroundImage property that should NOT be wrapped in url()
+// Used to prevent: background: "none" becoming background: "url(none)"
+const backgroundKeywordSet = new Set([
+  ...globalCSSKeywordSet,
+  // Background-specific keywords
+  "transparent",
+  "currentColor",
+]);
 
 const getUnit = (value) => {
   for (const cssUnit of cssUnitSet) {
@@ -142,9 +154,6 @@ const getUnit = (value) => {
 };
 // Check if value already has a unit
 const isUnitless = (value) => getUnit(value) === "";
-const isKeyword = (value) => {
-  return cssKeywordSet.has(value);
-};
 
 // url(
 // linear-gradient(
@@ -269,7 +278,7 @@ const normalizeNumber = (value, { unit, propertyName, preferedType }) => {
   if (typeof value === "string") {
     // Keep strings as-is (including %, em, rem, auto, none, etc.)
     if (preferedType === "string") {
-      if (unit && isUnitless(value) && !isKeyword(value)) {
+      if (unit && isUnitless(value) && !unitlessKeywordSet.has(value)) {
         return `${value}${unit}`;
       }
       return value;
