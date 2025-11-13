@@ -2,7 +2,7 @@
  * Required HTML structure for UI transitions with smooth size and phase/content animations:
  *
  * <div
- *   class="ui_transition_container"   <!-- Main container with relative positioning and overflow hidden -->
+ *   class="ui_transition"   <!-- Main container with relative positioning and overflow hidden -->
  *   data-size-transition              <!-- Optional: enable size animations -->
  *   data-size-transition-duration     <!-- Optional: size transition duration, default 300ms -->
  *   data-content-transition           <!-- Content transition type: cross-fade, slide-left -->
@@ -49,14 +49,14 @@ import {
 } from "@jsenv/dom";
 
 import.meta.css = /* css */ `
-  .ui_transition_container[data-transition-running] {
+  .ui_transition[data-transition-overflow] {
     /* When transition are running we need to put overflow: hidden */
     /* Either because the transition slides */
     /* Or when size transition are disabled because we need to immediatly crop old content when it's bigger than new content */
     overflow: hidden;
   }
 
-  .ui_transition_container,
+  .ui_transition,
   .ui_transition_outer_wrapper,
   .ui_transition_slot,
   .ui_transition_phase_overlay,
@@ -78,8 +78,12 @@ import.meta.css = /* css */ `
     min-height: fit-content;
     flex-direction: column;
   }
+  .ui_transition[data-fluid] .ui_transition_slot {
+    max-width: fit-content;
+    max-height: fit-content;
+  }
 
-  .ui_transition_container,
+  .ui_transition,
   .ui_transition_slot {
     position: relative;
   }
@@ -107,8 +111,8 @@ const PHASE_TRANSITION = "cross-fade"; // Default phase transition type (only cr
 const PHASE_TRANSITION_DURATION = 300; // Default phase transition duration
 
 export const initUITransition = (container) => {
-  if (!container.classList.contains("ui_transition_container")) {
-    console.error("Element must have ui_transition_container class");
+  if (!container.classList.contains("ui_transition")) {
+    console.error("Element must have ui_transition class");
     return { cleanup: () => {} };
   }
 
@@ -662,7 +666,7 @@ export const initUITransition = (container) => {
             setup: () =>
               notifyTransition(outerWrapper, {
                 modelId: "ui_transition_width",
-                canOverflow: true,
+                // canOverflow: true,
                 id:
                   targetWidth > constrainedWidth
                     ? "grow_to_new_width"
@@ -688,7 +692,7 @@ export const initUITransition = (container) => {
             setup: () =>
               notifyTransition(outerWrapper, {
                 modelId: "ui_transition_height",
-                canOverflow: true,
+                // canOverflow: true,
                 id:
                   targetHeight > constrainedHeight
                     ? "grow_to_new_height"
@@ -1119,6 +1123,20 @@ export const initUITransition = (container) => {
   update_transition_running_attribute: {
     const transitionSet = new Set();
     const updateTransitionOverflowAttribute = () => {
+      let someOverflow;
+      for (const transition of transitionSet) {
+        if (transition.canOverflow) {
+          debugger;
+          someOverflow = true;
+          break;
+        }
+      }
+      if (someOverflow) {
+        container.setAttribute("data-transition-overflow", "");
+      } else {
+        container.removeAttribute("data-transition-overflow");
+      }
+
       if (transitionSet.size > 0) {
         container.setAttribute("data-transition-running", "");
       } else {
@@ -1126,11 +1144,11 @@ export const initUITransition = (container) => {
       }
     };
     const onTransitionStart = (event) => {
-      transitionSet.add(event.detail.id);
+      transitionSet.add(event.detail);
       updateTransitionOverflowAttribute();
     };
     const onTransitionEnd = (event) => {
-      transitionSet.delete(event.detail.id);
+      transitionSet.delete(event.detail);
       updateTransitionOverflowAttribute();
     };
     container.addEventListener("ui_transition_start", onTransitionStart);
@@ -1448,7 +1466,6 @@ const crossFade = {
           setup: () =>
             notifyTransition(newElement, {
               modelId: crossFade.id,
-              canOverflow: true,
               id: "fade_out_old_content",
             }),
           from,
@@ -1474,7 +1491,6 @@ const crossFade = {
           setup: () =>
             notifyTransition(newElement, {
               modelId: crossFade.id,
-              canOverflow: true,
               id: "fade_in_new_content",
             }),
           from,
@@ -1521,7 +1537,6 @@ const crossFade = {
         setup: () =>
           notifyTransition(newElement, {
             modelId: crossFade.id,
-            canOverflow: true,
             id: "fade_out_old_content",
           }),
         from: oldOpacity,
@@ -1541,7 +1556,6 @@ const crossFade = {
         setup: () =>
           notifyTransition(newElement, {
             modelId: crossFade.id,
-            canOverflow: true,
             id: "fade_in_new_content",
           }),
         from: effectiveFromOpacity,

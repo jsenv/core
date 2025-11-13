@@ -132,7 +132,7 @@
 
     <div id="transition-box">
       <div
-        class="ui_transition_container"
+        class="ui_transition"
         data-size-transition
         data-content-transition="slide-left"
         data-content-transition-duration="3000"
@@ -162,7 +162,6 @@
       import { initUITransition } from "../ui_transition.js";
 
       const box = document.getElementById("transition-box");
-      const debugInfo = document.getElementById("debug-info");
       const durationInput = document.getElementById("transition-duration");
       const phaseDurationInput = document.getElementById("phase-duration");
       const contentTypeSelect = document.getElementById(
@@ -202,28 +201,6 @@
         uiTransitionRoot.dataset.phaseTransition = phaseTypeSelect.value;
       });
 
-      function updateDebugInfo() {
-        if (!uiTransition) return;
-
-        const state = uiTransition.getState();
-        debugInfo.textContent = JSON.stringify(
-          {
-            isPaused: state.isPaused,
-            contentTransitionInProgress: state.contentTransitionInProgress,
-            phaseTransitionInProgress: state.phaseTransitionInProgress,
-            contentDuration: uiTransitionRoot.dataset.contentTransitionDuration,
-            phaseDuration: uiTransitionRoot.dataset.phaseTransitionDuration,
-            contentType: uiTransitionRoot.dataset.contentTransition,
-            phaseType: uiTransitionRoot.dataset.phaseTransition,
-          },
-          null,
-          2,
-        );
-      }
-
-      // Update debug info periodically
-      setInterval(updateDebugInfo, 100);
-
       function setContent(content) {
         uiTransition.slot.innerHTML = content;
       }
@@ -242,8 +219,6 @@
         changeToFadeButton.disabled = false;
         changeToSlideButton.disabled = false;
         startButton.disabled = true;
-
-        updateDebugInfo();
       });
 
       slowLoadingButton.addEventListener("click", () => {
@@ -266,8 +241,6 @@
         // Enable relevant buttons
         pauseButton.disabled = false;
         slowLoadingButton.disabled = true;
-
-        updateDebugInfo();
       });
 
       pauseButton.addEventListener("click", () => {
@@ -275,7 +248,6 @@
         uiTransition.pause();
         pauseButton.disabled = true;
         resumeButton.disabled = false;
-        updateDebugInfo();
       });
 
       resumeButton.addEventListener("click", () => {
@@ -283,7 +255,6 @@
         uiTransition.resume();
         resumeButton.disabled = true;
         pauseButton.disabled = false;
-        updateDebugInfo();
       });
 
       insertButton.addEventListener("click", () => {
@@ -296,7 +267,6 @@
 
         // Disable buttons
         insertButton.disabled = true;
-        updateDebugInfo();
       });
 
       changeToFadeButton.addEventListener("click", () => {
@@ -311,7 +281,6 @@
         `);
 
         changeToFadeButton.disabled = true;
-        updateDebugInfo();
       });
 
       changeToSlideButton.addEventListener("click", () => {
@@ -326,7 +295,6 @@
         `);
 
         changeToSlideButton.disabled = true;
-        updateDebugInfo();
       });
 
       resetButton.addEventListener("click", () => {
@@ -351,8 +319,6 @@
         insertButton.disabled = true;
         changeToFadeButton.disabled = true;
         changeToSlideButton.disabled = true;
-
-        updateDebugInfo();
       });
     </script>
   </body>

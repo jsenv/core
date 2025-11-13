@@ -50,6 +50,7 @@ const ContentKeyContext = createContext();
 export const UITransition = ({
   children,
   contentKey,
+  fluid,
   sizeTransition = true,
   sizeTransitionDuration,
   transitionType,
@@ -57,6 +58,7 @@ export const UITransition = ({
   phaseTransitionType,
   phaseTransitionDuration,
   debugDetection,
+  debugContent,
   debugSize,
   debugBreakAfterClone,
   disabled,
@@ -123,7 +125,8 @@ export const UITransition = ({
       <div
         ref={ref}
         {...props}
-        className="ui_transition_container"
+        className="ui_transition"
+        data-fluid={fluid ? "" : undefined}
         data-size-transition={sizeTransition ? "" : undefined}
         data-size-transition-duration={
           sizeTransitionDuration ? sizeTransitionDuration : undefined
@@ -140,6 +143,7 @@ export const UITransition = ({
         }
         data-debug-detection={debugDetection ? "" : undefined}
         data-debug-size={debugSize ? "" : undefined}
+        data-debug-content={debugContent ? "" : undefined}
         data-debug-break-after-clone={debugBreakAfterClone}
       >
         <div className="ui_transition_outer_wrapper">

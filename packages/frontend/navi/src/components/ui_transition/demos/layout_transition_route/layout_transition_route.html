@@ -146,10 +146,12 @@
             background="rgba(0, 0, 160, 0.5)"
           >
             <UITransition
-              disabled
-              sizeTransitionDuration="1000"
+              sizeTransitionDuration="300"
               debugSize
               debugContent
+              // transitionType="none"
+              // transitionDuration="3000"
+              fluid={fluid}
             >
               <Box
                 minWidth={fluid ? "auto" : "100%"}
