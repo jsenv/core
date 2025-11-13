@@ -9,13 +9,16 @@
         box-sizing: border-box;
       }
       html,
-      body,
-      #root {
+      body {
         width: 100%;
         height: 100%;
       }
 
       #root {
+        width: 100%;
+        min-width: max-content;
+        height: 100%;
+        min-height: max-content;
         background: rgba(0, 0, 0, 0.5);
       }
 
@@ -151,6 +154,7 @@
         const fluid = info.meta?.layout === "fluid";
         return (
           <Layout
+            column
             as="main"
             id="root_layout"
             width="100%"
@@ -182,7 +186,6 @@
             minHeight="100%"
             height="fit-content"
             padding="40"
-            background="lightblue"
           >
             {children}
           </Box>
@@ -190,13 +193,7 @@
       };
 
       const SmallPage = () => (
-        <Box
-          id="fit_page"
-          width="300"
-          height="250"
-          padding="40"
-          // background="green"
-        >
+        <Box id="fit_page" width="300" height="250" padding="40">
           300x250 with border
         </Box>
       );

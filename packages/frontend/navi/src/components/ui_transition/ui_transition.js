@@ -60,9 +60,9 @@ import.meta.css = /* css */ `
   .ui_transition_outer_wrapper,
   .ui_transition_phase_overlay,
   .ui_transition_content_overlay {
-    display: flex;
-    width: 100%;
-    height: 100%;
+    display: inline-flex;
+    min-width: 100%;
+    min-height: 100%;
     flex-direction: inherit;
     align-items: inherit;
     justify-content: inherit;
@@ -79,7 +79,6 @@ import.meta.css = /* css */ `
     height: auto;
     align-self: start;
     justify-self: start;
-    background: white;
   }
 
   .ui_transition,
