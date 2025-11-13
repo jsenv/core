@@ -35,9 +35,10 @@
         UITransition,
       } from "@jsenv/navi";
 
-      const { SMALL_ROUTE, LARGE_ROUTE } = setupRoutes({
+      const { SMALL_ROUTE, LARGE_ROUTE, TALL_ROUTE } = setupRoutes({
         SMALL_ROUTE: "",
         LARGE_ROUTE: "large",
+        TALL_ROUTE: "tall",
       });
 
       const RootLayout = () => {
@@ -106,15 +107,53 @@
 
       const HomePage = () => (
         <FitContentLayout>
-          300×250 with border
-          <RouteLink route={LARGE_ROUTE}>First page</RouteLink>
+          <Layout row contentAlignX="center" gap="16">
+            <div>300×250 with border</div>
+            <RouteLink route={LARGE_ROUTE}>Go to Large Page</RouteLink>
+            <RouteLink route={TALL_ROUTE}>
+              Go to Tall Page (scrollbars)
+            </RouteLink>
+          </Layout>
         </FitContentLayout>
       );
 
       const FirstPage = () => (
         <ViewportLayout>
-          Full page no border
-          <RouteLink route={SMALL_ROUTE}>Homepage</RouteLink>
+          <Layout row contentAlignX="center" gap="16">
+            <div>Full page no border</div>
+            <RouteLink route={SMALL_ROUTE}>Go to Homepage</RouteLink>
+            <RouteLink route={TALL_ROUTE}>
+              Go to Tall Page (scrollbars)
+            </RouteLink>
+          </Layout>
+        </ViewportLayout>
+      );
+
+      const TallPage = () => (
+        <ViewportLayout>
+          <Layout row contentAlignX="center" minHeight="150vh" gap="20">
+            <div style="font-size: 18px; font-weight: bold;">
+              Tall Page (150% viewport height)
+            </div>
+            <div>
+              This page is taller than the viewport to test scrollbar behavior.
+            </div>
+            <div>
+              You should see vertical scrollbars when this page is active.
+            </div>
+            <div style="margin-top: 20px;">
+              Scroll down to see more content...
+            </div>
+            <div style="margin-top: 40px;">More content here...</div>
+            <div style="margin-top: 40px;">And even more content...</div>
+            <div style="margin-top: 40px;">Keep scrolling...</div>
+            <div style="margin-top: 40px;">Almost at the bottom...</div>
+            <div style="margin-top: 40px;">Navigation from here:</div>
+            <Layout row gap="16">
+              <RouteLink route={SMALL_ROUTE}>Go to Homepage</RouteLink>
+              <RouteLink route={LARGE_ROUTE}>Go to Large Page</RouteLink>
+            </Layout>
+          </Layout>
         </ViewportLayout>
       );
 
@@ -122,6 +161,7 @@
         return (
           <Routes element={RootLayout}>
             <Route element={<FirstPage />} route={LARGE_ROUTE} />
+            <Route element={<TallPage />} route={TALL_ROUTE} />
             <Route element={<HomePage />} fallback />
           </Routes>
         );
