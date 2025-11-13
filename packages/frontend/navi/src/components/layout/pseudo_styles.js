@@ -195,6 +195,7 @@ export const initPseudoStyles = (
   const [teardown, addTeardown] = createPubSub();
 
   let state;
+  let init = false;
   const checkPseudoClasses = () => {
     let someChange = false;
     const currentState = {};
