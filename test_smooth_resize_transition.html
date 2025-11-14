@@ -244,6 +244,7 @@
       };
 
       const DURATION = 3000;
+      const DEBUG_KEEP_CLONE = true;
       document.querySelector(".transition-container").style.transition =
         `width ${DURATION}ms ease, height ${DURATION}ms ease`;
 
@@ -332,8 +333,8 @@
 
         // 5. Nettoyer le clone après la transition
         setTimeout(() => {
-          if (clone.parentNode) {
-            clone.parentNode.removeChild(clone);
+          if (!DEBUG_KEEP_CLONE) {
+            clone.remove();
           }
           isTransitioning = false;
           console.log("Transition terminée, clone supprimé");
