@@ -80,6 +80,8 @@ import.meta.css = /* css */ `
   }
   .phase-slot,
   .old-phase-slot {
+    /* top: 0; */
+    /* left: 0; */
     width: 100%;
     height: 100%;
   }
@@ -632,17 +634,19 @@ export const createUITransitionController = (
         // Move any current phase to old phase slot if it exists
         if (phaseSlotId !== "empty") {
           const currentPhaseContent = phaseSlot.firstElementChild;
-          oldPhaseSlot.innerHTML = "";
-          oldPhaseSlot.appendChild(currentPhaseContent);
-          oldPhaseSlotId = phaseSlotId;
+          if (currentPhaseContent) {
+            oldPhaseSlot.innerHTML = "";
+            oldPhaseSlot.appendChild(currentPhaseContent);
+            oldPhaseSlotId = phaseSlotId;
 
-          // Store captured dimensions for the transition function
-          if (
-            capturedPhaseWidth !== undefined &&
-            capturedPhaseHeight !== undefined
-          ) {
-            phaseWidth = capturedPhaseWidth;
-            phaseHeight = capturedPhaseHeight;
+            // Store captured dimensions for the transition function
+            if (
+              capturedPhaseWidth !== undefined &&
+              capturedPhaseHeight !== undefined
+            ) {
+              phaseWidth = capturedPhaseWidth;
+              phaseHeight = capturedPhaseHeight;
+            }
           }
         }
         // Insert phase element into phase slot for measurement and transition
