@@ -215,6 +215,22 @@ export const createTransition = ({
   return transition;
 };
 
+/**
+ * Creates a timeline-managed transition that automatically handles animation timing
+ * and integrates with the global animation timeline.
+ *
+ * @param {Object} options - Configuration options for the transition
+ * @param {boolean} [options.isVisual] - Whether this is a visual transition (affects timeline priority)
+ * @param {number} options.duration - Duration of the transition in milliseconds
+ * @param {number} [options.fps=60] - Target frames per second for the animation
+ * @param {Function} [options.easing=EASING.EASE_OUT] - Easing function to apply to progress
+ * @param {Object} [options.lifecycle] - Lifecycle methods for the transition
+ * @param {number} [options.startProgress=0] - Progress value to start from (0-1)
+ * @param {number[]} [options.debugBreakpoints=[]] - Array of progress values (0-1) where debugger should trigger
+ * @param {boolean} [options.debugQuarterBreakpoints=false] - If true and debugBreakpoints is empty, sets breakpoints at 0.25 and 0.75
+ * @param {*} [...options] - Additional options passed to createTransition
+ * @returns {Object} Timeline transition object with play(), pause(), cancel(), finish() methods
+ */
 // Timeline-managed transition that adds/removes itself from the animation timeline
 export const createTimelineTransition = ({
   isVisual,
@@ -223,6 +239,8 @@ export const createTimelineTransition = ({
   easing = EASING.EASE_OUT,
   lifecycle,
   startProgress = 0, // Progress to start from (0-1)
+  debugQuarterBreakpoints = false, // Shorthand for debugBreakpoints: [0.25, 0.75]
+  debugBreakpoints = debugQuarterBreakpoints ? [0.25, 0.75] : [], // Array of progress values (0-1) where debugger should trigger
   ...options
 }) => {
   if (typeof duration !== "number" || duration <= 0) {
@@ -232,6 +250,7 @@ export const createTimelineTransition = ({
   }
 
   let lastUpdateTime = -1;
+  const breakPointSet = new Set(debugBreakpoints);
 
   const timeChangeCallback = () => {
     const timelineCurrentTime = getTimelineCurrentTime();
@@ -287,6 +306,18 @@ export const createTimelineTransition = ({
     // Apply start progress offset - transition runs from startProgress to 1
     const progress = startProgress + rawProgress * (1 - startProgress);
     transition.progress = progress;
+
+    // Check for debug breakpoints
+    for (const breakpoint of breakPointSet) {
+      if (progress >= breakpoint) {
+        breakPointSet.delete(breakpoint);
+        console.log(
+          `Debug breakpoint hit at ${(breakpoint * 100).toFixed(1)}% progress`,
+        );
+        debugger;
+      }
+    }
+
     const easedProgress = transition.easing(progress);
     const value =
       transition.from + (transition.to - transition.from) * easedProgress;
@@ -321,6 +352,7 @@ export const createTimelineTransition = ({
       setup: (transition) => {
         // Handle timeline management
         lastUpdateTime = -1;
+        breakPointSet.clear(); // Reset breakpoints for new transition run
         transition.baseTime = transition.startTime = getTimelineCurrentTime();
         // Calculate remaining frames based on remaining progress
         const remainingProgress = 1 - startProgress;
