@@ -280,6 +280,11 @@ export const createUITransitionController = (
       targetHeight = phaseHeight;
       oldPhaseSlot.style.width = "";
       oldPhaseSlot.style.height = "";
+
+      // Set wrapper dimensions immediately to prevent phase adaptation
+      // but keep container animation for visual transition
+      wrapper.style.width = `${targetWidth}px`;
+      wrapper.style.height = `${targetHeight}px`;
     } else {
       // force phase dimensions to content
       phaseSlot.style.width = `${contentWidth}px`;
@@ -295,7 +300,7 @@ export const createUITransitionController = (
     isInPhaseState = true;
 
     dimension: {
-      // Apply dimension transition
+      // Always animate container dimensions for visual transition
       container.style.width = `${width}px`;
       container.style.height = `${height}px`;
       requestAnimationFrame(() => {
@@ -365,6 +370,8 @@ export const createUITransitionController = (
       cleanupDimension: () => {
         container.style.width = "";
         container.style.height = "";
+        wrapper.style.width = "";
+        wrapper.style.height = "";
         container.removeAttribute("data-transitioning");
       },
     };
@@ -426,6 +433,8 @@ export const createUITransitionController = (
       cleanupDimension: () => {
         container.style.width = "";
         container.style.height = "";
+        wrapper.style.width = "";
+        wrapper.style.height = "";
         container.removeAttribute("data-transitioning");
       },
     };
@@ -510,6 +519,8 @@ export const createUITransitionController = (
       cleanupDimension: () => {
         container.style.width = "";
         container.style.height = "";
+        wrapper.style.width = "";
+        wrapper.style.height = "";
         container.removeAttribute("data-transitioning");
       },
     };
