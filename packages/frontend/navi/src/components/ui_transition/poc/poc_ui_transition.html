@@ -476,6 +476,30 @@
         });
       }
 
+      // Apply alignment - single place for all alignment logic
+      function applyAlignment(alignX, alignY) {
+        // Update UI transition component
+        uiTransition.setAlignment(alignX, alignY);
+
+        const viewport = document.querySelector(".transition-viewport");
+        viewport.style.alignItems = alignY;
+        viewport.style.justifyContent = alignX;
+
+        // Update form controls to reflect current state
+        const alignXSelect = document.getElementById("align-x-select");
+        const alignYSelect = document.getElementById("align-y-select");
+
+        if (alignXSelect) alignXSelect.value = alignX;
+        if (alignYSelect) alignYSelect.value = alignY;
+
+        // Save preferences
+        const currentPrefs = loadPreferences();
+        const updatedPrefs = { ...currentPrefs, alignX, alignY };
+        savePreferences(updatedPrefs);
+
+        console.log(`Alignment applied: X=${alignX}, Y=${alignY}`);
+      }
+
       // Setup controls
       function setupControls() {
         // Reset button
@@ -517,22 +541,20 @@
         if (alignXSelect) {
           alignXSelect.value = savedPrefs.alignX;
           alignXSelect.addEventListener("change", (e) => {
-            const alignX = e.target.value;
-            uiTransition.setAlignment(alignX, uiTransition.alignY);
-
-            const prefs = { ...loadPreferences(), alignX };
-            savePreferences(prefs);
+            const currentY = alignYSelect
+              ? alignYSelect.value
+              : savedPrefs.alignY;
+            applyAlignment(e.target.value, currentY);
           });
         }
 
         if (alignYSelect) {
           alignYSelect.value = savedPrefs.alignY;
           alignYSelect.addEventListener("change", (e) => {
-            const alignY = e.target.value;
-            uiTransition.setAlignment(uiTransition.alignX, alignY);
-
-            const prefs = { ...loadPreferences(), alignY };
-            savePreferences(prefs);
+            const currentX = alignXSelect
+              ? alignXSelect.value
+              : savedPrefs.alignX;
+            applyAlignment(currentX, e.target.value);
           });
         }
       }
@@ -541,6 +563,10 @@
       function init() {
         setupRectangleClickHandlers();
         setupControls();
+
+        // Apply initial alignment
+        applyAlignment(savedPrefs.alignX, savedPrefs.alignY);
+
         updateDebugInfo();
 
         // Continuous debug info updates
