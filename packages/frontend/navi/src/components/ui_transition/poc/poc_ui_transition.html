@@ -306,71 +306,76 @@
 
     <!-- Rectangles visibles pour cliquer -->
     <div class="rectangles-container">
-      <h3>Contenu</h3>
-      <div class="content-items">
-        <div class="rectangle" data-state="a" id="rect-a">
-          <h3>Contenu A</h3>
-          <p>Du texte yep</p>
-        </div>
+      <fieldset>
+        <legend>Content</legend>
 
-        <div class="rectangle" data-state="b" id="rect-b">
-          <h3>Contenu B</h3>
-          <p>
-            Rectangle plus grand avec plus de contenu. Ce texte est plus long
-            pour voir comment le contenu s'adapte dans un espace plus grand. La
-            transition doit être fluide.
-          </p>
-        </div>
+        <div class="content-items">
+          <div class="rectangle" data-state="a" id="rect-a">
+            <h3>A</h3>
+            <p>Du texte yep</p>
+          </div>
 
-        <div class="rectangle" data-state="c" id="rect-c">
-          <h3>Contenu C</h3>
-          <p>Format portrait</p>
-        </div>
-      </div>
+          <div class="rectangle" data-state="b" id="rect-b">
+            <h3>B</h3>
+            <p>
+              Rectangle plus grand avec plus de contenu. Ce texte est plus long
+              pour voir comment le contenu s'adapte dans un espace plus grand.
+              La transition doit être fluide.
+            </p>
+          </div>
 
-      <h3>Phases</h3>
-      <div class="phase-items">
-        <div
-          class="phase loading-phase"
-          data-phase="loading"
-          id="loading-phase"
-        >
+          <div class="rectangle" data-state="c" id="rect-c">
+            <h3>C</h3>
+            <p>Format portrait</p>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Content phase</legend>
+        <div class="phase-items">
           <div
-            style="
-              display: flex;
-              align-items: center;
-              gap: 10px;
-              color: #007acc;
-            "
+            class="phase loading-phase"
+            data-phase="loading"
+            id="loading-phase"
           >
             <div
               style="
-                width: 20px;
-                height: 20px;
-                border: 2px solid #007acc;
-                border-top: 2px solid transparent;
-                border-radius: 50%;
-                animation: spin 1s linear infinite;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                color: #007acc;
               "
-            ></div>
-            <span>Loading...</span>
+            >
+              <div
+                style="
+                  width: 20px;
+                  height: 20px;
+                  border: 2px solid #007acc;
+                  border-top: 2px solid transparent;
+                  border-radius: 50%;
+                  animation: spin 1s linear infinite;
+                "
+              ></div>
+              <span>Loading...</span>
+            </div>
           </div>
-        </div>
 
-        <div class="phase error-phase" data-phase="error" id="error-phase">
-          <div
-            style="
-              display: flex;
-              align-items: center;
-              gap: 10px;
-              color: #dc3545;
-            "
-          >
-            <div style="width: 20px; height: 20px; color: #dc3545">⚠️</div>
-            <span>Error occurred</span>
+          <div class="phase error-phase" data-phase="error" id="error-phase">
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                color: #dc3545;
+              "
+            >
+              <div style="width: 20px; height: 20px; color: #dc3545">⚠️</div>
+              <span>Error occurred</span>
+            </div>
           </div>
         </div>
-      </div>
+      </fieldset>
     </div>
 
     <!-- Zone de transition -->
