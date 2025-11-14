@@ -410,20 +410,13 @@
       <div id="state-info">État: A</div>
     </div>
 
-    <script>
-      const container = document.getElementById("container");
-
-      const debug = {
-        containerSize: document.getElementById("container-size"),
-        contentSize: document.getElementById("content-size"),
-        scaleInfo: document.getElementById("scale-info"),
-        stateInfo: document.getElementById("state-info"),
-      };
+    <script type="module">
+      import { UITransition } from "./poc_ui_transition.js";
 
       // Configuration localStorage
       const STORAGE_KEY = "smoothResizeTransition";
 
-      // Fonction pour charger les préférences depuis localStorage
+      // Load preferences from localStorage
       function loadPreferences() {
         try {
           const saved = localStorage.getItem(STORAGE_KEY);
@@ -445,14 +438,9 @@
         };
       }
 
-      // Fonction pour sauvegarder les préférences dans localStorage
-      function savePreferences() {
+      // Save preferences to localStorage
+      function savePreferences(prefs) {
         try {
-          const prefs = {
-            duration: DURATION,
-            alignX: contentAlignX,
-            alignY: contentAlignY,
-          };
           localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
           console.log("Préférences sauvegardées:", prefs);
         } catch (e) {
@@ -460,445 +448,88 @@
         }
       }
 
-      // Charger les préférences au démarrage
+      // Demo state and UI management
+      let currentState = "empty";
       const savedPrefs = loadPreferences();
 
-      let DURATION = savedPrefs.duration; // Durée chargée depuis localStorage
-      const VISUAL_DEBUG = false; // Affiche un ghost externe pour debug
-      const VISUAL_DEBUG_KEEP_GHOST = false; // Garde le ghost debug après transition
+      // Initialize UITransition
+      const uiTransition = new UITransition({
+        container: document.getElementById("container"),
+        oldContentContainer: document.getElementById("old-content-container"),
+        newContentContainer: document.getElementById("new-content-container"),
+        wrapper: document.getElementById("wrapper"),
+        duration: savedPrefs.duration,
+        alignX: savedPrefs.alignX,
+        alignY: savedPrefs.alignY,
+        onStateChange: updateUIState,
+      });
 
-      // Paramètres d'alignement chargés depuis localStorage
-      let contentAlignX = savedPrefs.alignX; // "start", "center", "end"
-      let contentAlignY = savedPrefs.alignY; // "start", "center", "end"
-
-      // États possibles - dimensions détectées automatiquement
-      const states = {
-        empty: {
-          contentClass: "state-empty",
-          content:
-            "<p>Cliquez sur un rectangle ci-dessus pour voir la transition</p>",
-        },
-        a: {
-          contentClass: "state-a",
-        },
-        b: {
-          contentClass: "state-b",
-        },
-        c: {
-          contentClass: "state-c",
-        },
+      // Debug info elements
+      const debug = {
+        containerSize: document.getElementById("container-size"),
+        contentSize: document.getElementById("content-size"),
+        scaleInfo: document.getElementById("scale-info"),
+        stateInfo: document.getElementById("state-info"),
       };
 
-      let currentState = "empty";
-      let isTransitioning = false;
-      let debugGhost = null; // Ghost externe pour debug visuel
-
-      // Fonction pour mettre à jour l'état visuel de l'interface selon isTransitioning
-      function updateUIState() {
+      // Update UI state during transitions
+      function updateUIState({ isTransitioning }) {
         const rectangles = document.querySelectorAll(".rectangle");
         const controls = document.querySelector(".controls-container");
         const resetButton = document.getElementById("reset-button");
 
         if (isTransitioning) {
-          // Désactiver visuellement les rectangles
           rectangles.forEach((rect) => {
             rect.classList.add("disabled");
             rect.style.pointerEvents = "none";
           });
 
-          // Désactiver les contrôles
           if (controls) {
             controls.classList.add("controls-disabled");
           }
 
-          // Désactiver le bouton reset spécifiquement
           if (resetButton) {
             resetButton.disabled = true;
             resetButton.textContent = "Transition en cours...";
           }
 
-          // Mettre à jour le debug info
           debug.scaleInfo.textContent =
             "⚠️ Transition en cours - Interface désactivée";
         } else {
-          // Réactiver visuellement les rectangles
           rectangles.forEach((rect) => {
             rect.classList.remove("disabled");
             rect.style.pointerEvents = "auto";
           });
 
-          // Réactiver les contrôles
           if (controls) {
             controls.classList.remove("controls-disabled");
           }
 
-          // Réactiver le bouton reset
           if (resetButton) {
             resetButton.disabled = false;
             resetButton.textContent = "Vider la zone";
           }
 
-          // Restaurer le debug info normal
           debug.scaleInfo.textContent = `Clone utilisé: ${isTransitioning ? "Oui" : "Non"}`;
         }
-
-        console.log(`État UI mis à jour: isTransitioning=${isTransitioning}`);
       }
 
-      // Fonction pour mettre à jour l'alignement de la viewport
-      function updateAlignment() {
-        const viewport = document.querySelector(".transition-viewport");
-        const wrapper = document.getElementById("wrapper");
-
-        // Convertir les valeurs d'alignement en propriétés CSS flexbox
-        const alignMap = {
-          start: "flex-start",
-          center: "center",
-          end: "flex-end",
-        };
-
-        // Appliquer l'alignement à la viewport (pour centrer le container)
-        viewport.style.justifyContent = alignMap[contentAlignX] || "center";
-        viewport.style.alignItems = alignMap[contentAlignY] || "center";
-
-        // Appliquer le même alignement au wrapper (pour positionner le contenu)
-        if (wrapper) {
-          wrapper.style.justifyContent = alignMap[contentAlignX] || "center";
-          wrapper.style.alignItems = alignMap[contentAlignY] || "center";
-        }
-
-        // Mettre à jour le positionnement du ghost debug
-        updateGhostPosition();
-
-        // Sauvegarder les préférences
-        savePreferences();
-
-        console.log(
-          `Alignement mis à jour et appliqué au wrapper: X=${contentAlignX}, Y=${contentAlignY}`,
-        );
-      }
-
-      // Fonction pour mettre à jour la position du ghost debug
-      function updateGhostPosition() {
-        if (!debugGhost) return;
-
-        const positionMap = {
-          start: "0%",
-          center: "50%",
-          end: "100%",
-        };
-
-        const transformMap = {
-          start: "0%",
-          center: "-50%",
-          end: "-100%",
-        };
-
-        debugGhost.style.marginLeft = contentAlignX === "center" ? 0 : "8px"; // transition container border size
-        debugGhost.style.marginTop = contentAlignY === "center" ? 0 : "8px"; // transition container border size
-        debugGhost.style.left = positionMap[contentAlignX] || "50%";
-        debugGhost.style.top = positionMap[contentAlignY] || "50%";
-        debugGhost.style.transform = `translate(${transformMap[contentAlignX] || "-50%"}, ${transformMap[contentAlignY] || "-50%"})`;
-      }
-
-      // Détection automatique des dimensions d'un rectangle OU du contenu actuel
-      function getDimensions(elementId) {
-        let element;
-
-        if (elementId === "current-content") {
-          // Cas spécial : mesurer le contenu actuel dans le conteneur old
-          const oldContainer = document.getElementById("old-content-container");
-          element = oldContainer ? oldContainer.firstElementChild : null;
-        } else {
-          // Cas normal : mesurer un rectangle source
-          element = document.getElementById(elementId);
-        }
-
-        if (!element) {
-          console.warn(`Élément ${elementId} non trouvé`);
-          return { width: 200, height: 100 }; // fallback
-        }
-
-        const rect = element.getBoundingClientRect();
-        const dimensions = {
-          width: rect.width,
-          height: rect.height,
-        };
-
-        console.log(`Dimensions détectées pour ${elementId}:`, dimensions);
-        return dimensions;
-      }
-
-      // Mise à jour du debug
+      // Update debug info
       function updateDebugInfo() {
+        const container = document.getElementById("container");
         const containerRect = container.getBoundingClientRect();
-
-        // Chercher le contenu actuel dans le conteneur old
-        const oldContainer = document.getElementById("old-content-container");
-        const actualContent = oldContainer
-          ? oldContainer.firstElementChild
-          : null;
-        const contentRect = actualContent
-          ? actualContent.getBoundingClientRect()
+        const currentContent = uiTransition.getCurrentContent();
+        const contentRect = currentContent
+          ? currentContent.getBoundingClientRect()
           : { width: 0, height: 0 };
 
         debug.containerSize.textContent = `Container: ${containerRect.width.toFixed(0)}px × ${containerRect.height.toFixed(0)}px`;
         debug.contentSize.textContent = `Content: ${contentRect.width.toFixed(0)}px × ${contentRect.height.toFixed(0)}px`;
-        debug.scaleInfo.textContent = `Clone utilisé: ${isTransitioning ? "Oui" : "Non"}`;
+        debug.scaleInfo.textContent = `Clone utilisé: ${uiTransition.getIsTransitioning() ? "Oui" : "Non"}`;
         debug.stateInfo.textContent = `État: ${currentState.toUpperCase()}`;
       }
 
-      // Fonction de clonage pour la zone de transition (interne)
-      function cloneRectangleForTransition(sourceElement) {
-        const clone = sourceElement.cloneNode(true);
-
-        // Préparer le clone pour la zone de transition
-        clone.style.position = "static"; // Pas de positionnement absolu dans la zone
-        clone.style.zIndex = "auto";
-        clone.style.pointerEvents = "none"; // Désactiver les interactions
-
-        // Supprimer les transitions du clone pour éviter les conflits
-        clone.style.transition = "none";
-
-        // S'assurer que les dimensions sont préservées
-        const sourceRect = sourceElement.getBoundingClientRect();
-        clone.style.width = `${sourceRect.width}px`;
-        clone.style.height = `${sourceRect.height}px`;
-        clone.style.flexShrink = "0"; // Ne pas rétrécir
-
-        console.log("Clone interne créé:", {
-          original: sourceElement.id,
-          dimensions: `${sourceRect.width}x${sourceRect.height}`,
-        });
-
-        return clone;
-      }
-
-      // Fonction de création du ghost pour debug visuel (dans la viewport)
-      function createDebugGhost(sourceElement) {
-        const ghost = sourceElement.cloneNode(true);
-
-        // Utiliser la classe CSS dédiée
-        ghost.classList.add("debug-ghost");
-
-        // S'assurer que les dimensions sont préservées
-        const sourceRect = sourceElement.getBoundingClientRect();
-        ghost.style.width = `${sourceRect.width}px`;
-        ghost.style.height = `${sourceRect.height}px`;
-
-        console.log("Ghost debug créé:", {
-          original: sourceElement.id,
-          dimensions: `${sourceRect.width}x${sourceRect.height}`,
-        });
-
-        return ghost;
-      }
-
-      // Transition vers un nouvel état avec cloneNode
-      function transitionTo(newState, sourceRectangle) {
-        if (isTransitioning) {
-          console.log("Transition déjà en cours, ignorée");
-          return;
-        }
-
-        isTransitioning = true;
-
-        // Détecter les dimensions actuelles et cibles
-        const currentDimensions = getDimensions("current-content");
-        const targetDimensions = getDimensions(sourceRectangle.id);
-
-        console.log("Début transition:", {
-          from: currentState,
-          to: newState,
-          currentDimensions,
-          targetDimensions,
-          sourceElement: sourceRectangle.id,
-        });
-
-        // 1. Cloner l'ancien contenu AVANT d'éventuelle modification visuelle
-        const oldContainer = document.getElementById("old-content-container");
-        const currentContent = oldContainer.firstElementChild;
-        const oldContentClone = currentContent
-          ? currentContent.cloneNode(true)
-          : null;
-
-        // 2. Créer le nouveau contenu clone AVANT de désactiver visuellement l'interface
-        const newClone = cloneRectangleForTransition(sourceRectangle);
-
-        // 3. Créer un ghost debug AVANT de désactiver visuellement (si VISUAL_DEBUG est activé)
-        if (VISUAL_DEBUG) {
-          // Nettoyer le ghost debug précédent
-          if (debugGhost && debugGhost.parentNode) {
-            debugGhost.parentNode.removeChild(debugGhost);
-            console.log("Ghost debug précédent supprimé");
-          }
-
-          debugGhost = createDebugGhost(sourceRectangle);
-        }
-
-        // 4. MAINTENANT désactiver visuellement l'interface (après tous les clonages)
-        updateUIState();
-
-        // 5. Définir les dimensions actuelles du container (point de départ)
-        container.style.transition = `width ${DURATION}ms ease, height ${DURATION}ms ease`;
-        container.style.width = `${currentDimensions.width}px`;
-        container.style.height = `${currentDimensions.height}px`;
-
-        // 6. Placer le ghost debug dans la viewport (si créé)
-        if (VISUAL_DEBUG && debugGhost) {
-          const viewport = document.querySelector(".transition-viewport");
-          viewport.appendChild(debugGhost);
-
-          // Positionner correctement le ghost selon l'alignement actuel
-          updateGhostPosition();
-
-          console.log("Ghost debug placé et positionné dans la viewport");
-        }
-
-        // 7. Préparer le cross-fade avec les conteneurs existants
-        const newContainer = document.getElementById("new-content-container");
-
-        // 7a. Configurer l'ancien conteneur avec le clone sauvegardé
-        if (oldContentClone) {
-          oldContainer.innerHTML = "";
-          oldContainer.appendChild(oldContentClone);
-        }
-        oldContainer.style.display = "flex";
-        oldContainer.style.opacity = "1";
-        oldContainer.style.transition = `opacity ${DURATION}ms ease`;
-        oldContainer.className = "content-transitioning content-old";
-
-        // 7b. Configurer le nouveau conteneur
-        newContainer.innerHTML = "";
-        newContainer.appendChild(newClone);
-        newContainer.style.display = "flex";
-        newContainer.style.opacity = "0";
-        newContainer.style.transition = `opacity ${DURATION}ms ease`;
-        newContainer.className = "content-transitioning content-new";
-
-        // 7c. Appliquer immédiatement l'alignement au contenu
-        updateAlignment();
-
-        console.log(
-          "Cross-fade préparé avec structure existante: prêt pour transition",
-        );
-
-        // 8. Forcer un reflow pour stabiliser les dimensions
-        const FORCE_REFLOW = newClone.offsetHeight;
-
-        // 9. Démarrer l'animation du conteneur et le cross-fade
-        setTimeout(() => {
-          // Animation du container
-          container.style.width = `${targetDimensions.width}px`;
-          container.style.height = `${targetDimensions.height}px`;
-
-          // Cross-fade
-          oldContainer.classList.add("fading-out");
-          newContainer.classList.add("fading-in");
-
-          console.log("Animation du container et cross-fade démarrés");
-        }, 50);
-
-        // 10. Nettoyer après la transition
-        setTimeout(() => {
-          // Basculer les contenus: nouveau devient ancien, ancien disparaît
-          const newContent = newContainer.firstElementChild;
-          if (newContent) {
-            // Réinitialiser les styles du nouveau contenu
-            newContent.style.position = "static";
-            newContent.style.opacity = "1";
-
-            // Le placer dans l'ancien conteneur
-            oldContainer.innerHTML = "";
-            oldContainer.appendChild(newContent);
-            oldContainer.style.display = "flex";
-            oldContainer.style.opacity = "1";
-            oldContainer.style.transition = "";
-            oldContainer.className = "content-transitioning content-old";
-            oldContainer.classList.remove("fading-out");
-          }
-
-          // Vider et cacher le nouveau conteneur
-          newContainer.innerHTML = "";
-          newContainer.style.display = "none";
-          newContainer.style.opacity = "0";
-          newContainer.style.transition = "";
-          newContainer.className = "content-transitioning content-new";
-          newContainer.classList.remove("fading-in");
-
-          // Nettoyer le ghost debug si nécessaire
-          if (
-            VISUAL_DEBUG &&
-            !VISUAL_DEBUG_KEEP_GHOST &&
-            debugGhost &&
-            debugGhost.parentNode
-          ) {
-            debugGhost.parentNode.removeChild(debugGhost);
-            debugGhost = null;
-            console.log("Ghost debug supprimé après transition");
-          } else if (VISUAL_DEBUG && VISUAL_DEBUG_KEEP_GHOST) {
-            console.log("Ghost debug conservé pour inspection");
-          }
-
-          isTransitioning = false;
-          updateUIState(); // Réactiver l'interface visuellement
-          console.log("Transition et cross-fade terminés");
-        }, DURATION + 100);
-
-        // 11. Mettre à jour l'état
-        currentState = newState;
-        updateDebugInfo();
-      }
-
-      // Retour à l'état vide
-      function resetToEmpty() {
-        if (isTransitioning) return;
-
-        const emptyState = states.empty;
-
-        // Mesurer les dimensions actuelles
-        const currentDimensions = getDimensions("current-content");
-
-        // Définir le point de départ
-        container.style.transition = `width ${DURATION}ms ease, height ${DURATION}ms ease`;
-        container.style.width = `${currentDimensions.width}px`;
-        container.style.height = `${currentDimensions.height}px`;
-
-        // Changer le contenu - recréer l'élément original dans l'ancien conteneur
-        const oldContainer = document.getElementById("old-content-container");
-        const emptyElement = document.createElement("div");
-        emptyElement.className = `content ${emptyState.contentClass}`;
-        emptyElement.innerHTML = emptyState.content;
-
-        // Remplacer le contenu actuel
-        oldContainer.innerHTML = "";
-        oldContainer.appendChild(emptyElement);
-        oldContainer.style.display = "flex";
-        oldContainer.style.opacity = "1";
-
-        // S'assurer que le nouveau conteneur est caché
-        const newContainer = document.getElementById("new-content-container");
-        newContainer.style.display = "none";
-        newContainer.innerHTML = "";
-
-        // Appliquer l'alignement immédiatement
-        updateAlignment();
-
-        // Mesurer les nouvelles dimensions et animer
-        const targetDimensions = getDimensions("current-content");
-
-        setTimeout(() => {
-          container.style.width = `${targetDimensions.width}px`;
-          container.style.height = `${targetDimensions.height}px`;
-        }, 50);
-
-        currentState = "empty";
-        updateDebugInfo();
-
-        console.log("Retour à l'état vide");
-      }
-
-      // Gestion des clics sur les rectangles
+      // Setup rectangle click handlers
       function setupRectangleClickHandlers() {
         const rectangles = document.querySelectorAll(".rectangle");
 
@@ -907,93 +538,80 @@
             const targetState = rectangle.dataset.state;
             console.log(`Clic sur rectangle ${targetState}:`, rectangle);
 
-            // Déclencher la transition avec le rectangle source
-            transitionTo(targetState, rectangle);
-          });
-
-          // Debug info au survol
-          rectangle.addEventListener("mouseenter", () => {
-            const state = rectangle.dataset.state;
-            console.log(`Survol rectangle ${state}:`, {
-              dimensions: `${rectangle.offsetWidth}x${rectangle.offsetHeight}`,
-              element: rectangle,
-            });
+            uiTransition.transitionTo(rectangle);
+            currentState = targetState;
           });
         });
       }
 
-      // Connexion des contrôles existants dans le DOM
+      // Setup controls
       function setupControls() {
-        // Connexion du bouton de reset
+        // Reset button
         const resetButton = document.getElementById("reset-button");
         if (resetButton) {
-          resetButton.addEventListener("click", resetToEmpty);
+          resetButton.addEventListener("click", () => {
+            const emptyElement = document.createElement("div");
+            emptyElement.className = "content state-empty";
+            emptyElement.innerHTML =
+              "<p>Cliquez sur un rectangle ci-dessus pour voir la transition</p>";
+
+            uiTransition.resetToEmpty(emptyElement);
+            currentState = "empty";
+          });
         }
 
-        // Connexion du contrôle de durée
-        setupDurationControl();
-
-        // Connexion des contrôles d'alignement
-        setupAlignmentControls();
-      }
-
-      // Fonction pour connecter le contrôle de durée existant
-      function setupDurationControl() {
+        // Duration control
         const durationSlider = document.getElementById("duration-slider");
         const durationValue = document.getElementById("duration-value");
 
         if (durationSlider && durationValue) {
-          // Initialiser avec la valeur chargée depuis localStorage
-          durationSlider.value = DURATION;
-          durationValue.textContent = `${DURATION}ms`;
+          durationSlider.value = savedPrefs.duration;
+          durationValue.textContent = `${savedPrefs.duration}ms`;
 
-          // Mise à jour de la durée
           durationSlider.addEventListener("input", (e) => {
-            DURATION = parseInt(e.target.value);
-            durationValue.textContent = `${DURATION}ms`;
-            savePreferences(); // Sauvegarder la durée
-            console.log(
-              `Durée de transition mise à jour et sauvegardée: ${DURATION}ms`,
-            );
+            const duration = parseInt(e.target.value);
+            durationValue.textContent = `${duration}ms`;
+            uiTransition.setDuration(duration);
+
+            const prefs = { ...loadPreferences(), duration };
+            savePreferences(prefs);
           });
         }
-      }
 
-      // Fonction pour connecter les contrôles d'alignement existants
-      function setupAlignmentControls() {
+        // Alignment controls
         const alignXSelect = document.getElementById("align-x-select");
         const alignYSelect = document.getElementById("align-y-select");
 
         if (alignXSelect) {
-          // Initialiser avec la valeur chargée depuis localStorage
-          alignXSelect.value = contentAlignX;
-
+          alignXSelect.value = savedPrefs.alignX;
           alignXSelect.addEventListener("change", (e) => {
-            contentAlignX = e.target.value;
-            updateAlignment(); // updateAlignment() sauvegarde automatiquement
+            const alignX = e.target.value;
+            uiTransition.setAlignment(alignX, uiTransition.alignY);
+
+            const prefs = { ...loadPreferences(), alignX };
+            savePreferences(prefs);
           });
         }
 
         if (alignYSelect) {
-          // Initialiser avec la valeur chargée depuis localStorage
-          alignYSelect.value = contentAlignY;
-
+          alignYSelect.value = savedPrefs.alignY;
           alignYSelect.addEventListener("change", (e) => {
-            contentAlignY = e.target.value;
-            updateAlignment(); // updateAlignment() sauvegarde automatiquement
+            const alignY = e.target.value;
+            uiTransition.setAlignment(uiTransition.alignX, alignY);
+
+            const prefs = { ...loadPreferences(), alignY };
+            savePreferences(prefs);
           });
         }
       }
 
-      // Initialisation
+      // Initialization
       function init() {
         setupRectangleClickHandlers();
         setupControls();
-        updateAlignment(); // Appliquer l'alignement initial
-        updateUIState(); // Appliquer l'état initial de l'UI
         updateDebugInfo();
 
-        // Mise à jour du debug en continu
+        // Continuous debug info updates
         setInterval(updateDebugInfo, 200);
 
         console.log(
@@ -1001,7 +619,7 @@
         );
       }
 
-      // Lancer l'initialisation quand le DOM est prêt
+      // Start when DOM is ready
       if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", init);
       } else {
