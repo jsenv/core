@@ -59,31 +59,22 @@ import.meta.css = /* css */ `
   .content-new,
   .content-old {
     position: absolute;
-    opacity: 1;
-    transition: opacity var(--x-transition-duration) ease;
+    top: 0;
+    left: 0;
+    display: flex;
+    width: 100%;
+    height: 100%;
+    align-items: inherit;
+    justify-content: inherit;
   }
 
+  /* Default states */
   .content-new {
-    opacity: 1;
-    transition: opacity var(--x-transition-duration) ease;
+    opacity: 1; /* New content visible by default */
   }
 
-  /* During transition states */
-  .transition-container[data-transitioning="true"] .content-old {
-    opacity: 1; /* Old content starts visible */
-  }
-
-  .transition-container[data-transitioning="true"] .content-new {
-    opacity: 0; /* New content starts hidden */
-  }
-
-  /* Cross-fade states */
-  .transition-container[data-fade="out"] .content-old {
-    opacity: 0; /* Fade out old content */
-  }
-
-  .transition-container[data-fade="in"] .content-new {
-    opacity: 1; /* Fade in new content */
+  .content-old {
+    opacity: 0; /* Old content hidden by default */
   }
 
   /* Styles for old content clones */
@@ -173,13 +164,21 @@ export function initUITransition(
     if (oldContentClone) {
       oldContentContainer.innerHTML = "";
       oldContentContainer.appendChild(oldContentClone);
+
+      // Set initial state: old content visible, with transition
+      oldContentContainer.style.opacity = "1";
+      oldContentContainer.style.transition = `opacity var(--x-transition-duration) ease`;
     }
 
     // Configure current container with new content
     currentContentContainer.innerHTML = "";
     currentContentContainer.appendChild(newClone);
 
-    // Set transition state - old visible, new hidden initially
+    // Set initial state: new content hidden, with transition
+    currentContentContainer.style.opacity = "0";
+    currentContentContainer.style.transition = `opacity var(--x-transition-duration) ease`;
+
+    // Set transition state marker
     container.setAttribute("data-transitioning", "true");
 
     // Apply alignment immediately
@@ -188,13 +187,17 @@ export function initUITransition(
 
   // Finalize cross-fade by swapping containers
   const finalizeCrossFade = () => {
-    // Current content is already in the right place (currentContentContainer)
-    // Just clear the old container
+    // Clear the old container
     oldContentContainer.innerHTML = "";
 
-    // Remove all transition data attributes
+    // Reset opacity and transition styles to defaults
+    oldContentContainer.style.opacity = "";
+    oldContentContainer.style.transition = "";
+    currentContentContainer.style.opacity = "";
+    currentContentContainer.style.transition = "";
+
+    // Remove transition data attributes
     container.removeAttribute("data-transitioning");
-    container.removeAttribute("data-fade");
   };
 
   // Main transition method
@@ -240,9 +243,11 @@ export function initUITransition(
         container.style.width = `${targetDimensions.width}px`;
         container.style.height = `${targetDimensions.height}px`;
 
-        // Start cross-fade: fade out old, fade in new
-        container.setAttribute("data-fade", "out");
-        container.setAttribute("data-fade", "in");
+        // Start cross-fade: fade out old, fade in new via JavaScript
+        if (oldContentClone) {
+          oldContentContainer.style.opacity = "0"; // Fade out old
+        }
+        currentContentContainer.style.opacity = "1"; // Fade in new
       }, 50);
 
       onStateChange({ isTransitioning: true });
@@ -283,9 +288,14 @@ export function initUITransition(
     // Clear old container
     oldContentContainer.innerHTML = "";
 
+    // Reset opacity and transition styles
+    oldContentContainer.style.opacity = "";
+    oldContentContainer.style.transition = "";
+    currentContentContainer.style.opacity = "";
+    currentContentContainer.style.transition = "";
+
     // Remove any transition states
     container.removeAttribute("data-transitioning");
-    container.removeAttribute("data-fade");
 
     // Apply alignment
     updateAlignment();
