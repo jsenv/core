@@ -1254,7 +1254,6 @@ export const initUITransition = (container) => {
       let someOverflow;
       for (const transition of transitionSet) {
         if (transition.canOverflow) {
-          debugger;
           someOverflow = true;
           break;
         }
