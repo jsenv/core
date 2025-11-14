@@ -354,12 +354,6 @@
             const targetState = rectangle.dataset.state;
             console.log(`Clic sur rectangle ${targetState}:`, rectangle);
 
-            // Effet visuel de clic
-            rectangle.style.transform = "scale(0.95)";
-            setTimeout(() => {
-              rectangle.style.transform = "";
-            }, 150);
-
             // Déclencher la transition avec le rectangle source
             transitionTo(targetState, rectangle);
           });
