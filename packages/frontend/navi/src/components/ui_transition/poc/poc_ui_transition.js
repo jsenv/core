@@ -538,6 +538,8 @@ export const createUITransitionController = (
           }
           contentSlot.innerHTML = "";
           contentSlotId = "empty";
+          contentWidth = undefined;
+          contentHeight = undefined;
           cleanupCallbacks = applyContentToEmptyTransition();
         } else {
           // Move current phase to old phase slot
@@ -549,6 +551,8 @@ export const createUITransitionController = (
           }
           phaseSlot.innerHTML = "";
           phaseSlotId = "empty";
+          phaseWidth = undefined;
+          phaseHeight = undefined;
           isInPhaseState = false;
           cleanupCallbacks = applyPhaseToEmptyTransition();
         }

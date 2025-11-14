@@ -448,7 +448,8 @@
 
         <!-- Seconde partie : Actions -->
         <div class="action-controls">
-          <button id="reset-button">Vider la zone</button>
+          <button id="empty-button">Vider la zone</button>
+          <button id="reset-button">Reset (état initial)</button>
         </div>
       </div>
     </div>
@@ -529,6 +530,7 @@
           ".content-items .rectangle, .phase-items .phase",
         );
         const controls = document.querySelector(".controls-container");
+        const emptyButton = document.getElementById("empty-button");
         const resetButton = document.getElementById("reset-button");
 
         if (isTransitioning) {
@@ -539,6 +541,11 @@
 
           if (controls) {
             controls.classList.add("controls-disabled");
+          }
+
+          if (emptyButton) {
+            emptyButton.disabled = true;
+            emptyButton.textContent = "Transition en cours...";
           }
 
           if (resetButton) {
@@ -558,9 +565,14 @@
             controls.classList.remove("controls-disabled");
           }
 
+          if (emptyButton) {
+            emptyButton.disabled = false;
+            emptyButton.textContent = "Vider la zone";
+          }
+
           if (resetButton) {
             resetButton.disabled = false;
-            resetButton.textContent = "Vider la zone";
+            resetButton.textContent = "Reset (état initial)";
           }
 
           debug.scaleInfo.textContent = `Clone utilisé: ${isTransitioning ? "Oui" : "Non"}`;
@@ -640,17 +652,32 @@
 
       // Setup controls
       function setupControls() {
-        // Reset button
+        // Empty button - transitions to completely empty
+        const emptyButton = document.getElementById("empty-button");
+        if (emptyButton) {
+          emptyButton.addEventListener("click", () => {
+            if (!uiTransition.getIsTransitioning()) {
+              console.log("Transitioning to empty state");
+              uiTransition.transitionTo(null);
+              currentState = "empty";
+            }
+          });
+        }
+
+        // Reset button - returns to initial state with placeholder content
         const resetButton = document.getElementById("reset-button");
         if (resetButton) {
           resetButton.addEventListener("click", () => {
-            const emptyElement = document.createElement("div");
-            emptyElement.className = "content state-empty";
-            emptyElement.innerHTML =
-              "<p>Cliquez sur un rectangle ci-dessus pour voir la transition</p>";
+            if (!uiTransition.getIsTransitioning()) {
+              const emptyElement = document.createElement("div");
+              emptyElement.className = "content state-empty";
+              emptyElement.innerHTML =
+                "<p>Cliquez sur un rectangle ci-dessus pour voir la transition</p>";
 
-            uiTransition.resetContent(emptyElement);
-            currentState = "empty";
+              console.log("Resetting to initial state");
+              uiTransition.resetContent(emptyElement);
+              currentState = "initial";
+            }
           });
         }
 
