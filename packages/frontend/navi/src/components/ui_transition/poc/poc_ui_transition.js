@@ -56,38 +56,17 @@ import.meta.css = /* css */ `
   }
 
   /* Éléments en transition avec cross-fade - styles statiques */
-  .content-old,
-  .content-new {
-    position: absolute;
-    top: 0;
-    left: 0;
-    display: inline-flex;
-    width: 100%;
-    height: 100%;
-    align-items: var(--x-align-items);
-    justify-content: var(--x-justify-content);
-    transition: opacity var(--x-transition-duration) ease;
-  }
-
+  .content-new,
   .content-old {
     opacity: 1;
+    transition: opacity var(--x-transition-duration) ease;
   }
   .content-new {
-    opacity: 0;
+    /* opacity: 1; */
   }
-  .transition-container[data-cross-fade] .content-new {
-    opacity: 1; /* Show new content immediately when transitioning starts */
+  .content-old {
+    position: absolute;
   }
-  .transition-container[data-cross-fade] .content-old {
-    opacity: 0; /* Fade out old content */
-  }
-
-  .content {
-    box-sizing: border-box;
-    padding: 20px;
-    border-radius: 4px;
-  }
-
   /* Styles pour les clones - forcer certains styles pour éviter les conflits */
   .content-old > * {
     position: static !important;
@@ -95,6 +74,12 @@ import.meta.css = /* css */ `
     /* flex-shrink: 0 !important; */
     /* transition: none !important; */
     pointer-events: none !important;
+  }
+  .transition-container[data-cross-fade] .content-new {
+    opacity: 1;
+  }
+  .transition-container[data-cross-fade] .content-old {
+    opacity: 0; /* Fade out old content */
   }
 `;
 
