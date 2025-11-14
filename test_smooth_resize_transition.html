@@ -38,7 +38,7 @@
       /* Rectangles visibles pour cliquer */
       .rectangles-container {
         display: flex;
-        margin-bottom: 40px;
+        margin-bottom: 20px;
         flex-wrap: wrap;
         gap: 20px;
       }
@@ -93,10 +93,11 @@
 
       /* Zone de transition */
       .transition-zone {
-        margin-top: 40px;
+        margin-top: 10px;
       }
 
       .transition-zone h4 {
+        margin-top: 10px;
         margin-bottom: 20px;
         color: #333;
       }
@@ -105,8 +106,8 @@
       .transition-viewport {
         position: relative;
         display: flex;
-        width: 400px;
-        height: 400px;
+        width: 350px;
+        height: 250px;
         margin: 20px 0;
         align-items: center;
         justify-content: center;
@@ -124,7 +125,7 @@
         font-weight: bold;
         font-size: 12px;
         background: #fafafa;
-        content: "Zone de visualisation 400×400";
+        content: "Zone de visualisation 350x250";
       }
 
       /* Ghost debug dans la viewport (position absolue pour ne pas impacter le layout) */
@@ -223,7 +224,7 @@
     </style>
   </head>
   <body>
-    <h1>Test de Transition Smooth de Redimensionnement</h1>
+    <h1>Test de Transition smooth</h1>
 
     <!-- Rectangles visibles - cliquer pour transitionner -->
     <div class="rectangles-container">
@@ -281,7 +282,7 @@
 
       let DURATION = 3000; // Durée par défaut, maintenant modifiable
       const VISUAL_DEBUG = true; // Affiche un ghost externe pour debug
-      const VISUAL_DEBUG_KEEP_GHOST = false; // Garde le ghost debug après transition
+      const VISUAL_DEBUG_KEEP_GHOST = true; // Garde le ghost debug après transition
 
       // Paramètres d'alignement
       let contentAlignX = "center"; // "start", "center", "end"
@@ -482,13 +483,14 @@
 
           debugGhost = createDebugGhost(sourceRectangle);
 
-          // Placer le ghost debug dans la viewport (hérite du centrage)
+          // Placer le ghost debug dans la viewport
           const viewport = document.querySelector(".transition-viewport");
           viewport.appendChild(debugGhost);
 
-          console.log(
-            "Ghost debug placé dans la viewport (centré automatiquement)",
-          );
+          // Positionner correctement le ghost selon l'alignement actuel
+          updateGhostPosition();
+
+          console.log("Ghost debug placé et positionné dans la viewport");
         }
 
         // 3. Remplacer le contenu actuel par le clone
@@ -500,7 +502,13 @@
         wrapper.innerHTML = ""; // Vider le wrapper
         wrapper.appendChild(clone); // Ajouter le clone
 
-        console.log("Clone placé dans la zone de transition");
+        // 3bis. Appliquer immédiatement l'alignement au contenu
+        // Le contenu doit être à sa position finale même si le container change de taille
+        updateAlignment();
+
+        console.log(
+          "Clone placé dans la zone de transition avec alignement correct",
+        );
 
         // 4. Forcer un reflow pour stabiliser les dimensions
         const FORCE_REFLOW = clone.offsetHeight;
@@ -558,6 +566,9 @@
         // Remplacer le contenu actuel
         wrapper.innerHTML = "";
         wrapper.appendChild(emptyElement);
+
+        // Appliquer l'alignement immédiatement
+        updateAlignment();
 
         // Mesurer les nouvelles dimensions et animer
         const targetDimensions = getDimensions("current-content");
