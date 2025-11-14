@@ -68,15 +68,6 @@ import.meta.css = /* css */ `
     justify-content: inherit;
   }
 
-  /* Default states */
-  .content-new {
-    opacity: 1; /* New content visible by default */
-  }
-
-  .content-old {
-    opacity: 0; /* Old content hidden by default */
-  }
-
   /* Styles for old content clones */
   .content-old > * {
     position: static !important;
@@ -167,7 +158,7 @@ export function initUITransition(
 
       // Set initial state: old content visible, with transition
       oldContentContainer.style.opacity = "1";
-      oldContentContainer.style.transition = `opacity var(--x-transition-duration) ease`;
+      oldContentContainer.style.transition = `opacity ${duration}ms ease`;
     }
 
     // Configure current container with new content
@@ -176,7 +167,7 @@ export function initUITransition(
 
     // Set initial state: new content hidden, with transition
     currentContentContainer.style.opacity = "0";
-    currentContentContainer.style.transition = `opacity var(--x-transition-duration) ease`;
+    currentContentContainer.style.transition = `opacity ${duration}ms ease`;
 
     // Set transition state marker
     container.setAttribute("data-transitioning", "true");
@@ -233,22 +224,26 @@ export function initUITransition(
       // 4. Prepare cross-fade: move current to old slot, new to current slot
       setupCrossFade(oldContentClone, newClone);
 
-      // 5. Force reflow to stabilize dimensions
-      const forceReflow = newClone.offsetHeight;
+      // 5. Force reflow to ensure DOM is stable
+      const forceReflow = currentContentContainer.offsetHeight;
       console.debug("Reflow forced:", forceReflow);
 
-      // 6. Start container animation and cross-fade
-      setTimeout(() => {
+      // 6. Enable transitions and start animation in next frame
+      requestAnimationFrame(() => {
         // Animate container dimensions
         container.style.width = `${targetDimensions.width}px`;
         container.style.height = `${targetDimensions.height}px`;
 
-        // Start cross-fade: fade out old, fade in new via JavaScript
+        // Start cross-fade: fade out old, fade in new
         if (oldContentClone) {
           oldContentContainer.style.opacity = "0"; // Fade out old
         }
+        console.debug(
+          "set opacity on new content to 1",
+          currentContentContainer.style.opacity,
+        );
         currentContentContainer.style.opacity = "1"; // Fade in new
-      }, 50);
+      });
 
       onStateChange({ isTransitioning: true });
 
@@ -291,6 +286,7 @@ export function initUITransition(
     // Reset opacity and transition styles
     oldContentContainer.style.opacity = "";
     oldContentContainer.style.transition = "";
+    console.log("reset opacity on new content");
     currentContentContainer.style.opacity = "";
     currentContentContainer.style.transition = "";
 
