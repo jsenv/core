@@ -157,15 +157,17 @@ export const createUITransitionController = (
   // Internal state
   let isTransitioning = false;
   let isInPhaseState = false;
-  // Dimension tracking
+  // Dimension we take/will take, can be content or content phase
   let width;
   let height;
-  let contentWidth;
-  let contentHeight;
-  let phaseWidth;
-  let phaseHeight;
   let targetWidth;
   let targetHeight;
+  // content phase dimension
+  let phaseWidth;
+  let phaseHeight;
+  // content dimensions
+  let contentWidth;
+  let contentHeight;
 
   // Slot tracking with IDs
   let contentSlotId = "empty";
@@ -292,6 +294,10 @@ export const createUITransitionController = (
     };
   };
   const applySomethingToPhaseTransition = () => {
+    // First, capture current phase dimensions before any changes
+    const currentPhaseWidth = phaseWidth;
+    const currentPhaseHeight = phaseHeight;
+
     phaseSlot.style.width = "";
     phaseSlot.style.height = "";
     updatePhaseDimensions();
@@ -301,8 +307,19 @@ export const createUITransitionController = (
       // phase slot is allowed to dictate dimensions
       targetWidth = phaseWidth;
       targetHeight = phaseHeight;
-      oldPhaseSlot.style.width = "";
-      oldPhaseSlot.style.height = "";
+
+      // Set the new phase slot to its natural size (for target dimensions)
+      phaseSlot.style.width = `${phaseWidth}px`;
+      phaseSlot.style.height = `${phaseHeight}px`;
+
+      // If we have an old phase, freeze it at its original size to prevent distortion
+      if (oldPhaseSlot.firstElementChild && currentPhaseWidth !== undefined) {
+        oldPhaseSlot.style.width = `${currentPhaseWidth}px`;
+        oldPhaseSlot.style.height = `${currentPhaseHeight}px`;
+      } else {
+        oldPhaseSlot.style.width = "";
+        oldPhaseSlot.style.height = "";
+      }
 
       // Set phase dimensions wrapper to target size immediately
       // This prevents phase content from adapting during transition
@@ -332,11 +349,11 @@ export const createUITransitionController = (
         container.style.height = `${targetHeight}px`;
         width = targetWidth;
         height = targetHeight;
-        // setTimeout(() => {
-        //   if (oldPhaseSlotId === "loading") {
-        //     debugger;
-        //   }
-        // }, 200);
+        setTimeout(() => {
+          if (oldPhaseSlotId === "loading") {
+            debugger;
+          }
+        }, 200);
       });
     }
     opacity: {
@@ -634,12 +651,31 @@ export const createUITransitionController = (
         activeSlot = "content";
         updatePhaseSlotPositioning();
       } else if (isContentPhase) {
+        // Capture current phase dimensions before any changes
+        const currentPhaseElement = phaseSlot.firstElementChild;
+        let capturedPhaseWidth;
+        let capturedPhaseHeight;
+        if (currentPhaseElement) {
+          const rect = currentPhaseElement.getBoundingClientRect();
+          capturedPhaseWidth = rect.width;
+          capturedPhaseHeight = rect.height;
+        }
+
         // Move any current phase to old phase slot if it exists
         if (phaseSlotId !== "empty") {
           const currentPhaseContent = phaseSlot.firstElementChild;
           oldPhaseSlot.innerHTML = "";
           oldPhaseSlot.appendChild(currentPhaseContent);
           oldPhaseSlotId = phaseSlotId;
+
+          // Store captured dimensions for the transition function
+          if (
+            capturedPhaseWidth !== undefined &&
+            capturedPhaseHeight !== undefined
+          ) {
+            phaseWidth = capturedPhaseWidth;
+            phaseHeight = capturedPhaseHeight;
+          }
         }
         // Insert phase element into phase slot for measurement and transition
         phaseSlot.innerHTML = "";
