@@ -275,6 +275,33 @@ export const createUITransitionController = (
     contentSlot.style.opacity = "1"; // Fade in new content
   };
 
+  // Setup phase to phase transition styling
+  const setupPhaseToPhaseTransition = () => {
+    // Set initial states
+    if (oldPhaseSlot.firstElementChild) {
+      oldPhaseSlot.style.opacity = "1";
+      oldPhaseSlot.style.transition = "none";
+    }
+    phaseSlot.style.opacity = "0";
+    phaseSlot.style.transition = "none";
+
+    // Set transition state marker
+    container.setAttribute("data-transitioning", "true");
+    updateAlignment();
+
+    // Force reflow
+    const reflow = phaseSlot.offsetHeight;
+    console.debug("Phase to phase reflow:", reflow);
+
+    // Start transitions
+    if (oldPhaseSlot.firstElementChild) {
+      oldPhaseSlot.style.transition = `opacity ${duration}ms ease`;
+      oldPhaseSlot.style.opacity = "0"; // Fade out old phase
+    }
+    phaseSlot.style.transition = `opacity ${duration}ms ease`;
+    phaseSlot.style.opacity = "1"; // Fade in new phase
+  };
+
   // Finalize phase transitions
   const finalizePhaseTransition = () => {
     // Clear old slots
@@ -333,6 +360,9 @@ export const createUITransitionController = (
         phaseSlot.style.height = "";
         updatePhaseDimensions();
 
+        // Determine if this is a phase-to-phase or content-to-phase transition
+        const wasAlreadyInPhaseState = isInPhaseState;
+
         // Transition to phase logic (inlined from transitionToPhase)
         // Store current dimensions if we have content and not already in phase
         const currentContent = getCurrentContent();
@@ -350,8 +380,15 @@ export const createUITransitionController = (
         }
         // Mark as in phase state
         isInPhaseState = true;
-        // Setup phase transition styling
-        setupPhaseTransition();
+
+        // Setup appropriate transition styling
+        if (wasAlreadyInPhaseState) {
+          // Phase to phase transition
+          setupPhaseToPhaseTransition();
+        } else {
+          // Content to phase transition
+          setupPhaseTransition();
+        }
       } else if (isInPhaseState) {
         // Transitioning from phase to content
         // Move current phase to old phase slot for fade-out
