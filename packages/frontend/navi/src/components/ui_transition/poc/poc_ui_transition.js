@@ -9,17 +9,15 @@
  *     <div class="content-slot"></div>     <!-- Regular content slot: relative positioning, dictates container size -->
  *     <div class="old-content-slot"></div> <!-- Fade-out content: absolute positioning for cross-fade transitions -->
  *   </div>
- *
- *   <div class="phase-dimensions">   <!-- Phase dimensions wrapper: dedicated sizing for phase states -->
- *     <div class="phase-slot"></div>     <!-- Phase content: wrapper positioning controlled by container[data-no-content] -->
- *     <div class="old-phase-slot"></div> <!-- Fade-out phase: absolute positioning for cross-fade transitions -->
- *   </div>
+ *   
+ *   <div class="phase-slot"></div>     <!-- Phase content: direct child, positioned based on container[data-no-content] -->
+ *   <div class="old-phase-slot"></div> <!-- Fade-out phase: absolute positioning for cross-fade transitions -->
  * </div>
  *
  * Architecture principles:
- * - Container: Provides smooth dimensional transitions (visual animation)
- * - Dimension wrappers: Set to target size immediately (prevent content adaptation during animation)
- * - Slots: Hold actual content within appropriately-sized containers
+ * - Container: Provides smooth dimensional transitions (visual animation)  
+ * - Content dimensions wrapper: Set to target size immediately (prevent content adaptation during animation)
+ * - Phase slots: Direct children of container, individually sized for fluid behavior
  * - Phase positioning: Dynamic (relative when no content, absolute when overlaying content)
  */
 
@@ -55,22 +53,11 @@ import.meta.css = /* css */ `
     justify-content: var(--x-justify-content);
   }
 
-  .phase-dimensions {
-    position: absolute;
-    top: 0;
-    left: 0;
-    display: flex;
-    width: 100%;
-    height: 100%;
-    align-items: var(--x-align-items);
-    justify-content: var(--x-justify-content);
-  }
-
   /* Phase dimensions in relative position when no content exists */
   .transition-container[data-no-content] .content-dimensions {
     display: none;
   }
-  .transition-container[data-no-content] .phase-dimensions {
+  .transition-container[data-no-content] .phase-slot {
     position: relative;
   }
 
@@ -138,7 +125,6 @@ export const createUITransitionController = (
   const oldContentSlot = container.querySelector(".old-content-slot");
   const oldPhaseSlot = container.querySelector(".old-phase-slot");
   const contentDimensions = container.querySelector(".content-dimensions");
-  const phaseDimensions = container.querySelector(".phase-dimensions");
 
   if (
     !container ||
@@ -146,11 +132,10 @@ export const createUITransitionController = (
     !phaseSlot ||
     !oldContentSlot ||
     !oldPhaseSlot ||
-    !contentDimensions ||
-    !phaseDimensions
+    !contentDimensions
   ) {
     throw new Error(
-      "createUITransitionController requires container with content-slot, phase-slot, old-content-slot, old-phase-slot, content-dimensions, and phase-dimensions elements",
+      "createUITransitionController requires container with content-slot, phase-slot, old-content-slot, old-phase-slot, and content-dimensions elements",
     );
   }
 
@@ -320,11 +305,6 @@ export const createUITransitionController = (
         oldPhaseSlot.style.width = "";
         oldPhaseSlot.style.height = "";
       }
-
-      // Set phase dimensions wrapper to target size immediately
-      // This prevents phase content from adapting during transition
-      phaseDimensions.style.width = `${targetWidth}px`;
-      phaseDimensions.style.height = `${targetHeight}px`;
     } else {
       // force phase dimensions to content
       phaseSlot.style.width = `${contentWidth}px`;
@@ -417,8 +397,10 @@ export const createUITransitionController = (
         container.style.height = "";
         contentDimensions.style.width = "";
         contentDimensions.style.height = "";
-        phaseDimensions.style.width = "";
-        phaseDimensions.style.height = "";
+        phaseSlot.style.width = "";
+        phaseSlot.style.height = "";
+        oldPhaseSlot.style.width = "";
+        oldPhaseSlot.style.height = "";
         container.removeAttribute("data-transitioning");
       },
     };
@@ -482,8 +464,10 @@ export const createUITransitionController = (
         container.style.height = "";
         contentDimensions.style.width = "";
         contentDimensions.style.height = "";
-        phaseDimensions.style.width = "";
-        phaseDimensions.style.height = "";
+        phaseSlot.style.width = "";
+        phaseSlot.style.height = "";
+        oldPhaseSlot.style.width = "";
+        oldPhaseSlot.style.height = "";
         container.removeAttribute("data-transitioning");
       },
     };
@@ -570,8 +554,10 @@ export const createUITransitionController = (
         container.style.height = "";
         contentDimensions.style.width = "";
         contentDimensions.style.height = "";
-        phaseDimensions.style.width = "";
-        phaseDimensions.style.height = "";
+        phaseSlot.style.width = "";
+        phaseSlot.style.height = "";
+        oldPhaseSlot.style.width = "";
+        oldPhaseSlot.style.height = "";
         container.removeAttribute("data-transitioning");
       },
     };
