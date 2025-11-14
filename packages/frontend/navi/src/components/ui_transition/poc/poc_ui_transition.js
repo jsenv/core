@@ -5,15 +5,17 @@
 
 import.meta.css = /* css */ `
   .transition-container {
+    --ui-transition-duration: 3000ms;
+
     position: relative;
     /* Dimensions seront définies dynamiquement */
     background: white;
     border: 8px dashed #ccc;
     border-radius: 8px;
-    /* Transition sur les dimensions */
+    /* Transition sur les dimensions avec variable CSS */
     transition:
-      width 3s ease,
-      height 3s ease;
+      width var(--ui-transition-duration) ease,
+      height var(--ui-transition-duration) ease;
     /* Overflow hidden pour que le contenu soit coupé pendant la transition */
     overflow: hidden;
   }
@@ -28,16 +30,37 @@ import.meta.css = /* css */ `
     font-style: italic;
   }
 
-  /* Wrapper qui applique l'alignement au contenu */
+  /* Wrapper qui applique l'alignement au contenu via data attributes */
   .content-wrapper {
     position: relative; /* Pour permettre le positionnement absolu des éléments en transition */
     display: flex;
     width: 100%;
     height: 100%;
-    /* Alignement sera mis à jour dynamiquement par JavaScript */
+    /* Alignement par défaut */
     align-items: center;
-
     justify-content: center;
+  }
+
+  /* Alignement horizontal via data attribute */
+  .transition-container[data-align-x="start"] .content-wrapper {
+    justify-content: flex-start;
+  }
+  .transition-container[data-align-x="center"] .content-wrapper {
+    justify-content: center;
+  }
+  .transition-container[data-align-x="end"] .content-wrapper {
+    justify-content: flex-end;
+  }
+
+  /* Alignement vertical via data attribute */
+  .transition-container[data-align-y="start"] .content-wrapper {
+    align-items: flex-start;
+  }
+  .transition-container[data-align-y="center"] .content-wrapper {
+    align-items: center;
+  }
+  .transition-container[data-align-y="end"] .content-wrapper {
+    align-items: flex-end;
   }
 
   /* Éléments en transition avec cross-fade */
@@ -50,7 +73,7 @@ import.meta.css = /* css */ `
     height: 100%;
     align-items: inherit;
     justify-content: inherit;
-    transition: opacity 0ms ease; /* Durée sera définie dynamiquement */
+    transition: opacity var(--ui-transition-duration) ease;
   }
 
   .content-old {
@@ -81,6 +104,15 @@ import.meta.css = /* css */ `
     color: #666;
     font-style: italic;
   }
+
+  /* Styles pour les clones - forcer certains styles pour éviter les conflits */
+  .content-transitioning * {
+    position: static !important;
+    z-index: auto !important;
+    flex-shrink: 0 !important;
+    transition: none !important;
+    pointer-events: none !important;
+  }
 `;
 
 export function initUITransition(container, options = {}) {
@@ -106,18 +138,9 @@ export function initUITransition(container, options = {}) {
 
   // Update alignment of content within the transition area
   function updateAlignment() {
-    // Convert alignment values to CSS flexbox properties
-    const alignMap = {
-      start: "flex-start",
-      center: "center",
-      end: "flex-end",
-    };
-
-    // Apply alignment to wrapper (for positioning content)
-    if (wrapper) {
-      wrapper.style.justifyContent = alignMap[alignX] || "center";
-      wrapper.style.alignItems = alignMap[alignY] || "center";
-    }
+    // Set data attributes for CSS-based alignment
+    container.setAttribute("data-align-x", alignX);
+    container.setAttribute("data-align-y", alignY);
   }
 
   // Get dimensions of an element
@@ -144,17 +167,10 @@ export function initUITransition(container, options = {}) {
   function cloneElementForTransition(sourceElement) {
     const clone = sourceElement.cloneNode(true);
 
-    // Prepare clone for transition area
-    clone.style.position = "static";
-    clone.style.zIndex = "auto";
-    clone.style.pointerEvents = "none";
-    clone.style.transition = "none";
-
-    // Preserve dimensions
+    // Preserve dimensions only - other styles handled by CSS
     const sourceRect = sourceElement.getBoundingClientRect();
     clone.style.width = `${sourceRect.width}px`;
     clone.style.height = `${sourceRect.height}px`;
-    clone.style.flexShrink = "0";
 
     return clone;
   }
@@ -168,7 +184,6 @@ export function initUITransition(container, options = {}) {
     }
     oldContentContainer.style.display = "flex";
     oldContentContainer.style.opacity = "1";
-    oldContentContainer.style.transition = `opacity ${duration}ms ease`;
     oldContentContainer.className = "content-transitioning content-old";
 
     // Configure new container
@@ -176,7 +191,6 @@ export function initUITransition(container, options = {}) {
     newContentContainer.appendChild(newClone);
     newContentContainer.style.display = "flex";
     newContentContainer.style.opacity = "0";
-    newContentContainer.style.transition = `opacity ${duration}ms ease`;
     newContentContainer.className = "content-transitioning content-new";
 
     // Apply alignment immediately
@@ -222,6 +236,9 @@ export function initUITransition(container, options = {}) {
       isTransitioning = true;
       onStateChange({ isTransitioning: true });
 
+      // Set CSS variable for transition duration
+      container.style.setProperty("--ui-transition-duration", `${duration}ms`);
+
       // Get dimensions
       const currentDimensions = getCurrentContentDimensions();
       const targetDimensions = getDimensions(newContentElement);
@@ -236,7 +253,6 @@ export function initUITransition(container, options = {}) {
       const newClone = cloneElementForTransition(newContentElement);
 
       // 3. Set current container dimensions (starting point)
-      container.style.transition = `width ${duration}ms ease, height ${duration}ms ease`;
       container.style.width = `${currentDimensions.width}px`;
       container.style.height = `${currentDimensions.height}px`;
 
@@ -272,11 +288,13 @@ export function initUITransition(container, options = {}) {
   function resetToEmpty(emptyContent = null) {
     if (isTransitioning) return;
 
+    // Set CSS variable for transition duration
+    container.style.setProperty("--ui-transition-duration", `${duration}ms`);
+
     // Measure current dimensions
     const currentDimensions = getCurrentContentDimensions();
 
     // Set starting point
-    container.style.transition = `width ${duration}ms ease, height ${duration}ms ease`;
     container.style.width = `${currentDimensions.width}px`;
     container.style.height = `${currentDimensions.height}px`;
 
@@ -308,6 +326,8 @@ export function initUITransition(container, options = {}) {
   // Update configuration
   function setDuration(newDuration) {
     duration = newDuration;
+    // Update CSS variable immediately
+    container.style.setProperty("--ui-transition-duration", `${duration}ms`);
   }
 
   function setAlignment(newAlignX, newAlignY) {
