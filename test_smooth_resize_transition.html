@@ -294,6 +294,9 @@
         container.innerHTML = "";
         container.classList.remove("empty");
 
+        // Ajouter la transition CSS si pas déjà présente
+        container.style.transition = `width ${DURATION}ms ease, height ${DURATION}ms ease`;
+
         // Créer le wrapper
         wrapper = document.createElement("div");
         wrapper.className = "content-wrapper";
@@ -392,6 +395,9 @@
         // 3. Créer la structure de contenu si nécessaire
         if (currentState === "empty") {
           createContentStructure();
+          // Pour le premier clic, donner des dimensions initiales très petites
+          container.style.width = "50px";
+          container.style.height = "50px";
         }
 
         // 4. Mettre le contenu à sa taille finale AVANT l'animation du container
@@ -403,10 +409,13 @@
 
         // 5. Démarrer l'animation du conteneur vers les dimensions cibles
         // Le contenu garde sa taille naturelle, le container s'adapte
-        setTimeout(() => {
-          container.style.width = `${targetDimensions.width}px`;
-          container.style.height = `${targetDimensions.height}px`;
-        }, 50); // Petit délai pour éviter le conflit
+        setTimeout(
+          () => {
+            container.style.width = `${targetDimensions.width}px`;
+            container.style.height = `${targetDimensions.height}px`;
+          },
+          currentState === "empty" ? 100 : 50,
+        ); // Plus de délai pour le premier clic
 
         // 6. Nettoyer le clone après la transition
         setTimeout(() => {
