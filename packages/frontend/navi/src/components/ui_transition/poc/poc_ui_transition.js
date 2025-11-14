@@ -159,16 +159,7 @@ export const createUITransitionController = (
     return getDimensions(currentContent);
   };
 
-  // Clone element for transition use
-  const cloneElementForTransition = (sourceElement) => {
-    const sourceRect = sourceElement.getBoundingClientRect();
-    const clone = sourceElement.cloneNode(true);
 
-    clone.style.width = `${sourceRect.width}px`;
-    clone.style.height = `${sourceRect.height}px`;
-
-    return clone;
-  };
 
   // Setup cross-fade styling between old and new content
   const setupContentCrossFade = () => {
@@ -209,6 +200,10 @@ export const createUITransitionController = (
     oldContentSlot.style.transition = "";
     contentSlot.style.opacity = "";
     contentSlot.style.transition = "";
+
+    // Remove container dimensions to let content flow naturally
+    container.style.width = "";
+    container.style.height = "";
 
     // Remove transition data attributes
     container.removeAttribute("data-transitioning");
@@ -282,6 +277,10 @@ export const createUITransitionController = (
     oldPhaseSlot.style.opacity = "";
     oldPhaseSlot.style.transition = "";
 
+    // Remove container dimensions to let content flow naturally
+    container.style.width = "";
+    container.style.height = "";
+
     // Remove transition marker
     container.removeAttribute("data-transitioning");
   };
@@ -324,7 +323,7 @@ export const createUITransitionController = (
 
         // Insert phase element into phase slot for measurement and transition
         phaseSlot.innerHTML = "";
-        phaseSlot.appendChild(newContentElement.cloneNode(true));
+        phaseSlot.appendChild(newContentElement);
         targetDimensions = getDimensions(phaseSlot.firstElementChild);
 
         // Mark as in phase state
@@ -345,10 +344,9 @@ export const createUITransitionController = (
         phaseSlot.innerHTML = "";
 
         // Insert new content into content slot
-        const newContentClone = cloneElementForTransition(newContentElement);
         contentSlot.innerHTML = "";
-        contentSlot.appendChild(newContentClone);
-        targetDimensions = getDimensions(newContentClone);
+        contentSlot.appendChild(newContentElement);
+        targetDimensions = getDimensions(newContentElement);
 
         // Mark as no longer in phase state
         isInPhaseState = false;
@@ -365,10 +363,9 @@ export const createUITransitionController = (
         }
 
         // Insert new content into content slot
-        const newClone = cloneElementForTransition(newContentElement);
         contentSlot.innerHTML = "";
-        contentSlot.appendChild(newClone);
-        targetDimensions = getDimensions(newClone);
+        contentSlot.appendChild(newContentElement);
+        targetDimensions = getDimensions(newContentElement);
 
         // Setup content cross-fade styling
         setupContentCrossFade();
