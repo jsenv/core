@@ -105,34 +105,51 @@
       .transition-container {
         position: relative;
 
-        /* Ces dimensions seront animées */
-        width: 200px;
-        height: 100px;
+        /* Pas de taille initiale fixe - sera définie dynamiquement */
+        min-width: 100px;
+        min-height: 50px;
         background: white;
         border: 2px dashed #ccc;
         border-radius: 8px;
 
-        overflow: hidden;
+        /* Transition sur les dimensions */
+        transition:
+          width 3s ease,
+          height 3s ease;
+      }
+
+      .transition-container.empty {
+        display: flex;
+        width: 300px;
+        height: 80px;
+        align-items: center;
+        justify-content: center;
+        color: #999;
+        font-style: italic;
       }
 
       .content-wrapper {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        /* Le wrapper centre le contenu, pas de scaling */
+        display: flex;
+        /* Simple wrapper, pas de positionnement absolu */
+        width: 100%;
+        height: 100%;
+        align-items: center;
+        justify-content: center;
       }
 
       .content {
+        /* Le contenu garde sa taille naturelle - pas de contraintes */
         display: flex;
         box-sizing: border-box;
+
+        /* Dimensions automatiques basées sur le contenu */
+        max-width: 100%;
+        max-height: 100%;
         padding: 20px;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         border-radius: 4px;
-
-        /* Chaque état a ses propres dimensions fixes */
       }
 
       /* États des contenus - dimensions détectées automatiquement */
@@ -209,12 +226,8 @@
     <!-- Zone de transition -->
     <div class="transition-zone">
       <h4>Zone de transition:</h4>
-      <div class="transition-container" id="container">
-        <div class="content-wrapper" id="wrapper">
-          <div class="content" id="content">
-            <p>Cliquez sur un rectangle ci-dessus pour voir la transition</p>
-          </div>
-        </div>
+      <div class="transition-container empty" id="container">
+        Cliquez sur un rectangle ci-dessus pour voir la transition
       </div>
     </div>
 
@@ -228,7 +241,9 @@
 
     <script>
       const container = document.getElementById("container");
-      const content = document.getElementById("content");
+      let content = null; // Sera créé dynamiquement
+      let wrapper = null; // Sera créé dynamiquement
+
       const debug = {
         containerSize: document.getElementById("container-size"),
         contentSize: document.getElementById("content-size"),
@@ -238,8 +253,6 @@
 
       const DURATION = 3000;
       const DEBUG_KEEP_CLONE = true;
-      document.querySelector(".transition-container").style.transition =
-        `width ${DURATION}ms ease, height ${DURATION}ms ease`;
 
       // États possibles - dimensions détectées automatiquement
       const states = {
@@ -275,6 +288,44 @@
         return dimensions;
       }
 
+      // Créer la structure de contenu dynamiquement
+      function createContentStructure() {
+        // Nettoyer le container
+        container.innerHTML = "";
+        container.classList.remove("empty");
+
+        // Créer le wrapper
+        wrapper = document.createElement("div");
+        wrapper.className = "content-wrapper";
+        wrapper.id = "wrapper";
+
+        // Créer le contenu
+        content = document.createElement("div");
+        content.className = "content";
+        content.id = "content";
+
+        // Assembler
+        wrapper.appendChild(content);
+        container.appendChild(wrapper);
+
+        console.log("Structure de contenu créée");
+      }
+
+      // Vider la zone de transition
+      function clearTransitionZone() {
+        container.innerHTML =
+          "Cliquez sur un rectangle ci-dessus pour voir la transition";
+        container.classList.add("empty");
+        container.style.width = "";
+        container.style.height = "";
+
+        content = null;
+        wrapper = null;
+        currentState = "empty";
+
+        console.log("Zone de transition vidée");
+      }
+
       // Mise à jour du debug
       function updateDebugInfo() {
         const containerRect = container.getBoundingClientRect();
@@ -283,7 +334,9 @@
           : { width: 0, height: 0 };
 
         debug.containerSize.textContent = `Container: ${containerRect.width.toFixed(0)}px × ${containerRect.height.toFixed(0)}px`;
-        debug.contentSize.textContent = `Content: ${contentRect.width.toFixed(0)}px × ${contentRect.height.toFixed(0)}px`;
+        debug.contentSize.textContent = content
+          ? `Content: ${contentRect.width.toFixed(0)}px × ${contentRect.height.toFixed(0)}px`
+          : "Content: aucun";
         debug.scaleInfo.textContent = `Clone utilisé: ${isTransitioning ? "Oui" : "Non"}`;
         debug.stateInfo.textContent = `État: ${currentState.toUpperCase()}`;
       }
@@ -309,7 +362,10 @@
 
       // Transition vers un nouvel état avec cloneNode
       function transitionTo(newState, sourceRectangle) {
-        if (isTransitioning || newState === currentState) return;
+        if (isTransitioning) {
+          console.log("Transition déjà en cours, ignorée");
+          return;
+        }
 
         isTransitioning = true;
         const state = states[newState];
@@ -318,40 +374,50 @@
         const targetDimensions = getRectangleDimensions(sourceRectangle.id);
 
         console.log("Début transition:", {
-          from: `${container.offsetWidth}x${container.offsetHeight}`,
-          to: `${targetDimensions.width}x${targetDimensions.height}`,
-          newState,
+          from: currentState,
+          to: newState,
+          targetDimensions,
           sourceElement: sourceRectangle.id,
-          detectedDimensions: targetDimensions,
         });
 
         // 1. Créer un clone du rectangle source
         const clone = cloneRectangle(sourceRectangle);
 
-        // 2. Positionner le clone temporairement dans la zone de transition
+        // 2. Positionner le clone temporairement
         const containerRect = container.getBoundingClientRect();
         clone.style.left = `${containerRect.left}px`;
         clone.style.top = `${containerRect.top}px`;
         document.body.appendChild(clone);
 
-        // 3. Changer le contenu de la zone de transition
+        // 3. Créer la structure de contenu si nécessaire
+        if (currentState === "empty") {
+          createContentStructure();
+        }
+
+        // 4. Mettre le contenu à sa taille finale AVANT l'animation du container
         content.className = `content ${state.contentClass}`;
         content.innerHTML = sourceRectangle.innerHTML;
 
-        // 4. Animer les dimensions du conteneur avec les dimensions détectées
-        container.style.width = `${targetDimensions.width}px`;
-        container.style.height = `${targetDimensions.height}px`;
+        // Forcer un reflow pour que le contenu prenne sa taille naturelle
+        const FORCE_REFLOW = content.offsetHeight;
 
-        // 5. Nettoyer le clone après la transition
+        // 5. Démarrer l'animation du conteneur vers les dimensions cibles
+        // Le contenu garde sa taille naturelle, le container s'adapte
         setTimeout(() => {
-          if (!DEBUG_KEEP_CLONE) {
-            clone.remove();
+          container.style.width = `${targetDimensions.width}px`;
+          container.style.height = `${targetDimensions.height}px`;
+        }, 50); // Petit délai pour éviter le conflit
+
+        // 6. Nettoyer le clone après la transition
+        setTimeout(() => {
+          if (!DEBUG_KEEP_CLONE && clone.parentNode) {
+            clone.parentNode.removeChild(clone);
           }
           isTransitioning = false;
-          console.log("Transition terminée, clone supprimé");
+          console.log("Transition terminée");
         }, DURATION + 100);
 
-        // 6. Mettre à jour l'état
+        // 7. Mettre à jour l'état
         currentState = newState;
         updateDebugInfo();
       }
@@ -380,9 +446,21 @@
         });
       }
 
+      // Bouton de reset
+      function addResetButton() {
+        const resetButton = document.createElement("button");
+        resetButton.textContent = "Vider la zone";
+        resetButton.style.marginTop = "10px";
+        resetButton.addEventListener("click", clearTransitionZone);
+
+        const transitionZone = document.querySelector(".transition-zone");
+        transitionZone.appendChild(resetButton);
+      }
+
       // Initialisation
       function init() {
         setupRectangleClickHandlers();
+        addResetButton();
         updateDebugInfo();
 
         // Mise à jour du debug en continu
