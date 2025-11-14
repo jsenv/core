@@ -8,10 +8,9 @@
  *   <div class="content-dimensions"> <!-- Content dimensions wrapper: set to target size immediately to prevent content adaptation -->
  *     <div class="content-slot"></div>     <!-- Regular content slot: relative positioning, dictates container size -->
  *     <div class="old-content-slot"></div> <!-- Fade-out content: absolute positioning for cross-fade transitions -->
+ *     <div class="phase-slot"></div>     <!-- Phase content: direct child, positioned based on container[data-no-content] -->
+ *     <div class="old-phase-slot"></div> <!-- Fade-out phase: absolute positioning for cross-fade transitions -->
  *   </div>
- *
- *   <div class="phase-slot"></div>     <!-- Phase content: direct child, positioned based on container[data-no-content] -->
- *   <div class="old-phase-slot"></div> <!-- Fade-out phase: absolute positioning for cross-fade transitions -->
  * </div>
  *
  * Architecture principles:
@@ -43,24 +42,6 @@ import.meta.css = /* css */ `
     /* Overflow hidden pour que le contenu soit coupé pendant la transition */
     overflow: hidden;
   }
-
-  .content-dimensions {
-    position: relative;
-    display: flex;
-    width: 100%;
-    height: 100%;
-    align-items: var(--x-align-items);
-    justify-content: var(--x-justify-content);
-  }
-
-  /* Phase dimensions in relative position when no content exists */
-  .transition-container[data-no-content] .content-dimensions {
-    display: none;
-  }
-  .transition-container[data-no-content] .phase-slot {
-    position: relative;
-  }
-
   /* Alignment controls */
   .transition-container[data-align-x="start"] {
     --x-justify-content: flex-start;
@@ -81,32 +62,41 @@ import.meta.css = /* css */ `
     --x-align-items: flex-end;
   }
 
-  /* Content slot - for regular content */
+  .content-dimensions {
+    position: relative;
+    display: flex;
+    width: 100%;
+    height: 100%;
+    align-items: var(--x-align-items);
+    justify-content: var(--x-justify-content);
+  }
   .content-slot {
     position: relative;
   }
-
-  /* Phase slot - for phase states */
-  .phase-slot {
-    position: relative;
-  }
-
-  /* Old content slot - for fade-out content */
-  .old-content-slot {
-    position: absolute;
-  }
-
-  /* Old phase slot - for fade-out phases */
+  .old-content-slot,
+  .phase-slot,
   .old-phase-slot {
     position: absolute;
   }
-
+  .phase-slot,
+  .old-phase-slot {
+    width: 100%;
+    height: 100%;
+  }
   /* Styles for content in old slots */
   .old-content-slot > *,
   .old-phase-slot > * {
     position: static !important;
     z-index: auto !important;
     pointer-events: none !important;
+  }
+
+  /* Phase dimensions in relative position when no content exists */
+  .transition-container[data-no-content] .content-dimensions {
+    display: none;
+  }
+  .transition-container[data-no-content] .phase-slot {
+    position: relative;
   }
 `;
 
