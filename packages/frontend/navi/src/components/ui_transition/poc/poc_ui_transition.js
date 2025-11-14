@@ -1,6 +1,26 @@
 /**
  * UI Transition - Core Implementation
  * Provides smooth resize transitions with cross-fade effects
+ *
+ * Required HTML structure:
+ *
+ * <div class="transition-container">  <!-- Main container: animates width/height with CSS transitions, has overflow:hidden -->
+ *   <div class="content-dimensions"> <!-- Content dimensions wrapper: set to target size immediately to prevent content adaptation -->
+ *     <div class="content-slot"></div>     <!-- Regular content slot: relative positioning, dictates container size -->
+ *     <div class="old-content-slot"></div> <!-- Fade-out content: absolute positioning for cross-fade transitions -->
+ *   </div>
+ *
+ *   <div class="phase-dimensions">   <!-- Phase dimensions wrapper: dedicated sizing for phase states -->
+ *     <div class="phase-slot" data-no-content=""></div>     <!-- Phase content: absolute when content exists, relative when dictating size -->
+ *     <div class="old-phase-slot"></div> <!-- Fade-out phase: absolute positioning for cross-fade transitions -->
+ *   </div>
+ * </div>
+ *
+ * Architecture principles:
+ * - Container: Provides smooth dimensional transitions (visual animation)
+ * - Dimension wrappers: Set to target size immediately (prevent content adaptation during animation)
+ * - Slots: Hold actual content within appropriately-sized containers
+ * - Phase positioning: Dynamic (relative when no content, absolute when overlaying content)
  */
 
 import.meta.css = /* css */ `
@@ -26,9 +46,19 @@ import.meta.css = /* css */ `
     overflow: hidden;
   }
 
-  /* Content wrapper - container for all slots */
-  .content-wrapper {
+  .content-dimensions {
     position: relative;
+    display: flex;
+    width: 100%;
+    height: 100%;
+    align-items: var(--x-align-items);
+    justify-content: var(--x-justify-content);
+  }
+
+  .phase-dimensions {
+    position: absolute;
+    top: 0;
+    left: 0;
     display: flex;
     width: 100%;
     height: 100%;
@@ -64,8 +94,6 @@ import.meta.css = /* css */ `
   /* Phase slot - for phase states, positioned above content when content exists */
   .phase-slot {
     position: absolute;
-    width: 100%;
-    height: 100%;
   }
 
   /* Phase slot in relative position when no content exists */
@@ -81,8 +109,6 @@ import.meta.css = /* css */ `
   /* Old phase slot - for fade-out phases */
   .old-phase-slot {
     position: absolute;
-    width: 100%;
-    height: 100%;
   }
 
   /* Styles for content in old slots */
@@ -97,7 +123,8 @@ import.meta.css = /* css */ `
   .content-slot:empty,
   .phase-slot:empty,
   .old-content-slot:empty,
-  .old-phase-slot:empty {
+  .old-phase-slot:empty,
+  .phase-dimensions:empty {
     display: none;
   }
 `;
@@ -116,7 +143,8 @@ export const createUITransitionController = (
   const phaseSlot = container.querySelector(".phase-slot");
   const oldContentSlot = container.querySelector(".old-content-slot");
   const oldPhaseSlot = container.querySelector(".old-phase-slot");
-  const wrapper = container.querySelector(".content-wrapper");
+  const contentDimensions = container.querySelector(".content-dimensions");
+  const phaseDimensions = container.querySelector(".phase-dimensions");
 
   if (
     !container ||
@@ -124,10 +152,11 @@ export const createUITransitionController = (
     !phaseSlot ||
     !oldContentSlot ||
     !oldPhaseSlot ||
-    !wrapper
+    !contentDimensions ||
+    !phaseDimensions
   ) {
     throw new Error(
-      "createUITransitionController requires container with content-slot, phase-slot, old-content-slot, old-phase-slot, and content-wrapper elements",
+      "createUITransitionController requires container with content-slot, phase-slot, old-content-slot, old-phase-slot, content-dimensions, and phase-dimensions elements",
     );
   }
 
@@ -281,10 +310,10 @@ export const createUITransitionController = (
       oldPhaseSlot.style.width = "";
       oldPhaseSlot.style.height = "";
 
-      // Set wrapper dimensions immediately to prevent phase adaptation
-      // but keep container animation for visual transition
-      wrapper.style.width = `${targetWidth}px`;
-      wrapper.style.height = `${targetHeight}px`;
+      // Set phase dimensions wrapper to target size immediately
+      // This prevents phase content from adapting during transition
+      phaseDimensions.style.width = `${targetWidth}px`;
+      phaseDimensions.style.height = `${targetHeight}px`;
     } else {
       // force phase dimensions to content
       phaseSlot.style.width = `${contentWidth}px`;
@@ -370,8 +399,10 @@ export const createUITransitionController = (
       cleanupDimension: () => {
         container.style.width = "";
         container.style.height = "";
-        wrapper.style.width = "";
-        wrapper.style.height = "";
+        contentDimensions.style.width = "";
+        contentDimensions.style.height = "";
+        phaseDimensions.style.width = "";
+        phaseDimensions.style.height = "";
         container.removeAttribute("data-transitioning");
       },
     };
@@ -433,8 +464,10 @@ export const createUITransitionController = (
       cleanupDimension: () => {
         container.style.width = "";
         container.style.height = "";
-        wrapper.style.width = "";
-        wrapper.style.height = "";
+        contentDimensions.style.width = "";
+        contentDimensions.style.height = "";
+        phaseDimensions.style.width = "";
+        phaseDimensions.style.height = "";
         container.removeAttribute("data-transitioning");
       },
     };
@@ -519,8 +552,10 @@ export const createUITransitionController = (
       cleanupDimension: () => {
         container.style.width = "";
         container.style.height = "";
-        wrapper.style.width = "";
-        wrapper.style.height = "";
+        contentDimensions.style.width = "";
+        contentDimensions.style.height = "";
+        phaseDimensions.style.width = "";
+        phaseDimensions.style.height = "";
         container.removeAttribute("data-transitioning");
       },
     };

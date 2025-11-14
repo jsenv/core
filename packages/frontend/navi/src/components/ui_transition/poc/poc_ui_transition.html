@@ -389,7 +389,7 @@
       <h4>Zone de transition:</h4>
       <div class="transition-viewport">
         <div class="transition-container">
-          <div class="content-wrapper">
+          <div class="content-dimensions">
             <!-- Content slot for regular content -->
             <div class="content-slot">
               <div class="content state-empty" id="content">
@@ -398,10 +398,13 @@
                 </p>
               </div>
             </div>
-            <!-- Phase slot for phase states -->
-            <div class="phase-slot"></div>
             <!-- Old content slot for fade-out content -->
             <div class="old-content-slot"></div>
+          </div>
+
+          <div class="phase-dimensions">
+            <!-- Phase slot for phase states -->
+            <div class="phase-slot"></div>
             <!-- Old phase slot for fade-out phases -->
             <div class="old-phase-slot"></div>
           </div>
