@@ -94,8 +94,8 @@ import.meta.css = /* css */ `
   }
   .phase-slot,
   .old-phase-slot {
-    width: 100%;
-    height: 100%;
+    /* width: 100%; */
+    /* height: 100%; */
   }
   /* Styles for content in old slots */
   .old-content-slot > *,
@@ -311,10 +311,6 @@ export const createUITransitionController = (
         oldPhaseSlot.style.width = "";
         oldPhaseSlot.style.height = "";
       }
-
-      // Set phase dimensions wrapper to target size for proper centering
-      phaseDimensions.style.width = `${targetWidth}px`;
-      phaseDimensions.style.height = `${targetHeight}px`;
     } else {
       // force phase dimensions to content
       phaseSlot.style.width = `${contentWidth}px`;
@@ -339,6 +335,11 @@ export const createUITransitionController = (
         container.style.height = `${targetHeight}px`;
         width = targetWidth;
         height = targetHeight;
+        setTimeout(() => {
+          if (phaseSlotId === "loading") {
+            debugger;
+          }
+        }, 200);
       });
     }
     opacity: {
@@ -402,8 +403,6 @@ export const createUITransitionController = (
         container.style.height = "";
         contentDimensions.style.width = "";
         contentDimensions.style.height = "";
-        phaseDimensions.style.width = "";
-        phaseDimensions.style.height = "";
         phaseSlot.style.width = "";
         phaseSlot.style.height = "";
         oldPhaseSlot.style.width = "";
@@ -471,8 +470,6 @@ export const createUITransitionController = (
         container.style.height = "";
         contentDimensions.style.width = "";
         contentDimensions.style.height = "";
-        phaseDimensions.style.width = "";
-        phaseDimensions.style.height = "";
         phaseSlot.style.width = "";
         phaseSlot.style.height = "";
         oldPhaseSlot.style.width = "";
@@ -563,8 +560,6 @@ export const createUITransitionController = (
         container.style.height = "";
         contentDimensions.style.width = "";
         contentDimensions.style.height = "";
-        phaseDimensions.style.width = "";
-        phaseDimensions.style.height = "";
         phaseSlot.style.width = "";
         phaseSlot.style.height = "";
         oldPhaseSlot.style.width = "";
