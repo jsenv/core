@@ -159,22 +159,6 @@
         );
       };
 
-      const Toto = ({ children }) => {
-        return (
-          <Box
-            padding="40"
-            // margin="auto"
-            background="white"
-            color="#666"
-            borderRadius="8"
-            border="5px solid orange"
-            expand
-          >
-            {children}
-          </Box>
-        );
-      };
-
       const DialogLayout = ({ children }) => {
         return (
           <Layout
@@ -189,8 +173,11 @@
               data-transition-size
               width="300"
               height="250"
+              padding="40"
+              background="white"
+              color="#666"
             >
-              <Toto>{children}</Toto>
+              {children}
             </Box>
           </Layout>
         );
@@ -209,9 +196,11 @@
             layoutRow
             contentAlignX="center"
             contentAlignY="center"
-            background="red"
+            padding="40"
+            background="white"
+            color="#666"
           >
-            <Toto>{children}</Toto>
+            {children}
           </Box>
         );
       };
