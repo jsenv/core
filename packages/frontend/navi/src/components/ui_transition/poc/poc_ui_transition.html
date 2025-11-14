@@ -403,7 +403,10 @@
 
       // Update UI state during transitions
       function updateUIState({ isTransitioning }) {
-        const rectangles = document.querySelectorAll(".rectangle");
+        // Only disable UI elements outside the transition zone
+        const rectangles = document.querySelectorAll(
+          ".rectangles-container .rectangle",
+        );
         const controls = document.querySelector(".controls-container");
         const resetButton = document.getElementById("reset-button");
 
