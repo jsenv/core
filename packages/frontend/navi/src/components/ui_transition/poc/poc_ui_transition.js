@@ -140,6 +140,11 @@ export function initUITransition(
   // Internal state
   let isTransitioning = false;
 
+  // Capture initial content from content-new container
+  const initialContent = newContentContainer.firstElementChild
+    ? newContentContainer.firstElementChild.cloneNode(true)
+    : null;
+
   // Update alignment of content within the transition area
   const updateAlignment = () => {
     // Set data attributes for CSS-based alignment
@@ -273,8 +278,8 @@ export function initUITransition(
     });
   };
 
-  // Reset to empty state
-  const resetToEmpty = (emptyContent = null) => {
+  // Reset to initial content
+  const resetContent = () => {
     if (isTransitioning) return;
 
     // Set CSS variable for transition duration
@@ -287,10 +292,13 @@ export function initUITransition(
     container.style.width = `${currentDimensions.width}px`;
     container.style.height = `${currentDimensions.height}px`;
 
-    // Create empty content element if provided
-    if (emptyContent) {
+    // Reset to initial content if it exists
+    if (initialContent) {
       oldContentContainer.innerHTML = "";
-      oldContentContainer.appendChild(emptyContent);
+      oldContentContainer.appendChild(initialContent.cloneNode(true));
+    } else {
+      // No initial content, clear everything
+      oldContentContainer.innerHTML = "";
     }
 
     // Clear new container
@@ -304,7 +312,7 @@ export function initUITransition(
     updateAlignment();
 
     // Measure new dimensions and animate
-    if (emptyContent) {
+    if (initialContent) {
       const targetDimensions = getCurrentContentDimensions();
       setTimeout(() => {
         container.style.width = `${targetDimensions.width}px`;
@@ -335,14 +343,16 @@ export function initUITransition(
     return oldContentContainer?.firstElementChild || null;
   };
 
-  // Initialize with visible empty content
+  // Initialize with visible content
   updateAlignment();
 
-  // Add empty content to make it visible on page load
-  const emptyDiv = document.createElement("div");
-  emptyDiv.className = "empty-content";
-  emptyDiv.textContent = "Empty";
-  oldContentContainer.appendChild(emptyDiv);
+  // If no initial content was found, create a fallback
+  if (initialContent) {
+    // Move initial content to old container
+    oldContentContainer.innerHTML = "";
+    oldContentContainer.appendChild(initialContent.cloneNode(true));
+    newContentContainer.innerHTML = "";
+  }
 
   // Set initial dimensions based on current content to ensure visibility
   const initialDimensions = getCurrentContentDimensions();
@@ -355,7 +365,7 @@ export function initUITransition(
   // Return public API
   return {
     transitionTo,
-    resetToEmpty,
+    resetContent,
     setDuration,
     setAlignment,
     getIsTransitioning,
