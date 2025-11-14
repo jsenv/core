@@ -63,6 +63,7 @@ import.meta.css = /* css */ `
 
   /* Phase slot - for phase states, positioned above content */
   .phase-slot {
+    position: absolute;
   }
 
   /* Old content slot - for fade-out content */
@@ -224,13 +225,17 @@ export const createUITransitionController = (
 
   // Setup phase transition
   const setupPhaseTransition = (phaseElement) => {
-    // For phase transition, keep content in background and show phase on top
+    // For phase transition, fade out content and fade in phase
     phaseSlot.innerHTML = "";
     phaseSlot.appendChild(phaseElement);
 
     // Phase starts hidden
     phaseSlot.style.opacity = "0";
     phaseSlot.style.transition = "none";
+
+    // Content starts visible, will fade out
+    contentSlot.style.opacity = "1";
+    contentSlot.style.transition = "none";
 
     // Set transition state marker
     container.setAttribute("data-transitioning", "true");
@@ -242,12 +247,13 @@ export const createUITransitionController = (
     const reflow = phaseSlot.offsetHeight;
     console.debug("Phase transition reflow:", reflow);
 
-    // Start fade-in
+    // Start transitions: fade out content, fade in phase
+    contentSlot.style.transition = `opacity ${duration}ms ease`;
     phaseSlot.style.transition = `opacity ${duration}ms ease`;
-    phaseSlot.style.opacity = "1";
-  };
 
-  // Setup phase to content transition
+    contentSlot.style.opacity = "0.3"; // Fade out content (keep slightly visible)
+    phaseSlot.style.opacity = "1"; // Fade in phase
+  }; // Setup phase to content transition
   const setupPhaseToContentTransition = (oldPhaseClone, newContentClone) => {
     // Move current phase to old phase slot for fade-out
     if (oldPhaseClone) {
