@@ -6,17 +6,14 @@
 import.meta.css = /* css */ `
   .transition-container {
     position: relative;
-
     /* Dimensions seront définies dynamiquement */
     background: white;
     border: 8px dashed #ccc;
     border-radius: 8px;
-
     /* Transition sur les dimensions */
     transition:
       width 3s ease,
       height 3s ease;
-
     /* Overflow hidden pour que le contenu soit coupé pendant la transition */
     overflow: hidden;
   }
@@ -31,14 +28,15 @@ import.meta.css = /* css */ `
     font-style: italic;
   }
 
+  /* Wrapper qui applique l'alignement au contenu */
   .content-wrapper {
     position: relative; /* Pour permettre le positionnement absolu des éléments en transition */
-    /* Wrapper qui applique l'alignement au contenu */
     display: flex;
     width: 100%;
     height: 100%;
-    align-items: center;
     /* Alignement sera mis à jour dynamiquement par JavaScript */
+    align-items: center;
+
     justify-content: center;
   }
 
@@ -74,14 +72,11 @@ import.meta.css = /* css */ `
   }
 
   .content {
-    /* Le contenu a des dimensions FIXES - ne s'adapte pas au conteneur */
-
     box-sizing: border-box;
     padding: 20px;
     border-radius: 4px;
   }
 
-  /* États des contenus - dimensions détectées automatiquement */
   .content.state-empty {
     color: #666;
     font-style: italic;
