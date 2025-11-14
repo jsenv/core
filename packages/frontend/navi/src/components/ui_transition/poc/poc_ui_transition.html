@@ -127,6 +127,7 @@
         display: flex;
         margin-bottom: 20px;
         margin-bottom: 20px;
+        flex-direction: column;
         flex-wrap: wrap;
         gap: 20px;
       }
@@ -142,9 +143,8 @@
       .content-items,
       .phase-items {
         display: flex;
-        margin-bottom: 20px;
         flex-wrap: wrap;
-        gap: 20px;
+        gap: 10px;
       }
 
       .rectangle,
@@ -181,22 +181,16 @@
       }
 
       .rectangle[data-state="a"] {
-        width: 100px;
-        height: 100px;
         color: white;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       }
 
       .rectangle[data-state="b"] {
-        width: 300px;
-        height: 150px;
         color: white;
         background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
       }
 
       .rectangle[data-state="c"] {
-        width: 100px;
-        height: 200px;
         color: white;
         background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
       }
@@ -306,33 +300,39 @@
 
     <!-- Rectangles visibles pour cliquer -->
     <div class="rectangles-container">
-      <fieldset>
-        <legend>Content</legend>
+      <details open>
+        <summary>Content</summary>
 
         <div class="content-items">
-          <div class="rectangle" data-state="a" id="rect-a">
-            <h3>A</h3>
-            <p>Du texte yep</p>
+          <div style="width: 100px; height: 100px">
+            <div class="rectangle" data-state="a" id="rect-a">
+              <h3>A</h3>
+              <p>Du texte yep</p>
+            </div>
           </div>
 
-          <div class="rectangle" data-state="b" id="rect-b">
-            <h3>B</h3>
-            <p>
-              Rectangle plus grand avec plus de contenu. Ce texte est plus long
-              pour voir comment le contenu s'adapte dans un espace plus grand.
-              La transition doit être fluide.
-            </p>
+          <div style="width: 300px; height: 150px">
+            <div class="rectangle" data-state="b" id="rect-b">
+              <h3>B</h3>
+              <p>
+                Rectangle plus grand avec plus de contenu. Ce texte est plus
+                long pour voir comment le contenu s'adapte dans un espace plus
+                grand. La transition doit être fluide.
+              </p>
+            </div>
           </div>
 
-          <div class="rectangle" data-state="c" id="rect-c">
-            <h3>C</h3>
-            <p>Format portrait</p>
+          <div style="width: 100px; height: 200px">
+            <div class="rectangle" data-state="c" id="rect-c">
+              <h3>C</h3>
+              <p>Format portrait</p>
+            </div>
           </div>
         </div>
-      </fieldset>
+      </details>
 
-      <fieldset>
-        <legend>Content phase</legend>
+      <details>
+        <summary>Content phase</summary>
         <div class="phase-items">
           <div
             class="phase loading-phase"
@@ -362,12 +362,7 @@
             </div>
           </div>
 
-          <div
-            class="phase error-phase"
-            data-phase="error"
-            id="error"
-            style="width: 100%; height: 100%"
-          >
+          <div class="phase error-phase" data-phase="error" id="error">
             <div
               style="
                 display: flex;
@@ -387,7 +382,7 @@
             </div>
           </div>
         </div>
-      </fieldset>
+      </details>
     </div>
 
     <!-- Zone de transition -->
