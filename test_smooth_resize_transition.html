@@ -240,7 +240,8 @@
       };
 
       const DURATION = 3000;
-      const DEBUG_KEEP_CLONE = true;
+      const VISUAL_DEBUG = true; // Affiche un ghost externe pour debug
+      const VISUAL_DEBUG_KEEP_GHOST = true; // Garde le ghost debug après transition
 
       // États possibles - dimensions détectées automatiquement
       const states = {
@@ -262,15 +263,16 @@
 
       let currentState = "empty";
       let isTransitioning = false;
-      let currentClone = null; // Track the current clone for DEBUG_KEEP_CLONE
+      let debugGhost = null; // Ghost externe pour debug visuel
 
       // Détection automatique des dimensions d'un rectangle OU du contenu actuel
       function getDimensions(elementId) {
         let element;
 
         if (elementId === "current-content") {
-          // Cas spécial : mesurer le contenu actuel
-          element = content;
+          // Cas spécial : mesurer le contenu actuel dans le wrapper
+          const wrapper = document.getElementById("wrapper");
+          element = wrapper ? wrapper.firstElementChild : null;
         } else {
           // Cas normal : mesurer un rectangle source
           element = document.getElementById(elementId);
@@ -294,7 +296,13 @@
       // Mise à jour du debug
       function updateDebugInfo() {
         const containerRect = container.getBoundingClientRect();
-        const contentRect = content.getBoundingClientRect();
+
+        // Chercher le contenu actuel dans le wrapper
+        const wrapper = document.getElementById("wrapper");
+        const actualContent = wrapper ? wrapper.firstElementChild : null;
+        const contentRect = actualContent
+          ? actualContent.getBoundingClientRect()
+          : { width: 0, height: 0 };
 
         debug.containerSize.textContent = `Container: ${containerRect.width.toFixed(0)}px × ${containerRect.height.toFixed(0)}px`;
         debug.contentSize.textContent = `Content: ${contentRect.width.toFixed(0)}px × ${contentRect.height.toFixed(0)}px`;
@@ -302,31 +310,56 @@
         debug.stateInfo.textContent = `État: ${currentState.toUpperCase()}`;
       }
 
-      // Fonction de clonage du rectangle source
-      function cloneRectangle(sourceElement) {
+      // Fonction de clonage pour la zone de transition (interne)
+      function cloneRectangleForTransition(sourceElement) {
         const clone = sourceElement.cloneNode(true);
 
-        // Préserver l'apparence visuelle exacte mais le rendre temporaire
-        clone.style.position = "absolute";
-        clone.style.opacity = "0.2";
-        clone.style.zIndex = "1000";
+        // Préparer le clone pour la zone de transition
+        clone.style.position = "static"; // Pas de positionnement absolu dans la zone
+        clone.style.zIndex = "auto";
         clone.style.pointerEvents = "none"; // Désactiver les interactions
 
-        // Ajouter une bordure pour indiquer que c'est un clone
-        clone.style.boxShadow = "0 0 0 3px #ff6b35";
+        // Supprimer les transitions du clone pour éviter les conflits
+        clone.style.transition = "none";
 
         // S'assurer que les dimensions sont préservées
         const sourceRect = sourceElement.getBoundingClientRect();
         clone.style.width = `${sourceRect.width}px`;
         clone.style.height = `${sourceRect.height}px`;
+        clone.style.flexShrink = "0"; // Ne pas rétrécir
 
-        console.log("Clone créé:", {
+        console.log("Clone interne créé:", {
           original: sourceElement.id,
-          clone,
           dimensions: `${sourceRect.width}x${sourceRect.height}`,
         });
 
         return clone;
+      }
+
+      // Fonction de création du ghost pour debug visuel (externe)
+      function createDebugGhost(sourceElement) {
+        const ghost = sourceElement.cloneNode(true);
+
+        // Styles pour le ghost de debug (externe, visible)
+        ghost.style.position = "absolute";
+        ghost.style.opacity = "0.2";
+        ghost.style.zIndex = "1000";
+        ghost.style.pointerEvents = "none";
+
+        // Bordure orange pour identifier le ghost debug
+        ghost.style.boxShadow = "0 0 0 3px #ff6b35";
+
+        // S'assurer que les dimensions sont préservées
+        const sourceRect = sourceElement.getBoundingClientRect();
+        ghost.style.width = `${sourceRect.width}px`;
+        ghost.style.height = `${sourceRect.height}px`;
+
+        console.log("Ghost debug créé:", {
+          original: sourceElement.id,
+          dimensions: `${sourceRect.width}x${sourceRect.height}`,
+        });
+
+        return ghost;
       }
 
       // Transition vers un nouvel état avec cloneNode
@@ -337,7 +370,6 @@
         }
 
         isTransitioning = true;
-        const state = states[newState];
 
         // Détecter les dimensions actuelles et cibles
         const currentDimensions = getDimensions("current-content");
@@ -356,65 +388,62 @@
         container.style.width = `${currentDimensions.width}px`;
         container.style.height = `${currentDimensions.height}px`;
 
-        // 2. Créer un clone du rectangle source
-        // Nettoyer le clone précédent si DEBUG_KEEP_CLONE est activé
-        if (DEBUG_KEEP_CLONE && currentClone && currentClone.parentNode) {
-          currentClone.parentNode.removeChild(currentClone);
-          console.log("Clone précédent supprimé");
+        // 2. Créer un clone pour la zone de transition
+        const clone = cloneRectangleForTransition(sourceRectangle);
+
+        // 2bis. Créer un ghost debug si VISUAL_DEBUG est activé
+        if (VISUAL_DEBUG) {
+          // Nettoyer le ghost debug précédent
+          if (debugGhost && debugGhost.parentNode) {
+            debugGhost.parentNode.removeChild(debugGhost);
+            console.log("Ghost debug précédent supprimé");
+          }
+
+          debugGhost = createDebugGhost(sourceRectangle);
+
+          // Positionner le ghost debug sur la zone de transition
+          const containerRect = container.getBoundingClientRect();
+          const computedStyle = window.getComputedStyle(container);
+          const borderLeftWidth = parseFloat(computedStyle.borderLeftWidth);
+          const borderTopWidth = parseFloat(computedStyle.borderTopWidth);
+          debugGhost.style.left = `${containerRect.left + borderLeftWidth}px`;
+          debugGhost.style.top = `${containerRect.top + borderTopWidth}px`;
+          document.body.appendChild(debugGhost);
+
+          console.log("Ghost debug positionné sur la zone de transition");
         }
 
-        const clone = cloneRectangle(sourceRectangle);
-        currentClone = clone; // Tracker le clone actuel
+        // 3. Remplacer le contenu actuel par le clone
+        const wrapper = content.parentNode;
+        wrapper.innerHTML = ""; // Vider le wrapper
+        wrapper.appendChild(clone); // Ajouter le clone
 
-        // 3. Positionner le clone temporairement
-        const containerRect = container.getBoundingClientRect();
-        const computedStyle = window.getComputedStyle(container);
-        const borderLeftWidth = parseFloat(computedStyle.borderLeftWidth);
-        const borderTopWidth = parseFloat(computedStyle.borderTopWidth);
-        clone.style.left = `${containerRect.left + borderLeftWidth}px`;
-        clone.style.top = `${containerRect.top + borderTopWidth}px`;
-        document.body.appendChild(clone);
+        console.log("Clone placé dans la zone de transition");
 
-        // 4. Changer le contenu pour correspondre exactement au rectangle source
-        content.className = `content ${state.contentClass}`;
-        content.innerHTML = sourceRectangle.innerHTML;
+        // 4. Forcer un reflow pour stabiliser les dimensions
+        const FORCE_REFLOW = clone.offsetHeight;
 
-        // Copier certains styles critiques du rectangle source pour une correspondance exacte
-        const sourceStyles = window.getComputedStyle(sourceRectangle);
-        content.style.background = sourceStyles.background;
-        content.style.color = sourceStyles.color;
-        content.style.padding = sourceStyles.padding;
-
-        // CRUCIAL: Définir les dimensions EXACTES du contenu pour éviter l'adaptation
-        const sourceRect = sourceRectangle.getBoundingClientRect();
-        content.style.width = `${sourceRect.width}px`;
-        content.style.height = `${sourceRect.height}px`;
-
-        console.log(
-          `Contenu fixé aux dimensions: ${sourceRect.width}x${sourceRect.height}`,
-        );
-
-        // 5. Forcer un reflow pour que le contenu prenne sa taille naturelle
-        const FORCE_REFLOW = content.offsetHeight;
-
-        // 6. Démarrer l'animation du conteneur vers les dimensions cibles
+        // 5. Démarrer l'animation du conteneur vers les dimensions cibles
         setTimeout(() => {
           container.style.width = `${targetDimensions.width}px`;
           container.style.height = `${targetDimensions.height}px`;
         }, 50);
 
-        // 7. Nettoyer le clone après la transition
+        // 7. Nettoyer le ghost debug après la transition (si nécessaire)
         setTimeout(() => {
-          if (!DEBUG_KEEP_CLONE && clone.parentNode) {
-            clone.parentNode.removeChild(clone);
-            currentClone = null;
+          if (
+            VISUAL_DEBUG &&
+            !VISUAL_DEBUG_KEEP_GHOST &&
+            debugGhost &&
+            debugGhost.parentNode
+          ) {
+            debugGhost.parentNode.removeChild(debugGhost);
+            debugGhost = null;
+            console.log("Ghost debug supprimé après transition");
+          } else if (VISUAL_DEBUG && VISUAL_DEBUG_KEEP_GHOST) {
+            console.log("Ghost debug conservé pour inspection");
           }
-          // Si DEBUG_KEEP_CLONE est true, on garde le clone mais on le marque comme non-courant
-          if (DEBUG_KEEP_CLONE && currentClone === clone) {
-            console.log(
-              "Clone gardé pour debug (sera remplacé au prochain clic)",
-            );
-          }
+
           isTransitioning = false;
           console.log("Transition terminée");
         }, DURATION + 100);
@@ -438,16 +467,15 @@
         container.style.width = `${currentDimensions.width}px`;
         container.style.height = `${currentDimensions.height}px`;
 
-        // Changer le contenu
-        content.className = `content ${emptyState.contentClass}`;
-        content.innerHTML = emptyState.content;
+        // Changer le contenu - recréer l'élément original
+        const wrapper = document.getElementById("wrapper");
+        const emptyElement = document.createElement("div");
+        emptyElement.className = `content ${emptyState.contentClass}`;
+        emptyElement.innerHTML = emptyState.content;
 
-        // Retirer les dimensions fixes pour que le contenu empty reprenne sa taille naturelle
-        content.style.width = "";
-        content.style.height = "";
-        content.style.background = "";
-        content.style.color = "";
-        content.style.padding = "";
+        // Remplacer le contenu actuel
+        wrapper.innerHTML = "";
+        wrapper.appendChild(emptyElement);
 
         // Mesurer les nouvelles dimensions et animer
         const targetDimensions = getDimensions("current-content");
