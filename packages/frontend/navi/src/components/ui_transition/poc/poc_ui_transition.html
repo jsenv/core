@@ -341,7 +341,7 @@
     </div>
 
     <script type="module">
-      import { initUITransition } from "./poc_ui_transition.js";
+      import { createUITransitionController } from "./poc_ui_transition.js";
 
       // Configuration localStorage
       const STORAGE_KEY = "smoothResizeTransition";
@@ -383,7 +383,7 @@
       const savedPrefs = loadPreferences();
 
       // Initialize UITransition
-      const uiTransition = initUITransition(
+      const uiTransitionController = createUITransitionController(
         document.querySelector(".transition-container"),
         {
           duration: savedPrefs.duration,
@@ -450,14 +450,14 @@
       function updateDebugInfo() {
         const container = document.querySelector(".transition-container");
         const containerRect = container.getBoundingClientRect();
-        const currentContent = uiTransition.getCurrentContent();
+        const currentContent = uiTransitionController.getCurrentContent();
         const contentRect = currentContent
           ? currentContent.getBoundingClientRect()
           : { width: 0, height: 0 };
 
         debug.containerSize.textContent = `Container: ${containerRect.width.toFixed(0)}px × ${containerRect.height.toFixed(0)}px`;
         debug.contentSize.textContent = `Content: ${contentRect.width.toFixed(0)}px × ${contentRect.height.toFixed(0)}px`;
-        debug.scaleInfo.textContent = `Clone utilisé: ${uiTransition.getIsTransitioning() ? "Oui" : "Non"}`;
+        debug.scaleInfo.textContent = `Clone utilisé: ${uiTransitionController.getIsTransitioning() ? "Oui" : "Non"}`;
         debug.stateInfo.textContent = `État: ${currentState.toUpperCase()}`;
       }
 
@@ -470,7 +470,7 @@
             const targetState = rectangle.dataset.state;
             console.log(`Clic sur rectangle ${targetState}:`, rectangle);
 
-            uiTransition.transitionTo(rectangle);
+            uiTransitionController.transitionTo(rectangle);
             currentState = targetState;
           });
         });
@@ -479,7 +479,7 @@
       // Apply alignment - single place for all alignment logic
       function applyAlignment(alignX, alignY) {
         // Update UI transition component
-        uiTransition.setAlignment(alignX, alignY);
+        uiTransitionController.setAlignment(alignX, alignY);
 
         const viewport = document.querySelector(".transition-viewport");
         viewport.style.alignItems = alignY;
@@ -511,7 +511,7 @@
             emptyElement.innerHTML =
               "<p>Cliquez sur un rectangle ci-dessus pour voir la transition</p>";
 
-            uiTransition.resetContent(emptyElement);
+            uiTransitionController.resetContent(emptyElement);
             currentState = "empty";
           });
         }
@@ -527,7 +527,7 @@
           durationSlider.addEventListener("input", (e) => {
             const duration = parseInt(e.target.value);
             durationValue.textContent = `${duration}ms`;
-            uiTransition.setDuration(duration);
+            uiTransitionController.setDuration(duration);
 
             const prefs = { ...loadPreferences(), duration };
             savePreferences(prefs);

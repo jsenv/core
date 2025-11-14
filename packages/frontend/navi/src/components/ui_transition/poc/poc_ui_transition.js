@@ -73,7 +73,7 @@ import.meta.css = /* css */ `
   }
 `;
 
-export function initUITransition(
+export const createUITransitionController = (
   container,
   {
     duration = 300,
@@ -81,7 +81,7 @@ export function initUITransition(
     alignY = "center",
     onStateChange = () => {},
   } = {},
-) {
+) => {
   // Required elements
   const oldContentContainer = container.querySelector(".content-old"); // For fade-out during transitions
   const currentContentContainer = container.querySelector(".content-new"); // For current content display
@@ -341,4 +341,4 @@ export function initUITransition(
     getCurrentContent,
     updateAlignment,
   };
-}
+};
