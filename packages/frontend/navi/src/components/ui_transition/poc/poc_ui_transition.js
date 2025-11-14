@@ -317,16 +317,14 @@ export const createUITransitionController = (
     return new Promise((resolve) => {
       isTransitioning = true;
 
-      // Set CSS variable for transition duration
-      container.style.setProperty("--x-transition-duration", `${duration}ms`);
-
-      // Get dimensions
+      // Get current dimensions
       const currentDimensions = getCurrentContentDimensions();
-      const targetDimensions = getDimensions(newContentElement);
 
       // Set current container dimensions (starting point)
       container.style.width = `${currentDimensions.width}px`;
       container.style.height = `${currentDimensions.height}px`;
+
+      let targetDimensions;
 
       if (isContentPhase) {
         // Transition to phase logic (inlined from transitionToPhase)
@@ -354,8 +352,14 @@ export const createUITransitionController = (
         const oldPhaseClone = currentPhase
           ? currentPhase.cloneNode(true)
           : null;
-        const newContentClone = cloneElementForTransition(newContentElement);
 
+        // Insert into content slot temporarily to measure dimensions
+        const tempClone = cloneElementForTransition(newContentElement);
+        contentSlot.innerHTML = "";
+        contentSlot.appendChild(tempClone);
+        targetDimensions = getDimensions(tempClone);
+
+        const newContentClone = cloneElementForTransition(newContentElement);
         setupPhaseToContentTransition(oldPhaseClone, newContentClone);
         isInPhaseState = false;
       } else {
@@ -364,8 +368,14 @@ export const createUITransitionController = (
         const oldContentClone = currentContent
           ? currentContent.cloneNode(true)
           : null;
-        const newClone = cloneElementForTransition(newContentElement);
 
+        // Insert into content slot temporarily to measure dimensions
+        const tempClone = cloneElementForTransition(newContentElement);
+        contentSlot.innerHTML = "";
+        contentSlot.appendChild(tempClone);
+        targetDimensions = getDimensions(tempClone);
+
+        const newClone = cloneElementForTransition(newContentElement);
         setupContentCrossFade(oldContentClone, newClone);
       }
 
