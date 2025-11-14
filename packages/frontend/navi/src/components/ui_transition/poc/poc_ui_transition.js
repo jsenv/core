@@ -73,15 +73,27 @@ import.meta.css = /* css */ `
   .content-slot {
     position: relative;
   }
-  .old-content-slot,
-  .phase-slot,
+  .old-content-slot {
+    position: absolute;
+  }
+  .phase-dimensions {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    width: 100%;
+    height: 100%;
+    align-items: var(--x-align-items);
+    justify-content: var(--x-justify-content);
+  }
+  .phase-slot {
+    position: relative;
+  }
   .old-phase-slot {
     position: absolute;
   }
   .phase-slot,
   .old-phase-slot {
-    /* top: 0; */
-    /* left: 0; */
     width: 100%;
     height: 100%;
   }
@@ -94,7 +106,10 @@ import.meta.css = /* css */ `
   }
 
   /* Phase dimensions in relative position when no content exists */
-  .transition-container[data-no-content] .phase-slot {
+  .transition-container[data-no-content] .content-dimensions {
+    display: none;
+  }
+  .transition-container[data-no-content] .phase-dimensions {
     position: relative;
   }
 `;
@@ -114,6 +129,7 @@ export const createUITransitionController = (
   const oldContentSlot = container.querySelector(".old-content-slot");
   const oldPhaseSlot = container.querySelector(".old-phase-slot");
   const contentDimensions = container.querySelector(".content-dimensions");
+  const phaseDimensions = container.querySelector(".phase-dimensions");
 
   if (
     !container ||
@@ -121,10 +137,11 @@ export const createUITransitionController = (
     !phaseSlot ||
     !oldContentSlot ||
     !oldPhaseSlot ||
-    !contentDimensions
+    !contentDimensions ||
+    !phaseDimensions
   ) {
     throw new Error(
-      "createUITransitionController requires container with content-slot, phase-slot, old-content-slot, old-phase-slot, and content-dimensions elements",
+      "createUITransitionController requires container with content-slot, phase-slot, old-content-slot, old-phase-slot, content-dimensions, and phase-dimensions elements",
     );
   }
 
@@ -294,6 +311,10 @@ export const createUITransitionController = (
         oldPhaseSlot.style.width = "";
         oldPhaseSlot.style.height = "";
       }
+
+      // Set phase dimensions wrapper to target size for proper centering
+      phaseDimensions.style.width = `${targetWidth}px`;
+      phaseDimensions.style.height = `${targetHeight}px`;
     } else {
       // force phase dimensions to content
       phaseSlot.style.width = `${contentWidth}px`;
@@ -381,6 +402,8 @@ export const createUITransitionController = (
         container.style.height = "";
         contentDimensions.style.width = "";
         contentDimensions.style.height = "";
+        phaseDimensions.style.width = "";
+        phaseDimensions.style.height = "";
         phaseSlot.style.width = "";
         phaseSlot.style.height = "";
         oldPhaseSlot.style.width = "";
@@ -448,6 +471,8 @@ export const createUITransitionController = (
         container.style.height = "";
         contentDimensions.style.width = "";
         contentDimensions.style.height = "";
+        phaseDimensions.style.width = "";
+        phaseDimensions.style.height = "";
         phaseSlot.style.width = "";
         phaseSlot.style.height = "";
         oldPhaseSlot.style.width = "";
@@ -538,6 +563,8 @@ export const createUITransitionController = (
         container.style.height = "";
         contentDimensions.style.width = "";
         contentDimensions.style.height = "";
+        phaseDimensions.style.width = "";
+        phaseDimensions.style.height = "";
         phaseSlot.style.width = "";
         phaseSlot.style.height = "";
         oldPhaseSlot.style.width = "";
