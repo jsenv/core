@@ -135,24 +135,18 @@
         /* Chaque état a ses propres dimensions fixes */
       }
 
-      /* États des contenus avec dimensions spécifiques */
+      /* États des contenus - dimensions détectées automatiquement */
       .content.state-a {
-        width: 160px;
-        height: 60px;
         color: white;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       }
 
       .content.state-b {
-        width: 360px;
-        height: 160px;
         color: white;
         background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
       }
 
       .content.state-c {
-        width: 110px;
-        height: 260px;
         color: white;
         background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
       }
@@ -248,27 +242,39 @@
       document.querySelector(".transition-container").style.transition =
         `width ${DURATION}ms ease, height ${DURATION}ms ease`;
 
-      // États possibles
+      // États possibles - dimensions détectées automatiquement
       const states = {
         a: {
-          width: 200,
-          height: 100,
           contentClass: "state-a",
         },
         b: {
-          width: 400,
-          height: 200,
           contentClass: "state-b",
         },
         c: {
-          width: 150,
-          height: 300,
           contentClass: "state-c",
         },
       };
 
       let currentState = "a";
       let isTransitioning = false;
+
+      // Détection automatique des dimensions d'un rectangle
+      function getRectangleDimensions(rectangleId) {
+        const rectangle = document.getElementById(rectangleId);
+        if (!rectangle) {
+          console.warn(`Rectangle ${rectangleId} non trouvé`);
+          return { width: 200, height: 100 }; // fallback
+        }
+
+        const rect = rectangle.getBoundingClientRect();
+        const dimensions = {
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
+        };
+
+        console.log(`Dimensions détectées pour ${rectangleId}:`, dimensions);
+        return dimensions;
+      }
 
       // Mise à jour du debug
       function updateDebugInfo() {
@@ -307,11 +313,15 @@
         isTransitioning = true;
         const state = states[newState];
 
+        // Détecter les dimensions du rectangle source
+        const targetDimensions = getRectangleDimensions(sourceRectangle.id);
+
         console.log("Début transition:", {
           from: `${container.offsetWidth}x${container.offsetHeight}`,
-          to: `${state.width}x${state.height}`,
+          to: `${targetDimensions.width}x${targetDimensions.height}`,
           newState,
           sourceElement: sourceRectangle.id,
+          detectedDimensions: targetDimensions,
         });
 
         // 1. Créer un clone du rectangle source
@@ -327,9 +337,9 @@
         content.className = `content ${state.contentClass}`;
         content.innerHTML = sourceRectangle.innerHTML;
 
-        // 4. Animer les dimensions du conteneur
-        container.style.width = `${state.width}px`;
-        container.style.height = `${state.height}px`;
+        // 4. Animer les dimensions du conteneur avec les dimensions détectées
+        container.style.width = `${targetDimensions.width}px`;
+        container.style.height = `${targetDimensions.height}px`;
 
         // 5. Nettoyer le clone après la transition
         setTimeout(() => {
