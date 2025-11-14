@@ -63,6 +63,16 @@
         gap: 15px;
       }
 
+      .transition-container.empty {
+        display: flex;
+        width: 300px;
+        height: 80px;
+        align-items: center;
+        justify-content: center;
+        color: #999;
+        font-style: italic;
+      }
+
       .duration-control {
         display: flex;
         align-items: center;
@@ -259,10 +269,7 @@
         <div class="transition-container" id="container">
           <div class="content-wrapper" id="wrapper">
             <!-- Conteneur pour le nouveau contenu (cross-fade) - EN PREMIER -->
-            <div
-              class="content-transitioning content-new"
-              id="new-content-container"
-            >
+            <div class="content-transitioning content-new">
               <div class="content state-empty" id="content">
                 <p>
                   Cliquez sur un rectangle ci-dessus pour voir la transition
@@ -270,10 +277,7 @@
               </div>
             </div>
             <!-- Conteneur pour l'ancien contenu (cross-fade) - EN DERNIER -->
-            <div
-              class="content-transitioning content-old"
-              id="old-content-container"
-            ></div>
+            <div class="content-transitioning content-old"></div>
           </div>
         </div>
       </div>

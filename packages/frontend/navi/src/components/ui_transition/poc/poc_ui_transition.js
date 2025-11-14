@@ -26,16 +26,6 @@ import.meta.css = /* css */ `
     overflow: hidden;
   }
 
-  .transition-container.empty {
-    display: flex;
-    width: 300px;
-    height: 80px;
-    align-items: center;
-    justify-content: center;
-    color: #999;
-    font-style: italic;
-  }
-
   /* Wrapper qui applique l'alignement au contenu via CSS variables */
   .content-wrapper {
     position: relative; /* Pour permettre le positionnement absolu des éléments en transition */
@@ -66,7 +56,8 @@ import.meta.css = /* css */ `
   }
 
   /* Éléments en transition avec cross-fade - styles statiques */
-  .content-transitioning {
+  .content-old,
+  .content-new {
     position: absolute;
     top: 0;
     left: 0;
@@ -103,7 +94,7 @@ import.meta.css = /* css */ `
   }
 
   /* Styles pour les clones - forcer certains styles pour éviter les conflits */
-  .content-transitioning > * {
+  .content-old > * {
     position: static !important;
     z-index: auto !important;
     /* flex-shrink: 0 !important; */
@@ -122,11 +113,9 @@ export function initUITransition(
   } = {},
 ) {
   // Required elements
-  const oldContentContainer = container.querySelector("#old-content-container"); // For fade-out during transitions
-  const currentContentContainer = container.querySelector(
-    "#new-content-container",
-  ); // For current content display
-  const wrapper = container.querySelector("#wrapper");
+  const oldContentContainer = container.querySelector(".content-old"); // For fade-out during transitions
+  const currentContentContainer = container.querySelector(".content-new"); // For current content display
+  const wrapper = container.querySelector(".content-wrapper");
 
   if (
     !container ||
