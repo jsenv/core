@@ -302,16 +302,24 @@
       function cloneRectangle(sourceElement) {
         const clone = sourceElement.cloneNode(true);
 
-        // Ajouter des styles pour identifier le clone
+        // Préserver l'apparence visuelle exacte mais le rendre temporaire
         clone.style.position = "absolute";
-        clone.style.opacity = "0.6";
-        clone.style.borderColor = "#ff6b35";
+        clone.style.opacity = "0.8";
         clone.style.zIndex = "1000";
+        clone.style.pointerEvents = "none"; // Désactiver les interactions
+        
+        // Ajouter une bordure pour indiquer que c'est un clone
+        clone.style.boxShadow = "0 0 0 3px #ff6b35";
+        
+        // S'assurer que les dimensions sont préservées
+        const sourceRect = sourceElement.getBoundingClientRect();
+        clone.style.width = `${sourceRect.width}px`;
+        clone.style.height = `${sourceRect.height}px`;
 
         console.log("Clone créé:", {
           original: sourceElement.id,
           clone,
-          dimensions: `${clone.offsetWidth}x${clone.offsetHeight}`,
+          dimensions: `${sourceRect.width}x${sourceRect.height}`,
         });
 
         return clone;
@@ -356,9 +364,15 @@
         clone.style.top = `${containerRect.top + borderTopWidth}px`;
         document.body.appendChild(clone);
 
-        // 4. Changer le contenu immédiatement
+        // 4. Changer le contenu pour correspondre exactement au rectangle source
         content.className = `content ${state.contentClass}`;
         content.innerHTML = sourceRectangle.innerHTML;
+        
+        // Copier certains styles critiques du rectangle source pour une correspondance exacte
+        const sourceStyles = window.getComputedStyle(sourceRectangle);
+        content.style.background = sourceStyles.background;
+        content.style.color = sourceStyles.color;
+        content.style.padding = sourceStyles.padding;
 
         // 5. Forcer un reflow pour que le contenu prenne sa taille naturelle
         const FORCE_REFLOW = content.offsetHeight;
