@@ -21,6 +21,10 @@
  */
 
 import.meta.css = /* css */ `
+  * {
+    box-sizing: border-box;
+  }
+
   .transition-container {
     --transition-duration: 3000ms;
     --justify-content: center;
@@ -246,13 +250,13 @@ export const createUITransitionController = (
     };
   };
 
-  const updateContentDimensions = () => {
+  const measureContentSlot = () => {
     const currentContent = contentSlot?.firstElementChild;
     const dimensions = getDimensions(currentContent);
     contentWidth = dimensions.width;
     contentHeight = dimensions.height;
   };
-  const updatePhaseDimensions = () => {
+  const measurePhaseSlot = () => {
     const currentPhase = phaseSlot?.firstElementChild;
     const dimensions = getDimensions(currentPhase);
     phaseWidth = dimensions.width;
@@ -262,11 +266,13 @@ export const createUITransitionController = (
   // Setup cross-fade styling between old and new content
   const applyContentToContentTransition = () => {
     dimension: {
-      updateContentDimensions();
+      measureContentSlot();
       targetWidth = contentWidth;
       targetHeight = contentHeight;
 
       // Apply dimension transition
+      contentDimensions.style.width = `${targetWidth}px`;
+      contentDimensions.style.height = `${targetHeight}px`;
       container.style.width = `${width}px`;
       container.style.height = `${height}px`;
       requestAnimationFrame(() => {
@@ -299,6 +305,12 @@ export const createUITransitionController = (
     const reflow = contentSlot.offsetHeight;
     console.debug("Content transition reflow:", reflow);
     return {
+      cleanupDimension: () => {
+        container.style.width = "";
+        container.style.height = "";
+        contentDimensions.style.width = "";
+        contentDimensions.style.height = "";
+      },
       cleanupOpacity: () => {
         oldContentSlot.innerHTML = "";
         oldContentSlot.style.opacity = "";
@@ -306,10 +318,6 @@ export const createUITransitionController = (
         contentSlot.style.opacity = "";
         contentSlot.style.transition = "";
         oldContentSlotId = "empty";
-      },
-      cleanupDimension: () => {
-        container.style.width = "";
-        container.style.height = "";
       },
     };
   };
@@ -320,7 +328,7 @@ export const createUITransitionController = (
 
     phaseSlot.style.width = "";
     phaseSlot.style.height = "";
-    updatePhaseDimensions();
+    measurePhaseSlot();
 
     if (contentWidth === undefined) {
       // we don't have any content to use
@@ -433,7 +441,6 @@ export const createUITransitionController = (
       },
     };
   };
-  // Setup phase to content transition styling
   const applyPhaseToContentTransition = () => {
     isInPhaseState = false;
     dimension: {
@@ -496,8 +503,6 @@ export const createUITransitionController = (
       },
     };
   };
-
-  // Setup content to empty transition
   const applyContentToEmptyTransition = () => {
     dimension: {
       targetWidth = 0;
@@ -538,8 +543,6 @@ export const createUITransitionController = (
       },
     };
   };
-
-  // Setup phase to empty transition
   const applyPhaseToEmptyTransition = () => {
     dimension: {
       targetWidth = 0;
@@ -712,7 +715,7 @@ export const createUITransitionController = (
         contentSlot.appendChild(newContentElement);
         contentSlotId = id;
         activeSlot = "content";
-        updateContentDimensions();
+        measureContentSlot();
         targetWidth = contentWidth;
         targetHeight = contentHeight;
         cleanupCallbacks = applyPhaseToContentTransition();
@@ -774,7 +777,7 @@ export const createUITransitionController = (
     }
 
     // Update and measure current dimensions
-    updateContentDimensions();
+    measureContentSlot();
 
     // Clear all other slots
     phaseSlot.innerHTML = "";
@@ -839,7 +842,7 @@ export const createUITransitionController = (
   }
 
   // Set initial dimensions based on current content to ensure visibility
-  updateContentDimensions();
+  measureContentSlot();
   width = contentWidth || "auto";
   height = contentHeight || "auto";
 
