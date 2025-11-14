@@ -135,10 +135,29 @@ export const createUITransitionController = (
   let targetWidth;
   let targetHeight;
 
+  // Slot tracking with IDs
+  let contentSlotId = "empty";
+  let phaseSlotId = "empty";
+  let oldContentSlotId = "empty";
+  let oldPhaseSlotId = "empty";
+  let activeSlot = "content"; // "content" or "phase"
+  let transitionType = "empty"; // Debug string for current transition type
+
   // Capture initial content from content slot
   const initialContent = contentSlot.firstElementChild
     ? contentSlot.firstElementChild.cloneNode(true)
     : null;
+
+  // Helper to get element signature or use provided ID
+  const getElementId = (element, providedId) => {
+    if (providedId) return providedId;
+    if (!element) return "empty";
+    // Simple signature based on element properties
+    const tagName = element.tagName?.toLowerCase() || "unknown";
+    const className = element.className || "";
+    const textContent = element.textContent?.slice(0, 20) || "";
+    return `${tagName}_${className}_${textContent}`.replace(/\s+/g, "_");
+  };
 
   // Update alignment of content within the transition area
   const updateAlignment = () => {
@@ -221,6 +240,7 @@ export const createUITransitionController = (
         oldContentSlot.style.transition = "";
         contentSlot.style.opacity = "";
         contentSlot.style.transition = "";
+        oldContentSlotId = "empty";
       },
       cleanupDimension: () => {
         container.style.width = "";
@@ -315,6 +335,7 @@ export const createUITransitionController = (
         oldPhaseSlot.style.transition = "";
         phaseSlot.style.opacity = "";
         phaseSlot.style.transition = "";
+        oldPhaseSlotId = "empty";
         // Keep content hidden in phase state
         if (isInPhaseState) {
           contentSlot.style.opacity = "0";
@@ -381,6 +402,91 @@ export const createUITransitionController = (
         contentSlot.style.transition = "";
         contentSlot.removeAttribute("aria-hidden");
         contentSlot.style.pointerEvents = "";
+        oldPhaseSlotId = "empty";
+      },
+      cleanupDimension: () => {
+        container.style.width = "";
+        container.style.height = "";
+        container.removeAttribute("data-transitioning");
+      },
+    };
+  };
+
+  // Setup content to empty transition
+  const applyContentToEmptyTransition = () => {
+    dimension: {
+      targetWidth = 0;
+      targetHeight = 0;
+      container.style.width = `${width}px`;
+      container.style.height = `${height}px`;
+      requestAnimationFrame(() => {
+        container.style.width = `${targetWidth}px`;
+        container.style.height = `${targetHeight}px`;
+        width = targetWidth;
+        height = targetHeight;
+      });
+    }
+    opacity: {
+      if (oldContentSlot.firstElementChild) {
+        oldContentSlot.style.opacity = "1";
+        oldContentSlot.style.transition = "none";
+        requestAnimationFrame(() => {
+          oldContentSlot.style.transition = `opacity ${duration}ms ease`;
+          oldContentSlot.style.opacity = "0";
+        });
+      }
+    }
+    container.setAttribute("data-transitioning", "true");
+    return {
+      cleanupOpacity: () => {
+        oldContentSlot.innerHTML = "";
+        oldContentSlot.style.opacity = "";
+        oldContentSlot.style.transition = "";
+        oldContentSlotId = "empty";
+      },
+      cleanupDimension: () => {
+        container.style.width = "";
+        container.style.height = "";
+        container.removeAttribute("data-transitioning");
+      },
+    };
+  };
+
+  // Setup phase to empty transition
+  const applyPhaseToEmptyTransition = () => {
+    dimension: {
+      targetWidth = 0;
+      targetHeight = 0;
+      container.style.width = `${width}px`;
+      container.style.height = `${height}px`;
+      requestAnimationFrame(() => {
+        container.style.width = `${targetWidth}px`;
+        container.style.height = `${targetHeight}px`;
+        width = targetWidth;
+        height = targetHeight;
+      });
+    }
+    opacity: {
+      if (oldPhaseSlot.firstElementChild) {
+        oldPhaseSlot.style.opacity = "1";
+        oldPhaseSlot.style.transition = "none";
+        requestAnimationFrame(() => {
+          oldPhaseSlot.style.transition = `opacity ${duration}ms ease`;
+          oldPhaseSlot.style.opacity = "0";
+        });
+      }
+    }
+    container.setAttribute("data-transitioning", "true");
+    return {
+      cleanupOpacity: () => {
+        oldPhaseSlot.innerHTML = "";
+        oldPhaseSlot.style.opacity = "";
+        oldPhaseSlot.style.transition = "";
+        oldPhaseSlotId = "empty";
+        // Reset content slot when transitioning from phase to empty
+        contentSlot.style.opacity = "";
+        contentSlot.removeAttribute("aria-hidden");
+        contentSlot.style.pointerEvents = "";
       },
       cleanupDimension: () => {
         container.style.width = "";
@@ -391,24 +497,75 @@ export const createUITransitionController = (
   };
 
   // Main transition method
-  const transitionTo = (newContentElement, { isContentPhase = false } = {}) => {
+  const transitionTo = (
+    newContentElement,
+    { isContentPhase = false, id } = {},
+  ) => {
     if (isTransitioning) {
       console.log("Transition already in progress, ignoring");
       return Promise.resolve();
     }
 
     return new Promise((resolve) => {
+      // Determine element ID
+      const elementId = getElementId(newContentElement, id);
+
+      // Determine transition type for debugging
+      const fromSlot = activeSlot;
+      const fromId = activeSlot === "content" ? contentSlotId : phaseSlotId;
+      const toSlot =
+        newContentElement === null
+          ? "empty"
+          : isContentPhase
+            ? "phase"
+            : "content";
+      const toId = elementId;
+
+      transitionType = `${fromSlot}(${fromId})_to_${toSlot}(${toId})`;
+      console.debug("Transition type:", transitionType);
+
       let cleanupCallbacks;
-      if (isContentPhase) {
+
+      if (newContentElement === null) {
+        // Transitioning to empty
+        if (activeSlot === "content") {
+          // Move current content to old content slot
+          const currentContent = contentSlot.firstElementChild;
+          if (currentContent) {
+            oldContentSlot.innerHTML = "";
+            oldContentSlot.appendChild(currentContent);
+            oldContentSlotId = contentSlotId;
+          }
+          contentSlot.innerHTML = "";
+          contentSlotId = "empty";
+          cleanupCallbacks = applyContentToEmptyTransition();
+        } else {
+          // Move current phase to old phase slot
+          const currentPhase = phaseSlot.firstElementChild;
+          if (currentPhase) {
+            oldPhaseSlot.innerHTML = "";
+            oldPhaseSlot.appendChild(currentPhase);
+            oldPhaseSlotId = phaseSlotId;
+          }
+          phaseSlot.innerHTML = "";
+          phaseSlotId = "empty";
+          isInPhaseState = false;
+          cleanupCallbacks = applyPhaseToEmptyTransition();
+        }
+        activeSlot = "content";
+      } else if (isContentPhase) {
         const currentPhaseContent = phaseSlot.firstElementChild;
         if (currentPhaseContent) {
           // move any current phase to old phase slot
           oldPhaseSlot.innerHTML = "";
           oldPhaseSlot.appendChild(currentPhaseContent);
+          oldPhaseSlotId = phaseSlotId;
         }
         // Insert phase element into phase slot for measurement and transition
         phaseSlot.innerHTML = "";
         phaseSlot.appendChild(newContentElement);
+        phaseSlotId = elementId;
+        activeSlot = "phase";
         cleanupCallbacks = applySomethingToPhaseTransition();
       } else if (isInPhaseState) {
         // Transitioning from phase to content
@@ -417,12 +574,16 @@ export const createUITransitionController = (
         if (currentPhase) {
           oldPhaseSlot.innerHTML = "";
           oldPhaseSlot.appendChild(currentPhase);
+          oldPhaseSlotId = phaseSlotId;
         }
         // Clear current phase slot
         phaseSlot.innerHTML = "";
+        phaseSlotId = "empty";
         // Insert new content into content slot
         contentSlot.innerHTML = "";
         contentSlot.appendChild(newContentElement);
+        contentSlotId = elementId;
+        activeSlot = "content";
         updateContentDimensions();
         targetWidth = contentWidth;
         targetHeight = contentHeight;
@@ -434,10 +595,13 @@ export const createUITransitionController = (
         if (currentContent) {
           oldContentSlot.innerHTML = "";
           oldContentSlot.appendChild(currentContent);
+          oldContentSlotId = contentSlotId;
         }
         // Insert new content into content slot
         contentSlot.innerHTML = "";
         contentSlot.appendChild(newContentElement);
+        contentSlotId = elementId;
+        activeSlot = "content";
         cleanupCallbacks = applyContentToContentTransition();
       }
 
@@ -532,10 +696,19 @@ export const createUITransitionController = (
   // Initialize with visible content
   updateAlignment();
 
+  // Initialize slot tracking
+  if (contentSlot.firstElementChild) {
+    contentSlotId = getElementId(contentSlot.firstElementChild);
+    activeSlot = "content";
+  } else {
+    contentSlotId = "empty";
+    activeSlot = "content";
+  }
+
   // Set initial dimensions based on current content to ensure visibility
   updateContentDimensions();
-  width = contentWidth;
-  height = contentHeight;
+  width = contentWidth || "auto";
+  height = contentHeight || "auto";
 
   // Set CSS variable for duration
   container.style.setProperty("--x-transition-duration", `${duration}ms`);
@@ -550,5 +723,14 @@ export const createUITransitionController = (
     getCurrentContent,
     getIsInPhaseState,
     updateAlignment,
+    // Slot state getters
+    getSlotStates: () => ({
+      contentSlotId,
+      phaseSlotId,
+      oldContentSlotId,
+      oldPhaseSlotId,
+      activeSlot,
+      transitionType,
+    }),
   };
 };
