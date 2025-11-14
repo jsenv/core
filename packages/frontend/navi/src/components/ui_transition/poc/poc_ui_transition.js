@@ -61,9 +61,14 @@ import.meta.css = /* css */ `
     position: relative;
   }
 
-  /* Phase slot - for phase states, positioned above content */
+  /* Phase slot - for phase states, positioned above content when content exists */
   .phase-slot {
     position: absolute;
+  }
+
+  /* Phase slot in relative position when no content exists */
+  .phase-slot[data-no-content] {
+    position: relative;
   }
 
   /* Old content slot - for fade-out content */
@@ -148,9 +153,18 @@ export const createUITransitionController = (
     ? contentSlot.firstElementChild.cloneNode(true)
     : null;
 
+  // Helper to update phase slot positioning based on content state
+  const updatePhaseSlotPositioning = () => {
+    const hasContent = contentSlotId !== "empty";
+    if (hasContent) {
+      phaseSlot.removeAttribute("data-no-content");
+    } else {
+      phaseSlot.setAttribute("data-no-content", "");
+    }
+  };
+
   // Helper to get element signature or use provided ID
-  const getElementId = (element, providedId) => {
-    if (providedId) return providedId;
+  const getElementId = (element) => {
     if (!element) return "empty";
     // Simple signature based on element properties
     const tagName = element.tagName?.toLowerCase() || "unknown";
@@ -499,7 +513,7 @@ export const createUITransitionController = (
   // Main transition method
   const transitionTo = (
     newContentElement,
-    { isContentPhase = false, id } = {},
+    { isContentPhase = false, id = getElementId(newContentElement) } = {},
   ) => {
     if (isTransitioning) {
       console.log("Transition already in progress, ignoring");
@@ -507,9 +521,6 @@ export const createUITransitionController = (
     }
 
     return new Promise((resolve) => {
-      // Determine element ID
-      const elementId = getElementId(newContentElement, id);
-
       // Determine transition type for debugging
       const fromSlot = activeSlot;
       const fromId = activeSlot === "content" ? contentSlotId : phaseSlotId;
@@ -519,7 +530,7 @@ export const createUITransitionController = (
           : isContentPhase
             ? "phase"
             : "content";
-      const toId = elementId;
+      const toId = id;
 
       transitionType = `${fromSlot}(${fromId})_to_${toSlot}(${toId})`;
       console.debug("Transition type:", transitionType);
@@ -540,6 +551,7 @@ export const createUITransitionController = (
           contentSlotId = "empty";
           contentWidth = undefined;
           contentHeight = undefined;
+          updatePhaseSlotPositioning();
           cleanupCallbacks = applyContentToEmptyTransition();
         } else {
           // Move current phase to old phase slot
@@ -568,7 +580,7 @@ export const createUITransitionController = (
         // Insert phase element into phase slot for measurement and transition
         phaseSlot.innerHTML = "";
         phaseSlot.appendChild(newContentElement);
-        phaseSlotId = elementId;
+        phaseSlotId = id;
         activeSlot = "phase";
         cleanupCallbacks = applySomethingToPhaseTransition();
       } else if (isInPhaseState) {
@@ -586,8 +598,9 @@ export const createUITransitionController = (
         // Insert new content into content slot
         contentSlot.innerHTML = "";
         contentSlot.appendChild(newContentElement);
-        contentSlotId = elementId;
+        contentSlotId = id;
         activeSlot = "content";
+        updatePhaseSlotPositioning();
         updateContentDimensions();
         targetWidth = contentWidth;
         targetHeight = contentHeight;
@@ -604,8 +617,9 @@ export const createUITransitionController = (
         // Insert new content into content slot
         contentSlot.innerHTML = "";
         contentSlot.appendChild(newContentElement);
-        contentSlotId = elementId;
+        contentSlotId = id;
         activeSlot = "content";
+        updatePhaseSlotPositioning();
         cleanupCallbacks = applyContentToContentTransition();
       }
 
@@ -716,6 +730,9 @@ export const createUITransitionController = (
 
   // Set CSS variable for duration
   container.style.setProperty("--x-transition-duration", `${duration}ms`);
+
+  // Initialize phase slot positioning
+  updatePhaseSlotPositioning();
 
   // Return public API
   return {
