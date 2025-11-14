@@ -444,7 +444,6 @@ export const createUITransitionController = (
 
     // Set transition state marker
     container.setAttribute("data-transitioning", "true");
-
     // Force reflow
     const reflow = contentSlot.offsetHeight;
     console.debug("Phase to content reflow:", reflow);
@@ -490,6 +489,7 @@ export const createUITransitionController = (
       });
     }
     opacity: {
+      // Ensure old content is visible before starting fade-out
       if (oldContentSlot.firstElementChild) {
         oldContentSlot.style.opacity = "1";
         oldContentSlot.style.transition = "none";
@@ -500,6 +500,9 @@ export const createUITransitionController = (
       }
     }
     container.setAttribute("data-transitioning", "true");
+    // Force reflow
+    const reflow = contentSlot.offsetHeight;
+    console.debug("Phase to content reflow:", reflow);
     return {
       cleanupOpacity: () => {
         oldContentSlot.innerHTML = "";
