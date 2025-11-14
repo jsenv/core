@@ -106,16 +106,9 @@
         position: relative;
 
         /* Pas de taille initiale fixe - sera définie dynamiquement */
-        min-width: 100px;
-        min-height: 50px;
         background: white;
         border: 2px dashed #ccc;
         border-radius: 8px;
-
-        /* Transition sur les dimensions */
-        transition:
-          width 3s ease,
-          height 3s ease;
       }
 
       .transition-container.empty {
@@ -277,8 +270,8 @@
 
         const rect = rectangle.getBoundingClientRect();
         const dimensions = {
-          width: Math.round(rect.width),
-          height: Math.round(rect.height),
+          width: rect.width,
+          height: rect.height,
         };
 
         console.log(`Dimensions détectées pour ${rectangleId}:`, dimensions);
@@ -347,8 +340,8 @@
 
         // Ajouter des styles pour identifier le clone
         clone.style.position = "absolute";
-        clone.style.opacity = "0.8";
-        clone.style.border = "3px solid #ff6b35";
+        clone.style.opacity = "0.6";
+        clone.style.borderColor = "#ff6b35";
         clone.style.zIndex = "1000";
 
         console.log("Clone créé:", {
@@ -385,8 +378,13 @@
 
         // 2. Positionner le clone temporairement
         const containerRect = container.getBoundingClientRect();
-        clone.style.left = `${containerRect.left}px`;
-        clone.style.top = `${containerRect.top}px`;
+        const containerComputedStyle = getComputedStyle(container);
+        const borderLeftWidth =
+          parseFloat(containerComputedStyle.borderLeftWidth) || 0;
+        const borderTopWidth =
+          parseFloat(containerComputedStyle.borderTopWidth) || 0;
+        clone.style.left = `${containerRect.left + borderLeftWidth}px`;
+        clone.style.top = `${containerRect.top + borderTopWidth}px`;
         document.body.appendChild(clone);
 
         // 3. Créer la structure de contenu si nécessaire
