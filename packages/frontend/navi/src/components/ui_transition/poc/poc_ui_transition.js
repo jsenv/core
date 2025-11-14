@@ -281,13 +281,25 @@ export const createUITransitionController = (
     oldPhaseSlot.innerHTML = "";
     oldContentSlot.innerHTML = "";
 
-    // Reset styles
+    // Reset styles for phase slot
     phaseSlot.style.opacity = "";
     phaseSlot.style.transition = "";
-    contentSlot.style.opacity = "";
-    contentSlot.style.transition = "";
     oldPhaseSlot.style.opacity = "";
     oldPhaseSlot.style.transition = "";
+
+    // If we're in phase state, keep content hidden and non-interactive
+    if (isInPhaseState) {
+      contentSlot.style.opacity = "0";
+      contentSlot.style.transition = "";
+      contentSlot.setAttribute("aria-hidden", "true");
+      contentSlot.style.pointerEvents = "none";
+    } else {
+      // Reset content slot when not in phase state
+      contentSlot.style.opacity = "";
+      contentSlot.style.transition = "";
+      contentSlot.removeAttribute("aria-hidden");
+      contentSlot.style.pointerEvents = "";
+    }
 
     // Remove container dimensions to let content flow naturally
     container.style.width = "";
@@ -454,6 +466,8 @@ export const createUITransitionController = (
     // Reset opacity and transition styles
     contentSlot.style.opacity = "";
     contentSlot.style.transition = "";
+    contentSlot.removeAttribute("aria-hidden");
+    contentSlot.style.pointerEvents = "";
     phaseSlot.style.opacity = "";
     phaseSlot.style.transition = "";
     oldContentSlot.style.opacity = "";
