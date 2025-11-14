@@ -165,7 +165,6 @@ export function initUITransition(
     currentContentContainer.appendChild(newClone);
     // Set initial state: new content hidden, NO TRANSITION YET
     currentContentContainer.style.opacity = "0";
-    currentContentContainer.style.transition = "none";
 
     // Set transition state marker
     container.setAttribute("data-transitioning", "true");
@@ -177,26 +176,15 @@ export function initUITransition(
     const reflow = currentContentContainer.offsetHeight;
     console.debug("Initial setup reflow:", reflow);
 
-    // NOW enable transitions in next frame
-    requestAnimationFrame(() => {
-      if (oldContentClone) {
-        oldContentContainer.style.transition = `opacity ${duration}ms ease`;
-      }
-      currentContentContainer.style.transition = `opacity ${duration}ms ease`;
+    if (oldContentClone) {
+      oldContentContainer.style.transition = `opacity ${duration}ms ease`;
+    }
+    currentContentContainer.style.transition = `opacity ${duration}ms ease`;
 
-      // Force another reflow to register transitions
-      const reflow2 = currentContentContainer.offsetHeight;
-      console.debug("Transition enabled reflow:", reflow2);
-
-      // Start fade in next frame
-      requestAnimationFrame(() => {
-        console.debug("Starting fade: old to 0, new to 1");
-        if (oldContentClone) {
-          oldContentContainer.style.opacity = "0"; // Fade out old
-        }
-        currentContentContainer.style.opacity = "1"; // Fade in new
-      });
-    });
+    if (oldContentClone) {
+      oldContentContainer.style.opacity = "0"; // Fade out old
+    }
+    currentContentContainer.style.opacity = "1"; // Fade in new
   };
 
   // Finalize cross-fade by swapping containers
