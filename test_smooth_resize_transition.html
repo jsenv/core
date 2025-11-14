@@ -35,6 +35,77 @@
         background: #ff6b35;
       }
 
+      /* Rectangles visibles pour cliquer */
+      .rectangles-container {
+        display: flex;
+        margin-bottom: 40px;
+        flex-wrap: wrap;
+        gap: 20px;
+      }
+
+      .rectangle {
+        display: flex;
+        box-sizing: border-box;
+        padding: 20px;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        transition:
+          transform 0.2s ease,
+          box-shadow 0.2s ease;
+        cursor: pointer;
+      }
+
+      .rectangle:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+      }
+
+      .rectangle[data-state="a"] {
+        width: 200px;
+        height: 100px;
+        color: white;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      }
+
+      .rectangle[data-state="b"] {
+        width: 400px;
+        height: 200px;
+        color: white;
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      }
+
+      .rectangle[data-state="c"] {
+        width: 150px;
+        height: 300px;
+        color: white;
+        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+      }
+
+      .rectangle h3 {
+        margin: 0 0 10px 0;
+        font-size: 18px;
+      }
+
+      .rectangle p {
+        margin: 0;
+        font-size: 14px;
+        text-align: center;
+        line-height: 1.4;
+      }
+
+      /* Zone de transition */
+      .transition-zone {
+        margin-top: 40px;
+      }
+
+      .transition-zone h4 {
+        margin-bottom: 20px;
+        color: #333;
+      }
+
       /* Structure de transition - NOUVELLE APPROCHE */
       .transition-container {
         position: relative;
@@ -121,21 +192,40 @@
   <body>
     <h1>Test de Transition Smooth de Redimensionnement</h1>
 
-    <div class="controls">
-      <button id="btn-state-a" class="active">État A (200x100)</button>
-      <button id="btn-state-b">État B (400x200)</button>
-      <button id="btn-state-c">État C (150x300)</button>
-      <button id="btn-reset">Reset (supprime contraintes)</button>
+    <!-- Rectangles visibles - cliquer pour transitionner -->
+    <div class="rectangles-container">
+      <div class="rectangle" data-state="a" id="rect-a">
+        <h3>État A</h3>
+        <p>
+          Petit rectangle avec du texte qui ne doit pas se déformer pendant la
+          transition
+        </p>
+      </div>
+
+      <div class="rectangle" data-state="b" id="rect-b">
+        <h3>État B</h3>
+        <p>
+          Rectangle plus grand avec plus de contenu. Ce texte est plus long pour
+          voir comment le contenu s'adapte dans un espace plus grand. La
+          transition doit être fluide.
+        </p>
+      </div>
+
+      <div class="rectangle" data-state="c" id="rect-c">
+        <h3>État C</h3>
+        <p>Format portrait</p>
+      </div>
     </div>
 
-    <div class="transition-container" id="container">
-      <div class="content-wrapper" id="wrapper">
-        <div class="content state-a" id="content">
-          <h3>État A</h3>
-          <p>
-            Petit rectangle avec du texte qui ne doit pas se déformer pendant la
-            transition
-          </p>
+    <!-- Zone de transition -->
+    <div class="transition-zone">
+      <h4>Zone de transition:</h4>
+      <div class="transition-container" id="container">
+        <div class="content-wrapper" id="wrapper">
+          <div class="content state-a" id="content">
+            <h3>État A</h3>
+            <p>Cliquez sur un rectangle ci-dessus pour voir la transition</p>
+          </div>
         </div>
       </div>
     </div>
@@ -168,110 +258,146 @@
           width: 200,
           height: 100,
           contentClass: "state-a",
-          title: "État A",
-          text: "Petit rectangle avec du texte qui ne doit pas se déformer pendant la transition",
         },
         b: {
           width: 400,
           height: 200,
           contentClass: "state-b",
-          title: "État B",
-          text: "Rectangle plus grand avec plus de contenu. Ce texte est plus long pour voir comment le contenu s'adapte dans un espace plus grand. La transition doit être fluide.",
         },
         c: {
           width: 150,
           height: 300,
-          contentClass: "state-c", // Changé pour state-c
-          title: "État C",
-          text: "Format portrait",
+          contentClass: "state-c",
         },
       };
 
       let currentState = "a";
       let isTransitioning = false;
 
-      // Mise à jour du debug - SIMPLIFIÉE
+      // Mise à jour du debug
       function updateDebugInfo() {
         const containerRect = container.getBoundingClientRect();
         const contentRect = content.getBoundingClientRect();
 
         debug.containerSize.textContent = `Container: ${containerRect.width.toFixed(0)}px × ${containerRect.height.toFixed(0)}px`;
         debug.contentSize.textContent = `Content: ${contentRect.width.toFixed(0)}px × ${contentRect.height.toFixed(0)}px`;
-        debug.scaleInfo.textContent = `Scale: pas de scaling - contenu à sa taille naturelle`;
+        debug.scaleInfo.textContent = `Clone utilisé: ${isTransitioning ? "Oui" : "Non"}`;
         debug.stateInfo.textContent = `État: ${currentState.toUpperCase()}`;
       }
 
-      // Transition vers un nouvel état - NOUVELLE APPROCHE SIMPLIFIÉE
-      function transitionTo(newState) {
+      // Fonction de clonage du rectangle source
+      function cloneRectangle(sourceElement) {
+        const clone = sourceElement.cloneNode(true);
+
+        // Ajouter des styles pour identifier le clone
+        clone.style.position = "absolute";
+        clone.style.opacity = "0.8";
+        clone.style.border = "3px solid #ff6b35";
+        clone.style.zIndex = "1000";
+
+        console.log("Clone créé:", {
+          original: sourceElement.id,
+          clone,
+          dimensions: `${clone.offsetWidth}x${clone.offsetHeight}`,
+        });
+
+        return clone;
+      }
+
+      // Transition vers un nouvel état avec cloneNode
+      function transitionTo(newState, sourceRectangle) {
         if (isTransitioning || newState === currentState) return;
 
         isTransitioning = true;
         const state = states[newState];
 
-        console.log("Transition:", {
+        console.log("Début transition:", {
           from: `${container.offsetWidth}x${container.offsetHeight}`,
           to: `${state.width}x${state.height}`,
           newState,
+          sourceElement: sourceRectangle.id,
         });
 
-        // 1. Changer immédiatement le contenu (il aura sa taille finale)
-        content.className = `content ${state.contentClass}`;
-        content.innerHTML = `
-          <h3>${state.title}</h3>
-          <p>${state.text}</p>
-        `;
+        // 1. Créer un clone du rectangle source
+        const clone = cloneRectangle(sourceRectangle);
 
-        // 2. Animer seulement les dimensions du conteneur
-        // Le contenu garde ses dimensions CSS fixes définies dans les styles
+        // 2. Positionner le clone temporairement dans la zone de transition
+        const containerRect = container.getBoundingClientRect();
+        clone.style.left = `${containerRect.left}px`;
+        clone.style.top = `${containerRect.top}px`;
+        document.body.appendChild(clone);
+
+        // 3. Changer le contenu de la zone de transition
+        content.className = `content ${state.contentClass}`;
+        content.innerHTML = sourceRectangle.innerHTML;
+
+        // 4. Animer les dimensions du conteneur
         container.style.width = `${state.width}px`;
         container.style.height = `${state.height}px`;
 
-        // 3. Mettre à jour l'état
-        currentState = newState;
-        updateActiveButton();
-        updateDebugInfo();
-
-        // 4. Marquer la fin de la transition
+        // 5. Nettoyer le clone après la transition
         setTimeout(() => {
+          if (clone.parentNode) {
+            clone.parentNode.removeChild(clone);
+          }
           isTransitioning = false;
-        }, 300);
-      }
+          console.log("Transition terminée, clone supprimé");
+        }, DURATION + 100);
 
-      // Reset - supprime les contraintes
-      function reset() {
-        container.style.width = "";
-        container.style.height = "";
-        isTransitioning = false;
+        // 6. Mettre à jour l'état
+        currentState = newState;
         updateDebugInfo();
       }
 
-      // Gestion des boutons
-      function updateActiveButton() {
-        document
-          .querySelectorAll("button")
-          .forEach((btn) => btn.classList.remove("active"));
-        document
-          .getElementById(`btn-state-${currentState}`)
-          .classList.add("active");
+      // Gestion des clics sur les rectangles
+      function setupRectangleClickHandlers() {
+        const rectangles = document.querySelectorAll(".rectangle");
+
+        rectangles.forEach((rectangle) => {
+          rectangle.addEventListener("click", () => {
+            const targetState = rectangle.dataset.state;
+            console.log(`Clic sur rectangle ${targetState}:`, rectangle);
+
+            // Effet visuel de clic
+            rectangle.style.transform = "scale(0.95)";
+            setTimeout(() => {
+              rectangle.style.transform = "";
+            }, 150);
+
+            // Déclencher la transition avec le rectangle source
+            transitionTo(targetState, rectangle);
+          });
+
+          // Debug info au survol
+          rectangle.addEventListener("mouseenter", () => {
+            const state = rectangle.dataset.state;
+            console.log(`Survol rectangle ${state}:`, {
+              dimensions: `${rectangle.offsetWidth}x${rectangle.offsetHeight}`,
+              element: rectangle,
+            });
+          });
+        });
       }
 
-      // Event listeners
-      document
-        .getElementById("btn-state-a")
-        .addEventListener("click", () => transitionTo("a"));
-      document
-        .getElementById("btn-state-b")
-        .addEventListener("click", () => transitionTo("b"));
-      document
-        .getElementById("btn-state-c")
-        .addEventListener("click", () => transitionTo("c"));
-      document.getElementById("btn-reset").addEventListener("click", reset);
+      // Initialisation
+      function init() {
+        setupRectangleClickHandlers();
+        updateDebugInfo();
 
-      // Mise à jour initiale
-      updateDebugInfo();
+        // Mise à jour du debug en continu
+        setInterval(updateDebugInfo, 200);
 
-      // Mise à jour du debug en continu
-      setInterval(updateDebugInfo, 100);
+        console.log(
+          "Interface initialisée - cliquez sur les rectangles pour transitionner",
+        );
+      }
+
+      // Lancer l'initialisation quand le DOM est prêt
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+      } else {
+        init();
+      }
     </script>
   </body>
 </html>
