@@ -56,16 +56,11 @@ import.meta.css = /* css */ `
   }
 
   /* Éléments en transition avec cross-fade - styles statiques */
-  .content-new,
+  .content-new {
+  }
+
   .content-old {
     position: absolute;
-    top: 0;
-    left: 0;
-    display: flex;
-    width: 100%;
-    height: 100%;
-    align-items: inherit;
-    justify-content: inherit;
   }
 
   /* Styles for old content clones */
