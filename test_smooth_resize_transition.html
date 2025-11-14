@@ -146,19 +146,11 @@
       }
 
       /* États des contenus - dimensions détectées automatiquement */
-      .content.state-a {
-        color: white;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      }
-
-      .content.state-b {
-        color: white;
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-      }
-
-      .content.state-c {
-        color: white;
-        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+      .content.state-empty {
+        color: #666;
+        font-style: italic;
+        background: #f8f8f8;
+        border: 2px dashed #ccc;
       }
 
       .content h3 {
@@ -216,8 +208,12 @@
     <!-- Zone de transition -->
     <div class="transition-zone">
       <h4>Zone de transition:</h4>
-      <div class="transition-container empty" id="container">
-        Cliquez sur un rectangle ci-dessus pour voir la transition
+      <div class="transition-container" id="container">
+        <div class="content-wrapper" id="wrapper">
+          <div class="content state-empty" id="content">
+            <p>Cliquez sur un rectangle ci-dessus pour voir la transition</p>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -231,8 +227,7 @@
 
     <script>
       const container = document.getElementById("container");
-      let content = null; // Sera créé dynamiquement
-      let wrapper = null; // Sera créé dynamiquement
+      const content = document.getElementById("content");
 
       const debug = {
         containerSize: document.getElementById("container-size"),
@@ -246,6 +241,11 @@
 
       // États possibles - dimensions détectées automatiquement
       const states = {
+        empty: {
+          contentClass: "state-empty",
+          content:
+            "<p>Cliquez sur un rectangle ci-dessus pour voir la transition</p>",
+        },
         a: {
           contentClass: "state-a",
         },
@@ -260,76 +260,40 @@
       let currentState = "empty";
       let isTransitioning = false;
 
-      // Détection automatique des dimensions d'un rectangle
-      function getRectangleDimensions(rectangleId) {
-        const rectangle = document.getElementById(rectangleId);
-        if (!rectangle) {
-          console.warn(`Rectangle ${rectangleId} non trouvé`);
+      // Détection automatique des dimensions d'un rectangle OU du contenu actuel
+      function getDimensions(elementId) {
+        let element;
+
+        if (elementId === "current-content") {
+          // Cas spécial : mesurer le contenu actuel
+          element = content;
+        } else {
+          // Cas normal : mesurer un rectangle source
+          element = document.getElementById(elementId);
+        }
+
+        if (!element) {
+          console.warn(`Élément ${elementId} non trouvé`);
           return { width: 200, height: 100 }; // fallback
         }
 
-        const rect = rectangle.getBoundingClientRect();
+        const rect = element.getBoundingClientRect();
         const dimensions = {
-          width: rect.width,
-          height: rect.height,
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
         };
 
-        console.log(`Dimensions détectées pour ${rectangleId}:`, dimensions);
+        console.log(`Dimensions détectées pour ${elementId}:`, dimensions);
         return dimensions;
-      }
-
-      // Créer la structure de contenu dynamiquement
-      function createContentStructure() {
-        // Nettoyer le container
-        container.innerHTML = "";
-        container.classList.remove("empty");
-
-        // Ajouter la transition CSS si pas déjà présente
-        container.style.transition = `width ${DURATION}ms ease, height ${DURATION}ms ease`;
-
-        // Créer le wrapper
-        wrapper = document.createElement("div");
-        wrapper.className = "content-wrapper";
-        wrapper.id = "wrapper";
-
-        // Créer le contenu
-        content = document.createElement("div");
-        content.className = "content";
-        content.id = "content";
-
-        // Assembler
-        wrapper.appendChild(content);
-        container.appendChild(wrapper);
-
-        console.log("Structure de contenu créée");
-      }
-
-      // Vider la zone de transition
-      function clearTransitionZone() {
-        container.innerHTML =
-          "Cliquez sur un rectangle ci-dessus pour voir la transition";
-        container.classList.add("empty");
-        container.style.width = "";
-        container.style.height = "";
-
-        content = null;
-        wrapper = null;
-        currentState = "empty";
-
-        console.log("Zone de transition vidée");
       }
 
       // Mise à jour du debug
       function updateDebugInfo() {
         const containerRect = container.getBoundingClientRect();
-        const contentRect = content
-          ? content.getBoundingClientRect()
-          : { width: 0, height: 0 };
+        const contentRect = content.getBoundingClientRect();
 
         debug.containerSize.textContent = `Container: ${containerRect.width.toFixed(0)}px × ${containerRect.height.toFixed(0)}px`;
-        debug.contentSize.textContent = content
-          ? `Content: ${contentRect.width.toFixed(0)}px × ${contentRect.height.toFixed(0)}px`
-          : "Content: aucun";
+        debug.contentSize.textContent = `Content: ${contentRect.width.toFixed(0)}px × ${contentRect.height.toFixed(0)}px`;
         debug.scaleInfo.textContent = `Clone utilisé: ${isTransitioning ? "Oui" : "Non"}`;
         debug.stateInfo.textContent = `État: ${currentState.toUpperCase()}`;
       }
@@ -363,56 +327,46 @@
         isTransitioning = true;
         const state = states[newState];
 
-        // Détecter les dimensions du rectangle source
-        const targetDimensions = getRectangleDimensions(sourceRectangle.id);
+        // Détecter les dimensions actuelles et cibles
+        const currentDimensions = getDimensions("current-content");
+        const targetDimensions = getDimensions(sourceRectangle.id);
 
         console.log("Début transition:", {
           from: currentState,
           to: newState,
+          currentDimensions,
           targetDimensions,
           sourceElement: sourceRectangle.id,
         });
 
-        // 1. Créer un clone du rectangle source
+        // 1. Définir les dimensions actuelles du container (point de départ)
+        container.style.transition = `width ${DURATION}ms ease, height ${DURATION}ms ease`;
+        container.style.width = `${currentDimensions.width}px`;
+        container.style.height = `${currentDimensions.height}px`;
+
+        // 2. Créer un clone du rectangle source
         const clone = cloneRectangle(sourceRectangle);
 
-        // 2. Positionner le clone temporairement
+        // 3. Positionner le clone temporairement
         const containerRect = container.getBoundingClientRect();
-        const containerComputedStyle = getComputedStyle(container);
-        const borderLeftWidth =
-          parseFloat(containerComputedStyle.borderLeftWidth) || 0;
-        const borderTopWidth =
-          parseFloat(containerComputedStyle.borderTopWidth) || 0;
-        clone.style.left = `${containerRect.left + borderLeftWidth}px`;
-        clone.style.top = `${containerRect.top + borderTopWidth}px`;
+        clone.style.left = `${containerRect.left}px`;
+        clone.style.top = `${containerRect.top}px`;
         document.body.appendChild(clone);
 
-        // 3. Créer la structure de contenu si nécessaire
-        if (currentState === "empty") {
-          createContentStructure();
-          // Pour le premier clic, donner des dimensions initiales très petites
-          container.style.width = "50px";
-          container.style.height = "50px";
-        }
-
-        // 4. Mettre le contenu à sa taille finale AVANT l'animation du container
+        // 4. Changer le contenu immédiatement
         content.className = `content ${state.contentClass}`;
         content.innerHTML = sourceRectangle.innerHTML;
 
-        // Forcer un reflow pour que le contenu prenne sa taille naturelle
+        // 5. Forcer un reflow pour que le contenu prenne sa taille naturelle
         const FORCE_REFLOW = content.offsetHeight;
 
-        // 5. Démarrer l'animation du conteneur vers les dimensions cibles
-        // Le contenu garde sa taille naturelle, le container s'adapte
-        setTimeout(
-          () => {
-            container.style.width = `${targetDimensions.width}px`;
-            container.style.height = `${targetDimensions.height}px`;
-          },
-          currentState === "empty" ? 100 : 50,
-        ); // Plus de délai pour le premier clic
+        // 6. Démarrer l'animation du conteneur vers les dimensions cibles
+        setTimeout(() => {
+          container.style.width = `${targetDimensions.width}px`;
+          container.style.height = `${targetDimensions.height}px`;
+        }, 50);
 
-        // 6. Nettoyer le clone après la transition
+        // 7. Nettoyer le clone après la transition
         setTimeout(() => {
           if (!DEBUG_KEEP_CLONE && clone.parentNode) {
             clone.parentNode.removeChild(clone);
@@ -421,9 +375,41 @@
           console.log("Transition terminée");
         }, DURATION + 100);
 
-        // 7. Mettre à jour l'état
+        // 8. Mettre à jour l'état
         currentState = newState;
         updateDebugInfo();
+      }
+
+      // Retour à l'état vide
+      function resetToEmpty() {
+        if (isTransitioning) return;
+
+        const emptyState = states.empty;
+
+        // Mesurer les dimensions actuelles
+        const currentDimensions = getDimensions("current-content");
+
+        // Définir le point de départ
+        container.style.transition = `width ${DURATION}ms ease, height ${DURATION}ms ease`;
+        container.style.width = `${currentDimensions.width}px`;
+        container.style.height = `${currentDimensions.height}px`;
+
+        // Changer le contenu
+        content.className = `content ${emptyState.contentClass}`;
+        content.innerHTML = emptyState.content;
+
+        // Mesurer les nouvelles dimensions et animer
+        const targetDimensions = getDimensions("current-content");
+
+        setTimeout(() => {
+          container.style.width = `${targetDimensions.width}px`;
+          container.style.height = `${targetDimensions.height}px`;
+        }, 50);
+
+        currentState = "empty";
+        updateDebugInfo();
+
+        console.log("Retour à l'état vide");
       }
 
       // Gestion des clics sur les rectangles
@@ -455,7 +441,7 @@
         const resetButton = document.createElement("button");
         resetButton.textContent = "Vider la zone";
         resetButton.style.marginTop = "10px";
-        resetButton.addEventListener("click", clearTransitionZone);
+        resetButton.addEventListener("click", resetToEmpty);
 
         const transitionZone = document.querySelector(".transition-zone");
         transitionZone.appendChild(resetButton);
