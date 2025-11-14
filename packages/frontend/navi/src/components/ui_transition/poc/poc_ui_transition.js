@@ -64,6 +64,8 @@ import.meta.css = /* css */ `
   /* Phase slot - for phase states, positioned above content when content exists */
   .phase-slot {
     position: absolute;
+    width: 100%;
+    height: 100%;
   }
 
   /* Phase slot in relative position when no content exists */
@@ -79,6 +81,8 @@ import.meta.css = /* css */ `
   /* Old phase slot - for fade-out phases */
   .old-phase-slot {
     position: absolute;
+    width: 100%;
+    height: 100%;
   }
 
   /* Styles for content in old slots */
@@ -166,6 +170,7 @@ export const createUITransitionController = (
   // Helper to get element signature or use provided ID
   const getElementId = (element) => {
     if (!element) return "empty";
+    if (element.id) return element.id;
     // Simple signature based on element properties
     const tagName = element.tagName?.toLowerCase() || "unknown";
     const className = element.className || "";
