@@ -280,13 +280,56 @@
         stateInfo: document.getElementById("state-info"),
       };
 
-      let DURATION = 3000; // Durée par défaut, maintenant modifiable
+      // Configuration localStorage
+      const STORAGE_KEY = 'smoothResizeTransition';
+      
+      // Fonction pour charger les préférences depuis localStorage
+      function loadPreferences() {
+        try {
+          const saved = localStorage.getItem(STORAGE_KEY);
+          if (saved) {
+            const prefs = JSON.parse(saved);
+            return {
+              duration: prefs.duration || 3000,
+              alignX: prefs.alignX || 'center',
+              alignY: prefs.alignY || 'center'
+            };
+          }
+        } catch (e) {
+          console.warn('Erreur lors du chargement des préférences:', e);
+        }
+        return {
+          duration: 3000,
+          alignX: 'center',
+          alignY: 'center'
+        };
+      }
+      
+      // Fonction pour sauvegarder les préférences dans localStorage
+      function savePreferences() {
+        try {
+          const prefs = {
+            duration: DURATION,
+            alignX: contentAlignX,
+            alignY: contentAlignY
+          };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+          console.log('Préférences sauvegardées:', prefs);
+        } catch (e) {
+          console.warn('Erreur lors de la sauvegarde des préférences:', e);
+        }
+      }
+      
+      // Charger les préférences au démarrage
+      const savedPrefs = loadPreferences();
+      
+      let DURATION = savedPrefs.duration; // Durée chargée depuis localStorage
       const VISUAL_DEBUG = true; // Affiche un ghost externe pour debug
       const VISUAL_DEBUG_KEEP_GHOST = true; // Garde le ghost debug après transition
 
-      // Paramètres d'alignement
-      let contentAlignX = "center"; // "start", "center", "end"
-      let contentAlignY = "center"; // "start", "center", "end"
+      // Paramètres d'alignement chargés depuis localStorage
+      let contentAlignX = savedPrefs.alignX; // "start", "center", "end"
+      let contentAlignY = savedPrefs.alignY; // "start", "center", "end"
 
       // États possibles - dimensions détectées automatiquement
       const states = {
@@ -667,7 +710,8 @@
         durationSlider.addEventListener("input", (e) => {
           DURATION = parseInt(e.target.value);
           durationValue.textContent = `${DURATION}ms`;
-          console.log(`Durée de transition mise à jour: ${DURATION}ms`);
+          savePreferences(); // Sauvegarder la durée
+          console.log(`Durée de transition mise à jour et sauvegardée: ${DURATION}ms`);
         });
 
         durationLabel.appendChild(durationText);
@@ -706,7 +750,7 @@
 
         alignXSelect.addEventListener("change", (e) => {
           contentAlignX = e.target.value;
-          updateAlignment();
+          updateAlignment(); // updateAlignment() sauvegarde automatiquement
         });
 
         alignXLabel.appendChild(alignXText);
@@ -732,7 +776,7 @@
 
         alignYSelect.addEventListener("change", (e) => {
           contentAlignY = e.target.value;
-          updateAlignment();
+          updateAlignment(); // updateAlignment() sauvegarde automatiquement
         });
 
         alignYLabel.appendChild(alignYText);
