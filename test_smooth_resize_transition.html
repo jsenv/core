@@ -35,6 +35,25 @@
         background: #ff6b35;
       }
 
+      /* État désactivé pendant les transitions */
+      button:disabled {
+        color: #999;
+        background: #ccc;
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .rectangle.disabled {
+        opacity: 0.5;
+        filter: grayscale(50%);
+        cursor: not-allowed;
+      }
+
+      .controls-disabled {
+        opacity: 0.6;
+        pointer-events: none;
+      }
+
       /* Rectangles visibles pour cliquer */
       .rectangles-container {
         display: flex;
@@ -281,8 +300,8 @@
       };
 
       // Configuration localStorage
-      const STORAGE_KEY = 'smoothResizeTransition';
-      
+      const STORAGE_KEY = "smoothResizeTransition";
+
       // Fonction pour charger les préférences depuis localStorage
       function loadPreferences() {
         try {
@@ -291,38 +310,38 @@
             const prefs = JSON.parse(saved);
             return {
               duration: prefs.duration || 3000,
-              alignX: prefs.alignX || 'center',
-              alignY: prefs.alignY || 'center'
+              alignX: prefs.alignX || "center",
+              alignY: prefs.alignY || "center",
             };
           }
         } catch (e) {
-          console.warn('Erreur lors du chargement des préférences:', e);
+          console.warn("Erreur lors du chargement des préférences:", e);
         }
         return {
           duration: 3000,
-          alignX: 'center',
-          alignY: 'center'
+          alignX: "center",
+          alignY: "center",
         };
       }
-      
+
       // Fonction pour sauvegarder les préférences dans localStorage
       function savePreferences() {
         try {
           const prefs = {
             duration: DURATION,
             alignX: contentAlignX,
-            alignY: contentAlignY
+            alignY: contentAlignY,
           };
           localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
-          console.log('Préférences sauvegardées:', prefs);
+          console.log("Préférences sauvegardées:", prefs);
         } catch (e) {
-          console.warn('Erreur lors de la sauvegarde des préférences:', e);
+          console.warn("Erreur lors de la sauvegarde des préférences:", e);
         }
       }
-      
+
       // Charger les préférences au démarrage
       const savedPrefs = loadPreferences();
-      
+
       let DURATION = savedPrefs.duration; // Durée chargée depuis localStorage
       const VISUAL_DEBUG = true; // Affiche un ghost externe pour debug
       const VISUAL_DEBUG_KEEP_GHOST = true; // Garde le ghost debug après transition
@@ -352,6 +371,58 @@
       let currentState = "empty";
       let isTransitioning = false;
       let debugGhost = null; // Ghost externe pour debug visuel
+
+      // Fonction pour mettre à jour l'état visuel de l'interface selon isTransitioning
+      function updateUIState() {
+        const rectangles = document.querySelectorAll(".rectangle");
+        const controls = document.querySelector(".controls-container");
+        const resetButton = document.querySelector("button");
+
+        if (isTransitioning) {
+          // Désactiver visuellement les rectangles
+          rectangles.forEach((rect) => {
+            rect.classList.add("disabled");
+            rect.style.pointerEvents = "none";
+          });
+
+          // Désactiver les contrôles
+          if (controls) {
+            controls.classList.add("controls-disabled");
+          }
+
+          // Désactiver le bouton reset spécifiquement
+          if (resetButton) {
+            resetButton.disabled = true;
+            resetButton.textContent = "Transition en cours...";
+          }
+
+          // Mettre à jour le debug info
+          debug.scaleInfo.textContent =
+            "⚠️ Transition en cours - Interface désactivée";
+        } else {
+          // Réactiver visuellement les rectangles
+          rectangles.forEach((rect) => {
+            rect.classList.remove("disabled");
+            rect.style.pointerEvents = "auto";
+          });
+
+          // Réactiver les contrôles
+          if (controls) {
+            controls.classList.remove("controls-disabled");
+          }
+
+          // Réactiver le bouton reset
+          if (resetButton) {
+            resetButton.disabled = false;
+            resetButton.textContent = "Vider la zone";
+          }
+
+          // Restaurer le debug info normal
+          debug.scaleInfo.textContent = `Clone utilisé: ${isTransitioning ? "Oui" : "Non"}`;
+        }
+
+        console.log(`État UI mis à jour: isTransitioning=${isTransitioning}`);
+      }
 
       // Fonction pour mettre à jour l'alignement de la viewport
       function updateAlignment() {
@@ -510,15 +581,10 @@
           sourceElement: sourceRectangle.id,
         });
 
-        // 1. Définir les dimensions actuelles du container (point de départ)
-        container.style.transition = `width ${DURATION}ms ease, height ${DURATION}ms ease`;
-        container.style.width = `${currentDimensions.width}px`;
-        container.style.height = `${currentDimensions.height}px`;
-
-        // 2. Créer un clone pour la zone de transition
+        // 1. Créer un clone AVANT de désactiver visuellement l'interface
         const clone = cloneRectangleForTransition(sourceRectangle);
 
-        // 2bis. Créer un ghost debug si VISUAL_DEBUG est activé
+        // 2. Créer un ghost debug AVANT de désactiver visuellement (si VISUAL_DEBUG est activé)
         if (VISUAL_DEBUG) {
           // Nettoyer le ghost debug précédent
           if (debugGhost && debugGhost.parentNode) {
@@ -527,8 +593,18 @@
           }
 
           debugGhost = createDebugGhost(sourceRectangle);
+        }
 
-          // Placer le ghost debug dans la viewport
+        // 3. MAINTENANT désactiver visuellement l'interface (après clonage)
+        updateUIState();
+
+        // 4. Définir les dimensions actuelles du container (point de départ)
+        container.style.transition = `width ${DURATION}ms ease, height ${DURATION}ms ease`;
+        container.style.width = `${currentDimensions.width}px`;
+        container.style.height = `${currentDimensions.height}px`;
+
+        // 5. Placer le ghost debug dans la viewport (si créé)
+        if (VISUAL_DEBUG && debugGhost) {
           const viewport = document.querySelector(".transition-viewport");
           viewport.appendChild(debugGhost);
 
@@ -538,7 +614,7 @@
           console.log("Ghost debug placé et positionné dans la viewport");
         }
 
-        // 3. Remplacer le contenu actuel par le clone
+        // 6. Remplacer le contenu actuel par le clone
         const wrapper = document.getElementById("wrapper");
         if (!wrapper) {
           console.error("Wrapper non trouvé");
@@ -547,7 +623,7 @@
         wrapper.innerHTML = ""; // Vider le wrapper
         wrapper.appendChild(clone); // Ajouter le clone
 
-        // 3bis. Appliquer immédiatement l'alignement au contenu
+        // 6bis. Appliquer immédiatement l'alignement au contenu
         // Le contenu doit être à sa position finale même si le container change de taille
         updateAlignment();
 
@@ -555,16 +631,16 @@
           "Clone placé dans la zone de transition avec alignement correct",
         );
 
-        // 4. Forcer un reflow pour stabiliser les dimensions
+        // 7. Forcer un reflow pour stabiliser les dimensions
         const FORCE_REFLOW = clone.offsetHeight;
 
-        // 5. Démarrer l'animation du conteneur vers les dimensions cibles
+        // 8. Démarrer l'animation du conteneur vers les dimensions cibles
         setTimeout(() => {
           container.style.width = `${targetDimensions.width}px`;
           container.style.height = `${targetDimensions.height}px`;
         }, 50);
 
-        // 7. Nettoyer le ghost debug après la transition (si nécessaire)
+        // 9. Nettoyer le ghost debug après la transition (si nécessaire)
         setTimeout(() => {
           if (
             VISUAL_DEBUG &&
@@ -580,10 +656,11 @@
           }
 
           isTransitioning = false;
+          updateUIState(); // Réactiver l'interface visuellement
           console.log("Transition terminée");
         }, DURATION + 100);
 
-        // 8. Mettre à jour l'état
+        // 10. Mettre à jour l'état
         currentState = newState;
         updateDebugInfo();
       }
@@ -656,6 +733,7 @@
       // Contrôles (bouton de reset + durée + alignement)
       function addControls() {
         const controlsContainer = document.createElement("div");
+        controlsContainer.className = "controls-container";
         controlsContainer.style.display = "flex";
         controlsContainer.style.flexWrap = "wrap";
         controlsContainer.style.alignItems = "center";
@@ -711,7 +789,9 @@
           DURATION = parseInt(e.target.value);
           durationValue.textContent = `${DURATION}ms`;
           savePreferences(); // Sauvegarder la durée
-          console.log(`Durée de transition mise à jour et sauvegardée: ${DURATION}ms`);
+          console.log(
+            `Durée de transition mise à jour et sauvegardée: ${DURATION}ms`,
+          );
         });
 
         durationLabel.appendChild(durationText);
@@ -793,6 +873,7 @@
         setupRectangleClickHandlers();
         addControls();
         updateAlignment(); // Appliquer l'alignement initial
+        updateUIState(); // Appliquer l'état initial de l'UI
         updateDebugInfo();
 
         // Mise à jour du debug en continu
