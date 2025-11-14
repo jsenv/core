@@ -11,7 +11,7 @@
  *   </div>
  *
  *   <div class="phase-dimensions">   <!-- Phase dimensions wrapper: dedicated sizing for phase states -->
- *     <div class="phase-slot" data-no-content=""></div>     <!-- Phase content: absolute when content exists, relative when dictating size -->
+ *     <div class="phase-slot"></div>     <!-- Phase content: wrapper positioning controlled by container[data-no-content] -->
  *     <div class="old-phase-slot"></div> <!-- Fade-out phase: absolute positioning for cross-fade transitions -->
  *   </div>
  * </div>
@@ -66,6 +66,11 @@ import.meta.css = /* css */ `
     justify-content: var(--x-justify-content);
   }
 
+  /* Phase dimensions in relative position when no content exists */
+  .transition-container[data-no-content] .phase-dimensions {
+    position: relative;
+  }
+
   /* Alignment controls */
   .transition-container[data-align-x="start"] {
     --x-justify-content: flex-start;
@@ -91,13 +96,8 @@ import.meta.css = /* css */ `
     position: relative;
   }
 
-  /* Phase slot - for phase states, positioned above content when content exists */
+  /* Phase slot - for phase states */
   .phase-slot {
-    position: absolute;
-  }
-
-  /* Phase slot in relative position when no content exists */
-  .phase-slot[data-no-content] {
     position: relative;
   }
 
@@ -117,15 +117,6 @@ import.meta.css = /* css */ `
     position: static !important;
     z-index: auto !important;
     pointer-events: none !important;
-  }
-
-  /* Hide slots when empty */
-  .content-slot:empty,
-  .phase-slot:empty,
-  .old-content-slot:empty,
-  .old-phase-slot:empty,
-  .phase-dimensions:empty {
-    display: none;
   }
 `;
 
@@ -190,9 +181,9 @@ export const createUITransitionController = (
   const updatePhaseSlotPositioning = () => {
     const hasContent = contentSlotId !== "empty";
     if (hasContent) {
-      phaseSlot.removeAttribute("data-no-content");
+      container.removeAttribute("data-no-content");
     } else {
-      phaseSlot.setAttribute("data-no-content", "");
+      container.setAttribute("data-no-content", "");
     }
   };
 
