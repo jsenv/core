@@ -63,7 +63,7 @@ import.meta.css = /* css */ `
     align-items: flex-end;
   }
 
-  /* Éléments en transition avec cross-fade */
+  /* Éléments en transition avec cross-fade - styles statiques */
   .content-transitioning {
     position: absolute;
     top: 0;
@@ -76,6 +76,7 @@ import.meta.css = /* css */ `
     transition: opacity var(--ui-transition-duration) ease;
   }
 
+  /* États par défaut */
   .content-old {
     z-index: 1;
     opacity: 1;
@@ -83,14 +84,20 @@ import.meta.css = /* css */ `
 
   .content-new {
     z-index: 2;
+    display: none;
     opacity: 0;
   }
 
-  .content-old.fading-out {
+  /* États dynamiques via data attributes */
+  .transition-container[data-transitioning="true"] .content-new {
+    display: flex;
+  }
+
+  .transition-container[data-fade="out"] .content-old {
     opacity: 0;
   }
 
-  .content-new.fading-in {
+  .transition-container[data-fade="in"] .content-new {
     opacity: 1;
   }
 
@@ -184,16 +191,13 @@ export function initUITransition(
       oldContentContainer.innerHTML = "";
       oldContentContainer.appendChild(oldContentClone);
     }
-    oldContentContainer.style.display = "flex";
-    oldContentContainer.style.opacity = "1";
-    oldContentContainer.className = "content-transitioning content-old";
 
     // Configure new container
     newContentContainer.innerHTML = "";
     newContentContainer.appendChild(newClone);
-    newContentContainer.style.display = "flex";
-    newContentContainer.style.opacity = "0";
-    newContentContainer.className = "content-transitioning content-new";
+
+    // Set data attributes for CSS to handle display/opacity
+    container.setAttribute("data-transitioning", "true");
 
     // Apply alignment immediately
     updateAlignment();
@@ -204,27 +208,17 @@ export function initUITransition(
     // Move new content to old container
     const newContent = newContentContainer.firstElementChild;
     if (newContent) {
-      // Reset new content styles
-      newContent.style.position = "static";
-      newContent.style.opacity = "1";
-
       // Place it in old container
       oldContentContainer.innerHTML = "";
       oldContentContainer.appendChild(newContent);
-      oldContentContainer.style.display = "flex";
-      oldContentContainer.style.opacity = "1";
-      oldContentContainer.style.transition = "";
-      oldContentContainer.className = "content-transitioning content-old";
-      oldContentContainer.classList.remove("fading-out");
     }
 
-    // Clear and hide new container
+    // Clear new container
     newContentContainer.innerHTML = "";
-    newContentContainer.style.display = "none";
-    newContentContainer.style.opacity = "0";
-    newContentContainer.style.transition = "";
-    newContentContainer.className = "content-transitioning content-new";
-    newContentContainer.classList.remove("fading-in");
+
+    // Remove transition data attributes
+    container.removeAttribute("data-transitioning");
+    container.removeAttribute("data-fade");
   }
 
   // Main transition method
@@ -271,9 +265,11 @@ export function initUITransition(
         container.style.width = `${targetDimensions.width}px`;
         container.style.height = `${targetDimensions.height}px`;
 
-        // Start cross-fade
-        oldContentContainer.classList.add("fading-out");
-        newContentContainer.classList.add("fading-in");
+        // Start cross-fade via data attributes
+        container.setAttribute("data-fade", "out"); // Fade out old
+        setTimeout(() => {
+          container.setAttribute("data-fade", "in"); // Fade in new
+        }, 0);
       }, 50);
 
       // 7. Clean up after transition
@@ -304,13 +300,14 @@ export function initUITransition(
     if (emptyContent) {
       oldContentContainer.innerHTML = "";
       oldContentContainer.appendChild(emptyContent);
-      oldContentContainer.style.display = "flex";
-      oldContentContainer.style.opacity = "1";
     }
 
-    // Ensure new container is hidden
-    newContentContainer.style.display = "none";
+    // Clear new container
     newContentContainer.innerHTML = "";
+
+    // Remove any transition states
+    container.removeAttribute("data-transitioning");
+    container.removeAttribute("data-fade");
 
     // Apply alignment
     updateAlignment();
