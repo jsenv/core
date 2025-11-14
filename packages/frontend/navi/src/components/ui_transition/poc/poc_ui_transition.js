@@ -106,11 +106,26 @@ import.meta.css = /* css */ `
     pointer-events: none !important;
   }
 
-  /* Phase dimensions in relative position when no content exists */
-  .transition-container[data-no-content] .content-dimensions {
-    display: none;
+  /* Boolean data attributes for single slot states */
+  .transition-container[data-only-content-phase] .content-dimensions,
+  .transition-container[data-only-old-content-phase] .content-dimensions {
+    position: absolute;
   }
-  .transition-container[data-no-content] .phase-dimensions {
+  .transition-container[data-only-content-phase] .phase-dimensions,
+  .transition-container[data-only-old-content-phase] .phase-dimensions {
+    position: relative;
+  }
+  .transition-container[data-only-old-content-phase] .phase-slot {
+    position: absolute;
+  }
+  .transition-container[data-only-old-content-phase] .old-phase-slot {
+    position: relative;
+  }
+
+  .transition-container[data-only-old-content] .content-slot {
+    position: absolute;
+  }
+  .transition-container[data-only-old-content] .old-content-slot {
     position: relative;
   }
 `;
@@ -174,16 +189,32 @@ export const createUITransitionController = (
     ? contentSlot.firstElementChild.cloneNode(true)
     : null;
 
-  // Helper to update phase slot positioning based on content state
-  const updatePhaseSlotPositioning = () => {
+  // Helper to update slot positioning based on active content
+  const updateSlotAttributes = () => {
     const hasContent = contentSlotId !== "empty";
-    if (hasContent) {
-      container.removeAttribute("data-no-content");
-    } else {
-      container.setAttribute("data-no-content", "");
+    const hasPhase = phaseSlotId !== "empty";
+    const hasOldContent = oldContentSlotId !== "empty";
+    const hasOldPhase = oldPhaseSlotId !== "empty";
+
+    // Clear all boolean attributes first
+    container.removeAttribute("data-only-content");
+    container.removeAttribute("data-only-content-phase");
+    container.removeAttribute("data-only-old-content");
+    container.removeAttribute("data-only-old-content-phase");
+
+    if (isTransitioning) {
+      // During transitions, determine which old slot is active
+      if (hasOldContent && !hasOldPhase) {
+        container.setAttribute("data-only-old-content", "");
+      } else if (hasOldPhase && !hasOldContent) {
+        container.setAttribute("data-only-old-content-phase", "");
+      }
+    } else if (hasContent && !hasPhase) {
+      container.setAttribute("data-only-content", "");
+    } else if (hasPhase && !hasContent) {
+      container.setAttribute("data-only-content-phase", "");
     }
   };
-
   // Helper to get element signature or use provided ID
   const getElementId = (element) => {
     if (!element) return "empty";
@@ -264,8 +295,6 @@ export const createUITransitionController = (
         contentSlot.style.opacity = "1"; // Fade in new
       });
     }
-    // Set transition state marker
-    container.setAttribute("data-transitioning", "true");
     // Force reflow to stabilize DOM
     const reflow = contentSlot.offsetHeight;
     console.debug("Content transition reflow:", reflow);
@@ -281,7 +310,6 @@ export const createUITransitionController = (
       cleanupDimension: () => {
         container.style.width = "";
         container.style.height = "";
-        container.removeAttribute("data-transitioning");
       },
     };
   };
@@ -372,8 +400,7 @@ export const createUITransitionController = (
           phaseSlot.style.opacity = "1"; // Fade in phase
         });
       }
-    } // Set transition state marker
-    container.setAttribute("data-transitioning", "true");
+    }
     // Force reflow
     const reflow = phaseSlot.offsetHeight;
     console.debug("Phase to phase reflow:", reflow);
@@ -403,7 +430,6 @@ export const createUITransitionController = (
         phaseSlot.style.height = "";
         oldPhaseSlot.style.width = "";
         oldPhaseSlot.style.height = "";
-        container.removeAttribute("data-transitioning");
       },
     };
   };
@@ -442,8 +468,6 @@ export const createUITransitionController = (
       });
     }
 
-    // Set transition state marker
-    container.setAttribute("data-transitioning", "true");
     // Force reflow
     const reflow = contentSlot.offsetHeight;
     console.debug("Phase to content reflow:", reflow);
@@ -469,7 +493,6 @@ export const createUITransitionController = (
         phaseSlot.style.height = "";
         oldPhaseSlot.style.width = "";
         oldPhaseSlot.style.height = "";
-        container.removeAttribute("data-transitioning");
       },
     };
   };
@@ -489,7 +512,7 @@ export const createUITransitionController = (
       });
     }
     opacity: {
-      // Ensure old content is visible before starting fade-out
+      // Fade out old content
       if (oldContentSlot.firstElementChild) {
         oldContentSlot.style.opacity = "1";
         oldContentSlot.style.transition = "none";
@@ -499,7 +522,6 @@ export const createUITransitionController = (
         });
       }
     }
-    container.setAttribute("data-transitioning", "true");
     // Force reflow
     const reflow = contentSlot.offsetHeight;
     console.debug("Phase to content reflow:", reflow);
@@ -513,7 +535,6 @@ export const createUITransitionController = (
       cleanupDimension: () => {
         container.style.width = "";
         container.style.height = "";
-        container.removeAttribute("data-transitioning");
       },
     };
   };
@@ -542,7 +563,6 @@ export const createUITransitionController = (
         });
       }
     }
-    container.setAttribute("data-transitioning", "true");
     return {
       cleanupOpacity: () => {
         oldPhaseSlot.innerHTML = "";
@@ -563,7 +583,6 @@ export const createUITransitionController = (
         phaseSlot.style.height = "";
         oldPhaseSlot.style.width = "";
         oldPhaseSlot.style.height = "";
-        container.removeAttribute("data-transitioning");
       },
     };
   };
@@ -609,6 +628,7 @@ export const createUITransitionController = (
           contentSlotId = "empty";
           contentWidth = undefined;
           contentHeight = undefined;
+          activeSlot = "content";
           cleanupCallbacks = applyContentToEmptyTransition();
         } else {
           // Move current phase to old phase slot if it exists
@@ -640,7 +660,6 @@ export const createUITransitionController = (
         }
 
         activeSlot = "content";
-        updatePhaseSlotPositioning();
       } else if (isContentPhase) {
         // Capture current phase dimensions before any changes
         const currentPhaseElement = phaseSlot.firstElementChild;
@@ -693,7 +712,6 @@ export const createUITransitionController = (
         contentSlot.appendChild(newContentElement);
         contentSlotId = id;
         activeSlot = "content";
-        updatePhaseSlotPositioning();
         updateContentDimensions();
         targetWidth = contentWidth;
         targetHeight = contentHeight;
@@ -712,16 +730,20 @@ export const createUITransitionController = (
         contentSlot.appendChild(newContentElement);
         contentSlotId = id;
         activeSlot = "content";
-        updatePhaseSlotPositioning();
         cleanupCallbacks = applyContentToContentTransition();
       }
+
+      updateSlotAttributes();
+      container.setAttribute("data-transitioning", "");
 
       isTransitioning = true;
       onStateChange({ isTransitioning: true });
       setTimeout(() => {
+        container.removeAttribute("data-transitioning");
         cleanupCallbacks.cleanupOpacity();
         cleanupCallbacks.cleanupDimension();
         isTransitioning = false;
+        updateSlotAttributes(); // Update positioning after transition
         onStateChange({ isTransitioning: false });
         resolve();
       }, duration + 100);
@@ -824,8 +846,8 @@ export const createUITransitionController = (
   // Set CSS variable for duration
   container.style.setProperty("--x-transition-duration", `${duration}ms`);
 
-  // Initialize phase slot positioning
-  updatePhaseSlotPositioning();
+  // Initialize slot positioning
+  updateSlotAttributes();
 
   // Return public API
   return {
