@@ -148,14 +148,14 @@ export function initUITransition(
   let isTransitioning = false;
 
   // Update alignment of content within the transition area
-  function updateAlignment() {
+  const updateAlignment = () => {
     // Set data attributes for CSS-based alignment
     container.setAttribute("data-align-x", alignX);
     container.setAttribute("data-align-y", alignY);
-  }
+  };
 
   // Get dimensions of an element
-  function getDimensions(element) {
+  const getDimensions = (element) => {
     if (!element) {
       console.warn("Element not found for dimension measurement");
       return { width: 200, height: 100 }; // fallback
@@ -166,16 +166,16 @@ export function initUITransition(
       width: rect.width,
       height: rect.height,
     };
-  }
+  };
 
   // Get dimensions of current content
-  function getCurrentContentDimensions() {
+  const getCurrentContentDimensions = () => {
     const currentContent = oldContentContainer?.firstElementChild;
     return getDimensions(currentContent);
-  }
+  };
 
   // Clone element for transition use
-  function cloneElementForTransition(sourceElement) {
+  const cloneElementForTransition = (sourceElement) => {
     const clone = sourceElement.cloneNode(true);
 
     // Preserve dimensions only - other styles handled by CSS
@@ -184,10 +184,10 @@ export function initUITransition(
     clone.style.height = `${sourceRect.height}px`;
 
     return clone;
-  }
+  };
 
   // Setup cross-fade between old and new content
-  function setupCrossFade(oldContentClone, newClone) {
+  const setupCrossFade = (oldContentClone, newClone) => {
     // Configure old container with saved clone
     if (oldContentClone) {
       oldContentContainer.innerHTML = "";
@@ -203,10 +203,10 @@ export function initUITransition(
 
     // Apply alignment immediately
     updateAlignment();
-  }
+  };
 
   // Finalize cross-fade by swapping containers
-  function finalizeCrossFade() {
+  const finalizeCrossFade = () => {
     // Move new content to old container
     const newContent = newContentContainer.firstElementChild;
     if (newContent) {
@@ -221,10 +221,10 @@ export function initUITransition(
     // Remove transition data attributes
     container.removeAttribute("data-transitioning");
     container.removeAttribute("data-fade");
-  }
+  };
 
   // Main transition method
-  function transitionTo(newContentElement) {
+  const transitionTo = (newContentElement) => {
     if (isTransitioning) {
       console.log("Transition already in progress, ignoring");
       return Promise.resolve();
@@ -282,10 +282,10 @@ export function initUITransition(
         resolve();
       }, duration + 100);
     });
-  }
+  };
 
   // Reset to empty state
-  function resetToEmpty(emptyContent = null) {
+  const resetToEmpty = (emptyContent = null) => {
     if (isTransitioning) return;
 
     // Set CSS variable for transition duration
@@ -322,32 +322,46 @@ export function initUITransition(
         container.style.height = `${targetDimensions.height}px`;
       }, 50);
     }
-  }
+  };
 
   // Update configuration
-  function setDuration(newDuration) {
+  const setDuration = (newDuration) => {
     duration = newDuration;
     // Update CSS variable immediately
     container.style.setProperty("--transition-duration", `${duration}ms`);
-  }
+  };
 
-  function setAlignment(newAlignX, newAlignY) {
+  const setAlignment = (newAlignX, newAlignY) => {
     alignX = newAlignX;
     alignY = newAlignY;
     updateAlignment();
-  }
+  };
 
   // Getters
-  function getIsTransitioning() {
+  const getIsTransitioning = () => {
     return isTransitioning;
-  }
+  };
 
-  function getCurrentContent() {
+  const getCurrentContent = () => {
     return oldContentContainer?.firstElementChild || null;
-  }
+  };
 
-  // Initialize
+  // Initialize with visible empty content
   updateAlignment();
+
+  // Add empty content to make it visible on page load
+  const emptyDiv = document.createElement("div");
+  emptyDiv.className = "empty-content";
+  emptyDiv.textContent = "Empty";
+  oldContentContainer.appendChild(emptyDiv);
+
+  // Set initial dimensions based on current content to ensure visibility
+  const initialDimensions = getCurrentContentDimensions();
+  container.style.width = `${initialDimensions.width}px`;
+  container.style.height = `${initialDimensions.height}px`;
+
+  // Set CSS variable for duration
+  container.style.setProperty("--transition-duration", `${duration}ms`);
 
   // Return public API
   return {
