@@ -109,7 +109,7 @@
 
         /* Pas de taille initiale fixe - sera définie dynamiquement */
         background: white;
-        border: 2px dashed #ccc;
+        border: 8px dashed #ccc;
         border-radius: 8px;
       }
 
@@ -349,8 +349,11 @@
 
         // 3. Positionner le clone temporairement
         const containerRect = container.getBoundingClientRect();
-        clone.style.left = `${containerRect.left}px`;
-        clone.style.top = `${containerRect.top}px`;
+        const computedStyle = window.getComputedStyle(container);
+        const borderLeftWidth = parseFloat(computedStyle.borderLeftWidth);
+        const borderTopWidth = parseFloat(computedStyle.borderTopWidth);
+        clone.style.left = `${containerRect.left + borderLeftWidth}px`;
+        clone.style.top = `${containerRect.top + borderTopWidth}px`;
         document.body.appendChild(clone);
 
         // 4. Changer le contenu immédiatement
