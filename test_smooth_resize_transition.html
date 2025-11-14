@@ -211,8 +211,7 @@
       <h4>Zone de transition:</h4>
       <div class="transition-container" id="container">
         <div class="content-wrapper" id="wrapper">
-          <div class="content state-a" id="content">
-            <h3>État A</h3>
+          <div class="content" id="content">
             <p>Cliquez sur un rectangle ci-dessus pour voir la transition</p>
           </div>
         </div>
@@ -255,7 +254,7 @@
         },
       };
 
-      let currentState = "a";
+      let currentState = "empty";
       let isTransitioning = false;
 
       // Détection automatique des dimensions d'un rectangle
@@ -279,7 +278,9 @@
       // Mise à jour du debug
       function updateDebugInfo() {
         const containerRect = container.getBoundingClientRect();
-        const contentRect = content.getBoundingClientRect();
+        const contentRect = content
+          ? content.getBoundingClientRect()
+          : { width: 0, height: 0 };
 
         debug.containerSize.textContent = `Container: ${containerRect.width.toFixed(0)}px × ${containerRect.height.toFixed(0)}px`;
         debug.contentSize.textContent = `Content: ${contentRect.width.toFixed(0)}px × ${contentRect.height.toFixed(0)}px`;
