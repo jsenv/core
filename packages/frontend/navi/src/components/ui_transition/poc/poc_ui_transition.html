@@ -58,9 +58,27 @@
       .controls-container {
         display: flex;
         margin-top: 15px;
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .settings-controls {
+        display: flex;
+        padding: 10px;
         flex-wrap: wrap;
         align-items: center;
         gap: 15px;
+        background: #f0f0f0;
+        border-radius: 4px;
+      }
+
+      .action-controls {
+        display: flex;
+        padding: 10px;
+        align-items: center;
+        gap: 10px;
+        background: #e8f4f8;
+        border-radius: 4px;
       }
 
       .transition-container.empty {
@@ -108,11 +126,29 @@
       .rectangles-container {
         display: flex;
         margin-bottom: 20px;
+        margin-bottom: 20px;
         flex-wrap: wrap;
         gap: 20px;
       }
 
-      .rectangle {
+      .rectangles-container h3 {
+        margin: 0 0 10px 0;
+        padding-bottom: 5px;
+        color: #333;
+        font-size: 16px;
+        border-bottom: 1px solid #ddd;
+      }
+
+      .content-items,
+      .phase-items {
+        display: flex;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 20px;
+      }
+
+      .rectangle,
+      .phase {
         display: flex;
         box-sizing: border-box;
         padding: 20px;
@@ -125,6 +161,18 @@
           transform 0.2s ease,
           box-shadow 0.2s ease;
         cursor: pointer;
+      }
+
+      .phase {
+        background: #f0f8ff;
+        border-color: #007acc;
+      }
+
+      /* Add spin animation for loading */
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
       }
 
       .rectangle[data-state="a"] {
@@ -295,39 +343,45 @@
 
       <!-- Contrôles -->
       <div class="controls-container">
-        <button id="reset-button">Vider la zone</button>
-
-        <label class="duration-control">
-          <span>Durée:</span>
-          <input
-            type="range"
-            id="duration-slider"
-            min="500"
-            max="5000"
-            step="100"
-            value="3000"
-          />
-          <span id="duration-value">3000ms</span>
-        </label>
-
-        <div class="alignment-controls">
-          <label class="align-control">
-            <span>X:</span>
-            <select id="align-x-select">
-              <option value="start">start</option>
-              <option value="center">center</option>
-              <option value="end">end</option>
-            </select>
+        <!-- Première partie : Durée et Alignement -->
+        <div class="settings-controls">
+          <label class="duration-control">
+            <span>Durée:</span>
+            <input
+              type="range"
+              id="duration-slider"
+              min="500"
+              max="5000"
+              step="100"
+              value="3000"
+            />
+            <span id="duration-value">3000ms</span>
           </label>
 
-          <label class="align-control">
-            <span>Y:</span>
-            <select id="align-y-select">
-              <option value="start">start</option>
-              <option value="center">center</option>
-              <option value="end">end</option>
-            </select>
-          </label>
+          <div class="alignment-controls">
+            <label class="align-control">
+              <span>X:</span>
+              <select id="align-x-select">
+                <option value="start">start</option>
+                <option value="center">center</option>
+                <option value="end">end</option>
+              </select>
+            </label>
+
+            <label class="align-control">
+              <span>Y:</span>
+              <select id="align-y-select">
+                <option value="start">start</option>
+                <option value="center">center</option>
+                <option value="end">end</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <!-- Seconde partie : Actions -->
+        <div class="action-controls">
+          <button id="reset-button">Vider la zone</button>
         </div>
       </div>
     </div>
@@ -383,7 +437,7 @@
       const savedPrefs = loadPreferences();
 
       // Initialize UITransition
-      const uiTransitionController = createUITransitionController(
+      const uiTransition = createUITransitionController(
         document.querySelector(".transition-container"),
         {
           duration: savedPrefs.duration,
@@ -405,7 +459,7 @@
       function updateUIState({ isTransitioning }) {
         // Only disable UI elements outside the transition zone
         const rectangles = document.querySelectorAll(
-          ".rectangles-container .rectangle",
+          ".content-items .rectangle, .phase-items .phase",
         );
         const controls = document.querySelector(".controls-container");
         const resetButton = document.getElementById("reset-button");
@@ -450,36 +504,51 @@
       function updateDebugInfo() {
         const container = document.querySelector(".transition-container");
         const containerRect = container.getBoundingClientRect();
-        const currentContent = uiTransitionController.getCurrentContent();
+        const currentContent = uiTransition.getCurrentContent();
         const contentRect = currentContent
           ? currentContent.getBoundingClientRect()
           : { width: 0, height: 0 };
 
         debug.containerSize.textContent = `Container: ${containerRect.width.toFixed(0)}px × ${containerRect.height.toFixed(0)}px`;
         debug.contentSize.textContent = `Content: ${contentRect.width.toFixed(0)}px × ${contentRect.height.toFixed(0)}px`;
-        debug.scaleInfo.textContent = `Clone utilisé: ${uiTransitionController.getIsTransitioning() ? "Oui" : "Non"}`;
+        debug.scaleInfo.textContent = `Clone utilisé: ${uiTransition.getIsTransitioning() ? "Oui" : "Non"}`;
         debug.stateInfo.textContent = `État: ${currentState.toUpperCase()}`;
       }
 
-      // Setup rectangle click handlers
-      function setupRectangleClickHandlers() {
-        const rectangles = document.querySelectorAll(".rectangle");
+      // Setup unified click handlers for both content and phases
+      function setupClickHandlers() {
+        document.addEventListener("click", (e) => {
+          const rectangle = e.target.closest(".rectangle");
+          const phase = e.target.closest(".phase");
 
-        rectangles.forEach((rectangle) => {
-          rectangle.addEventListener("click", () => {
-            const targetState = rectangle.dataset.state;
-            console.log(`Clic sur rectangle ${targetState}:`, rectangle);
+          if (rectangle) {
+            const state = rectangle.dataset.state;
+            if (
+              state &&
+              state !== currentState &&
+              !uiTransition.getIsTransitioning()
+            ) {
+              console.log(`Transitioning to content state: ${state}`);
+              uiTransition.transitionTo(rectangle.cloneNode(true));
+              currentState = state;
+            }
+          } else if (phase) {
+            const phaseType = phase.dataset.phase;
+            if (phaseType && !uiTransition.getIsTransitioning()) {
+              console.log(`Transitioning to phase: ${phaseType}`);
 
-            uiTransitionController.transitionTo(rectangle);
-            currentState = targetState;
-          });
+              // Use the transition controller's phase method
+              uiTransition.transitionToPhase(phase.cloneNode(true));
+              currentState = `phase-${phaseType}`;
+            }
+          }
         });
       }
 
       // Apply alignment - single place for all alignment logic
       function applyAlignment(alignX, alignY) {
         // Update UI transition component
-        uiTransitionController.setAlignment(alignX, alignY);
+        uiTransition.setAlignment(alignX, alignY);
 
         const viewport = document.querySelector(".transition-viewport");
         viewport.style.alignItems = alignY;
@@ -511,7 +580,7 @@
             emptyElement.innerHTML =
               "<p>Cliquez sur un rectangle ci-dessus pour voir la transition</p>";
 
-            uiTransitionController.resetContent(emptyElement);
+            uiTransition.resetContent(emptyElement);
             currentState = "empty";
           });
         }
@@ -527,7 +596,7 @@
           durationSlider.addEventListener("input", (e) => {
             const duration = parseInt(e.target.value);
             durationValue.textContent = `${duration}ms`;
-            uiTransitionController.setDuration(duration);
+            uiTransition.setDuration(duration);
 
             const prefs = { ...loadPreferences(), duration };
             savePreferences(prefs);
@@ -561,7 +630,7 @@
 
       // Initialization
       function init() {
-        setupRectangleClickHandlers();
+        setupClickHandlers();
         setupControls();
 
         // Apply initial alignment
