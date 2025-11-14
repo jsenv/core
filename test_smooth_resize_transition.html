@@ -238,7 +238,7 @@
         stateInfo: document.getElementById("state-info"),
       };
 
-      const DURATION = 3000;
+      let DURATION = 3000; // Durée par défaut, maintenant modifiable
       const VISUAL_DEBUG = true; // Affiche un ghost externe pour debug
       const VISUAL_DEBUG_KEEP_GHOST = false; // Garde le ghost debug après transition
 
@@ -518,21 +518,65 @@
         });
       }
 
-      // Bouton de reset
-      function addResetButton() {
+      // Contrôles (bouton de reset + durée)
+      function addControls() {
+        const controlsContainer = document.createElement("div");
+        controlsContainer.style.display = "flex";
+        controlsContainer.style.alignItems = "center";
+        controlsContainer.style.gap = "15px";
+        controlsContainer.style.marginTop = "15px";
+
+        // Bouton de reset
         const resetButton = document.createElement("button");
         resetButton.textContent = "Vider la zone";
-        resetButton.style.marginTop = "10px";
         resetButton.addEventListener("click", resetToEmpty);
 
+        // Contrôle de durée
+        const durationLabel = document.createElement("label");
+        durationLabel.style.display = "flex";
+        durationLabel.style.alignItems = "center";
+        durationLabel.style.gap = "8px";
+        durationLabel.style.fontSize = "14px";
+        durationLabel.style.color = "#333";
+
+        const durationText = document.createElement("span");
+        durationText.textContent = "Durée:";
+
+        const durationSlider = document.createElement("input");
+        durationSlider.type = "range";
+        durationSlider.min = "500";
+        durationSlider.max = "5000";
+        durationSlider.value = DURATION;
+        durationSlider.step = "100";
+        durationSlider.style.width = "120px";
+
+        const durationValue = document.createElement("span");
+        durationValue.textContent = `${DURATION}ms`;
+        durationValue.style.fontWeight = "bold";
+        durationValue.style.minWidth = "50px";
+
+        // Mise à jour de la durée
+        durationSlider.addEventListener("input", (e) => {
+          DURATION = parseInt(e.target.value);
+          durationValue.textContent = `${DURATION}ms`;
+          console.log(`Durée de transition mise à jour: ${DURATION}ms`);
+        });
+
+        durationLabel.appendChild(durationText);
+        durationLabel.appendChild(durationSlider);
+        durationLabel.appendChild(durationValue);
+
+        controlsContainer.appendChild(resetButton);
+        controlsContainer.appendChild(durationLabel);
+
         const transitionZone = document.querySelector(".transition-zone");
-        transitionZone.appendChild(resetButton);
+        transitionZone.appendChild(controlsContainer);
       }
 
       // Initialisation
       function init() {
         setupRectangleClickHandlers();
-        addResetButton();
+        addControls();
         updateDebugInfo();
 
         // Mise à jour du debug en continu
