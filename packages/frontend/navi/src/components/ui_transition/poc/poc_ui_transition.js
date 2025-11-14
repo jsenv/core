@@ -80,27 +80,20 @@ import.meta.css = /* css */ `
 
   /* États par défaut */
   .content-old {
-    z-index: 1;
     opacity: 1;
   }
 
   .content-new {
-    z-index: 2;
-    display: none;
     opacity: 0;
   }
 
   /* États dynamiques via data attributes */
   .transition-container[data-transitioning="true"] .content-new {
-    display: flex;
+    opacity: 1; /* Show new content immediately when transitioning starts */
   }
 
   .transition-container[data-fade="out"] .content-old {
-    opacity: 0;
-  }
-
-  .transition-container[data-fade="in"] .content-new {
-    opacity: 1;
+    opacity: 0; /* Fade out old content */
   }
 
   .content {
@@ -176,10 +169,9 @@ export function initUITransition(
 
   // Clone element for transition use
   const cloneElementForTransition = (sourceElement) => {
+    const sourceRect = sourceElement.getBoundingClientRect();
     const clone = sourceElement.cloneNode(true);
 
-    // Preserve dimensions only - other styles handled by CSS
-    const sourceRect = sourceElement.getBoundingClientRect();
     clone.style.width = `${sourceRect.width}px`;
     clone.style.height = `${sourceRect.height}px`;
 
@@ -267,11 +259,8 @@ export function initUITransition(
         container.style.width = `${targetDimensions.width}px`;
         container.style.height = `${targetDimensions.height}px`;
 
-        // Start cross-fade via data attributes
-        container.setAttribute("data-fade", "out"); // Fade out old
-        setTimeout(() => {
-          container.setAttribute("data-fade", "in"); // Fade in new
-        }, 0);
+        // Start cross-fade: fade out old content (new is already visible)
+        container.setAttribute("data-fade", "out");
       }, 50);
 
       // 7. Clean up after transition

@@ -258,7 +258,12 @@
       <div class="transition-viewport">
         <div class="transition-container" id="container">
           <div class="content-wrapper" id="wrapper">
-            <!-- Conteneur pour l'ancien contenu (cross-fade) -->
+            <!-- Conteneur pour le nouveau contenu (cross-fade) - EN PREMIER -->
+            <div
+              class="content-transitioning content-new"
+              id="new-content-container"
+            ></div>
+            <!-- Conteneur pour l'ancien contenu (cross-fade) - EN DERNIER -->
             <div
               class="content-transitioning content-old"
               id="old-content-container"
@@ -269,12 +274,6 @@
                 </p>
               </div>
             </div>
-            <!-- Conteneur pour le nouveau contenu (cross-fade) -->
-            <div
-              class="content-transitioning content-new"
-              id="new-content-container"
-              style="display: none"
-            ></div>
           </div>
         </div>
       </div>
