@@ -73,8 +73,8 @@ import.meta.css = /* css */ `
     display: flex;
     width: 100%;
     height: 100%;
-    align-items: inherit;
-    justify-content: inherit;
+    align-items: var(--x-align-items);
+    justify-content: var(--x-justify-content);
     transition: opacity var(--x-transition-duration) ease;
   }
 
@@ -111,8 +111,8 @@ import.meta.css = /* css */ `
   .content-transitioning > * {
     position: static !important;
     z-index: auto !important;
-    flex-shrink: 0 !important;
-    transition: none !important;
+    /* flex-shrink: 0 !important; */
+    /* transition: none !important; */
     pointer-events: none !important;
   }
 `;
@@ -232,7 +232,7 @@ export function initUITransition(
       onStateChange({ isTransitioning: true });
 
       // Set CSS variable for transition duration
-      container.style.setProperty("--transition-duration", `${duration}ms`);
+      container.style.setProperty("--x-transition-duration", `${duration}ms`);
 
       // Get dimensions
       const currentDimensions = getCurrentContentDimensions();
@@ -283,7 +283,7 @@ export function initUITransition(
     if (isTransitioning) return;
 
     // Set CSS variable for transition duration
-    container.style.setProperty("--transition-duration", `${duration}ms`);
+    container.style.setProperty("--x-transition-duration", `${duration}ms`);
 
     // Measure current dimensions
     const currentDimensions = getCurrentContentDimensions();
@@ -325,7 +325,7 @@ export function initUITransition(
   const setDuration = (newDuration) => {
     duration = newDuration;
     // Update CSS variable immediately
-    container.style.setProperty("--transition-duration", `${duration}ms`);
+    container.style.setProperty("--x-transition-duration", `${duration}ms`);
   };
 
   const setAlignment = (newAlignX, newAlignY) => {
@@ -360,7 +360,7 @@ export function initUITransition(
   container.style.height = `${initialDimensions.height}px`;
 
   // Set CSS variable for duration
-  container.style.setProperty("--transition-duration", `${duration}ms`);
+  container.style.setProperty("--x-transition-duration", `${duration}ms`);
 
   // Return public API
   return {
