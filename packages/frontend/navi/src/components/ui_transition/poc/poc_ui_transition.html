@@ -755,20 +755,20 @@
         );
         if (initialContentCheckbox) {
           initialContentCheckbox.checked = savedPrefs.hasInitialContent;
-          
+
           // Update reset button text based on checkbox state
           const updateResetButtonText = () => {
             const resetButton = document.getElementById("reset-button");
             if (resetButton) {
-              resetButton.textContent = initialContentCheckbox.checked 
-                ? "Reset (état initial avec hint)" 
+              resetButton.textContent = initialContentCheckbox.checked
+                ? "Reset (état initial avec hint)"
                 : "Reset (état vide)";
             }
           };
-          
+
           // Initial text update
           updateResetButtonText();
-          
+
           initialContentCheckbox.addEventListener("change", (e) => {
             const prefs = {
               ...loadPreferences(),

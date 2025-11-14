@@ -284,7 +284,7 @@ export const createUITransitionController = (
       },
     };
   };
-  const applySomethingToPhaseTransition = () => {
+  const applyAnyToPhaseTransition = () => {
     // First, capture current phase dimensions before any changes
     const currentPhaseWidth = phaseWidth;
     const currentPhaseHeight = phaseHeight;
@@ -676,7 +676,7 @@ export const createUITransitionController = (
         phaseSlot.appendChild(newContentElement);
         phaseSlotId = id;
         activeSlot = "phase";
-        cleanupCallbacks = applySomethingToPhaseTransition();
+        cleanupCallbacks = applyAnyToPhaseTransition();
       } else if (isInPhaseState) {
         // Transitioning from phase to content
         // Move current phase to old phase slot for fade-out if it exists
