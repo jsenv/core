@@ -46,9 +46,6 @@
         border: 2px dashed #ccc;
         border-radius: 8px;
 
-        transition:
-          width 300ms ease,
-          height 300ms ease;
         overflow: hidden;
       }
 
@@ -160,6 +157,10 @@
         scaleInfo: document.getElementById("scale-info"),
         stateInfo: document.getElementById("state-info"),
       };
+
+      const DURATION = 3000;
+      document.querySelector(".transition-container").style.transition =
+        `width ${DURATION}ms ease, height ${DURATION}ms ease`;
 
       // États possibles
       const states = {
