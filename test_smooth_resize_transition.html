@@ -104,13 +104,19 @@
       /* Structure de transition - NOUVELLE APPROCHE */
       .transition-container {
         position: relative;
-        width: max-content;
-        height: max-content;
 
-        /* Pas de taille initiale fixe - sera définie dynamiquement */
+        /* Dimensions seront définies dynamiquement */
         background: white;
         border: 8px dashed #ccc;
         border-radius: 8px;
+
+        /* Transition sur les dimensions */
+        transition:
+          width 3s ease,
+          height 3s ease;
+
+        /* Overflow hidden pour que le contenu soit coupé pendant la transition */
+        overflow: hidden;
       }
 
       .transition-container.empty {
@@ -124,23 +130,20 @@
       }
 
       .content-wrapper {
-        display: flex;
-        /* Simple wrapper, pas de positionnement absolu */
-        width: 100%;
-        height: 100%;
-        align-items: center;
-        justify-content: center;
+        /* Simple wrapper qui ne contraint pas les dimensions */
+        display: block;
       }
 
       .content {
-        /* Le contenu garde sa taille naturelle - pas de contraintes */
+        /* Le contenu a des dimensions FIXES - ne s'adapte pas au conteneur */
         display: flex;
         box-sizing: border-box;
 
-        /* Dimensions automatiques basées sur le contenu */
-        max-width: 100%;
-        max-height: 100%;
+        /* Dimensions fixes - seront définies par JavaScript */
+        width: auto;
+        height: auto;
         padding: 20px;
+        flex-shrink: 0; /* Ne rétrécit pas */
         flex-direction: column;
         align-items: center;
         justify-content: center;
@@ -305,7 +308,7 @@
 
         // Préserver l'apparence visuelle exacte mais le rendre temporaire
         clone.style.position = "absolute";
-        clone.style.opacity = "0.8";
+        clone.style.opacity = "0.2";
         clone.style.zIndex = "1000";
         clone.style.pointerEvents = "none"; // Désactiver les interactions
 
@@ -382,6 +385,15 @@
         content.style.color = sourceStyles.color;
         content.style.padding = sourceStyles.padding;
 
+        // CRUCIAL: Définir les dimensions EXACTES du contenu pour éviter l'adaptation
+        const sourceRect = sourceRectangle.getBoundingClientRect();
+        content.style.width = `${sourceRect.width}px`;
+        content.style.height = `${sourceRect.height}px`;
+
+        console.log(
+          `Contenu fixé aux dimensions: ${sourceRect.width}x${sourceRect.height}`,
+        );
+
         // 5. Forcer un reflow pour que le contenu prenne sa taille naturelle
         const FORCE_REFLOW = content.offsetHeight;
 
@@ -429,6 +441,13 @@
         // Changer le contenu
         content.className = `content ${emptyState.contentClass}`;
         content.innerHTML = emptyState.content;
+
+        // Retirer les dimensions fixes pour que le contenu empty reprenne sa taille naturelle
+        content.style.width = "";
+        content.style.height = "";
+        content.style.background = "";
+        content.style.color = "";
+        content.style.padding = "";
 
         // Mesurer les nouvelles dimensions et animer
         const targetDimensions = getDimensions("current-content");
