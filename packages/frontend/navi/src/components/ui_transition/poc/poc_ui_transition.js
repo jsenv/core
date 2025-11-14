@@ -70,7 +70,7 @@ import.meta.css = /* css */ `
     position: absolute;
     top: 0;
     left: 0;
-    display: flex;
+    display: inline-flex;
     width: 100%;
     height: 100%;
     align-items: var(--x-align-items);
@@ -78,21 +78,16 @@ import.meta.css = /* css */ `
     transition: opacity var(--x-transition-duration) ease;
   }
 
-  /* États par défaut */
   .content-old {
     opacity: 1;
   }
-
   .content-new {
     opacity: 0;
   }
-
-  /* États dynamiques via data attributes */
-  .transition-container[data-transitioning="true"] .content-new {
+  .transition-container[data-cross-fade] .content-new {
     opacity: 1; /* Show new content immediately when transitioning starts */
   }
-
-  .transition-container[data-fade="out"] .content-old {
+  .transition-container[data-cross-fade] .content-old {
     opacity: 0; /* Fade out old content */
   }
 
@@ -194,10 +189,6 @@ export function initUITransition(
     // Configure new container
     newContentContainer.innerHTML = "";
     newContentContainer.appendChild(newClone);
-
-    // Set data attributes for CSS to handle display/opacity
-    container.setAttribute("data-transitioning", "true");
-
     // Apply alignment immediately
     updateAlignment();
   };
@@ -211,13 +202,10 @@ export function initUITransition(
       oldContentContainer.innerHTML = "";
       oldContentContainer.appendChild(newContent);
     }
-
     // Clear new container
     newContentContainer.innerHTML = "";
-
     // Remove transition data attributes
-    container.removeAttribute("data-transitioning");
-    container.removeAttribute("data-fade");
+    container.removeAttribute("data-cross-fade");
   };
 
   // Main transition method
@@ -265,7 +253,7 @@ export function initUITransition(
         container.style.height = `${targetDimensions.height}px`;
 
         // Start cross-fade: fade out old content (new is already visible)
-        container.setAttribute("data-fade", "out");
+        container.setAttribute("data-cross-fade", "");
       }, 50);
 
       // 7. Clean up after transition
@@ -305,8 +293,7 @@ export function initUITransition(
     newContentContainer.innerHTML = "";
 
     // Remove any transition states
-    container.removeAttribute("data-transitioning");
-    container.removeAttribute("data-fade");
+    container.removeAttribute("data-cross-fade");
 
     // Apply alignment
     updateAlignment();
