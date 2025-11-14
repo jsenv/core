@@ -544,115 +544,7 @@ export const initUITransition = (container) => {
   let hasSizeTransitions = container.hasAttribute("data-size-transition");
   size_transition: {
     const elementToResize = container;
-    let observeSize = container.hasAttribute("data-size-observer");
-
-    let naturalContentWidth = 0; // Natural size of actual content (not loading/error states)
-    let naturalContentHeight = 0;
-    let constrainedWidth = 0; // Current constrained dimensions (what outer wrapper is set to)
-    let constrainedHeight = 0;
     let sizeTransition = null;
-
-    let pauseResizeObserver;
-    resize_observer: {
-      let resizeObserver = null;
-      let isWithinResizeObserverTick = false;
-      const pauseReasonSet = new Set();
-      let state = "disconnected"; // "disconnected" | "paused" | "observing"
-      let pendingResizeCount = 0;
-      let resumeAnimationFrame;
-
-      pauseResizeObserver = (reason = "pause_requested") => {
-        cancelAnimationFrame(resumeAnimationFrame);
-        pauseReasonSet.add(reason);
-        if (isWithinResizeObserverTick) {
-          if (resizeObserver) {
-            debug("size", `[resize observer] stop while "${reason}"`);
-            stopResizeObserver();
-          }
-        } else {
-          debug("size", `[resize observer] pause while "${reason}"`);
-          // we keep the resize observer alive because we are not in a resize tick
-          state = "paused";
-        }
-        const resume = () => {
-          pauseReasonSet.delete(reason);
-          if (pauseReasonSet.size > 0) {
-            return;
-          }
-          resumeAnimationFrame = requestAnimationFrame(() => {
-            debug("size", `[resize observer] resume after "${reason}"`);
-            if (pendingResizeCount) {
-              debug(
-                "size",
-                `[resize observer] was called while paused -> syncContentDimensions()`,
-              );
-              pendingResizeCount = 0;
-              syncContentDimensions();
-              state = "observing";
-            }
-            if (state === "disconnected") {
-              debug(
-                "size",
-                `[resize observer] was disconnected -> reconnect it`,
-              );
-              startResizeObserver();
-            }
-          });
-        };
-        return resume;
-      };
-      const stopResizeObserver = () => {
-        state = "disconnected";
-        if (!resizeObserver) return;
-        resizeObserver.disconnect();
-        resizeObserver = null;
-      };
-      const startResizeObserver = () => {
-        state = "observing";
-        resizeObserver = new ResizeObserver(() => {
-          if (!hasSizeTransitions) {
-            return;
-          }
-          if (!slotInfo.hasChild || slotInfo.isContentPhase) {
-            debug(
-              "size",
-              "[resize observer] size change ignored (no child or content-phase)",
-            );
-            return;
-          }
-          if (state === "paused") {
-            pendingResizeCount++;
-            const pauseReason =
-              Array.from(pauseReasonSet).join(", ") ||
-              "wait next frame to resume";
-            debug(
-              "size",
-              `[resize observer] size change ignore (${pauseReason})`,
-            );
-            return;
-          }
-          if (!observeSize) {
-            return;
-          }
-          if (localDebug.size) {
-            console.group("[resize observer] size change detected");
-          }
-          isWithinResizeObserverTick = true;
-          syncContentDimensions();
-          if (localDebug.size) {
-            console.groupEnd();
-          }
-          requestAnimationFrame(() => {
-            isWithinResizeObserverTick = false;
-          });
-        });
-        resizeObserver.observe(slot);
-      };
-      startResizeObserver();
-      addTeardown(() => {
-        stopResizeObserver();
-      });
-    }
 
     const measureSlotSize = () => {
       if (container.hasAttribute("data-fluid")) {
@@ -670,19 +562,26 @@ export const initUITransition = (container) => {
         getHeightWithoutTransition(slot),
       ];
     };
-    const syncContentDimensions = () => {
-      // check content dimensions to see if they changed and sync them
-      const [currentWidth, currentHeight] = measureSlotSize();
-      if (!slotInfo.isContentPhase) {
-        updateNaturalContentSize(currentWidth, currentHeight);
+
+    // Natural size of actual content (not loading/error states)
+    let naturalContentWidth = 0;
+    let naturalContentHeight = 0;
+    const updateNaturalContentSize = (width, height) => {
+      if (width === naturalContentWidth && height === naturalContentHeight) {
+        return;
       }
-      if (sizeTransition) {
-        updateToSize(currentWidth, currentHeight);
-      } else {
-        constrainedWidth = currentWidth;
-        constrainedHeight = currentHeight;
-      }
+      debug("size", "Updating natural content size:", {
+        width: `${naturalContentWidth} → ${width}`,
+        height: `${naturalContentHeight} → ${height}`,
+      });
+      naturalContentWidth = width;
+      naturalContentHeight = height;
     };
+
+    // Current constrained dimensions
+    // The dimensions (what outer wrapper is set to)
+    let constrainedWidth = 0;
+    let constrainedHeight = 0;
     const applySizeConstraintsUntil = (width, height, reason) => {
       // we want to pause either because we have a diff and don't want to trigger the resize observer
       // or if we have no diff because we're about to do something that would trigger it (transition)
@@ -724,13 +623,8 @@ export const initUITransition = (container) => {
       constrainedWidth = afterWidth;
       constrainedHeight = afterHeight;
     };
+
     const updateToSize = (targetWidth, targetHeight) => {
-      if (
-        constrainedWidth === targetWidth &&
-        constrainedHeight === targetHeight
-      ) {
-        return;
-      }
       if (!hasSizeTransitions) {
         applySizeConstraints(
           targetWidth,
@@ -854,21 +748,132 @@ export const initUITransition = (container) => {
 
       sizeTransition.play();
     };
-    const updateNaturalContentSize = (width, height) => {
-      if (width === naturalContentWidth && height === naturalContentHeight) {
-        return;
+
+    let pauseResizeObserver;
+    let observeSize = container.hasAttribute("data-size-observer");
+    resize_observer: {
+      if (!observeSize) {
+        pauseResizeObserver = () => {
+          return () => {};
+        };
+        break resize_observer;
       }
-      debug("size", "Updating natural content size:", {
-        width: `${naturalContentWidth} → ${width}`,
-        height: `${naturalContentHeight} → ${height}`,
+
+      const syncContentDimensions = () => {
+        // check content dimensions to see if they changed and sync them
+        const [currentWidth, currentHeight] = measureSlotSize();
+        if (!slotInfo.isContentPhase) {
+          updateNaturalContentSize(currentWidth, currentHeight);
+        }
+        if (sizeTransition) {
+          updateToSize(currentWidth, currentHeight);
+        } else {
+          constrainedWidth = currentWidth;
+          constrainedHeight = currentHeight;
+        }
+      };
+
+      let resizeObserver = null;
+      let isWithinResizeObserverTick = false;
+      const pauseReasonSet = new Set();
+      let state = "disconnected"; // "disconnected" | "paused" | "observing"
+      let pendingResizeCount = 0;
+      let resumeAnimationFrame;
+
+      pauseResizeObserver = (reason = "pause_requested") => {
+        cancelAnimationFrame(resumeAnimationFrame);
+        pauseReasonSet.add(reason);
+        if (isWithinResizeObserverTick) {
+          if (resizeObserver) {
+            debug("size", `[resize observer] stop while "${reason}"`);
+            stopResizeObserver();
+          }
+        } else {
+          debug("size", `[resize observer] pause while "${reason}"`);
+          // we keep the resize observer alive because we are not in a resize tick
+          state = "paused";
+        }
+        const resume = () => {
+          pauseReasonSet.delete(reason);
+          if (pauseReasonSet.size > 0) {
+            return;
+          }
+          resumeAnimationFrame = requestAnimationFrame(() => {
+            debug("size", `[resize observer] resume after "${reason}"`);
+            if (pendingResizeCount) {
+              debug(
+                "size",
+                `[resize observer] was called while paused -> syncContentDimensions()`,
+              );
+              pendingResizeCount = 0;
+              syncContentDimensions();
+              state = "observing";
+            }
+            if (state === "disconnected") {
+              debug(
+                "size",
+                `[resize observer] was disconnected -> reconnect it`,
+              );
+              startResizeObserver();
+            }
+          });
+        };
+        return resume;
+      };
+      const stopResizeObserver = () => {
+        state = "disconnected";
+        if (!resizeObserver) return;
+        resizeObserver.disconnect();
+        resizeObserver = null;
+      };
+      const startResizeObserver = () => {
+        state = "observing";
+        resizeObserver = new ResizeObserver(() => {
+          if (!hasSizeTransitions) {
+            return;
+          }
+          if (!slotInfo.hasChild || slotInfo.isContentPhase) {
+            debug(
+              "size",
+              "[resize observer] size change ignored (no child or content-phase)",
+            );
+            return;
+          }
+          if (state === "paused") {
+            pendingResizeCount++;
+            const pauseReason =
+              Array.from(pauseReasonSet).join(", ") ||
+              "wait next frame to resume";
+            debug(
+              "size",
+              `[resize observer] size change ignore (${pauseReason})`,
+            );
+            return;
+          }
+          if (!observeSize) {
+            return;
+          }
+          if (localDebug.size) {
+            console.group("[resize observer] size change detected");
+          }
+          isWithinResizeObserverTick = true;
+          syncContentDimensions();
+          if (localDebug.size) {
+            console.groupEnd();
+          }
+          requestAnimationFrame(() => {
+            isWithinResizeObserverTick = false;
+          });
+        });
+        resizeObserver.observe(slot);
+      };
+      startResizeObserver();
+      addTeardown(() => {
+        stopResizeObserver();
       });
-      naturalContentWidth = width;
-      naturalContentHeight = height;
-    };
+    }
 
-    // Initialize with current size
     [constrainedWidth, constrainedHeight] = measureSlotSize();
-
     const updateSizeTransition = () => {
       hasSizeTransitions = container.hasAttribute("data-size-transition");
       const { isContentPhase } = slotInfo;
