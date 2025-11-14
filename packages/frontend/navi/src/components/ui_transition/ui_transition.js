@@ -1427,6 +1427,26 @@ const applyTransition = (
 
   return groupTransition;
 };
+const notifyTransition = (element, detail) => {
+  dispatchUITransitionStartCustomEvent(element, detail);
+  return () => {
+    dispatchUITransitionEndCustomEvent(element, detail);
+  };
+};
+const dispatchUITransitionStartCustomEvent = (element, detail) => {
+  const customEvent = new CustomEvent("ui_transition_start", {
+    bubbles: true,
+    detail,
+  });
+  element.dispatchEvent(customEvent);
+};
+const dispatchUITransitionEndCustomEvent = (element, detail) => {
+  const customEvent = new CustomEvent("ui_transition_end", {
+    bubbles: true,
+    detail,
+  });
+  element.dispatchEvent(customEvent);
+};
 
 const slideLeft = {
   id: "ui_transition_slide_left",
@@ -1574,7 +1594,6 @@ const slideLeft = {
     return transitions;
   },
 };
-
 const crossFade = {
   id: "ui_transition_cross_fade",
   name: "cross-fade",
@@ -1704,25 +1723,4 @@ const crossFade = {
       }),
     ];
   },
-};
-
-const notifyTransition = (element, detail) => {
-  dispatchUITransitionStartCustomEvent(element, detail);
-  return () => {
-    dispatchUITransitionEndCustomEvent(element, detail);
-  };
-};
-const dispatchUITransitionStartCustomEvent = (element, detail) => {
-  const customEvent = new CustomEvent("ui_transition_start", {
-    bubbles: true,
-    detail,
-  });
-  element.dispatchEvent(customEvent);
-};
-const dispatchUITransitionEndCustomEvent = (element, detail) => {
-  const customEvent = new CustomEvent("ui_transition_end", {
-    bubbles: true,
-    detail,
-  });
-  element.dispatchEvent(customEvent);
 };
