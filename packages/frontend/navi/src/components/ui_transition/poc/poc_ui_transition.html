@@ -398,11 +398,6 @@
           <div class="content-dimensions">
             <!-- Content slot for regular content -->
             <div class="content-slot">
-              <div class="content state-empty" id="content">
-                <p>
-                  Cliquez sur un rectangle ci-dessus pour voir la transition
-                </p>
-              </div>
             </div>
             <!-- Old content slot for fade-out content -->
             <div class="old-content-slot"></div>
@@ -810,8 +805,16 @@
         applyAlignment(savedPrefs.alignX, savedPrefs.alignY);
 
         // Apply initial content preference
-        if (!savedPrefs.hasInitialContent) {
-          // Remove initial content if preference is disabled
+        if (savedPrefs.hasInitialContent) {
+          // Add initial content if preference is enabled
+          const emptyElement = document.createElement("div");
+          emptyElement.className = "content state-empty";
+          emptyElement.innerHTML =
+            "<p>Cliquez sur un rectangle ci-dessus pour voir la transition</p>";
+          uiTransition.transitionTo(emptyElement);
+          currentState = "initial";
+        } else {
+          // Start with empty content
           uiTransition.transitionTo(null);
           currentState = "empty";
         }
