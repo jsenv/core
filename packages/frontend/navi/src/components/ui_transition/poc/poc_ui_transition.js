@@ -9,13 +9,13 @@
  *     <div class="content-slot"></div>     <!-- Regular content slot: relative positioning, dictates container size -->
  *     <div class="old-content-slot"></div> <!-- Fade-out content: absolute positioning for cross-fade transitions -->
  *   </div>
- *   
+ *
  *   <div class="phase-slot"></div>     <!-- Phase content: direct child, positioned based on container[data-no-content] -->
  *   <div class="old-phase-slot"></div> <!-- Fade-out phase: absolute positioning for cross-fade transitions -->
  * </div>
  *
  * Architecture principles:
- * - Container: Provides smooth dimensional transitions (visual animation)  
+ * - Container: Provides smooth dimensional transitions (visual animation)
  * - Content dimensions wrapper: Set to target size immediately (prevent content adaptation during animation)
  * - Phase slots: Direct children of container, individually sized for fluid behavior
  * - Phase positioning: Dynamic (relative when no content, absolute when overlaying content)
