@@ -302,9 +302,23 @@
       <div class="transition-viewport">
         <div class="transition-container" id="container">
           <div class="content-wrapper" id="wrapper">
-            <div class="content state-empty" id="content">
-              <p>Cliquez sur un rectangle ci-dessus pour voir la transition</p>
+            <!-- Conteneur pour l'ancien contenu (cross-fade) -->
+            <div
+              class="content-transitioning content-old"
+              id="old-content-container"
+            >
+              <div class="content state-empty" id="content">
+                <p>
+                  Cliquez sur un rectangle ci-dessus pour voir la transition
+                </p>
+              </div>
             </div>
+            <!-- Conteneur pour le nouveau contenu (cross-fade) -->
+            <div
+              class="content-transitioning content-new"
+              id="new-content-container"
+              style="display: none"
+            ></div>
           </div>
         </div>
       </div>
@@ -514,9 +528,9 @@
         let element;
 
         if (elementId === "current-content") {
-          // Cas spécial : mesurer le contenu actuel dans le wrapper
-          const wrapper = document.getElementById("wrapper");
-          element = wrapper ? wrapper.firstElementChild : null;
+          // Cas spécial : mesurer le contenu actuel dans le conteneur old
+          const oldContainer = document.getElementById("old-content-container");
+          element = oldContainer ? oldContainer.firstElementChild : null;
         } else {
           // Cas normal : mesurer un rectangle source
           element = document.getElementById(elementId);
@@ -541,9 +555,11 @@
       function updateDebugInfo() {
         const containerRect = container.getBoundingClientRect();
 
-        // Chercher le contenu actuel dans le wrapper
-        const wrapper = document.getElementById("wrapper");
-        const actualContent = wrapper ? wrapper.firstElementChild : null;
+        // Chercher le contenu actuel dans le conteneur old
+        const oldContainer = document.getElementById("old-content-container");
+        const actualContent = oldContainer
+          ? oldContainer.firstElementChild
+          : null;
         const contentRect = actualContent
           ? actualContent.getBoundingClientRect()
           : { width: 0, height: 0 };
@@ -621,10 +637,17 @@
           sourceElement: sourceRectangle.id,
         });
 
-        // 1. Créer un clone AVANT de désactiver visuellement l'interface
+        // 1. Cloner l'ancien contenu AVANT d'éventuelle modification visuelle
+        const oldContainer = document.getElementById("old-content-container");
+        const currentContent = oldContainer.firstElementChild;
+        const oldContentClone = currentContent
+          ? currentContent.cloneNode(true)
+          : null;
+
+        // 2. Créer le nouveau contenu clone AVANT de désactiver visuellement l'interface
         const newClone = cloneRectangleForTransition(sourceRectangle);
 
-        // 2. Créer un ghost debug AVANT de désactiver visuellement (si VISUAL_DEBUG est activé)
+        // 3. Créer un ghost debug AVANT de désactiver visuellement (si VISUAL_DEBUG est activé)
         if (VISUAL_DEBUG) {
           // Nettoyer le ghost debug précédent
           if (debugGhost && debugGhost.parentNode) {
@@ -635,15 +658,15 @@
           debugGhost = createDebugGhost(sourceRectangle);
         }
 
-        // 3. MAINTENANT désactiver visuellement l'interface (après clonage)
+        // 4. MAINTENANT désactiver visuellement l'interface (après tous les clonages)
         updateUIState();
 
-        // 4. Définir les dimensions actuelles du container (point de départ)
+        // 5. Définir les dimensions actuelles du container (point de départ)
         container.style.transition = `width ${DURATION}ms ease, height ${DURATION}ms ease`;
         container.style.width = `${currentDimensions.width}px`;
         container.style.height = `${currentDimensions.height}px`;
 
-        // 5. Placer le ghost debug dans la viewport (si créé)
+        // 6. Placer le ghost debug dans la viewport (si créé)
         if (VISUAL_DEBUG && debugGhost) {
           const viewport = document.querySelector(".transition-viewport");
           viewport.appendChild(debugGhost);
@@ -654,67 +677,76 @@
           console.log("Ghost debug placé et positionné dans la viewport");
         }
 
-        // 6. Préparer le cross-fade
-        const wrapper = document.getElementById("wrapper");
-        if (!wrapper) {
-          console.error("Wrapper non trouvé");
-          return;
+        // 7. Préparer le cross-fade avec les conteneurs existants
+        const newContainer = document.getElementById("new-content-container");
+
+        // 7a. Configurer l'ancien conteneur avec le clone sauvegardé
+        if (oldContentClone) {
+          oldContainer.innerHTML = "";
+          oldContainer.appendChild(oldContentClone);
         }
+        oldContainer.style.display = "flex";
+        oldContainer.style.opacity = "1";
+        oldContainer.style.transition = `opacity ${DURATION}ms ease`;
+        oldContainer.className = "content-transitioning content-old";
 
-        // 6a. Sauvegarder l'ancien contenu et le marquer comme "old"
-        const currentContent = wrapper.firstElementChild;
-        if (currentContent) {
-          currentContent.className += " content-transitioning content-old";
-          currentContent.style.transition = `opacity ${DURATION}ms ease`;
-        }
+        // 7b. Configurer le nouveau conteneur
+        newContainer.innerHTML = "";
+        newContainer.appendChild(newClone);
+        newContainer.style.display = "flex";
+        newContainer.style.opacity = "0";
+        newContainer.style.transition = `opacity ${DURATION}ms ease`;
+        newContainer.className = "content-transitioning content-new";
 
-        // 6b. Créer un conteneur pour le nouveau contenu
-        const newContentContainer = document.createElement("div");
-        newContentContainer.className = "content-transitioning content-new";
-        newContentContainer.style.transition = `opacity ${DURATION}ms ease`;
-        newContentContainer.appendChild(newClone);
-
-        // 6c. Ajouter le nouveau contenu au wrapper
-        wrapper.appendChild(newContentContainer);
-
-        // 6d. Appliquer immédiatement l'alignement au contenu
+        // 7c. Appliquer immédiatement l'alignement au contenu
         updateAlignment();
 
         console.log(
-          "Cross-fade préparé: ancien contenu prêt à s'estomper, nouveau contenu prêt à apparaître",
+          "Cross-fade préparé avec structure existante: prêt pour transition",
         );
 
-        // 7. Forcer un reflow pour stabiliser les dimensions
+        // 8. Forcer un reflow pour stabiliser les dimensions
         const FORCE_REFLOW = newClone.offsetHeight;
 
-        // 8. Démarrer l'animation du conteneur et le cross-fade
+        // 9. Démarrer l'animation du conteneur et le cross-fade
         setTimeout(() => {
           // Animation du container
           container.style.width = `${targetDimensions.width}px`;
           container.style.height = `${targetDimensions.height}px`;
 
           // Cross-fade
-          if (currentContent) {
-            currentContent.classList.add("fading-out");
-          }
-          newContentContainer.classList.add("fading-in");
+          oldContainer.classList.add("fading-out");
+          newContainer.classList.add("fading-in");
 
           console.log("Animation du container et cross-fade démarrés");
         }, 50);
 
-        // 9. Nettoyer après la transition
+        // 10. Nettoyer après la transition
         setTimeout(() => {
-          // Supprimer l'ancien contenu
-          if (currentContent && currentContent.parentNode) {
-            currentContent.parentNode.removeChild(currentContent);
-            console.log("Ancien contenu supprimé après cross-fade");
+          // Basculer les contenus: nouveau devient ancien, ancien disparaît
+          const newContent = newContainer.firstElementChild;
+          if (newContent) {
+            // Réinitialiser les styles du nouveau contenu
+            newContent.style.position = "static";
+            newContent.style.opacity = "1";
+
+            // Le placer dans l'ancien conteneur
+            oldContainer.innerHTML = "";
+            oldContainer.appendChild(newContent);
+            oldContainer.style.display = "flex";
+            oldContainer.style.opacity = "1";
+            oldContainer.style.transition = "";
+            oldContainer.className = "content-transitioning content-old";
+            oldContainer.classList.remove("fading-out");
           }
 
-          // Nettoyer le nouveau contenu (retirer les classes de transition)
-          newContentContainer.className = "";
-          newContentContainer.style.transition = "";
-          newContentContainer.style.position = "static";
-          newContentContainer.style.opacity = "1";
+          // Vider et cacher le nouveau conteneur
+          newContainer.innerHTML = "";
+          newContainer.style.display = "none";
+          newContainer.style.opacity = "0";
+          newContainer.style.transition = "";
+          newContainer.className = "content-transitioning content-new";
+          newContainer.classList.remove("fading-in");
 
           // Nettoyer le ghost debug si nécessaire
           if (
@@ -735,7 +767,7 @@
           console.log("Transition et cross-fade terminés");
         }, DURATION + 100);
 
-        // 10. Mettre à jour l'état
+        // 11. Mettre à jour l'état
         currentState = newState;
         updateDebugInfo();
       }
@@ -754,15 +786,22 @@
         container.style.width = `${currentDimensions.width}px`;
         container.style.height = `${currentDimensions.height}px`;
 
-        // Changer le contenu - recréer l'élément original
-        const wrapper = document.getElementById("wrapper");
+        // Changer le contenu - recréer l'élément original dans l'ancien conteneur
+        const oldContainer = document.getElementById("old-content-container");
         const emptyElement = document.createElement("div");
         emptyElement.className = `content ${emptyState.contentClass}`;
         emptyElement.innerHTML = emptyState.content;
 
         // Remplacer le contenu actuel
-        wrapper.innerHTML = "";
-        wrapper.appendChild(emptyElement);
+        oldContainer.innerHTML = "";
+        oldContainer.appendChild(emptyElement);
+        oldContainer.style.display = "flex";
+        oldContainer.style.opacity = "1";
+
+        // S'assurer que le nouveau conteneur est caché
+        const newContainer = document.getElementById("new-content-container");
+        newContainer.style.display = "none";
+        newContainer.innerHTML = "";
 
         // Appliquer l'alignement immédiatement
         updateAlignment();
