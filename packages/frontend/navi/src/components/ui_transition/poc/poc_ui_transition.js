@@ -115,7 +115,15 @@ import.meta.css = /* css */ `
   }
 `;
 
-export function initUITransition(container, options = {}) {
+export function initUITransition(
+  container,
+  {
+    duration = 300,
+    alignX = "center",
+    alignY = "center",
+    onStateChange = () => {},
+  } = {},
+) {
   // Required elements
   const oldContentContainer = container.querySelector("#old-content-container");
   const newContentContainer = container.querySelector("#new-content-container");
@@ -126,12 +134,6 @@ export function initUITransition(container, options = {}) {
       "initUITransition requires container, oldContentContainer, newContentContainer, and wrapper elements",
     );
   }
-
-  // Configuration
-  let duration = options.duration || 3000;
-  let alignX = options.alignX || "center"; // "start", "center", "end"
-  let alignY = options.alignY || "center"; // "start", "center", "end"
-  const onStateChange = options.onStateChange || (() => {});
 
   // Internal state
   let isTransitioning = false;
