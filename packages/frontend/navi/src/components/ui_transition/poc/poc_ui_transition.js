@@ -538,11 +538,11 @@ export const createUITransitionController = (
       let cleanupCallbacks;
 
       if (newContentElement === null) {
-        // Transitioning to empty
+        // Transitioning to empty - clear both content and phase slots
         if (activeSlot === "content") {
-          // Move current content to old content slot
-          const currentContent = contentSlot.firstElementChild;
-          if (currentContent) {
+          // Move current content to old content slot if it exists
+          if (contentSlotId !== "empty") {
+            const currentContent = contentSlot.firstElementChild;
             oldContentSlot.innerHTML = "";
             oldContentSlot.appendChild(currentContent);
             oldContentSlotId = contentSlotId;
@@ -551,12 +551,11 @@ export const createUITransitionController = (
           contentSlotId = "empty";
           contentWidth = undefined;
           contentHeight = undefined;
-          updatePhaseSlotPositioning();
           cleanupCallbacks = applyContentToEmptyTransition();
         } else {
-          // Move current phase to old phase slot
-          const currentPhase = phaseSlot.firstElementChild;
-          if (currentPhase) {
+          // Move current phase to old phase slot if it exists
+          if (phaseSlotId !== "empty") {
+            const currentPhase = phaseSlot.firstElementChild;
             oldPhaseSlot.innerHTML = "";
             oldPhaseSlot.appendChild(currentPhase);
             oldPhaseSlotId = phaseSlotId;
@@ -568,11 +567,26 @@ export const createUITransitionController = (
           isInPhaseState = false;
           cleanupCallbacks = applyPhaseToEmptyTransition();
         }
+
+        // Also clear the other slot if it has content
+        if (activeSlot === "content" && phaseSlotId !== "empty") {
+          phaseSlot.innerHTML = "";
+          phaseSlotId = "empty";
+          phaseWidth = undefined;
+          phaseHeight = undefined;
+        } else if (activeSlot === "phase" && contentSlotId !== "empty") {
+          contentSlot.innerHTML = "";
+          contentSlotId = "empty";
+          contentWidth = undefined;
+          contentHeight = undefined;
+        }
+
         activeSlot = "content";
+        updatePhaseSlotPositioning();
       } else if (isContentPhase) {
-        const currentPhaseContent = phaseSlot.firstElementChild;
-        if (currentPhaseContent) {
-          // move any current phase to old phase slot
+        // Move any current phase to old phase slot if it exists
+        if (phaseSlotId !== "empty") {
+          const currentPhaseContent = phaseSlot.firstElementChild;
           oldPhaseSlot.innerHTML = "";
           oldPhaseSlot.appendChild(currentPhaseContent);
           oldPhaseSlotId = phaseSlotId;
@@ -585,9 +599,9 @@ export const createUITransitionController = (
         cleanupCallbacks = applySomethingToPhaseTransition();
       } else if (isInPhaseState) {
         // Transitioning from phase to content
-        // Move current phase to old phase slot for fade-out
-        const currentPhase = phaseSlot.firstElementChild;
-        if (currentPhase) {
+        // Move current phase to old phase slot for fade-out if it exists
+        if (phaseSlotId !== "empty") {
+          const currentPhase = phaseSlot.firstElementChild;
           oldPhaseSlot.innerHTML = "";
           oldPhaseSlot.appendChild(currentPhase);
           oldPhaseSlotId = phaseSlotId;
@@ -607,9 +621,9 @@ export const createUITransitionController = (
         cleanupCallbacks = applyPhaseToContentTransition();
       } else {
         // Regular content to content transition
-        // Move current content to old content slot for fade-out
-        const currentContent = contentSlot.firstElementChild;
-        if (currentContent) {
+        // Move current content to old content slot for fade-out if it exists
+        if (contentSlotId !== "empty") {
+          const currentContent = contentSlot.firstElementChild;
           oldContentSlot.innerHTML = "";
           oldContentSlot.appendChild(currentContent);
           oldContentSlotId = contentSlotId;

@@ -656,11 +656,9 @@
         const emptyButton = document.getElementById("empty-button");
         if (emptyButton) {
           emptyButton.addEventListener("click", () => {
-            if (!uiTransition.getIsTransitioning()) {
-              console.log("Transitioning to empty state");
-              uiTransition.transitionTo(null);
-              currentState = "empty";
-            }
+            console.log("Transitioning to empty state");
+            uiTransition.transitionTo(null);
+            currentState = "empty";
           });
         }
 
