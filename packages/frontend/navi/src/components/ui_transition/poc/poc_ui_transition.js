@@ -58,28 +58,41 @@ import.meta.css = /* css */ `
   /* Éléments en transition avec cross-fade - styles statiques */
   .content-new,
   .content-old {
+    position: absolute;
     opacity: 1;
     transition: opacity var(--x-transition-duration) ease;
   }
+
   .content-new {
-    /* opacity: 1; */
+    opacity: 1;
+    transition: opacity var(--x-transition-duration) ease;
   }
-  .content-old {
-    position: absolute;
+
+  /* During transition states */
+  .transition-container[data-transitioning="true"] .content-old {
+    opacity: 1; /* Old content starts visible */
   }
-  /* Styles pour les clones - forcer certains styles pour éviter les conflits */
+
+  .transition-container[data-transitioning="true"] .content-new {
+    opacity: 0; /* New content starts hidden */
+  }
+
+  /* Cross-fade states */
+  .transition-container[data-fade="out"] .content-old {
+    opacity: 0; /* Fade out old content */
+  }
+
+  .transition-container[data-fade="in"] .content-new {
+    opacity: 1; /* Fade in new content */
+  }
+
+  /* Styles for old content clones */
   .content-old > * {
     position: static !important;
     z-index: auto !important;
     /* flex-shrink: 0 !important; */
     /* transition: none !important; */
     pointer-events: none !important;
-  }
-  .transition-container[data-cross-fade] .content-new {
-    opacity: 1;
-  }
-  .transition-container[data-cross-fade] .content-old {
-    opacity: 0; /* Fade out old content */
   }
 `;
 
@@ -162,9 +175,13 @@ export function initUITransition(
       oldContentContainer.appendChild(oldContentClone);
     }
 
-    // Configure new container
+    // Configure current container with new content
     currentContentContainer.innerHTML = "";
     currentContentContainer.appendChild(newClone);
+
+    // Set transition state - old visible, new hidden initially
+    container.setAttribute("data-transitioning", "true");
+
     // Apply alignment immediately
     updateAlignment();
   };
@@ -174,7 +191,9 @@ export function initUITransition(
     // Current content is already in the right place (currentContentContainer)
     // Just clear the old container
     oldContentContainer.innerHTML = "";
-    // Remove transition data attributes
+
+    // Remove all transition data attributes
+    container.removeAttribute("data-transitioning");
     container.removeAttribute("data-fade");
   };
 
@@ -222,8 +241,9 @@ export function initUITransition(
         container.style.width = `${targetDimensions.width}px`;
         container.style.height = `${targetDimensions.height}px`;
 
-        // Start cross-fade: fade out old content (new is already visible)
-        container.setAttribute("data-cross-fade", "");
+        // Start cross-fade: fade out old, fade in new
+        container.setAttribute("data-fade", "out");
+        container.setAttribute("data-fade", "in");
       }, 50);
 
       // 7. Clean up after transition
@@ -263,7 +283,8 @@ export function initUITransition(
     oldContentContainer.innerHTML = "";
 
     // Remove any transition states
-    container.removeAttribute("data-cross-fade");
+    container.removeAttribute("data-transitioning");
+    container.removeAttribute("data-fade");
 
     // Apply alignment
     updateAlignment();
