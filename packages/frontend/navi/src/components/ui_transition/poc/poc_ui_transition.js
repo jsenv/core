@@ -122,22 +122,29 @@ export function initUITransition(
   } = {},
 ) {
   // Required elements
-  const oldContentContainer = container.querySelector("#old-content-container");
-  const newContentContainer = container.querySelector("#new-content-container");
+  const oldContentContainer = container.querySelector("#old-content-container"); // For fade-out during transitions
+  const currentContentContainer = container.querySelector(
+    "#new-content-container",
+  ); // For current content display
   const wrapper = container.querySelector("#wrapper");
 
-  if (!container || !oldContentContainer || !newContentContainer || !wrapper) {
+  if (
+    !container ||
+    !oldContentContainer ||
+    !currentContentContainer ||
+    !wrapper
+  ) {
     throw new Error(
-      "initUITransition requires container, oldContentContainer, newContentContainer, and wrapper elements",
+      "initUITransition requires container, oldContentContainer, currentContentContainer, and wrapper elements",
     );
   }
 
   // Internal state
   let isTransitioning = false;
 
-  // Capture initial content from content-new container
-  const initialContent = newContentContainer.firstElementChild
-    ? newContentContainer.firstElementChild.cloneNode(true)
+  // Capture initial content from current content container
+  const initialContent = currentContentContainer.firstElementChild
+    ? currentContentContainer.firstElementChild.cloneNode(true)
     : null;
 
   // Update alignment of content within the transition area
@@ -163,7 +170,7 @@ export function initUITransition(
 
   // Get dimensions of current content
   const getCurrentContentDimensions = () => {
-    const currentContent = oldContentContainer?.firstElementChild;
+    const currentContent = currentContentContainer?.firstElementChild;
     return getDimensions(currentContent);
   };
 
@@ -187,25 +194,19 @@ export function initUITransition(
     }
 
     // Configure new container
-    newContentContainer.innerHTML = "";
-    newContentContainer.appendChild(newClone);
+    currentContentContainer.innerHTML = "";
+    currentContentContainer.appendChild(newClone);
     // Apply alignment immediately
     updateAlignment();
   };
 
   // Finalize cross-fade by swapping containers
   const finalizeCrossFade = () => {
-    // Move new content to old container
-    const newContent = newContentContainer.firstElementChild;
-    if (newContent) {
-      // Place it in old container
-      oldContentContainer.innerHTML = "";
-      oldContentContainer.appendChild(newContent);
-    }
-    // Clear new container
-    newContentContainer.innerHTML = "";
+    // Current content is already in the right place (currentContentContainer)
+    // Just clear the old container
+    oldContentContainer.innerHTML = "";
     // Remove transition data attributes
-    container.removeAttribute("data-cross-fade");
+    container.removeAttribute("data-fade");
   };
 
   // Main transition method
@@ -227,7 +228,7 @@ export function initUITransition(
       const targetDimensions = getDimensions(newContentElement);
 
       // 1. Clone current content before any visual modifications
-      const currentContent = oldContentContainer.firstElementChild;
+      const currentContent = currentContentContainer.firstElementChild;
       const oldContentClone = currentContent
         ? currentContent.cloneNode(true)
         : null;
@@ -239,7 +240,7 @@ export function initUITransition(
       container.style.width = `${currentDimensions.width}px`;
       container.style.height = `${currentDimensions.height}px`;
 
-      // 4. Prepare cross-fade with existing containers
+      // 4. Prepare cross-fade: move current to old slot, new to current slot
       setupCrossFade(oldContentClone, newClone);
 
       // 5. Force reflow to stabilize dimensions
@@ -282,15 +283,15 @@ export function initUITransition(
 
     // Reset to initial content if it exists
     if (initialContent) {
-      oldContentContainer.innerHTML = "";
-      oldContentContainer.appendChild(initialContent.cloneNode(true));
+      currentContentContainer.innerHTML = "";
+      currentContentContainer.appendChild(initialContent.cloneNode(true));
     } else {
       // No initial content, clear everything
-      oldContentContainer.innerHTML = "";
+      currentContentContainer.innerHTML = "";
     }
 
-    // Clear new container
-    newContentContainer.innerHTML = "";
+    // Clear old container
+    oldContentContainer.innerHTML = "";
 
     // Remove any transition states
     container.removeAttribute("data-cross-fade");
@@ -327,19 +328,11 @@ export function initUITransition(
   };
 
   const getCurrentContent = () => {
-    return oldContentContainer?.firstElementChild || null;
+    return currentContentContainer?.firstElementChild || null;
   };
 
   // Initialize with visible content
   updateAlignment();
-
-  // If no initial content was found, create a fallback
-  if (initialContent) {
-    // Move initial content to old container
-    oldContentContainer.innerHTML = "";
-    oldContentContainer.appendChild(initialContent.cloneNode(true));
-    newContentContainer.innerHTML = "";
-  }
 
   // Set initial dimensions based on current content to ensure visibility
   const initialDimensions = getCurrentContentDimensions();
