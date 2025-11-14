@@ -92,9 +92,6 @@ import.meta.css = /* css */ `
   }
 
   /* Phase dimensions in relative position when no content exists */
-  .transition-container[data-no-content] .content-dimensions {
-    display: none;
-  }
   .transition-container[data-no-content] .phase-slot {
     position: relative;
   }
@@ -319,11 +316,6 @@ export const createUITransitionController = (
         container.style.height = `${targetHeight}px`;
         width = targetWidth;
         height = targetHeight;
-        setTimeout(() => {
-          if (oldPhaseSlotId === "loading") {
-            debugger;
-          }
-        }, 200);
       });
     }
     opacity: {
