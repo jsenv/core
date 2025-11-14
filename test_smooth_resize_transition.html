@@ -35,7 +35,7 @@
         background: #ff6b35;
       }
 
-      /* Structure de transition */
+      /* Structure de transition - NOUVELLE APPROCHE */
       .transition-container {
         position: relative;
 
@@ -54,36 +54,44 @@
 
       .content-wrapper {
         position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-
-        /* Transform sera utilisé pour le scaling */
-        transform-origin: center;
-        transition: transform 300ms ease;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        /* Le wrapper centre le contenu, pas de scaling */
       }
 
       .content {
         display: flex;
         box-sizing: border-box;
-        width: 100%;
-        height: 100%;
         padding: 20px;
         flex-direction: column;
         align-items: center;
         justify-content: center;
+        border-radius: 4px;
+
+        /* Chaque état a ses propres dimensions fixes */
       }
 
-      /* États des contenus */
-      .state-a .content {
+      /* États des contenus avec dimensions spécifiques */
+      .content.state-a {
+        width: 160px;
+        height: 60px;
         color: white;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       }
 
-      .state-b .content {
+      .content.state-b {
+        width: 360px;
+        height: 160px;
         color: white;
         background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      }
+
+      .content.state-c {
+        width: 110px;
+        height: 260px;
+        color: white;
+        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
       }
 
       .content h3 {
@@ -145,7 +153,6 @@
 
     <script>
       const container = document.getElementById("container");
-      const wrapper = document.getElementById("wrapper");
       const content = document.getElementById("content");
       const debug = {
         containerSize: document.getElementById("container-size"),
@@ -173,105 +180,66 @@
         c: {
           width: 150,
           height: 300,
-          contentClass: "state-b", // Même style que B
+          contentClass: "state-c", // Changé pour state-c
           title: "État C",
-          text: "Rectangle haut et étroit. Format portrait pour tester différents ratios d'aspect.",
+          text: "Format portrait",
         },
       };
 
       let currentState = "a";
       let isTransitioning = false;
 
-      // Mise à jour du debug
+      // Mise à jour du debug - SIMPLIFIÉE
       function updateDebugInfo() {
         const containerRect = container.getBoundingClientRect();
         const contentRect = content.getBoundingClientRect();
-        const computedStyle = window.getComputedStyle(wrapper);
-        const transform = computedStyle.transform;
-
-        let scaleX = 1;
-        let scaleY = 1;
-        if (transform && transform !== "none") {
-          const matrix = transform.match(/matrix\\((.+)\\)/);
-          if (matrix) {
-            const values = matrix[1].split(", ").map(Number);
-            scaleX = values[0];
-            scaleY = values[3];
-          }
-        }
 
         debug.containerSize.textContent = `Container: ${containerRect.width.toFixed(0)}px × ${containerRect.height.toFixed(0)}px`;
         debug.contentSize.textContent = `Content: ${contentRect.width.toFixed(0)}px × ${contentRect.height.toFixed(0)}px`;
-        debug.scaleInfo.textContent = `Scale: ${scaleX.toFixed(3)}, ${scaleY.toFixed(3)}`;
+        debug.scaleInfo.textContent = `Scale: pas de scaling - contenu à sa taille naturelle`;
         debug.stateInfo.textContent = `État: ${currentState.toUpperCase()}`;
       }
 
-      // Transition vers un nouvel état
+      // Transition vers un nouvel état - NOUVELLE APPROCHE SIMPLIFIÉE
       function transitionTo(newState) {
         if (isTransitioning || newState === currentState) return;
 
         isTransitioning = true;
         const state = states[newState];
 
-        // 1. Mesurer les dimensions naturelles du contenu actuel
-        wrapper.style.transform = "none";
-        const currentNaturalWidth = content.offsetWidth;
-        const currentNaturalHeight = content.offsetHeight;
+        console.log("Transition:", {
+          from: `${container.offsetWidth}x${container.offsetHeight}`,
+          to: `${state.width}x${state.height}`,
+          newState,
+        });
 
-        // 2. Changer le contenu
+        // 1. Changer immédiatement le contenu (il aura sa taille finale)
         content.className = `content ${state.contentClass}`;
         content.innerHTML = `
-                <h3>${state.title}</h3>
-                <p>${state.text}</p>
-            `;
+          <h3>${state.title}</h3>
+          <p>${state.text}</p>
+        `;
 
-        // 3. Mesurer les dimensions naturelles du nouveau contenu
-        const newNaturalWidth = content.offsetWidth;
-        const newNaturalHeight = content.offsetHeight;
+        // 2. Animer seulement les dimensions du conteneur
+        // Le contenu garde ses dimensions CSS fixes définies dans les styles
+        container.style.width = `${state.width}px`;
+        container.style.height = `${state.height}px`;
 
-        // 4. Calculer les scales nécessaires
-        const currentContainerWidth = container.offsetWidth;
-        const currentContainerHeight = container.offsetHeight;
+        // 3. Mettre à jour l'état
+        currentState = newState;
+        updateActiveButton();
+        updateDebugInfo();
 
-        // Scale pour que le nouveau contenu remplisse le container actuel
-        const scaleX = currentContainerWidth / newNaturalWidth;
-        const scaleY = currentContainerHeight / newNaturalHeight;
-
-        // 5. Appliquer le scale initial pour que le nouveau contenu s'adapte au container actuel
-        wrapper.style.transform = `scale(${scaleX}, ${scaleY})`;
-
-        console.log("Transition:", {
-          from: `${currentContainerWidth}x${currentContainerHeight}`,
-          to: `${state.width}x${state.height}`,
-          currentNatural: `${currentNaturalWidth}x${currentNaturalHeight}`,
-          newNatural: `${newNaturalWidth}x${newNaturalHeight}`,
-          initialScale: `${scaleX}, ${scaleY}`,
-        });
-
-        // 6. Attendre le prochain frame puis animer
-        requestAnimationFrame(() => {
-          // Animer vers les nouvelles dimensions et scale(1, 1)
-          container.style.width = `${state.width}px`;
-          container.style.height = `${state.height}px`;
-          wrapper.style.transform = "scale(1, 1)";
-
-          // Mettre à jour l'état
-          currentState = newState;
-          updateActiveButton();
-          updateDebugInfo();
-
-          // Marquer la fin de la transition
-          setTimeout(() => {
-            isTransitioning = false;
-          }, 300);
-        });
+        // 4. Marquer la fin de la transition
+        setTimeout(() => {
+          isTransitioning = false;
+        }, 300);
       }
 
       // Reset - supprime les contraintes
       function reset() {
         container.style.width = "";
         container.style.height = "";
-        wrapper.style.transform = "";
         isTransitioning = false;
         updateDebugInfo();
       }
