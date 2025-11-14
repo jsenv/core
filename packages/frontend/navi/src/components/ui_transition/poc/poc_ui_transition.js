@@ -3,13 +3,106 @@
  * Provides smooth resize transitions with cross-fade effects
  */
 
+import.meta.css = /* css */ `
+  .transition-container {
+    position: relative;
+
+    /* Dimensions seront définies dynamiquement */
+    background: white;
+    border: 8px dashed #ccc;
+    border-radius: 8px;
+
+    /* Transition sur les dimensions */
+    transition:
+      width 3s ease,
+      height 3s ease;
+
+    /* Overflow hidden pour que le contenu soit coupé pendant la transition */
+    overflow: hidden;
+  }
+
+  .transition-container.empty {
+    display: flex;
+    width: 300px;
+    height: 80px;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    font-style: italic;
+  }
+
+  .content-wrapper {
+    position: relative; /* Pour permettre le positionnement absolu des éléments en transition */
+    /* Wrapper qui applique l'alignement au contenu */
+    display: flex;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    /* Alignement sera mis à jour dynamiquement par JavaScript */
+    justify-content: center;
+  }
+
+  /* Éléments en transition avec cross-fade */
+  .content-transitioning {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    width: 100%;
+    height: 100%;
+    align-items: inherit;
+    justify-content: inherit;
+    transition: opacity 0ms ease; /* Durée sera définie dynamiquement */
+  }
+
+  .content-old {
+    z-index: 1;
+    opacity: 1;
+  }
+
+  .content-new {
+    z-index: 2;
+    opacity: 0;
+  }
+
+  .content-old.fading-out {
+    opacity: 0;
+  }
+
+  .content-new.fading-in {
+    opacity: 1;
+  }
+
+  .content {
+    /* Le contenu a des dimensions FIXES - ne s'adapte pas au conteneur */
+
+    box-sizing: border-box;
+    padding: 20px;
+    border-radius: 4px;
+  }
+
+  /* États des contenus - dimensions détectées automatiquement */
+  .content.state-empty {
+    color: #666;
+    font-style: italic;
+  }
+`;
+
 export class UITransition {
-  constructor(options = {}) {
+  constructor(container, options = {}) {
     // Required elements
-    this.container = options.container;
-    this.oldContentContainer = options.oldContentContainer;
-    this.newContentContainer = options.newContentContainer;
-    this.wrapper = options.wrapper;
+    this.container = container;
+    const oldContentContainer = container.querySelector(
+      "#old-content-container",
+    );
+    const newContentContainer = container.querySelector(
+      "#new-content-container",
+    );
+    const wrapper = container.querySelector("#wrapper");
+
+    this.oldContentContainer = oldContentContainer;
+    this.newContentContainer = newContentContainer;
+    this.wrapper = wrapper;
 
     if (
       !this.container ||
