@@ -173,191 +173,217 @@ export const createUITransitionController = (
     phaseHeight = dimensions.height;
   };
 
-  const applyDimensionTransition = () => {
-    // Set current container dimensions (starting point)
-    container.style.width = `${width}px`;
-    container.style.height = `${height}px`;
-    // Start container animation
-    requestAnimationFrame(() => {
-      onStateChange({ isTransitioning: true });
-      container.style.width = `${targetWidth}px`;
-      container.style.height = `${targetHeight}px`;
-      // for now we don't have a way to know the exact dimensions
-      // so width/height is immediatly updated to target
-      // later we'll have ability to know that
-      width = targetWidth;
-      height = targetHeight;
-    });
-
-    // Clean up after transition
-    setTimeout(() => {
-      if (isContentPhase) {
-        // We just transitioned to a phase
-        finalizePhaseTransition();
-      } else if (
-        phaseSlot.firstElementChild ||
-        oldPhaseSlot.firstElementChild
-      ) {
-        // We have phase-related content to clean up
-        finalizePhaseTransition();
-      } else {
-        // Regular content transition
-        finalizeContentCrossFade();
-      }
-      isTransitioning = false;
-      onStateChange({ isTransitioning: false });
-      resolve();
-    }, duration + 100);
-  };
-
   // Setup cross-fade styling between old and new content
   const applyContentToContentTransition = () => {
-    // Set initial state: old content visible, new content hidden
-    if (oldContentSlot.firstElementChild) {
-      oldContentSlot.style.opacity = "1";
-      oldContentSlot.style.transition = "none";
-    }
-    contentSlot.style.opacity = "0";
-    contentSlot.style.transition = "none";
+    dimension: {
+      updateContentDimensions();
+      targetWidth = contentWidth;
+      targetHeight = contentHeight;
 
+      // Apply dimension transition
+      container.style.width = `${width}px`;
+      container.style.height = `${height}px`;
+      requestAnimationFrame(() => {
+        // Start dimension transition
+        container.style.width = `${targetWidth}px`;
+        container.style.height = `${targetHeight}px`;
+        width = targetWidth;
+        height = targetHeight;
+      });
+    }
+    opacity: {
+      // Set initial state: old content visible, new content hidden
+      if (oldContentSlot.firstElementChild) {
+        oldContentSlot.style.opacity = "1";
+        oldContentSlot.style.transition = "none";
+      }
+      contentSlot.style.opacity = "0";
+      contentSlot.style.transition = "none";
+
+      requestAnimationFrame(() => {
+        if (oldContentSlot.firstElementChild) {
+          oldContentSlot.style.transition = `opacity ${duration}ms ease`;
+          oldContentSlot.style.opacity = "0"; // Fade out old
+        }
+        contentSlot.style.transition = `opacity ${duration}ms ease`;
+        contentSlot.style.opacity = "1"; // Fade in new
+      });
+    }
     // Set transition state marker
     container.setAttribute("data-transitioning", "true");
-
     // Force reflow to stabilize DOM
     const reflow = contentSlot.offsetHeight;
     console.debug("Content transition reflow:", reflow);
-
-    // Start transitions
-    if (oldContentSlot.firstElementChild) {
-      oldContentSlot.style.transition = `opacity ${duration}ms ease`;
-      oldContentSlot.style.opacity = "0"; // Fade out old
-    }
-    contentSlot.style.transition = `opacity ${duration}ms ease`;
-    contentSlot.style.opacity = "1"; // Fade in new
-    applyDimensionTransition(() => {
-      // Clear the old content slot
-      oldContentSlot.innerHTML = "";
-
-      // Reset to CSS defaults: new content visible, old content hidden
-      oldContentSlot.style.opacity = "";
-      oldContentSlot.style.transition = "";
-      contentSlot.style.opacity = "";
-      contentSlot.style.transition = "";
-
-      // Remove container dimensions to let content flow naturally
-      container.style.width = "";
-      container.style.height = "";
-
-      // Remove transition data attributes
-      container.removeAttribute("data-transitioning");
-    });
+    return {
+      cleanupOpacity: () => {
+        oldContentSlot.innerHTML = "";
+        oldContentSlot.style.opacity = "";
+        oldContentSlot.style.transition = "";
+        contentSlot.style.opacity = "";
+        contentSlot.style.transition = "";
+      },
+      cleanupDimension: () => {
+        container.style.width = "";
+        container.style.height = "";
+        container.removeAttribute("data-transitioning");
+      },
+    };
   };
-  // Setup phase to phase transition styling
-  const applyPhaseToPhaseTransition = () => {
-    // Set initial states
-    if (oldPhaseSlot.firstElementChild) {
-      oldPhaseSlot.style.opacity = "1";
-      oldPhaseSlot.style.transition = "none";
+  const applySomethingToPhaseTransition = () => {
+    phaseSlot.style.width = "";
+    phaseSlot.style.height = "";
+    updatePhaseDimensions();
+
+    // Use any known content dimension
+    if (contentWidth === undefined) {
+      // we don't have any content to use
+      // phase slot is allowed to dictate dimensions
+      targetWidth = phaseWidth;
+      targetHeight = phaseHeight;
+    } else {
+      // force phase dimensions to content
+      phaseSlot.style.width = `${contentWidth}px`;
+      phaseSlot.style.height = `${contentHeight}px`;
+      targetWidth = contentWidth;
+      targetHeight = contentHeight;
     }
-    phaseSlot.style.opacity = "0";
-    phaseSlot.style.transition = "none";
+    // Determine if this is a phase-to-phase or content-to-phase transition
+    const wasAlreadyInPhaseState = isInPhaseState;
+    // Mark as in phase state
+    isInPhaseState = true;
+
+    dimension: {
+      // Apply dimension transition
+      container.style.width = `${width}px`;
+      container.style.height = `${height}px`;
+      requestAnimationFrame(() => {
+        // Start dimension transition
+        container.style.width = `${targetWidth}px`;
+        container.style.height = `${targetHeight}px`;
+        width = targetWidth;
+        height = targetHeight;
+      });
+    }
+    opacity: {
+      if (wasAlreadyInPhaseState) {
+        // phase to phase
+
+        if (oldPhaseSlot.firstElementChild) {
+          oldPhaseSlot.style.opacity = "1";
+          oldPhaseSlot.style.transition = "none";
+        }
+        phaseSlot.style.opacity = "0";
+        phaseSlot.style.transition = "none";
+      } else {
+        // content to phase
+
+        phaseSlot.style.opacity = "0";
+        phaseSlot.style.transition = "none";
+
+        // Content starts visible, will fade out
+        contentSlot.style.opacity = "1";
+        contentSlot.style.transition = "none";
+      }
+
+      // Start transitions
+      requestAnimationFrame(() => {
+        // Start opacity transitions
+        if (oldPhaseSlot.firstElementChild) {
+          oldPhaseSlot.style.transition = `opacity ${duration}ms ease`;
+          oldPhaseSlot.style.opacity = "0"; // Fade out old phase
+        }
+        phaseSlot.style.transition = `opacity ${duration}ms ease`;
+        phaseSlot.style.opacity = "1"; // Fade in new phase
+      });
+    }
 
     // Set transition state marker
     container.setAttribute("data-transitioning", "true");
-
     // Force reflow
     const reflow = phaseSlot.offsetHeight;
     console.debug("Phase to phase reflow:", reflow);
 
-    // Start transitions
-    if (oldPhaseSlot.firstElementChild) {
-      oldPhaseSlot.style.transition = `opacity ${duration}ms ease`;
-      oldPhaseSlot.style.opacity = "0"; // Fade out old phase
-    }
-    phaseSlot.style.transition = `opacity ${duration}ms ease`;
-    phaseSlot.style.opacity = "1"; // Fade in new phase
-  };
-  // Setup phase transition styling
-  const applyContentToPhaseTransition = () => {
-    // Phase starts hidden
-    phaseSlot.style.opacity = "0";
-    phaseSlot.style.transition = "none";
-
-    // Content starts visible, will fade out
-    contentSlot.style.opacity = "1";
-    contentSlot.style.transition = "none";
-
-    // Set transition state marker
-    container.setAttribute("data-transitioning", "true");
-
-    // Force reflow
-    const reflow = phaseSlot.offsetHeight;
-    console.debug("Phase transition reflow:", reflow);
-
-    // Start transitions: fade out content, fade in phase
-    contentSlot.style.transition = `opacity ${duration}ms ease`;
-    phaseSlot.style.transition = `opacity ${duration}ms ease`;
-
-    contentSlot.style.opacity = "0.3"; // Fade out content (keep slightly visible)
-    phaseSlot.style.opacity = "1"; // Fade in phase
+    // Return cleanup functions
+    return {
+      cleanupOpacity: () => {
+        oldPhaseSlot.innerHTML = "";
+        oldPhaseSlot.style.opacity = "";
+        oldPhaseSlot.style.transition = "";
+        phaseSlot.style.opacity = "";
+        phaseSlot.style.transition = "";
+        // Keep content hidden in phase state
+        if (isInPhaseState) {
+          contentSlot.style.opacity = "0";
+          contentSlot.setAttribute("aria-hidden", "true");
+          contentSlot.style.pointerEvents = "none";
+        }
+      },
+      cleanupDimension: () => {
+        container.style.width = "";
+        container.style.height = "";
+        container.removeAttribute("data-transitioning");
+      },
+    };
   };
   // Setup phase to content transition styling
   const applyPhaseToContentTransition = () => {
-    // Set initial states
-    if (oldPhaseSlot.firstElementChild) {
-      oldPhaseSlot.style.opacity = "1";
-      oldPhaseSlot.style.transition = "none";
+    isInPhaseState = false;
+    dimension: {
+      // Apply dimension transition
+      container.style.width = `${width}px`;
+      container.style.height = `${height}px`;
+      // Start transitions
+      requestAnimationFrame(() => {
+        // Start dimension transition
+        container.style.width = `${targetWidth}px`;
+        container.style.height = `${targetHeight}px`;
+        width = targetWidth;
+        height = targetHeight;
+      });
     }
-    contentSlot.style.opacity = "0";
-    contentSlot.style.transition = "none";
+    opacity: {
+      // Set initial states
+      if (oldPhaseSlot.firstElementChild) {
+        oldPhaseSlot.style.opacity = "1";
+        oldPhaseSlot.style.transition = "none";
+      }
+      contentSlot.style.opacity = "0";
+      contentSlot.style.transition = "none";
+      requestAnimationFrame(() => {
+        // Start opacity transitions
+        if (oldPhaseSlot.firstElementChild) {
+          oldPhaseSlot.style.transition = `opacity ${duration}ms ease`;
+          oldPhaseSlot.style.opacity = "0"; // Fade out old phase
+        }
+        contentSlot.style.transition = `opacity ${duration}ms ease`;
+        contentSlot.style.opacity = "1"; // Fade in new content
+      });
+    }
 
     // Set transition state marker
     container.setAttribute("data-transitioning", "true");
+
     // Force reflow
     const reflow = contentSlot.offsetHeight;
     console.debug("Phase to content reflow:", reflow);
 
-    // Start transitions
-    if (oldPhaseSlot.firstElementChild) {
-      oldPhaseSlot.style.transition = `opacity ${duration}ms ease`;
-      oldPhaseSlot.style.opacity = "0"; // Fade out old phase
-    }
-    contentSlot.style.transition = `opacity ${duration}ms ease`;
-    contentSlot.style.opacity = "1"; // Fade in new content
-  };
-
-  // Finalize phase transitions
-  const finalizePhaseTransition = () => {
-    // Clear old slots
-    oldPhaseSlot.innerHTML = "";
-    oldContentSlot.innerHTML = "";
-
-    // Reset styles for phase slot
-    phaseSlot.style.opacity = "";
-    phaseSlot.style.transition = "";
-    oldPhaseSlot.style.opacity = "";
-    oldPhaseSlot.style.transition = "";
-
-    // If we're in phase state, keep content hidden and non-interactive
-    if (isInPhaseState) {
-      contentSlot.style.opacity = "0";
-      contentSlot.style.transition = "";
-      contentSlot.setAttribute("aria-hidden", "true");
-      contentSlot.style.pointerEvents = "none";
-    } else {
-      // Reset content slot when not in phase state
-      contentSlot.style.opacity = "";
-      contentSlot.style.transition = "";
-      contentSlot.removeAttribute("aria-hidden");
-      contentSlot.style.pointerEvents = "";
-    }
-
-    // Remove container dimensions to let content flow naturally
-    container.style.width = "";
-    container.style.height = "";
-
-    // Remove transition marker
-    container.removeAttribute("data-transitioning");
+    // Return cleanup functions
+    return {
+      cleanupOpacity: () => {
+        oldPhaseSlot.innerHTML = "";
+        oldPhaseSlot.style.opacity = "";
+        oldPhaseSlot.style.transition = "";
+        contentSlot.style.opacity = "";
+        contentSlot.style.transition = "";
+        contentSlot.removeAttribute("aria-hidden");
+        contentSlot.style.pointerEvents = "";
+      },
+      cleanupDimension: () => {
+        container.style.width = "";
+        container.style.height = "";
+        container.removeAttribute("data-transitioning");
+      },
+    };
   };
 
   // Main transition method
@@ -367,84 +393,60 @@ export const createUITransitionController = (
       return Promise.resolve();
     }
 
-    isTransitioning = true;
-
-    if (isContentPhase) {
-      const currentPhaseContent = phaseSlot.firstElementChild;
-      if (currentPhaseContent) {
-        // move any current phase to old phase slot
-        oldPhaseSlot.innerHTML = "";
-        oldPhaseSlot.appendChild(currentPhaseContent);
-      }
-      // Insert phase element into phase slot for measurement and transition
-      phaseSlot.innerHTML = "";
-      phaseSlot.appendChild(newContentElement);
-      phaseSlot.style.width = "";
-      phaseSlot.style.height = "";
-      updatePhaseDimensions();
-
-      // Determine if this is a phase-to-phase or content-to-phase transition
-      const wasAlreadyInPhaseState = isInPhaseState;
-
-      // Use any known content dimension
-      if (contentWidth !== undefined) {
-        // force phase dimensions to content
-        phaseSlot.style.width = `${contentWidth}px`;
-        phaseSlot.style.height = `${contentHeight}px`;
+    return new Promise((resolve) => {
+      let cleanupCallbacks;
+      if (isContentPhase) {
+        const currentPhaseContent = phaseSlot.firstElementChild;
+        if (currentPhaseContent) {
+          // move any current phase to old phase slot
+          oldPhaseSlot.innerHTML = "";
+          oldPhaseSlot.appendChild(currentPhaseContent);
+        }
+        // Insert phase element into phase slot for measurement and transition
+        phaseSlot.innerHTML = "";
+        phaseSlot.appendChild(newContentElement);
+        cleanupCallbacks = applySomethingToPhaseTransition();
+      } else if (isInPhaseState) {
+        // Transitioning from phase to content
+        // Move current phase to old phase slot for fade-out
+        const currentPhase = phaseSlot.firstElementChild;
+        if (currentPhase) {
+          oldPhaseSlot.innerHTML = "";
+          oldPhaseSlot.appendChild(currentPhase);
+        }
+        // Clear current phase slot
+        phaseSlot.innerHTML = "";
+        // Insert new content into content slot
+        contentSlot.innerHTML = "";
+        contentSlot.appendChild(newContentElement);
+        updateContentDimensions();
         targetWidth = contentWidth;
         targetHeight = contentHeight;
+        cleanupCallbacks = applyPhaseToContentTransition();
       } else {
-        // we don't have any content to use
-        // phase slot is allowed to dictacte dimensions
-        targetWidth = phaseWidth;
-        targetHeight = phaseHeight;
+        // Regular content to content transition
+        // Move current content to old content slot for fade-out
+        const currentContent = contentSlot.firstElementChild;
+        if (currentContent) {
+          oldContentSlot.innerHTML = "";
+          oldContentSlot.appendChild(currentContent);
+        }
+        // Insert new content into content slot
+        contentSlot.innerHTML = "";
+        contentSlot.appendChild(newContentElement);
+        cleanupCallbacks = applyContentToContentTransition();
       }
-      // Mark as in phase state
-      isInPhaseState = true;
 
-      // Setup appropriate transition styling
-      if (wasAlreadyInPhaseState) {
-        return applyPhaseToPhaseTransition();
-      }
-      return applyContentToPhaseTransition();
-    }
-    if (isInPhaseState) {
-      // Transitioning from phase to content
-      // Move current phase to old phase slot for fade-out
-      const currentPhase = phaseSlot.firstElementChild;
-      if (currentPhase) {
-        oldPhaseSlot.innerHTML = "";
-        oldPhaseSlot.appendChild(currentPhase);
-      }
-      // Clear current phase slot
-      phaseSlot.innerHTML = "";
-      // Insert new content into content slot
-      contentSlot.innerHTML = "";
-      contentSlot.appendChild(newContentElement);
-      updateContentDimensions();
-      targetWidth = contentWidth;
-      targetHeight = contentHeight;
-
-      // Mark as no longer in phase state
-      isInPhaseState = false;
-      return applyPhaseToContentTransition();
-    }
-
-    // Regular content to content transition
-    // Move current content to old content slot for fade-out
-    const currentContent = contentSlot.firstElementChild;
-    if (currentContent) {
-      oldContentSlot.innerHTML = "";
-      oldContentSlot.appendChild(currentContent.cloneNode(true));
-    }
-
-    // Insert new content into content slot
-    contentSlot.innerHTML = "";
-    contentSlot.appendChild(newContentElement);
-    updateContentDimensions();
-    targetWidth = contentWidth;
-    targetHeight = contentHeight;
-    return applyContentToContentTransition();
+      isTransitioning = true;
+      onStateChange({ isTransitioning: true });
+      setTimeout(() => {
+        cleanupCallbacks.cleanupOpacity();
+        cleanupCallbacks.cleanupDimension();
+        isTransitioning = false;
+        onStateChange({ isTransitioning: false });
+        resolve();
+      }, duration + 100);
+    });
   };
 
   // Reset to initial content
