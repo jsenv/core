@@ -206,7 +206,6 @@ export function initUITransition(
 
     return new Promise((resolve) => {
       isTransitioning = true;
-      onStateChange({ isTransitioning: true });
 
       // Set CSS variable for transition duration
       container.style.setProperty("--x-transition-duration", `${duration}ms`);
@@ -245,6 +244,8 @@ export function initUITransition(
         container.setAttribute("data-fade", "out");
         container.setAttribute("data-fade", "in");
       }, 50);
+
+      onStateChange({ isTransitioning: true });
 
       // 7. Clean up after transition
       setTimeout(() => {
