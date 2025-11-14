@@ -307,59 +307,12 @@ export const createUITransitionController = (
     container.removeAttribute("data-transitioning");
   };
 
-  // Internal: Transition to content
-  const transitionToContent = (newContentElement) => {
-    if (isInPhaseState) {
-      // Transitioning from phase to content
-      const currentPhase = phaseSlot.firstElementChild;
-      const oldPhaseClone = currentPhase ? currentPhase.cloneNode(true) : null;
-      const newContentClone = cloneElementForTransition(newContentElement);
-
-      setupPhaseToContentTransition(oldPhaseClone, newContentClone);
-      isInPhaseState = false;
-    } else {
-      // Regular content to content transition
-      const currentContent = contentSlot.firstElementChild;
-      const oldContentClone = currentContent
-        ? currentContent.cloneNode(true)
-        : null;
-      const newClone = cloneElementForTransition(newContentElement);
-
-      setupContentCrossFade(oldContentClone, newClone);
-    }
-  };
-
-  // Internal: Transition to phase
-  const transitionToPhase = (phaseElement) => {
-    // Store current dimensions if we have content and not already in phase
-    const currentContent = getCurrentContent();
-    if (currentContent && !isInPhaseState) {
-      const rect = currentContent.getBoundingClientRect();
-      phaseStateDimensions = { width: rect.width, height: rect.height };
-      console.debug("Stored phase dimensions:", phaseStateDimensions);
-    }
-
-    // Apply stored dimensions to the phase element if we have them
-    if (phaseStateDimensions) {
-      phaseElement.style.width = `${phaseStateDimensions.width}px`;
-      phaseElement.style.height = `${phaseStateDimensions.height}px`;
-      phaseElement.style.boxSizing = "border-box";
-    }
-
-    // Phase transition - keep content in background
-    isInPhaseState = true;
-    setupPhaseTransition(phaseElement.cloneNode(true));
-  };
-
   // Main transition method
-  const transitionTo = (newContentElement) => {
+  const transitionTo = (newContentElement, { isContentPhase = false } = {}) => {
     if (isTransitioning) {
       console.log("Transition already in progress, ignoring");
       return Promise.resolve();
     }
-
-    // Auto-detect if this is a phase element based on data-phase attribute
-    const isPhaseElement = newContentElement.dataset?.phase !== undefined;
 
     return new Promise((resolve) => {
       isTransitioning = true;
@@ -375,10 +328,45 @@ export const createUITransitionController = (
       container.style.width = `${currentDimensions.width}px`;
       container.style.height = `${currentDimensions.height}px`;
 
-      if (isPhaseElement) {
-        transitionToPhase(newContentElement);
+      if (isContentPhase) {
+        // Transition to phase logic (inlined from transitionToPhase)
+        // Store current dimensions if we have content and not already in phase
+        const currentContent = getCurrentContent();
+        if (currentContent && !isInPhaseState) {
+          const rect = currentContent.getBoundingClientRect();
+          phaseStateDimensions = { width: rect.width, height: rect.height };
+          console.debug("Stored phase dimensions:", phaseStateDimensions);
+        }
+
+        // Apply stored dimensions to the phase element if we have them
+        if (phaseStateDimensions) {
+          newContentElement.style.width = `${phaseStateDimensions.width}px`;
+          newContentElement.style.height = `${phaseStateDimensions.height}px`;
+          newContentElement.style.boxSizing = "border-box";
+        }
+
+        // Phase transition - keep content in background
+        isInPhaseState = true;
+        setupPhaseTransition(newContentElement.cloneNode(true));
+      } else if (isInPhaseState) {
+        // Transitioning from phase to content
+        const currentPhase = phaseSlot.firstElementChild;
+        const oldPhaseClone = currentPhase
+          ? currentPhase.cloneNode(true)
+          : null;
+        const newContentClone = cloneElementForTransition(newContentElement);
+
+        setupPhaseToContentTransition(oldPhaseClone, newContentClone);
+        isInPhaseState = false;
       } else {
-        transitionToContent(newContentElement);
+        // Regular content to content transition
+        const currentContent = contentSlot.firstElementChild;
+        const oldContentClone = currentContent
+          ? currentContent.cloneNode(true)
+          : null;
+        const newClone = cloneElementForTransition(newContentElement);
+
+        setupContentCrossFade(oldContentClone, newClone);
       }
 
       // Start container animation
@@ -391,7 +379,7 @@ export const createUITransitionController = (
 
       // Clean up after transition
       setTimeout(() => {
-        if (isPhaseElement) {
+        if (isContentPhase) {
           // We just transitioned to a phase
           finalizePhaseTransition();
         } else if (

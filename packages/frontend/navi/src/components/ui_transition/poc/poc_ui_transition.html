@@ -598,8 +598,10 @@
             if (phaseType && !uiTransition.getIsTransitioning()) {
               console.log(`Transitioning to phase: ${phaseType}`);
 
-              // Use unified transitionTo method (auto-detects phase via data-phase)
-              uiTransition.transitionTo(phase.cloneNode(true));
+              // Use transitionTo with isContentPhase option
+              uiTransition.transitionTo(phase.cloneNode(true), {
+                isContentPhase: true,
+              });
               currentState = `phase-${phaseType}`;
             }
           }
