@@ -189,8 +189,13 @@
       }
 
       .content-wrapper {
-        /* Simple wrapper qui ne contraint pas les dimensions */
-        display: block;
+        /* Wrapper qui applique l'alignement au contenu */
+        display: flex;
+        width: 100%;
+        height: 100%;
+        align-items: center;
+        /* Alignement sera mis à jour dynamiquement par JavaScript */
+        justify-content: center;
       }
 
       .content {
@@ -427,6 +432,7 @@
       // Fonction pour mettre à jour l'alignement de la viewport
       function updateAlignment() {
         const viewport = document.querySelector(".transition-viewport");
+        const wrapper = document.getElementById("wrapper");
 
         // Convertir les valeurs d'alignement en propriétés CSS flexbox
         const alignMap = {
@@ -435,14 +441,24 @@
           end: "flex-end",
         };
 
+        // Appliquer l'alignement à la viewport (pour centrer le container)
         viewport.style.justifyContent = alignMap[contentAlignX] || "center";
         viewport.style.alignItems = alignMap[contentAlignY] || "center";
+
+        // Appliquer le même alignement au wrapper (pour positionner le contenu)
+        if (wrapper) {
+          wrapper.style.justifyContent = alignMap[contentAlignX] || "center";
+          wrapper.style.alignItems = alignMap[contentAlignY] || "center";
+        }
 
         // Mettre à jour le positionnement du ghost debug
         updateGhostPosition();
 
+        // Sauvegarder les préférences
+        savePreferences();
+
         console.log(
-          `Alignement mis à jour: X=${contentAlignX}, Y=${contentAlignY}`,
+          `Alignement mis à jour et appliqué au wrapper: X=${contentAlignX}, Y=${contentAlignY}`,
         );
       }
 
