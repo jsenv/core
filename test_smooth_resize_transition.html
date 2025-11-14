@@ -311,43 +311,45 @@
 
       // Fonction pour mettre à jour l'alignement de la viewport
       function updateAlignment() {
-        const viewport = document.querySelector('.transition-viewport');
-        
+        const viewport = document.querySelector(".transition-viewport");
+
         // Convertir les valeurs d'alignement en propriétés CSS flexbox
         const alignMap = {
-          'start': 'flex-start',
-          'center': 'center',
-          'end': 'flex-end'
+          start: "flex-start",
+          center: "center",
+          end: "flex-end",
         };
-        
-        viewport.style.justifyContent = alignMap[contentAlignX] || 'center';
-        viewport.style.alignItems = alignMap[contentAlignY] || 'center';
-        
+
+        viewport.style.justifyContent = alignMap[contentAlignX] || "center";
+        viewport.style.alignItems = alignMap[contentAlignY] || "center";
+
         // Mettre à jour le positionnement du ghost debug
         updateGhostPosition();
-        
-        console.log(`Alignement mis à jour: X=${contentAlignX}, Y=${contentAlignY}`);
+
+        console.log(
+          `Alignement mis à jour: X=${contentAlignX}, Y=${contentAlignY}`,
+        );
       }
-      
+
       // Fonction pour mettre à jour la position du ghost debug
       function updateGhostPosition() {
         if (!debugGhost) return;
-        
+
         const positionMap = {
-          'start': '0%',
-          'center': '50%',
-          'end': '100%'
+          start: "0%",
+          center: "50%",
+          end: "100%",
         };
-        
+
         const transformMap = {
-          'start': '0%',
-          'center': '-50%',
-          'end': '-100%'
+          start: "0%",
+          center: "-50%",
+          end: "-100%",
         };
-        
-        debugGhost.style.left = positionMap[contentAlignX] || '50%';
-        debugGhost.style.top = positionMap[contentAlignY] || '50%';
-        debugGhost.style.transform = `translate(${transformMap[contentAlignX] || '-50%'}, ${transformMap[contentAlignY] || '-50%'})`;
+
+        debugGhost.style.left = positionMap[contentAlignX] || "50%";
+        debugGhost.style.top = positionMap[contentAlignY] || "50%";
+        debugGhost.style.transform = `translate(${transformMap[contentAlignX] || "-50%"}, ${transformMap[contentAlignY] || "-50%"})`;
       }
 
       // Détection automatique des dimensions d'un rectangle OU du contenu actuel
@@ -611,7 +613,7 @@
 
         // Contrôle de durée
         const durationControl = createDurationControl();
-        
+
         // Contrôles d'alignement
         const alignmentControls = createAlignmentControls();
 
@@ -622,7 +624,7 @@
         const transitionZone = document.querySelector(".transition-zone");
         transitionZone.appendChild(controlsContainer);
       }
-      
+
       // Fonction pour créer le contrôle de durée
       function createDurationControl() {
         const durationLabel = document.createElement("label");
@@ -658,10 +660,10 @@
         durationLabel.appendChild(durationText);
         durationLabel.appendChild(durationSlider);
         durationLabel.appendChild(durationValue);
-        
+
         return durationLabel;
       }
-      
+
       // Fonction pour créer les contrôles d'alignement
       function createAlignmentControls() {
         const alignmentContainer = document.createElement("div");
@@ -670,62 +672,62 @@
         alignmentContainer.style.alignItems = "center";
         alignmentContainer.style.fontSize = "14px";
         alignmentContainer.style.color = "#333";
-        
+
         // Contrôle Align X
         const alignXLabel = document.createElement("label");
         alignXLabel.style.display = "flex";
         alignXLabel.style.alignItems = "center";
         alignXLabel.style.gap = "5px";
-        
+
         const alignXText = document.createElement("span");
         alignXText.textContent = "X:";
-        
+
         const alignXSelect = document.createElement("select");
-        ['start', 'center', 'end'].forEach(value => {
-          const option = document.createElement('option');
+        ["start", "center", "end"].forEach((value) => {
+          const option = document.createElement("option");
           option.value = value;
           option.textContent = value;
           option.selected = value === contentAlignX;
           alignXSelect.appendChild(option);
         });
-        
-        alignXSelect.addEventListener('change', (e) => {
+
+        alignXSelect.addEventListener("change", (e) => {
           contentAlignX = e.target.value;
           updateAlignment();
         });
-        
+
         alignXLabel.appendChild(alignXText);
         alignXLabel.appendChild(alignXSelect);
-        
+
         // Contrôle Align Y
         const alignYLabel = document.createElement("label");
         alignYLabel.style.display = "flex";
         alignYLabel.style.alignItems = "center";
         alignYLabel.style.gap = "5px";
-        
+
         const alignYText = document.createElement("span");
         alignYText.textContent = "Y:";
-        
+
         const alignYSelect = document.createElement("select");
-        ['start', 'center', 'end'].forEach(value => {
-          const option = document.createElement('option');
+        ["start", "center", "end"].forEach((value) => {
+          const option = document.createElement("option");
           option.value = value;
           option.textContent = value;
           option.selected = value === contentAlignY;
           alignYSelect.appendChild(option);
         });
-        
-        alignYSelect.addEventListener('change', (e) => {
+
+        alignYSelect.addEventListener("change", (e) => {
           contentAlignY = e.target.value;
           updateAlignment();
         });
-        
+
         alignYLabel.appendChild(alignYText);
         alignYLabel.appendChild(alignYSelect);
-        
+
         alignmentContainer.appendChild(alignXLabel);
         alignmentContainer.appendChild(alignYLabel);
-        
+
         return alignmentContainer;
       }
 
