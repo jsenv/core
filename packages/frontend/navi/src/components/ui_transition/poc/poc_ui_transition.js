@@ -181,7 +181,7 @@ export function initUITransition(
     // Clear the old container
     oldContentContainer.innerHTML = "";
 
-    // Reset opacity and transition styles to defaults
+    // Reset to CSS defaults: new content visible, old content hidden
     oldContentContainer.style.opacity = "";
     oldContentContainer.style.transition = "";
     currentContentContainer.style.opacity = "";
