@@ -230,7 +230,6 @@
 
     <script>
       const container = document.getElementById("container");
-      const content = document.getElementById("content");
 
       const debug = {
         containerSize: document.getElementById("container-size"),
@@ -241,7 +240,7 @@
 
       const DURATION = 3000;
       const VISUAL_DEBUG = true; // Affiche un ghost externe pour debug
-      const VISUAL_DEBUG_KEEP_GHOST = true; // Garde le ghost debug après transition
+      const VISUAL_DEBUG_KEEP_GHOST = false; // Garde le ghost debug après transition
 
       // États possibles - dimensions détectées automatiquement
       const states = {
@@ -285,8 +284,8 @@
 
         const rect = element.getBoundingClientRect();
         const dimensions = {
-          width: Math.round(rect.width),
-          height: Math.round(rect.height),
+          width: rect.width,
+          height: rect.height,
         };
 
         console.log(`Dimensions détectées pour ${elementId}:`, dimensions);
@@ -414,7 +413,11 @@
         }
 
         // 3. Remplacer le contenu actuel par le clone
-        const wrapper = content.parentNode;
+        const wrapper = document.getElementById("wrapper");
+        if (!wrapper) {
+          console.error("Wrapper non trouvé");
+          return;
+        }
         wrapper.innerHTML = ""; // Vider le wrapper
         wrapper.appendChild(clone); // Ajouter le clone
 
