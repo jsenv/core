@@ -125,7 +125,15 @@ export const createUITransitionController = (
   // Internal state
   let isTransitioning = false;
   let isInPhaseState = false;
-  let phaseStateDimensions = null;
+  // Dimension tracking
+  let width;
+  let height;
+  let contentWidth;
+  let contentHeight;
+  let phaseWidth;
+  let phaseHeight;
+  let targetWidth;
+  let targetHeight;
 
   // Capture initial content from content slot
   const initialContent = contentSlot.firstElementChild
@@ -143,9 +151,8 @@ export const createUITransitionController = (
   const getDimensions = (element) => {
     if (!element) {
       console.warn("Element not found for dimension measurement");
-      return { width: 200, height: 100 }; // fallback
+      return { width: 50, height: 50 }; // fallback
     }
-
     const rect = element.getBoundingClientRect();
     return {
       width: rect.width,
@@ -153,13 +160,18 @@ export const createUITransitionController = (
     };
   };
 
-  // Get dimensions of current content
-  const getCurrentContentDimensions = () => {
+  const updateContentDimensions = () => {
     const currentContent = contentSlot?.firstElementChild;
-    return getDimensions(currentContent);
+    const dimensions = getDimensions(currentContent);
+    contentWidth = dimensions.width;
+    contentHeight = dimensions.height;
   };
-
-
+  const updatePhaseDimensions = () => {
+    const currentPhase = phaseSlot?.firstElementChild;
+    const dimensions = getDimensions(currentPhase);
+    phaseWidth = dimensions.width;
+    phaseHeight = dimensions.height;
+  };
 
   // Setup cross-fade styling between old and new content
   const setupContentCrossFade = () => {
@@ -295,40 +307,37 @@ export const createUITransitionController = (
     return new Promise((resolve) => {
       isTransitioning = true;
 
-      // Get current dimensions
-      const currentDimensions = getCurrentContentDimensions();
-
-      // Set current container dimensions (starting point)
-      container.style.width = `${currentDimensions.width}px`;
-      container.style.height = `${currentDimensions.height}px`;
-
-      let targetDimensions;
-
       if (isContentPhase) {
+        const currentPhaseContent = phaseSlot.firstElementChild;
+        if (currentPhaseContent) {
+          // move any current phase to old phase slot
+          oldPhaseSlot.innerHTML = "";
+          oldPhaseSlot.appendChild(currentPhaseContent);
+        }
+        // Insert phase element into phase slot for measurement and transition
+        phaseSlot.innerHTML = "";
+        phaseSlot.appendChild(newContentElement);
+        phaseSlot.style.width = "";
+        phaseSlot.style.height = "";
+        updatePhaseDimensions();
+
         // Transition to phase logic (inlined from transitionToPhase)
         // Store current dimensions if we have content and not already in phase
         const currentContent = getCurrentContent();
         if (currentContent && !isInPhaseState) {
-          const rect = currentContent.getBoundingClientRect();
-          phaseStateDimensions = { width: rect.width, height: rect.height };
-          console.debug("Stored phase dimensions:", phaseStateDimensions);
+          // force phase dimensions to content
+          phaseSlot.style.width = `${contentWidth}px`;
+          phaseSlot.style.height = `${contentHeight}px`;
+          targetWidth = contentWidth;
+          targetHeight = contentHeight;
+        } else {
+          // we don't have any content to use
+          // phase slot is allowed to dictacte dimensions
+          targetWidth = phaseWidth;
+          targetHeight = phaseHeight;
         }
-
-        // Apply stored dimensions to the phase element if we have them
-        if (phaseStateDimensions) {
-          newContentElement.style.width = `${phaseStateDimensions.width}px`;
-          newContentElement.style.height = `${phaseStateDimensions.height}px`;
-          newContentElement.style.boxSizing = "border-box";
-        }
-
-        // Insert phase element into phase slot for measurement and transition
-        phaseSlot.innerHTML = "";
-        phaseSlot.appendChild(newContentElement);
-        targetDimensions = getDimensions(phaseSlot.firstElementChild);
-
         // Mark as in phase state
         isInPhaseState = true;
-
         // Setup phase transition styling
         setupPhaseTransition();
       } else if (isInPhaseState) {
@@ -337,16 +346,16 @@ export const createUITransitionController = (
         const currentPhase = phaseSlot.firstElementChild;
         if (currentPhase) {
           oldPhaseSlot.innerHTML = "";
-          oldPhaseSlot.appendChild(currentPhase.cloneNode(true));
+          oldPhaseSlot.appendChild(currentPhase);
         }
-
         // Clear current phase slot
         phaseSlot.innerHTML = "";
-
         // Insert new content into content slot
         contentSlot.innerHTML = "";
         contentSlot.appendChild(newContentElement);
-        targetDimensions = getDimensions(newContentElement);
+        updateContentDimensions();
+        targetWidth = contentWidth;
+        targetHeight = contentHeight;
 
         // Mark as no longer in phase state
         isInPhaseState = false;
@@ -365,16 +374,26 @@ export const createUITransitionController = (
         // Insert new content into content slot
         contentSlot.innerHTML = "";
         contentSlot.appendChild(newContentElement);
-        targetDimensions = getDimensions(newContentElement);
-
+        updateContentDimensions();
+        targetWidth = contentWidth;
+        targetHeight = contentHeight;
         // Setup content cross-fade styling
         setupContentCrossFade();
       }
 
+      // Set current container dimensions (starting point)
+      container.style.width = `${width}px`;
+      container.style.height = `${height}px`;
+
       // Start container animation
       requestAnimationFrame(() => {
-        container.style.width = `${targetDimensions.width}px`;
-        container.style.height = `${targetDimensions.height}px`;
+        container.style.width = `${targetWidth}px`;
+        container.style.height = `${targetHeight}px`;
+        // for now we don't have a way to know the exact dimensions
+        // so width/height is immediatly updated to target
+        // later we'll have ability to know that
+        width = targetWidth;
+        height = targetHeight;
       });
 
       onStateChange({ isTransitioning: true });
@@ -407,17 +426,13 @@ export const createUITransitionController = (
 
     // Clear phase state
     isInPhaseState = false;
-    phaseStateDimensions = null;
+    contentWidth = undefined;
+    contentHeight = undefined;
+    targetWidth = undefined;
+    targetHeight = undefined;
 
     // Set CSS variable for transition duration
     container.style.setProperty("--x-transition-duration", `${duration}ms`);
-
-    // Measure current dimensions
-    const currentDimensions = getCurrentContentDimensions();
-
-    // Set starting point
-    container.style.width = `${currentDimensions.width}px`;
-    container.style.height = `${currentDimensions.height}px`;
 
     // Reset to initial content if it exists
     if (initialContent) {
@@ -427,6 +442,9 @@ export const createUITransitionController = (
       // No initial content, clear everything
       contentSlot.innerHTML = "";
     }
+
+    // Update and measure current dimensions
+    updateContentDimensions();
 
     // Clear all other slots
     phaseSlot.innerHTML = "";
@@ -448,15 +466,6 @@ export const createUITransitionController = (
 
     // Apply alignment
     updateAlignment();
-
-    // Measure new dimensions and animate
-    if (initialContent) {
-      const targetDimensions = getCurrentContentDimensions();
-      setTimeout(() => {
-        container.style.width = `${targetDimensions.width}px`;
-        container.style.height = `${targetDimensions.height}px`;
-      }, 50);
-    }
   };
 
   // Update configuration
@@ -485,17 +494,13 @@ export const createUITransitionController = (
     return isInPhaseState;
   };
 
-  const getPhaseStateDimensions = () => {
-    return phaseStateDimensions;
-  };
-
   // Initialize with visible content
   updateAlignment();
 
   // Set initial dimensions based on current content to ensure visibility
-  const initialDimensions = getCurrentContentDimensions();
-  container.style.width = `${initialDimensions.width}px`;
-  container.style.height = `${initialDimensions.height}px`;
+  updateContentDimensions();
+  width = contentWidth;
+  height = contentHeight;
 
   // Set CSS variable for duration
   container.style.setProperty("--x-transition-duration", `${duration}ms`);
@@ -509,7 +514,6 @@ export const createUITransitionController = (
     getIsTransitioning,
     getCurrentContent,
     getIsInPhaseState,
-    getPhaseStateDimensions,
     updateAlignment,
   };
 };
