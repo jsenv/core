@@ -1,10 +1,20 @@
 import { createTransition } from "./transition_playback.js";
 
 // transition that manages multiple transitions
-export const createGroupTransition = (transitionArray) => {
+export const createGroupTransition = (
+  transitionArray,
+  {
+    debugQuarterBreakpoints = false,
+    debugBreakpoints = debugQuarterBreakpoints ? [0.25, 0.75] : [],
+  } = {},
+) => {
   let finishedCount = 0;
   let duration = 0;
   let childCount = transitionArray.length;
+
+  // Set up debug breakpoint tracking
+  const breakPointSet = new Set(debugBreakpoints);
+
   for (const childTransition of transitionArray) {
     if (childTransition.duration > duration) {
       duration = childTransition.duration;
@@ -50,6 +60,18 @@ export const createGroupTransition = (transitionArray) => {
                 progressCount > 0 ? totalProgress / progressCount : 0;
               // Expose progress on the group transition for external access
               transition.progress = averageProgress;
+
+              // Check for debug breakpoints on group progress
+              for (const breakpoint of breakPointSet) {
+                if (averageProgress >= breakpoint) {
+                  breakPointSet.delete(breakpoint);
+                  console.log(
+                    `Group transition debug breakpoint hit at ${(breakpoint * 100).toFixed(1)}% progress`,
+                  );
+                  debugger;
+                }
+              }
+
               // Update this transition's value with average progress
               const isLast = averageProgress >= 1;
               transition.update(averageProgress, isLast);
@@ -131,10 +153,23 @@ export const createGroupTransitionController = () => {
      * @param {Object} options - Transition options
      * @param {Function} options.onChange - Called with (changeEntries, isLast) during transition
      * @param {Function} options.onFinish - Called when all transitions complete
+     * @param {Function} options.onCancel - Called when transitions are cancelled
+     * @param {number[]} [options.debugBreakpoints=[]] - Array of progress values (0-1) where debugger should trigger for the group
+     * @param {boolean} [options.debugQuarterBreakpoints=false] - If true and debugBreakpoints is empty, sets group breakpoints at 0.25 and 0.75
      * @returns {Object} Playback controller with play(), pause(), cancel(), etc.
      */
     animate: (transitions, options = {}) => {
-      const { onChange, onCancel, onFinish } = options;
+      const {
+        onChange,
+        onCancel,
+        onFinish,
+        debugBreakpoints,
+        debugQuarterBreakpoints,
+      } = options;
+      const groupTransitionOptions = {
+        debugBreakpoints,
+        debugQuarterBreakpoints,
+      };
 
       if (transitions.length === 0) {
         // No transitions to animate, call onFinish immediately
@@ -212,7 +247,10 @@ export const createGroupTransitionController = () => {
       }
 
       // Create group transition to coordinate new transitions only
-      const groupTransition = createGroupTransition(newTransitions);
+      const groupTransition = createGroupTransition(
+        newTransitions,
+        groupTransitionOptions,
+      );
 
       // Add unified update tracking for ALL transitions (new + updated)
       if (onChange) {
