@@ -19,7 +19,7 @@ const transitionStyleController = createStyleController("transition");
  * @param {string|Object} config.styleProperty - CSS property name or style object path
  * @param {number} [config.minDiff] - Minimum difference threshold for the transition
  * @param {Object} [config.options={}] - Additional options
- * @param {string} [config.options.transitionMode="js_animation"] - How to apply transition ("js_animation" or "inline_style")
+ * @param {string} [config.options.styleSynchronizer="js_animation"] - How to apply transition ("js_animation", "inline_style", or "--css-var-name")
  * @returns {Object} Timeline transition object
  */
 const createCSSPropertyTransition = ({
@@ -31,14 +31,19 @@ const createCSSPropertyTransition = ({
   minDiff,
   options = {},
 }) => {
-  const { setup, finish, transitionMode = "js_animation", ...rest } = options;
+  const {
+    setup,
+    finish,
+    styleSynchronizer = "js_animation",
+    ...rest
+  } = options;
 
   const lifecycle = {
     setup: () => {
       const teardown = setup?.();
       const from = getValue(element);
 
-      if (transitionMode === "inline_style") {
+      if (styleSynchronizer === "inline_style") {
         // Apply transition directly to element.style
         return {
           from,
@@ -68,6 +73,34 @@ const createCSSPropertyTransition = ({
                 element.style.transform = "";
               }
             }
+          },
+          teardown: () => {
+            teardown?.();
+          },
+        };
+      }
+
+      // Check if it's a CSS variable (starts with --)
+      if (
+        typeof styleSynchronizer === "string" &&
+        styleSynchronizer.startsWith("--")
+      ) {
+        // Apply transition via CSS custom property
+        return {
+          from,
+          update: ({ value }) => {
+            // Special handling for different CSS properties
+            if (styleProperty === "opacity") {
+              element.style.setProperty(styleSynchronizer, value);
+            } else {
+              element.style.setProperty(
+                styleSynchronizer,
+                typeof value === "number" ? `${value}px` : value,
+              );
+            }
+          },
+          restore: () => {
+            element.style.removeProperty(styleSynchronizer);
           },
           teardown: () => {
             teardown?.();
