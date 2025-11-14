@@ -127,6 +127,19 @@
         content: "Zone de visualisation 400×400";
       }
 
+      /* Ghost debug dans la viewport (position absolue pour ne pas impacter le layout) */
+      .debug-ghost {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        z-index: 10;
+        border-radius: 4px;
+        box-shadow: 0 0 0 3px #ff6b35;
+        opacity: 0.3;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+      }
+
       /* Structure de transition - NOUVELLE APPROCHE */
       .transition-container {
         position: relative;
@@ -363,18 +376,12 @@
         return clone;
       }
 
-      // Fonction de création du ghost pour debug visuel (externe)
+      // Fonction de création du ghost pour debug visuel (dans la viewport)
       function createDebugGhost(sourceElement) {
         const ghost = sourceElement.cloneNode(true);
 
-        // Styles pour le ghost de debug (externe, visible)
-        ghost.style.position = "absolute";
-        ghost.style.opacity = "0.2";
-        ghost.style.zIndex = "1000";
-        ghost.style.pointerEvents = "none";
-
-        // Bordure orange pour identifier le ghost debug
-        ghost.style.boxShadow = "0 0 0 3px #ff6b35";
+        // Utiliser la classe CSS dédiée
+        ghost.classList.add("debug-ghost");
 
         // S'assurer que les dimensions sont préservées
         const sourceRect = sourceElement.getBoundingClientRect();
@@ -428,16 +435,13 @@
 
           debugGhost = createDebugGhost(sourceRectangle);
 
-          // Positionner le ghost debug sur la zone de transition
-          const containerRect = container.getBoundingClientRect();
-          const computedStyle = window.getComputedStyle(container);
-          const borderLeftWidth = parseFloat(computedStyle.borderLeftWidth);
-          const borderTopWidth = parseFloat(computedStyle.borderTopWidth);
-          debugGhost.style.left = `${containerRect.left + borderLeftWidth}px`;
-          debugGhost.style.top = `${containerRect.top + borderTopWidth}px`;
-          document.body.appendChild(debugGhost);
+          // Placer le ghost debug dans la viewport (hérite du centrage)
+          const viewport = document.querySelector(".transition-viewport");
+          viewport.appendChild(debugGhost);
 
-          console.log("Ghost debug positionné sur la zone de transition");
+          console.log(
+            "Ghost debug placé dans la viewport (centré automatiquement)",
+          );
         }
 
         // 3. Remplacer le contenu actuel par le clone
