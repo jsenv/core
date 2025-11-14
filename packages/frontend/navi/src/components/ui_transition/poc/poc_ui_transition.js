@@ -83,6 +83,7 @@ import.meta.css = /* css */ `
     display: flex;
     width: 100%;
     height: 100%;
+    flex-shrink: 0; /* Prevent phase slots from adapting to container size */
     align-items: var(--x-align-items);
     justify-content: var(--x-justify-content);
   }
@@ -335,11 +336,6 @@ export const createUITransitionController = (
         container.style.height = `${targetHeight}px`;
         width = targetWidth;
         height = targetHeight;
-        setTimeout(() => {
-          if (phaseSlotId === "error") {
-            debugger;
-          }
-        }, 200);
       });
     }
     opacity: {
