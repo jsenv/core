@@ -151,7 +151,7 @@ export const createUITransitionController = (
   const getDimensions = (element) => {
     if (!element) {
       console.warn("Element not found for dimension measurement");
-      return { width: 50, height: 50 }; // fallback
+      return { width: undefined, height: undefined };
     }
     const rect = element.getBoundingClientRect();
     return {
@@ -247,7 +247,7 @@ export const createUITransitionController = (
 
     contentSlot.style.opacity = "0.3"; // Fade out content (keep slightly visible)
     phaseSlot.style.opacity = "1"; // Fade in phase
-  }; // Setup phase to content transition
+  };
   // Setup phase to content transition styling
   const setupPhaseToContentTransition = () => {
     // Set initial states
