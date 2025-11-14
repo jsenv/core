@@ -170,22 +170,15 @@ export const createUITransitionController = (
     return clone;
   };
 
-  // Setup cross-fade between old and new content
-  const setupContentCrossFade = (oldContentClone, newClone) => {
-    // Configure old content slot with saved clone
-    if (oldContentClone) {
-      oldContentSlot.innerHTML = "";
-      oldContentSlot.appendChild(oldContentClone);
-      // Set initial state: old content visible, NO TRANSITION YET
+  // Setup cross-fade styling between old and new content
+  const setupContentCrossFade = () => {
+    // Set initial state: old content visible, new content hidden
+    if (oldContentSlot.firstElementChild) {
       oldContentSlot.style.opacity = "1";
       oldContentSlot.style.transition = "none";
     }
-
-    // Configure content slot with new content
-    contentSlot.innerHTML = "";
-    contentSlot.appendChild(newClone);
-    // Set initial state: new content hidden, NO TRANSITION YET
     contentSlot.style.opacity = "0";
+    contentSlot.style.transition = "none";
 
     // Set transition state marker
     container.setAttribute("data-transitioning", "true");
@@ -197,14 +190,12 @@ export const createUITransitionController = (
     const reflow = contentSlot.offsetHeight;
     console.debug("Content transition reflow:", reflow);
 
-    if (oldContentClone) {
+    // Start transitions
+    if (oldContentSlot.firstElementChild) {
       oldContentSlot.style.transition = `opacity ${duration}ms ease`;
-    }
-    contentSlot.style.transition = `opacity ${duration}ms ease`;
-
-    if (oldContentClone) {
       oldContentSlot.style.opacity = "0"; // Fade out old
     }
+    contentSlot.style.transition = `opacity ${duration}ms ease`;
     contentSlot.style.opacity = "1"; // Fade in new
   };
 
@@ -223,12 +214,8 @@ export const createUITransitionController = (
     container.removeAttribute("data-transitioning");
   };
 
-  // Setup phase transition
-  const setupPhaseTransition = (phaseElement) => {
-    // For phase transition, fade out content and fade in phase
-    phaseSlot.innerHTML = "";
-    phaseSlot.appendChild(phaseElement);
-
+  // Setup phase transition styling
+  const setupPhaseTransition = () => {
     // Phase starts hidden
     phaseSlot.style.opacity = "0";
     phaseSlot.style.transition = "none";
@@ -254,23 +241,15 @@ export const createUITransitionController = (
     contentSlot.style.opacity = "0.3"; // Fade out content (keep slightly visible)
     phaseSlot.style.opacity = "1"; // Fade in phase
   }; // Setup phase to content transition
-  const setupPhaseToContentTransition = (oldPhaseClone, newContentClone) => {
-    // Move current phase to old phase slot for fade-out
-    if (oldPhaseClone) {
-      oldPhaseSlot.innerHTML = "";
-      oldPhaseSlot.appendChild(oldPhaseClone);
+  // Setup phase to content transition styling
+  const setupPhaseToContentTransition = () => {
+    // Set initial states
+    if (oldPhaseSlot.firstElementChild) {
       oldPhaseSlot.style.opacity = "1";
       oldPhaseSlot.style.transition = "none";
     }
-
-    // Put new content in content slot
-    contentSlot.innerHTML = "";
-    contentSlot.appendChild(newContentClone);
     contentSlot.style.opacity = "0";
     contentSlot.style.transition = "none";
-
-    // Clear current phase slot
-    phaseSlot.innerHTML = "";
 
     // Set transition state marker
     container.setAttribute("data-transitioning", "true");
@@ -281,7 +260,7 @@ export const createUITransitionController = (
     console.debug("Phase to content reflow:", reflow);
 
     // Start transitions
-    if (oldPhaseClone) {
+    if (oldPhaseSlot.firstElementChild) {
       oldPhaseSlot.style.transition = `opacity ${duration}ms ease`;
       oldPhaseSlot.style.opacity = "0"; // Fade out old phase
     }
@@ -343,40 +322,56 @@ export const createUITransitionController = (
           newContentElement.style.boxSizing = "border-box";
         }
 
-        // Phase transition - keep content in background
+        // Insert phase element into phase slot for measurement and transition
+        phaseSlot.innerHTML = "";
+        phaseSlot.appendChild(newContentElement.cloneNode(true));
+        targetDimensions = getDimensions(phaseSlot.firstElementChild);
+
+        // Mark as in phase state
         isInPhaseState = true;
-        setupPhaseTransition(newContentElement.cloneNode(true));
+
+        // Setup phase transition styling
+        setupPhaseTransition();
       } else if (isInPhaseState) {
         // Transitioning from phase to content
+        // Move current phase to old phase slot for fade-out
         const currentPhase = phaseSlot.firstElementChild;
-        const oldPhaseClone = currentPhase
-          ? currentPhase.cloneNode(true)
-          : null;
+        if (currentPhase) {
+          oldPhaseSlot.innerHTML = "";
+          oldPhaseSlot.appendChild(currentPhase.cloneNode(true));
+        }
 
-        // Insert into content slot temporarily to measure dimensions
-        const tempClone = cloneElementForTransition(newContentElement);
-        contentSlot.innerHTML = "";
-        contentSlot.appendChild(tempClone);
-        targetDimensions = getDimensions(tempClone);
+        // Clear current phase slot
+        phaseSlot.innerHTML = "";
 
+        // Insert new content into content slot
         const newContentClone = cloneElementForTransition(newContentElement);
-        setupPhaseToContentTransition(oldPhaseClone, newContentClone);
+        contentSlot.innerHTML = "";
+        contentSlot.appendChild(newContentClone);
+        targetDimensions = getDimensions(newContentClone);
+
+        // Mark as no longer in phase state
         isInPhaseState = false;
+
+        // Setup phase to content transition styling
+        setupPhaseToContentTransition();
       } else {
         // Regular content to content transition
+        // Move current content to old content slot for fade-out
         const currentContent = contentSlot.firstElementChild;
-        const oldContentClone = currentContent
-          ? currentContent.cloneNode(true)
-          : null;
+        if (currentContent) {
+          oldContentSlot.innerHTML = "";
+          oldContentSlot.appendChild(currentContent.cloneNode(true));
+        }
 
-        // Insert into content slot temporarily to measure dimensions
-        const tempClone = cloneElementForTransition(newContentElement);
-        contentSlot.innerHTML = "";
-        contentSlot.appendChild(tempClone);
-        targetDimensions = getDimensions(tempClone);
-
+        // Insert new content into content slot
         const newClone = cloneElementForTransition(newContentElement);
-        setupContentCrossFade(oldContentClone, newClone);
+        contentSlot.innerHTML = "";
+        contentSlot.appendChild(newClone);
+        targetDimensions = getDimensions(newClone);
+
+        // Setup content cross-fade styling
+        setupContentCrossFade();
       }
 
       // Start container animation
