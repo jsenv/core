@@ -88,11 +88,6 @@ import.meta.css = /* css */ `
     border-radius: 4px;
   }
 
-  .content.state-empty {
-    color: #666;
-    font-style: italic;
-  }
-
   /* Styles pour les clones - forcer certains styles pour éviter les conflits */
   .content-old > * {
     position: static !important;

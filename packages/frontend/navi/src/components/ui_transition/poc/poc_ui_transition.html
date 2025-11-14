@@ -232,6 +232,11 @@
         border-radius: 4px;
       }
 
+      .content.state-empty {
+        color: #666;
+        font-style: italic;
+      }
+
       .debug-info div {
         margin-bottom: 5px;
       }
@@ -266,8 +271,8 @@
     <div class="transition-zone">
       <h4>Zone de transition:</h4>
       <div class="transition-viewport">
-        <div class="transition-container" id="container">
-          <div class="content-wrapper" id="wrapper">
+        <div class="transition-container">
+          <div class="content-wrapper">
             <!-- Conteneur pour le nouveau contenu (cross-fade) - EN PREMIER -->
             <div class="content-transitioning content-new">
               <div class="content state-empty" id="content">
@@ -373,7 +378,7 @@
 
       // Initialize UITransition
       const uiTransition = initUITransition(
-        document.getElementById("container"),
+        document.querySelector(".transition-container"),
         {
           duration: savedPrefs.duration,
           alignX: savedPrefs.alignX,
@@ -434,7 +439,7 @@
 
       // Update debug info
       function updateDebugInfo() {
-        const container = document.getElementById("container");
+        const container = document.querySelector(".transition-container");
         const containerRect = container.getBoundingClientRect();
         const currentContent = uiTransition.getCurrentContent();
         const contentRect = currentContent
