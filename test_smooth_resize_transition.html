@@ -348,6 +348,8 @@
           end: "-100%",
         };
 
+        debugGhost.style.marginLeft = contentAlignX === "center" ? 0 : "8px"; // transition container border size
+        debugGhost.style.marginTop = contentAlignY === "center" ? 0 : "8px"; // transition container border size
         debugGhost.style.left = positionMap[contentAlignX] || "50%";
         debugGhost.style.top = positionMap[contentAlignY] || "50%";
         debugGhost.style.transform = `translate(${transformMap[contentAlignX] || "-50%"}, ${transformMap[contentAlignY] || "-50%"})`;
