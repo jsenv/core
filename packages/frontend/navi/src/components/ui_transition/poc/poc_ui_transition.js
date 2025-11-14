@@ -336,7 +336,7 @@ export const createUITransitionController = (
         width = targetWidth;
         height = targetHeight;
         setTimeout(() => {
-          if (phaseSlotId === "loading") {
+          if (phaseSlotId === "error") {
             debugger;
           }
         }, 200);

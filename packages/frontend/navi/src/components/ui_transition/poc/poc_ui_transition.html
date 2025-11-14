@@ -493,7 +493,10 @@
               duration: prefs.duration || 3000,
               alignX: prefs.alignX || "center",
               alignY: prefs.alignY || "center",
-              hasInitialContent: prefs.hasInitialContent !== undefined ? prefs.hasInitialContent : true,
+              hasInitialContent:
+                prefs.hasInitialContent !== undefined
+                  ? prefs.hasInitialContent
+                  : true,
             };
           }
         } catch (e) {
@@ -685,7 +688,7 @@
           resetButton.addEventListener("click", () => {
             if (!uiTransition.getIsTransitioning()) {
               const prefs = loadPreferences();
-              
+
               if (prefs.hasInitialContent) {
                 const emptyElement = document.createElement("div");
                 emptyElement.className = "content state-empty";
@@ -747,13 +750,35 @@
         }
 
         // Initial content checkbox
-        const initialContentCheckbox = document.getElementById("initial-content-checkbox");
+        const initialContentCheckbox = document.getElementById(
+          "initial-content-checkbox",
+        );
         if (initialContentCheckbox) {
           initialContentCheckbox.checked = savedPrefs.hasInitialContent;
+          
+          // Update reset button text based on checkbox state
+          const updateResetButtonText = () => {
+            const resetButton = document.getElementById("reset-button");
+            if (resetButton) {
+              resetButton.textContent = initialContentCheckbox.checked 
+                ? "Reset (état initial avec hint)" 
+                : "Reset (état vide)";
+            }
+          };
+          
+          // Initial text update
+          updateResetButtonText();
+          
           initialContentCheckbox.addEventListener("change", (e) => {
-            const prefs = { ...loadPreferences(), hasInitialContent: e.target.checked };
+            const prefs = {
+              ...loadPreferences(),
+              hasInitialContent: e.target.checked,
+            };
             savePreferences(prefs);
-            
+
+            // Update reset button text
+            updateResetButtonText();
+
             // Immediately apply the change
             if (!uiTransition.getIsTransitioning()) {
               if (e.target.checked) {
