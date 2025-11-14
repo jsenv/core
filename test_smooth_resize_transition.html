@@ -189,6 +189,7 @@
       }
 
       .content-wrapper {
+        position: relative; /* Pour permettre le positionnement absolu des éléments en transition */
         /* Wrapper qui applique l'alignement au contenu */
         display: flex;
         width: 100%;
@@ -196,6 +197,37 @@
         align-items: center;
         /* Alignement sera mis à jour dynamiquement par JavaScript */
         justify-content: center;
+      }
+
+      /* Éléments en transition avec cross-fade */
+      .content-transitioning {
+        position: absolute;
+        top: 0;
+        left: 0;
+        display: flex;
+        width: 100%;
+        height: 100%;
+        align-items: inherit;
+        justify-content: inherit;
+        transition: opacity 0ms ease; /* Durée sera définie dynamiquement */
+      }
+
+      .content-old {
+        z-index: 1;
+        opacity: 1;
+      }
+
+      .content-new {
+        z-index: 2;
+        opacity: 0;
+      }
+
+      .content-old.fading-out {
+        opacity: 0;
+      }
+
+      .content-new.fading-in {
+        opacity: 1;
       }
 
       .content {
@@ -598,7 +630,7 @@
         });
 
         // 1. Créer un clone AVANT de désactiver visuellement l'interface
-        const clone = cloneRectangleForTransition(sourceRectangle);
+        const newClone = cloneRectangleForTransition(sourceRectangle);
 
         // 2. Créer un ghost debug AVANT de désactiver visuellement (si VISUAL_DEBUG est activé)
         if (VISUAL_DEBUG) {
@@ -630,34 +662,69 @@
           console.log("Ghost debug placé et positionné dans la viewport");
         }
 
-        // 6. Remplacer le contenu actuel par le clone
+        // 6. Préparer le cross-fade
         const wrapper = document.getElementById("wrapper");
         if (!wrapper) {
           console.error("Wrapper non trouvé");
           return;
         }
-        wrapper.innerHTML = ""; // Vider le wrapper
-        wrapper.appendChild(clone); // Ajouter le clone
 
-        // 6bis. Appliquer immédiatement l'alignement au contenu
-        // Le contenu doit être à sa position finale même si le container change de taille
+        // 6a. Sauvegarder l'ancien contenu et le marquer comme "old"
+        const currentContent = wrapper.firstElementChild;
+        if (currentContent) {
+          currentContent.className += " content-transitioning content-old";
+          currentContent.style.transition = `opacity ${DURATION}ms ease`;
+        }
+
+        // 6b. Créer un conteneur pour le nouveau contenu
+        const newContentContainer = document.createElement("div");
+        newContentContainer.className = "content-transitioning content-new";
+        newContentContainer.style.transition = `opacity ${DURATION}ms ease`;
+        newContentContainer.appendChild(newClone);
+
+        // 6c. Ajouter le nouveau contenu au wrapper
+        wrapper.appendChild(newContentContainer);
+
+        // 6d. Appliquer immédiatement l'alignement au contenu
         updateAlignment();
 
         console.log(
-          "Clone placé dans la zone de transition avec alignement correct",
+          "Cross-fade préparé: ancien contenu prêt à s'estomper, nouveau contenu prêt à apparaître",
         );
 
         // 7. Forcer un reflow pour stabiliser les dimensions
-        const FORCE_REFLOW = clone.offsetHeight;
+        const FORCE_REFLOW = newClone.offsetHeight;
 
-        // 8. Démarrer l'animation du conteneur vers les dimensions cibles
+        // 8. Démarrer l'animation du conteneur et le cross-fade
         setTimeout(() => {
+          // Animation du container
           container.style.width = `${targetDimensions.width}px`;
           container.style.height = `${targetDimensions.height}px`;
+
+          // Cross-fade
+          if (currentContent) {
+            currentContent.classList.add("fading-out");
+          }
+          newContentContainer.classList.add("fading-in");
+
+          console.log("Animation du container et cross-fade démarrés");
         }, 50);
 
-        // 9. Nettoyer le ghost debug après la transition (si nécessaire)
+        // 9. Nettoyer après la transition
         setTimeout(() => {
+          // Supprimer l'ancien contenu
+          if (currentContent && currentContent.parentNode) {
+            currentContent.parentNode.removeChild(currentContent);
+            console.log("Ancien contenu supprimé après cross-fade");
+          }
+
+          // Nettoyer le nouveau contenu (retirer les classes de transition)
+          newContentContainer.className = "";
+          newContentContainer.style.transition = "";
+          newContentContainer.style.position = "static";
+          newContentContainer.style.opacity = "1";
+
+          // Nettoyer le ghost debug si nécessaire
           if (
             VISUAL_DEBUG &&
             !VISUAL_DEBUG_KEEP_GHOST &&
@@ -673,7 +740,7 @@
 
           isTransitioning = false;
           updateUIState(); // Réactiver l'interface visuellement
-          console.log("Transition terminée");
+          console.log("Transition et cross-fade terminés");
         }, DURATION + 100);
 
         // 10. Mettre à jour l'état
