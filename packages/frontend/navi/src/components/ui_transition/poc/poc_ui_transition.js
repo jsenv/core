@@ -83,48 +83,29 @@ import.meta.css = /* css */ `
   }
 `;
 
-export class UITransition {
-  constructor(container, options = {}) {
-    // Required elements
-    this.container = container;
-    const oldContentContainer = container.querySelector(
-      "#old-content-container",
+export function initUITransition(container, options = {}) {
+  // Required elements
+  const oldContentContainer = container.querySelector("#old-content-container");
+  const newContentContainer = container.querySelector("#new-content-container");
+  const wrapper = container.querySelector("#wrapper");
+
+  if (!container || !oldContentContainer || !newContentContainer || !wrapper) {
+    throw new Error(
+      "initUITransition requires container, oldContentContainer, newContentContainer, and wrapper elements",
     );
-    const newContentContainer = container.querySelector(
-      "#new-content-container",
-    );
-    const wrapper = container.querySelector("#wrapper");
-
-    this.oldContentContainer = oldContentContainer;
-    this.newContentContainer = newContentContainer;
-    this.wrapper = wrapper;
-
-    if (
-      !this.container ||
-      !this.oldContentContainer ||
-      !this.newContentContainer ||
-      !this.wrapper
-    ) {
-      throw new Error(
-        "UITransition requires container, oldContentContainer, newContentContainer, and wrapper elements",
-      );
-    }
-
-    // Configuration
-    this.duration = options.duration || 3000;
-    this.alignX = options.alignX || "center"; // "start", "center", "end"
-    this.alignY = options.alignY || "center"; // "start", "center", "end"
-    this.onStateChange = options.onStateChange || (() => {});
-
-    // Internal state
-    this.isTransitioning = false;
-
-    // Initialize
-    this.updateAlignment();
   }
 
+  // Configuration
+  let duration = options.duration || 3000;
+  let alignX = options.alignX || "center"; // "start", "center", "end"
+  let alignY = options.alignY || "center"; // "start", "center", "end"
+  const onStateChange = options.onStateChange || (() => {});
+
+  // Internal state
+  let isTransitioning = false;
+
   // Update alignment of content within the transition area
-  updateAlignment() {
+  function updateAlignment() {
     // Convert alignment values to CSS flexbox properties
     const alignMap = {
       start: "flex-start",
@@ -133,14 +114,14 @@ export class UITransition {
     };
 
     // Apply alignment to wrapper (for positioning content)
-    if (this.wrapper) {
-      this.wrapper.style.justifyContent = alignMap[this.alignX] || "center";
-      this.wrapper.style.alignItems = alignMap[this.alignY] || "center";
+    if (wrapper) {
+      wrapper.style.justifyContent = alignMap[alignX] || "center";
+      wrapper.style.alignItems = alignMap[alignY] || "center";
     }
   }
 
   // Get dimensions of an element
-  getDimensions(element) {
+  function getDimensions(element) {
     if (!element) {
       console.warn("Element not found for dimension measurement");
       return { width: 200, height: 100 }; // fallback
@@ -154,13 +135,13 @@ export class UITransition {
   }
 
   // Get dimensions of current content
-  getCurrentContentDimensions() {
-    const currentContent = this.oldContentContainer?.firstElementChild;
-    return this.getDimensions(currentContent);
+  function getCurrentContentDimensions() {
+    const currentContent = oldContentContainer?.firstElementChild;
+    return getDimensions(currentContent);
   }
 
   // Clone element for transition use
-  cloneElementForTransition(sourceElement) {
+  function cloneElementForTransition(sourceElement) {
     const clone = sourceElement.cloneNode(true);
 
     // Prepare clone for transition area
@@ -178,37 +159,89 @@ export class UITransition {
     return clone;
   }
 
+  // Setup cross-fade between old and new content
+  function setupCrossFade(oldContentClone, newClone) {
+    // Configure old container with saved clone
+    if (oldContentClone) {
+      oldContentContainer.innerHTML = "";
+      oldContentContainer.appendChild(oldContentClone);
+    }
+    oldContentContainer.style.display = "flex";
+    oldContentContainer.style.opacity = "1";
+    oldContentContainer.style.transition = `opacity ${duration}ms ease`;
+    oldContentContainer.className = "content-transitioning content-old";
+
+    // Configure new container
+    newContentContainer.innerHTML = "";
+    newContentContainer.appendChild(newClone);
+    newContentContainer.style.display = "flex";
+    newContentContainer.style.opacity = "0";
+    newContentContainer.style.transition = `opacity ${duration}ms ease`;
+    newContentContainer.className = "content-transitioning content-new";
+
+    // Apply alignment immediately
+    updateAlignment();
+  }
+
+  // Finalize cross-fade by swapping containers
+  function finalizeCrossFade() {
+    // Move new content to old container
+    const newContent = newContentContainer.firstElementChild;
+    if (newContent) {
+      // Reset new content styles
+      newContent.style.position = "static";
+      newContent.style.opacity = "1";
+
+      // Place it in old container
+      oldContentContainer.innerHTML = "";
+      oldContentContainer.appendChild(newContent);
+      oldContentContainer.style.display = "flex";
+      oldContentContainer.style.opacity = "1";
+      oldContentContainer.style.transition = "";
+      oldContentContainer.className = "content-transitioning content-old";
+      oldContentContainer.classList.remove("fading-out");
+    }
+
+    // Clear and hide new container
+    newContentContainer.innerHTML = "";
+    newContentContainer.style.display = "none";
+    newContentContainer.style.opacity = "0";
+    newContentContainer.style.transition = "";
+    newContentContainer.className = "content-transitioning content-new";
+    newContentContainer.classList.remove("fading-in");
+  }
+
   // Main transition method
-  transitionTo(newContentElement) {
-    if (this.isTransitioning) {
+  function transitionTo(newContentElement) {
+    if (isTransitioning) {
       console.log("Transition already in progress, ignoring");
       return Promise.resolve();
     }
 
     return new Promise((resolve) => {
-      this.isTransitioning = true;
-      this.onStateChange({ isTransitioning: true });
+      isTransitioning = true;
+      onStateChange({ isTransitioning: true });
 
       // Get dimensions
-      const currentDimensions = this.getCurrentContentDimensions();
-      const targetDimensions = this.getDimensions(newContentElement);
+      const currentDimensions = getCurrentContentDimensions();
+      const targetDimensions = getDimensions(newContentElement);
 
       // 1. Clone current content before any visual modifications
-      const currentContent = this.oldContentContainer.firstElementChild;
+      const currentContent = oldContentContainer.firstElementChild;
       const oldContentClone = currentContent
         ? currentContent.cloneNode(true)
         : null;
 
       // 2. Create new content clone
-      const newClone = this.cloneElementForTransition(newContentElement);
+      const newClone = cloneElementForTransition(newContentElement);
 
       // 3. Set current container dimensions (starting point)
-      this.container.style.transition = `width ${this.duration}ms ease, height ${this.duration}ms ease`;
-      this.container.style.width = `${currentDimensions.width}px`;
-      this.container.style.height = `${currentDimensions.height}px`;
+      container.style.transition = `width ${duration}ms ease, height ${duration}ms ease`;
+      container.style.width = `${currentDimensions.width}px`;
+      container.style.height = `${currentDimensions.height}px`;
 
       // 4. Prepare cross-fade with existing containers
-      this.setupCrossFade(oldContentClone, newClone);
+      setupCrossFade(oldContentClone, newClone);
 
       // 5. Force reflow to stabilize dimensions
       const forceReflow = newClone.offsetHeight;
@@ -217,130 +250,92 @@ export class UITransition {
       // 6. Start container animation and cross-fade
       setTimeout(() => {
         // Animate container dimensions
-        this.container.style.width = `${targetDimensions.width}px`;
-        this.container.style.height = `${targetDimensions.height}px`;
+        container.style.width = `${targetDimensions.width}px`;
+        container.style.height = `${targetDimensions.height}px`;
 
         // Start cross-fade
-        this.oldContentContainer.classList.add("fading-out");
-        this.newContentContainer.classList.add("fading-in");
+        oldContentContainer.classList.add("fading-out");
+        newContentContainer.classList.add("fading-in");
       }, 50);
 
       // 7. Clean up after transition
       setTimeout(() => {
-        this.finalizeCrossFade();
-        this.isTransitioning = false;
-        this.onStateChange({ isTransitioning: false });
+        finalizeCrossFade();
+        isTransitioning = false;
+        onStateChange({ isTransitioning: false });
         resolve();
-      }, this.duration + 100);
+      }, duration + 100);
     });
   }
 
-  // Setup cross-fade between old and new content
-  setupCrossFade(oldContentClone, newClone) {
-    // Configure old container with saved clone
-    if (oldContentClone) {
-      this.oldContentContainer.innerHTML = "";
-      this.oldContentContainer.appendChild(oldContentClone);
-    }
-    this.oldContentContainer.style.display = "flex";
-    this.oldContentContainer.style.opacity = "1";
-    this.oldContentContainer.style.transition = `opacity ${this.duration}ms ease`;
-    this.oldContentContainer.className = "content-transitioning content-old";
-
-    // Configure new container
-    this.newContentContainer.innerHTML = "";
-    this.newContentContainer.appendChild(newClone);
-    this.newContentContainer.style.display = "flex";
-    this.newContentContainer.style.opacity = "0";
-    this.newContentContainer.style.transition = `opacity ${this.duration}ms ease`;
-    this.newContentContainer.className = "content-transitioning content-new";
-
-    // Apply alignment immediately
-    this.updateAlignment();
-  }
-
-  // Finalize cross-fade by swapping containers
-  finalizeCrossFade() {
-    // Move new content to old container
-    const newContent = this.newContentContainer.firstElementChild;
-    if (newContent) {
-      // Reset new content styles
-      newContent.style.position = "static";
-      newContent.style.opacity = "1";
-
-      // Place it in old container
-      this.oldContentContainer.innerHTML = "";
-      this.oldContentContainer.appendChild(newContent);
-      this.oldContentContainer.style.display = "flex";
-      this.oldContentContainer.style.opacity = "1";
-      this.oldContentContainer.style.transition = "";
-      this.oldContentContainer.className = "content-transitioning content-old";
-      this.oldContentContainer.classList.remove("fading-out");
-    }
-
-    // Clear and hide new container
-    this.newContentContainer.innerHTML = "";
-    this.newContentContainer.style.display = "none";
-    this.newContentContainer.style.opacity = "0";
-    this.newContentContainer.style.transition = "";
-    this.newContentContainer.className = "content-transitioning content-new";
-    this.newContentContainer.classList.remove("fading-in");
-  }
-
   // Reset to empty state
-  resetToEmpty(emptyContent = null) {
-    if (this.isTransitioning) return;
+  function resetToEmpty(emptyContent = null) {
+    if (isTransitioning) return;
 
     // Measure current dimensions
-    const currentDimensions = this.getCurrentContentDimensions();
+    const currentDimensions = getCurrentContentDimensions();
 
     // Set starting point
-    this.container.style.transition = `width ${this.duration}ms ease, height ${this.duration}ms ease`;
-    this.container.style.width = `${currentDimensions.width}px`;
-    this.container.style.height = `${currentDimensions.height}px`;
+    container.style.transition = `width ${duration}ms ease, height ${duration}ms ease`;
+    container.style.width = `${currentDimensions.width}px`;
+    container.style.height = `${currentDimensions.height}px`;
 
     // Create empty content element if provided
     if (emptyContent) {
-      this.oldContentContainer.innerHTML = "";
-      this.oldContentContainer.appendChild(emptyContent);
-      this.oldContentContainer.style.display = "flex";
-      this.oldContentContainer.style.opacity = "1";
+      oldContentContainer.innerHTML = "";
+      oldContentContainer.appendChild(emptyContent);
+      oldContentContainer.style.display = "flex";
+      oldContentContainer.style.opacity = "1";
     }
 
     // Ensure new container is hidden
-    this.newContentContainer.style.display = "none";
-    this.newContentContainer.innerHTML = "";
+    newContentContainer.style.display = "none";
+    newContentContainer.innerHTML = "";
 
     // Apply alignment
-    this.updateAlignment();
+    updateAlignment();
 
     // Measure new dimensions and animate
     if (emptyContent) {
-      const targetDimensions = this.getCurrentContentDimensions();
+      const targetDimensions = getCurrentContentDimensions();
       setTimeout(() => {
-        this.container.style.width = `${targetDimensions.width}px`;
-        this.container.style.height = `${targetDimensions.height}px`;
+        container.style.width = `${targetDimensions.width}px`;
+        container.style.height = `${targetDimensions.height}px`;
       }, 50);
     }
   }
 
   // Update configuration
-  setDuration(duration) {
-    this.duration = duration;
+  function setDuration(newDuration) {
+    duration = newDuration;
   }
 
-  setAlignment(alignX, alignY) {
-    this.alignX = alignX;
-    this.alignY = alignY;
-    this.updateAlignment();
+  function setAlignment(newAlignX, newAlignY) {
+    alignX = newAlignX;
+    alignY = newAlignY;
+    updateAlignment();
   }
 
   // Getters
-  getIsTransitioning() {
-    return this.isTransitioning;
+  function getIsTransitioning() {
+    return isTransitioning;
   }
 
-  getCurrentContent() {
-    return this.oldContentContainer?.firstElementChild || null;
+  function getCurrentContent() {
+    return oldContentContainer?.firstElementChild || null;
   }
+
+  // Initialize
+  updateAlignment();
+
+  // Return public API
+  return {
+    transitionTo,
+    resetToEmpty,
+    setDuration,
+    setAlignment,
+    getIsTransitioning,
+    getCurrentContent,
+    updateAlignment,
+  };
 }
