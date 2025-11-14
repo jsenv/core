@@ -54,6 +54,46 @@
         pointer-events: none;
       }
 
+      /* Contrôles dans le DOM de base */
+      .controls-container {
+        display: flex;
+        margin-top: 15px;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .duration-control {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #333;
+        font-size: 14px;
+      }
+
+      .duration-control input[type="range"] {
+        width: 120px;
+      }
+
+      .duration-control span:last-child {
+        min-width: 50px;
+        font-weight: bold;
+      }
+
+      .alignment-controls {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #333;
+        font-size: 14px;
+      }
+
+      .align-control {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+
       /* Rectangles visibles pour cliquer */
       .rectangles-container {
         display: flex;
@@ -322,6 +362,44 @@
           </div>
         </div>
       </div>
+
+      <!-- Contrôles -->
+      <div class="controls-container">
+        <button id="reset-button">Vider la zone</button>
+
+        <label class="duration-control">
+          <span>Durée:</span>
+          <input
+            type="range"
+            id="duration-slider"
+            min="500"
+            max="5000"
+            step="100"
+            value="3000"
+          />
+          <span id="duration-value">3000ms</span>
+        </label>
+
+        <div class="alignment-controls">
+          <label class="align-control">
+            <span>X:</span>
+            <select id="align-x-select">
+              <option value="start">start</option>
+              <option value="center">center</option>
+              <option value="end">end</option>
+            </select>
+          </label>
+
+          <label class="align-control">
+            <span>Y:</span>
+            <select id="align-y-select">
+              <option value="start">start</option>
+              <option value="center">center</option>
+              <option value="end">end</option>
+            </select>
+          </label>
+        </div>
+      </div>
     </div>
 
     <div class="debug-info" id="debug">
@@ -419,7 +497,7 @@
       function updateUIState() {
         const rectangles = document.querySelectorAll(".rectangle");
         const controls = document.querySelector(".controls-container");
-        const resetButton = document.querySelector("button");
+        const resetButton = document.getElementById("reset-button");
 
         if (isTransitioning) {
           // Désactiver visuellement les rectangles
@@ -844,148 +922,73 @@
         });
       }
 
-      // Contrôles (bouton de reset + durée + alignement)
-      function addControls() {
-        const controlsContainer = document.createElement("div");
-        controlsContainer.className = "controls-container";
-        controlsContainer.style.display = "flex";
-        controlsContainer.style.flexWrap = "wrap";
-        controlsContainer.style.alignItems = "center";
-        controlsContainer.style.gap = "15px";
-        controlsContainer.style.marginTop = "15px";
+      // Connexion des contrôles existants dans le DOM
+      function setupControls() {
+        // Connexion du bouton de reset
+        const resetButton = document.getElementById("reset-button");
+        if (resetButton) {
+          resetButton.addEventListener("click", resetToEmpty);
+        }
 
-        // Bouton de reset
-        const resetButton = document.createElement("button");
-        resetButton.textContent = "Vider la zone";
-        resetButton.addEventListener("click", resetToEmpty);
+        // Connexion du contrôle de durée
+        setupDurationControl();
 
-        // Contrôle de durée
-        const durationControl = createDurationControl();
-
-        // Contrôles d'alignement
-        const alignmentControls = createAlignmentControls();
-
-        controlsContainer.appendChild(resetButton);
-        controlsContainer.appendChild(durationControl);
-        controlsContainer.appendChild(alignmentControls);
-
-        const transitionZone = document.querySelector(".transition-zone");
-        transitionZone.appendChild(controlsContainer);
+        // Connexion des contrôles d'alignement
+        setupAlignmentControls();
       }
 
-      // Fonction pour créer le contrôle de durée
-      function createDurationControl() {
-        const durationLabel = document.createElement("label");
-        durationLabel.style.display = "flex";
-        durationLabel.style.alignItems = "center";
-        durationLabel.style.gap = "8px";
-        durationLabel.style.fontSize = "14px";
-        durationLabel.style.color = "#333";
+      // Fonction pour connecter le contrôle de durée existant
+      function setupDurationControl() {
+        const durationSlider = document.getElementById("duration-slider");
+        const durationValue = document.getElementById("duration-value");
 
-        const durationText = document.createElement("span");
-        durationText.textContent = "Durée:";
-
-        const durationSlider = document.createElement("input");
-        durationSlider.type = "range";
-        durationSlider.min = "500";
-        durationSlider.max = "5000";
-        durationSlider.value = DURATION;
-        durationSlider.step = "100";
-        durationSlider.style.width = "120px";
-
-        const durationValue = document.createElement("span");
-        durationValue.textContent = `${DURATION}ms`;
-        durationValue.style.fontWeight = "bold";
-        durationValue.style.minWidth = "50px";
-
-        // Mise à jour de la durée
-        durationSlider.addEventListener("input", (e) => {
-          DURATION = parseInt(e.target.value);
+        if (durationSlider && durationValue) {
+          // Initialiser avec la valeur chargée depuis localStorage
+          durationSlider.value = DURATION;
           durationValue.textContent = `${DURATION}ms`;
-          savePreferences(); // Sauvegarder la durée
-          console.log(
-            `Durée de transition mise à jour et sauvegardée: ${DURATION}ms`,
-          );
-        });
 
-        durationLabel.appendChild(durationText);
-        durationLabel.appendChild(durationSlider);
-        durationLabel.appendChild(durationValue);
-
-        return durationLabel;
+          // Mise à jour de la durée
+          durationSlider.addEventListener("input", (e) => {
+            DURATION = parseInt(e.target.value);
+            durationValue.textContent = `${DURATION}ms`;
+            savePreferences(); // Sauvegarder la durée
+            console.log(
+              `Durée de transition mise à jour et sauvegardée: ${DURATION}ms`,
+            );
+          });
+        }
       }
 
-      // Fonction pour créer les contrôles d'alignement
-      function createAlignmentControls() {
-        const alignmentContainer = document.createElement("div");
-        alignmentContainer.style.display = "flex";
-        alignmentContainer.style.gap = "10px";
-        alignmentContainer.style.alignItems = "center";
-        alignmentContainer.style.fontSize = "14px";
-        alignmentContainer.style.color = "#333";
+      // Fonction pour connecter les contrôles d'alignement existants
+      function setupAlignmentControls() {
+        const alignXSelect = document.getElementById("align-x-select");
+        const alignYSelect = document.getElementById("align-y-select");
 
-        // Contrôle Align X
-        const alignXLabel = document.createElement("label");
-        alignXLabel.style.display = "flex";
-        alignXLabel.style.alignItems = "center";
-        alignXLabel.style.gap = "5px";
+        if (alignXSelect) {
+          // Initialiser avec la valeur chargée depuis localStorage
+          alignXSelect.value = contentAlignX;
 
-        const alignXText = document.createElement("span");
-        alignXText.textContent = "X:";
+          alignXSelect.addEventListener("change", (e) => {
+            contentAlignX = e.target.value;
+            updateAlignment(); // updateAlignment() sauvegarde automatiquement
+          });
+        }
 
-        const alignXSelect = document.createElement("select");
-        ["start", "center", "end"].forEach((value) => {
-          const option = document.createElement("option");
-          option.value = value;
-          option.textContent = value;
-          option.selected = value === contentAlignX;
-          alignXSelect.appendChild(option);
-        });
+        if (alignYSelect) {
+          // Initialiser avec la valeur chargée depuis localStorage
+          alignYSelect.value = contentAlignY;
 
-        alignXSelect.addEventListener("change", (e) => {
-          contentAlignX = e.target.value;
-          updateAlignment(); // updateAlignment() sauvegarde automatiquement
-        });
-
-        alignXLabel.appendChild(alignXText);
-        alignXLabel.appendChild(alignXSelect);
-
-        // Contrôle Align Y
-        const alignYLabel = document.createElement("label");
-        alignYLabel.style.display = "flex";
-        alignYLabel.style.alignItems = "center";
-        alignYLabel.style.gap = "5px";
-
-        const alignYText = document.createElement("span");
-        alignYText.textContent = "Y:";
-
-        const alignYSelect = document.createElement("select");
-        ["start", "center", "end"].forEach((value) => {
-          const option = document.createElement("option");
-          option.value = value;
-          option.textContent = value;
-          option.selected = value === contentAlignY;
-          alignYSelect.appendChild(option);
-        });
-
-        alignYSelect.addEventListener("change", (e) => {
-          contentAlignY = e.target.value;
-          updateAlignment(); // updateAlignment() sauvegarde automatiquement
-        });
-
-        alignYLabel.appendChild(alignYText);
-        alignYLabel.appendChild(alignYSelect);
-
-        alignmentContainer.appendChild(alignXLabel);
-        alignmentContainer.appendChild(alignYLabel);
-
-        return alignmentContainer;
+          alignYSelect.addEventListener("change", (e) => {
+            contentAlignY = e.target.value;
+            updateAlignment(); // updateAlignment() sauvegarde automatiquement
+          });
+        }
       }
 
       // Initialisation
       function init() {
         setupRectangleClickHandlers();
-        addControls();
+        setupControls();
         updateAlignment(); // Appliquer l'alignement initial
         updateUIState(); // Appliquer l'état initial de l'UI
         updateDebugInfo();
