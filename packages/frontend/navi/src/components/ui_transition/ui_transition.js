@@ -49,7 +49,7 @@ import {
 } from "@jsenv/dom";
 
 import.meta.css = /* css */ `
-  .ui_transition[data-transition-overflow] {
+  .ui_transition[data-transition-running] {
     /* When transition are running we need to put overflow: hidden */
     /* Either because the transition slides */
     /* Or when size transition are disabled because we need to immediatly crop old content when it's bigger than new content */
