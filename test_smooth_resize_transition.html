@@ -101,6 +101,32 @@
         color: #333;
       }
 
+      /* Boîte de visualisation pour centrer la zone de transition */
+      .transition-viewport {
+        position: relative;
+        display: flex;
+        width: 400px;
+        height: 400px;
+        margin: 20px 0;
+        align-items: center;
+        justify-content: center;
+        background: #fafafa;
+        border: 3px solid #007acc;
+        border-radius: 8px;
+      }
+
+      .transition-viewport::before {
+        position: absolute;
+        top: -8px;
+        left: 10px;
+        padding: 0 8px;
+        color: #007acc;
+        font-weight: bold;
+        font-size: 12px;
+        background: #fafafa;
+        content: "Zone de visualisation 400×400";
+      }
+
       /* Structure de transition - NOUVELLE APPROCHE */
       .transition-container {
         position: relative;
@@ -211,10 +237,12 @@
     <!-- Zone de transition -->
     <div class="transition-zone">
       <h4>Zone de transition:</h4>
-      <div class="transition-container" id="container">
-        <div class="content-wrapper" id="wrapper">
-          <div class="content state-empty" id="content">
-            <p>Cliquez sur un rectangle ci-dessus pour voir la transition</p>
+      <div class="transition-viewport">
+        <div class="transition-container" id="container">
+          <div class="content-wrapper" id="wrapper">
+            <div class="content state-empty" id="content">
+              <p>Cliquez sur un rectangle ci-dessus pour voir la transition</p>
+            </div>
           </div>
         </div>
       </div>
