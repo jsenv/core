@@ -5,16 +5,7 @@ import { createTransition } from "./transition_playback.js";
  * Creates an interface that manages ongoing transitions
  * and handles target updates automatically
  */
-export const createGroupTransitionController = ({
-  debugBreakpoints,
-  debugQuarterBreakpoints,
-  lifecycle,
-} = {}) => {
-  const groupTransitionOptions = {
-    debugBreakpoints,
-    debugQuarterBreakpoints,
-    lifecycle,
-  };
+export const createGroupTransitionController = (groupTransitionOptions) => {
   // Track all active transitions for cancellation and matching
   const activeTransitions = new Set();
 
