@@ -26,15 +26,13 @@ const transitionStyleController = createStyleController("transition");
  * @returns {Object} Timeline transition object
  */
 const createCSSPropertyTransition = ({
-  constructor,
   element,
-  to,
   getValue,
   styleProperty,
-  minDiff,
-  options = {},
+  styleSynchronizer = "js_animation",
+  lifecycle,
+  ...options
 }) => {
-  const { styleSynchronizer = "js_animation", ...rest } = options;
   if (typeof styleSynchronizer !== "string") {
     throw new Error("styleSynchronizer must be a string");
   }
@@ -121,11 +119,8 @@ const createCSSPropertyTransition = ({
 
   return createTimelineTransition({
     duration: 300,
-    ...rest,
-    constructor,
+    ...options,
     key: element,
-    to,
-    minDiff,
     isVisual: true,
     lifecycle: combineTwoLifecycle(
       {
@@ -139,53 +134,53 @@ const createCSSPropertyTransition = ({
           };
         },
       },
-      options.lifecycle,
+      lifecycle,
     ),
   });
 };
 
 export const createHeightTransition = (element, to, options = {}) => {
   return createCSSPropertyTransition({
+    ...options,
     constructor: createHeightTransition,
     element,
-    to,
     getValue: getHeight,
     styleProperty: "height",
+    to,
     minDiff: 10,
-    options,
   });
 };
 export const createWidthTransition = (element, to, options = {}) => {
   return createCSSPropertyTransition({
+    ...options,
     constructor: createWidthTransition,
     element,
-    to,
     getValue: getWidth,
     styleProperty: "width",
+    to,
     minDiff: 10,
-    options,
   });
 };
 export const createOpacityTransition = (element, to, options = {}) => {
   return createCSSPropertyTransition({
+    ...options,
     constructor: createOpacityTransition,
     element,
-    to,
     getValue: getOpacity,
     styleProperty: "opacity",
+    to,
     minDiff: 0.1,
-    options,
   });
 };
 export const createTranslateXTransition = (element, to, options = {}) => {
   return createCSSPropertyTransition({
+    ...options,
     constructor: createTranslateXTransition,
     element,
-    to,
     getValue: getTranslateX,
     styleProperty: "transform.translateX",
+    to,
     minDiff: 10,
-    options,
   });
 };
 
