@@ -69,6 +69,54 @@ export const combineTwoLifecycle = (lifecycleA, lifecycleB) => {
   };
 };
 
+/**
+ * Lifecycle object for managing transition behavior and DOM updates.
+ *
+ * The lifecycle pattern provides hooks for different transition phases:
+ *
+ * @typedef {Object} TransitionLifecycle
+ * @property {Function} [setup] - Called when transition starts. Should return an object with:
+ *   @property {number} [from] - Override the transition's from value if transition.from is undefined
+ *   @property {Function} [update] - Called on each frame with (transition) - handles DOM updates
+ *   @property {Function} [restore] - Called when transition is cancelled - should reset DOM to original state
+ *   @property {Function} [teardown] - Called when transition finishes or is cancelled - cleanup resources
+ * @property {Function} [pause] - Called when transition is paused. Should return a resume function
+ * @property {Function} [cancel] - Called when transition is cancelled
+ * @property {Function} [finish] - Called when transition finishes naturally
+ * @property {Function} [reverse] - Called when transition direction is reversed
+ * @property {Function} [updateTarget] - Called when transition target is updated mid-flight
+ *
+ * @example
+ * // Basic DOM animation lifecycle
+ * const lifecycle = {
+ *   setup: (transition) => {
+ *     const element = document.getElementById('myElement');
+ *     const originalWidth = element.style.width;
+ *
+ *     return {
+ *       from: element.offsetWidth, // Override from value with current DOM state
+ *       update: (transition) => {
+ *         // Apply transition value to DOM on each frame
+ *         element.style.width = `${transition.value}px`;
+ *       },
+ *       restore: () => {
+ *         // Reset DOM when cancelled
+ *         element.style.width = originalWidth;
+ *       },
+ *       teardown: () => {
+ *         // Cleanup when done (remove temp styles, event listeners, etc.)
+ *         element.style.width = '';
+ *       }
+ *     };
+ *   },
+ *   pause: (transition) => {
+ *     // Handle pause logic if needed
+ *     return () => {
+ *       // Resume logic
+ *     };
+ *   }
+ * };
+ */
 export const createTransition = ({
   constructor,
   key,
@@ -82,7 +130,7 @@ export const createTransition = ({
   debugQuarterBreakpoints = false, // Shorthand for debugBreakpoints: [0.25, 0.75]
   debugBreakpoints = debugQuarterBreakpoints ? [0.25, 0.75] : [], // Array of progress values (0-1) where debugger should trigger
   ...rest
-}) => {
+} = {}) => {
   const [updateCallbacks, executeUpdateCallbacks] = createCallbackController();
   const [cancelCallbacks, executeCancelCallbacks] = createCallbackController();
   const [finishCallbacks, executeFinishCallbacks] = createCallbackController();
