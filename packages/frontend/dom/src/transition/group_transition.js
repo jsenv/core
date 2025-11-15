@@ -141,7 +141,14 @@ export const createGroupTransition = (
  * Creates an interface that manages ongoing transitions
  * and handles target updates automatically
  */
-export const createGroupTransitionController = () => {
+export const createGroupTransitionController = ({
+  debugBreakpoints,
+  debugQuarterBreakpoints,
+} = {}) => {
+  const groupTransitionOptions = {
+    debugBreakpoints,
+    debugQuarterBreakpoints,
+  };
   // Track all active transitions for cancellation and matching
   const activeTransitions = new Set();
 
@@ -159,17 +166,7 @@ export const createGroupTransitionController = () => {
      * @returns {Object} Playback controller with play(), pause(), cancel(), etc.
      */
     animate: (transitions, options = {}) => {
-      const {
-        onChange,
-        onCancel,
-        onFinish,
-        debugBreakpoints,
-        debugQuarterBreakpoints,
-      } = options;
-      const groupTransitionOptions = {
-        debugBreakpoints,
-        debugQuarterBreakpoints,
-      };
+      const { onChange, onCancel, onFinish } = options;
 
       if (transitions.length === 0) {
         // No transitions to animate, call onFinish immediately

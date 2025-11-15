@@ -38,98 +38,102 @@ const createCSSPropertyTransition = ({
     ...rest
   } = options;
 
+  // Check if it's a CSS variable (starts with --)
+  if (typeof styleSynchronizer !== "string") {
+    throw new Error("styleSynchronizer must be a string");
+  }
+
+  const setupSynchronizer = () => {
+    if (styleSynchronizer === "inline_style") {
+      return {
+        update: ({ value }) => {
+          if (typeof styleProperty === "string") {
+            // Special handling for different CSS properties
+            if (styleProperty === "opacity") {
+              element.style[styleProperty] = value;
+            } else {
+              element.style[styleProperty] =
+                typeof value === "number" ? `${value}px` : value;
+            }
+          } else {
+            // Handle complex properties like transform.translateX
+            const keys = styleProperty.split(".");
+            if (keys[0] === "transform") {
+              element.style.transform = `${keys[1]}(${value}px)`;
+            }
+          }
+        },
+        restore: () => {
+          if (typeof styleProperty === "string") {
+            element.style[styleProperty] = "";
+          } else {
+            const keys = styleProperty.split(".");
+            if (keys[0] === "transform") {
+              element.style.transform = "";
+            }
+          }
+        },
+      };
+    }
+    if (styleSynchronizer.startsWith("--")) {
+      return {
+        update: ({ value }) => {
+          // Special handling for different CSS properties
+          if (styleProperty === "opacity") {
+            element.style.setProperty(styleSynchronizer, value);
+          } else {
+            element.style.setProperty(
+              styleSynchronizer,
+              typeof value === "number" ? `${value}px` : value,
+            );
+          }
+        },
+        restore: () => {
+          element.style.removeProperty(styleSynchronizer);
+        },
+      };
+    }
+    if (styleSynchronizer.startsWith("[")) {
+      const attributeName = styleSynchronizer.slice(1, -1);
+      return {
+        update: ({ value }) => {
+          element.setAttribute(attributeName, value);
+        },
+        restore: () => {
+          element.removeAttribute(attributeName);
+        },
+      };
+    }
+    return {
+      update: ({ value }) => {
+        if (typeof styleProperty === "string") {
+          transitionStyleController.set(element, { [styleProperty]: value });
+        } else {
+          // Handle nested properties like transform.translateX
+          const styleObj = {};
+          const keys = styleProperty.split(".");
+          if (keys.length === 2) {
+            styleObj[keys[0]] = { [keys[1]]: value };
+          }
+          transitionStyleController.set(element, styleObj);
+        }
+      },
+      restore: () => {
+        transitionStyleController.delete(element, styleProperty);
+      },
+    };
+  };
+
   const lifecycle = {
     setup: () => {
       const teardown = setup?.();
       const from = getValue(element);
-
-      if (styleSynchronizer === "inline_style") {
-        // Apply transition directly to element.style
-        return {
-          from,
-          update: ({ value }) => {
-            if (typeof styleProperty === "string") {
-              // Special handling for different CSS properties
-              if (styleProperty === "opacity") {
-                element.style[styleProperty] = value;
-              } else {
-                element.style[styleProperty] =
-                  typeof value === "number" ? `${value}px` : value;
-              }
-            } else {
-              // Handle complex properties like transform.translateX
-              const keys = styleProperty.split(".");
-              if (keys[0] === "transform") {
-                element.style.transform = `${keys[1]}(${value}px)`;
-              }
-            }
-          },
-          restore: () => {
-            if (typeof styleProperty === "string") {
-              element.style[styleProperty] = "";
-            } else {
-              const keys = styleProperty.split(".");
-              if (keys[0] === "transform") {
-                element.style.transform = "";
-              }
-            }
-          },
-          teardown: () => {
-            teardown?.();
-          },
-        };
-      }
-
-      // Check if it's a CSS variable (starts with --)
-      if (
-        typeof styleSynchronizer === "string" &&
-        styleSynchronizer.startsWith("--")
-      ) {
-        // Apply transition via CSS custom property
-        return {
-          from,
-          update: ({ value }) => {
-            // Special handling for different CSS properties
-            if (styleProperty === "opacity") {
-              element.style.setProperty(styleSynchronizer, value);
-            } else {
-              element.style.setProperty(
-                styleSynchronizer,
-                typeof value === "number" ? `${value}px` : value,
-              );
-            }
-          },
-          restore: () => {
-            element.style.removeProperty(styleSynchronizer);
-          },
-          teardown: () => {
-            teardown?.();
-          },
-        };
-      }
-
-      // Default: use style controller (js_animation)
+      const synchronizer = setupSynchronizer();
       return {
         from,
-        update: ({ value }) => {
-          if (typeof styleProperty === "string") {
-            transitionStyleController.set(element, { [styleProperty]: value });
-          } else {
-            // Handle nested properties like transform.translateX
-            const styleObj = {};
-            const keys = styleProperty.split(".");
-            if (keys.length === 2) {
-              styleObj[keys[0]] = { [keys[1]]: value };
-            }
-            transitionStyleController.set(element, styleObj);
-          }
-        },
-        restore: () => {
-          transitionStyleController.delete(element, styleProperty);
-        },
-        teardown: () => {
-          teardown?.();
-        },
+        update: synchronizer.update,
+        restore: synchronizer.restore,
+        teardown,
       };
     },
     finish,
