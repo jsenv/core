@@ -394,19 +394,22 @@ export const createTimelineTransition = ({
   const timeChangeCallback = () => {
     const timelineCurrentTime = getTimelineCurrentTime();
 
-    // Detect frozen code (debugger, long pause) early
-    const timeSinceLastUpdate =
-      lastUpdateTime === -1
-        ? timelineCurrentTime - transition.baseTime
-        : timelineCurrentTime - lastUpdateTime;
-
-    if (timeSinceLastUpdate > 2000) {
-      // Code was frozen for more than 2s (e.g. debugger)
-      // Adjust baseTime to compensate for the freeze and update timing for next frame
-      const freezeDuration = timeSinceLastUpdate - transition.frameDuration;
-      transition.baseTime += freezeDuration;
-      lastUpdateTime = timelineCurrentTime;
-      return;
+    detect_freeze: {
+      const SUSPICIOUS_FRAME_DURATION_MS = 4000;
+      // Detect frozen code (debugger, long pause) early
+      // (not needed that much since introduce of debugBreakpoints option)
+      const timeSinceLastUpdate =
+        lastUpdateTime === -1
+          ? timelineCurrentTime - transition.baseTime
+          : timelineCurrentTime - lastUpdateTime;
+      if (timeSinceLastUpdate > SUSPICIOUS_FRAME_DURATION_MS) {
+        // Code was frozen for more than SUSPICIOUS_FRAME_DURATION (e.g. debugger)
+        // Adjust baseTime to compensate for the freeze and update timing for next frame
+        const freezeDuration = timeSinceLastUpdate - transition.frameDuration;
+        transition.baseTime += freezeDuration;
+        lastUpdateTime = timelineCurrentTime;
+        return;
+      }
     }
 
     const msElapsedSinceStart = timelineCurrentTime - transition.baseTime;
@@ -478,7 +481,14 @@ export const createTimelineTransition = ({
         onTimelineNeeded();
         const unsubscribeDebugger = subscribeDebugger(() => {
           transition.pause();
-          return transition.play;
+          return () => {
+            // if we play() right after debugger
+            // document.timeline.currentTime is still the same
+            // and we can't adjust to the time ellapsed in the debugger session
+            // we need to wait for the next js loop to have an updated
+            // document.timeline.currentTime that takes into account the time spent in the debugger
+            requestAnimationFrame(transition.play);
+          };
         });
         return {
           teardown: () => {
