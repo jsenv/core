@@ -13,11 +13,30 @@
  * </div>
  *
  * Architecture principles:
- * .container: Provides smooth dimensional transitions with overflow hidden
- *   .active-layer: Contains the active ui
- *     .active-slot: Always contains the target ui (what we want to see at the end)
- *     .active-slot-old: Contains content-phase of the active content
- *   .previous-layer: Used for content to content transitions (clone of active layer)
+ *
+ * .container:
+ * Dimension of this container are transitioning from current dimensions to new dimensions
+ *
+ * .active-layer:
+ * Contains the active ui. Wraps both active-slot and active-slot-old so that they can be
+ * manipulated as a single unit. For instance we can translate
+ *
+ * .active-slot:
+ * Contains what we want to see (active content or active content-phase)
+ * This component is meant only to receive fade-in transitions.
+ *
+ * .active-slot-old:
+ * When content-phase becomes obsolete as we transit to something else (an other content-phase or content)
+ * We will put the content-phase here and perform a fade-out on this element.
+ *
+ * .previous-layer:
+ * Used for content to content transitions (clone of active layer)
+ *
+ *
+ * Notes:
+ *
+ * .active-slot and ..active-slot-old have their dimensions forced during transition to their natural dimensions
+ * This way their content is not distorted during the transition.
  */
 
 import {
