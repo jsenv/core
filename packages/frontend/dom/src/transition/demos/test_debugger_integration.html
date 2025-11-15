@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Timeline Transition Debugger Integration Test</title>
+    <style>
+      body {
+        margin: 20px;
+        font-family: Arial, sans-serif;
+        background: #f5f5f5;
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .test-element {
+        width: 50px;
+        height: 50px;
+        margin: 20px 0;
+        background: #007acc;
+        border-radius: 4px;
+        transition: none; /* Disable CSS transitions */
+      }
+
+      .controls {
+        display: flex;
+        margin: 20px 0;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      button {
+        padding: 8px 16px;
+        color: white;
+        font-size: 14px;
+        background: #007acc;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: #005a99;
+      }
+
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .status {
+        margin: 10px 0;
+        padding: 10px;
+        background: #f0f8ff;
+        border-left: 4px solid #007acc;
+        border-radius: 4px;
+      }
+
+      .log {
+        max-height: 200px;
+        margin: 10px 0;
+        padding: 10px;
+        font-size: 12px;
+        font-family: monospace;
+        background: #f8f8f8;
+        border-radius: 4px;
+        overflow-y: auto;
+      }
+
+      .debug-controls {
+        margin: 20px 0;
+        padding: 15px;
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 4px;
+      }
+
+      .debug-controls h3 {
+        margin-top: 0;
+        color: #856404;
+      }
+
+      .progress-bar {
+        width: 100%;
+        height: 20px;
+        margin: 10px 0;
+        background: #e0e0e0;
+        border-radius: 10px;
+        overflow: hidden;
+      }
+
+      .progress-fill {
+        width: 0%;
+        height: 100%;
+        background: linear-gradient(90deg, #4caf50, #8bc34a);
+        transition: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Timeline Transition Debugger Integration Test</h1>
+
+      <div class="test-element" id="testElement"></div>
+
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+
+      <div class="controls">
+        <button id="startBtn">Start Transition</button>
+        <button id="pauseBtn" disabled>Pause</button>
+        <button id="resumeBtn" disabled>Resume</button>
+        <button id="cancelBtn" disabled>Cancel</button>
+      </div>
+
+      <div class="debug-controls">
+        <h3>🐛 Debugger Simulation</h3>
+        <button id="triggerDebuggerBtn">
+          Trigger Debugger (Pause Transition)
+        </button>
+        <button id="endDebuggerBtn" disabled>
+          End Debugger (Resume Transition)
+        </button>
+        <p>
+          <em
+            >This simulates what happens when a debugger breakpoint is hit
+            during a transition.</em
+          >
+        </p>
+      </div>
+
+      <div class="status" id="status">Ready to start transition</div>
+
+      <div class="log" id="log"></div>
+    </div>
+
+    <script type="module">
+      import { createTimelineTransition } from "../transition_playback.js";
+      import { notifyDebuggerStart } from "../debugger_topic.js";
+
+      const testElement = document.getElementById("testElement");
+      const progressFill = document.getElementById("progressFill");
+      const status = document.getElementById("status");
+      const log = document.getElementById("log");
+
+      const startBtn = document.getElementById("startBtn");
+      const pauseBtn = document.getElementById("pauseBtn");
+      const resumeBtn = document.getElementById("resumeBtn");
+      const cancelBtn = document.getElementById("cancelBtn");
+      const triggerDebuggerBtn = document.getElementById("triggerDebuggerBtn");
+      const endDebuggerBtn = document.getElementById("endDebuggerBtn");
+
+      let currentTransition = null;
+      let notifyDebuggerEnd = null;
+
+      function addLog(message) {
+        const timestamp = new Date().toLocaleTimeString();
+        log.innerHTML += `[${timestamp}] ${message}<br>`;
+        log.scrollTop = log.scrollHeight;
+      }
+
+      function updateStatus(message) {
+        status.textContent = message;
+        addLog(`Status: ${message}`);
+      }
+
+      function updateButtons(state) {
+        startBtn.disabled = state !== "idle";
+        pauseBtn.disabled = state !== "running";
+        resumeBtn.disabled = state !== "paused";
+        cancelBtn.disabled = state === "idle";
+        triggerDebuggerBtn.disabled = state !== "running";
+      }
+
+      function createWidthTransition() {
+        return createTimelineTransition({
+          constructor: { name: "WidthTransition" },
+          from: 50,
+          to: 300,
+          duration: 3000,
+          isVisual: true,
+          debugQuarterBreakpoints: true,
+          lifecycle: {
+            update: (transition) => {
+              const width = Math.round(transition.value);
+              testElement.style.width = `${width}px`;
+
+              // Update progress bar
+              const progressPercent = transition.progress * 100;
+              progressFill.style.width = `${progressPercent}%`;
+
+              addLog(
+                `Width: ${width}px, Progress: ${(transition.progress * 100).toFixed(1)}%, Eased: ${(transition.easedProgress * 100).toFixed(1)}%, Timing: ${transition.timing}`,
+              );
+            },
+          },
+          onUpdate: (transition) => {
+            updateStatus(
+              `Animating... ${(transition.progress * 100).toFixed(1)}% complete`,
+            );
+          },
+        });
+      }
+
+      startBtn.addEventListener("click", () => {
+        currentTransition = createWidthTransition();
+
+        currentTransition.channels.finish.add(() => {
+          updateStatus("Transition finished");
+          updateButtons("idle");
+          currentTransition = null;
+        });
+
+        currentTransition.channels.cancel.add(() => {
+          updateStatus("Transition cancelled");
+          updateButtons("idle");
+          currentTransition = null;
+        });
+
+        currentTransition.play();
+        updateStatus("Transition started");
+        updateButtons("running");
+        addLog("🚀 Transition started");
+      });
+
+      pauseBtn.addEventListener("click", () => {
+        if (currentTransition) {
+          currentTransition.pause();
+          updateStatus("Transition paused manually");
+          updateButtons("paused");
+          addLog("⏸️ Transition paused manually");
+        }
+      });
+
+      resumeBtn.addEventListener("click", () => {
+        if (currentTransition) {
+          currentTransition.play();
+          updateStatus("Transition resumed manually");
+          updateButtons("running");
+          addLog("▶️ Transition resumed manually");
+        }
+      });
+
+      cancelBtn.addEventListener("click", () => {
+        if (currentTransition) {
+          currentTransition.cancel();
+          addLog("❌ Transition cancelled manually");
+        }
+      });
+
+      triggerDebuggerBtn.addEventListener("click", () => {
+        addLog("🐛 Triggering debugger - this should pause the transition");
+        notifyDebuggerEnd = notifyDebuggerStart();
+
+        updateStatus("Debugger active - transition should be paused");
+        triggerDebuggerBtn.disabled = true;
+        endDebuggerBtn.disabled = false;
+
+        addLog(
+          "⏸️ Debugger started, transition should be paused automatically",
+        );
+      });
+
+      endDebuggerBtn.addEventListener("click", () => {
+        if (notifyDebuggerEnd) {
+          addLog("🐛 Ending debugger - this should resume the transition");
+          notifyDebuggerEnd();
+          notifyDebuggerEnd = null;
+
+          updateStatus("Debugger ended - transition should resume");
+          triggerDebuggerBtn.disabled =
+            currentTransition?.playState !== "running";
+          endDebuggerBtn.disabled = true;
+
+          addLog("▶️ Debugger ended, transition should resume automatically");
+        }
+      });
+
+      // Initialize UI
+      updateButtons("idle");
+      addLog("🔧 Test page loaded and ready");
+      addLog("📝 Instructions:");
+      addLog('1. Click "Start Transition" to begin a 3-second width animation');
+      addLog(
+        '2. While running, click "Trigger Debugger" to simulate a debugger breakpoint',
+      );
+      addLog("3. Observe that the transition pauses automatically");
+      addLog('4. Click "End Debugger" to resume the transition');
+      addLog(
+        "5. Verify the transition continues smoothly from where it paused",
+      );
+    </script>
+  </body>
+</html>
