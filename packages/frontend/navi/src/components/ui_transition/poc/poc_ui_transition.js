@@ -141,6 +141,8 @@ import.meta.css = /* css */ `
   }
 `;
 
+const EMPTY = { id: "empty", toString: () => "empty" };
+
 export const createUITransitionController = (
   container,
   {
@@ -188,12 +190,12 @@ export const createUITransitionController = (
   let contentHeight;
 
   // Slot tracking with IDs
-  let contentSlotId = "empty";
-  let phaseSlotId = "empty";
-  let oldContentSlotId = "empty";
-  let oldPhaseSlotId = "empty";
+  let contentSlotId = EMPTY;
+  let phaseSlotId = EMPTY;
+  let oldContentSlotId = EMPTY;
+  let oldPhaseSlotId = EMPTY;
   let activeSlot = "content"; // "content" or "phase"
-  let transitionType = "empty"; // Debug string for current transition type
+  let transitionType = EMPTY; // Debug string for current transition type
 
   // Capture initial content from content slot
   const initialContent = contentSlot.firstElementChild
@@ -202,10 +204,10 @@ export const createUITransitionController = (
 
   // Helper to update slot positioning based on active content
   const updateSlotAttributes = () => {
-    const hasContent = contentSlotId !== "empty";
-    const hasPhase = phaseSlotId !== "empty";
-    const hasOldContent = oldContentSlotId !== "empty";
-    const hasOldPhase = oldPhaseSlotId !== "empty";
+    const hasContent = contentSlotId !== EMPTY;
+    const hasPhase = phaseSlotId !== EMPTY;
+    const hasOldContent = oldContentSlotId !== EMPTY;
+    const hasOldPhase = oldPhaseSlotId !== EMPTY;
 
     // Clear all boolean attributes first
     container.removeAttribute("data-only-content");
@@ -228,7 +230,7 @@ export const createUITransitionController = (
   };
   // Helper to get element signature or use provided ID
   const getElementId = (element) => {
-    if (!element) return "empty";
+    if (!element) return EMPTY;
     if (element.id) return element.id;
     // Simple signature based on element properties
     const tagName = element.tagName?.toLowerCase() || "unknown";
@@ -349,7 +351,7 @@ export const createUITransitionController = (
         oldContentSlot.innerHTML = "";
         contentDimensions.style.width = "";
         contentDimensions.style.height = "";
-        oldContentSlotId = "empty";
+        oldContentSlotId = EMPTY;
       },
     });
     transition.play();
@@ -465,7 +467,7 @@ export const createUITransitionController = (
         phaseSlot.style.height = "";
         oldPhaseSlot.style.width = "";
         oldPhaseSlot.style.height = "";
-        oldPhaseSlotId = "empty";
+        oldPhaseSlotId = EMPTY;
         // Keep content hidden in phase state
         if (isInPhaseState) {
           contentSlot.style.opacity = "0";
@@ -534,7 +536,7 @@ export const createUITransitionController = (
         oldPhaseSlot.style.height = "";
         contentSlot.removeAttribute("aria-hidden");
         contentSlot.style.pointerEvents = "";
-        oldPhaseSlotId = "empty";
+        oldPhaseSlotId = EMPTY;
       },
     });
     transition.play();
@@ -576,7 +578,7 @@ export const createUITransitionController = (
       onFinish: () => {
         transitionController.cancel();
         oldContentSlot.innerHTML = "";
-        oldContentSlotId = "empty";
+        oldContentSlotId = EMPTY;
       },
     });
     transition.play();
@@ -624,7 +626,7 @@ export const createUITransitionController = (
         phaseSlot.style.height = "";
         oldPhaseSlot.style.width = "";
         oldPhaseSlot.style.height = "";
-        oldPhaseSlotId = "empty";
+        oldPhaseSlotId = EMPTY;
         // Reset content slot when transitioning from phase to empty
         contentSlot.style.opacity = "";
         contentSlot.removeAttribute("aria-hidden");
@@ -643,60 +645,57 @@ export const createUITransitionController = (
       console.log("Transition already in progress, ignoring");
       return;
     }
-
-    // Determine transition type for debugging
     const fromSlot = activeSlot;
+    const toSlot = isContentPhase ? "phase" : "content";
     const fromId = activeSlot === "content" ? contentSlotId : phaseSlotId;
-    const toSlot =
-      newContentElement === null
-        ? "empty"
-        : isContentPhase
-          ? "phase"
-          : "content";
-    const toId = id;
-
+    const toId = isContentPhase ? id : id;
+    if (fromId === toId) {
+      console.log(`transitionTo() ignored (already in desired state: ${toId})`);
+      return;
+    }
+    // Determine transition type for debugging
     transitionType = `${fromSlot}_to_${toSlot}`;
     console.debug(`Transition type: ${transitionType} (${fromId} -> ${toId})`);
 
-    if (newContentElement === null) {
+    if (toId === EMPTY) {
       // Transitioning to empty - clear both content and phase slots
       if (activeSlot === "content") {
         // Move current content to old content slot if it exists
-        if (contentSlotId !== "empty") {
+        if (contentSlotId !== EMPTY) {
           const currentContent = contentSlot.firstElementChild;
           oldContentSlot.innerHTML = "";
           oldContentSlot.appendChild(currentContent);
           oldContentSlotId = contentSlotId;
         }
-        if (phaseSlotId !== "empty") {
+        if (phaseSlotId !== EMPTY) {
           phaseSlot.innerHTML = "";
-          phaseSlotId = "empty";
+          phaseSlotId = EMPTY;
           phaseWidth = undefined;
           phaseHeight = undefined;
         }
         contentSlot.innerHTML = "";
-        contentSlotId = "empty";
+        contentSlotId = EMPTY;
         contentWidth = undefined;
         contentHeight = undefined;
         activeSlot = "content";
         applyContentToEmptyTransition();
         return;
       }
-      if (contentSlotId !== "empty") {
+      if (contentSlotId !== EMPTY) {
         contentSlot.innerHTML = "";
-        contentSlotId = "empty";
+        contentSlotId = EMPTY;
         contentWidth = undefined;
         contentHeight = undefined;
       }
       // Move current phase to old phase slot if it exists
-      if (phaseSlotId !== "empty") {
+      if (phaseSlotId !== EMPTY) {
         const currentPhase = phaseSlot.firstElementChild;
         oldPhaseSlot.innerHTML = "";
         oldPhaseSlot.appendChild(currentPhase);
         oldPhaseSlotId = phaseSlotId;
       }
       phaseSlot.innerHTML = "";
-      phaseSlotId = "empty";
+      phaseSlotId = EMPTY;
       phaseWidth = undefined;
       phaseHeight = undefined;
       isInPhaseState = false;
@@ -716,7 +715,7 @@ export const createUITransitionController = (
       }
 
       // Move any current phase to old phase slot if it exists
-      if (phaseSlotId !== "empty") {
+      if (phaseSlotId !== EMPTY) {
         const currentPhaseContent = phaseSlot.firstElementChild;
         if (currentPhaseContent) {
           oldPhaseSlot.innerHTML = "";
@@ -744,7 +743,7 @@ export const createUITransitionController = (
     if (isInPhaseState) {
       // Transitioning from phase to content
       // Move current phase to old phase slot for fade-out if it exists
-      if (phaseSlotId !== "empty") {
+      if (phaseSlotId !== EMPTY) {
         const currentPhase = phaseSlot.firstElementChild;
         oldPhaseSlot.innerHTML = "";
         oldPhaseSlot.appendChild(currentPhase);
@@ -752,7 +751,7 @@ export const createUITransitionController = (
       }
       // Clear current phase slot
       phaseSlot.innerHTML = "";
-      phaseSlotId = "empty";
+      phaseSlotId = EMPTY;
       // Insert new content into content slot
       contentSlot.innerHTML = "";
       contentSlot.appendChild(newContentElement);
@@ -767,7 +766,7 @@ export const createUITransitionController = (
 
     // Regular content to content transition
     // Move current content to old content slot for fade-out if it exists
-    if (contentSlotId !== "empty") {
+    if (contentSlotId !== EMPTY) {
       const currentContent = contentSlot.firstElementChild;
       oldContentSlot.innerHTML = "";
       oldContentSlot.appendChild(currentContent);
@@ -855,28 +854,21 @@ export const createUITransitionController = (
     return isInPhaseState;
   };
 
-  // Initialize with visible content
+  container.style.setProperty("--x-transition-duration", `${duration}ms`);
   updateAlignment();
-
-  // Initialize slot tracking
+  activeSlot = "content";
   if (contentSlot.firstElementChild) {
     contentSlotId = getElementId(contentSlot.firstElementChild);
-    activeSlot = "content";
+    updateSlotAttributes();
+    measureContentSlot();
+    width = contentWidth;
+    height = contentHeight;
   } else {
-    contentSlotId = "empty";
-    activeSlot = "content";
+    contentSlotId = EMPTY;
+    updateSlotAttributes();
+    width = "auto";
+    height = "auto";
   }
-
-  // Set initial dimensions based on current content to ensure visibility
-  measureContentSlot();
-  width = contentWidth || "auto";
-  height = contentHeight || "auto";
-
-  // Set CSS variable for duration
-  container.style.setProperty("--x-transition-duration", `${duration}ms`);
-
-  // Initialize slot positioning
-  updateSlotAttributes();
 
   // Return public API
   return {
