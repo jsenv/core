@@ -389,19 +389,15 @@
     <div class="transition-zone">
       <h4>Zone de transition:</h4>
       <div class="transition-viewport">
-        <div class="transition-container">
-          <div class="content-dimensions">
-            <!-- Content slot for regular content -->
-            <div class="content-slot"></div>
-            <!-- Old content slot for fade-out content -->
-            <div class="old-content-slot"></div>
+        <div class="ui_transition">
+          <div class="active_group">
+            <div class="target_slot"></div>
+            <div class="outgoing_slot"></div>
           </div>
 
-          <div class="phase-dimensions">
-            <!-- Phase slot for phase states -->
-            <div class="phase-slot"></div>
-            <!-- Old phase slot for fade-out phases -->
-            <div class="old-phase-slot"></div>
+          <div class="previous_group">
+            <div class="previous_target_slot"></div>
+            <div class="previous_outgoing_slot"></div>
           </div>
         </div>
       </div>
@@ -515,7 +511,7 @@
 
       // Initialize UITransition
       const uiTransition = createUITransitionController(
-        document.querySelector(".transition-container"),
+        document.querySelector(".ui_transition"),
         {
           duration: savedPrefs.duration,
           alignX: savedPrefs.alignX,
@@ -590,16 +586,13 @@
 
       // Update debug info
       function updateDebugInfo() {
-        const container = document.querySelector(".transition-container");
+        const container = document.querySelector(".ui_transition");
         const containerRect = container.getBoundingClientRect();
-        const currentContent = uiTransition.getCurrentContent();
-        const contentRect = currentContent
-          ? currentContent.getBoundingClientRect()
-          : { width: 0, height: 0 };
+        const currentContent = container.querySelector(".target_slot");
+        const contentRect = currentContent.getBoundingClientRect();
 
         debug.containerSize.textContent = `Container: ${containerRect.width.toFixed(0)}px × ${containerRect.height.toFixed(0)}px`;
         debug.contentSize.textContent = `Content: ${contentRect.width.toFixed(0)}px × ${contentRect.height.toFixed(0)}px`;
-        debug.scaleInfo.textContent = `Clone utilisé: ${uiTransition.getIsTransitioning() ? "Oui" : "Non"}`;
         debug.stateInfo.textContent = `État: ${currentState.toUpperCase()}`;
       }
 
@@ -611,18 +604,14 @@
 
           if (rectangle) {
             const state = rectangle.dataset.state;
-            if (
-              state &&
-              state !== currentState &&
-              !uiTransition.getIsTransitioning()
-            ) {
+            if (state && state !== currentState) {
               console.log(`Transitioning to content state: ${state}`);
               uiTransition.transitionTo(rectangle.cloneNode(true));
               currentState = state;
             }
           } else if (phase) {
             const phaseType = phase.dataset.phase;
-            if (phaseType && !uiTransition.getIsTransitioning()) {
+            if (phaseType) {
               console.log(`Transitioning to phase: ${phaseType}`);
 
               // Use transitionTo with isContentPhase option
@@ -675,23 +664,21 @@
         const resetButton = document.getElementById("reset-button");
         if (resetButton) {
           resetButton.addEventListener("click", () => {
-            if (!uiTransition.getIsTransitioning()) {
-              const prefs = loadPreferences();
+            const prefs = loadPreferences();
 
-              if (prefs.hasInitialContent) {
-                const emptyElement = document.createElement("div");
-                emptyElement.className = "content state-empty";
-                emptyElement.innerHTML =
-                  "<p>Cliquez sur un rectangle ci-dessus pour voir la transition se lancer</p>";
+            if (prefs.hasInitialContent) {
+              const emptyElement = document.createElement("div");
+              emptyElement.className = "content state-empty";
+              emptyElement.innerHTML =
+                "<p>Cliquez sur un rectangle ci-dessus pour voir la transition se lancer</p>";
 
-                console.log("Resetting to initial state with content");
-                uiTransition.resetContent(emptyElement);
-                currentState = "initial";
-              } else {
-                console.log("Resetting to empty state");
-                uiTransition.transitionTo(null);
-                currentState = "empty";
-              }
+              console.log("Resetting to initial state with content");
+              uiTransition.resetContent(emptyElement);
+              currentState = "initial";
+            } else {
+              console.log("Resetting to empty state");
+              uiTransition.transitionTo(null);
+              currentState = "empty";
             }
           });
         }
@@ -768,23 +755,20 @@
             // Update reset button text
             updateResetButtonText();
 
-            // Immediately apply the change
-            if (!uiTransition.getIsTransitioning()) {
-              if (e.target.checked) {
-                // Add initial content if not already present
-                if (currentState === "empty") {
-                  const emptyElement = document.createElement("div");
-                  emptyElement.className = "content state-empty";
-                  emptyElement.innerHTML =
-                    "<p>Cliquez sur un rectangle ci-dessus pour voir la transition</p>";
-                  uiTransition.transitionTo(emptyElement);
-                  currentState = "initial";
-                }
-              } else if (currentState === "initial") {
-                // Remove content if it's the initial content
-                uiTransition.transitionTo(null);
-                currentState = "empty";
+            if (e.target.checked) {
+              // Add initial content if not already present
+              if (currentState === "empty") {
+                const emptyElement = document.createElement("div");
+                emptyElement.className = "content state-empty";
+                emptyElement.innerHTML =
+                  "<p>Cliquez sur un rectangle ci-dessus pour voir la transition</p>";
+                uiTransition.transitionTo(emptyElement);
+                currentState = "initial";
               }
+            } else if (currentState === "initial") {
+              // Remove content if it's the initial content
+              uiTransition.transitionTo(null);
+              currentState = "empty";
             }
           });
         }

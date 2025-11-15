@@ -284,17 +284,8 @@ export const createUITransitionController = (
 
   const applyConfiguration = (configuration, slot) => {
     slot.innerHTML = "";
-    configuration.domNodes.forEach((node) => {
-      slot.appendChild(node);
-    });
-    if (slot === targetSlot) {
-      targetSlotConfiguration = configuration;
-    } else if (slot === outgoingSlot) {
-      outgoingSlotConfiguration = configuration;
-    } else if (slot === previousTargetSlot) {
-      previousTargetSlotConfiguration = configuration;
-    } else if (slot === previousOutgoingSlot) {
-      previousOutgoingSlotConfiguration = EMPTY;
+    for (const domNode of configuration.domNodes) {
+      slot.appendChild(domNode);
     }
     if (slot === targetSlot || slot === outgoingSlot) {
       measureSlot();
@@ -305,6 +296,15 @@ export const createUITransitionController = (
         slot.style.width = `${outgoingSlotWidth}px`;
         slot.style.height = `${outgoingSlotHeight}px`;
       }
+    }
+    if (slot === targetSlot) {
+      targetSlotConfiguration = configuration;
+    } else if (slot === outgoingSlot) {
+      outgoingSlotConfiguration = configuration;
+    } else if (slot === previousTargetSlot) {
+      previousTargetSlotConfiguration = configuration;
+    } else if (slot === previousOutgoingSlot) {
+      previousOutgoingSlotConfiguration = EMPTY;
     }
   };
   const moveTargetSlotToOutgoing = () => {
@@ -504,10 +504,13 @@ export const createUITransitionController = (
     }
 
     const fromConfiguration = targetSlotConfiguration;
-    const toConfiguration = createConfiguration([newContentElement], {
-      isContentPhase,
-      id,
-    });
+    const toConfiguration = createConfiguration(
+      newContentElement ? [newContentElement] : null,
+      {
+        isContentPhase,
+        id,
+      },
+    );
 
     if (isSameConfiguration(fromConfiguration, toConfiguration)) {
       console.log(
