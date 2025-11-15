@@ -5,38 +5,42 @@
  * Required HTML structure:
  *
  * <div class="transition-container">
- *   <div class="active-layer">
- *     <div class="active-slot"></div>
- *     <div class="active-slot-old"></div>
+ *   <div class="active-group">
+ *     <div class="target-slot"></div>
+ *     <div class="outgoing-slot"></div>
  *   </div>
- *   <div class="previous-layer"></div>
+ *   <div class="previous-group"></div>
  * </div>
  *
  * Architecture principles:
  *
- * .container:
+ * .transition-container:
  * Dimension of this container are transitioning from current dimensions to new dimensions
  *
- * .active-layer:
- * Contains the active ui. Wraps both active-slot and active-slot-old so that they can be
- * manipulated as a single unit. For instance we can translate
+ * .active-group:
+ * Contains the active ui
+ * Wraps both slots so that they can be manipulated as a single unit.
+ * When sliding is enabled, this component slides-in for "content to content" transitions
  *
- * .active-slot:
+ * .target-slot:
  * Contains what we want to see (active content or active content-phase)
- * This component is meant only to receive fade-in transitions.
+ * This component will fade-in during transition.
  *
- * .active-slot-old:
- * When content-phase becomes obsolete as we transit to something else (an other content-phase or content)
- * We will put the content-phase here and perform a fade-out on this element.
+ * .outgoing-slot:
+ * When content-phase becomes obsolete as we transit to an other content-phase or content.
+ * Will contain a clone of the content-phase
+ * This component will fade-out during transition.
  *
- * .previous-layer:
- * Used for content to content transitions (clone of active layer)
- *
+ * .previous-group:
+ * Used for content to content transitions (clone of .active-group).
+ * When sliding is enabled, this component slides-out for "content to content" transitions.
+ * Otherwise we'll fade it out
  *
  * Notes:
  *
- * .active-slot and ..active-slot-old have their dimensions forced during transition to their natural dimensions
- * This way their content is not distorted during the transition.
+ * To prevent content distortion during size transition:
+ * When container is transitioning size .target-slot and .outgoing-slot
+ * have their dimensions forced to their natural dimensions.
  */
 
 import {
