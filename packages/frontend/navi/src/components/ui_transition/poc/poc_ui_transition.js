@@ -4,20 +4,20 @@
  *
  * Required HTML structure:
  *
- * <div class="transition-container">  <!-- Main container: animates width/height with CSS transitions, has overflow:hidden -->
- *   <div class="content-dimensions"> <!-- Content dimensions wrapper: set to target size immediately to prevent content adaptation -->
- *     <div class="content-slot"></div>     <!-- Regular content slot: relative positioning, dictates container size -->
- *     <div class="old-content-slot"></div> <!-- Fade-out content: absolute positioning for cross-fade transitions -->
- *     <div class="phase-slot"></div>     <!-- Phase content: direct child, positioned based on container[data-no-content] -->
- *     <div class="old-phase-slot"></div> <!-- Fade-out phase: absolute positioning for cross-fade transitions -->
+ * <div class="transition-container">
+ *   <div class="active-layer">
+ *     <div class="active-slot"></div>     <!-- Active content: where current content lives -->
+ *     <div class="active-slot-old"></div> <!-- Old active content: for content phase transitions -->
  *   </div>
+ *   <div class="previous-layer"></div>    <!-- Previous layer: for content to content transitions -->
  * </div>
  *
  * Architecture principles:
- * - Container: Provides smooth dimensional transitions (visual animation)
- * - Content dimensions wrapper: Set to target size immediately (prevent content adaptation during animation)
- * - Phase slots: Direct children of container, individually sized for fluid behavior
- * - Phase positioning: Dynamic (relative when no content, absolute when overlaying content)
+ * - Container: Provides smooth dimensional transitions with overflow hidden
+ * - Active layer: Contains the content/phase that should be active after transition
+ * - Active slot: Always contains the target content (what we want to see at the end)
+ * - Active slot old: Used for content phase to content phase transitions
+ * - Previous layer: Used for content to content transitions (clone of active layer)
  */
 
 import {
@@ -43,15 +43,15 @@ import.meta.css = /* css */ `
     --x-align-items: var(--align-items);
 
     position: relative;
-
     /* in case we set border on this element his size must include borders */
     box-sizing: content-box;
     background: var(--background-color);
     border: 8px dashed #ccc;
     border-radius: 8px;
-    /* Overflow hidden pour que le contenu soit coupé pendant la transition */
+    /* Overflow hidden so content is clipped during transition */
     overflow: hidden;
   }
+
   /* Alignment controls */
   .transition-container[data-align-x="start"] {
     --x-justify-content: flex-start;
@@ -72,55 +72,27 @@ import.meta.css = /* css */ `
     --x-align-items: flex-end;
   }
 
-  .content-dimensions {
+  .active-layer {
     position: relative;
   }
-  .content-slot {
+
+  .active-slot {
     position: relative;
   }
-  .old-content-slot {
+
+  .active-slot-old {
     position: absolute;
     top: 0;
     left: 0;
   }
-  .phase-dimensions {
+
+  .previous-layer {
     position: absolute;
     top: 0;
     left: 0;
-    display: flex;
-    width: 100%;
-    height: 100%;
-    flex-shrink: 0; /* Prevent phase slots from adapting to container size */
-    align-items: var(--x-align-items);
-    justify-content: var(--x-justify-content);
-  }
-  .phase-slot {
-    position: relative;
-  }
-  .old-phase-slot {
-    position: absolute;
   }
 
-  /* Boolean data attributes for single slot states */
-  .transition-container[data-only-content-phase] .content-dimensions,
-  .transition-container[data-only-old-content-phase] .content-dimensions {
-    position: absolute;
-  }
-  .transition-container[data-only-content-phase] .phase-dimensions,
-  .transition-container[data-only-old-content-phase] .phase-dimensions {
-    position: relative;
-  }
-  .transition-container[data-only-old-content-phase] .phase-slot {
-    position: absolute;
-  }
-  .transition-container[data-only-old-content-phase] .old-phase-slot {
-    position: relative;
-  }
-
-  .transition-container[data-only-old-content] .content-slot {
-    position: absolute;
-  }
-  .transition-container[data-only-old-content] .old-content-slot {
+  .transition-container[data-only-previous-layer] .previous-layer {
     position: relative;
   }
 `;
@@ -137,83 +109,50 @@ export const createUITransitionController = (
   } = {},
 ) => {
   // Required elements
-  const contentSlot = container.querySelector(".content-slot");
-  const phaseSlot = container.querySelector(".phase-slot");
-  const oldContentSlot = container.querySelector(".old-content-slot");
-  const oldPhaseSlot = container.querySelector(".old-phase-slot");
-  const contentDimensions = container.querySelector(".content-dimensions");
-  const phaseDimensions = container.querySelector(".phase-dimensions");
+  const activeLayer = container.querySelector(".active-layer");
+  const activeSlot = container.querySelector(".active-slot");
+  const activeSlotOld = container.querySelector(".active-slot-old");
+  const previousLayer = container.querySelector(".previous-layer");
 
   if (
     !container ||
-    !contentSlot ||
-    !phaseSlot ||
-    !oldContentSlot ||
-    !oldPhaseSlot ||
-    !contentDimensions ||
-    !phaseDimensions
+    !activeLayer ||
+    !activeSlot ||
+    !activeSlotOld ||
+    !previousLayer
   ) {
     throw new Error(
-      "createUITransitionController requires container with content-slot, phase-slot, old-content-slot, old-phase-slot, content-dimensions, and phase-dimensions elements",
+      "createUITransitionController requires container with active-layer, active-slot, active-slot-old, and previous-layer elements",
     );
   }
 
-  oldContentSlot.setAttribute("inert", "");
+  activeSlotOld.setAttribute("inert", "");
+  previousLayer.setAttribute("inert", "");
 
   // Internal state
   let isTransitioning = false;
   let isInPhaseState = false;
-  // Dimension we take/will take, can be content or content phase
   let width;
   let height;
   let targetWidth;
   let targetHeight;
-  // content phase dimension
-  let phaseWidth;
-  let phaseHeight;
-  // content dimensions
-  let contentWidth;
-  let contentHeight;
 
   // Slot tracking with IDs
-  let contentSlotId = EMPTY;
-  let phaseSlotId = EMPTY;
-  let oldContentSlotId = EMPTY;
-  let oldPhaseSlotId = EMPTY;
-  let activeSlot = "content"; // "content" or "phase"
+  let activeSlotId = EMPTY;
+  let activeSlotOldId = EMPTY;
   let transitionType = EMPTY; // Debug string for current transition type
 
-  // Capture initial content from content slot
-  const initialContent = contentSlot.firstElementChild
-    ? contentSlot.firstElementChild.cloneNode(true)
+  // Capture initial content from active slot
+  const initialContent = activeSlot.firstElementChild
+    ? activeSlot.firstElementChild.cloneNode(true)
     : null;
 
   // Helper to update slot positioning based on active content
   const updateSlotAttributes = () => {
-    const hasContent = contentSlotId !== EMPTY;
-    const hasPhase = phaseSlotId !== EMPTY;
-    const hasOldContent = oldContentSlotId !== EMPTY;
-    const hasOldPhase = oldPhaseSlotId !== EMPTY;
-
-    // Clear all boolean attributes first
-    container.removeAttribute("data-only-content");
-    container.removeAttribute("data-only-content-phase");
-    container.removeAttribute("data-only-old-content");
-    container.removeAttribute("data-only-old-content-phase");
-
-    if (isTransitioning) {
-      // During transitions, determine which old slot is active
-      if (hasOldContent && !hasOldPhase) {
-        container.setAttribute("data-only-old-content", "");
-      } else if (hasOldPhase && !hasOldContent) {
-        container.setAttribute("data-only-old-content-phase", "");
-      }
-    } else if (hasContent && !hasPhase) {
-      container.setAttribute("data-only-content", "");
-    } else if (hasPhase && !hasContent) {
-      container.setAttribute("data-only-content-phase", "");
-    }
+    // The new structure is simpler - we just track if we're transitioning
+    // No complex positioning logic needed with the new layer structure
   };
+
   // Helper to get element signature or use provided ID
   const getElementId = (element) => {
     if (!element) return EMPTY;
@@ -246,25 +185,15 @@ export const createUITransitionController = (
     };
   };
 
-  const measureContentSlot = () => {
-    if (contentSlotId === EMPTY) {
-      contentWidth = undefined;
-      contentHeight = undefined;
+  const measureActiveSlot = () => {
+    if (activeSlotId === EMPTY) {
+      targetWidth = undefined;
+      targetHeight = undefined;
       return;
     }
-    const dimensions = getSlotDimensions(contentSlot);
-    contentWidth = dimensions.width;
-    contentHeight = dimensions.height;
-  };
-  const measurePhaseSlot = () => {
-    if (phaseSlotId === EMPTY) {
-      phaseWidth = undefined;
-      phaseHeight = undefined;
-      return;
-    }
-    const dimensions = getSlotDimensions(phaseSlot);
-    phaseWidth = dimensions.width;
-    phaseHeight = dimensions.height;
+    const dimensions = getSlotDimensions(activeSlot);
+    targetWidth = dimensions.width;
+    targetHeight = dimensions.height;
   };
   // Start all transitions with single controller
   const transitionController = createGroupTransitionController({
@@ -287,18 +216,33 @@ export const createUITransitionController = (
     },
   });
 
-  // Setup cross-fade styling between old and new content
+  // Content to content transition (using previous layer)
   const applyContentToContentTransition = () => {
     const transitions = [];
-    dimension: {
-      oldContentSlot.style.width = `${contentWidth}px`;
-      oldContentSlot.style.height = `${contentHeight}px`;
-      measureContentSlot();
-      targetWidth = contentWidth;
-      targetHeight = contentHeight;
-      contentSlot.style.width = `${targetWidth}px`;
-      contentSlot.style.height = `${targetHeight}px`;
 
+    // Clone current active layer content to previous layer
+    if (activeSlot.firstElementChild) {
+      const clonedContent = activeSlot.firstElementChild.cloneNode(true);
+      previousLayer.innerHTML = "";
+      previousLayer.appendChild(clonedContent);
+
+      // Set previous layer dimensions to current dimensions
+      if (width !== undefined && height !== undefined) {
+        previousLayer.style.width = `${width}px`;
+        previousLayer.style.height = `${height}px`;
+      }
+    }
+
+    // Measure new content dimensions
+    measureActiveSlot();
+
+    // Set active layer to target dimensions
+    if (targetWidth !== undefined && targetHeight !== undefined) {
+      activeLayer.style.width = `${targetWidth}px`;
+      activeLayer.style.height = `${targetHeight}px`;
+    }
+
+    dimension: {
       transitions.push(
         createWidthTransition(container, targetWidth, {
           from: width || 0,
@@ -318,78 +262,149 @@ export const createUITransitionController = (
         }),
       );
     }
+
     opacity: {
       // Set initial opacity state and add opacity transitions
-      if (oldContentSlotId !== EMPTY) {
-        oldContentSlot.style.opacity = "1";
+      if (previousLayer.firstElementChild) {
+        previousLayer.style.opacity = "1";
         transitions.push(
-          createOpacityTransition(oldContentSlot, 0, {
-            // from: 1,
+          createOpacityTransition(previousLayer, 0, {
             duration,
             styleSynchronizer: "inline_style",
           }),
         );
       }
-      contentSlot.style.opacity = "0";
+      activeSlot.style.opacity = "0";
       transitions.push(
-        createOpacityTransition(contentSlot, 1, {
-          // from: 0,
+        createOpacityTransition(activeSlot, 1, {
           duration,
           styleSynchronizer: "inline_style",
         }),
       );
     }
+
     const transition = transitionController.update(transitions, {
       onFinish: () => {
         transition.cancel();
-        contentSlot.style.width = "";
-        contentSlot.style.height = "";
-        oldContentSlot.style.opacity = 0;
+        activeLayer.style.width = "";
+        activeLayer.style.height = "";
+        previousLayer.innerHTML = "";
+        previousLayer.style.opacity = "0";
+        previousLayer.style.width = "";
+        previousLayer.style.height = "";
       },
     });
     transition.play();
   };
-  const applyAnyToPhaseTransition = () => {
-    // First, capture current phase dimensions before any changes
-    const currentPhaseWidth = phaseWidth;
-    const currentPhaseHeight = phaseHeight;
 
-    phaseSlot.style.width = "";
-    phaseSlot.style.height = "";
-    measurePhaseSlot();
-
-    if (contentWidth === undefined) {
-      // we don't have any content to use
-      // phase slot is allowed to dictate dimensions
-      targetWidth = phaseWidth;
-      targetHeight = phaseHeight;
-
-      // Set the new phase slot to its natural size (for target dimensions)
-      phaseSlot.style.width = `${phaseWidth}px`;
-      phaseSlot.style.height = `${phaseHeight}px`;
-
-      // If we have an old phase, freeze it at its original size to prevent distortion
-      if (oldPhaseSlot.firstElementChild && currentPhaseWidth !== undefined) {
-        oldPhaseSlot.style.width = `${currentPhaseWidth}px`;
-        oldPhaseSlot.style.height = `${currentPhaseHeight}px`;
-      } else {
-        oldPhaseSlot.style.width = "";
-        oldPhaseSlot.style.height = "";
-      }
-    } else {
-      // force phase dimensions to content
-      phaseSlot.style.width = `${contentWidth}px`;
-      phaseSlot.style.height = `${contentHeight}px`;
-      oldPhaseSlot.style.width = `${contentWidth}px`;
-      oldPhaseSlot.style.height = `${contentHeight}px`;
-      targetWidth = contentWidth;
-      targetHeight = contentHeight;
-    }
-    // Determine if this is a phase-to-phase or content-to-phase transition
-    const isContentPhaseToContentPhase = isInPhaseState;
-    // Mark as in phase state
-    isInPhaseState = true;
+  // Content phase to content phase transition (using active-slot-old)
+  const applyContentPhaseToContentPhaseTransition = () => {
     const transitions = [];
+
+    // Move current active content to active-slot-old
+    if (activeSlot.firstElementChild) {
+      const currentContent = activeSlot.firstElementChild;
+      activeSlotOld.innerHTML = "";
+      activeSlotOld.appendChild(currentContent);
+      activeSlotOldId = activeSlotId;
+
+      // Set old slot dimensions to current dimensions
+      if (width !== undefined && height !== undefined) {
+        activeSlotOld.style.width = `${width}px`;
+        activeSlotOld.style.height = `${height}px`;
+      }
+    }
+
+    // Measure new content dimensions
+    measureActiveSlot();
+
+    // Set active slot to target dimensions
+    if (targetWidth !== undefined && targetHeight !== undefined) {
+      activeSlot.style.width = `${targetWidth}px`;
+      activeSlot.style.height = `${targetHeight}px`;
+    }
+
+    dimension: {
+      transitions.push(
+        createWidthTransition(container, targetWidth, {
+          from: width || 0,
+          duration,
+          styleSynchronizer: "inline_style",
+          onUpdate: ({ value }) => {
+            width = value;
+          },
+        }),
+        createHeightTransition(container, targetHeight, {
+          from: height || 0,
+          duration,
+          styleSynchronizer: "inline_style",
+          onUpdate: ({ value }) => {
+            height = value;
+          },
+        }),
+      );
+    }
+
+    opacity: {
+      // Set initial opacity state and add opacity transitions
+      if (activeSlotOld.firstElementChild) {
+        activeSlotOld.style.opacity = "1";
+        transitions.push(
+          createOpacityTransition(activeSlotOld, 0, {
+            duration,
+            styleSynchronizer: "inline_style",
+          }),
+        );
+      }
+      activeSlot.style.opacity = "0";
+      transitions.push(
+        createOpacityTransition(activeSlot, 1, {
+          duration,
+          styleSynchronizer: "inline_style",
+        }),
+      );
+    }
+
+    const transition = transitionController.update(transitions, {
+      onFinish: () => {
+        transition.cancel();
+        activeSlot.style.width = "";
+        activeSlot.style.height = "";
+        activeSlotOld.innerHTML = "";
+        activeSlotOld.style.opacity = "0";
+        activeSlotOld.style.width = "";
+        activeSlotOld.style.height = "";
+        activeSlotOldId = EMPTY;
+      },
+    });
+    transition.play();
+  };
+
+  // Transition to empty
+  const applyToEmptyTransition = () => {
+    const transitions = [];
+
+    // Move current content to appropriate old slot
+    if (isInPhaseState) {
+      // Move phase content to active-slot-old
+      if (activeSlot.firstElementChild) {
+        const currentContent = activeSlot.firstElementChild;
+        activeSlotOld.innerHTML = "";
+        activeSlotOld.appendChild(currentContent);
+      }
+    } else if (activeSlot.firstElementChild) {
+      const clonedContent = activeSlot.firstElementChild.cloneNode(true);
+      previousLayer.innerHTML = "";
+      previousLayer.appendChild(clonedContent);
+      if (width !== undefined && height !== undefined) {
+        previousLayer.style.width = `${width}px`;
+        previousLayer.style.height = `${height}px`;
+      }
+    }
+
+    targetWidth = 0;
+    targetHeight = 0;
+
     dimension: {
       transitions.push(
         createWidthTransition(container, {
@@ -397,168 +412,28 @@ export const createUITransitionController = (
           to: targetWidth,
           duration,
           styleSynchronizer: "inline_style",
+          onUpdate: ({ value }) => {
+            width = value;
+          },
         }),
         createHeightTransition(container, {
           from: height,
           to: targetHeight,
           duration,
           styleSynchronizer: "inline_style",
+          onUpdate: ({ value }) => {
+            height = value;
+          },
         }),
       );
     }
+
     opacity: {
-      if (isContentPhaseToContentPhase) {
-        if (oldPhaseSlot.firstElementChild) {
-          oldPhaseSlot.style.opacity = "1";
-          transitions.push(
-            createOpacityTransition(oldPhaseSlot, {
-              from: 1,
-              to: 0,
-              duration,
-              styleSynchronizer: "inline_style",
-            }),
-          );
-        }
-
-        phaseSlot.style.opacity = "0";
+      const oldSlot = isInPhaseState ? activeSlotOld : previousLayer;
+      if (oldSlot.firstElementChild) {
+        oldSlot.style.opacity = "1";
         transitions.push(
-          createOpacityTransition(phaseSlot, {
-            from: 0,
-            to: 1,
-            duration,
-            styleSynchronizer: "inline_style",
-          }),
-        );
-      } else {
-        // content to phase
-        phaseSlot.style.opacity = "0";
-        contentSlot.style.opacity = "1";
-
-        transitions.push(
-          createOpacityTransition(contentSlot, {
-            from: 1,
-            to: 0,
-            duration,
-            styleSynchronizer: "inline_style",
-          }),
-          createOpacityTransition(phaseSlot, {
-            from: 0,
-            to: 1,
-            duration,
-            styleSynchronizer: "inline_style",
-          }),
-        );
-      }
-    }
-    const transition = transitionController.update(transitions, {
-      onFinish: () => {
-        transition.cancel();
-        oldPhaseSlot.innerHTML = "";
-        contentDimensions.style.width = "";
-        contentDimensions.style.height = "";
-        phaseSlot.style.width = "";
-        phaseSlot.style.height = "";
-        oldPhaseSlot.style.width = "";
-        oldPhaseSlot.style.height = "";
-        oldPhaseSlotId = EMPTY;
-        // Keep content hidden in phase state
-        if (isInPhaseState) {
-          contentSlot.style.opacity = "0";
-          contentSlot.setAttribute("aria-hidden", "true");
-          contentSlot.style.pointerEvents = "none";
-        }
-      },
-    });
-    transition.play();
-  };
-  const applyPhaseToContentTransition = () => {
-    isInPhaseState = false;
-    // Create all transitions
-    const transitions = [];
-
-    dimension: {
-      // Add dimension transitions
-      transitions.push(
-        createWidthTransition(container, {
-          from: width,
-          to: targetWidth,
-          duration,
-          styleSynchronizer: "inline_style",
-        }),
-        createHeightTransition(container, {
-          from: height,
-          to: targetHeight,
-          duration,
-          styleSynchronizer: "inline_style",
-        }),
-      );
-    }
-    opacity: {
-      // Set initial states and add opacity transitions
-      if (oldPhaseSlot.firstElementChild) {
-        oldPhaseSlot.style.opacity = "1";
-        transitions.push(
-          createOpacityTransition(oldPhaseSlot, {
-            from: 1,
-            to: 0,
-            duration,
-            styleSynchronizer: "inline_style",
-          }),
-        );
-      }
-
-      contentSlot.style.opacity = "0";
-      transitions.push(
-        createOpacityTransition(contentSlot, {
-          from: 0,
-          to: 1,
-          duration,
-          styleSynchronizer: "inline_style",
-        }),
-      );
-    }
-    const transition = transitionController.update(transitions, {
-      onFinish: () => {
-        transition.cancel();
-        oldPhaseSlot.innerHTML = "";
-        contentDimensions.style.width = "";
-        contentDimensions.style.height = "";
-        phaseSlot.style.width = "";
-        phaseSlot.style.height = "";
-        oldPhaseSlot.style.width = "";
-        oldPhaseSlot.style.height = "";
-        contentSlot.removeAttribute("aria-hidden");
-        contentSlot.style.pointerEvents = "";
-        oldPhaseSlotId = EMPTY;
-      },
-    });
-    transition.play();
-  };
-  const applyContentToEmptyTransition = () => {
-    const transitions = [];
-    dimension: {
-      targetWidth = 0;
-      targetHeight = 0;
-      transitions.push(
-        createWidthTransition(container, {
-          from: width,
-          to: targetWidth,
-          duration,
-          styleSynchronizer: "inline_style",
-        }),
-        createHeightTransition(container, {
-          from: height,
-          to: targetHeight,
-          duration,
-          styleSynchronizer: "inline_style",
-        }),
-      );
-    }
-    opacity: {
-      if (oldContentSlot.firstElementChild) {
-        oldContentSlot.style.opacity = "1";
-        transitions.push(
-          createOpacityTransition(oldContentSlot, {
+          createOpacityTransition(oldSlot, {
             from: 1,
             to: 0,
             duration,
@@ -567,63 +442,19 @@ export const createUITransitionController = (
         );
       }
     }
+
     const transition = transitionController.update(transitions, {
       onFinish: () => {
         transition.cancel();
-        oldContentSlot.innerHTML = "";
-        oldContentSlotId = EMPTY;
-      },
-    });
-    transition.play();
-  };
-  const applyPhaseToEmptyTransition = () => {
-    const transitions = [];
-    dimension: {
-      targetWidth = 0;
-      targetHeight = 0;
-      transitions.push(
-        createWidthTransition(container, {
-          from: width,
-          to: targetWidth,
-          duration,
-          styleSynchronizer: "inline_style",
-        }),
-        createHeightTransition(container, {
-          from: height,
-          to: targetHeight,
-          duration,
-          styleSynchronizer: "inline_style",
-        }),
-      );
-    }
-    opacity: {
-      if (oldPhaseSlot.firstElementChild) {
-        oldPhaseSlot.style.opacity = "1";
-        transitions.push(
-          createOpacityTransition(oldPhaseSlot, {
-            from: 1,
-            to: 0,
-            duration,
-            styleSynchronizer: "inline_style",
-          }),
-        );
-      }
-    }
-    const transition = transitionController.update(transitions, {
-      onFinish: () => {
-        transition.cancel();
-        oldPhaseSlot.innerHTML = "";
-        contentDimensions.style.width = "";
-        contentDimensions.style.height = "";
-        phaseSlot.style.width = "";
-        phaseSlot.style.height = "";
-        oldPhaseSlot.style.width = "";
-        oldPhaseSlot.style.height = "";
-        oldPhaseSlotId = EMPTY;
-        // Reset content slot when transitioning from phase to empty
-        contentSlot.style.opacity = "";
-        contentSlot.removeAttribute("aria-hidden");
-        contentSlot.style.pointerEvents = "";
+        previousLayer.innerHTML = "";
+        previousLayer.style.opacity = "0";
+        previousLayer.style.width = "";
+        previousLayer.style.height = "";
+        activeSlotOld.innerHTML = "";
+        activeSlotOld.style.opacity = "0";
+        activeSlotOld.style.width = "";
+        activeSlotOld.style.height = "";
+        activeSlotOldId = EMPTY;
       },
     });
     transition.play();
@@ -638,138 +469,68 @@ export const createUITransitionController = (
       console.log("Transition already in progress, ignoring");
       return;
     }
-    const fromSlot = activeSlot;
-    const toSlot = isContentPhase ? "phase" : "content";
-    const fromId = activeSlot === "content" ? contentSlotId : phaseSlotId;
-    const toId = isContentPhase ? id : id;
+
+    const fromId = activeSlotId;
+    const toId = id;
+
     if (fromId === toId) {
       console.log(`transitionTo() ignored (already in desired state: ${toId})`);
       return;
     }
+
     // Determine transition type for debugging
-    transitionType = `${fromSlot}_to_${toSlot}`;
+    const fromState = isInPhaseState ? "phase" : "content";
+    const toState = isContentPhase ? "phase" : "content";
+    transitionType = `${fromState}_to_${toState}`;
     console.debug(`Transition type: ${transitionType} (${fromId} -> ${toId})`);
 
     if (toId === EMPTY) {
-      // Transitioning to empty - clear both content and phase slots
-      if (activeSlot === "content") {
-        // Move current content to old content slot if it exists
-        if (contentSlotId !== EMPTY) {
-          const currentContent = contentSlot.firstElementChild;
-          oldContentSlot.innerHTML = "";
-          oldContentSlot.appendChild(currentContent);
-          oldContentSlotId = contentSlotId;
-        }
-        if (phaseSlotId !== EMPTY) {
-          phaseSlot.innerHTML = "";
-          phaseSlotId = EMPTY;
-          phaseWidth = undefined;
-          phaseHeight = undefined;
-        }
-        contentSlot.innerHTML = "";
-        contentSlotId = EMPTY;
-        contentWidth = undefined;
-        contentHeight = undefined;
-        activeSlot = "content";
-        applyContentToEmptyTransition();
-        return;
+      // Transitioning to empty - clear active slot
+      if (activeSlotId !== EMPTY) {
+        // Will be handled by applyToEmptyTransition
       }
-      if (contentSlotId !== EMPTY) {
-        contentSlot.innerHTML = "";
-        contentSlotId = EMPTY;
-        contentWidth = undefined;
-        contentHeight = undefined;
-      }
-      // Move current phase to old phase slot if it exists
-      if (phaseSlotId !== EMPTY) {
-        const currentPhase = phaseSlot.firstElementChild;
-        oldPhaseSlot.innerHTML = "";
-        oldPhaseSlot.appendChild(currentPhase);
-        oldPhaseSlotId = phaseSlotId;
-      }
-      phaseSlot.innerHTML = "";
-      phaseSlotId = EMPTY;
-      phaseWidth = undefined;
-      phaseHeight = undefined;
+      activeSlot.innerHTML = "";
+      activeSlotId = EMPTY;
       isInPhaseState = false;
-      activeSlot = "content";
-      applyPhaseToEmptyTransition();
+      applyToEmptyTransition();
       return;
     }
+
     if (isContentPhase) {
-      // Capture current phase dimensions before any changes
-      const currentPhaseElement = phaseSlot.firstElementChild;
-      let capturedPhaseWidth;
-      let capturedPhaseHeight;
-      if (currentPhaseElement) {
-        const rect = currentPhaseElement.getBoundingClientRect();
-        capturedPhaseWidth = rect.width;
-        capturedPhaseHeight = rect.height;
+      // Transitioning to phase content
+      if (isInPhaseState) {
+        // Phase to phase - use active-slot-old
+        activeSlot.innerHTML = "";
+        activeSlot.appendChild(newContentElement);
+        activeSlotId = id;
+        isInPhaseState = true;
+        applyContentPhaseToContentPhaseTransition();
+      } else {
+        // Content to phase - use previous layer
+        activeSlot.innerHTML = "";
+        activeSlot.appendChild(newContentElement);
+        activeSlotId = id;
+        isInPhaseState = true;
+        applyContentToContentTransition(); // This will handle content->phase
       }
-
-      // Move any current phase to old phase slot if it exists
-      if (phaseSlotId !== EMPTY) {
-        const currentPhaseContent = phaseSlot.firstElementChild;
-        if (currentPhaseContent) {
-          oldPhaseSlot.innerHTML = "";
-          oldPhaseSlot.appendChild(currentPhaseContent);
-          oldPhaseSlotId = phaseSlotId;
-
-          // Store captured dimensions for the transition function
-          if (
-            capturedPhaseWidth !== undefined &&
-            capturedPhaseHeight !== undefined
-          ) {
-            phaseWidth = capturedPhaseWidth;
-            phaseHeight = capturedPhaseHeight;
-          }
-        }
-      }
-      // Insert phase element into phase slot for measurement and transition
-      phaseSlot.innerHTML = "";
-      phaseSlot.appendChild(newContentElement);
-      phaseSlotId = id;
-      activeSlot = "phase";
-      applyAnyToPhaseTransition();
       return;
     }
+
+    // Transitioning to regular content
     if (isInPhaseState) {
-      // Transitioning from phase to content
-      // Move current phase to old phase slot for fade-out if it exists
-      if (phaseSlotId !== EMPTY) {
-        const currentPhase = phaseSlot.firstElementChild;
-        oldPhaseSlot.innerHTML = "";
-        oldPhaseSlot.appendChild(currentPhase);
-        oldPhaseSlotId = phaseSlotId;
-      }
-      // Clear current phase slot
-      phaseSlot.innerHTML = "";
-      phaseSlotId = EMPTY;
-      // Insert new content into content slot
-      contentSlot.innerHTML = "";
-      contentSlot.appendChild(newContentElement);
-      contentSlotId = id;
-      activeSlot = "content";
-      measureContentSlot();
-      targetWidth = contentWidth;
-      targetHeight = contentHeight;
-      applyPhaseToContentTransition();
+      // Phase to content - use active-slot-old
+      activeSlot.innerHTML = "";
+      activeSlot.appendChild(newContentElement);
+      activeSlotId = id;
+      isInPhaseState = false;
+      applyContentPhaseToContentPhaseTransition(); // This will handle phase->content
       return;
     }
 
-    // Regular content to content transition
-    // Move current content to old content slot for fade-out if it exists
-    if (contentSlotId !== EMPTY) {
-      const currentContent = contentSlot.firstElementChild;
-      oldContentSlot.innerHTML = "";
-      oldContentSlot.appendChild(currentContent);
-      oldContentSlotId = contentSlotId;
-    }
-    // Insert new content into content slot
-    contentSlot.innerHTML = "";
-    contentSlot.appendChild(newContentElement);
-    contentSlotId = id;
-    activeSlot = "content";
+    // Regular content to content transition - use previous layer
+    activeSlot.innerHTML = "";
+    activeSlot.appendChild(newContentElement);
+    activeSlotId = id;
     applyContentToContentTransition();
   };
 
@@ -779,8 +540,6 @@ export const createUITransitionController = (
 
     // Clear phase state
     isInPhaseState = false;
-    contentWidth = undefined;
-    contentHeight = undefined;
     targetWidth = undefined;
     targetHeight = undefined;
 
@@ -789,30 +548,30 @@ export const createUITransitionController = (
 
     // Reset to initial content if it exists
     if (initialContent) {
-      contentSlot.innerHTML = "";
-      contentSlot.appendChild(initialContent.cloneNode(true));
+      activeSlot.innerHTML = "";
+      activeSlot.appendChild(initialContent.cloneNode(true));
+      activeSlotId = getElementId(initialContent);
     } else {
       // No initial content, clear everything
-      contentSlot.innerHTML = "";
+      activeSlot.innerHTML = "";
+      activeSlotId = EMPTY;
     }
 
-    // Update and measure current dimensions
-    measureContentSlot();
+    // Measure current dimensions
+    measureActiveSlot();
 
     // Clear all other slots
-    phaseSlot.innerHTML = "";
-    oldContentSlot.innerHTML = "";
-    oldPhaseSlot.innerHTML = "";
+    activeSlotOld.innerHTML = "";
+    previousLayer.innerHTML = "";
 
     transitionController.cancel();
 
-    // Reset opacity styles (no transition cleanup needed for JS transitions)
-    contentSlot.style.opacity = "";
-    contentSlot.removeAttribute("aria-hidden");
-    contentSlot.style.pointerEvents = "";
-    phaseSlot.style.opacity = "";
-    oldContentSlot.style.opacity = "";
-    oldPhaseSlot.style.opacity = "";
+    // Reset opacity styles
+    activeSlot.style.opacity = "";
+    activeSlot.removeAttribute("aria-hidden");
+    activeSlot.style.pointerEvents = "";
+    activeSlotOld.style.opacity = "";
+    previousLayer.style.opacity = "";
 
     // Remove any transition states
     container.removeAttribute("data-transitioning");
@@ -840,25 +599,27 @@ export const createUITransitionController = (
   };
 
   const getCurrentContent = () => {
-    return contentSlot?.firstElementChild || null;
+    return activeSlot?.firstElementChild || null;
   };
 
   const getIsInPhaseState = () => {
     return isInPhaseState;
   };
 
+  // Initialize controller
   container.style.setProperty("--x-transition-duration", `${duration}ms`);
   updateAlignment();
-  activeSlot = "content";
-  if (contentSlot.firstElementChild) {
-    contentSlotId = getElementId(contentSlot.firstElementChild);
+
+  if (activeSlot.firstElementChild) {
+    activeSlotId = getElementId(activeSlot.firstElementChild);
+    measureActiveSlot();
+    width = targetWidth;
+    height = targetHeight;
   } else {
-    contentSlotId = EMPTY;
+    activeSlotId = EMPTY;
   }
+
   updateSlotAttributes();
-  measureContentSlot();
-  width = contentWidth;
-  height = contentHeight;
 
   // Return public API
   return {
@@ -872,11 +633,9 @@ export const createUITransitionController = (
     updateAlignment,
     // Slot state getters
     getSlotStates: () => ({
-      contentSlotId,
-      phaseSlotId,
-      oldContentSlotId,
-      oldPhaseSlotId,
-      activeSlot,
+      activeSlotId,
+      activeSlotOldId,
+      isInPhaseState,
       transitionType,
     }),
   };
