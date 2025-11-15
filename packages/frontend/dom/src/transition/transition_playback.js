@@ -82,7 +82,7 @@ export const createTransition = ({
   debugQuarterBreakpoints = false, // Shorthand for debugBreakpoints: [0.25, 0.75]
   debugBreakpoints = debugQuarterBreakpoints ? [0.25, 0.75] : [], // Array of progress values (0-1) where debugger should trigger
   ...rest
-} = {}) => {
+}) => {
   const [updateCallbacks, executeUpdateCallbacks] = createCallbackController();
   const [cancelCallbacks, executeCancelCallbacks] = createCallbackController();
   const [finishCallbacks, executeFinishCallbacks] = createCallbackController();
@@ -128,7 +128,7 @@ export const createTransition = ({
         `${constructor.name} transition difference is very small (${diff}). Consider if this transition is necessary (minimum threshold: ${minDiff}).`,
       );
     }
-    transition.update(transition.value);
+    transition.update(transition.startProgress);
   };
 
   const transition = {
@@ -151,6 +151,7 @@ export const createTransition = ({
       if (playState === "idle") {
         transition.value = transition.from;
         transition.timing = "";
+        transition.progress = transition.startProgress;
         start();
         return;
       }

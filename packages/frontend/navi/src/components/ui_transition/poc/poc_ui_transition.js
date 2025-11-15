@@ -265,8 +265,9 @@ export const createUITransitionController = (
   // Start all transitions with single controller
   const transitionController = createGroupTransitionController({
     debugQuarterBreakpoints: true,
-    lifecyle: {
+    lifecycle: {
       setup: () => {
+        debugger;
         updateSlotAttributes();
         container.setAttribute("data-transitioning", "");
         isTransitioning = true;
