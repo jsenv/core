@@ -139,6 +139,7 @@ import.meta.css = /* css */ `
 
 const EMPTY = {
   contentId: "empty",
+  domNodes: [],
   type: "empty",
   isContentPhase: false,
   isContent: false,
@@ -170,11 +171,6 @@ const createConfiguration = (domNodes, { id, isContentPhase } = {}) => {
 };
 const isSameConfiguration = (configA, configB) => {
   return configA.toString() === configB.toString();
-};
-const applyConfiguration = (configuration, el) => {
-  configuration.domNodes.forEach((node) => {
-    el.appendChild(node);
-  });
 };
 const moveDOMNodes = (from, to) => {
   to.innerHTML = "";
@@ -221,18 +217,21 @@ export const createUITransitionController = (
   outgoingSlot.setAttribute("inert", "");
   previousGroup.setAttribute("inert", "");
 
-  let isTransitioning = false;
-  let isContentPhase = false;
-  let targetSlotConfiguration;
-  let outgoingSlotConfiguration;
-  let transitionType = "none";
+  const targetSlotInitialConfiguration = createConfiguration(
+    Array.from(targetSlot.childNodes),
+  );
+  const outgoingSlotInitialConfiguration = createConfiguration(
+    Array.from(outgoingSlot.childNodes),
+    { isContentPhase: true },
+  );
 
+  let targetSlotConfiguration = targetSlotInitialConfiguration;
+  let outgoingSlotConfiguration = outgoingSlotInitialConfiguration;
+  let previousTargetSlotConfiguration = EMPTY;
+  let previousOutgoingSlotConfiguration = EMPTY;
   // dimensions of the container
   let width;
   let height;
-  // dimensions the container wants to take (always the dimensions of the targetSlot?)
-  let targetWidth;
-  let targetHeight;
   let targetSlotWidth;
   let targetSlotHeight;
   let outgoingSlotWidth;
@@ -267,65 +266,78 @@ export const createUITransitionController = (
   };
   const measureTargetSlot = () => {
     if (targetSlotConfiguration === EMPTY) {
-      targetWidth = undefined;
-      targetHeight = undefined;
+      targetSlotWidth = undefined;
+      targetSlotWidth = undefined;
       return;
     }
     const dimensions = getSlotDimensions(targetSlot);
-    targetWidth = dimensions.width;
-    targetHeight = dimensions.height;
+    targetSlotWidth = dimensions.width;
+    targetSlotHeight = dimensions.height;
   };
 
-  const targetSlotInitialConfiguration = createConfiguration(
-    targetSlot.childNodes,
-  );
-  const outgoingSlotInitialConfiguration = createConfiguration(
-    outgoingSlot.childNodes,
-    { isContentPhase: true },
-  );
   updateAlignment();
   updateSlotAttributes();
   if (targetSlotConfiguration !== EMPTY) {
     measureTargetSlot();
-    width = targetWidth;
-    height = targetHeight;
+    width = targetSlotWidth;
+    height = targetSlotHeight;
   }
-  targetSlotConfiguration = targetSlotInitialConfiguration;
-  outgoingSlotConfiguration = outgoingSlotInitialConfiguration;
-  let previousTargetSlotConfiguration = EMPTY;
-  let previousOutgoingSlotConfiguration = EMPTY;
 
+  const applyConfiguration = (configuration, el) => {
+    el.innerHTML = "";
+    configuration.domNodes.forEach((node) => {
+      el.appendChild(node);
+    });
+    if (el === targetSlot) {
+      targetSlotConfiguration = configuration;
+    } else if (el === outgoingSlot) {
+      outgoingSlotConfiguration = configuration;
+    } else if (el === previousTargetSlot) {
+      previousTargetSlotConfiguration = configuration;
+    } else if (el === previousOutgoingSlot) {
+      previousOutgoingSlotConfiguration = EMPTY;
+    }
+
+    if (configuration === EMPTY) {
+      el.style.width = "";
+      el.style.height = "";
+      return;
+    }
+
+    if (el === targetSlot) {
+      measureTargetSlot();
+
+      targetSlot.style.width = `${targetSlotWidth}px`;
+      targetSlot.style.height = `${targetSlotHeight}px`;
+    }
+  };
   const moveTargetSlotToPrevious = () => {
     previousTargetSlot.innerHTML = "";
-    applyConfiguration(targetSlotConfiguration, previousTargetSlot);
+    moveDOMNodes(targetSlot, previousTargetSlot);
     previousTargetSlot.style.width = `${targetSlotWidth}px`;
     previousTargetSlot.style.height = `${targetSlotHeight}px`;
-    targetSlotConfiguration = EMPTY;
     previousTargetSlotConfiguration = targetSlotConfiguration;
+    targetSlotConfiguration = EMPTY;
   };
   const moveOutgoingSlotToPrevious = () => {
     previousOutgoingSlot.innerHTML = "";
-    applyConfiguration(outgoingSlotConfiguration, previousOutgoingSlot);
+    moveDOMNodes(outgoingSlot, previousOutgoingSlot);
     previousOutgoingSlot.style.width = `${outgoingSlotWidth}px`;
     previousOutgoingSlot.style.height = `${outgoingSlotHeight}px`;
-    outgoingSlotConfiguration = EMPTY;
     previousOutgoingSlotConfiguration = outgoingSlotConfiguration;
+    outgoingSlotConfiguration = EMPTY;
   };
   const moveTargetSlotToOutgoing = () => {
     outgoingSlot.innerHTML = "";
-    applyConfiguration(targetSlotConfiguration, outgoingSlot);
+    moveDOMNodes(targetSlot, outgoingSlot);
     outgoingSlot.style.width = `${targetSlotWidth}px`;
     outgoingSlot.style.height = `${targetSlotHeight}px`;
     outgoingSlotConfiguration = targetSlotConfiguration;
-  };
-  const setTargetSlotConfiguration = (configuration) => {
-    applyConfiguration(configuration, targetSlot);
-    measureTargetSlot();
-    targetSlot.style.width = `${targetSlotWidth}px`;
-    targetSlot.style.height = `${targetSlotHeight}px`;
-    targetSlotConfiguration = configuration;
+    targetSlotConfiguration = EMPTY;
   };
 
+  let isTransitioning = false;
+  let transitionType = "none";
   const transitionController = createGroupTransitionController({
     // debugQuarterBreakpoints: true,
     lifecycle: {
@@ -345,17 +357,16 @@ export const createUITransitionController = (
       },
     },
   });
-
   // content_to_content transition (uses previous_group)
   const applyContentToContentTransition = (toConfiguration) => {
     moveTargetSlotToPrevious();
     moveOutgoingSlotToPrevious();
-    setTargetSlotConfiguration(toConfiguration);
+    applyConfiguration(toConfiguration, targetSlot);
 
     const transitions = [];
     // transitions on container dimensions
     transitions.push(
-      createWidthTransition(container, targetWidth, {
+      createWidthTransition(container, targetSlotWidth, {
         from: width || 0,
         duration,
         styleSynchronizer: "inline_style",
@@ -363,7 +374,7 @@ export const createUITransitionController = (
           width = value;
         },
       }),
-      createHeightTransition(container, targetHeight, {
+      createHeightTransition(container, targetSlotHeight, {
         from: height || 0,
         duration,
         styleSynchronizer: "inline_style",
@@ -391,9 +402,10 @@ export const createUITransitionController = (
     const transition = transitionController.update(transitions, {
       onFinish: () => {
         transition.cancel();
+        previousGroup.style.opacity = "0"; // keep previous group visually hidden
+        // let target slot take natural size now container is done
         targetSlot.style.width = "";
         targetSlot.style.height = "";
-        previousGroup.style.opacity = "0"; // keep previous group visually hidden
       },
     });
     transition.play();
@@ -401,11 +413,11 @@ export const createUITransitionController = (
   // content_phase_to_content_phase transition (uses outgoing_slot)
   const applyContentPhaseToContentPhaseTransition = (toConfiguration) => {
     moveTargetSlotToOutgoing();
-    setTargetSlotConfiguration(toConfiguration);
+    applyConfiguration(toConfiguration, targetSlot);
     const transitions = [];
     // Adapt container dimensions
     transitions.push(
-      createWidthTransition(container, targetWidth, {
+      createWidthTransition(container, targetSlotWidth, {
         from: width || 0,
         duration,
         styleSynchronizer: "inline_style",
@@ -413,7 +425,7 @@ export const createUITransitionController = (
           width = value;
         },
       }),
-      createHeightTransition(container, targetHeight, {
+      createHeightTransition(container, targetSlotHeight, {
         from: height || 0,
         duration,
         styleSynchronizer: "inline_style",
@@ -441,13 +453,9 @@ export const createUITransitionController = (
     const transition = transitionController.update(transitions, {
       onFinish: () => {
         transition.cancel();
+        applyConfiguration(EMPTY, outgoingSlot);
         targetSlot.style.width = "";
         targetSlot.style.height = "";
-        outgoingSlot.innerHTML = "";
-        outgoingSlot.style.opacity = "0";
-        outgoingSlot.style.width = "";
-        outgoingSlot.style.height = "";
-        outgoingSlotConfiguration = EMPTY;
       },
     });
     transition.play();
@@ -456,39 +464,17 @@ export const createUITransitionController = (
   const applyToEmptyTransition = () => {
     const transitions = [];
 
-    // Move current content to appropriate slot for fade-out
-    if (targetSlotConfiguration.isContentPhase) {
-      // Move content_phase to outgoing_slot
-      if (targetSlot.firstElementChild) {
-        moveDOMNodes(targetSlot, outgoingSlot);
-        outgoingSlotConfiguration = targetSlotConfiguration;
-        outgoingSlot.style.width = `${targetSlotWidth}px`;
-        outgoingSlot.style.height = `${targetSlotHeight}px`;
-      }
-    } else {
-      // Move content to previous_group
-      if (targetSlotConfiguration !== EMPTY) {
-        moveDOMNodes(targetSlot, previousTargetSlot);
-        previousTargetSlot.style.width = `${targetSlotWidth}px`;
-        previousTargetSlot.style.height = `${targetSlotHeight}px`;
-      }
-      if (outgoingSlotConfiguration !== EMPTY) {
-        moveDOMNodes(outgoingSlot, previousOutgoingSlot);
-        previousOutgoingSlot.style.width = `${outgoingSlotWidth}px`;
-        previousOutgoingSlot.style.height = `${outgoingSlotHeight}px`;
-      }
-    }
-
-    targetSlotConfiguration = EMPTY;
-    outgoingSlotConfiguration = EMPTY;
-    targetWidth = 0;
-    targetHeight = 0;
+    moveTargetSlotToPrevious();
+    moveOutgoingSlotToPrevious();
+    applyConfiguration(EMPTY, targetSlot);
+    targetSlotWidth = undefined;
+    targetSlotHeight = undefined;
 
     // Animate container to zero dimensions
     transitions.push(
       createWidthTransition(container, {
         from: width,
-        to: targetWidth,
+        to: 0,
         duration,
         styleSynchronizer: "inline_style",
         onUpdate: ({ value }) => {
@@ -497,7 +483,7 @@ export const createUITransitionController = (
       }),
       createHeightTransition(container, {
         from: height,
-        to: targetHeight,
+        to: 0,
         duration,
         styleSynchronizer: "inline_style",
         onUpdate: ({ value }) => {
@@ -506,39 +492,26 @@ export const createUITransitionController = (
       }),
     );
 
-    // Fade out the appropriate slot
-    const oldSlot = targetSlotConfiguration.isContentPhase
-      ? outgoingSlot
-      : previousGroup;
-    if (oldSlot.firstElementChild) {
-      oldSlot.style.opacity = "1";
-      transitions.push(
-        createOpacityTransition(oldSlot, {
-          from: 1,
-          to: 0,
-          duration,
-          styleSynchronizer: "inline_style",
-        }),
-      );
-    }
-
+    // Fade out the previous group
+    previousGroup.style.opacity = "1";
+    transitions.push(
+      createOpacityTransition(previousGroup, {
+        from: 1,
+        to: 0,
+        duration,
+        styleSynchronizer: "inline_style",
+      }),
+    );
     const transition = transitionController.update(transitions, {
       onFinish: () => {
         transition.cancel();
-        previousGroup.innerHTML = "";
-        previousGroup.style.opacity = "0";
-        previousGroup.style.width = "";
-        previousGroup.style.height = "";
-        outgoingSlot.innerHTML = "";
-        outgoingSlot.style.opacity = "0";
-        outgoingSlot.style.width = "";
-        outgoingSlot.style.height = "";
-        outgoingSlotConfiguration = EMPTY;
+        applyConfiguration(EMPTY, previousGroup);
+        previousTargetSlotConfiguration = EMPTY;
+        previousOutgoingSlotConfiguration = EMPTY;
       },
     });
     transition.play();
   };
-
   // Main transition method
   const transitionTo = (
     newContentElement,
@@ -613,73 +586,22 @@ export const createUITransitionController = (
   const resetContent = () => {
     if (isTransitioning) return;
 
-    // Clear content_phase state
-    isContentPhase = false;
-    targetWidth = undefined;
-    targetHeight = undefined;
-
-    // Set CSS variable for transition duration
-    container.style.setProperty("--x-transition-duration", `${duration}ms`);
-
-    // Reset to initial content if it exists
-    if (initialContent) {
-      applyConfiguration(targetSlot, initialConfiguration);
-      targetSlotConfiguration = initialConfiguration;
-    } else {
-      // No initial content, clear everything
-      targetSlot.innerHTML = "";
-      targetSlotConfiguration = EMPTY;
-    }
-
-    // Measure current dimensions
-    measureTargetSlot();
-
-    // Clear all other slots
-    outgoingSlot.innerHTML = "";
-    previousGroup.innerHTML = "";
-    applyConfiguration(outgoingSlot, initialContent);
-    outgoingSlotConfiguration = EMPTY;
-
     transitionController.cancel();
-
-    // Reset opacity styles
-    targetSlot.style.opacity = "";
-    targetSlot.removeAttribute("aria-hidden");
-    targetSlot.style.pointerEvents = "";
-    outgoingSlot.style.opacity = "";
-    previousGroup.style.opacity = "";
-
-    // Remove any transition states
-    container.removeAttribute("data-transitioning");
-
-    // Apply alignment
-    updateAlignment();
+    applyConfiguration(targetSlotInitialConfiguration, targetSlot);
+    applyConfiguration(outgoingSlotInitialConfiguration, outgoingSlot);
+    applyConfiguration(EMPTY, previousTargetSlot);
+    applyConfiguration(EMPTY, previousOutgoingSlot);
   };
 
-  // Update configuration
   const setDuration = (newDuration) => {
     duration = newDuration;
     // Update CSS variable immediately
     container.style.setProperty("--x-transition-duration", `${duration}ms`);
   };
-
   const setAlignment = (newAlignX, newAlignY) => {
     alignX = newAlignX;
     alignY = newAlignY;
     updateAlignment();
-  };
-
-  // Getters
-  const getIsTransitioning = () => {
-    return isTransitioning;
-  };
-
-  const getCurrentContent = () => {
-    return targetSlot?.firstElementChild || null;
-  };
-
-  const getisContentPhase = () => {
-    return isContentPhase;
   };
 
   // Return public API
@@ -688,17 +610,9 @@ export const createUITransitionController = (
     resetContent,
     setDuration,
     setAlignment,
-    getIsTransitioning,
-    getCurrentContent,
-    getisContentPhase,
     updateAlignment,
-    // Slot state getters
-    getSlotStates: () => ({
-      targetSlotConfiguration: targetSlotConfiguration.toString(),
-      outgoingSlotConfiguration: outgoingSlotConfiguration.toString(),
-      isContentPhase,
-      transitionType,
-    }),
+    previousTargetSlotConfiguration: () => previousTargetSlotConfiguration,
+    previousOutgoingSlotConfiguration: () => previousOutgoingSlotConfiguration,
   };
 };
 
