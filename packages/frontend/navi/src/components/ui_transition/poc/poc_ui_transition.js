@@ -163,50 +163,20 @@ export const createUITransitionController = (
     );
   }
 
+  container.style.setProperty("--x-transition-duration", `${duration}ms`);
   outgoingSlot.setAttribute("inert", "");
   previousGroup.setAttribute("inert", "");
 
-  // Internal state
+  let initialContent;
   let isTransitioning = false;
-  let isInContentPhaseState = false;
+  let isContentPhase = false;
   let width;
   let height;
   let targetWidth;
   let targetHeight;
-
-  // Slot tracking with IDs
-  let targetSlotId = EMPTY;
-  let outgoingSlotId = EMPTY;
-  let transitionType = EMPTY; // Debug string for current transition type
-
-  // Capture initial content from target slot
-  const initialContent = targetSlot.firstElementChild
-    ? targetSlot.firstElementChild.cloneNode(true)
-    : null;
-
-  // Helper to update slot positioning based on active content
-  const updateSlotAttributes = () => {
-    // The new structure is simpler - we just track if we're transitioning
-    // No complex positioning logic needed with the new layer structure
-  };
-
-  // Helper to get element signature or use provided ID
-  const getElementId = (element) => {
-    if (!element) return EMPTY;
-    if (element.id) return element.id;
-    // Simple signature based on element properties
-    const tagName = element.tagName?.toLowerCase() || "unknown";
-    const className = element.className || "";
-    const textContent = element.textContent?.slice(0, 20) || "";
-    return `${tagName}_${className}_${textContent}`.replace(/\s+/g, "_");
-  };
-
-  // Update alignment of content within the transition area
-  const updateAlignment = () => {
-    // Set data attributes for CSS-based alignment
-    container.setAttribute("data-align-x", alignX);
-    container.setAttribute("data-align-y", alignY);
-  };
+  let targetSlotId;
+  let outgoingSlotId;
+  let transitionType; // Debug string for current transition type
 
   // Get dimensions of an element
   const getSlotDimensions = (slotElement) => {
@@ -221,7 +191,20 @@ export const createUITransitionController = (
       height: rect.height,
     };
   };
-
+  // Helper to update slot positioning based on active content
+  const updateSlotAttributes = () => {
+    if (targetSlotId === EMPTY && outgoingSlotId === EMPTY) {
+      container.setAttribute("data-only-previous-group", "");
+    } else {
+      container.removeAttribute("data-only-previous-group");
+    }
+  };
+  // Update alignment of content within the transition area
+  const updateAlignment = () => {
+    // Set data attributes for CSS-based alignment
+    container.setAttribute("data-align-x", alignX);
+    container.setAttribute("data-align-y", alignY);
+  };
   const measureTargetSlot = () => {
     if (targetSlotId === EMPTY) {
       targetWidth = undefined;
@@ -232,7 +215,23 @@ export const createUITransitionController = (
     targetWidth = dimensions.width;
     targetHeight = dimensions.height;
   };
-  // Start all transitions with single controller
+
+  if (targetSlot.firstElementChild) {
+    initialContent = targetSlot.firstElementChild.cloneNode(true);
+    targetSlotId = getElementId(targetSlot.firstElementChild);
+  } else {
+    targetSlotId = EMPTY;
+  }
+  updateAlignment();
+  updateSlotAttributes();
+  if (targetSlotId !== EMPTY) {
+    measureTargetSlot();
+    width = targetWidth;
+    height = targetHeight;
+  }
+  outgoingSlotId = EMPTY;
+  transitionType = EMPTY; // Debug string for current transition type
+
   const transitionController = createGroupTransitionController({
     // debugQuarterBreakpoints: true,
     lifecycle: {
@@ -422,7 +421,7 @@ export const createUITransitionController = (
     const transitions = [];
 
     // Move current content to appropriate old slot
-    if (isInContentPhaseState) {
+    if (isContentPhase) {
       // Move content_phase content to outgoing_slot
       if (targetSlot.firstElementChild) {
         const currentContent = targetSlot.firstElementChild;
@@ -466,7 +465,7 @@ export const createUITransitionController = (
     }
 
     opacity: {
-      const oldSlot = isInContentPhaseState ? outgoingSlot : previousGroup;
+      const oldSlot = isContentPhase ? outgoingSlot : previousGroup;
       if (oldSlot.firstElementChild) {
         oldSlot.style.opacity = "1";
         transitions.push(
@@ -516,7 +515,7 @@ export const createUITransitionController = (
     }
 
     // Determine transition type for debugging
-    const fromState = isInContentPhaseState ? "content_phase" : "content";
+    const fromState = isContentPhase ? "content_phase" : "content";
     const toState = isContentPhase ? "content_phase" : "content";
     transitionType = `${fromState}_to_${toState}`;
     console.debug(`Transition type: ${transitionType} (${fromId} -> ${toId})`);
@@ -528,38 +527,38 @@ export const createUITransitionController = (
       }
       targetSlot.innerHTML = "";
       targetSlotId = EMPTY;
-      isInContentPhaseState = false;
+      isContentPhase = false;
       applyToEmptyTransition();
       return;
     }
 
     if (isContentPhase) {
       // Transitioning to content_phase content
-      if (isInContentPhaseState) {
+      if (isContentPhase) {
         // content_phase to content_phase - use outgoing_slot
         targetSlot.innerHTML = "";
         targetSlot.appendChild(newContentElement);
         targetSlotId = id;
-        isInContentPhaseState = true;
+        isContentPhase = true;
         applyContentPhaseToContentPhaseTransition();
       } else {
         // content to content_phase - use previous_group
         targetSlot.innerHTML = "";
         targetSlot.appendChild(newContentElement);
         targetSlotId = id;
-        isInContentPhaseState = true;
+        isContentPhase = true;
         applyContentToContentTransition(); // This will handle content->content_phase
       }
       return;
     }
 
     // Transitioning to regular content
-    if (isInContentPhaseState) {
+    if (isContentPhase) {
       // content_phase to content - use outgoing_slot
       targetSlot.innerHTML = "";
       targetSlot.appendChild(newContentElement);
       targetSlotId = id;
-      isInContentPhaseState = false;
+      isContentPhase = false;
       applyContentPhaseToContentPhaseTransition(); // This will handle content_phase->content
       return;
     }
@@ -576,7 +575,7 @@ export const createUITransitionController = (
     if (isTransitioning) return;
 
     // Clear content_phase state
-    isInContentPhaseState = false;
+    isContentPhase = false;
     targetWidth = undefined;
     targetHeight = undefined;
 
@@ -639,24 +638,9 @@ export const createUITransitionController = (
     return targetSlot?.firstElementChild || null;
   };
 
-  const getIsInContentPhaseState = () => {
-    return isInContentPhaseState;
+  const getisContentPhase = () => {
+    return isContentPhase;
   };
-
-  // Initialize controller
-  container.style.setProperty("--x-transition-duration", `${duration}ms`);
-  updateAlignment();
-
-  if (targetSlot.firstElementChild) {
-    targetSlotId = getElementId(targetSlot.firstElementChild);
-    measureTargetSlot();
-    width = targetWidth;
-    height = targetHeight;
-  } else {
-    targetSlotId = EMPTY;
-  }
-
-  updateSlotAttributes();
 
   // Return public API
   return {
@@ -666,14 +650,25 @@ export const createUITransitionController = (
     setAlignment,
     getIsTransitioning,
     getCurrentContent,
-    getIsInContentPhaseState,
+    getisContentPhase,
     updateAlignment,
     // Slot state getters
     getSlotStates: () => ({
       targetSlotId,
       outgoingSlotId,
-      isInContentPhaseState,
+      isContentPhase,
       transitionType,
     }),
   };
+};
+
+// Helper to get element signature or use provided ID
+const getElementId = (element) => {
+  if (!element) return EMPTY;
+  if (element.id) return element.id;
+  // Simple signature based on element properties
+  const tagName = element.tagName?.toLowerCase() || "unknown";
+  const className = element.className || "";
+  const textContent = element.textContent?.slice(0, 20) || "";
+  return `${tagName}_${className}_${textContent}`.replace(/\s+/g, "_");
 };
