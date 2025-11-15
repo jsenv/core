@@ -187,10 +187,10 @@ export const createUITransitionController = (
   const targetSlot = container.querySelector(".target_slot");
   const outgoingSlot = container.querySelector(".outgoing_slot");
   const previousGroup = container.querySelector(".previous_group");
-  const previousTargetSlot = previousGroup.querySelector(
+  const previousTargetSlot = previousGroup?.querySelector(
     ".previous_target_slot",
   );
-  const previousOutgoingSlot = previousGroup.querySelector(
+  const previousOutgoingSlot = previousGroup?.querySelector(
     ".previous_outgoing_slot",
   );
 
@@ -199,10 +199,12 @@ export const createUITransitionController = (
     !activeGroup ||
     !targetSlot ||
     !outgoingSlot ||
-    !previousGroup
+    !previousGroup ||
+    !previousTargetSlot ||
+    !previousOutgoingSlot
   ) {
     throw new Error(
-      "createUITransitionController requires container with active_group, target_slot, outgoing_slot, and previous_group elements",
+      "createUITransitionController requires container with active_group, target_slot, outgoing_slot, previous_group, previous_target_slot, and previous_outgoing_slot elements",
     );
   }
 
