@@ -343,7 +343,7 @@ export const createUITransitionController = (
         }),
       );
     }
-    transitionController.update(transitions, {
+    const transition = transitionController.update(transitions, {
       onFinish: () => {
         transitionController.cancel();
         oldContentSlot.innerHTML = "";
@@ -352,7 +352,7 @@ export const createUITransitionController = (
         oldContentSlotId = "empty";
       },
     });
-    transitionController.play();
+    transition.play();
   };
   const applyAnyToPhaseTransition = () => {
     // First, capture current phase dimensions before any changes
@@ -455,7 +455,7 @@ export const createUITransitionController = (
         );
       }
     }
-    transitionController.update(transitions, {
+    const transition = transitionController.update(transitions, {
       onFinish: () => {
         transitionController.cancel();
         oldPhaseSlot.innerHTML = "";
@@ -474,7 +474,7 @@ export const createUITransitionController = (
         }
       },
     });
-    transitionController.play();
+    transition.play();
   };
   const applyPhaseToContentTransition = () => {
     isInPhaseState = false;
@@ -522,7 +522,7 @@ export const createUITransitionController = (
         }),
       );
     }
-    transitionController.update(transitions, {
+    const transition = transitionController.update(transitions, {
       onFinish: () => {
         transitionController.cancel();
         oldPhaseSlot.innerHTML = "";
@@ -537,7 +537,7 @@ export const createUITransitionController = (
         oldPhaseSlotId = "empty";
       },
     });
-    transitionController.play();
+    transition.play();
   };
   const applyContentToEmptyTransition = () => {
     const transitions = [];
@@ -559,7 +559,6 @@ export const createUITransitionController = (
         }),
       );
     }
-
     opacity: {
       if (oldContentSlot.firstElementChild) {
         oldContentSlot.style.opacity = "1";
@@ -573,14 +572,14 @@ export const createUITransitionController = (
         );
       }
     }
-    transitionController.update(transitions, {
+    const transition = transitionController.update(transitions, {
       onFinish: () => {
         transitionController.cancel();
         oldContentSlot.innerHTML = "";
         oldContentSlotId = "empty";
       },
     });
-    transitionController.play();
+    transition.play();
   };
   const applyPhaseToEmptyTransition = () => {
     const transitions = [];
@@ -615,7 +614,7 @@ export const createUITransitionController = (
         );
       }
     }
-    transitionController.update(transitions, {
+    const transition = transitionController.update(transitions, {
       onFinish: () => {
         transitionController.cancel();
         oldPhaseSlot.innerHTML = "";
@@ -632,7 +631,7 @@ export const createUITransitionController = (
         contentSlot.style.pointerEvents = "";
       },
     });
-    transitionController.play();
+    transition.play();
   };
 
   // Main transition method
