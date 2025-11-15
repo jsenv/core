@@ -28,8 +28,8 @@ export const combineTwoLifecycle = (lifecycleA, lifecycleB) => {
 
   return {
     setup: (transition) => {
-      const resultA = lifecycleA.setup?.(transition);
-      const resultB = lifecycleB.setup?.(transition);
+      const resultA = lifecycleA.setup?.(transition) || {};
+      const resultB = lifecycleB.setup?.(transition) || {};
       return {
         from: resultA.from ?? resultB.from,
         update: (transition) => {
