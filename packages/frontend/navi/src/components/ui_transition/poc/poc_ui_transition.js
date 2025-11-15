@@ -1,46 +1,52 @@
 /**
  * UI Transition - Core Implementation
- * Provides smooth resize transitions with cross-fade effects
+ * Provides smooth resize transitions with cross-fade effects between ui states
  *
  * Required HTML structure:
  *
- * <div class="transition-container">
- *   <div class="active-group">
- *     <div class="target-slot"></div>
- *     <div class="outgoing-slot"></div>
+ * <div class="ui_transition">
+ *   <div class="active_group">
+ *     <div class="target_slot"></div>
+ *     <div class="outgoing_slot"></div>
  *   </div>
- *   <div class="previous-group"></div>
+ *   <div class="previous_group"></div>
  * </div>
  *
- * Architecture principles:
+ * Architecture Overview:
  *
- * .transition-container:
- * Dimension of this container are transitioning from current dimensions to new dimensions
+ * .ui_transition
+ *   The main container that handles dimensional transitions. Its width and height animate
+ *   smoothly from current to target dimensions. Has overflow:hidden to clip ui during transitions.
  *
- * .active-group:
- * Contains the active ui
- * Wraps both slots so that they can be manipulated as a single unit.
- * When sliding is enabled, this component slides-in for "content to content" transitions
+ * .active_group
+ *   Contains the UI that should be active after the transition completes. Groups both the target
+ *   ui (.target_slot) and transitional ui (.outgoing_slot) as a single unit that can
+ *   be manipulated together (e.g., applying transforms or slides).
  *
- * .target-slot:
- * Contains what we want to see (active content or active content-phase)
- * This component will fade-in during transition.
+ * .target_slot
+ *   Always contains the target ui - what should be visible at the end of the transition.
+ *   Whether transitioning to regular content or content-phase, this slot receives the new ui.
+ *   Receives fade-in transitions (opacity 0 → 1) during all transition types.
  *
- * .outgoing-slot:
- * When content-phase becomes obsolete as we transit to an other content-phase or content.
- * Will contain a clone of the content-phase
- * This component will fade-out during transition.
+ * .outgoing_slot
+ *   Holds content-phase that's being replaced during content-phase transitions. When transitioning
+ *   from one content-phase to another, or from content-phase to content, the old content-phase moves
+ *   here for fade-out. Receives fade-out transitions (opacity 1 → 0).
  *
- * .previous-group:
- * Used for content to content transitions (clone of .active-group).
- * When sliding is enabled, this component slides-out for "content to content" transitions.
- * Otherwise we'll fade it out
+ * .previous_group
+ *   Used for content-to-content transitions. When switching between regular content (not phases),
+ *   the entire .active_group childNodes are cloned here to fade out while the new content fades in.
+ *   Can slide out when sliding transitions are enabled, otherwise fades out.
  *
- * Notes:
+ * Transition Logic:
+ * - Content → Content: Clone active_group to previous_group, transition between groups
+ * - Content-phase → Content-phase: Move current content to outgoing_slot, cross-fade within active_group
+ * - Content → Content-phase: Use outgoing_slot for cross-fade
+ * - Content-phase → Content: Use outgoing_slot for cross-fade
  *
- * To prevent content distortion during size transition:
- * When container is transitioning size .target-slot and .outgoing-slot
- * have their dimensions forced to their natural dimensions.
+ * Size Transition Handling:
+ * During dimensional transitions, both .target_slot and .outgoing_slot have their dimensions
+ * explicitly set to prevent content reflow and maintain visual consistency.
  */
 
 import {
