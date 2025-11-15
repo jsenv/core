@@ -17,7 +17,10 @@
  *     <div class="target_slot"></div>
  *     <div class="outgoing_slot"></div>
  *   </div>
- *   <div class="previous_group"></div>
+ *   <div class="previous_group">
+ *     <div class="previous_target_slot"></div>
+ *     <div class="previous_outgoing_slot"></div>
+ *   </div>
  * </div>
  *
  * Architecture Overview:
@@ -134,7 +137,35 @@ import.meta.css = /* css */ `
   }
 `;
 
-const EMPTY = { id: "empty", toString: () => "empty" };
+const EMPTY = {
+  contentId: "empty",
+  type: "empty",
+  toString: () => "empty",
+};
+const createConfiguration = (contentId, isContentPhase) => {
+  if (!contentId) {
+    return EMPTY;
+  }
+  if (isContentPhase) {
+    return {
+      contentId,
+      type: "content_phase",
+      toString: () => `content_phase:${contentId}`,
+    };
+  }
+  return {
+    contentId,
+    type: "content",
+    toString: () => `content:${contentId}`,
+  };
+};
+const isEmpty = (configuration) => configuration === EMPTY;
+const isContentPhase = (configuration) =>
+  configuration.type === "content_phase";
+const isContent = (configuration) => configuration.type === "content";
+const isSameConfiguration = (configA, configB) => {
+  return configA.toString() === configB.toString();
+};
 
 export const createUITransitionController = (
   container,
@@ -150,6 +181,12 @@ export const createUITransitionController = (
   const targetSlot = container.querySelector(".target_slot");
   const outgoingSlot = container.querySelector(".outgoing_slot");
   const previousGroup = container.querySelector(".previous_group");
+  const previousTargetSlot = previousGroup.querySelector(
+    ".previous_target_slot",
+  );
+  const previousOutgoingSlot = previousGroup.querySelector(
+    ".previous_outgoing_slot",
+  );
 
   if (
     !container ||
@@ -170,15 +207,22 @@ export const createUITransitionController = (
   let initialContent;
   let isTransitioning = false;
   let isContentPhase = false;
+  let contentId;
+  let targetSlotConfiguration;
+  let outgoingSlotConfiguration;
+  let transitionType = "none";
+
+  // dimensions of the container
   let width;
   let height;
+  // dimensions the container wants to take (always the dimensions of the targetSlot?)
   let targetWidth;
   let targetHeight;
-  let targetSlotId;
-  let outgoingSlotId;
-  let transitionType; // Debug string for current transition type
+  let targetSlotWidth;
+  let targetSlotHeight;
+  let outgoingSlotWidth;
+  let outgoingSlotHeight;
 
-  // Get dimensions of an element
   const getSlotDimensions = (slotElement) => {
     const firstChild = slotElement.firstElementChild;
     if (!firstChild) {
@@ -191,22 +235,23 @@ export const createUITransitionController = (
       height: rect.height,
     };
   };
-  // Helper to update slot positioning based on active content
   const updateSlotAttributes = () => {
-    if (targetSlotId === EMPTY && outgoingSlotId === EMPTY) {
+    if (
+      targetSlotConfiguration === EMPTY &&
+      outgoingSlotConfiguration === EMPTY
+    ) {
       container.setAttribute("data-only-previous-group", "");
     } else {
       container.removeAttribute("data-only-previous-group");
     }
   };
-  // Update alignment of content within the transition area
   const updateAlignment = () => {
     // Set data attributes for CSS-based alignment
     container.setAttribute("data-align-x", alignX);
     container.setAttribute("data-align-y", alignY);
   };
   const measureTargetSlot = () => {
-    if (targetSlotId === EMPTY) {
+    if (targetSlotConfiguration === EMPTY) {
       targetWidth = undefined;
       targetHeight = undefined;
       return;
@@ -218,19 +263,19 @@ export const createUITransitionController = (
 
   if (targetSlot.firstElementChild) {
     initialContent = targetSlot.firstElementChild.cloneNode(true);
-    targetSlotId = getElementId(targetSlot.firstElementChild);
+    contentId = getElementId(targetSlot.firstElementChild);
+    targetSlotConfiguration = createConfiguration(contentId, false);
   } else {
-    targetSlotId = EMPTY;
+    targetSlotConfiguration = EMPTY;
   }
   updateAlignment();
   updateSlotAttributes();
-  if (targetSlotId !== EMPTY) {
+  if (!isEmpty(targetSlotConfiguration)) {
     measureTargetSlot();
     width = targetWidth;
     height = targetHeight;
   }
-  outgoingSlotId = EMPTY;
-  transitionType = EMPTY; // Debug string for current transition type
+  outgoingSlotConfiguration = EMPTY;
 
   const transitionController = createGroupTransitionController({
     // debugQuarterBreakpoints: true,
@@ -252,21 +297,25 @@ export const createUITransitionController = (
     },
   });
 
-  // Content to content transition (using previous_group)
-  const applyContentToContentTransition = () => {
+  // content_to_content transition (uses previous_group)
+  const applyContentToContentTransition = (toConfiguration) => {
+    targetSlot.innerHTML = "";
+    targetSlot.appendChild(toConfiguration.element);
+    targetSlotConfiguration = toConfiguration;
+    isContentPhase = true;
+
     const transitions = [];
 
-    // Clone current active_group content to previous_group
-    if (targetSlot.firstElementChild) {
-      const clonedContent = targetSlot.firstElementChild.cloneNode(true);
-      previousGroup.innerHTML = "";
-      previousGroup.appendChild(clonedContent);
-
-      // Set previous_group dimensions to current dimensions
-      if (width !== undefined && height !== undefined) {
-        previousGroup.style.width = `${width}px`;
-        previousGroup.style.height = `${height}px`;
-      }
+    // Move active slots into previous slots
+    if (targetSlotConfiguration !== EMPTY) {
+      moveDOMNodes(targetSlot, previousTargetSlot);
+      previousTargetSlot.style.width = `${targetSlotWidth}px`;
+      previousTargetSlot.style.height = `${targetSlotHeight}px`;
+    }
+    if (outgoingSlotConfiguration !== EMPTY) {
+      moveDOMNodes(outgoingSlot, previousOutgoingSlot);
+      previousOutgoingSlot.style.width = `${outgoingSlotWidth}px`;
+      previousOutgoingSlot.style.height = `${outgoingSlotHeight}px`;
     }
 
     // Measure new content dimensions
@@ -332,33 +381,23 @@ export const createUITransitionController = (
     });
     transition.play();
   };
-
-  // content_phase to content_phase transition (using outgoing_slot)
-  const applyContentPhaseToContentPhaseTransition = () => {
-    const transitions = [];
-
+  // content_phase_to_content_phase transition (uses outgoing_slot)
+  const applyContentPhaseToContentPhaseTransition = (toConfiguration) => {
     // Move current target content to outgoing_slot
-    if (targetSlot.firstElementChild) {
-      const currentContent = targetSlot.firstElementChild;
-      outgoingSlot.innerHTML = "";
-      outgoingSlot.appendChild(currentContent);
-      outgoingSlotId = targetSlotId;
-
-      // Set old slot dimensions to current dimensions
-      if (width !== undefined && height !== undefined) {
-        outgoingSlot.style.width = `${width}px`;
-        outgoingSlot.style.height = `${height}px`;
-      }
+    if (targetSlotConfiguration !== EMPTY) {
+      moveDOMNodes(targetSlot, outgoingSlot);
+      outgoingSlotConfiguration = targetSlotConfiguration;
     }
+
+    // content_phase to content_phase - use outgoing_slot
+    targetSlot.innerHTML = "";
+    targetSlot.appendChild(toConfiguration.element);
+    targetSlotConfiguration = toConfiguration;
 
     // Measure new content dimensions
     measureTargetSlot();
 
-    // Set target slot to target dimensions
-    if (targetWidth !== undefined && targetHeight !== undefined) {
-      targetSlot.style.width = `${targetWidth}px`;
-      targetSlot.style.height = `${targetHeight}px`;
-    }
+    const transitions = [];
 
     dimension: {
       transitions.push(
@@ -410,25 +449,27 @@ export const createUITransitionController = (
         outgoingSlot.style.opacity = "0";
         outgoingSlot.style.width = "";
         outgoingSlot.style.height = "";
-        outgoingSlotId = EMPTY;
+        outgoingSlotConfiguration = EMPTY;
       },
     });
     transition.play();
   };
-
-  // Transition to empty
+  // any_to_empty
   const applyToEmptyTransition = () => {
     const transitions = [];
 
+    targetSlot.innerHTML = "";
+    targetSlotConfiguration = EMPTY;
+
     // Move current content to appropriate old slot
-    if (isContentPhase) {
+    if (true) {
       // Move content_phase content to outgoing_slot
       if (targetSlot.firstElementChild) {
         const currentContent = targetSlot.firstElementChild;
         outgoingSlot.innerHTML = "";
         outgoingSlot.appendChild(currentContent);
       }
-    } else if (targetSlot.firstElementChild) {
+    } else if (firstElementChild) {
       const clonedContent = targetSlot.firstElementChild.cloneNode(true);
       previousGroup.innerHTML = "";
       previousGroup.appendChild(clonedContent);
@@ -506,67 +547,34 @@ export const createUITransitionController = (
       return;
     }
 
-    const fromId = targetSlotId;
-    const toId = id;
-
-    if (fromId === toId) {
-      console.log(`transitionTo() ignored (already in desired state: ${toId})`);
+    const fromConfiguration = targetSlotConfiguration;
+    const toConfiguration = createConfiguration(id, isContentPhase);
+    if (isSameConfiguration(fromConfiguration, toConfiguration)) {
+      console.log(
+        `transitionTo() ignored (already in desired state: ${toConfiguration})`,
+      );
       return;
     }
 
     // Determine transition type for debugging
-    const fromState = isContentPhase ? "content_phase" : "content";
-    const toState = isContentPhase ? "content_phase" : "content";
-    transitionType = `${fromState}_to_${toState}`;
-    console.debug(`Transition type: ${transitionType} (${fromId} -> ${toId})`);
+    const fromConfigType = targetSlotConfiguration.type;
+    const toConfigType = toConfiguration.type;
+    transitionType = `${fromConfigType}_to_${toConfigType}`;
+    console.debug(
+      `Transition type: ${transitionType} (${fromConfiguration} -> ${toConfiguration})`,
+    );
 
-    if (toId === EMPTY) {
-      // Transitioning to empty - clear target slot
-      if (targetSlotId !== EMPTY) {
-        // Will be handled by applyToEmptyTransition
-      }
-      targetSlot.innerHTML = "";
-      targetSlotId = EMPTY;
-      isContentPhase = false;
+    if (toConfiguration === EMPTY) {
       applyToEmptyTransition();
       return;
     }
-
-    if (isContentPhase) {
-      // Transitioning to content_phase content
-      if (isContentPhase) {
-        // content_phase to content_phase - use outgoing_slot
-        targetSlot.innerHTML = "";
-        targetSlot.appendChild(newContentElement);
-        targetSlotId = id;
-        isContentPhase = true;
-        applyContentPhaseToContentPhaseTransition();
-      } else {
-        // content to content_phase - use previous_group
-        targetSlot.innerHTML = "";
-        targetSlot.appendChild(newContentElement);
-        targetSlotId = id;
-        isContentPhase = true;
-        applyContentToContentTransition(); // This will handle content->content_phase
+    if (isContentPhase(fromConfiguration)) {
+      if (isContentPhase(toConfiguration)) {
+        applyContentPhaseToContentPhaseTransition(toConfiguration);
+        return;
       }
-      return;
+      // apply content phase to something (content or content phase)
     }
-
-    // Transitioning to regular content
-    if (isContentPhase) {
-      // content_phase to content - use outgoing_slot
-      targetSlot.innerHTML = "";
-      targetSlot.appendChild(newContentElement);
-      targetSlotId = id;
-      isContentPhase = false;
-      applyContentPhaseToContentPhaseTransition(); // This will handle content_phase->content
-      return;
-    }
-
-    // Regular content to content transition - use previous_group
-    targetSlot.innerHTML = "";
-    targetSlot.appendChild(newContentElement);
-    targetSlotId = id;
     applyContentToContentTransition();
   };
 
@@ -660,6 +668,14 @@ export const createUITransitionController = (
       transitionType,
     }),
   };
+};
+
+const moveDOMNodes = (from, to) => {
+  to.innerHTML = "";
+  const nodesToMove = Array.from(from.childNodes);
+  nodesToMove.forEach((node) => {
+    to.appendChild(node);
+  });
 };
 
 // Helper to get element signature or use provided ID
