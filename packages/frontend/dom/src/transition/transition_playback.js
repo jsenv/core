@@ -76,7 +76,7 @@ export const combineTwoLifecycle = (lifecycleA, lifecycleB) => {
  *
  * @typedef {Object} TransitionLifecycle
  * @property {Function} [setup] - Called when transition starts. Should return an object with:
- *   @property {number} [from] - Override the transition's from value if transition.from is undefined
+ *   @property {number}   [from] - Override the transition's from value if transition.from is undefined
  *   @property {Function} [update] - Called on each frame with (transition) - handles DOM updates
  *   @property {Function} [restore] - Called when transition is cancelled - should reset DOM to original state
  *   @property {Function} [teardown] - Called when transition finishes or is cancelled - cleanup resources
