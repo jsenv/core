@@ -6,18 +6,18 @@
  *
  * <div class="transition-container">
  *   <div class="active-layer">
- *     <div class="active-slot"></div>     <!-- Active content: where current content lives -->
- *     <div class="active-slot-old"></div> <!-- Old active content: for content phase transitions -->
+ *     <div class="active-slot"></div>
+ *     <div class="active-slot-old"></div>
  *   </div>
- *   <div class="previous-layer"></div>    <!-- Previous layer: for content to content transitions -->
+ *   <div class="previous-layer"></div>
  * </div>
  *
  * Architecture principles:
- * - Container: Provides smooth dimensional transitions with overflow hidden
- * - Active layer: Contains the content/phase that should be active after transition
- * - Active slot: Always contains the target content (what we want to see at the end)
- * - Active slot old: Used for content phase to content phase transitions
- * - Previous layer: Used for content to content transitions (clone of active layer)
+ * .container: Provides smooth dimensional transitions with overflow hidden
+ *   .active-layer: Contains the active ui
+ *     .active-slot: Always contains the target ui (what we want to see at the end)
+ *     .active-slot-old: Contains content-phase of the active content
+ *   .previous-layer: Used for content to content transitions (clone of active layer)
  */
 
 import {
