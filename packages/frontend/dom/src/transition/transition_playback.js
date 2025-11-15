@@ -46,9 +46,9 @@ export const combineTwoLifecycle = (lifecycleA, lifecycleB) => {
         },
       };
     },
-    pause: () => {
-      const resumeA = lifecycleA.pause?.();
-      const resumeB = lifecycleB.pause?.();
+    pause: (transition) => {
+      const resumeA = lifecycleA.pause?.(transition);
+      const resumeB = lifecycleB.pause?.(transition);
       return () => {
         resumeA?.();
         resumeB?.();
@@ -429,7 +429,8 @@ export const createTimelineTransition = ({
         );
         onTimelineNeeded();
         const unsubscribeDebugger = subscribeDebugger(() => {
-          return transition.pause();
+          transition.pause();
+          return transition.play;
         });
         return {
           teardown: () => {
