@@ -46,10 +46,6 @@ import.meta.css = /* css */ `
     background: var(--background-color);
     border: 8px dashed #ccc;
     border-radius: 8px;
-    /* Transition sur les dimensions avec variable CSS */
-    transition:
-      width var(--x-transition-duration) ease,
-      height var(--x-transition-duration) ease;
     /* Overflow hidden pour que le contenu soit coupé pendant la transition */
     overflow: hidden;
   }
@@ -103,11 +99,6 @@ import.meta.css = /* css */ `
   }
   .old-phase-slot {
     position: absolute;
-  }
-  .phase-slot,
-  .old-phase-slot {
-    /* width: 100%; */
-    /* height: 100%; */
   }
   /* Styles for content in old slots */
   .old-content-slot > *,
@@ -302,18 +293,16 @@ export const createUITransitionController = (
       contentDimensions.style.width = `${targetWidth}px`;
       contentDimensions.style.height = `${targetHeight}px`;
       transitions.push(
-        createWidthTransition(container, {
-          from: width,
-          to: targetWidth,
+        createWidthTransition(container, targetWidth, {
+          // from: width,
           duration,
           styleSynchronizer: "inline_style",
           onUpdate: ({ value }) => {
             width = value;
           },
         }),
-        createHeightTransition(container, {
-          from: height,
-          to: targetHeight,
+        createHeightTransition(container, targetHeight, {
+          // from: height,
           duration,
           styleSynchronizer: "inline_style",
           onUpdate: ({ value }) => {
@@ -327,9 +316,8 @@ export const createUITransitionController = (
       if (oldContentSlot.firstElementChild) {
         oldContentSlot.style.opacity = "1";
         transitions.push(
-          createOpacityTransition(oldContentSlot, {
-            from: 1,
-            to: 0,
+          createOpacityTransition(oldContentSlot, 0, {
+            // from: 1,
             duration,
             styleSynchronizer: "inline_style",
           }),
@@ -337,9 +325,8 @@ export const createUITransitionController = (
       }
       contentSlot.style.opacity = "0";
       transitions.push(
-        createOpacityTransition(contentSlot, {
-          from: 0,
-          to: 1,
+        createOpacityTransition(contentSlot, 1, {
+          // from: 0,
           duration,
           styleSynchronizer: "inline_style",
         }),
