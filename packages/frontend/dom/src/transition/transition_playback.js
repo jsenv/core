@@ -96,7 +96,7 @@ export const createTransition = ({
   }
 
   const lifecycle = combineTwoLifecycle(baseLifecycle, rest.lifecycle);
-  const breakPointSet = new Set(debugBreakpoints);
+  let breakPointSet;
 
   let playState = "idle"; // 'idle', 'running', 'paused', 'finished'
   let isFirstUpdate = false;
@@ -108,7 +108,6 @@ export const createTransition = ({
     playState = "running";
 
     executionLifecycle = lifecycle.setup?.(transition) || {};
-    breakPointSet.clear();
 
     // Allow setup to override from value if transition.from is undefined
     if (
@@ -152,6 +151,7 @@ export const createTransition = ({
         transition.value = transition.from;
         transition.timing = "";
         transition.progress = transition.startProgress;
+        breakPointSet = new Set(debugBreakpoints);
         start();
         return;
       }
@@ -200,6 +200,8 @@ export const createTransition = ({
       transition.timing =
         progress === 1 ? "end" : isFirstUpdate ? "start" : "progress";
       isFirstUpdate = false;
+      executionLifecycle.update?.(transition);
+      executeUpdateCallbacks(transition);
 
       for (const breakpoint of breakPointSet) {
         if (progress >= breakpoint) {
@@ -212,9 +214,6 @@ export const createTransition = ({
           notifyDebuggerEnd();
         }
       }
-
-      executionLifecycle.update?.(transition);
-      executeUpdateCallbacks(transition);
     },
 
     pause: () => {

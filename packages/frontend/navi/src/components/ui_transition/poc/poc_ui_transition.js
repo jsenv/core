@@ -267,7 +267,6 @@ export const createUITransitionController = (
     debugQuarterBreakpoints: true,
     lifecycle: {
       setup: () => {
-        debugger;
         updateSlotAttributes();
         container.setAttribute("data-transitioning", "");
         isTransitioning = true;
