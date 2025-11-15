@@ -74,9 +74,13 @@ export const createTransition = ({
   key,
   from,
   to,
+  easing = EASING.EASE_OUT,
+  startProgress = 0, // Progress to start from (0-1)
   baseLifecycle,
   onUpdate,
   minDiff,
+  debugQuarterBreakpoints = false, // Shorthand for debugBreakpoints: [0.25, 0.75]
+  debugBreakpoints = debugQuarterBreakpoints ? [0.25, 0.75] : [], // Array of progress values (0-1) where debugger should trigger
   ...rest
 } = {}) => {
   const [updateCallbacks, executeUpdateCallbacks] = createCallbackController();
@@ -92,6 +96,7 @@ export const createTransition = ({
   }
 
   const lifecycle = combineTwoLifecycle(baseLifecycle, rest.lifecycle);
+  const breakPointSet = new Set(debugBreakpoints);
 
   let playState = "idle"; // 'idle', 'running', 'paused', 'finished'
   let isFirstUpdate = false;
@@ -103,6 +108,7 @@ export const createTransition = ({
     playState = "running";
 
     executionLifecycle = lifecycle.setup?.(transition) || {};
+    breakPointSet.clear();
 
     // Allow setup to override from value if transition.from is undefined
     if (
@@ -130,6 +136,10 @@ export const createTransition = ({
     key,
     from,
     to,
+    progress: startProgress,
+    startProgress,
+    easedProgress: easing ? easing(startProgress) : startProgress,
+    easing,
     value: from,
     timing: "",
     channels,
@@ -157,7 +167,7 @@ export const createTransition = ({
       start();
     },
 
-    update: (value, isLast) => {
+    update: (inputProgress) => {
       if (playState === "idle") {
         console.warn("Cannot update transition that is idle");
         return;
@@ -166,10 +176,42 @@ export const createTransition = ({
         console.warn("Cannot update a finished transition");
         return;
       }
+      let progress;
+      if (startProgress) {
+        // Apply start progress offset - transition runs from startProgress to 1
+        // Progress represents a ratio (0-1), so we can't just add ratios together
+        // Instead, we need to map inputProgress to the remaining progress range (1 - startProgress)
+        // This could also exceed 1 if we used simple addition, but that's just a symptom of the conceptual error
+        // Example: startProgress=0.3, inputProgress=0.5 → 0.3 + 0.5*(1-0.3) = 0.65
+        progress = startProgress + inputProgress * (1 - startProgress);
+      } else {
+        progress = inputProgress;
+      }
+      transition.progress = progress;
 
+      const easedProgress = easing ? easing(progress) : progress;
+      transition.easedProgress = easedProgress;
+
+      const value =
+        transition.from + (transition.to - transition.from) * easedProgress;
       transition.value = value;
-      transition.timing = isLast ? "end" : isFirstUpdate ? "start" : "progress";
+
+      transition.timing =
+        progress === 1 ? "end" : isFirstUpdate ? "start" : "progress";
       isFirstUpdate = false;
+
+      for (const breakpoint of breakPointSet) {
+        if (progress >= breakpoint) {
+          breakPointSet.delete(breakpoint);
+          console.log(
+            `Debug breakpoint hit at ${(breakpoint * 100).toFixed(1)}% progress`,
+          );
+          const notifyDebuggerEnd = notifyDebuggerStart();
+          debugger;
+          notifyDebuggerEnd();
+        }
+      }
+
       executionLifecycle.update?.(transition);
       executeUpdateCallbacks(transition);
     },
@@ -292,9 +334,6 @@ export const createTimelineTransition = ({
   duration,
   fps = 60,
   easing = EASING.EASE_OUT,
-  startProgress = 0, // Progress to start from (0-1)
-  debugQuarterBreakpoints = false, // Shorthand for debugBreakpoints: [0.25, 0.75]
-  debugBreakpoints = debugQuarterBreakpoints ? [0.25, 0.75] : [], // Array of progress values (0-1) where debugger should trigger
   ...options
 }) => {
   if (typeof duration !== "number" || duration <= 0) {
@@ -304,8 +343,6 @@ export const createTimelineTransition = ({
   }
 
   let lastUpdateTime = -1;
-  const breakPointSet = new Set(debugBreakpoints);
-
   const timeChangeCallback = () => {
     const timelineCurrentTime = getTimelineCurrentTime();
 
@@ -334,8 +371,7 @@ export const createTimelineTransition = ({
       msRemaining <= transition.frameDuration
     ) {
       transition.frameRemainingCount = 0;
-      transition.progress = 1;
-      transition.update(transition.to, true);
+      transition.update(1);
       transition.finish();
       return;
     }
@@ -356,31 +392,11 @@ export const createTimelineTransition = ({
       }
     }
     lastUpdateTime = timelineCurrentTime;
-    const rawProgress = Math.min(msElapsedSinceStart / transition.duration, 1);
-    // Apply start progress offset - transition runs from startProgress to 1
-    const progress = startProgress + rawProgress * (1 - startProgress);
-    transition.progress = progress;
-
-    // Check for debug breakpoints
-    for (const breakpoint of breakPointSet) {
-      if (progress >= breakpoint) {
-        breakPointSet.delete(breakpoint);
-        console.log(
-          `Debug breakpoint hit at ${(breakpoint * 100).toFixed(1)}% progress`,
-        );
-        const notifyDebuggerEnd = notifyDebuggerStart();
-        debugger;
-        notifyDebuggerEnd();
-      }
-    }
-
-    const easedProgress = transition.easing(progress);
-    const value =
-      transition.from + (transition.to - transition.from) * easedProgress;
     transition.frameRemainingCount = Math.ceil(
       msRemaining / transition.frameDuration,
     );
-    transition.update(value);
+    const progress = msElapsedSinceStart / transition.duration;
+    transition.update(progress > 1 ? 1 : progress);
   };
   const onTimelineNeeded = () => {
     addOnTimeline(timeChangeCallback, isVisual);
@@ -393,7 +409,6 @@ export const createTimelineTransition = ({
     ...options,
     startTime: null,
     baseTime: null,
-    progress: startProgress, // Initialize with start progress
     duration,
     easing,
     fps,
@@ -401,15 +416,13 @@ export const createTimelineTransition = ({
       return 1000 / fps;
     },
     frameRemainingCount: 0,
-    startProgress, // Store for calculations
     baseLifecycle: {
       setup: (transition) => {
         // Handle timeline management
         lastUpdateTime = -1;
-        breakPointSet.clear(); // Reset breakpoints for new transition run
         transition.baseTime = transition.startTime = getTimelineCurrentTime();
         // Calculate remaining frames based on remaining progress
-        const remainingProgress = 1 - startProgress;
+        const remainingProgress = 1 - transition.progress;
         const remainingDuration = transition.duration * remainingProgress;
         transition.frameRemainingCount = Math.ceil(
           remainingDuration / transition.frameDuration,
