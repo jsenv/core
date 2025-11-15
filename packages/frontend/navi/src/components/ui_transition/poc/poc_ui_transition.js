@@ -100,13 +100,6 @@ import.meta.css = /* css */ `
   .old-phase-slot {
     position: absolute;
   }
-  /* Styles for content in old slots */
-  .old-content-slot > *,
-  .old-phase-slot > * {
-    position: static !important;
-    z-index: auto !important;
-    pointer-events: none !important;
-  }
 
   /* Boolean data attributes for single slot states */
   .transition-container[data-only-content-phase] .content-dimensions,
@@ -164,6 +157,8 @@ export const createUITransitionController = (
       "createUITransitionController requires container with content-slot, phase-slot, old-content-slot, old-phase-slot, content-dimensions, and phase-dimensions elements",
     );
   }
+
+  oldContentSlot.setAttribute("inert", "");
 
   // Internal state
   let isTransitioning = false;
