@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Group Transition Controller Debugger Integration Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .test-elements {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .test-element {
+            min-width: 50px;
+            height: 50px;
+            border-radius: 4px;
+            transition: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .width-element {
+            background: #007acc;
+        }
+        
+        .height-element {
+            width: 50px;
+            background: #28a745;
+        }
+        
+        .opacity-element {
+            width: 60px;
+            background: #dc3545;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 8px 16px;
+            background: #007acc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        button:hover {
+            background: #005a99;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            background: #f0f8ff;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border-left: 4px solid #007acc;
+        }
+        
+        .log {
+            background: #f8f8f8;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            max-height: 250px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .debug-controls {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .debug-controls h3 {
+            margin-top: 0;
+            color: #856404;
+        }
+        
+        .progress-bars {
+            margin: 20px 0;
+        }
+        
+        .progress-item {
+            margin-bottom: 10px;
+        }
+        
+        .progress-label {
+            font-size: 12px;
+            margin-bottom: 4px;
+            color: #555;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 16px;
+            background: #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            transition: none;
+        }
+        
+        .progress-fill.width {
+            background: linear-gradient(90deg, #007acc, #0099ff);
+        }
+        
+        .progress-fill.height {
+            background: linear-gradient(90deg, #28a745, #5cb85c);
+        }
+        
+        .progress-fill.opacity {
+            background: linear-gradient(90deg, #dc3545, #f56565);
+        }
+        
+        .progress-fill.group {
+            background: linear-gradient(90deg, #6f42c1, #9966cc);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Group Transition Controller Debugger Integration Test</h1>
+        
+        <div class="test-elements">
+            <div class="test-element width-element" id="widthElement">WIDTH</div>
+            <div class="test-element height-element" id="heightElement">HEIGHT</div>
+            <div class="test-element opacity-element" id="opacityElement">OPACITY</div>
+        </div>
+        
+        <div class="progress-bars">
+            <div class="progress-item">
+                <div class="progress-label">Width Progress</div>
+                <div class="progress-bar">
+                    <div class="progress-fill width" id="widthProgress"></div>
+                </div>
+            </div>
+            <div class="progress-item">
+                <div class="progress-label">Height Progress</div>
+                <div class="progress-bar">
+                    <div class="progress-fill height" id="heightProgress"></div>
+                </div>
+            </div>
+            <div class="progress-item">
+                <div class="progress-label">Opacity Progress</div>
+                <div class="progress-bar">
+                    <div class="progress-fill opacity" id="opacityProgress"></div>
+                </div>
+            </div>
+            <div class="progress-item">
+                <div class="progress-label">Group Progress (Average)</div>
+                <div class="progress-bar">
+                    <div class="progress-fill group" id="groupProgress"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button id="startBtn">Start Group Transitions</button>
+            <button id="pauseBtn" disabled>Pause Group</button>
+            <button id="resumeBtn" disabled>Resume Group</button>
+            <button id="cancelBtn" disabled>Cancel Group</button>
+        </div>
+        
+        <div class="debug-controls">
+            <h3>🐛 Debugger Simulation</h3>
+            <div style="margin-bottom: 10px;">
+                <label>
+                    <input type="checkbox" id="debugBreakpointsCheckbox" />
+                    Enable debug breakpoints at 25% and 75% progress for each transition
+                </label>
+            </div>
+            <button id="triggerDebuggerBtn">Trigger Debugger (Pause All Transitions)</button>
+            <button id="endDebuggerBtn" disabled>End Debugger (Resume All Transitions)</button>
+            <p><em>This simulates what happens when a debugger breakpoint is hit during group transitions.</em></p>
+        </div>
+        
+        <div class="status" id="status">Ready to start group transitions</div>
+        
+        <div class="log" id="log"></div>
+    </div>
+
+    <script type="module">
+        import { createTimelineTransition } from "../transition_playback.js";
+        import { createGroupTransitionController } from "../group_transition.js";
+        import { notifyDebuggerStart } from "../debugger_topic.js";
+
+        const widthElement = document.getElementById("widthElement");
+        const heightElement = document.getElementById("heightElement");
+        const opacityElement = document.getElementById("opacityElement");
+        
+        const widthProgress = document.getElementById("widthProgress");
+        const heightProgress = document.getElementById("heightProgress");
+        const opacityProgress = document.getElementById("opacityProgress");
+        const groupProgress = document.getElementById("groupProgress");
+        
+        const status = document.getElementById("status");
+        const log = document.getElementById("log");
+        
+        const startBtn = document.getElementById("startBtn");
+        const pauseBtn = document.getElementById("pauseBtn");
+        const resumeBtn = document.getElementById("resumeBtn");
+        const cancelBtn = document.getElementById("cancelBtn");
+        const triggerDebuggerBtn = document.getElementById("triggerDebuggerBtn");
+        const endDebuggerBtn = document.getElementById("endDebuggerBtn");
+        const debugBreakpointsCheckbox = document.getElementById("debugBreakpointsCheckbox");
+
+        let currentGroupController = null;
+        let notifyDebuggerEnd = null;
+
+        function addLog(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            log.innerHTML += `[${timestamp}] ${message}<br>`;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function updateStatus(message) {
+            status.textContent = message;
+            addLog(`Status: ${message}`);
+        }
+
+        function updateButtons(state) {
+            startBtn.disabled = state !== "idle";
+            pauseBtn.disabled = state !== "running";
+            resumeBtn.disabled = state !== "paused";
+            cancelBtn.disabled = state === "idle";
+            triggerDebuggerBtn.disabled = state !== "running";
+        }
+
+        function createGroupTransitions() {
+            const useDebugBreakpoints = debugBreakpointsCheckbox.checked;
+            
+            // Create width transition (50px to 200px)
+            const widthTransition = createTimelineTransition({
+                constructor: { name: "WidthTransition" },
+                key: "width",
+                from: 50,
+                to: 200,
+                duration: 2500,
+                isVisual: true,
+                debugQuarterBreakpoints: useDebugBreakpoints,
+                lifecycle: {
+                    update: (transition) => {
+                        const width = Math.round(transition.value);
+                        widthElement.style.width = `${width}px`;
+                        widthProgress.style.width = `${transition.progress * 100}%`;
+                        
+                        addLog(`WIDTH: ${width}px, Progress: ${(transition.progress * 100).toFixed(1)}%`);
+                    }
+                }
+            });
+
+            // Create height transition (50px to 120px)
+            const heightTransition = createTimelineTransition({
+                constructor: { name: "HeightTransition" },
+                key: "height",
+                from: 50,
+                to: 120,
+                duration: 3000,
+                isVisual: true,
+                debugQuarterBreakpoints: useDebugBreakpoints,
+                lifecycle: {
+                    update: (transition) => {
+                        const height = Math.round(transition.value);
+                        heightElement.style.height = `${height}px`;
+                        heightProgress.style.width = `${transition.progress * 100}%`;
+                        
+                        addLog(`HEIGHT: ${height}px, Progress: ${(transition.progress * 100).toFixed(1)}%`);
+                    }
+                }
+            });
+
+            // Create opacity transition (0.3 to 1.0)
+            const opacityTransition = createTimelineTransition({
+                constructor: { name: "OpacityTransition" },
+                key: "opacity", 
+                from: 0.3,
+                to: 1.0,
+                duration: 2000,
+                isVisual: true,
+                debugQuarterBreakpoints: useDebugBreakpoints,
+                lifecycle: {
+                    update: (transition) => {
+                        const opacity = transition.value.toFixed(2);
+                        opacityElement.style.opacity = opacity;
+                        opacityProgress.style.width = `${transition.progress * 100}%`;
+                        
+                        addLog(`OPACITY: ${opacity}, Progress: ${(transition.progress * 100).toFixed(1)}%`);
+                    }
+                }
+            });
+
+            return [widthTransition, heightTransition, opacityTransition];
+        }
+
+        startBtn.addEventListener("click", () => {
+            const transitions = createGroupTransitions();
+            currentGroupController = createGroupTransitionController({
+                debugQuarterBreakpoints: debugBreakpointsCheckbox.checked
+            });
+            
+            const groupTransition = currentGroupController.update(transitions, {
+                onChange: (changeEntries) => {
+                    // Calculate average progress for group progress bar
+                    let totalProgress = 0;
+                    for (const entry of changeEntries) {
+                        totalProgress += entry.transition.progress || 0;
+                    }
+                    const averageProgress = totalProgress / changeEntries.length;
+                    groupProgress.style.width = `${averageProgress * 100}%`;
+                    
+                    updateStatus(`Group animating... ${(averageProgress * 100).toFixed(1)}% average progress`);
+                },
+                onFinish: () => {
+                    updateStatus("All group transitions finished");
+                    updateButtons("idle");
+                    currentGroupController = null;
+                    addLog("🏁 All group transitions finished");
+                },
+                onCancel: () => {
+                    updateStatus("All group transitions cancelled");
+                    updateButtons("idle");
+                    currentGroupController = null;
+                    addLog("❌ All group transitions cancelled");
+                }
+            });
+            
+            groupTransition.play();
+            updateStatus("Group transitions started");
+            updateButtons("running");
+            addLog("🚀 Group transitions started (width, height, opacity)");
+            addLog(`📊 Using debug breakpoints: ${debugBreakpointsCheckbox.checked ? "YES" : "NO"}`);
+        });
+
+        pauseBtn.addEventListener("click", () => {
+            if (currentGroupController) {
+                // Note: Group controller doesn't have pause method, 
+                // so we'll simulate it by cancelling and noting it was manual
+                addLog("⏸️ Manual pause requested (will cancel group)");
+                currentGroupController.cancel();
+            }
+        });
+
+        resumeBtn.addEventListener("click", () => {
+            addLog("▶️ Resume not implemented for group controller");
+            updateStatus("Resume not available for group controller");
+        });
+
+        cancelBtn.addEventListener("click", () => {
+            if (currentGroupController) {
+                currentGroupController.cancel();
+                addLog("❌ Group transitions cancelled manually");
+            }
+        });
+
+        triggerDebuggerBtn.addEventListener("click", () => {
+            addLog("🐛 Triggering debugger - this should pause all group transitions");
+            notifyDebuggerEnd = notifyDebuggerStart();
+            
+            updateStatus("Debugger active - all transitions should be paused");
+            triggerDebuggerBtn.disabled = true;
+            endDebuggerBtn.disabled = false;
+            
+            addLog("⏸️ Debugger started, all group transitions should be paused automatically");
+        });
+
+        endDebuggerBtn.addEventListener("click", () => {
+            if (notifyDebuggerEnd) {
+                addLog("🐛 Ending debugger - this should resume all group transitions");
+                notifyDebuggerEnd();
+                notifyDebuggerEnd = null;
+                
+                updateStatus("Debugger ended - all transitions should resume");
+                triggerDebuggerBtn.disabled = !currentGroupController;
+                endDebuggerBtn.disabled = true;
+                
+                addLog("▶️ Debugger ended, all group transitions should resume automatically");
+            }
+        });
+
+        // Initialize UI
+        updateButtons("idle");
+        addLog("🔧 Group transition test page loaded and ready");
+        addLog("📝 Instructions:");
+        addLog("1. Click 'Start Group Transitions' to begin coordinated width, height, and opacity animations");
+        addLog("2. While running, click 'Trigger Debugger' to simulate a debugger breakpoint");
+        addLog("3. Observe that ALL transitions pause automatically (width, height, opacity)");
+        addLog("4. Click 'End Debugger' to resume all transitions");
+        addLog("5. Verify all transitions continue smoothly from where they paused");
+        addLog("6. Optional: Enable debug breakpoints checkbox for automatic breakpoints at 25% and 75%");
+        addLog("💡 This tests the debugger integration with the group transition controller");
+    </script>
+</body>
+</html>
