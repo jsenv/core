@@ -20,40 +20,6 @@
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
       }
 
-      .test-elements {
-        display: flex;
-        margin: 20px 0;
-        flex-wrap: wrap;
-        gap: 20px;
-      }
-
-      .test-element {
-        display: flex;
-        min-width: 50px;
-        height: 50px;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: bold;
-        font-size: 12px;
-        border-radius: 4px;
-        transition: none;
-      }
-
-      .width-element {
-        background: #007acc;
-      }
-
-      .height-element {
-        width: 50px;
-        background: #28a745;
-      }
-
-      .opacity-element {
-        width: 60px;
-        background: #dc3545;
-      }
-
       .controls {
         display: flex;
         margin: 20px 0;
@@ -161,14 +127,6 @@
     <div class="container">
       <h1>Group Transition Controller Debugger Integration Test</h1>
 
-      <div class="test-elements">
-        <div class="test-element width-element" id="widthElement">WIDTH</div>
-        <div class="test-element height-element" id="heightElement">HEIGHT</div>
-        <div class="test-element opacity-element" id="opacityElement">
-          OPACITY
-        </div>
-      </div>
-
       <div class="progress-bars">
         <div class="progress-item">
           <div class="progress-label">Width Progress</div>
@@ -235,15 +193,10 @@
       import { createGroupTransitionController } from "../group_transition.js";
       import { notifyDebuggerStart } from "../debugger_topic.js";
 
-      const widthElement = document.getElementById("widthElement");
-      const heightElement = document.getElementById("heightElement");
-      const opacityElement = document.getElementById("opacityElement");
-
       const widthProgress = document.getElementById("widthProgress");
       const heightProgress = document.getElementById("heightProgress");
       const opacityProgress = document.getElementById("opacityProgress");
       const groupProgress = document.getElementById("groupProgress");
-
       const status = document.getElementById("status");
       const log = document.getElementById("log");
 
@@ -280,8 +233,6 @@
       }
 
       function createGroupTransitions() {
-        const useDebugBreakpoints = debugBreakpointsCheckbox.checked;
-
         // Create width transition (50px to 200px)
         const widthTransition = createTimelineTransition({
           constructor: { name: "WidthTransition" },
@@ -290,13 +241,11 @@
           to: 200,
           duration: 2500,
           isVisual: true,
-          debugQuarterBreakpoints: useDebugBreakpoints,
           lifecycle: {
             setup: () => {
               return {
                 update: (transition) => {
                   const width = Math.round(transition.value);
-                  widthElement.style.width = `${width}px`;
                   widthProgress.style.width = `${transition.progress * 100}%`;
 
                   addLog(
@@ -304,7 +253,6 @@
                   );
                 },
                 restore: () => {
-                  widthElement.style.width = "50px";
                   widthProgress.style.width = "0%";
                 },
               };
@@ -320,13 +268,11 @@
           to: 120,
           duration: 3000,
           isVisual: true,
-          debugQuarterBreakpoints: useDebugBreakpoints,
           lifecycle: {
             setup: () => {
               return {
                 update: (transition) => {
                   const height = Math.round(transition.value);
-                  heightElement.style.height = `${height}px`;
                   heightProgress.style.width = `${transition.progress * 100}%`;
 
                   addLog(
@@ -334,7 +280,6 @@
                   );
                 },
                 restore: () => {
-                  heightElement.style.height = "50px";
                   heightProgress.style.width = "0%";
                 },
               };
@@ -350,13 +295,11 @@
           to: 1.0,
           duration: 2000,
           isVisual: true,
-          debugQuarterBreakpoints: useDebugBreakpoints,
           lifecycle: {
             setup: () => {
               return {
                 update: (transition) => {
                   const opacity = transition.value.toFixed(2);
-                  opacityElement.style.opacity = opacity;
                   opacityProgress.style.width = `${transition.progress * 100}%`;
 
                   addLog(
@@ -364,7 +307,6 @@
                   );
                 },
                 restore: () => {
-                  opacityElement.style.opacity = "0.3";
                   opacityProgress.style.width = "0%";
                 },
               };
