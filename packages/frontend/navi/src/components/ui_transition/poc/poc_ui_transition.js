@@ -306,7 +306,7 @@ export const createUITransitionController = (
       contentDimensions.style.height = `${targetHeight}px`;
       transitions.push(
         createWidthTransition(container, targetWidth, {
-          // from: width,
+          from: width || 0,
           duration,
           styleSynchronizer: "inline_style",
           onUpdate: ({ value }) => {
@@ -314,7 +314,7 @@ export const createUITransitionController = (
           },
         }),
         createHeightTransition(container, targetHeight, {
-          // from: height,
+          from: height || 0,
           duration,
           styleSynchronizer: "inline_style",
           onUpdate: ({ value }) => {
@@ -858,16 +858,13 @@ export const createUITransitionController = (
   activeSlot = "content";
   if (contentSlot.firstElementChild) {
     contentSlotId = getElementId(contentSlot.firstElementChild);
-    updateSlotAttributes();
-    measureContentSlot();
-    width = contentWidth;
-    height = contentHeight;
   } else {
     contentSlotId = EMPTY;
-    updateSlotAttributes();
-    width = "auto";
-    height = "auto";
   }
+  updateSlotAttributes();
+  measureContentSlot();
+  width = contentWidth;
+  height = contentHeight;
 
   // Return public API
   return {
