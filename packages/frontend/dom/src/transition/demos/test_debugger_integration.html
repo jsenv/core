@@ -123,6 +123,12 @@
 
       <div class="debug-controls">
         <h3>🐛 Debugger Simulation</h3>
+        <div style="margin-bottom: 10px">
+          <label>
+            <input type="checkbox" id="debugBreakpointsCheckbox" />
+            Enable debug breakpoints at 25% and 75% progress
+          </label>
+        </div>
         <button id="triggerDebuggerBtn">
           Trigger Debugger (Pause Transition)
         </button>
@@ -157,6 +163,9 @@
       const cancelBtn = document.getElementById("cancelBtn");
       const triggerDebuggerBtn = document.getElementById("triggerDebuggerBtn");
       const endDebuggerBtn = document.getElementById("endDebuggerBtn");
+      const debugBreakpointsCheckbox = document.getElementById(
+        "debugBreakpointsCheckbox",
+      );
 
       let currentTransition = null;
       let notifyDebuggerEnd = null;
@@ -187,19 +196,27 @@
           to: 300,
           duration: 3000,
           isVisual: true,
-          debugQuarterBreakpoints: true,
+          debugQuarterBreakpoints: debugBreakpointsCheckbox.checked,
           lifecycle: {
-            update: (transition) => {
-              const width = Math.round(transition.value);
-              testElement.style.width = `${width}px`;
+            setup: () => {
+              return {
+                update: (transition) => {
+                  const width = Math.round(transition.value);
+                  testElement.style.width = `${width}px`;
 
-              // Update progress bar
-              const progressPercent = transition.progress * 100;
-              progressFill.style.width = `${progressPercent}%`;
+                  // Update progress bar
+                  const progressPercent = transition.progress * 100;
+                  progressFill.style.width = `${progressPercent}%`;
 
-              addLog(
-                `Width: ${width}px, Progress: ${(transition.progress * 100).toFixed(1)}%, Eased: ${(transition.easedProgress * 100).toFixed(1)}%, Timing: ${transition.timing}`,
-              );
+                  addLog(
+                    `Width: ${width}px, Progress: ${(transition.progress * 100).toFixed(1)}%, Eased: ${(transition.easedProgress * 100).toFixed(1)}%, Timing: ${transition.timing}`,
+                  );
+                },
+                restore: () => {
+                  testElement.style.width = "";
+                  progressFill.style.width = "0%";
+                },
+              };
             },
           },
           onUpdate: (transition) => {
@@ -296,6 +313,9 @@
       addLog('4. Click "End Debugger" to resume the transition');
       addLog(
         "5. Verify the transition continues smoothly from where it paused",
+      );
+      addLog(
+        "6. Optional: Enable debug breakpoints checkbox for automatic breakpoints at 25% and 75%",
       );
     </script>
   </body>
