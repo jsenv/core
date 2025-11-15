@@ -1,6 +1,14 @@
 /**
  * UI Transition - Core Implementation
- * Provides smooth resize transitions with cross-fade effects between ui states
+ * Provides smooth resize transitions with cross-fade effects between content states
+ *
+ * Content Types and Terminology:
+ *
+ * - ui: What the user currently sees rendered in the UI
+ * - dom_nodes: The actual DOM elements that make up the visual representation
+ * - content_id: Unique identifier for a content and its content_phase(s)
+ * - content_phase: Intermediate states (loading spinners, error messages, empty states)
+ * - content: The primary/final content we want to display (e.g., car details, user profile)
  *
  * Required HTML structure:
  *
@@ -19,34 +27,34 @@
  *   smoothly from current to target dimensions. Has overflow:hidden to clip ui during transitions.
  *
  * .active_group
- *   Contains the UI that should be active after the transition completes. Groups both the target
+ *   Contains the ui that should be active after the transition completes. Groups both the target
  *   ui (.target_slot) and transitional ui (.outgoing_slot) as a single unit that can
  *   be manipulated together (e.g., applying transforms or slides).
  *
  * .target_slot
- *   Always contains the target ui - what should be visible at the end of the transition.
- *   Whether transitioning to regular content or content-phase, this slot receives the new ui.
+ *   Always contains the target ui - what should be displayed at the end of the transition.
+ *   Whether transitioning to content or content_phase, this slot receives the new dom_nodes.
  *   Receives fade-in transitions (opacity 0 → 1) during all transition types.
  *
  * .outgoing_slot
- *   Holds content-phase that's being replaced during content-phase transitions. When transitioning
- *   from one content-phase to another, or from content-phase to content, the old content-phase moves
+ *   Holds content_phase that's being replaced during content_phase transitions. When transitioning
+ *   from one content_phase to another, or from content_phase to content, the old content_phase moves
  *   here for fade-out. Receives fade-out transitions (opacity 1 → 0).
  *
  * .previous_group
- *   Used for content-to-content transitions. When switching between regular content (not phases),
- *   the entire .active_group childNodes are cloned here to fade out while the new content fades in.
+ *   Used for content-to-content transitions. When switching between content (not phases),
+ *   the entire .active_group dom_nodes are cloned here to fade out while the new content fades in.
  *   Can slide out when sliding transitions are enabled, otherwise fades out.
  *
- * Transition Logic:
- * - Content → Content: Clone active_group to previous_group, transition between groups
- * - Content-phase → Content-phase: Move current content to outgoing_slot, cross-fade within active_group
- * - Content → Content-phase: Use outgoing_slot for cross-fade
- * - Content-phase → Content: Use outgoing_slot for cross-fade
+ * Transition Scenarios:
+ * - content → content: Car A details → Car B details (clone to previous_group)
+ * - content_phase → content_phase: Loading state → Error state (move to outgoing_slot, same content_id)
+ * - content → content_phase: Car A details → Loading Car B (use outgoing_slot for cross-fade)
+ * - content_phase → content: Loading Car B → Car B details (use outgoing_slot for cross-fade)
  *
  * Size Transition Handling:
  * During dimensional transitions, both .target_slot and .outgoing_slot have their dimensions
- * explicitly set to prevent content reflow and maintain visual consistency.
+ * explicitly set to prevent dom_nodes reflow and maintain visual consistency.
  */
 
 import {
