@@ -655,8 +655,8 @@ export const createUITransitionController = (
           : "content";
     const toId = id;
 
-    transitionType = `${fromSlot}(${fromId})_to_${toSlot}(${toId})`;
-    console.debug("Transition type:", transitionType);
+    transitionType = `${fromSlot}_to_${toSlot}`;
+    console.debug(`Transition type: ${transitionType} (${fromId} -> ${toId})`);
 
     if (newContentElement === null) {
       // Transitioning to empty - clear both content and phase slots
