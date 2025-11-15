@@ -1,141 +1,5 @@
+import { createPubSub } from "../pub_sub.js";
 import { createTransition } from "./transition_playback.js";
-
-// transition that manages multiple transitions
-export const createGroupTransition = (
-  transitionArray,
-  {
-    debugQuarterBreakpoints = false,
-    debugBreakpoints = debugQuarterBreakpoints ? [0.25, 0.75] : [],
-  } = {},
-) => {
-  let finishedCount = 0;
-  let duration = 0;
-  let childCount = transitionArray.length;
-
-  // Set up debug breakpoint tracking
-  const breakPointSet = new Set(debugBreakpoints);
-
-  for (const childTransition of transitionArray) {
-    if (childTransition.duration > duration) {
-      duration = childTransition.duration;
-    }
-  }
-
-  const groupTransition = createTransition({
-    constructor: createGroupTransition,
-    from: 0,
-    to: 1,
-    duration,
-    lifecycle: {
-      setup: (transition) => {
-        finishedCount = 0;
-
-        const cleanupCallbackSet = new Set();
-        for (const childTransition of transitionArray) {
-          const removeFinishListener = childTransition.channels.finish.add(
-            // eslint-disable-next-line no-loop-func
-            () => {
-              finishedCount++;
-              const allFinished = finishedCount === childCount;
-              if (allFinished) {
-                transition.finish();
-              }
-            },
-          );
-          cleanupCallbackSet.add(removeFinishListener);
-          childTransition.play();
-
-          const removeUpdateListener = childTransition.channels.update.add(
-            () => {
-              // Calculate average progress (handle undefined progress)
-              let totalProgress = 0;
-              let progressCount = 0;
-              for (const t of transitionArray) {
-                if (typeof t.progress === "number") {
-                  totalProgress += t.progress;
-                  progressCount++;
-                }
-              }
-              const averageProgress =
-                progressCount > 0 ? totalProgress / progressCount : 0;
-              // Expose progress on the group transition for external access
-              transition.progress = averageProgress;
-
-              // Check for debug breakpoints on group progress
-              for (const breakpoint of breakPointSet) {
-                if (averageProgress >= breakpoint) {
-                  breakPointSet.delete(breakpoint);
-                  console.log(
-                    `Group transition debug breakpoint hit at ${(breakpoint * 100).toFixed(1)}% progress`,
-                  );
-                  debugger;
-                }
-              }
-
-              // Update this transition's value with average progress
-              const isLast = averageProgress >= 1;
-              transition.update(averageProgress, isLast);
-            },
-          );
-          cleanupCallbackSet.add(removeUpdateListener);
-        }
-
-        return {
-          update: () => {},
-          teardown: () => {
-            for (const cleanupCallback of cleanupCallbackSet) {
-              cleanupCallback();
-            }
-            cleanupCallbackSet.clear();
-          },
-          restore: () => {},
-        };
-      },
-      pause: () => {
-        for (const childTransition of transitionArray) {
-          if (childTransition.playState === "running") {
-            childTransition.pause();
-          }
-        }
-        return () => {
-          for (const childTransition of transitionArray) {
-            if (childTransition.playState === "paused") {
-              childTransition.play();
-            }
-          }
-        };
-      },
-
-      cancel: () => {
-        for (const childTransition of transitionArray) {
-          if (childTransition.playState !== "idle") {
-            childTransition.cancel();
-          }
-        }
-      },
-
-      finish: () => {
-        for (const childTransition of transitionArray) {
-          if (childTransition.playState !== "finished") {
-            childTransition.finish();
-          }
-        }
-      },
-
-      reverse: () => {
-        for (const childTransition of transitionArray) {
-          if (
-            childTransition.playState === "running" ||
-            childTransition.playState === "paused"
-          ) {
-            childTransition.reverse();
-          }
-        }
-      },
-    },
-  });
-  return groupTransition;
-};
 
 /**
  * Creates an interface that manages ongoing transitions
@@ -144,17 +8,19 @@ export const createGroupTransition = (
 export const createGroupTransitionController = ({
   debugBreakpoints,
   debugQuarterBreakpoints,
+  lifecycle,
 } = {}) => {
   const groupTransitionOptions = {
     debugBreakpoints,
     debugQuarterBreakpoints,
+    lifecycle,
   };
   // Track all active transitions for cancellation and matching
   const activeTransitions = new Set();
 
   return {
     /**
-     * Animate multiple transitions simultaneously
+     * Control multiple transitions simultaneously
      * Automatically handles updateTarget for transitions that match constructor + targetKey
      * @param {Array} transitions - Array of transition objects with constructor and targetKey properties
      * @param {Object} options - Transition options
@@ -165,7 +31,7 @@ export const createGroupTransitionController = ({
      * @param {boolean} [options.debugQuarterBreakpoints=false] - If true and debugBreakpoints is empty, sets group breakpoints at 0.25 and 0.75
      * @returns {Object} Playback controller with play(), pause(), cancel(), etc.
      */
-    animate: (transitions, options = {}) => {
+    update: (transitions, options = {}) => {
       const { onChange, onCancel, onFinish } = options;
 
       if (transitions.length === 0) {
@@ -310,4 +176,131 @@ export const createGroupTransitionController = ({
       activeTransitions.clear();
     },
   };
+};
+
+// transition that manages multiple transitions
+const createGroupTransition = (
+  transitionArray,
+  {
+    debugQuarterBreakpoints = false,
+    debugBreakpoints = debugQuarterBreakpoints ? [0.25, 0.75] : [],
+    ...options
+  } = {},
+) => {
+  let childCount = transitionArray.length;
+  // duration is infered from the longest child transition
+  let duration = 0;
+  for (const childTransition of transitionArray) {
+    if (childTransition.duration > duration) {
+      duration = childTransition.duration;
+    }
+  }
+  const breakPointSet = new Set(debugBreakpoints);
+
+  const groupTransition = createTransition({
+    ...options,
+    constructor: createGroupTransition,
+    from: 0,
+    to: 1,
+    duration,
+    baseLifecycle: {
+      setup: (transition) => {
+        let finishedCount = 0;
+
+        const [cleanup, addCleanup] = createPubSub();
+
+        for (const childTransition of transitionArray) {
+          const removeFinishListener = childTransition.channels.finish.add(
+            // eslint-disable-next-line no-loop-func
+            () => {
+              finishedCount++;
+              const allFinished = finishedCount === childCount;
+              if (allFinished) {
+                transition.finish();
+              }
+            },
+          );
+          addCleanup(removeFinishListener);
+          childTransition.play();
+
+          const removeUpdateListener = childTransition.channels.update.add(
+            () => {
+              // Calculate average progress (handle undefined progress)
+              let totalProgress = 0;
+              let progressCount = 0;
+              for (const t of transitionArray) {
+                if (typeof t.progress === "number") {
+                  totalProgress += t.progress;
+                  progressCount++;
+                }
+              }
+              const averageProgress =
+                progressCount > 0 ? totalProgress / progressCount : 0;
+              // Expose progress on the group transition for external access
+              transition.progress = averageProgress;
+
+              // Check for debug breakpoints on group progress
+              for (const breakpoint of breakPointSet) {
+                if (averageProgress >= breakpoint) {
+                  breakPointSet.delete(breakpoint);
+                  console.log(
+                    `Group transition debug breakpoint hit at ${(breakpoint * 100).toFixed(1)}% progress`,
+                  );
+                  debugger;
+                }
+              }
+
+              // Update this transition's value with average progress
+              const isLast = averageProgress >= 1;
+              transition.update(averageProgress, isLast);
+            },
+          );
+          addCleanup(removeUpdateListener);
+        }
+
+        return {
+          teardown: cleanup,
+        };
+      },
+      pause: () => {
+        for (const childTransition of transitionArray) {
+          if (childTransition.playState === "running") {
+            childTransition.pause();
+          }
+        }
+        return () => {
+          for (const childTransition of transitionArray) {
+            if (childTransition.playState === "paused") {
+              childTransition.play();
+            }
+          }
+        };
+      },
+      cancel: () => {
+        for (const childTransition of transitionArray) {
+          if (childTransition.playState !== "idle") {
+            childTransition.cancel();
+          }
+        }
+      },
+      finish: () => {
+        for (const childTransition of transitionArray) {
+          if (childTransition.playState !== "finished") {
+            childTransition.finish();
+          }
+        }
+      },
+      reverse: () => {
+        for (const childTransition of transitionArray) {
+          if (
+            childTransition.playState === "running" ||
+            childTransition.playState === "paused"
+          ) {
+            childTransition.reverse();
+          }
+        }
+      },
+    },
+  });
+  return groupTransition;
 };

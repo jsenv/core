@@ -14,12 +14,66 @@ const LIFECYCLE_DEFAULT = {
   updateTarget: () => {},
 };
 
+const combineTwoLifecycle = (lifecycleA, lifecycleB) => {
+  if (!lifecycleA && !lifecycleB) {
+    return LIFECYCLE_DEFAULT;
+  }
+  if (!lifecycleB) {
+    return lifecycleA;
+  }
+  if (!lifecycleA) {
+    return lifecycleB;
+  }
+
+  return {
+    setup: (transition) => {
+      const resultA = lifecycleA.setup?.(transition);
+      const resultB = lifecycleB.setup?.(transition);
+      return {
+        from: resultA.from ?? resultB.from,
+        update: (transition) => {
+          resultA.update?.(transition);
+          resultB.update?.(transition);
+        },
+        restore: () => {
+          resultA.restore?.();
+          resultB.restore?.();
+        },
+        teardown: () => {
+          resultA.teardown?.();
+          resultB.teardown?.();
+        },
+      };
+    },
+    pause: () => {
+      const resumeA = lifecycleA.pause?.();
+      const resumeB = lifecycleB.pause?.();
+      return () => {
+        resumeA?.();
+        resumeB?.();
+      };
+    },
+    cancel: (transition) => {
+      lifecycleA.cancel?.(transition);
+      lifecycleB.cancel?.(transition);
+    },
+    finish: (transition) => {
+      lifecycleA.finish?.(transition);
+      lifecycleB.finish?.(transition);
+    },
+    updateTarget: (transition) => {
+      lifecycleA.updateTarget?.(transition);
+      lifecycleB.updateTarget?.(transition);
+    },
+  };
+};
+
 export const createTransition = ({
   constructor,
   key,
   from,
   to,
-  lifecycle = LIFECYCLE_DEFAULT,
+  baseLifecycle,
   onUpdate,
   minDiff,
   ...rest
@@ -36,6 +90,8 @@ export const createTransition = ({
     updateCallbacks.add(onUpdate);
   }
 
+  const lifecycle = combineTwoLifecycle(baseLifecycle, rest.lifecycle);
+
   let playState = "idle"; // 'idle', 'running', 'paused', 'finished'
   let isFirstUpdate = false;
   let resume;
@@ -45,7 +101,7 @@ export const createTransition = ({
     isFirstUpdate = true;
     playState = "running";
 
-    executionLifecycle = lifecycle.setup(transition);
+    executionLifecycle = lifecycle.setup?.(transition) || {};
 
     // Allow setup to override from value if transition.from is undefined
     if (
@@ -129,12 +185,12 @@ export const createTransition = ({
       playState = "paused";
 
       // Let the transition handle its own pause logic
-      resume = lifecycle.pause(transition);
+      resume = lifecycle.pause?.(transition);
     },
 
     cancel: () => {
       if (executionLifecycle) {
-        lifecycle.cancel(transition);
+        lifecycle.cancel?.(transition);
         executionLifecycle.teardown?.();
         executionLifecycle.restore?.();
       }
@@ -153,7 +209,7 @@ export const createTransition = ({
         return;
       }
       // "running" or "paused"
-      lifecycle.finish(transition);
+      lifecycle.finish?.(transition);
       executionLifecycle.teardown?.();
       resume = null;
       playState = "finished";
@@ -178,9 +234,7 @@ export const createTransition = ({
       transition.to = originalFrom;
 
       // Let the transition handle its own reverse logic (if any)
-      if (lifecycle.reverse) {
-        lifecycle.reverse(transition);
-      }
+      lifecycle.reverse?.(transition);
     },
 
     updateTarget: (newTarget) => {
@@ -206,7 +260,7 @@ export const createTransition = ({
       transition.to = newTarget;
 
       // Let the transition handle its own target update logic
-      lifecycle.updateTarget(transition);
+      lifecycle.updateTarget?.(transition);
     },
 
     ...rest,
