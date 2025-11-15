@@ -43,6 +43,9 @@ import.meta.css = /* css */ `
     --x-align-items: var(--align-items);
 
     position: relative;
+
+    /* in case we set border on this element his size must include borders */
+    box-sizing: content-box;
     background: var(--background-color);
     border: 8px dashed #ccc;
     border-radius: 8px;
@@ -238,12 +241,13 @@ export const createUITransitionController = (
   };
 
   // Get dimensions of an element
-  const getDimensions = (element) => {
-    if (!element) {
+  const getSlotDimensions = (slotElement) => {
+    const firstChild = slotElement.firstElementChild;
+    if (!firstChild) {
       console.warn("Element not found for dimension measurement");
       return { width: undefined, height: undefined };
     }
-    const rect = element.getBoundingClientRect();
+    const rect = firstChild.getBoundingClientRect();
     return {
       width: rect.width,
       height: rect.height,
@@ -251,20 +255,28 @@ export const createUITransitionController = (
   };
 
   const measureContentSlot = () => {
-    const currentContent = contentSlot?.firstElementChild;
-    const dimensions = getDimensions(currentContent);
+    if (contentSlotId === EMPTY) {
+      contentWidth = undefined;
+      contentHeight = undefined;
+      return;
+    }
+    const dimensions = getSlotDimensions(contentSlot);
     contentWidth = dimensions.width;
     contentHeight = dimensions.height;
   };
   const measurePhaseSlot = () => {
-    const currentPhase = phaseSlot?.firstElementChild;
-    const dimensions = getDimensions(currentPhase);
+    if (phaseSlotId === EMPTY) {
+      phaseWidth = undefined;
+      phaseHeight = undefined;
+      return;
+    }
+    const dimensions = getSlotDimensions(phaseSlot);
     phaseWidth = dimensions.width;
     phaseHeight = dimensions.height;
   };
   // Start all transitions with single controller
   const transitionController = createGroupTransitionController({
-    debugQuarterBreakpoints: true,
+    // debugQuarterBreakpoints: true,
     lifecycle: {
       setup: () => {
         updateSlotAttributes();
@@ -313,7 +325,7 @@ export const createUITransitionController = (
     }
     opacity: {
       // Set initial opacity state and add opacity transitions
-      if (oldContentSlot.firstElementChild) {
+      if (oldContentSlotId !== EMPTY) {
         oldContentSlot.style.opacity = "1";
         transitions.push(
           createOpacityTransition(oldContentSlot, 0, {
