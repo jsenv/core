@@ -27,8 +27,6 @@ export const createGroupTransitionController = ({
      * @param {Function} options.onChange - Called with (changeEntries, isLast) during transition
      * @param {Function} options.onFinish - Called when all transitions complete
      * @param {Function} options.onCancel - Called when transitions are cancelled
-     * @param {number[]} [options.debugBreakpoints=[]] - Array of progress values (0-1) where debugger should trigger for the group
-     * @param {boolean} [options.debugQuarterBreakpoints=false] - If true and debugBreakpoints is empty, sets group breakpoints at 0.25 and 0.75
      * @returns {Object} Playback controller with play(), pause(), cancel(), etc.
      */
     update: (transitions, options = {}) => {
@@ -179,14 +177,7 @@ export const createGroupTransitionController = ({
 };
 
 // transition that manages multiple transitions
-const createGroupTransition = (
-  transitionArray,
-  {
-    debugQuarterBreakpoints = false,
-    debugBreakpoints = debugQuarterBreakpoints ? [0.25, 0.75] : [],
-    ...options
-  } = {},
-) => {
+const createGroupTransition = (transitionArray, options = {}) => {
   let childCount = transitionArray.length;
   // duration is infered from the longest child transition
   let duration = 0;
@@ -195,7 +186,6 @@ const createGroupTransition = (
       duration = childTransition.duration;
     }
   }
-  const breakPointSet = new Set(debugBreakpoints);
 
   const groupTransition = createTransition({
     ...options,
@@ -238,18 +228,6 @@ const createGroupTransition = (
                 progressCount > 0 ? totalProgress / progressCount : 0;
               // Expose progress on the group transition for external access
               transition.progress = averageProgress;
-
-              // Check for debug breakpoints on group progress
-              for (const breakpoint of breakPointSet) {
-                if (averageProgress >= breakpoint) {
-                  breakPointSet.delete(breakpoint);
-                  console.log(
-                    `Group transition debug breakpoint hit at ${(breakpoint * 100).toFixed(1)}% progress`,
-                  );
-                  debugger;
-                }
-              }
-
               // Update this transition's value with average progress
               const isLast = averageProgress >= 1;
               transition.update(averageProgress, isLast);

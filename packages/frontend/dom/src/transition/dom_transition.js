@@ -5,7 +5,10 @@ import {
   getTranslateX,
   getWidth,
 } from "../style/style_controller.js";
-import { createTimelineTransition } from "./transition_playback.js";
+import {
+  combineTwoLifecycle,
+  createTimelineTransition,
+} from "./transition_playback.js";
 
 const transitionStyleController = createStyleController("transition");
 
@@ -31,18 +34,10 @@ const createCSSPropertyTransition = ({
   minDiff,
   options = {},
 }) => {
-  const {
-    setup,
-    finish,
-    styleSynchronizer = "js_animation",
-    ...rest
-  } = options;
-
-  // Check if it's a CSS variable (starts with --)
+  const { styleSynchronizer = "js_animation", ...rest } = options;
   if (typeof styleSynchronizer !== "string") {
     throw new Error("styleSynchronizer must be a string");
   }
-
   const setupSynchronizer = () => {
     if (styleSynchronizer === "inline_style") {
       return {
@@ -124,29 +119,28 @@ const createCSSPropertyTransition = ({
     };
   };
 
-  const lifecycle = {
-    setup: () => {
-      const teardown = setup?.();
-      const from = getValue(element);
-      const synchronizer = setupSynchronizer();
-      return {
-        from,
-        update: synchronizer.update,
-        restore: synchronizer.restore,
-        teardown,
-      };
-    },
-    finish,
-  };
-
   return createTimelineTransition({
+    duration: 300,
     ...rest,
     constructor,
     key: element,
     to,
     minDiff,
     isVisual: true,
-    lifecycle,
+    lifecycle: combineTwoLifecycle(
+      {
+        setup: () => {
+          const from = getValue(element);
+          const synchronizer = setupSynchronizer();
+          return {
+            from,
+            update: synchronizer.update,
+            restore: synchronizer.restore,
+          };
+        },
+      },
+      options.lifecycle,
+    ),
   });
 };
 

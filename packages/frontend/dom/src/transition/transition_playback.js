@@ -1,3 +1,4 @@
+import { notifyDebuggerStart, subscribeDebugger } from "./debugger_topic.js";
 import { EASING } from "./easing.js";
 import {
   addOnTimeline,
@@ -14,7 +15,7 @@ const LIFECYCLE_DEFAULT = {
   updateTarget: () => {},
 };
 
-const combineTwoLifecycle = (lifecycleA, lifecycleB) => {
+export const combineTwoLifecycle = (lifecycleA, lifecycleB) => {
   if (!lifecycleA && !lifecycleB) {
     return LIFECYCLE_DEFAULT;
   }
@@ -291,7 +292,6 @@ export const createTimelineTransition = ({
   duration,
   fps = 60,
   easing = EASING.EASE_OUT,
-  lifecycle,
   startProgress = 0, // Progress to start from (0-1)
   debugQuarterBreakpoints = false, // Shorthand for debugBreakpoints: [0.25, 0.75]
   debugBreakpoints = debugQuarterBreakpoints ? [0.25, 0.75] : [], // Array of progress values (0-1) where debugger should trigger
@@ -368,7 +368,9 @@ export const createTimelineTransition = ({
         console.log(
           `Debug breakpoint hit at ${(breakpoint * 100).toFixed(1)}% progress`,
         );
+        const notifyDebuggerEnd = notifyDebuggerStart();
         debugger;
+        notifyDebuggerEnd();
       }
     }
 
@@ -387,7 +389,6 @@ export const createTimelineTransition = ({
     removeFromTimeline(timeChangeCallback, isVisual);
   };
 
-  const { setup } = lifecycle;
   const transition = createTransition({
     ...options,
     startTime: null,
@@ -401,8 +402,7 @@ export const createTimelineTransition = ({
     },
     frameRemainingCount: 0,
     startProgress, // Store for calculations
-    lifecycle: {
-      ...lifecycle,
+    baseLifecycle: {
       setup: (transition) => {
         // Handle timeline management
         lastUpdateTime = -1;
@@ -415,8 +415,14 @@ export const createTimelineTransition = ({
           remainingDuration / transition.frameDuration,
         );
         onTimelineNeeded();
-        // Call the original setup
-        return setup(transition);
+        const unsubscribeDebugger = subscribeDebugger(() => {
+          return transition.pause();
+        });
+        return {
+          teardown: () => {
+            unsubscribeDebugger();
+          },
+        };
       },
       pause: (transition) => {
         const pauseTime = getTimelineCurrentTime();
