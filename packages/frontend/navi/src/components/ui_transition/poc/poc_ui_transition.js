@@ -74,17 +74,14 @@ import.meta.css = /* css */ `
 
   .content-dimensions {
     position: relative;
-    display: flex;
-    width: 100%;
-    height: 100%;
-    align-items: var(--x-align-items);
-    justify-content: var(--x-justify-content);
   }
   .content-slot {
     position: relative;
   }
   .old-content-slot {
     position: absolute;
+    top: 0;
+    left: 0;
   }
   .phase-dimensions {
     position: absolute;
@@ -299,11 +296,14 @@ export const createUITransitionController = (
   const applyContentToContentTransition = () => {
     const transitions = [];
     dimension: {
+      oldContentSlot.style.width = `${contentWidth}px`;
+      oldContentSlot.style.height = `${contentHeight}px`;
       measureContentSlot();
       targetWidth = contentWidth;
       targetHeight = contentHeight;
-      contentDimensions.style.width = `${targetWidth}px`;
-      contentDimensions.style.height = `${targetHeight}px`;
+      contentSlot.style.width = `${targetWidth}px`;
+      contentSlot.style.height = `${targetHeight}px`;
+
       transitions.push(
         createWidthTransition(container, targetWidth, {
           from: width || 0,
@@ -347,10 +347,9 @@ export const createUITransitionController = (
     const transition = transitionController.update(transitions, {
       onFinish: () => {
         transition.cancel();
-        oldContentSlot.innerHTML = "";
-        contentDimensions.style.width = "";
-        contentDimensions.style.height = "";
-        oldContentSlotId = EMPTY;
+        contentSlot.style.width = "";
+        contentSlot.style.height = "";
+        oldContentSlot.style.opacity = 0;
       },
     });
     transition.play();
