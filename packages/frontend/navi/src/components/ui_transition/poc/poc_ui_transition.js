@@ -334,7 +334,7 @@ export const createUITransitionController = (
     }
     const transition = transitionController.update(transitions, {
       onFinish: () => {
-        transitionController.cancel();
+        transition.cancel();
         oldContentSlot.innerHTML = "";
         contentDimensions.style.width = "";
         contentDimensions.style.height = "";
@@ -446,7 +446,7 @@ export const createUITransitionController = (
     }
     const transition = transitionController.update(transitions, {
       onFinish: () => {
-        transitionController.cancel();
+        transition.cancel();
         oldPhaseSlot.innerHTML = "";
         contentDimensions.style.width = "";
         contentDimensions.style.height = "";
@@ -513,7 +513,7 @@ export const createUITransitionController = (
     }
     const transition = transitionController.update(transitions, {
       onFinish: () => {
-        transitionController.cancel();
+        transition.cancel();
         oldPhaseSlot.innerHTML = "";
         contentDimensions.style.width = "";
         contentDimensions.style.height = "";
@@ -563,7 +563,7 @@ export const createUITransitionController = (
     }
     const transition = transitionController.update(transitions, {
       onFinish: () => {
-        transitionController.cancel();
+        transition.cancel();
         oldContentSlot.innerHTML = "";
         oldContentSlotId = EMPTY;
       },
@@ -605,7 +605,7 @@ export const createUITransitionController = (
     }
     const transition = transitionController.update(transitions, {
       onFinish: () => {
-        transitionController.cancel();
+        transition.cancel();
         oldPhaseSlot.innerHTML = "";
         contentDimensions.style.width = "";
         contentDimensions.style.height = "";
