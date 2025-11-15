@@ -172,13 +172,6 @@ const createConfiguration = (domNodes, { id, isContentPhase } = {}) => {
 const isSameConfiguration = (configA, configB) => {
   return configA.toString() === configB.toString();
 };
-const moveDOMNodes = (from, to) => {
-  to.innerHTML = "";
-  const nodesToMove = Array.from(from.childNodes);
-  nodesToMove.forEach((node) => {
-    to.appendChild(node);
-  });
-};
 
 export const createUITransitionController = (
   container,
@@ -264,8 +257,11 @@ export const createUITransitionController = (
     container.setAttribute("data-align-x", alignX);
     container.setAttribute("data-align-y", alignY);
   };
-  const measureTargetSlot = () => {
-    if (targetSlotConfiguration === EMPTY) {
+  const measureSlot = (slot) => {
+    const slotConfig =
+      slot === targetSlot ? targetSlotConfiguration : outgoingSlotConfiguration;
+
+    if (slotConfig === EMPTY) {
       targetSlotWidth = undefined;
       targetSlotWidth = undefined;
       return;
@@ -278,62 +274,50 @@ export const createUITransitionController = (
   updateAlignment();
   updateSlotAttributes();
   if (targetSlotConfiguration !== EMPTY) {
-    measureTargetSlot();
+    measureSlot(targetSlot);
     width = targetSlotWidth;
     height = targetSlotHeight;
   }
+  if (outgoingSlotConfiguration !== EMPTY) {
+    measureSlot(outgoingSlot);
+  }
 
-  const applyConfiguration = (configuration, el) => {
-    el.innerHTML = "";
+  const applyConfiguration = (configuration, slot) => {
+    slot.innerHTML = "";
     configuration.domNodes.forEach((node) => {
-      el.appendChild(node);
+      slot.appendChild(node);
     });
-    if (el === targetSlot) {
+    if (slot === targetSlot) {
       targetSlotConfiguration = configuration;
-    } else if (el === outgoingSlot) {
+    } else if (slot === outgoingSlot) {
       outgoingSlotConfiguration = configuration;
-    } else if (el === previousTargetSlot) {
+    } else if (slot === previousTargetSlot) {
       previousTargetSlotConfiguration = configuration;
-    } else if (el === previousOutgoingSlot) {
+    } else if (slot === previousOutgoingSlot) {
       previousOutgoingSlotConfiguration = EMPTY;
     }
-
-    if (configuration === EMPTY) {
-      el.style.width = "";
-      el.style.height = "";
-      return;
-    }
-
-    if (el === targetSlot) {
-      measureTargetSlot();
-
-      targetSlot.style.width = `${targetSlotWidth}px`;
-      targetSlot.style.height = `${targetSlotHeight}px`;
+    if (slot === targetSlot || slot === outgoingSlot) {
+      measureSlot();
+      if (configuration === EMPTY) {
+        slot.style.width = "";
+        slot.style.height = "";
+      } else {
+        slot.style.width = `${outgoingSlotWidth}px`;
+        slot.style.height = `${outgoingSlotHeight}px`;
+      }
     }
   };
+  const moveTargetSlotToOutgoing = () => {
+    applyConfiguration(targetSlotConfiguration, outgoingSlot);
+    targetSlotConfiguration = EMPTY;
+  };
   const moveTargetSlotToPrevious = () => {
-    previousTargetSlot.innerHTML = "";
-    moveDOMNodes(targetSlot, previousTargetSlot);
-    previousTargetSlot.style.width = `${targetSlotWidth}px`;
-    previousTargetSlot.style.height = `${targetSlotHeight}px`;
-    previousTargetSlotConfiguration = targetSlotConfiguration;
+    applyConfiguration(targetSlotConfiguration, previousTargetSlot);
     targetSlotConfiguration = EMPTY;
   };
   const moveOutgoingSlotToPrevious = () => {
-    previousOutgoingSlot.innerHTML = "";
-    moveDOMNodes(outgoingSlot, previousOutgoingSlot);
-    previousOutgoingSlot.style.width = `${outgoingSlotWidth}px`;
-    previousOutgoingSlot.style.height = `${outgoingSlotHeight}px`;
-    previousOutgoingSlotConfiguration = outgoingSlotConfiguration;
+    applyConfiguration(outgoingSlotConfiguration, previousOutgoingSlot);
     outgoingSlotConfiguration = EMPTY;
-  };
-  const moveTargetSlotToOutgoing = () => {
-    outgoingSlot.innerHTML = "";
-    moveDOMNodes(targetSlot, outgoingSlot);
-    outgoingSlot.style.width = `${targetSlotWidth}px`;
-    outgoingSlot.style.height = `${targetSlotHeight}px`;
-    outgoingSlotConfiguration = targetSlotConfiguration;
-    targetSlotConfiguration = EMPTY;
   };
 
   let isTransitioning = false;
@@ -462,14 +446,11 @@ export const createUITransitionController = (
   };
   // any_to_empty transition
   const applyToEmptyTransition = () => {
-    const transitions = [];
-
     moveTargetSlotToPrevious();
     moveOutgoingSlotToPrevious();
     applyConfiguration(EMPTY, targetSlot);
-    targetSlotWidth = undefined;
-    targetSlotHeight = undefined;
 
+    const transitions = [];
     // Animate container to zero dimensions
     transitions.push(
       createWidthTransition(container, {
