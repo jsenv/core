@@ -140,12 +140,6 @@ export const createTransition = ({
     cancel: cancelCallbacks,
     finish: finishCallbacks,
   };
-  if (onUpdate) {
-    updateCallbacks.add(onUpdate);
-  }
-  if (onFinish) {
-    finishCallbacks.add(onFinish);
-  }
 
   const lifecycle = combineTwoLifecycle(baseLifecycle, rest.lifecycle);
   let breakPointSet;
@@ -254,6 +248,7 @@ export const createTransition = ({
       isFirstUpdate = false;
       executionLifecycle.update?.(transition);
       executeUpdateCallbacks(transition);
+      onUpdate?.(transition);
 
       for (const breakpoint of breakPointSet) {
         if (progress >= breakpoint) {
@@ -309,6 +304,7 @@ export const createTransition = ({
       resume = null;
       playState = "finished";
       executeFinishCallbacks(transition);
+      onFinish?.(transition);
     },
 
     reverse: () => {

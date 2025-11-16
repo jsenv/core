@@ -250,6 +250,10 @@ const createGroupTransition = (transitionArray, options = {}) => {
       },
       finish: () => {
         for (const childTransition of transitionArray) {
+          if (childTransition.playState === "idle") {
+            // child transition got canceled, keep it canceled
+            continue;
+          }
           if (childTransition.playState !== "finished") {
             childTransition.finish();
           }

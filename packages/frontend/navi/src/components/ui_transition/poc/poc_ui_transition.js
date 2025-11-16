@@ -426,7 +426,13 @@ export const createUITransitionController = (
         },
       }),
     );
-    const transition = transitionController.update(transitions);
+    const transition = transitionController.update(transitions, {
+      onFinish: () => {
+        if (hasDebugLogs) {
+          console.groupEnd();
+        }
+      },
+    });
     transition.play();
   };
   // content_phase_to_content_phase transition (uses outgoing_slot)
@@ -616,9 +622,6 @@ export const createUITransitionController = (
 
     // content to content (default case)
     applyContentToContentTransition(toConfiguration);
-    if (hasDebugLogs) {
-      console.groupEnd();
-    }
   };
 
   // Reset to initial content
