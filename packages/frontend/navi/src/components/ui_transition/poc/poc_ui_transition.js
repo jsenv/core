@@ -86,9 +86,7 @@ import {
   createOpacityTransition,
   createWidthTransition,
   getElementSignature,
-  getScrollBox,
-  getScrollContainer,
-  measureScrollbar,
+  preventIntermediateScrollbar,
 } from "@jsenv/dom";
 
 import.meta.css = /* css */ `
@@ -430,95 +428,6 @@ export const createUITransitionController = (
     },
   });
 
-  // Smart overflow management during transitions
-  const manageTransitionOverflow = (
-    fromWidth,
-    fromHeight,
-    toWidth,
-    toHeight,
-  ) => {
-    const scrollContainer = getScrollContainer(container);
-    const [scrollbarWidth, scrollbarHeight] = measureScrollbar(scrollContainer);
-
-    // Get available content area (excluding scrollbars)
-    const scrollBox = getScrollBox(scrollContainer);
-    const scrollBoxWidth = scrollBox.width;
-    const scrollBoxHeight = scrollBox.height;
-
-    // Calculate available space accounting for potential scrollbars
-    const availableWidthWithVerticalScrollbar = scrollBoxWidth - scrollbarWidth;
-    const availableHeightWithHorizontalScrollbar =
-      scrollBoxHeight - scrollbarHeight;
-
-    // Check current scrollbar state
-    const hasHorizontalScrollbar = scrollContainer.scrollWidth > scrollBoxWidth;
-    const hasVerticalScrollbar = scrollContainer.scrollHeight > scrollBoxHeight;
-
-    // Check if target state will need scrollbars
-    const willNeedHorizontalScrollbar =
-      toWidth > availableWidthWithVerticalScrollbar ||
-      (toHeight > scrollBoxHeight &&
-        toWidth > availableWidthWithVerticalScrollbar);
-    const willNeedVerticalScrollbar =
-      toHeight > availableHeightWithHorizontalScrollbar ||
-      (toWidth > scrollBoxWidth &&
-        toHeight > availableHeightWithHorizontalScrollbar);
-
-    // Detect problematic scenarios during transition
-    const maxTransitionWidth = Math.max(fromWidth, toWidth);
-    const maxTransitionHeight = Math.max(fromHeight, toHeight);
-
-    const willCreateTempHorizontalScrollbar =
-      !hasHorizontalScrollbar &&
-      !willNeedHorizontalScrollbar &&
-      (maxTransitionWidth > scrollBoxWidth ||
-        (maxTransitionHeight > scrollBoxHeight &&
-          maxTransitionWidth > availableWidthWithVerticalScrollbar));
-
-    const willCreateTempVerticalScrollbar =
-      !hasVerticalScrollbar &&
-      !willNeedVerticalScrollbar &&
-      (maxTransitionHeight > scrollBoxHeight ||
-        (maxTransitionWidth > scrollBoxWidth &&
-          maxTransitionHeight > availableHeightWithHorizontalScrollbar));
-
-    // Store original overflow styles of the scroll container
-    const originalOverflowX = scrollContainer.style.overflowX;
-    const originalOverflowY = scrollContainer.style.overflowY;
-
-    if (
-      !willCreateTempHorizontalScrollbar &&
-      !willCreateTempVerticalScrollbar
-    ) {
-      return () => {};
-    }
-
-    // Temporarily hide overflow if needed
-    if (willCreateTempHorizontalScrollbar) {
-      scrollContainer.style.overflowX = "hidden";
-      debugSize(
-        `Temporarily hiding horizontal overflow during transition (scrollbar width: ${scrollbarWidth}px) on ${getElementSignature(scrollContainer)}`,
-      );
-    }
-    if (willCreateTempVerticalScrollbar) {
-      scrollContainer.style.overflowY = "hidden";
-      debugSize(
-        `Temporarily hiding vertical overflow during transition (scrollbar height: ${scrollbarHeight}px) on ${getElementSignature(scrollContainer)}`,
-      );
-    }
-
-    return () => {
-      if (willCreateTempHorizontalScrollbar) {
-        scrollContainer.style.overflowX = originalOverflowX;
-        debugSize("Restored horizontal overflow after transition");
-      }
-      if (willCreateTempVerticalScrollbar) {
-        scrollContainer.style.overflowY = originalOverflowY;
-        debugSize("Restored vertical overflow after transition");
-      }
-    };
-  };
-
   const updateContainerDimensions = (newWidth, newHeight) => {
     const fromWidth = width || 0;
     const fromHeight = height || 0;
@@ -526,13 +435,27 @@ export const createUITransitionController = (
       `transition from [${fromWidth}x${fromHeight}] to [${newWidth}x${newHeight}]`,
     );
 
-    // Apply smart overflow management
-    const restoreOverflow = manageTransitionOverflow(
+    const restoreOverflow = preventIntermediateScrollbar({
       fromWidth,
       fromHeight,
-      newWidth,
-      newHeight,
-    );
+      toWidth: newWidth,
+      toHeight: newHeight,
+      onPrevent: ({ x, y, scrollContainer }) => {
+        if (x) {
+          debugSize(
+            `Temporarily hiding horizontal overflow during transition on ${getElementSignature(scrollContainer)}`,
+          );
+        }
+        if (y) {
+          debugSize(
+            `Temporarily hiding vertical overflow during transition on ${getElementSignature(scrollContainer)}`,
+          );
+        }
+      },
+      onRestore: () => {
+        debugSize(`Restored overflow after transition`);
+      },
+    });
 
     const widthTransition = createWidthTransition(container, newWidth, {
       from: fromWidth,
