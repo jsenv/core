@@ -47,16 +47,18 @@
       /* Fixed controls in top-left corner */
       .controls {
         position: fixed;
-        top: 20px;
+        top: 50%;
         left: 20px;
         z-index: 1000;
         display: flex;
         padding: 15px;
+        flex-direction: column;
         gap: 10px;
         background: rgba(255, 255, 255, 0.95);
         border-radius: 8px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         backdrop-filter: blur(10px);
+        transform: translateY(-50%);
       }
 
       button {
@@ -89,6 +91,9 @@
       /* Content wrapper */
       .content-wrapper {
         position: relative;
+        /* Without flow-root, eventuals margins of elements inside are propagated up to the <body> */
+        /* Which can cause body to "move down"  */
+        display: flow-root;
         width: fit-content;
         height: fit-content;
       }
