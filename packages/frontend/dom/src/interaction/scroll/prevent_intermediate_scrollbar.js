@@ -14,24 +14,21 @@ export const preventIntermediateScrollbar = (
   const scrollBoxWidth = scrollBox.width;
   const scrollBoxHeight = scrollBox.height;
 
-  // Calculate available space accounting for potential scrollbars
-  const availableWidthWithVerticalScrollbar = scrollBoxWidth - scrollbarWidth;
-  const availableHeightWithHorizontalScrollbar =
-    scrollBoxHeight - scrollbarHeight;
+  // Since getScrollBox already excludes scrollbars, we don't need to subtract them again
+  // The scrollBox dimensions represent the actual available space for content
 
   // Check current scrollbar state
   const hasHorizontalScrollbar = scrollContainer.scrollWidth > scrollBoxWidth;
   const hasVerticalScrollbar = scrollContainer.scrollHeight > scrollBoxHeight;
 
   // Check if target state will need scrollbars
+  // If one scrollbar appears, it reduces available space for the other dimension
   const willNeedHorizontalScrollbar =
-    toWidth > availableWidthWithVerticalScrollbar ||
-    (toHeight > scrollBoxHeight &&
-      toWidth > availableWidthWithVerticalScrollbar);
+    toWidth > scrollBoxWidth ||
+    (toHeight > scrollBoxHeight && toWidth > scrollBoxWidth - scrollbarWidth);
   const willNeedVerticalScrollbar =
-    toHeight > availableHeightWithHorizontalScrollbar ||
-    (toWidth > scrollBoxWidth &&
-      toHeight > availableHeightWithHorizontalScrollbar);
+    toHeight > scrollBoxHeight ||
+    (toWidth > scrollBoxWidth && toHeight > scrollBoxHeight - scrollbarHeight);
 
   // Detect problematic scenarios during transition
   const maxTransitionWidth = Math.max(fromWidth, toWidth);
@@ -42,14 +39,14 @@ export const preventIntermediateScrollbar = (
     !willNeedHorizontalScrollbar &&
     (maxTransitionWidth > scrollBoxWidth ||
       (maxTransitionHeight > scrollBoxHeight &&
-        maxTransitionWidth > availableWidthWithVerticalScrollbar));
+        maxTransitionWidth > scrollBoxWidth - scrollbarWidth));
 
   const willCreateTempVerticalScrollbar =
     !hasVerticalScrollbar &&
     !willNeedVerticalScrollbar &&
     (maxTransitionHeight > scrollBoxHeight ||
       (maxTransitionWidth > scrollBoxWidth &&
-        maxTransitionHeight > availableHeightWithHorizontalScrollbar));
+        maxTransitionHeight > scrollBoxHeight - scrollbarHeight));
 
   // Store original overflow styles of the scroll container
   const originalOverflowX = scrollContainer.style.overflowX;

@@ -435,7 +435,7 @@ export const createUITransitionController = (
       `transition from [${fromWidth}x${fromHeight}] to [${newWidth}x${newHeight}]`,
     );
 
-    const restoreOverflow = preventIntermediateScrollbar({
+    const restoreOverflow = preventIntermediateScrollbar(container, {
       fromWidth,
       fromHeight,
       toWidth: newWidth,
