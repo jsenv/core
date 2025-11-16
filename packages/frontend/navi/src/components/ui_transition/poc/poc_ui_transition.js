@@ -466,11 +466,11 @@ export const createUITransitionController = (
       styleSynchronizer: "inline_style",
       onUpdate: (widthTransition) => {
         width = widthTransition.value;
-        uiTransitionStyleController.set(targetSlot, {
-          transform: {
-            translateX: "-50%",
-          },
-        });
+        // const containerWidth = width;
+        // const translateX = (containerWidth - targetSlotWidth) / 2;
+        // uiTransitionStyleController.set(targetSlot, {
+        //   transform: { translateX },
+        // });
       },
       onFinish: (widthTransition) => {
         widthTransition.cancel();
@@ -483,11 +483,11 @@ export const createUITransitionController = (
       styleSynchronizer: "inline_style",
       onUpdate: (heightTransition) => {
         height = heightTransition.value;
-        uiTransitionStyleController.set(targetSlot, {
-          transform: {
-            translateY: "-50%",
-          },
-        });
+        // const containerHeight = height;
+        // const translateY = (containerHeight - targetSlotHeight) / 2;
+        // uiTransitionStyleController.set(targetSlot, {
+        //   transform: { translateY },
+        // });
       },
       onFinish: (heightTransition) => {
         heightTransition.cancel();
