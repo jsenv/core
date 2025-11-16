@@ -85,6 +85,7 @@ import {
   createHeightTransition,
   createOpacityTransition,
   createWidthTransition,
+  measureScrollbar,
 } from "@jsenv/dom";
 
 import.meta.css = /* css */ `
@@ -433,30 +434,50 @@ export const createUITransitionController = (
     toWidth,
     toHeight,
   ) => {
-    const bodyRect = document.body.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
 
-    const currentBodyWidth = bodyRect.width;
-    const currentBodyHeight = bodyRect.height;
+    const [scrollbarWidth, scrollbarHeight] = measureScrollbar(
+      document.documentElement,
+    );
+    // Calculate available space accounting for potential scrollbars
+    const availableWidthWithVerticalScrollbar = viewportWidth - scrollbarWidth;
+    const availableHeightWithHorizontalScrollbar =
+      viewportHeight - scrollbarHeight;
 
-    // Check if current state has scrollbars
-    const hasHorizontalScrollbar = currentBodyWidth > viewportWidth;
-    const hasVerticalScrollbar = currentBodyHeight > viewportHeight;
+    // Check current scrollbar state
+    const hasHorizontalScrollbar =
+      document.documentElement.scrollWidth > viewportWidth;
+    const hasVerticalScrollbar =
+      document.documentElement.scrollHeight > viewportHeight;
 
-    // Check if target state will have scrollbars
-    const willHaveHorizontalScrollbar = toWidth > viewportWidth;
-    const willHaveVerticalScrollbar = toHeight > viewportHeight;
+    // Check if target state will need scrollbars
+    const willNeedHorizontalScrollbar =
+      toWidth > availableWidthWithVerticalScrollbar ||
+      (toHeight > viewportHeight &&
+        toWidth > availableWidthWithVerticalScrollbar);
+    const willNeedVerticalScrollbar =
+      toHeight > availableHeightWithHorizontalScrollbar ||
+      (toWidth > viewportWidth &&
+        toHeight > availableHeightWithHorizontalScrollbar);
 
-    // Detect if transition will create temporary unwanted scrollbars
+    // Detect problematic scenarios during transition
+    const maxTransitionWidth = Math.max(fromWidth, toWidth);
+    const maxTransitionHeight = Math.max(fromHeight, toHeight);
+
     const willCreateTempHorizontalScrollbar =
       !hasHorizontalScrollbar &&
-      !willHaveHorizontalScrollbar &&
-      Math.max(fromWidth, toWidth) > viewportWidth;
+      !willNeedHorizontalScrollbar &&
+      (maxTransitionWidth > viewportWidth ||
+        (maxTransitionHeight > viewportHeight &&
+          maxTransitionWidth > availableWidthWithVerticalScrollbar));
+
     const willCreateTempVerticalScrollbar =
       !hasVerticalScrollbar &&
-      !willHaveVerticalScrollbar &&
-      Math.max(fromHeight, toHeight) > viewportHeight;
+      !willNeedVerticalScrollbar &&
+      (maxTransitionHeight > viewportHeight ||
+        (maxTransitionWidth > viewportWidth &&
+          maxTransitionHeight > availableHeightWithHorizontalScrollbar));
 
     const originalOverflowX = document.body.style.overflowX;
     const originalOverflowY = document.body.style.overflowY;
@@ -471,11 +492,15 @@ export const createUITransitionController = (
     // Temporarily hide overflow if needed
     if (willCreateTempHorizontalScrollbar) {
       document.body.style.overflowX = "hidden";
-      debugSize("Temporarily hiding horizontal overflow during transition");
+      debugSize(
+        `Temporarily hiding horizontal overflow during transition (scrollbar width: ${scrollbarWidth}px)`,
+      );
     }
     if (willCreateTempVerticalScrollbar) {
       document.body.style.overflowY = "hidden";
-      debugSize("Temporarily hiding vertical overflow during transition");
+      debugSize(
+        `Temporarily hiding vertical overflow during transition (scrollbar height: ${scrollbarHeight}px)`,
+      );
     }
 
     return () => {
