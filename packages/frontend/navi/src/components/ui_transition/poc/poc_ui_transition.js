@@ -139,21 +139,23 @@ import.meta.css = /* css */ `
 
 const EMPTY = {
   contentId: "empty",
+  contentPhase: undefined,
   domNodes: [],
   type: "empty",
   isContentPhase: false,
   isContent: false,
   toString: () => "empty",
 };
-const createConfiguration = (domNodes, { contentId, isContentPhase } = {}) => {
+const createConfiguration = (domNodes, { contentId, contentPhase } = {}) => {
   if (!domNodes || domNodes.length === 0) {
     return EMPTY;
   }
   contentId = contentId || getElementId(domNodes[0]);
-  if (isContentPhase) {
+  if (contentPhase) {
     return {
       domNodes,
       contentId,
+      contentPhase,
       type: "content_phase",
       isContentPhase: true,
       isContent: false,
@@ -163,6 +165,7 @@ const createConfiguration = (domNodes, { contentId, isContentPhase } = {}) => {
   return {
     domNodes,
     contentId,
+    contentPhase: undefined,
     type: "content",
     isContentPhase: false,
     isContent: true,
@@ -217,7 +220,7 @@ export const createUITransitionController = (
   );
   const outgoingSlotInitialConfiguration = createConfiguration(
     Array.from(outgoingSlot.childNodes),
-    { isContentPhase: true },
+    { contentPhase: true },
   );
 
   let targetSlotConfiguration = targetSlotInitialConfiguration;
@@ -498,7 +501,7 @@ export const createUITransitionController = (
   // Main transition method
   const transitionTo = (
     newContentElement,
-    { isContentPhase = false, contentId } = {},
+    { contentPhase, contentId } = {},
   ) => {
     if (isTransitioning) {
       console.log("Transition already in progress, ignoring");
@@ -509,7 +512,7 @@ export const createUITransitionController = (
     const toConfiguration = createConfiguration(
       newContentElement ? [newContentElement] : null,
       {
-        isContentPhase,
+        contentPhase,
         contentId,
       },
     );
