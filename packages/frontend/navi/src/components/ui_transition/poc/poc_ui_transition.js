@@ -280,13 +280,24 @@ export const createUITransitionController = (
       slot === targetSlot ? targetSlotConfiguration : outgoingSlotConfiguration;
 
     if (slotConfig === EMPTY) {
+      debugSize(`measureSlot(".${slot.className}") -> it is empty`);
       targetSlotWidth = undefined;
       targetSlotHeight = undefined;
       return;
     }
     const dimensions = getSlotDimensions(targetSlot);
-    targetSlotWidth = dimensions.width;
-    targetSlotHeight = dimensions.height;
+    const slotWidth = dimensions.width;
+    const slotHeight = dimensions.height;
+    debugSize(
+      `measureSlot(".${slot.className}") -> [${slotWidth}x${slotHeight}]`,
+    );
+    if (slot === targetSlot) {
+      targetSlotWidth = slotWidth;
+      targetSlotHeight = slotHeight;
+    } else {
+      outgoingSlotWidth = slotWidth;
+      outgoingSlotHeight = slotHeight;
+    }
   };
 
   updateAlignment();
@@ -303,7 +314,7 @@ export const createUITransitionController = (
   const setSlotDimensions = (slot, width, height) => {
     if (width === undefined) {
       if (slot.style.width) {
-        debugSize(`Clear dimensions of ".${slot.className}"`);
+        debugSize(`cleatSlotDimensions(".${slot.className}")`);
       }
       slot.style.width = "";
       slot.style.height = "";
@@ -313,9 +324,7 @@ export const createUITransitionController = (
       slot.style.width !== `${width}px` ||
       slot.style.height !== `${height}px`
     ) {
-      debugSize(
-        `Set dimensions of ".${slot.className}" to [${width}x${height}]`,
-      );
+      debugSize(`setSlotDimensions(".${slot.className}", ${width}, ${height})`);
       slot.style.width = `${width}px`;
       slot.style.height = `${height}px`;
     }
@@ -355,6 +364,7 @@ export const createUITransitionController = (
     throw new Error("Unknown slot for applyConfiguration");
   };
   const targetSlotBecomes = (newConfiguration) => {
+    // measureSlot(targetSlot);
     setSlotConfiguration(previousTargetSlot, targetSlotConfiguration);
     setSlotConfiguration(targetSlot, newConfiguration);
   };
@@ -397,7 +407,7 @@ export const createUITransitionController = (
     const fromWidth = width || 0;
     const fromHeight = height || 0;
     debugSize(
-      `From [${fromWidth}x${fromHeight}] to [${targetSlotWidth}x${targetSlotHeight}]`,
+      `transition from [${fromWidth}x${fromHeight}] to [${targetSlotWidth}x${targetSlotHeight}]`,
     );
     // Adapt container dimensions
     transitions.push(
@@ -410,8 +420,6 @@ export const createUITransitionController = (
         },
         onFinish: (widthTransition) => {
           widthTransition.cancel();
-          // let target slot take natural size now container is done
-          targetSlot.style.width = "";
         },
       }),
       createHeightTransition(container, targetSlotHeight, {
@@ -423,8 +431,6 @@ export const createUITransitionController = (
         },
         onFinish: (heightTransition) => {
           heightTransition.cancel();
-          // let target slot take natural size now container is done
-          targetSlot.style.height = "";
         },
       }),
     );
@@ -453,6 +459,8 @@ export const createUITransitionController = (
     );
     const transition = transitionController.update(transitions, {
       onFinish: () => {
+        // let target slot take natural size now container is done
+        setSlotDimensions(targetSlot, undefined, undefined);
         if (hasDebugLogs) {
           console.groupEnd();
         }
