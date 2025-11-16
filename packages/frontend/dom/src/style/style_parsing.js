@@ -548,6 +548,9 @@ export const parseCSSWillChange = (willChangeString) => {
   if (!willChangeString || typeof willChangeString !== "string") {
     return [];
   }
+  if (willChangeString === "auto") {
+    return "auto";
+  }
   return willChangeString
     .split(",")
     .map((part) => part.trim())
