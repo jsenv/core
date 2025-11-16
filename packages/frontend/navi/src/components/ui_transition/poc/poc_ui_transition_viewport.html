@@ -25,7 +25,9 @@
         position: relative;
         /* Without flow-root, eventuals margins of elements inside are propagated up to the <body> */
         /* Which can cause body to "move down"  */
-        display: flow-root;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
 
       body {
@@ -109,19 +111,6 @@
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
       }
 
-      .content-fullscreen {
-        position: relative;
-        display: flex;
-        width: 100vw;
-        height: 100vh;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: bold;
-        font-size: 24px;
-        background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%);
-      }
-
       .content-medium {
         display: flex;
         width: 50vw;
@@ -136,12 +125,23 @@
         box-shadow: 0 10px 36px rgba(0, 0, 0, 0.25);
       }
 
+      .content-fullscreen {
+        position: relative;
+        display: flex;
+        width: 100vw;
+        height: 100vh;
+        padding: 20px;
+        color: white;
+        font-weight: bold;
+        font-size: 24px;
+        background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%);
+      }
+
       .content-wide {
         display: flex;
         width: 150vw;
         height: 200px;
-        align-items: center;
-        justify-content: center;
+        padding: 20px;
         color: white;
         font-weight: bold;
         font-size: 18px;
@@ -154,8 +154,7 @@
         display: flex;
         width: 300px;
         height: 150vh;
-        align-items: center;
-        justify-content: center;
+        padding: 20px;
         color: white;
         font-weight: bold;
         font-size: 18px;
