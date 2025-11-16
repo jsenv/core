@@ -62,7 +62,7 @@ export const preventIntermediateScrollbar = (
   const toDimensionsWouldTriggerXScrollbarAffectingYSpace =
     toWidth > availableWidth && toHeight > availableHeight - scrollbarHeight;
 
-  const problematicXScrollbarDuringTransition =
+  const intermediateXScrollbarDetected =
     !currentlyHasXScrollbar &&
     !finalWillHaveXScrollbar &&
     (fromDimensionsExceedXSpace ||
@@ -70,7 +70,7 @@ export const preventIntermediateScrollbar = (
       fromDimensionsWouldTriggerYScrollbarAffectingXSpace ||
       toDimensionsWouldTriggerYScrollbarAffectingXSpace);
 
-  const problematicYScrollbarDuringTransition =
+  const intermediateYScrollbarDetected =
     !currentlyHasYScrollbar &&
     !finalWillHaveYScrollbar &&
     (fromDimensionsExceedYSpace ||
@@ -78,37 +78,34 @@ export const preventIntermediateScrollbar = (
       fromDimensionsWouldTriggerXScrollbarAffectingYSpace ||
       toDimensionsWouldTriggerXScrollbarAffectingYSpace);
 
-  if (
-    !problematicXScrollbarDuringTransition &&
-    !problematicYScrollbarDuringTransition
-  ) {
+  if (!intermediateXScrollbarDetected && !intermediateYScrollbarDetected) {
     return () => {};
   }
 
   const originalOverflowX = scrollContainer.style.overflowX;
   const originalOverflowY = scrollContainer.style.overflowY;
 
-  if (problematicXScrollbarDuringTransition) {
+  if (intermediateXScrollbarDetected) {
     scrollContainer.style.overflowX = "hidden";
   }
-  if (problematicYScrollbarDuringTransition) {
+  if (intermediateYScrollbarDetected) {
     scrollContainer.style.overflowY = "hidden";
   }
   onPrevent?.({
-    x: problematicXScrollbarDuringTransition,
-    y: problematicYScrollbarDuringTransition,
+    x: intermediateXScrollbarDetected,
+    y: intermediateYScrollbarDetected,
     scrollContainer,
   });
   return () => {
-    if (problematicXScrollbarDuringTransition) {
+    if (intermediateXScrollbarDetected) {
       scrollContainer.style.overflowX = originalOverflowX;
     }
-    if (problematicYScrollbarDuringTransition) {
+    if (intermediateYScrollbarDetected) {
       scrollContainer.style.overflowY = originalOverflowY;
     }
     onRestore?.({
-      x: problematicXScrollbarDuringTransition,
-      y: problematicYScrollbarDuringTransition,
+      x: intermediateXScrollbarDetected,
+      y: intermediateYScrollbarDetected,
       scrollContainer,
     });
   };
