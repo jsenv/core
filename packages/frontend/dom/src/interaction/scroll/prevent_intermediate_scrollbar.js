@@ -1,4 +1,4 @@
-// import { getScrollBox } from "../../position/dom_coords.js";
+import { getScrollBox } from "../../position/dom_coords.js";
 import { getScrollContainer } from "./scroll_container.js";
 import { measureScrollbar } from "./scrollbar_size.js";
 
@@ -18,20 +18,22 @@ export const preventIntermediateScrollbar = (
 ) => {
   const scrollContainer = getScrollContainer(element);
   const [scrollbarWidth, scrollbarHeight] = measureScrollbar(scrollContainer);
-  const currentScrollbarState = getScrollbarState(
-    scrollContainer,
-    fromWidth,
-    fromHeight,
+  const scrollBox = getScrollBox(scrollContainer);
+  const scrollContainerWidth = scrollBox.width + scrollbarWidth;
+  const scrollContainerHeight = scrollBox.height + scrollbarHeight;
+
+  const currentScrollbarState = getScrollbarState(fromWidth, fromHeight, {
+    scrollContainerWidth,
+    scrollContainerHeight,
     scrollbarWidth,
     scrollbarHeight,
-  );
-  const finalScrollbarState = getScrollbarState(
-    scrollContainer,
-    toWidth,
-    toHeight,
+  });
+  const finalScrollbarState = getScrollbarState(toWidth, toHeight, {
+    scrollContainerWidth,
+    scrollContainerHeight,
     scrollbarWidth,
     scrollbarHeight,
-  );
+  });
   if (
     currentScrollbarState.x === finalScrollbarState.x &&
     currentScrollbarState.y === finalScrollbarState.y
@@ -46,14 +48,14 @@ export const preventIntermediateScrollbar = (
   if (!currentScrollbarState.x || !finalScrollbarState.x) {
     // X scrollbar could appear during transition if:
     // 1. Content width exceeds available width at any point during transition
-    if (maxWidth > scrollContainer.offsetWidth) {
+    if (maxWidth > scrollContainerWidth) {
       intermediateX = true;
     }
     // 2. Y scrollbar appears during transition, reducing available X space
-    else if (maxHeight > scrollContainer.offsetHeight) {
+    else if (maxHeight > scrollContainerHeight) {
       // Y scrollbar would appear, check if this causes X scrollbar due to reduced space
       const availableWidthWithYScrollbar =
-        scrollContainer.offsetWidth - scrollbarWidth;
+        scrollContainerWidth - scrollbarWidth;
       if (maxWidth > availableWidthWithYScrollbar) {
         intermediateX = true;
       }
@@ -64,14 +66,14 @@ export const preventIntermediateScrollbar = (
   if (!currentScrollbarState.y || !finalScrollbarState.y) {
     // Y scrollbar could appear during transition if:
     // 1. Content height exceeds available height at any point during transition
-    if (maxHeight > scrollContainer.offsetHeight) {
+    if (maxHeight > scrollContainerHeight) {
       intermediateY = true;
     }
     // 2. X scrollbar appears during transition, reducing available Y space
-    else if (maxWidth > scrollContainer.offsetWidth) {
+    else if (maxWidth > scrollContainerWidth) {
       // X scrollbar would appear, check if this causes Y scrollbar due to reduced space
       const availableHeightWithXScrollbar =
-        scrollContainer.offsetHeight - scrollbarHeight;
+        scrollContainerHeight - scrollbarHeight;
       if (maxHeight > availableHeightWithXScrollbar) {
         intermediateY = true;
       }
@@ -112,14 +114,17 @@ export const preventIntermediateScrollbar = (
 };
 
 const getScrollbarState = (
-  scrollContainer,
   contentWidth,
   contentHeight,
-  scrollbarWidth,
-  scrollbarHeight,
+  {
+    scrollContainerWidth,
+    scrollContainerHeight,
+    scrollbarWidth,
+    scrollbarHeight,
+  },
 ) => {
-  let availableWidth = scrollContainer.offsetWidth;
-  let availableHeight = scrollContainer.offsetHeight;
+  let availableWidth = scrollContainerWidth;
+  let availableHeight = scrollContainerHeight;
   const contentExceedsWidth = contentWidth > availableWidth;
   const contentExceedsHeight = contentHeight > availableHeight;
 
