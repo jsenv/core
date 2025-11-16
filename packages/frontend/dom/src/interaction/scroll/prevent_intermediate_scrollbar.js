@@ -41,49 +41,21 @@ export const preventIntermediateScrollbar = (
     return () => {};
   }
 
+  // Simulate worst case during transition - when both dimensions are at their maximum
   const maxWidth = Math.max(fromWidth, toWidth);
   const maxHeight = Math.max(fromHeight, toHeight);
-
-  // Detect intermediate X scrollbar (appears during transition but not needed in final state)
-  let intermediateX = false;
-  if (!finalScrollbarState.x) {
-    // Simulate worst case during transition - when both dimensions are at their maximum
-    let availableWidth = scrollContainerWidth;
-    let availableHeight = scrollContainerHeight;
-
-    // Check if Y scrollbar would appear during transition
-    const wouldHaveYDuringTransition = maxHeight > availableHeight;
-    if (wouldHaveYDuringTransition) {
-      availableWidth -= scrollbarWidth; // Y scrollbar reduces available X space
-    }
-
-    // Now check if X scrollbar would appear with potentially reduced space
-    const wouldHaveXDuringTransition = maxWidth > availableWidth;
-
-    // X scrollbar is intermediate/useless if it appears during transition but not in final state
-    intermediateX = wouldHaveXDuringTransition && !finalScrollbarState.x;
+  let availableWidth = scrollContainerWidth;
+  let availableHeight = scrollContainerHeight;
+  let wouldHaveXDuringTransition = maxWidth > availableWidth;
+  let wouldHaveYDuringTransition = maxHeight > availableHeight;
+  if (wouldHaveXDuringTransition) {
+    availableHeight -= scrollbarHeight; // X scrollbar reduces available Y space
   }
-
-  // Detect intermediate Y scrollbar (appears during transition but not needed in final state)
-  let intermediateY = false;
-  if (!finalScrollbarState.y) {
-    // Simulate worst case during transition - when both dimensions are at their maximum
-    let availableWidth = scrollContainerWidth;
-    let availableHeight = scrollContainerHeight;
-
-    // Check if X scrollbar would appear during transition
-    const wouldHaveXDuringTransition = maxWidth > availableWidth;
-    if (wouldHaveXDuringTransition) {
-      availableHeight -= scrollbarHeight; // X scrollbar reduces available Y space
-    }
-
-    // Now check if Y scrollbar would appear with potentially reduced space
-    const wouldHaveYDuringTransition = maxHeight > availableHeight;
-
-    // Y scrollbar is intermediate/useless if it appears during transition but not in final state
-    intermediateY = wouldHaveYDuringTransition && !finalScrollbarState.y;
+  if (wouldHaveYDuringTransition) {
+    availableWidth -= scrollbarWidth; // Y scrollbar reduces available X space
   }
-
+  const intermediateX = wouldHaveXDuringTransition && !finalScrollbarState.x;
+  const intermediateY = wouldHaveYDuringTransition && !finalScrollbarState.y;
   if (!intermediateX && !intermediateY) {
     return () => {};
   }
