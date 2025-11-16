@@ -305,8 +305,17 @@ export const createUITransitionController = (
     for (const domNode of configuration.domNodes) {
       slot.appendChild(domNode);
     }
+    if (slot === targetSlot) {
+      targetSlotConfiguration = configuration;
+    } else if (slot === outgoingSlot) {
+      outgoingSlotConfiguration = configuration;
+    } else if (slot === previousTargetSlot) {
+      previousTargetSlotConfiguration = configuration;
+    } else if (slot === previousOutgoingSlot) {
+      previousOutgoingSlotConfiguration = EMPTY;
+    }
     if (slot === targetSlot || slot === outgoingSlot) {
-      measureSlot();
+      measureSlot(slot);
       if (configuration === EMPTY) {
         slot.style.width = "";
         slot.style.height = "";
@@ -317,15 +326,6 @@ export const createUITransitionController = (
         slot.style.width = `${outgoingSlotWidth}px`;
         slot.style.height = `${outgoingSlotHeight}px`;
       }
-    }
-    if (slot === targetSlot) {
-      targetSlotConfiguration = configuration;
-    } else if (slot === outgoingSlot) {
-      outgoingSlotConfiguration = configuration;
-    } else if (slot === previousTargetSlot) {
-      previousTargetSlotConfiguration = configuration;
-    } else if (slot === previousOutgoingSlot) {
-      previousOutgoingSlotConfiguration = EMPTY;
     }
   };
   const moveTargetSlotToOutgoing = () => {
@@ -369,13 +369,15 @@ export const createUITransitionController = (
     applyConfiguration(toConfiguration, targetSlot);
 
     const transitions = [];
+    const fromWidth = width || 0;
+    const fromHeight = height || 0;
     debugSize(
-      `From [${width}x${height}] to [${targetSlotWidth}x${targetSlotHeight}]`,
+      `From [${fromWidth}x${fromHeight}] to [${targetSlotWidth}x${targetSlotHeight}]`,
     );
     // Adapt container dimensions
     transitions.push(
       createWidthTransition(container, targetSlotWidth, {
-        from: width || 0,
+        from: fromWidth,
         duration,
         styleSynchronizer: "inline_style",
         onUpdate: (widthTransition) => {
@@ -388,7 +390,7 @@ export const createUITransitionController = (
         },
       }),
       createHeightTransition(container, targetSlotHeight, {
-        from: height || 0,
+        from: fromHeight,
         duration,
         styleSynchronizer: "inline_style",
         onUpdate: (heightTransition) => {
