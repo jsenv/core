@@ -18,7 +18,6 @@ export const preventIntermediateScrollbar = (
 ) => {
   const scrollContainer = getScrollContainer(element);
   const [scrollbarWidth, scrollbarHeight] = measureScrollbar(scrollContainer);
-  // Calculate current state - what scrollbars exist now
   const currentScrollbarState = getScrollbarState(
     scrollContainer,
     fromWidth,
@@ -26,7 +25,6 @@ export const preventIntermediateScrollbar = (
     scrollbarWidth,
     scrollbarHeight,
   );
-  // Calculate final state - what scrollbars will exist when animation completes
   const finalScrollbarState = getScrollbarState(
     scrollContainer,
     toWidth,
@@ -34,10 +32,9 @@ export const preventIntermediateScrollbar = (
     scrollbarWidth,
     scrollbarHeight,
   );
-  // If current and final states are the same, no intermediate prevention needed
   if (
-    currentScrollbarState.hasXScrollbar === finalScrollbarState.hasXScrollbar &&
-    currentScrollbarState.hasYScrollbar === finalScrollbarState.hasYScrollbar
+    currentScrollbarState.x === finalScrollbarState.x &&
+    currentScrollbarState.y === finalScrollbarState.y
   ) {
     return () => {};
   }
@@ -45,8 +42,8 @@ export const preventIntermediateScrollbar = (
   // Check for problematic intermediate scrollbars
   // We need to prevent X scrollbar if it doesn't exist in current/final states but could appear during transition
   const needsXPrevention =
-    !currentScrollbarState.hasXScrollbar &&
-    !finalScrollbarState.hasXScrollbar &&
+    !currentScrollbarState.x &&
+    !finalScrollbarState.x &&
     (fromWidth > scrollContainer.offsetWidth ||
       toWidth > scrollContainer.offsetWidth ||
       // Or if Y scrollbar during transition would trigger X scrollbar
@@ -57,8 +54,8 @@ export const preventIntermediateScrollbar = (
 
   // We need to prevent Y scrollbar if it doesn't exist in current/final states but could appear during transition
   const needsYPrevention =
-    !currentScrollbarState.hasYScrollbar &&
-    !finalScrollbarState.hasYScrollbar &&
+    !currentScrollbarState.y &&
+    !finalScrollbarState.y &&
     (fromHeight > scrollContainer.offsetHeight ||
       toHeight > scrollContainer.offsetHeight ||
       // Or if X scrollbar during transition would trigger Y scrollbar
@@ -100,41 +97,33 @@ export const preventIntermediateScrollbar = (
   };
 };
 
-/**
- * Calculate what scrollbars will exist for given dimensions.
- * Shows the progressive space reduction as scrollbars appear.
- */
 const getScrollbarState = (
   scrollContainer,
-  finalWidth,
-  finalHeight,
+  contentWidth,
+  contentHeight,
   scrollbarWidth,
   scrollbarHeight,
 ) => {
   let availableWidth = scrollContainer.offsetWidth;
   let availableHeight = scrollContainer.offsetHeight;
-
-  // Check if content exceeds container dimensions
-  const contentExceedsWidth = finalWidth > availableWidth;
-  const contentExceedsHeight = finalHeight > availableHeight;
+  const contentExceedsWidth = contentWidth > availableWidth;
+  const contentExceedsHeight = contentHeight > availableHeight;
 
   // Start with basic overflow
-  let hasXScrollbar = contentExceedsWidth;
-  let hasYScrollbar = contentExceedsHeight;
-
+  let x = contentExceedsWidth;
+  let y = contentExceedsHeight;
   // If Y scrollbar appears, it reduces available X space
-  if (hasYScrollbar) {
+  if (y) {
     availableWidth -= scrollbarWidth;
     // Re-check X scrollbar with reduced space
-    hasXScrollbar = finalWidth > availableWidth;
+    x = contentWidth > availableWidth;
   }
-
   // If X scrollbar appears, it reduces available Y space
-  if (hasXScrollbar) {
+  if (x) {
     availableHeight -= scrollbarHeight;
     // Re-check Y scrollbar with reduced space
-    hasYScrollbar = finalHeight > availableHeight;
+    y = contentHeight > availableHeight;
   }
 
-  return { hasXScrollbar, hasYScrollbar, availableWidth, availableHeight };
+  return { x, y, availableWidth, availableHeight };
 };
