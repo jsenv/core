@@ -219,7 +219,7 @@
       }
 
       /* Boîte de visualisation pour centrer la zone de transition */
-      .transition-viewport {
+      .transition-wrapper {
         position: relative;
         display: flex;
         width: 350px;
@@ -232,7 +232,7 @@
         border-radius: 8px;
       }
 
-      .transition-viewport::before {
+      .transition-wrapper::before {
         position: absolute;
         top: -8px;
         left: 10px;
@@ -397,7 +397,7 @@
     <!-- Zone de transition -->
     <div class="transition-zone">
       <h4>Zone de transition:</h4>
-      <div class="transition-viewport">
+      <div class="transition-wrapper">
         <div class="ui_transition" data-debug-size data-debug-detection>
           <div class="active_group">
             <div class="target_slot"></div>
@@ -635,9 +635,9 @@
         // Update UI transition component
         uiTransition.setAlignment(alignX, alignY);
 
-        const viewport = document.querySelector(".transition-viewport");
-        viewport.style.alignItems = alignY;
-        viewport.style.justifyContent = alignX;
+        const transitionWrapper = document.querySelector(".transition-wrapper");
+        transitionWrapper.style.alignItems = alignY;
+        transitionWrapper.style.justifyContent = alignX;
 
         // Update form controls to reflect current state
         const alignXSelect = document.getElementById("align-x-select");
