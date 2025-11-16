@@ -22,7 +22,6 @@ export { addAttributeEffect } from "./src/attr/add_attribute_effect.js";
 export { setAttribute, setAttributes } from "./src/attr/attributes.js";
 
 // colors
-// colors
 export { getContrastRatio, getLuminance } from "./src/color/color_constrast.js";
 export { parseCSSColor, stringifyCSSColor } from "./src/color/color_parsing.js";
 export {
@@ -74,6 +73,7 @@ export {
   getSelfAndAncestorScrolls,
 } from "./src/interaction/scroll/scroll_container.js";
 export { trapScrollInside } from "./src/interaction/scroll/scroll_trap.js";
+export { measureScrollbar } from "./src/interaction/scroll/scrollbar_size.js";
 export { allowWheelThrough } from "./src/interaction/scroll/wheel_through.js";
 // interaction/drag
 export { getDragCoordinates } from "./src/interaction/drag/drag_element_positioner.js";
