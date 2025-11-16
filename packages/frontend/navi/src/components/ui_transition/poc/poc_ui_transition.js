@@ -142,10 +142,19 @@ import.meta.css = /* css */ `
 
   .active_group {
     position: relative;
+    display: flex;
+    height: 100%;
+    align-items: var(--x-align-items);
+    justify-content: var(--x-justify-content);
   }
 
   .target_slot {
     position: relative;
+  }
+
+  .ui_transition[data-transitioning] .target_slot {
+    min-width: 0;
+    flex-shrink: 0;
   }
 
   .outgoing_slot {
@@ -156,12 +165,15 @@ import.meta.css = /* css */ `
 
   .previous_group {
     position: absolute;
-    top: 0;
-    left: 0;
+    inset: 0;
+    display: flex;
+    align-items: var(--x-align-items);
+    justify-content: var(--x-justify-content);
   }
 
   .ui_transition[data-only-previous-group] .previous_group {
     position: relative;
+    height: 100%;
   }
 `;
 
