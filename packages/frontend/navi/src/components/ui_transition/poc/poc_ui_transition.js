@@ -369,8 +369,6 @@ export const createUITransitionController = (
     throw new Error("Unknown slot for applyConfiguration");
   };
   const targetSlotBecomes = (newConfiguration) => {
-    debugDetection(`targetSlotBecomes(${newConfiguration})`);
-    // measureSlot(targetSlot);
     setSlotConfiguration(previousTargetSlot, targetSlotConfiguration);
     setSlotConfiguration(targetSlot, newConfiguration);
   };
@@ -478,6 +476,8 @@ export const createUITransitionController = (
     ];
     const transition = transitionController.update(transitions, {
       onFinish: () => {
+        setSlotConfiguration(previousTargetSlot, EMPTY);
+        setSlotConfiguration(previousOutgoingSlot, EMPTY);
         // let target slot take natural size now container is done
         setSlotDimensions(targetSlot, undefined, undefined);
         if (hasDebugLogs) {
@@ -516,6 +516,8 @@ export const createUITransitionController = (
     const transition = transitionController.update(transitions, {
       onFinish: () => {
         setSlotDimensions(targetSlot, undefined, undefined);
+        setSlotConfiguration(previousTargetSlot, EMPTY);
+        setSlotConfiguration(previousOutgoingSlot, EMPTY);
         if (hasDebugLogs) {
           console.groupEnd();
         }
@@ -603,7 +605,6 @@ export const createUITransitionController = (
     updateAlignment();
   };
 
-  // Return public API
   return {
     transitionTo,
     resetContent,
