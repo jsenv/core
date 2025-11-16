@@ -50,9 +50,11 @@ export const preventIntermediateScrollbar = (
   let wouldHaveYDuringTransition = maxHeight > availableHeight;
   if (wouldHaveXDuringTransition) {
     availableHeight -= scrollbarHeight; // X scrollbar reduces available Y space
+    wouldHaveYDuringTransition = maxHeight > availableHeight; // Re-check Y with reduced space
   }
   if (wouldHaveYDuringTransition) {
     availableWidth -= scrollbarWidth; // Y scrollbar reduces available X space
+    wouldHaveXDuringTransition = maxWidth > availableWidth; // Re-check X with reduced space
   }
   const intermediateX = wouldHaveXDuringTransition && !finalScrollbarState.x;
   const intermediateY = wouldHaveYDuringTransition && !finalScrollbarState.y;
