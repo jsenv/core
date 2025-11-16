@@ -38,21 +38,19 @@ export const preventIntermediateScrollbar = (
   ) {
     return () => {};
   }
-  debugger;
 
   let intermediateX = false;
   intermediate_x: {
-    if (currentScrollbarState.x || finalScrollbarState.x) {
+    if (currentScrollbarState.x && finalScrollbarState.x) {
       break intermediate_x;
     }
   }
 
   let intermediateY = false;
   intermediate_y: {
-    if (currentScrollbarState.y || finalScrollbarState.y) {
+    if (currentScrollbarState.y && finalScrollbarState.y) {
       break intermediate_y;
     }
-    // TODO
   }
 
   if (!intermediateX && !intermediateY) {
