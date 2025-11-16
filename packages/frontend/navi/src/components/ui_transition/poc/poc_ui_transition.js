@@ -84,10 +84,13 @@ import {
   createGroupTransitionController,
   createHeightTransition,
   createOpacityTransition,
+  createStyleController,
   createWidthTransition,
   getElementSignature,
   preventIntermediateScrollbar,
 } from "@jsenv/dom";
+
+const uiTransitionStyleController = createStyleController("ui_transition");
 
 import.meta.css = /* css */ `
   * {
@@ -347,6 +350,8 @@ export const createUITransitionController = (
         debugSize(`cleatSlotDimensions(".${slot.className}")`);
         slot.style.width = "";
         slot.style.height = "";
+        uiTransitionStyleController.delete(slot, "transfom.translateX");
+        uiTransitionStyleController.delete(slot, "transfom.translateY");
       }
       return;
     }
@@ -357,6 +362,12 @@ export const createUITransitionController = (
       debugSize(`setSlotDimensions(".${slot.className}", ${width}, ${height})`);
       slot.style.width = `${width}px`;
       slot.style.height = `${height}px`;
+      uiTransitionStyleController.set(slot, {
+        transform: {
+          translateX: "-50%",
+          translateY: "-50%",
+        },
+      });
     }
   };
   const setSlotConfiguration = (slot, configuration) => {
