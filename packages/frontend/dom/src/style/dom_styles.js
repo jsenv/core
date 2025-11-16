@@ -1,11 +1,14 @@
 import { elementToOwnerWindow } from "../utils.js";
+import { normalizeStyle } from "./style_parsing.js";
 
 export const getComputedStyle = (element) => {
   return elementToOwnerWindow(element).getComputedStyle(element);
 };
 
-export const getStyle = (element, name) => {
-  return getComputedStyle(element).getPropertyValue(name);
+export const getStyle = (element, name, context) => {
+  const computedStyle = getComputedStyle(element);
+  const value = computedStyle.getPropertyValue(name);
+  return normalizeStyle(value, name, context);
 };
 
 const isCamelCase = (str) => {
@@ -49,33 +52,6 @@ export const forceStyle = (element, name, value) => {
   }
   const restoreStyle = setStyle(element, name, value);
   return restoreStyle;
-};
-
-export const addWillChange = (element, property) => {
-  const currentWillChange = element.style.willChange;
-  const willChangeValues = currentWillChange
-    ? currentWillChange
-        .split(",")
-        .map((v) => v.trim())
-        .filter(Boolean)
-    : [];
-
-  if (willChangeValues.includes(property)) {
-    // Property already exists, return no-op
-    return () => {};
-  }
-
-  willChangeValues.push(property);
-  element.style.willChange = willChangeValues.join(", ");
-  // Return function to remove only this property
-  return () => {
-    const newValues = willChangeValues.filter((v) => v !== property);
-    if (newValues.length === 0) {
-      element.style.removeProperty("will-change");
-    } else {
-      element.style.willChange = newValues.join(", ");
-    }
-  };
 };
 
 const createSetMany = (setter) => {

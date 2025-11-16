@@ -2,7 +2,9 @@ import {
   normalizeStyle,
   normalizeStyles,
   parseCSSTransform,
+  parseCSSWillChange,
   stringifyCSSTransform,
+  stringifyCSSWillChange,
 } from "./style_parsing.js";
 
 // Merge two style objects, handling special cases like transform
@@ -114,6 +116,73 @@ export const mergeOneStyle = (
       }
       return parseCSSTransform(newValue); // Convert to object
     }
+    return newValue;
+  }
+
+  if (propertyName === "willChange") {
+    const existingIsString = typeof existingValue === "string";
+    const newIsString = typeof newValue === "string";
+    const existingIsArray = Array.isArray(existingValue);
+    const newIsArray = Array.isArray(newValue);
+
+    // Case 1: Both are arrays - merge directly
+    if (existingIsArray && newIsArray) {
+      const merged = [...new Set([...existingValue, ...newValue])];
+      if (context === "css") {
+        return stringifyCSSWillChange(merged);
+      }
+      return merged;
+    }
+
+    // Case 2: New is array, existing is string - parse existing and merge
+    if (newIsArray && existingIsString) {
+      const existingArray = parseCSSWillChange(existingValue);
+      const merged = [...new Set([...existingArray, ...newValue])];
+      if (context === "css") {
+        return stringifyCSSWillChange(merged);
+      }
+      return merged;
+    }
+
+    // Case 3: New is string, existing is array - parse new and merge
+    if (newIsString && existingIsArray) {
+      const newArray = parseCSSWillChange(newValue);
+      const merged = [...new Set([...existingValue, ...newArray])];
+      if (context === "css") {
+        return stringifyCSSWillChange(merged);
+      }
+      return merged;
+    }
+
+    // Case 4: Both are strings - parse both and merge
+    if (existingIsString && newIsString) {
+      const existingArray = parseCSSWillChange(existingValue);
+      const newArray = parseCSSWillChange(newValue);
+      const merged = [...new Set([...existingArray, ...newArray])];
+      if (context === "css") {
+        return stringifyCSSWillChange(merged);
+      }
+      return merged;
+    }
+
+    // Case 5: New is array, no existing or existing is null/undefined
+    if (newIsArray) {
+      if (context === "css") {
+        return stringifyCSSWillChange(newValue);
+      }
+      return newValue;
+    }
+
+    // Case 6: New is string, no existing or existing is null/undefined
+    if (newIsString) {
+      if (context === "css") {
+        return newValue;
+      }
+      const parsed = parseCSSWillChange(newValue);
+      return parsed;
+    }
+    // Fallback: return newValue as is
+    return newValue;
   }
 
   // For all other properties, simple replacement

@@ -402,7 +402,6 @@ export const stringifyCSSTransform = (transformObj) => {
   }
   return transforms.join(" ");
 };
-
 // Parse transform CSS string into object
 export const parseCSSTransform = (transformString) => {
   if (!transformString || transformString === "none") {
@@ -439,7 +438,6 @@ export const parseCSSTransform = (transformString) => {
   // Return undefined if no properties were extracted (preserves original information)
   return Object.keys(transformObj).length > 0 ? transformObj : undefined;
 };
-
 // Parse a matrix transform and extract simple transform components when possible
 const parseMatrixTransform = (matrixString) => {
   // Match matrix() or matrix3d() functions
@@ -481,7 +479,6 @@ const parseMatrixTransform = (matrixString) => {
   const [a, b, c, d, e, f] = values;
   return parseSimple2DMatrix(a, b, c, d, e, f);
 };
-
 // Parse a simple 2D matrix into transform components
 const parseSimple2DMatrix = (a, b, c, d, e, f) => {
   const result = {};
@@ -545,4 +542,20 @@ const parseSimple2DMatrix = (a, b, c, d, e, f) => {
     result.skewX = skewX;
   }
   return result;
+};
+
+export const parseCSSWillChange = (willChangeString) => {
+  if (!willChangeString || typeof willChangeString !== "string") {
+    return [];
+  }
+  return willChangeString
+    .split(",")
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+};
+export const stringifyCSSWillChange = (willChangeArray) => {
+  if (!Array.isArray(willChangeArray) || willChangeArray.length === 0) {
+    return "auto";
+  }
+  return willChangeArray.join(", ");
 };
