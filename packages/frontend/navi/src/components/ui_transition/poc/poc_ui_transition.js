@@ -359,16 +359,26 @@ export const createUITransitionController = (
         from: width || 0,
         duration,
         styleSynchronizer: "inline_style",
-        onUpdate: ({ value }) => {
-          width = value;
+        onUpdate: (widthTransition) => {
+          width = widthTransition.value;
+        },
+        onFinish: (widthTransition) => {
+          widthTransition.cancel();
+          // let target slot take natural size now container is done
+          targetSlot.style.width = "";
         },
       }),
       createHeightTransition(container, targetSlotHeight, {
         from: height || 0,
         duration,
         styleSynchronizer: "inline_style",
-        onUpdate: ({ value }) => {
-          height = value;
+        onUpdate: (heightTransition) => {
+          height = heightTransition.value;
+        },
+        onFinish: (heightTransition) => {
+          heightTransition.cancel();
+          // let target slot take natural size now container is done
+          targetSlot.style.height = "";
         },
       }),
     );
@@ -378,6 +388,9 @@ export const createUITransitionController = (
       createOpacityTransition(targetSlot, 1, {
         duration,
         styleSynchronizer: "inline_style",
+        onFinish: (targetSlotOpacityTransition) => {
+          targetSlotOpacityTransition.cancel();
+        },
       }),
     );
     // fadeout previous group
@@ -386,17 +399,13 @@ export const createUITransitionController = (
       createOpacityTransition(previousGroup, 0, {
         duration,
         styleSynchronizer: "inline_style",
+        onFinish: (previousGroupOpacityTransition) => {
+          previousGroupOpacityTransition.cancel();
+          previousGroup.style.opacity = "0"; // keep previous group visually hidden
+        },
       }),
     );
-    const transition = transitionController.update(transitions, {
-      onFinish: () => {
-        transition.cancel();
-        previousGroup.style.opacity = "0"; // keep previous group visually hidden
-        // let target slot take natural size now container is done
-        targetSlot.style.width = "";
-        targetSlot.style.height = "";
-      },
-    });
+    const transition = transitionController.update(transitions);
     transition.play();
   };
   // content_phase_to_content_phase transition (uses outgoing_slot)

@@ -126,6 +126,7 @@ export const createTransition = ({
   startProgress = 0, // Progress to start from (0-1)
   baseLifecycle,
   onUpdate,
+  onFinish,
   minDiff,
   debugQuarterBreakpoints = false, // Shorthand for debugBreakpoints: [0.25, 0.75]
   debugBreakpoints = debugQuarterBreakpoints ? [0.25, 0.75] : [], // Array of progress values (0-1) where debugger should trigger
@@ -141,6 +142,9 @@ export const createTransition = ({
   };
   if (onUpdate) {
     updateCallbacks.add(onUpdate);
+  }
+  if (onFinish) {
+    finishCallbacks.add(onFinish);
   }
 
   const lifecycle = combineTwoLifecycle(baseLifecycle, rest.lifecycle);
@@ -287,7 +291,7 @@ export const createTransition = ({
       }
       resume = null;
       playState = "idle";
-      executeCancelCallbacks();
+      executeCancelCallbacks(transition);
     },
 
     finish: () => {
@@ -304,7 +308,7 @@ export const createTransition = ({
       executionLifecycle.teardown?.();
       resume = null;
       playState = "finished";
-      executeFinishCallbacks();
+      executeFinishCallbacks(transition);
     },
 
     reverse: () => {
