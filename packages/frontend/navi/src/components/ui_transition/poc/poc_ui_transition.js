@@ -108,6 +108,9 @@ import.meta.css = /* css */ `
     background: var(--background-color);
     border: 8px dashed #ccc;
     border-radius: 8px;
+  }
+
+  .ui_transition[data-transitioning] {
     /* Overflow hidden so content is clipped during transition */
     overflow: hidden;
   }

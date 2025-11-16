@@ -9,6 +9,19 @@
         box-sizing: border-box;
       }
 
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+      }
+
+      body {
+        width: max-content;
+        min-width: 100%;
+        height: max-content;
+        min-height: 100%;
+      }
+
       body {
         margin: 0;
         padding: 0;
@@ -60,8 +73,10 @@
       /* Viewport container */
       .viewport-container {
         position: relative;
-        width: 100vw;
-        height: 100vh;
+        width: max-content;
+        min-width: 100%;
+        height: max-content;
+        min-height: 100%;
       }
 
       /* Content styles */
