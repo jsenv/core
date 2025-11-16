@@ -8,76 +8,99 @@ export const preventIntermediateScrollbar = (
 ) => {
   const scrollContainer = getScrollContainer(element);
   const [scrollbarWidth, scrollbarHeight] = measureScrollbar(scrollContainer);
-
-  // Get available content area (excluding scrollbars)
   const scrollBox = getScrollBox(scrollContainer);
-  const scrollBoxWidth = scrollBox.width;
-  const scrollBoxHeight = scrollBox.height;
+  const availableWidth = scrollBox.width;
+  const availableHeight = scrollBox.height;
+  const currentContentWidth = scrollContainer.scrollWidth;
+  const currentContentHeight = scrollContainer.scrollHeight;
+  const currentlyHasHorizontalScrollbar = currentContentWidth > availableWidth;
+  const currentlyHasVerticalScrollbar = currentContentHeight > availableHeight;
 
-  // Since getScrollBox already excludes scrollbars, we don't need to subtract them again
-  // The scrollBox dimensions represent the actual available space for content
+  // Check if final state will need scrollbars
+  const finalStateNeedsHorizontalScrollbar = toWidth > availableWidth;
+  const finalStateNeedsVerticalScrollbar = toHeight > availableHeight;
 
-  // Check current scrollbar state
-  const hasHorizontalScrollbar = scrollContainer.scrollWidth > scrollBoxWidth;
-  const hasVerticalScrollbar = scrollContainer.scrollHeight > scrollBoxHeight;
+  // If final state needs vertical scrollbar, it reduces horizontal space
+  const finalStateNeedsVerticalScrollbarReducingHorizontalSpace =
+    finalStateNeedsVerticalScrollbar &&
+    toWidth > availableWidth - scrollbarWidth;
 
-  // Check if target state will need scrollbars
-  // If one scrollbar appears, it reduces available space for the other dimension
-  const willNeedHorizontalScrollbar =
-    toWidth > scrollBoxWidth ||
-    (toHeight > scrollBoxHeight && toWidth > scrollBoxWidth - scrollbarWidth);
-  const willNeedVerticalScrollbar =
-    toHeight > scrollBoxHeight ||
-    (toWidth > scrollBoxWidth && toHeight > scrollBoxHeight - scrollbarHeight);
+  // If final state needs horizontal scrollbar, it reduces vertical space
+  const finalStateNeedsHorizontalScrollbarReducingVerticalSpace =
+    finalStateNeedsHorizontalScrollbar &&
+    toHeight > availableHeight - scrollbarHeight;
 
-  // Detect problematic scenarios during transition
-  const maxTransitionWidth = Math.max(fromWidth, toWidth);
-  const maxTransitionHeight = Math.max(fromHeight, toHeight);
+  const finalWillHaveHorizontalScrollbar =
+    finalStateNeedsHorizontalScrollbar ||
+    finalStateNeedsVerticalScrollbarReducingHorizontalSpace;
+  const finalWillHaveVerticalScrollbar =
+    finalStateNeedsVerticalScrollbar ||
+    finalStateNeedsHorizontalScrollbarReducingVerticalSpace;
 
-  const willCreateTempHorizontalScrollbar =
-    !hasHorizontalScrollbar &&
-    !willNeedHorizontalScrollbar &&
-    (maxTransitionWidth > scrollBoxWidth ||
-      (maxTransitionHeight > scrollBoxHeight &&
-        maxTransitionWidth > scrollBoxWidth - scrollbarWidth));
+  // Early return: if current and final states both have the same scrollbar configuration
+  if (
+    currentlyHasHorizontalScrollbar === finalWillHaveHorizontalScrollbar &&
+    currentlyHasVerticalScrollbar === finalWillHaveVerticalScrollbar
+  ) {
+    return () => {}; // No scrollbar state changes, no need to prevent anything
+  }
 
-  const willCreateTempVerticalScrollbar =
-    !hasVerticalScrollbar &&
-    !willNeedVerticalScrollbar &&
-    (maxTransitionHeight > scrollBoxHeight ||
-      (maxTransitionWidth > scrollBoxWidth &&
-        maxTransitionHeight > scrollBoxHeight - scrollbarHeight));
+  // Check dimensions during transition - compare both from and to with available space
+  const transitionWillExceedHorizontalSpace =
+    fromWidth > availableWidth || toWidth > availableWidth;
+  const transitionWillExceedVerticalSpace =
+    fromHeight > availableHeight || toHeight > availableHeight;
 
-  // Store original overflow styles of the scroll container
+  // Detect when transition would temporarily create unwanted scrollbars
+  const wouldCreateTemporaryHorizontalScrollbar =
+    !currentlyHasHorizontalScrollbar &&
+    !finalWillHaveHorizontalScrollbar &&
+    (transitionWillExceedHorizontalSpace ||
+      (transitionWillExceedVerticalSpace &&
+        (fromWidth > availableWidth - scrollbarWidth ||
+          toWidth > availableWidth - scrollbarWidth)));
+
+  const wouldCreateTemporaryVerticalScrollbar =
+    !currentlyHasVerticalScrollbar &&
+    !finalWillHaveVerticalScrollbar &&
+    (transitionWillExceedVerticalSpace ||
+      (transitionWillExceedHorizontalSpace &&
+        (fromHeight > availableHeight - scrollbarHeight ||
+          toHeight > availableHeight - scrollbarHeight)));
+
+  // Early return: no temporary scrollbars will be created
+  if (
+    !wouldCreateTemporaryHorizontalScrollbar &&
+    !wouldCreateTemporaryVerticalScrollbar
+  ) {
+    return () => {}; // No problematic scrollbars during transition
+  }
+
+  // Store original overflow styles to restore later
   const originalOverflowX = scrollContainer.style.overflowX;
   const originalOverflowY = scrollContainer.style.overflowY;
-
-  if (!willCreateTempHorizontalScrollbar && !willCreateTempVerticalScrollbar) {
-    return () => {};
-  }
-
-  // Temporarily hide overflow if needed
-  if (willCreateTempHorizontalScrollbar) {
+  // Apply temporary overflow hidden to prevent unwanted scrollbars
+  if (wouldCreateTemporaryHorizontalScrollbar) {
     scrollContainer.style.overflowX = "hidden";
   }
-  if (willCreateTempVerticalScrollbar) {
+  if (wouldCreateTemporaryVerticalScrollbar) {
     scrollContainer.style.overflowY = "hidden";
   }
-  onPrevent({
-    x: willCreateTempHorizontalScrollbar,
-    y: willCreateTempVerticalScrollbar,
+  onPrevent?.({
+    x: wouldCreateTemporaryHorizontalScrollbar,
+    y: wouldCreateTemporaryVerticalScrollbar,
     scrollContainer,
   });
   return () => {
-    if (willCreateTempHorizontalScrollbar) {
+    if (wouldCreateTemporaryHorizontalScrollbar) {
       scrollContainer.style.overflowX = originalOverflowX;
     }
-    if (willCreateTempVerticalScrollbar) {
+    if (wouldCreateTemporaryVerticalScrollbar) {
       scrollContainer.style.overflowY = originalOverflowY;
     }
-    onRestore({
-      x: willCreateTempHorizontalScrollbar,
-      y: willCreateTempVerticalScrollbar,
+    onRestore?.({
+      x: wouldCreateTemporaryHorizontalScrollbar,
+      y: wouldCreateTemporaryVerticalScrollbar,
       scrollContainer,
     });
   };
