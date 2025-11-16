@@ -64,6 +64,8 @@
  *
  * TODO:
  *
+ * A MON AVIS LE FIX POUR LE CONTENU QUI SE DECALE LORSQUE CENTER
+ *
  * - vérifier le comportement lorsque la transition s'applique au "document"
  * c'est a dire que le container veut faire la taille de la page
  *
@@ -107,6 +109,7 @@ import.meta.css = /* css */ `
     position: relative;
     /* in case we set border on this element his size must include borders */
     box-sizing: content-box;
+
     background: var(--background-color);
     border: 8px dashed #ccc;
     border-radius: 8px;
@@ -152,6 +155,7 @@ import.meta.css = /* css */ `
   .ui_transition[data-transitioning] .target_slot,
   .ui_transition[data-transitioning] .previous_target_slot {
     min-width: 0;
+    min-height: 0;
     flex-shrink: 0;
   }
 
@@ -422,7 +426,7 @@ export const createUITransitionController = (
   let isTransitioning = false;
   let transitionType = "none";
   const transitionController = createGroupTransitionController({
-    // debugBreakpoints: [0.5],
+    // debugBreakpoints: [0.95],
     lifecycle: {
       setup: () => {
         updateSlotAttributes();
