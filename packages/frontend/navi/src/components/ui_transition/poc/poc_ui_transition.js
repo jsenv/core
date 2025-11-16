@@ -315,9 +315,9 @@ export const createUITransitionController = (
     if (width === undefined) {
       if (slot.style.width) {
         debugSize(`cleatSlotDimensions(".${slot.className}")`);
+        slot.style.width = "";
+        slot.style.height = "";
       }
-      slot.style.width = "";
-      slot.style.height = "";
       return;
     }
     if (
@@ -364,6 +364,7 @@ export const createUITransitionController = (
     throw new Error("Unknown slot for applyConfiguration");
   };
   const targetSlotBecomes = (newConfiguration) => {
+    debugDetection(`targetSlotBecomes(${newConfiguration})`);
     // measureSlot(targetSlot);
     setSlotConfiguration(previousTargetSlot, targetSlotConfiguration);
     setSlotConfiguration(targetSlot, newConfiguration);
@@ -580,11 +581,9 @@ export const createUITransitionController = (
         contentId,
       },
     );
-
     if (hasDebugLogs) {
       console.group(`transitionTo(${toConfiguration.contentId})`);
     }
-
     if (isSameConfiguration(fromConfiguration, toConfiguration)) {
       debugDetection(`ignored (already in desired state)`);
       if (hasDebugLogs) {
@@ -592,63 +591,33 @@ export const createUITransitionController = (
       }
       return;
     }
-
-    // Determine transition type for debugging
     const fromConfigType = fromConfiguration.type;
     const toConfigType = toConfiguration.type;
     transitionType = `${fromConfigType}_to_${toConfigType}`;
     debugDetection(
       `Prepare "${transitionType}" transition (${fromConfiguration} -> ${toConfiguration})`,
     );
-
+    // content_to_empty / content_phase_to_empty
     if (toConfiguration === EMPTY) {
       applyToEmptyTransition();
-      if (hasDebugLogs) {
-        console.groupEnd();
-      }
       return;
     }
-
-    // Store current slot dimensions before transition
-    if (targetSlotConfiguration !== EMPTY) {
-      const targetDimensions = getSlotDimensions(targetSlot);
-      targetSlotWidth = targetDimensions.width;
-      targetSlotHeight = targetDimensions.height;
-    }
-    if (outgoingSlotConfiguration !== EMPTY) {
-      const outgoingDimensions = getSlotDimensions(outgoingSlot);
-      outgoingSlotWidth = outgoingDimensions.width;
-      outgoingSlotHeight = outgoingDimensions.height;
-    }
-
-    // content_phase to content_phase
+    // content_phase_to_content_phase
     if (fromConfiguration.isContentPhase && toConfiguration.isContentPhase) {
       applyContentPhaseToContentPhaseTransition(toConfiguration);
-      if (hasDebugLogs) {
-        console.groupEnd();
-      }
       return;
     }
-
-    // content_phase to content
+    // content_phase_to_content
     if (fromConfiguration.isContentPhase && toConfiguration.isContent) {
       applyContentPhaseToContentPhaseTransition(toConfiguration);
-      if (hasDebugLogs) {
-        console.groupEnd();
-      }
       return;
     }
-
-    // content to content_phase
+    // content_to_content_phase
     if (fromConfiguration.isContent && toConfiguration.isContentPhase) {
       applyContentPhaseToContentPhaseTransition(toConfiguration);
-      if (hasDebugLogs) {
-        console.groupEnd();
-      }
       return;
     }
-
-    // content to content (default case)
+    // content_to_content (default case)
     applyContentToContentTransition(toConfiguration);
   };
 
