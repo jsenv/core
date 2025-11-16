@@ -21,28 +21,23 @@ export const preventIntermediateScrollbar = (
   const scrollBox = getScrollBox(scrollContainer);
   const availableWidth = scrollBox.width;
   const availableHeight = scrollBox.height;
-  const currentContentWidth = scrollContainer.scrollWidth;
-  const currentContentHeight = scrollContainer.scrollHeight;
-  const currentlyHasXScrollbar = currentContentWidth > availableWidth;
-  const currentlyHasYScrollbar = currentContentHeight > availableHeight;
-
-  const finalStateNeedsXScrollbar = toWidth > availableWidth;
-  const finalStateNeedsYScrollbar = toHeight > availableHeight;
+  const scrollbarXAtStart = fromWidth > availableWidth;
+  const scrollbarYAtStart = fromHeight > availableHeight;
+  const scrollbarXAtEnd = toWidth > availableWidth;
+  const scrollbarYAtEnd = toHeight > availableHeight;
 
   const finalStateNeedsYScrollbarReducingXSpace =
-    finalStateNeedsYScrollbar && toWidth > availableWidth - scrollbarWidth;
-
+    scrollbarYAtEnd && toWidth > availableWidth - scrollbarWidth;
   const finalStateNeedsXScrollbarReducingYSpace =
-    finalStateNeedsXScrollbar && toHeight > availableHeight - scrollbarHeight;
-
+    scrollbarXAtEnd && toHeight > availableHeight - scrollbarHeight;
   const finalWillHaveXScrollbar =
-    finalStateNeedsXScrollbar || finalStateNeedsYScrollbarReducingXSpace;
+    scrollbarXAtEnd || finalStateNeedsYScrollbarReducingXSpace;
   const finalWillHaveYScrollbar =
-    finalStateNeedsYScrollbar || finalStateNeedsXScrollbarReducingYSpace;
+    scrollbarYAtEnd || finalStateNeedsXScrollbarReducingYSpace;
 
   if (
-    currentlyHasXScrollbar === finalWillHaveXScrollbar &&
-    currentlyHasYScrollbar === finalWillHaveYScrollbar
+    scrollbarXAtStart === finalWillHaveXScrollbar &&
+    scrollbarYAtStart === finalWillHaveYScrollbar
   ) {
     return () => {};
   }
@@ -63,7 +58,7 @@ export const preventIntermediateScrollbar = (
     toWidth > availableWidth && toHeight > availableHeight - scrollbarHeight;
 
   const intermediateXScrollbarDetected =
-    !currentlyHasXScrollbar &&
+    !scrollbarXAtStart &&
     !finalWillHaveXScrollbar &&
     (fromDimensionsExceedXSpace ||
       toDimensionsExceedXSpace ||
@@ -71,7 +66,7 @@ export const preventIntermediateScrollbar = (
       toDimensionsWouldTriggerYScrollbarAffectingXSpace);
 
   const intermediateYScrollbarDetected =
-    !currentlyHasYScrollbar &&
+    !scrollbarXAtStart &&
     !finalWillHaveYScrollbar &&
     (fromDimensionsExceedYSpace ||
       toDimensionsExceedYSpace ||
@@ -84,7 +79,6 @@ export const preventIntermediateScrollbar = (
 
   const originalOverflowX = scrollContainer.style.overflowX;
   const originalOverflowY = scrollContainer.style.overflowY;
-
   if (intermediateXScrollbarDetected) {
     scrollContainer.style.overflowX = "hidden";
   }
