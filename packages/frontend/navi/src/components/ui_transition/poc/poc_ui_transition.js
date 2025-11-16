@@ -60,6 +60,26 @@
  * explicitly set to prevent dom_nodes reflow and maintain visual consistency.
  */
 
+/**
+ *
+ * TODO:
+ *
+ * - vérifier le comportement lorsque la transition s'applique au "document"
+ * c'est a dire que le container veut faire la taille de la page
+ *
+ * - content phase se comporte comme le contenu tant qu'on a pas vu de contenu
+ * des qu'on voit un contenu il doit respecter les dimensions du dernier contenu
+ * qu'on connait
+ * (meme si le content id change, on garde les dimensions du contenu "actuel" en attendant de voir le nouveau)
+ *
+ * - vérification des backgrounds (on peut appliquer des backgrounds
+ * et ils prennents bien la taille attendu (meme si le contenr "overflow"))
+ *
+ * - positionement des slots (centrage nottament)
+ *
+ *
+ */
+
 import {
   createGroupTransitionController,
   createHeightTransition,
