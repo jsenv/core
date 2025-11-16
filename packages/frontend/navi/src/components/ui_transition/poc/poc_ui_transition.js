@@ -281,7 +281,7 @@ export const createUITransitionController = (
 
     if (slotConfig === EMPTY) {
       targetSlotWidth = undefined;
-      targetSlotWidth = undefined;
+      targetSlotHeight = undefined;
       return;
     }
     const dimensions = getSlotDimensions(targetSlot);
@@ -302,12 +302,23 @@ export const createUITransitionController = (
 
   const setSlotDimensions = (slot, width, height) => {
     if (width === undefined) {
+      if (slot.style.width) {
+        debugSize(`Clear dimensions of ".${slot.className}"`);
+      }
       slot.style.width = "";
       slot.style.height = "";
       return;
     }
-    slot.style.width = `${width}px`;
-    slot.style.height = `${height}px`;
+    if (
+      slot.style.width !== `${width}px` ||
+      slot.style.height !== `${height}px`
+    ) {
+      debugSize(
+        `Set dimensions of ".${slot.className}" to [${width}x${height}]`,
+      );
+      slot.style.width = `${width}px`;
+      slot.style.height = `${height}px`;
+    }
   };
   const setSlotConfiguration = (slot, configuration) => {
     slot.innerHTML = "";
@@ -359,7 +370,7 @@ export const createUITransitionController = (
   let isTransitioning = false;
   let transitionType = "none";
   const transitionController = createGroupTransitionController({
-    debugQuarterBreakpoints: true,
+    // debugQuarterBreakpoints: true,
     lifecycle: {
       setup: () => {
         updateSlotAttributes();
