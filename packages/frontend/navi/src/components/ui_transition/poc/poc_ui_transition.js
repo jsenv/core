@@ -404,65 +404,78 @@ export const createUITransitionController = (
       },
     },
   });
-  // content_to_content transition (uses previous_group)
-  const applyContentToContentTransition = (toConfiguration) => {
-    outgoingSlotBecomes(EMPTY);
-    targetSlotBecomes(toConfiguration);
-
-    const transitions = [];
+  const updateContainerDimensions = (newWidth, newHeight) => {
     const fromWidth = width || 0;
     const fromHeight = height || 0;
     debugSize(
       `transition from [${fromWidth}x${fromHeight}] to [${targetSlotWidth}x${targetSlotHeight}]`,
     );
-    // Adapt container dimensions
-    transitions.push(
-      createWidthTransition(container, targetSlotWidth, {
-        from: fromWidth,
-        duration,
-        styleSynchronizer: "inline_style",
-        onUpdate: (widthTransition) => {
-          width = widthTransition.value;
-        },
-        onFinish: (widthTransition) => {
-          widthTransition.cancel();
-        },
-      }),
-      createHeightTransition(container, targetSlotHeight, {
-        from: fromHeight,
-        duration,
-        styleSynchronizer: "inline_style",
-        onUpdate: (heightTransition) => {
-          height = heightTransition.value;
-        },
-        onFinish: (heightTransition) => {
-          heightTransition.cancel();
-        },
-      }),
-    );
-    // fade in target slot
-    targetSlot.style.opacity = "0";
-    transitions.push(
-      createOpacityTransition(targetSlot, 1, {
-        duration,
-        styleSynchronizer: "inline_style",
-        onFinish: (targetSlotOpacityTransition) => {
-          targetSlotOpacityTransition.cancel();
-        },
-      }),
-    );
-    // fadeout previous group
-    previousGroup.style.opacity = "1";
-    transitions.push(
-      createOpacityTransition(previousGroup, 0, {
-        duration,
-        styleSynchronizer: "inline_style",
-        onFinish: (previousGroupOpacityTransition) => {
-          previousGroupOpacityTransition.cancel();
-          previousGroup.style.opacity = "0"; // keep previous group visually hidden
-        },
-      }),
-    );
+    const widthTransition = createWidthTransition(container, newWidth, {
+      from: fromWidth,
+      duration,
+      styleSynchronizer: "inline_style",
+      onUpdate: (widthTransition) => {
+        width = widthTransition.value;
+      },
+      onFinish: (widthTransition) => {
+        widthTransition.cancel();
+      },
+    });
+    const heightTransition = createHeightTransition(container, newHeight, {
+      from: fromHeight,
+      duration,
+      styleSynchronizer: "inline_style",
+      onUpdate: (heightTransition) => {
+        height = heightTransition.value;
+      },
+      onFinish: (heightTransition) => {
+        heightTransition.cancel();
+      },
+    });
+    return [widthTransition, heightTransition];
+  };
+  const fadeInTargetSlot = () => {
+    return createOpacityTransition(targetSlot, 1, {
+      from: 0,
+      duration,
+      styleSynchronizer: "inline_style",
+      onFinish: (targetSlotOpacityTransition) => {
+        targetSlotOpacityTransition.cancel();
+      },
+    });
+  };
+  const fadeOutPreviousGroup = () => {
+    return createOpacityTransition(previousGroup, 0, {
+      from: 1,
+      duration,
+      styleSynchronizer: "inline_style",
+      onFinish: (previousGroupOpacityTransition) => {
+        previousGroupOpacityTransition.cancel();
+        previousGroup.style.opacity = "0"; // keep previous group visually hidden
+      },
+    });
+  };
+  const fadeOutOutgoingSlot = () => {
+    return createOpacityTransition(outgoingSlot, 0, {
+      duration,
+      from: 1,
+      styleSynchronizer: "inline_style",
+      onFinish: (outgoingSlotOpacityTransition) => {
+        outgoingSlotOpacityTransition.cancel();
+        outgoingSlot.style.opacity = "0"; // keep outgoing slot visually hidden
+      },
+    });
+  };
+
+  // content_to_content transition (uses previous_group)
+  const applyContentToContentTransition = (toConfiguration) => {
+    outgoingSlotBecomes(EMPTY);
+    targetSlotBecomes(toConfiguration);
+    const transitions = [
+      ...updateContainerDimensions(targetSlotWidth, targetSlotHeight),
+      fadeInTargetSlot(),
+      fadeOutPreviousGroup(),
+    ];
     const transition = transitionController.update(transitions, {
       onFinish: () => {
         // let target slot take natural size now container is done
@@ -477,48 +490,17 @@ export const createUITransitionController = (
   // content_phase_to_content_phase transition (uses outgoing_slot)
   const applyContentPhaseToContentPhaseTransition = (toConfiguration) => {
     targetSlotBecomesViaOutgoing(toConfiguration);
-
-    const transitions = [];
-    // Adapt container dimensions
-    transitions.push(
-      createWidthTransition(container, targetSlotWidth, {
-        from: width || 0,
-        duration,
-        styleSynchronizer: "inline_style",
-        onUpdate: ({ value }) => {
-          width = value;
-        },
-      }),
-      createHeightTransition(container, targetSlotHeight, {
-        from: height || 0,
-        duration,
-        styleSynchronizer: "inline_style",
-        onUpdate: ({ value }) => {
-          height = value;
-        },
-      }),
-    );
-    // fade in target slot
-    targetSlot.style.opacity = "0";
-    transitions.push(
-      createOpacityTransition(targetSlot, 1, {
-        duration,
-        styleSynchronizer: "inline_style",
-      }),
-    );
-    // fade out outgoing slot
-    outgoingSlot.style.opacity = "1";
-    transitions.push(
-      createOpacityTransition(outgoingSlot, 0, {
-        duration,
-        styleSynchronizer: "inline_style",
-      }),
-    );
+    const transitions = [
+      ...updateContainerDimensions(targetSlotWidth, targetSlotHeight),
+      fadeInTargetSlot(),
+      fadeOutOutgoingSlot(),
+    ];
     const transition = transitionController.update(transitions, {
       onFinish: () => {
-        transition.cancel();
-        targetSlot.style.width = "";
-        targetSlot.style.height = "";
+        setSlotDimensions(targetSlot, undefined, undefined);
+        if (hasDebugLogs) {
+          console.groupEnd();
+        }
       },
     });
     transition.play();
@@ -527,43 +509,16 @@ export const createUITransitionController = (
   const applyToEmptyTransition = () => {
     targetSlotBecomes(EMPTY);
     outgoingSlotBecomes(EMPTY);
-
-    const transitions = [];
-    // Animate container to zero dimensions
-    transitions.push(
-      createWidthTransition(container, {
-        from: width,
-        to: 0,
-        duration,
-        styleSynchronizer: "inline_style",
-        onUpdate: ({ value }) => {
-          width = value;
-        },
-      }),
-      createHeightTransition(container, {
-        from: height,
-        to: 0,
-        duration,
-        styleSynchronizer: "inline_style",
-        onUpdate: ({ value }) => {
-          height = value;
-        },
-      }),
-    );
-
-    // Fade out the previous group
-    previousGroup.style.opacity = "1";
-    transitions.push(
-      createOpacityTransition(previousGroup, {
-        from: 1,
-        to: 0,
-        duration,
-        styleSynchronizer: "inline_style",
-      }),
-    );
+    const transitions = [
+      ...updateContainerDimensions(0, 0),
+      fadeOutPreviousGroup(),
+    ];
     const transition = transitionController.update(transitions, {
       onFinish: () => {
-        transition.cancel();
+        setSlotDimensions(targetSlot, undefined, undefined);
+        if (hasDebugLogs) {
+          console.groupEnd();
+        }
       },
     });
     transition.play();
