@@ -107,6 +107,20 @@
         background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%);
       }
 
+      .content-medium {
+        display: flex;
+        width: 50vw;
+        height: 50vh;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 16px;
+        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        border-radius: 10px;
+        box-shadow: 0 10px 36px rgba(0, 0, 0, 0.25);
+      }
+
       .content-wide {
         display: flex;
         width: 150vw;
@@ -117,6 +131,20 @@
         font-weight: bold;
         font-size: 18px;
         background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+        border-radius: 12px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+      }
+
+      .content-tall {
+        display: flex;
+        width: 300px;
+        height: 150vh;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 18px;
+        background: linear-gradient(180deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
         border-radius: 12px;
         box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
       }
@@ -136,6 +164,22 @@
         content: "";
       }
 
+      /* Add pattern for medium content */
+      .content-medium::before {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: 
+          radial-gradient(circle at 25% 25%, rgba(255,255,255,0.1) 2px, transparent 2px),
+          radial-gradient(circle at 75% 75%, rgba(255,255,255,0.1) 2px, transparent 2px);
+        background-size: 40px 40px;
+        background-position: 0 0, 20px 20px;
+        pointer-events: none;
+        content: "";
+      }
+
       /* Add scrollable pattern for wide content */
       .content-wide::before {
         position: absolute;
@@ -149,6 +193,24 @@
           rgba(255, 255, 255, 0.1) 1px,
           transparent 1px,
           transparent 30px
+        );
+        pointer-events: none;
+        content: "";
+      }
+
+      /* Add pattern for tall content */
+      .content-tall::before {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: repeating-linear-gradient(
+          0deg,
+          rgba(255, 255, 255, 0.1),
+          rgba(255, 255, 255, 0.1) 1px,
+          transparent 1px,
+          transparent 40px
         );
         pointer-events: none;
         content: "";
@@ -191,8 +253,10 @@
     <!-- Fixed controls -->
     <div class="controls">
       <button id="btn-small" class="active">Small (100x100)</button>
+      <button id="btn-medium">Medium (50vw x 50vh)</button>
       <button id="btn-fullscreen">Fullscreen (100vw x 100vh)</button>
       <button id="btn-wide">Wide (150vw x 200px)</button>
+      <button id="btn-tall">Tall (300px x 150vh)</button>
       <button id="btn-empty">Empty</button>
     </div>
 
@@ -250,6 +314,13 @@
         return div;
       };
 
+      const createMediumContent = () => {
+        const div = document.createElement("div");
+        div.className = "content-medium";
+        div.innerHTML = "Medium Content<br>50vw × 50vh";
+        return div;
+      };
+
       const createFullscreenContent = () => {
         const div = document.createElement("div");
         div.className = "content-fullscreen";
@@ -262,6 +333,14 @@
         div.className = "content-wide";
         div.innerHTML =
           "Wide Content<br>150vw × 200px height<br>(horizontally scrollable)";
+        return div;
+      };
+
+      const createTallContent = () => {
+        const div = document.createElement("div");
+        div.className = "content-tall";
+        div.innerHTML =
+          "Tall Content<br>300px × 150vh<br>(vertically scrollable)";
         return div;
       };
 
@@ -293,6 +372,13 @@
         setTimeout(updateDebugInfo, 100);
       });
 
+      document.getElementById("btn-medium").addEventListener("click", () => {
+        transitionController.transitionTo(createMediumContent());
+        currentContentEl.textContent = "Medium (50vw×50vh)";
+        updateActiveButton("btn-medium");
+        setTimeout(updateDebugInfo, 100);
+      });
+
       document
         .getElementById("btn-fullscreen")
         .addEventListener("click", () => {
@@ -306,6 +392,13 @@
         transitionController.transitionTo(createWideContent());
         currentContentEl.textContent = "Wide (150vw×200px)";
         updateActiveButton("btn-wide");
+        setTimeout(updateDebugInfo, 100);
+      });
+
+      document.getElementById("btn-tall").addEventListener("click", () => {
+        transitionController.transitionTo(createTallContent());
+        currentContentEl.textContent = "Tall (300px×150vh)";
+        updateActiveButton("btn-tall");
         setTimeout(updateDebugInfo, 100);
       });
 
