@@ -43,41 +43,45 @@ export const preventIntermediateScrollbar = (
 
   const maxWidth = Math.max(fromWidth, toWidth);
   const maxHeight = Math.max(fromHeight, toHeight);
+
+  // Detect intermediate X scrollbar (appears during transition but not needed in final state)
   let intermediateX = false;
-  // Only prevent X scrollbar if it WON'T be needed in the final state
   if (!finalScrollbarState.x) {
-    // X scrollbar could appear during transition if:
-    // 1. Content width exceeds available width at any point during transition
-    if (maxWidth > scrollContainerWidth) {
-      intermediateX = true;
+    // Simulate worst case during transition - when both dimensions are at their maximum
+    let availableWidth = scrollContainerWidth;
+    let availableHeight = scrollContainerHeight;
+
+    // Check if Y scrollbar would appear during transition
+    const wouldHaveYDuringTransition = maxHeight > availableHeight;
+    if (wouldHaveYDuringTransition) {
+      availableWidth -= scrollbarWidth; // Y scrollbar reduces available X space
     }
-    // 2. Y scrollbar appears during transition, reducing available X space
-    else if (maxHeight > scrollContainerHeight) {
-      // Y scrollbar would appear, check if this causes X scrollbar due to reduced space
-      const availableWidthWithYScrollbar =
-        scrollContainerWidth - scrollbarWidth;
-      if (maxWidth > availableWidthWithYScrollbar) {
-        intermediateX = true;
-      }
-    }
+
+    // Now check if X scrollbar would appear with potentially reduced space
+    const wouldHaveXDuringTransition = maxWidth > availableWidth;
+
+    // X scrollbar is intermediate/useless if it appears during transition but not in final state
+    intermediateX = wouldHaveXDuringTransition && !finalScrollbarState.x;
   }
+
+  // Detect intermediate Y scrollbar (appears during transition but not needed in final state)
   let intermediateY = false;
-  // Only prevent Y scrollbar if it WON'T be needed in the final state
   if (!finalScrollbarState.y) {
-    // Y scrollbar could appear during transition if:
-    // 1. Content height exceeds available height at any point during transition
-    if (maxHeight > scrollContainerHeight) {
-      intermediateY = true;
+    // Simulate worst case during transition - when both dimensions are at their maximum
+    let availableWidth = scrollContainerWidth;
+    let availableHeight = scrollContainerHeight;
+
+    // Check if X scrollbar would appear during transition
+    const wouldHaveXDuringTransition = maxWidth > availableWidth;
+    if (wouldHaveXDuringTransition) {
+      availableHeight -= scrollbarHeight; // X scrollbar reduces available Y space
     }
-    // 2. X scrollbar appears during transition, reducing available Y space
-    else if (maxWidth > scrollContainerWidth) {
-      // X scrollbar would appear, check if this causes Y scrollbar due to reduced space
-      const availableHeightWithXScrollbar =
-        scrollContainerHeight - scrollbarHeight;
-      if (maxHeight > availableHeightWithXScrollbar) {
-        intermediateY = true;
-      }
-    }
+
+    // Now check if Y scrollbar would appear with potentially reduced space
+    const wouldHaveYDuringTransition = maxHeight > availableHeight;
+
+    // Y scrollbar is intermediate/useless if it appears during transition but not in final state
+    intermediateY = wouldHaveYDuringTransition && !finalScrollbarState.y;
   }
 
   if (!intermediateX && !intermediateY) {
