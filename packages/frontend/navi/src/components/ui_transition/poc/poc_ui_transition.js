@@ -85,6 +85,7 @@ import {
   createHeightTransition,
   createOpacityTransition,
   createWidthTransition,
+  getElementSignature,
   getScrollContainer,
   measureScrollbar,
 } from "@jsenv/dom";
@@ -175,7 +176,7 @@ const createConfiguration = (domNodes, { contentId, contentPhase } = {}) => {
   if (!domNodes || domNodes.length === 0) {
     return EMPTY;
   }
-  contentId = contentId || getElementId(domNodes[0]);
+  contentId = contentId || getElementSignature(domNodes[0]);
   if (contentPhase) {
     return {
       domNodes,
@@ -435,21 +436,30 @@ export const createUITransitionController = (
     toWidth,
     toHeight,
   ) => {
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-
     const scrollContainer = getScrollContainer(container);
     const [scrollbarWidth, scrollbarHeight] = measureScrollbar(scrollContainer);
+    const scrollContainerIsDocument =
+      scrollContainer === document.documentElement;
+    // Get viewport dimensions based on the scroll container
+    let viewportWidth;
+    let viewportHeight;
+    if (scrollContainerIsDocument) {
+      viewportWidth = window.innerWidth;
+      viewportHeight = window.innerHeight;
+    } else {
+      const containerRect = scrollContainer.getBoundingClientRect();
+      viewportWidth = containerRect.width;
+      viewportHeight = containerRect.height;
+    }
+
     // Calculate available space accounting for potential scrollbars
     const availableWidthWithVerticalScrollbar = viewportWidth - scrollbarWidth;
     const availableHeightWithHorizontalScrollbar =
       viewportHeight - scrollbarHeight;
 
     // Check current scrollbar state
-    const hasHorizontalScrollbar =
-      document.documentElement.scrollWidth > viewportWidth;
-    const hasVerticalScrollbar =
-      document.documentElement.scrollHeight > viewportHeight;
+    const hasHorizontalScrollbar = scrollContainer.scrollWidth > viewportWidth;
+    const hasVerticalScrollbar = scrollContainer.scrollHeight > viewportHeight;
 
     // Check if target state will need scrollbars
     const willNeedHorizontalScrollbar =
@@ -479,8 +489,9 @@ export const createUITransitionController = (
         (maxTransitionWidth > viewportWidth &&
           maxTransitionHeight > availableHeightWithHorizontalScrollbar));
 
-    const originalOverflowX = document.body.style.overflowX;
-    const originalOverflowY = document.body.style.overflowY;
+    // Store original overflow styles of the scroll container
+    const originalOverflowX = scrollContainer.style.overflowX;
+    const originalOverflowY = scrollContainer.style.overflowY;
 
     if (
       !willCreateTempHorizontalScrollbar &&
@@ -491,25 +502,25 @@ export const createUITransitionController = (
 
     // Temporarily hide overflow if needed
     if (willCreateTempHorizontalScrollbar) {
-      document.body.style.overflowX = "hidden";
+      scrollContainer.style.overflowX = "hidden";
       debugSize(
-        `Temporarily hiding horizontal overflow during transition (scrollbar width: ${scrollbarWidth}px)`,
+        `Temporarily hiding horizontal overflow during transition (scrollbar width: ${scrollbarWidth}px) on ${getElementSignature(scrollContainer)}`,
       );
     }
     if (willCreateTempVerticalScrollbar) {
-      document.body.style.overflowY = "hidden";
+      scrollContainer.style.overflowY = "hidden";
       debugSize(
-        `Temporarily hiding vertical overflow during transition (scrollbar height: ${scrollbarHeight}px)`,
+        `Temporarily hiding vertical overflow during transition (scrollbar height: ${scrollbarHeight}px) on ${getElementSignature(scrollContainer)}`,
       );
     }
 
     return () => {
       if (willCreateTempHorizontalScrollbar) {
-        document.body.style.overflowX = originalOverflowX;
+        scrollContainer.style.overflowX = originalOverflowX;
         debugSize("Restored horizontal overflow after transition");
       }
       if (willCreateTempVerticalScrollbar) {
-        document.body.style.overflowY = originalOverflowY;
+        scrollContainer.style.overflowY = originalOverflowY;
         debugSize("Restored vertical overflow after transition");
       }
     };
@@ -738,15 +749,4 @@ export const createUITransitionController = (
     previousTargetSlotConfiguration: () => previousTargetSlotConfiguration,
     previousOutgoingSlotConfiguration: () => previousOutgoingSlotConfiguration,
   };
-};
-
-// Helper to get element signature or use provided ID
-const getElementId = (element) => {
-  if (!element) return EMPTY;
-  if (element.id) return element.id;
-  // Simple signature based on element properties
-  const tagName = element.tagName?.toLowerCase() || "unknown";
-  const className = element.className || "";
-  const textContent = element.textContent?.slice(0, 20) || "";
-  return `${tagName}_${className}_${textContent}`.replace(/\s+/g, "_");
 };

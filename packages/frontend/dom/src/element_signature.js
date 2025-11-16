@@ -106,6 +106,12 @@ export const getElementSignature = (element) => {
   if (dataUIName) {
     return `${tagName}[data-ui-name="${dataUIName}"]`;
   }
+  if (element === document.body) {
+    return "<body>";
+  }
+  if (element === document.documentElement) {
+    return "<html>";
+  }
   const elementId = element.id;
   if (elementId) {
     return `${tagName}#${elementId}`;
