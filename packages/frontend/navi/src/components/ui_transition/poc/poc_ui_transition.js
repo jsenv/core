@@ -152,7 +152,8 @@ import.meta.css = /* css */ `
     position: relative;
   }
 
-  .ui_transition[data-transitioning] .target_slot {
+  .ui_transition[data-transitioning] .target_slot,
+  .ui_transition[data-transitioning] .previous_target_slot {
     min-width: 0;
     flex-shrink: 0;
   }
@@ -424,7 +425,7 @@ export const createUITransitionController = (
   let isTransitioning = false;
   let transitionType = "none";
   const transitionController = createGroupTransitionController({
-    // debugQuarterBreakpoints: true,
+    // debugBreakpoints: [0.5],
     lifecycle: {
       setup: () => {
         updateSlotAttributes();
