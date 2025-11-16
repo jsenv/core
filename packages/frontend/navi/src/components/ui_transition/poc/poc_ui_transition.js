@@ -350,8 +350,6 @@ export const createUITransitionController = (
         debugSize(`cleatSlotDimensions(".${slot.className}")`);
         slot.style.width = "";
         slot.style.height = "";
-        uiTransitionStyleController.delete(slot, "transfom.translateX");
-        uiTransitionStyleController.delete(slot, "transfom.translateY");
       }
       return;
     }
@@ -362,12 +360,6 @@ export const createUITransitionController = (
       debugSize(`setSlotDimensions(".${slot.className}", ${width}, ${height})`);
       slot.style.width = `${width}px`;
       slot.style.height = `${height}px`;
-      uiTransitionStyleController.set(slot, {
-        transform: {
-          translateX: "-50%",
-          translateY: "-50%",
-        },
-      });
     }
   };
   const setSlotConfiguration = (slot, configuration) => {
@@ -474,9 +466,15 @@ export const createUITransitionController = (
       styleSynchronizer: "inline_style",
       onUpdate: (widthTransition) => {
         width = widthTransition.value;
+        uiTransitionStyleController.set(targetSlot, {
+          transform: {
+            translateX: "-50%",
+          },
+        });
       },
       onFinish: (widthTransition) => {
         widthTransition.cancel();
+        uiTransitionStyleController.delete(targetSlot, "transform.translateX");
       },
     });
     const heightTransition = createHeightTransition(container, newHeight, {
@@ -485,9 +483,15 @@ export const createUITransitionController = (
       styleSynchronizer: "inline_style",
       onUpdate: (heightTransition) => {
         height = heightTransition.value;
+        uiTransitionStyleController.set(targetSlot, {
+          transform: {
+            translateY: "-50%",
+          },
+        });
       },
       onFinish: (heightTransition) => {
         heightTransition.cancel();
+        uiTransitionStyleController.delete(targetSlot, "transform.translateY");
         // Restore overflow when transition is complete
         restoreOverflow();
       },
