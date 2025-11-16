@@ -39,17 +39,42 @@ export const preventIntermediateScrollbar = (
     return () => {};
   }
 
+  const maxWidth = Math.max(fromWidth, toWidth);
+  const maxHeight = Math.max(fromHeight, toHeight);
   let intermediateX = false;
-  intermediate_x: {
-    if (currentScrollbarState.x && finalScrollbarState.x) {
-      break intermediate_x;
+  // If X scrollbar doesn't exist in current OR final state, check for intermediate appearance
+  if (!currentScrollbarState.x || !finalScrollbarState.x) {
+    // X scrollbar could appear during transition if:
+    // 1. Content width exceeds available width at any point during transition
+    if (maxWidth > scrollContainer.offsetWidth) {
+      intermediateX = true;
+    }
+    // 2. Y scrollbar appears during transition, reducing available X space
+    else if (maxHeight > scrollContainer.offsetHeight) {
+      // Y scrollbar would appear, check if this causes X scrollbar due to reduced space
+      const availableWidthWithYScrollbar =
+        scrollContainer.offsetWidth - scrollbarWidth;
+      if (maxWidth > availableWidthWithYScrollbar) {
+        intermediateX = true;
+      }
     }
   }
-
   let intermediateY = false;
-  intermediate_y: {
-    if (currentScrollbarState.y && finalScrollbarState.y) {
-      break intermediate_y;
+  // If Y scrollbar doesn't exist in current OR final state, check for intermediate appearance
+  if (!currentScrollbarState.y || !finalScrollbarState.y) {
+    // Y scrollbar could appear during transition if:
+    // 1. Content height exceeds available height at any point during transition
+    if (maxHeight > scrollContainer.offsetHeight) {
+      intermediateY = true;
+    }
+    // 2. X scrollbar appears during transition, reducing available Y space
+    else if (maxWidth > scrollContainer.offsetWidth) {
+      // X scrollbar would appear, check if this causes Y scrollbar due to reduced space
+      const availableHeightWithXScrollbar =
+        scrollContainer.offsetHeight - scrollbarHeight;
+      if (maxHeight > availableHeightWithXScrollbar) {
+        intermediateY = true;
+      }
     }
   }
 
