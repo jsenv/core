@@ -300,51 +300,66 @@ export const createUITransitionController = (
     measureSlot(outgoingSlot);
   }
 
-  const applyConfiguration = (configuration, slot) => {
+  const setSlotDimensions = (slot, width, height) => {
+    if (width === undefined) {
+      slot.style.width = "";
+      slot.style.height = "";
+      return;
+    }
+    slot.style.width = `${width}px`;
+    slot.style.height = `${height}px`;
+  };
+  const setSlotConfiguration = (slot, configuration) => {
     slot.innerHTML = "";
     for (const domNode of configuration.domNodes) {
       slot.appendChild(domNode);
     }
+
     if (slot === targetSlot) {
       targetSlotConfiguration = configuration;
-    } else if (slot === outgoingSlot) {
-      outgoingSlotConfiguration = configuration;
-    } else if (slot === previousTargetSlot) {
-      previousTargetSlotConfiguration = configuration;
-    } else if (slot === previousOutgoingSlot) {
-      previousOutgoingSlotConfiguration = EMPTY;
-    }
-    if (slot === targetSlot || slot === outgoingSlot) {
       measureSlot(slot);
-      if (configuration === EMPTY) {
-        slot.style.width = "";
-        slot.style.height = "";
-      } else if (slot === targetSlot) {
-        slot.style.width = `${targetSlotWidth}px`;
-        slot.style.height = `${targetSlotHeight}px`;
-      } else if (slot === outgoingSlot) {
-        slot.style.width = `${outgoingSlotWidth}px`;
-        slot.style.height = `${outgoingSlotHeight}px`;
-      }
+      setSlotDimensions(slot, targetSlotWidth, targetSlotHeight);
+      return;
     }
+
+    if (slot === outgoingSlot) {
+      outgoingSlotConfiguration = configuration;
+      measureSlot(slot);
+      setSlotDimensions(slot, outgoingSlotWidth, outgoingSlotHeight);
+      return;
+    }
+
+    if (slot === previousTargetSlot) {
+      previousTargetSlotConfiguration = configuration;
+      setSlotDimensions(slot, targetSlotWidth, targetSlotHeight);
+      return;
+    }
+
+    if (slot === previousOutgoingSlot) {
+      previousOutgoingSlotConfiguration = configuration;
+      setSlotDimensions(slot, outgoingSlotWidth, outgoingSlotHeight);
+      return;
+    }
+
+    throw new Error("Unknown slot for applyConfiguration");
   };
-  const moveTargetSlotToOutgoing = () => {
-    applyConfiguration(targetSlotConfiguration, outgoingSlot);
-    targetSlotConfiguration = EMPTY;
+  const targetSlotBecomes = (newConfiguration) => {
+    setSlotConfiguration(previousTargetSlot, targetSlotConfiguration);
+    setSlotConfiguration(targetSlot, newConfiguration);
   };
-  const moveTargetSlotToPrevious = () => {
-    applyConfiguration(targetSlotConfiguration, previousTargetSlot);
-    targetSlotConfiguration = EMPTY;
+  const outgoingSlotBecomes = (newConfiguration) => {
+    setSlotConfiguration(previousOutgoingSlot, outgoingSlotConfiguration);
+    setSlotConfiguration(outgoingSlot, newConfiguration);
   };
-  const moveOutgoingSlotToPrevious = () => {
-    applyConfiguration(outgoingSlotConfiguration, previousOutgoingSlot);
-    outgoingSlotConfiguration = EMPTY;
+  const targetSlotBecomesViaOutgoing = (newConfiguration) => {
+    setSlotConfiguration(outgoingSlot, targetSlotConfiguration);
+    setSlotConfiguration(targetSlot, newConfiguration);
   };
 
   let isTransitioning = false;
   let transitionType = "none";
   const transitionController = createGroupTransitionController({
-    // debugQuarterBreakpoints: true,
+    debugQuarterBreakpoints: true,
     lifecycle: {
       setup: () => {
         updateSlotAttributes();
@@ -364,9 +379,8 @@ export const createUITransitionController = (
   });
   // content_to_content transition (uses previous_group)
   const applyContentToContentTransition = (toConfiguration) => {
-    moveTargetSlotToPrevious();
-    moveOutgoingSlotToPrevious();
-    applyConfiguration(toConfiguration, targetSlot);
+    outgoingSlotBecomes(EMPTY);
+    targetSlotBecomes(toConfiguration);
 
     const transitions = [];
     const fromWidth = width || 0;
@@ -437,8 +451,8 @@ export const createUITransitionController = (
   };
   // content_phase_to_content_phase transition (uses outgoing_slot)
   const applyContentPhaseToContentPhaseTransition = (toConfiguration) => {
-    moveTargetSlotToOutgoing();
-    applyConfiguration(toConfiguration, targetSlot);
+    targetSlotBecomesViaOutgoing(toConfiguration);
+
     const transitions = [];
     // Adapt container dimensions
     transitions.push(
@@ -478,7 +492,6 @@ export const createUITransitionController = (
     const transition = transitionController.update(transitions, {
       onFinish: () => {
         transition.cancel();
-        applyConfiguration(EMPTY, outgoingSlot);
         targetSlot.style.width = "";
         targetSlot.style.height = "";
       },
@@ -487,9 +500,8 @@ export const createUITransitionController = (
   };
   // any_to_empty transition
   const applyToEmptyTransition = () => {
-    moveTargetSlotToPrevious();
-    moveOutgoingSlotToPrevious();
-    applyConfiguration(EMPTY, targetSlot);
+    targetSlotBecomes(EMPTY);
+    outgoingSlotBecomes(EMPTY);
 
     const transitions = [];
     // Animate container to zero dimensions
@@ -527,9 +539,6 @@ export const createUITransitionController = (
     const transition = transitionController.update(transitions, {
       onFinish: () => {
         transition.cancel();
-        applyConfiguration(EMPTY, previousGroup);
-        previousTargetSlotConfiguration = EMPTY;
-        previousOutgoingSlotConfiguration = EMPTY;
       },
     });
     transition.play();
@@ -629,10 +638,10 @@ export const createUITransitionController = (
     if (isTransitioning) return;
 
     transitionController.cancel();
-    applyConfiguration(targetSlotInitialConfiguration, targetSlot);
-    applyConfiguration(outgoingSlotInitialConfiguration, outgoingSlot);
-    applyConfiguration(EMPTY, previousTargetSlot);
-    applyConfiguration(EMPTY, previousOutgoingSlot);
+    setSlotConfiguration(targetSlot, targetSlotInitialConfiguration);
+    setSlotConfiguration(outgoingSlot, outgoingSlotInitialConfiguration);
+    setSlotConfiguration(previousTargetSlot, EMPTY);
+    setSlotConfiguration(previousOutgoingSlot, EMPTY);
   };
 
   const setDuration = (newDuration) => {
