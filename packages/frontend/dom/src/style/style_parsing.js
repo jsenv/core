@@ -190,6 +190,21 @@ export const normalizeStyle = (value, propertyName, context = "js") => {
     return value;
   }
 
+  if (propertyName === "willChange") {
+    if (context === "js") {
+      if (typeof value === "string") {
+        // For js context, prefer arrays
+        return parseCSSWillChange(value);
+      }
+      return value;
+    }
+    if (Array.isArray(value)) {
+      // For CSS context, ensure willChange is a string
+      return stringifyCSSWillChange(value);
+    }
+    return value;
+  }
+
   // Handle transform.* properties (e.g., "transform.translateX")
   if (propertyName.startsWith("transform.")) {
     if (context === "css") {
