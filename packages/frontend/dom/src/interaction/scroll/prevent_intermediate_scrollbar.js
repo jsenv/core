@@ -44,8 +44,8 @@ export const preventIntermediateScrollbar = (
   const maxWidth = Math.max(fromWidth, toWidth);
   const maxHeight = Math.max(fromHeight, toHeight);
   let intermediateX = false;
-  // If X scrollbar doesn't exist in current OR final state, check for intermediate appearance
-  if (!currentScrollbarState.x || !finalScrollbarState.x) {
+  // Only prevent X scrollbar if it WON'T be needed in the final state
+  if (!finalScrollbarState.x) {
     // X scrollbar could appear during transition if:
     // 1. Content width exceeds available width at any point during transition
     if (maxWidth > scrollContainerWidth) {
@@ -62,8 +62,8 @@ export const preventIntermediateScrollbar = (
     }
   }
   let intermediateY = false;
-  // If Y scrollbar doesn't exist in current OR final state, check for intermediate appearance
-  if (!currentScrollbarState.y || !finalScrollbarState.y) {
+  // Only prevent Y scrollbar if it WON'T be needed in the final state
+  if (!finalScrollbarState.y) {
     // Y scrollbar could appear during transition if:
     // 1. Content height exceeds available height at any point during transition
     if (maxHeight > scrollContainerHeight) {
