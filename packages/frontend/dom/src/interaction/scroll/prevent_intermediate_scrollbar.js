@@ -2,6 +2,16 @@ import { getScrollBox } from "../../position/dom_coords.js";
 import { getScrollContainer } from "./scroll_container.js";
 import { measureScrollbar } from "./scrollbar_size.js";
 
+/**
+ * Prevents unwanted scrollbars during dimension transitions.
+ *
+ * Problem: When animating from one size to another, intermediate dimensions
+ * might temporarily trigger scrollbars that shouldn't exist in the final state.
+ * This creates visual flicker and layout shifts.
+ *
+ * Solution: Detect when intermediate animation frames would create problematic
+ * scrollbars and temporarily hide overflow during the transition.
+ */
 export const preventIntermediateScrollbar = (
   element,
   { fromWidth, toWidth, fromHeight, toHeight, onPrevent, onRestore },
