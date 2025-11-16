@@ -86,7 +86,10 @@ export { startDragToResizeGesture } from "./src/interaction/drag/drag_to_resize_
 export { getDropTargetInfo } from "./src/interaction/drag/drop_target_detection.js";
 
 // position
-export { getScrollRelativeRect } from "./src/position/dom_coords.js";
+export {
+  getScrollBox,
+  getScrollRelativeRect,
+} from "./src/position/dom_coords.js";
 export { getPositionedParent } from "./src/position/offset_parent.js";
 export { initPositionSticky } from "./src/position/position_sticky.js";
 export { stickyAsRelativeCoords } from "./src/position/sticky_rect.js";

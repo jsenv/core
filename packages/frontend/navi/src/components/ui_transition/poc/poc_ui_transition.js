@@ -86,6 +86,7 @@ import {
   createOpacityTransition,
   createWidthTransition,
   getElementSignature,
+  getScrollBox,
   getScrollContainer,
   measureScrollbar,
 } from "@jsenv/dom";
@@ -438,37 +439,29 @@ export const createUITransitionController = (
   ) => {
     const scrollContainer = getScrollContainer(container);
     const [scrollbarWidth, scrollbarHeight] = measureScrollbar(scrollContainer);
-    const scrollContainerIsDocument =
-      scrollContainer === document.documentElement;
-    // Get viewport dimensions based on the scroll container
-    let viewportWidth;
-    let viewportHeight;
-    if (scrollContainerIsDocument) {
-      viewportWidth = window.innerWidth;
-      viewportHeight = window.innerHeight;
-    } else {
-      const containerRect = scrollContainer.getBoundingClientRect();
-      viewportWidth = containerRect.width;
-      viewportHeight = containerRect.height;
-    }
+
+    // Get available content area (excluding scrollbars)
+    const scrollBox = getScrollBox(scrollContainer);
+    const scrollBoxWidth = scrollBox.width;
+    const scrollBoxHeight = scrollBox.height;
 
     // Calculate available space accounting for potential scrollbars
-    const availableWidthWithVerticalScrollbar = viewportWidth - scrollbarWidth;
+    const availableWidthWithVerticalScrollbar = scrollBoxWidth - scrollbarWidth;
     const availableHeightWithHorizontalScrollbar =
-      viewportHeight - scrollbarHeight;
+      scrollBoxHeight - scrollbarHeight;
 
     // Check current scrollbar state
-    const hasHorizontalScrollbar = scrollContainer.scrollWidth > viewportWidth;
-    const hasVerticalScrollbar = scrollContainer.scrollHeight > viewportHeight;
+    const hasHorizontalScrollbar = scrollContainer.scrollWidth > scrollBoxWidth;
+    const hasVerticalScrollbar = scrollContainer.scrollHeight > scrollBoxHeight;
 
     // Check if target state will need scrollbars
     const willNeedHorizontalScrollbar =
       toWidth > availableWidthWithVerticalScrollbar ||
-      (toHeight > viewportHeight &&
+      (toHeight > scrollBoxHeight &&
         toWidth > availableWidthWithVerticalScrollbar);
     const willNeedVerticalScrollbar =
       toHeight > availableHeightWithHorizontalScrollbar ||
-      (toWidth > viewportWidth &&
+      (toWidth > scrollBoxWidth &&
         toHeight > availableHeightWithHorizontalScrollbar);
 
     // Detect problematic scenarios during transition
@@ -478,15 +471,15 @@ export const createUITransitionController = (
     const willCreateTempHorizontalScrollbar =
       !hasHorizontalScrollbar &&
       !willNeedHorizontalScrollbar &&
-      (maxTransitionWidth > viewportWidth ||
-        (maxTransitionHeight > viewportHeight &&
+      (maxTransitionWidth > scrollBoxWidth ||
+        (maxTransitionHeight > scrollBoxHeight &&
           maxTransitionWidth > availableWidthWithVerticalScrollbar));
 
     const willCreateTempVerticalScrollbar =
       !hasVerticalScrollbar &&
       !willNeedVerticalScrollbar &&
-      (maxTransitionHeight > viewportHeight ||
-        (maxTransitionWidth > viewportWidth &&
+      (maxTransitionHeight > scrollBoxHeight ||
+        (maxTransitionWidth > scrollBoxWidth &&
           maxTransitionHeight > availableHeightWithHorizontalScrollbar));
 
     // Store original overflow styles of the scroll container
