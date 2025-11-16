@@ -38,60 +38,51 @@ export const preventIntermediateScrollbar = (
   ) {
     return () => {};
   }
+  debugger;
 
-  // Check for problematic intermediate scrollbars
-  // We need to prevent X scrollbar if it doesn't exist in current/final states but could appear during transition
-  const needsXPrevention =
-    !currentScrollbarState.x &&
-    !finalScrollbarState.x &&
-    (fromWidth > scrollContainer.offsetWidth ||
-      toWidth > scrollContainer.offsetWidth ||
-      // Or if Y scrollbar during transition would trigger X scrollbar
-      (fromHeight > scrollContainer.offsetHeight &&
-        fromWidth > scrollContainer.offsetWidth - scrollbarWidth) ||
-      (toHeight > scrollContainer.offsetHeight &&
-        toWidth > scrollContainer.offsetWidth - scrollbarWidth));
+  let intermediateX = false;
+  intermediate_x: {
+    if (currentScrollbarState.x || finalScrollbarState.x) {
+      break intermediate_x;
+    }
+  }
 
-  // We need to prevent Y scrollbar if it doesn't exist in current/final states but could appear during transition
-  const needsYPrevention =
-    !currentScrollbarState.y &&
-    !finalScrollbarState.y &&
-    (fromHeight > scrollContainer.offsetHeight ||
-      toHeight > scrollContainer.offsetHeight ||
-      // Or if X scrollbar during transition would trigger Y scrollbar
-      (fromWidth > scrollContainer.offsetWidth &&
-        fromHeight > scrollContainer.offsetHeight - scrollbarHeight) ||
-      (toWidth > scrollContainer.offsetWidth &&
-        toHeight > scrollContainer.offsetHeight - scrollbarHeight));
+  let intermediateY = false;
+  intermediate_y: {
+    if (currentScrollbarState.y || finalScrollbarState.y) {
+      break intermediate_y;
+    }
+    // TODO
+  }
 
-  if (!needsXPrevention && !needsYPrevention) {
+  if (!intermediateX && !intermediateY) {
     return () => {};
   }
 
   // Apply prevention
   const originalOverflowX = scrollContainer.style.overflowX;
   const originalOverflowY = scrollContainer.style.overflowY;
-  if (needsXPrevention) {
+  if (intermediateX) {
     scrollContainer.style.overflowX = "hidden";
   }
-  if (needsYPrevention) {
+  if (intermediateY) {
     scrollContainer.style.overflowY = "hidden";
   }
   onPrevent?.({
-    x: needsXPrevention,
-    y: needsYPrevention,
+    x: intermediateX,
+    y: intermediateY,
     scrollContainer,
   });
   return () => {
-    if (needsXPrevention) {
+    if (intermediateX) {
       scrollContainer.style.overflowX = originalOverflowX;
     }
-    if (needsYPrevention) {
+    if (intermediateY) {
       scrollContainer.style.overflowY = originalOverflowY;
     }
     onRestore?.({
-      x: needsXPrevention,
-      y: needsYPrevention,
+      x: intermediateX,
+      y: intermediateY,
       scrollContainer,
     });
   };
