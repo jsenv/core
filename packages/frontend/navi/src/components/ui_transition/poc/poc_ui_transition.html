@@ -605,15 +605,12 @@
           if (rectangle) {
             const state = rectangle.dataset.state;
             if (state && state !== currentState) {
-              console.log(`Transitioning to content state: ${state}`);
               uiTransition.transitionTo(rectangle.cloneNode(true));
               currentState = state;
             }
           } else if (phase) {
             const phaseType = phase.dataset.phase;
             if (phaseType) {
-              console.log(`Transitioning to phase: ${phaseType}`);
-
               // Use transitionTo with isContentPhase option
               uiTransition.transitionTo(phase.cloneNode(true), {
                 isContentPhase: true,
@@ -792,8 +789,6 @@
           uiTransition.transitionTo(emptyElement);
           currentState = "initial";
         } else {
-          // Start with empty content
-          uiTransition.transitionTo(null);
           currentState = "empty";
         }
 

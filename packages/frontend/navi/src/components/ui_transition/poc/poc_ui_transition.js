@@ -145,11 +145,11 @@ const EMPTY = {
   isContent: false,
   toString: () => "empty",
 };
-const createConfiguration = (domNodes, { id, isContentPhase } = {}) => {
+const createConfiguration = (domNodes, { contentId, isContentPhase } = {}) => {
   if (!domNodes || domNodes.length === 0) {
     return EMPTY;
   }
-  const contentId = id || getElementId(domNodes[0]);
+  contentId = contentId || getElementId(domNodes[0]);
   if (isContentPhase) {
     return {
       domNodes,
@@ -498,7 +498,7 @@ export const createUITransitionController = (
   // Main transition method
   const transitionTo = (
     newContentElement,
-    { isContentPhase = false, id } = {},
+    { isContentPhase = false, contentId } = {},
   ) => {
     if (isTransitioning) {
       console.log("Transition already in progress, ignoring");
@@ -510,14 +510,15 @@ export const createUITransitionController = (
       newContentElement ? [newContentElement] : null,
       {
         isContentPhase,
-        id,
+        contentId,
       },
     );
 
+    console.group(`transitionTo(${toConfiguration.contentId})`);
+
     if (isSameConfiguration(fromConfiguration, toConfiguration)) {
-      console.log(
-        `transitionTo() ignored (already in desired state: ${toConfiguration})`,
-      );
+      console.log(`ignored (already in desired state)`);
+      console.groupEnd();
       return;
     }
 
@@ -525,12 +526,13 @@ export const createUITransitionController = (
     const fromConfigType = fromConfiguration.type;
     const toConfigType = toConfiguration.type;
     transitionType = `${fromConfigType}_to_${toConfigType}`;
-    console.debug(
-      `Transition type: ${transitionType} (${fromConfiguration} -> ${toConfiguration})`,
+    console.log(
+      `Prepare "${transitionType}" transition (${fromConfiguration} -> ${toConfiguration})`,
     );
 
     if (toConfiguration === EMPTY) {
       applyToEmptyTransition();
+      console.groupEnd();
       return;
     }
 
@@ -549,23 +551,27 @@ export const createUITransitionController = (
     // content_phase to content_phase
     if (fromConfiguration.isContentPhase && toConfiguration.isContentPhase) {
       applyContentPhaseToContentPhaseTransition(toConfiguration);
+      console.groupEnd();
       return;
     }
 
     // content_phase to content
     if (fromConfiguration.isContentPhase && toConfiguration.isContent) {
       applyContentPhaseToContentPhaseTransition(toConfiguration);
+      console.groupEnd();
       return;
     }
 
     // content to content_phase
     if (fromConfiguration.isContent && toConfiguration.isContentPhase) {
       applyContentPhaseToContentPhaseTransition(toConfiguration);
+      console.groupEnd();
       return;
     }
 
     // content to content (default case)
     applyContentToContentTransition(toConfiguration);
+    console.groupEnd();
   };
 
   // Reset to initial content
