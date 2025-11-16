@@ -281,8 +281,13 @@ export const createUITransitionController = (
 
     if (slotConfig === EMPTY) {
       debugSize(`measureSlot(".${slot.className}") -> it is empty`);
-      targetSlotWidth = undefined;
-      targetSlotHeight = undefined;
+      if (slot === targetSlot) {
+        targetSlotWidth = undefined;
+        targetSlotHeight = undefined;
+      } else {
+        outgoingSlotWidth = undefined;
+        outgoingSlotHeight = undefined;
+      }
       return;
     }
     const dimensions = getSlotDimensions(targetSlot);
