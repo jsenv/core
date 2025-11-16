@@ -185,7 +185,20 @@ export const createUITransitionController = (
     onStateChange = () => {},
   } = {},
 ) => {
-  // Required elements
+  const debugConfig = {
+    detection: container.hasAttribute("data-debug-detection"),
+    size: container.hasAttribute("data-debug-size"),
+  };
+  const hasDebugLogs = debugConfig.size;
+  const debugDetection = (message) => {
+    if (!debugConfig.detection) return;
+    console.debug(`[detection]`, message);
+  };
+  const debugSize = (message) => {
+    if (!debugConfig.size) return;
+    console.debug(`[size]`, message);
+  };
+
   const activeGroup = container.querySelector(".active_group");
   const targetSlot = container.querySelector(".target_slot");
   const outgoingSlot = container.querySelector(".outgoing_slot");
@@ -297,7 +310,10 @@ export const createUITransitionController = (
       if (configuration === EMPTY) {
         slot.style.width = "";
         slot.style.height = "";
-      } else {
+      } else if (slot === targetSlot) {
+        slot.style.width = `${targetSlotWidth}px`;
+        slot.style.height = `${targetSlotHeight}px`;
+      } else if (slot === outgoingSlot) {
         slot.style.width = `${outgoingSlotWidth}px`;
         slot.style.height = `${outgoingSlotHeight}px`;
       }
@@ -353,7 +369,10 @@ export const createUITransitionController = (
     applyConfiguration(toConfiguration, targetSlot);
 
     const transitions = [];
-    // transitions on container dimensions
+    debugSize(
+      `From [${width}x${height}] to [${targetSlotWidth}x${targetSlotHeight}]`,
+    );
+    // Adapt container dimensions
     transitions.push(
       createWidthTransition(container, targetSlotWidth, {
         from: width || 0,
@@ -526,11 +545,15 @@ export const createUITransitionController = (
       },
     );
 
-    console.group(`transitionTo(${toConfiguration.contentId})`);
+    if (hasDebugLogs) {
+      console.group(`transitionTo(${toConfiguration.contentId})`);
+    }
 
     if (isSameConfiguration(fromConfiguration, toConfiguration)) {
-      console.log(`ignored (already in desired state)`);
-      console.groupEnd();
+      debugDetection(`ignored (already in desired state)`);
+      if (hasDebugLogs) {
+        console.groupEnd();
+      }
       return;
     }
 
@@ -538,13 +561,15 @@ export const createUITransitionController = (
     const fromConfigType = fromConfiguration.type;
     const toConfigType = toConfiguration.type;
     transitionType = `${fromConfigType}_to_${toConfigType}`;
-    console.log(
+    debugDetection(
       `Prepare "${transitionType}" transition (${fromConfiguration} -> ${toConfiguration})`,
     );
 
     if (toConfiguration === EMPTY) {
       applyToEmptyTransition();
-      console.groupEnd();
+      if (hasDebugLogs) {
+        console.groupEnd();
+      }
       return;
     }
 
@@ -563,27 +588,35 @@ export const createUITransitionController = (
     // content_phase to content_phase
     if (fromConfiguration.isContentPhase && toConfiguration.isContentPhase) {
       applyContentPhaseToContentPhaseTransition(toConfiguration);
-      console.groupEnd();
+      if (hasDebugLogs) {
+        console.groupEnd();
+      }
       return;
     }
 
     // content_phase to content
     if (fromConfiguration.isContentPhase && toConfiguration.isContent) {
       applyContentPhaseToContentPhaseTransition(toConfiguration);
-      console.groupEnd();
+      if (hasDebugLogs) {
+        console.groupEnd();
+      }
       return;
     }
 
     // content to content_phase
     if (fromConfiguration.isContent && toConfiguration.isContentPhase) {
       applyContentPhaseToContentPhaseTransition(toConfiguration);
-      console.groupEnd();
+      if (hasDebugLogs) {
+        console.groupEnd();
+      }
       return;
     }
 
     // content to content (default case)
     applyContentToContentTransition(toConfiguration);
-    console.groupEnd();
+    if (hasDebugLogs) {
+      console.groupEnd();
+    }
   };
 
   // Reset to initial content
