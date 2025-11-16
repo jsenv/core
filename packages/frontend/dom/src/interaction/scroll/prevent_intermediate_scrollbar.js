@@ -1,4 +1,4 @@
-import { getScrollBox } from "../../position/dom_coords.js";
+// import { getScrollBox } from "../../position/dom_coords.js";
 import { getScrollContainer } from "./scroll_container.js";
 import { measureScrollbar } from "./scrollbar_size.js";
 
@@ -18,9 +18,8 @@ export const preventIntermediateScrollbar = (
 ) => {
   const scrollContainer = getScrollContainer(element);
   const [scrollbarWidth, scrollbarHeight] = measureScrollbar(scrollContainer);
-  const scrollBox = getScrollBox(scrollContainer);
-  const availableWidth = scrollBox.width;
-  const availableHeight = scrollBox.height;
+  const availableWidth = scrollContainer.offsetWidth;
+  const availableHeight = scrollContainer.offsetHeight;
   const scrollbarXAtStart = fromWidth > availableWidth;
   const scrollbarYAtStart = fromHeight > availableHeight;
   const scrollbarXAtEnd = toWidth > availableWidth;
