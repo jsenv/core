@@ -84,13 +84,10 @@ import {
   createGroupTransitionController,
   createHeightTransition,
   createOpacityTransition,
-  createStyleController,
   createWidthTransition,
   getElementSignature,
   preventIntermediateScrollbar,
 } from "@jsenv/dom";
-
-const uiTransitionStyleController = createStyleController("ui_transition");
 
 import.meta.css = /* css */ `
   * {
@@ -487,7 +484,7 @@ export const createUITransitionController = (
       },
       onFinish: (widthTransition) => {
         widthTransition.cancel();
-        uiTransitionStyleController.delete(targetSlot, "transform.translateX");
+        // uiTransitionStyleController.delete(targetSlot, "transform.translateX");
       },
     });
     const heightTransition = createHeightTransition(container, newHeight, {
@@ -504,7 +501,7 @@ export const createUITransitionController = (
       },
       onFinish: (heightTransition) => {
         heightTransition.cancel();
-        uiTransitionStyleController.delete(targetSlot, "transform.translateY");
+        // uiTransitionStyleController.delete(targetSlot, "transform.translateY");
         // Restore overflow when transition is complete
         restoreOverflow();
       },
