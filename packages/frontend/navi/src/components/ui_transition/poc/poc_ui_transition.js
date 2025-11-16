@@ -85,6 +85,7 @@ import {
   createHeightTransition,
   createOpacityTransition,
   createWidthTransition,
+  getScrollContainer,
   measureScrollbar,
 } from "@jsenv/dom";
 
@@ -437,9 +438,8 @@ export const createUITransitionController = (
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
 
-    const [scrollbarWidth, scrollbarHeight] = measureScrollbar(
-      document.documentElement,
-    );
+    const scrollContainer = getScrollContainer(container);
+    const [scrollbarWidth, scrollbarHeight] = measureScrollbar(scrollContainer);
     // Calculate available space accounting for potential scrollbars
     const availableWidthWithVerticalScrollbar = viewportWidth - scrollbarWidth;
     const availableHeightWithHorizontalScrollbar =
