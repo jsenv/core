@@ -1,4 +1,8 @@
-import { stringifyCSSColor } from "../color/color_parsing.js";
+import {
+  areSameRGBA,
+  stringifyCSSColor,
+  updateRGBA,
+} from "../color/color_parsing.js";
 import { resolveCSSColor } from "../color/resolve_css_color.js";
 import {
   createStyleController,
@@ -148,6 +152,16 @@ const createCSSPropertyTransition = ({
     ),
   });
 };
+const createNoopCSSPropertyTransition = ({ element, ...options }) => {
+  return createTimelineTransition({
+    duration: 300,
+    ...options,
+    key: element,
+    isVisual: true,
+    from: 0,
+    to: 1,
+  });
+};
 
 export const createHeightTransition = (element, to, options = {}) => {
   return createCSSPropertyTransition({
@@ -198,41 +212,76 @@ export const createBackgroundColorTransition = (element, to, options = {}) => {
     ? resolveCSSColor(options.from, element)
     : getBackgroundColor(element);
   const toBackgroundColor = resolveCSSColor(to, element);
+  const fromUnset = fromBackgroundColor === undefined;
+  const toUnset = toBackgroundColor === undefined;
+  debugger;
 
-  let [rFrom, gFrom, bFrom, aFrom] = fromBackgroundColor;
-  let [rTo, gTo, bTo, aTo] = toBackgroundColor;
-  const fromFullyTransparent = aFrom === 0;
-  const toFullyTransparent = aTo === 0;
+  if (fromUnset && toUnset) {
+    return createNoopCSSPropertyTransition(element);
+  }
+
+  const innerCreateBackgroundTransition = (fromColor, toColor) => {
+    if (areSameRGBA(fromColor, toColor)) {
+      return createNoopCSSPropertyTransition(element);
+    }
+
+    const [rFrom, gFrom, bFrom, aFrom] = fromColor;
+    const [rTo, gTo, bTo, aTo] = toColor;
+
+    return createCSSPropertyTransition({
+      ...options,
+      constructor: createBackgroundColorTransition,
+      element,
+      styleProperty: "backgroundColor",
+      getFrom: () => 0,
+      from: 0,
+      to: 1,
+      getValue: (transition) => {
+        const r = applyTransitionProgress(transition, rFrom, rTo);
+        const g = applyTransitionProgress(transition, gFrom, gTo);
+        const b = applyTransitionProgress(transition, bFrom, bTo);
+        const a = applyTransitionProgress(transition, aFrom, aTo);
+        return stringifyCSSColor([r, g, b, a]);
+      },
+    });
+  };
+  if (fromUnset) {
+    const toFullyTransparent = updateRGBA(toBackgroundColor, { a: 0 });
+    return innerCreateBackgroundTransition(
+      toFullyTransparent,
+      toBackgroundColor,
+    );
+  }
+  if (toUnset) {
+    const fromFullyTransparent = updateRGBA(fromBackgroundColor, { a: 0 });
+    return innerCreateBackgroundTransition(
+      fromBackgroundColor,
+      fromFullyTransparent,
+    );
+  }
+  const fromFullyTransparent = fromBackgroundColor[3] === 0;
+  const toFullyTransparent = toBackgroundColor[3] === 0;
   if (fromFullyTransparent && toFullyTransparent) {
-  } else if (fromFullyTransparent) {
-    // use destination color and just change opacity
-    rFrom = rTo;
-    gFrom = gTo;
-    bFrom = bTo;
+    return createNoopCSSPropertyTransition(element);
+  }
+  if (fromFullyTransparent) {
+    const toFullTransparent = updateRGBA(toBackgroundColor, { a: 0 });
+    return innerCreateBackgroundTransition(
+      toFullTransparent,
+      toBackgroundColor,
+    );
   }
   if (toFullyTransparent) {
-    // use source color and just change opacity
-    rTo = rFrom;
-    gTo = gFrom;
-    bTo = bFrom;
+    const fromFullyTransparent = updateRGBA(fromBackgroundColor, { a: 0 });
+    return innerCreateBackgroundTransition(
+      fromBackgroundColor,
+      fromFullyTransparent,
+    );
   }
-
-  return createCSSPropertyTransition({
-    ...options,
-    constructor: createBackgroundColorTransition,
-    element,
-    styleProperty: "backgroundColor",
-    getFrom: () => 0,
-    from: 0,
-    to: 1,
-    getValue: (transition) => {
-      const r = applyTransitionProgress(transition, rFrom, rTo);
-      const g = applyTransitionProgress(transition, gFrom, gTo);
-      const b = applyTransitionProgress(transition, bFrom, bTo);
-      const a = applyTransitionProgress(transition, aFrom, aTo);
-      return stringifyCSSColor([r, g, b, a]);
-    },
-  });
+  return innerCreateBackgroundTransition(
+    fromBackgroundColor,
+    toBackgroundColor,
+  );
 };
 
 // Helper functions for getting natural values

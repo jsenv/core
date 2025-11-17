@@ -121,6 +121,29 @@ export const stringifyCSSColor = (rgba) => {
   return `rgba(${rInt}, ${gInt}, ${bInt}, ${a})`;
 };
 
+export const updateRGBA = (rgba, toUpdate) => {
+  const copy = [...rgba];
+  if (toUpdate.r !== undefined) {
+    copy[0] = toUpdate.r;
+  }
+  if (toUpdate.g !== undefined) {
+    copy[1] = toUpdate.g;
+  }
+  if (toUpdate.b !== undefined) {
+    copy[2] = toUpdate.b;
+  }
+  if (toUpdate.a !== undefined) {
+    copy[3] = toUpdate.a;
+  }
+  return copy;
+};
+
+export const areSameRGBA = (first, second) => {
+  const [r, g, b, a] = first;
+  const [r2, g2, b2, a2] = second;
+  return r === r2 && g === g2 && b === b2 && a === a2;
+};
+
 const namedColors = {
   // Basic colors
   black: [0, 0, 0],
