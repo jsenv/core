@@ -180,18 +180,22 @@ const interpolateStops = (fromStops, toStops, progress) => {
     const toStop = toStops[i];
 
     if (fromStop && toStop) {
-      // Parse numeric values for interpolation
-      const fromValue = parseStopValue(fromStop);
-      const toValue = parseStopValue(toStop);
-
+      // Stops are now already parsed objects
       if (
-        fromValue.isNumeric &&
-        toValue.isNumeric &&
-        fromValue.unit === toValue.unit
+        fromStop.isNumeric &&
+        toStop.isNumeric &&
+        fromStop.unit === toStop.unit
       ) {
-        const interpolatedValue =
-          fromValue.value + (toValue.value - fromValue.value) * progress;
-        result.push(`${interpolatedValue}${fromValue.unit}`);
+        const interpolatedValue = applyTransitionProgress(
+          { value: progress },
+          fromStop.value,
+          toStop.value,
+        );
+        result.push({
+          isNumeric: true,
+          value: interpolatedValue,
+          unit: fromStop.unit,
+        });
       } else {
         // Non-numeric or different units - use threshold
         result.push(progress < 0.5 ? fromStop : toStop);
@@ -203,21 +207,4 @@ const interpolateStops = (fromStops, toStops, progress) => {
   }
 
   return result;
-};
-
-// Helper to parse stop values for interpolation
-const parseStopValue = (stop) => {
-  const match = stop.match(/^([+-]?\d+(?:\.\d+)?|\d*\.\d+)(\D*)$/);
-  if (match) {
-    return {
-      isNumeric: true,
-      value: parseFloat(match[1]),
-      unit: match[2] || "",
-    };
-  }
-  return {
-    isNumeric: false,
-    value: stop,
-    unit: "",
-  };
 };

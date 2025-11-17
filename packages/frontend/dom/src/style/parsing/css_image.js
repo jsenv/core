@@ -177,11 +177,31 @@ const parseColorStop = (stopString) => {
 
   if (colorMatch) {
     const [, color, positions] = colorMatch;
-    const stops = positions ? positions.split(/\s+/) : [];
+    const stopStrings = positions ? positions.split(/\s+/) : [];
+
+    // Parse stop positions into structured objects
+    const stops =
+      stopStrings.length > 0
+        ? stopStrings.map((stop) => {
+            const match = stop.match(/^([+-]?\d+(?:\.\d+)?|\d*\.\d+)(\D*)$/);
+            if (match) {
+              return {
+                isNumeric: true,
+                value: parseFloat(match[1]),
+                unit: match[2] || "",
+              };
+            }
+            return {
+              isNumeric: false,
+              value: stop,
+              unit: "",
+            };
+          })
+        : undefined;
 
     return {
       color: color.trim(),
-      stops: stops.length > 0 ? stops : undefined,
+      stops,
     };
   }
 
@@ -261,7 +281,18 @@ const stringifyColorStop = (colorStop) => {
   const parts = [colorStop.color];
 
   if (colorStop.stops) {
-    parts.push(...colorStop.stops);
+    // Handle structured stop objects
+    const stopStrings = colorStop.stops.map((stop) => {
+      if (typeof stop === "string") {
+        return stop;
+      }
+      // If it's a parsed object, reconstruct the string
+      if (stop.isNumeric) {
+        return `${stop.value}${stop.unit}`;
+      }
+      return stop.value;
+    });
+    parts.push(...stopStrings);
   }
 
   return parts.join(" ");
