@@ -52,19 +52,22 @@ export const applyGradientToColor = (gradientImage, targetColor, progress) => {
   // Clone the gradient image object
   const interpolatedGradient = { ...gradientImage };
 
-  // Interpolate color stops if they exist
-  if (gradientImage.stops && Array.isArray(gradientImage.stops)) {
-    interpolatedGradient.stops = gradientImage.stops.map((stop) => {
-      if (stop.color) {
-        const stopColor = stop.color;
+  // Interpolate colors if they exist
+  if (gradientImage.colors && Array.isArray(gradientImage.colors)) {
+    interpolatedGradient.colors = gradientImage.colors.map((colorStop) => {
+      if (colorStop.color) {
+        const stopColor = colorStop.color;
         if (stopColor) {
           // Use applyColorToColor for consistent color interpolation
           const colorPair = [stopColor, targetColor];
           const transition = { value: progress };
-          return { ...stop, color: applyColorToColor(colorPair, transition) };
+          return {
+            ...colorStop,
+            color: applyColorToColor(colorPair, transition),
+          };
         }
       }
-      return stop;
+      return colorStop;
     });
   }
 
@@ -80,23 +83,23 @@ export const applyGradientToGradient = (fromGradient, toGradient, progress) => {
   // Clone the target gradient as base
   const interpolatedGradient = { ...toGradient };
 
-  // Interpolate color stops if both have them
+  // Interpolate colors if both have them
   if (
-    fromGradient.stops &&
-    toGradient.stops &&
-    Array.isArray(fromGradient.stops) &&
-    Array.isArray(toGradient.stops)
+    fromGradient.colors &&
+    toGradient.colors &&
+    Array.isArray(fromGradient.colors) &&
+    Array.isArray(toGradient.colors)
   ) {
-    // Use the longer stops array as base, interpolate corresponding stops
+    // Use the longer colors array as base, interpolate corresponding stops
     const maxStops = Math.max(
-      fromGradient.stops.length,
-      toGradient.stops.length,
+      fromGradient.colors.length,
+      toGradient.colors.length,
     );
-    interpolatedGradient.stops = [];
+    interpolatedGradient.colors = [];
 
     for (let i = 0; i < maxStops; i++) {
-      const fromStop = fromGradient.stops[i];
-      const toStop = toGradient.stops[i];
+      const fromStop = fromGradient.colors[i];
+      const toStop = toGradient.colors[i];
 
       if (fromStop && toStop) {
         // Both stops exist - interpolate them
@@ -114,11 +117,18 @@ export const applyGradientToGradient = (fromGradient, toGradient, progress) => {
           }
         }
 
-        // TODO: Could also interpolate position if both have positions
-        interpolatedGradient.stops.push(interpolatedStop);
+        // Interpolate position stops if both have them
+        if (fromStop.stops && toStop.stops) {
+          interpolatedStop.stops = interpolateStops(
+            fromStop.stops,
+            toStop.stops,
+            progress,
+          );
+        }
+        interpolatedGradient.colors.push(interpolatedStop);
       } else if (toStop) {
         // Only target stop exists - use it as-is
-        interpolatedGradient.stops.push({ ...toStop });
+        interpolatedGradient.colors.push({ ...toStop });
       } else if (fromStop) {
         // Only source stop exists - fade it toward transparent or skip
         // For now, skip it (it will disappear)
@@ -134,21 +144,80 @@ export const applyColorToGradient = (fromColor, targetGradient, progress) => {
   // Clone the target gradient as base
   const interpolatedGradient = { ...targetGradient };
 
-  // Interpolate color stops if they exist
-  if (targetGradient.stops && Array.isArray(targetGradient.stops)) {
-    interpolatedGradient.stops = targetGradient.stops.map((stop) => {
-      if (stop.color) {
-        const targetStopColor = stop.color;
+  // Interpolate colors if they exist
+  if (targetGradient.colors && Array.isArray(targetGradient.colors)) {
+    interpolatedGradient.colors = targetGradient.colors.map((colorStop) => {
+      if (colorStop.color) {
+        const targetStopColor = colorStop.color;
         if (targetStopColor && fromColor) {
           // Use applyColorToColor for consistent color interpolation
           const colorPair = [fromColor, targetStopColor];
           const transition = { value: progress };
-          return { ...stop, color: applyColorToColor(colorPair, transition) };
+          return {
+            ...colorStop,
+            color: applyColorToColor(colorPair, transition),
+          };
         }
       }
-      return stop;
+      return colorStop;
     });
   }
 
   return interpolatedGradient;
+};
+
+// Helper function to interpolate between two arrays of position stops
+const interpolateStops = (fromStops, toStops, progress) => {
+  if (!Array.isArray(fromStops) || !Array.isArray(toStops)) {
+    return progress < 0.5 ? fromStops : toStops;
+  }
+
+  const maxLength = Math.max(fromStops.length, toStops.length);
+  const result = [];
+
+  for (let i = 0; i < maxLength; i++) {
+    const fromStop = fromStops[i];
+    const toStop = toStops[i];
+
+    if (fromStop && toStop) {
+      // Parse numeric values for interpolation
+      const fromValue = parseStopValue(fromStop);
+      const toValue = parseStopValue(toStop);
+
+      if (
+        fromValue.isNumeric &&
+        toValue.isNumeric &&
+        fromValue.unit === toValue.unit
+      ) {
+        const interpolatedValue =
+          fromValue.value + (toValue.value - fromValue.value) * progress;
+        result.push(`${interpolatedValue}${fromValue.unit}`);
+      } else {
+        // Non-numeric or different units - use threshold
+        result.push(progress < 0.5 ? fromStop : toStop);
+      }
+    } else {
+      // Only one exists - use it
+      result.push(fromStop || toStop);
+    }
+  }
+
+  return result;
+};
+
+// Helper to parse stop values for interpolation
+const parseStopValue = (stop) => {
+  const match = stop.match(/^([+-]?\d+(?:\.\d+)?|\d*\.\d+)(\D*)$/);
+  if (match) {
+    return {
+      isNumeric: true,
+      value: parseFloat(match[1]),
+      unit: match[2] || "",
+    };
+  }
+  return {
+    isNumeric: false,
+    value: stop,
+    unit: "",
+  };
 };
