@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Background Color Transition Demo</title>
+    <style>
+      body {
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background: #f5f5f5;
+      }
+
+      .demo-container {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+
+      .demo-box {
+        display: flex;
+        width: 200px;
+        height: 150px;
+        margin: 20px;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        border: 2px solid #333;
+        border-radius: 8px;
+        transition: none; /* Disable CSS transitions to test JS transitions */
+        cursor: pointer;
+      }
+
+      .controls {
+        display: flex;
+        margin: 20px 0;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      button {
+        padding: 10px 20px;
+        color: white;
+        font-size: 14px;
+        background: #007acc;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: #005a9e;
+      }
+
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .info {
+        margin: 20px 0;
+        padding: 15px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+      }
+
+      .color-input {
+        margin: 5px;
+        padding: 5px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+
+      .duration-control {
+        margin: 20px 0;
+      }
+
+      .duration-control input {
+        width: 200px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-container">
+      <h1>Background Color Transition Demo</h1>
+
+      <div class="info">
+        <p>
+          <strong>Instructions:</strong> Click the buttons below to test
+          different background color transitions. You can also click directly on
+          the boxes to cycle through colors, or use custom colors.
+        </p>
+      </div>
+
+      <div class="duration-control">
+        <label>
+          Duration:
+          <input
+            type="range"
+            id="duration"
+            min="100"
+            max="3000"
+            value="500"
+            step="50"
+          />
+          <span id="durationValue">500ms</span>
+        </label>
+      </div>
+
+      <div class="controls">
+        <button onclick="transitionToColor('#ff0000')">Red</button>
+        <button onclick="transitionToColor('#00ff00')">Green</button>
+        <button onclick="transitionToColor('#0000ff')">Blue</button>
+        <button onclick="transitionToColor('#ff00ff')">Magenta</button>
+        <button onclick="transitionToColor('#ffff00')">Yellow</button>
+        <button onclick="transitionToColor('#00ffff')">Cyan</button>
+        <button onclick="transitionToColor('#ffa500')">Orange</button>
+        <button onclick="transitionToColor('#800080')">Purple</button>
+        <button onclick="transitionToColor('#ffffff')">White</button>
+        <button onclick="transitionToColor('#000000')">Black</button>
+      </div>
+
+      <div class="controls">
+        <input
+          type="color"
+          id="customColor"
+          class="color-input"
+          value="#ff0000"
+        />
+        <button onclick="transitionToCustomColor()">Custom Color</button>
+        <button onclick="transitionToRandomColor()">Random Color</button>
+        <button onclick="rainbowTransition()">Rainbow</button>
+      </div>
+
+      <div class="controls">
+        <button onclick="testTransitionStyles()">Test All Synchronizers</button>
+        <button onclick="testMultipleElements()">Test Multiple Elements</button>
+        <button onclick="stopAllTransitions()" style="background: #dc3545">
+          Stop All
+        </button>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; justify-content: center">
+        <div class="demo-box" id="box1" style="background-color: #007acc">
+          Box 1<br />Click me!
+        </div>
+        <div class="demo-box" id="box2" style="background-color: #28a745">
+          Box 2<br />Click me!
+        </div>
+        <div class="demo-box" id="box3" style="background-color: #dc3545">
+          Box 3<br />Click me!
+        </div>
+        <div class="demo-box" id="box4" style="background-color: #ffc107">
+          Box 4<br />Click me!
+        </div>
+      </div>
+
+      <div class="info">
+        <h3>Test Results:</h3>
+        <div id="results"></div>
+      </div>
+    </div>
+
+    <script type="module">
+      import { createBackgroundColorTransition } from "./dom_transition.js";
+
+      let currentTransitions = [];
+      let colorIndex = 0;
+      const colors = [
+        "#ff0000",
+        "#00ff00",
+        "#0000ff",
+        "#ff00ff",
+        "#ffff00",
+        "#00ffff",
+      ];
+
+      // Update duration display
+      const durationSlider = document.getElementById("duration");
+      const durationValue = document.getElementById("durationValue");
+      durationSlider.addEventListener("input", (e) => {
+        durationValue.textContent = e.target.value + "ms";
+      });
+
+      function getCurrentDuration() {
+        return parseInt(durationSlider.value);
+      }
+
+      function logResult(message) {
+        const results = document.getElementById("results");
+        const timestamp = new Date().toLocaleTimeString();
+        results.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+        results.scrollTop = results.scrollHeight;
+      }
+
+      function getRandomColor() {
+        const r = Math.floor(Math.random() * 256);
+        const g = Math.floor(Math.random() * 256);
+        const b = Math.floor(Math.random() * 256);
+        return `rgb(${r}, ${g}, ${b})`;
+      }
+
+      window.transitionToColor = function (color) {
+        const boxes = document.querySelectorAll(".demo-box");
+        stopAllTransitions();
+
+        boxes.forEach((box, index) => {
+          setTimeout(() => {
+            try {
+              const transition = createBackgroundColorTransition(box, color, {
+                duration: getCurrentDuration(),
+                styleSynchronizer: "inline_style",
+                onFinish: () => {
+                  logResult(
+                    `Box ${index + 1} transition to ${color} completed`,
+                  );
+                },
+              });
+              currentTransitions.push(transition);
+              transition.play();
+              logResult(`Started transition for Box ${index + 1} to ${color}`);
+            } catch (error) {
+              logResult(
+                `Error transitioning Box ${index + 1}: ${error.message}`,
+              );
+            }
+          }, index * 100); // Stagger the transitions
+        });
+      };
+
+      window.transitionToCustomColor = function () {
+        const customColor = document.getElementById("customColor").value;
+        transitionToColor(customColor);
+      };
+
+      window.transitionToRandomColor = function () {
+        const randomColor = getRandomColor();
+        transitionToColor(randomColor);
+      };
+
+      window.rainbowTransition = async function () {
+        const rainbowColors = [
+          "#ff0000",
+          "#ff8000",
+          "#ffff00",
+          "#80ff00",
+          "#00ff00",
+          "#00ff80",
+          "#00ffff",
+          "#0080ff",
+          "#0000ff",
+          "#8000ff",
+          "#ff00ff",
+          "#ff0080",
+        ];
+
+        for (const color of rainbowColors) {
+          transitionToColor(color);
+          await new Promise((resolve) =>
+            setTimeout(resolve, getCurrentDuration() + 100),
+          );
+        }
+      };
+
+      window.testTransitionStyles = function () {
+        const box1 = document.getElementById("box1");
+        const synchronizers = ["inline_style", "js_animation"];
+
+        synchronizers.forEach((sync, index) => {
+          setTimeout(
+            () => {
+              try {
+                const transition = createBackgroundColorTransition(
+                  box1,
+                  getRandomColor(),
+                  {
+                    duration: getCurrentDuration(),
+                    styleSynchronizer: sync,
+                    onFinish: () => {
+                      logResult(`${sync} synchronizer test completed`);
+                    },
+                  },
+                );
+                currentTransitions.push(transition);
+                transition.play();
+                logResult(`Testing ${sync} synchronizer`);
+              } catch (error) {
+                logResult(`Error testing ${sync}: ${error.message}`);
+              }
+            },
+            index * (getCurrentDuration() + 200),
+          );
+        });
+      };
+
+      window.testMultipleElements = function () {
+        const boxes = document.querySelectorAll(".demo-box");
+        const colors = ["#ff0000", "#00ff00", "#0000ff", "#ffff00"];
+
+        boxes.forEach((box, index) => {
+          setTimeout(() => {
+            try {
+              const transition = createBackgroundColorTransition(
+                box,
+                colors[index],
+                {
+                  duration: getCurrentDuration(),
+                  styleSynchronizer: "inline_style",
+                },
+              );
+              currentTransitions.push(transition);
+              transition.play();
+            } catch (error) {
+              logResult(`Error in multiple element test: ${error.message}`);
+            }
+          }, index * 150);
+        });
+        logResult("Started multiple element transition test");
+      };
+
+      window.stopAllTransitions = function () {
+        currentTransitions.forEach((transition) => {
+          try {
+            if (transition.cancel) {
+              transition.cancel();
+            }
+          } catch (error) {
+            console.warn("Error stopping transition:", error);
+          }
+        });
+        currentTransitions = [];
+        logResult("All transitions stopped");
+      };
+
+      // Add click handlers to boxes
+      document.querySelectorAll(".demo-box").forEach((box, index) => {
+        box.addEventListener("click", () => {
+          const nextColor = colors[colorIndex % colors.length];
+          colorIndex++;
+
+          try {
+            const transition = createBackgroundColorTransition(box, nextColor, {
+              duration: getCurrentDuration(),
+              styleSynchronizer: "inline_style",
+              onFinish: () => {
+                logResult(`Box ${index + 1} click transition completed`);
+              },
+            });
+            currentTransitions.push(transition);
+            transition.play();
+            logResult(
+              `Box ${index + 1} clicked - transitioning to ${nextColor}`,
+            );
+          } catch (error) {
+            logResult(`Error on box click: ${error.message}`);
+          }
+        });
+      });
+
+      // Initial log
+      logResult("Background Color Transition Demo loaded successfully");
+    </script>
+  </body>
+</html>
