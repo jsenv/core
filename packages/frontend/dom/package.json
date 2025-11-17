@@ -36,6 +36,7 @@
   "devDependencies": {
     "@jsenv/core": "../../../",
     "@jsenv/navi": "../navi",
+    "@jsenv/snapshot": "../../tooling/snapshot",
     "@preact/signals": "2.5.0",
     "preact": "11.0.0-beta.0"
   },

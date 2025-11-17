@@ -79,12 +79,6 @@ export const parseCSSBackground = (
     return { color: normalizedColor };
   }
 
-  // Handle image functions (gradients, url(), etc.)
-  if (isImageFunction(backgroundString)) {
-    const parsedImage = parseCSSImage(backgroundString, element);
-    return { image: parsedImage };
-  }
-
   // Complex background parsing - split by commas for multiple backgrounds
   const layers = splitCSSLayers(backgroundString);
 
@@ -113,6 +107,12 @@ const parseBackgroundLayer = (layerString, { parseStyle, element }) => {
   while (i < tokens.length) {
     const token = tokens[i];
 
+    // Skip spaces
+    if (token === " ") {
+      i++;
+      continue;
+    }
+
     // Skip "/" separator
     if (token === "/") {
       expectingSize = true;
@@ -123,19 +123,30 @@ const parseBackgroundLayer = (layerString, { parseStyle, element }) => {
     // If we're expecting size after "/", parse size values
     if (expectingSize) {
       if (isNumericValue(token) || isSizeKeyword(token)) {
-        // Collect all size tokens
-        const sizeTokens = [];
-        while (
-          i < tokens.length &&
-          tokens[i] !== "/" &&
-          (isNumericValue(tokens[i]) || isSizeKeyword(tokens[i]))
-        ) {
-          sizeTokens.push(tokens[i]);
-          i++;
+        // Collect all size tokens starting with current token
+        const sizeTokens = [token]; // Start with current token
+        i++; // Move to next token
+
+        while (i < tokens.length && tokens[i] !== "/") {
+          const currentToken = tokens[i];
+          // Skip spaces
+          if (currentToken === " ") {
+            i++;
+            continue;
+          }
+          // Check if it's a size/numeric value
+          if (isNumericValue(currentToken) || isSizeKeyword(currentToken)) {
+            sizeTokens.push(currentToken);
+            i++;
+          } else {
+            // Hit a non-size value, stop collecting
+            break;
+          }
         }
+
         backgroundObj.size = sizeTokens.join(" ");
         expectingSize = false;
-        continue; // Don't increment i since the while loop already did
+        continue; // Don't increment i since we're already positioned correctly
       } else {
         expectingSize = false; // Invalid size, continue with normal parsing
       }
@@ -158,19 +169,28 @@ const parseBackgroundLayer = (layerString, { parseStyle, element }) => {
       (isNumericValue(token) && !expectingSize)
     ) {
       // Collect position tokens until we hit a "/" or non-position value
-      const positionTokens = [];
-      while (
-        i < tokens.length &&
-        tokens[i] !== "/" &&
-        (isPositionValue(tokens[i]) || isNumericValue(tokens[i]))
-      ) {
-        positionTokens.push(tokens[i]);
-        i++;
+      const positionTokens = [token]; // Start with current token
+      i++; // Move to next token
+
+      while (i < tokens.length && tokens[i] !== "/") {
+        const currentToken = tokens[i];
+        // Skip spaces
+        if (currentToken === " ") {
+          i++;
+          continue;
+        }
+        // Check if it's a position/numeric value
+        if (isPositionValue(currentToken) || isNumericValue(currentToken)) {
+          positionTokens.push(currentToken);
+          i++;
+        } else {
+          // Hit a non-position value, stop collecting
+          break;
+        }
       }
-      if (positionTokens.length > 0) {
-        backgroundObj.position = positionTokens.join(" ");
-      }
-      continue; // Don't increment i since the while loop already did
+
+      backgroundObj.position = positionTokens.join(" ");
+      continue; // Don't increment i since we're already positioned correctly
     }
     // Check for repeat values (after position/size)
     else if (isRepeatValue(token)) {
@@ -239,9 +259,163 @@ const isSimpleColor = (value) => {
     return true;
   }
 
-  // CSS color keywords (basic check for word boundaries)
-  if (/^[a-z]+$/i.test(trimmed)) {
-    // Additional validation could be added here for known CSS color names
+  // CSS color keywords (specific list to avoid conflicts with position keywords)
+  const cssColorKeywords = [
+    "aliceblue",
+    "antiquewhite",
+    "aqua",
+    "aquamarine",
+    "azure",
+    "beige",
+    "bisque",
+    "black",
+    "blanchedalmond",
+    "blue",
+    "blueviolet",
+    "brown",
+    "burlywood",
+    "cadetblue",
+    "chartreuse",
+    "chocolate",
+    "coral",
+    "cornflowerblue",
+    "cornsilk",
+    "crimson",
+    "cyan",
+    "darkblue",
+    "darkcyan",
+    "darkgoldenrod",
+    "darkgray",
+    "darkgrey",
+    "darkgreen",
+    "darkkhaki",
+    "darkmagenta",
+    "darkolivegreen",
+    "darkorange",
+    "darkorchid",
+    "darkred",
+    "darksalmon",
+    "darkseagreen",
+    "darkslateblue",
+    "darkslategray",
+    "darkslategrey",
+    "darkturquoise",
+    "darkviolet",
+    "deeppink",
+    "deepskyblue",
+    "dimgray",
+    "dimgrey",
+    "dodgerblue",
+    "firebrick",
+    "floralwhite",
+    "forestgreen",
+    "fuchsia",
+    "gainsboro",
+    "ghostwhite",
+    "gold",
+    "goldenrod",
+    "gray",
+    "grey",
+    "green",
+    "greenyellow",
+    "honeydew",
+    "hotpink",
+    "indianred",
+    "indigo",
+    "ivory",
+    "khaki",
+    "lavender",
+    "lavenderblush",
+    "lawngreen",
+    "lemonchiffon",
+    "lightblue",
+    "lightcoral",
+    "lightcyan",
+    "lightgoldenrodyellow",
+    "lightgray",
+    "lightgrey",
+    "lightgreen",
+    "lightpink",
+    "lightsalmon",
+    "lightseagreen",
+    "lightskyblue",
+    "lightslategray",
+    "lightslategrey",
+    "lightsteelblue",
+    "lightyellow",
+    "lime",
+    "limegreen",
+    "linen",
+    "magenta",
+    "maroon",
+    "mediumaquamarine",
+    "mediumblue",
+    "mediumorchid",
+    "mediumpurple",
+    "mediumseagreen",
+    "mediumslateblue",
+    "mediumspringgreen",
+    "mediumturquoise",
+    "mediumvioletred",
+    "midnightblue",
+    "mintcream",
+    "mistyrose",
+    "moccasin",
+    "navajowhite",
+    "navy",
+    "oldlace",
+    "olive",
+    "olivedrab",
+    "orange",
+    "orangered",
+    "orchid",
+    "palegoldenrod",
+    "palegreen",
+    "paleturquoise",
+    "palevioletred",
+    "papayawhip",
+    "peachpuff",
+    "peru",
+    "pink",
+    "plum",
+    "powderblue",
+    "purple",
+    "red",
+    "rosybrown",
+    "royalblue",
+    "saddlebrown",
+    "salmon",
+    "sandybrown",
+    "seagreen",
+    "seashell",
+    "sienna",
+    "silver",
+    "skyblue",
+    "slateblue",
+    "slategray",
+    "slategrey",
+    "snow",
+    "springgreen",
+    "steelblue",
+    "tan",
+    "teal",
+    "thistle",
+    "tomato",
+    "turquoise",
+    "violet",
+    "wheat",
+    "white",
+    "whitesmoke",
+    "yellow",
+    "yellowgreen",
+    "transparent",
+    "currentcolor",
+  ];
+
+  if (
+    /^[a-z]+$/i.test(trimmed) &&
+    cssColorKeywords.includes(trimmed.toLowerCase())
+  ) {
     return true;
   }
 

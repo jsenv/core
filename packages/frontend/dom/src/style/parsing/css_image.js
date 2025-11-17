@@ -177,9 +177,9 @@ const parseColorStop = (stopString, element) => {
   const trimmed = stopString.trim();
 
   // Match color with optional position
-  // Examples: "red", "red 50%", "#ff0000 25% 75%", "rgba(255,0,0,0.5)"
+  // Examples: "red", "red 50%", "#ff0000 25% 75%", "rgba(255,0,0,0.5)", "rgb(0,122,204) 8px"
   const colorMatch = trimmed.match(
-    /^((?:rgb|hsl)a?\([^)]*\)|#[a-f0-9]{3,8}|[a-z](?:[a-z-]*[a-z])?|var\([^)]*\))(?:\s+([\d.]+%?(?:\s+[\d.]+%?)*))?$/i,
+    /^((?:rgb|hsl)a?\([^)]*\)|#[a-f0-9]{3,8}|[a-z](?:[a-z-]*[a-z])?|var\([^)]*\))(?:\s+([\d.]+(?:px|%|em|rem|vh|vw|ch|ex|cm|mm|in|pt|pc)?(?:\s+[\d.]+(?:px|%|em|rem|vh|vw|ch|ex|cm|mm|in|pt|pc)?)*)?)?$/i,
   );
 
   if (colorMatch) {
@@ -206,10 +206,11 @@ const parseColorStop = (stopString, element) => {
           })
         : undefined;
 
-    return {
+    const result = {
       color: parseCSSColor(color.trim(), element),
       stops,
     };
+    return result;
   }
 
   return null;
