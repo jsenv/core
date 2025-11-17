@@ -148,10 +148,10 @@ import.meta.css = /* css */ `
   /* It causes slot content to overflow outside the box leading to content being out of view */
   /* So for this case we disable flexbox positioning (and there is no need for positioning anyway as slot takes the whole space */
   .ui_transition[data-slot-overflow-x] {
-    --x-justify-content: flex-start;
+    /* --x-justify-content: flex-start; */
   }
   .ui_transition[data-slot-overflow-y] {
-    --x-align-items: flex-start;
+    /* --x-align-items: flex-start; */
   }
 
   .active_group {
