@@ -71,13 +71,6 @@
         font-weight: bold;
         font-size: 16px;
         text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-        background: repeating-linear-gradient(
-          45deg,
-          #ccc,
-          #ccc 10px,
-          #fff 10px,
-          #fff 20px
-        );
         border: 3px solid #333;
         border-radius: 12px;
       }
@@ -176,13 +169,6 @@
         font-weight: bold;
         font-size: 10px;
         text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-        background: repeating-linear-gradient(
-          45deg,
-          #ccc,
-          #ccc 5px,
-          #fff 5px,
-          #fff 10px
-        );
         border: 2px solid #333;
         border-radius: 6px;
       }
@@ -277,28 +263,16 @@
               CSS Var (Blue)
             </option>
             <option
-              value="var(--demo-green)"
-              style="background: #00ff00; color: black"
+              value="rgba(255, 0, 0, 0.5)"
+              style="background: rgba(255, 0, 0, 0.5); color: white"
             >
-              CSS Var (Green)
+              Semi-transparent Red
             </option>
             <option
-              value="var(--demo-orange)"
-              style="background: #ffa500; color: white"
+              value="rgba(0, 255, 0, 0.3)"
+              style="background: rgba(0, 255, 0, 0.3); color: black"
             >
-              CSS Var (Orange)
-            </option>
-            <option
-              value="rgb(255, 165, 0)"
-              style="background: rgb(255, 165, 0); color: white"
-            >
-              RGB Orange
-            </option>
-            <option
-              value="rgb(128, 0, 128)"
-              style="background: rgb(128, 0, 128); color: white"
-            >
-              RGB Purple
+              Semi-transparent Green
             </option>
           </select>
 
@@ -359,28 +333,16 @@
               CSS Var (Blue)
             </option>
             <option
-              value="var(--demo-green)"
-              style="background: #00ff00; color: black"
+              value="rgba(255, 0, 0, 0.5)"
+              style="background: rgba(255, 0, 0, 0.5); color: white"
             >
-              CSS Var (Green)
+              Semi-transparent Red
             </option>
             <option
-              value="var(--demo-orange)"
-              style="background: #ffa500; color: white"
+              value="rgba(0, 255, 0, 0.3)"
+              style="background: rgba(0, 255, 0, 0.3); color: black"
             >
-              CSS Var (Orange)
-            </option>
-            <option
-              value="rgb(255, 165, 0)"
-              style="background: rgb(255, 165, 0); color: white"
-            >
-              RGB Orange
-            </option>
-            <option
-              value="rgb(128, 0, 128)"
-              style="background: rgb(128, 0, 128); color: white"
-            >
-              RGB Purple
+              Semi-transparent Green
             </option>
           </select>
 
@@ -404,58 +366,8 @@
       </div>
     </div>
 
-    <!-- Opacity Demo -->
-    <div class="demo-section">
-      <h2>Opacity Transitions</h2>
-      <p class="section-description">
-        Test opacity changes alone or combined with color transitions.
-      </p>
-
-      <!-- Controls Area -->
-      <div class="controls-area">
-        <h3 style="margin-top: 0; color: #555">Opacity Controls</h3>
-
-        <div class="duration-control">
-          <label>
-            Duration:
-            <input
-              type="range"
-              id="opacityDuration"
-              min="100"
-              max="3000"
-              value="1000"
-              step="100"
-            />
-            <span id="opacityDurationValue">1000ms</span>
-          </label>
-        </div>
-
-        <div class="controls">
-          <button id="fadeOutBtn">Fade Out (1 → 0)</button>
-          <button id="fadeInBtn">Fade In (0 → 1)</button>
-          <button id="fadeHalfBtn">Fade to 50%</button>
-          <button id="colorAndOpacityBtn">Color + Opacity</button>
-        </div>
-      </div>
-
-      <!-- Transition Area -->
-      <div class="transition-area">
-        <h3>Opacity Result</h3>
-        <div
-          class="transition-box"
-          id="opacityBox"
-          style="background-color: #ff6600"
-        >
-          OPACITY<br />TEST
-        </div>
-      </div>
-    </div>
-
     <script type="module">
-      import {
-        createBackgroundColorTransition,
-        createOpacityTransition,
-      } from "./dom_transition.js";
+      import { createBackgroundColorTransition } from "./dom_transition.js";
 
       let currentTransitions = [];
 
@@ -470,10 +382,6 @@
       }
 
       const getDuration = setupDurationSlider("duration", "durationValue");
-      const getOpacityDuration = setupDurationSlider(
-        "opacityDuration",
-        "opacityDurationValue",
-      );
 
       function stopCurrentTransitions() {
         currentTransitions.forEach((t) => t.cancel && t.cancel());
@@ -548,64 +456,6 @@
           );
           currentTransitions.push(transition);
           transition.play();
-        });
-
-      // Opacity Transitions Section
-      const opacityBox = document.getElementById("opacityBox");
-
-      document.getElementById("fadeOutBtn").addEventListener("click", () => {
-        stopCurrentTransitions();
-        const transition = createOpacityTransition(opacityBox, 0, {
-          duration: getOpacityDuration(),
-          styleSynchronizer: "inline_style",
-        });
-        currentTransitions.push(transition);
-        transition.play();
-      });
-
-      document.getElementById("fadeInBtn").addEventListener("click", () => {
-        stopCurrentTransitions();
-        const transition = createOpacityTransition(opacityBox, 1, {
-          duration: getOpacityDuration(),
-          styleSynchronizer: "inline_style",
-        });
-        currentTransitions.push(transition);
-        transition.play();
-      });
-
-      document.getElementById("fadeHalfBtn").addEventListener("click", () => {
-        stopCurrentTransitions();
-        const transition = createOpacityTransition(opacityBox, 0.5, {
-          duration: getOpacityDuration(),
-          styleSynchronizer: "inline_style",
-        });
-        currentTransitions.push(transition);
-        transition.play();
-      });
-
-      document
-        .getElementById("colorAndOpacityBtn")
-        .addEventListener("click", () => {
-          stopCurrentTransitions();
-
-          // Start both transitions simultaneously
-          const colorTransition = createBackgroundColorTransition(
-            opacityBox,
-            "#00ff00",
-            {
-              duration: getOpacityDuration(),
-              styleSynchronizer: "inline_style",
-            },
-          );
-
-          const opacityTransition = createOpacityTransition(opacityBox, 0.3, {
-            duration: getOpacityDuration(),
-            styleSynchronizer: "inline_style",
-          });
-
-          currentTransitions.push(colorTransition, opacityTransition);
-          colorTransition.play();
-          opacityTransition.play();
         });
 
       // Initialize
