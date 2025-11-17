@@ -491,21 +491,41 @@ export const createUITransitionController = (
       },
     });
 
+    let widthTransitionFinished = false;
+    let heightTransitionFinished = false;
+    const onWidthTransitionFinished = () => {
+      widthTransitionFinished = true;
+      if (heightTransitionFinished) {
+        onSizeTransitionFinished();
+      }
+    };
+    const onHeightTransitionFinished = () => {
+      heightTransitionFinished = true;
+      if (widthTransitionFinished) {
+        onSizeTransitionFinished();
+      }
+    };
+    const onSizeTransitionFinished = () => {
+      // uiTransitionStyleController.delete(targetSlot, "transform.translateY");
+      // Restore overflow when transition is complete
+      restoreOverflow();
+      // let target slot take natural size now container is done
+      setSlotDimensions(targetSlot, undefined, undefined);
+    };
+
+    // const containerHeight = height;
+    // const translateY = (containerHeight - targetSlotHeight) / 2;
+
     const widthTransition = createWidthTransition(container, newWidth, {
       from: fromWidth,
       duration,
       styleSynchronizer: "inline_style",
       onUpdate: (widthTransition) => {
         width = widthTransition.value;
-        // const containerWidth = width;
-        // const translateX = (containerWidth - targetSlotWidth) / 2;
-        // uiTransitionStyleController.set(targetSlot, {
-        //   transform: { translateX },
-        // });
       },
       onFinish: (widthTransition) => {
         widthTransition.cancel();
-        // uiTransitionStyleController.delete(targetSlot, "transform.translateX");
+        onWidthTransitionFinished();
       },
     });
     const heightTransition = createHeightTransition(container, newHeight, {
@@ -514,17 +534,10 @@ export const createUITransitionController = (
       styleSynchronizer: "inline_style",
       onUpdate: (heightTransition) => {
         height = heightTransition.value;
-        // const containerHeight = height;
-        // const translateY = (containerHeight - targetSlotHeight) / 2;
-        // uiTransitionStyleController.set(targetSlot, {
-        //   transform: { translateY },
-        // });
       },
       onFinish: (heightTransition) => {
         heightTransition.cancel();
-        // uiTransitionStyleController.delete(targetSlot, "transform.translateY");
-        // Restore overflow when transition is complete
-        restoreOverflow();
+        onHeightTransitionFinished();
       },
     });
     return [widthTransition, heightTransition];
@@ -575,8 +588,6 @@ export const createUITransitionController = (
       onFinish: () => {
         setSlotConfiguration(previousTargetSlot, UNSET);
         setSlotConfiguration(previousOutgoingSlot, UNSET);
-        // let target slot take natural size now container is done
-        setSlotDimensions(targetSlot, undefined, undefined);
         if (hasDebugLogs) {
           console.groupEnd();
         }
@@ -594,7 +605,8 @@ export const createUITransitionController = (
     ];
     const transition = transitionController.update(transitions, {
       onFinish: () => {
-        setSlotDimensions(targetSlot, undefined, undefined);
+        setSlotConfiguration(outgoingSlot, UNSET);
+
         if (hasDebugLogs) {
           console.groupEnd();
         }
