@@ -441,15 +441,16 @@ export const createBackgroundTransition = (element, to, options = {}) => {
     });
   }
 
+  const toBackgroundCss = stringifyStyle(toBackground, "background");
   console.warn(
-    `Unsupported background transition between ${stringifyStyle(fromBackground, "background")} and ${stringifyStyle(toBackground, "background")}`,
+    `Unsupported background transition between "${stringifyStyle(fromBackground, "background")}" and "${toBackgroundCss}"`,
   );
   // All other cases: instant change
   return createInstantCSSPropertyTransition({
     ...options,
     element,
     styleProperty: "background",
-    value: stringifyStyle(toBackground, "background"),
+    value: toBackgroundCss,
   });
 };
 

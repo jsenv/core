@@ -56,22 +56,25 @@ export const stringifyCSSBackground = (backgroundObj, normalize) => {
 };
 
 // Parse background CSS string into object
-export const parseCSSBackground = (backgroundString, normalize, element) => {
+export const parseCSSBackground = (
+  backgroundString,
+  { parseStyle, element },
+) => {
   if (!backgroundString || backgroundString === "none") {
     return {};
   }
   if (backgroundString === "transparent") {
     return {
-      color: normalize("transparent", "backgroundColor", "js"),
+      color: parseStyle("transparent", "backgroundColor", element),
     };
   }
 
   // Handle simple cases first
   if (isSimpleColor(backgroundString)) {
-    const normalizedColor = normalize(
+    const normalizedColor = parseStyle(
       backgroundString,
       "backgroundColor",
-      "js",
+      element,
     );
     return { color: normalizedColor };
   }
@@ -86,15 +89,17 @@ export const parseCSSBackground = (backgroundString, normalize, element) => {
   const layers = splitCSSLayers(backgroundString);
 
   if (layers.length === 1) {
-    return parseBackgroundLayer(layers[0], normalize, element);
+    return parseBackgroundLayer(layers[0], { parseStyle, element });
   }
 
   // Multiple background layers - return array
-  return layers.map((layer) => parseBackgroundLayer(layer, normalize, element));
+  return layers.map((layer) =>
+    parseBackgroundLayer(layer, { parseStyle, element }),
+  );
 };
 
 // Parse a single background layer
-const parseBackgroundLayer = (layerString, normalize, element) => {
+const parseBackgroundLayer = (layerString, { parseStyle, element }) => {
   const backgroundObj = {};
   const tokens = tokenizeCSS(layerString, {
     separators: [" ", "/"],
@@ -112,7 +117,7 @@ const parseBackgroundLayer = (layerString, normalize, element) => {
     }
     // Check for colors
     else if (isSimpleColor(token)) {
-      const normalizedColor = normalize(token, "backgroundColor", "js");
+      const normalizedColor = parseStyle(token, "backgroundColor", element);
       backgroundObj.color = normalizedColor;
     }
     // Check for repeat values
@@ -204,6 +209,16 @@ const isSimpleColor = (value) => {
   }
 
   const trimmed = value.trim();
+
+  // Only match if it's a single word/token without spaces (except within parentheses)
+  // This prevents matching colors within complex background strings
+  if (trimmed.includes(" ")) {
+    // Allow spaces only within function calls like rgb(255, 0, 0)
+    const functionMatch = /^[a-z]+\s*\([^)]*\)$/i.test(trimmed);
+    if (!functionMatch) {
+      return false;
+    }
+  }
 
   // Hex colors: #rgb, #rrggbb, #rrggbbaa
   if (/^#[0-9a-f]{3,8}$/i.test(trimmed)) {

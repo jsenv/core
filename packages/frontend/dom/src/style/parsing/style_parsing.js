@@ -245,7 +245,10 @@ export const normalizeStyle = (
     if (context === "js") {
       if (typeof value === "string") {
         // For js context, prefer objects
-        return parseCSSBackground(value, normalizeStyle, element);
+        return parseCSSBackground(value, {
+          parseStyle,
+          element,
+        });
       }
       // If code does background: { color: "red", image: "url(...)" }
       // we want to normalize each part
