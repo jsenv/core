@@ -214,7 +214,7 @@ export const normalizeStyle = (
       // we want to store { translateX: 10 }
       const transformNormalized = {};
       for (const key of Object.keys(value)) {
-        const partValue = normalizeStyle(value[key], key, "js");
+        const partValue = normalizeStyle(value[key], key, context, element);
         transformNormalized[key] = partValue;
       }
       return transformNormalized;
@@ -259,7 +259,8 @@ export const normalizeStyle = (
           const partValue = normalizeStyle(
             value[key],
             `background${key.charAt(0).toUpperCase() + key.slice(1)}`,
-            "js",
+            context,
+            element,
           );
           backgroundNormalized[key] = partValue;
         }
@@ -382,6 +383,13 @@ export const normalizeStyle = (
 
   return value;
 };
+export const parseStyle = (value, propertyName, element) => {
+  return normalizeStyle(value, propertyName, "js", element);
+};
+export const stringifyStyle = (value, propertyName, element) => {
+  return normalizeStyle(value, propertyName, "css", element);
+};
+
 const normalizeNumber = (value, { unit, propertyName, preferedType }) => {
   if (typeof value === "string") {
     // Keep strings as-is (including %, em, rem, auto, none, etc.)

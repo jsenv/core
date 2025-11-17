@@ -1,4 +1,4 @@
-import { normalizeStyle } from "@jsenv/dom";
+import { stringifyStyle } from "@jsenv/dom";
 
 /**
  * Processes component props to extract and generate styles for layout, spacing, alignment, expansion, and typography.
@@ -49,14 +49,11 @@ import { normalizeStyle } from "@jsenv/dom";
 
 export const normalizeSpacingStyle = (value, property = "padding") => {
   const cssSize = sizeSpacingScale[value];
-  return cssSize || normalizeStyle(value, property, "css");
+  return cssSize || stringifyStyle(value, property);
 };
 export const normalizeTypoStyle = (value, property = "fontSize") => {
   const cssSize = sizeTypoScale[value];
-  return cssSize || normalizeStyle(value, property, "css");
-};
-export const normalizeCssStyle = (value, property) => {
-  return normalizeStyle(value, property, "css");
+  return cssSize || stringifyStyle(value, property);
 };
 
 const PASS_THROUGH = { name: "pass_through" };
@@ -404,7 +401,7 @@ const getNormalizer = (key) => {
   if (group === "typo") {
     return normalizeTypoStyle;
   }
-  return normalizeCssStyle;
+  return stringifyStyle;
 };
 
 export const assignStyle = (
@@ -464,12 +461,8 @@ const sizeSpacingScale = {
   xl: "2em", // 2 = 32px at 16px base
   xxl: "3em", // 3 = 48px at 16px base
 };
-export const resolveSpacingSize = (
-  size,
-  property = "padding",
-  context = "css",
-) => {
-  return normalizeStyle(sizeSpacingScale[size] || size, property, context);
+export const resolveSpacingSize = (size, property = "padding") => {
+  return stringifyStyle(sizeSpacingScale[size] || size, property);
 };
 
 const sizeTypoScale = {
@@ -481,10 +474,6 @@ const sizeTypoScale = {
   xl: "1.25em", // 1.25 = 20px at 16px base
   xxl: "1.5em", // 1.5 = 24px at 16px base
 };
-export const resolveTypoSize = (
-  size,
-  property = "fontSize",
-  context = "css",
-) => {
-  return normalizeStyle(sizeTypoScale[size] || size, property, context);
+export const resolveTypoSize = (size, property = "fontSize") => {
+  return stringifyStyle(sizeTypoScale[size] || size, property);
 };

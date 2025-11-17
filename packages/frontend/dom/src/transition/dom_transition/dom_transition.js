@@ -1,5 +1,8 @@
 import { areSameRGBA } from "../../style/parsing/css_color.js";
-import { normalizeStyle } from "../../style/parsing/style_parsing.js";
+import {
+  parseStyle,
+  stringifyStyle,
+} from "../../style/parsing/style_parsing.js";
 import {
   createStyleController,
   getBackground,
@@ -223,12 +226,7 @@ export const createTranslateXTransition = (element, to, options = {}) => {
 
 export const createBackgroundColorTransition = (element, to, options = {}) => {
   const fromBackgroundColor = options.from || getBackgroundColor(element);
-  const toBackgroundColor = normalizeStyle(
-    to,
-    "backgroundColor",
-    "js",
-    element,
-  );
+  const toBackgroundColor = parseStyle(to, "backgroundColor", element);
   const rgbaPair = prepareColorTransitionPair(
     fromBackgroundColor,
     toBackgroundColor,
@@ -251,10 +249,9 @@ export const createBackgroundColorTransition = (element, to, options = {}) => {
     to: 1,
     getValue: (transition) => {
       const rgbaWithTransition = applyColorToColor(rgbaPair, transition);
-      const backgroundColorWithTransition = normalizeStyle(
+      const backgroundColorWithTransition = stringifyStyle(
         rgbaWithTransition,
         "backgroundColor",
-        "css",
       );
       return backgroundColorWithTransition;
     },
@@ -263,7 +260,7 @@ export const createBackgroundColorTransition = (element, to, options = {}) => {
 
 export const createBackgroundTransition = (element, to, options = {}) => {
   const fromBackground = options.from || getBackground(element);
-  const toBackground = normalizeStyle(to, "background", "js", element);
+  const toBackground = parseStyle(to, "background", element);
 
   // Handle simple cases where no transition is possible
   if (!fromBackground && !toBackground) {
@@ -284,7 +281,7 @@ export const createBackgroundTransition = (element, to, options = {}) => {
       ...options,
       element,
       styleProperty: "background",
-      value: normalizeStyle(toBackground, "background", "css"),
+      value: stringifyStyle(toBackground, "background"),
     });
   }
 
@@ -319,7 +316,7 @@ export const createBackgroundTransition = (element, to, options = {}) => {
           );
           intermediateBackground.color = rgbaWithTransition;
         }
-        return normalizeStyle(intermediateBackground, "background", "css");
+        return stringifyStyle(intermediateBackground, "background");
       },
     });
   }
@@ -344,7 +341,7 @@ export const createBackgroundTransition = (element, to, options = {}) => {
           delete intermediateBackground.image;
           intermediateBackground.color = toBackground.color;
         }
-        return normalizeStyle(intermediateBackground, "background", "css");
+        return stringifyStyle(intermediateBackground, "background");
       },
     });
   }
@@ -364,7 +361,7 @@ export const createBackgroundTransition = (element, to, options = {}) => {
           toBackground.image,
           transition,
         );
-        return normalizeStyle(intermediateBackground, "background", "css");
+        return stringifyStyle(intermediateBackground, "background");
       },
     });
   }
@@ -406,7 +403,7 @@ export const createBackgroundTransition = (element, to, options = {}) => {
           }
         }
 
-        return normalizeStyle(intermediateBackground, "background", "css");
+        return stringifyStyle(intermediateBackground, "background");
       },
     });
   }
@@ -439,20 +436,20 @@ export const createBackgroundTransition = (element, to, options = {}) => {
           );
           intermediateBackground.color = rgbaWithTransition;
         }
-        return normalizeStyle(intermediateBackground, "background", "css");
+        return stringifyStyle(intermediateBackground, "background");
       },
     });
   }
 
   console.warn(
-    `Unsupported background transition between ${fromBackground.image.type} and ${toBackground.image.type}`,
+    `Unsupported background transition between ${stringifyStyle(fromBackground, "background")} and ${stringifyStyle(toBackground, "background")}`,
   );
   // All other cases: instant change
   return createInstantCSSPropertyTransition({
     ...options,
     element,
     styleProperty: "background",
-    value: normalizeStyle(toBackground, "background", "css"),
+    value: stringifyStyle(toBackground, "background"),
   });
 };
 

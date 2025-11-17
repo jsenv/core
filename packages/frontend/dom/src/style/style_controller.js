@@ -56,7 +56,7 @@
  * Multiple controllers can safely manage the same element without conflicts.
  */
 
-import { normalizeStyle, normalizeStyles } from "./parsing/style_parsing.js";
+import { normalizeStyles, parseStyle } from "./parsing/style_parsing.js";
 import { mergeOneStyle, mergeTwoStyles } from "./style_composition.js";
 
 // Global registry to track which controllers are managing each element's styles
@@ -224,8 +224,8 @@ export const createStyleController = (name = "anonymous") => {
     const elementControllerSet = elementControllerSetRegistry.get(element);
 
     const normalizeValueForJs = (value) => {
-      // Use normalizeStyle to handle all property types including transform dot notation
-      return normalizeStyle(value, propertyName, "js", element);
+      // Use parseStyle to handle all property types including transform dot notation
+      return parseStyle(value, propertyName, element);
     };
 
     const getFromOtherControllers = () => {

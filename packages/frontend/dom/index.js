@@ -8,8 +8,9 @@ export { createValueEffect } from "./src/value_effect.js";
 // style
 export { getStyle, setStyles } from "./src/style/dom_styles.js";
 export {
-  normalizeStyle,
   normalizeStyles,
+  parseStyle,
+  stringifyStyle,
 } from "./src/style/parsing/style_parsing.js";
 export { appendStyles, mergeTwoStyles } from "./src/style/style_composition.js";
 export {
