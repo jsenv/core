@@ -209,6 +209,12 @@
           <label>From:</label>
           <select id="fromColor">
             <option
+              value="undefined"
+              style="background: #f0f0f0; color: #666; font-style: italic"
+            >
+              Undefined (remove background)
+            </option>
+            <option
               value="transparent"
               style="
                 background: repeating-linear-gradient(
@@ -278,6 +284,12 @@
 
           <label>To:</label>
           <select id="toColor">
+            <option
+              value="undefined"
+              style="background: #f0f0f0; color: #666; font-style: italic"
+            >
+              Undefined (remove background)
+            </option>
             <option
               value="transparent"
               style="
@@ -400,7 +412,11 @@
         const toColor = toColorSelect.value;
 
         // Update preview boxes
-        if (fromColor === "transparent") {
+        if (fromColor === "undefined") {
+          fromPreview.style.backgroundColor = "";
+          fromPreview.style.background = "#f0f0f0";
+          fromPreview.style.color = "#666";
+        } else if (fromColor === "transparent") {
           fromPreview.style.backgroundColor = "";
           fromPreview.style.background = "transparent";
           fromPreview.style.color = "#333";
@@ -410,7 +426,11 @@
           fromPreview.style.color = "white";
         }
 
-        if (toColor === "transparent") {
+        if (toColor === "undefined") {
+          toPreview.style.backgroundColor = "";
+          toPreview.style.background = "#f0f0f0";
+          toPreview.style.color = "#666";
+        } else if (toColor === "transparent") {
           toPreview.style.backgroundColor = "";
           toPreview.style.background = "transparent";
           toPreview.style.color = "#333";
@@ -421,7 +441,11 @@
         }
 
         // Reset transition box to from color
-        if (fromColor === "transparent") {
+        if (fromColor === "undefined") {
+          transitionBox.style.backgroundColor = "";
+          transitionBox.style.background = "";
+          transitionBox.style.color = "#333";
+        } else if (fromColor === "transparent") {
           transitionBox.style.backgroundColor = "";
           transitionBox.style.background = "transparent";
           transitionBox.style.color = "#333";

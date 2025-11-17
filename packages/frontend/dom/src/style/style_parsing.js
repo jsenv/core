@@ -1,3 +1,5 @@
+import { resolveCSSColor } from "../color/resolve_css_color.js";
+
 // Properties that can use px units
 const pxPropertySet = new Set([
   "width",
@@ -150,6 +152,19 @@ const backgroundKeywordSet = new Set([
   "currentColor",
 ]);
 
+const colorPropertySet = new Set([
+  "outlineColor",
+  "borderColor",
+  "borderTopColor",
+  "borderRightColor",
+  "borderBottomColor",
+  "borderLeftColor",
+  "backgroundColor",
+  "color",
+  "stroke",
+  "fill",
+]);
+
 const getUnit = (value) => {
   for (const cssUnit of cssUnitSet) {
     if (value.endsWith(cssUnit)) {
@@ -167,7 +182,12 @@ const isUnitless = (value) => getUnit(value) === "";
 // ...
 const STARTS_WITH_CSS_IMAGE_FUNCTION_REGEX = /^[a-z-]+\(/;
 // Normalize a single style value
-export const normalizeStyle = (value, propertyName, context = "js") => {
+export const normalizeStyle = (
+  value,
+  propertyName,
+  context = "js",
+  element,
+) => {
   if (propertyName === "transform") {
     if (context === "js") {
       if (typeof value === "string") {
@@ -291,6 +311,10 @@ export const normalizeStyle = (value, propertyName, context = "js") => {
       unit: "",
       preferedType: context === "js" ? "number" : "string",
     });
+  }
+
+  if (colorPropertySet.has(propertyName)) {
+    return resolveCSSColor(value, element, context);
   }
 
   return value;

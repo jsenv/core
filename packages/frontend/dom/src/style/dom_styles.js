@@ -7,8 +7,10 @@ export const getComputedStyle = (element) => {
 
 export const getStyle = (element, name, context) => {
   const computedStyle = getComputedStyle(element);
-  const value = computedStyle.getPropertyValue(name);
-  return normalizeStyle(value, name, context);
+  const value = isCamelCase(name)
+    ? computedStyle[name]
+    : computedStyle.getPropertyValue(name);
+  return normalizeStyle(value, name, context, element);
 };
 
 const isCamelCase = (str) => {

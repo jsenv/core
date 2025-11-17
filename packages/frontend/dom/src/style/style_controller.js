@@ -416,3 +416,9 @@ export const getHeight = (
 ) => {
   return styleControllerToIgnore.getUnderlyingValue(element, "rect.height");
 };
+export const getBackgroundColor = (
+  element,
+  styleControllerToIgnore = dormantStyleController,
+) => {
+  return styleControllerToIgnore.getUnderlyingValue(element, "backgroundColor");
+};
