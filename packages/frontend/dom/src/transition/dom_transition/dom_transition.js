@@ -342,6 +342,7 @@ export const createBackgroundTransition = (element, to, options = {}) => {
         // Remove the original gradient since we're transitioning to a solid color
         if (transition.value === 1) {
           delete intermediateBackground.image;
+          intermediateBackground.color = toBackground.color;
         }
         return normalizeStyle(intermediateBackground, "background", "css");
       },
