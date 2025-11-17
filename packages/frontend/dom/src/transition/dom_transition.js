@@ -325,7 +325,6 @@ export const createBackgroundTransition = (element, to, options = {}) => {
       value: normalizeStyle(toBackground, "background", "css"),
     });
   }
-  debugger;
   const canTransition = canTransitionBackgrounds(fromBackground, toBackground);
   if (!canTransition) {
     return createInstantCSSPropertyTransition({
@@ -359,7 +358,12 @@ export const createBackgroundTransition = (element, to, options = {}) => {
         );
         intermediateBackground.color = rgbaWithTransition;
       }
-      return normalizeStyle(intermediateBackground, "background", "css");
+      const backgroundWithTransition = normalizeStyle(
+        intermediateBackground,
+        "background",
+        "css",
+      );
+      return backgroundWithTransition;
     },
   });
 };
