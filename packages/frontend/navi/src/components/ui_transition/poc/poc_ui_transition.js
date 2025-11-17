@@ -123,6 +123,9 @@ import.meta.css = /* css */ `
   .ui_transition_container {
     /* in case CSS sets border on this element his size must include borders */
     box-sizing: content-box;
+    transition-property: background-color, border-radius;
+    transition-duration: var(--x-transition-duration);
+    transition-timing-function: ease;
   }
 
   .ui_transition[data-transitioning] .ui_transition_container {
