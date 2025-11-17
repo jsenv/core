@@ -221,12 +221,9 @@
       /* Boîte de visualisation pour centrer la zone de transition */
       .transition-wrapper {
         position: relative;
-        display: flex;
         width: 350px;
         height: 250px;
         margin: 20px 0;
-        align-items: center;
-        justify-content: center;
         background: #fafafa;
         border: 3px solid #007acc;
         border-radius: 8px;
@@ -292,6 +289,12 @@
 
       .debug-info div {
         margin-bottom: 5px;
+      }
+
+      .ui_transition_container {
+        background: var(--background-color);
+        border: 8px dashed #ccc;
+        border-radius: 8px;
       }
     </style>
   </head>
@@ -399,14 +402,16 @@
       <h4>Zone de transition:</h4>
       <div class="transition-wrapper">
         <div class="ui_transition" data-debug-size data-debug-detection>
-          <div class="active_group">
-            <div class="target_slot"></div>
-            <div class="outgoing_slot"></div>
-          </div>
+          <div class="ui_transition_container">
+            <div class="active_group">
+              <div class="target_slot"></div>
+              <div class="outgoing_slot"></div>
+            </div>
 
-          <div class="previous_group">
-            <div class="previous_target_slot"></div>
-            <div class="previous_outgoing_slot"></div>
+            <div class="previous_group">
+              <div class="previous_target_slot"></div>
+              <div class="previous_outgoing_slot"></div>
+            </div>
           </div>
         </div>
       </div>

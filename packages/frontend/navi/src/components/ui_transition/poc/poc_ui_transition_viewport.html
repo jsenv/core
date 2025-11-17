@@ -11,7 +11,7 @@
 
       html,
       body,
-      .content-wrapper {
+      .ui_transition {
         width: 100%;
         min-width: max-content;
         height: 100%;
@@ -286,14 +286,13 @@
       <button id="btn-empty">Empty</button>
     </div>
 
-    <!-- Content wrapper with UI transition structure -->
-    <div class="content-wrapper">
-      <div
-        class="ui_transition"
-        data-align-x="center"
-        data-align-y="center"
-        data-debug-size
-      >
+    <div
+      class="ui_transition"
+      data-align-x="center"
+      data-align-y="center"
+      data-debug-size
+    >
+      <div class="ui_transition_container">
         <div class="active_group">
           <div class="target_slot">
             <div class="content-small">Small Content<br />100x100px</div>

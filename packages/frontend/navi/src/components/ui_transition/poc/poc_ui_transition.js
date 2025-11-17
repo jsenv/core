@@ -111,15 +111,24 @@ import.meta.css = /* css */ `
     --x-align-items: var(--align-items);
 
     position: relative;
-    /* in case we set border on this element his size must include borders */
-    box-sizing: content-box;
 
-    background: var(--background-color);
-    border: 8px dashed #ccc;
-    border-radius: 8px;
+    /* background: var(--background-color); */
+    /* border: 8px dashed #ccc; */
+    /* border-radius: 8px; */
+    display: flex;
+    width: 100%;
+    height: 100%;
+    align-items: var(--x-align-items);
+    justify-content: var(--x-justify-content);
   }
 
-  .ui_transition[data-transitioning] {
+  .ui_transition_container {
+    /* in case we set border on this element his size must include borders */
+    box-sizing: content-box;
+    background: white;
+  }
+
+  .ui_transition[data-transitioning] .ui_transition_container {
     /* Overflow hidden so content is clipped during transition */
     overflow: hidden;
   }
@@ -154,16 +163,23 @@ import.meta.css = /* css */ `
     /* --x-align-items: flex-start; */
   }
 
-  .active_group {
-    position: relative;
+  .active_group,
+  .previous_group {
     display: flex;
-    height: 100%;
+    /* min-width: 100%; */
+    min-height: 100%;
     align-items: var(--x-align-items);
     justify-content: var(--x-justify-content);
   }
-
+  .active_group {
+    position: relative;
+  }
   .target_slot {
     position: relative;
+  }
+  .ui_transition[data-transitioning] .active_group,
+  .ui_transition[data-transitioning] .previous_group {
+    height: 100%;
   }
 
   .ui_transition[data-transitioning] .target_slot,
@@ -172,24 +188,17 @@ import.meta.css = /* css */ `
     min-height: 0;
     flex-shrink: 0;
   }
-
   .outgoing_slot {
     position: absolute;
     top: 0;
     left: 0;
   }
-
   .previous_group {
     position: absolute;
     inset: 0;
-    display: flex;
-    align-items: var(--x-align-items);
-    justify-content: var(--x-justify-content);
   }
-
   .ui_transition[data-only-previous-group] .previous_group {
     position: relative;
-    height: 100%;
   }
 `;
 
@@ -296,7 +305,8 @@ export const createUITransitionController = (
     );
   }
 
-  const elementToResize = root;
+  const container = root.querySelector(".ui_transition_container");
+  const elementToResize = container;
   root.style.setProperty("--x-transition-duration", `${duration}ms`);
   outgoingSlot.setAttribute("inert", "");
   previousGroup.setAttribute("inert", "");
@@ -468,7 +478,7 @@ export const createUITransitionController = (
   let isTransitioning = false;
   let transitionType = "none";
   const transitionController = createGroupTransitionController({
-    // debugBreakpoints: [0.95],
+    // debugBreakpoints: [0.25],
     lifecycle: {
       setup: () => {
         updateSlotAttributes();
@@ -476,6 +486,11 @@ export const createUITransitionController = (
         isTransitioning = true;
         onStateChange({ isTransitioning: true });
         return {
+          update: (t) => {
+            if (t.progress > 0.6) {
+              // t.pause();
+            }
+          },
           teardown: () => {
             root.removeAttribute("data-transitioning");
             isTransitioning = false;
@@ -496,7 +511,7 @@ export const createUITransitionController = (
       `transition from [${fromWidth}x${fromHeight}] to [${toWidth}x${toHeight}]`,
     );
 
-    const restoreOverflow = preventIntermediateScrollbar(elementToResize, {
+    const restoreOverflow = preventIntermediateScrollbar(root, {
       fromWidth,
       fromHeight,
       toWidth,
@@ -552,7 +567,7 @@ export const createUITransitionController = (
         onWidthTransitionFinished();
       },
     });
-    const heightTransition = createHeightTransition(root, toHeight, {
+    const heightTransition = createHeightTransition(elementToResize, toHeight, {
       from: fromHeight,
       duration,
       styleSynchronizer: "inline_style",
