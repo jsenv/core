@@ -30,8 +30,8 @@
       }
 
       .controls-area {
-        margin-bottom: 30px;
         padding: 20px;
+        padding-bottom: 10px;
         background: #f8f9fa;
         border: 1px solid #e9ecef;
         border-radius: 8px;
@@ -169,15 +169,23 @@
       }
 
       .duration-control {
-        margin: 20px 0;
-        padding: 15px;
+        margin: 15px 0;
+        padding: 10px;
         background: #f0f8ff;
         border: 1px solid #b3d9ff;
         border-radius: 6px;
       }
 
       .duration-control input[type="range"] {
-        width: 300px;
+        width: 180px;
+      }
+
+      .duration-control label {
+        display: flex;
+        margin: 0;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
       }
 
       label {
@@ -326,7 +334,13 @@
         </div>
 
         <div
-          style="display: flex; align-items: center; gap: 20px; margin: 20px 0"
+          style="
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-top: -15px;
+            margin-bottom: 5px;
+          "
         >
           <button id="startTransition">Start Transition</button>
           <div style="display: flex; align-items: center; gap: 10px">
