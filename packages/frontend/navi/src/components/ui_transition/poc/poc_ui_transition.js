@@ -249,7 +249,7 @@ const isSameConfiguration = (configA, configB) => {
 };
 
 export const createUITransitionController = (
-  container,
+  root,
   {
     duration = 300,
     alignX = "center",
@@ -258,8 +258,8 @@ export const createUITransitionController = (
   } = {},
 ) => {
   const debugConfig = {
-    detection: container.hasAttribute("data-debug-detection"),
-    size: container.hasAttribute("data-debug-size"),
+    detection: root.hasAttribute("data-debug-detection"),
+    size: root.hasAttribute("data-debug-size"),
   };
   const hasDebugLogs = debugConfig.size;
   const debugDetection = (message) => {
@@ -271,10 +271,10 @@ export const createUITransitionController = (
     console.debug(`[size]`, message);
   };
 
-  const activeGroup = container.querySelector(".active_group");
-  const targetSlot = container.querySelector(".target_slot");
-  const outgoingSlot = container.querySelector(".outgoing_slot");
-  const previousGroup = container.querySelector(".previous_group");
+  const activeGroup = root.querySelector(".active_group");
+  const targetSlot = root.querySelector(".target_slot");
+  const outgoingSlot = root.querySelector(".outgoing_slot");
+  const previousGroup = root.querySelector(".previous_group");
   const previousTargetSlot = previousGroup?.querySelector(
     ".previous_target_slot",
   );
@@ -283,7 +283,7 @@ export const createUITransitionController = (
   );
 
   if (
-    !container ||
+    !root ||
     !activeGroup ||
     !targetSlot ||
     !outgoingSlot ||
@@ -292,11 +292,11 @@ export const createUITransitionController = (
     !previousOutgoingSlot
   ) {
     throw new Error(
-      "createUITransitionController requires container with active_group, target_slot, outgoing_slot, previous_group, previous_target_slot, and previous_outgoing_slot elements",
+      "createUITransitionController requires element with .active_group, .target_slot, .outgoing_slot, .previous_group, .previous_target_slot, and .previous_outgoing_slot elements",
     );
   }
 
-  container.style.setProperty("--x-transition-duration", `${duration}ms`);
+  root.style.setProperty("--x-transition-duration", `${duration}ms`);
   outgoingSlot.setAttribute("inert", "");
   previousGroup.setAttribute("inert", "");
 
@@ -334,15 +334,15 @@ export const createUITransitionController = (
   };
   const updateSlotAttributes = () => {
     if (targetSlotConfiguration.isEmpty && outgoingSlotConfiguration.isEmpty) {
-      container.setAttribute("data-only-previous-group", "");
+      root.setAttribute("data-only-previous-group", "");
     } else {
-      container.removeAttribute("data-only-previous-group");
+      root.removeAttribute("data-only-previous-group");
     }
   };
   const updateAlignment = () => {
     // Set data attributes for CSS-based alignment
-    container.setAttribute("data-align-x", alignX);
-    container.setAttribute("data-align-y", alignY);
+    root.setAttribute("data-align-x", alignX);
+    root.setAttribute("data-align-y", alignY);
   };
   const measureSlot = (slot) => {
     const slotConfig =
@@ -391,8 +391,8 @@ export const createUITransitionController = (
         return;
       }
       debugSize(`cleatSlotDimensions(".${slot.className}")`);
-      container.removeAttribute("data-slot-overflow-x");
-      container.removeAttribute("data-slot-overflow-y");
+      root.removeAttribute("data-slot-overflow-x");
+      root.removeAttribute("data-slot-overflow-y");
       slot.style.width = "";
       slot.style.height = "";
       return;
@@ -405,14 +405,14 @@ export const createUITransitionController = (
     }
     debugSize(`setSlotDimensions(".${slot.className}", ${width}, ${height})`);
     if (width > containerWidth) {
-      container.setAttribute("data-slot-overflow-x", "");
+      root.setAttribute("data-slot-overflow-x", "");
     } else {
-      container.removeAttribute("data-slot-overflow-x");
+      root.removeAttribute("data-slot-overflow-x");
     }
     if (height > containerHeight) {
-      container.setAttribute("data-slot-overflow-y", "");
+      root.setAttribute("data-slot-overflow-y", "");
     } else {
-      container.removeAttribute("data-slot-overflow-y");
+      root.removeAttribute("data-slot-overflow-y");
     }
     slot.style.width = `${width}px`;
     slot.style.height = `${height}px`;
@@ -471,12 +471,12 @@ export const createUITransitionController = (
     lifecycle: {
       setup: () => {
         updateSlotAttributes();
-        container.setAttribute("data-transitioning", "");
+        root.setAttribute("data-transitioning", "");
         isTransitioning = true;
         onStateChange({ isTransitioning: true });
         return {
           teardown: () => {
-            container.removeAttribute("data-transitioning");
+            root.removeAttribute("data-transitioning");
             isTransitioning = false;
             updateSlotAttributes(); // Update positioning after transition
             onStateChange({ isTransitioning: false });
@@ -493,7 +493,7 @@ export const createUITransitionController = (
       `transition from [${fromWidth}x${fromHeight}] to [${newWidth}x${newHeight}]`,
     );
 
-    const restoreOverflow = preventIntermediateScrollbar(container, {
+    const restoreOverflow = preventIntermediateScrollbar(root, {
       fromWidth,
       fromHeight,
       toWidth: newWidth,
@@ -537,7 +537,7 @@ export const createUITransitionController = (
       setSlotDimensions(targetSlot, undefined, undefined);
     };
 
-    const widthTransition = createWidthTransition(container, newWidth, {
+    const widthTransition = createWidthTransition(root, newWidth, {
       from: fromWidth,
       duration,
       styleSynchronizer: "inline_style",
@@ -549,7 +549,7 @@ export const createUITransitionController = (
         onWidthTransitionFinished();
       },
     });
-    const heightTransition = createHeightTransition(container, newHeight, {
+    const heightTransition = createHeightTransition(root, newHeight, {
       from: fromHeight,
       duration,
       styleSynchronizer: "inline_style",
@@ -727,7 +727,7 @@ export const createUITransitionController = (
   const setDuration = (newDuration) => {
     duration = newDuration;
     // Update CSS variable immediately
-    container.style.setProperty("--x-transition-duration", `${duration}ms`);
+    root.style.setProperty("--x-transition-duration", `${duration}ms`);
   };
   const setAlignment = (newAlignX, newAlignY) => {
     alignX = newAlignX;
