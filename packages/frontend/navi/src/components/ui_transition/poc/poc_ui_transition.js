@@ -143,6 +143,16 @@ import.meta.css = /* css */ `
   .ui_transition[data-align-y="end"] {
     --x-align-items: flex-end;
   }
+  /* When content overflows (bigger than parent) on a given axis */
+  /* Flexbox would still try to position it ¯_(ツ)_/¯ */
+  /* It causes slot content to overflow outside the box leading to content being out of view */
+  /* So for this case we disable flexbox positioning (and there is no need for positioning anyway as slot takes the whole space */
+  .ui_transition[data-slot-overflow-x] {
+    --x-justify-content: flex-start;
+  }
+  .ui_transition[data-slot-overflow-y] {
+    --x-align-items: flex-start;
+  }
 
   .active_group {
     position: relative;
@@ -303,8 +313,8 @@ export const createUITransitionController = (
   let previousTargetSlotConfiguration = UNSET;
   let previousOutgoingSlotConfiguration = UNSET;
   // dimensions of the container
-  let width;
-  let height;
+  let containerWidth;
+  let containerHeight;
   let targetSlotWidth;
   let targetSlotHeight;
   let outgoingSlotWidth;
@@ -368,8 +378,8 @@ export const createUITransitionController = (
   updateSlotAttributes();
   if (!targetSlotConfiguration.isEmpty) {
     measureSlot(targetSlot);
-    width = targetSlotWidth;
-    height = targetSlotHeight;
+    containerWidth = targetSlotWidth;
+    containerHeight = targetSlotHeight;
   }
   if (!outgoingSlotConfiguration.isEmpty) {
     measureSlot(outgoingSlot);
@@ -377,21 +387,35 @@ export const createUITransitionController = (
 
   const setSlotDimensions = (slot, width, height) => {
     if (width === undefined) {
-      if (slot.style.width) {
-        debugSize(`cleatSlotDimensions(".${slot.className}")`);
-        slot.style.width = "";
-        slot.style.height = "";
+      if (!slot.style.width) {
+        return;
       }
+      debugSize(`cleatSlotDimensions(".${slot.className}")`);
+      container.removeAttribute("data-slot-overflow-x");
+      container.removeAttribute("data-slot-overflow-y");
+      slot.style.width = "";
+      slot.style.height = "";
       return;
     }
     if (
-      slot.style.width !== `${width}px` ||
-      slot.style.height !== `${height}px`
+      slot.style.width === `${width}px` &&
+      slot.style.height === `${height}px`
     ) {
-      debugSize(`setSlotDimensions(".${slot.className}", ${width}, ${height})`);
-      slot.style.width = `${width}px`;
-      slot.style.height = `${height}px`;
+      return;
     }
+    debugSize(`setSlotDimensions(".${slot.className}", ${width}, ${height})`);
+    if (width > containerWidth) {
+      container.setAttribute("data-slot-overflow-x", "");
+    } else {
+      container.removeAttribute("data-slot-overflow-x");
+    }
+    if (height > containerHeight) {
+      container.setAttribute("data-slot-overflow-y", "");
+    } else {
+      container.removeAttribute("data-slot-overflow-y");
+    }
+    slot.style.width = `${width}px`;
+    slot.style.height = `${height}px`;
   };
   const setSlotConfiguration = (slot, configuration) => {
     slot.innerHTML = "";
@@ -463,8 +487,8 @@ export const createUITransitionController = (
   });
 
   const updateContainerDimensions = (newWidth, newHeight) => {
-    const fromWidth = width || 0;
-    const fromHeight = height || 0;
+    const fromWidth = containerWidth || 0;
+    const fromHeight = containerHeight || 0;
     debugSize(
       `transition from [${fromWidth}x${fromHeight}] to [${newWidth}x${newHeight}]`,
     );
@@ -513,15 +537,12 @@ export const createUITransitionController = (
       setSlotDimensions(targetSlot, undefined, undefined);
     };
 
-    // const containerHeight = height;
-    // const translateY = (containerHeight - targetSlotHeight) / 2;
-
     const widthTransition = createWidthTransition(container, newWidth, {
       from: fromWidth,
       duration,
       styleSynchronizer: "inline_style",
       onUpdate: (widthTransition) => {
-        width = widthTransition.value;
+        containerWidth = widthTransition.value;
       },
       onFinish: (widthTransition) => {
         widthTransition.cancel();
@@ -533,7 +554,7 @@ export const createUITransitionController = (
       duration,
       styleSynchronizer: "inline_style",
       onUpdate: (heightTransition) => {
-        height = heightTransition.value;
+        containerHeight = heightTransition.value;
       },
       onFinish: (heightTransition) => {
         heightTransition.cancel();
