@@ -11,6 +11,8 @@
 - [multiple backgrounds](multiple_backgrounds/multiple_backgrounds.md)
 - [radial gradient with size and position](radial_gradient_with_size_and_position/radial_gradient_with_size_and_position.md)
 - [background with color at beginning](background_with_color_at_beginning/background_with_color_at_beginning.md)
+- [conic gradient](conic_gradient/conic_gradient.md)
+- [repeating conic gradient](repeating_conic_gradient/repeating_conic_gradient.md)
 
 ---
 

@@ -63,4 +63,12 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("background with color at beginning", () => {
     return run("red url(image.jpg) no-repeat center");
   });
+
+  test("conic gradient", () => {
+    return run("conic-gradient(from 45deg, red 0deg, blue 180deg, red 360deg)");
+  });
+
+  test("repeating conic gradient", () => {
+    return run("repeating-conic-gradient(#ddd 0deg 90deg, #fff 90deg 180deg)");
+  });
 });

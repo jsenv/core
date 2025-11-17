@@ -126,7 +126,7 @@ const parseRadialGradient = (content, type, original, element) => {
 
 const parseConicGradient = (content, type, original, element) => {
   const { direction, colors } = parseGradientContent(content, element, {
-    isRadial: true,
+    isConic: true,
   });
 
   return {
@@ -138,7 +138,7 @@ const parseConicGradient = (content, type, original, element) => {
 };
 
 // Parse gradient content (colors and direction/shape)
-const parseGradientContent = (content, element, { isRadial }) => {
+const parseGradientContent = (content, element, { isRadial, isConic } = {}) => {
   const parts = tokenizeCSS(content, { separators: [","] });
   const colors = [];
   let direction = null;
@@ -152,12 +152,12 @@ const parseGradientContent = (content, element, { isRadial }) => {
       if (isRadial && isRadialShape(trimmedPart)) {
         shape = trimmedPart;
         continue;
-      } else if (!isRadial && isLinearDirection(trimmedPart)) {
+      } else if (!isRadial && !isConic && isLinearDirection(trimmedPart)) {
         direction = trimmedPart;
         continue;
-      } else if (!isRadial && trimmedPart.startsWith("from ")) {
-        // Conic gradient "from" direction
-        direction = trimmedPart;
+      } else if (isConic && trimmedPart.startsWith("from ")) {
+        // Conic gradient "from" direction - extract just the angle part
+        direction = trimmedPart.substring(5).trim(); // Remove "from " prefix
         continue;
       }
     }
@@ -177,9 +177,9 @@ const parseColorStop = (stopString, element) => {
   const trimmed = stopString.trim();
 
   // Match color with optional position
-  // Examples: "red", "red 50%", "#ff0000 25% 75%", "rgba(255,0,0,0.5)", "rgb(0,122,204) 8px"
+  // Examples: "red", "red 50%", "#ff0000 25% 75%", "rgba(255,0,0,0.5)", "rgb(0,122,204) 8px", "red 45deg", "blue 180deg"
   const colorMatch = trimmed.match(
-    /^((?:rgb|hsl)a?\([^)]*\)|#[a-f0-9]{3,8}|[a-z](?:[a-z-]*[a-z])?|var\([^)]*\))(?:\s+([\d.]+(?:px|%|em|rem|vh|vw|ch|ex|cm|mm|in|pt|pc)?(?:\s+[\d.]+(?:px|%|em|rem|vh|vw|ch|ex|cm|mm|in|pt|pc)?)*)?)?$/i,
+    /^((?:rgb|hsl)a?\([^)]*\)|#[a-f0-9]{3,8}|[a-z](?:[a-z-]*[a-z])?|var\([^)]*\))(?:\s+([\d.]+(?:deg|turn|rad|grad|px|%|em|rem|vh|vw|ch|ex|cm|mm|in|pt|pc)?(?:\s+[\d.]+(?:deg|turn|rad|grad|px|%|em|rem|vh|vw|ch|ex|cm|mm|in|pt|pc)?)*)?)?$/i,
   );
 
   if (colorMatch) {
