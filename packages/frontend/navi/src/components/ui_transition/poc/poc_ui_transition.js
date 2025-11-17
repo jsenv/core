@@ -64,24 +64,17 @@
  *
  * TODO:
  *
- * A MON AVIS LE FIX POUR LE CONTENU QUI SE DECALE LORSQUE CENTER (mais ca le fait meme sur start/end)
+ * - padding
  *
- * -> il y a quelque chose a faire pour qu'en gros lorsque le slot fait plus que son conteneur
- * on force la taille, ou on désactive le flex positionement pour éviter le décalage par ex
- * oui c'est ca, s'il est plus gros alors on met start sur cet axe
+ * - border radius
  *
- * - vérifier le comportement lorsque la transition s'applique au "document"
- * c'est a dire que le container veut faire la taille de la page
+ * - vérification des backgrounds (on peut appliquer des backgrounds
+ * et ils prennents bien la taille attendu (meme si le contenr "overflow"))
  *
  * - content phase se comporte comme le contenu tant qu'on a pas vu de contenu
  * des qu'on voit un contenu il doit respecter les dimensions du dernier contenu
  * qu'on connait
  * (meme si le content id change, on garde les dimensions du contenu "actuel" en attendant de voir le nouveau)
- *
- * - vérification des backgrounds (on peut appliquer des backgrounds
- * et ils prennents bien la taille attendu (meme si le contenr "overflow"))
- *
- * - positionement des slots (centrage nottament)
  *
  *
  */
