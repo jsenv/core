@@ -226,6 +226,32 @@
         border: 2px solid #333;
         border-radius: 6px;
       }
+
+      .arrow-container {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .invert-button {
+        position: absolute;
+        top: 25px;
+        z-index: 10;
+        padding: 4px 8px;
+        color: #007acc;
+        font-weight: bold;
+        font-size: 11px;
+        background: white;
+        border: 1px solid #007acc;
+        border-radius: 0px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+      }
+
+      .invert-button:hover {
+        color: white;
+      }
     </style>
   </head>
   <body>
@@ -278,7 +304,16 @@
           <div style="display: flex; align-items: center; gap: 10px">
             <span style="font-weight: bold">Preview:</span>
             <div class="preview-box" id="fromPreview">FROM</div>
-            <span style="font-size: 20px; color: #007acc">→</span>
+            <div class="arrow-container">
+              <button
+                class="invert-button"
+                id="invertButton"
+                title="Swap FROM and TO"
+              >
+                ↔
+              </button>
+              <span style="font-size: 20px; color: #007acc">→</span>
+            </div>
             <div class="preview-box" id="toPreview">TO</div>
           </div>
         </div>
@@ -630,6 +665,36 @@
           currentTransitions.push(transition);
           transition.play();
         });
+
+      // Invert button handler
+      document.getElementById("invertButton").addEventListener("click", () => {
+        // Swap selectedFrom and selectedTo
+        const temp = selectedFrom;
+        selectedFrom = selectedTo;
+        selectedTo = temp;
+
+        // Update the UI to reflect the change
+        updatePreviewBoxes();
+        saveState();
+
+        // Update the selectors to show the new selection
+        // Force update both selectors
+        document.querySelectorAll(".option-rect").forEach((rect) => {
+          rect.classList.remove("selected");
+          if (
+            rect.dataset.value === selectedFrom &&
+            rect.closest("#fromSelector")
+          ) {
+            rect.classList.add("selected");
+          }
+          if (
+            rect.dataset.value === selectedTo &&
+            rect.closest("#toSelector")
+          ) {
+            rect.classList.add("selected");
+          }
+        });
+      });
 
       // Initialize
       updatePreviewBoxes();
