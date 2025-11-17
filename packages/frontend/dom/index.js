@@ -10,6 +10,7 @@ export { getStyle, setStyles } from "./src/style/dom_styles.js";
 export { appendStyles, mergeTwoStyles } from "./src/style/style_composition.js";
 export {
   createStyleController,
+  getBackgroundColor,
   getOpacity,
   getTranslateX,
   getTranslateY,

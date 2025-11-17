@@ -161,6 +161,12 @@ const colorPropertySet = new Set([
   "borderLeftColor",
   "backgroundColor",
   "color",
+  "textDecorationColor",
+  "textEmphasisColor",
+  "caretColor",
+  "columnRuleColor",
+  "accentColor",
+  "scrollbarColor",
   "stroke",
   "fill",
 ]);

@@ -2,6 +2,7 @@ import { stringifyCSSColor } from "../color/color_parsing.js";
 import { resolveCSSColor } from "../color/resolve_css_color.js";
 import {
   createStyleController,
+  getBackgroundColor,
   getHeight,
   getOpacity,
   getTranslateX,
@@ -195,7 +196,7 @@ export const createTranslateXTransition = (element, to, options = {}) => {
 export const createBackgroundColorTransition = (element, to, options = {}) => {
   const fromBackgroundColor = options.from
     ? resolveCSSColor(options.from, element)
-    : resolveCSSColor(getComputedStyle(element).backgroundColor, element);
+    : getBackgroundColor(element);
   const toBackgroundColor = resolveCSSColor(to, element);
 
   const [rFrom, gFrom, bFrom, aFrom] = fromBackgroundColor;

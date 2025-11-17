@@ -63,6 +63,10 @@ export const parseCSSColor = (color) => {
     }
   }
 
+  if (color === "transparent") {
+    return [0, 0, 0, 0];
+  }
+
   // Named colors (basic set)
   if (namedColors[color]) {
     return [...namedColors[color], 1];
@@ -110,6 +114,9 @@ export const stringifyCSSColor = (rgba) => {
   // Use rgb() for opaque colors, rgba() for transparent
   if (a === 1) {
     return `rgb(${rInt}, ${gInt}, ${bInt})`;
+  }
+  if (a === 0 && rInt === 0 && gInt === 0 && bInt === 0) {
+    return "transparent";
   }
   return `rgba(${rInt}, ${gInt}, ${bInt}, ${a})`;
 };
@@ -260,7 +267,6 @@ const namedColors = {
   cornsilk: [255, 248, 220],
 
   // Special colors
-  transparent: [0, 0, 0], // Note: alpha will be 0 for transparent
   aliceblue: [240, 248, 255],
   antiquewhite: [250, 235, 215],
   azure: [240, 255, 255],
