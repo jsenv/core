@@ -56,8 +56,8 @@
  * Multiple controllers can safely manage the same element without conflicts.
  */
 
+import { normalizeStyle, normalizeStyles } from "./parsing/style_parsing.js";
 import { mergeOneStyle, mergeTwoStyles } from "./style_composition.js";
-import { normalizeStyle, normalizeStyles } from "./style_parsing.js";
 
 // Global registry to track which controllers are managing each element's styles
 const elementControllerSetRegistry = new WeakMap(); // element -> Set<controller>

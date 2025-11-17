@@ -1,4 +1,8 @@
 import { resolveCSSColor } from "../../color/resolve_css_color.js";
+import {
+  parseCSSBackground,
+  stringifyCSSBackground,
+} from "./css_background.js";
 import { parseCSSTransform, stringifyCSSTransform } from "./css_transform.js";
 import {
   parseCSSWillChange,
@@ -232,6 +236,39 @@ export const normalizeStyle = (
     if (Array.isArray(value)) {
       // For CSS context, ensure willChange is a string
       return stringifyCSSWillChange(value);
+    }
+    return value;
+  }
+
+  if (propertyName === "background") {
+    if (context === "js") {
+      if (typeof value === "string") {
+        // For js context, prefer objects
+        return parseCSSBackground(value, normalizeStyle);
+      }
+      // If code does background: { color: "red", image: "url(...)" }
+      // we want to normalize each part
+      if (
+        typeof value === "object" &&
+        value !== null &&
+        !Array.isArray(value)
+      ) {
+        const backgroundNormalized = {};
+        for (const key of Object.keys(value)) {
+          const partValue = normalizeStyle(
+            value[key],
+            `background${key.charAt(0).toUpperCase() + key.slice(1)}`,
+            "js",
+          );
+          backgroundNormalized[key] = partValue;
+        }
+        return backgroundNormalized;
+      }
+      return value;
+    }
+    if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+      // For CSS context, ensure background is a string
+      return stringifyCSSBackground(value, normalizeStyle);
     }
     return value;
   }

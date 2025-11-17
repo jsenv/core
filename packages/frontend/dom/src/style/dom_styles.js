@@ -1,5 +1,5 @@
 import { elementToOwnerWindow } from "../utils.js";
-import { normalizeStyle } from "./style_parsing.js";
+import { normalizeStyle } from "./parsing/style_parsing.js";
 
 export const getComputedStyle = (element) => {
   return elementToOwnerWindow(element).getComputedStyle(element);

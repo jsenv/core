@@ -1,4 +1,4 @@
-import { normalizeStyle } from "./style_parsing.js";
+import { normalizeStyle } from "./parsing/style_parsing.js";
 
 const DEBUG = false;
 
