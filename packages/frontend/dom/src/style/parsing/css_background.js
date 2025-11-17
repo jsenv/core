@@ -1,3 +1,5 @@
+import { parseCSSImage, stringifyCSSImage } from "./css_image.js";
+
 // Convert background object to CSS string
 export const stringifyCSSBackground = (backgroundObj, normalize) => {
   const parts = [];
@@ -8,11 +10,10 @@ export const stringifyCSSBackground = (backgroundObj, normalize) => {
   //            [background-clip] [background-origin]
 
   if (backgroundObj.image !== undefined) {
-    const normalizedImage = normalize(
-      backgroundObj.image,
-      "backgroundImage",
-      "css",
-    );
+    const normalizedImage =
+      typeof backgroundObj.image === "object" && backgroundObj.image !== null
+        ? stringifyCSSImage(backgroundObj.image)
+        : normalize(backgroundObj.image, "backgroundImage", "css");
     parts.push(normalizedImage);
   }
 
@@ -77,12 +78,8 @@ export const parseCSSBackground = (backgroundString, normalize) => {
 
   // Handle image functions (gradients, url(), etc.)
   if (isImageFunction(backgroundString)) {
-    const normalizedImage = normalize(
-      backgroundString,
-      "backgroundImage",
-      "js",
-    );
-    return { image: normalizedImage };
+    const parsedImage = parseCSSImage(backgroundString);
+    return { image: parsedImage };
   }
 
   // Complex background parsing - split by commas for multiple backgrounds
@@ -107,8 +104,8 @@ const parseBackgroundLayer = (layerString, normalize) => {
 
     // Check for image functions (gradients, url)
     if (isImageFunction(token)) {
-      const normalizedImage = normalize(token, "backgroundImage", "js");
-      backgroundObj.image = normalizedImage;
+      const parsedImage = parseCSSImage(token);
+      backgroundObj.image = parsedImage;
     }
     // Check for colors
     else if (isSimpleColor(token)) {

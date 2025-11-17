@@ -3,6 +3,7 @@ import {
   parseCSSBackground,
   stringifyCSSBackground,
 } from "./css_background.js";
+import { parseCSSImage, stringifyCSSImage } from "./css_image.js";
 import { parseCSSTransform, stringifyCSSTransform } from "./css_transform.js";
 import {
   parseCSSWillChange,
@@ -303,14 +304,24 @@ export const normalizeStyle = (
   }
 
   if (propertyName === "backgroundImage") {
-    if (context === "css") {
-      if (
-        typeof value === "string" &&
-        !backgroundKeywordSet.has(value) &&
-        !STARTS_WITH_CSS_IMAGE_FUNCTION_REGEX.test(value)
-      ) {
-        return `url(${value})`;
+    if (context === "js") {
+      if (typeof value === "string") {
+        // For js context, prefer structured objects
+        return parseCSSImage(value);
       }
+      return value;
+    }
+    if (typeof value === "object" && value !== null) {
+      // For CSS context, ensure backgroundImage is a string
+      return stringifyCSSImage(value);
+    }
+    // Fallback: add url() wrapper if needed
+    if (
+      typeof value === "string" &&
+      !backgroundKeywordSet.has(value) &&
+      !STARTS_WITH_CSS_IMAGE_FUNCTION_REGEX.test(value)
+    ) {
+      return `url(${value})`;
     }
     return value;
   }
