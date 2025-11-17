@@ -251,6 +251,34 @@
 
       .invert-button:hover {
         color: white;
+        background: #007acc;
+        transform: scale(1.05);
+      }
+
+      details {
+        margin: 15px 0;
+        padding: 10px;
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+      }
+
+      summary {
+        padding: 5px 0;
+        color: #555;
+        font-weight: bold;
+        cursor: pointer;
+        user-select: none;
+      }
+
+      summary:hover {
+        color: #007acc;
+      }
+
+      details[open] summary {
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #e9ecef;
       }
     </style>
   </head>
@@ -318,15 +346,8 @@
           </div>
         </div>
 
-        <div
-          style="
-            margin: 15px 0;
-            padding: 10px;
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 6px;
-          "
-        >
+        <details>
+          <summary>Debugging Options</summary>
           <label style="display: flex; align-items: center; gap: 8px">
             <input type="checkbox" id="pauseBreakpoints" />
             <span>Pause at 50% for debugging</span>
@@ -338,12 +359,11 @@
           >
             Resume Paused Transitions
           </button>
-        </div>
+        </details>
       </div>
 
       <!-- Transition Area -->
       <div class="transition-area">
-        <h3>Transition Result</h3>
         <div class="transition-box" id="transitionBox">TRANSITION<br />BOX</div>
       </div>
     </div>
