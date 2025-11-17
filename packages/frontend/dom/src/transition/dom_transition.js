@@ -212,9 +212,8 @@ export const createBackgroundColorTransition = (element, to, options = {}) => {
     ? resolveCSSColor(options.from, element)
     : getBackgroundColor(element);
   const toBackgroundColor = resolveCSSColor(to, element);
-  const fromUnset = fromBackgroundColor === undefined;
-  const toUnset = toBackgroundColor === undefined;
-  debugger;
+  const fromUnset = !fromBackgroundColor;
+  const toUnset = !toBackgroundColor;
 
   if (fromUnset && toUnset) {
     return createNoopCSSPropertyTransition(element);
