@@ -64,7 +64,11 @@
  *
  * TODO:
  *
- * A MON AVIS LE FIX POUR LE CONTENU QUI SE DECALE LORSQUE CENTER
+ * A MON AVIS LE FIX POUR LE CONTENU QUI SE DECALE LORSQUE CENTER (mais ca le fait meme sur start/end)
+ *
+ * -> il y a quelque chose a faire pour qu'en gros lorsque le slot fait plus que son conteneur
+ * on force la taille, ou on désactive le flex positionement pour éviter le décalage par ex
+ * oui c'est ca, s'il est plus gros alors on met start sur cet axe
  *
  * - vérifier le comportement lorsque la transition s'applique au "document"
  * c'est a dire que le container veut faire la taille de la page
@@ -179,36 +183,42 @@ import.meta.css = /* css */ `
   }
 `;
 
-const EMPTY = {
-  contentId: "empty",
-  contentPhase: undefined,
+const UNSET = {
   domNodes: [],
-  type: "empty",
+  isEmpty: true,
+
+  type: "unset",
+  contentId: "unset",
+  contentPhase: undefined,
   isContentPhase: false,
   isContent: false,
-  toString: () => "empty",
+  toString: () => "unset",
 };
 const createConfiguration = (domNodes, { contentId, contentPhase } = {}) => {
-  if (!domNodes || domNodes.length === 0) {
-    return EMPTY;
+  if (!domNodes) {
+    return UNSET;
   }
   contentId = contentId || getElementSignature(domNodes[0]);
   if (contentPhase) {
     return {
       domNodes,
+      isEmpty: domNodes.length === 0,
+
+      type: "content_phase",
       contentId,
       contentPhase,
-      type: "content_phase",
       isContentPhase: true,
       isContent: false,
-      toString: () => `content_phase:${contentId}`,
+      toString: () => `content_phase:${contentPhase}`,
     };
   }
   return {
     domNodes,
+    isEmpty: domNodes.length === 0,
+
+    type: "content",
     contentId,
     contentPhase: undefined,
-    type: "content",
     isContentPhase: false,
     isContent: true,
     toString: () => `content:${contentId}`,
@@ -280,8 +290,8 @@ export const createUITransitionController = (
 
   let targetSlotConfiguration = targetSlotInitialConfiguration;
   let outgoingSlotConfiguration = outgoingSlotInitialConfiguration;
-  let previousTargetSlotConfiguration = EMPTY;
-  let previousOutgoingSlotConfiguration = EMPTY;
+  let previousTargetSlotConfiguration = UNSET;
+  let previousOutgoingSlotConfiguration = UNSET;
   // dimensions of the container
   let width;
   let height;
@@ -303,10 +313,7 @@ export const createUITransitionController = (
     };
   };
   const updateSlotAttributes = () => {
-    if (
-      targetSlotConfiguration === EMPTY &&
-      outgoingSlotConfiguration === EMPTY
-    ) {
+    if (targetSlotConfiguration.isEmpty && outgoingSlotConfiguration.isEmpty) {
       container.setAttribute("data-only-previous-group", "");
     } else {
       container.removeAttribute("data-only-previous-group");
@@ -321,7 +328,7 @@ export const createUITransitionController = (
     const slotConfig =
       slot === targetSlot ? targetSlotConfiguration : outgoingSlotConfiguration;
 
-    if (slotConfig === EMPTY) {
+    if (slotConfig.isEmpty) {
       debugSize(`measureSlot(".${slot.className}") -> it is empty`);
       if (slot === targetSlot) {
         targetSlotWidth = undefined;
@@ -349,12 +356,12 @@ export const createUITransitionController = (
 
   updateAlignment();
   updateSlotAttributes();
-  if (targetSlotConfiguration !== EMPTY) {
+  if (!targetSlotConfiguration.isEmpty) {
     measureSlot(targetSlot);
     width = targetSlotWidth;
     height = targetSlotHeight;
   }
-  if (outgoingSlotConfiguration !== EMPTY) {
+  if (!outgoingSlotConfiguration.isEmpty) {
     measureSlot(outgoingSlot);
   }
 
@@ -547,7 +554,7 @@ export const createUITransitionController = (
 
   // content_to_content transition (uses previous_group)
   const applyContentToContentTransition = (toConfiguration) => {
-    outgoingSlotBecomes(EMPTY);
+    outgoingSlotBecomes(UNSET);
     targetSlotBecomes(toConfiguration);
     const transitions = [
       ...updateContainerDimensions(targetSlotWidth, targetSlotHeight),
@@ -556,8 +563,8 @@ export const createUITransitionController = (
     ];
     const transition = transitionController.update(transitions, {
       onFinish: () => {
-        setSlotConfiguration(previousTargetSlot, EMPTY);
-        setSlotConfiguration(previousOutgoingSlot, EMPTY);
+        setSlotConfiguration(previousTargetSlot, UNSET);
+        setSlotConfiguration(previousOutgoingSlot, UNSET);
         // let target slot take natural size now container is done
         setSlotDimensions(targetSlot, undefined, undefined);
         if (hasDebugLogs) {
@@ -587,8 +594,8 @@ export const createUITransitionController = (
   };
   // any_to_empty transition
   const applyToEmptyTransition = () => {
-    targetSlotBecomes(EMPTY);
-    outgoingSlotBecomes(EMPTY);
+    targetSlotBecomes(UNSET);
+    outgoingSlotBecomes(UNSET);
     const transitions = [
       ...updateContainerDimensions(0, 0),
       fadeOutPreviousGroup(),
@@ -596,8 +603,8 @@ export const createUITransitionController = (
     const transition = transitionController.update(transitions, {
       onFinish: () => {
         setSlotDimensions(targetSlot, undefined, undefined);
-        setSlotConfiguration(previousTargetSlot, EMPTY);
-        setSlotConfiguration(previousOutgoingSlot, EMPTY);
+        setSlotConfiguration(previousTargetSlot, UNSET);
+        setSlotConfiguration(previousOutgoingSlot, UNSET);
         if (hasDebugLogs) {
           console.groupEnd();
         }
@@ -640,7 +647,7 @@ export const createUITransitionController = (
       `Prepare "${transitionType}" transition (${fromConfiguration} -> ${toConfiguration})`,
     );
     // content_to_empty / content_phase_to_empty
-    if (toConfiguration === EMPTY) {
+    if (toConfiguration.isEmpty) {
       applyToEmptyTransition();
       return;
     }
@@ -670,8 +677,8 @@ export const createUITransitionController = (
     transitionController.cancel();
     setSlotConfiguration(targetSlot, targetSlotInitialConfiguration);
     setSlotConfiguration(outgoingSlot, outgoingSlotInitialConfiguration);
-    setSlotConfiguration(previousTargetSlot, EMPTY);
-    setSlotConfiguration(previousOutgoingSlot, EMPTY);
+    setSlotConfiguration(previousTargetSlot, UNSET);
+    setSlotConfiguration(previousOutgoingSlot, UNSET);
   };
 
   const setDuration = (newDuration) => {
