@@ -135,3 +135,31 @@ export const applyGradientToGradient = (fromGradient, toGradient, progress) => {
 
   return interpolatedGradient;
 };
+
+// Helper to interpolate from a solid color toward a gradient
+export const applyColorToGradient = (fromColor, targetGradient, progress) => {
+  // Clone the target gradient as base
+  const interpolatedGradient = { ...targetGradient };
+
+  // Interpolate color stops if they exist
+  if (targetGradient.stops && Array.isArray(targetGradient.stops)) {
+    interpolatedGradient.stops = targetGradient.stops.map((stop) => {
+      if (stop.color) {
+        const targetStopColor = stop.color;
+        if (targetStopColor && fromColor) {
+          // Interpolate from the solid color toward each gradient stop color
+          const [rFrom, gFrom, bFrom, aFrom] = fromColor;
+          const [rTo, gTo, bTo, aTo] = targetStopColor;
+          const r = Math.round(rFrom + (rTo - rFrom) * progress);
+          const g = Math.round(gFrom + (gTo - gFrom) * progress);
+          const b = Math.round(bFrom + (bTo - bFrom) * progress);
+          const a = aFrom + (aTo - aFrom) * progress;
+          return { ...stop, color: [r, g, b, a] };
+        }
+      }
+      return stop;
+    });
+  }
+
+  return interpolatedGradient;
+};

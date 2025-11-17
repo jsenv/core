@@ -15,6 +15,7 @@ import {
 } from "../transition_playback.js";
 import {
   applyColorToColor,
+  applyColorToGradient,
   applyGradientToColor,
   applyGradientToGradient,
   prepareColorTransitionPair,
@@ -340,8 +341,6 @@ export const createBackgroundTransition = (element, to, options = {}) => {
           toBackground.color,
           progress,
         );
-        // Remove any background color to let the gradient be the only background
-        delete intermediateBackground.color;
         return normalizeStyle(intermediateBackground, "background", "css");
       },
     });
@@ -349,12 +348,25 @@ export const createBackgroundTransition = (element, to, options = {}) => {
 
   // Case 3: Color to Gradient transitions
   if (!fromHasImage && fromBackground.color && toHasGradient) {
-    // For now, use instant change - could implement reverse interpolation later
-    return createInstantCSSPropertyTransition({
+    return createCSSPropertyTransition({
       ...options,
       element,
       styleProperty: "background",
-      value: normalizeStyle(toBackground, "background", "css"),
+      getFrom: () => 0,
+      from: 0,
+      to: 1,
+      getValue: (transition) => {
+        const progress = transition.value;
+        const intermediateBackground = { ...toBackground };
+        intermediateBackground.image = applyColorToGradient(
+          fromBackground.color,
+          toBackground.image,
+          progress,
+        );
+        // Remove any background color to let the gradient be the only background
+        delete intermediateBackground.color;
+        return normalizeStyle(intermediateBackground, "background", "css");
+      },
     });
   }
 
@@ -378,7 +390,6 @@ export const createBackgroundTransition = (element, to, options = {}) => {
           fromBackground.image,
           toBackground.image,
           progress,
-          element,
         );
 
         // Also interpolate background color if both have it
