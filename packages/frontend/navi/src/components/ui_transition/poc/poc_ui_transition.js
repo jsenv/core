@@ -93,6 +93,7 @@ import {
   createWidthTransition,
   getElementSignature,
   getScrollContainer,
+  measureScrollbar,
   preventIntermediateScrollbar,
 } from "@jsenv/dom";
 
@@ -281,6 +282,7 @@ export const createUITransitionController = (
     console.debug(`[size]`, message);
   };
 
+  const container = root.querySelector(".ui_transition_container");
   const activeGroup = root.querySelector(".active_group");
   const targetSlot = root.querySelector(".target_slot");
   const outgoingSlot = root.querySelector(".outgoing_slot");
@@ -306,7 +308,14 @@ export const createUITransitionController = (
     );
   }
 
-  const container = root.querySelector(".ui_transition_container");
+  const scrollContainer = getScrollContainer(root);
+  const getRootAvailableDimensions = () => {
+    const [scrollbarWidth, scrollbarHeight] = measureScrollbar(scrollContainer);
+    const clientWidth = scrollContainer.clientWidth + scrollbarWidth;
+    const clientHeight = scrollContainer.clientHeight + scrollbarHeight;
+    return [clientWidth, clientHeight];
+  };
+
   const elementToResize = container;
   root.style.setProperty("--x-transition-duration", `${duration}ms`);
   outgoingSlot.setAttribute("inert", "");
@@ -403,6 +412,10 @@ export const createUITransitionController = (
     x_overflow: {
       const xOverflowingSlotSet = new Set();
       updateSlotOverflowX = (slot, isOverflowingRootOnX) => {
+        if (slot === previousTargetSlot || slot === previousOutgoingSlot) {
+          return;
+        }
+
         const size = xOverflowingSlotSet.size;
         if (isOverflowingRootOnX) {
           xOverflowingSlotSet.add(slot);
@@ -431,6 +444,10 @@ export const createUITransitionController = (
     y_overflow: {
       const yOverflowingSlotSet = new Set();
       updateSlotOverflowY = (slot, isOverflowingRootOnY) => {
+        if (slot === previousTargetSlot || slot === previousOutgoingSlot) {
+          return;
+        }
+
         const size = yOverflowingSlotSet.size;
         if (isOverflowingRootOnY) {
           yOverflowingSlotSet.add(slot);
@@ -477,7 +494,7 @@ export const createUITransitionController = (
       return;
     }
     debugSize(`setSlotDimensions(".${slot.className}", ${width}, ${height})`);
-    const [rootVisibleWidth, rootVisibleHeight] = getVisibleDimensions(root);
+    const [rootVisibleWidth, rootVisibleHeight] = getRootAvailableDimensions();
     updateSlotOverflowX(slot, width > rootVisibleWidth);
     updateSlotOverflowY(slot, height > rootVisibleHeight);
     slot.style.width = `${width}px`;
@@ -825,11 +842,4 @@ export const createUITransitionController = (
     previousTargetSlotConfiguration: () => previousTargetSlotConfiguration,
     previousOutgoingSlotConfiguration: () => previousOutgoingSlotConfiguration,
   };
-};
-
-const getVisibleDimensions = (el) => {
-  const scrollContainer = getScrollContainer(el);
-  const clientWidth = scrollContainer.clientWidth;
-  const clientHeight = scrollContainer.clientHeight;
-  return [clientWidth, clientHeight];
 };
