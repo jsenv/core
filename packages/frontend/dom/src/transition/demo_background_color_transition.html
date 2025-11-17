@@ -5,47 +5,110 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Background Color Transition Demo</title>
     <style>
+      :root {
+        --demo-red: #ff0000;
+        --demo-blue: #0000ff;
+        --demo-green: #00ff00;
+        --demo-orange: #ffa500;
+      }
+
       body {
+        max-width: 900px;
+        margin: 0 auto;
         padding: 20px;
         font-family: Arial, sans-serif;
         background: #f5f5f5;
       }
 
-      .demo-container {
-        max-width: 800px;
-        margin: 0 auto;
+      .demo-section {
+        margin: 30px 0;
+        padding: 30px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
 
-      .demo-box {
+      .controls-area {
+        margin-bottom: 30px;
+        padding: 20px;
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+      }
+
+      .transition-area {
+        position: relative;
+        display: flex;
+        min-height: 200px;
+        padding: 40px;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        background: #ffffff;
+        border: 2px solid #007acc;
+        border-radius: 8px;
+      }
+
+      .transition-area h3 {
+        position: absolute;
+        top: -15px;
+        left: 20px;
+        margin: 0;
+        padding: 0 10px;
+        color: #555;
+        font-size: 14px;
+        background: white;
+      }
+
+      .transition-box {
         display: flex;
         width: 200px;
         height: 150px;
-        margin: 20px;
         align-items: center;
         justify-content: center;
         color: white;
         font-weight: bold;
-        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-        border: 2px solid #333;
-        border-radius: 8px;
-        transition: none; /* Disable CSS transitions to test JS transitions */
-        cursor: pointer;
+        font-size: 16px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        background: repeating-linear-gradient(
+          45deg,
+          #ccc,
+          #ccc 10px,
+          #fff 10px,
+          #fff 20px
+        );
+        border: 3px solid #333;
+        border-radius: 12px;
       }
 
       .controls {
         display: flex;
-        margin: 20px 0;
+        margin: 15px 0;
         flex-wrap: wrap;
-        gap: 10px;
+        align-items: center;
+        gap: 15px;
+      }
+
+      select,
+      button,
+      input {
+        padding: 10px 15px;
+        font-size: 14px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+      }
+
+      select {
+        min-width: 150px;
       }
 
       button {
-        padding: 10px 20px;
         color: white;
-        font-size: 14px;
+        font-weight: bold;
         background: #007acc;
         border: none;
-        border-radius: 4px;
+        transition: background 0.2s;
         cursor: pointer;
       }
 
@@ -58,309 +121,495 @@
         cursor: not-allowed;
       }
 
-      .info {
-        margin: 20px 0;
-        padding: 15px;
-        background: white;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-      }
-
-      .color-input {
-        margin: 5px;
-        padding: 5px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-      }
-
       .duration-control {
         margin: 20px 0;
+        padding: 15px;
+        background: #f0f8ff;
+        border: 1px solid #b3d9ff;
+        border-radius: 6px;
       }
 
-      .duration-control input {
-        width: 200px;
+      .duration-control input[type="range"] {
+        width: 300px;
+      }
+
+      label {
+        margin-right: 10px;
+        font-weight: bold;
+      }
+
+      h1 {
+        margin-bottom: 30px;
+        color: #333;
+        text-align: center;
+      }
+
+      h2 {
+        margin-top: 0;
+        padding-bottom: 10px;
+        color: #333;
+        border-bottom: 3px solid #007acc;
+      }
+
+      .section-description {
+        margin-bottom: 20px;
+        color: #666;
+        font-size: 16px;
+        line-height: 1.4;
+      }
+
+      .preview-boxes {
+        display: flex;
+        margin: 15px 0;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .preview-box {
+        display: flex;
+        width: 60px;
+        height: 60px;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 10px;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+        background: repeating-linear-gradient(
+          45deg,
+          #ccc,
+          #ccc 5px,
+          #fff 5px,
+          #fff 10px
+        );
+        border: 2px solid #333;
+        border-radius: 6px;
       }
     </style>
   </head>
   <body>
-    <div class="demo-container">
-      <h1>Background Color Transition Demo</h1>
+    <h1>Background Color Transition Demo</h1>
 
-      <div class="info">
-        <p>
-          <strong>Instructions:</strong> Click the buttons below to test
-          different background color transitions. You can also click directly on
-          the boxes to cycle through colors, or use custom colors.
-        </p>
-      </div>
+    <!-- Main Color Transition Demo -->
+    <div class="demo-section">
+      <h2>Color & Format Transition Testing</h2>
+      <p class="section-description">
+        Configure source and destination colors (including transparent and CSS
+        variables), then watch the transition happen in the isolated box below.
+        Supports all color formats: hex, rgb(), CSS variables, and transparent.
+      </p>
 
-      <div class="duration-control">
-        <label>
-          Duration:
-          <input
-            type="range"
-            id="duration"
-            min="100"
-            max="3000"
-            value="500"
-            step="50"
-          />
-          <span id="durationValue">500ms</span>
-        </label>
-      </div>
+      <!-- Controls Area -->
+      <div class="controls-area">
+        <h3 style="margin-top: 0; color: #555">Configuration</h3>
 
-      <div class="controls">
-        <button onclick="transitionToColor('#ff0000')">Red</button>
-        <button onclick="transitionToColor('#00ff00')">Green</button>
-        <button onclick="transitionToColor('#0000ff')">Blue</button>
-        <button onclick="transitionToColor('#ff00ff')">Magenta</button>
-        <button onclick="transitionToColor('#ffff00')">Yellow</button>
-        <button onclick="transitionToColor('#00ffff')">Cyan</button>
-        <button onclick="transitionToColor('#ffa500')">Orange</button>
-        <button onclick="transitionToColor('#800080')">Purple</button>
-        <button onclick="transitionToColor('#ffffff')">White</button>
-        <button onclick="transitionToColor('#000000')">Black</button>
-      </div>
-
-      <div class="controls">
-        <input
-          type="color"
-          id="customColor"
-          class="color-input"
-          value="#ff0000"
-        />
-        <button onclick="transitionToCustomColor()">Custom Color</button>
-        <button onclick="transitionToRandomColor()">Random Color</button>
-        <button onclick="rainbowTransition()">Rainbow</button>
-      </div>
-
-      <div class="controls">
-        <button onclick="testTransitionStyles()">Test All Synchronizers</button>
-        <button onclick="testMultipleElements()">Test Multiple Elements</button>
-        <button onclick="stopAllTransitions()" style="background: #dc3545">
-          Stop All
-        </button>
-      </div>
-
-      <div style="display: flex; flex-wrap: wrap; justify-content: center">
-        <div class="demo-box" id="box1" style="background-color: #007acc">
-          Box 1<br />Click me!
+        <div class="duration-control">
+          <label>
+            Duration:
+            <input
+              type="range"
+              id="duration"
+              min="100"
+              max="3000"
+              value="1000"
+              step="100"
+            />
+            <span id="durationValue">1000ms</span>
+          </label>
         </div>
-        <div class="demo-box" id="box2" style="background-color: #28a745">
-          Box 2<br />Click me!
+
+        <div class="controls">
+          <label>From:</label>
+          <select id="fromColor">
+            <option
+              value="transparent"
+              style="
+                background: repeating-linear-gradient(
+                  45deg,
+                  #ccc,
+                  #ccc 3px,
+                  #fff 3px,
+                  #fff 6px
+                );
+              "
+            >
+              Transparent
+            </option>
+            <option
+              value="#ff0000"
+              style="background: #ff0000; color: white"
+              selected
+            >
+              Red
+            </option>
+            <option value="#00ff00" style="background: #00ff00; color: black">
+              Green
+            </option>
+            <option value="#0000ff" style="background: #0000ff; color: white">
+              Blue
+            </option>
+            <option value="#ffff00" style="background: #ffff00; color: black">
+              Yellow
+            </option>
+            <option value="#ff00ff" style="background: #ff00ff; color: white">
+              Magenta
+            </option>
+            <option value="#00ffff" style="background: #00ffff; color: black">
+              Cyan
+            </option>
+            <option value="#ffffff" style="background: #ffffff; color: black">
+              White
+            </option>
+            <option value="#000000" style="background: #000000; color: white">
+              Black
+            </option>
+            <option
+              value="var(--demo-red)"
+              style="background: #ff0000; color: white"
+            >
+              CSS Var (Red)
+            </option>
+            <option
+              value="var(--demo-blue)"
+              style="background: #0000ff; color: white"
+            >
+              CSS Var (Blue)
+            </option>
+            <option
+              value="var(--demo-green)"
+              style="background: #00ff00; color: black"
+            >
+              CSS Var (Green)
+            </option>
+            <option
+              value="var(--demo-orange)"
+              style="background: #ffa500; color: white"
+            >
+              CSS Var (Orange)
+            </option>
+            <option
+              value="rgb(255, 165, 0)"
+              style="background: rgb(255, 165, 0); color: white"
+            >
+              RGB Orange
+            </option>
+            <option
+              value="rgb(128, 0, 128)"
+              style="background: rgb(128, 0, 128); color: white"
+            >
+              RGB Purple
+            </option>
+          </select>
+
+          <label>To:</label>
+          <select id="toColor">
+            <option
+              value="transparent"
+              style="
+                background: repeating-linear-gradient(
+                  45deg,
+                  #ccc,
+                  #ccc 3px,
+                  #fff 3px,
+                  #fff 6px
+                );
+              "
+            >
+              Transparent
+            </option>
+            <option value="#ff0000" style="background: #ff0000; color: white">
+              Red
+            </option>
+            <option value="#00ff00" style="background: #00ff00; color: black">
+              Green
+            </option>
+            <option
+              value="#0000ff"
+              style="background: #0000ff; color: white"
+              selected
+            >
+              Blue
+            </option>
+            <option value="#ffff00" style="background: #ffff00; color: black">
+              Yellow
+            </option>
+            <option value="#ff00ff" style="background: #ff00ff; color: white">
+              Magenta
+            </option>
+            <option value="#00ffff" style="background: #00ffff; color: black">
+              Cyan
+            </option>
+            <option value="#ffffff" style="background: #ffffff; color: black">
+              White
+            </option>
+            <option value="#000000" style="background: #000000; color: white">
+              Black
+            </option>
+            <option
+              value="var(--demo-red)"
+              style="background: #ff0000; color: white"
+            >
+              CSS Var (Red)
+            </option>
+            <option
+              value="var(--demo-blue)"
+              style="background: #0000ff; color: white"
+            >
+              CSS Var (Blue)
+            </option>
+            <option
+              value="var(--demo-green)"
+              style="background: #00ff00; color: black"
+            >
+              CSS Var (Green)
+            </option>
+            <option
+              value="var(--demo-orange)"
+              style="background: #ffa500; color: white"
+            >
+              CSS Var (Orange)
+            </option>
+            <option
+              value="rgb(255, 165, 0)"
+              style="background: rgb(255, 165, 0); color: white"
+            >
+              RGB Orange
+            </option>
+            <option
+              value="rgb(128, 0, 128)"
+              style="background: rgb(128, 0, 128); color: white"
+            >
+              RGB Purple
+            </option>
+          </select>
+
+          <button id="startTransition">Start Transition</button>
         </div>
-        <div class="demo-box" id="box3" style="background-color: #dc3545">
-          Box 3<br />Click me!
-        </div>
-        <div class="demo-box" id="box4" style="background-color: #ffc107">
-          Box 4<br />Click me!
+
+        <div class="preview-boxes">
+          <div style="display: flex; align-items: center; gap: 10px">
+            <span style="font-weight: bold">Preview:</span>
+            <div class="preview-box" id="fromPreview">FROM</div>
+            <span style="font-size: 20px; color: #007acc">→</span>
+            <div class="preview-box" id="toPreview">TO</div>
+          </div>
         </div>
       </div>
 
-      <div class="info">
-        <h3>Test Results:</h3>
-        <div id="results"></div>
+      <!-- Transition Area -->
+      <div class="transition-area">
+        <h3>Transition Result</h3>
+        <div class="transition-box" id="transitionBox">TRANSITION<br />BOX</div>
+      </div>
+    </div>
+
+    <!-- Opacity Demo -->
+    <div class="demo-section">
+      <h2>Opacity Transitions</h2>
+      <p class="section-description">
+        Test opacity changes alone or combined with color transitions.
+      </p>
+
+      <!-- Controls Area -->
+      <div class="controls-area">
+        <h3 style="margin-top: 0; color: #555">Opacity Controls</h3>
+
+        <div class="duration-control">
+          <label>
+            Duration:
+            <input
+              type="range"
+              id="opacityDuration"
+              min="100"
+              max="3000"
+              value="1000"
+              step="100"
+            />
+            <span id="opacityDurationValue">1000ms</span>
+          </label>
+        </div>
+
+        <div class="controls">
+          <button id="fadeOutBtn">Fade Out (1 → 0)</button>
+          <button id="fadeInBtn">Fade In (0 → 1)</button>
+          <button id="fadeHalfBtn">Fade to 50%</button>
+          <button id="colorAndOpacityBtn">Color + Opacity</button>
+        </div>
+      </div>
+
+      <!-- Transition Area -->
+      <div class="transition-area">
+        <h3>Opacity Result</h3>
+        <div
+          class="transition-box"
+          id="opacityBox"
+          style="background-color: #ff6600"
+        >
+          OPACITY<br />TEST
+        </div>
       </div>
     </div>
 
     <script type="module">
-      import { createBackgroundColorTransition } from "./dom_transition.js";
+      import {
+        createBackgroundColorTransition,
+        createOpacityTransition,
+      } from "./dom_transition.js";
 
       let currentTransitions = [];
-      let colorIndex = 0;
-      const colors = [
-        "#ff0000",
-        "#00ff00",
-        "#0000ff",
-        "#ff00ff",
-        "#ffff00",
-        "#00ffff",
-      ];
 
-      // Update duration display
-      const durationSlider = document.getElementById("duration");
-      const durationValue = document.getElementById("durationValue");
-      durationSlider.addEventListener("input", (e) => {
-        durationValue.textContent = e.target.value + "ms";
-      });
-
-      function getCurrentDuration() {
-        return parseInt(durationSlider.value);
+      // Duration slider handlers
+      function setupDurationSlider(sliderId, valueId) {
+        const slider = document.getElementById(sliderId);
+        const valueDisplay = document.getElementById(valueId);
+        slider.addEventListener("input", (e) => {
+          valueDisplay.textContent = `${e.target.value}ms`;
+        });
+        return () => parseInt(slider.value);
       }
 
-      function logResult(message) {
-        const results = document.getElementById("results");
-        const timestamp = new Date().toLocaleTimeString();
-        results.innerHTML += `<div>[${timestamp}] ${message}</div>`;
-        results.scrollTop = results.scrollHeight;
-      }
+      const getDuration = setupDurationSlider("duration", "durationValue");
+      const getOpacityDuration = setupDurationSlider(
+        "opacityDuration",
+        "opacityDurationValue",
+      );
 
-      function getRandomColor() {
-        const r = Math.floor(Math.random() * 256);
-        const g = Math.floor(Math.random() * 256);
-        const b = Math.floor(Math.random() * 256);
-        return `rgb(${r}, ${g}, ${b})`;
-      }
-
-      window.transitionToColor = function (color) {
-        const boxes = document.querySelectorAll(".demo-box");
-        stopAllTransitions();
-
-        boxes.forEach((box, index) => {
-          setTimeout(() => {
-            try {
-              const transition = createBackgroundColorTransition(box, color, {
-                duration: getCurrentDuration(),
-                styleSynchronizer: "inline_style",
-                onFinish: () => {
-                  logResult(
-                    `Box ${index + 1} transition to ${color} completed`,
-                  );
-                },
-              });
-              currentTransitions.push(transition);
-              transition.play();
-              logResult(`Started transition for Box ${index + 1} to ${color}`);
-            } catch (error) {
-              logResult(
-                `Error transitioning Box ${index + 1}: ${error.message}`,
-              );
-            }
-          }, index * 100); // Stagger the transitions
-        });
-      };
-
-      window.transitionToCustomColor = function () {
-        const customColor = document.getElementById("customColor").value;
-        transitionToColor(customColor);
-      };
-
-      window.transitionToRandomColor = function () {
-        const randomColor = getRandomColor();
-        transitionToColor(randomColor);
-      };
-
-      window.rainbowTransition = async function () {
-        const rainbowColors = [
-          "#ff0000",
-          "#ff8000",
-          "#ffff00",
-          "#80ff00",
-          "#00ff00",
-          "#00ff80",
-          "#00ffff",
-          "#0080ff",
-          "#0000ff",
-          "#8000ff",
-          "#ff00ff",
-          "#ff0080",
-        ];
-
-        for (const color of rainbowColors) {
-          transitionToColor(color);
-          await new Promise((resolve) =>
-            setTimeout(resolve, getCurrentDuration() + 100),
-          );
-        }
-      };
-
-      window.testTransitionStyles = function () {
-        const box1 = document.getElementById("box1");
-        const synchronizers = ["inline_style", "js_animation"];
-
-        synchronizers.forEach((sync, index) => {
-          setTimeout(
-            () => {
-              try {
-                const transition = createBackgroundColorTransition(
-                  box1,
-                  getRandomColor(),
-                  {
-                    duration: getCurrentDuration(),
-                    styleSynchronizer: sync,
-                    onFinish: () => {
-                      logResult(`${sync} synchronizer test completed`);
-                    },
-                  },
-                );
-                currentTransitions.push(transition);
-                transition.play();
-                logResult(`Testing ${sync} synchronizer`);
-              } catch (error) {
-                logResult(`Error testing ${sync}: ${error.message}`);
-              }
-            },
-            index * (getCurrentDuration() + 200),
-          );
-        });
-      };
-
-      window.testMultipleElements = function () {
-        const boxes = document.querySelectorAll(".demo-box");
-        const colors = ["#ff0000", "#00ff00", "#0000ff", "#ffff00"];
-
-        boxes.forEach((box, index) => {
-          setTimeout(() => {
-            try {
-              const transition = createBackgroundColorTransition(
-                box,
-                colors[index],
-                {
-                  duration: getCurrentDuration(),
-                  styleSynchronizer: "inline_style",
-                },
-              );
-              currentTransitions.push(transition);
-              transition.play();
-            } catch (error) {
-              logResult(`Error in multiple element test: ${error.message}`);
-            }
-          }, index * 150);
-        });
-        logResult("Started multiple element transition test");
-      };
-
-      window.stopAllTransitions = function () {
-        currentTransitions.forEach((transition) => {
-          try {
-            if (transition.cancel) {
-              transition.cancel();
-            }
-          } catch (error) {
-            console.warn("Error stopping transition:", error);
-          }
-        });
+      function stopCurrentTransitions() {
+        currentTransitions.forEach((t) => t.cancel && t.cancel());
         currentTransitions = [];
-        logResult("All transitions stopped");
-      };
+      }
 
-      // Add click handlers to boxes
-      document.querySelectorAll(".demo-box").forEach((box, index) => {
-        box.addEventListener("click", () => {
-          const nextColor = colors[colorIndex % colors.length];
-          colorIndex++;
+      // Main Color Transition Section
+      const fromColorSelect = document.getElementById("fromColor");
+      const toColorSelect = document.getElementById("toColor");
+      const transitionBox = document.getElementById("transitionBox");
+      const fromPreview = document.getElementById("fromPreview");
+      const toPreview = document.getElementById("toPreview");
 
-          try {
-            const transition = createBackgroundColorTransition(box, nextColor, {
-              duration: getCurrentDuration(),
+      function updatePreviewBoxes() {
+        const fromColor = fromColorSelect.value;
+        const toColor = toColorSelect.value;
+
+        // Update preview boxes
+        if (fromColor === "transparent") {
+          fromPreview.style.backgroundColor = "";
+          fromPreview.style.background =
+            "repeating-linear-gradient(45deg, #ccc, #ccc 5px, #fff 5px, #fff 10px)";
+          fromPreview.style.color = "#333";
+        } else {
+          fromPreview.style.background = "";
+          fromPreview.style.backgroundColor = fromColor;
+          fromPreview.style.color = "white";
+        }
+
+        if (toColor === "transparent") {
+          toPreview.style.backgroundColor = "";
+          toPreview.style.background =
+            "repeating-linear-gradient(45deg, #ccc, #ccc 5px, #fff 5px, #fff 10px)";
+          toPreview.style.color = "#333";
+        } else {
+          toPreview.style.background = "";
+          toPreview.style.backgroundColor = toColor;
+          toPreview.style.color = "white";
+        }
+
+        // Reset transition box to from color
+        if (fromColor === "transparent") {
+          transitionBox.style.backgroundColor = "";
+          transitionBox.style.background =
+            "repeating-linear-gradient(45deg, #ccc, #ccc 10px, #fff 10px, #fff 20px)";
+          transitionBox.style.color = "#333";
+        } else {
+          transitionBox.style.background = "";
+          transitionBox.style.backgroundColor = fromColor;
+          transitionBox.style.color = "white";
+        }
+      }
+
+      fromColorSelect.addEventListener("change", updatePreviewBoxes);
+      toColorSelect.addEventListener("change", updatePreviewBoxes);
+
+      document
+        .getElementById("startTransition")
+        .addEventListener("click", () => {
+          stopCurrentTransitions();
+          const fromColor = fromColorSelect.value;
+          const toColor = toColorSelect.value;
+
+          const transition = createBackgroundColorTransition(
+            transitionBox,
+            toColor,
+            {
+              from: fromColor,
+              duration: getDuration(),
               styleSynchronizer: "inline_style",
-              onFinish: () => {
-                logResult(`Box ${index + 1} click transition completed`);
-              },
-            });
-            currentTransitions.push(transition);
-            transition.play();
-            logResult(
-              `Box ${index + 1} clicked - transitioning to ${nextColor}`,
-            );
-          } catch (error) {
-            logResult(`Error on box click: ${error.message}`);
-          }
+            },
+          );
+          currentTransitions.push(transition);
+          transition.play();
         });
+
+      // Opacity Transitions Section
+      const opacityBox = document.getElementById("opacityBox");
+
+      document.getElementById("fadeOutBtn").addEventListener("click", () => {
+        stopCurrentTransitions();
+        const transition = createOpacityTransition(opacityBox, 0, {
+          duration: getOpacityDuration(),
+          styleSynchronizer: "inline_style",
+        });
+        currentTransitions.push(transition);
+        transition.play();
       });
 
-      // Initial log
-      logResult("Background Color Transition Demo loaded successfully");
+      document.getElementById("fadeInBtn").addEventListener("click", () => {
+        stopCurrentTransitions();
+        const transition = createOpacityTransition(opacityBox, 1, {
+          duration: getOpacityDuration(),
+          styleSynchronizer: "inline_style",
+        });
+        currentTransitions.push(transition);
+        transition.play();
+      });
+
+      document.getElementById("fadeHalfBtn").addEventListener("click", () => {
+        stopCurrentTransitions();
+        const transition = createOpacityTransition(opacityBox, 0.5, {
+          duration: getOpacityDuration(),
+          styleSynchronizer: "inline_style",
+        });
+        currentTransitions.push(transition);
+        transition.play();
+      });
+
+      document
+        .getElementById("colorAndOpacityBtn")
+        .addEventListener("click", () => {
+          stopCurrentTransitions();
+
+          // Start both transitions simultaneously
+          const colorTransition = createBackgroundColorTransition(
+            opacityBox,
+            "#00ff00",
+            {
+              duration: getOpacityDuration(),
+              styleSynchronizer: "inline_style",
+            },
+          );
+
+          const opacityTransition = createOpacityTransition(opacityBox, 0.3, {
+            duration: getOpacityDuration(),
+            styleSynchronizer: "inline_style",
+          });
+
+          currentTransitions.push(colorTransition, opacityTransition);
+          colorTransition.play();
+          opacityTransition.play();
+        });
+
+      // Initialize
+      updatePreviewBoxes();
     </script>
   </body>
 </html>
