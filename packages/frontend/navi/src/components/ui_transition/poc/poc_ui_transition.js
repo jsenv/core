@@ -158,10 +158,12 @@ import.meta.css = /* css */ `
   /* Flexbox would still try to position it ¯_(ツ)_/¯ */
   /* It causes slot content to overflow outside the box leading to content being out of view */
   /* So for this case we disable flexbox positioning (and there is no need for positioning anyway as slot takes the whole space */
-  .ui_transition[data-slot-overflow-x] {
+  .active_group[data-slot-overflow-x],
+  .previous_group[data-slot-overflow-x] {
     --x-justify-content: flex-start;
   }
-  .ui_transition[data-slot-overflow-y] {
+  .active_group[data-slot-overflow-y],
+  .previous_group[data-slot-overflow-y] {
     --x-align-items: flex-start;
   }
 
@@ -409,67 +411,73 @@ export const createUITransitionController = (
   let updateSlotOverflowX;
   let updateSlotOverflowY;
   slot_overflow: {
-    x_overflow: {
-      const xOverflowingSlotSet = new Set();
-      updateSlotOverflowX = (slot, isOverflowingRootOnX) => {
-        if (slot === previousTargetSlot || slot === previousOutgoingSlot) {
-          return;
-        }
-
-        const size = xOverflowingSlotSet.size;
-        if (isOverflowingRootOnX) {
-          xOverflowingSlotSet.add(slot);
-          if (size === 0 && xOverflowingSlotSet.size === 1) {
-            debugSize(
-              `".${slot.className}" overflowing on X -> add [data-slot-overflow-x]`,
-            );
-          }
-          root.setAttribute(
-            "data-slot-overflow-x",
-            Array.from(xOverflowingSlotSet, (s) => `.${s.className}`).join(
-              ", ",
-            ),
+    // We have data attributes per group because one group might overflow x and the other might overflow y
+    // and we want the other group to keep positioning correctly
+    const updateGroupOverflow = (
+      slot,
+      isOverflowingRoot,
+      { group, axis, overflowingSlotSet },
+    ) => {
+      const attrName =
+        axis === "x" ? "data-slot-overflow-x" : "data-slot-overflow-y";
+      const size = overflowingSlotSet.size;
+      if (isOverflowingRoot) {
+        overflowingSlotSet.add(slot);
+        if (size === 0 && overflowingSlotSet.size === 1) {
+          debugSize(
+            `".${slot.className}" overflowing on ${axis} -> add [${attrName}]`,
           );
+        }
+        group.setAttribute(
+          attrName,
+          Array.from(overflowingSlotSet, (s) => `.${s.className}`).join(", "),
+        );
+      } else {
+        overflowingSlotSet.delete(slot);
+        if (size === 1 && overflowingSlotSet.size === 0) {
+          debugSize(
+            `".${slot.className}" not overflowing anymore on ${axis} -> remove [${attrName}]`,
+          );
+          group.removeAttribute(attrName);
+        }
+      }
+    };
+
+    x_overflow: {
+      const xOverflowingActiveSlotSet = new Set();
+      const xOverflowingPreviousSlotSet = new Set();
+      updateSlotOverflowX = (slot, isOverflowingRootOnX) => {
+        if (slot === targetSlot || slot === outgoingSlot) {
+          updateGroupOverflow(slot, isOverflowingRootOnX, {
+            group: activeGroup,
+            axis: "x",
+            overflowingSlotSet: xOverflowingActiveSlotSet,
+          });
         } else {
-          xOverflowingSlotSet.delete(slot);
-          if (size === 1 && xOverflowingSlotSet.size === 0) {
-            debugSize(
-              `".${slot.className}" not overflowing anymore on X -> remove [data-slot-overflow-x]`,
-            );
-            root.removeAttribute("data-slot-overflow-x");
-          }
+          updateGroupOverflow(slot, isOverflowingRootOnX, {
+            group: previousGroup,
+            axis: "x",
+            overflowingSlotSet: xOverflowingPreviousSlotSet,
+          });
         }
       };
     }
     y_overflow: {
-      const yOverflowingSlotSet = new Set();
+      const yOverflowingActiveSlotSet = new Set();
+      const yOverflowingPreviousSlotSet = new Set();
       updateSlotOverflowY = (slot, isOverflowingRootOnY) => {
-        if (slot === previousTargetSlot || slot === previousOutgoingSlot) {
-          return;
-        }
-
-        const size = yOverflowingSlotSet.size;
-        if (isOverflowingRootOnY) {
-          yOverflowingSlotSet.add(slot);
-          if (size === 0 && yOverflowingSlotSet.size === 1) {
-            debugSize(
-              `".${slot.className}" overflowing on Y -> add [data-slot-overflow-y]`,
-            );
-          }
-          root.setAttribute(
-            "data-slot-overflow-y",
-            Array.from(yOverflowingSlotSet, (s) => `.${s.className}`).join(
-              ", ",
-            ),
-          );
+        if (slot === targetSlot || slot === outgoingSlot) {
+          updateGroupOverflow(slot, isOverflowingRootOnY, {
+            group: activeGroup,
+            axis: "y",
+            overflowingSlotSet: yOverflowingActiveSlotSet,
+          });
         } else {
-          yOverflowingSlotSet.delete(slot);
-          if (size === 1 && yOverflowingSlotSet.size === 0) {
-            debugSize(
-              `".${slot.className}" NOT overflowing anymore on Y -> remove [data-slot-overflow-y]`,
-            );
-            root.removeAttribute("data-slot-overflow-y");
-          }
+          updateGroupOverflow(slot, isOverflowingRootOnY, {
+            group: previousGroup,
+            axis: "y",
+            overflowingSlotSet: yOverflowingPreviousSlotSet,
+          });
         }
       };
     }
@@ -559,7 +567,7 @@ export const createUITransitionController = (
   let transitionType = "none";
   const transitionController = createGroupTransitionController({
     // debugBreakpoints: [0.25],
-    pauseBreakpoints: [0.5],
+    // pauseBreakpoints: [0.5],
     lifecycle: {
       setup: () => {
         updateSlotAttributes();
