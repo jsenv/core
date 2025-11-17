@@ -327,15 +327,7 @@ export const createBackgroundTransition = (element, to, options = {}) => {
     });
   }
 
-  // If only colors are different, use color transition
-  if (onlyColorsDiffer(fromBackground, toBackground)) {
-    return createBackgroundColorTransition(element, toBackground.color, {
-      ...options,
-      from: fromBackground.color,
-    });
-  }
-
-  // Complex transition between compatible backgrounds
+  // Use unified transition logic for all compatible backgrounds
   return createCSSPropertyTransition({
     ...options,
     element,
@@ -344,9 +336,9 @@ export const createBackgroundTransition = (element, to, options = {}) => {
     from: 0,
     to: 1,
     getValue: (transition) => {
-      const result = { ...toBackground };
-
-      // Handle color interpolation
+      // Start with the destination background as the base
+      const intermediateBackground = { ...toBackground };
+      // Override with interpolated properties from the transition
       const fromColor = fromBackground.color;
       const toColor = toBackground.color;
       if (fromColor && toColor) {
@@ -356,20 +348,9 @@ export const createBackgroundTransition = (element, to, options = {}) => {
         const g = applyTransitionProgress(transition, gFrom, gTo);
         const b = applyTransitionProgress(transition, bFrom, bTo);
         const a = applyTransitionProgress(transition, aFrom, aTo);
-        result.color = [r, g, b, a];
+        intermediateBackground.color = [r, g, b, a];
       }
-
-      // Remove properties that shouldn't be in the result
-      // If transitioning away from an image (gradient), remove it
-      if (fromBackground.image && !toBackground.image) {
-        delete result.image;
-      }
-      // If transitioning away from a color, remove it
-      if (fromBackground.color && !toBackground.color) {
-        delete result.color;
-      }
-
-      return normalizeStyle(result, "background", "css");
+      return normalizeStyle(intermediateBackground, "background", "css");
     },
   });
 };
@@ -400,19 +381,6 @@ const canTransitionBackgrounds = (from, to) => {
   // For now, allow these transitions but they will be instant changes
   // TODO: Could implement smart transitions by extracting colors from gradients
   return false;
-};
-
-// Helper function to check if only colors differ
-const onlyColorsDiffer = (from, to) => {
-  const fromCopy = { ...from };
-  const toCopy = { ...to };
-  delete fromCopy.color;
-  delete toCopy.color;
-
-  return (
-    JSON.stringify(fromCopy) === JSON.stringify(toCopy) &&
-    from.color !== to.color
-  );
 };
 
 // Helper functions for image object detection
