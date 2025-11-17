@@ -216,6 +216,22 @@ const createConfiguration = (domNodes, { contentId, contentPhase } = {}) => {
     return UNSET;
   }
   const isEmpty = domNodes.length === 0;
+  let textNodeCount = 0;
+  let elementNodeCount = 0;
+  let firstElementNode;
+  for (const domNode of domNodes) {
+    if (domNode.nodeType === Node.TEXT_NODE) {
+      textNodeCount++;
+    } else {
+      if (!firstElementNode) {
+        firstElementNode = domNode;
+      }
+      elementNodeCount++;
+    }
+  }
+  const isOnlyTextNodes = elementNodeCount === 0 && textNodeCount > 1;
+  const singleElementNode = elementNodeCount === 1 ? firstElementNode : null;
+
   contentId = contentId || getElementSignature(domNodes[0]);
   if (!contentPhase && isEmpty) {
     // Imagine code rendering null while switching to a new content
@@ -230,6 +246,8 @@ const createConfiguration = (domNodes, { contentId, contentPhase } = {}) => {
     return {
       domNodes,
       isEmpty,
+      isOnlyTextNodes,
+      singleElementNode,
 
       type: "content_phase",
       contentId,
@@ -242,6 +260,8 @@ const createConfiguration = (domNodes, { contentId, contentPhase } = {}) => {
   return {
     domNodes,
     isEmpty,
+    isOnlyTextNodes,
+    singleElementNode,
 
     type: "content",
     contentId,
@@ -467,12 +487,13 @@ export const createUITransitionController = (
 
   const applySlotConfigurationEffects = (slot) => {
     if (slot === targetSlot) {
-      if (targetSlotConfiguration.isEmpty) {
-        targetSlotBackgroundColor = undefined;
-      } else {
+      if (targetSlotConfiguration.singleElementNode) {
         targetSlotBackgroundColor = getBackgroundColor(
-          targetSlotConfiguration.domNodes[0],
+          targetSlotConfiguration.singleElementNode,
         );
+      } else {
+        // empty, text, multiple elements
+        targetSlotBackgroundColor = undefined;
       }
       measureSlot(slot);
       setSlotDimensions(slot, targetSlotWidth, targetSlotHeight);

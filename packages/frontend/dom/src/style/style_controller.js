@@ -225,7 +225,7 @@ export const createStyleController = (name = "anonymous") => {
 
     const normalizeValueForJs = (value) => {
       // Use normalizeStyle to handle all property types including transform dot notation
-      return normalizeStyle(value, propertyName, "js");
+      return normalizeStyle(value, propertyName, "js", element);
     };
 
     const getFromOtherControllers = () => {
