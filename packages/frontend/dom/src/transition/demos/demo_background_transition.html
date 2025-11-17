@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Background Color Transition Demo</title>
+    <title>Background Transition Demo</title>
     <style>
       :root {
         --demo-red: #ff0000;
@@ -228,6 +228,7 @@
             >
               Transparent
             </option>
+            <!-- Solid Colors -->
             <option
               value="#ff0000"
               style="background: #ff0000; color: white"
@@ -256,6 +257,7 @@
             <option value="#000000" style="background: #000000; color: white">
               Black
             </option>
+            <!-- CSS Variables -->
             <option
               value="var(--demo-red)"
               style="background: #ff0000; color: white"
@@ -268,6 +270,7 @@
             >
               CSS Var (Blue)
             </option>
+            <!-- Semi-transparent -->
             <option
               value="rgba(255, 0, 0, 0.5)"
               style="background: rgba(255, 0, 0, 0.5); color: white"
@@ -279,6 +282,80 @@
               style="background: rgba(0, 255, 0, 0.3); color: black"
             >
               Semi-transparent Green
+            </option>
+            <!-- Linear Gradients -->
+            <option
+              value="linear-gradient(45deg, #ff0000, #0000ff)"
+              style="
+                background: linear-gradient(45deg, #ff0000, #0000ff);
+                color: white;
+              "
+            >
+              Gradient Red-Blue
+            </option>
+            <option
+              value="linear-gradient(90deg, #00ff00, #ffff00)"
+              style="
+                background: linear-gradient(90deg, #00ff00, #ffff00);
+                color: black;
+              "
+            >
+              Gradient Green-Yellow
+            </option>
+            <!-- Radial Gradients -->
+            <option
+              value="radial-gradient(circle, #ff00ff, #00ffff)"
+              style="
+                background: radial-gradient(circle, #ff00ff, #00ffff);
+                color: white;
+              "
+            >
+              Radial Magenta-Cyan
+            </option>
+            <!-- Background Patterns -->
+            <option
+              value="repeating-conic-gradient(#ddd 0deg 90deg, #fff 90deg 180deg)"
+              style="
+                background: repeating-conic-gradient(
+                  #ddd 0deg 90deg,
+                  #fff 90deg 180deg
+                );
+                color: black;
+              "
+            >
+              Checkerboard Pattern
+            </option>
+            <option
+              value="radial-gradient(circle at center, #007acc 2px, transparent 2px)"
+              style="
+                background:
+                  radial-gradient(
+                    circle at center,
+                    #007acc 2px,
+                    transparent 2px
+                  ),
+                  #f0f0f0;
+                background-size: 40px 40px;
+                color: black;
+              "
+            >
+              Dot Pattern
+            </option>
+            <!-- CSS Patterns -->
+            <option
+              value="repeating-linear-gradient(45deg, #007acc, #007acc 10px, #fff 10px, #fff 20px)"
+              style="
+                background: repeating-linear-gradient(
+                  45deg,
+                  #007acc,
+                  #007acc 10px,
+                  #fff 10px,
+                  #fff 20px
+                );
+                color: white;
+              "
+            >
+              Diagonal Stripes
             </option>
           </select>
 
@@ -304,6 +381,7 @@
             >
               Transparent
             </option>
+            <!-- Solid Colors -->
             <option value="#ff0000" style="background: #ff0000; color: white">
               Red
             </option>
@@ -332,6 +410,7 @@
             <option value="#000000" style="background: #000000; color: white">
               Black
             </option>
+            <!-- CSS Variables -->
             <option
               value="var(--demo-red)"
               style="background: #ff0000; color: white"
@@ -344,6 +423,7 @@
             >
               CSS Var (Blue)
             </option>
+            <!-- Semi-transparent -->
             <option
               value="rgba(255, 0, 0, 0.5)"
               style="background: rgba(255, 0, 0, 0.5); color: white"
@@ -356,7 +436,103 @@
             >
               Semi-transparent Green
             </option>
+            <!-- Linear Gradients -->
+            <option
+              value="linear-gradient(45deg, #ff0000, #0000ff)"
+              style="
+                background: linear-gradient(45deg, #ff0000, #0000ff);
+                color: white;
+              "
+            >
+              Gradient Red-Blue
+            </option>
+            <option
+              value="linear-gradient(90deg, #00ff00, #ffff00)"
+              style="
+                background: linear-gradient(90deg, #00ff00, #ffff00);
+                color: black;
+              "
+            >
+              Gradient Green-Yellow
+            </option>
+            <!-- Radial Gradients -->
+            <option
+              value="radial-gradient(circle, #ff00ff, #00ffff)"
+              style="
+                background: radial-gradient(circle, #ff00ff, #00ffff);
+                color: white;
+              "
+            >
+              Radial Magenta-Cyan
+            </option>
+            <!-- Background Patterns -->
+            <option
+              value="repeating-conic-gradient(#ddd 0deg 90deg, #fff 90deg 180deg)"
+              style="
+                background: repeating-conic-gradient(
+                  #ddd 0deg 90deg,
+                  #fff 90deg 180deg
+                );
+                color: black;
+              "
+            >
+              Checkerboard Pattern
+            </option>
+            <option
+              value="radial-gradient(circle at center, #007acc 2px, transparent 2px)"
+              style="
+                background:
+                  radial-gradient(
+                    circle at center,
+                    #007acc 2px,
+                    transparent 2px
+                  ),
+                  #f0f0f0;
+                background-size: 40px 40px;
+                color: black;
+              "
+            >
+              Dot Pattern
+            </option>
+            <!-- CSS Patterns -->
+            <option
+              value="repeating-linear-gradient(45deg, #007acc, #007acc 10px, #fff 10px, #fff 20px)"
+              style="
+                background: repeating-linear-gradient(
+                  45deg,
+                  #007acc,
+                  #007acc 10px,
+                  #fff 10px,
+                  #fff 20px
+                );
+                color: white;
+              "
+            >
+              Diagonal Stripes
+            </option>
+            <!-- SVG Background Images -->
+            <option
+              value="url('./checkerboard.svg')"
+              style="
+                background: url(&quot;./checkerboard.svg&quot;);
+                color: black;
+              "
+            >
+              SVG Checkerboard
+            </option>
+            <option
+              value="url('./dots.svg')"
+              style="
+                background: url(&quot;./dots.svg&quot;);
+                background-size: 40px 40px;
+                color: black;
+              "
+            >
+              SVG Dots
+            </option>
           </select>
+
+          <h3>Preview Boxes</h3>
 
           <button id="startTransition">Start Transition</button>
         </div>
@@ -379,7 +555,7 @@
     </div>
 
     <script type="module">
-      import { createBackgroundColorTransition } from "../dom_transition.js";
+      import { createBackgroundTransition } from "../dom_transition.js";
 
       let currentTransitions = [];
 
@@ -408,52 +584,38 @@
       const toPreview = document.getElementById("toPreview");
 
       function updatePreviewBoxes() {
-        const fromColor = fromColorSelect.value;
-        const toColor = toColorSelect.value;
+        const fromBackground = fromColorSelect.value;
+        const toBackground = toColorSelect.value;
 
-        // Update preview boxes
-        if (fromColor === "undefined") {
-          fromPreview.style.backgroundColor = "";
-          fromPreview.style.background = "#f0f0f0";
-          fromPreview.style.color = "#666";
-        } else if (fromColor === "transparent") {
-          fromPreview.style.backgroundColor = "";
-          fromPreview.style.background = "transparent";
-          fromPreview.style.color = "#333";
-        } else {
-          fromPreview.style.background = "";
-          fromPreview.style.backgroundColor = fromColor;
-          fromPreview.style.color = "white";
+        function applyBackground(element, value) {
+          if (value === "undefined") {
+            element.style.background = "#f0f0f0";
+            element.style.backgroundColor = "";
+            element.style.color = "#666";
+          } else if (value === "transparent") {
+            element.style.background = "transparent";
+            element.style.backgroundColor = "";
+            element.style.color = "#333";
+          } else if (
+            value.includes("gradient") ||
+            value.includes("repeating-") ||
+            value.includes("url(")
+          ) {
+            // Complex backgrounds (gradients, patterns, images)
+            element.style.background = value;
+            element.style.backgroundColor = "";
+            element.style.color = "white";
+          } else {
+            // Simple colors
+            element.style.background = "";
+            element.style.backgroundColor = value;
+            element.style.color = "white";
+          }
         }
 
-        if (toColor === "undefined") {
-          toPreview.style.backgroundColor = "";
-          toPreview.style.background = "#f0f0f0";
-          toPreview.style.color = "#666";
-        } else if (toColor === "transparent") {
-          toPreview.style.backgroundColor = "";
-          toPreview.style.background = "transparent";
-          toPreview.style.color = "#333";
-        } else {
-          toPreview.style.background = "";
-          toPreview.style.backgroundColor = toColor;
-          toPreview.style.color = "white";
-        }
-
-        // Reset transition box to from color
-        if (fromColor === "undefined") {
-          transitionBox.style.backgroundColor = "";
-          transitionBox.style.background = "";
-          transitionBox.style.color = "#333";
-        } else if (fromColor === "transparent") {
-          transitionBox.style.backgroundColor = "";
-          transitionBox.style.background = "transparent";
-          transitionBox.style.color = "#333";
-        } else {
-          transitionBox.style.background = "";
-          transitionBox.style.backgroundColor = fromColor;
-          transitionBox.style.color = "white";
-        }
+        applyBackground(fromPreview, fromBackground);
+        applyBackground(toPreview, toBackground);
+        applyBackground(transitionBox, fromBackground);
       }
 
       fromColorSelect.addEventListener("change", updatePreviewBoxes);
@@ -463,14 +625,12 @@
         .getElementById("startTransition")
         .addEventListener("click", () => {
           stopCurrentTransitions();
-          const fromColor = fromColorSelect.value;
-          const toColor = toColorSelect.value;
+          const toBackground = toColorSelect.value;
 
-          const transition = createBackgroundColorTransition(
+          const transition = createBackgroundTransition(
             transitionBox,
-            toColor,
+            toBackground,
             {
-              from: fromColor,
               duration: getDuration(),
               styleSynchronizer: "inline_style",
             },
