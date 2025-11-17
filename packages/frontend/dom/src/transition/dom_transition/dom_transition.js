@@ -1,5 +1,9 @@
-import { areSameRGBA, updateRGBA } from "../style/parsing/css_color.js";
-import { normalizeStyle } from "../style/parsing/style_parsing.js";
+import {
+  areSameRGBA,
+  parseCSSColor,
+  updateRGBA,
+} from "../../style/parsing/css_color.js";
+import { normalizeStyle } from "../../style/parsing/style_parsing.js";
 import {
   createStyleController,
   getBackground,
@@ -8,12 +12,12 @@ import {
   getOpacity,
   getTranslateX,
   getWidth,
-} from "../style/style_controller.js";
+} from "../../style/style_controller.js";
 import {
   applyTransitionProgress,
   combineTwoLifecycle,
   createTimelineTransition,
-} from "./transition_playback.js";
+} from "../transition_playback.js";
 
 const transitionStyleController = createStyleController("transition");
 
@@ -300,6 +304,109 @@ export const createBackgroundColorTransition = (element, to, options = {}) => {
     },
   });
 };
+
+// Helper to interpolate gradient color stops toward a target color
+const interpolateGradientToColor = (
+  gradientImage,
+  targetColor,
+  progress,
+  element,
+) => {
+  const resolvedTargetColor = parseCSSColor(targetColor, element);
+  if (!resolvedTargetColor) return gradientImage;
+
+  // Clone the gradient image object
+  const interpolatedGradient = { ...gradientImage };
+
+  // Interpolate color stops if they exist
+  if (gradientImage.stops && Array.isArray(gradientImage.stops)) {
+    interpolatedGradient.stops = gradientImage.stops.map((stop) => {
+      if (stop.color) {
+        const stopColor = parseCSSColor(stop.color, element);
+        if (stopColor) {
+          // Interpolate each channel toward the target color
+          const [rFrom, gFrom, bFrom, aFrom] = stopColor;
+          const [rTo, gTo, bTo, aTo] = resolvedTargetColor;
+          const r = Math.round(rFrom + (rTo - rFrom) * progress);
+          const g = Math.round(gFrom + (gTo - gFrom) * progress);
+          const b = Math.round(bFrom + (bTo - bFrom) * progress);
+          const a = aFrom + (aTo - aFrom) * progress;
+          return { ...stop, color: [r, g, b, a] };
+        }
+      }
+      return stop;
+    });
+  }
+
+  return interpolatedGradient;
+};
+
+// Helper to interpolate between two gradients of the same type
+const interpolateGradientToGradient = (
+  fromGradient,
+  toGradient,
+  progress,
+  element,
+) => {
+  if (fromGradient.type !== toGradient.type) {
+    return toGradient; // Different types, return target
+  }
+
+  // Clone the target gradient as base
+  const interpolatedGradient = { ...toGradient };
+
+  // Interpolate color stops if both have them
+  if (
+    fromGradient.stops &&
+    toGradient.stops &&
+    Array.isArray(fromGradient.stops) &&
+    Array.isArray(toGradient.stops)
+  ) {
+    // Use the longer stops array as base, interpolate corresponding stops
+    const maxStops = Math.max(
+      fromGradient.stops.length,
+      toGradient.stops.length,
+    );
+    interpolatedGradient.stops = [];
+
+    for (let i = 0; i < maxStops; i++) {
+      const fromStop = fromGradient.stops[i];
+      const toStop = toGradient.stops[i];
+
+      if (fromStop && toStop) {
+        // Both stops exist - interpolate them
+        const interpolatedStop = { ...toStop };
+
+        if (fromStop.color && toStop.color) {
+          const fromColor = parseCSSColor(fromStop.color, element);
+          const toColor = parseCSSColor(toStop.color, element);
+
+          if (fromColor && toColor) {
+            const [rFrom, gFrom, bFrom, aFrom] = fromColor;
+            const [rTo, gTo, bTo, aTo] = toColor;
+            const r = Math.round(rFrom + (rTo - rFrom) * progress);
+            const g = Math.round(gFrom + (gTo - gFrom) * progress);
+            const b = Math.round(bFrom + (bTo - bFrom) * progress);
+            const a = aFrom + (aTo - aFrom) * progress;
+            interpolatedStop.color = [r, g, b, a];
+          }
+        }
+
+        // TODO: Could also interpolate position if both have positions
+        interpolatedGradient.stops.push(interpolatedStop);
+      } else if (toStop) {
+        // Only target stop exists - use it as-is
+        interpolatedGradient.stops.push({ ...toStop });
+      } else if (fromStop) {
+        // Only source stop exists - fade it toward transparent or skip
+        // For now, skip it (it will disappear)
+      }
+    }
+  }
+
+  return interpolatedGradient;
+};
+
 export const createBackgroundTransition = (element, to, options = {}) => {
   const fromBackground = options.from || getBackground(element);
   const toBackground = normalizeStyle(to, "background", "js", element);
@@ -311,6 +418,7 @@ export const createBackgroundTransition = (element, to, options = {}) => {
       ...options,
     });
   }
+
   // If either is not an object (complex case), fall back to instant change
   if (
     typeof fromBackground !== "object" ||
@@ -325,8 +433,71 @@ export const createBackgroundTransition = (element, to, options = {}) => {
       value: normalizeStyle(toBackground, "background", "css"),
     });
   }
-  const canTransition = canTransitionBackgrounds(fromBackground, toBackground);
-  if (!canTransition) {
+
+  const fromHasImage = Boolean(fromBackground.image);
+  const toHasImage = Boolean(toBackground.image);
+  const fromHasGradient =
+    fromHasImage && isGradientObject(fromBackground.image);
+  const toHasGradient = toHasImage && isGradientObject(toBackground.image);
+
+  // Case 1: Color to Color transitions (including no color to color)
+  if (!fromHasImage && !toHasImage) {
+    const fromBackgroundColor = fromBackground.color;
+    const toBackgroundColor = toBackground.color;
+    const backgroundColorRgbaPair = prepareColorTransitionPair(
+      fromBackgroundColor,
+      toBackgroundColor,
+    );
+
+    return createCSSPropertyTransition({
+      ...options,
+      element,
+      styleProperty: "background",
+      getFrom: () => 0,
+      from: 0,
+      to: 1,
+      getValue: (transition) => {
+        const intermediateBackground = { ...toBackground };
+        if (backgroundColorRgbaPair) {
+          const rgbaWithTransition = applyColorTransition(
+            backgroundColorRgbaPair,
+            transition,
+          );
+          intermediateBackground.color = rgbaWithTransition;
+        }
+        return normalizeStyle(intermediateBackground, "background", "css");
+      },
+    });
+  }
+
+  // Case 2: Gradient to Color transitions
+  if (fromHasGradient && !toHasImage && toBackground.color) {
+    return createCSSPropertyTransition({
+      ...options,
+      element,
+      styleProperty: "background",
+      getFrom: () => 0,
+      from: 0,
+      to: 1,
+      getValue: (transition) => {
+        const progress = transition.value;
+        const intermediateBackground = { ...fromBackground };
+        intermediateBackground.image = interpolateGradientToColor(
+          fromBackground.image,
+          toBackground.color,
+          progress,
+          element,
+        );
+        // Remove any background color to let the gradient be the only background
+        delete intermediateBackground.color;
+        return normalizeStyle(intermediateBackground, "background", "css");
+      },
+    });
+  }
+
+  // Case 3: Color to Gradient transitions
+  if (!fromHasImage && fromBackground.color && toHasGradient) {
+    // For now, use instant change - could implement reverse interpolation later
     return createInstantCSSPropertyTransition({
       ...options,
       element,
@@ -335,70 +506,92 @@ export const createBackgroundTransition = (element, to, options = {}) => {
     });
   }
 
-  // Use unified transition logic for all compatible backgrounds
-  const fromBackgroundColor = fromBackground.color;
-  const toBackgroundColor = toBackground.color;
-  const backgroundColorRgbaPair = prepareColorTransitionPair(
-    fromBackgroundColor,
-    toBackgroundColor,
-  );
-  return createCSSPropertyTransition({
+  // Same gradient type transitions
+  if (
+    fromHasGradient &&
+    toHasGradient &&
+    fromBackground.image.type === toBackground.image.type
+  ) {
+    return createCSSPropertyTransition({
+      ...options,
+      element,
+      styleProperty: "background",
+      getFrom: () => 0,
+      from: 0,
+      to: 1,
+      getValue: (transition) => {
+        const progress = transition.value;
+        const intermediateBackground = { ...toBackground };
+        intermediateBackground.image = interpolateGradientToGradient(
+          fromBackground.image,
+          toBackground.image,
+          progress,
+          element,
+        );
+
+        // Also interpolate background color if both have it
+        const fromBackgroundColor = fromBackground.color;
+        const toBackgroundColor = toBackground.color;
+        if (fromBackgroundColor || toBackgroundColor) {
+          const backgroundColorRgbaPair = prepareColorTransitionPair(
+            fromBackgroundColor,
+            toBackgroundColor,
+          );
+          if (backgroundColorRgbaPair) {
+            const rgbaWithTransition = applyColorTransition(
+              backgroundColorRgbaPair,
+              transition,
+            );
+            intermediateBackground.color = rgbaWithTransition;
+          }
+        }
+
+        return normalizeStyle(intermediateBackground, "background", "css");
+      },
+    });
+  }
+
+  // Identical image transitions
+  if (
+    fromHasImage &&
+    toHasImage &&
+    areImageObjectsEqual(fromBackground.image, toBackground.image)
+  ) {
+    const fromBackgroundColor = fromBackground.color;
+    const toBackgroundColor = toBackground.color;
+    const backgroundColorRgbaPair = prepareColorTransitionPair(
+      fromBackgroundColor,
+      toBackgroundColor,
+    );
+
+    return createCSSPropertyTransition({
+      ...options,
+      element,
+      styleProperty: "background",
+      getFrom: () => 0,
+      from: 0,
+      to: 1,
+      getValue: (transition) => {
+        const intermediateBackground = { ...toBackground };
+        if (backgroundColorRgbaPair) {
+          const rgbaWithTransition = applyColorTransition(
+            backgroundColorRgbaPair,
+            transition,
+          );
+          intermediateBackground.color = rgbaWithTransition;
+        }
+        return normalizeStyle(intermediateBackground, "background", "css");
+      },
+    });
+  }
+
+  // All other cases: instant change
+  return createInstantCSSPropertyTransition({
     ...options,
     element,
     styleProperty: "background",
-    getFrom: () => 0,
-    from: 0,
-    to: 1,
-    getValue: (transition) => {
-      const intermediateBackground = { ...toBackground };
-      if (backgroundColorRgbaPair) {
-        const rgbaWithTransition = applyColorTransition(
-          backgroundColorRgbaPair,
-          transition,
-        );
-        intermediateBackground.color = rgbaWithTransition;
-      }
-      const backgroundWithTransition = normalizeStyle(
-        intermediateBackground,
-        "background",
-        "css",
-      );
-      return backgroundWithTransition;
-    },
+    value: normalizeStyle(toBackground, "background", "css"),
   });
-};
-
-// Helper function to check if backgrounds can be transitioned
-const canTransitionBackgrounds = (from, to) => {
-  // Handle transitions between different background types
-
-  // Color transitions (including no color to color, color to no color)
-  // No color is treated as transparent, so these are always compatible
-  const fromHasImage = Boolean(from.image);
-  const toHasImage = Boolean(to.image);
-
-  // Color-only backgrounds (no images) can always transition
-  if (!fromHasImage && !toHasImage) {
-    return true;
-  }
-
-  // Image to image transitions (same structure)
-  if (fromHasImage && toHasImage) {
-    // Allow transition if images are identical objects
-    if (areImageObjectsEqual(from.image, to.image)) {
-      return true;
-    }
-
-    // Allow transition between gradients of the same type
-    if (isGradientObject(from.image) && isGradientObject(to.image)) {
-      return from.image.type === to.image.type;
-    }
-  }
-
-  // Mixed transitions (gradient to color, color to gradient, etc.)
-  // For now, these are not compatible for smooth transitions
-  // TODO: Could implement smart transitions by extracting colors from gradients
-  return false;
 };
 
 // Helper functions for image object detection
