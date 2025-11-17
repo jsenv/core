@@ -7,11 +7,9 @@ export const prefersDarkColors = (element) => {
   const colorScheme = getPreferedColorScheme(element);
   return colorScheme.includes("dark");
 };
-
 export const prefersLightColors = (element) => {
   return !prefersDarkColors(element);
 };
-
 export const getPreferedColorScheme = (element) => {
   const computedStyle = getComputedStyle(element || document.documentElement);
   const colorScheme = computedStyle.colorScheme;

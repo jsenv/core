@@ -1,16 +1,136 @@
+import { prefersDarkColors } from "../color_scheme.js";
+
+export const updateRGBA = (rgba, toUpdate) => {
+  const copy = [...rgba];
+  if (toUpdate.r !== undefined) {
+    copy[0] = toUpdate.r;
+  }
+  if (toUpdate.g !== undefined) {
+    copy[1] = toUpdate.g;
+  }
+  if (toUpdate.b !== undefined) {
+    copy[2] = toUpdate.b;
+  }
+  if (toUpdate.a !== undefined) {
+    copy[3] = toUpdate.a;
+  }
+  return copy;
+};
+export const areSameRGBA = (first, second) => {
+  const [r, g, b, a] = first;
+  const [r2, g2, b2, a2] = second;
+  return r === r2 && g === g2 && b === b2 && a === a2;
+};
+
+/**
+ * Resolves a color value, handling CSS custom properties and light-dark() function
+ * @param {string} color - CSS color value (may include CSS variables, light-dark())
+ * @param {Element} element - DOM element to resolve CSS variables and light-dark() against
+ * @param {string} context - Return format: "js" for RGBA array, "css" for CSS string
+ * @returns {Array<number>|string|null} [r, g, b, a] values, CSS string, or null if parsing fails
+ */
+export const parseCSSColor = (color, element) => {
+  if (!color) {
+    return null;
+  }
+  if (typeof color !== "string") {
+    return color;
+  }
+  let resolvedColor = color;
+
+  // Handle light-dark() function
+  const lightDarkMatch = color.match(/light-dark\(([^,]+),([^)]+)\)/);
+  if (lightDarkMatch) {
+    const lightColor = lightDarkMatch[1].trim();
+    const darkColor = lightDarkMatch[2].trim();
+
+    // Select the appropriate color and recursively resolve it
+    const prefersDark = prefersDarkColors(element);
+    resolvedColor = prefersDark ? darkColor : lightColor;
+    return parseCSSColor(resolvedColor, element);
+  }
+
+  // If it's a CSS custom property, resolve it using getComputedStyle
+  if (resolvedColor.includes("var(")) {
+    const computedStyle = getComputedStyle(element);
+
+    // Handle var() syntax
+    const varMatch = color.match(/var\(([^,)]+)(?:,([^)]+))?\)/);
+    if (varMatch) {
+      const propertyName = varMatch[1].trim();
+      const fallback = varMatch[2]?.trim();
+
+      const resolvedValue = computedStyle.getPropertyValue(propertyName).trim();
+      if (resolvedValue) {
+        // Recursively resolve in case the CSS variable contains light-dark() or other variables
+        return parseCSSColor(resolvedValue, element);
+      }
+      if (fallback) {
+        // Recursively resolve fallback (in case it's also a CSS variable)
+        return parseCSSColor(fallback, element);
+      }
+    }
+  }
+
+  if (color.startsWith("--")) {
+    console.warn(`found "${color}". Use "var(${color})" instead.`);
+    return null;
+  }
+  const rgba = convertColorToRgba(resolvedColor);
+  return rgba;
+};
+/**
+ * Converts HSL color to RGB
+ * @param {number} h - Hue (0-360)
+ * @param {number} s - Saturation (0-1)
+ * @param {number} l - Lightness (0-1)
+ * @returns {Array<number>} [r, g, b] values
+ */
+const hslToRgb = (h, s, l) => {
+  h = h % 360;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = l - c / 2;
+  const createRgb = (r, g, b) => {
+    return [
+      Math.round((r + m) * 255),
+      Math.round((g + m) * 255),
+      Math.round((b + m) * 255),
+    ];
+  };
+
+  if (h >= 0 && h < 60) {
+    return createRgb(c, x, 0);
+  }
+  if (h >= 60 && h < 120) {
+    return createRgb(x, c, 0);
+  }
+  if (h >= 120 && h < 180) {
+    return createRgb(0, c, x);
+  }
+  if (h >= 180 && h < 240) {
+    return createRgb(0, x, c);
+  }
+  if (h >= 240 && h < 300) {
+    return createRgb(x, 0, c);
+  }
+  if (h >= 300 && h < 360) {
+    return createRgb(c, 0, x);
+  }
+
+  return createRgb(0, 0, 0);
+};
 /**
  * Parses a CSS color string into RGBA values
  * Supports hex (#rgb, #rrggbb, #rrggbbaa), rgb(), rgba(), hsl(), hsla()
  * @param {string} color - CSS color string
  * @returns {Array<number>|null} [r, g, b, a] values or null if parsing fails
  */
-export const parseCSSColor = (color) => {
+const convertColorToRgba = (color) => {
   if (!color || typeof color !== "string") {
     return null;
   }
-
   color = color.trim().toLowerCase();
-
   // Hex colors
   if (color.startsWith("#")) {
     const hex = color.slice(1);
@@ -120,30 +240,6 @@ export const stringifyCSSColor = (rgba) => {
   }
   return `rgba(${rInt}, ${gInt}, ${bInt}, ${a})`;
 };
-
-export const updateRGBA = (rgba, toUpdate) => {
-  const copy = [...rgba];
-  if (toUpdate.r !== undefined) {
-    copy[0] = toUpdate.r;
-  }
-  if (toUpdate.g !== undefined) {
-    copy[1] = toUpdate.g;
-  }
-  if (toUpdate.b !== undefined) {
-    copy[2] = toUpdate.b;
-  }
-  if (toUpdate.a !== undefined) {
-    copy[3] = toUpdate.a;
-  }
-  return copy;
-};
-
-export const areSameRGBA = (first, second) => {
-  const [r, g, b, a] = first;
-  const [r2, g2, b2, a2] = second;
-  return r === r2 && g === g2 && b === b2 && a === a2;
-};
-
 const namedColors = {
   // Basic colors
   black: [0, 0, 0],
@@ -303,46 +399,4 @@ const namedColors = {
   oldlace: [253, 245, 230],
   seashell: [255, 245, 238],
   snow: [255, 250, 250],
-};
-
-/**
- * Converts HSL color to RGB
- * @param {number} h - Hue (0-360)
- * @param {number} s - Saturation (0-1)
- * @param {number} l - Lightness (0-1)
- * @returns {Array<number>} [r, g, b] values
- */
-const hslToRgb = (h, s, l) => {
-  h = h % 360;
-  const c = (1 - Math.abs(2 * l - 1)) * s;
-  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-  const m = l - c / 2;
-  const createRgb = (r, g, b) => {
-    return [
-      Math.round((r + m) * 255),
-      Math.round((g + m) * 255),
-      Math.round((b + m) * 255),
-    ];
-  };
-
-  if (h >= 0 && h < 60) {
-    return createRgb(c, x, 0);
-  }
-  if (h >= 60 && h < 120) {
-    return createRgb(x, c, 0);
-  }
-  if (h >= 120 && h < 180) {
-    return createRgb(0, c, x);
-  }
-  if (h >= 180 && h < 240) {
-    return createRgb(0, x, c);
-  }
-  if (h >= 240 && h < 300) {
-    return createRgb(x, 0, c);
-  }
-  if (h >= 300 && h < 360) {
-    return createRgb(c, 0, x);
-  }
-
-  return createRgb(0, 0, 0);
 };

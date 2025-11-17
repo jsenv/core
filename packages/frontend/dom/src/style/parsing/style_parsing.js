@@ -1,8 +1,8 @@
-import { resolveCSSColor } from "../../color/resolve_css_color.js";
 import {
   parseCSSBackground,
   stringifyCSSBackground,
 } from "./css_background.js";
+import { parseCSSColor, stringifyCSSColor } from "./css_color.js";
 import { parseCSSImage, stringifyCSSImage } from "./css_image.js";
 import { parseCSSTransform, stringifyCSSTransform } from "./css_transform.js";
 import {
@@ -373,7 +373,11 @@ export const normalizeStyle = (
   }
 
   if (colorPropertySet.has(propertyName)) {
-    return resolveCSSColor(value, element, context);
+    const rgba = parseCSSColor(value, element);
+    if (context === "js") {
+      return rgba;
+    }
+    return stringifyCSSColor(rgba);
   }
 
   return value;

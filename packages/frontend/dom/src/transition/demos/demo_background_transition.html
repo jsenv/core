@@ -558,6 +558,8 @@
         .addEventListener("click", () => {
           stopCurrentTransitions();
 
+          transitionBox.style.background = selectedFrom;
+
           const transition = createBackgroundTransition(
             transitionBox,
             selectedTo,

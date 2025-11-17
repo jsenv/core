@@ -325,6 +325,7 @@ export const createBackgroundTransition = (element, to, options = {}) => {
       value: normalizeStyle(toBackground, "background", "css"),
     });
   }
+  debugger;
   const canTransition = canTransitionBackgrounds(fromBackground, toBackground);
   if (!canTransition) {
     return createInstantCSSPropertyTransition({
@@ -367,13 +368,18 @@ export const createBackgroundTransition = (element, to, options = {}) => {
 const canTransitionBackgrounds = (from, to) => {
   // Handle transitions between different background types
 
-  // Color to color transitions
-  if (from.color && to.color && !from.image && !to.image) {
+  // Color transitions (including no color to color, color to no color)
+  // No color is treated as transparent, so these are always compatible
+  const fromHasImage = Boolean(from.image);
+  const toHasImage = Boolean(to.image);
+
+  // Color-only backgrounds (no images) can always transition
+  if (!fromHasImage && !toHasImage) {
     return true;
   }
 
   // Image to image transitions (same structure)
-  if (from.image && to.image) {
+  if (fromHasImage && toHasImage) {
     // Allow transition if images are identical objects
     if (areImageObjectsEqual(from.image, to.image)) {
       return true;
@@ -386,7 +392,7 @@ const canTransitionBackgrounds = (from, to) => {
   }
 
   // Mixed transitions (gradient to color, color to gradient, etc.)
-  // For now, allow these transitions but they will be instant changes
+  // For now, these are not compatible for smooth transitions
   // TODO: Could implement smart transitions by extracting colors from gradients
   return false;
 };
