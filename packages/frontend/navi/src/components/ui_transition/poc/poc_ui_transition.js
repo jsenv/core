@@ -296,6 +296,7 @@ export const createUITransitionController = (
     );
   }
 
+  const elementToResize = root;
   root.style.setProperty("--x-transition-duration", `${duration}ms`);
   outgoingSlot.setAttribute("inert", "");
   previousGroup.setAttribute("inert", "");
@@ -486,18 +487,20 @@ export const createUITransitionController = (
     },
   });
 
-  const updateContainerDimensions = (newWidth, newHeight) => {
+  const updateDimensions = (newWidth, newHeight) => {
     const fromWidth = containerWidth || 0;
     const fromHeight = containerHeight || 0;
+    const toWidth = newWidth || 0;
+    const toHeight = newHeight || 0;
     debugSize(
-      `transition from [${fromWidth}x${fromHeight}] to [${newWidth}x${newHeight}]`,
+      `transition from [${fromWidth}x${fromHeight}] to [${toWidth}x${toHeight}]`,
     );
 
-    const restoreOverflow = preventIntermediateScrollbar(root, {
+    const restoreOverflow = preventIntermediateScrollbar(elementToResize, {
       fromWidth,
       fromHeight,
-      toWidth: newWidth,
-      toHeight: newHeight,
+      toWidth,
+      toHeight,
       onPrevent: ({ x, y, scrollContainer }) => {
         if (x) {
           debugSize(
@@ -537,7 +540,7 @@ export const createUITransitionController = (
       setSlotDimensions(targetSlot, undefined, undefined);
     };
 
-    const widthTransition = createWidthTransition(root, newWidth, {
+    const widthTransition = createWidthTransition(elementToResize, toWidth, {
       from: fromWidth,
       duration,
       styleSynchronizer: "inline_style",
@@ -549,7 +552,7 @@ export const createUITransitionController = (
         onWidthTransitionFinished();
       },
     });
-    const heightTransition = createHeightTransition(root, newHeight, {
+    const heightTransition = createHeightTransition(root, toHeight, {
       from: fromHeight,
       duration,
       styleSynchronizer: "inline_style",
@@ -601,7 +604,7 @@ export const createUITransitionController = (
     outgoingSlotBecomes(UNSET);
     targetSlotBecomes(toConfiguration);
     const transitions = [
-      ...updateContainerDimensions(targetSlotWidth, targetSlotHeight),
+      ...updateDimensions(targetSlotWidth, targetSlotHeight),
       fadeInTargetSlot(),
       fadeOutPreviousGroup(),
     ];
@@ -620,7 +623,7 @@ export const createUITransitionController = (
   const applyContentPhaseToContentPhaseTransition = (toConfiguration) => {
     targetSlotBecomesViaOutgoing(toConfiguration);
     const transitions = [
-      ...updateContainerDimensions(targetSlotWidth, targetSlotHeight),
+      ...updateDimensions(targetSlotWidth, targetSlotHeight),
       fadeInTargetSlot(),
       fadeOutOutgoingSlot(),
     ];
@@ -640,7 +643,7 @@ export const createUITransitionController = (
     targetSlotBecomes(UNSET);
     outgoingSlotBecomes(UNSET);
     const transitions = [
-      ...updateContainerDimensions(0, 0),
+      ...updateDimensions(targetSlotWidth, targetSlotHeight),
       fadeOutPreviousGroup(),
     ];
     const transition = transitionController.update(transitions, {
