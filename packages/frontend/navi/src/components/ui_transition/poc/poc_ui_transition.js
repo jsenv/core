@@ -388,13 +388,6 @@ export const createUITransitionController = (
       outgoingSlotHeight = slotHeight;
     }
   };
-
-  updateAlignment();
-  measureSlot(targetSlot);
-  containerWidth = targetSlotWidth;
-  containerHeight = targetSlotHeight;
-  measureSlot(outgoingSlot);
-
   let updateSlotOverflowX;
   let updateSlotOverflowY;
   slot_overflow: {
@@ -470,6 +463,32 @@ export const createUITransitionController = (
     }
   }
 
+  const applySlotConfigurationEffects = (slot) => {
+    if (slot === targetSlot) {
+      measureSlot(slot);
+      setSlotDimensions(slot, targetSlotWidth, targetSlotHeight);
+      return;
+    }
+    if (slot === outgoingSlot) {
+      measureSlot(slot);
+      setSlotDimensions(slot, outgoingSlotWidth, outgoingSlotHeight);
+      return;
+    }
+
+    if (slot === previousTargetSlot) {
+      if (previousTargetSlotConfiguration.isEmpty) {
+        setSlotDimensions(slot, undefined, undefined);
+      } else {
+        setSlotDimensions(slot, targetSlotWidth, targetSlotHeight);
+      }
+    }
+
+    if (previousOutgoingSlotConfiguration.isEmpty) {
+      setSlotDimensions(slot, undefined, undefined);
+    } else {
+      setSlotDimensions(slot, outgoingSlotWidth, outgoingSlotHeight);
+    }
+  };
   const setSlotDimensions = (slot, width, height) => {
     if (width === undefined) {
       if (!slot.style.width) {
@@ -495,6 +514,11 @@ export const createUITransitionController = (
     slot.style.width = `${width}px`;
     slot.style.height = `${height}px`;
   };
+
+  updateAlignment();
+  applySlotConfigurationEffects(targetSlot);
+  applySlotConfigurationEffects(outgoingSlot);
+
   const setSlotConfiguration = (slot, configuration) => {
     slot.innerHTML = "";
     for (const domNode of configuration.domNodes) {
@@ -503,35 +527,25 @@ export const createUITransitionController = (
 
     if (slot === targetSlot) {
       targetSlotConfiguration = configuration;
-      measureSlot(slot);
-      setSlotDimensions(slot, targetSlotWidth, targetSlotHeight);
+      applySlotConfigurationEffects(slot);
       return;
     }
 
     if (slot === outgoingSlot) {
       outgoingSlotConfiguration = configuration;
-      measureSlot(slot);
-      setSlotDimensions(slot, outgoingSlotWidth, outgoingSlotHeight);
+      applySlotConfigurationEffects(slot);
       return;
     }
 
     if (slot === previousTargetSlot) {
       previousTargetSlotConfiguration = configuration;
-      if (configuration.isEmpty) {
-        setSlotDimensions(slot, undefined, undefined);
-      } else {
-        setSlotDimensions(slot, targetSlotWidth, targetSlotHeight);
-      }
+      applySlotConfigurationEffects(slot);
       return;
     }
 
     if (slot === previousOutgoingSlot) {
       previousOutgoingSlotConfiguration = configuration;
-      if (configuration.isEmpty) {
-        setSlotDimensions(slot, undefined, undefined);
-      } else {
-        setSlotDimensions(slot, outgoingSlotWidth, outgoingSlotHeight);
-      }
+      applySlotConfigurationEffects(slot);
       return;
     }
 
@@ -827,7 +841,5 @@ export const createUITransitionController = (
     setDuration,
     setAlignment,
     updateAlignment,
-    previousTargetSlotConfiguration: () => previousTargetSlotConfiguration,
-    previousOutgoingSlotConfiguration: () => previousOutgoingSlotConfiguration,
   };
 };
