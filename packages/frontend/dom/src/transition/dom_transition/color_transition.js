@@ -48,7 +48,11 @@ export const applyColorToColor = (rgbaPair, transition) => {
 };
 
 // Helper to interpolate gradient color stops toward a target color
-export const applyGradientToColor = (gradientImage, targetColor, progress) => {
+export const applyGradientToColor = (
+  gradientImage,
+  targetColor,
+  transition,
+) => {
   // Clone the gradient image object
   const interpolatedGradient = { ...gradientImage };
 
@@ -60,7 +64,6 @@ export const applyGradientToColor = (gradientImage, targetColor, progress) => {
         if (stopColor) {
           // Use applyColorToColor for consistent color interpolation
           const colorPair = [stopColor, targetColor];
-          const transition = { value: progress };
           return {
             ...colorStop,
             color: applyColorToColor(colorPair, transition),
@@ -75,7 +78,11 @@ export const applyGradientToColor = (gradientImage, targetColor, progress) => {
 };
 
 // Helper to interpolate between two gradients of the same type
-export const applyGradientToGradient = (fromGradient, toGradient, progress) => {
+export const applyGradientToGradient = (
+  fromGradient,
+  toGradient,
+  transition,
+) => {
   if (fromGradient.type !== toGradient.type) {
     return toGradient; // Different types, return target
   }
@@ -112,7 +119,6 @@ export const applyGradientToGradient = (fromGradient, toGradient, progress) => {
           if (fromColor && toColor) {
             // Use applyColorToColor for consistent color interpolation
             const colorPair = [fromColor, toColor];
-            const transition = { value: progress };
             interpolatedStop.color = applyColorToColor(colorPair, transition);
           }
         }
@@ -122,7 +128,7 @@ export const applyGradientToGradient = (fromGradient, toGradient, progress) => {
           interpolatedStop.stops = interpolateStops(
             fromStop.stops,
             toStop.stops,
-            progress,
+            transition,
           );
         }
         interpolatedGradient.colors.push(interpolatedStop);
@@ -140,7 +146,7 @@ export const applyGradientToGradient = (fromGradient, toGradient, progress) => {
 };
 
 // Helper to interpolate from a solid color toward a gradient
-export const applyColorToGradient = (fromColor, targetGradient, progress) => {
+export const applyColorToGradient = (fromColor, targetGradient, transition) => {
   // Clone the target gradient as base
   const interpolatedGradient = { ...targetGradient };
 
@@ -152,7 +158,6 @@ export const applyColorToGradient = (fromColor, targetGradient, progress) => {
         if (targetStopColor && fromColor) {
           // Use applyColorToColor for consistent color interpolation
           const colorPair = [fromColor, targetStopColor];
-          const transition = { value: progress };
           return {
             ...colorStop,
             color: applyColorToColor(colorPair, transition),
@@ -167,9 +172,9 @@ export const applyColorToGradient = (fromColor, targetGradient, progress) => {
 };
 
 // Helper function to interpolate between two arrays of position stops
-const interpolateStops = (fromStops, toStops, progress) => {
+const interpolateStops = (fromStops, toStops, transition) => {
   if (!Array.isArray(fromStops) || !Array.isArray(toStops)) {
-    return progress < 0.5 ? fromStops : toStops;
+    return transition.value < 0.5 ? fromStops : toStops;
   }
 
   const maxLength = Math.max(fromStops.length, toStops.length);
@@ -187,7 +192,7 @@ const interpolateStops = (fromStops, toStops, progress) => {
         fromStop.unit === toStop.unit
       ) {
         const interpolatedValue = applyTransitionProgress(
-          { value: progress },
+          transition,
           fromStop.value,
           toStop.value,
         );
@@ -198,7 +203,7 @@ const interpolateStops = (fromStops, toStops, progress) => {
         });
       } else {
         // Non-numeric or different units - use threshold
-        result.push(progress < 0.5 ? fromStop : toStop);
+        result.push(transition.value < 0.5 ? fromStop : toStop);
       }
     } else {
       // Only one exists - use it

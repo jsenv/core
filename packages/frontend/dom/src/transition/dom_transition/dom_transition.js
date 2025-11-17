@@ -334,15 +334,14 @@ export const createBackgroundTransition = (element, to, options = {}) => {
       from: 0,
       to: 1,
       getValue: (transition) => {
-        const progress = transition.value;
         const intermediateBackground = { ...fromBackground };
         intermediateBackground.image = applyGradientToColor(
           fromBackground.image,
           toBackground.color,
-          progress,
+          transition,
         );
         // Remove the original gradient since we're transitioning to a solid color
-        if (progress === 1) {
+        if (transition.value === 1) {
           delete intermediateBackground.image;
         }
         return normalizeStyle(intermediateBackground, "background", "css");
@@ -360,12 +359,11 @@ export const createBackgroundTransition = (element, to, options = {}) => {
       from: 0,
       to: 1,
       getValue: (transition) => {
-        const progress = transition.value;
         const intermediateBackground = { ...toBackground };
         intermediateBackground.image = applyColorToGradient(
           fromBackground.color,
           toBackground.image,
-          progress,
+          transition,
         );
         return normalizeStyle(intermediateBackground, "background", "css");
       },
@@ -386,12 +384,11 @@ export const createBackgroundTransition = (element, to, options = {}) => {
       from: 0,
       to: 1,
       getValue: (transition) => {
-        const progress = transition.value;
         const intermediateBackground = { ...toBackground };
         intermediateBackground.image = applyGradientToGradient(
           fromBackground.image,
           toBackground.image,
-          progress,
+          transition,
         );
 
         // Also interpolate background color if both have it
