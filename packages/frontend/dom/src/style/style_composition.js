@@ -1,11 +1,12 @@
 import {
-  normalizeStyle,
-  normalizeStyles,
   parseCSSTransform,
-  parseCSSWillChange,
   stringifyCSSTransform,
+} from "./parsing/css_transform.js";
+import {
+  parseCSSWillChange,
   stringifyCSSWillChange,
-} from "./style_parsing.js";
+} from "./parsing/css_will_change.js";
+import { normalizeStyle, normalizeStyles } from "./parsing/style_parsing.js";
 
 // Merge two style objects, handling special cases like transform
 export const mergeTwoStyles = (stylesA, stylesB, context = "js") => {
@@ -79,21 +80,27 @@ export const mergeOneStyle = (
     // Case 1: Both are objects - merge directly
     if (existingIsObject && newIsObject) {
       const merged = { ...existingValue, ...newValue };
-      return context === "css" ? stringifyCSSTransform(merged) : merged;
+      return context === "css"
+        ? stringifyCSSTransform(merged, normalizeStyle)
+        : merged;
     }
 
     // Case 2: New is object, existing is string - parse existing and merge
     if (newIsObject && existingIsString) {
-      const parsedExisting = parseCSSTransform(existingValue);
+      const parsedExisting = parseCSSTransform(existingValue, normalizeStyle);
       const merged = { ...parsedExisting, ...newValue };
-      return context === "css" ? stringifyCSSTransform(merged) : merged;
+      return context === "css"
+        ? stringifyCSSTransform(merged, normalizeStyle)
+        : merged;
     }
 
     // Case 3: New is string, existing is object - parse new and merge
     if (newIsString && existingIsObject) {
       const parsedNew = parseCSSTransform(newValue);
       const merged = { ...existingValue, ...parsedNew };
-      return context === "css" ? stringifyCSSTransform(merged) : merged;
+      return context === "css"
+        ? stringifyCSSTransform(merged, normalizeStyle)
+        : merged;
     }
 
     // Case 4: Both are strings - parse both and merge
@@ -101,12 +108,16 @@ export const mergeOneStyle = (
       const parsedExisting = parseCSSTransform(existingValue);
       const parsedNew = parseCSSTransform(newValue);
       const merged = { ...parsedExisting, ...parsedNew };
-      return context === "css" ? stringifyCSSTransform(merged) : merged;
+      return context === "css"
+        ? stringifyCSSTransform(merged, normalizeStyle)
+        : merged;
     }
 
     // Case 5: New is object, no existing or existing is none/null
     if (newIsObject) {
-      return context === "css" ? stringifyCSSTransform(newValue) : newValue;
+      return context === "css"
+        ? stringifyCSSTransform(newValue, normalizeStyle)
+        : newValue;
     }
 
     // Case 6: New is string, no existing or existing is none/null
@@ -114,7 +125,7 @@ export const mergeOneStyle = (
       if (context === "css") {
         return newValue; // Already a string
       }
-      return parseCSSTransform(newValue); // Convert to object
+      return parseCSSTransform(newValue, normalizeStyle); // Convert to object
     }
     return newValue;
   }
