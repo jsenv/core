@@ -56,7 +56,7 @@ export const stringifyCSSBackground = (backgroundObj, normalize) => {
 };
 
 // Parse background CSS string into object
-export const parseCSSBackground = (backgroundString, normalize) => {
+export const parseCSSBackground = (backgroundString, normalize, element) => {
   if (!backgroundString || backgroundString === "none") {
     return {};
   }
@@ -78,7 +78,7 @@ export const parseCSSBackground = (backgroundString, normalize) => {
 
   // Handle image functions (gradients, url(), etc.)
   if (isImageFunction(backgroundString)) {
-    const parsedImage = parseCSSImage(backgroundString);
+    const parsedImage = parseCSSImage(backgroundString, element);
     return { image: parsedImage };
   }
 
@@ -86,15 +86,15 @@ export const parseCSSBackground = (backgroundString, normalize) => {
   const layers = splitCSSLayers(backgroundString);
 
   if (layers.length === 1) {
-    return parseBackgroundLayer(layers[0], normalize);
+    return parseBackgroundLayer(layers[0], normalize, element);
   }
 
   // Multiple background layers - return array
-  return layers.map((layer) => parseBackgroundLayer(layer, normalize));
+  return layers.map((layer) => parseBackgroundLayer(layer, normalize, element));
 };
 
 // Parse a single background layer
-const parseBackgroundLayer = (layerString, normalize) => {
+const parseBackgroundLayer = (layerString, normalize, element) => {
   const backgroundObj = {};
   const tokens = tokenizeCSS(layerString, {
     separators: [" ", "/"],
@@ -107,7 +107,7 @@ const parseBackgroundLayer = (layerString, normalize) => {
 
     // Check for image functions (gradients, url)
     if (isImageFunction(token)) {
-      const parsedImage = parseCSSImage(token);
+      const parsedImage = parseCSSImage(token, element);
       backgroundObj.image = parsedImage;
     }
     // Check for colors

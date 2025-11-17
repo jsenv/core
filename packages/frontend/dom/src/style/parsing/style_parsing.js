@@ -245,7 +245,7 @@ export const normalizeStyle = (
     if (context === "js") {
       if (typeof value === "string") {
         // For js context, prefer objects
-        return parseCSSBackground(value, normalizeStyle);
+        return parseCSSBackground(value, normalizeStyle, element);
       }
       // If code does background: { color: "red", image: "url(...)" }
       // we want to normalize each part
@@ -307,7 +307,7 @@ export const normalizeStyle = (
     if (context === "js") {
       if (typeof value === "string") {
         // For js context, prefer structured objects
-        return parseCSSImage(value);
+        return parseCSSImage(value, element);
       }
       return value;
     }

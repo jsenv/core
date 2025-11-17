@@ -298,7 +298,8 @@
           </label>
           <button
             id="resumeTransitions"
-            style="margin-top: 10px; padding: 8px 15px; display: none"
+            style="margin-top: 10px; padding: 8px 15px"
+            disabled
           >
             Resume Paused Transitions
           </button>
@@ -537,7 +538,7 @@
         resumeButton.addEventListener("click", () => {
           if (typeof window.resumeTransitions === "function") {
             window.resumeTransitions();
-            resumeButton.style.display = "none";
+            resumeButton.disabled = true;
           }
         });
 
@@ -618,10 +619,10 @@
               styleSynchronizer: "inline_style",
               pauseBreakpoints,
               onPause: () => {
-                resumeButton.style.display = "inline-block";
+                resumeButton.disabled = false;
               },
               onFinish: () => {
-                resumeButton.style.display = "none";
+                resumeButton.disabled = true;
               },
             },
           );

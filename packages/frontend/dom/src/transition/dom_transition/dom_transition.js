@@ -323,7 +323,6 @@ export const createBackgroundTransition = (element, to, options = {}) => {
       },
     });
   }
-
   // Case 2: Gradient to Color transitions
   if (fromHasGradient && !toHasImage && toBackground.color) {
     return createCSSPropertyTransition({
@@ -348,7 +347,6 @@ export const createBackgroundTransition = (element, to, options = {}) => {
       },
     });
   }
-
   // Case 3: Color to Gradient transitions
   if (!fromHasImage && fromBackground.color && toHasGradient) {
     return createCSSPropertyTransition({
@@ -369,7 +367,6 @@ export const createBackgroundTransition = (element, to, options = {}) => {
       },
     });
   }
-
   // Same gradient type transitions
   if (
     fromHasGradient &&
@@ -412,7 +409,6 @@ export const createBackgroundTransition = (element, to, options = {}) => {
       },
     });
   }
-
   // Identical image transitions
   if (
     fromHasImage &&
@@ -447,6 +443,9 @@ export const createBackgroundTransition = (element, to, options = {}) => {
     });
   }
 
+  console.warn(
+    `Unsupported background transition between ${fromBackground.image.type} and ${toBackground.image.type}`,
+  );
   // All other cases: instant change
   return createInstantCSSPropertyTransition({
     ...options,

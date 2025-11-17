@@ -1,3 +1,4 @@
+import { parseCSSColor, stringifyCSSColor } from "./css_color.js";
 import { tokenizeCSS } from "./css_tokenizer.js";
 
 // Convert image object to CSS string
@@ -39,7 +40,7 @@ export const stringifyCSSImage = (imageObj) => {
 };
 
 // Parse CSS image string into structured object
-export const parseCSSImage = (imageString) => {
+export const parseCSSImage = (imageString, element) => {
   if (!imageString || imageString === "none") {
     return undefined;
   }
@@ -70,11 +71,11 @@ export const parseCSSImage = (imageString) => {
 
     switch (gradientType) {
       case "linear-gradient":
-        return parseLinearGradient(content, type, trimmed);
+        return parseLinearGradient(content, type, trimmed, element);
       case "radial-gradient":
-        return parseRadialGradient(content, type, trimmed);
+        return parseRadialGradient(content, type, trimmed, element);
       case "conic-gradient":
-        return parseConicGradient(content, type, trimmed);
+        return parseConicGradient(content, type, trimmed, element);
     }
   }
 
@@ -97,8 +98,10 @@ export const parseCSSImage = (imageString) => {
 };
 
 // Helper functions for gradient parsing
-const parseLinearGradient = (content, type, original) => {
-  const { direction, colors } = parseGradientContent(content);
+const parseLinearGradient = (content, type, original, element) => {
+  const { direction, colors } = parseGradientContent(content, element, {
+    isRadial: false,
+  });
 
   return {
     type,
@@ -108,8 +111,10 @@ const parseLinearGradient = (content, type, original) => {
   };
 };
 
-const parseRadialGradient = (content, type, original) => {
-  const { shape, colors } = parseGradientContent(content, true);
+const parseRadialGradient = (content, type, original, element) => {
+  const { shape, colors } = parseGradientContent(content, element, {
+    isRadial: true,
+  });
 
   return {
     type,
@@ -119,8 +124,10 @@ const parseRadialGradient = (content, type, original) => {
   };
 };
 
-const parseConicGradient = (content, type, original) => {
-  const { direction, colors } = parseGradientContent(content);
+const parseConicGradient = (content, type, original, element) => {
+  const { direction, colors } = parseGradientContent(content, element, {
+    isRadial: true,
+  });
 
   return {
     type,
@@ -131,7 +138,7 @@ const parseConicGradient = (content, type, original) => {
 };
 
 // Parse gradient content (colors and direction/shape)
-const parseGradientContent = (content, isRadial = false) => {
+const parseGradientContent = (content, element, { isRadial }) => {
   const parts = tokenizeCSS(content, { separators: [","] });
   const colors = [];
   let direction = null;
@@ -156,7 +163,7 @@ const parseGradientContent = (content, isRadial = false) => {
     }
 
     // Parse as color stop
-    const colorStop = parseColorStop(trimmedPart);
+    const colorStop = parseColorStop(trimmedPart, element);
     if (colorStop) {
       colors.push(colorStop);
     }
@@ -166,7 +173,7 @@ const parseGradientContent = (content, isRadial = false) => {
 };
 
 // Parse individual color stop
-const parseColorStop = (stopString) => {
+const parseColorStop = (stopString, element) => {
   const trimmed = stopString.trim();
 
   // Match color with optional position
@@ -200,7 +207,7 @@ const parseColorStop = (stopString) => {
         : undefined;
 
     return {
-      color: color.trim(),
+      color: parseCSSColor(color.trim(), element),
       stops,
     };
   }
@@ -278,7 +285,12 @@ const stringifyColorStop = (colorStop) => {
     return colorStop;
   }
 
-  const parts = [colorStop.color];
+  // Convert color back to CSS string (handles both strings and structured colors)
+  const colorString =
+    typeof colorStop.color === "string"
+      ? colorStop.color
+      : stringifyCSSColor(colorStop.color);
+  const parts = [colorString];
 
   if (colorStop.stops) {
     // Handle structured stop objects

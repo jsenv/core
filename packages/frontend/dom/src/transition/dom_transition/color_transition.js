@@ -53,27 +53,24 @@ export const applyGradientToColor = (
   targetColor,
   transition,
 ) => {
-  // Clone the gradient image object
-  const interpolatedGradient = { ...gradientImage };
-
   // Interpolate colors if they exist
-  if (gradientImage.colors && Array.isArray(gradientImage.colors)) {
-    interpolatedGradient.colors = gradientImage.colors.map((colorStop) => {
-      if (colorStop.color) {
-        const stopColor = colorStop.color;
-        if (stopColor) {
-          // Use applyColorToColor for consistent color interpolation
-          const colorPair = [stopColor, targetColor];
-          return {
-            ...colorStop,
-            color: applyColorToColor(colorPair, transition),
-          };
-        }
-      }
-      return colorStop;
-    });
+  if (!gradientImage.colors || !Array.isArray(gradientImage.colors)) {
+    return gradientImage;
   }
-
+  const interpolatedColors = gradientImage.colors.map((colorStop) => {
+    const colorStopColor = colorStop.color;
+    if (!colorStopColor) {
+      return colorStop;
+    }
+    const colorPair = [colorStopColor, targetColor];
+    const interpolatedColor = applyColorToColor(colorPair, transition);
+    const inerpolatedColorStop = {
+      ...colorStop,
+      color: interpolatedColor,
+    };
+    return inerpolatedColorStop;
+  });
+  const interpolatedGradient = { ...gradientImage, colors: interpolatedColors };
   return interpolatedGradient;
 };
 
