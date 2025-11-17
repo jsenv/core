@@ -676,10 +676,16 @@ export const createUITransitionController = (
 
     const backgroundColorTransition = createBackgroundColorTransition(
       container,
-      {},
+      targetSlotBackgroundColor,
+      {
+        duration,
+        styleSynchronizer: "inline_style",
+        onUpdate: () => {},
+        onFinish: () => {},
+      },
     );
 
-    return [widthTransition, heightTransition];
+    return [widthTransition, heightTransition, backgroundColorTransition];
   };
   const fadeInTargetSlot = () => {
     return createOpacityTransition(targetSlot, 1, {
