@@ -400,3 +400,10 @@ const namedColors = {
   seashell: [255, 245, 238],
   snow: [255, 250, 250],
 };
+
+// Export named colors and create a Set of color keywords for efficient lookup
+export const cssColorKeywordSet = new Set([
+  ...Object.keys(namedColors),
+  "transparent",
+  "currentcolor",
+]);
