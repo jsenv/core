@@ -198,11 +198,21 @@ const createConfiguration = (domNodes, { contentId, contentPhase } = {}) => {
   if (!domNodes) {
     return UNSET;
   }
+  const isEmpty = domNodes.length === 0;
   contentId = contentId || getElementSignature(domNodes[0]);
+  if (!contentPhase && isEmpty) {
+    // Imagine code rendering null while switching to a new content
+    // or even while staying on the same content.
+    // In the UI we want to consider this as an "empty" phase.
+    // meaning the ui will keep the same size until something else happens
+    // This prevent layout shifts of code not properly handling
+    // intermediate states.
+    contentPhase = "empty";
+  }
   if (contentPhase) {
     return {
       domNodes,
-      isEmpty: domNodes.length === 0,
+      isEmpty,
 
       type: "content_phase",
       contentId,
@@ -214,7 +224,7 @@ const createConfiguration = (domNodes, { contentId, contentPhase } = {}) => {
   }
   return {
     domNodes,
-    isEmpty: domNodes.length === 0,
+    isEmpty,
 
     type: "content",
     contentId,
