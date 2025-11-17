@@ -33,6 +33,7 @@
         padding: 0;
         font-family: Arial, sans-serif;
         background: #1a1a2e;
+        /* Simple dot pattern using box-shadow instead of gradients */
         background-image:
           radial-gradient(
             circle at 25% 25%,
@@ -103,7 +104,7 @@
         color: white;
         font-weight: bold;
         font-size: 14px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: #667eea;
         border-radius: 8px;
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
       }
@@ -117,7 +118,7 @@
         color: white;
         font-weight: bold;
         font-size: 16px;
-        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        background: #a8edea;
         border-radius: 10px;
         box-shadow: 0 10px 36px rgba(0, 0, 0, 0.25);
       }
@@ -142,7 +143,7 @@
         color: white;
         font-weight: bold;
         font-size: 18px;
-        background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+        background: #4facfe;
         border-radius: 12px;
         box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
       }
@@ -155,91 +156,9 @@
         color: white;
         font-weight: bold;
         font-size: 18px;
-        background: linear-gradient(
-          180deg,
-          #ff9a9e 0%,
-          #fecfef 50%,
-          #fecfef 100%
-        );
+        background: #ff9a9e;
         border-radius: 12px;
         box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
-      }
-
-      /* Add grid pattern for fullscreen content */
-      .content-fullscreen::before {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-image:
-          linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
-        background-size: 50px 50px;
-        pointer-events: none;
-        content: "";
-      }
-
-      /* Add pattern for medium content */
-      .content-medium::before {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-image:
-          radial-gradient(
-            circle at 25% 25%,
-            rgba(255, 255, 255, 0.1) 2px,
-            transparent 2px
-          ),
-          radial-gradient(
-            circle at 75% 75%,
-            rgba(255, 255, 255, 0.1) 2px,
-            transparent 2px
-          );
-        background-position:
-          0 0,
-          20px 20px;
-        background-size: 40px 40px;
-        pointer-events: none;
-        content: "";
-      }
-
-      /* Add scrollable pattern for wide content */
-      .content-wide::before {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-image: repeating-linear-gradient(
-          90deg,
-          rgba(255, 255, 255, 0.1),
-          rgba(255, 255, 255, 0.1) 1px,
-          transparent 1px,
-          transparent 30px
-        );
-        pointer-events: none;
-        content: "";
-      }
-
-      /* Add pattern for tall content */
-      .content-tall::before {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-image: repeating-linear-gradient(
-          0deg,
-          rgba(255, 255, 255, 0.1),
-          rgba(255, 255, 255, 0.1) 1px,
-          transparent 1px,
-          transparent 40px
-        );
-        pointer-events: none;
-        content: "";
       }
 
       /* Debug info overlay */

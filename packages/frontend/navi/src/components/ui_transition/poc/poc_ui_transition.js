@@ -123,9 +123,10 @@ import.meta.css = /* css */ `
   .ui_transition_container {
     /* in case CSS sets border on this element his size must include borders */
     box-sizing: content-box;
-    transition-property: background-color, border-radius;
-    transition-duration: var(--x-transition-duration);
-    transition-timing-function: ease;
+    /* transition-property: background-color, border-radius; */
+    /* transition-property: border-radius; */
+    /* transition-duration: var(--x-transition-duration); */
+    /* transition-timing-function: ease; */
   }
 
   .ui_transition[data-transitioning] .ui_transition_container {
@@ -358,6 +359,7 @@ export const createUITransitionController = (
   let targetSlotHeight;
   let outgoingSlotWidth;
   let outgoingSlotHeight;
+  let targetSlotBackground;
   let targetSlotBackgroundColor;
 
   const getSlotDimensions = (slotElement) => {
@@ -491,11 +493,15 @@ export const createUITransitionController = (
   const applySlotConfigurationEffects = (slot) => {
     if (slot === targetSlot) {
       if (targetSlotConfiguration.singleElementNode) {
+        targetSlotBackground = getComputedStyle(
+          targetSlotConfiguration.singleElementNode,
+        ).backgroundImage;
         targetSlotBackgroundColor = getBackgroundColor(
           targetSlotConfiguration.singleElementNode,
         );
       } else {
         // empty, text, multiple elements
+        targetSlotBackground = undefined;
         targetSlotBackgroundColor = undefined;
       }
       measureSlot(slot);
@@ -514,6 +520,7 @@ export const createUITransitionController = (
       } else {
         setSlotDimensions(slot, targetSlotWidth, targetSlotHeight);
       }
+      return;
     }
 
     if (previousOutgoingSlotConfiguration.isEmpty) {
@@ -601,7 +608,7 @@ export const createUITransitionController = (
   let transitionType = "none";
   const transitionController = createGroupTransitionController({
     // debugBreakpoints: [0.25],
-    // pauseBreakpoints: [0.5],
+    // pauseBreakpoints: [0.1],
     lifecycle: {
       setup: () => {
         updateSlotAttributes();
@@ -673,6 +680,7 @@ export const createUITransitionController = (
       setSlotDimensions(targetSlot, undefined, undefined);
     };
 
+    const morhTransitions = [];
     const widthTransition = createWidthTransition(container, toWidth, {
       from: fromWidth,
       duration,
@@ -697,19 +705,24 @@ export const createUITransitionController = (
         onHeightTransitionFinished();
       },
     });
-
-    const backgroundColorTransition = createBackgroundColorTransition(
-      container,
-      targetSlotBackgroundColor,
-      {
-        duration,
-        styleSynchronizer: "inline_style",
-        onUpdate: () => {},
-        onFinish: () => {},
-      },
-    );
-
-    return [widthTransition, heightTransition, backgroundColorTransition];
+    morhTransitions.push(widthTransition, heightTransition);
+    if (targetSlotBackground) {
+      container.style.background = targetSlotBackground;
+    } else {
+      container.style.background = "";
+      const backgroundColorTransition = createBackgroundColorTransition(
+        container,
+        targetSlotBackgroundColor,
+        {
+          duration,
+          styleSynchronizer: "inline_style",
+          onUpdate: () => {},
+          onFinish: () => {},
+        },
+      );
+      morhTransitions.push(backgroundColorTransition);
+    }
+    return morhTransitions;
   };
   const fadeInTargetSlot = () => {
     return createOpacityTransition(targetSlot, 1, {
