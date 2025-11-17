@@ -199,8 +199,34 @@ const isImageFunction = (value) => {
 };
 
 const isSimpleColor = (value) => {
-  // Basic color detection - hex, rgb, hsl, named colors
-  return /^(?:#[0-9a-f]{3,8}|rgb|hsl|[a-z]+)/.test(value.toLowerCase());
+  if (!value || typeof value !== "string") {
+    return false;
+  }
+
+  const trimmed = value.trim();
+
+  // Hex colors: #rgb, #rrggbb, #rrggbbaa
+  if (/^#[0-9a-f]{3,8}$/i.test(trimmed)) {
+    return true;
+  }
+
+  // RGB/RGBA functions
+  if (/^rgba?\s*\([^)]*\)$/i.test(trimmed)) {
+    return true;
+  }
+
+  // HSL/HSLA functions
+  if (/^hsla?\s*\([^)]*\)$/i.test(trimmed)) {
+    return true;
+  }
+
+  // CSS color keywords (basic check for word boundaries)
+  if (/^[a-z]+$/i.test(trimmed)) {
+    // Additional validation could be added here for known CSS color names
+    return true;
+  }
+
+  return false;
 };
 
 const isRepeatValue = (value) => {
