@@ -1,4 +1,4 @@
-# [test 2](../../css_background.test.mjs#L27)
+# [repeating gradient with multiple color stops and positions](../../css_background.test.mjs#L27)
 
 ```js
 return run(

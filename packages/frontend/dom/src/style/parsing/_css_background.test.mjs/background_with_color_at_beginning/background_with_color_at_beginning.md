@@ -1,19 +1,19 @@
-# [test 4](../../css_background.test.mjs#L37)
+# [background with color at beginning](../../css_background.test.mjs#L63)
 
 ```js
-return run("url(image.jpg) center top / 100px 200px no-repeat");
+return run("red url(image.jpg) no-repeat center");
 ```
 
 ```js
 {
+  "color": "red",
   "image": {
     "type": "url",
     "value": "image.jpg",
     "original": "url(image.jpg)"
   },
-  "position": "center top",
-  "size": "100px 200px",
-  "repeat": "no-repeat"
+  "repeat": "no-repeat",
+  "position": "center"
 }
 ```
 

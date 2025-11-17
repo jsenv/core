@@ -1,4 +1,4 @@
-# [test 3](../../css_background.test.mjs#L33)
+# [simple gradient with named colors](../../css_background.test.mjs#L33)
 
 ```js
 return run("linear-gradient(45deg, red, blue)");
