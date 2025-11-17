@@ -1,9 +1,4 @@
-import {
-  areSameRGBA,
-  stringifyCSSColor,
-  updateRGBA,
-} from "../color/color_parsing.js";
-import { resolveCSSColor } from "../color/resolve_css_color.js";
+import { areSameRGBA, updateRGBA } from "../color/color_parsing.js";
 import { normalizeStyle } from "../style/parsing/style_parsing.js";
 import {
   createStyleController,
@@ -219,78 +214,91 @@ export const createTranslateXTransition = (element, to, options = {}) => {
     minDiff: 10,
   });
 };
-export const createBackgroundColorTransition = (element, to, options = {}) => {
-  const fromBackgroundColor = options.from || getBackgroundColor(element);
-  const toBackgroundColor = resolveCSSColor(to, element);
-  const fromUnset = !fromBackgroundColor;
-  const toUnset = !toBackgroundColor;
 
+// Helper function to prepare color transition pairs, handling edge cases
+const prepareColorTransitionPair = (fromColor, toColor) => {
+  const fromUnset = !fromColor;
+  const toUnset = !toColor;
+
+  // Both unset - no transition needed
   if (fromUnset && toUnset) {
-    return createNoopCSSPropertyTransition(element);
+    return null;
   }
-
-  const innerCreateBackgroundTransition = (fromColor, toColor) => {
-    if (areSameRGBA(fromColor, toColor)) {
-      return createNoopCSSPropertyTransition(element);
-    }
-
-    const [rFrom, gFrom, bFrom, aFrom] = fromColor;
-    const [rTo, gTo, bTo, aTo] = toColor;
-
-    return createCSSPropertyTransition({
-      ...options,
-      constructor: createBackgroundColorTransition,
-      element,
-      styleProperty: "backgroundColor",
-      getFrom: () => 0,
-      from: 0,
-      to: 1,
-      getValue: (transition) => {
-        const r = applyTransitionProgress(transition, rFrom, rTo);
-        const g = applyTransitionProgress(transition, gFrom, gTo);
-        const b = applyTransitionProgress(transition, bFrom, bTo);
-        const a = applyTransitionProgress(transition, aFrom, aTo);
-        return stringifyCSSColor([r, g, b, a]);
-      },
-    });
-  };
+  // Handle unset cases by using transparent versions
   if (fromUnset) {
-    const toFullyTransparent = updateRGBA(toBackgroundColor, { a: 0 });
-    return innerCreateBackgroundTransition(
-      toFullyTransparent,
-      toBackgroundColor,
-    );
+    const toFullyTransparent = updateRGBA(toColor, { a: 0 });
+    return [toFullyTransparent, toColor];
   }
   if (toUnset) {
-    const fromFullyTransparent = updateRGBA(fromBackgroundColor, { a: 0 });
-    return innerCreateBackgroundTransition(
-      fromBackgroundColor,
-      fromFullyTransparent,
-    );
+    const fromFullyTransparent = updateRGBA(fromColor, { a: 0 });
+    return [fromColor, fromFullyTransparent];
   }
-  const fromFullyTransparent = fromBackgroundColor[3] === 0;
-  const toFullyTransparent = toBackgroundColor[3] === 0;
+  // Handle fully transparent cases
+  const fromFullyTransparent = fromColor[3] === 0;
+  const toFullyTransparent = toColor[3] === 0;
   if (fromFullyTransparent && toFullyTransparent) {
-    return createNoopCSSPropertyTransition(element);
+    return [fromColor, toColor];
   }
   if (fromFullyTransparent) {
-    const toFullTransparent = updateRGBA(toBackgroundColor, { a: 0 });
-    return innerCreateBackgroundTransition(
-      toFullTransparent,
-      toBackgroundColor,
-    );
+    const toFullTransparent = updateRGBA(toColor, { a: 0 });
+    return [toFullTransparent, toColor];
   }
   if (toFullyTransparent) {
-    const fromFullyTransparent = updateRGBA(fromBackgroundColor, { a: 0 });
-    return innerCreateBackgroundTransition(
-      fromBackgroundColor,
-      fromFullyTransparent,
-    );
+    const fromFullyTransparent = updateRGBA(fromColor, { a: 0 });
+    return [fromColor, fromFullyTransparent];
   }
-  return innerCreateBackgroundTransition(
+  return [fromColor, toColor];
+};
+const applyColorTransition = (rgbaPair, transition) => {
+  const [fromColor, toColor] = rgbaPair;
+  const [rFrom, gFrom, bFrom, aFrom] = fromColor;
+  const [rTo, gTo, bTo, aTo] = toColor;
+
+  const r = applyTransitionProgress(transition, rFrom, rTo);
+  const g = applyTransitionProgress(transition, gFrom, gTo);
+  const b = applyTransitionProgress(transition, bFrom, bTo);
+  const a = applyTransitionProgress(transition, aFrom, aTo);
+  return [r, g, b, a];
+};
+
+export const createBackgroundColorTransition = (element, to, options = {}) => {
+  const fromBackgroundColor = options.from || getBackgroundColor(element);
+  const toBackgroundColor = normalizeStyle(
+    to,
+    "backgroundColor",
+    "js",
+    element,
+  );
+  const rgbaPair = prepareColorTransitionPair(
     fromBackgroundColor,
     toBackgroundColor,
+    element,
   );
+  if (!rgbaPair) {
+    return createNoopCSSPropertyTransition({ element, ...options });
+  }
+  const [fromRgba, toRgba] = rgbaPair;
+  if (areSameRGBA(fromRgba, toRgba)) {
+    return createNoopCSSPropertyTransition({ element, ...options });
+  }
+  return createCSSPropertyTransition({
+    ...options,
+    constructor: createBackgroundColorTransition,
+    element,
+    styleProperty: "backgroundColor",
+    getFrom: () => 0,
+    from: 0,
+    to: 1,
+    getValue: (transition) => {
+      const rgbaWithTransition = applyColorTransition(rgbaPair, transition);
+      const backgroundColorWithTransition = normalizeStyle(
+        rgbaWithTransition,
+        "backgroundColor",
+        "css",
+      );
+      return backgroundColorWithTransition;
+    },
+  });
 };
 export const createBackgroundTransition = (element, to, options = {}) => {
   const fromBackground = options.from || getBackground(element);
@@ -328,6 +336,12 @@ export const createBackgroundTransition = (element, to, options = {}) => {
   }
 
   // Use unified transition logic for all compatible backgrounds
+  const fromBackgroundColor = fromBackground.color;
+  const toBackgroundColor = toBackground.color;
+  const backgroundColorRgbaPair = prepareColorTransitionPair(
+    fromBackgroundColor,
+    toBackgroundColor,
+  );
   return createCSSPropertyTransition({
     ...options,
     element,
@@ -336,19 +350,13 @@ export const createBackgroundTransition = (element, to, options = {}) => {
     from: 0,
     to: 1,
     getValue: (transition) => {
-      // Start with the destination background as the base
       const intermediateBackground = { ...toBackground };
-      // Override with interpolated properties from the transition
-      const fromColor = fromBackground.color;
-      const toColor = toBackground.color;
-      if (fromColor && toColor) {
-        const [rFrom, gFrom, bFrom, aFrom] = fromColor;
-        const [rTo, gTo, bTo, aTo] = toColor;
-        const r = applyTransitionProgress(transition, rFrom, rTo);
-        const g = applyTransitionProgress(transition, gFrom, gTo);
-        const b = applyTransitionProgress(transition, bFrom, bTo);
-        const a = applyTransitionProgress(transition, aFrom, aTo);
-        intermediateBackground.color = [r, g, b, a];
+      if (backgroundColorRgbaPair) {
+        const rgbaWithTransition = applyColorTransition(
+          backgroundColorRgbaPair,
+          transition,
+        );
+        intermediateBackground.color = rgbaWithTransition;
       }
       return normalizeStyle(intermediateBackground, "background", "css");
     },
