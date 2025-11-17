@@ -107,93 +107,95 @@ const parseBackgroundLayer = (layerString, { parseStyle, element }) => {
   });
 
   let i = 0;
+  let expectingSize = false; // Track if we're after a "/" and expecting size
+
   while (i < tokens.length) {
     const token = tokens[i];
 
-    // Check for image functions (gradients, url)
+    // Skip "/" separator
+    if (token === "/") {
+      expectingSize = true;
+      i++;
+      continue;
+    }
+
+    // If we're expecting size after "/", parse size values
+    if (expectingSize) {
+      if (isNumericValue(token) || isSizeKeyword(token)) {
+        // Collect all size tokens
+        const sizeTokens = [];
+        while (
+          i < tokens.length &&
+          tokens[i] !== "/" &&
+          (isNumericValue(tokens[i]) || isSizeKeyword(tokens[i]))
+        ) {
+          sizeTokens.push(tokens[i]);
+          i++;
+        }
+        backgroundObj.size = sizeTokens.join(" ");
+        expectingSize = false;
+        continue; // Don't increment i since the while loop already did
+      } else {
+        expectingSize = false; // Invalid size, continue with normal parsing
+      }
+    }
+
+    // Check for image functions (gradients, url) - can appear early
     if (isImageFunction(token)) {
       const parsedImage = parseCSSImage(token, element);
       backgroundObj.image = parsedImage;
     }
-    // Check for colors
-    else if (isSimpleColor(token)) {
-      const normalizedColor = parseStyle(token, "backgroundColor", element);
-      backgroundObj.color = normalizedColor;
+    // Check for position values (appear before size, after image)
+    else if (
+      isPositionValue(token) ||
+      (isNumericValue(token) && !expectingSize)
+    ) {
+      // Collect position tokens until we hit a "/" or non-position value
+      const positionTokens = [];
+      while (
+        i < tokens.length &&
+        tokens[i] !== "/" &&
+        (isPositionValue(tokens[i]) || isNumericValue(tokens[i]))
+      ) {
+        positionTokens.push(tokens[i]);
+        i++;
+      }
+      if (positionTokens.length > 0) {
+        backgroundObj.position = positionTokens.join(" ");
+      }
+      continue; // Don't increment i since the while loop already did
     }
-    // Check for repeat values
+    // Check for repeat values (after position/size)
     else if (isRepeatValue(token)) {
       backgroundObj.repeat = token;
     }
-    // Check for attachment values
+    // Check for attachment values (after repeat)
     else if (isAttachmentValue(token)) {
       backgroundObj.attachment = token;
     }
-    // Check for position/size values
-    else if (isPositionValue(token) || isNumericValue(token)) {
-      // Handle position and size parsing
-      const positionSize = parsePositionAndSize(tokens, i);
-      if (positionSize.position !== undefined) {
-        backgroundObj.position = positionSize.position;
-      }
-      if (positionSize.size !== undefined) {
-        backgroundObj.size = positionSize.size;
-      }
-      i = positionSize.nextIndex - 1; // -1 because loop will increment
-    }
-    // Check for box values (clip/origin)
+    // Check for box values (origin/clip - near the end)
     else if (isBoxValue(token)) {
-      // First box value is clip, second is origin
-      if (backgroundObj.clip === undefined) {
-        backgroundObj.clip = token;
-      } else {
+      // In CSS, origin comes before clip, but they can appear in either order
+      if (backgroundObj.origin === undefined) {
         backgroundObj.origin = token;
+      } else if (backgroundObj.clip === undefined) {
+        backgroundObj.clip = token;
       }
+      // If both are set, this might be a duplicate or error, but we'll take the last one
+      else {
+        backgroundObj.clip = token;
+      }
+    }
+    // Check for colors (typically last, but can appear anywhere)
+    else if (isSimpleColor(token)) {
+      const normalizedColor = parseStyle(token, "backgroundColor", element);
+      backgroundObj.color = normalizedColor;
     }
 
     i++;
   }
 
   return backgroundObj;
-};
-
-// Parse position and size values (position / size format)
-const parsePositionAndSize = (tokens, startIndex) => {
-  const result = { nextIndex: startIndex + 1 };
-  const positionTokens = [];
-  let i = startIndex;
-
-  // Collect position tokens until we hit a "/" or non-position value
-  while (i < tokens.length && tokens[i] !== "/") {
-    if (isPositionValue(tokens[i]) || isNumericValue(tokens[i])) {
-      positionTokens.push(tokens[i]);
-      i++;
-    } else {
-      break;
-    }
-  }
-
-  if (positionTokens.length > 0) {
-    result.position = positionTokens.join(" ");
-  }
-
-  // Check for size after "/"
-  if (i < tokens.length && tokens[i] === "/") {
-    i++; // Skip "/"
-    const sizeTokens = [];
-    while (
-      i < tokens.length &&
-      (isNumericValue(tokens[i]) || isSizeKeyword(tokens[i]))
-    ) {
-      sizeTokens.push(tokens[i]);
-      i++;
-    }
-    if (sizeTokens.length > 0) {
-      result.size = sizeTokens.join(" ");
-    }
-  }
-
-  result.nextIndex = i;
-  return result;
 };
 
 // Helper functions to identify token types
