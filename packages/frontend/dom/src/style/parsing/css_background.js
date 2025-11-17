@@ -57,14 +57,13 @@ export const stringifyCSSBackground = (backgroundObj, normalize) => {
 
 // Parse background CSS string into object
 export const parseCSSBackground = (backgroundString, normalize) => {
-  if (
-    !backgroundString ||
-    backgroundString === "none" ||
-    backgroundString === "transparent"
-  ) {
-    return backgroundString === "transparent"
-      ? { color: "transparent" }
-      : undefined;
+  if (!backgroundString || backgroundString === "none") {
+    return {};
+  }
+  if (backgroundString === "transparent") {
+    return {
+      color: normalize("transparent", "backgroundColor", "js"),
+    };
   }
 
   // Handle simple cases first
