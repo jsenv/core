@@ -85,6 +85,7 @@ import {
   createHeightTransition,
   createOpacityTransition,
   createWidthTransition,
+  getBackgroundColor,
   getElementSignature,
   getScrollContainer,
   measureScrollbar,
@@ -469,10 +470,9 @@ export const createUITransitionController = (
       if (targetSlotConfiguration.isEmpty) {
         targetSlotBackgroundColor = undefined;
       } else {
-        const computedStyle = getComputedStyle(
+        targetSlotBackgroundColor = getBackgroundColor(
           targetSlotConfiguration.domNodes[0],
         );
-        targetSlotBackgroundColor = computedStyle.backgroundColor;
       }
       measureSlot(slot);
       setSlotDimensions(slot, targetSlotWidth, targetSlotHeight);

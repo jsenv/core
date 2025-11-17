@@ -9,7 +9,13 @@ import { prefersDarkColors } from "./color_scheme.js";
  * @returns {Array<number>|string|null} [r, g, b, a] values, CSS string, or null if parsing fails
  */
 export const resolveCSSColor = (color, element, context = "js") => {
-  if (!color || typeof color !== "string") {
+  if (!color) {
+    return null;
+  }
+  if (typeof color !== "string") {
+    if (context === "js") {
+      return color;
+    }
     return null;
   }
 
