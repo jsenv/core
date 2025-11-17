@@ -341,6 +341,10 @@ export const createBackgroundTransition = (element, to, options = {}) => {
           toBackground.color,
           progress,
         );
+        // Remove the original gradient since we're transitioning to a solid color
+        if (progress === 1) {
+          delete intermediateBackground.image;
+        }
         return normalizeStyle(intermediateBackground, "background", "css");
       },
     });
@@ -363,8 +367,6 @@ export const createBackgroundTransition = (element, to, options = {}) => {
           toBackground.image,
           progress,
         );
-        // Remove any background color to let the gradient be the only background
-        delete intermediateBackground.color;
         return normalizeStyle(intermediateBackground, "background", "css");
       },
     });
