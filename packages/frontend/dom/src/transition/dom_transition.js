@@ -199,8 +199,23 @@ export const createBackgroundColorTransition = (element, to, options = {}) => {
     : getBackgroundColor(element);
   const toBackgroundColor = resolveCSSColor(to, element);
 
-  const [rFrom, gFrom, bFrom, aFrom] = fromBackgroundColor;
-  const [rTo, gTo, bTo, aTo] = toBackgroundColor;
+  let [rFrom, gFrom, bFrom, aFrom] = fromBackgroundColor;
+  let [rTo, gTo, bTo, aTo] = toBackgroundColor;
+  const fromFullyTransparent = aFrom === 0;
+  const toFullyTransparent = aTo === 0;
+  if (fromFullyTransparent && toFullyTransparent) {
+  } else if (fromFullyTransparent) {
+    // use destination color and just change opacity
+    rFrom = rTo;
+    gFrom = gTo;
+    bFrom = bTo;
+  }
+  if (toFullyTransparent) {
+    // use source color and just change opacity
+    rTo = rFrom;
+    gTo = gFrom;
+    bTo = bFrom;
+  }
 
   return createCSSPropertyTransition({
     ...options,
