@@ -124,6 +124,7 @@ export { useResizeStatus } from "./src/size/hooks/use_resize_status.js";
 
 // transition
 export {
+  createBackgroundColorTransition,
   createHeightTransition,
   createOpacityTransition,
   createTranslateXTransition,

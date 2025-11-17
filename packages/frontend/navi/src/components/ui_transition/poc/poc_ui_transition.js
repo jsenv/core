@@ -80,6 +80,7 @@
  */
 
 import {
+  createBackgroundColorTransition,
   createGroupTransitionController,
   createHeightTransition,
   createOpacityTransition,
@@ -310,7 +311,6 @@ export const createUITransitionController = (
     return [clientWidth, clientHeight];
   };
 
-  const elementToResize = container;
   root.style.setProperty("--x-transition-duration", `${duration}ms`);
   outgoingSlot.setAttribute("inert", "");
   previousGroup.setAttribute("inert", "");
@@ -334,6 +334,7 @@ export const createUITransitionController = (
   let targetSlotHeight;
   let outgoingSlotWidth;
   let outgoingSlotHeight;
+  let targetSlotBackgroundColor;
 
   const getSlotDimensions = (slotElement) => {
     const firstChild = slotElement.firstElementChild;
@@ -465,6 +466,14 @@ export const createUITransitionController = (
 
   const applySlotConfigurationEffects = (slot) => {
     if (slot === targetSlot) {
+      if (targetSlotConfiguration.isEmpty) {
+        targetSlotBackgroundColor = undefined;
+      } else {
+        const computedStyle = getComputedStyle(
+          targetSlotConfiguration.domNodes[0],
+        );
+        targetSlotBackgroundColor = computedStyle.backgroundColor;
+      }
       measureSlot(slot);
       setSlotDimensions(slot, targetSlotWidth, targetSlotHeight);
       return;
@@ -640,7 +649,7 @@ export const createUITransitionController = (
       setSlotDimensions(targetSlot, undefined, undefined);
     };
 
-    const widthTransition = createWidthTransition(elementToResize, toWidth, {
+    const widthTransition = createWidthTransition(container, toWidth, {
       from: fromWidth,
       duration,
       styleSynchronizer: "inline_style",
@@ -652,7 +661,7 @@ export const createUITransitionController = (
         onWidthTransitionFinished();
       },
     });
-    const heightTransition = createHeightTransition(elementToResize, toHeight, {
+    const heightTransition = createHeightTransition(container, toHeight, {
       from: fromHeight,
       duration,
       styleSynchronizer: "inline_style",
@@ -664,6 +673,12 @@ export const createUITransitionController = (
         onHeightTransitionFinished();
       },
     });
+
+    const backgroundColorTransition = createBackgroundColorTransition(
+      container,
+      {},
+    );
+
     return [widthTransition, heightTransition];
   };
   const fadeInTargetSlot = () => {
