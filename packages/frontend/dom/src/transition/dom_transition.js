@@ -4,8 +4,10 @@ import {
   updateRGBA,
 } from "../color/color_parsing.js";
 import { resolveCSSColor } from "../color/resolve_css_color.js";
+import { normalizeStyle } from "../style/parsing/style_parsing.js";
 import {
   createStyleController,
+  getBackground,
   getBackgroundColor,
   getHeight,
   getOpacity,
@@ -162,6 +164,16 @@ const createNoopCSSPropertyTransition = ({ element, ...options }) => {
     to: 1,
   });
 };
+const createInstantCSSPropertyTransition = ({ element, value, ...options }) => {
+  return createCSSPropertyTransition({
+    ...options,
+    element,
+    getFrom: () => 0,
+    from: 0,
+    to: 1,
+    getValue: () => value,
+  });
+};
 
 export const createHeightTransition = (element, to, options = {}) => {
   return createCSSPropertyTransition({
@@ -208,9 +220,7 @@ export const createTranslateXTransition = (element, to, options = {}) => {
   });
 };
 export const createBackgroundColorTransition = (element, to, options = {}) => {
-  const fromBackgroundColor = options.from
-    ? resolveCSSColor(options.from, element)
-    : getBackgroundColor(element);
+  const fromBackgroundColor = options.from || getBackgroundColor(element);
   const toBackgroundColor = resolveCSSColor(to, element);
   const fromUnset = !fromBackgroundColor;
   const toUnset = !toBackgroundColor;
@@ -283,7 +293,140 @@ export const createBackgroundColorTransition = (element, to, options = {}) => {
   );
 };
 export const createBackgroundTransition = (element, to, options = {}) => {
-  // TODO
+  const fromBackground = options.from || getBackground(element);
+  const toBackground = normalizeStyle(to, "background", "js", element);
+
+  // Handle simple cases where no transition is possible
+  if (!fromBackground && !toBackground) {
+    return createNoopCSSPropertyTransition({ element, ...options });
+  }
+
+  // If either is not an object (complex case), fall back to instant change
+  if (
+    typeof fromBackground !== "object" ||
+    typeof toBackground !== "object" ||
+    Array.isArray(fromBackground) ||
+    Array.isArray(toBackground)
+  ) {
+    return createInstantCSSPropertyTransition({
+      element,
+      styleProperty: "background",
+      value: normalizeStyle(toBackground, "background", "css"),
+    });
+  }
+
+  // Try to transition between compatible backgrounds
+  const canTransition = canTransitionBackgrounds(fromBackground, toBackground);
+  if (!canTransition) {
+    return createInstantCSSPropertyTransition({
+      element,
+      styleProperty: "background",
+      value: normalizeStyle(toBackground, "background", "css"),
+    });
+  }
+
+  // If only colors are different, use color transition
+  if (onlyColorsDiffer(fromBackground, toBackground)) {
+    return createBackgroundColorTransition(element, toBackground.color, {
+      ...options,
+      from: fromBackground.color,
+    });
+  }
+
+  // Complex transition between compatible backgrounds
+  return createCSSPropertyTransition({
+    ...options,
+    element,
+    styleProperty: "background",
+    getFrom: () => 0,
+    from: 0,
+    to: 1,
+    getValue: (transition) => {
+      const progress = transition.value;
+      const interpolated = interpolateBackgrounds(
+        fromBackground,
+        toBackground,
+        progress,
+      );
+      return normalizeStyle(interpolated, "background", "css");
+    },
+  });
+};
+
+// Helper function to check if backgrounds can be transitioned
+const canTransitionBackgrounds = (from, to) => {
+  // Can transition if both have colors and similar structure
+  if (from.color && to.color) {
+    // Same image/pattern structure allows transition
+    const fromImage = from.image || "none";
+    const toImage = to.image || "none";
+    // Allow transition if images are the same or both are "none"
+    if (fromImage === toImage) {
+      return true;
+    }
+    // Allow transition between gradients of the same type
+    if (isGradient(fromImage) && isGradient(toImage)) {
+      return getGradientType(fromImage) === getGradientType(toImage);
+    }
+  }
+  return false;
+};
+
+// Helper function to check if only colors differ
+const onlyColorsDiffer = (from, to) => {
+  const fromCopy = { ...from };
+  const toCopy = { ...to };
+  delete fromCopy.color;
+  delete toCopy.color;
+
+  return (
+    JSON.stringify(fromCopy) === JSON.stringify(toCopy) &&
+    from.color !== to.color
+  );
+};
+
+// Helper function to interpolate between backgrounds
+const interpolateBackgrounds = (from, to, progress) => {
+  const result = { ...to };
+
+  // Interpolate color if both have colors
+  if (from.color && to.color) {
+    const fromColor = resolveCSSColor(from.color);
+    const toColor = resolveCSSColor(to.color);
+
+    if (fromColor && toColor) {
+      const [rFrom, gFrom, bFrom, aFrom] = fromColor;
+      const [rTo, gTo, bTo, aTo] = toColor;
+
+      const r = Math.round(rFrom + (rTo - rFrom) * progress);
+      const g = Math.round(gFrom + (gTo - gFrom) * progress);
+      const b = Math.round(bFrom + (bTo - bFrom) * progress);
+      const a = aFrom + (aTo - aFrom) * progress;
+
+      result.color = stringifyCSSColor([r, g, b, a]);
+    }
+  }
+
+  // TODO: Add gradient interpolation for matching gradient types
+
+  return result;
+};
+
+// Helper functions for gradient detection
+const isGradient = (value) => {
+  return (
+    typeof value === "string" &&
+    (value.includes("linear-gradient") ||
+      value.includes("radial-gradient") ||
+      value.includes("conic-gradient"))
+  );
+};
+
+const getGradientType = (gradientString) => {
+  if (gradientString.includes("linear-gradient")) return "linear";
+  if (gradientString.includes("radial-gradient")) return "radial";
+  if (gradientString.includes("conic-gradient")) return "conic";
+  return "unknown";
 };
 
 // Helper functions for getting natural values
