@@ -108,6 +108,7 @@ const parseBackgroundLayer = (layerString, { parseStyle, element }) => {
 
   let i = 0;
   let expectingSize = false; // Track if we're after a "/" and expecting size
+  let colorFound = false; // Track if we've already found a color
 
   while (i < tokens.length) {
     const token = tokens[i];
@@ -140,8 +141,14 @@ const parseBackgroundLayer = (layerString, { parseStyle, element }) => {
       }
     }
 
+    // Check for colors early (can appear at the beginning or end)
+    if (!colorFound && isSimpleColor(token)) {
+      const normalizedColor = parseStyle(token, "backgroundColor", element);
+      backgroundObj.color = normalizedColor;
+      colorFound = true;
+    }
     // Check for image functions (gradients, url) - can appear early
-    if (isImageFunction(token)) {
+    else if (isImageFunction(token)) {
       const parsedImage = parseCSSImage(token, element);
       backgroundObj.image = parsedImage;
     }
@@ -185,11 +192,6 @@ const parseBackgroundLayer = (layerString, { parseStyle, element }) => {
       else {
         backgroundObj.clip = token;
       }
-    }
-    // Check for colors (typically last, but can appear anywhere)
-    else if (isSimpleColor(token)) {
-      const normalizedColor = parseStyle(token, "backgroundColor", element);
-      backgroundObj.color = normalizedColor;
     }
 
     i++;
