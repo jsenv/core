@@ -559,6 +559,7 @@ export const createUITransitionController = (
   let transitionType = "none";
   const transitionController = createGroupTransitionController({
     // debugBreakpoints: [0.25],
+    pauseBreakpoints: [0.5],
     lifecycle: {
       setup: () => {
         updateSlotAttributes();
@@ -566,11 +567,6 @@ export const createUITransitionController = (
         isTransitioning = true;
         onStateChange({ isTransitioning: true });
         return {
-          update: (t) => {
-            if (t.progress > 0.9) {
-              // t.pause();
-            }
-          },
           teardown: () => {
             root.removeAttribute("data-transitioning");
             isTransitioning = false;

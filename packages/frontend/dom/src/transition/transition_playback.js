@@ -1,3 +1,4 @@
+import { createIterableWeakSet } from "../iterable_weak_set.js";
 import { notifyDebuggerStart, subscribeDebugger } from "./debugger_topic.js";
 import { EASING } from "./easing.js";
 import {
@@ -13,6 +14,21 @@ const LIFECYCLE_DEFAULT = {
   cancel: () => {},
   finish: () => {},
   updateTarget: () => {},
+};
+
+const transitionPausedByBreakpointWeakSet = createIterableWeakSet();
+const onTransitionPausedByBreakpoint = (transition) => {
+  transitionPausedByBreakpointWeakSet.add(transition);
+  transition.channels.finish.add(cleanupTransitionPausedByBreakpoint);
+  transition.channels.cancel.add(cleanupTransitionPausedByBreakpoint);
+};
+const cleanupTransitionPausedByBreakpoint = (transition) => {
+  transitionPausedByBreakpointWeakSet.delete(transition);
+};
+window.resumeTransitions = () => {
+  for (const transition of transitionPausedByBreakpointWeakSet) {
+    transition.play();
+  }
 };
 
 export const combineTwoLifecycle = (lifecycleA, lifecycleB) => {
@@ -130,6 +146,7 @@ export const createTransition = ({
   minDiff,
   debugQuarterBreakpoints = false, // Shorthand for debugBreakpoints: [0.25, 0.75]
   debugBreakpoints = debugQuarterBreakpoints ? [0.25, 0.75] : [], // Array of progress values (0-1) where debugger should trigger
+  pauseBreakpoints = [],
   ...rest
 } = {}) => {
   const [updateCallbacks, executeUpdateCallbacks] = createCallbackController();
@@ -142,7 +159,7 @@ export const createTransition = ({
   };
 
   const lifecycle = combineTwoLifecycle(baseLifecycle, rest.lifecycle);
-  let breakPointSet;
+  let breakpointMap;
 
   let playState = "idle"; // 'idle', 'running', 'paused', 'finished'
   let isFirstUpdate = false;
@@ -197,7 +214,13 @@ export const createTransition = ({
         transition.value = transition.from;
         transition.timing = "";
         transition.progress = transition.startProgress;
-        breakPointSet = new Set(debugBreakpoints);
+        breakpointMap = new Map();
+        for (const debugBreakpoint of debugBreakpoints) {
+          breakpointMap.set(debugBreakpoint, "debug");
+        }
+        for (const pauseBreakpoint of pauseBreakpoints) {
+          breakpointMap.set(pauseBreakpoint, "pause");
+        }
         start();
         return;
       }
@@ -250,15 +273,21 @@ export const createTransition = ({
       executeUpdateCallbacks(transition);
       onUpdate?.(transition);
 
-      for (const breakpoint of breakPointSet) {
+      for (const [breakpoint, effect] of breakpointMap) {
         if (progress >= breakpoint) {
-          breakPointSet.delete(breakpoint);
-          console.log(
-            `Debug breakpoint hit at ${(breakpoint * 100).toFixed(1)}% progress`,
-          );
-          const notifyDebuggerEnd = notifyDebuggerStart();
-          debugger;
-          notifyDebuggerEnd();
+          breakpointMap.delete(breakpoint);
+          if (effect === "debug") {
+            console.log(
+              `Debug breakpoint hit at ${(breakpoint * 100).toFixed(1)}% progress`,
+            );
+            const notifyDebuggerEnd = notifyDebuggerStart();
+            debugger;
+            notifyDebuggerEnd();
+          }
+          if (effect === "pause") {
+            transition.pause();
+            onTransitionPausedByBreakpoint(transition);
+          }
         }
       }
     },
