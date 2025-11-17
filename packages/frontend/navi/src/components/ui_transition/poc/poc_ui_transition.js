@@ -99,10 +99,14 @@ import.meta.css = /* css */ `
     --transition-duration: 3000ms;
     --justify-content: center;
     --align-items: center;
+    --background-color: transparent;
+    --border-radius: 0;
 
     --x-transition-duration: var(--transition-duration);
     --x-justify-content: var(--justify-content);
     --x-align-items: var(--align-items);
+    --x-background-color: var(--background-color);
+    --x-border-radius: var(--border-radius);
 
     position: relative;
     display: flex;
@@ -110,6 +114,8 @@ import.meta.css = /* css */ `
     height: 100%;
     align-items: var(--x-align-items);
     justify-content: var(--x-justify-content);
+    background-color: var(--x-background-color);
+    border-radius: var(--x-border-radius);
   }
 
   .ui_transition_container {
@@ -384,15 +390,10 @@ export const createUITransitionController = (
   };
 
   updateAlignment();
-  updateSlotAttributes();
-  if (!targetSlotConfiguration.isEmpty) {
-    measureSlot(targetSlot);
-    containerWidth = targetSlotWidth;
-    containerHeight = targetSlotHeight;
-  }
-  if (!outgoingSlotConfiguration.isEmpty) {
-    measureSlot(outgoingSlot);
-  }
+  measureSlot(targetSlot);
+  containerWidth = targetSlotWidth;
+  containerHeight = targetSlotHeight;
+  measureSlot(outgoingSlot);
 
   let updateSlotOverflowX;
   let updateSlotOverflowY;
@@ -572,11 +573,11 @@ export const createUITransitionController = (
     },
   });
 
-  const updateDimensions = (newWidth, newHeight) => {
+  const morhContainerIntoTarget = () => {
     const fromWidth = containerWidth || 0;
     const fromHeight = containerHeight || 0;
-    const toWidth = newWidth || 0;
-    const toHeight = newHeight || 0;
+    const toWidth = targetSlotWidth || 0;
+    const toHeight = targetSlotHeight || 0;
     debugSize(
       `transition from [${fromWidth}x${fromHeight}] to [${toWidth}x${toHeight}]`,
     );
@@ -689,7 +690,7 @@ export const createUITransitionController = (
     outgoingSlotBecomes(UNSET);
     targetSlotBecomes(toConfiguration);
     const transitions = [
-      ...updateDimensions(targetSlotWidth, targetSlotHeight),
+      ...morhContainerIntoTarget(),
       fadeInTargetSlot(),
       fadeOutPreviousGroup(),
     ];
@@ -708,7 +709,7 @@ export const createUITransitionController = (
   const applyContentPhaseToContentPhaseTransition = (toConfiguration) => {
     targetSlotBecomesViaOutgoing(toConfiguration);
     const transitions = [
-      ...updateDimensions(targetSlotWidth, targetSlotHeight),
+      ...morhContainerIntoTarget(),
       fadeInTargetSlot(),
       fadeOutOutgoingSlot(),
     ];
@@ -727,10 +728,7 @@ export const createUITransitionController = (
   const applyToEmptyTransition = () => {
     targetSlotBecomes(UNSET);
     outgoingSlotBecomes(UNSET);
-    const transitions = [
-      ...updateDimensions(targetSlotWidth, targetSlotHeight),
-      fadeOutPreviousGroup(),
-    ];
+    const transitions = [...morhContainerIntoTarget(), fadeOutPreviousGroup()];
     const transition = transitionController.update(transitions, {
       onFinish: () => {
         setSlotDimensions(targetSlot, undefined, undefined);
