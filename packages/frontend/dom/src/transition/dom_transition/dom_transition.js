@@ -1,4 +1,4 @@
-import { areSameRGBA, parseCSSColor } from "../../style/parsing/css_color.js";
+import { areSameRGBA } from "../../style/parsing/css_color.js";
 import { normalizeStyle } from "../../style/parsing/style_parsing.js";
 import {
   createStyleController,
@@ -14,7 +14,9 @@ import {
   createTimelineTransition,
 } from "../transition_playback.js";
 import {
-  applyColorTransition,
+  applyColorToColor,
+  applyGradientToColor,
+  applyGradientToGradient,
   prepareColorTransitionPair,
 } from "./color_transition.js";
 
@@ -247,7 +249,7 @@ export const createBackgroundColorTransition = (element, to, options = {}) => {
     from: 0,
     to: 1,
     getValue: (transition) => {
-      const rgbaWithTransition = applyColorTransition(rgbaPair, transition);
+      const rgbaWithTransition = applyColorToColor(rgbaPair, transition);
       const backgroundColorWithTransition = normalizeStyle(
         rgbaWithTransition,
         "backgroundColor",
@@ -256,108 +258,6 @@ export const createBackgroundColorTransition = (element, to, options = {}) => {
       return backgroundColorWithTransition;
     },
   });
-};
-
-// Helper to interpolate gradient color stops toward a target color
-const interpolateGradientToColor = (
-  gradientImage,
-  targetColor,
-  progress,
-  element,
-) => {
-  const resolvedTargetColor = parseCSSColor(targetColor, element);
-  if (!resolvedTargetColor) return gradientImage;
-
-  // Clone the gradient image object
-  const interpolatedGradient = { ...gradientImage };
-
-  // Interpolate color stops if they exist
-  if (gradientImage.stops && Array.isArray(gradientImage.stops)) {
-    interpolatedGradient.stops = gradientImage.stops.map((stop) => {
-      if (stop.color) {
-        const stopColor = parseCSSColor(stop.color, element);
-        if (stopColor) {
-          // Interpolate each channel toward the target color
-          const [rFrom, gFrom, bFrom, aFrom] = stopColor;
-          const [rTo, gTo, bTo, aTo] = resolvedTargetColor;
-          const r = Math.round(rFrom + (rTo - rFrom) * progress);
-          const g = Math.round(gFrom + (gTo - gFrom) * progress);
-          const b = Math.round(bFrom + (bTo - bFrom) * progress);
-          const a = aFrom + (aTo - aFrom) * progress;
-          return { ...stop, color: [r, g, b, a] };
-        }
-      }
-      return stop;
-    });
-  }
-
-  return interpolatedGradient;
-};
-
-// Helper to interpolate between two gradients of the same type
-const interpolateGradientToGradient = (
-  fromGradient,
-  toGradient,
-  progress,
-  element,
-) => {
-  if (fromGradient.type !== toGradient.type) {
-    return toGradient; // Different types, return target
-  }
-
-  // Clone the target gradient as base
-  const interpolatedGradient = { ...toGradient };
-
-  // Interpolate color stops if both have them
-  if (
-    fromGradient.stops &&
-    toGradient.stops &&
-    Array.isArray(fromGradient.stops) &&
-    Array.isArray(toGradient.stops)
-  ) {
-    // Use the longer stops array as base, interpolate corresponding stops
-    const maxStops = Math.max(
-      fromGradient.stops.length,
-      toGradient.stops.length,
-    );
-    interpolatedGradient.stops = [];
-
-    for (let i = 0; i < maxStops; i++) {
-      const fromStop = fromGradient.stops[i];
-      const toStop = toGradient.stops[i];
-
-      if (fromStop && toStop) {
-        // Both stops exist - interpolate them
-        const interpolatedStop = { ...toStop };
-
-        if (fromStop.color && toStop.color) {
-          const fromColor = parseCSSColor(fromStop.color, element);
-          const toColor = parseCSSColor(toStop.color, element);
-
-          if (fromColor && toColor) {
-            const [rFrom, gFrom, bFrom, aFrom] = fromColor;
-            const [rTo, gTo, bTo, aTo] = toColor;
-            const r = Math.round(rFrom + (rTo - rFrom) * progress);
-            const g = Math.round(gFrom + (gTo - gFrom) * progress);
-            const b = Math.round(bFrom + (bTo - bFrom) * progress);
-            const a = aFrom + (aTo - aFrom) * progress;
-            interpolatedStop.color = [r, g, b, a];
-          }
-        }
-
-        // TODO: Could also interpolate position if both have positions
-        interpolatedGradient.stops.push(interpolatedStop);
-      } else if (toStop) {
-        // Only target stop exists - use it as-is
-        interpolatedGradient.stops.push({ ...toStop });
-      } else if (fromStop) {
-        // Only source stop exists - fade it toward transparent or skip
-        // For now, skip it (it will disappear)
-      }
-    }
-  }
-
-  return interpolatedGradient;
 };
 
 export const createBackgroundTransition = (element, to, options = {}) => {
@@ -412,7 +312,7 @@ export const createBackgroundTransition = (element, to, options = {}) => {
       getValue: (transition) => {
         const intermediateBackground = { ...toBackground };
         if (backgroundColorRgbaPair) {
-          const rgbaWithTransition = applyColorTransition(
+          const rgbaWithTransition = applyColorToColor(
             backgroundColorRgbaPair,
             transition,
           );
@@ -435,11 +335,10 @@ export const createBackgroundTransition = (element, to, options = {}) => {
       getValue: (transition) => {
         const progress = transition.value;
         const intermediateBackground = { ...fromBackground };
-        intermediateBackground.image = interpolateGradientToColor(
+        intermediateBackground.image = applyGradientToColor(
           fromBackground.image,
           toBackground.color,
           progress,
-          element,
         );
         // Remove any background color to let the gradient be the only background
         delete intermediateBackground.color;
@@ -475,7 +374,7 @@ export const createBackgroundTransition = (element, to, options = {}) => {
       getValue: (transition) => {
         const progress = transition.value;
         const intermediateBackground = { ...toBackground };
-        intermediateBackground.image = interpolateGradientToGradient(
+        intermediateBackground.image = applyGradientToGradient(
           fromBackground.image,
           toBackground.image,
           progress,
@@ -491,7 +390,7 @@ export const createBackgroundTransition = (element, to, options = {}) => {
             toBackgroundColor,
           );
           if (backgroundColorRgbaPair) {
-            const rgbaWithTransition = applyColorTransition(
+            const rgbaWithTransition = applyColorToColor(
               backgroundColorRgbaPair,
               transition,
             );
@@ -527,7 +426,7 @@ export const createBackgroundTransition = (element, to, options = {}) => {
       getValue: (transition) => {
         const intermediateBackground = { ...toBackground };
         if (backgroundColorRgbaPair) {
-          const rgbaWithTransition = applyColorTransition(
+          const rgbaWithTransition = applyColorToColor(
             backgroundColorRgbaPair,
             transition,
           );
