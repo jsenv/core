@@ -344,7 +344,9 @@ export const createBackgroundTransition = (element, to, options = {}) => {
     from: 0,
     to: 1,
     getValue: (transition) => {
-      const result = { ...to };
+      const result = { ...toBackground };
+
+      // Handle color interpolation
       const fromColor = fromBackground.color;
       const toColor = toBackground.color;
       if (fromColor && toColor) {
@@ -356,7 +358,17 @@ export const createBackgroundTransition = (element, to, options = {}) => {
         const a = applyTransitionProgress(transition, aFrom, aTo);
         result.color = [r, g, b, a];
       }
-      // TODO: Add gradient interpolation for matching gradient types
+
+      // Remove properties that shouldn't be in the result
+      // If transitioning away from an image (gradient), remove it
+      if (fromBackground.image && !toBackground.image) {
+        delete result.image;
+      }
+      // If transitioning away from a color, remove it
+      if (fromBackground.color && !toBackground.color) {
+        delete result.color;
+      }
+
       return normalizeStyle(result, "background", "css");
     },
   });
@@ -365,25 +377,25 @@ export const createBackgroundTransition = (element, to, options = {}) => {
 // Helper function to check if backgrounds can be transitioned
 const canTransitionBackgrounds = (from, to) => {
   // Handle transitions between different background types
-  
+
   // Color to color transitions
   if (from.color && to.color && !from.image && !to.image) {
     return true;
   }
-  
+
   // Image to image transitions (same structure)
   if (from.image && to.image) {
     // Allow transition if images are identical objects
     if (areImageObjectsEqual(from.image, to.image)) {
       return true;
     }
-    
+
     // Allow transition between gradients of the same type
     if (isGradientObject(from.image) && isGradientObject(to.image)) {
       return from.image.type === to.image.type;
     }
   }
-  
+
   // Mixed transitions (gradient to color, color to gradient, etc.)
   // For now, allow these transitions but they will be instant changes
   // TODO: Could implement smart transitions by extracting colors from gradients

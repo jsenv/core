@@ -294,6 +294,44 @@
     <script type="module">
       import { createBackgroundTransition } from "../dom_transition.js";
 
+      // LocalStorage utilities
+      const STORAGE_KEY = "background-transition-demo";
+
+      function saveToStorage(data) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        } catch (e) {
+          console.warn("Failed to save to localStorage:", e);
+        }
+      }
+
+      function loadFromStorage() {
+        try {
+          const data = localStorage.getItem(STORAGE_KEY);
+          return data ? JSON.parse(data) : null;
+        } catch (e) {
+          console.warn("Failed to load from localStorage:", e);
+          return null;
+        }
+      }
+
+      function getStoredState() {
+        const stored = loadFromStorage();
+        return {
+          selectedFrom: stored?.selectedFrom || "undefined",
+          selectedTo: stored?.selectedTo || "#0000ff",
+          duration: stored?.duration || 1000,
+        };
+      }
+
+      function saveState() {
+        saveToStorage({
+          selectedFrom,
+          selectedTo,
+          duration: getDuration(),
+        });
+      }
+
       // Background options organized by category with reduced set
       const backgroundCategories = {
         Special: [
@@ -385,8 +423,10 @@
         ],
       };
 
-      let selectedFrom = "undefined";
-      let selectedTo = "#0000ff";
+      // Initialize from localStorage or defaults
+      const initialState = getStoredState();
+      let selectedFrom = initialState.selectedFrom;
+      let selectedTo = initialState.selectedTo;
 
       function createOptionRect(option) {
         const rect = document.createElement("div");
@@ -444,8 +484,14 @@
       function setupDurationSlider(sliderId, valueId) {
         const slider = document.getElementById(sliderId);
         const valueDisplay = document.getElementById(valueId);
+
+        // Set initial value from localStorage
+        slider.value = initialState.duration;
+        valueDisplay.textContent = `${initialState.duration}ms`;
+
         slider.addEventListener("input", (e) => {
           valueDisplay.textContent = `${e.target.value}ms`;
+          saveState();
         });
         return () => parseInt(slider.value);
       }
@@ -466,11 +512,13 @@
       createCategorySelector("fromSelector", selectedFrom, (value) => {
         selectedFrom = value;
         updatePreviewBoxes();
+        saveState();
       });
 
       createCategorySelector("toSelector", selectedTo, (value) => {
         selectedTo = value;
         updatePreviewBoxes();
+        saveState();
       });
 
       function updatePreviewBoxes() {
