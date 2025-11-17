@@ -143,6 +143,7 @@ export const createTransition = ({
   baseLifecycle,
   onUpdate,
   onFinish,
+  onPause,
   minDiff,
   debugQuarterBreakpoints = false, // Shorthand for debugBreakpoints: [0.25, 0.75]
   debugBreakpoints = debugQuarterBreakpoints ? [0.25, 0.75] : [], // Array of progress values (0-1) where debugger should trigger
@@ -308,6 +309,7 @@ export const createTransition = ({
 
       // Let the transition handle its own pause logic
       resume = lifecycle.pause?.(transition);
+      onPause?.(transition);
     },
 
     cancel: () => {
