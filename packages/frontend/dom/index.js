@@ -7,6 +7,10 @@ export { createValueEffect } from "./src/value_effect.js";
 
 // style
 export { getStyle, setStyles } from "./src/style/dom_styles.js";
+export {
+  normalizeStyle,
+  normalizeStyles,
+} from "./src/style/parsing/style_parsing.js";
 export { appendStyles, mergeTwoStyles } from "./src/style/style_composition.js";
 export {
   createStyleController,
@@ -17,25 +21,23 @@ export {
   getTranslateY,
 } from "./src/style/style_controller.js";
 export { getDefaultStyles } from "./src/style/style_default.js";
-export { normalizeStyle, normalizeStyles } from "./src/style/style_parsing.js";
 
 // attributes
 export { addAttributeEffect } from "./src/attr/add_attribute_effect.js";
 export { setAttribute, setAttributes } from "./src/attr/attributes.js";
 
 // colors
-export { getContrastRatio, getLuminance } from "./src/color/color_constrast.js";
-export { parseCSSColor, stringifyCSSColor } from "./src/color/color_parsing.js";
+export {
+  getContrastRatio,
+  getLuminance,
+  pickLightOrDark,
+  resolveColorLuminance,
+} from "./src/style/color_constrast.js";
 export {
   getPreferedColorScheme,
   prefersDarkColors,
   prefersLightColors,
-} from "./src/color/color_scheme.js";
-export {
-  pickLightOrDark,
-  resolveColorLuminance,
-} from "./src/color/light_or_dark.js";
-export { resolveCSSColor } from "./src/color/resolve_css_color.js";
+} from "./src/style/color_scheme.js";
 
 // traversal
 export {

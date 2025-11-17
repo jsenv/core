@@ -1,4 +1,4 @@
-import { areSameRGBA, updateRGBA } from "../color/color_parsing.js";
+import { areSameRGBA, updateRGBA } from "../style/parsing/css_color.js";
 import { normalizeStyle } from "../style/parsing/style_parsing.js";
 import {
   createStyleController,
