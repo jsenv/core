@@ -298,9 +298,11 @@ export const createBackgroundTransition = (element, to, options = {}) => {
 
   // Handle simple cases where no transition is possible
   if (!fromBackground && !toBackground) {
-    return createNoopCSSPropertyTransition({ element, ...options });
+    return createNoopCSSPropertyTransition({
+      element,
+      ...options,
+    });
   }
-
   // If either is not an object (complex case), fall back to instant change
   if (
     typeof fromBackground !== "object" ||
@@ -314,8 +316,6 @@ export const createBackgroundTransition = (element, to, options = {}) => {
       value: normalizeStyle(toBackground, "background", "css"),
     });
   }
-
-  // Try to transition between compatible backgrounds
   const canTransition = canTransitionBackgrounds(fromBackground, toBackground);
   if (!canTransition) {
     return createInstantCSSPropertyTransition({
@@ -342,13 +342,20 @@ export const createBackgroundTransition = (element, to, options = {}) => {
     from: 0,
     to: 1,
     getValue: (transition) => {
-      const progress = transition.value;
-      const interpolated = interpolateBackgrounds(
-        fromBackground,
-        toBackground,
-        progress,
-      );
-      return normalizeStyle(interpolated, "background", "css");
+      const result = { ...to };
+      const fromColor = fromBackground.color;
+      const toColor = toBackground.color;
+      if (fromColor && toColor) {
+        const [rFrom, gFrom, bFrom, aFrom] = fromColor;
+        const [rTo, gTo, bTo, aTo] = toColor;
+        const r = applyTransitionProgress(transition, rFrom, rTo);
+        const g = applyTransitionProgress(transition, gFrom, gTo);
+        const b = applyTransitionProgress(transition, bFrom, bTo);
+        const a = applyTransitionProgress(transition, aFrom, aTo);
+        result.color = [r, g, b, a];
+      }
+      // TODO: Add gradient interpolation for matching gradient types
+      return normalizeStyle(result, "background", "css");
     },
   });
 };
@@ -358,15 +365,22 @@ const canTransitionBackgrounds = (from, to) => {
   // Can transition if both have colors and similar structure
   if (from.color && to.color) {
     // Same image/pattern structure allows transition
-    const fromImage = from.image || "none";
-    const toImage = to.image || "none";
-    // Allow transition if images are the same or both are "none"
-    if (fromImage === toImage) {
+    const fromImage = from.image;
+    const toImage = to.image;
+
+    // Allow transition if both have no image
+    if (!fromImage && !toImage) {
       return true;
     }
+
+    // Allow transition if images are identical objects
+    if (areImageObjectsEqual(fromImage, toImage)) {
+      return true;
+    }
+
     // Allow transition between gradients of the same type
-    if (isGradient(fromImage) && isGradient(toImage)) {
-      return getGradientType(fromImage) === getGradientType(toImage);
+    if (isGradientObject(fromImage) && isGradientObject(toImage)) {
+      return fromImage.type === toImage.type;
     }
   }
   return false;
@@ -385,48 +399,35 @@ const onlyColorsDiffer = (from, to) => {
   );
 };
 
-// Helper function to interpolate between backgrounds
-const interpolateBackgrounds = (from, to, progress) => {
-  const result = { ...to };
-
-  // Interpolate color if both have colors
-  if (from.color && to.color) {
-    const fromColor = resolveCSSColor(from.color);
-    const toColor = resolveCSSColor(to.color);
-
-    if (fromColor && toColor) {
-      const [rFrom, gFrom, bFrom, aFrom] = fromColor;
-      const [rTo, gTo, bTo, aTo] = toColor;
-
-      const r = Math.round(rFrom + (rTo - rFrom) * progress);
-      const g = Math.round(gFrom + (gTo - gFrom) * progress);
-      const b = Math.round(bFrom + (bTo - bFrom) * progress);
-      const a = aFrom + (aTo - aFrom) * progress;
-
-      result.color = stringifyCSSColor([r, g, b, a]);
-    }
-  }
-
-  // TODO: Add gradient interpolation for matching gradient types
-
-  return result;
-};
-
-// Helper functions for gradient detection
-const isGradient = (value) => {
+// Helper functions for image object detection
+const isGradientObject = (imageObj) => {
   return (
-    typeof value === "string" &&
-    (value.includes("linear-gradient") ||
-      value.includes("radial-gradient") ||
-      value.includes("conic-gradient"))
+    imageObj &&
+    typeof imageObj === "object" &&
+    imageObj.type &&
+    imageObj.type.includes("gradient")
   );
 };
 
-const getGradientType = (gradientString) => {
-  if (gradientString.includes("linear-gradient")) return "linear";
-  if (gradientString.includes("radial-gradient")) return "radial";
-  if (gradientString.includes("conic-gradient")) return "conic";
-  return "unknown";
+const areImageObjectsEqual = (img1, img2) => {
+  if (!img1 && !img2) return true;
+  if (!img1 || !img2) return false;
+
+  // For structured objects, compare type and key properties
+  if (typeof img1 === "object" && typeof img2 === "object") {
+    if (img1.type !== img2.type) return false;
+
+    // For URLs, compare the actual URL value
+    if (img1.type === "url") {
+      return img1.value === img2.value;
+    }
+
+    // For gradients, we could do deeper comparison, but for now just compare type
+    return img1.type === img2.type;
+  }
+
+  // Fallback to string comparison for non-objects
+  return img1 === img2;
 };
 
 // Helper functions for getting natural values
