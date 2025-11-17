@@ -58,14 +58,10 @@ export const applyGradientToColor = (gradientImage, targetColor, progress) => {
       if (stop.color) {
         const stopColor = stop.color;
         if (stopColor) {
-          // Interpolate each channel toward the target color
-          const [rFrom, gFrom, bFrom, aFrom] = stopColor;
-          const [rTo, gTo, bTo, aTo] = targetColor;
-          const r = Math.round(rFrom + (rTo - rFrom) * progress);
-          const g = Math.round(gFrom + (gTo - gFrom) * progress);
-          const b = Math.round(bFrom + (bTo - bFrom) * progress);
-          const a = aFrom + (aTo - aFrom) * progress;
-          return { ...stop, color: [r, g, b, a] };
+          // Use applyColorToColor for consistent color interpolation
+          const colorPair = [stopColor, targetColor];
+          const transition = { value: progress };
+          return { ...stop, color: applyColorToColor(colorPair, transition) };
         }
       }
       return stop;
@@ -111,13 +107,10 @@ export const applyGradientToGradient = (fromGradient, toGradient, progress) => {
           const toColor = toStop.color;
 
           if (fromColor && toColor) {
-            const [rFrom, gFrom, bFrom, aFrom] = fromColor;
-            const [rTo, gTo, bTo, aTo] = toColor;
-            const r = Math.round(rFrom + (rTo - rFrom) * progress);
-            const g = Math.round(gFrom + (gTo - gFrom) * progress);
-            const b = Math.round(bFrom + (bTo - bFrom) * progress);
-            const a = aFrom + (aTo - aFrom) * progress;
-            interpolatedStop.color = [r, g, b, a];
+            // Use applyColorToColor for consistent color interpolation
+            const colorPair = [fromColor, toColor];
+            const transition = { value: progress };
+            interpolatedStop.color = applyColorToColor(colorPair, transition);
           }
         }
 
@@ -147,14 +140,10 @@ export const applyColorToGradient = (fromColor, targetGradient, progress) => {
       if (stop.color) {
         const targetStopColor = stop.color;
         if (targetStopColor && fromColor) {
-          // Interpolate from the solid color toward each gradient stop color
-          const [rFrom, gFrom, bFrom, aFrom] = fromColor;
-          const [rTo, gTo, bTo, aTo] = targetStopColor;
-          const r = Math.round(rFrom + (rTo - rFrom) * progress);
-          const g = Math.round(gFrom + (gTo - gFrom) * progress);
-          const b = Math.round(bFrom + (bTo - bFrom) * progress);
-          const a = aFrom + (aTo - aFrom) * progress;
-          return { ...stop, color: [r, g, b, a] };
+          // Use applyColorToColor for consistent color interpolation
+          const colorPair = [fromColor, targetStopColor];
+          const transition = { value: progress };
+          return { ...stop, color: applyColorToColor(colorPair, transition) };
         }
       }
       return stop;
