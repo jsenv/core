@@ -209,7 +209,7 @@ const createConfiguration = (domNodes, { contentId, contentPhase } = {}) => {
       contentPhase,
       isContentPhase: true,
       isContent: false,
-      toString: () => `content_phase:${contentPhase}`,
+      toString: () => `content(${contentId}).phase(${contentPhase})`,
     };
   }
   return {
@@ -221,7 +221,7 @@ const createConfiguration = (domNodes, { contentId, contentPhase } = {}) => {
     contentPhase: undefined,
     isContentPhase: false,
     isContent: true,
-    toString: () => `content:${contentId}`,
+    toString: () => `content(${contentId})`,
   };
 };
 const isSameConfiguration = (configA, configB) => {
