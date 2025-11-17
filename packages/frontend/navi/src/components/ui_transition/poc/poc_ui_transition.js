@@ -92,6 +92,7 @@ import {
   createOpacityTransition,
   createWidthTransition,
   getElementSignature,
+  getScrollContainer,
   preventIntermediateScrollbar,
 } from "@jsenv/dom";
 
@@ -399,48 +400,62 @@ export const createUITransitionController = (
   let updateSlotOverflowX;
   let updateSlotOverflowY;
   slot_overflow: {
-    const xOverflowingSlotSet = new Set();
-    const yOverflowingSlotSet = new Set();
-    updateSlotOverflowX = (slot, isOverflowingRootOnX) => {
-      const size = yOverflowingSlotSet.size;
-      if (isOverflowingRootOnX) {
-        xOverflowingSlotSet.add(slot);
-        if (size === 0 && xOverflowingSlotSet.size === 1) {
-          debugSize(
-            `".${slot.className}" overflowing on X -> add [data-slot-overflow-x]`,
+    x_overflow: {
+      const xOverflowingSlotSet = new Set();
+      updateSlotOverflowX = (slot, isOverflowingRootOnX) => {
+        const size = xOverflowingSlotSet.size;
+        if (isOverflowingRootOnX) {
+          xOverflowingSlotSet.add(slot);
+          if (size === 0 && xOverflowingSlotSet.size === 1) {
+            debugSize(
+              `".${slot.className}" overflowing on X -> add [data-slot-overflow-x]`,
+            );
+          }
+          root.setAttribute(
+            "data-slot-overflow-x",
+            Array.from(xOverflowingSlotSet, (s) => `.${s.className}`).join(
+              ", ",
+            ),
           );
-          root.setAttribute("data-slot-overflow-x", "");
+        } else {
+          xOverflowingSlotSet.delete(slot);
+          if (size === 1 && xOverflowingSlotSet.size === 0) {
+            debugSize(
+              `".${slot.className}" not overflowing anymore on X -> remove [data-slot-overflow-x]`,
+            );
+            root.removeAttribute("data-slot-overflow-x");
+          }
         }
-      } else {
-        xOverflowingSlotSet.delete(slot);
-        if (size === 1 && xOverflowingSlotSet.size === 0) {
-          debugSize(
-            `".${slot.className}" not overflowing anymore on X -> remove [data-slot-overflow-x]`,
+      };
+    }
+    y_overflow: {
+      const yOverflowingSlotSet = new Set();
+      updateSlotOverflowY = (slot, isOverflowingRootOnY) => {
+        const size = yOverflowingSlotSet.size;
+        if (isOverflowingRootOnY) {
+          yOverflowingSlotSet.add(slot);
+          if (size === 0 && yOverflowingSlotSet.size === 1) {
+            debugSize(
+              `".${slot.className}" overflowing on Y -> add [data-slot-overflow-y]`,
+            );
+          }
+          root.setAttribute(
+            "data-slot-overflow-y",
+            Array.from(yOverflowingSlotSet, (s) => `.${s.className}`).join(
+              ", ",
+            ),
           );
-          root.removeAttribute("data-slot-overflow-x");
+        } else {
+          yOverflowingSlotSet.delete(slot);
+          if (size === 1 && yOverflowingSlotSet.size === 0) {
+            debugSize(
+              `".${slot.className}" NOT overflowing anymore on Y -> remove [data-slot-overflow-y]`,
+            );
+            root.removeAttribute("data-slot-overflow-y");
+          }
         }
-      }
-    };
-    updateSlotOverflowY = (slot, isOverflowingRootOnY) => {
-      const size = yOverflowingSlotSet.size;
-      if (isOverflowingRootOnY) {
-        yOverflowingSlotSet.add(slot);
-        if (size === 0 && yOverflowingSlotSet.size === 1) {
-          debugSize(
-            `".${slot.className}" overflowing on Y -> add [data-slot-overflow-y]`,
-          );
-          root.setAttribute("data-slot-overflow-y", "");
-        }
-      } else {
-        yOverflowingSlotSet.delete(slot);
-        if (size === 1 && yOverflowingSlotSet.size === 0) {
-          debugSize(
-            `".${slot.className}" NOT overflowing anymore on Y -> remove [data-slot-overflow-y]`,
-          );
-          root.removeAttribute("data-slot-overflow-y");
-        }
-      }
-    };
+      };
+    }
   }
 
   const setSlotDimensions = (slot, width, height) => {
@@ -490,13 +505,21 @@ export const createUITransitionController = (
 
     if (slot === previousTargetSlot) {
       previousTargetSlotConfiguration = configuration;
-      setSlotDimensions(slot, targetSlotWidth, targetSlotHeight);
+      if (configuration.isEmpty) {
+        setSlotDimensions(slot, undefined, undefined);
+      } else {
+        setSlotDimensions(slot, targetSlotWidth, targetSlotHeight);
+      }
       return;
     }
 
     if (slot === previousOutgoingSlot) {
       previousOutgoingSlotConfiguration = configuration;
-      setSlotDimensions(slot, outgoingSlotWidth, outgoingSlotHeight);
+      if (configuration.isEmpty) {
+        setSlotDimensions(slot, undefined, undefined);
+      } else {
+        setSlotDimensions(slot, outgoingSlotWidth, outgoingSlotHeight);
+      }
       return;
     }
 
@@ -804,19 +827,9 @@ export const createUITransitionController = (
   };
 };
 
-const getVisibleDimensions = (el, container = null) => {
-  const rect = el.getBoundingClientRect();
-  const containerRect = (container || el.parentElement).getBoundingClientRect();
-
-  const left = rect.left > containerRect.left ? rect.left : containerRect.left;
-  const right =
-    rect.right < containerRect.right ? rect.right : containerRect.right;
-  const top = rect.top > containerRect.top ? rect.top : containerRect.top;
-  const bottom =
-    rect.bottom < containerRect.bottom ? rect.bottom : containerRect.bottom;
-
-  const visibleWidth = right > left ? right - left : 0;
-  const visibleHeight = bottom > top ? bottom - top : 0;
-
-  return [visibleWidth, visibleHeight];
+const getVisibleDimensions = (el) => {
+  const scrollContainer = getScrollContainer(el);
+  const clientWidth = scrollContainer.clientWidth;
+  const clientHeight = scrollContainer.clientHeight;
+  return [clientWidth, clientHeight];
 };
