@@ -99,17 +99,12 @@ import.meta.css = /* css */ `
     --transition-duration: 3000ms;
     --justify-content: center;
     --align-items: center;
-    --background-color: white;
 
     --x-transition-duration: var(--transition-duration);
     --x-justify-content: var(--justify-content);
     --x-align-items: var(--align-items);
 
     position: relative;
-
-    /* background: var(--background-color); */
-    /* border: 8px dashed #ccc; */
-    /* border-radius: 8px; */
     display: flex;
     width: 100%;
     height: 100%;
@@ -118,9 +113,8 @@ import.meta.css = /* css */ `
   }
 
   .ui_transition_container {
-    /* in case we set border on this element his size must include borders */
+    /* in case CSS sets border on this element his size must include borders */
     box-sizing: content-box;
-    background: white;
   }
 
   .ui_transition[data-transitioning] .ui_transition_container {
@@ -163,7 +157,6 @@ import.meta.css = /* css */ `
   .active_group,
   .previous_group {
     display: flex;
-    /* min-width: 100%; */
     min-height: 100%;
     align-items: var(--x-align-items);
     justify-content: var(--x-justify-content);
