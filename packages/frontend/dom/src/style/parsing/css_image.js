@@ -1,3 +1,5 @@
+import { tokenizeCSS } from "./css_tokenizer.js";
+
 // Convert image object to CSS string
 export const stringifyCSSImage = (imageObj) => {
   if (typeof imageObj === "string") {
@@ -130,7 +132,7 @@ const parseConicGradient = (content, type, original) => {
 
 // Parse gradient content (colors and direction/shape)
 const parseGradientContent = (content, isRadial = false) => {
-  const parts = splitGradientParts(content);
+  const parts = tokenizeCSS(content, { separators: [","] });
   const colors = [];
   let direction = null;
   let shape = null;
@@ -161,37 +163,6 @@ const parseGradientContent = (content, isRadial = false) => {
   }
 
   return { direction, shape, colors };
-};
-
-// Split gradient content respecting nested functions
-const splitGradientParts = (content) => {
-  const parts = [];
-  let current = "";
-  let depth = 0;
-
-  for (let i = 0; i < content.length; i++) {
-    const char = content[i];
-
-    if (char === "(") {
-      depth++;
-    } else if (char === ")") {
-      depth--;
-    } else if (char === "," && depth === 0) {
-      if (current.trim()) {
-        parts.push(current.trim());
-      }
-      current = "";
-      continue;
-    }
-
-    current += char;
-  }
-
-  if (current.trim()) {
-    parts.push(current.trim());
-  }
-
-  return parts;
 };
 
 // Parse individual color stop

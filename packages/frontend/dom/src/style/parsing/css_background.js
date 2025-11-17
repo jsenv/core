@@ -1,4 +1,5 @@
 import { parseCSSImage, stringifyCSSImage } from "./css_image.js";
+import { splitCSSLayers, tokenizeCSS } from "./css_tokenizer.js";
 
 // Convert background object to CSS string
 export const stringifyCSSBackground = (backgroundObj, normalize) => {
@@ -83,7 +84,7 @@ export const parseCSSBackground = (backgroundString, normalize) => {
   }
 
   // Complex background parsing - split by commas for multiple backgrounds
-  const layers = splitBackgroundLayers(backgroundString);
+  const layers = splitCSSLayers(backgroundString);
 
   if (layers.length === 1) {
     return parseBackgroundLayer(layers[0], normalize);
@@ -96,7 +97,10 @@ export const parseCSSBackground = (backgroundString, normalize) => {
 // Parse a single background layer
 const parseBackgroundLayer = (layerString, normalize) => {
   const backgroundObj = {};
-  const tokens = tokenizeBackground(layerString);
+  const tokens = tokenizeCSS(layerString, {
+    separators: [" ", "/"],
+    preserveSeparators: true,
+  });
 
   let i = 0;
   while (i < tokens.length) {
@@ -146,79 +150,6 @@ const parseBackgroundLayer = (layerString, normalize) => {
   }
 
   return backgroundObj;
-};
-
-// Split background into layers (handle commas not inside functions)
-const splitBackgroundLayers = (backgroundString) => {
-  const layers = [];
-  let current = "";
-  let depth = 0;
-
-  for (let i = 0; i < backgroundString.length; i++) {
-    const char = backgroundString[i];
-
-    if (char === "(") {
-      depth++;
-    } else if (char === ")") {
-      depth--;
-    } else if (char === "," && depth === 0) {
-      layers.push(current.trim());
-      current = "";
-      continue;
-    }
-
-    current += char;
-  }
-
-  if (current.trim()) {
-    layers.push(current.trim());
-  }
-
-  return layers;
-};
-
-// Tokenize background string into individual values
-const tokenizeBackground = (backgroundString) => {
-  const tokens = [];
-  let current = "";
-  let depth = 0;
-  let inFunction = false;
-
-  for (let i = 0; i < backgroundString.length; i++) {
-    const char = backgroundString[i];
-
-    if (char === "(") {
-      depth++;
-      inFunction = true;
-      current += char;
-    } else if (char === ")") {
-      depth--;
-      current += char;
-      if (depth === 0) {
-        inFunction = false;
-      }
-    } else if (char === " " && !inFunction && depth === 0) {
-      if (current.trim()) {
-        tokens.push(current.trim());
-        current = "";
-      }
-    } else if (char === "/" && !inFunction && depth === 0) {
-      // Size separator
-      if (current.trim()) {
-        tokens.push(current.trim());
-        current = "";
-      }
-      tokens.push("/");
-    } else {
-      current += char;
-    }
-  }
-
-  if (current.trim()) {
-    tokens.push(current.trim());
-  }
-
-  return tokens;
 };
 
 // Parse position and size values (position / size format)
