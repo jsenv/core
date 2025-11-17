@@ -422,3 +422,10 @@ export const getBackgroundColor = (
 ) => {
   return styleControllerToIgnore.getUnderlyingValue(element, "backgroundColor");
 };
+
+export const getBackground = (
+  element,
+  styleControllerToIgnore = dormantStyleController,
+) => {
+  return styleControllerToIgnore.getUnderlyingValue(element, "background");
+};

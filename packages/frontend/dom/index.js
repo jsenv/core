@@ -10,6 +10,7 @@ export { getStyle, setStyles } from "./src/style/dom_styles.js";
 export { appendStyles, mergeTwoStyles } from "./src/style/style_composition.js";
 export {
   createStyleController,
+  getBackground,
   getBackgroundColor,
   getOpacity,
   getTranslateX,
@@ -126,6 +127,7 @@ export { useResizeStatus } from "./src/size/hooks/use_resize_status.js";
 // transition
 export {
   createBackgroundColorTransition,
+  createBackgroundTransition,
   createHeightTransition,
   createOpacityTransition,
   createTranslateXTransition,

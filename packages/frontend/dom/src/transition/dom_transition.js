@@ -282,6 +282,9 @@ export const createBackgroundColorTransition = (element, to, options = {}) => {
     toBackgroundColor,
   );
 };
+export const createBackgroundTransition = (element, to, options = {}) => {
+  // TODO
+};
 
 // Helper functions for getting natural values
 export const getOpacityWithoutTransition = (element) =>
