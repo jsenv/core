@@ -270,8 +270,15 @@ export const applyStyle = (element, style, pseudoState, pseudoNamedStyles) => {
   updateStyle(element, getStyleToApply(style, pseudoState, pseudoNamedStyles));
 };
 
+export const PSEUDO_STATE_DEFAULT = {};
+export const PSEUDO_NAMED_STYLES_DEFAULT = {};
 const getStyleToApply = (styles, pseudoState, pseudoNamedStyles) => {
-  if (!pseudoState || !pseudoNamedStyles) {
+  if (
+    !pseudoState ||
+    pseudoState === PSEUDO_STATE_DEFAULT ||
+    !pseudoNamedStyles ||
+    pseudoNamedStyles === PSEUDO_NAMED_STYLES_DEFAULT
+  ) {
     return styles;
   }
 

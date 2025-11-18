@@ -55,7 +55,12 @@ import {
 } from "./box_style_util.js";
 import { getDefaultDisplay } from "./display_defaults.js";
 import { BoxLayoutContext } from "./layout_context.jsx";
-import { applyStyle, initPseudoStyles } from "./pseudo_styles.js";
+import {
+  applyStyle,
+  initPseudoStyles,
+  PSEUDO_NAMED_STYLES_DEFAULT,
+  PSEUDO_STATE_DEFAULT,
+} from "./pseudo_styles.js";
 import { withPropsClassName } from "./with_props_class_name.js";
 
 import.meta.css = /* css */ `
@@ -87,7 +92,6 @@ import.meta.css = /* css */ `
 const PSEUDO_CLASSES_DEFAULT = [];
 const PSEUDO_ELEMENTS_DEFAULT = [];
 const MANAGED_BY_CSS_VARS_DEFAULT = {};
-const PSEUDO_STATE_DEFAULT = {};
 
 export const Box = (props) => {
   const {
@@ -268,56 +272,62 @@ export const Box = (props) => {
       assignStyleFromProp(value, key, boxStyles, styleContext);
     }
 
-    const pseudoNamedStyles = {};
+    let pseudoNamedStyles = PSEUDO_NAMED_STYLES_DEFAULT;
     if (pseudoStyle) {
-      for (const key of Object.keys(pseudoStyle)) {
-        const pseudoStyleContext = {
-          ...styleContext,
-          managedByCSSVars: {
-            ...managedByCSSVars,
-            ...managedByCSSVars[key],
-          },
-          pseudoName: key,
-        };
+      const pseudoStyleKeys = Object.keys(pseudoStyle);
+      if (pseudoStyleKeys.length) {
+        pseudoNamedStyles = {};
+        for (const key of pseudoStyleKeys) {
+          const pseudoStyleContext = {
+            ...styleContext,
+            managedByCSSVars: {
+              ...managedByCSSVars,
+              ...managedByCSSVars[key],
+            },
+            pseudoName: key,
+          };
 
-        // pseudo class
-        if (key.startsWith(":")) {
-          styleDeps.push(key);
-          const pseudoClassStyles = {};
-          const pseudoClassStyle = pseudoStyle[key];
-          for (const pseudoClassStyleKey of Object.keys(pseudoClassStyle)) {
-            const pseudoClassStyleValue = pseudoClassStyle[pseudoClassStyleKey];
-            assignStyleFromProp(
-              pseudoClassStyleValue,
-              pseudoClassStyleKey,
-              pseudoClassStyles,
-              pseudoStyleContext,
-            );
+          // pseudo class
+          if (key.startsWith(":")) {
+            styleDeps.push(key);
+            const pseudoClassStyles = {};
+            const pseudoClassStyle = pseudoStyle[key];
+            for (const pseudoClassStyleKey of Object.keys(pseudoClassStyle)) {
+              const pseudoClassStyleValue =
+                pseudoClassStyle[pseudoClassStyleKey];
+              assignStyleFromProp(
+                pseudoClassStyleValue,
+                pseudoClassStyleKey,
+                pseudoClassStyles,
+                pseudoStyleContext,
+              );
+            }
+            pseudoNamedStyles[key] = pseudoClassStyles;
+            continue;
           }
-          pseudoNamedStyles[key] = pseudoClassStyles;
-          continue;
-        }
-        // pseudo element
-        if (key.startsWith("::")) {
-          styleDeps.push(key);
-          const pseudoElementStyles = {};
-          const pseudoElementStyle = pseudoStyle[key];
-          for (const pseudoElementStyleKey of Object.keys(pseudoElementStyle)) {
-            const pseudoElementStyleValue =
-              pseudoElementStyle[pseudoElementStyleKey];
-            assignStyleFromProp(
-              pseudoElementStyleValue,
-              pseudoElementStyleKey,
-              pseudoElementStyles,
-              pseudoStyleContext,
-            );
+          // pseudo element
+          if (key.startsWith("::")) {
+            styleDeps.push(key);
+            const pseudoElementStyles = {};
+            const pseudoElementStyle = pseudoStyle[key];
+            for (const pseudoElementStyleKey of Object.keys(
+              pseudoElementStyle,
+            )) {
+              const pseudoElementStyleValue =
+                pseudoElementStyle[pseudoElementStyleKey];
+              assignStyleFromProp(
+                pseudoElementStyleValue,
+                pseudoElementStyleKey,
+                pseudoElementStyles,
+                pseudoStyleContext,
+              );
+            }
+            pseudoNamedStyles[key] = pseudoElementStyles;
+            continue;
           }
-          pseudoNamedStyles[key] = pseudoElementStyles;
-          continue;
+          console.warn(`unsupported pseudo style key "${key}"`);
         }
-        console.warn(`unsupported pseudo style key "${key}"`);
       }
-
       remainingProps.pseudoStyle = pseudoStyle;
       // TODO: we should also pass pseudoState right?
     }
