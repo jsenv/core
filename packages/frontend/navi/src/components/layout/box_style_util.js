@@ -140,21 +140,21 @@ const DIMENSION_PROPS = {
       return { flexGrow: 1 }; // Grow horizontally in row
     }
     if (parentLayout === "row") {
-      return { minWidth: "100%" }; // Take full width in column
+      return { minWidth: "100%", width: "auto" }; // Take full width in column
     }
-    return { minWidth: "100%" }; // Take full width outside flex
+    return { minWidth: "100%", width: "auto" }; // Take full width outside flex
   },
   expandY: (value, { parentLayout }) => {
     if (!value) {
       return null;
     }
     if (parentLayout === "column") {
-      return { minHeight: "100%" }; // Make column full height
+      return { minHeight: "100%", height: "auto" }; // Make column full height
     }
     if (parentLayout === "row" || parentLayout === "inline-row") {
       return { flexGrow: 1 }; // Make row full height
     }
-    return { minHeight: "100%" }; // Take full height outside flex
+    return { minHeight: "100%", height: "auto" }; // Take full height outside flex
   },
   shrinkX: (value, { parentLayout }) => {
     if (!value) {
