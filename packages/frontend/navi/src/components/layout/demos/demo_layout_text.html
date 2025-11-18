@@ -83,7 +83,7 @@
             <div className="demo-container">
               <h3>1. Text with Expand in row</h3>
               <div className="visual-container">
-                <Box layoutColumn gap="10px">
+                <Box column contentSpacing="sm">
                   <DemoBox>Start</DemoBox>
                   <Text expand padding="sm" background="#e8f5e8">
                     This text expands to fill available horizontal space
@@ -96,17 +96,14 @@
             <div className="demo-container">
               <h3>2. Text with Expand in column</h3>
               <div className="visual-container">
-                <Box layoutRow gap="10px" height="200">
-                  <Text style={{ background: "#fff3e0", padding: "10px" }}>
+                <Box row contentSpacing="sm" height="200">
+                  <Text background="#fff3e0" padding="sm">
                     Fixed text at top
                   </Text>
-                  <Text
-                    expand
-                    style={{ background: "#e8f5e8", padding: "10px" }}
-                  >
+                  <Text expand background="#e8f5e8" padding="sm">
                     This text expands vertically to fill available space
                   </Text>
-                  <Text style={{ background: "#fff3e0", padding: "10px" }}>
+                  <Text background="#fff3e0" padding="sm">
                     Fixed text at bottom
                   </Text>
                 </Box>

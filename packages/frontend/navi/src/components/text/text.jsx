@@ -115,7 +115,6 @@ const TextBasic = ({
   foregroundColor,
   foregroundElement,
   contentSpacing = " ",
-  box,
   children,
   ...rest
 }) => {
@@ -125,8 +124,6 @@ const TextBasic = ({
       {...rest}
       baseClassName="navi_text"
       as={as}
-      layoutInline
-      layoutColumn={box ? true : undefined}
       data-has-foreground={hasForeground ? "" : undefined}
     >
       {applyContentSpacingOnTextChildren(children, contentSpacing)}
