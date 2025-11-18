@@ -12,7 +12,11 @@ export {
   parseStyle,
   stringifyStyle,
 } from "./src/style/parsing/style_parsing.js";
-export { appendStyles, mergeTwoStyles } from "./src/style/style_composition.js";
+export {
+  appendStyles,
+  mergeOneStyle,
+  mergeTwoStyles,
+} from "./src/style/style_composition.js";
 export {
   createStyleController,
   getBackground,

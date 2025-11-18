@@ -1,4 +1,4 @@
-import { stringifyStyle } from "@jsenv/dom";
+import { mergeOneStyle, stringifyStyle } from "@jsenv/dom";
 
 /**
  * Processes component props to extract and generate styles for layout, spacing, alignment, expansion, and typography.
@@ -182,11 +182,22 @@ const DIMENSION_PROPS = {
     return { maxHeight: "100%" };
   },
 
-  // TODO
-  scaleX: () => {},
-  scaleY: () => {},
-  scale: () => {}, // equivalent to scaleX
-  scaleZ: () => {},
+  scaleX: (value) => {
+    return { transform: `scaleX(${value})` };
+  },
+  scaleY: (value) => {
+    return { transform: `scaleY(${value})` };
+  },
+  scale: (value) => {
+    if (Array.isArray(value)) {
+      const [x, y] = value;
+      return { transform: `scale(${x}, ${y})` };
+    }
+    return { transform: `scale(${value})` };
+  },
+  scaleZ: (value) => {
+    return { transform: `scaleZ(${value})` };
+  },
 };
 const POSITION_PROPS = {
   // For row, alignX uses auto margins for positioning
@@ -248,18 +259,44 @@ const POSITION_PROPS = {
   left: PASS_THROUGH,
   top: PASS_THROUGH,
 
-  // TODO
-  translateX: () => {},
-  translateY: () => {},
-  // translateZ: () => {},
-  translate: () => {}, // equivalent to translateX
-  rotateX: () => {},
-  rotateY: () => {},
-  rotateZ: () => {},
-  rotate: () => {}, // equivalent to rotateZ
-  skewX: () => {},
-  skewY: () => {},
-  skew: () => {}, // equivalent to skewX
+  translateX: (value) => {
+    return { transform: `translateX(${value})` };
+  },
+  translateY: (value) => {
+    return { transform: `translateY(${value})` };
+  },
+  translate: (value) => {
+    if (Array.isArray(value)) {
+      const [x, y] = value;
+      return { transform: `translate(${x}, ${y})` };
+    }
+    return { transform: `translate(${value})` };
+  },
+  rotateX: (value) => {
+    return { transform: `rotateX(${value})` };
+  },
+  rotateY: (value) => {
+    return { transform: `rotateY(${value})` };
+  },
+  rotateZ: (value) => {
+    return { transform: `rotateZ(${value})` };
+  },
+  rotate: (value) => {
+    return { transform: `rotate(${value})` };
+  },
+  skewX: (value) => {
+    return { transform: `skewX(${value})` };
+  },
+  skewY: (value) => {
+    return { transform: `skewY(${value})` };
+  },
+  skew: (value) => {
+    if (Array.isArray(value)) {
+      const [x, y] = value;
+      return { transform: `skew(${x}, ${y})` };
+    }
+    return { transform: `skew(${value})` };
+  },
 };
 const TYPO_PROPS = {
   size: applyOnCSSProp("fontSize"),
@@ -371,6 +408,7 @@ const All_PROPS = {
   ...VISUAL_PROPS,
   ...CONTENT_PROPS,
 };
+const LAYOUT_PROP_NAME_SET = new Set(Object.keys(LAYOUT_PROPS));
 const OUTER_SPACING_PROP_NAME_SET = new Set(Object.keys(OUTER_SPACING_PROPS));
 const INNER_SPACING_PROP_NAME_SET = new Set(Object.keys(INNER_SPACING_PROPS));
 const DIMENSION_PROP_NAME_SET = new Set(Object.keys(DIMENSION_PROPS));
@@ -386,10 +424,7 @@ export const HANDLED_BY_VISUAL_CHILD_PROP_SET = new Set([
   ...CONTENT_PROP_NAME_SET,
 ]);
 export const COPIED_ON_VISUAL_CHILD_PROP_SET = new Set([
-  "inline",
-  "box",
-  "row",
-  "column",
+  ...LAYOUT_PROP_NAME_SET,
   "expand",
   "shrink",
   "expandX",
@@ -401,6 +436,9 @@ export const COPIED_ON_VISUAL_CHILD_PROP_SET = new Set([
 export const isStyleProp = (name) => STYLE_PROP_NAME_SET.has(name);
 
 const getStylePropGroup = (name) => {
+  if (LAYOUT_PROP_NAME_SET.has(name)) {
+    return "layout";
+  }
   if (OUTER_SPACING_PROP_NAME_SET.has(name)) {
     return "margin";
   }
@@ -457,10 +495,15 @@ export const assignStyle = (
   ) {
     const cssValue = normalizer(propValue, propName);
     const cssVar = managedByCSSVars[propName];
+    const mergedValue = mergeOneStyle(
+      styleObject[propName],
+      cssValue,
+      propName,
+    );
     if (cssVar) {
-      styleObject[cssVar] = cssValue;
+      styleObject[cssVar] = mergedValue;
     } else {
-      styleObject[propName] = cssValue;
+      styleObject[propName] = mergedValue;
     }
     return;
   }
@@ -472,10 +515,15 @@ export const assignStyle = (
     const value = values[key];
     const cssValue = normalizer(value, key);
     const cssVar = managedByCSSVars[key];
+    const mergedValue = mergeOneStyle(
+      styleObject[propName],
+      cssValue,
+      propName,
+    );
     if (cssVar) {
-      styleObject[cssVar] = cssValue;
+      styleObject[cssVar] = mergedValue;
     } else {
-      styleObject[key] = cssValue;
+      styleObject[key] = mergedValue;
     }
   }
 };
