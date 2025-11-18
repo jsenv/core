@@ -97,6 +97,18 @@
         stroke: #d84315;
         stroke-width: 1;
       }
+
+      .demo-rectangle-h {
+        fill: #9c27b0;
+        stroke: #7b1fa2;
+        stroke-width: 2;
+      }
+
+      .demo-rectangle-v {
+        fill: #ff9800;
+        stroke: #f57c00;
+        stroke-width: 2;
+      }
     </style>
   </head>
   <body>
@@ -142,6 +154,21 @@
         </svg>
       );
 
+      // Rectangular icons with different aspect ratios
+      const HorizontalRectIcon = () => (
+        <svg viewBox="0 0 32 16">
+          <rect className="demo-rectangle-h" x="2" y="2" width="28" height="12" rx="2" />
+          <text x="16" y="10" textAnchor="middle" fontSize="6" fill="white">WIDE</text>
+        </svg>
+      );
+
+      const VerticalRectIcon = () => (
+        <svg viewBox="0 0 16 32">
+          <rect className="demo-rectangle-v" x="2" y="2" width="12" height="28" rx="2" />
+          <text x="8" y="17" textAnchor="middle" fontSize="6" fill="white">TALL</text>
+        </svg>
+      );
+
       const Demo = () => {
         return (
           <div style={{ padding: "20px", fontFamily: "system-ui, sans-serif" }}>
@@ -156,33 +183,38 @@
               <div className="visual-container">
                 <div className="size-demo">
                   <div>
-                    <div className="size-label">width="20px"</div>
-                    <Icon width="20px">
-                      <StarIcon />
-                    </Icon>
-                  </div>
-
-                  <div>
-                    <div className="size-label">width="40px"</div>
-                    <Icon width="40px">
-                      <StarIcon />
+                    <div className="size-label">width="30px"</div>
+                    <Icon width="30px">
+                      <HorizontalRectIcon />
                     </Icon>
                   </div>
 
                   <div>
                     <div className="size-label">width="60px"</div>
                     <Icon width="60px">
-                      <StarIcon />
+                      <HorizontalRectIcon />
                     </Icon>
                   </div>
 
                   <div>
-                    <div className="size-label">width="100px"</div>
-                    <Icon width="100px">
-                      <StarIcon />
+                    <div className="size-label">width="90px"</div>
+                    <Icon width="90px">
+                      <HorizontalRectIcon />
+                    </Icon>
+                  </div>
+
+                  <div>
+                    <div className="size-label">width="120px"</div>
+                    <Icon width="120px">
+                      <HorizontalRectIcon />
                     </Icon>
                   </div>
                 </div>
+                <Box marginTop="15px">
+                  <Text style={{ fontSize: "14px", color: "#666", fontStyle: "italic" }}>
+                    Notice how the height scales proportionally as width increases (2:1 aspect ratio maintained)
+                  </Text>
+                </Box>
               </div>
             </div>
 
@@ -191,40 +223,45 @@
               <div className="visual-container">
                 <div className="size-demo">
                   <div>
-                    <div className="size-label">height="24px"</div>
-                    <Icon height="24px">
-                      <HeartIcon />
-                    </Icon>
-                  </div>
-
-                  <div>
-                    <div className="size-label">height="36px"</div>
-                    <Icon height="36px">
-                      <HeartIcon />
+                    <div className="size-label">height="32px"</div>
+                    <Icon height="32px">
+                      <VerticalRectIcon />
                     </Icon>
                   </div>
 
                   <div>
                     <div className="size-label">height="48px"</div>
                     <Icon height="48px">
-                      <HeartIcon />
+                      <VerticalRectIcon />
                     </Icon>
                   </div>
 
                   <div>
-                    <div className="size-label">height="72px"</div>
-                    <Icon height="72px">
-                      <HeartIcon />
+                    <div className="size-label">height="64px"</div>
+                    <Icon height="64px">
+                      <VerticalRectIcon />
+                    </Icon>
+                  </div>
+
+                  <div>
+                    <div className="size-label">height="80px"</div>
+                    <Icon height="80px">
+                      <VerticalRectIcon />
                     </Icon>
                   </div>
 
                   <div>
                     <div className="size-label">height="96px"</div>
                     <Icon height="96px">
-                      <HeartIcon />
+                      <VerticalRectIcon />
                     </Icon>
                   </div>
                 </div>
+                <Box marginTop="15px">
+                  <Text style={{ fontSize: "14px", color: "#666", fontStyle: "italic" }}>
+                    Notice how the width scales proportionally as height increases (1:2 aspect ratio maintained)
+                  </Text>
+                </Box>
               </div>
             </div>
 
