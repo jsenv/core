@@ -38,30 +38,67 @@
       }
 
       .transition-area {
-        position: relative;
-        display: flex;
-        min-height: 150px;
-        padding: 20px;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        background: #ffffff;
-        border: 2px solid #007acc;
+        display: grid;
+        margin: 20px 0;
+        grid-template-columns: 1fr 1fr;
+        align-items: start;
+        gap: 0;
+        background: white;
+        border: 2px solid #dee2e6;
         border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .transition-column {
+        display: flex;
+        min-height: 200px;
+        padding: 25px;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+        background: #fafafa;
+      }
+
+      .transition-column:first-child {
+        background: #f8f9fa;
+        border-right: 2px solid #dee2e6;
+      }
+
+      .transition-column h3 {
+        margin: 0 0 5px 0;
+        color: #495057;
+        font-weight: 600;
+        font-size: 18px;
+        text-align: center;
+      }
+
+      .transition-column .subtitle {
+        margin: 0 0 5px 0;
+        color: #6c757d;
+        font-style: italic;
+        font-weight: 400;
+        font-size: 12px;
+        text-align: center;
       }
 
       .transition-box {
         display: flex;
-        width: 160px;
-        height: 120px;
+        width: 150px;
+        height: 150px;
         align-items: center;
         justify-content: center;
         color: white;
         font-weight: bold;
         font-size: 14px;
-        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        text-align: center;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
         border: 3px solid #333;
         border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      #userAgentBox {
+        transition: background 1s ease;
       }
 
       .selector-fieldset {
@@ -291,7 +328,7 @@
     </style>
   </head>
   <body>
-    <h1>Background Color Transition Demo</h1>
+    <h1>Background Color Transition Demo - User Agent vs Navi</h1>
 
     <!-- Main Color Transition Demo -->
     <div class="demo-section">
@@ -378,7 +415,18 @@
 
       <!-- Transition Area -->
       <div class="transition-area">
-        <div class="transition-box" id="transitionBox">TRANSITION<br />BOX</div>
+        <div class="transition-column">
+          <h3>User Agent</h3>
+          <div class="subtitle">CSS transition: background</div>
+          <div class="transition-box" id="userAgentBox">
+            USER AGENT<br />BOX
+          </div>
+        </div>
+        <div class="transition-column">
+          <h3>Navi</h3>
+          <div class="subtitle">Custom transition system</div>
+          <div class="transition-box" id="naviBox">NAVI<br />BOX</div>
+        </div>
       </div>
     </div>
 
@@ -622,7 +670,6 @@
       }
 
       // Main Color Transition Section
-      const transitionBox = document.getElementById("transitionBox");
       const fromPreview = document.getElementById("fromPreview");
       const toPreview = document.getElementById("toPreview");
 
@@ -668,7 +715,8 @@
 
         applyBackground(fromPreview, selectedFrom);
         applyBackground(toPreview, selectedTo);
-        applyBackground(transitionBox, selectedFrom);
+        applyBackground(document.getElementById("userAgentBox"), selectedFrom);
+        applyBackground(document.getElementById("naviBox"), selectedFrom);
       }
 
       document
@@ -676,25 +724,37 @@
         .addEventListener("click", () => {
           stopCurrentTransitions();
 
-          transitionBox.style.background = selectedFrom;
+          const userAgentBox = document.getElementById("userAgentBox");
+          const naviBox = document.getElementById("naviBox");
+
+          // Reset both boxes to starting state
+          userAgentBox.style.background = selectedFrom;
+          naviBox.style.background = selectedFrom;
+
+          // Update user agent transition duration to match
+          const duration = getDuration();
+          userAgentBox.style.transitionDuration = `${duration}ms`;
 
           const pauseBreakpoints = getPauseBreakpoints() ? [0.5] : [];
           const resumeButton = document.getElementById("resumeTransitions");
-          const transition = createBackgroundTransition(
-            transitionBox,
-            selectedTo,
-            {
-              duration: getDuration(),
-              styleSynchronizer: "inline_style",
-              pauseBreakpoints,
-              onPause: () => {
-                resumeButton.disabled = false;
-              },
-              onFinish: () => {
-                resumeButton.disabled = true;
-              },
+
+          // Start user agent transition (simple CSS change)
+          setTimeout(() => {
+            userAgentBox.style.background = selectedTo;
+          }, 10);
+
+          // Start navi custom transition
+          const transition = createBackgroundTransition(naviBox, selectedTo, {
+            duration,
+            styleSynchronizer: "inline_style",
+            pauseBreakpoints,
+            onPause: () => {
+              resumeButton.disabled = false;
             },
-          );
+            onFinish: () => {
+              resumeButton.disabled = true;
+            },
+          });
 
           currentTransitions.push(transition);
           transition.play();

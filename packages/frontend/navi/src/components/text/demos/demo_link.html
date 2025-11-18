@@ -109,7 +109,7 @@
               <div className="states-section">
                 <div className="states-title">Standard HTML Link States</div>
                 <p className="states-description">
-                  These states work exactly like native HTML links, with
+                  These states work exactly like user agent HTML links, with
                   enhanced styling and consistent behavior.
                 </p>
 
@@ -121,7 +121,7 @@
                         Navi
                       </Link>
                       <a href="./default" onClick={(e) => e.preventDefault()}>
-                        Native
+                        User Agent
                       </a>
                     </Layout>
                   </fieldset>
@@ -191,8 +191,8 @@
                     In real browsers, :active and :visited states cannot be
                     forced through JavaScript for security reasons. The examples
                     above use pseudoState for demonstration in Navi links, while
-                    native links show these states only when actually clicked or
-                    visited.
+                    user agent links show these states only when actually
+                    clicked or visited.
                   </p>
                 </div>
               </div>
