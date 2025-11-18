@@ -5,15 +5,15 @@
     <title>Icon Demo</title>
     <style>
       .demo-container {
-        margin-bottom: 30px;
-        padding: 20px;
+        margin-bottom: 20px;
+        padding: 15px;
         background: #f8f9fa;
         border-radius: 8px;
       }
 
       .visual-container {
         margin: 10px 0;
-        padding: 20px;
+        padding: 15px;
         background: #fff;
         border: 2px solid #e9ecef;
         border-radius: 6px;
@@ -21,12 +21,12 @@
 
       .icon-showcase {
         display: flex;
-        min-height: 120px;
-        padding: 20px;
+        min-height: 100px;
+        padding: 15px;
         flex-wrap: wrap;
         align-items: center;
         justify-content: center;
-        gap: 20px;
+        gap: 15px;
         background: #f8f9fa;
         border: 1px solid #dee2e6;
         border-radius: 4px;
@@ -34,10 +34,10 @@
 
       .size-demo {
         display: flex;
-        padding: 20px;
+        padding: 15px;
         flex-wrap: wrap;
         align-items: flex-end;
-        gap: 15px;
+        gap: 12px;
         background: #f0f8ff;
         border: 1px solid #b3d9ff;
         border-radius: 4px;
@@ -51,12 +51,12 @@
 
       .rotation-demo {
         display: flex;
-        min-height: 150px;
-        padding: 30px;
+        min-height: 100px;
+        padding: 15px;
         flex-wrap: wrap;
         align-items: center;
         justify-content: center;
-        gap: 30px;
+        gap: 20px;
         background: #f5f5f5;
         border: 1px solid #ddd;
         border-radius: 4px;
@@ -157,15 +157,33 @@
       // Rectangular icons with different aspect ratios
       const HorizontalRectIcon = () => (
         <svg viewBox="0 0 32 16">
-          <rect className="demo-rectangle-h" x="2" y="2" width="28" height="12" rx="2" />
-          <text x="16" y="10" textAnchor="middle" fontSize="6" fill="white">WIDE</text>
+          <rect
+            className="demo-rectangle-h"
+            x="2"
+            y="2"
+            width="28"
+            height="12"
+            rx="2"
+          />
+          <text x="16" y="10" textAnchor="middle" fontSize="6" fill="white">
+            WIDE
+          </text>
         </svg>
       );
 
       const VerticalRectIcon = () => (
         <svg viewBox="0 0 16 32">
-          <rect className="demo-rectangle-v" x="2" y="2" width="12" height="28" rx="2" />
-          <text x="8" y="17" textAnchor="middle" fontSize="6" fill="white">TALL</text>
+          <rect
+            className="demo-rectangle-v"
+            x="2"
+            y="2"
+            width="12"
+            height="28"
+            rx="2"
+          />
+          <text x="8" y="17" textAnchor="middle" fontSize="6" fill="white">
+            TALL
+          </text>
         </svg>
       );
 
@@ -211,8 +229,15 @@
                   </div>
                 </div>
                 <Box marginTop="15px">
-                  <Text style={{ fontSize: "14px", color: "#666", fontStyle: "italic" }}>
-                    Notice how the height scales proportionally as width increases (2:1 aspect ratio maintained)
+                  <Text
+                    style={{
+                      fontSize: "14px",
+                      color: "#666",
+                      fontStyle: "italic",
+                    }}
+                  >
+                    Notice how the height scales proportionally as width
+                    increases (2:1 aspect ratio maintained)
                   </Text>
                 </Box>
               </div>
@@ -258,8 +283,15 @@
                   </div>
                 </div>
                 <Box marginTop="15px">
-                  <Text style={{ fontSize: "14px", color: "#666", fontStyle: "italic" }}>
-                    Notice how the width scales proportionally as height increases (1:2 aspect ratio maintained)
+                  <Text
+                    style={{
+                      fontSize: "14px",
+                      color: "#666",
+                      fontStyle: "italic",
+                    }}
+                  >
+                    Notice how the width scales proportionally as height
+                    increases (1:2 aspect ratio maintained)
                   </Text>
                 </Box>
               </div>
@@ -325,7 +357,7 @@
                   </div>
                 </div>
 
-                <Box marginTop="20px">
+                <Box marginTop="10px">
                   <Text
                     style={{
                       fontSize: "14px",
@@ -394,7 +426,7 @@
                   </div>
                 </div>
 
-                <Box marginTop="20px">
+                <Box marginTop="12px">
                   <Text style={{ fontSize: "14px", color: "#666" }}>
                     The href prop allows referencing SVG symbols defined
                     elsewhere in the document, providing efficient icon reuse
