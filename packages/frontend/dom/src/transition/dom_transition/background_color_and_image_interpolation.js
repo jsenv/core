@@ -2,7 +2,7 @@ import { interpolate } from "../transition_playback.js";
 import {
   interpolateRGBA,
   prepareRGBATransitionPair,
-} from "./color_transition.js";
+} from "./color_interpolation.js";
 
 export const getBackgroundColorAndImageInterpolation = (
   fromBackground,

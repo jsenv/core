@@ -20,7 +20,8 @@ import { getBackgroundColorAndImageInterpolation } from "./background_color_and_
 import {
   interpolateRGBA,
   prepareRGBATransitionPair,
-} from "./color_transition.js";
+} from "./color_interpolation.js";
+import { createObjectInterpolation } from "./object_interpolation.js";
 
 const transitionStyleController = createStyleController("transition");
 
@@ -281,81 +282,39 @@ export const createBackgroundTransition = (element, to, options = {}) => {
     );
     backgrounInterpolation = colorAndImageInterpolation;
   }
-  return convertInterpolationToTransition(backgrounInterpolation, {
-    constructor: createBackgroundTransition,
-    element,
-    styleProperty: "background",
-    from: fromBackground,
-    to: toBackground,
-    ...options,
-  });
-};
 
-const convertInterpolationToTransition = (
-  interpolation,
-  { constructor, element, styleProperty, from, to, ...options },
-) => {
-  const createInstant = () => {
-    const toStyleCss = stringifyStyle(to, styleProperty);
+  const interpolateBackground = createObjectInterpolation(
+    backgrounInterpolation,
+    fromBackground,
+    toBackground,
+  );
+  if (!interpolateBackground) {
+    return createNoopCSSPropertyTransition({
+      element,
+      ...options,
+    });
+  }
+  if (interpolateBackground === toBackground) {
+    const toStyleCss = stringifyStyle(to, "background");
     console.warn(
-      `Unsupported ${styleProperty} transition between "${stringifyStyle(from, styleProperty)}" and "${toStyleCss}"`,
+      `Unsupported background transition between "${stringifyStyle(fromBackground, "background")}" and "${toStyleCss}"`,
     );
     return createInstantCSSPropertyTransition({
       element,
       value: toStyleCss,
       ...options,
     });
-  };
-
-  if (interpolation === to) {
-    if (from === to) {
-      return createNoopCSSPropertyTransition({
-        element,
-        ...options,
-      });
-    }
-    return createInstant();
-  }
-  const propertyInterpolatorMap = new Map();
-  for (const key of Object.keys(interpolation)) {
-    const value = interpolation[key];
-    if (value === to[key]) {
-      continue;
-    }
-    const propertyInterpolator = (transition) => {
-      const interpolatedValue = value(transition);
-      return interpolatedValue;
-    };
-    propertyInterpolatorMap.set(key, propertyInterpolator);
-  }
-  if (propertyInterpolatorMap.size === 0) {
-    return createInstant();
   }
   return createCSSPropertyTransition({
-    constructor,
+    constructor: createBackgroundTransition,
     element,
-    styleProperty,
+    styleProperty: "background",
     from: 0,
     to: 1,
     getFrom: () => 0,
     getValue: (transition) => {
-      const toAssignMap = new Map();
-      for (const [key, interpolate] of propertyInterpolatorMap) {
-        const interpolatedValue = interpolate(transition);
-        toAssignMap.set(key, interpolatedValue);
-      }
-      if (toAssignMap.size === 0) {
-        return stringifyStyle(to, styleProperty);
-      }
-      const copy = { ...to };
-      for (const [key, value] of toAssignMap) {
-        if (value === undefined) {
-          delete copy[key];
-        } else {
-          copy[key] = value;
-        }
-      }
-      return stringifyStyle(copy, styleProperty);
+      const backgroundInterpolated = interpolateBackground(transition);
+      return stringifyStyle(backgroundInterpolated, "background");
     },
     ...options,
   });
