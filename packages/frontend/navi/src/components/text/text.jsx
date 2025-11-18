@@ -14,20 +14,6 @@ import.meta.css = /* css */ `
     opacity: 0;
   }
 
-  .navi_icon {
-    display: flex;
-    aspect-ratio: 1 / 1;
-    height: 100%;
-    max-height: 1em;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .navi_icon > svg {
-    width: 100%;
-    height: 100%;
-  }
-
   .navi_text[data-has-foreground] {
     display: inline-block;
   }
@@ -51,6 +37,27 @@ import.meta.css = /* css */ `
     max-width: 100%;
     text-overflow: ellipsis;
     overflow: hidden;
+  }
+
+  .navi_icon_char {
+    display: flex;
+    aspect-ratio: 1 / 1;
+    height: 100%;
+    max-height: 1em;
+    align-items: center;
+    justify-content: center;
+  }
+  .navi_icon_char > svg {
+    width: 100%;
+    height: 100%;
+  }
+  .navi_icon[data-width] svg {
+    width: 100%;
+    height: auto;
+  }
+  .navi_icon[data-height] svg {
+    width: auto;
+    height: 100%;
   }
 `;
 
@@ -191,12 +198,21 @@ export const Icon = ({ href, children, ...props }) => {
   }
 
   if (box) {
-    return <Box {...props}>{innerChildren}</Box>;
+    return (
+      <Box
+        {...props}
+        baseClassName="navi_icon"
+        data-width={width}
+        data-height={height}
+      >
+        {innerChildren}
+      </Box>
+    );
   }
 
   return (
     <CharSlot decorative {...props}>
-      <span className="navi_icon">{innerChildren}</span>
+      <span className="navi_icon_char">{innerChildren}</span>
     </CharSlot>
   );
 };
