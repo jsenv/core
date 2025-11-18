@@ -263,11 +263,7 @@ export const createTransition = ({
       const easedProgress = easing ? easing(progress) : progress;
       transition.easedProgress = easedProgress;
 
-      const value = applyTransitionProgress(
-        transition,
-        transition.from,
-        transition.to,
-      );
+      const value = interpolate(transition, transition.from, transition.to);
       transition.value = value;
 
       transition.timing =
@@ -394,7 +390,7 @@ export const createTransition = ({
   return transition;
 };
 
-export const applyTransitionProgress = (transition, from, to) => {
+export const interpolate = (transition, from, to) => {
   const { easedProgress } = transition;
   return applyRatioToDiff(from, to, easedProgress);
 };

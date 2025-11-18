@@ -17,11 +17,11 @@ import {
   createTimelineTransition,
 } from "../transition_playback.js";
 import {
-  applyColorToColor,
-  applyColorToGradient,
-  applyGradientToColor,
-  applyGradientToGradient,
-  prepareColorTransitionPair,
+  interpolateColorToGradient,
+  interpolateGradient,
+  interpolateGradientToColor,
+  interpolateRGBA,
+  prepareRGBATransitionPair,
 } from "./color_transition.js";
 
 const transitionStyleController = createStyleController("transition");
@@ -227,7 +227,7 @@ export const createTranslateXTransition = (element, to, options = {}) => {
 export const createBackgroundColorTransition = (element, to, options = {}) => {
   const fromBackgroundColor = options.from || getBackgroundColor(element);
   const toBackgroundColor = parseStyle(to, "backgroundColor", element);
-  const rgbaPair = prepareColorTransitionPair(
+  const rgbaPair = prepareRGBATransitionPair(
     fromBackgroundColor,
     toBackgroundColor,
     element,
@@ -248,12 +248,12 @@ export const createBackgroundColorTransition = (element, to, options = {}) => {
     from: 0,
     to: 1,
     getValue: (transition) => {
-      const rgbaWithTransition = applyColorToColor(rgbaPair, transition);
-      const backgroundColorWithTransition = stringifyStyle(
-        rgbaWithTransition,
+      const rgbaInterpolated = interpolateRGBA(transition, fromRgba, toRgba);
+      const backgroundColorInterpolated = stringifyStyle(
+        rgbaInterpolated,
         "backgroundColor",
       );
-      return backgroundColorWithTransition;
+      return backgroundColorInterpolated;
     },
   });
 };
@@ -295,7 +295,7 @@ export const createBackgroundTransition = (element, to, options = {}) => {
   if (!fromHasImage && !toHasImage) {
     const fromBackgroundColor = fromBackground.color;
     const toBackgroundColor = toBackground.color;
-    const backgroundColorRgbaPair = prepareColorTransitionPair(
+    const backgroundColorRgbaPair = prepareRGBATransitionPair(
       fromBackgroundColor,
       toBackgroundColor,
     );
@@ -310,11 +310,12 @@ export const createBackgroundTransition = (element, to, options = {}) => {
       getValue: (transition) => {
         const intermediateBackground = { ...toBackground };
         if (backgroundColorRgbaPair) {
-          const rgbaWithTransition = applyColorToColor(
-            backgroundColorRgbaPair,
+          const rgbaInterpolated = interpolateRGBA(
             transition,
+            backgroundColorRgbaPair[0],
+            backgroundColorRgbaPair[1],
           );
-          intermediateBackground.color = rgbaWithTransition;
+          intermediateBackground.color = rgbaInterpolated;
         }
         return stringifyStyle(intermediateBackground, "background");
       },
@@ -331,10 +332,10 @@ export const createBackgroundTransition = (element, to, options = {}) => {
       to: 1,
       getValue: (transition) => {
         const intermediateBackground = { ...fromBackground };
-        intermediateBackground.image = applyGradientToColor(
+        intermediateBackground.image = interpolateGradientToColor(
+          transition,
           fromBackground.image,
           toBackground.color,
-          transition,
         );
         // Remove the original gradient since we're transitioning to a solid color
         if (transition.value === 1) {
@@ -356,10 +357,10 @@ export const createBackgroundTransition = (element, to, options = {}) => {
       to: 1,
       getValue: (transition) => {
         const intermediateBackground = { ...toBackground };
-        intermediateBackground.image = applyColorToGradient(
+        intermediateBackground.image = interpolateColorToGradient(
+          transition,
           fromBackground.color,
           toBackground.image,
-          transition,
         );
         return stringifyStyle(intermediateBackground, "background");
       },
@@ -392,10 +393,10 @@ export const createBackgroundTransition = (element, to, options = {}) => {
 
           if (isSameGradientType) {
             // Same type: use direct gradient interpolation
-            intermediateBackground.image = applyGradientToGradient(
+            intermediateBackground.image = interpolateGradient(
+              transition,
               fromBackground.image,
               toBackground.image,
-              transition,
             );
           } else {
             // Different types: use cross-gradient interpolation
@@ -410,16 +411,17 @@ export const createBackgroundTransition = (element, to, options = {}) => {
           const fromBackgroundColor = fromBackground.color;
           const toBackgroundColor = toBackground.color;
           if (fromBackgroundColor || toBackgroundColor) {
-            const backgroundColorRgbaPair = prepareColorTransitionPair(
+            const backgroundColorRgbaPair = prepareRGBATransitionPair(
               fromBackgroundColor,
               toBackgroundColor,
             );
             if (backgroundColorRgbaPair) {
-              const rgbaWithTransition = applyColorToColor(
-                backgroundColorRgbaPair,
+              const rgbaInterpolated = interpolateRGBA(
                 transition,
+                backgroundColorRgbaPair[0],
+                backgroundColorRgbaPair[1],
               );
-              intermediateBackground.color = rgbaWithTransition;
+              intermediateBackground.color = rgbaInterpolated;
             }
           }
 
@@ -447,7 +449,7 @@ export const createBackgroundTransition = (element, to, options = {}) => {
   ) {
     const fromBackgroundColor = fromBackground.color;
     const toBackgroundColor = toBackground.color;
-    const backgroundColorRgbaPair = prepareColorTransitionPair(
+    const backgroundColorRgbaPair = prepareRGBATransitionPair(
       fromBackgroundColor,
       toBackgroundColor,
     );
@@ -462,11 +464,11 @@ export const createBackgroundTransition = (element, to, options = {}) => {
       getValue: (transition) => {
         const intermediateBackground = { ...toBackground };
         if (backgroundColorRgbaPair) {
-          const rgbaWithTransition = applyColorToColor(
+          const rgbaInterpolated = interpolateRGBA(
             backgroundColorRgbaPair,
             transition,
           );
-          intermediateBackground.color = rgbaWithTransition;
+          intermediateBackground.color = rgbaInterpolated;
         }
         return stringifyStyle(intermediateBackground, "background");
       },
@@ -537,8 +539,11 @@ const applyCrossGradientTransition = (fromGradient, toGradient, transition) => {
         const interpolatedStop = { ...toStop };
 
         if (fromStop.color && toStop.color) {
-          const colorPair = [fromStop.color, toStop.color];
-          interpolatedStop.color = applyColorToColor(colorPair, transition);
+          interpolatedStop.color = interpolateRGBA(
+            transition,
+            fromStop.color,
+            toStop.color,
+          );
         }
 
         // For cross-gradient transitions, use target positions
