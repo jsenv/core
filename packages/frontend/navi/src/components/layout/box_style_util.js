@@ -478,7 +478,7 @@ export const assignStyle = (
   propValue,
   propName,
   styleContext,
-  normalizer = getNormalizer(propName),
+  context = "js",
 ) => {
   if (propValue === undefined) {
     return;
@@ -487,6 +487,7 @@ export const assignStyle = (
   if (!managedByCSSVars) {
     throw new Error("managedByCSSVars is required in styleContext");
   }
+  const normalizer = getNormalizer(propName);
   const getStyle = All_PROPS[propName];
   if (
     getStyle === PASS_THROUGH ||
@@ -499,6 +500,7 @@ export const assignStyle = (
       styleObject[propName],
       cssValue,
       propName,
+      context,
     );
     if (cssVar) {
       styleObject[cssVar] = mergedValue;
@@ -519,6 +521,7 @@ export const assignStyle = (
       styleObject[propName],
       cssValue,
       propName,
+      context,
     );
     if (cssVar) {
       styleObject[cssVar] = mergedValue;

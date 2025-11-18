@@ -328,7 +328,6 @@ export const Box = (props) => {
         }
       }
       remainingProps.pseudoStyle = pseudoStyle;
-      // TODO: we should also pass pseudoState right?
     }
 
     if (typeof style === "string") {
@@ -337,7 +336,7 @@ export const Box = (props) => {
     } else if (style && typeof style === "object") {
       for (const key of Object.keys(style)) {
         const stylePropValue = style[key];
-        assignStyle(boxStyles, stylePropValue, key, styleContext);
+        assignStyle(boxStyles, stylePropValue, key, styleContext, "css");
         styleDeps.push(stylePropValue); // impact box style -> add to deps
       }
     }
