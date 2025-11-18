@@ -128,6 +128,8 @@ export { useMaxWidth } from "./src/size/hooks/use_max_width.js";
 export { useResizeStatus } from "./src/size/hooks/use_resize_status.js";
 
 // transition
+export { EASING, cubicBezier } from "./src/transition/easing.js";
+export { createGroupTransitionController } from "./src/transition/group_transition.js";
 export {
   createBackgroundColorTransition,
   createBackgroundTransition,
@@ -139,9 +141,7 @@ export {
   getOpacityWithoutTransition,
   getTranslateXWithoutTransition,
   getWidthWithoutTransition,
-} from "./src/transition/dom_transition/dom_transition.js";
-export { EASING, cubicBezier } from "./src/transition/easing.js";
-export { createGroupTransitionController } from "./src/transition/group_transition.js";
+} from "./src/transition/style/style_transition.js";
 export {
   createTimelineTransition,
   createTransition,
