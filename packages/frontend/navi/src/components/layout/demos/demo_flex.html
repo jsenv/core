@@ -43,10 +43,12 @@
       const Demo = () => {
         return (
           <div style={{ padding: "20px", fontFamily: "system-ui, sans-serif" }}>
-            <h1>Column Layout Demo</h1>
+            <h1>Flex Layout Demo</h1>
+
+            <h2>Column Layout</h2>
 
             <section className="demo-section">
-              <h3>1. 3 rows</h3>
+              <h3>1. 3 items in column</h3>
               <Box column backgroundImage="./bird.webp">
                 <DemoBox>Item 1</DemoBox>
                 <DemoBox>Item 2</DemoBox>
@@ -55,7 +57,7 @@
             </section>
 
             <section className="demo-section">
-              <h3>2. 3 rows with gap</h3>
+              <h3>2. 3 items in column with contentSpacing="md"</h3>
               <Box column contentSpacing="md">
                 <DemoBox>Item 1</DemoBox>
                 <DemoBox>Item 2</DemoBox>
@@ -233,10 +235,10 @@
               </Box>
             </section>
 
-            <h2>Col nested</h2>
+            <h2>Nested Column Layout</h2>
 
             <section className="demo-section">
-              <h3>6. Basic Usage</h3>
+              <h3>6. Nested Box items</h3>
 
               <Box column contentSpacing="10px">
                 <Box>
@@ -267,10 +269,10 @@
               </Box>
             </section>
 
-            <h2>Rows</h2>
+            <h2>Row Layout</h2>
 
             <section className="demo-section">
-              <h3>8. Basic Rows</h3>
+              <h3>8. 3 items in row</h3>
               <Box row height="200">
                 <DemoBox>Item 1</DemoBox>
                 <DemoBox>Item 2</DemoBox>
@@ -279,7 +281,7 @@
             </section>
 
             <section className="demo-section">
-              <h3>9. Rows with spacing</h3>
+              <h3>9. 3 items in row with contentSpacing="md"</h3>
               <Box row contentSpacing="md" height="200">
                 <DemoBox>Item 1</DemoBox>
                 <DemoBox>Item 2</DemoBox>
@@ -288,7 +290,7 @@
             </section>
 
             <section className="demo-section">
-              <h3>10. Rows with contentAlignX</h3>
+              <h3>10. Row with contentAlignX</h3>
 
               <h4>contentAlignX="start"</h4>
               <Box
@@ -414,7 +416,7 @@
               </Box>
             </section>
 
-            <h2>FlexItem Individual Alignment</h2>
+            <h2>Individual Item Alignment</h2>
             <p
               style={{
                 marginBottom: "20px",
@@ -501,7 +503,7 @@
                 </Box>
               </Box>
 
-              <h4>FlexItem alignY in Column</h4>
+              <h4>Box alignY in Row</h4>
               <Box
                 row
                 contentSpacing="sm"
@@ -526,7 +528,7 @@
             </section>
 
             <section className="demo-section">
-              <h3>14. Box Practical Examples - Row layout</h3>
+              <h3>14. Practical Examples - Row layout</h3>
 
               <h4>Single item pushed to bottom</h4>
               <Box
@@ -560,10 +562,10 @@
             </section>
 
             <section className="demo-section">
-              <h3>15. When to Use FlexItem Alignment</h3>
+              <h3>15. When to Use Individual Item Alignment</h3>
               <p style={{ marginBottom: "15px", fontSize: "14px" }}>
-                FlexItem alignment is useful when you need exceptions to the
-                container's alignment:
+                Individual item alignment is useful when you need exceptions to
+                the container's alignment:
               </p>
 
               <h4>Example: Most items start, one pushed to end</h4>
