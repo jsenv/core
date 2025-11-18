@@ -235,7 +235,7 @@ export const Box = (props) => {
       propValue,
       propName,
       stylesTarget,
-      context,
+      styleContext,
     ) => {
       const propEffect = getPropEffect(propName);
       if (propEffect === "ignore") {
@@ -248,7 +248,7 @@ export const Box = (props) => {
 
       if (useToStyle) {
         styleDeps.push(propValue);
-        assignStyle(stylesTarget, propValue, propName, context);
+        assignStyle(stylesTarget, propValue, propName, styleContext, "css");
       }
       if (stylesTarget === boxStyles) {
         if (!shouldForwardAllToChild && !useToStyle) {
