@@ -64,6 +64,9 @@
  *
  * TODO:
  *
+ * - finir le truc avec le background
+ * puis faire la meme avec le border-color et le radius
+ *
  * - padding
  *
  * - border radius
@@ -127,7 +130,7 @@ import.meta.css = /* css */ `
     /* transition-property: border-radius; */
     /* transition-duration: var(--x-transition-duration); */
     /* transition-timing-function: ease; */
-    background-clip: text !important;
+    /* background-clip: text !important; */
   }
 
   .ui_transition[data-transitioning] .ui_transition_container {
@@ -496,6 +499,7 @@ export const createUITransitionController = (
         targetSlotBackground = getBackground(
           targetSlotConfiguration.singleElementNode,
         );
+        targetSlotConfiguration.singleElementNode.style.background = "none";
       } else {
         // empty, text, multiple elements
         targetSlotBackground = undefined;
@@ -604,7 +608,7 @@ export const createUITransitionController = (
   let transitionType = "none";
   const transitionController = createGroupTransitionController({
     // debugBreakpoints: [0.25],
-    pauseBreakpoints: [0.6],
+    // pauseBreakpoints: [0.6],
     lifecycle: {
       setup: () => {
         updateSlotAttributes();
@@ -623,7 +627,7 @@ export const createUITransitionController = (
     },
   });
 
-  const morhContainerIntoTarget = () => {
+  const morphContainerIntoTarget = () => {
     const fromWidth = containerWidth || 0;
     const fromHeight = containerHeight || 0;
     const toWidth = targetSlotWidth || 0;
@@ -753,7 +757,7 @@ export const createUITransitionController = (
     outgoingSlotBecomes(UNSET);
     targetSlotBecomes(toConfiguration);
     const transitions = [
-      ...morhContainerIntoTarget(),
+      ...morphContainerIntoTarget(),
       fadeInTargetSlot(),
       fadeOutPreviousGroup(),
     ];
@@ -772,7 +776,7 @@ export const createUITransitionController = (
   const applyContentPhaseToContentPhaseTransition = (toConfiguration) => {
     targetSlotBecomesViaOutgoing(toConfiguration);
     const transitions = [
-      ...morhContainerIntoTarget(),
+      ...morphContainerIntoTarget(),
       fadeInTargetSlot(),
       fadeOutOutgoingSlot(),
     ];
@@ -791,7 +795,7 @@ export const createUITransitionController = (
   const applyToEmptyTransition = () => {
     targetSlotBecomes(UNSET);
     outgoingSlotBecomes(UNSET);
-    const transitions = [...morhContainerIntoTarget(), fadeOutPreviousGroup()];
+    const transitions = [...morphContainerIntoTarget(), fadeOutPreviousGroup()];
     const transition = transitionController.update(transitions, {
       onFinish: () => {
         setSlotDimensions(targetSlot, undefined, undefined);
