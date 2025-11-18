@@ -23,6 +23,11 @@ import.meta.css = /* css */ `
     justify-content: center;
   }
 
+  .navi_icon > svg {
+    width: 100%;
+    height: 100%;
+  }
+
   .navi_text[data-has-foreground] {
     display: inline-block;
   }
@@ -159,14 +164,19 @@ export const CharSlot = ({
     : { role, "aria-label": ariaLabel };
 
   return (
-    <Text {...rest} {...ariaProps} foregroundElement={children}>
+    <Text
+      {...rest}
+      {...ariaProps}
+      foregroundElement={children}
+      data-char-slot=""
+    >
       <span className="navi_char_slot_invisible" aria-hidden="true">
         {invisibleText}
       </span>
     </Text>
   );
 };
-export const Icon = ({ box, href, children, ...props }) => {
+export const Icon = ({ href, children, ...props }) => {
   const innerChildren = href ? (
     <svg width="100%" height="100%">
       <use href={href} />
@@ -174,6 +184,11 @@ export const Icon = ({ box, href, children, ...props }) => {
   ) : (
     children
   );
+
+  let { box, width, height } = props;
+  if (width !== undefined || height !== undefined) {
+    box = true;
+  }
 
   if (box) {
     return <Box {...props}>{innerChildren}</Box>;
