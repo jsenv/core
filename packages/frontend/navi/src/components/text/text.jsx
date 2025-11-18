@@ -176,11 +176,7 @@ export const Icon = ({ box, href, children, ...props }) => {
   );
 
   if (box) {
-    return (
-      <Box layoutInline layoutColumn {...props}>
-        {innerChildren}
-      </Box>
-    );
+    return <Box {...props}>{innerChildren}</Box>;
   }
 
   return (

@@ -517,12 +517,7 @@ export const assignStyle = (
     const value = values[key];
     const cssValue = normalizer(value, key);
     const cssVar = managedByCSSVars[key];
-    const mergedValue = mergeOneStyle(
-      styleObject[propName],
-      cssValue,
-      propName,
-      context,
-    );
+    const mergedValue = mergeOneStyle(styleObject[key], cssValue, key, context);
     if (cssVar) {
       styleObject[cssVar] = mergedValue;
     } else {
