@@ -183,7 +183,7 @@ const DIMENSION_PROPS = {
   },
 
   scaleX: (value) => {
-    return { transform: `scaleX(${value})` };
+    return { transform: `scaleX(${stringifyStyle(value, "scaleX")})` };
   },
   scaleY: (value) => {
     return { transform: `scaleY(${value})` };
@@ -270,7 +270,7 @@ const POSITION_PROPS = {
       const [x, y] = value;
       return { transform: `translate(${x}, ${y})` };
     }
-    return { transform: `translate(${value})` };
+    return { transform: `translate(${stringifyStyle(value, "translateX")})` };
   },
   rotateX: (value) => {
     return { transform: `rotateX(${value})` };
