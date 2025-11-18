@@ -279,7 +279,7 @@ export const createBackgroundTransition = (element, to, options = {}) => {
       fromBackground,
       toBackground,
     );
-    return colorAndImageInterpolation;
+    backgrounInterpolation = colorAndImageInterpolation;
   }
   return convertInterpolationToTransition(backgrounInterpolation, {
     constructor: createBackgroundTransition,
@@ -332,8 +332,9 @@ const convertInterpolationToTransition = (
     return createInstant();
   }
   return createCSSPropertyTransition({
-    element,
     constructor,
+    element,
+    styleProperty,
     from: 0,
     to: 1,
     getFrom: () => 0,
