@@ -71,4 +71,20 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("repeating conic gradient", () => {
     return run("repeating-conic-gradient(#ddd 0deg 90deg, #fff 90deg 180deg)");
   });
+
+  test("basic radial gradient", () => {
+    return run("radial-gradient(red, blue)");
+  });
+
+  test("repeating radial gradient with size", () => {
+    return run(
+      "repeating-radial-gradient(circle 50px, red 0%, blue 50%, red 100%)",
+    );
+  });
+
+  test("radial gradient with complex shape and position", () => {
+    return run(
+      "radial-gradient(ellipse farthest-corner at top left, yellow 0%, red 50%, blue 100%)",
+    );
+  });
 });

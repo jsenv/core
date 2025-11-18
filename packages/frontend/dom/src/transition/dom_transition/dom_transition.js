@@ -365,46 +365,78 @@ export const createBackgroundTransition = (element, to, options = {}) => {
       },
     });
   }
-  // Same gradient type transitions
-  if (
-    fromHasGradient &&
-    toHasGradient &&
-    fromBackground.image.type === toBackground.image.type
-  ) {
-    return createCSSPropertyTransition({
+  // Case 4: Gradient to Gradient transitions (same or different types)
+  if (fromHasGradient && toHasGradient) {
+    const fromGradientType = fromBackground.image.type;
+    const toGradientType = toBackground.image.type;
+    const isSameGradientType = fromGradientType === toGradientType;
+
+    // Check if this is a supported cross-gradient transition
+    const isSupportedCrossTransition =
+      !isSameGradientType &&
+      areGradientsCompatibleForTransition(
+        fromBackground.image,
+        toBackground.image,
+      );
+
+    if (isSameGradientType || isSupportedCrossTransition) {
+      return createCSSPropertyTransition({
+        ...options,
+        element,
+        styleProperty: "background",
+        getFrom: () => 0,
+        from: 0,
+        to: 1,
+        getValue: (transition) => {
+          const intermediateBackground = { ...toBackground };
+
+          if (isSameGradientType) {
+            // Same type: use direct gradient interpolation
+            intermediateBackground.image = applyGradientToGradient(
+              fromBackground.image,
+              toBackground.image,
+              transition,
+            );
+          } else {
+            // Different types: use cross-gradient interpolation
+            intermediateBackground.image = applyCrossGradientTransition(
+              fromBackground.image,
+              toBackground.image,
+              transition,
+            );
+          }
+
+          // Also interpolate background color if both have it
+          const fromBackgroundColor = fromBackground.color;
+          const toBackgroundColor = toBackground.color;
+          if (fromBackgroundColor || toBackgroundColor) {
+            const backgroundColorRgbaPair = prepareColorTransitionPair(
+              fromBackgroundColor,
+              toBackgroundColor,
+            );
+            if (backgroundColorRgbaPair) {
+              const rgbaWithTransition = applyColorToColor(
+                backgroundColorRgbaPair,
+                transition,
+              );
+              intermediateBackground.color = rgbaWithTransition;
+            }
+          }
+
+          return stringifyStyle(intermediateBackground, "background");
+        },
+      });
+    }
+
+    // Unsupported cross-gradient transition - fall back to instant change
+    console.warn(
+      `Unsupported gradient transition from ${fromGradientType} to ${toGradientType}`,
+    );
+    return createInstantCSSPropertyTransition({
       ...options,
       element,
       styleProperty: "background",
-      getFrom: () => 0,
-      from: 0,
-      to: 1,
-      getValue: (transition) => {
-        const intermediateBackground = { ...toBackground };
-        intermediateBackground.image = applyGradientToGradient(
-          fromBackground.image,
-          toBackground.image,
-          transition,
-        );
-
-        // Also interpolate background color if both have it
-        const fromBackgroundColor = fromBackground.color;
-        const toBackgroundColor = toBackground.color;
-        if (fromBackgroundColor || toBackgroundColor) {
-          const backgroundColorRgbaPair = prepareColorTransitionPair(
-            fromBackgroundColor,
-            toBackgroundColor,
-          );
-          if (backgroundColorRgbaPair) {
-            const rgbaWithTransition = applyColorToColor(
-              backgroundColorRgbaPair,
-              transition,
-            );
-            intermediateBackground.color = rgbaWithTransition;
-          }
-        }
-
-        return stringifyStyle(intermediateBackground, "background");
-      },
+      value: stringifyStyle(toBackground, "background"),
     });
   }
   // Identical image transitions
@@ -462,6 +494,65 @@ const isGradientObject = (imageObj) => {
     imageObj.type &&
     imageObj.type.includes("gradient")
   );
+};
+
+// Check if two gradients are compatible for cross-type transitions
+const areGradientsCompatibleForTransition = (fromGradient, toGradient) => {
+  // All gradient types can transition to each other as long as both have colors
+  return (
+    fromGradient.colors &&
+    toGradient.colors &&
+    Array.isArray(fromGradient.colors) &&
+    Array.isArray(toGradient.colors) &&
+    fromGradient.colors.length > 0 &&
+    toGradient.colors.length > 0
+  );
+};
+
+// Apply transition between different gradient types
+const applyCrossGradientTransition = (fromGradient, toGradient, transition) => {
+  // For cross-gradient transitions, we morph towards the target gradient
+  // while interpolating the colors
+  const interpolatedGradient = { ...toGradient };
+
+  // Interpolate colors if both gradients have them
+  if (
+    fromGradient.colors &&
+    toGradient.colors &&
+    Array.isArray(fromGradient.colors) &&
+    Array.isArray(toGradient.colors)
+  ) {
+    const maxStops = Math.max(
+      fromGradient.colors.length,
+      toGradient.colors.length,
+    );
+    interpolatedGradient.colors = [];
+
+    for (let i = 0; i < maxStops; i++) {
+      const fromStop = fromGradient.colors[i];
+      const toStop = toGradient.colors[i];
+
+      if (fromStop && toStop) {
+        // Both stops exist - interpolate them
+        const interpolatedStop = { ...toStop };
+
+        if (fromStop.color && toStop.color) {
+          const colorPair = [fromStop.color, toStop.color];
+          interpolatedStop.color = applyColorToColor(colorPair, transition);
+        }
+
+        // For cross-gradient transitions, use target positions
+        // (morphing shape/direction is more important than position interpolation)
+        interpolatedGradient.colors.push(interpolatedStop);
+      } else if (toStop) {
+        // Only target stop exists - use it as-is
+        interpolatedGradient.colors.push({ ...toStop });
+      }
+      // Skip fromStop-only cases in cross transitions
+    }
+  }
+
+  return interpolatedGradient;
 };
 
 const areImageObjectsEqual = (img1, img2) => {
