@@ -32,7 +32,7 @@ import.meta.css = /* css */ `
     inset: 0;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
+    justify-content: start;
   }
 
   .navi_text_overflow_wrapper {

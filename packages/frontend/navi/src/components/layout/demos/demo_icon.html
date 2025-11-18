@@ -449,9 +449,9 @@
             </div>
 
             <div className="demo-container">
-              <h3>6. Icons in Layout Context</h3>
+              <h3>6. Icons in Row Layout</h3>
               <div className="visual-container">
-                <Box column contentSpacing="20px">
+                <Box column contentSpacing="15px">
                   <Box row contentSpacing="10px" contentAlignY="center">
                     <Icon width="24px">
                       <StarIcon />
@@ -463,24 +463,33 @@
                     <Text>Settings</Text>
                     <Icon width="20px" href="#icon-settings" />
                   </Box>
+                </Box>
+              </div>
+            </div>
 
-                  <Box
-                    row
-                    contentSpacing="15px"
-                    contentAlignY="center"
-                    padding="10px"
-                    background="#f8f9fa"
-                  >
-                    <Icon width="32px" href="#icon-user" />
-                    <Box column>
-                      <Text style={{ fontWeight: "bold" }}>John Doe</Text>
-                      <Text style={{ fontSize: "14px", color: "#666" }}>
-                        User Profile
-                      </Text>
-                    </Box>
-                    <Icon width="20px" rotate="45deg">
-                      <TriangleIcon />
-                    </Icon>
+            <div className="demo-container">
+              <h3>7. Icons in Column Layout</h3>
+              <div className="visual-container">
+                <Box row contentSpacing="20px">
+                  <Box column contentSpacing="10px">
+                    <Icon href="#icon-home" />
+                    <Text style={{ fontSize: "14px", textAlign: "center" }}>
+                      Home
+                    </Text>
+                  </Box>
+
+                  <Box column contentSpacing="10px">
+                    <Icon href="#icon-settings" />
+                    <Text style={{ fontSize: "14px", textAlign: "center" }}>
+                      Settings
+                    </Text>
+                  </Box>
+
+                  <Box column contentSpacing="10px">
+                    <Icon href="#icon-user" />
+                    <Text style={{ fontSize: "14px", textAlign: "center" }}>
+                      Profile
+                    </Text>
                   </Box>
                 </Box>
               </div>
