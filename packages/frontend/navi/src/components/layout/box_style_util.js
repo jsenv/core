@@ -104,6 +104,13 @@ const applyOnTwoProps = (propA, propB) => {
   };
 };
 
+const LAYOUT_PROPS = {
+  // all are handled by data-attributes
+  inline: () => {},
+  box: () => {},
+  row: () => {},
+  column: () => {},
+};
 const OUTER_SPACING_PROPS = {
   margin: PASS_THROUGH,
   marginLeft: PASS_THROUGH,
@@ -336,6 +343,7 @@ const CONTENT_PROPS = {
   },
 };
 const All_PROPS = {
+  ...LAYOUT_PROPS,
   ...OUTER_SPACING_PROPS,
   ...INNER_SPACING_PROPS,
   ...DIMENSION_PROPS,
@@ -359,6 +367,10 @@ export const HANDLED_BY_VISUAL_CHILD_PROP_SET = new Set([
   ...CONTENT_PROP_NAME_SET,
 ]);
 export const COPIED_ON_VISUAL_CHILD_PROP_SET = new Set([
+  "inline",
+  "box",
+  "row",
+  "column",
   "expand",
   "shrink",
   "expandX",

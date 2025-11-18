@@ -92,9 +92,6 @@ const PSEUDO_STATE_DEFAULT = {};
 export const Box = (props) => {
   const {
     as = "div",
-    layoutRow,
-    layoutColumn,
-    layoutInline,
     baseClassName,
     className,
     baseStyle,
@@ -126,18 +123,19 @@ export const Box = (props) => {
   const ref = props.ref || defaultRef;
   const TagName = as;
 
+  const { box, inline = box, row = box, column } = rest;
   let layout;
-  if (layoutInline) {
-    if (layoutRow) {
+  if (inline) {
+    if (row) {
       layout = "inline-row";
-    } else if (layoutColumn) {
+    } else if (column) {
       layout = "inline-column";
     } else {
       layout = "inline";
     }
-  } else if (layoutRow) {
+  } else if (row) {
     layout = "row";
-  } else if (layoutColumn) {
+  } else if (column) {
     layout = "column";
   } else {
     layout = getDefaultDisplay(TagName);
@@ -145,6 +143,7 @@ export const Box = (props) => {
   const innerClassName = withPropsClassName(baseClassName, className);
 
   const remainingProps = {};
+  const shouldForwardAllToChild = visualSelector && pseudoStateSelector;
   styling: {
     const parentLayout = useContext(BoxLayoutContext);
     const styleDeps = [
@@ -217,6 +216,17 @@ export const Box = (props) => {
     const stylingKeyCandidateArray = Object.keys(rest);
     const remainingPropKeys = [];
 
+    const getPropEffect = (propName) => {
+      if (visualSelector) {
+        if (HANDLED_BY_VISUAL_CHILD_PROP_SET.has(propName)) {
+          return "forward";
+        }
+        if (COPIED_ON_VISUAL_CHILD_PROP_SET.has(propName)) {
+          return "style_and_forward";
+        }
+      }
+      return isStyleProp(propName) ? "style" : "forward";
+    };
     const assignStyleFromProp = (
       propValue,
       propName,
@@ -228,7 +238,7 @@ export const Box = (props) => {
         return;
       }
       if (propEffect === "forward" || propEffect === "style_and_forward") {
-        if (stylesTarget === boxStyles) {
+        if (shouldForwardAllToChild && stylesTarget === boxStyles) {
           remainingPropKeys.push(propName);
           remainingProps[propName] = propValue;
         }
@@ -238,17 +248,6 @@ export const Box = (props) => {
       }
       styleDeps.push(propValue);
       assignStyle(stylesTarget, propValue, propName, context);
-    };
-    const getPropEffect = (propName) => {
-      if (visualSelector) {
-        if (HANDLED_BY_VISUAL_CHILD_PROP_SET.has(propName)) {
-          return "forward";
-        }
-        if (COPIED_ON_VISUAL_CHILD_PROP_SET.has(propName)) {
-          return "style_and_forward";
-        }
-      }
-      return isStyleProp(propName) ? "style" : "forward";
     };
 
     for (const key of stylingKeyCandidateArray) {
@@ -389,15 +388,14 @@ export const Box = (props) => {
     innerChildren = children;
   }
 
-  const shouldForwardAllToChild = visualSelector && pseudoStateSelector;
-
   return (
     <TagName
       ref={ref}
       className={innerClassName}
-      data-layout-inline={layoutInline ? "" : undefined}
-      data-layout-row={layoutRow ? "" : undefined}
-      data-layout-column={layoutColumn ? "" : undefined}
+      data-layout-inline={inline ? "" : undefined}
+      data-layout-box={box ? "" : undefined}
+      data-layout-row={row ? "" : undefined}
+      data-layout-column={column ? "" : undefined}
       {...(shouldForwardAllToChild ? undefined : remainingProps)}
     >
       <BoxLayoutContext.Provider value={layout}>
@@ -408,13 +406,5 @@ export const Box = (props) => {
 };
 
 export const Layout = (props) => {
-  const { row, column, inline, ...rest } = props;
-
-  if (row) {
-    return <Box layoutRow layoutInline={inline} {...rest} />;
-  }
-  if (column) {
-    return <Box layoutColumn layoutInline={inline} {...rest} />;
-  }
-  return <Box layoutInline={inline} {...rest} />;
+  return <Box {...props} />;
 };

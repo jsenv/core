@@ -283,12 +283,7 @@ const ButtonBasic = (props) => {
   );
   const renderButtonContent = (buttonProps) => {
     return (
-      <Box
-        {...buttonProps}
-        as="span"
-        baseClassName="navi_button_content"
-        layoutInline
-      >
+      <Box {...buttonProps} as="span" baseClassName="navi_button_content">
         {innerChildren}
         <span className="navi_button_shadow"></span>
       </Box>
@@ -307,8 +302,6 @@ const ButtonBasic = (props) => {
       aria-busy={innerLoading}
       // style management
       baseClassName="navi_button"
-      layoutInline
-      layoutColumn
       managedByCSSVars={ButtonManagedByCSSVars}
       pseudoClasses={ButtonPseudoClasses}
       pseudoElements={ButtonPseudoElements}
