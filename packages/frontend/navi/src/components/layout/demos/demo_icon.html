@@ -154,6 +154,18 @@
         </svg>
       );
 
+      const ArrowIcon = () => (
+        <svg viewBox="0 0 24 24">
+          <path
+            fill="#2196f3"
+            stroke="#1976d2"
+            strokeWidth="2"
+            d="M12 2 L20 10 L16 10 L16 18 L20 18 L12 22 L4 18 L8 18 L8 10 L4 10 Z"
+          />
+          <circle cx="12" cy="6" r="1.5" fill="#ff5722" />
+        </svg>
+      );
+
       // Rectangular icons with different aspect ratios
       const HorizontalRectIcon = () => (
         <svg viewBox="0 0 32 16">
@@ -339,7 +351,7 @@
                   <div style={{ textAlign: "center" }}>
                     <div className="size-label">Original</div>
                     <Icon width="48px">
-                      <CircleIcon />
+                      <ArrowIcon />
                     </Icon>
                   </div>
 
@@ -352,7 +364,7 @@
                       rotate="45deg"
                       translate={["10px", "5px"]}
                     >
-                      <CircleIcon />
+                      <ArrowIcon />
                     </Icon>
                   </div>
                 </div>
