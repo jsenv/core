@@ -130,7 +130,7 @@
               <h3>4. Text Spacing - Margins</h3>
               <div className="visual-container">
                 <div className="text-showcase">
-                  <Layout row contentSpacing="0">
+                  <Box row contentSpacing="0">
                     <Text
                       margin="15px"
                       style={{ background: "#e3f2fd", padding: "5px" }}
@@ -155,7 +155,7 @@
                     >
                       Text with marginLeft only
                     </Text>
-                  </Layout>
+                  </Box>
                 </div>
               </div>
             </div>
@@ -164,7 +164,7 @@
               <h3>5. Text Spacing - Padding</h3>
               <div className="visual-container">
                 <div className="text-showcase">
-                  <Layout row contentSpacing="md">
+                  <Box row contentSpacing="md">
                     <Text
                       style={{
                         background: "#e3f2fd",
@@ -203,7 +203,7 @@
                     >
                       PaddingY only
                     </Text>
-                  </Layout>
+                  </Box>
                 </div>
               </div>
             </div>
@@ -212,7 +212,7 @@
               <h3>6. Text AlignX Test: row + alignX="end"</h3>
               <div className="visual-container">
                 <div className="bounded">
-                  <Box layoutColumn gap="10px" style={{ height: "100%" }}>
+                  <Box column contentSpacing="sm" height="100%">
                     <Text style={{ background: "#e3f2fd", padding: "5px" }}>
                       Default position
                     </Text>
@@ -230,8 +230,8 @@
             <div className="demo-container">
               <h3>7. Text Labels and Content Layout</h3>
               <div className="visual-container">
-                <Box layoutRow gap="15px">
-                  <Box layoutColumn gap="10px">
+                <Box row contentSpacing="md">
+                  <Box column contentSpacing="sm">
                     <Text style={{ minWidth: "80px", fontWeight: "bold" }}>
                       Name:
                     </Text>
@@ -243,7 +243,7 @@
                     </Text>
                   </Box>
 
-                  <Box layoutColumn gap="10px">
+                  <Box column contentSpacing="sm">
                     <Text style={{ minWidth: "80px", fontWeight: "bold" }}>
                       Email:
                     </Text>
@@ -256,7 +256,7 @@
                     <Button>Edit</Button>
                   </Box>
 
-                  <Box layoutColumn gap="10px">
+                  <Box column contentSpacing="sm">
                     <Text style={{ minWidth: "80px", fontWeight: "bold" }}>
                       Status:
                     </Text>
@@ -286,7 +286,7 @@
                     width: "350px",
                   }}
                 >
-                  <Box layoutColumn gap="15px" style={{ marginBottom: "15px" }}>
+                  <Box column gap="15px" style={{ marginBottom: "15px" }}>
                     <Text style={{ fontSize: "20px", fontWeight: "bold" }}>
                       Article Title
                     </Text>
@@ -310,7 +310,7 @@
                     layout props.
                   </Text>
 
-                  <Box layoutColumn gap="10px">
+                  <Box column gap="10px">
                     <Text style={{ fontSize: "12px", color: "#999" }}>
                       Published: Oct 29, 2025
                     </Text>
@@ -328,8 +328,8 @@
             <div className="demo-container">
               <h3>9. Text Navigation and Breadcrumbs</h3>
               <div className="visual-container">
-                <Box layoutRow gap="15px">
-                  <Box layoutColumn gap="10px">
+                <Box row gap="15px">
+                  <Box column gap="10px">
                     <Text style={{ fontWeight: "bold" }}>Home</Text>
                     <Text>/</Text>
                     <Text style={{ fontWeight: "bold" }}>Products</Text>
@@ -343,7 +343,7 @@
                     </Text>
                   </Box>
 
-                  <Box layoutColumn gap="15px">
+                  <Box column gap="15px">
                     <Text
                       expand
                       style={{ fontSize: "18px", fontWeight: "bold" }}
@@ -361,8 +361,8 @@
             <div className="demo-container">
               <h3>10. Text with Mixed Alignment</h3>
               <div className="visual-container">
-                <Box layoutColumn gap="10px">
-                  <Box layoutColumn gap="10px">
+                <Box column gap="10px">
+                  <Box column gap="10px">
                     <Text style={{ background: "#e3f2fd", padding: "8px" }}>
                       Default (start)
                     </Text>
@@ -380,7 +380,7 @@
                     </Text>
                   </Box>
 
-                  <Box layoutColumn contentSpacing="sm">
+                  <Box column contentSpacing="sm">
                     <Text
                       expand
                       box
@@ -402,8 +402,8 @@
             <div className="demo-container">
               <h3>11. Text in Message/Chat Layout</h3>
               <div className="visual-container">
-                <Box layoutRow gap="10px" style={{ width: "400px" }}>
-                  <Box layoutColumn gap="10px">
+                <Box row gap="10px" style={{ width: "400px" }}>
+                  <Box column gap="10px">
                     <Text
                       style={{
                         background: "#e3f2fd",
@@ -416,7 +416,7 @@
                     </Text>
                   </Box>
 
-                  <Box layoutColumn gap="10px">
+                  <Box column gap="10px">
                     <Text
                       alignX="end"
                       style={{
@@ -430,7 +430,7 @@
                     </Text>
                   </Box>
 
-                  <Box layoutColumn gap="10px">
+                  <Box column gap="10px">
                     <Text
                       style={{
                         background: "#fff3e0",
@@ -448,14 +448,81 @@
             </div>
 
             <div className="demo-container">
-              <h3>12. Combined Text Styling and Layout</h3>
+              <h3>12. Text Rotation with Transform</h3>
               <div className="visual-container">
-                <Box layoutRow gap="15px">
+                <Box
+                  row
+                  contentSpacing="md"
+                  contentAlignY="center"
+                  height="150"
+                >
+                  <Text
+                    background="#e3f2fd"
+                    padding="sm"
+                    style="transform: rotate(15deg)"
+                  >
+                    Rotated 15°
+                  </Text>
+
+                  <Text
+                    style={{
+                      background: "#f3e5f5",
+                      padding: "10px",
+                      transform: "rotate(-30deg)",
+                      transformOrigin: "center",
+                    }}
+                  >
+                    Rotated -30°
+                  </Text>
+
+                  <Text
+                    style={{
+                      background: "#e8f5e8",
+                      padding: "10px",
+                      transform: "rotate(45deg)",
+                      transformOrigin: "center",
+                      fontSize: "14px",
+                    }}
+                  >
+                    45° Rotation
+                  </Text>
+
+                  <Text
+                    style={{
+                      background: "#fff3e0",
+                      padding: "8px 15px",
+                      transform: "rotate(90deg)",
+                      transformOrigin: "center",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Vertical Text
+                  </Text>
+
+                  <Text
+                    style={{
+                      background: "#ffebee",
+                      padding: "10px",
+                      transform: "rotate(-15deg) scale(1.2)",
+                      transformOrigin: "center",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    Rotated & Scaled
+                  </Text>
+                </Box>
+              </div>
+            </div>
+
+            <div className="demo-container">
+              <h3>13. Combined Text Styling and Layout</h3>
+              <div className="visual-container">
+                <Box row gap="15px">
                   <Text bold marginBottom="10px" style={{ fontSize: "24px" }}>
                     Main Heading
                   </Text>
 
-                  <Box layoutColumn gap="15px">
+                  <Box column contentSpacing="md">
                     <Text italic marginRight="20px" style={{ color: "#666" }}>
                       Subtitle
                     </Text>
@@ -477,7 +544,7 @@
                     styling.
                   </Text>
 
-                  <Box layoutColumn gap="10px">
+                  <Box column contentSpacing="sm">
                     <Text underline style={{ color: "#007bff" }}>
                       Link text
                     </Text>

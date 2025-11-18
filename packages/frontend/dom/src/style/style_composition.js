@@ -96,7 +96,7 @@ export const mergeOneStyle = (
 
     // Case 3: New is string, existing is object - parse new and merge
     if (newIsString && existingIsObject) {
-      const parsedNew = parseCSSTransform(newValue);
+      const parsedNew = parseCSSTransform(newValue, normalizeStyle);
       const merged = { ...existingValue, ...parsedNew };
       return context === "css"
         ? stringifyCSSTransform(merged, normalizeStyle)

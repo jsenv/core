@@ -208,7 +208,7 @@ export const normalizeStyle = (
     if (context === "js") {
       if (typeof value === "string") {
         // For js context, prefer objects
-        return parseCSSTransform(value);
+        return parseCSSTransform(value, normalizeStyle);
       }
       // If code does transform: { translateX: "10px" }
       // we want to store { translateX: 10 }
