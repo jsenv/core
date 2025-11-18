@@ -10,7 +10,7 @@ import.meta.css = /* css */ `
 
 export const Count = ({ children, ...rest }) => {
   return (
-    <Box as="span" baseClassName=".navi_count" {...rest}>
+    <Box as="span" baseClassName="navi_count" {...rest}>
       ({children})
     </Box>
   );

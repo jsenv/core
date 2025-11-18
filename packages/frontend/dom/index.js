@@ -39,6 +39,7 @@ export {
   prefersDarkColors,
   prefersLightColors,
 } from "./src/style/color_scheme.js";
+export { resolveCSSColor } from "./src/style/parsing/css_color.js";
 
 // traversal
 export {

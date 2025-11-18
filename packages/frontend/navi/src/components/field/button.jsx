@@ -83,8 +83,8 @@ import.meta.css = /* css */ `
 
     position: relative;
     box-sizing: border-box;
-    width: fit-content;
-    height: fit-content;
+    /* width: fit-content; */
+    /* height: fit-content; */
     padding: 0;
     flex-direction: inherit;
     align-items: inherit;
