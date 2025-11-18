@@ -214,7 +214,8 @@
             <h1>Icon Demo</h1>
             <p>
               Demonstrating Icon component features: custom sizing, rotation,
-              translation, and href usage with SVG symbols.
+              translation, combined transforms, and href usage with SVG symbols.
+              Ghost icons show original positions for transform examples.
             </p>
 
             <div className="demo-container">
@@ -301,29 +302,73 @@
               <h3>3. Icon Rotation Examples</h3>
               <div className="visual-container">
                 <div className="rotation-demo">
-                  <div style={{ textAlign: "center" }}>
+                  <div style={{ textAlign: "center", position: "relative" }}>
                     <div className="size-label">rotate="45deg"</div>
+                    {/* Ghost icon showing original position */}
+                    <Icon
+                      width="48px"
+                      style={{
+                        position: "absolute",
+                        opacity: 0.3,
+                        filter: "grayscale(100%)",
+                      }}
+                    >
+                      <TriangleIcon />
+                    </Icon>
                     <Icon width="48px" rotate="45deg">
                       <TriangleIcon />
                     </Icon>
                   </div>
 
-                  <div style={{ textAlign: "center" }}>
+                  <div style={{ textAlign: "center", position: "relative" }}>
                     <div className="size-label">rotate="90deg"</div>
+                    {/* Ghost icon showing original position */}
+                    <Icon
+                      width="48px"
+                      style={{
+                        position: "absolute",
+                        opacity: 0.3,
+                        filter: "grayscale(100%)",
+                      }}
+                    >
+                      <SquareIcon />
+                    </Icon>
                     <Icon width="48px" rotate="90deg">
                       <SquareIcon />
                     </Icon>
                   </div>
 
-                  <div style={{ textAlign: "center" }}>
+                  <div style={{ textAlign: "center", position: "relative" }}>
                     <div className="size-label">rotate="180deg"</div>
+                    {/* Ghost icon showing original position */}
+                    <Icon
+                      width="48px"
+                      style={{
+                        position: "absolute",
+                        opacity: 0.3,
+                        filter: "grayscale(100%)",
+                      }}
+                    >
+                      <StarIcon />
+                    </Icon>
                     <Icon width="48px" rotate="180deg">
                       <StarIcon />
                     </Icon>
                   </div>
 
-                  <div style={{ textAlign: "center" }}>
+                  <div style={{ textAlign: "center", position: "relative" }}>
                     <div className="size-label">rotate="-45deg"</div>
+                    {/* Ghost icon showing original position */}
+                    <Icon
+                      width="48px"
+                      style={{
+                        position: "absolute",
+                        opacity: 0.3,
+                        filter: "grayscale(100%)",
+                      }}
+                    >
+                      <HeartIcon />
+                    </Icon>
                     <Icon width="48px" rotate="-45deg">
                       <HeartIcon />
                     </Icon>
@@ -333,21 +378,117 @@
             </div>
 
             <div className="demo-container">
-              <h3>4. Combining Rotation and Translation</h3>
+              <h3>4. Icon Translation Examples</h3>
               <div className="visual-container">
                 <div className="rotation-demo">
-                  <div style={{ textAlign: "center" }}>
-                    <div className="size-label">Original</div>
-                    <Icon width="48px">
+                  <div style={{ textAlign: "center", position: "relative" }}>
+                    <div className="size-label">translate="5"</div>
+                    {/* Ghost icon showing original position */}
+                    <Icon
+                      width="48px"
+                      style={{
+                        position: "absolute",
+                        opacity: 0.3,
+                        filter: "grayscale(100%)",
+                      }}
+                    >
+                      <ArrowIcon />
+                    </Icon>
+                    <Icon width="48px" translate="5">
                       <ArrowIcon />
                     </Icon>
                   </div>
 
-                  <div style={{ textAlign: "center" }}>
+                  <div style={{ textAlign: "center", position: "relative" }}>
+                    <div className="size-label">translate="10"</div>
+                    {/* Ghost icon showing original position */}
+                    <Icon
+                      width="48px"
+                      style={{
+                        position: "absolute",
+                        opacity: 0.3,
+                        filter: "grayscale(100%)",
+                      }}
+                    >
+                      <ArrowIcon />
+                    </Icon>
+                    <Icon width="48px" translate="10">
+                      <ArrowIcon />
+                    </Icon>
+                  </div>
+
+                  <div style={{ textAlign: "center", position: "relative" }}>
+                    <div className="size-label">translate="-8"</div>
+                    {/* Ghost icon showing original position */}
+                    <Icon
+                      width="48px"
+                      style={{
+                        position: "absolute",
+                        opacity: 0.3,
+                        filter: "grayscale(100%)",
+                      }}
+                    >
+                      <ArrowIcon />
+                    </Icon>
+                    <Icon width="48px" translate="-8">
+                      <ArrowIcon />
+                    </Icon>
+                  </div>
+                </div>
+                <Box marginTop="10px">
+                  <Text
+                    style={{
+                      fontSize: "14px",
+                      color: "#666",
+                      fontStyle: "italic",
+                    }}
+                  >
+                    Gray icons show the original position before translation.
+                  </Text>
+                </Box>
+              </div>
+            </div>
+
+            <div className="demo-container">
+              <h3>5. Combining Rotation and Translation</h3>
+              <div className="visual-container">
+                <div className="rotation-demo">
+                  <div style={{ textAlign: "center", position: "relative" }}>
                     <div className="size-label">
                       rotate="45deg" + translate="10"
                     </div>
+                    {/* Ghost icon showing original position */}
+                    <Icon
+                      width="48px"
+                      style={{
+                        position: "absolute",
+                        opacity: 0.3,
+                        filter: "grayscale(100%)",
+                      }}
+                    >
+                      <ArrowIcon />
+                    </Icon>
                     <Icon width="48" rotate="45deg" translate="10">
+                      <ArrowIcon />
+                    </Icon>
+                  </div>
+
+                  <div style={{ textAlign: "center", position: "relative" }}>
+                    <div className="size-label">
+                      rotate="90deg" + translate="-5"
+                    </div>
+                    {/* Ghost icon showing original position */}
+                    <Icon
+                      width="48px"
+                      style={{
+                        position: "absolute",
+                        opacity: 0.3,
+                        filter: "grayscale(100%)",
+                      }}
+                    >
+                      <ArrowIcon />
+                    </Icon>
+                    <Icon width="48" rotate="90deg" translate="-5">
                       <ArrowIcon />
                     </Icon>
                   </div>
@@ -369,7 +510,7 @@
             </div>
 
             <div className="demo-container">
-              <h3>5. Usage with Href (SVG Symbol References)</h3>
+              <h3>6. Usage with Href (SVG Symbol References)</h3>
               <div className="visual-container">
                 {/* Define SVG symbols */}
                 <svg style={{ display: "none" }}>
@@ -398,12 +539,17 @@
                 <div className="icon-showcase">
                   <div style={{ textAlign: "center" }}>
                     <div className="size-label">href="#icon-home"</div>
-                    <Icon width="48px" href="#icon-home" />
+                    <Icon width="48px" href="#icon-home" color="green" />
                   </div>
 
                   <div style={{ textAlign: "center" }}>
                     <div className="size-label">href + rotate="90deg"</div>
-                    <Icon width="48px" href="#icon-settings" rotate="90deg" />
+                    <Icon
+                      width="48px"
+                      href="#icon-settings"
+                      rotate="90deg"
+                      color="red"
+                    />
                   </div>
 
                   <div style={{ textAlign: "center", color: "purple" }}>
@@ -425,7 +571,7 @@
             </div>
 
             <div className="demo-container">
-              <h3>6. Icons in Row Layout</h3>
+              <h3>7. Icons in Row Layout</h3>
               <div className="visual-container">
                 <Box column contentSpacing="15px">
                   <Box row contentSpacing="10px" contentAlignY="center">
@@ -444,7 +590,7 @@
             </div>
 
             <div className="demo-container">
-              <h3>7. Icons in Column Layout</h3>
+              <h3>8. Icons in Column Layout</h3>
               <div className="visual-container">
                 <Box row contentSpacing="20px">
                   <Box column contentSpacing="10px">
