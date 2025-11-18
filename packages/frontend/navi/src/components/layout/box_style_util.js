@@ -221,7 +221,7 @@ const POSITION_PROPS = {
 
     if (value === "start") {
       if (inlineColumnLayout) {
-        return undefined; // this is the default
+        return { alignSelf: "start" };
       }
       return { marginBottom: "auto" };
     }

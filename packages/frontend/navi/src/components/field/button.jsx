@@ -82,13 +82,10 @@ import.meta.css = /* css */ `
     --x-color: var(--color);
 
     position: relative;
+    display: inline-flex;
     box-sizing: border-box;
-    width: fit-content;
-    height: fit-content;
     padding: 0;
     flex-direction: inherit;
-    align-items: inherit;
-    justify-content: inherit;
     background: none;
     border: none;
     border-radius: inherit;
@@ -97,6 +94,7 @@ import.meta.css = /* css */ `
   }
   .navi_button_content {
     position: relative;
+    box-sizing: border-box;
     padding-top: var(--padding-top, var(--padding-y, var(--padding, 1px)));
     padding-right: var(--padding-right, var(--padding-x, var(--padding, 6px)));
     padding-bottom: var(
