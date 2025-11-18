@@ -36,7 +36,7 @@ import.meta.css = /* css */ `
       --color-visited: light-dark(#6a1b9a, #ab47bc);
       --color-active: red;
       --text-decoration: underline;
-      --text-decoration-hover: underline;
+      --text-decoration-hover: var(--text-decoration);
       --cursor: pointer;
     }
   }
@@ -47,7 +47,7 @@ import.meta.css = /* css */ `
     --x-color-visited: var(--color-visited);
     --x-color-active: var(--color-active);
     --x-text-decoration: var(--text-decoration);
-    --x-text-decoration-hover: var(--text-decoration-hover,);
+    --x-text-decoration-hover: var(--text-decoration-hover);
     --x-cursor: var(--cursor);
 
     position: relative;
