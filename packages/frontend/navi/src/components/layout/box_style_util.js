@@ -181,6 +181,12 @@ const DIMENSION_PROPS = {
     }
     return { maxHeight: "100%" };
   },
+
+  // TODO
+  scaleX: () => {},
+  scaleY: () => {},
+  scale: () => {}, // equivalent to scaleX
+  scaleZ: () => {},
 };
 const POSITION_PROPS = {
   // For row, alignX uses auto margins for positioning
@@ -241,6 +247,19 @@ const POSITION_PROPS = {
   },
   left: PASS_THROUGH,
   top: PASS_THROUGH,
+
+  // TODO
+  translateX: () => {},
+  translateY: () => {},
+  // translateZ: () => {},
+  translate: () => {}, // equivalent to translateX
+  rotateX: () => {},
+  rotateY: () => {},
+  rotateZ: () => {},
+  rotate: () => {}, // equivalent to rotateZ
+  skewX: () => {},
+  skewY: () => {},
+  skew: () => {}, // equivalent to skewX
 };
 const TYPO_PROPS = {
   size: applyOnCSSProp("fontSize"),
