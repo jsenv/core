@@ -166,6 +166,15 @@
         </svg>
       );
 
+      const ColorableIcon = () => (
+        <svg viewBox="0 0 24 24">
+          <path
+            fill="currentColor"
+            d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 1L13.5 2.5L16.17 5.17L10.5 10.84L12 12.34L17.66 6.68L20.34 9.34L21 9ZM3.27 1.44L2 2.72L5.04 5.76L2.5 8.3L3.91 9.71L5.04 8.58L8.21 11.75L1.39 18.56L2.8 19.97L9.62 13.16L12.19 15.73L11.06 16.86L12.47 18.27L15.01 15.73L18.28 19L19.56 17.72L3.27 1.44Z"
+          />
+        </svg>
+      );
+
       // Rectangular icons with different aspect ratios
       const HorizontalRectIcon = () => (
         <svg viewBox="0 0 32 16">
@@ -232,13 +241,6 @@
                       <HorizontalRectIcon />
                     </Icon>
                   </div>
-
-                  <div>
-                    <div className="size-label">width="120px"</div>
-                    <Icon width="120px">
-                      <HorizontalRectIcon />
-                    </Icon>
-                  </div>
                 </div>
                 <Box marginTop="15px">
                   <Text
@@ -267,22 +269,8 @@
                   </div>
 
                   <div>
-                    <div className="size-label">height="48px"</div>
-                    <Icon height="48px">
-                      <VerticalRectIcon />
-                    </Icon>
-                  </div>
-
-                  <div>
                     <div className="size-label">height="64px"</div>
                     <Icon height="64px">
-                      <VerticalRectIcon />
-                    </Icon>
-                  </div>
-
-                  <div>
-                    <div className="size-label">height="80px"</div>
-                    <Icon height="80px">
                       <VerticalRectIcon />
                     </Icon>
                   </div>
@@ -388,19 +376,19 @@
                   <defs>
                     <symbol id="icon-home" viewBox="0 0 24 24">
                       <path
-                        fill="#4caf50"
+                        fill="currentColor"
                         d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"
                       />
                     </symbol>
                     <symbol id="icon-settings" viewBox="0 0 24 24">
                       <path
-                        fill="#2196f3"
+                        fill="currentColor"
                         d="M12 15.5A3.5 3.5 0 0 1 8.5 12A3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97c0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1c0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z"
                       />
                     </symbol>
                     <symbol id="icon-user" viewBox="0 0 24 24">
                       <path
-                        fill="#ff9800"
+                        fill="currentColor"
                         d="M12 2A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2M7.07 18.28c.43-.9 3.05-1.78 4.93-1.78s4.51.88 4.93 1.78A7.893 7.893 0 0 1 12 20c-1.86 0-3.57-.64-4.93-1.72m11.29-1.45c-1.43-1.74-4.9-2.33-6.36-2.33s-4.93.59-6.36 2.33A7.928 7.928 0 0 1 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8c0 1.82-.62 3.5-1.64 4.83M12 6c-1.94 0-3.5 1.56-3.5 3.5S10.06 13 12 13s3.5-1.56 3.5-3.5S13.94 6 12 6m0 5c-.83 0-1.5-.67-1.5-1.5S11.17 8.5 12 8.5s1.5.67 1.5 1.5S12.83 11 12 11Z"
                       />
                     </symbol>
@@ -414,23 +402,15 @@
                   </div>
 
                   <div style={{ textAlign: "center" }}>
-                    <div className="size-label">href="#icon-settings"</div>
-                    <Icon width="48px" href="#icon-settings" />
-                  </div>
-
-                  <div style={{ textAlign: "center" }}>
-                    <div className="size-label">href="#icon-user"</div>
-                    <Icon width="48px" href="#icon-user" />
-                  </div>
-
-                  <div style={{ textAlign: "center" }}>
                     <div className="size-label">href + rotate="90deg"</div>
                     <Icon width="48px" href="#icon-settings" rotate="90deg" />
                   </div>
 
-                  <div style={{ textAlign: "center" }}>
-                    <div className="size-label">href + height="72px"</div>
-                    <Icon height="72px" href="#icon-home" />
+                  <div style={{ textAlign: "center", color: "purple" }}>
+                    <div className="size-label">href + custom color</div>
+                    <Icon width="48px" href="#icon-user">
+                      <ColorableIcon />
+                    </Icon>
                   </div>
                 </div>
 
