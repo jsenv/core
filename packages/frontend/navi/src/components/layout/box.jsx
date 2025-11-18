@@ -251,7 +251,6 @@ export const Box = (props) => {
         assignStyle(stylesTarget, propValue, propName, context);
       }
       if (stylesTarget === boxStyles) {
-        console.log(propName, useToStyle);
         if (!shouldForwardAllToChild && !useToStyle) {
           // we'll put these props on ourselves
           remainingProps[propName] = propValue;

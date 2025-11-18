@@ -431,7 +431,7 @@ export const normalizeStyles = (styles, context = "js", mutate = false) => {
     return mutate ? styles : {};
   }
   if (typeof styles === "string") {
-    styles = parseStyleString(styles);
+    styles = parseStyleString(styles, context);
     return styles;
   }
   if (mutate) {
