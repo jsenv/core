@@ -65,22 +65,22 @@
             <div className="demo-container">
               <h3>1. Input with Expand in row</h3>
               <div className="visual-container">
-                <Layout column contentSpacing="sm">
+                <Box column contentSpacing="sm">
                   <Button>Start</Button>
                   <Input placeholder="Expanding input" expandX />
                   <Button>End</Button>
-                </Layout>
+                </Box>
               </div>
             </div>
 
             <div className="demo-container">
               <h3>2. Input with Expand in column</h3>
               <div className="visual-container">
-                <Layout row contentSpacing="sm" height="200">
+                <Box row contentSpacing="sm" height="200">
                   <Input placeholder="Fixed input" />
                   <Input placeholder="Expanding input (height)" expandY />
                   <Input placeholder="Fixed input" />
-                </Layout>
+                </Box>
               </div>
             </div>
 
@@ -108,11 +108,11 @@
             <div className="demo-container">
               <h3>4. Multiple Expand Elements</h3>
               <div className="visual-container">
-                <Layout column contentSpacing="sm">
+                <Box column contentSpacing="sm">
                   <Input placeholder="Expand 1" expand />
                   <Input placeholder="Expand 2" expand />
                   <Input placeholder="Expand 3" expand />
-                </Layout>
+                </Box>
               </div>
             </div>
 
@@ -128,18 +128,18 @@
             <div className="demo-container">
               <h3>6. Input with Padding</h3>
               <div className="visual-container">
-                <Layout column contentSpacing="xs">
+                <Box column contentSpacing="xs">
                   <Input placeholder="Default padding" />
                   <Input placeholder="Extra padding" padding="md" />
                   <Input placeholder="PaddingX only" paddingX="xl" />
-                </Layout>
+                </Box>
               </div>
             </div>
 
             <div className="demo-container">
               <h3>7. Directional Margins and Padding</h3>
               <div className="visual-container">
-                <Box layoutRow contentSpacing="xs">
+                <Box row contentSpacing="xs">
                   <Input placeholder="marginLeft: 20px" marginLeft="20px" />
                   <Input placeholder="marginRight: 30px" marginRight="30px" />
                   <Input
@@ -156,10 +156,10 @@
               <h3>8. AlignX Test: row + alignX="end"</h3>
               <div className="visual-container">
                 <div className="bounded">
-                  <Layout column contentSpacing="sm" expandY>
+                  <Box column contentSpacing="sm" expandY>
                     <Input placeholder="Default" />
                     <Input placeholder="Pushed to end" alignX="end" />
-                  </Layout>
+                  </Box>
                 </div>
               </div>
             </div>
@@ -167,7 +167,7 @@
             <div className="demo-container">
               <h3>9. Combined Spacing and Expand</h3>
               <div className="visual-container">
-                <Layout column contentSpacing="sm">
+                <Box column contentSpacing="sm">
                   <Button>Label</Button>
                   <Input
                     placeholder="Margin + Expand"
@@ -176,30 +176,30 @@
                     paddingX="15px"
                   />
                   <Button>Action</Button>
-                </Layout>
+                </Box>
               </div>
             </div>
 
             <div className="demo-container">
               <h3>10. Complex Layout: Form with Expand</h3>
               <div className="visual-container">
-                <Layout row contentSpacing="md">
-                  <Layout column contentSpacing="sm">
+                <Box row contentSpacing="md">
+                  <Box column contentSpacing="sm">
                     <label style={{ minWidth: "80px", alignSelf: "center" }}>
                       Name:
                     </label>
                     <Input placeholder="Enter your name" expand />
-                  </Layout>
+                  </Box>
 
-                  <Layout column contentSpacing="sm">
+                  <Box column contentSpacing="sm">
                     <label style={{ minWidth: "80px", alignSelf: "center" }}>
                       Email:
                     </label>
                     <Input placeholder="Enter your email" expand />
                     <Button>Verify</Button>
-                  </Layout>
+                  </Box>
 
-                  <Layout column contentSpacing="sm">
+                  <Box column contentSpacing="sm">
                     <label style={{ minWidth: "80px", alignSelf: "center" }}>
                       Message:
                     </label>
@@ -208,13 +208,13 @@
                       expand
                       paddingY="10px"
                     />
-                  </Layout>
+                  </Box>
 
-                  <Layout column contentSpacing="sm" alignX="end">
+                  <Box column contentSpacing="sm" alignX="end">
                     <Button>Cancel</Button>
                     <Button>Submit</Button>
-                  </Layout>
-                </Layout>
+                  </Box>
+                </Box>
               </div>
             </div>
           </div>
