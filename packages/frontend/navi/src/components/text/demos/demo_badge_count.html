@@ -19,6 +19,160 @@
         Button,
       } from "@jsenv/navi";
 
+      // Composants pour éviter les erreurs de syntaxe lors des modifications
+      const BadgePositioningSection = () => (
+        <Box as="section" marginBottom="xl" id="badge-positioning">
+          <Title as="h2">Badge positioning</Title>
+          <Box column contentSpacing="md">
+            <div>
+              <Text
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "4px",
+                  display: "block",
+                }}
+              >
+                alignX="start" - Position au début du conteneur
+              </Text>
+              <Box row contentSpacing="md">
+                <Box
+                  style={{
+                    border: "1px solid #e0e0e0",
+                    borderRadius: "8px",
+                    padding: "12px",
+                    width: "300px",
+                  }}
+                >
+                  <BadgeCount background="#4caf50" color="white" alignX="start">
+                    3
+                  </BadgeCount>
+                  <Text>Nouveaux messages</Text>
+                </Box>
+
+                <Box
+                  style={{
+                    border: "1px solid #e0e0e0",
+                    borderRadius: "8px",
+                    padding: "12px",
+                    width: "350px",
+                  }}
+                >
+                  <BadgeCount
+                    background="#ff9800"
+                    color="white"
+                    alignX="start"
+                    size="xs"
+                  >
+                    12
+                  </BadgeCount>
+                  <Text>Tâches en attente</Text>
+                </Box>
+              </Box>
+            </div>
+
+            <div>
+              <Text
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "4px",
+                  display: "block",
+                }}
+              >
+                alignX="end" - Position à la fin du conteneur
+              </Text>
+              <Box row contentSpacing="md">
+                <Box
+                  style={{
+                    border: "1px solid #e0e0e0",
+                    borderRadius: "8px",
+                    padding: "12px",
+                    width: "300px",
+                  }}
+                >
+                  <Text>Messages</Text>
+                  <BadgeCount background="#1976d2" color="white" alignX="end">
+                    8
+                  </BadgeCount>
+                </Box>
+
+                <Box
+                  style={{
+                    border: "1px solid #e0e0e0",
+                    borderRadius: "8px",
+                    padding: "12px",
+                    width: "350px",
+                  }}
+                >
+                  <Text>Alertes</Text>
+                  <BadgeCount
+                    background="#d32f2f"
+                    color="white"
+                    alignX="end"
+                    size="xs"
+                  >
+                    25
+                  </BadgeCount>
+                </Box>
+              </Box>
+            </div>
+          </Box>
+        </Box>
+      );
+
+      // Composants des sections
+      const TableOfContents = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">Table des matières</Title>
+          <Box row contentSpacing="xs" marginTop="md">
+            <Link href="#exemples-base">1. Exemples de base</Link>
+            <Link href="#line-heights">
+              2. Comportement avec différents line-heights
+            </Link>
+            <Link href="#integration-composants">
+              3. Intégration dans différents composants
+            </Link>
+            <Link href="#badge-positioning">4. Badge positioning</Link>
+            <Link href="#nowrap">
+              5. Association texte + badge (pas de coupure)
+            </Link>
+            <Link href="#nombres-max">
+              6. Compteurs avec nombres élevés et paramètre max
+            </Link>
+            <Link href="#best-practices">7. Best Practices</Link>
+          </Box>
+        </Box>
+      );
+
+      const ExemplesBase = () => (
+        <Box as="section" marginBottom="xl" id="exemples-base">
+          <Title as="h2">Exemples de base</Title>
+          <Box row contentSpacing="md">
+            <Text>
+              Messages non lus
+              <BadgeCount background="red" color="white">
+                5
+              </BadgeCount>
+            </Text>
+
+            <Text>
+              Notifications en attente
+              <BadgeCount background="#ffebee" color="#d32f2f" size="xs">
+                120
+              </BadgeCount>
+            </Text>
+
+            <Text>
+              Tâches à faire
+              <BadgeCount background="#e8f5e8" color="#2e7d32" size="lg">
+                3
+              </BadgeCount>
+            </Text>
+          </Box>
+        </Box>
+      );
+
       const Demo = () => {
         return (
           <div
@@ -42,9 +196,7 @@
                 <Link href="#integration-composants">
                   3. Intégration dans différents composants
                 </Link>
-                <Link href="#badge-positioning">
-                  4. Badge positioning
-                </Link>
+                <Link href="#badge-positioning">4. Badge positioning</Link>
                 <Link href="#nowrap">
                   5. Association texte + badge (pas de coupure)
                 </Link>
@@ -186,91 +338,91 @@
             <Box as="section" marginBottom="xl" id="integration-composants">
               <Title as="h2">Intégration dans différents composants</Title>
               <Box row contentSpacing="md">
-                  <div>
-                    <Text
-                      style={{
-                        fontSize: "12px",
-                        color: "#666",
-                        marginBottom: "4px",
-                        display: "block",
-                      }}
-                    >
-                      Avec Text
-                    </Text>
-                    <Text>
-                      Notifications
-                      <BadgeCount background="#ff9800" color="white">
-                        3
+                <div>
+                  <Text
+                    style={{
+                      fontSize: "12px",
+                      color: "#666",
+                      marginBottom: "4px",
+                      display: "block",
+                    }}
+                  >
+                    Avec Text
+                  </Text>
+                  <Text>
+                    Notifications
+                    <BadgeCount background="#ff9800" color="white">
+                      3
+                    </BadgeCount>
+                  </Text>
+                </div>
+
+                <div>
+                  <Text
+                    style={{
+                      fontSize: "12px",
+                      color: "#666",
+                      marginBottom: "4px",
+                      display: "block",
+                    }}
+                  >
+                    Avec Paragraph
+                  </Text>
+                  <Paragraph>
+                    Vos messages
+                    <BadgeCount background="#4caf50" color="white" size="xs">
+                      8
+                    </BadgeCount>
+                    sont prêts à être consultés.
+                  </Paragraph>
+                </div>
+
+                <div>
+                  <Text
+                    style={{
+                      fontSize: "12px",
+                      color: "#666",
+                      marginBottom: "4px",
+                      display: "block",
+                    }}
+                  >
+                    Avec Link
+                  </Text>
+                  <Link href="#" underline={false}>
+                    <Text underline>Voir les alertes</Text>
+                    <BadgeCount background="#f44336" color="white" max="99">
+                      127
+                    </BadgeCount>
+                  </Link>
+                </div>
+
+                <div>
+                  <Text
+                    style={{
+                      fontSize: "12px",
+                      color: "#666",
+                      marginBottom: "4px",
+                      display: "block",
+                    }}
+                  >
+                    Avec Button
+                  </Text>
+                  <Box column contentSpacing="md">
+                    <Button alignY="start">
+                      Tâches
+                      <BadgeCount background="#2196f3" color="white">
+                        5
                       </BadgeCount>
-                    </Text>
-                  </div>
+                    </Button>
 
-                  <div>
-                    <Text
-                      style={{
-                        fontSize: "12px",
-                        color: "#666",
-                        marginBottom: "4px",
-                        display: "block",
-                      }}
-                    >
-                      Avec Paragraph
-                    </Text>
-                    <Paragraph>
-                      Vos messages
-                      <BadgeCount background="#4caf50" color="white" size="xs">
-                        8
+                    <Button lineHeight="1.5">
+                      Tâches
+                      <BadgeCount background="#2196f3" color="white">
+                        5
                       </BadgeCount>
-                      sont prêts à être consultés.
-                    </Paragraph>
-                  </div>
-
-                  <div>
-                    <Text
-                      style={{
-                        fontSize: "12px",
-                        color: "#666",
-                        marginBottom: "4px",
-                        display: "block",
-                      }}
-                    >
-                      Avec Link
-                    </Text>
-                    <Link href="#" underline={false}>
-                      <Text underline>Voir les alertes</Text>
-                      <BadgeCount background="#f44336" color="white" max="99">
-                        127
-                      </BadgeCount>
-                    </Link>
-                  </div>
-
-                  <div>
-                    <Text
-                      style={{
-                        fontSize: "12px",
-                        color: "#666",
-                        marginBottom: "4px",
-                        display: "block",
-                      }}
-                    >
-                      Avec Button
-                    </Text>
-                    <Box column contentSpacing="md">
-                      <Button alignY="start">
-                        Tâches
-                        <BadgeCount background="#2196f3" color="white">
-                          5
-                        </BadgeCount>
-                      </Button>
-
-                      <Button lineHeight="1.5">
-                        Tâches
-                        <BadgeCount background="#2196f3" color="white">
-                          5
-                        </BadgeCount>
-                      </Button>
-                    </Box>
-                  </div>
+                    </Button>
+                  </Box>
+                </div>
               </Box>
             </Box>
 
@@ -278,6 +430,57 @@
             <Box as="section" marginBottom="xl" id="badge-positioning">
               <Title as="h2">Badge positioning</Title>
               <Box column contentSpacing="md">
+                <div>
+                  <Text
+                    style={{
+                      fontSize: "12px",
+                      color: "#666",
+                      marginBottom: "4px",
+                      display: "block",
+                    }}
+                  >
+                    alignX="start" - Position au début du conteneur
+                  </Text>
+                  <Box row contentSpacing="md">
+                    <Box
+                      style={{
+                        border: "1px solid #e0e0e0",
+                        borderRadius: "8px",
+                        padding: "12px",
+                        width: "300px",
+                      }}
+                    >
+                      <BadgeCount
+                        background="#4caf50"
+                        color="white"
+                        alignX="start"
+                      >
+                        3
+                      </BadgeCount>
+                      <Text>Nouveaux messages</Text>
+                    </Box>
+
+                    <Box
+                      style={{
+                        border: "1px solid #e0e0e0",
+                        borderRadius: "8px",
+                        padding: "12px",
+                        width: "350px",
+                      }}
+                    >
+                      <BadgeCount
+                        background="#ff9800"
+                        color="white"
+                        alignX="start"
+                        size="xs"
+                      >
+                        12
+                      </BadgeCount>
+                      <Text>Tâches en attente</Text>
+                    </Box>
+                  </Box>
+                </div>
+
                 <div>
                   <Text
                     style={{
