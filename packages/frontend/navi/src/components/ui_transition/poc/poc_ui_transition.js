@@ -229,66 +229,7 @@ const UNSET = {
   isContent: false,
   toString: () => "unset",
 };
-const createConfiguration = (domNodes, { contentId, contentPhase } = {}) => {
-  if (!domNodes) {
-    return UNSET;
-  }
-  const isEmpty = domNodes.length === 0;
-  let textNodeCount = 0;
-  let elementNodeCount = 0;
-  let firstElementNode;
-  for (const domNode of domNodes) {
-    if (domNode.nodeType === Node.TEXT_NODE) {
-      textNodeCount++;
-    } else {
-      if (!firstElementNode) {
-        firstElementNode = domNode;
-      }
-      elementNodeCount++;
-    }
-  }
-  const isOnlyTextNodes = elementNodeCount === 0 && textNodeCount > 1;
-  const singleElementNode = elementNodeCount === 1 ? firstElementNode : null;
 
-  contentId = contentId || getElementSignature(domNodes[0]);
-  if (!contentPhase && isEmpty) {
-    // Imagine code rendering null while switching to a new content
-    // or even while staying on the same content.
-    // In the UI we want to consider this as an "empty" phase.
-    // meaning the ui will keep the same size until something else happens
-    // This prevent layout shifts of code not properly handling
-    // intermediate states.
-    contentPhase = "empty";
-  }
-  if (contentPhase) {
-    return {
-      domNodes,
-      isEmpty,
-      isOnlyTextNodes,
-      singleElementNode,
-
-      type: "content_phase",
-      contentId,
-      contentPhase,
-      isContentPhase: true,
-      isContent: false,
-      toString: () => `content(${contentId}).phase(${contentPhase})`,
-    };
-  }
-  return {
-    domNodes,
-    isEmpty,
-    isOnlyTextNodes,
-    singleElementNode,
-
-    type: "content",
-    contentId,
-    contentPhase: undefined,
-    isContentPhase: false,
-    isContent: true,
-    toString: () => `content(${contentId})`,
-  };
-};
 const isSameConfiguration = (configA, configB) => {
   return configA.toString() === configB.toString();
 };
@@ -354,41 +295,114 @@ export const createUITransitionController = (
   outgoingSlot.setAttribute("inert", "");
   previousGroup.setAttribute("inert", "");
 
-  const targetSlotInitialConfiguration = createConfiguration(
-    Array.from(targetSlot.childNodes),
-  );
-  const outgoingSlotInitialConfiguration = createConfiguration(
-    Array.from(outgoingSlot.childNodes),
-    { contentPhase: true },
-  );
+  const detectConfiguration = (slot, { contentId, contentPhase } = {}) => {
+    const domNodes = Array.from(slot.childNodes);
 
+    if (!domNodes) {
+      return UNSET;
+    }
+    const isEmpty = domNodes.length === 0;
+    let textNodeCount = 0;
+    let elementNodeCount = 0;
+    let firstElementNode;
+    const domNodesClone = [];
+    for (const domNode of domNodes) {
+      if (domNode.nodeType === Node.TEXT_NODE) {
+        textNodeCount++;
+      } else {
+        if (!firstElementNode) {
+          firstElementNode = domNode;
+        }
+        elementNodeCount++;
+      }
+      const domNodeClone = domNode.cloneNode(true);
+      domNodesClone.push(domNodeClone);
+    }
+    const isOnlyTextNodes = elementNodeCount === 0 && textNodeCount > 1;
+    const singleElementNode = elementNodeCount === 1 ? firstElementNode : null;
+
+    contentId = contentId || getElementSignature(domNodes[0]);
+    if (!contentPhase && isEmpty) {
+      // Imagine code rendering null while switching to a new content
+      // or even while staying on the same content.
+      // In the UI we want to consider this as an "empty" phase.
+      // meaning the ui will keep the same size until something else happens
+      // This prevent layout shifts of code not properly handling
+      // intermediate states.
+      contentPhase = "empty";
+    }
+
+    let width;
+    let height;
+    let borderRadius;
+    let border;
+    let background;
+
+    if (isEmpty) {
+      debugSize(`measureSlot(".${slot.className}") -> it is empty`);
+    } else if (singleElementNode) {
+      const rect = singleElementNode.getBoundingClientRect();
+      width = rect.width;
+      height = rect.height;
+      debugSize(`measureSlot(".${slot.className}") -> [${width}x${height}]`);
+      borderRadius = getBorderRadius(singleElementNode);
+      border = getComputedStyle(singleElementNode).border;
+      background = getBackground(singleElementNode);
+    } else {
+      // text, multiple elements
+      const rect = slot.getBoundingClientRect();
+      width = rect.width;
+      height = rect.height;
+      debugSize(`measureSlot(".${slot.className}") -> [${width}x${height}]`);
+    }
+
+    const commonProperties = {
+      domNodes,
+      domNodesClone,
+      isEmpty,
+      isOnlyTextNodes,
+      singleElementNode,
+
+      width,
+      height,
+      borderRadius,
+      border,
+      background,
+
+      contentId,
+    };
+
+    if (contentPhase) {
+      return {
+        ...commonProperties,
+        type: "content_phase",
+        contentPhase,
+        isContentPhase: true,
+        isContent: false,
+        toString: () => `content(${contentId}).phase(${contentPhase})`,
+      };
+    }
+    return {
+      ...commonProperties,
+      type: "content",
+      contentPhase: undefined,
+      isContentPhase: false,
+      isContent: true,
+      toString: () => `content(${contentId})`,
+    };
+  };
+
+  const targetSlotInitialConfiguration = detectConfiguration(targetSlot);
+  const outgoingSlotInitialConfiguration = detectConfiguration(outgoingSlot, {
+    contentPhase: "true",
+  });
   let targetSlotConfiguration = targetSlotInitialConfiguration;
   let outgoingSlotConfiguration = outgoingSlotInitialConfiguration;
   let previousTargetSlotConfiguration = UNSET;
   let previousOutgoingSlotConfiguration = UNSET;
-  // dimensions of the container
   let containerWidth;
   let containerHeight;
-  let targetSlotWidth;
-  let targetSlotHeight;
-  let outgoingSlotWidth;
-  let outgoingSlotHeight;
-  let targetSlotBorderRadius;
-  let targetSlotBorder;
-  let targetSlotBackground;
 
-  const getSlotDimensions = (slotElement) => {
-    const firstChild = slotElement.firstElementChild;
-    if (!firstChild) {
-      console.warn("Element not found for dimension measurement");
-      return { width: undefined, height: undefined };
-    }
-    const rect = firstChild.getBoundingClientRect();
-    return {
-      width: rect.width,
-      height: rect.height,
-    };
-  };
   const updateSlotAttributes = () => {
     if (targetSlotConfiguration.isEmpty && outgoingSlotConfiguration.isEmpty) {
       root.setAttribute("data-only-previous-group", "");
@@ -400,35 +414,6 @@ export const createUITransitionController = (
     // Set data attributes for CSS-based alignment
     root.setAttribute("data-align-x", alignX);
     root.setAttribute("data-align-y", alignY);
-  };
-  const measureSlot = (slot) => {
-    const slotConfig =
-      slot === targetSlot ? targetSlotConfiguration : outgoingSlotConfiguration;
-
-    if (slotConfig.isEmpty) {
-      debugSize(`measureSlot(".${slot.className}") -> it is empty`);
-      if (slot === targetSlot) {
-        targetSlotWidth = undefined;
-        targetSlotHeight = undefined;
-      } else {
-        outgoingSlotWidth = undefined;
-        outgoingSlotHeight = undefined;
-      }
-      return;
-    }
-    const dimensions = getSlotDimensions(targetSlot);
-    const slotWidth = dimensions.width;
-    const slotHeight = dimensions.height;
-    debugSize(
-      `measureSlot(".${slot.className}") -> [${slotWidth}x${slotHeight}]`,
-    );
-    if (slot === targetSlot) {
-      targetSlotWidth = slotWidth;
-      targetSlotHeight = slotHeight;
-    } else {
-      outgoingSlotWidth = slotWidth;
-      outgoingSlotHeight = slotHeight;
-    }
   };
   let updateSlotOverflowX;
   let updateSlotOverflowY;
@@ -505,50 +490,54 @@ export const createUITransitionController = (
     }
   }
 
-  const applySlotConfigurationEffects = (slot) => {
+  const getSlotConfiguration = (slot) => {
     if (slot === targetSlot) {
-      if (targetSlotConfiguration.singleElementNode) {
-        targetSlotBorderRadius = getBorderRadius(
-          targetSlotConfiguration.singleElementNode,
-        );
-        targetSlotBorder = getComputedStyle(
-          targetSlotConfiguration.singleElementNode,
-        ).border;
-        targetSlotBackground = getBackground(
-          targetSlotConfiguration.singleElementNode,
-        );
-      } else {
-        // empty, text, multiple elements
-        targetSlotBorderRadius = undefined;
-        targetSlotBorder = undefined;
-        targetSlotBackground = undefined;
-      }
-      measureSlot(slot);
-      setSlotDimensions(slot, targetSlotWidth, targetSlotHeight);
+      return targetSlotConfiguration;
+    }
+    if (slot === outgoingSlot) {
+      return outgoingSlotConfiguration;
+    }
+    if (slot === previousTargetSlot) {
+      return previousTargetSlotConfiguration;
+    }
+    if (slot === previousOutgoingSlot) {
+      return previousOutgoingSlotConfiguration;
+    }
+    throw new Error("Unknown slot for getConfiguration");
+  };
+  const setSlotConfiguration = (slot, configuration) => {
+    slot.innerHTML = "";
+    for (const domNode of configuration.domNodes) {
+      slot.appendChild(domNode);
+    }
+    if (slot === targetSlot) {
+      targetSlotConfiguration = configuration;
+      applySlotConfigurationEffects(slot);
       return;
     }
     if (slot === outgoingSlot) {
-      measureSlot(slot);
-      setSlotDimensions(slot, outgoingSlotWidth, outgoingSlotHeight);
+      outgoingSlotConfiguration = configuration;
+      applySlotConfigurationEffects(slot);
       return;
     }
-
     if (slot === previousTargetSlot) {
-      if (previousTargetSlotConfiguration.isEmpty) {
-        setSlotDimensions(slot, undefined, undefined);
-      } else {
-        setSlotDimensions(slot, targetSlotWidth, targetSlotHeight);
-      }
+      previousTargetSlotConfiguration = configuration;
+      applySlotConfigurationEffects(slot);
       return;
     }
-
-    if (previousOutgoingSlotConfiguration.isEmpty) {
-      setSlotDimensions(slot, undefined, undefined);
-    } else {
-      setSlotDimensions(slot, outgoingSlotWidth, outgoingSlotHeight);
+    if (slot === previousOutgoingSlot) {
+      previousOutgoingSlotConfiguration = configuration;
+      applySlotConfigurationEffects(slot);
+      return;
     }
+    throw new Error("Unknown slot for applyConfiguration");
   };
-  const setSlotDimensions = (slot, width, height) => {
+  const applySlotConfigurationEffects = (slot) => {
+    setSlotDimensions(slot);
+  };
+  const setSlotDimensions = (slot) => {
+    const configuration = getSlotConfiguration(slot);
+    const { width, height } = configuration;
     if (width === undefined) {
       if (!slot.style.width) {
         return;
@@ -578,51 +567,6 @@ export const createUITransitionController = (
   applySlotConfigurationEffects(targetSlot);
   applySlotConfigurationEffects(outgoingSlot);
 
-  const setSlotConfiguration = (slot, configuration) => {
-    slot.innerHTML = "";
-    for (const domNode of configuration.domNodes) {
-      slot.appendChild(domNode);
-    }
-
-    if (slot === targetSlot) {
-      targetSlotConfiguration = configuration;
-      applySlotConfigurationEffects(slot);
-      return;
-    }
-
-    if (slot === outgoingSlot) {
-      outgoingSlotConfiguration = configuration;
-      applySlotConfigurationEffects(slot);
-      return;
-    }
-
-    if (slot === previousTargetSlot) {
-      previousTargetSlotConfiguration = configuration;
-      applySlotConfigurationEffects(slot);
-      return;
-    }
-
-    if (slot === previousOutgoingSlot) {
-      previousOutgoingSlotConfiguration = configuration;
-      applySlotConfigurationEffects(slot);
-      return;
-    }
-
-    throw new Error("Unknown slot for applyConfiguration");
-  };
-  const targetSlotBecomes = (newConfiguration) => {
-    setSlotConfiguration(previousTargetSlot, targetSlotConfiguration);
-    setSlotConfiguration(targetSlot, newConfiguration);
-  };
-  const outgoingSlotBecomes = (newConfiguration) => {
-    setSlotConfiguration(previousOutgoingSlot, outgoingSlotConfiguration);
-    setSlotConfiguration(outgoingSlot, newConfiguration);
-  };
-  const targetSlotBecomesViaOutgoing = (newConfiguration) => {
-    setSlotConfiguration(outgoingSlot, targetSlotConfiguration);
-    setSlotConfiguration(targetSlot, newConfiguration);
-  };
-
   let isTransitioning = false;
   let transitionType = "none";
   const transitionController = createGroupTransitionController({
@@ -649,8 +593,8 @@ export const createUITransitionController = (
   const morphContainerIntoTarget = () => {
     const fromWidth = containerWidth || 0;
     const fromHeight = containerHeight || 0;
-    const toWidth = targetSlotWidth || 0;
-    const toHeight = targetSlotHeight || 0;
+    const toWidth = targetSlotConfiguration.width || 0;
+    const toHeight = targetSlotConfiguration.height || 0;
     debugSize(
       `transition from [${fromWidth}x${fromHeight}] to [${toWidth}x${toHeight}]`,
     );
@@ -702,7 +646,7 @@ export const createUITransitionController = (
     const morphTransitions = [];
     const borderRadiusTransition = createBorderRadiusTransition(
       container,
-      targetSlotBorderRadius,
+      targetSlotConfiguration.borderRadius,
       {
         from: getBorderRadius(container),
         duration,
@@ -714,7 +658,7 @@ export const createUITransitionController = (
       },
     );
     morphTransitions.push(borderRadiusTransition);
-    container.style.border = targetSlotBorder;
+    container.style.border = targetSlotConfiguration.border;
     const widthTransition = createWidthTransition(container, toWidth, {
       from: fromWidth,
       duration,
@@ -742,13 +686,12 @@ export const createUITransitionController = (
     morphTransitions.push(widthTransition, heightTransition);
     const backgroundTransition = createBackgroundTransition(
       container,
-      targetSlotBackground,
+      targetSlotConfiguration.background,
       {
         duration,
         styleSynchronizer: "inline_style",
         onUpdate: () => {},
         onFinish: () => {
-          container.style.borderRadius = "";
           container.style.border = "";
           // swap background and border
           backgroundTransition.cancel();
@@ -793,8 +736,13 @@ export const createUITransitionController = (
 
   // content_to_content transition (uses previous_group)
   const applyContentToContentTransition = (toConfiguration) => {
-    outgoingSlotBecomes(UNSET);
-    targetSlotBecomes(toConfiguration);
+    // 1. move target slot to previous
+    setSlotConfiguration(previousTargetSlot, targetSlotConfiguration);
+    targetSlotConfiguration = toConfiguration;
+    // 2. move outgoing slot to previous
+    setSlotConfiguration(previousOutgoingSlot, outgoingSlotConfiguration);
+    setSlotConfiguration(outgoingSlot, UNSET);
+
     const transitions = [
       ...morphContainerIntoTarget(),
       fadeInTargetSlot(),
@@ -813,7 +761,10 @@ export const createUITransitionController = (
   };
   // content_phase_to_content_phase transition (uses outgoing_slot)
   const applyContentPhaseToContentPhaseTransition = (toConfiguration) => {
-    targetSlotBecomesViaOutgoing(toConfiguration);
+    // 1. Move target slot to outgoing
+    setSlotConfiguration(outgoingSlot, targetSlotConfiguration);
+    targetSlotConfiguration = toConfiguration;
+
     const transitions = [
       ...morphContainerIntoTarget(),
       fadeInTargetSlot(),
@@ -832,8 +783,13 @@ export const createUITransitionController = (
   };
   // any_to_empty transition
   const applyToEmptyTransition = () => {
-    targetSlotBecomes(UNSET);
-    outgoingSlotBecomes(UNSET);
+    // 1. move target slot to previous
+    setSlotConfiguration(previousTargetSlot, targetSlotConfiguration);
+    targetSlotConfiguration = UNSET;
+    // 2. move outgoing slot to previous
+    setSlotConfiguration(previousOutgoingSlot, outgoingSlotConfiguration);
+    outgoingSlotConfiguration = UNSET;
+
     const transitions = [...morphContainerIntoTarget(), fadeOutPreviousGroup()];
     const transition = transitionController.update(transitions, {
       onFinish: () => {
@@ -857,14 +813,18 @@ export const createUITransitionController = (
       return;
     }
 
+    if (newContentElement) {
+      targetSlot.innerHTML = "";
+      targetSlot.appendChild(newContentElement);
+    } else {
+      targetSlot.innerHTML = "";
+    }
+
     const fromConfiguration = targetSlotConfiguration;
-    const toConfiguration = createConfiguration(
-      newContentElement ? [newContentElement] : null,
-      {
-        contentPhase,
-        contentId,
-      },
-    );
+    const toConfiguration = detectConfiguration(targetSlot, {
+      contentPhase,
+      contentId,
+    });
     if (hasDebugLogs) {
       console.group(`transitionTo(${toConfiguration.contentId})`);
     }
