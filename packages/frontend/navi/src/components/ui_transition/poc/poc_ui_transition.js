@@ -689,14 +689,6 @@ export const createUITransitionController = (
       const isGrowing = toWidth >= fromWidth && toHeight >= fromHeight;
       const isShrinking = toWidth <= fromWidth && toHeight <= fromHeight;
 
-      // Get viewport dimensions to handle overflow cases
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-
-      // Check if target dimensions exceed viewport
-      const exceedsViewport =
-        toWidth > viewportWidth || toHeight > viewportHeight;
-
       // Get border radius values for clip-path and normalize them
       const fromBorderRadius = previousTargetSlotConfiguration.borderRadius;
       const toBorderRadius = targetSlotConfiguration.borderRadius;
@@ -714,17 +706,7 @@ export const createUITransitionController = (
       let startClipPath;
       let endClipPath;
 
-      if (exceedsViewport) {
-        // Special case for large elements: use a different approach
-        // Instead of clip-path, we could fall back to opacity transition or a different strategy
-        debugSize(
-          `Large element transition: ${fromWidth}x${fromHeight} to ${toWidth}x${toHeight} - falling back to simpler transition`,
-        );
-
-        // Use minimal clip-path effect for very large elements
-        startClipPath = `inset(0% 0% 0% 0% round ${fromBorderRadiusNormalized})`;
-        endClipPath = `inset(0% 0% 0% 0% round ${toBorderRadiusNormalized})`;
-      } else if (isGrowing) {
+      if (isGrowing) {
         // Growing: Start with smaller clip, expand to full
         const fromClipWidth = Math.min(fromWidth, toWidth);
         const fromClipHeight = Math.min(fromHeight, toHeight);
@@ -732,7 +714,7 @@ export const createUITransitionController = (
         const widthDiff = toWidth - fromClipWidth;
         const heightDiff = toHeight - fromClipHeight;
 
-        const topInset = toHeight > 0 ? (heightDiff / 2 / toHeight) * 100 : 0;
+        const topInset = toHeight > 0 ? (heightDiff / 2 / toWidth) * 100 : 0;
         const rightInset = toWidth > 0 ? (widthDiff / 2 / toWidth) * 100 : 0;
         const bottomInset =
           toHeight > 0 ? (heightDiff / 2 / toHeight) * 100 : 0;
