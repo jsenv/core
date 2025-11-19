@@ -21,6 +21,7 @@ export {
   createStyleController,
   getBackground,
   getBackgroundColor,
+  getBorderRadius,
   getOpacity,
   getTranslateX,
   getTranslateY,
@@ -138,6 +139,7 @@ export { createGroupTransitionController } from "./src/transition/group_transiti
 export {
   createBackgroundColorTransition,
   createBackgroundTransition,
+  createBorderRadiusTransition,
   createHeightTransition,
   createOpacityTransition,
   createTranslateXTransition,

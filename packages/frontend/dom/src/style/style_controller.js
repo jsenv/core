@@ -416,15 +416,21 @@ export const getHeight = (
 ) => {
   return styleControllerToIgnore.getUnderlyingValue(element, "rect.height");
 };
-export const getBackgroundColor = (
+export const getBorderRadius = (
   element,
   styleControllerToIgnore = dormantStyleController,
 ) => {
-  return styleControllerToIgnore.getUnderlyingValue(element, "backgroundColor");
+  return styleControllerToIgnore.getUnderlyingValue(element, "borderRadius");
 };
 export const getBackground = (
   element,
   styleControllerToIgnore = dormantStyleController,
 ) => {
   return styleControllerToIgnore.getUnderlyingValue(element, "background");
+};
+export const getBackgroundColor = (
+  element,
+  styleControllerToIgnore = dormantStyleController,
+) => {
+  return styleControllerToIgnore.getUnderlyingValue(element, "backgroundColor");
 };

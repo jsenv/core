@@ -7,6 +7,7 @@ import {
   createStyleController,
   getBackground,
   getBackgroundColor,
+  getBorderRadius,
   getHeight,
   getOpacity,
   getTranslateX,
@@ -223,40 +224,19 @@ export const createTranslateXTransition = (element, to, options = {}) => {
   });
 };
 
-export const createBackgroundColorTransition = (element, to, options = {}) => {
-  const fromBackgroundColor = options.from || getBackgroundColor(element);
-  const toBackgroundColor = parseStyle(to, "backgroundColor", element);
-  const rgbaPair = prepareRGBATransitionPair(
-    fromBackgroundColor,
-    toBackgroundColor,
-    element,
-  );
-  if (!rgbaPair) {
-    return createNoopCSSPropertyTransition({ element, ...options });
-  }
-  const [fromRgba, toRgba] = rgbaPair;
-  if (areSameRGBA(fromRgba, toRgba)) {
-    return createNoopCSSPropertyTransition({ element, ...options });
-  }
+export const createBorderRadiusTransition = (element, to, options = {}) => {
   return createCSSPropertyTransition({
     ...options,
-    constructor: createBackgroundColorTransition,
+    constructor: createBorderRadiusTransition,
     element,
-    styleProperty: "backgroundColor",
-    getFrom: () => 0,
-    from: 0,
-    to: 1,
-    getValue: (transition) => {
-      const rgbaInterpolated = interpolateRGBA(transition, fromRgba, toRgba);
-      const backgroundColorInterpolated = stringifyStyle(
-        rgbaInterpolated,
-        "backgroundColor",
-      );
-      return backgroundColorInterpolated;
+    styleProperty: "borderRadius",
+    getFrom: () => {
+      const computedStyle = getComputedStyle(element);
+      return computedStyle.borderRadius;
     },
+    to,
   });
 };
-
 export const createBackgroundTransition = (element, to, options = {}) => {
   const fromBackground = options.from || getBackground(element);
   const toBackground = parseStyle(to, "background", element);
@@ -319,6 +299,39 @@ export const createBackgroundTransition = (element, to, options = {}) => {
     ...options,
   });
 };
+export const createBackgroundColorTransition = (element, to, options = {}) => {
+  const fromBackgroundColor = options.from || getBackgroundColor(element);
+  const toBackgroundColor = parseStyle(to, "backgroundColor", element);
+  const rgbaPair = prepareRGBATransitionPair(
+    fromBackgroundColor,
+    toBackgroundColor,
+    element,
+  );
+  if (!rgbaPair) {
+    return createNoopCSSPropertyTransition({ element, ...options });
+  }
+  const [fromRgba, toRgba] = rgbaPair;
+  if (areSameRGBA(fromRgba, toRgba)) {
+    return createNoopCSSPropertyTransition({ element, ...options });
+  }
+  return createCSSPropertyTransition({
+    ...options,
+    constructor: createBackgroundColorTransition,
+    element,
+    styleProperty: "backgroundColor",
+    getFrom: () => 0,
+    from: 0,
+    to: 1,
+    getValue: (transition) => {
+      const rgbaInterpolated = interpolateRGBA(transition, fromRgba, toRgba);
+      const backgroundColorInterpolated = stringifyStyle(
+        rgbaInterpolated,
+        "backgroundColor",
+      );
+      return backgroundColorInterpolated;
+    },
+  });
+};
 
 // Helper functions for getting natural values
 export const getOpacityWithoutTransition = (element) =>
@@ -329,3 +342,5 @@ export const getWidthWithoutTransition = (element) =>
   getWidth(element, transitionStyleController);
 export const getHeightWithoutTransition = (element) =>
   getHeight(element, transitionStyleController);
+export const getBorderRadiusWithoutTransition = (element) =>
+  getBorderRadius(element, transitionStyleController);

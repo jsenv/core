@@ -84,11 +84,13 @@
 
 import {
   createBackgroundTransition,
+  createBorderRadiusTransition,
   createGroupTransitionController,
   createHeightTransition,
   createOpacityTransition,
   createWidthTransition,
   getBackground,
+  getBorderRadius,
   getElementSignature,
   getScrollContainer,
   measureScrollbar,
@@ -125,7 +127,7 @@ import.meta.css = /* css */ `
 
   .ui_transition_container {
     /* in case CSS sets border on this element his size must include borders */
-    box-sizing: content-box;
+    box-sizing: border-box;
     transition-property: border, border-radius;
     transition-duration: var(--x-transition-duration);
     transition-timing-function: ease;
@@ -506,9 +508,9 @@ export const createUITransitionController = (
   const applySlotConfigurationEffects = (slot) => {
     if (slot === targetSlot) {
       if (targetSlotConfiguration.singleElementNode) {
-        targetSlotBorderRadius = getComputedStyle(
+        targetSlotBorderRadius = getBorderRadius(
           targetSlotConfiguration.singleElementNode,
-        ).borderRadius;
+        );
         targetSlotBorder = getComputedStyle(
           targetSlotConfiguration.singleElementNode,
         ).border;
@@ -625,7 +627,7 @@ export const createUITransitionController = (
   let transitionType = "none";
   const transitionController = createGroupTransitionController({
     // debugBreakpoints: [0.25],
-    pauseBreakpoints: [0.4],
+    // pauseBreakpoints: [0.2],
     lifecycle: {
       setup: () => {
         updateSlotAttributes();
@@ -698,6 +700,21 @@ export const createUITransitionController = (
     };
 
     const morphTransitions = [];
+    const borderRadiusTransition = createBorderRadiusTransition(
+      container,
+      targetSlotBorderRadius,
+      {
+        from: getBorderRadius(container),
+        duration,
+        styleSynchronizer: "inline_style",
+        onUpdate: () => {},
+        onFinish: (borderRadiusTransition) => {
+          borderRadiusTransition.cancel();
+        },
+      },
+    );
+    morphTransitions.push(borderRadiusTransition);
+    container.style.border = targetSlotBorder;
     const widthTransition = createWidthTransition(container, toWidth, {
       from: fromWidth,
       duration,
@@ -723,8 +740,6 @@ export const createUITransitionController = (
       },
     });
     morphTransitions.push(widthTransition, heightTransition);
-    container.style.borderRadius = targetSlotBorderRadius;
-    container.style.border = targetSlotBorder;
     const backgroundTransition = createBackgroundTransition(
       container,
       targetSlotBackground,
@@ -732,7 +747,12 @@ export const createUITransitionController = (
         duration,
         styleSynchronizer: "inline_style",
         onUpdate: () => {},
-        onFinish: () => {},
+        onFinish: () => {
+          container.style.borderRadius = "";
+          container.style.border = "";
+          // swap background and border
+          backgroundTransition.cancel();
+        },
       },
     );
     morphTransitions.push(backgroundTransition);
