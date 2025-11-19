@@ -24,17 +24,91 @@
         <Box as="section" marginBottom="xl">
           <Title as="h2">Table des matières</Title>
           <Box row contentSpacing="xs" marginTop="md">
-            <Link href="#different-font-sizes">1. Different font sizes</Link>
-            <Link href="#multiple-icons">2. Multiple icons</Link>
-            <Link href="#inline-text-icons">3. Icon inside text</Link>
-            <Link href="#line-height-variations">4. Icon line height</Link>
-            <Link href="#icon-transformation">5. Icon transformation</Link>
-            <Link href="#icon-href">6. Icon with SVG use</Link>
-            <Link href="#icon-dimensions">7. Icon dimensions</Link>
-            <Link href="#icon-text-link">8. Icon + text + link</Link>
-            <Link href="#icon-row">9. Icon in row</Link>
-            <Link href="#icon-column">10. Icon in column</Link>
-            <Link href="#integration">11. Integration</Link>
+            <Link href="#basic-icon-positioning">
+              1. Basic icon positioning
+            </Link>
+            <Link href="#different-font-sizes">2. Different font sizes</Link>
+            <Link href="#multiple-icons">3. Multiple icons</Link>
+            <Link href="#inline-text-icons">4. Icon inside text</Link>
+            <Link href="#line-height-variations">5. Icon line height</Link>
+            <Link href="#icon-transformation">6. Icon transformation</Link>
+            <Link href="#icon-href">7. Icon with SVG use</Link>
+            <Link href="#icon-dimensions">8. Icon dimensions</Link>
+            <Link href="#icon-text-link">9. Icon + text + link</Link>
+            <Link href="#icon-row">10. Icon in row</Link>
+            <Link href="#icon-column">11. Icon in column</Link>
+            <Link href="#integration">12. Integration</Link>
+          </Box>
+        </Box>
+      );
+
+      // Basic Icon Positioning Section
+      const BasicIconPositioningSection = () => (
+        <Box as="section" marginBottom="xl" id="basic-icon-positioning">
+          <Title as="h2">Basic Icon Positioning</Title>
+          <Box column contentSpacing="md">
+            <div>
+              <Text
+                style={{
+                  fontSize: "14px",
+                  fontWeight: "bold",
+                  color: "#333",
+                  marginBottom: "8px",
+                  display: "block",
+                }}
+              >
+                Icon Before Text
+              </Text>
+              <Text>
+                <Icon color="blue">
+                  <HomeSvg />
+                </Icon>
+                Home
+              </Text>
+            </div>
+
+            <div>
+              <Text
+                style={{
+                  fontSize: "14px",
+                  fontWeight: "bold",
+                  color: "#333",
+                  marginBottom: "8px",
+                  display: "block",
+                }}
+              >
+                Icon After Text
+              </Text>
+              <Text>
+                Search
+                <Icon color="green">
+                  <SearchSvg />
+                </Icon>
+              </Text>
+            </div>
+
+            <div>
+              <Text
+                style={{
+                  fontSize: "14px",
+                  fontWeight: "bold",
+                  color: "#333",
+                  marginBottom: "8px",
+                  display: "block",
+                }}
+              >
+                Icons Before and After
+              </Text>
+              <Text>
+                <Icon color="orange">
+                  <StarSvg />
+                </Icon>
+                Favorites
+                <Icon color="red">
+                  <HeartSvg />
+                </Icon>
+              </Text>
+            </div>
           </Box>
         </Box>
       );
@@ -1376,6 +1450,7 @@
             <Title as="h1">Icon Demo</Title>
 
             <TableOfContents />
+            <BasicIconPositioningSection />
             <DifferentFontSizesSection />
             <MultipleIconsSection />
             <InlineTextIconsSection />
