@@ -62,21 +62,46 @@
             <Box as="section" marginBottom="xl">
               <Title as="h2">Comportement avec différents line-heights</Title>
               <Box row contentSpacing="md">
-                <Text style={{ lineHeight: "1.4" }}>
+                <Text
+                  style={{
+                    lineHeight: "1.4",
+                    border: "1px solid #e0e0e0",
+                    backgroundColor: "#f9f9f9",
+                    padding: "4px 8px",
+                    borderRadius: "4px",
+                  }}
+                >
                   Line-height normal (1.4)
                   <BadgeCount background="#9c27b0" color="white">
                     23
                   </BadgeCount>
                 </Text>
 
-                <Text style={{ lineHeight: "2" }}>
+                <Text
+                  style={{
+                    lineHeight: "2",
+                    border: "1px solid #e0e0e0",
+                    backgroundColor: "#f9f9f9",
+                    padding: "4px 8px",
+                    borderRadius: "4px",
+                  }}
+                >
                   Line-height 2
                   <BadgeCount background="#ff5722" color="white">
                     4
                   </BadgeCount>
                 </Text>
 
-                <Text style={{ lineHeight: "3", fontSize: "18px" }}>
+                <Text
+                  style={{
+                    lineHeight: "3",
+                    fontSize: "18px",
+                    border: "1px solid #e0e0e0",
+                    backgroundColor: "#f9f9f9",
+                    padding: "4px 8px",
+                    borderRadius: "4px",
+                  }}
+                >
                   Line-height 3 avec fontSize plus grand
                   <BadgeCount background="#607d8b" color="white" size="lg">
                     15
@@ -91,13 +116,244 @@
                     fontStyle: "italic",
                   }}
                 >
-                  Le badge s'adapte automatiquement à la hauteur de ligne du
-                  composant parent.
+                  Les bordures montrent la hauteur de ligne réelle. Le badge
+                  s'adapte automatiquement à la hauteur de ligne du composant
+                  parent.
                 </Text>
               </Box>
             </Box>
 
-            {/* Section 3: Nombres élevés et max */}
+            {/* Section 3: Comportement inline - retour à la ligne */}
+            <Box as="section" marginBottom="xl">
+              <Title as="h2">Comportement inline - retour à la ligne</Title>
+              <Box column contentSpacing="lg">
+                <div>
+                  <Title as="h3" size="18">
+                    Le badge se comporte comme du texte normal
+                  </Title>
+                  <Box
+                    style={{
+                      border: "1px solid #e0e0e0",
+                      borderRadius: "8px",
+                      padding: "16px",
+                      backgroundColor: "#fafafa",
+                      width: "300px",
+                    }}
+                  >
+                    <Paragraph>
+                      Voici un texte assez long qui va dépasser la largeur du
+                      conteneur et provoquer un retour à la ligne. Les
+                      notifications
+                      <BadgeCount background="#1976d2" color="white">
+                        42
+                      </BadgeCount>
+                      peuvent apparaître au milieu d'une phrase et continuer
+                      naturellement sur la ligne suivante si nécessaire.
+                    </Paragraph>
+                  </Box>
+
+                  <Box marginTop="md">
+                    <Text
+                      style={{
+                        fontSize: "14px",
+                        color: "#666",
+                        fontStyle: "italic",
+                      }}
+                    >
+                      Le badge suit le flux du texte et peut passer à la ligne
+                      comme n'importe quel caractère.
+                    </Text>
+                  </Box>
+                </div>
+
+                <div>
+                  <Title as="h3" size="18">
+                    Plusieurs badges dans un texte
+                  </Title>
+                  <Box
+                    style={{
+                      border: "1px solid #e0e0e0",
+                      borderRadius: "8px",
+                      padding: "16px",
+                      backgroundColor: "#fafafa",
+                      width: "280px",
+                    }}
+                  >
+                    <Paragraph>
+                      Messages
+                      <BadgeCount background="#4caf50" color="white" size="xs">
+                        12
+                      </BadgeCount>
+                      reçus aujourd'hui, alertes
+                      <BadgeCount background="#f44336" color="white" size="xs">
+                        3
+                      </BadgeCount>
+                      urgentes en attente, et tâches
+                      <BadgeCount background="#ff9800" color="white" size="xs">
+                        8
+                      </BadgeCount>
+                      à terminer cette semaine.
+                    </Paragraph>
+                  </Box>
+                </div>
+              </Box>
+            </Box>
+
+            {/* Section 4: Association texte + badge avec noWrap */}
+            <Box as="section" marginBottom="xl">
+              <Title as="h2">Association texte + badge (pas de coupure)</Title>
+              <Box column contentSpacing="lg">
+                <div>
+                  <Title as="h3" size="18">
+                    Garder le mot et son compteur ensemble
+                  </Title>
+
+                  <Box marginBottom="md">
+                    <Text
+                      style={{
+                        fontSize: "14px",
+                        color: "#666",
+                        fontStyle: "italic",
+                      }}
+                    >
+                      Utilisez noWrap sur le composant Text qui contient le mot
+                      + badge pour éviter qu'ils se séparent lors d'un retour à
+                      la ligne.
+                    </Text>
+                  </Box>
+
+                  <Box column contentSpacing="md">
+                    <div>
+                      <Title
+                        as="h4"
+                        size="16"
+                        style={{ color: "#d32f2f", marginBottom: "8px" }}
+                      >
+                        ❌ Sans noWrap : le badge peut se séparer du mot
+                      </Title>
+                      <Box
+                        style={{
+                          border: "1px solid #ffcdd2",
+                          borderRadius: "8px",
+                          padding: "16px",
+                          backgroundColor: "#ffeaea",
+                          width: "200px",
+                        }}
+                      >
+                        <Paragraph>
+                          Consultez vos messages
+                          <BadgeCount background="#1976d2" color="white">
+                            156
+                          </BadgeCount>
+                          et répondez rapidement.
+                        </Paragraph>
+                      </Box>
+                    </div>
+
+                    <div>
+                      <Title
+                        as="h4"
+                        size="16"
+                        style={{ color: "#2e7d32", marginBottom: "8px" }}
+                      >
+                        ✅ Avec noWrap : le mot et son badge restent ensemble
+                      </Title>
+                      <Box
+                        style={{
+                          border: "1px solid #c8e6c9",
+                          borderRadius: "8px",
+                          padding: "16px",
+                          backgroundColor: "#e8f5e8",
+                          width: "200px",
+                        }}
+                      >
+                        <Paragraph>
+                          Consultez vos{" "}
+                          <Text noWrap>
+                            messages
+                            <BadgeCount background="#1976d2" color="white">
+                              156
+                            </BadgeCount>
+                          </Text>{" "}
+                          et répondez rapidement.
+                        </Paragraph>
+                      </Box>
+                    </div>
+                  </Box>
+                </div>
+
+                <div>
+                  <Title as="h3" size="18">
+                    Exemples pratiques avec noWrap
+                  </Title>
+                  <Box
+                    style={{
+                      border: "1px solid #e0e0e0",
+                      borderRadius: "8px",
+                      padding: "16px",
+                      backgroundColor: "#fafafa",
+                      width: "250px",
+                    }}
+                  >
+                    <Box column contentSpacing="sm">
+                      <Paragraph>
+                        Interface avec{" "}
+                        <Text noWrap>
+                          notifications
+                          <BadgeCount
+                            background="#ff9800"
+                            color="white"
+                            size="xs"
+                          >
+                            23
+                          </BadgeCount>
+                        </Text>{" "}
+                        et{" "}
+                        <Text noWrap>
+                          alertes
+                          <BadgeCount
+                            background="#f44336"
+                            color="white"
+                            size="xs"
+                          >
+                            5
+                          </BadgeCount>
+                        </Text>{" "}
+                        en temps réel.
+                      </Paragraph>
+
+                      <Paragraph>
+                        Dashboard montrant les{" "}
+                        <Text noWrap>
+                          ventes
+                          <BadgeCount background="#4caf50" color="white">
+                            1.2k
+                          </BadgeCount>
+                        </Text>{" "}
+                        du mois.
+                      </Paragraph>
+
+                      <Paragraph>
+                        Gestion des{" "}
+                        <Text noWrap>
+                          utilisateurs
+                          <BadgeCount
+                            background="#9c27b0"
+                            color="white"
+                            max={999}
+                          >
+                            1250
+                          </BadgeCount>
+                        </Text>{" "}
+                        actifs sur la plateforme.
+                      </Paragraph>
+                    </Box>
+                  </Box>
+                </div>
+              </Box>
+            </Box>
+
+            {/* Section 5: Nombres élevés et max */}
             <Box as="section" marginBottom="xl">
               <Title as="h2">
                 Compteurs avec nombres élevés et paramètre max
@@ -170,7 +426,7 @@
               </Box>
             </Box>
 
-            {/* Section 4: Intégration dans différents composants */}
+            {/* Section 6: Intégration dans différents composants */}
             <Box as="section" marginBottom="xl">
               <Title as="h2">Intégration dans différents composants</Title>
               <Box row contentSpacing="lg">
@@ -340,7 +596,7 @@
               </Box>
             </Box>
 
-            {/* Section 5: Best Practices en dernier */}
+            {/* Section 7: Best Practices en dernier */}
             <Box as="section" marginBottom="xl">
               <Title as="h2">Best Practices</Title>
 
