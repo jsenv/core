@@ -630,6 +630,18 @@
         rect.className = "option-rect";
         if (option.border === "none") {
           rect.style.border = "none";
+          rect.style.background = "#e9ecef";
+          rect.style.color = "#6c757d";
+          rect.style.fontSize = "8px";
+          rect.style.fontWeight = "bold";
+          rect.textContent = "NONE";
+        } else if (option.value === "0px solid transparent") {
+          rect.style.border = option.border;
+          rect.style.background = "#fff3cd";
+          rect.style.color = "#856404";
+          rect.style.fontSize = "7px";
+          rect.style.fontWeight = "bold";
+          rect.textContent = "TRANSP";
         } else {
           rect.style.border = option.border;
         }
