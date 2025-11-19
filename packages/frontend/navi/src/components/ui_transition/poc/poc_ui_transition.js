@@ -126,10 +126,9 @@ import.meta.css = /* css */ `
   .ui_transition_container {
     /* in case CSS sets border on this element his size must include borders */
     box-sizing: content-box;
-    /* transition-property: background-color, border-radius; */
-    /* transition-property: border-radius; */
-    /* transition-duration: var(--x-transition-duration); */
-    /* transition-timing-function: ease; */
+    transition-property: border, border-radius;
+    transition-duration: var(--x-transition-duration);
+    transition-timing-function: ease;
     /* background-clip: text !important; */
   }
 
@@ -205,6 +204,10 @@ import.meta.css = /* css */ `
   }
   .ui_transition[data-only-previous-group] .previous_group {
     position: relative;
+  }
+
+  .ui_transition[data-transitioning] .target_slot {
+    background: none !important;
   }
 `;
 
@@ -363,6 +366,7 @@ export const createUITransitionController = (
   let targetSlotHeight;
   let outgoingSlotWidth;
   let outgoingSlotHeight;
+  let targetSlotBorder;
   let targetSlotBackground;
 
   const getSlotDimensions = (slotElement) => {
@@ -496,12 +500,15 @@ export const createUITransitionController = (
   const applySlotConfigurationEffects = (slot) => {
     if (slot === targetSlot) {
       if (targetSlotConfiguration.singleElementNode) {
+        targetSlotBorder = getComputedStyle(
+          targetSlotConfiguration.singleElementNode,
+        ).border;
         targetSlotBackground = getBackground(
           targetSlotConfiguration.singleElementNode,
         );
-        targetSlotConfiguration.singleElementNode.style.background = "none";
       } else {
         // empty, text, multiple elements
+        targetSlotBorder = undefined;
         targetSlotBackground = undefined;
       }
       measureSlot(slot);
@@ -706,6 +713,7 @@ export const createUITransitionController = (
       },
     });
     morphTransitions.push(widthTransition, heightTransition);
+    container.style.border = targetSlotBorder;
     const backgroundTransition = createBackgroundTransition(
       container,
       targetSlotBackground,
