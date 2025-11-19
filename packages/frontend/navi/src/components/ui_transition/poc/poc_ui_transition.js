@@ -129,6 +129,9 @@ import.meta.css = /* css */ `
   .ui_transition_container {
     /* in case CSS sets border on this element his size must include borders */
     box-sizing: border-box;
+    /* max-width/max-height saves use from content going outside parent boundaries by flexbox positioning */
+    max-width: 100%;
+    max-height: 100%;
   }
 
   .ui_transition[data-transitioning] .ui_transition_container {
@@ -399,8 +402,6 @@ export const createUITransitionController = (
   let outgoingSlotConfiguration = outgoingSlotInitialConfiguration;
   let previousTargetSlotConfiguration = UNSET;
   let previousOutgoingSlotConfiguration = UNSET;
-  let containerWidth;
-  let containerHeight;
 
   const updateSlotAttributes = () => {
     if (targetSlotConfiguration.isEmpty && outgoingSlotConfiguration.isEmpty) {
@@ -643,8 +644,10 @@ export const createUITransitionController = (
       morphTransitions.push(backgroundTransition);
     }
     dimensions: {
-      const fromWidth = containerWidth || 0;
-      const fromHeight = containerHeight || 0;
+      // let containerWidth;
+      // let containerHeight;
+      const fromWidth = previousTargetSlotConfiguration.width || 0;
+      const fromHeight = previousTargetSlotConfiguration.height || 0;
       const toWidth = targetSlotConfiguration.width || 0;
       const toHeight = targetSlotConfiguration.height || 0;
       debugSize(
@@ -699,7 +702,7 @@ export const createUITransitionController = (
         duration,
         styleSynchronizer: "inline_style",
         onUpdate: (widthTransition) => {
-          containerWidth = widthTransition.value;
+          // containerWidth = widthTransition.value;
         },
         onFinish: (widthTransition) => {
           widthTransition.cancel();
@@ -711,7 +714,7 @@ export const createUITransitionController = (
         duration,
         styleSynchronizer: "inline_style",
         onUpdate: (heightTransition) => {
-          containerHeight = heightTransition.value;
+          // containerHeight = heightTransition.value;
         },
         onFinish: (heightTransition) => {
           heightTransition.cancel();
