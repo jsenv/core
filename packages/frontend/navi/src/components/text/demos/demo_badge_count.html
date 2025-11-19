@@ -68,89 +68,26 @@
                     Compteurs avec badges colorés
                   </Title>
                   <Box column contentSpacing="md">
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        padding: "8px 0",
-                      }}
-                    >
-                      <Text>Erreurs critiques</Text>
-                      <div
-                        style={{
-                          backgroundColor: "#f44336",
-                          color: "white",
-                          borderRadius: "12px",
-                          minWidth: "24px",
-                          height: "24px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "12px",
-                          fontWeight: "bold",
-                          padding: "0 8px",
-                        }}
-                      >
+                    <Text>
+                      Erreurs critiques
+                      <BadgeCount background="#f44336" color="white" borderRadius="12px">
                         2
-                      </div>
-                    </div>
+                      </BadgeCount>
+                    </Text>
 
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        padding: "8px 0",
-                      }}
-                    >
-                      <Text>Avertissements</Text>
-                      <div
-                        style={{
-                          backgroundColor: "#ff9800",
-                          color: "white",
-                          borderRadius: "12px",
-                          minWidth: "24px",
-                          height: "24px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "12px",
-                          fontWeight: "bold",
-                          padding: "0 8px",
-                        }}
-                      >
+                    <Text>
+                      Avertissements
+                      <BadgeCount background="#ff9800" color="white" borderRadius="12px">
                         7
-                      </div>
-                    </div>
+                      </BadgeCount>
+                    </Text>
 
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        padding: "8px 0",
-                      }}
-                    >
-                      <Text>Réussites</Text>
-                      <div
-                        style={{
-                          backgroundColor: "#4caf50",
-                          color: "white",
-                          borderRadius: "12px",
-                          minWidth: "24px",
-                          height: "24px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "12px",
-                          fontWeight: "bold",
-                          padding: "0 8px",
-                        }}
-                      >
+                    <Text>
+                      Réussites
+                      <BadgeCount background="#4caf50" color="white" borderRadius="12px">
                         15
-                      </div>
-                    </div>
+                      </BadgeCount>
+                    </Text>
                   </Box>
                 </div>
 
@@ -159,93 +96,143 @@
                     Compteurs avec nombres élevés
                   </Title>
                   <Box column contentSpacing="md">
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        padding: "8px 0",
-                      }}
-                    >
-                      <Text>Abonnés sur YouTube</Text>
-                      <div
-                        style={{
-                          backgroundColor: "#f5f5f5",
-                          color: "#424242",
-                          borderRadius: "16px",
-                          minWidth: "32px",
-                          height: "32px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "14px",
-                          fontWeight: "bold",
-                          padding: "0 12px",
-                          border: "1px solid #e0e0e0",
-                        }}
+                    <Text>
+                      Abonnés sur YouTube
+                      <BadgeCount 
+                        background="#f5f5f5" 
+                        color="#424242" 
+                        borderRadius="16px"
+                        border="1px solid #e0e0e0"
+                        size="lg"
                       >
                         1.2K
-                      </div>
-                    </div>
+                      </BadgeCount>
+                    </Text>
 
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        padding: "8px 0",
-                      }}
-                    >
-                      <Text>Vues totales</Text>
-                      <div
-                        style={{
-                          backgroundColor: "#3f51b5",
-                          color: "white",
-                          borderRadius: "16px",
-                          minWidth: "32px",
-                          height: "32px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "14px",
-                          fontWeight: "bold",
-                          padding: "0 12px",
-                        }}
+                    <Text>
+                      Vues totales
+                      <BadgeCount 
+                        background="#3f51b5" 
+                        color="white" 
+                        borderRadius="16px"
+                        size="lg"
                       >
                         99+
-                      </div>
-                    </div>
+                      </BadgeCount>
+                    </Text>
 
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        padding: "8px 0",
-                      }}
-                    >
-                      <Text>Points de fidélité</Text>
-                      <div
-                        style={{
-                          backgroundColor:
-                            "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                          background:
-                            "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                          color: "white",
-                          borderRadius: "16px",
-                          minWidth: "32px",
-                          height: "32px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "14px",
-                          fontWeight: "bold",
-                          padding: "0 12px",
-                        }}
+                    <Text>
+                      Points de fidélité
+                      <BadgeCount 
+                        background="linear-gradient(135deg, #667eea 0%, #764ba2 100%)" 
+                        color="white" 
+                        borderRadius="16px"
+                        size="lg"
                       >
                         8.7K
-                      </div>
-                    </div>
+                      </BadgeCount>
+                    </Text>
+                  </Box>
+                </div>
+              </Box>
+            </Box>
+
+            <Box as="section" marginBottom="xl">
+              <Title as="h2">Badge avec alignX="end"</Title>
+              
+              <Box column contentSpacing="lg">
+                <div>
+                  <Title as="h3" size="18">
+                    Badges alignés à droite du conteneur
+                  </Title>
+                  <Box column contentSpacing="md">
+                    <Box 
+                      style={{
+                        border: "1px solid #e0e0e0",
+                        borderRadius: "8px",
+                        padding: "12px",
+                        minWidth: "300px"
+                      }}
+                    >
+                      <Text>Messages dans la boîte de réception</Text>
+                      <BadgeCount 
+                        background="#1976d2" 
+                        color="white" 
+                        alignX="end"
+                      >
+                        8
+                      </BadgeCount>
+                    </Box>
+
+                    <Box 
+                      style={{
+                        border: "1px solid #e0e0e0",
+                        borderRadius: "8px",
+                        padding: "12px",
+                        minWidth: "300px"
+                      }}
+                    >
+                      <Text>Notifications push en attente</Text>
+                      <BadgeCount 
+                        background="#d32f2f" 
+                        color="white" 
+                        alignX="end"
+                        size="xs"
+                      >
+                        25
+                      </BadgeCount>
+                    </Box>
+
+                    <Box 
+                      style={{
+                        border: "1px solid #e0e0e0",
+                        borderRadius: "8px",
+                        padding: "12px",
+                        minWidth: "300px"
+                      }}
+                    >
+                      <Text>Tâches terminées cette semaine</Text>
+                      <BadgeCount 
+                        background="#388e3c" 
+                        color="white" 
+                        alignX="end"
+                        size="lg"
+                      >
+                        156
+                      </BadgeCount>
+                    </Box>
+
+                    <Box 
+                      style={{
+                        border: "1px solid #e0e0e0",
+                        borderRadius: "8px",
+                        padding: "12px",
+                        minWidth: "400px"
+                      }}
+                    >
+                      <Text>Très long texte pour montrer comment le badge se positionne toujours à droite même quand le contenu est long</Text>
+                      <BadgeCount 
+                        background="#7b1fa2" 
+                        color="white" 
+                        alignX="end"
+                        borderRadius="16px"
+                      >
+                        999+
+                      </BadgeCount>
+                    </Box>
+                  </Box>
+                  
+                  <Box marginTop="md">
+                    <Text 
+                      style={{
+                        fontSize: "14px",
+                        color: "#666",
+                        fontStyle: "italic"
+                      }}
+                    >
+                      Avec alignX="end", le badge se positionne toujours à droite du conteneur, 
+                      indépendamment de la longueur du texte.
+                    </Text>
                   </Box>
                 </div>
               </Box>
