@@ -662,7 +662,11 @@
       function createOptionRect(option) {
         const rect = document.createElement("div");
         rect.className = "option-rect";
-        rect.style.cssText = option.border;
+        if (option.border === "none") {
+          rect.style.border = "none";
+        } else {
+          rect.style.border = option.border;
+        }
         rect.title = option.label;
         rect.dataset.value = option.value;
         return rect;
@@ -779,7 +783,7 @@
           if (value === "none") {
             element.style.border = "none";
           } else {
-            element.style.cssText = value;
+            element.style.border = value;
           }
         }
 
@@ -802,8 +806,8 @@
             userAgentBox.style.border = "none";
             naviBox.style.border = "none";
           } else {
-            userAgentBox.style.cssText = selectedFrom;
-            naviBox.style.cssText = selectedFrom;
+            userAgentBox.style.border = selectedFrom;
+            naviBox.style.border = selectedFrom;
           }
 
           // Update user agent transition duration to match
@@ -818,7 +822,7 @@
             if (selectedTo === "none") {
               userAgentBox.style.border = "none";
             } else {
-              userAgentBox.style.cssText = selectedTo;
+              userAgentBox.style.border = selectedTo;
             }
           }, 10);
 
