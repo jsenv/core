@@ -24,15 +24,17 @@
         <Box as="section" marginBottom="xl">
           <Title as="h2">Table des matières</Title>
           <Box row contentSpacing="xs" marginTop="md">
-            <Link href="#inline-text-icons">1. Icon inside text</Link>
-            <Link href="#line-height-variations">2. Icon line height</Link>
-            <Link href="#icon-transformation">3. Icon transformation</Link>
-            <Link href="#icon-href">4. Icon with SVG use</Link>
-            <Link href="#icon-dimensions">5. Icon dimensions</Link>
-            <Link href="#icon-text-link">6. Icon + text + link</Link>
-            <Link href="#container-widths">7. Container width variations</Link>
-            <Link href="#icon-row">8. Icon in row</Link>
-            <Link href="#icon-column">9. Icon in column</Link>
+            <Link href="#different-font-sizes">1. Different font sizes</Link>
+            <Link href="#multiple-icons">2. Multiple icons</Link>
+            <Link href="#inline-text-icons">3. Icon inside text</Link>
+            <Link href="#line-height-variations">4. Icon line height</Link>
+            <Link href="#icon-transformation">5. Icon transformation</Link>
+            <Link href="#icon-href">6. Icon with SVG use</Link>
+            <Link href="#icon-dimensions">7. Icon dimensions</Link>
+            <Link href="#icon-text-link">8. Icon + text + link</Link>
+            <Link href="#icon-row">9. Icon in row</Link>
+            <Link href="#icon-column">10. Icon in column</Link>
+            <Link href="#integration">11. Integration</Link>
           </Box>
         </Box>
       );
@@ -424,89 +426,12 @@
       const IconHrefSection = () => (
         <Box as="section" marginBottom="xl" id="icon-href">
           <Title as="h2">Icon with SVG Use</Title>
-          <Box column contentSpacing="lg">
-            <div>
-              <Text
-                style={{
-                  fontSize: "14px",
-                  fontWeight: "bold",
-                  color: "#333",
-                  marginBottom: "8px",
-                  display: "block",
-                }}
-              >
-                Using SVG symbols with &lt;use&gt; tag
-              </Text>
-              <Box column contentSpacing="md">
-                <Text>
-                  Icon with href attribute uses SVG &lt;use&gt; tag internally:
-                  <Icon href="#star-symbol" color="orange">
-                    {/* This will render as <use href="#star-symbol" /> */}
-                  </Icon>
-                </Text>
-                <Text>
-                  Multiple icons can reference the same symbol:
-                  <Icon href="#heart-symbol" color="red">
-                    {/* <use href="#heart-symbol" /> */}
-                  </Icon>
-                  <Icon href="#heart-symbol" color="pink">
-                    {/* <use href="#heart-symbol" /> */}
-                  </Icon>
-                </Text>
-              </Box>
-              <Text
-                style={{
-                  fontSize: "12px",
-                  color: "#666",
-                  fontStyle: "italic",
-                  marginTop: "8px",
-                }}
-              >
-                Note: SVG symbols must be defined elsewhere in the document for
-                &lt;use&gt; to work.
-              </Text>
-            </div>
-
-            <div>
-              <Text
-                style={{
-                  fontSize: "14px",
-                  fontWeight: "bold",
-                  color: "#333",
-                  marginBottom: "8px",
-                  display: "block",
-                }}
-              >
-                Example SVG symbol definition
-              </Text>
-              <Box
-                style={{
-                  padding: "12px",
-                  backgroundColor: "#f5f5f5",
-                  borderRadius: "4px",
-                  border: "1px solid #ddd",
-                }}
-              >
-                <Text
-                  style={{
-                    fontFamily: "monospace",
-                    fontSize: "12px",
-                    color: "#333",
-                  }}
-                >
-                  {`<svg style="display: none;">
-  <defs>
-    <symbol id="star-symbol" viewBox="0 0 24 24">
-      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="currentColor"/>
-    </symbol>
-    <symbol id="heart-symbol" viewBox="0 0 24 24">
-      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="currentColor"/>
-    </symbol>
-  </defs>
-</svg>`}
-                </Text>
-              </Box>
-            </div>
+          <Box column contentSpacing="md">
+            <Text>
+              Icon with href attribute:
+              <Icon href="#star-symbol" color="orange" />
+              <Icon href="#heart-symbol" color="red" />
+            </Text>
           </Box>
         </Box>
       );
@@ -1370,6 +1295,74 @@
         </Box>
       );
 
+      // Integration Section
+      const IntegrationSection = () => (
+        <Box as="section" marginBottom="xl" id="integration">
+          <Title as="h2">Integration with Components</Title>
+          <Box column contentSpacing="lg">
+            <div>
+              <Text
+                style={{
+                  fontSize: "14px",
+                  fontWeight: "bold",
+                  color: "#333",
+                  marginBottom: "8px",
+                  display: "block",
+                }}
+              >
+                Icons in Links
+              </Text>
+              <Link href="#profile" underline={false} color="green">
+                <Icon>
+                  <UserSvg />
+                </Icon>
+                <Text underline>View Profile</Text>
+              </Link>
+            </div>
+
+            <div>
+              <Text
+                style={{
+                  fontSize: "14px",
+                  fontWeight: "bold",
+                  color: "#333",
+                  marginBottom: "8px",
+                  display: "block",
+                }}
+              >
+                Icons in Buttons
+              </Text>
+              <button
+                style={{
+                  padding: "12px 16px",
+                  border: "2px solid #dc3545",
+                  borderRadius: "6px",
+                  background: "white",
+                  color: "#dc3545",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                }}
+                onMouseOver={(e) => {
+                  e.target.closest("button").style.background = "#dc3545";
+                  e.target.closest("button").style.color = "white";
+                }}
+                onMouseOut={(e) => {
+                  e.target.closest("button").style.background = "white";
+                  e.target.closest("button").style.color = "#dc3545";
+                }}
+              >
+                <Text>
+                  <Icon>
+                    <HeartSvg />
+                  </Icon>
+                  Add to Favorites
+                </Text>
+              </button>
+            </div>
+          </Box>
+        </Box>
+      );
+
       const Demo = () => {
         return (
           <div
@@ -1383,6 +1376,8 @@
             <Title as="h1">Icon Demo</Title>
 
             <TableOfContents />
+            <DifferentFontSizesSection />
+            <MultipleIconsSection />
             <InlineTextIconsSection />
             <LineHeightVariationsSection />
             <IconTransformationSection />
@@ -1391,6 +1386,7 @@
             <IconTextLinkSection />
             <IconRowSection />
             <IconColumnSection />
+            <IntegrationSection />
           </div>
         );
       };
