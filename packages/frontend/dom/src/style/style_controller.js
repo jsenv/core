@@ -422,6 +422,12 @@ export const getBorderRadius = (
 ) => {
   return styleControllerToIgnore.getUnderlyingValue(element, "borderRadius");
 };
+export const getBorder = (
+  element,
+  styleControllerToIgnore = dormantStyleController,
+) => {
+  return styleControllerToIgnore.getUnderlyingValue(element, "border");
+};
 export const getBackground = (
   element,
   styleControllerToIgnore = dormantStyleController,

@@ -7,6 +7,7 @@ import {
   createStyleController,
   getBackground,
   getBackgroundColor,
+  getBorder,
   getBorderRadius,
   getHeight,
   getOpacity,

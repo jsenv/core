@@ -2,6 +2,7 @@ import {
   parseCSSBackground,
   stringifyCSSBackground,
 } from "./css_background.js";
+import { parseCSSBorder, stringifyCSSBorder } from "./css_border.js";
 import { parseCSSColor, stringifyCSSColor } from "./css_color.js";
 import { parseCSSImage, stringifyCSSImage } from "./css_image.js";
 import { parseCSSTransform, stringifyCSSTransform } from "./css_transform.js";
@@ -274,6 +275,40 @@ export const normalizeStyle = (
     if (typeof value === "object" && value !== null && !Array.isArray(value)) {
       // For CSS context, ensure background is a string
       return stringifyCSSBackground(value, normalizeStyle);
+    }
+    return value;
+  }
+
+  if (propertyName === "border") {
+    if (context === "js") {
+      if (typeof value === "string") {
+        // For js context, prefer objects
+        return parseCSSBorder(value);
+      }
+      // If code does border: { width: 2, style: "solid", color: "red" }
+      // we want to normalize each part
+      if (
+        typeof value === "object" &&
+        value !== null &&
+        !Array.isArray(value)
+      ) {
+        const borderNormalized = {};
+        for (const key of Object.keys(value)) {
+          const partValue = normalizeStyle(
+            value[key],
+            `border${key.charAt(0).toUpperCase() + key.slice(1)}`,
+            context,
+            element,
+          );
+          borderNormalized[key] = partValue;
+        }
+        return borderNormalized;
+      }
+      return value;
+    }
+    if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+      // For CSS context, ensure border is a string
+      return stringifyCSSBorder(value);
     }
     return value;
   }
