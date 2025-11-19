@@ -38,7 +38,6 @@
             <Link href="#nombres-max">
               6. Compteurs avec nombres élevés et paramètre max
             </Link>
-            <Link href="#best-practices">7. Best Practices</Link>
           </Box>
         </Box>
       );
@@ -372,7 +371,7 @@
                 }}
               >
                 <Text>
-                  Vous avez 
+                  Vous avez
                   <BadgeCount background="#673ab7" color="white">
                     15
                   </BadgeCount>
@@ -400,7 +399,7 @@
                   backgroundColor: "#e8f5e8",
                 }}
               >
-                Vous avez{" "}
+                Vous avez
                 <Text noWrap>
                   <BadgeCount background="#673ab7" color="white">
                     15
@@ -443,26 +442,6 @@
         </Box>
       );
 
-      const BestPracticesSection = () => (
-        <Box as="section" marginBottom="xl" id="best-practices">
-          <Title as="h2">Best Practices</Title>
-          <Box column contentSpacing="md">
-            <Paragraph>
-              • Utilisez des couleurs contrastées pour une bonne lisibilité
-            </Paragraph>
-            <Paragraph>
-              • Limitez les nombres élevés avec le paramètre max
-            </Paragraph>
-            <Paragraph>
-              • Adaptez la taille du badge au contexte (xs, s, m, lg)
-            </Paragraph>
-            <Paragraph>
-              • Positionnez le badge de manière cohérente dans votre interface
-            </Paragraph>
-          </Box>
-        </Box>
-      );
-
       const Demo = () => {
         return (
           <div
@@ -482,7 +461,6 @@
             <BadgePositioningSection />
             <NoWrapSection />
             <NombresMaxSection />
-            <BestPracticesSection />
           </div>
         );
       };
