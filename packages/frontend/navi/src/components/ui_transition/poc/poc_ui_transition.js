@@ -675,53 +675,101 @@ export const createUITransitionController = (
         },
       });
 
-      let widthTransitionFinished = false;
-      let heightTransitionFinished = false;
-      const onWidthTransitionFinished = () => {
-        widthTransitionFinished = true;
-        if (heightTransitionFinished) {
-          onSizeTransitionFinished();
-        }
-      };
-      const onHeightTransitionFinished = () => {
-        heightTransitionFinished = true;
-        if (widthTransitionFinished) {
-          onSizeTransitionFinished();
-        }
-      };
       const onSizeTransitionFinished = () => {
-        // uiTransitionStyleController.delete(targetSlot, "transform.translateY");
         // Restore overflow when transition is complete
         restoreOverflow();
-        // let target slot take natural size now container is done
+        // Let target slot take natural size now container is done
         releaseSlotDimensions(targetSlot);
       };
 
-      const widthTransition = createWidthTransition(container, toWidth, {
-        from: fromWidth,
-        duration,
-        styleSynchronizer: "inline_style",
-        onUpdate: () => {
-          // containerWidth = widthTransition.value;
+      // Set final dimensions immediately
+      container.style.width = `${toWidth}px`;
+      container.style.height = `${toHeight}px`;
+
+      // Determine if we're growing or shrinking
+      const isGrowing = toWidth >= fromWidth && toHeight >= fromHeight;
+      const isShrinking = toWidth <= fromWidth && toHeight <= fromHeight;
+
+      let startClipPath;
+      let endClipPath;
+
+      if (isGrowing) {
+        // Growing: Start with smaller clip, expand to full
+        const fromClipWidth = Math.min(fromWidth, toWidth);
+        const fromClipHeight = Math.min(fromHeight, toHeight);
+
+        const widthDiff = toWidth - fromClipWidth;
+        const heightDiff = toHeight - fromClipHeight;
+
+        const topInset = toHeight > 0 ? (heightDiff / 2 / toHeight) * 100 : 0;
+        const rightInset = toWidth > 0 ? (widthDiff / 2 / toWidth) * 100 : 0;
+        const bottomInset =
+          toHeight > 0 ? (heightDiff / 2 / toHeight) * 100 : 0;
+        const leftInset = toWidth > 0 ? (widthDiff / 2 / toWidth) * 100 : 0;
+
+        startClipPath = `inset(${topInset}% ${rightInset}% ${bottomInset}% ${leftInset}%)`;
+        endClipPath = "inset(0% 0% 0% 0%)";
+
+        debugSize(
+          `Growing transition: from ${fromWidth}x${fromHeight} to ${toWidth}x${toHeight}`,
+        );
+      } else if (isShrinking) {
+        // Shrinking: Start with full content, clip to smaller size
+        const widthDiff = fromWidth - toWidth;
+        const heightDiff = fromHeight - toHeight;
+
+        const topInset =
+          fromHeight > 0 ? (heightDiff / 2 / fromHeight) * 100 : 0;
+        const rightInset =
+          fromWidth > 0 ? (widthDiff / 2 / fromWidth) * 100 : 0;
+        const bottomInset =
+          fromHeight > 0 ? (heightDiff / 2 / fromHeight) * 100 : 0;
+        const leftInset = fromWidth > 0 ? (widthDiff / 2 / fromWidth) * 100 : 0;
+
+        // For shrinking, we need to set the container to the from size initially
+        container.style.width = `${fromWidth}px`;
+        container.style.height = `${fromHeight}px`;
+
+        startClipPath = "inset(0% 0% 0% 0%)";
+        endClipPath = `inset(${topInset}% ${rightInset}% ${bottomInset}% ${leftInset}%)`;
+
+        debugSize(
+          `Shrinking transition: from ${fromWidth}x${fromHeight} to ${toWidth}x${toHeight}`,
+        );
+      } else {
+        // Mixed case (width grows, height shrinks or vice versa) - use simpler approach
+        startClipPath = "inset(0% 0% 0% 0%)";
+        endClipPath = "inset(0% 0% 0% 0%)";
+        debugSize(
+          `Mixed transition: from ${fromWidth}x${fromHeight} to ${toWidth}x${toHeight} - no clip effect`,
+        );
+      }
+
+      // Create clip-path animation using Web Animations API
+      const clipAnimation = container.animate(
+        [{ clipPath: startClipPath }, { clipPath: endClipPath }],
+        {
+          duration,
+          easing: "ease",
+          fill: "forwards",
         },
-        onFinish: (widthTransition) => {
-          widthTransition.cancel();
-          onWidthTransitionFinished();
-        },
-      });
-      const heightTransition = createHeightTransition(container, toHeight, {
-        from: fromHeight,
-        duration,
-        styleSynchronizer: "inline_style",
-        onUpdate: () => {
-          // containerHeight = heightTransition.value;
-        },
-        onFinish: (heightTransition) => {
-          heightTransition.cancel();
-          onHeightTransitionFinished();
-        },
-      });
-      morphTransitions.push(widthTransition, heightTransition);
+      );
+
+      // Handle finish
+      clipAnimation.finished
+        .then(() => {
+          // let container take natural dimensions now
+          container.style.width = ``;
+          container.style.height = ``;
+          // Clear clip-path to restore normal behavior
+          container.style.clipPath = "";
+          onSizeTransitionFinished();
+        })
+        .catch(() => {
+          // Animation was cancelled
+        });
+
+      clipAnimation.play();
     }
 
     return morphTransitions;
