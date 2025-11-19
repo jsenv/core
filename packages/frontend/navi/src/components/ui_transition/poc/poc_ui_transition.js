@@ -701,7 +701,7 @@ export const createUITransitionController = (
         from: fromWidth,
         duration,
         styleSynchronizer: "inline_style",
-        onUpdate: (widthTransition) => {
+        onUpdate: () => {
           // containerWidth = widthTransition.value;
         },
         onFinish: (widthTransition) => {
@@ -713,7 +713,7 @@ export const createUITransitionController = (
         from: fromHeight,
         duration,
         styleSynchronizer: "inline_style",
-        onUpdate: (heightTransition) => {
+        onUpdate: () => {
           // containerHeight = heightTransition.value;
         },
         onFinish: (heightTransition) => {
