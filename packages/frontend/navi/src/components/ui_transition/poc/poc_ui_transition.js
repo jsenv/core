@@ -688,6 +688,20 @@ export const createUITransitionController = (
       const isGrowing = toWidth >= fromWidth && toHeight >= fromHeight;
       const isShrinking = toWidth <= fromWidth && toHeight <= fromHeight;
 
+      // Get border radius values for clip-path and normalize them
+      const fromBorderRadius = previousTargetSlotConfiguration.borderRadius;
+      const toBorderRadius = targetSlotConfiguration.borderRadius;
+
+      // Normalize border-radius values to strings
+      const normalizeRadius = (radius) => {
+        if (!radius) return "0";
+        if (typeof radius === "number") return `${radius}px`;
+        return radius;
+      };
+
+      const fromBorderRadiusNormalized = normalizeRadius(fromBorderRadius);
+      const toBorderRadiusNormalized = normalizeRadius(toBorderRadius);
+
       let startClipPath;
       let endClipPath;
 
@@ -705,8 +719,8 @@ export const createUITransitionController = (
           toHeight > 0 ? (heightDiff / 2 / toHeight) * 100 : 0;
         const leftInset = toWidth > 0 ? (widthDiff / 2 / toWidth) * 100 : 0;
 
-        startClipPath = `inset(${topInset}% ${rightInset}% ${bottomInset}% ${leftInset}%)`;
-        endClipPath = "inset(0% 0% 0% 0%)";
+        startClipPath = `inset(${topInset}% ${rightInset}% ${bottomInset}% ${leftInset}% round ${fromBorderRadiusNormalized})`;
+        endClipPath = `inset(0% 0% 0% 0% round ${toBorderRadiusNormalized})`;
 
         debugSize(
           `Growing transition: from ${fromWidth}x${fromHeight} to ${toWidth}x${toHeight}`,
@@ -728,16 +742,16 @@ export const createUITransitionController = (
         container.style.width = `${fromWidth}px`;
         container.style.height = `${fromHeight}px`;
 
-        startClipPath = "inset(0% 0% 0% 0%)";
-        endClipPath = `inset(${topInset}% ${rightInset}% ${bottomInset}% ${leftInset}%)`;
+        startClipPath = `inset(0% 0% 0% 0% round ${fromBorderRadiusNormalized})`;
+        endClipPath = `inset(${topInset}% ${rightInset}% ${bottomInset}% ${leftInset}% round ${toBorderRadiusNormalized})`;
 
         debugSize(
           `Shrinking transition: from ${fromWidth}x${fromHeight} to ${toWidth}x${toHeight}`,
         );
       } else {
         // Mixed case (width grows, height shrinks or vice versa) - use simpler approach
-        startClipPath = "inset(0% 0% 0% 0%)";
-        endClipPath = "inset(0% 0% 0% 0%)";
+        startClipPath = `inset(0% 0% 0% 0% round ${fromBorderRadiusNormalized})`;
+        endClipPath = `inset(0% 0% 0% 0% round ${toBorderRadiusNormalized})`;
         debugSize(
           `Mixed transition: from ${fromWidth}x${fromHeight} to ${toWidth}x${toHeight} - no clip effect`,
         );
