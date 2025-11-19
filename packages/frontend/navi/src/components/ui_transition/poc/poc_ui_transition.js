@@ -212,14 +212,15 @@ import.meta.css = /* css */ `
   .ui_transition[data-transitioning] .outgoing_slot > *,
   .ui_transition[data-transitioning] .previous_target_slot > *,
   .ui_transition[data-transitioning] .previous_outgoing_slot > * {
-    background-image: none !important;
-    background-color: transparent !important;
-    border-color: transparent !important;
+    /* background-image: none !important; */
+    /* background-color: transparent !important; */
+    /* border-color: transparent !important; */
   }
 `;
 
 const UNSET = {
   domNodes: [],
+  domNodesClone: [],
   isEmpty: true,
 
   type: "unset",
@@ -505,28 +506,30 @@ export const createUITransitionController = (
     }
     throw new Error("Unknown slot for getConfiguration");
   };
-  const setSlotConfiguration = (slot, configuration) => {
+  const moveConfigurationIntoSlot = (configuration, slot) => {
     slot.innerHTML = "";
-    for (const domNode of configuration.domNodes) {
+    for (const domNode of configuration.domNodesClone) {
       slot.appendChild(domNode);
     }
+    // in case border or stuff like that have changed we re-detect the config
+    const updatedConfig = detectConfiguration(slot);
     if (slot === targetSlot) {
-      targetSlotConfiguration = configuration;
+      targetSlotConfiguration = updatedConfig;
       applySlotConfigurationEffects(slot);
       return;
     }
     if (slot === outgoingSlot) {
-      outgoingSlotConfiguration = configuration;
+      outgoingSlotConfiguration = updatedConfig;
       applySlotConfigurationEffects(slot);
       return;
     }
     if (slot === previousTargetSlot) {
-      previousTargetSlotConfiguration = configuration;
+      previousTargetSlotConfiguration = updatedConfig;
       applySlotConfigurationEffects(slot);
       return;
     }
     if (slot === previousOutgoingSlot) {
-      previousOutgoingSlotConfiguration = configuration;
+      previousOutgoingSlotConfiguration = updatedConfig;
       applySlotConfigurationEffects(slot);
       return;
     }
@@ -743,11 +746,11 @@ export const createUITransitionController = (
   // content_to_content transition (uses previous_group)
   const applyContentToContentTransition = (toConfiguration) => {
     // 1. move target slot to previous
-    setSlotConfiguration(previousTargetSlot, targetSlotConfiguration);
+    moveConfigurationIntoSlot(targetSlotConfiguration, previousTargetSlot);
     targetSlotConfiguration = toConfiguration;
     // 2. move outgoing slot to previous
-    setSlotConfiguration(previousOutgoingSlot, outgoingSlotConfiguration);
-    setSlotConfiguration(outgoingSlot, UNSET);
+    moveConfigurationIntoSlot(outgoingSlotConfiguration, previousOutgoingSlot);
+    moveConfigurationIntoSlot(UNSET, outgoingSlot);
 
     const transitions = [
       ...morphContainerIntoTarget(),
@@ -756,8 +759,8 @@ export const createUITransitionController = (
     ];
     const transition = transitionController.update(transitions, {
       onFinish: () => {
-        setSlotConfiguration(previousTargetSlot, UNSET);
-        setSlotConfiguration(previousOutgoingSlot, UNSET);
+        moveConfigurationIntoSlot(UNSET, previousTargetSlot);
+        moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
         if (hasDebugLogs) {
           console.groupEnd();
         }
@@ -768,7 +771,7 @@ export const createUITransitionController = (
   // content_phase_to_content_phase transition (uses outgoing_slot)
   const applyContentPhaseToContentPhaseTransition = (toConfiguration) => {
     // 1. Move target slot to outgoing
-    setSlotConfiguration(outgoingSlot, targetSlotConfiguration);
+    moveConfigurationIntoSlot(targetSlotConfiguration, outgoingSlot);
     targetSlotConfiguration = toConfiguration;
 
     const transitions = [
@@ -778,7 +781,7 @@ export const createUITransitionController = (
     ];
     const transition = transitionController.update(transitions, {
       onFinish: () => {
-        setSlotConfiguration(outgoingSlot, UNSET);
+        moveConfigurationIntoSlot(UNSET, outgoingSlot);
 
         if (hasDebugLogs) {
           console.groupEnd();
@@ -790,17 +793,17 @@ export const createUITransitionController = (
   // any_to_empty transition
   const applyToEmptyTransition = () => {
     // 1. move target slot to previous
-    setSlotConfiguration(previousTargetSlot, targetSlotConfiguration);
+    moveConfigurationIntoSlot(targetSlotConfiguration, previousTargetSlot);
     targetSlotConfiguration = UNSET;
     // 2. move outgoing slot to previous
-    setSlotConfiguration(previousOutgoingSlot, outgoingSlotConfiguration);
+    moveConfigurationIntoSlot(outgoingSlotConfiguration, previousOutgoingSlot);
     outgoingSlotConfiguration = UNSET;
 
     const transitions = [...morphContainerIntoTarget(), fadeOutPreviousGroup()];
     const transition = transitionController.update(transitions, {
       onFinish: () => {
-        setSlotConfiguration(previousTargetSlot, UNSET);
-        setSlotConfiguration(previousOutgoingSlot, UNSET);
+        moveConfigurationIntoSlot(UNSET, previousTargetSlot);
+        moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
         if (hasDebugLogs) {
           console.groupEnd();
         }
@@ -875,10 +878,10 @@ export const createUITransitionController = (
     if (isTransitioning) return;
 
     transitionController.cancel();
-    setSlotConfiguration(targetSlot, targetSlotInitialConfiguration);
-    setSlotConfiguration(outgoingSlot, outgoingSlotInitialConfiguration);
-    setSlotConfiguration(previousTargetSlot, UNSET);
-    setSlotConfiguration(previousOutgoingSlot, UNSET);
+    moveConfigurationIntoSlot(targetSlotInitialConfiguration, targetSlot);
+    moveConfigurationIntoSlot(outgoingSlotInitialConfiguration, outgoingSlot);
+    moveConfigurationIntoSlot(UNSET, previousTargetSlot);
+    moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
   };
 
   const setDuration = (newDuration) => {
