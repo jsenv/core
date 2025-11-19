@@ -426,36 +426,38 @@
         localStorage.setItem(STORAGE_KEYS.pausePercentage, pausePercentage);
       }
 
-      // Setup pause controls event listeners
-      document
-        .getElementById("pauseEnabled")
-        .addEventListener("change", savePauseSettings);
-      document
-        .getElementById("pausePercentage")
-        .addEventListener("change", savePauseSettings);
-
-      // Pause/Resume controls
-      document.getElementById("resumeButton").addEventListener("click", () => {
-        if (typeof window.resumeTransitions === "function") {
-          window.resumeTransitions();
-        }
-      });
-
-      // Add pause functionality to transition controller
-      const originalTransitionTo = transitionController.transitionTo;
-      transitionController.transitionTo = function (content) {
+      // Update pause breakpoints when controls change
+      const updatePauseBreakpoints = () => {
         const pauseEnabled = document.getElementById("pauseEnabled").checked;
         const pausePercentage = parseFloat(
           document.getElementById("pausePercentage").value,
         );
         const pauseBreakpoints = pauseEnabled ? [pausePercentage] : [];
-
-        // Call original with pause breakpoints
-        return originalTransitionTo.call(this, content, { pauseBreakpoints });
+        transitionController.setPauseBreakpoints(pauseBreakpoints);
       };
 
-      // Load initial pause settings
+      // Setup pause controls event listeners with breakpoint updates
+      document.getElementById("pauseEnabled").addEventListener("change", () => {
+        savePauseSettings();
+        updatePauseBreakpoints();
+      });
+      document
+        .getElementById("pausePercentage")
+        .addEventListener("change", () => {
+          savePauseSettings();
+          updatePauseBreakpoints();
+        });
+
+      // Load initial pause settings and apply breakpoints
       loadPauseSettings();
+      updatePauseBreakpoints();
+
+      // Resume button functionality
+      document.getElementById("resumeButton").addEventListener("click", () => {
+        if (typeof window.resumeTransitions === "function") {
+          window.resumeTransitions();
+        }
+      });
     </script>
   </body>
 </html>
