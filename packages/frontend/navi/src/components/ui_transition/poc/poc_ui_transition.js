@@ -212,9 +212,9 @@ import.meta.css = /* css */ `
   .ui_transition[data-transitioning] .outgoing_slot > *,
   .ui_transition[data-transitioning] .previous_target_slot > *,
   .ui_transition[data-transitioning] .previous_outgoing_slot > * {
-    /* background-image: none !important; */
-    /* background-color: transparent !important; */
-    /* border-color: transparent !important; */
+    background-image: none !important;
+    background-color: transparent !important;
+    border-color: transparent !important;
   }
 `;
 
