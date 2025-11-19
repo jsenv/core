@@ -31,8 +31,29 @@
           >
             <Title as="h1">Badge Count Demo</Title>
 
-            {/* Section 1: Exemples de base - garde le premier exemple parfait */}
+            {/* Table des matières */}
             <Box as="section" marginBottom="xl">
+              <Title as="h2">Table des matières</Title>
+              <Box row contentSpacing="xs" marginTop="md">
+                <Link href="#exemples-base">1. Exemples de base</Link>
+                <Link href="#line-heights">
+                  2. Comportement avec différents line-heights
+                </Link>
+                <Link href="#nowrap">
+                  3. Association texte + badge (pas de coupure)
+                </Link>
+                <Link href="#nombres-max">
+                  4. Compteurs avec nombres élevés et paramètre max
+                </Link>
+                <Link href="#integration-composants">
+                  5. Intégration dans différents composants
+                </Link>
+                <Link href="#best-practices">6. Best Practices</Link>
+              </Box>
+            </Box>
+
+            {/* Exemples de base */}
+            <Box as="section" marginBottom="xl" id="exemples-base">
               <Title as="h2">Exemples de base</Title>
               <Box row contentSpacing="md">
                 <Text>
@@ -58,8 +79,8 @@
               </Box>
             </Box>
 
-            {/* Section 2: Comportement avec line-heights */}
-            <Box as="section" marginBottom="xl">
+            {/* Comportement avec line-heights */}
+            <Box as="section" marginBottom="xl" id="line-heights">
               <Title as="h2">Comportement avec différents line-heights</Title>
               <Box row contentSpacing="md">
                 <div>
@@ -159,8 +180,8 @@
               </Box>
             </Box>
 
-            {/* Section 3: Association texte + badge avec noWrap */}
-            <Box as="section" marginBottom="xl">
+            {/* Association texte + badge avec noWrap */}
+            <Box as="section" marginBottom="xl" id="nowrap">
               <Title as="h2">Association texte + badge (pas de coupure)</Title>
               <Box column contentSpacing="lg">
                 <div>
@@ -244,8 +265,8 @@
               </Box>
             </Box>
 
-            {/* Section 4: Nombres élevés et max */}
-            <Box as="section" marginBottom="xl">
+            {/* Nombres élevés et max */}
+            <Box as="section" marginBottom="xl" id="nombres-max">
               <Title as="h2">
                 Compteurs avec nombres élevés et paramètre max
               </Title>
@@ -317,8 +338,8 @@
               </Box>
             </Box>
 
-            {/* Section 4: Intégration dans différents composants */}
-            <Box as="section" marginBottom="xl">
+            {/* Intégration dans différents composants */}
+            <Box as="section" marginBottom="xl" id="integration-composants">
               <Title as="h2">Intégration dans différents composants</Title>
               <Box row contentSpacing="lg">
                 <div>
@@ -487,8 +508,8 @@
               </Box>
             </Box>
 
-            {/* Section 5: Best Practices en dernier */}
-            <Box as="section" marginBottom="xl">
+            {/* Best Practices */}
+            <Box as="section" marginBottom="xl" id="best-practices">
               <Title as="h2">Best Practices</Title>
 
               <Box column contentSpacing="lg">
