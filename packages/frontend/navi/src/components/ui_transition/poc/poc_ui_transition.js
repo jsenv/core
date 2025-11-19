@@ -689,70 +689,65 @@ export const createUITransitionController = (
       const isGrowing = toWidth >= fromWidth && toHeight >= fromHeight;
       const isShrinking = toWidth <= fromWidth && toHeight <= fromHeight;
 
-      // Get border radius values for clip-path and normalize them
-      const fromBorderRadius = previousTargetSlotConfiguration.borderRadius;
-      const toBorderRadius = targetSlotConfiguration.borderRadius;
-
-      // Normalize border-radius values to strings
-      const normalizeRadius = (radius) => {
-        if (!radius) return "0";
-        if (typeof radius === "number") return `${radius}px`;
-        return radius;
-      };
-
-      const fromBorderRadiusNormalized = normalizeRadius(fromBorderRadius);
-      const toBorderRadiusNormalized = normalizeRadius(toBorderRadius);
-
       let startClipPath;
       let endClipPath;
 
       if (isGrowing) {
-        // Growing: Start with smaller clip, expand to full
-        const fromClipWidth = Math.min(fromWidth, toWidth);
-        const fromClipHeight = Math.min(fromHeight, toHeight);
+        // Growing: Start with smaller rectangle, expand to full size
+        // Calculate the starting rectangle centered in the target area
+        const startWidth = fromWidth;
+        const startHeight = fromHeight;
 
-        const widthDiff = toWidth - fromClipWidth;
-        const heightDiff = toHeight - fromClipHeight;
+        // Center the starting rectangle in the target container
+        const startLeft = (toWidth - startWidth) / 2;
+        const startTop = (toHeight - startHeight) / 2;
+        const startRight = startLeft + startWidth;
+        const startBottom = startTop + startHeight;
 
-        const topInset = toHeight > 0 ? (heightDiff / 2 / toWidth) * 100 : 0;
-        const rightInset = toWidth > 0 ? (widthDiff / 2 / toWidth) * 100 : 0;
-        const bottomInset =
-          toHeight > 0 ? (heightDiff / 2 / toHeight) * 100 : 0;
-        const leftInset = toWidth > 0 ? (widthDiff / 2 / toWidth) * 100 : 0;
+        // Convert to percentages of container size
+        const startLeftPct = (startLeft / toWidth) * 100;
+        const startTopPct = (startTop / toHeight) * 100;
+        const startRightPct = (startRight / toWidth) * 100;
+        const startBottomPct = (startBottom / toHeight) * 100;
 
-        startClipPath = `inset(${topInset}% ${rightInset}% ${bottomInset}% ${leftInset}% round ${fromBorderRadiusNormalized})`;
-        endClipPath = `inset(0% 0% 0% 0% round ${toBorderRadiusNormalized})`;
+        // Start with centered rectangle, end with full rectangle
+        startClipPath = `polygon(${startLeftPct}% ${startTopPct}%, ${startRightPct}% ${startTopPct}%, ${startRightPct}% ${startBottomPct}%, ${startLeftPct}% ${startBottomPct}%)`;
+        endClipPath = `polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)`;
 
         debugSize(
           `Growing transition: from ${fromWidth}x${fromHeight} to ${toWidth}x${toHeight}`,
         );
       } else if (isShrinking) {
-        // Shrinking: Start with full content, clip to smaller size
-        const widthDiff = fromWidth - toWidth;
-        const heightDiff = fromHeight - toHeight;
-
-        const topInset =
-          fromHeight > 0 ? (heightDiff / 2 / fromHeight) * 100 : 0;
-        const rightInset =
-          fromWidth > 0 ? (widthDiff / 2 / fromWidth) * 100 : 0;
-        const bottomInset =
-          fromHeight > 0 ? (heightDiff / 2 / fromHeight) * 100 : 0;
-        const leftInset = fromWidth > 0 ? (widthDiff / 2 / fromWidth) * 100 : 0;
-
-        // For shrinking, we need to set the container to the from size initially
+        // Shrinking: Start with full size, contract to smaller centered rectangle
         container.style.width = `${fromWidth}px`;
         container.style.height = `${fromHeight}px`;
 
-        startClipPath = `inset(0% 0% 0% 0% round ${fromBorderRadiusNormalized})`;
-        endClipPath = `inset(${topInset}% ${rightInset}% ${bottomInset}% ${leftInset}% round ${toBorderRadiusNormalized})`;
+        // Calculate the ending rectangle centered in the source area
+        const endWidth = toWidth;
+        const endHeight = toHeight;
+
+        const endLeft = (fromWidth - endWidth) / 2;
+        const endTop = (fromHeight - endHeight) / 2;
+        const endRight = endLeft + endWidth;
+        const endBottom = endTop + endHeight;
+
+        // Convert to percentages of container size
+        const endLeftPct = (endLeft / fromWidth) * 100;
+        const endTopPct = (endTop / fromHeight) * 100;
+        const endRightPct = (endRight / fromWidth) * 100;
+        const endBottomPct = (endBottom / fromHeight) * 100;
+
+        // Start with full rectangle, end with centered smaller rectangle
+        startClipPath = `polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)`;
+        endClipPath = `polygon(${endLeftPct}% ${endTopPct}%, ${endRightPct}% ${endTopPct}%, ${endRightPct}% ${endBottomPct}%, ${endLeftPct}% ${endBottomPct}%)`;
 
         debugSize(
           `Shrinking transition: from ${fromWidth}x${fromHeight} to ${toWidth}x${toHeight}`,
         );
       } else {
         // Mixed case (width grows, height shrinks or vice versa) - use simpler approach
-        startClipPath = `inset(0% 0% 0% 0% round ${fromBorderRadiusNormalized})`;
-        endClipPath = `inset(0% 0% 0% 0% round ${toBorderRadiusNormalized})`;
+        startClipPath = `polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)`;
+        endClipPath = `polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)`;
         debugSize(
           `Mixed transition: from ${fromWidth}x${fromHeight} to ${toWidth}x${toHeight} - no clip effect`,
         );
