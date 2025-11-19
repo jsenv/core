@@ -227,15 +227,17 @@ export const createTranslateXTransition = (element, to, options = {}) => {
 };
 
 export const createBorderRadiusTransition = (element, to, options = {}) => {
+  const from = Object.hasOwn(options, "from")
+    ? parseStyle(options.from, "borderRadius")
+    : undefined;
+  to = parseStyle(to, "borderRadius");
   return createCSSPropertyTransition({
     ...options,
     constructor: createBorderRadiusTransition,
     element,
     styleProperty: "borderRadius",
-    getFrom: () => {
-      const computedStyle = getComputedStyle(element);
-      return computedStyle.borderRadius;
-    },
+    getFrom: getBorderRadius,
+    from,
     to,
   });
 };
