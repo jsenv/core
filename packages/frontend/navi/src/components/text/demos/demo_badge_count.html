@@ -42,13 +42,16 @@
                 <Link href="#integration-composants">
                   3. Intégration dans différents composants
                 </Link>
+                <Link href="#badges-alignes">
+                  4. Badges alignés à droite (alignX="end")
+                </Link>
                 <Link href="#nowrap">
-                  4. Association texte + badge (pas de coupure)
+                  5. Association texte + badge (pas de coupure)
                 </Link>
                 <Link href="#nombres-max">
-                  5. Compteurs avec nombres élevés et paramètre max
+                  6. Compteurs avec nombres élevés et paramètre max
                 </Link>
-                <Link href="#best-practices">6. Best Practices</Link>
+                <Link href="#best-practices">7. Best Practices</Link>
               </Box>
             </Box>
 
@@ -395,59 +398,56 @@
               <Title as="h2">
                 Compteurs avec nombres élevés et paramètre max
               </Title>
-              <Box row contentSpacing="lg">
-                <Box row contentSpacing="md">
-                  <Text>
-                    Abonnés YouTube
-                    <BadgeCount
-                      background="#f5f5f5"
-                      color="#424242"
-                      borderRadius="16px"
-                      border="1px solid #e0e0e0"
-                      size="lg"
-                    >
-                      1250
-                    </BadgeCount>
-                  </Text>
-                  <Text>
-                    Points fidélité
-                    <BadgeCount
-                      background="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-                      color="white"
-                      borderRadius="16px"
-                      size="lg"
-                    >
-                      8700
-                    </BadgeCount>
-                  </Text>
-                </Box>
-                <Box row contentSpacing="md">
-                  <Text>
-                    Messages (max=99)
-                    <BadgeCount background="#d32f2f" color="white" max={99}>
-                      150
-                    </BadgeCount>
-                  </Text>
 
-                  <Text>
-                    Notifications (max=9)
-                    <BadgeCount background="#1976d2" color="white" max={9}>
-                      15
-                    </BadgeCount>
-                  </Text>
-                </Box>
-                <Box marginTop="md">
-                  <Text
-                    style={{
-                      fontSize: "14px",
-                      color: "#666",
-                      fontStyle: "italic",
-                    }}
+              <Box row contentSpacing="md">
+                <Text>
+                  Abonnés YouTube
+                  <BadgeCount
+                    background="#f5f5f5"
+                    color="#424242"
+                    borderRadius="16px"
+                    border="1px solid #e0e0e0"
+                    size="lg"
                   >
-                    Quand la valeur dépasse le paramètre max, on affiche "max+"
-                    au lieu de la vraie valeur.
-                  </Text>
-                </Box>
+                    1250
+                  </BadgeCount>
+                </Text>
+                <Text>
+                  Points fidélité
+                  <BadgeCount
+                    background="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+                    color="white"
+                    borderRadius="16px"
+                    size="lg"
+                  >
+                    8700
+                  </BadgeCount>
+                </Text>
+                <Text>
+                  Messages (max=99)
+                  <BadgeCount background="#d32f2f" color="white" max={99}>
+                    150
+                  </BadgeCount>
+                </Text>
+
+                <Text>
+                  Notifications (max=9)
+                  <BadgeCount background="#1976d2" color="white" max={9}>
+                    15
+                  </BadgeCount>
+                </Text>
+              </Box>
+              <Box marginTop="md">
+                <Text
+                  style={{
+                    fontSize: "14px",
+                    color: "#666",
+                    fontStyle: "italic",
+                  }}
+                >
+                  Quand la valeur dépasse le paramètre max, on affiche "max+" au
+                  lieu de la vraie valeur.
+                </Text>
               </Box>
             </Box>
 
