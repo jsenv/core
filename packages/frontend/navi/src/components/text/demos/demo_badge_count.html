@@ -97,18 +97,17 @@
                   >
                     line-height: 1.4
                   </Text>
+
                   <Text
-                    style={{
-                      lineHeight: "1.4",
-                      border: "1px solid #e0e0e0",
-                      backgroundColor: "#f9f9f9",
-                      padding: "4px 8px",
-                      borderRadius: "4px",
-                    }}
+                    lineHeight="1.4"
+                    border="1px solid #e0e0e0"
+                    backgroundColor="#f9f9f9"
+                    padding="4px 8px"
+                    borderRadius="4px"
                   >
                     Messages
                     <BadgeCount background="#9c27b0" color="white">
-                      23
+                      2
                     </BadgeCount>
                   </Text>
                 </div>
@@ -135,7 +134,7 @@
                   >
                     Messages
                     <BadgeCount background="#ff5722" color="white">
-                      23
+                      2
                     </BadgeCount>
                   </Text>
                 </div>
@@ -163,7 +162,7 @@
                   >
                     Messages
                     <BadgeCount background="#607d8b" color="white" size="lg">
-                      23
+                      2
                     </BadgeCount>
                   </Text>
                 </div>
@@ -257,12 +256,21 @@
                     >
                       Avec Button
                     </Text>
-                    <Button>
-                      Tâches
-                      <BadgeCount background="#2196f3" color="white">
-                        5
-                      </BadgeCount>
-                    </Button>
+                    <Box column contentSpacing="md">
+                      <Button alignY="start">
+                        Tâches
+                        <BadgeCount background="#2196f3" color="white">
+                          5
+                        </BadgeCount>
+                      </Button>
+
+                      <Button lineHeight="1.5">
+                        Tâches
+                        <BadgeCount background="#2196f3" color="white">
+                          5
+                        </BadgeCount>
+                      </Button>
+                    </Box>
                   </div>
                 </Box>
 

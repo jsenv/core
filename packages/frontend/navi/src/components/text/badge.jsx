@@ -23,14 +23,18 @@ import.meta.css = /* css */ `
     padding-left: var(--padding-left, var(--padding-x, var(--padding, 0.4em)));
   }
   .navi_badge .navi_text_foreground {
+    top: 50%;
+    left: 50%;
     width: 100%;
     min-width: 1.5em;
     height: 1.5em;
     max-height: 100%;
     align-items: center;
     justify-content: center;
+    text-indent: -0.5px;
     background-color: var(--background-color);
     border-radius: var(--border-radius, 1em);
+    transform: translate(-50%, -50%);
   }
 `;
 
