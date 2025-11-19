@@ -26,6 +26,7 @@ import.meta.css = /* css */ `
     width: 100%;
     min-width: 1.5em;
     height: 1.5em;
+    max-height: 100%;
     align-items: center;
     justify-content: center;
     background-color: var(--background-color);

@@ -78,8 +78,10 @@ import.meta.css = /* css */ `
     flex-direction: row;
   }
 
-  [data-layout-row] > *,
-  [data-layout-column] > * {
+  [data-layout-row] > [data-layout-row],
+  [data-layout-row] > [data-layout-column],
+  [data-layout-column] > [data-layout-column],
+  [data-layout-column] > [data-layout-row] {
     flex-shrink: 0;
   }
 

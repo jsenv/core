@@ -619,6 +619,178 @@
                       </div>
                     </Box>
                   </Box>
+
+                  <Box marginTop="lg">
+                    <Title as="h4" size="16">
+                      Comportement avec des boutons plus grands
+                    </Title>
+                    <Box row contentSpacing="md" marginTop="md">
+                      <div>
+                        <Text
+                          style={{
+                            fontSize: "14px",
+                            color: "#666",
+                            marginBottom: "8px",
+                          }}
+                        >
+                          Bouton normal :
+                        </Text>
+                        <Button>
+                          Messages
+                          <BadgeCount background="#1976d2" color="white">
+                            12
+                          </BadgeCount>
+                        </Button>
+                      </div>
+
+                      <div>
+                        <Text
+                          style={{
+                            fontSize: "14px",
+                            color: "#666",
+                            marginBottom: "8px",
+                          }}
+                        >
+                          Bouton avec lineHeight: 2 :
+                        </Text>
+                        <Button style={{ lineHeight: "2" }}>
+                          Notifications importantes
+                          <BadgeCount background="#f44336" color="white">
+                            7
+                          </BadgeCount>
+                        </Button>
+                      </div>
+
+                      <div>
+                        <Text
+                          style={{
+                            fontSize: "14px",
+                            color: "#666",
+                            marginBottom: "8px",
+                          }}
+                        >
+                          Bouton avec padding et lineHeight: 2.5 :
+                        </Text>
+                        <Button
+                          style={{
+                            lineHeight: "2.5",
+                            padding: "16px 24px",
+                            fontSize: "16px",
+                          }}
+                        >
+                          Gérer les tâches
+                          <BadgeCount
+                            background="#388e3c"
+                            color="white"
+                            max={99}
+                          >
+                            156
+                          </BadgeCount>
+                        </Button>
+                      </div>
+                    </Box>
+                  </Box>
+
+                  <Box marginTop="lg">
+                    <Title as="h4" size="16">
+                      Comportement avec différents line-heights sur Text
+                    </Title>
+                    <Box row contentSpacing="md" marginTop="md">
+                      <div>
+                        <Text
+                          style={{
+                            fontSize: "14px",
+                            color: "#666",
+                            marginBottom: "8px",
+                          }}
+                        >
+                          Line-height normal (1.4) :
+                        </Text>
+                        <Text style={{ lineHeight: "1.4" }}>
+                          Emails non lus
+                          <BadgeCount background="#9c27b0" color="white">
+                            23
+                          </BadgeCount>
+                        </Text>
+                      </div>
+
+                      <div>
+                        <Text
+                          style={{
+                            fontSize: "14px",
+                            color: "#666",
+                            marginBottom: "8px",
+                          }}
+                        >
+                          Line-height 2 :
+                        </Text>
+                        <Text style={{ lineHeight: "2" }}>
+                          Messages urgents
+                          <BadgeCount background="#ff5722" color="white">
+                            4
+                          </BadgeCount>
+                        </Text>
+                      </div>
+
+                      <div>
+                        <Text
+                          style={{
+                            fontSize: "14px",
+                            color: "#666",
+                            marginBottom: "8px",
+                          }}
+                        >
+                          Line-height 3 avec fontSize plus grand :
+                        </Text>
+                        <Text style={{ lineHeight: "3", fontSize: "18px" }}>
+                          Notifications système
+                          <BadgeCount
+                            background="#607d8b"
+                            color="white"
+                            size="lg"
+                          >
+                            99+
+                          </BadgeCount>
+                        </Text>
+                      </div>
+
+                      <div>
+                        <Text
+                          style={{
+                            fontSize: "14px",
+                            color: "#666",
+                            marginBottom: "8px",
+                          }}
+                        >
+                          Line-height 0.8 (compact) :
+                        </Text>
+                        <Text style={{ lineHeight: "0.8", fontSize: "12px" }}>
+                          Mini compteur
+                          <BadgeCount
+                            background="#795548"
+                            color="white"
+                            size="xs"
+                          >
+                            2
+                          </BadgeCount>
+                        </Text>
+                      </div>
+                    </Box>
+
+                    <Box marginTop="md">
+                      <Text
+                        style={{
+                          fontSize: "12px",
+                          color: "#666",
+                          fontStyle: "italic",
+                        }}
+                      >
+                        Le badge s'adapte automatiquement à la hauteur de ligne
+                        du composant parent, garantissant un alignement cohérent
+                        dans tous les contextes.
+                      </Text>
+                    </Box>
+                  </Box>
                 </div>
               </Box>
             </Box>
