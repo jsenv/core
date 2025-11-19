@@ -128,7 +128,7 @@ import.meta.css = /* css */ `
   .ui_transition_container {
     /* in case CSS sets border on this element his size must include borders */
     box-sizing: border-box;
-    transition-property: border, border-radius;
+    transition-property: border;
     transition-duration: var(--x-transition-duration);
     transition-timing-function: ease;
     /* background-clip: text !important; */
@@ -515,25 +515,16 @@ export const createUITransitionController = (
     const updatedConfig = detectConfiguration(slot);
     if (slot === targetSlot) {
       targetSlotConfiguration = updatedConfig;
-      applySlotConfigurationEffects(slot);
-      return;
-    }
-    if (slot === outgoingSlot) {
+    } else if (slot === outgoingSlot) {
       outgoingSlotConfiguration = updatedConfig;
-      applySlotConfigurationEffects(slot);
-      return;
-    }
-    if (slot === previousTargetSlot) {
+    } else if (slot === previousTargetSlot) {
       previousTargetSlotConfiguration = updatedConfig;
-      applySlotConfigurationEffects(slot);
-      return;
-    }
-    if (slot === previousOutgoingSlot) {
+    } else if (slot === previousOutgoingSlot) {
       previousOutgoingSlotConfiguration = updatedConfig;
-      applySlotConfigurationEffects(slot);
-      return;
+    } else {
+      throw new Error("Unknown slot for applyConfiguration");
     }
-    throw new Error("Unknown slot for applyConfiguration");
+    applySlotConfigurationEffects(slot);
   };
   const applySlotConfigurationEffects = (slot) => {
     forceSlotDimensions(slot);
@@ -580,7 +571,7 @@ export const createUITransitionController = (
   let transitionType = "none";
   const transitionController = createGroupTransitionController({
     // debugBreakpoints: [0.25],
-    // pauseBreakpoints: [0.2],
+    pauseBreakpoints: [0.4],
     lifecycle: {
       setup: () => {
         updateSlotAttributes();
@@ -836,6 +827,7 @@ export const createUITransitionController = (
     if (hasDebugLogs) {
       console.group(`transitionTo(${toConfiguration.contentId})`);
     }
+    applySlotConfigurationEffects(targetSlot);
     if (isSameConfiguration(fromConfiguration, toConfiguration)) {
       debugDetection(`ignored (already in desired state)`);
       if (hasDebugLogs) {

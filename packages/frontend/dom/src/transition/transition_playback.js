@@ -148,6 +148,7 @@ export const createTransition = ({
   debugQuarterBreakpoints = false, // Shorthand for debugBreakpoints: [0.25, 0.75]
   debugBreakpoints = debugQuarterBreakpoints ? [0.25, 0.75] : [], // Array of progress values (0-1) where debugger should trigger
   pauseBreakpoints = [],
+  warnOnSmallDifferences = false,
   ...rest
 } = {}) => {
   const [updateCallbacks, executeUpdateCallbacks] = createCallbackController();
@@ -181,15 +182,17 @@ export const createTransition = ({
       transition.from = executionLifecycle.from;
     }
 
-    const diff = Math.abs(transition.to - transition.from);
-    if (diff === 0) {
-      console.warn(
-        `${constructor.name} transition has identical from and to values (${transition.from}). This transition will have no effect.`,
-      );
-    } else if (typeof minDiff === "number" && diff < minDiff) {
-      console.warn(
-        `${constructor.name} transition difference is very small (${diff}). Consider if this transition is necessary (minimum threshold: ${minDiff}).`,
-      );
+    if (warnOnSmallDifferences) {
+      const diff = Math.abs(transition.to - transition.from);
+      if (diff === 0) {
+        console.warn(
+          `${constructor.name} transition has identical from and to values (${transition.from}). This transition will have no effect.`,
+        );
+      } else if (typeof minDiff === "number" && diff < minDiff) {
+        console.warn(
+          `${constructor.name} transition difference is very small (${diff}). Consider if this transition is necessary (minimum threshold: ${minDiff}).`,
+        );
+      }
     }
     transition.update(transition.startProgress);
   };
