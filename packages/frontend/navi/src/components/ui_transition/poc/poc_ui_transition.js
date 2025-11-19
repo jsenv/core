@@ -206,8 +206,13 @@ import.meta.css = /* css */ `
     position: relative;
   }
 
-  .ui_transition[data-transitioning] .target_slot {
-    background: none !important;
+  .ui_transition[data-transitioning] .target_slot,
+  .ui_transition[data-transitioning] .outgoing_slot,
+  .ui_transition[data-transitioning] .previous_target_slot,
+  .ui_transition[data-transitioning] .previous_outgoing_slot {
+    background-image: none !important;
+    background-color: transparent !important;
+    border-color: transparent !important;
   }
 `;
 
@@ -366,6 +371,7 @@ export const createUITransitionController = (
   let targetSlotHeight;
   let outgoingSlotWidth;
   let outgoingSlotHeight;
+  let targetSlotBorderRadius;
   let targetSlotBorder;
   let targetSlotBackground;
 
@@ -500,6 +506,9 @@ export const createUITransitionController = (
   const applySlotConfigurationEffects = (slot) => {
     if (slot === targetSlot) {
       if (targetSlotConfiguration.singleElementNode) {
+        targetSlotBorderRadius = getComputedStyle(
+          targetSlotConfiguration.singleElementNode,
+        ).borderRadius;
         targetSlotBorder = getComputedStyle(
           targetSlotConfiguration.singleElementNode,
         ).border;
@@ -508,6 +517,7 @@ export const createUITransitionController = (
         );
       } else {
         // empty, text, multiple elements
+        targetSlotBorderRadius = undefined;
         targetSlotBorder = undefined;
         targetSlotBackground = undefined;
       }
@@ -713,6 +723,7 @@ export const createUITransitionController = (
       },
     });
     morphTransitions.push(widthTransition, heightTransition);
+    container.style.borderRadius = targetSlotBorderRadius;
     container.style.border = targetSlotBorder;
     const backgroundTransition = createBackgroundTransition(
       container,
