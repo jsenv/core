@@ -119,16 +119,15 @@
             <Box
               column
               contentSpacing="xs"
-              alignItems="center"
+              height="70"
               style={{
-                height: "120px",
                 padding: "8px",
                 border: "1px solid #ccc",
                 borderRadius: "4px",
                 backgroundColor: "white",
               }}
             >
-              <Icon color="orange">
+              <Icon color="orange" alignY="start">
                 <StarSvg />
               </Icon>
               <Text>Favorites</Text>
@@ -137,9 +136,8 @@
             <Box
               column
               contentSpacing="xs"
-              alignItems="center"
+              height="70"
               style={{
-                height: "80px",
                 padding: "8px",
                 border: "1px solid #ccc",
                 borderRadius: "4px",
@@ -155,9 +153,8 @@
             <Box
               column
               contentSpacing="xs"
-              alignItems="center"
+              height="70"
               style={{
-                height: "80px",
                 padding: "8px",
                 border: "1px solid #ccc",
                 borderRadius: "4px",
@@ -226,27 +223,6 @@
       const IconTextLinkSection = () => (
         <Box as="section" marginBottom="xl" id="icon-text-link">
           <Title as="h2">Icon + Text + Link Combinations</Title>
-          <Box column contentSpacing="md">
-            <Text>
-              <Icon color="green">
-                <CheckSvg />
-              </Icon>
-              Un lien de réinitialisation a été envoyé à
-              <Link href="dmail@gmail.com" underline={false}>
-                <Text underline>dmail@gmail.com</Text>
-                <Icon>
-                  <BlankTargetLinkSvg />
-                </Icon>
-              </Link>
-            </Text>
-          </Box>
-        </Box>
-      );
-
-      // Container Width Variations Section
-      const ContainerWidthsSection = () => (
-        <Box as="section" marginBottom="xl" id="container-widths">
-          <Title as="h2">Container Width Variations</Title>
           <Box row contentSpacing="lg">
             <div>
               <Text
@@ -962,93 +938,434 @@
         <Box as="section" marginBottom="xl" id="icon-transformation">
           <Title as="h2">Icon Transformation</Title>
           <Box column contentSpacing="lg">
-            <div>
-              <Text
-                style={{
-                  fontSize: "14px",
-                  fontWeight: "bold",
-                  color: "#333",
-                  marginBottom: "8px",
-                  display: "block",
-                }}
-              >
-                Rotation Examples
-              </Text>
-              <Box
-                row
-                contentSpacing="lg"
-                alignItems="center"
-                justifyContent="center"
-                style={{
-                  padding: "20px",
-                  backgroundColor: "#f5f5f5",
-                  borderRadius: "8px",
-                  border: "1px solid #ddd",
-                }}
-              >
-                <div style={{ textAlign: "center", position: "relative" }}>
-                  <Text
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      display: "block",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    rotate="45deg"
-                  </Text>
-                  {/* Ghost icon showing original position */}
-                  <Icon
-                    style={{
-                      position: "absolute",
-                      opacity: 0.3,
-                      filter: "grayscale(100%)",
-                    }}
-                  >
-                    <TriangleSvg />
-                  </Icon>
-                  <Icon rotate="45deg">
-                    <TriangleSvg />
-                  </Icon>
-                </div>
+            <Box
+              row
+              contentSpacing="lg"
+              alignItems="center"
+              justifyContent="center"
+              style={{
+                padding: "20px",
+                backgroundColor: "#f5f5f5",
+                borderRadius: "8px",
+                border: "1px solid #ddd",
+              }}
+            >
+              <div style={{ textAlign: "center", position: "relative" }}>
+                <Text
+                  style={{
+                    fontSize: "12px",
+                    color: "#666",
+                    display: "block",
+                    marginBottom: "8px",
+                  }}
+                >
+                  rotate="45deg"
+                </Text>
+                {/* Ghost icon showing original position */}
+                <Icon
+                  style={{
+                    position: "absolute",
+                    opacity: 0.3,
+                    filter: "grayscale(100%)",
+                  }}
+                >
+                  <TriangleSvg />
+                </Icon>
+                <Icon rotate="45deg">
+                  <TriangleSvg />
+                </Icon>
+              </div>
 
-                <div style={{ textAlign: "center", position: "relative" }}>
-                  <Text
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      display: "block",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    translate="10"
-                  </Text>
-                  {/* Ghost icon showing original position */}
-                  <Icon
-                    style={{
-                      position: "absolute",
-                      opacity: 0.3,
-                      filter: "grayscale(100%)",
-                    }}
-                  >
-                    <ArrowSvg />
-                  </Icon>
-                  <Icon translate="10">
-                    <ArrowSvg />
-                  </Icon>
-                </div>
-              </Box>
-              <Text
-                style={{
-                  fontSize: "14px",
-                  color: "#666",
-                  fontStyle: "italic",
-                  marginTop: "8px",
-                }}
+              <div style={{ textAlign: "center", position: "relative" }}>
+                <Text
+                  style={{
+                    fontSize: "12px",
+                    color: "#666",
+                    display: "block",
+                    marginBottom: "8px",
+                  }}
+                >
+                  translate="10"
+                </Text>
+                {/* Ghost icon showing original position */}
+                <Icon
+                  style={{
+                    position: "absolute",
+                    opacity: 0.3,
+                    filter: "grayscale(100%)",
+                  }}
+                >
+                  <ArrowSvg />
+                </Icon>
+                <Icon translate="10">
+                  <ArrowSvg />
+                </Icon>
+              </div>
+            </Box>
+          </Box>
+        </Box>
+      );
+
+      // ========== SECTIONS FROM ORIGINAL GITHUB FILE ==========
+      // Different Font Sizes with Colors Section
+      const DifferentFontSizesSection = () => (
+        <Box as="section" marginBottom="xl" id="different-font-sizes">
+          <Title as="h2">Different Font Sizes with Colors</Title>
+          <Box row contentSpacing="sm">
+            <Text size="sm" color="blue">
+              <Icon>
+                <HomeSvg />
+              </Icon>
+              Small blue text
+            </Text>
+
+            <Text color="green">
+              <Icon>
+                <UserSvg />
+              </Icon>
+              Normal green text
+            </Text>
+
+            <Text size="lg" color="red">
+              <Icon>
+                <SettingsSvg />
+              </Icon>
+              Large red text
+            </Text>
+
+            <Text size="xl" color="purple">
+              <Icon>
+                <StarSvg />
+              </Icon>
+              Extra large purple text
+            </Text>
+          </Box>
+        </Box>
+      );
+
+      // Text + Icon (Reversed Order) Section
+      const ReversedOrderSection = () => (
+        <Box as="section" marginBottom="xl" id="reversed-order">
+          <Title as="h2">Text + Icon (Reversed Order)</Title>
+          <Box row contentSpacing="sm">
+            <Text>
+              Search
+              <Icon>
+                <SearchSvg />
+              </Icon>
+            </Text>
+          </Box>
+        </Box>
+      );
+
+      // Multiple Icons Section
+      const MultipleIconsSection = () => (
+        <Box as="section" marginBottom="xl" id="multiple-icons">
+          <Title as="h2">Multiple Icons</Title>
+          <Box row contentSpacing="sm">
+            <Text>
+              <Icon>
+                <HomeSvg />
+              </Icon>
+              Left and right
+              <Icon>
+                <StarSvg />
+              </Icon>
+            </Text>
+
+            <Text>
+              <Icon>
+                <UserSvg />
+              </Icon>
+              <Icon>
+                <SettingsSvg />
+              </Icon>
+              Two on the left
+            </Text>
+
+            <Text>
+              Two on the right
+              <Icon>
+                <StarSvg />
+              </Icon>
+              <Icon>
+                <HeartSvg />
+              </Icon>
+            </Text>
+
+            <Text>
+              <Icon>
+                <HomeSvg />
+              </Icon>
+              <Icon>
+                <UserSvg />
+              </Icon>
+              Two on the left and right
+              <Icon>
+                <StarSvg />
+              </Icon>
+              <Icon>
+                <HeartSvg />
+              </Icon>
+            </Text>
+          </Box>
+        </Box>
+      );
+
+      // Icons in Links Section
+      const IconsInLinksSection = () => (
+        <Box as="section" marginBottom="xl" id="icons-in-links">
+          <Title as="h2">Icons in Links</Title>
+          <Paragraph>
+            Icons work seamlessly within Link components, maintaining proper
+            spacing and hover effects:
+          </Paragraph>
+          <Box
+            row
+            contentSpacing="md"
+            padding="md"
+            style={{ backgroundColor: "#f8f9fa" }}
+            borderRadius="sm"
+            contentAlignX="start"
+          >
+            <Link href="#home">Go to Homepage</Link>
+
+            <div>
+              <Link href="#profile" underline={false} color="green">
+                <Icon>
+                  <UserSvg />
+                </Icon>
+                <Text underline>View Profile</Text>
+              </Link>
+            </div>
+
+            <div>
+              <Link
+                href="#search"
+                underline={false}
+                anchorIcon={false}
+                textColor="purple"
               >
-                Gray icons show the original position before transformation.
+                <Icon>
+                  <SearchSvg />
+                </Icon>
+                <Text underline>Search Documentation</Text>
+              </Link>
+            </div>
+
+            {/* Another solution: put icon outside the link (This means it's not clickable) */}
+            <div>
+              <Text noWrap color="orange">
+                <Icon>
+                  <SettingsSvg />
+                </Icon>
+                <Link href="#settings">Open Settings</Link>
               </Text>
             </div>
+
+            <div>
+              <Link href="#favorites" color="red">
+                <Icon>
+                  <HeartSvg />
+                </Icon>
+                <Text>My Favorites</Text>
+              </Link>
+            </div>
+
+            {/* We create a link with <Text> just to test but this is not recommended */}
+            <div>
+              <Text
+                as="a"
+                href="https://example.com"
+                target="_blank"
+                color="gray"
+                underline={false}
+              >
+                <Icon>
+                  <BlankTargetLinkSvg />
+                </Icon>
+                <Text underline>External Link</Text>
+              </Text>
+            </div>
+          </Box>
+        </Box>
+      );
+
+      // Icons in Buttons Section
+      const IconsInButtonsSection = () => (
+        <Box as="section" marginBottom="xl" id="icons-in-buttons">
+          <Title as="h2">Icons in Buttons</Title>
+          <Paragraph>
+            Icons enhance button functionality and provide visual context for
+            actions:
+          </Paragraph>
+
+          <Box
+            row
+            contentSpacing="md"
+            padding="md"
+            style={{ backgroundColor: "#f8f9fa" }}
+            borderRadius="sm"
+            contentAlignX="start"
+          >
+            <Button
+              paddingX="lg"
+              paddingY="md"
+              backgroundColor="#007bff"
+              borderColor="#007bff"
+              textColor="white"
+              textSize="sm"
+              borderWidth="2"
+              borderStyle="solid"
+              borderRadius="5"
+              pseudoStyle={{
+                ":hover": {
+                  backgroundColor: "#0056b3",
+                  borderColor: "#0056b3",
+                },
+              }}
+            >
+              <Icon>
+                <SearchSvg />
+              </Icon>
+              Search Files
+            </Button>
+
+            <button
+              style={{
+                padding: "12px 16px",
+                border: "2px solid #28a745",
+                borderRadius: "6px",
+                background: "#28a745",
+                color: "white",
+                cursor: "pointer",
+                fontSize: "14px",
+              }}
+              onMouseOver={(e) => {
+                e.target.closest("button").style.background = "#1e7e34";
+                e.target.closest("button").style.borderColor = "#1e7e34";
+              }}
+              onMouseOut={(e) => {
+                e.target.closest("button").style.background = "#28a745";
+                e.target.closest("button").style.borderColor = "#28a745";
+              }}
+            >
+              <Text>
+                <Icon>
+                  <CheckSvg />
+                </Icon>
+                Save Changes
+              </Text>
+            </button>
+
+            <button
+              style={{
+                padding: "12px 16px",
+                border: "2px solid #6c757d",
+                borderRadius: "6px",
+                background: "#6c757d",
+                color: "white",
+                cursor: "pointer",
+                fontSize: "14px",
+              }}
+              onMouseOver={(e) => {
+                e.target.closest("button").style.background = "#545b62";
+                e.target.closest("button").style.borderColor = "#545b62";
+              }}
+              onMouseOut={(e) => {
+                e.target.closest("button").style.background = "#6c757d";
+                e.target.closest("button").style.borderColor = "#6c757d";
+              }}
+            >
+              <Text>
+                <Icon>
+                  <SettingsSvg />
+                </Icon>
+                Configure
+              </Text>
+            </button>
+
+            <button
+              style={{
+                padding: "12px 16px",
+                border: "2px solid #dc3545",
+                borderRadius: "6px",
+                background: "white",
+                color: "#dc3545",
+                cursor: "pointer",
+                fontSize: "14px",
+              }}
+              onMouseOver={(e) => {
+                e.target.closest("button").style.background = "#dc3545";
+                e.target.closest("button").style.color = "white";
+              }}
+              onMouseOut={(e) => {
+                e.target.closest("button").style.background = "white";
+                e.target.closest("button").style.color = "#dc3545";
+              }}
+            >
+              <Text>
+                <Icon>
+                  <HeartSvg />
+                </Icon>
+                Add to Favorites
+              </Text>
+            </button>
+
+            <button
+              style={{
+                padding: "8px 12px",
+                border: "1px solid #ccc",
+                borderRadius: "4px",
+                background: "white",
+                color: "#666",
+                cursor: "pointer",
+                fontSize: "12px",
+              }}
+              onMouseOver={(e) => {
+                e.target.closest("button").style.background = "#f8f9fa";
+                e.target.closest("button").style.borderColor = "#adb5bd";
+              }}
+              onMouseOut={(e) => {
+                e.target.closest("button").style.background = "white";
+                e.target.closest("button").style.borderColor = "#ccc";
+              }}
+            >
+              <Text>
+                <Icon charWidth={1.5}>
+                  <HomeSvg />
+                </Icon>
+                Home
+              </Text>
+            </button>
+
+            <button
+              style={{
+                padding: "10px 14px",
+                border: "2px solid #ffc107",
+                borderRadius: "6px",
+                background: "#ffc107",
+                color: "#212529",
+                cursor: "pointer",
+                fontSize: "14px",
+                fontWeight: "bold",
+              }}
+              onMouseOver={(e) => {
+                e.target.closest("button").style.background = "#e0a800";
+                e.target.closest("button").style.borderColor = "#e0a800";
+              }}
+              onMouseOut={(e) => {
+                e.target.closest("button").style.background = "#ffc107";
+                e.target.closest("button").style.borderColor = "#ffc107";
+              }}
+            >
+              <Text>
+                <Icon>
+                  <StarSvg />
+                </Icon>
+                Rate this
+              </Text>
+            </button>
           </Box>
         </Box>
       );
@@ -1072,7 +1389,6 @@
             <IconHrefSection />
             <IconDimensionsSection />
             <IconTextLinkSection />
-            <ContainerWidthsSection />
             <IconRowSection />
             <IconColumnSection />
           </div>
