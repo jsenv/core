@@ -242,6 +242,7 @@ export const createUITransitionController = (
     alignX = "center",
     alignY = "center",
     onStateChange = () => {},
+    pauseBreakpoints = [],
   } = {},
 ) => {
   const debugConfig = {
@@ -571,7 +572,7 @@ export const createUITransitionController = (
   let transitionType = "none";
   const transitionController = createGroupTransitionController({
     // debugBreakpoints: [0.25],
-    pauseBreakpoints: [0.4],
+    pauseBreakpoints,
     lifecycle: {
       setup: () => {
         updateSlotAttributes();
@@ -820,6 +821,7 @@ export const createUITransitionController = (
     }
 
     const fromConfiguration = targetSlotConfiguration;
+    debugger;
     const toConfiguration = detectConfiguration(targetSlot, {
       contentPhase,
       contentId,
