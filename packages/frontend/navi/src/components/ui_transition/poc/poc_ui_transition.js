@@ -533,11 +533,17 @@ export const createUITransitionController = (
     throw new Error("Unknown slot for applyConfiguration");
   };
   const applySlotConfigurationEffects = (slot) => {
-    setSlotDimensions(slot);
+    forceSlotDimensions(slot);
   };
-  const setSlotDimensions = (slot) => {
+  const forceSlotDimensions = (slot) => {
     const configuration = getSlotConfiguration(slot);
     const { width, height } = configuration;
+    setSlotDimensions(slot, width, height);
+  };
+  const releaseSlotDimensions = (slot) => {
+    setSlotDimensions(slot, undefined, undefined);
+  };
+  const setSlotDimensions = (slot, width, height) => {
     if (width === undefined) {
       if (!slot.style.width) {
         return;
@@ -640,7 +646,7 @@ export const createUITransitionController = (
       // Restore overflow when transition is complete
       restoreOverflow();
       // let target slot take natural size now container is done
-      setSlotDimensions(targetSlot, undefined, undefined);
+      releaseSlotDimensions(targetSlot);
     };
 
     const morphTransitions = [];
@@ -793,7 +799,6 @@ export const createUITransitionController = (
     const transitions = [...morphContainerIntoTarget(), fadeOutPreviousGroup()];
     const transition = transitionController.update(transitions, {
       onFinish: () => {
-        setSlotDimensions(targetSlot, undefined, undefined);
         setSlotConfiguration(previousTargetSlot, UNSET);
         setSlotConfiguration(previousOutgoingSlot, UNSET);
         if (hasDebugLogs) {
