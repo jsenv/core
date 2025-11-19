@@ -740,6 +740,7 @@ export const createUITransitionController = (
     // 1. move target slot to previous
     moveConfigurationIntoSlot(targetSlotConfiguration, previousTargetSlot);
     targetSlotConfiguration = toConfiguration;
+    applySlotConfigurationEffects(targetSlot);
     // 2. move outgoing slot to previous
     moveConfigurationIntoSlot(outgoingSlotConfiguration, previousOutgoingSlot);
     moveConfigurationIntoSlot(UNSET, outgoingSlot);
@@ -765,6 +766,7 @@ export const createUITransitionController = (
     // 1. Move target slot to outgoing
     moveConfigurationIntoSlot(targetSlotConfiguration, outgoingSlot);
     targetSlotConfiguration = toConfiguration;
+    applySlotConfigurationEffects(targetSlot);
 
     const transitions = [
       ...morphContainerIntoTarget(),
@@ -821,7 +823,6 @@ export const createUITransitionController = (
     }
 
     const fromConfiguration = targetSlotConfiguration;
-    debugger;
     const toConfiguration = detectConfiguration(targetSlot, {
       contentPhase,
       contentId,
@@ -829,7 +830,6 @@ export const createUITransitionController = (
     if (hasDebugLogs) {
       console.group(`transitionTo(${toConfiguration.contentId})`);
     }
-    applySlotConfigurationEffects(targetSlot);
     if (isSameConfiguration(fromConfiguration, toConfiguration)) {
       debugDetection(`ignored (already in desired state)`);
       if (hasDebugLogs) {
