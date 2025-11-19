@@ -570,7 +570,7 @@ export const createUITransitionController = (
 
   let isTransitioning = false;
   let transitionType = "none";
-  const transitionController = createGroupTransitionController({
+  const groupTransitionOptions = {
     // debugBreakpoints: [0.25],
     pauseBreakpoints,
     lifecycle: {
@@ -589,7 +589,10 @@ export const createUITransitionController = (
         };
       },
     },
-  });
+  };
+  const transitionController = createGroupTransitionController(
+    groupTransitionOptions,
+  );
 
   const morphContainerIntoTarget = () => {
     const fromWidth = containerWidth || 0;
@@ -895,5 +898,8 @@ export const createUITransitionController = (
     setDuration,
     setAlignment,
     updateAlignment,
+    setPauseBreakpoints: (value) => {
+      groupTransitionOptions.pauseBreakpoints = value;
+    },
   };
 };

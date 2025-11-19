@@ -472,6 +472,9 @@
         <div class="action-controls">
           <button id="empty-button">Vider la zone</button>
           <button id="reset-button">Reset (état initial)</button>
+          <button id="resume-button" style="display: none">
+            Reprendre la transition
+          </button>
         </div>
       </div>
     </div>
@@ -554,7 +557,7 @@
       };
 
       // Update UI state during transitions
-      function updateUIState({ isTransitioning }) {
+      function updateUIState({ isTransitioning, isPaused }) {
         // Only disable UI elements outside the transition zone
         const rectangles = document.querySelectorAll(
           ".content-items .rectangle, .phase-items .phase",
@@ -562,8 +565,9 @@
         const controls = document.querySelector(".controls-container");
         const emptyButton = document.getElementById("empty-button");
         const resetButton = document.getElementById("reset-button");
+        const resumeButton = document.getElementById("resume-button");
 
-        if (isTransitioning) {
+        if (isTransitioning && !isPaused) {
           rectangles.forEach((rect) => {
             rect.classList.add("disabled");
             rect.style.pointerEvents = "none";
@@ -583,8 +587,40 @@
             resetButton.textContent = "Transition en cours...";
           }
 
+          if (resumeButton) {
+            resumeButton.style.display = "none";
+          }
+
           debug.scaleInfo.textContent =
             "⚠️ Transition en cours - Interface désactivée";
+        } else if (isPaused) {
+          // Transition is paused - enable resume button but keep other controls disabled
+          rectangles.forEach((rect) => {
+            rect.classList.add("disabled");
+            rect.style.pointerEvents = "none";
+          });
+
+          if (controls) {
+            controls.classList.add("controls-disabled");
+          }
+
+          if (emptyButton) {
+            emptyButton.disabled = true;
+            emptyButton.textContent = "Transition en pause...";
+          }
+
+          if (resetButton) {
+            resetButton.disabled = true;
+            resetButton.textContent = "Transition en pause...";
+          }
+
+          if (resumeButton) {
+            resumeButton.style.display = "inline-block";
+            resumeButton.disabled = false;
+          }
+
+          debug.scaleInfo.textContent =
+            "⏸️ Transition en pause - Cliquez pour reprendre";
         } else {
           rectangles.forEach((rect) => {
             rect.classList.remove("disabled");
@@ -603,6 +639,10 @@
           if (resetButton) {
             resetButton.disabled = false;
             resetButton.textContent = "Reset (état initial)";
+          }
+
+          if (resumeButton) {
+            resumeButton.style.display = "none";
           }
 
           debug.scaleInfo.textContent = `Clone utilisé: ${isTransitioning ? "Oui" : "Non"}`;
@@ -702,6 +742,15 @@
               uiTransition.transitionTo(null);
               currentState = "empty";
             }
+          });
+        }
+
+        // Resume button - resumes paused transition
+        const resumeButton = document.getElementById("resume-button");
+        if (resumeButton) {
+          resumeButton.addEventListener("click", () => {
+            console.log("Resuming paused transition");
+            uiTransition.resume();
           });
         }
 
