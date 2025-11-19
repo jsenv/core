@@ -263,6 +263,8 @@
               </Text>
               <Box row contentSpacing="md">
                 <Box
+                  column
+                  contentAlignX="end"
                   style={{
                     border: "1px solid #e0e0e0",
                     borderRadius: "8px",
@@ -273,10 +275,13 @@
                   <BadgeCount background="#4caf50" color="white" alignX="start">
                     3
                   </BadgeCount>
-                  <Text>Nouveaux messages</Text>
+                  Nouveaux messages
                 </Box>
 
                 <Box
+                  column
+                  contentAlignX="start"
+                  contentAlignY="center"
                   style={{
                     border: "1px solid #e0e0e0",
                     borderRadius: "8px",
@@ -284,15 +289,10 @@
                     width: "350px",
                   }}
                 >
-                  <BadgeCount
-                    background="#ff9800"
-                    color="white"
-                    alignX="start"
-                    size="xs"
-                  >
+                  <BadgeCount background="#ff9800" color="white" size="xs">
                     12
                   </BadgeCount>
-                  <Text>Tâches en attente</Text>
+                  <Text alignX="end">Tâches en attente</Text>
                 </Box>
               </Box>
             </div>
@@ -317,10 +317,12 @@
                     width: "300px",
                   }}
                 >
-                  <Text>Messages</Text>
-                  <BadgeCount background="#1976d2" color="white" alignX="end">
-                    8
-                  </BadgeCount>
+                  <Text>
+                    Messages
+                    <BadgeCount background="#1976d2" color="white" alignX="end">
+                      8
+                    </BadgeCount>
+                  </Text>
                 </Box>
 
                 <Box
@@ -331,15 +333,17 @@
                     width: "350px",
                   }}
                 >
-                  <Text>Alertes</Text>
-                  <BadgeCount
-                    background="#d32f2f"
-                    color="white"
-                    alignX="end"
-                    size="xs"
-                  >
-                    25
-                  </BadgeCount>
+                  <Text>
+                    Alertes
+                    <BadgeCount
+                      background="#d32f2f"
+                      color="white"
+                      alignX="end"
+                      size="xs"
+                    >
+                      25
+                    </BadgeCount>
+                  </Text>
                 </Box>
               </Box>
             </div>
