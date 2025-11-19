@@ -688,10 +688,12 @@ export const createUITransitionController = (
       },
     });
     morphTransitions.push(widthTransition, heightTransition);
+    const toBackground = targetSlotConfiguration.background;
     const backgroundTransition = createBackgroundTransition(
       container,
-      targetSlotConfiguration.background,
+      toBackground,
       {
+        from: previousTargetSlotConfiguration.background,
         duration,
         styleSynchronizer: "inline_style",
         onUpdate: () => {},

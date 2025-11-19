@@ -472,7 +472,7 @@
         <div class="action-controls">
           <button id="empty-button">Vider la zone</button>
           <button id="reset-button">Reset (état initial)</button>
-          <button id="resume-button" style="display: none">
+          <button id="resume-button" onclick="window.resumeTransitions?.()">
             Reprendre la transition
           </button>
         </div>
@@ -557,7 +557,7 @@
       };
 
       // Update UI state during transitions
-      function updateUIState({ isTransitioning, isPaused }) {
+      function updateUIState({ isTransitioning }) {
         // Only disable UI elements outside the transition zone
         const rectangles = document.querySelectorAll(
           ".content-items .rectangle, .phase-items .phase",
@@ -567,7 +567,7 @@
         const resetButton = document.getElementById("reset-button");
         const resumeButton = document.getElementById("resume-button");
 
-        if (isTransitioning && !isPaused) {
+        if (isTransitioning) {
           rectangles.forEach((rect) => {
             rect.classList.add("disabled");
             rect.style.pointerEvents = "none";
@@ -575,6 +575,12 @@
 
           if (controls) {
             controls.classList.add("controls-disabled");
+          }
+
+          // Keep resume button always enabled
+          if (resumeButton) {
+            resumeButton.style.pointerEvents = "auto";
+            resumeButton.disabled = false;
           }
 
           if (emptyButton) {
@@ -587,40 +593,8 @@
             resetButton.textContent = "Transition en cours...";
           }
 
-          if (resumeButton) {
-            resumeButton.style.display = "none";
-          }
-
           debug.scaleInfo.textContent =
             "⚠️ Transition en cours - Interface désactivée";
-        } else if (isPaused) {
-          // Transition is paused - enable resume button but keep other controls disabled
-          rectangles.forEach((rect) => {
-            rect.classList.add("disabled");
-            rect.style.pointerEvents = "none";
-          });
-
-          if (controls) {
-            controls.classList.add("controls-disabled");
-          }
-
-          if (emptyButton) {
-            emptyButton.disabled = true;
-            emptyButton.textContent = "Transition en pause...";
-          }
-
-          if (resetButton) {
-            resetButton.disabled = true;
-            resetButton.textContent = "Transition en pause...";
-          }
-
-          if (resumeButton) {
-            resumeButton.style.display = "inline-block";
-            resumeButton.disabled = false;
-          }
-
-          debug.scaleInfo.textContent =
-            "⏸️ Transition en pause - Cliquez pour reprendre";
         } else {
           rectangles.forEach((rect) => {
             rect.classList.remove("disabled");
@@ -639,10 +613,6 @@
           if (resetButton) {
             resetButton.disabled = false;
             resetButton.textContent = "Reset (état initial)";
-          }
-
-          if (resumeButton) {
-            resumeButton.style.display = "none";
           }
 
           debug.scaleInfo.textContent = `Clone utilisé: ${isTransitioning ? "Oui" : "Non"}`;
@@ -745,15 +715,6 @@
           });
         }
 
-        // Resume button - resumes paused transition
-        const resumeButton = document.getElementById("resume-button");
-        if (resumeButton) {
-          resumeButton.addEventListener("click", () => {
-            console.log("Resuming paused transition");
-            uiTransition.resume();
-          });
-        }
-
         // Duration control
         const durationSlider = document.getElementById("duration-slider");
         const durationValue = document.getElementById("duration-value");
@@ -811,7 +772,7 @@
             savePreferences(prefs);
 
             // Update UI transition controller with new pause setting
-            uiTransition.setPauseBreakpoints(e.target.checked ? ["50%"] : []);
+            uiTransition.setPauseBreakpoints(e.target.checked ? [0.5] : []);
 
             console.log(
               `Pause at middle: ${e.target.checked ? "enabled" : "disabled"}`,
