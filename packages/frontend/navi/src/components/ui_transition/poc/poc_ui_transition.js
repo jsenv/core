@@ -128,8 +128,8 @@ import.meta.css = /* css */ `
     /* in case CSS sets border on this element his size must include borders */
     box-sizing: border-box;
     /* max-width/max-height saves use from content going outside parent boundaries by flexbox positioning */
-    max-width: 100%;
-    max-height: 100%;
+    /* max-width: 100%; */
+    /* max-height: 100%; */
   }
 
   .ui_transition[data-transitioning] .ui_transition_container {
@@ -764,11 +764,11 @@ export const createUITransitionController = (
 
       // Pause at 80% progress
       setTimeout(() => {
-        clipAnimation.pause();
-        window.pausedTransitions.add(clipAnimation);
-        console.debug(
-          "Transition paused at 80% - call window.resumeTransitions() to continue",
-        );
+        // clipAnimation.pause();
+        // window.pausedTransitions.add(clipAnimation);
+        // console.debug(
+        //   "Transition paused at 80% - call window.resumeTransitions() to continue",
+        // );
       }, duration * 0.8);
 
       // Handle finish
