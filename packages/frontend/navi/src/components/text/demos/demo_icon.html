@@ -35,6 +35,8 @@
               6. Line Height Variations
             </Link>
             <Link href="#icon-positioning">7. Icon Positioning</Link>
+            <Link href="#icon-transformation">8. Icon Transformation</Link>
+            <Link href="#icon-dimensions">9. Icon Dimensions</Link>
           </Box>
         </Box>
       );
@@ -760,6 +762,162 @@
         </svg>
       );
 
+      // Demo icons from original file
+      const TriangleSvg = () => (
+        <svg viewBox="0 0 24 24">
+          <path
+            fill="#4caf50"
+            stroke="#388e3c"
+            strokeWidth="1"
+            d="M12 2 L22 20 L2 20 Z"
+          />
+        </svg>
+      );
+
+      const ArrowSvg = () => (
+        <svg viewBox="0 0 24 24">
+          <path
+            fill="#2196f3"
+            stroke="#1976d2"
+            strokeWidth="2"
+            d="M12 2 L20 10 L16 10 L16 18 L20 18 L12 22 L4 18 L8 18 L8 10 L4 10 Z"
+          />
+          <circle cx="12" cy="6" r="1.5" fill="#ff5722" />
+        </svg>
+      );
+
+      const HorizontalRectSvg = () => (
+        <svg viewBox="0 0 32 16">
+          <rect
+            fill="#9c27b0"
+            stroke="#7b1fa2"
+            strokeWidth="2"
+            x="2"
+            y="2"
+            width="28"
+            height="12"
+            rx="2"
+          />
+          <text x="16" y="10" textAnchor="middle" fontSize="6" fill="white">
+            WIDE
+          </text>
+        </svg>
+      );
+
+      const VerticalRectSvg = () => (
+        <svg viewBox="0 0 16 32">
+          <rect
+            fill="#ff9800"
+            stroke="#f57c00"
+            strokeWidth="2"
+            x="2"
+            y="2"
+            width="12"
+            height="28"
+            rx="2"
+          />
+          <text x="8" y="17" textAnchor="middle" fontSize="6" fill="white">
+            TALL
+          </text>
+        </svg>
+      );
+
+      // Icon Transformation Section
+      const IconTransformationSection = () => (
+        <Box as="section" marginBottom="xl" id="icon-transformation">
+          <Title as="h2">Icon Transformation</Title>
+          <Box column contentSpacing="lg">
+            <div>
+              <Text
+                style={{
+                  fontSize: "14px",
+                  fontWeight: "bold",
+                  color: "#333",
+                  marginBottom: "8px",
+                  display: "block",
+                }}
+              >
+                Rotation Examples
+              </Text>
+              <Box
+                row
+                contentSpacing="lg"
+                alignItems="center"
+                justifyContent="center"
+                style={{
+                  padding: "20px",
+                  backgroundColor: "#f5f5f5",
+                  borderRadius: "8px",
+                  border: "1px solid #ddd",
+                }}
+              >
+                <div style={{ textAlign: "center", position: "relative" }}>
+                  <Text
+                    style={{
+                      fontSize: "12px",
+                      color: "#666",
+                      display: "block",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    rotate="45deg"
+                  </Text>
+                  {/* Ghost icon showing original position */}
+                  <Icon
+                    style={{
+                      position: "absolute",
+                      opacity: 0.3,
+                      filter: "grayscale(100%)",
+                    }}
+                  >
+                    <TriangleSvg />
+                  </Icon>
+                  <Icon rotate="45deg">
+                    <TriangleSvg />
+                  </Icon>
+                </div>
+
+                <div style={{ textAlign: "center", position: "relative" }}>
+                  <Text
+                    style={{
+                      fontSize: "12px",
+                      color: "#666",
+                      display: "block",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    translate="10"
+                  </Text>
+                  {/* Ghost icon showing original position */}
+                  <Icon
+                    style={{
+                      position: "absolute",
+                      opacity: 0.3,
+                      filter: "grayscale(100%)",
+                    }}
+                  >
+                    <ArrowSvg />
+                  </Icon>
+                  <Icon translate="10">
+                    <ArrowSvg />
+                  </Icon>
+                </div>
+              </Box>
+              <Text
+                style={{
+                  fontSize: "14px",
+                  color: "#666",
+                  fontStyle: "italic",
+                  marginTop: "8px",
+                }}
+              >
+                Gray icons show the original position before transformation.
+              </Text>
+            </div>
+          </Box>
+        </Box>
+      );
+
       const Demo = () => {
         return (
           <div
@@ -780,14 +938,7 @@
             <ContainerWidthsSection />
             <LineHeightVariationsSection />
             <IconPositioningSection />
-            <IconHrefSection />
-            <IconTransformSection />
-            <IconDimensionsSection />
-            <IconHrefSection />
-            <IconTransformSection />
-            <IconDimensionsSection />
-            <IconHrefSection />
-            <IconTransformSection />
+            <IconTransformationSection />
             <IconDimensionsSection />
           </div>
         );
