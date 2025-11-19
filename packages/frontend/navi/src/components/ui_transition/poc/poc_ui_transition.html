@@ -460,6 +460,11 @@
               <input type="checkbox" id="initial-content-checkbox" checked />
               <span>Démarrer avec contenu initial</span>
             </label>
+
+            <label class="align-control">
+              <input type="checkbox" id="pause-middle-checkbox" />
+              <span>Pauser au milieu de la transition</span>
+            </label>
           </div>
         </div>
 
@@ -499,6 +504,7 @@
                 prefs.hasInitialContent !== undefined
                   ? prefs.hasInitialContent
                   : true,
+              pauseAtMiddle: prefs.pauseAtMiddle || false,
             };
           }
         } catch (e) {
@@ -509,6 +515,7 @@
           alignX: "center",
           alignY: "center",
           hasInitialContent: true,
+          pauseAtMiddle: false,
         };
       }
 
@@ -534,6 +541,7 @@
           alignX: savedPrefs.alignX,
           alignY: savedPrefs.alignY,
           onStateChange: updateUIState,
+          pauseBreakpoints: savedPrefs.pauseAtMiddle ? [0.5] : [],
         },
       );
 
@@ -736,6 +744,29 @@
               ? alignXSelect.value
               : savedPrefs.alignX;
             applyAlignment(currentX, e.target.value);
+          });
+        }
+
+        // Pause at middle checkbox
+        const pauseMiddleCheckbox = document.getElementById(
+          "pause-middle-checkbox",
+        );
+        if (pauseMiddleCheckbox) {
+          pauseMiddleCheckbox.checked = savedPrefs.pauseAtMiddle;
+
+          pauseMiddleCheckbox.addEventListener("change", (e) => {
+            const prefs = {
+              ...loadPreferences(),
+              pauseAtMiddle: e.target.checked,
+            };
+            savePreferences(prefs);
+
+            // Update UI transition controller with new pause setting
+            uiTransition.setPauseBreakpoints(e.target.checked ? ["50%"] : []);
+
+            console.log(
+              `Pause at middle: ${e.target.checked ? "enabled" : "disabled"}`,
+            );
           });
         }
 
