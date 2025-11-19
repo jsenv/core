@@ -287,27 +287,21 @@ export const normalizeStyle = (
       }
       // If code does border: { width: 2, style: "solid", color: "red" }
       // we want to normalize each part
-      if (
-        typeof value === "object" &&
-        value !== null &&
-        !Array.isArray(value)
-      ) {
-        const borderNormalized = {};
-        for (const key of Object.keys(value)) {
-          const partValue = normalizeStyle(
-            value[key],
-            `border${key.charAt(0).toUpperCase() + key.slice(1)}`,
-            context,
-            element,
-          );
-          borderNormalized[key] = partValue;
-        }
+      if (value === null) {
+        return null;
+      }
+      if (typeof value === "object") {
+        const { width, style, color } = value;
+        const borderNormalized = {
+          width: normalizeStyle(width, "borderWidth", context, element),
+          style: normalizeStyle(style, "borderStyle", context, element),
+          color: normalizeStyle(color, "borderColor", context, element),
+        };
         return borderNormalized;
       }
       return value;
     }
-    if (typeof value === "object" && value !== null && !Array.isArray(value)) {
-      // For CSS context, ensure border is a string
+    if (typeof value !== "string") {
       return stringifyCSSBorder(value);
     }
     return value;
