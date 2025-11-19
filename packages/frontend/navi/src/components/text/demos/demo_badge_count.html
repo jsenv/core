@@ -39,14 +39,14 @@
                 <Link href="#line-heights">
                   2. Comportement avec différents line-heights
                 </Link>
+                <Link href="#integration-composants">
+                  3. Intégration dans différents composants
+                </Link>
                 <Link href="#nowrap">
-                  3. Association texte + badge (pas de coupure)
+                  4. Association texte + badge (pas de coupure)
                 </Link>
                 <Link href="#nombres-max">
-                  4. Compteurs avec nombres élevés et paramètre max
-                </Link>
-                <Link href="#integration-composants">
-                  5. Intégration dans différents composants
+                  5. Compteurs avec nombres élevés et paramètre max
                 </Link>
                 <Link href="#best-practices">6. Best Practices</Link>
               </Box>
@@ -180,182 +180,22 @@
               </Box>
             </Box>
 
-            {/* Association texte + badge avec noWrap */}
-            <Box as="section" marginBottom="xl" id="nowrap">
-              <Title as="h2">Association texte + badge (pas de coupure)</Title>
-              <Box column contentSpacing="lg">
-                <div>
-                  <Title as="h3" size="18">
-                    Garder le mot et son compteur ensemble
-                  </Title>
-
-                  <Box marginBottom="md">
-                    <Text
-                      style={{
-                        fontSize: "14px",
-                        color: "#666",
-                        fontStyle: "italic",
-                      }}
-                    >
-                      Utilisez noWrap sur le composant Text qui contient le mot
-                      + badge pour éviter qu'ils se séparent lors d'un retour à
-                      la ligne.
-                    </Text>
-                  </Box>
-
-                  <Box column contentSpacing="md">
-                    <div>
-                      <Title
-                        as="h4"
-                        size="16"
-                        style={{ color: "#d32f2f", marginBottom: "8px" }}
-                      >
-                        ❌ Sans noWrap : le badge peut se séparer du mot
-                      </Title>
-                      <Box
-                        style={{
-                          border: "1px solid #ffcdd2",
-                          borderRadius: "8px",
-                          padding: "16px",
-                          backgroundColor: "#ffeaea",
-                          width: "200px",
-                        }}
-                      >
-                        <Paragraph>
-                          Consultez vos messages
-                          <BadgeCount background="#1976d2" color="white">
-                            156
-                          </BadgeCount>
-                          et répondez rapidement.
-                        </Paragraph>
-                      </Box>
-                    </div>
-
-                    <div>
-                      <Title
-                        as="h4"
-                        size="16"
-                        style={{ color: "#2e7d32", marginBottom: "8px" }}
-                      >
-                        ✅ Avec noWrap : le mot et son badge restent ensemble
-                      </Title>
-                      <Box
-                        style={{
-                          border: "1px solid #c8e6c9",
-                          borderRadius: "8px",
-                          padding: "16px",
-                          backgroundColor: "#e8f5e8",
-                          width: "200px",
-                        }}
-                      >
-                        <Paragraph>
-                          Consultez vos{" "}
-                          <Text noWrap>
-                            messages
-                            <BadgeCount background="#1976d2" color="white">
-                              156
-                            </BadgeCount>
-                          </Text>{" "}
-                          et répondez rapidement.
-                        </Paragraph>
-                      </Box>
-                    </div>
-                  </Box>
-                </div>
-              </Box>
-            </Box>
-
-            {/* Nombres élevés et max */}
-            <Box as="section" marginBottom="xl" id="nombres-max">
-              <Title as="h2">
-                Compteurs avec nombres élevés et paramètre max
-              </Title>
-              <Box column contentSpacing="lg">
-                <div>
-                  <Title as="h3" size="18">
-                    Nombres élevés
-                  </Title>
-                  <Box row contentSpacing="md">
-                    <Text>
-                      Abonnés YouTube
-                      <BadgeCount
-                        background="#f5f5f5"
-                        color="#424242"
-                        borderRadius="16px"
-                        border="1px solid #e0e0e0"
-                        size="lg"
-                      >
-                        1250
-                      </BadgeCount>
-                    </Text>
-
-                    <Text>
-                      Points fidélité
-                      <BadgeCount
-                        background="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-                        color="white"
-                        borderRadius="16px"
-                        size="lg"
-                      >
-                        8700
-                      </BadgeCount>
-                    </Text>
-                  </Box>
-                </div>
-
-                <div>
-                  <Title as="h3" size="18">
-                    Avec limite max
-                  </Title>
-                  <Box row contentSpacing="md">
-                    <Text>
-                      Messages (max=99)
-                      <BadgeCount background="#d32f2f" color="white" max={99}>
-                        150
-                      </BadgeCount>
-                    </Text>
-
-                    <Text>
-                      Notifications (max=9)
-                      <BadgeCount background="#1976d2" color="white" max={9}>
-                        15
-                      </BadgeCount>
-                    </Text>
-                  </Box>
-                  <Box marginTop="md">
-                    <Text
-                      style={{
-                        fontSize: "14px",
-                        color: "#666",
-                        fontStyle: "italic",
-                      }}
-                    >
-                      Quand la valeur dépasse le paramètre max, on affiche
-                      "max+" au lieu de la vraie valeur.
-                    </Text>
-                  </Box>
-                </div>
-              </Box>
-            </Box>
-
             {/* Intégration dans différents composants */}
             <Box as="section" marginBottom="xl" id="integration-composants">
               <Title as="h2">Intégration dans différents composants</Title>
               <Box row contentSpacing="lg">
                 <div>
-                  <Title as="h3" size="18">
-                    Exemples d'intégration
-                  </Title>
                   <Box row contentSpacing="md">
                     <div>
                       <Text
                         style={{
-                          fontSize: "14px",
+                          fontSize: "12px",
                           color: "#666",
-                          marginBottom: "8px",
+                          marginBottom: "4px",
+                          display: "block",
                         }}
                       >
-                        Avec Text :
+                        Avec Text
                       </Text>
                       <Text>
                         Notifications
@@ -368,12 +208,13 @@
                     <div>
                       <Text
                         style={{
-                          fontSize: "14px",
+                          fontSize: "12px",
                           color: "#666",
-                          marginBottom: "8px",
+                          marginBottom: "4px",
+                          display: "block",
                         }}
                       >
-                        Avec Paragraph :
+                        Avec Paragraph
                       </Text>
                       <Paragraph>
                         Vos messages
@@ -391,12 +232,13 @@
                     <div>
                       <Text
                         style={{
-                          fontSize: "14px",
+                          fontSize: "12px",
                           color: "#666",
-                          marginBottom: "8px",
+                          marginBottom: "4px",
+                          display: "block",
                         }}
                       >
-                        Avec Link :
+                        Avec Link
                       </Text>
                       <Link href="#" underline={false}>
                         <Text underline>Voir les alertes</Text>
@@ -409,41 +251,18 @@
                     <div>
                       <Text
                         style={{
-                          fontSize: "14px",
+                          fontSize: "12px",
                           color: "#666",
-                          marginBottom: "8px",
+                          marginBottom: "4px",
+                          display: "block",
                         }}
                       >
-                        Avec Button :
+                        Avec Button
                       </Text>
                       <Button>
                         Tâches
                         <BadgeCount background="#2196f3" color="white">
                           5
-                        </BadgeCount>
-                      </Button>
-                    </div>
-
-                    <div>
-                      <Text
-                        style={{
-                          fontSize: "14px",
-                          color: "#666",
-                          marginBottom: "8px",
-                        }}
-                      >
-                        Avec Button plus grand :
-                      </Text>
-                      <Button
-                        style={{
-                          lineHeight: "2.5",
-                          padding: "16px 24px",
-                          fontSize: "16px",
-                        }}
-                      >
-                        Gérer les tâches
-                        <BadgeCount background="#388e3c" color="white">
-                          12
                         </BadgeCount>
                       </Button>
                     </div>
@@ -495,16 +314,146 @@
                   <Box marginTop="md">
                     <Text
                       style={{
-                        fontSize: "14px",
+                        fontSize: "12px",
                         color: "#666",
                         fontStyle: "italic",
                       }}
                     >
                       Avec alignX="end", le badge se positionne à droite du
-                      conteneur, même quand le texte est court.
+                      conteneur.
                     </Text>
                   </Box>
                 </div>
+              </Box>
+            </Box>
+
+            {/* Association texte + badge avec noWrap */}
+            <Box as="section" marginBottom="xl" id="nowrap">
+              <Title as="h2">Association texte + badge (pas de coupure)</Title>
+              <Box column contentSpacing="md">
+                <div>
+                  <Text
+                    style={{
+                      fontSize: "12px",
+                      color: "#d32f2f",
+                      marginBottom: "4px",
+                      display: "block",
+                    }}
+                  >
+                    ❌ Sans noWrap : le badge peut se séparer du mot
+                  </Text>
+                  <Box
+                    style={{
+                      border: "1px solid #ffcdd2",
+                      borderRadius: "8px",
+                      padding: "12px",
+                      backgroundColor: "#ffeaea",
+                      width: "200px",
+                    }}
+                  >
+                    <Paragraph>
+                      Consultez vos messages
+                      <BadgeCount background="#1976d2" color="white">
+                        156
+                      </BadgeCount>
+                      et répondez rapidement.
+                    </Paragraph>
+                  </Box>
+                </div>
+
+                <div>
+                  <Text
+                    style={{
+                      fontSize: "12px",
+                      color: "#2e7d32",
+                      marginBottom: "4px",
+                      display: "block",
+                    }}
+                  >
+                    ✅ Avec noWrap : le mot et son badge restent ensemble
+                  </Text>
+                  <Box
+                    style={{
+                      border: "1px solid #c8e6c9",
+                      borderRadius: "8px",
+                      padding: "12px",
+                      backgroundColor: "#e8f5e8",
+                      width: "200px",
+                    }}
+                  >
+                    <Paragraph>
+                      Consultez vos{" "}
+                      <Text noWrap>
+                        messages
+                        <BadgeCount background="#1976d2" color="white">
+                          156
+                        </BadgeCount>
+                      </Text>{" "}
+                      et répondez rapidement.
+                    </Paragraph>
+                  </Box>
+                </div>
+              </Box>
+            </Box>
+
+            {/* Nombres élevés et max */}
+            <Box as="section" marginBottom="xl" id="nombres-max">
+              <Title as="h2">
+                Compteurs avec nombres élevés et paramètre max
+              </Title>
+              <Box row contentSpacing="lg">
+                <Box row contentSpacing="md">
+                  <Text>
+                    Abonnés YouTube
+                    <BadgeCount
+                      background="#f5f5f5"
+                      color="#424242"
+                      borderRadius="16px"
+                      border="1px solid #e0e0e0"
+                      size="lg"
+                    >
+                      1250
+                    </BadgeCount>
+                  </Text>
+                  <Text>
+                    Points fidélité
+                    <BadgeCount
+                      background="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+                      color="white"
+                      borderRadius="16px"
+                      size="lg"
+                    >
+                      8700
+                    </BadgeCount>
+                  </Text>
+                </Box>
+                <Box row contentSpacing="md">
+                  <Text>
+                    Messages (max=99)
+                    <BadgeCount background="#d32f2f" color="white" max={99}>
+                      150
+                    </BadgeCount>
+                  </Text>
+
+                  <Text>
+                    Notifications (max=9)
+                    <BadgeCount background="#1976d2" color="white" max={9}>
+                      15
+                    </BadgeCount>
+                  </Text>
+                </Box>
+                <Box marginTop="md">
+                  <Text
+                    style={{
+                      fontSize: "14px",
+                      color: "#666",
+                      fontStyle: "italic",
+                    }}
+                  >
+                    Quand la valeur dépasse le paramètre max, on affiche "max+"
+                    au lieu de la vraie valeur.
+                  </Text>
+                </Box>
               </Box>
             </Box>
 
