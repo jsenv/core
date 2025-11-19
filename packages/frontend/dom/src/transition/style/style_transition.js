@@ -181,17 +181,6 @@ const createInstantCSSPropertyTransition = ({ element, value, ...options }) => {
   });
 };
 
-export const createHeightTransition = (element, to, options = {}) => {
-  return createCSSPropertyTransition({
-    ...options,
-    constructor: createHeightTransition,
-    element,
-    styleProperty: "height",
-    getFrom: getHeight,
-    to,
-    minDiff: 10,
-  });
-};
 export const createWidthTransition = (element, to, options = {}) => {
   return createCSSPropertyTransition({
     ...options,
@@ -203,6 +192,18 @@ export const createWidthTransition = (element, to, options = {}) => {
     minDiff: 10,
   });
 };
+export const createHeightTransition = (element, to, options = {}) => {
+  return createCSSPropertyTransition({
+    ...options,
+    constructor: createHeightTransition,
+    element,
+    styleProperty: "height",
+    getFrom: getHeight,
+    to,
+    minDiff: 10,
+  });
+};
+
 export const createOpacityTransition = (element, to, options = {}) => {
   return createCSSPropertyTransition({
     ...options,
