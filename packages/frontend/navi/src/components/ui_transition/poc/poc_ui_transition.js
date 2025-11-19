@@ -764,11 +764,11 @@ export const createUITransitionController = (
 
       // Pause at 80% progress
       setTimeout(() => {
-        // clipAnimation.pause();
-        // window.pausedTransitions.add(clipAnimation);
-        // console.debug(
-        //   "Transition paused at 80% - call window.resumeTransitions() to continue",
-        // );
+        clipAnimation.pause();
+        window.pausedTransitions.add(clipAnimation);
+        console.debug(
+          "Transition paused at 80% - call window.resumeTransitions() to continue",
+        );
       }, duration * 0.8);
 
       // Handle finish
@@ -777,8 +777,8 @@ export const createUITransitionController = (
           // Remove from paused set if completed
           window.pausedTransitions.delete(clipAnimation);
           // let container take natural dimensions now
-          container.style.width = ``;
-          container.style.height = ``;
+          // container.style.width = ``;
+          // container.style.height = ``;
           // Clear clip-path to restore normal behavior
           container.style.clipPath = "";
           clipAnimation.cancel();
