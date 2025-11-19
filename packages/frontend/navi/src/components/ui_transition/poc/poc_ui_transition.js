@@ -686,12 +686,17 @@ export const createUITransitionController = (
       container.style.height = `${toHeight}px`;
       container.style.contain = "paint";
 
+      // https://emilkowal.ski/ui/the-magic-of-clip-path
       // Determine if we're growing or shrinking
       const isGrowing = toWidth >= fromWidth && toHeight >= fromHeight;
       const isShrinking = toWidth <= fromWidth && toHeight <= fromHeight;
 
       let startClipPath;
       let endClipPath;
+
+      // Get viewport dimensions with padding
+      const viewportWidth = window.innerWidth - 40; // 20px padding on each side
+      const viewportHeight = window.innerHeight - 40; // 20px padding on each side
 
       if (isGrowing) {
         // Growing: Start with smaller rectangle, expand to full size
@@ -700,45 +705,55 @@ export const createUITransitionController = (
         const startHeight = fromHeight;
 
         // Center the starting rectangle in the target container
-        const startLeft = (toWidth - startWidth) / 2;
-        const startTop = (toHeight - startHeight) / 2;
+        const startLeft = Math.max(0, (toWidth - startWidth) / 2);
+        const startTop = Math.max(0, (toHeight - startHeight) / 2);
         const startRight = startLeft + startWidth;
         const startBottom = startTop + startHeight;
 
-        // Use pixel values directly
+        // Limit end dimensions to viewport
+        const endWidth = Math.min(toWidth, viewportWidth);
+        const endHeight = Math.min(toHeight, viewportHeight);
+
+        // Use pixel values directly, constrained to viewport
         startClipPath = `polygon(${startLeft}px ${startTop}px, ${startRight}px ${startTop}px, ${startRight}px ${startBottom}px, ${startLeft}px ${startBottom}px)`;
-        endClipPath = `polygon(0px 0px, ${toWidth}px 0px, ${toWidth}px ${toHeight}px, 0px ${toHeight}px)`;
+        endClipPath = `polygon(0px 0px, ${endWidth}px 0px, ${endWidth}px ${endHeight}px, 0px ${endHeight}px)`;
 
         debugSize(
-          `Growing transition: from ${fromWidth}x${fromHeight} to ${toWidth}x${toHeight}`,
+          `Growing transition: from ${fromWidth}x${fromHeight} to ${toWidth}x${toHeight} (limited to ${endWidth}x${endHeight})`,
         );
       } else if (isShrinking) {
         // Shrinking: Start with full size, contract to smaller centered rectangle
-        container.style.width = `${fromWidth}px`;
-        container.style.height = `${fromHeight}px`;
+        // Limit container size to viewport
+        const containerWidth = Math.min(fromWidth, viewportWidth);
+        const containerHeight = Math.min(fromHeight, viewportHeight);
 
-        // Calculate the ending rectangle centered in the source area
+        container.style.width = `${containerWidth}px`;
+        container.style.height = `${containerHeight}px`;
+
+        // Calculate the ending rectangle centered in the constrained container
         const endWidth = toWidth;
         const endHeight = toHeight;
 
-        const endLeft = (fromWidth - endWidth) / 2;
-        const endTop = (fromHeight - endHeight) / 2;
+        const endLeft = Math.max(0, (containerWidth - endWidth) / 2);
+        const endTop = Math.max(0, (containerHeight - endHeight) / 2);
         const endRight = endLeft + endWidth;
         const endBottom = endTop + endHeight;
 
-        // Use pixel values directly
-        startClipPath = `polygon(0px 0px, ${fromWidth}px 0px, ${fromWidth}px ${fromHeight}px, 0px ${fromHeight}px)`;
+        // Use pixel values directly, relative to constrained container
+        startClipPath = `polygon(0px 0px, ${containerWidth}px 0px, ${containerWidth}px ${containerHeight}px, 0px ${containerHeight}px)`;
         endClipPath = `polygon(${endLeft}px ${endTop}px, ${endRight}px ${endTop}px, ${endRight}px ${endBottom}px, ${endLeft}px ${endBottom}px)`;
 
         debugSize(
-          `Shrinking transition: from ${fromWidth}x${fromHeight} to ${toWidth}x${toHeight}`,
+          `Shrinking transition: from ${fromWidth}x${fromHeight} to ${toWidth}x${toHeight} (container limited to ${containerWidth}x${containerHeight})`,
         );
       } else {
         // Mixed case (width grows, height shrinks or vice versa) - use simpler approach
-        startClipPath = `polygon(0px 0px, ${toWidth}px 0px, ${toWidth}px ${toHeight}px, 0px ${toHeight}px)`;
-        endClipPath = `polygon(0px 0px, ${toWidth}px 0px, ${toWidth}px ${toHeight}px, 0px ${toHeight}px)`;
+        const mixedWidth = Math.min(toWidth, viewportWidth);
+        const mixedHeight = Math.min(toHeight, viewportHeight);
+        startClipPath = `polygon(0px 0px, ${mixedWidth}px 0px, ${mixedWidth}px ${mixedHeight}px, 0px ${mixedHeight}px)`;
+        endClipPath = `polygon(0px 0px, ${mixedWidth}px 0px, ${mixedWidth}px ${mixedHeight}px, 0px ${mixedHeight}px)`;
         debugSize(
-          `Mixed transition: from ${fromWidth}x${fromHeight} to ${toWidth}x${toHeight} - no clip effect`,
+          `Mixed transition: from ${fromWidth}x${fromHeight} to ${toWidth}x${toHeight} (limited to ${mixedWidth}x${mixedHeight}) - no clip effect`,
         );
       }
 
