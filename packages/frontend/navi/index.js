@@ -84,19 +84,20 @@ export { Tab, TabList } from "./src/components/tablist/tablist.jsx";
 export { UITransition } from "./src/components/ui_transition/ui_transition.jsx";
 export { useSignalSync } from "./src/components/use_signal_sync.js";
 // Text and icons
+// Link can be used to wrap other things than text BUT it's most of the time used to wrap text
+// So they naturally belong to text stuff
 export { FontSizedSvg } from "./src/components/svg/font_sized_svg.jsx";
 export { IconAndText } from "./src/components/svg/icon_and_text.jsx";
 export { SVGMaskOverlay } from "./src/components/svg/svg_mask_overlay.jsx";
 export { Count } from "./src/components/text/badge.jsx";
-export { Image } from "./src/components/text/image.jsx";
-// Link can be used to wrap other things than text BUT it's most of the time used to wrap text
-// So they naturally belong to text stuff
 export { Code } from "./src/components/text/code.jsx";
+export { Image } from "./src/components/text/image.jsx";
 export { Link } from "./src/components/text/link.jsx";
 export { LinkWithIcon } from "./src/components/text/link_with_icon.jsx";
 export { MessageBox } from "./src/components/text/message_box.jsx";
 export { Svg } from "./src/components/text/svg.jsx";
 export {
+  BadgeCount,
   CharSlot,
   Icon,
   Paragraph,

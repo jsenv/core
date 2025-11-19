@@ -59,6 +59,10 @@ import.meta.css = /* css */ `
     width: auto;
     height: 100%;
   }
+
+  .navi_badge_count {
+    justify-content: center;
+  }
 `;
 
 const OverflowPinnedElementContext = createContext(null);
@@ -126,6 +130,7 @@ const TextBasic = ({
   as = "span",
   foregroundColor,
   foregroundElement,
+  foregroundElementProps,
   contentSpacing = " ",
   children,
   ...rest
@@ -141,12 +146,13 @@ const TextBasic = ({
       {applyContentSpacingOnTextChildren(children, contentSpacing)}
       {/* https://jsfiddle.net/v5xzJ/4/ */}
       {hasForeground && (
-        <span
+        <Text
           className="navi_text_foreground"
           style={{ backgroundColor: foregroundColor }}
+          {...foregroundElementProps}
         >
           {foregroundElement}
-        </span>
+        </Text>
       )}
     </Box>
   );
@@ -214,6 +220,37 @@ export const Icon = ({ href, children, ...props }) => {
     <CharSlot decorative {...props}>
       <span className="navi_icon_char">{innerChildren}</span>
     </CharSlot>
+  );
+};
+
+export const BadgeCount = ({ children, background, color, ...props }) => {
+  // je crois qu'on devrait utiliser le visualSelector ici pour obtenir background par ex
+  return (
+    <Text
+      className="navi_badge"
+      bold
+      padding="0.45em"
+      {...props}
+      foregroundElement={
+        <Text
+          box
+          borderRadius="1em"
+          background={background}
+          color={color}
+          height="1.5em"
+          minWidth="1.5em"
+          width="100%"
+          contentAlignX="center"
+          contentAlignY="center"
+        >
+          {children}
+        </Text>
+      }
+    >
+      <span className="navi_char_slot_invisible" aria-hidden="true">
+        {children}
+      </span>
+    </Text>
   );
 };
 

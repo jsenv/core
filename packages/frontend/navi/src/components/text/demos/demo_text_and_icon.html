@@ -9,8 +9,8 @@
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      /* eslint-disable no-unused-vars */
       import {
+        BadgeCount,
         Text,
         Paragraph,
         Icon,
@@ -550,6 +550,250 @@
                     Rate this
                   </Text>
                 </button>
+              </Box>
+            </Box>
+
+            <Box as="section" marginBottom="xl">
+              <Title as="h2">Text avec Compteur</Title>
+
+              <Box row contentSpacing="lg">
+                <div>
+                  <Title as="h3" size="18">
+                    Exemples de base
+                  </Title>
+                  <Box row contentSpacing="md">
+                    <Text>
+                      Messages non lus
+                      <BadgeCount background="red" color="white">
+                        5
+                      </BadgeCount>
+                    </Text>
+
+                    <Text>
+                      Notifications en attente
+                      <BadgeCount
+                        background="#ffebee"
+                        color="#d32f2f"
+                        size="xs"
+                      >
+                        120
+                      </BadgeCount>
+                    </Text>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "8px 0",
+                      }}
+                    >
+                      <Text>Tâches à faire</Text>
+                      <div
+                        style={{
+                          backgroundColor: "#e8f5e8",
+                          color: "#2e7d32",
+                          borderRadius: "50%",
+                          minWidth: "32px",
+                          height: "32px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "16px",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        3
+                      </div>
+                    </div>
+                  </Box>
+                </div>
+
+                <div>
+                  <Title as="h3" size="18">
+                    Compteurs avec badges colorés
+                  </Title>
+                  <Box column contentSpacing="md">
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "8px 0",
+                      }}
+                    >
+                      <Text>Erreurs critiques</Text>
+                      <div
+                        style={{
+                          backgroundColor: "#f44336",
+                          color: "white",
+                          borderRadius: "12px",
+                          minWidth: "24px",
+                          height: "24px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "12px",
+                          fontWeight: "bold",
+                          padding: "0 8px",
+                        }}
+                      >
+                        2
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "8px 0",
+                      }}
+                    >
+                      <Text>Avertissements</Text>
+                      <div
+                        style={{
+                          backgroundColor: "#ff9800",
+                          color: "white",
+                          borderRadius: "12px",
+                          minWidth: "24px",
+                          height: "24px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "12px",
+                          fontWeight: "bold",
+                          padding: "0 8px",
+                        }}
+                      >
+                        7
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "8px 0",
+                      }}
+                    >
+                      <Text>Réussites</Text>
+                      <div
+                        style={{
+                          backgroundColor: "#4caf50",
+                          color: "white",
+                          borderRadius: "12px",
+                          minWidth: "24px",
+                          height: "24px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "12px",
+                          fontWeight: "bold",
+                          padding: "0 8px",
+                        }}
+                      >
+                        15
+                      </div>
+                    </div>
+                  </Box>
+                </div>
+
+                <div>
+                  <Title as="h3" size="18">
+                    Compteurs avec nombres élevés
+                  </Title>
+                  <Box column contentSpacing="md">
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "8px 0",
+                      }}
+                    >
+                      <Text>Abonnés sur YouTube</Text>
+                      <div
+                        style={{
+                          backgroundColor: "#f5f5f5",
+                          color: "#424242",
+                          borderRadius: "16px",
+                          minWidth: "32px",
+                          height: "32px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "14px",
+                          fontWeight: "bold",
+                          padding: "0 12px",
+                          border: "1px solid #e0e0e0",
+                        }}
+                      >
+                        1.2K
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "8px 0",
+                      }}
+                    >
+                      <Text>Vues totales</Text>
+                      <div
+                        style={{
+                          backgroundColor: "#3f51b5",
+                          color: "white",
+                          borderRadius: "16px",
+                          minWidth: "32px",
+                          height: "32px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "14px",
+                          fontWeight: "bold",
+                          padding: "0 12px",
+                        }}
+                      >
+                        99+
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "8px 0",
+                      }}
+                    >
+                      <Text>Points de fidélité</Text>
+                      <div
+                        style={{
+                          backgroundColor:
+                            "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                          background:
+                            "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                          color: "white",
+                          borderRadius: "16px",
+                          minWidth: "32px",
+                          height: "32px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "14px",
+                          fontWeight: "bold",
+                          padding: "0 12px",
+                        }}
+                      >
+                        8.7K
+                      </div>
+                    </div>
+                  </Box>
+                </div>
               </Box>
             </Box>
           </div>
