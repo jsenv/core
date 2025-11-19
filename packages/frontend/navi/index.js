@@ -89,7 +89,7 @@ export { useSignalSync } from "./src/components/use_signal_sync.js";
 export { FontSizedSvg } from "./src/components/svg/font_sized_svg.jsx";
 export { IconAndText } from "./src/components/svg/icon_and_text.jsx";
 export { SVGMaskOverlay } from "./src/components/svg/svg_mask_overlay.jsx";
-export { Count } from "./src/components/text/badge.jsx";
+export { BadgeCount } from "./src/components/text/badge.jsx";
 export { Code } from "./src/components/text/code.jsx";
 export { Image } from "./src/components/text/image.jsx";
 export { Link } from "./src/components/text/link.jsx";
@@ -97,7 +97,6 @@ export { LinkWithIcon } from "./src/components/text/link_with_icon.jsx";
 export { MessageBox } from "./src/components/text/message_box.jsx";
 export { Svg } from "./src/components/text/svg.jsx";
 export {
-  BadgeCount,
   CharSlot,
   Icon,
   Paragraph,

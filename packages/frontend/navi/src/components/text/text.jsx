@@ -1,6 +1,6 @@
 /* eslint-disable jsenv/no-unknown-params */
 import { createContext, toChildArray } from "preact";
-import { useCallback, useContext, useState } from "preact/hooks";
+import { useContext, useState } from "preact/hooks";
 
 import { Box } from "../layout/box.jsx";
 
@@ -59,21 +59,6 @@ import.meta.css = /* css */ `
   .navi_icon[data-height] svg {
     width: auto;
     height: 100%;
-  }
-
-  .navi_badge_count {
-    justify-content: center;
-  }
-
-  .navi_badge .navi_char_slot_invisible {
-    padding: 0.4em;
-  }
-  .navi_badge .navi_text_foreground {
-    width: 100%;
-    min-width: 1.5em;
-    height: 1.5em;
-    align-items: center;
-    justify-content: center;
   }
 `;
 
@@ -153,7 +138,7 @@ const TextBasic = ({
 };
 
 /* https://jsfiddle.net/v5xzJ/4/ */
-const TextForeground = ({ children, ...props }) => {
+export const TextForeground = ({ children, ...props }) => {
   return (
     <Text {...props} className="navi_text_foreground">
       {children}
@@ -218,35 +203,6 @@ export const Icon = ({ href, children, ...props }) => {
     <CharSlot decorative {...props}>
       <span className="navi_icon_char">{innerChildren}</span>
     </CharSlot>
-  );
-};
-
-export const BadgeCount = ({ children, bold = true, ...props }) => {
-  // je crois qu'on devrait utiliser le visualSelector ici pour obtenir background par ex
-  const renderForeground = (remainingProps) => {
-    return (
-      <TextForeground {...remainingProps} box borderRadius="1em">
-        {children}
-      </TextForeground>
-    );
-  };
-  const renderForegroundMemoized = useCallback(renderForeground, [children]);
-
-  return (
-    <Text
-      {...props}
-      className="navi_badge"
-      bold={bold}
-      data-has-foreground=""
-      hasChildFunction
-      visualSelector=".navi_text_foreground"
-    >
-      {/* padding must go on the char slot */}
-      <span className="navi_char_slot_invisible" aria-hidden="true">
-        {children}
-      </span>
-      {renderForegroundMemoized}
-    </Text>
   );
 };
 
