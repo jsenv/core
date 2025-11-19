@@ -196,6 +196,15 @@
       <button id="btn-wide">Wide (150vw x 200px)</button>
       <button id="btn-tall">Tall (300px x 150vh)</button>
       <button id="btn-empty">Empty</button>
+      
+      <!-- Pause/Resume controls -->
+      <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(0, 0, 0, 0.1);">
+        <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: #333; font-size: 13px;">
+          <input type="checkbox" id="pauseAtMiddle" />
+          <span>Pause at 50%</span>
+        </label>
+        <button id="resumeButton">Resume Transitions</button>
+      </div>
     </div>
 
     <div
@@ -364,6 +373,23 @@
 
       // Update debug info periodically during transitions
       setInterval(updateDebugInfo, 200);
+
+      // Pause/Resume controls
+      document.getElementById("resumeButton").addEventListener("click", () => {
+        if (typeof window.resumeTransitions === "function") {
+          window.resumeTransitions();
+        }
+      });
+
+      // Add pause at middle functionality to transition controller
+      const originalTransitionTo = transitionController.transitionTo;
+      transitionController.transitionTo = function(content) {
+        const pauseCheckbox = document.getElementById("pauseAtMiddle");
+        const pauseBreakpoints = pauseCheckbox && pauseCheckbox.checked ? [0.5] : [];
+        
+        // Call original with pause breakpoints
+        return originalTransitionTo.call(this, content, { pauseBreakpoints });
+      };
     </script>
   </body>
 </html>
