@@ -1,3 +1,4 @@
+import { withPropsClassName } from "../layout/with_props_class_name.js";
 import { Text } from "./text.jsx";
 
 import.meta.css = /* css */ `
@@ -34,7 +35,7 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const Icon = ({ href, children, ...props }) => {
+export const Icon = ({ href, children, className, ...props }) => {
   const innerChildren = href ? (
     <svg width="100%" height="100%">
       <use href={href} />
@@ -52,7 +53,7 @@ export const Icon = ({ href, children, ...props }) => {
     <Text
       {...props}
       box={box}
-      className="navi_icon"
+      className={withPropsClassName("navi_icon", className)}
       data-width={width}
       data-height={height}
     >
