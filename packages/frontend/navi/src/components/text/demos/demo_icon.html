@@ -601,7 +601,13 @@
       const IconDimensionsSection = () => (
         <Box as="section" marginBottom="xl" id="icon-dimensions">
           <Title as="h2">Icon Dimensions</Title>
-          <Box row contentSpacing="md">
+          <Text multiline>
+            By default, icons follow text size. You can control icon dimensions
+            using the <code>size</code> attribute to increase/decrease size
+            proportionally, or use <code>width</code>/<code>height</code> to
+            control non-square icons precisely.
+          </Text>
+          <Box column contentSpacing="lg" marginTop="md">
             <div>
               <Text
                 style={{
@@ -612,45 +618,51 @@
                   display: "block",
                 }}
               >
-                Regular Icons with Size Prop
+                Size attribute (proportional scaling)
               </Text>
-              <Box row contentSpacing="sm">
-                <Text
-                  style={{
-                    fontSize: "12px",
-                    color: "#666",
-                    display: "block",
-                  }}
-                >
-                  Default
-                </Text>
-                <Icon>
-                  <StarSvg />
-                </Icon>
-                <Text
-                  style={{
-                    fontSize: "12px",
-                    color: "#666",
-                    display: "block",
-                  }}
-                >
-                  Large
-                </Text>
-                <Icon size="lg">
-                  <StarSvg />
-                </Icon>
-                <Text
-                  style={{
-                    fontSize: "12px",
-                    color: "#666",
-                    display: "block",
-                  }}
-                >
-                  Custom 32px
-                </Text>
-                <Icon size="32px">
-                  <StarSvg />
-                </Icon>
+              <Box row contentSpacing="lg" alignItems="center">
+                <div>
+                  <Text
+                    style={{
+                      fontSize: "12px",
+                      color: "#666",
+                      display: "block",
+                    }}
+                  >
+                    Default
+                  </Text>
+                  <Icon>
+                    <StarSvg />
+                  </Icon>
+                </div>
+                <div>
+                  <Text
+                    style={{
+                      fontSize: "12px",
+                      color: "#666",
+                      display: "block",
+                    }}
+                  >
+                    size="lg"
+                  </Text>
+                  <Icon size="lg">
+                    <StarSvg />
+                  </Icon>
+                </div>
+                <div>
+                  <Text
+                    style={{
+                      fontSize: "12px",
+                      color: "#666",
+                      display: "block",
+                    }}
+                  >
+                    size="32px"
+                  </Text>
+                  <Icon size="32px">
+                    <StarSvg />
+                  </Icon>
+                </div>
               </Box>
             </div>
 
@@ -664,7 +676,7 @@
                   display: "block",
                 }}
               >
-                SVG/Image with Custom Dimensions
+                Width/Height for non-square icons
               </Text>
               <Box row contentSpacing="lg" alignItems="center">
                 <div>
@@ -675,10 +687,10 @@
                       display: "block",
                     }}
                   >
-                    Width 24px
+                    width="90"
                   </Text>
-                  <Icon width="24">
-                    <StarSvg />
+                  <Icon width="90">
+                    <HorizontalRectSvg />
                   </Icon>
                 </div>
                 <div>
@@ -689,10 +701,24 @@
                       display: "block",
                     }}
                   >
-                    Height 24px
+                    height="40"
                   </Text>
-                  <Icon height="24">
-                    <HeartSvg />
+                  <Icon height="40">
+                    <VerticalRectSvg />
+                  </Icon>
+                </div>
+                <div>
+                  <Text
+                    style={{
+                      fontSize: "12px",
+                      color: "#666",
+                      display: "block",
+                    }}
+                  >
+                    width="60" height="20"
+                  </Text>
+                  <Icon width="60" height="20">
+                    <HorizontalRectSvg />
                   </Icon>
                 </div>
               </Box>
