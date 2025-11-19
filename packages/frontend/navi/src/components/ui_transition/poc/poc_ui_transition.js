@@ -723,7 +723,9 @@ export const createUITransitionController = (
 
       debugSize(
         `Transition: ${fromWidth}x${fromHeight} → ${toWidth}x${toHeight} (width ${widthIsGrowing ? "growing" : "shrinking"}, height ${heightIsGrowing ? "growing" : "shrinking"}) in container ${containerWidth}x${containerHeight}`,
-      ); // Create clip-path animation using Web Animations API
+      );
+
+      // Create clip-path animation using Web Animations API
       const clipAnimation = container.animate(
         [{ clipPath: startClipPath }, { clipPath: endClipPath }],
         {
@@ -733,9 +735,47 @@ export const createUITransitionController = (
         },
       );
 
+      // Initialize global pause/resume mechanism if not exists
+      if (!window.pausedTransitions) {
+        window.pausedTransitions = new Set();
+      }
+      if (!window.resumeTransitions) {
+        window.resumeTransitions = () => {
+          window.pausedTransitions.forEach((animation) => {
+            animation.play();
+          });
+          window.pausedTransitions.clear();
+          console.debug("Resumed all paused transitions");
+        };
+      } else {
+        // Override existing function but call the previous version
+        const originalResumeTransitions = window.resumeTransitions;
+        window.resumeTransitions = () => {
+          // Call original function first
+          originalResumeTransitions();
+          // Then handle our clip-path animations
+          window.pausedTransitions.forEach((animation) => {
+            animation.play();
+          });
+          window.pausedTransitions.clear();
+          console.debug("Resumed all paused transitions including clip-path");
+        };
+      }
+
+      // Pause at 80% progress
+      setTimeout(() => {
+        clipAnimation.pause();
+        window.pausedTransitions.add(clipAnimation);
+        console.debug(
+          "Transition paused at 80% - call window.resumeTransitions() to continue",
+        );
+      }, duration * 0.8);
+
       // Handle finish
       clipAnimation.finished
         .then(() => {
+          // Remove from paused set if completed
+          window.pausedTransitions.delete(clipAnimation);
           // let container take natural dimensions now
           container.style.width = ``;
           container.style.height = ``;
@@ -746,6 +786,7 @@ export const createUITransitionController = (
         })
         .catch(() => {
           // Animation was cancelled
+          window.pausedTransitions.delete(clipAnimation);
         });
 
       clipAnimation.play();
