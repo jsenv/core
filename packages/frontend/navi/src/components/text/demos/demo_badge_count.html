@@ -19,11 +19,238 @@
         Button,
       } from "@jsenv/navi";
 
-      // Composants pour éviter les erreurs de syntaxe lors des modifications
+      // Composants JSX pour éviter les erreurs de syntaxe lors des modifications
+      const TableOfContents = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">Table des matières</Title>
+          <Box row contentSpacing="xs" marginTop="md">
+            <Link href="#exemples-base">1. Exemples de base</Link>
+            <Link href="#line-heights">
+              2. Comportement avec différents line-heights
+            </Link>
+            <Link href="#integration-composants">
+              3. Intégration dans différents composants
+            </Link>
+            <Link href="#badge-positioning">4. Badge positioning</Link>
+            <Link href="#nowrap">
+              5. Association texte + badge (pas de coupure)
+            </Link>
+            <Link href="#nombres-max">
+              6. Compteurs avec nombres élevés et paramètre max
+            </Link>
+            <Link href="#best-practices">7. Best Practices</Link>
+          </Box>
+        </Box>
+      );
+
+      const ExemplesBase = () => (
+        <Box as="section" marginBottom="xl" id="exemples-base">
+          <Title as="h2">Exemples de base</Title>
+          <Box row contentSpacing="md">
+            <Text>
+              Messages non lus
+              <BadgeCount background="red" color="white">
+                5
+              </BadgeCount>
+            </Text>
+
+            <Text>
+              Notifications en attente
+              <BadgeCount background="#ffebee" color="#d32f2f" size="xs">
+                120
+              </BadgeCount>
+            </Text>
+
+            <Text>
+              Tâches à faire
+              <BadgeCount background="#e8f5e8" color="#2e7d32" size="lg">
+                3
+              </BadgeCount>
+            </Text>
+          </Box>
+        </Box>
+      );
+
+      const LineHeightsSection = () => (
+        <Box as="section" marginBottom="xl" id="line-heights">
+          <Title as="h2">Comportement avec différents line-heights</Title>
+          <Paragraph>
+            Ces exemples montrent comment le badge s'adapte à différentes
+            hauteurs de ligne. Les bordures colorées visualisent la hauteur
+            réelle occupée par chaque ligne.
+          </Paragraph>
+          <Box column contentSpacing="lg">
+            <div>
+              <Text
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "8px",
+                  display: "block",
+                }}
+              >
+                line-height: 1.4 - Hauteur de ligne compacte
+              </Text>
+              <div
+                style={{
+                  border: "2px dashed #2196f3",
+                  backgroundColor: "rgba(33, 150, 243, 0.05)",
+                  padding: "8px",
+                  borderRadius: "4px",
+                  lineHeight: "1.4",
+                  fontSize: "16px",
+                }}
+              >
+                <Text style={{ lineHeight: "inherit" }}>
+                  Messages
+                  <BadgeCount background="#9c27b0" color="white">
+                    2
+                  </BadgeCount>
+                </Text>
+              </div>
+            </div>
+
+            <div>
+              <Text
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "8px",
+                  display: "block",
+                }}
+              >
+                line-height: 2 - Hauteur de ligne espacée
+              </Text>
+              <div
+                style={{
+                  border: "2px dashed #ff9800",
+                  backgroundColor: "rgba(255, 152, 0, 0.05)",
+                  padding: "8px",
+                  borderRadius: "4px",
+                  lineHeight: "2",
+                  fontSize: "16px",
+                }}
+              >
+                <Text style={{ lineHeight: "inherit" }}>
+                  Messages
+                  <BadgeCount background="#ff5722" color="white">
+                    2
+                  </BadgeCount>
+                </Text>
+              </div>
+            </div>
+
+            <div>
+              <Text
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "8px",
+                  display: "block",
+                }}
+              >
+                line-height: 3 - Hauteur de ligne très espacée
+              </Text>
+              <div
+                style={{
+                  border: "2px dashed #4caf50",
+                  backgroundColor: "rgba(76, 175, 80, 0.05)",
+                  padding: "8px",
+                  borderRadius: "4px",
+                  lineHeight: "3",
+                  fontSize: "16px",
+                }}
+              >
+                <Text style={{ lineHeight: "inherit" }}>
+                  Messages
+                  <BadgeCount background="#795548" color="white">
+                    2
+                  </BadgeCount>
+                </Text>
+              </div>
+            </div>
+          </Box>
+        </Box>
+      );
+
+      const IntegrationComposantsSection = () => (
+        <Box as="section" marginBottom="xl" id="integration-composants">
+          <Title as="h2">Intégration dans différents composants</Title>
+          <Box row contentSpacing="lg">
+            <div>
+              <Text
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "4px",
+                  display: "block",
+                }}
+              >
+                Avec Text
+              </Text>
+              <Text>
+                Notifications
+                <BadgeCount background="#ff9800" color="white">
+                  3
+                </BadgeCount>
+              </Text>
+            </div>
+
+            <div>
+              <Text
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "4px",
+                  display: "block",
+                }}
+              >
+                Avec Paragraph
+              </Text>
+              <Paragraph>
+                Vos messages
+                <BadgeCount background="#4caf50" color="white" size="xs">
+                  8
+                </BadgeCount>
+                sont prêts.
+              </Paragraph>
+            </div>
+
+            <div>
+              <Text
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "4px",
+                  display: "block",
+                }}
+              >
+                Avec Button
+              </Text>
+              <Box column contentSpacing="md">
+                <Button alignY="start">
+                  Tâches
+                  <BadgeCount background="#2196f3" color="white">
+                    5
+                  </BadgeCount>
+                </Button>
+
+                <Button lineHeight="1.5">
+                  Tâches
+                  <BadgeCount background="#2196f3" color="white">
+                    5
+                  </BadgeCount>
+                </Button>
+              </Box>
+            </div>
+          </Box>
+        </Box>
+      );
+
       const BadgePositioningSection = () => (
         <Box as="section" marginBottom="xl" id="badge-positioning">
           <Title as="h2">Badge positioning</Title>
-          <Box column contentSpacing="md">
+          <Box row contentSpacing="md">
             <div>
               <Text
                 style={{
@@ -121,54 +348,96 @@
         </Box>
       );
 
-      // Composants des sections
-      const TableOfContents = () => (
-        <Box as="section" marginBottom="xl">
-          <Title as="h2">Table des matières</Title>
-          <Box row contentSpacing="xs" marginTop="md">
-            <Link href="#exemples-base">1. Exemples de base</Link>
-            <Link href="#line-heights">
-              2. Comportement avec différents line-heights
-            </Link>
-            <Link href="#integration-composants">
-              3. Intégration dans différents composants
-            </Link>
-            <Link href="#badge-positioning">4. Badge positioning</Link>
-            <Link href="#nowrap">
-              5. Association texte + badge (pas de coupure)
-            </Link>
-            <Link href="#nombres-max">
-              6. Compteurs avec nombres élevés et paramètre max
-            </Link>
-            <Link href="#best-practices">7. Best Practices</Link>
+      const NoWrapSection = () => (
+        <Box as="section" marginBottom="xl" id="nowrap">
+          <Title as="h2">Association texte + badge (pas de coupure)</Title>
+          <Box column contentSpacing="md">
+            <div
+              style={{
+                width: "200px",
+                border: "1px solid #ddd",
+                padding: "8px",
+              }}
+            >
+              <Text>
+                Texte très long qui devrait normalement se couper
+                <BadgeCount background="#673ab7" color="white">
+                  15
+                </BadgeCount>
+              </Text>
+            </div>
+
+            <div
+              style={{
+                width: "200px",
+                border: "1px solid #ddd",
+                padding: "8px",
+              }}
+            >
+              <Text noWrap>
+                Texte très long mais avec noWrap
+                <BadgeCount background="#673ab7" color="white">
+                  15
+                </BadgeCount>
+              </Text>
+            </div>
           </Box>
         </Box>
       );
 
-      const ExemplesBase = () => (
-        <Box as="section" marginBottom="xl" id="exemples-base">
-          <Title as="h2">Exemples de base</Title>
-          <Box row contentSpacing="md">
-            <Text>
-              Messages non lus
-              <BadgeCount background="red" color="white">
-                5
-              </BadgeCount>
-            </Text>
+      const NombresMaxSection = () => (
+        <Box as="section" marginBottom="xl" id="nombres-max">
+          <Title as="h2">Compteurs avec nombres élevés et paramètre max</Title>
+          <Box column contentSpacing="md">
+            <Box row contentSpacing="md">
+              <Text>
+                Sans limite
+                <BadgeCount background="#e91e63" color="white">
+                  1234
+                </BadgeCount>
+              </Text>
+
+              <Text>
+                Max 99
+                <BadgeCount background="#e91e63" color="white" max={99}>
+                  1234
+                </BadgeCount>
+              </Text>
+
+              <Text>
+                Max 999
+                <BadgeCount background="#e91e63" color="white" max={999}>
+                  1234
+                </BadgeCount>
+              </Text>
+            </Box>
 
             <Text>
-              Notifications en attente
-              <BadgeCount background="#ffebee" color="#d32f2f" size="xs">
-                120
+              Test avec string → number
+              <BadgeCount background="#607d8b" color="white" max="99">
+                150
               </BadgeCount>
             </Text>
+          </Box>
+        </Box>
+      );
 
-            <Text>
-              Tâches à faire
-              <BadgeCount background="#e8f5e8" color="#2e7d32" size="lg">
-                3
-              </BadgeCount>
-            </Text>
+      const BestPracticesSection = () => (
+        <Box as="section" marginBottom="xl" id="best-practices">
+          <Title as="h2">Best Practices</Title>
+          <Box column contentSpacing="md">
+            <Paragraph>
+              • Utilisez des couleurs contrastées pour une bonne lisibilité
+            </Paragraph>
+            <Paragraph>
+              • Limitez les nombres élevés avec le paramètre max
+            </Paragraph>
+            <Paragraph>
+              • Adaptez la taille du badge au contexte (xs, s, m, lg)
+            </Paragraph>
+            <Paragraph>
+              • Positionnez le badge de manière cohérente dans votre interface
+            </Paragraph>
           </Box>
         </Box>
       );
@@ -185,581 +454,14 @@
           >
             <Title as="h1">Badge Count Demo</Title>
 
-            {/* Table des matières */}
-            <Box as="section" marginBottom="xl">
-              <Title as="h2">Table des matières</Title>
-              <Box row contentSpacing="xs" marginTop="md">
-                <Link href="#exemples-base">1. Exemples de base</Link>
-                <Link href="#line-heights">
-                  2. Comportement avec différents line-heights
-                </Link>
-                <Link href="#integration-composants">
-                  3. Intégration dans différents composants
-                </Link>
-                <Link href="#badge-positioning">4. Badge positioning</Link>
-                <Link href="#nowrap">
-                  5. Association texte + badge (pas de coupure)
-                </Link>
-                <Link href="#nombres-max">
-                  6. Compteurs avec nombres élevés et paramètre max
-                </Link>
-                <Link href="#best-practices">7. Best Practices</Link>
-              </Box>
-            </Box>
-
-            {/* Exemples de base */}
-            <Box as="section" marginBottom="xl" id="exemples-base">
-              <Title as="h2">Exemples de base</Title>
-              <Box row contentSpacing="md">
-                <Text>
-                  Messages non lus
-                  <BadgeCount background="red" color="white">
-                    5
-                  </BadgeCount>
-                </Text>
-
-                <Text>
-                  Notifications en attente
-                  <BadgeCount background="#ffebee" color="#d32f2f" size="xs">
-                    120
-                  </BadgeCount>
-                </Text>
-
-                <Text>
-                  Tâches à faire
-                  <BadgeCount background="#e8f5e8" color="#2e7d32" size="lg">
-                    3
-                  </BadgeCount>
-                </Text>
-              </Box>
-            </Box>
-
-            {/* Comportement avec line-heights */}
-            <Box as="section" marginBottom="xl" id="line-heights">
-              <Title as="h2">Comportement avec différents line-heights</Title>
-              <Box row contentSpacing="md">
-                <div>
-                  <Text
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      marginBottom: "4px",
-                      display: "block",
-                    }}
-                  >
-                    line-height: 1.4
-                  </Text>
-
-                  <Text
-                    lineHeight="1.4"
-                    border="1px solid #e0e0e0"
-                    backgroundColor="#f9f9f9"
-                    padding="4px 8px"
-                    borderRadius="4px"
-                  >
-                    Messages
-                    <BadgeCount background="#9c27b0" color="white">
-                      2
-                    </BadgeCount>
-                  </Text>
-                </div>
-
-                <div>
-                  <Text
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      marginBottom: "4px",
-                      display: "block",
-                    }}
-                  >
-                    line-height: 2
-                  </Text>
-                  <Text
-                    style={{
-                      lineHeight: "2",
-                      border: "1px solid #e0e0e0",
-                      backgroundColor: "#f9f9f9",
-                      padding: "4px 8px",
-                      borderRadius: "4px",
-                    }}
-                  >
-                    Messages
-                    <BadgeCount background="#ff5722" color="white">
-                      2
-                    </BadgeCount>
-                  </Text>
-                </div>
-
-                <div>
-                  <Text
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      marginBottom: "4px",
-                      display: "block",
-                    }}
-                  >
-                    line-height: 3, fontSize: 18px
-                  </Text>
-                  <Text
-                    style={{
-                      lineHeight: "3",
-                      fontSize: "18px",
-                      border: "1px solid #e0e0e0",
-                      backgroundColor: "#f9f9f9",
-                      padding: "4px 8px",
-                      borderRadius: "4px",
-                    }}
-                  >
-                    Messages
-                    <BadgeCount background="#607d8b" color="white" size="lg">
-                      2
-                    </BadgeCount>
-                  </Text>
-                </div>
-              </Box>
-              <Box marginTop="md">
-                <Text
-                  style={{
-                    fontSize: "14px",
-                    color: "#666",
-                    fontStyle: "italic",
-                  }}
-                >
-                  Les bordures montrent la hauteur de ligne réelle. Le badge
-                  s'adapte automatiquement à la hauteur de ligne du composant
-                  parent.
-                </Text>
-              </Box>
-            </Box>
-
-            {/* Intégration dans différents composants */}
-            <Box as="section" marginBottom="xl" id="integration-composants">
-              <Title as="h2">Intégration dans différents composants</Title>
-              <Box row contentSpacing="md">
-                <div>
-                  <Text
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      marginBottom: "4px",
-                      display: "block",
-                    }}
-                  >
-                    Avec Text
-                  </Text>
-                  <Text>
-                    Notifications
-                    <BadgeCount background="#ff9800" color="white">
-                      3
-                    </BadgeCount>
-                  </Text>
-                </div>
-
-                <div>
-                  <Text
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      marginBottom: "4px",
-                      display: "block",
-                    }}
-                  >
-                    Avec Paragraph
-                  </Text>
-                  <Paragraph>
-                    Vos messages
-                    <BadgeCount background="#4caf50" color="white" size="xs">
-                      8
-                    </BadgeCount>
-                    sont prêts à être consultés.
-                  </Paragraph>
-                </div>
-
-                <div>
-                  <Text
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      marginBottom: "4px",
-                      display: "block",
-                    }}
-                  >
-                    Avec Link
-                  </Text>
-                  <Link href="#" underline={false}>
-                    <Text underline>Voir les alertes</Text>
-                    <BadgeCount background="#f44336" color="white" max="99">
-                      127
-                    </BadgeCount>
-                  </Link>
-                </div>
-
-                <div>
-                  <Text
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      marginBottom: "4px",
-                      display: "block",
-                    }}
-                  >
-                    Avec Button
-                  </Text>
-                  <Box column contentSpacing="md">
-                    <Button alignY="start">
-                      Tâches
-                      <BadgeCount background="#2196f3" color="white">
-                        5
-                      </BadgeCount>
-                    </Button>
-
-                    <Button lineHeight="1.5">
-                      Tâches
-                      <BadgeCount background="#2196f3" color="white">
-                        5
-                      </BadgeCount>
-                    </Button>
-                  </Box>
-                </div>
-              </Box>
-            </Box>
-
-            {/* Badge positioning */}
-            <Box as="section" marginBottom="xl" id="badge-positioning">
-              <Title as="h2">Badge positioning</Title>
-              <Box column contentSpacing="md">
-                <div>
-                  <Text
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      marginBottom: "4px",
-                      display: "block",
-                    }}
-                  >
-                    alignX="start" - Position au début du conteneur
-                  </Text>
-                  <Box row contentSpacing="md">
-                    <Box
-                      style={{
-                        border: "1px solid #e0e0e0",
-                        borderRadius: "8px",
-                        padding: "12px",
-                        width: "300px",
-                      }}
-                    >
-                      <BadgeCount
-                        background="#4caf50"
-                        color="white"
-                        alignX="start"
-                      >
-                        3
-                      </BadgeCount>
-                      <Text>Nouveaux messages</Text>
-                    </Box>
-
-                    <Box
-                      style={{
-                        border: "1px solid #e0e0e0",
-                        borderRadius: "8px",
-                        padding: "12px",
-                        width: "350px",
-                      }}
-                    >
-                      <BadgeCount
-                        background="#ff9800"
-                        color="white"
-                        alignX="start"
-                        size="xs"
-                      >
-                        12
-                      </BadgeCount>
-                      <Text>Tâches en attente</Text>
-                    </Box>
-                  </Box>
-                </div>
-
-                <div>
-                  <Text
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      marginBottom: "4px",
-                      display: "block",
-                    }}
-                  >
-                    alignX="end" - Position à la fin du conteneur
-                  </Text>
-                  <Box row contentSpacing="md">
-                    <Box
-                      style={{
-                        border: "1px solid #e0e0e0",
-                        borderRadius: "8px",
-                        padding: "12px",
-                        width: "300px",
-                      }}
-                    >
-                      <Text>Messages</Text>
-                      <BadgeCount
-                        background="#1976d2"
-                        color="white"
-                        alignX="end"
-                      >
-                        8
-                      </BadgeCount>
-                    </Box>
-
-                    <Box
-                      style={{
-                        border: "1px solid #e0e0e0",
-                        borderRadius: "8px",
-                        padding: "12px",
-                        width: "350px",
-                      }}
-                    >
-                      <Text>Alertes</Text>
-                      <BadgeCount
-                        background="#d32f2f"
-                        color="white"
-                        alignX="end"
-                        size="xs"
-                      >
-                        25
-                      </BadgeCount>
-                    </Box>
-                  </Box>
-                </div>
-              </Box>
-            </Box>
-
-            {/* Association texte + badge avec noWrap */}
-            <Box as="section" marginBottom="xl" id="nowrap">
-              <Title as="h2">Association texte + badge (pas de coupure)</Title>
-              <Box column contentSpacing="md">
-                <div>
-                  <Text
-                    style={{
-                      fontSize: "12px",
-                      color: "#d32f2f",
-                      marginBottom: "4px",
-                      display: "block",
-                    }}
-                  >
-                    ❌ Sans noWrap : le badge peut se séparer du mot
-                  </Text>
-                  <Box
-                    style={{
-                      border: "1px solid #ffcdd2",
-                      borderRadius: "8px",
-                      padding: "12px",
-                      backgroundColor: "#ffeaea",
-                      width: "200px",
-                    }}
-                  >
-                    <Paragraph>
-                      Consultez vos messages
-                      <BadgeCount background="#1976d2" color="white">
-                        156
-                      </BadgeCount>
-                      et répondez rapidement.
-                    </Paragraph>
-                  </Box>
-                </div>
-
-                <div>
-                  <Text
-                    style={{
-                      fontSize: "12px",
-                      color: "#2e7d32",
-                      marginBottom: "4px",
-                      display: "block",
-                    }}
-                  >
-                    ✅ Avec noWrap : le mot et son badge restent ensemble
-                  </Text>
-                  <Box
-                    style={{
-                      border: "1px solid #c8e6c9",
-                      borderRadius: "8px",
-                      padding: "12px",
-                      backgroundColor: "#e8f5e8",
-                      width: "200px",
-                    }}
-                  >
-                    <Paragraph>
-                      Consultez vos{" "}
-                      <Text noWrap>
-                        messages
-                        <BadgeCount background="#1976d2" color="white">
-                          156
-                        </BadgeCount>
-                      </Text>{" "}
-                      et répondez rapidement.
-                    </Paragraph>
-                  </Box>
-                </div>
-              </Box>
-            </Box>
-
-            {/* Nombres élevés et max */}
-            <Box as="section" marginBottom="xl" id="nombres-max">
-              <Title as="h2">
-                Compteurs avec nombres élevés et paramètre max
-              </Title>
-
-              <Box row contentSpacing="md">
-                <Text>
-                  Abonnés YouTube
-                  <BadgeCount
-                    background="#f5f5f5"
-                    color="#424242"
-                    borderRadius="16px"
-                    border="1px solid #e0e0e0"
-                    size="lg"
-                  >
-                    1250
-                  </BadgeCount>
-                </Text>
-                <Text>
-                  Points fidélité
-                  <BadgeCount
-                    background="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-                    color="white"
-                    borderRadius="16px"
-                    size="lg"
-                  >
-                    8700
-                  </BadgeCount>
-                </Text>
-                <Text>
-                  Messages (max=99)
-                  <BadgeCount background="#d32f2f" color="white" max={99}>
-                    150
-                  </BadgeCount>
-                </Text>
-
-                <Text>
-                  Notifications (max=9)
-                  <BadgeCount background="#1976d2" color="white" max={9}>
-                    15
-                  </BadgeCount>
-                </Text>
-              </Box>
-              <Box marginTop="md">
-                <Text
-                  style={{
-                    fontSize: "14px",
-                    color: "#666",
-                    fontStyle: "italic",
-                  }}
-                >
-                  Quand la valeur dépasse le paramètre max, on affiche "max+" au
-                  lieu de la vraie valeur.
-                </Text>
-              </Box>
-            </Box>
-
-            {/* Best Practices */}
-            <Box as="section" marginBottom="xl" id="best-practices">
-              <Title as="h2">Best Practices</Title>
-
-              <Box column contentSpacing="lg">
-                <div>
-                  <Title as="h3" size="18">
-                    Auto-spacing avec composants inline
-                  </Title>
-
-                  <Box marginBottom="md">
-                    <Text
-                      style={{
-                        fontSize: "14px",
-                        color: "#666",
-                        fontStyle: "italic",
-                      }}
-                    >
-                      Pour bénéficier de l'espacement automatique, placez
-                      BadgeCount dans des composants inline comme &lt;Text&gt;,
-                      &lt;Paragraph&gt;, &lt;Link&gt;, &lt;Button&gt;, etc.
-                    </Text>
-                  </Box>
-
-                  <Box column contentSpacing="lg">
-                    <div>
-                      <Title
-                        as="h4"
-                        size="16"
-                        style={{ color: "#d32f2f", marginBottom: "8px" }}
-                      >
-                        ❌ Incorrect : Badge en dehors du texte
-                      </Title>
-                      <Box
-                        style={{
-                          border: "1px solid #ffcdd2",
-                          borderRadius: "8px",
-                          padding: "12px",
-                          backgroundColor: "#ffeaea",
-                        }}
-                      >
-                        <div style={{ display: "flex", alignItems: "center" }}>
-                          <span>Messages</span>
-                          <BadgeCount background="#1976d2" color="white">
-                            5
-                          </BadgeCount>
-                        </div>
-                      </Box>
-                      <Text
-                        style={{
-                          fontSize: "12px",
-                          color: "#666",
-                          fontStyle: "italic",
-                          marginTop: "8px",
-                        }}
-                      >
-                        Pas d'espacement automatique entre le texte et le badge
-                      </Text>
-                    </div>
-
-                    <div>
-                      <Title
-                        as="h4"
-                        size="16"
-                        style={{ color: "#2e7d32", marginBottom: "8px" }}
-                      >
-                        ✅ Correct : Badge dans un composant Textuel
-                      </Title>
-                      <Box
-                        style={{
-                          border: "1px solid #c8e6c9",
-                          borderRadius: "8px",
-                          padding: "12px",
-                          backgroundColor: "#e8f5e8",
-                        }}
-                      >
-                        <Text>
-                          Messages
-                          <BadgeCount background="#1976d2" color="white">
-                            5
-                          </BadgeCount>
-                        </Text>
-                      </Box>
-                      <Text
-                        style={{
-                          fontSize: "12px",
-                          color: "#666",
-                          fontStyle: "italic",
-                          marginTop: "8px",
-                        }}
-                      >
-                        Espacement automatique et cohérent grâce au composant
-                        Text
-                      </Text>
-                    </div>
-                  </Box>
-                </div>
-              </Box>
-            </Box>
+            <TableOfContents />
+            <ExemplesBase />
+            <LineHeightsSection />
+            <IntegrationComposantsSection />
+            <BadgePositioningSection />
+            <NoWrapSection />
+            <NombresMaxSection />
+            <BestPracticesSection />
           </div>
         );
       };
