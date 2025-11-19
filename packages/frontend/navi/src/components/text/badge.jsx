@@ -50,24 +50,15 @@ export const BadgeCount = ({ children, bold = true, max, ...props }) => {
     if (max === undefined) {
       return children;
     }
-
-    // Convertir children en nombre si c'est une string
     const numericValue =
       typeof children === "string" ? parseInt(children, 10) : children;
-
-    // Convertir max en nombre si c'est une string
     const numericMax = typeof max === "string" ? parseInt(max, 10) : max;
-
-    // Vérifier que les valeurs sont des nombres valides
     if (isNaN(numericValue) || isNaN(numericMax)) {
       return children;
     }
-
-    // Si la valeur dépasse max, afficher "max+"
     if (numericValue > numericMax) {
       return `${numericMax}+`;
     }
-
     return children;
   };
 
