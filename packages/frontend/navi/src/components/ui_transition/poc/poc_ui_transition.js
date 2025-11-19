@@ -206,10 +206,10 @@ import.meta.css = /* css */ `
     position: relative;
   }
 
-  .ui_transition[data-transitioning] .target_slot,
-  .ui_transition[data-transitioning] .outgoing_slot,
-  .ui_transition[data-transitioning] .previous_target_slot,
-  .ui_transition[data-transitioning] .previous_outgoing_slot {
+  .ui_transition[data-transitioning] .target_slot > *,
+  .ui_transition[data-transitioning] .outgoing_slot > *,
+  .ui_transition[data-transitioning] .previous_target_slot > *,
+  .ui_transition[data-transitioning] .previous_outgoing_slot > * {
     background-image: none !important;
     background-color: transparent !important;
     border-color: transparent !important;
@@ -625,7 +625,7 @@ export const createUITransitionController = (
   let transitionType = "none";
   const transitionController = createGroupTransitionController({
     // debugBreakpoints: [0.25],
-    // pauseBreakpoints: [0.6],
+    pauseBreakpoints: [0.4],
     lifecycle: {
       setup: () => {
         updateSlotAttributes();
