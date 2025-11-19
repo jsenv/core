@@ -361,24 +361,23 @@
                   display: "block",
                 }}
               >
-                Sans noWrap - Le texte et le badge peuvent se séparer
+                Sans noWrap - Le badge peut être séparé du texte
               </Text>
               <div
                 style={{
-                  width: "200px",
+                  width: "120px",
                   border: "1px solid #ddd",
                   padding: "8px",
                   backgroundColor: "#f9f9f9",
                 }}
               >
-                Vous avez reçu de nouveaux{" "}
                 <Text>
-                  messages
+                  Vous avez 
                   <BadgeCount background="#673ab7" color="white">
                     15
                   </BadgeCount>
-                </Text>{" "}
-                importants à consulter.
+                  messages
+                </Text>
               </div>
             </div>
 
@@ -391,24 +390,23 @@
                   display: "block",
                 }}
               >
-                Avec noWrap - Le mot et son badge restent ensemble
+                Avec noWrap - Le badge et "messages" restent ensemble
               </Text>
               <div
                 style={{
-                  width: "200px",
+                  width: "120px",
                   border: "1px solid #ddd",
                   padding: "8px",
                   backgroundColor: "#e8f5e8",
                 }}
               >
-                Vous avez reçu de nouveaux{" "}
+                Vous avez{" "}
                 <Text noWrap>
-                  messages
                   <BadgeCount background="#673ab7" color="white">
                     15
                   </BadgeCount>
-                </Text>{" "}
-                importants à consulter.
+                  messages
+                </Text>
               </div>
             </div>
           </Box>
