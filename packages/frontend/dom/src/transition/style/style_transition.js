@@ -277,7 +277,8 @@ export const createBorderTransition = (element, to, options = {}) => {
     getFrom: () => 0,
     getValue: (transition) => {
       const borderInterpolated = interpolateBorder(transition);
-      return stringifyStyle(borderInterpolated, "border");
+      const borderCSSValue = stringifyStyle(borderInterpolated, "border");
+      return borderCSSValue;
     },
     ...options,
   });
