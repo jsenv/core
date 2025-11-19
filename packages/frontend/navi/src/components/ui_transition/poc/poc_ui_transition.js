@@ -87,9 +87,7 @@ import {
   createBorderRadiusTransition,
   createBorderTransition,
   createGroupTransitionController,
-  createHeightTransition,
   createOpacityTransition,
-  createWidthTransition,
   getBackground,
   getBorderRadius,
   getElementSignature,
@@ -763,6 +761,7 @@ export const createUITransitionController = (
           container.style.height = ``;
           // Clear clip-path to restore normal behavior
           container.style.clipPath = "";
+          clipAnimation.cancel();
           onSizeTransitionFinished();
         })
         .catch(() => {
