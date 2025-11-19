@@ -149,10 +149,6 @@
         cursor: pointer;
       }
 
-      .option-rect:hover {
-        transform: scale(1.05);
-      }
-
       .option-rect.selected {
         box-shadow: 0 0 0 2px #007acc;
       }
@@ -291,7 +287,6 @@
       .invert-button:hover {
         color: white;
         background: #007acc;
-        transform: scale(1.05);
       }
 
       details {
@@ -436,7 +431,6 @@
         element.style.border = fromBorder;
 
         return new Promise((resolve) => {
-          let isPaused = false;
           let pauseTimeout;
 
           const transition = {
@@ -446,13 +440,13 @@
                 // Pause at 50%
                 pauseTimeout = setTimeout(() => {
                   element.style.animationPlayState = "paused";
-                  isPaused = true;
+
                   if (options.onPause) options.onPause();
 
                   // Set up resume function
                   window.resumeTransitions = () => {
                     element.style.animationPlayState = "running";
-                    isPaused = false;
+
                     if (options.onResume) options.onResume();
                   };
                 }, duration / 2);
