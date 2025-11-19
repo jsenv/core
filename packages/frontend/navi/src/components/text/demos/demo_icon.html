@@ -601,7 +601,7 @@
       const IconDimensionsSection = () => (
         <Box as="section" marginBottom="xl" id="icon-dimensions">
           <Title as="h2">Icon Dimensions</Title>
-          <Box column contentSpacing="lg">
+          <Box row contentSpacing="md">
             <div>
               <Text
                 style={{
@@ -614,43 +614,43 @@
               >
                 Regular Icons with Size Prop
               </Text>
-              <Box row contentSpacing="lg" alignItems="center">
-                <div>
-                  <Text
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      display: "block",
-                    }}
-                  >
-                    Default
-                  </Text>
-                  <Icon href="#icon-github" />
-                </div>
-                <div>
-                  <Text
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      display: "block",
-                    }}
-                  >
-                    Large
-                  </Text>
-                  <Icon href="#icon-github" size="lg" />
-                </div>
-                <div>
-                  <Text
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      display: "block",
-                    }}
-                  >
-                    Custom 32px
-                  </Text>
-                  <Icon href="#icon-github" size="32px" />
-                </div>
+              <Box row contentSpacing="sm">
+                <Text
+                  style={{
+                    fontSize: "12px",
+                    color: "#666",
+                    display: "block",
+                  }}
+                >
+                  Default
+                </Text>
+                <Icon>
+                  <StarSvg />
+                </Icon>
+                <Text
+                  style={{
+                    fontSize: "12px",
+                    color: "#666",
+                    display: "block",
+                  }}
+                >
+                  Large
+                </Text>
+                <Icon size="lg">
+                  <StarSvg />
+                </Icon>
+                <Text
+                  style={{
+                    fontSize: "12px",
+                    color: "#666",
+                    display: "block",
+                  }}
+                >
+                  Custom 32px
+                </Text>
+                <Icon size="32px">
+                  <StarSvg />
+                </Icon>
               </Box>
             </div>
 
@@ -693,20 +693,6 @@
                   </Text>
                   <Icon height="24">
                     <HeartSvg />
-                  </Icon>
-                </div>
-                <div>
-                  <Text
-                    style={{
-                      fontSize: "12px",
-                      color: "#666",
-                      display: "block",
-                    }}
-                  >
-                    32x24px
-                  </Text>
-                  <Icon width="32" height="24">
-                    <SettingsSvg />
                   </Icon>
                 </div>
               </Box>
