@@ -6,8 +6,8 @@ import {
 
 export const getBorderColorAndWidthInterpolation = (fromBorder, toBorder) => {
   // If one side has no color, use transparent as fallback
-  const fromBorderColor = fromBorder.color || "transparent";
-  const toBorderColor = toBorder.color || "transparent";
+  const fromBorderColor = fromBorder?.color || [0, 0, 0, 0];
+  const toBorderColor = toBorder?.color || [0, 0, 0, 0];
   const getInterpolateBorderColor = () => {
     // Handle cases where one or both colors are undefined (e.g., border: none)
     if (!fromBorderColor && !toBorderColor) {
@@ -27,8 +27,8 @@ export const getBorderColorAndWidthInterpolation = (fromBorder, toBorder) => {
     };
   };
 
-  const fromWidth = fromBorder.width || 0;
-  const toWidth = toBorder.width || 0;
+  const fromWidth = fromBorder?.width || 0;
+  const toWidth = toBorder?.width || 0;
   const getInterpolateBorderWidth = () => {
     return (transition) => interpolate(transition, fromWidth, toWidth);
   };
