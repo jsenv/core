@@ -684,6 +684,7 @@ export const createUITransitionController = (
       // Set final dimensions immediately
       container.style.width = `${toWidth}px`;
       container.style.height = `${toHeight}px`;
+      container.style.contain = "paint";
 
       // Determine if we're growing or shrinking
       const isGrowing = toWidth >= fromWidth && toHeight >= fromHeight;
@@ -704,15 +705,9 @@ export const createUITransitionController = (
         const startRight = startLeft + startWidth;
         const startBottom = startTop + startHeight;
 
-        // Convert to percentages of container size
-        const startLeftPct = (startLeft / toWidth) * 100;
-        const startTopPct = (startTop / toHeight) * 100;
-        const startRightPct = (startRight / toWidth) * 100;
-        const startBottomPct = (startBottom / toHeight) * 100;
-
-        // Start with centered rectangle, end with full rectangle
-        startClipPath = `polygon(${startLeftPct}% ${startTopPct}%, ${startRightPct}% ${startTopPct}%, ${startRightPct}% ${startBottomPct}%, ${startLeftPct}% ${startBottomPct}%)`;
-        endClipPath = `polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)`;
+        // Use pixel values directly
+        startClipPath = `polygon(${startLeft}px ${startTop}px, ${startRight}px ${startTop}px, ${startRight}px ${startBottom}px, ${startLeft}px ${startBottom}px)`;
+        endClipPath = `polygon(0px 0px, ${toWidth}px 0px, ${toWidth}px ${toHeight}px, 0px ${toHeight}px)`;
 
         debugSize(
           `Growing transition: from ${fromWidth}x${fromHeight} to ${toWidth}x${toHeight}`,
@@ -731,23 +726,17 @@ export const createUITransitionController = (
         const endRight = endLeft + endWidth;
         const endBottom = endTop + endHeight;
 
-        // Convert to percentages of container size
-        const endLeftPct = (endLeft / fromWidth) * 100;
-        const endTopPct = (endTop / fromHeight) * 100;
-        const endRightPct = (endRight / fromWidth) * 100;
-        const endBottomPct = (endBottom / fromHeight) * 100;
-
-        // Start with full rectangle, end with centered smaller rectangle
-        startClipPath = `polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)`;
-        endClipPath = `polygon(${endLeftPct}% ${endTopPct}%, ${endRightPct}% ${endTopPct}%, ${endRightPct}% ${endBottomPct}%, ${endLeftPct}% ${endBottomPct}%)`;
+        // Use pixel values directly
+        startClipPath = `polygon(0px 0px, ${fromWidth}px 0px, ${fromWidth}px ${fromHeight}px, 0px ${fromHeight}px)`;
+        endClipPath = `polygon(${endLeft}px ${endTop}px, ${endRight}px ${endTop}px, ${endRight}px ${endBottom}px, ${endLeft}px ${endBottom}px)`;
 
         debugSize(
           `Shrinking transition: from ${fromWidth}x${fromHeight} to ${toWidth}x${toHeight}`,
         );
       } else {
         // Mixed case (width grows, height shrinks or vice versa) - use simpler approach
-        startClipPath = `polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)`;
-        endClipPath = `polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)`;
+        startClipPath = `polygon(0px 0px, ${toWidth}px 0px, ${toWidth}px ${toHeight}px, 0px ${toHeight}px)`;
+        endClipPath = `polygon(0px 0px, ${toWidth}px 0px, ${toWidth}px ${toHeight}px, 0px ${toHeight}px)`;
         debugSize(
           `Mixed transition: from ${fromWidth}x${fromHeight} to ${toWidth}x${toHeight} - no clip effect`,
         );
