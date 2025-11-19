@@ -16,6 +16,22 @@ import.meta.css = /* css */ `
     line-height: 1.5em;
     vertical-align: middle;
   }
+
+  .navi_icon > svg,
+  .navi_icon > img {
+    width: 100%;
+    height: 100%;
+  }
+  .navi_icon[data-width] > svg,
+  .navi_icon[data-width] > img {
+    width: 100%;
+    height: auto;
+  }
+  .navi_icon[data-height] > svg,
+  .navi_icon[data-height] > img {
+    width: auto;
+    height: 100%;
+  }
 `;
 
 export const Icon = ({ href, children, ...props }) => {
