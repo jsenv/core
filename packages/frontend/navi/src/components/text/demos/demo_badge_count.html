@@ -9,7 +9,15 @@
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { Text, Box, Title, BadgeCount } from "@jsenv/navi";
+      import {
+        Text,
+        Paragraph,
+        Box,
+        Title,
+        BadgeCount,
+        Link,
+        Button,
+      } from "@jsenv/navi";
 
       const Demo = () => {
         return (
@@ -423,6 +431,193 @@
                         </Text>
                       </div>
                     </div>
+                  </Box>
+                </div>
+              </Box>
+            </Box>
+
+            <Box as="section" marginBottom="xl">
+              <Title as="h2">Best Practices</Title>
+
+              <Box column contentSpacing="lg">
+                <div>
+                  <Title as="h3" size="18">
+                    Auto-spacing avec composants inline
+                  </Title>
+
+                  <Box marginBottom="md">
+                    <Text
+                      style={{
+                        fontSize: "14px",
+                        color: "#666",
+                        fontStyle: "italic",
+                      }}
+                    >
+                      Pour bénéficier de l'espacement automatique, placez
+                      BadgeCount dans des composants inline comme &lt;Text&gt;,
+                      &lt;Paragraph&gt;, &lt;Link&gt;, &lt;Button&gt;, etc.
+                    </Text>
+                  </Box>
+
+                  <Box column contentSpacing="lg">
+                    <div>
+                      <Title
+                        as="h4"
+                        size="16"
+                        style={{ color: "#d32f2f", marginBottom: "8px" }}
+                      >
+                        ❌ Incorrect : Badge en dehors du texte
+                      </Title>
+                      <Box
+                        style={{
+                          border: "1px solid #ffcdd2",
+                          borderRadius: "8px",
+                          padding: "12px",
+                          backgroundColor: "#ffeaea",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center" }}>
+                          <span>Messages</span>
+                          <BadgeCount background="#1976d2" color="white">
+                            5
+                          </BadgeCount>
+                        </div>
+                      </Box>
+                      <Text
+                        style={{
+                          fontSize: "12px",
+                          color: "#666",
+                          fontStyle: "italic",
+                          marginTop: "8px",
+                        }}
+                      >
+                        Pas d'espacement automatique entre le texte et le badge
+                      </Text>
+                    </div>
+
+                    <div>
+                      <Title
+                        as="h4"
+                        size="16"
+                        style={{ color: "#2e7d32", marginBottom: "8px" }}
+                      >
+                        ✅ Correct : Badge dans un composant Text
+                      </Title>
+                      <Box
+                        style={{
+                          border: "1px solid #c8e6c9",
+                          borderRadius: "8px",
+                          padding: "12px",
+                          backgroundColor: "#e8f5e8",
+                        }}
+                      >
+                        <Text>
+                          Messages
+                          <BadgeCount background="#1976d2" color="white">
+                            5
+                          </BadgeCount>
+                        </Text>
+                      </Box>
+                      <Text
+                        style={{
+                          fontSize: "12px",
+                          color: "#666",
+                          fontStyle: "italic",
+                          marginTop: "8px",
+                        }}
+                      >
+                        Espacement automatique et cohérent grâce au composant
+                        Text
+                      </Text>
+                    </div>
+                  </Box>
+
+                  <Box marginTop="lg">
+                    <Title as="h4" size="16">
+                      Exemples avec différents composants inline
+                    </Title>
+                    <Box row contentSpacing="md" marginTop="md">
+                      <div>
+                        <Text
+                          style={{
+                            fontSize: "14px",
+                            color: "#666",
+                            marginBottom: "8px",
+                          }}
+                        >
+                          Avec Text :
+                        </Text>
+                        <Text>
+                          Notifications
+                          <BadgeCount background="#ff9800" color="white">
+                            3
+                          </BadgeCount>
+                        </Text>
+                      </div>
+
+                      <div>
+                        <Text
+                          style={{
+                            fontSize: "14px",
+                            color: "#666",
+                            marginBottom: "8px",
+                          }}
+                        >
+                          Avec Paragraph :
+                        </Text>
+                        <Paragraph>
+                          Vos messages
+                          <BadgeCount
+                            background="#4caf50"
+                            color="white"
+                            size="xs"
+                          >
+                            8
+                          </BadgeCount>
+                          sont prêts à être consultés.
+                        </Paragraph>
+                      </div>
+
+                      <div>
+                        <Text
+                          style={{
+                            fontSize: "14px",
+                            color: "#666",
+                            marginBottom: "8px",
+                          }}
+                        >
+                          Avec Link :
+                        </Text>
+                        <Link href="#" underline={false}>
+                          <Text underline>Voir les alertes</Text>
+                          <BadgeCount
+                            background="#f44336"
+                            color="white"
+                            max="99"
+                          >
+                            127
+                          </BadgeCount>
+                        </Link>
+                      </div>
+
+                      <div>
+                        <Text
+                          style={{
+                            fontSize: "14px",
+                            color: "#666",
+                            marginBottom: "8px",
+                          }}
+                        >
+                          Avec Button :
+                        </Text>
+                        <Button>
+                          Tâches
+                          <BadgeCount background="#2196f3" color="white">
+                            5
+                          </BadgeCount>
+                        </Button>
+                      </div>
+                    </Box>
                   </Box>
                 </div>
               </Box>
