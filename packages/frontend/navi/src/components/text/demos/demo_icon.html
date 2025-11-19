@@ -45,83 +45,45 @@
       const BasicIconPositioningSection = () => (
         <Box as="section" marginBottom="xl" id="basic-icon-positioning">
           <Title as="h2">Basic Icon Positioning</Title>
-          <Box
-            row
-            contentSpacing="lg"
-            style={{
-              padding: "16px",
-              backgroundColor: "#f8f9fa",
-              borderRadius: "8px",
-            }}
-          >
-            <div style={{ textAlign: "center" }}>
-              <Text
-                style={{
-                  fontSize: "14px",
-                  fontWeight: "bold",
-                  color: "#333",
-                  marginBottom: "8px",
-                  display: "block",
-                }}
-              >
-                Icon Before Text
-              </Text>
-              <Text>
-                <Icon color="blue">
-                  <HomeSvg />
-                </Icon>
-                Home
-              </Text>
-            </div>
+          <Box row contentSpacing="sm" borderRadius="md">
+            <Text size="xs" color="rgb(102, 102, 102)">
+              Icon Before Text
+            </Text>
+            <Text>
+              <Icon color="blue">
+                <HomeSvg />
+              </Icon>
+              Home
+            </Text>
 
-            <div style={{ textAlign: "center" }}>
-              <Text
-                style={{
-                  fontSize: "14px",
-                  fontWeight: "bold",
-                  color: "#333",
-                  marginBottom: "8px",
-                  display: "block",
-                }}
-              >
-                Icon After Text
-              </Text>
-              <Text>
-                Search
-                <Icon color="green">
-                  <SearchSvg />
-                </Icon>
-              </Text>
-            </div>
+            <Text size="xs" color="rgb(102, 102, 102)">
+              Icon After Text
+            </Text>
+            <Text>
+              Search
+              <Icon color="green">
+                <SearchSvg />
+              </Icon>
+            </Text>
 
-            <div style={{ textAlign: "center" }}>
-              <Text
-                style={{
-                  fontSize: "14px",
-                  fontWeight: "bold",
-                  color: "#333",
-                  marginBottom: "8px",
-                  display: "block",
-                }}
-              >
-                Multiple Icons
-              </Text>
-              <Text>
-                <Icon color="orange">
-                  <StarSvg />
-                </Icon>
-                <Icon color="blue">
-                  <UserSvg />
-                </Icon>
-                Two on left and right
-                <Icon color="red">
-                  <HeartSvg />
-                </Icon>
-                <Icon color="purple">
-                  <SettingsSvg />
-                </Icon>
-              </Text>
-            </div>
+            <Text size="xs" color="rgb(102, 102, 102)">
+              Multiple Icons
+            </Text>
+            <Text>
+              <Icon color="orange">
+                <StarSvg />
+              </Icon>
+              <Icon color="blue">
+                <UserSvg />
+              </Icon>
+              Two on left and right
+              <Icon color="red">
+                <HeartSvg />
+              </Icon>
+              <Icon color="purple">
+                <SettingsSvg />
+              </Icon>
+            </Text>
           </Box>
         </Box>
       );
