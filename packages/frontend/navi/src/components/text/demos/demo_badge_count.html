@@ -42,8 +42,8 @@
                 <Link href="#integration-composants">
                   3. Intégration dans différents composants
                 </Link>
-                <Link href="#badges-alignes">
-                  4. Badges alignés à droite (alignX="end")
+                <Link href="#badge-positioning">
+                  4. Badge positioning
                 </Link>
                 <Link href="#nowrap">
                   5. Association texte + badge (pas de coupure)
@@ -185,8 +185,7 @@
             {/* Intégration dans différents composants */}
             <Box as="section" marginBottom="xl" id="integration-composants">
               <Title as="h2">Intégration dans différents composants</Title>
-              <Box row contentSpacing="lg">
-                <Box row contentSpacing="md">
+              <Box row contentSpacing="md">
                   <div>
                     <Text
                       style={{
@@ -272,12 +271,24 @@
                       </Button>
                     </Box>
                   </div>
-                </Box>
+              </Box>
+            </Box>
 
+            {/* Badge positioning */}
+            <Box as="section" marginBottom="xl" id="badge-positioning">
+              <Title as="h2">Badge positioning</Title>
+              <Box column contentSpacing="md">
                 <div>
-                  <Title as="h3" size="18">
-                    Badges alignés à droite (alignX="end")
-                  </Title>
+                  <Text
+                    style={{
+                      fontSize: "12px",
+                      color: "#666",
+                      marginBottom: "4px",
+                      display: "block",
+                    }}
+                  >
+                    alignX="end" - Position à la fin du conteneur
+                  </Text>
                   <Box row contentSpacing="md">
                     <Box
                       style={{
@@ -315,18 +326,6 @@
                         25
                       </BadgeCount>
                     </Box>
-                  </Box>
-                  <Box marginTop="md">
-                    <Text
-                      style={{
-                        fontSize: "12px",
-                        color: "#666",
-                        fontStyle: "italic",
-                      }}
-                    >
-                      Avec alignX="end", le badge se positionne à droite du
-                      conteneur.
-                    </Text>
                   </Box>
                 </div>
               </Box>
