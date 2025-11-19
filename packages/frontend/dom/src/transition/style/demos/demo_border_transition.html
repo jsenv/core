@@ -421,77 +421,7 @@
     </div>
 
     <script type="module">
-      // Create a border transition function similar to createBackgroundTransition
-      const createBorderTransition = (element, to, options = {}) => {
-        const fromBorder = options.from || getComputedStyle(element).border;
-        const duration = options.duration || 300;
-        const pauseBreakpoints = options.pauseBreakpoints || [];
-
-        // Set initial border
-        element.style.border = fromBorder;
-
-        return new Promise((resolve) => {
-          let pauseTimeout;
-
-          const transition = {
-            play: () => {
-              // Check for pause breakpoints
-              if (pauseBreakpoints.includes(0.5)) {
-                // Pause at 50%
-                pauseTimeout = setTimeout(() => {
-                  element.style.animationPlayState = "paused";
-
-                  if (options.onPause) options.onPause();
-
-                  // Set up resume function
-                  window.resumeTransitions = () => {
-                    element.style.animationPlayState = "running";
-
-                    if (options.onResume) options.onResume();
-                  };
-                }, duration / 2);
-              }
-
-              requestAnimationFrame(() => {
-                // Start CSS transition
-                element.style.border = to;
-
-                // Listen for transition end
-                const onTransitionEnd = (event) => {
-                  if (
-                    event.target === element &&
-                    event.propertyName.includes("border")
-                  ) {
-                    element.removeEventListener(
-                      "transitionend",
-                      onTransitionEnd,
-                    );
-                    clearTimeout(pauseTimeout);
-                    if (options.onFinish) options.onFinish();
-                    resolve(transition);
-                  }
-                };
-
-                element.addEventListener("transitionend", onTransitionEnd);
-
-                // Fallback timeout
-                setTimeout(() => {
-                  element.removeEventListener("transitionend", onTransitionEnd);
-                  clearTimeout(pauseTimeout);
-                  if (options.onFinish) options.onFinish();
-                  resolve(transition);
-                }, duration + 100);
-              });
-            },
-            cancel: () => {
-              clearTimeout(pauseTimeout);
-              element.style.border = "";
-            },
-          };
-
-          resolve(transition);
-        });
-      };
+      import { createBorderTransition } from "../style_transition.js";
 
       // LocalStorage utilities
       const STORAGE_KEY = "border-transition-demo";
@@ -805,21 +735,18 @@
           }, 10);
 
           // Start navi custom transition
-          const transition = await createBorderTransition(
-            naviBox,
-            selectedTo === "none" ? "none" : selectedTo,
-            {
-              from: selectedFrom === "none" ? "none" : selectedFrom,
-              duration,
-              pauseBreakpoints,
-              onPause: () => {
-                resumeButton.disabled = false;
-              },
-              onFinish: () => {
-                resumeButton.disabled = true;
-              },
+          const transition = createBorderTransition(naviBox, selectedTo, {
+            from: selectedFrom === "none" ? "none" : selectedFrom,
+            duration,
+            styleSynchronizer: "inline_style",
+            pauseBreakpoints,
+            onPause: () => {
+              resumeButton.disabled = false;
             },
-          );
+            onFinish: () => {
+              resumeButton.disabled = true;
+            },
+          });
 
           currentTransitions.push(transition);
           transition.play();
