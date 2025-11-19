@@ -13,6 +13,7 @@
  * Required HTML structure:
  *
  * <div class="ui_transition">
+ *  <div class="ui_transition_container">
  *   <div class="active_group">
  *     <div class="target_slot"></div>
  *     <div class="outgoing_slot"></div>
@@ -21,6 +22,7 @@
  *     <div class="previous_target_slot"></div>
  *     <div class="previous_outgoing_slot"></div>
  *   </div>
+ *  </div>
  * </div>
  *
  * Architecture Overview:
