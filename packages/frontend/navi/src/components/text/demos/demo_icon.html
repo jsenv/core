@@ -28,16 +28,15 @@
               1. Basic icon positioning
             </Link>
             <Link href="#different-font-sizes">2. Different font sizes</Link>
-            <Link href="#multiple-icons">3. Multiple icons</Link>
-            <Link href="#inline-text-icons">4. Icon inside text</Link>
-            <Link href="#line-height-variations">5. Icon line height</Link>
-            <Link href="#icon-transformation">6. Icon transformation</Link>
-            <Link href="#icon-href">7. Icon with SVG use</Link>
-            <Link href="#icon-dimensions">8. Icon dimensions</Link>
-            <Link href="#icon-text-link">9. Icon + text + link</Link>
-            <Link href="#icon-row">10. Icon in row</Link>
-            <Link href="#icon-column">11. Icon in column</Link>
-            <Link href="#integration">12. Integration</Link>
+            <Link href="#inline-text-icons">3. Icon inside text</Link>
+            <Link href="#line-height-variations">4. Icon line height</Link>
+            <Link href="#icon-transformation">5. Icon transformation</Link>
+            <Link href="#icon-href">6. Icon with SVG use</Link>
+            <Link href="#icon-dimensions">7. Icon dimensions</Link>
+            <Link href="#icon-text-link">8. Icon + text + link</Link>
+            <Link href="#icon-row">9. Icon in row</Link>
+            <Link href="#icon-column">10. Icon in column</Link>
+            <Link href="#integration">11. Integration</Link>
           </Box>
         </Box>
       );
@@ -46,8 +45,16 @@
       const BasicIconPositioningSection = () => (
         <Box as="section" marginBottom="xl" id="basic-icon-positioning">
           <Title as="h2">Basic Icon Positioning</Title>
-          <Box column contentSpacing="md">
-            <div>
+          <Box
+            row
+            contentSpacing="lg"
+            style={{
+              padding: "16px",
+              backgroundColor: "#f8f9fa",
+              borderRadius: "8px",
+            }}
+          >
+            <div style={{ textAlign: "center" }}>
               <Text
                 style={{
                   fontSize: "14px",
@@ -67,7 +74,7 @@
               </Text>
             </div>
 
-            <div>
+            <div style={{ textAlign: "center" }}>
               <Text
                 style={{
                   fontSize: "14px",
@@ -87,7 +94,7 @@
               </Text>
             </div>
 
-            <div>
+            <div style={{ textAlign: "center" }}>
               <Text
                 style={{
                   fontSize: "14px",
@@ -97,15 +104,21 @@
                   display: "block",
                 }}
               >
-                Icons Before and After
+                Multiple Icons
               </Text>
               <Text>
                 <Icon color="orange">
                   <StarSvg />
                 </Icon>
-                Favorites
+                <Icon color="blue">
+                  <UserSvg />
+                </Icon>
+                Two on left and right
                 <Icon color="red">
                   <HeartSvg />
+                </Icon>
+                <Icon color="purple">
+                  <SettingsSvg />
                 </Icon>
               </Text>
             </div>
@@ -500,12 +513,83 @@
       const IconHrefSection = () => (
         <Box as="section" marginBottom="xl" id="icon-href">
           <Title as="h2">Icon with SVG Use</Title>
+
+          {/* Define SVG symbols */}
+          <svg style={{ display: "none" }}>
+            <defs>
+              <symbol id="icon-home" viewBox="0 0 24 24">
+                <path
+                  fill="currentColor"
+                  d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"
+                />
+              </symbol>
+              <symbol id="icon-settings" viewBox="0 0 24 24">
+                <path
+                  fill="currentColor"
+                  d="M12 15.5A3.5 3.5 0 0 1 8.5 12A3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97c0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1c0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z"
+                />
+              </symbol>
+              <symbol id="icon-user" viewBox="0 0 24 24">
+                <path
+                  fill="currentColor"
+                  d="M12 2A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2M7.07 18.28c.43-.9 3.05-1.78 4.93-1.78s4.51.88 4.93 1.78A7.893 7.893 0 0 1 12 20c-1.86 0-3.57-.64-4.93-1.72m11.29-1.45c-1.43-1.74-4.9-2.33-6.36-2.33s-4.93.59-6.36 2.33A7.928 7.928 0 0 1 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8c0 1.82-.62 3.5-1.64 4.83M12 6c-1.94 0-3.5 1.56-3.5 3.5S10.06 13 12 13s3.5-1.56 3.5-3.5S13.94 6 12 6m0 5c-.83 0-1.5-.67-1.5-1.5S11.17 8.5 12 8.5s1.5.67 1.5 1.5S12.83 11 12 11Z"
+                />
+              </symbol>
+            </defs>
+          </svg>
+
           <Box column contentSpacing="md">
-            <Text>
-              Icon with href attribute:
-              <Icon href="#star-symbol" color="orange" />
-              <Icon href="#heart-symbol" color="red" />
-            </Text>
+            <Box
+              row
+              contentSpacing="lg"
+              alignItems="center"
+              justifyContent="center"
+              style={{
+                padding: "15px",
+                backgroundColor: "#f8f9fa",
+                borderRadius: "4px",
+              }}
+            >
+              <div style={{ textAlign: "center" }}>
+                <Text
+                  style={{
+                    fontSize: "12px",
+                    color: "#666",
+                    display: "block",
+                    marginBottom: "5px",
+                  }}
+                >
+                  href="#icon-home"
+                </Text>
+                <Icon href="#icon-home" color="green" />
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <Text
+                  style={{
+                    fontSize: "12px",
+                    color: "#666",
+                    display: "block",
+                    marginBottom: "5px",
+                  }}
+                >
+                  href + rotate="90deg"
+                </Text>
+                <Icon href="#icon-settings" rotate="90deg" color="red" />
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <Text
+                  style={{
+                    fontSize: "12px",
+                    color: "#666",
+                    display: "block",
+                    marginBottom: "5px",
+                  }}
+                >
+                  href + custom color
+                </Text>
+                <Icon href="#icon-user" color="purple" />
+              </div>
+            </Box>
           </Box>
         </Box>
       );
@@ -1452,7 +1536,6 @@
             <TableOfContents />
             <BasicIconPositioningSection />
             <DifferentFontSizesSection />
-            <MultipleIconsSection />
             <InlineTextIconsSection />
             <LineHeightVariationsSection />
             <IconTransformationSection />
