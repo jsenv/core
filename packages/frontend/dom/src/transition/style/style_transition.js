@@ -240,7 +240,8 @@ export const createBorderRadiusTransition = (element, to, options = {}) => {
   });
 };
 export const createBorderTransition = (element, to, options = {}) => {
-  const fromBorder = options.from || getBorder(element);
+  const fromBorder =
+    parseStyle(options.from, "border", element) || getBorder(element);
   const toBorder = parseStyle(to, "border", element);
   let borderInterpolation;
   interpolation: {
