@@ -328,7 +328,10 @@
         onStateChange: ({ isTransitioning }) => {
           isTransitioningEl.textContent = isTransitioning ? "Yes" : "No";
           buttons.forEach((btn) => {
-            btn.disabled = isTransitioning;
+            // Skip resume button - it should always stay enabled
+            if (btn.id !== "resumeButton") {
+              btn.disabled = isTransitioning;
+            }
           });
         },
       });
