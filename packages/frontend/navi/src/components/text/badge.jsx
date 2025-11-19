@@ -1,5 +1,4 @@
-import { useCallback } from "preact/hooks";
-import { Text, TextForeground } from "./text.jsx";
+import { Text } from "./text.jsx";
 
 import.meta.css = /* css */ `
   @layer navi {
@@ -8,42 +7,28 @@ import.meta.css = /* css */ `
     }
   }
   .navi_badge {
-    color: var(--color);
-  }
-  .navi_badge .navi_char_slot_invisible {
-    padding-top: var(--padding-top, var(--padding-y, var(--padding, 0.4em)));
+    display: inline-block;
+    box-sizing: border-box;
+    min-width: 1.5em;
+    height: 1.5em;
+    max-height: 1.5em;
     padding-right: var(
       --padding-right,
       var(--padding-x, var(--padding, 0.4em))
     );
-    padding-bottom: var(
-      --padding-bottom,
-      var(--padding-y, var(--padding, 0.4em))
-    );
     padding-left: var(--padding-left, var(--padding-x, var(--padding, 0.4em)));
-  }
-  .navi_badge .navi_text_foreground {
-    top: 50%;
-    left: 50%;
-    width: 100%;
-    min-width: 1.5em;
-    height: 1.5em;
-    max-height: 100%;
-    align-items: center;
-    justify-content: center;
-    text-indent: -0.5px;
-    background-color: var(--background-color);
+    color: var(--color);
+    text-align: center;
+    line-height: 1.5em;
+    vertical-align: middle;
     border-radius: var(--border-radius, 1em);
-    transform: translate(-50%, -50%);
   }
 `;
 
 const BadgeManagedByCSSVars = {
   borderWidth: "--border-width",
   borderRadius: "--border-radius",
-  paddingTop: "--padding-top",
   paddingRight: "--padding-right",
-  paddingBottom: "--padding-bottom",
   paddingLeft: "--padding-left",
   backgroundColor: "--background-color",
   borderColor: "--border-color",
@@ -69,32 +54,14 @@ export const BadgeCount = ({ children, bold = true, max, ...props }) => {
 
   const displayValue = getDisplayValue();
 
-  const renderForeground = (remainingProps) => {
-    return (
-      <TextForeground {...remainingProps} box>
-        {displayValue}
-      </TextForeground>
-    );
-  };
-  const renderForegroundMemoized = useCallback(renderForeground, [
-    displayValue,
-  ]);
-
   return (
     <Text
       {...props}
       className="navi_badge"
       bold={bold}
-      data-has-foreground=""
-      hasChildFunction
-      visualSelector=".navi_text_foreground"
       managedByCSSVars={BadgeManagedByCSSVars}
     >
-      {/* padding must go on the char slot */}
-      <span className="navi_char_slot_invisible" aria-hidden="true">
-        {displayValue}
-      </span>
-      {renderForegroundMemoized}
+      {displayValue}
     </Text>
   );
 };
