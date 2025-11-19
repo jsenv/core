@@ -259,40 +259,42 @@
                   display: "block",
                 }}
               >
-                alignX="start" - Position au début du conteneur
+                Position au début du conteneur
               </Text>
               <Box row contentSpacing="md">
                 <Box
                   column
-                  contentAlignX="end"
-                  style={{
-                    border: "1px solid #e0e0e0",
-                    borderRadius: "8px",
-                    padding: "12px",
-                    width: "300px",
-                  }}
-                >
-                  <BadgeCount background="#4caf50" color="white" alignX="start">
-                    3
-                  </BadgeCount>
-                  Nouveaux messages
-                </Box>
-
-                <Box
-                  column
                   contentAlignX="start"
                   contentAlignY="center"
-                  style={{
-                    border: "1px solid #e0e0e0",
-                    borderRadius: "8px",
-                    padding: "12px",
-                    width: "350px",
-                  }}
+                  border="1px solid #e0e0e0"
+                  borderRadius="8px"
+                  padding="sm"
+                  width="200"
                 >
                   <BadgeCount background="#ff9800" color="white" size="xs">
                     12
                   </BadgeCount>
                   <Text alignX="end">Tâches en attente</Text>
+                </Box>
+
+                <Box
+                  column
+                  contentAlignX="end"
+                  contentAlignY="center"
+                  border="1px solid #e0e0e0"
+                  borderRadius="8px"
+                  padding="sm"
+                  width="250"
+                >
+                  <BadgeCount
+                    background="#4caf50"
+                    color="white"
+                    alignX="start"
+                    size="xs"
+                  >
+                    12
+                  </BadgeCount>
+                  <Text>Tâches en attente</Text>
                 </Box>
               </Box>
             </div>
@@ -306,44 +308,36 @@
                   display: "block",
                 }}
               >
-                alignX="end" - Position à la fin du conteneur
+                Position à la fin du conteneur
               </Text>
               <Box row contentSpacing="md">
                 <Box
-                  style={{
-                    border: "1px solid #e0e0e0",
-                    borderRadius: "8px",
-                    padding: "12px",
-                    width: "300px",
-                  }}
+                  column
+                  contentAlignX="end"
+                  contentAlignY="center"
+                  border="1px solid #e0e0e0"
+                  borderRadius="8px"
+                  padding="sm"
+                  width="200"
                 >
-                  <Text>
-                    Messages
-                    <BadgeCount background="#1976d2" color="white" alignX="end">
-                      8
-                    </BadgeCount>
-                  </Text>
+                  <Text alignX="start">Alertes</Text>
+                  <BadgeCount background="#d32f2f" color="white" size="xs">
+                    25
+                  </BadgeCount>
                 </Box>
 
                 <Box
-                  style={{
-                    border: "1px solid #e0e0e0",
-                    borderRadius: "8px",
-                    padding: "12px",
-                    width: "350px",
-                  }}
+                  column
+                  contentAlignX="start"
+                  border="1px solid #e0e0e0"
+                  borderRadius="8px"
+                  padding="sm"
+                  width="250"
                 >
-                  <Text>
-                    Alertes
-                    <BadgeCount
-                      background="#d32f2f"
-                      color="white"
-                      alignX="end"
-                      size="xs"
-                    >
-                      25
-                    </BadgeCount>
-                  </Text>
+                  Messages
+                  <BadgeCount background="#1976d2" color="white" alignX="end">
+                    8
+                  </BadgeCount>
                 </Box>
               </Box>
             </div>
