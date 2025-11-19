@@ -229,7 +229,13 @@ export const Box = (props) => {
           return "style_and_forward";
         }
       }
-      return isStyleProp(propName) ? "style" : "forward";
+      if (isStyleProp(propName)) {
+        return "style";
+      }
+      if (propName.startsWith("data-")) {
+        return "use";
+      }
+      return "forward";
     };
     const assignStyleFromProp = (
       propValue,

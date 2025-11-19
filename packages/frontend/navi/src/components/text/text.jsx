@@ -1,6 +1,6 @@
 /* eslint-disable jsenv/no-unknown-params */
 import { createContext, toChildArray } from "preact";
-import { useContext, useState } from "preact/hooks";
+import { useCallback, useContext, useState } from "preact/hooks";
 
 import { Box } from "../layout/box.jsx";
 
@@ -22,6 +22,7 @@ import.meta.css = /* css */ `
     position: absolute;
     inset: 0;
     display: inline-flex;
+    box-sizing: border-box;
     align-items: center;
     justify-content: start;
   }
@@ -61,6 +62,17 @@ import.meta.css = /* css */ `
   }
 
   .navi_badge_count {
+    justify-content: center;
+  }
+
+  .navi_badge .navi_char_slot_invisible {
+    padding: 0.4em;
+  }
+  .navi_badge .navi_text_foreground {
+    width: 100%;
+    min-width: 1.5em;
+    height: 1.5em;
+    align-items: center;
     justify-content: center;
   }
 `;
@@ -128,35 +140,25 @@ const TextOverflowPinned = ({ overflowPinned, ...props }) => {
 };
 const TextBasic = ({
   as = "span",
-  foregroundColor,
-  foregroundElement,
-  foregroundElementProps,
   contentSpacing = " ",
   children,
   ...rest
 }) => {
-  const hasForeground = Boolean(foregroundElement || foregroundColor);
   const text = (
-    <Box
-      {...rest}
-      baseClassName="navi_text"
-      as={as}
-      data-has-foreground={hasForeground ? "" : undefined}
-    >
+    <Box {...rest} baseClassName="navi_text" as={as}>
       {applyContentSpacingOnTextChildren(children, contentSpacing)}
-      {/* https://jsfiddle.net/v5xzJ/4/ */}
-      {hasForeground && (
-        <Text
-          className="navi_text_foreground"
-          style={{ backgroundColor: foregroundColor }}
-          {...foregroundElementProps}
-        >
-          {foregroundElement}
-        </Text>
-      )}
     </Box>
   );
   return text;
+};
+
+/* https://jsfiddle.net/v5xzJ/4/ */
+const TextForeground = ({ children, ...props }) => {
+  return (
+    <Text {...props} className="navi_text_foreground">
+      {children}
+    </Text>
+  );
 };
 
 export const CharSlot = ({
@@ -177,15 +179,11 @@ export const CharSlot = ({
     : { role, "aria-label": ariaLabel };
 
   return (
-    <Text
-      {...rest}
-      {...ariaProps}
-      foregroundElement={children}
-      data-char-slot=""
-    >
+    <Text {...rest} {...ariaProps} data-has-foreground="" data-char-slot="">
       <span className="navi_char_slot_invisible" aria-hidden="true">
         {invisibleText}
       </span>
+      <TextForeground>{children}</TextForeground>
     </Text>
   );
 };
@@ -223,33 +221,31 @@ export const Icon = ({ href, children, ...props }) => {
   );
 };
 
-export const BadgeCount = ({ children, background, color, ...props }) => {
+export const BadgeCount = ({ children, bold = true, ...props }) => {
   // je crois qu'on devrait utiliser le visualSelector ici pour obtenir background par ex
+  const renderForeground = (remainingProps) => {
+    return (
+      <TextForeground {...remainingProps} box borderRadius="1em">
+        {children}
+      </TextForeground>
+    );
+  };
+  const renderForegroundMemoized = useCallback(renderForeground, [children]);
+
   return (
     <Text
-      className="navi_badge"
-      bold
-      padding="0.45em"
       {...props}
-      foregroundElement={
-        <Text
-          box
-          borderRadius="1em"
-          background={background}
-          color={color}
-          height="1.5em"
-          minWidth="1.5em"
-          width="100%"
-          contentAlignX="center"
-          contentAlignY="center"
-        >
-          {children}
-        </Text>
-      }
+      className="navi_badge"
+      bold={bold}
+      data-has-foreground=""
+      hasChildFunction
+      visualSelector=".navi_text_foreground"
     >
+      {/* padding must go on the char slot */}
       <span className="navi_char_slot_invisible" aria-hidden="true">
         {children}
       </span>
+      {renderForegroundMemoized}
     </Text>
   );
 };
