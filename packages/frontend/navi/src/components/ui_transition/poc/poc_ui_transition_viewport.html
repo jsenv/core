@@ -196,12 +196,37 @@
       <button id="btn-wide">Wide (150vw x 200px)</button>
       <button id="btn-tall">Tall (300px x 150vh)</button>
       <button id="btn-empty">Empty</button>
-      
+
       <!-- Pause/Resume controls -->
-      <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(0, 0, 0, 0.1);">
-        <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: #333; font-size: 13px;">
-          <input type="checkbox" id="pauseAtMiddle" />
-          <span>Pause at 50%</span>
+      <div
+        style="
+          margin-top: 10px;
+          padding-top: 10px;
+          border-top: 1px solid rgba(0, 0, 0, 0.1);
+        "
+      >
+        <label
+          style="
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 13px;
+          "
+        >
+          <input type="checkbox" id="pauseEnabled" />
+          <span>Pause at</span>
+          <select
+            id="pausePercentage"
+            style="padding: 2px 4px; font-size: 12px; border-radius: 3px"
+          >
+            <option value="0.01">1%</option>
+            <option value="0.2">20%</option>
+            <option value="0.5" selected>50%</option>
+            <option value="0.8">80%</option>
+            <option value="0.99">99%</option>
+          </select>
         </label>
         <button id="resumeButton">Resume Transitions</button>
       </div>
@@ -374,6 +399,41 @@
       // Update debug info periodically during transitions
       setInterval(updateDebugInfo, 200);
 
+      // LocalStorage keys for pause controls
+      const STORAGE_KEYS = {
+        pauseEnabled: "ui-transition-pause-enabled",
+        pausePercentage: "ui-transition-pause-percentage",
+      };
+
+      // Load saved settings
+      function loadPauseSettings() {
+        const pauseEnabled =
+          localStorage.getItem(STORAGE_KEYS.pauseEnabled) === "true";
+        const pausePercentage =
+          parseFloat(localStorage.getItem(STORAGE_KEYS.pausePercentage)) || 0.5;
+
+        document.getElementById("pauseEnabled").checked = pauseEnabled;
+        document.getElementById("pausePercentage").value = pausePercentage;
+      }
+
+      // Save settings to localStorage
+      function savePauseSettings() {
+        const pauseEnabled = document.getElementById("pauseEnabled").checked;
+        const pausePercentage =
+          document.getElementById("pausePercentage").value;
+
+        localStorage.setItem(STORAGE_KEYS.pauseEnabled, pauseEnabled);
+        localStorage.setItem(STORAGE_KEYS.pausePercentage, pausePercentage);
+      }
+
+      // Setup pause controls event listeners
+      document
+        .getElementById("pauseEnabled")
+        .addEventListener("change", savePauseSettings);
+      document
+        .getElementById("pausePercentage")
+        .addEventListener("change", savePauseSettings);
+
       // Pause/Resume controls
       document.getElementById("resumeButton").addEventListener("click", () => {
         if (typeof window.resumeTransitions === "function") {
@@ -381,15 +441,21 @@
         }
       });
 
-      // Add pause at middle functionality to transition controller
+      // Add pause functionality to transition controller
       const originalTransitionTo = transitionController.transitionTo;
-      transitionController.transitionTo = function(content) {
-        const pauseCheckbox = document.getElementById("pauseAtMiddle");
-        const pauseBreakpoints = pauseCheckbox && pauseCheckbox.checked ? [0.5] : [];
-        
+      transitionController.transitionTo = function (content) {
+        const pauseEnabled = document.getElementById("pauseEnabled").checked;
+        const pausePercentage = parseFloat(
+          document.getElementById("pausePercentage").value,
+        );
+        const pauseBreakpoints = pauseEnabled ? [pausePercentage] : [];
+
         // Call original with pause breakpoints
         return originalTransitionTo.call(this, content, { pauseBreakpoints });
       };
+
+      // Load initial pause settings
+      loadPauseSettings();
     </script>
   </body>
 </html>
