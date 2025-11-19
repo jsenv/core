@@ -91,17 +91,13 @@ export { IconAndText } from "./src/components/svg/icon_and_text.jsx";
 export { SVGMaskOverlay } from "./src/components/svg/svg_mask_overlay.jsx";
 export { BadgeCount } from "./src/components/text/badge.jsx";
 export { Code } from "./src/components/text/code.jsx";
+export { Icon } from "./src/components/text/icon.jsx";
 export { Image } from "./src/components/text/image.jsx";
 export { Link } from "./src/components/text/link.jsx";
 export { LinkWithIcon } from "./src/components/text/link_with_icon.jsx";
 export { MessageBox } from "./src/components/text/message_box.jsx";
 export { Svg } from "./src/components/text/svg.jsx";
-export {
-  CharSlot,
-  Icon,
-  Paragraph,
-  Text,
-} from "./src/components/text/text.jsx";
+export { Paragraph, Text } from "./src/components/text/text.jsx";
 export { Title } from "./src/components/text/title.jsx";
 // Callout, dialogs, ...
 export { openCallout } from "./src/components/callout/callout.js";

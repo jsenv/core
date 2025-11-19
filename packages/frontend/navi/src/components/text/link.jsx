@@ -16,7 +16,8 @@ import {
   useSelectableElement,
 } from "../selection/selection.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
-import { Icon, applyContentSpacingOnTextChildren } from "./text.jsx";
+import { Icon } from "./icon.jsx";
+import { applyContentSpacingOnTextChildren } from "./text.jsx";
 
 /*
  * Apply opacity to child content, not the link element itself.

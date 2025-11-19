@@ -1,4 +1,4 @@
-import { Box, Count, Icon, Layout, Text } from "@jsenv/navi";
+import { BadgeCount, Box, Icon, Layout, Text } from "@jsenv/navi";
 import { useState } from "preact/hooks";
 
 export const App = () => {
@@ -38,7 +38,9 @@ export const App = () => {
             <Text overflowEllipsis>
               Text with a dynamic count that is long and will overflow
               <Text overflowPinned color="#4caf50">
-                <Count>10</Count>
+                <BadgeCount background="violet" color="white">
+                  10
+                </BadgeCount>
               </Text>
             </Text>
           </Box>

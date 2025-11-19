@@ -1,3 +1,4 @@
+import { Box } from "../layout/box.jsx";
 import { withPropsClassName } from "../layout/with_props_class_name.js";
 import { Text } from "./text.jsx";
 
@@ -5,17 +6,26 @@ import.meta.css = /* css */ `
   .navi_icon {
     display: inline-block;
     box-sizing: border-box;
-    min-width: 1.5em;
-    height: 1.5em;
-    max-height: 1.5em;
-    padding-right: var(
-      --padding-right,
-      var(--padding-x, var(--padding, 0.4em))
-    );
-    padding-left: var(--padding-left, var(--padding-x, var(--padding, 0.4em)));
-    text-align: center;
-    line-height: 1.5em;
-    vertical-align: middle;
+  }
+
+  .navi_icon_char_slot {
+    opacity: 0;
+  }
+  .navi_icon_foreground {
+    position: absolute;
+    inset: 0;
+    display: inline-flex;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: start;
+  }
+  .navi_icon_foreground > .navi_text {
+    display: flex;
+    aspect-ratio: 1 / 1;
+    height: 100%;
+    max-height: 1em;
+    align-items: center;
+    justify-content: center;
   }
 
   .navi_icon > svg,
@@ -35,7 +45,20 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const Icon = ({ href, children, className, ...props }) => {
+export const Icon = ({
+  href,
+  children,
+  className,
+  charWidth = 1,
+  // 0 (zéro) is the real char width
+  // but 2 zéros gives too big icons
+  // while 1 "W" gives a nice result
+  baseChar = "W",
+  "aria-label": ariaLabel,
+  role,
+  decorative = false,
+  ...props
+}) => {
   const innerChildren = href ? (
     <svg width="100%" height="100%">
       <use href={href} />
@@ -49,15 +72,40 @@ export const Icon = ({ href, children, className, ...props }) => {
     box = true;
   }
 
+  if (box) {
+    return (
+      <Box
+        {...props}
+        baseClassName="navi_icon"
+        data-width={width}
+        data-height={height}
+      >
+        {innerChildren}
+      </Box>
+    );
+  }
+
+  const invisibleText = baseChar.repeat(charWidth);
+  const ariaProps = decorative
+    ? { "aria-hidden": "true" }
+    : { role, "aria-label": ariaLabel };
+
   return (
     <Text
       {...props}
+      {...ariaProps}
       box={box}
       className={withPropsClassName("navi_icon", className)}
+      data-icon-char=""
       data-width={width}
       data-height={height}
     >
-      {innerChildren}
+      <span className="navi_icon_char_slot" aria-hidden="true">
+        {invisibleText}
+      </span>
+      <span className="navi_icon_foreground">
+        <Text>{innerChildren}</Text>
+      </span>
     </Text>
   );
 };
