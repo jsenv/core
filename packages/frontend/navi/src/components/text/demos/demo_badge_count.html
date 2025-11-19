@@ -352,34 +352,64 @@
         <Box as="section" marginBottom="xl" id="nowrap">
           <Title as="h2">Association texte + badge (pas de coupure)</Title>
           <Box column contentSpacing="md">
-            <div
-              style={{
-                width: "200px",
-                border: "1px solid #ddd",
-                padding: "8px",
-              }}
-            >
-              <Text>
-                Texte très long qui devrait normalement se couper
-                <BadgeCount background="#673ab7" color="white">
-                  15
-                </BadgeCount>
+            <div>
+              <Text
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "4px",
+                  display: "block",
+                }}
+              >
+                Sans noWrap - Le texte et le badge peuvent se séparer
               </Text>
+              <div
+                style={{
+                  width: "200px",
+                  border: "1px solid #ddd",
+                  padding: "8px",
+                  backgroundColor: "#f9f9f9",
+                }}
+              >
+                Vous avez reçu de nouveaux{" "}
+                <Text>
+                  messages
+                  <BadgeCount background="#673ab7" color="white">
+                    15
+                  </BadgeCount>
+                </Text>{" "}
+                importants à consulter.
+              </div>
             </div>
 
-            <div
-              style={{
-                width: "200px",
-                border: "1px solid #ddd",
-                padding: "8px",
-              }}
-            >
-              <Text noWrap>
-                Texte très long mais avec noWrap
-                <BadgeCount background="#673ab7" color="white">
-                  15
-                </BadgeCount>
+            <div>
+              <Text
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "4px",
+                  display: "block",
+                }}
+              >
+                Avec noWrap - Le mot et son badge restent ensemble
               </Text>
+              <div
+                style={{
+                  width: "200px",
+                  border: "1px solid #ddd",
+                  padding: "8px",
+                  backgroundColor: "#e8f5e8",
+                }}
+              >
+                Vous avez reçu de nouveaux{" "}
+                <Text noWrap>
+                  messages
+                  <BadgeCount background="#673ab7" color="white">
+                    15
+                  </BadgeCount>
+                </Text>{" "}
+                importants à consulter.
+              </div>
             </div>
           </Box>
         </Box>
@@ -411,13 +441,6 @@
                 </BadgeCount>
               </Text>
             </Box>
-
-            <Text>
-              Test avec string → number
-              <BadgeCount background="#607d8b" color="white" max="99">
-                150
-              </BadgeCount>
-            </Text>
           </Box>
         </Box>
       );
