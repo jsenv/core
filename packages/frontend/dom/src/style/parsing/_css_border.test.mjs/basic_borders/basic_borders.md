@@ -24,14 +24,24 @@ return {
     ]
   },
   "rgb_color": {
-    "width": 53,
+    "width": 20,
     "style": "solid",
-    "color": null
+    "color": [
+      255,
+      107,
+      53,
+      1
+    ]
   },
   "rgba_color": {
-    "width": 0.5,
+    "width": 3,
     "style": "solid",
-    "color": null
+    "color": [
+      255,
+      0,
+      0,
+      0.5
+    ]
   },
   "hex_color": {
     "width": 1,

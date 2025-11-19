@@ -34,14 +34,24 @@ return {
     ]
   },
   "hsl_color": {
-    "width": 50,
+    "width": 2,
     "style": "solid",
-    "color": null
+    "color": [
+      0,
+      255,
+      0,
+      1
+    ]
   },
   "hsla_color": {
-    "width": 0.7,
+    "width": 3,
     "style": "solid",
-    "color": null
+    "color": [
+      0,
+      0,
+      255,
+      0.7
+    ]
   },
   "mixed_case": {
     "width": 2,

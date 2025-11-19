@@ -25,8 +25,34 @@ export const parseCSSBorder = (borderValue, element) => {
     };
   }
 
-  // Split by spaces to get individual parts
-  const parts = normalizedValue.split(" ");
+  // Split while keeping function values like rgb() intact
+  const parts = [];
+  let current = "";
+  let parenDepth = 0;
+
+  for (let i = 0; i < normalizedValue.length; i++) {
+    const char = normalizedValue[i];
+
+    if (char === "(") {
+      parenDepth++;
+      current += char;
+    } else if (char === ")") {
+      parenDepth--;
+      current += char;
+    } else if (char === " " && parenDepth === 0) {
+      if (current.trim()) {
+        parts.push(current.trim());
+        current = "";
+      }
+    } else {
+      current += char;
+    }
+  }
+
+  // Add the last part
+  if (current.trim()) {
+    parts.push(current.trim());
+  }
 
   let width = null;
   let style = null;

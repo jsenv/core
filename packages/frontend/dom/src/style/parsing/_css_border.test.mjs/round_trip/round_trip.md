@@ -27,11 +27,16 @@ return {
   },
   "complex_color": {
     "parsed": {
-      "width": 0.8,
+      "width": 5,
       "style": "dashed",
-      "color": null
+      "color": [
+        255,
+        128,
+        0,
+        0.8
+      ]
     },
-    "stringified": "0.8px dashed"
+    "stringified": "5px dashed rgba(255, 128, 0, 0.8)"
   },
   "transparent": {
     "parsed": {
