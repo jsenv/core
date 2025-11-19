@@ -283,7 +283,7 @@ export const normalizeStyle = (
     if (context === "js") {
       if (typeof value === "string") {
         // For js context, prefer objects
-        return parseCSSBorder(value);
+        return parseCSSBorder(value, element);
       }
       // If code does border: { width: 2, style: "solid", color: "red" }
       // we want to normalize each part
