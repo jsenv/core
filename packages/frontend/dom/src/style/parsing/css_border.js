@@ -1,4 +1,5 @@
 import { parseCSSColor, stringifyCSSColor } from "./css_color.js";
+import { tokenizeCSS } from "./css_tokenizer.js";
 
 /**
  * Parse a CSS border value into components
@@ -25,34 +26,11 @@ export const parseCSSBorder = (borderValue, element) => {
     };
   }
 
-  // Split while keeping function values like rgb() intact
-  const parts = [];
-  let current = "";
-  let parenDepth = 0;
-
-  for (let i = 0; i < normalizedValue.length; i++) {
-    const char = normalizedValue[i];
-
-    if (char === "(") {
-      parenDepth++;
-      current += char;
-    } else if (char === ")") {
-      parenDepth--;
-      current += char;
-    } else if (char === " " && parenDepth === 0) {
-      if (current.trim()) {
-        parts.push(current.trim());
-        current = "";
-      }
-    } else {
-      current += char;
-    }
-  }
-
-  // Add the last part
-  if (current.trim()) {
-    parts.push(current.trim());
-  }
+  // Use CSS tokenizer to split while respecting function boundaries
+  const parts = tokenizeCSS(normalizedValue, {
+    separators: [" "],
+    respectFunctions: true,
+  });
 
   let width = null;
   let style = null;
