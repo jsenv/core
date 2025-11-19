@@ -18,6 +18,7 @@ import {
   createTimelineTransition,
 } from "../transition_playback.js";
 import { getBackgroundColorAndImageInterpolation } from "./background_color_and_image_interpolation.js";
+import { getBorderColorAndWidthInterpolation } from "./border_color_and_width_interpolation.js";
 import {
   interpolateRGBA,
   prepareRGBATransitionPair,
@@ -237,6 +238,49 @@ export const createBorderRadiusTransition = (element, to, options = {}) => {
     to,
   });
 };
+export const createBorderTransition = (element, to, options = {}) => {
+  const fromBorder = options.from || getBorder(element);
+  const toBorder = parseStyle(to, "border", element);
+  let borderInterpolation;
+  interpolation: {
+    // Handle simple cases where no transition is possible
+    if (!fromBorder && !toBorder) {
+      borderInterpolation = toBorder;
+      break interpolation;
+    }
+    const colorAndWidthInterpolation = getBorderColorAndWidthInterpolation(
+      fromBorder,
+      toBorder,
+    );
+    borderInterpolation = colorAndWidthInterpolation;
+  }
+
+  const interpolateBorder = createObjectInterpolation(
+    borderInterpolation,
+    fromBorder,
+    toBorder,
+  );
+  if (!interpolateBorder) {
+    return createNoopCSSPropertyTransition({
+      element,
+      ...options,
+    });
+  }
+  return createCSSPropertyTransition({
+    constructor: createBackgroundTransition,
+    element,
+    styleProperty: "border",
+    from: 0,
+    to: 1,
+    getFrom: () => 0,
+    getValue: (transition) => {
+      const borderInterpolated = interpolateBorder(transition);
+      return stringifyStyle(borderInterpolated, "border");
+    },
+    ...options,
+  });
+};
+
 export const createBackgroundTransition = (element, to, options = {}) => {
   const fromBackground = options.from || getBackground(element);
   const toBackground = parseStyle(to, "background", element);

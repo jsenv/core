@@ -85,6 +85,7 @@
 import {
   createBackgroundTransition,
   createBorderRadiusTransition,
+  createBorderTransition,
   createGroupTransitionController,
   createHeightTransition,
   createOpacityTransition,
@@ -662,7 +663,18 @@ export const createUITransitionController = (
       },
     );
     morphTransitions.push(borderRadiusTransition);
-    container.style.border = targetSlotConfiguration.border;
+
+    const toBorder = targetSlotConfiguration.border;
+    const borderTransition = createBorderTransition(container, toBorder, {
+      from: previousTargetSlotConfiguration.border,
+      duration,
+      styleSynchronizer: "inline_style",
+      onFinish: (borderTransition) => {
+        borderTransition.cancel();
+      },
+    });
+    morphTransitions.push(borderTransition);
+
     const widthTransition = createWidthTransition(container, toWidth, {
       from: fromWidth,
       duration,
@@ -698,8 +710,6 @@ export const createUITransitionController = (
         styleSynchronizer: "inline_style",
         onUpdate: () => {},
         onFinish: () => {
-          container.style.border = "";
-          // swap background and border
           backgroundTransition.cancel();
         },
       },
