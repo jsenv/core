@@ -9,8 +9,8 @@ import.meta.css = /* css */ `
       --navi-loader-color: light-dark(#355fcc, #3b82f6);
       --navi-selection-border-color: #0078d4;
       --navi-selection-background-color: #eaf1fd;
-      --navi-text-color-light: white;
-      --navi-text-color-dark: rgb(55, 60, 69);
+      --navi-color-light: white;
+      --navi-color-dark: rgb(55, 60, 69);
     }
   }
 `;

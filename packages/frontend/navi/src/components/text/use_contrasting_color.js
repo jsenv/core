@@ -1,0 +1,27 @@
+import { pickLightOrDark } from "@jsenv/dom";
+import { useLayoutEffect } from "preact/hooks";
+
+const CSS_VAR_NAME = "--color-contrasting";
+
+export const useContrastingColor = (ref) => {
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return;
+    }
+    const lightColor = "var(--navi-color-light)";
+    const darkColor = "var(--navi-color-dark)";
+    const backgroundColor = getComputedStyle(el).backgroundColor;
+    if (!backgroundColor) {
+      el.style.removeProperty(CSS_VAR_NAME);
+      return;
+    }
+    const colorPicked = pickLightOrDark(
+      backgroundColor,
+      lightColor,
+      darkColor,
+      el,
+    );
+    el.style.setProperty(CSS_VAR_NAME, colorPicked);
+  }, []);
+};

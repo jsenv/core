@@ -1,4 +1,7 @@
+import { useRef } from "preact/hooks";
+
 import { Text } from "./text.jsx";
+import { useContrastingColor } from "./use_contrasting_color.js";
 
 import.meta.css = /* css */ `
   @layer navi {
@@ -17,7 +20,7 @@ import.meta.css = /* css */ `
       var(--padding-x, var(--padding, 0.4em))
     );
     padding-left: var(--padding-left, var(--padding-x, var(--padding, 0.4em)));
-    color: var(--color);
+    color: var(--color, var(--color-contrasting));
     text-align: center;
     line-height: 1.5em;
     vertical-align: middle;
@@ -35,6 +38,9 @@ const BadgeManagedByCSSVars = {
   color: "--color",
 };
 export const BadgeCount = ({ children, bold = true, max, ...props }) => {
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
+
   // Calculer la valeur à afficher en fonction du paramètre max
   const getDisplayValue = () => {
     if (max === undefined) {
@@ -53,10 +59,12 @@ export const BadgeCount = ({ children, bold = true, max, ...props }) => {
   };
 
   const displayValue = getDisplayValue();
+  useContrastingColor(ref);
 
   return (
     <Text
       {...props}
+      ref={ref}
       className="navi_badge"
       bold={bold}
       managedByCSSVars={BadgeManagedByCSSVars}
