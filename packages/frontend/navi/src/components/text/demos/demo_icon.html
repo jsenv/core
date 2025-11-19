@@ -24,19 +24,15 @@
         <Box as="section" marginBottom="xl">
           <Title as="h2">Table des matières</Title>
           <Box row contentSpacing="xs" marginTop="md">
-            <Link href="#icon-row">1. Icon in Row</Link>
-            <Link href="#icon-column">2. Icon in Column</Link>
-            <Link href="#inline-text-icons">3. Inline Text with Icons</Link>
-            <Link href="#icon-text-link">
-              4. Icon + Text + Link Combinations
-            </Link>
-            <Link href="#container-widths">5. Container Width Variations</Link>
-            <Link href="#line-height-variations">
-              6. Line Height Variations
-            </Link>
-            <Link href="#icon-positioning">7. Icon Positioning</Link>
-            <Link href="#icon-transformation">8. Icon Transformation</Link>
-            <Link href="#icon-dimensions">9. Icon Dimensions</Link>
+            <Link href="#inline-text-icons">1. Icon inside text</Link>
+            <Link href="#line-height-variations">2. Icon line height</Link>
+            <Link href="#icon-transformation">3. Icon transformation</Link>
+            <Link href="#icon-href">4. Icon with href</Link>
+            <Link href="#icon-dimensions">5. Icon dimensions</Link>
+            <Link href="#icon-text-link">6. Icon + text + link</Link>
+            <Link href="#container-widths">7. Container width variations</Link>
+            <Link href="#icon-row">8. Icon in row</Link>
+            <Link href="#icon-column">9. Icon in column</Link>
           </Box>
         </Box>
       );
@@ -45,7 +41,16 @@
       const IconRowSection = () => (
         <Box as="section" marginBottom="xl" id="icon-row">
           <Title as="h2">Icon in Row</Title>
-          <Box column contentSpacing="md">
+          <Box
+            column
+            contentSpacing="md"
+            style={{
+              padding: "16px",
+              border: "2px solid #e0e0e0",
+              borderRadius: "8px",
+              backgroundColor: "#f9f9f9",
+            }}
+          >
             <Box row alignItems="center">
               <Icon>
                 <HomeSvg />
@@ -74,7 +79,16 @@
       const IconColumnSection = () => (
         <Box as="section" marginBottom="xl" id="icon-column">
           <Title as="h2">Icon in Column</Title>
-          <Box row contentSpacing="lg">
+          <Box
+            row
+            contentSpacing="lg"
+            style={{
+              padding: "16px",
+              border: "2px solid #e0e0e0",
+              borderRadius: "8px",
+              backgroundColor: "#f9f9f9",
+            }}
+          >
             <Box
               column
               contentSpacing="xs"
@@ -91,7 +105,7 @@
               column
               contentSpacing="xs"
               alignItems="center"
-              style={{ height: "120px" }}
+              style={{ height: "80px" }}
             >
               <Icon color="red" alignY="center">
                 <HeartSvg />
@@ -103,7 +117,7 @@
               column
               contentSpacing="xs"
               alignItems="center"
-              style={{ height: "120px" }}
+              style={{ height: "80px" }}
             >
               <Icon alignY="end">
                 <SearchSvg />
@@ -931,15 +945,15 @@
             <Title as="h1">Icon Demo</Title>
 
             <TableOfContents />
-            <IconRowSection />
-            <IconColumnSection />
             <InlineTextIconsSection />
+            <LineHeightVariationsSection />
+            <IconTransformationSection />
+            <IconHrefSection />
+            <IconDimensionsSection />
             <IconTextLinkSection />
             <ContainerWidthsSection />
-            <LineHeightVariationsSection />
-            <IconPositioningSection />
-            <IconTransformationSection />
-            <IconDimensionsSection />
+            <IconRowSection />
+            <IconColumnSection />
           </div>
         );
       };
