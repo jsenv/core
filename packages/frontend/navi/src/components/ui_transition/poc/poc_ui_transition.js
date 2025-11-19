@@ -592,125 +592,135 @@ export const createUITransitionController = (
   );
 
   const morphContainerIntoTarget = () => {
-    const fromWidth = containerWidth || 0;
-    const fromHeight = containerHeight || 0;
-    const toWidth = targetSlotConfiguration.width || 0;
-    const toHeight = targetSlotConfiguration.height || 0;
-    debugSize(
-      `transition from [${fromWidth}x${fromHeight}] to [${toWidth}x${toHeight}]`,
-    );
-
-    const restoreOverflow = preventIntermediateScrollbar(root, {
-      fromWidth,
-      fromHeight,
-      toWidth,
-      toHeight,
-      onPrevent: ({ x, y, scrollContainer }) => {
-        if (x) {
-          debugSize(
-            `Temporarily hiding horizontal overflow during transition on ${getElementSignature(scrollContainer)}`,
-          );
-        }
-        if (y) {
-          debugSize(
-            `Temporarily hiding vertical overflow during transition on ${getElementSignature(scrollContainer)}`,
-          );
-        }
-      },
-      onRestore: () => {
-        debugSize(`Restored overflow after transition`);
-      },
-    });
-
-    let widthTransitionFinished = false;
-    let heightTransitionFinished = false;
-    const onWidthTransitionFinished = () => {
-      widthTransitionFinished = true;
-      if (heightTransitionFinished) {
-        onSizeTransitionFinished();
-      }
-    };
-    const onHeightTransitionFinished = () => {
-      heightTransitionFinished = true;
-      if (widthTransitionFinished) {
-        onSizeTransitionFinished();
-      }
-    };
-    const onSizeTransitionFinished = () => {
-      // uiTransitionStyleController.delete(targetSlot, "transform.translateY");
-      // Restore overflow when transition is complete
-      restoreOverflow();
-      // let target slot take natural size now container is done
-      releaseSlotDimensions(targetSlot);
-    };
-
     const morphTransitions = [];
-    const borderRadiusTransition = createBorderRadiusTransition(
-      container,
-      targetSlotConfiguration.borderRadius,
-      {
-        from: getBorderRadius(container),
+    border_radius: {
+      const fromBorderRadius = previousTargetSlotConfiguration.borderRadius;
+      const toBorderRadius = targetSlotConfiguration.borderRadius;
+      const borderRadiusTransition = createBorderRadiusTransition(
+        container,
+        toBorderRadius,
+        {
+          from: fromBorderRadius,
+          duration,
+          styleSynchronizer: "inline_style",
+          onUpdate: () => {},
+          onFinish: (borderRadiusTransition) => {
+            borderRadiusTransition.cancel();
+          },
+        },
+      );
+      morphTransitions.push(borderRadiusTransition);
+    }
+    border: {
+      const fromBorder = previousTargetSlotConfiguration.border;
+      const toBorder = targetSlotConfiguration.border;
+      const borderTransition = createBorderTransition(container, toBorder, {
+        from: fromBorder,
         duration,
         styleSynchronizer: "inline_style",
-        onUpdate: () => {},
-        onFinish: (borderRadiusTransition) => {
-          borderRadiusTransition.cancel();
+        onFinish: (borderTransition) => {
+          borderTransition.cancel();
         },
-      },
-    );
-    morphTransitions.push(borderRadiusTransition);
+      });
+      morphTransitions.push(borderTransition);
+    }
+    background: {
+      const fromBackground = previousTargetSlotConfiguration.background;
+      const toBackground = targetSlotConfiguration.background;
+      const backgroundTransition = createBackgroundTransition(
+        container,
+        toBackground,
+        {
+          from: fromBackground,
+          duration,
+          styleSynchronizer: "inline_style",
+          onUpdate: () => {},
+          onFinish: () => {
+            backgroundTransition.cancel();
+          },
+        },
+      );
+      morphTransitions.push(backgroundTransition);
+    }
+    dimensions: {
+      const fromWidth = containerWidth || 0;
+      const fromHeight = containerHeight || 0;
+      const toWidth = targetSlotConfiguration.width || 0;
+      const toHeight = targetSlotConfiguration.height || 0;
+      debugSize(
+        `transition from [${fromWidth}x${fromHeight}] to [${toWidth}x${toHeight}]`,
+      );
+      const restoreOverflow = preventIntermediateScrollbar(root, {
+        fromWidth,
+        fromHeight,
+        toWidth,
+        toHeight,
+        onPrevent: ({ x, y, scrollContainer }) => {
+          if (x) {
+            debugSize(
+              `Temporarily hiding horizontal overflow during transition on ${getElementSignature(scrollContainer)}`,
+            );
+          }
+          if (y) {
+            debugSize(
+              `Temporarily hiding vertical overflow during transition on ${getElementSignature(scrollContainer)}`,
+            );
+          }
+        },
+        onRestore: () => {
+          debugSize(`Restored overflow after transition`);
+        },
+      });
 
-    const toBorder = targetSlotConfiguration.border;
-    const borderTransition = createBorderTransition(container, toBorder, {
-      from: previousTargetSlotConfiguration.border,
-      duration,
-      styleSynchronizer: "inline_style",
-      onFinish: (borderTransition) => {
-        borderTransition.cancel();
-      },
-    });
-    morphTransitions.push(borderTransition);
+      let widthTransitionFinished = false;
+      let heightTransitionFinished = false;
+      const onWidthTransitionFinished = () => {
+        widthTransitionFinished = true;
+        if (heightTransitionFinished) {
+          onSizeTransitionFinished();
+        }
+      };
+      const onHeightTransitionFinished = () => {
+        heightTransitionFinished = true;
+        if (widthTransitionFinished) {
+          onSizeTransitionFinished();
+        }
+      };
+      const onSizeTransitionFinished = () => {
+        // uiTransitionStyleController.delete(targetSlot, "transform.translateY");
+        // Restore overflow when transition is complete
+        restoreOverflow();
+        // let target slot take natural size now container is done
+        releaseSlotDimensions(targetSlot);
+      };
 
-    const widthTransition = createWidthTransition(container, toWidth, {
-      from: fromWidth,
-      duration,
-      styleSynchronizer: "inline_style",
-      onUpdate: (widthTransition) => {
-        containerWidth = widthTransition.value;
-      },
-      onFinish: (widthTransition) => {
-        widthTransition.cancel();
-        onWidthTransitionFinished();
-      },
-    });
-    const heightTransition = createHeightTransition(container, toHeight, {
-      from: fromHeight,
-      duration,
-      styleSynchronizer: "inline_style",
-      onUpdate: (heightTransition) => {
-        containerHeight = heightTransition.value;
-      },
-      onFinish: (heightTransition) => {
-        heightTransition.cancel();
-        onHeightTransitionFinished();
-      },
-    });
-    morphTransitions.push(widthTransition, heightTransition);
-    const toBackground = targetSlotConfiguration.background;
-    const backgroundTransition = createBackgroundTransition(
-      container,
-      toBackground,
-      {
-        from: previousTargetSlotConfiguration.background,
+      const widthTransition = createWidthTransition(container, toWidth, {
+        from: fromWidth,
         duration,
         styleSynchronizer: "inline_style",
-        onUpdate: () => {},
-        onFinish: () => {
-          backgroundTransition.cancel();
+        onUpdate: (widthTransition) => {
+          containerWidth = widthTransition.value;
         },
-      },
-    );
-    morphTransitions.push(backgroundTransition);
+        onFinish: (widthTransition) => {
+          widthTransition.cancel();
+          onWidthTransitionFinished();
+        },
+      });
+      const heightTransition = createHeightTransition(container, toHeight, {
+        from: fromHeight,
+        duration,
+        styleSynchronizer: "inline_style",
+        onUpdate: (heightTransition) => {
+          containerHeight = heightTransition.value;
+        },
+        onFinish: (heightTransition) => {
+          heightTransition.cancel();
+          onHeightTransitionFinished();
+        },
+      });
+      morphTransitions.push(widthTransition, heightTransition);
+    }
+
     return morphTransitions;
   };
   const fadeInTargetSlot = () => {

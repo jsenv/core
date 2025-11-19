@@ -1,0 +1,801 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Border Radius Transition Demo</title>
+    <style>
+      :root {
+        --demo-primary: #007acc;
+        --demo-secondary: #005a9e;
+        --demo-success: #28a745;
+        --demo-warning: #ffc107;
+        --demo-danger: #dc3545;
+      }
+
+      body {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background: #f5f5f5;
+      }
+
+      .demo-section {
+        margin: 30px 0;
+        padding: 30px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .controls-area {
+        padding: 20px;
+        padding-bottom: 10px;
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+      }
+
+      .transition-area {
+        display: grid;
+        margin: 20px 0;
+        grid-template-columns: 1fr 1fr;
+        align-items: start;
+        gap: 0;
+        background: white;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .transition-column {
+        display: flex;
+        min-height: 250px;
+        padding: 25px;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+        background: #fafafa;
+      }
+
+      .transition-column:first-child {
+        background: #f8f9fa;
+        border-right: 2px solid #dee2e6;
+      }
+
+      .transition-column h3 {
+        margin: 0 0 5px 0;
+        color: #495057;
+        font-weight: 600;
+        font-size: 18px;
+        text-align: center;
+      }
+
+      .transition-column .subtitle {
+        margin: 0 0 5px 0;
+        color: #6c757d;
+        font-style: italic;
+        font-weight: 400;
+        font-size: 12px;
+        text-align: center;
+      }
+
+      .transition-box {
+        display: flex;
+        width: 150px;
+        height: 150px;
+        align-items: center;
+        justify-content: center;
+        color: #333;
+        font-weight: bold;
+        font-size: 14px;
+        text-align: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: 3px solid #333;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      #userAgentBox {
+        transition: border-radius 1s ease;
+      }
+
+      .selector-fieldset {
+        margin: 15px 0;
+        padding: 15px;
+        background: #fafafa;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+      }
+
+      .selectors-container {
+        display: grid;
+        margin: 15px 0;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+
+      .selector-fieldset legend {
+        padding: 0 10px;
+        color: #555;
+        font-weight: bold;
+      }
+
+      .option-category {
+        margin: 10px 0;
+      }
+
+      .option-category h4 {
+        margin: 8px 0 5px 0;
+        color: #666;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .option-grid {
+        display: flex;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .option-rect {
+        position: relative;
+        width: 45px;
+        height: 35px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: 2px solid #333;
+        transition: all 0.2s ease;
+        cursor: pointer;
+      }
+
+      .option-rect.selected {
+        box-shadow: 0 0 0 3px var(--demo-primary);
+        transform: scale(1.05);
+      }
+
+      .option-rect[title] {
+        position: relative;
+      }
+
+      .controls {
+        display: flex;
+        margin: 15px 0;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 15px;
+      }
+
+      select,
+      button,
+      input {
+        padding: 10px 15px;
+        font-size: 14px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+      }
+
+      select {
+        min-width: 150px;
+      }
+
+      button {
+        color: white;
+        font-weight: bold;
+        background: var(--demo-primary);
+        border: none;
+        transition: background 0.2s;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: var(--demo-secondary);
+      }
+
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .duration-control {
+        margin: 15px 0;
+        padding: 10px;
+        background: #f0f8ff;
+        border: 1px solid #b3d9ff;
+        border-radius: 6px;
+      }
+
+      .duration-control input[type="range"] {
+        width: 180px;
+      }
+
+      .duration-control label {
+        display: flex;
+        margin: 0;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+      }
+
+      label {
+        margin-right: 10px;
+        font-weight: bold;
+      }
+
+      h1 {
+        margin-bottom: 30px;
+        color: #333;
+        text-align: center;
+      }
+
+      h2 {
+        margin-top: 0;
+        padding-bottom: 10px;
+        color: #333;
+        border-bottom: 3px solid var(--demo-primary);
+      }
+
+      .section-description {
+        margin-bottom: 20px;
+        color: #666;
+        font-size: 16px;
+        line-height: 1.4;
+      }
+
+      .preview-boxes {
+        display: flex;
+        margin: 15px 0;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .preview-box {
+        display: flex;
+        width: 60px;
+        height: 60px;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-weight: bold;
+        font-size: 10px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: 2px solid #333;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .arrow-container {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .invert-button {
+        position: absolute;
+        top: 25px;
+        z-index: 10;
+        padding: 4px 8px;
+        color: var(--demo-primary);
+        font-weight: bold;
+        font-size: 11px;
+        background: white;
+        border: 1px solid var(--demo-primary);
+        border-radius: 0px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+      }
+
+      .invert-button:hover {
+        color: white;
+        background: var(--demo-primary);
+      }
+
+      details {
+        margin: 15px 0;
+        padding: 10px;
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+      }
+
+      summary {
+        padding: 5px 0;
+        color: #555;
+        font-weight: bold;
+        cursor: pointer;
+        user-select: none;
+      }
+
+      summary:hover {
+        color: var(--demo-primary);
+      }
+
+      details[open] summary {
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #e9ecef;
+      }
+
+      .value-display {
+        margin: 8px 0;
+        padding: 8px 12px;
+        color: #495057;
+        font-size: 12px;
+        font-family: "Monaco", "Consolas", monospace;
+        background: #fff;
+        border: 1px solid #e9ecef;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Border Radius Transition Demo - User Agent vs Navi</h1>
+
+    <!-- Main Border Radius Transition Demo -->
+    <div class="demo-section">
+      <h2>Border Radius Transition Testing</h2>
+      <p class="section-description">
+        Configure source and destination border radius values, then watch the
+        transition happen. Supports various radius patterns: all corners same,
+        individual corners, elliptical radii, and CSS shorthand combinations.
+        Compare how the browser's native CSS transition behaves versus the
+        custom implementation.
+      </p>
+
+      <!-- Controls Area -->
+      <div class="controls-area">
+        <h3 style="margin-top: 0; color: #555">Configuration</h3>
+
+        <div class="duration-control">
+          <label>
+            Duration:
+            <input
+              type="range"
+              id="duration"
+              min="100"
+              max="3000"
+              value="1000"
+              step="100"
+            />
+            <span id="durationValue">1000ms</span>
+          </label>
+        </div>
+
+        <div class="selectors-container">
+          <fieldset class="selector-fieldset">
+            <legend>From Border Radius</legend>
+            <div id="fromSelector"></div>
+            <div class="value-display" id="fromValue">0px</div>
+          </fieldset>
+
+          <fieldset class="selector-fieldset">
+            <legend>To Border Radius</legend>
+            <div id="toSelector"></div>
+            <div class="value-display" id="toValue">20px</div>
+          </fieldset>
+        </div>
+
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-top: -15px;
+            margin-bottom: 5px;
+          "
+        >
+          <button id="startTransition">Start Transition</button>
+          <div style="display: flex; align-items: center; gap: 10px">
+            <span style="font-weight: bold">Preview:</span>
+            <div class="preview-box" id="fromPreview">FROM</div>
+            <div class="arrow-container">
+              <button
+                class="invert-button"
+                id="invertButton"
+                title="Swap FROM and TO"
+              >
+                ↔
+              </button>
+              <span style="font-size: 20px; color: var(--demo-primary)">→</span>
+            </div>
+            <div class="preview-box" id="toPreview">TO</div>
+          </div>
+        </div>
+
+        <details>
+          <summary>Debugging Options</summary>
+          <label style="display: flex; align-items: center; gap: 8px">
+            <input type="checkbox" id="pauseBreakpoints" />
+            <span>Pause at 50% for debugging</span>
+          </label>
+          <button
+            id="resumeTransitions"
+            style="margin-top: 10px; padding: 8px 15px"
+            disabled
+          >
+            Resume Paused Transitions
+          </button>
+        </details>
+      </div>
+
+      <!-- Transition Area -->
+      <div class="transition-area">
+        <div class="transition-column">
+          <h3>User Agent</h3>
+          <div class="subtitle">CSS transition: border-radius</div>
+          <div class="transition-box" id="userAgentBox">
+            USER AGENT<br />BOX
+          </div>
+        </div>
+        <div class="transition-column">
+          <h3>Navi</h3>
+          <div class="subtitle">Custom transition system</div>
+          <div class="transition-box" id="naviBox">NAVI<br />BOX</div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      import { createBorderRadiusTransition } from "../style_transition.js";
+
+      // LocalStorage utilities
+      const STORAGE_KEY = "border-radius-transition-demo";
+
+      function saveToStorage(data) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        } catch (e) {
+          console.warn("Failed to save to localStorage:", e);
+        }
+      }
+
+      function loadFromStorage() {
+        try {
+          const data = localStorage.getItem(STORAGE_KEY);
+          return data ? JSON.parse(data) : null;
+        } catch (e) {
+          console.warn("Failed to load from localStorage:", e);
+          return null;
+        }
+      }
+
+      function getStoredState() {
+        const stored = loadFromStorage();
+        return {
+          selectedFrom: stored?.selectedFrom || "0px",
+          selectedTo: stored?.selectedTo || "20px",
+          duration: stored?.duration || 1000,
+          pauseBreakpoints: stored?.pauseBreakpoints || false,
+        };
+      }
+
+      function saveState() {
+        saveToStorage({
+          selectedFrom,
+          selectedTo,
+          duration: getDuration(),
+          pauseBreakpoints: getPauseBreakpoints(),
+        });
+      }
+
+      // Border radius options organized by category
+      const borderRadiusCategories = {
+        Basic: [
+          {
+            value: "0px",
+            label: "Square",
+            defaultFrom: true,
+          },
+          {
+            value: "5px",
+            label: "Slightly Rounded",
+          },
+          {
+            value: "10px",
+            label: "Rounded",
+          },
+          {
+            value: "20px",
+            label: "Very Rounded",
+            defaultTo: true,
+          },
+          {
+            value: "40px",
+            label: "Super Rounded",
+          },
+          {
+            value: "75px",
+            label: "Circle",
+          },
+        ],
+        Individual_Corners: [
+          {
+            value: "20px 0px 0px 0px",
+            label: "Top Left Only",
+          },
+          {
+            value: "0px 20px 0px 0px",
+            label: "Top Right Only",
+          },
+          {
+            value: "0px 0px 20px 0px",
+            label: "Bottom Right Only",
+          },
+          {
+            value: "0px 0px 0px 20px",
+            label: "Bottom Left Only",
+          },
+          {
+            value: "20px 0px 20px 0px",
+            label: "Top & Bottom Left",
+          },
+          {
+            value: "0px 20px 0px 20px",
+            label: "Top & Bottom Right",
+          },
+        ],
+        Complex_Patterns: [
+          {
+            value: "30px 10px",
+            label: "Asymmetric Horizontal",
+          },
+          {
+            value: "10px 30px 10px 30px",
+            label: "Alternating",
+          },
+          {
+            value: "50px 10px 20px 5px",
+            label: "Random Mix",
+          },
+          {
+            value: "20px 40px 60px 80px",
+            label: "Progressive",
+          },
+        ],
+        Elliptical: [
+          {
+            value: "50px / 25px",
+            label: "Horizontal Oval",
+          },
+          {
+            value: "25px / 50px",
+            label: "Vertical Oval",
+          },
+          {
+            value: "40px 20px / 20px 40px",
+            label: "Complex Ellipse",
+          },
+          {
+            value: "75px / 75px",
+            label: "Perfect Circle",
+          },
+        ],
+      };
+
+      // Initialize from localStorage or defaults
+      const initialState = getStoredState();
+      let selectedFrom = initialState.selectedFrom;
+      let selectedTo = initialState.selectedTo;
+
+      function createOptionRect(option) {
+        const rect = document.createElement("div");
+        rect.className = "option-rect";
+        rect.style.borderRadius = option.value;
+        rect.title = `${option.label}: ${option.value}`;
+        rect.dataset.value = option.value;
+        return rect;
+      }
+
+      function createCategorySelector(containerId, selectedValue, onSelect) {
+        const container = document.getElementById(containerId);
+        const valueDisplay = document.getElementById(
+          containerId.replace("Selector", "Value"),
+        );
+        container.innerHTML = "";
+
+        Object.entries(borderRadiusCategories).forEach(
+          ([categoryName, options]) => {
+            const categoryDiv = document.createElement("div");
+            categoryDiv.className = "option-category";
+
+            const header = document.createElement("h4");
+            header.textContent = categoryName.replace(/_/g, " ");
+            categoryDiv.appendChild(header);
+
+            const grid = document.createElement("div");
+            grid.className = "option-grid";
+
+            options.forEach((option) => {
+              const rect = createOptionRect(option);
+              if (option.value === selectedValue) {
+                rect.classList.add("selected");
+              }
+
+              rect.addEventListener("click", () => {
+                // Remove selection from all rects in this container
+                container
+                  .querySelectorAll(".option-rect.selected")
+                  .forEach((r) => r.classList.remove("selected"));
+                // Add selection to clicked rect
+                rect.classList.add("selected");
+                // Update value display
+                valueDisplay.textContent = option.value;
+                onSelect(option.value);
+              });
+
+              grid.appendChild(rect);
+            });
+
+            categoryDiv.appendChild(grid);
+            container.appendChild(categoryDiv);
+          },
+        );
+
+        // Set initial value display
+        valueDisplay.textContent = selectedValue;
+      }
+
+      let currentTransitions = [];
+
+      // Duration slider handlers
+      function setupDurationSlider(sliderId, valueId) {
+        const slider = document.getElementById(sliderId);
+        const valueDisplay = document.getElementById(valueId);
+
+        // Set initial value from localStorage
+        slider.value = initialState.duration;
+        valueDisplay.textContent = `${initialState.duration}ms`;
+
+        slider.addEventListener("input", (e) => {
+          valueDisplay.textContent = `${e.target.value}ms`;
+          saveState();
+        });
+        return () => parseInt(slider.value);
+      }
+
+      const getDuration = setupDurationSlider("duration", "durationValue");
+
+      // Pause breakpoints checkbox handler
+      function setupPauseBreakpoints() {
+        const checkbox = document.getElementById("pauseBreakpoints");
+        const resumeButton = document.getElementById("resumeTransitions");
+
+        // Set initial value from localStorage
+        checkbox.checked = initialState.pauseBreakpoints;
+
+        checkbox.addEventListener("change", () => {
+          saveState();
+        });
+
+        // Resume button handler
+        resumeButton.addEventListener("click", () => {
+          if (typeof window.resumeTransitions === "function") {
+            window.resumeTransitions();
+            resumeButton.disabled = true;
+          }
+        });
+
+        return () => checkbox.checked;
+      }
+
+      const getPauseBreakpoints = setupPauseBreakpoints();
+
+      function stopCurrentTransitions() {
+        currentTransitions.forEach((t) => t.cancel && t.cancel());
+        currentTransitions = [];
+      }
+
+      // Main Border Radius Transition Section
+      const fromPreview = document.getElementById("fromPreview");
+      const toPreview = document.getElementById("toPreview");
+
+      // Create visual selectors
+      createCategorySelector("fromSelector", selectedFrom, (value) => {
+        selectedFrom = value;
+        updatePreviewBoxes();
+        saveState();
+      });
+
+      createCategorySelector("toSelector", selectedTo, (value) => {
+        selectedTo = value;
+        updatePreviewBoxes();
+        saveState();
+      });
+
+      function updatePreviewBoxes() {
+        function applyBorderRadius(element, value) {
+          element.style.borderRadius = value;
+        }
+
+        applyBorderRadius(fromPreview, selectedFrom);
+        applyBorderRadius(toPreview, selectedTo);
+        applyBorderRadius(
+          document.getElementById("userAgentBox"),
+          selectedFrom,
+        );
+        applyBorderRadius(document.getElementById("naviBox"), selectedFrom);
+      }
+
+      document
+        .getElementById("startTransition")
+        .addEventListener("click", async () => {
+          stopCurrentTransitions();
+
+          const userAgentBox = document.getElementById("userAgentBox");
+          const naviBox = document.getElementById("naviBox");
+
+          // Reset both boxes to starting state
+          userAgentBox.style.borderRadius = selectedFrom;
+          naviBox.style.borderRadius = selectedFrom;
+
+          // Update user agent transition duration to match
+          const duration = getDuration();
+          userAgentBox.style.transitionDuration = `${duration}ms`;
+
+          const pauseBreakpoints = getPauseBreakpoints() ? [0.5] : [];
+          const resumeButton = document.getElementById("resumeTransitions");
+
+          // Start user agent transition (simple CSS change)
+          setTimeout(() => {
+            userAgentBox.style.borderRadius = selectedTo;
+          }, 10);
+
+          // Start navi custom transition
+          const transition = createBorderRadiusTransition(naviBox, selectedTo, {
+            from: selectedFrom,
+            duration,
+            styleSynchronizer: "inline_style",
+            pauseBreakpoints,
+            onPause: () => {
+              resumeButton.disabled = false;
+            },
+            onFinish: () => {
+              resumeButton.disabled = true;
+            },
+          });
+
+          currentTransitions.push(transition);
+          transition.play();
+        });
+
+      // Invert button handler
+      document.getElementById("invertButton").addEventListener("click", () => {
+        // Swap selectedFrom and selectedTo
+        const temp = selectedFrom;
+        selectedFrom = selectedTo;
+        selectedTo = temp;
+
+        // Update the UI to reflect the change
+        updatePreviewBoxes();
+        saveState();
+
+        // Update value displays
+        document.getElementById("fromValue").textContent = selectedFrom;
+        document.getElementById("toValue").textContent = selectedTo;
+
+        // Update the selectors to show the new selection
+        document.querySelectorAll(".option-rect").forEach((rect) => {
+          rect.classList.remove("selected");
+          if (
+            rect.dataset.value === selectedFrom &&
+            rect.closest("#fromSelector")
+          ) {
+            rect.classList.add("selected");
+          }
+          if (
+            rect.dataset.value === selectedTo &&
+            rect.closest("#toSelector")
+          ) {
+            rect.classList.add("selected");
+          }
+        });
+      });
+
+      // Initialize
+      updatePreviewBoxes();
+    </script>
+  </body>
+</html>
