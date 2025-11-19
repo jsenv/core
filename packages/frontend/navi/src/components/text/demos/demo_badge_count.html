@@ -67,24 +67,36 @@
                   <Title as="h3" size="18">
                     Compteurs avec badges colorés
                   </Title>
-                  <Box column contentSpacing="md">
+                  <Box row contentSpacing="md">
                     <Text>
                       Erreurs critiques
-                      <BadgeCount background="#f44336" color="white" borderRadius="12px">
+                      <BadgeCount
+                        background="#f44336"
+                        color="white"
+                        borderRadius="12px"
+                      >
                         2
                       </BadgeCount>
                     </Text>
 
                     <Text>
                       Avertissements
-                      <BadgeCount background="#ff9800" color="white" borderRadius="12px">
+                      <BadgeCount
+                        background="#ff9800"
+                        color="white"
+                        borderRadius="12px"
+                      >
                         7
                       </BadgeCount>
                     </Text>
 
                     <Text>
                       Réussites
-                      <BadgeCount background="#4caf50" color="white" borderRadius="12px">
+                      <BadgeCount
+                        background="#4caf50"
+                        color="white"
+                        borderRadius="12px"
+                      >
                         15
                       </BadgeCount>
                     </Text>
@@ -95,12 +107,12 @@
                   <Title as="h3" size="18">
                     Compteurs avec nombres élevés
                   </Title>
-                  <Box column contentSpacing="md">
+                  <Box row contentSpacing="md">
                     <Text>
                       Abonnés sur YouTube
-                      <BadgeCount 
-                        background="#f5f5f5" 
-                        color="#424242" 
+                      <BadgeCount
+                        background="#f5f5f5"
+                        color="#424242"
                         borderRadius="16px"
                         border="1px solid #e0e0e0"
                         size="lg"
@@ -111,9 +123,9 @@
 
                     <Text>
                       Vues totales
-                      <BadgeCount 
-                        background="#3f51b5" 
-                        color="white" 
+                      <BadgeCount
+                        background="#3f51b5"
+                        color="white"
                         borderRadius="16px"
                         size="lg"
                       >
@@ -123,9 +135,9 @@
 
                     <Text>
                       Points de fidélité
-                      <BadgeCount 
-                        background="linear-gradient(135deg, #667eea 0%, #764ba2 100%)" 
-                        color="white" 
+                      <BadgeCount
+                        background="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+                        color="white"
                         borderRadius="16px"
                         size="lg"
                       >
@@ -139,100 +151,276 @@
 
             <Box as="section" marginBottom="xl">
               <Title as="h2">Badge avec alignX="end"</Title>
-              
+
               <Box column contentSpacing="lg">
                 <div>
                   <Title as="h3" size="18">
                     Badges alignés à droite du conteneur
                   </Title>
-                  <Box column contentSpacing="md">
-                    <Box 
+                  <Box row contentSpacing="md">
+                    <Box
                       style={{
                         border: "1px solid #e0e0e0",
                         borderRadius: "8px",
                         padding: "12px",
-                        minWidth: "300px"
+                        width: "400px",
                       }}
                     >
-                      <Text>Messages dans la boîte de réception</Text>
-                      <BadgeCount 
-                        background="#1976d2" 
-                        color="white" 
+                      <Text>Messages</Text>
+                      <BadgeCount
+                        background="#1976d2"
+                        color="white"
                         alignX="end"
                       >
                         8
                       </BadgeCount>
                     </Box>
 
-                    <Box 
+                    <Box
                       style={{
                         border: "1px solid #e0e0e0",
                         borderRadius: "8px",
                         padding: "12px",
-                        minWidth: "300px"
+                        width: "350px",
                       }}
                     >
-                      <Text>Notifications push en attente</Text>
-                      <BadgeCount 
-                        background="#d32f2f" 
-                        color="white" 
+                      <Text>Alertes</Text>
+                      <BadgeCount
+                        background="#d32f2f"
+                        color="white"
                         alignX="end"
                         size="xs"
                       >
                         25
                       </BadgeCount>
                     </Box>
+                  </Box>
 
-                    <Box 
+                  <Box row contentSpacing="md" marginTop="md">
+                    <Box
                       style={{
                         border: "1px solid #e0e0e0",
                         borderRadius: "8px",
                         padding: "12px",
-                        minWidth: "300px"
+                        width: "500px",
                       }}
                     >
-                      <Text>Tâches terminées cette semaine</Text>
-                      <BadgeCount 
-                        background="#388e3c" 
-                        color="white" 
+                      <Text>Tâches</Text>
+                      <BadgeCount
+                        background="#388e3c"
+                        color="white"
                         alignX="end"
                         size="lg"
                       >
-                        156
+                        12
                       </BadgeCount>
                     </Box>
 
-                    <Box 
+                    <Box
                       style={{
                         border: "1px solid #e0e0e0",
                         borderRadius: "8px",
                         padding: "12px",
-                        minWidth: "400px"
+                        width: "300px",
                       }}
                     >
-                      <Text>Très long texte pour montrer comment le badge se positionne toujours à droite même quand le contenu est long</Text>
-                      <BadgeCount 
-                        background="#7b1fa2" 
-                        color="white" 
+                      <Text>News</Text>
+                      <BadgeCount
+                        background="#7b1fa2"
+                        color="white"
                         alignX="end"
                         borderRadius="16px"
                       >
-                        999+
+                        3
                       </BadgeCount>
                     </Box>
                   </Box>
-                  
+
                   <Box marginTop="md">
-                    <Text 
+                    <Text
                       style={{
                         fontSize: "14px",
                         color: "#666",
-                        fontStyle: "italic"
+                        fontStyle: "italic",
                       }}
                     >
-                      Avec alignX="end", le badge se positionne toujours à droite du conteneur, 
-                      indépendamment de la longueur du texte.
+                      Avec alignX="end", le badge se positionne toujours à
+                      droite du conteneur, même quand le texte est court et ne
+                      prend qu'une petite partie de l'espace disponible.
                     </Text>
+                  </Box>
+                </div>
+              </Box>
+            </Box>
+
+            <Box as="section" marginBottom="xl">
+              <Title as="h2">Badge avec limite max</Title>
+
+              <Box row contentSpacing="lg">
+                <div>
+                  <Title as="h3" size="18">
+                    Exemples avec paramètre max
+                  </Title>
+                  <Box row contentSpacing="md">
+                    <Text>
+                      Notifications (max=9, valeur=15)
+                      <BadgeCount background="#1976d2" color="white" max={9}>
+                        15
+                      </BadgeCount>
+                    </Text>
+
+                    <Text>
+                      Messages (max=99, valeur=150)
+                      <BadgeCount background="#d32f2f" color="white" max={99}>
+                        150
+                      </BadgeCount>
+                    </Text>
+
+                    <Text>
+                      Abonnés (max=999, valeur=1250)
+                      <BadgeCount
+                        background="#388e3c"
+                        color="white"
+                        max={999}
+                        size="lg"
+                      >
+                        1250
+                      </BadgeCount>
+                    </Text>
+
+                    <Text>
+                      Points (max=9999, valeur=12000)
+                      <BadgeCount
+                        background="#7b1fa2"
+                        color="white"
+                        max={9999}
+                        borderRadius="16px"
+                        size="lg"
+                      >
+                        12000
+                      </BadgeCount>
+                    </Text>
+                  </Box>
+
+                  <Box marginTop="md">
+                    <Text
+                      style={{
+                        fontSize: "14px",
+                        color: "#666",
+                        fontStyle: "italic",
+                      }}
+                    >
+                      Quand la valeur dépasse le paramètre max, on affiche
+                      "max+" (ex: "9+", "99+", "999+", "9999+") au lieu de la
+                      vraie valeur.
+                    </Text>
+                  </Box>
+                </div>
+
+                <div>
+                  <Title as="h3" size="18">
+                    Comparaison avec et sans limite
+                  </Title>
+                  <Box row contentSpacing="md">
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "20px",
+                        alignItems: "center",
+                      }}
+                    >
+                      <div>
+                        <Text
+                          style={{
+                            fontSize: "12px",
+                            color: "#666",
+                            marginBottom: "4px",
+                          }}
+                        >
+                          Sans limite max
+                        </Text>
+                        <Text>
+                          Tâches
+                          <BadgeCount background="#ff9800" color="white">
+                            127
+                          </BadgeCount>
+                        </Text>
+                      </div>
+
+                      <div>
+                        <Text
+                          style={{
+                            fontSize: "12px",
+                            color: "#666",
+                            marginBottom: "4px",
+                          }}
+                        >
+                          Avec max=99
+                        </Text>
+                        <Text>
+                          Tâches
+                          <BadgeCount
+                            background="#ff9800"
+                            color="white"
+                            max={99}
+                          >
+                            127
+                          </BadgeCount>
+                        </Text>
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "20px",
+                        alignItems: "center",
+                      }}
+                    >
+                      <div>
+                        <Text
+                          style={{
+                            fontSize: "12px",
+                            color: "#666",
+                            marginBottom: "4px",
+                          }}
+                        >
+                          Valeur = 5 ( max=9)
+                        </Text>
+                        <Text>
+                          Alertes
+                          <BadgeCount
+                            background="#f44336"
+                            color="white"
+                            max={9}
+                          >
+                            5
+                          </BadgeCount>
+                        </Text>
+                      </div>
+
+                      <div>
+                        <Text
+                          style={{
+                            fontSize: "12px",
+                            color: "#666",
+                            marginBottom: "4px",
+                          }}
+                        >
+                          Valeur = 15 (> max=9)
+                        </Text>
+                        <Text>
+                          Alertes
+                          <BadgeCount
+                            background="#f44336"
+                            color="white"
+                            max={9}
+                          >
+                            15
+                          </BadgeCount>
+                        </Text>
+                      </div>
+                    </div>
                   </Box>
                 </div>
               </Box>

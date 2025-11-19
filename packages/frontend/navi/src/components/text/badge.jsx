@@ -44,15 +44,45 @@ const BadgeManagedByCSSVars = {
   borderColor: "--border-color",
   color: "--color",
 };
-export const BadgeCount = ({ children, bold = true, ...props }) => {
+export const BadgeCount = ({ children, bold = true, max, ...props }) => {
+  // Calculer la valeur à afficher en fonction du paramètre max
+  const getDisplayValue = () => {
+    if (max === undefined) {
+      return children;
+    }
+
+    // Convertir children en nombre si c'est une string
+    const numericValue =
+      typeof children === "string" ? parseInt(children, 10) : children;
+
+    // Convertir max en nombre si c'est une string
+    const numericMax = typeof max === "string" ? parseInt(max, 10) : max;
+
+    // Vérifier que les valeurs sont des nombres valides
+    if (isNaN(numericValue) || isNaN(numericMax)) {
+      return children;
+    }
+
+    // Si la valeur dépasse max, afficher "max+"
+    if (numericValue > numericMax) {
+      return `${numericMax}+`;
+    }
+
+    return children;
+  };
+
+  const displayValue = getDisplayValue();
+
   const renderForeground = (remainingProps) => {
     return (
       <TextForeground {...remainingProps} box>
-        {children}
+        {displayValue}
       </TextForeground>
     );
   };
-  const renderForegroundMemoized = useCallback(renderForeground, [children]);
+  const renderForegroundMemoized = useCallback(renderForeground, [
+    displayValue,
+  ]);
 
   return (
     <Text
@@ -66,7 +96,7 @@ export const BadgeCount = ({ children, bold = true, ...props }) => {
     >
       {/* padding must go on the char slot */}
       <span className="navi_char_slot_invisible" aria-hidden="true">
-        {children}
+        {displayValue}
       </span>
       {renderForegroundMemoized}
     </Text>
