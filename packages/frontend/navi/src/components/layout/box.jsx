@@ -269,12 +269,20 @@ export const Box = (props) => {
         addStyle(value, name, boxStylesTarget, context);
         return;
       }
+      const isPseudoStyle = styleOrigin === "pseudo_style";
       const mightStyle = isStyleProp(name);
       if (!mightStyle) {
         // not a style prop what do we do with it?
         if (shouldForwardAllToChild) {
-          childForwardedProps[name] = value;
+          if (isPseudoStyle) {
+            // le pseudo style est deja passé tel quel au child
+          } else {
+            childForwardedProps[name] = value;
+          }
         } else {
+          if (isPseudoStyle) {
+            console.warn(`unsupported pseudo style key "${name}"`);
+          }
           selfForwardedProps[name] = value;
         }
         return;
@@ -296,7 +304,11 @@ export const Box = (props) => {
           visualChildPropStrategy,
         );
         if (needForwarding) {
-          childForwardedProps[name] = value;
+          if (isPseudoStyle) {
+            // le pseudo style est deja passé tel quel au child
+          } else {
+            childForwardedProps[name] = value;
+          }
         }
         return;
       }
@@ -316,7 +328,11 @@ export const Box = (props) => {
         );
       }
       if (needForwarding) {
-        childForwardedProps[name] = value;
+        if (isPseudoStyle) {
+          // le pseudo style est deja passé tel quel au child
+        } else {
+          childForwardedProps[name] = value;
+        }
       }
     };
 
@@ -343,17 +359,6 @@ export const Box = (props) => {
         pseudoStyleContext,
         pseudoStylesTarget,
       ) => {
-        // const shouldCopyOnVisualChild =
-        //   visualSelector && COPIED_ON_VISUAL_CHILD_PROP_SET.has(propName);
-        // const shouldOnlyForwardToChild =
-        //   visualSelector &&
-        //   !shouldCopyOnVisualChild &&
-        //   HANDLED_BY_VISUAL_CHILD_PROP_SET.has(propName);
-        // const shouldApplyOnSelf = !shouldOnlyForwardToChild;
-        // const shouldApplyOnChild =
-        //   shouldCopyOnVisualChild ||
-        //   shouldOnlyForwardToChild ||
-        //   !shouldForwardOnSelf;
         assignStyle(
           propValue,
           propName,
@@ -417,6 +422,7 @@ export const Box = (props) => {
           console.warn(`unsupported pseudo style key "${key}"`);
         }
       }
+      childForwardedProps.pseudoStyle = childPseudoStyles;
     }
     if (typeof style === "string") {
       const styleObject = normalizeStyles(style, "css");
