@@ -48,7 +48,6 @@ export const UITransition = ({
   ...props
 }) => {
   const contentIdRef = useRef(contentId);
-
   const updateContentId = () => {
     const uiTransition = uiTransitionRef.current;
     if (!uiTransition) {
@@ -100,7 +99,8 @@ export const UITransition = ({
   }, []);
 
   const ref = useRef();
-  const uiTransitionRef = useRef();
+  const uiTransitionRefDefault = useRef();
+  const uiTransitionRef = props.uiTransitionRef || uiTransitionRefDefault;
   useLayoutEffect(() => {
     if (disabled) {
       return null;

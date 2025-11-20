@@ -61,6 +61,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useRef } from "preact/hooks";
       import {
         Layout,
         Link,
@@ -86,9 +87,9 @@
         VIEWPORT_OVERFLOW_XY_ROUTE: "viewport_overflow_xy",
       });
 
-      const Router = () => {
+      const Router = ({ uiTransitionRef }) => {
         return (
-          <Routes element={RootLayout}>
+          <Routes element={<RootLayout uiTransitionRef={uiTransitionRef} />}>
             <Route element={<ViewportPage />} route={VIEWPORT_ROUTE} />
             <Route
               element={<ViewportOverflowXPage />}
@@ -111,7 +112,7 @@
         );
       };
 
-      const Nav = () => {
+      const Nav = ({ uiTransitionRef }) => {
         return (
           <Layout
             as="nav"
@@ -130,15 +131,77 @@
             <RouteLink route={VIEWPORT_OVERFLOW_XY_ROUTE}>
               Viewport overflow xy
             </RouteLink>
+
+            <PauseControls uiTransitionRef={uiTransitionRef} />
           </Layout>
         );
       };
 
-      const RootLayout = () => {
+      const PauseControls = ({ uiTransitionRef }) => {
         return (
-          <UITransition duration="2000" debugDetection debugSize debugContent>
-            <Route.Slot />
-          </UITransition>
+          <div style="background: rgba(255,255,255,0.9); padding: 10px; border-radius: 5px;">
+            <label style="display: flex; align-items: center; gap: 8px; color: #333;">
+              <input
+                type="checkbox"
+                id="pauseCheckbox"
+                onChange={(e) => {
+                  if (uiTransitionRef.current) {
+                    if (e.target.checked) {
+                      const pausePercentage =
+                        document.querySelector("#pausePercentage").value;
+                      uiTransitionRef.current.setPauseBreakpoints([
+                        pausePercentage / 100,
+                      ]);
+                    } else {
+                      uiTransitionRef.current.setPauseBreakpoints([]);
+                    }
+                  }
+                }}
+              />
+              Pause at
+              <input
+                type="range"
+                id="pausePercentage"
+                min="1"
+                max="99"
+                value="80"
+                style="width: 60px;"
+                onInput={(e) => {
+                  document.querySelector("#pauseLabel").textContent =
+                    `${e.target.value}%`;
+                }}
+              />
+              <span id="pauseLabel">80%</span>
+            </label>
+            <button
+              id="resumeButton"
+              style="margin-left: 8px; padding: 4px 8px; border: 1px solid #ccc; background: #f5f5f5; border-radius: 3px; cursor: pointer;"
+              onClick={() => {
+                if (window.resumeTransitions) {
+                  window.resumeTransitions();
+                }
+              }}
+            >
+              Resume Transitions
+            </button>
+          </div>
+        );
+      };
+
+      const RootLayout = ({ uiTransitionRef }) => {
+        return (
+          <>
+            <UITransition
+              uiTransitionRef={uiTransitionRef}
+              duration="2000"
+              debugDetection
+              debugSize
+              debugContent
+            >
+              <Route.Slot />
+            </UITransition>
+            <PauseControls uiTransitionRef={uiTransitionRef} />
+          </>
         );
       };
 
@@ -228,9 +291,11 @@
       );
 
       const App = () => {
+        const uiTransitionRef = useRef();
+
         return (
           <>
-            <Nav />
+            <Nav uiTransitionRef={uiTransitionRef} />
             <Router />
           </>
         );
