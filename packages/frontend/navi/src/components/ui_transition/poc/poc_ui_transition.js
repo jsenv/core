@@ -136,7 +136,7 @@ import.meta.css = /* css */ `
 
   .ui_transition[data-transitioning] .ui_transition_container {
     /* Overflow hidden so content is clipped during transition */
-    overflow: hidden;
+    /* overflow: hidden; */
   }
 
   /* Alignment controls */
@@ -212,9 +212,9 @@ import.meta.css = /* css */ `
   .ui_transition[data-transitioning] .outgoing_slot > *,
   .ui_transition[data-transitioning] .previous_target_slot > *,
   .ui_transition[data-transitioning] .previous_outgoing_slot > * {
-    background-image: none !important;
-    background-color: transparent !important;
-    border-color: transparent !important;
+    /* background-image: none !important; */
+    /* background-color: transparent !important; */
+    /* border-color: transparent !important; */
     box-shadow: none !important;
   }
 `;
@@ -684,44 +684,75 @@ export const createUITransitionController = (
       };
 
       // https://emilkowal.ski/ui/the-magic-of-clip-path
-      // Analyze each dimension independently
-      const widthIsGrowing = toWidth > fromWidth;
-      const heightIsGrowing = toHeight > fromHeight;
+      // NEW APPROACH: Let container take its natural final size
+      // Use clip-path to reveal content progressively
+
+      // Set container to final dimensions immediately - no layout impact
+      container.style.width = `${toWidth}px`;
+      container.style.height = `${toHeight}px`;
+
+      debugSize(
+        `Simple clip-path approach: container at final size ${toWidth}x${toHeight}, transitioning from ${fromWidth}x${fromHeight}`,
+      );
+
+      // Calculate alignment-aware positioning within final container
+      const getAlignedPosition = (containerSize, contentSize, align) => {
+        switch (align) {
+          case "start":
+            return 0;
+          case "end":
+            return containerSize - contentSize;
+          case "center":
+          default:
+            return (containerSize - contentSize) / 2;
+        }
+      };
+
+      // Different logic for growing vs shrinking
+      const isGrowing = toWidth >= fromWidth && toHeight >= fromHeight;
 
       let startClipPath;
       let endClipPath;
 
-      // Set container to the larger of from/to dimensions to accommodate the animation
-      const containerWidth = Math.max(fromWidth, toWidth);
-      const containerHeight = Math.max(fromHeight, toHeight);
+      if (isGrowing) {
+        // GROWING: Start with "from" size area, end with full container
+        const startLeft = getAlignedPosition(toWidth, fromWidth, alignX);
+        const startTop = getAlignedPosition(toHeight, fromHeight, alignY);
+        const startRight = startLeft + fromWidth;
+        const startBottom = startTop + fromHeight;
 
-      // Set final dimensions immediately
-      container.style.width = `${containerWidth}px`;
-      container.style.height = `${containerHeight}px`;
-      container.style.contain = "paint";
+        const endLeft = 0;
+        const endTop = 0;
+        const endRight = toWidth;
+        const endBottom = toHeight;
 
-      // Calculate start rectangle (from dimensions, centered in container)
-      const startWidth = fromWidth;
-      const startHeight = fromHeight;
-      const startLeft = (containerWidth - startWidth) / 2;
-      const startTop = (containerHeight - startHeight) / 2;
-      const startRight = startLeft + startWidth;
-      const startBottom = startTop + startHeight;
+        startClipPath = `polygon(${startLeft}px ${startTop}px, ${startRight}px ${startTop}px, ${startRight}px ${startBottom}px, ${startLeft}px ${startBottom}px)`;
+        endClipPath = `polygon(${endLeft}px ${endTop}px, ${endRight}px ${endTop}px, ${endRight}px ${endBottom}px, ${endLeft}px ${endBottom}px)`;
+      } else {
+        // SHRINKING: Start with "from" size area (may extend beyond container bounds), end with full container
+        // Position the "from" size as if it were in a container of that size, then center it
+        const startLeft = getAlignedPosition(toWidth, fromWidth, alignX);
+        const startTop = getAlignedPosition(toHeight, fromHeight, alignY);
+        const startRight = startLeft + fromWidth;
+        const startBottom = startTop + fromHeight;
 
-      // Calculate end rectangle (to dimensions, centered in container)
-      const endWidth = toWidth;
-      const endHeight = toHeight;
-      const endLeft = (containerWidth - endWidth) / 2;
-      const endTop = (containerHeight - endHeight) / 2;
-      const endRight = endLeft + endWidth;
-      const endBottom = endTop + endHeight;
+        // End is always the full current container
+        const endLeft = 0;
+        const endTop = 0;
+        const endRight = toWidth;
+        const endBottom = toHeight;
 
-      // Use pixel values directly
-      startClipPath = `polygon(${startLeft}px ${startTop}px, ${startRight}px ${startTop}px, ${startRight}px ${startBottom}px, ${startLeft}px ${startBottom}px)`;
-      endClipPath = `polygon(${endLeft}px ${endTop}px, ${endRight}px ${endTop}px, ${endRight}px ${endBottom}px, ${endLeft}px ${endBottom}px)`;
+        // Allow coordinates outside container bounds for shrinking
+        startClipPath = `polygon(${startLeft}px ${startTop}px, ${startRight}px ${startTop}px, ${startRight}px ${startBottom}px, ${startLeft}px ${startBottom}px)`;
+        endClipPath = `polygon(${endLeft}px ${endTop}px, ${endRight}px ${endTop}px, ${endRight}px ${endBottom}px, ${endLeft}px ${endBottom}px)`;
+
+        debugSize(
+          `SHRINKING coords: start(${startLeft},${startTop} to ${startRight},${startBottom}) end(${endLeft},${endTop} to ${endRight},${endBottom}) in container ${toWidth}x${toHeight}`,
+        );
+      }
 
       debugSize(
-        `Transition: ${fromWidth}x${fromHeight} → ${toWidth}x${toHeight} (width ${widthIsGrowing ? "growing" : "shrinking"}, height ${heightIsGrowing ? "growing" : "shrinking"}) in container ${containerWidth}x${containerHeight}`,
+        `${isGrowing ? "GROWING" : "SHRINKING"} clip-path transition: ${fromWidth}x${fromHeight} → ${toWidth}x${toHeight}`,
       );
 
       // Create clip-path animation using Web Animations API
@@ -766,9 +797,9 @@ export const createUITransitionController = (
         clipAnimation.pause();
         window.pausedTransitions.add(clipAnimation);
         console.debug(
-          "Transition paused at 80% - call window.resumeTransitions() to continue",
+          "Transition paused at 50% - call window.resumeTransitions() to continue",
         );
-      }, duration * 0.8);
+      }, duration * 0.5);
 
       // Handle finish
       clipAnimation.finished
