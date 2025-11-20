@@ -150,7 +150,8 @@ import.meta.css = /* css */ `
     min-height: 0;
     flex-shrink: 0;
   }
-  .outgoing_slot {
+  .outgoing_slot,
+  .previous_outgoing_slot {
     position: absolute;
     top: 0;
     left: 0;

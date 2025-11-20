@@ -70,7 +70,6 @@
         RouteLink,
         setupRoutes,
         UITransition,
-        useActiveRouteInfo,
       } from "@jsenv/navi";
 
       const {
@@ -136,9 +135,6 @@
       };
 
       const RootLayout = () => {
-        const info = useActiveRouteInfo();
-        const fluid = info.meta?.layout === "fluid";
-        console.log(fluid);
         return (
           <UITransition duration="2000" debugDetection debugSize debugContent>
             <Route.Slot />
@@ -147,25 +143,14 @@
       };
 
       const DialogLayout = ({ children }) => {
+        // We put paddings around the dialog to ensure window resizing respects this space
+        // this way even narrow window will show some space around the dialog
         return (
-          <Layout
-            row
-            contentAlignX="center"
-            contentAlignY="center"
-            height="100%"
-            width="100%"
-          >
-            <Box
-              id="dialog_layout"
-              width="300"
-              height="250"
-              padding="40"
-              background="white"
-              color="#666"
-            >
+          <Box id="dialog_layout" padding="40" color="#666">
+            <Box background="white" minWidth="300" height="250" padding="20">
               {children}
             </Box>
-          </Layout>
+          </Box>
         );
       };
       const ViewportLayout = ({ children }) => {

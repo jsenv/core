@@ -79,7 +79,7 @@ import {
   getElementSignature,
   preventIntermediateScrollbar,
 } from "@jsenv/dom";
-import { monitorItemsHeightOverflow } from "./monitor_items_height_overflow.js";
+import { monitorItemsOverflow } from "./monitor_items_overflow.js";
 
 import.meta.css = /* css */ `
   * {
@@ -136,6 +136,12 @@ import.meta.css = /* css */ `
     align-items: var(--x-align-items);
     justify-content: var(--x-justify-content);
   }
+  .target_slot[data-items-width-overflow],
+  .previous_target_slot[data-items-width-overflow],
+  .previous_target_slot[data-items-width-overflow],
+  .previous_outgoing_slot[data-items-width-overflow] {
+    --x-justify-content: flex-start;
+  }
   .target_slot[data-items-height-overflow],
   .previous_slot[data-items-height-overflow],
   .previous_target_slot[data-items-height-overflow],
@@ -149,7 +155,8 @@ import.meta.css = /* css */ `
   .target_slot {
     position: relative;
   }
-  .outgoing_slot {
+  .outgoing_slot,
+  .previous_outgoing_slot {
     position: absolute;
     top: 0;
     left: 0;
@@ -790,7 +797,7 @@ export const createUITransitionController = (
       previousOutgoingSlot,
     ];
     for (const slot of slots) {
-      addTeardown(monitorItemsHeightOverflow(slot));
+      addTeardown(monitorItemsOverflow(slot));
     }
   }
 
