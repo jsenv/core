@@ -346,7 +346,7 @@ const getStyleToApply = (styles, pseudoState, pseudoNamedStyles) => {
   }
   let style = styles || {};
   for (const styleToAdd of styleToAddSet) {
-    style = mergeTwoStyles(style, styleToAdd);
+    style = mergeTwoStyles(style, styleToAdd, "css");
   }
   return style;
 };

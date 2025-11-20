@@ -214,7 +214,6 @@ export const Box = (props) => {
 
     const boxStyles = {};
     let boxPseudoNamedStyles = PSEUDO_NAMED_STYLES_DEFAULT;
-    const childPseudoStyles = {};
     const shouldForwardAllToChild = visualSelector && pseudoStateSelector;
 
     const addStyle = (value, name, stylesTarget, context) => {
@@ -422,7 +421,7 @@ export const Box = (props) => {
           console.warn(`unsupported pseudo style key "${key}"`);
         }
       }
-      childForwardedProps.pseudoStyle = childPseudoStyles;
+      childForwardedProps.pseudoStyle = pseudoStyle;
     }
     if (typeof style === "string") {
       const styleObject = normalizeStyles(style, "css");
