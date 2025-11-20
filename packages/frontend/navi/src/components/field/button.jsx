@@ -281,7 +281,7 @@ const ButtonBasic = (props) => {
   );
   const renderButtonContent = (buttonProps) => {
     return (
-      <Box {...buttonProps} as="span" baseClassName="navi_button_content">
+      <Box {...buttonProps} as="span" className="navi_button_content">
         {innerChildren}
         <span className="navi_button_shadow"></span>
       </Box>

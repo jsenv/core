@@ -148,9 +148,8 @@ export const Box = (props) => {
   }
   const innerClassName = withPropsClassName(baseClassName, className);
 
-  const remainingProps = {};
-  const propsToForward = {};
-  const shouldForwardAllToChild = visualSelector && pseudoStateSelector;
+  const selfForwardedProps = {};
+  const childForwardedProps = {};
   styling: {
     const parentLayout = useContext(BoxLayoutContext);
     const styleDeps = [
@@ -222,51 +221,41 @@ export const Box = (props) => {
     }
     const stylingKeyCandidateArray = Object.keys(rest);
 
-    const getPropEffect = (propName) => {
-      if (visualSelector) {
-        if (HANDLED_BY_VISUAL_CHILD_PROP_SET.has(propName)) {
-          return "forward";
-        }
-        if (COPIED_ON_VISUAL_CHILD_PROP_SET.has(propName)) {
-          return "style_and_forward";
-        }
+    const shouldForwardAllToChild = visualSelector && pseudoStateSelector;
+    const assignStyleFromProp = (propValue, propName, styleContext) => {
+      const shouldStyle = isStyleProp(propName);
+      const shouldCopyOnVisualChild =
+        visualSelector && COPIED_ON_VISUAL_CHILD_PROP_SET.has(propName);
+      const shouldOnlyForwardToChild =
+        visualSelector &&
+        !shouldCopyOnVisualChild &&
+        HANDLED_BY_VISUAL_CHILD_PROP_SET.has(propName);
+      const shouldForwardOnSelf =
+        !shouldOnlyForwardToChild && !shouldStyle && !shouldForwardAllToChild;
+      const shouldForwardToChild =
+        shouldCopyOnVisualChild ||
+        shouldOnlyForwardToChild ||
+        !shouldForwardOnSelf;
+
+      if (shouldStyle) {
+        styleDeps.push(propValue);
+        assignStyle(boxStyles, propValue, propName, styleContext, "css");
       }
-      if (isStyleProp(propName)) {
-        return "style";
+      if (shouldForwardOnSelf) {
+        selfForwardedProps[propName] = propValue;
       }
-      if (propName.startsWith("data-")) {
-        return "use";
+      if (shouldForwardToChild) {
+        childForwardedProps[propName] = propValue;
       }
-      return "forward";
     };
-    const assignStyleFromProp = (
+    const assignPseudoStyle = (
       propValue,
       propName,
       stylesTarget,
       styleContext,
     ) => {
-      const propEffect = getPropEffect(propName);
-      if (propEffect === "ignore") {
-        return;
-      }
-      const useToStyle =
-        propEffect === "style" || propEffect === "style_and_forward";
-      const shouldForward =
-        propEffect === "forward" || propEffect === "style_and_forward";
-
-      if (useToStyle) {
-        styleDeps.push(propValue);
-        assignStyle(stylesTarget, propValue, propName, styleContext, "css");
-      }
-      if (stylesTarget === boxStyles) {
-        if (!shouldForwardAllToChild && !useToStyle) {
-          // we'll put these props on ourselves
-          remainingProps[propName] = propValue;
-        }
-        if (shouldForward) {
-          propsToForward[propName] = propValue;
-        }
-      }
+      styleDeps.push(propValue);
+      assignStyle(stylesTarget, propValue, propName, styleContext, "css");
     };
 
     for (const key of stylingKeyCandidateArray) {
@@ -276,7 +265,7 @@ export const Box = (props) => {
         continue;
       }
       const value = rest[key];
-      assignStyleFromProp(value, key, boxStyles, styleContext);
+      assignStyleFromProp(value, key, styleContext);
     }
 
     let pseudoNamedStyles = PSEUDO_NAMED_STYLES_DEFAULT;
@@ -302,7 +291,7 @@ export const Box = (props) => {
             for (const pseudoClassStyleKey of Object.keys(pseudoClassStyle)) {
               const pseudoClassStyleValue =
                 pseudoClassStyle[pseudoClassStyleKey];
-              assignStyleFromProp(
+              assignPseudoStyle(
                 pseudoClassStyleValue,
                 pseudoClassStyleKey,
                 pseudoClassStyles,
@@ -322,7 +311,7 @@ export const Box = (props) => {
             )) {
               const pseudoElementStyleValue =
                 pseudoElementStyle[pseudoElementStyleKey];
-              assignStyleFromProp(
+              assignPseudoStyle(
                 pseudoElementStyleValue,
                 pseudoElementStyleKey,
                 pseudoElementStyles,
@@ -335,7 +324,7 @@ export const Box = (props) => {
           console.warn(`unsupported pseudo style key "${key}"`);
         }
       }
-      remainingProps.pseudoStyle = pseudoStyle;
+      // childForwardedProps.pseudoStyle = pseudoStyle;
     }
 
     if (typeof style === "string") {
@@ -400,10 +389,10 @@ export const Box = (props) => {
   if (hasChildFunction) {
     if (Array.isArray(children)) {
       innerChildren = children.map((child) =>
-        typeof child === "function" ? child(propsToForward) : child,
+        typeof child === "function" ? child(childForwardedProps) : child,
       );
     } else if (typeof children === "function") {
-      innerChildren = children(propsToForward);
+      innerChildren = children(childForwardedProps);
     } else {
       innerChildren = children;
     }
@@ -418,7 +407,7 @@ export const Box = (props) => {
       data-layout-inline={inline ? "" : undefined}
       data-layout-row={row ? "" : undefined}
       data-layout-column={column ? "" : undefined}
-      {...remainingProps}
+      {...selfForwardedProps}
     >
       <BoxLayoutContext.Provider value={layout}>
         {innerChildren}

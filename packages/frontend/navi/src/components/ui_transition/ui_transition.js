@@ -595,6 +595,9 @@ export const createUITransitionController = (
       duration,
       styleSynchronizer: "inline_style",
       onFinish: (targetSlotOpacityTransition) => {
+        targetSlotBackground.style.removeProperty("--target-slot-background");
+        targetSlotBackground.style.removeProperty("--target-slot-width");
+        targetSlotBackground.style.removeProperty("--target-slot-height");
         targetSlotOpacityTransition.cancel();
       },
     });

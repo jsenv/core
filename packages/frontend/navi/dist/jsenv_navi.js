@@ -8734,58 +8734,58 @@ import.meta.css = /* css */ `
   }
 
   .ui_transition,
-  .active_group,
-  .previous_group,
-  .target_slot,
-  .previous_target_slot,
-  .outgoing_slot,
-  .previous_outgoing_slot {
+  .ui_transition_active_group,
+  .ui_transition_previous_group,
+  .ui_transition_target_slot,
+  .ui_transition_previous_target_slot,
+  .ui_transition_outgoing_slot,
+  .ui_transition_previous_outgoing_slot {
     width: 100%;
     height: 100%;
   }
 
-  .target_slot,
-  .outgoing_slot,
-  .previous_target_slot,
-  .previous_outgoing_slot {
+  .ui_transition_target_slot,
+  .ui_transition_outgoing_slot,
+  .ui_transition_previous_target_slot,
+  .ui_transition_previous_outgoing_slot {
     display: flex;
     align-items: var(--x-align-items);
     justify-content: var(--x-justify-content);
   }
-  .target_slot[data-items-width-overflow],
-  .previous_target_slot[data-items-width-overflow],
-  .previous_target_slot[data-items-width-overflow],
-  .previous_outgoing_slot[data-items-width-overflow] {
+  .ui_transition_target_slot[data-items-width-overflow],
+  .ui_transition_previous_target_slot[data-items-width-overflow],
+  .ui_transition_previous_target_slot[data-items-width-overflow],
+  .ui_transition_previous_outgoing_slot[data-items-width-overflow] {
     --x-justify-content: flex-start;
   }
-  .target_slot[data-items-height-overflow],
-  .previous_slot[data-items-height-overflow],
-  .previous_target_slot[data-items-height-overflow],
-  .previous_outgoing_slot[data-items-height-overflow] {
+  .ui_transition_target_slot[data-items-height-overflow],
+  .ui_transition_previous_slot[data-items-height-overflow],
+  .ui_transition_previous_target_slot[data-items-height-overflow],
+  .ui_transition_previous_outgoing_slot[data-items-height-overflow] {
     --x-align-items: flex-start;
   }
 
-  .active_group {
+  .ui_transition_active_group {
     position: relative;
   }
-  .target_slot {
+  .ui_transition_target_slot {
     position: relative;
   }
-  .outgoing_slot,
-  .previous_outgoing_slot {
+  .ui_transition_outgoing_slot,
+  .ui_transition_previous_outgoing_slot {
     position: absolute;
     top: 0;
     left: 0;
   }
-  .previous_group {
+  .ui_transition_previous_group {
     position: absolute;
     inset: 0;
   }
-  .ui_transition[data-only-previous-group] .previous_group {
+  .ui_transition[data-only-previous-group] .ui_transition_previous_group {
     position: relative;
   }
 
-  .target_slot_background {
+  .ui_transition_target_slot_background {
     position: absolute;
     top: 0;
     left: 0;
@@ -8796,7 +8796,7 @@ import.meta.css = /* css */ `
     background: var(--target-slot-background, transparent);
     pointer-events: none;
   }
-  .ui_transition[data-transitioning] .target_slot_background {
+  .ui_transition[data-transitioning] .ui_transition_target_slot_background {
     display: block;
   }
 `;
@@ -8844,15 +8844,15 @@ const createUITransitionController = (
     console.debug(`[size]`, message);
   };
 
-  const activeGroup = root.querySelector(".active_group");
-  const targetSlot = root.querySelector(".target_slot");
-  const outgoingSlot = root.querySelector(".outgoing_slot");
-  const previousGroup = root.querySelector(".previous_group");
+  const activeGroup = root.querySelector(".ui_transition_active_group");
+  const targetSlot = root.querySelector(".ui_transition_target_slot");
+  const outgoingSlot = root.querySelector(".ui_transition_outgoing_slot");
+  const previousGroup = root.querySelector(".ui_transition_previous_group");
   const previousTargetSlot = previousGroup?.querySelector(
-    ".previous_target_slot",
+    ".ui_transition_previous_target_slot",
   );
   const previousOutgoingSlot = previousGroup?.querySelector(
-    ".previous_outgoing_slot",
+    ".ui_transition_previous_outgoing_slot",
   );
 
   if (
@@ -8872,7 +8872,7 @@ const createUITransitionController = (
   // we maintain a background copy behind target slot to avoid showing
   // the body flashing during the fade-in
   const targetSlotBackground = document.createElement("div");
-  targetSlotBackground.className = "target_slot_background";
+  targetSlotBackground.className = "ui_transition_target_slot_background";
   activeGroup.insertBefore(targetSlotBackground, targetSlot);
 
   root.style.setProperty("--x-transition-duration", `${duration}ms`);
@@ -9530,6 +9530,8 @@ const UITransition = ({
   debugSize,
   disabled,
   uiTransitionRef,
+  alignX,
+  alignY,
   ...props
 }) => {
   const contentIdRef = useRef(contentId);
@@ -9590,12 +9592,15 @@ const UITransition = ({
     if (disabled) {
       return null;
     }
-    const uiTransition = createUITransitionController(ref.current);
+    const uiTransition = createUITransitionController(ref.current, {
+      alignX,
+      alignY
+    });
     uiTransitionRef.current = uiTransition;
     return () => {
       uiTransition.cleanup();
     };
-  }, [disabled]);
+  }, [disabled, alignX, alignY]);
   if (disabled) {
     return children;
   }
@@ -9609,23 +9614,23 @@ const UITransition = ({
     "data-debug-size": debugSize ? "" : undefined,
     "data-debug-content": debugContent ? "" : undefined,
     children: [jsxs("div", {
-      className: "active_group",
+      className: "ui_transition_active_group",
       children: [jsx("div", {
-        className: "target_slot",
+        className: "ui_transition_target_slot",
         "data-content-id": contentIdRef.current ? contentIdRef.current : undefined,
         children: jsx(UITransitionContentIdContext.Provider, {
           value: uiTransitionContentIdContextValue,
           children: children
         })
       }), jsx("div", {
-        className: "outgoing_slot"
+        className: "ui_transition_outgoing_slot"
       })]
     }), jsxs("div", {
-      className: "previous_group",
+      className: "ui_transition_previous_group",
       children: [jsx("div", {
-        className: "previous_target_slot"
+        className: "ui_transition_previous_target_slot"
       }), jsx("div", {
-        className: "previous_outgoing_slot"
+        className: "ui_transition_previous_outgoing_slot"
       })]
     })]
   });
@@ -21588,6 +21593,118 @@ const Title = ({
   });
 };
 
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  @layer navi {
+    .navi_dialog_layout {
+      --margin: 30px;
+      --padding: 20px;
+      --background: white;
+      --border-width: 2px;
+      --border-color: lightgrey;
+      --border-radius: 10px;
+      --min-width: 300px;
+      --min-height: auto;
+    }
+  }
+  .navi_dialog_layout {
+    padding-top: var(--margin-top, var(--margin-y, var(--margin)));
+    padding-right: var(--margin-right, var(--margin-x, var(--margin)));
+    padding-bottom: var(--margin-bottom, var(--margin-y, var(--margin)));
+    padding-left: var(--margin-left, var(--margin-x, var(--margin)));
+  }
+
+  .navi_dialog_content {
+    min-width: var(--min-width);
+    min-height: var(--min-height);
+    padding-top: var(--padding-top, var(--padding-y, var(--padding)));
+    padding-right: var(--padding-right, var(--padding-x, var(--padding)));
+    padding-bottom: var(--padding-bottom, var(--padding-y, var(--padding)));
+    padding-left: var(--padding-left, var(--padding-x, var(--padding)));
+    background: var(--background);
+    background-color: var(--background-color, var(--background));
+    border-width: var(--border-width);
+    border-style: solid;
+    border-color: var(--border-color);
+    border-radius: var(--border-radius);
+  }
+`;
+const DialogManagedByCSSVars = {
+  margin: "--margin",
+  marginTop: "--margin-top",
+  marginBottom: "--margin-bottom",
+  marginLeft: "--margin-left",
+  marginRight: "--margin-right",
+  borderRadius: "--border-radius",
+  borderWidth: "--border-width",
+  borderColor: "--border-color",
+  background: "--background",
+  backgroundColor: "--background-color",
+  padding: "--padding",
+  paddingTop: "--padding-top",
+  paddingBottom: "--padding-bottom",
+  paddingLeft: "--padding-left",
+  paddingRight: "--padding-right",
+  minWidth: "--min-width",
+  minHeight: "--min-height"
+};
+const DialogLayout = ({
+  children,
+  contentAlignX = "center",
+  contentAlignY = "center",
+  ...props
+}) => {
+  return jsx(Box, {
+    className: "navi_dialog_layout",
+    managedByCSSVars: DialogManagedByCSSVars,
+    visualSelector: ".navi_dialog_content",
+    ...props,
+    contentAlignX: contentAlignX,
+    contentAlignY: contentAlignY,
+    children: jsx(Box, {
+      className: "navi_dialog_content",
+      row: true,
+      children: children
+    })
+  });
+};
+
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  @layer navi {
+    .navi_viewport_layout {
+      --padding: 40px;
+      --background: white;
+    }
+  }
+
+  .navi_viewport_layout {
+    padding-top: var(--padding-top, var(--padding-y, var(--padding)));
+    padding-right: var(--padding-right, var(--padding-x, var(--padding)));
+    padding-bottom: var(--padding-bottom, var(--padding-y, var(--padding)));
+    padding-left: var(--padding-left, var(--padding-x, var(--padding)));
+    background: var(--background);
+  }
+`;
+const ViewportManagedByCSSVars = {
+  padding: "--padding",
+  paddingTop: "--padding-top",
+  paddingBottom: "--padding-bottom",
+  paddingLeft: "--padding-left",
+  paddingRight: "--padding-right",
+  background: "--background"
+};
+const ViewportLayout = props => {
+  return jsx(Box, {
+    row: true,
+    ...props,
+    className: "navi_viewport_layout",
+    managedByCSSVars: ViewportManagedByCSSVars,
+    minWidth: "max-content",
+    minHeight: "max-content",
+    width: "100%",
+    height: "100%"
+  });
+};
+
 const createUniqueValueConstraint = (
   // the set might be incomplete (the front usually don't have the full copy of all the items from the backend)
   // but this is already nice to help user with what we know
@@ -21665,5 +21782,5 @@ const useDependenciesDiff = (inputs) => {
   return diffRef.current;
 };
 
-export { ActionRenderer, ActiveKeyboardShortcuts, BadgeCount, Box, Button, Checkbox, CheckboxList, Code, Col, Colgroup, Details, Editable, ErrorBoundaryContext, FontSizedSvg, Form, Icon, IconAndText, Image, Input, Label, Layout, Link, LinkWithIcon, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, Select, SelectionContext, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useActiveRouteInfo, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useUrlSearchParam, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, BadgeCount, Box, Button, Checkbox, CheckboxList, Code, Col, Colgroup, Details, DialogLayout, Editable, ErrorBoundaryContext, FontSizedSvg, Form, Icon, IconAndText, Image, Input, Label, Layout, Link, LinkWithIcon, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, Select, SelectionContext, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, ViewportLayout, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useActiveRouteInfo, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useUrlSearchParam, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map

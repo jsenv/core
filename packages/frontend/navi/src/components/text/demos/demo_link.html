@@ -231,6 +231,24 @@
                       </Link>
                     </Layout>
                   </fieldset>
+                  <fieldset>
+                    <legend>:-navi-current</legend>
+                    <Layout row contentSpacing="sm" contentAlignX="start">
+                      <Link
+                        href="./current"
+                        preventDefault
+                        pseudoState={{ ":-navi-current-link": true }}
+                        pseudoStyle={{
+                          ":-navi-current-link": {
+                            fontWeight: "bold",
+                            cursor: "default",
+                          },
+                        }}
+                      >
+                        Link text
+                      </Link>
+                    </Layout>
+                  </fieldset>
                 </Layout>
 
                 <div

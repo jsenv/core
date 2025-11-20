@@ -67,14 +67,17 @@ export const DialogLayout = ({
 }) => {
   return (
     <Box
-      className="navi_dialog_layout"
+      baseClassName="navi_dialog_layout"
       managedByCSSVars={DialogManagedByCSSVars}
       visualSelector=".navi_dialog_content"
       {...props}
-      contentAlignX={contentAlignX}
-      contentAlignY={contentAlignY}
     >
-      <Box className="navi_dialog_content" row>
+      <Box
+        row
+        className="navi_dialog_content"
+        contentAlignX={contentAlignX}
+        contentAlignY={contentAlignY}
+      >
         {children}
       </Box>
     </Box>
