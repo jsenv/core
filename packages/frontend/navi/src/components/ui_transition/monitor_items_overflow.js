@@ -84,9 +84,10 @@ export const monitorItemsOverflow = (container) => {
   update();
 
   // mutation observer
-  const mutationObserver = new MutationObserver(() => {});
+  const mutationObserver = new MutationObserver(() => {
+    update();
+  });
   mutationObserver.observe(container, {
-    attributes: true,
     childList: true,
     characterData: true,
   });
