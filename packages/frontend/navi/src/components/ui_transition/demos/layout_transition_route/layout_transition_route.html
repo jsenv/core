@@ -76,12 +76,14 @@
 
       const {
         DIALOG_ROUTE,
+        DIALOG2_ROUTE,
         VIEWPORT_ROUTE,
         VIEWPORT_OVERFLOW_X_ROUTE,
         VIEWPORT_OVERFLOW_Y_ROUTE,
         VIEWPORT_OVERFLOW_XY_ROUTE,
       } = setupRoutes({
         DIALOG_ROUTE: "",
+        DIALOG2_ROUTE: "dialog2",
         VIEWPORT_ROUTE: "viewport",
         VIEWPORT_OVERFLOW_X_ROUTE: "viewport_overflow_x",
         VIEWPORT_OVERFLOW_Y_ROUTE: "viewport_overflow_y",
@@ -106,6 +108,11 @@
             />
             <Route
               meta={{ layout: "dialog" }}
+              element={<BigPage />}
+              route={DIALOG2_ROUTE}
+            />
+            <Route
+              meta={{ layout: "dialog" }}
               element={<SmallPage />}
               fallback
             />
@@ -122,6 +129,7 @@
             style="position: fixed; z-index: 1; top: 0; left: 0;"
           >
             <RouteLink route={DIALOG_ROUTE}>Dialog</RouteLink>
+            <RouteLink route={DIALOG2_ROUTE}>Dialog 2</RouteLink>
             <RouteLink route={VIEWPORT_ROUTE}>Viewport</RouteLink>
             <RouteLink route={VIEWPORT_OVERFLOW_X_ROUTE}>
               Viewport x overflow
@@ -229,6 +237,41 @@
                 >
                   Increment ({count})
                 </button>
+              </div>
+            </div>
+          </DialogLayout>
+        );
+      };
+
+      const BigPage = () => {
+        const [count, setCount] = useState(0);
+
+        return (
+          <DialogLayout>
+            <div style="width: 500px; height: 400px; padding: 20px;">
+              <div style="font-size: 18px; margin-bottom: 20px;">
+                500x400 Big Dialog
+              </div>
+              <div style="margin: 20px 0;">
+                <div style="margin-bottom: 10px;">
+                  Big Dialog Counter: {count}
+                </div>
+                <button
+                  style="padding: 12px 20px; border: 1px solid #007acc; background: #e6f3ff; border-radius: 6px; cursor: pointer; font-size: 16px;"
+                  onClick={() => setCount(count + 1)}
+                >
+                  Big Increment ({count})
+                </button>
+              </div>
+              <div style="background: #f0f0f0; padding: 15px; border-radius: 8px; margin-top: 20px;">
+                <p>
+                  This is a larger dialog to test size transitions between
+                  different dialog layouts.
+                </p>
+                <p>
+                  You can navigate between Dialog and Dialog 2 to see the smooth
+                  size animation.
+                </p>
               </div>
             </div>
           </DialogLayout>
