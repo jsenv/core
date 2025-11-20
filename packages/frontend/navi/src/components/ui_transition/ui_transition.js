@@ -13,13 +13,13 @@
  * Required HTML structure:
  *
  * <div class="ui_transition">
- *   <div class="active_group">
- *     <div class="target_slot"></div>
- *     <div class="outgoing_slot"></div>
+ *   <div class="ui_transition_active_group">
+ *     <div class="ui_transition_target_slot"></div>
+ *     <div class="ui_transition_outgoing_slot"></div>
  *   </div>
- *   <div class="previous_group">
- *     <div class="previous_target_slot"></div>
- *     <div class="previous_outgoing_slot"></div>
+ *   <div class="ui_transition_previous_group">
+ *     <div class="ui_transition_previous_target_slot"></div>
+ *     <div class="ui_transition_previous_outgoing_slot"></div>
  *   </div>
  * </div>
  *
@@ -119,58 +119,58 @@ import.meta.css = /* css */ `
   }
 
   .ui_transition,
-  .active_group,
-  .previous_group,
-  .target_slot,
-  .previous_target_slot,
-  .outgoing_slot,
-  .previous_outgoing_slot {
+  .ui_transition_active_group,
+  .ui_transition_previous_group,
+  .ui_transition_target_slot,
+  .ui_transition_previous_target_slot,
+  .ui_transition_outgoing_slot,
+  .ui_transition_previous_outgoing_slot {
     width: 100%;
     height: 100%;
   }
 
-  .target_slot,
-  .outgoing_slot,
-  .previous_target_slot,
-  .previous_outgoing_slot {
+  .ui_transition_target_slot,
+  .ui_transition_outgoing_slot,
+  .ui_transition_previous_target_slot,
+  .ui_transition_previous_outgoing_slot {
     display: flex;
     align-items: var(--x-align-items);
     justify-content: var(--x-justify-content);
   }
-  .target_slot[data-items-width-overflow],
-  .previous_target_slot[data-items-width-overflow],
-  .previous_target_slot[data-items-width-overflow],
-  .previous_outgoing_slot[data-items-width-overflow] {
+  .ui_transition_target_slot[data-items-width-overflow],
+  .ui_transition_previous_target_slot[data-items-width-overflow],
+  .ui_transition_previous_target_slot[data-items-width-overflow],
+  .ui_transition_previous_outgoing_slot[data-items-width-overflow] {
     --x-justify-content: flex-start;
   }
-  .target_slot[data-items-height-overflow],
-  .previous_slot[data-items-height-overflow],
-  .previous_target_slot[data-items-height-overflow],
-  .previous_outgoing_slot[data-items-height-overflow] {
+  .ui_transition_target_slot[data-items-height-overflow],
+  .ui_transition_previous_slot[data-items-height-overflow],
+  .ui_transition_previous_target_slot[data-items-height-overflow],
+  .ui_transition_previous_outgoing_slot[data-items-height-overflow] {
     --x-align-items: flex-start;
   }
 
-  .active_group {
+  .ui_transition_active_group {
     position: relative;
   }
-  .target_slot {
+  .ui_transition_target_slot {
     position: relative;
   }
-  .outgoing_slot,
-  .previous_outgoing_slot {
+  .ui_transition_outgoing_slot,
+  .ui_transition_previous_outgoing_slot {
     position: absolute;
     top: 0;
     left: 0;
   }
-  .previous_group {
+  .ui_transition_previous_group {
     position: absolute;
     inset: 0;
   }
-  .ui_transition[data-only-previous-group] .previous_group {
+  .ui_transition[data-only-previous-group] .ui_transition_previous_group {
     position: relative;
   }
 
-  .target_slot_background {
+  .ui_transition_target_slot_background {
     position: absolute;
     top: 0;
     left: 0;
@@ -181,7 +181,7 @@ import.meta.css = /* css */ `
     background: var(--target-slot-background, transparent);
     pointer-events: none;
   }
-  .ui_transition[data-transitioning] .target_slot_background {
+  .ui_transition[data-transitioning] .ui_transition_target_slot_background {
     display: block;
   }
 `;
@@ -229,15 +229,15 @@ export const createUITransitionController = (
     console.debug(`[size]`, message);
   };
 
-  const activeGroup = root.querySelector(".active_group");
-  const targetSlot = root.querySelector(".target_slot");
-  const outgoingSlot = root.querySelector(".outgoing_slot");
-  const previousGroup = root.querySelector(".previous_group");
+  const activeGroup = root.querySelector(".ui_transition_active_group");
+  const targetSlot = root.querySelector(".ui_transition_target_slot");
+  const outgoingSlot = root.querySelector(".ui_transition_outgoing_slot");
+  const previousGroup = root.querySelector(".ui_transition_previous_group");
   const previousTargetSlot = previousGroup?.querySelector(
-    ".previous_target_slot",
+    ".ui_transition_previous_target_slot",
   );
   const previousOutgoingSlot = previousGroup?.querySelector(
-    ".previous_outgoing_slot",
+    ".ui_transition_previous_outgoing_slot",
   );
 
   if (
@@ -257,7 +257,7 @@ export const createUITransitionController = (
   // we maintain a background copy behind target slot to avoid showing
   // the body flashing during the fade-in
   const targetSlotBackground = document.createElement("div");
-  targetSlotBackground.className = "target_slot_background";
+  targetSlotBackground.className = "ui_transition_target_slot_background";
   activeGroup.insertBefore(targetSlotBackground, targetSlot);
 
   root.style.setProperty("--x-transition-duration", `${duration}ms`);

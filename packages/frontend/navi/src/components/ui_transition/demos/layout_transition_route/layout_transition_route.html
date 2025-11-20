@@ -24,7 +24,6 @@
         position: relative;
         margin: 0;
         padding: 0;
-        color: white;
         font-family: system-ui;
         background:
           repeating-linear-gradient(
@@ -71,6 +70,8 @@
         RouteLink,
         setupRoutes,
         UITransition,
+        DialogLayout,
+        ViewportLayout,
       } from "@jsenv/navi";
 
       const {
@@ -200,35 +201,6 @@
               <Route.Slot />
             </UITransition>
           </>
-        );
-      };
-
-      const DialogLayout = ({ children }) => {
-        // We put paddings around the dialog to ensure window resizing respects this space
-        // this way even narrow window will show some space around the dialog
-        return (
-          <Box id="dialog_layout" padding="40" color="#666">
-            <Box background="white" minWidth="300" height="250" padding="20">
-              {children}
-            </Box>
-          </Box>
-        );
-      };
-      const ViewportLayout = ({ children }) => {
-        return (
-          <Box
-            id="viewport_layout"
-            minWidth="max-content"
-            minHeight="max-content"
-            width="100%"
-            height="100%"
-            row
-            padding="40"
-            background="white"
-            color="#666"
-          >
-            {children}
-          </Box>
         );
       };
 

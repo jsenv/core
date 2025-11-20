@@ -108,6 +108,8 @@ export {
   // Layout is a more semantic version of Box when we want to express layout intention (row/column/inline)
   Layout,
 } from "./src/components/layout/box.jsx";
+export { DialogLayout } from "./src/components/layout/dialog_layout.jsx";
+export { ViewportLayout } from "./src/components/layout/viewport_layout.jsx";
 
 // Validation
 export { createUniqueValueConstraint } from "./src/validation/constraints/create_unique_value_constraint.js";
