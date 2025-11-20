@@ -62,18 +62,6 @@
 
 /**
  *
- * TODO:
- *
- * - finir le truc avec le background
- * puis faire la meme avec le border-color et le radius
- *
- * - padding
- *
- * - border radius
- *
- * - vérification des backgrounds (on peut appliquer des backgrounds
- * et ils prennents bien la taille attendu (meme si le contenr "overflow"))
- *
  * - content phase se comporte comme le contenu tant qu'on a pas vu de contenu
  * des qu'on voit un contenu il doit respecter les dimensions du dernier contenu
  * qu'on connait
@@ -83,13 +71,9 @@
  */
 
 import {
-  createBackgroundTransition,
-  createBorderRadiusTransition,
-  createBorderTransition,
   createGroupTransitionController,
-  createHeightTransition,
   createOpacityTransition,
-  createWidthTransition,
+  createPubSub,
   getBackground,
   getBorderRadius,
   getElementSignature,
@@ -97,6 +81,7 @@ import {
   measureScrollbar,
   preventIntermediateScrollbar,
 } from "@jsenv/dom";
+import { monitorItemsHeightOverflow } from "../monitor_items_height_overflow.js";
 
 import.meta.css = /* css */ `
   * {
@@ -104,39 +89,35 @@ import.meta.css = /* css */ `
   }
 
   .ui_transition {
-    --transition-duration: 3000ms;
+    --transition-duration: 300ms;
     --justify-content: center;
     --align-items: center;
-    --background-color: transparent;
-    --border-radius: 0;
 
     --x-transition-duration: var(--transition-duration);
     --x-justify-content: var(--justify-content);
     --x-align-items: var(--align-items);
-    --x-background-color: var(--background-color);
-    --x-border-radius: var(--border-radius);
 
     position: relative;
-    display: flex;
+  }
+  .ui_transition,
+  .active_group,
+  .target_slot,
+  .previous_target_slot {
     width: 100%;
     height: 100%;
+  }
+
+  .target_slot,
+  .previous_target_slot {
+    display: flex;
     align-items: var(--x-align-items);
     justify-content: var(--x-justify-content);
-    background-color: var(--x-background-color);
-    border-radius: var(--x-border-radius);
   }
-
-  .ui_transition_container {
-    /* in case CSS sets border on this element his size must include borders */
-    box-sizing: border-box;
-    /* max-width/max-height saves use from content going outside parent boundaries by flexbox positioning */
-    max-width: 100%;
-    max-height: 100%;
+  .active_group {
+    position: relative;
   }
-
-  .ui_transition[data-transitioning] .ui_transition_container {
-    /* Overflow hidden so content is clipped during transition */
-    overflow: hidden;
+  .target_slot {
+    position: relative;
   }
 
   /* Alignment controls */
@@ -158,35 +139,9 @@ import.meta.css = /* css */ `
   .ui_transition[data-align-y="end"] {
     --x-align-items: flex-end;
   }
-  /* When content overflows (bigger than parent) on a given axis */
-  /* Flexbox would still try to position it ¯_(ツ)_/¯ */
-  /* It causes slot content to overflow outside the box leading to content being out of view */
-  /* So for this case we disable flexbox positioning (and there is no need for positioning anyway as slot takes the whole space */
-  .active_group[data-slot-overflow-x],
-  .previous_group[data-slot-overflow-x] {
-    --x-justify-content: flex-start;
-  }
-  .active_group[data-slot-overflow-y],
-  .previous_group[data-slot-overflow-y] {
+  .target_slot[data-items-height-overflow],
+  .previous_slot[data-items-height-overflow] {
     --x-align-items: flex-start;
-  }
-
-  .active_group,
-  .previous_group {
-    display: flex;
-    min-height: 100%;
-    align-items: var(--x-align-items);
-    justify-content: var(--x-justify-content);
-  }
-  .active_group {
-    position: relative;
-  }
-  .target_slot {
-    position: relative;
-  }
-  .ui_transition[data-transitioning] .active_group,
-  .ui_transition[data-transitioning] .previous_group {
-    height: 100%;
   }
 
   .ui_transition[data-transitioning] .target_slot,
@@ -195,7 +150,8 @@ import.meta.css = /* css */ `
     min-height: 0;
     flex-shrink: 0;
   }
-  .outgoing_slot {
+  .outgoing_slot,
+  .previous_outgoing_slot {
     position: absolute;
     top: 0;
     left: 0;
@@ -212,12 +168,12 @@ import.meta.css = /* css */ `
   .ui_transition[data-transitioning] .outgoing_slot > *,
   .ui_transition[data-transitioning] .previous_target_slot > *,
   .ui_transition[data-transitioning] .previous_outgoing_slot > * {
-    background-image: none !important;
-    background-color: transparent !important;
-    border-color: transparent !important;
+    /* box-shadow: none !important; */
   }
 `;
 
+const CONTENT_ID_ATTRIBUTE = "data-content-id";
+const CONTENT_PHASE_ATTRIBUTE = "data-content-phase";
 const UNSET = {
   domNodes: [],
   domNodesClone: [],
@@ -259,7 +215,6 @@ export const createUITransitionController = (
     console.debug(`[size]`, message);
   };
 
-  const container = root.querySelector(".ui_transition_container");
   const activeGroup = root.querySelector(".active_group");
   const targetSlot = root.querySelector(".target_slot");
   const outgoingSlot = root.querySelector(".outgoing_slot");
@@ -285,6 +240,7 @@ export const createUITransitionController = (
     );
   }
 
+  const elementToClip = root;
   const scrollContainer = getScrollContainer(root);
   const getRootAvailableDimensions = () => {
     const [scrollbarWidth, scrollbarHeight] = measureScrollbar(scrollContainer);
@@ -299,26 +255,51 @@ export const createUITransitionController = (
 
   const detectConfiguration = (slot, { contentId, contentPhase } = {}) => {
     const domNodes = Array.from(slot.childNodes);
-
     if (!domNodes) {
       return UNSET;
     }
+
     const isEmpty = domNodes.length === 0;
     let textNodeCount = 0;
     let elementNodeCount = 0;
     let firstElementNode;
     const domNodesClone = [];
-    for (const domNode of domNodes) {
-      if (domNode.nodeType === Node.TEXT_NODE) {
-        textNodeCount++;
-      } else {
-        if (!firstElementNode) {
-          firstElementNode = domNode;
-        }
-        elementNodeCount++;
+    if (isEmpty) {
+      if (contentPhase === undefined) {
+        contentPhase = "empty";
       }
-      const domNodeClone = domNode.cloneNode(true);
-      domNodesClone.push(domNodeClone);
+    } else {
+      const contentIdSlotAttr = slot.getAttribute(CONTENT_ID_ATTRIBUTE);
+      let contentIdChildAttr;
+      for (const domNode of domNodes) {
+        if (domNode.nodeType === Node.TEXT_NODE) {
+          textNodeCount++;
+        } else {
+          if (!firstElementNode) {
+            firstElementNode = domNode;
+          }
+          elementNodeCount++;
+
+          if (domNode.hasAttribute("data-content-phase")) {
+            const contentPhaseAttr = domNode.getAttribute("data-content-phase");
+            contentPhase = contentPhaseAttr || "attr";
+          }
+          if (domNode.hasAttribute("data-content-key")) {
+            contentIdChildAttr = domNode.getAttribute("data-content-key");
+          }
+        }
+        const domNodeClone = domNode.cloneNode(true);
+        domNodesClone.push(domNodeClone);
+      }
+
+      if (contentIdSlotAttr && contentIdChildAttr) {
+        console.warn(
+          `Slot and slot child both have a [${CONTENT_ID_ATTRIBUTE}]. Slot is ${contentIdSlotAttr} and child is ${contentIdChildAttr}, using the child.`,
+        );
+      }
+      if (contentId === undefined) {
+        contentId = contentIdChildAttr || contentIdSlotAttr || undefined;
+      }
     }
     const isOnlyTextNodes = elementNodeCount === 0 && textNodeCount > 1;
     const singleElementNode = elementNodeCount === 1 ? firstElementNode : null;
@@ -526,12 +507,10 @@ export const createUITransitionController = (
     applySlotConfigurationEffects(slot);
   };
   const applySlotConfigurationEffects = (slot) => {
-    forceSlotDimensions(slot);
-  };
-  const forceSlotDimensions = (slot) => {
     const configuration = getSlotConfiguration(slot);
-    const { width, height } = configuration;
-    setSlotDimensions(slot, width, height);
+    debugDetection(
+      `applySlotConfigurationEffects(.${slot.className}) ${configuration}`,
+    );
   };
   const releaseSlotDimensions = (slot) => {
     setSlotDimensions(slot, undefined, undefined);
@@ -566,7 +545,6 @@ export const createUITransitionController = (
   applySlotConfigurationEffects(targetSlot);
   applySlotConfigurationEffects(outgoingSlot);
 
-  let isTransitioning = false;
   let transitionType = "none";
   const groupTransitionOptions = {
     // debugBreakpoints: [0.25],
@@ -575,12 +553,10 @@ export const createUITransitionController = (
       setup: () => {
         updateSlotAttributes();
         root.setAttribute("data-transitioning", "");
-        isTransitioning = true;
         onStateChange({ isTransitioning: true });
         return {
           teardown: () => {
             root.removeAttribute("data-transitioning");
-            isTransitioning = false;
             updateSlotAttributes(); // Update positioning after transition
             onStateChange({ isTransitioning: false });
           },
@@ -594,58 +570,7 @@ export const createUITransitionController = (
 
   const morphContainerIntoTarget = () => {
     const morphTransitions = [];
-    border_radius: {
-      const fromBorderRadius = previousTargetSlotConfiguration.borderRadius;
-      const toBorderRadius = targetSlotConfiguration.borderRadius;
-      const borderRadiusTransition = createBorderRadiusTransition(
-        container,
-        toBorderRadius,
-        {
-          from: fromBorderRadius,
-          duration,
-          styleSynchronizer: "inline_style",
-          onUpdate: () => {},
-          onFinish: (borderRadiusTransition) => {
-            borderRadiusTransition.cancel();
-          },
-        },
-      );
-      morphTransitions.push(borderRadiusTransition);
-    }
-    border: {
-      const fromBorder = previousTargetSlotConfiguration.border;
-      const toBorder = targetSlotConfiguration.border;
-      const borderTransition = createBorderTransition(container, toBorder, {
-        from: fromBorder,
-        duration,
-        styleSynchronizer: "inline_style",
-        onFinish: (borderTransition) => {
-          borderTransition.cancel();
-        },
-      });
-      morphTransitions.push(borderTransition);
-    }
-    background: {
-      const fromBackground = previousTargetSlotConfiguration.background;
-      const toBackground = targetSlotConfiguration.background;
-      const backgroundTransition = createBackgroundTransition(
-        container,
-        toBackground,
-        {
-          from: fromBackground,
-          duration,
-          styleSynchronizer: "inline_style",
-          onUpdate: () => {},
-          onFinish: () => {
-            backgroundTransition.cancel();
-          },
-        },
-      );
-      morphTransitions.push(backgroundTransition);
-    }
     dimensions: {
-      // let containerWidth;
-      // let containerHeight;
       const fromWidth = previousTargetSlotConfiguration.width || 0;
       const fromHeight = previousTargetSlotConfiguration.height || 0;
       const toWidth = targetSlotConfiguration.width || 0;
@@ -675,53 +600,107 @@ export const createUITransitionController = (
         },
       });
 
-      let widthTransitionFinished = false;
-      let heightTransitionFinished = false;
-      const onWidthTransitionFinished = () => {
-        widthTransitionFinished = true;
-        if (heightTransitionFinished) {
-          onSizeTransitionFinished();
-        }
-      };
-      const onHeightTransitionFinished = () => {
-        heightTransitionFinished = true;
-        if (widthTransitionFinished) {
-          onSizeTransitionFinished();
-        }
-      };
       const onSizeTransitionFinished = () => {
-        // uiTransitionStyleController.delete(targetSlot, "transform.translateY");
         // Restore overflow when transition is complete
         restoreOverflow();
-        // let target slot take natural size now container is done
+        // Let target slot take natural size now container is done
         releaseSlotDimensions(targetSlot);
       };
 
-      const widthTransition = createWidthTransition(container, toWidth, {
-        from: fromWidth,
-        duration,
-        styleSynchronizer: "inline_style",
-        onUpdate: () => {
-          // containerWidth = widthTransition.value;
+      // https://emilkowal.ski/ui/the-magic-of-clip-path
+      const elementToClipRect = elementToClip.getBoundingClientRect();
+      const elementToClipWidth = elementToClipRect.width;
+      const elementToClipHeight = elementToClipRect.height;
+
+      debugSize(
+        `Container dimensions: ${elementToClipWidth}x${elementToClipHeight}, target slot: ${toWidth}x${toHeight}`,
+      );
+
+      // Calculate where content is positioned within the large container
+      const getAlignedPosition = (containerSize, contentSize, align) => {
+        switch (align) {
+          case "start":
+            return 0;
+          case "end":
+            return containerSize - contentSize;
+          case "center":
+          default:
+            return (containerSize - contentSize) / 2;
+        }
+      };
+
+      // Position of "from" content within large container
+      const fromLeft = getAlignedPosition(
+        elementToClipWidth,
+        fromWidth,
+        alignX,
+      );
+      const fromTop = getAlignedPosition(
+        elementToClipHeight,
+        fromHeight,
+        alignY,
+      );
+
+      // Position of target content within large container
+      const targetLeft = getAlignedPosition(
+        elementToClipWidth,
+        toWidth,
+        alignX,
+      );
+      const targetTop = getAlignedPosition(
+        elementToClipHeight,
+        toHeight,
+        alignY,
+      );
+
+      debugSize(
+        `Positions in container: from [${fromLeft},${fromTop}] ${fromWidth}x${fromHeight} to [${targetLeft},${targetTop}] ${toWidth}x${toHeight}`,
+      );
+      // Get border-radius values
+      const fromBorderRadius =
+        previousTargetSlotConfiguration.borderRadius || 0;
+      const toBorderRadius = targetSlotConfiguration.borderRadius || 0;
+
+      // Use inset() for all cases - simpler and works with or without border-radius
+      const startInsetTop = fromTop;
+      const startInsetRight = elementToClipWidth - (fromLeft + fromWidth);
+      const startInsetBottom = elementToClipHeight - (fromTop + fromHeight);
+      const startInsetLeft = fromLeft;
+
+      const endInsetTop = targetTop;
+      const endInsetRight = elementToClipWidth - (targetLeft + toWidth);
+      const endInsetBottom = elementToClipHeight - (targetTop + toHeight);
+      const endInsetLeft = targetLeft;
+
+      const startClipPath = `inset(${startInsetTop}px ${startInsetRight}px ${startInsetBottom}px ${startInsetLeft}px round ${fromBorderRadius}px)`;
+      const endClipPath = `inset(${endInsetTop}px ${endInsetRight}px ${endInsetBottom}px ${endInsetLeft}px round ${toBorderRadius}px)`;
+
+      debugSize(
+        `Clip-path inset: from radius ${fromBorderRadius}px to ${toBorderRadius}px`,
+      );
+
+      // Create clip-path animation using Web Animations API
+      const clipAnimation = elementToClip.animate(
+        [{ clipPath: startClipPath }, { clipPath: endClipPath }],
+        {
+          duration,
+          easing: "ease",
+          fill: "forwards",
         },
-        onFinish: (widthTransition) => {
-          widthTransition.cancel();
-          onWidthTransitionFinished();
-        },
-      });
-      const heightTransition = createHeightTransition(container, toHeight, {
-        from: fromHeight,
-        duration,
-        styleSynchronizer: "inline_style",
-        onUpdate: () => {
-          // containerHeight = heightTransition.value;
-        },
-        onFinish: (heightTransition) => {
-          heightTransition.cancel();
-          onHeightTransitionFinished();
-        },
-      });
-      morphTransitions.push(widthTransition, heightTransition);
+      );
+
+      // Handle finish
+      clipAnimation.finished
+        .then(() => {
+          // Clear clip-path to restore normal behavior
+          elementToClip.style.clipPath = "";
+          clipAnimation.cancel();
+          onSizeTransitionFinished();
+        })
+        .catch(() => {
+          // Animation was cancelled
+        });
+      clipAnimation.play();
     }
 
     return morphTransitions;
@@ -834,28 +813,42 @@ export const createUITransitionController = (
     newContentElement,
     { contentPhase, contentId } = {},
   ) => {
-    if (isTransitioning) {
-      console.log("Transition already in progress, ignoring");
-      return;
+    if (contentId) {
+      targetSlot.setAttribute(CONTENT_ID_ATTRIBUTE, contentId);
+    } else {
+      targetSlot.removeAttribute(CONTENT_ID_ATTRIBUTE);
     }
-
+    if (contentPhase) {
+      targetSlot.setAttribute(CONTENT_PHASE_ATTRIBUTE, contentPhase);
+    } else {
+      targetSlot.removeAttribute(CONTENT_PHASE_ATTRIBUTE);
+    }
     if (newContentElement) {
       targetSlot.innerHTML = "";
       targetSlot.appendChild(newContentElement);
     } else {
       targetSlot.innerHTML = "";
     }
+  };
+  // Reset to initial content
+  const resetContent = () => {
+    transitionController.cancel();
+    moveConfigurationIntoSlot(targetSlotInitialConfiguration, targetSlot);
+    moveConfigurationIntoSlot(outgoingSlotInitialConfiguration, outgoingSlot);
+    moveConfigurationIntoSlot(UNSET, previousTargetSlot);
+    moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
+  };
 
+  const targetSlotEffect = (reason) => {
     const fromConfiguration = targetSlotConfiguration;
-    const toConfiguration = detectConfiguration(targetSlot, {
-      contentPhase,
-      contentId,
-    });
+    const toConfiguration = detectConfiguration(targetSlot);
     if (hasDebugLogs) {
-      console.group(`transitionTo(${toConfiguration.contentId})`);
+      console.group(`transitionTo(${reason})`);
     }
     if (isSameConfiguration(fromConfiguration, toConfiguration)) {
-      debugDetection(`ignored (already in desired state)`);
+      debugDetection(
+        `already in desired state (${toConfiguration}) -> early return`,
+      );
       if (hasDebugLogs) {
         console.groupEnd();
       }
@@ -891,16 +884,55 @@ export const createUITransitionController = (
     applyContentToContentTransition(toConfiguration);
   };
 
-  // Reset to initial content
-  const resetContent = () => {
-    if (isTransitioning) return;
+  const [teardown, addTeardown] = createPubSub();
+  mutation_observer: {
+    const mutationObserver = new MutationObserver((mutations) => {
+      const reasonParts = [];
+      for (const mutation of mutations) {
+        if (mutation.type === "childList") {
+          const added = mutation.addedNodes.length;
+          const removed = mutation.removedNodes.length;
+          if (added && removed) {
+            reasonParts.push(`addedNodes(${added}) removedNodes(${removed})`);
+          } else if (added) {
+            reasonParts.push(`addedNodes(${added})`);
+          } else {
+            reasonParts.push(`removedNodes(${removed})`);
+          }
+          continue;
+        }
+        if (mutation.type === "attributes") {
+          const { attributeName } = mutation;
+          debugger;
+          if (
+            attributeName === CONTENT_ID_ATTRIBUTE ||
+            attributeName === CONTENT_PHASE_ATTRIBUTE
+          ) {
+            reasonParts.push(`[${attributeName}]`);
+          }
+        }
+      }
 
-    transitionController.cancel();
-    moveConfigurationIntoSlot(targetSlotInitialConfiguration, targetSlot);
-    moveConfigurationIntoSlot(outgoingSlotInitialConfiguration, outgoingSlot);
-    moveConfigurationIntoSlot(UNSET, previousTargetSlot);
-    moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
-  };
+      if (reasonParts.length === 0) {
+        return;
+      }
+      const reason = `mutation: ${reasonParts.join("+")}`;
+      targetSlotEffect(reason);
+    });
+    mutationObserver.observe(targetSlot, {
+      childList: true,
+      attributes: true,
+      attributeFilter: [CONTENT_ID_ATTRIBUTE, CONTENT_PHASE_ATTRIBUTE],
+      characterData: false,
+    });
+    addTeardown(() => {
+      mutationObserver.disconnect();
+    });
+  }
+
+  const stopMonitoringTargetSlotOverflow =
+    monitorItemsHeightOverflow(targetSlot);
+  addTeardown(stopMonitoringTargetSlotOverflow);
 
   const setDuration = (newDuration) => {
     duration = newDuration;
@@ -921,6 +953,9 @@ export const createUITransitionController = (
     updateAlignment,
     setPauseBreakpoints: (value) => {
       groupTransitionOptions.pauseBreakpoints = value;
+    },
+    cleanup: () => {
+      teardown();
     },
   };
 };

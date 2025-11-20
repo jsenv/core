@@ -21,7 +21,7 @@ import { signal } from "@preact/signals";
 import { createContext } from "preact";
 import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
-import { useContentKey } from "../components/ui_transition/ui_transition.jsx";
+import { useUITransitionContentId } from "../components/ui_transition/ui_transition.jsx";
 import { useForceRender } from "./use_force_render.js";
 
 const DEBUG = false;
@@ -205,7 +205,7 @@ const initRouteObserver = ({
   const SlotActiveElementSignal = signal();
   const ActiveElement = () => {
     const activeRouteInfo = activeRouteInfoSignal.value;
-    useContentKey(
+    useUITransitionContentId(
       activeRouteInfo
         ? activeRouteInfo.route.urlPattern
         : fallback
