@@ -175,10 +175,14 @@ import.meta.css = /* css */ `
     top: 0;
     left: 0;
     z-index: -1;
+    display: none;
     width: var(--target-slot-width, 100%);
     height: var(--target-slot-height, 100%);
     background: var(--target-slot-background, transparent);
     pointer-events: none;
+  }
+  .ui_transition[data-transitioning] .target_slot_background {
+    display: block;
   }
 `;
 
@@ -249,6 +253,12 @@ export const createUITransitionController = (
       "createUITransitionController requires element with .active_group, .target_slot, .outgoing_slot, .previous_group, .previous_target_slot, and .previous_outgoing_slot elements",
     );
   }
+
+  // we maintain a background copy behind target slot to avoid showing
+  // the body flashing during the fade-in
+  const targetSlotBackground = document.createElement("div");
+  targetSlotBackground.className = "target_slot_background";
+  activeGroup.insertBefore(targetSlotBackground, targetSlot);
 
   root.style.setProperty("--x-transition-duration", `${duration}ms`);
   outgoingSlot.setAttribute("inert", "");
@@ -568,30 +578,23 @@ export const createUITransitionController = (
     return morphTransitions;
   };
   const fadeInTargetSlot = () => {
-    // we maintain a background copy behind target slot to avoid showing
-    // the body flashing during the fade-in
-    const backgroundDiv = document.createElement("div");
-    backgroundDiv.className = "target_slot_background";
-    backgroundDiv.style.setProperty(
+    targetSlotBackground.style.setProperty(
       "--target-slot-background",
       stringifyStyle(targetSlotConfiguration.background, "background"),
     );
-    backgroundDiv.style.setProperty(
+    targetSlotBackground.style.setProperty(
       "--target-slot-width",
       `${targetSlotConfiguration.width || 0}px`,
     );
-    backgroundDiv.style.setProperty(
+    targetSlotBackground.style.setProperty(
       "--target-slot-height",
       `${targetSlotConfiguration.height || 0}px`,
     );
-    activeGroup.insertBefore(backgroundDiv, targetSlot);
-
     return createOpacityTransition(targetSlot, 1, {
       from: 0,
       duration,
       styleSynchronizer: "inline_style",
       onFinish: (targetSlotOpacityTransition) => {
-        backgroundDiv.remove();
         targetSlotOpacityTransition.cancel();
       },
     });
