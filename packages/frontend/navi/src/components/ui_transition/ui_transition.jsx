@@ -160,8 +160,8 @@ export const UITransition = ({
  * as changed even if the component is still the same
  *
  * This is used by <Route> to set the content key to the route path
- * When the route becomes inactive it will call useContentKey(undefined)
- * And if a sibling route becones active it will call useContentKey with its own path
+ * When the route becomes inactive it will call useUITransitionContentId(undefined)
+ * And if a sibling route becones active it will call useUITransitionContentId with its own path
  *
  */
 export const useUITransitionContentId = (value) => {

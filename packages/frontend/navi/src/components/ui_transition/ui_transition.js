@@ -837,11 +837,13 @@ export const createUITransitionController = (
     moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
   };
 
-  const targetSlotEffect = (reason) => {
+  const targetSlotEffect = (reasons) => {
     const fromConfiguration = targetSlotConfiguration;
     const toConfiguration = detectConfiguration(targetSlot);
     if (hasDebugLogs) {
-      console.group(`transitionTo(${reason})`);
+      console.group(`targetSlotEffect()`);
+      console.debug(`reasons:`);
+      console.debug(`- ${reasons.join("\n- ")}`);
     }
     if (isSameConfiguration(fromConfiguration, toConfiguration)) {
       debugDetection(
@@ -901,12 +903,28 @@ export const createUITransitionController = (
         }
         if (mutation.type === "attributes") {
           const { attributeName } = mutation;
-          debugger;
           if (
             attributeName === CONTENT_ID_ATTRIBUTE ||
             attributeName === CONTENT_PHASE_ATTRIBUTE
           ) {
-            reasonParts.push(`[${attributeName}]`);
+            const { oldValue } = mutation;
+            if (oldValue === null) {
+              const value = targetSlot.getAttribute(attributeName);
+              reasonParts.push(
+                value
+                  ? `added [${attributeName}=${value}]`
+                  : `added [${attributeName}]`,
+              );
+            } else if (targetSlot.hasAttribute(attributeName)) {
+              const value = targetSlot.getAttribute(attributeName);
+              reasonParts.push(`[${attributeName}] ${oldValue} -> ${value}`);
+            } else {
+              reasonParts.push(
+                oldValue
+                  ? `removed [${attributeName}=${oldValue}]`
+                  : `removed [${attributeName}]`,
+              );
+            }
           }
         }
       }
@@ -914,8 +932,7 @@ export const createUITransitionController = (
       if (reasonParts.length === 0) {
         return;
       }
-      const reason = `mutation: ${reasonParts.join("+")}`;
-      targetSlotEffect(reason);
+      targetSlotEffect(reasonParts);
     });
     mutationObserver.observe(targetSlot, {
       childList: true,
