@@ -13,7 +13,6 @@
  * Required HTML structure:
  *
  * <div class="ui_transition">
- *  <div class="ui_transition_container">
  *   <div class="active_group">
  *     <div class="target_slot"></div>
  *     <div class="outgoing_slot"></div>
@@ -22,7 +21,6 @@
  *     <div class="previous_target_slot"></div>
  *     <div class="previous_outgoing_slot"></div>
  *   </div>
- *  </div>
  * </div>
  *
  * Architecture Overview:
@@ -79,8 +77,6 @@ import {
   getBackground,
   getBorderRadius,
   getElementSignature,
-  getScrollContainer,
-  measureScrollbar,
   preventIntermediateScrollbar,
 } from "@jsenv/dom";
 import { monitorItemsHeightOverflow } from "./monitor_items_height_overflow.js";
@@ -210,7 +206,6 @@ export const createUITransitionController = (
     console.debug(`[size]`, message);
   };
 
-  const container = root.querySelector(".ui_transition_container");
   const activeGroup = root.querySelector(".active_group");
   const targetSlot = root.querySelector(".target_slot");
   const outgoingSlot = root.querySelector(".outgoing_slot");
@@ -235,14 +230,6 @@ export const createUITransitionController = (
       "createUITransitionController requires element with .active_group, .target_slot, .outgoing_slot, .previous_group, .previous_target_slot, and .previous_outgoing_slot elements",
     );
   }
-
-  const scrollContainer = getScrollContainer(root);
-  const getRootAvailableDimensions = () => {
-    const [scrollbarWidth, scrollbarHeight] = measureScrollbar(scrollContainer);
-    const clientWidth = scrollContainer.clientWidth + scrollbarWidth;
-    const clientHeight = scrollContainer.clientHeight + scrollbarHeight;
-    return [clientWidth, clientHeight];
-  };
 
   root.style.setProperty("--x-transition-duration", `${duration}ms`);
   outgoingSlot.setAttribute("inert", "");
@@ -377,7 +364,6 @@ export const createUITransitionController = (
   let targetSlotConfiguration = targetSlotInitialConfiguration;
   let outgoingSlotConfiguration = outgoingSlotInitialConfiguration;
   let previousTargetSlotConfiguration = UNSET;
-  let previousOutgoingSlotConfiguration = UNSET;
 
   const updateSlotAttributes = () => {
     if (targetSlotConfiguration.isEmpty && outgoingSlotConfiguration.isEmpty) {
@@ -391,96 +377,7 @@ export const createUITransitionController = (
     root.setAttribute("data-align-x", alignX);
     root.setAttribute("data-align-y", alignY);
   };
-  let updateSlotOverflowX;
-  let updateSlotOverflowY;
-  slot_overflow: {
-    // We have data attributes per group because one group might overflow x and the other might overflow y
-    // and we want the other group to keep positioning correctly
-    const updateGroupOverflow = (
-      slot,
-      isOverflowingRoot,
-      { group, axis, overflowingSlotSet },
-    ) => {
-      const attrName =
-        axis === "x" ? "data-slot-overflow-x" : "data-slot-overflow-y";
-      const size = overflowingSlotSet.size;
-      if (isOverflowingRoot) {
-        overflowingSlotSet.add(slot);
-        if (size === 0 && overflowingSlotSet.size === 1) {
-          debugSize(
-            `".${slot.className}" overflowing on ${axis} -> add [${attrName}]`,
-          );
-        }
-        group.setAttribute(
-          attrName,
-          Array.from(overflowingSlotSet, (s) => `.${s.className}`).join(", "),
-        );
-      } else {
-        overflowingSlotSet.delete(slot);
-        if (size === 1 && overflowingSlotSet.size === 0) {
-          debugSize(
-            `".${slot.className}" not overflowing anymore on ${axis} -> remove [${attrName}]`,
-          );
-          group.removeAttribute(attrName);
-        }
-      }
-    };
 
-    x_overflow: {
-      const xOverflowingActiveSlotSet = new Set();
-      const xOverflowingPreviousSlotSet = new Set();
-      updateSlotOverflowX = (slot, isOverflowingRootOnX) => {
-        if (slot === targetSlot || slot === outgoingSlot) {
-          updateGroupOverflow(slot, isOverflowingRootOnX, {
-            group: activeGroup,
-            axis: "x",
-            overflowingSlotSet: xOverflowingActiveSlotSet,
-          });
-        } else {
-          updateGroupOverflow(slot, isOverflowingRootOnX, {
-            group: previousGroup,
-            axis: "x",
-            overflowingSlotSet: xOverflowingPreviousSlotSet,
-          });
-        }
-      };
-    }
-    y_overflow: {
-      const yOverflowingActiveSlotSet = new Set();
-      const yOverflowingPreviousSlotSet = new Set();
-      updateSlotOverflowY = (slot, isOverflowingRootOnY) => {
-        if (slot === targetSlot || slot === outgoingSlot) {
-          updateGroupOverflow(slot, isOverflowingRootOnY, {
-            group: activeGroup,
-            axis: "y",
-            overflowingSlotSet: yOverflowingActiveSlotSet,
-          });
-        } else {
-          updateGroupOverflow(slot, isOverflowingRootOnY, {
-            group: previousGroup,
-            axis: "y",
-            overflowingSlotSet: yOverflowingPreviousSlotSet,
-          });
-        }
-      };
-    }
-  }
-
-  const getSlotConfiguration = (slot) => {
-    if (slot === targetSlot) {
-      return targetSlotConfiguration;
-    }
-    if (slot === outgoingSlot) {
-      return outgoingSlotConfiguration;
-    }
-    if (slot === previousTargetSlot) {
-      return previousTargetSlotConfiguration;
-    }
-    if (slot === previousOutgoingSlot) {
-      return previousOutgoingSlotConfiguration;
-    }
-    throw new Error("Unknown slot for getConfiguration");
-  };
   const moveConfigurationIntoSlot = (configuration, slot) => {
     slot.innerHTML = "";
     for (const domNode of configuration.domNodesClone) {
@@ -495,52 +392,12 @@ export const createUITransitionController = (
     } else if (slot === previousTargetSlot) {
       previousTargetSlotConfiguration = updatedConfig;
     } else if (slot === previousOutgoingSlot) {
-      previousOutgoingSlotConfiguration = updatedConfig;
     } else {
       throw new Error("Unknown slot for applyConfiguration");
     }
-    applySlotConfigurationEffects(slot);
-  };
-  const applySlotConfigurationEffects = (slot) => {
-    forceSlotDimensions(slot);
-  };
-  const forceSlotDimensions = (slot) => {
-    const configuration = getSlotConfiguration(slot);
-    const { width, height } = configuration;
-    setSlotDimensions(slot, width, height);
-  };
-  const releaseSlotDimensions = (slot) => {
-    setSlotDimensions(slot, undefined, undefined);
-  };
-  const setSlotDimensions = (slot, width, height) => {
-    if (width === undefined) {
-      if (!slot.style.width) {
-        return;
-      }
-      debugSize(`cleatSlotDimensions(".${slot.className}")`);
-      slot.style.width = "";
-      slot.style.height = "";
-      updateSlotOverflowX(slot, false);
-      updateSlotOverflowY(slot, false);
-      return;
-    }
-    if (
-      slot.style.width === `${width}px` &&
-      slot.style.height === `${height}px`
-    ) {
-      return;
-    }
-    debugSize(`setSlotDimensions(".${slot.className}", ${width}, ${height})`);
-    const [rootVisibleWidth, rootVisibleHeight] = getRootAvailableDimensions();
-    updateSlotOverflowX(slot, width > rootVisibleWidth);
-    updateSlotOverflowY(slot, height > rootVisibleHeight);
-    slot.style.width = `${width}px`;
-    slot.style.height = `${height}px`;
   };
 
   updateAlignment();
-  applySlotConfigurationEffects(targetSlot);
-  applySlotConfigurationEffects(outgoingSlot);
 
   let transitionType = "none";
   const groupTransitionOptions = {
@@ -565,11 +422,9 @@ export const createUITransitionController = (
     groupTransitionOptions,
   );
 
+  const elementToClip = root;
   const morphContainerIntoTarget = () => {
     const morphTransitions = [];
-    border_radius: {
-      container.style.borderRadius = targetSlotConfiguration.borderRadius;
-    }
     dimensions: {
       const fromWidth = previousTargetSlotConfiguration.width || 0;
       const fromHeight = previousTargetSlotConfiguration.height || 0;
@@ -603,12 +458,13 @@ export const createUITransitionController = (
       const onSizeTransitionFinished = () => {
         // Restore overflow when transition is complete
         restoreOverflow();
-        // Let target slot take natural size now container is done
-        releaseSlotDimensions(targetSlot);
       };
 
       // https://emilkowal.ski/ui/the-magic-of-clip-path
-      // Calculate alignment-aware positioning within final container
+      const elementToClipRect = elementToClip.getBoundingClientRect();
+      const elementToClipWidth = elementToClipRect.width;
+      const elementToClipHeight = elementToClipRect.height;
+      // Calculate where content is positioned within the large container
       const getAlignedPosition = (containerSize, contentSize, align) => {
         switch (align) {
           case "start":
@@ -620,34 +476,49 @@ export const createUITransitionController = (
             return (containerSize - contentSize) / 2;
         }
       };
-      const startLeft = getAlignedPosition(toWidth, fromWidth, alignX);
-      const startTop = getAlignedPosition(toHeight, fromHeight, alignY);
-      const startRight = startLeft + fromWidth;
-      const startBottom = startTop + fromHeight;
-      // End clip rectangle: full container
-      const endLeft = 0;
-      const endTop = 0;
-      const endRight = toWidth;
-      const endBottom = toHeight;
+      // Position of "from" content within large container
+      const fromLeft = getAlignedPosition(
+        elementToClipWidth,
+        fromWidth,
+        alignX,
+      );
+      const fromTop = getAlignedPosition(
+        elementToClipHeight,
+        fromHeight,
+        alignY,
+      );
+      // Position of target content within large container
+      const targetLeft = getAlignedPosition(
+        elementToClipWidth,
+        toWidth,
+        alignX,
+      );
+      const targetTop = getAlignedPosition(
+        elementToClipHeight,
+        toHeight,
+        alignY,
+      );
+      debugSize(
+        `Positions in container: from [${fromLeft},${fromTop}] ${fromWidth}x${fromHeight} to [${targetLeft},${targetTop}] ${toWidth}x${toHeight}`,
+      );
+      // Get border-radius values
       const fromBorderRadius =
         previousTargetSlotConfiguration.borderRadius || 0;
       const toBorderRadius = targetSlotConfiguration.borderRadius || 0;
+      const startInsetTop = fromTop;
+      const startInsetRight = elementToClipWidth - (fromLeft + fromWidth);
+      const startInsetBottom = elementToClipHeight - (fromTop + fromHeight);
+      const startInsetLeft = fromLeft;
 
-      let startClipPath;
-      let endClipPath;
-      const startInsetTop = startTop;
-      const startInsetRight = toWidth - startRight;
-      const startInsetBottom = toHeight - startBottom;
-      const startInsetLeft = startLeft;
-      const endInsetTop = endTop;
-      const endInsetRight = toWidth - endRight;
-      const endInsetBottom = toHeight - endBottom;
-      const endInsetLeft = endLeft;
-      startClipPath = `inset(${startInsetTop}px ${startInsetRight}px ${startInsetBottom}px ${startInsetLeft}px round ${fromBorderRadius}px)`;
-      endClipPath = `inset(${endInsetTop}px ${endInsetRight}px ${endInsetBottom}px ${endInsetLeft}px round ${toBorderRadius}px)`;
+      const endInsetTop = targetTop;
+      const endInsetRight = elementToClipWidth - (targetLeft + toWidth);
+      const endInsetBottom = elementToClipHeight - (targetTop + toHeight);
+      const endInsetLeft = targetLeft;
 
+      const startClipPath = `inset(${startInsetTop}px ${startInsetRight}px ${startInsetBottom}px ${startInsetLeft}px round ${fromBorderRadius}px)`;
+      const endClipPath = `inset(${endInsetTop}px ${endInsetRight}px ${endInsetBottom}px ${endInsetLeft}px round ${toBorderRadius}px)`;
       // Create clip-path animation using Web Animations API
-      const clipAnimation = container.animate(
+      const clipAnimation = elementToClip.animate(
         [{ clipPath: startClipPath }, { clipPath: endClipPath }],
         {
           duration,
@@ -660,7 +531,7 @@ export const createUITransitionController = (
       clipAnimation.finished
         .then(() => {
           // Clear clip-path to restore normal behavior
-          container.style.clipPath = "";
+          elementToClip.style.clipPath = "";
           clipAnimation.cancel();
           onSizeTransitionFinished();
         })
@@ -710,7 +581,6 @@ export const createUITransitionController = (
     // 1. move target slot to previous
     moveConfigurationIntoSlot(targetSlotConfiguration, previousTargetSlot);
     targetSlotConfiguration = toConfiguration;
-    applySlotConfigurationEffects(targetSlot);
     // 2. move outgoing slot to previous
     moveConfigurationIntoSlot(outgoingSlotConfiguration, previousOutgoingSlot);
     moveConfigurationIntoSlot(UNSET, outgoingSlot);
@@ -736,7 +606,6 @@ export const createUITransitionController = (
     // 1. Move target slot to outgoing
     moveConfigurationIntoSlot(targetSlotConfiguration, outgoingSlot);
     targetSlotConfiguration = toConfiguration;
-    applySlotConfigurationEffects(targetSlot);
 
     const transitions = [
       ...morphContainerIntoTarget(),

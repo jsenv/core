@@ -127,22 +127,20 @@ export const UITransition = ({
       data-debug-size={debugSize ? "" : undefined}
       data-debug-content={debugContent ? "" : undefined}
     >
-      <div className="ui_transition_container">
-        <div className="active_group">
-          <div
-            className="target_slot"
-            data-content-id={
-              contentIdRef.current ? contentIdRef.current : undefined
-            }
+      <div className="active_group">
+        <div
+          className="target_slot"
+          data-content-id={
+            contentIdRef.current ? contentIdRef.current : undefined
+          }
+        >
+          <UITransitionContentIdContext.Provider
+            value={uiTransitionContentIdContextValue}
           >
-            <UITransitionContentIdContext.Provider
-              value={uiTransitionContentIdContextValue}
-            >
-              {children}
-            </UITransitionContentIdContext.Provider>
-          </div>
-          <div className="outgoing_slot"></div>
+            {children}
+          </UITransitionContentIdContext.Provider>
         </div>
+        <div className="outgoing_slot"></div>
       </div>
       <div className="previous_group">
         <div className="previous_target_slot"></div>

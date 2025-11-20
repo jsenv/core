@@ -607,9 +607,6 @@ export const createUITransitionController = (
       };
 
       // https://emilkowal.ski/ui/the-magic-of-clip-path
-      // REAL WORLD APPROACH: Container is 100% of parent, we need to clip the actual targetSlot position
-
-      // Get actual container dimensions (100% of parent)
       const elementToClipRect = elementToClip.getBoundingClientRect();
       const elementToClipWidth = elementToClipRect.width;
       const elementToClipHeight = elementToClipRect.height;
