@@ -85,10 +85,9 @@ import.meta.css = /* css */ `
     display: inline-flex;
     box-sizing: border-box;
     padding: 0;
-    flex-direction: inherit;
     background: none;
     border: none;
-    border-radius: inherit;
+    border-radius: var(--x-border-radius);
     outline: none;
     cursor: pointer;
   }
