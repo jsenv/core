@@ -85,9 +85,6 @@
  */
 
 import {
-  createBackgroundTransition,
-  createBorderRadiusTransition,
-  createBorderTransition,
   createGroupTransitionController,
   createOpacityTransition,
   getBackground,
@@ -596,53 +593,54 @@ export const createUITransitionController = (
   const morphContainerIntoTarget = () => {
     const morphTransitions = [];
     border_radius: {
-      const fromBorderRadius = previousTargetSlotConfiguration.borderRadius;
-      const toBorderRadius = targetSlotConfiguration.borderRadius;
-      const borderRadiusTransition = createBorderRadiusTransition(
-        container,
-        toBorderRadius,
-        {
-          from: fromBorderRadius,
-          duration,
-          styleSynchronizer: "inline_style",
-          onUpdate: () => {},
-          onFinish: (borderRadiusTransition) => {
-            borderRadiusTransition.cancel();
-          },
-        },
-      );
-      morphTransitions.push(borderRadiusTransition);
+      container.style.borderRadius = targetSlotConfiguration.borderRadius;
+      // const fromBorderRadius = previousTargetSlotConfiguration.borderRadius;
+      // const toBorderRadius = targetSlotConfiguration.borderRadius;
+      // const borderRadiusTransition = createBorderRadiusTransition(
+      //   container,
+      //   toBorderRadius,
+      //   {
+      //     from: fromBorderRadius,
+      //     duration,
+      //     styleSynchronizer: "inline_style",
+      //     onUpdate: () => {},
+      //     onFinish: (borderRadiusTransition) => {
+      //       borderRadiusTransition.cancel();
+      //     },
+      //   },
+      // );
+      // morphTransitions.push(borderRadiusTransition);
     }
     border: {
-      const fromBorder = previousTargetSlotConfiguration.border;
-      const toBorder = targetSlotConfiguration.border;
-      const borderTransition = createBorderTransition(container, toBorder, {
-        from: fromBorder,
-        duration,
-        styleSynchronizer: "inline_style",
-        onFinish: (borderTransition) => {
-          borderTransition.cancel();
-        },
-      });
-      morphTransitions.push(borderTransition);
+      // const fromBorder = previousTargetSlotConfiguration.border;
+      // const toBorder = targetSlotConfiguration.border;
+      // const borderTransition = createBorderTransition(container, toBorder, {
+      //   from: fromBorder,
+      //   duration,
+      //   styleSynchronizer: "inline_style",
+      //   onFinish: (borderTransition) => {
+      //     borderTransition.cancel();
+      //   },
+      // });
+      // morphTransitions.push(borderTransition);
     }
     background: {
-      const fromBackground = previousTargetSlotConfiguration.background;
-      const toBackground = targetSlotConfiguration.background;
-      const backgroundTransition = createBackgroundTransition(
-        container,
-        toBackground,
-        {
-          from: fromBackground,
-          duration,
-          styleSynchronizer: "inline_style",
-          onUpdate: () => {},
-          onFinish: () => {
-            backgroundTransition.cancel();
-          },
-        },
-      );
-      morphTransitions.push(backgroundTransition);
+      // const fromBackground = previousTargetSlotConfiguration.background;
+      // const toBackground = targetSlotConfiguration.background;
+      // const backgroundTransition = createBackgroundTransition(
+      //   container,
+      //   toBackground,
+      //   {
+      //     from: fromBackground,
+      //     duration,
+      //     styleSynchronizer: "inline_style",
+      //     onUpdate: () => {},
+      //     onFinish: () => {
+      //       backgroundTransition.cancel();
+      //     },
+      //   },
+      // );
+      // morphTransitions.push(backgroundTransition);
     }
     dimensions: {
       // let containerWidth;
@@ -710,8 +708,25 @@ export const createUITransitionController = (
       const endRight = toWidth;
       const endBottom = toHeight;
 
-      const startClipPath = `polygon(${startLeft}px ${startTop}px, ${startRight}px ${startTop}px, ${startRight}px ${startBottom}px, ${startLeft}px ${startBottom}px)`;
-      const endClipPath = `polygon(${endLeft}px ${endTop}px, ${endRight}px ${endTop}px, ${endRight}px ${endBottom}px, ${endLeft}px ${endBottom}px)`;
+      // Get border-radius values
+      const fromBorderRadius =
+        previousTargetSlotConfiguration.borderRadius || 0;
+      const toBorderRadius = targetSlotConfiguration.borderRadius || 0;
+
+      let startClipPath;
+      let endClipPath;
+
+      // Use inset() for rounded rectangles when border-radius is involved
+      const startInsetTop = startTop;
+      const startInsetRight = toWidth - startRight;
+      const startInsetBottom = toHeight - startBottom;
+      const startInsetLeft = startLeft;
+      const endInsetTop = endTop;
+      const endInsetRight = toWidth - endRight;
+      const endInsetBottom = toHeight - endBottom;
+      const endInsetLeft = endLeft;
+      startClipPath = `inset(${startInsetTop}px ${startInsetRight}px ${startInsetBottom}px ${startInsetLeft}px round ${fromBorderRadius}px)`;
+      endClipPath = `inset(${endInsetTop}px ${endInsetRight}px ${endInsetBottom}px ${endInsetLeft}px round ${toBorderRadius}px)`;
 
       // Create clip-path animation using Web Animations API
       const clipAnimation = container.animate(
