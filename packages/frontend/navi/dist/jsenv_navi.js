@@ -1,5 +1,5 @@
 import { installImportMetaCss } from "./jsenv_navi_side_effects.js";
-import { createIterableWeakSet, createPubSub, createValueEffect, createStyleController, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, activeElementSignal, canInterceptKeys, createGroupTransitionController, getElementSignature, getBorderRadius, getBackground, preventIntermediateScrollbar, createOpacityTransition, stringifyStyle, mergeOneStyle, mergeTwoStyles, appendStyles, normalizeStyles, resolveCSSSize, findBefore, findAfter, initFocusGroup, elementIsFocusable, pickLightOrDark, resolveColorLuminance, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { createIterableWeakSet, createPubSub, createValueEffect, createStyleController, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, activeElementSignal, canInterceptKeys, createGroupTransitionController, getElementSignature, getBorderRadius, getBackground, preventIntermediateScrollbar, createOpacityTransition, stringifyStyle, mergeOneStyle, mergeTwoStyles, normalizeStyles, resolveCSSSize, findBefore, findAfter, initFocusGroup, elementIsFocusable, pickLightOrDark, resolveColorLuminance, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { effect, signal, computed, batch, useSignal } from "@preact/signals";
 import { useEffect, useRef, useCallback, useContext, useState, useLayoutEffect, useMemo, useErrorBoundary, useImperativeHandle, useId } from "preact/hooks";
@@ -9209,6 +9209,9 @@ const createUITransitionController = (
       duration,
       styleSynchronizer: "inline_style",
       onFinish: (targetSlotOpacityTransition) => {
+        targetSlotBackground.style.removeProperty("--target-slot-background");
+        targetSlotBackground.style.removeProperty("--target-slot-width");
+        targetSlotBackground.style.removeProperty("--target-slot-height");
         targetSlotOpacityTransition.cancel();
       },
     });
@@ -10482,11 +10485,6 @@ const VISUAL_PROP_NAME_SET = new Set(Object.keys(VISUAL_PROPS));
 const CONTENT_PROP_NAME_SET = new Set(Object.keys(CONTENT_PROPS));
 const STYLE_PROP_NAME_SET = new Set(Object.keys(All_PROPS));
 
-const HANDLED_BY_VISUAL_CHILD_PROP_SET = new Set([
-  ...INNER_SPACING_PROP_NAME_SET,
-  ...VISUAL_PROP_NAME_SET,
-  ...CONTENT_PROP_NAME_SET,
-]);
 const COPIED_ON_VISUAL_CHILD_PROP_SET = new Set([
   ...LAYOUT_PROP_NAME_SET,
   "expand",
@@ -10496,6 +10494,20 @@ const COPIED_ON_VISUAL_CHILD_PROP_SET = new Set([
   "contentAlignX",
   "contentAlignY",
 ]);
+const HANDLED_BY_VISUAL_CHILD_PROP_SET = new Set([
+  ...INNER_SPACING_PROP_NAME_SET,
+  ...VISUAL_PROP_NAME_SET,
+  ...CONTENT_PROP_NAME_SET,
+]);
+const getVisualChildStylePropStrategy = (name) => {
+  if (COPIED_ON_VISUAL_CHILD_PROP_SET.has(name)) {
+    return "copy";
+  }
+  if (HANDLED_BY_VISUAL_CHILD_PROP_SET.has(name)) {
+    return "forward";
+  }
+  return null;
+};
 
 const isStyleProp = (name) => STYLE_PROP_NAME_SET.has(name);
 
@@ -10527,6 +10539,9 @@ const getStylePropGroup = (name) => {
   return null;
 };
 const getNormalizer = (key) => {
+  if (key === "borderRadius") {
+    return normalizeTypoStyle;
+  }
   const group = getStylePropGroup(key);
   if (group === "margin" || group === "padding") {
     return normalizeSpacingStyle;
@@ -10536,58 +10551,18 @@ const getNormalizer = (key) => {
   }
   return stringifyStyle;
 };
-
-const assignStyle = (
-  styleObject,
-  propValue,
-  propName,
-  styleContext,
-  context = "js",
-) => {
-  if (propValue === undefined) {
-    return;
+const getHowToHandleStyleProp = (name) => {
+  const getStyle = All_PROPS[name];
+  if (getStyle === PASS_THROUGH) {
+    return null;
   }
-  const { managedByCSSVars } = styleContext;
-  if (!managedByCSSVars) {
-    throw new Error("managedByCSSVars is required in styleContext");
-  }
-  const normalizer = getNormalizer(propName);
-  const getStyle = All_PROPS[propName];
-  if (
-    getStyle === PASS_THROUGH ||
-    // style not listed can be passed through as-is (accentColor, zIndex, ...)
-    getStyle === undefined
-  ) {
-    const cssValue = normalizer(propValue, propName);
-    const cssVar = managedByCSSVars[propName];
-    const mergedValue = mergeOneStyle(
-      styleObject[propName],
-      cssValue,
-      propName,
-      context,
-    );
-    if (cssVar) {
-      styleObject[cssVar] = mergedValue;
-    } else {
-      styleObject[propName] = mergedValue;
-    }
-    return;
-  }
-  const values = getStyle(propValue, styleContext);
-  if (!values) {
-    return;
-  }
-  for (const key of Object.keys(values)) {
-    const value = values[key];
-    const cssValue = normalizer(value, key);
-    const cssVar = managedByCSSVars[key];
-    const mergedValue = mergeOneStyle(styleObject[key], cssValue, key, context);
-    if (cssVar) {
-      styleObject[cssVar] = mergedValue;
-    } else {
-      styleObject[key] = mergedValue;
-    }
-  }
+  return getStyle;
+};
+const prepareStyleValue = (existingValue, value, name, context) => {
+  const normalizer = getNormalizer(name);
+  const cssValue = normalizer(value, name);
+  const mergedValue = mergeOneStyle(existingValue, cssValue, name, context);
+  return mergedValue;
 };
 
 // Unified design scale using t-shirt sizes with rem units for accessibility.
@@ -10943,6 +10918,20 @@ const PSEUDO_CLASSES = {
   },
 };
 
+const dispatchNaviPseudoStateEvent = (element, value, previousValue) => {
+  if (!element) {
+    return;
+  }
+  element.dispatchEvent(
+    new CustomEvent("navi_pseudo_state", {
+      detail: {
+        pseudoState: value,
+        previousPseudoState: previousValue,
+      },
+    }),
+  );
+};
+
 const EMPTY_STATE = {};
 const initPseudoStyles = (
   element,
@@ -10951,10 +10940,20 @@ const initPseudoStyles = (
     pseudoState, // ":disabled", ":read-only", ":-navi-loading", etc...
     effect,
     elementToImpact = element,
+    elementListeningPseudoState,
   },
 ) => {
+  const onStateChange = (value, previousValue) => {
+    effect?.(value, previousValue);
+    dispatchNaviPseudoStateEvent(
+      elementListeningPseudoState,
+      value,
+      previousValue,
+    );
+  };
+
   if (!pseudoClasses || pseudoClasses.length === 0) {
-    effect?.(EMPTY_STATE);
+    onStateChange(EMPTY_STATE);
     return () => {};
   }
 
@@ -11000,9 +10999,16 @@ const initPseudoStyles = (
     if (!someChange) {
       return;
     }
-    effect?.(currentState, state);
+    const previousState = state;
     state = currentState;
+    onStateChange(state, previousState);
   };
+
+  element.addEventListener("navi_pseudo_state_check", (event) => {
+    const previousState = event.detail.previousPseudoState;
+    state = event.detail.pseudoState;
+    onStateChange(state, previousState);
+  });
 
   for (const pseudoClass of pseudoClasses) {
     const pseudoClassDefinition = PSEUDO_CLASSES[pseudoClass];
@@ -11081,7 +11087,7 @@ const getStyleToApply = (styles, pseudoState, pseudoNamedStyles) => {
   }
   let style = styles || {};
   for (const styleToAdd of styleToAddSet) {
-    style = mergeTwoStyles(style, styleToAdd);
+    style = mergeTwoStyles(style, styleToAdd, "css");
   }
   return style;
 };
@@ -11246,9 +11252,8 @@ const Box = props => {
     layout = getDefaultDisplay(TagName);
   }
   const innerClassName = withPropsClassName(baseClassName, className);
-  const remainingProps = {};
-  const propsToForward = {};
-  const shouldForwardAllToChild = visualSelector && pseudoStateSelector;
+  const selfForwardedProps = {};
+  const childForwardedProps = {};
   {
     const parentLayout = useContext(BoxLayoutContext);
     const styleDeps = [
@@ -11304,66 +11309,112 @@ const Box = props => {
       pseudoElements
     };
     const boxStyles = {};
+    let boxPseudoNamedStyles = PSEUDO_NAMED_STYLES_DEFAULT;
+    const shouldForwardAllToChild = visualSelector && pseudoStateSelector;
+    const addStyle = (value, name, stylesTarget, context) => {
+      styleDeps.push(value); // impact box style -> add to deps
+      const cssVar = managedByCSSVars[name];
+      const mergedValue = prepareStyleValue(stylesTarget[name], value, name, context);
+      if (cssVar) {
+        stylesTarget[cssVar] = mergedValue;
+        return true;
+      }
+      stylesTarget[name] = mergedValue;
+      return false;
+    };
+    const addStyleMaybeForwarding = (value, name, stylesTarget, context, visualChildPropStrategy) => {
+      if (!visualChildPropStrategy) {
+        addStyle(value, name, stylesTarget, context);
+        return false;
+      }
+      const cssVar = managedByCSSVars[name];
+      if (cssVar) {
+        // css var wins over visual child handling
+        addStyle(value, name, stylesTarget, context);
+        return false;
+      }
+      if (visualChildPropStrategy === "copy") {
+        // we stylyze ourself + forward prop to the child
+        addStyle(value, name, stylesTarget, context);
+      }
+      return true;
+    };
+    const assignStyle = (value, name, styleContext, boxStylesTarget, styleOrigin) => {
+      const context = styleOrigin === "base_style" ? "js" : "css";
+      const isCss = styleOrigin === "base_style" || styleOrigin === "style";
+      if (isCss) {
+        addStyle(value, name, boxStylesTarget, context);
+        return;
+      }
+      const isPseudoStyle = styleOrigin === "pseudo_style";
+      const mightStyle = isStyleProp(name);
+      if (!mightStyle) {
+        // not a style prop what do we do with it?
+        if (shouldForwardAllToChild) {
+          if (isPseudoStyle) ; else {
+            childForwardedProps[name] = value;
+          }
+        } else {
+          if (isPseudoStyle) {
+            console.warn(`unsupported pseudo style key "${name}"`);
+          }
+          selfForwardedProps[name] = value;
+        }
+        return;
+      }
+      // it's a style prop, we need first to check if we have css var to handle them
+      // otherwise we decide to put it either on self or child
+      const visualChildPropStrategy = visualSelector && getVisualChildStylePropStrategy(name);
+      const getStyle = getHowToHandleStyleProp(name);
+      if (
+      // prop name === css style name
+      !getStyle) {
+        const needForwarding = addStyleMaybeForwarding(value, name, boxStylesTarget, context, visualChildPropStrategy);
+        if (needForwarding) {
+          if (isPseudoStyle) ; else {
+            childForwardedProps[name] = value;
+          }
+        }
+        return;
+      }
+      const cssValues = getStyle(value, styleContext);
+      if (!cssValues) {
+        return;
+      }
+      let needForwarding = false;
+      for (const styleName of Object.keys(cssValues)) {
+        const cssValue = cssValues[styleName];
+        needForwarding = addStyleMaybeForwarding(cssValue, styleName, boxStylesTarget, context, visualChildPropStrategy);
+      }
+      if (needForwarding) {
+        if (isPseudoStyle) ; else {
+          childForwardedProps[name] = value;
+        }
+      }
+    };
     if (baseStyle) {
       for (const key of baseStyle) {
         const value = baseStyle[key];
-        styleDeps.push(value);
-        assignStyle(boxStyles, value, key, styleContext);
+        assignStyle(value, key, styleContext, boxStyles, "baseStyle");
       }
     }
-    const stylingKeyCandidateArray = Object.keys(rest);
-    const getPropEffect = propName => {
-      if (visualSelector) {
-        if (HANDLED_BY_VISUAL_CHILD_PROP_SET.has(propName)) {
-          return "forward";
-        }
-        if (COPIED_ON_VISUAL_CHILD_PROP_SET.has(propName)) {
-          return "style_and_forward";
-        }
-      }
-      if (isStyleProp(propName)) {
-        return "style";
-      }
-      if (propName.startsWith("data-")) {
-        return "use";
-      }
-      return "forward";
-    };
-    const assignStyleFromProp = (propValue, propName, stylesTarget, styleContext) => {
-      const propEffect = getPropEffect(propName);
-      if (propEffect === "ignore") {
-        return;
-      }
-      const useToStyle = propEffect === "style" || propEffect === "style_and_forward";
-      const shouldForward = propEffect === "forward" || propEffect === "style_and_forward";
-      if (useToStyle) {
-        styleDeps.push(propValue);
-        assignStyle(stylesTarget, propValue, propName, styleContext, "css");
-      }
-      if (stylesTarget === boxStyles) {
-        if (!shouldForwardAllToChild && !useToStyle) {
-          // we'll put these props on ourselves
-          remainingProps[propName] = propValue;
-        }
-        if (shouldForward) {
-          propsToForward[propName] = propValue;
-        }
-      }
-    };
-    for (const key of stylingKeyCandidateArray) {
-      if (key === "ref") {
+    const remainingPropKeyArray = Object.keys(rest);
+    for (const propName of remainingPropKeyArray) {
+      if (propName === "ref") {
         // some props not destructured but that are neither
         // style props, nor should be forwarded to the child
         continue;
       }
-      const value = rest[key];
-      assignStyleFromProp(value, key, boxStyles, styleContext);
+      const propValue = rest[propName];
+      assignStyle(propValue, propName, styleContext, boxStyles, "prop");
     }
-    let pseudoNamedStyles = PSEUDO_NAMED_STYLES_DEFAULT;
     if (pseudoStyle) {
+      const assignPseudoStyle = (propValue, propName, pseudoStyleContext, pseudoStylesTarget) => {
+        assignStyle(propValue, propName, pseudoStyleContext, pseudoStylesTarget, "pseudo_style");
+      };
       const pseudoStyleKeys = Object.keys(pseudoStyle);
       if (pseudoStyleKeys.length) {
-        pseudoNamedStyles = {};
+        boxPseudoNamedStyles = {};
         for (const key of pseudoStyleKeys) {
           const pseudoStyleContext = {
             ...styleContext,
@@ -11381,9 +11432,9 @@ const Box = props => {
             const pseudoClassStyle = pseudoStyle[key];
             for (const pseudoClassStyleKey of Object.keys(pseudoClassStyle)) {
               const pseudoClassStyleValue = pseudoClassStyle[pseudoClassStyleKey];
-              assignStyleFromProp(pseudoClassStyleValue, pseudoClassStyleKey, pseudoClassStyles, pseudoStyleContext);
+              assignPseudoStyle(pseudoClassStyleValue, pseudoClassStyleKey, pseudoStyleContext, pseudoClassStyles);
             }
-            pseudoNamedStyles[key] = pseudoClassStyles;
+            boxPseudoNamedStyles[key] = pseudoClassStyles;
             continue;
           }
           // pseudo element
@@ -11393,29 +11444,31 @@ const Box = props => {
             const pseudoElementStyle = pseudoStyle[key];
             for (const pseudoElementStyleKey of Object.keys(pseudoElementStyle)) {
               const pseudoElementStyleValue = pseudoElementStyle[pseudoElementStyleKey];
-              assignStyleFromProp(pseudoElementStyleValue, pseudoElementStyleKey, pseudoElementStyles, pseudoStyleContext);
+              assignPseudoStyle(pseudoElementStyleValue, pseudoElementStyleKey, pseudoStyleContext, pseudoElementStyles);
             }
-            pseudoNamedStyles[key] = pseudoElementStyles;
+            boxPseudoNamedStyles[key] = pseudoElementStyles;
             continue;
           }
           console.warn(`unsupported pseudo style key "${key}"`);
         }
       }
-      remainingProps.pseudoStyle = pseudoStyle;
+      childForwardedProps.pseudoStyle = pseudoStyle;
     }
     if (typeof style === "string") {
-      appendStyles(boxStyles, normalizeStyles(style, "css"), "css");
-      styleDeps.push(style); // impact box style -> add to deps
+      const styleObject = normalizeStyles(style, "css");
+      for (const styleName of Object.keys(styleObject)) {
+        const styleValue = styleObject[styleName];
+        assignStyle(styleValue, styleName, styleContext, boxStyles, "style");
+      }
     } else if (style && typeof style === "object") {
-      for (const key of Object.keys(style)) {
-        const stylePropValue = style[key];
-        assignStyle(boxStyles, stylePropValue, key, styleContext, "css");
-        styleDeps.push(stylePropValue); // impact box style -> add to deps
+      for (const styleName of Object.keys(style)) {
+        const styleValue = style[styleName];
+        assignStyle(styleValue, styleName, styleContext, boxStyles, "style");
       }
     }
     const updateStyle = useCallback(state => {
       const boxEl = ref.current;
-      applyStyle(boxEl, boxStyles, state, pseudoNamedStyles);
+      applyStyle(boxEl, boxStyles, state, boxPseudoNamedStyles);
     }, styleDeps);
     const finalStyleDeps = [pseudoStateSelector, innerPseudoState, updateStyle];
     // By default ":hover", ":active" are not tracked.
@@ -11446,11 +11499,13 @@ const Box = props => {
         return null;
       }
       const pseudoStateEl = pseudoStateSelector ? boxEl.querySelector(pseudoStateSelector) : boxEl;
+      const visualEl = visualSelector ? boxEl.querySelector(visualSelector) : null;
       return initPseudoStyles(pseudoStateEl, {
         pseudoClasses: innerPseudoClasses,
         pseudoState: innerPseudoState,
         effect: updateStyle,
-        elementToImpact: boxEl
+        elementToImpact: boxEl,
+        elementListeningPseudoState: visualEl
       });
     }, finalStyleDeps);
   }
@@ -11461,9 +11516,9 @@ const Box = props => {
   let innerChildren;
   if (hasChildFunction) {
     if (Array.isArray(children)) {
-      innerChildren = children.map(child => typeof child === "function" ? child(propsToForward) : child);
+      innerChildren = children.map(child => typeof child === "function" ? child(childForwardedProps) : child);
     } else if (typeof children === "function") {
-      innerChildren = children(propsToForward);
+      innerChildren = children(childForwardedProps);
     } else {
       innerChildren = children;
     }
@@ -11476,7 +11531,7 @@ const Box = props => {
     "data-layout-inline": inline ? "" : undefined,
     "data-layout-row": row ? "" : undefined,
     "data-layout-column": column ? "" : undefined,
-    ...remainingProps,
+    ...selfForwardedProps,
     children: jsx(BoxLayoutContext.Provider, {
       value: layout,
       children: innerChildren
@@ -16573,10 +16628,9 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     display: inline-flex;
     box-sizing: border-box;
     padding: 0;
-    flex-direction: inherit;
     background: none;
     border: none;
-    border-radius: inherit;
+    border-radius: var(--x-border-radius);
     outline: none;
     cursor: pointer;
   }
@@ -16752,7 +16806,7 @@ const ButtonBasic = props => {
     return jsxs(Box, {
       ...buttonProps,
       as: "span",
-      baseClassName: "navi_button_content",
+      className: "navi_button_content",
       children: [innerChildren, jsx("span", {
         className: "navi_button_shadow"
       })]
@@ -21654,15 +21708,15 @@ const DialogLayout = ({
   ...props
 }) => {
   return jsx(Box, {
-    className: "navi_dialog_layout",
+    baseClassName: "navi_dialog_layout",
     managedByCSSVars: DialogManagedByCSSVars,
     visualSelector: ".navi_dialog_content",
     ...props,
-    contentAlignX: contentAlignX,
-    contentAlignY: contentAlignY,
     children: jsx(Box, {
-      className: "navi_dialog_content",
       row: true,
+      className: "navi_dialog_content",
+      contentAlignX: contentAlignX,
+      contentAlignY: contentAlignY,
       children: children
     })
   });
