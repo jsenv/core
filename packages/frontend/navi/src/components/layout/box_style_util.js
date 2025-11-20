@@ -299,6 +299,8 @@ const POSITION_PROPS = {
   },
 };
 const TYPO_PROPS = {
+  font: PASS_THROUGH,
+  fontFamily: PASS_THROUGH,
   size: applyOnCSSProp("fontSize"),
   fontSize: PASS_THROUGH,
   bold: applyToCssPropWhenTruthy("fontWeight", "bold", "normal"),
