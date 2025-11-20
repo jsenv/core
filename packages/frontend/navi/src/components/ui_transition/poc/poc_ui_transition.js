@@ -13,7 +13,6 @@
  * Required HTML structure:
  *
  * <div class="ui_transition">
- *  <div class="ui_transition_container">
  *   <div class="active_group">
  *     <div class="target_slot"></div>
  *     <div class="outgoing_slot"></div>
@@ -22,7 +21,6 @@
  *     <div class="previous_target_slot"></div>
  *     <div class="previous_outgoing_slot"></div>
  *   </div>
- *  </div>
  * </div>
  *
  * Architecture Overview:
@@ -83,6 +81,7 @@ import {
   measureScrollbar,
   preventIntermediateScrollbar,
 } from "@jsenv/dom";
+import { monitorItemsHeightOverflow } from "../monitor_items_height_overflow.js";
 
 import.meta.css = /* css */ `
   * {
@@ -90,35 +89,35 @@ import.meta.css = /* css */ `
   }
 
   .ui_transition {
-    --transition-duration: 3000ms;
+    --transition-duration: 300ms;
     --justify-content: center;
     --align-items: center;
-    --background-color: transparent;
-    --border-radius: 0;
 
     --x-transition-duration: var(--transition-duration);
     --x-justify-content: var(--justify-content);
     --x-align-items: var(--align-items);
-    --x-background-color: var(--background-color);
-    --x-border-radius: var(--border-radius);
 
     position: relative;
-    display: flex;
+  }
+  .ui_transition,
+  .active_group,
+  .target_slot,
+  .previous_target_slot {
     width: 100%;
-    /* Chrome would just need height: 100% */
-    /* but firefox needs height: max-content otherwise when content overflows vertically */
-    /* firefox tries to center it nevertheless and make content inaccessible (overflow parent rectangle) */
-    height: max-content;
-    min-height: 100%;
-    align-items: var(--x-align-items);
-    justify-content: var(--x-justify-content);
-    background-color: var(--x-background-color);
-    border-radius: var(--x-border-radius);
+    height: 100%;
   }
 
-  .ui_transition_container {
-    /* in case CSS sets border on this element his size must include borders */
-    box-sizing: border-box;
+  .target_slot,
+  .previous_target_slot {
+    display: flex;
+    align-items: var(--x-align-items);
+    justify-content: var(--x-justify-content);
+  }
+  .active_group {
+    position: relative;
+  }
+  .target_slot {
+    position: relative;
   }
 
   /* Alignment controls */
@@ -140,35 +139,9 @@ import.meta.css = /* css */ `
   .ui_transition[data-align-y="end"] {
     --x-align-items: flex-end;
   }
-  /* When content overflows (bigger than parent) on a given axis */
-  /* Flexbox would still try to position it ¯_(ツ)_/¯ */
-  /* It causes slot content to overflow outside the box leading to content being out of view */
-  /* So for this case we disable flexbox positioning (and there is no need for positioning anyway as slot takes the whole space */
-  .active_group[data-slot-overflow-x],
-  .previous_group[data-slot-overflow-x] {
-    --x-justify-content: flex-start;
-  }
-  .active_group[data-slot-overflow-y],
-  .previous_group[data-slot-overflow-y] {
+  .target_slot[data-items-height-overflow],
+  .previous_slot[data-items-height-overflow] {
     --x-align-items: flex-start;
-  }
-
-  .active_group,
-  .previous_group {
-    display: flex;
-    min-height: 100%;
-    align-items: var(--x-align-items);
-    justify-content: var(--x-justify-content);
-  }
-  .active_group {
-    position: relative;
-  }
-  .target_slot {
-    position: relative;
-  }
-  .ui_transition[data-transitioning] .active_group,
-  .ui_transition[data-transitioning] .previous_group {
-    height: 100%;
   }
 
   .ui_transition[data-transitioning] .target_slot,
@@ -241,7 +214,6 @@ export const createUITransitionController = (
     console.debug(`[size]`, message);
   };
 
-  const container = root.querySelector(".ui_transition_container");
   const activeGroup = root.querySelector(".active_group");
   const targetSlot = root.querySelector(".target_slot");
   const outgoingSlot = root.querySelector(".outgoing_slot");
@@ -267,6 +239,7 @@ export const createUITransitionController = (
     );
   }
 
+  const elementToClip = root;
   const scrollContainer = getScrollContainer(root);
   const getRootAvailableDimensions = () => {
     const [scrollbarWidth, scrollbarHeight] = measureScrollbar(scrollContainer);
@@ -533,12 +506,10 @@ export const createUITransitionController = (
     applySlotConfigurationEffects(slot);
   };
   const applySlotConfigurationEffects = (slot) => {
-    forceSlotDimensions(slot);
-  };
-  const forceSlotDimensions = (slot) => {
     const configuration = getSlotConfiguration(slot);
-    const { width, height } = configuration;
-    setSlotDimensions(slot, width, height);
+    debugDetection(
+      `applySlotConfigurationEffects(.${slot.className}) ${configuration}`,
+    );
   };
   const releaseSlotDimensions = (slot) => {
     setSlotDimensions(slot, undefined, undefined);
@@ -598,9 +569,6 @@ export const createUITransitionController = (
 
   const morphContainerIntoTarget = () => {
     const morphTransitions = [];
-    border_radius: {
-      container.style.borderRadius = targetSlotConfiguration.borderRadius;
-    }
     dimensions: {
       const fromWidth = previousTargetSlotConfiguration.width || 0;
       const fromHeight = previousTargetSlotConfiguration.height || 0;
@@ -639,7 +607,18 @@ export const createUITransitionController = (
       };
 
       // https://emilkowal.ski/ui/the-magic-of-clip-path
-      // Calculate alignment-aware positioning within final container
+      // REAL WORLD APPROACH: Container is 100% of parent, we need to clip the actual targetSlot position
+
+      // Get actual container dimensions (100% of parent)
+      const elementToClipRect = elementToClip.getBoundingClientRect();
+      const elementToClipWidth = elementToClipRect.width;
+      const elementToClipHeight = elementToClipRect.height;
+
+      debugSize(
+        `Container dimensions: ${elementToClipWidth}x${elementToClipHeight}, target slot: ${toWidth}x${toHeight}`,
+      );
+
+      // Calculate where content is positioned within the large container
       const getAlignedPosition = (containerSize, contentSize, align) => {
         switch (align) {
           case "start":
@@ -651,34 +630,59 @@ export const createUITransitionController = (
             return (containerSize - contentSize) / 2;
         }
       };
-      const startLeft = getAlignedPosition(toWidth, fromWidth, alignX);
-      const startTop = getAlignedPosition(toHeight, fromHeight, alignY);
-      const startRight = startLeft + fromWidth;
-      const startBottom = startTop + fromHeight;
-      // End clip rectangle: full container
-      const endLeft = 0;
-      const endTop = 0;
-      const endRight = toWidth;
-      const endBottom = toHeight;
+
+      // Position of "from" content within large container
+      const fromLeft = getAlignedPosition(
+        elementToClipWidth,
+        fromWidth,
+        alignX,
+      );
+      const fromTop = getAlignedPosition(
+        elementToClipHeight,
+        fromHeight,
+        alignY,
+      );
+
+      // Position of target content within large container
+      const targetLeft = getAlignedPosition(
+        elementToClipWidth,
+        toWidth,
+        alignX,
+      );
+      const targetTop = getAlignedPosition(
+        elementToClipHeight,
+        toHeight,
+        alignY,
+      );
+
+      debugSize(
+        `Positions in container: from [${fromLeft},${fromTop}] ${fromWidth}x${fromHeight} to [${targetLeft},${targetTop}] ${toWidth}x${toHeight}`,
+      );
+      // Get border-radius values
       const fromBorderRadius =
         previousTargetSlotConfiguration.borderRadius || 0;
       const toBorderRadius = targetSlotConfiguration.borderRadius || 0;
 
-      let startClipPath;
-      let endClipPath;
-      const startInsetTop = startTop;
-      const startInsetRight = toWidth - startRight;
-      const startInsetBottom = toHeight - startBottom;
-      const startInsetLeft = startLeft;
-      const endInsetTop = endTop;
-      const endInsetRight = toWidth - endRight;
-      const endInsetBottom = toHeight - endBottom;
-      const endInsetLeft = endLeft;
-      startClipPath = `inset(${startInsetTop}px ${startInsetRight}px ${startInsetBottom}px ${startInsetLeft}px round ${fromBorderRadius}px)`;
-      endClipPath = `inset(${endInsetTop}px ${endInsetRight}px ${endInsetBottom}px ${endInsetLeft}px round ${toBorderRadius}px)`;
+      // Use inset() for all cases - simpler and works with or without border-radius
+      const startInsetTop = fromTop;
+      const startInsetRight = elementToClipWidth - (fromLeft + fromWidth);
+      const startInsetBottom = elementToClipHeight - (fromTop + fromHeight);
+      const startInsetLeft = fromLeft;
+
+      const endInsetTop = targetTop;
+      const endInsetRight = elementToClipWidth - (targetLeft + toWidth);
+      const endInsetBottom = elementToClipHeight - (targetTop + toHeight);
+      const endInsetLeft = targetLeft;
+
+      const startClipPath = `inset(${startInsetTop}px ${startInsetRight}px ${startInsetBottom}px ${startInsetLeft}px round ${fromBorderRadius}px)`;
+      const endClipPath = `inset(${endInsetTop}px ${endInsetRight}px ${endInsetBottom}px ${endInsetLeft}px round ${toBorderRadius}px)`;
+
+      debugSize(
+        `Clip-path inset: from radius ${fromBorderRadius}px to ${toBorderRadius}px`,
+      );
 
       // Create clip-path animation using Web Animations API
-      const clipAnimation = container.animate(
+      const clipAnimation = elementToClip.animate(
         [{ clipPath: startClipPath }, { clipPath: endClipPath }],
         {
           duration,
@@ -691,7 +695,7 @@ export const createUITransitionController = (
       clipAnimation.finished
         .then(() => {
           // Clear clip-path to restore normal behavior
-          container.style.clipPath = "";
+          elementToClip.style.clipPath = "";
           clipAnimation.cancel();
           onSizeTransitionFinished();
         })
@@ -927,6 +931,10 @@ export const createUITransitionController = (
       mutationObserver.disconnect();
     });
   }
+
+  const stopMonitoringTargetSlotOverflow =
+    monitorItemsHeightOverflow(targetSlot);
+  addTeardown(stopMonitoringTargetSlotOverflow);
 
   const setDuration = (newDuration) => {
     duration = newDuration;

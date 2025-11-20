@@ -83,6 +83,7 @@ import {
   measureScrollbar,
   preventIntermediateScrollbar,
 } from "@jsenv/dom";
+import { monitorItemsHeightOverflow } from "./monitor_items_height_overflow.js";
 
 import.meta.css = /* css */ `
   * {
@@ -90,37 +91,16 @@ import.meta.css = /* css */ `
   }
 
   .ui_transition {
-    --transition-duration: 3000ms;
+    --transition-duration: 300ms;
     --justify-content: center;
     --align-items: center;
-    --background-color: transparent;
-    --border-radius: 0;
 
     --x-transition-duration: var(--transition-duration);
     --x-justify-content: var(--justify-content);
     --x-align-items: var(--align-items);
-    --x-background-color: var(--background-color);
-    --x-border-radius: var(--border-radius);
 
     position: relative;
-    display: flex;
-    width: 100%;
-    /* Chrome would just need height: 100% */
-    /* but firefox needs height: max-content otherwise when content overflows vertically */
-    /* firefox tries to center it nevertheless and make content inaccessible (overflow parent rectangle) */
-    height: max-content;
-    min-height: 100%;
-    align-items: var(--x-align-items);
-    justify-content: var(--x-justify-content);
-    background-color: var(--x-background-color);
-    border-radius: var(--x-border-radius);
   }
-
-  .ui_transition_container {
-    /* in case CSS sets border on this element his size must include borders */
-    box-sizing: border-box;
-  }
-
   /* Alignment controls */
   .ui_transition[data-align-x="start"] {
     --x-justify-content: flex-start;
@@ -140,42 +120,38 @@ import.meta.css = /* css */ `
   .ui_transition[data-align-y="end"] {
     --x-align-items: flex-end;
   }
-  /* When content overflows (bigger than parent) on a given axis */
-  /* Flexbox would still try to position it ¯_(ツ)_/¯ */
-  /* It causes slot content to overflow outside the box leading to content being out of view */
-  /* So for this case we disable flexbox positioning (and there is no need for positioning anyway as slot takes the whole space */
-  .active_group[data-slot-overflow-x],
-  .previous_group[data-slot-overflow-x] {
-    --x-justify-content: flex-start;
-  }
-  .active_group[data-slot-overflow-y],
-  .previous_group[data-slot-overflow-y] {
-    --x-align-items: flex-start;
+
+  .ui_transition,
+  .active_group,
+  .previous_group,
+  .target_slot,
+  .previous_target_slot,
+  .outgoing_slot,
+  .previous_outgoing_slot {
+    width: 100%;
+    height: 100%;
   }
 
-  .active_group,
-  .previous_group {
+  .target_slot,
+  .outgoing_slot,
+  .previous_target_slot,
+  .previous_outgoing_slot {
     display: flex;
-    min-height: 100%;
     align-items: var(--x-align-items);
     justify-content: var(--x-justify-content);
   }
+  .target_slot[data-items-height-overflow],
+  .previous_slot[data-items-height-overflow],
+  .previous_target_slot[data-items-height-overflow],
+  .previous_outgoing_slot[data-items-height-overflow] {
+    --x-align-items: flex-start;
+  }
+
   .active_group {
     position: relative;
   }
   .target_slot {
     position: relative;
-  }
-  .ui_transition[data-transitioning] .active_group,
-  .ui_transition[data-transitioning] .previous_group {
-    height: 100%;
-  }
-
-  .ui_transition[data-transitioning] .target_slot,
-  .ui_transition[data-transitioning] .previous_target_slot {
-    min-width: 0;
-    min-height: 0;
-    flex-shrink: 0;
   }
   .outgoing_slot {
     position: absolute;
@@ -188,13 +164,6 @@ import.meta.css = /* css */ `
   }
   .ui_transition[data-only-previous-group] .previous_group {
     position: relative;
-  }
-
-  .ui_transition[data-transitioning] .target_slot > *,
-  .ui_transition[data-transitioning] .outgoing_slot > *,
-  .ui_transition[data-transitioning] .previous_target_slot > *,
-  .ui_transition[data-transitioning] .previous_outgoing_slot > * {
-    /* box-shadow: none !important; */
   }
 `;
 
@@ -943,6 +912,17 @@ export const createUITransitionController = (
     addTeardown(() => {
       mutationObserver.disconnect();
     });
+  }
+  monitor_slots_height_overflow: {
+    const slots = [
+      targetSlot,
+      outgoingSlot,
+      previousTargetSlot,
+      previousOutgoingSlot,
+    ];
+    for (const slot of slots) {
+      addTeardown(monitorItemsHeightOverflow(slot));
+    }
   }
 
   const setDuration = (newDuration) => {
