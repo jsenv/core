@@ -75,6 +75,7 @@
 import {
   createGroupTransitionController,
   createOpacityTransition,
+  createPubSub,
   getBackground,
   getBorderRadius,
   getElementSignature,
@@ -197,6 +198,8 @@ import.meta.css = /* css */ `
   }
 `;
 
+const CONTENT_ID_ATTRIBUTE = "data-content-id";
+const CONTENT_PHASE_ATTRIBUTE = "data-content-phase";
 const UNSET = {
   domNodes: [],
   domNodesClone: [],
@@ -278,26 +281,51 @@ export const createUITransitionController = (
 
   const detectConfiguration = (slot, { contentId, contentPhase } = {}) => {
     const domNodes = Array.from(slot.childNodes);
-
     if (!domNodes) {
       return UNSET;
     }
+
     const isEmpty = domNodes.length === 0;
     let textNodeCount = 0;
     let elementNodeCount = 0;
     let firstElementNode;
     const domNodesClone = [];
-    for (const domNode of domNodes) {
-      if (domNode.nodeType === Node.TEXT_NODE) {
-        textNodeCount++;
-      } else {
-        if (!firstElementNode) {
-          firstElementNode = domNode;
-        }
-        elementNodeCount++;
+    if (isEmpty) {
+      if (contentPhase === undefined) {
+        contentPhase = "empty";
       }
-      const domNodeClone = domNode.cloneNode(true);
-      domNodesClone.push(domNodeClone);
+    } else {
+      const contentIdSlotAttr = slot.getAttribute(CONTENT_ID_ATTRIBUTE);
+      let contentIdChildAttr;
+      for (const domNode of domNodes) {
+        if (domNode.nodeType === Node.TEXT_NODE) {
+          textNodeCount++;
+        } else {
+          if (!firstElementNode) {
+            firstElementNode = domNode;
+          }
+          elementNodeCount++;
+
+          if (domNode.hasAttribute("data-content-phase")) {
+            const contentPhaseAttr = domNode.getAttribute("data-content-phase");
+            contentPhase = contentPhaseAttr || "attr";
+          }
+          if (domNode.hasAttribute("data-content-key")) {
+            contentIdChildAttr = domNode.getAttribute("data-content-key");
+          }
+        }
+        const domNodeClone = domNode.cloneNode(true);
+        domNodesClone.push(domNodeClone);
+      }
+
+      if (contentIdSlotAttr && contentIdChildAttr) {
+        console.warn(
+          `Slot and slot child both have a [${CONTENT_ID_ATTRIBUTE}]. Slot is ${contentIdSlotAttr} and child is ${contentIdChildAttr}, using the child.`,
+        );
+      }
+      if (contentId === undefined) {
+        contentId = contentIdChildAttr || contentIdSlotAttr || undefined;
+      }
     }
     const isOnlyTextNodes = elementNodeCount === 0 && textNodeCount > 1;
     const singleElementNode = elementNodeCount === 1 ? firstElementNode : null;
@@ -545,7 +573,6 @@ export const createUITransitionController = (
   applySlotConfigurationEffects(targetSlot);
   applySlotConfigurationEffects(outgoingSlot);
 
-  let isTransitioning = false;
   let transitionType = "none";
   const groupTransitionOptions = {
     // debugBreakpoints: [0.25],
@@ -554,12 +581,10 @@ export const createUITransitionController = (
       setup: () => {
         updateSlotAttributes();
         root.setAttribute("data-transitioning", "");
-        isTransitioning = true;
         onStateChange({ isTransitioning: true });
         return {
           teardown: () => {
             root.removeAttribute("data-transitioning");
-            isTransitioning = false;
             updateSlotAttributes(); // Update positioning after transition
             onStateChange({ isTransitioning: false });
           },
@@ -786,28 +811,34 @@ export const createUITransitionController = (
     newContentElement,
     { contentPhase, contentId } = {},
   ) => {
-    if (isTransitioning) {
-      console.log("Transition already in progress, ignoring");
-      return;
-    }
-
+    targetSlot.setAttribute(CONTENT_ID_ATTRIBUTE, contentId);
+    targetSlot.setAttribute(CONTENT_PHASE_ATTRIBUTE, contentPhase);
     if (newContentElement) {
       targetSlot.innerHTML = "";
       targetSlot.appendChild(newContentElement);
     } else {
       targetSlot.innerHTML = "";
     }
+  };
+  // Reset to initial content
+  const resetContent = () => {
+    transitionController.cancel();
+    moveConfigurationIntoSlot(targetSlotInitialConfiguration, targetSlot);
+    moveConfigurationIntoSlot(outgoingSlotInitialConfiguration, outgoingSlot);
+    moveConfigurationIntoSlot(UNSET, previousTargetSlot);
+    moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
+  };
 
+  const targetSlotEffect = (reason) => {
     const fromConfiguration = targetSlotConfiguration;
-    const toConfiguration = detectConfiguration(targetSlot, {
-      contentPhase,
-      contentId,
-    });
+    const toConfiguration = detectConfiguration(targetSlot);
     if (hasDebugLogs) {
-      console.group(`transitionTo(${toConfiguration.contentId})`);
+      console.group(`transitionTo(${reason})`);
     }
     if (isSameConfiguration(fromConfiguration, toConfiguration)) {
-      debugDetection(`ignored (already in desired state)`);
+      debugDetection(
+        `already in desired state (${toConfiguration.id}) -> early return`,
+      );
       if (hasDebugLogs) {
         console.groupEnd();
       }
@@ -843,16 +874,50 @@ export const createUITransitionController = (
     applyContentToContentTransition(toConfiguration);
   };
 
-  // Reset to initial content
-  const resetContent = () => {
-    if (isTransitioning) return;
+  const [teardown, addTeardown] = createPubSub();
+  mutation_observer: {
+    const mutationObserver = new MutationObserver((mutations) => {
+      const reasonParts = [];
+      for (const mutation of mutations) {
+        if (mutation.type === "childList") {
+          const added = mutation.addedNodes.length;
+          const removed = mutation.removedNodes.length;
+          if (added && removed) {
+            reasonParts.push(`addedNodes(${added}) removedNodes(${removed})`);
+          } else if (added) {
+            reasonParts.push(`addedNodes(${added})`);
+          } else {
+            reasonParts.push(`removedNodes(${removed})`);
+          }
+          continue;
+        }
+        if (mutation.type === "attributes") {
+          const { attributeName } = mutation;
+          if (
+            attributeName === CONTENT_ID_ATTRIBUTE ||
+            attributeName === CONTENT_PHASE_ATTRIBUTE
+          ) {
+            reasonParts.push(`[${attributeName}]`);
+          }
+        }
+      }
 
-    transitionController.cancel();
-    moveConfigurationIntoSlot(targetSlotInitialConfiguration, targetSlot);
-    moveConfigurationIntoSlot(outgoingSlotInitialConfiguration, outgoingSlot);
-    moveConfigurationIntoSlot(UNSET, previousTargetSlot);
-    moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
-  };
+      if (reasonParts.length === 0) {
+        return;
+      }
+      const reason = `mutation: ${reasonParts.join("+")}`;
+      targetSlotEffect(reason);
+    });
+    mutationObserver.observe(targetSlot, {
+      childList: true,
+      attributes: true,
+      attributeFilter: [CONTENT_ID_ATTRIBUTE, CONTENT_PHASE_ATTRIBUTE],
+      characterData: false,
+    });
+    addTeardown(() => {
+      mutationObserver.disconnect();
+    });
+  }
 
   const setDuration = (newDuration) => {
     duration = newDuration;
@@ -873,6 +938,9 @@ export const createUITransitionController = (
     updateAlignment,
     setPauseBreakpoints: (value) => {
       groupTransitionOptions.pauseBreakpoints = value;
+    },
+    cleanup: () => {
+      teardown();
     },
   };
 };
