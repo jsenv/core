@@ -13,119 +13,100 @@
  *
  * Usage:
  * - Wrap dynamic content in <UITransition> to animate between states
- * - Set a unique `data-content-key` on your rendered content to identify each content variant
+ * - Set a unique `data-content-id` on your rendered content to identify each content variant
  * - Use `data-content-phase` to mark loading/error states for phase transitions
  * - Configure transition types and durations for both content and phase changes
  *
  * Example:
  *
- *   <UITransition
- *     transitionType="slide-left"
- *     transitionDuration={400}
- *     phaseTransitionType="cross-fade"
- *     phaseTransitionDuration={300}
- *   >
+ *   <UITransition>
  *     {isLoading
  *       ? <Spinner data-content-key={userId} data-content-phase />
  *       : <UserProfile user={user} data-content-key={userId} />}
  *   </UITransition>
  *
- * When `data-content-key` changes, UITransition animates content transitions.
+ * When `data-content-id` changes, UITransition animates content transitions.
  * When `data-content-phase` changes for the same key, it animates phase transitions.
  */
 
 import { createContext } from "preact";
 import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
 
-import { initUITransition } from "./ui_transition.js";
+import { createUITransitionController } from "./ui_transition.js";
 
-const ContentKeyContext = createContext();
+const UITransitionContentIdContext = createContext();
 
 export const UITransition = ({
   children,
-  contentKey,
-  fluid,
-  sizeTransition = true,
-  sizeTransitionDuration,
-  transitionType,
-  transitionDuration,
-  phaseTransitionType,
-  phaseTransitionDuration,
+  contentId,
+  type,
+  duration,
   debugDetection,
   debugContent,
   debugSize,
-  debugBreakAfterClone,
   disabled,
   ...props
 }) => {
-  const contentKeyRef = useRef(contentKey);
+  const contentIdRef = useRef(contentId);
 
-  const updateContentKey = () => {
-    const el = ref.current;
-    if (!el) {
+  const updateContentId = () => {
+    const uiTransition = uiTransitionRef.current;
+    if (!uiTransition) {
       return;
     }
-    const value = contentKeyRef.current;
-    if (value) {
-      el.querySelector(".ui_transition_slot").setAttribute(
-        "data-content-key",
-        value,
-      );
-    } else {
-      el.querySelector(".ui_transition_slot").removeAttribute(
-        "data-content-key",
-      );
-    }
+    const value = contentIdRef.current;
+    uiTransition.updateContentId(value);
   };
 
-  const contentKeyContextValue = useMemo(() => {
-    const keySet = new Set();
-    const onKeySetChange = () => {
-      const contentKeyValue = Array.from(keySet).join("|");
-      contentKeyRef.current = contentKeyValue;
-      updateContentKey();
+  const uiTransitionContentIdContextValue = useMemo(() => {
+    const set = new Set();
+    const onSetChange = () => {
+      const value = Array.from(set).join("|");
+      contentIdRef.current = value;
+      updateContentId();
     };
-    const update = (key, newKey) => {
-      if (!keySet.has(key)) {
+    const update = (part, newPart) => {
+      if (!set.has(part)) {
         console.warn(
-          `UITransition: trying to update a key that does not exist: ${key}`,
+          `UITransition: trying to update an id that does not exist: ${part}`,
         );
         return;
       }
-      keySet.delete(key);
-      keySet.add(newKey);
-      onKeySetChange();
+      set.delete(part);
+      set.add(newPart);
+      onSetChange();
     };
-    const add = (key) => {
-      if (!key) {
+    const add = (part) => {
+      if (!part) {
         return;
       }
-      if (keySet.has(key)) {
+      if (set.has(part)) {
         return;
       }
-      keySet.add(key);
-      onKeySetChange();
+      set.add(part);
+      onSetChange();
     };
-    const remove = (key) => {
-      if (!key) {
+    const remove = (part) => {
+      if (!part) {
         return;
       }
-      if (!keySet.has(key)) {
+      if (!set.has(part)) {
         return;
       }
-      keySet.delete(key);
-      onKeySetChange();
+      set.delete(part);
+      onSetChange();
     };
     return { add, update, remove };
   }, []);
 
   const ref = useRef();
+  const uiTransitionRef = useRef();
   useLayoutEffect(() => {
     if (disabled) {
       return null;
     }
-    updateContentKey();
-    const uiTransition = initUITransition(ref.current);
+    const uiTransition = createUITransitionController(ref.current);
+    uiTransitionRef.current = uiTransition;
     return () => {
       uiTransition.cleanup();
     };
@@ -136,45 +117,38 @@ export const UITransition = ({
   }
 
   return (
-    <ContentKeyContext.Provider value={contentKeyContextValue}>
-      <div
-        ref={ref}
-        {...props}
-        className="ui_transition"
-        data-fluid={fluid ? "" : undefined}
-        data-size-transition={sizeTransition ? "" : undefined}
-        data-size-transition-duration={
-          sizeTransitionDuration ? sizeTransitionDuration : undefined
-        }
-        data-content-transition={transitionType ? transitionType : undefined}
-        data-content-transition-duration={
-          transitionDuration ? transitionDuration : undefined
-        }
-        data-phase-transition={
-          phaseTransitionType ? phaseTransitionType : undefined
-        }
-        data-phase-transition-duration={
-          phaseTransitionDuration ? phaseTransitionDuration : undefined
-        }
-        data-debug-detection={debugDetection ? "" : undefined}
-        data-debug-size={debugSize ? "" : undefined}
-        data-debug-content={debugContent ? "" : undefined}
-        data-debug-break-after-clone={debugBreakAfterClone}
-      >
-        <div className="ui_transition_outer_wrapper">
+    <div
+      ref={ref}
+      {...props}
+      className="ui_transition"
+      data-transition-type={type}
+      data-transition-duration={duration}
+      data-debug-detection={debugDetection ? "" : undefined}
+      data-debug-size={debugSize ? "" : undefined}
+      data-debug-content={debugContent ? "" : undefined}
+    >
+      <div className="ui_transition_container">
+        <div className="active_group">
           <div
-            className="ui_transition_slot"
-            data-content-key={
-              contentKeyRef.current ? contentKeyRef.current : undefined
+            className="target_slot"
+            data-content-id={
+              contentIdRef.current ? contentIdRef.current : undefined
             }
           >
-            {children}
+            <UITransitionContentIdContext.Provider
+              value={uiTransitionContentIdContextValue}
+            >
+              {children}
+            </UITransitionContentIdContext.Provider>
           </div>
-          <div className="ui_transition_phase_overlay"></div>
+          <div className="outgoing_slot"></div>
         </div>
-        <div className="ui_transition_content_overlay"></div>
       </div>
-    </ContentKeyContext.Provider>
+      <div className="previous_group">
+        <div className="previous_target_slot"></div>
+        <div className="previous_outgoing_slot"></div>
+      </div>
+    </div>
   );
 };
 
@@ -190,24 +164,24 @@ export const UITransition = ({
  * And if a sibling route becones active it will call useContentKey with its own path
  *
  */
-export const useContentKey = (key) => {
-  const contentKey = useContext(ContentKeyContext);
-  const keyRef = useRef();
-  if (keyRef.current !== key && contentKey !== undefined) {
-    const previousKey = keyRef.current;
-    keyRef.current = key;
-    if (previousKey === undefined) {
-      contentKey.add(key);
+export const useUITransitionContentId = (value) => {
+  const contentId = useContext(UITransitionContentIdContext);
+  const valueRef = useRef();
+  if (contentId !== undefined && valueRef.current !== value) {
+    const previousValue = valueRef.current;
+    valueRef.current = value;
+    if (previousValue === undefined) {
+      contentId.add(value);
     } else {
-      contentKey.update(previousKey, key);
+      contentId.update(previousValue, value);
     }
   }
   useLayoutEffect(() => {
-    if (contentKey === undefined) {
+    if (contentId === undefined) {
       return null;
     }
     return () => {
-      contentKey.remove(keyRef.current);
+      contentId.remove(valueRef.current);
     };
   }, []);
 };
