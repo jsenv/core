@@ -64,18 +64,6 @@
 
 /**
  *
- * TODO:
- *
- * - finir le truc avec le background
- * puis faire la meme avec le border-color et le radius
- *
- * - padding
- *
- * - border radius
- *
- * - vérification des backgrounds (on peut appliquer des backgrounds
- * et ils prennents bien la taille attendu (meme si le contenr "overflow"))
- *
  * - content phase se comporte comme le contenu tant qu'on a pas vu de contenu
  * des qu'on voit un contenu il doit respecter les dimensions du dernier contenu
  * qu'on connait
@@ -209,10 +197,7 @@ import.meta.css = /* css */ `
   .ui_transition[data-transitioning] .outgoing_slot > *,
   .ui_transition[data-transitioning] .previous_target_slot > *,
   .ui_transition[data-transitioning] .previous_outgoing_slot > * {
-    /* background-image: none !important; */
-    /* background-color: transparent !important; */
-    /* border-color: transparent !important; */
-    box-shadow: none !important;
+    /* box-shadow: none !important; */
   }
 `;
 
@@ -594,57 +579,8 @@ export const createUITransitionController = (
     const morphTransitions = [];
     border_radius: {
       container.style.borderRadius = targetSlotConfiguration.borderRadius;
-      // const fromBorderRadius = previousTargetSlotConfiguration.borderRadius;
-      // const toBorderRadius = targetSlotConfiguration.borderRadius;
-      // const borderRadiusTransition = createBorderRadiusTransition(
-      //   container,
-      //   toBorderRadius,
-      //   {
-      //     from: fromBorderRadius,
-      //     duration,
-      //     styleSynchronizer: "inline_style",
-      //     onUpdate: () => {},
-      //     onFinish: (borderRadiusTransition) => {
-      //       borderRadiusTransition.cancel();
-      //     },
-      //   },
-      // );
-      // morphTransitions.push(borderRadiusTransition);
-    }
-    border: {
-      // const fromBorder = previousTargetSlotConfiguration.border;
-      // const toBorder = targetSlotConfiguration.border;
-      // const borderTransition = createBorderTransition(container, toBorder, {
-      //   from: fromBorder,
-      //   duration,
-      //   styleSynchronizer: "inline_style",
-      //   onFinish: (borderTransition) => {
-      //     borderTransition.cancel();
-      //   },
-      // });
-      // morphTransitions.push(borderTransition);
-    }
-    background: {
-      // const fromBackground = previousTargetSlotConfiguration.background;
-      // const toBackground = targetSlotConfiguration.background;
-      // const backgroundTransition = createBackgroundTransition(
-      //   container,
-      //   toBackground,
-      //   {
-      //     from: fromBackground,
-      //     duration,
-      //     styleSynchronizer: "inline_style",
-      //     onUpdate: () => {},
-      //     onFinish: () => {
-      //       backgroundTransition.cancel();
-      //     },
-      //   },
-      // );
-      // morphTransitions.push(backgroundTransition);
     }
     dimensions: {
-      // let containerWidth;
-      // let containerHeight;
       const fromWidth = previousTargetSlotConfiguration.width || 0;
       const fromHeight = previousTargetSlotConfiguration.height || 0;
       const toWidth = targetSlotConfiguration.width || 0;
@@ -682,8 +618,6 @@ export const createUITransitionController = (
       };
 
       // https://emilkowal.ski/ui/the-magic-of-clip-path
-      // SIMPLE APPROACH: Container takes final size, clip-path does the transition
-
       // Calculate alignment-aware positioning within final container
       const getAlignedPosition = (containerSize, contentSize, align) => {
         switch (align) {
@@ -696,27 +630,21 @@ export const createUITransitionController = (
             return (containerSize - contentSize) / 2;
         }
       };
-
       const startLeft = getAlignedPosition(toWidth, fromWidth, alignX);
       const startTop = getAlignedPosition(toHeight, fromHeight, alignY);
       const startRight = startLeft + fromWidth;
       const startBottom = startTop + fromHeight;
-
       // End clip rectangle: full container
       const endLeft = 0;
       const endTop = 0;
       const endRight = toWidth;
       const endBottom = toHeight;
-
-      // Get border-radius values
       const fromBorderRadius =
         previousTargetSlotConfiguration.borderRadius || 0;
       const toBorderRadius = targetSlotConfiguration.borderRadius || 0;
 
       let startClipPath;
       let endClipPath;
-
-      // Use inset() for rounded rectangles when border-radius is involved
       const startInsetTop = startTop;
       const startInsetRight = toWidth - startRight;
       const startInsetBottom = toHeight - startBottom;
@@ -738,58 +666,17 @@ export const createUITransitionController = (
         },
       );
 
-      // Initialize global pause/resume mechanism if not exists
-      if (!window.pausedTransitions) {
-        window.pausedTransitions = new Set();
-      }
-      if (!window.resumeTransitions) {
-        window.resumeTransitions = () => {
-          window.pausedTransitions.forEach((animation) => {
-            animation.play();
-          });
-          window.pausedTransitions.clear();
-          console.debug("Resumed all paused transitions");
-        };
-      } else {
-        // Override existing function but call the previous version
-        const originalResumeTransitions = window.resumeTransitions;
-        window.resumeTransitions = () => {
-          // Call original function first
-          originalResumeTransitions();
-          // Then handle our clip-path animations
-          window.pausedTransitions.forEach((animation) => {
-            animation.play();
-          });
-          window.pausedTransitions.clear();
-          console.debug("Resumed all paused transitions including clip-path");
-        };
-      }
-
-      // Pause at 80% progress
-      setTimeout(() => {
-        // clipAnimation.pause();
-        // window.pausedTransitions.add(clipAnimation);
-        // console.debug(
-        //   "Transition paused at 20% - call window.resumeTransitions() to continue",
-        // );
-      }, duration * 0.2);
-
       // Handle finish
       clipAnimation.finished
         .then(() => {
-          // Remove from paused set if completed
-          window.pausedTransitions.delete(clipAnimation);
           // Clear clip-path to restore normal behavior
-          // clipAnimation.commitStyles();
           container.style.clipPath = "";
           clipAnimation.cancel();
           onSizeTransitionFinished();
         })
         .catch(() => {
           // Animation was cancelled
-          window.pausedTransitions.delete(clipAnimation);
         });
-
       clipAnimation.play();
     }
 
