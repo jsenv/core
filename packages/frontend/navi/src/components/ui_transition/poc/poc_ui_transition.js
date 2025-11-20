@@ -755,9 +755,9 @@ export const createUITransitionController = (
         // clipAnimation.pause();
         // window.pausedTransitions.add(clipAnimation);
         // console.debug(
-        //   "Transition paused at 50% - call window.resumeTransitions() to continue",
+        //   "Transition paused at 20% - call window.resumeTransitions() to continue",
         // );
-      }, duration * 0.5);
+      }, duration * 0.2);
 
       // Handle finish
       clipAnimation.finished
@@ -765,7 +765,8 @@ export const createUITransitionController = (
           // Remove from paused set if completed
           window.pausedTransitions.delete(clipAnimation);
           // Clear clip-path to restore normal behavior
-          clipAnimation.commitStyles();
+          // clipAnimation.commitStyles();
+          container.style.clipPath = "";
           clipAnimation.cancel();
           onSizeTransitionFinished();
         })
