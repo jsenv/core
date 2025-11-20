@@ -104,7 +104,11 @@ import.meta.css = /* css */ `
     position: relative;
     display: flex;
     width: 100%;
-    height: 100%;
+    /* Chrome would just need height: 100% */
+    /* but firefox needs height: max-content otherwise when content overflows vertically */
+    /* firefox tries to center it nevertheless and make content inaccessible (overflow parent rectangle) */
+    height: max-content;
+    min-height: 100%;
     align-items: var(--x-align-items);
     justify-content: var(--x-justify-content);
     background-color: var(--x-background-color);
@@ -114,14 +118,6 @@ import.meta.css = /* css */ `
   .ui_transition_container {
     /* in case CSS sets border on this element his size must include borders */
     box-sizing: border-box;
-    /* max-width/max-height saves use from content going outside parent boundaries by flexbox positioning */
-    /* max-width: 100%; */
-    /* max-height: 100%; */
-  }
-
-  .ui_transition[data-transitioning] .ui_transition_container {
-    /* Overflow hidden so content is clipped during transition */
-    /* overflow: hidden; */
   }
 
   /* Alignment controls */
