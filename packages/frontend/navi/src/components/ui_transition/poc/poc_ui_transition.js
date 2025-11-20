@@ -811,8 +811,16 @@ export const createUITransitionController = (
     newContentElement,
     { contentPhase, contentId } = {},
   ) => {
-    targetSlot.setAttribute(CONTENT_ID_ATTRIBUTE, contentId);
-    targetSlot.setAttribute(CONTENT_PHASE_ATTRIBUTE, contentPhase);
+    if (contentId) {
+      targetSlot.setAttribute(CONTENT_ID_ATTRIBUTE, contentId);
+    } else {
+      targetSlot.removeAttribute(CONTENT_ID_ATTRIBUTE);
+    }
+    if (contentPhase) {
+      targetSlot.setAttribute(CONTENT_PHASE_ATTRIBUTE, contentPhase);
+    } else {
+      targetSlot.removeAttribute(CONTENT_PHASE_ATTRIBUTE);
+    }
     if (newContentElement) {
       targetSlot.innerHTML = "";
       targetSlot.appendChild(newContentElement);
@@ -837,7 +845,7 @@ export const createUITransitionController = (
     }
     if (isSameConfiguration(fromConfiguration, toConfiguration)) {
       debugDetection(
-        `already in desired state (${toConfiguration.id}) -> early return`,
+        `already in desired state (${toConfiguration}) -> early return`,
       );
       if (hasDebugLogs) {
         console.groupEnd();
@@ -893,6 +901,7 @@ export const createUITransitionController = (
         }
         if (mutation.type === "attributes") {
           const { attributeName } = mutation;
+          debugger;
           if (
             attributeName === CONTENT_ID_ATTRIBUTE ||
             attributeName === CONTENT_PHASE_ATTRIBUTE
