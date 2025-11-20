@@ -683,11 +683,6 @@ export const createUITransitionController = (
         releaseSlotDimensions(targetSlot);
       };
 
-      // Set final dimensions immediately
-      container.style.width = `${toWidth}px`;
-      container.style.height = `${toHeight}px`;
-      container.style.contain = "paint";
-
       // https://emilkowal.ski/ui/the-magic-of-clip-path
       // Analyze each dimension independently
       const widthIsGrowing = toWidth > fromWidth;
@@ -700,8 +695,10 @@ export const createUITransitionController = (
       const containerWidth = Math.max(fromWidth, toWidth);
       const containerHeight = Math.max(fromHeight, toHeight);
 
+      // Set final dimensions immediately
       container.style.width = `${containerWidth}px`;
       container.style.height = `${containerHeight}px`;
+      container.style.contain = "paint";
 
       // Calculate start rectangle (from dimensions, centered in container)
       const startWidth = fromWidth;
@@ -782,7 +779,8 @@ export const createUITransitionController = (
           // container.style.width = ``;
           // container.style.height = ``;
           // Clear clip-path to restore normal behavior
-          container.style.clipPath = "";
+          // container.style.clipPath = "";
+          clipAnimation.commitStyles();
           clipAnimation.cancel();
           onSizeTransitionFinished();
         })
