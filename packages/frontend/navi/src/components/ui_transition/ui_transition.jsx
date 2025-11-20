@@ -46,6 +46,8 @@ export const UITransition = ({
   debugSize,
   disabled,
   uiTransitionRef,
+  alignX,
+  alignY,
   ...props
 }) => {
   const contentIdRef = useRef(contentId);
@@ -106,12 +108,15 @@ export const UITransition = ({
     if (disabled) {
       return null;
     }
-    const uiTransition = createUITransitionController(ref.current);
+    const uiTransition = createUITransitionController(ref.current, {
+      alignX,
+      alignY,
+    });
     uiTransitionRef.current = uiTransition;
     return () => {
       uiTransition.cleanup();
     };
-  }, [disabled]);
+  }, [disabled, alignX, alignY]);
 
   if (disabled) {
     return children;
