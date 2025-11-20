@@ -44,13 +44,12 @@
  * without requiring separate CSS classes or inline styles.
  */
 
-import { appendStyles, normalizeStyles } from "@jsenv/dom";
+import { normalizeStyles } from "@jsenv/dom";
 import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import {
-  COPIED_ON_VISUAL_CHILD_PROP_SET,
   getHowToHandleStyleProp,
-  HANDLED_BY_VISUAL_CHILD_PROP_SET,
+  getVisualChildStylePropStrategy,
   isStyleProp,
   prepareStyleValue,
 } from "./box_style_util.js";
@@ -215,76 +214,116 @@ export const Box = (props) => {
 
     const boxStyles = {};
     let boxPseudoNamedStyles = PSEUDO_NAMED_STYLES_DEFAULT;
-    const childStyles = {};
-    // const childPseudoStyles = {};
-    const assignStyle = (
-      propValue,
-      propName,
-      styleContext,
-      context = "js",
-      boxStylesTarget,
-      childStylesTarget,
+    const childPseudoStyles = {};
+    const shouldForwardAllToChild = visualSelector && pseudoStateSelector;
+
+    const addStyle = (value, name, stylesTarget, context) => {
+      styleDeps.push(value); // impact box style -> add to deps
+      const cssVar = managedByCSSVars[name];
+      const mergedValue = prepareStyleValue(
+        stylesTarget[name],
+        value,
+        name,
+        context,
+      );
+      if (cssVar) {
+        stylesTarget[cssVar] = mergedValue;
+        return true;
+      }
+      stylesTarget[name] = mergedValue;
+      return false;
+    };
+    const addStyleMaybeForwarding = (
+      value,
+      name,
+      stylesTarget,
+      context,
+      visualChildPropStrategy,
     ) => {
-      if (propValue === undefined) {
+      if (!visualChildPropStrategy) {
+        addStyle(value, name, stylesTarget, context);
+        return false;
+      }
+      const cssVar = managedByCSSVars[name];
+      if (cssVar) {
+        // css var wins over visual child handling
+        addStyle(value, name, stylesTarget, context);
+        return false;
+      }
+      if (visualChildPropStrategy === "copy") {
+        // we stylyze ourself + forward prop to the child
+        addStyle(value, name, stylesTarget, context);
+      }
+      return true;
+    };
+    const assignStyle = (
+      value,
+      name,
+      styleContext,
+      boxStylesTarget,
+      styleOrigin,
+    ) => {
+      const context = styleOrigin === "base_style" ? "js" : "css";
+      const isCss = styleOrigin === "base_style" || styleOrigin === "style";
+      if (isCss) {
+        addStyle(value, name, boxStylesTarget, context);
         return;
       }
-      const getStyle = getHowToHandleStyleProp(propName);
+      const mightStyle = isStyleProp(name);
+      if (!mightStyle) {
+        // not a style prop what do we do with it?
+        if (shouldForwardAllToChild) {
+          childForwardedProps[name] = value;
+        } else {
+          selfForwardedProps[name] = value;
+        }
+        return;
+      }
+      // it's a style prop, we need first to check if we have css var to handle them
+      // otherwise we decide to put it either on self or child
+      const visualChildPropStrategy =
+        visualSelector && getVisualChildStylePropStrategy(name);
+      const getStyle = getHowToHandleStyleProp(name);
       if (
-        // style not listed can be passed through as-is (accentColor, zIndex, ...)
+        // prop name === css style name
         !getStyle
       ) {
-        const cssVar = managedByCSSVars[propName];
-        const stylesTarget =
-          childStylesTarget && !cssVar ? childStylesTarget : boxStylesTarget;
-        const mergedValue = prepareStyleValue(
-          stylesTarget[propName],
-          propValue,
-          propName,
-          context,
-        );
-        stylesTarget[cssVar || propName] = mergedValue;
-        return;
-      }
-      const values = getStyle(propValue, styleContext);
-      if (!values) {
-        return;
-      }
-      for (const key of Object.keys(values)) {
-        const value = values[key];
-        const cssVar = managedByCSSVars[key];
-        const stylesTarget =
-          childStylesTarget && !cssVar ? childStylesTarget : boxStylesTarget;
-        const mergedValue = prepareStyleValue(
-          stylesTarget[key],
+        const needForwarding = addStyleMaybeForwarding(
           value,
-          key,
+          name,
+          boxStylesTarget,
           context,
+          visualChildPropStrategy,
         );
-        stylesTarget[cssVar || key] = mergedValue;
+        if (needForwarding) {
+          childForwardedProps[name] = value;
+        }
+        return;
       }
-    };
-    const assignPseudoStyle = (
-      propValue,
-      propName,
-      pseudoStyleContext,
-      pseudoStylesTarget,
-    ) => {
-      styleDeps.push(propValue);
-      assignStyle(
-        propValue,
-        propName,
-        pseudoStyleContext,
-        "css",
-        pseudoStylesTarget,
-        null,
-      );
+      const cssValues = getStyle(value, styleContext);
+      if (!cssValues) {
+        return;
+      }
+      let needForwarding = false;
+      for (const styleName of Object.keys(cssValues)) {
+        const cssValue = cssValues[styleName];
+        needForwarding = addStyleMaybeForwarding(
+          styleName,
+          cssValue,
+          boxStylesTarget,
+          context,
+          visualChildPropStrategy,
+        );
+      }
+      if (needForwarding) {
+        childForwardedProps[name] = value;
+      }
     };
 
     if (baseStyle) {
       for (const key of baseStyle) {
         const value = baseStyle[key];
-        styleDeps.push(value);
-        assignStyle(value, key, styleContext, "js", boxStyles, null);
+        assignStyle(value, key, styleContext, boxStyles, "baseStyle");
       }
     }
     const remainingPropKeyArray = Object.keys(rest);
@@ -295,41 +334,35 @@ export const Box = (props) => {
         continue;
       }
       const propValue = rest[propName];
-      const shouldForwardAllToChild = visualSelector && pseudoStateSelector;
-      const shouldCopyOnVisualChild =
-        visualSelector && COPIED_ON_VISUAL_CHILD_PROP_SET.has(propName);
-      const shouldOnlyForwardToChild =
-        visualSelector &&
-        !shouldCopyOnVisualChild &&
-        HANDLED_BY_VISUAL_CHILD_PROP_SET.has(propName);
-      const shouldStyle = !shouldOnlyForwardToChild && isStyleProp(propName);
-      const shouldForwardOnSelf =
-        !shouldOnlyForwardToChild && !shouldStyle && !shouldForwardAllToChild;
-      const shouldForwardToChild =
-        shouldCopyOnVisualChild ||
-        shouldOnlyForwardToChild ||
-        (!shouldForwardOnSelf && !shouldStyle);
-
-      if (shouldStyle) {
-        styleDeps.push(propValue);
+      assignStyle(propValue, propName, styleContext, boxStyles, "prop");
+    }
+    if (pseudoStyle) {
+      const assignPseudoStyle = (
+        propValue,
+        propName,
+        pseudoStyleContext,
+        pseudoStylesTarget,
+      ) => {
+        // const shouldCopyOnVisualChild =
+        //   visualSelector && COPIED_ON_VISUAL_CHILD_PROP_SET.has(propName);
+        // const shouldOnlyForwardToChild =
+        //   visualSelector &&
+        //   !shouldCopyOnVisualChild &&
+        //   HANDLED_BY_VISUAL_CHILD_PROP_SET.has(propName);
+        // const shouldApplyOnSelf = !shouldOnlyForwardToChild;
+        // const shouldApplyOnChild =
+        //   shouldCopyOnVisualChild ||
+        //   shouldOnlyForwardToChild ||
+        //   !shouldForwardOnSelf;
         assignStyle(
           propValue,
           propName,
-          styleContext,
-          "css",
-          boxStyles,
-          shouldForwardToChild ? childStyles : null,
+          pseudoStyleContext,
+          pseudoStylesTarget,
+          "pseudo_style",
         );
-      }
-      if (shouldForwardOnSelf) {
-        selfForwardedProps[propName] = propValue;
-      }
-      if (shouldForwardToChild) {
-        childForwardedProps[propName] = propValue;
-      }
-    }
+      };
 
-    if (pseudoStyle) {
       const pseudoStyleKeys = Object.keys(pseudoStyle);
       if (pseudoStyleKeys.length) {
         boxPseudoNamedStyles = {};
@@ -385,15 +418,16 @@ export const Box = (props) => {
         }
       }
     }
-
     if (typeof style === "string") {
-      appendStyles(boxStyles, normalizeStyles(style, "css"), "css");
-      styleDeps.push(style); // impact box style -> add to deps
+      const styleObject = normalizeStyles(style, "css");
+      for (const styleName of Object.keys(styleObject)) {
+        const styleValue = styleObject[styleName];
+        assignStyle(styleValue, styleName, styleContext, boxStyles, "style");
+      }
     } else if (style && typeof style === "object") {
-      for (const key of Object.keys(style)) {
-        const stylePropValue = style[key];
-        styleDeps.push(stylePropValue); // impact box style -> add to deps
-        assignStyle(stylePropValue, key, styleContext, "css", boxStyles, null);
+      for (const styleName of Object.keys(style)) {
+        const styleValue = style[styleName];
+        assignStyle(styleValue, styleName, styleContext, boxStyles, "style");
       }
     }
 

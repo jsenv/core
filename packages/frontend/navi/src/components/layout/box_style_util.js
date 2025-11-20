@@ -420,7 +420,7 @@ const VISUAL_PROP_NAME_SET = new Set(Object.keys(VISUAL_PROPS));
 const CONTENT_PROP_NAME_SET = new Set(Object.keys(CONTENT_PROPS));
 const STYLE_PROP_NAME_SET = new Set(Object.keys(All_PROPS));
 
-export const COPIED_ON_VISUAL_CHILD_PROP_SET = new Set([
+const COPIED_ON_VISUAL_CHILD_PROP_SET = new Set([
   ...LAYOUT_PROP_NAME_SET,
   "expand",
   "shrink",
@@ -429,11 +429,20 @@ export const COPIED_ON_VISUAL_CHILD_PROP_SET = new Set([
   "contentAlignX",
   "contentAlignY",
 ]);
-export const HANDLED_BY_VISUAL_CHILD_PROP_SET = new Set([
+const HANDLED_BY_VISUAL_CHILD_PROP_SET = new Set([
   ...INNER_SPACING_PROP_NAME_SET,
   ...VISUAL_PROP_NAME_SET,
   ...CONTENT_PROP_NAME_SET,
 ]);
+export const getVisualChildStylePropStrategy = (name) => {
+  if (COPIED_ON_VISUAL_CHILD_PROP_SET.has(name)) {
+    return "copy";
+  }
+  if (HANDLED_BY_VISUAL_CHILD_PROP_SET.has(name)) {
+    return "forward";
+  }
+  return null;
+};
 
 export const isStyleProp = (name) => STYLE_PROP_NAME_SET.has(name);
 
