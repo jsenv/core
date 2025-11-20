@@ -113,7 +113,7 @@
         );
       };
 
-      const Nav = ({ uiTransitionRef }) => {
+      const Nav = ({ uiTransitionRef, globalCount, setGlobalCount }) => {
         return (
           <Layout
             as="nav"
@@ -132,6 +132,18 @@
             <RouteLink route={VIEWPORT_OVERFLOW_XY_ROUTE}>
               Viewport overflow xy
             </RouteLink>
+
+            <div style="background: rgba(255,255,255,0.9); padding: 10px; border-radius: 5px; margin-left: 16px;">
+              <div style="display: flex; align-items: center; gap: 8px; color: #333;">
+                <span>Global: {globalCount}</span>
+                <button
+                  style="padding: 4px 8px; border: 1px solid #ccc; background: #f5f5f5; border-radius: 3px; cursor: pointer;"
+                  onClick={() => setGlobalCount(globalCount + 1)}
+                >
+                  +1
+                </button>
+              </div>
+            </div>
 
             <PauseControls uiTransitionRef={uiTransitionRef} />
           </Layout>
@@ -281,16 +293,21 @@
 
       const App = () => {
         const uiTransitionRef = useRef();
+        const [globalCount, setGlobalCount] = useState(0);
 
         return (
-          <>
-            <Nav uiTransitionRef={uiTransitionRef} />
+          <div>
+            <Nav
+              uiTransitionRef={uiTransitionRef}
+              globalCount={globalCount}
+              setGlobalCount={setGlobalCount}
+            />
             <Router uiTransitionRef={uiTransitionRef} />
-          </>
+          </div>
         );
       };
 
-      render(<App />, document.querySelector("#root"));
+      render(<App />, document.getElementById("root"));
     </script>
   </body>
 </html>

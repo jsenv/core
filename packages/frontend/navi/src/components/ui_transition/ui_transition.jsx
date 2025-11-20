@@ -146,9 +146,9 @@ export const UITransition = ({
             {children}
           </UITransitionContentIdContext.Provider>
         </div>
-        <div className="ui_transition_outgoing_slot"></div>
+        <div className="ui_transition_outgoing_slot" inert></div>
       </div>
-      <div className="ui_transition_previous_group">
+      <div className="ui_transition_previous_group" inert>
         <div className="ui_transition_previous_target_slot"></div>
         <div className="ui_transition_previous_outgoing_slot"></div>
       </div>
