@@ -149,9 +149,8 @@
                     if (e.target.checked) {
                       const pausePercentage =
                         document.querySelector("#pausePercentage").value;
-                      uiTransitionRef.current.setPauseBreakpoints([
-                        pausePercentage / 100,
-                      ]);
+                      const ratio = pausePercentage / 100;
+                      uiTransitionRef.current.setPauseBreakpoints([ratio]);
                     } else {
                       uiTransitionRef.current.setPauseBreakpoints([]);
                     }
@@ -296,7 +295,7 @@
         return (
           <>
             <Nav uiTransitionRef={uiTransitionRef} />
-            <Router />
+            <Router uiTransitionRef={uiTransitionRef} />
           </>
         );
       };
