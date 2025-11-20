@@ -77,6 +77,7 @@
       const {
         DIALOG_ROUTE,
         DIALOG2_ROUTE,
+        DIALOG3_ROUTE,
         VIEWPORT_ROUTE,
         VIEWPORT_OVERFLOW_X_ROUTE,
         VIEWPORT_OVERFLOW_Y_ROUTE,
@@ -84,6 +85,7 @@
       } = setupRoutes({
         DIALOG_ROUTE: "",
         DIALOG2_ROUTE: "dialog2",
+        DIALOG3_ROUTE: "dialog3",
         VIEWPORT_ROUTE: "viewport",
         VIEWPORT_OVERFLOW_X_ROUTE: "viewport_overflow_x",
         VIEWPORT_OVERFLOW_Y_ROUTE: "viewport_overflow_y",
@@ -113,6 +115,11 @@
             />
             <Route
               meta={{ layout: "dialog" }}
+              element={<MediumPage />}
+              route={DIALOG3_ROUTE}
+            />
+            <Route
+              meta={{ layout: "dialog" }}
               element={<SmallPage />}
               fallback
             />
@@ -130,6 +137,7 @@
           >
             <RouteLink route={DIALOG_ROUTE}>Dialog</RouteLink>
             <RouteLink route={DIALOG2_ROUTE}>Dialog 2</RouteLink>
+            <RouteLink route={DIALOG3_ROUTE}>Dialog 3</RouteLink>
             <RouteLink route={VIEWPORT_ROUTE}>Viewport</RouteLink>
             <RouteLink route={VIEWPORT_OVERFLOW_X_ROUTE}>
               Viewport x overflow
@@ -277,6 +285,42 @@
           </DialogLayout>
         );
       };
+
+      const MediumPage = () => {
+        const [count, setCount] = useState(0);
+
+        return (
+          <DialogLayout>
+            <div style="width: 480px; height: 420px; padding: 20px;">
+              <div style="font-size: 18px; margin-bottom: 20px; color: #d4691b;">
+                480x420 Medium Dialog
+              </div>
+              <div style="margin: 20px 0;">
+                <div style="margin-bottom: 10px;">
+                  Medium Dialog Counter: {count}
+                </div>
+                <button
+                  style="padding: 12px 20px; border: 1px solid #d4691b; background: #fff5ee; border-radius: 6px; cursor: pointer; font-size: 16px;"
+                  onClick={() => setCount(count + 1)}
+                >
+                  Medium Increment ({count})
+                </button>
+              </div>
+              <div style="background: #fff5ee; padding: 15px; border-radius: 8px; margin-top: 20px; border: 1px solid #ffdab3;">
+                <p>
+                  This dialog is slightly smaller than Dialog 2 (480x420 vs
+                  500x400) to test subtle size transitions.
+                </p>
+                <p style="margin: 0;">
+                  Navigate between Dialog 2 and Dialog 3 to see the minimal size
+                  difference animation.
+                </p>
+              </div>
+            </div>
+          </DialogLayout>
+        );
+      };
+
       const ViewportPage = () => {
         return <ViewportLayout>Full page no border</ViewportLayout>;
       };
