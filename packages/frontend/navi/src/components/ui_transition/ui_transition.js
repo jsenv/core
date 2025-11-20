@@ -78,6 +78,7 @@ import {
   getBorderRadius,
   getElementSignature,
   preventIntermediateScrollbar,
+  stringifyStyle,
 } from "@jsenv/dom";
 import { monitorItemsOverflow } from "./monitor_items_overflow.js";
 
@@ -167,6 +168,17 @@ import.meta.css = /* css */ `
   }
   .ui_transition[data-only-previous-group] .previous_group {
     position: relative;
+  }
+
+  .target_slot_background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: -1;
+    width: var(--target-slot-width, 100%);
+    height: var(--target-slot-height, 100%);
+    background: var(--target-slot-background, transparent);
+    pointer-events: none;
   }
 `;
 
@@ -551,11 +563,30 @@ export const createUITransitionController = (
     return morphTransitions;
   };
   const fadeInTargetSlot = () => {
+    // we maintain a background copy behind target slot to avoid showing
+    // the body flashing during the fade-in
+    const backgroundDiv = document.createElement("div");
+    backgroundDiv.className = "target_slot_background";
+    backgroundDiv.style.setProperty(
+      "--target-slot-background",
+      stringifyStyle(targetSlotConfiguration.background, "background"),
+    );
+    backgroundDiv.style.setProperty(
+      "--target-slot-width",
+      `${targetSlotConfiguration.width || 0}px`,
+    );
+    backgroundDiv.style.setProperty(
+      "--target-slot-height",
+      `${targetSlotConfiguration.height || 0}px`,
+    );
+    activeGroup.insertBefore(backgroundDiv, targetSlot);
+
     return createOpacityTransition(targetSlot, 1, {
       from: 0,
       duration,
       styleSynchronizer: "inline_style",
       onFinish: (targetSlotOpacityTransition) => {
+        backgroundDiv.remove();
         targetSlotOpacityTransition.cancel();
       },
     });
