@@ -319,8 +319,8 @@ export const Box = (props) => {
       for (const styleName of Object.keys(cssValues)) {
         const cssValue = cssValues[styleName];
         needForwarding = addStyleMaybeForwarding(
-          styleName,
           cssValue,
+          styleName,
           boxStylesTarget,
           context,
           visualChildPropStrategy,
