@@ -684,16 +684,7 @@ export const createUITransitionController = (
       };
 
       // https://emilkowal.ski/ui/the-magic-of-clip-path
-      // NEW APPROACH: Let container take its natural final size
-      // Use clip-path to reveal content progressively
-
-      // Set container to final dimensions immediately - no layout impact
-      container.style.width = `${toWidth}px`;
-      container.style.height = `${toHeight}px`;
-
-      debugSize(
-        `Simple clip-path approach: container at final size ${toWidth}x${toHeight}, transitioning from ${fromWidth}x${fromHeight}`,
-      );
+      // SIMPLE APPROACH: Container takes final size, clip-path does the transition
 
       // Calculate alignment-aware positioning within final container
       const getAlignedPosition = (containerSize, contentSize, align) => {
@@ -708,52 +699,19 @@ export const createUITransitionController = (
         }
       };
 
-      // Different logic for growing vs shrinking
-      const isGrowing = toWidth >= fromWidth && toHeight >= fromHeight;
+      const startLeft = getAlignedPosition(toWidth, fromWidth, alignX);
+      const startTop = getAlignedPosition(toHeight, fromHeight, alignY);
+      const startRight = startLeft + fromWidth;
+      const startBottom = startTop + fromHeight;
 
-      let startClipPath;
-      let endClipPath;
+      // End clip rectangle: full container
+      const endLeft = 0;
+      const endTop = 0;
+      const endRight = toWidth;
+      const endBottom = toHeight;
 
-      if (isGrowing) {
-        // GROWING: Start with "from" size area, end with full container
-        const startLeft = getAlignedPosition(toWidth, fromWidth, alignX);
-        const startTop = getAlignedPosition(toHeight, fromHeight, alignY);
-        const startRight = startLeft + fromWidth;
-        const startBottom = startTop + fromHeight;
-
-        const endLeft = 0;
-        const endTop = 0;
-        const endRight = toWidth;
-        const endBottom = toHeight;
-
-        startClipPath = `polygon(${startLeft}px ${startTop}px, ${startRight}px ${startTop}px, ${startRight}px ${startBottom}px, ${startLeft}px ${startBottom}px)`;
-        endClipPath = `polygon(${endLeft}px ${endTop}px, ${endRight}px ${endTop}px, ${endRight}px ${endBottom}px, ${endLeft}px ${endBottom}px)`;
-      } else {
-        // SHRINKING: Start with "from" size area (may extend beyond container bounds), end with full container
-        // Position the "from" size as if it were in a container of that size, then center it
-        const startLeft = getAlignedPosition(toWidth, fromWidth, alignX);
-        const startTop = getAlignedPosition(toHeight, fromHeight, alignY);
-        const startRight = startLeft + fromWidth;
-        const startBottom = startTop + fromHeight;
-
-        // End is always the full current container
-        const endLeft = 0;
-        const endTop = 0;
-        const endRight = toWidth;
-        const endBottom = toHeight;
-
-        // Allow coordinates outside container bounds for shrinking
-        startClipPath = `polygon(${startLeft}px ${startTop}px, ${startRight}px ${startTop}px, ${startRight}px ${startBottom}px, ${startLeft}px ${startBottom}px)`;
-        endClipPath = `polygon(${endLeft}px ${endTop}px, ${endRight}px ${endTop}px, ${endRight}px ${endBottom}px, ${endLeft}px ${endBottom}px)`;
-
-        debugSize(
-          `SHRINKING coords: start(${startLeft},${startTop} to ${startRight},${startBottom}) end(${endLeft},${endTop} to ${endRight},${endBottom}) in container ${toWidth}x${toHeight}`,
-        );
-      }
-
-      debugSize(
-        `${isGrowing ? "GROWING" : "SHRINKING"} clip-path transition: ${fromWidth}x${fromHeight} → ${toWidth}x${toHeight}`,
-      );
+      const startClipPath = `polygon(${startLeft}px ${startTop}px, ${startRight}px ${startTop}px, ${startRight}px ${startBottom}px, ${startLeft}px ${startBottom}px)`;
+      const endClipPath = `polygon(${endLeft}px ${endTop}px, ${endRight}px ${endTop}px, ${endRight}px ${endBottom}px, ${endLeft}px ${endBottom}px)`;
 
       // Create clip-path animation using Web Animations API
       const clipAnimation = container.animate(
@@ -794,11 +752,11 @@ export const createUITransitionController = (
 
       // Pause at 80% progress
       setTimeout(() => {
-        clipAnimation.pause();
-        window.pausedTransitions.add(clipAnimation);
-        console.debug(
-          "Transition paused at 50% - call window.resumeTransitions() to continue",
-        );
+        // clipAnimation.pause();
+        // window.pausedTransitions.add(clipAnimation);
+        // console.debug(
+        //   "Transition paused at 50% - call window.resumeTransitions() to continue",
+        // );
       }, duration * 0.5);
 
       // Handle finish
@@ -806,11 +764,7 @@ export const createUITransitionController = (
         .then(() => {
           // Remove from paused set if completed
           window.pausedTransitions.delete(clipAnimation);
-          // let container take natural dimensions now
-          // container.style.width = ``;
-          // container.style.height = ``;
           // Clear clip-path to restore normal behavior
-          // container.style.clipPath = "";
           clipAnimation.commitStyles();
           clipAnimation.cancel();
           onSizeTransitionFinished();
