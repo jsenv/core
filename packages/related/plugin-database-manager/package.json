@@ -29,8 +29,8 @@
   },
   "dependencies": {
     "@jsenv/database": "0.0.4",
-    "@jsenv/dom": "0.8.2",
-    "@jsenv/navi": "0.12.8",
+    "@jsenv/dom": "0.8.3",
+    "@jsenv/navi": "0.12.9",
     "@jsenv/sigi": "0.1.4",
     "@jsenv/urls": "2.9.3",
     "@tanstack/table-core": "8.21.3",

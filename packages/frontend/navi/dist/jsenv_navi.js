@@ -1,10 +1,10 @@
 import { installImportMetaCss } from "./jsenv_navi_side_effects.js";
-import { createIterableWeakSet, createPubSub, createValueEffect, createStyleController, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, activeElementSignal, canInterceptKeys, createGroupTransitionController, getWidthWithoutTransition, getHeightWithoutTransition, createWidthTransition, createHeightTransition, getElementSignature, getTranslateX, getInnerWidth, createTranslateXTransition, getTranslateXWithoutTransition, getOpacity, createOpacityTransition, getOpacityWithoutTransition, normalizeStyle, mergeTwoStyles, appendStyles, normalizeStyles, resolveCSSSize, findBefore, findAfter, initFocusGroup, elementIsFocusable, pickLightOrDark, resolveColorLuminance, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { createIterableWeakSet, createPubSub, createValueEffect, createStyleController, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, activeElementSignal, canInterceptKeys, createGroupTransitionController, getElementSignature, getBorderRadius, getBackground, preventIntermediateScrollbar, createOpacityTransition, stringifyStyle, mergeOneStyle, mergeTwoStyles, appendStyles, normalizeStyles, resolveCSSSize, findBefore, findAfter, initFocusGroup, elementIsFocusable, pickLightOrDark, resolveColorLuminance, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { effect, signal, computed, batch, useSignal } from "@preact/signals";
 import { useEffect, useRef, useCallback, useContext, useState, useLayoutEffect, useMemo, useErrorBoundary, useImperativeHandle, useId } from "preact/hooks";
 import { createContext, toChildArray, createRef, cloneElement } from "preact";
-import { jsx, jsxs, Fragment } from "preact/jsx-runtime";
+import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
 import { createPortal, forwardRef } from "preact/compat";
 
 const actionPrivatePropertiesWeakMap = new WeakMap();
@@ -614,9 +614,9 @@ const weakEffect = (values, callback) => {
   return dispose;
 };
 
-let DEBUG$3 = false;
+let DEBUG$2 = false;
 const enableDebugActions = () => {
-  DEBUG$3 = true;
+  DEBUG$2 = true;
 };
 
 let dispatchActions = (params) => {
@@ -680,7 +680,7 @@ const prerunProtectionRegistry = (() => {
     if (protection) {
       clearTimeout(protection.timeoutId);
       protectedActionMap.delete(action);
-      if (DEBUG$3) {
+      if (DEBUG$2) {
         const elapsed = Date.now() - protection.timestamp;
         console.debug(`"${action}": GC protection removed after ${elapsed}ms`);
       }
@@ -698,7 +698,7 @@ const prerunProtectionRegistry = (() => {
       const timestamp = Date.now();
       const timeoutId = setTimeout(() => {
         unprotect(action);
-        if (DEBUG$3) {
+        if (DEBUG$2) {
           console.debug(
             `"${action}": prerun protection expired after ${PROTECTION_DURATION}ms`,
           );
@@ -707,7 +707,7 @@ const prerunProtectionRegistry = (() => {
 
       protectedActionMap.set(action, { timeoutId, timestamp });
 
-      if (DEBUG$3) {
+      if (DEBUG$2) {
         console.debug(
           `"${action}": protected from GC for ${PROTECTION_DURATION}ms`,
         );
@@ -818,7 +818,7 @@ const updateActions = ({
 
   const { runningSet, settledSet } = getActivationInfo();
 
-  if (DEBUG$3) {
+  if (DEBUG$2) {
     let argSource = `reason: \`${reason}\``;
     if (isReplace) {
       argSource += `, isReplace: true`;
@@ -942,7 +942,7 @@ ${lines.join("\n")}`,
       }
     }
   }
-  if (DEBUG$3) {
+  if (DEBUG$2) {
     const lines = [
       ...(willResetSet.size
         ? [formatActionSet(willResetSet, "- will reset:")]
@@ -1038,7 +1038,7 @@ ${lines.join("\n")}`);
       actionToPromotePrivateProperties.isPrerunSignal.value = false;
     }
   }
-  if (DEBUG$3) {
+  if (DEBUG$2) {
     console.groupEnd();
   }
 
@@ -1149,7 +1149,7 @@ const createAction = (callback, rootOptions = {}) => {
       if (!actionAbort) {
         return false;
       }
-      if (DEBUG$3) {
+      if (DEBUG$2) {
         console.log(`"${action}": aborting (reason: ${reason})`);
       }
       actionAbort(reason);
@@ -1421,7 +1421,7 @@ const createAction = (callback, rootOptions = {}) => {
           if (isPrerun && (globalAbortSignal.aborted || abortSignal.aborted)) {
             prerunProtectionRegistry.unprotect(action);
           }
-          if (DEBUG$3) {
+          if (DEBUG$2) {
             console.log(`"${action}": aborted (reason: ${abortReason})`);
           }
         };
@@ -1494,7 +1494,7 @@ const createAction = (callback, rootOptions = {}) => {
             onComplete?.(computedDataSignal.peek(), action);
             completeSideEffect?.(action);
           });
-          if (DEBUG$3) {
+          if (DEBUG$2) {
             console.log(`"${action}": completed`);
           }
           return computedDataSignal.peek();
@@ -1521,7 +1521,7 @@ const createAction = (callback, rootOptions = {}) => {
               "never supposed to happen, abort error should be handled by the abort signal",
             );
           }
-          if (DEBUG$3) {
+          if (DEBUG$2) {
             console.log(
               `"${action}": failed (error: ${e}, handled by ui: ${ui.hasRenderers})`,
             );
@@ -1591,7 +1591,7 @@ const createAction = (callback, rootOptions = {}) => {
 
       const performStop = ({ reason }) => {
         abort(reason);
-        if (DEBUG$3) {
+        if (DEBUG$2) {
           console.log(`"${action}": stopping (reason: ${reason})`);
         }
 
@@ -5212,11 +5212,11 @@ const useExternalValueSync = (
   }
 };
 
-const UNSET = {};
+const UNSET$1 = {};
 const useInitialValue = (compute) => {
-  const initialValueRef = useRef(UNSET);
+  const initialValueRef = useRef(UNSET$1);
   let initialValue = initialValueRef.current;
-  if (initialValue !== UNSET) {
+  if (initialValue !== UNSET$1) {
     return initialValue;
   }
 
@@ -8013,9 +8013,9 @@ const executeWithCleanup = (fn, cleanup) => {
   }
 };
 
-let DEBUG$2 = false;
+let DEBUG$1 = false;
 const enableDebugOnDocumentLoading = () => {
-  DEBUG$2 = true;
+  DEBUG$1 = true;
 };
 
 const windowIsLoadingSignal = signal(true);
@@ -8035,13 +8035,13 @@ const [
   removeFromDocumentLoadingRouteArraySignal,
 ] = arraySignal([]);
 const routingWhile = (fn, routeNames = []) => {
-  if (DEBUG$2 && routeNames.length > 0) {
+  if (DEBUG$1 && routeNames.length > 0) {
     console.debug(`routingWhile: Adding routes to loading state:`, routeNames);
   }
   addToDocumentLoadingRouteArraySignal(...routeNames);
   return executeWithCleanup(fn, () => {
     removeFromDocumentLoadingRouteArraySignal(...routeNames);
-    if (DEBUG$2 && routeNames.length > 0) {
+    if (DEBUG$1 && routeNames.length > 0) {
       console.debug(
         `routingWhile: Removed routes from loading state:`,
         routeNames,
@@ -8058,7 +8058,7 @@ const [
   removeFromDocumentLoadingActionArraySignal,
 ] = arraySignal([]);
 const workingWhile = (fn, actionNames = []) => {
-  if (DEBUG$2 && actionNames.length > 0) {
+  if (DEBUG$1 && actionNames.length > 0) {
     console.debug(
       `workingWhile: Adding actions to loading state:`,
       actionNames,
@@ -8067,7 +8067,7 @@ const workingWhile = (fn, actionNames = []) => {
   addToDocumentLoadingActionArraySignal(...actionNames);
   return executeWithCleanup(fn, () => {
     removeFromDocumentLoadingActionArraySignal(...actionNames);
-    if (DEBUG$2 && actionNames.length > 0) {
+    if (DEBUG$1 && actionNames.length > 0) {
       console.debug(
         `routingWhile: Removed action from loading state:`,
         actionNames,
@@ -8585,1104 +8585,807 @@ const useUrlSearchParam = (paramName) => {
   return [value, setSearchParamValue];
 };
 
+/**
+ * Fix alignment behavior for flex/grid containers that use `height: 100%`.
+ *
+ * Context:
+ * - When a flex/grid container has `height: 100%`, it is "height-locked".
+ * - If its content becomes taller than the container, alignment rules like
+ *   `align-items: center` will cause content to be partially clipped.
+ *
+ * Goal:
+ * - Center content only when it fits.
+ * - Align content at start when it overflows.
+ *
+ * How:
+ * - Temporarily remove height-constraint (`height:auto`) to measure natural height.
+ * - Compare natural height to container height.
+ * - Add/remove an attribute so CSS can adapt alignment.
+ *
+ * Usage:
+ *   monitorItemsOverflow(containerElement);
+ *
+ * CSS example:
+ *   .container { align-items: center; }
+ *   .container[data-items-height-overflow] { align-items: flex-start; }
+ */
+
+
+const WIDTH_ATTRIBUTE_NAME = "data-items-width-overflow";
+const HEIGHT_ATTRIBUTE_NAME = "data-items-height-overflow";
+const monitorItemsOverflow = (container) => {
+  let widthIsOverflowing;
+  let heightIsOverflowing;
+  const onItemsWidthOverflowChange = () => {
+    if (widthIsOverflowing) {
+      container.setAttribute(WIDTH_ATTRIBUTE_NAME, "");
+    } else {
+      container.removeAttribute(WIDTH_ATTRIBUTE_NAME);
+    }
+  };
+  const onItemsHeightOverflowChange = () => {
+    if (heightIsOverflowing) {
+      container.setAttribute(HEIGHT_ATTRIBUTE_NAME, "");
+    } else {
+      container.removeAttribute(HEIGHT_ATTRIBUTE_NAME);
+    }
+  };
+
+  const update = () => {
+    // Save current manual height constraint
+    const prevWidth = container.style.width;
+    const prevHeight = container.style.height;
+    // Remove constraint → get true content dimension
+    container.style.width = "auto";
+    container.style.height = "auto";
+    const naturalWidth = container.scrollWidth;
+    const naturalHeight = container.scrollHeight;
+    if (prevWidth) {
+      container.style.width = prevWidth;
+    } else {
+      container.style.removeProperty("width");
+    }
+    if (prevHeight) {
+      container.style.height = prevHeight;
+    } else {
+      container.style.removeProperty("height");
+    }
+
+    const lockedWidth = container.clientWidth;
+    const lockedHeight = container.clientHeight;
+    const currentWidthIsOverflowing = naturalWidth > lockedWidth;
+    const currentHeightIsOverflowing = naturalHeight > lockedHeight;
+    if (currentWidthIsOverflowing !== widthIsOverflowing) {
+      widthIsOverflowing = currentWidthIsOverflowing;
+      onItemsWidthOverflowChange();
+    }
+    if (currentHeightIsOverflowing !== heightIsOverflowing) {
+      heightIsOverflowing = currentHeightIsOverflowing;
+      onItemsHeightOverflowChange();
+    }
+  };
+
+  const [teardown, addTeardown] = createPubSub();
+
+  update();
+
+  // mutation observer
+  const mutationObserver = new MutationObserver(() => {
+    update();
+  });
+  mutationObserver.observe(container, {
+    childList: true,
+    characterData: true,
+  });
+  addTeardown(() => {
+    mutationObserver.disconnect();
+  });
+
+  // resize observer
+  const resizeObserver = new ResizeObserver(update);
+  resizeObserver.observe(container);
+  addTeardown(() => {
+    resizeObserver.disconnect();
+  });
+
+  const destroy = () => {
+    teardown();
+    container.removeAttribute(WIDTH_ATTRIBUTE_NAME);
+    container.removeAttribute(HEIGHT_ATTRIBUTE_NAME);
+  };
+  return destroy;
+};
+
 installImportMetaCss(import.meta);
 import.meta.css = /* css */ `
-  .ui_transition_container[data-transition-running] {
-    /* When transition are running we need to put overflow: hidden */
-    /* Either because the transition slides */
-    /* Or when size transition are disabled because we need to immediatly crop old content when it's bigger than new content */
-    overflow: hidden;
+  * {
+    box-sizing: border-box;
   }
 
-  .ui_transition_container,
-  .ui_transition_outer_wrapper,
-  .ui_transition_slot,
-  .ui_transition_phase_overlay,
-  .ui_transition_content_overlay {
-    display: flex;
-    width: fit-content;
-    min-width: 100%;
-    height: fit-content;
-    min-height: 100%;
-    flex-direction: inherit;
-    align-items: inherit;
-    justify-content: inherit;
-    border-radius: inherit;
-    cursor: inherit;
+  .ui_transition {
+    --transition-duration: 300ms;
+    --justify-content: center;
+    --align-items: center;
+
+    --x-transition-duration: var(--transition-duration);
+    --x-justify-content: var(--justify-content);
+    --x-align-items: var(--align-items);
+
+    position: relative;
+  }
+  /* Alignment controls */
+  .ui_transition[data-align-x="start"] {
+    --x-justify-content: flex-start;
+  }
+  .ui_transition[data-align-x="center"] {
+    --x-justify-content: center;
+  }
+  .ui_transition[data-align-x="end"] {
+    --x-justify-content: flex-end;
+  }
+  .ui_transition[data-align-y="start"] {
+    --x-align-items: flex-start;
+  }
+  .ui_transition[data-align-y="center"] {
+    --x-align-items: center;
+  }
+  .ui_transition[data-align-y="end"] {
+    --x-align-items: flex-end;
   }
 
-  .ui_transition_slot {
+  .ui_transition,
+  .active_group,
+  .previous_group,
+  .target_slot,
+  .previous_target_slot,
+  .outgoing_slot,
+  .previous_outgoing_slot {
     width: 100%;
-    min-width: fit-content;
     height: 100%;
-    min-height: fit-content;
-    flex-direction: column;
   }
 
-  .ui_transition_container,
-  .ui_transition_slot {
+  .target_slot,
+  .outgoing_slot,
+  .previous_target_slot,
+  .previous_outgoing_slot {
+    display: flex;
+    align-items: var(--x-align-items);
+    justify-content: var(--x-justify-content);
+  }
+  .target_slot[data-items-width-overflow],
+  .previous_target_slot[data-items-width-overflow],
+  .previous_target_slot[data-items-width-overflow],
+  .previous_outgoing_slot[data-items-width-overflow] {
+    --x-justify-content: flex-start;
+  }
+  .target_slot[data-items-height-overflow],
+  .previous_slot[data-items-height-overflow],
+  .previous_target_slot[data-items-height-overflow],
+  .previous_outgoing_slot[data-items-height-overflow] {
+    --x-align-items: flex-start;
+  }
+
+  .active_group {
+    position: relative;
+  }
+  .target_slot {
+    position: relative;
+  }
+  .outgoing_slot,
+  .previous_outgoing_slot {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  .previous_group {
+    position: absolute;
+    inset: 0;
+  }
+  .ui_transition[data-only-previous-group] .previous_group {
     position: relative;
   }
 
-  .ui_transition_phase_overlay,
-  .ui_transition_content_overlay {
+  .target_slot_background {
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 0;
+    z-index: -1;
+    display: none;
+    width: var(--target-slot-width, 100%);
+    height: var(--target-slot-height, 100%);
+    background: var(--target-slot-background, transparent);
     pointer-events: none;
+  }
+  .ui_transition[data-transitioning] .target_slot_background {
+    display: block;
   }
 `;
 
-const DEBUG$1 = {
-  detection: false,
-  size: false,
-  content: false,
-  transition_updates: false,
+const CONTENT_ID_ATTRIBUTE = "data-content-id";
+const CONTENT_PHASE_ATTRIBUTE = "data-content-phase";
+const UNSET = {
+  domNodes: [],
+  domNodesClone: [],
+  isEmpty: true,
+
+  type: "unset",
+  contentId: "unset",
+  contentPhase: undefined,
+  isContentPhase: false,
+  isContent: false,
+  toString: () => "unset",
 };
 
-const SIZE_TRANSITION_DURATION = 150; // Default size transition duration
-const SIZE_DIFF_EPSILON = 0.5; // Ignore size transition when difference below this (px)
-const CONTENT_TRANSITION = "cross-fade"; // Default content transition type
-const CONTENT_TRANSITION_DURATION = 300; // Default content transition duration
-const PHASE_TRANSITION = "cross-fade"; // Default phase transition type (only cross-fade supported)
-const PHASE_TRANSITION_DURATION = 300; // Default phase transition duration
+const isSameConfiguration = (configA, configB) => {
+  return configA.toString() === configB.toString();
+};
 
-const initUITransition = (container) => {
-  if (!container.classList.contains("ui_transition_container")) {
-    console.error("Element must have ui_transition_container class");
-    return { cleanup: () => {} };
-  }
-
-  const localDebug = {
-    ...DEBUG$1,
-    detection: container.hasAttribute("data-debug-detection"),
-    size: container.hasAttribute("data-debug-size"),
-    content: container.hasAttribute("data-debug-content"),
-  };
-  const hasSomeDebugLogs =
-    localDebug.detection || localDebug.size || localDebug.content;
-  const debugClones = container.hasAttribute("data-debug-clones");
-  const debugBreakAfterClone = container.getAttribute(
-    "data-debug-break-after-clone",
-  );
-  const debug = (type, ...args) => {
-    if (localDebug[type]) {
-      console.debug(`[${type}]`, ...args);
-    }
-  };
-
-  const outerWrapper = container.querySelector(".ui_transition_outer_wrapper");
-  const slot = container.querySelector(".ui_transition_slot");
-  const phaseOverlay = outerWrapper.querySelector(
-    ".ui_transition_phase_overlay",
-  );
-  const contentOverlay = container.querySelector(
-    ".ui_transition_content_overlay",
-  );
-  if (!outerWrapper || !slot || !phaseOverlay || !contentOverlay) {
-    console.error("Missing required ui-transition structure");
-    return { cleanup: () => {} };
-  }
-
-  const state = {
-    isPaused: false,
-  };
-  const initialTransitionEnabled = container.hasAttribute(
-    "data-initial-transition",
-  );
-  const transitionController = createGroupTransitionController();
-  const setupTransition = ({
-    isPhaseTransition = false,
-    overlay,
-    needsOldChildNodesClone,
-    previousChildNodes,
-    childNodes,
-    slotInfo,
-    attributeToRemove = [],
-  }) => {
-    let cleanup = () => {};
-    let elementToImpact;
-
-    if (overlay.childNodes.length > 0) {
-      elementToImpact = overlay;
-      cleanup = () => {
-        if (!debugClones) {
-          overlay.innerHTML = "";
-        }
-      };
-      debug(
-        "content",
-        `Continuing from current ${isPhaseTransition ? "phase" : "content"} transition element`,
-      );
-    } else if (needsOldChildNodesClone) {
-      overlay.innerHTML = "";
-      for (const previousChildNode of previousChildNodes) {
-        const previousChildClone = previousChildNode.cloneNode(true);
-        if (previousChildClone.nodeType !== Node.TEXT_NODE) {
-          for (const attrToRemove of attributeToRemove) {
-            previousChildClone.removeAttribute(attrToRemove);
-          }
-          previousChildClone.setAttribute("data-ui-transition-clone", "");
-        }
-        overlay.appendChild(previousChildClone);
-      }
-      elementToImpact = overlay;
-      cleanup = () => {
-        if (!debugClones) {
-          overlay.innerHTML = "";
-        }
-      };
-      debug(
-        "content",
-        `Cloned previous child for ${isPhaseTransition ? "phase" : "content"} transition:`,
-        getElementSignature(previousChildNodes),
-      );
-      if (debugBreakAfterClone === slotInfo.contentKey) {
-        debugger;
-      }
-    } else {
-      overlay.innerHTML = "";
-      debug(
-        "content",
-        `No old child to clone for ${isPhaseTransition ? "phase" : "content"} transition`,
-      );
-    }
-
-    // Determine which elements to return based on transition type:
-    // - Phase transitions: operate on individual elements (cross-fade between specific elements)
-    // - Content transitions: operate at container level (slide entire containers, outlive content phases)
-    let oldElement;
-    let newElement;
-    if (isPhaseTransition) {
-      // Phase transitions work on individual elements
-      oldElement = elementToImpact;
-      newElement = slot;
-    } else {
-      // Content transitions work at container level and can outlive content phase changes
-      oldElement = previousChildNodes.length ? elementToImpact : null;
-      newElement = childNodes.length ? slot : null;
-    }
-
-    return {
-      cleanup,
-      oldElement,
-      newElement,
-    };
-  };
-  const [teardown, addTeardown] = createPubSub();
-  const [publishPause, addPauseCallback] = createPubSub();
-  const [publishResume, addResumeCallback] = createPubSub();
-
-  const [publishChange, subscribeChange] = createPubSub();
-  let triggerChildSlotMutation;
-  let previousSlotInfo;
-  let slotInfo;
-  let changeInfo;
+const createUITransitionController = (
+  root,
   {
-    const createSlotInfo = (childNodes, { contentKey, contentPhase }) => {
-      const hasChild = childNodes.length > 0;
-      let contentKeyFormatted;
-      let contentName;
-      if (hasChild) {
-        if (contentKey) {
-          contentKeyFormatted = `[data-content-key="${contentKey}"]`;
+    duration = 300,
+    alignX = "center",
+    alignY = "center",
+    onStateChange = () => {},
+    pauseBreakpoints = [],
+  } = {},
+) => {
+  const debugConfig = {
+    detection: root.hasAttribute("data-debug-detection"),
+    size: root.hasAttribute("data-debug-size"),
+  };
+  const hasDebugLogs = debugConfig.size;
+  const debugDetection = (message) => {
+    if (!debugConfig.detection) return;
+    console.debug(`[detection]`, message);
+  };
+  const debugSize = (message) => {
+    if (!debugConfig.size) return;
+    console.debug(`[size]`, message);
+  };
+
+  const activeGroup = root.querySelector(".active_group");
+  const targetSlot = root.querySelector(".target_slot");
+  const outgoingSlot = root.querySelector(".outgoing_slot");
+  const previousGroup = root.querySelector(".previous_group");
+  const previousTargetSlot = previousGroup?.querySelector(
+    ".previous_target_slot",
+  );
+  const previousOutgoingSlot = previousGroup?.querySelector(
+    ".previous_outgoing_slot",
+  );
+
+  if (
+    !root ||
+    !activeGroup ||
+    !targetSlot ||
+    !outgoingSlot ||
+    !previousGroup ||
+    !previousTargetSlot ||
+    !previousOutgoingSlot
+  ) {
+    throw new Error(
+      "createUITransitionController requires element with .active_group, .target_slot, .outgoing_slot, .previous_group, .previous_target_slot, and .previous_outgoing_slot elements",
+    );
+  }
+
+  // we maintain a background copy behind target slot to avoid showing
+  // the body flashing during the fade-in
+  const targetSlotBackground = document.createElement("div");
+  targetSlotBackground.className = "target_slot_background";
+  activeGroup.insertBefore(targetSlotBackground, targetSlot);
+
+  root.style.setProperty("--x-transition-duration", `${duration}ms`);
+  outgoingSlot.setAttribute("inert", "");
+  previousGroup.setAttribute("inert", "");
+
+  const detectConfiguration = (slot, { contentId, contentPhase } = {}) => {
+    const domNodes = Array.from(slot.childNodes);
+    if (!domNodes) {
+      return UNSET;
+    }
+
+    const isEmpty = domNodes.length === 0;
+    let textNodeCount = 0;
+    let elementNodeCount = 0;
+    let firstElementNode;
+    const domNodesClone = [];
+    if (isEmpty) {
+      if (contentPhase === undefined) {
+        contentPhase = "empty";
+      }
+    } else {
+      const contentIdSlotAttr = slot.getAttribute(CONTENT_ID_ATTRIBUTE);
+      let contentIdChildAttr;
+      for (const domNode of domNodes) {
+        if (domNode.nodeType === Node.TEXT_NODE) {
+          textNodeCount++;
         } else {
-          let onlyTextNodes = true;
-          for (const child of childNodes) {
-            if (child.nodeType !== Node.TEXT_NODE) {
-              onlyTextNodes = false;
-              break;
-            }
+          if (!firstElementNode) {
+            firstElementNode = domNode;
           }
-          contentKeyFormatted = onlyTextNodes ? "[text]" : "[unkeyed]";
+          elementNodeCount++;
+
+          if (domNode.hasAttribute("data-content-phase")) {
+            const contentPhaseAttr = domNode.getAttribute("data-content-phase");
+            contentPhase = contentPhaseAttr || "attr";
+          }
+          if (domNode.hasAttribute("data-content-key")) {
+            contentIdChildAttr = domNode.getAttribute("data-content-key");
+          }
         }
-        contentName = contentPhase ? "content-phase" : "content";
-      } else {
-        contentKeyFormatted = "[empty]";
-        contentName = "null";
+        const domNodeClone = domNode.cloneNode(true);
+        domNodesClone.push(domNodeClone);
       }
 
-      return {
-        childNodes,
-        contentKey,
-        contentPhase,
+      if (contentIdSlotAttr && contentIdChildAttr) {
+        console.warn(
+          `Slot and slot child both have a [${CONTENT_ID_ATTRIBUTE}]. Slot is ${contentIdSlotAttr} and child is ${contentIdChildAttr}, using the child.`,
+        );
+      }
+      if (contentId === undefined) {
+        contentId = contentIdChildAttr || contentIdSlotAttr || undefined;
+      }
+    }
+    const isOnlyTextNodes = elementNodeCount === 0 && textNodeCount > 1;
+    const singleElementNode = elementNodeCount === 1 ? firstElementNode : null;
 
-        hasChild: childNodes.length > 0,
-        contentKeyFormatted,
-        isContentPhase: Boolean(contentPhase),
-        contentName,
-      };
+    contentId = contentId || getElementSignature(domNodes[0]);
+    if (!contentPhase && isEmpty) {
+      // Imagine code rendering null while switching to a new content
+      // or even while staying on the same content.
+      // In the UI we want to consider this as an "empty" phase.
+      // meaning the ui will keep the same size until something else happens
+      // This prevent layout shifts of code not properly handling
+      // intermediate states.
+      contentPhase = "empty";
+    }
+
+    let width;
+    let height;
+    let borderRadius;
+    let border;
+    let background;
+
+    if (isEmpty) {
+      debugSize(`measureSlot(".${slot.className}") -> it is empty`);
+    } else if (singleElementNode) {
+      const rect = singleElementNode.getBoundingClientRect();
+      width = rect.width;
+      height = rect.height;
+      debugSize(`measureSlot(".${slot.className}") -> [${width}x${height}]`);
+      borderRadius = getBorderRadius(singleElementNode);
+      border = getComputedStyle(singleElementNode).border;
+      background = getBackground(singleElementNode);
+    } else {
+      // text, multiple elements
+      const rect = slot.getBoundingClientRect();
+      width = rect.width;
+      height = rect.height;
+      debugSize(`measureSlot(".${slot.className}") -> [${width}x${height}]`);
+    }
+
+    const commonProperties = {
+      domNodes,
+      domNodesClone,
+      isEmpty,
+      isOnlyTextNodes,
+      singleElementNode,
+
+      width,
+      height,
+      borderRadius,
+      border,
+      background,
+
+      contentId,
     };
-    previousSlotInfo = createSlotInfo([], {
-      contentKey: undefined,
+
+    if (contentPhase) {
+      return {
+        ...commonProperties,
+        type: "content_phase",
+        contentPhase,
+        isContentPhase: true,
+        isContent: false,
+        toString: () => `content(${contentId}).phase(${contentPhase})`,
+      };
+    }
+    return {
+      ...commonProperties,
+      type: "content",
       contentPhase: undefined,
-    });
-    slotInfo = previousSlotInfo;
-    let isUpdating = false;
-    triggerChildSlotMutation = (reason) => {
-      if (isUpdating) {
-        debug("detection", "Preventing recursive update");
-        return;
-      }
-      try {
-        const childNodes = Array.from(slot.childNodes);
-        if (hasSomeDebugLogs) {
-          const updateLabel =
-            childNodes.length === 0
-              ? "cleared/empty"
-              : childNodes.length === 1
-                ? getElementSignature(childNodes[0])
-                : getElementSignature(slot);
-          console.group(`UI Update: ${updateLabel} (reason: ${reason})`);
-        }
-        updateSlotChangeInfo(childNodes, reason);
-        if (changeInfo.isStateChangeOnly) {
-        } else {
-          publishChange();
-          previousSlotInfo = slotInfo;
-          if (
-            changeInfo.isInitialPopulationWithoutTransition ||
-            changeInfo.becomesPopulated
-          ) {
-            hasPopulatedOnce = true;
+      isContentPhase: false,
+      isContent: true,
+      toString: () => `content(${contentId})`,
+    };
+  };
+
+  const targetSlotInitialConfiguration = detectConfiguration(targetSlot);
+  const outgoingSlotInitialConfiguration = detectConfiguration(outgoingSlot, {
+    contentPhase: "true",
+  });
+  let targetSlotConfiguration = targetSlotInitialConfiguration;
+  let outgoingSlotConfiguration = outgoingSlotInitialConfiguration;
+  let previousTargetSlotConfiguration = UNSET;
+
+  const updateSlotAttributes = () => {
+    if (targetSlotConfiguration.isEmpty && outgoingSlotConfiguration.isEmpty) {
+      root.setAttribute("data-only-previous-group", "");
+    } else {
+      root.removeAttribute("data-only-previous-group");
+    }
+  };
+  const updateAlignment = () => {
+    // Set data attributes for CSS-based alignment
+    root.setAttribute("data-align-x", alignX);
+    root.setAttribute("data-align-y", alignY);
+  };
+
+  const moveConfigurationIntoSlot = (configuration, slot) => {
+    slot.innerHTML = "";
+    for (const domNode of configuration.domNodesClone) {
+      slot.appendChild(domNode);
+    }
+    // in case border or stuff like that have changed we re-detect the config
+    const updatedConfig = detectConfiguration(slot);
+    if (slot === targetSlot) {
+      targetSlotConfiguration = updatedConfig;
+    } else if (slot === outgoingSlot) {
+      outgoingSlotConfiguration = updatedConfig;
+    } else if (slot === previousTargetSlot) {
+      previousTargetSlotConfiguration = updatedConfig;
+    } else if (slot === previousOutgoingSlot) ; else {
+      throw new Error("Unknown slot for applyConfiguration");
+    }
+  };
+
+  updateAlignment();
+
+  let transitionType = "none";
+  const groupTransitionOptions = {
+    // debugBreakpoints: [0.25],
+    pauseBreakpoints,
+    lifecycle: {
+      setup: () => {
+        updateSlotAttributes();
+        root.setAttribute("data-transitioning", "");
+        onStateChange({ isTransitioning: true });
+        return {
+          teardown: () => {
+            root.removeAttribute("data-transitioning");
+            updateSlotAttributes(); // Update positioning after transition
+            onStateChange({ isTransitioning: false });
+          },
+        };
+      },
+    },
+  };
+  const transitionController = createGroupTransitionController(
+    groupTransitionOptions,
+  );
+
+  const elementToClip = root;
+  const morphContainerIntoTarget = () => {
+    const morphTransitions = [];
+    {
+      // TODO: ideally when scrollContainer is document AND we transition
+      // from a layout with scrollbar to a layout without
+      // we have clip path detecting we go from a given width/height to a new width/height
+      // that might just be the result of scrollbar appearing/disappearing
+      // we should detect when this happens to avoid clipping what correspond to the scrollbar presence toggling
+      const fromWidth = previousTargetSlotConfiguration.width || 0;
+      const fromHeight = previousTargetSlotConfiguration.height || 0;
+      const toWidth = targetSlotConfiguration.width || 0;
+      const toHeight = targetSlotConfiguration.height || 0;
+      debugSize(
+        `transition from [${fromWidth}x${fromHeight}] to [${toWidth}x${toHeight}]`,
+      );
+      const restoreOverflow = preventIntermediateScrollbar(root, {
+        fromWidth,
+        fromHeight,
+        toWidth,
+        toHeight,
+        onPrevent: ({ x, y, scrollContainer }) => {
+          if (x) {
+            debugSize(
+              `Temporarily hiding horizontal overflow during transition on ${getElementSignature(scrollContainer)}`,
+            );
           }
+          if (y) {
+            debugSize(
+              `Temporarily hiding vertical overflow during transition on ${getElementSignature(scrollContainer)}`,
+            );
+          }
+        },
+        onRestore: () => {
+          debugSize(`Restored overflow after transition`);
+        },
+      });
+
+      const onSizeTransitionFinished = () => {
+        // Restore overflow when transition is complete
+        restoreOverflow();
+      };
+
+      // https://emilkowal.ski/ui/the-magic-of-clip-path
+      const elementToClipRect = elementToClip.getBoundingClientRect();
+      const elementToClipWidth = elementToClipRect.width;
+      const elementToClipHeight = elementToClipRect.height;
+      // Calculate where content is positioned within the large container
+      const getAlignedPosition = (containerSize, contentSize, align) => {
+        switch (align) {
+          case "start":
+            return 0;
+          case "end":
+            return containerSize - contentSize;
+          case "center":
+          default:
+            return (containerSize - contentSize) / 2;
         }
-      } finally {
-        isUpdating = false;
-        if (hasSomeDebugLogs) {
+      };
+      // Position of "from" content within large container
+      const fromLeft = getAlignedPosition(
+        elementToClipWidth,
+        fromWidth,
+        alignX,
+      );
+      const fromTop = getAlignedPosition(
+        elementToClipHeight,
+        fromHeight,
+        alignY,
+      );
+      // Position of target content within large container
+      const targetLeft = getAlignedPosition(
+        elementToClipWidth,
+        toWidth,
+        alignX,
+      );
+      const targetTop = getAlignedPosition(
+        elementToClipHeight,
+        toHeight,
+        alignY,
+      );
+      debugSize(
+        `Positions in container: from [${fromLeft},${fromTop}] ${fromWidth}x${fromHeight} to [${targetLeft},${targetTop}] ${toWidth}x${toHeight}`,
+      );
+      // Get border-radius values
+      const fromBorderRadius =
+        previousTargetSlotConfiguration.borderRadius || 0;
+      const toBorderRadius = targetSlotConfiguration.borderRadius || 0;
+      const startInsetTop = fromTop;
+      const startInsetRight = elementToClipWidth - (fromLeft + fromWidth);
+      const startInsetBottom = elementToClipHeight - (fromTop + fromHeight);
+      const startInsetLeft = fromLeft;
+
+      const endInsetTop = targetTop;
+      const endInsetRight = elementToClipWidth - (targetLeft + toWidth);
+      const endInsetBottom = elementToClipHeight - (targetTop + toHeight);
+      const endInsetLeft = targetLeft;
+
+      const startClipPath = `inset(${startInsetTop}px ${startInsetRight}px ${startInsetBottom}px ${startInsetLeft}px round ${fromBorderRadius}px)`;
+      const endClipPath = `inset(${endInsetTop}px ${endInsetRight}px ${endInsetBottom}px ${endInsetLeft}px round ${toBorderRadius}px)`;
+      // Create clip-path animation using Web Animations API
+      const clipAnimation = elementToClip.animate(
+        [{ clipPath: startClipPath }, { clipPath: endClipPath }],
+        {
+          duration,
+          easing: "ease",
+          fill: "forwards",
+        },
+      );
+
+      // Handle finish
+      clipAnimation.finished
+        .then(() => {
+          // Clear clip-path to restore normal behavior
+          elementToClip.style.clipPath = "";
+          clipAnimation.cancel();
+          onSizeTransitionFinished();
+        })
+        .catch(() => {
+          // Animation was cancelled
+        });
+      clipAnimation.play();
+    }
+
+    return morphTransitions;
+  };
+  const fadeInTargetSlot = () => {
+    targetSlotBackground.style.setProperty(
+      "--target-slot-background",
+      stringifyStyle(targetSlotConfiguration.background, "background"),
+    );
+    targetSlotBackground.style.setProperty(
+      "--target-slot-width",
+      `${targetSlotConfiguration.width || 0}px`,
+    );
+    targetSlotBackground.style.setProperty(
+      "--target-slot-height",
+      `${targetSlotConfiguration.height || 0}px`,
+    );
+    return createOpacityTransition(targetSlot, 1, {
+      from: 0,
+      duration,
+      styleSynchronizer: "inline_style",
+      onFinish: (targetSlotOpacityTransition) => {
+        targetSlotOpacityTransition.cancel();
+      },
+    });
+  };
+  const fadeOutPreviousGroup = () => {
+    return createOpacityTransition(previousGroup, 0, {
+      from: 1,
+      duration,
+      styleSynchronizer: "inline_style",
+      onFinish: (previousGroupOpacityTransition) => {
+        previousGroupOpacityTransition.cancel();
+        previousGroup.style.opacity = "0"; // keep previous group visually hidden
+      },
+    });
+  };
+  const fadeOutOutgoingSlot = () => {
+    return createOpacityTransition(outgoingSlot, 0, {
+      duration,
+      from: 1,
+      styleSynchronizer: "inline_style",
+      onFinish: (outgoingSlotOpacityTransition) => {
+        outgoingSlotOpacityTransition.cancel();
+        outgoingSlot.style.opacity = "0"; // keep outgoing slot visually hidden
+      },
+    });
+  };
+
+  // content_to_content transition (uses previous_group)
+  const applyContentToContentTransition = (toConfiguration) => {
+    // 1. move target slot to previous
+    moveConfigurationIntoSlot(targetSlotConfiguration, previousTargetSlot);
+    targetSlotConfiguration = toConfiguration;
+    // 2. move outgoing slot to previous
+    moveConfigurationIntoSlot(outgoingSlotConfiguration, previousOutgoingSlot);
+    moveConfigurationIntoSlot(UNSET, outgoingSlot);
+
+    const transitions = [
+      ...morphContainerIntoTarget(),
+      fadeInTargetSlot(),
+      fadeOutPreviousGroup(),
+    ];
+    const transition = transitionController.update(transitions, {
+      onFinish: () => {
+        moveConfigurationIntoSlot(UNSET, previousTargetSlot);
+        moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
+        if (hasDebugLogs) {
           console.groupEnd();
         }
-      }
-    };
+      },
+    });
+    transition.play();
+  };
+  // content_phase_to_content_phase transition (uses outgoing_slot)
+  const applyContentPhaseToContentPhaseTransition = (toConfiguration) => {
+    // 1. Move target slot to outgoing
+    moveConfigurationIntoSlot(targetSlotConfiguration, outgoingSlot);
+    targetSlotConfiguration = toConfiguration;
 
-    let hasPopulatedOnce = false; // track if we've already populated once (null → something)
-    const updateSlotChangeInfo = (currentChildNodes, reason = "mutation") => {
-      let childContentKey;
-      let contentPhase;
-      if (currentChildNodes.length === 0) {
-        contentPhase = true; // empty treated as phase
-      } else {
-        for (const childNode of currentChildNodes) {
-          if (childNode.nodeType === Node.TEXT_NODE) {
-            continue;
-          }
-          if (childNode.hasAttribute("data-content-phase")) {
-            const contentPhaseAttr =
-              childNode.getAttribute("data-content-phase");
-            contentPhase = contentPhaseAttr || true;
-          }
-          if (childNode.hasAttribute("data-content-key")) {
-            childContentKey = childNode.getAttribute("data-content-key");
-          }
+    const transitions = [
+      ...morphContainerIntoTarget(),
+      fadeInTargetSlot(),
+      fadeOutOutgoingSlot(),
+    ];
+    const transition = transitionController.update(transitions, {
+      onFinish: () => {
+        moveConfigurationIntoSlot(UNSET, outgoingSlot);
+
+        if (hasDebugLogs) {
+          console.groupEnd();
         }
-      }
-      const slotContentKey = slot.getAttribute("data-content-key");
-      if (childContentKey && slotContentKey) {
-        console.warn(
-          `Slot and slot child both have a [data-content-key]. Slot is ${slotContentKey} and child is ${childContentKey}, using the child.`,
-        );
-      }
-      const contentKey = childContentKey || slotContentKey || undefined;
-      slotInfo = createSlotInfo(currentChildNodes, {
-        contentKey,
-        contentPhase,
-      });
+      },
+    });
+    transition.play();
+  };
+  // any_to_empty transition
+  const applyToEmptyTransition = () => {
+    // 1. move target slot to previous
+    moveConfigurationIntoSlot(targetSlotConfiguration, previousTargetSlot);
+    targetSlotConfiguration = UNSET;
+    // 2. move outgoing slot to previous
+    moveConfigurationIntoSlot(outgoingSlotConfiguration, previousOutgoingSlot);
+    outgoingSlotConfiguration = UNSET;
 
-      const hadChild = previousSlotInfo.hasChild;
-      const hasChild = currentChildNodes.length > 0;
-      const becomesEmpty = hadChild && !hasChild;
-      const becomesPopulated = !hadChild && hasChild;
-      const isInitialPopulationWithoutTransition =
-        becomesPopulated && !hasPopulatedOnce && !initialTransitionEnabled;
-      const shouldDoContentTransition =
-        contentKey &&
-        previousSlotInfo.contentKey &&
-        contentKey !== previousSlotInfo.contentKey;
-      const previousIsContentPhase = !hadChild || previousSlotInfo.contentPhase;
-      const currentIsContentPhase = !hasChild || contentPhase;
-      const shouldDoPhaseTransition =
-        !shouldDoContentTransition &&
-        (becomesPopulated ||
-          becomesEmpty ||
-          (hadChild &&
-            hasChild &&
-            (previousIsContentPhase !== currentIsContentPhase ||
-              (previousIsContentPhase && currentIsContentPhase))));
-      const contentChange = hadChild && hasChild && shouldDoContentTransition;
-      const phaseChange = hadChild && hasChild && shouldDoPhaseTransition;
-      const isTransitionLess =
-        !shouldDoContentTransition &&
-        !shouldDoPhaseTransition &&
-        !becomesPopulated &&
-        !becomesEmpty;
-      const shouldDoContentTransitionIncludingPopulation =
-        shouldDoContentTransition ||
-        (becomesPopulated && !shouldDoPhaseTransition);
-      // nothing to transition if no previous and no current child
-      // (Either it's the initial call or just content-key changes but there is no child yet)
-      const isStateChangeOnly = !hadChild && !hasChild;
-      if (isStateChangeOnly) {
-        const prevKey = previousSlotInfo.contentKey;
-        const keyIsTheSame = prevKey === contentKey;
-        if (keyIsTheSame) {
-          debug(
-            "detection",
-            `Childless change: no changes found -> do nothing and skip transitions`,
-          );
-        } else if (!prevKey && contentKey) {
-          debug(
-            "detection",
-            `Childless change: ${contentKey} added -> registering it and skip transitions`,
-          );
-        } else if (prevKey && !contentKey) {
-          debug(
-            "detection",
-            `Childless change: ${contentKey} removed -> registering it and skip transitions`,
-          );
-        } else {
-          debug(
-            "detection",
-            `Childless change: content key updated from ${prevKey} to ${contentKey} -> registering it and skip transitions`,
-          );
+    const transitions = [...morphContainerIntoTarget(), fadeOutPreviousGroup()];
+    const transition = transitionController.update(transitions, {
+      onFinish: () => {
+        moveConfigurationIntoSlot(UNSET, previousTargetSlot);
+        moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
+        if (hasDebugLogs) {
+          console.groupEnd();
         }
-      } else if (isInitialPopulationWithoutTransition) {
-        debug(
-          "detection",
-          "Initial population detected -> skipping transitions (opt-in with [data-initial-transition])",
-        );
-      } else if (previousSlotInfo.contentKey !== slotInfo.contentKey) {
-        let contentKeysSentence = `Content key: ${previousSlotInfo.contentKeyFormatted} → ${slotInfo.contentKeyFormatted}`;
-        debug("detection", contentKeysSentence);
-      } else if (previousSlotInfo.contentPhase !== slotInfo.contentPhase) {
-        let contentPhasesSentence =
-          slotInfo.contentPhase && previousSlotInfo.contentPhase
-            ? `Content phase: ${previousSlotInfo.contentPhase} → ${slotInfo.contentPhase}`
-            : previousSlotInfo.contentPhase
-              ? `becomes content (content phase becomes undefined)`
-              : `content phase becomes ${slotInfo.contentPhase}`;
-        debug("detection", contentPhasesSentence);
-      }
-
-      changeInfo = {
-        reason,
-        previousSlotInfo,
-        becomesEmpty,
-        becomesPopulated,
-        isInitialPopulationWithoutTransition,
-        shouldDoContentTransition,
-        shouldDoPhaseTransition,
-        contentChange,
-        phaseChange,
-        isTransitionLess,
-        shouldDoContentTransitionIncludingPopulation,
-        isStateChangeOnly,
-      };
-    };
-  }
-
-  let onContentTransitionComplete;
-  let hasSizeTransitions = container.hasAttribute("data-size-transition");
-  {
-    let naturalContentWidth = 0; // Natural size of actual content (not loading/error states)
-    let naturalContentHeight = 0;
-    let constrainedWidth = 0; // Current constrained dimensions (what outer wrapper is set to)
-    let constrainedHeight = 0;
-    let sizeTransition = null;
-
-    let pauseResizeObserver;
-    {
-      let resizeObserver = null;
-      let isWithinResizeObserverTick = false;
-      const pauseReasonSet = new Set();
-      let state = "disconnected"; // "disconnected" | "paused" | "observing"
-      let pendingResizeCount = 0;
-      let resumeAnimationFrame;
-
-      pauseResizeObserver = (reason = "pause_requested") => {
-        cancelAnimationFrame(resumeAnimationFrame);
-        pauseReasonSet.add(reason);
-        if (isWithinResizeObserverTick) {
-          if (resizeObserver) {
-            debug("size", `[resize observer] stop while "${reason}"`);
-            stopResizeObserver();
-          }
-        } else {
-          debug("size", `[resize observer] pause while "${reason}"`);
-          // we keep the resize observer alive because we are not in a resize tick
-          state = "paused";
-        }
-        const resume = () => {
-          pauseReasonSet.delete(reason);
-          if (pauseReasonSet.size > 0) {
-            return;
-          }
-          resumeAnimationFrame = requestAnimationFrame(() => {
-            debug("size", `[resize observer] resume after "${reason}"`);
-            if (pendingResizeCount) {
-              debug(
-                "size",
-                `[resize observer] was called while paused -> syncContentDimensions()`,
-              );
-              pendingResizeCount = 0;
-              syncContentDimensions();
-              state = "observing";
-            }
-            if (state === "disconnected") {
-              debug(
-                "size",
-                `[resize observer] was disconnected -> reconnect it`,
-              );
-              startResizeObserver();
-            }
-          });
-        };
-        return resume;
-      };
-      const stopResizeObserver = () => {
-        state = "disconnected";
-        if (!resizeObserver) return;
-        resizeObserver.disconnect();
-        resizeObserver = null;
-      };
-      const startResizeObserver = () => {
-        state = "observing";
-        resizeObserver = new ResizeObserver(() => {
-          if (!hasSizeTransitions) {
-            return;
-          }
-          if (!slotInfo.hasChild || slotInfo.isContentPhase) {
-            debug(
-              "size",
-              "[resize observer] size change ignored (no child or content-phase)",
-            );
-            return;
-          }
-          if (state === "paused") {
-            pendingResizeCount++;
-            const pauseReason =
-              Array.from(pauseReasonSet).join(", ") ||
-              "wait next frame to resume";
-            debug(
-              "size",
-              `[resize observer] size change ignore (${pauseReason})`,
-            );
-            return;
-          }
-          if (localDebug.size) {
-            console.group("[resize observer] size change detected");
-          }
-          isWithinResizeObserverTick = true;
-          syncContentDimensions();
-          if (localDebug.size) {
-            console.groupEnd();
-          }
-          requestAnimationFrame(() => {
-            isWithinResizeObserverTick = false;
-          });
-        });
-        resizeObserver.observe(slot);
-      };
-      startResizeObserver();
-      addTeardown(() => {
-        stopResizeObserver();
-      });
+      },
+    });
+    transition.play();
+  };
+  // Main transition method
+  const transitionTo = (
+    newContentElement,
+    { contentPhase, contentId } = {},
+  ) => {
+    if (contentId) {
+      targetSlot.setAttribute(CONTENT_ID_ATTRIBUTE, contentId);
+    } else {
+      targetSlot.removeAttribute(CONTENT_ID_ATTRIBUTE);
     }
+    if (contentPhase) {
+      targetSlot.setAttribute(CONTENT_PHASE_ATTRIBUTE, contentPhase);
+    } else {
+      targetSlot.removeAttribute(CONTENT_PHASE_ATTRIBUTE);
+    }
+    if (newContentElement) {
+      targetSlot.innerHTML = "";
+      targetSlot.appendChild(newContentElement);
+    } else {
+      targetSlot.innerHTML = "";
+    }
+  };
+  // Reset to initial content
+  const resetContent = () => {
+    transitionController.cancel();
+    moveConfigurationIntoSlot(targetSlotInitialConfiguration, targetSlot);
+    moveConfigurationIntoSlot(outgoingSlotInitialConfiguration, outgoingSlot);
+    moveConfigurationIntoSlot(UNSET, previousTargetSlot);
+    moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
+  };
 
-    const measureSlotSize = () => {
-      return [
-        getWidthWithoutTransition(slot),
-        getHeightWithoutTransition(slot),
-      ];
-    };
-    const syncContentDimensions = () => {
-      // check content dimensions to see if they changed and sync them
-      const [currentWidth, currentHeight] = measureSlotSize();
-      if (!slotInfo.isContentPhase) {
-        updateNaturalContentSize(currentWidth, currentHeight);
-      }
-      if (sizeTransition) {
-        updateToSize(currentWidth, currentHeight);
-      } else {
-        constrainedWidth = currentWidth;
-        constrainedHeight = currentHeight;
-      }
-    };
-    const applySizeConstraintsUntil = (width, height, reason) => {
-      // we want to pause either because we have a diff and don't want to trigger the resize observer
-      // or if we have no diff because we're about to do something that would trigger it (transition)
-      const resumeResizeObserver = pauseResizeObserver(reason);
-      debug("size", `Applying size constraints (${reason})`, {
-        width: `${constrainedWidth} → ${width}`,
-        height: `${constrainedHeight} → ${height}`,
-      });
-      outerWrapper.style.width = `${width}px`;
-      outerWrapper.style.height = `${height}px`;
-      constrainedWidth = width;
-      constrainedHeight = height;
-      // force content overlay to take the right size
-      // (this way the content clone is not distorted by the new content size)
-      contentOverlay.style.width = `${width}px`;
-      contentOverlay.style.height = `${height}px`;
-      const release = (reason) => {
-        releaseSizeConstraints(reason);
-        resumeResizeObserver(reason);
-      };
-      release.releaseResizeObserver = () => {
-        resumeResizeObserver(reason);
-      };
-      return release;
-    };
-    const applySizeConstraints = (width, height, reason) => {
-      applySizeConstraintsUntil(width, height, reason);
-    };
-    const releaseSizeConstraints = (reason) => {
-      if (slotInfo.isContentPhase) {
-        return;
-      }
-      debug("size", `Releasing constraints (${reason})`);
-      const [beforeWidth, beforeHeight] = measureSlotSize();
-      outerWrapper.style.width = "";
-      outerWrapper.style.height = "";
-      const [afterWidth, afterHeight] = measureSlotSize();
-      debug("size", "Size after release:", {
-        width: `${beforeWidth} → ${afterWidth}`,
-        height: `${beforeHeight} → ${afterHeight}`,
-      });
-      updateNaturalContentSize(afterWidth, afterHeight);
-      constrainedWidth = afterWidth;
-      constrainedHeight = afterHeight;
-      contentOverlay.style.width = ``;
-      contentOverlay.style.height = ``;
-    };
-    const updateToSize = (targetWidth, targetHeight) => {
-      if (
-        constrainedWidth === targetWidth &&
-        constrainedHeight === targetHeight
-      ) {
-        return;
-      }
-      if (!hasSizeTransitions) {
-        applySizeConstraints(
-          targetWidth,
-          targetHeight,
-          "size update without transition",
-        );
-        return;
-      }
-      const widthDiff = Math.abs(targetWidth - constrainedWidth);
-      const heightDiff = Math.abs(targetHeight - constrainedHeight);
-      if (widthDiff <= SIZE_DIFF_EPSILON && heightDiff <= SIZE_DIFF_EPSILON) {
-        applySizeConstraints(
-          targetWidth,
-          targetHeight,
-          "skip transition (negligible diff)",
-        );
-        return;
-      }
-      const duration = parseInt(
-        container.getAttribute("data-size-transition-duration") ||
-          SIZE_TRANSITION_DURATION,
+  const targetSlotEffect = (reasons) => {
+    const fromConfiguration = targetSlotConfiguration;
+    const toConfiguration = detectConfiguration(targetSlot);
+    if (hasDebugLogs) {
+      console.group(`targetSlotEffect()`);
+      console.debug(`reasons:`);
+      console.debug(`- ${reasons.join("\n- ")}`);
+    }
+    if (isSameConfiguration(fromConfiguration, toConfiguration)) {
+      debugDetection(
+        `already in desired state (${toConfiguration}) -> early return`,
       );
-      debug("size", "prepare transition:", {
-        width: `${constrainedWidth} → ${targetWidth}`,
-        height: `${constrainedHeight} → ${targetHeight}`,
-        duration,
-      });
-
-      const transitions = [];
-      if (widthDiff === 0) ; else if (widthDiff <= SIZE_DIFF_EPSILON) {
-        debug(
-          "size",
-          `Skip width transition (negligible diff ${widthDiff.toFixed(4)}px)`,
-        );
-      } else {
-        transitions.push(
-          createWidthTransition(outerWrapper, targetWidth, {
-            setup: () =>
-              notifyTransition(outerWrapper, {
-                modelId: "ui_transition_width",
-                canOverflow: true,
-                id:
-                  targetWidth > constrainedWidth
-                    ? "grow_to_new_width"
-                    : "shrink_to_new_width",
-              }),
-            duration,
-            onUpdate: ({ value }) => {
-              constrainedWidth = value;
-            },
-          }),
-        );
+      if (hasDebugLogs) {
+        console.groupEnd();
       }
-      if (heightDiff === 0) ; else if (heightDiff <= SIZE_DIFF_EPSILON) {
-        debug(
-          "size",
-          `Skip height transition (negligible diff ${heightDiff.toFixed(4)}px)`,
-        );
-      } else {
-        transitions.push(
-          createHeightTransition(outerWrapper, targetHeight, {
-            setup: () =>
-              notifyTransition(outerWrapper, {
-                modelId: "ui_transition_height",
-                canOverflow: true,
-                id:
-                  targetHeight > constrainedHeight
-                    ? "grow_to_new_height"
-                    : "shrink_to_new_height",
-              }),
-            duration,
-            onUpdate: ({ value }) => {
-              constrainedHeight = value;
-            },
-          }),
-        );
-      }
-      const release = applySizeConstraintsUntil(
-        constrainedWidth,
-        constrainedHeight,
-        "size transitioning",
-      );
-      sizeTransition = transitionController.animate(transitions, {
-        onCancel: () => {
-          release.releaseResizeObserver("size transition cancelled");
-        },
-        onFinish: () => {
-          release("size transition finished");
-        },
-      });
-      sizeTransition.play();
-    };
-    const updateNaturalContentSize = (width, height) => {
-      if (width === naturalContentWidth && height === naturalContentHeight) {
-        return;
-      }
-      debug("size", "Updating natural content size:", {
-        width: `${naturalContentWidth} → ${width}`,
-        height: `${naturalContentHeight} → ${height}`,
-      });
-      naturalContentWidth = width;
-      naturalContentHeight = height;
-    };
+      return;
+    }
+    const fromConfigType = fromConfiguration.type;
+    const toConfigType = toConfiguration.type;
+    transitionType = `${fromConfigType}_to_${toConfigType}`;
+    debugDetection(
+      `Prepare "${transitionType}" transition (${fromConfiguration} -> ${toConfiguration})`,
+    );
+    // content_to_empty / content_phase_to_empty
+    if (toConfiguration.isEmpty) {
+      applyToEmptyTransition();
+      return;
+    }
+    // content_phase_to_content_phase
+    if (fromConfiguration.isContentPhase && toConfiguration.isContentPhase) {
+      applyContentPhaseToContentPhaseTransition(toConfiguration);
+      return;
+    }
+    // content_phase_to_content
+    if (fromConfiguration.isContentPhase && toConfiguration.isContent) {
+      applyContentPhaseToContentPhaseTransition(toConfiguration);
+      return;
+    }
+    // content_to_content_phase
+    if (fromConfiguration.isContent && toConfiguration.isContentPhase) {
+      applyContentPhaseToContentPhaseTransition(toConfiguration);
+      return;
+    }
+    // content_to_content (default case)
+    applyContentToContentTransition(toConfiguration);
+  };
 
-    // Initialize with current size
-    [constrainedWidth, constrainedHeight] = measureSlotSize();
-
-    const updateSizeTransition = () => {
-      hasSizeTransitions = container.hasAttribute("data-size-transition");
-      const { isContentPhase } = slotInfo;
-      const { isInitialPopulationWithoutTransition } = changeInfo;
-      debug(
-        "size",
-        `updateSizeTransition(), current constrained size: ${constrainedWidth.toFixed(2)}x${constrainedHeight.toFixed(2)}`,
-      );
-      sizeTransition?.cancel();
-
-      // Initial population skip (first null → something): no content or size animations
-      if (isInitialPopulationWithoutTransition) {
-        const [newWidth, newHeight] = measureSlotSize();
-        debug("size", `content size measured to: ${newWidth}x${newHeight}`);
-        if (isContentPhase) {
-          applySizeConstraints(
-            newWidth,
-            newHeight,
-            "content phase initial population",
-          );
-        } else {
-          updateNaturalContentSize(newWidth, newHeight);
-          releaseSizeConstraints("initial population - skip transitions");
-        }
-        return;
-      }
-
-      let targetWidth;
-      let targetHeight;
-      if (isContentPhase) {
-        const shouldUseNewDimensions =
-          naturalContentWidth === 0 && naturalContentHeight === 0;
-        if (shouldUseNewDimensions) {
-          // we don't have any natural content dimensions yet, we can use the content phase dimensions for now
-          [targetWidth, targetHeight] = measureSlotSize();
-          debug(
-            "size",
-            `content phase dimension measured to: ${targetWidth}x${targetHeight}`,
-          );
-        } else {
-          // we don't care about the content phase dimension.
-          // the content dimensions prevails
-          targetWidth = naturalContentWidth;
-          targetHeight = naturalContentHeight;
-          debug(
-            "size",
-            `content phase using natural content size: ${naturalContentWidth}x${naturalContentHeight}`,
-          );
-        }
-      } else {
-        outerWrapper.style.width = "";
-        outerWrapper.style.height = "";
-        const [slotNaturalWidth, slotNaturalHeight] = measureSlotSize();
-        outerWrapper.style.width = `${constrainedWidth}px`;
-        outerWrapper.style.height = `${constrainedHeight}px`;
-        updateNaturalContentSize(slotNaturalWidth, slotNaturalHeight);
-        targetWidth = slotNaturalWidth;
-        targetHeight = slotNaturalHeight;
-        debug(
-          "size",
-          `content size measured to: ${slotNaturalWidth}x${slotNaturalHeight}`,
-        );
-      }
-
-      // If size transitions are disabled hold the previous size to avoid cropping during the content transition.
-      if (!hasSizeTransitions) {
-        debug(
-          "size",
-          `Holding previous size during content transition: ${constrainedWidth}x${constrainedHeight}`,
-        );
-        applySizeConstraints(
-          constrainedWidth,
-          constrainedHeight,
-          "hold size for content transition",
-        );
-        sizeTransition?.cancel();
-        onContentTransitionComplete = () => {
-          onContentTransitionComplete = null;
-          releaseSizeConstraints(
-            "content transition completed - release size hold",
-          );
-        };
-        return;
-      }
-
-      if (
-        targetWidth === constrainedWidth &&
-        targetHeight === constrainedHeight
-      ) {
-        sizeTransition?.cancel();
-        debug("size", "No size change required");
-        releaseSizeConstraints("no size change needed");
-        return;
-      }
-      debug("size", "Size change needed:", {
-        width: `${constrainedWidth} → ${targetWidth}`,
-        height: `${constrainedHeight} → ${targetHeight}`,
-      });
-      updateToSize(targetWidth, targetHeight);
-    };
-    subscribeChange(updateSizeTransition);
-
-    addPauseCallback(() => {
-      sizeTransition?.pause();
-    });
-    addResumeCallback(() => {
-      sizeTransition?.play();
-    });
-    addTeardown(() => {
-      sizeTransition?.cancel();
-    });
-  }
-
-  {
-    let activeContentTransition = null;
-    let activeContentTransitionType = null;
-    let activePhaseTransition = null;
-    let activePhaseTransitionType = null;
-
-    const updateContentTransitions = () => {
-      const { childNodes, contentName: fromContentName } = slotInfo;
-      const {
-        previousSlotInfo,
-        becomesEmpty,
-        becomesPopulated,
-        shouldDoContentTransition,
-        shouldDoPhaseTransition,
-        contentChange,
-        phaseChange,
-        isTransitionLess,
-        shouldDoContentTransitionIncludingPopulation,
-      } = changeInfo;
-      const { hasChild: hadChild, contentName: toContentName } =
-        previousSlotInfo;
-
-      const preserveOnlyContentTransition =
-        isTransitionLess && activeContentTransition !== null;
-      const previousChildNodes = previousSlotInfo.childNodes;
-
-      // Determine transition scenarios (hadChild/hasChild already computed above for logging)
-
-      /**
-       * Content Phase Logic: Why empty slots are treated as content phases
-       *
-       * When there is no child element (React component returns null), it is considered
-       * that the component does not render anything temporarily. This might be because:
-       * - The component is loading but does not have a loading state
-       * - The component has an error but does not have an error state
-       * - The component is conceptually unloaded (underlying content was deleted/is not accessible)
-       *
-       * This represents a phase of the given content: having nothing to display.
-       *
-       * We support transitions between different contents via the ability to set
-       * [data-content-key] on the ".ui_transition_slot". This is also useful when you want
-       * all children of a React component to inherit the same data-content-key without
-       * explicitly setting the attribute on each child element.
-       */
-
-      // Content key change when either slot or child has data-content-key and it changed
-      // Content key change detection already computed in getSlotChangeInfo.
-      // We rely on the shouldDoContentTransition value coming from changeInfo.
-
-      const decisions = [];
-      if (shouldDoContentTransition) {
-        decisions.push("CONTENT TRANSITION");
-      }
-      if (shouldDoPhaseTransition) {
-        decisions.push("PHASE TRANSITION");
-      }
-      if (preserveOnlyContentTransition) {
-        decisions.push("PRESERVE CONTENT TRANSITION");
-      }
-      if (decisions.length === 0) {
-        decisions.push("NO TRANSITION");
-      }
-
-      debug("content", `Decision: ${decisions.join(" + ")}`);
-      if (preserveOnlyContentTransition) {
-        const progress = (activeContentTransition.progress * 100).toFixed(1);
-        debug(
-          "content",
-          `Preserving existing content transition (progress ${progress}%)`,
-        );
-      }
-
-      if (changeInfo.isInitialPopulationWithoutTransition) {
-        return;
-      }
-
-      // Handle content transitions (slide-left, cross-fade for content key changes)
-      if (
-        decisions.length === 1 &&
-        decisions[0] === "NO TRANSITION" &&
-        activeContentTransition === null &&
-        activePhaseTransition === null
-      ) {
-        // Skip creating any new transitions entirely
-        onContentTransitionComplete?.();
-      } else if (
-        shouldDoContentTransitionIncludingPopulation &&
-        !preserveOnlyContentTransition
-      ) {
-        const animationProgress = activeContentTransition?.progress || 0;
-        if (animationProgress > 0) {
-          debug(
-            "content",
-            `Preserving content transition progress: ${(animationProgress * 100).toFixed(1)}%`,
-          );
-        }
-
-        const newTransitionType =
-          container.getAttribute("data-content-transition") ||
-          CONTENT_TRANSITION;
-        const canContinueSmoothly =
-          activeContentTransitionType === newTransitionType &&
-          activeContentTransition;
-        if (canContinueSmoothly) {
-          debug(
-            "content",
-            "Continuing with same content transition type (restarting due to actual change)",
-          );
-          activeContentTransition.cancel();
-        } else if (
-          activeContentTransition &&
-          activeContentTransitionType !== newTransitionType
-        ) {
-          debug(
-            "content",
-            "Different content transition type, keeping both",
-            `${activeContentTransitionType} → ${newTransitionType}`,
-          );
-        } else if (activeContentTransition) {
-          debug("content", "Cancelling current content transition");
-          activeContentTransition.cancel();
-        }
-
-        const needsOldChildNodesClone =
-          (contentChange || becomesEmpty) && hadChild;
-        const duration = parseInt(
-          container.getAttribute("data-content-transition-duration") ||
-            CONTENT_TRANSITION_DURATION,
-        );
-        const type =
-          container.getAttribute("data-content-transition") ||
-          CONTENT_TRANSITION;
-
-        const setupContentTransition = () =>
-          setupTransition({
-            isPhaseTransition: false,
-            overlay: contentOverlay,
-            needsOldChildNodesClone,
-            previousChildNodes,
-            childNodes,
-            slotInfo,
-            attributeToRemove: ["data-content-key"],
-          });
-
-        activeContentTransition = applyTransition(
-          transitionController,
-          setupContentTransition,
-          {
-            duration,
-            type,
-            animationProgress,
-            isPhaseTransition: false,
-            previousSlotInfo,
-            slotInfo,
-            onComplete: () => {
-              activeContentTransition = null;
-              activeContentTransitionType = null;
-              onContentTransitionComplete?.();
-            },
-            debug,
-          },
-        );
-
-        if (activeContentTransition) {
-          activeContentTransition.play();
-        }
-        activeContentTransitionType = type;
-      } else if (!shouldDoContentTransition && !preserveOnlyContentTransition) {
-        // Clean up content overlay if no content transition needed and nothing to preserve
-        contentOverlay.innerHTML = "";
-        activeContentTransition = null;
-        activeContentTransitionType = null;
-      }
-
-      // Handle phase transitions (cross-fade for content phase changes)
-      if (shouldDoPhaseTransition) {
-        const phaseTransitionType =
-          container.getAttribute("data-phase-transition") || PHASE_TRANSITION;
-        const phaseAnimationProgress = activePhaseTransition?.progress || 0;
-        if (phaseAnimationProgress > 0) {
-          debug(
-            "content",
-            `Preserving phase transition progress: ${(phaseAnimationProgress * 100).toFixed(1)}%`,
-          );
-        }
-
-        const canContinueSmoothly =
-          activePhaseTransitionType === phaseTransitionType &&
-          activePhaseTransition;
-
-        if (canContinueSmoothly) {
-          debug("content", "Continuing with same phase transition type");
-          activePhaseTransition.cancel();
-        } else if (
-          activePhaseTransition &&
-          activePhaseTransitionType !== phaseTransitionType
-        ) {
-          debug(
-            "content",
-            "Different phase transition type, keeping both",
-            `${activePhaseTransitionType} → ${phaseTransitionType}`,
-          );
-        } else if (activePhaseTransition) {
-          debug("content", "Cancelling current phase transition");
-          activePhaseTransition.cancel();
-        }
-
-        const needsOldPhaseClone =
-          (becomesEmpty || becomesPopulated || phaseChange) && hadChild;
-        const phaseDuration = parseInt(
-          container.getAttribute("data-phase-transition-duration") ||
-            PHASE_TRANSITION_DURATION,
-        );
-
-        const setupPhaseTransition = () =>
-          setupTransition({
-            isPhaseTransition: true,
-            overlay: phaseOverlay,
-            needsOldChildNodesClone: needsOldPhaseClone,
-            previousChildNodes,
-            childNodes,
-            slotInfo,
-            attributeToRemove: ["data-content-key", "data-content-phase"],
-          });
-
-        debug(
-          "content",
-          `Starting transition: ${fromContentName} → ${toContentName}`,
-        );
-
-        activePhaseTransition = applyTransition(
-          transitionController,
-          setupPhaseTransition,
-          {
-            duration: phaseDuration,
-            type: phaseTransitionType,
-            animationProgress: phaseAnimationProgress,
-            isPhaseTransition: true,
-            previousSlotInfo,
-            slotInfo,
-            onComplete: () => {
-              activePhaseTransition = null;
-              activePhaseTransitionType = null;
-              onContentTransitionComplete?.();
-              debug("content", "Phase transition complete");
-            },
-            debug,
-          },
-        );
-
-        if (activePhaseTransition) {
-          activePhaseTransition.play();
-        }
-        activePhaseTransitionType = phaseTransitionType;
-      }
-    };
-    subscribeChange(updateContentTransitions);
-
-    addPauseCallback(() => {
-      activeContentTransition?.pause();
-      activePhaseTransition?.pause();
-    });
-    addResumeCallback(() => {
-      activeContentTransition?.play();
-      activePhaseTransition?.play();
-    });
-    addTeardown(() => {
-      activeContentTransition?.cancel();
-      activePhaseTransition?.cancel();
-    });
-  }
-
-  {
-    const transitionSet = new Set();
-    const updateTransitionOverflowAttribute = () => {
-      if (transitionSet.size > 0) {
-        container.setAttribute("data-transition-running", "");
-      } else {
-        container.removeAttribute("data-transition-running");
-      }
-    };
-    const onTransitionStart = (event) => {
-      transitionSet.add(event.detail.id);
-      updateTransitionOverflowAttribute();
-    };
-    const onTransitionEnd = (event) => {
-      transitionSet.delete(event.detail.id);
-      updateTransitionOverflowAttribute();
-    };
-    container.addEventListener("ui_transition_start", onTransitionStart);
-    container.addEventListener("ui_transition_end", onTransitionEnd);
-    addTeardown(() => {
-      container.removeEventListener("ui_transition_start", onTransitionStart);
-      container.removeEventListener("ui_transition_end", onTransitionEnd);
-    });
-  }
-
-  // Run once at init to process current slot content
-  triggerChildSlotMutation("init");
+  const [teardown, addTeardown] = createPubSub();
   {
     const mutationObserver = new MutationObserver((mutations) => {
       const reasonParts = [];
-
       for (const mutation of mutations) {
         if (mutation.type === "childList") {
           const added = mutation.addedNodes.length;
@@ -9699,10 +9402,27 @@ const initUITransition = (container) => {
         if (mutation.type === "attributes") {
           const { attributeName } = mutation;
           if (
-            attributeName === "data-content-key" ||
-            attributeName === "data-content-phase"
+            attributeName === CONTENT_ID_ATTRIBUTE ||
+            attributeName === CONTENT_PHASE_ATTRIBUTE
           ) {
-            reasonParts.push(`[${attributeName}] change`);
+            const { oldValue } = mutation;
+            if (oldValue === null) {
+              const value = targetSlot.getAttribute(attributeName);
+              reasonParts.push(
+                value
+                  ? `added [${attributeName}=${value}]`
+                  : `added [${attributeName}]`,
+              );
+            } else if (targetSlot.hasAttribute(attributeName)) {
+              const value = targetSlot.getAttribute(attributeName);
+              reasonParts.push(`[${attributeName}] ${oldValue} -> ${value}`);
+            } else {
+              reasonParts.push(
+                oldValue
+                  ? `removed [${attributeName}=${oldValue}]`
+                  : `removed [${attributeName}]`,
+              );
+            }
           }
         }
       }
@@ -9710,409 +9430,62 @@ const initUITransition = (container) => {
       if (reasonParts.length === 0) {
         return;
       }
-      const reason = reasonParts.join("+");
-      triggerChildSlotMutation(reason);
+      targetSlotEffect(reasonParts);
     });
-    mutationObserver.observe(slot, {
+    mutationObserver.observe(targetSlot, {
       childList: true,
       attributes: true,
-      attributeFilter: ["data-content-key", "data-content-phase"],
+      attributeFilter: [CONTENT_ID_ATTRIBUTE, CONTENT_PHASE_ATTRIBUTE],
       characterData: false,
     });
     addTeardown(() => {
       mutationObserver.disconnect();
     });
   }
+  {
+    const slots = [
+      targetSlot,
+      outgoingSlot,
+      previousTargetSlot,
+      previousOutgoingSlot,
+    ];
+    for (const slot of slots) {
+      addTeardown(monitorItemsOverflow(slot));
+    }
+  }
+
+  const setDuration = (newDuration) => {
+    duration = newDuration;
+    // Update CSS variable immediately
+    root.style.setProperty("--x-transition-duration", `${duration}ms`);
+  };
+  const setAlignment = (newAlignX, newAlignY) => {
+    alignX = newAlignX;
+    alignY = newAlignY;
+    updateAlignment();
+  };
 
   return {
-    slot,
+    updateContentId: (value) => {
+      if (value) {
+        targetSlot.setAttribute(CONTENT_ID_ATTRIBUTE, value);
+      } else {
+        targetSlot.removeAttribute(CONTENT_ID_ATTRIBUTE);
+      }
+    },
 
+    transitionTo,
+    resetContent,
+    setDuration,
+    setAlignment,
+    updateAlignment,
+    setPauseBreakpoints: (value) => {
+      groupTransitionOptions.pauseBreakpoints = value;
+    },
     cleanup: () => {
       teardown();
     },
-    pause: () => {
-      if (state.isPaused) {
-        return;
-      }
-      publishPause();
-      state.isPaused = true;
-    },
-    resume: () => {
-      if (!state.isPaused) {
-        return;
-      }
-      state.isPaused = false;
-      publishResume();
-    },
-    getState: () => state,
   };
-};
-
-const applyTransition = (
-  transitionController,
-  setupTransition,
-  {
-    type,
-    duration,
-    animationProgress = 0,
-    isPhaseTransition,
-    onComplete,
-    previousSlotInfo,
-    slotInfo,
-    debug,
-  },
-) => {
-  let transitionType;
-  if (type === "cross-fade") {
-    transitionType = crossFade;
-  } else if (type === "slide-left") {
-    transitionType = slideLeft;
-  } else {
-    return null;
-  }
-
-  const { cleanup, oldElement, newElement, onTeardown } = setupTransition();
-  // Use precomputed content key states (expected to be provided by caller)
-  const fromContentKey = previousSlotInfo.contentKeyFormatted;
-  const toContentKey = slotInfo.contentKeyFormatted;
-
-  debug("content", "Setting up animation:", {
-    type,
-    from: fromContentKey,
-    to: toContentKey,
-    progress: `${(animationProgress * 100).toFixed(1)}%`,
-  });
-
-  const remainingDuration = Math.max(100, duration * (1 - animationProgress));
-  debug("content", `Animation duration: ${remainingDuration}ms`);
-
-  const transitions = transitionType.apply(oldElement, newElement, {
-    duration: remainingDuration,
-    startProgress: animationProgress,
-    isPhaseTransition,
-    debug,
-  });
-
-  debug("content", `Created ${transitions.length} transition(s) for animation`);
-
-  if (transitions.length === 0) {
-    debug("content", "No transitions to animate, cleaning up immediately");
-    cleanup();
-    onTeardown?.();
-    onComplete?.();
-    return null;
-  }
-
-  const groupTransition = transitionController.animate(transitions, {
-    onFinish: () => {
-      groupTransition.cancel();
-      cleanup();
-      onTeardown?.();
-      onComplete?.();
-    },
-  });
-
-  return groupTransition;
-};
-
-const slideLeft = {
-  id: "ui_transition_slide_left",
-  name: "slide-left",
-  apply: (
-    oldElement,
-    newElement,
-    { duration, startProgress = 0, isPhaseTransition = false, debug },
-  ) => {
-    if (!oldElement && !newElement) {
-      return [];
-    }
-
-    if (!newElement) {
-      // Content -> Empty (slide out left only)
-      const currentPosition = getTranslateX(oldElement);
-      const containerWidth = getInnerWidth(oldElement.parentElement);
-      const from = currentPosition;
-      const to = -containerWidth;
-      debug("content", "Slide out to empty:", { from, to });
-
-      return [
-        createTranslateXTransition(oldElement, to, {
-          setup: () =>
-            notifyTransition(newElement, {
-              modelId: slideLeft.id,
-              canOverflow: true,
-              id: "slide_out_old_content",
-            }),
-          from,
-          duration,
-          startProgress,
-          onUpdate: ({ value, timing }) => {
-            debug("transition_updates", "Slide out progress:", value);
-            if (timing === "end") {
-              debug("content", "Slide out complete");
-            }
-          },
-        }),
-      ];
-    }
-
-    if (!oldElement) {
-      // Empty -> Content (slide in from right)
-      const containerWidth = getInnerWidth(newElement.parentElement);
-      const from = containerWidth; // Start from right edge for slide-in effect
-      const to = getTranslateXWithoutTransition(newElement);
-      debug("content", "Slide in from empty:", { from, to });
-      return [
-        createTranslateXTransition(newElement, to, {
-          setup: () =>
-            notifyTransition(newElement, {
-              modelId: slideLeft.id,
-              canOverflow: true,
-              id: "slide_in_new_content",
-            }),
-          from,
-          duration,
-          startProgress,
-          onUpdate: ({ value, timing }) => {
-            debug("transition_updates", "Slide in progress:", value);
-            if (timing === "end") {
-              debug("content", "Slide in complete");
-            }
-          },
-        }),
-      ];
-    }
-
-    // Content -> Content (slide left)
-    // The old content (oldElement) slides OUT to the left
-    // The new content (newElement) slides IN from the right
-
-    // Get positions for the slide animation
-    const containerWidth = getInnerWidth(newElement.parentElement);
-    const oldContentPosition = getTranslateX(oldElement);
-    const currentNewPosition = getTranslateX(newElement);
-    const naturalNewPosition = getTranslateXWithoutTransition(newElement);
-
-    // For smooth continuation: if newElement is mid-transition,
-    // calculate new position to maintain seamless sliding
-    let startNewPosition;
-    if (currentNewPosition !== 0 && naturalNewPosition === 0) {
-      startNewPosition = currentNewPosition + containerWidth;
-      debug(
-        "content",
-        "Calculated seamless position:",
-        `${currentNewPosition} + ${containerWidth} = ${startNewPosition}`,
-      );
-    } else {
-      startNewPosition = naturalNewPosition || containerWidth;
-    }
-
-    // For phase transitions, force new content to start from right edge for proper slide-in
-    const effectiveFromPosition = isPhaseTransition
-      ? containerWidth
-      : startNewPosition;
-
-    debug("content", "Slide transition:", {
-      oldContent: `${oldContentPosition} → ${-containerWidth}`,
-      newContent: `${effectiveFromPosition} → ${naturalNewPosition}`,
-    });
-
-    const transitions = [];
-
-    // Slide old content out
-    transitions.push(
-      createTranslateXTransition(oldElement, -containerWidth, {
-        setup: () =>
-          notifyTransition(newElement, {
-            modelId: slideLeft.id,
-            canOverflow: true,
-            id: "slide_out_old_content",
-          }),
-        from: oldContentPosition,
-        duration,
-        startProgress,
-        onUpdate: ({ value }) => {
-          debug("transition_updates", "Old content slide out:", value);
-        },
-      }),
-    );
-
-    // Slide new content in
-    transitions.push(
-      createTranslateXTransition(newElement, naturalNewPosition, {
-        setup: () =>
-          notifyTransition(newElement, {
-            modelId: slideLeft.id,
-            canOverflow: true,
-            id: "slide_in_new_content",
-          }),
-        from: effectiveFromPosition,
-        duration,
-        startProgress,
-        onUpdate: ({ value, timing }) => {
-          debug("transition_updates", "New content slide in:", value);
-          if (timing === "end") {
-            debug("content", "Slide complete");
-          }
-        },
-      }),
-    );
-
-    return transitions;
-  },
-};
-
-const crossFade = {
-  id: "ui_transition_cross_fade",
-  name: "cross-fade",
-  apply: (
-    oldElement,
-    newElement,
-    { duration, startProgress = 0, isPhaseTransition = false, debug },
-  ) => {
-    if (!oldElement && !newElement) {
-      return [];
-    }
-
-    if (!newElement) {
-      // Content -> Empty (fade out only)
-      const from = getOpacity(oldElement);
-      const to = 0;
-      debug("content", "Fade out to empty:", { from, to });
-      return [
-        createOpacityTransition(oldElement, to, {
-          setup: () =>
-            notifyTransition(newElement, {
-              modelId: crossFade.id,
-              canOverflow: true,
-              id: "fade_out_old_content",
-            }),
-          from,
-          duration,
-          startProgress,
-          onUpdate: ({ value, timing }) => {
-            debug("transition_updates", "Content fade out:", value.toFixed(3));
-            if (timing === "end") {
-              debug("content", "Fade out complete");
-            }
-          },
-        }),
-      ];
-    }
-
-    if (!oldElement) {
-      // Empty -> Content (fade in only)
-      const from = 0;
-      const to = getOpacityWithoutTransition(newElement);
-      debug("content", "Fade in from empty:", { from, to });
-      return [
-        createOpacityTransition(newElement, to, {
-          setup: () =>
-            notifyTransition(newElement, {
-              modelId: crossFade.id,
-              canOverflow: true,
-              id: "fade_in_new_content",
-            }),
-          from,
-          duration,
-          startProgress,
-          onUpdate: ({ value, timing }) => {
-            debug("transition_updates", "Fade in progress:", value.toFixed(3));
-            if (timing === "end") {
-              debug("content", "Fade in complete");
-            }
-          },
-        }),
-      ];
-    }
-
-    // Content -> Content (cross-fade)
-    // Get current opacity for both elements
-    const oldOpacity = getOpacity(oldElement);
-    const newOpacity = getOpacity(newElement);
-    const newNaturalOpacity = getOpacityWithoutTransition(newElement);
-
-    // For phase transitions, always start new content from 0 for clean visual transition
-    // For content transitions, check for ongoing transitions to continue smoothly
-    let effectiveFromOpacity;
-    if (isPhaseTransition) {
-      effectiveFromOpacity = 0; // Always start fresh for phase transitions (loading → content, etc.)
-    } else {
-      // For content transitions: if new element has ongoing opacity transition
-      // (indicated by non-zero opacity when natural opacity is different),
-      // start from current opacity to continue smoothly, otherwise start from 0
-      const hasOngoingTransition =
-        newOpacity !== newNaturalOpacity && newOpacity > 0;
-      effectiveFromOpacity = hasOngoingTransition ? newOpacity : 0;
-    }
-
-    debug("content", "Cross-fade transition:", {
-      oldOpacity: `${oldOpacity} → 0`,
-      newOpacity: `${effectiveFromOpacity} → ${newNaturalOpacity}`,
-      isPhaseTransition,
-    });
-
-    return [
-      createOpacityTransition(oldElement, 0, {
-        setup: () =>
-          notifyTransition(newElement, {
-            modelId: crossFade.id,
-            canOverflow: true,
-            id: "fade_out_old_content",
-          }),
-        from: oldOpacity,
-        duration,
-        startProgress,
-        onUpdate: ({ value }) => {
-          if (value > 0) {
-            debug(
-              "transition_updates",
-              "Old content fade out:",
-              value.toFixed(3),
-            );
-          }
-        },
-      }),
-      createOpacityTransition(newElement, newNaturalOpacity, {
-        setup: () =>
-          notifyTransition(newElement, {
-            modelId: crossFade.id,
-            canOverflow: true,
-            id: "fade_in_new_content",
-          }),
-        from: effectiveFromOpacity,
-        duration,
-        startProgress: isPhaseTransition ? 0 : startProgress, // Phase transitions: new content always starts fresh
-        onUpdate: ({ value, timing }) => {
-          debug("transition_updates", "New content fade in:", value.toFixed(3));
-          if (timing === "end") {
-            debug("content", "Cross-fade complete");
-          }
-        },
-      }),
-    ];
-  },
-};
-
-const notifyTransition = (element, detail) => {
-  dispatchUITransitionStartCustomEvent(element, detail);
-  return () => {
-    dispatchUITransitionEndCustomEvent(element, detail);
-  };
-};
-const dispatchUITransitionStartCustomEvent = (element, detail) => {
-  const customEvent = new CustomEvent("ui_transition_start", {
-    bubbles: true,
-    detail,
-  });
-  element.dispatchEvent(customEvent);
-};
-const dispatchUITransitionEndCustomEvent = (element, detail) => {
-  const customEvent = new CustomEvent("ui_transition_end", {
-    bubbles: true,
-    detail,
-  });
-  element.dispatchEvent(customEvent);
 };
 
 /**
@@ -10130,76 +9503,79 @@ const dispatchUITransitionEndCustomEvent = (element, detail) => {
  *
  * Usage:
  * - Wrap dynamic content in <UITransition> to animate between states
- * - Set a unique `data-content-key` on your rendered content to identify each content variant
+ * - Set a unique `data-content-id` on your rendered content to identify each content variant
  * - Use `data-content-phase` to mark loading/error states for phase transitions
  * - Configure transition types and durations for both content and phase changes
  *
  * Example:
  *
- *   <UITransition
- *     transitionType="slide-left"
- *     transitionDuration={400}
- *     phaseTransitionType="cross-fade"
- *     phaseTransitionDuration={300}
- *   >
+ *   <UITransition>
  *     {isLoading
  *       ? <Spinner data-content-key={userId} data-content-phase />
  *       : <UserProfile user={user} data-content-key={userId} />}
  *   </UITransition>
  *
- * When `data-content-key` changes, UITransition animates content transitions.
+ * When `data-content-id` changes, UITransition animates content transitions.
  * When `data-content-phase` changes for the same key, it animates phase transitions.
  */
 
-const ContentKeyContext = createContext();
+const UITransitionContentIdContext = createContext();
 const UITransition = ({
   children,
-  contentKey,
-  sizeTransition = true,
-  sizeTransitionDuration,
-  transitionType,
-  transitionDuration,
-  phaseTransitionType,
-  phaseTransitionDuration,
+  contentId,
+  type,
+  duration,
   debugDetection,
+  debugContent,
   debugSize,
-  debugBreakAfterClone,
+  disabled,
+  uiTransitionRef,
   ...props
 }) => {
-  const [contentKeyFromContext, setContentKeyFromContext] = useState();
-  const contentKeyContextValue = useMemo(() => {
-    const keySet = new Set();
-    const onKeySetChange = () => {
-      setContentKeyFromContext(Array.from(keySet).join("|"));
+  const contentIdRef = useRef(contentId);
+  const updateContentId = () => {
+    const uiTransition = uiTransitionRef.current;
+    if (!uiTransition) {
+      return;
+    }
+    const value = contentIdRef.current;
+    uiTransition.updateContentId(value);
+  };
+  const uiTransitionContentIdContextValue = useMemo(() => {
+    const set = new Set();
+    const onSetChange = () => {
+      const value = Array.from(set).join("|");
+      contentIdRef.current = value;
+      updateContentId();
     };
-    const update = (key, newKey) => {
-      if (!keySet.has(key)) {
-        console.warn(`UITransition: trying to update a key that does not exist: ${key}`);
+    const update = (part, newPart) => {
+      if (!set.has(part)) {
+        console.warn(`UITransition: trying to update an id that does not exist: ${part}`);
         return;
       }
-      keySet.delete(key);
-      keySet.add(newKey);
-      onKeySetChange();
+      set.delete(part);
+      set.add(newPart);
+      onSetChange();
     };
-    const add = key => {
-      if (!key) {
+    const add = part => {
+      if (!part) {
         return;
       }
-      if (keySet.has(key)) {
+      if (set.has(part)) {
         return;
       }
-      keySet.add(key);
-      onKeySetChange();
+      set.add(part);
+      onSetChange();
     };
-    const remove = key => {
-      if (!key) {
+    const remove = part => {
+      if (!part) {
         return;
       }
-      if (!keySet.has(key)) {
+      if (!set.has(part)) {
         return;
       }
-      keySet.delete(key);
-      onKeySetChange();
+      set.delete(part);
+      onSetChange();
     };
     return {
       add,
@@ -10207,42 +9583,51 @@ const UITransition = ({
       remove
     };
   }, []);
-  const effectiveContentKey = contentKey || contentKeyFromContext;
   const ref = useRef();
+  const uiTransitionRefDefault = useRef();
+  uiTransitionRef = uiTransitionRef || uiTransitionRefDefault;
   useLayoutEffect(() => {
-    const uiTransition = initUITransition(ref.current);
+    if (disabled) {
+      return null;
+    }
+    const uiTransition = createUITransitionController(ref.current);
+    uiTransitionRef.current = uiTransition;
     return () => {
       uiTransition.cleanup();
     };
-  }, []);
-  return jsx(ContentKeyContext.Provider, {
-    value: contentKeyContextValue,
-    children: jsxs("div", {
-      ref: ref,
-      ...props,
-      className: "ui_transition_container",
-      "data-size-transition": sizeTransition ? "" : undefined,
-      "data-size-transition-duration": sizeTransitionDuration ? sizeTransitionDuration : undefined,
-      "data-content-transition": transitionType ? transitionType : undefined,
-      "data-content-transition-duration": transitionDuration ? transitionDuration : undefined,
-      "data-phase-transition": phaseTransitionType ? phaseTransitionType : undefined,
-      "data-phase-transition-duration": phaseTransitionDuration ? phaseTransitionDuration : undefined,
-      "data-debug-detection": debugDetection ? "" : undefined,
-      "data-debug-size": debugSize ? "" : undefined,
-      "data-debug-break-after-clone": debugBreakAfterClone,
-      children: [jsxs("div", {
-        className: "ui_transition_outer_wrapper",
-        children: [jsx("div", {
-          className: "ui_transition_slot",
-          "data-content-key": effectiveContentKey ? effectiveContentKey : undefined,
+  }, [disabled]);
+  if (disabled) {
+    return children;
+  }
+  return jsxs("div", {
+    ref: ref,
+    ...props,
+    className: "ui_transition",
+    "data-transition-type": type,
+    "data-transition-duration": duration,
+    "data-debug-detection": debugDetection ? "" : undefined,
+    "data-debug-size": debugSize ? "" : undefined,
+    "data-debug-content": debugContent ? "" : undefined,
+    children: [jsxs("div", {
+      className: "active_group",
+      children: [jsx("div", {
+        className: "target_slot",
+        "data-content-id": contentIdRef.current ? contentIdRef.current : undefined,
+        children: jsx(UITransitionContentIdContext.Provider, {
+          value: uiTransitionContentIdContextValue,
           children: children
-        }), jsx("div", {
-          className: "ui_transition_phase_overlay"
-        })]
+        })
       }), jsx("div", {
-        className: "ui_transition_content_overlay"
+        className: "outgoing_slot"
       })]
-    })
+    }), jsxs("div", {
+      className: "previous_group",
+      children: [jsx("div", {
+        className: "previous_target_slot"
+      }), jsx("div", {
+        className: "previous_outgoing_slot"
+      })]
+    })]
   });
 };
 
@@ -10254,28 +9639,28 @@ const UITransition = ({
  * as changed even if the component is still the same
  *
  * This is used by <Route> to set the content key to the route path
- * When the route becomes inactive it will call useContentKey(undefined)
- * And if a sibling route becones active it will call useContentKey with its own path
+ * When the route becomes inactive it will call useUITransitionContentId(undefined)
+ * And if a sibling route becones active it will call useUITransitionContentId with its own path
  *
  */
-const useContentKey = key => {
-  const contentKey = useContext(ContentKeyContext);
-  const keyRef = useRef();
-  if (keyRef.current !== key && contentKey) {
-    const previousKey = keyRef.current;
-    keyRef.current = key;
-    if (previousKey) {
-      contentKey.update(previousKey, key);
+const useUITransitionContentId = value => {
+  const contentId = useContext(UITransitionContentIdContext);
+  const valueRef = useRef();
+  if (contentId !== undefined && valueRef.current !== value) {
+    const previousValue = valueRef.current;
+    valueRef.current = value;
+    if (previousValue === undefined) {
+      contentId.add(value);
     } else {
-      contentKey.add(key);
+      contentId.update(previousValue, value);
     }
   }
   useLayoutEffect(() => {
-    if (!contentKey) {
+    if (contentId === undefined) {
       return null;
     }
     return () => {
-      contentKey.remove(keyRef.current);
+      contentId.remove(valueRef.current);
     };
   }, []);
 };
@@ -10331,10 +9716,13 @@ const Routes = ({
   });
 };
 const SlotContext = createContext(null);
+const RouteInfoContext = createContext(null);
+const useActiveRouteInfo = () => useContext(RouteInfoContext);
 const Route = ({
   element,
   route,
   fallback,
+  meta,
   children
 }) => {
   const forceRender = useForceRender();
@@ -10345,6 +9733,7 @@ const Route = ({
       element: element,
       route: route,
       fallback: fallback,
+      meta: meta,
       onActiveInfoChange: activeInfo => {
         hasDiscoveredRef.current = true;
         activeInfoRef.current = activeInfo;
@@ -10371,18 +9760,23 @@ const ActiveRouteManager = ({
   element,
   route,
   fallback,
+  meta,
   onActiveInfoChange,
   children
 }) => {
+  if (route && fallback) {
+    throw new Error("Route cannot have both route and fallback props");
+  }
   const registerChildRouteFromContext = useContext(RegisterChildRouteContext);
   getElementSignature(element);
   const candidateSet = new Set();
-  const registerChildRoute = (ChildActiveElement, childRoute, childFallback) => {
+  const registerChildRoute = (ChildActiveElement, childRoute, childFallback, childMeta) => {
     getElementSignature(ChildActiveElement);
     candidateSet.add({
       ActiveElement: ChildActiveElement,
       route: childRoute,
-      fallback: childFallback
+      fallback: childFallback,
+      meta: childMeta
     });
   };
   useLayoutEffect(() => {
@@ -10390,6 +9784,7 @@ const ActiveRouteManager = ({
       element,
       route,
       fallback,
+      meta,
       candidateSet,
       onActiveInfoChange,
       registerChildRouteFromContext
@@ -10404,6 +9799,7 @@ const initRouteObserver = ({
   element,
   route,
   fallback,
+  meta,
   candidateSet,
   onActiveInfoChange,
   registerChildRouteFromContext
@@ -10424,19 +9820,13 @@ const initRouteObserver = ({
     let fallbackInfo = null;
     for (const candidate of candidateSet) {
       if (candidate.route?.active) {
-        return {
-          ChildActiveElement: candidate.ActiveElement,
-          route: candidate.route
-        };
+        return candidate;
       }
       // fallback without route can match when no other route matches.
       // This is useful solely for "catch all" fallback used on the <Routes>
       // otherwise a fallback would always match and make the parent route always active
       if (candidate.fallback && !candidate.route.routeFromProps) {
-        fallbackInfo = {
-          ChildActiveElement: candidate.ActiveElement,
-          route: candidate.route
-        };
+        fallbackInfo = candidate;
       }
     }
     return fallbackInfo;
@@ -10453,8 +9843,9 @@ const initRouteObserver = ({
       return activeChildInfo;
     }
     return {
-      ChildActiveElement: null,
-      route
+      ActiveElement: null,
+      route,
+      meta
     };
   } : () => {
     // we don't have a route, do we have an active child?
@@ -10464,22 +9855,22 @@ const initRouteObserver = ({
     }
     return null;
   };
-  const activeRouteSignal = signal();
+  const activeRouteInfoSignal = signal();
   const SlotActiveElementSignal = signal();
   const ActiveElement = () => {
-    const activeRoute = activeRouteSignal.value;
-    useContentKey(activeRoute?.urlPattern);
+    const activeRouteInfo = activeRouteInfoSignal.value;
+    useUITransitionContentId(activeRouteInfo ? activeRouteInfo.route.urlPattern : fallback ? "fallback" : undefined);
     const SlotActiveElement = SlotActiveElementSignal.value;
     if (typeof element === "function") {
       const Element = element;
-      return jsx(SlotContext.Provider, {
-        value: SlotActiveElement,
-        children: jsx(Element, {})
-      });
+      element = jsx(Element, {});
     }
-    return jsx(SlotContext.Provider, {
-      value: SlotActiveElement,
-      children: element
+    return jsx(RouteInfoContext.Provider, {
+      value: activeRouteInfo,
+      children: jsx(SlotContext.Provider, {
+        value: SlotActiveElement,
+        children: element
+      })
     });
   };
   ActiveElement.underlyingElementId = candidateSet.size === 0 ? `${getElementSignature(element)} without slot` : `[${getElementSignature(element)} with slot one of ${candidateElementIds}]`;
@@ -10487,20 +9878,17 @@ const initRouteObserver = ({
     const newActiveInfo = getActiveInfo();
     if (newActiveInfo) {
       compositeRoute.active = true;
-      const {
-        route,
-        ChildActiveElement
-      } = newActiveInfo;
-      activeRouteSignal.value = route;
-      SlotActiveElementSignal.value = ChildActiveElement;
+      activeRouteInfoSignal.value = newActiveInfo;
+      SlotActiveElementSignal.value = newActiveInfo.ActiveElement;
       onActiveInfoChange({
-        route: newActiveInfo.route,
         ActiveElement,
-        SlotActiveElement: ChildActiveElement
+        SlotActiveElement: newActiveInfo.ActiveElement,
+        route: newActiveInfo.route,
+        meta: newActiveInfo.meta
       });
     } else {
       compositeRoute.active = false;
-      activeRouteSignal.value = null;
+      activeRouteInfoSignal.value = null;
       SlotActiveElementSignal.value = null;
       onActiveInfoChange(null);
     }
@@ -10516,7 +9904,7 @@ const initRouteObserver = ({
     candidate.route.subscribeStatus(onChange);
   }
   if (registerChildRouteFromContext) {
-    registerChildRouteFromContext(ActiveElement, compositeRoute, fallback);
+    registerChildRouteFromContext(ActiveElement, compositeRoute, fallback, meta);
   }
   updateActiveInfo();
 };
@@ -10718,14 +10106,11 @@ const renderActionableComponent = (props, {
 
 const normalizeSpacingStyle = (value, property = "padding") => {
   const cssSize = sizeSpacingScale[value];
-  return cssSize || normalizeStyle(value, property, "css");
+  return cssSize || stringifyStyle(value, property);
 };
 const normalizeTypoStyle = (value, property = "fontSize") => {
   const cssSize = sizeTypoScale[value];
-  return cssSize || normalizeStyle(value, property, "css");
-};
-const normalizeCssStyle = (value, property) => {
-  return normalizeStyle(value, property, "css");
+  return cssSize || stringifyStyle(value, property);
 };
 
 const PASS_THROUGH = { name: "pass_through" };
@@ -10776,6 +10161,13 @@ const applyOnTwoProps = (propA, propB) => {
   };
 };
 
+const LAYOUT_PROPS = {
+  // all are handled by data-attributes
+  inline: () => {},
+  box: () => {},
+  row: () => {},
+  column: () => {},
+};
 const OUTER_SPACING_PROPS = {
   margin: PASS_THROUGH,
   marginLeft: PASS_THROUGH,
@@ -10812,21 +10204,21 @@ const DIMENSION_PROPS = {
       return { flexGrow: 1 }; // Grow horizontally in row
     }
     if (parentLayout === "row") {
-      return { minWidth: "100%" }; // Take full width in column
+      return { minWidth: "100%", width: "auto" }; // Take full width in column
     }
-    return { minWidth: "100%" }; // Take full width outside flex
+    return { minWidth: "100%", width: "auto" }; // Take full width outside flex
   },
   expandY: (value, { parentLayout }) => {
     if (!value) {
       return null;
     }
     if (parentLayout === "column") {
-      return { minHeight: "100%" }; // Make column full height
+      return { minHeight: "100%", height: "auto" }; // Make column full height
     }
     if (parentLayout === "row" || parentLayout === "inline-row") {
       return { flexGrow: 1 }; // Make row full height
     }
-    return { minHeight: "100%" }; // Take full height outside flex
+    return { minHeight: "100%", height: "auto" }; // Take full height outside flex
   },
   shrinkX: (value, { parentLayout }) => {
     if (!value) {
@@ -10845,6 +10237,23 @@ const DIMENSION_PROPS = {
       return { flexShrink: 1 };
     }
     return { maxHeight: "100%" };
+  },
+
+  scaleX: (value) => {
+    return { transform: `scaleX(${stringifyStyle(value, "scaleX")})` };
+  },
+  scaleY: (value) => {
+    return { transform: `scaleY(${value})` };
+  },
+  scale: (value) => {
+    if (Array.isArray(value)) {
+      const [x, y] = value;
+      return { transform: `scale(${x}, ${y})` };
+    }
+    return { transform: `scale(${value})` };
+  },
+  scaleZ: (value) => {
+    return { transform: `scaleZ(${value})` };
   },
 };
 const POSITION_PROPS = {
@@ -10886,7 +10295,7 @@ const POSITION_PROPS = {
 
     if (value === "start") {
       if (inlineColumnLayout) {
-        return undefined; // this is the default
+        return { alignSelf: "start" };
       }
       return { marginBottom: "auto" };
     }
@@ -10906,8 +10315,49 @@ const POSITION_PROPS = {
   },
   left: PASS_THROUGH,
   top: PASS_THROUGH,
+
+  translateX: (value) => {
+    return { transform: `translateX(${value})` };
+  },
+  translateY: (value) => {
+    return { transform: `translateY(${value})` };
+  },
+  translate: (value) => {
+    if (Array.isArray(value)) {
+      const [x, y] = value;
+      return { transform: `translate(${x}, ${y})` };
+    }
+    return { transform: `translate(${stringifyStyle(value, "translateX")})` };
+  },
+  rotateX: (value) => {
+    return { transform: `rotateX(${value})` };
+  },
+  rotateY: (value) => {
+    return { transform: `rotateY(${value})` };
+  },
+  rotateZ: (value) => {
+    return { transform: `rotateZ(${value})` };
+  },
+  rotate: (value) => {
+    return { transform: `rotate(${value})` };
+  },
+  skewX: (value) => {
+    return { transform: `skewX(${value})` };
+  },
+  skewY: (value) => {
+    return { transform: `skewY(${value})` };
+  },
+  skew: (value) => {
+    if (Array.isArray(value)) {
+      const [x, y] = value;
+      return { transform: `skew(${x}, ${y})` };
+    }
+    return { transform: `skew(${value})` };
+  },
 };
 const TYPO_PROPS = {
+  font: PASS_THROUGH,
+  fontFamily: PASS_THROUGH,
   size: applyOnCSSProp("fontSize"),
   fontSize: PASS_THROUGH,
   bold: applyToCssPropWhenTruthy("fontWeight", "bold", "normal"),
@@ -10924,6 +10374,11 @@ const TYPO_PROPS = {
   preWrap: applyToCssPropWhenTruthy("whiteSpace", "pre-wrap", "normal"),
 };
 const VISUAL_PROPS = {
+  outline: PASS_THROUGH,
+  outlineStyle: PASS_THROUGH,
+  outlineColor: PASS_THROUGH,
+  outlineWidth: PASS_THROUGH,
+  boxDecorationBreak: PASS_THROUGH,
   boxShadow: PASS_THROUGH,
   background: PASS_THROUGH,
   backgroundColor: PASS_THROUGH,
@@ -11003,6 +10458,7 @@ const CONTENT_PROPS = {
   },
 };
 const All_PROPS = {
+  ...LAYOUT_PROPS,
   ...OUTER_SPACING_PROPS,
   ...INNER_SPACING_PROPS,
   ...DIMENSION_PROPS,
@@ -11011,6 +10467,7 @@ const All_PROPS = {
   ...VISUAL_PROPS,
   ...CONTENT_PROPS,
 };
+const LAYOUT_PROP_NAME_SET = new Set(Object.keys(LAYOUT_PROPS));
 const OUTER_SPACING_PROP_NAME_SET = new Set(Object.keys(OUTER_SPACING_PROPS));
 const INNER_SPACING_PROP_NAME_SET = new Set(Object.keys(INNER_SPACING_PROPS));
 const DIMENSION_PROP_NAME_SET = new Set(Object.keys(DIMENSION_PROPS));
@@ -11026,6 +10483,7 @@ const HANDLED_BY_VISUAL_CHILD_PROP_SET = new Set([
   ...CONTENT_PROP_NAME_SET,
 ]);
 const COPIED_ON_VISUAL_CHILD_PROP_SET = new Set([
+  ...LAYOUT_PROP_NAME_SET,
   "expand",
   "shrink",
   "expandX",
@@ -11037,6 +10495,9 @@ const COPIED_ON_VISUAL_CHILD_PROP_SET = new Set([
 const isStyleProp = (name) => STYLE_PROP_NAME_SET.has(name);
 
 const getStylePropGroup = (name) => {
+  if (LAYOUT_PROP_NAME_SET.has(name)) {
+    return "layout";
+  }
   if (OUTER_SPACING_PROP_NAME_SET.has(name)) {
     return "margin";
   }
@@ -11068,7 +10529,7 @@ const getNormalizer = (key) => {
   if (group === "typo") {
     return normalizeTypoStyle;
   }
-  return normalizeCssStyle;
+  return stringifyStyle;
 };
 
 const assignStyle = (
@@ -11076,7 +10537,7 @@ const assignStyle = (
   propValue,
   propName,
   styleContext,
-  normalizer = getNormalizer(propName),
+  context = "js",
 ) => {
   if (propValue === undefined) {
     return;
@@ -11085,6 +10546,7 @@ const assignStyle = (
   if (!managedByCSSVars) {
     throw new Error("managedByCSSVars is required in styleContext");
   }
+  const normalizer = getNormalizer(propName);
   const getStyle = All_PROPS[propName];
   if (
     getStyle === PASS_THROUGH ||
@@ -11093,10 +10555,16 @@ const assignStyle = (
   ) {
     const cssValue = normalizer(propValue, propName);
     const cssVar = managedByCSSVars[propName];
+    const mergedValue = mergeOneStyle(
+      styleObject[propName],
+      cssValue,
+      propName,
+      context,
+    );
     if (cssVar) {
-      styleObject[cssVar] = cssValue;
+      styleObject[cssVar] = mergedValue;
     } else {
-      styleObject[propName] = cssValue;
+      styleObject[propName] = mergedValue;
     }
     return;
   }
@@ -11108,10 +10576,11 @@ const assignStyle = (
     const value = values[key];
     const cssValue = normalizer(value, key);
     const cssVar = managedByCSSVars[key];
+    const mergedValue = mergeOneStyle(styleObject[key], cssValue, key, context);
     if (cssVar) {
-      styleObject[cssVar] = cssValue;
+      styleObject[cssVar] = mergedValue;
     } else {
-      styleObject[key] = cssValue;
+      styleObject[key] = mergedValue;
     }
   }
 };
@@ -11128,12 +10597,8 @@ const sizeSpacingScale = {
   xl: "2em", // 2 = 32px at 16px base
   xxl: "3em", // 3 = 48px at 16px base
 };
-const resolveSpacingSize = (
-  size,
-  property = "padding",
-  context = "css",
-) => {
-  return normalizeStyle(sizeSpacingScale[size] || size, property, context);
+const resolveSpacingSize = (size, property = "padding") => {
+  return stringifyStyle(sizeSpacingScale[size] || size, property);
 };
 
 const sizeTypoScale = {
@@ -11511,7 +10976,7 @@ const initPseudoStyles = (
       }
       currentState[pseudoClass] = currentValue;
       const oldValue = state ? state[pseudoClass] : undefined;
-      if (oldValue !== currentValue) {
+      if (oldValue !== currentValue || !state) {
         someChange = true;
         const { attribute, add, remove } = pseudoClassDefinition;
         if (currentValue) {
@@ -11566,8 +11031,15 @@ const applyStyle = (element, style, pseudoState, pseudoNamedStyles) => {
   updateStyle(element, getStyleToApply(style, pseudoState, pseudoNamedStyles));
 };
 
+const PSEUDO_STATE_DEFAULT = {};
+const PSEUDO_NAMED_STYLES_DEFAULT = {};
 const getStyleToApply = (styles, pseudoState, pseudoNamedStyles) => {
-  if (!pseudoState || !pseudoNamedStyles) {
+  if (
+    !pseudoState ||
+    pseudoState === PSEUDO_STATE_DEFAULT ||
+    !pseudoNamedStyles ||
+    pseudoNamedStyles === PSEUDO_NAMED_STYLES_DEFAULT
+  ) {
     return styles;
   }
 
@@ -11634,7 +11106,13 @@ const updateStyle = (element, style) => {
     }
   }
   for (const toDeleteKey of toDeleteKeySet) {
-    element.style.removeProperty(toDeleteKey);
+    if (toDeleteKey.startsWith("--")) {
+      element.style.removeProperty(toDeleteKey);
+    } else {
+      // we can't use removeProperty because "toDeleteKey" is in camelCase
+      // e.g., backgroundColor (and it's safer to just let the browser do the conversion)
+      element.style[toDeleteKey] = "";
+    }
   }
   styleKeySetWeakMap.set(element, styleKeySet);
   return;
@@ -11693,8 +11171,10 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     flex-direction: row;
   }
 
-  [data-layout-row] > *,
-  [data-layout-column] > * {
+  [data-layout-row] > [data-layout-row],
+  [data-layout-row] > [data-layout-column],
+  [data-layout-column] > [data-layout-column],
+  [data-layout-column] > [data-layout-row] {
     flex-shrink: 0;
   }
 
@@ -11709,9 +11189,6 @@ const MANAGED_BY_CSS_VARS_DEFAULT = {};
 const Box = props => {
   const {
     as = "div",
-    layoutRow,
-    layoutColumn,
-    layoutInline,
     baseClassName,
     className,
     baseStyle,
@@ -11741,30 +11218,78 @@ const Box = props => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   const TagName = as;
+  const {
+    box,
+    inline = box,
+    row,
+    column = box
+  } = rest;
   let layout;
-  if (layoutInline) {
-    if (layoutRow) {
+  if (inline) {
+    if (row) {
       layout = "inline-row";
-    } else if (layoutColumn) {
+    } else if (column) {
       layout = "inline-column";
     } else {
       layout = "inline";
     }
-  } else if (layoutRow) {
+  } else if (row) {
     layout = "row";
-  } else if (layoutColumn) {
+  } else if (column) {
     layout = "column";
   } else {
     layout = getDefaultDisplay(TagName);
   }
   const innerClassName = withPropsClassName(baseClassName, className);
   const remainingProps = {};
+  const propsToForward = {};
+  const shouldForwardAllToChild = visualSelector && pseudoStateSelector;
   {
     const parentLayout = useContext(BoxLayoutContext);
-    const innerPseudoState = basePseudoState && pseudoState ? {
-      ...basePseudoState,
-      ...pseudoState
-    } : basePseudoState;
+    const styleDeps = [
+    // Layout and alignment props
+    parentLayout, layout,
+    // Style context dependencies
+    managedByCSSVars, pseudoClasses, pseudoElements,
+    // Selectors
+    visualSelector, pseudoStateSelector];
+    let innerPseudoState;
+    if (basePseudoState && pseudoState) {
+      innerPseudoState = {};
+      const baseStateKeys = Object.keys(basePseudoState);
+      const pseudoStateKeySet = new Set(Object.keys(pseudoState));
+      for (const key of baseStateKeys) {
+        if (pseudoStateKeySet.has(key)) {
+          pseudoStateKeySet.delete(key);
+          const value = pseudoState[key];
+          styleDeps.push(value);
+          innerPseudoState[key] = value;
+        } else {
+          const value = basePseudoState[key];
+          styleDeps.push(value);
+          innerPseudoState[key] = value;
+        }
+      }
+      for (const key of pseudoStateKeySet) {
+        const value = pseudoState[key];
+        styleDeps.push(value);
+        innerPseudoState[key] = value;
+      }
+    } else if (basePseudoState) {
+      innerPseudoState = basePseudoState;
+      for (const key of Object.keys(basePseudoState)) {
+        const value = basePseudoState[key];
+        styleDeps.push(value);
+      }
+    } else if (pseudoState) {
+      innerPseudoState = pseudoState;
+      for (const key of Object.keys(pseudoState)) {
+        const value = pseudoState[key];
+        styleDeps.push(value);
+      }
+    } else {
+      innerPseudoState = PSEUDO_STATE_DEFAULT;
+    }
     const styleContext = {
       parentLayout,
       layout,
@@ -11773,13 +11298,6 @@ const Box = props => {
       pseudoClasses,
       pseudoElements
     };
-    const styleDeps = [
-    // Layout and alignment props
-    parentLayout, layout,
-    // Style context dependencies
-    managedByCSSVars, pseudoClasses, pseudoElements,
-    // Selectors
-    visualSelector, pseudoStateSelector];
     const boxStyles = {};
     if (baseStyle) {
       for (const key of baseStyle) {
@@ -11789,22 +11307,6 @@ const Box = props => {
       }
     }
     const stylingKeyCandidateArray = Object.keys(rest);
-    const assignStyleFromProp = (propValue, propName, stylesTarget, context) => {
-      const propEffect = getPropEffect(propName);
-      if (propEffect === "ignore") {
-        return;
-      }
-      if (propEffect === "forward" || propEffect === "style_and_forward") {
-        if (stylesTarget === boxStyles) {
-          remainingProps[propName] = propValue;
-        }
-        if (propEffect === "forward") {
-          return;
-        }
-      }
-      styleDeps.push(propValue);
-      assignStyle(stylesTarget, propValue, propName, context);
-    };
     const getPropEffect = propName => {
       if (visualSelector) {
         if (HANDLED_BY_VISUAL_CHILD_PROP_SET.has(propName)) {
@@ -11814,7 +11316,34 @@ const Box = props => {
           return "style_and_forward";
         }
       }
-      return isStyleProp(propName) ? "style" : "forward";
+      if (isStyleProp(propName)) {
+        return "style";
+      }
+      if (propName.startsWith("data-")) {
+        return "use";
+      }
+      return "forward";
+    };
+    const assignStyleFromProp = (propValue, propName, stylesTarget, styleContext) => {
+      const propEffect = getPropEffect(propName);
+      if (propEffect === "ignore") {
+        return;
+      }
+      const useToStyle = propEffect === "style" || propEffect === "style_and_forward";
+      const shouldForward = propEffect === "forward" || propEffect === "style_and_forward";
+      if (useToStyle) {
+        styleDeps.push(propValue);
+        assignStyle(stylesTarget, propValue, propName, styleContext, "css");
+      }
+      if (stylesTarget === boxStyles) {
+        if (!shouldForwardAllToChild && !useToStyle) {
+          // we'll put these props on ourselves
+          remainingProps[propName] = propValue;
+        }
+        if (shouldForward) {
+          propsToForward[propName] = propValue;
+        }
+      }
     };
     for (const key of stylingKeyCandidateArray) {
       if (key === "ref") {
@@ -11825,46 +11354,49 @@ const Box = props => {
       const value = rest[key];
       assignStyleFromProp(value, key, boxStyles, styleContext);
     }
-    const pseudoNamedStyles = {};
+    let pseudoNamedStyles = PSEUDO_NAMED_STYLES_DEFAULT;
     if (pseudoStyle) {
-      for (const key of Object.keys(pseudoStyle)) {
-        const pseudoStyleContext = {
-          ...styleContext,
-          managedByCSSVars: {
-            ...managedByCSSVars,
-            ...managedByCSSVars[key]
-          },
-          pseudoName: key
-        };
+      const pseudoStyleKeys = Object.keys(pseudoStyle);
+      if (pseudoStyleKeys.length) {
+        pseudoNamedStyles = {};
+        for (const key of pseudoStyleKeys) {
+          const pseudoStyleContext = {
+            ...styleContext,
+            managedByCSSVars: {
+              ...managedByCSSVars,
+              ...managedByCSSVars[key]
+            },
+            pseudoName: key
+          };
 
-        // pseudo class
-        if (key.startsWith(":")) {
-          styleDeps.push(key);
-          const pseudoClassStyles = {};
-          const pseudoClassStyle = pseudoStyle[key];
-          for (const pseudoClassStyleKey of Object.keys(pseudoClassStyle)) {
-            const pseudoClassStyleValue = pseudoClassStyle[pseudoClassStyleKey];
-            assignStyleFromProp(pseudoClassStyleValue, pseudoClassStyleKey, pseudoClassStyles, pseudoStyleContext);
+          // pseudo class
+          if (key.startsWith(":")) {
+            styleDeps.push(key);
+            const pseudoClassStyles = {};
+            const pseudoClassStyle = pseudoStyle[key];
+            for (const pseudoClassStyleKey of Object.keys(pseudoClassStyle)) {
+              const pseudoClassStyleValue = pseudoClassStyle[pseudoClassStyleKey];
+              assignStyleFromProp(pseudoClassStyleValue, pseudoClassStyleKey, pseudoClassStyles, pseudoStyleContext);
+            }
+            pseudoNamedStyles[key] = pseudoClassStyles;
+            continue;
           }
-          pseudoNamedStyles[key] = pseudoClassStyles;
-          continue;
-        }
-        // pseudo element
-        if (key.startsWith("::")) {
-          styleDeps.push(key);
-          const pseudoElementStyles = {};
-          const pseudoElementStyle = pseudoStyle[key];
-          for (const pseudoElementStyleKey of Object.keys(pseudoElementStyle)) {
-            const pseudoElementStyleValue = pseudoElementStyle[pseudoElementStyleKey];
-            assignStyleFromProp(pseudoElementStyleValue, pseudoElementStyleKey, pseudoElementStyles, pseudoStyleContext);
+          // pseudo element
+          if (key.startsWith("::")) {
+            styleDeps.push(key);
+            const pseudoElementStyles = {};
+            const pseudoElementStyle = pseudoStyle[key];
+            for (const pseudoElementStyleKey of Object.keys(pseudoElementStyle)) {
+              const pseudoElementStyleValue = pseudoElementStyle[pseudoElementStyleKey];
+              assignStyleFromProp(pseudoElementStyleValue, pseudoElementStyleKey, pseudoElementStyles, pseudoStyleContext);
+            }
+            pseudoNamedStyles[key] = pseudoElementStyles;
+            continue;
           }
-          pseudoNamedStyles[key] = pseudoElementStyles;
-          continue;
+          console.warn(`unsupported pseudo style key "${key}"`);
         }
-        console.warn(`unsupported pseudo style key "${key}"`);
       }
       remainingProps.pseudoStyle = pseudoStyle;
-      // TODO: we should also pass pseudoState right?
     }
     if (typeof style === "string") {
       appendStyles(boxStyles, normalizeStyles(style, "css"), "css");
@@ -11872,7 +11404,7 @@ const Box = props => {
     } else if (style && typeof style === "object") {
       for (const key of Object.keys(style)) {
         const stylePropValue = style[key];
-        assignStyle(boxStyles, stylePropValue, key, styleContext);
+        assignStyle(boxStyles, stylePropValue, key, styleContext, "css");
         styleDeps.push(stylePropValue); // impact box style -> add to deps
       }
     }
@@ -11924,23 +11456,22 @@ const Box = props => {
   let innerChildren;
   if (hasChildFunction) {
     if (Array.isArray(children)) {
-      innerChildren = children.map(child => typeof child === "function" ? child(remainingProps) : child);
+      innerChildren = children.map(child => typeof child === "function" ? child(propsToForward) : child);
     } else if (typeof children === "function") {
-      innerChildren = children(remainingProps);
+      innerChildren = children(propsToForward);
     } else {
       innerChildren = children;
     }
   } else {
     innerChildren = children;
   }
-  const shouldForwardAllToChild = visualSelector && pseudoStateSelector;
   return jsx(TagName, {
     ref: ref,
     className: innerClassName,
-    "data-layout-inline": layoutInline ? "" : undefined,
-    "data-layout-row": layoutRow ? "" : undefined,
-    "data-layout-column": layoutColumn ? "" : undefined,
-    ...(shouldForwardAllToChild ? undefined : remainingProps),
+    "data-layout-inline": inline ? "" : undefined,
+    "data-layout-row": row ? "" : undefined,
+    "data-layout-column": column ? "" : undefined,
+    ...remainingProps,
     children: jsx(BoxLayoutContext.Provider, {
       value: layout,
       children: innerChildren
@@ -11948,25 +11479,8 @@ const Box = props => {
   });
 };
 const Layout = props => {
-  const {
-    row,
-    column,
-    ...rest
-  } = props;
-  if (row) {
-    return jsx(Box, {
-      layoutRow: true,
-      ...rest
-    });
-  }
-  if (column) {
-    return jsx(Box, {
-      layoutColumn: true,
-      ...rest
-    });
-  }
   return jsx(Box, {
-    ...rest
+    ...props
   });
 };
 
@@ -13907,31 +13421,6 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     color: inherit;
   }
 
-  .navi_char_slot_invisible {
-    opacity: 0;
-  }
-
-  .navi_icon {
-    display: flex;
-    aspect-ratio: 1 / 1;
-    height: 100%;
-    max-height: 1em;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .navi_text[data-has-foreground] {
-    display: inline-block;
-  }
-
-  .navi_text_foreground {
-    position: absolute;
-    inset: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-
   .navi_text_overflow_wrapper {
     display: flex;
     width: 0;
@@ -14016,90 +13505,17 @@ const TextOverflowPinned = ({
 };
 const TextBasic = ({
   as = "span",
-  foregroundColor,
-  foregroundElement,
   contentSpacing = " ",
-  box,
   children,
   ...rest
 }) => {
-  const hasForeground = Boolean(foregroundElement || foregroundColor);
-  const text = jsxs(Box, {
+  const text = jsx(Box, {
     ...rest,
     baseClassName: "navi_text",
     as: as,
-    layoutInline: true,
-    layoutColumn: box ? true : undefined,
-    "data-has-foreground": hasForeground ? "" : undefined,
-    children: [applyContentSpacingOnTextChildren(children, contentSpacing), hasForeground && jsx("span", {
-      className: "navi_text_foreground",
-      style: {
-        backgroundColor: foregroundColor
-      },
-      children: foregroundElement
-    })]
+    children: applyContentSpacingOnTextChildren(children, contentSpacing)
   });
   return text;
-};
-const CharSlot = ({
-  charWidth = 1,
-  // 0 (zéro) is the real char width
-  // but 2 zéros gives too big icons
-  // while 1 "W" gives a nice result
-  baseChar = "W",
-  "aria-label": ariaLabel,
-  role,
-  decorative = false,
-  children,
-  ...rest
-}) => {
-  const invisibleText = baseChar.repeat(charWidth);
-  const ariaProps = decorative ? {
-    "aria-hidden": "true"
-  } : {
-    role,
-    "aria-label": ariaLabel
-  };
-  return jsx(Text, {
-    ...rest,
-    ...ariaProps,
-    foregroundElement: children,
-    children: jsx("span", {
-      className: "navi_char_slot_invisible",
-      "aria-hidden": "true",
-      children: invisibleText
-    })
-  });
-};
-const Icon = ({
-  box,
-  href,
-  children,
-  ...props
-}) => {
-  const innerChildren = href ? jsx("svg", {
-    width: "100%",
-    height: "100%",
-    children: jsx("use", {
-      href: href
-    })
-  }) : children;
-  if (box) {
-    return jsx(Box, {
-      layoutInline: true,
-      layoutColumn: true,
-      ...props,
-      children: innerChildren
-    });
-  }
-  return jsx(CharSlot, {
-    decorative: true,
-    ...props,
-    children: jsx("span", {
-      className: "navi_icon",
-      children: innerChildren
-    })
-  });
 };
 const Paragraph = ({
   contentSpacing = " ",
@@ -14164,6 +13580,114 @@ const applyContentSpacingOnTextChildren = (children, contentSpacing) => {
 };
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .navi_icon {
+    display: inline-block;
+    box-sizing: border-box;
+  }
+
+  .navi_icon_char_slot {
+    opacity: 0;
+  }
+  .navi_icon_foreground {
+    position: absolute;
+    inset: 0;
+    display: inline-flex;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: start;
+  }
+  .navi_icon_foreground > .navi_text {
+    display: flex;
+    aspect-ratio: 1 / 1;
+    height: 100%;
+    max-height: 1em;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .navi_icon > svg,
+  .navi_icon > img {
+    width: 100%;
+    height: 100%;
+  }
+  .navi_icon[data-width] > svg,
+  .navi_icon[data-width] > img {
+    width: 100%;
+    height: auto;
+  }
+  .navi_icon[data-height] > svg,
+  .navi_icon[data-height] > img {
+    width: auto;
+    height: 100%;
+  }
+`;
+const Icon = ({
+  href,
+  children,
+  className,
+  charWidth = 1,
+  // 0 (zéro) is the real char width
+  // but 2 zéros gives too big icons
+  // while 1 "W" gives a nice result
+  baseChar = "W",
+  "aria-label": ariaLabel,
+  role,
+  decorative = false,
+  ...props
+}) => {
+  const innerChildren = href ? jsx("svg", {
+    width: "100%",
+    height: "100%",
+    children: jsx("use", {
+      href: href
+    })
+  }) : children;
+  let {
+    box,
+    width,
+    height
+  } = props;
+  if (width !== undefined || height !== undefined) {
+    box = true;
+  }
+  if (box) {
+    return jsx(Box, {
+      ...props,
+      baseClassName: "navi_icon",
+      "data-width": width,
+      "data-height": height,
+      children: innerChildren
+    });
+  }
+  const invisibleText = baseChar.repeat(charWidth);
+  const ariaProps = decorative ? {
+    "aria-hidden": "true"
+  } : {
+    role,
+    "aria-label": ariaLabel
+  };
+  return jsxs(Text, {
+    ...props,
+    ...ariaProps,
+    box: box,
+    className: withPropsClassName("navi_icon", className),
+    "data-icon-char": "",
+    "data-width": width,
+    "data-height": height,
+    children: [jsx("span", {
+      className: "navi_icon_char_slot",
+      "aria-hidden": "true",
+      children: invisibleText
+    }), jsx("span", {
+      className: "navi_icon_foreground",
+      children: jsx(Text, {
+        children: innerChildren
+      })
+    })]
+  });
+};
+
+installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_link {
       --border-radius: 2px;
@@ -14172,7 +13696,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       --color-visited: light-dark(#6a1b9a, #ab47bc);
       --color-active: red;
       --text-decoration: underline;
-      --text-decoration-hover: underline;
+      --text-decoration-hover: var(--text-decoration);
       --cursor: pointer;
     }
   }
@@ -14183,7 +13707,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     --x-color-visited: var(--color-visited);
     --x-color-active: var(--color-active);
     --x-text-decoration: var(--text-decoration);
-    --x-text-decoration-hover: var(--text-decoration-hover,);
+    --x-text-decoration-hover: var(--text-decoration-hover);
     --x-cursor: var(--cursor);
 
     position: relative;
@@ -14301,7 +13825,6 @@ const LinkPlain = props => {
     rel,
     preventDefault,
     // visual
-    box,
     blankTargetIcon,
     anchorIcon,
     icon,
@@ -14361,8 +13884,6 @@ const LinkPlain = props => {
     // Visual
     ,
     baseClassName: "navi_link",
-    layoutInline: true,
-    layoutColumn: box ? true : undefined,
     managedByCSSVars: LinkManagedByCSSVars,
     pseudoClasses: LinkPseudoClasses,
     pseudoElements: LinkPseudoElements,
@@ -14408,8 +13929,6 @@ const LinkPlain = props => {
 const BlankTargetLinkSvg = () => {
   return jsx("svg", {
     viewBox: "0 0 24 24",
-    width: "100%",
-    height: "100%",
     xmlns: "http://www.w3.org/2000/svg",
     children: jsx("path", {
       d: "M10.0002 5H8.2002C7.08009 5 6.51962 5 6.0918 5.21799C5.71547 5.40973 5.40973 5.71547 5.21799 6.0918C5 6.51962 5 7.08009 5 8.2002V15.8002C5 16.9203 5 17.4801 5.21799 17.9079C5.40973 18.2842 5.71547 18.5905 6.0918 18.7822C6.5192 19 7.07899 19 8.19691 19H15.8031C16.921 19 17.48 19 17.9074 18.7822C18.2837 18.5905 18.5905 18.2839 18.7822 17.9076C19 17.4802 19 16.921 19 15.8031V14M20 9V4M20 4H15M20 4L13 11",
@@ -14424,8 +13943,6 @@ const BlankTargetLinkSvg = () => {
 const AnchorLinkSvg = () => {
   return jsxs("svg", {
     viewBox: "0 0 24 24",
-    width: "100%",
-    height: "100%",
     xmlns: "http://www.w3.org/2000/svg",
     children: [jsx("path", {
       d: "M13.2218 3.32234C15.3697 1.17445 18.8521 1.17445 21 3.32234C23.1479 5.47022 23.1479 8.95263 21 11.1005L17.4645 14.636C15.3166 16.7839 11.8342 16.7839 9.6863 14.636C9.48752 14.4373 9.30713 14.2271 9.14514 14.0075C8.90318 13.6796 8.97098 13.2301 9.25914 12.9419C9.73221 12.4688 10.5662 12.6561 11.0245 13.1435C11.0494 13.1699 11.0747 13.196 11.1005 13.2218C12.4673 14.5887 14.6834 14.5887 16.0503 13.2218L19.5858 9.6863C20.9526 8.31947 20.9526 6.10339 19.5858 4.73655C18.219 3.36972 16.0029 3.36972 14.636 4.73655L13.5754 5.79721C13.1849 6.18774 12.5517 6.18774 12.1612 5.79721C11.7706 5.40669 11.7706 4.77352 12.1612 4.383L13.2218 3.32234Z",
@@ -14439,8 +13956,6 @@ const AnchorLinkSvg = () => {
 const PhoneSvg = () => {
   return jsx("svg", {
     viewBox: "0 0 24 24",
-    width: "100%",
-    height: "100%",
     xmlns: "http://www.w3.org/2000/svg",
     children: jsx("path", {
       d: "M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z",
@@ -14451,8 +13966,6 @@ const PhoneSvg = () => {
 const SmsSvg = () => {
   return jsx("svg", {
     viewBox: "0 0 24 24",
-    width: "100%",
-    height: "100%",
     xmlns: "http://www.w3.org/2000/svg",
     children: jsx("path", {
       d: "M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM18 14H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z",
@@ -14463,8 +13976,6 @@ const SmsSvg = () => {
 const EmailSvg = () => {
   return jsxs("svg", {
     viewBox: "0 0 24 24",
-    width: "100%",
-    height: "100%",
     xmlns: "http://www.w3.org/2000/svg",
     children: [jsx("path", {
       d: "M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z",
@@ -14484,8 +13995,6 @@ const EmailSvg = () => {
 const GithubSvg = () => {
   return jsx("svg", {
     viewBox: "0 0 24 24",
-    width: "100%",
-    height: "100%",
     xmlns: "http://www.w3.org/2000/svg",
     children: jsx("path", {
       d: "M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0012 2z",
@@ -17056,13 +16565,10 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     --x-color: var(--color);
 
     position: relative;
+    display: inline-flex;
     box-sizing: border-box;
-    width: fit-content;
-    height: fit-content;
     padding: 0;
     flex-direction: inherit;
-    align-items: inherit;
-    justify-content: inherit;
     background: none;
     border: none;
     border-radius: inherit;
@@ -17071,6 +16577,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   }
   .navi_button_content {
     position: relative;
+    box-sizing: border-box;
     padding-top: var(--padding-top, var(--padding-y, var(--padding, 1px)));
     padding-right: var(--padding-right, var(--padding-x, var(--padding, 6px)));
     padding-bottom: var(
@@ -17241,7 +16748,6 @@ const ButtonBasic = props => {
       ...buttonProps,
       as: "span",
       baseClassName: "navi_button_content",
-      layoutInline: true,
       children: [innerChildren, jsx("span", {
         className: "navi_button_shadow"
       })]
@@ -17259,8 +16765,6 @@ const ButtonBasic = props => {
     // style management
     ,
     baseClassName: "navi_button",
-    layoutInline: true,
-    layoutColumn: true,
     managedByCSSVars: ButtonManagedByCSSVars,
     pseudoClasses: ButtonPseudoClasses,
     pseudoElements: ButtonPseudoElements,
@@ -21811,29 +21315,97 @@ const SVGMaskOverlay = ({
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
-  .navi_count {
-    position: relative;
-    top: -1px;
-    color: rgba(28, 43, 52, 0.4);
-  }
-`;
-const Count = ({
-  children,
-  ...rest
-}) => {
-  return jsxs(Box, {
-    as: "span",
-    baseClassName: ".navi_count",
-    ...rest,
-    children: ["(", children, ")"]
-  });
+const CSS_VAR_NAME = "--color-contrasting";
+
+const useContrastingColor = (ref) => {
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return;
+    }
+    const lightColor = "var(--navi-color-light)";
+    const darkColor = "var(--navi-color-dark)";
+    const backgroundColor = getComputedStyle(el).backgroundColor;
+    if (!backgroundColor) {
+      el.style.removeProperty(CSS_VAR_NAME);
+      return;
+    }
+    const colorPicked = pickLightOrDark(
+      backgroundColor,
+      lightColor,
+      darkColor,
+      el,
+    );
+    el.style.setProperty(CSS_VAR_NAME, colorPicked);
+  }, []);
 };
 
-const Image = props => {
-  return jsx(Box, {
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  @layer navi {
+    .navi_badge {
+      --border-radius: 1em;
+    }
+  }
+  .navi_badge {
+    display: inline-block;
+    box-sizing: border-box;
+    min-width: 1.5em;
+    height: 1.5em;
+    max-height: 1.5em;
+    padding-right: var(
+      --padding-right,
+      var(--padding-x, var(--padding, 0.4em))
+    );
+    padding-left: var(--padding-left, var(--padding-x, var(--padding, 0.4em)));
+    color: var(--color, var(--color-contrasting));
+    text-align: center;
+    line-height: 1.5em;
+    vertical-align: middle;
+    border-radius: var(--border-radius, 1em);
+  }
+`;
+const BadgeManagedByCSSVars = {
+  borderWidth: "--border-width",
+  borderRadius: "--border-radius",
+  paddingRight: "--padding-right",
+  paddingLeft: "--padding-left",
+  backgroundColor: "--background-color",
+  borderColor: "--border-color",
+  color: "--color"
+};
+const BadgeCount = ({
+  children,
+  bold = true,
+  max,
+  ...props
+}) => {
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
+
+  // Calculer la valeur à afficher en fonction du paramètre max
+  const getDisplayValue = () => {
+    if (max === undefined) {
+      return children;
+    }
+    const numericValue = typeof children === "string" ? parseInt(children, 10) : children;
+    const numericMax = typeof max === "string" ? parseInt(max, 10) : max;
+    if (isNaN(numericValue) || isNaN(numericMax)) {
+      return children;
+    }
+    if (numericValue > numericMax) {
+      return `${numericMax}+`;
+    }
+    return children;
+  };
+  const displayValue = getDisplayValue();
+  useContrastingColor(ref);
+  return jsx(Text, {
     ...props,
-    as: "img"
+    ref: ref,
+    className: "navi_badge",
+    bold: bold,
+    managedByCSSVars: BadgeManagedByCSSVars,
+    children: displayValue
   });
 };
 
@@ -21846,6 +21418,13 @@ const Code = ({
     ...rest,
     as: "code",
     children: applyContentSpacingOnTextChildren(children, contentSpacing)
+  });
+};
+
+const Image = props => {
+  return jsx(Box, {
+    ...props,
+    as: "img"
   });
 };
 
@@ -22086,5 +21665,5 @@ const useDependenciesDiff = (inputs) => {
   return diffRef.current;
 };
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Box, Button, CharSlot, Checkbox, CheckboxList, Code, Col, Colgroup, Count, Details, Editable, ErrorBoundaryContext, FontSizedSvg, Form, Icon, IconAndText, Image, Input, Label, Layout, Link, LinkWithIcon, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, Select, SelectionContext, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useUrlSearchParam, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, BadgeCount, Box, Button, Checkbox, CheckboxList, Code, Col, Colgroup, Details, Editable, ErrorBoundaryContext, FontSizedSvg, Form, Icon, IconAndText, Image, Input, Label, Layout, Link, LinkWithIcon, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, Select, SelectionContext, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useActiveRouteInfo, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useUrlSearchParam, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map

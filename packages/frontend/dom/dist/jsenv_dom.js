@@ -109,6 +109,12 @@ const getElementSignature = (element) => {
   if (dataUIName) {
     return `${tagName}[data-ui-name="${dataUIName}"]`;
   }
+  if (element === document.body) {
+    return "<body>";
+  }
+  if (element === document.documentElement) {
+    return "<html>";
+  }
   const elementId = element.id;
   if (elementId) {
     return `${tagName}#${elementId}`;
@@ -326,86 +332,1448 @@ const getAssociatedElements = (element) => {
   return null;
 };
 
-const getComputedStyle$1 = (element) => {
-  return elementToOwnerWindow(element).getComputedStyle(element);
+/**
+ * Determines if the current color scheme is dark mode
+ * @param {Element} [element] - DOM element to check color-scheme against (optional)
+ * @returns {boolean} True if dark mode is active
+ */
+const prefersDarkColors = (element) => {
+  const colorScheme = getPreferedColorScheme(element);
+  return colorScheme.includes("dark");
 };
-
-const getStyle = (element, name) => {
-  return getComputedStyle$1(element).getPropertyValue(name);
+const prefersLightColors = (element) => {
+  return !prefersDarkColors(element);
 };
-const setStyle = (element, name, value) => {
+const getPreferedColorScheme = (element) => {
+  const computedStyle = getComputedStyle(element || document.documentElement);
+  const colorScheme = computedStyle.colorScheme;
 
-  const prevValue = element.style[name];
-  if (prevValue) {
-    element.style.setProperty(name, value);
-    return () => {
-      element.style.setProperty(name, prevValue);
-    };
-  }
-  element.style.setProperty(name, value);
-  return () => {
-    element.style.removeProperty(name);
-  };
-};
-const forceStyle = (element, name, value) => {
-  const inlineStyleValue = element.style[name];
-  if (inlineStyleValue === value) {
-    return () => {};
-  }
-  const computedStyleValue = getStyle(element, name);
-  if (computedStyleValue === value) {
-    return () => {};
-  }
-  const restoreStyle = setStyle(element, name, value);
-  return restoreStyle;
-};
-
-const addWillChange = (element, property) => {
-  const currentWillChange = element.style.willChange;
-  const willChangeValues = currentWillChange
-    ? currentWillChange
-        .split(",")
-        .map((v) => v.trim())
-        .filter(Boolean)
-    : [];
-
-  if (willChangeValues.includes(property)) {
-    // Property already exists, return no-op
-    return () => {};
+  // If no explicit color-scheme is set, or it's "normal",
+  // fall back to prefers-color-scheme media query
+  if (!colorScheme || colorScheme === "normal") {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
   }
 
-  willChangeValues.push(property);
-  element.style.willChange = willChangeValues.join(", ");
-  // Return function to remove only this property
-  return () => {
-    const newValues = willChangeValues.filter((v) => v !== property);
-    if (newValues.length === 0) {
-      element.style.removeProperty("will-change");
-    } else {
-      element.style.willChange = newValues.join(", ");
-    }
-  };
+  return colorScheme;
 };
 
-const createSetMany$1 = (setter) => {
-  return (element, description) => {
-    const cleanupCallbackSet = new Set();
-    for (const name of Object.keys(description)) {
-      const value = description[name];
-      const restoreStyle = setter(element, name, value);
-      cleanupCallbackSet.add(restoreStyle);
-    }
-    return () => {
-      for (const cleanupCallback of cleanupCallbackSet) {
-        cleanupCallback();
+const updateRGBA = (rgba, toUpdate) => {
+  const copy = [...rgba];
+  if (toUpdate.r !== undefined) {
+    copy[0] = toUpdate.r;
+  }
+  if (toUpdate.g !== undefined) {
+    copy[1] = toUpdate.g;
+  }
+  if (toUpdate.b !== undefined) {
+    copy[2] = toUpdate.b;
+  }
+  if (toUpdate.a !== undefined) {
+    copy[3] = toUpdate.a;
+  }
+  return copy;
+};
+const areSameRGBA = (first, second) => {
+  const [r, g, b, a] = first;
+  const [r2, g2, b2, a2] = second;
+  return r === r2 && g === g2 && b === b2 && a === a2;
+};
+const resolveCSSColor = (color, element) => {
+  const rgba = parseCSSColor(color, element);
+  return stringifyCSSColor(rgba);
+};
+
+/**
+ * Resolves a color value, handling CSS custom properties and light-dark() function
+ * @param {string} color - CSS color value (may include CSS variables, light-dark())
+ * @param {Element} element - DOM element to resolve CSS variables and light-dark() against
+ * @param {string} context - Return format: "js" for RGBA array, "css" for CSS string
+ * @returns {Array<number>|string|null} [r, g, b, a] values, CSS string, or null if parsing fails
+ */
+const parseCSSColor = (color, element) => {
+  if (!color) {
+    return null;
+  }
+  if (typeof color !== "string") {
+    return color;
+  }
+  let resolvedColor = color;
+
+  // Handle light-dark() function
+  const lightDarkMatch = color.match(/light-dark\(([^,]+),([^)]+)\)/);
+  if (lightDarkMatch) {
+    const lightColor = lightDarkMatch[1].trim();
+    const darkColor = lightDarkMatch[2].trim();
+
+    // Select the appropriate color and recursively resolve it
+    const prefersDark = prefersDarkColors(element);
+    resolvedColor = prefersDark ? darkColor : lightColor;
+    return parseCSSColor(resolvedColor, element);
+  }
+
+  // If it's a CSS custom property, resolve it using getComputedStyle
+  if (resolvedColor.includes("var(")) {
+    const computedStyle = getComputedStyle(element);
+
+    // Handle var() syntax
+    const varMatch = color.match(/var\(([^,)]+)(?:,([^)]+))?\)/);
+    if (varMatch) {
+      const propertyName = varMatch[1].trim();
+      const fallback = varMatch[2]?.trim();
+
+      const resolvedValue = computedStyle.getPropertyValue(propertyName).trim();
+      if (resolvedValue) {
+        // Recursively resolve in case the CSS variable contains light-dark() or other variables
+        return parseCSSColor(resolvedValue, element);
       }
-      cleanupCallbackSet.clear();
+      if (fallback) {
+        // Recursively resolve fallback (in case it's also a CSS variable)
+        return parseCSSColor(fallback, element);
+      }
+    }
+  }
+
+  if (color.startsWith("--")) {
+    console.warn(`found "${color}". Use "var(${color})" instead.`);
+    return null;
+  }
+  const rgba = convertColorToRgba(resolvedColor);
+  return rgba;
+};
+/**
+ * Converts HSL color to RGB
+ * @param {number} h - Hue (0-360)
+ * @param {number} s - Saturation (0-1)
+ * @param {number} l - Lightness (0-1)
+ * @returns {Array<number>} [r, g, b] values
+ */
+const hslToRgb = (h, s, l) => {
+  h = h % 360;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = l - c / 2;
+  const createRgb = (r, g, b) => {
+    return [
+      Math.round((r + m) * 255),
+      Math.round((g + m) * 255),
+      Math.round((b + m) * 255),
+    ];
+  };
+
+  if (h >= 0 && h < 60) {
+    return createRgb(c, x, 0);
+  }
+  if (h >= 60 && h < 120) {
+    return createRgb(x, c, 0);
+  }
+  if (h >= 120 && h < 180) {
+    return createRgb(0, c, x);
+  }
+  if (h >= 180 && h < 240) {
+    return createRgb(0, x, c);
+  }
+  if (h >= 240 && h < 300) {
+    return createRgb(x, 0, c);
+  }
+  if (h >= 300 && h < 360) {
+    return createRgb(c, 0, x);
+  }
+
+  return createRgb(0, 0, 0);
+};
+/**
+ * Parses a CSS color string into RGBA values
+ * Supports hex (#rgb, #rrggbb, #rrggbbaa), rgb(), rgba(), hsl(), hsla()
+ * @param {string} color - CSS color string
+ * @returns {Array<number>|null} [r, g, b, a] values or null if parsing fails
+ */
+const convertColorToRgba = (color) => {
+  if (!color || typeof color !== "string") {
+    return null;
+  }
+  color = color.trim().toLowerCase();
+  // Hex colors
+  if (color.startsWith("#")) {
+    const hex = color.slice(1);
+    if (hex.length === 3) {
+      // #rgb -> #rrggbb
+      const r = parseInt(hex[0] + hex[0], 16);
+      const g = parseInt(hex[1] + hex[1], 16);
+      const b = parseInt(hex[2] + hex[2], 16);
+      return [r, g, b, 1];
+    }
+    if (hex.length === 6) {
+      // #rrggbb
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      return [r, g, b, 1];
+    }
+    if (hex.length === 8) {
+      // #rrggbbaa
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      const a = parseInt(hex.slice(6, 8), 16) / 255;
+      return [r, g, b, a];
+    }
+  }
+
+  // RGB/RGBA colors
+  const rgbMatch = color.match(/rgba?\(([^)]+)\)/);
+  if (rgbMatch) {
+    const values = rgbMatch[1].split(",").map((v) => parseFloat(v.trim()));
+    if (values.length >= 3) {
+      const r = values[0];
+      const g = values[1];
+      const b = values[2];
+      const a = values.length >= 4 ? values[3] : 1;
+      return [r, g, b, a];
+    }
+  }
+
+  // HSL/HSLA colors - convert to RGB
+  const hslMatch = color.match(/hsla?\(([^)]+)\)/);
+  if (hslMatch) {
+    const values = hslMatch[1].split(",").map((v) => parseFloat(v.trim()));
+    if (values.length >= 3) {
+      const [h, s, l] = values;
+      const a = values.length >= 4 ? values[3] : 1;
+      const [r, g, b] = hslToRgb(h, s / 100, l / 100);
+      return [r, g, b, a];
+    }
+  }
+
+  if (color === "transparent") {
+    return [0, 0, 0, 0];
+  }
+
+  // Named colors (basic set)
+  if (namedColors[color]) {
+    return [...namedColors[color], 1];
+  }
+  return null;
+};
+
+/**
+ * Converts RGBA values back to a CSS color string
+ * Prefers named colors when possible, then rgb() for opaque colors, rgba() for transparent
+ * @param {Array<number>} rgba - [r, g, b, a] values
+ * @returns {string|null} CSS color string or null if invalid input
+ */
+const stringifyCSSColor = (rgba) => {
+  if (!Array.isArray(rgba) || rgba.length < 3) {
+    return null;
+  }
+
+  const [r, g, b, a = 1] = rgba;
+
+  // Validate RGB values
+  if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
+    return null;
+  }
+
+  // Validate alpha value
+  if (a < 0 || a > 1) {
+    return null;
+  }
+
+  // Round RGB values to integers
+  const rInt = Math.round(r);
+  const gInt = Math.round(g);
+  const bInt = Math.round(b);
+
+  // Check for named colors (only for fully opaque colors)
+  if (a === 1) {
+    for (const [name, [nameR, nameG, nameB]] of Object.entries(namedColors)) {
+      if (rInt === nameR && gInt === nameG && bInt === nameB) {
+        return name;
+      }
+    }
+  }
+
+  // Use rgb() for opaque colors, rgba() for transparent
+  if (a === 1) {
+    return `rgb(${rInt}, ${gInt}, ${bInt})`;
+  }
+  if (a === 0 && rInt === 0 && gInt === 0 && bInt === 0) {
+    return "transparent";
+  }
+  return `rgba(${rInt}, ${gInt}, ${bInt}, ${a})`;
+};
+const namedColors = {
+  // Basic colors
+  black: [0, 0, 0],
+  white: [255, 255, 255],
+  red: [255, 0, 0],
+  green: [0, 128, 0],
+  blue: [0, 0, 255],
+  yellow: [255, 255, 0],
+  cyan: [0, 255, 255],
+  magenta: [255, 0, 255],
+
+  // Gray variations
+  silver: [192, 192, 192],
+  gray: [128, 128, 128],
+  grey: [128, 128, 128],
+  darkgray: [169, 169, 169],
+  darkgrey: [169, 169, 169],
+  lightgray: [211, 211, 211],
+  lightgrey: [211, 211, 211],
+  dimgray: [105, 105, 105],
+  dimgrey: [105, 105, 105],
+  gainsboro: [220, 220, 220],
+  whitesmoke: [245, 245, 245],
+
+  // Extended basic colors
+  maroon: [128, 0, 0],
+  olive: [128, 128, 0],
+  lime: [0, 255, 0],
+  aqua: [0, 255, 255],
+  teal: [0, 128, 128],
+  navy: [0, 0, 128],
+  fuchsia: [255, 0, 255],
+  purple: [128, 0, 128],
+
+  // Red variations
+  darkred: [139, 0, 0],
+  firebrick: [178, 34, 34],
+  crimson: [220, 20, 60],
+  indianred: [205, 92, 92],
+  lightcoral: [240, 128, 128],
+  salmon: [250, 128, 114],
+  darksalmon: [233, 150, 122],
+  lightsalmon: [255, 160, 122],
+
+  // Pink variations
+  pink: [255, 192, 203],
+  lightpink: [255, 182, 193],
+  hotpink: [255, 105, 180],
+  deeppink: [255, 20, 147],
+  mediumvioletred: [199, 21, 133],
+  palevioletred: [219, 112, 147],
+
+  // Orange variations
+  orange: [255, 165, 0],
+  darkorange: [255, 140, 0],
+  orangered: [255, 69, 0],
+  tomato: [255, 99, 71],
+  coral: [255, 127, 80],
+
+  // Yellow variations
+  gold: [255, 215, 0],
+  lightyellow: [255, 255, 224],
+  lemonchiffon: [255, 250, 205],
+  lightgoldenrodyellow: [250, 250, 210],
+  papayawhip: [255, 239, 213],
+  moccasin: [255, 228, 181],
+  peachpuff: [255, 218, 185],
+  palegoldenrod: [238, 232, 170],
+  khaki: [240, 230, 140],
+  darkkhaki: [189, 183, 107],
+
+  // Green variations
+  darkgreen: [0, 100, 0],
+  forestgreen: [34, 139, 34],
+  seagreen: [46, 139, 87],
+  mediumseagreen: [60, 179, 113],
+  springgreen: [0, 255, 127],
+  mediumspringgreen: [0, 250, 154],
+  lawngreen: [124, 252, 0],
+  chartreuse: [127, 255, 0],
+  greenyellow: [173, 255, 47],
+  limegreen: [50, 205, 50],
+  palegreen: [152, 251, 152],
+  lightgreen: [144, 238, 144],
+  mediumaquamarine: [102, 205, 170],
+  aquamarine: [127, 255, 212],
+  darkolivegreen: [85, 107, 47],
+  olivedrab: [107, 142, 35],
+  yellowgreen: [154, 205, 50],
+
+  // Blue variations
+  darkblue: [0, 0, 139],
+  mediumblue: [0, 0, 205],
+  royalblue: [65, 105, 225],
+  steelblue: [70, 130, 180],
+  dodgerblue: [30, 144, 255],
+  deepskyblue: [0, 191, 255],
+  skyblue: [135, 206, 235],
+  lightskyblue: [135, 206, 250],
+  lightblue: [173, 216, 230],
+  powderblue: [176, 224, 230],
+  lightcyan: [224, 255, 255],
+  paleturquoise: [175, 238, 238],
+  darkturquoise: [0, 206, 209],
+  mediumturquoise: [72, 209, 204],
+  turquoise: [64, 224, 208],
+  cadetblue: [95, 158, 160],
+  darkcyan: [0, 139, 139],
+  lightseagreen: [32, 178, 170],
+
+  // Purple variations
+  indigo: [75, 0, 130],
+  darkviolet: [148, 0, 211],
+  blueviolet: [138, 43, 226],
+  mediumpurple: [147, 112, 219],
+  mediumslateblue: [123, 104, 238],
+  slateblue: [106, 90, 205],
+  darkslateblue: [72, 61, 139],
+  lavender: [230, 230, 250],
+  thistle: [216, 191, 216],
+  plum: [221, 160, 221],
+  violet: [238, 130, 238],
+  orchid: [218, 112, 214],
+  mediumorchid: [186, 85, 211],
+  darkorchid: [153, 50, 204],
+  darkmagenta: [139, 0, 139],
+
+  // Brown variations
+  brown: [165, 42, 42],
+  saddlebrown: [139, 69, 19],
+  sienna: [160, 82, 45],
+  chocolate: [210, 105, 30],
+  darkgoldenrod: [184, 134, 11],
+  peru: [205, 133, 63],
+  rosybrown: [188, 143, 143],
+  goldenrod: [218, 165, 32],
+  sandybrown: [244, 164, 96],
+  tan: [210, 180, 140],
+  burlywood: [222, 184, 135],
+  wheat: [245, 222, 179],
+  navajowhite: [255, 222, 173],
+  bisque: [255, 228, 196],
+  blanchedalmond: [255, 235, 205],
+  cornsilk: [255, 248, 220],
+
+  // Special colors
+  aliceblue: [240, 248, 255],
+  antiquewhite: [250, 235, 215],
+  azure: [240, 255, 255],
+  beige: [245, 245, 220],
+  honeydew: [240, 255, 240],
+  ivory: [255, 255, 240],
+  lavenderblush: [255, 240, 245],
+  linen: [250, 240, 230],
+  mintcream: [245, 255, 250],
+  mistyrose: [255, 228, 225],
+  oldlace: [253, 245, 230],
+  seashell: [255, 245, 238],
+  snow: [255, 250, 250],
+};
+
+// Export named colors and create a Set of color keywords for efficient lookup
+const cssColorKeywordSet = new Set([
+  ...Object.keys(namedColors),
+  "transparent",
+  "currentcolor",
+]);
+
+// Shared tokenization utilities for CSS parsing
+
+// Tokenize CSS string into individual values, respecting function boundaries
+const tokenizeCSS = (cssString, options = {}) => {
+  const {
+    separators = [" "],
+    preserveSeparators = false,
+    respectFunctions = true,
+  } = options;
+
+  const tokens = [];
+  let current = "";
+  let depth = 0;
+  let inFunction = false;
+
+  for (let i = 0; i < cssString.length; i++) {
+    const char = cssString[i];
+
+    if (respectFunctions && char === "(") {
+      depth++;
+      inFunction = true;
+      current += char;
+    } else if (respectFunctions && char === ")") {
+      depth--;
+      current += char;
+      if (depth === 0) {
+        inFunction = false;
+      }
+    } else if (
+      separators.includes(char) &&
+      (!respectFunctions || (!inFunction && depth === 0))
+    ) {
+      if (current.trim()) {
+        tokens.push(current.trim());
+        current = "";
+      }
+      if (preserveSeparators) {
+        tokens.push(char);
+      }
+    } else {
+      current += char;
+    }
+  }
+
+  if (current.trim()) {
+    tokens.push(current.trim());
+  }
+
+  return tokens;
+};
+
+// Split CSS string into layers/sections (handle commas not inside functions)
+const splitCSSLayers = (cssString) => {
+  const layers = [];
+  let current = "";
+  let depth = 0;
+
+  for (let i = 0; i < cssString.length; i++) {
+    const char = cssString[i];
+
+    if (char === "(") {
+      depth++;
+    } else if (char === ")") {
+      depth--;
+    } else if (char === "," && depth === 0) {
+      layers.push(current.trim());
+      current = "";
+      continue;
+    }
+
+    current += char;
+  }
+
+  if (current.trim()) {
+    layers.push(current.trim());
+  }
+
+  return layers;
+};
+
+// Convert image object to CSS string
+const stringifyCSSImage = (imageObj) => {
+  if (typeof imageObj === "string") {
+    return imageObj;
+  }
+
+  if (typeof imageObj !== "object" || imageObj === null) {
+    return imageObj;
+  }
+
+  switch (imageObj.type) {
+    case "url":
+      return `url(${imageObj.value})`;
+
+    case "linear-gradient":
+      return stringifyLinearGradient(imageObj);
+
+    case "radial-gradient":
+      return stringifyRadialGradient(imageObj);
+
+    case "conic-gradient":
+      return stringifyConicGradient(imageObj);
+
+    case "repeating-linear-gradient":
+      return `repeating-${stringifyLinearGradient(imageObj)}`;
+
+    case "repeating-radial-gradient":
+      return `repeating-${stringifyRadialGradient(imageObj)}`;
+
+    case "repeating-conic-gradient":
+      return `repeating-${stringifyConicGradient(imageObj)}`;
+
+    default:
+      // Fallback for unknown types
+      return imageObj.original || "none";
+  }
+};
+
+// Parse CSS image string into structured object
+const parseCSSImage = (imageString, element) => {
+  if (!imageString || imageString === "none") {
+    return undefined;
+  }
+
+  if (typeof imageString !== "string") {
+    return imageString;
+  }
+
+  const trimmed = imageString.trim();
+
+  // Parse URL
+  const urlMatch = trimmed.match(/^url\s*\(([^)]*)\)$/);
+  if (urlMatch) {
+    return {
+      type: "url",
+      value: cleanUrlValue(urlMatch[1]),
+      original: trimmed,
     };
+  }
+
+  // Parse gradients
+  const gradientMatch = trimmed.match(
+    /^(repeating-)?(linear-gradient|radial-gradient|conic-gradient)\s*\(([\s\S]*)\)$/,
+  );
+  if (gradientMatch) {
+    const [, repeating, gradientType, content] = gradientMatch;
+    const type = repeating ? `repeating-${gradientType}` : gradientType;
+
+    switch (gradientType) {
+      case "linear-gradient":
+        return parseLinearGradient(content, type, trimmed, element);
+      case "radial-gradient":
+        return parseRadialGradient(content, type, trimmed, element);
+      case "conic-gradient":
+        return parseConicGradient(content, type, trimmed, element);
+    }
+  }
+
+  // Other image functions (element, cross-fade, etc.)
+  const functionMatch = trimmed.match(/^([a-z-]+)\s*\(([\s\S]*)\)$/);
+  if (functionMatch) {
+    return {
+      type: functionMatch[1],
+      content: functionMatch[2],
+      original: trimmed,
+    };
+  }
+
+  // Fallback for unrecognized values
+  return {
+    type: "unknown",
+    value: trimmed,
+    original: trimmed,
   };
 };
 
-const setStyles = createSetMany$1(setStyle);
-const forceStyles = createSetMany$1(forceStyle);
+// Helper functions for gradient parsing
+const parseLinearGradient = (content, type, original, element) => {
+  const { direction, colors } = parseGradientContent(content, element, {
+    isRadial: false,
+  });
+
+  return {
+    type,
+    direction: direction || "to bottom",
+    colors,
+    original,
+  };
+};
+
+const parseRadialGradient = (content, type, original, element) => {
+  const { shape, colors } = parseGradientContent(content, element, {
+    isRadial: true,
+  });
+
+  return {
+    type,
+    shape: shape || "ellipse",
+    colors,
+    original,
+  };
+};
+
+const parseConicGradient = (content, type, original, element) => {
+  const { direction, colors } = parseGradientContent(content, element, {
+    isConic: true,
+  });
+
+  return {
+    type,
+    from: direction || "0deg",
+    colors,
+    original,
+  };
+};
+
+// Parse gradient content (colors and direction/shape)
+const parseGradientContent = (content, element, { isRadial, isConic } = {}) => {
+  const parts = tokenizeCSS(content, { separators: [","] });
+  const colors = [];
+  let direction = null;
+  let shape = null;
+
+  for (const part of parts) {
+    const trimmedPart = part.trim();
+
+    // Check if it's a direction/shape (before any colors)
+    if (colors.length === 0) {
+      if (isRadial && isRadialShape(trimmedPart)) {
+        shape = trimmedPart;
+        continue;
+      } else if (!isRadial && !isConic && isLinearDirection(trimmedPart)) {
+        direction = trimmedPart;
+        continue;
+      } else if (isConic && trimmedPart.startsWith("from ")) {
+        // Conic gradient "from" direction - extract just the angle part
+        direction = trimmedPart.substring(5).trim(); // Remove "from " prefix
+        continue;
+      }
+    }
+
+    // Parse as color stop
+    const colorStop = parseColorStop(trimmedPart, element);
+    if (colorStop) {
+      colors.push(colorStop);
+    }
+  }
+
+  return { direction, shape, colors };
+};
+
+// Parse individual color stop
+const parseColorStop = (stopString, element) => {
+  const trimmed = stopString.trim();
+
+  // Match color with optional position
+  // Examples: "red", "red 50%", "#ff0000 25% 75%", "rgba(255,0,0,0.5)", "rgb(0,122,204) 8px", "red 45deg", "blue 180deg"
+  const colorMatch = trimmed.match(
+    /^((?:rgb|hsl)a?\([^)]*\)|#[a-f0-9]{3,8}|[a-z](?:[a-z-]*[a-z])?|var\([^)]*\))(?:\s+([\d.]+(?:deg|turn|rad|grad|px|%|em|rem|vh|vw|ch|ex|cm|mm|in|pt|pc)?(?:\s+[\d.]+(?:deg|turn|rad|grad|px|%|em|rem|vh|vw|ch|ex|cm|mm|in|pt|pc)?)*)?)?$/i,
+  );
+
+  if (colorMatch) {
+    const [, color, positions] = colorMatch;
+    const stopStrings = positions ? positions.split(/\s+/) : [];
+
+    // Parse stop positions into structured objects
+    const stops =
+      stopStrings.length > 0
+        ? stopStrings.map((stop) => {
+            const match = stop.match(/^([+-]?\d+(?:\.\d+)?|\d*\.\d+)(\D*)$/);
+            if (match) {
+              return {
+                isNumeric: true,
+                value: parseFloat(match[1]),
+                unit: match[2] || "",
+              };
+            }
+            return {
+              isNumeric: false,
+              value: stop,
+              unit: "",
+            };
+          })
+        : undefined;
+
+    const result = {
+      color: parseCSSColor(color.trim(), element),
+      stops,
+    };
+    return result;
+  }
+
+  return null;
+};
+
+// Direction/shape detection helpers
+const isLinearDirection = (value) => {
+  return (
+    value.includes("deg") ||
+    value.includes("turn") ||
+    value.includes("rad") ||
+    value.includes("grad") ||
+    value.startsWith("to ") ||
+    ["top", "bottom", "left", "right"].some((dir) => value.includes(dir))
+  );
+};
+
+const isRadialShape = (value) => {
+  return (
+    value.includes("circle") ||
+    value.includes("ellipse") ||
+    value.includes("at ") ||
+    value.includes("closest") ||
+    value.includes("farthest")
+  );
+};
+
+// Stringification helpers
+const stringifyLinearGradient = (gradientObj) => {
+  const parts = [];
+
+  if (gradientObj.direction && gradientObj.direction !== "to bottom") {
+    parts.push(gradientObj.direction);
+  }
+
+  if (gradientObj.colors) {
+    parts.push(...gradientObj.colors.map(stringifyColorStop));
+  }
+
+  return `linear-gradient(${parts.join(", ")})`;
+};
+
+const stringifyRadialGradient = (gradientObj) => {
+  const parts = [];
+
+  if (gradientObj.shape && gradientObj.shape !== "ellipse") {
+    parts.push(gradientObj.shape);
+  }
+
+  if (gradientObj.colors) {
+    parts.push(...gradientObj.colors.map(stringifyColorStop));
+  }
+
+  return `radial-gradient(${parts.join(", ")})`;
+};
+
+const stringifyConicGradient = (gradientObj) => {
+  const parts = [];
+
+  if (gradientObj.from && gradientObj.from !== "0deg") {
+    parts.push(`from ${gradientObj.from}`);
+  }
+
+  if (gradientObj.colors) {
+    parts.push(...gradientObj.colors.map(stringifyColorStop));
+  }
+
+  return `conic-gradient(${parts.join(", ")})`;
+};
+
+const stringifyColorStop = (colorStop) => {
+  if (typeof colorStop === "string") {
+    return colorStop;
+  }
+
+  // Convert color back to CSS string (handles both strings and structured colors)
+  const colorString =
+    typeof colorStop.color === "string"
+      ? colorStop.color
+      : stringifyCSSColor(colorStop.color);
+  const parts = [colorString];
+
+  if (colorStop.stops) {
+    // Handle structured stop objects
+    const stopStrings = colorStop.stops.map((stop) => {
+      if (typeof stop === "string") {
+        return stop;
+      }
+      // If it's a parsed object, reconstruct the string
+      if (stop.isNumeric) {
+        return `${stop.value}${stop.unit}`;
+      }
+      return stop.value;
+    });
+    parts.push(...stopStrings);
+  }
+
+  return parts.join(" ");
+};
+
+// Helper to clean URL values (remove quotes)
+const cleanUrlValue = (urlValue) => {
+  const trimmed = urlValue.trim();
+  // Remove surrounding quotes if present
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+};
+
+// Convert background object to CSS string
+const stringifyCSSBackground = (backgroundObj, normalize) => {
+  const parts = [];
+
+  // Order matters for CSS background shorthand
+  // background: [background-color] [background-image] [background-repeat]
+  //            [background-attachment] [background-position] / [background-size]
+  //            [background-clip] [background-origin]
+
+  if (backgroundObj.image !== undefined) {
+    const normalizedImage =
+      typeof backgroundObj.image === "object" && backgroundObj.image !== null
+        ? stringifyCSSImage(backgroundObj.image)
+        : normalize(backgroundObj.image, "backgroundImage", "css");
+    parts.push(normalizedImage);
+  }
+
+  if (backgroundObj.repeat !== undefined) {
+    parts.push(backgroundObj.repeat);
+  }
+
+  if (backgroundObj.attachment !== undefined) {
+    parts.push(backgroundObj.attachment);
+  }
+
+  if (backgroundObj.position !== undefined) {
+    parts.push(backgroundObj.position);
+  }
+
+  if (backgroundObj.size !== undefined) {
+    // background-size must be preceded by "/"
+    parts.push(`/ ${backgroundObj.size}`);
+  }
+
+  if (backgroundObj.clip !== undefined) {
+    parts.push(backgroundObj.clip);
+  }
+
+  if (backgroundObj.origin !== undefined) {
+    parts.push(backgroundObj.origin);
+  }
+
+  if (backgroundObj.color !== undefined) {
+    const normalizedColor = normalize(
+      backgroundObj.color,
+      "backgroundColor",
+      "css",
+    );
+    parts.push(normalizedColor);
+  }
+
+  return parts.join(" ");
+};
+
+// Parse background CSS string into object
+const parseCSSBackground = (
+  backgroundString,
+  { parseStyle, element },
+) => {
+  if (!backgroundString || backgroundString === "none") {
+    return {};
+  }
+  if (backgroundString === "transparent") {
+    return {
+      color: parseStyle("transparent", "backgroundColor", element),
+    };
+  }
+
+  // Handle simple cases first
+  if (isSimpleColor(backgroundString)) {
+    const normalizedColor = parseStyle(
+      backgroundString,
+      "backgroundColor",
+      element,
+    );
+    return { color: normalizedColor };
+  }
+
+  // Complex background parsing - split by commas for multiple backgrounds
+  const layers = splitCSSLayers(backgroundString);
+
+  if (layers.length === 1) {
+    return parseBackgroundLayer(layers[0], { parseStyle, element });
+  }
+
+  // Multiple background layers - return array
+  return layers.map((layer) =>
+    parseBackgroundLayer(layer, { parseStyle, element }),
+  );
+};
+
+// Parse a single background layer
+const parseBackgroundLayer = (layerString, { parseStyle, element }) => {
+  const backgroundObj = {};
+  const tokens = tokenizeCSS(layerString, {
+    separators: [" ", "/"],
+    preserveSeparators: true,
+  });
+
+  let i = 0;
+  let expectingSize = false; // Track if we're after a "/" and expecting size
+  let colorFound = false; // Track if we've already found a color
+
+  while (i < tokens.length) {
+    const token = tokens[i];
+
+    // Skip spaces
+    if (token === " ") {
+      i++;
+      continue;
+    }
+
+    // Skip "/" separator
+    if (token === "/") {
+      expectingSize = true;
+      i++;
+      continue;
+    }
+
+    // If we're expecting size after "/", parse size values
+    if (expectingSize) {
+      if (isNumericValue(token) || isSizeKeyword(token)) {
+        // Collect all size tokens starting with current token
+        const sizeTokens = [token]; // Start with current token
+        i++; // Move to next token
+
+        while (i < tokens.length && tokens[i] !== "/") {
+          const currentToken = tokens[i];
+          // Skip spaces
+          if (currentToken === " ") {
+            i++;
+            continue;
+          }
+          // Check if it's a size/numeric value
+          if (isNumericValue(currentToken) || isSizeKeyword(currentToken)) {
+            sizeTokens.push(currentToken);
+            i++;
+          } else {
+            // Hit a non-size value, stop collecting
+            break;
+          }
+        }
+
+        backgroundObj.size = sizeTokens.join(" ");
+        expectingSize = false;
+        continue; // Don't increment i since we're already positioned correctly
+      } else {
+        expectingSize = false; // Invalid size, continue with normal parsing
+      }
+    }
+
+    // Check for colors early (can appear at the beginning or end)
+    if (!colorFound && isSimpleColor(token)) {
+      const normalizedColor = parseStyle(token, "backgroundColor", element);
+      backgroundObj.color = normalizedColor;
+      colorFound = true;
+    }
+    // Check for image functions (gradients, url) - can appear early
+    else if (isImageFunction(token)) {
+      const parsedImage = parseCSSImage(token, element);
+      backgroundObj.image = parsedImage;
+    }
+    // Check for position values (appear before size, after image)
+    else if (
+      isPositionValue(token) ||
+      (isNumericValue(token) && !expectingSize)
+    ) {
+      // Collect position tokens until we hit a "/" or non-position value
+      const positionTokens = [token]; // Start with current token
+      i++; // Move to next token
+
+      while (i < tokens.length && tokens[i] !== "/") {
+        const currentToken = tokens[i];
+        // Skip spaces
+        if (currentToken === " ") {
+          i++;
+          continue;
+        }
+        // Check if it's a position/numeric value
+        if (isPositionValue(currentToken) || isNumericValue(currentToken)) {
+          positionTokens.push(currentToken);
+          i++;
+        } else {
+          // Hit a non-position value, stop collecting
+          break;
+        }
+      }
+
+      backgroundObj.position = positionTokens.join(" ");
+      continue; // Don't increment i since we're already positioned correctly
+    }
+    // Check for repeat values (after position/size)
+    else if (isRepeatValue(token)) {
+      backgroundObj.repeat = token;
+    }
+    // Check for attachment values (after repeat)
+    else if (isAttachmentValue(token)) {
+      backgroundObj.attachment = token;
+    }
+    // Check for box values (origin/clip - near the end)
+    else if (isBoxValue(token)) {
+      // In CSS, origin comes before clip, but they can appear in either order
+      if (backgroundObj.origin === undefined) {
+        backgroundObj.origin = token;
+      } else if (backgroundObj.clip === undefined) {
+        backgroundObj.clip = token;
+      }
+      // If both are set, this might be a duplicate or error, but we'll take the last one
+      else {
+        backgroundObj.clip = token;
+      }
+    }
+
+    i++;
+  }
+
+  return backgroundObj;
+};
+
+// Helper functions to identify token types
+const isImageFunction = (value) => {
+  return /^(?:url|linear-gradient|radial-gradient|conic-gradient|repeating-linear-gradient|repeating-radial-gradient|repeating-conic-gradient|image|element|cross-fade)\s*\(/.test(
+    value,
+  );
+};
+
+const isSimpleColor = (value) => {
+  if (!value || typeof value !== "string") {
+    return false;
+  }
+
+  const trimmed = value.trim();
+
+  // Only match if it's a single word/token without spaces (except within parentheses)
+  // This prevents matching colors within complex background strings
+  if (trimmed.includes(" ")) {
+    // Allow spaces only within function calls like rgb(255, 0, 0)
+    const functionMatch = /^[a-z]+\s*\([^)]*\)$/i.test(trimmed);
+    if (!functionMatch) {
+      return false;
+    }
+  }
+
+  // Hex colors: #rgb, #rrggbb, #rrggbbaa
+  if (/^#[0-9a-f]{3,8}$/i.test(trimmed)) {
+    return true;
+  }
+
+  // RGB/RGBA functions
+  if (/^rgba?\s*\([^)]*\)$/i.test(trimmed)) {
+    return true;
+  }
+
+  // HSL/HSLA functions
+  if (/^hsla?\s*\([^)]*\)$/i.test(trimmed)) {
+    return true;
+  }
+
+  // CSS color keywords using the imported Set
+  if (cssColorKeywordSet.has(trimmed.toLowerCase())) {
+    return true;
+  }
+
+  return false;
+};
+
+const isRepeatValue = (value) => {
+  return [
+    "repeat",
+    "repeat-x",
+    "repeat-y",
+    "no-repeat",
+    "space",
+    "round",
+  ].includes(value);
+};
+
+const isAttachmentValue = (value) => {
+  return ["scroll", "fixed", "local"].includes(value);
+};
+
+const isPositionValue = (value) => {
+  return ["left", "center", "right", "top", "bottom"].includes(value);
+};
+
+const isNumericValue = (value) => {
+  return /^-?\d+(?:\.\d+)?(?:px|em|rem|%|vh|vw|ch|ex|cm|mm|in|pt|pc)?$/.test(
+    value,
+  );
+};
+
+const isSizeKeyword = (value) => {
+  return ["auto", "contain", "cover"].includes(value);
+};
+
+const isBoxValue = (value) => {
+  return ["border-box", "padding-box", "content-box", "text"].includes(value);
+};
+
+/**
+ * Parse a CSS border value into components
+ * @param {string} borderValue - CSS border value like "2px solid red"
+ * @returns {Object|null} Parsed border components {width, style, color} or null if invalid
+ */
+const parseCSSBorder = (borderValue, element) => {
+  if (!borderValue || borderValue === "none" || borderValue === "initial") {
+    return null;
+  }
+
+  // Normalize whitespace and trim
+  const normalizedValue = borderValue.trim().replace(/\s+/g, " ");
+
+  // Handle transparent border case
+  if (
+    normalizedValue === "0px solid transparent" ||
+    normalizedValue === "transparent"
+  ) {
+    return {
+      width: 0,
+      style: "solid",
+      color: parseCSSColor("transparent"),
+    };
+  }
+
+  // Use CSS tokenizer to split while respecting function boundaries
+  const parts = tokenizeCSS(normalizedValue, {
+    separators: [" "],
+    respectFunctions: true,
+  });
+
+  let width = null;
+  let style = null;
+  let color = null;
+
+  for (const part of parts) {
+    // Check if it's a width (starts with number or has px, em, etc.)
+    if (
+      /^\d/.test(part) ||
+      /\d+(?:px|em|rem|ex|ch|vw|vh|vmin|vmax|cm|mm|in|pt|pc)$/.test(part)
+    ) {
+      width = parseFloat(part) || 0;
+    }
+    // Check if it's a border style
+    else if (borderStyleSet.has(part.toLowerCase())) {
+      style = part.toLowerCase();
+    }
+    // Assume it's a color
+    else {
+      color = part;
+    }
+  }
+
+  // Set defaults for missing values
+  width = width ?? 0;
+  style = style || "solid";
+
+  // Parse the color properly
+  if (color) {
+    color = parseCSSColor(color, element);
+  } else {
+    color = parseCSSColor("transparent");
+  }
+
+  return {
+    width,
+    style,
+    color,
+  };
+};
+
+const borderStyleSet = new Set([
+  "none",
+  "hidden",
+  "dotted",
+  "dashed",
+  "solid",
+  "double",
+  "groove",
+  "ridge",
+  "inset",
+  "outset",
+]);
+
+/**
+ * Stringify border components back to a CSS border value
+ * @param {Object} borderComponents - Border components {width, style, color}
+ * @returns {string} CSS border value like "2px solid red"
+ */
+const stringifyCSSBorder = (borderComponents) => {
+  if (!borderComponents) {
+    return "none";
+  }
+
+  const { width, style, color } = borderComponents;
+
+  // Handle special cases
+  if (width === 0 || style === "none") {
+    return "none";
+  }
+
+  // Build border string
+  const parts = [];
+
+  if (width !== undefined && width !== null) {
+    parts.push(`${width}px`);
+  }
+
+  if (style) {
+    parts.push(style);
+  }
+
+  if (color) {
+    // Stringify the parsed color back to CSS
+    const colorString = stringifyCSSColor(color);
+    if (colorString && colorString !== "transparent") {
+      parts.push(colorString);
+    } else if (colorString === "transparent") {
+      parts.push("transparent");
+    }
+  }
+
+  return parts.join(" ") || "none";
+};
+
+// Convert transform object to CSS string
+const stringifyCSSTransform = (transformObj, normalize) => {
+  const transforms = [];
+  for (const key of Object.keys(transformObj)) {
+    const transformPartValue = transformObj[key];
+    const normalizedTransformPartValue = normalize(
+      transformPartValue,
+      key,
+      "css",
+    );
+    transforms.push(`${key}(${normalizedTransformPartValue})`);
+  }
+  return transforms.join(" ");
+};
+
+// Parse transform CSS string into object
+const parseCSSTransform = (transformString, normalize) => {
+  if (!transformString || transformString === "none") {
+    return undefined;
+  }
+
+  const transformObj = {};
+
+  // Parse transform functions
+  const transformPattern = /(\w+)\(([^)]+)\)/g;
+  let match;
+
+  while ((match = transformPattern.exec(transformString)) !== null) {
+    const [, functionName, value] = match;
+
+    // Handle matrix functions specially
+    if (functionName === "matrix" || functionName === "matrix3d") {
+      const matrixComponents = parseMatrixTransform(match[0]);
+      if (matrixComponents) {
+        // Only add non-default values to preserve original information
+        Object.assign(transformObj, matrixComponents);
+      }
+      // If matrix can't be parsed to simple components, skip it (keep complex transforms as-is)
+      continue;
+    }
+
+    // Handle regular transform functions
+    const normalizedValue = normalize(value.trim(), functionName, "js");
+    if (normalizedValue !== undefined) {
+      transformObj[functionName] = normalizedValue;
+    }
+  }
+
+  // Return undefined if no properties were extracted (preserves original information)
+  return Object.keys(transformObj).length > 0 ? transformObj : undefined;
+};
+// Parse a matrix transform and extract simple transform components when possible
+const parseMatrixTransform = (matrixString) => {
+  // Match matrix() or matrix3d() functions
+  const matrixMatch = matrixString.match(/matrix(?:3d)?\(([^)]+)\)/);
+  if (!matrixMatch) {
+    return null;
+  }
+
+  const values = matrixMatch[1].split(",").map((v) => parseFloat(v.trim()));
+
+  if (matrixString.includes("matrix3d")) {
+    // matrix3d(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p)
+    if (values.length !== 16) {
+      return null;
+    }
+    const [a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p] = values;
+    // Check if it's a simple 2D transform (most common case)
+    if (
+      c === 0 &&
+      d === 0 &&
+      g === 0 &&
+      h === 0 &&
+      i === 0 &&
+      j === 0 &&
+      k === 1 &&
+      l === 0 &&
+      o === 0 &&
+      p === 1
+    ) {
+      // This is essentially a 2D transform
+      return parseSimple2DMatrix(a, b, e, f, m, n);
+    }
+    return null; // Complex 3D transform
+  }
+  // matrix(a, b, c, d, e, f)
+  if (values.length !== 6) {
+    return null;
+  }
+  const [a, b, c, d, e, f] = values;
+  return parseSimple2DMatrix(a, b, c, d, e, f);
+};
+// Parse a simple 2D matrix into transform components
+const parseSimple2DMatrix = (a, b, c, d, e, f) => {
+  const result = {};
+
+  // Extract translation - only add if not default (0)
+  if (e !== 0) {
+    result.translateX = e;
+  }
+  if (f !== 0) {
+    result.translateY = f;
+  }
+
+  // Check for identity matrix (no transform)
+  if (a === 1 && b === 0 && c === 0 && d === 1) {
+    return result; // Only translation
+  }
+
+  // Decompose the 2D transformation matrix
+  // Based on: https://frederic-wang.fr/decomposition-of-2d-transform-matrices.html
+
+  const det = a * d - b * c;
+  // Degenerate matrix (maps to a line or point)
+  if (det === 0) {
+    return null;
+  }
+
+  // Extract scale and rotation
+  if (c === 0) {
+    // Simple case: no skew
+    if (a !== 1) {
+      result.scaleX = a;
+    }
+    if (d !== 1) {
+      result.scaleY = d;
+    }
+    if (b !== 0) {
+      const angle = Math.atan(b / a) * (180 / Math.PI);
+      if (angle !== 0) {
+        result.rotate = angle;
+      }
+    }
+    return result;
+  }
+
+  // General case: decompose using QR decomposition approach
+  const scaleX = Math.sqrt(a * a + b * b);
+  const scaleY = det / scaleX;
+  const rotation = Math.atan2(b, a) * (180 / Math.PI);
+  const skewX =
+    Math.atan((a * c + b * d) / (scaleX * scaleX)) * (180 / Math.PI);
+  if (scaleX !== 1) {
+    result.scaleX = scaleX;
+  }
+  if (scaleY !== 1) {
+    result.scaleY = scaleY;
+  }
+  if (rotation !== 0) {
+    result.rotate = rotation;
+  }
+  if (skewX !== 0) {
+    result.skewX = skewX;
+  }
+  return result;
+};
+
+const parseCSSWillChange = (willChangeString) => {
+  if (!willChangeString || typeof willChangeString !== "string") {
+    return [];
+  }
+  if (willChangeString === "auto") {
+    return "auto";
+  }
+  return willChangeString
+    .split(",")
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+};
+
+const stringifyCSSWillChange = (willChangeArray) => {
+  if (!Array.isArray(willChangeArray) || willChangeArray.length === 0) {
+    return "auto";
+  }
+  return willChangeArray.join(", ");
+};
 
 // Properties that can use px units
 const pxPropertySet = new Set([
@@ -485,6 +1853,12 @@ const cssSizeUnitSet = new Set([
   "ch",
   "vw",
   "vh",
+  "dvw",
+  "dvh",
+  "svw",
+  "svh",
+  "lvw",
+  "lvh",
   "vmin",
   "vmax",
   "cm",
@@ -508,14 +1882,68 @@ const cssUnitSet = new Set([
   "Hz",
   "kHz",
 ]);
-const cssKeywordSet = new Set([
-  // Keywords that shouldn't get units
+// Global CSS keywords that apply to any property
+const globalCSSKeywordSet = new Set([
   "auto",
   "none",
   "inherit",
   "initial",
   "unset",
   "revert",
+]);
+// Keywords that should NOT get automatic units when used with properties from:
+// - pxPropertySet (width, height, fontSize, etc.)
+// - degPropertySet (rotate, skew, etc.)
+// - unitlessPropertySet (opacity, zIndex, etc.)
+// This prevents auto-unit addition: e.g., width: "auto" stays "auto", not "autopx"
+const unitlessKeywordSet = new Set([
+  ...globalCSSKeywordSet,
+  // Size/dimension keywords for pxPropertySet properties
+  "fit-content",
+  "min-content",
+  "max-content",
+  // Font size keywords for fontSize
+  "medium",
+  "small",
+  "large",
+  "x-small",
+  "x-large",
+  "xx-small",
+  "xx-large",
+  "smaller",
+  "larger",
+  // Border width keywords for borderWidth properties
+  "thin",
+  "thick",
+  // Line height keyword (though lineHeight is handled specially)
+  "normal",
+]);
+// Keywords for backgroundImage property that should NOT be wrapped in url()
+// Used to prevent: background: "none" becoming background: "url(none)"
+const backgroundKeywordSet = new Set([
+  ...globalCSSKeywordSet,
+  // Background-specific keywords
+  "transparent",
+  "currentColor",
+]);
+
+const colorPropertySet = new Set([
+  "outlineColor",
+  "borderColor",
+  "borderTopColor",
+  "borderRightColor",
+  "borderBottomColor",
+  "borderLeftColor",
+  "backgroundColor",
+  "color",
+  "textDecorationColor",
+  "textEmphasisColor",
+  "caretColor",
+  "columnRuleColor",
+  "accentColor",
+  "scrollbarColor",
+  "stroke",
+  "fill",
 ]);
 
 const getUnit = (value) => {
@@ -528,9 +1956,6 @@ const getUnit = (value) => {
 };
 // Check if value already has a unit
 const isUnitless = (value) => getUnit(value) === "";
-const isKeyword = (value) => {
-  return cssKeywordSet.has(value);
-};
 
 // url(
 // linear-gradient(
@@ -538,25 +1963,110 @@ const isKeyword = (value) => {
 // ...
 const STARTS_WITH_CSS_IMAGE_FUNCTION_REGEX = /^[a-z-]+\(/;
 // Normalize a single style value
-const normalizeStyle = (value, propertyName, context = "js") => {
+const normalizeStyle = (
+  value,
+  propertyName,
+  context = "js",
+  element,
+) => {
   if (propertyName === "transform") {
     if (context === "js") {
       if (typeof value === "string") {
         // For js context, prefer objects
-        return parseCSSTransform(value);
+        return parseCSSTransform(value, normalizeStyle);
       }
       // If code does transform: { translateX: "10px" }
       // we want to store { translateX: 10 }
       const transformNormalized = {};
       for (const key of Object.keys(value)) {
-        const partValue = normalizeStyle(value[key], key, "js");
+        const partValue = normalizeStyle(value[key], key, context, element);
         transformNormalized[key] = partValue;
       }
       return transformNormalized;
     }
     if (typeof value === "object" && value !== null) {
       // For CSS context, ensure transform is a string
-      return stringifyCSSTransform(value);
+      return stringifyCSSTransform(value, normalizeStyle);
+    }
+    return value;
+  }
+
+  if (propertyName === "willChange") {
+    if (context === "js") {
+      if (typeof value === "string") {
+        // For js context, prefer arrays
+        return parseCSSWillChange(value);
+      }
+      return value;
+    }
+    if (Array.isArray(value)) {
+      // For CSS context, ensure willChange is a string
+      return stringifyCSSWillChange(value);
+    }
+    return value;
+  }
+
+  if (propertyName === "background") {
+    if (context === "js") {
+      if (typeof value === "string") {
+        // For js context, prefer objects
+        return parseCSSBackground(value, {
+          parseStyle,
+          element,
+        });
+      }
+      // If code does background: { color: "red", image: "url(...)" }
+      // we want to normalize each part
+      if (
+        typeof value === "object" &&
+        value !== null &&
+        !Array.isArray(value)
+      ) {
+        const backgroundNormalized = {};
+        for (const key of Object.keys(value)) {
+          const partValue = normalizeStyle(
+            value[key],
+            `background${key.charAt(0).toUpperCase() + key.slice(1)}`,
+            context,
+            element,
+          );
+          backgroundNormalized[key] = partValue;
+        }
+        return backgroundNormalized;
+      }
+      return value;
+    }
+    if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+      // For CSS context, ensure background is a string
+      return stringifyCSSBackground(value, normalizeStyle);
+    }
+    return value;
+  }
+
+  if (propertyName === "border") {
+    if (context === "js") {
+      if (typeof value === "string") {
+        // For js context, prefer objects
+        return parseCSSBorder(value, element);
+      }
+      // If code does border: { width: 2, style: "solid", color: "red" }
+      // we want to normalize each part
+      if (value === null) {
+        return null;
+      }
+      if (typeof value === "object") {
+        const { width, style, color } = value;
+        const borderNormalized = {
+          width: normalizeStyle(width, "borderWidth", context, element),
+          style: normalizeStyle(style, "borderStyle", context, element),
+          color: normalizeStyle(color, "borderColor", context, element),
+        };
+        return borderNormalized;
+      }
+      return value;
+    }
+    if (typeof value !== "string") {
+      return stringifyCSSBorder(value);
     }
     return value;
   }
@@ -579,7 +2089,7 @@ const normalizeStyle = (value, propertyName, context = "js") => {
         // translate, rotate, skew
         return 0;
       }
-      const parsedTransform = parseCSSTransform(value);
+      const parsedTransform = parseCSSTransform(value, normalizeStyle);
       return parsedTransform?.[transformProperty];
     }
     // If value is a transform object, extract the property directly
@@ -591,14 +2101,24 @@ const normalizeStyle = (value, propertyName, context = "js") => {
   }
 
   if (propertyName === "backgroundImage") {
-    if (context === "css") {
-      if (
-        typeof value === "string" &&
-        !isKeyword(value) &&
-        !STARTS_WITH_CSS_IMAGE_FUNCTION_REGEX.test(value)
-      ) {
-        return `url(${value})`;
+    if (context === "js") {
+      if (typeof value === "string") {
+        // For js context, prefer structured objects
+        return parseCSSImage(value, element);
       }
+      return value;
+    }
+    if (typeof value === "object" && value !== null) {
+      // For CSS context, ensure backgroundImage is a string
+      return stringifyCSSImage(value);
+    }
+    // Fallback: add url() wrapper if needed
+    if (
+      typeof value === "string" &&
+      !backgroundKeywordSet.has(value) &&
+      !STARTS_WITH_CSS_IMAGE_FUNCTION_REGEX.test(value)
+    ) {
+      return `url(${value})`;
     }
     return value;
   }
@@ -649,13 +2169,28 @@ const normalizeStyle = (value, propertyName, context = "js") => {
     });
   }
 
+  if (colorPropertySet.has(propertyName)) {
+    const rgba = parseCSSColor(value, element);
+    if (context === "js") {
+      return rgba;
+    }
+    return stringifyCSSColor(rgba);
+  }
+
   return value;
 };
+const parseStyle = (value, propertyName, element) => {
+  return normalizeStyle(value, propertyName, "js", element);
+};
+const stringifyStyle = (value, propertyName, element) => {
+  return normalizeStyle(value, propertyName, "css", element);
+};
+
 const normalizeNumber = (value, { unit, propertyName, preferedType }) => {
   if (typeof value === "string") {
     // Keep strings as-is (including %, em, rem, auto, none, etc.)
     if (preferedType === "string") {
-      if (unit && isUnitless(value) && !isKeyword(value)) {
+      if (unit && isUnitless(value) && !unitlessKeywordSet.has(value)) {
         return `${value}${unit}`;
       }
       return value;
@@ -689,7 +2224,7 @@ const normalizeStyles = (styles, context = "js", mutate = false) => {
     return mutate ? styles : {};
   }
   if (typeof styles === "string") {
-    styles = parseStyleString(styles);
+    styles = parseStyleString(styles, context);
     return styles;
   }
   if (mutate) {
@@ -759,164 +2294,68 @@ const parseStyleString = (styleString, context = "js") => {
   return style;
 };
 
-// Convert transform object to CSS string
-const stringifyCSSTransform = (transformObj) => {
-  const transforms = [];
-  for (const key of Object.keys(transformObj)) {
-    const transformPartValue = transformObj[key];
-    const normalizedTransformPartValue = normalizeStyle(
-      transformPartValue,
-      key,
-      "css",
-    );
-    transforms.push(`${key}(${normalizedTransformPartValue})`);
-  }
-  return transforms.join(" ");
+const getComputedStyle$1 = (element) => {
+  return elementToOwnerWindow(element).getComputedStyle(element);
 };
 
-// Parse transform CSS string into object
-const parseCSSTransform = (transformString) => {
-  if (!transformString || transformString === "none") {
-    return undefined;
+const getStyle = (element, name, context) => {
+  const computedStyle = getComputedStyle$1(element);
+  const value = isCamelCase(name)
+    ? computedStyle[name]
+    : computedStyle.getPropertyValue(name);
+  return normalizeStyle(value, name, context, element);
+};
+
+const isCamelCase = (str) => {
+  // Check if string contains lowercase letter followed by uppercase letter (camelCase pattern)
+  return /[a-z][A-Z]/.test(str);
+};
+const setStyle = (element, name, value) => {
+
+  const prevValue = element.style[name];
+  if (prevValue) {
+    element.style.setProperty(name, value);
+    return () => {
+      element.style.setProperty(name, prevValue);
+    };
   }
+  element.style.setProperty(name, value);
+  return () => {
+    element.style.removeProperty(name);
+  };
+};
+const forceStyle = (element, name, value) => {
+  const inlineStyleValue = element.style[name];
+  if (inlineStyleValue === value) {
+    return () => {};
+  }
+  const computedStyleValue = getStyle(element, name);
+  if (computedStyleValue === value) {
+    return () => {};
+  }
+  const restoreStyle = setStyle(element, name, value);
+  return restoreStyle;
+};
 
-  const transformObj = {};
-
-  // Parse transform functions
-  const transformPattern = /(\w+)\(([^)]+)\)/g;
-  let match;
-
-  while ((match = transformPattern.exec(transformString)) !== null) {
-    const [, functionName, value] = match;
-
-    // Handle matrix functions specially
-    if (functionName === "matrix" || functionName === "matrix3d") {
-      const matrixComponents = parseMatrixTransform(match[0]);
-      if (matrixComponents) {
-        // Only add non-default values to preserve original information
-        Object.assign(transformObj, matrixComponents);
+const createSetMany$1 = (setter) => {
+  return (element, description) => {
+    const cleanupCallbackSet = new Set();
+    for (const name of Object.keys(description)) {
+      const value = description[name];
+      const restoreStyle = setter(element, name, value);
+      cleanupCallbackSet.add(restoreStyle);
+    }
+    return () => {
+      for (const cleanupCallback of cleanupCallbackSet) {
+        cleanupCallback();
       }
-      // If matrix can't be parsed to simple components, skip it (keep complex transforms as-is)
-      continue;
-    }
-
-    // Handle regular transform functions
-    const normalizedValue = normalizeStyle(value.trim(), functionName, "js");
-    if (normalizedValue !== undefined) {
-      transformObj[functionName] = normalizedValue;
-    }
-  }
-
-  // Return undefined if no properties were extracted (preserves original information)
-  return Object.keys(transformObj).length > 0 ? transformObj : undefined;
+      cleanupCallbackSet.clear();
+    };
+  };
 };
 
-// Parse a matrix transform and extract simple transform components when possible
-const parseMatrixTransform = (matrixString) => {
-  // Match matrix() or matrix3d() functions
-  const matrixMatch = matrixString.match(/matrix(?:3d)?\(([^)]+)\)/);
-  if (!matrixMatch) {
-    return null;
-  }
-
-  const values = matrixMatch[1].split(",").map((v) => parseFloat(v.trim()));
-
-  if (matrixString.includes("matrix3d")) {
-    // matrix3d(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p)
-    if (values.length !== 16) {
-      return null;
-    }
-    const [a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p] = values;
-    // Check if it's a simple 2D transform (most common case)
-    if (
-      c === 0 &&
-      d === 0 &&
-      g === 0 &&
-      h === 0 &&
-      i === 0 &&
-      j === 0 &&
-      k === 1 &&
-      l === 0 &&
-      o === 0 &&
-      p === 1
-    ) {
-      // This is essentially a 2D transform
-      return parseSimple2DMatrix(a, b, e, f, m, n);
-    }
-    return null; // Complex 3D transform
-  }
-  // matrix(a, b, c, d, e, f)
-  if (values.length !== 6) {
-    return null;
-  }
-  const [a, b, c, d, e, f] = values;
-  return parseSimple2DMatrix(a, b, c, d, e, f);
-};
-
-// Parse a simple 2D matrix into transform components
-const parseSimple2DMatrix = (a, b, c, d, e, f) => {
-  const result = {};
-
-  // Extract translation - only add if not default (0)
-  if (e !== 0) {
-    result.translateX = e;
-  }
-  if (f !== 0) {
-    result.translateY = f;
-  }
-
-  // Check for identity matrix (no transform)
-  if (a === 1 && b === 0 && c === 0 && d === 1) {
-    return result; // Only translation
-  }
-
-  // Decompose the 2D transformation matrix
-  // Based on: https://frederic-wang.fr/decomposition-of-2d-transform-matrices.html
-
-  const det = a * d - b * c;
-  // Degenerate matrix (maps to a line or point)
-  if (det === 0) {
-    return null;
-  }
-
-  // Extract scale and rotation
-  if (c === 0) {
-    // Simple case: no skew
-    if (a !== 1) {
-      result.scaleX = a;
-    }
-    if (d !== 1) {
-      result.scaleY = d;
-    }
-    if (b !== 0) {
-      const angle = Math.atan(b / a) * (180 / Math.PI);
-      if (angle !== 0) {
-        result.rotate = angle;
-      }
-    }
-    return result;
-  }
-
-  // General case: decompose using QR decomposition approach
-  const scaleX = Math.sqrt(a * a + b * b);
-  const scaleY = det / scaleX;
-  const rotation = Math.atan2(b, a) * (180 / Math.PI);
-  const skewX =
-    Math.atan((a * c + b * d) / (scaleX * scaleX)) * (180 / Math.PI);
-  if (scaleX !== 1) {
-    result.scaleX = scaleX;
-  }
-  if (scaleY !== 1) {
-    result.scaleY = scaleY;
-  }
-  if (rotation !== 0) {
-    result.rotate = rotation;
-  }
-  if (skewX !== 0) {
-    result.skewX = skewX;
-  }
-  return result;
-};
+const setStyles = createSetMany$1(setStyle);
+const forceStyles = createSetMany$1(forceStyle);
 
 // Merge two style objects, handling special cases like transform
 const mergeTwoStyles = (stylesA, stylesB, context = "js") => {
@@ -990,34 +2429,44 @@ const mergeOneStyle = (
     // Case 1: Both are objects - merge directly
     if (existingIsObject && newIsObject) {
       const merged = { ...existingValue, ...newValue };
-      return context === "css" ? stringifyCSSTransform(merged) : merged;
+      return context === "css"
+        ? stringifyCSSTransform(merged, normalizeStyle)
+        : merged;
     }
 
     // Case 2: New is object, existing is string - parse existing and merge
     if (newIsObject && existingIsString) {
-      const parsedExisting = parseCSSTransform(existingValue);
+      const parsedExisting = parseCSSTransform(existingValue, normalizeStyle);
       const merged = { ...parsedExisting, ...newValue };
-      return context === "css" ? stringifyCSSTransform(merged) : merged;
+      return context === "css"
+        ? stringifyCSSTransform(merged, normalizeStyle)
+        : merged;
     }
 
     // Case 3: New is string, existing is object - parse new and merge
     if (newIsString && existingIsObject) {
-      const parsedNew = parseCSSTransform(newValue);
+      const parsedNew = parseCSSTransform(newValue, normalizeStyle);
       const merged = { ...existingValue, ...parsedNew };
-      return context === "css" ? stringifyCSSTransform(merged) : merged;
+      return context === "css"
+        ? stringifyCSSTransform(merged, normalizeStyle)
+        : merged;
     }
 
     // Case 4: Both are strings - parse both and merge
     if (existingIsString && newIsString) {
-      const parsedExisting = parseCSSTransform(existingValue);
-      const parsedNew = parseCSSTransform(newValue);
+      const parsedExisting = parseCSSTransform(existingValue, normalizeStyle);
+      const parsedNew = parseCSSTransform(newValue, normalizeStyle);
       const merged = { ...parsedExisting, ...parsedNew };
-      return context === "css" ? stringifyCSSTransform(merged) : merged;
+      return context === "css"
+        ? stringifyCSSTransform(merged, normalizeStyle)
+        : merged;
     }
 
     // Case 5: New is object, no existing or existing is none/null
     if (newIsObject) {
-      return context === "css" ? stringifyCSSTransform(newValue) : newValue;
+      return context === "css"
+        ? stringifyCSSTransform(newValue, normalizeStyle)
+        : newValue;
     }
 
     // Case 6: New is string, no existing or existing is none/null
@@ -1025,8 +2474,75 @@ const mergeOneStyle = (
       if (context === "css") {
         return newValue; // Already a string
       }
-      return parseCSSTransform(newValue); // Convert to object
+      return parseCSSTransform(newValue, normalizeStyle); // Convert to object
     }
+    return newValue;
+  }
+
+  if (propertyName === "willChange") {
+    const existingIsString = typeof existingValue === "string";
+    const newIsString = typeof newValue === "string";
+    const existingIsArray = Array.isArray(existingValue);
+    const newIsArray = Array.isArray(newValue);
+
+    // Case 1: Both are arrays - merge directly
+    if (existingIsArray && newIsArray) {
+      const merged = [...new Set([...existingValue, ...newValue])];
+      if (context === "css") {
+        return stringifyCSSWillChange(merged);
+      }
+      return merged;
+    }
+
+    // Case 2: New is array, existing is string - parse existing and merge
+    if (newIsArray && existingIsString) {
+      const existingArray = parseCSSWillChange(existingValue);
+      const merged = [...new Set([...existingArray, ...newValue])];
+      if (context === "css") {
+        return stringifyCSSWillChange(merged);
+      }
+      return merged;
+    }
+
+    // Case 3: New is string, existing is array - parse new and merge
+    if (newIsString && existingIsArray) {
+      const newArray = parseCSSWillChange(newValue);
+      const merged = [...new Set([...existingValue, ...newArray])];
+      if (context === "css") {
+        return stringifyCSSWillChange(merged);
+      }
+      return merged;
+    }
+
+    // Case 4: Both are strings - parse both and merge
+    if (existingIsString && newIsString) {
+      const existingArray = parseCSSWillChange(existingValue);
+      const newArray = parseCSSWillChange(newValue);
+      const merged = [...new Set([...existingArray, ...newArray])];
+      if (context === "css") {
+        return stringifyCSSWillChange(merged);
+      }
+      return merged;
+    }
+
+    // Case 5: New is array, no existing or existing is null/undefined
+    if (newIsArray) {
+      if (context === "css") {
+        return stringifyCSSWillChange(newValue);
+      }
+      return newValue;
+    }
+
+    // Case 6: New is string, no existing or existing is null/undefined
+    if (newIsString) {
+      if (context === "css") {
+        return newValue;
+      }
+      const parsed = parseCSSWillChange(newValue);
+      return parsed;
+    }
+    // Fallback: return newValue as is
+    return newValue;
   }
 
   // For all other properties, simple replacement
@@ -1257,8 +2773,8 @@ const createStyleController = (name = "anonymous") => {
     const elementControllerSet = elementControllerSetRegistry.get(element);
 
     const normalizeValueForJs = (value) => {
-      // Use normalizeStyle to handle all property types including transform dot notation
-      return normalizeStyle(value, propertyName, "js");
+      // Use parseStyle to handle all property types including transform dot notation
+      return parseStyle(value, propertyName, element);
     };
 
     const getFromOtherControllers = () => {
@@ -1448,6 +2964,30 @@ const getHeight$1 = (
   styleControllerToIgnore = dormantStyleController,
 ) => {
   return styleControllerToIgnore.getUnderlyingValue(element, "rect.height");
+};
+const getBorderRadius = (
+  element,
+  styleControllerToIgnore = dormantStyleController,
+) => {
+  return styleControllerToIgnore.getUnderlyingValue(element, "borderRadius");
+};
+const getBorder = (
+  element,
+  styleControllerToIgnore = dormantStyleController,
+) => {
+  return styleControllerToIgnore.getUnderlyingValue(element, "border");
+};
+const getBackground = (
+  element,
+  styleControllerToIgnore = dormantStyleController,
+) => {
+  return styleControllerToIgnore.getUnderlyingValue(element, "background");
+};
+const getBackgroundColor = (
+  element,
+  styleControllerToIgnore = dormantStyleController,
+) => {
+  return styleControllerToIgnore.getUnderlyingValue(element, "backgroundColor");
 };
 
 // Register the style isolator custom element once
@@ -1728,6 +3268,71 @@ const createSetMany = (setter) => {
 const setAttributes = createSetMany(setAttribute);
 
 /**
+ * Chooses between light and dark colors based on which provides better contrast against a background
+ * @param {string} backgroundColor - CSS color value (hex, rgb, hsl, CSS variable, etc.) to test against
+ * @param {string} [lightColor="white"] - Light color option (typically for dark backgrounds)
+ * @param {string} [darkColor="black"] - Dark color option (typically for light backgrounds)
+ * @param {Element} [element] - DOM element to resolve CSS variables against
+ * @returns {string} The color that provides better contrast (lightColor or darkColor)
+ * @example
+ * // Choose text color for a dark blue background
+ * pickLightOrDark("#1a202c") // returns "white"
+ *
+ * // Choose text color for a light background with CSS variable
+ * pickLightOrDark("var(--bg-color)", "white", "black", element) // returns "black" or "white"
+ */
+
+
+const pickLightOrDark = (
+  backgroundColor,
+  lightColor = "white",
+  darkColor = "black",
+  element,
+) => {
+  const resolvedBgColor = parseCSSColor(backgroundColor, element);
+  const resolvedLightColor = parseCSSColor(lightColor, element);
+  const resolvedDarkColor = parseCSSColor(darkColor, element);
+
+  if (!resolvedBgColor || !resolvedLightColor || !resolvedDarkColor) {
+    // Fallback to light color if parsing fails
+    return lightColor;
+  }
+
+  const contrastWithLight = getContrastRatio(
+    resolvedBgColor,
+    resolvedLightColor,
+  );
+  const contrastWithDark = getContrastRatio(resolvedBgColor, resolvedDarkColor);
+
+  return contrastWithLight > contrastWithDark ? lightColor : darkColor;
+};
+
+/**
+ * Resolves the luminance value of a CSS color
+ * @param {string} color - CSS color value (hex, rgb, hsl, CSS variable, etc.)
+ * @param {Element} [element] - DOM element to resolve CSS variables against
+ * @returns {number|undefined} Relative luminance (0-1) according to WCAG formula, or undefined if color cannot be resolved
+ * @example
+ * // Get luminance of a hex color
+ * resolveColorLuminance("#ff0000") // returns ~0.213 (red)
+ *
+ * // Get luminance of a CSS variable
+ * resolveColorLuminance("var(--primary-color)", element) // returns luminance value or undefined
+ *
+ * // Use for light/dark classification
+ * const luminance = resolveColorLuminance("#2ecc71");
+ * const isLight = luminance > 0.3; // true for light colors, false for dark
+ */
+const resolveColorLuminance = (color, element) => {
+  const rgba = parseCSSColor(color, element);
+  if (!rgba) {
+    return undefined;
+  }
+  const [r, g, b] = rgba;
+  return getLuminance(r, g, b);
+};
+
+/**
  * Calculates the contrast ratio between two RGBA colors
  * Based on WCAG 2.1 specification
  * @param {Array<number>} rgba1 - [r, g, b, a] values for first color
@@ -1795,482 +3400,6 @@ const getLuminance = (r, g, b) => {
     return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
   });
   return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
-};
-
-/**
- * Parses a CSS color string into RGBA values
- * Supports hex (#rgb, #rrggbb, #rrggbbaa), rgb(), rgba(), hsl(), hsla()
- * @param {string} color - CSS color string
- * @returns {Array<number>|null} [r, g, b, a] values or null if parsing fails
- */
-const parseCSSColor = (color) => {
-  if (!color || typeof color !== "string") {
-    return null;
-  }
-
-  color = color.trim().toLowerCase();
-
-  // Hex colors
-  if (color.startsWith("#")) {
-    const hex = color.slice(1);
-    if (hex.length === 3) {
-      // #rgb -> #rrggbb
-      const r = parseInt(hex[0] + hex[0], 16);
-      const g = parseInt(hex[1] + hex[1], 16);
-      const b = parseInt(hex[2] + hex[2], 16);
-      return [r, g, b, 1];
-    }
-    if (hex.length === 6) {
-      // #rrggbb
-      const r = parseInt(hex.slice(0, 2), 16);
-      const g = parseInt(hex.slice(2, 4), 16);
-      const b = parseInt(hex.slice(4, 6), 16);
-      return [r, g, b, 1];
-    }
-    if (hex.length === 8) {
-      // #rrggbbaa
-      const r = parseInt(hex.slice(0, 2), 16);
-      const g = parseInt(hex.slice(2, 4), 16);
-      const b = parseInt(hex.slice(4, 6), 16);
-      const a = parseInt(hex.slice(6, 8), 16) / 255;
-      return [r, g, b, a];
-    }
-  }
-
-  // RGB/RGBA colors
-  const rgbMatch = color.match(/rgba?\(([^)]+)\)/);
-  if (rgbMatch) {
-    const values = rgbMatch[1].split(",").map((v) => parseFloat(v.trim()));
-    if (values.length >= 3) {
-      const r = values[0];
-      const g = values[1];
-      const b = values[2];
-      const a = values.length >= 4 ? values[3] : 1;
-      return [r, g, b, a];
-    }
-  }
-
-  // HSL/HSLA colors - convert to RGB
-  const hslMatch = color.match(/hsla?\(([^)]+)\)/);
-  if (hslMatch) {
-    const values = hslMatch[1].split(",").map((v) => parseFloat(v.trim()));
-    if (values.length >= 3) {
-      const [h, s, l] = values;
-      const a = values.length >= 4 ? values[3] : 1;
-      const [r, g, b] = hslToRgb(h, s / 100, l / 100);
-      return [r, g, b, a];
-    }
-  }
-
-  // Named colors (basic set)
-  if (namedColors[color]) {
-    return [...namedColors[color], 1];
-  }
-  return null;
-};
-
-/**
- * Converts RGBA values back to a CSS color string
- * Prefers named colors when possible, then rgb() for opaque colors, rgba() for transparent
- * @param {Array<number>} rgba - [r, g, b, a] values
- * @returns {string|null} CSS color string or null if invalid input
- */
-const stringifyCSSColor = (rgba) => {
-  if (!Array.isArray(rgba) || rgba.length < 3) {
-    return null;
-  }
-
-  const [r, g, b, a = 1] = rgba;
-
-  // Validate RGB values
-  if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
-    return null;
-  }
-
-  // Validate alpha value
-  if (a < 0 || a > 1) {
-    return null;
-  }
-
-  // Round RGB values to integers
-  const rInt = Math.round(r);
-  const gInt = Math.round(g);
-  const bInt = Math.round(b);
-
-  // Check for named colors (only for fully opaque colors)
-  if (a === 1) {
-    for (const [name, [nameR, nameG, nameB]] of Object.entries(namedColors)) {
-      if (rInt === nameR && gInt === nameG && bInt === nameB) {
-        return name;
-      }
-    }
-  }
-
-  // Use rgb() for opaque colors, rgba() for transparent
-  if (a === 1) {
-    return `rgb(${rInt}, ${gInt}, ${bInt})`;
-  }
-  return `rgba(${rInt}, ${gInt}, ${bInt}, ${a})`;
-};
-
-const namedColors = {
-  // Basic colors
-  black: [0, 0, 0],
-  white: [255, 255, 255],
-  red: [255, 0, 0],
-  green: [0, 128, 0],
-  blue: [0, 0, 255],
-  yellow: [255, 255, 0],
-  cyan: [0, 255, 255],
-  magenta: [255, 0, 255],
-
-  // Gray variations
-  silver: [192, 192, 192],
-  gray: [128, 128, 128],
-  grey: [128, 128, 128],
-  darkgray: [169, 169, 169],
-  darkgrey: [169, 169, 169],
-  lightgray: [211, 211, 211],
-  lightgrey: [211, 211, 211],
-  dimgray: [105, 105, 105],
-  dimgrey: [105, 105, 105],
-  gainsboro: [220, 220, 220],
-  whitesmoke: [245, 245, 245],
-
-  // Extended basic colors
-  maroon: [128, 0, 0],
-  olive: [128, 128, 0],
-  lime: [0, 255, 0],
-  aqua: [0, 255, 255],
-  teal: [0, 128, 128],
-  navy: [0, 0, 128],
-  fuchsia: [255, 0, 255],
-  purple: [128, 0, 128],
-
-  // Red variations
-  darkred: [139, 0, 0],
-  firebrick: [178, 34, 34],
-  crimson: [220, 20, 60],
-  indianred: [205, 92, 92],
-  lightcoral: [240, 128, 128],
-  salmon: [250, 128, 114],
-  darksalmon: [233, 150, 122],
-  lightsalmon: [255, 160, 122],
-
-  // Pink variations
-  pink: [255, 192, 203],
-  lightpink: [255, 182, 193],
-  hotpink: [255, 105, 180],
-  deeppink: [255, 20, 147],
-  mediumvioletred: [199, 21, 133],
-  palevioletred: [219, 112, 147],
-
-  // Orange variations
-  orange: [255, 165, 0],
-  darkorange: [255, 140, 0],
-  orangered: [255, 69, 0],
-  tomato: [255, 99, 71],
-  coral: [255, 127, 80],
-
-  // Yellow variations
-  gold: [255, 215, 0],
-  lightyellow: [255, 255, 224],
-  lemonchiffon: [255, 250, 205],
-  lightgoldenrodyellow: [250, 250, 210],
-  papayawhip: [255, 239, 213],
-  moccasin: [255, 228, 181],
-  peachpuff: [255, 218, 185],
-  palegoldenrod: [238, 232, 170],
-  khaki: [240, 230, 140],
-  darkkhaki: [189, 183, 107],
-
-  // Green variations
-  darkgreen: [0, 100, 0],
-  forestgreen: [34, 139, 34],
-  seagreen: [46, 139, 87],
-  mediumseagreen: [60, 179, 113],
-  springgreen: [0, 255, 127],
-  mediumspringgreen: [0, 250, 154],
-  lawngreen: [124, 252, 0],
-  chartreuse: [127, 255, 0],
-  greenyellow: [173, 255, 47],
-  limegreen: [50, 205, 50],
-  palegreen: [152, 251, 152],
-  lightgreen: [144, 238, 144],
-  mediumaquamarine: [102, 205, 170],
-  aquamarine: [127, 255, 212],
-  darkolivegreen: [85, 107, 47],
-  olivedrab: [107, 142, 35],
-  yellowgreen: [154, 205, 50],
-
-  // Blue variations
-  darkblue: [0, 0, 139],
-  mediumblue: [0, 0, 205],
-  royalblue: [65, 105, 225],
-  steelblue: [70, 130, 180],
-  dodgerblue: [30, 144, 255],
-  deepskyblue: [0, 191, 255],
-  skyblue: [135, 206, 235],
-  lightskyblue: [135, 206, 250],
-  lightblue: [173, 216, 230],
-  powderblue: [176, 224, 230],
-  lightcyan: [224, 255, 255],
-  paleturquoise: [175, 238, 238],
-  darkturquoise: [0, 206, 209],
-  mediumturquoise: [72, 209, 204],
-  turquoise: [64, 224, 208],
-  cadetblue: [95, 158, 160],
-  darkcyan: [0, 139, 139],
-  lightseagreen: [32, 178, 170],
-
-  // Purple variations
-  indigo: [75, 0, 130],
-  darkviolet: [148, 0, 211],
-  blueviolet: [138, 43, 226],
-  mediumpurple: [147, 112, 219],
-  mediumslateblue: [123, 104, 238],
-  slateblue: [106, 90, 205],
-  darkslateblue: [72, 61, 139],
-  lavender: [230, 230, 250],
-  thistle: [216, 191, 216],
-  plum: [221, 160, 221],
-  violet: [238, 130, 238],
-  orchid: [218, 112, 214],
-  mediumorchid: [186, 85, 211],
-  darkorchid: [153, 50, 204],
-  darkmagenta: [139, 0, 139],
-
-  // Brown variations
-  brown: [165, 42, 42],
-  saddlebrown: [139, 69, 19],
-  sienna: [160, 82, 45],
-  chocolate: [210, 105, 30],
-  darkgoldenrod: [184, 134, 11],
-  peru: [205, 133, 63],
-  rosybrown: [188, 143, 143],
-  goldenrod: [218, 165, 32],
-  sandybrown: [244, 164, 96],
-  tan: [210, 180, 140],
-  burlywood: [222, 184, 135],
-  wheat: [245, 222, 179],
-  navajowhite: [255, 222, 173],
-  bisque: [255, 228, 196],
-  blanchedalmond: [255, 235, 205],
-  cornsilk: [255, 248, 220],
-
-  // Special colors
-  transparent: [0, 0, 0], // Note: alpha will be 0 for transparent
-  aliceblue: [240, 248, 255],
-  antiquewhite: [250, 235, 215],
-  azure: [240, 255, 255],
-  beige: [245, 245, 220],
-  honeydew: [240, 255, 240],
-  ivory: [255, 255, 240],
-  lavenderblush: [255, 240, 245],
-  linen: [250, 240, 230],
-  mintcream: [245, 255, 250],
-  mistyrose: [255, 228, 225],
-  oldlace: [253, 245, 230],
-  seashell: [255, 245, 238],
-  snow: [255, 250, 250],
-};
-
-/**
- * Converts HSL color to RGB
- * @param {number} h - Hue (0-360)
- * @param {number} s - Saturation (0-1)
- * @param {number} l - Lightness (0-1)
- * @returns {Array<number>} [r, g, b] values
- */
-const hslToRgb = (h, s, l) => {
-  h = h % 360;
-  const c = (1 - Math.abs(2 * l - 1)) * s;
-  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-  const m = l - c / 2;
-  const createRgb = (r, g, b) => {
-    return [
-      Math.round((r + m) * 255),
-      Math.round((g + m) * 255),
-      Math.round((b + m) * 255),
-    ];
-  };
-
-  if (h >= 0 && h < 60) {
-    return createRgb(c, x, 0);
-  }
-  if (h >= 60 && h < 120) {
-    return createRgb(x, c, 0);
-  }
-  if (h >= 120 && h < 180) {
-    return createRgb(0, c, x);
-  }
-  if (h >= 180 && h < 240) {
-    return createRgb(0, x, c);
-  }
-  if (h >= 240 && h < 300) {
-    return createRgb(x, 0, c);
-  }
-  if (h >= 300 && h < 360) {
-    return createRgb(c, 0, x);
-  }
-
-  return createRgb(0, 0, 0);
-};
-
-/**
- * Determines if the current color scheme is dark mode
- * @param {Element} [element] - DOM element to check color-scheme against (optional)
- * @returns {boolean} True if dark mode is active
- */
-const prefersDarkColors = (element) => {
-  const colorScheme = getPreferedColorScheme(element);
-  return colorScheme.includes("dark");
-};
-
-const prefersLightColors = (element) => {
-  return !prefersDarkColors(element);
-};
-
-const getPreferedColorScheme = (element) => {
-  const computedStyle = getComputedStyle(element || document.documentElement);
-  const colorScheme = computedStyle.colorScheme;
-
-  // If no explicit color-scheme is set, or it's "normal",
-  // fall back to prefers-color-scheme media query
-  if (!colorScheme || colorScheme === "normal") {
-    return window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
-  }
-
-  return colorScheme;
-};
-
-/**
- * Resolves a color value, handling CSS custom properties and light-dark() function
- * @param {string} color - CSS color value (may include CSS variables, light-dark())
- * @param {Element} element - DOM element to resolve CSS variables and light-dark() against
- * @param {string} context - Return format: "js" for RGBA array, "css" for CSS string
- * @returns {Array<number>|string|null} [r, g, b, a] values, CSS string, or null if parsing fails
- */
-const resolveCSSColor = (color, element, context = "js") => {
-  if (!color || typeof color !== "string") {
-    return null;
-  }
-
-  let resolvedColor = color;
-
-  // Handle light-dark() function
-  const lightDarkMatch = color.match(/light-dark\(([^,]+),([^)]+)\)/);
-  if (lightDarkMatch) {
-    const lightColor = lightDarkMatch[1].trim();
-    const darkColor = lightDarkMatch[2].trim();
-
-    // Select the appropriate color and recursively resolve it
-    const prefersDark = prefersDarkColors(element);
-    resolvedColor = prefersDark ? darkColor : lightColor;
-    return resolveCSSColor(resolvedColor, element, context);
-  }
-
-  // If it's a CSS custom property, resolve it using getComputedStyle
-  if (resolvedColor.includes("var(")) {
-    const computedStyle = getComputedStyle(element);
-
-    // Handle var() syntax
-    const varMatch = color.match(/var\(([^,)]+)(?:,([^)]+))?\)/);
-    if (varMatch) {
-      const propertyName = varMatch[1].trim();
-      const fallback = varMatch[2]?.trim();
-
-      const resolvedValue = computedStyle.getPropertyValue(propertyName).trim();
-      if (resolvedValue) {
-        // Recursively resolve in case the CSS variable contains light-dark() or other variables
-        return resolveCSSColor(resolvedValue, element, context);
-      }
-      if (fallback) {
-        // Recursively resolve fallback (in case it's also a CSS variable)
-        return resolveCSSColor(fallback, element, context);
-      }
-    }
-  }
-
-  if (color.startsWith("--")) {
-    console.warn(`found "${color}". Use "var(${color})" instead.`);
-    return null;
-  }
-
-  // Parse the resolved color and return in the requested format
-  const rgba = parseCSSColor(resolvedColor);
-
-  if (context === "css") {
-    return rgba ? stringifyCSSColor(rgba) : null;
-  }
-
-  return rgba;
-};
-
-/**
- * Chooses between light and dark colors based on which provides better contrast against a background
- * @param {string} backgroundColor - CSS color value (hex, rgb, hsl, CSS variable, etc.) to test against
- * @param {string} [lightColor="white"] - Light color option (typically for dark backgrounds)
- * @param {string} [darkColor="black"] - Dark color option (typically for light backgrounds)
- * @param {Element} [element] - DOM element to resolve CSS variables against
- * @returns {string} The color that provides better contrast (lightColor or darkColor)
- * @example
- * // Choose text color for a dark blue background
- * pickLightOrDark("#1a202c") // returns "white"
- *
- * // Choose text color for a light background with CSS variable
- * pickLightOrDark("var(--bg-color)", "white", "black", element) // returns "black" or "white"
- */
-
-const pickLightOrDark = (
-  backgroundColor,
-  lightColor = "white",
-  darkColor = "black",
-  element,
-) => {
-  const resolvedBgColor = resolveCSSColor(backgroundColor, element);
-  const resolvedLightColor = resolveCSSColor(lightColor, element);
-  const resolvedDarkColor = resolveCSSColor(darkColor, element);
-
-  if (!resolvedBgColor || !resolvedLightColor || !resolvedDarkColor) {
-    // Fallback to light color if parsing fails
-    return lightColor;
-  }
-
-  const contrastWithLight = getContrastRatio(
-    resolvedBgColor,
-    resolvedLightColor,
-  );
-  const contrastWithDark = getContrastRatio(resolvedBgColor, resolvedDarkColor);
-
-  return contrastWithLight > contrastWithDark ? lightColor : darkColor;
-};
-
-/**
- * Resolves the luminance value of a CSS color
- * @param {string} color - CSS color value (hex, rgb, hsl, CSS variable, etc.)
- * @param {Element} [element] - DOM element to resolve CSS variables against
- * @returns {number|undefined} Relative luminance (0-1) according to WCAG formula, or undefined if color cannot be resolved
- * @example
- * // Get luminance of a hex color
- * resolveColorLuminance("#ff0000") // returns ~0.213 (red)
- *
- * // Get luminance of a CSS variable
- * resolveColorLuminance("var(--primary-color)", element) // returns luminance value or undefined
- *
- * // Use for light/dark classification
- * const luminance = resolveColorLuminance("#2ecc71");
- * const isLight = luminance > 0.3; // true for light colors, false for dark
- */
-const resolveColorLuminance = (color, element) => {
-  const resolvedColor = resolveCSSColor(color, element);
-  if (!resolvedColor) {
-    return undefined;
-  }
-  const [r, g, b] = resolvedColor;
-  return getLuminance(r, g, b);
 };
 
 const findAncestor = (node, predicate) => {
@@ -4014,6 +5143,352 @@ const getScrollContainerSet = (element) => {
   return scrollContainerSet;
 };
 
+const getBorderSizes = (element) => {
+  const {
+    borderLeftWidth,
+    borderRightWidth,
+    borderTopWidth,
+    borderBottomWidth,
+  } = window.getComputedStyle(element, null);
+  return {
+    left: parseFloat(borderLeftWidth),
+    right: parseFloat(borderRightWidth),
+    top: parseFloat(borderTopWidth),
+    bottom: parseFloat(borderBottomWidth),
+  };
+};
+
+/**
+ * DOM Coordinate Systems: The Missing APIs Problem
+ *
+ * When positioning and moving DOM elements, we commonly need coordinate information.
+ * The web platform provides getBoundingClientRect() which gives viewport-relative coordinates,
+ * but this creates several challenges when working with scrollable containers:
+ *
+ * ## The Problem
+ *
+ * 1. **Basic positioning**: getBoundingClientRect() works great for viewport-relative positioning
+ * 2. **Document scrolling**: When document has scroll, we add document.scrollLeft/scrollTop
+ * 3. **Scroll containers**: When elements are inside scrollable containers, we need coordinates
+ *    relative to that container, not the document
+ *
+ * ## Missing Browser APIs
+ *
+ * The web platform lacks essential APIs for scroll container workflows:
+ * - No equivalent of getBoundingClientRect() relative to scroll container
+ * - No built-in way to get element coordinates in scroll container space
+ * - Manual coordinate conversion is error-prone and inconsistent
+ *
+ * ## This Module's Solution
+ *
+ * This module provides the missing coordinate APIs that work seamlessly with scroll containers:
+ * - **getScrollRelativeRect()**: element rect relative to scroll container (PRIMARY API)
+ * - **getMouseEventScrollRelativeRect()**: Mouse coordinates in scroll container space
+ * - **convertScrollRelativeRectInto()**: Convert scroll-relative rect to element positioning coordinates
+ *
+ * These APIs abstract away the complexity of coordinate system conversion and provide
+ * a consistent interface for element positioning regardless of scroll container depth.
+ *
+ * ## Primary API: getScrollRelativeRect()
+ *
+ * This is the main API you want - element rectangle relative to scroll container:
+ *
+ * ```js
+ * const rect = element.getBoundingClientRect(); // viewport-relative
+ * const scrollRect = getScrollRelativeRect(element, scrollContainer); // scroll-relative
+ * ```
+ *
+ * Returns: { left, top, right, bottom, width, height, scrollLeft, scrollTop, scrollContainer, ...metadata }
+ *
+ * The scroll values are included so you can calculate scroll-absolute coordinates yourself:
+ * ```js
+ * const { left, top, scrollLeft, scrollTop } = getScrollRelativeRect(element);
+ * const scrollAbsoluteLeft = left + scrollLeft;
+ * const scrollAbsoluteTop = top + scrollTop;
+ * ```
+ *
+ * ## Secondary APIs:
+ *
+ * - **getMouseEventScrollRelativeRect()**: Get mouse coordinates as a rect in scroll container space
+ * - **convertScrollRelativeRectInto()**: Convert from scroll-relative coordinates to element positioning coordinates (for setting element.style.left/top)
+ *
+ * ## Coordinate System Terminology:
+ *
+ * - **Viewport-relative**: getBoundingClientRect() coordinates - relative to browser viewport
+ * - **Scroll-relative**: Coordinates relative to scroll container (ignoring current scroll position)
+ * - **Scroll-absolute**: Scroll-relative + scroll position (element's position in full scrollable content)
+ * - **Element coordinates**: Coordinates for positioning elements (via element.style.left/top)
+ *
+ * ## Legacy Coordinate System Diagrams
+ *
+ * X-Axis Coordinate Systems in Web Development
+ *
+ * Diagram showing horizontal positioning and scrollbars:
+ *
+ * VIEWPORT (visible part of the document)
+ * ┌───────────────────────────────────────────────┐
+ * │                                               │
+ * │                                               │
+ * │ container.offsetLeft: 20px                    │
+ * │       ┼─────────────────────────────┐         │
+ * │       │                             │         │
+ * │       │                             │         │
+ * │       │  el.offsetLeft: 100px       │         │
+ * │       │         ┼─────┐             │         │
+ * │       │         │     │             │         │
+ * │       │         └─────┘             │         │
+ * │       │                             │         │
+ * │       │ ░░░███░░░░░░░░░░░░░░░░░░░░░ │         │
+ * │       └─────│───────────────────────┘         │
+ * │ container.scrollLeft: 50px                    │
+ * │                                               │
+ * │                                               │
+ * │ ░░░░░░░███░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░│
+ * └─────────│─────────────────────────────────────┘
+ *   document.scrollLeft: 200px
+ *
+ *
+ * Left coordinate for the element:
+ *
+ * Document coordinates (absolute position in full document)
+ * • Result: 320px
+ * • Detail: container.offsetLeft + element.offsetLeft + document.scrollLeft
+ *           20                +  100              + 200               = 320px
+ *
+ * Viewport coordinates (getBoundingClientRect().left):
+ * • Result: 120px
+ * • Detail: container.offsetLeft + element.offsetLeft
+ *           20                +  100              = 120px
+ *
+ * Scroll coordinates (position within scroll container):
+ * • Result: 50px
+ * • Detail: element.offsetLeft - container.scrollLeft
+ *           100              - 50                 = 50px
+ *
+ * Scroll behavior examples:
+ *
+ * When document scrolls (scrollLeft: 200px → 300px):
+ * • Document coordinates: 320px → 420px
+ * • Viewport coordinates: 120px → 120px (unchanged)
+ * • Scroll coordinates: 50px → 50px (unchanged)
+ *
+ * When container scrolls (scrollLeft: 50px → 100px):
+ * • Document coordinates: 320px → 270px
+ * • Viewport coordinates: 120px → 70px
+ * • Scroll coordinates: 50px → 0px
+ */
+
+
+const { documentElement: documentElement$1 } = document;
+
+/**
+ * Get element rectangle relative to its scroll container
+ *
+ * @param {Element} element - The element to get coordinates for
+ * @param {Element} [scrollContainer] - Optional scroll container (auto-detected if not provided)
+ * @param {object} [options] - Configuration options
+ * @returns {object} { left, top, right, bottom, width, height, scrollLeft, scrollTop, scrollContainer, ...metadata }
+ */
+const getScrollRelativeRect = (
+  element,
+  scrollContainer = getScrollContainer(element),
+  { useOriginalPositionEvenIfSticky = false } = {},
+) => {
+  const {
+    left: leftViewport,
+    top: topViewport,
+    width,
+    height,
+  } = element.getBoundingClientRect();
+
+  let fromFixed = false;
+  let fromStickyLeft;
+  let fromStickyTop;
+  let fromStickyLeftAttr;
+  let fromStickyTopAttr;
+  const scrollLeft = scrollContainer.scrollLeft;
+  const scrollTop = scrollContainer.scrollTop;
+  const scrollContainerIsDocument = scrollContainer === documentElement$1;
+  const createScrollRelativeRect = (leftScrollRelative, topScrollRelative) => {
+    const isStickyLeftOrHasStickyLeftAttr = Boolean(
+      fromStickyLeft || fromStickyLeftAttr,
+    );
+    const isStickyTopOrHasStickyTopAttr = Boolean(
+      fromStickyTop || fromStickyTopAttr,
+    );
+    return {
+      left: leftScrollRelative,
+      top: topScrollRelative,
+      right: leftScrollRelative + width,
+      bottom: topScrollRelative + height,
+
+      // metadata
+      width,
+      height,
+      scrollContainer,
+      scrollContainerIsDocument,
+      scrollLeft,
+      scrollTop,
+      fromFixed,
+      fromStickyLeft,
+      fromStickyTop,
+      fromStickyLeftAttr,
+      fromStickyTopAttr,
+      isStickyLeftOrHasStickyLeftAttr,
+      isStickyTopOrHasStickyTopAttr,
+      isSticky:
+        isStickyLeftOrHasStickyLeftAttr || isStickyTopOrHasStickyTopAttr,
+    };
+  };
+
+  {
+    const computedStyle = getComputedStyle(element);
+    {
+      const usePositionSticky = computedStyle.position === "sticky";
+      if (usePositionSticky) {
+        // For CSS position:sticky elements, use scrollable-relative coordinates
+        const [leftScrollRelative, topScrollRelative] =
+          viewportPosToScrollRelativePos(
+            leftViewport,
+            topViewport,
+            scrollContainer,
+          );
+        const isStickyLeft = computedStyle.left !== "auto";
+        const isStickyTop = computedStyle.top !== "auto";
+        fromStickyLeft = isStickyLeft
+          ? { value: parseFloat(computedStyle.left) || 0 }
+          : undefined;
+        fromStickyTop = isStickyTop
+          ? { value: parseFloat(computedStyle.top) || 0 }
+          : undefined;
+        return createScrollRelativeRect(leftScrollRelative, topScrollRelative);
+      }
+    }
+    {
+      const hasStickyLeftAttribute = element.hasAttribute("data-sticky-left");
+      const hasStickyTopAttribute = element.hasAttribute("data-sticky-top");
+      const useStickyAttribute =
+        hasStickyLeftAttribute || hasStickyTopAttribute;
+      if (useStickyAttribute) {
+        // Handle virtually sticky obstacles (<col> or <tr>) - elements with data-sticky attributes
+        // but not CSS position:sticky. Calculate their position based on scroll and sticky behavior
+        let [leftScrollRelative, topScrollRelative] =
+          viewportPosToScrollRelativePos(
+            leftViewport,
+            topViewport,
+            scrollContainer,
+          );
+        if (hasStickyLeftAttribute) {
+          const leftCssValue = parseFloat(computedStyle.left) || 0;
+          fromStickyLeftAttr = { value: leftCssValue };
+          if (useOriginalPositionEvenIfSticky) ; else {
+            const scrollLeft = scrollContainer.scrollLeft;
+            const stickyPosition = scrollLeft + leftCssValue;
+            const leftWithScroll = leftScrollRelative + scrollLeft;
+            if (stickyPosition > leftWithScroll) {
+              leftScrollRelative = leftCssValue; // Element is stuck
+            }
+          }
+        }
+        if (hasStickyTopAttribute) {
+          const topCssValue = parseFloat(computedStyle.top) || 0;
+          fromStickyTopAttr = { value: topCssValue };
+          if (useOriginalPositionEvenIfSticky) ; else {
+            const scrollTop = scrollContainer.scrollTop;
+            const stickyPosition = scrollTop + topCssValue;
+            const topWithScroll = topScrollRelative + scrollTop;
+            if (stickyPosition > topWithScroll) {
+              topScrollRelative = topCssValue; // Element is stuck
+            }
+          }
+        }
+        return createScrollRelativeRect(leftScrollRelative, topScrollRelative);
+      }
+    }
+  }
+
+  // For normal elements, use scrollable-relative coordinates
+  const [leftScrollRelative, topScrollRelative] =
+    viewportPosToScrollRelativePos(leftViewport, topViewport, scrollContainer);
+  return createScrollRelativeRect(leftScrollRelative, topScrollRelative);
+};
+const viewportPosToScrollRelativePos = (
+  leftViewport,
+  topViewport,
+  scrollContainer,
+) => {
+  const scrollContainerIsDocument = scrollContainer === documentElement$1;
+  if (scrollContainerIsDocument) {
+    return [leftViewport, topViewport];
+  }
+  const { left: scrollContainerLeftViewport, top: scrollContainerTopViewport } =
+    scrollContainer.getBoundingClientRect();
+  return [
+    leftViewport - scrollContainerLeftViewport,
+    topViewport - scrollContainerTopViewport,
+  ];
+};
+
+const addScrollToRect = (scrollRelativeRect) => {
+  const { left, top, width, height, scrollLeft, scrollTop } =
+    scrollRelativeRect;
+  const leftWithScroll = left + scrollLeft;
+  const topWithScroll = top + scrollTop;
+  return {
+    ...scrollRelativeRect,
+    left: leftWithScroll,
+    top: topWithScroll,
+    right: leftWithScroll + width,
+    bottom: topWithScroll + height,
+  };
+};
+
+// https://github.com/w3c/csswg-drafts/issues/3329
+// Return the portion of the element that is visible for this scoll container
+const getScrollBox = (scrollContainer) => {
+  if (scrollContainer === documentElement$1) {
+    const { clientWidth, clientHeight } = documentElement$1;
+
+    return {
+      left: 0,
+      top: 0,
+      right: clientWidth,
+      bottom: clientHeight,
+      width: clientWidth,
+      height: clientHeight,
+    };
+  }
+
+  const { clientWidth, clientHeight } = scrollContainer;
+  const scrollContainerBorderSizes = getBorderSizes(scrollContainer);
+  const left = scrollContainerBorderSizes.left;
+  const top = scrollContainerBorderSizes.top;
+  const right = left + clientWidth;
+  const bottom = top + clientHeight;
+  return {
+    left,
+    top,
+    right,
+    bottom,
+    width: clientWidth,
+    height: clientHeight,
+  };
+};
+// https://developer.mozilla.org/en-US/docs/Glossary/Scroll_container#scrollport
+const getScrollport = (scrollBox, scrollContainer) => {
+  const { left, top, width, height } = scrollBox;
+  const leftWithScroll = left + scrollContainer.scrollLeft;
+  const topWithScroll = top + scrollContainer.scrollTop;
+  const rightWithScroll = leftWithScroll + width;
+  const bottomWithScroll = topWithScroll + height;
+  return {
+    left: leftWithScroll,
+    top: topWithScroll,
+    right: rightWithScroll,
+    bottom: bottomWithScroll,
+  };
+};
+
 // https://davidwalsh.name/detect-scrollbar-width
 const measureScrollbar = (scrollableElement) => {
   const hasXScrollbar =
@@ -4033,6 +5508,129 @@ const measureScrollbar = (scrollableElement) => {
     hasXScrollbar ? scrollbarWidth : 0,
     hasYScrollbar ? scrollbarHeight : 0,
   ];
+};
+
+/**
+ * Prevents unwanted scrollbars during dimension transitions.
+ *
+ * Problem: When animating from one size to another, intermediate dimensions
+ * might temporarily trigger scrollbars that shouldn't exist in the final state.
+ * This creates visual flicker and layout shifts.
+ *
+ * Solution: Detect when intermediate animation frames would create problematic
+ * scrollbars and temporarily hide overflow during the transition.
+ */
+const preventIntermediateScrollbar = (
+  element,
+  { fromWidth, toWidth, fromHeight, toHeight, onPrevent, onRestore },
+) => {
+  const scrollContainer = getScrollContainer(element);
+  const [scrollbarWidth, scrollbarHeight] = measureScrollbar(scrollContainer);
+  const scrollBox = getScrollBox(scrollContainer);
+  const scrollContainerWidth = scrollBox.width + scrollbarWidth;
+  const scrollContainerHeight = scrollBox.height + scrollbarHeight;
+
+  const currentScrollbarState = getScrollbarState(fromWidth, fromHeight, {
+    scrollContainerWidth,
+    scrollContainerHeight,
+    scrollbarWidth,
+    scrollbarHeight,
+  });
+  const finalScrollbarState = getScrollbarState(toWidth, toHeight, {
+    scrollContainerWidth,
+    scrollContainerHeight,
+    scrollbarWidth,
+    scrollbarHeight,
+  });
+  if (
+    currentScrollbarState.x === finalScrollbarState.x &&
+    currentScrollbarState.y === finalScrollbarState.y
+  ) {
+    return () => {};
+  }
+
+  // Simulate worst case during transition - when both dimensions are at their maximum
+  const maxWidth = Math.max(fromWidth, toWidth);
+  const maxHeight = Math.max(fromHeight, toHeight);
+  let availableWidth = scrollContainerWidth;
+  let availableHeight = scrollContainerHeight;
+  let wouldHaveXDuringTransition = maxWidth > availableWidth;
+  let wouldHaveYDuringTransition = maxHeight > availableHeight;
+  if (wouldHaveXDuringTransition) {
+    availableHeight -= scrollbarHeight; // X scrollbar reduces available Y space
+    wouldHaveYDuringTransition = maxHeight > availableHeight; // Re-check Y with reduced space
+  }
+  if (wouldHaveYDuringTransition) {
+    availableWidth -= scrollbarWidth; // Y scrollbar reduces available X space
+    wouldHaveXDuringTransition = maxWidth > availableWidth; // Re-check X with reduced space
+  }
+  const intermediateX = wouldHaveXDuringTransition && !finalScrollbarState.x;
+  const intermediateY = wouldHaveYDuringTransition && !finalScrollbarState.y;
+  if (!intermediateX && !intermediateY) {
+    return () => {};
+  }
+
+  // Apply prevention
+  const originalOverflowX = scrollContainer.style.overflowX;
+  const originalOverflowY = scrollContainer.style.overflowY;
+  if (intermediateX) {
+    scrollContainer.style.overflowX = "hidden";
+  }
+  if (intermediateY) {
+    scrollContainer.style.overflowY = "hidden";
+  }
+  onPrevent?.({
+    x: intermediateX,
+    y: intermediateY,
+    scrollContainer,
+  });
+  return () => {
+    if (intermediateX) {
+      scrollContainer.style.overflowX = originalOverflowX;
+    }
+    if (intermediateY) {
+      scrollContainer.style.overflowY = originalOverflowY;
+    }
+    onRestore?.({
+      x: intermediateX,
+      y: intermediateY,
+      scrollContainer,
+    });
+  };
+};
+
+const getScrollbarState = (
+  contentWidth,
+  contentHeight,
+  {
+    scrollContainerWidth,
+    scrollContainerHeight,
+    scrollbarWidth,
+    scrollbarHeight,
+  },
+) => {
+  let availableWidth = scrollContainerWidth;
+  let availableHeight = scrollContainerHeight;
+  const contentExceedsWidth = contentWidth > availableWidth;
+  const contentExceedsHeight = contentHeight > availableHeight;
+
+  // Start with basic overflow
+  let x = contentExceedsWidth;
+  let y = contentExceedsHeight;
+  // If Y scrollbar appears, it reduces available X space
+  if (y) {
+    availableWidth -= scrollbarWidth;
+    // Re-check X scrollbar with reduced space
+    x = contentWidth > availableWidth;
+  }
+  // If X scrollbar appears, it reduces available Y space
+  if (x) {
+    availableHeight -= scrollbarHeight;
+    // Re-check Y scrollbar with reduced space
+    y = contentHeight > availableHeight;
+  }
+
+  return { x, y, availableWidth, availableHeight };
 };
 
 const trapScrollInside = (element) => {
@@ -4324,7 +5922,7 @@ const createDragElementPositioner = (
 const getScrollablePosition = (element, scrollContainer) => {
   const { left: elementViewportLeft, top: elementViewportTop } =
     element.getBoundingClientRect();
-  const scrollContainerIsDocument = scrollContainer === documentElement$1;
+  const scrollContainerIsDocument = scrollContainer === documentElement;
   if (scrollContainerIsDocument) {
     return [elementViewportLeft, elementViewportTop];
   }
@@ -4382,7 +5980,7 @@ const createGetOffsets = ({
       },
     );
   }
-  const scrollContainerIsDocument = scrollContainer === documentElement$1;
+  const scrollContainerIsDocument = scrollContainer === documentElement;
   if (scrollContainerIsDocument) {
     // Document case: getBoundingClientRect already includes document scroll effects
     // Add current scroll position to get the static offset
@@ -4432,7 +6030,7 @@ const createGetOffsetsForOverlay = (
   const scrollContainerIsDocument =
     scrollContainer === document.documentElement;
   const referenceScrollContainerIsDocument =
-    referenceScrollContainer === documentElement$1;
+    referenceScrollContainer === documentElement;
 
   if (getComputedStyle(overlay).position === "fixed") {
     if (referenceScrollContainerIsDocument) {
@@ -4544,7 +6142,7 @@ const isOverlayOf = (element, potentialTarget) => {
   return false;
 };
 
-const { documentElement: documentElement$1 } = document;
+const { documentElement } = document;
 const createGetScrollOffsets = (
   scrollContainer,
   referenceScrollContainer,
@@ -4552,7 +6150,7 @@ const createGetScrollOffsets = (
   samePositionedParent,
 ) => {
   const getGetScrollOffsetsSameContainer = () => {
-    const scrollContainerIsDocument = scrollContainer === documentElement$1;
+    const scrollContainerIsDocument = scrollContainer === documentElement;
     // I don't really get why we have to add scrollLeft (scrollLeft at grab)
     // to properly position the element in this scenario
     // It happens since we use translateX to position the element
@@ -5337,352 +6935,6 @@ import.meta.css = /* css */ `
     user-select: none;
   }
 `;
-
-const getBorderSizes = (element) => {
-  const {
-    borderLeftWidth,
-    borderRightWidth,
-    borderTopWidth,
-    borderBottomWidth,
-  } = window.getComputedStyle(element, null);
-  return {
-    left: parseFloat(borderLeftWidth),
-    right: parseFloat(borderRightWidth),
-    top: parseFloat(borderTopWidth),
-    bottom: parseFloat(borderBottomWidth),
-  };
-};
-
-/**
- * DOM Coordinate Systems: The Missing APIs Problem
- *
- * When positioning and moving DOM elements, we commonly need coordinate information.
- * The web platform provides getBoundingClientRect() which gives viewport-relative coordinates,
- * but this creates several challenges when working with scrollable containers:
- *
- * ## The Problem
- *
- * 1. **Basic positioning**: getBoundingClientRect() works great for viewport-relative positioning
- * 2. **Document scrolling**: When document has scroll, we add document.scrollLeft/scrollTop
- * 3. **Scroll containers**: When elements are inside scrollable containers, we need coordinates
- *    relative to that container, not the document
- *
- * ## Missing Browser APIs
- *
- * The web platform lacks essential APIs for scroll container workflows:
- * - No equivalent of getBoundingClientRect() relative to scroll container
- * - No built-in way to get element coordinates in scroll container space
- * - Manual coordinate conversion is error-prone and inconsistent
- *
- * ## This Module's Solution
- *
- * This module provides the missing coordinate APIs that work seamlessly with scroll containers:
- * - **getScrollRelativeRect()**: element rect relative to scroll container (PRIMARY API)
- * - **getMouseEventScrollRelativeRect()**: Mouse coordinates in scroll container space
- * - **convertScrollRelativeRectInto()**: Convert scroll-relative rect to element positioning coordinates
- *
- * These APIs abstract away the complexity of coordinate system conversion and provide
- * a consistent interface for element positioning regardless of scroll container depth.
- *
- * ## Primary API: getScrollRelativeRect()
- *
- * This is the main API you want - element rectangle relative to scroll container:
- *
- * ```js
- * const rect = element.getBoundingClientRect(); // viewport-relative
- * const scrollRect = getScrollRelativeRect(element, scrollContainer); // scroll-relative
- * ```
- *
- * Returns: { left, top, right, bottom, width, height, scrollLeft, scrollTop, scrollContainer, ...metadata }
- *
- * The scroll values are included so you can calculate scroll-absolute coordinates yourself:
- * ```js
- * const { left, top, scrollLeft, scrollTop } = getScrollRelativeRect(element);
- * const scrollAbsoluteLeft = left + scrollLeft;
- * const scrollAbsoluteTop = top + scrollTop;
- * ```
- *
- * ## Secondary APIs:
- *
- * - **getMouseEventScrollRelativeRect()**: Get mouse coordinates as a rect in scroll container space
- * - **convertScrollRelativeRectInto()**: Convert from scroll-relative coordinates to element positioning coordinates (for setting element.style.left/top)
- *
- * ## Coordinate System Terminology:
- *
- * - **Viewport-relative**: getBoundingClientRect() coordinates - relative to browser viewport
- * - **Scroll-relative**: Coordinates relative to scroll container (ignoring current scroll position)
- * - **Scroll-absolute**: Scroll-relative + scroll position (element's position in full scrollable content)
- * - **Element coordinates**: Coordinates for positioning elements (via element.style.left/top)
- *
- * ## Legacy Coordinate System Diagrams
- *
- * X-Axis Coordinate Systems in Web Development
- *
- * Diagram showing horizontal positioning and scrollbars:
- *
- * VIEWPORT (visible part of the document)
- * ┌───────────────────────────────────────────────┐
- * │                                               │
- * │                                               │
- * │ container.offsetLeft: 20px                    │
- * │       ┼─────────────────────────────┐         │
- * │       │                             │         │
- * │       │                             │         │
- * │       │  el.offsetLeft: 100px       │         │
- * │       │         ┼─────┐             │         │
- * │       │         │     │             │         │
- * │       │         └─────┘             │         │
- * │       │                             │         │
- * │       │ ░░░███░░░░░░░░░░░░░░░░░░░░░ │         │
- * │       └─────│───────────────────────┘         │
- * │ container.scrollLeft: 50px                    │
- * │                                               │
- * │                                               │
- * │ ░░░░░░░███░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░│
- * └─────────│─────────────────────────────────────┘
- *   document.scrollLeft: 200px
- *
- *
- * Left coordinate for the element:
- *
- * Document coordinates (absolute position in full document)
- * • Result: 320px
- * • Detail: container.offsetLeft + element.offsetLeft + document.scrollLeft
- *           20                +  100              + 200               = 320px
- *
- * Viewport coordinates (getBoundingClientRect().left):
- * • Result: 120px
- * • Detail: container.offsetLeft + element.offsetLeft
- *           20                +  100              = 120px
- *
- * Scroll coordinates (position within scroll container):
- * • Result: 50px
- * • Detail: element.offsetLeft - container.scrollLeft
- *           100              - 50                 = 50px
- *
- * Scroll behavior examples:
- *
- * When document scrolls (scrollLeft: 200px → 300px):
- * • Document coordinates: 320px → 420px
- * • Viewport coordinates: 120px → 120px (unchanged)
- * • Scroll coordinates: 50px → 50px (unchanged)
- *
- * When container scrolls (scrollLeft: 50px → 100px):
- * • Document coordinates: 320px → 270px
- * • Viewport coordinates: 120px → 70px
- * • Scroll coordinates: 50px → 0px
- */
-
-
-const { documentElement } = document;
-
-/**
- * Get element rectangle relative to its scroll container
- *
- * @param {Element} element - The element to get coordinates for
- * @param {Element} [scrollContainer] - Optional scroll container (auto-detected if not provided)
- * @param {object} [options] - Configuration options
- * @returns {object} { left, top, right, bottom, width, height, scrollLeft, scrollTop, scrollContainer, ...metadata }
- */
-const getScrollRelativeRect = (
-  element,
-  scrollContainer = getScrollContainer(element),
-  { useOriginalPositionEvenIfSticky = false } = {},
-) => {
-  const {
-    left: leftViewport,
-    top: topViewport,
-    width,
-    height,
-  } = element.getBoundingClientRect();
-
-  let fromFixed = false;
-  let fromStickyLeft;
-  let fromStickyTop;
-  let fromStickyLeftAttr;
-  let fromStickyTopAttr;
-  const scrollLeft = scrollContainer.scrollLeft;
-  const scrollTop = scrollContainer.scrollTop;
-  const scrollContainerIsDocument = scrollContainer === documentElement;
-  const createScrollRelativeRect = (leftScrollRelative, topScrollRelative) => {
-    const isStickyLeftOrHasStickyLeftAttr = Boolean(
-      fromStickyLeft || fromStickyLeftAttr,
-    );
-    const isStickyTopOrHasStickyTopAttr = Boolean(
-      fromStickyTop || fromStickyTopAttr,
-    );
-    return {
-      left: leftScrollRelative,
-      top: topScrollRelative,
-      right: leftScrollRelative + width,
-      bottom: topScrollRelative + height,
-
-      // metadata
-      width,
-      height,
-      scrollContainer,
-      scrollContainerIsDocument,
-      scrollLeft,
-      scrollTop,
-      fromFixed,
-      fromStickyLeft,
-      fromStickyTop,
-      fromStickyLeftAttr,
-      fromStickyTopAttr,
-      isStickyLeftOrHasStickyLeftAttr,
-      isStickyTopOrHasStickyTopAttr,
-      isSticky:
-        isStickyLeftOrHasStickyLeftAttr || isStickyTopOrHasStickyTopAttr,
-    };
-  };
-
-  {
-    const computedStyle = getComputedStyle(element);
-    {
-      const usePositionSticky = computedStyle.position === "sticky";
-      if (usePositionSticky) {
-        // For CSS position:sticky elements, use scrollable-relative coordinates
-        const [leftScrollRelative, topScrollRelative] =
-          viewportPosToScrollRelativePos(
-            leftViewport,
-            topViewport,
-            scrollContainer,
-          );
-        const isStickyLeft = computedStyle.left !== "auto";
-        const isStickyTop = computedStyle.top !== "auto";
-        fromStickyLeft = isStickyLeft
-          ? { value: parseFloat(computedStyle.left) || 0 }
-          : undefined;
-        fromStickyTop = isStickyTop
-          ? { value: parseFloat(computedStyle.top) || 0 }
-          : undefined;
-        return createScrollRelativeRect(leftScrollRelative, topScrollRelative);
-      }
-    }
-    {
-      const hasStickyLeftAttribute = element.hasAttribute("data-sticky-left");
-      const hasStickyTopAttribute = element.hasAttribute("data-sticky-top");
-      const useStickyAttribute =
-        hasStickyLeftAttribute || hasStickyTopAttribute;
-      if (useStickyAttribute) {
-        // Handle virtually sticky obstacles (<col> or <tr>) - elements with data-sticky attributes
-        // but not CSS position:sticky. Calculate their position based on scroll and sticky behavior
-        let [leftScrollRelative, topScrollRelative] =
-          viewportPosToScrollRelativePos(
-            leftViewport,
-            topViewport,
-            scrollContainer,
-          );
-        if (hasStickyLeftAttribute) {
-          const leftCssValue = parseFloat(computedStyle.left) || 0;
-          fromStickyLeftAttr = { value: leftCssValue };
-          if (useOriginalPositionEvenIfSticky) ; else {
-            const scrollLeft = scrollContainer.scrollLeft;
-            const stickyPosition = scrollLeft + leftCssValue;
-            const leftWithScroll = leftScrollRelative + scrollLeft;
-            if (stickyPosition > leftWithScroll) {
-              leftScrollRelative = leftCssValue; // Element is stuck
-            }
-          }
-        }
-        if (hasStickyTopAttribute) {
-          const topCssValue = parseFloat(computedStyle.top) || 0;
-          fromStickyTopAttr = { value: topCssValue };
-          if (useOriginalPositionEvenIfSticky) ; else {
-            const scrollTop = scrollContainer.scrollTop;
-            const stickyPosition = scrollTop + topCssValue;
-            const topWithScroll = topScrollRelative + scrollTop;
-            if (stickyPosition > topWithScroll) {
-              topScrollRelative = topCssValue; // Element is stuck
-            }
-          }
-        }
-        return createScrollRelativeRect(leftScrollRelative, topScrollRelative);
-      }
-    }
-  }
-
-  // For normal elements, use scrollable-relative coordinates
-  const [leftScrollRelative, topScrollRelative] =
-    viewportPosToScrollRelativePos(leftViewport, topViewport, scrollContainer);
-  return createScrollRelativeRect(leftScrollRelative, topScrollRelative);
-};
-const viewportPosToScrollRelativePos = (
-  leftViewport,
-  topViewport,
-  scrollContainer,
-) => {
-  const scrollContainerIsDocument = scrollContainer === documentElement;
-  if (scrollContainerIsDocument) {
-    return [leftViewport, topViewport];
-  }
-  const { left: scrollContainerLeftViewport, top: scrollContainerTopViewport } =
-    scrollContainer.getBoundingClientRect();
-  return [
-    leftViewport - scrollContainerLeftViewport,
-    topViewport - scrollContainerTopViewport,
-  ];
-};
-
-const addScrollToRect = (scrollRelativeRect) => {
-  const { left, top, width, height, scrollLeft, scrollTop } =
-    scrollRelativeRect;
-  const leftWithScroll = left + scrollLeft;
-  const topWithScroll = top + scrollTop;
-  return {
-    ...scrollRelativeRect,
-    left: leftWithScroll,
-    top: topWithScroll,
-    right: leftWithScroll + width,
-    bottom: topWithScroll + height,
-  };
-};
-
-// https://github.com/w3c/csswg-drafts/issues/3329
-// Return the portion of the element that is visible for this scoll container
-const getScrollBox = (scrollContainer) => {
-  if (scrollContainer === documentElement) {
-    const { clientWidth, clientHeight } = documentElement;
-
-    return {
-      left: 0,
-      top: 0,
-      right: clientWidth,
-      bottom: clientHeight,
-      width: clientWidth,
-      height: clientHeight,
-    };
-  }
-
-  const { clientWidth, clientHeight } = scrollContainer;
-  const scrollContainerBorderSizes = getBorderSizes(scrollContainer);
-  const left = scrollContainerBorderSizes.left;
-  const top = scrollContainerBorderSizes.top;
-  const right = left + clientWidth;
-  const bottom = top + clientHeight;
-  return {
-    left,
-    top,
-    right,
-    bottom,
-    width: clientWidth,
-    height: clientHeight,
-  };
-};
-// https://developer.mozilla.org/en-US/docs/Glossary/Scroll_container#scrollport
-const getScrollport = (scrollBox, scrollContainer) => {
-  const { left, top, width, height } = scrollBox;
-  const leftWithScroll = left + scrollContainer.scrollLeft;
-  const topWithScroll = top + scrollContainer.scrollTop;
-  const rightWithScroll = leftWithScroll + width;
-  const bottomWithScroll = topWithScroll + height;
-  return {
-    left: leftWithScroll,
-    top: topWithScroll,
-    right: rightWithScroll,
-    bottom: bottomWithScroll,
-  };
-};
 
 installImportMetaCss(import.meta);const setupConstraintFeedbackLine = () => {
   const constraintFeedbackLine = createConstraintFeedbackLine();
@@ -8256,6 +9508,20 @@ const pickPositionRelativeTo = (
   };
 };
 
+const [publishDebugger, subscribeDebugger] = createPubSub();
+
+const notifyDebuggerStart = () => {
+  const results = publishDebugger();
+  const notifyDebuggerEnd = () => {
+    for (const result of results) {
+      if (typeof result === "function") {
+        result();
+      }
+    }
+  };
+  return notifyDebuggerEnd;
+};
+
 const EASING = {
   LINEAR: (x) => x,
   EASE: (x) => {
@@ -8384,14 +9650,139 @@ const LIFECYCLE_DEFAULT = {
   updateTarget: () => {},
 };
 
+const transitionPausedByBreakpointWeakSet = createIterableWeakSet();
+const onTransitionPausedByBreakpoint = (transition) => {
+  transitionPausedByBreakpointWeakSet.add(transition);
+  transition.channels.finish.add(cleanupTransitionPausedByBreakpoint);
+  transition.channels.cancel.add(cleanupTransitionPausedByBreakpoint);
+};
+const cleanupTransitionPausedByBreakpoint = (transition) => {
+  transitionPausedByBreakpointWeakSet.delete(transition);
+};
+window.resumeTransitions = () => {
+  for (const transition of transitionPausedByBreakpointWeakSet) {
+    transition.play();
+  }
+};
+
+const combineTwoLifecycle = (lifecycleA, lifecycleB) => {
+  if (!lifecycleA && !lifecycleB) {
+    return LIFECYCLE_DEFAULT;
+  }
+  if (!lifecycleB) {
+    return lifecycleA;
+  }
+  if (!lifecycleA) {
+    return lifecycleB;
+  }
+
+  return {
+    setup: (transition) => {
+      const resultA = lifecycleA.setup?.(transition) || {};
+      const resultB = lifecycleB.setup?.(transition) || {};
+      return {
+        from: resultA.from ?? resultB.from,
+        update: (transition) => {
+          resultA.update?.(transition);
+          resultB.update?.(transition);
+        },
+        restore: () => {
+          resultA.restore?.();
+          resultB.restore?.();
+        },
+        teardown: () => {
+          resultA.teardown?.();
+          resultB.teardown?.();
+        },
+      };
+    },
+    pause: (transition) => {
+      const resumeA = lifecycleA.pause?.(transition);
+      const resumeB = lifecycleB.pause?.(transition);
+      return () => {
+        resumeA?.();
+        resumeB?.();
+      };
+    },
+    cancel: (transition) => {
+      lifecycleA.cancel?.(transition);
+      lifecycleB.cancel?.(transition);
+    },
+    finish: (transition) => {
+      lifecycleA.finish?.(transition);
+      lifecycleB.finish?.(transition);
+    },
+    updateTarget: (transition) => {
+      lifecycleA.updateTarget?.(transition);
+      lifecycleB.updateTarget?.(transition);
+    },
+  };
+};
+
+/**
+ * Lifecycle object for managing transition behavior and DOM updates.
+ *
+ * The lifecycle pattern provides hooks for different transition phases:
+ *
+ * @typedef {Object} TransitionLifecycle
+ * @property {Function} [setup] - Called when transition starts. Should return an object with:
+ *   @property {number}   [from] - Override the transition's from value if transition.from is undefined
+ *   @property {Function} [update] - Called on each frame with (transition) - handles DOM updates
+ *   @property {Function} [restore] - Called when transition is cancelled - should reset DOM to original state
+ *   @property {Function} [teardown] - Called when transition finishes or is cancelled - cleanup resources
+ * @property {Function} [pause] - Called when transition is paused. Should return a resume function
+ * @property {Function} [cancel] - Called when transition is cancelled
+ * @property {Function} [finish] - Called when transition finishes naturally
+ * @property {Function} [reverse] - Called when transition direction is reversed
+ * @property {Function} [updateTarget] - Called when transition target is updated mid-flight
+ *
+ * @example
+ * // Basic DOM animation lifecycle
+ * const lifecycle = {
+ *   setup: (transition) => {
+ *     const element = document.getElementById('myElement');
+ *     const originalWidth = element.style.width;
+ *
+ *     return {
+ *       from: element.offsetWidth, // Override from value with current DOM state
+ *       update: (transition) => {
+ *         // Apply transition value to DOM on each frame
+ *         element.style.width = `${transition.value}px`;
+ *       },
+ *       restore: () => {
+ *         // Reset DOM when cancelled
+ *         element.style.width = originalWidth;
+ *       },
+ *       teardown: () => {
+ *         // Cleanup when done (remove temp styles, event listeners, etc.)
+ *         element.style.width = '';
+ *       }
+ *     };
+ *   },
+ *   pause: (transition) => {
+ *     // Handle pause logic if needed
+ *     return () => {
+ *       // Resume logic
+ *     };
+ *   }
+ * };
+ */
 const createTransition = ({
   constructor,
   key,
   from,
   to,
-  lifecycle = LIFECYCLE_DEFAULT,
+  easing = EASING.EASE_OUT,
+  startProgress = 0, // Progress to start from (0-1)
+  baseLifecycle,
   onUpdate,
+  onFinish,
+  onPause,
   minDiff,
+  debugQuarterBreakpoints = false, // Shorthand for debugBreakpoints: [0.25, 0.75]
+  debugBreakpoints = debugQuarterBreakpoints ? [0.25, 0.75] : [], // Array of progress values (0-1) where debugger should trigger
+  pauseBreakpoints = [],
+  warnOnSmallDifferences = false,
   ...rest
 } = {}) => {
   const [updateCallbacks, executeUpdateCallbacks] = createCallbackController();
@@ -8402,9 +9793,9 @@ const createTransition = ({
     cancel: cancelCallbacks,
     finish: finishCallbacks,
   };
-  if (onUpdate) {
-    updateCallbacks.add(onUpdate);
-  }
+
+  const lifecycle = combineTwoLifecycle(baseLifecycle, rest.lifecycle);
+  let breakpointMap;
 
   let playState = "idle"; // 'idle', 'running', 'paused', 'finished'
   let isFirstUpdate = false;
@@ -8415,7 +9806,7 @@ const createTransition = ({
     isFirstUpdate = true;
     playState = "running";
 
-    executionLifecycle = lifecycle.setup(transition);
+    executionLifecycle = lifecycle.setup?.(transition) || {};
 
     // Allow setup to override from value if transition.from is undefined
     if (
@@ -8425,17 +9816,19 @@ const createTransition = ({
       transition.from = executionLifecycle.from;
     }
 
-    const diff = Math.abs(transition.to - transition.from);
-    if (diff === 0) {
-      console.warn(
-        `${constructor.name} transition has identical from and to values (${transition.from}). This transition will have no effect.`,
-      );
-    } else if (typeof minDiff === "number" && diff < minDiff) {
-      console.warn(
-        `${constructor.name} transition difference is very small (${diff}). Consider if this transition is necessary (minimum threshold: ${minDiff}).`,
-      );
+    if (warnOnSmallDifferences) {
+      const diff = Math.abs(transition.to - transition.from);
+      if (diff === 0) {
+        console.warn(
+          `${constructor.name} transition has identical from and to values (${transition.from}). This transition will have no effect.`,
+        );
+      } else if (typeof minDiff === "number" && diff < minDiff) {
+        console.warn(
+          `${constructor.name} transition difference is very small (${diff}). Consider if this transition is necessary (minimum threshold: ${minDiff}).`,
+        );
+      }
     }
-    transition.update(transition.value);
+    transition.update(transition.startProgress);
   };
 
   const transition = {
@@ -8443,6 +9836,10 @@ const createTransition = ({
     key,
     from,
     to,
+    progress: startProgress,
+    startProgress,
+    easedProgress: easing ? easing(startProgress) : startProgress,
+    easing,
     value: from,
     timing: "",
     channels,
@@ -8454,6 +9851,14 @@ const createTransition = ({
       if (playState === "idle") {
         transition.value = transition.from;
         transition.timing = "";
+        transition.progress = transition.startProgress;
+        breakpointMap = new Map();
+        for (const debugBreakpoint of debugBreakpoints) {
+          breakpointMap.set(debugBreakpoint, "debug");
+        }
+        for (const pauseBreakpoint of pauseBreakpoints) {
+          breakpointMap.set(pauseBreakpoint, "pause");
+        }
         start();
         return;
       }
@@ -8470,7 +9875,7 @@ const createTransition = ({
       start();
     },
 
-    update: (value, isLast) => {
+    update: (inputProgress) => {
       if (playState === "idle") {
         console.warn("Cannot update transition that is idle");
         return;
@@ -8479,12 +9884,49 @@ const createTransition = ({
         console.warn("Cannot update a finished transition");
         return;
       }
+      let progress;
+      if (startProgress) {
+        // Apply start progress offset - transition runs from startProgress to 1
+        // Progress represents a ratio (0-1), so we can't just add ratios together
+        // Instead, we need to map inputProgress to the remaining progress range (1 - startProgress)
+        // This could also exceed 1 if we used simple addition, but that's just a symptom of the conceptual error
+        // Example: startProgress=0.3, inputProgress=0.5 → 0.3 + 0.5*(1-0.3) = 0.65
+        progress = startProgress + inputProgress * (1 - startProgress);
+      } else {
+        progress = inputProgress;
+      }
+      transition.progress = progress;
 
+      const easedProgress = easing ? easing(progress) : progress;
+      transition.easedProgress = easedProgress;
+
+      const value = interpolate(transition, transition.from, transition.to);
       transition.value = value;
-      transition.timing = isLast ? "end" : isFirstUpdate ? "start" : "progress";
+
+      transition.timing =
+        progress === 1 ? "end" : isFirstUpdate ? "start" : "progress";
       isFirstUpdate = false;
       executionLifecycle.update?.(transition);
       executeUpdateCallbacks(transition);
+      onUpdate?.(transition);
+
+      for (const [breakpoint, effect] of breakpointMap) {
+        if (progress >= breakpoint) {
+          breakpointMap.delete(breakpoint);
+          if (effect === "debug") {
+            console.log(
+              `Debug breakpoint hit at ${(breakpoint * 100).toFixed(1)}% progress`,
+            );
+            const notifyDebuggerEnd = notifyDebuggerStart();
+            debugger;
+            notifyDebuggerEnd();
+          }
+          if (effect === "pause") {
+            transition.pause();
+            onTransitionPausedByBreakpoint(transition);
+          }
+        }
+      }
     },
 
     pause: () => {
@@ -8499,18 +9941,19 @@ const createTransition = ({
       playState = "paused";
 
       // Let the transition handle its own pause logic
-      resume = lifecycle.pause(transition);
+      resume = lifecycle.pause?.(transition);
+      onPause?.(transition);
     },
 
     cancel: () => {
       if (executionLifecycle) {
-        lifecycle.cancel(transition);
+        lifecycle.cancel?.(transition);
         executionLifecycle.teardown?.();
         executionLifecycle.restore?.();
       }
       resume = null;
       playState = "idle";
-      executeCancelCallbacks();
+      executeCancelCallbacks(transition);
     },
 
     finish: () => {
@@ -8523,11 +9966,12 @@ const createTransition = ({
         return;
       }
       // "running" or "paused"
-      lifecycle.finish(transition);
+      lifecycle.finish?.(transition);
       executionLifecycle.teardown?.();
       resume = null;
       playState = "finished";
-      executeFinishCallbacks();
+      executeFinishCallbacks(transition);
+      onFinish?.(transition);
     },
 
     reverse: () => {
@@ -8548,9 +9992,7 @@ const createTransition = ({
       transition.to = originalFrom;
 
       // Let the transition handle its own reverse logic (if any)
-      if (lifecycle.reverse) {
-        lifecycle.reverse(transition);
-      }
+      lifecycle.reverse?.(transition);
     },
 
     updateTarget: (newTarget) => {
@@ -8576,7 +10018,7 @@ const createTransition = ({
       transition.to = newTarget;
 
       // Let the transition handle its own target update logic
-      lifecycle.updateTarget(transition);
+      lifecycle.updateTarget?.(transition);
     },
 
     ...rest,
@@ -8585,14 +10027,42 @@ const createTransition = ({
   return transition;
 };
 
+const interpolate = (transition, from, to) => {
+  const { easedProgress } = transition;
+  return applyRatioToDiff(from, to, easedProgress);
+};
+const applyRatioToDiff = (from, to, ratio) => {
+  if (ratio === 0) {
+    return from;
+  }
+  if (ratio === 1) {
+    return to;
+  }
+  return from + (to - from) * ratio;
+};
+
+/**
+ * Creates a timeline-managed transition that automatically handles animation timing
+ * and integrates with the global animation timeline.
+ *
+ * @param {Object} options - Configuration options for the transition
+ * @param {boolean} [options.isVisual] - Whether this is a visual transition (affects timeline priority)
+ * @param {number} options.duration - Duration of the transition in milliseconds
+ * @param {number} [options.fps=60] - Target frames per second for the animation
+ * @param {Function} [options.easing=EASING.EASE_OUT] - Easing function to apply to progress
+ * @param {Object} [options.lifecycle] - Lifecycle methods for the transition
+ * @param {number} [options.startProgress=0] - Progress value to start from (0-1)
+ * @param {number[]} [options.debugBreakpoints=[]] - Array of progress values (0-1) where debugger should trigger
+ * @param {boolean} [options.debugQuarterBreakpoints=false] - If true and debugBreakpoints is empty, sets breakpoints at 0.25 and 0.75
+ * @param {*} [...options] - Additional options passed to createTransition
+ * @returns {Object} Timeline transition object with play(), pause(), cancel(), finish() methods
+ */
 // Timeline-managed transition that adds/removes itself from the animation timeline
 const createTimelineTransition = ({
   isVisual,
   duration,
   fps = 60,
   easing = EASING.EASE_OUT,
-  lifecycle,
-  startProgress = 0, // Progress to start from (0-1)
   ...options
 }) => {
   if (typeof duration !== "number" || duration <= 0) {
@@ -8602,10 +10072,28 @@ const createTimelineTransition = ({
   }
 
   let lastUpdateTime = -1;
-
   const timeChangeCallback = () => {
     const timelineCurrentTime = getTimelineCurrentTime();
-    const msElapsedSinceStart = timelineCurrentTime - transition.startTime;
+
+    {
+      const SUSPICIOUS_FRAME_DURATION_MS = 4000;
+      // Detect frozen code (debugger, long pause) early
+      // (not needed that much since introduce of debugBreakpoints option)
+      const timeSinceLastUpdate =
+        lastUpdateTime === -1
+          ? timelineCurrentTime - transition.baseTime
+          : timelineCurrentTime - lastUpdateTime;
+      if (timeSinceLastUpdate > SUSPICIOUS_FRAME_DURATION_MS) {
+        // Code was frozen for more than SUSPICIOUS_FRAME_DURATION (e.g. debugger)
+        // Adjust baseTime to compensate for the freeze and update timing for next frame
+        const freezeDuration = timeSinceLastUpdate - transition.frameDuration;
+        transition.baseTime += freezeDuration;
+        lastUpdateTime = timelineCurrentTime;
+        return;
+      }
+    }
+
+    const msElapsedSinceStart = timelineCurrentTime - transition.baseTime;
     const msRemaining = transition.duration - msElapsedSinceStart;
 
     if (
@@ -8615,13 +10103,14 @@ const createTimelineTransition = ({
       msRemaining <= transition.frameDuration
     ) {
       transition.frameRemainingCount = 0;
-      transition.progress = 1;
-      transition.update(transition.to, true);
+      transition.update(1);
       transition.finish();
       return;
     }
+
     if (lastUpdateTime === -1) ; else {
       const timeSinceLastUpdate = timelineCurrentTime - lastUpdateTime;
+
       // Allow rendering if we're within 3ms of the target frame duration
       // This prevents choppy animations when browser timing is slightly off
       const frameTimeTolerance = 3; // ms
@@ -8633,17 +10122,11 @@ const createTimelineTransition = ({
       }
     }
     lastUpdateTime = timelineCurrentTime;
-    const rawProgress = Math.min(msElapsedSinceStart / transition.duration, 1);
-    // Apply start progress offset - transition runs from startProgress to 1
-    const progress = startProgress + rawProgress * (1 - startProgress);
-    transition.progress = progress;
-    const easedProgress = transition.easing(progress);
-    const value =
-      transition.from + (transition.to - transition.from) * easedProgress;
     transition.frameRemainingCount = Math.ceil(
       msRemaining / transition.frameDuration,
     );
-    transition.update(value);
+    const progress = msElapsedSinceStart / transition.duration;
+    transition.update(progress > 1 ? 1 : progress);
   };
   const onTimelineNeeded = () => {
     addOnTimeline(timeChangeCallback, isVisual);
@@ -8652,11 +10135,10 @@ const createTimelineTransition = ({
     removeFromTimeline(timeChangeCallback, isVisual);
   };
 
-  const { setup } = lifecycle;
   const transition = createTransition({
     ...options,
     startTime: null,
-    progress: startProgress, // Initialize with start progress
+    baseTime: null,
     duration,
     easing,
     fps,
@@ -8664,29 +10146,41 @@ const createTimelineTransition = ({
       return 1000 / fps;
     },
     frameRemainingCount: 0,
-    startProgress, // Store for calculations
-    lifecycle: {
-      ...lifecycle,
+    baseLifecycle: {
       setup: (transition) => {
         // Handle timeline management
         lastUpdateTime = -1;
-        transition.startTime = getTimelineCurrentTime();
+        transition.baseTime = transition.startTime = getTimelineCurrentTime();
         // Calculate remaining frames based on remaining progress
-        const remainingProgress = 1 - startProgress;
+        const remainingProgress = 1 - transition.progress;
         const remainingDuration = transition.duration * remainingProgress;
         transition.frameRemainingCount = Math.ceil(
           remainingDuration / transition.frameDuration,
         );
         onTimelineNeeded();
-        // Call the original setup
-        return setup(transition);
+        const unsubscribeDebugger = subscribeDebugger(() => {
+          transition.pause();
+          return () => {
+            // if we play() right after debugger
+            // document.timeline.currentTime is still the same
+            // and we can't adjust to the time ellapsed in the debugger session
+            // we need to wait for the next js loop to have an updated
+            // document.timeline.currentTime that takes into account the time spent in the debugger
+            requestAnimationFrame(transition.play);
+          };
+        });
+        return {
+          teardown: () => {
+            unsubscribeDebugger();
+          },
+        };
       },
       pause: (transition) => {
         const pauseTime = getTimelineCurrentTime();
         onTimelineNotNeeded();
         return () => {
           const pausedDuration = getTimelineCurrentTime() - pauseTime;
-          transition.startTime += pausedDuration;
+          transition.baseTime += pausedDuration;
           // Only adjust lastUpdateTime if it was set (not -1)
           if (lastUpdateTime !== -1) {
             lastUpdateTime += pausedDuration;
@@ -8695,7 +10189,7 @@ const createTimelineTransition = ({
         };
       },
       updateTarget: (transition) => {
-        transition.startTime = getTimelineCurrentTime();
+        transition.baseTime = getTimelineCurrentTime();
         // Don't reset lastUpdateTime - we want visual continuity for smooth target updates
         // Recalculate remaining frames from current progress
         const remainingProgress = 1 - transition.progress;
@@ -8736,265 +10230,26 @@ const createCallbackController = () => {
   return [callbacks, execute];
 };
 
-const transitionStyleController = createStyleController("transition");
-
-const createHeightTransition = (element, to, options = {}) => {
-  const { setup, ...rest } = options;
-  const heightTransition = createTimelineTransition({
-    ...rest,
-    constructor: createHeightTransition,
-    key: element,
-    to,
-    isVisual: true,
-    minDiff: 10,
-    lifecycle: {
-      setup: () => {
-        const teardown = setup?.();
-        return {
-          from: getHeight$1(element),
-          update: ({ value }) => {
-            transitionStyleController.set(element, { height: value });
-          },
-          teardown: () => {
-            transitionStyleController.delete(element, "height");
-            teardown?.();
-          },
-        };
-      },
-    },
-  });
-  return heightTransition;
-};
-const createWidthTransition = (element, to, options = {}) => {
-  const { setup, ...rest } = options;
-  const widthTransition = createTimelineTransition({
-    ...rest,
-    constructor: createWidthTransition,
-    key: element,
-    to,
-    minDiff: 10,
-    isVisual: true,
-    lifecycle: {
-      setup: () => {
-        const teardown = setup?.();
-        return {
-          from: getWidth$1(element),
-          update: ({ value }) => {
-            transitionStyleController.set(element, { width: value });
-          },
-          teardown: () => {
-            transitionStyleController.delete(element, "width");
-            teardown?.();
-          },
-        };
-      },
-    },
-  });
-  return widthTransition;
-};
-const createOpacityTransition = (element, to, options = {}) => {
-  const { setup, ...rest } = options;
-  const opacityTransition = createTimelineTransition({
-    ...rest,
-    constructor: createOpacityTransition,
-    key: element,
-    to,
-    minDiff: 0.1,
-    isVisual: true,
-    lifecycle: {
-      setup: () => {
-        const teardown = setup?.();
-        return {
-          from: getOpacity(element),
-          update: ({ value }) => {
-            transitionStyleController.set(element, { opacity: value });
-          },
-          teardown: () => {
-            transitionStyleController.delete(element, "opacity");
-            teardown?.();
-          },
-        };
-      },
-    },
-  });
-  return opacityTransition;
-};
-const createTranslateXTransition = (element, to, options = {}) => {
-  const { setup, ...rest } = options;
-  const translateXTransition = createTimelineTransition({
-    ...rest,
-    constructor: createTranslateXTransition,
-    key: element,
-    to,
-    minDiff: 10,
-    isVisual: true,
-    lifecycle: {
-      setup: () => {
-        const teardown = setup?.();
-        return {
-          from: getTranslateX(element),
-          update: ({ value }) => {
-            transitionStyleController.set(element, {
-              transform: {
-                translateX: value,
-              },
-            });
-          },
-          teardown: () => {
-            transitionStyleController.delete(element, "transform.translateX");
-            teardown?.();
-          },
-        };
-      },
-    },
-  });
-  return translateXTransition;
-};
-
-// Helper functions for getting natural values
-const getOpacityWithoutTransition = (element) =>
-  getOpacity(element, transitionStyleController);
-const getTranslateXWithoutTransition = (element) =>
-  getTranslateX(element, transitionStyleController);
-const getWidthWithoutTransition = (element) =>
-  getWidth$1(element, transitionStyleController);
-const getHeightWithoutTransition = (element) =>
-  getHeight$1(element, transitionStyleController);
-
-// transition that manages multiple transitions
-const createGroupTransition = (transitionArray) => {
-  let finishedCount = 0;
-  let duration = 0;
-  let childCount = transitionArray.length;
-  for (const childTransition of transitionArray) {
-    if (childTransition.duration > duration) {
-      duration = childTransition.duration;
-    }
-  }
-
-  const groupTransition = createTransition({
-    constructor: createGroupTransition,
-    from: 0,
-    to: 1,
-    duration,
-    lifecycle: {
-      setup: (transition) => {
-        finishedCount = 0;
-
-        const cleanupCallbackSet = new Set();
-        for (const childTransition of transitionArray) {
-          const removeFinishListener = childTransition.channels.finish.add(
-            // eslint-disable-next-line no-loop-func
-            () => {
-              finishedCount++;
-              const allFinished = finishedCount === childCount;
-              if (allFinished) {
-                transition.finish();
-              }
-            },
-          );
-          cleanupCallbackSet.add(removeFinishListener);
-          childTransition.play();
-
-          const removeUpdateListener = childTransition.channels.update.add(
-            () => {
-              // Calculate average progress (handle undefined progress)
-              let totalProgress = 0;
-              let progressCount = 0;
-              for (const t of transitionArray) {
-                if (typeof t.progress === "number") {
-                  totalProgress += t.progress;
-                  progressCount++;
-                }
-              }
-              const averageProgress =
-                progressCount > 0 ? totalProgress / progressCount : 0;
-              // Expose progress on the group transition for external access
-              transition.progress = averageProgress;
-              // Update this transition's value with average progress
-              const isLast = averageProgress >= 1;
-              transition.update(averageProgress, isLast);
-            },
-          );
-          cleanupCallbackSet.add(removeUpdateListener);
-        }
-
-        return {
-          update: () => {},
-          teardown: () => {
-            for (const cleanupCallback of cleanupCallbackSet) {
-              cleanupCallback();
-            }
-            cleanupCallbackSet.clear();
-          },
-          restore: () => {},
-        };
-      },
-      pause: () => {
-        for (const childTransition of transitionArray) {
-          if (childTransition.playState === "running") {
-            childTransition.pause();
-          }
-        }
-        return () => {
-          for (const childTransition of transitionArray) {
-            if (childTransition.playState === "paused") {
-              childTransition.play();
-            }
-          }
-        };
-      },
-
-      cancel: () => {
-        for (const childTransition of transitionArray) {
-          if (childTransition.playState !== "idle") {
-            childTransition.cancel();
-          }
-        }
-      },
-
-      finish: () => {
-        for (const childTransition of transitionArray) {
-          if (childTransition.playState !== "finished") {
-            childTransition.finish();
-          }
-        }
-      },
-
-      reverse: () => {
-        for (const childTransition of transitionArray) {
-          if (
-            childTransition.playState === "running" ||
-            childTransition.playState === "paused"
-          ) {
-            childTransition.reverse();
-          }
-        }
-      },
-    },
-  });
-  return groupTransition;
-};
-
 /**
  * Creates an interface that manages ongoing transitions
  * and handles target updates automatically
  */
-const createGroupTransitionController = () => {
+const createGroupTransitionController = (groupTransitionOptions) => {
   // Track all active transitions for cancellation and matching
   const activeTransitions = new Set();
 
   return {
     /**
-     * Animate multiple transitions simultaneously
+     * Control multiple transitions simultaneously
      * Automatically handles updateTarget for transitions that match constructor + targetKey
      * @param {Array} transitions - Array of transition objects with constructor and targetKey properties
      * @param {Object} options - Transition options
      * @param {Function} options.onChange - Called with (changeEntries, isLast) during transition
      * @param {Function} options.onFinish - Called when all transitions complete
+     * @param {Function} options.onCancel - Called when transitions are cancelled
      * @returns {Object} Playback controller with play(), pause(), cancel(), etc.
      */
-    animate: (transitions, options = {}) => {
+    update: (transitions, options = {}) => {
       const { onChange, onCancel, onFinish } = options;
 
       if (transitions.length === 0) {
@@ -9073,7 +10328,10 @@ const createGroupTransitionController = () => {
       }
 
       // Create group transition to coordinate new transitions only
-      const groupTransition = createGroupTransition(newTransitions);
+      const groupTransition = createGroupTransition(
+        newTransitions,
+        groupTransitionOptions,
+      );
 
       // Add unified update tracking for ALL transitions (new + updated)
       if (onChange) {
@@ -9137,6 +10395,887 @@ const createGroupTransitionController = () => {
     },
   };
 };
+
+// transition that manages multiple transitions
+const createGroupTransition = (transitionArray, options = {}) => {
+  let childCount = transitionArray.length;
+  // duration is infered from the longest child transition
+  let duration = 0;
+  for (const childTransition of transitionArray) {
+    if (childTransition.duration > duration) {
+      duration = childTransition.duration;
+    }
+  }
+
+  const groupTransition = createTransition({
+    ...options,
+    constructor: createGroupTransition,
+    from: 0,
+    to: 1,
+    duration,
+    baseLifecycle: {
+      setup: (transition) => {
+        let finishedCount = 0;
+
+        const [cleanup, addCleanup] = createPubSub();
+
+        for (const childTransition of transitionArray) {
+          const removeFinishListener = childTransition.channels.finish.add(
+            // eslint-disable-next-line no-loop-func
+            () => {
+              finishedCount++;
+              const allFinished = finishedCount === childCount;
+              if (allFinished) {
+                transition.finish();
+              }
+            },
+          );
+          addCleanup(removeFinishListener);
+          childTransition.play();
+
+          const removeUpdateListener = childTransition.channels.update.add(
+            () => {
+              // Calculate average progress (handle undefined progress)
+              let totalProgress = 0;
+              let progressCount = 0;
+              for (const t of transitionArray) {
+                if (typeof t.progress === "number") {
+                  totalProgress += t.progress;
+                  progressCount++;
+                }
+              }
+              const averageProgress =
+                progressCount > 0 ? totalProgress / progressCount : 0;
+              transition.update(averageProgress);
+            },
+          );
+          addCleanup(removeUpdateListener);
+        }
+
+        return {
+          teardown: cleanup,
+        };
+      },
+      pause: () => {
+        for (const childTransition of transitionArray) {
+          if (childTransition.playState === "running") {
+            childTransition.pause();
+          }
+        }
+        return () => {
+          for (const childTransition of transitionArray) {
+            if (childTransition.playState === "paused") {
+              childTransition.play();
+            }
+          }
+        };
+      },
+      cancel: () => {
+        for (const childTransition of transitionArray) {
+          if (childTransition.playState !== "idle") {
+            childTransition.cancel();
+          }
+        }
+      },
+      finish: () => {
+        for (const childTransition of transitionArray) {
+          if (childTransition.playState === "idle") {
+            // child transition got canceled, keep it canceled
+            continue;
+          }
+          if (childTransition.playState !== "finished") {
+            childTransition.finish();
+          }
+        }
+      },
+      reverse: () => {
+        for (const childTransition of transitionArray) {
+          if (
+            childTransition.playState === "running" ||
+            childTransition.playState === "paused"
+          ) {
+            childTransition.reverse();
+          }
+        }
+      },
+    },
+  });
+  return groupTransition;
+};
+
+// Helper function to prepare color transition pairs, handling edge cases
+const prepareRGBATransitionPair = (fromColor, toColor) => {
+  const fromUnset = !fromColor;
+  const toUnset = !toColor;
+
+  // Both unset - no transition needed
+  if (fromUnset && toUnset) {
+    return null;
+  }
+  // Handle unset cases by using transparent versions
+  if (fromUnset) {
+    const toFullyTransparent = updateRGBA(toColor, { a: 0 });
+    return [toFullyTransparent, toColor];
+  }
+  if (toUnset) {
+    const fromFullyTransparent = updateRGBA(fromColor, { a: 0 });
+    return [fromColor, fromFullyTransparent];
+  }
+  // Handle fully transparent cases
+  const fromFullyTransparent = fromColor[3] === 0;
+  const toFullyTransparent = toColor[3] === 0;
+  if (fromFullyTransparent && toFullyTransparent) {
+    return [fromColor, toColor];
+  }
+  if (fromFullyTransparent) {
+    const toFullTransparent = updateRGBA(toColor, { a: 0 });
+    return [toFullTransparent, toColor];
+  }
+  if (toFullyTransparent) {
+    const fromFullyTransparent = updateRGBA(fromColor, { a: 0 });
+    return [fromColor, fromFullyTransparent];
+  }
+  return [fromColor, toColor];
+};
+const interpolateRGBA = (transition, fromRGBA, toRGBA) => {
+  const [rFrom, gFrom, bFrom, aFrom] = fromRGBA;
+  const [rTo, gTo, bTo, aTo] = toRGBA;
+  const r = interpolate(transition, rFrom, rTo);
+  const g = interpolate(transition, gFrom, gTo);
+  const b = interpolate(transition, bFrom, bTo);
+  const a = interpolate(transition, aFrom, aTo);
+  return [r, g, b, a];
+};
+
+const getBackgroundColorAndImageInterpolation = (
+  fromBackground,
+  toBackground,
+) => {
+  const fromBackgroundColor = fromBackground.color;
+  const toBackgroundColor = toBackground.color;
+  const fromBackgroundImage = fromBackground.image;
+  const toBackgroundImage = toBackground.image;
+  const fromHasImage = Boolean(fromBackgroundImage);
+  const toHasImage = Boolean(toBackgroundImage);
+  const fromHasGradient = fromHasImage && isGradientObject(fromBackgroundImage);
+  const toHasGradient = toHasImage && isGradientObject(toBackgroundImage);
+  const getInterpolateBackgroundColor = () => {
+    const backgroundColorRgbaPair = prepareRGBATransitionPair(
+      fromBackgroundColor,
+      toBackgroundColor,
+    );
+    if (!backgroundColorRgbaPair) {
+      return toBackgroundColor;
+    }
+    const [fromRGBA, toRGBA] = backgroundColorRgbaPair;
+    return (transition) => {
+      const rgbaInterpolated = interpolateRGBA(transition, fromRGBA, toRGBA);
+      return rgbaInterpolated;
+    };
+  };
+
+  // color to color
+  if (!fromHasImage && !toHasImage) {
+    return {
+      color: getInterpolateBackgroundColor(),
+    };
+  }
+  // gradient to color
+  if (fromHasGradient && !toHasImage && toBackgroundColor) {
+    if (!gradientHasColors(fromBackgroundImage)) {
+      return { color: toBackgroundColor };
+    }
+    return {
+      image: (transition) => {
+        if (transition.value === 1) {
+          return undefined;
+        }
+        const interpolatedColors = fromBackgroundImage.colors.map(
+          (colorStop) => {
+            return interpolateColorStopToColor(
+              transition,
+              colorStop,
+              toBackgroundColor,
+            );
+          },
+        );
+        return { ...fromBackgroundImage, colors: interpolatedColors };
+      },
+      color: (transition) => {
+        if (transition.value < 1) {
+          return undefined;
+        }
+        return toBackgroundColor;
+      },
+    };
+  }
+  // color to gradient
+  if (!fromHasImage && fromBackgroundColor && toHasGradient) {
+    if (!gradientHasColors(toBackgroundImage)) {
+      return { image: toBackgroundImage };
+    }
+    return {
+      image: (transition) => {
+        const interpolatedColors = toBackgroundImage.colors.map((colorStop) => {
+          return interpolateColorToColorStop(
+            transition,
+            fromBackgroundColor,
+            colorStop,
+          );
+        });
+        return {
+          ...toBackgroundImage,
+          colors: interpolatedColors,
+        };
+      },
+    };
+  }
+  // gradient to gradient
+  if (fromHasGradient && toHasGradient) {
+    if (
+      !gradientHasColors(fromBackgroundImage) ||
+      !gradientHasColors(toBackgroundImage)
+    ) {
+      // Unsupported cross-gradient transition - fall back to instant change
+      return { image: toBackgroundImage };
+    }
+    const fromGradientType = fromBackgroundImage.type;
+    const toGradientType = toBackgroundImage.type;
+    const isSameGradientType = fromGradientType === toGradientType;
+    const fromColors = fromBackgroundImage.colors;
+    const toColors = toBackgroundImage.colors;
+    return {
+      image: (transition) => {
+        const interpolatedColors = interpolateColorStopsArray(
+          transition,
+          fromColors,
+          toColors,
+          isSameGradientType ? "same-type" : "cross-type",
+        );
+        return {
+          ...toBackgroundImage,
+          colors: interpolatedColors,
+        };
+      },
+      color: isSameGradientType
+        ? getInterpolateBackgroundColor()
+        : toBackgroundColor,
+    };
+  }
+  return {
+    color: getInterpolateBackgroundColor(),
+  };
+};
+
+// Helper to interpolate color stops with position values
+const interpolateStops = (transition, fromStops, toStops) => {
+  if (!Array.isArray(fromStops) || !Array.isArray(toStops)) {
+    return transition.value < 0.5 ? fromStops : toStops;
+  }
+
+  const maxLength = Math.max(fromStops.length, toStops.length);
+  const result = [];
+  for (let i = 0; i < maxLength; i++) {
+    const fromStop = fromStops[i];
+    const toStop = toStops[i];
+    result.push(interpolateStop(transition, fromStop, toStop));
+  }
+
+  return result;
+};
+
+// Helper to interpolate a single stop (position value)
+const interpolateStop = (transition, fromStop, toStop) => {
+  if (fromStop && toStop) {
+    // Stops are now already parsed objects
+    if (
+      fromStop.isNumeric &&
+      toStop.isNumeric &&
+      fromStop.unit === toStop.unit
+    ) {
+      const interpolatedValue = interpolate(
+        transition,
+        fromStop.value,
+        toStop.value,
+      );
+      return {
+        isNumeric: true,
+        value: interpolatedValue,
+        unit: fromStop.unit,
+      };
+    }
+    // Non-numeric or different units - use threshold
+    return transition.value < 0.5 ? fromStop : toStop;
+  }
+  // Only one exists - use it
+  return fromStop || toStop;
+};
+
+// Helper to interpolate a single color stop between two color stops
+const interpolateColorStop = (transition, fromStop, toStop) => {
+  if (!fromStop || !toStop) {
+    return toStop || fromStop;
+  }
+
+  const interpolatedStop = { ...toStop };
+
+  // Interpolate colors if both exist
+  if (fromStop.color && toStop.color) {
+    interpolatedStop.color = interpolateRGBA(
+      transition,
+      fromStop.color,
+      toStop.color,
+    );
+  }
+
+  // Interpolate position stops if both exist
+  if (fromStop.stops && toStop.stops) {
+    interpolatedStop.stops = interpolateStops(
+      transition,
+      fromStop.stops,
+      toStop.stops,
+    );
+  }
+
+  return interpolatedStop;
+};
+
+// Helper to interpolate color stops arrays with different handling strategies
+const interpolateColorStopsArray = (
+  transition,
+  fromColors,
+  toColors,
+  strategy = "same-type",
+) => {
+  const maxStops = Math.max(fromColors.length, toColors.length);
+  const interpolatedColors = [];
+
+  for (let i = 0; i < maxStops; i++) {
+    const fromStop = fromColors[i];
+    const toStop = toColors[i];
+
+    if (fromStop && toStop) {
+      if (strategy === "cross-type") {
+        // For cross-gradient transitions, prioritize target structure
+        const interpolatedStop = { ...toStop };
+        if (fromStop.color && toStop.color) {
+          interpolatedStop.color = interpolateRGBA(
+            transition,
+            fromStop.color,
+            toStop.color,
+          );
+        }
+        interpolatedColors.push(interpolatedStop);
+      } else {
+        // For same-type transitions, fully interpolate
+        interpolatedColors.push(
+          interpolateColorStop(transition, fromStop, toStop),
+        );
+      }
+    } else if (toStop) {
+      // Only target stop exists - use it as-is
+      interpolatedColors.push(toStop);
+    } else ;
+    // Skip fromStop-only cases in cross transitions
+  }
+
+  return interpolatedColors;
+};
+const interpolateColorStopToColor = (transition, colorStop, targetColor) => {
+  const colorStopColor = colorStop.color;
+  if (!colorStopColor) {
+    return colorStop;
+  }
+  const colorInterpolated = interpolateRGBA(
+    transition,
+    colorStopColor,
+    targetColor,
+  );
+  return {
+    ...colorStop,
+    color: colorInterpolated,
+  };
+};
+
+// Helper to interpolate from a source color toward a color stop
+const interpolateColorToColorStop = (transition, sourceColor, colorStop) => {
+  const colorStopColor = colorStop.color;
+  if (!colorStopColor) {
+    return colorStop;
+  }
+  const colorInterpolated = interpolateRGBA(
+    transition,
+    sourceColor,
+    colorStopColor,
+  );
+  return {
+    ...colorStop,
+    color: colorInterpolated,
+  };
+};
+
+// Helper functions for image object detection
+const isGradientObject = (imageObj) => {
+  return (
+    imageObj &&
+    typeof imageObj === "object" &&
+    imageObj.type &&
+    imageObj.type.includes("gradient")
+  );
+};
+
+const gradientHasColors = (gradientObj) => {
+  return (
+    gradientObj.colors &&
+    Array.isArray(gradientObj.colors) &&
+    gradientObj.colors.length > 0
+  );
+};
+
+const getBorderColorAndWidthInterpolation = (fromBorder, toBorder) => {
+  // If one side has no color, use transparent as fallback
+  const fromBorderColor = fromBorder?.color || [0, 0, 0, 0];
+  const toBorderColor = toBorder?.color || [0, 0, 0, 0];
+  const getInterpolateBorderColor = () => {
+    // Handle cases where one or both colors are undefined (e.g., border: none)
+    if (!fromBorderColor && !toBorderColor) {
+      return null;
+    }
+    const borderColorRgbaPair = prepareRGBATransitionPair(
+      fromBorderColor,
+      toBorderColor,
+    );
+    if (!borderColorRgbaPair) {
+      return toBorderColor;
+    }
+    const [fromRGBA, toRGBA] = borderColorRgbaPair;
+    return (transition) => {
+      const rgbaInterpolated = interpolateRGBA(transition, fromRGBA, toRGBA);
+      return rgbaInterpolated;
+    };
+  };
+
+  const fromWidth = fromBorder?.width || 0;
+  const toWidth = toBorder?.width || 0;
+  const getInterpolateBorderWidth = () => {
+    return (transition) => interpolate(transition, fromWidth, toWidth);
+  };
+
+  return {
+    color: getInterpolateBorderColor(),
+    width: getInterpolateBorderWidth(),
+  };
+};
+
+const createObjectInterpolation = (interpolation, from, to) => {
+  if (interpolation === to) {
+    if (from === to) {
+      return null;
+    }
+    return to;
+  }
+  const propertyInterpolatorMap = new Map();
+  for (const key of Object.keys(interpolation)) {
+    const value = interpolation[key];
+    if (value === to[key]) {
+      continue;
+    }
+    const propertyInterpolator = (transition) => {
+      const interpolatedValue = value(transition);
+      return interpolatedValue;
+    };
+    propertyInterpolatorMap.set(key, propertyInterpolator);
+  }
+  if (propertyInterpolatorMap.size === 0) {
+    return to;
+  }
+  const interpolateProperties = (transition) => {
+    const toAssignMap = new Map();
+    for (const [key, interpolate] of propertyInterpolatorMap) {
+      const interpolatedValue = interpolate(transition);
+      toAssignMap.set(key, interpolatedValue);
+    }
+    if (toAssignMap.size === 0) {
+      return to;
+    }
+    const copy = { ...to };
+    for (const [key, value] of toAssignMap) {
+      if (value === undefined) {
+        delete copy[key];
+      } else {
+        copy[key] = value;
+      }
+    }
+    return copy;
+  };
+  return interpolateProperties;
+};
+
+const transitionStyleController = createStyleController("transition");
+
+/**
+ * Helper function to create CSS property transitions with common configuration
+ * @param {Object} config - Configuration object
+ * @param {Function} config.constructor - Constructor function for the transition
+ * @param {HTMLElement} config.element - DOM element to animate
+ * @param {number} config.to - Target value
+ * @param {Function} config.getFrom - Function to get current property value
+ * @param {string|Object} config.styleProperty - CSS property name or style object path
+ * @param {number} [config.minDiff] - Minimum difference threshold for the transition
+ * @param {Object} [config.options={}] - Additional options
+ * @param {string} [config.options.styleSynchronizer="js_animation"] - How to apply transition ("js_animation", "inline_style", or "--css-var-name")
+ * @returns {Object} Timeline transition object
+ */
+const createCSSPropertyTransition = ({
+  element,
+  getFrom,
+  styleProperty,
+  styleSynchronizer = "js_animation",
+  getValue = (t) => t.value,
+  lifecycle,
+  ...options
+}) => {
+  if (typeof styleSynchronizer !== "string") {
+    throw new Error("styleSynchronizer must be a string");
+  }
+  const setupSynchronizer = () => {
+    if (styleSynchronizer === "inline_style") {
+      return {
+        update: (transition) => {
+          const value = getValue(transition);
+          if (typeof styleProperty === "string") {
+            // Special handling for different CSS properties
+            if (styleProperty === "opacity") {
+              element.style[styleProperty] = value;
+            } else {
+              element.style[styleProperty] =
+                typeof value === "number" ? `${value}px` : value;
+            }
+          } else {
+            // Handle complex properties like transform.translateX
+            const keys = styleProperty.split(".");
+            if (keys[0] === "transform") {
+              element.style.transform = `${keys[1]}(${value}px)`;
+            }
+          }
+        },
+        restore: () => {
+          if (typeof styleProperty === "string") {
+            element.style[styleProperty] = "";
+          } else {
+            const keys = styleProperty.split(".");
+            if (keys[0] === "transform") {
+              element.style.transform = "";
+            }
+          }
+        },
+      };
+    }
+    if (styleSynchronizer.startsWith("--")) {
+      return {
+        update: (transition) => {
+          const value = getValue(transition);
+          // Special handling for different CSS properties
+          if (styleProperty === "opacity") {
+            element.style.setProperty(styleSynchronizer, value);
+          } else {
+            element.style.setProperty(
+              styleSynchronizer,
+              typeof value === "number" ? `${value}px` : value,
+            );
+          }
+        },
+        restore: () => {
+          element.style.removeProperty(styleSynchronizer);
+        },
+      };
+    }
+    if (styleSynchronizer.startsWith("[")) {
+      const attributeName = styleSynchronizer.slice(1, -1);
+      return {
+        update: (transition) => {
+          const value = getValue(transition);
+          element.setAttribute(attributeName, value);
+        },
+        restore: () => {
+          element.removeAttribute(attributeName);
+        },
+      };
+    }
+    return {
+      update: (transition) => {
+        const value = getValue(transition);
+
+        if (typeof styleProperty === "string") {
+          transitionStyleController.set(element, { [styleProperty]: value });
+        } else {
+          // Handle nested properties like transform.translateX
+          const styleObj = {};
+          const keys = styleProperty.split(".");
+          if (keys.length === 2) {
+            styleObj[keys[0]] = { [keys[1]]: value };
+          }
+          transitionStyleController.set(element, styleObj);
+        }
+      },
+      restore: () => {
+        transitionStyleController.delete(element, styleProperty);
+      },
+    };
+  };
+
+  return createTimelineTransition({
+    duration: 300,
+    ...options,
+    key: element,
+    isVisual: true,
+    lifecycle: combineTwoLifecycle(
+      {
+        setup: () => {
+          const from = getFrom(element);
+          const synchronizer = setupSynchronizer();
+          return {
+            from,
+            update: synchronizer.update,
+            restore: synchronizer.restore,
+          };
+        },
+      },
+      lifecycle,
+    ),
+  });
+};
+const createNoopCSSPropertyTransition = ({ element, ...options }) => {
+  return createTimelineTransition({
+    duration: 300,
+    ...options,
+    key: element,
+    isVisual: true,
+    from: 0,
+    to: 1,
+  });
+};
+const createInstantCSSPropertyTransition = ({ element, value, ...options }) => {
+  return createCSSPropertyTransition({
+    ...options,
+    element,
+    getFrom: () => 0,
+    from: 0,
+    to: 1,
+    getValue: () => value,
+  });
+};
+
+const createWidthTransition = (element, to, options = {}) => {
+  return createCSSPropertyTransition({
+    ...options,
+    constructor: createWidthTransition,
+    element,
+    styleProperty: "width",
+    getFrom: getWidth$1,
+    to,
+    minDiff: 10,
+  });
+};
+const createHeightTransition = (element, to, options = {}) => {
+  return createCSSPropertyTransition({
+    ...options,
+    constructor: createHeightTransition,
+    element,
+    styleProperty: "height",
+    getFrom: getHeight$1,
+    to,
+    minDiff: 10,
+  });
+};
+
+const createOpacityTransition = (element, to, options = {}) => {
+  return createCSSPropertyTransition({
+    ...options,
+    constructor: createOpacityTransition,
+    element,
+    styleProperty: "opacity",
+    getFrom: getOpacity,
+    to,
+    minDiff: 0.1,
+  });
+};
+const createTranslateXTransition = (element, to, options = {}) => {
+  return createCSSPropertyTransition({
+    ...options,
+    constructor: createTranslateXTransition,
+    element,
+    styleProperty: "transform.translateX",
+    getFrom: getTranslateX,
+    to,
+    minDiff: 10,
+  });
+};
+
+const createBorderRadiusTransition = (element, to, options = {}) => {
+  const from = Object.hasOwn(options, "from")
+    ? parseStyle(options.from, "borderRadius")
+    : undefined;
+  to = parseStyle(to, "borderRadius");
+  return createCSSPropertyTransition({
+    ...options,
+    constructor: createBorderRadiusTransition,
+    element,
+    styleProperty: "borderRadius",
+    getFrom: getBorderRadius,
+    from,
+    to,
+  });
+};
+const createBorderTransition = (element, to, options = {}) => {
+  const fromBorder = Object.hasOwn(options, "from")
+    ? parseStyle(options.from, "border", element)
+    : getBorder(element);
+  const toBorder = parseStyle(to, "border", element);
+  let borderInterpolation;
+  interpolation: {
+    // Handle simple cases where no transition is possible
+    if (!fromBorder && !toBorder) {
+      borderInterpolation = toBorder;
+      break interpolation;
+    }
+    const colorAndWidthInterpolation = getBorderColorAndWidthInterpolation(
+      fromBorder,
+      toBorder,
+    );
+    borderInterpolation = colorAndWidthInterpolation;
+  }
+
+  const interpolateBorder = createObjectInterpolation(
+    borderInterpolation,
+    fromBorder,
+    toBorder,
+  );
+  if (!interpolateBorder) {
+    return createNoopCSSPropertyTransition({
+      element,
+      ...options,
+    });
+  }
+  return createCSSPropertyTransition({
+    constructor: createBackgroundTransition,
+    element,
+    styleProperty: "border",
+    from: 0,
+    to: 1,
+    getFrom: () => 0,
+    getValue: (transition) => {
+      const borderInterpolated = interpolateBorder(transition);
+      const borderCSSValue = stringifyStyle(borderInterpolated, "border");
+      return borderCSSValue;
+    },
+    ...options,
+  });
+};
+
+const createBackgroundTransition = (element, to, options = {}) => {
+  const fromBackground = options.from || getBackground(element);
+  const toBackground = parseStyle(to, "background", element);
+  let backgrounInterpolation;
+  interpolation: {
+    // Handle simple cases where no transition is possible
+    if (!fromBackground && !toBackground) {
+      backgrounInterpolation = toBackground;
+      break interpolation;
+    }
+    if (
+      typeof fromBackground !== "object" ||
+      typeof toBackground !== "object" ||
+      Array.isArray(fromBackground) ||
+      Array.isArray(toBackground)
+    ) {
+      backgrounInterpolation = toBackground;
+      break interpolation;
+    }
+    const colorAndImageInterpolation = getBackgroundColorAndImageInterpolation(
+      fromBackground,
+      toBackground,
+    );
+    backgrounInterpolation = colorAndImageInterpolation;
+  }
+
+  const interpolateBackground = createObjectInterpolation(
+    backgrounInterpolation,
+    fromBackground,
+    toBackground,
+  );
+  if (!interpolateBackground) {
+    return createNoopCSSPropertyTransition({
+      element,
+      ...options,
+    });
+  }
+  if (interpolateBackground === toBackground) {
+    const toStyleCss = stringifyStyle(to, "background");
+    console.warn(
+      `Unsupported background transition between "${stringifyStyle(fromBackground, "background")}" and "${toStyleCss}"`,
+    );
+    return createInstantCSSPropertyTransition({
+      element,
+      value: toStyleCss,
+      ...options,
+    });
+  }
+  return createCSSPropertyTransition({
+    constructor: createBackgroundTransition,
+    element,
+    styleProperty: "background",
+    from: 0,
+    to: 1,
+    getFrom: () => 0,
+    getValue: (transition) => {
+      const backgroundInterpolated = interpolateBackground(transition);
+      return stringifyStyle(backgroundInterpolated, "background");
+    },
+    ...options,
+  });
+};
+const createBackgroundColorTransition = (element, to, options = {}) => {
+  const fromBackgroundColor = options.from || getBackgroundColor(element);
+  const toBackgroundColor = parseStyle(to, "backgroundColor", element);
+  const rgbaPair = prepareRGBATransitionPair(
+    fromBackgroundColor,
+    toBackgroundColor);
+  if (!rgbaPair) {
+    return createNoopCSSPropertyTransition({ element, ...options });
+  }
+  const [fromRgba, toRgba] = rgbaPair;
+  if (areSameRGBA(fromRgba, toRgba)) {
+    return createNoopCSSPropertyTransition({ element, ...options });
+  }
+  return createCSSPropertyTransition({
+    ...options,
+    constructor: createBackgroundColorTransition,
+    element,
+    styleProperty: "backgroundColor",
+    getFrom: () => 0,
+    from: 0,
+    to: 1,
+    getValue: (transition) => {
+      const rgbaInterpolated = interpolateRGBA(transition, fromRgba, toRgba);
+      const backgroundColorInterpolated = stringifyStyle(
+        rgbaInterpolated,
+        "backgroundColor",
+      );
+      return backgroundColorInterpolated;
+    },
+  });
+};
+
+// Helper functions for getting natural values
+const getOpacityWithoutTransition = (element) =>
+  getOpacity(element, transitionStyleController);
+const getTranslateXWithoutTransition = (element) =>
+  getTranslateX(element, transitionStyleController);
+const getWidthWithoutTransition = (element) =>
+  getWidth$1(element, transitionStyleController);
+const getHeightWithoutTransition = (element) =>
+  getHeight$1(element, transitionStyleController);
 
 const getPaddingSizes = (element) => {
   const { paddingLeft, paddingRight, paddingTop, paddingBottom } =
@@ -10461,4 +12600,4 @@ const useResizeStatus = (elementRef, { as = "number" } = {}) => {
   };
 };
 
-export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, addWillChange, allowWheelThrough, appendStyles, canInterceptKeys, captureScrollState, createDragGestureController, createDragToMoveGestureController, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findFocusable, getAvailableHeight, getAvailableWidth, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPreferedColorScheme, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, initFlexDetailsSet, initFocusGroup, initPositionSticky, isScrollable, mergeTwoStyles, normalizeStyle, normalizeStyles, parseCSSColor, pickLightOrDark, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, resolveCSSColor, resolveCSSSize, resolveColorLuminance, setAttribute, setAttributes, setStyles, startDragToResizeGesture, stickyAsRelativeCoords, stringifyCSSColor, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };
+export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, canInterceptKeys, captureScrollState, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findFocusable, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, initFlexDetailsSet, initFocusGroup, initPositionSticky, isScrollable, measureScrollbar, mergeOneStyle, mergeTwoStyles, normalizeStyles, parseStyle, pickLightOrDark, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, resolveCSSColor, resolveCSSSize, resolveColorLuminance, setAttribute, setAttributes, setStyles, startDragToResizeGesture, stickyAsRelativeCoords, stringifyStyle, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };
