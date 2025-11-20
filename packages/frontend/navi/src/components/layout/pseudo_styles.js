@@ -177,6 +177,20 @@ export const PSEUDO_CLASSES = {
   },
 };
 
+const dispatchNaviPseudoStateEvent = (element, value, previousValue) => {
+  if (!element) {
+    return;
+  }
+  element.dispatchEvent(
+    new CustomEvent("navi_pseudo_state", {
+      detail: {
+        pseudoState: value,
+        previousPseudoState: previousValue,
+      },
+    }),
+  );
+};
+
 const EMPTY_STATE = {};
 export const initPseudoStyles = (
   element,
@@ -185,10 +199,20 @@ export const initPseudoStyles = (
     pseudoState, // ":disabled", ":read-only", ":-navi-loading", etc...
     effect,
     elementToImpact = element,
+    elementListeningPseudoState,
   },
 ) => {
+  const onStateChange = (value, previousValue) => {
+    effect?.(value, previousValue);
+    dispatchNaviPseudoStateEvent(
+      elementListeningPseudoState,
+      value,
+      previousValue,
+    );
+  };
+
   if (!pseudoClasses || pseudoClasses.length === 0) {
-    effect?.(EMPTY_STATE);
+    onStateChange(EMPTY_STATE);
     return () => {};
   }
 
@@ -234,9 +258,16 @@ export const initPseudoStyles = (
     if (!someChange) {
       return;
     }
-    effect?.(currentState, state);
+    const previousState = state;
     state = currentState;
+    onStateChange(state, previousState);
   };
+
+  element.addEventListener("navi_pseudo_state_check", (event) => {
+    const previousState = event.detail.previousPseudoState;
+    state = event.detail.pseudoState;
+    onStateChange(state, previousState);
+  });
 
   for (const pseudoClass of pseudoClasses) {
     const pseudoClassDefinition = PSEUDO_CLASSES[pseudoClass];

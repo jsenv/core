@@ -472,11 +472,15 @@ export const Box = (props) => {
       const pseudoStateEl = pseudoStateSelector
         ? boxEl.querySelector(pseudoStateSelector)
         : boxEl;
+      const visualEl = visualSelector
+        ? boxEl.querySelector(visualSelector)
+        : null;
       return initPseudoStyles(pseudoStateEl, {
         pseudoClasses: innerPseudoClasses,
         pseudoState: innerPseudoState,
         effect: updateStyle,
         elementToImpact: boxEl,
+        elementListeningPseudoState: visualEl,
       });
     }, finalStyleDeps);
   }
