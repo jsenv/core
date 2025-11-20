@@ -23,6 +23,8 @@
  *   .container[data-items-height-overflow] { align-items: flex-start; }
  */
 
+import { createPubSub } from "@jsenv/dom";
+
 const WIDTH_ATTRIBUTE_NAME = "data-items-width-overflow";
 const HEIGHT_ATTRIBUTE_NAME = "data-items-height-overflow";
 export const monitorItemsOverflow = (container) => {
@@ -77,12 +79,30 @@ export const monitorItemsOverflow = (container) => {
     }
   };
 
-  const resizeObserver = new ResizeObserver(update);
-  resizeObserver.observe(container);
+  const [teardown, addTeardown] = createPubSub();
+
   update();
 
-  const destroy = () => {
+  // mutation observer
+  const mutationObserver = new MutationObserver(() => {});
+  mutationObserver.observe(container, {
+    attributes: true,
+    childList: true,
+    characterData: true,
+  });
+  addTeardown(() => {
+    mutationObserver.disconnect();
+  });
+
+  // resize observer
+  const resizeObserver = new ResizeObserver(update);
+  resizeObserver.observe(container);
+  addTeardown(() => {
     resizeObserver.disconnect();
+  });
+
+  const destroy = () => {
+    teardown();
     container.removeAttribute(WIDTH_ATTRIBUTE_NAME);
     container.removeAttribute(HEIGHT_ATTRIBUTE_NAME);
   };

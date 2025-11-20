@@ -45,6 +45,7 @@ export const UITransition = ({
   debugContent,
   debugSize,
   disabled,
+  uiTransitionRef,
   ...props
 }) => {
   const contentIdRef = useRef(contentId);
@@ -100,7 +101,7 @@ export const UITransition = ({
 
   const ref = useRef();
   const uiTransitionRefDefault = useRef();
-  const uiTransitionRef = props.uiTransitionRef || uiTransitionRefDefault;
+  uiTransitionRef = uiTransitionRef || uiTransitionRefDefault;
   useLayoutEffect(() => {
     if (disabled) {
       return null;
