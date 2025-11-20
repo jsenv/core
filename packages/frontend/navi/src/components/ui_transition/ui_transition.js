@@ -445,6 +445,11 @@ export const createUITransitionController = (
   const morphContainerIntoTarget = () => {
     const morphTransitions = [];
     dimensions: {
+      // TODO: ideally when scrollContainer is document AND we transition
+      // from a layout with scrollbar to a layout without
+      // we have clip path detecting we go from a given width/height to a new width/height
+      // that might just be the result of scrollbar appearing/disappearing
+      // we should detect when this happens to avoid clipping what correspond to the scrollbar presence toggling
       const fromWidth = previousTargetSlotConfiguration.width || 0;
       const fromHeight = previousTargetSlotConfiguration.height || 0;
       const toWidth = targetSlotConfiguration.width || 0;
