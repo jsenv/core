@@ -213,6 +213,8 @@ const ButtonManagedByCSSVars = {
   "paddingRight": "--padding-right",
   "paddingBottom": "--padding-bottom",
   "paddingLeft": "--padding-left",
+  "paddingX": "--padding-x",
+  "paddingY": "--padding-y",
   "backgroundColor": "--background-color",
   "borderColor": "--border-color",
   "color": "--color",

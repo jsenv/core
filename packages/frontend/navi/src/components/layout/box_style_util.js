@@ -474,58 +474,18 @@ const getNormalizer = (key) => {
   }
   return stringifyStyle;
 };
-
-export const assignStyle = (
-  styleObject,
-  propValue,
-  propName,
-  styleContext,
-  context = "js",
-) => {
-  if (propValue === undefined) {
-    return;
+export const getHowToHandleStyleProp = (name) => {
+  const getStyle = All_PROPS[name];
+  if (getStyle === PASS_THROUGH) {
+    return null;
   }
-  const { managedByCSSVars } = styleContext;
-  if (!managedByCSSVars) {
-    throw new Error("managedByCSSVars is required in styleContext");
-  }
-  const normalizer = getNormalizer(propName);
-  const getStyle = All_PROPS[propName];
-  if (
-    getStyle === PASS_THROUGH ||
-    // style not listed can be passed through as-is (accentColor, zIndex, ...)
-    getStyle === undefined
-  ) {
-    const cssValue = normalizer(propValue, propName);
-    const cssVar = managedByCSSVars[propName];
-    const mergedValue = mergeOneStyle(
-      styleObject[propName],
-      cssValue,
-      propName,
-      context,
-    );
-    if (cssVar) {
-      styleObject[cssVar] = mergedValue;
-    } else {
-      styleObject[propName] = mergedValue;
-    }
-    return;
-  }
-  const values = getStyle(propValue, styleContext);
-  if (!values) {
-    return;
-  }
-  for (const key of Object.keys(values)) {
-    const value = values[key];
-    const cssValue = normalizer(value, key);
-    const cssVar = managedByCSSVars[key];
-    const mergedValue = mergeOneStyle(styleObject[key], cssValue, key, context);
-    if (cssVar) {
-      styleObject[cssVar] = mergedValue;
-    } else {
-      styleObject[key] = mergedValue;
-    }
-  }
+  return getStyle;
+};
+export const prepareStyleValue = (existingValue, value, name, context) => {
+  const normalizer = getNormalizer(name);
+  const cssValue = normalizer(value, name);
+  const mergedValue = mergeOneStyle(existingValue, cssValue, name, context);
+  return mergedValue;
 };
 
 // Unified design scale using t-shirt sizes with rem units for accessibility.

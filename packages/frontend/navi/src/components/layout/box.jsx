@@ -48,10 +48,11 @@ import { appendStyles, normalizeStyles } from "@jsenv/dom";
 import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import {
-  assignStyle,
   COPIED_ON_VISUAL_CHILD_PROP_SET,
+  getHowToHandleStyleProp,
   HANDLED_BY_VISUAL_CHILD_PROP_SET,
   isStyleProp,
+  prepareStyleValue,
 } from "./box_style_util.js";
 import { getDefaultDisplay } from "./display_defaults.js";
 import { BoxLayoutContext } from "./layout_context.jsx";
@@ -211,25 +212,76 @@ export const Box = (props) => {
       pseudoClasses,
       pseudoElements,
     };
-    const boxStyles = {};
-    if (baseStyle) {
-      for (const key of baseStyle) {
-        const value = baseStyle[key];
-        styleDeps.push(value);
-        assignStyle(boxStyles, value, key, styleContext);
-      }
-    }
-    const stylingKeyCandidateArray = Object.keys(rest);
 
+    const boxStyles = {};
+    let boxPseudoNamedStyles = PSEUDO_NAMED_STYLES_DEFAULT;
+    const childStyles = {};
+    const childPseudoStyles = {};
+    const assignStyle = (
+      boxStylesOrPseudoStyles,
+      propValue,
+      propName,
+      styleContext,
+      shouldForwardToChild,
+      context = "js",
+    ) => {
+      if (propValue === undefined) {
+        return;
+      }
+      const isForPseudoStyles =
+        boxStylesOrPseudoStyles === boxPseudoNamedStyles;
+      const getStyle = getHowToHandleStyleProp(propName);
+      if (
+        // style not listed can be passed through as-is (accentColor, zIndex, ...)
+        !getStyle
+      ) {
+        const cssVar = managedByCSSVars[propName];
+        const styleTarget =
+          shouldForwardToChild && !cssVar
+            ? isForPseudoStyles
+              ? childPseudoStyles
+              : childStyles
+            : boxStylesOrPseudoStyles;
+        const mergedValue = prepareStyleValue(
+          styleTarget[propName],
+          propValue,
+          propName,
+          context,
+        );
+        styleTarget[cssVar || propName] = mergedValue;
+        return;
+      }
+      const values = getStyle(propValue, styleContext);
+      if (!values) {
+        return;
+      }
+      for (const key of Object.keys(values)) {
+        const value = values[key];
+        const cssVar = managedByCSSVars[key];
+        const styleTarget =
+          shouldForwardToChild && !cssVar
+            ? isForPseudoStyles
+              ? childPseudoStyles
+              : childStyles
+            : boxStylesOrPseudoStyles;
+        const mergedValue = prepareStyleValue(
+          styleTarget[key],
+          value,
+          key,
+          context,
+        );
+        styleTarget[cssVar || key] = mergedValue;
+      }
+    };
     const shouldForwardAllToChild = visualSelector && pseudoStateSelector;
     const assignStyleFromProp = (propValue, propName, styleContext) => {
-      const shouldStyle = isStyleProp(propName);
       const shouldCopyOnVisualChild =
         visualSelector && COPIED_ON_VISUAL_CHILD_PROP_SET.has(propName);
       const shouldOnlyForwardToChild =
         visualSelector &&
         !shouldCopyOnVisualChild &&
         HANDLED_BY_VISUAL_CHILD_PROP_SET.has(propName);
+      const shouldStyle = !shouldOnlyForwardToChild && isStyleProp(propName);
       const shouldForwardOnSelf =
         !shouldOnlyForwardToChild && !shouldStyle && !shouldForwardAllToChild;
       const shouldForwardToChild =
@@ -239,7 +291,14 @@ export const Box = (props) => {
 
       if (shouldStyle) {
         styleDeps.push(propValue);
-        assignStyle(boxStyles, propValue, propName, styleContext, "css");
+        assignStyle(
+          boxStyles,
+          propValue,
+          propName,
+          styleContext,
+          shouldForwardToChild,
+          "css",
+        );
       }
       if (shouldForwardOnSelf) {
         selfForwardedProps[propName] = propValue;
@@ -258,6 +317,15 @@ export const Box = (props) => {
       assignStyle(stylesTarget, propValue, propName, styleContext, "css");
     };
 
+    if (baseStyle) {
+      for (const key of baseStyle) {
+        const value = baseStyle[key];
+        styleDeps.push(value);
+        assignStyle(boxStyles, value, key, styleContext);
+      }
+    }
+    const stylingKeyCandidateArray = Object.keys(rest);
+
     for (const key of stylingKeyCandidateArray) {
       if (key === "ref") {
         // some props not destructured but that are neither
@@ -268,11 +336,10 @@ export const Box = (props) => {
       assignStyleFromProp(value, key, styleContext);
     }
 
-    let pseudoNamedStyles = PSEUDO_NAMED_STYLES_DEFAULT;
     if (pseudoStyle) {
       const pseudoStyleKeys = Object.keys(pseudoStyle);
       if (pseudoStyleKeys.length) {
-        pseudoNamedStyles = {};
+        boxPseudoNamedStyles = {};
         for (const key of pseudoStyleKeys) {
           const pseudoStyleContext = {
             ...styleContext,
@@ -298,7 +365,7 @@ export const Box = (props) => {
                 pseudoStyleContext,
               );
             }
-            pseudoNamedStyles[key] = pseudoClassStyles;
+            boxPseudoNamedStyles[key] = pseudoClassStyles;
             continue;
           }
           // pseudo element
@@ -318,13 +385,12 @@ export const Box = (props) => {
                 pseudoStyleContext,
               );
             }
-            pseudoNamedStyles[key] = pseudoElementStyles;
+            boxPseudoNamedStyles[key] = pseudoElementStyles;
             continue;
           }
           console.warn(`unsupported pseudo style key "${key}"`);
         }
       }
-      // childForwardedProps.pseudoStyle = pseudoStyle;
     }
 
     if (typeof style === "string") {
@@ -340,7 +406,10 @@ export const Box = (props) => {
 
     const updateStyle = useCallback((state) => {
       const boxEl = ref.current;
-      applyStyle(boxEl, boxStyles, state, pseudoNamedStyles);
+      if (props.id === "favorite") {
+        console.log(boxStyles, boxPseudoNamedStyles);
+      }
+      applyStyle(boxEl, boxStyles, state, boxPseudoNamedStyles);
     }, styleDeps);
     const finalStyleDeps = [pseudoStateSelector, innerPseudoState, updateStyle];
     // By default ":hover", ":active" are not tracked.
