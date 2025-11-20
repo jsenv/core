@@ -202,17 +202,15 @@
 
       const RootLayout = ({ uiTransitionRef }) => {
         return (
-          <>
-            <UITransition
-              uiTransitionRef={uiTransitionRef}
-              duration="2000"
-              debugDetection
-              debugSize
-              debugContent
-            >
-              <Route.Slot />
-            </UITransition>
-          </>
+          <UITransition
+            uiTransitionRef={uiTransitionRef}
+            duration="2000"
+            debugDetection
+            debugSize
+            debugContent
+          >
+            <Route.Slot />
+          </UITransition>
         );
       };
 
@@ -296,14 +294,14 @@
         const [globalCount, setGlobalCount] = useState(0);
 
         return (
-          <div>
+          <>
             <Nav
               uiTransitionRef={uiTransitionRef}
               globalCount={globalCount}
               setGlobalCount={setGlobalCount}
             />
             <Router uiTransitionRef={uiTransitionRef} />
-          </div>
+          </>
         );
       };
 
