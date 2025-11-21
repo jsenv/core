@@ -463,7 +463,7 @@ const getStylePropGroup = (name) => {
 };
 const getNormalizer = (key) => {
   if (key === "borderRadius") {
-    return normalizeTypoStyle;
+    return normalizeSpacingStyle;
   }
   const group = getStylePropGroup(key);
   if (group === "margin" || group === "padding") {

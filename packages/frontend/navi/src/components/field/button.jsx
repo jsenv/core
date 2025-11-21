@@ -223,6 +223,10 @@ import.meta.css = /* css */ `
   .navi_button[data-discrete][data-disabled] {
     --x-button-border-color: transparent;
   }
+
+  .navi_button > img {
+    border-radius: inherit;
+  }
 `;
 
 export const Button = (props) => {
