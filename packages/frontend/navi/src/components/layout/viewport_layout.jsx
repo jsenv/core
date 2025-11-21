@@ -29,13 +29,11 @@ export const ViewportLayout = (props) => {
   return (
     <Box
       row
+      width="100%"
+      height="100%"
       {...props}
       className="navi_viewport_layout"
       managedByCSSVars={ViewportManagedByCSSVars}
-      minWidth="max-content"
-      minHeight="max-content"
-      width="100%"
-      height="100%"
     />
   );
 };

@@ -109,7 +109,10 @@ import.meta.css = /* css */ `
   }
   .navi_button_content {
     position: relative;
+    display: inherit;
     box-sizing: border-box;
+    width: 100%;
+    height: 100%;
     padding-top: var(
       --button-padding-top,
       var(--button-padding-y, var(--button-padding, 1px))
@@ -126,6 +129,8 @@ import.meta.css = /* css */ `
       --button-padding-left,
       var(--button-padding-x, var(--button-padding, 6px))
     );
+    align-items: inherit;
+    justify-content: inherit;
     color: var(--x-button-color);
     background-color: var(--x-button-background-color);
     border-width: var(--x-button-outer-width);

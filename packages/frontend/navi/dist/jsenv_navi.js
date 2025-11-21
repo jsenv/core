@@ -9601,9 +9601,6 @@ const UITransition = ({
   const uiTransitionRefDefault = useRef();
   uiTransitionRef = uiTransitionRef || uiTransitionRefDefault;
   useLayoutEffect(() => {
-    if (disabled) {
-      return null;
-    }
     const uiTransition = createUITransitionController(ref.current, {
       alignX,
       alignY
@@ -10075,6 +10072,44 @@ const renderActionableComponent = (props, {
 };
 
 /**
+ * Merges a component's base className with className received from props.
+ *
+ * ```jsx
+ * const MyButton = ({ className, children }) => (
+ *   <button className={withPropsClassName("btn", className)}>
+ *     {children}
+ *   </button>
+ * );
+ *
+ * // Usage:
+ * <MyButton className="primary large" /> // Results in "btn primary large"
+ * <MyButton /> // Results in "btn"
+ * ```
+ *
+ * @param {string} baseClassName - The component's base CSS class name
+ * @param {string} [classNameFromProps] - Additional className from props (optional)
+ * @returns {string} The merged className string
+ */
+const withPropsClassName = (baseClassName, classNameFromProps) => {
+  if (!classNameFromProps) {
+    return baseClassName;
+  }
+
+  // Trim and normalize whitespace from the props className
+  const trimmedPropsClassName = classNameFromProps.trim();
+  if (!trimmedPropsClassName) {
+    return baseClassName;
+  }
+
+  // Normalize multiple spaces to single spaces and combine
+  const normalizedPropsClassName = trimmedPropsClassName.replace(/\s+/g, " ");
+  if (!baseClassName) {
+    return normalizedPropsClassName;
+  }
+  return `${baseClassName} ${normalizedPropsClassName}`;
+};
+
+/**
  * Processes component props to extract and generate styles for layout, spacing, alignment, expansion, and typography.
  * Returns remaining props and styled objects based on configuration.
  *
@@ -10429,13 +10464,7 @@ const CONTENT_PROPS = {
       }
       return { justifyContent: value };
     }
-    if (layout === "inline-block" || layout === "table-cell") {
-      if (value === "start") {
-        return undefined; // this is the default
-      }
-      return { textAlign: value };
-    }
-    return undefined;
+    return { textAlign: value };
   },
   contentAlignY: (value, { layout }) => {
     if (layout === "row" || layout === "inline-row") {
@@ -10452,13 +10481,7 @@ const CONTENT_PROPS = {
       }
       return { alignItems: value };
     }
-    if (layout === "inline-block" || layout === "table-cell") {
-      if (value === "start") {
-        return undefined;
-      }
-      return { verticalAlign: value };
-    }
-    return undefined;
+    return { verticalAlign: value };
   },
   contentSpacing: (value, { layout }) => {
     if (
@@ -11136,44 +11159,6 @@ const updateStyle = (element, style) => {
   }
   styleKeySetWeakMap.set(element, styleKeySet);
   return;
-};
-
-/**
- * Merges a component's base className with className received from props.
- *
- * ```jsx
- * const MyButton = ({ className, children }) => (
- *   <button className={withPropsClassName("btn", className)}>
- *     {children}
- *   </button>
- * );
- *
- * // Usage:
- * <MyButton className="primary large" /> // Results in "btn primary large"
- * <MyButton /> // Results in "btn"
- * ```
- *
- * @param {string} baseClassName - The component's base CSS class name
- * @param {string} [classNameFromProps] - Additional className from props (optional)
- * @returns {string} The merged className string
- */
-const withPropsClassName = (baseClassName, classNameFromProps) => {
-  if (!classNameFromProps) {
-    return baseClassName;
-  }
-
-  // Trim and normalize whitespace from the props className
-  const trimmedPropsClassName = classNameFromProps.trim();
-  if (!trimmedPropsClassName) {
-    return baseClassName;
-  }
-
-  // Normalize multiple spaces to single spaces and combine
-  const normalizedPropsClassName = trimmedPropsClassName.replace(/\s+/g, " ");
-  if (!baseClassName) {
-    return normalizedPropsClassName;
-  }
-  return `${baseClassName} ${normalizedPropsClassName}`;
 };
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
@@ -13485,10 +13470,119 @@ const useAutoFocus = (
   }, []);
 };
 
+const useInitialTextSelection = (ref, textSelection) => {
+  const deps = [];
+  if (Array.isArray(textSelection)) {
+    deps.push(...textSelection);
+  } else {
+    deps.push(textSelection);
+  }
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || !textSelection) {
+      return;
+    }
+    const range = document.createRange();
+    const selection = window.getSelection();
+    if (Array.isArray(textSelection)) {
+      if (textSelection.length === 2) {
+        const [start, end] = textSelection;
+        if (typeof start === "number" && typeof end === "number") {
+          // Format: [0, 10] - character indices
+          selectByCharacterIndices(el, range, start, end);
+        } else if (typeof start === "string" && typeof end === "string") {
+          // Format: ["Click on the", "button to return"] - text strings
+          selectByTextStrings(el, range, start, end);
+        }
+      }
+    } else if (typeof textSelection === "string") {
+      // Format: "some text" - select the entire string occurrence
+      selectSingleTextString(el, range, textSelection);
+    }
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }, deps);
+};
+const selectByCharacterIndices = (element, range, startIndex, endIndex) => {
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
+  let currentIndex = 0;
+  let startNode = null;
+  let startOffset = 0;
+  let endNode = null;
+  let endOffset = 0;
+  while (walker.nextNode()) {
+    const textContent = walker.currentNode.textContent;
+    const nodeLength = textContent.length;
+
+    // Check if start position is in this text node
+    if (!startNode && currentIndex + nodeLength > startIndex) {
+      startNode = walker.currentNode;
+      startOffset = startIndex - currentIndex;
+    }
+
+    // Check if end position is in this text node
+    if (currentIndex + nodeLength >= endIndex) {
+      endNode = walker.currentNode;
+      endOffset = endIndex - currentIndex;
+      break;
+    }
+    currentIndex += nodeLength;
+  }
+  if (startNode && endNode) {
+    range.setStart(startNode, startOffset);
+    range.setEnd(endNode, endOffset);
+  }
+};
+const selectSingleTextString = (element, range, text) => {
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
+  while (walker.nextNode()) {
+    const textContent = walker.currentNode.textContent;
+    const index = textContent.indexOf(text);
+    if (index !== -1) {
+      range.setStart(walker.currentNode, index);
+      range.setEnd(walker.currentNode, index + text.length);
+      return;
+    }
+  }
+};
+const selectByTextStrings = (element, range, startText, endText) => {
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
+  let startNode = null;
+  let endNode = null;
+  let foundStart = false;
+  while (walker.nextNode()) {
+    const textContent = walker.currentNode.textContent;
+    if (!foundStart && textContent.includes(startText)) {
+      startNode = walker.currentNode;
+      foundStart = true;
+    }
+    if (foundStart && textContent.includes(endText)) {
+      endNode = walker.currentNode;
+      break;
+    }
+  }
+  if (startNode && endNode) {
+    const startOffset = startNode.textContent.indexOf(startText);
+    const endOffset = endNode.textContent.indexOf(endText) + endText.length;
+    range.setStart(startNode, startOffset);
+    range.setEnd(endNode, endOffset);
+  }
+};
+
 installImportMetaCss(import.meta);import.meta.css = /* css */`
+  *[data-navi-space] {
+    /* user-select: none; */
+  }
+
   .navi_text {
     position: relative;
     color: inherit;
+  }
+
+  .navi_text_overflow {
+    flex-wrap: wrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
   }
 
   .navi_text_overflow_wrapper {
@@ -13504,102 +13598,10 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     overflow: hidden;
   }
 `;
-const OverflowPinnedElementContext = createContext(null);
-const Text = props => {
-  const {
-    overflowEllipsis,
-    ...rest
-  } = props;
-  if (overflowEllipsis) {
-    return jsx(TextOverflow, {
-      ...rest
-    });
-  }
-  if (props.overflowPinned) {
-    return jsx(TextOverflowPinned, {
-      ...props
-    });
-  }
-  return jsx(TextBasic, {
-    ...props
-  });
-};
-const TextOverflow = ({
-  as = "div",
-  contentSpacing = " ",
-  noWrap,
-  pre = !noWrap,
-  children,
-  ...rest
-}) => {
-  const [OverflowPinnedElement, setOverflowPinnedElement] = useState(null);
-  return jsx(Text, {
-    ...rest,
-    as: as,
-    box: true,
-    expandX: true,
-    pre: pre,
-    nowWrap: noWrap,
-    contentSpacing: "pre",
-    style: "text-overflow: ellipsis; overflow: hidden; flex-wrap: wrap;",
-    children: jsxs("span", {
-      className: "navi_text_overflow_wrapper",
-      children: [jsx("span", {
-        className: "navi_text_overflow_text",
-        children: jsx(OverflowPinnedElementContext.Provider, {
-          value: setOverflowPinnedElement,
-          children: applyContentSpacingOnTextChildren(children, contentSpacing)
-        })
-      }), OverflowPinnedElement]
-    })
-  });
-};
-const TextOverflowPinned = ({
-  overflowPinned,
-  ...props
-}) => {
-  const setOverflowPinnedElement = useContext(OverflowPinnedElementContext);
-  const text = jsx(Text, {
-    ...props
-  });
-  if (!setOverflowPinnedElement) {
-    console.warn("<Text overflowPinned> declared outside a <Text overflowEllipsis>");
-    return text;
-  }
-  if (overflowPinned) {
-    setOverflowPinnedElement(text);
-    return null;
-  }
-  setOverflowPinnedElement(null);
-  return text;
-};
-const TextBasic = ({
-  as = "span",
-  contentSpacing = " ",
-  children,
-  ...rest
-}) => {
-  const text = jsx(Box, {
-    ...rest,
-    baseClassName: "navi_text",
-    as: as,
-    children: applyContentSpacingOnTextChildren(children, contentSpacing)
-  });
-  return text;
-};
-const Paragraph = ({
-  contentSpacing = " ",
-  marginTop = "md",
-  children,
-  ...rest
-}) => {
-  return jsx(Box, {
-    ...rest,
-    as: "p",
-    marginTop: marginTop,
-    children: applyContentSpacingOnTextChildren(children, contentSpacing)
-  });
-};
+const INSERTED_SPACE = jsx("span", {
+  "data-navi-space": "",
+  children: " "
+});
 const applyContentSpacingOnTextChildren = (children, contentSpacing) => {
   if (contentSpacing === "pre") {
     return children;
@@ -13628,6 +13630,7 @@ const applyContentSpacingOnTextChildren = (children, contentSpacing) => {
     }
     return false;
   };
+  const separator = contentSpacing === undefined || contentSpacing === " " ? INSERTED_SPACE : contentSpacing;
   const childrenWithGap = [];
   let i = 0;
   while (true) {
@@ -13643,10 +13646,93 @@ const applyContentSpacingOnTextChildren = (children, contentSpacing) => {
     const nextChild = childArray[i];
     const shouldSkipSpacing = endsWithWhitespace(currentChild) || startsWithWhitespace(nextChild);
     if (!shouldSkipSpacing) {
-      childrenWithGap.push(contentSpacing);
+      childrenWithGap.push(separator);
     }
   }
   return childrenWithGap;
+};
+const OverflowPinnedElementContext = createContext(null);
+const Text = props => {
+  const {
+    overflowEllipsis,
+    ...rest
+  } = props;
+  if (overflowEllipsis) {
+    return jsx(TextOverflow, {
+      ...rest
+    });
+  }
+  if (props.overflowPinned) {
+    return jsx(TextOverflowPinned, {
+      ...props
+    });
+  }
+  return jsx(TextBasic, {
+    ...props
+  });
+};
+const TextOverflow = ({
+  noWrap,
+  pre = !noWrap,
+  children,
+  ...rest
+}) => {
+  const [OverflowPinnedElement, setOverflowPinnedElement] = useState(null);
+  return jsx(Text, {
+    as: "div",
+    pre: pre,
+    nowWrap: noWrap,
+    ...rest,
+    className: "navi_text_overflow",
+    expandX: true,
+    contentSpacing: "pre",
+    children: jsxs("span", {
+      className: "navi_text_overflow_wrapper",
+      children: [jsx(OverflowPinnedElementContext.Provider, {
+        value: setOverflowPinnedElement,
+        children: jsx(Text, {
+          className: "navi_text_overflow_text",
+          children: children
+        })
+      }), OverflowPinnedElement]
+    })
+  });
+};
+const TextOverflowPinned = ({
+  overflowPinned,
+  ...props
+}) => {
+  const setOverflowPinnedElement = useContext(OverflowPinnedElementContext);
+  const text = jsx(Text, {
+    ...props
+  });
+  if (!setOverflowPinnedElement) {
+    console.warn("<Text overflowPinned> declared outside a <Text overflowEllipsis>");
+    return text;
+  }
+  if (overflowPinned) {
+    setOverflowPinnedElement(text);
+    return null;
+  }
+  setOverflowPinnedElement(null);
+  return text;
+};
+const TextBasic = ({
+  contentSpacing = " ",
+  selectRange,
+  children,
+  ...rest
+}) => {
+  const defaultRef = useRef();
+  const ref = rest.ref || defaultRef;
+  useInitialTextSelection(ref, selectRange);
+  return jsx(Box, {
+    ref: ref,
+    as: "span",
+    ...rest,
+    baseClassName: "navi_text",
+    children: applyContentSpacingOnTextChildren(children, contentSpacing)
+  });
 };
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
@@ -13657,6 +13743,8 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
 
   .navi_icon_char_slot {
     opacity: 0;
+    cursor: default;
+    user-select: none;
   }
   .navi_icon_foreground {
     position: absolute;
@@ -13741,6 +13829,7 @@ const Icon = ({
     ...ariaProps,
     box: box,
     className: withPropsClassName("navi_icon", className),
+    contentSpacing: "pre",
     "data-icon-char": "",
     "data-width": width,
     "data-height": height,
@@ -13751,6 +13840,7 @@ const Icon = ({
     }), jsx("span", {
       className: "navi_icon_foreground",
       children: jsx(Text, {
+        contentSpacing: "pre",
         children: innerChildren
       })
     })]
@@ -13898,7 +13988,7 @@ const LinkPlain = props => {
     blankTargetIcon,
     anchorIcon,
     icon,
-    contentSpacing = " ",
+    contentSpacing,
     children,
     ...rest
   } = props;
@@ -13950,7 +14040,8 @@ const LinkPlain = props => {
     rel: innerRel,
     target: innerTarget === "_self" ? undefined : target,
     "aria-busy": loading,
-    inert: disabled
+    inert: disabled,
+    contentSpacing: "pre"
     // Visual
     ,
     baseClassName: "navi_link",
@@ -16661,7 +16752,10 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   }
   .navi_button_content {
     position: relative;
+    display: inherit;
     box-sizing: border-box;
+    width: 100%;
+    height: 100%;
     padding-top: var(
       --button-padding-top,
       var(--button-padding-y, var(--button-padding, 1px))
@@ -16678,6 +16772,8 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       --button-padding-left,
       var(--button-padding-x, var(--button-padding, 6px))
     );
+    align-items: inherit;
+    justify-content: inherit;
     color: var(--x-button-color);
     background-color: var(--x-button-background-color);
     border-width: var(--x-button-outer-width);
@@ -16824,7 +16920,6 @@ const ButtonBasic = props => {
     autoFocus,
     // visual
     discrete,
-    contentSpacing = " ",
     children,
     ...rest
   } = props;
@@ -16835,13 +16930,11 @@ const ButtonBasic = props => {
   const innerLoading = loading || contextLoading && contextLoadingElement === ref.current;
   const innerReadOnly = readOnly || contextReadOnly || innerLoading;
   const innerDisabled = disabled || contextDisabled;
-  const innerChildren = applyContentSpacingOnTextChildren(children, contentSpacing);
   const renderButtonContent = buttonProps => {
-    return jsxs(Box, {
+    return jsxs(Text, {
       ...buttonProps,
-      as: "span",
       className: "navi_button_content",
-      children: [innerChildren, jsx("span", {
+      children: [children, jsx("span", {
         className: "navi_button_shadow"
       })]
     });
@@ -21338,10 +21431,6 @@ const useSignalSync = (value, initialValue = value) => {
   return signal;
 };
 
-const FontSizedSvg = () => {};
-
-const IconAndText = () => {};
-
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   .svg_mask_content * {
     fill: black !important;
@@ -21435,11 +21524,11 @@ const useContrastingColor = (ref) => {
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
-    .navi_badge {
+    .navi_badge_count {
       --border-radius: 1em;
     }
   }
-  .navi_badge {
+  .navi_badge_count {
     display: inline-block;
     box-sizing: border-box;
     min-width: 1.5em;
@@ -21495,33 +21584,20 @@ const BadgeCount = ({
   return jsx(Text, {
     ...props,
     ref: ref,
-    className: "navi_badge",
+    className: "navi_badge_count",
     bold: bold,
     managedByCSSVars: BadgeManagedByCSSVars,
+    contentSpacing: "pre",
     children: displayValue
   });
 };
 
-const Code = ({
-  contentSpacing = " ",
-  children,
-  ...rest
-}) => {
-  return jsx(Box, {
-    ...rest,
-    as: "code",
-    children: applyContentSpacingOnTextChildren(children, contentSpacing)
-  });
-};
-
-const Image = props => {
-  return jsx(Box, {
+const Code = props => {
+  return jsx(Text, {
     ...props,
-    as: "img"
+    as: "code"
   });
 };
-
-const LinkWithIcon = () => {};
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
@@ -21615,19 +21691,19 @@ const MessageBoxReportTitleChildContext = createContext();
 const MessageBox = ({
   level = "info",
   padding = "sm",
-  contentSpacing = " ",
   leftStripe,
   children,
+  contentSpacing,
   ...rest
 }) => {
   const [hasTitleChild, setHasTitleChild] = useState(false);
   const innerLeftStripe = leftStripe === undefined ? hasTitleChild : leftStripe;
-  return jsx(Box, {
+  return jsx(Text, {
     as: "div",
     role: level === "info" ? "status" : "alert",
     "data-left-stripe": innerLeftStripe ? "" : undefined,
     ...rest,
-    baseClassName: "navi_message_box",
+    className: withPropsClassName("navi_message_box", rest.className),
     padding: padding,
     pseudoClasses: MessageBoxPseudoClasses,
     basePseudoState: {
@@ -21646,38 +21722,46 @@ const MessageBox = ({
   });
 };
 
+const Paragraph = props => {
+  return jsx(Text, {
+    marginTop: "md",
+    ...props,
+    as: "p",
+    ...props
+  });
+};
+
+const Title = props => {
+  const messageBoxLevel = useContext(MessageBoxLevelContext);
+  const reportTitleToMessageBox = useContext(MessageBoxReportTitleChildContext);
+  reportTitleToMessageBox?.(true);
+  return jsx(Text, {
+    bold: true,
+    as: messageBoxLevel ? "h4" : "h1",
+    marginTop: messageBoxLevel ? "0" : undefined,
+    marginBottom: messageBoxLevel ? "sm" : undefined,
+    color: messageBoxLevel ? `var(--x-color)` : undefined,
+    ...props
+  });
+};
+
+const FontSizedSvg = () => {};
+
+const IconAndText = () => {};
+
+const LinkWithIcon = () => {};
+
+const Image = props => {
+  return jsx(Box, {
+    ...props,
+    as: "img"
+  });
+};
+
 const Svg = props => {
   return jsx(Box, {
     ...props,
     as: "svg"
-  });
-};
-
-const Title = ({
-  as,
-  bold = true,
-  contentSpacing = " ",
-  color,
-  children,
-  marginTop,
-  marginBottom,
-  ...rest
-}) => {
-  const messageBoxLevel = useContext(MessageBoxLevelContext);
-  const reportTitleToMessageBox = useContext(MessageBoxReportTitleChildContext);
-  const innerColor = color === undefined ? messageBoxLevel ? `var(--x-color)` : undefined : color;
-  const innerAs = as === undefined ? messageBoxLevel ? "h4" : "h1" : as;
-  reportTitleToMessageBox?.(true);
-  const innerMarginTop = marginTop === undefined ? messageBoxLevel ? "0" : undefined : marginTop;
-  const innerMarginBottom = marginBottom === undefined ? messageBoxLevel ? "8px" : undefined : marginBottom;
-  return jsx(Box, {
-    ...rest,
-    as: innerAs,
-    bold: bold,
-    color: innerColor,
-    marginTop: innerMarginTop,
-    marginBottom: innerMarginBottom,
-    children: applyContentSpacingOnTextChildren(children, contentSpacing)
   });
 };
 
@@ -21807,13 +21891,11 @@ const ViewportManagedByCSSVars = {
 const ViewportLayout = props => {
   return jsx(Box, {
     row: true,
+    width: "100%",
+    height: "100%",
     ...props,
     className: "navi_viewport_layout",
-    managedByCSSVars: ViewportManagedByCSSVars,
-    minWidth: "max-content",
-    minHeight: "max-content",
-    width: "100%",
-    height: "100%"
+    managedByCSSVars: ViewportManagedByCSSVars
   });
 };
 

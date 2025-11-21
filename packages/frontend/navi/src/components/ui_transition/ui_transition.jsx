@@ -105,9 +105,6 @@ export const UITransition = ({
   const uiTransitionRefDefault = useRef();
   uiTransitionRef = uiTransitionRef || uiTransitionRefDefault;
   useLayoutEffect(() => {
-    if (disabled) {
-      return null;
-    }
     const uiTransition = createUITransitionController(ref.current, {
       alignX,
       alignY,
