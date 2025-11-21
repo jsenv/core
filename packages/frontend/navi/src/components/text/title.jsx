@@ -1,10 +1,10 @@
 import { useContext } from "preact/hooks";
 
-import { Box } from "../layout/box.jsx";
 import {
   MessageBoxLevelContext,
   MessageBoxReportTitleChildContext,
 } from "./message_box.jsx";
+import { Text } from "./text.jsx";
 
 export const Title = (props) => {
   const messageBoxLevel = useContext(MessageBoxLevelContext);
@@ -12,7 +12,7 @@ export const Title = (props) => {
   reportTitleToMessageBox?.(true);
 
   return (
-    <Box
+    <Text
       bold
       as={messageBoxLevel ? "h4" : "h1"}
       marginTop={messageBoxLevel ? "0" : undefined}
