@@ -76,19 +76,28 @@ export const eslintConfigRelax = ({
   }
 
   const browserExtensions = [".js", ".jsx"];
-  browserFiles = [
+  const defaultBrowserFiles = [
     "**/*.html",
     ...patternForEachExtension("**/client/**/*[extension]", browserExtensions),
     ...patternForEachExtension("**/www/**/*[extension]", browserExtensions),
     ...patternForEachExtension("**/browser/**/*[extension]", browserExtensions),
-    ...(browserDirectoryUrl
-      ? patternForEachExtension(
-          `${urlToRelativeUrl(browserDirectoryUrl, rootDirectoryUrl)}/**/*[extension]`,
-          browserExtensions,
-        )
-      : []),
-    ...browserFiles,
   ];
+  if (browserDirectoryUrl) {
+    let relativeBrowserDir = urlToRelativeUrl(
+      browserDirectoryUrl,
+      rootDirectoryUrl,
+    );
+    if (relativeBrowserDir.endsWith("/")) {
+      relativeBrowserDir = relativeBrowserDir.slice(0, -1);
+    }
+    defaultBrowserFiles.push(
+      ...patternForEachExtension(
+        `${relativeBrowserDir}/**/*[extension]`,
+        browserExtensions,
+      ),
+    );
+  }
+  browserFiles = [...defaultBrowserFiles, ...browserFiles];
   browserAndNodeFiles = [...browserAndNodeFiles];
   const parserOptions = {
     ecmaVersion: 2022,
