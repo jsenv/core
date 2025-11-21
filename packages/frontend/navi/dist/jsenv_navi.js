@@ -13760,37 +13760,37 @@ const Icon = ({
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_link {
-      --border-radius: 2px;
-      --outline-color: var(--navi-focus-outline-color);
-      --color: rgb(0, 0, 238);
-      --color-visited: light-dark(#6a1b9a, #ab47bc);
-      --color-active: red;
-      --text-decoration: underline;
-      --text-decoration-hover: var(--text-decoration);
-      --cursor: pointer;
+      --link-border-radius: 2px;
+      --link-outline-color: var(--navi-focus-outline-color);
+      --link-color: rgb(0, 0, 238);
+      --link-color-visited: light-dark(#6a1b9a, #ab47bc);
+      --link-color-active: red;
+      --link-text-decoration: underline;
+      --link-text-decoration-hover: var(--link-text-decoration);
+      --link-cursor: pointer;
     }
   }
 
   .navi_link {
-    --x-color: var(--color);
-    --x-color-hover: var(--color-hover, var(--color));
-    --x-color-visited: var(--color-visited);
-    --x-color-active: var(--color-active);
-    --x-text-decoration: var(--text-decoration);
-    --x-text-decoration-hover: var(--text-decoration-hover);
-    --x-cursor: var(--cursor);
+    --x-link-color: var(--link-color);
+    --x-link-color-hover: var(--link-color-hover, var(--link-color));
+    --x-link-color-visited: var(--link-color-visited);
+    --x-link-color-active: var(--link-color-active);
+    --x-link-text-decoration: var(--link-text-decoration);
+    --x-link-text-decoration-hover: var(--link-text-decoration-hover);
+    --x-link-cursor: var(--link-cursor);
 
     position: relative;
-    color: var(--x-color);
-    text-decoration: var(--x-text-decoration);
-    border-radius: var(--border-radius);
-    outline-color: var(--outline-color);
-    cursor: var(--x-cursor);
+    color: var(--x-link-color);
+    text-decoration: var(--x-link-text-decoration);
+    border-radius: var(--link-border-radius);
+    outline-color: var(--link-outline-color);
+    cursor: var(--x-link-cursor);
   }
   /* Hover */
   .navi_link[data-hover] {
-    --x-color: var(--x-color-hover);
-    --x-text-decoration: var(--x-text-decoration-hover);
+    --x-link-color: var(--x-link-color-hover);
+    --x-link-text-decoration: var(--x-link-text-decoration-hover);
   }
   /* Focus */
   .navi_link[data-focus] {
@@ -13803,7 +13803,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   }
   /* Visited */
   .navi_link[data-visited] {
-    --x-color: var(--x-color-visited);
+    --x-link-color: var(--x-link-color-visited);
   }
   /* Selected */
   .navi_link[aria-selected] {
@@ -13819,7 +13819,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   /* Active */
   .navi_link[data-active] {
     /* Redefine it otherwise [data-visited] prevails */
-    --x-color: var(--x-color-active);
+    --x-link-color: var(--x-link-color-active);
   }
   /* Readonly */
   .navi_link[data-readonly] > * {
@@ -13834,17 +13834,17 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   }
 `;
 const LinkManagedByCSSVars = {
-  "outlineColor": "--outline-color",
-  "borderRadius": "--border-radius",
-  "color": "--color",
-  "cursor": "--cursor",
-  "textDecoration": "--text-decoration",
+  "outlineColor": "--link-outline-color",
+  "borderRadius": "--link-border-radius",
+  "color": "--link-color",
+  "cursor": "--link-cursor",
+  "textDecoration": "--link-text-decoration",
   ":hover": {
-    color: "--color-hover",
-    textDecoration: "--text-decoration-hover"
+    color: "--link-color-hover",
+    textDecoration: "--link-text-decoration-hover"
   },
   ":active": {
-    color: "--color-active"
+    color: "--link-color-active"
   }
 };
 const LinkPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":visited", ":-navi-loading", ":-navi-internal-link", ":-navi-external-link", ":-navi-anchor-link", ":-navi-current-link"];
@@ -16213,8 +16213,7 @@ const InputTextualBasic = props => {
   const renderInputMemoized = useCallback(renderInput, [type, uiState, innerValue, innerOnInput]);
   return jsxs(Box, {
     as: "span",
-    layoutInline: true,
-    layoutColumn: true,
+    box: true,
     baseClassName: "navi_input",
     managedByCSSVars: InputManagedByCSSVars,
     pseudoStateSelector: ".navi_native_input",
@@ -16587,52 +16586,68 @@ const useFormEvents = (
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_button {
-      --outline-width: 1px;
-      --border-width: 1px;
-      --border-radius: 2px;
+      --button-outline-width: 1px;
+      --button-border-width: 1px;
+      --button-border-radius: 2px;
       /* default */
-      --outline-color: var(--navi-focus-outline-color);
-      --loader-color: var(--navi-loader-color);
-      --border-color: light-dark(#767676, #8e8e93);
-      --background-color: light-dark(#f3f4f6, #2d3748);
-      --color: currentColor;
+      --button-outline-color: var(--navi-focus-outline-color);
+      --button-loader-color: var(--navi-loader-color);
+      --button-border-color: light-dark(#767676, #8e8e93);
+      --button-background-color: light-dark(#f3f4f6, #2d3748);
+      --button-color: currentColor;
 
       /* Hover */
-      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
-      --background-color-hover: color-mix(
+      --button-border-color-hover: color-mix(
         in srgb,
-        var(--background-color) 95%,
+        var(--button-border-color) 70%,
         black
       );
-      --color-hover: var(--color);
-      /* Active */
-      --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
-      /* Readonly */
-      --border-color-readonly: color-mix(
+      --button-background-color-hover: color-mix(
         in srgb,
-        var(--border-color) 30%,
+        var(--button-background-color) 95%,
+        black
+      );
+      --button-color-hover: var(--button-color);
+      /* Active */
+      --button-border-color-active: color-mix(
+        in srgb,
+        var(--button-border-color) 90%,
+        black
+      );
+      /* Readonly */
+      --button-border-color-readonly: color-mix(
+        in srgb,
+        var(--button-border-color) 30%,
         white
       );
-      --background-color-readonly: var(--background-color);
-      --color-readonly: color-mix(in srgb, var(--color) 30%, transparent);
+      --button-background-color-readonly: var(--button-background-color);
+      --button-color-readonly: color-mix(
+        in srgb,
+        var(--button-color) 30%,
+        transparent
+      );
       /* Disabled */
-      --border-color-disabled: var(--border-color-readonly);
-      --background-color-disabled: var(--background-color-readonly);
-      --color-disabled: var(--color-readonly);
+      --button-border-color-disabled: var(--button-border-color-readonly);
+      --button-background-color-disabled: var(
+        --button-background-color-readonly
+      );
+      --button-color-disabled: var(--button-color-readonly);
     }
   }
 
   .navi_button {
     /* Internal css vars are the one controlling final values */
     /* allowing to override them on interactions (like hover, disabled, etc.) */
-    --x-outline-width: var(--outline-width);
-    --x-border-radius: var(--border-radius);
-    --x-border-width: var(--border-width);
-    --x-outer-width: calc(var(--x-border-width) + var(--x-outline-width));
-    --x-outline-color: var(--outline-color);
-    --x-border-color: var(--border-color);
-    --x-background-color: var(--background-color);
-    --x-color: var(--color);
+    --x-button-outline-width: var(--button-outline-width);
+    --x-button-border-radius: var(--button-border-radius);
+    --x-button-border-width: var(--button-border-width);
+    --x-button-outer-width: calc(
+      var(--button-x-border-width) + var(--x-button-outline-width)
+    );
+    --x-button-outline-color: var(--button-outline-color);
+    --x-button-border-color: var(--button-border-color);
+    --x-button-background-color: var(--button-background-color);
+    --x-button-color: var(--button-color);
 
     position: relative;
     display: inline-flex;
@@ -16640,50 +16655,59 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     padding: 0;
     background: none;
     border: none;
-    border-radius: var(--x-border-radius);
+    border-radius: var(--x-button-border-radius);
     outline: none;
     cursor: pointer;
   }
   .navi_button_content {
     position: relative;
     box-sizing: border-box;
-    padding-top: var(--padding-top, var(--padding-y, var(--padding, 1px)));
-    padding-right: var(--padding-right, var(--padding-x, var(--padding, 6px)));
-    padding-bottom: var(
-      --padding-bottom,
-      var(--padding-y, var(--padding, 1px))
+    padding-top: var(
+      --button-padding-top,
+      var(--button-padding-y, var(--button-padding, 1px))
     );
-    padding-left: var(--padding-left, var(--padding-x, var(--padding, 6px)));
-    color: var(--x-color);
-    background-color: var(--x-background-color);
-    border-width: var(--x-outer-width);
+    padding-right: var(
+      --button-padding-right,
+      var(--button-padding-x, var(--button-padding, 6px))
+    );
+    padding-bottom: var(
+      --button-padding-bottom,
+      var(--button-padding-y, var(--button-padding, 1px))
+    );
+    padding-left: var(
+      --button-padding-left,
+      var(--button-padding-x, var(--button-padding, 6px))
+    );
+    color: var(--x-button-color);
+    background-color: var(--x-button-background-color);
+    border-width: var(--x-button-outer-width);
     border-style: solid;
     border-color: transparent;
-    border-radius: var(--x-border-radius);
-    outline-width: var(--x-border-width);
+    border-radius: var(--x-button-border-radius);
+    outline-width: var(--x-button-border-width);
     outline-style: solid;
-    outline-color: var(--x-border-color);
-    outline-offset: calc(-1 * (var(--x-border-width)));
+    outline-color: var(--x-button-border-color);
+    outline-offset: calc(-1 * (var(--x-button-border-width)));
     transition-property: transform;
     transition-duration: 0.15s;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   }
   .navi_button_shadow {
     position: absolute;
-    inset: calc(-1 * var(--x-outer-width));
+    inset: calc(-1 * var(--x-button-outer-width));
     border-radius: inherit;
     pointer-events: none;
   }
 
   /* Hover */
   .navi_button[data-hover] {
-    --x-border-color: var(--border-color-hover);
-    --x-background-color: var(--background-color-hover);
-    --x-color: var(--color-hover);
+    --x-button-border-color: var(--button-border-color-hover);
+    --x-button-background-color: var(--button-background-color-hover);
+    --x-button-color: var(--button-color-hover);
   }
   /* Active */
   .navi_button[data-active] {
-    --x-outline-color: var(--border-color-active);
+    --x-button-outline-color: var(--button-border-color-active);
   }
   .navi_button[data-active] .navi_button_content {
     transform: scale(0.9);
@@ -16698,17 +16722,17 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   }
   /* Readonly */
   .navi_button[data-readonly] {
-    --x-border-color: var(--border-color-readonly);
-    --x-background-color: var(--background-color-readonly);
-    --x-color: var(--color-readonly);
+    --x-button-border-color: var(--button-border-color-readonly);
+    --x-button-background-color: var(--button-background-color-readonly);
+    --x-button-color: var(--button-color-readonly);
   }
   /* Focus */
   .navi_button[data-focus-visible] {
-    --x-border-color: var(--x-outline-color);
+    --x-button-border-color: var(--x-button-outline-color);
   }
   .navi_button[data-focus-visible] .navi_button_content {
-    outline-width: var(--x-outer-width);
-    outline-offset: calc(-1 * var(--x-outer-width));
+    outline-width: var(--x-button-outer-width);
+    outline-offset: calc(-1 * var(--x-button-outer-width));
   }
   /* Disabled */
   .navi_button[data-disabled] {
@@ -16716,9 +16740,9 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     cursor: default;
   }
   .navi_button[data-disabled] {
-    --x-border-color: var(--border-color-disabled);
-    --x-background-color: var(--background-color-disabled);
-    --x-color: var(--color-disabled);
+    --x-border-color: var(--button-border-color-disabled);
+    --x-background-color: var(--button-background-color-disabled);
+    --x-color: var(--button-color-disabled);
   }
   /* no active effect */
   .navi_button[data-disabled] .navi_button_content {
@@ -16729,22 +16753,22 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   }
   /* Callout (info, warning, error) */
   .navi_button[data-callout] {
-    --x-border-color: var(--callout-color);
+    --x-button-border-color: var(--callout-color);
   }
 
   /* Discrete variant */
   .navi_button[data-discrete] {
-    --x-background-color: transparent;
-    --x-border-color: transparent;
+    --x-button-background-color: transparent;
+    --x-button-border-color: transparent;
   }
   .navi_button[data-discrete][data-hover] {
-    --x-border-color: var(--border-color-hover);
+    --x-button-border-color: var(--button-border-color-hover);
   }
   .navi_button[data-discrete][data-readonly] {
-    --x-border-color: transparent;
+    --x-button-border-color: transparent;
   }
   .navi_button[data-discrete][data-disabled] {
-    --x-border-color: transparent;
+    --x-button-border-color: transparent;
   }
 `;
 const Button = props => {
@@ -16756,33 +16780,33 @@ const Button = props => {
   });
 };
 const ButtonManagedByCSSVars = {
-  "outlineWidth": "--outline-width",
-  "borderWidth": "--border-width",
-  "borderRadius": "--border-radius",
-  "paddingTop": "--padding-top",
-  "paddingRight": "--padding-right",
-  "paddingBottom": "--padding-bottom",
-  "paddingLeft": "--padding-left",
-  "backgroundColor": "--background-color",
-  "borderColor": "--border-color",
-  "color": "--color",
+  "outlineWidth": "--button-outline-width",
+  "borderWidth": "--button-border-width",
+  "borderRadius": "--button-border-radius",
+  "paddingTop": "--button-padding-top",
+  "paddingRight": "--button-padding-right",
+  "paddingBottom": "--button-padding-bottom",
+  "paddingLeft": "--button-padding-left",
+  "backgroundColor": "--button-background-color",
+  "borderColor": "--button-border-color",
+  "color": "--button-color",
   ":hover": {
-    backgroundColor: "--background-color-hover",
-    borderColor: "--border-color-hover",
-    color: "--color-hover"
+    backgroundColor: "--button-background-color-hover",
+    borderColor: "--button-border-color-hover",
+    color: "--button-color-hover"
   },
   ":active": {
-    borderColor: "--border-color-active"
+    borderColor: "--button-border-color-active"
   },
   ":read-only": {
-    backgroundColor: "--background-color-readonly",
-    borderColor: "--border-color-readonly",
-    color: "--color-readonly"
+    backgroundColor: "--button-background-color-readonly",
+    borderColor: "--button-border-color-readonly",
+    color: "--button-color-readonly"
   },
   ":disabled": {
-    backgroundColor: "--background-color-disabled",
-    borderColor: "--border-color-disabled",
-    color: "--color-disabled"
+    backgroundColor: "--button-background-color-disabled",
+    borderColor: "--button-border-color-disabled",
+    color: "--button-color-disabled"
   }
 };
 const ButtonPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
@@ -21660,56 +21684,80 @@ const Title = ({
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_dialog_layout {
-      --margin: 30px;
-      --padding: 20px;
-      --background: white;
-      --border-width: 2px;
-      --border-color: lightgrey;
-      --border-radius: 10px;
-      --min-width: 300px;
-      --min-height: auto;
+      --dialog-margin: 30px;
+      --dialog-padding: 20px;
+      --dialog-background: white;
+      --dialog-border-width: 2px;
+      --dialog-border-color: lightgrey;
+      --dialog-border-radius: 10px;
+      --dialog-min-width: 300px;
+      --dialog-min-height: auto;
     }
   }
   .navi_dialog_layout {
-    padding-top: var(--margin-top, var(--margin-y, var(--margin)));
-    padding-right: var(--margin-right, var(--margin-x, var(--margin)));
-    padding-bottom: var(--margin-bottom, var(--margin-y, var(--margin)));
-    padding-left: var(--margin-left, var(--margin-x, var(--margin)));
+    padding-top: var(
+      --dialog-margin-top,
+      var(--dialog-margin-y, var(--dialog-margin))
+    );
+    padding-right: var(
+      --dialog-margin-right,
+      var(--dialog-margin-x, var(--dialog-margin))
+    );
+    padding-bottom: var(
+      --dialog-margin-bottom,
+      var(--dialog-margin-y, var(--dialog-margin))
+    );
+    padding-left: var(
+      --dialog-margin-left,
+      var(--dialog-margin-x, var(--dialog-margin))
+    );
   }
 
   .navi_dialog_content {
-    min-width: var(--min-width);
-    min-height: var(--min-height);
-    padding-top: var(--padding-top, var(--padding-y, var(--padding)));
-    padding-right: var(--padding-right, var(--padding-x, var(--padding)));
-    padding-bottom: var(--padding-bottom, var(--padding-y, var(--padding)));
-    padding-left: var(--padding-left, var(--padding-x, var(--padding)));
-    background: var(--background);
-    background-color: var(--background-color, var(--background));
-    border-width: var(--border-width);
+    min-width: var(--dialog-min-width);
+    min-height: var(--dialog-min-height);
+    padding-top: var(
+      --dialog-padding-top,
+      var(--dialog-padding-y, var(--dialog-padding))
+    );
+    padding-right: var(
+      --dialog-padding-right,
+      var(--dialog-padding-x, var(--dialog-padding))
+    );
+    padding-bottom: var(
+      --dialog-padding-bottom,
+      var(--dialog-padding-y, var(--dialog-padding))
+    );
+    padding-left: var(
+      --dialog-padding-left,
+      var(--dialog-padding-x, var(--dialog-padding))
+    );
+    background: var(--dialog-background);
+    background-color: var(--dialog-background-color, var(--dialog-background));
+    border-width: var(--dialog-border-width);
     border-style: solid;
-    border-color: var(--border-color);
-    border-radius: var(--border-radius);
+    border-color: var(--dialog-border-color);
+    border-radius: var(--dialog-border-radius);
   }
 `;
 const DialogManagedByCSSVars = {
-  margin: "--margin",
-  marginTop: "--margin-top",
-  marginBottom: "--margin-bottom",
-  marginLeft: "--margin-left",
-  marginRight: "--margin-right",
-  borderRadius: "--border-radius",
-  borderWidth: "--border-width",
-  borderColor: "--border-color",
-  background: "--background",
-  backgroundColor: "--background-color",
-  padding: "--padding",
-  paddingTop: "--padding-top",
-  paddingBottom: "--padding-bottom",
-  paddingLeft: "--padding-left",
-  paddingRight: "--padding-right",
-  minWidth: "--min-width",
-  minHeight: "--min-height"
+  margin: "--dialog-margin",
+  marginTop: "--dialog-margin-top",
+  marginBottom: "--dialog-margin-bottom",
+  marginLeft: "--dialog-margin-left",
+  marginRight: "--dialog-margin-right",
+  borderRadius: "--dialog-border-radius",
+  borderWidth: "--dialog-border-width",
+  borderColor: "--dialog-border-color",
+  background: "--dialog-background",
+  backgroundColor: "--dialog-background-color",
+  padding: "--dialog-padding",
+  paddingTop: "--dialog-padding-top",
+  paddingBottom: "--dialog-padding-bottom",
+  paddingLeft: "--dialog-padding-left",
+  paddingRight: "--dialog-padding-right",
+  minWidth: "--dialog-min-width",
+  minHeight: "--dialog-min-height"
 };
 const DialogLayout = ({
   children,
