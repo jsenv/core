@@ -8,8 +8,11 @@
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      /* eslint-disable no-unused-vars */
+      import { createContext } from "preact";
       import { Text, Icon, Link } from "@jsenv/navi";
+
+      // Create a context for testing wrapper components
+      const ThemeContext = createContext({ theme: "default" });
 
       const StarSvg = () => (
         <svg
@@ -138,6 +141,87 @@
                     Clean JSX, automatic spacing!
                   </small>
                 </div>
+              </div>
+            </section>
+
+            {/* Context Provider wrapper */}
+            <section id="context-provider" style={{ marginBottom: "30px" }}>
+              <h2>⚠️ Context Provider Limitation</h2>
+              <p>
+                <strong>Auto-spacing doesn't work</strong> when children are
+                wrapped in Context Providers or other wrapper components because
+                they don't render as direct text nodes.
+              </p>
+
+              <div style={{ marginBottom: "20px" }}>
+                <h3>❌ Problem: Provider breaks auto-spacing</h3>
+                <div
+                  style={{
+                    border: "1px solid #ccc",
+                    padding: "8px",
+                    backgroundColor: "#fee",
+                  }}
+                >
+                  <Text>
+                    Welcome to
+                    <ThemeContext.Provider value={{ theme: "premium" }}>
+                      <Text bold>our platform</Text>
+                      <Text italic>today</Text>
+                    </ThemeContext.Provider>
+                    and enjoy!
+                  </Text>
+                </div>
+                <small style={{ color: "#d73527" }}>
+                  Missing spaces around provider content
+                </small>
+              </div>
+
+              <div style={{ marginBottom: "20px" }}>
+                <h3>✅ Solution 1: Move provider outside Text</h3>
+                <div
+                  style={{
+                    border: "1px solid #ccc",
+                    padding: "8px",
+                    backgroundColor: "#e8f5e8",
+                  }}
+                >
+                  <ThemeContext.Provider value={{ theme: "premium" }}>
+                    <Text>
+                      Welcome to
+                      <Text bold>our platform</Text>
+                      <Text italic>today</Text>
+                      and enjoy!
+                    </Text>
+                  </ThemeContext.Provider>
+                </div>
+                <small style={{ color: "#28a745" }}>
+                  Provider wraps the entire Text component
+                </small>
+              </div>
+
+              <div style={{ marginBottom: "20px" }}>
+                <h3>✅ Solution 2: Wrap provider children in Text</h3>
+                <div
+                  style={{
+                    border: "1px solid #ccc",
+                    padding: "8px",
+                    backgroundColor: "#e8f5e8",
+                  }}
+                >
+                  <Text>
+                    Welcome to
+                    <ThemeContext.Provider value={{ theme: "premium" }}>
+                      <Text>
+                        <Text bold>our platform</Text>
+                        <Text italic>today</Text>
+                      </Text>
+                    </ThemeContext.Provider>
+                    and enjoy!
+                  </Text>
+                </div>
+                <small style={{ color: "#28a745" }}>
+                  Additional Text wrapper handles spacing inside provider
+                </small>
               </div>
             </section>
 
