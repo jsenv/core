@@ -244,8 +244,8 @@
                   marginBottom: "8px",
                 }}
               >
-                💡 Try selecting text below to see how icons behave within text
-                selection
+                💡 Text is auto-selected on page load to show icon selection
+                behavior
               </Text>
               <Text
                 style={{
@@ -258,7 +258,11 @@
                 maintain proper spacing
               </Text>
             </Box>
-            <Paragraph size="16" lineHeight="1.6">
+            <Paragraph
+              selectRange={["Click on the", "button to return"]}
+              size="16"
+              lineHeight="1.6"
+            >
               Welcome to our platform! Click on the
               <Text noWrap>
                 <Icon>
