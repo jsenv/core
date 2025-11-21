@@ -29,13 +29,8 @@ export const useInitialTextSelection = (ref, textSelection) => {
         }
       }
     } else if (typeof textSelection === "string") {
-      // Format: "0,10" - comma-separated character indices
-      const [start, end] = textSelection
-        .split(",")
-        .map((s) => parseInt(s.trim(), 10));
-      if (!isNaN(start) && !isNaN(end)) {
-        selectByCharacterIndices(el, range, start, end);
-      }
+      // Format: "some text" - select the entire string occurrence
+      selectSingleTextString(el, range, textSelection);
     }
 
     selection.removeAllRanges();
@@ -80,6 +75,26 @@ const selectByCharacterIndices = (element, range, startIndex, endIndex) => {
   if (startNode && endNode) {
     range.setStart(startNode, startOffset);
     range.setEnd(endNode, endOffset);
+  }
+};
+
+const selectSingleTextString = (element, range, text) => {
+  const walker = document.createTreeWalker(
+    element,
+    NodeFilter.SHOW_TEXT,
+    null,
+    false,
+  );
+
+  while (walker.nextNode()) {
+    const textContent = walker.currentNode.textContent;
+    const index = textContent.indexOf(text);
+
+    if (index !== -1) {
+      range.setStart(walker.currentNode, index);
+      range.setEnd(walker.currentNode, index + text.length);
+      return;
+    }
   }
 };
 

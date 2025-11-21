@@ -1,8 +1,9 @@
 /* eslint-disable jsenv/no-unknown-params */
 import { createContext, toChildArray } from "preact";
-import { useContext, useState } from "preact/hooks";
+import { useContext, useRef, useState } from "preact/hooks";
 
 import { Box } from "../layout/box.jsx";
+import { useInitialTextSelection } from "./use_initial_text_selection.jsx";
 
 import.meta.css = /* css */ `
   *[data-navi-space] {
@@ -142,9 +143,19 @@ const TextOverflowPinned = ({ overflowPinned, ...props }) => {
   setOverflowPinnedElement(null);
   return text;
 };
-const TextBasic = ({ contentSpacing = " ", children, ...rest }) => {
+const TextBasic = ({
+  contentSpacing = " ",
+  selectRange,
+  children,
+  ...rest
+}) => {
+  const defaultRef = useRef();
+  const ref = rest.ref || defaultRef;
+
+  useInitialTextSelection(ref, selectRange);
+
   return (
-    <Box as="span" {...rest} baseClassName="navi_text">
+    <Box ref={ref} as="span" {...rest} baseClassName="navi_text">
       {applyContentSpacingOnTextChildren(children, contentSpacing)}
     </Box>
   );
