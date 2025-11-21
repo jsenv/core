@@ -17,7 +17,7 @@ import {
 } from "../selection/selection.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { Icon } from "./icon.jsx";
-import { applyContentSpacingOnTextChildren } from "./text.jsx";
+import { applyContentSpacingOnTextChildren } from "./text_content_spacing.js";
 
 /*
  * Apply opacity to child content, not the link element itself.
@@ -184,7 +184,7 @@ const LinkPlain = (props) => {
     blankTargetIcon,
     anchorIcon,
     icon,
-    contentSpacing = " ",
+    contentSpacing,
 
     children,
 
@@ -256,6 +256,7 @@ const LinkPlain = (props) => {
       target={innerTarget === "_self" ? undefined : target}
       aria-busy={loading}
       inert={disabled}
+      contentSpacing="pre"
       // Visual
       baseClassName="navi_link"
       managedByCSSVars={LinkManagedByCSSVars}

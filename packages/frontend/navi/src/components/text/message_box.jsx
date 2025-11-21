@@ -1,9 +1,9 @@
 import { createContext } from "preact";
 import { useState } from "preact/hooks";
 
-import { Box } from "../layout/box.jsx";
 import { PSEUDO_CLASSES } from "../layout/pseudo_styles.js";
-import { applyContentSpacingOnTextChildren } from "./text.jsx";
+import { Text } from "./text.jsx";
+import { applyContentSpacingOnTextChildren } from "./text_content_spacing.js";
 
 import.meta.css = /* css */ `
   @layer navi {
@@ -105,16 +105,16 @@ export const MessageBoxReportTitleChildContext = createContext();
 export const MessageBox = ({
   level = "info",
   padding = "sm",
-  contentSpacing = " ",
   leftStripe,
   children,
+  contentSpacing,
   ...rest
 }) => {
   const [hasTitleChild, setHasTitleChild] = useState(false);
   const innerLeftStripe = leftStripe === undefined ? hasTitleChild : leftStripe;
 
   return (
-    <Box
+    <Text
       as="div"
       role={level === "info" ? "status" : "alert"}
       data-left-stripe={innerLeftStripe ? "" : undefined}
@@ -134,6 +134,6 @@ export const MessageBox = ({
           {applyContentSpacingOnTextChildren(children, contentSpacing)}
         </MessageBoxReportTitleChildContext.Provider>
       </MessageBoxLevelContext.Provider>
-    </Box>
+    </Text>
   );
 };

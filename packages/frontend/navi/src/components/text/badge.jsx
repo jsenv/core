@@ -5,11 +5,11 @@ import { useContrastingColor } from "./use_contrasting_color.js";
 
 import.meta.css = /* css */ `
   @layer navi {
-    .navi_badge {
+    .navi_badge_count {
       --border-radius: 1em;
     }
   }
-  .navi_badge {
+  .navi_badge_count {
     display: inline-block;
     box-sizing: border-box;
     min-width: 1.5em;
@@ -65,9 +65,10 @@ export const BadgeCount = ({ children, bold = true, max, ...props }) => {
     <Text
       {...props}
       ref={ref}
-      className="navi_badge"
+      className="navi_badge_count"
       bold={bold}
       managedByCSSVars={BadgeManagedByCSSVars}
+      contentSpacing="pre"
     >
       {displayValue}
     </Text>

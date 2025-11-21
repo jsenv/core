@@ -355,13 +355,7 @@ const CONTENT_PROPS = {
       }
       return { justifyContent: value };
     }
-    if (layout === "inline-block" || layout === "table-cell") {
-      if (value === "start") {
-        return undefined; // this is the default
-      }
-      return { textAlign: value };
-    }
-    return undefined;
+    return { textAlign: value };
   },
   contentAlignY: (value, { layout }) => {
     if (layout === "row" || layout === "inline-row") {
@@ -378,13 +372,7 @@ const CONTENT_PROPS = {
       }
       return { alignItems: value };
     }
-    if (layout === "inline-block" || layout === "table-cell") {
-      if (value === "start") {
-        return undefined;
-      }
-      return { verticalAlign: value };
-    }
-    return undefined;
+    return { verticalAlign: value };
   },
   contentSpacing: (value, { layout }) => {
     if (

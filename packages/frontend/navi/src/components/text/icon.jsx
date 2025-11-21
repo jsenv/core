@@ -96,6 +96,7 @@ export const Icon = ({
       {...ariaProps}
       box={box}
       className={withPropsClassName("navi_icon", className)}
+      contentSpacing="pre"
       data-icon-char=""
       data-width={width}
       data-height={height}
@@ -104,7 +105,7 @@ export const Icon = ({
         {invisibleText}
       </span>
       <span className="navi_icon_foreground">
-        <Text>{innerChildren}</Text>
+        <Text contentSpacing="pre">{innerChildren}</Text>
       </span>
     </Text>
   );

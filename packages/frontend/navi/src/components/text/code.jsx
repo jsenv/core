@@ -1,10 +1,5 @@
-import { Box } from "../layout/box.jsx";
-import { applyContentSpacingOnTextChildren } from "./text.jsx";
+import { Text } from "./text.jsx";
 
-export const Code = ({ contentSpacing = " ", children, ...rest }) => {
-  return (
-    <Box {...rest} as="code">
-      {applyContentSpacingOnTextChildren(children, contentSpacing)}
-    </Box>
-  );
+export const Code = (props) => {
+  return <Text {...props} as="code" />;
 };

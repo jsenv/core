@@ -83,22 +83,25 @@ export { useCellsAndColumns } from "./src/components/table/use_cells_and_columns
 export { Tab, TabList } from "./src/components/tablist/tablist.jsx";
 export { UITransition } from "./src/components/ui_transition/ui_transition.jsx";
 export { useSignalSync } from "./src/components/use_signal_sync.js";
-// Text and icons
-// Link can be used to wrap other things than text BUT it's most of the time used to wrap text
-// So they naturally belong to text stuff
-export { FontSizedSvg } from "./src/components/svg/font_sized_svg.jsx";
-export { IconAndText } from "./src/components/svg/icon_and_text.jsx";
+// Text
 export { SVGMaskOverlay } from "./src/components/svg/svg_mask_overlay.jsx";
 export { BadgeCount } from "./src/components/text/badge.jsx";
 export { Code } from "./src/components/text/code.jsx";
-export { Icon } from "./src/components/text/icon.jsx";
-export { Image } from "./src/components/text/image.jsx";
+// Link can be used to wrap other things than text BUT it's most of the time used to wrap text
+// So they naturally belong to text stuff
 export { Link } from "./src/components/text/link.jsx";
-export { LinkWithIcon } from "./src/components/text/link_with_icon.jsx";
 export { MessageBox } from "./src/components/text/message_box.jsx";
-export { Svg } from "./src/components/text/svg.jsx";
-export { Paragraph, Text } from "./src/components/text/text.jsx";
+export { Paragraph } from "./src/components/text/paragraph.jsx";
+export { Text } from "./src/components/text/text.jsx";
 export { Title } from "./src/components/text/title.jsx";
+// Icons are mostly used alongside text
+export { FontSizedSvg } from "./src/components/svg/font_sized_svg.jsx";
+export { IconAndText } from "./src/components/svg/icon_and_text.jsx";
+export { Icon } from "./src/components/text/icon.jsx";
+export { LinkWithIcon } from "./src/components/text/link_with_icon.jsx";
+// Graphics
+export { Image } from "./src/components/graphic/image.jsx";
+export { Svg } from "./src/components/graphic/svg.jsx";
 // Callout, dialogs, ...
 export { openCallout } from "./src/components/callout/callout.js";
 // Layout
