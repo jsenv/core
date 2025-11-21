@@ -3,6 +3,7 @@ import { createContext } from "preact";
 import { useContext, useState } from "preact/hooks";
 
 import { Box } from "../layout/box.jsx";
+import { applyContentSpacingOnTextChildren } from "./text_content_spacing.js";
 
 import.meta.css = /* css */ `
   .navi_text {
@@ -80,8 +81,12 @@ const TextOverflowPinned = ({ overflowPinned, ...props }) => {
   setOverflowPinnedElement(null);
   return text;
 };
-const TextBasic = (props) => {
-  return <Box as="span" {...props} baseClassName="navi_text" />;
+const TextBasic = ({ contentSpacing = " ", children, ...rest }) => {
+  return (
+    <Box as="span" {...rest} baseClassName="navi_text">
+      {applyContentSpacingOnTextChildren(children, contentSpacing)}
+    </Box>
+  );
 };
 
 /* https://jsfiddle.net/v5xzJ/4/ */

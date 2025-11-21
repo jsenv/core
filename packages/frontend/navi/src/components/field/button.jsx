@@ -10,7 +10,7 @@ import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { Box } from "../layout/box.jsx";
 import { LoaderBackground } from "../loader/loader_background.jsx";
-import { applyContentSpacingOnTextChildren } from "../text/text.jsx";
+import { Text } from "../text/text.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useActionEvents } from "./use_action_events.js";
 import { useFormEvents } from "./use_form_events.js";
@@ -284,7 +284,6 @@ const ButtonBasic = (props) => {
 
     // visual
     discrete,
-    contentSpacing = " ",
 
     children,
     ...rest
@@ -299,16 +298,12 @@ const ButtonBasic = (props) => {
   const innerReadOnly = readOnly || contextReadOnly || innerLoading;
   const innerDisabled = disabled || contextDisabled;
 
-  const innerChildren = applyContentSpacingOnTextChildren(
-    children,
-    contentSpacing,
-  );
   const renderButtonContent = (buttonProps) => {
     return (
-      <Box {...buttonProps} as="span" className="navi_button_content">
-        {innerChildren}
+      <Text {...buttonProps} className="navi_button_content">
+        {children}
         <span className="navi_button_shadow"></span>
-      </Box>
+      </Text>
     );
   };
   const renderButtonContentMemoized = useCallback(renderButtonContent, []);
