@@ -1,5 +1,5 @@
 import { Box } from "../layout/box.jsx";
-import { withPropsClassName } from "../layout/with_props_class_name.js";
+import { withPropsClassName } from "../with_props_class_name.js";
 import { Text } from "./text.jsx";
 
 import.meta.css = /* css */ `

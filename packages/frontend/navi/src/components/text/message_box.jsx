@@ -2,6 +2,7 @@ import { createContext } from "preact";
 import { useState } from "preact/hooks";
 
 import { PSEUDO_CLASSES } from "../layout/pseudo_styles.js";
+import { withPropsClassName } from "../with_props_class_name.js";
 import { applyContentSpacingOnTextChildren, Text } from "./text.jsx";
 
 import.meta.css = /* css */ `
@@ -118,7 +119,7 @@ export const MessageBox = ({
       role={level === "info" ? "status" : "alert"}
       data-left-stripe={innerLeftStripe ? "" : undefined}
       {...rest}
-      baseClassName="navi_message_box"
+      className={withPropsClassName("navi_message_box", rest.className)}
       padding={padding}
       pseudoClasses={MessageBoxPseudoClasses}
       basePseudoState={{

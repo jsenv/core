@@ -56,6 +56,10 @@ export const parseCSSColor = (color, element) => {
 
   // If it's a CSS custom property, resolve it using getComputedStyle
   if (resolvedColor.includes("var(")) {
+    if (!element) {
+      // console.warn(`"${resolvedColor}" cannot be resolved without element.`);
+      return resolvedColor;
+    }
     const computedStyle = getComputedStyle(element);
 
     // Handle var() syntax
@@ -204,11 +208,15 @@ const convertColorToRgba = (color) => {
  * @param {Array<number>} rgba - [r, g, b, a] values
  * @returns {string|null} CSS color string or null if invalid input
  */
-export const stringifyCSSColor = (rgba) => {
-  if (!Array.isArray(rgba) || rgba.length < 3) {
+export const stringifyCSSColor = (value) => {
+  if (typeof value === "string") {
+    // can happen for css variables that we can't resolve
+    return value;
+  }
+  if (!Array.isArray(value) || value.length < 3) {
     return null;
   }
-
+  const rgba = value;
   const [r, g, b, a = 1] = rgba;
 
   // Validate RGB values
