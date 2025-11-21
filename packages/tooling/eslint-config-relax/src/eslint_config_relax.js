@@ -24,13 +24,49 @@ const patternForEachExtension = (pattern, extensions) => {
 };
 
 /**
- * Return an ESLint flat config
- * @param {Object} parameters
- * @param {string|url} parameters.rootDirectoryUrl
- *        Directory containing the eslint config file and likely your package.json
- * @param {string|url} [parameters.webDirectoryUrl]
- *        Directory leading to files that will be executed by a web browser
- * @return {Array} Array of ESLint config objects
+ * Creates a comprehensive ESLint flat configuration with relaxed rules and automatic detection
+ * of project settings. Supports React/Preact, Prettier integration, browser/Node.js environments,
+ * and smart defaults based on your package.json dependencies.
+ *
+ * @param {Object} parameters - Configuration options
+ * @param {string|URL} parameters.rootDirectoryUrl - Directory containing the eslint config file and likely your package.json
+ * @param {string|URL} [parameters.browserDirectoryUrl] - Directory containing files that will be executed by a web browser (formerly webDirectoryUrl)
+ * @param {boolean} [parameters.prettier] - Enable Prettier integration. Auto-detected from package.json if not specified
+ * @param {boolean} [parameters.prettierSortImport] - Enable prettier-plugin-organize-imports integration. Auto-detected if not specified
+ * @param {boolean} [parameters.jsxPragmaAuto=false] - Disable react/react-in-jsx-scope rule for automatic JSX pragma
+ * @param {boolean} [parameters.preact] - Enable Preact-specific settings. Auto-detected from package.json if not specified
+ * @param {string} [parameters.reactVersion="detect"] - React version for eslint-plugin-react. Defaults to auto-detection
+ * @param {string} [parameters.reactVersionForPreact="19.2.0"] - React version to use when preact is detected
+ * @param {string} [parameters.importResolutionLogLevel] - Log level for import resolution debugging
+ * @param {string[]} [parameters.importResolutionDevConditions=[]] - Additional package.json conditions for import resolution in development
+ * @param {string[]} [parameters.browserFiles=[]] - Additional glob patterns for files that should use browser environment. Extends default patterns
+ * @param {string[]} [parameters.browserAndNodeFiles=[]] - Glob patterns for files that run in both browser and Node.js environments
+ *
+ * @returns {Array<Object>} Array of ESLint flat config objects configured with:
+ *   - Relaxed rules optimized for development productivity
+ *   - Automatic browser/Node.js environment detection
+ *   - React/Preact JSX support with proper settings
+ *   - Import resolution with package.json conditions
+ *   - HTML file linting support
+ *   - Prettier integration when detected
+ *   - Smart ignores for common directories
+ *
+ * @example
+ * // Basic usage with auto-detection
+ * import { eslintConfigRelax } from "@jsenv/eslint-config-relax";
+ * export default eslintConfigRelax({
+ *   rootDirectoryUrl: import.meta.url
+ * });
+ *
+ * @example
+ * // With custom browser directory and explicit settings
+ * export default eslintConfigRelax({
+ *   rootDirectoryUrl: import.meta.url,
+ *   browserDirectoryUrl: new URL("./src/client/", import.meta.url),
+ *   prettier: true,
+ *   preact: true,
+ *   browserFiles: ["src/frontend/**"]
+ * });
  */
 export const eslintConfigRelax = ({
   rootDirectoryUrl,
@@ -83,16 +119,17 @@ export const eslintConfigRelax = ({
     ...patternForEachExtension("**/browser/**/*[extension]", browserExtensions),
   ];
   if (browserDirectoryUrl) {
-    let relativeBrowserDir = urlToRelativeUrl(
+    let browserDirectoryUrlString = String(browserDirectoryUrl);
+    if (!browserDirectoryUrlString.endsWith("/")) {
+      browserDirectoryUrlString += "/";
+    }
+    const relativeBrowserDir = urlToRelativeUrl(
       browserDirectoryUrl,
       rootDirectoryUrl,
     );
-    if (relativeBrowserDir.endsWith("/")) {
-      relativeBrowserDir = relativeBrowserDir.slice(0, -1);
-    }
     defaultBrowserFiles.push(
       ...patternForEachExtension(
-        `${relativeBrowserDir}/**/*[extension]`,
+        `${relativeBrowserDir}**/*[extension]`,
         browserExtensions,
       ),
     );
