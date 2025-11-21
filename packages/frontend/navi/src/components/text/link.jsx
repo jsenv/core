@@ -31,37 +31,37 @@ import { applyContentSpacingOnTextChildren } from "./text.jsx";
 import.meta.css = /* css */ `
   @layer navi {
     .navi_link {
-      --border-radius: 2px;
-      --outline-color: var(--navi-focus-outline-color);
-      --color: rgb(0, 0, 238);
-      --color-visited: light-dark(#6a1b9a, #ab47bc);
-      --color-active: red;
-      --text-decoration: underline;
-      --text-decoration-hover: var(--text-decoration);
-      --cursor: pointer;
+      --link-border-radius: 2px;
+      --link-outline-color: var(--navi-focus-outline-color);
+      --link-color: rgb(0, 0, 238);
+      --link-color-visited: light-dark(#6a1b9a, #ab47bc);
+      --link-color-active: red;
+      --link-text-decoration: underline;
+      --link-text-decoration-hover: var(--link-text-decoration);
+      --link-cursor: pointer;
     }
   }
 
   .navi_link {
-    --x-color: var(--color);
-    --x-color-hover: var(--color-hover, var(--color));
-    --x-color-visited: var(--color-visited);
-    --x-color-active: var(--color-active);
-    --x-text-decoration: var(--text-decoration);
-    --x-text-decoration-hover: var(--text-decoration-hover);
-    --x-cursor: var(--cursor);
+    --x-link-color: var(--link-color);
+    --x-link-color-hover: var(--link-color-hover, var(--link-color));
+    --x-link-color-visited: var(--link-color-visited);
+    --x-link-color-active: var(--link-color-active);
+    --x-link-text-decoration: var(--link-text-decoration);
+    --x-link-text-decoration-hover: var(--link-text-decoration-hover);
+    --x-link-cursor: var(--link-cursor);
 
     position: relative;
-    color: var(--x-color);
-    text-decoration: var(--x-text-decoration);
-    border-radius: var(--border-radius);
-    outline-color: var(--outline-color);
-    cursor: var(--x-cursor);
+    color: var(--x-link-color);
+    text-decoration: var(--x-link-text-decoration);
+    border-radius: var(--link-border-radius);
+    outline-color: var(--link-outline-color);
+    cursor: var(--x-link-cursor);
   }
   /* Hover */
   .navi_link[data-hover] {
-    --x-color: var(--x-color-hover);
-    --x-text-decoration: var(--x-text-decoration-hover);
+    --x-link-color: var(--x-link-color-hover);
+    --x-link-text-decoration: var(--x-link-text-decoration-hover);
   }
   /* Focus */
   .navi_link[data-focus] {
@@ -74,7 +74,7 @@ import.meta.css = /* css */ `
   }
   /* Visited */
   .navi_link[data-visited] {
-    --x-color: var(--x-color-visited);
+    --x-link-color: var(--x-link-color-visited);
   }
   /* Selected */
   .navi_link[aria-selected] {
@@ -90,7 +90,7 @@ import.meta.css = /* css */ `
   /* Active */
   .navi_link[data-active] {
     /* Redefine it otherwise [data-visited] prevails */
-    --x-color: var(--x-color-active);
+    --x-link-color: var(--x-link-color-active);
   }
   /* Readonly */
   .navi_link[data-readonly] > * {
@@ -106,17 +106,17 @@ import.meta.css = /* css */ `
 `;
 
 const LinkManagedByCSSVars = {
-  "outlineColor": "--outline-color",
-  "borderRadius": "--border-radius",
-  "color": "--color",
-  "cursor": "--cursor",
-  "textDecoration": "--text-decoration",
+  "outlineColor": "--link-outline-color",
+  "borderRadius": "--link-border-radius",
+  "color": "--link-color",
+  "cursor": "--link-cursor",
+  "textDecoration": "--link-text-decoration",
   ":hover": {
-    color: "--color-hover",
-    textDecoration: "--text-decoration-hover",
+    color: "--link-color-hover",
+    textDecoration: "--link-text-decoration-hover",
   },
   ":active": {
-    color: "--color-active",
+    color: "--link-color-active",
   },
 };
 const LinkPseudoClasses = [

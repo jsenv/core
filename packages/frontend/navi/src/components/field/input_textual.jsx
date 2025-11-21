@@ -302,8 +302,7 @@ const InputTextualBasic = (props) => {
   return (
     <Box
       as="span"
-      layoutInline
-      layoutColumn
+      box
       baseClassName="navi_input"
       managedByCSSVars={InputManagedByCSSVars}
       pseudoStateSelector=".navi_native_input"

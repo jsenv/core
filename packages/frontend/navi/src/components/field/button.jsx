@@ -34,52 +34,68 @@ import {
 import.meta.css = /* css */ `
   @layer navi {
     .navi_button {
-      --outline-width: 1px;
-      --border-width: 1px;
-      --border-radius: 2px;
+      --button-outline-width: 1px;
+      --button-border-width: 1px;
+      --button-border-radius: 2px;
       /* default */
-      --outline-color: var(--navi-focus-outline-color);
-      --loader-color: var(--navi-loader-color);
-      --border-color: light-dark(#767676, #8e8e93);
-      --background-color: light-dark(#f3f4f6, #2d3748);
-      --color: currentColor;
+      --button-outline-color: var(--navi-focus-outline-color);
+      --button-loader-color: var(--navi-loader-color);
+      --button-border-color: light-dark(#767676, #8e8e93);
+      --button-background-color: light-dark(#f3f4f6, #2d3748);
+      --button-color: currentColor;
 
       /* Hover */
-      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
-      --background-color-hover: color-mix(
+      --button-border-color-hover: color-mix(
         in srgb,
-        var(--background-color) 95%,
+        var(--button-border-color) 70%,
         black
       );
-      --color-hover: var(--color);
-      /* Active */
-      --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
-      /* Readonly */
-      --border-color-readonly: color-mix(
+      --button-background-color-hover: color-mix(
         in srgb,
-        var(--border-color) 30%,
+        var(--button-background-color) 95%,
+        black
+      );
+      --button-color-hover: var(--button-color);
+      /* Active */
+      --button-border-color-active: color-mix(
+        in srgb,
+        var(--button-border-color) 90%,
+        black
+      );
+      /* Readonly */
+      --button-border-color-readonly: color-mix(
+        in srgb,
+        var(--button-border-color) 30%,
         white
       );
-      --background-color-readonly: var(--background-color);
-      --color-readonly: color-mix(in srgb, var(--color) 30%, transparent);
+      --button-background-color-readonly: var(--button-background-color);
+      --button-color-readonly: color-mix(
+        in srgb,
+        var(--button-color) 30%,
+        transparent
+      );
       /* Disabled */
-      --border-color-disabled: var(--border-color-readonly);
-      --background-color-disabled: var(--background-color-readonly);
-      --color-disabled: var(--color-readonly);
+      --button-border-color-disabled: var(--button-border-color-readonly);
+      --button-background-color-disabled: var(
+        --button-background-color-readonly
+      );
+      --button-color-disabled: var(--button-color-readonly);
     }
   }
 
   .navi_button {
     /* Internal css vars are the one controlling final values */
     /* allowing to override them on interactions (like hover, disabled, etc.) */
-    --x-outline-width: var(--outline-width);
-    --x-border-radius: var(--border-radius);
-    --x-border-width: var(--border-width);
-    --x-outer-width: calc(var(--x-border-width) + var(--x-outline-width));
-    --x-outline-color: var(--outline-color);
-    --x-border-color: var(--border-color);
-    --x-background-color: var(--background-color);
-    --x-color: var(--color);
+    --x-button-outline-width: var(--button-outline-width);
+    --x-button-border-radius: var(--button-border-radius);
+    --x-button-border-width: var(--button-border-width);
+    --x-button-outer-width: calc(
+      var(--button-x-border-width) + var(--x-button-outline-width)
+    );
+    --x-button-outline-color: var(--button-outline-color);
+    --x-button-border-color: var(--button-border-color);
+    --x-button-background-color: var(--button-background-color);
+    --x-button-color: var(--button-color);
 
     position: relative;
     display: inline-flex;
@@ -87,50 +103,59 @@ import.meta.css = /* css */ `
     padding: 0;
     background: none;
     border: none;
-    border-radius: var(--x-border-radius);
+    border-radius: var(--x-button-border-radius);
     outline: none;
     cursor: pointer;
   }
   .navi_button_content {
     position: relative;
     box-sizing: border-box;
-    padding-top: var(--padding-top, var(--padding-y, var(--padding, 1px)));
-    padding-right: var(--padding-right, var(--padding-x, var(--padding, 6px)));
-    padding-bottom: var(
-      --padding-bottom,
-      var(--padding-y, var(--padding, 1px))
+    padding-top: var(
+      --button-padding-top,
+      var(--button-padding-y, var(--button-padding, 1px))
     );
-    padding-left: var(--padding-left, var(--padding-x, var(--padding, 6px)));
-    color: var(--x-color);
-    background-color: var(--x-background-color);
-    border-width: var(--x-outer-width);
+    padding-right: var(
+      --button-padding-right,
+      var(--button-padding-x, var(--button-padding, 6px))
+    );
+    padding-bottom: var(
+      --button-padding-bottom,
+      var(--button-padding-y, var(--button-padding, 1px))
+    );
+    padding-left: var(
+      --button-padding-left,
+      var(--button-padding-x, var(--button-padding, 6px))
+    );
+    color: var(--x-button-color);
+    background-color: var(--x-button-background-color);
+    border-width: var(--x-button-outer-width);
     border-style: solid;
     border-color: transparent;
-    border-radius: var(--x-border-radius);
-    outline-width: var(--x-border-width);
+    border-radius: var(--x-button-border-radius);
+    outline-width: var(--x-button-border-width);
     outline-style: solid;
-    outline-color: var(--x-border-color);
-    outline-offset: calc(-1 * (var(--x-border-width)));
+    outline-color: var(--x-button-border-color);
+    outline-offset: calc(-1 * (var(--x-button-border-width)));
     transition-property: transform;
     transition-duration: 0.15s;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   }
   .navi_button_shadow {
     position: absolute;
-    inset: calc(-1 * var(--x-outer-width));
+    inset: calc(-1 * var(--x-button-outer-width));
     border-radius: inherit;
     pointer-events: none;
   }
 
   /* Hover */
   .navi_button[data-hover] {
-    --x-border-color: var(--border-color-hover);
-    --x-background-color: var(--background-color-hover);
-    --x-color: var(--color-hover);
+    --x-button-border-color: var(--button-border-color-hover);
+    --x-button-background-color: var(--button-background-color-hover);
+    --x-button-color: var(--button-color-hover);
   }
   /* Active */
   .navi_button[data-active] {
-    --x-outline-color: var(--border-color-active);
+    --x-button-outline-color: var(--button-border-color-active);
   }
   .navi_button[data-active] .navi_button_content {
     transform: scale(0.9);
@@ -145,17 +170,17 @@ import.meta.css = /* css */ `
   }
   /* Readonly */
   .navi_button[data-readonly] {
-    --x-border-color: var(--border-color-readonly);
-    --x-background-color: var(--background-color-readonly);
-    --x-color: var(--color-readonly);
+    --x-button-border-color: var(--button-border-color-readonly);
+    --x-button-background-color: var(--button-background-color-readonly);
+    --x-button-color: var(--button-color-readonly);
   }
   /* Focus */
   .navi_button[data-focus-visible] {
-    --x-border-color: var(--x-outline-color);
+    --x-button-border-color: var(--x-button-outline-color);
   }
   .navi_button[data-focus-visible] .navi_button_content {
-    outline-width: var(--x-outer-width);
-    outline-offset: calc(-1 * var(--x-outer-width));
+    outline-width: var(--x-button-outer-width);
+    outline-offset: calc(-1 * var(--x-button-outer-width));
   }
   /* Disabled */
   .navi_button[data-disabled] {
@@ -163,9 +188,9 @@ import.meta.css = /* css */ `
     cursor: default;
   }
   .navi_button[data-disabled] {
-    --x-border-color: var(--border-color-disabled);
-    --x-background-color: var(--background-color-disabled);
-    --x-color: var(--color-disabled);
+    --x-border-color: var(--button-border-color-disabled);
+    --x-background-color: var(--button-background-color-disabled);
+    --x-color: var(--button-color-disabled);
   }
   /* no active effect */
   .navi_button[data-disabled] .navi_button_content {
@@ -176,22 +201,22 @@ import.meta.css = /* css */ `
   }
   /* Callout (info, warning, error) */
   .navi_button[data-callout] {
-    --x-border-color: var(--callout-color);
+    --x-button-border-color: var(--callout-color);
   }
 
   /* Discrete variant */
   .navi_button[data-discrete] {
-    --x-background-color: transparent;
-    --x-border-color: transparent;
+    --x-button-background-color: transparent;
+    --x-button-border-color: transparent;
   }
   .navi_button[data-discrete][data-hover] {
-    --x-border-color: var(--border-color-hover);
+    --x-button-border-color: var(--button-border-color-hover);
   }
   .navi_button[data-discrete][data-readonly] {
-    --x-border-color: transparent;
+    --x-button-border-color: transparent;
   }
   .navi_button[data-discrete][data-disabled] {
-    --x-border-color: transparent;
+    --x-button-border-color: transparent;
   }
 `;
 
@@ -205,33 +230,33 @@ export const Button = (props) => {
 };
 
 const ButtonManagedByCSSVars = {
-  "outlineWidth": "--outline-width",
-  "borderWidth": "--border-width",
-  "borderRadius": "--border-radius",
-  "paddingTop": "--padding-top",
-  "paddingRight": "--padding-right",
-  "paddingBottom": "--padding-bottom",
-  "paddingLeft": "--padding-left",
-  "backgroundColor": "--background-color",
-  "borderColor": "--border-color",
-  "color": "--color",
+  "outlineWidth": "--button-outline-width",
+  "borderWidth": "--button-border-width",
+  "borderRadius": "--button-border-radius",
+  "paddingTop": "--button-padding-top",
+  "paddingRight": "--button-padding-right",
+  "paddingBottom": "--button-padding-bottom",
+  "paddingLeft": "--button-padding-left",
+  "backgroundColor": "--button-background-color",
+  "borderColor": "--button-border-color",
+  "color": "--button-color",
   ":hover": {
-    backgroundColor: "--background-color-hover",
-    borderColor: "--border-color-hover",
-    color: "--color-hover",
+    backgroundColor: "--button-background-color-hover",
+    borderColor: "--button-border-color-hover",
+    color: "--button-color-hover",
   },
   ":active": {
-    borderColor: "--border-color-active",
+    borderColor: "--button-border-color-active",
   },
   ":read-only": {
-    backgroundColor: "--background-color-readonly",
-    borderColor: "--border-color-readonly",
-    color: "--color-readonly",
+    backgroundColor: "--button-background-color-readonly",
+    borderColor: "--button-border-color-readonly",
+    color: "--button-color-readonly",
   },
   ":disabled": {
-    backgroundColor: "--background-color-disabled",
-    borderColor: "--border-color-disabled",
-    color: "--color-disabled",
+    backgroundColor: "--button-background-color-disabled",
+    borderColor: "--button-border-color-disabled",
+    color: "--button-color-disabled",
   },
 };
 const ButtonPseudoClasses = [
