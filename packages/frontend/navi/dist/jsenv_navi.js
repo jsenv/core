@@ -1,5 +1,5 @@
 import { installImportMetaCss } from "./jsenv_navi_side_effects.js";
-import { createIterableWeakSet, createPubSub, createValueEffect, createStyleController, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, activeElementSignal, canInterceptKeys, createGroupTransitionController, getElementSignature, getBorderRadius, getBackground, preventIntermediateScrollbar, createOpacityTransition, stringifyStyle, mergeOneStyle, mergeTwoStyles, normalizeStyles, resolveCSSSize, findBefore, findAfter, initFocusGroup, elementIsFocusable, pickLightOrDark, resolveColorLuminance, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { createIterableWeakSet, createPubSub, createValueEffect, createStyleController, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, activeElementSignal, canInterceptKeys, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, mergeOneStyle, stringifyStyle, mergeTwoStyles, normalizeStyles, resolveCSSSize, findBefore, findAfter, initFocusGroup, elementIsFocusable, pickLightOrDark, resolveColorLuminance, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { effect, signal, computed, batch, useSignal } from "@preact/signals";
 import { useEffect, useRef, useCallback, useContext, useState, useLayoutEffect, useMemo, useErrorBoundary, useImperativeHandle, useId } from "preact/hooks";
@@ -8950,13 +8950,19 @@ const createUITransitionController = (
     if (isEmpty) {
       debugSize(`measureSlot(".${slot.className}") -> it is empty`);
     } else if (singleElementNode) {
-      const rect = singleElementNode.getBoundingClientRect();
+      const visualSelector = singleElementNode.getAttribute(
+        "data-visual-selector",
+      );
+      const visualElement = visualSelector
+        ? singleElementNode.querySelector(visualSelector) || singleElementNode
+        : singleElementNode;
+      const rect = visualElement.getBoundingClientRect();
       width = rect.width;
       height = rect.height;
       debugSize(`measureSlot(".${slot.className}") -> [${width}x${height}]`);
-      borderRadius = getBorderRadius(singleElementNode);
-      border = getComputedStyle(singleElementNode).border;
-      background = getBackground(singleElementNode);
+      borderRadius = getBorderRadius(visualElement);
+      border = getComputedStyle(visualElement).border;
+      background = getComputedStyle(visualElement).background;
     } else {
       // text, multiple elements
       const rect = slot.getBoundingClientRect();
@@ -9194,7 +9200,7 @@ const createUITransitionController = (
   const fadeInTargetSlot = () => {
     targetSlotBackground.style.setProperty(
       "--target-slot-background",
-      stringifyStyle(targetSlotConfiguration.background, "background"),
+      targetSlotConfiguration.background,
     );
     targetSlotBackground.style.setProperty(
       "--target-slot-width",
@@ -9339,6 +9345,9 @@ const createUITransitionController = (
   };
 
   const targetSlotEffect = (reasons) => {
+    if (root.hasAttribute("data-disabled")) {
+      return;
+    }
     const fromConfiguration = targetSlotConfiguration;
     const toConfiguration = detectConfiguration(targetSlot);
     if (hasDebugLogs) {
@@ -9604,13 +9613,11 @@ const UITransition = ({
       uiTransition.cleanup();
     };
   }, [disabled, alignX, alignY]);
-  if (disabled) {
-    return children;
-  }
   return jsxs("div", {
     ref: ref,
     ...props,
     className: "ui_transition",
+    "data-disabled": disabled ? "" : undefined,
     "data-transition-type": type,
     "data-transition-duration": duration,
     "data-debug-detection": debugDetection ? "" : undefined,
@@ -9626,10 +9633,12 @@ const UITransition = ({
           children: children
         })
       }), jsx("div", {
-        className: "ui_transition_outgoing_slot"
+        className: "ui_transition_outgoing_slot",
+        inert: true
       })]
     }), jsxs("div", {
       className: "ui_transition_previous_group",
+      inert: true,
       children: [jsx("div", {
         className: "ui_transition_previous_target_slot"
       }), jsx("div", {
@@ -11531,6 +11540,7 @@ const Box = props => {
     "data-layout-inline": inline ? "" : undefined,
     "data-layout-row": row ? "" : undefined,
     "data-layout-column": column ? "" : undefined,
+    "data-visual-selector": visualSelector,
     ...selfForwardedProps,
     children: jsx(BoxLayoutContext.Provider, {
       value: layout,

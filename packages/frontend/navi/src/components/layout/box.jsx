@@ -509,6 +509,7 @@ export const Box = (props) => {
       data-layout-inline={inline ? "" : undefined}
       data-layout-row={row ? "" : undefined}
       data-layout-column={column ? "" : undefined}
+      data-visual-selector={visualSelector}
       {...selfForwardedProps}
     >
       <BoxLayoutContext.Provider value={layout}>

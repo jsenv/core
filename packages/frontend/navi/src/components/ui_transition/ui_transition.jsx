@@ -118,15 +118,12 @@ export const UITransition = ({
     };
   }, [disabled, alignX, alignY]);
 
-  if (disabled) {
-    return children;
-  }
-
   return (
     <div
       ref={ref}
       {...props}
       className="ui_transition"
+      data-disabled={disabled ? "" : undefined}
       data-transition-type={type}
       data-transition-duration={duration}
       data-debug-detection={debugDetection ? "" : undefined}

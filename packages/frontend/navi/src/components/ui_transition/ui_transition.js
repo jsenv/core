@@ -74,11 +74,9 @@ import {
   createGroupTransitionController,
   createOpacityTransition,
   createPubSub,
-  getBackground,
   getBorderRadius,
   getElementSignature,
   preventIntermediateScrollbar,
-  stringifyStyle,
 } from "@jsenv/dom";
 import { monitorItemsOverflow } from "./monitor_items_overflow.js";
 
@@ -335,13 +333,19 @@ export const createUITransitionController = (
     if (isEmpty) {
       debugSize(`measureSlot(".${slot.className}") -> it is empty`);
     } else if (singleElementNode) {
-      const rect = singleElementNode.getBoundingClientRect();
+      const visualSelector = singleElementNode.getAttribute(
+        "data-visual-selector",
+      );
+      const visualElement = visualSelector
+        ? singleElementNode.querySelector(visualSelector) || singleElementNode
+        : singleElementNode;
+      const rect = visualElement.getBoundingClientRect();
       width = rect.width;
       height = rect.height;
       debugSize(`measureSlot(".${slot.className}") -> [${width}x${height}]`);
-      borderRadius = getBorderRadius(singleElementNode);
-      border = getComputedStyle(singleElementNode).border;
-      background = getBackground(singleElementNode);
+      borderRadius = getBorderRadius(visualElement);
+      border = getComputedStyle(visualElement).border;
+      background = getComputedStyle(visualElement).background;
     } else {
       // text, multiple elements
       const rect = slot.getBoundingClientRect();
@@ -580,7 +584,7 @@ export const createUITransitionController = (
   const fadeInTargetSlot = () => {
     targetSlotBackground.style.setProperty(
       "--target-slot-background",
-      stringifyStyle(targetSlotConfiguration.background, "background"),
+      targetSlotConfiguration.background,
     );
     targetSlotBackground.style.setProperty(
       "--target-slot-width",
@@ -725,6 +729,9 @@ export const createUITransitionController = (
   };
 
   const targetSlotEffect = (reasons) => {
+    if (root.hasAttribute("data-disabled")) {
+      return;
+    }
     const fromConfiguration = targetSlotConfiguration;
     const toConfiguration = detectConfiguration(targetSlot);
     if (hasDebugLogs) {
