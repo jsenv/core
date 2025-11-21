@@ -17,7 +17,7 @@ import {
 } from "../selection/selection.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { Icon } from "./icon.jsx";
-import { applyContentSpacingOnTextChildren } from "./text_content_spacing.js";
+import { applyContentSpacingOnTextChildren } from "./text.jsx";
 
 /*
  * Apply opacity to child content, not the link element itself.

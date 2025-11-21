@@ -2,8 +2,7 @@ import { createContext } from "preact";
 import { useState } from "preact/hooks";
 
 import { PSEUDO_CLASSES } from "../layout/pseudo_styles.js";
-import { Text } from "./text.jsx";
-import { applyContentSpacingOnTextChildren } from "./text_content_spacing.js";
+import { applyContentSpacingOnTextChildren, Text } from "./text.jsx";
 
 import.meta.css = /* css */ `
   @layer navi {

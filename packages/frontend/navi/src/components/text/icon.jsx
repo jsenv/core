@@ -10,6 +10,8 @@ import.meta.css = /* css */ `
 
   .navi_icon_char_slot {
     opacity: 0;
+    cursor: default;
+    user-select: none;
   }
   .navi_icon_foreground {
     position: absolute;

@@ -222,53 +222,87 @@
       );
 
       // Text Flow Section
-      const InlineTextIconsSection = () => (
-        <Box as="section" marginBottom="xl" id="inline-text-icons">
-          <Title as="h2">Text Flow</Title>
-          <Paragraph size="16" lineHeight="1.6">
-            Welcome to our platform! Click on the
-            <Text noWrap>
-              <Icon>
-                <HomeSvg />
-              </Icon>
-              <Text bold>home</Text>
-            </Text>
-            button to return to the dashboard, or visit your
-            <Text noWrap>
-              <Icon>
-                <UserSvg />
-              </Icon>
-              <Text italic>profile</Text>
-            </Text>
-            to update your settings. Don't forget to
-            <Text noWrap>
-              <Icon>
-                <StarSvg />
-              </Icon>
-              <Text underline>star</Text>
-            </Text>
-            your favorite items and
-            <Text noWrap>
-              <Icon>
-                <HeartSvg />
-              </Icon>
-              <Text bold italic>
-                like
+      const InlineTextIconsSection = () => {
+        return (
+          <Box as="section" marginBottom="xl" id="inline-text-icons">
+            <Title as="h2">Text Flow</Title>
+            <Box
+              style={{
+                padding: "16px",
+                backgroundColor: "#fffbf0",
+                border: "2px solid #ffd700",
+                borderRadius: "8px",
+                marginBottom: "16px",
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: "14px",
+                  color: "#b8860b",
+                  fontWeight: "bold",
+                  display: "block",
+                  marginBottom: "8px",
+                }}
+              >
+                💡 Try selecting text below to see how icons behave within text
+                selection
               </Text>
-            </Text>
-            the content you enjoy. Use the
-            <Text noWrap>
-              <Icon>
-                <SearchSvg />
-              </Icon>
-              <Text bold underline>
-                search
+              <Text
+                style={{
+                  fontSize: "12px",
+                  color: "#8b6914",
+                  fontStyle: "italic",
+                }}
+              >
+                Notice how icons are selectable as part of the text flow and
+                maintain proper spacing
               </Text>
-            </Text>
-            feature to find what you're looking for quickly.
-          </Paragraph>
-        </Box>
-      );
+            </Box>
+            <Paragraph size="16" lineHeight="1.6">
+              Welcome to our platform! Click on the
+              <Text noWrap>
+                <Icon>
+                  <HomeSvg />
+                </Icon>
+                <Text bold>home</Text>
+              </Text>
+              button to return to the dashboard, or visit your
+              <Text noWrap>
+                <Icon>
+                  <UserSvg />
+                </Icon>
+                <Text italic>profile</Text>
+              </Text>
+              to update your settings. Don't forget to
+              <Text noWrap>
+                <Icon>
+                  <StarSvg />
+                </Icon>
+                <Text underline>star</Text>
+              </Text>
+              your favorite items and
+              <Text noWrap>
+                <Icon>
+                  <HeartSvg />
+                </Icon>
+                <Text bold italic>
+                  like
+                </Text>
+              </Text>
+              the content you enjoy. Use the
+              <Text noWrap>
+                <Icon>
+                  <SearchSvg />
+                </Icon>
+                <Text bold underline>
+                  search
+                </Text>
+              </Text>
+              feature to find what you're looking for quickly.
+            </Paragraph>
+          </Box>
+        );
+      };
 
       // Icon + Text + Link Combinations Section
       const IconTextLinkSection = () => (
