@@ -23,6 +23,7 @@ const run = async ({ browserLauncher, browserName }) => {
       );
     }
     const filename = urlToFilename(serverUrl);
+    // console.log(`taking snapshot of: ${story} on ${browserName}`);
     // await new Promise((resolve) => setTimeout(resolve, 200));
     await takePageSnapshots(page, `${filename}_${browserName}`);
     await page.close();
