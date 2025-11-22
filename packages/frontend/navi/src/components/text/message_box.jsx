@@ -1,9 +1,16 @@
 import { createContext } from "preact";
 import { useState } from "preact/hooks";
 
+import {
+  ErrorIconSvg,
+  InfoIconSvg,
+  SuccessIconSvg,
+  WarningIconSvg,
+} from "../graphic/level_svgs.jsx";
 import { PSEUDO_CLASSES } from "../layout/pseudo_styles.js";
 import { withPropsClassName } from "../with_props_class_name.js";
-import { applySpacingOnTextChildren, Text } from "./text.jsx";
+import { Icon } from "./icon.jsx";
+import { Text } from "./text.jsx";
 
 import.meta.css = /* css */ `
   @layer navi {
@@ -105,35 +112,53 @@ export const MessageBoxReportTitleChildContext = createContext();
 export const MessageBox = ({
   level = "info",
   padding = "sm",
+  icon,
   leftStripe,
   children,
-  spacing,
   ...rest
 }) => {
   const [hasTitleChild, setHasTitleChild] = useState(false);
   const innerLeftStripe = leftStripe === undefined ? hasTitleChild : leftStripe;
+  let IconComponent;
+  if (icon === true) {
+    IconComponent =
+      level === "info"
+        ? InfoIconSvg
+        : level === "success"
+          ? SuccessIconSvg
+          : level === "warning"
+            ? WarningIconSvg
+            : level === "error"
+              ? ErrorIconSvg
+              : null;
+  }
 
   return (
-    <Text
-      as="div"
-      role={level === "info" ? "status" : "alert"}
-      data-left-stripe={innerLeftStripe ? "" : undefined}
-      {...rest}
-      className={withPropsClassName("navi_message_box", rest.className)}
-      padding={padding}
-      pseudoClasses={MessageBoxPseudoClasses}
-      basePseudoState={{
-        ":-navi-info": level === "info",
-        ":-navi-success": level === "success",
-        ":-navi-warning": level === "warning",
-        ":-navi-error": level === "error",
-      }}
-    >
-      <MessageBoxLevelContext.Provider value={level}>
-        <MessageBoxReportTitleChildContext.Provider value={setHasTitleChild}>
-          {applySpacingOnTextChildren(children, spacing)}
-        </MessageBoxReportTitleChildContext.Provider>
-      </MessageBoxLevelContext.Provider>
-    </Text>
+    <MessageBoxLevelContext.Provider value={level}>
+      <MessageBoxReportTitleChildContext.Provider value={setHasTitleChild}>
+        <Text
+          as="div"
+          role={level === "info" ? "status" : "alert"}
+          data-left-stripe={innerLeftStripe ? "" : undefined}
+          {...rest}
+          className={withPropsClassName("navi_message_box", rest.className)}
+          padding={padding}
+          pseudoClasses={MessageBoxPseudoClasses}
+          basePseudoState={{
+            ":-navi-info": level === "info",
+            ":-navi-success": level === "success",
+            ":-navi-warning": level === "warning",
+            ":-navi-error": level === "error",
+          }}
+        >
+          {IconComponent && (
+            <Icon color="var(--x-color)">
+              <IconComponent />
+            </Icon>
+          )}
+          {children}
+        </Text>
+      </MessageBoxReportTitleChildContext.Provider>
+    </MessageBoxLevelContext.Provider>
   );
 };

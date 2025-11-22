@@ -70,6 +70,7 @@
         return (
           <div>
             <BasicMessageBoxDemo />
+            <MessageBoxWithIconDemo />
             <MessageBoxWithTitleDemo />
           </div>
         );
@@ -110,6 +111,48 @@
                 <MessageBox level="error">
                   This is an error message indicating that something went wrong
                   and requires attention.
+                </MessageBox>
+              </div>
+            </Layout>
+          </div>
+        );
+      };
+
+      const MessageBoxWithIconDemo = () => {
+        return (
+          <div className="demo-section">
+            <h2>MessageBox with Icon Examples</h2>
+
+            <Layout row spacing="md">
+              <div className="message-example">
+                <h3>Info with Icon</h3>
+                <MessageBox level="info" icon>
+                  This MessageBox includes an info icon to visually represent
+                  the message type.
+                </MessageBox>
+              </div>
+
+              <div className="message-example">
+                <h3>Warning with Icon</h3>
+                <MessageBox level="warning" icon>
+                  This MessageBox includes a warning icon to visually represent
+                  the message type.
+                </MessageBox>
+              </div>
+
+              <div className="message-example">
+                <h3>Success with Icon</h3>
+                <MessageBox level="success" icon>
+                  This MessageBox includes a success icon to visually represent
+                  the message type.
+                </MessageBox>
+              </div>
+
+              <div className="message-example">
+                <h3>Error with Icon</h3>
+                <MessageBox level="error" icon>
+                  This MessageBox includes an error icon to visually represent
+                  the message type.
                 </MessageBox>
               </div>
             </Layout>

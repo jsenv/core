@@ -45,6 +45,10 @@ import.meta.css = /* css */ `
     width: auto;
     height: 100%;
   }
+
+  .navi_icon[data-icon-char] svg {
+    overflow: visible;
+  }
 `;
 
 export const Icon = ({
