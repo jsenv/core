@@ -173,17 +173,17 @@
                 enhanced styling and consistent behavior.
               </p>
 
-              <Layout column contentSpacing="sm">
+              <Layout column spacing="sm">
                 <fieldset>
                   <legend>Default</legend>
-                  <Layout row contentSpacing="sm" contentAlignX="start">
+                  <Layout row spacing="sm" alignX="start">
                     <Button>Click Me</Button>
                     <button>Click Me</button>
                   </Layout>
                 </fieldset>
                 <fieldset>
                   <legend>:focus-visible</legend>
-                  <Layout row contentSpacing="sm" contentAlignX="start">
+                  <Layout row spacing="sm" alignX="start">
                     <Button pseudoState={{ ":focus-visible": true }}>
                       Focused
                     </Button>
@@ -192,7 +192,7 @@
                 </fieldset>
                 <fieldset>
                   <legend>:disabled</legend>
-                  <Layout row contentSpacing="sm" contentAlignX="start">
+                  <Layout row spacing="sm" alignX="start">
                     <Button disabled>Disabled</Button>
                     <button disabled>Disabled</button>
                   </Layout>
@@ -209,16 +209,16 @@
                 available in standard HTML buttons.
               </p>
 
-              <Layout column contentSpacing="sm">
+              <Layout column spacing="sm">
                 <fieldset>
                   <legend>:read-only</legend>
-                  <Layout row contentSpacing="sm" contentAlignX="start">
+                  <Layout row spacing="sm" alignX="start">
                     <Button readOnly>Read-only Button</Button>
                   </Layout>
                 </fieldset>
                 <fieldset>
                   <legend>:read-only:focus-visible</legend>
-                  <Layout row contentSpacing="sm" contentAlignX="start">
+                  <Layout row spacing="sm" alignX="start">
                     <Button readOnly pseudoState={{ ":focus-visible": true }}>
                       Focused Read-only
                     </Button>
@@ -226,7 +226,7 @@
                 </fieldset>
                 <fieldset>
                   <legend>:-navi-loading</legend>
-                  <Layout row contentSpacing="sm" contentAlignX="start">
+                  <Layout row spacing="sm" alignX="start">
                     <Button loading>Processing...</Button>
                   </Layout>
                 </fieldset>

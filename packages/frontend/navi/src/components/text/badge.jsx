@@ -71,7 +71,7 @@ export const BadgeCount = ({ children, bold = true, max, ...props }) => {
       className="navi_badge_count"
       bold={bold}
       managedByCSSVars={BadgeManagedByCSSVars}
-      contentSpacing="pre"
+      spacing="pre"
     >
       {displayValue}
     </Text>

@@ -191,17 +191,17 @@
                 enhanced styling and consistent behavior.
               </p>
 
-              <Layout column contentSpacing="sm">
+              <Layout column spacing="sm">
                 <fieldset>
                   <legend>Default</legend>
-                  <Layout row contentSpacing="sm" contentAlignX="start">
+                  <Layout row spacing="sm" alignX="start">
                     <Input placeholder="Type here..." />
                     <input placeholder="Type here..." />
                   </Layout>
                 </fieldset>
                 <fieldset>
                   <legend>:focus-visible</legend>
-                  <Layout row contentSpacing="sm" contentAlignX="start">
+                  <Layout row spacing="sm" alignX="start">
                     <Input
                       placeholder="Focus me"
                       pseudoState={{ ":focus-visible": true }}
@@ -211,14 +211,14 @@
                 </fieldset>
                 <fieldset>
                   <legend>:read-only</legend>
-                  <Layout row contentSpacing="sm" contentAlignX="start">
+                  <Layout row spacing="sm" alignX="start">
                     <Input value="Read-only content" />
                     <input readOnly value="Read-only content" />
                   </Layout>
                 </fieldset>
                 <fieldset>
                   <legend>:disabled</legend>
-                  <Layout row contentSpacing="sm" contentAlignX="start">
+                  <Layout row spacing="sm" alignX="start">
                     <Input disabled placeholder="Disabled input" />
                     <input disabled placeholder="Disabled input" />
                   </Layout>
@@ -235,10 +235,10 @@
                 available in standard HTML inputs.
               </p>
 
-              <Layout column contentSpacing="sm">
+              <Layout column spacing="sm">
                 <fieldset>
                   <legend>Loading state</legend>
-                  <Layout row contentSpacing="sm" contentAlignX="start">
+                  <Layout row spacing="sm" alignX="start">
                     <Input loading placeholder="Loading input..." />
                   </Layout>
                 </fieldset>
@@ -331,8 +331,8 @@
           <div className="demo-section">
             <h2>Size Variations</h2>
 
-            <Layout row contentSpacing="sm">
-              <Layout column contentSpacing="sm">
+            <Layout row spacing="sm">
+              <Layout column spacing="sm">
                 <div className="variation-item">
                   <p className="variation-label">Custom Padding</p>
                   <Input
@@ -367,8 +367,8 @@
 
             <fieldset>
               <legend>Controlled vs Uncontrolled</legend>
-              <Layout column contentSpacing="sm">
-                <Layout row contentSpacing="sm" contentAlignX="start">
+              <Layout column spacing="sm">
+                <Layout row spacing="sm" alignX="start">
                   <div>
                     <label style={{ fontSize: "0.9rem", marginBottom: "5px" }}>
                       Controlled (with value prop)
@@ -397,7 +397,7 @@
 
             <fieldset>
               <legend>Read-only Behavior</legend>
-              <Layout column contentSpacing="sm">
+              <Layout column spacing="sm">
                 <p
                   style={{
                     color: "#666",
@@ -427,7 +427,7 @@
 
             <fieldset>
               <legend>Toggle States</legend>
-              <Layout row contentSpacing="sm" contentAlignX="start" contentWrap>
+              <Layout row spacing="sm" alignX="start" wrap>
                 <button
                   style={{
                     padding: "8px 16px",
@@ -475,7 +475,7 @@
 
             <fieldset>
               <legend>Result</legend>
-              <Layout column contentSpacing="sm">
+              <Layout column spacing="sm">
                 <Input
                   type={type}
                   loading={loading}

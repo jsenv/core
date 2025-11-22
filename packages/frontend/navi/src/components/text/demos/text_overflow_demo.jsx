@@ -25,7 +25,7 @@ export const App = () => {
 
       <section>
         <h2>Pinned Content</h2>
-        <Layout row contentSpacing="16px">
+        <Layout row spacing="16px">
           <Box width="260" border="1px solid #ccc" padding="sm">
             <Text overflowEllipsis>
               This text has extra info that stays visible
@@ -54,7 +54,7 @@ export const App = () => {
           Inline icons and styled fragments inside an overflow ellipsis will
           auto-space correctly while the pinned part stays visible.
         </p>
-        <Layout row contentSpacing="16px">
+        <Layout row spacing="16px">
           <Box width="300" border="1px solid #ccc" padding="sm">
             <Text overflowEllipsis>
               <Icon color="orange">
@@ -88,7 +88,7 @@ export const App = () => {
 
       <section>
         <h2>Container Widths</h2>
-        <Layout row contentSpacing="12px">
+        <Layout row spacing="12px">
           {[150, 200, 300, 400].map((width) => (
             <div
               key={width}
@@ -114,7 +114,7 @@ export const App = () => {
 
       <section>
         <h2>HTML Elements</h2>
-        <Layout row contentSpacing="12px">
+        <Layout row spacing="12px">
           <div
             style={{ width: "200px", border: "1px solid #ccc", padding: "8px" }}
           >
@@ -160,7 +160,7 @@ export const App = () => {
 
       <section>
         <h2>Complex Pinned Content</h2>
-        <Layout row contentSpacing="12px">
+        <Layout row spacing="12px">
           <div
             style={{ width: "280px", border: "1px solid #ccc", padding: "8px" }}
           >
@@ -208,7 +208,7 @@ export const App = () => {
 
       <section>
         <h2>Multiline Behavior</h2>
-        <Layout row contentSpacing="16px">
+        <Layout row spacing="16px">
           {/* Test 1: Text with line breaks */}
           <div
             style={{ width: "200px", border: "1px solid #ccc", padding: "8px" }}
@@ -253,7 +253,7 @@ const InteractiveWidthDemo = () => {
   const [width, setWidth] = useState(200);
 
   return (
-    <Layout row contentSpacing="12px">
+    <Layout row spacing="12px">
       <Layout column spacing="12px" alignY="center">
         <label htmlFor="width-slider">Container Width: {width}px</label>
         <input

@@ -36,8 +36,8 @@ import.meta.css = /* css */ `
 `;
 
 const INSERTED_SPACE = <span data-navi-space=""> </span>;
-export const applyContentSpacingOnTextChildren = (children, contentSpacing) => {
-  if (contentSpacing === "pre") {
+export const applySpacingOnTextChildren = (children, spacing) => {
+  if (spacing === "pre") {
     return children;
   }
   if (!children) {
@@ -66,9 +66,7 @@ export const applyContentSpacingOnTextChildren = (children, contentSpacing) => {
   };
 
   const separator =
-    contentSpacing === undefined || contentSpacing === " "
-      ? INSERTED_SPACE
-      : contentSpacing;
+    spacing === undefined || spacing === " " ? INSERTED_SPACE : spacing;
 
   const childrenWithGap = [];
   let i = 0;
@@ -80,7 +78,7 @@ export const applyContentSpacingOnTextChildren = (children, contentSpacing) => {
       break;
     }
 
-    // Check if we should skip adding contentSpacing
+    // Check if we should skip adding spacing
     const currentChild = childArray[i - 1];
     const nextChild = childArray[i];
     const shouldSkipSpacing =
@@ -119,7 +117,7 @@ const TextOverflow = ({ noWrap, children, ...rest }) => {
       {...rest}
       className="navi_text_overflow"
       expandX
-      contentSpacing="pre"
+      spacing="pre"
     >
       <span className="navi_text_overflow_wrapper">
         <OverflowPinnedElementContext.Provider value={setOverflowPinnedElement}>
@@ -146,12 +144,7 @@ const TextOverflowPinned = ({ overflowPinned, ...props }) => {
   setOverflowPinnedElement(null);
   return text;
 };
-const TextBasic = ({
-  contentSpacing = " ",
-  selectRange,
-  children,
-  ...rest
-}) => {
+const TextBasic = ({ spacing = " ", selectRange, children, ...rest }) => {
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
 
@@ -159,7 +152,7 @@ const TextBasic = ({
 
   return (
     <Box ref={ref} as="span" {...rest} baseClassName="navi_text">
-      {applyContentSpacingOnTextChildren(children, contentSpacing)}
+      {applySpacingOnTextChildren(children, spacing)}
     </Box>
   );
 };

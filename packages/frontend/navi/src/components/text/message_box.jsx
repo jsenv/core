@@ -3,7 +3,7 @@ import { useState } from "preact/hooks";
 
 import { PSEUDO_CLASSES } from "../layout/pseudo_styles.js";
 import { withPropsClassName } from "../with_props_class_name.js";
-import { applyContentSpacingOnTextChildren, Text } from "./text.jsx";
+import { applySpacingOnTextChildren, Text } from "./text.jsx";
 
 import.meta.css = /* css */ `
   @layer navi {
@@ -107,7 +107,7 @@ export const MessageBox = ({
   padding = "sm",
   leftStripe,
   children,
-  contentSpacing,
+  spacing,
   ...rest
 }) => {
   const [hasTitleChild, setHasTitleChild] = useState(false);
@@ -131,7 +131,7 @@ export const MessageBox = ({
     >
       <MessageBoxLevelContext.Provider value={level}>
         <MessageBoxReportTitleChildContext.Provider value={setHasTitleChild}>
-          {applyContentSpacingOnTextChildren(children, contentSpacing)}
+          {applySpacingOnTextChildren(children, spacing)}
         </MessageBoxReportTitleChildContext.Provider>
       </MessageBoxLevelContext.Provider>
     </Text>

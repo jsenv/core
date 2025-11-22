@@ -41,7 +41,7 @@ const run = async ({ browserLauncher, browserName }) => {
     "src/components/layout/demos/demo_layout_buttons.html",
     "src/components/text/demos/demo_badge_count.html",
     "src/components/text/demos/demo_icon.html",
-    "src/components/text/demos/demo_text_content_spacing.html",
+    "src/components/text/demos/demo_text_spacing.html",
     "src/components/text/demos/demo_text_overflow.html",
   ]) {
     await takeSnapshotsForStory(story);

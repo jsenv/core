@@ -113,10 +113,10 @@
                   enhanced styling and consistent behavior.
                 </p>
 
-                <Layout column contentSpacing="sm">
+                <Layout column spacing="sm">
                   <fieldset>
                     <legend>Default</legend>
-                    <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Layout row spacing="sm" alignX="start">
                       <Link href="./default" preventDefault>
                         Navi
                       </Link>
@@ -127,7 +127,7 @@
                   </fieldset>
                   <fieldset>
                     <legend>:focus-visible</legend>
-                    <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Layout row spacing="sm" alignX="start">
                       <Link
                         href="./focus"
                         pseudoState={{ ":focus-visible": true }}
@@ -146,7 +146,7 @@
                   </fieldset>
                   <fieldset>
                     <legend>:active</legend>
-                    <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Layout row spacing="sm" alignX="start">
                       <Link
                         href="./active"
                         pseudoState={{ ":active": true }}
@@ -161,7 +161,7 @@
                   </fieldset>
                   <fieldset>
                     <legend>:visited</legend>
-                    <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Layout row spacing="sm" alignX="start">
                       <Link
                         href="./visited"
                         pseudoState={{ ":visited": true }}
@@ -206,10 +206,10 @@
                   available in standard HTML links.
                 </p>
 
-                <Layout column contentSpacing="sm">
+                <Layout column spacing="sm">
                   <fieldset>
                     <legend>:read-only</legend>
-                    <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Layout row spacing="sm" alignX="start">
                       <Link href="./readonly" readOnly preventDefault>
                         Link text
                       </Link>
@@ -217,7 +217,7 @@
                   </fieldset>
                   <fieldset>
                     <legend>:disabled</legend>
-                    <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Layout row spacing="sm" alignX="start">
                       <Link href="./disabled" disabled preventDefault>
                         Link text
                       </Link>
@@ -225,7 +225,7 @@
                   </fieldset>
                   <fieldset>
                     <legend>:-navi-loading</legend>
-                    <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Layout row spacing="sm" alignX="start">
                       <Link href="./loading" loading readOnly preventDefault>
                         Link text
                       </Link>
@@ -233,7 +233,7 @@
                   </fieldset>
                   <fieldset>
                     <legend>:-navi-current</legend>
-                    <Layout row contentSpacing="sm" contentAlignX="start">
+                    <Layout row spacing="sm" alignX="start">
                       <Link
                         href="./current"
                         preventDefault
@@ -290,10 +290,10 @@
                 expect when clicking the link.
               </p>
 
-              <Layout row contentSpacing="lg">
+              <Layout row spacing="lg">
                 <div>
                   <h3>External Links</h3>
-                  <Layout column contentSpacing="sm">
+                  <Layout column spacing="sm">
                     <Link href="https://example.com">Documentation</Link>
                   </Layout>
                   <p style={{ fontSize: "14px", color: "#666" }}>
@@ -308,7 +308,7 @@
                   >
                     Opt-out: Use target="_self" to disable the icon
                   </p>
-                  <Layout column contentSpacing="xs">
+                  <Layout column spacing="xs">
                     <Link href="https://example.com" target="_self">
                       Documentation (no icon)
                     </Link>
@@ -317,7 +317,7 @@
 
                 <div>
                   <h3>Internal Links</h3>
-                  <Layout column contentSpacing="sm">
+                  <Layout column spacing="sm">
                     <Link href="/settings">Settings</Link>
                   </Layout>
                   <p style={{ fontSize: "14px", color: "#666" }}>
@@ -332,7 +332,7 @@
                   >
                     Opt-in: Use target="_blank" to add an icon
                   </p>
-                  <Layout column contentSpacing="xs">
+                  <Layout column spacing="xs">
                     <Link href="/settings" target="_blank">
                       Settings (new tab)
                     </Link>
@@ -347,7 +347,7 @@
                   >
                     Same-document anchors get an anchor icon.
                   </p>
-                  <Layout column contentSpacing="xs">
+                  <Layout column spacing="xs">
                     <Link href="#section">Go to section</Link>
                   </Layout>
                   <p
@@ -359,7 +359,7 @@
                   >
                     Opt-out: Use anchorIcon={false} to disable
                   </p>
-                  <Layout column contentSpacing="xs">
+                  <Layout column spacing="xs">
                     <Link href="#section" anchorIcon={false}>
                       Go to section (no icon)
                     </Link>
@@ -368,7 +368,7 @@
 
                 <div>
                   <h3>Special Protocol Icons</h3>
-                  <Layout column contentSpacing="sm">
+                  <Layout column spacing="sm">
                     <Link href="tel:+1234567890">Call now</Link>
                     <Link href="sms:+1234567890">Send message</Link>
                     <Link href="mailto:test@example.com">Contact us</Link>
@@ -391,10 +391,10 @@
                 options.
               </p>
 
-              <Layout row contentSpacing="lg">
+              <Layout row spacing="lg">
                 <div>
                   <h3>Colors and Sizes</h3>
-                  <Layout column contentSpacing="sm">
+                  <Layout column spacing="sm">
                     <Link href="./blue" preventDefault color="blue" size="sm">
                       Small blue
                     </Link>
@@ -429,10 +429,10 @@
                 Links demonstrating different interactive behaviors and states.
               </p>
 
-              <Layout row contentSpacing="lg">
+              <Layout row spacing="lg">
                 <div>
                   <h3>Hover Effects</h3>
-                  <Layout column contentSpacing="sm">
+                  <Layout column spacing="sm">
                     <Link
                       href="./hover"
                       color="blue"
