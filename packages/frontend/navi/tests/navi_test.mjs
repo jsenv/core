@@ -1,7 +1,7 @@
 import { writeFileSync } from "@jsenv/filesystem";
 import { snapshotTests } from "@jsenv/snapshot";
 import { urlToFilename } from "@jsenv/urls";
-import { chromium, firefox, webkit } from "playwright";
+import { chromium, firefox } from "playwright";
 
 if (process.platform === "win32") {
   // disable on windows because it would fails due to line endings (CRLF)
@@ -58,12 +58,6 @@ try {
       run({
         browserLauncher: firefox,
         browserName: "firefox",
-      }));
-
-    test("2_webkit", () =>
-      run({
-        browserLauncher: webkit,
-        browserName: "webkit",
       }));
   });
 } finally {

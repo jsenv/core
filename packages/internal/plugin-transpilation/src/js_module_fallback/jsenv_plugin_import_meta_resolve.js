@@ -31,7 +31,7 @@ export const jsenvPluginImportMetaResolve = ({ needJsModuleFallback }) => {
           let reference;
           for (const referenceToOther of urlInfo.referenceToOthersSet) {
             if (
-              referenceToOther.generatedSpecifier.slice(1, -1) ===
+              referenceToOther.generatedSpecifier?.slice(1, -1) ===
               jsUrl.specifier
             ) {
               reference = referenceToOther;

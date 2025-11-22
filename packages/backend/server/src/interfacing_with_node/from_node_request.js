@@ -248,7 +248,7 @@ const createRequestLogger = (nodeRequest, write) => {
       }
       add({
         type:
-          status === 404 && nodeRequest.path === "/favicon.ico"
+          status === 404 && nodeRequest.url === "/favicon.ico"
             ? "debug"
             : {
                 information: "info",

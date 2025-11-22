@@ -1,4 +1,4 @@
-# [1_firefox](../../navi_test.mjs#L56)
+# [1_firefox](../../navi_test.mjs#L57)
 
 ```js
 run({
@@ -7,30 +7,11 @@ run({
 })
 ```
 
-# 1/3 logs
-
-![img](log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-GET http://127.0.0.1/favicon.ico
-  404 Failed to fetch url content
-  @jsenv/core/packages/frontend/navi/src/components/layout/demos/demo_flex.html
-  no entry on filesystem
-  --- plugin name ---
-  "jsenv:file_url_fetching"
-```
-
-</details>
-
-
-# 2/3 write file "./output/demo_flex.html_firefox.png"
+# 1/2 write file "./output/demo_flex.html_firefox.png"
 
 see [./output/demo_flex.html_firefox.png](./output/demo_flex.html_firefox.png)
 
-# 3/3 resolve
+# 2/2 resolve
 
 ```js
 undefined

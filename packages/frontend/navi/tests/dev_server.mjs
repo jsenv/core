@@ -7,7 +7,7 @@ export const devServer = await startDevServer({
   sourceDirectoryUrl: import.meta.resolve("../"),
   hostname: "127.0.0.1",
   http2: false,
-  port: 0,
+  port: 5673,
   // supervisor: { logs: true },
   plugins: [
     jsenvPluginPreact({
