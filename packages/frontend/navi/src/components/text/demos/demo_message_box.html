@@ -100,7 +100,7 @@
 
               <div className="message-example">
                 <h3>Success Level</h3>
-                <MessageBox level="success">
+                <MessageBox level="success" onClose={() => {}}>
                   This is a success message indicating that an operation
                   completed successfully.
                 </MessageBox>
@@ -199,7 +199,7 @@
 
               <div className="message-example">
                 <h3>Error with Title</h3>
-                <MessageBox level="error">
+                <MessageBox level="error" icon>
                   <Title>Operation Failed</Title>
                   An error has occurred during processing. Please check your
                   input and try again. If the problem persists, contact support

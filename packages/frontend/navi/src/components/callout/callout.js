@@ -382,7 +382,7 @@ import.meta.css = /* css */ `
     background-color: var(--x-callout-icon-color);
     border-radius: 2px;
   }
-  .navi_callout_icon_svg {
+  .navi_callout_icon svg {
     width: 16px;
     height: 12px;
     color: white;
@@ -447,11 +447,7 @@ const calloutTemplate = /* html */ `
       <div class="navi_callout_frame"></div>
       <div class="navi_callout_body">
         <div class="navi_callout_icon">
-          <svg
-            class="navi_callout_icon_svg"
-            viewBox="0 0 125 300"
-            xmlns="http://www.w3.org/2000/svg"
-          >
+          <svg viewBox="0 0 125 300" xmlns="http://www.w3.org/2000/svg">
             <path
               fill="currentColor"
               d="m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z"

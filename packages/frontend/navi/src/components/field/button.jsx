@@ -158,6 +158,11 @@ import.meta.css = /* css */ `
     --x-button-background-color: var(--button-background-color-hover);
     --x-button-color: var(--button-color-hover);
   }
+  .navi_button[data-nohover] {
+    --x-button-border-color: var(--button-border-color);
+    --x-button-background-color: var(--button-background-color);
+    --x-button-color: var(--button-color);
+  }
   /* Active */
   .navi_button[data-active] {
     --x-button-outline-color: var(--button-border-color-active);
@@ -216,6 +221,9 @@ import.meta.css = /* css */ `
   }
   .navi_button[data-discrete][data-hover] {
     --x-button-border-color: var(--button-border-color-hover);
+  }
+  .navi_button[data-discrete][data-nohover] {
+    --x-button-border-color: transparent;
   }
   .navi_button[data-discrete][data-readonly] {
     --x-button-border-color: transparent;

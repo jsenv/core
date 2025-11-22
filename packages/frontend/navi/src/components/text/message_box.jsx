@@ -1,12 +1,15 @@
 import { createContext } from "preact";
 import { useState } from "preact/hooks";
 
+import { Button } from "../field/button.jsx";
+import { CloseIconSvg } from "../graphic/close_icon_svg.jsx";
 import {
   ErrorIconSvg,
   InfoIconSvg,
   SuccessIconSvg,
   WarningIconSvg,
 } from "../graphic/level_svgs.jsx";
+import { Box } from "../layout/box.jsx";
 import { PSEUDO_CLASSES } from "../layout/pseudo_styles.js";
 import { withPropsClassName } from "../with_props_class_name.js";
 import { Icon } from "./icon.jsx";
@@ -115,6 +118,7 @@ export const MessageBox = ({
   icon,
   leftStripe,
   children,
+  onClose,
   ...rest
 }) => {
   const [hasTitleChild, setHasTitleChild] = useState(false);
@@ -134,31 +138,55 @@ export const MessageBox = ({
   }
 
   return (
-    <MessageBoxLevelContext.Provider value={level}>
-      <MessageBoxReportTitleChildContext.Provider value={setHasTitleChild}>
-        <Text
-          as="div"
-          role={level === "info" ? "status" : "alert"}
-          data-left-stripe={innerLeftStripe ? "" : undefined}
-          {...rest}
-          className={withPropsClassName("navi_message_box", rest.className)}
-          padding={padding}
-          pseudoClasses={MessageBoxPseudoClasses}
-          basePseudoState={{
-            ":-navi-info": level === "info",
-            ":-navi-success": level === "success",
-            ":-navi-warning": level === "warning",
-            ":-navi-error": level === "error",
-          }}
-        >
+    <Box
+      as="div"
+      role={level === "info" ? "status" : "alert"}
+      data-left-stripe={innerLeftStripe ? "" : undefined}
+      column
+      alignY="start"
+      spacing="sm"
+      {...rest}
+      className={withPropsClassName("navi_message_box", rest.className)}
+      padding={padding}
+      pseudoClasses={MessageBoxPseudoClasses}
+      basePseudoState={{
+        ":-navi-info": level === "info",
+        ":-navi-success": level === "success",
+        ":-navi-warning": level === "warning",
+        ":-navi-error": level === "error",
+      }}
+    >
+      <MessageBoxLevelContext.Provider value={level}>
+        <MessageBoxReportTitleChildContext.Provider value={setHasTitleChild}>
           {IconComponent && (
             <Icon color="var(--x-color)">
               <IconComponent />
             </Icon>
           )}
-          {children}
-        </Text>
-      </MessageBoxReportTitleChildContext.Provider>
-    </MessageBoxLevelContext.Provider>
+          <Text>{children}</Text>
+          {onClose && (
+            <Button
+              action={onClose}
+              discrete
+              border="none"
+              data-nohover=""
+              alignX="center"
+              alignY="center"
+              width="1em"
+              height="1em"
+              pseudoStyle={{
+                ":hover": {
+                  backgroundColor: "rgba(0, 0, 0, 0.1)",
+                },
+              }}
+            >
+              <Icon>
+                <CloseIconSvg />
+              </Icon>
+            </Button>
+          )}
+        </MessageBoxReportTitleChildContext.Provider>
+      </MessageBoxLevelContext.Provider>
+    </Box>
   );
 };
