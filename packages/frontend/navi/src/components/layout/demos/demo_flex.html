@@ -422,7 +422,7 @@
               </Box>
             </section>
 
-            <h2>Individual Item Alignment</h2>
+            <h2>Self Alignment</h2>
             <p
               style={{
                 marginBottom: "20px",
@@ -440,8 +440,8 @@
                 and selfAlignY props instead
               </strong>
               , as they control all items at once and are more efficient.
-              FlexItem alignment is useful for special cases where you need one
-              or two items to behave differently from the rest.
+              FlexItem self alignment is useful for special cases where you need
+              one or two items to behave differently from the rest.
             </p>
 
             <section className="demo-section">
@@ -450,14 +450,14 @@
                 <Box>
                   <DemoBox>Default</DemoBox>
                 </Box>
-                <Box alignX="start">
-                  <DemoBox>alignX="start"</DemoBox>
+                <Box selfAlignX="start">
+                  <DemoBox>selfAlignX="start"</DemoBox>
                 </Box>
-                <Box alignX="center">
-                  <DemoBox>alignX="center"</DemoBox>
+                <Box selfAlignX="center">
+                  <DemoBox>selfAlignX="center"</DemoBox>
                 </Box>
-                <Box alignX="end">
-                  <DemoBox>alignX="end"</DemoBox>
+                <Box selfAlignX="end">
+                  <DemoBox>selfAlignX="end"</DemoBox>
                 </Box>
               </Box>
 
@@ -473,11 +473,14 @@
                 <Box>
                   <DemoBox>Default</DemoBox>
                 </Box>
-                <Box alignY="start">
-                  <DemoBox>alignY="start"</DemoBox>
+                <Box selfAlignY="start">
+                  <DemoBox>selfAlignY="start"</DemoBox>
                 </Box>
-                <Box alignY="end">
-                  <DemoBox>alignY="end"</DemoBox>
+                <Box selfAlignY="center">
+                  <DemoBox>selfAlignY="center"</DemoBox>
+                </Box>
+                <Box selfAlignY="end">
+                  <DemoBox>selfAlignY="end"</DemoBox>
                 </Box>
                 <Box expandY>
                   <DemoBox style={{ height: "100%" }}>expandY</DemoBox>
@@ -486,7 +489,7 @@
             </section>
 
             <section className="demo-section">
-              <h3>Box alignX in row</h3>
+              <h3>Box selfAlignX in row</h3>
               <Box
                 row
                 spacing="sm"
@@ -498,14 +501,14 @@
                 <Box>
                   <DemoBox>Default</DemoBox>
                 </Box>
-                <Box alignX="start">
-                  <DemoBox>alignX="start"</DemoBox>
+                <Box selfAlignX="start">
+                  <DemoBox>selfAlignY="start"</DemoBox>
                 </Box>
-                <Box alignX="center">
-                  <DemoBox>alignX="center"</DemoBox>
+                <Box selfAlignX="center">
+                  <DemoBox>selfAlignY="center"</DemoBox>
                 </Box>
-                <Box alignX="end">
-                  <DemoBox>alignX="end"</DemoBox>
+                <Box selfAlignX="end">
+                  <DemoBox>selfAlignY="end"</DemoBox>
                 </Box>
               </Box>
 
@@ -521,14 +524,14 @@
                 <Box>
                   <DemoBox>Default</DemoBox>
                 </Box>
-                <Box alignY="start">
-                  <DemoBox>alignY="start"</DemoBox>
+                <Box selfAlignY="start">
+                  <DemoBox>selfAlignY="start"</DemoBox>
                 </Box>
                 <Box selfAlignY="center">
                   <DemoBox>selfAlignY="center"</DemoBox>
                 </Box>
-                <Box alignY="end">
-                  <DemoBox>alignY="end"</DemoBox>
+                <Box selfAlignY="end">
+                  <DemoBox>selfAlignY="end"</DemoBox>
                 </Box>
               </Box>
             </section>
@@ -546,7 +549,7 @@
               >
                 <DemoBox>Item 1</DemoBox>
                 <DemoBox>Item 2</DemoBox>
-                <Box alignY="end">
+                <Box selfAlignY="end">
                   <DemoBox>Pushed to bottom</DemoBox>
                 </Box>
               </Box>
@@ -560,7 +563,7 @@
                 background="#e8f5e8"
               >
                 <DemoBox>Item 1</DemoBox>
-                <Box alignY="center">
+                <Box selfAlignY="center">
                   <DemoBox>Centered</DemoBox>
                 </Box>
                 <DemoBox>Item 3</DemoBox>
@@ -568,10 +571,10 @@
             </section>
 
             <section className="demo-section">
-              <h3>15. When to Use Individual Item Alignment</h3>
+              <h3>15. When to Use Self Alignment</h3>
               <p style={{ marginBottom: "15px", fontSize: "14px" }}>
-                Individual item alignment is useful when you need exceptions to
-                the container's alignment:
+                Self alignment is useful when you need exceptions to the
+                container's alignment:
               </p>
 
               <h4>Example: Most items start, one pushed to end</h4>
@@ -584,7 +587,7 @@
               >
                 <DemoBox>Start</DemoBox>
                 <DemoBox>Start</DemoBox>
-                <Box alignX="end">
+                <Box selfAlignX="end">
                   <DemoBox>Pushed to end</DemoBox>
                 </Box>
               </Box>
@@ -600,7 +603,7 @@
                 padding="sm"
               >
                 <DemoBox>Left aligned</DemoBox>
-                <Box alignX="center">
+                <Box selfAlignX="center">
                   <DemoBox>Centered exception</DemoBox>
                 </Box>
                 <DemoBox>Left aligned</DemoBox>
