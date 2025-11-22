@@ -11223,12 +11223,23 @@ const Box = props => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   const TagName = as;
-  const {
+  let {
     box,
-    inline = box,
+    inline,
     row,
-    column = box
+    column
   } = rest;
+  if (box === "auto") {
+    box = Boolean(rest.contentAlignX || rest.contentAlignY);
+  }
+  if (box) {
+    if (inline === undefined) {
+      inline = true;
+    }
+    if (column === undefined) {
+      column = true;
+    }
+  }
   let layout;
   if (inline) {
     if (row) {
@@ -14033,6 +14044,7 @@ const LinkPlain = props => {
     innerIcon = icon;
   }
   return jsxs(Box, {
+    box: "auto",
     ...rest,
     ref: ref,
     as: "a",
@@ -16945,6 +16957,7 @@ const ButtonBasic = props => {
   };
   const renderButtonContentMemoized = useCallback(renderButtonContent, []);
   return jsxs(Box, {
+    box: "auto",
     ...rest,
     as: "button",
     ref: ref,

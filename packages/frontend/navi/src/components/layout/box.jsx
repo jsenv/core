@@ -129,7 +129,19 @@ export const Box = (props) => {
   const ref = props.ref || defaultRef;
   const TagName = as;
 
-  const { box, inline = box, row, column = box } = rest;
+  let { box, inline, row, column } = rest;
+  if (box === "auto") {
+    box = Boolean(rest.contentAlignX || rest.contentAlignY);
+  }
+  if (box) {
+    if (inline === undefined) {
+      inline = true;
+    }
+    if (column === undefined) {
+      column = true;
+    }
+  }
+
   let layout;
   if (inline) {
     if (row) {

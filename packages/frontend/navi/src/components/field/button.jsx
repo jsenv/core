@@ -319,6 +319,7 @@ const ButtonBasic = (props) => {
 
   return (
     <Box
+      box="auto"
       {...rest}
       as="button"
       ref={ref}

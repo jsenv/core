@@ -248,6 +248,7 @@ const LinkPlain = (props) => {
 
   return (
     <Box
+      box="auto"
       {...rest}
       ref={ref}
       as="a"
