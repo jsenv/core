@@ -10572,7 +10572,7 @@ const getStylePropGroup = (name) => {
 };
 const getNormalizer = (key) => {
   if (key === "borderRadius") {
-    return normalizeTypoStyle;
+    return normalizeSpacingStyle;
   }
   const group = getStylePropGroup(key);
   if (group === "margin" || group === "padding") {
@@ -16741,7 +16741,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     --x-button-color: var(--button-color);
 
     position: relative;
-    display: inline-flex;
+    /* display: inline-flex; */
     box-sizing: border-box;
     padding: 0;
     background: none;
@@ -16865,6 +16865,10 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   }
   .navi_button[data-discrete][data-disabled] {
     --x-button-border-color: transparent;
+  }
+
+  .navi_button > img {
+    border-radius: inherit;
   }
 `;
 const Button = props => {
@@ -21543,6 +21547,8 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     text-align: center;
     line-height: 1.5em;
     vertical-align: middle;
+    background: var(--background);
+    background-color: var(--background-color, var(--background));
     border-radius: var(--border-radius, 1em);
   }
 `;
@@ -21552,6 +21558,7 @@ const BadgeManagedByCSSVars = {
   paddingRight: "--padding-right",
   paddingLeft: "--padding-left",
   backgroundColor: "--background-color",
+  background: "--background",
   borderColor: "--border-color",
   color: "--color"
 };

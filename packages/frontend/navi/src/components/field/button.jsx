@@ -98,7 +98,7 @@ import.meta.css = /* css */ `
     --x-button-color: var(--button-color);
 
     position: relative;
-    display: inline-flex;
+    /* display: inline-flex; */
     box-sizing: border-box;
     padding: 0;
     background: none;
