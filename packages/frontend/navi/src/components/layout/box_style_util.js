@@ -75,17 +75,21 @@ const applyToCssPropWhenTruthy = (
   cssPropValue,
   cssPropValueOtherwise,
 ) => {
-  return (value) => {
-    if (!value) {
-      if (cssPropValueOtherwise === undefined) {
-        return null;
-      }
-      if (value === undefined) {
-        return null;
-      }
-      return { [cssProp]: cssPropValueOtherwise };
+  return (value, styleContext) => {
+    if (value) {
+      return { [cssProp]: cssPropValue };
     }
-    return { [cssProp]: cssPropValue };
+    if (cssPropValueOtherwise === undefined) {
+      return null;
+    }
+    if (value === undefined) {
+      return null;
+    }
+    if (styleContext.styles[cssProp] !== undefined) {
+      // keep any value previously set
+      return null;
+    }
+    return { [cssProp]: cssPropValueOtherwise };
   };
 };
 const applyOnTwoProps = (propA, propB) => {
@@ -315,6 +319,7 @@ const TYPO_PROPS = {
   noWrap: applyToCssPropWhenTruthy("whiteSpace", "nowrap", "normal"),
   pre: applyToCssPropWhenTruthy("whiteSpace", "pre", "normal"),
   preWrap: applyToCssPropWhenTruthy("whiteSpace", "pre-wrap", "normal"),
+  preLine: applyToCssPropWhenTruthy("whiteSpace", "pre-line", "normal"),
 };
 const VISUAL_PROPS = {
   outline: PASS_THROUGH,

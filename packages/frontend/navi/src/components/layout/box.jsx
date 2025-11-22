@@ -215,6 +215,7 @@ export const Box = (props) => {
     } else {
       innerPseudoState = PSEUDO_STATE_DEFAULT;
     }
+    const boxStyles = {};
     const styleContext = {
       parentLayout,
       layout,
@@ -222,9 +223,9 @@ export const Box = (props) => {
       pseudoState: innerPseudoState,
       pseudoClasses,
       pseudoElements,
+      remainingProps: rest,
+      styles: boxStyles,
     };
-
-    const boxStyles = {};
     let boxPseudoNamedStyles = PSEUDO_NAMED_STYLES_DEFAULT;
     const shouldForwardAllToChild = visualSelector && pseudoStateSelector;
 

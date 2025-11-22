@@ -105,14 +105,17 @@ export const Text = (props) => {
   return <TextBasic {...props} />;
 };
 
-const TextOverflow = ({ noWrap, pre = !noWrap, children, ...rest }) => {
+const TextOverflow = ({ noWrap, children, ...rest }) => {
   const [OverflowPinnedElement, setOverflowPinnedElement] = useState(null);
 
   return (
     <Text
+      column
       as="div"
-      pre={pre}
       nowWrap={noWrap}
+      pre={!noWrap}
+      // For paragraph we prefer to keep lines and only hide unbreakable long sections
+      preLine={rest.as === "p"}
       {...rest}
       className="navi_text_overflow"
       expandX

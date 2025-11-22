@@ -216,7 +216,7 @@ export const App = () => {
             <div
               style={{ fontSize: "12px", color: "#666", marginBottom: "4px" }}
             >
-              Text with line breaks (\\n not respected by default)
+              Text with line breaks
             </div>
             <Text overflowEllipsis>
               First line of text{"\n"}
