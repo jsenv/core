@@ -23,7 +23,7 @@
       const TableOfContents = () => (
         <Box as="section" marginBottom="xl">
           <Title as="h2">Table des matières</Title>
-          <Box row contentSpacing="xs" marginTop="md">
+          <Box row spacing="xs" marginTop="md">
             <Link href="#exemples-base">1. Exemples de base</Link>
             <Link href="#line-heights">
               2. Comportement avec différents line-heights
@@ -76,7 +76,7 @@
             hauteurs de ligne. Les bordures colorées visualisent la hauteur
             réelle occupée par chaque ligne.
           </Paragraph>
-          <Box column contentSpacing="lg">
+          <Box column spacing="lg">
             <div>
               <Text
                 style={{
@@ -225,7 +225,7 @@
                 Avec Button
               </Text>
               <Box column contentSpacing="md">
-                <Button alignY="start">
+                <Button selfAlignY="start">
                   Tâches
                   <BadgeCount background="#2196f3" color="white">
                     5
@@ -262,8 +262,8 @@
               <Box row contentSpacing="md">
                 <Box
                   column
-                  contentAlignX="start"
-                  contentAlignY="center"
+                  alignX="start"
+                  alignY="center"
                   border="1px solid #e0e0e0"
                   borderRadius="8px"
                   padding="sm"
@@ -272,13 +272,13 @@
                   <BadgeCount background="#ff9800" color="white" size="xs">
                     12
                   </BadgeCount>
-                  <Text alignX="end">Tâches en attente</Text>
+                  <Text selfAlignX="end">Tâches en attente</Text>
                 </Box>
 
                 <Box
                   column
-                  contentAlignX="end"
-                  contentAlignY="center"
+                  alignX="end"
+                  alignY="center"
                   border="1px solid #e0e0e0"
                   borderRadius="8px"
                   padding="sm"
@@ -287,7 +287,7 @@
                   <BadgeCount
                     background="#4caf50"
                     color="white"
-                    alignX="start"
+                    selfAlignX="start"
                     size="xs"
                   >
                     12
@@ -311,14 +311,14 @@
               <Box row contentSpacing="md">
                 <Box
                   column
-                  contentAlignX="end"
-                  contentAlignY="center"
+                  alignX="end"
+                  alignY="center"
                   border="1px solid #e0e0e0"
                   borderRadius="8px"
                   padding="sm"
                   width="200"
                 >
-                  <Text alignX="start">Alertes</Text>
+                  <Text selfAlignX="start">Alertes</Text>
                   <BadgeCount background="#d32f2f" color="white" size="xs">
                     25
                   </BadgeCount>
@@ -326,14 +326,18 @@
 
                 <Box
                   column
-                  contentAlignX="start"
+                  alignX="start"
                   border="1px solid #e0e0e0"
                   borderRadius="8px"
                   padding="sm"
                   width="250"
                 >
                   Messages
-                  <BadgeCount background="#1976d2" color="white" alignX="end">
+                  <BadgeCount
+                    background="#1976d2"
+                    color="white"
+                    selfAlignX="end"
+                  >
                     8
                   </BadgeCount>
                 </Box>

@@ -27,8 +27,8 @@
  * ## Human-Friendly Alignment
  *
  * Instead of CSS's justify-content/align-items which depend on flex-direction context:
- * - `contentAlignX` controls horizontal alignment regardless of layout direction
- * - `contentAlignY` controls vertical alignment regardless of layout direction
+ * - `alignX` controls horizontal alignment regardless of layout direction
+ * - `alignY` controls vertical alignment regardless of layout direction
  *
  * This eliminates the mental overhead of remembering which axis is "main" vs "cross"
  * depending on the flex direction.
@@ -131,7 +131,7 @@ export const Box = (props) => {
 
   let { box, inline, row, column } = rest;
   if (box === "auto") {
-    box = Boolean(rest.contentAlignX || rest.contentAlignY);
+    box = Boolean(rest.alignX || rest.alignY);
   }
   if (box) {
     if (inline === undefined) {

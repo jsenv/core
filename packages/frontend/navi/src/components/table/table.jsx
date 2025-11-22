@@ -428,8 +428,8 @@ export const TableCell = forwardRef((props, ref) => {
     style,
     cursor,
     bold,
-    alignX = column.alignX,
-    alignY = column.alignY,
+    selfAlignX = column.selfAlignX,
+    selfAlignY = column.selfAlignY,
     backgroundColor = column.backgroundColor || row.backgroundColor,
     children,
   } = props;
@@ -570,8 +570,8 @@ export const TableCell = forwardRef((props, ref) => {
   if (rowHeight !== undefined) {
     innerStyle.maxHeight = `${rowHeight}px`;
   }
-  const innerAlignX = alignX || isFirstRow ? "center" : "start";
-  const innerAlignY = alignY || isFirstColumn ? "center" : "start";
+  const innerAlignX = selfAlignX || isFirstRow ? "center" : "start";
+  const innerAlignY = selfAlignY || isFirstColumn ? "center" : "start";
   const innerBold = bold || containSelectedCell;
   if (innerBold) {
     innerStyle.fontWeight = "bold";
@@ -714,7 +714,7 @@ export const RowNumberTableCell = (props) => {
   const isTopLeftCell = columnIndex === 0 && rowIndex === 0;
 
   return (
-    <TableCell canSelectAll={isTopLeftCell} alignX="left" {...props}>
+    <TableCell canSelectAll={isTopLeftCell} selfAlignX="left" {...props}>
       {isTopLeftCell ? "" : rowIndex}
     </TableCell>
   );

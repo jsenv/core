@@ -64,7 +64,7 @@
             <div className="demo-container">
               <h3>0. Button Vertical Centering in Column Layout</h3>
               <div className="visual-container">
-                <h4>Default behavior (no contentAlignY specified)</h4>
+                <h4>Default behavior (no alignY specified)</h4>
                 <Layout column contentSpacing="md">
                   <Box
                     row
@@ -72,8 +72,8 @@
                     height="40"
                     background="#e3f2fd"
                     border="1px solid #90caf9"
-                    contentAlignX="center"
-                    contentAlignY="center"
+                    alignX="center"
+                    alignY="center"
                   >
                     Rectangle
                   </Box>
@@ -81,7 +81,7 @@
                   <Button>Not Centered</Button>
                 </Layout>
 
-                <h4>With contentAlignY="center" on button</h4>
+                <h4>With alignY="center" on button</h4>
                 <Layout column contentSpacing="md">
                   <Box
                     row
@@ -89,13 +89,13 @@
                     height="40"
                     background="#e3f2fd"
                     border="1px solid #90caf9"
-                    contentAlignX="center"
-                    contentAlignY="center"
+                    alignX="center"
+                    alignY="center"
                   >
                     Rectangle
                   </Box>
 
-                  <Button contentAlignY="center">Centered</Button>
+                  <Button alignY="center">Centered</Button>
                 </Layout>
               </div>
             </div>
@@ -106,15 +106,15 @@
                 <h4>Buttons in rows (takes full width)</h4>
                 <Layout row contentSpacing="sm">
                   <Button>Default</Button>
-                  <Button box contentAlignX="start">
+                  <Button box alignX="start">
                     Text start
                   </Button>
-                  <Button box contentAlignX="end">
+                  <Button box alignX="end">
                     Text end
                   </Button>
-                  <Button alignX="start">Start</Button>
-                  <Button alignX="center">Center</Button>
-                  <Button alignX="end">End</Button>
+                  <Button selfAlignX="start">Start</Button>
+                  <Button selfAlignX="center">Center</Button>
+                  <Button selfAlignX="end">End</Button>
                 </Layout>
 
                 <h4>Buttons in columns (grows horizontally)</h4>
@@ -128,7 +128,7 @@
                   </Layout>
                   <Layout column contentSpacing="sm">
                     <Button>Fixed</Button>
-                    <Button box expandX contentAlignX="center">
+                    <Button box expandX alignX="center">
                       ExpandX text centered
                     </Button>
                     <Button>Fixed</Button>
@@ -143,15 +143,15 @@
                 <h4>Buttons in columns (takes full height)</h4>
                 <Layout column contentSpacing="10px" height="100px">
                   <Button>Default</Button>
-                  <Button box contentAlignY="center">
+                  <Button box alignY="center">
                     Text centered
                   </Button>
-                  <Button box contentAlignY="end">
+                  <Button box alignY="end">
                     Text end
                   </Button>
-                  <Button alignY="start">Start</Button>
-                  <Button alignY="center">Center</Button>
-                  <Button alignY="end">End</Button>
+                  <Button selfAlignY="start">Start</Button>
+                  <Button selfAlignY="center">Center</Button>
+                  <Button selfAlignY="end">End</Button>
                 </Layout>
 
                 <h4>Buttons in rows (grows vertically)</h4>
@@ -163,7 +163,7 @@
                   </Layout>
                   <Layout row contentSpacing="sm" height="200px">
                     <Button>Fixed</Button>
-                    <Button box expandY contentAlignY="center">
+                    <Button box expandY alignY="center">
                       ExpandY text centered
                     </Button>
                     <Button>Fixed</Button>
@@ -176,14 +176,9 @@
               <h3>3. Button ExpandX + ExpandY - Both Axes</h3>
               <div className="visual-container">
                 <h4>Buttons in columns (grows horizontally, full height)</h4>
-                <Box column contentSpacing="10px" height="80px">
+                <Box column spacing="10px" height="80px">
                   <Button>Fixed</Button>
-                  <Button
-                    expandX
-                    expandY
-                    contentAlignX="center"
-                    contentAlignY="center"
-                  >
+                  <Button expandX expandY alignX="center" alignY="center">
                     Both Axes
                   </Button>
                   <Button>Fixed</Button>
@@ -192,12 +187,7 @@
                 <h4>Buttons in rows (full width, grows vertically)</h4>
                 <Box row contentSpacing="10px" height="150px">
                   <Button>Fixed</Button>
-                  <Button
-                    expandX
-                    expandY
-                    contentAlignX="center"
-                    contentAlignY="center"
-                  >
+                  <Button expandX expandY alignX="center" alignY="center">
                     Both Axes
                   </Button>
                   <Button>Fixed</Button>
@@ -317,7 +307,7 @@
             </div>
 
             <div className="demo-container">
-              <h3>9. Button AlignX Test: row + alignX="end"</h3>
+              <h3>9. Button SelfAlignX Test: row + selfAlignX="end"</h3>
               <div className="visual-container">
                 <div className="bounded">
                   <Layout
@@ -326,7 +316,7 @@
                     style={{ height: "100%" }}
                   >
                     <Button>Default</Button>
-                    <Button alignX="end">Pushed to End</Button>
+                    <Button selfAlignX="end">Pushed to End</Button>
                   </Layout>
                 </div>
               </div>
@@ -353,7 +343,7 @@
                   <Button>Open</Button>
                   <Button>Save</Button>
                   <Button expandX>Status Message Area</Button>
-                  <Button alignX="end">Settings</Button>
+                  <Button selfAlignX="end">Settings</Button>
                 </Layout>
               </div>
             </div>
@@ -364,7 +354,7 @@
                 <Layout row contentSpacing="10px">
                   <Layout column contentSpacing="10px">
                     <Button>Start</Button>
-                    <Button alignX="center">Center</Button>
+                    <Button selfAlignX="center">Center</Button>
                     <Button>End</Button>
                   </Layout>
 
@@ -373,7 +363,7 @@
                     <Button>Cancel</Button>
                   </Layout>
 
-                  <Layout column contentSpacing="10px" alignX="end">
+                  <Layout column contentSpacing="10px" selfAlignX="end">
                     <Button>Back</Button>
                     <Button>Next</Button>
                   </Layout>
@@ -401,7 +391,7 @@
 
                     <Layout column contentSpacing="10px">
                       <Button expandX>Primary Action</Button>
-                      <Button alignX="end">More</Button>
+                      <Button selfAlignX="end">More</Button>
                     </Layout>
                   </div>
                 </div>
@@ -414,16 +404,20 @@
                     <Box column contentSpacing="10px">
                       <Button>Home</Button>
                       <Button expandX>Current Page Title</Button>
-                      <Button alignX="end">Profile</Button>
+                      <Button selfAlignX="end">Profile</Button>
                     </Box>
 
-                    <Box column contentSpacing="10px" alignX="center">
+                    <Box column contentSpacing="10px" selfAlignX="center">
                       <Button marginX="5px">Tab 1</Button>
                       <Button marginX="5px">Tab 2</Button>
                       <Button marginX="5px">Tab 3</Button>
                     </Box>
 
-                    <Box column contentSpacing="10px" alignX="space-between">
+                    <Box
+                      column
+                      contentSpacing="10px"
+                      selfAlignX="space-between"
+                    >
                       <Button>Previous</Button>
                       <Button>Next</Button>
                     </Box>

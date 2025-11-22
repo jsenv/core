@@ -66,13 +66,13 @@
             </section>
 
             <section className="demo-section">
-              <h3>3. contentAlignX</h3>
+              <h3>3. alignX</h3>
 
-              <h4>contentAlignX="start" (default)</h4>
+              <h4>alignX="start" (default)</h4>
               <Box
                 column
-                contentAlignX="start"
-                contentAlignY="start"
+                alignX="start"
+                alignY="start"
                 contentSpacing="sm"
                 width="400"
                 height="80"
@@ -89,8 +89,8 @@
               <h4>contentAlignX="center"</h4>
               <Box
                 column
-                contentAlignX="center"
-                contentAlignY="start"
+                alignX="center"
+                alignY="start"
                 contentSpacing="10px"
                 width="400"
                 height="80"
@@ -107,8 +107,8 @@
               <h4>contentAlignX="end"</h4>
               <Box
                 column
-                contentAlignX="end"
-                contentAlignY="start"
+                alignX="end"
+                alignY="start"
                 contentSpacing="10px"
                 width="400"
                 height="80"
@@ -122,11 +122,11 @@
                 <DemoBox>Short</DemoBox>
               </Box>
 
-              <h4>contentAlignX="space-between"</h4>
+              <h4>alignX="space-between"</h4>
               <Box
                 column
-                contentAlignX="space-between"
-                contentAlignY="start"
+                alignX="space-between"
+                alignY="start"
                 width="400"
                 height="80"
                 padding="sm"
@@ -139,11 +139,11 @@
                 <DemoBox>Short</DemoBox>
               </Box>
 
-              <h4>contentAlignX="space-around"</h4>
+              <h4>alignX="space-around"</h4>
               <Box
                 column
-                contentAlignX="space-around"
-                contentAlignY="start"
+                alignX="space-around"
+                alignY="start"
                 width="400"
                 height="80"
                 padding="sm"
@@ -158,9 +158,9 @@
             </section>
 
             <section className="demo-section">
-              <h3>4. contentAlignY</h3>
+              <h3>4. alignY</h3>
 
-              <h4>contentAlignY="start"</h4>
+              <h4>alignY="start"</h4>
               <Box
                 column
                 contentAlignY="start"
@@ -208,10 +208,10 @@
                 <DemoBox>Short</DemoBox>
               </Box>
 
-              <h4>contentAlignY undefined</h4>
+              <h4>alignY undefined</h4>
               <Box
                 column
-                contentAlignY="stretch"
+                alignY="stretch"
                 contentSpacing="sm"
                 height="80"
                 padding="sm"
@@ -224,7 +224,7 @@
             </section>
 
             <section className="demo-section">
-              <h3>5. Real-World Example: Button with alignX</h3>
+              <h3>5. Real-World Example: Button with selfAlignX</h3>
 
               <Box
                 column
@@ -235,7 +235,7 @@
               >
                 <DemoBox>Content</DemoBox>
                 <DemoBox>More content</DemoBox>
-                <Button alignX="end" alignY="center">
+                <Button selfAlignX="end" selfAlignY="center">
                   Action Button
                 </Button>
               </Box>
@@ -296,9 +296,9 @@
             </section>
 
             <section className="demo-section">
-              <h3>10. Row with contentAlignX</h3>
+              <h3>10. Row with alignX</h3>
 
-              <h4>contentAlignX="start"</h4>
+              <h4>alignX="start"</h4>
               <Box
                 row
                 contentAlignX="start"
@@ -436,8 +436,8 @@
               FlexItem components can override the container's alignment.
               However,{" "}
               <strong>
-                in most cases, you should use the FlexRow/FlexColumn alignX and
-                alignY props instead
+                in most cases, you should use the FlexRow/FlexColumn selfAlignX
+                and selfAlignY props instead
               </strong>
               , as they control all items at once and are more efficient.
               FlexItem alignment is useful for special cases where you need one
@@ -445,7 +445,7 @@
             </p>
 
             <section className="demo-section">
-              <h3>Box alignX in col</h3>
+              <h3>Box selfAlignX in col</h3>
               <Box column contentSpacing="sm" padding="sm" background="#f3e5f5">
                 <Box>
                   <DemoBox>Default</DemoBox>
@@ -461,7 +461,7 @@
                 </Box>
               </Box>
 
-              <h3>Box alignY in col</h3>
+              <h3>Box selfAlignY in col</h3>
               <Box
                 column
                 contentSpacing="10px"
@@ -509,7 +509,7 @@
                 </Box>
               </Box>
 
-              <h4>Box alignY in Row</h4>
+              <h4>Box selfAlignY in Row</h4>
               <Box
                 row
                 contentSpacing="sm"
@@ -524,8 +524,8 @@
                 <Box alignY="start">
                   <DemoBox>alignY="start"</DemoBox>
                 </Box>
-                <Box alignY="center">
-                  <DemoBox>alignY="center"</DemoBox>
+                <Box selfAlignY="center">
+                  <DemoBox>selfAlignY="center"</DemoBox>
                 </Box>
                 <Box alignY="end">
                   <DemoBox>alignY="end"</DemoBox>

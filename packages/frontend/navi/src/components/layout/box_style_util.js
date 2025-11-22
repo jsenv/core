@@ -15,7 +15,7 @@ import { mergeOneStyle, stringifyStyle } from "@jsenv/dom";
  * };
  *
  * // Usage:
- * <MyButton margin={10} expandX alignX="center" color="white">Click me</MyButton>
+ * <MyButton margin={10} expandX selfAlignX="center" color="white">Click me</MyButton>
  * <MyButton paddingX={20} bold style={{ border: '1px solid red' }}>Bold button</MyButton>
  * ```
  *
@@ -38,7 +38,7 @@ import { mergeOneStyle, stringifyStyle } from "@jsenv/dom";
  * @param {string|object} [config.base] - Base styles to apply first
  * @param {boolean} [config.layout] - Enable all layout props (shorthand for spacing, align, expansion)
  * @param {boolean} [config.spacing] - Enable margin/padding props
- * @param {boolean} [config.align] - Enable alignment props (alignX, alignY)
+ * @param {boolean} [config.align] - Enable alignment props (selfAlignX, selfAlignY)
  * @param {boolean} [config.expansion] - Enable expansion props (expandX, expandY)
  * @param {boolean} [config.typo] - Enable typography props (color, bold, italic, etc.)
  * @param {...object} remainingConfig - Additional configuration objects for generating separate style objects
@@ -204,12 +204,12 @@ const DIMENSION_PROPS = {
   },
 };
 const POSITION_PROPS = {
-  // For row, alignX uses auto margins for positioning
+  // For row, selfAlignX uses auto margins for positioning
   // NOTE: Auto margins only work effectively for positioning individual items.
-  // When multiple adjacent items have the same auto margin alignment (e.g., alignX="end"),
+  // When multiple adjacent items have the same auto margin alignment (e.g., selfAlignX="end"),
   // only the first item will be positioned as expected because subsequent items
   // will be positioned relative to the previous item's margins, not the container edge.
-  alignX: (value, { parentLayout }) => {
+  selfAlignX: (value, { parentLayout }) => {
     const insideRowLayout =
       parentLayout === "row" || parentLayout === "inline-row";
 
@@ -236,7 +236,7 @@ const POSITION_PROPS = {
     }
     return undefined;
   },
-  alignY: (value, { parentLayout }) => {
+  selfAlignY: (value, { parentLayout }) => {
     const inlineColumnLayout =
       parentLayout === "column" || parentLayout === "inline-column";
 
@@ -346,8 +346,8 @@ const VISUAL_PROPS = {
   cursor: PASS_THROUGH,
 };
 const CONTENT_PROPS = {
-  contentAlign: applyOnTwoProps("contentAlignX", "contentAlignY"),
-  contentAlignX: (value, { layout }) => {
+  align: applyOnTwoProps("alignX", "alignY"),
+  alignX: (value, { layout }) => {
     if (layout === "row" || layout === "inline-row") {
       if (value === "stretch") {
         return undefined; // this is the default
@@ -362,7 +362,7 @@ const CONTENT_PROPS = {
     }
     return { textAlign: value };
   },
-  contentAlignY: (value, { layout }) => {
+  alignY: (value, { layout }) => {
     if (layout === "row" || layout === "inline-row") {
       if (value === "start") {
         return undefined;
@@ -379,7 +379,7 @@ const CONTENT_PROPS = {
     }
     return { verticalAlign: value };
   },
-  contentSpacing: (value, { layout }) => {
+  spacing: (value, { layout }) => {
     if (
       layout === "row" ||
       layout === "column"
@@ -419,8 +419,8 @@ const COPIED_ON_VISUAL_CHILD_PROP_SET = new Set([
   "shrink",
   "expandX",
   "expandY",
-  "contentAlignX",
-  "contentAlignY",
+  "alignX",
+  "alignY",
 ]);
 const HANDLED_BY_VISUAL_CHILD_PROP_SET = new Set([
   ...INNER_SPACING_PROP_NAME_SET,

@@ -299,7 +299,7 @@ When using `box={true}`, the Text component supports Box layout and styling prop
 
 ```jsx
 // Layout properties
-<Text box expandX alignX="center" gap="sm">
+<Text box expandX selfAlignX="center" gap="sm">
   <Icon><StarSvg /></Icon>
   Centered expanding text
 </Text>

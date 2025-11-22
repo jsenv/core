@@ -85,8 +85,8 @@ const DialogManagedByCSSVars = {
 
 export const DialogLayout = ({
   children,
-  contentAlignX = "center",
-  contentAlignY = "center",
+  alignX = "center",
+  alignY = "center",
   ...props
 }) => {
   return (
@@ -96,12 +96,7 @@ export const DialogLayout = ({
       visualSelector=".navi_dialog_content"
       {...props}
     >
-      <Box
-        row
-        className="navi_dialog_content"
-        contentAlignX={contentAlignX}
-        contentAlignY={contentAlignY}
-      >
+      <Box row className="navi_dialog_content" alignX={alignX} alignY={alignY}>
         {children}
       </Box>
     </Box>

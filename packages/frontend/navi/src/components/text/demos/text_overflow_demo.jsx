@@ -254,7 +254,7 @@ const InteractiveWidthDemo = () => {
 
   return (
     <Layout row contentSpacing="12px">
-      <Layout column contentSpacing="12px" contentAlignY="center">
+      <Layout column spacing="12px" alignY="center">
         <label htmlFor="width-slider">Container Width: {width}px</label>
         <input
           id="width-slider"
