@@ -1,0 +1,69 @@
+import { writeFileSync } from "@jsenv/filesystem";
+import { snapshotTests } from "@jsenv/snapshot";
+import { urlToFilename } from "@jsenv/urls";
+import { chromium, firefox, webkit } from "playwright";
+
+if (process.platform === "win32") {
+  // disable on windows because it would fails due to line endings (CRLF)
+  process.exit(0);
+}
+
+process.env.GENERATING_SNAPSHOTS = "true"; // for dev server
+const { devServer } = await import("./dev_server.mjs");
+const run = async ({ browserLauncher, browserName }) => {
+  const browser = await browserLauncher.launch({ headless: true });
+  const takeSnapshotsForStory = async (story) => {
+    const page = await browser.newPage();
+    const serverUrl = `${devServer.origin}/${story}`;
+    try {
+      await page.goto(serverUrl);
+    } catch (e) {
+      throw new Error(
+        `error while loading page on ${browserName} for ${story}: ${e.stack}`,
+      );
+    }
+    const filename = urlToFilename(serverUrl);
+    // await new Promise((resolve) => setTimeout(resolve, 200));
+    await takePageSnapshots(page, `${filename}_${browserName}`);
+    await page.close();
+  };
+  const takePageSnapshots = async (page, scenario) => {
+    await page.setViewportSize({ width: 900, height: 0 }); // generate smaller screenshots
+    const sceenshotBuffer = await page.screenshot({ fullPage: true });
+    writeFileSync(
+      import.meta.resolve(`./output/${scenario}.png`),
+      sceenshotBuffer,
+    );
+  };
+  for (const story of ["src/components/layout/demos/demo_flex.html"]) {
+    await takeSnapshotsForStory(story);
+  }
+  await browser.close();
+};
+snapshotTests.prefConfigure({
+  filesystemActions: {
+    "**/.jsenv/": "ignore",
+    "**/*.png": "compare_presence_only",
+  },
+});
+await snapshotTests(import.meta.url, ({ test }) => {
+  test("0_chromium", () =>
+    run({
+      browserLauncher: chromium,
+      browserName: "chromium",
+    }));
+
+  test("1_firefox", () =>
+    run({
+      browserLauncher: firefox,
+      browserName: "firefox",
+    }));
+
+  test("2_webkit", () =>
+    run({
+      browserLauncher: webkit,
+      browserName: "webkit",
+    }));
+});
+
+await devServer.stop();
