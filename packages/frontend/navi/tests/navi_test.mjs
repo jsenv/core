@@ -28,7 +28,7 @@ const run = async ({ browserLauncher, browserName }) => {
     await page.close();
   };
   const takePageSnapshots = async (page, scenario) => {
-    await page.setViewportSize({ width: 900, height: 0 }); // generate smaller screenshots
+    await page.setViewportSize({ width: 900, height: 600 }); // generate smaller screenshots
     const sceenshotBuffer = await page.screenshot({ fullPage: true });
     writeFileSync(
       import.meta.resolve(`./output/${scenario}.png`),
@@ -46,24 +46,26 @@ snapshotTests.prefConfigure({
     "**/*.png": "compare_presence_only",
   },
 });
-await snapshotTests(import.meta.url, ({ test }) => {
-  test("0_chromium", () =>
-    run({
-      browserLauncher: chromium,
-      browserName: "chromium",
-    }));
+try {
+  await snapshotTests(import.meta.url, ({ test }) => {
+    test("0_chromium", () =>
+      run({
+        browserLauncher: chromium,
+        browserName: "chromium",
+      }));
 
-  test("1_firefox", () =>
-    run({
-      browserLauncher: firefox,
-      browserName: "firefox",
-    }));
+    test("1_firefox", () =>
+      run({
+        browserLauncher: firefox,
+        browserName: "firefox",
+      }));
 
-  test("2_webkit", () =>
-    run({
-      browserLauncher: webkit,
-      browserName: "webkit",
-    }));
-});
-
-await devServer.stop();
+    test("2_webkit", () =>
+      run({
+        browserLauncher: webkit,
+        browserName: "webkit",
+      }));
+  });
+} finally {
+  await devServer.stop();
+}
