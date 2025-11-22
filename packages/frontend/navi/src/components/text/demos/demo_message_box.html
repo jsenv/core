@@ -64,7 +64,14 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { MessageBox, Title, Code, Layout, Icon } from "@jsenv/navi";
+      import {
+        MessageBox,
+        Title,
+        Code,
+        Layout,
+        Icon,
+        ExclamationIconSvg,
+      } from "@jsenv/navi";
 
       const App = () => {
         return (
@@ -151,6 +158,14 @@
               <div className="message-example">
                 <h3>Error with Icon</h3>
                 <MessageBox level="error" icon>
+                  This MessageBox includes an error icon to visually represent
+                  the message type.
+                </MessageBox>
+              </div>
+
+              <div className="message-example">
+                <h3>Error with custom</h3>
+                <MessageBox level="error" icon={<ExclamationIconSvg />}>
                   This MessageBox includes an error icon to visually represent
                   the message type.
                 </MessageBox>

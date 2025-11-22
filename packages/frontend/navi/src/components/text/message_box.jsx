@@ -123,18 +123,20 @@ export const MessageBox = ({
 }) => {
   const [hasTitleChild, setHasTitleChild] = useState(false);
   const innerLeftStripe = leftStripe === undefined ? hasTitleChild : leftStripe;
-  let IconComponent;
   if (icon === true) {
-    IconComponent =
-      level === "info"
-        ? InfoIconSvg
-        : level === "success"
-          ? SuccessIconSvg
-          : level === "warning"
-            ? WarningIconSvg
-            : level === "error"
-              ? ErrorIconSvg
-              : null;
+    icon =
+      level === "info" ? (
+        <InfoIconSvg />
+      ) : level === "success" ? (
+        <SuccessIconSvg />
+      ) : level === "warning" ? (
+        <WarningIconSvg />
+      ) : level === "error" ? (
+        <ErrorIconSvg />
+      ) : null;
+  } else if (typeof icon === "function") {
+    const Comp = icon;
+    icon = <Comp />;
   }
 
   return (
@@ -158,11 +160,7 @@ export const MessageBox = ({
     >
       <MessageBoxLevelContext.Provider value={level}>
         <MessageBoxReportTitleChildContext.Provider value={setHasTitleChild}>
-          {IconComponent && (
-            <Icon color="var(--x-color)">
-              <IconComponent />
-            </Icon>
-          )}
+          {icon && <Icon color="var(--x-color)">{icon}</Icon>}
           <Text>{children}</Text>
           {onClose && (
             <Button

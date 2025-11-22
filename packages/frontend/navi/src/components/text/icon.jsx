@@ -46,6 +46,11 @@ import.meta.css = /* css */ `
     height: 100%;
   }
 
+  .navi_icon[data-icon-char] svg,
+  .navi_icon[data-icon-char] img {
+    width: 100%;
+    height: 100%;
+  }
   .navi_icon[data-icon-char] svg {
     overflow: visible;
   }
