@@ -1,4 +1,4 @@
-# [1_firefox](../../navi_test.mjs#L57)
+# [1_firefox](../../navi_test.mjs#L64)
 
 ```js
 run({
@@ -7,9 +7,9 @@ run({
 })
 ```
 
-# 1/2 write file "./output/demo_flex.html_firefox.png"
+# 1/2 write 6 files into "./output/"
 
-see [./output/demo_flex.html_firefox.png](./output/demo_flex.html_firefox.png)
+see [./output/](./output/)
 
 # 2/2 resolve
 

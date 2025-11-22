@@ -35,7 +35,14 @@ const run = async ({ browserLauncher, browserName }) => {
       sceenshotBuffer,
     );
   };
-  for (const story of ["src/components/layout/demos/demo_flex.html"]) {
+  for (const story of [
+    "src/components/layout/demos/demo_flex.html",
+    "src/components/layout/demos/demo_layout_buttons.html",
+    "src/components/text/demos/demo_badge_count.html",
+    "src/components/text/demos/demo_icon.html",
+    "src/components/text/demos/demo_text_content_spacing.html",
+    "src/components/text/demos/demo_text_overflow.html",
+  ]) {
     await takeSnapshotsForStory(story);
   }
   await browser.close();

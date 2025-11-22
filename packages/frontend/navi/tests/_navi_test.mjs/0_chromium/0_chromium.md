@@ -1,4 +1,4 @@
-# [0_chromium](../../navi_test.mjs#L51)
+# [0_chromium](../../navi_test.mjs#L58)
 
 ```js
 run({
@@ -7,9 +7,9 @@ run({
 })
 ```
 
-# 1/2 write file "./output/demo_flex.html_chromium.png"
+# 1/2 write 6 files into "./output/"
 
-see [./output/demo_flex.html_chromium.png](./output/demo_flex.html_chromium.png)
+see [./output/](./output/)
 
 # 2/2 resolve
 
