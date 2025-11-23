@@ -17,6 +17,7 @@
         BadgeCount,
         Link,
         Button,
+        Caption,
       } from "@jsenv/navi";
 
       // Composants JSX pour éviter les erreurs de syntaxe lors des modifications
@@ -25,21 +26,24 @@
           <Title as="h2">Table des matières</Title>
           <Box row spacing="xs" marginTop="md">
             <Link href="#exemples-base">1. Exemples de base</Link>
-            <Link href="#line-heights">
-              2. Comportement avec différents line-heights
-            </Link>
             <Link href="#font-sizes">
-              3. Comportement avec différents font-size
+              2. Comportement avec différents font-size
+            </Link>
+            <Link href="#font-families">
+              3. Comportement avec différents font-family
+            </Link>
+            <Link href="#line-heights">
+              4. Comportement avec différents line-heights
             </Link>
             <Link href="#integration-composants">
-              4. Intégration dans différents composants
+              5. Intégration dans différents composants
             </Link>
-            <Link href="#badge-positioning">5. Badge positioning</Link>
+            <Link href="#badge-positioning">6. Badge positioning</Link>
             <Link href="#nowrap">
-              6. Association texte + badge (pas de coupure)
+              7. Association texte + badge (pas de coupure)
             </Link>
             <Link href="#nombres-max">
-              7. Compteurs avec nombres élevés et paramètre max
+              8. Compteurs avec nombres élevés et paramètre max
             </Link>
           </Box>
         </Box>
@@ -63,10 +67,103 @@
 
             <Text>
               Tâches à faire
-              <BadgeCount backgroundColor="#e8f5e8" color="#2e7d32" size="lg">
+              <BadgeCount backgroundColor="#e8f5e8" color="#2e7d32" size="xs">
                 3
               </BadgeCount>
             </Text>
+          </Box>
+        </Box>
+      );
+
+      const FontFamiliesSection = () => (
+        <Box as="section" marginBottom="xl" id="font-families">
+          <Title as="h2">Comportement avec différents font-family</Title>
+          <Paragraph>
+            Ces exemples montrent comment le badge s'adapte à différentes
+            polices. Le badge maintient son alignement quel que soit le style de
+            police utilisé.
+          </Paragraph>
+          <Box row spacing="lg">
+            <div>
+              <Caption>Sans-serif (défaut)</Caption>
+              <div
+                style={{
+                  border: "2px dashed #e91e63",
+                  backgroundColor: "rgba(233, 30, 99, 0.05)",
+                  padding: "12px",
+                  borderRadius: "4px",
+                }}
+              >
+                <Text
+                  style={{ fontSize: "20px", fontFamily: "sans-serif" }}
+                  noWrap
+                >
+                  Messages
+                  <BadgeCount background="#e91e63" color="white">
+                    42
+                  </BadgeCount>
+                </Text>
+              </div>
+            </div>
+
+            <div>
+              <Text
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "8px",
+                  display: "block",
+                }}
+              >
+                Monospace
+              </Text>
+              <div
+                style={{
+                  border: "2px dashed #00bcd4",
+                  backgroundColor: "rgba(0, 188, 212, 0.05)",
+                  padding: "12px",
+                  borderRadius: "4px",
+                }}
+              >
+                <Text
+                  style={{ fontSize: "20px", fontFamily: "monospace" }}
+                  noWrap
+                >
+                  Messages
+                  <BadgeCount background="#00bcd4" color="white">
+                    42
+                  </BadgeCount>
+                </Text>
+              </div>
+            </div>
+
+            <div>
+              <Text
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "8px",
+                  display: "block",
+                }}
+              >
+                Serif
+              </Text>
+              <div
+                style={{
+                  border: "2px dashed #8bc34a",
+                  backgroundColor: "rgba(139, 195, 74, 0.05)",
+                  padding: "12px",
+                  borderRadius: "4px",
+                }}
+              >
+                <Text style={{ fontSize: "20px", fontFamily: "serif" }} noWrap>
+                  Messages
+                  <BadgeCount background="#8bc34a" color="white">
+                    42
+                  </BadgeCount>
+                </Text>
+              </div>
+            </div>
           </Box>
         </Box>
       );
@@ -79,7 +176,7 @@
             hauteurs de ligne. Les bordures colorées visualisent la hauteur
             réelle occupée par chaque ligne.
           </Paragraph>
-          <Box column spacing="lg">
+          <Box row spacing="lg">
             <div>
               <Text
                 style={{
@@ -181,7 +278,7 @@
             tailles de police. Le badge maintient ses proportions relatives au
             texte.
           </Paragraph>
-          <Box column spacing="lg">
+          <Box row spacing="lg">
             <div>
               <Text
                 style={{
@@ -585,8 +682,9 @@
 
             <TableOfContents />
             <ExemplesBase />
-            <LineHeightsSection />
             <FontSizesSection />
+            <FontFamiliesSection />
+            <LineHeightsSection />
             <IntegrationComposantsSection />
             <BadgePositioningSection />
             <NoWrapSection />

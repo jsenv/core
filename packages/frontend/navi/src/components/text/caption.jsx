@@ -1,3 +1,4 @@
+import { withPropsClassName } from "../with_props_class_name.js";
 import { Text } from "./text.jsx";
 
 import.meta.css = /* css */ `
@@ -16,10 +17,14 @@ const CaptionStyleCSSVars = {
   color: "--color",
 };
 
-export const Caption = ({ children }) => {
+export const Caption = ({ className, ...rest }) => {
   return (
-    <Text size="sm" className="navi_caption" styleCSSVars={CaptionStyleCSSVars}>
-      {children}
-    </Text>
+    <Text
+      size="xs"
+      marginBottom="sm"
+      className={withPropsClassName("navi_caption", className)}
+      {...rest}
+      styleCSSVars={CaptionStyleCSSVars}
+    />
   );
 };

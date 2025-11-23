@@ -86,6 +86,7 @@ export { useSignalSync } from "./src/components/use_signal_sync.js";
 // Text
 export { SVGMaskOverlay } from "./src/components/svg/svg_mask_overlay.jsx";
 export { BadgeCount } from "./src/components/text/badge.jsx";
+export { Caption } from "./src/components/text/caption.jsx";
 export { Code } from "./src/components/text/code.jsx";
 // Link can be used to wrap other things than text BUT it's most of the time used to wrap text
 // So they naturally belong to text stuff
