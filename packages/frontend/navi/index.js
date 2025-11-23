@@ -137,3 +137,6 @@ export { enableDebugOnDocumentLoading } from "./src/browser_integration/document
 export { CheckSvg } from "./src/components/graphic/icons/check_svg.jsx";
 export { ExclamationSvg } from "./src/components/graphic/icons/exclamation_svg.jsx";
 export { HeartSvg } from "./src/components/graphic/icons/heart_svg.jsx";
+export { SearchSvg } from "./src/components/graphic/icons/search_svg.jsx";
+export { SettingsSvg } from "./src/components/graphic/icons/settings_svg.jsx";
+export { StarSvg } from "./src/components/graphic/icons/star_svg.jsx";
