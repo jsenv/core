@@ -136,11 +136,14 @@ export { useFocusGroup } from "./src/components/use_focus_group.js";
 export { enableDebugActions } from "./src/actions.js";
 export { enableDebugOnDocumentLoading } from "./src/browser_integration/document_loading_signal.js";
 
-export { BlankTargetLinkSvg } from "./src/components/graphic/icons/blank_target_link_svg.jsx";
 export { CheckSvg } from "./src/components/graphic/icons/check_svg.jsx";
 export { ExclamationSvg } from "./src/components/graphic/icons/exclamation_svg.jsx";
 export { HeartSvg } from "./src/components/graphic/icons/heart_svg.jsx";
 export { HomeSvg } from "./src/components/graphic/icons/home_svg.jsx";
+export {
+  LinkAnchorSvg,
+  LinkBlankTargetSvg,
+} from "./src/components/graphic/icons/link_svgs.jsx";
 export { SearchSvg } from "./src/components/graphic/icons/search_svg.jsx";
 export { SettingsSvg } from "./src/components/graphic/icons/settings_svg.jsx";
 export { StarSvg } from "./src/components/graphic/icons/star_svg.jsx";
