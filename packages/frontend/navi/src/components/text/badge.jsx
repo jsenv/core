@@ -28,6 +28,10 @@ import.meta.css = /* css */ `
     background-color: var(--background-color, var(--background));
     border-radius: var(--border-radius, 1em);
   }
+  .navi_badge_count[data-two-digits] {
+    padding-right: 0;
+    padding-left: 0;
+  }
 
   .navi_count_badge_overflow {
     position: relative;
@@ -53,7 +57,6 @@ const BadgeCountOverflow = () => (
 
 export const BadgeCount = ({
   children,
-  bold = true,
   max,
   maxElement = <BadgeCountOverflow />,
   ...props
@@ -61,13 +64,14 @@ export const BadgeCount = ({
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
 
+  const numericValue =
+    typeof children === "string" ? parseInt(children, 10) : children;
   // Calculer la valeur à afficher en fonction du paramètre max
   const getDisplayValue = () => {
     if (max === undefined) {
       return children;
     }
-    const numericValue =
-      typeof children === "string" ? parseInt(children, 10) : children;
+
     const numericMax = typeof max === "string" ? parseInt(max, 10) : max;
     if (isNaN(numericValue) || isNaN(numericMax)) {
       return children;
@@ -88,10 +92,11 @@ export const BadgeCount = ({
 
   return (
     <Text
-      {...props}
       ref={ref}
       className="navi_badge_count"
-      bold={bold}
+      bold
+      data-two-digits={String(numericValue).length === 2 ? "" : undefined}
+      {...props}
       styleCSSVars={BadgeStyleCSSVars}
       spacing="pre"
     >
