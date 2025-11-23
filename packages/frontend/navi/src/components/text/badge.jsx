@@ -10,27 +10,30 @@ import.meta.css = /* css */ `
     }
   }
   .navi_badge_count {
+    --inner-spacing: 0.2em;
+    --size: 1em;
+    --x-outer-size: calc(var(--size) + var(--inner-spacing));
+    --x-offset-top: calc(-0.5 * (1em - var(--size)));
+
     display: inline-block;
     box-sizing: border-box;
-    min-width: 1.5em;
-    height: 1.5em;
-    max-height: 1.5em;
-    padding-right: var(
-      --padding-right,
-      var(--padding-x, var(--padding, 0.4em))
-    );
-    padding-left: var(--padding-left, var(--padding-x, var(--padding, 0.4em)));
+    min-width: var(--size);
+    height: var(--size);
+    max-height: var(--size);
+    margin-top: var(--x-offset-top);
     color: var(--color, var(--color-contrasting));
     text-align: center;
-    line-height: 1.5em;
+    line-height: var(--size);
     /* vertical-align: middle; */
     background: var(--background);
     background-color: var(--background-color, var(--background));
     border-radius: var(--border-radius, 1em);
   }
+  .navi_badge_count[data-single-digit] {
+    --size: 1.2em;
+  }
   .navi_badge_count[data-two-digits] {
-    padding-right: 0;
-    padding-left: 0;
+    --size: 1.4em;
   }
 
   .navi_count_badge_overflow {
@@ -90,12 +93,15 @@ export const BadgeCount = ({
   const displayValue = getDisplayValue();
   useContrastingColor(ref);
 
+  const digitCount = String(numericValue).length;
+
   return (
     <Text
       ref={ref}
       className="navi_badge_count"
       bold
-      data-two-digits={String(numericValue).length === 2 ? "" : undefined}
+      data-single-digit={digitCount.length === 1 ? "" : undefined}
+      data-two-digits={digitCount.length === 2 ? "" : undefined}
       {...props}
       styleCSSVars={BadgeStyleCSSVars}
       spacing="pre"
