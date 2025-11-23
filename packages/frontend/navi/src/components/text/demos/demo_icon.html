@@ -1081,33 +1081,72 @@
         <Box as="section" marginBottom="xl" id="font-family">
           <Title as="h2">Font Family</Title>
           <Box column spacing="md">
-            <Text style={{ fontFamily: "monospace" }}>
-              <Icon>
-                <HomeSvg />
-              </Icon>
-              Monospace font (fixed-width)
-            </Text>
+            <div>
+              <Text
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "4px",
+                  display: "block",
+                }}
+              >
+                Monospace (fixed-width)
+              </Text>
+              <Text style={{ fontFamily: "monospace" }}>
+                <Icon>
+                  <HomeSvg />
+                </Icon>
+                Icon with text example
+              </Text>
+            </div>
 
-            <Text
-              style={{
-                fontFamily: "Arial, sans-serif",
-                fontStretch: "condensed",
-              }}
-            >
-              <Icon>
-                <UserSvg />
-              </Icon>
-              Condensed Arial font
-            </Text>
+            <div>
+              <Text
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "4px",
+                  display: "block",
+                }}
+              >
+                Arial condensed
+              </Text>
+              <Text
+                style={{
+                  fontFamily: "Arial, sans-serif",
+                  fontStretch: "condensed",
+                }}
+              >
+                <Icon>
+                  <HomeSvg />
+                </Icon>
+                Icon with text example
+              </Text>
+            </div>
 
-            <Text
-              style={{ fontFamily: "Georgia, serif", fontStretch: "expanded" }}
-            >
-              <Icon>
-                <SettingsSvg />
-              </Icon>
-              Expanded Georgia serif
-            </Text>
+            <div>
+              <Text
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "4px",
+                  display: "block",
+                }}
+              >
+                Georgia serif expanded
+              </Text>
+              <Text
+                style={{
+                  fontFamily: "Georgia, serif",
+                  fontStretch: "expanded",
+                }}
+              >
+                <Icon>
+                  <HomeSvg />
+                </Icon>
+                Icon with text example
+              </Text>
+            </div>
           </Box>
         </Box>
       );

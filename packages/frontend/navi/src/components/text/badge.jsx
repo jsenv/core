@@ -30,7 +30,7 @@ import.meta.css = /* css */ `
   }
 `;
 
-const BadgeManagedByCSSVars = {
+const BadgeStyleCSSVars = {
   borderWidth: "--border-width",
   borderRadius: "--border-radius",
   paddingRight: "--padding-right",
@@ -70,7 +70,7 @@ export const BadgeCount = ({ children, bold = true, max, ...props }) => {
       ref={ref}
       className="navi_badge_count"
       bold={bold}
-      managedByCSSVars={BadgeManagedByCSSVars}
+      styleCSSVars={BadgeStyleCSSVars}
       spacing="pre"
     >
       {displayValue}

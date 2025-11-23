@@ -6,83 +6,82 @@ import { Box } from "./box.jsx";
 import.meta.css = /* css */ `
   @layer navi {
     .navi_dialog_layout {
-      --dialog-margin: 30px;
-      --dialog-padding: 20px;
-      --dialog-background: white;
-      --dialog-border-width: 2px;
-      --dialog-border-color: lightgrey;
-      --dialog-border-radius: 10px;
-      --dialog-min-width: 300px;
-      --dialog-min-height: auto;
+      --layout-margin: 30px;
+      --layout-padding: 20px;
+      --layout-background: white;
+      --layout-border-width: 2px;
+      --layout-border-color: lightgrey;
+      --layout-border-radius: 10px;
+      --layout-min-width: 300px;
+      --layout-min-height: auto;
     }
   }
   .navi_dialog_layout {
     padding-top: var(
-      --dialog-margin-top,
-      var(--dialog-margin-y, var(--dialog-margin))
+      --layout-margin-top,
+      var(--layout-margin-y, var(--layout-margin))
     );
     padding-right: var(
-      --dialog-margin-right,
-      var(--dialog-margin-x, var(--dialog-margin))
+      --layout-margin-right,
+      var(--layout-margin-x, var(--layout-margin))
     );
     padding-bottom: var(
-      --dialog-margin-bottom,
-      var(--dialog-margin-y, var(--dialog-margin))
+      --layout-margin-bottom,
+      var(--layout-margin-y, var(--layout-margin))
     );
     padding-left: var(
-      --dialog-margin-left,
-      var(--dialog-margin-x, var(--dialog-margin))
+      --layout-margin-left,
+      var(--layout-margin-x, var(--layout-margin))
     );
   }
 
   .navi_dialog_content {
-    min-width: var(--dialog-min-width);
-    min-height: var(--dialog-min-height);
+    min-width: var(--layout-min-width);
+    min-height: var(--layout-min-height);
     padding-top: var(
-      --dialog-padding-top,
-      var(--dialog-padding-y, var(--dialog-padding))
+      --layout-padding-top,
+      var(--layout-padding-y, var(--layout-padding))
     );
     padding-right: var(
-      --dialog-padding-right,
-      var(--dialog-padding-x, var(--dialog-padding))
+      --layout-padding-right,
+      var(--layout-padding-x, var(--layout-padding))
     );
     padding-bottom: var(
-      --dialog-padding-bottom,
-      var(--dialog-padding-y, var(--dialog-padding))
+      --layout-padding-bottom,
+      var(--layout-padding-y, var(--layout-padding))
     );
     padding-left: var(
-      --dialog-padding-left,
-      var(--dialog-padding-x, var(--dialog-padding))
+      --layout-padding-left,
+      var(--layout-padding-x, var(--layout-padding))
     );
-    background: var(--dialog-background);
-    background-color: var(--dialog-background-color, var(--dialog-background));
-    border-width: var(--dialog-border-width);
+    background: var(--layout-background);
+    background-color: var(--layout-background-color, var(--layout-background));
+    border-width: var(--layout-border-width);
     border-style: solid;
-    border-color: var(--dialog-border-color);
-    border-radius: var(--dialog-border-radius);
+    border-color: var(--layout-border-color);
+    border-radius: var(--layout-border-radius);
   }
 `;
 
-const DialogManagedByCSSVars = {
-  margin: "--dialog-margin",
-  marginTop: "--dialog-margin-top",
-  marginBottom: "--dialog-margin-bottom",
-  marginLeft: "--dialog-margin-left",
-  marginRight: "--dialog-margin-right",
-  borderRadius: "--dialog-border-radius",
-  borderWidth: "--dialog-border-width",
-  borderColor: "--dialog-border-color",
-  background: "--dialog-background",
-  backgroundColor: "--dialog-background-color",
-  padding: "--dialog-padding",
-  paddingTop: "--dialog-padding-top",
-  paddingBottom: "--dialog-padding-bottom",
-  paddingLeft: "--dialog-padding-left",
-  paddingRight: "--dialog-padding-right",
-  minWidth: "--dialog-min-width",
-  minHeight: "--dialog-min-height",
+const DialogLayoutStyleCSSVars = {
+  margin: "--layout-margin",
+  marginTop: "--layout-margin-top",
+  marginBottom: "--layout-margin-bottom",
+  marginLeft: "--layout-margin-left",
+  marginRight: "--layout-margin-right",
+  borderRadius: "--layout-border-radius",
+  borderWidth: "--layout-border-width",
+  borderColor: "--layout-border-color",
+  background: "--layout-background",
+  backgroundColor: "--layout-background-color",
+  padding: "--layout-padding",
+  paddingTop: "--layout-padding-top",
+  paddingBottom: "--layout-padding-bottom",
+  paddingLeft: "--layout-padding-left",
+  paddingRight: "--layout-padding-right",
+  minWidth: "--layout-min-width",
+  minHeight: "--layout-min-height",
 };
-
 export const DialogLayout = ({
   children,
   alignX = "center",
@@ -92,7 +91,7 @@ export const DialogLayout = ({
   return (
     <Box
       baseClassName="navi_dialog_layout"
-      managedByCSSVars={DialogManagedByCSSVars}
+      CSSVars={DialogLayoutStyleCSSVars}
       visualSelector=".navi_dialog_content"
       {...props}
     >

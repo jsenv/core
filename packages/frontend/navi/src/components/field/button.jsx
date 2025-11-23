@@ -246,7 +246,7 @@ export const Button = (props) => {
   });
 };
 
-const ButtonManagedByCSSVars = {
+const ButtonStyleCSSVars = {
   "outlineWidth": "--button-outline-width",
   "borderWidth": "--button-border-width",
   "borderRadius": "--button-border-radius",
@@ -337,7 +337,7 @@ const ButtonBasic = (props) => {
       aria-busy={innerLoading}
       // style management
       baseClassName="navi_button"
-      managedByCSSVars={ButtonManagedByCSSVars}
+      styleCSSVars={ButtonStyleCSSVars}
       pseudoClasses={ButtonPseudoClasses}
       pseudoElements={ButtonPseudoElements}
       basePseudoState={{

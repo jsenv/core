@@ -93,7 +93,7 @@ import.meta.css = /* css */ `
 
 const PSEUDO_CLASSES_DEFAULT = [];
 const PSEUDO_ELEMENTS_DEFAULT = [];
-const MANAGED_BY_CSS_VARS_DEFAULT = {};
+const STYLE_CSS_VARS_DEFAULT = {};
 
 export const Box = (props) => {
   const {
@@ -104,7 +104,7 @@ export const Box = (props) => {
 
     // style management
     style,
-    managedByCSSVars = MANAGED_BY_CSS_VARS_DEFAULT,
+    styleCSSVars = STYLE_CSS_VARS_DEFAULT,
     basePseudoState,
     pseudoState, // for demo purposes it's possible to control pseudo state from props
     pseudoClasses = PSEUDO_CLASSES_DEFAULT,
@@ -170,7 +170,7 @@ export const Box = (props) => {
       layout,
 
       // Style context dependencies
-      managedByCSSVars,
+      styleCSSVars,
       pseudoClasses,
       pseudoElements,
 
@@ -219,7 +219,7 @@ export const Box = (props) => {
     const styleContext = {
       parentLayout,
       layout,
-      managedByCSSVars,
+      styleCSSVars,
       pseudoState: innerPseudoState,
       pseudoClasses,
       pseudoElements,
@@ -231,7 +231,7 @@ export const Box = (props) => {
 
     const addStyle = (value, name, stylesTarget, context) => {
       styleDeps.push(value); // impact box style -> add to deps
-      const cssVar = managedByCSSVars[name];
+      const cssVar = styleCSSVars[name];
       const mergedValue = prepareStyleValue(
         stylesTarget[name],
         value,
@@ -256,7 +256,7 @@ export const Box = (props) => {
         addStyle(value, name, stylesTarget, context);
         return false;
       }
-      const cssVar = managedByCSSVars[name];
+      const cssVar = styleCSSVars[name];
       if (cssVar) {
         // css var wins over visual child handling
         addStyle(value, name, stylesTarget, context);
@@ -386,9 +386,9 @@ export const Box = (props) => {
         for (const key of pseudoStyleKeys) {
           const pseudoStyleContext = {
             ...styleContext,
-            managedByCSSVars: {
-              ...managedByCSSVars,
-              ...managedByCSSVars[key],
+            styleCSSVars: {
+              ...styleCSSVars,
+              ...styleCSSVars[key],
             },
             pseudoName: key,
           };

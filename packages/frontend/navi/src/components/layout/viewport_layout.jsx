@@ -3,27 +3,39 @@ import { Box } from "./box.jsx";
 import.meta.css = /* css */ `
   @layer navi {
     .navi_viewport_layout {
-      --padding: 40px;
-      --background: white;
+      --layout-padding: 40px;
+      --layout-background: white;
     }
   }
 
   .navi_viewport_layout {
-    padding-top: var(--padding-top, var(--padding-y, var(--padding)));
-    padding-right: var(--padding-right, var(--padding-x, var(--padding)));
-    padding-bottom: var(--padding-bottom, var(--padding-y, var(--padding)));
-    padding-left: var(--padding-left, var(--padding-x, var(--padding)));
-    background: var(--background);
+    padding-top: var(
+      --layout-padding-top,
+      var(--layout-padding-y, var(--layout-padding))
+    );
+    padding-right: var(
+      --layout-padding-right,
+      var(--layout-padding-x, var(--layout-padding))
+    );
+    padding-bottom: var(
+      --layout-padding-bottom,
+      var(--layout-padding-y, var(--layout-padding))
+    );
+    padding-left: var(
+      --layout-padding-left,
+      var(--layout-padding-x, var(--layout-padding))
+    );
+    background: var(--layout-background);
   }
 `;
 
-const ViewportManagedByCSSVars = {
-  padding: "--padding",
-  paddingTop: "--padding-top",
-  paddingBottom: "--padding-bottom",
-  paddingLeft: "--padding-left",
-  paddingRight: "--padding-right",
-  background: "--background",
+const ViewportLayoutStyleCSSVars = {
+  padding: "--layout-padding",
+  paddingTop: "--layout-padding-top",
+  paddingBottom: "--layout-padding-bottom",
+  paddingLeft: "--layout-padding-left",
+  paddingRight: "--layout-padding-right",
+  background: "--layout-background",
 };
 export const ViewportLayout = (props) => {
   return (
@@ -33,7 +45,7 @@ export const ViewportLayout = (props) => {
       height="100%"
       {...props}
       className="navi_viewport_layout"
-      managedByCSSVars={ViewportManagedByCSSVars}
+      styleCSSVars={ViewportLayoutStyleCSSVars}
     />
   );
 };

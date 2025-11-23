@@ -216,7 +216,7 @@ export const InputRadio = (props) => {
   );
 };
 
-const RadioManagedByCSSVars = {
+const RadioStyleCSSVars = {
   "outlineWidth": "--outline-width",
   "borderWidth": "--border-width",
   "borderRadius": "--border-radius",
@@ -386,7 +386,7 @@ const InputRadioBasic = (props) => {
       ref={ref}
       baseClassName="navi_radio"
       pseudoStateSelector=".navi_native_field"
-      managedByCSSVars={RadioManagedByCSSVars}
+      styleCSSVars={RadioStyleCSSVars}
       pseudoClasses={RadioPseudoClasses}
       pseudoElements={RadioPseudoElements}
       basePseudoState={{

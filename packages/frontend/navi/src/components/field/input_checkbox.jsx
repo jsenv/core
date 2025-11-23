@@ -212,7 +212,7 @@ export const InputCheckbox = (props) => {
   );
 };
 
-const CheckboxManagedByCSSVars = {
+const CheckboxStyleCSSVars = {
   "outlineWidth": "--outline-width",
   "borderWidth": "--border-width",
   "borderRadius": "--border-radius",
@@ -358,7 +358,7 @@ const InputCheckboxBasic = (props) => {
       ref={ref}
       baseClassName="navi_checkbox"
       pseudoStateSelector=".navi_native_field"
-      managedByCSSVars={CheckboxManagedByCSSVars}
+      styleCSSVars={CheckboxStyleCSSVars}
       pseudoClasses={CheckboxPseudoClasses}
       pseudoElements={CheckboxPseudoElements}
       basePseudoState={{

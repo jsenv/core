@@ -177,7 +177,7 @@ export const InputTextual = (props) => {
   );
 };
 
-const InputManagedByCSSVars = {
+const InputStyleCSSVars = {
   "outlineWidth": "--outline-width",
   "borderWidth": "--border-width",
   "borderRadius": "--border-radius",
@@ -304,7 +304,7 @@ const InputTextualBasic = (props) => {
       as="span"
       box
       baseClassName="navi_input"
-      managedByCSSVars={InputManagedByCSSVars}
+      styleCSSVars={InputStyleCSSVars}
       pseudoStateSelector=".navi_native_input"
       visualSelector=".navi_native_input"
       basePseudoState={{

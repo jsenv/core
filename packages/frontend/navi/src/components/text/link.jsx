@@ -105,7 +105,7 @@ import.meta.css = /* css */ `
   }
 `;
 
-const LinkManagedByCSSVars = {
+const LinkStyleCSSVars = {
   "outlineColor": "--link-outline-color",
   "borderRadius": "--link-border-radius",
   "color": "--link-color",
@@ -260,7 +260,7 @@ const LinkPlain = (props) => {
       spacing="pre"
       // Visual
       baseClassName="navi_link"
-      managedByCSSVars={LinkManagedByCSSVars}
+      styleCSSVars={LinkStyleCSSVars}
       pseudoClasses={LinkPseudoClasses}
       pseudoElements={LinkPseudoElements}
       basePseudoState={{
