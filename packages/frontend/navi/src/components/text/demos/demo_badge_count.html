@@ -25,7 +25,9 @@
         <Box as="section" marginBottom="xl">
           <Title as="h2">Table des matières</Title>
           <Box row spacing="xs" marginTop="md">
-            <Link href="#exemples-base">1. Exemples de base</Link>
+            <Link href="#tests-comportementaux">
+              1. Tests comportementaux par police
+            </Link>
             <Link href="#font-sizes">
               2. Comportement avec différents font-size
             </Link>
@@ -45,13 +47,116 @@
             <Link href="#nombres-max">
               8. Compteurs avec nombres élevés et paramètre max
             </Link>
+            <Link href="#exemples-base">9. Variations courantes</Link>
+          </Box>
+        </Box>
+      );
+
+      const TestsComportementauxSection = () => (
+        <Box as="section" marginBottom="xl" id="tests-comportementaux">
+          <Title as="h2">Tests comportementaux par police</Title>
+          <Paragraph>
+            Cette section teste le comportement du badge avec différentes
+            valeurs numériques et différentes polices pour vérifier l'alignement
+            et le rendu.
+          </Paragraph>
+
+          <Box row spacing="lg">
+            <Box column alignY="center" spacing="md">
+              <Caption>Police par défaut (sans-serif)</Caption>
+              <Box column spacing="md">
+                <BadgeCount background="#2196f3" color="white">
+                  0
+                </BadgeCount>
+                <BadgeCount background="#2196f3" color="white">
+                  1
+                </BadgeCount>
+                <BadgeCount background="#2196f3" color="white">
+                  5
+                </BadgeCount>
+                <BadgeCount background="#2196f3" color="white">
+                  9
+                </BadgeCount>
+                <BadgeCount background="#2196f3" color="white">
+                  10
+                </BadgeCount>
+                <BadgeCount background="#2196f3" color="white">
+                  99
+                </BadgeCount>
+                <BadgeCount background="#2196f3" color="white">
+                  100
+                </BadgeCount>
+              </Box>
+            </Box>
+
+            <div>
+              <Caption>Police monospace</Caption>
+              <Box
+                row
+                spacing="md"
+                style={{ flexWrap: "wrap", fontFamily: "monospace" }}
+              >
+                <BadgeCount background="#ff9800" color="white">
+                  0
+                </BadgeCount>
+                <BadgeCount background="#ff9800" color="white">
+                  1
+                </BadgeCount>
+                <BadgeCount background="#ff9800" color="white">
+                  5
+                </BadgeCount>
+                <BadgeCount background="#ff9800" color="white">
+                  9
+                </BadgeCount>
+                <BadgeCount background="#ff9800" color="white">
+                  10
+                </BadgeCount>
+                <BadgeCount background="#ff9800" color="white">
+                  99
+                </BadgeCount>
+                <BadgeCount background="#ff9800" color="white">
+                  100
+                </BadgeCount>
+              </Box>
+            </div>
+
+            <div>
+              <Caption>Police serif</Caption>
+              <Box
+                row
+                spacing="md"
+                style={{ flexWrap: "wrap", fontFamily: "serif" }}
+              >
+                <BadgeCount background="#4caf50" color="white">
+                  0
+                </BadgeCount>
+                <BadgeCount background="#4caf50" color="white">
+                  1
+                </BadgeCount>
+                <BadgeCount background="#4caf50" color="white">
+                  5
+                </BadgeCount>
+                <BadgeCount background="#4caf50" color="white">
+                  9
+                </BadgeCount>
+                <BadgeCount background="#4caf50" color="white">
+                  10
+                </BadgeCount>
+                <BadgeCount background="#4caf50" color="white">
+                  99
+                </BadgeCount>
+                <BadgeCount background="#4caf50" color="white">
+                  100
+                </BadgeCount>
+              </Box>
+            </div>
           </Box>
         </Box>
       );
 
       const ExemplesBase = () => (
         <Box as="section" marginBottom="xl" id="exemples-base">
-          <Title as="h2">Exemples de base</Title>
+          <Title as="h2">Variations courantes</Title>
           <Box row spacing="md">
             <Text>
               Messages non lus
@@ -541,7 +646,7 @@
             <Title as="h1">Badge Count Demo</Title>
 
             <TableOfContents />
-            <ExemplesBase />
+            <TestsComportementauxSection />
             <FontSizesSection />
             <FontFamiliesSection />
             <LineHeightsSection />
@@ -549,6 +654,7 @@
             <BadgePositioningSection />
             <NoWrapSection />
             <NombresMaxSection />
+            <ExemplesBase />
           </div>
         );
       };
