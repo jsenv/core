@@ -10,30 +10,34 @@ import.meta.css = /* css */ `
     }
   }
   .navi_badge_count {
-    --inner-spacing: 0.2em;
+    --spacing: 0.3em;
     --size: 1em;
-    --x-outer-size: calc(var(--size) + var(--inner-spacing));
-    --x-offset-top: calc(-0.5 * (1em - var(--size)));
+    --x-outer-size: calc(var(--size) + var(--spacing));
+    --x-offset-top: calc(0.5 * (var(--x-outer-size) - 1em));
 
     display: inline-block;
     box-sizing: border-box;
-    min-width: var(--size);
-    height: var(--size);
-    max-height: var(--size);
-    margin-top: var(--x-offset-top);
+    min-width: var(--x-outer-size);
+    height: var(--x-outer-size);
+    max-height: var(--x-outer-size);
+    margin-top: calc(-1 * var(--x-offset-top));
+    padding-right: var(--spacing);
+    padding-left: var(--spacing);
     color: var(--color, var(--color-contrasting));
     text-align: center;
-    line-height: var(--size);
+    line-height: var(--x-outer-size);
     /* vertical-align: middle; */
     background: var(--background);
     background-color: var(--background-color, var(--background));
     border-radius: var(--border-radius, 1em);
   }
   .navi_badge_count[data-single-digit] {
-    --size: 1.2em;
+    --spacing: 0em;
+    --size: 1.3em;
   }
   .navi_badge_count[data-two-digits] {
-    --size: 1.4em;
+    --spacing: 0em;
+    --size: 1.6em;
   }
 
   .navi_count_badge_overflow {
@@ -100,8 +104,8 @@ export const BadgeCount = ({
       ref={ref}
       className="navi_badge_count"
       bold
-      data-single-digit={digitCount.length === 1 ? "" : undefined}
-      data-two-digits={digitCount.length === 2 ? "" : undefined}
+      data-single-digit={digitCount === 1 ? "" : undefined}
+      data-two-digits={digitCount === 2 ? "" : undefined}
       {...props}
       styleCSSVars={BadgeStyleCSSVars}
       spacing="pre"
