@@ -1,4 +1,4 @@
-# [0_chromium](../../navi_snap.mjs#L59)
+# [0_chromium](../../navi_snap.mjs#L60)
 
 ```js
 run({
@@ -7,7 +7,7 @@ run({
 })
 ```
 
-# 1/2 write 6 files into "./output/"
+# 1/2 write 7 files into "./output/"
 
 see [./output/](./output/)
 
