@@ -28,15 +28,18 @@
             <Link href="#line-heights">
               2. Comportement avec différents line-heights
             </Link>
-            <Link href="#integration-composants">
-              3. Intégration dans différents composants
+            <Link href="#font-sizes">
+              3. Comportement avec différents font-size
             </Link>
-            <Link href="#badge-positioning">4. Badge positioning</Link>
+            <Link href="#integration-composants">
+              4. Intégration dans différents composants
+            </Link>
+            <Link href="#badge-positioning">5. Badge positioning</Link>
             <Link href="#nowrap">
-              5. Association texte + badge (pas de coupure)
+              6. Association texte + badge (pas de coupure)
             </Link>
             <Link href="#nombres-max">
-              6. Compteurs avec nombres élevés et paramètre max
+              7. Compteurs avec nombres élevés et paramètre max
             </Link>
           </Box>
         </Box>
@@ -162,6 +165,130 @@
                   Messages
                   <BadgeCount background="#795548" color="white">
                     2
+                  </BadgeCount>
+                </Text>
+              </div>
+            </div>
+          </Box>
+        </Box>
+      );
+
+      const FontSizesSection = () => (
+        <Box as="section" marginBottom="xl" id="font-sizes">
+          <Title as="h2">Comportement avec différents font-size</Title>
+          <Paragraph>
+            Ces exemples montrent comment le badge s'adapte à différentes
+            tailles de police. Le badge maintient ses proportions relatives au
+            texte.
+          </Paragraph>
+          <Box column spacing="lg">
+            <div>
+              <Text
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "8px",
+                  display: "block",
+                }}
+              >
+                font-size: 12px - Petit texte
+              </Text>
+              <div
+                style={{
+                  border: "2px dashed #9c27b0",
+                  backgroundColor: "rgba(156, 39, 176, 0.05)",
+                  padding: "8px",
+                  borderRadius: "4px",
+                }}
+              >
+                <Text style={{ fontSize: "12px" }} noWrap>
+                  Petits messages
+                  <BadgeCount background="#9c27b0" color="white">
+                    5
+                  </BadgeCount>
+                </Text>
+              </div>
+            </div>
+
+            <div>
+              <Text
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "8px",
+                  display: "block",
+                }}
+              >
+                font-size: 16px - Taille normale
+              </Text>
+              <div
+                style={{
+                  border: "2px dashed #ff5722",
+                  backgroundColor: "rgba(255, 87, 34, 0.05)",
+                  padding: "8px",
+                  borderRadius: "4px",
+                }}
+              >
+                <Text style={{ fontSize: "16px" }} noWrap>
+                  Messages normaux
+                  <BadgeCount background="#ff5722" color="white">
+                    12
+                  </BadgeCount>
+                </Text>
+              </div>
+            </div>
+
+            <div>
+              <Text
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "8px",
+                  display: "block",
+                }}
+              >
+                font-size: 24px - Grand texte
+              </Text>
+              <div
+                style={{
+                  border: "2px dashed #607d8b",
+                  backgroundColor: "rgba(96, 125, 139, 0.05)",
+                  padding: "8px",
+                  borderRadius: "4px",
+                }}
+              >
+                <Text style={{ fontSize: "24px" }} noWrap>
+                  Gros messages
+                  <BadgeCount background="#607d8b" color="white">
+                    8
+                  </BadgeCount>
+                </Text>
+              </div>
+            </div>
+
+            <div>
+              <Text
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "8px",
+                  display: "block",
+                }}
+              >
+                font-size: 32px - Très grand texte
+              </Text>
+              <div
+                style={{
+                  border: "2px dashed #795548",
+                  backgroundColor: "rgba(121, 85, 72, 0.05)",
+                  padding: "8px",
+                  borderRadius: "4px",
+                }}
+              >
+                <Text style={{ fontSize: "32px" }} noWrap>
+                  Messages énormes
+                  <BadgeCount background="#795548" color="white">
+                    99+
                   </BadgeCount>
                 </Text>
               </div>
@@ -459,6 +586,7 @@
             <TableOfContents />
             <ExemplesBase />
             <LineHeightsSection />
+            <FontSizesSection />
             <IntegrationComposantsSection />
             <BadgePositioningSection />
             <NoWrapSection />
