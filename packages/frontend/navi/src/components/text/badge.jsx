@@ -23,7 +23,7 @@ import.meta.css = /* css */ `
     color: var(--color, var(--color-contrasting));
     text-align: center;
     line-height: 1.5em;
-    vertical-align: middle;
+    /* vertical-align: middle; */
     background: var(--background);
     background-color: var(--background-color, var(--background));
     border-radius: var(--border-radius, 1em);
