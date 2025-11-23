@@ -24,27 +24,26 @@
         <Box as="section" marginBottom="xl">
           <Title as="h2">Table des matières</Title>
           <Box row spacing="xs" marginTop="md">
-            <Link href="#basic-icon-positioning">
-              1. Basic icon positioning
-            </Link>
+            <Link href="#icon-positioning">1. Icon positioning</Link>
             <Link href="#different-font-sizes">2. Font size and color</Link>
-            <Link href="#inline-text-icons">3. Text flow</Link>
+            <Link href="#font-family">3. Font family</Link>
             <Link href="#line-height-variations">4. Line height</Link>
-            <Link href="#icon-dimensions">5. Icon dimensions</Link>
-            <Link href="#icon-transformation">6. Icon transformation</Link>
-            <Link href="#icon-href">7. Icon with SVG use</Link>
-            <Link href="#icon-text-link">8. Icon + text + link</Link>
-            <Link href="#icon-row">9. Icon in row</Link>
-            <Link href="#icon-column">10. Icon in column</Link>
-            <Link href="#integration">11. Integration</Link>
+            <Link href="#inline-text-icons">5. Text flow</Link>
+            <Link href="#icon-dimensions">6. Icon dimensions</Link>
+            <Link href="#icon-transformation">7. Icon transformation</Link>
+            <Link href="#icon-href">8. Icon with SVG use</Link>
+            <Link href="#icon-text-link">9. Icon + text + link</Link>
+            <Link href="#icon-row">10. Icon in row</Link>
+            <Link href="#icon-column">11. Icon in column</Link>
+            <Link href="#integration">12. Integration</Link>
           </Box>
         </Box>
       );
 
-      // Basic Icon Positioning Section
-      const BasicIconPositioningSection = () => (
-        <Box as="section" marginBottom="xl" id="basic-icon-positioning">
-          <Title as="h2">Basic Icon Positioning</Title>
+      // Icon Positioning Section
+      const IconPositioningSection = () => (
+        <Box as="section" marginBottom="xl" id="icon-positioning">
+          <Title as="h2">Icon Positioning</Title>
           <Box row spacing="sm" borderRadius="md">
             <Text size="xs" color="rgb(102, 102, 102)">
               Icon Before Text
@@ -447,10 +446,10 @@
         </Box>
       );
 
-      // Icon Positioning Section
-      const IconPositioningSection = () => (
-        <Box as="section" marginBottom="xl" id="icon-positioning">
-          <Title as="h2">Icon Positioning</Title>
+      // Icon Placement Section
+      const IconPlacementSection = () => (
+        <Box as="section" marginBottom="xl" id="icon-placement">
+          <Title as="h2">Icon Placement</Title>
           <Box column spacing="md">
             <div>
               <Text
@@ -1066,6 +1065,49 @@
               </Icon>
               Extra large purple text
             </Text>
+
+            <Text style={{ fontSize: "50px" }} color="orange">
+              <Icon>
+                <HeartSvg />
+              </Icon>
+              Huge orange text
+            </Text>
+          </Box>
+        </Box>
+      );
+
+      // Font Family Section
+      const FontFamilySection = () => (
+        <Box as="section" marginBottom="xl" id="font-family">
+          <Title as="h2">Font Family</Title>
+          <Box column spacing="md">
+            <Text style={{ fontFamily: "monospace" }}>
+              <Icon>
+                <HomeSvg />
+              </Icon>
+              Monospace font (fixed-width)
+            </Text>
+
+            <Text
+              style={{
+                fontFamily: "Arial, sans-serif",
+                fontStretch: "condensed",
+              }}
+            >
+              <Icon>
+                <UserSvg />
+              </Icon>
+              Condensed Arial font
+            </Text>
+
+            <Text
+              style={{ fontFamily: "Georgia, serif", fontStretch: "expanded" }}
+            >
+              <Icon>
+                <SettingsSvg />
+              </Icon>
+              Expanded Georgia serif
+            </Text>
           </Box>
         </Box>
       );
@@ -1478,10 +1520,11 @@
             <Title as="h1">Icon Demo</Title>
 
             <TableOfContents />
-            <BasicIconPositioningSection />
+            <IconPositioningSection />
             <DifferentFontSizesSection />
-            <InlineTextIconsSection />
+            <FontFamilySection />
             <LineHeightVariationsSection />
+            <InlineTextIconsSection />
             <IconDimensionsSection />
             <IconTransformationSection />
             <IconTextLinkSection />
