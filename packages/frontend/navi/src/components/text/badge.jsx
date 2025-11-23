@@ -28,6 +28,12 @@ import.meta.css = /* css */ `
     background-color: var(--background-color, var(--background));
     border-radius: var(--border-radius, 1em);
   }
+
+  .navi_count_badge_overflow {
+    position: relative;
+    top: -0.4em;
+    font-size: 0.8em;
+  }
 `;
 
 const BadgeStyleCSSVars = {
@@ -40,7 +46,18 @@ const BadgeStyleCSSVars = {
   borderColor: "--border-color",
   color: "--color",
 };
-export const BadgeCount = ({ children, bold = true, max, ...props }) => {
+
+const BadgeCountOverflow = () => (
+  <span className="navi_count_badge_overflow">+</span>
+);
+
+export const BadgeCount = ({
+  children,
+  bold = true,
+  max,
+  maxElement = <BadgeCountOverflow />,
+  ...props
+}) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
 
@@ -56,7 +73,12 @@ export const BadgeCount = ({ children, bold = true, max, ...props }) => {
       return children;
     }
     if (numericValue > numericMax) {
-      return `${numericMax}+`;
+      return (
+        <>
+          {children}
+          {maxElement}
+        </>
+      );
     }
     return children;
   };
