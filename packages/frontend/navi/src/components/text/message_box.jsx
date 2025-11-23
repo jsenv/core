@@ -2,13 +2,13 @@ import { createContext } from "preact";
 import { useState } from "preact/hooks";
 
 import { Button } from "../field/button.jsx";
-import { CloseIconSvg } from "../graphic/close_icon_svg.jsx";
+import { CloseSvg } from "../graphic/icons/close_svg.jsx";
 import {
-  ErrorIconSvg,
-  InfoIconSvg,
-  SuccessIconSvg,
-  WarningIconSvg,
-} from "../graphic/level_svgs.jsx";
+  ErrorSvg,
+  InfoSvg,
+  SuccessSvg,
+  WarningSvg,
+} from "../graphic/icons/level_svg.jsx";
 import { Box } from "../layout/box.jsx";
 import { PSEUDO_CLASSES } from "../layout/pseudo_styles.js";
 import { withPropsClassName } from "../with_props_class_name.js";
@@ -126,13 +126,13 @@ export const MessageBox = ({
   if (icon === true) {
     icon =
       level === "info" ? (
-        <InfoIconSvg />
+        <InfoSvg />
       ) : level === "success" ? (
-        <SuccessIconSvg />
+        <SuccessSvg />
       ) : level === "warning" ? (
-        <WarningIconSvg />
+        <WarningSvg />
       ) : level === "error" ? (
-        <ErrorIconSvg />
+        <ErrorSvg />
       ) : null;
   } else if (typeof icon === "function") {
     const Comp = icon;
@@ -179,7 +179,7 @@ export const MessageBox = ({
               }}
             >
               <Icon>
-                <CloseIconSvg />
+                <CloseSvg />
               </Icon>
             </Button>
           )}

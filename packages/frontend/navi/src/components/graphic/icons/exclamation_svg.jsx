@@ -1,4 +1,4 @@
-export const ExclamationIconSvg = () => {
+export const ExclamationSvg = () => {
   return (
     <svg viewBox="0 0 125 300" xmlns="http://www.w3.org/2000/svg">
       <path

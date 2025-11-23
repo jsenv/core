@@ -134,4 +134,6 @@ export { useFocusGroup } from "./src/components/use_focus_group.js";
 // for debugging testing purposes
 export { enableDebugActions } from "./src/actions.js";
 export { enableDebugOnDocumentLoading } from "./src/browser_integration/document_loading_signal.js";
-export { ExclamationIconSvg } from "./src/components/graphic/exclamation_icon_svg.jsx";
+export { CheckSvg } from "./src/components/graphic/icons/check_svg.jsx";
+export { ExclamationSvg } from "./src/components/graphic/icons/exclamation_svg.jsx";
+export { HeartSvg } from "./src/components/graphic/icons/heart_svg.jsx";
