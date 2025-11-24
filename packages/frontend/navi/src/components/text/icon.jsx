@@ -8,6 +8,10 @@ import.meta.css = /* css */ `
     box-sizing: border-box;
   }
 
+  .navi_icon[data-interactive] {
+    cursor: pointer;
+  }
+
   .navi_icon_char_slot {
     opacity: 0;
     cursor: default;
@@ -68,6 +72,7 @@ export const Icon = ({
   "aria-label": ariaLabel,
   role,
   decorative = false,
+  onClick,
   ...props
 }) => {
   const innerChildren = href ? (
@@ -90,6 +95,8 @@ export const Icon = ({
         baseClassName="navi_icon"
         data-width={width}
         data-height={height}
+        data-interactive={onClick ? "" : undefined}
+        onClick={onClick}
       >
         {innerChildren}
       </Box>
@@ -111,6 +118,8 @@ export const Icon = ({
       data-icon-char=""
       data-width={width}
       data-height={height}
+      data-interactive={onClick ? "" : undefined}
+      onClick={onClick}
     >
       <span className="navi_icon_char_slot" aria-hidden="true">
         {invisibleText}

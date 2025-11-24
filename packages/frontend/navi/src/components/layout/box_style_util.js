@@ -114,6 +114,10 @@ const LAYOUT_PROPS = {
   box: () => {},
   row: () => {},
   column: () => {},
+
+  absolute: applyToCssPropWhenTruthy("position", "absolute", "static"),
+  relative: applyToCssPropWhenTruthy("position", "relative", "static"),
+  fixed: applyToCssPropWhenTruthy("position", "fixed", "static"),
 };
 const OUTER_SPACING_PROPS = {
   margin: PASS_THROUGH,
