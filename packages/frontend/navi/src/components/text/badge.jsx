@@ -95,7 +95,7 @@ export const BadgeCount = ({
     if (numericValue > numericMax) {
       return (
         <>
-          {children}
+          {numericMax}
           {maxElement}
         </>
       );
