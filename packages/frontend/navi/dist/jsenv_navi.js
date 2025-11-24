@@ -10249,6 +10249,10 @@ const LAYOUT_PROPS = {
   box: () => {},
   row: () => {},
   column: () => {},
+
+  absolute: applyToCssPropWhenTruthy("position", "absolute", "static"),
+  relative: applyToCssPropWhenTruthy("position", "relative", "static"),
+  fixed: applyToCssPropWhenTruthy("position", "fixed", "static"),
 };
 const OUTER_SPACING_PROPS = {
   margin: PASS_THROUGH,
@@ -13788,6 +13792,10 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     box-sizing: border-box;
   }
 
+  .navi_icon[data-interactive] {
+    cursor: pointer;
+  }
+
   .navi_icon_char_slot {
     opacity: 0;
     cursor: default;
@@ -13847,6 +13855,7 @@ const Icon = ({
   "aria-label": ariaLabel,
   role,
   decorative = false,
+  onClick,
   ...props
 }) => {
   const innerChildren = href ? jsx("svg", {
@@ -13870,6 +13879,8 @@ const Icon = ({
       baseClassName: "navi_icon",
       "data-width": width,
       "data-height": height,
+      "data-interactive": onClick ? "" : undefined,
+      onClick: onClick,
       children: innerChildren
     });
   }
@@ -13889,6 +13900,8 @@ const Icon = ({
     "data-icon-char": "",
     "data-width": width,
     "data-height": height,
+    "data-interactive": onClick ? "" : undefined,
+    onClick: onClick,
     children: [jsx("span", {
       className: "navi_icon_char_slot",
       "aria-hidden": "true",
@@ -13908,6 +13921,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     .navi_link {
       --link-border-radius: 2px;
       --link-outline-color: var(--navi-focus-outline-color);
+      --link-loader-color: var(--navi-loader-color);
       --link-color: rgb(0, 0, 238);
       --link-color-visited: light-dark(#6a1b9a, #ab47bc);
       --link-color-active: red;
@@ -14137,7 +14151,7 @@ const LinkPlain = props => {
     },
     children: [jsx(LoaderBackground, {
       loading: loading,
-      color: "light-dark(#355fcc, #3b82f6)"
+      color: "var(--link-loader-color)"
     }), applySpacingOnTextChildren(children, spacing), innerIcon && jsx(Icon, {
       marginLeft: "xxs",
       children: innerIcon
@@ -17007,7 +17021,7 @@ const ButtonBasic = props => {
     children: [jsx(LoaderBackground, {
       loading: innerLoading,
       inset: -1,
-      color: "var(--loader-color)"
+      color: "var(--button-loader-color)"
     }), renderButtonContentMemoized]
   });
 };
