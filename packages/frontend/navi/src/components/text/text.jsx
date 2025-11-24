@@ -39,17 +39,16 @@ import.meta.css = /* css */ `
     overflow: hidden;
   }
 
-  .navi_inline_spacer {
+  .navi_custom_space {
   }
 `;
 
-const SPACE_CHAR_SEPARATOR = <span data-navi-space=""> </span>;
-const InlineSpacer = ({ value }) => {
+const REGULAR_SPACE = <span data-navi-space=""> </span>;
+const CustomWidthSpace = ({ value }) => {
   return (
-    <span
-      className="navi_inline_spacer"
-      style={`padding-left: ${value}`}
-    ></span>
+    <span className="navi_custom_space" style={`padding-left: ${value}`}>
+      &#8203;
+    </span>
   );
 };
 
@@ -68,17 +67,17 @@ export const applySpacingOnTextChildren = (children, spacing) => {
 
   let separator;
   if (spacing === undefined) {
-    spacing = SPACE_CHAR_SEPARATOR;
+    spacing = REGULAR_SPACE;
   } else if (typeof spacing === "string") {
     if (isSizeSpacingScaleKey(spacing)) {
-      separator = <InlineSpacer value={resolveSpacingSize(spacing)} />;
+      separator = <CustomWidthSpace value={resolveSpacingSize(spacing)} />;
     } else if (hasCSSSizeUnit(spacing)) {
-      separator = <InlineSpacer value={resolveSpacingSize(spacing)} />;
+      separator = <CustomWidthSpace value={resolveSpacingSize(spacing)} />;
     } else {
       separator = spacing;
     }
   } else if (typeof spacing === "number") {
-    separator = <InlineSpacer value={spacing} />;
+    separator = <CustomWidthSpace value={spacing} />;
   } else {
     separator = spacing;
   }

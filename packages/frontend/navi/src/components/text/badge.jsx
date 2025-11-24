@@ -113,7 +113,11 @@ export const BadgeCount = ({
       styleCSSVars={BadgeStyleCSSVars}
       spacing="pre"
     >
+      {/* When we double click on count we don't want to eventually select surrounding text (in case) */}
+      {/* the surrounding text has no spaces so we add "&#8203;" (zero-width space char) */}
+      &#8203;
       {displayValue}
+      &#8203;
     </Text>
   );
 };
