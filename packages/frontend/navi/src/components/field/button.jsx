@@ -351,7 +351,7 @@ const ButtonBasic = (props) => {
       <LoaderBackground
         loading={innerLoading}
         inset={-1}
-        color="var(--loader-color)"
+        color="var(--button-loader-color)"
       />
       {renderButtonContentMemoized}
     </Box>

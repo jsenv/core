@@ -37,6 +37,7 @@ import.meta.css = /* css */ `
     .navi_link {
       --link-border-radius: 2px;
       --link-outline-color: var(--navi-focus-outline-color);
+      --link-loader-color: var(--navi-loader-color);
       --link-color: rgb(0, 0, 238);
       --link-color-visited: light-dark(#6a1b9a, #ab47bc);
       --link-color-active: red;
@@ -298,10 +299,7 @@ const LinkPlain = (props) => {
         onKeyDown?.(e);
       }}
     >
-      <LoaderBackground
-        loading={loading}
-        color="light-dark(#355fcc, #3b82f6)"
-      />
+      <LoaderBackground loading={loading} color="var(--link-loader-color)" />
       {applySpacingOnTextChildren(children, spacing)}
       {innerIcon && <Icon marginLeft="xxs">{innerIcon}</Icon>}
     </Box>
