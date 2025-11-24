@@ -309,7 +309,7 @@ const POSITION_PROPS = {
   },
 };
 const TYPO_PROPS = {
-  font: PASS_THROUGH,
+  font: applyOnCSSProp("fontFamily"),
   fontFamily: PASS_THROUGH,
   size: applyOnCSSProp("fontSize"),
   fontSize: PASS_THROUGH,
