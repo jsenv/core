@@ -89,6 +89,11 @@
                       Multiline Behavior Testing
                     </Link>
                   </li>
+                  <li>
+                    <Link href="#icon-spacing" textColor="#007bff">
+                      Icon Spacing Control
+                    </Link>
+                  </li>
                 </ol>
               </nav>
             </section>
@@ -775,9 +780,164 @@
                 <strong>Fix explanation:</strong> The
                 applyContentSpacingOnTextChildren function now checks if
                 adjacent children start/end with whitespace characters (space,
-                newline, tab, etc.) and skips adding spacing in those
-                cases, while preserving normal auto-spacing for regular content.
+                newline, tab, etc.) and skips adding spacing in those cases,
+                while preserving normal auto-spacing for regular content.
               </p>
+            </section>
+
+            {/* Icon Spacing Section */}
+            <section id="icon-spacing" style={{ marginBottom: "30px" }}>
+              <h2>🎯 Icon Spacing Control</h2>
+              <p>
+                By default, icons are spaced from text by the width of a space
+                character. You can control this spacing using the{" "}
+                <code>spacing</code> prop on the Text component.
+              </p>
+
+              <div style={{ marginBottom: "20px" }}>
+                <h3>Default spacing (space character width)</h3>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "20px",
+                  }}
+                >
+                  <Text>
+                    <Icon>
+                      <StarSvg />
+                    </Icon>
+                    Text
+                  </Text>
+                  <Text>
+                    Text
+                    <Icon>
+                      <StarSvg />
+                    </Icon>
+                  </Text>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: "20px" }}>
+                <h3>Custom spacing with spacing prop</h3>
+
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "20px",
+                  }}
+                >
+                  <div>
+                    <small style={{ color: "#666", display: "block" }}>
+                      spacing="xs"
+                    </small>
+                    <Text spacing="xs">
+                      <Icon>
+                        <StarSvg />
+                      </Icon>
+                      Text
+                    </Text>
+                  </div>
+                  <div>
+                    <small style={{ color: "#666", display: "block" }}>
+                      spacing="sm"
+                    </small>
+                    <Text spacing="sm">
+                      <Icon>
+                        <StarSvg />
+                      </Icon>
+                      Text
+                    </Text>
+                  </div>
+                  <div>
+                    <small style={{ color: "#666", display: "block" }}>
+                      spacing="md"
+                    </small>
+                    <Text spacing="md">
+                      <Icon>
+                        <StarSvg />
+                      </Icon>
+                      Text
+                    </Text>
+                  </div>
+
+                  <div>
+                    <small style={{ color: "#666", display: "block" }}>
+                      spacing="lg"
+                    </small>
+                    <Text spacing="lg">
+                      <Icon>
+                        <StarSvg />
+                      </Icon>
+                      Text
+                    </Text>
+                  </div>
+                  <div>
+                    <small style={{ color: "#666", display: "block" }}>
+                      spacing="xl"
+                    </small>
+                    <Text spacing="xl">
+                      <Icon>
+                        <StarSvg />
+                      </Icon>
+                      Text
+                    </Text>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: "20px" }}>
+                <h3>Icons after text with custom spacing</h3>
+                <div
+                  style={{ display: "flex", gap: "20px", alignItems: "center" }}
+                >
+                  <Text spacing="xs">
+                    Tight spacing
+                    <Icon>
+                      <StarSvg />
+                    </Icon>
+                  </Text>
+                  <Text spacing="md">
+                    Comfortable spacing
+                    <Icon>
+                      <StarSvg />
+                    </Icon>
+                  </Text>
+                  <Text spacing="xl">
+                    Wide spacing
+                    <Icon>
+                      <StarSvg />
+                    </Icon>
+                  </Text>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: "20px" }}>
+                <h3>Multiple icons with custom spacing</h3>
+                <div
+                  style={{ display: "flex", gap: "20px", alignItems: "center" }}
+                >
+                  <Text spacing="sm">
+                    <Icon>
+                      <StarSvg />
+                    </Icon>
+                    <Icon>
+                      <StarSvg />
+                    </Icon>
+                    Small spacing between all
+                  </Text>
+                  <Text spacing="lg">
+                    <Icon>
+                      <StarSvg />
+                    </Icon>
+                    Large spacing
+                    <Icon>
+                      <StarSvg />
+                    </Icon>
+                  </Text>
+                </div>
+              </div>
             </section>
           </div>
         );

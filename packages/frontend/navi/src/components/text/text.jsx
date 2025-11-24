@@ -44,11 +44,11 @@ import.meta.css = /* css */ `
 `;
 
 const SPACE_CHAR_SEPARATOR = <span data-navi-space=""> </span>;
-const InlineSpacer = (value) => {
+const InlineSpacer = ({ value }) => {
   return (
     <span
       className="navi_inline_spacer"
-      style={`padding-left: ${value}px`}
+      style={`padding-left: ${value}`}
     ></span>
   );
 };
