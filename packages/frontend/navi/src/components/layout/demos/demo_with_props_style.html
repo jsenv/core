@@ -2,73 +2,127 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>withPropsStyle Demo - Minimalist</title>
-    <style>
-      button {
-        padding: 12px 20px;
-        font-family: system-ui, sans-serif;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        cursor: pointer;
-      }
-    </style>
+    <title>Button Style Combination Demo</title>
   </head>
   <body>
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
-      /* eslint-disable no-unused-vars */
       import { render } from "preact";
-      import { withPropsStyle } from "../with_props_style.js";
-
-      const Button = ({ children, backgroundColor, ...rest }) => {
-        const [remainingProps, innerStyle] = withPropsStyle(rest, {
-          base: {
-            "--background-color": backgroundColor,
-            "backgroundColor": "var(--background-color, #f8f9fa)",
-          },
-        });
-        return (
-          <button style={innerStyle} {...remainingProps}>
-            {children}
-          </button>
-        );
-      };
+      import { Button } from "@jsenv/navi";
 
       const Demo = () => {
         return (
           <div style={{ padding: "20px", fontFamily: "system-ui, sans-serif" }}>
-            <h1>withPropsStyle Demo</h1>
+            <h1>Button Style Combination Demo</h1>
+            <p>
+              This demo shows how Button components combine styles from multiple
+              sources. Every component built with Box (like Button) has built-in
+              style combination.
+            </p>
 
             <section style={{ marginBottom: "30px" }}>
               <h2>1. Default Button</h2>
-              <div>
-                <Button>Default</Button>
-                <Button backgroundColor="red">Default</Button>
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                <Button>Default Button</Button>
+                <Button backgroundColor="#007bff" color="white">
+                  Prop Colors
+                </Button>
               </div>
             </section>
 
             <section style={{ marginBottom: "30px" }}>
-              <h2>2. Override via style + background-color</h2>
+              <h2>2. Style Override via CSS Variables</h2>
               <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                <Button style={{ backgroundColor: "#007bff" }}>
-                  Object notation
+                <Button style={{ "--button-background-color": "#28a745" }}>
+                  CSS Var Object
                 </Button>
+                <Button style="--button-background-color: #dc3545; --button-color: white;">
+                  CSS Var String
+                </Button>
+              </div>
+            </section>
 
-                <Button style="background-color: #28a745;">
-                  String notation
+            <section style={{ marginBottom: "30px" }}>
+              <h2>3. Style Override via Direct Properties</h2>
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                <Button style={{ backgroundColor: "#6f42c1", color: "white" }}>
+                  Object Style
+                </Button>
+                <Button style="background-color: #fd7e14; color: white; border-radius: 20px;">
+                  String Style
+                </Button>
+              </div>
+            </section>
+
+            <section style={{ marginBottom: "30px" }}>
+              <h2>4. Layout Props Combined with Styles</h2>
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                <Button
+                  margin="md"
+                  padding="lg"
+                  backgroundColor="#20c997"
+                  color="white"
+                >
+                  Layout + Props
+                </Button>
+                <Button
+                  marginX="xl"
+                  paddingY="sm"
+                  style={{ backgroundColor: "#6610f2", color: "white" }}
+                >
+                  Layout + Style
+                </Button>
+              </div>
+            </section>
+
+            <section style={{ marginBottom: "30px" }}>
+              <h2>5. Complex Style Combination</h2>
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                <Button
+                  backgroundColor="#f8f9fa"
+                  color="#212529"
+                  padding="lg"
+                  style={{
+                    "--button-border-color": "#6c757d",
+                    "--button-border-radius": "10px",
+                    "fontWeight": "bold",
+                    "textTransform": "uppercase",
+                  }}
+                >
+                  All Combined
+                </Button>
+                <Button
+                  discrete
+                  padding="md"
+                  style="--button-background-color-hover: #e9ecef; font-style: italic;"
+                >
+                  Discrete + Hover
                 </Button>
               </div>
             </section>
 
             <section>
-              <h2>3. Override via style + CSS var</h2>
+              <h2>6. Pseudo-State Styling</h2>
               <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                <Button style={{ "--background-color": "#dc3545" }}>
-                  Object notation
+                <Button
+                  backgroundColor="#0d6efd"
+                  color="white"
+                  style={{
+                    "--button-background-color-hover": "#0b5ed7",
+                    "--button-background-color-active": "#0a58ca",
+                  }}
+                >
+                  Custom Hover/Active
                 </Button>
-
-                <Button style="--background-color: #ffc107;">
-                  String notation
+                <Button
+                  style={{
+                    "backgroundColor": "#198754",
+                    "color": "white",
+                    "--button-border-color": "#157347",
+                    "--button-border-width": "2px",
+                  }}
+                >
+                  Border Styling
                 </Button>
               </div>
             </section>
