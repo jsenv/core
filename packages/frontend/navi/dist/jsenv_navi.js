@@ -2090,7 +2090,7 @@ const openCallout = (
 
     addLevelEffect(() => {
       const levelColor = resolveCSSColor(
-        `var(--${level}-color)`,
+        `var(--callout-${level}-color)`,
         calloutElement,
       );
       anchorElement.style.setProperty("--callout-color", levelColor);
@@ -2201,14 +2201,14 @@ const ARROW_SPACING = 8;
 import.meta.css = /* css */ `
   @layer navi {
     .navi_callout {
-      --success-color: #4caf50;
-      --info-color: #2196f3;
-      --warning-color: #ff9800;
-      --error-color: #f44336;
+      --callout-success-color: #4caf50;
+      --callout-info-color: #2196f3;
+      --callout-warning-color: #ff9800;
+      --callout-error-color: #f44336;
 
-      --background-color: white;
-      --icon-color: black;
-      --padding: 8px;
+      --callout-background-color: white;
+      --callout-icon-color: black;
+      --callout-padding: 8px;
     }
   }
 
@@ -2224,9 +2224,9 @@ import.meta.css = /* css */ `
     transition: opacity 0.2s ease-in-out;
     overflow: visible;
 
-    --x-border-color: var(--x-level-color);
-    --x-background-color: var(--x-level-color);
-    --x-icon-color: var(--x-level-color);
+    --x-callout-border-color: var(--x-callout-level-color);
+    --x-callout-background-color: var(--callout-background-color);
+    --x-callout-icon-color: var(--x-callout-level-color);
   }
 
   .navi_callout_frame {
@@ -2235,7 +2235,7 @@ import.meta.css = /* css */ `
     pointer-events: none;
   }
   .navi_callout .navi_callout_border {
-    fill: var(--x-border-color);
+    fill: var(--x-callout-border-color);
   }
   .navi_callout_frame svg {
     position: absolute;
@@ -2243,7 +2243,7 @@ import.meta.css = /* css */ `
     overflow: visible;
   }
   .navi_callout_background {
-    fill: var(--x-background-color);
+    fill: var(--x-callout-background-color);
   }
   .navi_callout_box {
     position: relative;
@@ -2254,7 +2254,7 @@ import.meta.css = /* css */ `
     position: relative;
     display: flex;
     max-width: 47vw;
-    padding: var(--padding);
+    padding: var(--callout-padding);
     flex-direction: row;
     gap: 10px;
   }
@@ -2266,10 +2266,10 @@ import.meta.css = /* css */ `
     align-items: center;
     align-self: flex-start;
     justify-content: center;
-    background-color: var(--x-icon-color);
+    background-color: var(--x-callout-icon-color);
     border-radius: 2px;
   }
-  .navi_callout_icon_svg {
+  .navi_callout_icon svg {
     width: 16px;
     height: 12px;
     color: white;
@@ -2314,16 +2314,16 @@ import.meta.css = /* css */ `
   }
 
   .navi_callout[data-level="success"] {
-    --x-level-color: var(--success-color);
+    --x-callout-level-color: var(--callout-success-color);
   }
   .navi_callout[data-level="info"] {
-    --x-level-color: var(--info-color);
+    --x-callout-level-color: var(--callout-info-color);
   }
   .navi_callout[data-level="warning"] {
-    --x-level-color: var(--warning-color);
+    --x-callout-level-color: var(--callout-warning-color);
   }
   .navi_callout[data-level="error"] {
-    --x-level-color: var(--error-color);
+    --x-callout-level-color: var(--callout-error-color);
   }
 `;
 
@@ -2334,11 +2334,7 @@ const calloutTemplate = /* html */ `
       <div class="navi_callout_frame"></div>
       <div class="navi_callout_body">
         <div class="navi_callout_icon">
-          <svg
-            class="navi_callout_icon_svg"
-            viewBox="0 0 125 300"
-            xmlns="http://www.w3.org/2000/svg"
-          >
+          <svg viewBox="0 0 125 300" xmlns="http://www.w3.org/2000/svg">
             <path
               fill="currentColor"
               d="m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z"
@@ -10071,6 +10067,36 @@ const renderActionableComponent = (props, {
   });
 };
 
+const LinkBlankTargetSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 24 24",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: jsx("path", {
+      d: "M10.0002 5H8.2002C7.08009 5 6.51962 5 6.0918 5.21799C5.71547 5.40973 5.40973 5.71547 5.21799 6.0918C5 6.51962 5 7.08009 5 8.2002V15.8002C5 16.9203 5 17.4801 5.21799 17.9079C5.40973 18.2842 5.71547 18.5905 6.0918 18.7822C6.5192 19 7.07899 19 8.19691 19H15.8031C16.921 19 17.48 19 17.9074 18.7822C18.2837 18.5905 18.5905 18.2839 18.7822 17.9076C19 17.4802 19 16.921 19 15.8031V14M20 9V4M20 4H15M20 4L13 11",
+      stroke: "currentColor",
+      fill: "none",
+      "stroke-width": "2",
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round"
+    })
+  });
+};
+const LinkAnchorSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 24 24",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: jsxs("g", {
+      children: [jsx("path", {
+        d: "M13.2218 3.32234C15.3697 1.17445 18.8521 1.17445 21 3.32234C23.1479 5.47022 23.1479 8.95263 21 11.1005L17.4645 14.636C15.3166 16.7839 11.8342 16.7839 9.6863 14.636C9.48752 14.4373 9.30713 14.2271 9.14514 14.0075C8.90318 13.6796 8.97098 13.2301 9.25914 12.9419C9.73221 12.4688 10.5662 12.6561 11.0245 13.1435C11.0494 13.1699 11.0747 13.196 11.1005 13.2218C12.4673 14.5887 14.6834 14.5887 16.0503 13.2218L19.5858 9.6863C20.9526 8.31947 20.9526 6.10339 19.5858 4.73655C18.219 3.36972 16.0029 3.36972 14.636 4.73655L13.5754 5.79721C13.1849 6.18774 12.5517 6.18774 12.1612 5.79721C11.7706 5.40669 11.7706 4.77352 12.1612 4.383L13.2218 3.32234Z",
+        fill: "currentColor"
+      }), jsx("path", {
+        d: "M6.85787 9.6863C8.90184 7.64233 12.2261 7.60094 14.3494 9.42268C14.7319 9.75083 14.7008 10.3287 14.3444 10.685C13.9253 11.1041 13.2317 11.0404 12.7416 10.707C11.398 9.79292 9.48593 9.88667 8.27209 11.1005L4.73655 14.636C3.36972 16.0029 3.36972 18.219 4.73655 19.5858C6.10339 20.9526 8.31947 20.9526 9.6863 19.5858L10.747 18.5251C11.1375 18.1346 11.7706 18.1346 12.1612 18.5251C12.5517 18.9157 12.5517 19.5488 12.1612 19.9394L11.1005 21C8.95263 23.1479 5.47022 23.1479 3.32234 21C1.17445 18.8521 1.17445 15.3697 3.32234 13.2218L6.85787 9.6863Z",
+        fill: "currentColor"
+      })]
+    })
+  });
+};
+
 /**
  * Merges a component's base className with className received from props.
  *
@@ -10124,7 +10150,7 @@ const withPropsClassName = (baseClassName, classNameFromProps) => {
  * };
  *
  * // Usage:
- * <MyButton margin={10} expandX alignX="center" color="white">Click me</MyButton>
+ * <MyButton margin={10} expandX selfAlignX="center" color="white">Click me</MyButton>
  * <MyButton paddingX={20} bold style={{ border: '1px solid red' }}>Bold button</MyButton>
  * ```
  *
@@ -10147,7 +10173,7 @@ const withPropsClassName = (baseClassName, classNameFromProps) => {
  * @param {string|object} [config.base] - Base styles to apply first
  * @param {boolean} [config.layout] - Enable all layout props (shorthand for spacing, align, expansion)
  * @param {boolean} [config.spacing] - Enable margin/padding props
- * @param {boolean} [config.align] - Enable alignment props (alignX, alignY)
+ * @param {boolean} [config.align] - Enable alignment props (selfAlignX, selfAlignY)
  * @param {boolean} [config.expansion] - Enable expansion props (expandX, expandY)
  * @param {boolean} [config.typo] - Enable typography props (color, bold, italic, etc.)
  * @param {...object} remainingConfig - Additional configuration objects for generating separate style objects
@@ -10184,17 +10210,21 @@ const applyToCssPropWhenTruthy = (
   cssPropValue,
   cssPropValueOtherwise,
 ) => {
-  return (value) => {
-    if (!value) {
-      if (cssPropValueOtherwise === undefined) {
-        return null;
-      }
-      if (value === undefined) {
-        return null;
-      }
-      return { [cssProp]: cssPropValueOtherwise };
+  return (value, styleContext) => {
+    if (value) {
+      return { [cssProp]: cssPropValue };
     }
-    return { [cssProp]: cssPropValue };
+    if (cssPropValueOtherwise === undefined) {
+      return null;
+    }
+    if (value === undefined) {
+      return null;
+    }
+    if (styleContext.styles[cssProp] !== undefined) {
+      // keep any value previously set
+      return null;
+    }
+    return { [cssProp]: cssPropValueOtherwise };
   };
 };
 const applyOnTwoProps = (propA, propB) => {
@@ -10309,12 +10339,12 @@ const DIMENSION_PROPS = {
   },
 };
 const POSITION_PROPS = {
-  // For row, alignX uses auto margins for positioning
+  // For row, selfAlignX uses auto margins for positioning
   // NOTE: Auto margins only work effectively for positioning individual items.
-  // When multiple adjacent items have the same auto margin alignment (e.g., alignX="end"),
+  // When multiple adjacent items have the same auto margin alignment (e.g., selfAlignX="end"),
   // only the first item will be positioned as expected because subsequent items
   // will be positioned relative to the previous item's margins, not the container edge.
-  alignX: (value, { parentLayout }) => {
+  selfAlignX: (value, { parentLayout }) => {
     const insideRowLayout =
       parentLayout === "row" || parentLayout === "inline-row";
 
@@ -10341,7 +10371,7 @@ const POSITION_PROPS = {
     }
     return undefined;
   },
-  alignY: (value, { parentLayout }) => {
+  selfAlignY: (value, { parentLayout }) => {
     const inlineColumnLayout =
       parentLayout === "column" || parentLayout === "inline-column";
 
@@ -10424,6 +10454,7 @@ const TYPO_PROPS = {
   noWrap: applyToCssPropWhenTruthy("whiteSpace", "nowrap", "normal"),
   pre: applyToCssPropWhenTruthy("whiteSpace", "pre", "normal"),
   preWrap: applyToCssPropWhenTruthy("whiteSpace", "pre-wrap", "normal"),
+  preLine: applyToCssPropWhenTruthy("whiteSpace", "pre-line", "normal"),
 };
 const VISUAL_PROPS = {
   outline: PASS_THROUGH,
@@ -10450,8 +10481,8 @@ const VISUAL_PROPS = {
   cursor: PASS_THROUGH,
 };
 const CONTENT_PROPS = {
-  contentAlign: applyOnTwoProps("contentAlignX", "contentAlignY"),
-  contentAlignX: (value, { layout }) => {
+  align: applyOnTwoProps("alignX", "alignY"),
+  alignX: (value, { layout }) => {
     if (layout === "row" || layout === "inline-row") {
       if (value === "stretch") {
         return undefined; // this is the default
@@ -10466,7 +10497,7 @@ const CONTENT_PROPS = {
     }
     return { textAlign: value };
   },
-  contentAlignY: (value, { layout }) => {
+  alignY: (value, { layout }) => {
     if (layout === "row" || layout === "inline-row") {
       if (value === "start") {
         return undefined;
@@ -10483,7 +10514,7 @@ const CONTENT_PROPS = {
     }
     return { verticalAlign: value };
   },
-  contentSpacing: (value, { layout }) => {
+  spacing: (value, { layout }) => {
     if (
       layout === "row" ||
       layout === "column"
@@ -10523,8 +10554,8 @@ const COPIED_ON_VISUAL_CHILD_PROP_SET = new Set([
   "shrink",
   "expandX",
   "expandY",
-  "contentAlignX",
-  "contentAlignY",
+  "alignX",
+  "alignY",
 ]);
 const HANDLED_BY_VISUAL_CHILD_PROP_SET = new Set([
   ...INNER_SPACING_PROP_NAME_SET,
@@ -11190,7 +11221,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
 `;
 const PSEUDO_CLASSES_DEFAULT = [];
 const PSEUDO_ELEMENTS_DEFAULT = [];
-const MANAGED_BY_CSS_VARS_DEFAULT = {};
+const STYLE_CSS_VARS_DEFAULT = {};
 const Box = props => {
   const {
     as = "div",
@@ -11199,7 +11230,7 @@ const Box = props => {
     baseStyle,
     // style management
     style,
-    managedByCSSVars = MANAGED_BY_CSS_VARS_DEFAULT,
+    styleCSSVars = STYLE_CSS_VARS_DEFAULT,
     basePseudoState,
     pseudoState,
     // for demo purposes it's possible to control pseudo state from props
@@ -11230,7 +11261,7 @@ const Box = props => {
     column
   } = rest;
   if (box === "auto") {
-    box = Boolean(rest.contentAlignX || rest.contentAlignY);
+    box = Boolean(rest.alignX || rest.alignY);
   }
   if (box) {
     if (inline === undefined) {
@@ -11265,7 +11296,7 @@ const Box = props => {
     // Layout and alignment props
     parentLayout, layout,
     // Style context dependencies
-    managedByCSSVars, pseudoClasses, pseudoElements,
+    styleCSSVars, pseudoClasses, pseudoElements,
     // Selectors
     visualSelector, pseudoStateSelector];
     let innerPseudoState;
@@ -11305,20 +11336,22 @@ const Box = props => {
     } else {
       innerPseudoState = PSEUDO_STATE_DEFAULT;
     }
+    const boxStyles = {};
     const styleContext = {
       parentLayout,
       layout,
-      managedByCSSVars,
+      styleCSSVars,
       pseudoState: innerPseudoState,
       pseudoClasses,
-      pseudoElements
+      pseudoElements,
+      remainingProps: rest,
+      styles: boxStyles
     };
-    const boxStyles = {};
     let boxPseudoNamedStyles = PSEUDO_NAMED_STYLES_DEFAULT;
     const shouldForwardAllToChild = visualSelector && pseudoStateSelector;
     const addStyle = (value, name, stylesTarget, context) => {
       styleDeps.push(value); // impact box style -> add to deps
-      const cssVar = managedByCSSVars[name];
+      const cssVar = styleCSSVars[name];
       const mergedValue = prepareStyleValue(stylesTarget[name], value, name, context);
       if (cssVar) {
         stylesTarget[cssVar] = mergedValue;
@@ -11332,7 +11365,7 @@ const Box = props => {
         addStyle(value, name, stylesTarget, context);
         return false;
       }
-      const cssVar = managedByCSSVars[name];
+      const cssVar = styleCSSVars[name];
       if (cssVar) {
         // css var wins over visual child handling
         addStyle(value, name, stylesTarget, context);
@@ -11423,9 +11456,9 @@ const Box = props => {
         for (const key of pseudoStyleKeys) {
           const pseudoStyleContext = {
             ...styleContext,
-            managedByCSSVars: {
-              ...managedByCSSVars,
-              ...managedByCSSVars[key]
+            styleCSSVars: {
+              ...styleCSSVars,
+              ...styleCSSVars[key]
             },
             pseudoName: key
           };
@@ -13613,8 +13646,8 @@ const INSERTED_SPACE = jsx("span", {
   "data-navi-space": "",
   children: " "
 });
-const applyContentSpacingOnTextChildren = (children, contentSpacing) => {
-  if (contentSpacing === "pre") {
+const applySpacingOnTextChildren = (children, spacing) => {
+  if (spacing === "pre") {
     return children;
   }
   if (!children) {
@@ -13641,7 +13674,7 @@ const applyContentSpacingOnTextChildren = (children, contentSpacing) => {
     }
     return false;
   };
-  const separator = contentSpacing === undefined || contentSpacing === " " ? INSERTED_SPACE : contentSpacing;
+  const separator = spacing === undefined || spacing === " " ? INSERTED_SPACE : spacing;
   const childrenWithGap = [];
   let i = 0;
   while (true) {
@@ -13652,7 +13685,7 @@ const applyContentSpacingOnTextChildren = (children, contentSpacing) => {
       break;
     }
 
-    // Check if we should skip adding contentSpacing
+    // Check if we should skip adding spacing
     const currentChild = childArray[i - 1];
     const nextChild = childArray[i];
     const shouldSkipSpacing = endsWithWhitespace(currentChild) || startsWithWhitespace(nextChild);
@@ -13684,19 +13717,22 @@ const Text = props => {
 };
 const TextOverflow = ({
   noWrap,
-  pre = !noWrap,
   children,
   ...rest
 }) => {
   const [OverflowPinnedElement, setOverflowPinnedElement] = useState(null);
   return jsx(Text, {
+    column: true,
     as: "div",
-    pre: pre,
     nowWrap: noWrap,
+    pre: !noWrap
+    // For paragraph we prefer to keep lines and only hide unbreakable long sections
+    ,
+    preLine: rest.as === "p",
     ...rest,
     className: "navi_text_overflow",
     expandX: true,
-    contentSpacing: "pre",
+    spacing: "pre",
     children: jsxs("span", {
       className: "navi_text_overflow_wrapper",
       children: [jsx(OverflowPinnedElementContext.Provider, {
@@ -13729,7 +13765,7 @@ const TextOverflowPinned = ({
   return text;
 };
 const TextBasic = ({
-  contentSpacing = " ",
+  spacing = " ",
   selectRange,
   children,
   ...rest
@@ -13742,7 +13778,7 @@ const TextBasic = ({
     as: "span",
     ...rest,
     baseClassName: "navi_text",
-    children: applyContentSpacingOnTextChildren(children, contentSpacing)
+    children: applySpacingOnTextChildren(children, spacing)
   });
 };
 
@@ -13788,6 +13824,15 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   .navi_icon[data-height] > img {
     width: auto;
     height: 100%;
+  }
+
+  .navi_icon[data-icon-char] svg,
+  .navi_icon[data-icon-char] img {
+    width: 100%;
+    height: 100%;
+  }
+  .navi_icon[data-icon-char] svg {
+    overflow: visible;
   }
 `;
 const Icon = ({
@@ -13840,7 +13885,7 @@ const Icon = ({
     ...ariaProps,
     box: box,
     className: withPropsClassName("navi_icon", className),
-    contentSpacing: "pre",
+    spacing: "pre",
     "data-icon-char": "",
     "data-width": width,
     "data-height": height,
@@ -13851,7 +13896,7 @@ const Icon = ({
     }), jsx("span", {
       className: "navi_icon_foreground",
       children: jsx(Text, {
-        contentSpacing: "pre",
+        spacing: "pre",
         children: innerChildren
       })
     })]
@@ -13934,7 +13979,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     opacity: 0.5;
   }
 `;
-const LinkManagedByCSSVars = {
+const LinkStyleCSSVars = {
   "outlineColor": "--link-outline-color",
   "borderRadius": "--link-border-radius",
   "color": "--link-color",
@@ -13999,7 +14044,7 @@ const LinkPlain = props => {
     blankTargetIcon,
     anchorIcon,
     icon,
-    contentSpacing,
+    spacing,
     children,
     ...rest
   } = props;
@@ -14035,9 +14080,9 @@ const LinkPlain = props => {
       const innerBlankTargetIcon = blankTargetIcon === undefined ? innerTarget === "_blank" : blankTargetIcon;
       const innerAnchorIcon = anchorIcon === undefined ? targetIsAnchor : anchorIcon;
       if (innerBlankTargetIcon) {
-        innerIcon = innerBlankTargetIcon === true ? jsx(BlankTargetLinkSvg, {}) : innerBlankTargetIcon;
+        innerIcon = innerBlankTargetIcon === true ? jsx(LinkBlankTargetSvg, {}) : innerBlankTargetIcon;
       } else if (innerAnchorIcon) {
-        innerIcon = innerAnchorIcon === true ? jsx(AnchorLinkSvg, {}) : anchorIcon;
+        innerIcon = innerAnchorIcon === true ? jsx(LinkAnchorSvg, {}) : anchorIcon;
       }
     }
   } else {
@@ -14053,11 +14098,11 @@ const LinkPlain = props => {
     target: innerTarget === "_self" ? undefined : target,
     "aria-busy": loading,
     inert: disabled,
-    contentSpacing: "pre"
+    spacing: "pre"
     // Visual
     ,
     baseClassName: "navi_link",
-    managedByCSSVars: LinkManagedByCSSVars,
+    styleCSSVars: LinkStyleCSSVars,
     pseudoClasses: LinkPseudoClasses,
     pseudoElements: LinkPseudoElements,
     basePseudoState: {
@@ -14093,36 +14138,9 @@ const LinkPlain = props => {
     children: [jsx(LoaderBackground, {
       loading: loading,
       color: "light-dark(#355fcc, #3b82f6)"
-    }), applyContentSpacingOnTextChildren(children, contentSpacing), innerIcon && jsx(Icon, {
+    }), applySpacingOnTextChildren(children, spacing), innerIcon && jsx(Icon, {
       marginLeft: "xxs",
       children: innerIcon
-    })]
-  });
-};
-const BlankTargetLinkSvg = () => {
-  return jsx("svg", {
-    viewBox: "0 0 24 24",
-    xmlns: "http://www.w3.org/2000/svg",
-    children: jsx("path", {
-      d: "M10.0002 5H8.2002C7.08009 5 6.51962 5 6.0918 5.21799C5.71547 5.40973 5.40973 5.71547 5.21799 6.0918C5 6.51962 5 7.08009 5 8.2002V15.8002C5 16.9203 5 17.4801 5.21799 17.9079C5.40973 18.2842 5.71547 18.5905 6.0918 18.7822C6.5192 19 7.07899 19 8.19691 19H15.8031C16.921 19 17.48 19 17.9074 18.7822C18.2837 18.5905 18.5905 18.2839 18.7822 17.9076C19 17.4802 19 16.921 19 15.8031V14M20 9V4M20 4H15M20 4L13 11",
-      stroke: "currentColor",
-      fill: "none",
-      "stroke-width": "2",
-      "stroke-linecap": "round",
-      "stroke-linejoin": "round"
-    })
-  });
-};
-const AnchorLinkSvg = () => {
-  return jsxs("svg", {
-    viewBox: "0 0 24 24",
-    xmlns: "http://www.w3.org/2000/svg",
-    children: [jsx("path", {
-      d: "M13.2218 3.32234C15.3697 1.17445 18.8521 1.17445 21 3.32234C23.1479 5.47022 23.1479 8.95263 21 11.1005L17.4645 14.636C15.3166 16.7839 11.8342 16.7839 9.6863 14.636C9.48752 14.4373 9.30713 14.2271 9.14514 14.0075C8.90318 13.6796 8.97098 13.2301 9.25914 12.9419C9.73221 12.4688 10.5662 12.6561 11.0245 13.1435C11.0494 13.1699 11.0747 13.196 11.1005 13.2218C12.4673 14.5887 14.6834 14.5887 16.0503 13.2218L19.5858 9.6863C20.9526 8.31947 20.9526 6.10339 19.5858 4.73655C18.219 3.36972 16.0029 3.36972 14.636 4.73655L13.5754 5.79721C13.1849 6.18774 12.5517 6.18774 12.1612 5.79721C11.7706 5.40669 11.7706 4.77352 12.1612 4.383L13.2218 3.32234Z",
-      fill: "currentColor"
-    }), jsx("path", {
-      d: "M6.85787 9.6863C8.90184 7.64233 12.2261 7.60094 14.3494 9.42268C14.7319 9.75083 14.7008 10.3287 14.3444 10.685C13.9253 11.1041 13.2317 11.0404 12.7416 10.707C11.398 9.79292 9.48593 9.88667 8.27209 11.1005L4.73655 14.636C3.36972 16.0029 3.36972 18.219 4.73655 19.5858C6.10339 20.9526 8.31947 20.9526 9.6863 19.5858L10.747 18.5251C11.1375 18.1346 11.7706 18.1346 12.1612 18.5251C12.5517 18.9157 12.5517 19.5488 12.1612 19.9394L11.1005 21C8.95263 23.1479 5.47022 23.1479 3.32234 21C1.17445 18.8521 1.17445 15.3697 3.32234 13.2218L6.85787 9.6863Z",
-      fill: "currentColor"
     })]
   });
 };
@@ -15480,7 +15498,7 @@ const InputCheckbox = props => {
     })
   });
 };
-const CheckboxManagedByCSSVars = {
+const CheckboxStyleCSSVars = {
   "outlineWidth": "--outline-width",
   "borderWidth": "--border-width",
   "borderRadius": "--border-radius",
@@ -15598,7 +15616,7 @@ const InputCheckboxBasic = props => {
     ref: ref,
     baseClassName: "navi_checkbox",
     pseudoStateSelector: ".navi_native_field",
-    managedByCSSVars: CheckboxManagedByCSSVars,
+    styleCSSVars: CheckboxStyleCSSVars,
     pseudoClasses: CheckboxPseudoClasses,
     pseudoElements: CheckboxPseudoElements,
     basePseudoState: {
@@ -15887,7 +15905,7 @@ const InputRadio = props => {
     })
   });
 };
-const RadioManagedByCSSVars = {
+const RadioStyleCSSVars = {
   "outlineWidth": "--outline-width",
   "borderWidth": "--border-width",
   "borderRadius": "--border-radius",
@@ -16031,7 +16049,7 @@ const InputRadioBasic = props => {
     ref: ref,
     baseClassName: "navi_radio",
     pseudoStateSelector: ".navi_native_field",
-    managedByCSSVars: RadioManagedByCSSVars,
+    styleCSSVars: RadioStyleCSSVars,
     pseudoClasses: RadioPseudoClasses,
     pseudoElements: RadioPseudoElements,
     basePseudoState: {
@@ -16216,7 +16234,7 @@ const InputTextual = props => {
     })
   });
 };
-const InputManagedByCSSVars = {
+const InputStyleCSSVars = {
   "outlineWidth": "--outline-width",
   "borderWidth": "--border-width",
   "borderRadius": "--border-radius",
@@ -16318,7 +16336,7 @@ const InputTextualBasic = props => {
     as: "span",
     box: true,
     baseClassName: "navi_input",
-    managedByCSSVars: InputManagedByCSSVars,
+    styleCSSVars: InputStyleCSSVars,
     pseudoStateSelector: ".navi_native_input",
     visualSelector: ".navi_native_input",
     basePseudoState: {
@@ -16813,6 +16831,11 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     --x-button-background-color: var(--button-background-color-hover);
     --x-button-color: var(--button-color-hover);
   }
+  .navi_button[data-nohover] {
+    --x-button-border-color: var(--button-border-color);
+    --x-button-background-color: var(--button-background-color);
+    --x-button-color: var(--button-color);
+  }
   /* Active */
   .navi_button[data-active] {
     --x-button-outline-color: var(--button-border-color-active);
@@ -16872,6 +16895,9 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   .navi_button[data-discrete][data-hover] {
     --x-button-border-color: var(--button-border-color-hover);
   }
+  .navi_button[data-discrete][data-nohover] {
+    --x-button-border-color: transparent;
+  }
   .navi_button[data-discrete][data-readonly] {
     --x-button-border-color: transparent;
   }
@@ -16891,7 +16917,7 @@ const Button = props => {
     WithActionInsideForm: ButtonWithActionInsideForm
   });
 };
-const ButtonManagedByCSSVars = {
+const ButtonStyleCSSVars = {
   "outlineWidth": "--button-outline-width",
   "borderWidth": "--button-border-width",
   "borderRadius": "--button-border-radius",
@@ -16968,7 +16994,7 @@ const ButtonBasic = props => {
     // style management
     ,
     baseClassName: "navi_button",
-    managedByCSSVars: ButtonManagedByCSSVars,
+    styleCSSVars: ButtonStyleCSSVars,
     pseudoClasses: ButtonPseudoClasses,
     pseudoElements: ButtonPseudoElements,
     basePseudoState: {
@@ -20967,8 +20993,8 @@ const TableCell = forwardRef((props, ref) => {
     style,
     cursor,
     bold,
-    alignX = column.alignX,
-    alignY = column.alignY,
+    selfAlignX = column.selfAlignX,
+    selfAlignY = column.selfAlignY,
     backgroundColor = column.backgroundColor || row.backgroundColor,
     children
   } = props;
@@ -21082,8 +21108,8 @@ const TableCell = forwardRef((props, ref) => {
   if (rowHeight !== undefined) {
     innerStyle.maxHeight = `${rowHeight}px`;
   }
-  const innerAlignX = alignX || isFirstRow ? "center" : "start";
-  const innerAlignY = alignY || isFirstColumn ? "center" : "start";
+  const innerAlignX = selfAlignX || isFirstRow ? "center" : "start";
+  const innerAlignY = selfAlignY || isFirstColumn ? "center" : "start";
   const innerBold = bold || containSelectedCell;
   if (innerBold) {
     innerStyle.fontWeight = "bold";
@@ -21195,7 +21221,7 @@ const RowNumberTableCell = props => {
   const isTopLeftCell = columnIndex === 0 && rowIndex === 0;
   return jsx(TableCell, {
     canSelectAll: isTopLeftCell,
-    alignX: "left",
+    selfAlignX: "left",
     ...props,
     children: isTopLeftCell ? "" : rowIndex
   });
@@ -21546,26 +21572,43 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     }
   }
   .navi_badge_count {
+    --spacing: 0.3em;
+    --size: 1em;
+    --x-outer-size: calc(var(--size) + var(--spacing));
+    --x-offset-top: calc(0.5 * (var(--x-outer-size) - 1em));
+
     display: inline-block;
     box-sizing: border-box;
-    min-width: 1.5em;
-    height: 1.5em;
-    max-height: 1.5em;
-    padding-right: var(
-      --padding-right,
-      var(--padding-x, var(--padding, 0.4em))
-    );
-    padding-left: var(--padding-left, var(--padding-x, var(--padding, 0.4em)));
+    min-width: var(--x-outer-size);
+    height: var(--x-outer-size);
+    max-height: var(--x-outer-size);
+    margin-top: calc(-1 * var(--x-offset-top));
+    padding-right: var(--spacing);
+    padding-left: var(--spacing);
     color: var(--color, var(--color-contrasting));
     text-align: center;
-    line-height: 1.5em;
-    vertical-align: middle;
+    line-height: var(--x-outer-size);
+    /* vertical-align: middle; */
     background: var(--background);
     background-color: var(--background-color, var(--background));
     border-radius: var(--border-radius, 1em);
   }
+  .navi_badge_count[data-single-digit] {
+    --spacing: 0em;
+    --size: 1.3em;
+  }
+  .navi_badge_count[data-two-digits] {
+    --spacing: 0em;
+    --size: 1.6em;
+  }
+
+  .navi_count_badge_overflow {
+    position: relative;
+    top: -0.4em;
+    font-size: 0.8em;
+  }
 `;
-const BadgeManagedByCSSVars = {
+const BadgeStyleCSSVars = {
   borderWidth: "--border-width",
   borderRadius: "--border-radius",
   paddingRight: "--padding-right",
@@ -21575,40 +21618,83 @@ const BadgeManagedByCSSVars = {
   borderColor: "--border-color",
   color: "--color"
 };
+const BadgeCountOverflow = () => jsx("span", {
+  className: "navi_count_badge_overflow",
+  children: "+"
+});
 const BadgeCount = ({
   children,
-  bold = true,
   max,
+  maxElement = jsx(BadgeCountOverflow, {}),
   ...props
 }) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
-
+  const numericValue = typeof children === "string" ? parseInt(children, 10) : children;
   // Calculer la valeur à afficher en fonction du paramètre max
   const getDisplayValue = () => {
     if (max === undefined) {
       return children;
     }
-    const numericValue = typeof children === "string" ? parseInt(children, 10) : children;
     const numericMax = typeof max === "string" ? parseInt(max, 10) : max;
     if (isNaN(numericValue) || isNaN(numericMax)) {
       return children;
     }
     if (numericValue > numericMax) {
-      return `${numericMax}+`;
+      return jsxs(Fragment, {
+        children: [children, maxElement]
+      });
     }
     return children;
   };
   const displayValue = getDisplayValue();
   useContrastingColor(ref);
+  const digitCount = String(numericValue).length;
   return jsx(Text, {
-    ...props,
     ref: ref,
     className: "navi_badge_count",
-    bold: bold,
-    managedByCSSVars: BadgeManagedByCSSVars,
-    contentSpacing: "pre",
+    bold: true,
+    "data-single-digit": digitCount === 1 ? "" : undefined,
+    "data-two-digits": digitCount === 2 ? "" : undefined,
+    ...props,
+    styleCSSVars: BadgeStyleCSSVars,
+    spacing: "pre",
     children: displayValue
+  });
+};
+
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  @layer navi {
+    .navi_caption {
+      --color: #6b7280;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .navi_caption {
+        --color: rgb(102, 102, 102);
+      }
+    }
+  }
+
+  .navi_caption {
+    color: var(--color);
+  }
+`;
+const CaptionStyleCSSVars = {
+  color: "--color"
+};
+const Caption = ({
+  className,
+  ...rest
+}) => {
+  return jsx(Text, {
+    as: "p",
+    size: "xs",
+    marginTop: "sm",
+    marginBottom: "sm",
+    className: withPropsClassName("navi_caption", className),
+    ...rest,
+    styleCSSVars: CaptionStyleCSSVars
   });
 };
 
@@ -21616,6 +21702,57 @@ const Code = props => {
   return jsx(Text, {
     ...props,
     as: "code"
+  });
+};
+
+const CloseSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 24 24",
+    fill: "none",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: jsx("path", {
+      "fill-rule": "evenodd",
+      "clip-rule": "evenodd",
+      d: "M5.29289 5.29289C5.68342 4.90237 6.31658 4.90237 6.70711 5.29289L12 10.5858L17.2929 5.29289C17.6834 4.90237 18.3166 4.90237 18.7071 5.29289C19.0976 5.68342 19.0976 6.31658 18.7071 6.70711L13.4142 12L18.7071 17.2929C19.0976 17.6834 19.0976 18.3166 18.7071 18.7071C18.3166 19.0976 17.6834 19.0976 17.2929 18.7071L12 13.4142L6.70711 18.7071C6.31658 19.0976 5.68342 19.0976 5.29289 18.7071C4.90237 18.3166 4.90237 17.6834 5.29289 17.2929L10.5858 12L5.29289 6.70711C4.90237 6.31658 4.90237 5.68342 5.29289 5.29289Z",
+      fill: "currentColor"
+    })
+  });
+};
+
+const SuccessSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 16 16",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm1.5 0a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Zm10.28-1.72-4.5 4.5a.75.75 0 0 1-1.06 0l-2-2a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018l1.47 1.47 3.97-3.97a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042Z"
+    })
+  });
+};
+const ErrorSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 16 16",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M4.47.22A.749.749 0 0 1 5 0h6c.199 0 .389.079.53.22l4.25 4.25c.141.14.22.331.22.53v6a.749.749 0 0 1-.22.53l-4.25 4.25A.749.749 0 0 1 11 16H5a.749.749 0 0 1-.53-.22L.22 11.53A.749.749 0 0 1 0 11V5c0-.199.079-.389.22-.53Zm.84 1.28L1.5 5.31v5.38l3.81 3.81h5.38l3.81-3.81V5.31L10.69 1.5ZM8 4a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"
+    })
+  });
+};
+const InfoSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 16 16",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"
+    })
+  });
+};
+const WarningSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 16 16",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
+    })
   });
 };
 
@@ -21711,17 +21848,27 @@ const MessageBoxReportTitleChildContext = createContext();
 const MessageBox = ({
   level = "info",
   padding = "sm",
+  icon,
   leftStripe,
   children,
-  contentSpacing,
+  onClose,
   ...rest
 }) => {
   const [hasTitleChild, setHasTitleChild] = useState(false);
   const innerLeftStripe = leftStripe === undefined ? hasTitleChild : leftStripe;
-  return jsx(Text, {
+  if (icon === true) {
+    icon = level === "info" ? jsx(InfoSvg, {}) : level === "success" ? jsx(SuccessSvg, {}) : level === "warning" ? jsx(WarningSvg, {}) : level === "error" ? jsx(ErrorSvg, {}) : null;
+  } else if (typeof icon === "function") {
+    const Comp = icon;
+    icon = jsx(Comp, {});
+  }
+  return jsx(Box, {
     as: "div",
     role: level === "info" ? "status" : "alert",
     "data-left-stripe": innerLeftStripe ? "" : undefined,
+    column: true,
+    alignY: "start",
+    spacing: "sm",
     ...rest,
     className: withPropsClassName("navi_message_box", rest.className),
     padding: padding,
@@ -21734,9 +21881,31 @@ const MessageBox = ({
     },
     children: jsx(MessageBoxLevelContext.Provider, {
       value: level,
-      children: jsx(MessageBoxReportTitleChildContext.Provider, {
+      children: jsxs(MessageBoxReportTitleChildContext.Provider, {
         value: setHasTitleChild,
-        children: applyContentSpacingOnTextChildren(children, contentSpacing)
+        children: [icon && jsx(Icon, {
+          color: "var(--x-color)",
+          children: icon
+        }), jsx(Text, {
+          children: children
+        }), onClose && jsx(Button, {
+          action: onClose,
+          discrete: true,
+          border: "none",
+          "data-nohover": "",
+          alignX: "center",
+          alignY: "center",
+          width: "1em",
+          height: "1em",
+          pseudoStyle: {
+            ":hover": {
+              backgroundColor: "rgba(0, 0, 0, 0.1)"
+            }
+          },
+          children: jsx(Icon, {
+            children: jsx(CloseSvg, {})
+          })
+        })]
       })
     })
   });
@@ -21788,97 +21957,97 @@ const Svg = props => {
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_dialog_layout {
-      --dialog-margin: 30px;
-      --dialog-padding: 20px;
-      --dialog-background: white;
-      --dialog-border-width: 2px;
-      --dialog-border-color: lightgrey;
-      --dialog-border-radius: 10px;
-      --dialog-min-width: 300px;
-      --dialog-min-height: auto;
+      --layout-margin: 30px;
+      --layout-padding: 20px;
+      --layout-background: white;
+      --layout-border-width: 2px;
+      --layout-border-color: lightgrey;
+      --layout-border-radius: 10px;
+      --layout-min-width: 300px;
+      --layout-min-height: auto;
     }
   }
   .navi_dialog_layout {
     padding-top: var(
-      --dialog-margin-top,
-      var(--dialog-margin-y, var(--dialog-margin))
+      --layout-margin-top,
+      var(--layout-margin-y, var(--layout-margin))
     );
     padding-right: var(
-      --dialog-margin-right,
-      var(--dialog-margin-x, var(--dialog-margin))
+      --layout-margin-right,
+      var(--layout-margin-x, var(--layout-margin))
     );
     padding-bottom: var(
-      --dialog-margin-bottom,
-      var(--dialog-margin-y, var(--dialog-margin))
+      --layout-margin-bottom,
+      var(--layout-margin-y, var(--layout-margin))
     );
     padding-left: var(
-      --dialog-margin-left,
-      var(--dialog-margin-x, var(--dialog-margin))
+      --layout-margin-left,
+      var(--layout-margin-x, var(--layout-margin))
     );
   }
 
   .navi_dialog_content {
-    min-width: var(--dialog-min-width);
-    min-height: var(--dialog-min-height);
+    min-width: var(--layout-min-width);
+    min-height: var(--layout-min-height);
     padding-top: var(
-      --dialog-padding-top,
-      var(--dialog-padding-y, var(--dialog-padding))
+      --layout-padding-top,
+      var(--layout-padding-y, var(--layout-padding))
     );
     padding-right: var(
-      --dialog-padding-right,
-      var(--dialog-padding-x, var(--dialog-padding))
+      --layout-padding-right,
+      var(--layout-padding-x, var(--layout-padding))
     );
     padding-bottom: var(
-      --dialog-padding-bottom,
-      var(--dialog-padding-y, var(--dialog-padding))
+      --layout-padding-bottom,
+      var(--layout-padding-y, var(--layout-padding))
     );
     padding-left: var(
-      --dialog-padding-left,
-      var(--dialog-padding-x, var(--dialog-padding))
+      --layout-padding-left,
+      var(--layout-padding-x, var(--layout-padding))
     );
-    background: var(--dialog-background);
-    background-color: var(--dialog-background-color, var(--dialog-background));
-    border-width: var(--dialog-border-width);
+    background: var(--layout-background);
+    background-color: var(--layout-background-color, var(--layout-background));
+    border-width: var(--layout-border-width);
     border-style: solid;
-    border-color: var(--dialog-border-color);
-    border-radius: var(--dialog-border-radius);
+    border-color: var(--layout-border-color);
+    border-radius: var(--layout-border-radius);
   }
 `;
-const DialogManagedByCSSVars = {
-  margin: "--dialog-margin",
-  marginTop: "--dialog-margin-top",
-  marginBottom: "--dialog-margin-bottom",
-  marginLeft: "--dialog-margin-left",
-  marginRight: "--dialog-margin-right",
-  borderRadius: "--dialog-border-radius",
-  borderWidth: "--dialog-border-width",
-  borderColor: "--dialog-border-color",
-  background: "--dialog-background",
-  backgroundColor: "--dialog-background-color",
-  padding: "--dialog-padding",
-  paddingTop: "--dialog-padding-top",
-  paddingBottom: "--dialog-padding-bottom",
-  paddingLeft: "--dialog-padding-left",
-  paddingRight: "--dialog-padding-right",
-  minWidth: "--dialog-min-width",
-  minHeight: "--dialog-min-height"
+const DialogLayoutStyleCSSVars = {
+  margin: "--layout-margin",
+  marginTop: "--layout-margin-top",
+  marginBottom: "--layout-margin-bottom",
+  marginLeft: "--layout-margin-left",
+  marginRight: "--layout-margin-right",
+  borderRadius: "--layout-border-radius",
+  borderWidth: "--layout-border-width",
+  borderColor: "--layout-border-color",
+  background: "--layout-background",
+  backgroundColor: "--layout-background-color",
+  padding: "--layout-padding",
+  paddingTop: "--layout-padding-top",
+  paddingBottom: "--layout-padding-bottom",
+  paddingLeft: "--layout-padding-left",
+  paddingRight: "--layout-padding-right",
+  minWidth: "--layout-min-width",
+  minHeight: "--layout-min-height"
 };
 const DialogLayout = ({
   children,
-  contentAlignX = "center",
-  contentAlignY = "center",
+  alignX = "center",
+  alignY = "center",
   ...props
 }) => {
   return jsx(Box, {
     baseClassName: "navi_dialog_layout",
-    managedByCSSVars: DialogManagedByCSSVars,
+    CSSVars: DialogLayoutStyleCSSVars,
     visualSelector: ".navi_dialog_content",
     ...props,
     children: jsx(Box, {
       row: true,
       className: "navi_dialog_content",
-      contentAlignX: contentAlignX,
-      contentAlignY: contentAlignY,
+      alignX: alignX,
+      alignY: alignY,
       children: children
     })
   });
@@ -21887,26 +22056,38 @@ const DialogLayout = ({
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_viewport_layout {
-      --padding: 40px;
-      --background: white;
+      --layout-padding: 40px;
+      --layout-background: white;
     }
   }
 
   .navi_viewport_layout {
-    padding-top: var(--padding-top, var(--padding-y, var(--padding)));
-    padding-right: var(--padding-right, var(--padding-x, var(--padding)));
-    padding-bottom: var(--padding-bottom, var(--padding-y, var(--padding)));
-    padding-left: var(--padding-left, var(--padding-x, var(--padding)));
-    background: var(--background);
+    padding-top: var(
+      --layout-padding-top,
+      var(--layout-padding-y, var(--layout-padding))
+    );
+    padding-right: var(
+      --layout-padding-right,
+      var(--layout-padding-x, var(--layout-padding))
+    );
+    padding-bottom: var(
+      --layout-padding-bottom,
+      var(--layout-padding-y, var(--layout-padding))
+    );
+    padding-left: var(
+      --layout-padding-left,
+      var(--layout-padding-x, var(--layout-padding))
+    );
+    background: var(--layout-background);
   }
 `;
-const ViewportManagedByCSSVars = {
-  padding: "--padding",
-  paddingTop: "--padding-top",
-  paddingBottom: "--padding-bottom",
-  paddingLeft: "--padding-left",
-  paddingRight: "--padding-right",
-  background: "--background"
+const ViewportLayoutStyleCSSVars = {
+  padding: "--layout-padding",
+  paddingTop: "--layout-padding-top",
+  paddingBottom: "--layout-padding-bottom",
+  paddingLeft: "--layout-padding-left",
+  paddingRight: "--layout-padding-right",
+  background: "--layout-background"
 };
 const ViewportLayout = props => {
   return jsx(Box, {
@@ -21915,7 +22096,7 @@ const ViewportLayout = props => {
     height: "100%",
     ...props,
     className: "navi_viewport_layout",
-    managedByCSSVars: ViewportManagedByCSSVars
+    styleCSSVars: ViewportLayoutStyleCSSVars
   });
 };
 
@@ -21996,5 +22177,79 @@ const useDependenciesDiff = (inputs) => {
   return diffRef.current;
 };
 
-export { ActionRenderer, ActiveKeyboardShortcuts, BadgeCount, Box, Button, Checkbox, CheckboxList, Code, Col, Colgroup, Details, DialogLayout, Editable, ErrorBoundaryContext, FontSizedSvg, Form, Icon, IconAndText, Image, Input, Label, Layout, Link, LinkWithIcon, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, Select, SelectionContext, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, ViewportLayout, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useActiveRouteInfo, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useUrlSearchParam, valueInLocalStorage };
+const CheckSvg = () => jsx("svg", {
+  viewBox: "0 0 24 24",
+  xmlns: "http://www.w3.org/2000/svg",
+  children: jsx("path", {
+    d: "M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z",
+    fill: "currentColor"
+  })
+});
+
+const ExclamationSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 125 300",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: jsx("path", {
+      fill: "currentColor",
+      d: "m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z"
+    })
+  });
+};
+
+const HeartSvg = () => jsx("svg", {
+  viewBox: "0 0 24 24",
+  xmlns: "http://www.w3.org/2000/svg",
+  children: jsx("path", {
+    d: "M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z",
+    fill: "currentColor"
+  })
+});
+
+const HomeSvg = () => jsx("svg", {
+  viewBox: "0 0 24 24",
+  xmlns: "http://www.w3.org/2000/svg",
+  children: jsx("path", {
+    d: "M12 3l8 6v11h-5v-6h-6v6H4V9l8-6z",
+    fill: "currentColor"
+  })
+});
+
+const SearchSvg = () => jsx("svg", {
+  viewBox: "0 0 24 24",
+  xmlns: "http://www.w3.org/2000/svg",
+  children: jsx("path", {
+    d: "M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z",
+    fill: "currentColor"
+  })
+});
+
+const SettingsSvg = () => jsx("svg", {
+  viewBox: "0 0 24 24",
+  xmlns: "http://www.w3.org/2000/svg",
+  children: jsx("path", {
+    d: "M12 15.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5zM19.43 12.98c.04-.32.07-.64.07-.98 0-.34-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11.02c-.04.32-.07.64-.07.98 0 .34.03.66.07.98L2.46 14.63c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65z",
+    fill: "currentColor"
+  })
+});
+
+const StarSvg = () => jsx("svg", {
+  viewBox: "0 0 24 24",
+  xmlns: "http://www.w3.org/2000/svg",
+  children: jsx("path", {
+    d: "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z",
+    fill: "currentColor"
+  })
+});
+
+const UserSvg = () => jsx("svg", {
+  viewBox: "0 0 24 24",
+  xmlns: "http://www.w3.org/2000/svg",
+  children: jsx("path", {
+    d: "M12 2C9.8 2 8 3.8 8 6s1.8 4 4 4 4-1.8 4-4-1.8-4-4-4zm0 12c-2.7 0-8 1.3-8 4v2h16v-2c0-2.7-5.3-4-8-4z",
+    fill: "currentColor"
+  })
+});
+
+export { ActionRenderer, ActiveKeyboardShortcuts, BadgeCount, Box, Button, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, FontSizedSvg, Form, HeartSvg, HomeSvg, Icon, IconAndText, Image, Input, Label, Layout, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkWithIcon, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useActiveRouteInfo, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useUrlSearchParam, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map

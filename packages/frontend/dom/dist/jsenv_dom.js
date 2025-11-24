@@ -415,6 +415,10 @@ const parseCSSColor = (color, element) => {
 
   // If it's a CSS custom property, resolve it using getComputedStyle
   if (resolvedColor.includes("var(")) {
+    if (!element) {
+      // console.warn(`"${resolvedColor}" cannot be resolved without element.`);
+      return resolvedColor;
+    }
     const computedStyle = getComputedStyle(element);
 
     // Handle var() syntax
@@ -563,11 +567,15 @@ const convertColorToRgba = (color) => {
  * @param {Array<number>} rgba - [r, g, b, a] values
  * @returns {string|null} CSS color string or null if invalid input
  */
-const stringifyCSSColor = (rgba) => {
-  if (!Array.isArray(rgba) || rgba.length < 3) {
+const stringifyCSSColor = (value) => {
+  if (typeof value === "string") {
+    // can happen for css variables that we can't resolve
+    return value;
+  }
+  if (!Array.isArray(value) || value.length < 3) {
     return null;
   }
-
+  const rgba = value;
   const [r, g, b, a = 1] = rgba;
 
   // Validate RGB values
@@ -2369,6 +2377,9 @@ const mergeTwoStyles = (stylesA, stylesB, context = "js") => {
   const aKeys = Object.keys(stylesA);
   // in case stylesB is a string we first parse it
   stylesB = normalizeStyles(stylesB, context);
+  if (aKeys.length === 0) {
+    return stylesB;
+  }
   const bKeyToVisitSet = new Set(Object.keys(stylesB));
   for (const aKey of aKeys) {
     const bHasKey = bKeyToVisitSet.has(aKey);

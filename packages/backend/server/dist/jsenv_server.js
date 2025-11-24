@@ -1514,22 +1514,29 @@ const createRequestLogger = (nodeRequest, write) => {
       });
     },
     onHeadersSent: ({ status, statusText }) => {
+      const isFaviconNotFound =
+        status === 404 && nodeRequest.url === "/favicon.ico";
+      if (isFaviconNotFound) {
+        if (process.env.CAPTURING_SIDE_EFFECTS) {
+          // we don't care about this 99.999999% of the time, it only pollute logs
+          return;
+        }
+      }
       const statusType = statusToType(status);
       let message = `${colorizeResponseStatus(status)}`;
       if (statusText) {
         message += ` ${statusText}`;
       }
       add({
-        type:
-          status === 404 && nodeRequest.path === "/favicon.ico"
-            ? "debug"
-            : {
-                information: "info",
-                success: "info",
-                redirection: "info",
-                client_error: "warn",
-                server_error: "error",
-              }[statusType] || "error",
+        type: isFaviconNotFound
+          ? "debug"
+          : {
+              information: "info",
+              success: "info",
+              redirection: "info",
+              client_error: "warn",
+              server_error: "error",
+            }[statusType] || "error",
         value: message,
       });
     },
