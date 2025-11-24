@@ -1,8 +1,13 @@
 /* eslint-disable jsenv/no-unknown-params */
+import { hasCSSSizeUnit } from "@jsenv/dom";
 import { createContext, toChildArray } from "preact";
 import { useContext, useRef, useState } from "preact/hooks";
 
 import { Box } from "../layout/box.jsx";
+import {
+  isSizeSpacingScaleKey,
+  resolveSpacingSize,
+} from "../layout/box_style_util.js";
 import { useInitialTextSelection } from "./use_initial_text_selection.jsx";
 
 import.meta.css = /* css */ `
@@ -33,9 +38,21 @@ import.meta.css = /* css */ `
     text-overflow: ellipsis;
     overflow: hidden;
   }
+
+  .navi_inline_spacer {
+  }
 `;
 
-const INSERTED_SPACE = <span data-navi-space=""> </span>;
+const SPACE_CHAR_SEPARATOR = <span data-navi-space=""> </span>;
+const InlineSpacer = (value) => {
+  return (
+    <span
+      className="navi_inline_spacer"
+      style={`padding-left: ${value}px`}
+    ></span>
+  );
+};
+
 export const applySpacingOnTextChildren = (children, spacing) => {
   if (spacing === "pre") {
     return children;
@@ -49,24 +66,22 @@ export const applySpacingOnTextChildren = (children, spacing) => {
     return children;
   }
 
-  // Helper function to check if a value ends with whitespace
-  const endsWithWhitespace = (value) => {
-    if (typeof value === "string") {
-      return /\s$/.test(value);
+  let separator;
+  if (spacing === undefined) {
+    spacing = SPACE_CHAR_SEPARATOR;
+  } else if (typeof spacing === "string") {
+    if (isSizeSpacingScaleKey(spacing)) {
+      separator = <InlineSpacer value={resolveSpacingSize(spacing)} />;
+    } else if (hasCSSSizeUnit(spacing)) {
+      separator = <InlineSpacer value={resolveSpacingSize(spacing)} />;
+    } else {
+      separator = spacing;
     }
-    return false;
-  };
-
-  // Helper function to check if a value starts with whitespace
-  const startsWithWhitespace = (value) => {
-    if (typeof value === "string") {
-      return /^\s/.test(value);
-    }
-    return false;
-  };
-
-  const separator =
-    spacing === undefined || spacing === " " ? INSERTED_SPACE : spacing;
+  } else if (typeof spacing === "number") {
+    separator = <InlineSpacer value={spacing} />;
+  } else {
+    separator = spacing;
+  }
 
   const childrenWithGap = [];
   let i = 0;
@@ -77,18 +92,29 @@ export const applySpacingOnTextChildren = (children, spacing) => {
     if (i === childCount) {
       break;
     }
-
-    // Check if we should skip adding spacing
     const currentChild = childArray[i - 1];
     const nextChild = childArray[i];
-    const shouldSkipSpacing =
-      endsWithWhitespace(currentChild) || startsWithWhitespace(nextChild);
-
-    if (!shouldSkipSpacing) {
-      childrenWithGap.push(separator);
+    if (endsWithWhitespace(currentChild)) {
+      continue;
     }
+    if (startsWithWhitespace(nextChild)) {
+      continue;
+    }
+    childrenWithGap.push(separator);
   }
   return childrenWithGap;
+};
+const endsWithWhitespace = (jsxChild) => {
+  if (typeof jsxChild === "string") {
+    return /\s$/.test(jsxChild);
+  }
+  return false;
+};
+const startsWithWhitespace = (jsxChild) => {
+  if (typeof jsxChild === "string") {
+    return /^\s/.test(jsxChild);
+  }
+  return false;
 };
 
 const OverflowPinnedElementContext = createContext(null);

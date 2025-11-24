@@ -192,6 +192,7 @@ const getUnit = (value) => {
 };
 // Check if value already has a unit
 const isUnitless = (value) => getUnit(value) === "";
+export const hasCSSSizeUnit = (value) => cssSizeUnitSet.has(getUnit(value));
 
 // url(
 // linear-gradient(

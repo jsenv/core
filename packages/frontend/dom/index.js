@@ -8,6 +8,7 @@ export { createValueEffect } from "./src/value_effect.js";
 // style
 export { getStyle, setStyles } from "./src/style/dom_styles.js";
 export {
+  hasCSSSizeUnit,
   normalizeStyles,
   parseStyle,
   stringifyStyle,

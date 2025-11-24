@@ -511,6 +511,10 @@ const sizeSpacingScale = {
   xl: "2em", // 2 = 32px at 16px base
   xxl: "3em", // 3 = 48px at 16px base
 };
+const sizeSpacingScaleKeys = new Set(Object.keys(sizeSpacingScale));
+export const isSizeSpacingScaleKey = (key) => {
+  return sizeSpacingScaleKeys.has(key);
+};
 export const resolveSpacingSize = (size, property = "padding") => {
   return stringifyStyle(sizeSpacingScale[size] || size, property);
 };
