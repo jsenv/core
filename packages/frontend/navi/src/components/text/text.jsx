@@ -54,7 +54,7 @@ const InlineSpacer = ({ value }) => {
 };
 
 export const applySpacingOnTextChildren = (children, spacing) => {
-  if (spacing === "pre") {
+  if (spacing === "pre" || spacing === "0" || spacing === 0) {
     return children;
   }
   if (!children) {

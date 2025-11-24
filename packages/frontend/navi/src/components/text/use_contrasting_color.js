@@ -1,7 +1,7 @@
 import { pickLightOrDark } from "@jsenv/dom";
 import { useLayoutEffect } from "preact/hooks";
 
-const CSS_VAR_NAME = "--color-contrasting";
+const CSS_VAR_NAME = "--x-color-contrasting";
 
 export const useContrastingColor = (ref) => {
   useLayoutEffect(() => {

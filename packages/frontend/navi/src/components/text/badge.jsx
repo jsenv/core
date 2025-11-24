@@ -10,34 +10,37 @@ import.meta.css = /* css */ `
     }
   }
   .navi_badge_count {
-    --spacing: 0.3em;
-    --size: 1em;
-    --x-outer-size: calc(var(--size) + var(--spacing));
+    --x-spacing: 0.3em;
+    --x-size: 1em;
+    --x-outer-size: calc(var(--x-size) + var(--x-spacing));
     --x-offset-top: calc(0.5 * (var(--x-outer-size) - 1em));
+    --x-border-radius: var(--border-radius, 1em);
 
     display: inline-block;
     box-sizing: border-box;
     min-width: var(--x-outer-size);
     height: var(--x-outer-size);
     max-height: var(--x-outer-size);
-    margin-top: calc(-1 * var(--x-offset-top));
-    padding-right: var(--spacing);
-    padding-left: var(--spacing);
-    color: var(--color, var(--color-contrasting));
+    /* margin-top: calc(-1 * var(--x-offset-top)); */
+    padding-right: var(--x-spacing);
+    padding-left: var(--x-spacing);
+    color: var(--color, var(--x-color-contrasting));
     text-align: center;
     line-height: var(--x-outer-size);
-    /* vertical-align: middle; */
+    vertical-align: middle; /* in case this text has !== size surrounding text */
     background: var(--background);
     background-color: var(--background-color, var(--background));
-    border-radius: var(--border-radius, 1em);
+    border-radius: var(--x-border-radius);
   }
   .navi_badge_count[data-single-digit] {
     --spacing: 0em;
-    --size: 1.3em;
+    --size: 1lh;
+    --border-radius: 100%;
   }
   .navi_badge_count[data-two-digits] {
     --spacing: 0em;
     --size: 1.6em;
+    --border-radius: 100%;
   }
 
   .navi_count_badge_overflow {
