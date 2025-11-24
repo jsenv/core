@@ -66,7 +66,7 @@ const BadgeCountOverflow = () => (
 
 export const BadgeCount = ({
   children,
-  max,
+  max = 99,
   maxElement = <BadgeCountOverflow />,
   ...props
 }) => {
@@ -77,7 +77,14 @@ export const BadgeCount = ({
     typeof children === "string" ? parseInt(children, 10) : children;
   // Calculer la valeur à afficher en fonction du paramètre max
   const getDisplayValue = () => {
-    if (max === undefined) {
+    if (
+      max === undefined ||
+      max === Infinity ||
+      max === false ||
+      max === "false" ||
+      max === "Infinity" ||
+      max === "none"
+    ) {
       return children;
     }
 
