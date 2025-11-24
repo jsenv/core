@@ -5,9 +5,6 @@ import { useContrastingColor } from "./use_contrasting_color.js";
 
 import.meta.css = /* css */ `
   @layer navi {
-    .navi_badge_count {
-      --border-radius: 1em;
-    }
   }
   .navi_badge_count {
     --x-border-radius: var(--border-radius, 1em);
@@ -19,18 +16,6 @@ import.meta.css = /* css */ `
     color: var(--color, var(--x-color-contrasting));
     border-radius: var(--x-border-radius);
   }
-  .navi_badge_count[data-single-digit] {
-    --x-size: 1lh;
-    --x-border-radius: 100%;
-  }
-  .navi_badge_count[data-two-digits] {
-    --x-size: 1lh;
-    --x-border-radius: 100%;
-  }
-
-  .navi_badge_count_force_line_height {
-  }
-
   .navi_badge_count_visual {
     width: 1lh;
     height: 1lh;
@@ -40,11 +25,26 @@ import.meta.css = /* css */ `
     background-color: var(--background-color, var(--background));
     border-radius: inherit;
   }
-
   .navi_count_badge_overflow {
     position: relative;
     top: -0.4em;
     font-size: 0.8em;
+  }
+
+  .navi_badge_count[data-single-digit] {
+    --x-size: 1lh;
+    --x-border-radius: 100%;
+  }
+  .navi_badge_count[data-two-digits] {
+    --x-size: 1lh;
+    --x-border-radius: 100%;
+  }
+  .navi_badge_count[data-indeterminate-digits] .navi_badge_count_visual {
+    width: auto;
+    height: auto;
+    padding-right: 0.5em;
+    padding-left: 0.5em;
+    --x-border-radius: 1em;
   }
 `;
 
@@ -108,6 +108,7 @@ export const BadgeCount = ({
       bold
       data-single-digit={digitCount === 1 ? "" : undefined}
       data-two-digits={digitCount === 2 ? "" : undefined}
+      data-indeterminate-digits={digitCount > 2 ? "" : undefined}
       {...props}
       styleCSSVars={BadgeStyleCSSVars}
       spacing="pre"
