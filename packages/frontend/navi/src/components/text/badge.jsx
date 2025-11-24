@@ -10,37 +10,35 @@ import.meta.css = /* css */ `
     }
   }
   .navi_badge_count {
-    --x-spacing: 0.3em;
-    --x-size: 1em;
-    --x-outer-size: calc(var(--x-size) + var(--x-spacing));
-    --x-offset-top: calc(0.5 * (var(--x-outer-size) - 1em));
     --x-border-radius: var(--border-radius, 1em);
 
-    display: inline-block;
+    display: inline-flex;
     box-sizing: border-box;
-    min-width: var(--x-outer-size);
-    height: var(--x-outer-size);
-    max-height: var(--x-outer-size);
-    /* margin-top: calc(-1 * var(--x-offset-top)); */
-    padding-right: var(--x-spacing);
-    padding-left: var(--x-spacing);
+    align-items: center;
+    justify-content: center;
     color: var(--color, var(--x-color-contrasting));
-    text-align: center;
-    line-height: var(--x-outer-size);
-    vertical-align: middle; /* in case this text has !== size surrounding text */
-    background: var(--background);
-    background-color: var(--background-color, var(--background));
     border-radius: var(--x-border-radius);
   }
   .navi_badge_count[data-single-digit] {
-    --spacing: 0em;
-    --size: 1lh;
-    --border-radius: 100%;
+    --x-size: 1lh;
+    --x-border-radius: 100%;
   }
   .navi_badge_count[data-two-digits] {
-    --spacing: 0em;
-    --size: 1.6em;
-    --border-radius: 100%;
+    --x-size: 1lh;
+    --x-border-radius: 100%;
+  }
+
+  .navi_badge_count_force_line_height {
+  }
+
+  .navi_badge_count_visual {
+    width: 1lh;
+    height: 1lh;
+    font-size: var(--font-size, inherit);
+    text-align: center;
+    background: var(--background);
+    background-color: var(--background-color, var(--background));
+    border-radius: inherit;
   }
 
   .navi_count_badge_overflow {
@@ -59,6 +57,7 @@ const BadgeStyleCSSVars = {
   background: "--background",
   borderColor: "--border-color",
   color: "--color",
+  fontSize: "--font-size",
 };
 
 const BadgeCountOverflow = () => (
@@ -115,9 +114,11 @@ export const BadgeCount = ({
     >
       {/* When we double click on count we don't want to eventually select surrounding text (in case) */}
       {/* the surrounding text has no spaces so we add "&#8203;" (zero-width space char) */}
-      &#8203;
-      {displayValue}
-      &#8203;
+      {/* This also forces .navi_badge_count to take 1 line-height even if .navi_badge_count_visual font-size differs  */}
+      <span style="user-select: none">&#8203;</span>
+      {/* Force element to take 1 line-height */}
+      <span className="navi_badge_count_visual">{displayValue}</span>
+      <span style="user-select: none">&#8203;</span>
     </Text>
   );
 };

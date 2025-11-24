@@ -69,7 +69,7 @@
                 <BadgeCount background="#2196f3" color="white">
                   0
                 </BadgeCount>
-                <BadgeCount background="#2196f3" color="white">
+                <BadgeCount background="#2196f3" color="white" size="xxs">
                   1
                 </BadgeCount>
                 <BadgeCount background="#2196f3" color="white">
@@ -323,6 +323,33 @@
                 <Text noWrap>
                   Messages
                   <BadgeCount background="#795548" color="white">
+                    2
+                  </BadgeCount>
+                </Text>
+              </div>
+            </div>
+
+            <div>
+              <Caption>
+                line-height: 3 - Restoring a regular line height on the badge
+              </Caption>
+              <div
+                style={{
+                  border: "2px dashed #4caf50",
+                  backgroundColor: "rgba(76, 175, 80, 0.05)",
+                  padding: "8px",
+                  borderRadius: "4px",
+                  lineHeight: "3",
+                  fontSize: "16px",
+                }}
+              >
+                <Text noWrap>
+                  Messages
+                  <BadgeCount
+                    background="#795548"
+                    color="white"
+                    lineHeight="normal"
+                  >
                     2
                   </BadgeCount>
                 </Text>
