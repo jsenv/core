@@ -8,8 +8,8 @@ import.meta.css = /* css */ `
   }
   .navi_badge_count {
     --x-size: 1.5em;
-    --x-border-radius: var(--border-radius, 1em);
-    --x-font-size: var(--font-size, inherit);
+    --x-border-radius: var(--border-radius);
+    --x-number-font-size: var(--font-size);
 
     display: inline-flex;
     box-sizing: border-box;
@@ -24,11 +24,14 @@ import.meta.css = /* css */ `
     height: var(--x-size);
     align-items: inherit;
     justify-content: inherit;
-    font-size: var(--x-font-size);
+    font-size: var(--font-size);
     text-align: center;
     background: var(--background);
     background-color: var(--background-color, var(--background));
     border-radius: inherit;
+  }
+  .navi_badge_count_text {
+    font-size: var(--x-number-font-size);
   }
   .navi_count_badge_overflow {
     position: relative;
@@ -38,21 +41,22 @@ import.meta.css = /* css */ `
 
   .navi_badge_count[data-single-digit] {
     --x-border-radius: 100%;
+    --x-number-font-size: var(--font-size);
   }
-  .navi_badge_count[data-two-digits] .navi_badge_count_text {
-    font-size: 0.8em;
+  .navi_badge_count[data-two-digits] {
     --x-border-radius: 100%;
+    --x-number-font-size: 0.8em;
   }
-  .navi_badge_count[data-two-digits][data-value-overflow]
-    .navi_badge_count_text {
-    font-size: 0.65em;
+  .navi_badge_count[data-two-digits][data-value-overflow] {
+    --x-number-font-size: 0.6em;
+  }
+  .navi_badge_count[data-indeterminate-digits] {
+    --x-border-radius: 1em;
+    --x-size: auto;
   }
   .navi_badge_count[data-indeterminate-digits] .navi_badge_count_visual {
-    width: auto;
-    height: auto;
     padding-right: 0.5em;
     padding-left: 0.5em;
-    --x-border-radius: 1em;
   }
 `;
 
