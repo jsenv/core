@@ -523,13 +523,13 @@ export const resolveSpacingSize = (size, property = "padding") => {
 };
 
 const sizeTypoScale = {
-  xxs: "0.625em", // 0.625 = 10px at 16px base (smaller than before for more range)
-  xs: "0.75em", // 0.75 = 12px at 16px base
-  sm: "0.875em", // 0.875 = 14px at 16px base
-  md: "1em", // 1 = 16px at 16px base (base font size)
-  lg: "1.125em", // 1.125 = 18px at 16px base
-  xl: "1.25em", // 1.25 = 20px at 16px base
-  xxl: "1.5em", // 1.5 = 24px at 16px base
+  xxs: "0.625rem", // 0.625 = 10px at 16px base (smaller than before for more range)
+  xs: "0.75rem", // 0.75 = 12px at 16px base
+  sm: "0.875rem", // 0.875 = 14px at 16px base
+  md: "1rem", // 1 = 16px at 16px base (base font size)
+  lg: "1.125rem", // 1.125 = 18px at 16px base
+  xl: "1.25rem", // 1.25 = 20px at 16px base
+  xxl: "1.5rem", // 1.5 = 24px at 16px base
 };
 sizeTypoScale.s = sizeTypoScale.sm;
 sizeTypoScale.m = sizeTypoScale.md;
