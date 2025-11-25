@@ -54,7 +54,8 @@ import.meta.css = /* css */ `
     --x-border-radius: 100%;
     --x-number-font-size: 0.8em;
   }
-  .navi_badge_count[data-two-chars][data-value-overflow] {
+  .navi_badge_count[data-three-chars] {
+    --x-border-radius: 100%;
     --x-number-font-size: 0.6em;
   }
   .navi_badge_count[data-indeterminate-chars] {
@@ -100,8 +101,8 @@ export const BadgeCount = ({
   const valueRequested =
     typeof children === "string" ? parseInt(children, 10) : children;
   const valueDisplayed = applyMaxToValue(max, valueRequested);
-  const charCount = String(valueDisplayed).length;
   const hasOverflow = valueDisplayed !== valueRequested;
+  const charCount = String(valueDisplayed).length + (hasOverflow ? 1 : 0);
 
   return (
     <Text
@@ -110,7 +111,8 @@ export const BadgeCount = ({
       bold
       data-single-char={charCount === 1 ? "" : undefined}
       data-two-chars={charCount === 2 ? "" : undefined}
-      data-indeterminate-chars={charCount > 2 ? "" : undefined}
+      data-three-chars={charCount === 3 ? "" : undefined}
+      data-indeterminate-chars={charCount > 3 ? "" : undefined}
       data-value-overflow={hasOverflow ? "" : undefined}
       {...props}
       styleCSSVars={BadgeStyleCSSVars}
