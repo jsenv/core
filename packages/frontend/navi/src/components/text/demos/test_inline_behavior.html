@@ -98,6 +98,29 @@
           </span>After</span>
       </div>
 
+      <!-- Solution 1: Utiliser flexbox pour centrer le texte plus petit -->
+      <div class="test-line">
+        <span>Before<span style="display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; background: red; border-radius: 100%; vertical-align: middle;">
+            <span style="color: white; font-size: 0.5em;">99</span>
+          </span>After</span>
+      </div>
+
+      <!-- Solution 2: Ajuster la line-height du texte plus petit -->
+      <div class="test-line">
+        <span>Before<span style="position: relative; display: inline-block; width: 20px; text-align: center; vertical-align: middle;">
+              <span style="position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 100%; aspect-ratio: 1/1; background: red; border-radius: 100%;"></span>
+            <span style="position: relative; color: white; font-size: 0.5em; line-height: 2em;">99</span>
+          </span>After</span>
+      </div>
+
+      <!-- Solution 3: Centrer manuellement avec top ajusté -->
+      <div class="test-line">
+        <span>Before<span style="position: relative; display: inline-block; width: 20px; text-align: center; vertical-align: middle;">
+              <span style="position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 100%; aspect-ratio: 1/1; background: red; border-radius: 100%;"></span>
+            <span style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); color: white; font-size: 0.5em;">99</span>
+          </span>After</span>
+      </div>
+
       <h3>Techniques d'alignement pour texte plus petit:</h3>
 
       <div class="test-line">

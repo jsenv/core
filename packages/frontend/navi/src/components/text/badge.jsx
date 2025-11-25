@@ -15,7 +15,7 @@ import.meta.css = /* css */ `
     display: inline-block;
     box-sizing: border-box;
     width: var(--x-size);
-    max-width: var(--x-size);
+    height: var(--x-size);
     color: var(--color, var(--x-color-contrasting));
     font-size: var(--font-size);
     text-align: center;
@@ -26,21 +26,24 @@ import.meta.css = /* css */ `
     position: absolute;
     top: 50%;
     left: 0;
-    aspect-ratio: 1/1;
     width: 100%;
+    height: 100%;
     background: var(--background);
     background-color: var(--background-color, var(--background));
     border-radius: inherit;
     transform: translateY(-50%);
   }
   .navi_badge_count_text {
-    position: relative;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    color: white;
     font-size: var(--x-number-font-size, inherit);
+    transform: translate(-50%, -50%);
   }
   .navi_count_badge_overflow {
     position: relative;
-    top: -0.4em;
-    font-size: 0.8em;
+    top: -0.1em;
   }
 
   .navi_badge_count[data-single-digit] {
@@ -57,10 +60,14 @@ import.meta.css = /* css */ `
   .navi_badge_count[data-indeterminate-digits] {
     --x-border-radius: 1em;
     --x-size: auto;
-  }
-  .navi_badge_count[data-indeterminate-digits] .navi_badge_count_visual {
     padding-right: 0.5em;
     padding-left: 0.5em;
+  }
+  .navi_badge_count[data-indeterminate-digits] .navi_badge_count_text {
+    position: relative;
+    top: unset;
+    left: unset;
+    transform: none;
   }
 `;
 
@@ -111,7 +118,6 @@ export const BadgeCount = ({
     >
       {/* When we double click on count we don't want to eventually select surrounding text (in case) */}
       {/* the surrounding text has no spaces so we add "&#8203;" (zero-width space char) */}
-      {/* This also forces .navi_badge_count to take 1 line-height even if .navi_badge_count_visual font-size differs  */}
       <span style="user-select: none">&#8203;</span>
       <span className="navi_badge_count_frame" />
       <span className="navi_badge_count_text">
