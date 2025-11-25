@@ -12,11 +12,12 @@ import.meta.css = /* css */ `
     --x-number-font-size: var(--font-size);
     position: relative;
 
-    display: inline-block;
+    display: inline-flex;
     box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
     color: var(--color, var(--x-color-contrasting));
     font-size: var(--font-size);
-    text-align: center;
     vertical-align: middle;
     border-radius: var(--x-border-radius);
   }
@@ -49,12 +50,9 @@ import.meta.css = /* css */ `
     transform: translateY(-50%);
   }
   .navi_badge_count_text {
-    position: absolute;
-    top: 50%;
-    left: 50%;
+    position: relative;
     color: white;
     font-size: var(--x-number-font-size, inherit);
-    transform: translate(-50%, -50%);
   }
   .navi_badge_count[data-single-char] {
     --x-border-radius: 100%;
