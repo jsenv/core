@@ -231,5 +231,84 @@
         >
       </div>
     </div>
+
+    <div class="test-section">
+      <h2>6. Tests avancés - Configuration clé du carré</h2>
+      <p>
+        <strong>Base:</strong> display: inline-block; width: 1em; height: 1em;
+        background: green; font-size: 0.8em; vertical-align: middle;
+      </p>
+
+      <h3>Avec line-height: 3</h3>
+      <div class="test-line" style="line-height: 3">
+        <span
+          >Before<span
+            style="
+              display: inline-block;
+              width: 1em;
+              height: 1em;
+              background: green;
+              font-size: 0.8em;
+              vertical-align: middle;
+            "
+          ></span
+          >After</span
+        >
+      </div>
+
+      <h3>Contexte 24px + carré 12px</h3>
+      <div class="test-line" style="font-size: 24px">
+        <span
+          >Before<span
+            style="
+              display: inline-block;
+              width: 1em;
+              height: 1em;
+              background: green;
+              font-size: 12px;
+              vertical-align: middle;
+            "
+          ></span
+          >After</span
+        >
+      </div>
+
+      <h3>Font monospace</h3>
+      <div class="test-line" style="font-family: monospace">
+        <span
+          >Before<span
+            style="
+              display: inline-block;
+              width: 1em;
+              height: 1em;
+              background: green;
+              font-size: 0.8em;
+              vertical-align: middle;
+            "
+          ></span
+          >After</span
+        >
+      </div>
+
+      <h3>Combinaison: line-height: 3 + 24px + monospace</h3>
+      <div
+        class="test-line"
+        style="line-height: 3; font-size: 24px; font-family: monospace"
+      >
+        <span
+          >Before<span
+            style="
+              display: inline-block;
+              width: 1em;
+              height: 1em;
+              background: green;
+              font-size: 12px;
+              vertical-align: middle;
+            "
+          ></span
+          >After</span
+        >
+      </div>
+    </div>
   </body>
 </html>
