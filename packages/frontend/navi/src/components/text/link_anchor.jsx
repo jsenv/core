@@ -28,5 +28,5 @@ import.meta.css = /* css */ `
 `;
 
 export const LinkAnchor = (props) => {
-  return <Link color="inherit" {...props} />;
+  return <Link color="inherit" id={props.href.slice(1)} {...props} />;
 };
