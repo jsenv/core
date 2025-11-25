@@ -58,21 +58,93 @@
 
       <div class="test-line">
         <span
-          >Before<span
+          >Before<span style="position: relative; display: inline-block; width: 20px; text-align: center;  font-size: 0.5em; vertical-align: middle">
+              <span
+            style="
+            position: absolute;
+            left: 0;
+            top: 50%;
+              transform: translateY(-50%);
+              width: 100%;
+             aspect-ratio: 1/1;
+              background: red;
+              vertical-align: middle;
+              border-radius: 100%;
+              text-align: center;
+            "
+          ></span>
+            <span style="position: relative; color: black; ">99</span>
+          </span>After</span>
+      </div>
+
+      <h3>Techniques d'alignement pour texte plus petit:</h3>
+
+      <div class="test-line">
+        <span
+          >Technique 1 - line-height calculé:
+          <span
             style="
               display: inline-block;
               width: 1.5em;
               height: 1.5em;
-              background: red;
+              background: blue;
               vertical-align: middle;
-              line-height: 1.5em;
               border-radius: 100%;
               color: white;
               text-align: center;
+              line-height: 3em;
             "
           >
             <span style="font-size: 0.5em">99</span></span
-          >After</span
+          >
+          text</span
+        >
+      </div>
+
+      <div class="test-line">
+        <span
+          >Technique 2 - flexbox:
+
+          <span style="position: relative; font-size: 0.5em">99
+
+               <span
+            style="
+              position: absolute;
+              width: 1.5em;
+              height: 1.5em;
+              background: green;
+              border-radius: 100%;
+              color: white;
+              align-items: center;
+              justify-content: center;
+            "
+          >
+          </span>
+
+          text</span
+        >
+      </div>
+
+      <div class="test-line">
+        <span
+          >Technique 3 - padding calculé:
+          <span
+            style="
+              display: inline-block;
+              width: 1.5em;
+              height: 1.5em;
+              background: purple;
+              vertical-align: middle;
+              border-radius: 100%;
+              color: white;
+              text-align: center;
+              box-sizing: border-box;
+              padding-top: 0.6em;
+            "
+          >
+            <span style="font-size: 0.5em">99</span></span
+          >
+          text</span
         >
       </div>
     </div>

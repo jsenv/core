@@ -10,28 +10,31 @@ import.meta.css = /* css */ `
     --x-size: 1.5em;
     --x-border-radius: var(--border-radius);
     --x-number-font-size: var(--font-size);
+    position: relative;
 
     display: inline-block;
     box-sizing: border-box;
-    color: var(--color, var(--x-color-contrasting));
-    line-height: 1;
-    vertical-align: baseline;
-    border-radius: var(--x-border-radius);
-  }
-  .navi_badge_count_visual {
-    display: inline-flex;
     width: var(--x-size);
-    height: var(--x-size);
-    align-items: inherit;
-    justify-content: inherit;
+    max-width: var(--x-size);
+    color: var(--color, var(--x-color-contrasting));
     font-size: var(--font-size);
     text-align: center;
-    line-height: var(--x-size);
+    vertical-align: middle;
+    border-radius: var(--x-border-radius);
+  }
+  .navi_badge_count_frame {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    aspect-ratio: 1/1;
+    width: 100%;
     background: var(--background);
     background-color: var(--background-color, var(--background));
     border-radius: inherit;
+    transform: translateY(-50%);
   }
   .navi_badge_count_text {
+    position: relative;
     font-size: var(--x-number-font-size);
   }
   .navi_count_badge_overflow {
@@ -110,12 +113,10 @@ export const BadgeCount = ({
       {/* the surrounding text has no spaces so we add "&#8203;" (zero-width space char) */}
       {/* This also forces .navi_badge_count to take 1 line-height even if .navi_badge_count_visual font-size differs  */}
       <span style="user-select: none">&#8203;</span>
-      {/* Force element to take 1 line-height */}
-      <span className="navi_badge_count_visual">
-        <span className="navi_badge_count_text">
-          {valueDisplayed}
-          {hasOverflow && maxElement}
-        </span>
+      <span className="navi_badge_count_frame" />
+      <span className="navi_badge_count_text">
+        {valueDisplayed}
+        {hasOverflow && maxElement}
       </span>
       <span style="user-select: none">&#8203;</span>
     </Text>
