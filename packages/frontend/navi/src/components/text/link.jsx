@@ -83,9 +83,6 @@ import.meta.css = /* css */ `
   .navi_link[data-visited] {
     --x-link-color: var(--x-link-color-visited);
   }
-  .navi_link[data-visited][data-link-anchor] {
-    --x-link-color: var(--link-color);
-  }
   /* Selected */
   .navi_link[aria-selected] {
     position: relative;
