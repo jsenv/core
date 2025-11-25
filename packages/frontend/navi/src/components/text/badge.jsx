@@ -89,9 +89,11 @@ const BadgeCountOverflow = () => (
 const MAX_CHAR_AS_CIRCLE = 3;
 export const BadgeCount = ({
   children,
-  ellipse,
   max = 99,
   maxElement = <BadgeCountOverflow />,
+  // When you use max="none" (or max > 99) it might be a good idea to force ellipse
+  // so that visually the interface do not suddently switch from circle to ellipse depending on the count
+  ellipse,
   ...props
 }) => {
   const defaultRef = useRef();
