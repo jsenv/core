@@ -38,6 +38,12 @@
             <Link href="#line-height-variations">4. Line height</Link>
             <Link href="#inline-text-icons">5. Text flow</Link>
             <Link href="#icon-dimensions">6. Icon dimensions</Link>
+            <Link href="#squarish-icon-dimensions">
+              6a. Squarish icon dimensions (size)
+            </Link>
+            <Link href="#custom-icon-dimensions">
+              6b. Custom icon dimensions (width/height)
+            </Link>
             <Link href="#icon-transformation">7. Icon transformation</Link>
             <Link href="#icon-href">8. Icon with SVG use</Link>
             <Link href="#icon-text-link">9. Icon + text + link</Link>
@@ -642,15 +648,15 @@
         </Box>
       );
 
-      // Icon Dimensions Section
-      const IconDimensionsSection = () => (
-        <Box as="section" marginBottom="xl" id="icon-dimensions">
-          <Title as="h2">Icon Dimensions</Title>
+      // Squarish Icon Dimensions Section
+      const SquarishIconDimensionsSection = () => (
+        <Box as="section" marginBottom="xl" id="squarish-icon-dimensions">
+          <Title as="h2">Squarish Icon Dimensions (size)</Title>
           <Text multiline>
-            By default, icons follow text size. You can control icon dimensions
-            using the <code>size</code> attribute to increase/decrease size
-            proportionally, or use <code>width</code>/<code>height</code> to
-            control non-square icons precisely.
+            By default, icons follow text size. You can control squarish icon
+            dimensions using the <code>size</code> attribute to
+            increase/decrease size proportionally while maintaining the square
+            aspect ratio.
           </Text>
           <Box column spacing="lg" marginTop="md">
             <div>
@@ -710,7 +716,21 @@
                 </div>
               </Box>
             </div>
+          </Box>
+        </Box>
+      );
 
+      // Custom Icon Dimensions Section
+      const CustomIconDimensionsSection = () => (
+        <Box as="section" marginBottom="xl" id="custom-icon-dimensions">
+          <Title as="h2">Custom Icon Dimensions (width/height)</Title>
+          <Text multiline>
+            For non-square icons or precise dimension control, use{" "}
+            <code>width</code> and/or <code>height</code>
+            attributes to set specific dimensions. This allows for rectangular
+            icons and custom aspect ratios.
+          </Text>
+          <Box column spacing="lg" marginTop="md">
             <div>
               <Text
                 style={{
@@ -1493,7 +1513,8 @@
             <FontFamilySection />
             <LineHeightVariationsSection />
             <InlineTextIconsSection />
-            <IconDimensionsSection />
+            <SquarishIconDimensionsSection />
+            <CustomIconDimensionsSection />
             <IconTransformationSection />
             <IconTextLinkSection />
             <IconRowSection />
