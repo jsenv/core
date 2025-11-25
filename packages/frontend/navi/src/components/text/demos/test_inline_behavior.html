@@ -310,5 +310,65 @@
         >
       </div>
     </div>
+
+    <div class="test-section">
+      <h2>7. Carré plus grand que le texte</h2>
+      <p>
+        <strong>Test:</strong> Carré qui dépasse la taille du texte environnant
+      </p>
+
+      <h3>Texte normal (20px) avec carré 40px</h3>
+      <div class="test-line">
+        <span
+          >Before<span
+            style="
+              display: inline-block;
+              width: 2em;
+              height: 2em;
+              background: red;
+              font-size: 20px;
+              vertical-align: middle;
+            "
+          ></span
+          >After</span
+        >
+      </div>
+
+      <h3>
+        Petit texte (12px) avec carré normal (1em = 20px du contexte parent)
+      </h3>
+      <div class="test-line" style="font-size: 12px">
+        <span
+          >Before<span
+            style="
+              display: inline-block;
+              width: 1.5em;
+              height: 1.5em;
+              background: orange;
+              font-size: 20px;
+              vertical-align: middle;
+            "
+          ></span
+          >After petit texte</span
+        >
+      </div>
+
+      <h3>Cas extrême: line-height élevé + carré géant</h3>
+      <div class="test-line" style="line-height: 4; font-size: 16px">
+        <span
+          >Before<span
+            style="
+              display: inline-block;
+              width: 4em;
+              height: 4em;
+              background: darkblue;
+              font-size: 16px;
+              vertical-align: middle;
+            "
+          ></span
+          >After avec line-height: 4</span
+        >
+      </div>
+    </div>
   </body>
 </html>
