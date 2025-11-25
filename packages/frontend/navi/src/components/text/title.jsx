@@ -27,6 +27,13 @@ import.meta.css = /* css */ `
   .navi_title:hover .navi_title_anchor {
     opacity: 1;
   }
+  /* The anchor link is displayed only on :hover */
+  /* So we "need" a visual indicator when it's shown by focus */
+  /* (even if it's focused by mouse aka not :focus-visible) */
+  /* otherwise we might wonder why we see this UI element */
+  .navi_title_anchor[data-focus] {
+    outline-width: 2px;
+  }
 `;
 
 const TitlePseudoClasses = [":hover"];
