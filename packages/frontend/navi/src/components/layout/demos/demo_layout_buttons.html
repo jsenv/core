@@ -65,7 +65,7 @@
               <h3>0. Button Vertical Centering in Column Layout</h3>
               <div className="visual-container">
                 <h4>Default behavior (no alignY specified)</h4>
-                <Layout column spacing="md">
+                <Box column spacing="md">
                   <Box
                     row
                     width="100"
@@ -79,10 +79,10 @@
                   </Box>
 
                   <Button>Not Centered</Button>
-                </Layout>
+                </Box>
 
                 <h4>With alignY="center" on button</h4>
-                <Layout column spacing="md">
+                <Box column spacing="md">
                   <Box
                     row
                     width="100"
@@ -98,7 +98,7 @@
                   <Button box alignY="center">
                     Centered
                   </Button>
-                </Layout>
+                </Box>
               </div>
             </div>
 
@@ -106,7 +106,7 @@
               <h3>1. Button ExpandX - Horizontal Expansion Only</h3>
               <div className="visual-container">
                 <h4>Buttons in rows (takes full width)</h4>
-                <Layout row spacing="sm">
+                <Box row spacing="sm">
                   <Button>Default</Button>
                   <Button box alignX="start">
                     Text start
@@ -117,25 +117,25 @@
                   <Button selfAlignX="start">Start</Button>
                   <Button selfAlignX="center">Center</Button>
                   <Button selfAlignX="end">End</Button>
-                </Layout>
+                </Box>
 
                 <h4>Buttons in columns (grows horizontally)</h4>
-                <Layout row spacing="sm">
-                  <Layout column spacing="sm">
+                <Box row spacing="sm">
+                  <Box column spacing="sm">
                     <Button>Fixed</Button>
                     <Button box expandX>
                       ExpandX Button
                     </Button>
                     <Button>Fixed</Button>
-                  </Layout>
-                  <Layout column spacing="sm">
+                  </Box>
+                  <Box column spacing="sm">
                     <Button>Fixed</Button>
                     <Button box expandX alignX="center">
                       ExpandX text centered
                     </Button>
                     <Button>Fixed</Button>
-                  </Layout>
-                </Layout>
+                  </Box>
+                </Box>
               </div>
             </div>
 

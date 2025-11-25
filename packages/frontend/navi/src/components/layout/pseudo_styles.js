@@ -272,7 +272,8 @@ export const initPseudoStyles = (
   for (const pseudoClass of pseudoClasses) {
     const pseudoClassDefinition = PSEUDO_CLASSES[pseudoClass];
     if (!pseudoClassDefinition) {
-      throw new Error(`Unknown pseudo class: ${pseudoClass}`);
+      console.warn(`Unknown pseudo class: ${pseudoClass}`);
+      continue;
     }
     const { setup } = pseudoClassDefinition;
     if (setup) {

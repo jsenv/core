@@ -11092,7 +11092,8 @@ const initPseudoStyles = (
   for (const pseudoClass of pseudoClasses) {
     const pseudoClassDefinition = PSEUDO_CLASSES[pseudoClass];
     if (!pseudoClassDefinition) {
-      throw new Error(`Unknown pseudo class: ${pseudoClass}`);
+      console.warn(`Unknown pseudo class: ${pseudoClass}`);
+      continue;
     }
     const { setup } = pseudoClassDefinition;
     if (setup) {
@@ -22249,7 +22250,7 @@ const DialogLayout = ({
 }) => {
   return jsx(Box, {
     baseClassName: "navi_dialog_layout",
-    CSSVars: DialogLayoutStyleCSSVars,
+    styleCSSVars: DialogLayoutStyleCSSVars,
     visualSelector: ".navi_dialog_content",
     ...props,
     children: jsx(Box, {

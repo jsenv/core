@@ -91,7 +91,7 @@ export const DialogLayout = ({
   return (
     <Box
       baseClassName="navi_dialog_layout"
-      CSSVars={DialogLayoutStyleCSSVars}
+      styleCSSVars={DialogLayoutStyleCSSVars}
       visualSelector=".navi_dialog_content"
       {...props}
     >
