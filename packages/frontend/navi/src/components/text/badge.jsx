@@ -11,11 +11,11 @@ import.meta.css = /* css */ `
     --x-border-radius: var(--border-radius);
     --x-number-font-size: var(--font-size);
 
-    display: inline-flex;
+    display: inline-block;
     box-sizing: border-box;
-    align-items: center;
-    justify-content: center;
     color: var(--color, var(--x-color-contrasting));
+    line-height: 1;
+    vertical-align: baseline;
     border-radius: var(--x-border-radius);
   }
   .navi_badge_count_visual {
@@ -26,6 +26,7 @@ import.meta.css = /* css */ `
     justify-content: inherit;
     font-size: var(--font-size);
     text-align: center;
+    line-height: var(--x-size);
     background: var(--background);
     background-color: var(--background-color, var(--background));
     border-radius: inherit;

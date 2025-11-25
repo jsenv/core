@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test Comportement Inline</title>
+    <style>
+      body {
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+      }
+      .test-section {
+        margin-bottom: 30px;
+        padding: 15px;
+        background: #f9f9f9;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+      .test-line {
+        margin: 10px 0;
+        padding: 5px;
+        font-size: 20px;
+        border: 1px dashed #666;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Test du comportement inline des éléments</h1>
+
+    <div class="test-section">
+      <h2>1. Texte avec font-size plus petite</h2>
+      <div class="test-line">
+        <span>Before<small>dam</small>After</span>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>2. Carré de couleur dans le texte</h2>
+      <div class="test-line">
+        <span
+          >Before<span
+            style="
+              display: inline-block;
+              width: 1em;
+              height: 1em;
+              background: green;
+            "
+          ></span
+          >After</span
+        >
+      </div>
+      <div class="test-line">
+        <span
+          >Before<span
+            style="
+              display: inline-block;
+              width: 1em;
+              height: 1em;
+              background: red;
+              vertical-align: middle;
+            "
+          ></span
+          >After</span
+        >
+      </div>
+      <div class="test-line">
+        <span
+          >Before<span
+            style="
+              display: inline-block;
+              width: 1em;
+              height: 1em;
+              background: blue;
+              vertical-align: baseline;
+            "
+          ></span
+          >After</span
+        >
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>3. Carré avec font-size plus petite</h2>
+      <div class="test-line">
+        <span
+          >Before<span
+            style="
+              display: inline-block;
+              width: 1em;
+              height: 1em;
+              background: orange;
+              font-size: 0.8em;
+            "
+          ></span
+          >After</span
+        >
+      </div>
+      <div class="test-line">
+        <span
+          >Before<span
+            style="
+              display: inline-block;
+              width: 1em;
+              height: 1em;
+              background: purple;
+              font-size: 12px;
+            "
+          ></span
+          >After</span
+        >
+      </div>
+      <div class="test-line">
+        <span
+          >Before<span
+            style="
+              display: inline-block;
+              width: 1em;
+              height: 1em;
+              background: teal;
+              font-size: 0.6em;
+              vertical-align: middle;
+            "
+          ></span
+          >After</span
+        >
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>4. Comparaisons avec différents alignements</h2>
+      <div class="test-line">
+        <span
+          >Baseline:
+          <span
+            style="
+              display: inline-block;
+              width: 1em;
+              height: 1em;
+              background: green;
+              font-size: 0.8em;
+              vertical-align: baseline;
+            "
+          ></span>
+          text</span
+        >
+      </div>
+      <div class="test-line">
+        <span
+          >Middle:
+          <span
+            style="
+              display: inline-block;
+              width: 1em;
+              height: 1em;
+              background: green;
+              font-size: 0.8em;
+              vertical-align: middle;
+            "
+          ></span>
+          text</span
+        >
+      </div>
+      <div class="test-line">
+        <span
+          >Top:
+          <span
+            style="
+              display: inline-block;
+              width: 1em;
+              height: 1em;
+              background: green;
+              font-size: 0.8em;
+              vertical-align: top;
+            "
+          ></span>
+          text</span
+        >
+      </div>
+      <div class="test-line">
+        <span
+          >Bottom:
+          <span
+            style="
+              display: inline-block;
+              width: 1em;
+              height: 1em;
+              background: green;
+              font-size: 0.8em;
+              vertical-align: bottom;
+            "
+          ></span>
+          text</span
+        >
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>5. Avec du contenu dans le carré</h2>
+      <div class="test-line">
+        <span
+          >Before<span
+            style="
+              display: inline-block;
+              width: 2em;
+              height: 1.2em;
+              background: lightblue;
+              text-align: center;
+              font-size: 0.8em;
+              border-radius: 3px;
+            "
+            >42</span
+          >After</span
+        >
+      </div>
+      <div class="test-line">
+        <span
+          >Before<span
+            style="
+              display: inline-block;
+              width: 2em;
+              height: 1.2em;
+              background: lightcoral;
+              text-align: center;
+              font-size: 0.6em;
+              border-radius: 50%;
+              vertical-align: middle;
+            "
+            >99+</span
+          >After</span
+        >
+      </div>
+    </div>
+  </body>
+</html>
