@@ -28,6 +28,7 @@ import.meta.css = /* css */ `
   .navi_icon_foreground > .navi_text {
     display: flex;
     aspect-ratio: 1 / 1;
+    min-width: 0;
     height: 100%;
     max-height: 1em;
     align-items: center;
@@ -124,9 +125,9 @@ export const Icon = ({
       <span className="navi_icon_char_slot" aria-hidden="true">
         {invisibleText}
       </span>
-      <span className="navi_icon_foreground">
-        <Text spacing="pre">{innerChildren}</Text>
-      </span>
+      <Text className="navi_icon_foreground" spacing="pre">
+        {innerChildren}
+      </Text>
     </Text>
   );
 };
