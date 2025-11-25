@@ -90,11 +90,16 @@ export const Icon = ({
   if (width !== undefined || height !== undefined) {
     box = true;
   }
+  const ariaProps = decorative
+    ? { "aria-hidden": "true" }
+    : { role, "aria-label": ariaLabel };
 
   if (box) {
     return (
       <Box
         {...props}
+        {...ariaProps}
+        box={box}
         baseClassName="navi_icon"
         data-width={width}
         data-height={height}
@@ -107,9 +112,6 @@ export const Icon = ({
   }
 
   const invisibleText = baseChar.repeat(charWidth);
-  const ariaProps = decorative
-    ? { "aria-hidden": "true" }
-    : { role, "aria-label": ariaLabel };
 
   return (
     <Text

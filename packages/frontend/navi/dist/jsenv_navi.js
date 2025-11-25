@@ -13829,6 +13829,8 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   .navi_icon {
     display: inline-block;
     box-sizing: border-box;
+    max-width: 100%;
+    max-height: 100%;
   }
 
   .navi_icon[data-interactive] {
@@ -13983,6 +13985,8 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     text-decoration: var(--x-link-text-decoration);
     vertical-align: middle;
     border-radius: var(--link-border-radius);
+    outline-width: 0;
+    outline-style: solid;
     outline-color: var(--link-outline-color);
     cursor: var(--x-link-cursor);
   }
@@ -13998,7 +14002,6 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   }
   .navi_link[data-focus-visible] {
     outline-width: 2px;
-    outline-style: solid;
   }
   /* Visited */
   .navi_link[data-visited] {
@@ -14046,20 +14049,20 @@ const LinkStyleCSSVars = {
     color: "--link-color-active"
   }
 };
-const LinkPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":visited", ":-navi-loading", ":-navi-internal-link", ":-navi-external-link", ":-navi-anchor-link", ":-navi-current-link"];
+const LinkPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":visited", ":-navi-loading", ":-navi-link-internal", ":-navi-link-external", ":-navi-link-anchor", ":-navi-link-current"];
 const LinkPseudoElements = ["::-navi-loader"];
 Object.assign(PSEUDO_CLASSES, {
-  ":-navi-internal-link": {
-    attribute: "data-internal-link"
+  ":-navi-link-internal": {
+    attribute: "data-link-internal"
   },
-  ":-navi-external-link": {
-    attribute: "data-external-link"
+  ":-navi-link-external": {
+    attribute: "data-link-external"
   },
-  ":-navi-anchor-link": {
-    attribute: "data-anchor-link"
+  ":-navi-link-anchor": {
+    attribute: "data-link-anchor"
   },
-  ":-navi-current-link": {
-    attribute: "data-current-link"
+  ":-navi-link-current": {
+    attribute: "data-link-current"
   }
 });
 const Link = props => {
@@ -14162,10 +14165,10 @@ const LinkPlain = props => {
       ":disabled": disabled,
       ":visited": visited,
       ":-navi-loading": loading,
-      ":-navi-internal-link": targetIsSameSite,
-      ":-navi-external-link": !targetIsSameSite,
-      ":-navi-anchor-link": targetIsAnchor,
-      ":-navi-current-link": targetIsCurrent
+      ":-navi-link-internal": targetIsSameSite,
+      ":-navi-link-external": !targetIsSameSite,
+      ":-navi-link-anchor": targetIsAnchor,
+      ":-navi-link-current": targetIsCurrent
     },
     onClick: e => {
       if (preventDefault) {
@@ -14191,7 +14194,7 @@ const LinkPlain = props => {
       loading: loading,
       color: "var(--link-loader-color)"
     }), applySpacingOnTextChildren(children, spacing), innerIcon && jsx(Icon, {
-      marginLeft: "xxs",
+      marginLeft: children ? "xxs" : undefined,
       children: innerIcon
     })]
   });
@@ -14361,7 +14364,7 @@ const RouteLink = ({
     ...rest,
     href: url,
     pseudoState: {
-      ":-navi-current-link": routeIsActive
+      ":-navi-link-current": routeIsActive
     },
     children: children
   });
@@ -22059,25 +22062,81 @@ const MessageBox = ({
   });
 };
 
+const TitleLevelContext = createContext();
+const TitlePseudoClasses = [":hover"];
+const Title = props => {
+  const messageBoxLevel = useContext(MessageBoxLevelContext);
+  const innerAs = props.as || (messageBoxLevel ? "h4" : "h1");
+  const titleLevel = parseInt(innerAs.slice(1));
+  const reportTitleToMessageBox = useContext(MessageBoxReportTitleChildContext);
+  reportTitleToMessageBox?.(true);
+  return jsx(TitleLevelContext.Provider, {
+    value: titleLevel,
+    children: jsx(Text, {
+      bold: true,
+      className: withPropsClassName("navi_title"),
+      as: messageBoxLevel ? "h4" : "h1",
+      marginTop: messageBoxLevel ? "0" : undefined,
+      marginBottom: messageBoxLevel ? "sm" : undefined,
+      color: messageBoxLevel ? `var(--x-color)` : undefined,
+      ...props,
+      pseudoClasses: TitlePseudoClasses,
+      children: props.children
+    })
+  });
+};
+
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .navi_link_anchor[data-discrete] {
+    position: absolute !important;
+    top: 1em;
+    left: -1em;
+    width: 1em;
+    height: 1em;
+    font-size: 1em;
+    opacity: 0;
+    transform: translateY(-25%);
+  }
+
+  .navi_title .navi_link_anchor {
+    font-size: 0.7em;
+  }
+
+  .navi_link.navi_link_anchor[data-visited] {
+    /* We don't want to change the color of those links when they are visited */
+    /* Here it makes no sense */
+    --x-link-color: var(--link-color);
+  }
+
+  .navi_link_anchor[data-discrete]:focus,
+  .navi_link_anchor[data-discrete]:focus-visible,
+  *:hover > .navi_link_anchor {
+    opacity: 1;
+  }
+  /* The anchor link is displayed only on :hover */
+  /* So we "need" a visual indicator when it's shown by focus */
+  /* (even if it's focused by mouse aka not :focus-visible) */
+  /* otherwise we might wonder why we see this UI element */
+  .navi_link_anchor[data-discrete][data-focus] {
+    outline-width: 2px;
+  }
+`;
+const LinkAnchor = props => {
+  const titleLevel = useContext(TitleLevelContext);
+  return jsx(Link, {
+    className: "navi_link_anchor",
+    color: "inherit",
+    id: props.href.slice(1),
+    "data-discrete": props.discrete || titleLevel ? "" : undefined,
+    ...props
+  });
+};
+
 const Paragraph = props => {
   return jsx(Text, {
     marginTop: "md",
     ...props,
     as: "p",
-    ...props
-  });
-};
-
-const Title = props => {
-  const messageBoxLevel = useContext(MessageBoxLevelContext);
-  const reportTitleToMessageBox = useContext(MessageBoxReportTitleChildContext);
-  reportTitleToMessageBox?.(true);
-  return jsx(Text, {
-    bold: true,
-    as: messageBoxLevel ? "h4" : "h1",
-    marginTop: messageBoxLevel ? "0" : undefined,
-    marginBottom: messageBoxLevel ? "sm" : undefined,
-    color: messageBoxLevel ? `var(--x-color)` : undefined,
     ...props
   });
 };
@@ -22399,5 +22458,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, BadgeCount, Box, Button, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, FontSizedSvg, Form, HeartSvg, HomeSvg, Icon, IconAndText, Image, Input, Label, Layout, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkWithIcon, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useActiveRouteInfo, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useUrlSearchParam, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, BadgeCount, Box, Button, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, FontSizedSvg, Form, HeartSvg, HomeSvg, Icon, IconAndText, Image, Input, Label, Layout, Link, LinkAnchor, LinkAnchorSvg, LinkBlankTargetSvg, LinkWithIcon, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useActiveRouteInfo, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useUrlSearchParam, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map
