@@ -1,5 +1,6 @@
 import { useContext } from "preact/hooks";
 
+import { LinkAnchor } from "./link_anchor.jsx";
 import {
   MessageBoxLevelContext,
   MessageBoxReportTitleChildContext,
@@ -19,6 +20,11 @@ export const Title = (props) => {
       marginBottom={messageBoxLevel ? "sm" : undefined}
       color={messageBoxLevel ? `var(--x-color)` : undefined}
       {...props}
-    />
+    >
+      {props.id && (
+        <LinkAnchor href={`#${props.id}`} aria-label="Permalink to title" />
+      )}
+      {props.children}
+    </Text>
   );
 };

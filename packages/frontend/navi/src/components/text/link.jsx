@@ -82,6 +82,9 @@ import.meta.css = /* css */ `
   .navi_link[data-visited] {
     --x-link-color: var(--x-link-color-visited);
   }
+  .navi_link[data-visited][data-anchor-link] {
+    --x-link-color: var(--link-color);
+  }
   /* Selected */
   .navi_link[aria-selected] {
     position: relative;
@@ -301,7 +304,9 @@ const LinkPlain = (props) => {
     >
       <LoaderBackground loading={loading} color="var(--link-loader-color)" />
       {applySpacingOnTextChildren(children, spacing)}
-      {innerIcon && <Icon marginLeft="xxs">{innerIcon}</Icon>}
+      {innerIcon && (
+        <Icon marginLeft={children ? "xxs" : undefined}>{innerIcon}</Icon>
+      )}
     </Box>
   );
 };
