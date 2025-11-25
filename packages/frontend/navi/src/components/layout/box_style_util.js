@@ -388,9 +388,9 @@ const CONTENT_PROPS = {
   spacing: (value, { layout }) => {
     if (
       layout === "row" ||
-      layout === "column"
-      // layout === "inline-row" ||
-      // layout === "inline-column"
+      layout === "column" ||
+      layout === "inline-row" ||
+      layout === "inline-column"
     ) {
       return {
         gap: resolveSpacingSize(value, "gap"),
@@ -511,6 +511,9 @@ const sizeSpacingScale = {
   xl: "2em", // 2 = 32px at 16px base
   xxl: "3em", // 3 = 48px at 16px base
 };
+sizeSpacingScale.s = sizeSpacingScale.sm;
+sizeSpacingScale.m = sizeSpacingScale.md;
+sizeSpacingScale.l = sizeSpacingScale.lg;
 const sizeSpacingScaleKeys = new Set(Object.keys(sizeSpacingScale));
 export const isSizeSpacingScaleKey = (key) => {
   return sizeSpacingScaleKeys.has(key);
@@ -528,6 +531,9 @@ const sizeTypoScale = {
   xl: "1.25em", // 1.25 = 20px at 16px base
   xxl: "1.5em", // 1.5 = 24px at 16px base
 };
+sizeTypoScale.s = sizeTypoScale.sm;
+sizeTypoScale.m = sizeTypoScale.md;
+sizeTypoScale.l = sizeTypoScale.lg;
 export const resolveTypoSize = (size, property = "fontSize") => {
   return stringifyStyle(sizeTypoScale[size] || size, property);
 };

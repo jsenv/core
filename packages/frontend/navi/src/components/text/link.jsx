@@ -59,6 +59,7 @@ import.meta.css = /* css */ `
     position: relative;
     color: var(--x-link-color);
     text-decoration: var(--x-link-text-decoration);
+    vertical-align: middle;
     border-radius: var(--link-border-radius);
     outline-color: var(--link-outline-color);
     cursor: var(--x-link-cursor);
@@ -253,7 +254,6 @@ const LinkPlain = (props) => {
 
   return (
     <Box
-      box="auto"
       {...rest}
       ref={ref}
       as="a"

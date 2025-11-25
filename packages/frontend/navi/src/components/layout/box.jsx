@@ -130,9 +130,6 @@ export const Box = (props) => {
   const TagName = as;
 
   let { box, inline, row, column } = rest;
-  if (box === "auto") {
-    box = Boolean(rest.alignX || rest.alignY);
-  }
   if (box) {
     if (inline === undefined) {
       inline = true;

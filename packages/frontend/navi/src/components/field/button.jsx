@@ -98,9 +98,9 @@ import.meta.css = /* css */ `
     --x-button-color: var(--button-color);
 
     position: relative;
-    /* display: inline-flex; */
     box-sizing: border-box;
     padding: 0;
+    vertical-align: middle;
     background: none;
     border: none;
     border-radius: var(--x-button-border-radius);
@@ -327,7 +327,6 @@ const ButtonBasic = (props) => {
 
   return (
     <Box
-      box="auto"
       {...rest}
       as="button"
       ref={ref}
