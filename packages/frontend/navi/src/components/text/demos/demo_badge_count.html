@@ -44,10 +44,6 @@
             <Link href="#nowrap">
               7. Association texte + badge (pas de coupure)
             </Link>
-            <Link href="#nombres-max">
-              8. Compteurs avec nombres élevés et paramètre max
-            </Link>
-            <Link href="#exemples-base">9. Variations courantes</Link>
           </Box>
         </Box>
       );
@@ -247,32 +243,6 @@
                 </Text>
               </Box>
             </Box>
-          </Box>
-        </Box>
-      );
-
-      const ExemplesBase = () => (
-        <Box as="section" marginBottom="xl" id="exemples-base">
-          <Title as="h2">Variations courantes</Title>
-          <Box row spacing="md">
-            <Text>
-              Messages non lus
-              <BadgeCount background="red">5</BadgeCount>
-            </Text>
-
-            <Text>
-              Notifications en attente
-              <BadgeCount backgroundColor="#ffebee" size="xs">
-                120
-              </BadgeCount>
-            </Text>
-
-            <Text>
-              Tâches à faire
-              <BadgeCount backgroundColor="#e8f5e8" color="#2e7d32" size="xs">
-                3
-              </BadgeCount>
-            </Text>
           </Box>
         </Box>
       );
@@ -727,36 +697,6 @@
         </Box>
       );
 
-      const NombresMaxSection = () => (
-        <Box as="section" marginBottom="xl" id="nombres-max">
-          <Title as="h2">Compteurs avec nombres élevés et paramètre max</Title>
-          <Box column spacing="md">
-            <Box row spacing="md">
-              <Text>
-                Sans limite
-                <BadgeCount background="#e91e63" color="white">
-                  1234
-                </BadgeCount>
-              </Text>
-
-              <Text>
-                Max 99
-                <BadgeCount background="#e91e63" color="white" max={99}>
-                  1234
-                </BadgeCount>
-              </Text>
-
-              <Text>
-                Max 999
-                <BadgeCount background="#e91e63" color="white" max={999}>
-                  1234
-                </BadgeCount>
-              </Text>
-            </Box>
-          </Box>
-        </Box>
-      );
-
       const Demo = () => {
         return (
           <div
@@ -777,8 +717,6 @@
             <IntegrationComposantsSection />
             <BadgePositioningSection />
             <NoWrapSection />
-            <NombresMaxSection />
-            <ExemplesBase />
           </div>
         );
       };
