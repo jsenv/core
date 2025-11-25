@@ -46,24 +46,24 @@ import.meta.css = /* css */ `
     top: -0.1em;
   }
 
-  .navi_badge_count[data-single-digit] {
+  .navi_badge_count[data-single-char] {
     --x-border-radius: 100%;
     --x-number-font-size: unset;
   }
-  .navi_badge_count[data-two-digits] {
+  .navi_badge_count[data-two-chars] {
     --x-border-radius: 100%;
     --x-number-font-size: 0.8em;
   }
-  .navi_badge_count[data-two-digits][data-value-overflow] {
+  .navi_badge_count[data-two-chars][data-value-overflow] {
     --x-number-font-size: 0.6em;
   }
-  .navi_badge_count[data-indeterminate-digits] {
+  .navi_badge_count[data-indeterminate-chars] {
     --x-border-radius: 1em;
     --x-size: auto;
     padding-right: 0.5em;
     padding-left: 0.5em;
   }
-  .navi_badge_count[data-indeterminate-digits] .navi_badge_count_text {
+  .navi_badge_count[data-indeterminate-chars] .navi_badge_count_text {
     position: relative;
     top: unset;
     left: unset;
@@ -100,7 +100,7 @@ export const BadgeCount = ({
   const valueRequested =
     typeof children === "string" ? parseInt(children, 10) : children;
   const valueDisplayed = applyMaxToValue(max, valueRequested);
-  const digitCount = String(valueDisplayed).length;
+  const charCount = String(valueDisplayed).length;
   const hasOverflow = valueDisplayed !== valueRequested;
 
   return (
@@ -108,10 +108,10 @@ export const BadgeCount = ({
       ref={ref}
       className="navi_badge_count"
       bold
-      data-single-digit={digitCount === 1 ? "" : undefined}
-      data-two-digits={digitCount === 2 ? "" : undefined}
+      data-single-char={charCount === 1 ? "" : undefined}
+      data-two-chars={charCount === 2 ? "" : undefined}
+      data-indeterminate-chars={charCount > 2 ? "" : undefined}
       data-value-overflow={hasOverflow ? "" : undefined}
-      data-indeterminate-digits={digitCount > 2 ? "" : undefined}
       {...props}
       styleCSSVars={BadgeStyleCSSVars}
       spacing="pre"
