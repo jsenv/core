@@ -89,7 +89,7 @@ const BadgeCountOverflow = () => (
 const MAX_CHAR_AS_CIRCLE = 3;
 export const BadgeCount = ({
   children,
-  circle,
+  ellipse,
   max = 99,
   maxElement = <BadgeCountOverflow />,
   ...props
@@ -104,37 +104,28 @@ export const BadgeCount = ({
   const hasOverflow = valueDisplayed !== valueRequested;
   const valueCharCount = String(valueDisplayed).length;
   const charCount = valueCharCount + (hasOverflow ? 1 : 0);
-
   if (charCount > MAX_CHAR_AS_CIRCLE) {
-    circle = false;
-  } else if (
-    charCount === MAX_CHAR_AS_CIRCLE &&
-    valueCharCount === MAX_CHAR_AS_CIRCLE - 1
-  ) {
-    // we want to display 100 and max is 1000 we "can't" use circle here
-    // because when people/designers force a max they don't expect the circle to become an ellipse
-    // so we want to be sure it'will always be a circle
-    circle = false;
+    ellipse = true;
   }
 
-  if (circle) {
+  if (ellipse) {
     return (
-      <BadgeCountCircle
-        {...props}
-        ref={ref}
-        hasOverflow={hasOverflow}
-        charCount={charCount}
-      >
+      <BadgeCountEllipse {...props} ref={ref} hasOverflow={hasOverflow}>
         {valueDisplayed}
         {hasOverflow && maxElement}
-      </BadgeCountCircle>
+      </BadgeCountEllipse>
     );
   }
   return (
-    <BadgeCountEllipse {...props} ref={ref} hasOverflow={hasOverflow}>
+    <BadgeCountCircle
+      {...props}
+      ref={ref}
+      hasOverflow={hasOverflow}
+      charCount={charCount}
+    >
       {valueDisplayed}
       {hasOverflow && maxElement}
-    </BadgeCountEllipse>
+    </BadgeCountCircle>
   );
 };
 const applyMaxToValue = (max, value) => {
