@@ -6,7 +6,6 @@ const DEFAULT_DISPLAY_BY_TAG_NAME = {
     "bdi",
     "bdo",
     "br",
-    "button",
     "cite",
     "code",
     "dfn",

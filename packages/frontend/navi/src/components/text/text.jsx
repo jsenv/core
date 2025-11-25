@@ -125,6 +125,9 @@ export const Text = (props) => {
   if (props.overflowPinned) {
     return <TextOverflowPinned {...props} />;
   }
+  if (props.selectRange) {
+    return <TextWithSelectRange {...props} />;
+  }
   return <TextBasic {...props} />;
 };
 
@@ -169,14 +172,15 @@ const TextOverflowPinned = ({ overflowPinned, ...props }) => {
   setOverflowPinnedElement(null);
   return text;
 };
-const TextBasic = ({ spacing = " ", selectRange, children, ...rest }) => {
+const TextWithSelectRange = ({ selectRange, ...props }) => {
   const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
-
+  const ref = props.ref || defaultRef;
   useInitialTextSelection(ref, selectRange);
-
+  return <Text ref={ref} {...props}></Text>;
+};
+const TextBasic = ({ spacing = " ", children, ...rest }) => {
   return (
-    <Box ref={ref} as="span" {...rest} baseClassName="navi_text">
+    <Box as="span" baseClassName="navi_text" {...rest}>
       {applySpacingOnTextChildren(children, spacing)}
     </Box>
   );

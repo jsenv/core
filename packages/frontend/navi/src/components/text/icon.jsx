@@ -117,7 +117,6 @@ export const Icon = ({
     <Text
       {...props}
       {...ariaProps}
-      box={box}
       className={withPropsClassName("navi_icon", className)}
       spacing="pre"
       data-icon-char=""

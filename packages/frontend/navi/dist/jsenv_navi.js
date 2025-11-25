@@ -10678,7 +10678,6 @@ const DEFAULT_DISPLAY_BY_TAG_NAME = {
     "bdi",
     "bdo",
     "br",
-    "button",
     "cite",
     "code",
     "dfn",
@@ -11271,12 +11270,18 @@ const Box = props => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   const TagName = as;
+  const defaultDisplay = getDefaultDisplay(TagName);
   let {
     box,
     inline,
     row,
     column
   } = rest;
+  if (box === "auto" || inline || defaultDisplay === "inline") {
+    if (rest.width !== undefined || rest.height !== undefined) {
+      box = true;
+    }
+  }
   if (box) {
     if (inline === undefined) {
       inline = true;
@@ -11299,7 +11304,7 @@ const Box = props => {
   } else if (column) {
     layout = "column";
   } else {
-    layout = getDefaultDisplay(TagName);
+    layout = defaultDisplay;
   }
   const innerClassName = withPropsClassName(baseClassName, className);
   const selfForwardedProps = {};
@@ -13755,6 +13760,11 @@ const Text = props => {
       ...props
     });
   }
+  if (props.selectRange) {
+    return jsx(TextWithSelectRange, {
+      ...props
+    });
+  }
   return jsx(TextBasic, {
     ...props
   });
@@ -13808,20 +13818,27 @@ const TextOverflowPinned = ({
   setOverflowPinnedElement(null);
   return text;
 };
+const TextWithSelectRange = ({
+  selectRange,
+  ...props
+}) => {
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
+  useInitialTextSelection(ref, selectRange);
+  return jsx(Text, {
+    ref: ref,
+    ...props
+  });
+};
 const TextBasic = ({
   spacing = " ",
-  selectRange,
   children,
   ...rest
 }) => {
-  const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
-  useInitialTextSelection(ref, selectRange);
   return jsx(Box, {
-    ref: ref,
     as: "span",
-    ...rest,
     baseClassName: "navi_text",
+    ...rest,
     children: applySpacingOnTextChildren(children, spacing)
   });
 };
@@ -13939,7 +13956,6 @@ const Icon = ({
   return jsxs(Text, {
     ...props,
     ...ariaProps,
-    box: box,
     className: withPropsClassName("navi_icon", className),
     spacing: "pre",
     "data-icon-char": "",

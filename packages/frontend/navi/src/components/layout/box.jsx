@@ -129,7 +129,13 @@ export const Box = (props) => {
   const ref = props.ref || defaultRef;
   const TagName = as;
 
+  const defaultDisplay = getDefaultDisplay(TagName);
   let { box, inline, row, column } = rest;
+  if (box === "auto" || inline || defaultDisplay === "inline") {
+    if (rest.width !== undefined || rest.height !== undefined) {
+      box = true;
+    }
+  }
   if (box) {
     if (inline === undefined) {
       inline = true;
@@ -153,7 +159,7 @@ export const Box = (props) => {
   } else if (column) {
     layout = "column";
   } else {
-    layout = getDefaultDisplay(TagName);
+    layout = defaultDisplay;
   }
   const innerClassName = withPropsClassName(baseClassName, className);
 
