@@ -6,6 +6,8 @@ import.meta.css = /* css */ `
   .navi_icon {
     display: inline-block;
     box-sizing: border-box;
+    max-width: 100%;
+    max-height: 100%;
   }
 
   .navi_icon[data-interactive] {

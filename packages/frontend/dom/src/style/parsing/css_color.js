@@ -40,6 +40,14 @@ export const parseCSSColor = (color, element) => {
   if (typeof color !== "string") {
     return color;
   }
+  if (color === "inherit") {
+    if (!element) {
+      return color;
+    }
+    const computedStyle = getComputedStyle(element);
+    const resolvedColor = parseCSSColor(computedStyle.color, element);
+    return resolvedColor;
+  }
   let resolvedColor = color;
 
   // Handle light-dark() function

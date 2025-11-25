@@ -61,6 +61,8 @@ import.meta.css = /* css */ `
     text-decoration: var(--x-link-text-decoration);
     vertical-align: middle;
     border-radius: var(--link-border-radius);
+    outline-width: 0;
+    outline-style: solid;
     outline-color: var(--link-outline-color);
     cursor: var(--x-link-cursor);
   }
@@ -76,7 +78,6 @@ import.meta.css = /* css */ `
   }
   .navi_link[data-focus-visible] {
     outline-width: 2px;
-    outline-style: solid;
   }
   /* Visited */
   .navi_link[data-visited] {
