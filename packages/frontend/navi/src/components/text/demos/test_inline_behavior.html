@@ -44,35 +44,8 @@
               display: inline-block;
               width: 1em;
               height: 1em;
-              background: green;
-            "
-          ></span
-          >After</span
-        >
-      </div>
-      <div class="test-line">
-        <span
-          >Before<span
-            style="
-              display: inline-block;
-              width: 1em;
-              height: 1em;
               background: red;
               vertical-align: middle;
-            "
-          ></span
-          >After</span
-        >
-      </div>
-      <div class="test-line">
-        <span
-          >Before<span
-            style="
-              display: inline-block;
-              width: 1em;
-              height: 1em;
-              background: blue;
-              vertical-align: baseline;
             "
           ></span
           >After</span
@@ -89,145 +62,72 @@
               display: inline-block;
               width: 1em;
               height: 1em;
+              background: red;
+              vertical-align: middle;
+              font-size: 0.5em;
+            "
+          ></span
+          >After</span
+        >
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>7. Carré plus grand que le texte</h2>
+      <p>
+        <strong>Test:</strong> Carré qui dépasse la taille du texte environnant
+      </p>
+
+      <h3>Texte normal (20px) avec carré 40px</h3>
+      <div class="test-line">
+        <span
+          >Before<span
+            style="
+              display: inline-block;
+              width: 2em;
+              height: 2em;
+              background: red;
+              font-size: 20px;
+              vertical-align: middle;
+            "
+          ></span
+          >After</span
+        >
+      </div>
+
+      <h3>
+        Petit texte (12px) avec carré normal (1em = 20px du contexte parent)
+      </h3>
+      <div class="test-line" style="font-size: 12px">
+        <span
+          >Before<span
+            style="
+              display: inline-block;
+              width: 1.5em;
+              height: 1.5em;
               background: orange;
-              font-size: 0.8em;
-            "
-          ></span
-          >After</span
-        >
-      </div>
-      <div class="test-line">
-        <span
-          >Before<span
-            style="
-              display: inline-block;
-              width: 1em;
-              height: 1em;
-              background: purple;
-              font-size: 12px;
-            "
-          ></span
-          >After</span
-        >
-      </div>
-      <div class="test-line">
-        <span
-          >Before<span
-            style="
-              display: inline-block;
-              width: 1em;
-              height: 1em;
-              background: teal;
-              font-size: 0.6em;
+              font-size: 20px;
               vertical-align: middle;
             "
           ></span
-          >After</span
+          >After petit texte</span
         >
       </div>
-    </div>
 
-    <div class="test-section">
-      <h2>4. Comparaisons avec différents alignements</h2>
-      <div class="test-line">
-        <span
-          >Baseline:
-          <span
-            style="
-              display: inline-block;
-              width: 1em;
-              height: 1em;
-              background: green;
-              font-size: 0.8em;
-              vertical-align: baseline;
-            "
-          ></span>
-          text</span
-        >
-      </div>
-      <div class="test-line">
-        <span
-          >Middle:
-          <span
-            style="
-              display: inline-block;
-              width: 1em;
-              height: 1em;
-              background: green;
-              font-size: 0.8em;
-              vertical-align: middle;
-            "
-          ></span>
-          text</span
-        >
-      </div>
-      <div class="test-line">
-        <span
-          >Top:
-          <span
-            style="
-              display: inline-block;
-              width: 1em;
-              height: 1em;
-              background: green;
-              font-size: 0.8em;
-              vertical-align: top;
-            "
-          ></span>
-          text</span
-        >
-      </div>
-      <div class="test-line">
-        <span
-          >Bottom:
-          <span
-            style="
-              display: inline-block;
-              width: 1em;
-              height: 1em;
-              background: green;
-              font-size: 0.8em;
-              vertical-align: bottom;
-            "
-          ></span>
-          text</span
-        >
-      </div>
-    </div>
-
-    <div class="test-section">
-      <h2>5. Avec du contenu dans le carré</h2>
-      <div class="test-line">
+      <h3>Cas extrême: line-height élevé + carré géant</h3>
+      <div class="test-line" style="line-height: 4; font-size: 16px">
         <span
           >Before<span
             style="
               display: inline-block;
-              width: 2em;
-              height: 1.2em;
-              background: lightblue;
-              text-align: center;
-              font-size: 0.8em;
-              border-radius: 3px;
-            "
-            >42</span
-          >After</span
-        >
-      </div>
-      <div class="test-line">
-        <span
-          >Before<span
-            style="
-              display: inline-block;
-              width: 2em;
-              height: 1.2em;
-              background: lightcoral;
-              text-align: center;
-              font-size: 0.6em;
-              border-radius: 50%;
+              width: 4em;
+              height: 4em;
+              background: darkblue;
+              font-size: 16px;
               vertical-align: middle;
             "
-            >99+</span
-          >After</span
+          ></span
+          >After avec line-height: 4</span
         >
       </div>
     </div>
@@ -307,66 +207,6 @@
             "
           ></span
           >After</span
-        >
-      </div>
-    </div>
-
-    <div class="test-section">
-      <h2>7. Carré plus grand que le texte</h2>
-      <p>
-        <strong>Test:</strong> Carré qui dépasse la taille du texte environnant
-      </p>
-
-      <h3>Texte normal (20px) avec carré 40px</h3>
-      <div class="test-line">
-        <span
-          >Before<span
-            style="
-              display: inline-block;
-              width: 2em;
-              height: 2em;
-              background: red;
-              font-size: 20px;
-              vertical-align: middle;
-            "
-          ></span
-          >After</span
-        >
-      </div>
-
-      <h3>
-        Petit texte (12px) avec carré normal (1em = 20px du contexte parent)
-      </h3>
-      <div class="test-line" style="font-size: 12px">
-        <span
-          >Before<span
-            style="
-              display: inline-block;
-              width: 1.5em;
-              height: 1.5em;
-              background: orange;
-              font-size: 20px;
-              vertical-align: middle;
-            "
-          ></span
-          >After petit texte</span
-        >
-      </div>
-
-      <h3>Cas extrême: line-height élevé + carré géant</h3>
-      <div class="test-line" style="line-height: 4; font-size: 16px">
-        <span
-          >Before<span
-            style="
-              display: inline-block;
-              width: 4em;
-              height: 4em;
-              background: darkblue;
-              font-size: 16px;
-              vertical-align: middle;
-            "
-          ></span
-          >After avec line-height: 4</span
         >
       </div>
     </div>
