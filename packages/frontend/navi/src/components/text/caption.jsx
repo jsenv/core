@@ -9,7 +9,7 @@ import.meta.css = /* css */ `
 
     @media (prefers-color-scheme: dark) {
       .navi_caption {
-        --color: rgb(102, 102, 102);
+        --color: rgb(129, 134, 140);
       }
     }
   }
@@ -26,10 +26,8 @@ const CaptionStyleCSSVars = {
 export const Caption = ({ className, ...rest }) => {
   return (
     <Text
-      as="p"
-      size="xs"
-      marginTop="sm"
-      marginBottom="sm"
+      as="small"
+      size="0.8em" // We use em to be relative to the parent (we want to be smaller than the surrounding text)
       className={withPropsClassName("navi_caption", className)}
       {...rest}
       styleCSSVars={CaptionStyleCSSVars}

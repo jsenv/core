@@ -1,5 +1,5 @@
 import { installImportMetaCss } from "./jsenv_navi_side_effects.js";
-import { createIterableWeakSet, createPubSub, createValueEffect, createStyleController, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, activeElementSignal, canInterceptKeys, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, mergeOneStyle, stringifyStyle, mergeTwoStyles, normalizeStyles, resolveCSSSize, findBefore, findAfter, initFocusGroup, elementIsFocusable, pickLightOrDark, resolveColorLuminance, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { createIterableWeakSet, createPubSub, createValueEffect, createStyleController, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, activeElementSignal, canInterceptKeys, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, stringifyStyle, mergeOneStyle, mergeTwoStyles, normalizeStyles, resolveCSSSize, findBefore, findAfter, hasCSSSizeUnit, initFocusGroup, elementIsFocusable, pickLightOrDark, resolveColorLuminance, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { effect, signal, computed, batch, useSignal } from "@preact/signals";
 import { useEffect, useRef, useCallback, useContext, useState, useLayoutEffect, useMemo, useErrorBoundary, useImperativeHandle, useId } from "preact/hooks";
@@ -10401,6 +10401,8 @@ const POSITION_PROPS = {
   },
   left: PASS_THROUGH,
   top: PASS_THROUGH,
+  bottom: PASS_THROUGH,
+  right: PASS_THROUGH,
 
   translateX: (value) => {
     return { transform: `translateX(${value})` };
@@ -10442,7 +10444,7 @@ const POSITION_PROPS = {
   },
 };
 const TYPO_PROPS = {
-  font: PASS_THROUGH,
+  font: applyOnCSSProp("fontFamily"),
   fontFamily: PASS_THROUGH,
   size: applyOnCSSProp("fontSize"),
   fontSize: PASS_THROUGH,
@@ -10521,9 +10523,9 @@ const CONTENT_PROPS = {
   spacing: (value, { layout }) => {
     if (
       layout === "row" ||
-      layout === "column"
-      // layout === "inline-row" ||
-      // layout === "inline-column"
+      layout === "column" ||
+      layout === "inline-row" ||
+      layout === "inline-column"
     ) {
       return {
         gap: resolveSpacingSize(value, "gap"),
@@ -10644,19 +10646,29 @@ const sizeSpacingScale = {
   xl: "2em", // 2 = 32px at 16px base
   xxl: "3em", // 3 = 48px at 16px base
 };
+sizeSpacingScale.s = sizeSpacingScale.sm;
+sizeSpacingScale.m = sizeSpacingScale.md;
+sizeSpacingScale.l = sizeSpacingScale.lg;
+const sizeSpacingScaleKeys = new Set(Object.keys(sizeSpacingScale));
+const isSizeSpacingScaleKey = (key) => {
+  return sizeSpacingScaleKeys.has(key);
+};
 const resolveSpacingSize = (size, property = "padding") => {
   return stringifyStyle(sizeSpacingScale[size] || size, property);
 };
 
 const sizeTypoScale = {
-  xxs: "0.625em", // 0.625 = 10px at 16px base (smaller than before for more range)
-  xs: "0.75em", // 0.75 = 12px at 16px base
-  sm: "0.875em", // 0.875 = 14px at 16px base
-  md: "1em", // 1 = 16px at 16px base (base font size)
-  lg: "1.125em", // 1.125 = 18px at 16px base
-  xl: "1.25em", // 1.25 = 20px at 16px base
-  xxl: "1.5em", // 1.5 = 24px at 16px base
+  xxs: "0.625rem", // 0.625 = 10px at 16px base (smaller than before for more range)
+  xs: "0.75rem", // 0.75 = 12px at 16px base
+  sm: "0.875rem", // 0.875 = 14px at 16px base
+  md: "1rem", // 1 = 16px at 16px base (base font size)
+  lg: "1.125rem", // 1.125 = 18px at 16px base
+  xl: "1.25rem", // 1.25 = 20px at 16px base
+  xxl: "1.5rem", // 1.5 = 24px at 16px base
 };
+sizeTypoScale.s = sizeTypoScale.sm;
+sizeTypoScale.m = sizeTypoScale.md;
+sizeTypoScale.l = sizeTypoScale.lg;
 
 const DEFAULT_DISPLAY_BY_TAG_NAME = {
   "inline": new Set([
@@ -11264,9 +11276,6 @@ const Box = props => {
     row,
     column
   } = rest;
-  if (box === "auto") {
-    box = Boolean(rest.alignX || rest.alignY);
-  }
   if (box) {
     if (inline === undefined) {
       inline = true;
@@ -13645,13 +13654,25 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     text-overflow: ellipsis;
     overflow: hidden;
   }
+
+  .navi_custom_space {
+  }
 `;
-const INSERTED_SPACE = jsx("span", {
+const REGULAR_SPACE = jsx("span", {
   "data-navi-space": "",
   children: " "
 });
+const CustomWidthSpace = ({
+  value
+}) => {
+  return jsx("span", {
+    className: "navi_custom_space",
+    style: `padding-left: ${value}`,
+    children: "\u200B"
+  });
+};
 const applySpacingOnTextChildren = (children, spacing) => {
-  if (spacing === "pre") {
+  if (spacing === "pre" || spacing === "0" || spacing === 0) {
     return children;
   }
   if (!children) {
@@ -13662,23 +13683,28 @@ const applySpacingOnTextChildren = (children, spacing) => {
   if (childCount <= 1) {
     return children;
   }
-
-  // Helper function to check if a value ends with whitespace
-  const endsWithWhitespace = value => {
-    if (typeof value === "string") {
-      return /\s$/.test(value);
+  let separator;
+  if (spacing === undefined) {
+    spacing = REGULAR_SPACE;
+  } else if (typeof spacing === "string") {
+    if (isSizeSpacingScaleKey(spacing)) {
+      separator = jsx(CustomWidthSpace, {
+        value: resolveSpacingSize(spacing)
+      });
+    } else if (hasCSSSizeUnit(spacing)) {
+      separator = jsx(CustomWidthSpace, {
+        value: resolveSpacingSize(spacing)
+      });
+    } else {
+      separator = spacing;
     }
-    return false;
-  };
-
-  // Helper function to check if a value starts with whitespace
-  const startsWithWhitespace = value => {
-    if (typeof value === "string") {
-      return /^\s/.test(value);
-    }
-    return false;
-  };
-  const separator = spacing === undefined || spacing === " " ? INSERTED_SPACE : spacing;
+  } else if (typeof spacing === "number") {
+    separator = jsx(CustomWidthSpace, {
+      value: spacing
+    });
+  } else {
+    separator = spacing;
+  }
   const childrenWithGap = [];
   let i = 0;
   while (true) {
@@ -13688,16 +13714,29 @@ const applySpacingOnTextChildren = (children, spacing) => {
     if (i === childCount) {
       break;
     }
-
-    // Check if we should skip adding spacing
     const currentChild = childArray[i - 1];
     const nextChild = childArray[i];
-    const shouldSkipSpacing = endsWithWhitespace(currentChild) || startsWithWhitespace(nextChild);
-    if (!shouldSkipSpacing) {
-      childrenWithGap.push(separator);
+    if (endsWithWhitespace(currentChild)) {
+      continue;
     }
+    if (startsWithWhitespace(nextChild)) {
+      continue;
+    }
+    childrenWithGap.push(separator);
   }
   return childrenWithGap;
+};
+const endsWithWhitespace = jsxChild => {
+  if (typeof jsxChild === "string") {
+    return /\s$/.test(jsxChild);
+  }
+  return false;
+};
+const startsWithWhitespace = jsxChild => {
+  if (typeof jsxChild === "string") {
+    return /^\s/.test(jsxChild);
+  }
+  return false;
 };
 const OverflowPinnedElementContext = createContext(null);
 const Text = props => {
@@ -13812,6 +13851,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   .navi_icon_foreground > .navi_text {
     display: flex;
     aspect-ratio: 1 / 1;
+    min-width: 0;
     height: 100%;
     max-height: 1em;
     align-items: center;
@@ -13906,12 +13946,10 @@ const Icon = ({
       className: "navi_icon_char_slot",
       "aria-hidden": "true",
       children: invisibleText
-    }), jsx("span", {
+    }), jsx(Text, {
       className: "navi_icon_foreground",
-      children: jsx(Text, {
-        spacing: "pre",
-        children: innerChildren
-      })
+      spacing: "pre",
+      children: innerChildren
     })]
   });
 };
@@ -13943,6 +13981,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     position: relative;
     color: var(--x-link-color);
     text-decoration: var(--x-link-text-decoration);
+    vertical-align: middle;
     border-radius: var(--link-border-radius);
     outline-color: var(--link-outline-color);
     cursor: var(--x-link-cursor);
@@ -14103,7 +14142,6 @@ const LinkPlain = props => {
     innerIcon = icon;
   }
   return jsxs(Box, {
-    box: "auto",
     ...rest,
     ref: ref,
     as: "a",
@@ -16785,9 +16823,9 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     --x-button-color: var(--button-color);
 
     position: relative;
-    /* display: inline-flex; */
     box-sizing: border-box;
     padding: 0;
+    vertical-align: middle;
     background: none;
     border: none;
     border-radius: var(--x-button-border-radius);
@@ -16997,7 +17035,6 @@ const ButtonBasic = props => {
   };
   const renderButtonContentMemoized = useCallback(renderButtonContent, []);
   return jsxs(Box, {
-    box: "auto",
     ...rest,
     as: "button",
     ref: ref,
@@ -21554,17 +21591,24 @@ const SVGMaskOverlay = ({
   });
 };
 
-const CSS_VAR_NAME = "--color-contrasting";
+const CSS_VAR_NAME = "--x-color-contrasting";
 
-const useContrastingColor = (ref) => {
+const useContrastingColor = (ref, backgroundElementSelector) => {
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) {
       return;
     }
+    let elementToCheck = el;
+    {
+      elementToCheck = el.querySelector(backgroundElementSelector);
+      if (!elementToCheck) {
+        return;
+      }
+    }
     const lightColor = "var(--navi-color-light)";
     const darkColor = "var(--navi-color-dark)";
-    const backgroundColor = getComputedStyle(el).backgroundColor;
+    const backgroundColor = getComputedStyle(elementToCheck).backgroundColor;
     if (!backgroundColor) {
       el.style.removeProperty(CSS_VAR_NAME);
       return;
@@ -21581,45 +21625,65 @@ const useContrastingColor = (ref) => {
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
-    .navi_badge_count {
-      --border-radius: 1em;
-    }
   }
   .navi_badge_count {
-    --spacing: 0.3em;
-    --size: 1em;
-    --x-outer-size: calc(var(--size) + var(--spacing));
-    --x-offset-top: calc(0.5 * (var(--x-outer-size) - 1em));
-
+    --x-size: 1.5em;
+    --x-border-radius: var(--border-radius);
+    --x-number-font-size: var(--font-size);
+    position: relative;
     display: inline-block;
-    box-sizing: border-box;
-    min-width: var(--x-outer-size);
-    height: var(--x-outer-size);
-    max-height: var(--x-outer-size);
-    margin-top: calc(-1 * var(--x-offset-top));
-    padding-right: var(--spacing);
-    padding-left: var(--spacing);
-    color: var(--color, var(--color-contrasting));
-    text-align: center;
-    line-height: var(--x-outer-size);
-    /* vertical-align: middle; */
-    background: var(--background);
-    background-color: var(--background-color, var(--background));
-    border-radius: var(--border-radius, 1em);
-  }
-  .navi_badge_count[data-single-digit] {
-    --spacing: 0em;
-    --size: 1.3em;
-  }
-  .navi_badge_count[data-two-digits] {
-    --spacing: 0em;
-    --size: 1.6em;
-  }
 
+    color: var(--color, var(--x-color-contrasting));
+    font-size: var(--font-size);
+    vertical-align: middle;
+    border-radius: var(--x-border-radius);
+  }
   .navi_count_badge_overflow {
     position: relative;
-    top: -0.4em;
-    font-size: 0.8em;
+    top: -0.1em;
+  }
+  /* Ellipse */
+  .navi_badge_count[data-ellipse] {
+    padding-right: 0.4em;
+    padding-left: 0.4em;
+    background: var(--background);
+    background-color: var(--background-color, var(--background));
+    border-radius: 1em;
+  }
+  /* Circle */
+  .navi_badge_count[data-circle] {
+    width: var(--x-size);
+    height: var(--x-size);
+  }
+  .navi_badge_count_frame {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--background);
+    background-color: var(--background-color, var(--background));
+    border-radius: inherit;
+    transform: translateY(-50%);
+  }
+  .navi_badge_count_text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    font-size: var(--x-number-font-size, inherit);
+    transform: translate(-50%, -50%);
+  }
+  .navi_badge_count[data-single-char] {
+    --x-border-radius: 100%;
+    --x-number-font-size: unset;
+  }
+  .navi_badge_count[data-two-chars] {
+    --x-border-radius: 100%;
+    --x-number-font-size: 0.8em;
+  }
+  .navi_badge_count[data-three-chars] {
+    --x-border-radius: 100%;
+    --x-number-font-size: 0.6em;
   }
 `;
 const BadgeStyleCSSVars = {
@@ -21630,50 +21694,121 @@ const BadgeStyleCSSVars = {
   backgroundColor: "--background-color",
   background: "--background",
   borderColor: "--border-color",
-  color: "--color"
+  color: "--color",
+  fontSize: "--font-size"
 };
 const BadgeCountOverflow = () => jsx("span", {
   className: "navi_count_badge_overflow",
   children: "+"
 });
+const MAX_CHAR_AS_CIRCLE = 3;
 const BadgeCount = ({
   children,
-  max,
+  max = 99,
   maxElement = jsx(BadgeCountOverflow, {}),
+  // When you use max="none" (or max > 99) it might be a good idea to force ellipse
+  // so that visually the interface do not suddently switch from circle to ellipse depending on the count
+  ellipse,
   ...props
 }) => {
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
-  const numericValue = typeof children === "string" ? parseInt(children, 10) : children;
-  // Calculer la valeur à afficher en fonction du paramètre max
-  const getDisplayValue = () => {
-    if (max === undefined) {
-      return children;
-    }
-    const numericMax = typeof max === "string" ? parseInt(max, 10) : max;
-    if (isNaN(numericValue) || isNaN(numericMax)) {
-      return children;
-    }
-    if (numericValue > numericMax) {
-      return jsxs(Fragment, {
-        children: [children, maxElement]
-      });
-    }
-    return children;
-  };
-  const displayValue = getDisplayValue();
-  useContrastingColor(ref);
-  const digitCount = String(numericValue).length;
-  return jsx(Text, {
+  useContrastingColor(ref, ".navi_badge_count_visual");
+  const valueRequested = typeof children === "string" ? parseInt(children, 10) : children;
+  const valueDisplayed = applyMaxToValue(max, valueRequested);
+  const hasOverflow = valueDisplayed !== valueRequested;
+  const valueCharCount = String(valueDisplayed).length;
+  const charCount = valueCharCount + (hasOverflow ? 1 : 0);
+  if (charCount > MAX_CHAR_AS_CIRCLE) {
+    ellipse = true;
+  }
+  if (ellipse) {
+    return jsxs(BadgeCountEllipse, {
+      ...props,
+      ref: ref,
+      hasOverflow: hasOverflow,
+      children: [valueDisplayed, hasOverflow && maxElement]
+    });
+  }
+  return jsxs(BadgeCountCircle, {
+    ...props,
+    ref: ref,
+    hasOverflow: hasOverflow,
+    charCount: charCount,
+    children: [valueDisplayed, hasOverflow && maxElement]
+  });
+};
+const applyMaxToValue = (max, value) => {
+  if (isNaN(value)) {
+    return value;
+  }
+  if (max === undefined || max === Infinity || max === false || max === "false" || max === "Infinity" || max === "none") {
+    return value;
+  }
+  const numericMax = typeof max === "string" ? parseInt(max, 10) : max;
+  if (isNaN(numericMax)) {
+    return value;
+  }
+  if (value > numericMax) {
+    return numericMax;
+  }
+  return value;
+};
+const BadgeCountCircle = ({
+  ref,
+  charCount,
+  hasOverflow,
+  children,
+  ...props
+}) => {
+  return jsxs(Text, {
     ref: ref,
     className: "navi_badge_count",
+    "data-circle": "",
     bold: true,
-    "data-single-digit": digitCount === 1 ? "" : undefined,
-    "data-two-digits": digitCount === 2 ? "" : undefined,
+    "data-single-char": charCount === 1 ? "" : undefined,
+    "data-two-chars": charCount === 2 ? "" : undefined,
+    "data-three-chars": charCount === 3 ? "" : undefined,
+    "data-value-overflow": hasOverflow ? "" : undefined,
     ...props,
     styleCSSVars: BadgeStyleCSSVars,
     spacing: "pre",
-    children: displayValue
+    children: [jsx("span", {
+      style: "user-select: none",
+      children: "\u200B"
+    }), jsx("span", {
+      className: "navi_badge_count_frame"
+    }), jsx("span", {
+      className: "navi_badge_count_text",
+      children: children
+    }), jsx("span", {
+      style: "user-select: none",
+      children: "\u200B"
+    })]
+  });
+};
+const BadgeCountEllipse = ({
+  ref,
+  children,
+  hasOverflow,
+  ...props
+}) => {
+  return jsxs(Text, {
+    ref: ref,
+    className: "navi_badge_count",
+    bold: true,
+    "data-ellipse": "",
+    "data-value-overflow": hasOverflow ? "" : undefined,
+    ...props,
+    styleCSSVars: BadgeStyleCSSVars,
+    spacing: "pre",
+    children: [jsx("span", {
+      style: "user-select: none",
+      children: "\u200B"
+    }), children, jsx("span", {
+      style: "user-select: none",
+      children: "\u200B"
+    })]
   });
 };
 
@@ -21685,7 +21820,7 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
 
     @media (prefers-color-scheme: dark) {
       .navi_caption {
-        --color: rgb(102, 102, 102);
+        --color: rgb(129, 134, 140);
       }
     }
   }
@@ -21702,10 +21837,9 @@ const Caption = ({
   ...rest
 }) => {
   return jsx(Text, {
-    as: "p",
-    size: "xs",
-    marginTop: "sm",
-    marginBottom: "sm",
+    as: "small",
+    size: "0.8em" // We use em to be relative to the parent (we want to be smaller than the surrounding text)
+    ,
     className: withPropsClassName("navi_caption", className),
     ...rest,
     styleCSSVars: CaptionStyleCSSVars
