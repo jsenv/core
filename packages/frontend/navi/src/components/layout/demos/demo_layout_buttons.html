@@ -95,7 +95,9 @@
                     Rectangle
                   </Box>
 
-                  <Button alignY="center">Centered</Button>
+                  <Button box alignY="center">
+                    Centered
+                  </Button>
                 </Layout>
               </div>
             </div>
@@ -310,11 +312,7 @@
               <h3>9. Button SelfAlignX Test: row + selfAlignX="end"</h3>
               <div className="visual-container">
                 <div className="bounded">
-                  <Layout
-                    column
-                    spacing="10px"
-                    style={{ height: "100%" }}
-                  >
+                  <Layout column spacing="10px" style={{ height: "100%" }}>
                     <Button>Default</Button>
                     <Button selfAlignX="end">Pushed to End</Button>
                   </Layout>
@@ -413,11 +411,7 @@
                       <Button marginX="5px">Tab 3</Button>
                     </Box>
 
-                    <Box
-                      column
-                      spacing="10px"
-                      selfAlignX="space-between"
-                    >
+                    <Box column spacing="10px" selfAlignX="space-between">
                       <Button>Previous</Button>
                       <Button>Next</Button>
                     </Box>
