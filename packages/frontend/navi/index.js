@@ -91,6 +91,7 @@ export { Code } from "./src/components/text/code.jsx";
 // Link can be used to wrap other things than text BUT it's most of the time used to wrap text
 // So they naturally belong to text stuff
 export { Link } from "./src/components/text/link.jsx";
+export { LinkAnchor } from "./src/components/text/link_anchor.jsx";
 export { MessageBox } from "./src/components/text/message_box.jsx";
 export { Paragraph } from "./src/components/text/paragraph.jsx";
 export { Text } from "./src/components/text/text.jsx";

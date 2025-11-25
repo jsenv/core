@@ -18,6 +18,7 @@
         Link,
         Button,
         Caption,
+        LinkAnchor,
       } from "@jsenv/navi";
 
       // Composants JSX pour éviter les erreurs de syntaxe lors des modifications
@@ -50,7 +51,11 @@
 
       const TestsComportementauxSection = () => (
         <Box as="section" marginBottom="xl">
-          <Title as="h2" id="tests-comportementaux">
+          <Title as="h2">
+            <LinkAnchor
+              id="tests-comportementaux"
+              href="#tests-comportementaux"
+            />
             Tests comportementaux par police
           </Title>
           <Paragraph>

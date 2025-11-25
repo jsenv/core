@@ -61,6 +61,8 @@ import.meta.css = /* css */ `
     text-decoration: var(--x-link-text-decoration);
     vertical-align: middle;
     border-radius: var(--link-border-radius);
+    outline-width: 0;
+    outline-style: solid;
     outline-color: var(--link-outline-color);
     cursor: var(--x-link-cursor);
   }
@@ -76,13 +78,12 @@ import.meta.css = /* css */ `
   }
   .navi_link[data-focus-visible] {
     outline-width: 2px;
-    outline-style: solid;
   }
   /* Visited */
   .navi_link[data-visited] {
     --x-link-color: var(--x-link-color-visited);
   }
-  .navi_link[data-visited][data-anchor-link] {
+  .navi_link[data-visited][data-link-anchor] {
     --x-link-color: var(--link-color);
   }
   /* Selected */
@@ -137,25 +138,25 @@ const LinkPseudoClasses = [
   ":disabled",
   ":visited",
   ":-navi-loading",
-  ":-navi-internal-link",
-  ":-navi-external-link",
-  ":-navi-anchor-link",
-  ":-navi-current-link",
+  ":-navi-link-internal",
+  ":-navi-link-external",
+  ":-navi-link-anchor",
+  ":-navi-link-current",
 ];
 const LinkPseudoElements = ["::-navi-loader"];
 
 Object.assign(PSEUDO_CLASSES, {
-  ":-navi-internal-link": {
-    attribute: "data-internal-link",
+  ":-navi-link-internal": {
+    attribute: "data-link-internal",
   },
-  ":-navi-external-link": {
-    attribute: "data-external-link",
+  ":-navi-link-external": {
+    attribute: "data-link-external",
   },
-  ":-navi-anchor-link": {
-    attribute: "data-anchor-link",
+  ":-navi-link-anchor": {
+    attribute: "data-link-anchor",
   },
-  ":-navi-current-link": {
-    attribute: "data-current-link",
+  ":-navi-link-current": {
+    attribute: "data-link-current",
   },
 });
 
@@ -276,10 +277,10 @@ const LinkPlain = (props) => {
         ":disabled": disabled,
         ":visited": visited,
         ":-navi-loading": loading,
-        ":-navi-internal-link": targetIsSameSite,
-        ":-navi-external-link": !targetIsSameSite,
-        ":-navi-anchor-link": targetIsAnchor,
-        ":-navi-current-link": targetIsCurrent,
+        ":-navi-link-internal": targetIsSameSite,
+        ":-navi-link-external": !targetIsSameSite,
+        ":-navi-link-anchor": targetIsAnchor,
+        ":-navi-link-current": targetIsCurrent,
       }}
       onClick={(e) => {
         if (preventDefault) {
