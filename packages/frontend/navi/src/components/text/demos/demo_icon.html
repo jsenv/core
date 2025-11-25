@@ -25,6 +25,7 @@
         LinkBlankTargetSvg,
         UserSvg,
         HomeSvg,
+        LinkAnchor,
       } from "@jsenv/navi";
 
       // Table of Contents Component
@@ -56,8 +57,11 @@
 
       // Icon Positioning Section
       const IconPositioningSection = () => (
-        <Box as="section" marginBottom="xl" id="icon-positioning">
-          <Title as="h2">Icon Positioning</Title>
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <LinkAnchor href="#icon-positioning" />
+            Icon Positioning
+          </Title>
           <Box row spacing="sm" borderRadius="md">
             <Text size="xs" color="rgb(102, 102, 102)">
               Icon Before Text
@@ -103,8 +107,11 @@
 
       // Icon in Row Section
       const IconRowSection = () => (
-        <Box as="section" marginBottom="xl" id="icon-row">
-          <Title as="h2">Icon in Row</Title>
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <LinkAnchor href="#icon-row" />
+            Icon in Row
+          </Title>
           <Box
             column
             spacing="md"
@@ -168,8 +175,11 @@
 
       // Icon in Column Section
       const IconColumnSection = () => (
-        <Box as="section" marginBottom="xl" id="icon-column">
-          <Title as="h2">Icon in Column</Title>
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <LinkAnchor href="#icon-column" />
+            Icon in Column
+          </Title>
           <Box
             row
             spacing="lg"
@@ -237,8 +247,11 @@
       // Text Flow Section
       const InlineTextIconsSection = () => {
         return (
-          <Box as="section" marginBottom="xl" id="inline-text-icons">
-            <Title as="h2">Text Flow</Title>
+          <Box as="section" marginBottom="xl">
+            <Title as="h2">
+              <LinkAnchor href="#inline-text-icons" />
+              Text Flow
+            </Title>
             <Box
               style={{
                 padding: "16px",
@@ -323,8 +336,11 @@
 
       // Icon + Text + Link Combinations Section
       const IconTextLinkSection = () => (
-        <Box as="section" marginBottom="xl" id="icon-text-link">
-          <Title as="h2">Icon + Text + Link Combinations</Title>
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <LinkAnchor href="#icon-text-link" />
+            Icon + Text + Link Combinations
+          </Title>
           <Box row spacing="lg">
             <div>
               <Text
@@ -396,8 +412,11 @@
 
       // Line Height Section
       const LineHeightVariationsSection = () => (
-        <Box as="section" marginBottom="xl" id="line-height-variations">
-          <Title as="h2">Line Height</Title>
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <LinkAnchor href="#line-height-variations" />
+            Line Height
+          </Title>
           <Box row spacing="lg">
             <div>
               <Text
@@ -462,8 +481,11 @@
 
       // Icon Placement Section
       const IconPlacementSection = () => (
-        <Box as="section" marginBottom="xl" id="icon-placement">
-          <Title as="h2">Icon Placement</Title>
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <LinkAnchor href="#icon-placement" />
+            Icon Placement
+          </Title>
           <Box column spacing="md">
             <div>
               <Text
@@ -524,8 +546,11 @@
 
       // Icon with Href Section
       const IconHrefSection = () => (
-        <Box as="section" marginBottom="xl" id="icon-href">
-          <Title as="h2">Icon with SVG Use</Title>
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <LinkAnchor href="#icon-href" />
+            Icon with SVG Use
+          </Title>
 
           {/* Define SVG symbols */}
           <svg style={{ display: "none" }}>
@@ -609,7 +634,7 @@
 
       // Icon Transformation Section
       const IconTransformSection = () => (
-        <Box as="section" marginBottom="xl" id="icon-transform">
+        <Box as="section" marginBottom="xl">
           <Title as="h2">Icon Transformation</Title>
           <Box column spacing="md">
             <div>
@@ -650,8 +675,11 @@
 
       // Squarish Icon Dimensions Section
       const SquarishIconDimensionsSection = () => (
-        <Box as="section" marginBottom="xl" id="squarish-icon-dimensions">
-          <Title as="h2">Squarish Icon Dimensions (size)</Title>
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <LinkAnchor href="#squarish-icon-dimensions" />
+            Squarish Icon Dimensions (size)
+          </Title>
           <Text multiline>
             By default, icons follow text size. You can control squarish icon
             dimensions using the <code>size</code> attribute to
@@ -722,8 +750,11 @@
 
       // Custom Icon Dimensions Section
       const CustomIconDimensionsSection = () => (
-        <Box as="section" marginBottom="xl" id="custom-icon-dimensions">
-          <Title as="h2">Custom Icon Dimensions (width/height)</Title>
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <LinkAnchor href="#custom-icon-dimensions" />
+            Custom Icon Dimensions (width/height)
+          </Title>
           <Text multiline>
             For non-square icons or precise dimension control, use{" "}
             <code>width</code> and/or <code>height</code>
@@ -873,8 +904,11 @@
 
       // Icon Transformation Section
       const IconTransformationSection = () => (
-        <Box as="section" marginBottom="xl" id="icon-transformation">
-          <Title as="h2">Icon Transformation</Title>
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <LinkAnchor href="#icon-transformation" />
+            Icon Transformation
+          </Title>
           <Box column spacing="lg">
             <Box
               row
@@ -947,8 +981,11 @@
       // ========== SECTIONS FROM ORIGINAL GITHUB FILE ==========
       // Font Size and Color Section
       const DifferentFontSizesSection = () => (
-        <Box as="section" marginBottom="xl" id="different-font-sizes">
-          <Title as="h2">Font Size and Color</Title>
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <LinkAnchor href="#different-font-sizes" />
+            Font Size and Color
+          </Title>
           <Box row spacing="sm">
             <Text size="sm" color="blue">
               <Icon>
@@ -990,8 +1027,11 @@
 
       // Font Family Section
       const FontFamilySection = () => (
-        <Box as="section" marginBottom="xl" id="font-family">
-          <Title as="h2">Font Family</Title>
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <LinkAnchor href="#font-family" />
+            Font Family
+          </Title>
           <Box row spacing="md">
             <div>
               <Text
@@ -1067,8 +1107,11 @@
 
       // Text + Icon (Reversed Order) Section
       const ReversedOrderSection = () => (
-        <Box as="section" marginBottom="xl" id="reversed-order">
-          <Title as="h2">Text + Icon (Reversed Order)</Title>
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <LinkAnchor href="#reversed-order" />
+            Text + Icon (Reversed Order)
+          </Title>
           <Box row spacing="sm">
             <Text>
               Search
@@ -1082,8 +1125,11 @@
 
       // Multiple Icons Section
       const MultipleIconsSection = () => (
-        <Box as="section" marginBottom="xl" id="multiple-icons">
-          <Title as="h2">Multiple Icons</Title>
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <LinkAnchor href="#multiple-icons" />
+            Multiple Icons
+          </Title>
           <Box row spacing="sm">
             <Text>
               <Icon>
@@ -1136,8 +1182,11 @@
 
       // Icons in Links Section
       const IconsInLinksSection = () => (
-        <Box as="section" marginBottom="xl" id="icons-in-links">
-          <Title as="h2">Icons in Links</Title>
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <LinkAnchor href="#icons-in-links" />
+            Icons in Links
+          </Title>
           <Paragraph>
             Icons work seamlessly within Link components, maintaining proper
             spacing and hover effects:
@@ -1215,8 +1264,11 @@
 
       // Icons in Buttons Section
       const IconsInButtonsSection = () => (
-        <Box as="section" marginBottom="xl" id="icons-in-buttons">
-          <Title as="h2">Icons in Buttons</Title>
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <LinkAnchor href="#icons-in-buttons" />
+            Icons in Buttons
+          </Title>
           <Paragraph>
             Icons enhance button functionality and provide visual context for
             actions:
@@ -1394,8 +1446,11 @@
 
       // Integration Section
       const IntegrationSection = () => (
-        <Box as="section" marginBottom="xl" id="integration">
-          <Title as="h2">Integration with Components</Title>
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <LinkAnchor href="#integration" />
+            Integration with Components
+          </Title>
           <Box column spacing="lg">
             <div>
               <Text
