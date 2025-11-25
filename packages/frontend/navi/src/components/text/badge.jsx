@@ -35,7 +35,7 @@ import.meta.css = /* css */ `
   }
   .navi_badge_count_text {
     position: relative;
-    font-size: var(--x-number-font-size);
+    font-size: var(--x-number-font-size, inherit);
   }
   .navi_count_badge_overflow {
     position: relative;
@@ -45,7 +45,7 @@ import.meta.css = /* css */ `
 
   .navi_badge_count[data-single-digit] {
     --x-border-radius: 100%;
-    --x-number-font-size: var(--font-size);
+    --x-number-font-size: unset;
   }
   .navi_badge_count[data-two-digits] {
     --x-border-radius: 100%;
