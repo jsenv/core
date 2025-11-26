@@ -4,7 +4,7 @@ import { setActionDispatcher } from "../actions.js";
 import { executeWithCleanup } from "../utils/execute_with_cleanup.js";
 import { updateDocumentState } from "./document_state_signal.js";
 import { documentUrlSignal, updateDocumentUrl } from "./document_url_signal.js";
-import { getLinkTargetInfo } from "./link_target_info.js";
+import { getHrefTargetInfo } from "./href_target_info.js";
 
 export const setupBrowserIntegrationViaHistory = ({
   applyActions,
@@ -132,14 +132,13 @@ export const setupBrowserIntegrationViaHistory = ({
         return;
       }
       const href = linkElement.href;
-      const { targetIsEmpty, targetIsSameOrigin, targetIsAnchor } =
-        getLinkTargetInfo(href);
+      const { isEmpty, isSameOrigin, isAnchor } = getHrefTargetInfo(href);
       if (
-        targetIsEmpty ||
+        isEmpty ||
         // Let link to other origins be handled by the browser
-        !targetIsSameOrigin ||
+        !isSameOrigin ||
         // Ignore anchor navigation (same page, different hash)
-        targetIsAnchor
+        isAnchor
       ) {
         return;
       }

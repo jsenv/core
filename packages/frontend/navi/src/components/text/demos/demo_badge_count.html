@@ -18,7 +18,6 @@
         Link,
         Button,
         Caption,
-        LinkAnchor,
       } from "@jsenv/navi";
 
       // Composants JSX pour éviter les erreurs de syntaxe lors des modifications
@@ -52,7 +51,7 @@
       const TestsComportementauxSection = () => (
         <Box as="section" marginBottom="xl">
           <Title as="h2">
-            <LinkAnchor href="#tests-comportementaux" />
+            <Link anchor href="#tests-comportementaux" />
             Tests comportementaux par police
           </Title>
           <Paragraph>
@@ -317,7 +316,7 @@
       const FontFamiliesSection = () => (
         <Box as="section" marginBottom="xl">
           <Title as="h2">
-            <LinkAnchor href="#font-families" />
+            <Link anchor href="#font-families" />
             Comportement avec différents font-family
           </Title>
           <Paragraph>
@@ -395,7 +394,7 @@
       const LineHeightsSection = () => (
         <Box as="section" marginBottom="xl">
           <Title as="h2">
-            <LinkAnchor href="#line-heights" />
+            <Link anchor href="#line-heights" />
             Comportement avec différents line-heights
           </Title>
           <Paragraph>
@@ -499,7 +498,7 @@
 
       const FontSizesSection = () => (
         <Box as="section" marginBottom="xl" relative>
-          <LinkAnchor href="#font-sizes" discrete />
+          <Link anchor href="#font-sizes" revealOnInteraction />
           <Title as="h2">Comportement avec différents font-size</Title>
           <Paragraph>
             Ces exemples montrent comment le badge s'adapte à différentes
@@ -589,7 +588,7 @@
       const IntegrationComposantsSection = () => (
         <Box as="section" marginBottom="xl">
           <Title as="h2">
-            <LinkAnchor href="#integration-composants" />
+            <Link anchor href="#integration-composants" />
             Intégration dans différents composants
           </Title>
           <Box row spacing="lg">
@@ -654,7 +653,7 @@
       const BadgePositioningSection = () => (
         <Box as="section" marginBottom="xl">
           <Title as="h2">
-            <LinkAnchor href="#badge-positioning" />
+            <Link anchor href="#badge-positioning" />
             Badge positioning
           </Title>
           <Box row spacing="md">
@@ -742,7 +741,7 @@
       const NoWrapSection = () => (
         <Box as="section" marginBottom="xl">
           <Title as="h2">
-            <LinkAnchor href="#nowrap" />
+            <Link anchor href="#nowrap" />
             Association texte + badge (pas de coupure)
           </Title>
           <Box column spacing="md">

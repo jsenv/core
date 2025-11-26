@@ -1,7 +1,7 @@
 import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { useDocumentUrl } from "../../browser_integration/document_url_signal.js";
-import { getLinkTargetInfo } from "../../browser_integration/link_target_info.js";
+import { getHrefTargetInfo } from "../../browser_integration/href_target_info.js";
 import { useIsVisited } from "../../browser_integration/use_is_visited.js";
 import { closeValidationMessage } from "../../validation/custom_constraint_validation.js";
 import { useConstraints } from "../../validation/hooks/use_constraints.js";
@@ -22,6 +22,7 @@ import {
 import { useAutoFocus } from "../use_auto_focus.js";
 import { Icon } from "./icon.jsx";
 import { applySpacingOnTextChildren } from "./text.jsx";
+import { TitleLevelContext } from "./title.jsx";
 
 /*
  * Apply opacity to child content, not the link element itself.
@@ -65,50 +66,88 @@ import.meta.css = /* css */ `
     outline-style: solid;
     outline-color: var(--link-outline-color);
     cursor: var(--x-link-cursor);
+
+    /* Hover */
+    &[data-hover] {
+      --x-link-color: var(--x-link-color-hover);
+      --x-link-text-decoration: var(--x-link-text-decoration-hover);
+    }
+    /* Focus */
+    &[data-focus] {
+      position: relative;
+      z-index: 1; /* Ensure focus outline is above other elements */
+    }
+    &[data-focus-visible] {
+      outline-width: 2px;
+    }
+    /* Visited */
+    &[data-visited] {
+      --x-link-color: var(--x-link-color-visited);
+      &[data-anchor] {
+        /* Visited is meant to help user see what links he already seen / what remains to discover */
+        /* But anchor links are already in the area user is currently seeing */
+        /* No need for a special color for visited anchors */
+        --x-link-color: var(--link-color);
+      }
+    }
+    /* Selected */
+    &[aria-selected] {
+      position: relative;
+    }
+    &[aria-selected="true"] {
+      background-color: light-dark(#bbdefb, #2563eb);
+    }
+    &[aria-selected] input[type="checkbox"] {
+      position: absolute;
+      opacity: 0;
+    }
+    /* Active */
+    &[data-active] {
+      /* Redefine it otherwise [data-visited] prevails */
+      --x-link-color: var(--x-link-color-active);
+    }
+    /* Readonly */
+    &[data-readonly] > * {
+      opacity: 0.5;
+    }
+    /* Disabled */
+    &[data-disabled] {
+      pointer-events: none;
+    }
+    &[data-disabled] > * {
+      opacity: 0.5;
+    }
+    /* Reveal on interaction */
+    &[data-reveal-on-interaction] {
+      position: absolute !important;
+      top: 1em;
+      left: -1em;
+      width: 1em;
+      height: 1em;
+      font-size: 1em;
+      opacity: 0;
+      transform: translateY(-25%);
+      /* The anchor link is displayed only on :hover */
+      /* So we "need" a visual indicator when it's shown by focus */
+      /* (even if it's focused by mouse aka not :focus-visible) */
+      /* otherwise we might wonder why we see this UI element */
+      &[data-focus] {
+        outline-width: 2px;
+      }
+      &[data-hover],
+      &[data-focus],
+      &[data-focus-visible] {
+        opacity: 1;
+      }
+    }
   }
-  /* Hover */
-  .navi_link[data-hover] {
-    --x-link-color: var(--x-link-color-hover);
-    --x-link-text-decoration: var(--x-link-text-decoration-hover);
+
+  *:hover > .navi_link[data-reveal-on-interaction] {
+    opacity: 1;
   }
-  /* Focus */
-  .navi_link[data-focus] {
-    position: relative;
-    z-index: 1; /* Ensure focus outline is above other elements */
-  }
-  .navi_link[data-focus-visible] {
-    outline-width: 2px;
-  }
-  /* Visited */
-  .navi_link[data-visited] {
-    --x-link-color: var(--x-link-color-visited);
-  }
-  /* Selected */
-  .navi_link[aria-selected] {
-    position: relative;
-  }
-  .navi_link[aria-selected="true"] {
-    background-color: light-dark(#bbdefb, #2563eb);
-  }
-  .navi_link[aria-selected] input[type="checkbox"] {
-    position: absolute;
-    opacity: 0;
-  }
-  /* Active */
-  .navi_link[data-active] {
-    /* Redefine it otherwise [data-visited] prevails */
-    --x-link-color: var(--x-link-color-active);
-  }
-  /* Readonly */
-  .navi_link[data-readonly] > * {
-    opacity: 0.5;
-  }
-  /* Disabled */
-  .navi_link[data-disabled] {
-    pointer-events: none;
-  }
-  .navi_link[data-disabled] > * {
-    opacity: 0.5;
+
+  .navi_title .navi_link[data-reveal-on-interaction] {
+    font-size: 0.7em;
   }
 `;
 
@@ -135,25 +174,25 @@ const LinkPseudoClasses = [
   ":disabled",
   ":visited",
   ":-navi-loading",
-  ":-navi-link-internal",
-  ":-navi-link-external",
-  ":-navi-link-anchor",
-  ":-navi-link-current",
+  ":-navi-href-internal",
+  ":-navi-href-external",
+  ":-navi-href-anchor",
+  ":-navi-href-current",
 ];
 const LinkPseudoElements = ["::-navi-loader"];
 
 Object.assign(PSEUDO_CLASSES, {
-  ":-navi-link-internal": {
-    attribute: "data-link-internal",
+  ":-navi-href-internal": {
+    attribute: "data-href-internal",
   },
-  ":-navi-link-external": {
-    attribute: "data-link-external",
+  ":-navi-href-external": {
+    attribute: "data-href-external",
   },
-  ":-navi-link-anchor": {
-    attribute: "data-link-anchor",
+  ":-navi-href-anchor": {
+    attribute: "data-href-anchor",
   },
-  ":-navi-link-current": {
-    attribute: "data-link-current",
+  ":-navi-href-current": {
+    attribute: "data-href-current",
   },
 });
 
@@ -173,6 +212,7 @@ const LinkBasic = (props) => {
 };
 
 const LinkPlain = (props) => {
+  const titleLevel = useContext(TitleLevelContext);
   const {
     loading,
     readOnly,
@@ -186,12 +226,14 @@ const LinkPlain = (props) => {
     target,
     rel,
     preventDefault,
+    anchor,
 
     // visual
     blankTargetIcon,
     anchorIcon,
     icon,
     spacing,
+    revealOnInteraction = Boolean(titleLevel),
 
     children,
 
@@ -205,19 +247,14 @@ const LinkPlain = (props) => {
   useConstraints(ref, constraints);
   const shouldDimColor = readOnly || disabled;
   useDimColorWhen(ref, shouldDimColor);
-  // subscribe to document url to re-render and re-compute getLinkTargetInfo
+  // subscribe to document url to re-render and re-compute getHrefTargetInfo
   useDocumentUrl();
-  const { targetIsSameSite, targetIsAnchor, targetIsCurrent } =
-    getLinkTargetInfo(href);
+  const { isSameSite, isAnchor, isCurrent } = getHrefTargetInfo(href);
 
   const innerTarget =
-    target === undefined ? (targetIsSameSite ? "_self" : "_blank") : target;
+    target === undefined ? (isSameSite ? "_self" : "_blank") : target;
   const innerRel =
-    rel === undefined
-      ? targetIsSameSite
-        ? undefined
-        : "noopener noreferrer"
-      : rel;
+    rel === undefined ? (isSameSite ? undefined : "noopener noreferrer") : rel;
 
   let innerIcon;
   if (icon === undefined) {
@@ -236,8 +273,7 @@ const LinkPlain = (props) => {
         blankTargetIcon === undefined
           ? innerTarget === "_blank"
           : blankTargetIcon;
-      const innerAnchorIcon =
-        anchorIcon === undefined ? targetIsAnchor : anchorIcon;
+      const innerAnchorIcon = anchorIcon === undefined ? isAnchor : anchorIcon;
       if (innerBlankTargetIcon) {
         innerIcon =
           innerBlankTargetIcon === true ? (
@@ -255,9 +291,11 @@ const LinkPlain = (props) => {
 
   return (
     <Box
+      as="a"
+      color={anchor && !children ? "inherit" : undefined}
+      id={anchor ? href.slice(1) : undefined}
       {...rest}
       ref={ref}
-      as="a"
       href={href}
       rel={innerRel}
       target={innerTarget === "_self" ? undefined : target}
@@ -265,6 +303,8 @@ const LinkPlain = (props) => {
       inert={disabled}
       spacing="pre"
       // Visual
+      data-anchor={anchor ? "" : undefined}
+      data-reveal-on-interaction={revealOnInteraction ? "" : undefined}
       baseClassName="navi_link"
       styleCSSVars={LinkStyleCSSVars}
       pseudoClasses={LinkPseudoClasses}
@@ -274,10 +314,10 @@ const LinkPlain = (props) => {
         ":disabled": disabled,
         ":visited": visited,
         ":-navi-loading": loading,
-        ":-navi-link-internal": targetIsSameSite,
-        ":-navi-link-external": !targetIsSameSite,
-        ":-navi-link-anchor": targetIsAnchor,
-        ":-navi-link-current": targetIsCurrent,
+        ":-navi-href-internal": isSameSite,
+        ":-navi-href-external": !isSameSite,
+        ":-navi-href-anchor": isAnchor,
+        ":-navi-href-current": isCurrent,
       }}
       onClick={(e) => {
         if (preventDefault) {
