@@ -25,6 +25,10 @@ import { useUITransitionContentId } from "../components/ui_transition/ui_transit
 import { useForceRender } from "./use_force_render.js";
 
 const DEBUG = true;
+const debug = (...args) => {
+  if (!DEBUG) return;
+  console.debug(...args);
+};
 
 const RootElement = () => {
   return <Route.Slot />;
@@ -99,9 +103,7 @@ const ActiveRouteManager = ({
     childMeta,
   ) => {
     const childElementId = getElementSignature(ChildActiveElement);
-    if (DEBUG) {
-      console.debug(`${elementId}.registerChildRoute(${childElementId})`);
-    }
+    debug(`${elementId}.registerChildRoute(${childElementId})`);
     candidateSet.add({
       ActiveElement: ChildActiveElement,
       route: childRoute,
@@ -147,11 +149,9 @@ const initRouteObserver = ({
   const candidateElementIds = Array.from(candidateSet, (c) =>
     getElementSignature(c.ActiveElement),
   ).join(", ");
-  if (DEBUG) {
-    console.log(
-      `🔍 initRouteObserver ${elementId}, candidates: ${candidateElementIds}`,
-    );
-  }
+  debug(
+    `🔍 initRouteObserver ${elementId}, candidates: ${candidateElementIds}`,
+  );
   const [publishCompositeStatus, subscribeCompositeStatus] = createPubSub();
   const compositeRoute = {
     urlPattern: `composite(${candidateElementIds})`,
