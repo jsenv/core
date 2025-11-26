@@ -1,14 +1,10 @@
 import { Route, RouteLink, Routes, setupRoutes } from "@jsenv/navi";
 import "preact/debug";
 
-const {
-  MAP_ROUTE,
-  MAP_PANEL_A_ROUTE,
-  // MAP_PANEL_B_ROUTE
-} = setupRoutes({
+const { MAP_ROUTE, MAP_PANEL_A_ROUTE, MAP_PANEL_B_ROUTE } = setupRoutes({
   MAP_ROUTE: "map/*?",
   MAP_PANEL_A_ROUTE: "map/a",
-  //   MAP_PANEL_B_ROUTE: "map/b",
+  MAP_PANEL_B_ROUTE: "map/b",
 });
 
 const Router = () => {
@@ -16,7 +12,7 @@ const Router = () => {
     <Routes>
       <Route route={MAP_ROUTE} element={<Map />}>
         <Route route={MAP_PANEL_A_ROUTE} element={<MapPanelA />} />
-        {/* <Route route={MAP_PANEL_B_ROUTE} element={<MapPanelB />} /> */}
+        <Route route={MAP_PANEL_B_ROUTE} element={<MapPanelB />} />
       </Route>
     </Routes>
   );
@@ -25,9 +21,9 @@ const Router = () => {
 const MapPanelA = () => {
   return <span id="panel_a">panel a</span>;
 };
-// const MapPanelB = () => {
-//   return <span id="panel_b">panel b</span>;
-// };
+const MapPanelB = () => {
+  return <span id="panel_b">panel b</span>;
+};
 
 const Map = () => {
   return (
@@ -35,7 +31,7 @@ const Map = () => {
       <aside>
         <nav>
           <RouteLink route={MAP_PANEL_A_ROUTE}>Map panel A</RouteLink>
-          {/* <RouteLink route={MAP_PANEL_B_ROUTE}>Map panel B</RouteLink> */}
+          <RouteLink route={MAP_PANEL_B_ROUTE}>Map panel B</RouteLink>
         </nav>
       </aside>
       <section>
