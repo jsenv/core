@@ -37,11 +37,7 @@ const SlotContext = createContext(null);
 const RouteInfoContext = createContext(null);
 
 export const Routes = ({ element = RootElement, children }) => {
-  return (
-    <SlotContext.Provider value={null}>
-      <Route element={element}>{children}</Route>
-    </SlotContext.Provider>
-  );
+  return <Route element={element}>{children}</Route>;
 };
 
 export const useActiveRouteInfo = () => useContext(RouteInfoContext);
@@ -145,6 +141,8 @@ const initRouteObserver = ({
   onActiveInfoChange,
   registerChildRouteFromContext,
 }) => {
+  const [teardown, addTeardown] = createPubSub();
+
   const elementId = getElementSignature(element);
   const candidateElementIds = Array.from(candidateSet, (c) =>
     getElementSignature(c.ActiveElement),
@@ -266,7 +264,7 @@ const initRouteObserver = ({
     if (DEBUG) {
       console.debug(`${elementId} subscribing to ${route}`);
     }
-    route.subscribeStatus(onChange);
+    addTeardown(route.subscribeStatus(onChange));
   }
   for (const candidate of candidateSet) {
     if (DEBUG) {
@@ -274,7 +272,7 @@ const initRouteObserver = ({
         `${elementId} subscribing to child candidate ${candidate.route}`,
       );
     }
-    candidate.route.subscribeStatus(onChange);
+    addTeardown(candidate.route.subscribeStatus(onChange));
   }
   if (registerChildRouteFromContext) {
     registerChildRouteFromContext(
@@ -285,6 +283,10 @@ const initRouteObserver = ({
     );
   }
   updateActiveInfo();
+
+  return () => {
+    teardown();
+  };
 };
 
 export const RouteSlot = () => {
