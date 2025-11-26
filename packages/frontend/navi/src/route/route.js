@@ -398,6 +398,10 @@ const createRoute = (urlPatternInput) => {
         wildcardIndex++;
         return replacement;
       });
+      // we did not replace anything, or not enough to remove the last "*"
+      if (relativeUrl.endsWith("*")) {
+        relativeUrl = relativeUrl.slice(0, -1);
+      }
     }
 
     // Add remaining parameters as search params
