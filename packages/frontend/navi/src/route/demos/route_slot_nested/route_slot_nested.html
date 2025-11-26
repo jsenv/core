@@ -1,0 +1,50 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Route Slot nested test</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        padding: 20px;
+        font-family: Arial, sans-serif;
+      }
+      .nav {
+        margin-bottom: 20px;
+      }
+      .nav a {
+        margin-right: 10px;
+        padding: 5px 10px;
+        text-decoration: none;
+        background: #f0f0f0;
+        border-radius: 3px;
+      }
+      .nav a.active {
+        color: white;
+        background: #007acc;
+      }
+      .route-wrapper {
+        margin: 10px 0;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+      }
+      .debug {
+        margin: 10px 0;
+        padding: 10px;
+        background: #f9f9f9;
+        border-left: 3px solid #333;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { App } from "./route_slot_nested.jsx";
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

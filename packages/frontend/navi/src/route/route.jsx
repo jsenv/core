@@ -24,18 +24,22 @@ import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 import { useUITransitionContentId } from "../components/ui_transition/ui_transition.jsx";
 import { useForceRender } from "./use_force_render.js";
 
-const DEBUG = false;
+const DEBUG = true;
 
 const RootElement = () => {
   return <Route.Slot />;
 };
-
-export const Routes = ({ element = RootElement, children }) => {
-  return <Route element={element}>{children}</Route>;
-};
-
 const SlotContext = createContext(null);
 const RouteInfoContext = createContext(null);
+
+export const Routes = ({ element = RootElement, children }) => {
+  return (
+    <SlotContext.Provider value={null}>
+      <Route element={element}>{children}</Route>
+    </SlotContext.Provider>
+  );
+};
+
 export const useActiveRouteInfo = () => useContext(RouteInfoContext);
 export const Route = ({ element, route, fallback, meta, children }) => {
   const forceRender = useForceRender();
@@ -272,8 +276,11 @@ const initRouteObserver = ({
 
 export const RouteSlot = () => {
   const SlotElement = useContext(SlotContext);
-  if (!SlotElement) {
+  if (SlotElement === undefined) {
     return <p>RouteSlot must be used inside a Route</p>;
+  }
+  if (SlotElement === null) {
+    return null;
   }
   return <SlotElement />;
 };
