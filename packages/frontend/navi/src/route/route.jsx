@@ -148,10 +148,15 @@ const initRouteObserver = ({
   const elementId = getElementSignature(element);
   const candidateElementIds = Array.from(candidateSet, (c) =>
     getElementSignature(c.ActiveElement),
-  ).join(", ");
-  debug(
-    `🔍 initRouteObserver ${elementId}, candidates: ${candidateElementIds}`,
   );
+  if (candidateElementIds.length === 0) {
+    debug(`initRouteObserver ${elementId}, no children`);
+  } else {
+    debug(
+      `initRouteObserver ${elementId}, child candidates:
+  - ${candidateElementIds.join("\n  - ")}`,
+    );
+  }
   const [publishCompositeStatus, subscribeCompositeStatus] = createPubSub();
   const compositeRoute = {
     urlPattern: `composite(${candidateElementIds})`,
