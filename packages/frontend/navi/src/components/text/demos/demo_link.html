@@ -442,7 +442,7 @@
               same-document anchors and allowing users to copy the anchor.
             </Text>
 
-            <Box row spacing="md" marginTop="md">
+            <Box row marginTop="md">
               <Box>
                 <Caption>anchor</Caption>
                 <br />
@@ -452,30 +452,44 @@
               <Box>
                 <Caption>anchor + revealOnInteraction</Caption>
                 <br />
+
                 <Text relative>
                   <Link href="#anchor-to-text" anchor revealOnInteraction />
                   Some text
                 </Text>
               </Box>
 
-              <Box>
+              <Box row>
                 <Caption>
                   revealOnInteraction — anchor floats left and appears on
                   hover/focus
                 </Caption>
-                <br />
+
                 <Box background="green" width="50" height="50" relative>
                   <Link href="#anchor-to-box" anchor revealOnInteraction />
                 </Box>
               </Box>
 
-              <Box>
+              <Box row>
                 <Caption>
                   Inside Title — revealOnInteraction auto enabled
                 </Caption>
-                <br />
+
                 <Title as="h3" marginTop="0">
                   <Link href="#anchor-to-link" anchor />
+                  Section Title
+                </Title>
+              </Box>
+
+              <Box row>
+                <Caption>Inside Title — disabling revealOnInteraction</Caption>
+
+                <Title as="h3" marginTop="0">
+                  <Link
+                    href="#anchor-to-link-static"
+                    anchor
+                    revealOnInteraction={false}
+                  />
                   Section Title
                 </Title>
               </Box>
