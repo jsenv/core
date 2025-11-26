@@ -125,7 +125,7 @@ import.meta.css = /* css */ `
       width: 1em;
       height: 1em;
       font-size: 1em;
-      opacity: 0;
+      /* opacity: 0; */
       transform: translateY(-25%);
       /* The anchor link is displayed only on :hover */
       /* So we "need" a visual indicator when it's shown by focus */

@@ -289,189 +289,146 @@
               </div>
             </div>
 
-            {/* Automatic Icon Behavior */}
-            <Box as="section" marginBottom="xl">
-              <Title as="h2">Automatic Icon Behavior</Title>
-              <p>
-                Links automatically add icons based on their target and
-                behavior. This provides visual cues to users about what to
-                expect when clicking the link.
-              </p>
-
-              <Layout row spacing="lg">
-                <div>
-                  <h3>External Links</h3>
-                  <Layout column spacing="sm">
-                    <Link href="https://example.com">Documentation</Link>
-                  </Layout>
-                  <p style={{ fontSize: "14px", color: "#666" }}>
-                    External links get an icon by default.
-                  </p>
-                  <p
-                    style={{
-                      fontSize: "12px",
-                      color: "#888",
-                      fontStyle: "italic",
-                    }}
-                  >
-                    Opt-out: Use target="_self" to disable the icon
-                  </p>
-                  <Layout column spacing="xs">
-                    <Link href="https://example.com" target="_self">
-                      Documentation (no icon)
-                    </Link>
-                  </Layout>
-                </div>
-
-                <div>
-                  <h3>Internal Links</h3>
-                  <Layout column spacing="sm">
-                    <Link href="/settings">Settings</Link>
-                  </Layout>
-                  <p style={{ fontSize: "14px", color: "#666" }}>
-                    Internal links have no icon by default.
-                  </p>
-                  <p
-                    style={{
-                      fontSize: "12px",
-                      color: "#888",
-                      fontStyle: "italic",
-                    }}
-                  >
-                    Opt-in: Use target="_blank" to add an icon
-                  </p>
-                  <Layout column spacing="xs">
-                    <Link href="/settings" target="_blank">
-                      Settings (new tab)
-                    </Link>
-                  </Layout>
-
-                  <p
-                    style={{
-                      fontSize: "14px",
-                      color: "#666",
-                      marginTop: "12px",
-                    }}
-                  >
-                    Same-document anchors get an anchor icon.
-                  </p>
-                  <Layout column spacing="xs">
-                    <Link href="#section">Go to section</Link>
-                  </Layout>
-                  <p
-                    style={{
-                      fontSize: "12px",
-                      color: "#888",
-                      fontStyle: "italic",
-                    }}
-                  >
-                    Opt-out: Use anchorIcon={false} to disable
-                  </p>
-                  <Layout column spacing="xs">
-                    <Link href="#section" anchorIcon={false}>
-                      Go to section (no icon)
-                    </Link>
-                  </Layout>
-                </div>
-
-                <div>
-                  <h3>Special Protocol Icons</h3>
-                  <Layout column spacing="sm">
-                    <Link href="tel:+1234567890">Call now</Link>
-                    <Link href="sms:+1234567890">Send message</Link>
-                    <Link href="mailto:test@example.com">Contact us</Link>
-                    <Link href="https://github.com/jsenv/core">
-                      View source
-                    </Link>
-                  </Layout>
-                  <p style={{ fontSize: "14px", color: "#666" }}>
-                    Special protocols and GitHub automatically get custom icons
-                  </p>
-                </div>
-              </Layout>
-            </Box>
-
-            {/* Colors and Sizes Combined */}
-            <Box as="section" marginBottom="xl">
-              <Title as="h2">Colors and Sizes</Title>
-              <p>
-                Links with different color schemes, styling variations, and size
-                options.
-              </p>
-
-              <Layout row spacing="lg">
-                <div>
-                  <h3>Colors and Sizes</h3>
-                  <Layout column spacing="sm">
-                    <Link href="./blue" preventDefault color="blue" size="sm">
-                      Small blue
-                    </Link>
-                    <Link href="./green" preventDefault color="green">
-                      Normal green
-                    </Link>
-                    <Link
-                      href="./orange"
-                      preventDefault
-                      color="orange"
-                      size="lg"
-                    >
-                      Large orange
-                    </Link>
-                    <Link
-                      href="./purple"
-                      preventDefault
-                      color="purple"
-                      size="xl"
-                    >
-                      Extra large purple
-                    </Link>
-                  </Layout>
-                </div>
-              </Layout>
-            </Box>
-
-            {/* Interactive States */}
-            <Box as="section" marginBottom="xl">
-              <Title as="h2">Interactive States</Title>
-              <p>
-                Links demonstrating different interactive behaviors and states.
-              </p>
-
-              <Layout row spacing="lg">
-                <div>
-                  <h3>Hover Effects</h3>
-                  <Layout column spacing="sm">
-                    <Link
-                      href="./hover"
-                      color="blue"
-                      pseudoStyle={{ ":hover": { color: "green" } }}
-                      preventDefault
-                    >
-                      Hover becomes green
-                    </Link>
-                    <Link
-                      href="./hover"
-                      color="green"
-                      underline={false}
-                      pseudoStyle={{ ":hover": { underline: true } }}
-                      preventDefault
-                    >
-                      Hover shows underline
-                    </Link>
-                    <Link
-                      href="./hover"
-                      preventDefault
-                      style={"--color-hover: yellow;"}
-                    >
-                      Hover color (using css vars)
-                    </Link>
-                  </Layout>
-                </div>
-              </Layout>
-            </Box>
-
+            <AutomaticIconDemo />
+            <ColorsAndSizesDemo />
+            <InteractiveStatesDemo />
             <AnchorFeatureDemo />
           </div>
+        );
+      };
+
+      const AutomaticIconDemo = () => {
+        return (
+          <Box as="section" marginBottom="xl">
+            <Title as="h2">Automatic Icon Behavior</Title>
+            <Box row>
+              <Box row>
+                <Caption>External link (icon added by default)</Caption>
+
+                <Link href="https://example.com">Link text</Link>
+              </Box>
+
+              <Box row>
+                <Caption>Internal link (no icon by default)</Caption>
+
+                <Link href="/settings">Link text</Link>
+              </Box>
+
+              <Box row>
+                <Caption>target="_blank" (adds external icon)</Caption>
+
+                <Link href="/settings" target="_blank">
+                  Link text
+                </Link>
+              </Box>
+
+              <Box row>
+                <Caption>Same-document anchor (adds anchor icon)</Caption>
+
+                <Link href="#section">Link text</Link>
+              </Box>
+
+              <Box row>
+                <Caption>anchorIcon={false} (disables anchor icon)</Caption>
+                <Link href="#section" anchorIcon={false}>
+                  Link text
+                </Link>
+              </Box>
+
+              <Box row>
+                <Caption>tel: / sms: / mailto: (custom icons)</Caption>
+
+                <Box row>
+                  <Link href="tel:+1234567890">Link text</Link>
+                  <Link href="sms:+1234567890">Link text</Link>
+                  <Link href="mailto:test@example.com">Link text</Link>
+                </Box>
+              </Box>
+
+              <Box row>
+                <Caption>GitHub URL (GitHub icon)</Caption>
+
+                <Link href="https://github.com/jsenv/core">Link text</Link>
+              </Box>
+            </Box>
+          </Box>
+        );
+      };
+
+      const ColorsAndSizesDemo = () => {
+        return (
+          <Box as="section" marginBottom="xl">
+            <Title as="h2">Colors and Sizes</Title>
+            <Box row spacing="xxs">
+              <Box row>
+                <Caption>size="sm" color="blue"</Caption>
+                <Link href="./blue" preventDefault color="blue" size="sm">
+                  Link text
+                </Link>
+              </Box>
+              <Box row>
+                <Caption>size (default) color="green"</Caption>
+                <Link href="./green" preventDefault color="green">
+                  Link text
+                </Link>
+              </Box>
+              <Box row>
+                <Caption>size="lg" color="orange"</Caption>
+                <Link href="./orange" preventDefault color="orange" size="lg">
+                  Link text
+                </Link>
+              </Box>
+              <Box row>
+                <Caption>size="xl" color="purple"</Caption>
+                <Link href="./purple" preventDefault color="purple" size="xl">
+                  Link text
+                </Link>
+              </Box>
+            </Box>
+          </Box>
+        );
+      };
+
+      const InteractiveStatesDemo = () => {
+        return (
+          <Box as="section" marginBottom="xl">
+            <Title as="h2">Interactive States</Title>
+            <Box row>
+              <Box row>
+                <Caption>pseudoStyle ":hover" color="green"</Caption>
+                <Link
+                  href="./hover"
+                  color="blue"
+                  pseudoStyle={{ ":hover": { color: "green" } }}
+                  preventDefault
+                >
+                  Link text
+                </Link>
+              </Box>
+              <Box row>
+                <Caption>underline={false} + ":hover" underline</Caption>
+                <Link
+                  href="./hover"
+                  color="green"
+                  underline={false}
+                  pseudoStyle={{ ":hover": { underline: true } }}
+                  preventDefault
+                >
+                  Link text
+                </Link>
+              </Box>
+              <Box row>
+                <Caption>CSS var: --link-color-hover: yellow</Caption>
+                <Link
+                  href="./hover"
+                  preventDefault
+                  style={"--link-color-hover: yellow;"}
+                >
+                  Link text
+                </Link>
+              </Box>
+            </Box>
+          </Box>
         );
       };
 
