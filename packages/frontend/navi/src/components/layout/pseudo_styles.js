@@ -224,6 +224,10 @@ export const initPseudoStyles = (
     const currentState = {};
     for (const pseudoClass of pseudoClasses) {
       const pseudoClassDefinition = PSEUDO_CLASSES[pseudoClass];
+      if (!pseudoClassDefinition) {
+        console.warn(`Unknown pseudo class: ${pseudoClass}`);
+        continue;
+      }
       let currentValue;
       if (
         pseudoState &&

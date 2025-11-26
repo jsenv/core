@@ -8114,43 +8114,43 @@ const updateDocumentUrl = (value) => {
   documentUrlSignal.value = value;
 };
 
-const getLinkTargetInfo = (href) => {
+const getHrefTargetInfo = (href) => {
   href = String(href);
 
   if (!href || href.trim() === "") {
     return {
-      targetIsEmpty: true,
-      targetIsCurrent: false,
-      targetIsAnchor: false,
-      targetIsSameOrigin: true,
-      targetIsSameSite: true,
+      isEmpty: true,
+      isCurrent: false,
+      isAnchor: false,
+      isSameOrigin: true,
+      isSameSite: true,
     };
   }
 
   const currentUrl = new URL(window.location.href);
   const targetUrl = new URL(href, window.location.href);
 
-  let targetIsCurrent = false;
+  let isCurrent = false;
   {
-    targetIsCurrent = currentUrl.href === targetUrl.href;
+    isCurrent = currentUrl.href === targetUrl.href;
   }
-  let targetIsAnchor = false;
+  let isAnchor = false;
   {
     if (
       currentUrl.pathname === targetUrl.pathname &&
       currentUrl.search === targetUrl.search &&
       targetUrl.hash !== ""
     ) {
-      targetIsAnchor = true;
+      isAnchor = true;
     }
   }
-  let targetIsSameOrigin = false;
+  let isSameOrigin = false;
   {
     const currentOrigin = currentUrl.origin;
     const targetOrigin = targetUrl.origin;
-    targetIsSameOrigin = currentOrigin === targetOrigin;
+    isSameOrigin = currentOrigin === targetOrigin;
   }
-  let targetIsSameSite = false;
+  let isSameSite = false;
   {
     const baseDomain = (hostname) => {
       const parts = hostname.split(".").slice(-2);
@@ -8158,15 +8158,15 @@ const getLinkTargetInfo = (href) => {
     };
     const currentDomain = baseDomain(currentUrl.hostname);
     const targetDomain = baseDomain(targetUrl.hostname);
-    targetIsSameSite = currentDomain === targetDomain;
+    isSameSite = currentDomain === targetDomain;
   }
 
   return {
-    targetIsEmpty: false,
-    targetIsCurrent,
-    targetIsAnchor,
-    targetIsSameOrigin,
-    targetIsSameSite,
+    isEmpty: false,
+    isCurrent,
+    isAnchor,
+    isSameOrigin,
+    isSameSite,
   };
 };
 
@@ -8296,14 +8296,13 @@ const setupBrowserIntegrationViaHistory = ({
         return;
       }
       const href = linkElement.href;
-      const { targetIsEmpty, targetIsSameOrigin, targetIsAnchor } =
-        getLinkTargetInfo(href);
+      const { isEmpty, isSameOrigin, isAnchor } = getHrefTargetInfo(href);
       if (
-        targetIsEmpty ||
+        isEmpty ||
         // Let link to other origins be handled by the browser
-        !targetIsSameOrigin ||
+        !isSameOrigin ||
         // Ignore anchor navigation (same page, different hash)
-        targetIsAnchor
+        isAnchor
       ) {
         return;
       }
@@ -10446,6 +10445,7 @@ const POSITION_PROPS = {
 const TYPO_PROPS = {
   font: applyOnCSSProp("fontFamily"),
   fontFamily: PASS_THROUGH,
+  fontWeight: PASS_THROUGH,
   size: applyOnCSSProp("fontSize"),
   fontSize: PASS_THROUGH,
   bold: applyToCssPropWhenTruthy("fontWeight", "bold", "normal"),
@@ -13839,7 +13839,7 @@ const TextBasic = ({
     as: "span",
     baseClassName: "navi_text",
     ...rest,
-    children: applySpacingOnTextChildren(children, spacing)
+    children: rest.as === "pre" ? children : applySpacingOnTextChildren(children, spacing)
   });
 };
 
@@ -13975,6 +13975,1180 @@ const Icon = ({
   });
 };
 
+const useFormEvents = (
+  elementRef,
+  {
+    onFormReset,
+    onFormActionRequested,
+    onFormActionPrevented,
+    onFormActionStart,
+    onFormActionAbort,
+    onFormActionError,
+    onFormActionEnd,
+  },
+) => {
+  onFormReset = useStableCallback(onFormReset);
+  onFormActionRequested = useStableCallback(onFormActionRequested);
+  onFormActionPrevented = useStableCallback(onFormActionPrevented);
+  onFormActionStart = useStableCallback(onFormActionStart);
+  onFormActionAbort = useStableCallback(onFormActionAbort);
+  onFormActionError = useStableCallback(onFormActionError);
+  onFormActionEnd = useStableCallback(onFormActionEnd);
+
+  useLayoutEffect(() => {
+    const element = elementRef.current;
+    if (!element) {
+      return null;
+    }
+
+    let form = element.form;
+    if (!form) {
+      // some non input elements may want to listen form events (<RadioList> is a <div>)
+      form = element.closest("form");
+      if (!form) {
+        console.warn("No form found for element", element);
+        return null;
+      }
+    }
+    return addManyEventListeners(form, {
+      reset: onFormReset,
+      actionrequested: onFormActionRequested,
+      actionprevented: onFormActionPrevented,
+      actionstart: onFormActionStart,
+      actionabort: onFormActionAbort,
+      actionerror: onFormActionError,
+      actionend: onFormActionEnd,
+    });
+  }, [
+    onFormReset,
+    onFormActionRequested,
+    onFormActionPrevented,
+    onFormActionStart,
+    onFormActionAbort,
+    onFormActionError,
+    onFormActionEnd,
+  ]);
+};
+
+const debugUIState = (...args) => {
+};
+const debugUIGroup = (...args) => {
+};
+
+const UIStateControllerContext = createContext();
+const UIStateContext = createContext();
+const ParentUIStateControllerContext = createContext();
+
+const FieldNameContext = createContext();
+const ReadOnlyContext = createContext();
+const DisabledContext = createContext();
+const RequiredContext = createContext();
+const LoadingContext = createContext();
+const LoadingElementContext = createContext();
+
+/**
+ * UI State Controller Hook
+ *
+ * Manages the relationship between external state (props) and UI state (what user sees).
+ * Allows UI state to diverge temporarily for responsive interactions, with mechanisms
+ * to sync back to external state when needed.
+ *
+ * Key features:
+ * - Immediate UI updates for responsive interactions
+ * - State divergence with sync capabilities (resetUIState)
+ * - Group integration for coordinated form inputs
+ * - External control via custom events (onsetuistate/onresetuistate)
+ * - Error recovery and form reset support
+ *
+ * See README.md for detailed usage examples and patterns.
+ */
+const useUIStateController = (
+  props,
+  componentType,
+  {
+    statePropName = "value",
+    defaultStatePropName = "defaultValue",
+    fallbackState = "",
+    getStateFromProp = (prop) => prop,
+    getPropFromState = (state) => state,
+  } = {},
+) => {
+  const parentUIStateController = useContext(ParentUIStateControllerContext);
+  const formContext = useContext(FormContext);
+  const { id, name, onUIStateChange, action } = props;
+  const uncontrolled = !formContext && !action;
+  const [navState, setNavState] = useNavState(id);
+
+  const uiStateControllerRef = useRef();
+  const hasStateProp = Object.hasOwn(props, statePropName);
+  const state = props[statePropName];
+  const defaultState = props[defaultStatePropName];
+  const stateInitial = useInitialValue(() => {
+    if (hasStateProp) {
+      // controlled by state prop ("value" or "checked")
+      return getStateFromProp(state);
+    }
+    if (defaultState) {
+      // not controlled but want an initial state (a value or being checked)
+      return getStateFromProp(defaultState);
+    }
+    if (formContext && navState) {
+      // not controlled but want to use value from nav state
+      // (I think this should likely move earlier to win over the hasUIStateProp when it's undefined)
+      return getStateFromProp(navState);
+    }
+    return getStateFromProp(fallbackState);
+  });
+
+  /**
+   * This check is needed only for basic field because
+   * When using action/form we consider the action/form code
+   * will have a side effect that will re-render the component with the up-to-date state
+   *
+   * In practice we set the checked from the backend state
+   * We use action to fetch the new state and update the local state
+   * The component re-renders so it's the action/form that is considered as responsible
+   * to update the state and as a result allowed to have "checked"/"value" prop without "onUIStateChange"
+   */
+  const readOnly =
+    uncontrolled &&
+    hasStateProp &&
+    !onUIStateChange &&
+    !parentUIStateController;
+
+  const [
+    notifyParentAboutChildMount,
+    notifyParentAboutChildUIStateChange,
+    notifyParentAboutChildUnmount,
+  ] = useParentControllerNotifiers(
+    parentUIStateController,
+    uiStateControllerRef);
+  useLayoutEffect(() => {
+    notifyParentAboutChildMount();
+    return notifyParentAboutChildUnmount;
+  }, []);
+
+  const existingUIStateController = uiStateControllerRef.current;
+  if (existingUIStateController) {
+    existingUIStateController._checkForUpdates({
+      readOnly,
+      name,
+      onUIStateChange,
+      getPropFromState,
+      getStateFromProp,
+      hasStateProp,
+      stateInitial,
+      state,
+    });
+    return existingUIStateController;
+  }
+  debugUIState(
+    `Creating "${componentType}" ui state controller - initial state:`,
+    JSON.stringify(stateInitial),
+  );
+  const [publishUIState, subscribeUIState] = createPubSub();
+  const uiStateController = {
+    _checkForUpdates: ({
+      readOnly,
+      name,
+      onUIStateChange,
+      getPropFromState,
+      getStateFromProp,
+      hasStateProp,
+      stateInitial,
+      state,
+    }) => {
+      uiStateController.readOnly = readOnly;
+      uiStateController.name = name;
+      uiStateController.onUIStateChange = onUIStateChange;
+      uiStateController.getPropFromState = getPropFromState;
+      uiStateController.getStateFromProp = getStateFromProp;
+      uiStateController.stateInitial = stateInitial;
+
+      if (hasStateProp) {
+        uiStateController.hasStateProp = true;
+        const currentState = uiStateController.state;
+        if (state !== currentState) {
+          uiStateController.state = state;
+          uiStateController.setUIState(
+            uiStateController.getPropFromState(state),
+            new CustomEvent("state_prop"),
+          );
+        }
+      } else if (uiStateController.hasStateProp) {
+        uiStateController.hasStateProp = false;
+        uiStateController.state = uiStateController.stateInitial;
+      }
+    },
+
+    componentType,
+    readOnly,
+    name,
+    hasStateProp,
+    state: stateInitial,
+    uiState: stateInitial,
+    onUIStateChange,
+    getPropFromState,
+    getStateFromProp,
+    setUIState: (prop, e) => {
+      const newUIState = uiStateController.getStateFromProp(prop);
+      if (formContext) {
+        setNavState(prop);
+      }
+      const currentUIState = uiStateController.uiState;
+      if (newUIState === currentUIState) {
+        return;
+      }
+      debugUIState(
+        `${componentType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updating to ${JSON.stringify(newUIState)}`,
+      );
+      uiStateController.uiState = newUIState;
+      publishUIState(newUIState);
+      uiStateController.onUIStateChange?.(newUIState, e);
+      notifyParentAboutChildUIStateChange(e);
+    },
+    resetUIState: (e) => {
+      const currentState = uiStateController.state;
+      uiStateController.setUIState(currentState, e);
+    },
+    actionEnd: () => {
+      if (formContext) {
+        setNavState(undefined);
+      }
+    },
+    subscribe: subscribeUIState,
+  };
+  uiStateControllerRef.current = uiStateController;
+  return uiStateController;
+};
+
+const NO_PARENT = [() => {}, () => {}, () => {}];
+const useParentControllerNotifiers = (
+  parentUIStateController,
+  uiStateControllerRef,
+  componentType,
+) => {
+  return useMemo(() => {
+    if (!parentUIStateController) {
+      return NO_PARENT;
+    }
+
+    parentUIStateController.componentType;
+    const notifyParentAboutChildMount = () => {
+      const uiStateController = uiStateControllerRef.current;
+      parentUIStateController.registerChild(uiStateController);
+    };
+
+    const notifyParentAboutChildUIStateChange = (e) => {
+      const uiStateController = uiStateControllerRef.current;
+      parentUIStateController.onChildUIStateChange(uiStateController, e);
+    };
+
+    const notifyParentAboutChildUnmount = () => {
+      const uiStateController = uiStateControllerRef.current;
+      parentUIStateController.unregisterChild(uiStateController);
+    };
+
+    return [
+      notifyParentAboutChildMount,
+      notifyParentAboutChildUIStateChange,
+      notifyParentAboutChildUnmount,
+    ];
+  }, []);
+};
+
+/**
+ * UI Group State Controller Hook
+ *
+ * This hook manages a collection of child UI state controllers and aggregates their states
+ * into a unified group state. It provides a way to coordinate multiple form inputs that
+ * work together as a logical unit.
+ *
+ * What it provides:
+ *
+ * 1. **Child State Aggregation**:
+ *    - Collects state from multiple child UI controllers
+ *    - Combines them into a single meaningful group state
+ *    - Updates group state automatically when any child changes
+ *
+ * 2. **Child Filtering**:
+ *    - Can filter which child controllers to include based on component type
+ *    - Useful for mixed content where only specific inputs matter
+ *    - Enables type-safe aggregation patterns
+ *
+ * 3. **Group Operations**:
+ *    - Provides `resetUIState()` that cascades to all children
+ *    - Enables group-level operations like "clear all" or "reset form section"
+ *    - Maintains consistency across related inputs
+ *
+ * 4. **External State Management**:
+ *    - Notifies external code of group state changes via `onUIStateChange`
+ *    - Allows external systems to react to group-level state changes
+ *    - Supports complex form validation and submission logic
+ *
+ * Why use it:
+ * - When you have multiple related inputs that should be treated as one logical unit
+ * - For implementing checkbox lists, radio groups, or form sections
+ * - When you need to perform operations on multiple inputs simultaneously
+ * - To aggregate input states for validation or submission
+ *
+ * How it works:
+ * - Child controllers automatically register themselves when mounted
+ * - Group controller listens for child state changes and re-aggregates
+ * - Custom aggregation function determines how child states combine
+ * - Group state updates trigger notifications to external code
+ *
+ * @param {Object} props - Component props containing onUIStateChange callback
+ * @param {string} componentType - Type identifier for this group controller
+ * @param {Object} config - Configuration object
+ * @param {string} [config.childComponentType] - Filter children by this type (e.g., "checkbox")
+ * @param {Function} config.aggregateChildStates - Function to aggregate child states
+ * @param {any} [config.emptyState] - State to use when no children have values
+ * @returns {Object} UI group state controller
+ *
+ * Usage Examples:
+ * - **Checkbox List**: Aggregates multiple checkboxes into array of checked values
+ * - **Radio Group**: Manages radio buttons to ensure single selection
+ * - **Form Section**: Groups related inputs for validation and reset operations
+ * - **Dynamic Lists**: Handles variable number of repeated input groups
+ */
+
+const useUIGroupStateController = (
+  props,
+  componentType,
+  { childComponentType, aggregateChildStates, emptyState = undefined },
+) => {
+  if (typeof aggregateChildStates !== "function") {
+    throw new TypeError("aggregateChildStates must be a function");
+  }
+  const parentUIStateController = useContext(ParentUIStateControllerContext);
+  const { onUIStateChange, name } = props;
+  const childUIStateControllerArrayRef = useRef([]);
+  const childUIStateControllerArray = childUIStateControllerArrayRef.current;
+  const uiStateControllerRef = useRef();
+
+  const groupIsRenderingRef = useRef(false);
+  const pendingChangeRef = useRef(false);
+  groupIsRenderingRef.current = true;
+  pendingChangeRef.current = false;
+
+  const [
+    notifyParentAboutChildMount,
+    notifyParentAboutChildUIStateChange,
+    notifyParentAboutChildUnmount,
+  ] = useParentControllerNotifiers(
+    parentUIStateController,
+    uiStateControllerRef);
+  useLayoutEffect(() => {
+    notifyParentAboutChildMount();
+    return notifyParentAboutChildUnmount;
+  }, []);
+
+  const onChange = (_, e) => {
+    if (groupIsRenderingRef.current) {
+      pendingChangeRef.current = true;
+      return;
+    }
+    const newUIState = aggregateChildStates(
+      childUIStateControllerArray,
+      emptyState,
+    );
+    const uiStateController = uiStateControllerRef.current;
+    uiStateController.setUIState(newUIState, e);
+  };
+
+  useLayoutEffect(() => {
+    groupIsRenderingRef.current = false;
+    if (pendingChangeRef.current) {
+      pendingChangeRef.current = false;
+      onChange(
+        null,
+        new CustomEvent(`${componentType}_batched_ui_state_update`),
+      );
+    }
+  });
+
+  const existingUIStateController = uiStateControllerRef.current;
+  if (existingUIStateController) {
+    existingUIStateController.name = name;
+    existingUIStateController.onUIStateChange = onUIStateChange;
+    return existingUIStateController;
+  }
+
+  const [publishUIState, subscribeUIState] = createPubSub();
+  const isMonitoringChild = (childUIStateController) => {
+    if (childComponentType === "*") {
+      return true;
+    }
+    return childUIStateController.componentType === childComponentType;
+  };
+  const uiStateController = {
+    componentType,
+    name,
+    onUIStateChange,
+    uiState: emptyState,
+    setUIState: (newUIState, e) => {
+      const currentUIState = uiStateController.uiState;
+      if (newUIState === currentUIState) {
+        return;
+      }
+      uiStateController.uiState = newUIState;
+      debugUIGroup(
+        `${componentType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
+      );
+      publishUIState(newUIState);
+      uiStateController.onUIStateChange?.(newUIState, e);
+      notifyParentAboutChildUIStateChange(e);
+    },
+    registerChild: (childUIStateController) => {
+      if (!isMonitoringChild(childUIStateController)) {
+        return;
+      }
+      const childComponentType = childUIStateController.componentType;
+      childUIStateControllerArray.push(childUIStateController);
+      debugUIGroup(
+        `${componentType}.registerChild("${childComponentType}") -> registered (total: ${childUIStateControllerArray.length})`,
+      );
+      onChange(
+        childUIStateController,
+        new CustomEvent(`${childComponentType}_mount`),
+      );
+    },
+    onChildUIStateChange: (childUIStateController, e) => {
+      if (!isMonitoringChild(childUIStateController)) {
+        return;
+      }
+      debugUIGroup(
+        `${componentType}.onChildUIStateChange("${childComponentType}") to ${JSON.stringify(
+          childUIStateController.uiState,
+        )}`,
+      );
+      onChange(childUIStateController, e);
+    },
+    unregisterChild: (childUIStateController) => {
+      if (!isMonitoringChild(childUIStateController)) {
+        return;
+      }
+      const childComponentType = childUIStateController.componentType;
+      const index = childUIStateControllerArray.indexOf(childUIStateController);
+      if (index === -1) {
+        return;
+      }
+      childUIStateControllerArray.splice(index, 1);
+      debugUIGroup(
+        `${componentType}.unregisterChild("${childComponentType}") -> unregisteed (remaining: ${childUIStateControllerArray.length})`,
+      );
+      onChange(
+        childUIStateController,
+        new CustomEvent(`${childComponentType}_unmount`),
+      );
+    },
+    resetUIState: (e) => {
+      // we should likely batch the changes that will be reported for performances
+      for (const childUIStateController of childUIStateControllerArray) {
+        childUIStateController.resetUIState(e);
+      }
+    },
+    actionEnd: (e) => {
+      for (const childUIStateController of childUIStateControllerArray) {
+        childUIStateController.actionEnd(e);
+      }
+    },
+    subscribe: subscribeUIState,
+  };
+  uiStateControllerRef.current = uiStateController;
+  return uiStateController;
+};
+
+/**
+ * Hook to track UI state from a UI state controller
+ *
+ * This hook allows external code to react to UI state changes without
+ * causing the controller itself to re-create. It returns the current UI state
+ * and will cause re-renders when the UI state changes.
+ *
+ * @param {Object} uiStateController - The UI state controller to track
+ * @returns {any} The current UI state
+ */
+const useUIState = (uiStateController) => {
+  const [trackedUIState, setTrackedUIState] = useState(
+    uiStateController.uiState,
+  );
+
+  useLayoutEffect(() => {
+    // Subscribe to UI state changes
+    const unsubscribe = uiStateController.subscribe(setTrackedUIState);
+
+    // Sync with current state in case it changed before subscription
+    setTrackedUIState(uiStateController.uiState);
+
+    return unsubscribe;
+  }, [uiStateController]);
+
+  return trackedUIState;
+};
+
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  @layer navi {
+    .navi_button {
+      --button-outline-width: 1px;
+      --button-border-width: 1px;
+      --button-border-radius: 2px;
+      /* default */
+      --button-outline-color: var(--navi-focus-outline-color);
+      --button-loader-color: var(--navi-loader-color);
+      --button-border-color: light-dark(#767676, #8e8e93);
+      --button-background-color: light-dark(#f3f4f6, #2d3748);
+      --button-color: currentColor;
+
+      /* Hover */
+      --button-border-color-hover: color-mix(
+        in srgb,
+        var(--button-border-color) 70%,
+        black
+      );
+      --button-background-color-hover: color-mix(
+        in srgb,
+        var(--button-background-color) 95%,
+        black
+      );
+      --button-color-hover: var(--button-color);
+      /* Active */
+      --button-border-color-active: color-mix(
+        in srgb,
+        var(--button-border-color) 90%,
+        black
+      );
+      /* Readonly */
+      --button-border-color-readonly: color-mix(
+        in srgb,
+        var(--button-border-color) 30%,
+        white
+      );
+      --button-background-color-readonly: var(--button-background-color);
+      --button-color-readonly: color-mix(
+        in srgb,
+        var(--button-color) 30%,
+        transparent
+      );
+      /* Disabled */
+      --button-border-color-disabled: var(--button-border-color-readonly);
+      --button-background-color-disabled: var(
+        --button-background-color-readonly
+      );
+      --button-color-disabled: var(--button-color-readonly);
+    }
+  }
+
+  .navi_button {
+    /* Internal css vars are the one controlling final values */
+    /* allowing to override them on interactions (like hover, disabled, etc.) */
+    --x-button-outline-width: var(--button-outline-width);
+    --x-button-border-radius: var(--button-border-radius);
+    --x-button-border-width: var(--button-border-width);
+    --x-button-outer-width: calc(
+      var(--button-x-border-width) + var(--x-button-outline-width)
+    );
+    --x-button-outline-color: var(--button-outline-color);
+    --x-button-border-color: var(--button-border-color);
+    --x-button-background-color: var(--button-background-color);
+    --x-button-color: var(--button-color);
+
+    position: relative;
+    box-sizing: border-box;
+    padding: 0;
+    vertical-align: middle;
+    background: none;
+    border: none;
+    border-radius: var(--x-button-border-radius);
+    outline: none;
+    cursor: pointer;
+  }
+  .navi_button_content {
+    position: relative;
+    display: inherit;
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    padding-top: var(
+      --button-padding-top,
+      var(--button-padding-y, var(--button-padding, 1px))
+    );
+    padding-right: var(
+      --button-padding-right,
+      var(--button-padding-x, var(--button-padding, 6px))
+    );
+    padding-bottom: var(
+      --button-padding-bottom,
+      var(--button-padding-y, var(--button-padding, 1px))
+    );
+    padding-left: var(
+      --button-padding-left,
+      var(--button-padding-x, var(--button-padding, 6px))
+    );
+    align-items: inherit;
+    justify-content: inherit;
+    color: var(--x-button-color);
+    background-color: var(--x-button-background-color);
+    border-width: var(--x-button-outer-width);
+    border-style: solid;
+    border-color: transparent;
+    border-radius: var(--x-button-border-radius);
+    outline-width: var(--x-button-border-width);
+    outline-style: solid;
+    outline-color: var(--x-button-border-color);
+    outline-offset: calc(-1 * (var(--x-button-border-width)));
+    transition-property: transform;
+    transition-duration: 0.15s;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .navi_button_shadow {
+    position: absolute;
+    inset: calc(-1 * var(--x-button-outer-width));
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  /* Hover */
+  .navi_button[data-hover] {
+    --x-button-border-color: var(--button-border-color-hover);
+    --x-button-background-color: var(--button-background-color-hover);
+    --x-button-color: var(--button-color-hover);
+  }
+  .navi_button[data-nohover] {
+    --x-button-border-color: var(--button-border-color);
+    --x-button-background-color: var(--button-background-color);
+    --x-button-color: var(--button-color);
+  }
+  /* Active */
+  .navi_button[data-active] {
+    --x-button-outline-color: var(--button-border-color-active);
+  }
+  .navi_button[data-active] .navi_button_content {
+    transform: scale(0.9);
+  }
+  .navi_button[data-active] .navi_button_shadow {
+    box-shadow:
+      inset 0 3px 6px rgba(0, 0, 0, 0.2),
+      inset 0 1px 2px rgba(0, 0, 0, 0.3),
+      inset 0 0 0 1px rgba(0, 0, 0, 0.1),
+      inset 2px 0 4px rgba(0, 0, 0, 0.1),
+      inset -2px 0 4px rgba(0, 0, 0, 0.1);
+  }
+  /* Readonly */
+  .navi_button[data-readonly] {
+    --x-button-border-color: var(--button-border-color-readonly);
+    --x-button-background-color: var(--button-background-color-readonly);
+    --x-button-color: var(--button-color-readonly);
+  }
+  /* Focus */
+  .navi_button[data-focus-visible] {
+    --x-button-border-color: var(--x-button-outline-color);
+  }
+  .navi_button[data-focus-visible] .navi_button_content {
+    outline-width: var(--x-button-outer-width);
+    outline-offset: calc(-1 * var(--x-button-outer-width));
+  }
+  /* Disabled */
+  .navi_button[data-disabled] {
+    color: unset;
+    cursor: default;
+  }
+  .navi_button[data-disabled] {
+    --x-border-color: var(--button-border-color-disabled);
+    --x-background-color: var(--button-background-color-disabled);
+    --x-color: var(--button-color-disabled);
+  }
+  /* no active effect */
+  .navi_button[data-disabled] .navi_button_content {
+    transform: none;
+  }
+  .navi_button[data-disabled] .navi_button_shadow {
+    box-shadow: none;
+  }
+  /* Callout (info, warning, error) */
+  .navi_button[data-callout] {
+    --x-button-border-color: var(--callout-color);
+  }
+
+  /* Discrete variant */
+  .navi_button[data-discrete] {
+    --x-button-background-color: transparent;
+    --x-button-border-color: transparent;
+  }
+  .navi_button[data-discrete][data-hover] {
+    --x-button-border-color: var(--button-border-color-hover);
+  }
+  .navi_button[data-discrete][data-nohover] {
+    --x-button-border-color: transparent;
+  }
+  .navi_button[data-discrete][data-readonly] {
+    --x-button-border-color: transparent;
+  }
+  .navi_button[data-discrete][data-disabled] {
+    --x-button-border-color: transparent;
+  }
+
+  .navi_button > img {
+    border-radius: inherit;
+  }
+`;
+const Button = props => {
+  return renderActionableComponent(props, {
+    Basic: ButtonBasic,
+    WithAction: ButtonWithAction,
+    InsideForm: ButtonInsideForm,
+    WithActionInsideForm: ButtonWithActionInsideForm
+  });
+};
+const ButtonStyleCSSVars = {
+  "outlineWidth": "--button-outline-width",
+  "borderWidth": "--button-border-width",
+  "borderRadius": "--button-border-radius",
+  "paddingTop": "--button-padding-top",
+  "paddingRight": "--button-padding-right",
+  "paddingBottom": "--button-padding-bottom",
+  "paddingLeft": "--button-padding-left",
+  "backgroundColor": "--button-background-color",
+  "borderColor": "--button-border-color",
+  "color": "--button-color",
+  ":hover": {
+    backgroundColor: "--button-background-color-hover",
+    borderColor: "--button-border-color-hover",
+    color: "--button-color-hover"
+  },
+  ":active": {
+    borderColor: "--button-border-color-active"
+  },
+  ":read-only": {
+    backgroundColor: "--button-background-color-readonly",
+    borderColor: "--button-border-color-readonly",
+    color: "--button-color-readonly"
+  },
+  ":disabled": {
+    backgroundColor: "--button-background-color-disabled",
+    borderColor: "--button-border-color-disabled",
+    color: "--button-color-disabled"
+  }
+};
+const ButtonPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
+const ButtonPseudoElements = ["::-navi-loader"];
+const ButtonBasic = props => {
+  const contextLoading = useContext(LoadingContext);
+  const contextLoadingElement = useContext(LoadingElementContext);
+  const contextReadOnly = useContext(ReadOnlyContext);
+  const contextDisabled = useContext(DisabledContext);
+  const {
+    readOnly,
+    disabled,
+    loading,
+    constraints = [],
+    autoFocus,
+    // visual
+    discrete,
+    children,
+    ...rest
+  } = props;
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
+  useAutoFocus(ref, autoFocus);
+  useConstraints(ref, constraints);
+  const innerLoading = loading || contextLoading && contextLoadingElement === ref.current;
+  const innerReadOnly = readOnly || contextReadOnly || innerLoading;
+  const innerDisabled = disabled || contextDisabled;
+  const renderButtonContent = buttonProps => {
+    return jsxs(Text, {
+      ...buttonProps,
+      className: "navi_button_content",
+      children: [children, jsx("span", {
+        className: "navi_button_shadow"
+      })]
+    });
+  };
+  const renderButtonContentMemoized = useCallback(renderButtonContent, []);
+  return jsxs(Box, {
+    ...rest,
+    as: "button",
+    ref: ref,
+    "data-discrete": discrete ? "" : undefined,
+    "data-readonly-silent": innerLoading ? "" : undefined,
+    "data-callout-arrow-x": "center",
+    "aria-busy": innerLoading
+    // style management
+    ,
+    baseClassName: "navi_button",
+    styleCSSVars: ButtonStyleCSSVars,
+    pseudoClasses: ButtonPseudoClasses,
+    pseudoElements: ButtonPseudoElements,
+    basePseudoState: {
+      ":read-only": innerReadOnly,
+      ":disabled": innerDisabled,
+      ":-navi-loading": innerLoading
+    },
+    visualSelector: ".navi_button_content",
+    hasChildFunction: true,
+    children: [jsx(LoaderBackground, {
+      loading: innerLoading,
+      inset: -1,
+      color: "var(--button-loader-color)"
+    }), renderButtonContentMemoized]
+  });
+};
+const ButtonWithAction = props => {
+  const {
+    action,
+    loading,
+    actionErrorEffect,
+    onActionPrevented,
+    onActionStart,
+    onActionError,
+    onActionEnd,
+    children,
+    ...rest
+  } = props;
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
+  const boundAction = useAction(action);
+  const {
+    loading: actionLoading
+  } = useActionStatus(boundAction);
+  const executeAction = useExecuteAction(ref, {
+    errorEffect: actionErrorEffect
+  });
+  const innerLoading = loading || actionLoading;
+  useActionEvents(ref, {
+    onPrevented: onActionPrevented,
+    onRequested: e => forwardActionRequested(e, boundAction),
+    onAction: executeAction,
+    onStart: onActionStart,
+    onError: onActionError,
+    onEnd: onActionEnd
+  });
+  return jsx(ButtonBasic
+  // put data-action first to help find it in devtools
+  , {
+    "data-action": boundAction.name,
+    ...rest,
+    ref: ref,
+    loading: innerLoading,
+    children: children
+  });
+};
+const ButtonInsideForm = props => {
+  const {
+    // eslint-disable-next-line no-unused-vars
+    formContext,
+    type,
+    children,
+    loading,
+    readOnly,
+    ...rest
+  } = props;
+  const innerLoading = loading;
+  const innerReadOnly = readOnly;
+  return jsx(ButtonBasic, {
+    ...rest,
+    type: type,
+    loading: innerLoading,
+    readOnly: innerReadOnly,
+    children: children
+  });
+};
+const ButtonWithActionInsideForm = props => {
+  const formAction = useContext(FormActionContext);
+  const {
+    // eslint-disable-next-line no-unused-vars
+    formContext,
+    // to avoid passing it to the button element
+    type,
+    action,
+    loading,
+    children,
+    onActionPrevented,
+    onActionStart,
+    onActionAbort,
+    onActionError,
+    onActionEnd,
+    ...rest
+  } = props;
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
+  const formParamsSignal = getActionPrivateProperties(formAction).paramsSignal;
+  const actionBoundToFormParams = useAction(action, formParamsSignal);
+  const {
+    loading: actionLoading
+  } = useActionStatus(actionBoundToFormParams);
+  const innerLoading = loading || actionLoading;
+  useFormEvents(ref, {
+    onFormActionPrevented: e => {
+      if (e.detail.action === actionBoundToFormParams) {
+        onActionPrevented?.(e);
+      }
+    },
+    onFormActionStart: e => {
+      if (e.detail.action === actionBoundToFormParams) {
+        onActionStart?.(e);
+      }
+    },
+    onFormActionAbort: e => {
+      if (e.detail.action === actionBoundToFormParams) {
+        onActionAbort?.(e);
+      }
+    },
+    onFormActionError: e => {
+      if (e.detail.action === actionBoundToFormParams) {
+        onActionError?.(e.detail.error);
+      }
+    },
+    onFormActionEnd: e => {
+      if (e.detail.action === actionBoundToFormParams) {
+        onActionEnd?.(e);
+      }
+    }
+  });
+  return jsx(ButtonBasic, {
+    "data-action": actionBoundToFormParams.name,
+    ...rest,
+    ref: ref,
+    type: type,
+    loading: innerLoading,
+    onactionrequested: e => {
+      forwardActionRequested(e, actionBoundToFormParams, e.target.form);
+    },
+    children: children
+  });
+};
+
+const CloseSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 24 24",
+    fill: "none",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: jsx("path", {
+      "fill-rule": "evenodd",
+      "clip-rule": "evenodd",
+      d: "M5.29289 5.29289C5.68342 4.90237 6.31658 4.90237 6.70711 5.29289L12 10.5858L17.2929 5.29289C17.6834 4.90237 18.3166 4.90237 18.7071 5.29289C19.0976 5.68342 19.0976 6.31658 18.7071 6.70711L13.4142 12L18.7071 17.2929C19.0976 17.6834 19.0976 18.3166 18.7071 18.7071C18.3166 19.0976 17.6834 19.0976 17.2929 18.7071L12 13.4142L6.70711 18.7071C6.31658 19.0976 5.68342 19.0976 5.29289 18.7071C4.90237 18.3166 4.90237 17.6834 5.29289 17.2929L10.5858 12L5.29289 6.70711C4.90237 6.31658 4.90237 5.68342 5.29289 5.29289Z",
+      fill: "currentColor"
+    })
+  });
+};
+
+const SuccessSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 16 16",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm1.5 0a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Zm10.28-1.72-4.5 4.5a.75.75 0 0 1-1.06 0l-2-2a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018l1.47 1.47 3.97-3.97a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042Z"
+    })
+  });
+};
+const ErrorSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 16 16",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M4.47.22A.749.749 0 0 1 5 0h6c.199 0 .389.079.53.22l4.25 4.25c.141.14.22.331.22.53v6a.749.749 0 0 1-.22.53l-4.25 4.25A.749.749 0 0 1 11 16H5a.749.749 0 0 1-.53-.22L.22 11.53A.749.749 0 0 1 0 11V5c0-.199.079-.389.22-.53Zm.84 1.28L1.5 5.31v5.38l3.81 3.81h5.38l3.81-3.81V5.31L10.69 1.5ZM8 4a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"
+    })
+  });
+};
+const InfoSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 16 16",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"
+    })
+  });
+};
+const WarningSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 16 16",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
+    })
+  });
+};
+
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  @layer navi {
+    .navi_message_box {
+      --background-color-info: #eaf6fc;
+      --color-info: #376cc2;
+      --background-color-success: #ecf9ef;
+      --color-success: #50c464;
+      --background-color-warning: #fdf6e3;
+      --color-warning: #f19c05;
+      --background-color-error: #fcebed;
+      --color-error: #eb364b;
+    }
+  }
+
+  .navi_message_box {
+    --x-background-color: var(--background-color-info);
+    --x-color: var(--color-info);
+    /* color: var(--x-color); */
+    background-color: var(--x-background-color);
+  }
+
+  .navi_message_box[data-level="info"] {
+    --x-background-color: var(--background-color-info);
+    --x-color: var(--color-info);
+  }
+  .navi_message_box[data-level="success"] {
+    --x-background-color: var(--background-color-success);
+    --x-color: var(--color-success);
+  }
+  .navi_message_box[data-level="warning"] {
+    --x-background-color: var(--background-color-warning);
+    --x-color: var(--color-warning);
+  }
+  .navi_message_box[data-level="error"] {
+    --x-background-color: var(--background-color-error);
+    --x-color: var(--color-error);
+  }
+
+  .navi_message_box[data-left-stripe] {
+    border-left: 6px solid var(--x-color);
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+  }
+`;
+Object.assign(PSEUDO_CLASSES, {
+  ":-navi-info": {
+    add: el => {
+      el.setAttribute("data-level", "info");
+    },
+    remove: el => {
+      if (el.getAttribute("data-level") === "info") {
+        el.removeAttribute("data-level");
+      }
+    }
+  },
+  ":-navi-success": {
+    add: el => {
+      el.setAttribute("data-level", "success");
+    },
+    remove: el => {
+      if (el.getAttribute("data-level") === "success") {
+        el.removeAttribute("data-level");
+      }
+    }
+  },
+  ":-navi-warning": {
+    add: el => {
+      el.setAttribute("data-level", "warning");
+    },
+    remove: el => {
+      if (el.getAttribute("data-level") === "warning") {
+        el.removeAttribute("data-level");
+      }
+    }
+  },
+  ":-navi-error": {
+    add: el => {
+      el.setAttribute("data-level", "error");
+    },
+    remove: el => {
+      if (el.getAttribute("data-level") === "error") {
+        el.removeAttribute("data-level");
+      }
+    }
+  }
+});
+const MessageBoxPseudoClasses = [":-navi-info", ":-navi-success", ":-navi-warning", ":-navi-error"];
+const MessageBoxLevelContext = createContext();
+const MessageBoxReportTitleChildContext = createContext();
+const MessageBox = ({
+  level = "info",
+  padding = "sm",
+  icon,
+  leftStripe,
+  children,
+  onClose,
+  ...rest
+}) => {
+  const [hasTitleChild, setHasTitleChild] = useState(false);
+  const innerLeftStripe = leftStripe === undefined ? hasTitleChild : leftStripe;
+  if (icon === true) {
+    icon = level === "info" ? jsx(InfoSvg, {}) : level === "success" ? jsx(SuccessSvg, {}) : level === "warning" ? jsx(WarningSvg, {}) : level === "error" ? jsx(ErrorSvg, {}) : null;
+  } else if (typeof icon === "function") {
+    const Comp = icon;
+    icon = jsx(Comp, {});
+  }
+  return jsx(Box, {
+    as: "div",
+    role: level === "info" ? "status" : "alert",
+    "data-left-stripe": innerLeftStripe ? "" : undefined,
+    column: true,
+    alignY: "start",
+    spacing: "sm",
+    ...rest,
+    className: withPropsClassName("navi_message_box", rest.className),
+    padding: padding,
+    pseudoClasses: MessageBoxPseudoClasses,
+    basePseudoState: {
+      ":-navi-info": level === "info",
+      ":-navi-success": level === "success",
+      ":-navi-warning": level === "warning",
+      ":-navi-error": level === "error"
+    },
+    children: jsx(MessageBoxLevelContext.Provider, {
+      value: level,
+      children: jsxs(MessageBoxReportTitleChildContext.Provider, {
+        value: setHasTitleChild,
+        children: [icon && jsx(Icon, {
+          color: "var(--x-color)",
+          children: icon
+        }), jsx(Text, {
+          children: children
+        }), onClose && jsx(Button, {
+          action: onClose,
+          discrete: true,
+          border: "none",
+          "data-nohover": "",
+          alignX: "center",
+          alignY: "center",
+          width: "1em",
+          height: "1em",
+          pseudoStyle: {
+            ":hover": {
+              backgroundColor: "rgba(0, 0, 0, 0.1)"
+            }
+          },
+          children: jsx(Icon, {
+            children: jsx(CloseSvg, {})
+          })
+        })]
+      })
+    })
+  });
+};
+
+const TitleLevelContext = createContext();
+const TitlePseudoClasses = [":hover"];
+const Title = props => {
+  const messageBoxLevel = useContext(MessageBoxLevelContext);
+  const innerAs = props.as || (messageBoxLevel ? "h4" : "h1");
+  const titleLevel = parseInt(innerAs.slice(1));
+  const reportTitleToMessageBox = useContext(MessageBoxReportTitleChildContext);
+  reportTitleToMessageBox?.(true);
+  return jsx(TitleLevelContext.Provider, {
+    value: titleLevel,
+    children: jsx(Text, {
+      bold: true,
+      className: withPropsClassName("navi_title"),
+      as: messageBoxLevel ? "h4" : "h1",
+      marginTop: messageBoxLevel ? "0" : undefined,
+      marginBottom: messageBoxLevel ? "sm" : undefined,
+      color: messageBoxLevel ? `var(--x-color)` : undefined,
+      ...props,
+      pseudoClasses: TitlePseudoClasses,
+      children: props.children
+    })
+  });
+};
+
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_link {
@@ -14008,50 +15182,90 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     outline-style: solid;
     outline-color: var(--link-outline-color);
     cursor: var(--x-link-cursor);
+
+    /* Hover */
+    &[data-hover] {
+      --x-link-color: var(--x-link-color-hover);
+      --x-link-text-decoration: var(--x-link-text-decoration-hover);
+    }
+    /* Focus */
+    &[data-focus] {
+      position: relative;
+      z-index: 1; /* Ensure focus outline is above other elements */
+    }
+    &[data-focus-visible] {
+      outline-width: 2px;
+    }
+    /* Visited */
+    &[data-visited] {
+      --x-link-color: var(--x-link-color-visited);
+      &[data-anchor] {
+        /* Visited is meant to help user see what links he already seen / what remains to discover */
+        /* But anchor links are already in the area user is currently seeing */
+        /* No need for a special color for visited anchors */
+        --x-link-color: var(--link-color);
+      }
+    }
+    /* Selected */
+    &[aria-selected] {
+      position: relative;
+    }
+    &[aria-selected="true"] {
+      background-color: light-dark(#bbdefb, #2563eb);
+    }
+    &[aria-selected] input[type="checkbox"] {
+      position: absolute;
+      opacity: 0;
+    }
+    /* Active */
+    &[data-active] {
+      /* Redefine it otherwise [data-visited] prevails */
+      --x-link-color: var(--x-link-color-active);
+    }
+    /* Readonly */
+    &[data-readonly] > * {
+      opacity: 0.5;
+    }
+    /* Disabled */
+    &[data-disabled] {
+      pointer-events: none;
+    }
+    &[data-disabled] > * {
+      opacity: 0.5;
+    }
+    /* Reveal on interaction */
+    &[data-reveal-on-interaction] {
+      position: absolute !important;
+      top: 0;
+      left: -1em;
+      width: 1em;
+      height: 1em;
+      font-size: 1em;
+      opacity: 0;
+      /* The anchor link is displayed only on :hover */
+      /* So we "need" a visual indicator when it's shown by focus */
+      /* (even if it's focused by mouse aka not :focus-visible) */
+      /* otherwise we might wonder why we see this UI element */
+      &[data-focus] {
+        outline-width: 2px;
+      }
+      &[data-hover],
+      &[data-focus],
+      &[data-focus-visible] {
+        opacity: 1;
+      }
+    }
   }
-  /* Hover */
-  .navi_link[data-hover] {
-    --x-link-color: var(--x-link-color-hover);
-    --x-link-text-decoration: var(--x-link-text-decoration-hover);
+
+  *:hover > .navi_link[data-reveal-on-interaction] {
+    opacity: 1;
   }
-  /* Focus */
-  .navi_link[data-focus] {
-    position: relative;
-    z-index: 1; /* Ensure focus outline is above other elements */
+
+  .navi_text .navi_link[data-reveal-on-interaction] {
+    top: 0.1em;
   }
-  .navi_link[data-focus-visible] {
-    outline-width: 2px;
-  }
-  /* Visited */
-  .navi_link[data-visited] {
-    --x-link-color: var(--x-link-color-visited);
-  }
-  /* Selected */
-  .navi_link[aria-selected] {
-    position: relative;
-  }
-  .navi_link[aria-selected="true"] {
-    background-color: light-dark(#bbdefb, #2563eb);
-  }
-  .navi_link[aria-selected] input[type="checkbox"] {
-    position: absolute;
-    opacity: 0;
-  }
-  /* Active */
-  .navi_link[data-active] {
-    /* Redefine it otherwise [data-visited] prevails */
-    --x-link-color: var(--x-link-color-active);
-  }
-  /* Readonly */
-  .navi_link[data-readonly] > * {
-    opacity: 0.5;
-  }
-  /* Disabled */
-  .navi_link[data-disabled] {
-    pointer-events: none;
-  }
-  .navi_link[data-disabled] > * {
-    opacity: 0.5;
+  .navi_title .navi_link[data-reveal-on-interaction] {
+    top: 0.25em;
   }
 `;
 const LinkStyleCSSVars = {
@@ -14068,20 +15282,20 @@ const LinkStyleCSSVars = {
     color: "--link-color-active"
   }
 };
-const LinkPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":visited", ":-navi-loading", ":-navi-link-internal", ":-navi-link-external", ":-navi-link-anchor", ":-navi-link-current"];
+const LinkPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":visited", ":-navi-loading", ":-navi-href-internal", ":-navi-href-external", ":-navi-href-anchor", ":-navi-href-current"];
 const LinkPseudoElements = ["::-navi-loader"];
 Object.assign(PSEUDO_CLASSES, {
-  ":-navi-link-internal": {
-    attribute: "data-link-internal"
+  ":-navi-href-internal": {
+    attribute: "data-href-internal"
   },
-  ":-navi-link-external": {
-    attribute: "data-link-external"
+  ":-navi-href-external": {
+    attribute: "data-href-external"
   },
-  ":-navi-link-anchor": {
-    attribute: "data-link-anchor"
+  ":-navi-href-anchor": {
+    attribute: "data-href-anchor"
   },
-  ":-navi-link-current": {
-    attribute: "data-link-current"
+  ":-navi-href-current": {
+    attribute: "data-href-current"
   }
 });
 const Link = props => {
@@ -14102,6 +15316,7 @@ const LinkBasic = props => {
   });
 };
 const LinkPlain = props => {
+  const titleLevel = useContext(TitleLevelContext);
   const {
     loading,
     readOnly,
@@ -14115,11 +15330,13 @@ const LinkPlain = props => {
     target,
     rel,
     preventDefault,
+    anchor,
     // visual
     blankTargetIcon,
     anchorIcon,
     icon,
     spacing,
+    revealOnInteraction = Boolean(titleLevel),
     children,
     ...rest
   } = props;
@@ -14130,15 +15347,15 @@ const LinkPlain = props => {
   useConstraints(ref, constraints);
   const shouldDimColor = readOnly || disabled;
   useDimColorWhen(ref, shouldDimColor);
-  // subscribe to document url to re-render and re-compute getLinkTargetInfo
+  // subscribe to document url to re-render and re-compute getHrefTargetInfo
   useDocumentUrl();
   const {
-    targetIsSameSite,
-    targetIsAnchor,
-    targetIsCurrent
-  } = getLinkTargetInfo(href);
-  const innerTarget = target === undefined ? targetIsSameSite ? "_self" : "_blank" : target;
-  const innerRel = rel === undefined ? targetIsSameSite ? undefined : "noopener noreferrer" : rel;
+    isSameSite,
+    isAnchor,
+    isCurrent
+  } = getHrefTargetInfo(href);
+  const innerTarget = target === undefined ? isSameSite ? "_self" : "_blank" : target;
+  const innerRel = rel === undefined ? isSameSite ? undefined : "noopener noreferrer" : rel;
   let innerIcon;
   if (icon === undefined) {
     // Check for special protocol or domain-specific icons first
@@ -14153,7 +15370,7 @@ const LinkPlain = props => {
     } else {
       // Fall back to default icon logic
       const innerBlankTargetIcon = blankTargetIcon === undefined ? innerTarget === "_blank" : blankTargetIcon;
-      const innerAnchorIcon = anchorIcon === undefined ? targetIsAnchor : anchorIcon;
+      const innerAnchorIcon = anchorIcon === undefined ? isAnchor : anchorIcon;
       if (innerBlankTargetIcon) {
         innerIcon = innerBlankTargetIcon === true ? jsx(LinkBlankTargetSvg, {}) : innerBlankTargetIcon;
       } else if (innerAnchorIcon) {
@@ -14164,9 +15381,11 @@ const LinkPlain = props => {
     innerIcon = icon;
   }
   return jsxs(Box, {
+    as: "a",
+    color: anchor && !children ? "inherit" : undefined,
+    id: anchor ? href.slice(1) : undefined,
     ...rest,
     ref: ref,
-    as: "a",
     href: href,
     rel: innerRel,
     target: innerTarget === "_self" ? undefined : target,
@@ -14175,6 +15394,8 @@ const LinkPlain = props => {
     spacing: "pre"
     // Visual
     ,
+    "data-anchor": anchor ? "" : undefined,
+    "data-reveal-on-interaction": revealOnInteraction ? "" : undefined,
     baseClassName: "navi_link",
     styleCSSVars: LinkStyleCSSVars,
     pseudoClasses: LinkPseudoClasses,
@@ -14184,10 +15405,10 @@ const LinkPlain = props => {
       ":disabled": disabled,
       ":visited": visited,
       ":-navi-loading": loading,
-      ":-navi-link-internal": targetIsSameSite,
-      ":-navi-link-external": !targetIsSameSite,
-      ":-navi-link-anchor": targetIsAnchor,
-      ":-navi-link-current": targetIsCurrent
+      ":-navi-href-internal": isSameSite,
+      ":-navi-href-external": !isSameSite,
+      ":-navi-href-anchor": isAnchor,
+      ":-navi-href-current": isCurrent
     },
     onClick: e => {
       if (preventDefault) {
@@ -14383,7 +15604,7 @@ const RouteLink = ({
     ...rest,
     href: url,
     pseudoState: {
-      ":-navi-link-current": routeIsActive
+      ":-navi-href-current": routeIsActive
     },
     children: children
   });
@@ -14934,464 +16155,6 @@ const Label = props => {
       })
     })
   });
-};
-
-const debugUIState = (...args) => {
-};
-const debugUIGroup = (...args) => {
-};
-
-const UIStateControllerContext = createContext();
-const UIStateContext = createContext();
-const ParentUIStateControllerContext = createContext();
-
-const FieldNameContext = createContext();
-const ReadOnlyContext = createContext();
-const DisabledContext = createContext();
-const RequiredContext = createContext();
-const LoadingContext = createContext();
-const LoadingElementContext = createContext();
-
-/**
- * UI State Controller Hook
- *
- * Manages the relationship between external state (props) and UI state (what user sees).
- * Allows UI state to diverge temporarily for responsive interactions, with mechanisms
- * to sync back to external state when needed.
- *
- * Key features:
- * - Immediate UI updates for responsive interactions
- * - State divergence with sync capabilities (resetUIState)
- * - Group integration for coordinated form inputs
- * - External control via custom events (onsetuistate/onresetuistate)
- * - Error recovery and form reset support
- *
- * See README.md for detailed usage examples and patterns.
- */
-const useUIStateController = (
-  props,
-  componentType,
-  {
-    statePropName = "value",
-    defaultStatePropName = "defaultValue",
-    fallbackState = "",
-    getStateFromProp = (prop) => prop,
-    getPropFromState = (state) => state,
-  } = {},
-) => {
-  const parentUIStateController = useContext(ParentUIStateControllerContext);
-  const formContext = useContext(FormContext);
-  const { id, name, onUIStateChange, action } = props;
-  const uncontrolled = !formContext && !action;
-  const [navState, setNavState] = useNavState(id);
-
-  const uiStateControllerRef = useRef();
-  const hasStateProp = Object.hasOwn(props, statePropName);
-  const state = props[statePropName];
-  const defaultState = props[defaultStatePropName];
-  const stateInitial = useInitialValue(() => {
-    if (hasStateProp) {
-      // controlled by state prop ("value" or "checked")
-      return getStateFromProp(state);
-    }
-    if (defaultState) {
-      // not controlled but want an initial state (a value or being checked)
-      return getStateFromProp(defaultState);
-    }
-    if (formContext && navState) {
-      // not controlled but want to use value from nav state
-      // (I think this should likely move earlier to win over the hasUIStateProp when it's undefined)
-      return getStateFromProp(navState);
-    }
-    return getStateFromProp(fallbackState);
-  });
-
-  /**
-   * This check is needed only for basic field because
-   * When using action/form we consider the action/form code
-   * will have a side effect that will re-render the component with the up-to-date state
-   *
-   * In practice we set the checked from the backend state
-   * We use action to fetch the new state and update the local state
-   * The component re-renders so it's the action/form that is considered as responsible
-   * to update the state and as a result allowed to have "checked"/"value" prop without "onUIStateChange"
-   */
-  const readOnly =
-    uncontrolled &&
-    hasStateProp &&
-    !onUIStateChange &&
-    !parentUIStateController;
-
-  const [
-    notifyParentAboutChildMount,
-    notifyParentAboutChildUIStateChange,
-    notifyParentAboutChildUnmount,
-  ] = useParentControllerNotifiers(
-    parentUIStateController,
-    uiStateControllerRef);
-  useLayoutEffect(() => {
-    notifyParentAboutChildMount();
-    return notifyParentAboutChildUnmount;
-  }, []);
-
-  const existingUIStateController = uiStateControllerRef.current;
-  if (existingUIStateController) {
-    existingUIStateController._checkForUpdates({
-      readOnly,
-      name,
-      onUIStateChange,
-      getPropFromState,
-      getStateFromProp,
-      hasStateProp,
-      stateInitial,
-      state,
-    });
-    return existingUIStateController;
-  }
-  debugUIState(
-    `Creating "${componentType}" ui state controller - initial state:`,
-    JSON.stringify(stateInitial),
-  );
-  const [publishUIState, subscribeUIState] = createPubSub();
-  const uiStateController = {
-    _checkForUpdates: ({
-      readOnly,
-      name,
-      onUIStateChange,
-      getPropFromState,
-      getStateFromProp,
-      hasStateProp,
-      stateInitial,
-      state,
-    }) => {
-      uiStateController.readOnly = readOnly;
-      uiStateController.name = name;
-      uiStateController.onUIStateChange = onUIStateChange;
-      uiStateController.getPropFromState = getPropFromState;
-      uiStateController.getStateFromProp = getStateFromProp;
-      uiStateController.stateInitial = stateInitial;
-
-      if (hasStateProp) {
-        uiStateController.hasStateProp = true;
-        const currentState = uiStateController.state;
-        if (state !== currentState) {
-          uiStateController.state = state;
-          uiStateController.setUIState(
-            uiStateController.getPropFromState(state),
-            new CustomEvent("state_prop"),
-          );
-        }
-      } else if (uiStateController.hasStateProp) {
-        uiStateController.hasStateProp = false;
-        uiStateController.state = uiStateController.stateInitial;
-      }
-    },
-
-    componentType,
-    readOnly,
-    name,
-    hasStateProp,
-    state: stateInitial,
-    uiState: stateInitial,
-    onUIStateChange,
-    getPropFromState,
-    getStateFromProp,
-    setUIState: (prop, e) => {
-      const newUIState = uiStateController.getStateFromProp(prop);
-      if (formContext) {
-        setNavState(prop);
-      }
-      const currentUIState = uiStateController.uiState;
-      if (newUIState === currentUIState) {
-        return;
-      }
-      debugUIState(
-        `${componentType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updating to ${JSON.stringify(newUIState)}`,
-      );
-      uiStateController.uiState = newUIState;
-      publishUIState(newUIState);
-      uiStateController.onUIStateChange?.(newUIState, e);
-      notifyParentAboutChildUIStateChange(e);
-    },
-    resetUIState: (e) => {
-      const currentState = uiStateController.state;
-      uiStateController.setUIState(currentState, e);
-    },
-    actionEnd: () => {
-      if (formContext) {
-        setNavState(undefined);
-      }
-    },
-    subscribe: subscribeUIState,
-  };
-  uiStateControllerRef.current = uiStateController;
-  return uiStateController;
-};
-
-const NO_PARENT = [() => {}, () => {}, () => {}];
-const useParentControllerNotifiers = (
-  parentUIStateController,
-  uiStateControllerRef,
-  componentType,
-) => {
-  return useMemo(() => {
-    if (!parentUIStateController) {
-      return NO_PARENT;
-    }
-
-    parentUIStateController.componentType;
-    const notifyParentAboutChildMount = () => {
-      const uiStateController = uiStateControllerRef.current;
-      parentUIStateController.registerChild(uiStateController);
-    };
-
-    const notifyParentAboutChildUIStateChange = (e) => {
-      const uiStateController = uiStateControllerRef.current;
-      parentUIStateController.onChildUIStateChange(uiStateController, e);
-    };
-
-    const notifyParentAboutChildUnmount = () => {
-      const uiStateController = uiStateControllerRef.current;
-      parentUIStateController.unregisterChild(uiStateController);
-    };
-
-    return [
-      notifyParentAboutChildMount,
-      notifyParentAboutChildUIStateChange,
-      notifyParentAboutChildUnmount,
-    ];
-  }, []);
-};
-
-/**
- * UI Group State Controller Hook
- *
- * This hook manages a collection of child UI state controllers and aggregates their states
- * into a unified group state. It provides a way to coordinate multiple form inputs that
- * work together as a logical unit.
- *
- * What it provides:
- *
- * 1. **Child State Aggregation**:
- *    - Collects state from multiple child UI controllers
- *    - Combines them into a single meaningful group state
- *    - Updates group state automatically when any child changes
- *
- * 2. **Child Filtering**:
- *    - Can filter which child controllers to include based on component type
- *    - Useful for mixed content where only specific inputs matter
- *    - Enables type-safe aggregation patterns
- *
- * 3. **Group Operations**:
- *    - Provides `resetUIState()` that cascades to all children
- *    - Enables group-level operations like "clear all" or "reset form section"
- *    - Maintains consistency across related inputs
- *
- * 4. **External State Management**:
- *    - Notifies external code of group state changes via `onUIStateChange`
- *    - Allows external systems to react to group-level state changes
- *    - Supports complex form validation and submission logic
- *
- * Why use it:
- * - When you have multiple related inputs that should be treated as one logical unit
- * - For implementing checkbox lists, radio groups, or form sections
- * - When you need to perform operations on multiple inputs simultaneously
- * - To aggregate input states for validation or submission
- *
- * How it works:
- * - Child controllers automatically register themselves when mounted
- * - Group controller listens for child state changes and re-aggregates
- * - Custom aggregation function determines how child states combine
- * - Group state updates trigger notifications to external code
- *
- * @param {Object} props - Component props containing onUIStateChange callback
- * @param {string} componentType - Type identifier for this group controller
- * @param {Object} config - Configuration object
- * @param {string} [config.childComponentType] - Filter children by this type (e.g., "checkbox")
- * @param {Function} config.aggregateChildStates - Function to aggregate child states
- * @param {any} [config.emptyState] - State to use when no children have values
- * @returns {Object} UI group state controller
- *
- * Usage Examples:
- * - **Checkbox List**: Aggregates multiple checkboxes into array of checked values
- * - **Radio Group**: Manages radio buttons to ensure single selection
- * - **Form Section**: Groups related inputs for validation and reset operations
- * - **Dynamic Lists**: Handles variable number of repeated input groups
- */
-
-const useUIGroupStateController = (
-  props,
-  componentType,
-  { childComponentType, aggregateChildStates, emptyState = undefined },
-) => {
-  if (typeof aggregateChildStates !== "function") {
-    throw new TypeError("aggregateChildStates must be a function");
-  }
-  const parentUIStateController = useContext(ParentUIStateControllerContext);
-  const { onUIStateChange, name } = props;
-  const childUIStateControllerArrayRef = useRef([]);
-  const childUIStateControllerArray = childUIStateControllerArrayRef.current;
-  const uiStateControllerRef = useRef();
-
-  const groupIsRenderingRef = useRef(false);
-  const pendingChangeRef = useRef(false);
-  groupIsRenderingRef.current = true;
-  pendingChangeRef.current = false;
-
-  const [
-    notifyParentAboutChildMount,
-    notifyParentAboutChildUIStateChange,
-    notifyParentAboutChildUnmount,
-  ] = useParentControllerNotifiers(
-    parentUIStateController,
-    uiStateControllerRef);
-  useLayoutEffect(() => {
-    notifyParentAboutChildMount();
-    return notifyParentAboutChildUnmount;
-  }, []);
-
-  const onChange = (_, e) => {
-    if (groupIsRenderingRef.current) {
-      pendingChangeRef.current = true;
-      return;
-    }
-    const newUIState = aggregateChildStates(
-      childUIStateControllerArray,
-      emptyState,
-    );
-    const uiStateController = uiStateControllerRef.current;
-    uiStateController.setUIState(newUIState, e);
-  };
-
-  useLayoutEffect(() => {
-    groupIsRenderingRef.current = false;
-    if (pendingChangeRef.current) {
-      pendingChangeRef.current = false;
-      onChange(
-        null,
-        new CustomEvent(`${componentType}_batched_ui_state_update`),
-      );
-    }
-  });
-
-  const existingUIStateController = uiStateControllerRef.current;
-  if (existingUIStateController) {
-    existingUIStateController.name = name;
-    existingUIStateController.onUIStateChange = onUIStateChange;
-    return existingUIStateController;
-  }
-
-  const [publishUIState, subscribeUIState] = createPubSub();
-  const isMonitoringChild = (childUIStateController) => {
-    if (childComponentType === "*") {
-      return true;
-    }
-    return childUIStateController.componentType === childComponentType;
-  };
-  const uiStateController = {
-    componentType,
-    name,
-    onUIStateChange,
-    uiState: emptyState,
-    setUIState: (newUIState, e) => {
-      const currentUIState = uiStateController.uiState;
-      if (newUIState === currentUIState) {
-        return;
-      }
-      uiStateController.uiState = newUIState;
-      debugUIGroup(
-        `${componentType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
-      );
-      publishUIState(newUIState);
-      uiStateController.onUIStateChange?.(newUIState, e);
-      notifyParentAboutChildUIStateChange(e);
-    },
-    registerChild: (childUIStateController) => {
-      if (!isMonitoringChild(childUIStateController)) {
-        return;
-      }
-      const childComponentType = childUIStateController.componentType;
-      childUIStateControllerArray.push(childUIStateController);
-      debugUIGroup(
-        `${componentType}.registerChild("${childComponentType}") -> registered (total: ${childUIStateControllerArray.length})`,
-      );
-      onChange(
-        childUIStateController,
-        new CustomEvent(`${childComponentType}_mount`),
-      );
-    },
-    onChildUIStateChange: (childUIStateController, e) => {
-      if (!isMonitoringChild(childUIStateController)) {
-        return;
-      }
-      debugUIGroup(
-        `${componentType}.onChildUIStateChange("${childComponentType}") to ${JSON.stringify(
-          childUIStateController.uiState,
-        )}`,
-      );
-      onChange(childUIStateController, e);
-    },
-    unregisterChild: (childUIStateController) => {
-      if (!isMonitoringChild(childUIStateController)) {
-        return;
-      }
-      const childComponentType = childUIStateController.componentType;
-      const index = childUIStateControllerArray.indexOf(childUIStateController);
-      if (index === -1) {
-        return;
-      }
-      childUIStateControllerArray.splice(index, 1);
-      debugUIGroup(
-        `${componentType}.unregisterChild("${childComponentType}") -> unregisteed (remaining: ${childUIStateControllerArray.length})`,
-      );
-      onChange(
-        childUIStateController,
-        new CustomEvent(`${childComponentType}_unmount`),
-      );
-    },
-    resetUIState: (e) => {
-      // we should likely batch the changes that will be reported for performances
-      for (const childUIStateController of childUIStateControllerArray) {
-        childUIStateController.resetUIState(e);
-      }
-    },
-    actionEnd: (e) => {
-      for (const childUIStateController of childUIStateControllerArray) {
-        childUIStateController.actionEnd(e);
-      }
-    },
-    subscribe: subscribeUIState,
-  };
-  uiStateControllerRef.current = uiStateController;
-  return uiStateController;
-};
-
-/**
- * Hook to track UI state from a UI state controller
- *
- * This hook allows external code to react to UI state changes without
- * causing the controller itself to re-create. It returns the current UI state
- * and will cause re-renders when the UI state changes.
- *
- * @param {Object} uiStateController - The UI state controller to track
- * @returns {any} The current UI state
- */
-const useUIState = (uiStateController) => {
-  const [trackedUIState, setTrackedUIState] = useState(
-    uiStateController.uiState,
-  );
-
-  useLayoutEffect(() => {
-    // Subscribe to UI state changes
-    const unsubscribe = uiStateController.subscribe(setTrackedUIState);
-
-    // Sync with current state in case it changed before subscription
-    setTrackedUIState(uiStateController.uiState);
-
-    return unsubscribe;
-  }, [uiStateController]);
-
-  return trackedUIState;
 };
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
@@ -16722,492 +17485,6 @@ const Editable = forwardRef((props, ref) => {
     })]
   });
 });
-
-const useFormEvents = (
-  elementRef,
-  {
-    onFormReset,
-    onFormActionRequested,
-    onFormActionPrevented,
-    onFormActionStart,
-    onFormActionAbort,
-    onFormActionError,
-    onFormActionEnd,
-  },
-) => {
-  onFormReset = useStableCallback(onFormReset);
-  onFormActionRequested = useStableCallback(onFormActionRequested);
-  onFormActionPrevented = useStableCallback(onFormActionPrevented);
-  onFormActionStart = useStableCallback(onFormActionStart);
-  onFormActionAbort = useStableCallback(onFormActionAbort);
-  onFormActionError = useStableCallback(onFormActionError);
-  onFormActionEnd = useStableCallback(onFormActionEnd);
-
-  useLayoutEffect(() => {
-    const element = elementRef.current;
-    if (!element) {
-      return null;
-    }
-
-    let form = element.form;
-    if (!form) {
-      // some non input elements may want to listen form events (<RadioList> is a <div>)
-      form = element.closest("form");
-      if (!form) {
-        console.warn("No form found for element", element);
-        return null;
-      }
-    }
-    return addManyEventListeners(form, {
-      reset: onFormReset,
-      actionrequested: onFormActionRequested,
-      actionprevented: onFormActionPrevented,
-      actionstart: onFormActionStart,
-      actionabort: onFormActionAbort,
-      actionerror: onFormActionError,
-      actionend: onFormActionEnd,
-    });
-  }, [
-    onFormReset,
-    onFormActionRequested,
-    onFormActionPrevented,
-    onFormActionStart,
-    onFormActionAbort,
-    onFormActionError,
-    onFormActionEnd,
-  ]);
-};
-
-installImportMetaCss(import.meta);import.meta.css = /* css */`
-  @layer navi {
-    .navi_button {
-      --button-outline-width: 1px;
-      --button-border-width: 1px;
-      --button-border-radius: 2px;
-      /* default */
-      --button-outline-color: var(--navi-focus-outline-color);
-      --button-loader-color: var(--navi-loader-color);
-      --button-border-color: light-dark(#767676, #8e8e93);
-      --button-background-color: light-dark(#f3f4f6, #2d3748);
-      --button-color: currentColor;
-
-      /* Hover */
-      --button-border-color-hover: color-mix(
-        in srgb,
-        var(--button-border-color) 70%,
-        black
-      );
-      --button-background-color-hover: color-mix(
-        in srgb,
-        var(--button-background-color) 95%,
-        black
-      );
-      --button-color-hover: var(--button-color);
-      /* Active */
-      --button-border-color-active: color-mix(
-        in srgb,
-        var(--button-border-color) 90%,
-        black
-      );
-      /* Readonly */
-      --button-border-color-readonly: color-mix(
-        in srgb,
-        var(--button-border-color) 30%,
-        white
-      );
-      --button-background-color-readonly: var(--button-background-color);
-      --button-color-readonly: color-mix(
-        in srgb,
-        var(--button-color) 30%,
-        transparent
-      );
-      /* Disabled */
-      --button-border-color-disabled: var(--button-border-color-readonly);
-      --button-background-color-disabled: var(
-        --button-background-color-readonly
-      );
-      --button-color-disabled: var(--button-color-readonly);
-    }
-  }
-
-  .navi_button {
-    /* Internal css vars are the one controlling final values */
-    /* allowing to override them on interactions (like hover, disabled, etc.) */
-    --x-button-outline-width: var(--button-outline-width);
-    --x-button-border-radius: var(--button-border-radius);
-    --x-button-border-width: var(--button-border-width);
-    --x-button-outer-width: calc(
-      var(--button-x-border-width) + var(--x-button-outline-width)
-    );
-    --x-button-outline-color: var(--button-outline-color);
-    --x-button-border-color: var(--button-border-color);
-    --x-button-background-color: var(--button-background-color);
-    --x-button-color: var(--button-color);
-
-    position: relative;
-    box-sizing: border-box;
-    padding: 0;
-    vertical-align: middle;
-    background: none;
-    border: none;
-    border-radius: var(--x-button-border-radius);
-    outline: none;
-    cursor: pointer;
-  }
-  .navi_button_content {
-    position: relative;
-    display: inherit;
-    box-sizing: border-box;
-    width: 100%;
-    height: 100%;
-    padding-top: var(
-      --button-padding-top,
-      var(--button-padding-y, var(--button-padding, 1px))
-    );
-    padding-right: var(
-      --button-padding-right,
-      var(--button-padding-x, var(--button-padding, 6px))
-    );
-    padding-bottom: var(
-      --button-padding-bottom,
-      var(--button-padding-y, var(--button-padding, 1px))
-    );
-    padding-left: var(
-      --button-padding-left,
-      var(--button-padding-x, var(--button-padding, 6px))
-    );
-    align-items: inherit;
-    justify-content: inherit;
-    color: var(--x-button-color);
-    background-color: var(--x-button-background-color);
-    border-width: var(--x-button-outer-width);
-    border-style: solid;
-    border-color: transparent;
-    border-radius: var(--x-button-border-radius);
-    outline-width: var(--x-button-border-width);
-    outline-style: solid;
-    outline-color: var(--x-button-border-color);
-    outline-offset: calc(-1 * (var(--x-button-border-width)));
-    transition-property: transform;
-    transition-duration: 0.15s;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .navi_button_shadow {
-    position: absolute;
-    inset: calc(-1 * var(--x-button-outer-width));
-    border-radius: inherit;
-    pointer-events: none;
-  }
-
-  /* Hover */
-  .navi_button[data-hover] {
-    --x-button-border-color: var(--button-border-color-hover);
-    --x-button-background-color: var(--button-background-color-hover);
-    --x-button-color: var(--button-color-hover);
-  }
-  .navi_button[data-nohover] {
-    --x-button-border-color: var(--button-border-color);
-    --x-button-background-color: var(--button-background-color);
-    --x-button-color: var(--button-color);
-  }
-  /* Active */
-  .navi_button[data-active] {
-    --x-button-outline-color: var(--button-border-color-active);
-  }
-  .navi_button[data-active] .navi_button_content {
-    transform: scale(0.9);
-  }
-  .navi_button[data-active] .navi_button_shadow {
-    box-shadow:
-      inset 0 3px 6px rgba(0, 0, 0, 0.2),
-      inset 0 1px 2px rgba(0, 0, 0, 0.3),
-      inset 0 0 0 1px rgba(0, 0, 0, 0.1),
-      inset 2px 0 4px rgba(0, 0, 0, 0.1),
-      inset -2px 0 4px rgba(0, 0, 0, 0.1);
-  }
-  /* Readonly */
-  .navi_button[data-readonly] {
-    --x-button-border-color: var(--button-border-color-readonly);
-    --x-button-background-color: var(--button-background-color-readonly);
-    --x-button-color: var(--button-color-readonly);
-  }
-  /* Focus */
-  .navi_button[data-focus-visible] {
-    --x-button-border-color: var(--x-button-outline-color);
-  }
-  .navi_button[data-focus-visible] .navi_button_content {
-    outline-width: var(--x-button-outer-width);
-    outline-offset: calc(-1 * var(--x-button-outer-width));
-  }
-  /* Disabled */
-  .navi_button[data-disabled] {
-    color: unset;
-    cursor: default;
-  }
-  .navi_button[data-disabled] {
-    --x-border-color: var(--button-border-color-disabled);
-    --x-background-color: var(--button-background-color-disabled);
-    --x-color: var(--button-color-disabled);
-  }
-  /* no active effect */
-  .navi_button[data-disabled] .navi_button_content {
-    transform: none;
-  }
-  .navi_button[data-disabled] .navi_button_shadow {
-    box-shadow: none;
-  }
-  /* Callout (info, warning, error) */
-  .navi_button[data-callout] {
-    --x-button-border-color: var(--callout-color);
-  }
-
-  /* Discrete variant */
-  .navi_button[data-discrete] {
-    --x-button-background-color: transparent;
-    --x-button-border-color: transparent;
-  }
-  .navi_button[data-discrete][data-hover] {
-    --x-button-border-color: var(--button-border-color-hover);
-  }
-  .navi_button[data-discrete][data-nohover] {
-    --x-button-border-color: transparent;
-  }
-  .navi_button[data-discrete][data-readonly] {
-    --x-button-border-color: transparent;
-  }
-  .navi_button[data-discrete][data-disabled] {
-    --x-button-border-color: transparent;
-  }
-
-  .navi_button > img {
-    border-radius: inherit;
-  }
-`;
-const Button = props => {
-  return renderActionableComponent(props, {
-    Basic: ButtonBasic,
-    WithAction: ButtonWithAction,
-    InsideForm: ButtonInsideForm,
-    WithActionInsideForm: ButtonWithActionInsideForm
-  });
-};
-const ButtonStyleCSSVars = {
-  "outlineWidth": "--button-outline-width",
-  "borderWidth": "--button-border-width",
-  "borderRadius": "--button-border-radius",
-  "paddingTop": "--button-padding-top",
-  "paddingRight": "--button-padding-right",
-  "paddingBottom": "--button-padding-bottom",
-  "paddingLeft": "--button-padding-left",
-  "backgroundColor": "--button-background-color",
-  "borderColor": "--button-border-color",
-  "color": "--button-color",
-  ":hover": {
-    backgroundColor: "--button-background-color-hover",
-    borderColor: "--button-border-color-hover",
-    color: "--button-color-hover"
-  },
-  ":active": {
-    borderColor: "--button-border-color-active"
-  },
-  ":read-only": {
-    backgroundColor: "--button-background-color-readonly",
-    borderColor: "--button-border-color-readonly",
-    color: "--button-color-readonly"
-  },
-  ":disabled": {
-    backgroundColor: "--button-background-color-disabled",
-    borderColor: "--button-border-color-disabled",
-    color: "--button-color-disabled"
-  }
-};
-const ButtonPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
-const ButtonPseudoElements = ["::-navi-loader"];
-const ButtonBasic = props => {
-  const contextLoading = useContext(LoadingContext);
-  const contextLoadingElement = useContext(LoadingElementContext);
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
-  const {
-    readOnly,
-    disabled,
-    loading,
-    constraints = [],
-    autoFocus,
-    // visual
-    discrete,
-    children,
-    ...rest
-  } = props;
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
-  useAutoFocus(ref, autoFocus);
-  useConstraints(ref, constraints);
-  const innerLoading = loading || contextLoading && contextLoadingElement === ref.current;
-  const innerReadOnly = readOnly || contextReadOnly || innerLoading;
-  const innerDisabled = disabled || contextDisabled;
-  const renderButtonContent = buttonProps => {
-    return jsxs(Text, {
-      ...buttonProps,
-      className: "navi_button_content",
-      children: [children, jsx("span", {
-        className: "navi_button_shadow"
-      })]
-    });
-  };
-  const renderButtonContentMemoized = useCallback(renderButtonContent, []);
-  return jsxs(Box, {
-    ...rest,
-    as: "button",
-    ref: ref,
-    "data-discrete": discrete ? "" : undefined,
-    "data-readonly-silent": innerLoading ? "" : undefined,
-    "data-callout-arrow-x": "center",
-    "aria-busy": innerLoading
-    // style management
-    ,
-    baseClassName: "navi_button",
-    styleCSSVars: ButtonStyleCSSVars,
-    pseudoClasses: ButtonPseudoClasses,
-    pseudoElements: ButtonPseudoElements,
-    basePseudoState: {
-      ":read-only": innerReadOnly,
-      ":disabled": innerDisabled,
-      ":-navi-loading": innerLoading
-    },
-    visualSelector: ".navi_button_content",
-    hasChildFunction: true,
-    children: [jsx(LoaderBackground, {
-      loading: innerLoading,
-      inset: -1,
-      color: "var(--button-loader-color)"
-    }), renderButtonContentMemoized]
-  });
-};
-const ButtonWithAction = props => {
-  const {
-    action,
-    loading,
-    actionErrorEffect,
-    onActionPrevented,
-    onActionStart,
-    onActionError,
-    onActionEnd,
-    children,
-    ...rest
-  } = props;
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
-  const boundAction = useAction(action);
-  const {
-    loading: actionLoading
-  } = useActionStatus(boundAction);
-  const executeAction = useExecuteAction(ref, {
-    errorEffect: actionErrorEffect
-  });
-  const innerLoading = loading || actionLoading;
-  useActionEvents(ref, {
-    onPrevented: onActionPrevented,
-    onRequested: e => forwardActionRequested(e, boundAction),
-    onAction: executeAction,
-    onStart: onActionStart,
-    onError: onActionError,
-    onEnd: onActionEnd
-  });
-  return jsx(ButtonBasic
-  // put data-action first to help find it in devtools
-  , {
-    "data-action": boundAction.name,
-    ...rest,
-    ref: ref,
-    loading: innerLoading,
-    children: children
-  });
-};
-const ButtonInsideForm = props => {
-  const {
-    // eslint-disable-next-line no-unused-vars
-    formContext,
-    type,
-    children,
-    loading,
-    readOnly,
-    ...rest
-  } = props;
-  const innerLoading = loading;
-  const innerReadOnly = readOnly;
-  return jsx(ButtonBasic, {
-    ...rest,
-    type: type,
-    loading: innerLoading,
-    readOnly: innerReadOnly,
-    children: children
-  });
-};
-const ButtonWithActionInsideForm = props => {
-  const formAction = useContext(FormActionContext);
-  const {
-    // eslint-disable-next-line no-unused-vars
-    formContext,
-    // to avoid passing it to the button element
-    type,
-    action,
-    loading,
-    children,
-    onActionPrevented,
-    onActionStart,
-    onActionAbort,
-    onActionError,
-    onActionEnd,
-    ...rest
-  } = props;
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
-  const formParamsSignal = getActionPrivateProperties(formAction).paramsSignal;
-  const actionBoundToFormParams = useAction(action, formParamsSignal);
-  const {
-    loading: actionLoading
-  } = useActionStatus(actionBoundToFormParams);
-  const innerLoading = loading || actionLoading;
-  useFormEvents(ref, {
-    onFormActionPrevented: e => {
-      if (e.detail.action === actionBoundToFormParams) {
-        onActionPrevented?.(e);
-      }
-    },
-    onFormActionStart: e => {
-      if (e.detail.action === actionBoundToFormParams) {
-        onActionStart?.(e);
-      }
-    },
-    onFormActionAbort: e => {
-      if (e.detail.action === actionBoundToFormParams) {
-        onActionAbort?.(e);
-      }
-    },
-    onFormActionError: e => {
-      if (e.detail.action === actionBoundToFormParams) {
-        onActionError?.(e.detail.error);
-      }
-    },
-    onFormActionEnd: e => {
-      if (e.detail.action === actionBoundToFormParams) {
-        onActionEnd?.(e);
-      }
-    }
-  });
-  return jsx(ButtonBasic, {
-    "data-action": actionBoundToFormParams.name,
-    ...rest,
-    ref: ref,
-    type: type,
-    loading: innerLoading,
-    onactionrequested: e => {
-      forwardActionRequested(e, actionBoundToFormParams, e.target.form);
-    },
-    children: children
-  });
-};
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
@@ -21869,285 +22146,27 @@ const Caption = ({
 };
 
 const Code = props => {
+  if (props.box) {
+    return jsx(CodeBox, {
+      ...props
+    });
+  }
   return jsx(Text, {
-    ...props,
-    as: "code"
-  });
-};
-
-const CloseSvg = () => {
-  return jsx("svg", {
-    viewBox: "0 0 24 24",
-    fill: "none",
-    xmlns: "http://www.w3.org/2000/svg",
-    children: jsx("path", {
-      "fill-rule": "evenodd",
-      "clip-rule": "evenodd",
-      d: "M5.29289 5.29289C5.68342 4.90237 6.31658 4.90237 6.70711 5.29289L12 10.5858L17.2929 5.29289C17.6834 4.90237 18.3166 4.90237 18.7071 5.29289C19.0976 5.68342 19.0976 6.31658 18.7071 6.70711L13.4142 12L18.7071 17.2929C19.0976 17.6834 19.0976 18.3166 18.7071 18.7071C18.3166 19.0976 17.6834 19.0976 17.2929 18.7071L12 13.4142L6.70711 18.7071C6.31658 19.0976 5.68342 19.0976 5.29289 18.7071C4.90237 18.3166 4.90237 17.6834 5.29289 17.2929L10.5858 12L5.29289 6.70711C4.90237 6.31658 4.90237 5.68342 5.29289 5.29289Z",
-      fill: "currentColor"
-    })
-  });
-};
-
-const SuccessSvg = () => {
-  return jsx("svg", {
-    viewBox: "0 0 16 16",
-    fill: "currentColor",
-    children: jsx("path", {
-      d: "M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm1.5 0a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Zm10.28-1.72-4.5 4.5a.75.75 0 0 1-1.06 0l-2-2a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018l1.47 1.47 3.97-3.97a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042Z"
-    })
-  });
-};
-const ErrorSvg = () => {
-  return jsx("svg", {
-    viewBox: "0 0 16 16",
-    fill: "currentColor",
-    children: jsx("path", {
-      d: "M4.47.22A.749.749 0 0 1 5 0h6c.199 0 .389.079.53.22l4.25 4.25c.141.14.22.331.22.53v6a.749.749 0 0 1-.22.53l-4.25 4.25A.749.749 0 0 1 11 16H5a.749.749 0 0 1-.53-.22L.22 11.53A.749.749 0 0 1 0 11V5c0-.199.079-.389.22-.53Zm.84 1.28L1.5 5.31v5.38l3.81 3.81h5.38l3.81-3.81V5.31L10.69 1.5ZM8 4a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"
-    })
-  });
-};
-const InfoSvg = () => {
-  return jsx("svg", {
-    viewBox: "0 0 16 16",
-    fill: "currentColor",
-    children: jsx("path", {
-      d: "M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"
-    })
-  });
-};
-const WarningSvg = () => {
-  return jsx("svg", {
-    viewBox: "0 0 16 16",
-    fill: "currentColor",
-    children: jsx("path", {
-      d: "M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
-    })
-  });
-};
-
-installImportMetaCss(import.meta);import.meta.css = /* css */`
-  @layer navi {
-    .navi_message_box {
-      --background-color-info: #eaf6fc;
-      --color-info: #376cc2;
-      --background-color-success: #ecf9ef;
-      --color-success: #50c464;
-      --background-color-warning: #fdf6e3;
-      --color-warning: #f19c05;
-      --background-color-error: #fcebed;
-      --color-error: #eb364b;
-    }
-  }
-
-  .navi_message_box {
-    --x-background-color: var(--background-color-info);
-    --x-color: var(--color-info);
-    /* color: var(--x-color); */
-    background-color: var(--x-background-color);
-  }
-
-  .navi_message_box[data-level="info"] {
-    --x-background-color: var(--background-color-info);
-    --x-color: var(--color-info);
-  }
-  .navi_message_box[data-level="success"] {
-    --x-background-color: var(--background-color-success);
-    --x-color: var(--color-success);
-  }
-  .navi_message_box[data-level="warning"] {
-    --x-background-color: var(--background-color-warning);
-    --x-color: var(--color-warning);
-  }
-  .navi_message_box[data-level="error"] {
-    --x-background-color: var(--background-color-error);
-    --x-color: var(--color-error);
-  }
-
-  .navi_message_box[data-left-stripe] {
-    border-left: 6px solid var(--x-color);
-    border-top-left-radius: 6px;
-    border-bottom-left-radius: 6px;
-  }
-`;
-Object.assign(PSEUDO_CLASSES, {
-  ":-navi-info": {
-    add: el => {
-      el.setAttribute("data-level", "info");
-    },
-    remove: el => {
-      if (el.getAttribute("data-level") === "info") {
-        el.removeAttribute("data-level");
-      }
-    }
-  },
-  ":-navi-success": {
-    add: el => {
-      el.setAttribute("data-level", "success");
-    },
-    remove: el => {
-      if (el.getAttribute("data-level") === "success") {
-        el.removeAttribute("data-level");
-      }
-    }
-  },
-  ":-navi-warning": {
-    add: el => {
-      el.setAttribute("data-level", "warning");
-    },
-    remove: el => {
-      if (el.getAttribute("data-level") === "warning") {
-        el.removeAttribute("data-level");
-      }
-    }
-  },
-  ":-navi-error": {
-    add: el => {
-      el.setAttribute("data-level", "error");
-    },
-    remove: el => {
-      if (el.getAttribute("data-level") === "error") {
-        el.removeAttribute("data-level");
-      }
-    }
-  }
-});
-const MessageBoxPseudoClasses = [":-navi-info", ":-navi-success", ":-navi-warning", ":-navi-error"];
-const MessageBoxLevelContext = createContext();
-const MessageBoxReportTitleChildContext = createContext();
-const MessageBox = ({
-  level = "info",
-  padding = "sm",
-  icon,
-  leftStripe,
-  children,
-  onClose,
-  ...rest
-}) => {
-  const [hasTitleChild, setHasTitleChild] = useState(false);
-  const innerLeftStripe = leftStripe === undefined ? hasTitleChild : leftStripe;
-  if (icon === true) {
-    icon = level === "info" ? jsx(InfoSvg, {}) : level === "success" ? jsx(SuccessSvg, {}) : level === "warning" ? jsx(WarningSvg, {}) : level === "error" ? jsx(ErrorSvg, {}) : null;
-  } else if (typeof icon === "function") {
-    const Comp = icon;
-    icon = jsx(Comp, {});
-  }
-  return jsx(Box, {
-    as: "div",
-    role: level === "info" ? "status" : "alert",
-    "data-left-stripe": innerLeftStripe ? "" : undefined,
-    column: true,
-    alignY: "start",
-    spacing: "sm",
-    ...rest,
-    className: withPropsClassName("navi_message_box", rest.className),
-    padding: padding,
-    pseudoClasses: MessageBoxPseudoClasses,
-    basePseudoState: {
-      ":-navi-info": level === "info",
-      ":-navi-success": level === "success",
-      ":-navi-warning": level === "warning",
-      ":-navi-error": level === "error"
-    },
-    children: jsx(MessageBoxLevelContext.Provider, {
-      value: level,
-      children: jsxs(MessageBoxReportTitleChildContext.Provider, {
-        value: setHasTitleChild,
-        children: [icon && jsx(Icon, {
-          color: "var(--x-color)",
-          children: icon
-        }), jsx(Text, {
-          children: children
-        }), onClose && jsx(Button, {
-          action: onClose,
-          discrete: true,
-          border: "none",
-          "data-nohover": "",
-          alignX: "center",
-          alignY: "center",
-          width: "1em",
-          height: "1em",
-          pseudoStyle: {
-            ":hover": {
-              backgroundColor: "rgba(0, 0, 0, 0.1)"
-            }
-          },
-          children: jsx(Icon, {
-            children: jsx(CloseSvg, {})
-          })
-        })]
-      })
-    })
-  });
-};
-
-const TitleLevelContext = createContext();
-const TitlePseudoClasses = [":hover"];
-const Title = props => {
-  const messageBoxLevel = useContext(MessageBoxLevelContext);
-  const innerAs = props.as || (messageBoxLevel ? "h4" : "h1");
-  const titleLevel = parseInt(innerAs.slice(1));
-  const reportTitleToMessageBox = useContext(MessageBoxReportTitleChildContext);
-  reportTitleToMessageBox?.(true);
-  return jsx(TitleLevelContext.Provider, {
-    value: titleLevel,
-    children: jsx(Text, {
-      bold: true,
-      className: withPropsClassName("navi_title"),
-      as: messageBoxLevel ? "h4" : "h1",
-      marginTop: messageBoxLevel ? "0" : undefined,
-      marginBottom: messageBoxLevel ? "sm" : undefined,
-      color: messageBoxLevel ? `var(--x-color)` : undefined,
-      ...props,
-      pseudoClasses: TitlePseudoClasses,
-      children: props.children
-    })
-  });
-};
-
-installImportMetaCss(import.meta);import.meta.css = /* css */`
-  .navi_link_anchor[data-discrete] {
-    position: absolute !important;
-    top: 1em;
-    left: -1em;
-    width: 1em;
-    height: 1em;
-    font-size: 1em;
-    opacity: 0;
-    transform: translateY(-25%);
-  }
-
-  .navi_title .navi_link_anchor {
-    font-size: 0.7em;
-  }
-
-  .navi_link.navi_link_anchor[data-visited] {
-    /* We don't want to change the color of those links when they are visited */
-    /* Here it makes no sense */
-    --x-link-color: var(--link-color);
-  }
-
-  .navi_link_anchor[data-discrete]:focus,
-  .navi_link_anchor[data-discrete]:focus-visible,
-  *:hover > .navi_link_anchor {
-    opacity: 1;
-  }
-  /* The anchor link is displayed only on :hover */
-  /* So we "need" a visual indicator when it's shown by focus */
-  /* (even if it's focused by mouse aka not :focus-visible) */
-  /* otherwise we might wonder why we see this UI element */
-  .navi_link_anchor[data-discrete][data-focus] {
-    outline-width: 2px;
-  }
-`;
-const LinkAnchor = props => {
-  const titleLevel = useContext(TitleLevelContext);
-  return jsx(Link, {
-    className: "navi_link_anchor",
-    color: "inherit",
-    id: props.href.slice(1),
-    "data-discrete": props.discrete || titleLevel ? "" : undefined,
+    as: "code",
     ...props
+  });
+};
+const CodeBox = ({
+  children,
+  ...props
+}) => {
+  return jsx(Text, {
+    as: "pre",
+    ...props,
+    children: jsx(Text, {
+      as: "code",
+      children: children
+    })
   });
 };
 
@@ -22477,5 +22496,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, BadgeCount, Box, Button, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, FontSizedSvg, Form, HeartSvg, HomeSvg, Icon, IconAndText, Image, Input, Label, Layout, Link, LinkAnchor, LinkAnchorSvg, LinkBlankTargetSvg, LinkWithIcon, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useActiveRouteInfo, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useUrlSearchParam, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, BadgeCount, Box, Button, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, FontSizedSvg, Form, HeartSvg, HomeSvg, Icon, IconAndText, Image, Input, Label, Layout, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkWithIcon, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useActiveRouteInfo, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useUrlSearchParam, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map
