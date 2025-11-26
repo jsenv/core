@@ -169,7 +169,7 @@ export const App = () => {
             />
             <Route
               fallback
-              route={AUTH_ANY_ROUTE}
+              // route={AUTH_ANY_ROUTE}
               element={
                 <div id="auth_fallback">No matching auth route found.</div>
               }

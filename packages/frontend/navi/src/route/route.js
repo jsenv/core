@@ -27,7 +27,7 @@ export const rawUrlPart = (value) => {
   };
 };
 
-const DEBUG = false;
+const DEBUG = true;
 const NO_PARAMS = { [SYMBOL_IDENTITY]: Symbol("no_params") };
 // Controls what happens to actions when their route becomes inactive:
 // 'abort' - Cancel the action immediately when route deactivates
@@ -328,6 +328,13 @@ const createRoute = (urlPatternInput) => {
         someChange = true;
       }
       if (someChange) {
+        if (DEBUG) {
+          console.debug(`${route} status changed:`, {
+            active,
+            params,
+            visited,
+          });
+        }
         publishStatus({ active, params, visited });
       }
     },
