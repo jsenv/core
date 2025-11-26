@@ -120,13 +120,12 @@ import.meta.css = /* css */ `
     /* Reveal on interaction */
     &[data-reveal-on-interaction] {
       position: absolute !important;
-      top: 1em;
+      top: 0;
       left: -1em;
       width: 1em;
       height: 1em;
       font-size: 1em;
-      /* opacity: 0; */
-      transform: translateY(-25%);
+      opacity: 0;
       /* The anchor link is displayed only on :hover */
       /* So we "need" a visual indicator when it's shown by focus */
       /* (even if it's focused by mouse aka not :focus-visible) */
@@ -146,8 +145,11 @@ import.meta.css = /* css */ `
     opacity: 1;
   }
 
+  .navi_text .navi_link[data-reveal-on-interaction] {
+    top: 0.1em;
+  }
   .navi_title .navi_link[data-reveal-on-interaction] {
-    font-size: 0.7em;
+    top: 0.25em;
   }
 `;
 
