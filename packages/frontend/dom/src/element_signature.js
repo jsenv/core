@@ -89,16 +89,17 @@ export const getElementSignature = (element) => {
     }
     return `[${functionLabel}]`;
   }
-  if (element.nodeType === Node.TEXT_NODE) {
-    return `#text(${getElementSignature(element.nodeValue)})`;
-  }
   if (element.props) {
     const type = element.type;
+    const elementName = typeof type === "function" ? type.name : type;
     const id = element.props.id;
     if (id) {
-      return `<${type} id="${id}" />`;
+      return `<${elementName} id="${id}" />`;
     }
-    return `<${type} />`;
+    return `<${elementName} />`;
+  }
+  if (element.nodeType === Node.TEXT_NODE) {
+    return `#text(${getElementSignature(element.nodeValue)})`;
   }
 
   const tagName = element.tagName.toLowerCase();
