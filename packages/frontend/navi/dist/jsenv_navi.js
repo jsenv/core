@@ -7704,6 +7704,10 @@ const createRoute = (urlPatternInput) => {
         wildcardIndex++;
         return replacement;
       });
+      // we did not replace anything, or not enough to remove the last "*"
+      if (relativeUrl.endsWith("*")) {
+        relativeUrl = relativeUrl.slice(0, -1);
+      }
     }
 
     // Add remaining parameters as search params
@@ -9712,20 +9716,26 @@ const useForceRender = () => {
  *
  */
 
+const debug$1 = (...args) => {
+  return;
+};
 const RootElement = () => {
   return jsx(Route.Slot, {});
 };
+const SlotContext = createContext(null);
+const RouteInfoContext = createContext(null);
 const Routes = ({
   element = RootElement,
   children
 }) => {
-  return jsx(Route, {
-    element: element,
-    children: children
+  return jsx(SlotContext.Provider, {
+    value: null,
+    children: jsx(Route, {
+      element: element,
+      children: children
+    })
   });
 };
-const SlotContext = createContext(null);
-const RouteInfoContext = createContext(null);
 const useActiveRouteInfo = () => useContext(RouteInfoContext);
 const Route = ({
   element,
@@ -9813,8 +9823,12 @@ const initRouteObserver = ({
   onActiveInfoChange,
   registerChildRouteFromContext
 }) => {
-  getElementSignature(element);
-  const candidateElementIds = Array.from(candidateSet, c => getElementSignature(c.ActiveElement)).join(", ");
+  const elementId = getElementSignature(element);
+  const candidateElementIds = Array.from(candidateSet, c => getElementSignature(c.ActiveElement));
+  if (candidateElementIds.length === 0) ; else {
+    debug$1(`initRouteObserver ${elementId}, child candidates:
+  - ${candidateElementIds.join("\n  - ")}`);
+  }
   const [publishCompositeStatus, subscribeCompositeStatus] = createPubSub();
   const compositeRoute = {
     urlPattern: `composite(${candidateElementIds})`,
@@ -9919,10 +9933,13 @@ const initRouteObserver = ({
 };
 const RouteSlot = () => {
   const SlotElement = useContext(SlotContext);
-  if (!SlotElement) {
+  if (SlotElement === undefined) {
     return jsx("p", {
       children: "RouteSlot must be used inside a Route"
     });
+  }
+  if (SlotElement === null) {
+    return null;
   }
   return jsx(SlotElement, {});
 };
@@ -11043,6 +11060,10 @@ const initPseudoStyles = (
     const currentState = {};
     for (const pseudoClass of pseudoClasses) {
       const pseudoClassDefinition = PSEUDO_CLASSES[pseudoClass];
+      if (!pseudoClassDefinition) {
+        console.warn(`Unknown pseudo class: ${pseudoClass}`);
+        continue;
+      }
       let currentValue;
       if (
         pseudoState &&
