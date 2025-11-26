@@ -437,9 +437,16 @@
           <Box as="section" marginBottom="xl">
             <Title as="h2">Anchor Feature</Title>
             <Text>
-              The <code>anchor</code> feature shows an anchor link for headings
-              or any link, making it clear where the browser will navigate for
-              same-document anchors and allowing users to copy the anchor.
+              Use the <code>anchor</code> prop to mark the clickable anchor of a
+              section or element. It displays a small anchor affordance that
+              users can click to copy the URL with the hash and understand the
+              exact same-document target.
+            </Text>
+            <Text>
+              With <code>revealOnInteraction</code>, the anchor sits in a
+              floating area to the left and only appears on hover or focus.
+              Inside a <code>Title</code>, <code>revealOnInteraction</code> is
+              enabled by default.
             </Text>
 
             <Box row marginTop="md">
