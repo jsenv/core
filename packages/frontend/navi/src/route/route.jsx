@@ -263,9 +263,17 @@ const initRouteObserver = ({
     publishCompositeStatus();
   };
   if (route) {
+    if (DEBUG) {
+      console.debug(`${elementId} subscribing to ${route}`);
+    }
     route.subscribeStatus(onChange);
   }
   for (const candidate of candidateSet) {
+    if (DEBUG) {
+      console.debug(
+        `${elementId} subscribing to child candidate ${candidate.route}`,
+      );
+    }
     candidate.route.subscribeStatus(onChange);
   }
   if (registerChildRouteFromContext) {
