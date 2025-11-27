@@ -384,7 +384,9 @@ const createRoute = (urlPatternInput) => {
     // always remove the wildcard part for URL building since it's optional
     if (relativeUrl.endsWith("/*?")) {
       // Always remove the optional wildcard part for URL building
-      relativeUrl = relativeUrl.replace(/\/\*\?$/, "");
+      relativeUrl = relativeUrl.slice(0, -"/*?".length);
+    } else if (relativeUrl.endsWith("{/}?*")) {
+      relativeUrl = relativeUrl.slice(0, -"{/}?*".length);
     } else {
       // For required wildcards (/*) or other patterns, replace normally
       let wildcardIndex = 0;

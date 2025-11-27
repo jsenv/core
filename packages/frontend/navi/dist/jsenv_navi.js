@@ -1,8 +1,8 @@
 import { installImportMetaCss } from "./jsenv_navi_side_effects.js";
-import { createIterableWeakSet, createPubSub, createValueEffect, createStyleController, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, activeElementSignal, canInterceptKeys, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, stringifyStyle, mergeOneStyle, mergeTwoStyles, normalizeStyles, resolveCSSSize, findBefore, findAfter, hasCSSSizeUnit, initFocusGroup, elementIsFocusable, pickLightOrDark, resolveColorLuminance, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { createIterableWeakSet, createPubSub, createValueEffect, createStyleController, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, activeElementSignal, canInterceptKeys, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, stringifyStyle, mergeOneStyle, mergeTwoStyles, normalizeStyles, resolveCSSSize, findBefore, findAfter, hasCSSSizeUnit, pickLightOrDark, resolveColorLuminance, initFocusGroup, elementIsFocusable, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { effect, signal, computed, batch, useSignal } from "@preact/signals";
-import { useEffect, useRef, useCallback, useContext, useState, useLayoutEffect, useMemo, useErrorBoundary, useImperativeHandle, useId } from "preact/hooks";
+import { useEffect, useRef, useCallback, useContext, useState, useLayoutEffect, useMemo, useImperativeHandle, useErrorBoundary, useId } from "preact/hooks";
 import { createContext, toChildArray, createRef, cloneElement } from "preact";
 import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
 import { createPortal, forwardRef } from "preact/compat";
@@ -7690,7 +7690,9 @@ const createRoute = (urlPatternInput) => {
     // always remove the wildcard part for URL building since it's optional
     if (relativeUrl.endsWith("/*?")) {
       // Always remove the optional wildcard part for URL building
-      relativeUrl = relativeUrl.replace(/\/\*\?$/, "");
+      relativeUrl = relativeUrl.slice(0, -"/*?".length);
+    } else if (relativeUrl.endsWith("{/}?*")) {
+      relativeUrl = relativeUrl.slice(0, -"{/}?*".length);
     } else {
       // For required wildcards (/*) or other patterns, replace normally
       let wildcardIndex = 0;
@@ -13851,7 +13853,7 @@ const TextBasic = ({
     as: "span",
     baseClassName: "navi_text",
     ...rest,
-    children: rest.as === "pre" ? children : applySpacingOnTextChildren(children, spacing)
+    children: rest.as === "pre" || rest.box || rest.column || rest.row ? children : applySpacingOnTextChildren(children, spacing)
   });
 };
 
@@ -15623,508 +15625,116 @@ const RouteLink = ({
 };
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
-  .action_error {
-    padding: 20px;
-    background: #fdd;
-    border: 1px solid red;
-    margin-top: 0;
-    margin-bottom: 20px;
-  }
-`;
-const renderIdleDefault = () => null;
-const renderLoadingDefault = () => null;
-const renderAbortedDefault = () => null;
-const renderErrorDefault = error => {
-  let routeErrorText = error && error.message ? error.message : error;
-  return jsxs("p", {
-    className: "action_error",
-    children: ["An error occured: ", routeErrorText]
-  });
-};
-const renderCompletedDefault = () => null;
-const ActionRenderer = ({
-  action,
-  children,
-  disabled
-}) => {
-  const {
-    idle: renderIdle = renderIdleDefault,
-    loading: renderLoading = renderLoadingDefault,
-    aborted: renderAborted = renderAbortedDefault,
-    error: renderError = renderErrorDefault,
-    completed: renderCompleted,
-    always: renderAlways
-  } = typeof children === "function" ? {
-    completed: children
-  } : children || {};
-  if (disabled) {
-    return null;
-  }
-  if (action === undefined) {
-    throw new Error("ActionRenderer requires an action to render, but none was provided.");
-  }
-  const {
-    idle,
-    loading,
-    aborted,
-    error,
-    data
-  } = useActionStatus(action);
-  const UIRenderedPromise = useUIRenderedPromise(action);
-  const [errorBoundary, resetErrorBoundary] = useErrorBoundary();
-
-  // Mark this action as bound to UI components (has renderers)
-  // This tells the action system that errors should be caught and stored
-  // in the action's error state rather than bubbling up
-  useLayoutEffect(() => {
-    if (action) {
-      const {
-        ui
-      } = getActionPrivateProperties(action);
-      ui.hasRenderers = true;
-    }
-  }, [action]);
-  useLayoutEffect(() => {
-    resetErrorBoundary();
-  }, [action, loading, idle, resetErrorBoundary]);
-  useLayoutEffect(() => {
-    UIRenderedPromise.resolve();
-    return () => {
-      actionUIRenderedPromiseWeakMap.delete(action);
-    };
-  }, [action]);
-
-  // If renderAlways is provided, it wins and handles all rendering
-  if (renderAlways) {
-    return renderAlways({
-      idle,
-      loading,
-      aborted,
-      error,
-      data
-    });
-  }
-  if (idle) {
-    return renderIdle(action);
-  }
-  if (errorBoundary) {
-    return renderError(errorBoundary, "ui_error", action);
-  }
-  if (error) {
-    return renderError(error, "action_error", action);
-  }
-  if (aborted) {
-    return renderAborted(action);
-  }
-  let renderCompletedSafe;
-  if (renderCompleted) {
-    renderCompletedSafe = renderCompleted;
-  } else {
-    const {
-      ui
-    } = getActionPrivateProperties(action);
-    if (ui.renderCompleted) {
-      renderCompletedSafe = ui.renderCompleted;
-    } else {
-      renderCompletedSafe = renderCompletedDefault;
-    }
-  }
-  if (loading) {
-    if (action.canDisplayOldData && data !== undefined) {
-      return renderCompletedSafe(data, action);
-    }
-    return renderLoading(action);
-  }
-  return renderCompletedSafe(data, action);
-};
-const defaultPromise = Promise.resolve();
-defaultPromise.resolve = () => {};
-const actionUIRenderedPromiseWeakMap = new WeakMap();
-const useUIRenderedPromise = action => {
-  if (!action) {
-    return defaultPromise;
-  }
-  const actionUIRenderedPromise = actionUIRenderedPromiseWeakMap.get(action);
-  if (actionUIRenderedPromise) {
-    return actionUIRenderedPromise;
-  }
-  let resolve;
-  const promise = new Promise(res => {
-    resolve = res;
-  });
-  promise.resolve = resolve;
-  actionUIRenderedPromiseWeakMap.set(action, promise);
-  return promise;
-};
-
-const useFocusGroup = (
-  elementRef,
-  { enabled = true, direction, skipTab, loop, name } = {},
-) => {
-  useLayoutEffect(() => {
-    if (!enabled) {
-      return null;
-    }
-    const focusGroup = initFocusGroup(elementRef.current, {
-      direction,
-      skipTab,
-      loop,
-      name,
-    });
-    return focusGroup.cleanup;
-  }, [direction, skipTab, loop, name]);
-};
-
-installImportMetaCss(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
-const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
-import.meta.css = /* css */`
-  .summary_marker {
-    width: 1em;
-    height: 1em;
-    line-height: 1em;
-  }
-  .summary_marker_svg .arrow {
-    animation-duration: 0.3s;
-    animation-fill-mode: forwards;
-    animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-  .summary_marker_svg .arrow[data-animation-target="down"] {
-    animation-name: morph-to-down;
-  }
-  @keyframes morph-to-down {
-    from {
-      d: path("${rightArrowPath}");
-    }
-    to {
-      d: path("${downArrowPath}");
-    }
-  }
-  .summary_marker_svg .arrow[data-animation-target="right"] {
-    animation-name: morph-to-right;
-  }
-  @keyframes morph-to-right {
-    from {
-      d: path("${downArrowPath}");
-    }
-    to {
-      d: path("${rightArrowPath}");
-    }
+  .navi_tablist {
+    display: flex;
+    justify-content: space-between;
+    overflow-x: auto;
+    overflow-y: hidden;
   }
 
-  .summary_marker_svg .foreground_circle {
-    stroke-dasharray: 503 1507; /* ~25% of circle perimeter */
-    stroke-dashoffset: 0;
-    animation: progress-around-circle 1.5s linear infinite;
-  }
-  @keyframes progress-around-circle {
-    0% {
-      stroke-dashoffset: 0;
-    }
-    100% {
-      stroke-dashoffset: -2010;
-    }
+  .navi_tablist > ul {
+    display: flex;
+    margin: 0;
+    padding: 0;
+    align-items: center;
+    gap: 0.5rem;
+    list-style: none;
   }
 
-  /* fading and scaling */
-  .summary_marker_svg .arrow {
-    transition: opacity 0.3s ease-in-out;
-    opacity: 1;
-  }
-  .summary_marker_svg .loading_container {
-    transition: transform 0.3s linear;
-    transform: scale(0.3);
-  }
-  .summary_marker_svg .background_circle,
-  .summary_marker_svg .foreground_circle {
-    transition: opacity 0.3s ease-in-out;
-    opacity: 0;
-  }
-  .summary_marker_svg[data-loading] .arrow {
-    opacity: 0;
-  }
-  .summary_marker_svg[data-loading] .loading_container {
-    transform: scale(1);
-  }
-  .summary_marker_svg[data-loading] .background_circle {
-    opacity: 0.2;
-  }
-  .summary_marker_svg[data-loading] .foreground_circle {
-    opacity: 1;
-  }
-`;
-const SummaryMarker = ({
-  open,
-  loading
-}) => {
-  const showLoading = useDebounceTrue(loading, 300);
-  const mountedRef = useRef(false);
-  const prevOpenRef = useRef(open);
-  useLayoutEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-  const shouldAnimate = mountedRef.current && prevOpenRef.current !== open;
-  prevOpenRef.current = open;
-  return jsx("span", {
-    className: "summary_marker",
-    children: jsxs("svg", {
-      className: "summary_marker_svg",
-      viewBox: "0 -960 960 960",
-      xmlns: "http://www.w3.org/2000/svg",
-      "data-loading": open ? showLoading || undefined : undefined,
-      children: [jsxs("g", {
-        className: "loading_container",
-        "transform-origin": "480px -480px",
-        children: [jsx("circle", {
-          className: "background_circle",
-          cx: "480",
-          cy: "-480",
-          r: "320",
-          stroke: "currentColor",
-          fill: "none",
-          strokeWidth: "60",
-          opacity: "0.2"
-        }), jsx("circle", {
-          className: "foreground_circle",
-          cx: "480",
-          cy: "-480",
-          r: "320",
-          stroke: "currentColor",
-          fill: "none",
-          strokeWidth: "60",
-          strokeLinecap: "round",
-          strokeDasharray: "503 1507"
-        })]
-      }), jsx("g", {
-        className: "arrow_container",
-        "transform-origin": "480px -480px",
-        children: jsx("path", {
-          className: "arrow",
-          fill: "currentColor",
-          "data-animation-target": shouldAnimate ? open ? "down" : "right" : undefined,
-          d: open ? downArrowPath : rightArrowPath
-        })
-      })]
-    })
-  });
-};
-
-installImportMetaCss(import.meta);import.meta.css = /* css */`
-  .navi_details {
+  .navi_tablist > ul > li {
     position: relative;
-    z-index: 1;
-    display: flex;
-    flex-shrink: 0;
-    flex-direction: column;
+    display: inline-flex;
   }
 
-  .navi_details > summary {
+  .navi_tab {
     display: flex;
-    flex-shrink: 0;
     flex-direction: column;
-    cursor: pointer;
-    user-select: none;
+    white-space: nowrap;
   }
-  .summary_body {
+
+  .navi_tab_content {
+    display: flex;
+    padding: 0 0.5rem;
+    text-decoration: none;
+    line-height: 30px;
+    border-radius: 6px;
+    transition: background 0.12s ease-out;
+  }
+
+  .navi_tab:hover .navi_tab_content {
+    color: #010409;
+    background: #dae0e7;
+  }
+
+  .navi_tab .active_marker {
+    z-index: 1;
     display: flex;
     width: 100%;
-    flex-direction: row;
-    align-items: center;
-    gap: 0.2em;
-  }
-  .summary_label {
-    display: flex;
-    padding-right: 10px;
-    flex: 1;
-    align-items: center;
-    gap: 0.2em;
+    height: 2px;
+    margin-top: 5px;
+    background: transparent;
+    border-radius: 0.1px;
   }
 
-  .navi_details > summary:focus {
-    z-index: 1;
+  /* Hidden bold clone to reserve space for bold width without affecting height */
+  .navi_tab_content_bold_clone {
+    display: block; /* in-flow so it contributes to width */
+    height: 0; /* zero height so it doesn't change layout height */
+    font-weight: 600; /* force bold to compute max width */
+    visibility: hidden; /* not visible */
+    pointer-events: none; /* inert */
+    overflow: hidden; /* avoid any accidental height */
+  }
+
+  .navi_tab[aria-selected="true"] .active_marker {
+    background: rgb(205, 52, 37);
+  }
+
+  .navi_tab[aria-selected="true"] .navi_tab_content {
+    font-weight: 600;
   }
 `;
-const Details = forwardRef((props, ref) => {
-  return renderActionableComponent(props, ref);
-});
-const DetailsBasic = forwardRef((props, ref) => {
-  const {
-    id,
-    label = "Summary",
-    open,
-    loading,
-    className,
-    focusGroup,
-    focusGroupDirection,
-    arrowKeyShortcuts = true,
-    openKeyShortcut = "ArrowRight",
-    closeKeyShortcut = "ArrowLeft",
-    onToggle,
-    children,
-    ...rest
-  } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-  const [navState, setNavState] = useNavState(id);
-  const [innerOpen, innerOpenSetter] = useState(open || navState);
-  useFocusGroup(innerRef, {
-    enabled: focusGroup,
-    name: typeof focusGroup === "string" ? focusGroup : undefined,
-    direction: focusGroupDirection
-  });
-
-  /**
-   * Browser will dispatch "toggle" event even if we set open={true}
-   * When rendering the component for the first time
-   * We have to ensure the initial "toggle" event is ignored.
-   *
-   * If we don't do that code will think the details has changed and run logic accordingly
-   * For example it will try to navigate to the current url while we are already there
-   *
-   * See:
-   * - https://techblog.thescore.com/2024/10/08/why-we-decided-to-change-how-the-details-element-works/
-   * - https://github.com/whatwg/html/issues/4500
-   * - https://stackoverflow.com/questions/58942600/react-html-details-toggles-uncontrollably-when-starts-open
-   *
-   */
-
-  const summaryRef = useRef(null);
-  useKeyboardShortcuts(innerRef, [{
-    key: openKeyShortcut,
-    enabled: arrowKeyShortcuts,
-    when: e => document.activeElement === summaryRef.current &&
-    // avoid handling openKeyShortcut twice when keydown occurs inside nested details
-    !e.defaultPrevented,
-    action: e => {
-      const details = innerRef.current;
-      if (!details.open) {
-        e.preventDefault();
-        details.open = true;
-        return;
-      }
-      const summary = summaryRef.current;
-      const firstFocusableElementInDetails = findAfter(summary, elementIsFocusable, {
-        root: details
-      });
-      if (!firstFocusableElementInDetails) {
-        return;
-      }
-      e.preventDefault();
-      firstFocusableElementInDetails.focus();
-    }
-  }, {
-    key: closeKeyShortcut,
-    enabled: arrowKeyShortcuts,
-    when: () => {
-      const details = innerRef.current;
-      return details.open;
-    },
-    action: e => {
-      const details = innerRef.current;
-      const summary = summaryRef.current;
-      if (document.activeElement === summary) {
-        e.preventDefault();
-        summary.focus();
-        details.open = false;
-      } else {
-        e.preventDefault();
-        summary.focus();
-      }
-    }
-  }]);
-  const mountedRef = useRef(false);
-  useEffect(() => {
-    mountedRef.current = true;
-  }, []);
-  return jsxs("details", {
-    ...rest,
-    ref: innerRef,
-    id: id,
-    className: ["navi_details", ...(className ? className.split(" ") : [])].join(" "),
-    onToggle: e => {
-      const isOpen = e.newState === "open";
-      if (mountedRef.current) {
-        if (isOpen) {
-          innerOpenSetter(true);
-          setNavState(true);
-        } else {
-          innerOpenSetter(false);
-          setNavState(undefined);
-        }
-      }
-      onToggle?.(e);
-    },
-    open: innerOpen,
-    children: [jsx("summary", {
-      ref: summaryRef,
-      children: jsxs("div", {
-        className: "summary_body",
-        children: [jsx(SummaryMarker, {
-          open: innerOpen,
-          loading: loading
-        }), jsx("div", {
-          className: "summary_label",
-          children: label
-        })]
+const TabList = ({
+  children,
+  ...props
+}) => {
+  return jsx(Box, {
+    as: "nav",
+    baseClassName: "navi_tablist",
+    role: "tablist",
+    ...props,
+    children: jsx("ul", {
+      role: "list",
+      children: children.map(child => {
+        return jsx("li", {
+          children: child
+        }, child.props.key);
       })
-    }), children]
-  });
-});
-forwardRef((props, ref) => {
-  const {
-    action,
-    loading,
-    onToggle,
-    onActionPrevented,
-    onActionStart,
-    onActionError,
-    onActionEnd,
-    children,
-    ...rest
-  } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-  const effectiveAction = useAction(action);
-  const {
-    loading: actionLoading
-  } = useActionStatus(effectiveAction);
-  const executeAction = useExecuteAction(innerRef, {
-    // the error will be displayed by actionRenderer inside <details>
-    errorEffect: "none"
-  });
-  useActionEvents(innerRef, {
-    onPrevented: onActionPrevented,
-    onAction: e => {
-      executeAction(e);
-    },
-    onStart: onActionStart,
-    onError: onActionError,
-    onEnd: onActionEnd
-  });
-  return jsx(DetailsBasic, {
-    ...rest,
-    ref: innerRef,
-    loading: loading || actionLoading,
-    onToggle: toggleEvent => {
-      const isOpen = toggleEvent.newState === "open";
-      if (isOpen) {
-        requestAction(toggleEvent.target, effectiveAction, {
-          event: toggleEvent,
-          method: "run"
-        });
-      } else {
-        effectiveAction.abort();
-      }
-      onToggle?.(toggleEvent);
-    },
-    children: jsx(ActionRenderer, {
-      action: effectiveAction,
-      children: children
     })
   });
-});
+};
+const Tab = ({
+  children,
+  selected,
+  ...props
+}) => {
+  return jsxs(Box, {
+    baseClassName: "navi_tab",
+    role: "tab",
+    "aria-selected": selected ? "true" : "false",
+    ...props,
+    children: [jsx("div", {
+      className: "navi_tab_content",
+      children: children
+    }), jsx("div", {
+      className: "navi_tab_content_bold_clone",
+      "aria-hidden": "true",
+      children: children
+    }), jsx("span", {
+      className: "active_marker"
+    })]
+  });
+};
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
@@ -18311,6 +17921,552 @@ forwardRef((props, ref) => {
     },
     ...rest,
     children: children
+  });
+});
+
+const createUniqueValueConstraint = (
+  // the set might be incomplete (the front usually don't have the full copy of all the items from the backend)
+  // but this is already nice to help user with what we know
+  // it's also possible that front is unsync with backend, preventing user to choose a value
+  // that is actually free.
+  // But this is unlikely to happen and user could reload the page to be able to choose that name
+  // that suddenly became available
+  existingValueSet,
+  message = `"{value}" already exists. Please choose another value.`,
+) => {
+  return {
+    name: "unique_value",
+    check: (input) => {
+      const inputValue = input.value;
+      const hasConflict = existingValueSet.has(inputValue);
+      // console.log({
+      //   inputValue,
+      //   names: Array.from(otherNameSet.values()),
+      //   hasConflict,
+      // });
+      if (hasConflict) {
+        return message.replace("{value}", inputValue);
+      }
+      return "";
+    },
+  };
+};
+
+const SINGLE_SPACE_CONSTRAINT = {
+  name: "single_space",
+  check: (input) => {
+    const inputValue = input.value;
+    const hasLeadingSpace = inputValue.startsWith(" ");
+    const hasTrailingSpace = inputValue.endsWith(" ");
+    const hasDoubleSpace = inputValue.includes("  ");
+    if (hasLeadingSpace || hasDoubleSpace || hasTrailingSpace) {
+      return "Spaces at the beginning, end, or consecutive spaces are not allowed";
+    }
+    return "";
+  },
+};
+
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .action_error {
+    padding: 20px;
+    background: #fdd;
+    border: 1px solid red;
+    margin-top: 0;
+    margin-bottom: 20px;
+  }
+`;
+const renderIdleDefault = () => null;
+const renderLoadingDefault = () => null;
+const renderAbortedDefault = () => null;
+const renderErrorDefault = error => {
+  let routeErrorText = error && error.message ? error.message : error;
+  return jsxs("p", {
+    className: "action_error",
+    children: ["An error occured: ", routeErrorText]
+  });
+};
+const renderCompletedDefault = () => null;
+const ActionRenderer = ({
+  action,
+  children,
+  disabled
+}) => {
+  const {
+    idle: renderIdle = renderIdleDefault,
+    loading: renderLoading = renderLoadingDefault,
+    aborted: renderAborted = renderAbortedDefault,
+    error: renderError = renderErrorDefault,
+    completed: renderCompleted,
+    always: renderAlways
+  } = typeof children === "function" ? {
+    completed: children
+  } : children || {};
+  if (disabled) {
+    return null;
+  }
+  if (action === undefined) {
+    throw new Error("ActionRenderer requires an action to render, but none was provided.");
+  }
+  const {
+    idle,
+    loading,
+    aborted,
+    error,
+    data
+  } = useActionStatus(action);
+  const UIRenderedPromise = useUIRenderedPromise(action);
+  const [errorBoundary, resetErrorBoundary] = useErrorBoundary();
+
+  // Mark this action as bound to UI components (has renderers)
+  // This tells the action system that errors should be caught and stored
+  // in the action's error state rather than bubbling up
+  useLayoutEffect(() => {
+    if (action) {
+      const {
+        ui
+      } = getActionPrivateProperties(action);
+      ui.hasRenderers = true;
+    }
+  }, [action]);
+  useLayoutEffect(() => {
+    resetErrorBoundary();
+  }, [action, loading, idle, resetErrorBoundary]);
+  useLayoutEffect(() => {
+    UIRenderedPromise.resolve();
+    return () => {
+      actionUIRenderedPromiseWeakMap.delete(action);
+    };
+  }, [action]);
+
+  // If renderAlways is provided, it wins and handles all rendering
+  if (renderAlways) {
+    return renderAlways({
+      idle,
+      loading,
+      aborted,
+      error,
+      data
+    });
+  }
+  if (idle) {
+    return renderIdle(action);
+  }
+  if (errorBoundary) {
+    return renderError(errorBoundary, "ui_error", action);
+  }
+  if (error) {
+    return renderError(error, "action_error", action);
+  }
+  if (aborted) {
+    return renderAborted(action);
+  }
+  let renderCompletedSafe;
+  if (renderCompleted) {
+    renderCompletedSafe = renderCompleted;
+  } else {
+    const {
+      ui
+    } = getActionPrivateProperties(action);
+    if (ui.renderCompleted) {
+      renderCompletedSafe = ui.renderCompleted;
+    } else {
+      renderCompletedSafe = renderCompletedDefault;
+    }
+  }
+  if (loading) {
+    if (action.canDisplayOldData && data !== undefined) {
+      return renderCompletedSafe(data, action);
+    }
+    return renderLoading(action);
+  }
+  return renderCompletedSafe(data, action);
+};
+const defaultPromise = Promise.resolve();
+defaultPromise.resolve = () => {};
+const actionUIRenderedPromiseWeakMap = new WeakMap();
+const useUIRenderedPromise = action => {
+  if (!action) {
+    return defaultPromise;
+  }
+  const actionUIRenderedPromise = actionUIRenderedPromiseWeakMap.get(action);
+  if (actionUIRenderedPromise) {
+    return actionUIRenderedPromise;
+  }
+  let resolve;
+  const promise = new Promise(res => {
+    resolve = res;
+  });
+  promise.resolve = resolve;
+  actionUIRenderedPromiseWeakMap.set(action, promise);
+  return promise;
+};
+
+const useFocusGroup = (
+  elementRef,
+  { enabled = true, direction, skipTab, loop, name } = {},
+) => {
+  useLayoutEffect(() => {
+    if (!enabled) {
+      return null;
+    }
+    const focusGroup = initFocusGroup(elementRef.current, {
+      direction,
+      skipTab,
+      loop,
+      name,
+    });
+    return focusGroup.cleanup;
+  }, [direction, skipTab, loop, name]);
+};
+
+installImportMetaCss(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
+const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
+import.meta.css = /* css */`
+  .summary_marker {
+    width: 1em;
+    height: 1em;
+    line-height: 1em;
+  }
+  .summary_marker_svg .arrow {
+    animation-duration: 0.3s;
+    animation-fill-mode: forwards;
+    animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .summary_marker_svg .arrow[data-animation-target="down"] {
+    animation-name: morph-to-down;
+  }
+  @keyframes morph-to-down {
+    from {
+      d: path("${rightArrowPath}");
+    }
+    to {
+      d: path("${downArrowPath}");
+    }
+  }
+  .summary_marker_svg .arrow[data-animation-target="right"] {
+    animation-name: morph-to-right;
+  }
+  @keyframes morph-to-right {
+    from {
+      d: path("${downArrowPath}");
+    }
+    to {
+      d: path("${rightArrowPath}");
+    }
+  }
+
+  .summary_marker_svg .foreground_circle {
+    stroke-dasharray: 503 1507; /* ~25% of circle perimeter */
+    stroke-dashoffset: 0;
+    animation: progress-around-circle 1.5s linear infinite;
+  }
+  @keyframes progress-around-circle {
+    0% {
+      stroke-dashoffset: 0;
+    }
+    100% {
+      stroke-dashoffset: -2010;
+    }
+  }
+
+  /* fading and scaling */
+  .summary_marker_svg .arrow {
+    transition: opacity 0.3s ease-in-out;
+    opacity: 1;
+  }
+  .summary_marker_svg .loading_container {
+    transition: transform 0.3s linear;
+    transform: scale(0.3);
+  }
+  .summary_marker_svg .background_circle,
+  .summary_marker_svg .foreground_circle {
+    transition: opacity 0.3s ease-in-out;
+    opacity: 0;
+  }
+  .summary_marker_svg[data-loading] .arrow {
+    opacity: 0;
+  }
+  .summary_marker_svg[data-loading] .loading_container {
+    transform: scale(1);
+  }
+  .summary_marker_svg[data-loading] .background_circle {
+    opacity: 0.2;
+  }
+  .summary_marker_svg[data-loading] .foreground_circle {
+    opacity: 1;
+  }
+`;
+const SummaryMarker = ({
+  open,
+  loading
+}) => {
+  const showLoading = useDebounceTrue(loading, 300);
+  const mountedRef = useRef(false);
+  const prevOpenRef = useRef(open);
+  useLayoutEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+  const shouldAnimate = mountedRef.current && prevOpenRef.current !== open;
+  prevOpenRef.current = open;
+  return jsx("span", {
+    className: "summary_marker",
+    children: jsxs("svg", {
+      className: "summary_marker_svg",
+      viewBox: "0 -960 960 960",
+      xmlns: "http://www.w3.org/2000/svg",
+      "data-loading": open ? showLoading || undefined : undefined,
+      children: [jsxs("g", {
+        className: "loading_container",
+        "transform-origin": "480px -480px",
+        children: [jsx("circle", {
+          className: "background_circle",
+          cx: "480",
+          cy: "-480",
+          r: "320",
+          stroke: "currentColor",
+          fill: "none",
+          strokeWidth: "60",
+          opacity: "0.2"
+        }), jsx("circle", {
+          className: "foreground_circle",
+          cx: "480",
+          cy: "-480",
+          r: "320",
+          stroke: "currentColor",
+          fill: "none",
+          strokeWidth: "60",
+          strokeLinecap: "round",
+          strokeDasharray: "503 1507"
+        })]
+      }), jsx("g", {
+        className: "arrow_container",
+        "transform-origin": "480px -480px",
+        children: jsx("path", {
+          className: "arrow",
+          fill: "currentColor",
+          "data-animation-target": shouldAnimate ? open ? "down" : "right" : undefined,
+          d: open ? downArrowPath : rightArrowPath
+        })
+      })]
+    })
+  });
+};
+
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .navi_details {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-shrink: 0;
+    flex-direction: column;
+  }
+
+  .navi_details > summary {
+    display: flex;
+    flex-shrink: 0;
+    flex-direction: column;
+    cursor: pointer;
+    user-select: none;
+  }
+  .summary_body {
+    display: flex;
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.2em;
+  }
+  .summary_label {
+    display: flex;
+    padding-right: 10px;
+    flex: 1;
+    align-items: center;
+    gap: 0.2em;
+  }
+
+  .navi_details > summary:focus {
+    z-index: 1;
+  }
+`;
+const Details = forwardRef((props, ref) => {
+  return renderActionableComponent(props, ref);
+});
+const DetailsBasic = forwardRef((props, ref) => {
+  const {
+    id,
+    label = "Summary",
+    open,
+    loading,
+    className,
+    focusGroup,
+    focusGroupDirection,
+    arrowKeyShortcuts = true,
+    openKeyShortcut = "ArrowRight",
+    closeKeyShortcut = "ArrowLeft",
+    onToggle,
+    children,
+    ...rest
+  } = props;
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
+  const [navState, setNavState] = useNavState(id);
+  const [innerOpen, innerOpenSetter] = useState(open || navState);
+  useFocusGroup(innerRef, {
+    enabled: focusGroup,
+    name: typeof focusGroup === "string" ? focusGroup : undefined,
+    direction: focusGroupDirection
+  });
+
+  /**
+   * Browser will dispatch "toggle" event even if we set open={true}
+   * When rendering the component for the first time
+   * We have to ensure the initial "toggle" event is ignored.
+   *
+   * If we don't do that code will think the details has changed and run logic accordingly
+   * For example it will try to navigate to the current url while we are already there
+   *
+   * See:
+   * - https://techblog.thescore.com/2024/10/08/why-we-decided-to-change-how-the-details-element-works/
+   * - https://github.com/whatwg/html/issues/4500
+   * - https://stackoverflow.com/questions/58942600/react-html-details-toggles-uncontrollably-when-starts-open
+   *
+   */
+
+  const summaryRef = useRef(null);
+  useKeyboardShortcuts(innerRef, [{
+    key: openKeyShortcut,
+    enabled: arrowKeyShortcuts,
+    when: e => document.activeElement === summaryRef.current &&
+    // avoid handling openKeyShortcut twice when keydown occurs inside nested details
+    !e.defaultPrevented,
+    action: e => {
+      const details = innerRef.current;
+      if (!details.open) {
+        e.preventDefault();
+        details.open = true;
+        return;
+      }
+      const summary = summaryRef.current;
+      const firstFocusableElementInDetails = findAfter(summary, elementIsFocusable, {
+        root: details
+      });
+      if (!firstFocusableElementInDetails) {
+        return;
+      }
+      e.preventDefault();
+      firstFocusableElementInDetails.focus();
+    }
+  }, {
+    key: closeKeyShortcut,
+    enabled: arrowKeyShortcuts,
+    when: () => {
+      const details = innerRef.current;
+      return details.open;
+    },
+    action: e => {
+      const details = innerRef.current;
+      const summary = summaryRef.current;
+      if (document.activeElement === summary) {
+        e.preventDefault();
+        summary.focus();
+        details.open = false;
+      } else {
+        e.preventDefault();
+        summary.focus();
+      }
+    }
+  }]);
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    mountedRef.current = true;
+  }, []);
+  return jsxs("details", {
+    ...rest,
+    ref: innerRef,
+    id: id,
+    className: ["navi_details", ...(className ? className.split(" ") : [])].join(" "),
+    onToggle: e => {
+      const isOpen = e.newState === "open";
+      if (mountedRef.current) {
+        if (isOpen) {
+          innerOpenSetter(true);
+          setNavState(true);
+        } else {
+          innerOpenSetter(false);
+          setNavState(undefined);
+        }
+      }
+      onToggle?.(e);
+    },
+    open: innerOpen,
+    children: [jsx("summary", {
+      ref: summaryRef,
+      children: jsxs("div", {
+        className: "summary_body",
+        children: [jsx(SummaryMarker, {
+          open: innerOpen,
+          loading: loading
+        }), jsx("div", {
+          className: "summary_label",
+          children: label
+        })]
+      })
+    }), children]
+  });
+});
+forwardRef((props, ref) => {
+  const {
+    action,
+    loading,
+    onToggle,
+    onActionPrevented,
+    onActionStart,
+    onActionError,
+    onActionEnd,
+    children,
+    ...rest
+  } = props;
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
+  const effectiveAction = useAction(action);
+  const {
+    loading: actionLoading
+  } = useActionStatus(effectiveAction);
+  const executeAction = useExecuteAction(innerRef, {
+    // the error will be displayed by actionRenderer inside <details>
+    errorEffect: "none"
+  });
+  useActionEvents(innerRef, {
+    onPrevented: onActionPrevented,
+    onAction: e => {
+      executeAction(e);
+    },
+    onStart: onActionStart,
+    onError: onActionError,
+    onEnd: onActionEnd
+  });
+  return jsx(DetailsBasic, {
+    ...rest,
+    ref: innerRef,
+    loading: loading || actionLoading,
+    onToggle: toggleEvent => {
+      const isOpen = toggleEvent.newState === "open";
+      if (isOpen) {
+        requestAction(toggleEvent.target, effectiveAction, {
+          event: toggleEvent,
+          method: "run"
+        });
+      } else {
+        effectiveAction.abort();
+      }
+      onToggle?.(toggleEvent);
+    },
+    children: jsx(ActionRenderer, {
+      action: effectiveAction,
+      children: children
+    })
   });
 });
 
@@ -21678,116 +21834,6 @@ const useCellsAndColumns = (cells, columns) => {
   };
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
-  .navi_tablist {
-    display: flex;
-    overflow-x: auto;
-    overflow-y: hidden;
-    justify-content: space-between;
-  }
-
-  .navi_tablist > ul {
-    align-items: center;
-    display: flex;
-    gap: 0.5rem;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  .navi_tablist > ul > li {
-    display: inline-flex;
-    position: relative;
-  }
-
-  .navi_tab {
-    white-space: nowrap;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .navi_tab_content {
-    transition: background 0.12s ease-out;
-    border-radius: 6px;
-    text-decoration: none;
-    line-height: 30px;
-    display: flex;
-    padding: 0 0.5rem;
-  }
-
-  .navi_tab:hover .navi_tab_content {
-    background: #dae0e7;
-    color: #010409;
-  }
-
-  .navi_tab .active_marker {
-    display: flex;
-    background: transparent;
-    border-radius: 0.1px;
-    width: 100%;
-    z-index: 1;
-    height: 2px;
-    margin-top: 5px;
-  }
-
-  /* Hidden bold clone to reserve space for bold width without affecting height */
-  .navi_tab_content_bold_clone {
-    font-weight: 600; /* force bold to compute max width */
-    visibility: hidden; /* not visible */
-    display: block; /* in-flow so it contributes to width */
-    height: 0; /* zero height so it doesn't change layout height */
-    overflow: hidden; /* avoid any accidental height */
-    pointer-events: none; /* inert */
-  }
-
-  .navi_tab[aria-selected="true"] .active_marker {
-    background: rgb(205, 52, 37);
-  }
-
-  .navi_tab[aria-selected="true"] .navi_tab_content {
-    font-weight: 600;
-  }
-`;
-const TabList = ({
-  children,
-  ...props
-}) => {
-  return jsx("nav", {
-    className: "navi_tablist",
-    role: "tablist",
-    ...props,
-    children: jsx("ul", {
-      children: children.map(child => {
-        return jsx("li", {
-          children: child
-        }, child.props.key);
-      })
-    })
-  });
-};
-const Tab = ({
-  children,
-  selected,
-  ...props
-}) => {
-  return jsxs("div", {
-    className: "navi_tab",
-    role: "tab",
-    "aria-selected": selected ? "true" : "false",
-    ...props,
-    children: [jsx("div", {
-      className: "navi_tab_content",
-      children: children
-    }), jsx("div", {
-      className: "navi_tab_content_bold_clone",
-      "aria-hidden": "true",
-      children: children
-    }), jsx("span", {
-      className: "active_marker"
-    })]
-  });
-};
-
 /**
  * Creates a signal that stays synchronized with an external value,
  * only updating the signal when the value actually changes.
@@ -22355,48 +22401,6 @@ const ViewportLayout = props => {
     className: "navi_viewport_layout",
     styleCSSVars: ViewportLayoutStyleCSSVars
   });
-};
-
-const createUniqueValueConstraint = (
-  // the set might be incomplete (the front usually don't have the full copy of all the items from the backend)
-  // but this is already nice to help user with what we know
-  // it's also possible that front is unsync with backend, preventing user to choose a value
-  // that is actually free.
-  // But this is unlikely to happen and user could reload the page to be able to choose that name
-  // that suddenly became available
-  existingValueSet,
-  message = `"{value}" already exists. Please choose another value.`,
-) => {
-  return {
-    name: "unique_value",
-    check: (input) => {
-      const inputValue = input.value;
-      const hasConflict = existingValueSet.has(inputValue);
-      // console.log({
-      //   inputValue,
-      //   names: Array.from(otherNameSet.values()),
-      //   hasConflict,
-      // });
-      if (hasConflict) {
-        return message.replace("{value}", inputValue);
-      }
-      return "";
-    },
-  };
-};
-
-const SINGLE_SPACE_CONSTRAINT = {
-  name: "single_space",
-  check: (input) => {
-    const inputValue = input.value;
-    const hasLeadingSpace = inputValue.startsWith(" ");
-    const hasTrailingSpace = inputValue.endsWith(" ");
-    const hasDoubleSpace = inputValue.includes("  ");
-    if (hasLeadingSpace || hasDoubleSpace || hasTrailingSpace) {
-      return "Spaces at the beginning, end, or consecutive spaces are not allowed";
-    }
-    return "";
-  },
 };
 
 /*
