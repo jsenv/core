@@ -32,7 +32,6 @@ import.meta.css = /* css */ `
 
   .navi_tablist {
     display: flex;
-    justify-content: space-around;
     line-height: 2em;
     background: var(--tablist-background);
     overflow-x: auto;
@@ -40,6 +39,7 @@ import.meta.css = /* css */ `
   }
   .navi_tablist > ul {
     display: flex;
+    width: 100%;
     margin: 0;
     padding: 0;
     align-items: center;
@@ -105,16 +105,53 @@ import.meta.css = /* css */ `
       }
     }
   }
+
+  .navi_tablist[data-expand] {
+    .navi_tab {
+      flex: 1;
+      align-items: center;
+    }
+
+    .navi_tab_content {
+      width: 100%;
+      justify-content: center;
+    }
+  }
 `;
 
 const TabListUnderlinerContext = createContext();
-export const TabList = ({ children, spacing, underline, ...props }) => {
+export const TabList = ({
+  children,
+  spacing,
+  underline,
+  expand,
+  expandX,
+  ...props
+}) => {
   return (
-    <Box as="nav" baseClassName="navi_tablist" role="tablist" {...props}>
+    <Box
+      as="nav"
+      baseClassName="navi_tablist"
+      role="tablist"
+      data-expand={expand || expandX ? "" : undefined}
+      expand={expand}
+      expandX={expandX}
+      {...props}
+    >
       <Box as="ul" column role="list" spacing={spacing}>
         <TabListUnderlinerContext.Provider value={underline}>
           {children.map((child) => {
-            return <li key={child.props.key}>{child}</li>;
+            return (
+              <Box
+                as="li"
+                column
+                key={child.props.key}
+                expandX={expandX}
+                expand={expand}
+              >
+                {child}
+              </Box>
+            );
           })}
         </TabListUnderlinerContext.Provider>
       </Box>
