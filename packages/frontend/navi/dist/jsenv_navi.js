@@ -15207,7 +15207,8 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
       --x-link-text-decoration: var(--x-link-text-decoration-hover);
     }
     /* Focus */
-    &[data-focus] {
+    &[data-focus],
+    &[data-focus-visible] {
       position: relative;
       z-index: 1; /* Ensure focus outline is above other elements */
     }
@@ -15661,8 +15662,6 @@ import.meta.css = /* css */`
   .navi_tablist {
     display: flex;
     line-height: 2em;
-    background: var(--tablist-background);
-    border-radius: var(--tablist-border-radius);
     overflow-x: auto;
     overflow-y: hidden;
   }
@@ -15674,6 +15673,8 @@ import.meta.css = /* css */`
     align-items: center;
     gap: 0.5rem;
     list-style: none;
+    background: var(--tablist-background);
+    border-radius: var(--tablist-border-radius);
   }
   .navi_tablist > ul > li {
     position: relative;
@@ -15691,11 +15692,16 @@ import.meta.css = /* css */`
 
     .navi_tab_content {
       display: flex;
-      padding: 0 0.5rem;
       color: var(--x-tab-color);
       background: var(--x-tab-background);
       border-radius: inherit;
       transition: background 0.12s ease-out;
+
+      .navi_link {
+        flex-grow: 1;
+        text-align: center;
+        border-radius: inherit;
+      }
     }
     /* Hidden bold clone to reserve space for bold width without affecting height */
     .navi_tab_content_bold_clone {
@@ -15820,6 +15826,9 @@ const Tab = props => {
 const TabRoute = ({
   route,
   children,
+  paddingX,
+  padding,
+  paddingY,
   ...props
 }) => {
   const {
@@ -15827,12 +15836,16 @@ const TabRoute = ({
   } = useRouteStatus(route);
   return jsx(TabBasic, {
     selected: active,
+    paddingX: "0",
     ...props,
     children: jsx(RouteLink, {
       route: route,
       expand: true,
       discrete: true,
       align: "center",
+      paddingX: paddingX,
+      padding: padding,
+      paddingY: paddingY,
       children: children
     })
   });
@@ -15840,6 +15853,9 @@ const TabRoute = ({
 const TabBasic = ({
   children,
   selected,
+  padding,
+  paddingX = "s",
+  paddingY,
   onClick,
   ...props
 }) => {
@@ -15859,8 +15875,11 @@ const TabBasic = ({
       ":-navi-selected": selected
     },
     ...props,
-    children: [jsx("div", {
+    children: [jsx(Box, {
       className: "navi_tab_content",
+      paddingX: paddingX,
+      paddingY: paddingY,
+      padding: padding,
       children: children
     }), jsx("div", {
       className: "navi_tab_content_bold_clone",

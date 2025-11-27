@@ -394,8 +394,10 @@
                     "--tab-color-selected": "white",
                   }}
                 >
-                  <Tab key="overview" selected>
-                    <Link discrete>Overview</Link>
+                  <Tab key="overview" selected padding="0">
+                    <Link discrete pseudoState={{ ":focus-visible": true }}>
+                      Overview
+                    </Link>
                   </Tab>
                   <Tab key="details">Details</Tab>
                   <Tab key="more">More</Tab>

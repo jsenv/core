@@ -37,8 +37,6 @@ import.meta.css = /* css */ `
   .navi_tablist {
     display: flex;
     line-height: 2em;
-    background: var(--tablist-background);
-    border-radius: var(--tablist-border-radius);
     overflow-x: auto;
     overflow-y: hidden;
   }
@@ -50,6 +48,8 @@ import.meta.css = /* css */ `
     align-items: center;
     gap: 0.5rem;
     list-style: none;
+    background: var(--tablist-background);
+    border-radius: var(--tablist-border-radius);
   }
   .navi_tablist > ul > li {
     position: relative;
@@ -67,11 +67,16 @@ import.meta.css = /* css */ `
 
     .navi_tab_content {
       display: flex;
-      padding: 0 0.5rem;
       color: var(--x-tab-color);
       background: var(--x-tab-background);
       border-radius: inherit;
       transition: background 0.12s ease-out;
+
+      .navi_link {
+        flex-grow: 1;
+        text-align: center;
+        border-radius: inherit;
+      }
     }
     /* Hidden bold clone to reserve space for bold width without affecting height */
     .navi_tab_content_bold_clone {
@@ -194,17 +199,40 @@ export const Tab = (props) => {
   return <TabBasic {...props} />;
 };
 
-const TabRoute = ({ route, children, ...props }) => {
+const TabRoute = ({
+  route,
+  children,
+  paddingX,
+  padding,
+  paddingY,
+  ...props
+}) => {
   const { active } = useRouteStatus(route);
   return (
-    <TabBasic selected={active} {...props}>
-      <RouteLink route={route} expand discrete align="center">
+    <TabBasic selected={active} paddingX="0" {...props}>
+      <RouteLink
+        route={route}
+        expand
+        discrete
+        align="center"
+        paddingX={paddingX}
+        padding={padding}
+        paddingY={paddingY}
+      >
         {children}
       </RouteLink>
     </TabBasic>
   );
 };
-const TabBasic = ({ children, selected, onClick, ...props }) => {
+const TabBasic = ({
+  children,
+  selected,
+  padding,
+  paddingX = "s",
+  paddingY,
+  onClick,
+  ...props
+}) => {
   const tabListUnderline = useContext(TabListUnderlinerContext);
 
   return (
@@ -223,7 +251,14 @@ const TabBasic = ({ children, selected, onClick, ...props }) => {
       }}
       {...props}
     >
-      <div className="navi_tab_content">{children}</div>
+      <Box
+        className="navi_tab_content"
+        paddingX={paddingX}
+        paddingY={paddingY}
+        padding={padding}
+      >
+        {children}
+      </Box>
       <div className="navi_tab_content_bold_clone" aria-hidden="true">
         {children}
       </div>

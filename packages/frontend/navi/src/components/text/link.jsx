@@ -77,7 +77,8 @@ import.meta.css = /* css */ `
       --x-link-text-decoration: var(--x-link-text-decoration-hover);
     }
     /* Focus */
-    &[data-focus] {
+    &[data-focus],
+    &[data-focus-visible] {
       position: relative;
       z-index: 1; /* Ensure focus outline is above other elements */
     }
