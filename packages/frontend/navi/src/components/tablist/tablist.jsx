@@ -17,6 +17,8 @@ Object.assign(PSEUDO_CLASSES, {
 import.meta.css = /* css */ `
   @layer navi {
     .navi_tablist {
+      --tablist-background: transparent;
+
       --tab-background: transparent;
       --tab-background-hover: #dae0e7;
       --tab-background-selected: transparent;
@@ -32,6 +34,7 @@ import.meta.css = /* css */ `
     display: flex;
     justify-content: space-around;
     line-height: 2em;
+    background: var(--tablist-background);
     overflow-x: auto;
     overflow-y: hidden;
   }

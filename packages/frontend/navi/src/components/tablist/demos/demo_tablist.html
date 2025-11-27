@@ -75,8 +75,7 @@
           <div style={{ padding: "10px" }}>
             <Title as="h1">TabList Component Demo</Title>
             <BasicTabs />
-            <UnderlineTabs />
-            <InteractiveTabs />
+            <UnderlineInteractiveTabs />
             <SpacingVariants />
             <ThemingVariables />
             <HoverAndSelectedVariables />
@@ -106,37 +105,17 @@
         );
       };
 
-      const UnderlineTabs = () => {
+      const UnderlineInteractiveTabs = () => {
+        const [active, setActive] = useState("overview");
+        const tabs = ["overview", "activity", "reports", "billing"];
         return (
           <Box as="section" className="demo-section">
-            <Title as="h2">Underline Marker</Title>
+            <Title as="h2">Underline + Click Selection</Title>
             <Text className="note">
-              The <code>underline</code> prop on <code>TabList</code> enables an
-              active underline marker on selected tabs.
-            </Text>
-            <div className="example-block">
-              <TabList underline spacing="sm">
-                <Tab key="overview">Overview</Tab>
-                <Tab key="activity" selected>
-                  Activity
-                </Tab>
-                <Tab key="reports">Reports</Tab>
-                <Tab key="billing">Billing</Tab>
-              </TabList>
-            </div>
-          </Box>
-        );
-      };
-
-      const InteractiveTabs = () => {
-        const [active, setActive] = useState("profile");
-        const tabs = ["home", "profile", "messages", "account"];
-        return (
-          <Box as="section" className="demo-section">
-            <Title as="h2">Interactive (Click to Select)</Title>
-            <Text className="note">
-              Click a tab to update selection. Selection state lives outside the
-              component and is passed down.
+              The <code>underline</code> prop enables an active marker. Tabs
+              become interactive when you provide an <code>onClick</code>;
+              selection is controlled externally (here by local state). The
+              selected tab also updates the associated panel below.
             </Text>
             <div className="example-block">
               <TabList underline spacing="sm">
