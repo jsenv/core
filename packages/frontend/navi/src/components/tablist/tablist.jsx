@@ -1,7 +1,18 @@
+/**
+ * TODO: vertical prop to display the tab vertically
+ */
+
 import { createContext } from "preact";
 import { useContext } from "preact/hooks";
 
 import { Box } from "../layout/box.jsx";
+import { PSEUDO_CLASSES } from "../layout/pseudo_styles.js";
+
+Object.assign(PSEUDO_CLASSES, {
+  ":-navi-selected": {
+    attribute: "data-selected",
+  },
+});
 
 import.meta.css = /* css */ `
   @layer navi {
@@ -23,9 +34,6 @@ import.meta.css = /* css */ `
     line-height: 2em;
     overflow-x: auto;
     overflow-y: hidden;
-
-    --x-tab-background: var(--tab-background);
-    --x-tab-color: var(--tab-color);
   }
   .navi_tablist > ul {
     display: flex;
@@ -41,6 +49,9 @@ import.meta.css = /* css */ `
   }
 
   .navi_tab {
+    --x-tab-background: var(--tab-background);
+    --x-tab-color: var(--tab-color);
+
     display: flex;
     flex-direction: column;
     white-space: nowrap;
@@ -94,7 +105,6 @@ import.meta.css = /* css */ `
 `;
 
 const TabListUnderlinerContext = createContext();
-
 export const TabList = ({ children, spacing, underline, ...props }) => {
   return (
     <Box as="nav" baseClassName="navi_tablist" role="tablist" {...props}>
@@ -109,17 +119,37 @@ export const TabList = ({ children, spacing, underline, ...props }) => {
   );
 };
 
+const TAB_STYLE_CSS_VARS = {
+  "background": "--tab-background",
+  "color": "--tab-color",
+  ":hover": {
+    background: "--tab-background-hover",
+    color: "--tab-color-hover",
+  },
+  ":-navi-selected": {
+    background: "--tab-color-selected",
+    color: "--tab-color-selected",
+  },
+};
+const TAB_PSEUDO_CLASSES = [":hover", ":-navi-selected"];
+const TAB_PSEUDO_ELEMENTS = ["::-navi-marker"];
 export const Tab = ({ children, selected, onClick, ...props }) => {
   const tabListUnderline = useContext(TabListUnderlinerContext);
 
   return (
     <Box
-      baseClassName="navi_tab"
       role="tab"
-      data-selected={selected ? "" : undefined}
       aria-selected={selected ? "true" : "false"}
       data-interactive={onClick ? "" : undefined}
       onClick={onClick}
+      // Style system
+      baseClassName="navi_tab"
+      styleCSSVars={TAB_STYLE_CSS_VARS}
+      pseudoClasses={TAB_PSEUDO_CLASSES}
+      pseudoElements={TAB_PSEUDO_ELEMENTS}
+      basePseudoState={{
+        ":-navi-selected": selected,
+      }}
       {...props}
     >
       <div className="navi_tab_content">{children}</div>
