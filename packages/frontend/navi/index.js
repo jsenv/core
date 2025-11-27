@@ -12,7 +12,7 @@ export { useStateArray } from "./src/components/use_state_array.js";
 export { resource } from "./src/store/resource_graph.js";
 export { valueInLocalStorage } from "./src/store/value_in_local_storage.js";
 
-// routing
+// Navigation/routing
 export {
   actionIntegratedVia,
   goBack,
@@ -33,16 +33,15 @@ export {
 } from "./src/route/route.js";
 export { Route, Routes, useActiveRouteInfo } from "./src/route/route.jsx";
 export { RouteLink } from "./src/route/route_link.jsx";
+// Navigation/components
+export { Tab, TabList } from "./src/components/tablist/tablist.jsx";
+export { Link } from "./src/components/text/link.jsx";
 
-// Components
-export { ActionRenderer } from "./src/components/action_renderer.jsx";
-export { Details } from "./src/components/details/details.jsx";
-export { SummaryMarker } from "./src/components/details/summary_marker.jsx";
+// Form/Components
 export {
   Editable,
   useEditionController,
 } from "./src/components/edition/editable.jsx";
-export { ErrorBoundaryContext } from "./src/components/error_boundary_context.js";
 export { Button } from "./src/components/field/button.jsx";
 export {
   Checkbox,
@@ -53,6 +52,24 @@ export { Input } from "./src/components/field/input.jsx";
 export { Label } from "./src/components/field/label.jsx";
 export { Radio, RadioList } from "./src/components/field/radio_list.jsx";
 export { Select } from "./src/components/field/select.jsx";
+// Form/Validation
+export { createUniqueValueConstraint } from "./src/validation/constraints/create_unique_value_constraint.js";
+export { SINGLE_SPACE_CONSTRAINT } from "./src/validation/constraints/single_space_constraint.js";
+export {
+  addCustomMessage,
+  removeCustomMessage,
+} from "./src/validation/custom_message.js";
+// advanced constraint validation functions
+export {
+  forwardActionRequested,
+  installCustomConstraintValidation,
+} from "./src/validation/custom_constraint_validation.js";
+
+// Components
+export { ActionRenderer } from "./src/components/action_renderer.jsx";
+export { Details } from "./src/components/details/details.jsx";
+export { SummaryMarker } from "./src/components/details/summary_marker.jsx";
+export { ErrorBoundaryContext } from "./src/components/error_boundary_context.js";
 export { ActiveKeyboardShortcuts } from "./src/components/keyboard_shortcuts/active_keyboard_shortcuts.jsx";
 export {
   SelectionContext,
@@ -60,6 +77,7 @@ export {
   useSelectableElement,
   useSelectionController,
 } from "./src/components/selection/selection.jsx";
+
 // Table start
 export {
   isCellSelected,
@@ -80,7 +98,6 @@ export {
 } from "./src/components/table/table.jsx";
 export { useCellsAndColumns } from "./src/components/table/use_cells_and_columns.js";
 // Table end
-export { Tab, TabList } from "./src/components/tablist/tablist.jsx";
 export { UITransition } from "./src/components/ui_transition/ui_transition.jsx";
 export { useSignalSync } from "./src/components/use_signal_sync.js";
 // Text
@@ -88,9 +105,6 @@ export { SVGMaskOverlay } from "./src/components/svg/svg_mask_overlay.jsx";
 export { BadgeCount } from "./src/components/text/badge.jsx";
 export { Caption } from "./src/components/text/caption.jsx";
 export { Code } from "./src/components/text/code.jsx";
-// Link can be used to wrap other things than text BUT it's most of the time used to wrap text
-// So they naturally belong to text stuff
-export { Link } from "./src/components/text/link.jsx";
 export { MessageBox } from "./src/components/text/message_box.jsx";
 export { Paragraph } from "./src/components/text/paragraph.jsx";
 export { Text } from "./src/components/text/text.jsx";
@@ -114,19 +128,6 @@ export {
 } from "./src/components/layout/box.jsx";
 export { DialogLayout } from "./src/components/layout/dialog_layout.jsx";
 export { ViewportLayout } from "./src/components/layout/viewport_layout.jsx";
-
-// Validation
-export { createUniqueValueConstraint } from "./src/validation/constraints/create_unique_value_constraint.js";
-export { SINGLE_SPACE_CONSTRAINT } from "./src/validation/constraints/single_space_constraint.js";
-export {
-  addCustomMessage,
-  removeCustomMessage,
-} from "./src/validation/custom_message.js";
-// advanced constraint validation functions
-export {
-  forwardActionRequested,
-  installCustomConstraintValidation,
-} from "./src/validation/custom_constraint_validation.js";
 
 // Other
 export { useDependenciesDiff } from "./src/components/use_dependencies_diff.js";
