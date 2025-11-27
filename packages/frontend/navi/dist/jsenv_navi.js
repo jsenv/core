@@ -9678,25 +9678,15 @@ const useUITransitionContentId = value => {
   }, []);
 };
 
-const renderSignal = signal(null);
-const forceRender = () => {
-  renderSignal.value = {}; // force re-render
-};
+// import { signal } from "@preact/signals";
+
 
 const useForceRender = () => {
-  // eslint-disable-next-line no-unused-expressions
-  renderSignal.value;
-  return forceRender;
+  const [, setState] = useState(null);
+  return () => {
+    setState({});
+  };
 };
-
-// import { useState } from "preact/hooks";
-
-// export const useForceRender = () => {
-//   const [, setState] = useState(null);
-//   return () => {
-//     setState({});
-//   };
-// };
 
 /**
  *
@@ -9728,12 +9718,9 @@ const Routes = ({
   element = RootElement,
   children
 }) => {
-  return jsx(SlotContext.Provider, {
-    value: null,
-    children: jsx(Route, {
-      element: element,
-      children: children
-    })
+  return jsx(Route, {
+    element: element,
+    children: children
   });
 };
 const useActiveRouteInfo = () => useContext(RouteInfoContext);
@@ -9823,6 +9810,7 @@ const initRouteObserver = ({
   onActiveInfoChange,
   registerChildRouteFromContext
 }) => {
+  const [teardown, addTeardown] = createPubSub();
   const elementId = getElementSignature(element);
   const candidateElementIds = Array.from(candidateSet, c => getElementSignature(c.ActiveElement));
   if (candidateElementIds.length === 0) ; else {
@@ -9921,15 +9909,18 @@ const initRouteObserver = ({
     publishCompositeStatus();
   };
   if (route) {
-    route.subscribeStatus(onChange);
+    addTeardown(route.subscribeStatus(onChange));
   }
   for (const candidate of candidateSet) {
-    candidate.route.subscribeStatus(onChange);
+    addTeardown(candidate.route.subscribeStatus(onChange));
   }
   if (registerChildRouteFromContext) {
     registerChildRouteFromContext(ActiveElement, compositeRoute, fallback, meta);
   }
   updateActiveInfo();
+  return () => {
+    teardown();
+  };
 };
 const RouteSlot = () => {
   const SlotElement = useContext(SlotContext);

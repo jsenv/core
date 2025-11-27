@@ -181,7 +181,7 @@ const TextWithSelectRange = ({ selectRange, ...props }) => {
 const TextBasic = ({ spacing = " ", children, ...rest }) => {
   return (
     <Box as="span" baseClassName="navi_text" {...rest}>
-      {rest.as === "pre"
+      {rest.as === "pre" || rest.box || rest.column || rest.row
         ? children
         : applySpacingOnTextChildren(children, spacing)}
     </Box>
