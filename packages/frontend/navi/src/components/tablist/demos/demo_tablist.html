@@ -371,40 +371,59 @@
               </TabList>
             </div>
             <div className="example-block">
-              <div className="caption">
-                TabList background + selected styling (no underline)
-              </div>
-              <Box
-                row
-                align="center"
-                paddingX="m"
-                width="400"
-                border="1px solid #ccc"
-              >
-                <TabList
-                  borderRadius="s"
-                  expandX
-                  spacing="0"
-                  padding="xxs"
-                  style={{
-                    "--tablist-background": "rgb(233, 236, 240)",
-                    "--tab-background": "transparent",
-                    "--tab-color": "#373C45",
-                    "--tab-background-selected": "#373C45",
-                    "--tab-color-selected": "white",
-                  }}
-                >
-                  <Tab key="overview" selected padding="0">
-                    <Link discrete pseudoState={{ ":focus-visible": true }}>
-                      Overview
-                    </Link>
-                  </Tab>
-                  <Tab key="details">Details</Tab>
-                  <Tab key="more">More</Tab>
-                </TabList>
-              </Box>
+              <InteractiveStyledTabs />
             </div>
           </Box>
+        );
+      };
+
+      const InteractiveStyledTabs = () => {
+        const [active, setActive] = useState("overview");
+        const tabs = ["overview", "details", "more"];
+        return (
+          <div className="example-block">
+            <div className="caption">
+              TabList background + selected styling (no underline)
+            </div>
+            <Box
+              row
+              align="center"
+              paddingX="m"
+              width="400"
+              border="1px solid #ccc"
+            >
+              <TabList
+                borderRadius="s"
+                expandX
+                spacing="0"
+                padding="xxs"
+                style={{
+                  "--tablist-background": "rgb(233, 236, 240)",
+                  "--tab-background": "transparent",
+                  "--tab-color": "#373C45",
+                  "--tab-background-selected": "#373C45",
+                  "--tab-color-selected": "white",
+                }}
+              >
+                {tabs.map((name) => (
+                  <Tab
+                    key={name}
+                    selected={name === active}
+                    onClick={() => setActive(name)}
+                    aria-controls={`panel-${name}`}
+                    padding="0"
+                  >
+                    <Link
+                      discrete
+                      pseudoState={{ ":focus-visible": name === "details" }}
+                    >
+                      {name}
+                    </Link>
+                  </Tab>
+                ))}
+              </TabList>
+            </Box>
+          </div>
         );
       };
 

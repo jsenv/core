@@ -144,6 +144,9 @@ export const TabList = ({
   underline,
   expand,
   expandX,
+  paddingX,
+  paddingY,
+  padding,
   ...props
 }) => {
   return (
@@ -157,7 +160,15 @@ export const TabList = ({
       {...props}
       styleCSSVars={TabListStyleCSSVars}
     >
-      <Box as="ul" column role="list" spacing={spacing}>
+      <Box
+        as="ul"
+        column
+        role="list"
+        paddingX={paddingX}
+        paddingY={paddingY}
+        padding={padding}
+        spacing={spacing}
+      >
         <TabListUnderlinerContext.Provider value={underline}>
           {children.map((child) => {
             return (
