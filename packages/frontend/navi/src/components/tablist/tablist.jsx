@@ -8,8 +8,12 @@ import.meta.css = /* css */ `
     .navi_tablist {
       --tab-background: transparent;
       --tab-background-hover: #dae0e7;
+      --tab-background-selected: transparent;
       --tab-color: inherit;
       --tab-color-hover: #010409;
+      --tab-color-selected: inherit;
+      --tab-marker-height: 2px;
+      --tab-marker-color: rgb(205, 52, 37);
     }
   }
 
@@ -41,11 +45,6 @@ import.meta.css = /* css */ `
     flex-direction: column;
     white-space: nowrap;
 
-    &:hover {
-      --x-tab-background: var(--tab-background-hover);
-      --x-tab-color: var(--tab-color-hover);
-    }
-
     .navi_tab_content {
       display: flex;
       padding: 0 0.5rem;
@@ -54,7 +53,6 @@ import.meta.css = /* css */ `
       border-radius: 6px;
       transition: background 0.12s ease-out;
     }
-
     /* Hidden bold clone to reserve space for bold width without affecting height */
     .navi_tab_content_bold_clone {
       display: block; /* in-flow so it contributes to width */
@@ -64,23 +62,32 @@ import.meta.css = /* css */ `
       pointer-events: none; /* inert */
       overflow: hidden; /* avoid any accidental height */
     }
-
-    .navi_tab_active_marker {
+    .navi_tab_selected_marker {
       z-index: 1;
       display: flex;
       width: 100%;
-      height: 2px;
+      height: var(--tab-marker-height);
       margin-top: 5px;
       background: transparent;
       border-radius: 0.1px;
     }
 
-    &[aria-selected="true"] {
+    /* Interactive */
+    &[data-interactive] {
+      cursor: pointer;
+    }
+    /* Hover */
+    &:hover {
+      --x-tab-background: var(--tab-background-hover);
+      --x-tab-color: var(--tab-color-hover);
+    }
+    /* Selected */
+    &[data-selected] {
       .navi_tab_content {
         font-weight: 600;
       }
-      .navi_tab_active_marker {
-        background: rgb(205, 52, 37);
+      .navi_tab_selected_marker {
+        background: var(--tab-marker-color);
       }
     }
   }
@@ -102,21 +109,24 @@ export const TabList = ({ children, spacing, underline, ...props }) => {
   );
 };
 
-export const Tab = ({ children, selected, ...props }) => {
+export const Tab = ({ children, selected, onClick, ...props }) => {
   const tabListUnderline = useContext(TabListUnderlinerContext);
 
   return (
     <Box
       baseClassName="navi_tab"
       role="tab"
+      data-selected={selected ? "" : undefined}
       aria-selected={selected ? "true" : "false"}
+      data-interactive={onClick ? "" : undefined}
+      onClick={onClick}
       {...props}
     >
       <div className="navi_tab_content">{children}</div>
       <div className="navi_tab_content_bold_clone" aria-hidden="true">
         {children}
       </div>
-      {tabListUnderline && <span className="navi_tab_active_marker"></span>}
+      {tabListUnderline && <span className="navi_tab_selected_marker"></span>}
     </Box>
   );
 };
