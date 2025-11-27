@@ -68,7 +68,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Box, Title, Text, TabList, Tab } from "@jsenv/navi";
+      import { Box, Title, Text, TabList, Tab, Link } from "@jsenv/navi";
 
       const Demo = () => {
         return (
@@ -382,10 +382,10 @@
                 border="1px solid #ccc"
               >
                 <TabList
-                  borderRadius="xs"
+                  borderRadius="s"
                   expandX
                   spacing="0"
-                  padding="xs"
+                  padding="xxs"
                   style={{
                     "--tablist-background": "rgb(233, 236, 240)",
                     "--tab-background": "transparent",
@@ -395,7 +395,7 @@
                   }}
                 >
                   <Tab key="overview" selected>
-                    Overview
+                    <Link discrete>Overview</Link>
                   </Tab>
                   <Tab key="details">Details</Tab>
                   <Tab key="more">More</Tab>

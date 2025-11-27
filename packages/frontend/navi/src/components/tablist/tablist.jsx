@@ -5,6 +5,8 @@
 import { createContext } from "preact";
 import { useContext } from "preact/hooks";
 
+import { useRouteStatus } from "../../route/route.js";
+import { RouteLink } from "../../route/route_link.jsx";
 import { Box } from "../layout/box.jsx";
 import { PSEUDO_CLASSES } from "../layout/pseudo_styles.js";
 
@@ -17,7 +19,9 @@ Object.assign(PSEUDO_CLASSES, {
 import.meta.css = /* css */ `
   @layer navi {
     .navi_tablist {
+      --tablist-border-radius: 8px;
       --tablist-background: transparent;
+      --tab-border-radius: calc(var(--tablist-border-radius) - 2px);
 
       --tab-background: transparent;
       --tab-background-hover: #dae0e7;
@@ -34,6 +38,7 @@ import.meta.css = /* css */ `
     display: flex;
     line-height: 2em;
     background: var(--tablist-background);
+    border-radius: var(--tablist-border-radius);
     overflow-x: auto;
     overflow-y: hidden;
   }
@@ -58,13 +63,14 @@ import.meta.css = /* css */ `
     display: flex;
     flex-direction: column;
     white-space: nowrap;
+    border-radius: var(--tab-border-radius);
 
     .navi_tab_content {
       display: flex;
       padding: 0 0.5rem;
       color: var(--x-tab-color);
       background: var(--x-tab-background);
-      border-radius: 6px;
+      border-radius: inherit;
       transition: background 0.12s ease-out;
     }
     /* Hidden bold clone to reserve space for bold width without affecting height */
@@ -97,6 +103,9 @@ import.meta.css = /* css */ `
     }
     /* Selected */
     &[data-selected] {
+      --x-tab-background: var(--tab-background-selected);
+      --x-tab-color: var(--tab-color-selected);
+
       .navi_tab_content {
         font-weight: 600;
       }
@@ -120,6 +129,10 @@ import.meta.css = /* css */ `
 `;
 
 const TabListUnderlinerContext = createContext();
+const TabListStyleCSSVars = {
+  borderRadius: "--tablist-border-radius",
+  background: "--tablist-background",
+};
 export const TabList = ({
   children,
   spacing,
@@ -137,6 +150,7 @@ export const TabList = ({
       expand={expand}
       expandX={expandX}
       {...props}
+      styleCSSVars={TabListStyleCSSVars}
     >
       <Box as="ul" column role="list" spacing={spacing}>
         <TabListUnderlinerContext.Provider value={underline}>
@@ -173,7 +187,24 @@ const TAB_STYLE_CSS_VARS = {
 };
 const TAB_PSEUDO_CLASSES = [":hover", ":-navi-selected"];
 const TAB_PSEUDO_ELEMENTS = ["::-navi-marker"];
-export const Tab = ({ children, selected, onClick, ...props }) => {
+export const Tab = (props) => {
+  if (props.route) {
+    return <TabRoute {...props} />;
+  }
+  return <TabBasic {...props} />;
+};
+
+const TabRoute = ({ route, children, ...props }) => {
+  const { active } = useRouteStatus(route);
+  return (
+    <TabBasic selected={active} {...props}>
+      <RouteLink route={route} expand discrete align="center">
+        {children}
+      </RouteLink>
+    </TabBasic>
+  );
+};
+const TabBasic = ({ children, selected, onClick, ...props }) => {
   const tabListUnderline = useContext(TabListUnderlinerContext);
 
   return (

@@ -15197,6 +15197,10 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     outline-color: var(--link-outline-color);
     cursor: var(--x-link-cursor);
 
+    /* Current */
+    &[data-href-current] {
+      --x-link-cursor: default;
+    }
     /* Hover */
     &[data-hover] {
       --x-link-color: var(--x-link-color-hover);
@@ -15246,6 +15250,11 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     }
     &[data-disabled] > * {
       opacity: 0.5;
+    }
+    &[data-discrete] {
+      --link-color: inherit;
+      --link-text-decoration: none;
+      --x-link-color: var(--link-color);
     }
     /* Reveal on interaction */
     &[data-reveal-on-interaction] {
@@ -15346,6 +15355,7 @@ const LinkPlain = props => {
     preventDefault,
     anchor,
     // visual
+    discrete,
     blankTargetIcon,
     anchorIcon,
     icon,
@@ -15410,6 +15420,7 @@ const LinkPlain = props => {
     ,
     "data-anchor": anchor ? "" : undefined,
     "data-reveal-on-interaction": revealOnInteraction ? "" : undefined,
+    "data-discrete": discrete ? "" : undefined,
     baseClassName: "navi_link",
     styleCSSVars: LinkStyleCSSVars,
     pseudoClasses: LinkPseudoClasses,
@@ -15624,104 +15635,229 @@ const RouteLink = ({
   });
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCss(import.meta);Object.assign(PSEUDO_CLASSES, {
+  ":-navi-selected": {
+    attribute: "data-selected"
+  }
+});
+import.meta.css = /* css */`
+  @layer navi {
+    .navi_tablist {
+      --tablist-border-radius: 8px;
+      --tablist-background: transparent;
+      --tab-border-radius: calc(var(--tablist-border-radius) - 2px);
+
+      --tab-background: transparent;
+      --tab-background-hover: #dae0e7;
+      --tab-background-selected: transparent;
+      --tab-color: inherit;
+      --tab-color-hover: #010409;
+      --tab-color-selected: inherit;
+      --tab-marker-height: 2px;
+      --tab-marker-color: rgb(205, 52, 37);
+    }
+  }
+
   .navi_tablist {
     display: flex;
-    justify-content: space-between;
+    line-height: 2em;
+    background: var(--tablist-background);
+    border-radius: var(--tablist-border-radius);
     overflow-x: auto;
     overflow-y: hidden;
   }
-
   .navi_tablist > ul {
     display: flex;
+    width: 100%;
     margin: 0;
     padding: 0;
     align-items: center;
     gap: 0.5rem;
     list-style: none;
   }
-
   .navi_tablist > ul > li {
     position: relative;
     display: inline-flex;
   }
 
   .navi_tab {
+    --x-tab-background: var(--tab-background);
+    --x-tab-color: var(--tab-color);
+
     display: flex;
     flex-direction: column;
     white-space: nowrap;
+    border-radius: var(--tab-border-radius);
+
+    .navi_tab_content {
+      display: flex;
+      padding: 0 0.5rem;
+      color: var(--x-tab-color);
+      background: var(--x-tab-background);
+      border-radius: inherit;
+      transition: background 0.12s ease-out;
+    }
+    /* Hidden bold clone to reserve space for bold width without affecting height */
+    .navi_tab_content_bold_clone {
+      display: block; /* in-flow so it contributes to width */
+      height: 0; /* zero height so it doesn't change layout height */
+      font-weight: 600; /* force bold to compute max width */
+      visibility: hidden; /* not visible */
+      pointer-events: none; /* inert */
+      overflow: hidden; /* avoid any accidental height */
+    }
+    .navi_tab_selected_marker {
+      z-index: 1;
+      display: flex;
+      width: 100%;
+      height: var(--tab-marker-height);
+      margin-top: 5px;
+      background: transparent;
+      border-radius: 0.1px;
+    }
+
+    /* Interactive */
+    &[data-interactive] {
+      cursor: pointer;
+    }
+    /* Hover */
+    &:hover {
+      --x-tab-background: var(--tab-background-hover);
+      --x-tab-color: var(--tab-color-hover);
+    }
+    /* Selected */
+    &[data-selected] {
+      --x-tab-background: var(--tab-background-selected);
+      --x-tab-color: var(--tab-color-selected);
+
+      .navi_tab_content {
+        font-weight: 600;
+      }
+      .navi_tab_selected_marker {
+        background: var(--tab-marker-color);
+      }
+    }
   }
 
-  .navi_tab_content {
-    display: flex;
-    padding: 0 0.5rem;
-    text-decoration: none;
-    line-height: 30px;
-    border-radius: 6px;
-    transition: background 0.12s ease-out;
-  }
+  .navi_tablist[data-expand] {
+    .navi_tab {
+      flex: 1;
+      align-items: center;
+    }
 
-  .navi_tab:hover .navi_tab_content {
-    color: #010409;
-    background: #dae0e7;
-  }
-
-  .navi_tab .active_marker {
-    z-index: 1;
-    display: flex;
-    width: 100%;
-    height: 2px;
-    margin-top: 5px;
-    background: transparent;
-    border-radius: 0.1px;
-  }
-
-  /* Hidden bold clone to reserve space for bold width without affecting height */
-  .navi_tab_content_bold_clone {
-    display: block; /* in-flow so it contributes to width */
-    height: 0; /* zero height so it doesn't change layout height */
-    font-weight: 600; /* force bold to compute max width */
-    visibility: hidden; /* not visible */
-    pointer-events: none; /* inert */
-    overflow: hidden; /* avoid any accidental height */
-  }
-
-  .navi_tab[aria-selected="true"] .active_marker {
-    background: rgb(205, 52, 37);
-  }
-
-  .navi_tab[aria-selected="true"] .navi_tab_content {
-    font-weight: 600;
+    .navi_tab_content {
+      width: 100%;
+      justify-content: center;
+    }
   }
 `;
+const TabListUnderlinerContext = createContext();
+const TabListStyleCSSVars = {
+  borderRadius: "--tablist-border-radius",
+  background: "--tablist-background"
+};
 const TabList = ({
   children,
+  spacing,
+  underline,
+  expand,
+  expandX,
   ...props
 }) => {
   return jsx(Box, {
     as: "nav",
     baseClassName: "navi_tablist",
     role: "tablist",
+    "data-expand": expand || expandX ? "" : undefined,
+    expand: expand,
+    expandX: expandX,
     ...props,
-    children: jsx("ul", {
+    styleCSSVars: TabListStyleCSSVars,
+    children: jsx(Box, {
+      as: "ul",
+      column: true,
       role: "list",
-      children: children.map(child => {
-        return jsx("li", {
-          children: child
-        }, child.props.key);
+      spacing: spacing,
+      children: jsx(TabListUnderlinerContext.Provider, {
+        value: underline,
+        children: children.map(child => {
+          return jsx(Box, {
+            as: "li",
+            column: true,
+            expandX: expandX,
+            expand: expand,
+            children: child
+          }, child.props.key);
+        })
       })
     })
   });
 };
-const Tab = ({
+const TAB_STYLE_CSS_VARS = {
+  "background": "--tab-background",
+  "color": "--tab-color",
+  ":hover": {
+    background: "--tab-background-hover",
+    color: "--tab-color-hover"
+  },
+  ":-navi-selected": {
+    background: "--tab-color-selected",
+    color: "--tab-color-selected"
+  }
+};
+const TAB_PSEUDO_CLASSES = [":hover", ":-navi-selected"];
+const TAB_PSEUDO_ELEMENTS = ["::-navi-marker"];
+const Tab = props => {
+  if (props.route) {
+    return jsx(TabRoute, {
+      ...props
+    });
+  }
+  return jsx(TabBasic, {
+    ...props
+  });
+};
+const TabRoute = ({
+  route,
   children,
-  selected,
   ...props
 }) => {
+  const {
+    active
+  } = useRouteStatus(route);
+  return jsx(TabBasic, {
+    selected: active,
+    ...props,
+    children: jsx(RouteLink, {
+      route: route,
+      expand: true,
+      discrete: true,
+      align: "center",
+      children: children
+    })
+  });
+};
+const TabBasic = ({
+  children,
+  selected,
+  onClick,
+  ...props
+}) => {
+  const tabListUnderline = useContext(TabListUnderlinerContext);
   return jsxs(Box, {
-    baseClassName: "navi_tab",
     role: "tab",
     "aria-selected": selected ? "true" : "false",
+    "data-interactive": onClick ? "" : undefined,
+    onClick: onClick
+    // Style system
+    ,
+    baseClassName: "navi_tab",
+    styleCSSVars: TAB_STYLE_CSS_VARS,
+    pseudoClasses: TAB_PSEUDO_CLASSES,
+    pseudoElements: TAB_PSEUDO_ELEMENTS,
+    basePseudoState: {
+      ":-navi-selected": selected
+    },
     ...props,
     children: [jsx("div", {
       className: "navi_tab_content",
@@ -15730,8 +15866,8 @@ const Tab = ({
       className: "navi_tab_content_bold_clone",
       "aria-hidden": "true",
       children: children
-    }), jsx("span", {
-      className: "active_marker"
+    }), tabListUnderline && jsx("span", {
+      className: "navi_tab_selected_marker"
     })]
   });
 };

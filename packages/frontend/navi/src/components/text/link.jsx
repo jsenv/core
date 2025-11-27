@@ -67,6 +67,10 @@ import.meta.css = /* css */ `
     outline-color: var(--link-outline-color);
     cursor: var(--x-link-cursor);
 
+    /* Current */
+    &[data-href-current] {
+      --x-link-cursor: default;
+    }
     /* Hover */
     &[data-hover] {
       --x-link-color: var(--x-link-color-hover);
@@ -116,6 +120,11 @@ import.meta.css = /* css */ `
     }
     &[data-disabled] > * {
       opacity: 0.5;
+    }
+    &[data-discrete] {
+      --link-color: inherit;
+      --link-text-decoration: none;
+      --x-link-color: var(--link-color);
     }
     /* Reveal on interaction */
     &[data-reveal-on-interaction] {
@@ -231,6 +240,7 @@ const LinkPlain = (props) => {
     anchor,
 
     // visual
+    discrete,
     blankTargetIcon,
     anchorIcon,
     icon,
@@ -307,6 +317,7 @@ const LinkPlain = (props) => {
       // Visual
       data-anchor={anchor ? "" : undefined}
       data-reveal-on-interaction={revealOnInteraction ? "" : undefined}
+      data-discrete={discrete ? "" : undefined}
       baseClassName="navi_link"
       styleCSSVars={LinkStyleCSSVars}
       pseudoClasses={LinkPseudoClasses}
