@@ -91,7 +91,7 @@ const TabListUnderlinerContext = createContext();
 export const TabList = ({ children, spacing, underline, ...props }) => {
   return (
     <Box as="nav" baseClassName="navi_tablist" role="tablist" {...props}>
-      <Box as="ul" role="list" spacing={spacing}>
+      <Box as="ul" column role="list" spacing={spacing}>
         <TabListUnderlinerContext.Provider value={underline}>
           {children.map((child) => {
             return <li key={child.props.key}>{child}</li>;
