@@ -45,6 +45,7 @@
         margin-bottom: 24px;
       }
       .note {
+        display: inline-block;
         padding: 10px 12px;
         color: #555;
         font-size: 0.8rem;
@@ -77,6 +78,8 @@
             <UnderlineTabs />
             <InteractiveTabs />
             <SpacingVariants />
+            <ThemingVariables />
+            <HoverAndSelectedVariables />
             <DynamicAddRemove />
           </div>
         );
@@ -253,6 +256,158 @@
               role="tabpanel"
             >
               <strong>{active}</strong> dynamic panel content
+            </div>
+          </Box>
+        );
+      };
+
+      const ThemingVariables = () => {
+        return (
+          <Box as="section" className="demo-section">
+            <Title as="h2">Background & Color via CSS Variables</Title>
+            <Text className="note">
+              Set <code>--tab-background</code> / <code>--tab-color</code> (and
+              hover variants) on <code>TabList</code>. Override a single tab by
+              setting variables directly on the <code>Tab</code>.
+            </Text>
+            <div className="example-block">
+              <div className="caption">Global theme (light slate)</div>
+              <TabList
+                underline
+                style={{
+                  "--tab-background": "#f2f5f8",
+                  "--tab-color": "#334155",
+                  "--tab-background-hover": "#e2e8f0",
+                  "--tab-color-hover": "#1e293b",
+                }}
+              >
+                <Tab key="one" selected>
+                  One
+                </Tab>
+                <Tab key="two">Two</Tab>
+                <Tab key="three">Three</Tab>
+              </TabList>
+            </div>
+            <div className="example-block">
+              <div className="caption">Override third tab only</div>
+              <TabList
+                underline
+                style={{
+                  "--tab-background": "#202124",
+                  "--tab-color": "#e8eaed",
+                  "--tab-background-hover": "#2d2f31",
+                  "--tab-color-hover": "white",
+                }}
+              >
+                <Tab key="alpha" selected>
+                  Alpha
+                </Tab>
+                <Tab key="beta">Beta</Tab>
+                <Tab
+                  key="gamma"
+                  style={{
+                    "--tab-background": "#0d47a1",
+                    "--tab-color": "#fff",
+                    "--tab-background-hover": "#1565c0",
+                    "--tab-color-hover": "#fff",
+                  }}
+                >
+                  Gamma (override)
+                </Tab>
+              </TabList>
+            </div>
+          </Box>
+        );
+      };
+
+      const HoverAndSelectedVariables = () => {
+        return (
+          <Box as="section" className="demo-section">
+            <Title as="h2">Hover & Selected Appearance</Title>
+            <Text className="note">
+              Control hover and selected visuals using{" "}
+              <code>--tab-background-hover</code>,{" "}
+              <code>--tab-color-hover</code>,{" "}
+              <code>--tab-background-selected</code>,{" "}
+              <code>--tab-color-selected</code>, and for underline{" "}
+              <code>--tab-marker-color</code> / <code>--tab-marker-height</code>
+              . Selected background/color are applied via pseudo state{" "}
+              <code>:-navi-selected</code>.
+            </Text>
+            <div className="example-block">
+              <div className="caption">Custom hover + marker</div>
+              <TabList
+                underline
+                style={{
+                  "--tab-background": "transparent",
+                  "--tab-color": "#374151",
+                  "--tab-background-hover": "#fde68a",
+                  "--tab-color-hover": "#92400e",
+                  "--tab-marker-color": "#f59e0b",
+                }}
+              >
+                <Tab key="day" selected>
+                  Day
+                </Tab>
+                <Tab key="week">Week</Tab>
+                <Tab key="month">Month</Tab>
+              </TabList>
+            </div>
+            <div className="example-block">
+              <div className="caption">Custom selected background & color</div>
+              <TabList
+                underline
+                style={{
+                  "--tab-background": "#1e1e1e",
+                  "--tab-color": "#c9d1d9",
+                  "--tab-background-hover": "#2a2a2a",
+                  "--tab-color-hover": "white",
+                  "--tab-marker-color": "#ff6b6b",
+                  "--tab-marker-height": "3px",
+                  "--tab-background-selected": "#0d1117",
+                  "--tab-color-selected": "#ffdd57",
+                }}
+              >
+                <Tab key="code" selected>
+                  Code
+                </Tab>
+                <Tab key="design">Design</Tab>
+                <Tab key="docs">Docs</Tab>
+              </TabList>
+            </div>
+            <div className="example-block">
+              <div className="caption">Override selected style for one tab</div>
+              <TabList
+                underline
+                style={{
+                  "--tab-background": "#f1f5f9",
+                  "--tab-color": "#475569",
+                  "--tab-background-hover": "#e2e8f0",
+                  "--tab-color-hover": "#1e293b",
+                  "--tab-background-selected": "#cbd5e1",
+                  "--tab-color-selected": "#0f172a",
+                  "--tab-marker-color": "#0ea5e9",
+                }}
+              >
+                <Tab key="general" selected>
+                  General
+                </Tab>
+                <Tab key="advanced">Advanced</Tab>
+                <Tab
+                  key="danger"
+                  style={{
+                    "--tab-background": "#fee2e2",
+                    "--tab-color": "#991b1b",
+                    "--tab-background-hover": "#fecaca",
+                    "--tab-color-hover": "#7f1d1d",
+                    "--tab-background-selected": "#fb7185",
+                    "--tab-color-selected": "white",
+                    "--tab-marker-color": "#dc2626",
+                  }}
+                >
+                  Danger (override)
+                </Tab>
+              </TabList>
             </div>
           </Box>
         );
