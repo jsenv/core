@@ -378,8 +378,8 @@
       };
 
       const InteractiveStyledTabs = () => {
-        const [active, setActive] = useState("overview");
-        const tabs = ["overview", "details", "more"];
+        const [active, setActive] = useState("Overview");
+        const tabs = ["Overview", "Details", "More"];
         return (
           <div className="example-block">
             <div className="caption">
@@ -396,7 +396,7 @@
                 borderRadius="s"
                 expandX
                 spacing="0"
-                padding="xxs"
+                padding="xs"
                 style={{
                   "--tablist-background": "rgb(233, 236, 240)",
                   "--tab-background": "transparent",
@@ -415,7 +415,7 @@
                   >
                     <Link
                       discrete
-                      pseudoState={{ ":focus-visible": name === "details" }}
+                      pseudoState={{ ":focus-visible": name === "Details" }}
                     >
                       {name}
                     </Link>

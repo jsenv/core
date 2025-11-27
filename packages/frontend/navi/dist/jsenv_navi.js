@@ -15768,6 +15768,9 @@ const TabList = ({
   underline,
   expand,
   expandX,
+  paddingX,
+  paddingY,
+  padding,
   ...props
 }) => {
   return jsx(Box, {
@@ -15783,6 +15786,9 @@ const TabList = ({
       as: "ul",
       column: true,
       role: "list",
+      paddingX: paddingX,
+      paddingY: paddingY,
+      padding: padding,
       spacing: spacing,
       children: jsx(TabListUnderlinerContext.Provider, {
         value: underline,
