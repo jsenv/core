@@ -1,13 +1,28 @@
+import { createContext } from "preact";
+import { useContext } from "preact/hooks";
+
 import { Box } from "../layout/box.jsx";
 
 import.meta.css = /* css */ `
-  .navi_tablist {
-    display: flex;
-    justify-content: space-between;
-    overflow-x: auto;
-    overflow-y: hidden;
+  @layer navi {
+    .navi_tablist {
+      --tab-background: transparent;
+      --tab-background-hover: #dae0e7;
+      --tab-color: inherit;
+      --tab-color-hover: #010409;
+    }
   }
 
+  .navi_tablist {
+    display: flex;
+    justify-content: space-around;
+    line-height: 2em;
+    overflow-x: auto;
+    overflow-y: hidden;
+
+    --x-tab-background: var(--tab-background);
+    --x-tab-color: var(--tab-color);
+  }
   .navi_tablist > ul {
     display: flex;
     margin: 0;
@@ -16,7 +31,6 @@ import.meta.css = /* css */ `
     gap: 0.5rem;
     list-style: none;
   }
-
   .navi_tablist > ul > li {
     position: relative;
     display: inline-flex;
@@ -26,64 +40,71 @@ import.meta.css = /* css */ `
     display: flex;
     flex-direction: column;
     white-space: nowrap;
-  }
 
-  .navi_tab_content {
-    display: flex;
-    padding: 0 0.5rem;
-    text-decoration: none;
-    line-height: 30px;
-    border-radius: 6px;
-    transition: background 0.12s ease-out;
-  }
+    &:hover {
+      --x-tab-background: var(--tab-background-hover);
+      --x-tab-color: var(--tab-color-hover);
+    }
 
-  .navi_tab:hover .navi_tab_content {
-    color: #010409;
-    background: #dae0e7;
-  }
+    .navi_tab_content {
+      display: flex;
+      padding: 0 0.5rem;
+      color: var(--x-tab-color);
+      background: var(--x-tab-background);
+      border-radius: 6px;
+      transition: background 0.12s ease-out;
+    }
 
-  .navi_tab .active_marker {
-    z-index: 1;
-    display: flex;
-    width: 100%;
-    height: 2px;
-    margin-top: 5px;
-    background: transparent;
-    border-radius: 0.1px;
-  }
+    /* Hidden bold clone to reserve space for bold width without affecting height */
+    .navi_tab_content_bold_clone {
+      display: block; /* in-flow so it contributes to width */
+      height: 0; /* zero height so it doesn't change layout height */
+      font-weight: 600; /* force bold to compute max width */
+      visibility: hidden; /* not visible */
+      pointer-events: none; /* inert */
+      overflow: hidden; /* avoid any accidental height */
+    }
 
-  /* Hidden bold clone to reserve space for bold width without affecting height */
-  .navi_tab_content_bold_clone {
-    display: block; /* in-flow so it contributes to width */
-    height: 0; /* zero height so it doesn't change layout height */
-    font-weight: 600; /* force bold to compute max width */
-    visibility: hidden; /* not visible */
-    pointer-events: none; /* inert */
-    overflow: hidden; /* avoid any accidental height */
-  }
+    .navi_tab_active_marker {
+      z-index: 1;
+      display: flex;
+      width: 100%;
+      height: 2px;
+      margin-top: 5px;
+      background: transparent;
+      border-radius: 0.1px;
+    }
 
-  .navi_tab[aria-selected="true"] .active_marker {
-    background: rgb(205, 52, 37);
-  }
-
-  .navi_tab[aria-selected="true"] .navi_tab_content {
-    font-weight: 600;
+    &[aria-selected="true"] {
+      .navi_tab_content {
+        font-weight: 600;
+      }
+      .navi_tab_active_marker {
+        background: rgb(205, 52, 37);
+      }
+    }
   }
 `;
 
-export const TabList = ({ children, ...props }) => {
+const TabListUnderlinerContext = createContext();
+
+export const TabList = ({ children, spacing, underline, ...props }) => {
   return (
     <Box as="nav" baseClassName="navi_tablist" role="tablist" {...props}>
-      <ul role="list">
-        {children.map((child) => {
-          return <li key={child.props.key}>{child}</li>;
-        })}
-      </ul>
+      <Box as="ul" role="list" spacing={spacing}>
+        <TabListUnderlinerContext.Provider value={underline}>
+          {children.map((child) => {
+            return <li key={child.props.key}>{child}</li>;
+          })}
+        </TabListUnderlinerContext.Provider>
+      </Box>
     </Box>
   );
 };
 
 export const Tab = ({ children, selected, ...props }) => {
+  const tabListUnderline = useContext(TabListUnderlinerContext);
+
   return (
     <Box
       baseClassName="navi_tab"
@@ -95,7 +116,7 @@ export const Tab = ({ children, selected, ...props }) => {
       <div className="navi_tab_content_bold_clone" aria-hidden="true">
         {children}
       </div>
-      <span className="active_marker"></span>
+      {tabListUnderline && <span className="navi_tab_active_marker"></span>}
     </Box>
   );
 };

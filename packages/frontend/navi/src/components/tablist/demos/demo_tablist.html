@@ -1,0 +1,272 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>TabList Demo</title>
+    <style>
+      body {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        line-height: 1.5;
+        background: #f5f5f5;
+      }
+      h1 {
+        margin: 0 0 30px;
+        color: #333;
+        font-size: 2rem;
+        text-align: center;
+      }
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 20px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      }
+      .demo-section h2 {
+        margin: 0 0 15px;
+        padding-bottom: 6px;
+        color: #222;
+        font-size: 1.3rem;
+        border-bottom: 2px solid #e0e0e0;
+      }
+      .caption {
+        margin: 10px 0 8px;
+        color: #666;
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .example-block {
+        margin-bottom: 24px;
+      }
+      .note {
+        padding: 10px 12px;
+        color: #555;
+        font-size: 0.8rem;
+        background: #f8f9fa;
+        border-left: 4px solid #1976d2;
+        border-radius: 0 6px 6px 0;
+      }
+      .dynamic-panel {
+        min-height: 60px;
+        margin-top: 16px;
+        padding: 12px 16px;
+        background: #fafafa;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { Box, Title, Text, TabList, Tab } from "@jsenv/navi";
+
+      const Demo = () => {
+        return (
+          <div style={{ padding: "10px" }}>
+            <Title as="h1">TabList Component Demo</Title>
+            <BasicTabs />
+            <UnderlineTabs />
+            <InteractiveTabs />
+            <SpacingVariants />
+            <DynamicAddRemove />
+          </div>
+        );
+      };
+
+      const BasicTabs = () => {
+        return (
+          <Box as="section" className="demo-section">
+            <Title as="h2">Basic</Title>
+            <Text className="note">
+              A minimal tab list. Selection is controlled via the{" "}
+              <code>selected</code> prop on each <code>Tab</code>.
+            </Text>
+            <div className="example-block">
+              <TabList>
+                <Tab key="home" selected>
+                  Home
+                </Tab>
+                <Tab key="profile">Profile</Tab>
+                <Tab key="settings">Settings</Tab>
+              </TabList>
+            </div>
+          </Box>
+        );
+      };
+
+      const UnderlineTabs = () => {
+        return (
+          <Box as="section" className="demo-section">
+            <Title as="h2">Underline Marker</Title>
+            <Text className="note">
+              The <code>underline</code> prop on <code>TabList</code> enables an
+              active underline marker on selected tabs.
+            </Text>
+            <div className="example-block">
+              <TabList underline spacing="sm">
+                {[
+                  <Tab key="overview">Overview</Tab>,
+                  <Tab key="activity" selected>
+                    Activity
+                  </Tab>,
+                  <Tab key="reports">Reports</Tab>,
+                  <Tab key="billing">Billing</Tab>,
+                ]}
+              </TabList>
+            </div>
+          </Box>
+        );
+      };
+
+      const InteractiveTabs = () => {
+        const [active, setActive] = useState("profile");
+        const tabs = ["home", "profile", "messages", "account"];
+        return (
+          <Box as="section" className="demo-section">
+            <Title as="h2">Interactive (Click to Select)</Title>
+            <Text className="note">
+              Click a tab to update selection. Selection state lives outside the
+              component and is passed down.
+            </Text>
+            <div className="example-block">
+              <TabList underline spacing="sm">
+                {tabs.map((name) => (
+                  <Tab
+                    key={name}
+                    selected={name === active}
+                    onClick={() => setActive(name)}
+                    aria-controls={`panel-${name}`}
+                  >
+                    {name.charAt(0).toUpperCase() + name.slice(1)}
+                  </Tab>
+                ))}
+              </TabList>
+              <div
+                className="dynamic-panel"
+                id={`panel-${active}`}
+                role="tabpanel"
+              >
+                <strong>{active}</strong> panel content
+              </div>
+            </div>
+          </Box>
+        );
+      };
+
+      const SpacingVariants = () => {
+        return (
+          <Box as="section" className="demo-section">
+            <Title as="h2">Spacing Variants</Title>
+            <Text className="note">
+              The <code>spacing</code> prop controls gap between tabs.
+              Demonstrated with values <code>xs</code>, <code>sm</code>, and no
+              spacing prop (default).
+            </Text>
+            <div className="example-block">
+              <div className="caption">spacing="xs"</div>
+              <TabList underline spacing="xs">
+                {[
+                  <Tab key="a" selected>
+                    A
+                  </Tab>,
+                  <Tab key="b">B</Tab>,
+                  <Tab key="c">C</Tab>,
+                ]}
+              </TabList>
+            </div>
+            <div className="example-block">
+              <div className="caption">spacing="sm"</div>
+              <TabList underline spacing="sm">
+                {[
+                  <Tab key="a" selected>
+                    A
+                  </Tab>,
+                  <Tab key="b">B</Tab>,
+                  <Tab key="c">C</Tab>,
+                ]}
+              </TabList>
+            </div>
+            <div className="example-block">
+              <div className="caption">(default spacing)</div>
+              <TabList underline>
+                {[
+                  <Tab key="a" selected>
+                    A
+                  </Tab>,
+                  <Tab key="b">B</Tab>,
+                  <Tab key="c">C</Tab>,
+                ]}
+              </TabList>
+            </div>
+          </Box>
+        );
+      };
+
+      const DynamicAddRemove = () => {
+        const [tabs, setTabs] = useState([
+          { key: "alpha", label: "Alpha" },
+          { key: "beta", label: "Beta" },
+          { key: "gamma", label: "Gamma" },
+        ]);
+        const [active, setActive] = useState("alpha");
+        const addTab = () => {
+          const id = `tab${tabs.length + 1}`;
+          setTabs([...tabs, { key: id, label: id }]);
+        };
+        const removeLast = () => {
+          if (tabs.length === 0) return;
+          const clone = tabs.slice(0, -1);
+          setTabs(clone);
+          if (!clone.find((t) => t.key === active) && clone.length) {
+            setActive(clone[clone.length - 1].key);
+          }
+        };
+        return (
+          <Box as="section" className="demo-section">
+            <Title as="h2">Dynamic Add / Remove</Title>
+            <Text className="note">
+              Tabs can be created or removed externally; the list simply renders
+              what it receives.
+            </Text>
+            <div style={{ marginBottom: "12px" }}>
+              <button onClick={addTab} style={{ marginRight: "8px" }}>
+                Add Tab
+              </button>
+              <button onClick={removeLast}>Remove Last</button>
+            </div>
+            <TabList underline spacing="sm">
+              {tabs.map((t) => (
+                <Tab
+                  key={t.key}
+                  selected={t.key === active}
+                  onClick={() => setActive(t.key)}
+                  aria-controls={`panel-${t.key}`}
+                >
+                  {t.label}
+                </Tab>
+              ))}
+            </TabList>
+            <div
+              className="dynamic-panel"
+              id={`panel-${active}`}
+              role="tabpanel"
+            >
+              <strong>{active}</strong> dynamic panel content
+            </div>
+          </Box>
+        );
+      };
+
+      render(<Demo />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
