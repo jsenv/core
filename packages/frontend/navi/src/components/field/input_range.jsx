@@ -1,4 +1,4 @@
-import { useCallback, useContext, useRef } from "preact/hooks";
+import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { useActionStatus } from "../../use_action_status.js";
 import { forwardActionRequested } from "../../validation/custom_constraint_validation.js";
@@ -26,64 +26,79 @@ import {
 import.meta.css = /* css */ `
   @layer navi {
     .navi_input_range {
-      --border-radius: 2px;
+      --border-radius: 6px;
       --outline-width: 1px;
+      --height: 12px;
+      --rail-height: 8px;
+      --rail-border: 1px solid #b5b5b5;
+      --thumb-size: 0.9em;
 
-      /* Default */
       --outline-color: var(--navi-focus-outline-color);
       --loader-color: var(--navi-loader-color);
-      --background-color: transparent;
-      --color: currentColor;
-      --color-dimmed: color-mix(in srgb, currentColor 60%, transparent);
-      --placeholder-color: var(--color-dimmed);
-      /* Hover */
-      --background-color-hover: color-mix(
-        in srgb,
-        var(--background-color) 95%,
-        black
-      );
-      --color-hover: var(--color);
-      /* Active */
-      /* Readonly */
-      --background-color-readonly: var(--background-color);
-      --color-readonly: var(--color-dimmed);
-      /* Disabled */
-      --background-color-disabled: color-mix(
-        in srgb,
-        var(--background-color) 95%,
-        grey
-      );
-      --color-disabled: color-mix(in srgb, var(--color) 95%, grey);
+      --rail-color: #efefef;
+      --track-color: #4a90e2;
+      --thumb-color: #1875ff;
+      --thumb-color-hover: #105cc8;
     }
   }
 
   .navi_input_range {
+    --x-fill-ratio: 0;
+    --x-rail-border: var(--rail-border);
+    --x-rail-color: var(--rail-color);
+    --x-track-color: var(--track-color);
+    --x-handle-color: var(--handle-color);
+    --x-handle-border: none;
+
     position: relative;
     box-sizing: border-box;
-    width: fit-content;
-    height: fit-content;
+    width: 100%;
+    height: var(--height);
     margin: 2px;
     flex-direction: inherit;
+    align-items: center;
     border-radius: inherit;
+    border-radius: var(--border-radius);
+    outline-width: var(--outline-width);
+    outline-style: none;
+    outline-color: var(--outline-color);
     cursor: inherit;
 
-    --x-border-radius: var(--border-radius);
-    --x-outline-color: var(--outline-color);
-    --x-background-color: var(--background-color);
-    --x-color: var(--color);
+    .navi_native_input {
+      position: absolute;
+      margin: 0;
+      opacity: 0.2;
+      pointer-events: none;
+    }
+
+    .navi_input_range_rail {
+      position: absolute;
+      box-sizing: border-box;
+      width: 100%;
+      height: var(--rail-height);
+      background: var(--x-rail-color);
+      border: var(--x-rail-border);
+      border-radius: inherit;
+    }
+    .navi_input_range_track {
+      position: absolute;
+      width: calc(var(--x-fill-ratio) * 100%);
+      height: 4px;
+      background: var(--x-track-color);
+    }
+
+    .navi_input_range_handle {
+      position: absolute;
+      left: calc(var(--x-fill-ratio) * 100%);
+      width: var(--handle-size);
+      height: var(--handle-size);
+      background: var(--x-handle-color);
+      border: var(--x-handle-border);
+      border-radius: 100%;
+      cursor: pointer;
+    }
   }
 
-  .navi_input_range .navi_native_input {
-    box-sizing: border-box;
-    margin: 0;
-    flex-grow: 1;
-    color: var(--x-color);
-    background-color: var(--x-background-color);
-    border-radius: var(--x-border-radius);
-    outline-width: var(--x-outline-width);
-    outline-style: none;
-    outline-color: var(--x-outline-color);
-  }
   /* Readonly */
   .navi_input_range[data-readonly] {
     --x-background-color: var(--background-color-readonly);
@@ -192,6 +207,13 @@ const InputRangeBasic = (props) => {
 
   const innerOnInput = useStableCallback(onInput);
   const renderInput = (inputProps) => {
+    useLayoutEffect(() => {
+      const el = ref.current;
+      if (!el) {
+        return;
+      }
+    }, []);
+
     return (
       <Box
         {...inputProps}
@@ -204,6 +226,10 @@ const InputRangeBasic = (props) => {
           const inputValue = e.target.value;
           uiStateController.setUIState(inputValue, e);
           innerOnInput?.(e);
+
+          const ratio =
+            (inputValue - e.target.min) / (e.target.max - e.target.min);
+          e.target.parentNode.style.setProperty("--x-fill-ratio", ratio);
         }}
         onresetuistate={(e) => {
           uiStateController.resetUIState(e);
@@ -248,6 +274,9 @@ const InputRangeBasic = (props) => {
         inset={-1}
       />
       {renderInputMemoized}
+      <div className="navi_input_range_rail"></div>
+      <div className="navi_input_range_track"></div>
+      <div className="navi_input_range_handle"></div>
     </Box>
   );
 };
