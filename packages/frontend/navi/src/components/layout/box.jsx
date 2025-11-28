@@ -140,7 +140,7 @@ export const Box = (props) => {
     if (inline === undefined) {
       inline = true;
     }
-    if (column === undefined) {
+    if (column === undefined && !row) {
       column = true;
     }
   }
