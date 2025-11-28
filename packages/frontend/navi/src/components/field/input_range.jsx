@@ -35,14 +35,22 @@ import.meta.css = /* css */ `
       --outline-color: var(--navi-focus-outline-color);
       --loader-color: var(--navi-loader-color);
       --rail-border-color: #b5b5b5;
+      --track-border-color: #3e75bb;
+      --track-border-color-hover: #2b568b;
       --rail-color: #efefef;
-      --track-color: #1875ff;
-      --handle-color: #1875ff;
+      --track-color: rgb(24, 117, 255);
+      --handle-color: rgb(24, 117, 255);
 
       --rail-color-hover: color-mix(in srgb, var(--rail-color) 95%, black);
-      --track-color-hover: #105cc8;
-      --handle-color-hover: #105cc8;
+      --track-color-hover: rgb(16, 92, 200);
+      --handle-color-hover: rgb(16, 92, 200);
+
       --rail-color-active: color-mix(in srgb, var(--rail-color) 75%, white);
+      --track-border-color-active: color-mix(
+        in srgb,
+        var(--track-border-color) 75%,
+        white
+      );
       --track-color-active: color-mix(in srgb, var(--track-color) 75%, white);
       --handle-color-active: color-mix(in srgb, var(--handle-color) 75%, white);
     }
@@ -51,6 +59,7 @@ import.meta.css = /* css */ `
   .navi_input_range {
     --x-fill-ratio: 0;
     --x-rail-border-color: var(--rail-border-color);
+    --x-track-border-color: var(--track-border-color);
     --x-rail-color: var(--rail-color);
     --x-track-color: var(--track-color);
     --x-handle-color: var(--handle-color);
@@ -94,10 +103,12 @@ import.meta.css = /* css */ `
       width: calc(var(--x-fill-ratio) * 100%);
       height: var(--rail-height);
       background: var(--x-track-color);
-      border: 1px solid var(--x-track-color);
+      background-clip: content-box;
+      border: 1px solid var(--x-track-border-color);
       border-radius: var(--border-radius);
 
       &:hover {
+        --x-track-border-color: var(--track-border-color-hover);
         --x-track-color: var(--track-color-hover);
       }
     }
@@ -122,16 +133,19 @@ import.meta.css = /* css */ `
 
     /* Hover */
     &:hover {
+      --x-track-border-color: var(--track-border-color-hover);
       --x-track-color: var(--track-color-hover);
       --x-rail-color: var(--rail-color-hover);
     }
     /* Active */
     &:active {
+      --x-track-border-color: var(--track-border-color-active);
       --x-track-color: var(--track-color-active);
       --x-rail-color: var(--rail-color-active);
       --x-handle-color: var(--handle-color-active);
 
       .navi_input_range_track {
+        --x-track-border-color: var(--track-border-color-active) !important;
         --x-track-color: var(--track-color-active) !important;
       }
     }
