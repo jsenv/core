@@ -1,16 +1,18 @@
-import { forwardRef } from "preact/compat";
-
 import { InputCheckbox } from "./input_checkbox.jsx";
 import { InputRadio } from "./input_radio.jsx";
+import { InputRange } from "./input_range.jsx";
 import { InputTextual } from "./input_textual.jsx";
 
-export const Input = forwardRef((props, ref) => {
+export const Input = (props) => {
   const { type } = props;
   if (type === "radio") {
-    return <InputRadio {...props} ref={ref} />;
+    return <InputRadio {...props} />;
   }
   if (type === "checkbox") {
-    return <InputCheckbox {...props} ref={ref} />;
+    return <InputCheckbox {...props} />;
   }
-  return <InputTextual {...props} ref={ref} />;
-});
+  if (type === "range") {
+    return <InputRange {...props} />;
+  }
+  return <InputTextual {...props} />;
+};
