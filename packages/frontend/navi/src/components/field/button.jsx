@@ -198,9 +198,9 @@ import.meta.css = /* css */ `
     cursor: default;
   }
   .navi_button[data-disabled] {
-    --x-border-color: var(--button-border-color-disabled);
-    --x-background-color: var(--button-background-color-disabled);
-    --x-color: var(--button-color-disabled);
+    --x-button-border-color: var(--button-border-color-disabled);
+    --x-button-background-color: var(--button-background-color-disabled);
+    --x-button-color: var(--button-color-disabled);
   }
   /* no active effect */
   .navi_button[data-disabled] .navi_button_content {

@@ -148,6 +148,8 @@
       import { render } from "preact";
       import { useState } from "preact/hooks";
       import { Button, Layout, Icon } from "@jsenv/navi";
+      import { EyeSvg } from "@jsenv/navi/src/components/graphic/icons/eye_svg.jsx";
+      import { EyeClosedSvg } from "@jsenv/navi/src/components/graphic/icons/eye_closed_svg.jsx";
 
       const App = () => {
         return (
@@ -155,6 +157,7 @@
             <BasicStatesDemo />
             <SizeVariationsDemo />
             <ColorVariationsDemo />
+            <IconToggleDemo />
             <DiscreteVariantDemo />
             <InteractiveDemo />
           </div>
@@ -351,6 +354,70 @@
                 </Button>
               </div>
             </div>
+          </div>
+        );
+      };
+
+      const IconToggleDemo = () => {
+        const [isVisible, setIsVisible] = useState(false);
+
+        return (
+          <div className="demo-section">
+            <h2>Icon Button Toggle</h2>
+            
+            <fieldset>
+              <legend>Toggle Eye Visibility</legend>
+              <div className="button-group">
+                <Button 
+                  onClick={() => setIsVisible(!isVisible)}
+                  aria-label={isVisible ? "Hide content" : "Show content"}
+                >
+                  <Icon>
+                    {isVisible ? <EyeSvg /> : <EyeClosedSvg />}
+                  </Icon>
+                </Button>
+                <span style={{ marginLeft: "10px", color: "#666" }}>
+                  Content is {isVisible ? "visible" : "hidden"}
+                </span>
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend>Different Sizes</legend>
+              <div className="button-group">
+                <Button 
+                  size="sm"
+                  onClick={() => setIsVisible(!isVisible)}
+                  aria-label={isVisible ? "Hide content" : "Show content"}
+                >
+                  <Icon size="sm">
+                    {isVisible ? <EyeSvg /> : <EyeClosedSvg />}
+                  </Icon>
+                </Button>
+                <Button 
+                  onClick={() => setIsVisible(!isVisible)}
+                  aria-label={isVisible ? "Hide content" : "Show content"}
+                >
+                  <Icon>
+                    {isVisible ? <EyeSvg /> : <EyeClosedSvg />}
+                  </Icon>
+                </Button>
+                <Button 
+                  size="lg"
+                  onClick={() => setIsVisible(!isVisible)}
+                  aria-label={isVisible ? "Hide content" : "Show content"}
+                >
+                  <Icon size="lg">
+                    {isVisible ? <EyeSvg /> : <EyeClosedSvg />}
+                  </Icon>
+                </Button>
+              </div>
+            </fieldset>
+
+            <p style={{ color: "#666", fontSize: "0.9rem", margin: "10px 0" }}>
+              Icon buttons that change state when clicked. The eye icon toggles 
+              between open and closed states based on the visibility toggle.
+            </p>
           </div>
         );
       };
