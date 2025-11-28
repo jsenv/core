@@ -323,7 +323,9 @@ const ButtonBasic = (props) => {
       </Text>
     );
   };
-  const renderButtonContentMemoized = useCallback(renderButtonContent, []);
+  const renderButtonContentMemoized = useCallback(renderButtonContent, [
+    children,
+  ]);
 
   return (
     <Box

@@ -8121,11 +8121,14 @@ const updateDocumentUrl = (value) => {
   documentUrlSignal.value = value;
 };
 
-computed(() => {
+const documentResourceSignal = computed(() => {
   const documentUrl = documentUrlSignal.value;
   const documentResource = urlToResource(documentUrl);
   return documentResource;
 });
+const useDocumentResource = () => {
+  return documentResourceSignal.value;
+};
 const urlToResource = (url) => {
   const scheme = urlToScheme(url);
   if (scheme === "file") {
@@ -14702,9 +14705,9 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     cursor: default;
   }
   .navi_button[data-disabled] {
-    --x-border-color: var(--button-border-color-disabled);
-    --x-background-color: var(--button-background-color-disabled);
-    --x-color: var(--button-color-disabled);
+    --x-button-border-color: var(--button-border-color-disabled);
+    --x-button-background-color: var(--button-background-color-disabled);
+    --x-button-color: var(--button-color-disabled);
   }
   /* no active effect */
   .navi_button[data-disabled] .navi_button_content {
@@ -14812,7 +14815,7 @@ const ButtonBasic = props => {
       })]
     });
   };
-  const renderButtonContentMemoized = useCallback(renderButtonContent, []);
+  const renderButtonContentMemoized = useCallback(renderButtonContent, [children]);
   return jsxs(Box, {
     ...rest,
     as: "button",
@@ -22707,5 +22710,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, BadgeCount, Box, Button, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, FontSizedSvg, Form, HeartSvg, HomeSvg, Icon, IconAndText, Image, Input, Label, Layout, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkWithIcon, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useActiveRouteInfo, useCellsAndColumns, useDependenciesDiff, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useUrlSearchParam, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, BadgeCount, Box, Button, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, FontSizedSvg, Form, HeartSvg, HomeSvg, Icon, IconAndText, Image, Input, Label, Layout, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkWithIcon, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useActiveRouteInfo, useCellsAndColumns, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useUrlSearchParam, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map
