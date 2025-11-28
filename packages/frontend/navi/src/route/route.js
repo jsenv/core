@@ -435,6 +435,7 @@ const createRoute = (urlPatternInput) => {
       hasRawUrlPartWithInvalidChars,
     };
   };
+  route.buildRelativeUrl = buildRelativeUrl;
 
   /**
    * Builds a complete URL for this route with the given parameters.

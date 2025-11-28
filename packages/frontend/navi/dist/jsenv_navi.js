@@ -7741,6 +7741,7 @@ const createRoute = (urlPatternInput) => {
       hasRawUrlPartWithInvalidChars,
     };
   };
+  route.buildRelativeUrl = buildRelativeUrl;
 
   /**
    * Builds a complete URL for this route with the given parameters.
@@ -8120,6 +8121,37 @@ const updateDocumentUrl = (value) => {
   documentUrlSignal.value = value;
 };
 
+computed(() => {
+  const documentUrl = documentUrlSignal.value;
+  const documentResource = urlToResource(documentUrl);
+  return documentResource;
+});
+const urlToResource = (url) => {
+  const scheme = urlToScheme(url);
+  if (scheme === "file") {
+    const urlAsStringWithoutFileProtocol = String(url).slice("file://".length);
+    return urlAsStringWithoutFileProtocol;
+  }
+  if (scheme === "https" || scheme === "http") {
+    // remove origin
+    const afterProtocol = String(url).slice(scheme.length + "://".length);
+    const pathnameSlashIndex = afterProtocol.indexOf("/", "://".length);
+    const urlAsStringWithoutOrigin = afterProtocol.slice(pathnameSlashIndex);
+    return urlAsStringWithoutOrigin;
+  }
+  const urlAsStringWithoutProtocol = String(url).slice(scheme.length + 1);
+  return urlAsStringWithoutProtocol;
+};
+const urlToScheme = (url) => {
+  const urlString = String(url);
+  const colonIndex = urlString.indexOf(":");
+  if (colonIndex === -1) {
+    return "";
+  }
+  const scheme = urlString.slice(0, colonIndex);
+  return scheme;
+};
+
 const getHrefTargetInfo = (href) => {
   href = String(href);
 
@@ -8340,7 +8372,8 @@ const setupBrowserIntegrationViaHistory = ({
     });
   });
 
-  const goTo = async (url, { state = null, replace } = {}) => {
+  const goTo = async (target, { state = null, replace } = {}) => {
+    const url = new URL(target, window.location.href).href;
     const currentUrl = documentUrlSignal.peek();
     if (url === currentUrl) {
       return;
@@ -8566,11 +8599,11 @@ const useNavStateBasic = (id, initialValue, { debug } = {}) => {
 const useNavState = useNavStateBasic;
 
 const NEVER_SET = {};
-const useUrlSearchParam = (paramName) => {
+const useUrlSearchParam = (paramName, defaultValue) => {
   const documentUrl = documentUrlSignal.value;
   const searchParam = new URL(documentUrl).searchParams.get(paramName);
   const valueRef = useRef(NEVER_SET);
-  const [value, setValue] = useState();
+  const [value, setValue] = useState(defaultValue);
   if (valueRef.current !== searchParam) {
     valueRef.current = searchParam;
     setValue(searchParam);

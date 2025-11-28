@@ -23,7 +23,10 @@ export {
   useNavState,
 } from "./src/browser_integration/browser_integration.js";
 export { useDocumentState } from "./src/browser_integration/document_state_signal.js";
-export { useDocumentUrl } from "./src/browser_integration/document_url_signal.js";
+export {
+  useDocumentResource,
+  useDocumentUrl,
+} from "./src/browser_integration/document_url_signal.js";
 export { useUrlSearchParam } from "./src/browser_integration/use_url_search_param.js";
 export {
   rawUrlPart,

@@ -170,7 +170,8 @@ export const setupBrowserIntegrationViaHistory = ({
     });
   });
 
-  const goTo = async (url, { state = null, replace } = {}) => {
+  const goTo = async (target, { state = null, replace } = {}) => {
+    const url = new URL(target, window.location.href).href;
     const currentUrl = documentUrlSignal.peek();
     if (url === currentUrl) {
       return;
