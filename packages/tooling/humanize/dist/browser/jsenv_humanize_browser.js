@@ -976,48 +976,90 @@ const setDecimalsPrecision = (
 //   return numberTruncated
 // }
 
-const humanizeEllapsedTime = (ms, { short } = {}) => {
+const UNIT_MS = {
+  year: 31_557_600_000,
+  month: 2_629_000_000,
+  week: 604_800_000,
+  day: 86_400_000,
+  hour: 3_600_000,
+  minute: 60_000,
+  second: 1000,
+};
+const UNIT_KEYS = Object.keys(UNIT_MS);
+const SMALLEST_UNIT_NAME = UNIT_KEYS[UNIT_KEYS.length - 1];
+const TIME_DICTIONARY_EN = {
+  year: { long: "year", plural: "years", short: "y" },
+  month: { long: "month", plural: "months", short: "m" },
+  week: { long: "week", plural: "weeks", short: "w" },
+  day: { long: "day", plural: "days", short: "d" },
+  hour: { long: "hour", plural: "hours", short: "h" },
+  minute: { long: "minute", plural: "minutes", short: "m" },
+  second: { long: "second", plural: "seconds", short: "s" },
+  joinDuration: (primary, remaining) => `${primary} and ${remaining}`,
+};
+const TIME_DICTIONARY_FR = {
+  year: { long: "an", plural: "ans", short: "a" },
+  month: { long: "mois", plural: "mois", short: "m" },
+  week: { long: "semaine", plural: "semaines", short: "s" },
+  day: { long: "jour", plural: "jours", short: "j" },
+  hour: { long: "heure", plural: "heures", short: "h" },
+  minute: { long: "minute", plural: "minutes", short: "m" },
+  second: { long: "seconde", plural: "secondes", short: "s" },
+  joinDuration: (primary, remaining) => `${primary} et ${remaining}`,
+};
+
+const humanizeEllapsedTime = (
+  ms,
+  {
+    short,
+    lang = "en",
+    timeDictionnary = lang === "fr" ? TIME_DICTIONARY_FR : TIME_DICTIONARY_EN,
+  } = {},
+) => {
   if (ms < 1000) {
-    return short ? "0s" : "0 second";
+    return short
+      ? `0${timeDictionnary.second.short}`
+      : `0 ${timeDictionnary.second.long}`;
   }
   const { primary, remaining } = parseMs(ms);
   if (!remaining) {
-    return inspectEllapsedUnit(primary, short);
+    return inspectEllapsedUnit(primary, { short, timeDictionnary });
   }
-  return `${inspectEllapsedUnit(primary, short)} and ${inspectEllapsedUnit(
-    remaining,
+  const primaryText = inspectEllapsedUnit(primary, {
     short,
-  )}`;
+    timeDictionnary,
+  });
+  const remainingText = inspectEllapsedUnit(remaining, {
+    short,
+    timeDictionnary,
+  });
+  return timeDictionnary.joinDuration(primaryText, remainingText);
 };
-const inspectEllapsedUnit = (unit, short) => {
+const inspectEllapsedUnit = (unit, { short, timeDictionnary }) => {
   const count =
     unit.name === "second" ? Math.floor(unit.count) : Math.round(unit.count);
-  let name = unit.name;
+  const name = unit.name;
   if (short) {
-    name = unitShort[name];
-    if (count <= 1) {
-      return `${count}${name}`;
-    }
-    return `${count}${name}s`;
+    const unitText = timeDictionnary[name].short;
+    return `${count}${unitText}`;
   }
   if (count <= 1) {
-    return `${count} ${name}`;
+    const unitText = timeDictionnary[name].long;
+    return `${count} ${unitText}`;
   }
-  return `${count} ${name}s`;
-};
-const unitShort = {
-  year: "y",
-  month: "m",
-  week: "w",
-  day: "d",
-  hour: "h",
-  minute: "m",
-  second: "s",
+  const unitText = timeDictionnary[name].plural;
+  return `${count} ${unitText}`;
 };
 
 const humanizeDuration = (
   ms,
-  { short, rounded = true, decimals } = {},
+  {
+    short,
+    rounded = true,
+    decimals,
+    lang = "en",
+    timeDictionnary = lang === "fr" ? TIME_DICTIONARY_FR : TIME_DICTIONARY_EN,
+  } = {},
 ) => {
   // ignore ms below meaningfulMs so that:
   // humanizeDuration(0.5) -> "0 second"
@@ -1027,7 +1069,9 @@ const humanizeDuration = (
   // yes we could return "0.1 millisecond" but we choosed consistency over precision
   // so that the prefered unit is "second" (and does not become millisecond when ms is super small)
   if (ms < 1) {
-    return short ? "0s" : "0 second";
+    return short
+      ? `0${timeDictionnary.second.short}`
+      : `0 ${timeDictionnary.second.long}`;
   }
   const { primary, remaining } = parseMs(ms);
   if (!remaining) {
@@ -1036,52 +1080,51 @@ const humanizeDuration = (
         decimals === undefined ? (primary.name === "second" ? 1 : 0) : decimals,
       short,
       rounded,
+      timeDictionnary,
     });
   }
-  return `${humanizeDurationUnit(primary, {
+  const primaryText = humanizeDurationUnit(primary, {
     decimals: decimals === undefined ? 0 : decimals,
     short,
     rounded,
-  })} and ${humanizeDurationUnit(remaining, {
+    timeDictionnary,
+  });
+  const remainingText = humanizeDurationUnit(remaining, {
     decimals: decimals === undefined ? 0 : decimals,
     short,
     rounded,
-  })}`;
+    timeDictionnary,
+  });
+  return timeDictionnary.joinDuration(primaryText, remainingText);
 };
-const humanizeDurationUnit = (unit, { decimals, short, rounded }) => {
+const humanizeDurationUnit = (
+  unit,
+  { decimals, short, rounded, timeDictionnary },
+) => {
   const count = rounded
     ? setRoundedPrecision(unit.count, { decimals })
     : setPrecision(unit.count, { decimals });
-  let name = unit.name;
+  const name = unit.name;
   if (short) {
-    name = unitShort[name];
-    return `${count}${name}`;
+    const unitText = timeDictionnary[name].short;
+    return `${count}${unitText}`;
   }
   if (count <= 1) {
-    return `${count} ${name}`;
+    const unitText = timeDictionnary[name].long;
+    return `${count} ${unitText}`;
   }
-  return `${count} ${name}s`;
-};
-const MS_PER_UNITS = {
-  year: 31_557_600_000,
-  month: 2_629_000_000,
-  week: 604_800_000,
-  day: 86_400_000,
-  hour: 3_600_000,
-  minute: 60_000,
-  second: 1000,
+  const unitText = timeDictionnary[name].plural;
+  return `${count} ${unitText}`;
 };
 
 const parseMs = (ms) => {
-  const unitNames = Object.keys(MS_PER_UNITS);
-  const smallestUnitName = unitNames[unitNames.length - 1];
-  let firstUnitName = smallestUnitName;
-  let firstUnitCount = ms / MS_PER_UNITS[smallestUnitName];
-  const firstUnitIndex = unitNames.findIndex((unitName) => {
-    if (unitName === smallestUnitName) {
+  let firstUnitName = SMALLEST_UNIT_NAME;
+  let firstUnitCount = ms / UNIT_MS[SMALLEST_UNIT_NAME];
+  const firstUnitIndex = UNIT_KEYS.findIndex((unitName) => {
+    if (unitName === SMALLEST_UNIT_NAME) {
       return false;
     }
-    const msPerUnit = MS_PER_UNITS[unitName];
+    const msPerUnit = UNIT_MS[unitName];
     const unitCount = Math.floor(ms / msPerUnit);
     if (unitCount) {
       firstUnitName = unitName;
@@ -1090,7 +1133,7 @@ const parseMs = (ms) => {
     }
     return false;
   });
-  if (firstUnitName === smallestUnitName) {
+  if (firstUnitName === SMALLEST_UNIT_NAME) {
     return {
       primary: {
         name: firstUnitName,
@@ -1098,9 +1141,9 @@ const parseMs = (ms) => {
       },
     };
   }
-  const remainingMs = ms - firstUnitCount * MS_PER_UNITS[firstUnitName];
-  const remainingUnitName = unitNames[firstUnitIndex + 1];
-  const remainingUnitCount = remainingMs / MS_PER_UNITS[remainingUnitName];
+  const remainingMs = ms - firstUnitCount * UNIT_MS[firstUnitName];
+  const remainingUnitName = UNIT_KEYS[firstUnitIndex + 1];
+  const remainingUnitCount = remainingMs / UNIT_MS[remainingUnitName];
   // - 1 year and 1 second is too much information
   //   so we don't check the remaining units
   // - 1 year and 0.0001 week is awful
