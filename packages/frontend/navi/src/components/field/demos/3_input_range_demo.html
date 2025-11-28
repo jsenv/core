@@ -289,7 +289,6 @@
       const ColorVariationsDemo = () => {
         const [redValue, setRedValue] = useState(25);
         const [greenValue, setGreenValue] = useState(50);
-        const [blueValue, setBlueValue] = useState(75);
 
         return (
           <div className="demo-section">
@@ -328,7 +327,48 @@
                 </Box>
               </fieldset>
               <fieldset>
-                <legend>Green Theme</legend>
+                <legend>Different Thumb & Track Colors</legend>
+                <Box row spacing="sm" alignX="start">
+                  <div className="range-group">
+                    <InputRange
+                      value="45"
+                      min="0"
+                      max="100"
+                      style={{
+                        "--thumb-color": "#ff4444",
+                        "--track-color": "#4444ff",
+                        "--track-filled-color": "#6666ff",
+                      }}
+                    />
+                    <div className="value-display">45</div>
+                  </div>
+                  <div className="range-group">
+                    <input
+                      type="range"
+                      value="45"
+                      min="0"
+                      max="100"
+                      id="custom_colors_range"
+                    />
+                    <div className="value-display">45</div>
+                  </div>
+                </Box>
+                <p
+                  style={{
+                    fontSize: "0.8rem",
+                    color: "#666",
+                    margin: "8px 0 0 0",
+                  }}
+                >
+                  <strong>Navi:</strong> Uses CSS variables --thumb-color,
+                  --track-color, --track-filled-color
+                  <br />
+                  <strong>Native:</strong> Uses accent-color for thumb +
+                  background gradient for track
+                </p>
+              </fieldset>
+              <fieldset>
+                <legend>Blue Theme</legend>
                 <Box row spacing="sm" alignX="start">
                   <div className="range-group">
                     <InputRange
@@ -360,5 +400,34 @@
 
       render(<App />, document.getElementById("root"));
     </script>
+
+    <style>
+      #custom_colors_range {
+        accent-color: #ff4444;
+      }
+
+      #custom_colors_range::-webkit-slider-runnable-track {
+        height: 6px;
+        background: linear-gradient(
+          to right,
+          #4a90e2 0%,
+          #4a90e2 var(--p),
+          #bbb var(--p),
+          #bbb 100%
+        );
+        border-radius: 8px;
+      }
+
+      #custom_colors_range::-webkit-slider-thumb {
+        width: 16px;
+        height: 16px;
+        margin-top: -5px;
+        background: yellow;
+        border: 2px solid #666;
+        border-radius: 50%;
+        -webkit-appearance: none;
+        appearance: none;
+      }
+    </style>
   </body>
 </html>
