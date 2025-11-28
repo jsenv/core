@@ -283,7 +283,7 @@ const InputRadioBasic = (props) => {
     ...rest
   } = props;
   const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
+  const ref = rest.ref || defaultRef;
 
   const innerName = name || contextName;
   const innerDisabled = disabled || contextDisabled;
@@ -383,7 +383,7 @@ const InputRadioBasic = (props) => {
     <Box
       as="span"
       {...rest}
-      ref={ref}
+      ref={undefined}
       baseClassName="navi_radio"
       pseudoStateSelector=".navi_native_field"
       styleCSSVars={RadioStyleCSSVars}

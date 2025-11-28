@@ -281,7 +281,7 @@ const InputCheckboxBasic = (props) => {
     ...rest
   } = props;
   const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
+  const ref = rest.ref || defaultRef;
   const innerName = name || contextFieldName;
   const innerDisabled = disabled || contextDisabled;
   const innerRequired = required || contextRequired;
@@ -355,7 +355,7 @@ const InputCheckboxBasic = (props) => {
     <Box
       as="span"
       {...rest}
-      ref={ref}
+      ref={undefined}
       baseClassName="navi_checkbox"
       pseudoStateSelector=".navi_native_field"
       styleCSSVars={CheckboxStyleCSSVars}

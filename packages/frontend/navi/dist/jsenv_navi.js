@@ -16176,7 +16176,7 @@ const InputCheckboxBasic = props => {
     ...rest
   } = props;
   const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
+  const ref = rest.ref || defaultRef;
   const innerName = name || contextFieldName;
   const innerDisabled = disabled || contextDisabled;
   const innerRequired = required || contextRequired;
@@ -16233,7 +16233,7 @@ const InputCheckboxBasic = props => {
   return jsxs(Box, {
     as: "span",
     ...rest,
-    ref: ref,
+    ref: undefined,
     baseClassName: "navi_checkbox",
     pseudoStateSelector: ".navi_native_field",
     styleCSSVars: CheckboxStyleCSSVars,
@@ -16582,7 +16582,7 @@ const InputRadioBasic = props => {
     ...rest
   } = props;
   const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
+  const ref = rest.ref || defaultRef;
   const innerName = name || contextName;
   const innerDisabled = disabled || contextDisabled;
   const innerRequired = required || contextRequired;
@@ -16666,7 +16666,7 @@ const InputRadioBasic = props => {
   return jsxs(Box, {
     as: "span",
     ...rest,
-    ref: ref,
+    ref: undefined,
     baseClassName: "navi_radio",
     pseudoStateSelector: ".navi_native_field",
     styleCSSVars: RadioStyleCSSVars,
@@ -16907,7 +16907,7 @@ const InputTextualBasic = props => {
     ...rest
   } = props;
   const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
+  const ref = rest.ref || defaultRef;
   const innerValue = type === "datetime-local" ? convertToLocalTimezone(uiState) : uiState;
   const innerLoading = loading || contextLoading && contextLoadingElement === ref.current;
   const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
@@ -16968,6 +16968,7 @@ const InputTextualBasic = props => {
     pseudoElements: InputPseudoElements,
     hasChildFunction: true,
     ...rest,
+    ref: undefined,
     children: [jsx(LoaderBackground, {
       loading: innerLoading,
       color: "var(--loader-color)",

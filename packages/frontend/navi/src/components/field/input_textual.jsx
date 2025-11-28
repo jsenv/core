@@ -241,7 +241,7 @@ const InputTextualBasic = (props) => {
     ...rest
   } = props;
   const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
+  const ref = rest.ref || defaultRef;
 
   const innerValue =
     type === "datetime-local" ? convertToLocalTimezone(uiState) : uiState;
@@ -316,6 +316,7 @@ const InputTextualBasic = (props) => {
       pseudoElements={InputPseudoElements}
       hasChildFunction
       {...rest}
+      ref={undefined}
     >
       <LoaderBackground
         loading={innerLoading}
