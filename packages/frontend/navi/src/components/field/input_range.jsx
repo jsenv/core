@@ -27,24 +27,30 @@ import.meta.css = /* css */ `
   @layer navi {
     .navi_input_range {
       --border-radius: 6px;
-      --outline-width: 1px;
+      --outline-width: 2px;
       --height: 12px;
       --rail-height: 8px;
-      --rail-border: 1px solid #b5b5b5;
-      --thumb-size: 0.9em;
+      --handle-size: 1em;
 
       --outline-color: var(--navi-focus-outline-color);
       --loader-color: var(--navi-loader-color);
+      --rail-border-color: #b5b5b5;
       --rail-color: #efefef;
-      --track-color: #4a90e2;
-      --thumb-color: #1875ff;
-      --thumb-color-hover: #105cc8;
+      --track-color: #1875ff;
+      --handle-color: #1875ff;
+
+      --rail-color-hover: color-mix(in srgb, var(--rail-color) 95%, black);
+      --track-color-hover: #105cc8;
+      --handle-color-hover: #105cc8;
+      --rail-color-active: color-mix(in srgb, var(--rail-color) 75%, white);
+      --track-color-active: color-mix(in srgb, var(--track-color) 75%, white);
+      --handle-color-active: color-mix(in srgb, var(--handle-color) 75%, white);
     }
   }
 
   .navi_input_range {
     --x-fill-ratio: 0;
-    --x-rail-border: var(--rail-border);
+    --x-rail-border-color: var(--rail-border-color);
     --x-rail-color: var(--rail-color);
     --x-track-color: var(--track-color);
     --x-handle-color: var(--handle-color);
@@ -57,17 +63,18 @@ import.meta.css = /* css */ `
     margin: 2px;
     flex-direction: inherit;
     align-items: center;
-    border-radius: inherit;
-    border-radius: var(--border-radius);
+    border-radius: 2px;
     outline-width: var(--outline-width);
     outline-style: none;
     outline-color: var(--outline-color);
+    outline-offset: 0px;
     cursor: inherit;
 
     .navi_native_input {
       position: absolute;
+      inset: 0;
       margin: 0;
-      opacity: 0.2;
+      opacity: 0;
       pointer-events: none;
     }
 
@@ -77,16 +84,23 @@ import.meta.css = /* css */ `
       width: 100%;
       height: var(--rail-height);
       background: var(--x-rail-color);
-      border: var(--x-rail-border);
-      border-radius: inherit;
+      border-width: 1px;
+      border-style: solid;
+      border-color: var(--x-rail-border-color);
+      border-radius: var(--border-radius);
     }
     .navi_input_range_track {
       position: absolute;
       width: calc(var(--x-fill-ratio) * 100%);
-      height: 4px;
+      height: var(--rail-height);
       background: var(--x-track-color);
-    }
+      border: 1px solid var(--x-track-color);
+      border-radius: var(--border-radius);
 
+      &:hover {
+        --x-track-color: var(--track-color-hover);
+      }
+    }
     .navi_input_range_handle {
       position: absolute;
       left: calc(var(--x-fill-ratio) * 100%);
@@ -95,19 +109,43 @@ import.meta.css = /* css */ `
       background: var(--x-handle-color);
       border: var(--x-handle-border);
       border-radius: 100%;
+      transform: translateX(-50%);
       cursor: pointer;
+
+      &:hover {
+        --x-handle-color: var(--handle-color-hover);
+      }
+      &:active {
+        --x-handle-color: var(--handle-color-active);
+      }
+    }
+
+    /* Hover */
+    &:hover {
+      --x-track-color: var(--track-color-hover);
+      --x-rail-color: var(--rail-color-hover);
+    }
+    /* Active */
+    &:active {
+      --x-track-color: var(--track-color-active);
+      --x-rail-color: var(--rail-color-active);
+      --x-handle-color: var(--handle-color-active);
+
+      .navi_input_range_track {
+        --x-track-color: var(--track-color-active) !important;
+      }
+    }
+    /* Readonly */
+    &[data-readonly] {
+      --x-background-color: var(--background-color-readonly);
+      --x-color: var(--color-readonly);
+    }
+    /* Focus */
+    &[data-focus-visible] {
+      outline-style: solid;
     }
   }
 
-  /* Readonly */
-  .navi_input_range[data-readonly] {
-    --x-background-color: var(--background-color-readonly);
-    --x-color: var(--color-readonly);
-  }
-  /* Focus */
-  .navi_input_range[data-focus-visible] .navi_native_input {
-    outline-style: solid;
-  }
   /* Disabled */
   .navi_input_range[data-disabled] {
     --x-background-color: var(--background-color-disabled);
@@ -207,11 +245,18 @@ const InputRangeBasic = (props) => {
 
   const innerOnInput = useStableCallback(onInput);
   const renderInput = (inputProps) => {
-    useLayoutEffect(() => {
-      const el = ref.current;
-      if (!el) {
+    const updateFillRatio = () => {
+      const input = ref.current;
+      if (!input) {
         return;
       }
+      const inputValue = input.value;
+      const ratio = (inputValue - input.min) / (input.max - input.min);
+      input.parentNode.style.setProperty("--x-fill-ratio", ratio);
+    };
+
+    useLayoutEffect(() => {
+      updateFillRatio();
     }, []);
 
     return (
@@ -226,16 +271,14 @@ const InputRangeBasic = (props) => {
           const inputValue = e.target.value;
           uiStateController.setUIState(inputValue, e);
           innerOnInput?.(e);
-
-          const ratio =
-            (inputValue - e.target.min) / (e.target.max - e.target.min);
-          e.target.parentNode.style.setProperty("--x-fill-ratio", ratio);
+          updateFillRatio();
         }}
         onresetuistate={(e) => {
           uiStateController.resetUIState(e);
         }}
         onsetuistate={(e) => {
           uiStateController.setUIState(e.detail.value, e);
+          updateFillRatio();
         }}
         // style management
         baseClassName="navi_native_input"
