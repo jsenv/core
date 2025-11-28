@@ -185,7 +185,6 @@ const InputRangeBasic = (props) => {
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
   const {
-    type,
     onInput,
 
     readOnly,
@@ -222,8 +221,8 @@ const InputRangeBasic = (props) => {
       <Box
         {...inputProps}
         as="input"
+        type="range"
         ref={ref}
-        type={type}
         data-value={uiState}
         value={innerValue}
         onInput={(e) => {
@@ -244,7 +243,6 @@ const InputRangeBasic = (props) => {
   };
 
   const renderInputMemoized = useCallback(renderInput, [
-    type,
     uiState,
     innerValue,
     innerOnInput,

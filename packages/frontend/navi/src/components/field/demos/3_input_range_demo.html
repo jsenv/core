@@ -114,7 +114,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Layout } from "@jsenv/navi";
+      import { Box } from "@jsenv/navi";
       import { InputRange } from "../input_range.jsx";
 
       const App = () => {
@@ -143,10 +143,10 @@
                 with enhanced styling and consistent behavior.
               </p>
 
-              <Layout column spacing="sm">
+              <Box column spacing="sm">
                 <fieldset>
                   <legend>Default</legend>
-                  <Layout row spacing="sm" alignX="start">
+                  <Box row spacing="sm" alignX="start">
                     <div className="range-group">
                       <InputRange
                         value={defaultValue}
@@ -166,11 +166,11 @@
                       />
                       <div className="value-display">{defaultValue}</div>
                     </div>
-                  </Layout>
+                  </Box>
                 </fieldset>
                 <fieldset>
                   <legend>:focus-visible</legend>
-                  <Layout row spacing="sm" alignX="start">
+                  <Box row spacing="sm" alignX="start">
                     <div className="range-group">
                       <InputRange
                         value={focusedValue}
@@ -192,11 +192,11 @@
                       />
                       <div className="value-display">{focusedValue}</div>
                     </div>
-                  </Layout>
+                  </Box>
                 </fieldset>
                 <fieldset>
                   <legend>:disabled</legend>
-                  <Layout row spacing="sm" alignX="start">
+                  <Box row spacing="sm" alignX="start">
                     <div className="range-group">
                       <InputRange
                         value={disabledValue}
@@ -216,9 +216,9 @@
                       />
                       <div className="value-display">{disabledValue}</div>
                     </div>
-                  </Layout>
+                  </Box>
                 </fieldset>
-              </Layout>
+              </Box>
             </div>
 
             <div className="states-section">
@@ -230,19 +230,19 @@
                 available in standard HTML range inputs.
               </p>
 
-              <Layout column spacing="sm">
+              <Box column spacing="sm">
                 <fieldset>
                   <legend>:read-only</legend>
-                  <Layout row spacing="sm" alignX="start">
+                  <Box row spacing="sm" alignX="start">
                     <div className="range-group">
                       <InputRange value="60" min="0" max="100" readOnly />
                       <div className="value-display">60</div>
                     </div>
-                  </Layout>
+                  </Box>
                 </fieldset>
                 <fieldset>
                   <legend>:-navi-loading</legend>
-                  <Layout row spacing="sm" alignX="start">
+                  <Box row spacing="sm" alignX="start">
                     <div className="range-group">
                       <InputRange
                         value="40"
@@ -253,9 +253,9 @@
                       />
                       <div className="value-display">40</div>
                     </div>
-                  </Layout>
+                  </Box>
                 </fieldset>
-              </Layout>
+              </Box>
 
               <div
                 style={{
