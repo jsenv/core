@@ -116,18 +116,10 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import {
-        // eslint-disable-next-line no-unused-vars
-        Input,
-        // eslint-disable-next-line no-unused-vars
-        Form,
-        // eslint-disable-next-line no-unused-vars
-        Button,
-      } from "@jsenv/navi";
+      import { Input, Form, Button } from "@jsenv/navi";
 
       const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-      // eslint-disable-next-line no-unused-vars
       const App = () => {
         return (
           <>
@@ -194,7 +186,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const DateTimeLocalDemo = () => {
         // External state (what the server/app knows) - stored as UTC ISO string
         const [externalDateTime, setExternalDateTime] = useState(
@@ -334,7 +325,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const DateTimeLocalFormDemo = () => {
         const [externalDateTime, setExternalDateTime] = useState(
           "2024-06-01T10:00:00Z",
@@ -491,7 +481,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const BasicInputNoActionDemo = () => {
         const [result, setResult] = useState("");
 
@@ -517,7 +506,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const InputWithDefaultValueDemo = () => {
         return (
           <div className="demo-card">
@@ -539,7 +527,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const InputWithErrorDemo = () => {
         const [result, setResult] = useState("");
         const [isLoading, setIsLoading] = useState(false);
@@ -578,7 +565,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const InputWithValidationErrorDemo = () => {
         const [result, setResult] = useState("");
         const [isLoading, setIsLoading] = useState(false);
@@ -626,7 +612,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const BasicInputDemo = () => {
         const [result, setResult] = useState("");
         const [isLoading, setIsLoading] = useState(false);
@@ -667,7 +652,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const InputWithInitialValueDemo = () => {
         const [value, setValue] = useState("Hello World!");
         const [result, setResult] = useState("");
@@ -701,7 +685,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const InputWithExternalControlDemo = () => {
         const [value, setValue] = useState(undefined);
         const [result, setResult] = useState("");
@@ -760,7 +743,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const FormInputDemo = () => {
         const [result, setResult] = useState("");
         const [isLoading, setIsLoading] = useState(false);
@@ -806,7 +788,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const FormInputErrorDemo = () => {
         const [result, setResult] = useState("");
         const [isLoading, setIsLoading] = useState(false);
