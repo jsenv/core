@@ -121,6 +121,7 @@
         return (
           <div>
             <BasicStatesDemo />
+            <ColorVariationsDemo />
           </div>
         );
       };
@@ -281,6 +282,78 @@
                 </ul>
               </div>
             </div>
+          </div>
+        );
+      };
+
+      const ColorVariationsDemo = () => {
+        const [redValue, setRedValue] = useState(25);
+        const [greenValue, setGreenValue] = useState(50);
+        const [blueValue, setBlueValue] = useState(75);
+
+        return (
+          <div className="demo-section">
+            <h2>Color Variations</h2>
+            <p className="states-description">
+              Range inputs can be styled with different colors. Native inputs
+              use CSS <code>accent-color</code>, while Navi's InputRange uses
+              the <code>color</code> property for consistent theming.
+            </p>
+
+            <Box column spacing="sm">
+              <fieldset>
+                <legend>Red Theme</legend>
+                <Box row spacing="sm" alignX="start">
+                  <div className="range-group">
+                    <InputRange
+                      value={redValue}
+                      onInput={(e) => setRedValue(e.target.value)}
+                      min="0"
+                      max="100"
+                      color="red"
+                    />
+                    <div className="value-display">{redValue}</div>
+                  </div>
+                  <div className="range-group">
+                    <input
+                      type="range"
+                      value={redValue}
+                      onChange={(e) => setRedValue(e.target.value)}
+                      min="0"
+                      max="100"
+                      style={{ accentColor: "red" }}
+                    />
+                    <div className="value-display">{redValue}</div>
+                  </div>
+                </Box>
+              </fieldset>
+              <fieldset>
+                <legend>Green Theme</legend>
+                <Box row spacing="sm" alignX="start">
+                  <div className="range-group">
+                    <InputRange
+                      value={greenValue}
+                      onInput={(e) => setGreenValue(e.target.value)}
+                      min="0"
+                      max="100"
+                      color="green"
+                    />
+                    <div className="value-display">{greenValue}</div>
+                  </div>
+                  <div className="range-group">
+                    <input
+                      type="range"
+                      value={greenValue}
+                      onChange={(e) => setGreenValue(e.target.value)}
+                      min="0"
+                      max="100"
+                      style={{ accentColor: "green" }}
+                    />
+                    <div className="value-display">{greenValue}</div>
+                  </div>
+                </Box>
+              </fieldset>
+            </Box>
           </div>
         );
       };

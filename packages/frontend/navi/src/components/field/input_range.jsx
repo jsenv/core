@@ -27,20 +27,16 @@ import.meta.css = /* css */ `
   @layer navi {
     .navi_input_range {
       --border-radius: 2px;
-      --border-width: 1px;
       --outline-width: 1px;
-      --outer-width: calc(var(--border-width) + var(--outline-width));
 
       /* Default */
       --outline-color: var(--navi-focus-outline-color);
       --loader-color: var(--navi-loader-color);
-      --border-color: light-dark(#767676, #8e8e93);
-      --background-color: white;
+      --background-color: transparent;
       --color: currentColor;
       --color-dimmed: color-mix(in srgb, currentColor 60%, transparent);
       --placeholder-color: var(--color-dimmed);
       /* Hover */
-      --border-color-hover: color-mix(in srgb, var(--border-color) 70%, black);
       --background-color-hover: color-mix(
         in srgb,
         var(--background-color) 95%,
@@ -48,17 +44,10 @@ import.meta.css = /* css */ `
       );
       --color-hover: var(--color);
       /* Active */
-      --border-color-active: color-mix(in srgb, var(--border-color) 90%, black);
       /* Readonly */
-      --border-color-readonly: color-mix(
-        in srgb,
-        var(--border-color) 45%,
-        transparent
-      );
       --background-color-readonly: var(--background-color);
       --color-readonly: var(--color-dimmed);
       /* Disabled */
-      --border-color-disabled: var(--border-color-readonly);
       --background-color-disabled: color-mix(
         in srgb,
         var(--background-color) 95%,
@@ -73,57 +62,45 @@ import.meta.css = /* css */ `
     box-sizing: border-box;
     width: fit-content;
     height: fit-content;
+    margin: 2px;
     flex-direction: inherit;
     border-radius: inherit;
     cursor: inherit;
 
-    --x-outline-width: var(--outline-width);
     --x-border-radius: var(--border-radius);
-    --x-border-width: var(--border-width);
-    --x-outer-width: calc(var(--x-border-width) + var(--x-outline-width));
     --x-outline-color: var(--outline-color);
-    --x-border-color: var(--border-color);
     --x-background-color: var(--background-color);
     --x-color: var(--color);
-    --x-placeholder-color: var(--placeholder-color);
   }
 
   .navi_input_range .navi_native_input {
     box-sizing: border-box;
+    margin: 0;
+    flex-grow: 1;
     color: var(--x-color);
     background-color: var(--x-background-color);
-    border-width: var(--x-outer-width);
-    border-width: var(--x-outer-width);
-    border-style: solid;
-    border-color: transparent;
     border-radius: var(--x-border-radius);
-    outline-width: var(--x-border-width);
-    outline-style: solid;
-    outline-color: var(--x-border-color);
-    outline-offset: calc(-1 * (var(--x-border-width)));
+    outline-width: var(--x-outline-width);
+    outline-style: none;
+    outline-color: var(--x-outline-color);
   }
   /* Readonly */
   .navi_input_range[data-readonly] {
-    --x-border-color: var(--border-color-readonly);
     --x-background-color: var(--background-color-readonly);
     --x-color: var(--color-readonly);
   }
   /* Focus */
-  .navi_input_range[data-focus] .navi_native_input,
   .navi_input_range[data-focus-visible] .navi_native_input {
-    outline-width: var(--x-outer-width);
-    outline-offset: calc(-1 * var(--x-outer-width));
-    --x-border-color: var(--x-outline-color);
+    outline-style: solid;
   }
   /* Disabled */
   .navi_input_range[data-disabled] {
-    --x-border-color: var(--border-color-disabled);
     --x-background-color: var(--background-color-disabled);
     --x-color: var(--color-disabled);
   }
   /* Callout (info, warning, error) */
   .navi_input_range[data-callout] {
-    --x-border-color: var(--callout-color);
+    /* What can we do? */
   }
 `;
 
@@ -145,10 +122,8 @@ export const InputRange = (props) => {
 
 const InputStyleCSSVars = {
   "outlineWidth": "--outline-width",
-  "borderWidth": "--border-width",
   "borderRadius": "--border-radius",
   "backgroundColor": "--background-color",
-  "borderColor": "--border-color",
   "color": "--color",
   ":hover": {
     backgroundColor: "--background-color-hover",
