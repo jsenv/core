@@ -10,14 +10,21 @@ export {
 export { useActionData } from "./src/action/use_action_data.js";
 export { useActionStatus } from "./src/action/use_action_status.js";
 export { useRunOnMount } from "./src/action/use_run_on_mount.js";
-export { useKeyboardShortcuts } from "./src/components/keyboard_shortcuts/keyboard_shortcuts.js";
+
 // for debug/testing purposes
 export { enableDebugActions } from "./src/action/actions.js";
 
 // state management (store)
+export { localStorageSignal } from "./src/state/local_storage_signal.js";
 export { resource } from "./src/state/store/resource_graph.js";
-export { valueInLocalStorage } from "./src/state/store/value_in_local_storage.js";
+export { useSignalSync } from "./src/state/use_signal_sync.js";
 export { useStateArray } from "./src/state/use_state_array.js";
+export { valueInLocalStorage } from "./src/state/value_in_local_storage.js";
+
+// Box
+export { Box } from "./src/box/box.jsx";
+// UI Transition
+export { UITransition } from "./src/ui_transition/ui_transition.jsx";
 
 // Navigation/routing
 export {
@@ -28,72 +35,65 @@ export {
   reload,
   stopLoad,
   useNavState,
-} from "./src/browser_integration/browser_integration.js";
-export { useDocumentState } from "./src/browser_integration/document_state_signal.js";
+} from "./src/nav/browser_integration/browser_integration.js";
+export { useDocumentState } from "./src/nav/browser_integration/document_state_signal.js";
 export {
   useDocumentResource,
   useDocumentUrl,
-} from "./src/browser_integration/document_url_signal.js";
-export { useUrlSearchParam } from "./src/browser_integration/use_url_search_param.js";
+} from "./src/nav/browser_integration/document_url_signal.js";
+export { useUrlSearchParam } from "./src/nav/browser_integration/use_url_search_param.js";
 export {
   rawUrlPart,
   setBaseUrl,
   setupRoutes,
   useRouteStatus,
-} from "./src/route/route.js";
-export { Route, Routes, useActiveRouteInfo } from "./src/route/route.jsx";
-export { RouteLink } from "./src/route/route_link.jsx";
+} from "./src/nav/route.js";
+export { Route, Routes, useActiveRouteInfo } from "./src/nav/route.jsx";
+export { RouteLink } from "./src/nav/route_link.jsx";
 // Navigation/components
-export { Tab, TabList } from "./src/components/tablist/tablist.jsx";
-export { Link } from "./src/components/text/link.jsx";
+export { Link } from "./src/nav/link.jsx";
+export { Tab, TabList } from "./src/nav/tablist/tablist.jsx";
+// debug/tests
+export { enableDebugOnDocumentLoading } from "./src/nav/browser_integration/document_loading_signal.js";
 
-// Form/Components
-export {
-  Editable,
-  useEditionController,
-} from "./src/components/edition/editable.jsx";
-export { Button } from "./src/components/field/button.jsx";
-export {
-  Checkbox,
-  CheckboxList,
-} from "./src/components/field/checkbox_list.jsx";
-export { Form } from "./src/components/field/form.jsx";
-export { Input } from "./src/components/field/input.jsx";
-export { Label } from "./src/components/field/label.jsx";
-export { Radio, RadioList } from "./src/components/field/radio_list.jsx";
-export { Select } from "./src/components/field/select.jsx";
-// Form/Validation
-export { createUniqueValueConstraint } from "./src/validation/constraints/create_unique_value_constraint.js";
-export { SINGLE_SPACE_CONSTRAINT } from "./src/validation/constraints/single_space_constraint.js";
-export {
-  addCustomMessage,
-  removeCustomMessage,
-} from "./src/validation/custom_message.js";
-// advanced constraint validation functions
+// Form
+// Validation
+export { createUniqueValueConstraint } from "./src/field/validation/constraints/create_unique_value_constraint.js";
+export { SINGLE_SPACE_CONSTRAINT } from "./src/field/validation/constraints/single_space_constraint.js";
 export {
   forwardActionRequested,
   installCustomConstraintValidation,
-} from "./src/validation/custom_constraint_validation.js";
-
-// Components
-export { Details } from "./src/components/details/details.jsx";
-export { SummaryMarker } from "./src/components/details/summary_marker.jsx";
-export { ActiveKeyboardShortcuts } from "./src/components/keyboard_shortcuts/active_keyboard_shortcuts.jsx";
+} from "./src/field/validation/custom_constraint_validation.js";
+export {
+  addCustomMessage,
+  removeCustomMessage,
+} from "./src/field/validation/custom_message.js";
+// Selection
 export {
   SelectionContext,
   createSelectionKeyboardShortcuts,
   useSelectableElement,
   useSelectionController,
-} from "./src/components/selection/selection.jsx";
-export { ErrorBoundaryContext } from "./src/error_boundary_context.js";
-
+} from "./src/field/selection/selection.jsx";
+// Form/Components
+export { Button } from "./src/field/button.jsx";
+export { Checkbox, CheckboxList } from "./src/field/checkbox_list.jsx";
+export {
+  Editable,
+  useEditionController,
+} from "./src/field/edition/editable.jsx";
+export { Form } from "./src/field/form.jsx";
+export { Input } from "./src/field/input.jsx";
+export { Label } from "./src/field/label.jsx";
+export { Radio, RadioList } from "./src/field/radio_list.jsx";
+export { Select } from "./src/field/select.jsx";
 // Table start
 export {
   isCellSelected,
   isColumnSelected,
   isRowSelected,
   stringifyTableSelectionValue,
-} from "./src/components/table/selection/table_selection.js";
+} from "./src/field/table/selection/table_selection.js";
 export {
   Col,
   Colgroup,
@@ -104,57 +104,54 @@ export {
   Tbody,
   Thead,
   Tr,
-} from "./src/components/table/table.jsx";
-export { useCellsAndColumns } from "./src/components/table/use_cells_and_columns.js";
+} from "./src/field/table/table.jsx";
+export { useCellsAndColumns } from "./src/field/table/use_cells_and_columns.js";
 // Table end
-export { UITransition } from "./src/components/ui_transition/ui_transition.jsx";
-export { useSignalSync } from "./src/components/use_signal_sync.js";
+
+// Components
+export { ErrorBoundaryContext } from "./src/error_boundary_context.js";
+export { ActiveKeyboardShortcuts } from "./src/keyboard/active_keyboard_shortcuts.jsx";
+
 // Text
-export { SVGMaskOverlay } from "./src/components/svg/svg_mask_overlay.jsx";
-export { BadgeCount } from "./src/components/text/badge.jsx";
-export { Caption } from "./src/components/text/caption.jsx";
-export { Code } from "./src/components/text/code.jsx";
-export { MessageBox } from "./src/components/text/message_box.jsx";
-export { Paragraph } from "./src/components/text/paragraph.jsx";
-export { Text } from "./src/components/text/text.jsx";
-export { Title } from "./src/components/text/title.jsx";
-// Icons are mostly used alongside text
-export { FontSizedSvg } from "./src/components/svg/font_sized_svg.jsx";
-export { IconAndText } from "./src/components/svg/icon_and_text.jsx";
-export { Icon } from "./src/components/text/icon.jsx";
-export { LinkWithIcon } from "./src/components/text/link_with_icon.jsx";
+export { BadgeCount } from "./src/text/badge.jsx";
+export { Caption } from "./src/text/caption.jsx";
+export { Code } from "./src/text/code.jsx";
+export { MessageBox } from "./src/text/message_box.jsx";
+export { Paragraph } from "./src/text/paragraph.jsx";
+export { Text } from "./src/text/text.jsx";
+export { Title } from "./src/text/title.jsx";
+
 // Graphics
-export { Image } from "./src/components/graphic/image.jsx";
-export { Svg } from "./src/components/graphic/svg.jsx";
+export { Icon } from "./src/graphic/icon.jsx";
+export { Image } from "./src/graphic/image.jsx";
+export { Svg } from "./src/graphic/svg.jsx";
+export { SVGMaskOverlay } from "./src/graphic/svg_mask_overlay.jsx";
+
 // Callout, dialogs, ...
-export { openCallout } from "./src/components/callout/callout.js";
+export { openCallout } from "./src/overlay/callout/callout.js";
+
 // Layout
-export {
-  // Box is meant to be used everytime we don't want to create a specific layout for the content
-  Box,
-  // Layout is a more semantic version of Box when we want to express layout intention (row/column/inline)
-  Layout,
-} from "./src/components/layout/box.jsx";
-export { DialogLayout } from "./src/components/layout/dialog_layout.jsx";
-export { ViewportLayout } from "./src/components/layout/viewport_layout.jsx";
+export { Details } from "./src/layout/details/details.jsx";
+export { SummaryMarker } from "./src/layout/details/summary_marker.jsx";
+export { DialogLayout } from "./src/layout/dialog_layout.jsx";
+export { ViewportLayout } from "./src/layout/viewport_layout.jsx";
 
 // Other
-export { useDependenciesDiff } from "./src/components/use_dependencies_diff.js";
-export { useFocusGroup } from "./src/components/use_focus_group.js";
+export { useFocusGroup } from "./src/field/use_focus_group.js";
+export { useDependenciesDiff } from "./src/utils/use_dependencies_diff.js";
 
-// for debugging testing purposes
+// keyboard
+export { useKeyboardShortcuts } from "./src/keyboard/keyboard_shortcuts.js";
 
-export { enableDebugOnDocumentLoading } from "./src/browser_integration/document_loading_signal.js";
-
-export { CheckSvg } from "./src/components/graphic/icons/check_svg.jsx";
-export { ExclamationSvg } from "./src/components/graphic/icons/exclamation_svg.jsx";
-export { HeartSvg } from "./src/components/graphic/icons/heart_svg.jsx";
-export { HomeSvg } from "./src/components/graphic/icons/home_svg.jsx";
+export { CheckSvg } from "./src/graphic/icons/check_svg.jsx";
+export { ExclamationSvg } from "./src/graphic/icons/exclamation_svg.jsx";
+export { HeartSvg } from "./src/graphic/icons/heart_svg.jsx";
+export { HomeSvg } from "./src/graphic/icons/home_svg.jsx";
 export {
   LinkAnchorSvg,
   LinkBlankTargetSvg,
-} from "./src/components/graphic/icons/link_svgs.jsx";
-export { SearchSvg } from "./src/components/graphic/icons/search_svg.jsx";
-export { SettingsSvg } from "./src/components/graphic/icons/settings_svg.jsx";
-export { StarSvg } from "./src/components/graphic/icons/star_svg.jsx";
-export { UserSvg } from "./src/components/graphic/icons/user_svg.jsx";
+} from "./src/graphic/icons/link_svgs.jsx";
+export { SearchSvg } from "./src/graphic/icons/search_svg.jsx";
+export { SettingsSvg } from "./src/graphic/icons/settings_svg.jsx";
+export { StarSvg } from "./src/graphic/icons/star_svg.jsx";
+export { UserSvg } from "./src/graphic/icons/user_svg.jsx";

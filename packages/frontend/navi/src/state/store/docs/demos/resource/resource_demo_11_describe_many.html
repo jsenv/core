@@ -14,14 +14,10 @@
       import { useState, useEffect, useRef } from "preact/hooks";
       import {
         resource,
-        // eslint-disable-next-line no-unused-vars
         ActionRenderer,
+        localStorageSignal,
       } from "@jsenv/navi";
-      import {
-        // eslint-disable-next-line no-unused-vars
-        ActionStatus,
-      } from "./action_status.jsx";
-      import { localStorageSignal } from "../../../store/local_storage_signal.js";
+      import { ActionStatus } from "./action_status.jsx";
 
       // Mock data
       const users = [
@@ -112,7 +108,6 @@
       // Load initial data
       USER.GET_MANY.load();
 
-      // eslint-disable-next-line no-unused-vars
       const App = () => {
         return (
           <div style={{ display: "flex", gap: "20px" }}>
@@ -129,7 +124,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const UsersList = () => {
         return (
           <ActionRenderer action={USER.GET_MANY}>
@@ -144,7 +138,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const UserItem = ({ user }) => {
         const [isEditing, setIsEditing] = useState(false);
         const [editName, setEditName] = useState(user.name);
@@ -219,7 +212,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const CurrentUserFriends = () => {
         if (!currentUserIdSignal.value) {
           return <p>No user selected</p>;
@@ -235,7 +227,6 @@
         );
       };
 
-      // eslint-disable-next-line no-unused-vars
       const UserFriends = ({ user }) => {
         const [isAddingFriend, setIsAddingFriend] = useState(false);
         const [selectedFriendId, setSelectedFriendId] = useState("");
