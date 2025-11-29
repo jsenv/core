@@ -47,7 +47,7 @@
 import { normalizeStyles } from "@jsenv/dom";
 import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
-import { withPropsClassName } from "../with_props_class_name.js";
+import { BoxFlowContext } from "./box_flow_context.jsx";
 import {
   getHowToHandleStyleProp,
   getVisualChildStylePropStrategy,
@@ -55,13 +55,13 @@ import {
   prepareStyleValue,
 } from "./box_style_util.js";
 import { getDefaultDisplay } from "./display_defaults.js";
-import { BoxLayoutContext } from "./layout_context.jsx";
 import {
   applyStyle,
   initPseudoStyles,
   PSEUDO_NAMED_STYLES_DEFAULT,
   PSEUDO_STATE_DEFAULT,
 } from "./pseudo_styles.js";
+import { withPropsClassName } from "./with_props_class_name.js";
 
 import.meta.css = /* css */ `
   [data-layout-inline] {
@@ -145,32 +145,32 @@ export const Box = (props) => {
     }
   }
 
-  let layout;
+  let boxFlow;
   if (inline) {
     if (row) {
-      layout = "inline-row";
+      boxFlow = "inline-row";
     } else if (column) {
-      layout = "inline-column";
+      boxFlow = "inline-column";
     } else {
-      layout = "inline";
+      boxFlow = "inline";
     }
   } else if (row) {
-    layout = "row";
+    boxFlow = "row";
   } else if (column) {
-    layout = "column";
+    boxFlow = "column";
   } else {
-    layout = defaultDisplay;
+    boxFlow = defaultDisplay;
   }
   const innerClassName = withPropsClassName(baseClassName, className);
 
   const selfForwardedProps = {};
   const childForwardedProps = {};
   styling: {
-    const parentLayout = useContext(BoxLayoutContext);
+    const parentBoxFlow = useContext(BoxFlowContext);
     const styleDeps = [
       // Layout and alignment props
-      parentLayout,
-      layout,
+      parentBoxFlow,
+      boxFlow,
 
       // Style context dependencies
       styleCSSVars,
@@ -220,8 +220,8 @@ export const Box = (props) => {
     }
     const boxStyles = {};
     const styleContext = {
-      parentLayout,
-      layout,
+      parentBoxFlow,
+      boxFlow,
       styleCSSVars,
       pseudoState: innerPseudoState,
       pseudoClasses,
@@ -528,9 +528,9 @@ export const Box = (props) => {
       data-visual-selector={visualSelector}
       {...selfForwardedProps}
     >
-      <BoxLayoutContext.Provider value={layout}>
+      <BoxFlowContext.Provider value={boxFlow}>
         {innerChildren}
-      </BoxLayoutContext.Provider>
+      </BoxFlowContext.Provider>
     </TagName>
   );
 };

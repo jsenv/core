@@ -147,44 +147,44 @@ const DIMENSION_PROPS = {
   expand: applyOnTwoProps("expandX", "expandY"),
   shrink: applyOnTwoProps("shrinkX", "shrinkY"),
   // apply after width/height to override if both are set
-  expandX: (value, { parentLayout }) => {
+  expandX: (value, { parentBoxFlow }) => {
     if (!value) {
       return null;
     }
-    if (parentLayout === "column" || parentLayout === "inline-column") {
+    if (parentBoxFlow === "column" || parentBoxFlow === "inline-column") {
       return { flexGrow: 1 }; // Grow horizontally in row
     }
-    if (parentLayout === "row") {
+    if (parentBoxFlow === "row") {
       return { minWidth: "100%", width: "auto" }; // Take full width in column
     }
     return { minWidth: "100%", width: "auto" }; // Take full width outside flex
   },
-  expandY: (value, { parentLayout }) => {
+  expandY: (value, { parentBoxFlow }) => {
     if (!value) {
       return null;
     }
-    if (parentLayout === "column") {
+    if (parentBoxFlow === "column") {
       return { minHeight: "100%", height: "auto" }; // Make column full height
     }
-    if (parentLayout === "row" || parentLayout === "inline-row") {
+    if (parentBoxFlow === "row" || parentBoxFlow === "inline-row") {
       return { flexGrow: 1 }; // Make row full height
     }
     return { minHeight: "100%", height: "auto" }; // Take full height outside flex
   },
-  shrinkX: (value, { parentLayout }) => {
+  shrinkX: (value, { parentBoxFlow }) => {
     if (!value) {
       return null;
     }
-    if (parentLayout === "row" || parentLayout === "inline-row") {
+    if (parentBoxFlow === "row" || parentBoxFlow === "inline-row") {
       return { flexShrink: 1 };
     }
     return { maxWidth: "100%" };
   },
-  shrinkY: (value, { parentLayout }) => {
+  shrinkY: (value, { parentBoxFlow }) => {
     if (!value) {
       return null;
     }
-    if (parentLayout === "column" || parentLayout === "inline-column") {
+    if (parentBoxFlow === "column" || parentBoxFlow === "inline-column") {
       return { flexShrink: 1 };
     }
     return { maxHeight: "100%" };
@@ -213,51 +213,50 @@ const POSITION_PROPS = {
   // When multiple adjacent items have the same auto margin alignment (e.g., selfAlignX="end"),
   // only the first item will be positioned as expected because subsequent items
   // will be positioned relative to the previous item's margins, not the container edge.
-  selfAlignX: (value, { parentLayout }) => {
-    const insideRowLayout =
-      parentLayout === "row" || parentLayout === "inline-row";
+  selfAlignX: (value, { parentBoxFlow }) => {
+    const inRowFlow = parentBoxFlow === "row" || parentBoxFlow === "inline-row";
 
     if (value === "start") {
-      if (insideRowLayout) {
+      if (inRowFlow) {
         return { alignSelf: "start" };
       }
       return { marginRight: "auto" };
     }
     if (value === "end") {
-      if (insideRowLayout) {
+      if (inRowFlow) {
         return { alignSelf: "end" };
       }
       return { marginLeft: "auto" };
     }
     if (value === "center") {
-      if (insideRowLayout) {
+      if (inRowFlow) {
         return { alignSelf: "center" };
       }
       return { marginLeft: "auto", marginRight: "auto" };
     }
-    if (insideRowLayout && value !== "stretch") {
+    if (inRowFlow && value !== "stretch") {
       return { alignSelf: value };
     }
     return undefined;
   },
-  selfAlignY: (value, { parentLayout }) => {
-    const inlineColumnLayout =
-      parentLayout === "column" || parentLayout === "inline-column";
+  selfAlignY: (value, { parentBoxFlow }) => {
+    const inColumnFlow =
+      parentBoxFlow === "column" || parentBoxFlow === "inline-column";
 
     if (value === "start") {
-      if (inlineColumnLayout) {
+      if (inColumnFlow) {
         return { alignSelf: "start" };
       }
       return { marginBottom: "auto" };
     }
     if (value === "center") {
-      if (inlineColumnLayout) {
+      if (inColumnFlow) {
         return { alignSelf: "center" };
       }
       return { marginTop: "auto", marginBottom: "auto" };
     }
     if (value === "end") {
-      if (inlineColumnLayout) {
+      if (inColumnFlow) {
         return { alignSelf: "end" };
       }
       return { marginTop: "auto" };
