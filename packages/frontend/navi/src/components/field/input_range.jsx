@@ -34,13 +34,18 @@ import.meta.css = /* css */ `
 
       --outline-color: var(--navi-focus-outline-color);
       --loader-color: var(--navi-loader-color);
-      --rail-border-color: #b5b5b5;
+      --rail-border-color: rgba(181, 181, 181, 0.2);
       --track-border-color: #3e75bb;
       --track-border-color-hover: #2b568b;
       --rail-color: #efefef;
       --track-color: rgb(24, 117, 255);
       --handle-color: rgb(24, 117, 255);
 
+      --rail-border-color-hover: color-mix(
+        in srgb,
+        var(--rail-border-color) 75%,
+        black
+      );
       --rail-color-hover: color-mix(in srgb, var(--rail-color) 95%, black);
       --track-color-hover: rgb(16, 92, 200);
       --handle-color-hover: rgb(16, 92, 200);
@@ -87,12 +92,22 @@ import.meta.css = /* css */ `
       pointer-events: none;
     }
 
+    .navi_input_range_background {
+      position: absolute;
+      width: 100%;
+      height: var(--rail-height);
+      background: var(--x-rail-color);
+      /* Same color as rail-border-color without opacity */
+      border: 1px solid rgba(181, 181, 181, 1);
+      border-radius: var(--border-radius);
+    }
+
     .navi_input_range_rail {
       position: absolute;
       box-sizing: border-box;
       width: 100%;
       height: var(--rail-height);
-      background: var(--x-rail-color);
+
       border-width: 1px;
       border-style: solid;
       border-color: var(--x-rail-border-color);
@@ -104,7 +119,7 @@ import.meta.css = /* css */ `
       height: var(--rail-height);
       background: var(--x-track-color);
       background-clip: content-box;
-      border: 1px solid var(--x-track-border-color);
+      /* border: 1px solid var(--x-track-border-color); */
       border-radius: var(--border-radius);
 
       &:hover {
@@ -133,6 +148,7 @@ import.meta.css = /* css */ `
 
     /* Hover */
     &:hover {
+      --x-rail-border-color: var(--rail-border-color-hover);
       --x-track-border-color: var(--track-border-color-hover);
       --x-track-color: var(--track-color-hover);
       --x-rail-color: var(--rail-color-hover);
@@ -331,8 +347,10 @@ const InputRangeBasic = (props) => {
         inset={-1}
       />
       {renderInputMemoized}
-      <div className="navi_input_range_rail"></div>
+      <div className="navi_input_range_background"></div>
       <div className="navi_input_range_track"></div>
+      <div className="navi_input_range_rail"></div>
+
       <div className="navi_input_range_handle"></div>
     </Box>
   );
