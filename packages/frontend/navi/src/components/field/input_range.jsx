@@ -119,17 +119,16 @@ import.meta.css = /* css */ `
       position: absolute;
       inset: 0;
       margin: 0;
-      opacity: 1;
-
+      opacity: 0;
       --webkit-appearance: none;
-      background: yellow;
+      font-size: inherit;
       appearance: none;
 
       &::-webkit-slider-thumb {
         width: var(--thumb-size);
         height: var(--thumb-size);
-        background: violet;
         border-radius: var(--thumb-border-radius);
+        -webkit-appearance: none;
         cursor: pointer;
       }
     }
