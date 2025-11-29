@@ -4,7 +4,7 @@ import { useResetErrorBoundary } from "../error_boundary_context.js";
 import {
   addCustomMessage,
   removeCustomMessage,
-} from "../validation/custom_message.js";
+} from "../field/validation/custom_message.js";
 
 let debug = false;
 
