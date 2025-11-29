@@ -1,13 +1,13 @@
 import { useCallback, useContext, useRef } from "preact/hooks";
 
 import { getActionPrivateProperties } from "../action/action_private_properties.js";
-import { FormActionContext } from "../action/form_context.js";
 import { renderActionableComponent } from "../action/render_actionable_component.jsx";
 import { useAction } from "../action/use_action.js";
 import { useActionStatus } from "../action/use_action_status.js";
 import { useExecuteAction } from "../action/use_execute_action.js";
 import { Box } from "../box/box.jsx";
 import { Text } from "../text/text.jsx";
+import { FormActionContext } from "./form_context.js";
 import { LoaderBackground } from "./loader/loader_background.jsx";
 import { useActionEvents } from "./use_action_events.js";
 import { useAutoFocus } from "./use_auto_focus.js";
