@@ -188,6 +188,7 @@
         return (
           <div>
             <BasicStatesDemo />
+            <FocusStatesDemo />
             <ColorVariationsDemo />
             <ThumbCustomizationDemo />
           </div>
@@ -196,7 +197,6 @@
 
       const BasicStatesDemo = () => {
         const [defaultValue, setDefaultValue] = useState(50);
-        const [focusedValue, setFocusedValue] = useState(30);
         const [disabledValue] = useState(75);
 
         return (
@@ -239,36 +239,6 @@
                     </div>
                   </Box>
                 </fieldset>
-                <fieldset>
-                  <legend>:focus-visible</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <div className="range-group">
-                      <InputRange
-                        value={focusedValue}
-                        onUIStateChange={(v) => {
-                          setFocusedValue(v);
-                        }}
-                        min="0"
-                        max="100"
-                        pseudoState={{ ":focus-visible": true }}
-                      />
-                      <div className="value-display">{focusedValue}</div>
-                    </div>
-                    <div className="range-group">
-                      <input
-                        type="range"
-                        value={focusedValue}
-                        onChange={(e) => setFocusedValue(e.target.value)}
-                        min="0"
-                        max="100"
-                        autoFocus
-                      />
-                      <div className="value-display">{focusedValue}</div>
-                    </div>
-                  </Box>
-                </fieldset>
-              </Box>
-              <Box column>
                 <fieldset>
                   <legend>:disabled</legend>
                   <Box row spacing="sm" alignX="start">
@@ -355,6 +325,110 @@
                   </li>
                 </ul>
               </div>
+            </div>
+          </div>
+        );
+      };
+
+      const FocusStatesDemo = () => {
+        const [focusedValue, setFocusedValue] = useState(30);
+
+        return (
+          <div className="demo-section">
+            <h2>Focus States</h2>
+            <p className="states-description">
+              Focus states are crucial for accessibility and keyboard
+              navigation. Read-only and loading ranges maintain their ability to
+              receive focus, allowing screen readers and keyboard users to
+              access them.
+            </p>
+
+            <Box column spacing="sm">
+              <fieldset>
+                <legend>:focus-visible</legend>
+                <Box row spacing="sm" alignX="start">
+                  <div className="range-group">
+                    <InputRange
+                      value={focusedValue}
+                      onUIStateChange={(v) => setFocusedValue(v)}
+                      min="0"
+                      max="100"
+                      pseudoState={{ ":focus-visible": true }}
+                    />
+                    <div className="value-display">{focusedValue}</div>
+                  </div>
+                  <div className="range-group">
+                    <input
+                      type="range"
+                      value={focusedValue}
+                      onChange={(e) => setFocusedValue(e.target.value)}
+                      min="0"
+                      max="100"
+                      autoFocus
+                    />
+                    <div className="value-display">{focusedValue}</div>
+                  </div>
+                </Box>
+              </fieldset>
+            </Box>
+
+            <Box column spacing="sm">
+              <fieldset>
+                <legend>:read-only + :focus-visible</legend>
+                <Box row spacing="sm" alignX="start">
+                  <div className="range-group">
+                    <InputRange
+                      value="45"
+                      min="0"
+                      max="100"
+                      readOnly
+                      pseudoState={{ ":focus-visible": true }}
+                    />
+                    <div className="value-display">45</div>
+                  </div>
+                </Box>
+              </fieldset>
+              <fieldset>
+                <legend>:-navi-loading + :focus-visible</legend>
+                <Box row spacing="sm" alignX="start">
+                  <div className="range-group">
+                    <InputRange
+                      value="75"
+                      min="0"
+                      max="100"
+                      loading
+                      readOnly
+                      pseudoState={{ ":focus-visible": true }}
+                    />
+                    <div className="value-display">75</div>
+                  </div>
+                </Box>
+              </fieldset>
+            </Box>
+
+            <div
+              style={{
+                marginTop: "15px",
+                padding: "10px",
+                background: "#f8f9fa",
+                borderRadius: "4px",
+                fontSize: "0.85rem",
+                color: "#666",
+              }}
+            >
+              <strong>Focus Accessibility:</strong>
+              <p style={{ margin: "5px 0" }}>
+                Read-only ranges maintain their ability to receive keyboard
+                focus, which is essential for accessibility. This allows screen
+                reader users and keyboard-only users to navigate to and
+                understand the current value of the range input, even when they
+                cannot modify it.
+              </p>
+              <p style={{ margin: "5px 0 0 0" }}>
+                Loading ranges are typically both read-only and focusable,
+                providing feedback about their state while maintaining
+                accessibility.
+              </p>
             </div>
           </div>
         );
