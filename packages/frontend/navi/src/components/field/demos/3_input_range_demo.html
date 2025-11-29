@@ -151,7 +151,9 @@
                     <div className="range-group">
                       <InputRange
                         value={defaultValue}
-                        onInput={(e) => setDefaultValue(e.target.value)}
+                        onUIStateChange={(v) => {
+                          setDefaultValue(v);
+                        }}
                         min="0"
                         max="100"
                       />
@@ -175,7 +177,9 @@
                     <div className="range-group">
                       <InputRange
                         value={focusedValue}
-                        onInput={(e) => setFocusedValue(e.target.value)}
+                        onUIStateChange={(v) => {
+                          setFocusedValue(v);
+                        }}
                         min="0"
                         max="100"
                         pseudoState={{ ":focus-visible": true }}

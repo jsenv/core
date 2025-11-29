@@ -43,7 +43,7 @@ import.meta.css = /* css */ `
       --background-color: #efefef;
       --fill-color: rgb(24, 117, 255);
       --thumb-color: var(--fill-color);
-
+      /* Hover */
       --border-color-hover: color-mix(in srgb, var(--border-color) 75%, black);
       --track-border-color-hover: color-mix(
         in srgb,
@@ -54,7 +54,7 @@ import.meta.css = /* css */ `
       --color-hover: color-mix(in srgb, var(--rail-color) 95%, black);
       --fill-color-hover: color-mix(in srgb, var(--fill-color) 80%, black);
       --thumb-color-hover: color-mix(in srgb, var(--thumb-color) 80%, black);
-
+      /* Active */
       --border-color-active: color-mix(
         in srgb,
         var(--border-color) 50%,
@@ -68,9 +68,16 @@ import.meta.css = /* css */ `
       );
       --fill-color-active: color-mix(in srgb, var(--fill-color) 75%, white);
       --thumb-color-active: color-mix(in srgb, var(--thumb-color) 75%, white);
-
-      --thumb-color-readonly: #aaaaaa;
-
+      /* Readonly */
+      --border-color-readonly: color-mix(
+        in srgb,
+        var(--border-color) 30%,
+        white
+      );
+      --background-color-readonly: var(--background-color);
+      --fill-color-readonly: color-mix(in srgb, var(--fill-color) 30%, grey);
+      --thumb-color-readonly: var(--fill-color-readonly);
+      /* Disabled */
       --background-color-disabled: color-mix(
         in srgb,
         var(--background-color) 60%,
@@ -178,6 +185,8 @@ import.meta.css = /* css */ `
     /* Readonly */
     &[data-readonly] {
       --x-background-color: var(--background-color-readonly);
+      --x-border-color: var(--border-color-readonly);
+      --x-fill-color: var(--fill-color-readonly);
       --x-thumb-color: var(--thumb-color-readonly);
     }
     /* Disabled */
@@ -220,22 +229,31 @@ export const InputRange = (props) => {
 const InputStyleCSSVars = {
   "outlineWidth": "--outline-width",
   "borderRadius": "--border-radius",
+  "borderColor": "--border-color",
   "backgroundColor": "--background-color",
-  "color": "--color",
   ":hover": {
+    borderColor: "--border-color-hover",
     backgroundColor: "--background-color-hover",
-    color: "--color-hover",
+    fillColor: "--fill-color-hover",
+    thumbColor: "--thumb-color-hover",
   },
   ":active": {
-    borderColor: "--border-color-active",
+    borderColor: "--border-color-hover",
+    backgroundColor: "--background-color-hover",
+    fillColor: "--fill-color-active",
+    thumbColor: "--thumb-color-active",
   },
   ":read-only": {
+    borderColor: "--border-color-readonly",
     backgroundColor: "--background-color-readonly",
-    color: "--color-readonly",
+    fillColor: "--fill-color-readonly",
+    thumbColor: "--thumb-color-readonly",
   },
   ":disabled": {
+    borderColor: "--border-color-disabled",
     backgroundColor: "--background-color-disabled",
-    color: "--color-disabled",
+    fillColor: "--fill-color-disabled",
+    thumbColor: "--thumb-color-disabled",
   },
 };
 const InputPseudoClasses = [
@@ -345,7 +363,7 @@ const InputRangeBasic = (props) => {
       pseudoStateSelector=".navi_native_input"
       visualSelector=".navi_native_input"
       basePseudoState={{
-        ":read-only": false,
+        ":read-only": innerReadOnly,
         ":disabled": innerDisabled,
         ":-navi-loading": innerLoading,
       }}
