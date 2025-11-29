@@ -33,6 +33,7 @@ import.meta.css = /* css */ `
 
       --outline-color: var(--navi-focus-outline-color);
       --loader-color: var(--navi-loader-color);
+      --color: rgb(24, 117, 255);
 
       --border-color: rgba(150, 150, 150);
       --track-border-color: color-mix(
@@ -41,7 +42,7 @@ import.meta.css = /* css */ `
         transparent
       );
       --background-color: #efefef;
-      --fill-color: rgb(24, 117, 255);
+      --fill-color: var(--color);
       --thumb-color: var(--fill-color);
       /* Hover */
       --border-color-hover: color-mix(in srgb, var(--border-color) 75%, black);
@@ -231,6 +232,7 @@ const InputStyleCSSVars = {
   "borderRadius": "--border-radius",
   "borderColor": "--border-color",
   "backgroundColor": "--background-color",
+  "color": "--color",
   ":hover": {
     borderColor: "--border-color-hover",
     backgroundColor: "--background-color-hover",

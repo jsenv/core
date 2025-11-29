@@ -310,10 +310,12 @@
                   <div className="range-group">
                     <InputRange
                       value={redValue}
-                      onInput={(e) => setRedValue(e.target.value)}
+                      onUIStateChange={(v) => setRedValue(v)}
                       min="0"
                       max="100"
-                      color="red"
+                      style={{
+                        "--fill-color": "red",
+                      }}
                     />
                     <div className="value-display">{redValue}</div>
                   </div>
@@ -338,10 +340,11 @@
                       value="45"
                       min="0"
                       max="100"
+                      onUIStateChange={() => {}}
                       style={{
                         "--thumb-color": "#ff4444",
                         "--track-color": "#4444ff",
-                        "--track-filled-color": "#6666ff",
+                        "--fill-color": "yellow",
                       }}
                     />
                     <div className="value-display">45</div>
@@ -372,12 +375,12 @@
                 </p>
               </fieldset>
               <fieldset>
-                <legend>Blue Theme</legend>
+                <legend>Green Theme</legend>
                 <Box row spacing="sm" alignX="start">
                   <div className="range-group">
                     <InputRange
                       value={greenValue}
-                      onInput={(e) => setGreenValue(e.target.value)}
+                      onUIStateChange={(v) => setGreenValue(v)}
                       min="0"
                       max="100"
                       color="green"
