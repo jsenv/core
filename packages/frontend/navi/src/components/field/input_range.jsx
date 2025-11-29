@@ -28,47 +28,59 @@ import.meta.css = /* css */ `
     .navi_input_range {
       --border-radius: 6px;
       --outline-width: 2px;
-      --height: 12px;
-      --rail-height: 8px;
-      --handle-size: 1em;
+      --height: 8px;
+      --thumb-size: 1em;
 
       --outline-color: var(--navi-focus-outline-color);
       --loader-color: var(--navi-loader-color);
-      --rail-border-color: rgba(181, 181, 181, 0.2);
-      --track-border-color: #3e75bb;
-      --track-border-color-hover: #2b568b;
-      --rail-color: #efefef;
-      --track-color: rgb(24, 117, 255);
-      --handle-color: rgb(24, 117, 255);
 
-      --rail-border-color-hover: color-mix(
+      --border-color: rgba(181, 181, 181);
+      --track-border-color: rgba(181, 181, 181, 0.2);
+      --border-color-hover: #2b568b;
+      --background-color: #efefef;
+      --fill-color: rgb(24, 117, 255);
+      --thumb-color: rgb(24, 117, 255);
+
+      --border-color-hover: color-mix(in srgb, var(--border-color) 75%, black);
+      --track-border-color-hover: color-mix(
         in srgb,
-        var(--rail-border-color) 75%,
+        var(--track-border-color) 75%,
         black
       );
-      --rail-color-hover: color-mix(in srgb, var(--rail-color) 95%, black);
-      --track-color-hover: rgb(16, 92, 200);
-      --handle-color-hover: rgb(16, 92, 200);
+      --track-color-hover: color-mix(in srgb, var(--fill-color) 95%, black);
+      --color-hover: color-mix(in srgb, var(--rail-color) 95%, black);
+      --fill-color-hover: rgb(16, 92, 200);
+      --thumb-color-hover: rgb(16, 92, 200);
 
-      --rail-color-active: color-mix(in srgb, var(--rail-color) 75%, white);
-      --track-border-color-active: color-mix(
+      --background-color-active: color-mix(
+        in srgb,
+        var(--rail-color) 75%,
+        white
+      );
+      --fill-border-color-active: color-mix(
         in srgb,
         var(--track-border-color) 75%,
         white
       );
-      --track-color-active: color-mix(in srgb, var(--track-color) 75%, white);
-      --handle-color-active: color-mix(in srgb, var(--handle-color) 75%, white);
+      --background-color-active: color-mix(
+        in srgb,
+        var(--background-color) 75%,
+        white
+      );
+      --thumb-color-active: color-mix(in srgb, var(--thumb-color) 75%, white);
+
+      --thumb-color-readonly: #aaaaaa;
     }
   }
 
   .navi_input_range {
     --x-fill-ratio: 0;
-    --x-rail-border-color: var(--rail-border-color);
+    --x-border-color: var(--border-color);
     --x-track-border-color: var(--track-border-color);
-    --x-rail-color: var(--rail-color);
-    --x-track-color: var(--track-color);
-    --x-handle-color: var(--handle-color);
-    --x-handle-border: none;
+    --x-background-color: var(--background-color);
+    --x-fill-color: var(--fill-color);
+    --x-thumb-color: var(--thumb-color);
+    --x-thumb-border: none;
 
     position: relative;
     box-sizing: border-box;
@@ -95,70 +107,59 @@ import.meta.css = /* css */ `
     .navi_input_range_background {
       position: absolute;
       width: 100%;
-      height: var(--rail-height);
-      background: var(--x-rail-color);
-      /* Same color as rail-border-color without opacity */
-      border: 1px solid rgba(181, 181, 181, 1);
-      border-radius: var(--border-radius);
-    }
-
-    .navi_input_range_rail {
-      position: absolute;
-      box-sizing: border-box;
-      width: 100%;
-      height: var(--rail-height);
-
+      height: var(--height);
+      background: var(--x-background-color);
       border-width: 1px;
       border-style: solid;
-      border-color: var(--x-rail-border-color);
+      border-color: var(--x-border-color);
       border-radius: var(--border-radius);
     }
     .navi_input_range_track {
       position: absolute;
-      width: calc(var(--x-fill-ratio) * 100%);
-      height: var(--rail-height);
-      background: var(--x-track-color);
-      background-clip: content-box;
-      /* border: 1px solid var(--x-track-border-color); */
+      box-sizing: border-box;
+      width: 100%;
+      height: var(--height);
+      border-width: 1px;
+      border-style: solid;
+      border-color: var(--x-track-border-color);
       border-radius: var(--border-radius);
-
-      &:hover {
-        --x-track-border-color: var(--track-border-color-hover);
-        --x-track-color: var(--track-color-hover);
-      }
     }
-    .navi_input_range_handle {
+    .navi_input_range_fill {
+      position: absolute;
+      width: calc(var(--x-fill-ratio) * 100%);
+      height: var(--height);
+      background: var(--x-fill-color);
+      background-clip: content-box;
+      border-radius: var(--border-radius);
+    }
+    .navi_input_range_thumb {
       position: absolute;
       left: calc(var(--x-fill-ratio) * 100%);
-      width: var(--handle-size);
-      height: var(--handle-size);
-      background: var(--x-handle-color);
-      border: var(--x-handle-border);
+      width: var(--thumb-size);
+      height: var(--thumb-size);
+      background: var(--x-thumb-color);
+      border: var(--x-thumb-border);
       border-radius: 100%;
       transform: translateX(-50%);
       cursor: pointer;
 
       &:hover {
-        --x-handle-color: var(--handle-color-hover);
+        --x-thumb-color: var(--thumb-color-hover);
       }
       &:active {
-        --x-handle-color: var(--handle-color-active);
+        --x-thumb-color: var(--thumb-color-active);
       }
     }
 
     /* Hover */
     &:hover {
-      --x-rail-border-color: var(--rail-border-color-hover);
+      --x-border-color: var(--border-color-hover);
       --x-track-border-color: var(--track-border-color-hover);
-      --x-track-color: var(--track-color-hover);
-      --x-rail-color: var(--rail-color-hover);
+      --x-fill-color: var(--fill-color-hover);
     }
     /* Active */
     &:active {
-      --x-track-border-color: var(--track-border-color-active);
-      --x-track-color: var(--track-color-active);
-      --x-rail-color: var(--rail-color-active);
-      --x-handle-color: var(--handle-color-active);
+      --x-border-color: var(--border-color-active);
 
       .navi_input_range_track {
         --x-track-border-color: var(--track-border-color-active) !important;
@@ -168,7 +169,7 @@ import.meta.css = /* css */ `
     /* Readonly */
     &[data-readonly] {
       --x-background-color: var(--background-color-readonly);
-      --x-color: var(--color-readonly);
+      --x-thumb-color: var(--thumb-color-readonly);
     }
     /* Focus */
     &[data-focus-visible] {
@@ -331,7 +332,7 @@ const InputRangeBasic = (props) => {
       pseudoStateSelector=".navi_native_input"
       visualSelector=".navi_native_input"
       basePseudoState={{
-        ":read-only": innerReadOnly,
+        ":read-only": false,
         ":disabled": innerDisabled,
         ":-navi-loading": innerLoading,
       }}
@@ -346,12 +347,11 @@ const InputRangeBasic = (props) => {
         color="var(--loader-color)"
         inset={-1}
       />
-      {renderInputMemoized}
       <div className="navi_input_range_background"></div>
+      <div className="navi_input_range_fill"></div>
       <div className="navi_input_range_track"></div>
-      <div className="navi_input_range_rail"></div>
-
-      <div className="navi_input_range_handle"></div>
+      <div className="navi_input_range_thumb"></div>
+      {renderInputMemoized}
     </Box>
   );
 };
