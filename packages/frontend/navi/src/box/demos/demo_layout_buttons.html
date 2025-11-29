@@ -44,7 +44,7 @@
     <div id="app"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { Box, Input, Button, Layout } from "@jsenv/navi";
+      import { Box, Input, Button } from "@jsenv/navi";
 
       const DemoBox = ({ children, ...props }) => (
         <div className="demo-box" {...props}>
@@ -143,7 +143,7 @@
               <h3>2. Button ExpandY - Vertical Expansion Only</h3>
               <div className="visual-container">
                 <h4>Buttons in columns (takes full height)</h4>
-                <Layout column spacing="10px" height="100px">
+                <Box column spacing="10px" height="100px">
                   <Button>Default</Button>
                   <Button box alignY="center">
                     Text centered
@@ -154,23 +154,23 @@
                   <Button selfAlignY="start">Start</Button>
                   <Button selfAlignY="center">Center</Button>
                   <Button selfAlignY="end">End</Button>
-                </Layout>
+                </Box>
 
                 <h4>Buttons in rows (grows vertically)</h4>
-                <Layout column spacing="sm">
-                  <Layout row spacing="sm" height="200px">
+                <Box column spacing="sm">
+                  <Box row spacing="sm" height="200px">
                     <Button>Fixed</Button>
                     <Button expandY>ExpandY</Button>
                     <Button>Fixed</Button>
-                  </Layout>
-                  <Layout row spacing="sm" height="200px">
+                  </Box>
+                  <Box row spacing="sm" height="200px">
                     <Button>Fixed</Button>
                     <Button box expandY alignY="center">
                       ExpandY text centered
                     </Button>
                     <Button>Fixed</Button>
-                  </Layout>
-                </Layout>
+                  </Box>
+                </Box>
               </div>
             </div>
 
@@ -312,10 +312,10 @@
               <h3>9. Button SelfAlignX Test: row + selfAlignX="end"</h3>
               <div className="visual-container">
                 <div className="bounded">
-                  <Layout column spacing="10px" style={{ height: "100%" }}>
+                  <Box column spacing="10px" style={{ height: "100%" }}>
                     <Button>Default</Button>
                     <Button selfAlignX="end">Pushed to End</Button>
-                  </Layout>
+                  </Box>
                 </div>
               </div>
             </div>
@@ -323,49 +323,49 @@
             <div className="demo-container">
               <h3>10. Combined Spacing and ExpandX</h3>
               <div className="visual-container">
-                <Layout column spacing="10px">
+                <Box column spacing="10px">
                   <Button>Label</Button>
                   <Button expandX marginY="5px" paddingX="20px">
                     Margin + Padding + ExpandX
                   </Button>
                   <Button>End</Button>
-                </Layout>
+                </Box>
               </div>
             </div>
 
             <div className="demo-container">
               <h3>11. Button Toolbar Layout</h3>
               <div className="visual-container">
-                <Layout column spacing="10px">
+                <Box column spacing="10px">
                   <Button>New</Button>
                   <Button>Open</Button>
                   <Button>Save</Button>
                   <Button expandX>Status Message Area</Button>
                   <Button selfAlignX="end">Settings</Button>
-                </Layout>
+                </Box>
               </div>
             </div>
 
             <div className="demo-container">
               <h3>12. Button Group with Various Alignments</h3>
               <div className="visual-container">
-                <Layout row spacing="10px">
-                  <Layout column spacing="10px">
+                <Box row spacing="10px">
+                  <Box column spacing="10px">
                     <Button>Start</Button>
                     <Button selfAlignX="center">Center</Button>
                     <Button>End</Button>
-                  </Layout>
+                  </Box>
 
-                  <Layout column spacing="10px">
+                  <Box column spacing="10px">
                     <Button expandX>Primary Action</Button>
                     <Button>Cancel</Button>
-                  </Layout>
+                  </Box>
 
-                  <Layout column spacing="10px" selfAlignX="end">
+                  <Box column spacing="10px" selfAlignX="end">
                     <Button>Back</Button>
                     <Button>Next</Button>
-                  </Layout>
-                </Layout>
+                  </Box>
+                </Box>
               </div>
             </div>
 
@@ -387,10 +387,10 @@
                       action.
                     </p>
 
-                    <Layout column spacing="10px">
+                    <Box column spacing="10px">
                       <Button expandX>Primary Action</Button>
                       <Button selfAlignX="end">More</Button>
-                    </Layout>
+                    </Box>
                   </div>
                 </div>
               </div>

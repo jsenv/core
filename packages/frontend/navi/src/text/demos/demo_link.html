@@ -121,21 +121,21 @@
                   enhanced styling and consistent behavior.
                 </p>
 
-                <Layout column spacing="sm">
+                <Box column spacing="sm">
                   <fieldset>
                     <legend>Default</legend>
-                    <Layout row spacing="sm" alignX="start">
+                    <Box row spacing="sm" alignX="start">
                       <Link href="./default" preventDefault>
                         Navi
                       </Link>
                       <a href="./default" onClick={(e) => e.preventDefault()}>
                         User Agent
                       </a>
-                    </Layout>
+                    </Box>
                   </fieldset>
                   <fieldset>
                     <legend>:focus-visible</legend>
-                    <Layout row spacing="sm" alignX="start">
+                    <Box row spacing="sm" alignX="start">
                       <Link
                         href="./focus"
                         pseudoState={{ ":focus-visible": true }}
@@ -150,11 +150,11 @@
                       >
                         Link text
                       </a>
-                    </Layout>
+                    </Box>
                   </fieldset>
                   <fieldset>
                     <legend>:active</legend>
-                    <Layout row spacing="sm" alignX="start">
+                    <Box row spacing="sm" alignX="start">
                       <Link
                         href="./active"
                         pseudoState={{ ":active": true }}
@@ -165,11 +165,11 @@
                       <a href="./active" onClick={(e) => e.preventDefault()}>
                         Link text
                       </a>
-                    </Layout>
+                    </Box>
                   </fieldset>
                   <fieldset>
                     <legend>:visited</legend>
-                    <Layout row spacing="sm" alignX="start">
+                    <Box row spacing="sm" alignX="start">
                       <Link
                         href="./visited"
                         pseudoState={{ ":visited": true }}
@@ -180,9 +180,9 @@
                       <a href="./visited" onClick={(e) => e.preventDefault()}>
                         Link text
                       </a>
-                    </Layout>
+                    </Box>
                   </fieldset>
-                </Layout>
+                </Box>
 
                 <div
                   style={{
@@ -214,34 +214,34 @@
                   available in standard HTML links.
                 </p>
 
-                <Layout column spacing="sm">
+                <Box column spacing="sm">
                   <fieldset>
                     <legend>:read-only</legend>
-                    <Layout row spacing="sm" alignX="start">
+                    <Box row spacing="sm" alignX="start">
                       <Link href="./readonly" readOnly preventDefault>
                         Link text
                       </Link>
-                    </Layout>
+                    </Box>
                   </fieldset>
                   <fieldset>
                     <legend>:disabled</legend>
-                    <Layout row spacing="sm" alignX="start">
+                    <Box row spacing="sm" alignX="start">
                       <Link href="./disabled" disabled preventDefault>
                         Link text
                       </Link>
-                    </Layout>
+                    </Box>
                   </fieldset>
                   <fieldset>
                     <legend>:-navi-loading</legend>
-                    <Layout row spacing="sm" alignX="start">
+                    <Box row spacing="sm" alignX="start">
                       <Link href="./loading" loading readOnly preventDefault>
                         Link text
                       </Link>
-                    </Layout>
+                    </Box>
                   </fieldset>
                   <fieldset>
                     <legend>:-navi-href-current</legend>
-                    <Layout row spacing="sm" alignX="start">
+                    <Box row spacing="sm" alignX="start">
                       <Link
                         href="./current"
                         preventDefault
@@ -255,9 +255,9 @@
                       >
                         Link text
                       </Link>
-                    </Layout>
+                    </Box>
                   </fieldset>
-                </Layout>
+                </Box>
 
                 <div
                   style={{
