@@ -21,10 +21,10 @@ import { useNetworkSpeed } from "./network_speed.js";
 import.meta.css = /* css */ `
   .navi_rectangle_loading {
     position: relative;
+    display: flex;
     width: 100%;
     height: 100%;
     opacity: 0;
-    display: block;
   }
 
   .navi_rectangle_loading[data-visible] {
@@ -109,15 +109,18 @@ const RectangleLoadingSvg = ({
   const drawableWidth = width - margin * 2;
   const drawableHeight = height - margin * 2;
 
-  // ✅ Check if this should be a circle
+  // ✅ Check if this should be a circle - only if width and height are nearly equal
   const maxPossibleRadius = Math.min(drawableWidth, drawableHeight) / 2;
   const actualRadius = Math.min(
     radius || Math.min(drawableWidth, drawableHeight) * 0.05,
     maxPossibleRadius, // ✅ Limité au radius maximum possible
   );
 
-  // ✅ Determine if we're dealing with a circle
-  const isCircle = actualRadius >= maxPossibleRadius * 0.95; // 95% = virtually a circle
+  const aspectRatio =
+    Math.max(drawableWidth, drawableHeight) /
+    Math.min(drawableWidth, drawableHeight);
+  const isNearlySquare = aspectRatio <= 1.2; // Allow some tolerance for nearly square shapes
+  const isCircle = isNearlySquare && actualRadius >= maxPossibleRadius * 0.95;
 
   let pathLength;
   let rectPath;
