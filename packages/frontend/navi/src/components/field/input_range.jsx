@@ -29,7 +29,9 @@ import.meta.css = /* css */ `
       --border-radius: 6px;
       --outline-width: 2px;
       --height: 8px;
-      --thumb-size: 2em;
+      --thumb-size: 16px;
+      --thumb-width: var(--thumb-size);
+      --thumb-height: var(--thumb-size);
       --thumb-border-radius: 100%;
 
       --outline-color: var(--navi-focus-outline-color);
@@ -125,8 +127,8 @@ import.meta.css = /* css */ `
       appearance: none;
 
       &::-webkit-slider-thumb {
-        width: var(--thumb-size);
-        height: var(--thumb-size);
+        width: var(--thumb-width);
+        height: var(--thumb-height);
         border-radius: var(--thumb-border-radius);
         -webkit-appearance: none;
         cursor: pointer;
@@ -167,8 +169,8 @@ import.meta.css = /* css */ `
       left: calc(
         var(--x-fill-ratio) * (100% - var(--thumb-size)) + var(--thumb-size) / 2
       );
-      width: var(--thumb-size);
-      height: var(--thumb-size);
+      width: var(--thumb-width);
+      height: var(--thumb-height);
       background: var(--x-thumb-color);
       border: var(--x-thumb-border);
       border-radius: var(--thumb-border-radius);
