@@ -323,6 +323,7 @@ const InputRangeBasic = (props) => {
 
     return (
       <Box
+        disabled={innerReadOnly}
         {...inputProps}
         as="input"
         type="range"
@@ -352,6 +353,7 @@ const InputRangeBasic = (props) => {
     uiState,
     innerValue,
     innerOnInput,
+    innerReadOnly,
   ]);
 
   return (
