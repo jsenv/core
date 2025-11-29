@@ -29,7 +29,8 @@ import.meta.css = /* css */ `
       --border-radius: 6px;
       --outline-width: 2px;
       --height: 8px;
-      --thumb-size: 1em;
+      --thumb-size: 2em;
+      --thumb-border-radius: 100%;
 
       --outline-color: var(--navi-focus-outline-color);
       --loader-color: var(--navi-loader-color);
@@ -118,7 +119,19 @@ import.meta.css = /* css */ `
       position: absolute;
       inset: 0;
       margin: 0;
-      opacity: 0;
+      opacity: 1;
+
+      --webkit-appearance: none;
+      background: yellow;
+      appearance: none;
+
+      &::-webkit-slider-thumb {
+        width: var(--thumb-size);
+        height: var(--thumb-size);
+        background: violet;
+        border-radius: var(--thumb-border-radius);
+        cursor: pointer;
+      }
     }
 
     .navi_input_range_background {
@@ -159,7 +172,7 @@ import.meta.css = /* css */ `
       height: var(--thumb-size);
       background: var(--x-thumb-color);
       border: var(--x-thumb-border);
-      border-radius: 100%;
+      border-radius: var(--thumb-border-radius);
       transform: translateX(-50%);
       cursor: pointer;
     }
@@ -189,6 +202,13 @@ import.meta.css = /* css */ `
       --x-border-color: var(--border-color-readonly);
       --x-fill-color: var(--fill-color-readonly);
       --x-thumb-color: var(--thumb-color-readonly);
+
+      .navi_native_input {
+        cursor: default;
+      }
+      .navi_input_range_thumb {
+        cursor: default;
+      }
     }
     /* Disabled */
     &[data-disabled] {

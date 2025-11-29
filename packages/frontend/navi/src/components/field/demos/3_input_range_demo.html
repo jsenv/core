@@ -105,6 +105,70 @@
         border: 1px solid #dee2e6;
         border-radius: 4px;
       }
+
+      /* Custom thumb styles for native inputs */
+      .small-thumb-range::-webkit-slider-thumb {
+        width: 14px;
+        height: 14px;
+        background: #ff6b35;
+        border: none;
+        border-radius: 50%;
+        -webkit-appearance: none;
+        cursor: pointer;
+      }
+
+      .large-thumb-range::-webkit-slider-thumb {
+        width: 24px;
+        height: 24px;
+        background: #4a90e2;
+        border: none;
+        border-radius: 50%;
+        -webkit-appearance: none;
+        cursor: pointer;
+      }
+
+      .square-thumb-range {
+        --webkit-appearance: none;
+        background: yellow;
+        appearance: none;
+      }
+      .square-thumb-range::-webkit-slider-thumb {
+        width: 20px;
+        height: 20px;
+        background: #9b59b6;
+        border: none;
+        border-radius: 3px;
+        -webkit-appearance: none;
+        cursor: pointer;
+      }
+
+      /* Firefox styles */
+      .small-thumb-range::-moz-range-thumb {
+        width: 14px;
+        height: 14px;
+        background: #ff6b35;
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+      }
+
+      .large-thumb-range::-moz-range-thumb {
+        width: 24px;
+        height: 24px;
+        background: #4a90e2;
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+      }
+
+      .square-thumb-range::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        background: #9b59b6;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+      }
     </style>
   </head>
   <body>
@@ -122,6 +186,7 @@
           <div>
             <BasicStatesDemo />
             <ColorVariationsDemo />
+            <ThumbCustomizationDemo />
           </div>
         );
       };
@@ -399,6 +464,125 @@
                 </Box>
               </fieldset>
             </Box>
+          </div>
+        );
+      };
+
+      const ThumbCustomizationDemo = () => {
+        const [smallThumbValue, setSmallThumbValue] = useState(30);
+        const [largeThumbValue, setLargeThumbValue] = useState(70);
+
+        return (
+          <div className="demo-section">
+            <h2>Thumb Customization</h2>
+            <p className="states-description">
+              Customize the slider thumb (draggable handle) size and color. Navi
+              uses CSS variables while native inputs use vendor-specific
+              pseudo-elements.
+            </p>
+
+            <Box column spacing="sm">
+              <fieldset>
+                <legend>Small Thumb</legend>
+                <Box row spacing="sm" alignX="start">
+                  <div className="range-group">
+                    <InputRange
+                      value={smallThumbValue}
+                      onUIStateChange={(e) => setSmallThumbValue(e)}
+                      min="0"
+                      max="100"
+                      style={{
+                        "--thumb-size": "0.8em",
+                        "--thumb-color": "#ff6b35",
+                      }}
+                    />
+                    <div className="value-display">{smallThumbValue}</div>
+                  </div>
+                  <div className="range-group">
+                    <input
+                      type="range"
+                      value={smallThumbValue}
+                      onChange={(e) => setSmallThumbValue(e.target.value)}
+                      min="0"
+                      max="100"
+                      className="small-thumb-range"
+                    />
+                    <div className="value-display">{smallThumbValue}</div>
+                  </div>
+                </Box>
+              </fieldset>
+              <fieldset>
+                <legend>Large Thumb</legend>
+                <Box row spacing="sm" alignX="start">
+                  <div className="range-group">
+                    <InputRange
+                      value={largeThumbValue}
+                      onUIStateChange={(e) => setLargeThumbValue(e)}
+                      min="0"
+                      max="100"
+                      style={{
+                        "--thumb-size": "1.5em",
+                        "--thumb-color": "#4a90e2",
+                      }}
+                    />
+                    <div className="value-display">{largeThumbValue}</div>
+                  </div>
+                  <div className="range-group">
+                    <input
+                      type="range"
+                      value={largeThumbValue}
+                      onChange={(e) => setLargeThumbValue(e.target.value)}
+                      min="0"
+                      max="100"
+                      className="large-thumb-range"
+                    />
+                    <div className="value-display">{largeThumbValue}</div>
+                  </div>
+                </Box>
+              </fieldset>
+              <fieldset>
+                <legend>Square Thumb</legend>
+                <Box row spacing="sm" alignX="start">
+                  <div className="range-group">
+                    <InputRange
+                      value="50"
+                      min="0"
+                      onUIStateChange={() => {}}
+                      max="100"
+                      style={{
+                        "--thumb-size": "1.2em",
+                        "--thumb-color": "#9b59b6",
+                        "--thumb-border-radius": "3px",
+                      }}
+                    />
+                    <div className="value-display">50</div>
+                  </div>
+                  <div className="range-group">
+                    <input
+                      type="range"
+                      value="50"
+                      min="0"
+                      max="100"
+                      className="square-thumb-range"
+                    />
+                    <div className="value-display">50</div>
+                  </div>
+                </Box>
+              </fieldset>
+            </Box>
+            <p
+              style={{
+                fontSize: "0.8rem",
+                color: "#666",
+                margin: "12px 0 0 0",
+              }}
+            >
+              <strong>Navi:</strong> Uses --thumb-size, --thumb-color,
+              --thumb-border-radius variables
+              <br />
+              <strong>Native:</strong> Uses ::-webkit-slider-thumb and
+              ::-moz-range-thumb pseudo-elements
+            </p>
           </div>
         );
       };
