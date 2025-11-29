@@ -1,9 +1,10 @@
 import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
+
+import { useResetErrorBoundary } from "../error_boundary_context.js";
 import {
   addCustomMessage,
   removeCustomMessage,
-} from "../../validation/custom_message.js";
-import { useResetErrorBoundary } from "../error_boundary_context.js";
+} from "../validation/custom_message.js";
 
 let debug = false;
 

@@ -1,8 +1,8 @@
 import { useSignal } from "@preact/signals";
 import { useCallback, useRef } from "preact/hooks";
 
-import { createAction } from "../../actions.js";
-import { addIntoArray, removeFromArray } from "../../utils/array_add_remove.js";
+import { addIntoArray, removeFromArray } from "../utils/array_add_remove.js";
+import { createAction } from "./actions.js";
 
 // used by form elements such as <input>, <select>, <textarea> to have their own action bound to a single parameter
 // when inside a <form> the form params are updated when the form element single param is updated
