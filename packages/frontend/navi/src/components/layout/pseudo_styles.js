@@ -98,7 +98,16 @@ export const PSEUDO_CLASSES = {
         el.removeEventListener("focusout", callback);
       };
     },
-    test: (el) => el.matches(":focus"),
+    test: (el) => {
+      if (el.matches(":focus")) {
+        return true;
+      }
+      const focusProxy = el.getAttribute("focus-proxy");
+      if (focusProxy) {
+        return document.querySelector(`#${focusProxy}`).matches(":focus");
+      }
+      return false;
+    },
   },
   ":focus-visible": {
     attribute: "data-focus-visible",
@@ -110,7 +119,18 @@ export const PSEUDO_CLASSES = {
         document.removeEventListener("keyup", callback);
       };
     },
-    test: (el) => el.matches(":focus-visible"),
+    test: (el) => {
+      if (el.matches(":focus-visible")) {
+        return true;
+      }
+      const focusProxy = el.getAttribute("focus-proxy");
+      if (focusProxy) {
+        return document
+          .querySelector(`#${focusProxy}`)
+          .matches(":focus-visible");
+      }
+      return false;
+    },
   },
   ":disabled": {
     attribute: "data-disabled",

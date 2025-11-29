@@ -1,4 +1,10 @@
-import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
+import {
+  useCallback,
+  useContext,
+  useId,
+  useLayoutEffect,
+  useRef,
+} from "preact/hooks";
 
 import { useActionStatus } from "../../use_action_status.js";
 import { forwardActionRequested } from "../../validation/custom_constraint_validation.js";
@@ -177,6 +183,11 @@ import.meta.css = /* css */ `
       transform: translateX(-50%);
       cursor: pointer;
     }
+    .navi_input_range_focus_proxy {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+    }
 
     /* Hover */
     &:hover {
@@ -329,6 +340,8 @@ const InputRangeBasic = (props) => {
   useConstraints(ref, constraints);
 
   const innerOnInput = useStableCallback(onInput);
+  const focusProxyId = `input_range_focus_proxy_${useId()}`;
+  const inertButFocusable = innerReadOnly && !innerDisabled;
   const renderInput = (inputProps) => {
     const updateFillRatio = () => {
       const input = ref.current;
@@ -350,8 +363,28 @@ const InputRangeBasic = (props) => {
     // this means however that the input is no longer focusable
     // we have to put an other focusable element somewhere
     useLayoutEffect(() => {
-      ref.current.disabled = innerReadOnly;
-    }, [innerReadOnly]);
+      const input = ref.current;
+      if (!input) {
+        return;
+      }
+
+      const focusProxy = document.querySelector(`#${focusProxyId}`);
+      if (innerReadOnly) {
+        if (document.activeElement === input) {
+          focusProxy.focus({ preventScroll: true });
+        }
+        input.setAttribute("focus-proxy", focusProxyId);
+        input.disabled = innerReadOnly;
+      } else {
+        if (document.activeElement === focusProxy) {
+          input.focus({ preventScroll: true });
+        }
+        if (!innerDisabled) {
+          input.disabled = false;
+        }
+        input.removeAttribute("focus-proxy");
+      }
+    }, [innerReadOnly, innerDisabled]);
 
     return (
       <Box
@@ -384,6 +417,7 @@ const InputRangeBasic = (props) => {
     uiState,
     innerValue,
     innerOnInput,
+    innerDisabled,
     innerReadOnly,
   ]);
 
@@ -411,10 +445,15 @@ const InputRangeBasic = (props) => {
         color="var(--loader-color)"
         inset={-1}
       />
-      <div className="navi_input_range_background"></div>
-      <div className="navi_input_range_fill"></div>
-      <div className="navi_input_range_track"></div>
-      <div className="navi_input_range_thumb"></div>
+      <div className="navi_input_range_background" />
+      <div className="navi_input_range_fill" />
+      <div className="navi_input_range_track" />
+      <div className="navi_input_range_thumb" />
+      <div
+        id={focusProxyId}
+        className="navi_input_range_focus_proxy"
+        tabIndex={inertButFocusable ? "0" : "-1"}
+      />
       {renderInputMemoized}
     </Box>
   );
