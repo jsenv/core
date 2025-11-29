@@ -1,16 +1,23 @@
 import "./src/navi_css_vars.js";
 
 // actions
-export { createAction, rerunActions, updateActions } from "./src/actions.js";
-export { useRunOnMount } from "./src/components/action_execution/use_run_on_mount.js";
+export { ActionRenderer } from "./src/action/action_renderer.jsx";
+export {
+  createAction,
+  rerunActions,
+  updateActions,
+} from "./src/action/actions.js";
+export { useActionData } from "./src/action/use_action_data.js";
+export { useActionStatus } from "./src/action/use_action_status.js";
+export { useRunOnMount } from "./src/action/use_run_on_mount.js";
 export { useKeyboardShortcuts } from "./src/components/keyboard_shortcuts/keyboard_shortcuts.js";
-export { useActionData } from "./src/use_action_data.js";
-export { useActionStatus } from "./src/use_action_status.js";
+// for debug/testing purposes
+export { enableDebugActions } from "./src/action/actions.js";
 
 // state management (store)
-export { useStateArray } from "./src/components/use_state_array.js";
-export { resource } from "./src/store/resource_graph.js";
-export { valueInLocalStorage } from "./src/store/value_in_local_storage.js";
+export { resource } from "./src/state/store/resource_graph.js";
+export { valueInLocalStorage } from "./src/state/store/value_in_local_storage.js";
+export { useStateArray } from "./src/state/use_state_array.js";
 
 // Navigation/routing
 export {
@@ -69,10 +76,8 @@ export {
 } from "./src/validation/custom_constraint_validation.js";
 
 // Components
-export { ActionRenderer } from "./src/components/action_renderer.jsx";
 export { Details } from "./src/components/details/details.jsx";
 export { SummaryMarker } from "./src/components/details/summary_marker.jsx";
-export { ErrorBoundaryContext } from "./src/components/error_boundary_context.js";
 export { ActiveKeyboardShortcuts } from "./src/components/keyboard_shortcuts/active_keyboard_shortcuts.jsx";
 export {
   SelectionContext,
@@ -80,6 +85,7 @@ export {
   useSelectableElement,
   useSelectionController,
 } from "./src/components/selection/selection.jsx";
+export { ErrorBoundaryContext } from "./src/error_boundary_context.js";
 
 // Table start
 export {
@@ -137,7 +143,7 @@ export { useDependenciesDiff } from "./src/components/use_dependencies_diff.js";
 export { useFocusGroup } from "./src/components/use_focus_group.js";
 
 // for debugging testing purposes
-export { enableDebugActions } from "./src/actions.js";
+
 export { enableDebugOnDocumentLoading } from "./src/browser_integration/document_loading_signal.js";
 
 export { CheckSvg } from "./src/components/graphic/icons/check_svg.jsx";
