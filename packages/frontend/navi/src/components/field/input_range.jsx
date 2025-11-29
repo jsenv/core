@@ -323,10 +323,12 @@ const InputRangeBasic = (props) => {
 
     return (
       <Box
-        disabled={innerReadOnly}
         {...inputProps}
         as="input"
-        type="range"
+        // By using <input type="text"> we effectively range specific things
+        // like drag to change, keyboard shortcuts etc without disabling
+        // focus accessibility
+        type={innerReadOnly ? "text" : "range"}
         ref={ref}
         data-value={uiState}
         value={innerValue}
