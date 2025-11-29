@@ -47,6 +47,7 @@
 import { normalizeStyles } from "@jsenv/dom";
 import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
+import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { BoxFlowContext } from "./box_flow_context.jsx";
 import {
   getHowToHandleStyleProp,
@@ -61,7 +62,6 @@ import {
   PSEUDO_NAMED_STYLES_DEFAULT,
   PSEUDO_STATE_DEFAULT,
 } from "./pseudo_styles.js";
-import { withPropsClassName } from "./with_props_class_name.js";
 
 import.meta.css = /* css */ `
   [data-flow-inline] {
