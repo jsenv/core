@@ -41,7 +41,8 @@
  */
 
 import { createPubSub } from "@jsenv/dom";
-import { openCallout } from "../components/callout/callout.js";
+
+import { openCallout } from "../../overlay/callout/callout.js";
 import {
   DISABLED_CONSTRAINT,
   MAX_CONSTRAINT,

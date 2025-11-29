@@ -64,29 +64,29 @@ import {
 import { withPropsClassName } from "./with_props_class_name.js";
 
 import.meta.css = /* css */ `
-  [data-layout-inline] {
+  [data-flow-inline] {
     display: inline;
   }
 
-  [data-layout-row] {
+  [data-flow-row] {
     display: flex;
     flex-direction: column;
   }
 
-  [data-layout-column] {
+  [data-flow-column] {
     display: flex;
     flex-direction: row;
   }
 
-  [data-layout-row] > [data-layout-row],
-  [data-layout-row] > [data-layout-column],
-  [data-layout-column] > [data-layout-column],
-  [data-layout-column] > [data-layout-row] {
+  [data-flow-row] > [data-flow-row],
+  [data-flow-row] > [data-flow-column],
+  [data-flow-column] > [data-flow-column],
+  [data-flow-column] > [data-flow-row] {
     flex-shrink: 0;
   }
 
-  [data-layout-inline][data-layout-row],
-  [data-layout-inline][data-layout-column] {
+  [data-flow-inline][data-flow-row],
+  [data-flow-inline][data-flow-column] {
     display: inline-flex;
   }
 `;
@@ -522,9 +522,9 @@ export const Box = (props) => {
     <TagName
       ref={ref}
       className={innerClassName}
-      data-layout-inline={inline ? "" : undefined}
-      data-layout-row={row ? "" : undefined}
-      data-layout-column={column ? "" : undefined}
+      data-flow-inline={inline ? "" : undefined}
+      data-flow-row={row ? "" : undefined}
+      data-flow-column={column ? "" : undefined}
       data-visual-selector={visualSelector}
       {...selfForwardedProps}
     >
@@ -533,8 +533,4 @@ export const Box = (props) => {
       </BoxFlowContext.Provider>
     </TagName>
   );
-};
-
-export const Layout = (props) => {
-  return <Box {...props} />;
 };

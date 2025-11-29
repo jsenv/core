@@ -1,18 +1,16 @@
 import { useCallback, useContext, useRef } from "preact/hooks";
 
-import { getActionPrivateProperties } from "../../action_private_properties.js";
-import { useActionStatus } from "../../use_action_status.js";
-import { forwardActionRequested } from "../../validation/custom_constraint_validation.js";
-import { useConstraints } from "../../validation/hooks/use_constraints.js";
-import { FormActionContext } from "../action_execution/form_context.js";
-import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import { useAction } from "../action_execution/use_action.js";
-import { useExecuteAction } from "../action_execution/use_execute_action.js";
-import { Box } from "../layout/box.jsx";
-import { LoaderBackground } from "../loader/loader_background.jsx";
+import { getActionPrivateProperties } from "../action/action_private_properties.js";
+import { FormActionContext } from "../action/form_context.js";
+import { renderActionableComponent } from "../action/render_actionable_component.jsx";
+import { useAction } from "../action/use_action.js";
+import { useActionStatus } from "../action/use_action_status.js";
+import { useExecuteAction } from "../action/use_execute_action.js";
+import { Box } from "../box/box.jsx";
 import { Text } from "../text/text.jsx";
-import { useAutoFocus } from "../use_auto_focus.js";
+import { LoaderBackground } from "./loader/loader_background.jsx";
 import { useActionEvents } from "./use_action_events.js";
+import { useAutoFocus } from "./use_auto_focus.js";
 import { useFormEvents } from "./use_form_events.js";
 import {
   DisabledContext,
@@ -20,6 +18,8 @@ import {
   LoadingElementContext,
   ReadOnlyContext,
 } from "./use_ui_state_controller.js";
+import { forwardActionRequested } from "./validation/custom_constraint_validation.js";
+import { useConstraints } from "./validation/hooks/use_constraints.js";
 
 /**
  * We need a content the visually shrink (scale down) but the button interactive are must remain intact

@@ -1,6 +1,8 @@
 import { createContext } from "preact";
 import { useState } from "preact/hooks";
 
+import { Box } from "../box/box.jsx";
+import { PSEUDO_CLASSES } from "../box/pseudo_styles.js";
 import { Button } from "../field/button.jsx";
 import { CloseSvg } from "../graphic/icons/close_svg.jsx";
 import {
@@ -9,10 +11,8 @@ import {
   SuccessSvg,
   WarningSvg,
 } from "../graphic/icons/level_svg.jsx";
-import { Box } from "../layout/box.jsx";
-import { PSEUDO_CLASSES } from "../layout/pseudo_styles.js";
-import { withPropsClassName } from "../with_props_class_name.js";
-import { Icon } from "./icon.jsx";
+import { withPropsClassName } from "../utils/with_props_class_name.js";
+import { Icon } from "./graphic/icon.jsx";
 import { Text } from "./text.jsx";
 
 import.meta.css = /* css */ `

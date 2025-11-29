@@ -1,4 +1,4 @@
-import { withPropsClassName } from "../with_props_class_name.js";
+import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { Text } from "./text.jsx";
 
 import.meta.css = /* css */ `

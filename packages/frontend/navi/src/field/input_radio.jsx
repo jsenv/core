@@ -1,16 +1,15 @@
 import { resolveColorLuminance } from "@jsenv/dom";
 import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
-import { useConstraints } from "../../validation/hooks/use_constraints.js";
-import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import { Box } from "../layout/box.jsx";
-import { LoaderBackground } from "../loader/loader_background.jsx";
-import { useAutoFocus } from "../use_auto_focus.js";
-import { useStableCallback } from "../use_stable_callback.js";
+import { renderActionableComponent } from "../action/render_actionable_component.jsx";
+import { Box } from "../box/box.jsx";
+import { useStableCallback } from "../utils/use_stable_callback.js";
 import {
   ReportDisabledOnLabelContext,
   ReportReadOnlyOnLabelContext,
 } from "./label.jsx";
+import { LoaderBackground } from "./loader/loader_background.jsx";
+import { useAutoFocus } from "./use_auto_focus.js";
 import {
   DisabledContext,
   FieldNameContext,
@@ -23,6 +22,7 @@ import {
   useUIState,
   useUIStateController,
 } from "./use_ui_state_controller.js";
+import { useConstraints } from "./validation/hooks/use_constraints.js";
 
 import.meta.css = /* css */ `
   @layer navi {

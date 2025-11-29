@@ -1,7 +1,7 @@
 import { createContext } from "preact";
 import { useContext } from "preact/hooks";
 
-import { withPropsClassName } from "../with_props_class_name.js";
+import { withPropsClassName } from "../utils/with_props_class_name.js";
 import {
   MessageBoxLevelContext,
   MessageBoxReportTitleChildContext,

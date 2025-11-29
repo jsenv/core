@@ -1,52 +1,5 @@
 import { mergeOneStyle, stringifyStyle } from "@jsenv/dom";
 
-/**
- * Processes component props to extract and generate styles for layout, spacing, alignment, expansion, and typography.
- * Returns remaining props and styled objects based on configuration.
- *
- * ```jsx
- * const MyButton = (props) => {
- *   const [remainingProps, style] = withPropsStyle(props, {
- *     base: { padding: 10, backgroundColor: 'blue' },
- *     layout: true, // Enable spacing, alignment, and expansion props
- *     typo: true,   // Enable typography props
- *   });
- *   return <button style={style} {...remainingProps}>{props.children}</button>;
- * };
- *
- * // Usage:
- * <MyButton margin={10} expandX selfAlignX="center" color="white">Click me</MyButton>
- * <MyButton paddingX={20} bold style={{ border: '1px solid red' }}>Bold button</MyButton>
- * ```
- *
- * ## Advanced: Multiple Style Objects
- *
- * You can generate additional style objects with different configurations:
- *
- * ```jsx
- * const [remainingProps, mainStyle, layoutOnlyStyle] = withPropsStyle(props, {
- *   base: { color: 'blue' },
- *   layout: true,
- *   typo: true,
- * }, {
- *   layout: true,  // Second style object with only layout styles
- * });
- * ```
- *
- * @param {object} props - Component props including style and layout props
- * @param {object} config - Main configuration for which style categories to process
- * @param {string|object} [config.base] - Base styles to apply first
- * @param {boolean} [config.layout] - Enable all layout props (shorthand for spacing, align, expansion)
- * @param {boolean} [config.spacing] - Enable margin/padding props
- * @param {boolean} [config.align] - Enable alignment props (selfAlignX, selfAlignY)
- * @param {boolean} [config.expansion] - Enable expansion props (expandX, expandY)
- * @param {boolean} [config.typo] - Enable typography props (color, bold, italic, etc.)
- * @param {...object} remainingConfig - Additional configuration objects for generating separate style objects
- * @param {boolean|object} [remainingConfig.base] - Include base styles (true for main base, or custom base object)
- * @param {boolean} [remainingConfig.style] - Include styles from props in this config
- * @returns {array} [remainingProps, mainStyle, ...additionalStyles] - Non-style props and style objects
- */
-
 export const normalizeSpacingStyle = (value, property = "padding") => {
   const cssSize = sizeSpacingScale[value];
   return cssSize || stringifyStyle(value, property);
@@ -108,7 +61,7 @@ const applyOnTwoProps = (propA, propB) => {
   };
 };
 
-const LAYOUT_PROPS = {
+const FLOW_PROPS = {
   // all are handled by data-attributes
   inline: () => {},
   box: () => {},
@@ -353,14 +306,14 @@ const VISUAL_PROPS = {
 };
 const CONTENT_PROPS = {
   align: applyOnTwoProps("alignX", "alignY"),
-  alignX: (value, { layout }) => {
-    if (layout === "row" || layout === "inline-row") {
+  alignX: (value, { boxFlow }) => {
+    if (boxFlow === "row" || boxFlow === "inline-row") {
       if (value === "stretch") {
         return undefined; // this is the default
       }
       return { alignItems: value };
     }
-    if (layout === "column" || layout === "inline-column") {
+    if (boxFlow === "column" || boxFlow === "inline-column") {
       if (value === "start") {
         return undefined; // this is the default
       }
@@ -368,8 +321,8 @@ const CONTENT_PROPS = {
     }
     return { textAlign: value };
   },
-  alignY: (value, { layout }) => {
-    if (layout === "row" || layout === "inline-row") {
+  alignY: (value, { boxFlow }) => {
+    if (boxFlow === "row" || boxFlow === "inline-row") {
       if (value === "start") {
         return undefined;
       }
@@ -377,7 +330,7 @@ const CONTENT_PROPS = {
         justifyContent: value,
       };
     }
-    if (layout === "column" || layout === "inline-column") {
+    if (boxFlow === "column" || boxFlow === "inline-column") {
       if (value === "stretch") {
         return undefined;
       }
@@ -385,12 +338,12 @@ const CONTENT_PROPS = {
     }
     return { verticalAlign: value };
   },
-  spacing: (value, { layout }) => {
+  spacing: (value, { boxFlow }) => {
     if (
-      layout === "row" ||
-      layout === "column" ||
-      layout === "inline-row" ||
-      layout === "inline-column"
+      boxFlow === "row" ||
+      boxFlow === "column" ||
+      boxFlow === "inline-row" ||
+      boxFlow === "inline-column"
     ) {
       return {
         gap: resolveSpacingSize(value, "gap"),
@@ -400,7 +353,7 @@ const CONTENT_PROPS = {
   },
 };
 const All_PROPS = {
-  ...LAYOUT_PROPS,
+  ...FLOW_PROPS,
   ...OUTER_SPACING_PROPS,
   ...INNER_SPACING_PROPS,
   ...DIMENSION_PROPS,
@@ -409,7 +362,7 @@ const All_PROPS = {
   ...VISUAL_PROPS,
   ...CONTENT_PROPS,
 };
-const LAYOUT_PROP_NAME_SET = new Set(Object.keys(LAYOUT_PROPS));
+const FLOW_PROP_NAME_SET = new Set(Object.keys(FLOW_PROPS));
 const OUTER_SPACING_PROP_NAME_SET = new Set(Object.keys(OUTER_SPACING_PROPS));
 const INNER_SPACING_PROP_NAME_SET = new Set(Object.keys(INNER_SPACING_PROPS));
 const DIMENSION_PROP_NAME_SET = new Set(Object.keys(DIMENSION_PROPS));
@@ -420,7 +373,7 @@ const CONTENT_PROP_NAME_SET = new Set(Object.keys(CONTENT_PROPS));
 const STYLE_PROP_NAME_SET = new Set(Object.keys(All_PROPS));
 
 const COPIED_ON_VISUAL_CHILD_PROP_SET = new Set([
-  ...LAYOUT_PROP_NAME_SET,
+  ...FLOW_PROP_NAME_SET,
   "expand",
   "shrink",
   "expandX",
@@ -446,8 +399,8 @@ export const getVisualChildStylePropStrategy = (name) => {
 export const isStyleProp = (name) => STYLE_PROP_NAME_SET.has(name);
 
 const getStylePropGroup = (name) => {
-  if (LAYOUT_PROP_NAME_SET.has(name)) {
-    return "layout";
+  if (FLOW_PROP_NAME_SET.has(name)) {
+    return "flow";
   }
   if (OUTER_SPACING_PROP_NAME_SET.has(name)) {
     return "margin";

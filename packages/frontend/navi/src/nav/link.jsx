@@ -1,28 +1,28 @@
 import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
-import { useDocumentUrl } from "../../browser_integration/document_url_signal.js";
-import { getHrefTargetInfo } from "../../browser_integration/href_target_info.js";
-import { useIsVisited } from "../../browser_integration/use_is_visited.js";
-import { closeValidationMessage } from "../../validation/custom_constraint_validation.js";
-import { useConstraints } from "../../validation/hooks/use_constraints.js";
-import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import { useRequestedActionStatus } from "../field/use_action_events.js";
+import { renderActionableComponent } from "../action/render_actionable_component.jsx";
+import { Box } from "../box/box.jsx";
+import { PSEUDO_CLASSES } from "../box/pseudo_styles.js";
 import {
   LinkAnchorSvg,
   LinkBlankTargetSvg,
-} from "../graphic/icons/link_svgs.jsx";
-import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
-import { Box } from "../layout/box.jsx";
-import { PSEUDO_CLASSES } from "../layout/pseudo_styles.js";
-import { LoaderBackground } from "../loader/loader_background.jsx";
+} from "../components/graphic/icons/link_svgs.jsx";
+import { useKeyboardShortcuts } from "../components/keyboard_shortcuts/keyboard_shortcuts.js";
+import { LoaderBackground } from "../field/loader/loader_background.jsx";
+import { useRequestedActionStatus } from "../field/use_action_events.js";
+import { useAutoFocus } from "../field/use_auto_focus.js";
+import { closeValidationMessage } from "../field/validation/custom_constraint_validation.js";
+import { useConstraints } from "../field/validation/hooks/use_constraints.js";
 import {
   SelectionContext,
   useSelectableElement,
 } from "../selection/selection.jsx";
-import { useAutoFocus } from "../use_auto_focus.js";
-import { Icon } from "./icon.jsx";
-import { applySpacingOnTextChildren } from "./text.jsx";
-import { TitleLevelContext } from "./title.jsx";
+import { Icon } from "../text/icon.jsx";
+import { applySpacingOnTextChildren } from "../text/text.jsx";
+import { TitleLevelContext } from "../text/title.jsx";
+import { useDocumentUrl } from "./browser_integration/document_url_signal.js";
+import { getHrefTargetInfo } from "./browser_integration/href_target_info.js";
+import { useIsVisited } from "./browser_integration/use_is_visited.js";
 
 /*
  * Apply opacity to child content, not the link element itself.

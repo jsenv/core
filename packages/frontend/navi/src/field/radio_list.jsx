@@ -6,11 +6,10 @@ import {
   useState,
 } from "preact/hooks";
 
-import { useActionStatus } from "../../use_action_status.js";
-import { requestAction } from "../../validation/custom_constraint_validation.js";
-import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import { useActionBoundToOneParam } from "../action_execution/use_action.js";
-import { useExecuteAction } from "../action_execution/use_execute_action.js";
+import { renderActionableComponent } from "../action/render_actionable_component.jsx";
+import { useActionBoundToOneParam } from "../action/use_action.js";
+import { useActionStatus } from "../action/use_action_status.js";
+import { useExecuteAction } from "../action/use_execute_action.js";
 import { InputRadio } from "./input_radio.jsx";
 import { useActionEvents } from "./use_action_events.js";
 import {
@@ -26,6 +25,7 @@ import {
   useUIGroupStateController,
   useUIState,
 } from "./use_ui_state_controller.js";
+import { requestAction } from "./validation/custom_constraint_validation.js";
 
 import.meta.css = /* css */ `
   @layer navi {

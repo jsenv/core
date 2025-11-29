@@ -21,7 +21,7 @@ import { signal } from "@preact/signals";
 import { createContext } from "preact";
 import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
-import { useUITransitionContentId } from "../components/ui_transition/ui_transition.jsx";
+import { useUITransitionContentId } from "../ui_transition/ui_transition.jsx";
 import { useForceRender } from "./use_force_render.js";
 
 const DEBUG = false;

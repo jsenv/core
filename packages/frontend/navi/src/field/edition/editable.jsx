@@ -17,7 +17,7 @@ import {
   useState,
 } from "preact/hooks";
 
-import { Input } from "../field/input.jsx";
+import { Input } from "../input.jsx";
 
 import.meta.css = /* css */ `
   .navi_editable_wrapper {

@@ -16,6 +16,7 @@
  */
 
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
+
 import { useNetworkSpeed } from "./network_speed.js";
 
 import.meta.css = /* css */ `

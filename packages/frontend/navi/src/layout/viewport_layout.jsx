@@ -1,4 +1,4 @@
-import { Box } from "./box.jsx";
+import { Box } from "../box/box.jsx";
 
 import.meta.css = /* css */ `
   @layer navi {

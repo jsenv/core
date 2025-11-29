@@ -1,7 +1,7 @@
 // We HAVE TO put paddings around the dialog to ensure window resizing respects this space
 // this way even narrow window will show some space around the dialog
 
-import { Box } from "./box.jsx";
+import { Box } from "../box/box.jsx";
 
 import.meta.css = /* css */ `
   @layer navi {

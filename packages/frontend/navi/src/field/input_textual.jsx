@@ -18,18 +18,16 @@
 
 import { useCallback, useContext, useRef } from "preact/hooks";
 
-import { useActionStatus } from "../../use_action_status.js";
-import { forwardActionRequested } from "../../validation/custom_constraint_validation.js";
-import { useConstraints } from "../../validation/hooks/use_constraints.js";
-import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import { useActionBoundToOneParam } from "../action_execution/use_action.js";
-import { useExecuteAction } from "../action_execution/use_execute_action.js";
-import { Box } from "../layout/box.jsx";
-import { LoaderBackground } from "../loader/loader_background.jsx";
-import { useAutoFocus } from "../use_auto_focus.js";
-import { useStableCallback } from "../use_stable_callback.js";
+import { renderActionableComponent } from "../action/render_actionable_component.jsx";
+import { useActionBoundToOneParam } from "../action/use_action.js";
+import { useActionStatus } from "../action/use_action_status.js";
+import { useExecuteAction } from "../action/use_execute_action.js";
+import { Box } from "../box/box.jsx";
+import { useStableCallback } from "../utils/use_stable_callback.js";
 import { ReportReadOnlyOnLabelContext } from "./label.jsx";
+import { LoaderBackground } from "./loader/loader_background.jsx";
 import { useActionEvents } from "./use_action_events.js";
+import { useAutoFocus } from "./use_auto_focus.js";
 import {
   DisabledContext,
   LoadingContext,
@@ -40,6 +38,8 @@ import {
   useUIState,
   useUIStateController,
 } from "./use_ui_state_controller.js";
+import { forwardActionRequested } from "./validation/custom_constraint_validation.js";
+import { useConstraints } from "./validation/hooks/use_constraints.js";
 
 import.meta.css = /* css */ `
   @layer navi {

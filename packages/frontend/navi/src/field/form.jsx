@@ -15,16 +15,11 @@
 
 import { useContext, useMemo, useRef } from "preact/hooks";
 
-import { forwardActionRequested } from "../../validation/custom_constraint_validation.js";
-import { useConstraints } from "../../validation/hooks/use_constraints.js";
-import {
-  FormActionContext,
-  FormContext,
-} from "../action_execution/form_context.js";
-import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import { useActionBoundToOneParam } from "../action_execution/use_action.js";
-import { useExecuteAction } from "../action_execution/use_execute_action.js";
-import { Box } from "../layout/box.jsx";
+import { FormActionContext, FormContext } from "../action/form_context.js";
+import { renderActionableComponent } from "../action/render_actionable_component.jsx";
+import { useActionBoundToOneParam } from "../action/use_action.js";
+import { useExecuteAction } from "../action/use_execute_action.js";
+import { Box } from "../box/box.jsx";
 import { collectFormElementValues } from "./collect_form_element_values.js";
 import {
   useActionEvents,
@@ -40,6 +35,8 @@ import {
   useUIGroupStateController,
   useUIState,
 } from "./use_ui_state_controller.js";
+import { forwardActionRequested } from "./validation/custom_constraint_validation.js";
+import { useConstraints } from "./validation/hooks/use_constraints.js";
 
 export const Form = (props) => {
   const uiStateController = useUIGroupStateController(props, "form", {

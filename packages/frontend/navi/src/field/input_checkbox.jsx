@@ -1,21 +1,19 @@
 import { pickLightOrDark } from "@jsenv/dom";
 import { useCallback, useContext, useLayoutEffect, useRef } from "preact/hooks";
 
-import { useActionStatus } from "../../use_action_status.js";
-import { requestAction } from "../../validation/custom_constraint_validation.js";
-import { useConstraints } from "../../validation/hooks/use_constraints.js";
-import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import { useActionBoundToOneParam } from "../action_execution/use_action.js";
-import { useExecuteAction } from "../action_execution/use_execute_action.js";
-import { Box } from "../layout/box.jsx";
-import { LoaderBackground } from "../loader/loader_background.jsx";
-import { useAutoFocus } from "../use_auto_focus.js";
-import { useStableCallback } from "../use_stable_callback.js";
+import { renderActionableComponent } from "../action/render_actionable_component.jsx";
+import { useActionBoundToOneParam } from "../action/use_action.js";
+import { useActionStatus } from "../action/use_action_status.js";
+import { useExecuteAction } from "../action/use_execute_action.js";
+import { Box } from "../box/box.jsx";
+import { useStableCallback } from "../utils/use_stable_callback.js";
 import {
   ReportDisabledOnLabelContext,
   ReportReadOnlyOnLabelContext,
 } from "./label.jsx";
+import { LoaderBackground } from "./loader/loader_background.jsx";
 import { useActionEvents } from "./use_action_events.js";
+import { useAutoFocus } from "./use_auto_focus.js";
 import {
   DisabledContext,
   FieldNameContext,
@@ -28,6 +26,8 @@ import {
   useUIState,
   useUIStateController,
 } from "./use_ui_state_controller.js";
+import { requestAction } from "./validation/custom_constraint_validation.js";
+import { useConstraints } from "./validation/hooks/use_constraints.js";
 
 // to finish: la couleur du checkmark: faire un exemple navi/natif
 // avec le constraste de couleur

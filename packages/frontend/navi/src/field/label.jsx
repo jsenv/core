@@ -1,7 +1,7 @@
 import { createContext } from "preact";
 import { useState } from "preact/hooks";
 
-import { Box } from "../layout/box.jsx";
+import { Box } from "../box/box.jsx";
 
 import.meta.css = /* css */ `
   @layer navi {

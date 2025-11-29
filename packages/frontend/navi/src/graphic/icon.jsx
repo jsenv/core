@@ -1,6 +1,6 @@
-import { Box } from "../layout/box.jsx";
-import { withPropsClassName } from "../with_props_class_name.js";
-import { Text } from "./text.jsx";
+import { Box } from "../box/box.jsx";
+import { Text } from "../text/text.jsx";
+import { withPropsClassName } from "../utils/with_props_class_name.js";
 
 import.meta.css = /* css */ `
   .navi_icon {

@@ -2,7 +2,7 @@ import { resolveCSSSize } from "@jsenv/dom";
 import { createPortal } from "preact/compat";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 
-import { useDebounceTrue } from "../use_debounce_true.js";
+import { useDebounceTrue } from "../../utils/use_debounce_true.js";
 import { RectangleLoading } from "./rectangle_loading.jsx";
 
 import.meta.css = /* css */ `

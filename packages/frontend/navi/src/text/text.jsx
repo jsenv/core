@@ -3,11 +3,11 @@ import { hasCSSSizeUnit } from "@jsenv/dom";
 import { createContext, toChildArray } from "preact";
 import { useContext, useRef, useState } from "preact/hooks";
 
-import { Box } from "../layout/box.jsx";
+import { Box } from "../box/box.jsx";
 import {
   isSizeSpacingScaleKey,
   resolveSpacingSize,
-} from "../layout/box_style_util.js";
+} from "../box/box_style_util.js";
 import { useInitialTextSelection } from "./use_initial_text_selection.jsx";
 
 import.meta.css = /* css */ `
