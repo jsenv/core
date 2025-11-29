@@ -10,7 +10,7 @@ import { createContext } from "preact";
 import { forwardRef } from "preact/compat";
 import { useMemo, useState } from "preact/hooks";
 
-import { useStableCallback } from "../../use_stable_callback.js";
+import { useStableCallback } from "../../../utils/use_stable_callback.js";
 import { Z_INDEX_CELL_FOREGROUND, Z_INDEX_DROP_PREVIEW } from "../z_indexes.js";
 
 const DEBUG_VISUAL = false;
@@ -18,8 +18,8 @@ const DEBUG_VISUAL = false;
 import.meta.css = /* css */ `
   .navi_table_drag_clone_container {
     position: absolute;
-    left: var(--table-visual-left);
     top: var(--table-visual-top);
+    left: var(--table-visual-left);
     width: var(--table-visual-width);
     height: var(--table-visual-height);
     /* background: rgba(0, 0, 0, 0.5); */
@@ -49,12 +49,12 @@ import.meta.css = /* css */ `
   }
 
   .navi_table_cell_foreground {
-    pointer-events: none;
     position: absolute;
     inset: 0;
+    z-index: ${Z_INDEX_CELL_FOREGROUND};
     background: lightgrey;
     opacity: 0;
-    z-index: ${Z_INDEX_CELL_FOREGROUND};
+    pointer-events: none;
   }
   .navi_table_cell[data-first-row] .navi_table_cell_foreground {
     background-color: grey;
@@ -64,8 +64,8 @@ import.meta.css = /* css */ `
   }
 
   .navi_table_drag_clone_container .navi_table_cell_foreground {
-    opacity: 1;
     background-color: rgba(255, 255, 255, 0.2);
+    opacity: 1;
     backdrop-filter: blur(10px);
   }
   .navi_table_drag_clone_container
@@ -80,25 +80,25 @@ import.meta.css = /* css */ `
 
   .navi_table_column_drop_preview {
     position: absolute;
-    left: var(--column-left);
     top: var(--column-top);
+    left: var(--column-left);
+    z-index: ${Z_INDEX_DROP_PREVIEW};
     width: var(--column-width);
     height: var(--column-height);
-    pointer-events: none;
-    z-index: ${Z_INDEX_DROP_PREVIEW};
     /* Invisible container - just for positioning */
     background: transparent;
     border: none;
+    pointer-events: none;
   }
 
   .navi_table_column_drop_preview_line {
     position: absolute;
     top: 0;
     bottom: 0;
+    left: 0; /* Default: left edge for dropping before */
     width: 4px;
     background: rgba(0, 0, 255, 0.5);
     opacity: 0;
-    left: 0; /* Default: left edge for dropping before */
     transform: translateX(-50%);
   }
   .navi_table_column_drop_preview[data-after]
@@ -114,9 +114,9 @@ import.meta.css = /* css */ `
     position: absolute;
     left: 0; /* Default: left edge for dropping before */
     display: flex;
+    color: rgba(0, 0, 255, 0.5);
     opacity: 0;
     transform: translateX(-50%);
-    color: rgba(0, 0, 255, 0.5);
   }
   .navi_table_column_drop_preview[data-after] .arrow_positioner {
     left: 100%; /* Right edge for dropping after */

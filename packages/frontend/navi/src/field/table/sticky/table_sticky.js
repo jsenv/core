@@ -1,7 +1,7 @@
 import { createContext } from "preact";
 import { useMemo } from "preact/hooks";
 
-import { useStableCallback } from "../../use_stable_callback.js";
+import { useStableCallback } from "../../../utils/use_stable_callback.js";
 
 export const TableStickyContext = createContext();
 
