@@ -34,12 +34,15 @@ import.meta.css = /* css */ `
       --outline-color: var(--navi-focus-outline-color);
       --loader-color: var(--navi-loader-color);
 
-      --border-color: rgba(181, 181, 181);
-      --track-border-color: rgba(181, 181, 181, 0.2);
-      --border-color-hover: #2b568b;
+      --border-color: rgba(150, 150, 150);
+      --track-border-color: color-mix(
+        in srgb,
+        var(--border-color) 35%,
+        transparent
+      );
       --background-color: #efefef;
       --fill-color: rgb(24, 117, 255);
-      --thumb-color: rgb(24, 117, 255);
+      --thumb-color: var(--fill-color);
 
       --border-color-hover: color-mix(in srgb, var(--border-color) 75%, black);
       --track-border-color-hover: color-mix(
@@ -49,24 +52,21 @@ import.meta.css = /* css */ `
       );
       --track-color-hover: color-mix(in srgb, var(--fill-color) 95%, black);
       --color-hover: color-mix(in srgb, var(--rail-color) 95%, black);
-      --fill-color-hover: rgb(16, 92, 200);
-      --thumb-color-hover: rgb(16, 92, 200);
+      --fill-color-hover: color-mix(in srgb, var(--fill-color) 80%, black);
+      --thumb-color-hover: color-mix(in srgb, var(--thumb-color) 80%, black);
 
-      --background-color-active: color-mix(
+      --border-color-active: color-mix(
         in srgb,
-        var(--rail-color) 75%,
-        white
+        var(--border-color) 50%,
+        transparent
       );
-      --fill-border-color-active: color-mix(
-        in srgb,
-        var(--track-border-color) 75%,
-        white
-      );
+      --track-border-color-active: var(--border-color-active);
       --background-color-active: color-mix(
         in srgb,
         var(--background-color) 75%,
         white
       );
+      --fill-color-active: color-mix(in srgb, var(--fill-color) 75%, white);
       --thumb-color-active: color-mix(in srgb, var(--thumb-color) 75%, white);
 
       --thumb-color-readonly: #aaaaaa;
@@ -160,11 +160,9 @@ import.meta.css = /* css */ `
     /* Active */
     &:active {
       --x-border-color: var(--border-color-active);
-
-      .navi_input_range_track {
-        --x-track-border-color: var(--track-border-color-active) !important;
-        --x-track-color: var(--track-color-active) !important;
-      }
+      --x-track-border-color: var(--track-border-color-active);
+      --x-background-color: var(--background-color-active);
+      --x-fill-color: var(--fill-color-active);
     }
     /* Readonly */
     &[data-readonly] {
