@@ -70,6 +70,16 @@ import.meta.css = /* css */ `
       --thumb-color-active: color-mix(in srgb, var(--thumb-color) 75%, white);
 
       --thumb-color-readonly: #aaaaaa;
+
+      --background-color-disabled: color-mix(
+        in srgb,
+        var(--background-color) 60%,
+        transparent
+      );
+      --border-color-disabled: #b1b1b1;
+      --track-border-color-disabled: var(--border-color-disabled);
+      --fill-color-disabled: #cbcbcb;
+      --thumb-color-disabled: #cbcbcb;
     }
   }
 
@@ -93,7 +103,7 @@ import.meta.css = /* css */ `
     outline-width: var(--outline-width);
     outline-style: none;
     outline-color: var(--outline-color);
-    outline-offset: 0px;
+    outline-offset: 2px;
     cursor: inherit;
 
     .navi_native_input {
@@ -101,7 +111,6 @@ import.meta.css = /* css */ `
       inset: 0;
       margin: 0;
       opacity: 0;
-      pointer-events: none;
     }
 
     .navi_input_range_background {
@@ -135,7 +144,9 @@ import.meta.css = /* css */ `
     }
     .navi_input_range_thumb {
       position: absolute;
-      left: calc(var(--x-fill-ratio) * 100%);
+      left: calc(
+        var(--x-fill-ratio) * (100% - var(--thumb-size)) + var(--thumb-size) / 2
+      );
       width: var(--thumb-size);
       height: var(--thumb-size);
       background: var(--x-thumb-color);
@@ -143,13 +154,6 @@ import.meta.css = /* css */ `
       border-radius: 100%;
       transform: translateX(-50%);
       cursor: pointer;
-
-      &:hover {
-        --x-thumb-color: var(--thumb-color-hover);
-      }
-      &:active {
-        --x-thumb-color: var(--thumb-color-active);
-      }
     }
 
     /* Hover */
@@ -157,6 +161,7 @@ import.meta.css = /* css */ `
       --x-border-color: var(--border-color-hover);
       --x-track-border-color: var(--track-border-color-hover);
       --x-fill-color: var(--fill-color-hover);
+      --x-thumb-color: var(--thumb-color-hover);
     }
     /* Active */
     &:active {
@@ -164,15 +169,24 @@ import.meta.css = /* css */ `
       --x-track-border-color: var(--track-border-color-active);
       --x-background-color: var(--background-color-active);
       --x-fill-color: var(--fill-color-active);
+      --x-thumb-color: var(--thumb-color-active);
+    }
+    /* Focus */
+    &[data-focus-visible] {
+      outline-style: solid;
     }
     /* Readonly */
     &[data-readonly] {
       --x-background-color: var(--background-color-readonly);
       --x-thumb-color: var(--thumb-color-readonly);
     }
-    /* Focus */
-    &[data-focus-visible] {
-      outline-style: solid;
+    /* Disabled */
+    &[data-disabled] {
+      --x-background-color: var(--background-color-disabled);
+      --x-border-color: var(--border-color-disabled);
+      --x-track-border-color: var(--track-border-color-disabled);
+      --x-fill-color: var(--fill-color-disabled);
+      --x-thumb-color: var(--thumb-color-disabled);
     }
   }
 
