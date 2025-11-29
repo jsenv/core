@@ -1,10 +1,11 @@
 import { useEffect, useRef } from "preact/hooks";
-import { updateActions } from "../actions.js";
+
+import { updateActions } from "../../action/actions.js";
 import {
   setBrowserIntegration,
   setOnRouteDefined,
   updateRoutes,
-} from "../route/route.js";
+} from "../route.js";
 import {
   documentIsBusySignal,
   routingWhile,

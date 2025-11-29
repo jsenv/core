@@ -55,10 +55,10 @@ import { createContext, toChildArray } from "preact";
 import { forwardRef } from "preact/compat";
 import { useContext, useId, useImperativeHandle, useRef } from "preact/hooks";
 
+import { useKeyboardShortcuts } from "../../keyboard/keyboard_shortcuts.js";
+import { createIsolatedItemTracker } from "../../utils/item_tracker/use_isolated_item_tracker.jsx";
+import { createItemTracker } from "../../utils/item_tracker/use_item_tracker.jsx";
 import { Editable, useEditionController } from "../edition/editable.jsx";
-import { createIsolatedItemTracker } from "../item_tracker/use_isolated_item_tracker.jsx";
-import { createItemTracker } from "../item_tracker/use_item_tracker.jsx";
-import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
 import {
   createSelectionKeyboardShortcuts,
   useSelectableElement,

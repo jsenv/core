@@ -1,6 +1,7 @@
 import { computed, signal } from "@preact/signals";
-import { arraySignal } from "../utils/array_signal.js";
-import { executeWithCleanup } from "../utils/execute_with_cleanup.js";
+
+import { arraySignal } from "../../utils/array_signal.js";
+import { executeWithCleanup } from "../../utils/execute_with_cleanup.js";
 
 let DEBUG = false;
 export const enableDebugOnDocumentLoading = () => {

@@ -5,10 +5,10 @@
 import { createContext } from "preact";
 import { useContext } from "preact/hooks";
 
-import { useRouteStatus } from "../../route/route.js";
-import { RouteLink } from "../../route/route_link.jsx";
-import { Box } from "../layout/box.jsx";
-import { PSEUDO_CLASSES } from "../layout/pseudo_styles.js";
+import { Box } from "../../box/box.jsx";
+import { PSEUDO_CLASSES } from "../../box/pseudo_styles.js";
+import { useRouteStatus } from "../route.js";
+import { RouteLink } from "../route_link.jsx";
 
 Object.assign(PSEUDO_CLASSES, {
   ":-navi-selected": {

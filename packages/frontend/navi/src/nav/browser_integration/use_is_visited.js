@@ -1,4 +1,5 @@
 import { useMemo } from "preact/hooks";
+
 import { isVisited, visitedUrlsSignal } from "./browser_integration.js";
 
 /**

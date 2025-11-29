@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef } from "preact/hooks";
-import { useDebounceTrue } from "../use_debounce_true.js";
+
+import { useDebounceTrue } from "../../utils/use_debounce_true.js";
 
 const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
 const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
@@ -12,8 +13,8 @@ import.meta.css = /* css */ `
   }
   .summary_marker_svg .arrow {
     animation-duration: 0.3s;
-    animation-fill-mode: forwards;
     animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+    animation-fill-mode: forwards;
   }
   .summary_marker_svg .arrow[data-animation-target="down"] {
     animation-name: morph-to-down;
@@ -54,17 +55,17 @@ import.meta.css = /* css */ `
 
   /* fading and scaling */
   .summary_marker_svg .arrow {
-    transition: opacity 0.3s ease-in-out;
     opacity: 1;
+    transition: opacity 0.3s ease-in-out;
   }
   .summary_marker_svg .loading_container {
-    transition: transform 0.3s linear;
     transform: scale(0.3);
+    transition: transform 0.3s linear;
   }
   .summary_marker_svg .background_circle,
   .summary_marker_svg .foreground_circle {
-    transition: opacity 0.3s ease-in-out;
     opacity: 0;
+    transition: opacity 0.3s ease-in-out;
   }
   .summary_marker_svg[data-loading] .arrow {
     opacity: 0;

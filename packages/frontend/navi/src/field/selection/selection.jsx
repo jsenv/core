@@ -9,7 +9,7 @@ import {
 } from "preact/hooks";
 
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
-import { useStableCallback } from "../use_stable_callback.js";
+import { useStableCallback } from "../../utils/use_stable_callback.js";
 
 const DEBUG = {
   registration: false, // Element registration/unregistration

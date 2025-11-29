@@ -1,7 +1,7 @@
 import { useLayoutEffect, useState } from "preact/hooks";
 
-import { addManyEventListeners } from "../../utils/add_many_event_listeners.js";
-import { useStableCallback } from "../use_stable_callback.js";
+import { addManyEventListeners } from "../utils/add_many_event_listeners.js";
+import { useStableCallback } from "../utils/use_stable_callback.js";
 
 export const useActionEvents = (
   elementRef,

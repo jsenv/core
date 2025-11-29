@@ -3,21 +3,21 @@ import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 import { renderActionableComponent } from "../action/render_actionable_component.jsx";
 import { Box } from "../box/box.jsx";
 import { PSEUDO_CLASSES } from "../box/pseudo_styles.js";
-import {
-  LinkAnchorSvg,
-  LinkBlankTargetSvg,
-} from "../components/graphic/icons/link_svgs.jsx";
-import { useKeyboardShortcuts } from "../components/keyboard_shortcuts/keyboard_shortcuts.js";
 import { LoaderBackground } from "../field/loader/loader_background.jsx";
+import {
+  SelectionContext,
+  useSelectableElement,
+} from "../field/selection/selection.jsx";
 import { useRequestedActionStatus } from "../field/use_action_events.js";
 import { useAutoFocus } from "../field/use_auto_focus.js";
 import { closeValidationMessage } from "../field/validation/custom_constraint_validation.js";
 import { useConstraints } from "../field/validation/hooks/use_constraints.js";
+import { Icon } from "../graphic/icon.jsx";
 import {
-  SelectionContext,
-  useSelectableElement,
-} from "../selection/selection.jsx";
-import { Icon } from "../text/icon.jsx";
+  LinkAnchorSvg,
+  LinkBlankTargetSvg,
+} from "../graphic/icons/link_svgs.jsx";
+import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { applySpacingOnTextChildren } from "../text/text.jsx";
 import { TitleLevelContext } from "../text/title.jsx";
 import { useDocumentUrl } from "./browser_integration/document_url_signal.js";

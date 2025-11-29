@@ -2,16 +2,16 @@ import { elementIsFocusable, findAfter } from "@jsenv/dom";
 import { forwardRef } from "preact/compat";
 import { useEffect, useImperativeHandle, useRef, useState } from "preact/hooks";
 
-import { useNavState } from "../../browser_integration/browser_integration.js";
-import { useActionStatus } from "../../use_action_status.js";
-import { requestAction } from "../../validation/custom_constraint_validation.js";
-import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import { useAction } from "../action_execution/use_action.js";
-import { useExecuteAction } from "../action_execution/use_execute_action.js";
-import { ActionRenderer } from "../action_renderer.jsx";
-import { useActionEvents } from "../field/use_action_events.js";
-import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
-import { useFocusGroup } from "../use_focus_group.js";
+import { ActionRenderer } from "../../action/action_renderer.jsx";
+import { renderActionableComponent } from "../../action/render_actionable_component.jsx";
+import { useAction } from "../../action/use_action.js";
+import { useActionStatus } from "../../action/use_action_status.js";
+import { useExecuteAction } from "../../action/use_execute_action.js";
+import { useActionEvents } from "../../field/use_action_events.js";
+import { useFocusGroup } from "../../field/use_focus_group.js";
+import { requestAction } from "../../field/validation/custom_constraint_validation.js";
+import { useKeyboardShortcuts } from "../../keyboard/keyboard_shortcuts.js";
+import { useNavState } from "../../nav/browser_integration/browser_integration.js";
 import { SummaryMarker } from "./summary_marker.jsx";
 
 import.meta.css = /* css */ `

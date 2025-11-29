@@ -4,6 +4,7 @@ import { useState } from "preact/hooks";
 import { Box } from "../box/box.jsx";
 import { PSEUDO_CLASSES } from "../box/pseudo_styles.js";
 import { Button } from "../field/button.jsx";
+import { Icon } from "../graphic/icon.jsx";
 import { CloseSvg } from "../graphic/icons/close_svg.jsx";
 import {
   ErrorSvg,
@@ -12,7 +13,6 @@ import {
   WarningSvg,
 } from "../graphic/icons/level_svg.jsx";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
-import { Icon } from "./graphic/icon.jsx";
 import { Text } from "./text.jsx";
 
 import.meta.css = /* css */ `

@@ -1,7 +1,7 @@
 import { signal } from "@preact/signals";
 
-import { setActionDispatcher } from "../actions.js";
-import { executeWithCleanup } from "../utils/execute_with_cleanup.js";
+import { setActionDispatcher } from "../../action/actions.js";
+import { executeWithCleanup } from "../../utils/execute_with_cleanup.js";
 import { updateDocumentState } from "./document_state_signal.js";
 import { documentUrlSignal, updateDocumentUrl } from "./document_url_signal.js";
 import { getHrefTargetInfo } from "./href_target_info.js";
