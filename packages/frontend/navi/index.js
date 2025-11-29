@@ -127,8 +127,8 @@ export { Image } from "./src/graphic/image.jsx";
 export { Svg } from "./src/graphic/svg.jsx";
 export { SVGMaskOverlay } from "./src/graphic/svg_mask_overlay.jsx";
 
-// Callout, dialogs, ...
-export { openCallout } from "./src/overlay/callout/callout.js";
+// popover (callout, dialogs, ...)
+export { openCallout } from "./src/popover/callout/callout.js";
 
 // Layout
 export { Details } from "./src/layout/details/details.jsx";
