@@ -126,11 +126,12 @@ import.meta.css = /* css */ `
     }
     .navi_input_range_fill {
       position: absolute;
-      width: calc(var(--x-fill-ratio) * 100%);
+      width: 100%;
       height: var(--height);
       background: var(--x-fill-color);
       background-clip: content-box;
       border-radius: var(--border-radius);
+      clip-path: inset(0 calc((1 - var(--x-fill-ratio)) * 100%) 0 0);
     }
     .navi_input_range_thumb {
       position: absolute;
