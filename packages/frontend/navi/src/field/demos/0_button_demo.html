@@ -147,9 +147,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Button, Layout, Icon } from "@jsenv/navi";
-      import { EyeSvg } from "@jsenv/navi/src/components/graphic/icons/eye_svg.jsx";
-      import { EyeClosedSvg } from "@jsenv/navi/src/components/graphic/icons/eye_closed_svg.jsx";
+      import { Button, Box, Icon, EyeSvg, EyeClosedSvg } from "@jsenv/navi";
 
       const App = () => {
         return (
@@ -176,31 +174,31 @@
                 enhanced styling and consistent behavior.
               </p>
 
-              <Layout column spacing="sm">
+              <Box column spacing="sm">
                 <fieldset>
                   <legend>Default</legend>
-                  <Layout row spacing="sm" alignX="start">
+                  <Box row spacing="sm" alignX="start">
                     <Button>Click Me</Button>
                     <button>Click Me</button>
-                  </Layout>
+                  </Box>
                 </fieldset>
                 <fieldset>
                   <legend>:focus-visible</legend>
-                  <Layout row spacing="sm" alignX="start">
+                  <Box row spacing="sm" alignX="start">
                     <Button pseudoState={{ ":focus-visible": true }}>
                       Focused
                     </Button>
                     <button autofocus>Focused</button>
-                  </Layout>
+                  </Box>
                 </fieldset>
                 <fieldset>
                   <legend>:disabled</legend>
-                  <Layout row spacing="sm" alignX="start">
+                  <Box row spacing="sm" alignX="start">
                     <Button disabled>Disabled</Button>
                     <button disabled>Disabled</button>
-                  </Layout>
+                  </Box>
                 </fieldset>
-              </Layout>
+              </Box>
             </div>
 
             <div className="states-section">
@@ -212,28 +210,28 @@
                 available in standard HTML buttons.
               </p>
 
-              <Layout column spacing="sm">
+              <Box column spacing="sm">
                 <fieldset>
                   <legend>:read-only</legend>
-                  <Layout row spacing="sm" alignX="start">
+                  <Box row spacing="sm" alignX="start">
                     <Button readOnly>Read-only Button</Button>
-                  </Layout>
+                  </Box>
                 </fieldset>
                 <fieldset>
                   <legend>:read-only:focus-visible</legend>
-                  <Layout row spacing="sm" alignX="start">
+                  <Box row spacing="sm" alignX="start">
                     <Button readOnly pseudoState={{ ":focus-visible": true }}>
                       Focused Read-only
                     </Button>
-                  </Layout>
+                  </Box>
                 </fieldset>
                 <fieldset>
                   <legend>:-navi-loading</legend>
-                  <Layout row spacing="sm" alignX="start">
+                  <Box row spacing="sm" alignX="start">
                     <Button loading>Processing...</Button>
-                  </Layout>
+                  </Box>
                 </fieldset>
-              </Layout>
+              </Box>
 
               <div
                 style={{
@@ -364,17 +362,15 @@
         return (
           <div className="demo-section">
             <h2>Icon Button Toggle</h2>
-            
+
             <fieldset>
               <legend>Toggle Eye Visibility</legend>
               <div className="button-group">
-                <Button 
+                <Button
                   onClick={() => setIsVisible(!isVisible)}
                   aria-label={isVisible ? "Hide content" : "Show content"}
                 >
-                  <Icon>
-                    {isVisible ? <EyeSvg /> : <EyeClosedSvg />}
-                  </Icon>
+                  <Icon>{isVisible ? <EyeSvg /> : <EyeClosedSvg />}</Icon>
                 </Button>
                 <span style={{ marginLeft: "10px", color: "#666" }}>
                   Content is {isVisible ? "visible" : "hidden"}
@@ -385,7 +381,7 @@
             <fieldset>
               <legend>Different Sizes</legend>
               <div className="button-group">
-                <Button 
+                <Button
                   size="sm"
                   onClick={() => setIsVisible(!isVisible)}
                   aria-label={isVisible ? "Hide content" : "Show content"}
@@ -394,15 +390,13 @@
                     {isVisible ? <EyeSvg /> : <EyeClosedSvg />}
                   </Icon>
                 </Button>
-                <Button 
+                <Button
                   onClick={() => setIsVisible(!isVisible)}
                   aria-label={isVisible ? "Hide content" : "Show content"}
                 >
-                  <Icon>
-                    {isVisible ? <EyeSvg /> : <EyeClosedSvg />}
-                  </Icon>
+                  <Icon>{isVisible ? <EyeSvg /> : <EyeClosedSvg />}</Icon>
                 </Button>
-                <Button 
+                <Button
                   size="lg"
                   onClick={() => setIsVisible(!isVisible)}
                   aria-label={isVisible ? "Hide content" : "Show content"}
@@ -415,7 +409,7 @@
             </fieldset>
 
             <p style={{ color: "#666", fontSize: "0.9rem", margin: "10px 0" }}>
-              Icon buttons that change state when clicked. The eye icon toggles 
+              Icon buttons that change state when clicked. The eye icon toggles
               between open and closed states based on the visibility toggle.
             </p>
           </div>

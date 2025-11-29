@@ -145,6 +145,8 @@ export { useKeyboardShortcuts } from "./src/keyboard/keyboard_shortcuts.js";
 
 export { CheckSvg } from "./src/graphic/icons/check_svg.jsx";
 export { ExclamationSvg } from "./src/graphic/icons/exclamation_svg.jsx";
+export { EyeClosedSvg } from "./src/graphic/icons/eye_closed_svg.jsx";
+export { EyeSvg } from "./src/graphic/icons/eye_svg.jsx";
 export { HeartSvg } from "./src/graphic/icons/heart_svg.jsx";
 export { HomeSvg } from "./src/graphic/icons/home_svg.jsx";
 export {
