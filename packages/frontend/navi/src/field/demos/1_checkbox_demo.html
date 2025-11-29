@@ -147,7 +147,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Input, Layout, Label, Box } from "@jsenv/navi";
+      import { Input, Label, Box } from "@jsenv/navi";
 
       const App = () => {
         return (
@@ -171,10 +171,10 @@
                 enhanced styling and consistent behavior.
               </p>
 
-              <Layout column spacing="sm">
+              <Box column spacing="sm">
                 <Box as="fieldset" width="100">
                   <legend>Default</legend>
-                  <Layout row spacing="sm" alignX="start">
+                  <Box row spacing="sm" alignX="start">
                     <Label>
                       <Input type="checkbox" />
                       Navi
@@ -183,11 +183,11 @@
                       <input type="checkbox" />
                       User Agent
                     </label>
-                  </Layout>
+                  </Box>
                 </Box>
                 <Box as="fieldset" width="200">
                   <legend>:focus-visible</legend>
-                  <Layout row spacing="sm" alignX="start">
+                  <Box row spacing="sm" alignX="start">
                     <Label>
                       <Input
                         type="checkbox"
@@ -199,11 +199,11 @@
                       <input type="checkbox" autofocus />
                       Native
                     </label>
-                  </Layout>
+                  </Box>
                 </Box>
                 <Box as="fieldset" width="150">
                   <legend>:disabled</legend>
-                  <Layout row spacing="sm" alignX="start">
+                  <Box row spacing="sm" alignX="start">
                     <Label>
                       <Input type="checkbox" disabled />
                       Navi
@@ -212,13 +212,13 @@
                       <input type="checkbox" disabled />
                       User Agent
                     </label>
-                  </Layout>
+                  </Box>
                 </Box>
-              </Layout>
-              <Layout column spacing="sm">
+              </Box>
+              <Box column spacing="sm">
                 <Box as="fieldset" width="100">
                   <legend>:checked</legend>
-                  <Layout row spacing="sm" alignX="start">
+                  <Box row spacing="sm" alignX="start">
                     <Label>
                       <Input type="checkbox" defaultChecked />
                       Navi
@@ -227,12 +227,12 @@
                       <input type="checkbox" checked />
                       User Agent
                     </label>
-                  </Layout>
+                  </Box>
                 </Box>
 
                 <Box as="fieldset" width="200">
                   <legend>:focus-visible:checked</legend>
-                  <Layout row spacing="sm" alignX="start">
+                  <Box row spacing="sm" alignX="start">
                     <Label>
                       <Input
                         type="checkbox"
@@ -245,12 +245,12 @@
                       <input type="checkbox" autofocus defaultChecked />
                       User Agent
                     </label>
-                  </Layout>
+                  </Box>
                 </Box>
 
                 <Box as="fieldset" width="150">
                   <legend>:disabled:checked</legend>
-                  <Layout row spacing="sm" alignX="start">
+                  <Box row spacing="sm" alignX="start">
                     <Label>
                       <Input type="checkbox" disabled defaultChecked />
                       Navi
@@ -259,9 +259,9 @@
                       <input type="checkbox" disabled checked />
                       Native
                     </label>
-                  </Layout>
+                  </Box>
                 </Box>
-              </Layout>
+              </Box>
             </div>
 
             <div className="states-section">
@@ -273,46 +273,46 @@
                 available in standard HTML checkboxes.
               </p>
 
-              <Layout column spacing="sm">
+              <Box column spacing="sm">
                 <Box as="fieldset" width="200">
                   <legend>:read-only</legend>
-                  <Layout row spacing="sm" alignX="start">
+                  <Box row spacing="sm" alignX="start">
                     <Label>
                       <Input type="checkbox" readOnly />
                       Read-only
                     </Label>
-                  </Layout>
+                  </Box>
                 </Box>
                 <Box as="fieldset" width="200">
                   <legend>:-navi-loading</legend>
-                  <Layout row spacing="sm" alignX="start">
+                  <Box row spacing="sm" alignX="start">
                     <Label>
                       <Input type="checkbox" loading />
                       Loading
                     </Label>
-                  </Layout>
+                  </Box>
                 </Box>
-              </Layout>
-              <Layout column spacing="sm">
+              </Box>
+              <Box column spacing="sm">
                 <Box as="fieldset" width="200">
                   <legend>:read-only:checked</legend>
-                  <Layout row spacing="sm" alignX="start">
+                  <Box row spacing="sm" alignX="start">
                     <Label>
                       <Input type="checkbox" readOnly checked />
                       Read-only
                     </Label>
-                  </Layout>
+                  </Box>
                 </Box>
                 <Box as="fieldset" width="200">
                   <legend>:-navi-loading:checked</legend>
-                  <Layout row spacing="sm" alignX="start">
+                  <Box row spacing="sm" alignX="start">
                     <Label>
                       <Input type="checkbox" loading checked />
                       Loading
                     </Label>
-                  </Layout>
+                  </Box>
                 </Box>
-              </Layout>
+              </Box>
 
               <div
                 style={{
@@ -354,10 +354,10 @@
                 constrast. Like the user agent version in modern browsers.
               </p>
 
-              <Layout column spacing="sm">
+              <Box column spacing="sm">
                 <fieldset>
                   <legend>Orange</legend>
-                  <Layout row spacing="sm" alignX="start">
+                  <Box row spacing="sm" alignX="start">
                     <Label>
                       <Input type="checkbox" color="#f39c12" defaultChecked />
                       Navi
@@ -370,11 +370,11 @@
                       />
                       Native
                     </label>
-                  </Layout>
+                  </Box>
                 </fieldset>
                 <fieldset>
                   <legend>Green</legend>
-                  <Layout row spacing="sm" alignX="start">
+                  <Box row spacing="sm" alignX="start">
                     <Label>
                       <Input type="checkbox" color="#2ecc71" defaultChecked />
                       Navi
@@ -387,11 +387,11 @@
                       />
                       Native
                     </label>
-                  </Layout>
+                  </Box>
                 </fieldset>
                 <fieldset>
                   <legend>Dark grey</legend>
-                  <Layout row spacing="sm" alignX="start">
+                  <Box row spacing="sm" alignX="start">
                     <Label>
                       <Input type="checkbox" color="#34495e" defaultChecked />
                       Navi
@@ -404,9 +404,9 @@
                       />
                       Native
                     </label>
-                  </Layout>
+                  </Box>
                 </fieldset>
-              </Layout>
+              </Box>
             </div>
           </div>
         );
@@ -423,7 +423,7 @@
 
             <fieldset>
               <legend>Toggle States</legend>
-              <Layout row spacing="sm" alignX="start" wrap>
+              <Box row spacing="sm" alignX="start" wrap>
                 <button
                   style={{
                     padding: "8px 16px",
@@ -463,12 +463,12 @@
                 >
                   Checked: {checked ? "ON" : "OFF"}
                 </button>
-              </Layout>
+              </Box>
             </fieldset>
 
             <fieldset>
               <legend>Result</legend>
-              <Layout column spacing="sm">
+              <Box column spacing="sm">
                 <Label>
                   <Input
                     type="checkbox"
@@ -494,7 +494,7 @@
                   {loading ? "true" : "false"} | disabled=
                   {disabled ? "true" : "false"}
                 </div>
-              </Layout>
+              </Box>
             </fieldset>
           </div>
         );
