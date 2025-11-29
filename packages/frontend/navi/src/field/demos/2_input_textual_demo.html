@@ -164,8 +164,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      /* eslint-disable no-unused-vars */
-      import { Input, Layout } from "@jsenv/navi";
+      import { Input, Box } from "@jsenv/navi";
 
       const App = () => {
         return (
@@ -191,39 +190,39 @@
                 enhanced styling and consistent behavior.
               </p>
 
-              <Layout column spacing="sm">
+              <Box column spacing="sm">
                 <fieldset>
                   <legend>Default</legend>
-                  <Layout row spacing="sm" alignX="start">
+                  <Box row spacing="sm" alignX="start">
                     <Input placeholder="Type here..." />
                     <input placeholder="Type here..." />
-                  </Layout>
+                  </Box>
                 </fieldset>
                 <fieldset>
                   <legend>:focus-visible</legend>
-                  <Layout row spacing="sm" alignX="start">
+                  <Box row spacing="sm" alignX="start">
                     <Input
                       placeholder="Focus me"
                       pseudoState={{ ":focus-visible": true }}
                     />
                     <input placeholder="Focus me" autoFocus />
-                  </Layout>
+                  </Box>
                 </fieldset>
                 <fieldset>
                   <legend>:read-only</legend>
-                  <Layout row spacing="sm" alignX="start">
+                  <Box row spacing="sm" alignX="start">
                     <Input value="Read-only content" />
                     <input readOnly value="Read-only content" />
-                  </Layout>
+                  </Box>
                 </fieldset>
                 <fieldset>
                   <legend>:disabled</legend>
-                  <Layout row spacing="sm" alignX="start">
+                  <Box row spacing="sm" alignX="start">
                     <Input disabled placeholder="Disabled input" />
                     <input disabled placeholder="Disabled input" />
-                  </Layout>
+                  </Box>
                 </fieldset>
-              </Layout>
+              </Box>
             </div>
 
             <div className="states-section">
@@ -235,14 +234,14 @@
                 available in standard HTML inputs.
               </p>
 
-              <Layout column spacing="sm">
+              <Box column spacing="sm">
                 <fieldset>
                   <legend>Loading state</legend>
-                  <Layout row spacing="sm" alignX="start">
+                  <Box row spacing="sm" alignX="start">
                     <Input loading placeholder="Loading input..." />
-                  </Layout>
+                  </Box>
                 </fieldset>
-              </Layout>
+              </Box>
 
               <div
                 style={{
@@ -331,8 +330,8 @@
           <div className="demo-section">
             <h2>Size Variations</h2>
 
-            <Layout row spacing="sm">
-              <Layout column spacing="sm">
+            <Box row spacing="sm">
+              <Box column spacing="sm">
                 <div className="variation-item">
                   <p className="variation-label">Custom Padding</p>
                   <Input
@@ -345,14 +344,14 @@
                   <p className="variation-label">Width 200</p>
                   <Input placeholder="Wide input" width="200px" />
                 </div>
-              </Layout>
-              <Layout row>
+              </Box>
+              <Box row>
                 <div className="variation-item">
                   <p className="variation-label">Full Width</p>
                   <Input placeholder="Full width" expandX />
                 </div>
-              </Layout>
-            </Layout>
+              </Box>
+            </Box>
           </div>
         );
       };
@@ -367,8 +366,8 @@
 
             <fieldset>
               <legend>Controlled vs Uncontrolled</legend>
-              <Layout column spacing="sm">
-                <Layout row spacing="sm" alignX="start">
+              <Box column spacing="sm">
+                <Box row spacing="sm" alignX="start">
                   <div>
                     <label style={{ fontSize: "0.9rem", marginBottom: "5px" }}>
                       Controlled (with value prop)
@@ -391,13 +390,13 @@
                     />
                     <div className="value-display">{uncontrolledValue}</div>
                   </div>
-                </Layout>
-              </Layout>
+                </Box>
+              </Box>
             </fieldset>
 
             <fieldset>
               <legend>Read-only Behavior</legend>
-              <Layout column spacing="sm">
+              <Box column spacing="sm">
                 <p
                   style={{
                     color: "#666",
@@ -409,7 +408,7 @@
                   automatically
                 </p>
                 <Input value="This is read-only (no handler)" />
-              </Layout>
+              </Box>
             </fieldset>
           </div>
         );
@@ -427,7 +426,7 @@
 
             <fieldset>
               <legend>Toggle States</legend>
-              <Layout row spacing="sm" alignX="start" wrap>
+              <Box row spacing="sm" alignX="start" wrap>
                 <button
                   style={{
                     padding: "8px 16px",
@@ -470,12 +469,12 @@
                   <option value="url">URL</option>
                   <option value="number">Number</option>
                 </select>
-              </Layout>
+              </Box>
             </fieldset>
 
             <fieldset>
               <legend>Result</legend>
-              <Layout column spacing="sm">
+              <Box column spacing="sm">
                 <Input
                   type={type}
                   loading={loading}
@@ -488,7 +487,7 @@
                   Value: "{value}" | Type: {type} | Loading:{" "}
                   {loading ? "Yes" : "No"} | Disabled: {disabled ? "Yes" : "No"}
                 </div>
-              </Layout>
+              </Box>
             </fieldset>
           </div>
         );
