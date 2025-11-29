@@ -344,14 +344,20 @@ const InputRangeBasic = (props) => {
       updateFillRatio();
     }, []);
 
+    // we must disable the input when readOnly to prevent drag and keyboard interactions effectively
+    // for some reason we have to do this here instead of just giving the disabled attribute
+    // via props, as for some reason preact won't set it correctly on the input element in that case
+    // this means however that the input is no longer focusable
+    // we have to put an other focusable element somewhere
+    useLayoutEffect(() => {
+      ref.current.disabled = innerReadOnly;
+    }, [innerReadOnly]);
+
     return (
       <Box
         {...inputProps}
         as="input"
-        // By using <input type="text"> we effectively range specific things
-        // like drag to change, keyboard shortcuts etc without disabling
-        // focus accessibility
-        type={innerReadOnly ? "text" : "range"}
+        type="range"
         ref={ref}
         data-value={uiState}
         value={innerValue}
