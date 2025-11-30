@@ -99,6 +99,7 @@ export const MessageBox = ({
       as="div"
       role={status === "info" ? "status" : "alert"}
       data-left-stripe={innerLeftStripe ? "" : undefined}
+      inline
       column
       alignY="start"
       spacing="sm"

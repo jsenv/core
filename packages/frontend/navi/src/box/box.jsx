@@ -67,24 +67,14 @@ import.meta.css = /* css */ `
   [data-flow-inline] {
     display: inline;
   }
-
   [data-flow-row] {
     display: flex;
     flex-direction: column;
   }
-
   [data-flow-column] {
     display: flex;
     flex-direction: row;
   }
-
-  [data-flow-row] > [data-flow-row],
-  [data-flow-row] > [data-flow-column],
-  [data-flow-column] > [data-flow-column],
-  [data-flow-column] > [data-flow-row] {
-    flex-shrink: 0;
-  }
-
   [data-flow-inline][data-flow-row],
   [data-flow-inline][data-flow-column] {
     display: inline-flex;

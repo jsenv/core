@@ -80,6 +80,7 @@
             <BasicMessageBoxDemo />
             <MessageBoxWithIconDemo />
             <MessageBoxWithTitleDemo />
+            <MessageBoxDismissibleDemo />
           </div>
         );
       };
@@ -235,6 +236,28 @@
                   unavailable. We apologize for any inconvenience and appreciate
                   your patience as we improve our
                   <Code>system performance</Code> and security.
+                </MessageBox>
+              </Box>
+            </Box>
+          </div>
+        );
+      };
+
+      const MessageBoxDismissibleDemo = () => {
+        return (
+          <div className="demo-section">
+            <h2>Dismissible MessageBox</h2>
+
+            <Box column>
+              <Box row>
+                <Caption>Message with close button</Caption>
+                <MessageBox
+                  status="info"
+                  onClose={() => console.log("Message dismissed!")}
+                >
+                  This message can be dismissed by clicking the close button.
+                  The close button appears automatically when
+                  <Code>onClose</Code> is provided.
                 </MessageBox>
               </Box>
             </Box>
