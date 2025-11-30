@@ -110,132 +110,140 @@ import.meta.css = /* css */ `
     &[data-icon] {
       --button-padding: 0;
     }
-  }
-  .navi_button_content {
-    position: relative;
-    display: inherit;
-    box-sizing: border-box;
-    width: 100%;
-    height: 100%;
-    padding-top: var(
-      --button-padding-top,
-      var(--button-padding-y, var(--button-padding, 1px))
-    );
-    padding-right: var(
-      --button-padding-right,
-      var(--button-padding-x, var(--button-padding, 6px))
-    );
-    padding-bottom: var(
-      --button-padding-bottom,
-      var(--button-padding-y, var(--button-padding, 1px))
-    );
-    padding-left: var(
-      --button-padding-left,
-      var(--button-padding-x, var(--button-padding, 6px))
-    );
-    align-items: inherit;
-    justify-content: inherit;
-    color: var(--x-button-color);
-    background-color: var(--x-button-background-color);
-    border-width: var(--x-button-outer-width);
-    border-style: solid;
-    border-color: transparent;
-    border-radius: var(--x-button-border-radius);
-    outline-width: var(--x-button-border-width);
-    outline-style: solid;
-    outline-color: var(--x-button-border-color);
-    outline-offset: calc(-1 * (var(--x-button-border-width)));
-    transition-property: transform;
-    transition-duration: 0.15s;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .navi_button_shadow {
-    position: absolute;
-    inset: calc(-1 * var(--x-button-outer-width));
-    border-radius: inherit;
-    pointer-events: none;
-  }
 
-  /* Hover */
-  .navi_button[data-hover] {
-    --x-button-border-color: var(--button-border-color-hover);
-    --x-button-background-color: var(--button-background-color-hover);
-    --x-button-color: var(--button-color-hover);
-  }
-  .navi_button[data-nohover] {
-    --x-button-border-color: var(--button-border-color);
-    --x-button-background-color: var(--button-background-color);
-    --x-button-color: var(--button-color);
-  }
-  /* Active */
-  .navi_button[data-active] {
-    --x-button-outline-color: var(--button-border-color-active);
-  }
-  .navi_button[data-active] .navi_button_content {
-    transform: scale(0.9);
-  }
-  .navi_button[data-active] .navi_button_shadow {
-    box-shadow:
-      inset 0 3px 6px rgba(0, 0, 0, 0.2),
-      inset 0 1px 2px rgba(0, 0, 0, 0.3),
-      inset 0 0 0 1px rgba(0, 0, 0, 0.1),
-      inset 2px 0 4px rgba(0, 0, 0, 0.1),
-      inset -2px 0 4px rgba(0, 0, 0, 0.1);
-  }
-  /* Readonly */
-  .navi_button[data-readonly] {
-    --x-button-border-color: var(--button-border-color-readonly);
-    --x-button-background-color: var(--button-background-color-readonly);
-    --x-button-color: var(--button-color-readonly);
-  }
-  /* Focus */
-  .navi_button[data-focus-visible] {
-    --x-button-border-color: var(--x-button-outline-color);
-  }
-  .navi_button[data-focus-visible] .navi_button_content {
-    outline-width: var(--x-button-outer-width);
-    outline-offset: calc(-1 * var(--x-button-outer-width));
-  }
-  /* Disabled */
-  .navi_button[data-disabled] {
-    color: unset;
-    cursor: default;
-  }
-  .navi_button[data-disabled] {
-    --x-button-border-color: var(--button-border-color-disabled);
-    --x-button-background-color: var(--button-background-color-disabled);
-    --x-button-color: var(--button-color-disabled);
-  }
-  /* no active effect */
-  .navi_button[data-disabled] .navi_button_content {
-    transform: none;
-  }
-  .navi_button[data-disabled] .navi_button_shadow {
-    box-shadow: none;
+    .navi_button_content {
+      position: relative;
+      display: inherit;
+      box-sizing: border-box;
+      width: 100%;
+      height: 100%;
+      padding-top: var(
+        --button-padding-top,
+        var(--button-padding-y, var(--button-padding, 1px))
+      );
+      padding-right: var(
+        --button-padding-right,
+        var(--button-padding-x, var(--button-padding, 6px))
+      );
+      padding-bottom: var(
+        --button-padding-bottom,
+        var(--button-padding-y, var(--button-padding, 1px))
+      );
+      padding-left: var(
+        --button-padding-left,
+        var(--button-padding-x, var(--button-padding, 6px))
+      );
+      align-items: inherit;
+      justify-content: inherit;
+      color: var(--x-button-color);
+      background-color: var(--x-button-background-color);
+      border-width: var(--x-button-outer-width);
+      border-style: solid;
+      border-color: transparent;
+      border-radius: var(--x-button-border-radius);
+      outline-width: var(--x-button-border-width);
+      outline-style: solid;
+      outline-color: var(--x-button-border-color);
+      outline-offset: calc(-1 * (var(--x-button-border-width)));
+      transition-property: transform;
+      transition-duration: 0.15s;
+      transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+
+      .navi_button_shadow {
+        position: absolute;
+        inset: calc(-1 * var(--x-button-outer-width));
+        border-radius: inherit;
+        pointer-events: none;
+      }
+    }
+
+    /* Hover */
+    &[data-hover] {
+      --x-button-border-color: var(--button-border-color-hover);
+      --x-button-background-color: var(--button-background-color-hover);
+      --x-button-color: var(--button-color-hover);
+    }
+    &[data-nohover] {
+      --x-button-border-color: var(--button-border-color);
+      --x-button-background-color: var(--button-background-color);
+      --x-button-color: var(--button-color);
+    }
+    /* Active */
+    &[data-active] {
+      --x-button-outline-color: var(--button-border-color-active);
+    }
+    &[data-active] {
+      .navi_button_content {
+        transform: scale(0.9);
+      }
+    }
+    &[data-active] {
+      .navi_button_shadow {
+        box-shadow:
+          inset 0 3px 6px rgba(0, 0, 0, 0.2),
+          inset 0 1px 2px rgba(0, 0, 0, 0.3),
+          inset 0 0 0 1px rgba(0, 0, 0, 0.1),
+          inset 2px 0 4px rgba(0, 0, 0, 0.1),
+          inset -2px 0 4px rgba(0, 0, 0, 0.1);
+      }
+    }
+    /* Readonly */
+    &[data-readonly] {
+      --x-button-border-color: var(--button-border-color-readonly);
+      --x-button-background-color: var(--button-background-color-readonly);
+      --x-button-color: var(--button-color-readonly);
+    }
+    /* Focus */
+    &[data-focus-visible] {
+      --x-button-border-color: var(--x-button-outline-color);
+    }
+    &[data-focus-visible] {
+      .navi_button_content {
+        outline-width: var(--x-button-outer-width);
+        outline-offset: calc(-1 * var(--x-button-outer-width));
+      }
+    }
+    /* Disabled */
+    &[data-disabled] {
+      --x-button-border-color: var(--button-border-color-disabled);
+      --x-button-background-color: var(--button-background-color-disabled);
+      --x-button-color: var(--button-color-disabled);
+
+      color: unset;
+      cursor: default;
+
+      /* Remove active effects */
+      .navi_button_content {
+        transform: none;
+
+        .navi_button_shadow {
+          box-shadow: none;
+        }
+      }
+    }
+    /* Discrete variant */
+    &[data-discrete] {
+      --x-button-background-color: transparent;
+      --x-button-border-color: transparent;
+
+      &[data-hover] {
+        --x-button-border-color: var(--button-border-color-hover);
+      }
+      &[data-nohover] {
+        --x-button-border-color: transparent;
+      }
+      &[data-readonly] {
+        --x-button-border-color: transparent;
+      }
+      &[data-disabled] {
+        --x-button-border-color: transparent;
+      }
+    }
   }
   /* Callout (info, warning, error) */
   .navi_button[data-callout] {
     --x-button-border-color: var(--callout-color);
   }
-
-  /* Discrete variant */
-  .navi_button[data-discrete] {
-    --x-button-background-color: transparent;
-    --x-button-border-color: transparent;
-  }
-  .navi_button[data-discrete][data-hover] {
-    --x-button-border-color: var(--button-border-color-hover);
-  }
-  .navi_button[data-discrete][data-nohover] {
-    --x-button-border-color: transparent;
-  }
-  .navi_button[data-discrete][data-readonly] {
-    --x-button-border-color: transparent;
-  }
-  .navi_button[data-discrete][data-disabled] {
-    --x-button-border-color: transparent;
-  }
-
   .navi_button > img {
     border-radius: inherit;
   }
