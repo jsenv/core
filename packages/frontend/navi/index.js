@@ -20,6 +20,7 @@ export { resource } from "./src/state/store/resource_graph.js";
 export { useSignalSync } from "./src/state/use_signal_sync.js";
 export { useStateArray } from "./src/state/use_state_array.js";
 export { valueInLocalStorage } from "./src/state/value_in_local_storage.js";
+export { compareTwoJsValues } from "./src/utils/compare_two_js_values.js";
 
 // Box
 export { Box } from "./src/box/box.jsx";
@@ -68,6 +69,7 @@ export {
   addCustomMessage,
   removeCustomMessage,
 } from "./src/field/validation/custom_message.js";
+export { useConstraintValidityState } from "./src/field/validation/hooks/use_constraint_validity_state.js";
 // popover (callout, dialogs, ...)
 export { openCallout } from "./src/field/validation/callout/callout.js";
 // Selection

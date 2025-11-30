@@ -42,6 +42,7 @@
 
 import { createPubSub } from "@jsenv/dom";
 
+import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { openCallout } from "./callout/callout.js";
 import {
   DISABLED_CONSTRAINT,
@@ -308,6 +309,10 @@ export const installCustomConstraintValidation = (
   const validityInfoMap = new Map();
   const hasTitleAttribute = element.hasAttribute("title");
 
+  let constraintValidityState = { valid: true };
+  const getConstraintValidityState = () => constraintValidityState;
+  validationInterface.getConstraintValidityState = getConstraintValidityState;
+
   const resetValidity = ({ fromRequestAction } = {}) => {
     if (fromRequestAction && failedConstraintInfo) {
       for (const [key, customMessage] of customMessageMap) {
@@ -327,6 +332,8 @@ export const installCustomConstraintValidation = (
   addTeardown(resetValidity);
 
   const checkValidity = ({ fromRequestAction, skipReadonly } = {}) => {
+    let newConstraintValidityState = { valid: true };
+
     resetValidity({ fromRequestAction });
     for (const constraint of constraintSet) {
       const constraintCleanupSet = new Set();
@@ -352,6 +359,7 @@ export const installCustomConstraintValidation = (
       });
       if (!checkResult) {
         cleanup();
+        newConstraintValidityState[constraint.name] = null;
         continue;
       }
       const constraintValidityInfo =
@@ -366,6 +374,8 @@ export const installCustomConstraintValidation = (
         reportStatus: "not_reported",
       };
       validityInfoMap.set(constraint, failedConstraintInfo);
+      newConstraintValidityState.valid = false;
+      newConstraintValidityState[constraint.name] = failedConstraintInfo;
     }
 
     if (failedConstraintInfo) {
@@ -381,8 +391,13 @@ export const installCustomConstraintValidation = (
       closeElementValidationMessage("becomes_valid");
     }
 
-    element.dispatchEvent(new CustomEvent(NAVI_VALIDITY_CHANGE_CUSTOM_EVENT));
-    return !failedConstraintInfo;
+    if (
+      !compareTwoJsValues(constraintValidityState, newConstraintValidityState)
+    ) {
+      constraintValidityState = newConstraintValidityState;
+      element.dispatchEvent(new CustomEvent(NAVI_VALIDITY_CHANGE_CUSTOM_EVENT));
+    }
+    return newConstraintValidityState.valid;
   };
   const reportValidity = ({ skipFocus } = {}) => {
     if (!failedConstraintInfo) {
@@ -432,22 +447,6 @@ export const installCustomConstraintValidation = (
   };
   validationInterface.checkValidity = checkValidity;
   validationInterface.reportValidity = reportValidity;
-
-  const getConstraintValidityState = () => {
-    const constraintValidityState = {
-      valid: true,
-    };
-    for (const [constraint, constraintFailedInfo] of validityInfoMap) {
-      constraintValidityState[constraint.name] = false;
-      if (!constraintFailedInfo) {
-        continue;
-      }
-      constraintValidityState.valid = false;
-      constraintValidityState[constraint.name] = constraintFailedInfo;
-    }
-    return constraintValidityState;
-  };
-  validationInterface.getConstraintValidityState = getConstraintValidityState;
 
   const customMessageMap = new Map();
   custom_message: {

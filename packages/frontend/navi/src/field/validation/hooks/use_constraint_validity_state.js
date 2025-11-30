@@ -12,9 +12,8 @@ export const useConstraintValidityState = (ref) => {
     if (!__validationInterface__) {
       return null;
     }
-    const currentConstraintValidityState =
-      __validationInterface__.getConstraintValidityState();
-    return currentConstraintValidityState;
+    const value = __validationInterface__.getConstraintValidityState();
+    return value;
   };
 
   const [constraintValidityState, setConstraintValidityState] =
