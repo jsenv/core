@@ -22,6 +22,146 @@ import {
  * - Centers in viewport when no anchor element provided or anchor is too big
  */
 
+import.meta.css = /* css */ `
+  @layer navi {
+    .navi_callout {
+      --callout-success-color: #4caf50;
+      --callout-info-color: #2196f3;
+      --callout-warning-color: #ff9800;
+      --callout-error-color: #f44336;
+
+      --callout-background-color: white;
+      --callout-icon-color: black;
+      --callout-padding: 8px;
+    }
+  }
+
+  .navi_callout {
+    --x-callout-border-color: var(--x-callout-status-color);
+    --x-callout-background-color: var(--callout-background-color);
+    --x-callout-icon-color: var(--x-callout-status-color);
+
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    display: block;
+    height: auto;
+    opacity: 0;
+    /* will be positioned with transform: translate */
+    transition: opacity 0.2s ease-in-out;
+    overflow: visible;
+
+    &[data-status="success"] {
+      --x-callout-status-color: var(--callout-success-color);
+    }
+    &[data-status="info"] {
+      --x-callout-status-color: var(--callout-info-color);
+    }
+    &[data-status="warning"] {
+      --x-callout-status-color: var(--callout-warning-color);
+    }
+    &[data-status="error"] {
+      --x-callout-status-color: var(--callout-error-color);
+    }
+
+    .navi_callout_box {
+      position: relative;
+      border-style: solid;
+      border-color: transparent;
+
+      .navi_callout_frame {
+        position: absolute;
+        filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
+        pointer-events: none;
+
+        svg {
+          position: absolute;
+          inset: 0;
+          overflow: visible;
+
+          .navi_callout_border {
+            fill: var(--x-callout-border-color);
+          }
+          .navi_callout_background {
+            fill: var(--x-callout-background-color);
+          }
+        }
+      }
+
+      .navi_callout_body {
+        position: relative;
+        display: flex;
+        max-width: 47vw;
+        padding: var(--callout-padding);
+        flex-direction: row;
+        gap: 10px;
+
+        .navi_callout_icon {
+          display: flex;
+          width: 22px;
+          height: 22px;
+          flex-shrink: 0;
+          align-items: center;
+          align-self: flex-start;
+          justify-content: center;
+          background-color: var(--x-callout-icon-color);
+          border-radius: 2px;
+
+          svg {
+            width: 16px;
+            height: 12px;
+            color: white;
+          }
+        }
+
+        .navi_callout_message {
+          min-width: 0;
+          align-self: center;
+          word-break: break-word;
+          overflow-wrap: anywhere;
+
+          .navi_callout_error_stack {
+            max-height: 200px;
+            overflow: auto;
+          }
+          iframe {
+            display: block;
+            margin: 0;
+          }
+        }
+      }
+    }
+
+    .navi_callout_close_button_column {
+      display: flex;
+      height: 22px;
+
+      .navi_callout_close_button {
+        width: 1em;
+        height: 1em;
+        padding: 0;
+        align-self: center;
+        color: currentColor;
+        font-size: inherit;
+        background: none;
+        border: none;
+        border-radius: 0.2em;
+        cursor: pointer;
+
+        &:hover {
+          background: rgba(0, 0, 0, 0.1);
+        }
+
+        .navi_callout_close_button_svg {
+          width: 100%;
+          height: 100%;
+        }
+      }
+    }
+  }
+`;
+
 /**
  * Shows a callout attached to the specified element
  * @param {string} message - HTML content for the callout
@@ -314,135 +454,6 @@ const CORNER_RADIUS = 3;
 const ARROW_WIDTH = 16;
 const ARROW_HEIGHT = 8;
 const ARROW_SPACING = 8;
-
-import.meta.css = /* css */ `
-  @layer navi {
-    .navi_callout {
-      --callout-success-color: #4caf50;
-      --callout-info-color: #2196f3;
-      --callout-warning-color: #ff9800;
-      --callout-error-color: #f44336;
-
-      --callout-background-color: white;
-      --callout-icon-color: black;
-      --callout-padding: 8px;
-    }
-  }
-
-  .navi_callout {
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: 1;
-    display: block;
-    height: auto;
-    opacity: 0;
-    /* will be positioned with transform: translate */
-    transition: opacity 0.2s ease-in-out;
-    overflow: visible;
-
-    --x-callout-border-color: var(--x-callout-level-color);
-    --x-callout-background-color: var(--callout-background-color);
-    --x-callout-icon-color: var(--x-callout-level-color);
-  }
-
-  .navi_callout_frame {
-    position: absolute;
-    filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
-    pointer-events: none;
-  }
-  .navi_callout .navi_callout_border {
-    fill: var(--x-callout-border-color);
-  }
-  .navi_callout_frame svg {
-    position: absolute;
-    inset: 0;
-    overflow: visible;
-  }
-  .navi_callout_background {
-    fill: var(--x-callout-background-color);
-  }
-  .navi_callout_box {
-    position: relative;
-    border-style: solid;
-    border-color: transparent;
-  }
-  .navi_callout_body {
-    position: relative;
-    display: flex;
-    max-width: 47vw;
-    padding: var(--callout-padding);
-    flex-direction: row;
-    gap: 10px;
-  }
-  .navi_callout_icon {
-    display: flex;
-    width: 22px;
-    height: 22px;
-    flex-shrink: 0;
-    align-items: center;
-    align-self: flex-start;
-    justify-content: center;
-    background-color: var(--x-callout-icon-color);
-    border-radius: 2px;
-  }
-  .navi_callout_icon svg {
-    width: 16px;
-    height: 12px;
-    color: white;
-  }
-
-  .navi_callout_message {
-    min-width: 0;
-    align-self: center;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-  }
-  .navi_callout_message iframe {
-    display: block;
-    margin: 0;
-  }
-  .navi_callout_close_button_column {
-    display: flex;
-    height: 22px;
-  }
-  .navi_callout_close_button {
-    width: 1em;
-    height: 1em;
-    padding: 0;
-    align-self: center;
-    color: currentColor;
-    font-size: inherit;
-    background: none;
-    border: none;
-    border-radius: 0.2em;
-    cursor: pointer;
-  }
-  .navi_callout_close_button:hover {
-    background: rgba(0, 0, 0, 0.1);
-  }
-  .navi_callout_close_button_svg {
-    width: 100%;
-    height: 100%;
-  }
-  .navi_callout_error_stack {
-    max-height: 200px;
-    overflow: auto;
-  }
-
-  .navi_callout[data-level="success"] {
-    --x-callout-level-color: var(--callout-success-color);
-  }
-  .navi_callout[data-level="info"] {
-    --x-callout-level-color: var(--callout-info-color);
-  }
-  .navi_callout[data-level="warning"] {
-    --x-callout-level-color: var(--callout-warning-color);
-  }
-  .navi_callout[data-level="error"] {
-    --x-callout-level-color: var(--callout-error-color);
-  }
-`;
 
 // HTML template for the callout
 const calloutTemplate = /* html */ `

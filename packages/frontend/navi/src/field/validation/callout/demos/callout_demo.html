@@ -71,12 +71,6 @@
         background: white;
         border: 2px solid #ddd;
         border-radius: 4px;
-        transition: border-color 0.2s ease;
-        cursor: pointer;
-      }
-
-      .example-text:hover {
-        border-color: #007bff;
       }
 
       .button-example {
@@ -143,7 +137,7 @@
 
       <div class="text-example">
         <h3>Info Status Callout</h3>
-        <p>Click on this text to see an informational callout:</p>
+        <p>This text has an informational callout displayed:</p>
         <span class="example-text" id="info-text">
           Text with info callout
         </span>
@@ -221,70 +215,69 @@
           onClose: () => {
             activeCallouts.delete(element);
           },
+          // debug: true,
         });
 
         activeCallouts.set(element, callout);
       };
 
       // Demo 1: Callouts with different status types (auto-open)
-      document.addEventListener("DOMContentLoaded", () => {
-        // Info callout
-        const infoText = document.getElementById("info-text");
-        showCallout(
-          infoText,
-          "This is an <strong>informational callout</strong>. It provides helpful context or additional details about this element.",
-          "info",
-        );
+      // Info callout
+      const infoText = document.getElementById("info-text");
+      showCallout(
+        infoText,
+        "This is an <strong>informational callout</strong>. It provides helpful context or additional details about this element.",
+        "info",
+      );
 
-        // Success callout
-        const successText = document.getElementById("success-text");
-        showCallout(
-          successText,
-          "✅ This is a <strong>success callout</strong>. It indicates that an operation completed successfully.",
-          "success",
-        );
+      // Success callout
+      const successText = document.getElementById("success-text");
+      showCallout(
+        successText,
+        "This is a <strong>success callout</strong>. It indicates that an operation completed successfully.",
+        "success",
+      );
 
-        // Warning callout
-        const warningText = document.getElementById("warning-text");
-        showCallout(
-          warningText,
-          "⚠️ This is a <strong>warning callout</strong>. It alerts users about potential issues or important considerations.",
-          "warning",
-        );
+      // Warning callout
+      const warningText = document.getElementById("warning-text");
+      showCallout(
+        warningText,
+        "This is a <strong>warning callout</strong>. It alerts users about potential issues or important considerations.",
+        "warning",
+      );
 
-        // Error callout
-        const errorText = document.getElementById("error-text");
-        showCallout(
-          errorText,
-          "❌ This is an <strong>error callout</strong>. It indicates that something went wrong and requires attention.",
-          "error",
-        );
+      // Error callout
+      const errorText = document.getElementById("error-text");
+      showCallout(
+        errorText,
+        "This is an <strong>error callout</strong>. It indicates that something went wrong and requires attention.",
+        "error",
+      );
 
-        // Demo 2: Interactive callout trigger
-        const triggerButton = document.getElementById("trigger-button");
-        let isCalloutOpen = false;
+      // Demo 2: Interactive callout trigger
+      const triggerButton = document.getElementById("trigger-button");
+      let isCalloutOpen = false;
 
-        triggerButton.addEventListener("click", () => {
-          if (!isCalloutOpen) {
-            const callout = openCallout(
-              "🎯 This callout was <strong>triggered by clicking the button</strong>!<br><br>It demonstrates how to programmatically open callouts in response to user interactions.",
-              {
-                anchorElement: triggerButton,
-                status: "info",
-                onClose: () => {
-                  isCalloutOpen = false;
-                  triggerButton.textContent = "Open Callout";
-                  triggerButton.disabled = false;
-                },
+      triggerButton.addEventListener("click", () => {
+        if (!isCalloutOpen) {
+          const callout = openCallout(
+            "🎯 This callout was <strong>triggered by clicking the button</strong>!<br><br>It demonstrates how to programmatically open callouts in response to user interactions.",
+            {
+              anchorElement: triggerButton,
+              status: "info",
+              onClose: () => {
+                isCalloutOpen = false;
+                triggerButton.textContent = "Open Callout";
+                triggerButton.disabled = false;
               },
-            );
+            },
+          );
 
-            isCalloutOpen = true;
-            triggerButton.textContent = "Callout Open";
-            triggerButton.disabled = true;
-            activeCallouts.set(triggerButton, callout);
-          }
-        });
+          isCalloutOpen = true;
+          triggerButton.textContent = "Callout Open";
+          triggerButton.disabled = true;
+          activeCallouts.set(triggerButton, callout);
+        }
       });
 
       // Cleanup on page unload
