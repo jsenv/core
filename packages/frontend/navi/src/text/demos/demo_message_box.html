@@ -64,6 +64,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useState } from "preact/hooks";
       import {
         MessageBox,
         Title,
@@ -72,6 +73,7 @@
         ExclamationSvg,
         Box,
         Caption,
+        Button,
       } from "@jsenv/navi";
 
       const App = () => {
@@ -244,6 +246,8 @@
       };
 
       const MessageBoxDismissibleDemo = () => {
+        const [isVisible, setIsVisible] = useState(true);
+
         return (
           <div className="demo-section">
             <h2>Dismissible MessageBox</h2>
@@ -251,14 +255,28 @@
             <Box column>
               <Box row>
                 <Caption>Message with close button</Caption>
-                <MessageBox
-                  status="info"
-                  onClose={() => console.log("Message dismissed!")}
-                >
-                  This message can be dismissed by clicking the close button.
-                  The close button appears automatically when
-                  <Code>onClose</Code> is provided.
-                </MessageBox>
+                {isVisible ? (
+                  <MessageBox status="info" onClose={() => setIsVisible(false)}>
+                    This message can be dismissed by clicking the close button.
+                    The close button appears automatically when
+                    <Code>onClose</Code> is provided.
+                  </MessageBox>
+                ) : (
+                  <div
+                    style={{
+                      padding: "16px",
+                      color: "#666",
+                    }}
+                  >
+                    <p style={{ margin: "0 0 12px 0", fontStyle: "italic" }}>
+                      Message has been dismissed. In practice, you would usually
+                      just hide the message permanently.
+                    </p>
+                    <Button onClick={() => setIsVisible(true)}>
+                      Show Message Again (for demo)
+                    </Button>
+                  </div>
+                )}
               </Box>
             </Box>
           </div>
