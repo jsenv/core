@@ -122,12 +122,11 @@ export const MessageBox = ({
             <Button
               action={onClose}
               discrete
+              icon
               border="none"
               data-nohover=""
               alignX="center"
               alignY="center"
-              width="1em"
-              height="1em"
               pseudoStyle={{
                 ":hover": {
                   backgroundColor: "rgba(0, 0, 0, 0.1)",

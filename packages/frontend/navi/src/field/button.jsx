@@ -106,6 +106,10 @@ import.meta.css = /* css */ `
     border-radius: var(--x-button-border-radius);
     outline: none;
     cursor: pointer;
+
+    &[data-icon] {
+      --button-padding: 0;
+    }
   }
   .navi_button_content {
     position: relative;
@@ -301,6 +305,7 @@ const ButtonBasic = (props) => {
 
     // visual
     discrete,
+    icon,
 
     children,
     ...rest
@@ -332,6 +337,7 @@ const ButtonBasic = (props) => {
       {...rest}
       as="button"
       ref={ref}
+      data-icon={icon ? "" : undefined}
       data-discrete={discrete ? "" : undefined}
       data-readonly-silent={innerLoading ? "" : undefined}
       data-callout-arrow-x="center"
