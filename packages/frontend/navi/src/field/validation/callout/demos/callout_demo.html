@@ -72,8 +72,8 @@
         border: 2px solid #ddd;
         border-radius: 4px;
       }
-      .example-text[data-callout-status] {
-        border-color: var(--callout-color);
+      .example-text[data-callout] {
+        border-color: var(--callout-color, #ddd);
       }
 
       .button-example {
@@ -137,6 +137,14 @@
         status types. Each callout demonstrates the visual styling and behavior
         for that status level.
       </p>
+
+      <div class="text-example">
+        <h3>Default Status Callout</h3>
+        <p>This text has a callout with no specific status (default):</p>
+        <span class="example-text" id="default-text">
+          Text with default callout
+        </span>
+      </div>
 
       <div class="text-example">
         <h3>Info Status Callout</h3>
@@ -226,6 +234,14 @@
       };
 
       // Demo 1: Callouts with different status types (auto-open)
+      // Default callout (no status)
+      const defaultText = document.getElementById("default-text");
+      showCallout(
+        defaultText,
+        "This is a <strong>default callout</strong> with no specific status. It uses the default styling and behavior.",
+        undefined,
+      );
+
       // Info callout
       const infoText = document.getElementById("info-text");
       showCallout(
