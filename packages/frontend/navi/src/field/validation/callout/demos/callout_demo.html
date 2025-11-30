@@ -69,7 +69,7 @@
         color: #333;
         font-size: 1rem;
         background: white;
-        border: 2px solid #ddd;
+        border: 8px solid #ddd;
         border-radius: 4px;
         transition: border-color 0.3s ease;
       }
@@ -146,9 +146,12 @@
       </p>
 
       <div class="text-example">
-        <h3>Default Status Callout</h3>
-        <p>This text has a callout with no specific status (default):</p>
-        <span class="example-text" id="default-text">
+        <h3>Default Status Callout (Forced Above)</h3>
+        <p>
+          This text has a callout with no specific status and is forced to
+          appear above using <code>data-position="above"</code>:
+        </p>
+        <span class="example-text" id="default-text" data-position="above">
           Text with default callout
         </span>
       </div>
@@ -162,17 +165,28 @@
       </div>
 
       <div class="text-example">
-        <h3>Success Status Callout</h3>
-        <p>This text shows a success callout:</p>
-        <span class="example-text" id="success-text">
+        <h3>Success Status Callout (Centered Arrow)</h3>
+        <p>
+          This text shows a success callout with
+          <code>data-callout-arrow-x="center"</code> to center the arrow:
+        </p>
+        <span
+          class="example-text"
+          id="success-text"
+          data-callout-arrow-x="center"
+        >
           Text with success callout
         </span>
       </div>
 
       <div class="text-example">
-        <h3>Warning Status Callout</h3>
-        <p>This text displays a warning callout:</p>
-        <span class="example-text" id="warning-text">
+        <h3>Warning Status Callout (Arrow at End)</h3>
+        <p>
+          This text displays a warning callout with
+          <code>data-callout-arrow-x="end"</code> to position the arrow at the
+          right edge:
+        </p>
+        <span class="example-text" id="warning-text" data-callout-arrow-x="end">
           Text with warning callout
         </span>
       </div>
@@ -195,6 +209,39 @@
         through the <code>[data-callout]</code>
         attribute and CSS custom properties that automatically reflect the
         callout's status color.
+        <br /><br />
+        <strong>Positioning Control:</strong> Use <code>data-position</code> to
+        influence initial positioning:
+        <ul style="margin: 8px 0; padding-left: 20px">
+          <li>
+            <code>data-position="above"</code> - Forces callout to appear above
+            the element
+          </li>
+          <li>
+            <code>data-position="below"</code> - Forces callout to appear below
+            the element
+          </li>
+        </ul>
+        <strong>Arrow Positioning:</strong> Use
+        <code>data-callout-arrow-x</code> to control arrow placement. Notice how
+        the arrows point <strong>inside the element</strong> (accounting for
+        border widths) rather than at the outer edges:
+        <ul style="margin: 8px 0; padding-left: 20px">
+          <li>
+            <code>data-callout-arrow-x="center"</code> - Centers arrow
+            horizontally on the element
+          </li>
+          <li>
+            <code>data-callout-arrow-x="end"</code> - Positions arrow at the
+            right edge of the element
+          </li>
+          <li>
+            Default behavior positions arrow at the left edge of the element
+            (inside the border)
+          </li>
+        </ul>
+        The thick borders on these examples help visualize how the arrow targets
+        the content area, not the border edges.
       </div>
     </div>
 

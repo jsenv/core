@@ -651,6 +651,10 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
       if (arrowPositionAttribute === "center") {
         // Target the center of the anchorElement element
         arrowAnchorLeft = (anchorLeft + anchorRight) / 2;
+      } else if (arrowPositionAttribute === "end") {
+        const anchorBorderSizes = getBorderSizes(anchorElement);
+        // Target the right edge of the anchorElement element (before borders)
+        arrowAnchorLeft = anchorRight - anchorBorderSizes.right;
       } else {
         const anchorBorderSizes = getBorderSizes(anchorElement);
         // Default behavior: target the left edge of the anchorElement element (after borders)
