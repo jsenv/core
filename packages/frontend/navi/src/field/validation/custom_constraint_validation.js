@@ -59,6 +59,7 @@ import { SAME_AS_CONSTRAINT } from "./constraints/same_as_constraint.js";
 import { listenInputChange } from "./input_change_effect.js";
 
 let debug = false;
+export const NAVI_VALIDITY_CHANGE_CUSTOM_EVENT = "navi_validity_change";
 
 const validationInProgressWeakSet = new WeakSet();
 
@@ -305,7 +306,6 @@ export const installCustomConstraintValidation = (
 
   let failedConstraintInfo = null;
   const validityInfoMap = new Map();
-
   const hasTitleAttribute = element.hasAttribute("title");
 
   const resetValidity = ({ fromRequestAction } = {}) => {
@@ -316,7 +316,6 @@ export const installCustomConstraintValidation = (
         }
       }
     }
-
     for (const [, validityInfo] of validityInfoMap) {
       if (validityInfo.cleanup) {
         validityInfo.cleanup();
@@ -359,7 +358,6 @@ export const installCustomConstraintValidation = (
         typeof checkResult === "string"
           ? { message: checkResult }
           : checkResult;
-
       failedConstraintInfo = {
         name: constraint.name,
         constraint,
@@ -383,6 +381,7 @@ export const installCustomConstraintValidation = (
       closeElementValidationMessage("becomes_valid");
     }
 
+    element.dispatchEvent(new CustomEvent(NAVI_VALIDITY_CHANGE_CUSTOM_EVENT));
     return !failedConstraintInfo;
   };
   const reportValidity = ({ skipFocus } = {}) => {
@@ -433,6 +432,22 @@ export const installCustomConstraintValidation = (
   };
   validationInterface.checkValidity = checkValidity;
   validationInterface.reportValidity = reportValidity;
+
+  const getConstraintValidityState = () => {
+    const constraintValidityState = {
+      valid: true,
+    };
+    for (const [constraint, constraintFailedInfo] of validityInfoMap) {
+      constraintValidityState[constraint.name] = false;
+      if (!constraintFailedInfo) {
+        continue;
+      }
+      constraintValidityState.valid = false;
+      constraintValidityState[constraint.name] = constraintFailedInfo;
+    }
+    return constraintValidityState;
+  };
+  validationInterface.getConstraintValidityState = getConstraintValidityState;
 
   const customMessageMap = new Map();
   custom_message: {

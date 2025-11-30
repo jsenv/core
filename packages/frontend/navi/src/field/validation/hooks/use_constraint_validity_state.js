@@ -1,5 +1,7 @@
 import { useLayoutEffect, useState } from "preact/hooks";
 
+import { NAVI_VALIDITY_CHANGE_CUSTOM_EVENT } from "../custom_constraint_validation.js";
+
 export const useConstraintValidityState = (ref) => {
   const checkValue = () => {
     const element = ref.current;
@@ -10,7 +12,9 @@ export const useConstraintValidityState = (ref) => {
     if (!__validationInterface__) {
       return null;
     }
-    return __validationInterface__.getConstraintValidityState();
+    const currentConstraintValidityState =
+      __validationInterface__.getConstraintValidityState();
+    return currentConstraintValidityState;
   };
 
   const [constraintValidityState, setConstraintValidityState] =
@@ -21,7 +25,7 @@ export const useConstraintValidityState = (ref) => {
     if (!element) {
       return;
     }
-    element.addEventListener("navi_constraint_validity_state", () => {
+    element.addEventListener(NAVI_VALIDITY_CHANGE_CUSTOM_EVENT, () => {
       setConstraintValidityState(checkValue());
     });
   }, []);
