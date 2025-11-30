@@ -167,9 +167,9 @@ import.meta.css = /* css */ `
  * @param {string} message - HTML content for the callout
  * @param {Object} options - Configuration options
  * @param {HTMLElement} [options.anchorElement] - Element the callout should follow. If not provided or too big, callout will be centered in viewport
- * @param {string} [options.level="warning"] - Callout level: "info" | "warning" | "error"
+ * @param {string} [options.status=""] - Callout status: "info" | "warning" | "error" | "success"
  * @param {Function} [options.onClose] - Callback when callout is closed
- * @param {boolean} [options.closeOnClickOutside] - Whether to close on outside clicks (defaults to true for "info" level)
+ * @param {boolean} [options.closeOnClickOutside] - Whether to close on outside clicks (defaults to true for "info" status)
  * @param {boolean} [options.debug=false] - Enable debug logging
  * @returns {Object} - Callout object with properties:
  *   - {Function} close - Function to close the callout
@@ -186,7 +186,9 @@ export const openCallout = (
     // "info" - polite announcement (e.g., "This element cannot be modified")
     // "warning" - expected failure requiring user action (e.g., "Field is required")
     // "error" - unexpected failure, may not be actionable (e.g., "Server error")
-    status = "warning",
+    // "success" - positive feedback (e.g., "Changes saved successfully")
+    // "" - neutral information
+    status = "",
     onClose,
     closeOnClickOutside = status === "info",
     showErrorStack,
@@ -248,7 +250,7 @@ export const openCallout = (
   const update = (newMessage, options = {}) => {
     // Connect callout with target element for accessibility
     if (options.status && options.status !== callout.status) {
-      callout.level = status;
+      callout.status = status;
       updateStatus(status);
     }
 
@@ -312,10 +314,15 @@ export const openCallout = (
     close,
   });
   addStatusEffect(() => {
-    calloutElement.setAttribute("data-status", status);
-    if (status === "info") {
-      calloutElement.setAttribute("role", "status");
+    if (status) {
+      calloutElement.setAttribute("data-status", status);
     } else {
+      calloutElement.removeAttribute("data-status");
+    }
+
+    if (!status || status === "info" || status === "success") {
+      calloutElement.setAttribute("role", "status");
+    } else if (status) {
       calloutElement.setAttribute("role", "alert");
     }
   });
@@ -341,22 +348,26 @@ export const openCallout = (
       anchorElement.removeAttribute("data-callout");
     });
 
-    addStatusEffect(() => {
+    addStatusEffect((status) => {
+      if (!status) {
+        return () => {};
+      }
       // todo:
-      // - rename level into status
       // - dispatch something on the element to indicate the status
       // and that would in turn be used by pseudo styles system to eventually apply styles
       const statusColor = resolveCSSColor(
         `var(--callout-${status}-color)`,
         calloutElement,
       );
+      anchorElement.setAttribute("data-callout-status", status);
       anchorElement.style.setProperty("--callout-color", statusColor);
       return () => {
+        anchorElement.removeAttribute("data-callout-status");
         anchorElement.style.removeProperty("--callout-color");
       };
     });
     addStatusEffect((status) => {
-      if (status === "info") {
+      if (!status || status === "info" || status === "success") {
         anchorElement.setAttribute("aria-describedby", calloutId);
         return () => {
           anchorElement.removeAttribute("aria-describedby");
