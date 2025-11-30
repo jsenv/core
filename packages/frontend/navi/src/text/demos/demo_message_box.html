@@ -108,7 +108,7 @@
 
               <Box row>
                 <Caption>Success status</Caption>
-                <MessageBox status="success" onClose={() => {}}>
+                <MessageBox status="success">
                   This is a success message indicating that an operation
                   completed successfully.
                 </MessageBox>
@@ -131,46 +131,46 @@
           <div className="demo-section">
             <h2>MessageBox with Icon Examples</h2>
 
-            <Box row spacing="md">
-              <div className="message-example">
-                <h3>Info with Icon</h3>
+            <Box row>
+              <Box row>
+                <Caption>Info with Icon</Caption>
                 <MessageBox status="info" icon>
                   This MessageBox includes an info icon to visually represent
                   the message type.
                 </MessageBox>
-              </div>
+              </Box>
 
-              <div className="message-example">
-                <h3>Warning with Icon</h3>
+              <Box row>
+                <Caption>Warning with Icon</Caption>
                 <MessageBox status="warning" icon>
                   This MessageBox includes a warning icon to visually represent
                   the message type.
                 </MessageBox>
-              </div>
+              </Box>
 
-              <div className="message-example">
-                <h3>Success with Icon</h3>
+              <Box row>
+                <Caption>Success with Icon</Caption>
                 <MessageBox status="success" icon>
                   This MessageBox includes a success icon to visually represent
                   the message type.
                 </MessageBox>
-              </div>
+              </Box>
 
-              <div className="message-example">
-                <h3>Error with Icon</h3>
+              <Box row>
+                <Caption>Error with Icon</Caption>
                 <MessageBox status="error" icon>
                   This MessageBox includes an error icon to visually represent
                   the message type.
                 </MessageBox>
-              </div>
+              </Box>
 
-              <div className="message-example">
-                <h3>Error with custom</h3>
+              <Box row>
+                <Caption>Error with custom icon</Caption>
                 <MessageBox status="error" icon={<ExclamationSvg />}>
-                  This MessageBox includes an error icon to visually represent
-                  the message type.
+                  This MessageBox includes a custom error icon to visually
+                  represent the message type.
                 </MessageBox>
-              </div>
+              </Box>
             </Box>
           </div>
         );
@@ -181,9 +181,9 @@
           <div className="demo-section">
             <h2>MessageBox with Title Examples</h2>
 
-            <Box row spacing="md">
-              <div className="message-example">
-                <h3>Info with Title</h3>
+            <Box row>
+              <Box row>
+                <Caption>Info with Title</Caption>
                 <MessageBox status="info">
                   <Title>Important Information</Title>
                   This MessageBox includes a title for better organization.
@@ -191,40 +191,40 @@
                   The <Code>Title</Code> component automatically inherits the
                   appropriate color based on the message status.
                 </MessageBox>
-              </div>
+              </Box>
 
-              <div className="message-example">
-                <h3>Warning with Title</h3>
+              <Box row>
+                <Caption>Warning with Title</Caption>
                 <MessageBox status="warning">
                   <Title>Attention Required</Title>
                   Please review the following warning carefully. This message
                   contains important information about
                   <Code>potential issues</Code> that may affect your workflow.
                 </MessageBox>
-              </div>
+              </Box>
 
-              <div className="message-example">
-                <h3>Success with Title</h3>
+              <Box row>
+                <Caption>Success with Title</Caption>
                 <MessageBox status="success">
                   <Title alignX="center">Operation Successful</Title>
                   Great! Your request has been processed successfully. All
                   changes have been saved and the
                   <Code>system has been updated</Code> accordingly.
                 </MessageBox>
-              </div>
+              </Box>
 
-              <div className="message-example">
-                <h3>Error with Title</h3>
+              <Box row>
+                <Caption>Error with Title and Icon</Caption>
                 <MessageBox status="error" icon>
                   <Title>Operation Failed</Title>
                   An error has occurred during processing. Please check your
                   input and try again. If the problem persists, contact support
                   with the <Code>error details</Code>.
                 </MessageBox>
-              </div>
+              </Box>
 
-              <div className="message-example">
-                <h3>Multi-paragraph Message</h3>
+              <Box row>
+                <Caption>Complex Message with Icon</Caption>
                 <MessageBox status="info">
                   <Title>
                     <Icon href="#icon-maintenance" />
@@ -236,7 +236,7 @@
                   your patience as we improve our
                   <Code>system performance</Code> and security.
                 </MessageBox>
-              </div>
+              </Box>
             </Box>
           </div>
         );
