@@ -71,6 +71,7 @@
         Icon,
         ExclamationSvg,
         Box,
+        Caption,
       } from "@jsenv/navi";
 
       const App = () => {
@@ -88,38 +89,38 @@
           <div className="demo-section">
             <h2>Basic MessageBox Examples</h2>
 
-            <Box row spacing="md">
-              <div className="message-example">
-                <h3>Info status</h3>
+            <Box row>
+              <Box row>
+                <Caption>Info status</Caption>
                 <MessageBox status="info">
                   This is an informational message to provide helpful context or
                   status updates.
                 </MessageBox>
-              </div>
+              </Box>
 
-              <div className="message-example">
-                <h3>Warning status</h3>
+              <Box row>
+                <Caption>Warning status</Caption>
                 <MessageBox status="warning">
                   This is a warning message to alert users about potential
                   issues or important considerations.
                 </MessageBox>
-              </div>
+              </Box>
 
-              <div className="message-example">
-                <h3>Success status</h3>
+              <Box row>
+                <Caption>Success status</Caption>
                 <MessageBox status="success" onClose={() => {}}>
                   This is a success message indicating that an operation
                   completed successfully.
                 </MessageBox>
-              </div>
+              </Box>
 
-              <div className="message-example">
-                <h3>Error status</h3>
+              <Box row>
+                <Caption>Error status</Caption>
                 <MessageBox status="error">
                   This is an error message indicating that something went wrong
                   and requires attention.
                 </MessageBox>
-              </div>
+              </Box>
             </Box>
           </div>
         );
