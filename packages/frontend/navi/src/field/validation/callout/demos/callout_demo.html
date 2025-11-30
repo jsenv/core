@@ -146,12 +146,16 @@
       </p>
 
       <div class="text-example">
-        <h3>Default Status Callout (Forced Above)</h3>
+        <h3>Default Status Callout (Preferred Above)</h3>
         <p>
-          This text has a callout with no specific status and is forced to
-          appear above using <code>data-position="above"</code>:
+          This text has a callout with no specific status and prefers to appear
+          above using <code>data-callout-position="above"</code>:
         </p>
-        <span class="example-text" id="default-text" data-position="above">
+        <span
+          class="example-text"
+          id="default-text"
+          data-callout-position="above"
+        >
           Text with default callout
         </span>
       </div>
@@ -210,16 +214,26 @@
         attribute and CSS custom properties that automatically reflect the
         callout's status color.
         <br /><br />
-        <strong>Positioning Control:</strong> Use <code>data-position</code> to
-        influence initial positioning:
+        <strong>Positioning Control:</strong> Use positioning attributes on the
+        anchor element:
         <ul style="margin: 8px 0; padding-left: 20px">
           <li>
-            <code>data-position="above"</code> - Forces callout to appear above
-            the element
+            <code>data-callout-position="above"</code> - Prefers callout to
+            appear above the element (but will fallback to below if less than
+            60% would be visible above)
           </li>
           <li>
-            <code>data-position="below"</code> - Forces callout to appear below
-            the element
+            <code>data-callout-position="below"</code> - Prefers callout to
+            appear below the element (but will fallback to above if less than
+            60% would be visible below)
+          </li>
+          <li>
+            <code>data-callout-position-force="above"</code> - Forces callout
+            above regardless of available space
+          </li>
+          <li>
+            <code>data-callout-position-force="below"</code> - Forces callout
+            below regardless of available space
           </li>
         </ul>
         <strong>Arrow Positioning:</strong> Use

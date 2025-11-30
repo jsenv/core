@@ -321,6 +321,7 @@ export const pickPositionRelativeTo = (
   {
     alignToViewportEdgeWhenTargetNearEdge = 0,
     minLeft = 0,
+    positionPreference,
     forcePosition,
   } = {},
 ) => {
@@ -417,8 +418,12 @@ export const pickPositionRelativeTo = (
       position = forcePosition;
       break determine_position;
     }
-    const preferredPosition = element.getAttribute("data-position");
+    const elementPreferredPosition = element.getAttribute("data-position");
     const minContentVisibilityRatio = 0.6; // 60% minimum visibility to keep position
+
+    // Check positionPreference parameter first, then element attribute
+    const preferredPosition = positionPreference || elementPreferredPosition;
+
     if (preferredPosition) {
       // Element has a preferred position - try to keep it unless we really struggle
       const visibleRatio =

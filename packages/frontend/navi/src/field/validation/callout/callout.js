@@ -626,6 +626,14 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
     ({ left: anchorLeft, right: anchorRight, visibilityRatio }) => {
       const calloutElementClone =
         cloneCalloutToMeasureNaturalSize(calloutElement);
+      // Check for preferred and forced position from anchor element
+      const preferredPosition = anchorElement.getAttribute(
+        "data-callout-position",
+      );
+      const forcedPosition = anchorElement.getAttribute(
+        "data-callout-position-force",
+      );
+
       const {
         position,
         left: calloutLeft,
@@ -638,6 +646,12 @@ const stickCalloutToAnchor = (calloutElement, anchorElement) => {
         alignToViewportEdgeWhenTargetNearEdge: 20,
         // when fully to the left, the border color is collé to the browser window making it hard to see
         minLeft: 1,
+        positionPreference:
+          // we want to avoid the callout to switch position when it can still fit so
+          // we start with preferredPosition if given but once a position is picked we stick to it
+          // This is implemented by favoring the data attribute of the callout then of the anchor
+          calloutElement.getAttribute("data-position") || preferredPosition,
+        forcePosition: forcedPosition,
       });
       calloutElementClone.remove();
 
