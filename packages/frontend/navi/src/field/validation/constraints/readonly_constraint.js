@@ -18,7 +18,7 @@ export const READONLY_CONSTRAINT = {
     if (readonlyMessage) {
       return {
         message: readonlyMessage,
-        level: "info",
+        status: "info",
       };
     }
     const isBusy = element.getAttribute("aria-busy") === "true";
@@ -26,7 +26,7 @@ export const READONLY_CONSTRAINT = {
       return {
         target: element,
         message: `Cette action est en cours. Veuillez patienter.`,
-        level: "info",
+        status: "info",
       };
     }
     return {
@@ -35,7 +35,7 @@ export const READONLY_CONSTRAINT = {
         element.tagName === "BUTTON"
           ? `Cet action n'est pas disponible pour l'instant.`
           : `Cet élément est en lecture seule et ne peut pas être modifié.`,
-      level: "info",
+      status: "info",
     };
   },
 };

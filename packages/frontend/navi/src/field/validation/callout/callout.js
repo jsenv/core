@@ -42,13 +42,13 @@ export const openCallout = (
   message,
   {
     anchorElement,
-    // Level determines visual styling and behavior:
+    // status determines visual styling and behavior:
     // "info" - polite announcement (e.g., "This element cannot be modified")
     // "warning" - expected failure requiring user action (e.g., "Field is required")
     // "error" - unexpected failure, may not be actionable (e.g., "Server error")
-    level = "warning",
+    status = "warning",
     onClose,
-    closeOnClickOutside = level === "info",
+    closeOnClickOutside = status === "info",
     showErrorStack,
     debug = false,
   } = {},
@@ -56,7 +56,7 @@ export const openCallout = (
   const callout = {
     opened: true,
     close: null,
-    level: undefined,
+    status: undefined,
 
     update: null,
     updatePosition: null,
@@ -68,7 +68,7 @@ export const openCallout = (
     console.debug("open callout", {
       anchorElement,
       message,
-      level,
+      status,
     });
   }
 
@@ -87,9 +87,9 @@ export const openCallout = (
     addTeardown(onClose);
   }
 
-  const [updateLevel, addLevelEffect, cleanupLevelEffects] =
+  const [updateStatus, addStatusEffect, cleanupStatusEffects] =
     createValueEffect(undefined);
-  addTeardown(cleanupLevelEffects);
+  addTeardown(cleanupStatusEffects);
 
   // Create and add callout to document
   const calloutElement = createCalloutElement();
@@ -107,9 +107,9 @@ export const openCallout = (
   calloutStyleController.set(calloutElement, { opacity: 0 });
   const update = (newMessage, options = {}) => {
     // Connect callout with target element for accessibility
-    if (options.level && options.level !== callout.level) {
-      callout.level = level;
-      updateLevel(level);
+    if (options.status && options.status !== callout.status) {
+      callout.level = status;
+      updateStatus(status);
     }
 
     if (options.closeOnClickOutside) {
@@ -171,9 +171,9 @@ export const openCallout = (
     update,
     close,
   });
-  addLevelEffect(() => {
-    calloutElement.setAttribute("data-level", level);
-    if (level === "info") {
+  addStatusEffect(() => {
+    calloutElement.setAttribute("data-status", status);
+    if (status === "info") {
       calloutElement.setAttribute("role", "status");
     } else {
       calloutElement.setAttribute("role", "alert");
@@ -201,22 +201,22 @@ export const openCallout = (
       anchorElement.removeAttribute("data-callout");
     });
 
-    addLevelEffect(() => {
+    addStatusEffect(() => {
       // todo:
       // - rename level into status
       // - dispatch something on the element to indicate the status
       // and that would in turn be used by pseudo styles system to eventually apply styles
-      const levelColor = resolveCSSColor(
-        `var(--callout-${level}-color)`,
+      const statusColor = resolveCSSColor(
+        `var(--callout-${status}-color)`,
         calloutElement,
       );
-      anchorElement.style.setProperty("--callout-color", levelColor);
+      anchorElement.style.setProperty("--callout-color", statusColor);
       return () => {
         anchorElement.style.removeProperty("--callout-color");
       };
     });
-    addLevelEffect((level) => {
-      if (level === "info") {
+    addStatusEffect((status) => {
+      if (status === "info") {
         anchorElement.setAttribute("aria-describedby", calloutId);
         return () => {
           anchorElement.removeAttribute("aria-describedby");
@@ -232,7 +232,7 @@ export const openCallout = (
 
     close_on_anchor_focus: {
       const onfocus = () => {
-        if (level === "error") {
+        if (status === "error") {
           // error messages must be explicitely closed by the user
           return;
         }
@@ -252,7 +252,7 @@ export const openCallout = (
     });
   }
 
-  update(message, { level });
+  update(message, { status });
 
   positioning: {
     const documentScrollLeftAtOpen = document.documentElement.scrollLeft;

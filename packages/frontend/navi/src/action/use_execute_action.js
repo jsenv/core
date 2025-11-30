@@ -48,6 +48,7 @@ export const useExecuteAction = (
       message = error;
     }
     addCustomMessage(calloutAnchor, "action_error", message, {
+      status: "error",
       // This error should not prevent <form> submission
       // so whenever user tries to submit the form the error is cleared
       // (Hitting enter key, clicking on submit button, etc. would allow to re-submit the form in error state)

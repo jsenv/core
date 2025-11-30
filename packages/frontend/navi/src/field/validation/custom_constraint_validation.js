@@ -395,9 +395,9 @@ export const installCustomConstraintValidation = (
       return;
     }
     if (validationInterface.validationMessage) {
-      const { message, level, closeOnClickOutside } = failedConstraintInfo;
+      const { message, status, closeOnClickOutside } = failedConstraintInfo;
       validationInterface.validationMessage.update(message, {
-        level,
+        status,
         closeOnClickOutside,
       });
       return;
@@ -415,7 +415,7 @@ export const installCustomConstraintValidation = (
       failedConstraintInfo.message,
       {
         anchorElement,
-        level: failedConstraintInfo.level,
+        status: failedConstraintInfo.status,
         closeOnClickOutside: failedConstraintInfo.closeOnClickOutside,
         onClose: () => {
           removeCloseOnCleanup();
@@ -439,8 +439,8 @@ export const installCustomConstraintValidation = (
     constraintSet.add({
       name: "custom_message",
       check: () => {
-        for (const [, { message, level }] of customMessageMap) {
-          return { message, level };
+        for (const [, { message, status }] of customMessageMap) {
+          return { message, status };
         }
         return null;
       },
@@ -448,9 +448,9 @@ export const installCustomConstraintValidation = (
     const addCustomMessage = (
       key,
       message,
-      { level = "error", removeOnRequestAction = false } = {},
+      { status = "info", removeOnRequestAction = false } = {},
     ) => {
-      customMessageMap.set(key, { message, level, removeOnRequestAction });
+      customMessageMap.set(key, { message, status, removeOnRequestAction });
       checkValidity();
       reportValidity();
       return () => {
