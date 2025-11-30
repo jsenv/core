@@ -221,6 +221,58 @@
       </div>
     </div>
 
+    <div class="demo-section">
+      <h2>Unanchored Callout</h2>
+      <p>
+        This section demonstrates a callout without an anchor element. While
+        this is primarily a robustness feature, it can be useful when dealing
+        with elements that have no visual appearance (like
+        <code>input type="hidden"</code>, invisible elements, or when validation
+        errors apply to the form as a whole).
+      </p>
+
+      <div class="button-example">
+        <h3>Callout Centered in Viewport</h3>
+        <p>Click the button below to open a callout without an anchor:</p>
+        <button class="demo-button" id="no-anchor-button">
+          Open Unanchored Callout
+        </button>
+        <p style="margin-top: 15px; color: #6c757d; font-size: 0.85rem">
+          The callout will appear centered in the viewport without arrows.
+        </p>
+      </div>
+
+      <div class="note">
+        <strong>Use Cases:</strong> This pattern can be helpful when:
+        <ul style="margin: 8px 0; padding-left: 20px">
+          <li>
+            Validating hidden form fields (<code
+              >&lt;input type="hidden"&gt;</code
+            >)
+          </li>
+          <li>Showing form-level validation messages</li>
+          <li>
+            Handling elements with <code>display: none</code> or
+            <code>visibility: hidden</code>
+          </li>
+          <li>
+            Displaying general alerts that don't relate to a specific visible
+            element
+          </li>
+        </ul>
+        <strong>Scroll Behavior:</strong> When centered in the viewport, the
+        callout <strong>will not follow page scrolling</strong> and this is
+        intentional. The callout is designed to display a message to the user at
+        the moment <code>openCallout</code>
+        is called. Following scroll would likely move the message further from
+        the UI element that triggered it in the first place, reducing its
+        contextual relevance.
+        <br /><br />
+        When no anchor is provided, the callout centers itself in the viewport
+        as a fallback.
+      </div>
+    </div>
+
     <script type="module" jsenv-type="module/jsx">
       import { openCallout } from "../callout.js";
 
@@ -311,6 +363,32 @@
           triggerButton.textContent = "Callout Open";
           triggerButton.disabled = true;
           activeCallouts.set(triggerButton, callout);
+        }
+      });
+
+      // Demo 3: Callout without anchor (robustness test)
+      const noAnchorButton = document.getElementById("no-anchor-button");
+      let isNoAnchorCalloutOpen = false;
+
+      noAnchorButton.addEventListener("click", () => {
+        if (!isNoAnchorCalloutOpen) {
+          const callout = openCallout(
+            "🔧 This is a <strong>callout without an anchor element</strong>.<br><br>Notice how it's centered in the viewport and has no arrow pointing to any element. This demonstrates the component's robustness in handling edge cases.",
+            {
+              // No anchorElement provided
+              status: "warning",
+              onClose: () => {
+                isNoAnchorCalloutOpen = false;
+                noAnchorButton.textContent = "Open Unanchored Callout";
+                noAnchorButton.disabled = false;
+              },
+            },
+          );
+
+          isNoAnchorCalloutOpen = true;
+          noAnchorButton.textContent = "Callout Open";
+          noAnchorButton.disabled = true;
+          activeCallouts.set(noAnchorButton, callout);
         }
       });
 
