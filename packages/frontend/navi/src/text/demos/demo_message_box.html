@@ -68,9 +68,9 @@
         MessageBox,
         Title,
         Code,
-        Layout,
         Icon,
-        ExclamationIconSvg,
+        ExclamationSvg,
+        Box,
       } from "@jsenv/navi";
 
       const App = () => {
@@ -90,32 +90,32 @@
 
             <Box row spacing="md">
               <div className="message-example">
-                <h3>Info Level</h3>
-                <MessageBox level="info">
+                <h3>Info status</h3>
+                <MessageBox status="info">
                   This is an informational message to provide helpful context or
                   status updates.
                 </MessageBox>
               </div>
 
               <div className="message-example">
-                <h3>Warning Level</h3>
-                <MessageBox level="warning">
+                <h3>Warning status</h3>
+                <MessageBox status="warning">
                   This is a warning message to alert users about potential
                   issues or important considerations.
                 </MessageBox>
               </div>
 
               <div className="message-example">
-                <h3>Success Level</h3>
-                <MessageBox level="success" onClose={() => {}}>
+                <h3>Success status</h3>
+                <MessageBox status="success" onClose={() => {}}>
                   This is a success message indicating that an operation
                   completed successfully.
                 </MessageBox>
               </div>
 
               <div className="message-example">
-                <h3>Error Level</h3>
-                <MessageBox level="error">
+                <h3>Error status</h3>
+                <MessageBox status="error">
                   This is an error message indicating that something went wrong
                   and requires attention.
                 </MessageBox>
@@ -133,7 +133,7 @@
             <Box row spacing="md">
               <div className="message-example">
                 <h3>Info with Icon</h3>
-                <MessageBox level="info" icon>
+                <MessageBox status="info" icon>
                   This MessageBox includes an info icon to visually represent
                   the message type.
                 </MessageBox>
@@ -141,7 +141,7 @@
 
               <div className="message-example">
                 <h3>Warning with Icon</h3>
-                <MessageBox level="warning" icon>
+                <MessageBox status="warning" icon>
                   This MessageBox includes a warning icon to visually represent
                   the message type.
                 </MessageBox>
@@ -149,7 +149,7 @@
 
               <div className="message-example">
                 <h3>Success with Icon</h3>
-                <MessageBox level="success" icon>
+                <MessageBox status="success" icon>
                   This MessageBox includes a success icon to visually represent
                   the message type.
                 </MessageBox>
@@ -157,7 +157,7 @@
 
               <div className="message-example">
                 <h3>Error with Icon</h3>
-                <MessageBox level="error" icon>
+                <MessageBox status="error" icon>
                   This MessageBox includes an error icon to visually represent
                   the message type.
                 </MessageBox>
@@ -165,7 +165,7 @@
 
               <div className="message-example">
                 <h3>Error with custom</h3>
-                <MessageBox level="error" icon={<ExclamationIconSvg />}>
+                <MessageBox status="error" icon={<ExclamationSvg />}>
                   This MessageBox includes an error icon to visually represent
                   the message type.
                 </MessageBox>
@@ -183,38 +183,38 @@
             <Box row spacing="md">
               <div className="message-example">
                 <h3>Info with Title</h3>
-                <MessageBox level="info">
+                <MessageBox status="info">
                   <Title>Important Information</Title>
                   This MessageBox includes a title for better organization.
                   <br />
                   The <Code>Title</Code> component automatically inherits the
-                  appropriate color based on the message level.
+                  appropriate color based on the message status.
                 </MessageBox>
               </div>
 
               <div className="message-example">
                 <h3>Warning with Title</h3>
-                <MessageBox level="warning">
+                <MessageBox status="warning">
                   <Title>Attention Required</Title>
                   Please review the following warning carefully. This message
-                  contains important information about{" "}
+                  contains important information about
                   <Code>potential issues</Code> that may affect your workflow.
                 </MessageBox>
               </div>
 
               <div className="message-example">
                 <h3>Success with Title</h3>
-                <MessageBox level="success">
+                <MessageBox status="success">
                   <Title alignX="center">Operation Successful</Title>
                   Great! Your request has been processed successfully. All
-                  changes have been saved and the{" "}
+                  changes have been saved and the
                   <Code>system has been updated</Code> accordingly.
                 </MessageBox>
               </div>
 
               <div className="message-example">
                 <h3>Error with Title</h3>
-                <MessageBox level="error" icon>
+                <MessageBox status="error" icon>
                   <Title>Operation Failed</Title>
                   An error has occurred during processing. Please check your
                   input and try again. If the problem persists, contact support
@@ -224,7 +224,7 @@
 
               <div className="message-example">
                 <h3>Multi-paragraph Message</h3>
-                <MessageBox level="info">
+                <MessageBox status="info">
                   <Title>
                     <Icon href="#icon-maintenance" />
                     System Maintenance Notice

@@ -2,7 +2,6 @@ import { createContext } from "preact";
 import { useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
-import { PSEUDO_CLASSES } from "../box/pseudo_styles.js";
 import { Button } from "../field/button.jsx";
 import { Icon } from "../graphic/icon.jsx";
 import { CloseSvg } from "../graphic/icons/close_svg.jsx";
@@ -18,14 +17,14 @@ import { Text } from "./text.jsx";
 import.meta.css = /* css */ `
   @layer navi {
     .navi_message_box {
-      --background-color-info: #eaf6fc;
-      --color-info: #376cc2;
-      --background-color-success: #ecf9ef;
-      --color-success: #50c464;
-      --background-color-warning: #fdf6e3;
-      --color-warning: #f19c05;
-      --background-color-error: #fcebed;
-      --color-error: #eb364b;
+      --background-color-info: var(--navi-info-color-light);
+      --color-info: var(--navi-info-color);
+      --background-color-success: var(--navi-success-color-light);
+      --color-success: var(--navi-success-color);
+      --background-color-warning: var(--navi-warning-color-light);
+      --color-warning: var(--navi-warning-color);
+      --background-color-error: var(--navi-error-color-light);
+      --color-error: var(--navi-error-color);
     }
   }
 
@@ -36,19 +35,19 @@ import.meta.css = /* css */ `
     background-color: var(--x-background-color);
   }
 
-  .navi_message_box[data-level="info"] {
+  .navi_message_box[data-status-info] {
     --x-background-color: var(--background-color-info);
     --x-color: var(--color-info);
   }
-  .navi_message_box[data-level="success"] {
+  .navi_message_box[data-status-success] {
     --x-background-color: var(--background-color-success);
     --x-color: var(--color-success);
   }
-  .navi_message_box[data-level="warning"] {
+  .navi_message_box[data-status-warning] {
     --x-background-color: var(--background-color-warning);
     --x-color: var(--color-warning);
   }
-  .navi_message_box[data-level="error"] {
+  .navi_message_box[data-status-error] {
     --x-background-color: var(--background-color-error);
     --x-color: var(--color-error);
   }
@@ -60,60 +59,16 @@ import.meta.css = /* css */ `
   }
 `;
 
-Object.assign(PSEUDO_CLASSES, {
-  ":-navi-info": {
-    add: (el) => {
-      el.setAttribute("data-level", "info");
-    },
-    remove: (el) => {
-      if (el.getAttribute("data-level") === "info") {
-        el.removeAttribute("data-level");
-      }
-    },
-  },
-  ":-navi-success": {
-    add: (el) => {
-      el.setAttribute("data-level", "success");
-    },
-    remove: (el) => {
-      if (el.getAttribute("data-level") === "success") {
-        el.removeAttribute("data-level");
-      }
-    },
-  },
-  ":-navi-warning": {
-    add: (el) => {
-      el.setAttribute("data-level", "warning");
-    },
-    remove: (el) => {
-      if (el.getAttribute("data-level") === "warning") {
-        el.removeAttribute("data-level");
-      }
-    },
-  },
-  ":-navi-error": {
-    add: (el) => {
-      el.setAttribute("data-level", "error");
-    },
-    remove: (el) => {
-      if (el.getAttribute("data-level") === "error") {
-        el.removeAttribute("data-level");
-      }
-    },
-  },
-});
 const MessageBoxPseudoClasses = [
-  ":-navi-info",
-  ":-navi-success",
-  ":-navi-warning",
-  ":-navi-error",
+  ":-navi-status-info",
+  ":-navi-status-success",
+  ":-navi-status-warning",
+  ":-navi-status-error",
 ];
-
-export const MessageBoxLevelContext = createContext();
+export const MessageBoxStatusContext = createContext();
 export const MessageBoxReportTitleChildContext = createContext();
-
 export const MessageBox = ({
-  level = "info",
+  status = "info",
   padding = "sm",
   icon,
   leftStripe,
@@ -125,13 +80,13 @@ export const MessageBox = ({
   const innerLeftStripe = leftStripe === undefined ? hasTitleChild : leftStripe;
   if (icon === true) {
     icon =
-      level === "info" ? (
+      status === "info" ? (
         <InfoSvg />
-      ) : level === "success" ? (
+      ) : status === "success" ? (
         <SuccessSvg />
-      ) : level === "warning" ? (
+      ) : status === "warning" ? (
         <WarningSvg />
-      ) : level === "error" ? (
+      ) : status === "error" ? (
         <ErrorSvg />
       ) : null;
   } else if (typeof icon === "function") {
@@ -142,7 +97,7 @@ export const MessageBox = ({
   return (
     <Box
       as="div"
-      role={level === "info" ? "status" : "alert"}
+      role={status === "info" ? "status" : "alert"}
       data-left-stripe={innerLeftStripe ? "" : undefined}
       column
       alignY="start"
@@ -152,13 +107,13 @@ export const MessageBox = ({
       padding={padding}
       pseudoClasses={MessageBoxPseudoClasses}
       basePseudoState={{
-        ":-navi-info": level === "info",
-        ":-navi-success": level === "success",
-        ":-navi-warning": level === "warning",
-        ":-navi-error": level === "error",
+        ":-navi-status-info": status === "info",
+        ":-navi-status-success": status === "success",
+        ":-navi-status-warning": status === "warning",
+        ":-navi-status-error": status === "error",
       }}
     >
-      <MessageBoxLevelContext.Provider value={level}>
+      <MessageBoxStatusContext.Provider value={status}>
         <MessageBoxReportTitleChildContext.Provider value={setHasTitleChild}>
           {icon && <Icon color="var(--x-color)">{icon}</Icon>}
           <Text>{children}</Text>
@@ -184,7 +139,7 @@ export const MessageBox = ({
             </Button>
           )}
         </MessageBoxReportTitleChildContext.Provider>
-      </MessageBoxLevelContext.Provider>
+      </MessageBoxStatusContext.Provider>
     </Box>
   );
 };

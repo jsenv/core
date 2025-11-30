@@ -11,6 +11,15 @@ import.meta.css = /* css */ `
       --navi-selection-background-color: #eaf1fd;
       --navi-color-light: white;
       --navi-color-dark: rgb(55, 60, 69);
+
+      --navi-info-color-light: #eaf6fc;
+      --navi-info-color: #376cc2;
+      --navi-success-color-light: #ecf9ef;
+      --navi-success-color: #50c464;
+      --navi-warning-color-light: #fdf6e3;
+      --navi-warning-color: #f19c05;
+      --navi-error-color-light: #fcebed;
+      --navi-error-color: #eb364b;
     }
   }
 `;

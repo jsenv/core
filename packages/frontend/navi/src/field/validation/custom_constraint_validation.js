@@ -42,7 +42,7 @@
 
 import { createPubSub } from "@jsenv/dom";
 
-import { openCallout } from "../../popover/callout/callout.js";
+import { openCallout } from "./callout/callout.js";
 import {
   DISABLED_CONSTRAINT,
   MAX_CONSTRAINT,

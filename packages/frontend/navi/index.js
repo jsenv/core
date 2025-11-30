@@ -68,6 +68,8 @@ export {
   addCustomMessage,
   removeCustomMessage,
 } from "./src/field/validation/custom_message.js";
+// popover (callout, dialogs, ...)
+export { openCallout } from "./src/field/validation/callout/callout.js";
 // Selection
 export {
   SelectionContext,
@@ -126,9 +128,6 @@ export { Icon } from "./src/graphic/icon.jsx";
 export { Image } from "./src/graphic/image.jsx";
 export { Svg } from "./src/graphic/svg.jsx";
 export { SVGMaskOverlay } from "./src/graphic/svg_mask_overlay.jsx";
-
-// popover (callout, dialogs, ...)
-export { openCallout } from "./src/popover/callout/callout.js";
 
 // Layout
 export { Details } from "./src/layout/details/details.jsx";

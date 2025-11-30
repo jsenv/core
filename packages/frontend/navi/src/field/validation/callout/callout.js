@@ -202,6 +202,10 @@ export const openCallout = (
     });
 
     addLevelEffect(() => {
+      // todo:
+      // - rename level into status
+      // - dispatch something on the element to indicate the status
+      // and that would in turn be used by pseudo styles system to eventually apply styles
       const levelColor = resolveCSSColor(
         `var(--callout-${level}-color)`,
         calloutElement,

@@ -195,14 +195,27 @@ export const PSEUDO_CLASSES = {
   ":-navi-loading": {
     attribute: "data-loading",
   },
+  ":-navi-status-info": {
+    attribute: "data-status-info",
+  },
+  ":-navi-status-success": {
+    attribute: "data-status-success",
+  },
+  ":-navi-status-warning": {
+    attribute: "data-status-warning",
+  },
+  ":-navi-status-error": {
+    attribute: "data-status-error",
+  },
 };
 
+const NAVI_PSEUDO_STATE_CUSTOM_EVENT = "navi_pseudo_state";
 const dispatchNaviPseudoStateEvent = (element, value, previousValue) => {
   if (!element) {
     return;
   }
   element.dispatchEvent(
-    new CustomEvent("navi_pseudo_state", {
+    new CustomEvent(NAVI_PSEUDO_STATE_CUSTOM_EVENT, {
       detail: {
         pseudoState: value,
         previousPseudoState: previousValue,
@@ -287,7 +300,7 @@ export const initPseudoStyles = (
     onStateChange(state, previousState);
   };
 
-  element.addEventListener("navi_pseudo_state_check", (event) => {
+  element.addEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, (event) => {
     const previousState = event.detail.previousPseudoState;
     state = event.detail.pseudoState;
     onStateChange(state, previousState);
