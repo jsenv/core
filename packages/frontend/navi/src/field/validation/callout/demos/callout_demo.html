@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Callout Demo</title>
+    <style>
+      body {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 40px 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        line-height: 1.6;
+        background: #f8f9fa;
+      }
+
+      h1 {
+        margin-bottom: 30px;
+        color: #333;
+        font-size: 2rem;
+        text-align: center;
+      }
+
+      .demo-section {
+        margin-bottom: 50px;
+        padding: 30px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+      }
+
+      .demo-section h2 {
+        margin: 0 0 25px 0;
+        padding-bottom: 15px;
+        color: #333;
+        font-size: 1.5rem;
+        border-bottom: 2px solid #ddd;
+      }
+
+      .text-example {
+        margin-bottom: 30px;
+        padding: 20px;
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+      }
+
+      .text-example:last-child {
+        margin-bottom: 0;
+      }
+
+      .text-example h3 {
+        margin: 0 0 15px 0;
+        color: #495057;
+        font-size: 1.1rem;
+      }
+
+      .text-example p {
+        margin: 0 0 15px 0;
+        color: #666;
+        font-size: 0.9rem;
+      }
+
+      .example-text {
+        display: inline-block;
+        padding: 12px 16px;
+        color: #333;
+        font-size: 1rem;
+        background: white;
+        border: 2px solid #ddd;
+        border-radius: 4px;
+        transition: border-color 0.2s ease;
+        cursor: pointer;
+      }
+
+      .example-text:hover {
+        border-color: #007bff;
+      }
+
+      .button-example {
+        margin-bottom: 20px;
+        padding: 20px;
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+      }
+
+      .button-example h3 {
+        margin: 0 0 15px 0;
+        color: #495057;
+        font-size: 1.1rem;
+      }
+
+      .button-example p {
+        margin: 0 0 15px 0;
+        color: #666;
+        font-size: 0.9rem;
+      }
+
+      .demo-button {
+        padding: 10px 20px;
+        color: white;
+        font-size: 1rem;
+        background: #007bff;
+        border: none;
+        border-radius: 4px;
+        transition: background-color 0.2s ease;
+        cursor: pointer;
+      }
+
+      .demo-button:hover {
+        background: #0056b3;
+      }
+
+      .demo-button:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+      }
+
+      .note {
+        margin-top: 20px;
+        padding: 15px;
+        color: #1565c0;
+        font-size: 0.9rem;
+        background: #e3f2fd;
+        border-left: 4px solid #2196f3;
+        border-radius: 0 4px 4px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Callout Component Demo</h1>
+
+    <div class="demo-section">
+      <h2>Callouts with Different Status Types</h2>
+      <p>
+        The following text elements have callouts already opened with different
+        status types. Each callout demonstrates the visual styling and behavior
+        for that status level.
+      </p>
+
+      <div class="text-example">
+        <h3>Info Status Callout</h3>
+        <p>Click on this text to see an informational callout:</p>
+        <span class="example-text" id="info-text">
+          Text with info callout
+        </span>
+      </div>
+
+      <div class="text-example">
+        <h3>Success Status Callout</h3>
+        <p>This text shows a success callout:</p>
+        <span class="example-text" id="success-text">
+          Text with success callout
+        </span>
+      </div>
+
+      <div class="text-example">
+        <h3>Warning Status Callout</h3>
+        <p>This text displays a warning callout:</p>
+        <span class="example-text" id="warning-text">
+          Text with warning callout
+        </span>
+      </div>
+
+      <div class="text-example">
+        <h3>Error Status Callout</h3>
+        <p>This text shows an error callout:</p>
+        <span class="example-text" id="error-text">
+          Text with error callout
+        </span>
+      </div>
+
+      <div class="note">
+        <strong>Note:</strong> These callouts are automatically positioned above
+        or below the target element based on available space, and include arrows
+        pointing to the anchor element.
+      </div>
+    </div>
+
+    <div class="demo-section">
+      <h2>Interactive Callout Trigger</h2>
+      <p>
+        This section demonstrates triggering a callout programmatically. The
+        callout is not initially open but can be opened by clicking the button.
+      </p>
+
+      <div class="button-example">
+        <h3>Button-Triggered Callout</h3>
+        <p>Click the button below to open a callout:</p>
+        <button class="demo-button" id="trigger-button">Open Callout</button>
+        <p style="margin-top: 15px; color: #6c757d; font-size: 0.85rem">
+          The callout will appear anchored to this button when clicked.
+        </p>
+      </div>
+
+      <div class="note">
+        <strong>Tip:</strong> The callout can be closed by clicking the close
+        button or by clicking outside of it (depending on the status type).
+      </div>
+    </div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { openCallout } from "../callout.js";
+
+      // Store callout references for cleanup
+      const activeCallouts = new Map();
+
+      // Function to open a callout for a given element
+      const showCallout = (element, message, status) => {
+        // Close any existing callout for this element
+        if (activeCallouts.has(element)) {
+          activeCallouts.get(element).close();
+        }
+
+        const callout = openCallout(message, {
+          anchorElement: element,
+          status,
+          onClose: () => {
+            activeCallouts.delete(element);
+          },
+        });
+
+        activeCallouts.set(element, callout);
+      };
+
+      // Demo 1: Callouts with different status types (auto-open)
+      document.addEventListener("DOMContentLoaded", () => {
+        // Info callout
+        const infoText = document.getElementById("info-text");
+        showCallout(
+          infoText,
+          "This is an <strong>informational callout</strong>. It provides helpful context or additional details about this element.",
+          "info",
+        );
+
+        // Success callout
+        const successText = document.getElementById("success-text");
+        showCallout(
+          successText,
+          "✅ This is a <strong>success callout</strong>. It indicates that an operation completed successfully.",
+          "success",
+        );
+
+        // Warning callout
+        const warningText = document.getElementById("warning-text");
+        showCallout(
+          warningText,
+          "⚠️ This is a <strong>warning callout</strong>. It alerts users about potential issues or important considerations.",
+          "warning",
+        );
+
+        // Error callout
+        const errorText = document.getElementById("error-text");
+        showCallout(
+          errorText,
+          "❌ This is an <strong>error callout</strong>. It indicates that something went wrong and requires attention.",
+          "error",
+        );
+
+        // Demo 2: Interactive callout trigger
+        const triggerButton = document.getElementById("trigger-button");
+        let isCalloutOpen = false;
+
+        triggerButton.addEventListener("click", () => {
+          if (!isCalloutOpen) {
+            const callout = openCallout(
+              "🎯 This callout was <strong>triggered by clicking the button</strong>!<br><br>It demonstrates how to programmatically open callouts in response to user interactions.",
+              {
+                anchorElement: triggerButton,
+                status: "info",
+                onClose: () => {
+                  isCalloutOpen = false;
+                  triggerButton.textContent = "Open Callout";
+                  triggerButton.disabled = false;
+                },
+              },
+            );
+
+            isCalloutOpen = true;
+            triggerButton.textContent = "Callout Open";
+            triggerButton.disabled = true;
+            activeCallouts.set(triggerButton, callout);
+          }
+        });
+      });
+
+      // Cleanup on page unload
+      window.addEventListener("beforeunload", () => {
+        activeCallouts.forEach((callout) => callout.close());
+        activeCallouts.clear();
+      });
+    </script>
+  </body>
+</html>
