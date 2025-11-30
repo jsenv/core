@@ -71,6 +71,13 @@
         background: white;
         border: 2px solid #ddd;
         border-radius: 4px;
+        transition: border-color 0.3s ease;
+      }
+
+      /* Callout effect on anchor elements */
+      .example-text[data-callout] {
+        border-color: var(--callout-color, #007bff);
+        box-shadow: 0 0 0 1px var(--callout-color, #007bff);
       }
       .example-text[data-callout] {
         border-color: var(--callout-color, #ddd);
@@ -179,9 +186,15 @@
       </div>
 
       <div class="note">
-        <strong>Note:</strong> These callouts are automatically positioned above
-        or below the target element based on available space, and include arrows
-        pointing to the anchor element.
+        <strong>Important:</strong> Callouts are designed to be displayed
+        <strong>one at a time</strong>. In this demo, we show multiple callouts
+        simultaneously for comparison purposes, but in practice only a single
+        callout should be open to avoid overlapping issues. <br /><br />
+        <strong>Anchor Element Styling:</strong> Notice how each text element's
+        border color changes when a callout is attached. This is achieved
+        through the <code>[data-callout]</code>
+        attribute and CSS custom properties that automatically reflect the
+        callout's status color.
       </div>
     </div>
 
@@ -202,8 +215,9 @@
       </div>
 
       <div class="note">
-        <strong>Tip:</strong> The callout can be closed by clicking the close
-        button or by clicking outside of it (depending on the status type).
+        <strong>Positioning:</strong> Callouts are automatically positioned
+        above or below the target element based on available viewport space,
+        with arrows pointing to the anchor element for clear visual association.
       </div>
     </div>
 
