@@ -210,7 +210,7 @@ export const PSEUDO_CLASSES = {
 };
 
 const NAVI_PSEUDO_STATE_CUSTOM_EVENT = "navi_pseudo_state";
-const dispatchNaviPseudoStateEvent = (element, value, previousValue) => {
+const dispatchNaviPseudoStateEvent = (element, value, oldValue) => {
   if (!element) {
     return;
   }
@@ -218,7 +218,7 @@ const dispatchNaviPseudoStateEvent = (element, value, previousValue) => {
     new CustomEvent(NAVI_PSEUDO_STATE_CUSTOM_EVENT, {
       detail: {
         pseudoState: value,
-        previousPseudoState: previousValue,
+        oldPseudoState: oldValue,
       },
     }),
   );
@@ -235,13 +235,15 @@ export const initPseudoStyles = (
     elementListeningPseudoState,
   },
 ) => {
-  const onStateChange = (value, previousValue) => {
-    effect?.(value, previousValue);
-    dispatchNaviPseudoStateEvent(
-      elementListeningPseudoState,
-      value,
-      previousValue,
-    );
+  const onStateChange = (value, oldValue) => {
+    effect?.(value, oldValue);
+    if (elementListeningPseudoState) {
+      dispatchNaviPseudoStateEvent(
+        elementListeningPseudoState,
+        value,
+        oldValue,
+      );
+    }
   };
 
   if (!pseudoClasses || pseudoClasses.length === 0) {
@@ -295,15 +297,15 @@ export const initPseudoStyles = (
     if (!someChange) {
       return;
     }
-    const previousState = state;
+    const oldState = state;
     state = currentState;
-    onStateChange(state, previousState);
+    onStateChange(state, oldState);
   };
 
   element.addEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, (event) => {
-    const previousState = event.detail.previousPseudoState;
+    const oldState = event.detail.oldPseudoState;
     state = event.detail.pseudoState;
-    onStateChange(state, previousState);
+    onStateChange(state, oldState);
   });
 
   for (const pseudoClass of pseudoClasses) {
@@ -391,9 +393,9 @@ const getStyleToApply = (styles, pseudoState, pseudoNamedStyles) => {
 
 const styleKeySetWeakMap = new WeakMap();
 const updateStyle = (element, style) => {
-  const previousStyleKeySet = styleKeySetWeakMap.get(element);
+  const oldStyleKeySet = styleKeySetWeakMap.get(element);
   const styleKeySet = new Set(style ? Object.keys(style) : []);
-  if (!previousStyleKeySet) {
+  if (!oldStyleKeySet) {
     for (const key of styleKeySet) {
       if (key.startsWith("--")) {
         element.style.setProperty(key, style[key]);
@@ -404,7 +406,7 @@ const updateStyle = (element, style) => {
     styleKeySetWeakMap.set(element, styleKeySet);
     return;
   }
-  const toDeleteKeySet = new Set(previousStyleKeySet);
+  const toDeleteKeySet = new Set(oldStyleKeySet);
   for (const key of styleKeySet) {
     toDeleteKeySet.delete(key);
     if (key.startsWith("--")) {
