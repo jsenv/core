@@ -33,6 +33,7 @@ import.meta.css = /* css */ `
       --callout-background-color: white;
       --callout-icon-color: black;
       --callout-padding: 8px;
+      --callout-z-index: 1000;
     }
   }
 
@@ -44,7 +45,7 @@ import.meta.css = /* css */ `
     position: absolute;
     top: 0;
     left: 0;
-    z-index: 1;
+    z-index: var(--callout-z-index);
     display: block;
     height: auto;
     opacity: 0;

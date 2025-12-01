@@ -342,12 +342,12 @@ const ButtonBasic = (props) => {
 
   return (
     <Box
+      data-readonly-silent={innerLoading ? "" : undefined}
       {...rest}
       as="button"
       ref={ref}
       data-icon={icon ? "" : undefined}
       data-discrete={discrete ? "" : undefined}
-      data-readonly-silent={innerLoading ? "" : undefined}
       data-callout-arrow-x="center"
       aria-busy={innerLoading}
       // style management

@@ -4561,19 +4561,19 @@ const DIMENSION_PROPS = {
     return { minHeight: "100%", height: "auto" }; // Take full height outside flex
   },
   shrinkX: (value, { parentBoxFlow }) => {
-    if (!value) {
-      return null;
-    }
     if (parentBoxFlow === "row" || parentBoxFlow === "inline-row") {
+      if (!value) {
+        return { flexShrink: 0 };
+      }
       return { flexShrink: 1 };
     }
     return { maxWidth: "100%" };
   },
   shrinkY: (value, { parentBoxFlow }) => {
-    if (!value) {
-      return null;
-    }
     if (parentBoxFlow === "column" || parentBoxFlow === "inline-column") {
+      if (!value) {
+        return { flexShrink: 0 };
+      }
       return { flexShrink: 1 };
     }
     return { maxHeight: "100%" };
@@ -10726,6 +10726,7 @@ import.meta.css = /* css */ `
       --callout-background-color: white;
       --callout-icon-color: black;
       --callout-padding: 8px;
+      --callout-z-index: 1000;
     }
   }
 
@@ -10737,7 +10738,7 @@ import.meta.css = /* css */ `
     position: absolute;
     top: 0;
     left: 0;
-    z-index: 1;
+    z-index: var(--callout-z-index);
     display: block;
     height: auto;
     opacity: 0;
@@ -11940,31 +11941,28 @@ const READONLY_CONSTRAINT = {
     if (field.type === "hidden") {
       return null;
     }
+    const isButton = field.tagName === "BUTTON";
+    const isBusy = field.getAttribute("aria-busy") === "true";
     const readonlySilent = field.hasAttribute("data-readonly-silent");
+    const messageAttribute = field.getAttribute("data-readonly-message");
     if (readonlySilent) {
       return { silent: true };
     }
-    const messageAttribute = field.getAttribute("data-readonly-message");
-    if (messageAttribute) {
-      return {
-        message: messageAttribute,
-        status: "info",
-      };
-    }
-    const isBusy = field.getAttribute("aria-busy") === "true";
     if (isBusy) {
       return {
         target: field,
-        message: `Cette action est en cours. Veuillez patienter.`,
+        message:
+          messageAttribute || `Cette action est en cours. Veuillez patienter.`,
         status: "info",
       };
     }
     return {
       target: field,
       message:
-        field.tagName === "BUTTON"
+        messageAttribute ||
+        (isButton
           ? `Cet action n'est pas disponible pour l'instant.`
-          : `Cet élément est en lecture seule et ne peut pas être modifié.`,
+          : `Cet élément est en lecture seule et ne peut pas être modifié.`),
       status: "info",
     };
   },
@@ -15389,12 +15387,12 @@ const ButtonBasic = props => {
   };
   const renderButtonContentMemoized = useCallback(renderButtonContent, [children]);
   return jsxs(Box, {
+    "data-readonly-silent": innerLoading ? "" : undefined,
     ...rest,
     as: "button",
     ref: ref,
     "data-icon": icon ? "" : undefined,
     "data-discrete": discrete ? "" : undefined,
-    "data-readonly-silent": innerLoading ? "" : undefined,
     "data-callout-arrow-x": "center",
     "aria-busy": innerLoading
     // style management

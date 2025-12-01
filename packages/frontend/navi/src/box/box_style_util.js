@@ -125,19 +125,19 @@ const DIMENSION_PROPS = {
     return { minHeight: "100%", height: "auto" }; // Take full height outside flex
   },
   shrinkX: (value, { parentBoxFlow }) => {
-    if (!value) {
-      return null;
-    }
     if (parentBoxFlow === "row" || parentBoxFlow === "inline-row") {
+      if (!value) {
+        return { flexShrink: 0 };
+      }
       return { flexShrink: 1 };
     }
     return { maxWidth: "100%" };
   },
   shrinkY: (value, { parentBoxFlow }) => {
-    if (!value) {
-      return null;
-    }
     if (parentBoxFlow === "column" || parentBoxFlow === "inline-column") {
+      if (!value) {
+        return { flexShrink: 0 };
+      }
       return { flexShrink: 1 };
     }
     return { maxHeight: "100%" };
