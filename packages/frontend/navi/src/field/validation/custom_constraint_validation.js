@@ -45,6 +45,15 @@ import { createPubSub } from "@jsenv/dom";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { openCallout } from "./callout/callout.js";
 import {
+  MIN_DIGIT_CONSTRAINT,
+  MIN_LOWER_LETTER_CONSTRAINT,
+  MIN_SPECIAL_CHARS_CONSTRAINT,
+  MIN_UPPER_LETTER_CONSTRAINT,
+} from "./constraints/min_char_constraint.js";
+import { READONLY_CONSTRAINT } from "./constraints/readonly_constraint.js";
+import { SAME_AS_CONSTRAINT } from "./constraints/same_as_constraint.js";
+import { SINGLE_SPACE_CONSTRAINT } from "./constraints/single_space_constraint.js";
+import {
   DISABLED_CONSTRAINT,
   MAX_CONSTRAINT,
   MAX_LENGTH_CONSTRAINT,
@@ -54,13 +63,36 @@ import {
   REQUIRED_CONSTRAINT,
   TYPE_EMAIL_CONSTRAINT,
   TYPE_NUMBER_CONSTRAINT,
-} from "./constraints/native_constraints.js";
-import { READONLY_CONSTRAINT } from "./constraints/readonly_constraint.js";
-import { SAME_AS_CONSTRAINT } from "./constraints/same_as_constraint.js";
+} from "./constraints/standard_constraints.js";
 import { listenInputChange } from "./input_change_effect.js";
 
 let debug = false;
 export const NAVI_VALIDITY_CHANGE_CUSTOM_EVENT = "navi_validity_change";
+
+const STANDARD_CONSTRAINT_SET = new Set([
+  DISABLED_CONSTRAINT,
+  REQUIRED_CONSTRAINT,
+  PATTERN_CONSTRAINT,
+  TYPE_EMAIL_CONSTRAINT,
+  TYPE_NUMBER_CONSTRAINT,
+  MIN_LENGTH_CONSTRAINT,
+  MAX_LENGTH_CONSTRAINT,
+  MIN_CONSTRAINT,
+  MAX_CONSTRAINT,
+]);
+const NAVI_CONSTRAINT_SET = new Set([
+  READONLY_CONSTRAINT,
+  SAME_AS_CONSTRAINT,
+  SINGLE_SPACE_CONSTRAINT,
+  MIN_DIGIT_CONSTRAINT,
+  MIN_LOWER_LETTER_CONSTRAINT,
+  MIN_UPPER_LETTER_CONSTRAINT,
+  MIN_SPECIAL_CHARS_CONSTRAINT,
+]);
+const DEFAULT_CONSTRAINT_SET = new Set([
+  ...STANDARD_CONSTRAINT_SET,
+  ...NAVI_CONSTRAINT_SET,
+]);
 
 const validationInProgressWeakSet = new WeakSet();
 
@@ -278,18 +310,8 @@ export const installCustomConstraintValidation = (
     return false;
   };
 
-  const constraintSet = new Set();
-  constraintSet.add(DISABLED_CONSTRAINT);
-  constraintSet.add(REQUIRED_CONSTRAINT);
-  constraintSet.add(PATTERN_CONSTRAINT);
-  constraintSet.add(TYPE_EMAIL_CONSTRAINT);
-  constraintSet.add(TYPE_NUMBER_CONSTRAINT);
-  constraintSet.add(MIN_LENGTH_CONSTRAINT);
-  constraintSet.add(MAX_LENGTH_CONSTRAINT);
-  constraintSet.add(MIN_CONSTRAINT);
-  constraintSet.add(MAX_CONSTRAINT);
-  constraintSet.add(READONLY_CONSTRAINT);
-  constraintSet.add(SAME_AS_CONSTRAINT);
+  const constraintSet = new Set(DEFAULT_CONSTRAINT_SET);
+
   register_constraint: {
     validationInterface.registerConstraint = (constraint) => {
       if (typeof constraint === "function") {
