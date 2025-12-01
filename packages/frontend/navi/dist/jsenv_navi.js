@@ -2103,6 +2103,340 @@ const localStorageSignal = (key) => {
   return valueSignal;
 };
 
+const valueInLocalStorage = (
+  key,
+  { type = "string", fallback } = {},
+) => {
+  const converter = typeConverters[type];
+  if (converter === undefined) {
+    console.warn(
+      `Invalid type "${type}" for "${key}" in local storage, expected one of ${Object.keys(
+        typeConverters,
+      ).join(", ")}`,
+    );
+  }
+  const getValidityMessage = (
+    valueToCheck,
+    valueInLocalStorage = valueToCheck,
+  ) => {
+    if (!converter) {
+      return "";
+    }
+    if (!converter.checkValidity) {
+      return "";
+    }
+    const checkValidityResult = converter.checkValidity(valueToCheck);
+    if (checkValidityResult === false) {
+      return `${valueInLocalStorage}`;
+    }
+    if (!checkValidityResult) {
+      return "";
+    }
+    return `${checkValidityResult}, got "${valueInLocalStorage}"`;
+  };
+
+  const get = () => {
+    let valueInLocalStorage = window.localStorage.getItem(key);
+    if (valueInLocalStorage === null) {
+      return fallback;
+    }
+    if (converter && converter.decode) {
+      const valueDecoded = converter.decode(valueInLocalStorage);
+      const validityMessage = getValidityMessage(
+        valueDecoded,
+        valueInLocalStorage,
+      );
+      if (validityMessage) {
+        console.warn(
+          `The value found in localStorage "${key}" is invalid: ${validityMessage}`,
+        );
+        return undefined;
+      }
+      return valueDecoded;
+    }
+    const validityMessage = getValidityMessage(valueInLocalStorage);
+    if (validityMessage) {
+      console.warn(
+        `The value found in localStorage "${key}" is invalid: ${validityMessage}`,
+      );
+      return undefined;
+    }
+    return valueInLocalStorage;
+  };
+  const set = (value) => {
+    if (value === undefined) {
+      window.localStorage.removeItem(key);
+      return;
+    }
+    const validityMessage = getValidityMessage(value);
+    if (validityMessage) {
+      console.warn(
+        `The value to set in localStorage "${key}" is invalid: ${validityMessage}`,
+      );
+    }
+    if (converter && converter.encode) {
+      const valueEncoded = converter.encode(value);
+      window.localStorage.setItem(key, valueEncoded);
+      return;
+    }
+    window.localStorage.setItem(key, value);
+  };
+  const remove = () => {
+    window.localStorage.removeItem(key);
+  };
+
+  return [get, set, remove];
+};
+
+const createNumberValidator = ({ min, max, step } = {}) => {
+  return {
+    decode: (value) => {
+      const valueParsed = parseFloat(value);
+      return valueParsed;
+    },
+    checkValidity: (value) => {
+      if (typeof value !== "number") {
+        return `must be a number`;
+      }
+      if (!Number.isFinite(value)) {
+        return `must be finite`;
+      }
+      if (min !== undefined && value < min) {
+        return min === 0 ? `must be positive` : `must be >= ${min}`;
+      }
+      if (max !== undefined && value > max) {
+        return max === 0 ? `must be negative` : `must be <= ${max}`;
+      }
+      if (step !== undefined) {
+        const remainder = (value - (min || 0)) % step;
+        const epsilon = 0.0000001;
+        if (remainder > epsilon && step - remainder > epsilon) {
+          if (step === 1) {
+            return `must be an integer`;
+          }
+          return `must be a multiple of ${step}`;
+        }
+      }
+      return "";
+    },
+  };
+};
+const typeConverters = {
+  boolean: {
+    checkValidity: (value) => {
+      if (typeof value !== "boolean") {
+        return `must be a boolean`;
+      }
+      return "";
+    },
+    decode: (value) => {
+      return value === "true";
+    },
+    encode: (value) => {
+      return value ? "true" : "false";
+    },
+  },
+  string: {
+    checkValidity: (value) => {
+      if (typeof value !== "string") {
+        return `must be a string`;
+      }
+      return "";
+    },
+  },
+  number: createNumberValidator(),
+  float: createNumberValidator(),
+  positive_number: createNumberValidator({ min: 0 }),
+  integer: createNumberValidator({ step: 1 }),
+  positive_integer: createNumberValidator({ min: 0, step: 1 }),
+  percentage: {
+    checkValidity: (value) => {
+      if (typeof value !== "string") {
+        return `must be a percentage`;
+      }
+      if (!value.endsWith("%")) {
+        return `must end with %`;
+      }
+      const percentageString = value.slice(0, -1);
+      const percentageFloat = parseFloat(percentageString);
+      if (typeof percentageFloat !== "number") {
+        return `must be a percentage`;
+      }
+      if (percentageFloat < 0 || percentageFloat > 100) {
+        return `must be between 0 and 100`;
+      }
+      return "";
+    },
+  },
+  object: {
+    decode: (value) => {
+      const valueParsed = JSON.parse(value);
+      return valueParsed;
+    },
+    encode: (value) => {
+      const valueStringified = JSON.stringify(value);
+      return valueStringified;
+    },
+    checkValidity: (value) => {
+      if (value === null || typeof value !== "object") {
+        return `must be an object`;
+      }
+      return "";
+    },
+  },
+};
+
+/**
+ * Creates an advanced signal with optional source signal synchronization and local storage persistence.
+ *
+ * The sourceSignal option creates a fallback mechanism where:
+ * 1. The signal initially takes the value from sourceSignal (if defined) or falls back to defaultValue
+ * 2. The signal can be manually overridden with any value
+ * 3. When sourceSignal changes, it will override the current value again
+ *
+ * This is useful for scenarios like UI state management where you want to:
+ * - Start with a value from an external source (e.g., backend data)
+ * - Allow temporary local overrides (e.g., user interactions)
+ * - Reset to the external source when context changes (e.g., navigation, data refresh)
+ *
+ * @param {any} defaultValue - The default value to use when no other value is available
+ * @param {Object} [options={}] - Configuration options
+ * @param {import("@preact/signals").Signal} [options.sourceSignal] - Source signal to synchronize with. When the source signal changes, this signal will be updated
+ * @param {string} [options.localStorageKey] - Key for local storage persistence. When provided, the signal value will be saved to and restored from localStorage
+ * @param {"string" | "number" | "boolean" | "object"} [options.type="string"] - Type for localStorage serialization/deserialization
+ * @returns {import("@preact/signals").Signal} A signal that can be synchronized with a source signal and/or persisted in localStorage
+ *
+ * @example
+ * // Basic signal with default value
+ * const count = stateSignal(0);
+ *
+ * @example
+ * // Position that follows backend data but allows temporary overrides
+ * const backendPosition = signal({ x: 100, y: 50 });
+ * const currentPosition = stateSignal({ x: 0, y: 0 }, { sourceSignal: backendPosition });
+ *
+ * // Initially: currentPosition.value = { x: 100, y: 50 } (from backend)
+ * // User drags: currentPosition.value = { x: 150, y: 80 } (manual override)
+ * // Backend updates: backendPosition.value = { x: 200, y: 60 }
+ * // Result: currentPosition.value = { x: 200, y: 60 } (reset to new backend value)
+ *
+ * @example
+ * // Signal with localStorage persistence
+ * const userPreference = stateSignal("light", {
+ *   localStorageKey: "theme",
+ *   type: "string"
+ * });
+ *
+ * @example
+ * // Combined: follows source with localStorage backup
+ * const serverConfig = signal({ timeout: 5000 });
+ * const appConfig = stateSignal({ timeout: 3000 }, {
+ *   sourceSignal: serverConfig,
+ *   localStorageKey: "app-config",
+ *   type: "object"
+ * });
+ */
+const stateSignal = (
+  defaultValue,
+  { sourceSignal, localStorageKey, type } = {},
+) => {
+  const advancedSignal = signal();
+  if (sourceSignal) {
+    connectSignalToSource(advancedSignal, sourceSignal, defaultValue);
+  } else {
+    advancedSignal.value = defaultValue;
+  }
+  if (localStorageKey) {
+    connectSignalWithLocalStorage(advancedSignal, localStorageKey, { type });
+  }
+  return advancedSignal;
+};
+
+const connectSignalToSource = (signal, sourceSignal, defaultValue) => {
+  connectSignalFallbacks(signal, [sourceSignal], defaultValue);
+  updateSignalOnChange(sourceSignal, signal);
+};
+const connectSignalFallbacks = (signal, fallbackSignals, defaultValue) => {
+  if (fallbackSignals.length === 0) {
+    signal.value = defaultValue;
+    return () => {};
+  }
+  if (fallbackSignals.length === 1) {
+    const [fallbackSignal] = fallbackSignals;
+    const applyFallback = () => {
+      const value = signal.value;
+      const fallbackValue = fallbackSignal.value;
+      if (value !== undefined) {
+        return;
+      }
+      if (fallbackValue !== undefined) {
+        signal.value = fallbackValue;
+        return;
+      }
+      signal.value = defaultValue;
+    };
+    applyFallback();
+    return effect(() => {
+      applyFallback();
+    });
+  }
+  const applyFallback = () => {
+    const fallbackValues = fallbackSignals.map((s) => s.value);
+    const value = signal.value;
+    if (value !== undefined) {
+      return;
+    }
+    for (const fallbackValue of fallbackValues) {
+      if (fallbackValue === undefined) {
+        continue;
+      }
+      signal.value = fallbackValue;
+      return;
+    }
+    signal.value = defaultValue;
+  };
+  applyFallback();
+  return effect(() => {
+    applyFallback();
+  });
+};
+const updateSignalOnChange = (sourceSignal, targetSignal) => {
+  let sourcePreviousValue = sourceSignal.value;
+  return effect(() => {
+    const sourceValue = sourceSignal.value;
+    if (sourcePreviousValue !== undefined && sourceValue !== undefined) {
+      // console.log(
+      //   "value modified from",
+      //   sourcePreviousValue,
+      //   "to",
+      //   sourceValue,
+      // );
+      targetSignal.value = sourceValue;
+    }
+    sourcePreviousValue = sourceValue;
+  });
+};
+
+const connectSignalWithLocalStorage = (
+  signal,
+  key,
+  { type = "string" } = {},
+) => {
+  const [get, set, remove] = valueInLocalStorage(key, { type });
+  const valueFromLocalStorage = get();
+  if (valueFromLocalStorage !== undefined) {
+    signal.value = valueFromLocalStorage;
+  }
+  effect(() => {
+    const value = signal.value;
+    if (value === undefined || value === null) {
+      remove();
+    } else {
+      set(value);
+    }
+  });
+};
+
 const getCallerInfo = (targetFunction = null, additionalOffset = 0) => {
   const originalPrepareStackTrace = Error.prepareStackTrace;
   try {
@@ -4208,193 +4542,52 @@ const useStateArray = (
   return [array, add, remove, reset];
 };
 
-const valueInLocalStorage = (key, options = {}) => {
-  const { type = "string" } = options;
-  const converter = typeConverters[type];
-  if (converter === undefined) {
-    console.warn(
-      `Invalid type "${type}" for "${key}" in local storage, expected one of ${Object.keys(
-        typeConverters,
-      ).join(", ")}`,
-    );
+/**
+ * Creates a function that generates abort signals, automatically cancelling previous requests.
+ *
+ * This prevents race conditions when multiple fetch requests are triggered rapidly,
+ * ensuring only the most recent request completes while canceling outdated ones.
+ *
+ * @param {string} [reason="Request superseded"] - Custom reason for the abort signal
+ * @returns {() => AbortSignal} A function that returns a fresh AbortSignal and cancels the previous one
+ *
+ * @example
+ * // Setup the request canceller
+ * const cancelPrevious = createRequestCanceller();
+ *
+ * // Use it in sequential fetch operations
+ * const searchUsers = async (query) => {
+ *   const signal = cancelPrevious(); // Cancels previous search
+ *   const response = await fetch(`/api/users?q=${query}`, { signal });
+ *   return response.json();
+ * };
+ *
+ * // Rapid successive calls - only the last one will complete
+ * searchUsers("john");  // Will be aborted
+ * searchUsers("jane");  // Will be aborted
+ * searchUsers("jack");  // Will complete
+ *
+ * @example
+ * // With custom reason
+ * const cancelPrevious = createRequestCanceller("Search cancelled");
+ */
+const createRequestCanceller = (reason = "Request superseded") => {
+  let previousAbortController;
+  return () => {
+    if (previousAbortController) {
+      const abortError = new DOMException(reason, "AbortError");
+      abortError.isHandled = true;
+      previousAbortController.abort(abortError);
+    }
+    previousAbortController = new AbortController();
+    return previousAbortController.signal;
+  };
+};
+window.addEventListener("unhandledrejection", (event) => {
+  if (event.reason?.isHandled) {
+    event.preventDefault(); // 💥 empêche les "uncaught rejection" devtools pour nos cancellations
   }
-  const getValidityMessage = (
-    valueToCheck,
-    valueInLocalStorage = valueToCheck,
-  ) => {
-    if (!converter) {
-      return "";
-    }
-    if (!converter.checkValidity) {
-      return "";
-    }
-    const checkValidityResult = converter.checkValidity(valueToCheck);
-    if (checkValidityResult === false) {
-      return `${valueInLocalStorage}`;
-    }
-    if (!checkValidityResult) {
-      return "";
-    }
-    return `${checkValidityResult}, got "${valueInLocalStorage}"`;
-  };
-
-  const get = () => {
-    let valueInLocalStorage = window.localStorage.getItem(key);
-    if (valueInLocalStorage === null) {
-      return Object.hasOwn(options, "default") ? options.default : undefined;
-    }
-    if (converter && converter.decode) {
-      const valueDecoded = converter.decode(valueInLocalStorage);
-      const validityMessage = getValidityMessage(
-        valueDecoded,
-        valueInLocalStorage,
-      );
-      if (validityMessage) {
-        console.warn(
-          `The value found in localStorage "${key}" is invalid: ${validityMessage}`,
-        );
-        return undefined;
-      }
-      return valueDecoded;
-    }
-    const validityMessage = getValidityMessage(valueInLocalStorage);
-    if (validityMessage) {
-      console.warn(
-        `The value found in localStorage "${key}" is invalid: ${validityMessage}`,
-      );
-      return undefined;
-    }
-    return valueInLocalStorage;
-  };
-  const set = (value) => {
-    if (value === undefined) {
-      window.localStorage.removeItem(key);
-      return;
-    }
-    const validityMessage = getValidityMessage(value);
-    if (validityMessage) {
-      console.warn(
-        `The value to set in localStorage "${key}" is invalid: ${validityMessage}`,
-      );
-    }
-    if (converter && converter.encode) {
-      const valueEncoded = converter.encode(value);
-      window.localStorage.setItem(key, valueEncoded);
-      return;
-    }
-    window.localStorage.setItem(key, value);
-  };
-  const remove = () => {
-    window.localStorage.removeItem(key);
-  };
-
-  return [get, set, remove];
-};
-
-const typeConverters = {
-  boolean: {
-    checkValidity: (value) => {
-      if (typeof value !== "boolean") {
-        return `must be a boolean`;
-      }
-      return "";
-    },
-    decode: (value) => {
-      return value === "true";
-    },
-  },
-  string: {
-    checkValidity: (value) => {
-      if (typeof value !== "string") {
-        return `must be a string`;
-      }
-      return "";
-    },
-  },
-  number: {
-    decode: (value) => {
-      const valueParsed = parseFloat(value);
-      return valueParsed;
-    },
-    checkValidity: (value) => {
-      if (typeof value !== "number") {
-        return `must be a number`;
-      }
-      if (!Number.isFinite(value)) {
-        return `must be finite`;
-      }
-      return "";
-    },
-  },
-  positive_number: {
-    decode: (value) => {
-      const valueParsed = parseFloat(value);
-      return valueParsed;
-    },
-    checkValidity: (value) => {
-      if (typeof value !== "number") {
-        return `must be a number`;
-      }
-      if (value < 0) {
-        return `must be positive`;
-      }
-      return "";
-    },
-  },
-  positive_integer: {
-    decode: (value) => {
-      const valueParsed = parseInt(value, 10);
-      return valueParsed;
-    },
-    checkValidity: (value) => {
-      if (typeof value !== "number") {
-        return `must be a number`;
-      }
-      if (!Number.isInteger(value)) {
-        return `must be an integer`;
-      }
-      if (value < 0) {
-        return `must be positive`;
-      }
-      return "";
-    },
-  },
-  percentage: {
-    checkValidity: (value) => {
-      if (typeof value !== "string") {
-        return `must be a percentage`;
-      }
-      if (!value.endsWith("%")) {
-        return `must end with %`;
-      }
-      const percentageString = value.slice(0, -1);
-      const percentageFloat = parseFloat(percentageString);
-      if (typeof percentageFloat !== "number") {
-        return `must be a percentage`;
-      }
-      if (percentageFloat < 0 || percentageFloat > 100) {
-        return `must be between 0 and 100`;
-      }
-      return "";
-    },
-  },
-  object: {
-    decode: (value) => {
-      const valueParsed = JSON.parse(value);
-      return valueParsed;
-    },
-    encode: (value) => {
-      const valueStringified = JSON.stringify(value);
-      return valueStringified;
-    },
-    checkValidity: (value) => {
-      if (value === null || typeof value !== "object") {
-        return `must be an object`;
-      }
-      return "";
-    },
-  },
-};
+});
 
 /**
  * Merges a component's base className with className received from props.
@@ -4562,7 +4755,7 @@ const DIMENSION_PROPS = {
   },
   shrinkX: (value, { parentBoxFlow }) => {
     if (parentBoxFlow === "row" || parentBoxFlow === "inline-row") {
-      if (!value) {
+      if (!value || value === "0") {
         return { flexShrink: 0 };
       }
       return { flexShrink: 1 };
@@ -4571,7 +4764,7 @@ const DIMENSION_PROPS = {
   },
   shrinkY: (value, { parentBoxFlow }) => {
     if (parentBoxFlow === "column" || parentBoxFlow === "inline-column") {
-      if (!value) {
+      if (!value || value === "0") {
         return { flexShrink: 0 };
       }
       return { flexShrink: 1 };
@@ -23595,5 +23788,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, BadgeCount, Box, Button, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, compareTwoJsValues, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useActiveRouteInfo, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useUrlSearchParam, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, BadgeCount, Box, Button, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, compareTwoJsValues, createAction, createRequestCanceller, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useActiveRouteInfo, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useUrlSearchParam, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map

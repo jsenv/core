@@ -22,6 +22,8 @@ export { useSignalSync } from "./src/state/use_signal_sync.js";
 export { useStateArray } from "./src/state/use_state_array.js";
 export { valueInLocalStorage } from "./src/state/value_in_local_storage.js";
 export { compareTwoJsValues } from "./src/utils/compare_two_js_values.js";
+// state fetching
+export { createRequestCanceller } from "./src/state/request_canceller.js";
 
 // Box
 export { Box } from "./src/box/box.jsx";
