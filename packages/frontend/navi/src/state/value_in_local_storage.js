@@ -1,5 +1,7 @@
-export const valueInLocalStorage = (key, options = {}) => {
-  const { type = "string" } = options;
+export const valueInLocalStorage = (
+  key,
+  { type = "string", fallback } = {},
+) => {
   const converter = typeConverters[type];
   if (converter === undefined) {
     console.warn(
@@ -31,7 +33,7 @@ export const valueInLocalStorage = (key, options = {}) => {
   const get = () => {
     let valueInLocalStorage = window.localStorage.getItem(key);
     if (valueInLocalStorage === null) {
-      return Object.hasOwn(options, "default") ? options.default : undefined;
+      return fallback;
     }
     if (converter && converter.decode) {
       const valueDecoded = converter.decode(valueInLocalStorage);
@@ -81,27 +83,8 @@ export const valueInLocalStorage = (key, options = {}) => {
   return [get, set, remove];
 };
 
-const typeConverters = {
-  boolean: {
-    checkValidity: (value) => {
-      if (typeof value !== "boolean") {
-        return `must be a boolean`;
-      }
-      return "";
-    },
-    decode: (value) => {
-      return value === "true";
-    },
-  },
-  string: {
-    checkValidity: (value) => {
-      if (typeof value !== "string") {
-        return `must be a string`;
-      }
-      return "";
-    },
-  },
-  number: {
+const createNumberValidator = ({ min, max, step } = {}) => {
+  return {
     decode: (value) => {
       const valueParsed = parseFloat(value);
       return valueParsed;
@@ -113,42 +96,54 @@ const typeConverters = {
       if (!Number.isFinite(value)) {
         return `must be finite`;
       }
+      if (min !== undefined && value < min) {
+        return min === 0 ? `must be positive` : `must be >= ${min}`;
+      }
+      if (max !== undefined && value > max) {
+        return max === 0 ? `must be negative` : `must be <= ${max}`;
+      }
+      if (step !== undefined) {
+        const remainder = (value - (min || 0)) % step;
+        const epsilon = 0.0000001;
+        if (remainder > epsilon && step - remainder > epsilon) {
+          if (step === 1) {
+            return `must be an integer`;
+          }
+          return `must be a multiple of ${step}`;
+        }
+      }
       return "";
     },
-  },
-  positive_number: {
-    decode: (value) => {
-      const valueParsed = parseFloat(value);
-      return valueParsed;
-    },
+  };
+};
+const typeConverters = {
+  boolean: {
     checkValidity: (value) => {
-      if (typeof value !== "number") {
-        return `must be a number`;
-      }
-      if (value < 0) {
-        return `must be positive`;
+      if (typeof value !== "boolean") {
+        return `must be a boolean`;
       }
       return "";
     },
-  },
-  positive_integer: {
     decode: (value) => {
-      const valueParsed = parseInt(value, 10);
-      return valueParsed;
+      return value === "true";
     },
+    encode: (value) => {
+      return value ? "true" : "false";
+    },
+  },
+  string: {
     checkValidity: (value) => {
-      if (typeof value !== "number") {
-        return `must be a number`;
-      }
-      if (!Number.isInteger(value)) {
-        return `must be an integer`;
-      }
-      if (value < 0) {
-        return `must be positive`;
+      if (typeof value !== "string") {
+        return `must be a string`;
       }
       return "";
     },
   },
+  number: createNumberValidator(),
+  float: createNumberValidator(),
+  positive_number: createNumberValidator({ min: 0 }),
+  integer: createNumberValidator({ step: 1 }),
+  positive_integer: createNumberValidator({ min: 0, step: 1 }),
   percentage: {
     checkValidity: (value) => {
       if (typeof value !== "string") {

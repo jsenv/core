@@ -126,7 +126,7 @@ const DIMENSION_PROPS = {
   },
   shrinkX: (value, { parentBoxFlow }) => {
     if (parentBoxFlow === "row" || parentBoxFlow === "inline-row") {
-      if (!value) {
+      if (!value || value === "0") {
         return { flexShrink: 0 };
       }
       return { flexShrink: 1 };
@@ -135,7 +135,7 @@ const DIMENSION_PROPS = {
   },
   shrinkY: (value, { parentBoxFlow }) => {
     if (parentBoxFlow === "column" || parentBoxFlow === "inline-column") {
-      if (!value) {
+      if (!value || value === "0") {
         return { flexShrink: 0 };
       }
       return { flexShrink: 1 };
