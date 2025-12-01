@@ -94,13 +94,16 @@ const STANDARD_CONSTRAINT_SET = new Set([
   MAX_CONSTRAINT,
 ]);
 const NAVI_CONSTRAINT_SET = new Set([
-  READONLY_CONSTRAINT,
-  SAME_AS_CONSTRAINT,
+  // the order matters here, the last constraint is picked first when multiple constraints fail
+  // so it's better to keep the most complex constraints at the beginning of the list
+  // so the more basic ones shows up first
+  MIN_SPECIAL_CHARS_CONSTRAINT,
   SINGLE_SPACE_CONSTRAINT,
   MIN_DIGIT_CONSTRAINT,
-  MIN_LOWER_LETTER_CONSTRAINT,
   MIN_UPPER_LETTER_CONSTRAINT,
-  MIN_SPECIAL_CHARS_CONSTRAINT,
+  MIN_LOWER_LETTER_CONSTRAINT,
+  SAME_AS_CONSTRAINT,
+  READONLY_CONSTRAINT,
 ]);
 const DEFAULT_CONSTRAINT_SET = new Set([
   ...STANDARD_CONSTRAINT_SET,
@@ -747,16 +750,21 @@ export const installCustomConstraintValidation = (
 };
 
 const pickConstraint = (a, b) => {
-  if (!a) {
-    return b;
-  }
-  if (!b) {
-    return a;
-  }
-  if (a.name === "required") {
+  const aPrio = getConstraintPriority(a);
+  const bPrio = getConstraintPriority(b);
+  if (aPrio > bPrio) {
     return a;
   }
   return b;
+};
+const getConstraintPriority = (constraint) => {
+  if (constraint.name === "required") {
+    return 100;
+  }
+  if (STANDARD_CONSTRAINT_SET.has(constraint)) {
+    return 10;
+  }
+  return 1;
 };
 
 const wouldButtonClickSubmitForm = (button, clickEvent) => {
