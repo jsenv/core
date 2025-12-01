@@ -25,6 +25,7 @@ export const useConstraintValidityState = (ref) => {
     if (!element) {
       return;
     }
+    setConstraintValidityState(checkValue());
     element.addEventListener(NAVI_VALIDITY_CHANGE_CUSTOM_EVENT, () => {
       setConstraintValidityState(checkValue());
     });

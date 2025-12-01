@@ -391,6 +391,7 @@ export const installCustomConstraintValidation = (
       failedConstraintInfo = {
         name: constraint.name,
         constraint,
+        status: "warning",
         ...constraintValidityInfo,
         cleanup,
         reportStatus: "not_reported",
