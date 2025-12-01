@@ -72,9 +72,7 @@ export const Icon = ({
   // but 2 zéros gives too big icons
   // while 1 "W" gives a nice result
   baseChar = "W",
-  "aria-label": ariaLabel,
-  role,
-  decorative = false,
+  decorative,
   onClick,
   ...props
 }) => {
@@ -87,12 +85,14 @@ export const Icon = ({
   );
 
   let { box, width, height } = props;
-  if (width !== undefined || height !== undefined) {
+  if (width === undefined && height === undefined) {
+    if (decorative === undefined) {
+      decorative = true;
+    }
+  } else {
     box = true;
   }
-  const ariaProps = decorative
-    ? { "aria-hidden": "true" }
-    : { role, "aria-label": ariaLabel };
+  const ariaProps = decorative ? { "aria-hidden": "true" } : {};
 
   if (box) {
     return (

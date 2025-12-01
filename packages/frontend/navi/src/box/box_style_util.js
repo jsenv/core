@@ -303,6 +303,7 @@ const VISUAL_PROPS = {
   opacity: PASS_THROUGH,
   filter: PASS_THROUGH,
   cursor: PASS_THROUGH,
+  transition: PASS_THROUGH,
 };
 const CONTENT_PROPS = {
   align: applyOnTwoProps("alignX", "alignY"),
