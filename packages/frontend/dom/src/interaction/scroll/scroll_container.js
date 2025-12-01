@@ -3,7 +3,8 @@
 import { getStyle } from "../../style/dom_styles.js";
 import { getScrollingElement, isScrollable } from "./is_scrollable.js";
 
-const { documentElement } = document;
+const { documentElement } =
+  typeof document === "object" ? document : { documentElement: null };
 
 export const getScrollContainer = (arg, { includeHidden } = {}) => {
   if (typeof arg !== "object" || arg.nodeType !== 1) {

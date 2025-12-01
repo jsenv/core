@@ -25,11 +25,13 @@ const onTransitionPausedByBreakpoint = (transition) => {
 const cleanupTransitionPausedByBreakpoint = (transition) => {
   transitionPausedByBreakpointWeakSet.delete(transition);
 };
-window.resumeTransitions = () => {
-  for (const transition of transitionPausedByBreakpointWeakSet) {
-    transition.play();
-  }
-};
+if (typeof window !== "undefined") {
+  window.resumeTransitions = () => {
+    for (const transition of transitionPausedByBreakpointWeakSet) {
+      transition.play();
+    }
+  };
+}
 
 export const combineTwoLifecycle = (lifecycleA, lifecycleB) => {
   if (!lifecycleA && !lifecycleB) {

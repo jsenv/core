@@ -304,6 +304,9 @@ const VISUAL_PROPS = {
   filter: PASS_THROUGH,
   cursor: PASS_THROUGH,
   transition: PASS_THROUGH,
+  overflow: PASS_THROUGH,
+  overflowX: PASS_THROUGH,
+  overflowY: PASS_THROUGH,
 };
 const CONTENT_PROPS = {
   align: applyOnTwoProps("alignX", "alignY"),

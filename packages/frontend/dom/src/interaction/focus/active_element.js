@@ -1,25 +1,28 @@
 import { effect, signal } from "@preact/signals";
 
-export const activeElementSignal = signal(document.activeElement);
-
-document.addEventListener(
-  "focus",
-  () => {
-    activeElementSignal.value = document.activeElement;
-  },
-  { capture: true },
+export const activeElementSignal = signal(
+  typeof document === "object" ? document.activeElement : undefined,
 );
-// When clicking on document there is no "focus" event dispatched on the document
-// We can detect that with "blur" event when relatedTarget is null
-document.addEventListener(
-  "blur",
-  (e) => {
-    if (!e.relatedTarget) {
+if (typeof document === "object") {
+  document.addEventListener(
+    "focus",
+    () => {
       activeElementSignal.value = document.activeElement;
-    }
-  },
-  { capture: true },
-);
+    },
+    { capture: true },
+  );
+  // When clicking on document there is no "focus" event dispatched on the document
+  // We can detect that with "blur" event when relatedTarget is null
+  document.addEventListener(
+    "blur",
+    (e) => {
+      if (!e.relatedTarget) {
+        activeElementSignal.value = document.activeElement;
+      }
+    },
+    { capture: true },
+  );
+}
 
 export const useActiveElement = () => {
   return activeElementSignal.value;

@@ -317,7 +317,9 @@ const isOverlayOf = (element, potentialTarget) => {
   return false;
 };
 
-const { documentElement } = document;
+const { documentElement } =
+  typeof document === "object" ? document : { documentElement: null };
+
 const createGetScrollOffsets = (
   scrollContainer,
   referenceScrollContainer,

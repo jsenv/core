@@ -121,7 +121,8 @@
 import { getScrollContainer } from "../interaction/scroll/scroll_container.js";
 import { getBorderSizes } from "../size/get_border_sizes.js";
 
-const { documentElement } = document;
+const { documentElement } =
+  typeof document === "object" ? document : { documentElement: null };
 
 /**
  * Get element rectangle relative to its scroll container

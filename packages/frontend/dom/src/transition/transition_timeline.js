@@ -76,4 +76,6 @@ export const startTimeline = () => {
   backgroundUpdateLoop.start();
   animationUpdateLoop.start();
 };
-startTimeline();
+if (typeof document === "object") {
+  startTimeline();
+}

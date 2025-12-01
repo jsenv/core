@@ -11,9 +11,14 @@ import {
   compareTwoJsValues,
 } from "../utils/compare_two_js_values.js";
 
-let baseUrl = import.meta.dev
-  ? new URL(window.HTML_ROOT_PATHNAME, window.location).href
-  : window.location.origin;
+let baseUrl;
+if (typeof window === "undefined") {
+  baseUrl = "http://localhost/";
+} else {
+  baseUrl = import.meta.dev
+    ? new URL(window.HTML_ROOT_PATHNAME, window.location).href
+    : window.location.origin;
+}
 
 export const setBaseUrl = (value) => {
   baseUrl = new URL(value, window.location).href;
