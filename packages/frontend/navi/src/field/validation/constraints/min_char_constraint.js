@@ -2,24 +2,24 @@ import { generateFieldInvalidMessage } from "./constraint_message_util.js";
 
 export const MIN_LOWER_LETTER_CONSTRAINT = {
   name: "min_lower_letter",
-  check: (input) => {
-    const inputValue = input.value;
-    if (!inputValue) {
+  check: (field) => {
+    const fieldValue = field.value;
+    if (!fieldValue && !field.required) {
       return "";
     }
-    const minAttribute = input.getAttribute("data-min-lower-letter");
+    const minAttribute = field.getAttribute("data-min-lower-letter");
     if (!minAttribute) {
       return "";
     }
     const min = parseInt(minAttribute, 10);
     let numberOfLowercaseChars = 0;
-    for (const char of inputValue) {
+    for (const char of fieldValue) {
       if (char >= "a" && char <= "z") {
         numberOfLowercaseChars++;
       }
     }
     if (numberOfLowercaseChars < min) {
-      const messageAttribute = input.getAttribute(
+      const messageAttribute = field.getAttribute(
         "data-min-lower-letter-message",
       );
       if (messageAttribute) {
@@ -28,12 +28,12 @@ export const MIN_LOWER_LETTER_CONSTRAINT = {
       if (min === 0) {
         return generateFieldInvalidMessage(
           `{field} doit contenir au moins une lettre minuscule.`,
-          { field: input },
+          { field },
         );
       }
       return generateFieldInvalidMessage(
         `{field} contenir au moins ${min} lettres minuscules.`,
-        { field: input },
+        { field },
       );
     }
     return "";
@@ -41,24 +41,24 @@ export const MIN_LOWER_LETTER_CONSTRAINT = {
 };
 export const MIN_UPPER_LETTER_CONSTRAINT = {
   name: "min_upper_letter",
-  check: (input) => {
-    const inputValue = input.value;
-    if (!inputValue) {
+  check: (field) => {
+    const fieldValue = field.value;
+    if (!fieldValue && !field.required) {
       return "";
     }
-    const minAttribute = input.getAttribute("data-min-upper-letter");
+    const minAttribute = field.getAttribute("data-min-upper-letter");
     if (!minAttribute) {
       return "";
     }
     const min = parseInt(minAttribute, 10);
     let numberOfUppercaseChars = 0;
-    for (const char of inputValue) {
+    for (const char of fieldValue) {
       if (char >= "A" && char <= "Z") {
         numberOfUppercaseChars++;
       }
     }
     if (numberOfUppercaseChars < min) {
-      const messageAttribute = input.getAttribute(
+      const messageAttribute = field.getAttribute(
         "data-min-upper-letter-message",
       );
       if (messageAttribute) {
@@ -67,12 +67,12 @@ export const MIN_UPPER_LETTER_CONSTRAINT = {
       if (min === 0) {
         return generateFieldInvalidMessage(
           `{field} doit contenir au moins une lettre majuscule.`,
-          { field: input },
+          { field },
         );
       }
       return generateFieldInvalidMessage(
         `{field} contenir au moins ${min} lettres majuscules.`,
-        { field: input },
+        { field },
       );
     }
     return "";
@@ -80,36 +80,36 @@ export const MIN_UPPER_LETTER_CONSTRAINT = {
 };
 export const MIN_DIGIT_CONSTRAINT = {
   name: "min_digit",
-  check: (input) => {
-    const inputValue = input.value;
-    if (!inputValue) {
+  check: (field) => {
+    const fieldValue = field.value;
+    if (!fieldValue && !field.required) {
       return "";
     }
-    const minAttribute = input.getAttribute("data-min-digit");
+    const minAttribute = field.getAttribute("data-min-digit");
     if (!minAttribute) {
       return "";
     }
     const min = parseInt(minAttribute, 10);
     let numberOfDigitChars = 0;
-    for (const char of inputValue) {
+    for (const char of fieldValue) {
       if (char >= "0" && char <= "9") {
         numberOfDigitChars++;
       }
     }
     if (numberOfDigitChars < min) {
-      const messageAttribute = input.getAttribute("data-min-digit-message");
+      const messageAttribute = field.getAttribute("data-min-digit-message");
       if (messageAttribute) {
         return messageAttribute;
       }
       if (min === 0) {
         return generateFieldInvalidMessage(
           `{field} doit contenir au moins un chiffre.`,
-          { field: input },
+          { field },
         );
       }
       return generateFieldInvalidMessage(
         `{field} doit contenir au moins ${min} chiffres.`,
-        { field: input },
+        { field },
       );
     }
     return "";
@@ -117,29 +117,29 @@ export const MIN_DIGIT_CONSTRAINT = {
 };
 export const MIN_SPECIAL_CHARS_CONSTRAINT = {
   name: "min_special_chars",
-  check: (input) => {
-    const inputValue = input.value;
-    if (!inputValue) {
+  check: (field) => {
+    const fieldValue = field.value;
+    if (!fieldValue && !field.required) {
       return "";
     }
-    const minSpecialChars = input.getAttribute("data-min-special-chars");
+    const minSpecialChars = field.getAttribute("data-min-special-chars");
     if (!minSpecialChars) {
       return "";
     }
     const min = parseInt(minSpecialChars, 10);
-    const specialChars = input.getAttribute("data-special-chars");
+    const specialChars = field.getAttribute("data-special-chars");
     if (!specialChars) {
       return "L'attribut data-special-chars doit être défini pour utiliser data-min-special-chars.";
     }
 
     let numberOfSpecialChars = 0;
-    for (const char of inputValue) {
+    for (const char of fieldValue) {
       if (specialChars.includes(char)) {
         numberOfSpecialChars++;
       }
     }
     if (numberOfSpecialChars < min) {
-      const messageAttribute = input.getAttribute(
+      const messageAttribute = field.getAttribute(
         "data-min-special-chars-message",
       );
       if (messageAttribute) {
@@ -148,12 +148,12 @@ export const MIN_SPECIAL_CHARS_CONSTRAINT = {
       if (min === 0) {
         return generateFieldInvalidMessage(
           `{field} doit contenir au moins un caractère spécial parmi: ${specialChars}`,
-          { field: input },
+          { field },
         );
       }
       return generateFieldInvalidMessage(
         `{field} doit contenir au moins ${min} caractères spéciaux parmi: ${specialChars}`,
-        { field: input },
+        { field },
       );
     }
     return "";

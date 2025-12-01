@@ -1,28 +1,37 @@
+import { generateFieldInvalidMessage } from "./constraint_message_util.js";
+
 export const SINGLE_SPACE_CONSTRAINT = {
   name: "single_space",
-  check: (element) => {
-    const singleSpace = element.hasAttribute("data-single-space");
+  check: (field) => {
+    const singleSpace = field.hasAttribute("data-single-space");
     if (!singleSpace) {
       return null;
     }
-    const inputValue = element.value;
-    const hasLeadingSpace = inputValue.startsWith(" ");
-    const hasTrailingSpace = inputValue.endsWith(" ");
-    const hasDoubleSpace = inputValue.includes("  ");
+    const fieldValue = field.value;
+    const hasLeadingSpace = fieldValue.startsWith(" ");
+    const hasTrailingSpace = fieldValue.endsWith(" ");
+    const hasDoubleSpace = fieldValue.includes("  ");
     if (hasLeadingSpace || hasDoubleSpace || hasTrailingSpace) {
-      const messageAttribute = element.getAttribute(
-        "data-single-space-message",
-      );
+      const messageAttribute = field.getAttribute("data-single-space-message");
       if (messageAttribute) {
         return messageAttribute;
       }
       if (hasLeadingSpace) {
-        return "Les espaces au début ne sont pas autorisés.";
+        return generateFieldInvalidMessage(
+          `{field} ne doit pas commencer par un espace.`,
+          { field },
+        );
       }
       if (hasTrailingSpace) {
-        return "Les espaces à la fin ne sont pas autorisés.";
+        return generateFieldInvalidMessage(
+          `{field} ne doit pas finir par un espace.`,
+          { field },
+        );
       }
-      return "Les espaces consécutifs ne sont pas autorisés.";
+      return generateFieldInvalidMessage(
+        `{field} ne doit pas contenir plusieurs espaces consécutifs.`,
+        { field },
+      );
     }
     return "";
   },

@@ -1,36 +1,34 @@
 export const SAME_AS_CONSTRAINT = {
   name: "same_as",
-  check: (element) => {
-    const sameAs = element.getAttribute("data-same-as");
+  check: (field) => {
+    const sameAs = field.getAttribute("data-same-as");
     if (!sameAs) {
       return null;
     }
-
-    const otherElement = document.querySelector(sameAs);
-    if (!otherElement) {
+    const otherField = document.querySelector(sameAs);
+    if (!otherField) {
       console.warn(
         `Same as constraint: could not find element for selector ${sameAs}`,
       );
       return null;
     }
-
-    const value = element.value;
-    const otherValue = otherElement.value;
-    if (value === "" || otherValue === "") {
+    const fieldValue = field.value;
+    if (!fieldValue && !field.required) {
+      return null;
+    }
+    const otherFieldValue = otherField.value;
+    if (!otherFieldValue && !otherField.required) {
       // don't validate if one of the two values is empty
       return null;
     }
-
-    if (value === otherValue) {
+    if (fieldValue === otherFieldValue) {
       return null;
     }
-
-    const messageAttribute = element.getAttribute("data-same-as-message");
+    const messageAttribute = field.getAttribute("data-same-as-message");
     if (messageAttribute) {
       return messageAttribute;
     }
-
-    const type = element.type;
+    const type = field.type;
     if (type === "password") {
       return `Ce mot de passe doit être identique au précédent.`;
     }

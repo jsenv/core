@@ -1,38 +1,38 @@
 export const READONLY_CONSTRAINT = {
   name: "readonly",
-  check: (element, { skipReadonly }) => {
+  check: (field, { skipReadonly }) => {
     if (skipReadonly) {
       return null;
     }
-    if (!element.readonly && !element.hasAttribute("data-readonly")) {
+    if (!field.readonly && !field.hasAttribute("data-readonly")) {
       return null;
     }
-    if (element.type === "hidden") {
+    if (field.type === "hidden") {
       return null;
     }
-    const readonlySilent = element.hasAttribute("data-readonly-silent");
+    const readonlySilent = field.hasAttribute("data-readonly-silent");
     if (readonlySilent) {
       return { silent: true };
     }
-    const messageAttribute = element.getAttribute("data-readonly-message");
+    const messageAttribute = field.getAttribute("data-readonly-message");
     if (messageAttribute) {
       return {
         message: messageAttribute,
         status: "info",
       };
     }
-    const isBusy = element.getAttribute("aria-busy") === "true";
+    const isBusy = field.getAttribute("aria-busy") === "true";
     if (isBusy) {
       return {
-        target: element,
+        target: field,
         message: `Cette action est en cours. Veuillez patienter.`,
         status: "info",
       };
     }
     return {
-      target: element,
+      target: field,
       message:
-        element.tagName === "BUTTON"
+        field.tagName === "BUTTON"
           ? `Cet action n'est pas disponible pour l'instant.`
           : `Cet élément est en lecture seule et ne peut pas être modifié.`,
       status: "info",

@@ -8,11 +8,9 @@ import { generateFieldInvalidMessage } from "./constraint_message_util.js";
 // in our case it's just here in case some code is wrongly calling "requestAction" or "checkValidity" on a disabled element
 export const DISABLED_CONSTRAINT = {
   name: "disabled",
-  check: (element) => {
-    if (element.disabled) {
-      return generateFieldInvalidMessage(`{field} est désactivé.`, {
-        field: element,
-      });
+  check: (field) => {
+    if (field.disabled) {
+      return generateFieldInvalidMessage(`{field} est désactivé.`, { field });
     }
     return null;
   },
@@ -20,14 +18,14 @@ export const DISABLED_CONSTRAINT = {
 
 export const REQUIRED_CONSTRAINT = {
   name: "required",
-  check: (element, { registerChange }) => {
-    if (!element.required) {
+  check: (field, { registerChange }) => {
+    if (!field.required) {
       return null;
     }
-    const messageAttribute = element.getAttribute("data-required-message");
+    const messageAttribute = field.getAttribute("data-required-message");
 
-    if (element.type === "checkbox") {
-      if (!element.checked) {
+    if (field.type === "checkbox") {
+      if (!field.checked) {
         if (messageAttribute) {
           return messageAttribute;
         }
@@ -35,12 +33,12 @@ export const REQUIRED_CONSTRAINT = {
       }
       return null;
     }
-    if (element.type === "radio") {
+    if (field.type === "radio") {
       // For radio buttons, check if any radio with the same name is selected
-      const name = element.name;
+      const name = field.name;
       if (!name) {
         // If no name, check just this radio
-        if (!element.checked) {
+        if (!field.checked) {
           if (messageAttribute) {
             return messageAttribute;
           }
@@ -49,13 +47,13 @@ export const REQUIRED_CONSTRAINT = {
         return null;
       }
 
-      const closestFieldset = element.closest("fieldset");
+      const closestFieldset = field.closest("fieldset");
       const fieldsetRequiredMessage = closestFieldset
         ? closestFieldset.getAttribute("data-required-message")
         : null;
 
       // Find the container (form or closest fieldset)
-      const container = element.form || closestFieldset || document;
+      const container = field.form || closestFieldset || document;
       // Check if any radio with the same name is checked
       const radioSelector = `input[type="radio"][name="${CSS.escape(name)}"]`;
       const radiosWithSameName = container.querySelectorAll(radioSelector);
@@ -81,23 +79,23 @@ export const REQUIRED_CONSTRAINT = {
           : undefined,
       };
     }
-    if (element.value) {
+    if (field.value) {
       return null;
     }
     if (messageAttribute) {
       return messageAttribute;
     }
-    if (element.type === "password") {
-      return element.hasAttribute("data-same-as")
+    if (field.type === "password") {
+      return field.hasAttribute("data-same-as")
         ? `Veuillez confirmer le mot de passe.`
         : `Veuillez saisir un mot de passe.`;
     }
-    if (element.type === "email") {
-      return element.hasAttribute("data-same-as")
+    if (field.type === "email") {
+      return field.hasAttribute("data-same-as")
         ? `Veuillez confirmer l'adresse e-mail`
         : `Veuillez saisir une adresse e-mail.`;
     }
-    return element.hasAttribute("data-same-as")
+    return field.hasAttribute("data-same-as")
       ? `Veuillez confirmer le champ précédent`
       : `Veuillez remplir ce champ.`;
   },
@@ -105,28 +103,28 @@ export const REQUIRED_CONSTRAINT = {
 
 export const PATTERN_CONSTRAINT = {
   name: "pattern",
-  check: (input) => {
-    const pattern = input.pattern;
+  check: (field) => {
+    const pattern = field.pattern;
     if (!pattern) {
       return null;
     }
-    const value = input.value;
-    if (!value) {
+    const value = field.value;
+    if (!value && !field.required) {
       return null;
     }
     const regex = new RegExp(pattern);
     if (regex.test(value)) {
       return null;
     }
-    const messageAttribute = input.getAttribute("data-pattern-message");
+    const messageAttribute = field.getAttribute("data-pattern-message");
     if (messageAttribute) {
       return messageAttribute;
     }
     let message = generateFieldInvalidMessage(
       `{field} ne correspond pas au format requis.`,
-      { field: input },
+      { field },
     );
-    const title = input.title;
+    const title = field.title;
     if (title) {
       message += `<br />${title}`;
     }
@@ -138,15 +136,15 @@ const emailregex =
   /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 export const TYPE_EMAIL_CONSTRAINT = {
   name: "type_email",
-  check: (input) => {
-    if (input.type !== "email") {
+  check: (field) => {
+    if (field.type !== "email") {
       return null;
     }
-    const value = input.value;
-    if (!value) {
+    const value = field.value;
+    if (!value && !field.required) {
       return null;
     }
-    const messageAttribute = input.getAttribute("data-type-email-message");
+    const messageAttribute = field.getAttribute("data-type-email-message");
     if (!value.includes("@")) {
       if (messageAttribute) {
         return messageAttribute;
@@ -165,42 +163,41 @@ export const TYPE_EMAIL_CONSTRAINT = {
 
 export const MIN_LENGTH_CONSTRAINT = {
   name: "min_length",
-  check: (element) => {
-    if (element.tagName === "INPUT") {
-      if (!INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET.has(element.type)) {
+  check: (field) => {
+    if (field.tagName === "INPUT") {
+      if (!INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET.has(field.type)) {
         return null;
       }
-    } else if (element.tagName !== "TEXTAREA") {
+    } else if (field.tagName !== "TEXTAREA") {
       return null;
     }
 
-    const minLength = element.minLength;
+    const minLength = field.minLength;
     if (minLength === -1) {
       return null;
     }
-
-    const value = element.value;
-    const valueLength = value.length;
-    if (valueLength === 0) {
+    const value = field.value;
+    if (!value && !field.required) {
       return null;
     }
-    if (valueLength < minLength) {
-      const messageAttribute = element.getAttribute("data-min-length-message");
-      if (messageAttribute) {
-        return messageAttribute;
-      }
-      if (valueLength === 1) {
-        return generateFieldInvalidMessage(
-          `{field} doit contenir au moins ${minLength} caractère (il contient actuellement un seul caractère).`,
-          { field: element },
-        );
-      }
+    const valueLength = value.length;
+    if (valueLength >= minLength) {
+      return null;
+    }
+    const messageAttribute = field.getAttribute("data-min-length-message");
+    if (messageAttribute) {
+      return messageAttribute;
+    }
+    if (valueLength === 1) {
       return generateFieldInvalidMessage(
-        `{field} doit contenir au moins ${minLength} caractères (il contient actuellement ${valueLength} caractères).`,
-        { field: element },
+        `{field} doit contenir au moins ${minLength} caractère (il contient actuellement un seul caractère).`,
+        { field },
       );
     }
-    return null;
+    return generateFieldInvalidMessage(
+      `{field} doit contenir au moins ${minLength} caractères (il contient actuellement ${valueLength} caractères).`,
+      { field },
+    );
   },
 };
 const INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET = new Set([
@@ -214,33 +211,31 @@ const INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET = new Set([
 
 export const MAX_LENGTH_CONSTRAINT = {
   name: "max_length",
-  check: (element) => {
-    if (element.tagName === "INPUT") {
-      if (!INPUT_TYPE_SUPPORTING_MAX_LENGTH_SET.has(element.type)) {
+  check: (field) => {
+    if (field.tagName === "INPUT") {
+      if (!INPUT_TYPE_SUPPORTING_MAX_LENGTH_SET.has(field.type)) {
         return null;
       }
-    } else if (element.tagName !== "TEXTAREA") {
+    } else if (field.tagName !== "TEXTAREA") {
       return null;
     }
-
-    const maxLength = element.maxLength;
+    const maxLength = field.maxLength;
     if (maxLength === -1) {
       return null;
     }
-
-    const value = element.value;
+    const value = field.value;
     const valueLength = value.length;
-    if (valueLength > maxLength) {
-      const messageAttribute = element.getAttribute("data-max-length-message");
-      if (messageAttribute) {
-        return messageAttribute;
-      }
-      return generateFieldInvalidMessage(
-        `{field} doit contenir au maximum ${maxLength} caractères (il contient actuellement ${valueLength} caractères).`,
-        { field: element },
-      );
+    if (valueLength <= maxLength) {
+      return null;
     }
-    return null;
+    const messageAttribute = field.getAttribute("data-max-length-message");
+    if (messageAttribute) {
+      return messageAttribute;
+    }
+    return generateFieldInvalidMessage(
+      `{field} doit contenir au maximum ${maxLength} caractères (il contient actuellement ${valueLength} caractères).`,
+      { field },
+    );
   },
 };
 const INPUT_TYPE_SUPPORTING_MAX_LENGTH_SET = new Set(
@@ -249,24 +244,24 @@ const INPUT_TYPE_SUPPORTING_MAX_LENGTH_SET = new Set(
 
 export const TYPE_NUMBER_CONSTRAINT = {
   name: "type_number",
-  check: (element) => {
-    if (element.tagName !== "INPUT") {
+  check: (field) => {
+    if (field.tagName !== "INPUT") {
       return null;
     }
-    if (element.type !== "number") {
+    if (field.type !== "number") {
       return null;
     }
-    if (element.value === "") {
+    if (field.value === "" && !field.required) {
       return null;
     }
-    const value = element.valueAsNumber;
+    const value = field.valueAsNumber;
     if (isNaN(value)) {
-      const messageAttribute = element.getAttribute("data-type-number-message");
+      const messageAttribute = field.getAttribute("data-type-number-message");
       if (messageAttribute) {
         return messageAttribute;
       }
       return generateFieldInvalidMessage(`{field} doit être un nombre.`, {
-        field: element,
+        field,
       });
     }
     return null;
@@ -275,12 +270,12 @@ export const TYPE_NUMBER_CONSTRAINT = {
 
 export const MIN_CONSTRAINT = {
   name: "min",
-  check: (element) => {
-    if (element.tagName !== "INPUT") {
+  check: (field) => {
+    if (field.tagName !== "INPUT") {
       return null;
     }
-    if (element.type === "number") {
-      const minString = element.min;
+    if (field.type === "number") {
+      const minString = field.min;
       if (minString === "") {
         return null;
       }
@@ -288,38 +283,38 @@ export const MIN_CONSTRAINT = {
       if (isNaN(minNumber)) {
         return null;
       }
-      const valueAsNumber = element.valueAsNumber;
+      const valueAsNumber = field.valueAsNumber;
       if (isNaN(valueAsNumber)) {
         return null;
       }
       if (valueAsNumber < minNumber) {
-        const messageAttribute = element.getAttribute("data-min-message");
+        const messageAttribute = field.getAttribute("data-min-message");
         if (messageAttribute) {
           return messageAttribute;
         }
         return generateFieldInvalidMessage(
           `{field} doit être supérieur ou égal à <strong>${minString}</strong>.`,
-          { field: element },
+          { field },
         );
       }
       return null;
     }
-    if (element.type === "time") {
-      const min = element.min;
+    if (field.type === "time") {
+      const min = field.min;
       if (min === undefined) {
         return null;
       }
       const [minHours, minMinutes] = min.split(":").map(Number);
-      const value = element.value;
+      const value = field.value;
       const [hours, minutes] = value.split(":").map(Number);
-      const messageAttribute = element.getAttribute("data-min-message");
+      const messageAttribute = field.getAttribute("data-min-message");
       if (hours < minHours || (hours === minHours && minMinutes < minutes)) {
         if (messageAttribute) {
           return messageAttribute;
         }
         return generateFieldInvalidMessage(
           `{field} doit être <strong>${min}</strong> ou plus.`,
-          { field: element },
+          { field },
         );
       }
       return null;
@@ -335,51 +330,51 @@ export const MIN_CONSTRAINT = {
 
 export const MAX_CONSTRAINT = {
   name: "max",
-  check: (element) => {
-    if (element.tagName !== "INPUT") {
+  check: (field) => {
+    if (field.tagName !== "INPUT") {
       return null;
     }
-    if (element.type === "number") {
-      const maxString = element.max;
-      if (maxString === "") {
+    if (field.type === "number") {
+      const maxAttribute = field.max;
+      if (maxAttribute === "") {
         return null;
       }
-      const maxNumber = parseFloat(maxString);
+      const maxNumber = parseFloat(maxAttribute);
       if (isNaN(maxNumber)) {
         return null;
       }
-      const valueAsNumber = element.valueAsNumber;
+      const valueAsNumber = field.valueAsNumber;
       if (isNaN(valueAsNumber)) {
         return null;
       }
       if (valueAsNumber > maxNumber) {
-        const messageAttribute = element.getAttribute("data-max-message");
+        const messageAttribute = field.getAttribute("data-max-message");
         if (messageAttribute) {
           return messageAttribute;
         }
         return generateFieldInvalidMessage(
-          `{field} être <strong>${maxString}</strong> ou plus.`,
-          { field: element },
+          `{field} être <strong>${maxAttribute}</strong> ou plus.`,
+          { field },
         );
       }
       return null;
     }
-    if (element.type === "time") {
-      const max = element.min;
+    if (field.type === "time") {
+      const max = field.max;
       if (max === undefined) {
         return null;
       }
       const [maxHours, maxMinutes] = max.split(":").map(Number);
-      const value = element.value;
+      const value = field.value;
       const [hours, minutes] = value.split(":").map(Number);
       if (hours > maxHours || (hours === maxHours && maxMinutes > minutes)) {
-        const messageAttribute = element.getAttribute("data-max-message");
+        const messageAttribute = field.getAttribute("data-max-message");
         if (messageAttribute) {
           return messageAttribute;
         }
         return generateFieldInvalidMessage(
           `{field} doit être <strong>${max}</strong> ou moins.`,
-          { field: element },
+          { field },
         );
       }
       return null;

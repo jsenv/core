@@ -12,9 +12,9 @@ export const createUniqueValueConstraint = (
 ) => {
   return {
     name: "unique",
-    check: (input) => {
-      const inputValue = input.value;
-      const hasConflict = existingValueSet.has(inputValue);
+    check: (field) => {
+      const fieldValue = field.value;
+      const hasConflict = existingValueSet.has(fieldValue);
       // console.log({
       //   inputValue,
       //   names: Array.from(otherNameSet.values()),
@@ -22,7 +22,7 @@ export const createUniqueValueConstraint = (
       // });
       if (hasConflict) {
         return replaceStringVars(message, {
-          "{value}": inputValue,
+          "{value}": fieldValue,
         });
       }
       return "";

@@ -1,7 +1,7 @@
 export const CONFIRM_CONSTRAINT = {
   name: "confirm",
-  check: (element) => {
-    const messageAttribute = element.getAttribute("data-confirm");
+  check: (field) => {
+    const messageAttribute = field.getAttribute("data-confirm");
     if (!messageAttribute) {
       return "";
     }

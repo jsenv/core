@@ -388,7 +388,7 @@ export const installCustomConstraintValidation = (
         typeof checkResult === "string"
           ? { message: checkResult }
           : checkResult;
-      failedConstraintInfo = {
+      const thisConstraintFailureInfo = {
         name: constraint.name,
         constraint,
         status: "warning",
@@ -396,9 +396,37 @@ export const installCustomConstraintValidation = (
         cleanup,
         reportStatus: "not_reported",
       };
-      validityInfoMap.set(constraint, failedConstraintInfo);
+      validityInfoMap.set(constraint, thisConstraintFailureInfo);
       newConstraintValidityState.valid = false;
-      newConstraintValidityState[constraint.name] = failedConstraintInfo;
+      newConstraintValidityState[constraint.name] = thisConstraintFailureInfo;
+
+      // Here we diverge from the standard HTML validation behavior:
+      // Many constraint implementation have this kind of logic internally:
+      // if (!field.value && !field.required) return null
+      // It means when required is not set the constraint do not apply
+      // BUT the browser here is more aggressive and never apply constraints
+      // when input value is not set.
+      // In other words constraints like minLength won't be reported until the user
+      // types something in the input
+      // This is very distrubing and prevent to know state of the constraints until user starts typing.
+      // When required is not set we behave like the browser
+      // but when required is set we compute the constraints even if the input is empty
+      // This allow to inform the user about all the constraints that are not met
+      if (failedConstraintInfo) {
+        // there is already a failing constraint, which one to we pick?
+        const constraintPicked = pickConstraint(
+          failedConstraintInfo.constraint,
+          constraint,
+        );
+        if (constraintPicked === constraint) {
+          failedConstraintInfo = thisConstraintFailureInfo;
+        } else {
+          // keep the current failedConstraintInfo, this one fails but it's considered secondary
+        }
+      } else {
+        // first failing constraint
+        failedConstraintInfo = thisConstraintFailureInfo;
+      }
     }
 
     if (failedConstraintInfo) {
@@ -713,6 +741,19 @@ export const installCustomConstraintValidation = (
   }
 
   return validationInterface;
+};
+
+const pickConstraint = (a, b) => {
+  if (!a) {
+    return b;
+  }
+  if (!b) {
+    return a;
+  }
+  if (a.name === "required") {
+    return a;
+  }
+  return b;
 };
 
 const wouldButtonClickSubmitForm = (button, clickEvent) => {
