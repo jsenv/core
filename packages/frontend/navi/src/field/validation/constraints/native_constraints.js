@@ -2,13 +2,17 @@
  * https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
  */
 
+import { generateFieldInvalidMessage } from "./constraint_message_util.js";
+
 // this constraint is not really a native constraint and browser just not let this happen at all
 // in our case it's just here in case some code is wrongly calling "requestAction" or "checkValidity" on a disabled element
 export const DISABLED_CONSTRAINT = {
   name: "disabled",
   check: (element) => {
     if (element.disabled) {
-      return `Ce champ est désactivé.`;
+      return generateFieldInvalidMessage(`{field} est désactivé.`, {
+        field: element,
+      });
     }
     return null;
   },
@@ -20,11 +24,14 @@ export const REQUIRED_CONSTRAINT = {
     if (!element.required) {
       return null;
     }
-    const requiredMessage = element.getAttribute("data-required-message");
+    const messageAttribute = element.getAttribute("data-required-message");
 
     if (element.type === "checkbox") {
       if (!element.checked) {
-        return requiredMessage || `Veuillez cocher cette case.`;
+        if (messageAttribute) {
+          return messageAttribute;
+        }
+        return `Veuillez cocher cette case.`;
       }
       return null;
     }
@@ -34,7 +41,10 @@ export const REQUIRED_CONSTRAINT = {
       if (!name) {
         // If no name, check just this radio
         if (!element.checked) {
-          return requiredMessage || `Veuillez sélectionner une option.`;
+          if (messageAttribute) {
+            return messageAttribute;
+          }
+          return `Veuillez sélectionner une option.`;
         }
         return null;
       }
@@ -63,7 +73,7 @@ export const REQUIRED_CONSTRAINT = {
 
       return {
         message:
-          requiredMessage ||
+          messageAttribute ||
           fieldsetRequiredMessage ||
           `Veuillez sélectionner une option.`,
         target: closestFieldset
@@ -74,8 +84,8 @@ export const REQUIRED_CONSTRAINT = {
     if (element.value) {
       return null;
     }
-    if (requiredMessage) {
-      return requiredMessage;
+    if (messageAttribute) {
+      return messageAttribute;
     }
     if (element.type === "password") {
       return element.hasAttribute("data-same-as")
@@ -92,6 +102,7 @@ export const REQUIRED_CONSTRAINT = {
       : `Veuillez remplir ce champ.`;
   },
 };
+
 export const PATTERN_CONSTRAINT = {
   name: "pattern",
   check: (input) => {
@@ -107,11 +118,14 @@ export const PATTERN_CONSTRAINT = {
     if (regex.test(value)) {
       return null;
     }
-    const patternMessage = input.getAttribute("data-pattern-message");
-    if (patternMessage) {
-      return patternMessage;
+    const messageAttribute = input.getAttribute("data-pattern-message");
+    if (messageAttribute) {
+      return messageAttribute;
     }
-    let message = `Veuillez respecter le format requis.`;
+    let message = generateFieldInvalidMessage(
+      `{field} ne correspond pas au format requis.`,
+      { field: input },
+    );
     const title = input.title;
     if (title) {
       message += `<br />${title}`;
@@ -132,10 +146,17 @@ export const TYPE_EMAIL_CONSTRAINT = {
     if (!value) {
       return null;
     }
+    const messageAttribute = input.getAttribute("data-type-email-message");
     if (!value.includes("@")) {
+      if (messageAttribute) {
+        return messageAttribute;
+      }
       return `Veuillez inclure "@" dans l'adresse e-mail. Il manque un symbole "@" dans ${value}.`;
     }
     if (!emailregex.test(value)) {
+      if (messageAttribute) {
+        return messageAttribute;
+      }
       return `Veuillez saisir une adresse e-mail valide.`;
     }
     return null;
@@ -164,11 +185,20 @@ export const MIN_LENGTH_CONSTRAINT = {
       return null;
     }
     if (valueLength < minLength) {
-      const thisField = generateThisFieldText(element);
-      if (valueLength === 1) {
-        return `${thisField} doit contenir au moins ${minLength} caractère (il contient actuellement un seul caractère).`;
+      const messageAttribute = element.getAttribute("data-min-length-message");
+      if (messageAttribute) {
+        return messageAttribute;
       }
-      return `${thisField} doit contenir au moins ${minLength} caractères (il contient actuellement ${valueLength} caractères).`;
+      if (valueLength === 1) {
+        return generateFieldInvalidMessage(
+          `{field} doit contenir au moins ${minLength} caractère (il contient actuellement un seul caractère).`,
+          { field: element },
+        );
+      }
+      return generateFieldInvalidMessage(
+        `{field} doit contenir au moins ${minLength} caractères (il contient actuellement ${valueLength} caractères).`,
+        { field: element },
+      );
     }
     return null;
   },
@@ -181,14 +211,6 @@ const INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET = new Set([
   "email",
   "password",
 ]);
-
-const generateThisFieldText = (field) => {
-  return field.type === "password"
-    ? "Ce mot de passe"
-    : field.type === "email"
-      ? "Cette adresse e-mail"
-      : "Ce champ";
-};
 
 export const MAX_LENGTH_CONSTRAINT = {
   name: "max_length",
@@ -209,8 +231,14 @@ export const MAX_LENGTH_CONSTRAINT = {
     const value = element.value;
     const valueLength = value.length;
     if (valueLength > maxLength) {
-      const thisField = generateThisFieldText(element);
-      return `${thisField} doit contenir au maximum ${maxLength} caractères (il contient actuellement ${valueLength} caractères).`;
+      const messageAttribute = element.getAttribute("data-max-length-message");
+      if (messageAttribute) {
+        return messageAttribute;
+      }
+      return generateFieldInvalidMessage(
+        `{field} doit contenir au maximum ${maxLength} caractères (il contient actuellement ${valueLength} caractères).`,
+        { field: element },
+      );
     }
     return null;
   },
@@ -233,7 +261,13 @@ export const TYPE_NUMBER_CONSTRAINT = {
     }
     const value = element.valueAsNumber;
     if (isNaN(value)) {
-      return `Doit être un nombre.`;
+      const messageAttribute = element.getAttribute("data-type-number-message");
+      if (messageAttribute) {
+        return messageAttribute;
+      }
+      return generateFieldInvalidMessage(`{field} doit être un nombre.`, {
+        field: element,
+      });
     }
     return null;
   },
@@ -259,10 +293,13 @@ export const MIN_CONSTRAINT = {
         return null;
       }
       if (valueAsNumber < minNumber) {
-        const minMessage = element.getAttribute("data-min-message");
-        return (
-          minMessage ||
-          `Doit être supérieur ou égal à <strong>${minString}</strong>.`
+        const messageAttribute = element.getAttribute("data-min-message");
+        if (messageAttribute) {
+          return messageAttribute;
+        }
+        return generateFieldInvalidMessage(
+          `{field} doit être supérieur ou égal à <strong>${minString}</strong>.`,
+          { field: element },
         );
       }
       return null;
@@ -275,11 +312,15 @@ export const MIN_CONSTRAINT = {
       const [minHours, minMinutes] = min.split(":").map(Number);
       const value = element.value;
       const [hours, minutes] = value.split(":").map(Number);
-      if (hours < minHours) {
-        return `Doit être <strong>${min}</strong> ou plus.`;
-      }
-      if (hours === minHours && minMinutes < minutes) {
-        return `Doit être <strong>${min}</strong> ou plus.`;
+      const messageAttribute = element.getAttribute("data-min-message");
+      if (hours < minHours || (hours === minHours && minMinutes < minutes)) {
+        if (messageAttribute) {
+          return messageAttribute;
+        }
+        return generateFieldInvalidMessage(
+          `{field} doit être <strong>${min}</strong> ou plus.`,
+          { field: element },
+        );
       }
       return null;
     }
@@ -312,8 +353,14 @@ export const MAX_CONSTRAINT = {
         return null;
       }
       if (valueAsNumber > maxNumber) {
-        const maxMessage = element.getAttribute("data-max-message");
-        return maxMessage || `Doit être <strong>${maxString}</strong> ou plus.`;
+        const messageAttribute = element.getAttribute("data-max-message");
+        if (messageAttribute) {
+          return messageAttribute;
+        }
+        return generateFieldInvalidMessage(
+          `{field} être <strong>${maxString}</strong> ou plus.`,
+          { field: element },
+        );
       }
       return null;
     }
@@ -325,11 +372,15 @@ export const MAX_CONSTRAINT = {
       const [maxHours, maxMinutes] = max.split(":").map(Number);
       const value = element.value;
       const [hours, minutes] = value.split(":").map(Number);
-      if (hours > maxHours) {
-        return `Doit être <strong>${max}</strong> ou moins.`;
-      }
-      if (hours === maxHours && maxMinutes > minutes) {
-        return `Doit être <strong>${max}</strong> ou moins.`;
+      if (hours > maxHours || (hours === maxHours && maxMinutes > minutes)) {
+        const messageAttribute = element.getAttribute("data-max-message");
+        if (messageAttribute) {
+          return messageAttribute;
+        }
+        return generateFieldInvalidMessage(
+          `{field} doit être <strong>${max}</strong> ou moins.`,
+          { field: element },
+        );
       }
       return null;
     }

@@ -391,7 +391,7 @@ const InputRangeBasic = (props) => {
         data-value={uiState}
         value={innerValue}
         onInput={(e) => {
-          const inputValue = e.target.value;
+          const inputValue = e.target.valueAsNumber;
           uiStateController.setUIState(inputValue, e);
           innerOnInput?.(e);
           updateFillRatio();

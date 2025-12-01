@@ -25,9 +25,9 @@ export const SAME_AS_CONSTRAINT = {
       return null;
     }
 
-    const message = element.getAttribute("data-same-as-message");
-    if (message) {
-      return message;
+    const messageAttribute = element.getAttribute("data-same-as-message");
+    if (messageAttribute) {
+      return messageAttribute;
     }
 
     const type = element.type;

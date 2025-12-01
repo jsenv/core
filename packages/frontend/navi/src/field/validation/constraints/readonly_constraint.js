@@ -14,10 +14,10 @@ export const READONLY_CONSTRAINT = {
     if (readonlySilent) {
       return { silent: true };
     }
-    const readonlyMessage = element.getAttribute("data-readonly-message");
-    if (readonlyMessage) {
+    const messageAttribute = element.getAttribute("data-readonly-message");
+    if (messageAttribute) {
       return {
-        message: readonlyMessage,
+        message: messageAttribute,
         status: "info",
       };
     }
