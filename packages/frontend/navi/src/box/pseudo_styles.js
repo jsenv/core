@@ -235,6 +235,13 @@ export const initPseudoStyles = (
     elementListeningPseudoState,
   },
 ) => {
+  if (elementListeningPseudoState === element) {
+    console.warn(
+      `elementListeningPseudoState should not be the same as element to avoid infinite loop`,
+    );
+    elementListeningPseudoState = null;
+  }
+
   const onStateChange = (value, oldValue) => {
     effect?.(value, oldValue);
     if (elementListeningPseudoState) {

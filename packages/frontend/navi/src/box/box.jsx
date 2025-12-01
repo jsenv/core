@@ -485,7 +485,8 @@ export const Box = (props) => {
         pseudoState: innerPseudoState,
         effect: updateStyle,
         elementToImpact: boxEl,
-        elementListeningPseudoState: visualEl,
+        elementListeningPseudoState:
+          visualEl === pseudoStateEl ? null : visualEl,
       });
     }, finalStyleDeps);
   }
