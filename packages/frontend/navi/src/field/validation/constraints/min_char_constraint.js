@@ -145,14 +145,14 @@ export const MIN_SPECIAL_CHARS_CONSTRAINT = {
       if (messageAttribute) {
         return messageAttribute;
       }
-      if (min === 0) {
+      if (min === 1) {
         return generateFieldInvalidMessage(
-          `{field} doit contenir au moins un caractère spécial parmi: ${specialChars}`,
+          `{field} doit contenir au moins un caractère spécial. (${specialChars})`,
           { field },
         );
       }
       return generateFieldInvalidMessage(
-        `{field} doit contenir au moins ${min} caractères spéciaux parmi: ${specialChars}`,
+        `{field} doit contenir au moins ${min} caractères spéciaux (${specialChars})`,
         { field },
       );
     }

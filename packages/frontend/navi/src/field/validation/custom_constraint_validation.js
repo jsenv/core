@@ -25,6 +25,19 @@
  * - Escape key to dismiss validation messages
  * - Support for standard HTML validation attributes (required, pattern, type="email")
  * - Validation messages that follow the input element and adapt to viewport
+ *
+ * Constraint evaluation behavior:
+ * This implementation differs from browser native validation in how it handles empty values.
+ * Native validation typically ignores constraints (like minLength) when the input is empty,
+ * only validating them once the user starts typing. This prevents developers from knowing
+ * the validation state until user interaction begins.
+ *
+ * Our approach:
+ * - When 'required' attribute is not set: behaves like native validation (ignores constraints on empty values)
+ * - When 'required' attribute is set: evaluates all constraints even on empty values
+ *
+ * This allows for complete constraint state visibility when fields are required, enabling
+ * better UX patterns like showing all validation requirements upfront.
  */
 
 /**
@@ -400,18 +413,8 @@ export const installCustomConstraintValidation = (
       newConstraintValidityState.valid = false;
       newConstraintValidityState[constraint.name] = thisConstraintFailureInfo;
 
-      // Here we diverge from the standard HTML validation behavior:
-      // Many constraint implementation have this kind of logic internally:
-      // if (!field.value && !field.required) return null
-      // It means when required is not set the constraint do not apply
-      // BUT the browser here is more aggressive and never apply constraints
-      // when input value is not set.
-      // In other words constraints like minLength won't be reported until the user
-      // types something in the input
-      // This is very distrubing and prevent to know state of the constraints until user starts typing.
-      // When required is not set we behave like the browser
-      // but when required is set we compute the constraints even if the input is empty
-      // This allow to inform the user about all the constraints that are not met
+      // Constraint evaluation: evaluate all constraints when required is set,
+      // otherwise follow native behavior (skip constraints on empty values)
       if (failedConstraintInfo) {
         // there is already a failing constraint, which one to we pick?
         const constraintPicked = pickConstraint(
