@@ -1,10 +1,10 @@
 import { installImportMetaCss } from "./jsenv_navi_side_effects.js";
-import { createIterableWeakSet, createPubSub, createValueEffect, createStyleController, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, activeElementSignal, canInterceptKeys, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, stringifyStyle, mergeOneStyle, mergeTwoStyles, normalizeStyles, resolveCSSSize, findBefore, findAfter, hasCSSSizeUnit, pickLightOrDark, resolveColorLuminance, initFocusGroup, elementIsFocusable, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { useErrorBoundary, useLayoutEffect, useEffect, useRef, useState, useCallback, useContext, useMemo, useImperativeHandle, useId } from "preact/hooks";
+import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
+import { createIterableWeakSet, mergeOneStyle, stringifyStyle, createPubSub, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, resolveCSSSize, findBefore, findAfter, createValueEffect, createStyleController, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, allowWheelThrough, resolveCSSColor, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, hasCSSSizeUnit, activeElementSignal, canInterceptKeys, pickLightOrDark, resolveColorLuminance, initFocusGroup, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, elementIsFocusable } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { effect, signal, computed, batch, useSignal } from "@preact/signals";
-import { useEffect, useRef, useCallback, useContext, useState, useLayoutEffect, useMemo, useImperativeHandle, useErrorBoundary, useId } from "preact/hooks";
 import { createContext, toChildArray, createRef, cloneElement } from "preact";
-import { jsxs, jsx, Fragment } from "preact/jsx-runtime";
 import { createPortal, forwardRef } from "preact/compat";
 
 const actionPrivatePropertiesWeakMap = new WeakMap();
@@ -25,7 +25,185 @@ const ABORTED = { id: "aborted" };
 const FAILED = { id: "failed" };
 const COMPLETED = { id: "completed" };
 
-const SYMBOL_OBJECT_SIGNAL = Symbol.for("navi_object_signal");
+const useActionStatus = (action) => {
+  if (!action) {
+    return {
+      params: undefined,
+      runningState: IDLE,
+      isPrerun: false,
+      idle: true,
+      loading: false,
+      aborted: false,
+      error: null,
+      completed: false,
+      data: undefined,
+    };
+  }
+  const {
+    paramsSignal,
+    runningStateSignal,
+    isPrerunSignal,
+    errorSignal,
+    computedDataSignal,
+  } = getActionPrivateProperties(action);
+
+  const params = paramsSignal.value;
+  const isPrerun = isPrerunSignal.value;
+  const runningState = runningStateSignal.value;
+  const idle = runningState === IDLE;
+  const aborted = runningState === ABORTED;
+  const error = errorSignal.value;
+  const loading = runningState === RUNNING;
+  const completed = runningState === COMPLETED;
+  const data = computedDataSignal.value;
+
+  return {
+    params,
+    runningState,
+    isPrerun,
+    idle,
+    loading,
+    aborted,
+    error,
+    completed,
+    data,
+  };
+};
+
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .action_error {
+    margin-top: 0;
+    margin-bottom: 20px;
+    padding: 20px;
+    background: #fdd;
+    border: 1px solid red;
+  }
+`;
+const renderIdleDefault = () => null;
+const renderLoadingDefault = () => null;
+const renderAbortedDefault = () => null;
+const renderErrorDefault = error => {
+  let routeErrorText = error && error.message ? error.message : error;
+  return jsxs("p", {
+    className: "action_error",
+    children: ["An error occured: ", routeErrorText]
+  });
+};
+const renderCompletedDefault = () => null;
+const ActionRenderer = ({
+  action,
+  children,
+  disabled
+}) => {
+  const {
+    idle: renderIdle = renderIdleDefault,
+    loading: renderLoading = renderLoadingDefault,
+    aborted: renderAborted = renderAbortedDefault,
+    error: renderError = renderErrorDefault,
+    completed: renderCompleted,
+    always: renderAlways
+  } = typeof children === "function" ? {
+    completed: children
+  } : children || {};
+  if (disabled) {
+    return null;
+  }
+  if (action === undefined) {
+    throw new Error("ActionRenderer requires an action to render, but none was provided.");
+  }
+  const {
+    idle,
+    loading,
+    aborted,
+    error,
+    data
+  } = useActionStatus(action);
+  const UIRenderedPromise = useUIRenderedPromise(action);
+  const [errorBoundary, resetErrorBoundary] = useErrorBoundary();
+
+  // Mark this action as bound to UI components (has renderers)
+  // This tells the action system that errors should be caught and stored
+  // in the action's error state rather than bubbling up
+  useLayoutEffect(() => {
+    if (action) {
+      const {
+        ui
+      } = getActionPrivateProperties(action);
+      ui.hasRenderers = true;
+    }
+  }, [action]);
+  useLayoutEffect(() => {
+    resetErrorBoundary();
+  }, [action, loading, idle, resetErrorBoundary]);
+  useLayoutEffect(() => {
+    UIRenderedPromise.resolve();
+    return () => {
+      actionUIRenderedPromiseWeakMap.delete(action);
+    };
+  }, [action]);
+
+  // If renderAlways is provided, it wins and handles all rendering
+  if (renderAlways) {
+    return renderAlways({
+      idle,
+      loading,
+      aborted,
+      error,
+      data
+    });
+  }
+  if (idle) {
+    return renderIdle(action);
+  }
+  if (errorBoundary) {
+    return renderError(errorBoundary, "ui_error", action);
+  }
+  if (error) {
+    return renderError(error, "action_error", action);
+  }
+  if (aborted) {
+    return renderAborted(action);
+  }
+  let renderCompletedSafe;
+  if (renderCompleted) {
+    renderCompletedSafe = renderCompleted;
+  } else {
+    const {
+      ui
+    } = getActionPrivateProperties(action);
+    if (ui.renderCompleted) {
+      renderCompletedSafe = ui.renderCompleted;
+    } else {
+      renderCompletedSafe = renderCompletedDefault;
+    }
+  }
+  if (loading) {
+    if (action.canDisplayOldData && data !== undefined) {
+      return renderCompletedSafe(data, action);
+    }
+    return renderLoading(action);
+  }
+  return renderCompletedSafe(data, action);
+};
+const defaultPromise = Promise.resolve();
+defaultPromise.resolve = () => {};
+const actionUIRenderedPromiseWeakMap = new WeakMap();
+const useUIRenderedPromise = action => {
+  if (!action) {
+    return defaultPromise;
+  }
+  const actionUIRenderedPromise = actionUIRenderedPromiseWeakMap.get(action);
+  if (actionUIRenderedPromise) {
+    return actionUIRenderedPromise;
+  }
+  let resolve;
+  const promise = new Promise(res => {
+    resolve = res;
+  });
+  promise.resolve = resolve;
+  actionUIRenderedPromiseWeakMap.set(action, promise);
+  return promise;
+};
 
 const isSignal = (value) => {
   return getSignalType(value) !== null;
@@ -613,6 +791,8 @@ const weakEffect = (values, callback) => {
   });
   return dispose;
 };
+
+const SYMBOL_OBJECT_SIGNAL = Symbol.for("navi_object_signal");
 
 let DEBUG$2 = false;
 const enableDebugActions = () => {
@@ -1890,3213 +2070,6 @@ const generateActionName = (name, params) => {
   return `${name}${argsString}`;
 };
 
-const useRunOnMount = (action, Component) => {
-  useEffect(() => {
-    action.run({
-      reason: `<${Component.name} /> mounted`,
-    });
-  }, []);
-};
-
-installImportMetaCss(import.meta);
-/**
- * A callout component that mimics native browser validation messages.
- * Features:
- * - Positions above or below target element based on available space
- * - Follows target element during scrolling and resizing
- * - Automatically hides when target element is not visible
- * - Arrow automatically shows when pointing at a valid anchor element
- * - Centers in viewport when no anchor element provided or anchor is too big
- */
-
-/**
- * Shows a callout attached to the specified element
- * @param {string} message - HTML content for the callout
- * @param {Object} options - Configuration options
- * @param {HTMLElement} [options.anchorElement] - Element the callout should follow. If not provided or too big, callout will be centered in viewport
- * @param {string} [options.level="warning"] - Callout level: "info" | "warning" | "error"
- * @param {Function} [options.onClose] - Callback when callout is closed
- * @param {boolean} [options.closeOnClickOutside] - Whether to close on outside clicks (defaults to true for "info" level)
- * @param {boolean} [options.debug=false] - Enable debug logging
- * @returns {Object} - Callout object with properties:
- *   - {Function} close - Function to close the callout
- *   - {Function} update - Function to update message and options
- *   - {Function} updatePosition - Function to update position
- *   - {HTMLElement} element - The callout DOM element
- *   - {boolean} opened - Whether the callout is currently open
- */
-const openCallout = (
-  message,
-  {
-    anchorElement,
-    // Level determines visual styling and behavior:
-    // "info" - polite announcement (e.g., "This element cannot be modified")
-    // "warning" - expected failure requiring user action (e.g., "Field is required")
-    // "error" - unexpected failure, may not be actionable (e.g., "Server error")
-    level = "warning",
-    onClose,
-    closeOnClickOutside = level === "info",
-    showErrorStack,
-    debug = false,
-  } = {},
-) => {
-  const callout = {
-    opened: true,
-    close: null,
-    level: undefined,
-
-    update: null,
-    updatePosition: null,
-
-    element: null,
-  };
-
-  if (debug) {
-    console.debug("open callout", {
-      anchorElement,
-      message,
-      level,
-    });
-  }
-
-  const [teardown, addTeardown] = createPubSub(true);
-  const close = (reason) => {
-    if (!callout.opened) {
-      return;
-    }
-    if (debug) {
-      console.debug(`callout closed (reason: ${reason})`);
-    }
-    callout.opened = false;
-    teardown(reason);
-  };
-  if (onClose) {
-    addTeardown(onClose);
-  }
-
-  const [updateLevel, addLevelEffect, cleanupLevelEffects] =
-    createValueEffect(undefined);
-  addTeardown(cleanupLevelEffects);
-
-  // Create and add callout to document
-  const calloutElement = createCalloutElement();
-  const calloutMessageElement = calloutElement.querySelector(
-    ".navi_callout_message",
-  );
-  const calloutCloseButton = calloutElement.querySelector(
-    ".navi_callout_close_button",
-  );
-  calloutCloseButton.onclick = () => {
-    close("click_close_button");
-  };
-  const calloutId = `navi_callout_${Date.now()}`;
-  calloutElement.id = calloutId;
-  calloutStyleController.set(calloutElement, { opacity: 0 });
-  const update = (newMessage, options = {}) => {
-    // Connect callout with target element for accessibility
-    if (options.level && options.level !== callout.level) {
-      callout.level = level;
-      updateLevel(level);
-    }
-
-    if (options.closeOnClickOutside) {
-      closeOnClickOutside = options.closeOnClickOutside;
-    }
-
-    if (Error.isError(newMessage)) {
-      const error = newMessage;
-      newMessage = error.message;
-      if (showErrorStack && error.stack) {
-        newMessage += `<pre class="navi_callout_error_stack">${escapeHtml(String(error.stack))}</pre>`;
-      }
-    }
-
-    // Check if the message is a full HTML document (starts with DOCTYPE)
-    if (typeof newMessage === "string" && isHtmlDocument(newMessage)) {
-      // Create iframe to isolate the HTML document
-      const iframe = document.createElement("iframe");
-      iframe.style.border = "none";
-      iframe.style.width = "100%";
-      iframe.style.backgroundColor = "white";
-      iframe.srcdoc = newMessage;
-
-      // Clear existing content and add iframe
-      calloutMessageElement.innerHTML = "";
-      calloutMessageElement.appendChild(iframe);
-    } else {
-      calloutMessageElement.innerHTML = newMessage;
-    }
-  };
-  {
-    const handleClickOutside = (event) => {
-      if (!closeOnClickOutside) {
-        return;
-      }
-
-      const clickTarget = event.target;
-      if (
-        clickTarget === calloutElement ||
-        calloutElement.contains(clickTarget)
-      ) {
-        return;
-      }
-      // if (
-      //   clickTarget === targetElement ||
-      //   targetElement.contains(clickTarget)
-      // ) {
-      //   return;
-      // }
-      close("click_outside");
-    };
-    document.addEventListener("click", handleClickOutside, true);
-    addTeardown(() => {
-      document.removeEventListener("click", handleClickOutside, true);
-    });
-  }
-  Object.assign(callout, {
-    element: calloutElement,
-    update,
-    close,
-  });
-  addLevelEffect(() => {
-    calloutElement.setAttribute("data-level", level);
-    if (level === "info") {
-      calloutElement.setAttribute("role", "status");
-    } else {
-      calloutElement.setAttribute("role", "alert");
-    }
-  });
-  document.body.appendChild(calloutElement);
-  addTeardown(() => {
-    calloutElement.remove();
-  });
-
-  if (anchorElement) {
-    const anchorVisuallyVisibleInfo = getVisuallyVisibleInfo(anchorElement, {
-      countOffscreenAsVisible: true,
-    });
-    if (!anchorVisuallyVisibleInfo.visible) {
-      console.warn(
-        `anchor element is not visually visible (${anchorVisuallyVisibleInfo.reason}) -> will be anchored to first visually visible ancestor`,
-      );
-      anchorElement = getFirstVisuallyVisibleAncestor(anchorElement);
-    }
-
-    allowWheelThrough(calloutElement, anchorElement);
-    anchorElement.setAttribute("data-callout", calloutId);
-    addTeardown(() => {
-      anchorElement.removeAttribute("data-callout");
-    });
-
-    addLevelEffect(() => {
-      const levelColor = resolveCSSColor(
-        `var(--callout-${level}-color)`,
-        calloutElement,
-      );
-      anchorElement.style.setProperty("--callout-color", levelColor);
-      return () => {
-        anchorElement.style.removeProperty("--callout-color");
-      };
-    });
-    addLevelEffect((level) => {
-      if (level === "info") {
-        anchorElement.setAttribute("aria-describedby", calloutId);
-        return () => {
-          anchorElement.removeAttribute("aria-describedby");
-        };
-      }
-      anchorElement.setAttribute("aria-errormessage", calloutId);
-      anchorElement.setAttribute("aria-invalid", "true");
-      return () => {
-        anchorElement.removeAttribute("aria-errormessage");
-        anchorElement.removeAttribute("aria-invalid");
-      };
-    });
-
-    {
-      const onfocus = () => {
-        if (level === "error") {
-          // error messages must be explicitely closed by the user
-          return;
-        }
-        if (anchorElement.hasAttribute("data-callout-stay-on-focus")) {
-          return;
-        }
-        close("target_element_focus");
-      };
-      anchorElement.addEventListener("focus", onfocus);
-      addTeardown(() => {
-        anchorElement.removeEventListener("focus", onfocus);
-      });
-    }
-    anchorElement.callout = callout;
-    addTeardown(() => {
-      delete anchorElement.callout;
-    });
-  }
-
-  update(message, { level });
-
-  {
-    const documentScrollLeftAtOpen = document.documentElement.scrollLeft;
-    const documentScrollTopAtOpen = document.documentElement.scrollTop;
-
-    let positioner;
-    let strategy;
-    const determine = () => {
-      if (!anchorElement) {
-        return "centered";
-      }
-      // Check if anchor element is too big to reasonably position callout relative to it
-      const anchorRect = anchorElement.getBoundingClientRect();
-      const viewportHeight = window.innerHeight;
-      const anchorTooBig = anchorRect.height > viewportHeight - 50;
-      if (anchorTooBig) {
-        return "centered";
-      }
-      return "anchored";
-    };
-    const updatePositioner = () => {
-      const newStrategy = determine();
-      if (newStrategy === strategy) {
-        return;
-      }
-      positioner?.stop();
-      if (newStrategy === "centered") {
-        positioner = centerCalloutInViewport(calloutElement, {
-          documentScrollLeftAtOpen,
-          documentScrollTopAtOpen,
-        });
-      } else {
-        positioner = stickCalloutToAnchor(calloutElement, anchorElement);
-      }
-      strategy = newStrategy;
-    };
-    updatePositioner();
-    addTeardown(() => {
-      positioner.stop();
-    });
-    {
-      const handleResize = () => {
-        updatePositioner();
-      };
-      window.addEventListener("resize", handleResize);
-      addTeardown(() => {
-        window.removeEventListener("resize", handleResize);
-      });
-    }
-    callout.updatePosition = () => positioner.update();
-  }
-
-  return callout;
-};
-
-// Configuration parameters for callout appearance
-const BORDER_WIDTH = 1;
-const CORNER_RADIUS = 3;
-const ARROW_WIDTH = 16;
-const ARROW_HEIGHT = 8;
-const ARROW_SPACING = 8;
-
-import.meta.css = /* css */ `
-  @layer navi {
-    .navi_callout {
-      --callout-success-color: #4caf50;
-      --callout-info-color: #2196f3;
-      --callout-warning-color: #ff9800;
-      --callout-error-color: #f44336;
-
-      --callout-background-color: white;
-      --callout-icon-color: black;
-      --callout-padding: 8px;
-    }
-  }
-
-  .navi_callout {
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: 1;
-    display: block;
-    height: auto;
-    opacity: 0;
-    /* will be positioned with transform: translate */
-    transition: opacity 0.2s ease-in-out;
-    overflow: visible;
-
-    --x-callout-border-color: var(--x-callout-level-color);
-    --x-callout-background-color: var(--callout-background-color);
-    --x-callout-icon-color: var(--x-callout-level-color);
-  }
-
-  .navi_callout_frame {
-    position: absolute;
-    filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
-    pointer-events: none;
-  }
-  .navi_callout .navi_callout_border {
-    fill: var(--x-callout-border-color);
-  }
-  .navi_callout_frame svg {
-    position: absolute;
-    inset: 0;
-    overflow: visible;
-  }
-  .navi_callout_background {
-    fill: var(--x-callout-background-color);
-  }
-  .navi_callout_box {
-    position: relative;
-    border-style: solid;
-    border-color: transparent;
-  }
-  .navi_callout_body {
-    position: relative;
-    display: flex;
-    max-width: 47vw;
-    padding: var(--callout-padding);
-    flex-direction: row;
-    gap: 10px;
-  }
-  .navi_callout_icon {
-    display: flex;
-    width: 22px;
-    height: 22px;
-    flex-shrink: 0;
-    align-items: center;
-    align-self: flex-start;
-    justify-content: center;
-    background-color: var(--x-callout-icon-color);
-    border-radius: 2px;
-  }
-  .navi_callout_icon svg {
-    width: 16px;
-    height: 12px;
-    color: white;
-  }
-
-  .navi_callout_message {
-    min-width: 0;
-    align-self: center;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-  }
-  .navi_callout_message iframe {
-    display: block;
-    margin: 0;
-  }
-  .navi_callout_close_button_column {
-    display: flex;
-    height: 22px;
-  }
-  .navi_callout_close_button {
-    width: 1em;
-    height: 1em;
-    padding: 0;
-    align-self: center;
-    color: currentColor;
-    font-size: inherit;
-    background: none;
-    border: none;
-    border-radius: 0.2em;
-    cursor: pointer;
-  }
-  .navi_callout_close_button:hover {
-    background: rgba(0, 0, 0, 0.1);
-  }
-  .navi_callout_close_button_svg {
-    width: 100%;
-    height: 100%;
-  }
-  .navi_callout_error_stack {
-    max-height: 200px;
-    overflow: auto;
-  }
-
-  .navi_callout[data-level="success"] {
-    --x-callout-level-color: var(--callout-success-color);
-  }
-  .navi_callout[data-level="info"] {
-    --x-callout-level-color: var(--callout-info-color);
-  }
-  .navi_callout[data-level="warning"] {
-    --x-callout-level-color: var(--callout-warning-color);
-  }
-  .navi_callout[data-level="error"] {
-    --x-callout-level-color: var(--callout-error-color);
-  }
-`;
-
-// HTML template for the callout
-const calloutTemplate = /* html */ `
-  <div class="navi_callout">
-    <div class="navi_callout_box">
-      <div class="navi_callout_frame"></div>
-      <div class="navi_callout_body">
-        <div class="navi_callout_icon">
-          <svg viewBox="0 0 125 300" xmlns="http://www.w3.org/2000/svg">
-            <path
-              fill="currentColor"
-              d="m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z"
-            />
-          </svg>
-        </div>
-        <div class="navi_callout_message">Default message</div>
-        <div class="navi_callout_close_button_column">
-          <button class="navi_callout_close_button">
-            <svg
-              class="navi_callout_close_button_svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                fill-rule="evenodd"
-                clip-rule="evenodd"
-                d="M5.29289 5.29289C5.68342 4.90237 6.31658 4.90237 6.70711 5.29289L12 10.5858L17.2929 5.29289C17.6834 4.90237 18.3166 4.90237 18.7071 5.29289C19.0976 5.68342 19.0976 6.31658 18.7071 6.70711L13.4142 12L18.7071 17.2929C19.0976 17.6834 19.0976 18.3166 18.7071 18.7071C18.3166 19.0976 17.6834 19.0976 17.2929 18.7071L12 13.4142L6.70711 18.7071C6.31658 19.0976 5.68342 19.0976 5.29289 18.7071C4.90237 18.3166 4.90237 17.6834 5.29289 17.2929L10.5858 12L5.29289 6.70711C4.90237 6.31658 4.90237 5.68342 5.29289 5.29289Z"
-                fill="currentColor"
-              />
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-`;
-
-const calloutStyleController = createStyleController("callout");
-
-/**
- * Creates a new callout element from template
- * @returns {HTMLElement} - The callout element
- */
-const createCalloutElement = () => {
-  const div = document.createElement("div");
-  div.innerHTML = calloutTemplate;
-  const calloutElement = div.firstElementChild;
-  return calloutElement;
-};
-
-const centerCalloutInViewport = (
-  calloutElement,
-  { documentScrollLeftAtOpen, documentScrollTopAtOpen },
-) => {
-  // Set up initial styles for centered positioning
-  const calloutBoxElement = calloutElement.querySelector(".navi_callout_box");
-  const calloutFrameElement = calloutElement.querySelector(
-    ".navi_callout_frame",
-  );
-  const calloutBodyElement = calloutElement.querySelector(".navi_callout_body");
-  const calloutMessageElement = calloutElement.querySelector(
-    ".navi_callout_message",
-  );
-
-  // Remove any margins and set frame positioning for no arrow
-  calloutBoxElement.style.marginTop = "";
-  calloutBoxElement.style.marginBottom = "";
-  calloutBoxElement.style.borderWidth = `${BORDER_WIDTH}px`;
-  calloutFrameElement.style.left = `-${BORDER_WIDTH}px`;
-  calloutFrameElement.style.right = `-${BORDER_WIDTH}px`;
-  calloutFrameElement.style.top = `-${BORDER_WIDTH}px`;
-  calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
-
-  // Generate simple rectangle SVG without arrow and position in center
-  const updateCenteredPosition = () => {
-    const calloutElementClone =
-      cloneCalloutToMeasureNaturalSize(calloutElement);
-    const { height } = calloutElementClone.getBoundingClientRect();
-    calloutElementClone.remove();
-
-    // Handle content overflow when viewport is too small
-    const viewportHeight = window.innerHeight;
-    const maxAllowedHeight = viewportHeight - 40; // Leave some margin from viewport edges
-
-    if (height > maxAllowedHeight) {
-      const paddingSizes = getPaddingSizes(calloutBodyElement);
-      const paddingY = paddingSizes.top + paddingSizes.bottom;
-      const spaceNeededAroundContent = BORDER_WIDTH * 2 + paddingY;
-      const spaceAvailableForContent =
-        maxAllowedHeight - spaceNeededAroundContent;
-      calloutMessageElement.style.maxHeight = `${spaceAvailableForContent}px`;
-      calloutMessageElement.style.overflowY = "scroll";
-    } else {
-      // Reset overflow styles if not needed
-      calloutMessageElement.style.maxHeight = "";
-      calloutMessageElement.style.overflowY = "";
-    }
-
-    // Get final dimensions after potential overflow adjustments
-    const { width: finalWidth, height: finalHeight } =
-      calloutElement.getBoundingClientRect();
-    calloutFrameElement.innerHTML = generateSvgWithoutArrow(
-      finalWidth,
-      finalHeight,
-    );
-
-    // Center in viewport (accounting for document scroll)
-    const viewportWidth = window.innerWidth;
-    const left = documentScrollLeftAtOpen + (viewportWidth - finalWidth) / 2;
-    const top = documentScrollTopAtOpen + (viewportHeight - finalHeight) / 2;
-
-    calloutStyleController.set(calloutElement, {
-      opacity: 1,
-      transform: {
-        translateX: left,
-        translateY: top,
-      },
-    });
-  };
-
-  // Initial positioning
-  updateCenteredPosition();
-  window.addEventListener("resize", updateCenteredPosition);
-
-  // Return positioning function for dynamic updates
-  return {
-    update: updateCenteredPosition,
-    stop: () => {
-      window.removeEventListener("resize", updateCenteredPosition);
-    },
-  };
-};
-
-/**
- * Positions a callout relative to an anchor element with an arrow pointing to it
- * @param {HTMLElement} calloutElement - The callout element to position
- * @param {HTMLElement} anchorElement - The anchor element to stick to
- * @returns {Object} - Object with update and stop functions
- */
-const stickCalloutToAnchor = (calloutElement, anchorElement) => {
-  // Get references to callout parts
-  const calloutBoxElement = calloutElement.querySelector(".navi_callout_box");
-  const calloutFrameElement = calloutElement.querySelector(
-    ".navi_callout_frame",
-  );
-  const calloutBodyElement = calloutElement.querySelector(".navi_callout_body");
-  const calloutMessageElement = calloutElement.querySelector(
-    ".navi_callout_message",
-  );
-
-  // Set initial border styles
-  calloutBoxElement.style.borderWidth = `${BORDER_WIDTH}px`;
-  calloutFrameElement.style.left = `-${BORDER_WIDTH}px`;
-  calloutFrameElement.style.right = `-${BORDER_WIDTH}px`;
-
-  const anchorVisibleRectEffect = visibleRectEffect(
-    anchorElement,
-    ({ left: anchorLeft, right: anchorRight, visibilityRatio }) => {
-      const calloutElementClone =
-        cloneCalloutToMeasureNaturalSize(calloutElement);
-      const {
-        position,
-        left: calloutLeft,
-        top: calloutTop,
-        width: calloutWidth,
-        height: calloutHeight,
-        spaceAboveTarget,
-        spaceBelowTarget,
-      } = pickPositionRelativeTo(calloutElementClone, anchorElement, {
-        alignToViewportEdgeWhenTargetNearEdge: 20,
-        // when fully to the left, the border color is collé to the browser window making it hard to see
-        minLeft: 1,
-      });
-      calloutElementClone.remove();
-
-      // Calculate arrow position to point at anchorElement element
-      let arrowLeftPosOnCallout;
-      // Determine arrow target position based on attribute
-      const arrowPositionAttribute = anchorElement.getAttribute(
-        "data-callout-arrow-x",
-      );
-      let arrowAnchorLeft;
-      if (arrowPositionAttribute === "center") {
-        // Target the center of the anchorElement element
-        arrowAnchorLeft = (anchorLeft + anchorRight) / 2;
-      } else {
-        const anchorBorderSizes = getBorderSizes(anchorElement);
-        // Default behavior: target the left edge of the anchorElement element (after borders)
-        arrowAnchorLeft = anchorLeft + anchorBorderSizes.left;
-      }
-
-      // Calculate arrow position within the callout
-      if (calloutLeft < arrowAnchorLeft) {
-        // Callout is left of the target point, move arrow right
-        const diff = arrowAnchorLeft - calloutLeft;
-        arrowLeftPosOnCallout = diff;
-      } else if (calloutLeft + calloutWidth < arrowAnchorLeft) {
-        // Edge case: target point is beyond right edge of callout
-        arrowLeftPosOnCallout = calloutWidth - ARROW_WIDTH;
-      } else {
-        // Target point is within callout width
-        arrowLeftPosOnCallout = arrowAnchorLeft - calloutLeft;
-      }
-
-      // Ensure arrow stays within callout bounds with some padding
-      const minArrowPos = CORNER_RADIUS + ARROW_WIDTH / 2 + ARROW_SPACING;
-      const maxArrowPos = calloutWidth - minArrowPos;
-      arrowLeftPosOnCallout = Math.max(
-        minArrowPos,
-        Math.min(arrowLeftPosOnCallout, maxArrowPos),
-      );
-
-      // Force content overflow when there is not enough space to display
-      // the entirety of the callout
-      const spaceAvailable =
-        position === "below" ? spaceBelowTarget : spaceAboveTarget;
-      const paddingSizes = getPaddingSizes(calloutBodyElement);
-      const paddingY = paddingSizes.top + paddingSizes.bottom;
-      const spaceNeededAroundContent =
-        ARROW_HEIGHT + BORDER_WIDTH * 2 + paddingY;
-      const spaceAvailableForContent =
-        spaceAvailable - spaceNeededAroundContent;
-      const contentHeight = calloutHeight - spaceNeededAroundContent;
-      const spaceRemainingAfterContent =
-        spaceAvailableForContent - contentHeight;
-      if (spaceRemainingAfterContent < 2) {
-        const maxHeight = spaceAvailableForContent;
-        calloutMessageElement.style.maxHeight = `${maxHeight}px`;
-        calloutMessageElement.style.overflowY = "scroll";
-      } else {
-        calloutMessageElement.style.maxHeight = "";
-        calloutMessageElement.style.overflowY = "";
-      }
-
-      const { width, height } = calloutElement.getBoundingClientRect();
-      if (position === "above") {
-        // Position above target element
-        calloutBoxElement.style.marginTop = "";
-        calloutBoxElement.style.marginBottom = `${ARROW_HEIGHT}px`;
-        calloutFrameElement.style.top = `-${BORDER_WIDTH}px`;
-        calloutFrameElement.style.bottom = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
-        calloutFrameElement.innerHTML = generateSvgWithBottomArrow(
-          width,
-          height,
-          arrowLeftPosOnCallout,
-        );
-      } else {
-        calloutBoxElement.style.marginTop = `${ARROW_HEIGHT}px`;
-        calloutBoxElement.style.marginBottom = "";
-        calloutFrameElement.style.top = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
-        calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
-        calloutFrameElement.innerHTML = generateSvgWithTopArrow(
-          width,
-          height,
-          arrowLeftPosOnCallout,
-        );
-      }
-
-      calloutElement.setAttribute("data-position", position);
-      calloutStyleController.set(calloutElement, {
-        opacity: visibilityRatio ? 1 : 0,
-        transform: {
-          translateX: calloutLeft,
-          translateY: calloutTop,
-        },
-      });
-    },
-  );
-  const calloutSizeChangeObserver = observeCalloutSizeChange(
-    calloutMessageElement,
-    (width, height) => {
-      anchorVisibleRectEffect.check(`callout_size_change (${width}x${height})`);
-    },
-  );
-  anchorVisibleRectEffect.onBeforeAutoCheck(() => {
-    // prevent feedback loop because check triggers size change which triggers check...
-    calloutSizeChangeObserver.disable();
-    return () => {
-      calloutSizeChangeObserver.enable();
-    };
-  });
-
-  return {
-    update: anchorVisibleRectEffect.check,
-    stop: () => {
-      calloutSizeChangeObserver.disconnect();
-      anchorVisibleRectEffect.disconnect();
-    },
-  };
-};
-
-const observeCalloutSizeChange = (elementSizeToObserve, callback) => {
-  let lastContentWidth;
-  let lastContentHeight;
-  const resizeObserver = new ResizeObserver((entries) => {
-    const [entry] = entries;
-    const { width, height } = entry.contentRect;
-    // Debounce tiny changes that are likely sub-pixel rounding
-    if (lastContentWidth !== undefined) {
-      const widthDiff = Math.abs(width - lastContentWidth);
-      const heightDiff = Math.abs(height - lastContentHeight);
-      const threshold = 1; // Ignore changes smaller than 1px
-      if (widthDiff < threshold && heightDiff < threshold) {
-        return;
-      }
-    }
-    lastContentWidth = width;
-    lastContentHeight = height;
-    callback(width, height);
-  });
-  resizeObserver.observe(elementSizeToObserve);
-
-  return {
-    disable: () => {
-      resizeObserver.unobserve(elementSizeToObserve);
-    },
-    enable: () => {
-      resizeObserver.observe(elementSizeToObserve);
-    },
-    disconnect: () => {
-      resizeObserver.disconnect();
-    },
-  };
-};
-
-const escapeHtml = (string) => {
-  return string
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-};
-
-/**
- * Checks if a string is a full HTML document (starts with DOCTYPE)
- * @param {string} content - The content to check
- * @returns {boolean} - True if it looks like a complete HTML document
- */
-const isHtmlDocument = (content) => {
-  if (typeof content !== "string") {
-    return false;
-  }
-  // Trim whitespace and check if it starts with DOCTYPE (case insensitive)
-  const trimmed = content.trim();
-  return /^<!doctype\s+html/i.test(trimmed);
-};
-
-// It's ok to do this because the element is absolutely positioned
-const cloneCalloutToMeasureNaturalSize = (calloutElement) => {
-  // Create invisible clone to measure natural size
-  const calloutElementClone = calloutElement.cloneNode(true);
-  calloutElementClone.style.visibility = "hidden";
-  const calloutMessageElementClone = calloutElementClone.querySelector(
-    ".navi_callout_message",
-  );
-  // Reset any overflow constraints on the clone
-  calloutMessageElementClone.style.maxHeight = "";
-  calloutMessageElementClone.style.overflowY = "";
-
-  // Add clone to DOM to measure
-  calloutElement.parentNode.appendChild(calloutElementClone);
-
-  return calloutElementClone;
-};
-
-/**
- * Generates SVG path for callout with arrow on top
- * @param {number} width - Callout width
- * @param {number} height - Callout height
- * @param {number} arrowPosition - Horizontal position of arrow
- * @returns {string} - SVG markup
- */
-const generateSvgWithTopArrow = (width, height, arrowPosition) => {
-  // Calculate valid arrow position range
-  const arrowLeft =
-    ARROW_WIDTH / 2 + CORNER_RADIUS + BORDER_WIDTH + ARROW_SPACING;
-  const minArrowPos = arrowLeft;
-  const maxArrowPos = width - arrowLeft;
-  const constrainedArrowPos = Math.max(
-    minArrowPos,
-    Math.min(arrowPosition, maxArrowPos),
-  );
-
-  // Calculate content height
-  const contentHeight = height - ARROW_HEIGHT;
-
-  // Create two paths: one for the border (outer) and one for the content (inner)
-  const adjustedWidth = width;
-  const adjustedHeight = contentHeight + ARROW_HEIGHT;
-
-  // Slight adjustment for visual balance
-  const innerArrowWidthReduction = Math.min(BORDER_WIDTH * 0.3, 1);
-
-  // Outer path (border)
-  const outerPath = `
-      M${CORNER_RADIUS},${ARROW_HEIGHT} 
-      H${constrainedArrowPos - ARROW_WIDTH / 2} 
-      L${constrainedArrowPos},0 
-      L${constrainedArrowPos + ARROW_WIDTH / 2},${ARROW_HEIGHT} 
-      H${width - CORNER_RADIUS} 
-      Q${width},${ARROW_HEIGHT} ${width},${ARROW_HEIGHT + CORNER_RADIUS} 
-      V${adjustedHeight - CORNER_RADIUS} 
-      Q${width},${adjustedHeight} ${width - CORNER_RADIUS},${adjustedHeight} 
-      H${CORNER_RADIUS} 
-      Q0,${adjustedHeight} 0,${adjustedHeight - CORNER_RADIUS} 
-      V${ARROW_HEIGHT + CORNER_RADIUS} 
-      Q0,${ARROW_HEIGHT} ${CORNER_RADIUS},${ARROW_HEIGHT}
-    `;
-
-  // Inner path (content) - keep arrow width almost the same
-  const innerRadius = Math.max(0, CORNER_RADIUS - BORDER_WIDTH);
-  const innerPath = `
-    M${innerRadius + BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} 
-    H${constrainedArrowPos - ARROW_WIDTH / 2 + innerArrowWidthReduction} 
-    L${constrainedArrowPos},${BORDER_WIDTH} 
-    L${constrainedArrowPos + ARROW_WIDTH / 2 - innerArrowWidthReduction},${ARROW_HEIGHT + BORDER_WIDTH} 
-    H${width - innerRadius - BORDER_WIDTH} 
-    Q${width - BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} ${width - BORDER_WIDTH},${ARROW_HEIGHT + innerRadius + BORDER_WIDTH} 
-    V${adjustedHeight - innerRadius - BORDER_WIDTH} 
-    Q${width - BORDER_WIDTH},${adjustedHeight - BORDER_WIDTH} ${width - innerRadius - BORDER_WIDTH},${adjustedHeight - BORDER_WIDTH} 
-    H${innerRadius + BORDER_WIDTH} 
-    Q${BORDER_WIDTH},${adjustedHeight - BORDER_WIDTH} ${BORDER_WIDTH},${adjustedHeight - innerRadius - BORDER_WIDTH} 
-    V${ARROW_HEIGHT + innerRadius + BORDER_WIDTH} 
-    Q${BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} ${innerRadius + BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH}
-  `;
-
-  return /* html */ `
-    <svg
-      width="${adjustedWidth}"
-      height="${adjustedHeight}"
-      viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      role="presentation"
-      aria-hidden="true"
-    >
-      <path d="${outerPath}" class="navi_callout_border" />
-      <path d="${innerPath}" class="navi_callout_background" />
-    </svg>`;
-};
-
-/**
- * Generates SVG path for callout with arrow on bottom
- * @param {number} width - Callout width
- * @param {number} height - Callout height
- * @param {number} arrowPosition - Horizontal position of arrow
- * @returns {string} - SVG markup
- */
-const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
-  // Calculate valid arrow position range
-  const arrowLeft =
-    ARROW_WIDTH / 2 + CORNER_RADIUS + BORDER_WIDTH + ARROW_SPACING;
-  const minArrowPos = arrowLeft;
-  const maxArrowPos = width - arrowLeft;
-  const constrainedArrowPos = Math.max(
-    minArrowPos,
-    Math.min(arrowPosition, maxArrowPos),
-  );
-
-  // Calculate content height
-  const contentHeight = height - ARROW_HEIGHT;
-
-  // Create two paths: one for the border (outer) and one for the content (inner)
-  const adjustedWidth = width;
-  const adjustedHeight = contentHeight + ARROW_HEIGHT;
-
-  // For small border widths, keep inner arrow nearly the same size as outer
-  const innerArrowWidthReduction = Math.min(BORDER_WIDTH * 0.3, 1);
-
-  // Outer path with rounded corners
-  const outerPath = `
-      M${CORNER_RADIUS},0 
-      H${width - CORNER_RADIUS} 
-      Q${width},0 ${width},${CORNER_RADIUS} 
-      V${contentHeight - CORNER_RADIUS} 
-      Q${width},${contentHeight} ${width - CORNER_RADIUS},${contentHeight} 
-      H${constrainedArrowPos + ARROW_WIDTH / 2} 
-      L${constrainedArrowPos},${adjustedHeight} 
-      L${constrainedArrowPos - ARROW_WIDTH / 2},${contentHeight} 
-      H${CORNER_RADIUS} 
-      Q0,${contentHeight} 0,${contentHeight - CORNER_RADIUS} 
-      V${CORNER_RADIUS} 
-      Q0,0 ${CORNER_RADIUS},0
-    `;
-
-  // Inner path with correct arrow direction and color
-  const innerRadius = Math.max(0, CORNER_RADIUS - BORDER_WIDTH);
-  const innerPath = `
-    M${innerRadius + BORDER_WIDTH},${BORDER_WIDTH} 
-    H${width - innerRadius - BORDER_WIDTH} 
-    Q${width - BORDER_WIDTH},${BORDER_WIDTH} ${width - BORDER_WIDTH},${innerRadius + BORDER_WIDTH} 
-    V${contentHeight - innerRadius - BORDER_WIDTH} 
-    Q${width - BORDER_WIDTH},${contentHeight - BORDER_WIDTH} ${width - innerRadius - BORDER_WIDTH},${contentHeight - BORDER_WIDTH} 
-    H${constrainedArrowPos + ARROW_WIDTH / 2 - innerArrowWidthReduction} 
-    L${constrainedArrowPos},${adjustedHeight - BORDER_WIDTH} 
-    L${constrainedArrowPos - ARROW_WIDTH / 2 + innerArrowWidthReduction},${contentHeight - BORDER_WIDTH} 
-    H${innerRadius + BORDER_WIDTH} 
-    Q${BORDER_WIDTH},${contentHeight - BORDER_WIDTH} ${BORDER_WIDTH},${contentHeight - innerRadius - BORDER_WIDTH} 
-    V${innerRadius + BORDER_WIDTH} 
-    Q${BORDER_WIDTH},${BORDER_WIDTH} ${innerRadius + BORDER_WIDTH},${BORDER_WIDTH}
-  `;
-
-  return /* html */ `
-    <svg
-      width="${adjustedWidth}"
-      height="${adjustedHeight}"
-      viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      role="presentation"
-      aria-hidden="true"
-    >
-      <path d="${outerPath}" class="navi_callout_border" />
-      <path d="${innerPath}" class="navi_callout_background" />
-    </svg>`;
-};
-
-/**
- * Generates SVG path for callout without arrow (simple rectangle)
- * @param {number} width - Callout width
- * @param {number} height - Callout height
- * @returns {string} - SVG markup
- */
-const generateSvgWithoutArrow = (width, height) => {
-  return /* html */ `
-    <svg
-      width="${width}"
-      height="${height}"
-      viewBox="0 0 ${width} ${height}"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      role="presentation"
-      aria-hidden="true"
-    >
-      <rect
-        class="navi_callout_border"
-        x="0"
-        y="0"
-        width="${width}"
-        height="${height}"
-        rx="${CORNER_RADIUS}"
-        ry="${CORNER_RADIUS}"
-      />
-      <rect
-        class="navi_callout_background"
-        x="${BORDER_WIDTH}"
-        y="${BORDER_WIDTH}"
-        width="${width - BORDER_WIDTH * 2}"
-        height="${height - BORDER_WIDTH * 2}"
-        rx="${Math.max(0, CORNER_RADIUS - BORDER_WIDTH)}"
-        ry="${Math.max(0, CORNER_RADIUS - BORDER_WIDTH)}"
-      />
-    </svg>`;
-};
-
-/**
- * https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
- */
-
-// this constraint is not really a native constraint and browser just not let this happen at all
-// in our case it's just here in case some code is wrongly calling "requestAction" or "checkValidity" on a disabled element
-const DISABLED_CONSTRAINT = {
-  name: "disabled",
-  check: (element) => {
-    if (element.disabled) {
-      return `Ce champ est désactivé.`;
-    }
-    return null;
-  },
-};
-
-const REQUIRED_CONSTRAINT = {
-  name: "required",
-  check: (element, { registerChange }) => {
-    if (!element.required) {
-      return null;
-    }
-    const requiredMessage = element.getAttribute("data-required-message");
-
-    if (element.type === "checkbox") {
-      if (!element.checked) {
-        return requiredMessage || `Veuillez cocher cette case.`;
-      }
-      return null;
-    }
-    if (element.type === "radio") {
-      // For radio buttons, check if any radio with the same name is selected
-      const name = element.name;
-      if (!name) {
-        // If no name, check just this radio
-        if (!element.checked) {
-          return requiredMessage || `Veuillez sélectionner une option.`;
-        }
-        return null;
-      }
-
-      const closestFieldset = element.closest("fieldset");
-      const fieldsetRequiredMessage = closestFieldset
-        ? closestFieldset.getAttribute("data-required-message")
-        : null;
-
-      // Find the container (form or closest fieldset)
-      const container = element.form || closestFieldset || document;
-      // Check if any radio with the same name is checked
-      const radioSelector = `input[type="radio"][name="${CSS.escape(name)}"]`;
-      const radiosWithSameName = container.querySelectorAll(radioSelector);
-      for (const radio of radiosWithSameName) {
-        if (radio.checked) {
-          return null; // At least one radio is selected
-        }
-        registerChange((onChange) => {
-          radio.addEventListener("change", onChange);
-          return () => {
-            radio.removeEventListener("change", onChange);
-          };
-        });
-      }
-
-      return {
-        message:
-          requiredMessage ||
-          fieldsetRequiredMessage ||
-          `Veuillez sélectionner une option.`,
-        target: closestFieldset
-          ? closestFieldset.querySelector("legend")
-          : undefined,
-      };
-    }
-    if (element.value) {
-      return null;
-    }
-    if (requiredMessage) {
-      return requiredMessage;
-    }
-    if (element.type === "password") {
-      return element.hasAttribute("data-same-as")
-        ? `Veuillez confirmer le mot de passe.`
-        : `Veuillez saisir un mot de passe.`;
-    }
-    if (element.type === "email") {
-      return element.hasAttribute("data-same-as")
-        ? `Veuillez confirmer l'adresse e-mail`
-        : `Veuillez saisir une adresse e-mail.`;
-    }
-    return element.hasAttribute("data-same-as")
-      ? `Veuillez confirmer le champ précédent`
-      : `Veuillez remplir ce champ.`;
-  },
-};
-const PATTERN_CONSTRAINT = {
-  name: "pattern",
-  check: (input) => {
-    const pattern = input.pattern;
-    if (!pattern) {
-      return null;
-    }
-    const value = input.value;
-    if (!value) {
-      return null;
-    }
-    const regex = new RegExp(pattern);
-    if (regex.test(value)) {
-      return null;
-    }
-    const patternMessage = input.getAttribute("data-pattern-message");
-    if (patternMessage) {
-      return patternMessage;
-    }
-    let message = `Veuillez respecter le format requis.`;
-    const title = input.title;
-    if (title) {
-      message += `<br />${title}`;
-    }
-    return message;
-  },
-};
-// https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/email#validation
-const emailregex =
-  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-const TYPE_EMAIL_CONSTRAINT = {
-  name: "type_email",
-  check: (input) => {
-    if (input.type !== "email") {
-      return null;
-    }
-    const value = input.value;
-    if (!value) {
-      return null;
-    }
-    if (!value.includes("@")) {
-      return `Veuillez inclure "@" dans l'adresse e-mail. Il manque un symbole "@" dans ${value}.`;
-    }
-    if (!emailregex.test(value)) {
-      return `Veuillez saisir une adresse e-mail valide.`;
-    }
-    return null;
-  },
-};
-
-const MIN_LENGTH_CONSTRAINT = {
-  name: "min_length",
-  check: (element) => {
-    if (element.tagName === "INPUT") {
-      if (!INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET.has(element.type)) {
-        return null;
-      }
-    } else if (element.tagName !== "TEXTAREA") {
-      return null;
-    }
-
-    const minLength = element.minLength;
-    if (minLength === -1) {
-      return null;
-    }
-
-    const value = element.value;
-    const valueLength = value.length;
-    if (valueLength === 0) {
-      return null;
-    }
-    if (valueLength < minLength) {
-      const thisField = generateThisFieldText(element);
-      if (valueLength === 1) {
-        return `${thisField} doit contenir au moins ${minLength} caractère (il contient actuellement un seul caractère).`;
-      }
-      return `${thisField} doit contenir au moins ${minLength} caractères (il contient actuellement ${valueLength} caractères).`;
-    }
-    return null;
-  },
-};
-const INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET = new Set([
-  "text",
-  "search",
-  "url",
-  "tel",
-  "email",
-  "password",
-]);
-
-const generateThisFieldText = (field) => {
-  return field.type === "password"
-    ? "Ce mot de passe"
-    : field.type === "email"
-      ? "Cette adresse e-mail"
-      : "Ce champ";
-};
-
-const MAX_LENGTH_CONSTRAINT = {
-  name: "max_length",
-  check: (element) => {
-    if (element.tagName === "INPUT") {
-      if (!INPUT_TYPE_SUPPORTING_MAX_LENGTH_SET.has(element.type)) {
-        return null;
-      }
-    } else if (element.tagName !== "TEXTAREA") {
-      return null;
-    }
-
-    const maxLength = element.maxLength;
-    if (maxLength === -1) {
-      return null;
-    }
-
-    const value = element.value;
-    const valueLength = value.length;
-    if (valueLength > maxLength) {
-      const thisField = generateThisFieldText(element);
-      return `${thisField} doit contenir au maximum ${maxLength} caractères (il contient actuellement ${valueLength} caractères).`;
-    }
-    return null;
-  },
-};
-const INPUT_TYPE_SUPPORTING_MAX_LENGTH_SET = new Set(
-  INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET,
-);
-
-const TYPE_NUMBER_CONSTRAINT = {
-  name: "type_number",
-  check: (element) => {
-    if (element.tagName !== "INPUT") {
-      return null;
-    }
-    if (element.type !== "number") {
-      return null;
-    }
-    if (element.value === "") {
-      return null;
-    }
-    const value = element.valueAsNumber;
-    if (isNaN(value)) {
-      return `Doit être un nombre.`;
-    }
-    return null;
-  },
-};
-
-const MIN_CONSTRAINT = {
-  name: "min",
-  check: (element) => {
-    if (element.tagName !== "INPUT") {
-      return null;
-    }
-    if (element.type === "number") {
-      const minString = element.min;
-      if (minString === "") {
-        return null;
-      }
-      const minNumber = parseFloat(minString);
-      if (isNaN(minNumber)) {
-        return null;
-      }
-      const valueAsNumber = element.valueAsNumber;
-      if (isNaN(valueAsNumber)) {
-        return null;
-      }
-      if (valueAsNumber < minNumber) {
-        const minMessage = element.getAttribute("data-min-message");
-        return (
-          minMessage ||
-          `Doit être supérieur ou égal à <strong>${minString}</strong>.`
-        );
-      }
-      return null;
-    }
-    if (element.type === "time") {
-      const min = element.min;
-      if (min === undefined) {
-        return null;
-      }
-      const [minHours, minMinutes] = min.split(":").map(Number);
-      const value = element.value;
-      const [hours, minutes] = value.split(":").map(Number);
-      if (hours < minHours) {
-        return `Doit être <strong>${min}</strong> ou plus.`;
-      }
-      if (hours === minHours && minMinutes < minutes) {
-        return `Doit être <strong>${min}</strong> ou plus.`;
-      }
-      return null;
-    }
-    // "range"
-    // - user interface do not let user enter anything outside the boundaries
-    // - when setting value via js browser enforce boundaries too
-    // "date", "month", "week", "datetime-local"
-    // - same as "range"
-    return null;
-  },
-};
-
-const MAX_CONSTRAINT = {
-  name: "max",
-  check: (element) => {
-    if (element.tagName !== "INPUT") {
-      return null;
-    }
-    if (element.type === "number") {
-      const maxString = element.max;
-      if (maxString === "") {
-        return null;
-      }
-      const maxNumber = parseFloat(maxString);
-      if (isNaN(maxNumber)) {
-        return null;
-      }
-      const valueAsNumber = element.valueAsNumber;
-      if (isNaN(valueAsNumber)) {
-        return null;
-      }
-      if (valueAsNumber > maxNumber) {
-        const maxMessage = element.getAttribute("data-max-message");
-        return maxMessage || `Doit être <strong>${maxString}</strong> ou plus.`;
-      }
-      return null;
-    }
-    if (element.type === "time") {
-      const max = element.min;
-      if (max === undefined) {
-        return null;
-      }
-      const [maxHours, maxMinutes] = max.split(":").map(Number);
-      const value = element.value;
-      const [hours, minutes] = value.split(":").map(Number);
-      if (hours > maxHours) {
-        return `Doit être <strong>${max}</strong> ou moins.`;
-      }
-      if (hours === maxHours && maxMinutes > minutes) {
-        return `Doit être <strong>${max}</strong> ou moins.`;
-      }
-      return null;
-    }
-    return null;
-  },
-};
-
-const READONLY_CONSTRAINT = {
-  name: "readonly",
-  check: (element, { skipReadonly }) => {
-    if (skipReadonly) {
-      return null;
-    }
-    if (!element.readonly && !element.hasAttribute("data-readonly")) {
-      return null;
-    }
-    if (element.type === "hidden") {
-      return null;
-    }
-    const readonlySilent = element.hasAttribute("data-readonly-silent");
-    if (readonlySilent) {
-      return { silent: true };
-    }
-    const readonlyMessage = element.getAttribute("data-readonly-message");
-    if (readonlyMessage) {
-      return {
-        message: readonlyMessage,
-        level: "info",
-      };
-    }
-    const isBusy = element.getAttribute("aria-busy") === "true";
-    if (isBusy) {
-      return {
-        target: element,
-        message: `Cette action est en cours. Veuillez patienter.`,
-        level: "info",
-      };
-    }
-    return {
-      target: element,
-      message:
-        element.tagName === "BUTTON"
-          ? `Cet action n'est pas disponible pour l'instant.`
-          : `Cet élément est en lecture seule et ne peut pas être modifié.`,
-      level: "info",
-    };
-  },
-};
-
-const SAME_AS_CONSTRAINT = {
-  name: "same_as",
-  check: (element) => {
-    const sameAs = element.getAttribute("data-same-as");
-    if (!sameAs) {
-      return null;
-    }
-
-    const otherElement = document.querySelector(sameAs);
-    if (!otherElement) {
-      console.warn(
-        `Same as constraint: could not find element for selector ${sameAs}`,
-      );
-      return null;
-    }
-
-    const value = element.value;
-    const otherValue = otherElement.value;
-    if (value === "" || otherValue === "") {
-      // don't validate if one of the two values is empty
-      return null;
-    }
-
-    if (value === otherValue) {
-      return null;
-    }
-
-    const message = element.getAttribute("data-same-as-message");
-    if (message) {
-      return message;
-    }
-
-    const type = element.type;
-    if (type === "password") {
-      return `Ce mot de passe doit être identique au précédent.`;
-    }
-    if (type === "email") {
-      return `Cette adresse e-mail doit être identique a la précédente.`;
-    }
-    return `Ce champ doit être identique au précédent.`;
-  },
-};
-
-const listenInputChange = (input, callback) => {
-  const [teardown, addTeardown] = createPubSub();
-
-  let valueAtInteraction;
-  const oninput = () => {
-    valueAtInteraction = undefined;
-  };
-  const onkeydown = (e) => {
-    if (e.key === "Enter") {
-      /**
-       * Browser trigger a "change" event right after the enter is pressed
-       * if the input value has changed.
-       * We need to prevent the next change event otherwise we would request action twice
-       */
-      valueAtInteraction = input.value;
-    }
-    if (e.key === "Escape") {
-      /**
-       * Browser trigger a "change" event right after the escape is pressed
-       * if the input value has changed.
-       * We need to prevent the next change event otherwise we would request action when
-       * we actually want to cancel
-       */
-      valueAtInteraction = input.value;
-    }
-  };
-  const onchange = (e) => {
-    if (
-      valueAtInteraction !== undefined &&
-      e.target.value === valueAtInteraction
-    ) {
-      valueAtInteraction = undefined;
-      return;
-    }
-    callback(e);
-  };
-  input.addEventListener("input", oninput);
-  input.addEventListener("keydown", onkeydown);
-  input.addEventListener("change", onchange);
-  addTeardown(() => {
-    input.removeEventListener("input", oninput);
-    input.removeEventListener("keydown", onkeydown);
-    input.removeEventListener("change", onchange);
-  });
-
-  {
-    // Handle programmatic value changes that don't trigger browser change events
-    //
-    // Problem: When input values are set programmatically (not by user typing),
-    // browsers don't fire the 'change' event. However, our application logic
-    // still needs to detect these changes.
-    //
-    // Example scenario:
-    // 1. User starts editing (letter key pressed, value set programmatically)
-    // 2. User doesn't type anything additional (this is the key part)
-    // 3. User clicks outside to finish editing
-    // 4. Without this code, no change event would fire despite the fact that the input value did change from its original state
-    //
-    // This distinction is crucial because:
-    //
-    // - If the user typed additional text after the initial programmatic value,
-    //   the browser would fire change events normally
-    // - But when they don't type anything else, the browser considers it as "no user interaction"
-    //   even though the programmatic initial value represents a meaningful change
-    //
-    // We achieve this by checking if the input value has changed between focus and blur without any user interaction
-    // if yes we fire the callback because input value did change
-    let valueAtStart = input.value;
-    let interacted = false;
-
-    const onfocus = () => {
-      interacted = false;
-      valueAtStart = input.value;
-    };
-    const oninput = (e) => {
-      if (!e.isTrusted) {
-        // non trusted "input" events will be ignored by the browser when deciding to fire "change" event
-        // we ignore them too
-        return;
-      }
-      interacted = true;
-    };
-    const onblur = (e) => {
-      if (interacted) {
-        return;
-      }
-      if (valueAtStart === input.value) {
-        return;
-      }
-      callback(e);
-    };
-
-    input.addEventListener("focus", onfocus);
-    input.addEventListener("input", oninput);
-    input.addEventListener("blur", onblur);
-    addTeardown(() => {
-      input.removeEventListener("focus", onfocus);
-      input.removeEventListener("input", oninput);
-      input.removeEventListener("blur", onblur);
-    });
-  }
-
-  return teardown;
-};
-
-/**
- * Custom form validation implementation
- *
- * This implementation addresses several limitations of the browser's native validation API:
- *
- * Limitations of native validation:
- * - Cannot programmatically detect if validation message is currently displayed
- * - No ability to dismiss messages with keyboard (e.g., Escape key)
- * - Requires complex event handling to manage validation message display
- * - Limited support for storing/managing multiple validation messages
- * - No customization of validation message appearance
- *
- * Design approach:
- * - Works alongside native validation (which acts as a fallback)
- * - Proactively detects validation issues before native validation triggers
- * - Provides complete control over validation message UX
- * - Supports keyboard navigation and dismissal
- * - Allows custom styling and positioning of validation messages
- *
- * Features:
- * - Constraint-based validation system with built-in and custom constraints
- * - Custom validation messages with different severity levels
- * - Form submission prevention on validation failure
- * - Validation on Enter key in forms or standalone inputs
- * - Escape key to dismiss validation messages
- * - Support for standard HTML validation attributes (required, pattern, type="email")
- * - Validation messages that follow the input element and adapt to viewport
- */
-
-
-const validationInProgressWeakSet = new WeakSet();
-
-const requestAction = (
-  target,
-  action,
-  {
-    actionOrigin,
-    event,
-    requester = target,
-    method = "rerun",
-    meta = {},
-    confirmMessage,
-  } = {},
-) => {
-  if (!actionOrigin) {
-    console.warn("requestAction: actionOrigin is required");
-  }
-  let elementToValidate = requester;
-
-  let validationInterface = elementToValidate.__validationInterface__;
-  if (!validationInterface) {
-    validationInterface = installCustomConstraintValidation(elementToValidate);
-  }
-
-  const customEventDetail = {
-    action,
-    actionOrigin,
-    method,
-    event,
-    requester,
-    meta,
-  };
-
-  // Determine what needs to be validated and how to handle the result
-  const isForm = elementToValidate.tagName === "FORM";
-  const formToValidate = isForm ? elementToValidate : elementToValidate.form;
-
-  let isValid = false;
-  let elementForConfirmation = elementToValidate;
-  let elementForDispatch = elementToValidate;
-
-  if (formToValidate) {
-    // Form validation case
-    if (validationInProgressWeakSet.has(formToValidate)) {
-      return false;
-    }
-    validationInProgressWeakSet.add(formToValidate);
-    setTimeout(() => {
-      validationInProgressWeakSet.delete(formToValidate);
-    });
-
-    // Validate all form elements
-    const formElements = formToValidate.elements;
-    isValid = true; // Assume valid until proven otherwise
-    for (const formElement of formElements) {
-      const elementValidationInterface = formElement.__validationInterface__;
-      if (!elementValidationInterface) {
-        continue;
-      }
-
-      const elementIsValid = elementValidationInterface.checkValidity({
-        fromRequestAction: true,
-        skipReadonly:
-          formElement.tagName === "BUTTON" && formElement !== requester,
-      });
-      if (!elementIsValid) {
-        elementValidationInterface.reportValidity();
-        isValid = false;
-        break;
-      }
-    }
-
-    elementForConfirmation = formToValidate;
-    elementForDispatch = target;
-  } else {
-    // Single element validation case
-    isValid = validationInterface.checkValidity({ fromRequestAction: true });
-    if (!isValid) {
-      validationInterface.reportValidity();
-    }
-    elementForConfirmation = target;
-    elementForDispatch = target;
-  }
-
-  // If validation failed, dispatch actionprevented and return
-  if (!isValid) {
-    const actionPreventedCustomEvent = new CustomEvent("actionprevented", {
-      detail: customEventDetail,
-    });
-    elementForDispatch.dispatchEvent(actionPreventedCustomEvent);
-    return false;
-  }
-
-  // Validation passed, check for confirmation
-  confirmMessage =
-    confirmMessage ||
-    elementForConfirmation.getAttribute("data-confirm-message");
-  if (confirmMessage) {
-    // eslint-disable-next-line no-alert
-    if (!window.confirm(confirmMessage)) {
-      const actionPreventedCustomEvent = new CustomEvent("actionprevented", {
-        detail: customEventDetail,
-      });
-      elementForDispatch.dispatchEvent(actionPreventedCustomEvent);
-      return false;
-    }
-  }
-
-  // All good, dispatch the action
-  const actionCustomEvent = new CustomEvent("action", {
-    detail: customEventDetail,
-  });
-  elementForDispatch.dispatchEvent(actionCustomEvent);
-  return true;
-};
-
-const forwardActionRequested = (e, action, target = e.target) => {
-  requestAction(target, action, {
-    actionOrigin: e.detail?.actionOrigin,
-    event: e.detail?.event || e,
-    requester: e.detail?.requester,
-    meta: e.detail?.meta,
-  });
-};
-
-const closeValidationMessage = (element, reason) => {
-  const validationInterface = element.__validationInterface__;
-  if (!validationInterface) {
-    return false;
-  }
-  const { validationMessage } = validationInterface;
-  if (!validationMessage) {
-    return false;
-  }
-  return validationMessage.close(reason);
-};
-
-const formInstrumentedWeakSet = new WeakSet();
-const installCustomConstraintValidation = (
-  element,
-  elementReceivingValidationMessage = element,
-) => {
-  if (element.tagName === "INPUT" && element.type === "hidden") {
-    elementReceivingValidationMessage = element.form || document.body;
-  }
-
-  const validationInterface = {
-    uninstall: undefined,
-    registerConstraint: undefined,
-    addCustomMessage: undefined,
-    removeCustomMessage: undefined,
-    checkValidity: undefined,
-    reportValidity: undefined,
-    validationMessage: null,
-  };
-
-  const [teardown, addTeardown] = createPubSub();
-  {
-    const uninstall = () => {
-      teardown();
-    };
-    validationInterface.uninstall = uninstall;
-  }
-
-  const isForm = element.tagName === "FORM";
-  if (isForm) {
-    formInstrumentedWeakSet.add(element);
-    addTeardown(() => {
-      formInstrumentedWeakSet.delete(element);
-    });
-  }
-
-  {
-    element.__validationInterface__ = validationInterface;
-    addTeardown(() => {
-      delete element.__validationInterface__;
-    });
-  }
-
-  const dispatchCancelCustomEvent = (options) => {
-    const cancelEvent = new CustomEvent("cancel", options);
-    element.dispatchEvent(cancelEvent);
-  };
-  const closeElementValidationMessage = (reason) => {
-    if (validationInterface.validationMessage) {
-      validationInterface.validationMessage.close(reason);
-      return true;
-    }
-    return false;
-  };
-
-  const constraintSet = new Set();
-  constraintSet.add(DISABLED_CONSTRAINT);
-  constraintSet.add(REQUIRED_CONSTRAINT);
-  constraintSet.add(PATTERN_CONSTRAINT);
-  constraintSet.add(TYPE_EMAIL_CONSTRAINT);
-  constraintSet.add(TYPE_NUMBER_CONSTRAINT);
-  constraintSet.add(MIN_LENGTH_CONSTRAINT);
-  constraintSet.add(MAX_LENGTH_CONSTRAINT);
-  constraintSet.add(MIN_CONSTRAINT);
-  constraintSet.add(MAX_CONSTRAINT);
-  constraintSet.add(READONLY_CONSTRAINT);
-  constraintSet.add(SAME_AS_CONSTRAINT);
-  {
-    validationInterface.registerConstraint = (constraint) => {
-      if (typeof constraint === "function") {
-        constraint = {
-          name: constraint.name || "custom_function",
-          check: constraint,
-        };
-      }
-      constraintSet.add(constraint);
-      return () => {
-        constraintSet.delete(constraint);
-      };
-    };
-  }
-
-  let failedConstraintInfo = null;
-  const validityInfoMap = new Map();
-
-  const hasTitleAttribute = element.hasAttribute("title");
-
-  const resetValidity = ({ fromRequestAction } = {}) => {
-    if (fromRequestAction && failedConstraintInfo) {
-      for (const [key, customMessage] of customMessageMap) {
-        if (customMessage.removeOnRequestAction) {
-          customMessageMap.delete(key);
-        }
-      }
-    }
-
-    for (const [, validityInfo] of validityInfoMap) {
-      if (validityInfo.cleanup) {
-        validityInfo.cleanup();
-      }
-    }
-    validityInfoMap.clear();
-    failedConstraintInfo = null;
-  };
-  addTeardown(resetValidity);
-
-  const checkValidity = ({ fromRequestAction, skipReadonly } = {}) => {
-    resetValidity({ fromRequestAction });
-    for (const constraint of constraintSet) {
-      const constraintCleanupSet = new Set();
-      const registerChange = (register) => {
-        const registerResult = register(() => {
-          checkValidity();
-        });
-        if (typeof registerResult === "function") {
-          constraintCleanupSet.add(registerResult);
-        }
-      };
-      const cleanup = () => {
-        for (const cleanupCallback of constraintCleanupSet) {
-          cleanupCallback();
-        }
-        constraintCleanupSet.clear();
-      };
-
-      const checkResult = constraint.check(element, {
-        fromRequestAction,
-        skipReadonly,
-        registerChange,
-      });
-      if (!checkResult) {
-        cleanup();
-        continue;
-      }
-      const constraintValidityInfo =
-        typeof checkResult === "string"
-          ? { message: checkResult }
-          : checkResult;
-
-      failedConstraintInfo = {
-        name: constraint.name,
-        constraint,
-        ...constraintValidityInfo,
-        cleanup,
-        reportStatus: "not_reported",
-      };
-      validityInfoMap.set(constraint, failedConstraintInfo);
-    }
-
-    if (failedConstraintInfo) {
-      if (!hasTitleAttribute) {
-        // when a constraint is failing browser displays that constraint message if the element has no title attribute.
-        // We want to do the same with our message (overriding the browser in the process to get better messages)
-        element.setAttribute("title", failedConstraintInfo.message);
-      }
-    } else {
-      if (!hasTitleAttribute) {
-        element.removeAttribute("title");
-      }
-      closeElementValidationMessage("becomes_valid");
-    }
-
-    return !failedConstraintInfo;
-  };
-  const reportValidity = ({ skipFocus } = {}) => {
-    if (!failedConstraintInfo) {
-      closeElementValidationMessage("becomes_valid");
-      return;
-    }
-    if (failedConstraintInfo.silent) {
-      closeElementValidationMessage("invalid_silent");
-      return;
-    }
-    if (validationInterface.validationMessage) {
-      const { message, level, closeOnClickOutside } = failedConstraintInfo;
-      validationInterface.validationMessage.update(message, {
-        level,
-        closeOnClickOutside,
-      });
-      return;
-    }
-    if (!skipFocus) {
-      element.focus();
-    }
-    const removeCloseOnCleanup = addTeardown(() => {
-      closeElementValidationMessage("cleanup");
-    });
-
-    const anchorElement =
-      failedConstraintInfo.target || elementReceivingValidationMessage;
-    validationInterface.validationMessage = openCallout(
-      failedConstraintInfo.message,
-      {
-        anchorElement,
-        level: failedConstraintInfo.level,
-        closeOnClickOutside: failedConstraintInfo.closeOnClickOutside,
-        onClose: () => {
-          removeCloseOnCleanup();
-          validationInterface.validationMessage = null;
-          if (failedConstraintInfo) {
-            failedConstraintInfo.reportStatus = "closed";
-          }
-          if (!skipFocus) {
-            element.focus();
-          }
-        },
-      },
-    );
-    failedConstraintInfo.reportStatus = "reported";
-  };
-  validationInterface.checkValidity = checkValidity;
-  validationInterface.reportValidity = reportValidity;
-
-  const customMessageMap = new Map();
-  {
-    constraintSet.add({
-      name: "custom_message",
-      check: () => {
-        for (const [, { message, level }] of customMessageMap) {
-          return { message, level };
-        }
-        return null;
-      },
-    });
-    const addCustomMessage = (
-      key,
-      message,
-      { level = "error", removeOnRequestAction = false } = {},
-    ) => {
-      customMessageMap.set(key, { message, level, removeOnRequestAction });
-      checkValidity();
-      reportValidity();
-      return () => {
-        removeCustomMessage(key);
-      };
-    };
-    const removeCustomMessage = (key) => {
-      if (customMessageMap.has(key)) {
-        customMessageMap.delete(key);
-        checkValidity();
-        reportValidity();
-      }
-    };
-    addTeardown(() => {
-      customMessageMap.clear();
-    });
-    Object.assign(validationInterface, {
-      addCustomMessage,
-      removeCustomMessage,
-    });
-  }
-
-  checkValidity();
-  {
-    const oninput = () => {
-      customMessageMap.clear();
-      closeElementValidationMessage("input_event");
-      checkValidity();
-    };
-    element.addEventListener("input", oninput);
-    addTeardown(() => {
-      element.removeEventListener("input", oninput);
-    });
-  }
-
-  {
-    // this ensure we re-check validity (and remove message no longer relevant)
-    // once the action ends (used to remove the NOT_BUSY_CONSTRAINT message)
-    const onactionend = () => {
-      checkValidity();
-    };
-    element.addEventListener("actionend", onactionend);
-    addTeardown(() => {
-      element.removeEventListener("actionend", onactionend);
-    });
-  }
-
-  {
-    const nativeReportValidity = element.reportValidity;
-    element.reportValidity = () => {
-      reportValidity();
-    };
-    addTeardown(() => {
-      element.reportValidity = nativeReportValidity;
-    });
-  }
-
-  request_on_enter: {
-    if (element.tagName !== "INPUT") {
-      // maybe we want it too for checkboxes etc, we'll see
-      break request_on_enter;
-    }
-    const onkeydown = (keydownEvent) => {
-      if (keydownEvent.defaultPrevented) {
-        return;
-      }
-      if (keydownEvent.key !== "Enter") {
-        return;
-      }
-      if (element.hasAttribute("data-action")) {
-        if (wouldKeydownSubmitForm(keydownEvent)) {
-          keydownEvent.preventDefault();
-        }
-        dispatchActionRequestedCustomEvent(element, {
-          event: keydownEvent,
-          requester: element,
-        });
-        return;
-      }
-      const { form } = element;
-      if (!form) {
-        return;
-      }
-      keydownEvent.preventDefault();
-      dispatchActionRequestedCustomEvent(form, {
-        event: keydownEvent,
-        requester: getFirstButtonSubmittingForm(form) || element,
-      });
-    };
-    element.addEventListener("keydown", onkeydown);
-    addTeardown(() => {
-      element.removeEventListener("keydown", onkeydown);
-    });
-  }
-
-  {
-    const onclick = (clickEvent) => {
-      if (clickEvent.defaultPrevented) {
-        return;
-      }
-      if (element.tagName !== "BUTTON") {
-        return;
-      }
-      if (element.hasAttribute("data-action")) {
-        if (wouldButtonClickSubmitForm(element, clickEvent)) {
-          clickEvent.preventDefault();
-        }
-        dispatchActionRequestedCustomEvent(element, {
-          event: clickEvent,
-          requester: element,
-        });
-        return;
-      }
-      const { form } = element;
-      if (!form) {
-        return;
-      }
-      if (element.type === "reset") {
-        return;
-      }
-      if (wouldButtonClickSubmitForm(element, clickEvent)) {
-        clickEvent.preventDefault();
-      }
-      dispatchActionRequestedCustomEvent(form, {
-        event: clickEvent,
-        requester: element,
-      });
-    };
-    element.addEventListener("click", onclick);
-    addTeardown(() => {
-      element.removeEventListener("click", onclick);
-    });
-  }
-
-  request_on_input_change: {
-    const isInput =
-      element.tagName === "INPUT" || element.tagName === "TEXTAREA";
-    if (!isInput) {
-      break request_on_input_change;
-    }
-    const stop = listenInputChange(element, (e) => {
-      if (element.hasAttribute("data-action")) {
-        dispatchActionRequestedCustomEvent(element, {
-          event: e,
-          requester: element,
-        });
-        return;
-      }
-    });
-    addTeardown(() => {
-      stop();
-    });
-  }
-
-  execute_on_form_submit: {
-    if (!isForm) {
-      break execute_on_form_submit;
-    }
-    // We will dispatch "action" when "submit" occurs (code called from.submit() to bypass validation)
-    const form = element;
-    const removeListener = addEventListener(form, "submit", (e) => {
-      e.preventDefault();
-      const actionCustomEvent = new CustomEvent("action", {
-        detail: {
-          action: null,
-          event: e,
-          method: "rerun",
-          requester: form,
-          meta: {
-            isSubmit: true,
-          },
-        },
-      });
-      form.dispatchEvent(actionCustomEvent);
-    });
-    addTeardown(() => {
-      removeListener();
-    });
-  }
-
-  {
-    const onkeydown = (e) => {
-      if (e.key === "Escape") {
-        if (!closeElementValidationMessage("escape_key")) {
-          dispatchCancelCustomEvent({ detail: { reason: "escape_key" } });
-        }
-      }
-    };
-    element.addEventListener("keydown", onkeydown);
-    addTeardown(() => {
-      element.removeEventListener("keydown", onkeydown);
-    });
-  }
-
-  {
-    const onblur = () => {
-      if (element.value === "") {
-        dispatchCancelCustomEvent({
-          detail: {
-            reason: "blur_empty",
-          },
-        });
-        return;
-      }
-      // if we have failed constraint, we cancel too
-      if (failedConstraintInfo) {
-        dispatchCancelCustomEvent({
-          detail: {
-            reason: "blur_invalid",
-            failedConstraintInfo,
-          },
-        });
-        return;
-      }
-    };
-    element.addEventListener("blur", onblur);
-    addTeardown(() => {
-      element.removeEventListener("blur", onblur);
-    });
-  }
-
-  return validationInterface;
-};
-
-const wouldButtonClickSubmitForm = (button, clickEvent) => {
-  if (clickEvent.defaultPrevented) {
-    return false;
-  }
-  const { form } = button;
-  if (!form) {
-    return false;
-  }
-  if (!button) {
-    return false;
-  }
-  const wouldSubmitFormByType =
-    button.type === "submit" || button.type === "image";
-  if (wouldSubmitFormByType) {
-    return true;
-  }
-  if (button.type) {
-    return false;
-  }
-  if (getFirstButtonSubmittingForm(form)) {
-    // an other button is explicitly submitting the form, this one would not submit it
-    return false;
-  }
-  // this is the only button inside the form without type attribute, so it defaults to type="submit"
-  return true;
-};
-const getFirstButtonSubmittingForm = (form) => {
-  return form.querySelector(
-    `button[type="submit"], input[type="submit"], input[type="image"]`,
-  );
-};
-
-const wouldKeydownSubmitForm = (keydownEvent) => {
-  if (keydownEvent.defaultPrevented) {
-    return false;
-  }
-  const keydownTarget = keydownEvent.target;
-  const { form } = keydownTarget;
-  if (!form) {
-    return false;
-  }
-  if (keydownEvent.key !== "Enter") {
-    return false;
-  }
-  const isTextInput =
-    keydownTarget.tagName === "INPUT" || keydownTarget.tagName === "TEXTAREA";
-  if (!isTextInput) {
-    return false;
-  }
-  return true;
-};
-
-const dispatchActionRequestedCustomEvent = (
-  fieldOrForm,
-  { actionOrigin = "action_prop", event, requester },
-) => {
-  const actionRequestedCustomEvent = new CustomEvent("actionrequested", {
-    cancelable: true,
-    detail: {
-      actionOrigin,
-      event,
-      requester,
-    },
-  });
-  fieldOrForm.dispatchEvent(actionRequestedCustomEvent);
-};
-// https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
-const requestSubmit = HTMLFormElement.prototype.requestSubmit;
-HTMLFormElement.prototype.requestSubmit = function (submitter) {
-  const form = this;
-  const isInstrumented = formInstrumentedWeakSet.has(form);
-  if (!isInstrumented) {
-    requestSubmit.call(form, submitter);
-    return;
-  }
-  const programmaticEvent = new CustomEvent("programmatic_requestsubmit", {
-    cancelable: true,
-    detail: {
-      submitter,
-    },
-  });
-  dispatchActionRequestedCustomEvent(form, {
-    event: programmaticEvent,
-    requester: submitter,
-  });
-
-  // When all fields are valid calling the native requestSubmit would let browser go through the
-  // standard form validation steps leading to form submission.
-  // We don't want that because we have our own action system to handle forms
-  // If we did that the form submission would happen in parallel of our action system
-  // and because we listen to "submit" event to dispatch "action" event
-  // we would end up with two actions being executed.
-  //
-  // In case we have discrepencies in our implementation compared to the browser standard
-  // this also prevent the native validation message to show up.
-
-  // requestSubmit.call(this, submitter);
-};
-
-// const submit = HTMLFormElement.prototype.submit;
-// HTMLFormElement.prototype.submit = function (...args) {
-//   const form = this;
-//   if (form.hasAttribute("data-method")) {
-//     console.warn("You must use form.requestSubmit() instead of form.submit()");
-//     return form.requestSubmit();
-//   }
-//   return submit.apply(this, args);
-// };
-
-const addEventListener = (element, event, callback) => {
-  element.addEventListener(event, callback);
-  return () => {
-    element.removeEventListener(event, callback);
-  };
-};
-
-const addIntoArray = (array, ...valuesToAdd) => {
-  if (valuesToAdd.length === 1) {
-    const [valueToAdd] = valuesToAdd;
-    const arrayWithThisValue = [];
-    for (const value of array) {
-      if (value === valueToAdd) {
-        return array;
-      }
-      arrayWithThisValue.push(value);
-    }
-    arrayWithThisValue.push(valueToAdd);
-    return arrayWithThisValue;
-  }
-
-  const existingValueSet = new Set();
-  const arrayWithTheseValues = [];
-  for (const existingValue of array) {
-    arrayWithTheseValues.push(existingValue);
-    existingValueSet.add(existingValue);
-  }
-  let hasNewValues = false;
-  for (const valueToAdd of valuesToAdd) {
-    if (existingValueSet.has(valueToAdd)) {
-      continue;
-    }
-    arrayWithTheseValues.push(valueToAdd);
-    hasNewValues = true;
-  }
-  return hasNewValues ? arrayWithTheseValues : array;
-};
-
-const removeFromArray = (array, ...valuesToRemove) => {
-  if (valuesToRemove.length === 1) {
-    const [valueToRemove] = valuesToRemove;
-    const arrayWithoutThisValue = [];
-    let found = false;
-    for (const value of array) {
-      if (value === valueToRemove) {
-        found = true;
-        continue;
-      }
-      arrayWithoutThisValue.push(value);
-    }
-    if (!found) {
-      return array;
-    }
-    return arrayWithoutThisValue;
-  }
-
-  const valuesToRemoveSet = new Set(valuesToRemove);
-  const arrayWithoutTheseValues = [];
-  let hasRemovedValues = false;
-  for (const value of array) {
-    if (valuesToRemoveSet.has(value)) {
-      hasRemovedValues = true;
-      continue;
-    }
-    arrayWithoutTheseValues.push(value);
-  }
-  return hasRemovedValues ? arrayWithoutTheseValues : array;
-};
-
-// used by form elements such as <input>, <select>, <textarea> to have their own action bound to a single parameter
-// when inside a <form> the form params are updated when the form element single param is updated
-const useActionBoundToOneParam = (action, externalValue) => {
-  const actionFirstArgSignal = useSignal(externalValue);
-  const boundAction = useBoundAction(action, actionFirstArgSignal);
-  const getValue = useCallback(() => actionFirstArgSignal.value, []);
-  const setValue = useCallback((value) => {
-    actionFirstArgSignal.value = value;
-  }, []);
-  const externalValueRef = useRef(externalValue);
-  if (externalValue !== externalValueRef.current) {
-    externalValueRef.current = externalValue;
-    setValue(externalValue);
-  }
-
-  const value = getValue();
-  return [boundAction, value, setValue];
-};
-const useActionBoundToOneArrayParam = (
-  action,
-  name,
-  externalValue,
-  fallbackValue,
-  defaultValue,
-) => {
-  const [boundAction, value, setValue] = useActionBoundToOneParam(
-    action,
-    name);
-
-  const add = (valueToAdd, valueArray = value) => {
-    setValue(addIntoArray(valueArray, valueToAdd));
-  };
-
-  const remove = (valueToRemove, valueArray = value) => {
-    setValue(removeFromArray(valueArray, valueToRemove));
-  };
-
-  const result = [boundAction, value, setValue];
-  result.add = add;
-  result.remove = remove;
-  return result;
-};
-// used by <details> to just call their action
-const useAction = (action, paramsSignal) => {
-  return useBoundAction(action, paramsSignal);
-};
-
-const useBoundAction = (action, actionParamsSignal) => {
-  const actionRef = useRef();
-  const actionCallbackRef = useRef();
-
-  if (!action) {
-    return null;
-  }
-  if (isFunctionButNotAnActionFunction(action)) {
-    actionCallbackRef.current = action;
-    const existingAction = actionRef.current;
-    if (existingAction) {
-      return existingAction;
-    }
-    const actionFromFunction = createAction(
-      (...args) => {
-        return actionCallbackRef.current?.(...args);
-      },
-      {
-        name: action.name,
-        // We don't want to give empty params by default
-        // we want to give undefined for regular functions
-        params: undefined,
-      },
-    );
-    if (!actionParamsSignal) {
-      actionRef.current = actionFromFunction;
-      return actionFromFunction;
-    }
-    const actionBoundToParams =
-      actionFromFunction.bindParams(actionParamsSignal);
-    actionRef.current = actionBoundToParams;
-    return actionBoundToParams;
-  }
-  if (actionParamsSignal) {
-    return action.bindParams(actionParamsSignal);
-  }
-  return action;
-};
-
-const isFunctionButNotAnActionFunction = (action) => {
-  return typeof action === "function" && !action.isAction;
-};
-
-const addCustomMessage = (element, key, message, options) => {
-  const customConstraintValidation =
-    element.__validationInterface__ ||
-    (element.__validationInterface__ =
-      installCustomConstraintValidation(element));
-
-  return customConstraintValidation.addCustomMessage(key, message, options);
-};
-
-const removeCustomMessage = (element, key) => {
-  const customConstraintValidation = element.__validationInterface__;
-  if (!customConstraintValidation) {
-    return;
-  }
-  customConstraintValidation.removeCustomMessage(key);
-};
-
-const ErrorBoundaryContext = createContext(null);
-
-const useResetErrorBoundary = () => {
-  const resetErrorBoundary = useContext(ErrorBoundaryContext);
-  return resetErrorBoundary;
-};
-
-const useExecuteAction = (
-  elementRef,
-  {
-    errorEffect = "show_validation_message", // "show_validation_message" or "throw"
-    errorMapping,
-  } = {},
-) => {
-  // see https://medium.com/trabe/catching-asynchronous-errors-in-react-using-error-boundaries-5e8a5fd7b971
-  // and https://codepen.io/dmail/pen/XJJqeGp?editors=0010
-  // To change if https://github.com/preactjs/preact/issues/4754 lands
-  const [error, setError] = useState(null);
-  const resetErrorBoundary = useResetErrorBoundary();
-  useLayoutEffect(() => {
-    if (error) {
-      error.__handled__ = true; // prevent jsenv from displaying it
-      throw error;
-    }
-  }, [error]);
-
-  const validationMessageTargetRef = useRef(null);
-  const addErrorMessage = (error) => {
-    let calloutAnchor = validationMessageTargetRef.current;
-    let message;
-    if (errorMapping) {
-      const errorMappingResult = errorMapping(error);
-      if (typeof errorMappingResult === "string") {
-        message = errorMappingResult;
-      } else if (Error.isError(errorMappingResult)) {
-        message = errorMappingResult;
-      } else if (
-        typeof errorMappingResult === "object" &&
-        errorMappingResult !== null
-      ) {
-        message = errorMappingResult.message || error.message;
-        calloutAnchor = errorMappingResult.target || calloutAnchor;
-      }
-    } else {
-      message = error;
-    }
-    addCustomMessage(calloutAnchor, "action_error", message, {
-      // This error should not prevent <form> submission
-      // so whenever user tries to submit the form the error is cleared
-      // (Hitting enter key, clicking on submit button, etc. would allow to re-submit the form in error state)
-      removeOnRequestAction: true,
-    });
-  };
-  const removeErrorMessage = () => {
-    const validationMessageTarget = validationMessageTargetRef.current;
-    if (validationMessageTarget) {
-      removeCustomMessage(validationMessageTarget, "action_error");
-    }
-  };
-
-  useLayoutEffect(() => {
-    const element = elementRef.current;
-    if (!element) {
-      return null;
-    }
-    const form = element.tagName === "FORM" ? element : element.form;
-    if (!form) {
-      return null;
-    }
-    const onReset = () => {
-      removeErrorMessage();
-    };
-    form.addEventListener("reset", onReset);
-    return () => {
-      form.removeEventListener("reset", onReset);
-    };
-  });
-
-  // const errorEffectRef = useRef();
-  // errorEffectRef.current = errorEffect;
-  const executeAction = useCallback(
-    (actionEvent) => {
-      const { action, actionOrigin, requester, event, method } =
-        actionEvent.detail;
-      const sharedActionEventDetail = {
-        action,
-        actionOrigin,
-        requester,
-        event,
-        method,
-      };
-
-      const dispatchCustomEvent = (type, options) => {
-        const element = elementRef.current;
-        const customEvent = new CustomEvent(type, options);
-        element.dispatchEvent(customEvent);
-      };
-      if (resetErrorBoundary) {
-        resetErrorBoundary();
-      }
-      removeErrorMessage();
-      setError(null);
-
-      const validationMessageTarget = requester || elementRef.current;
-      validationMessageTargetRef.current = validationMessageTarget;
-
-      dispatchCustomEvent("actionstart", {
-        detail: sharedActionEventDetail,
-      });
-
-      return action[method]({
-        reason: `"${event.type}" event on ${(() => {
-          const target = event.target;
-          const tagName = target.tagName.toLowerCase();
-
-          if (target.id) {
-            return `${tagName}#${target.id}`;
-          }
-
-          const uiName = target.getAttribute("data-ui-name");
-          if (uiName) {
-            return `${tagName}[data-ui-name="${uiName}"]`;
-          }
-
-          return `<${tagName}>`;
-        })()}`,
-        onAbort: (reason) => {
-          if (
-            // at this stage the action side effect might have removed the <element> from the DOM
-            // (in theory no because action side effect are batched to happen after)
-            // but other side effects might do this
-            elementRef.current
-          ) {
-            dispatchCustomEvent("actionabort", {
-              detail: {
-                ...sharedActionEventDetail,
-                reason,
-              },
-            });
-          }
-        },
-        onError: (error) => {
-          if (
-            // at this stage the action side effect might have removed the <element> from the DOM
-            // (in theory no because action side effect are batched to happen after)
-            // but other side effects might do this
-            elementRef.current
-          ) {
-            dispatchCustomEvent("actionerror", {
-              detail: {
-                ...sharedActionEventDetail,
-                error,
-              },
-            });
-          }
-          if (errorEffect === "show_validation_message") {
-            addErrorMessage(error);
-          } else if (errorEffect === "throw") {
-            setError(error);
-          }
-        },
-        onComplete: (data) => {
-          if (
-            // at this stage the action side effect might have removed the <element> from the DOM
-            // (in theory no because action side effect are batched to happen after)
-            // but other side effects might do this
-            elementRef.current
-          ) {
-            dispatchCustomEvent("actionend", {
-              detail: {
-                ...sharedActionEventDetail,
-                data,
-              },
-            });
-          }
-        },
-      });
-    },
-    [errorEffect],
-  );
-
-  return executeAction;
-};
-
-const addManyEventListeners = (element, events) => {
-  const cleanupCallbackSet = new Set();
-  for (const event of Object.keys(events)) {
-    const callback = events[event];
-    element.addEventListener(event, callback);
-    cleanupCallbackSet.add(() => {
-      element.removeEventListener(event, callback);
-    });
-  }
-  return () => {
-    for (const cleanupCallback of cleanupCallbackSet) {
-      cleanupCallback();
-    }
-  };
-};
-
-/**
- * Custom hook creating a stable callback that doesn't trigger re-renders.
- *
- * PROBLEM: Parent components often forget to use useCallback, causing library
- * components to re-render unnecessarily when receiving callback props.
- *
- * SOLUTION: Library components can use this hook to create stable callback
- * references internally, making them defensive against parents who don't
- * optimize their callbacks. This ensures library components don't force
- * consumers to think about useCallback.
- *
- * USAGE:
- * ```js
- * // Parent component (consumer) - no useCallback needed
- * const Parent = () => {
- *   const [count, setCount] = useState(0);
- *
- *   // Parent naturally creates new function reference each render
- *   // (forgetting useCallback is common and shouldn't break performance)
- *   return <LibraryButton onClick={(e) => setCount(count + 1)} />;
- * };
- *
- * // Library component - defensive against changing callbacks
- * const LibraryButton = ({ onClick }) => {
- *   // ✅ Create stable reference from parent's potentially changing callback
- *   const stableClick = useStableCallback(onClick);
- *
- *   // Internal expensive components won't re-render when parent updates
- *   return <ExpensiveInternalButton onClick={stableClick} />;
- * };
- *
- * // Deep internal component gets stable reference
- * const ExpensiveInternalButton = memo(({ onClick }) => {
- *   // This won't re-render when Parent's count changes
- *   // But onClick will always call the latest Parent callback
- *   return <button onClick={onClick}>Click me</button>;
- * });
- * ```
- *
- * Perfect for library components that need performance without burdening consumers.
- */
-
-
-const useStableCallback = (callback, mapper) => {
-  const callbackRef = useRef();
-  callbackRef.current = callback;
-  const stableCallbackRef = useRef();
-
-  // Return original falsy value directly when callback is not a function
-  if (!callback) {
-    return callback;
-  }
-
-  const existingStableCallback = stableCallbackRef.current;
-  if (existingStableCallback) {
-    return existingStableCallback;
-  }
-  const stableCallback = (...args) => {
-    const currentCallback = callbackRef.current;
-    return currentCallback(...args);
-  };
-  stableCallbackRef.current = stableCallback;
-  return stableCallback;
-};
-
-const useActionEvents = (
-  elementRef,
-  {
-    actionOrigin = "action_prop",
-    /**
-     * @param {Event} e - L'événement original
-     * @param {"form_reset" | "blur_invalid" | "escape_key"} reason - Raison du cancel
-     */
-    onCancel,
-    onRequested,
-    onPrevented,
-    onAction,
-    onStart,
-    onAbort,
-    onError,
-    onEnd,
-  },
-) => {
-  onCancel = useStableCallback(onCancel);
-  onRequested = useStableCallback(onRequested);
-  onPrevented = useStableCallback(onPrevented);
-  onAction = useStableCallback(onAction);
-  onStart = useStableCallback(onStart);
-  onAbort = useStableCallback(onAbort);
-  onError = useStableCallback(onError);
-  onEnd = useStableCallback(onEnd);
-
-  useLayoutEffect(() => {
-    const element = elementRef.current;
-    if (!element) {
-      return null;
-    }
-
-    return addManyEventListeners(element, {
-      cancel: (e) => {
-        // cancel don't need to check for actionOrigin because
-        // it's actually unrelated to a specific actions
-        // in that sense it should likely be moved elsewhere as it's related to
-        // interaction and constraint validation, not to a specific action
-        onCancel?.(e, e.detail.reason);
-      },
-      actionrequested: (e) => {
-        if (e.detail.actionOrigin !== actionOrigin) {
-          return;
-        }
-        onRequested?.(e);
-      },
-      actionprevented: (e) => {
-        if (e.detail.actionOrigin !== actionOrigin) {
-          return;
-        }
-        onPrevented?.(e);
-      },
-      action: (e) => {
-        if (e.detail.actionOrigin !== actionOrigin) {
-          return;
-        }
-        onAction?.(e);
-      },
-      actionstart: (e) => {
-        if (e.detail.actionOrigin !== actionOrigin) {
-          return;
-        }
-        onStart?.(e);
-      },
-      actionabort: (e) => {
-        if (e.detail.actionOrigin !== actionOrigin) {
-          return;
-        }
-        onAbort?.(e);
-      },
-      actionerror: (e) => {
-        if (e.detail.actionOrigin !== actionOrigin) {
-          return;
-        }
-        onError?.(e.detail.error, e);
-      },
-      actionend: onEnd,
-    });
-  }, [
-    actionOrigin,
-    onCancel,
-    onRequested,
-    onPrevented,
-    onAction,
-    onStart,
-    onAbort,
-    onError,
-    onEnd,
-  ]);
-};
-
-const useRequestedActionStatus = (elementRef) => {
-  const [actionRequester, setActionRequester] = useState(null);
-  const [actionPending, setActionPending] = useState(false);
-  const [actionAborted, setActionAborted] = useState(false);
-  const [actionError, setActionError] = useState(null);
-
-  useActionEvents(elementRef, {
-    onAction: (actionEvent) => {
-      setActionRequester(actionEvent.detail.requester);
-    },
-    onStart: () => {
-      setActionPending(true);
-      setActionAborted(false);
-      setActionError(null);
-    },
-    onAbort: () => {
-      setActionPending(false);
-      setActionAborted(true);
-    },
-    onError: (error) => {
-      setActionPending(false);
-      setActionError(error);
-    },
-    onEnd: () => {
-      setActionPending(false);
-    },
-  });
-
-  return {
-    actionRequester,
-    actionPending,
-    actionAborted,
-    actionError,
-  };
-};
-
-const detectMac = () => {
-  // Modern way using User-Agent Client Hints API
-  if (window.navigator.userAgentData) {
-    return window.navigator.userAgentData.platform === "macOS";
-  }
-  // Fallback to userAgent string parsing
-  return /Mac|iPhone|iPad|iPod/.test(window.navigator.userAgent);
-};
-const isMac = detectMac();
-
-// Maps canonical browser key names to their user-friendly aliases.
-// Used for both event matching and ARIA normalization.
-const keyMapping = {
-  " ": { alias: ["space"] },
-  "escape": { alias: ["esc"] },
-  "arrowup": { alias: ["up"] },
-  "arrowdown": { alias: ["down"] },
-  "arrowleft": { alias: ["left"] },
-  "arrowright": { alias: ["right"] },
-  "delete": { alias: ["del"] },
-  // Platform-specific mappings
-  ...(isMac
-    ? { delete: { alias: ["backspace"] } }
-    : { backspace: { alias: ["delete"] } }),
-};
-
-const activeShortcutsSignal = signal([]);
-const shortcutsMap = new Map();
-
-const areShortcutsEqual = (shortcutA, shortcutB) => {
-  return (
-    shortcutA.key === shortcutB.key &&
-    shortcutA.description === shortcutB.description &&
-    shortcutA.enabled === shortcutB.enabled
-  );
-};
-
-const areShortcutArraysEqual = (arrayA, arrayB) => {
-  if (arrayA.length !== arrayB.length) {
-    return false;
-  }
-
-  for (let i = 0; i < arrayA.length; i++) {
-    if (!areShortcutsEqual(arrayA[i], arrayB[i])) {
-      return false;
-    }
-  }
-
-  return true;
-};
-
-const updateActiveShortcuts = () => {
-  const activeElement = activeElementSignal.peek();
-  const currentActiveShortcuts = activeShortcutsSignal.peek();
-  const activeShortcuts = [];
-  for (const [element, { shortcuts }] of shortcutsMap) {
-    if (element === activeElement || element.contains(activeElement)) {
-      activeShortcuts.push(...shortcuts);
-    }
-  }
-
-  // Only update if shortcuts have actually changed
-  if (!areShortcutArraysEqual(currentActiveShortcuts, activeShortcuts)) {
-    activeShortcutsSignal.value = activeShortcuts;
-  }
-};
-effect(() => {
-  // eslint-disable-next-line no-unused-expressions
-  activeElementSignal.value;
-  updateActiveShortcuts();
-});
-const addShortcuts = (element, shortcuts) => {
-  shortcutsMap.set(element, { shortcuts });
-  updateActiveShortcuts();
-};
-const removeShortcuts = (element) => {
-  shortcutsMap.delete(element);
-  updateActiveShortcuts();
-};
-
-const useKeyboardShortcuts = (
-  elementRef,
-  shortcuts,
-  {
-    onActionPrevented,
-    onActionStart,
-    onActionAbort,
-    onActionError,
-    onActionEnd,
-    allowConcurrentActions,
-  } = {},
-) => {
-  if (!elementRef) {
-    throw new Error(
-      "useKeyboardShortcuts requires an elementRef to attach shortcuts to.",
-    );
-  }
-
-  const executeAction = useExecuteAction(elementRef);
-  const shortcutActionIsBusyRef = useRef(false);
-  useActionEvents(elementRef, {
-    actionOrigin: "keyboard_shortcut",
-    onPrevented: onActionPrevented,
-    onAction: (actionEvent) => {
-      const { shortcut } = actionEvent.detail.meta || {};
-      if (!shortcut) {
-        // not a shortcut (an other interaction triggered the action, don't request it again)
-        return;
-      }
-      // action can be a function or an action object, whem a function we must "wrap" it in a function returning that function
-      // otherwise setState would call that action immediately
-      // setAction(() => actionEvent.detail.action);
-      executeAction(actionEvent, {
-        requester: document.activeElement,
-      });
-    },
-    onStart: (e) => {
-      const { shortcut } = e.detail.meta || {};
-      if (!shortcut) {
-        return;
-      }
-      if (!allowConcurrentActions) {
-        shortcutActionIsBusyRef.current = true;
-      }
-      shortcut.onStart?.(e);
-      onActionStart?.(e);
-    },
-    onAbort: (e) => {
-      const { shortcut } = e.detail.meta || {};
-      if (!shortcut) {
-        return;
-      }
-      shortcutActionIsBusyRef.current = false;
-      shortcut.onAbort?.(e);
-      onActionAbort?.(e);
-    },
-    onError: (error, e) => {
-      const { shortcut } = e.detail.meta || {};
-      if (!shortcut) {
-        return;
-      }
-      shortcutActionIsBusyRef.current = false;
-      shortcut.onError?.(error, e);
-      onActionError?.(error, e);
-    },
-    onEnd: (e) => {
-      const { shortcut } = e.detail.meta || {};
-      if (!shortcut) {
-        return;
-      }
-      shortcutActionIsBusyRef.current = false;
-      shortcut.onEnd?.(e);
-      onActionEnd?.(e);
-    },
-  });
-
-  const shortcutDeps = [];
-  for (const shortcut of shortcuts) {
-    shortcutDeps.push(
-      shortcut.key,
-      shortcut.description,
-      shortcut.enabled,
-      shortcut.confirmMessage,
-    );
-    shortcut.action = useAction(shortcut.action);
-  }
-
-  useEffect(() => {
-    const element = elementRef.current;
-    const shortcutsCopy = [];
-    for (const shortcutCandidate of shortcuts) {
-      shortcutsCopy.push({
-        ...shortcutCandidate,
-        handler: (keyboardEvent) => {
-          if (shortcutCandidate.handler) {
-            return shortcutCandidate.handler(keyboardEvent);
-          }
-          if (shortcutActionIsBusyRef.current) {
-            return false;
-          }
-          const { action } = shortcutCandidate;
-          return requestAction(element, action, {
-            actionOrigin: "keyboard_shortcut",
-            event: keyboardEvent,
-            requester: document.activeElement,
-            confirmMessage: shortcutCandidate.confirmMessage,
-            meta: {
-              shortcut: shortcutCandidate,
-            },
-          });
-        },
-      });
-    }
-
-    addShortcuts(element, shortcuts);
-
-    const onKeydown = (event) => {
-      applyKeyboardShortcuts(shortcutsCopy, event);
-    };
-    element.addEventListener("keydown", onKeydown);
-    return () => {
-      element.removeEventListener("keydown", onKeydown);
-      removeShortcuts(element);
-    };
-  }, [shortcutDeps]);
-};
-
-const applyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
-  if (!canInterceptKeys(keyboardEvent)) {
-    return null;
-  }
-  for (const shortcutCandidate of shortcuts) {
-    let { enabled = true, key } = shortcutCandidate;
-    if (!enabled) {
-      continue;
-    }
-
-    if (typeof key === "function") {
-      const keyReturnValue = key(keyboardEvent);
-      if (!keyReturnValue) {
-        continue;
-      }
-      key = keyReturnValue;
-    }
-    if (!key) {
-      console.error(shortcutCandidate);
-      throw new TypeError(`key is required in keyboard shortcut, got ${key}`);
-    }
-
-    // Handle platform-specific combination objects
-    let actualCombination;
-    let crossPlatformCombination;
-    if (typeof key === "object" && key !== null) {
-      actualCombination = isMac ? key.mac : key.other;
-    } else {
-      actualCombination = key;
-      if (containsPlatformSpecificKeys(key)) {
-        crossPlatformCombination = generateCrossPlatformCombination(key);
-      }
-    }
-
-    // Check both the actual combination and cross-platform combination
-    const matchesActual =
-      actualCombination &&
-      keyboardEventIsMatchingKeyCombination(keyboardEvent, actualCombination);
-    const matchesCrossPlatform =
-      crossPlatformCombination &&
-      crossPlatformCombination !== actualCombination &&
-      keyboardEventIsMatchingKeyCombination(
-        keyboardEvent,
-        crossPlatformCombination,
-      );
-
-    if (!matchesActual && !matchesCrossPlatform) {
-      continue;
-    }
-    if (typeof enabled === "function" && !enabled(keyboardEvent)) {
-      continue;
-    }
-    const returnValue = shortcutCandidate.handler(keyboardEvent);
-    if (returnValue) {
-      keyboardEvent.preventDefault();
-    }
-    return shortcutCandidate;
-  }
-  return null;
-};
-const containsPlatformSpecificKeys = (combination) => {
-  const lowerCombination = combination.toLowerCase();
-  const macSpecificKeys = ["command", "cmd"];
-
-  return macSpecificKeys.some((key) => lowerCombination.includes(key));
-};
-const generateCrossPlatformCombination = (combination) => {
-  let crossPlatform = combination;
-
-  if (isMac) {
-    // No need to convert anything TO Windows/Linux-specific format since we're on Mac
-    return null;
-  }
-  // If not on Mac but combination contains Mac-specific keys, generate Windows equivalent
-  crossPlatform = crossPlatform.replace(/\bcommand\b/gi, "control");
-  crossPlatform = crossPlatform.replace(/\bcmd\b/gi, "control");
-
-  return crossPlatform;
-};
-const keyboardEventIsMatchingKeyCombination = (event, keyCombination) => {
-  const keys = keyCombination.toLowerCase().split("+");
-
-  for (const key of keys) {
-    let modifierFound = false;
-
-    // Check if this key is a modifier
-    for (const [eventProperty, config] of Object.entries(modifierKeyMapping)) {
-      const allNames = [...config.names];
-
-      // Add Mac-specific names only if we're on Mac and they exist
-      if (isMac && config.macNames) {
-        allNames.push(...config.macNames);
-      }
-
-      if (allNames.includes(key)) {
-        // Check if the corresponding event property is pressed
-        if (!event[eventProperty]) {
-          return false;
-        }
-        modifierFound = true;
-        break;
-      }
-    }
-    if (modifierFound) {
-      continue;
-    }
-
-    // Check if it's a range pattern like "a-z" or "0-9"
-    if (key.includes("-") && key.length === 3) {
-      const [startChar, dash, endChar] = key;
-      if (dash === "-") {
-        // Only check ranges for single alphanumeric characters
-        const eventKey = event.key.toLowerCase();
-        if (eventKey.length !== 1) {
-          return false; // Not a single character key
-        }
-
-        // Only allow a-z and 0-9 ranges
-        const isValidRange =
-          (startChar >= "a" && endChar <= "z") ||
-          (startChar >= "0" && endChar <= "9");
-
-        if (!isValidRange) {
-          return false; // Invalid range pattern
-        }
-
-        const eventKeyCode = eventKey.charCodeAt(0);
-        const startCode = startChar.charCodeAt(0);
-        const endCode = endChar.charCodeAt(0);
-
-        if (eventKeyCode >= startCode && eventKeyCode <= endCode) {
-          continue; // Range matched
-        }
-        return false; // Range not matched
-      }
-    }
-
-    // If it's not a modifier or range, check if it matches the actual key
-    if (!isSameKey(event.key, key)) {
-      return false;
-    }
-  }
-  return true;
-};
-// Configuration for mapping shortcut key names to browser event properties
-const modifierKeyMapping = {
-  metaKey: {
-    names: ["meta"],
-    macNames: ["command", "cmd"],
-  },
-  ctrlKey: {
-    names: ["control", "ctrl"],
-  },
-  shiftKey: {
-    names: ["shift"],
-  },
-  altKey: {
-    names: ["alt"],
-    macNames: ["option"],
-  },
-};
-const isSameKey = (browserEventKey, key) => {
-  browserEventKey = browserEventKey.toLowerCase();
-  key = key.toLowerCase();
-
-  if (browserEventKey === key) {
-    return true;
-  }
-
-  // Check if either key is an alias for the other
-  for (const [canonicalKey, config] of Object.entries(keyMapping)) {
-    const allKeys = [canonicalKey, ...config.alias];
-    if (allKeys.includes(browserEventKey) && allKeys.includes(key)) {
-      return true;
-    }
-  }
-
-  return false;
-};
-
 const useActionData = (action) => {
   if (!action) {
     return undefined;
@@ -5106,160 +2079,28 @@ const useActionData = (action) => {
   return data;
 };
 
-const useActionStatus = (action) => {
-  if (!action) {
-    return {
-      params: undefined,
-      runningState: IDLE,
-      isPrerun: false,
-      idle: true,
-      loading: false,
-      aborted: false,
-      error: null,
-      completed: false,
-      data: undefined,
-    };
-  }
-  const {
-    paramsSignal,
-    runningStateSignal,
-    isPrerunSignal,
-    errorSignal,
-    computedDataSignal,
-  } = getActionPrivateProperties(action);
-
-  const params = paramsSignal.value;
-  const isPrerun = isPrerunSignal.value;
-  const runningState = runningStateSignal.value;
-  const idle = runningState === IDLE;
-  const aborted = runningState === ABORTED;
-  const error = errorSignal.value;
-  const loading = runningState === RUNNING;
-  const completed = runningState === COMPLETED;
-  const data = computedDataSignal.value;
-
-  return {
-    params,
-    runningState,
-    isPrerun,
-    idle,
-    loading,
-    aborted,
-    error,
-    completed,
-    data,
-  };
-};
-
-/**
- * Picks the best initial value from three options using a simple priority system.
- *
- * @param {any} externalValue - Value from props or parent component
- * @param {any} fallbackValue - Backup value if external value isn't useful
- * @param {any} defaultValue - Final fallback (usually empty/neutral value)
- *
- * @returns {any} The chosen value using this priority:
- *   1. externalValue (if provided and different from default)
- *   2. fallbackValue (if external value is missing/same as default)
- *   3. defaultValue (if nothing else works)
- *
- * @example
- * resolveInitialValue("hello", "backup", "") → "hello"
- * resolveInitialValue(undefined, "backup", "") → "backup"
- * resolveInitialValue("", "backup", "") → "backup" (empty same as default)
- */
-const resolveInitialValue = (
-  externalValue,
-  fallbackValue,
-  defaultValue,
-) => {
-  if (externalValue !== undefined && externalValue !== defaultValue) {
-    return externalValue;
-  }
-  if (fallbackValue !== undefined) {
-    return fallbackValue;
-  }
-  return defaultValue;
-};
-
-/**
- * Hook that syncs external value changes to a setState function.
- * Always syncs when external value changes, regardless of what it changes to.
- *
- * @param {any} externalValue - Value from props or parent component to watch for changes
- * @param {any} defaultValue - Default value to use when external value is undefined
- * @param {Function} setValue - Function to call when external value changes
- * @param {string} name - Parameter name for debugging
- */
-const useExternalValueSync = (
-  externalValue,
-  defaultValue,
-  setValue,
-  name = "",
-) => {
-  // Track external value changes and sync them
-  const previousExternalValueRef = useRef(externalValue);
-  if (externalValue !== previousExternalValueRef.current) {
-    previousExternalValueRef.current = externalValue;
-    // Always sync external value changes - use defaultValue only when external is undefined
-    const valueToSet =
-      externalValue === undefined ? defaultValue : externalValue;
-    setValue(valueToSet);
-  }
-};
-
-const UNSET$1 = {};
-const useInitialValue = (compute) => {
-  const initialValueRef = useRef(UNSET$1);
-  let initialValue = initialValueRef.current;
-  if (initialValue !== UNSET$1) {
-    return initialValue;
-  }
-
-  initialValue = compute();
-  initialValueRef.current = initialValue;
-  return initialValue;
-};
-
-const FIRST_MOUNT = {};
-const useStateArray = (
-  externalValue,
-  fallbackValue,
-  defaultValue = [],
-) => {
-  const initialValueRef = useRef(FIRST_MOUNT);
-  if (initialValueRef.current === FIRST_MOUNT) {
-    const initialValue = resolveInitialValue(
-      externalValue,
-      fallbackValue,
-      defaultValue,
-    );
-    initialValueRef.current = initialValue;
-  }
-  const initialValue = initialValueRef.current;
-  const [array, setArray] = useState(initialValue);
-
-  // Only sync external value changes if externalValue was explicitly provided
-  useExternalValueSync(externalValue, defaultValue, setArray, "state_array");
-
-  const add = useCallback((valueToAdd) => {
-    setArray((array) => {
-      const newArray = addIntoArray(array, valueToAdd);
-      return newArray;
+const useRunOnMount = (action, Component) => {
+  useEffect(() => {
+    action.run({
+      reason: `<${Component.name} /> mounted`,
     });
   }, []);
+};
 
-  const remove = useCallback((valueToRemove) => {
-    setArray((array) => {
-      return removeFromArray(array, valueToRemove);
-    });
-  }, []);
+const localStorageSignal = (key) => {
+  const initialValue = localStorage.getItem(key);
 
-  const reset = useCallback(() => {
-    setArray(initialValue);
-  }, [initialValue]);
+  const valueSignal = signal(initialValue === null ? undefined : initialValue);
+  effect(() => {
+    const value = valueSignal.value;
+    if (value === undefined) {
+      localStorage.removeItem(key);
+    } else {
+      localStorage.setItem(key, value);
+    }
+  });
 
-  return [array, add, remove, reset];
+  return valueSignal;
 };
 
 const getCallerInfo = (targetFunction = null, additionalOffset = 0) => {
@@ -7146,6 +3987,227 @@ const isProps = (value) => {
   return value !== null && typeof value === "object";
 };
 
+/**
+ * Creates a signal that stays synchronized with an external value,
+ * only updating the signal when the value actually changes.
+ *
+ * This hook solves a common reactive UI pattern where:
+ * 1. A signal controls a UI element (like an input field)
+ * 2. The UI element can be modified by user interaction
+ * 3. When the external "source of truth" changes, it should take precedence
+ *
+ * @param {any} value - The external value to sync with (the "source of truth")
+ * @param {any} [initialValue] - Optional initial value for the signal (defaults to value)
+ * @returns {Signal} A signal that tracks the external value but allows temporary local changes
+ *
+ * @example
+ * const FileNameEditor = ({ file }) => {
+ *   // Signal stays in sync with file.name, but allows user editing
+ *   const nameSignal = useSignalSync(file.name);
+ *
+ *   return (
+ *     <Editable
+ *       valueSignal={nameSignal}  // User can edit this
+ *       action={renameFileAction} // Saves changes
+ *     />
+ *   );
+ * };
+ *
+ * // Scenario:
+ * // 1. file.name = "doc.txt", nameSignal.value = "doc.txt"
+ * // 2. User types "report" -> nameSignal.value = "report.txt"
+ * // 3. External update: file.name = "shared-doc.txt"
+ * // 4. Next render: nameSignal.value = "shared-doc.txt" (model wins!)
+ *
+ */
+
+const useSignalSync = (value, initialValue = value) => {
+  const signal = useSignal(initialValue);
+  const previousValueRef = useRef(value);
+
+  // Only update signal when external value actually changes
+  // This preserves user input between external changes
+  if (previousValueRef.current !== value) {
+    previousValueRef.current = value;
+    signal.value = value; // Model takes precedence
+  }
+
+  return signal;
+};
+
+const addIntoArray = (array, ...valuesToAdd) => {
+  if (valuesToAdd.length === 1) {
+    const [valueToAdd] = valuesToAdd;
+    const arrayWithThisValue = [];
+    for (const value of array) {
+      if (value === valueToAdd) {
+        return array;
+      }
+      arrayWithThisValue.push(value);
+    }
+    arrayWithThisValue.push(valueToAdd);
+    return arrayWithThisValue;
+  }
+
+  const existingValueSet = new Set();
+  const arrayWithTheseValues = [];
+  for (const existingValue of array) {
+    arrayWithTheseValues.push(existingValue);
+    existingValueSet.add(existingValue);
+  }
+  let hasNewValues = false;
+  for (const valueToAdd of valuesToAdd) {
+    if (existingValueSet.has(valueToAdd)) {
+      continue;
+    }
+    arrayWithTheseValues.push(valueToAdd);
+    hasNewValues = true;
+  }
+  return hasNewValues ? arrayWithTheseValues : array;
+};
+
+const removeFromArray = (array, ...valuesToRemove) => {
+  if (valuesToRemove.length === 1) {
+    const [valueToRemove] = valuesToRemove;
+    const arrayWithoutThisValue = [];
+    let found = false;
+    for (const value of array) {
+      if (value === valueToRemove) {
+        found = true;
+        continue;
+      }
+      arrayWithoutThisValue.push(value);
+    }
+    if (!found) {
+      return array;
+    }
+    return arrayWithoutThisValue;
+  }
+
+  const valuesToRemoveSet = new Set(valuesToRemove);
+  const arrayWithoutTheseValues = [];
+  let hasRemovedValues = false;
+  for (const value of array) {
+    if (valuesToRemoveSet.has(value)) {
+      hasRemovedValues = true;
+      continue;
+    }
+    arrayWithoutTheseValues.push(value);
+  }
+  return hasRemovedValues ? arrayWithoutTheseValues : array;
+};
+
+/**
+ * Picks the best initial value from three options using a simple priority system.
+ *
+ * @param {any} externalValue - Value from props or parent component
+ * @param {any} fallbackValue - Backup value if external value isn't useful
+ * @param {any} defaultValue - Final fallback (usually empty/neutral value)
+ *
+ * @returns {any} The chosen value using this priority:
+ *   1. externalValue (if provided and different from default)
+ *   2. fallbackValue (if external value is missing/same as default)
+ *   3. defaultValue (if nothing else works)
+ *
+ * @example
+ * resolveInitialValue("hello", "backup", "") → "hello"
+ * resolveInitialValue(undefined, "backup", "") → "backup"
+ * resolveInitialValue("", "backup", "") → "backup" (empty same as default)
+ */
+const resolveInitialValue = (
+  externalValue,
+  fallbackValue,
+  defaultValue,
+) => {
+  if (externalValue !== undefined && externalValue !== defaultValue) {
+    return externalValue;
+  }
+  if (fallbackValue !== undefined) {
+    return fallbackValue;
+  }
+  return defaultValue;
+};
+
+/**
+ * Hook that syncs external value changes to a setState function.
+ * Always syncs when external value changes, regardless of what it changes to.
+ *
+ * @param {any} externalValue - Value from props or parent component to watch for changes
+ * @param {any} defaultValue - Default value to use when external value is undefined
+ * @param {Function} setValue - Function to call when external value changes
+ * @param {string} name - Parameter name for debugging
+ */
+const useExternalValueSync = (
+  externalValue,
+  defaultValue,
+  setValue,
+  name = "",
+) => {
+  // Track external value changes and sync them
+  const previousExternalValueRef = useRef(externalValue);
+  if (externalValue !== previousExternalValueRef.current) {
+    previousExternalValueRef.current = externalValue;
+    // Always sync external value changes - use defaultValue only when external is undefined
+    const valueToSet =
+      externalValue === undefined ? defaultValue : externalValue;
+    setValue(valueToSet);
+  }
+};
+
+const UNSET$1 = {};
+const useInitialValue = (compute) => {
+  const initialValueRef = useRef(UNSET$1);
+  let initialValue = initialValueRef.current;
+  if (initialValue !== UNSET$1) {
+    return initialValue;
+  }
+
+  initialValue = compute();
+  initialValueRef.current = initialValue;
+  return initialValue;
+};
+
+const FIRST_MOUNT = {};
+const useStateArray = (
+  externalValue,
+  fallbackValue,
+  defaultValue = [],
+) => {
+  const initialValueRef = useRef(FIRST_MOUNT);
+  if (initialValueRef.current === FIRST_MOUNT) {
+    const initialValue = resolveInitialValue(
+      externalValue,
+      fallbackValue,
+      defaultValue,
+    );
+    initialValueRef.current = initialValue;
+  }
+  const initialValue = initialValueRef.current;
+  const [array, setArray] = useState(initialValue);
+
+  // Only sync external value changes if externalValue was explicitly provided
+  useExternalValueSync(externalValue, defaultValue, setArray, "state_array");
+
+  const add = useCallback((valueToAdd) => {
+    setArray((array) => {
+      const newArray = addIntoArray(array, valueToAdd);
+      return newArray;
+    });
+  }, []);
+
+  const remove = useCallback((valueToRemove) => {
+    setArray((array) => {
+      return removeFromArray(array, valueToRemove);
+    });
+  }, []);
+
+  const reset = useCallback(() => {
+    setArray(initialValue);
+  }, [initialValue]);
+
+  return [array, add, remove, reset];
+};
+
 const valueInLocalStorage = (key, options = {}) => {
   const { type = "string" } = options;
   const converter = typeConverters[type];
@@ -7332,6 +4394,2590 @@ const typeConverters = {
       return "";
     },
   },
+};
+
+/**
+ * Merges a component's base className with className received from props.
+ *
+ * ```jsx
+ * const MyButton = ({ className, children }) => (
+ *   <button className={withPropsClassName("btn", className)}>
+ *     {children}
+ *   </button>
+ * );
+ *
+ * // Usage:
+ * <MyButton className="primary large" /> // Results in "btn primary large"
+ * <MyButton /> // Results in "btn"
+ * ```
+ *
+ * @param {string} baseClassName - The component's base CSS class name
+ * @param {string} [classNameFromProps] - Additional className from props (optional)
+ * @returns {string} The merged className string
+ */
+const withPropsClassName = (baseClassName, classNameFromProps) => {
+  if (!classNameFromProps) {
+    return baseClassName;
+  }
+
+  // Trim and normalize whitespace from the props className
+  const trimmedPropsClassName = classNameFromProps.trim();
+  if (!trimmedPropsClassName) {
+    return baseClassName;
+  }
+
+  // Normalize multiple spaces to single spaces and combine
+  const normalizedPropsClassName = trimmedPropsClassName.replace(/\s+/g, " ");
+  if (!baseClassName) {
+    return normalizedPropsClassName;
+  }
+  return `${baseClassName} ${normalizedPropsClassName}`;
+};
+
+const BoxFlowContext = createContext();
+
+const normalizeSpacingStyle = (value, property = "padding") => {
+  const cssSize = sizeSpacingScale[value];
+  return cssSize || stringifyStyle(value, property);
+};
+const normalizeTypoStyle = (value, property = "fontSize") => {
+  const cssSize = sizeTypoScale[value];
+  return cssSize || stringifyStyle(value, property);
+};
+
+const PASS_THROUGH = { name: "pass_through" };
+const applyOnCSSProp = (cssStyle) => {
+  return (value) => {
+    return { [cssStyle]: value };
+  };
+};
+const applyOnTwoCSSProps = (cssStyleA, cssStyleB) => {
+  return (value) => {
+    return {
+      [cssStyleA]: value,
+      [cssStyleB]: value,
+    };
+  };
+};
+const applyToCssPropWhenTruthy = (
+  cssProp,
+  cssPropValue,
+  cssPropValueOtherwise,
+) => {
+  return (value, styleContext) => {
+    if (value) {
+      return { [cssProp]: cssPropValue };
+    }
+    if (cssPropValueOtherwise === undefined) {
+      return null;
+    }
+    if (value === undefined) {
+      return null;
+    }
+    if (styleContext.styles[cssProp] !== undefined) {
+      // keep any value previously set
+      return null;
+    }
+    return { [cssProp]: cssPropValueOtherwise };
+  };
+};
+const applyOnTwoProps = (propA, propB) => {
+  return (value, context) => {
+    const firstProp = All_PROPS[propA];
+    const secondProp = All_PROPS[propB];
+    const firstPropResult = firstProp(value, context);
+    const secondPropResult = secondProp(value, context);
+    if (firstPropResult && secondPropResult) {
+      return {
+        ...firstPropResult,
+        ...secondPropResult,
+      };
+    }
+    return firstPropResult || secondPropResult;
+  };
+};
+
+const FLOW_PROPS = {
+  // all are handled by data-attributes
+  inline: () => {},
+  box: () => {},
+  row: () => {},
+  column: () => {},
+
+  absolute: applyToCssPropWhenTruthy("position", "absolute", "static"),
+  relative: applyToCssPropWhenTruthy("position", "relative", "static"),
+  fixed: applyToCssPropWhenTruthy("position", "fixed", "static"),
+};
+const OUTER_SPACING_PROPS = {
+  margin: PASS_THROUGH,
+  marginLeft: PASS_THROUGH,
+  marginRight: PASS_THROUGH,
+  marginTop: PASS_THROUGH,
+  marginBottom: PASS_THROUGH,
+  marginX: applyOnTwoCSSProps("marginLeft", "marginRight"),
+  marginY: applyOnTwoCSSProps("marginTop", "marginBottom"),
+};
+const INNER_SPACING_PROPS = {
+  padding: PASS_THROUGH,
+  paddingLeft: PASS_THROUGH,
+  paddingRight: PASS_THROUGH,
+  paddingTop: PASS_THROUGH,
+  paddingBottom: PASS_THROUGH,
+  paddingX: applyOnTwoCSSProps("paddingLeft", "paddingRight"),
+  paddingY: applyOnTwoCSSProps("paddingTop", "paddingBottom"),
+};
+const DIMENSION_PROPS = {
+  width: PASS_THROUGH,
+  minWidth: PASS_THROUGH,
+  maxWidth: PASS_THROUGH,
+  height: PASS_THROUGH,
+  minHeight: PASS_THROUGH,
+  maxHeight: PASS_THROUGH,
+  expand: applyOnTwoProps("expandX", "expandY"),
+  shrink: applyOnTwoProps("shrinkX", "shrinkY"),
+  // apply after width/height to override if both are set
+  expandX: (value, { parentBoxFlow }) => {
+    if (!value) {
+      return null;
+    }
+    if (parentBoxFlow === "column" || parentBoxFlow === "inline-column") {
+      return { flexGrow: 1 }; // Grow horizontally in row
+    }
+    if (parentBoxFlow === "row") {
+      return { minWidth: "100%", width: "auto" }; // Take full width in column
+    }
+    return { minWidth: "100%", width: "auto" }; // Take full width outside flex
+  },
+  expandY: (value, { parentBoxFlow }) => {
+    if (!value) {
+      return null;
+    }
+    if (parentBoxFlow === "column") {
+      return { minHeight: "100%", height: "auto" }; // Make column full height
+    }
+    if (parentBoxFlow === "row" || parentBoxFlow === "inline-row") {
+      return { flexGrow: 1 }; // Make row full height
+    }
+    return { minHeight: "100%", height: "auto" }; // Take full height outside flex
+  },
+  shrinkX: (value, { parentBoxFlow }) => {
+    if (!value) {
+      return null;
+    }
+    if (parentBoxFlow === "row" || parentBoxFlow === "inline-row") {
+      return { flexShrink: 1 };
+    }
+    return { maxWidth: "100%" };
+  },
+  shrinkY: (value, { parentBoxFlow }) => {
+    if (!value) {
+      return null;
+    }
+    if (parentBoxFlow === "column" || parentBoxFlow === "inline-column") {
+      return { flexShrink: 1 };
+    }
+    return { maxHeight: "100%" };
+  },
+
+  scaleX: (value) => {
+    return { transform: `scaleX(${stringifyStyle(value, "scaleX")})` };
+  },
+  scaleY: (value) => {
+    return { transform: `scaleY(${value})` };
+  },
+  scale: (value) => {
+    if (Array.isArray(value)) {
+      const [x, y] = value;
+      return { transform: `scale(${x}, ${y})` };
+    }
+    return { transform: `scale(${value})` };
+  },
+  scaleZ: (value) => {
+    return { transform: `scaleZ(${value})` };
+  },
+};
+const POSITION_PROPS = {
+  // For row, selfAlignX uses auto margins for positioning
+  // NOTE: Auto margins only work effectively for positioning individual items.
+  // When multiple adjacent items have the same auto margin alignment (e.g., selfAlignX="end"),
+  // only the first item will be positioned as expected because subsequent items
+  // will be positioned relative to the previous item's margins, not the container edge.
+  selfAlignX: (value, { parentBoxFlow }) => {
+    const inRowFlow = parentBoxFlow === "row" || parentBoxFlow === "inline-row";
+
+    if (value === "start") {
+      if (inRowFlow) {
+        return { alignSelf: "start" };
+      }
+      return { marginRight: "auto" };
+    }
+    if (value === "end") {
+      if (inRowFlow) {
+        return { alignSelf: "end" };
+      }
+      return { marginLeft: "auto" };
+    }
+    if (value === "center") {
+      if (inRowFlow) {
+        return { alignSelf: "center" };
+      }
+      return { marginLeft: "auto", marginRight: "auto" };
+    }
+    if (inRowFlow && value !== "stretch") {
+      return { alignSelf: value };
+    }
+    return undefined;
+  },
+  selfAlignY: (value, { parentBoxFlow }) => {
+    const inColumnFlow =
+      parentBoxFlow === "column" || parentBoxFlow === "inline-column";
+
+    if (value === "start") {
+      if (inColumnFlow) {
+        return { alignSelf: "start" };
+      }
+      return { marginBottom: "auto" };
+    }
+    if (value === "center") {
+      if (inColumnFlow) {
+        return { alignSelf: "center" };
+      }
+      return { marginTop: "auto", marginBottom: "auto" };
+    }
+    if (value === "end") {
+      if (inColumnFlow) {
+        return { alignSelf: "end" };
+      }
+      return { marginTop: "auto" };
+    }
+    return undefined;
+  },
+  left: PASS_THROUGH,
+  top: PASS_THROUGH,
+  bottom: PASS_THROUGH,
+  right: PASS_THROUGH,
+
+  translateX: (value) => {
+    return { transform: `translateX(${value})` };
+  },
+  translateY: (value) => {
+    return { transform: `translateY(${value})` };
+  },
+  translate: (value) => {
+    if (Array.isArray(value)) {
+      const [x, y] = value;
+      return { transform: `translate(${x}, ${y})` };
+    }
+    return { transform: `translate(${stringifyStyle(value, "translateX")})` };
+  },
+  rotateX: (value) => {
+    return { transform: `rotateX(${value})` };
+  },
+  rotateY: (value) => {
+    return { transform: `rotateY(${value})` };
+  },
+  rotateZ: (value) => {
+    return { transform: `rotateZ(${value})` };
+  },
+  rotate: (value) => {
+    return { transform: `rotate(${value})` };
+  },
+  skewX: (value) => {
+    return { transform: `skewX(${value})` };
+  },
+  skewY: (value) => {
+    return { transform: `skewY(${value})` };
+  },
+  skew: (value) => {
+    if (Array.isArray(value)) {
+      const [x, y] = value;
+      return { transform: `skew(${x}, ${y})` };
+    }
+    return { transform: `skew(${value})` };
+  },
+};
+const TYPO_PROPS = {
+  font: applyOnCSSProp("fontFamily"),
+  fontFamily: PASS_THROUGH,
+  fontWeight: PASS_THROUGH,
+  size: applyOnCSSProp("fontSize"),
+  fontSize: PASS_THROUGH,
+  bold: applyToCssPropWhenTruthy("fontWeight", "bold", "normal"),
+  think: applyToCssPropWhenTruthy("fontWeight", "thin", "normal"),
+  italic: applyToCssPropWhenTruthy("fontStyle", "italic", "normal"),
+  underline: applyToCssPropWhenTruthy("textDecoration", "underline", "none"),
+  underlineStyle: applyOnCSSProp("textDecorationStyle"),
+  underlineColor: applyOnCSSProp("textDecorationColor"),
+  textShadow: PASS_THROUGH,
+  lineHeight: PASS_THROUGH,
+  color: PASS_THROUGH,
+  noWrap: applyToCssPropWhenTruthy("whiteSpace", "nowrap", "normal"),
+  pre: applyToCssPropWhenTruthy("whiteSpace", "pre", "normal"),
+  preWrap: applyToCssPropWhenTruthy("whiteSpace", "pre-wrap", "normal"),
+  preLine: applyToCssPropWhenTruthy("whiteSpace", "pre-line", "normal"),
+};
+const VISUAL_PROPS = {
+  outline: PASS_THROUGH,
+  outlineStyle: PASS_THROUGH,
+  outlineColor: PASS_THROUGH,
+  outlineWidth: PASS_THROUGH,
+  boxDecorationBreak: PASS_THROUGH,
+  boxShadow: PASS_THROUGH,
+  background: PASS_THROUGH,
+  backgroundColor: PASS_THROUGH,
+  backgroundImage: PASS_THROUGH,
+  backgroundSize: PASS_THROUGH,
+  border: PASS_THROUGH,
+  borderTop: PASS_THROUGH,
+  borderLeft: PASS_THROUGH,
+  borderRight: PASS_THROUGH,
+  borderBottom: PASS_THROUGH,
+  borderWidth: PASS_THROUGH,
+  borderRadius: PASS_THROUGH,
+  borderColor: PASS_THROUGH,
+  borderStyle: PASS_THROUGH,
+  opacity: PASS_THROUGH,
+  filter: PASS_THROUGH,
+  cursor: PASS_THROUGH,
+  transition: PASS_THROUGH,
+};
+const CONTENT_PROPS = {
+  align: applyOnTwoProps("alignX", "alignY"),
+  alignX: (value, { boxFlow }) => {
+    if (boxFlow === "row" || boxFlow === "inline-row") {
+      if (value === "stretch") {
+        return undefined; // this is the default
+      }
+      return { alignItems: value };
+    }
+    if (boxFlow === "column" || boxFlow === "inline-column") {
+      if (value === "start") {
+        return undefined; // this is the default
+      }
+      return { justifyContent: value };
+    }
+    return { textAlign: value };
+  },
+  alignY: (value, { boxFlow }) => {
+    if (boxFlow === "row" || boxFlow === "inline-row") {
+      if (value === "start") {
+        return undefined;
+      }
+      return {
+        justifyContent: value,
+      };
+    }
+    if (boxFlow === "column" || boxFlow === "inline-column") {
+      if (value === "stretch") {
+        return undefined;
+      }
+      return { alignItems: value };
+    }
+    return { verticalAlign: value };
+  },
+  spacing: (value, { boxFlow }) => {
+    if (
+      boxFlow === "row" ||
+      boxFlow === "column" ||
+      boxFlow === "inline-row" ||
+      boxFlow === "inline-column"
+    ) {
+      return {
+        gap: resolveSpacingSize(value, "gap"),
+      };
+    }
+    return undefined;
+  },
+};
+const All_PROPS = {
+  ...FLOW_PROPS,
+  ...OUTER_SPACING_PROPS,
+  ...INNER_SPACING_PROPS,
+  ...DIMENSION_PROPS,
+  ...POSITION_PROPS,
+  ...TYPO_PROPS,
+  ...VISUAL_PROPS,
+  ...CONTENT_PROPS,
+};
+const FLOW_PROP_NAME_SET = new Set(Object.keys(FLOW_PROPS));
+const OUTER_SPACING_PROP_NAME_SET = new Set(Object.keys(OUTER_SPACING_PROPS));
+const INNER_SPACING_PROP_NAME_SET = new Set(Object.keys(INNER_SPACING_PROPS));
+const DIMENSION_PROP_NAME_SET = new Set(Object.keys(DIMENSION_PROPS));
+const POSITION_PROP_NAME_SET = new Set(Object.keys(POSITION_PROPS));
+const TYPO_PROP_NAME_SET = new Set(Object.keys(TYPO_PROPS));
+const VISUAL_PROP_NAME_SET = new Set(Object.keys(VISUAL_PROPS));
+const CONTENT_PROP_NAME_SET = new Set(Object.keys(CONTENT_PROPS));
+const STYLE_PROP_NAME_SET = new Set(Object.keys(All_PROPS));
+
+const COPIED_ON_VISUAL_CHILD_PROP_SET = new Set([
+  ...FLOW_PROP_NAME_SET,
+  "expand",
+  "shrink",
+  "expandX",
+  "expandY",
+  "alignX",
+  "alignY",
+]);
+const HANDLED_BY_VISUAL_CHILD_PROP_SET = new Set([
+  ...INNER_SPACING_PROP_NAME_SET,
+  ...VISUAL_PROP_NAME_SET,
+  ...CONTENT_PROP_NAME_SET,
+]);
+const getVisualChildStylePropStrategy = (name) => {
+  if (COPIED_ON_VISUAL_CHILD_PROP_SET.has(name)) {
+    return "copy";
+  }
+  if (HANDLED_BY_VISUAL_CHILD_PROP_SET.has(name)) {
+    return "forward";
+  }
+  return null;
+};
+
+const isStyleProp = (name) => STYLE_PROP_NAME_SET.has(name);
+
+const getStylePropGroup = (name) => {
+  if (FLOW_PROP_NAME_SET.has(name)) {
+    return "flow";
+  }
+  if (OUTER_SPACING_PROP_NAME_SET.has(name)) {
+    return "margin";
+  }
+  if (INNER_SPACING_PROP_NAME_SET.has(name)) {
+    return "padding";
+  }
+  if (DIMENSION_PROP_NAME_SET.has(name)) {
+    return "dimension";
+  }
+  if (POSITION_PROP_NAME_SET.has(name)) {
+    return "position";
+  }
+  if (TYPO_PROP_NAME_SET.has(name)) {
+    return "typo";
+  }
+  if (VISUAL_PROP_NAME_SET.has(name)) {
+    return "visual";
+  }
+  if (CONTENT_PROP_NAME_SET.has(name)) {
+    return "content";
+  }
+  return null;
+};
+const getNormalizer = (key) => {
+  if (key === "borderRadius") {
+    return normalizeSpacingStyle;
+  }
+  const group = getStylePropGroup(key);
+  if (group === "margin" || group === "padding") {
+    return normalizeSpacingStyle;
+  }
+  if (group === "typo") {
+    return normalizeTypoStyle;
+  }
+  return stringifyStyle;
+};
+const getHowToHandleStyleProp = (name) => {
+  const getStyle = All_PROPS[name];
+  if (getStyle === PASS_THROUGH) {
+    return null;
+  }
+  return getStyle;
+};
+const prepareStyleValue = (existingValue, value, name, context) => {
+  const normalizer = getNormalizer(name);
+  const cssValue = normalizer(value, name);
+  const mergedValue = mergeOneStyle(existingValue, cssValue, name, context);
+  return mergedValue;
+};
+
+// Unified design scale using t-shirt sizes with rem units for accessibility.
+// This scale is used for spacing to create visual harmony
+// and consistent proportions throughout the design system.
+const sizeSpacingScale = {
+  xxs: "0.125em", // 0.125 = 2px at 16px base
+  xs: "0.25em", // 0.25 = 4px at 16px base
+  sm: "0.5em", // 0.5 = 8px at 16px base
+  md: "1em", // 1 = 16px at 16px base (base font size)
+  lg: "1.5em", // 1.5 = 24px at 16px base
+  xl: "2em", // 2 = 32px at 16px base
+  xxl: "3em", // 3 = 48px at 16px base
+};
+sizeSpacingScale.s = sizeSpacingScale.sm;
+sizeSpacingScale.m = sizeSpacingScale.md;
+sizeSpacingScale.l = sizeSpacingScale.lg;
+const sizeSpacingScaleKeys = new Set(Object.keys(sizeSpacingScale));
+const isSizeSpacingScaleKey = (key) => {
+  return sizeSpacingScaleKeys.has(key);
+};
+const resolveSpacingSize = (size, property = "padding") => {
+  return stringifyStyle(sizeSpacingScale[size] || size, property);
+};
+
+const sizeTypoScale = {
+  xxs: "0.625rem", // 0.625 = 10px at 16px base (smaller than before for more range)
+  xs: "0.75rem", // 0.75 = 12px at 16px base
+  sm: "0.875rem", // 0.875 = 14px at 16px base
+  md: "1rem", // 1 = 16px at 16px base (base font size)
+  lg: "1.125rem", // 1.125 = 18px at 16px base
+  xl: "1.25rem", // 1.25 = 20px at 16px base
+  xxl: "1.5rem", // 1.5 = 24px at 16px base
+};
+sizeTypoScale.s = sizeTypoScale.sm;
+sizeTypoScale.m = sizeTypoScale.md;
+sizeTypoScale.l = sizeTypoScale.lg;
+
+const DEFAULT_DISPLAY_BY_TAG_NAME = {
+  "inline": new Set([
+    "a",
+    "abbr",
+    "b",
+    "bdi",
+    "bdo",
+    "br",
+    "cite",
+    "code",
+    "dfn",
+    "em",
+    "i",
+    "kbd",
+    "label",
+    "mark",
+    "q",
+    "s",
+    "samp",
+    "small",
+    "span",
+    "strong",
+    "sub",
+    "sup",
+    "time",
+    "u",
+    "var",
+    "wbr",
+    "area",
+    "audio",
+    "img",
+    "map",
+    "track",
+    "video",
+    "embed",
+    "iframe",
+    "object",
+    "picture",
+    "portal",
+    "source",
+    "svg",
+    "math",
+    "input",
+    "meter",
+    "output",
+    "progress",
+    "select",
+    "textarea",
+  ]),
+  "block": new Set([
+    "address",
+    "article",
+    "aside",
+    "blockquote",
+    "div",
+    "dl",
+    "fieldset",
+    "figure",
+    "footer",
+    "form",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "header",
+    "hr",
+    "main",
+    "nav",
+    "ol",
+    "p",
+    "pre",
+    "section",
+    "table",
+    "ul",
+    "video",
+    "canvas",
+    "details",
+    "dialog",
+    "dd",
+    "dt",
+    "figcaption",
+    "li",
+    "summary",
+    "caption",
+    "colgroup",
+    "tbody",
+    "td",
+    "tfoot",
+    "th",
+    "thead",
+    "tr",
+  ]),
+  "inline-block": new Set([
+    "button",
+    "input",
+    "select",
+    "textarea",
+    "img",
+    "video",
+    "audio",
+    "canvas",
+    "embed",
+    "iframe",
+    "object",
+  ]),
+  "table-cell": new Set(["td", "th"]),
+  "table-row": new Set(["tr"]),
+  "list-item": new Set(["li"]),
+  "none": new Set([
+    "head",
+    "meta",
+    "title",
+    "link",
+    "style",
+    "script",
+    "noscript",
+    "template",
+    "slot",
+  ]),
+};
+
+// Create a reverse map for quick lookup: tagName -> display value
+const TAG_NAME_TO_DEFAULT_DISPLAY = new Map();
+for (const display of Object.keys(DEFAULT_DISPLAY_BY_TAG_NAME)) {
+  const displayTagnameSet = DEFAULT_DISPLAY_BY_TAG_NAME[display];
+  for (const tagName of displayTagnameSet) {
+    TAG_NAME_TO_DEFAULT_DISPLAY.set(tagName, display);
+  }
+}
+
+/**
+ * Get the default CSS display value for a given HTML tag name
+ * @param {string} tagName - The HTML tag name (case-insensitive)
+ * @returns {string} The default display value ("block", "inline", "inline-block", etc.) or "inline" as fallback
+ * @example
+ * getDefaultDisplay("div")      // "block"
+ * getDefaultDisplay("span")     // "inline"
+ * getDefaultDisplay("img")      // "inline-block"
+ * getDefaultDisplay("unknown")  // "inline" (fallback)
+ */
+const getDefaultDisplay = (tagName) => {
+  const normalizedTagName = tagName.toLowerCase();
+  return TAG_NAME_TO_DEFAULT_DISPLAY.get(normalizedTagName) || "inline";
+};
+
+const PSEUDO_CLASSES = {
+  ":hover": {
+    attribute: "data-hover",
+    setup: (el, callback) => {
+      el.addEventListener("mouseenter", callback);
+      el.addEventListener("mouseleave", callback);
+      return () => {
+        el.removeEventListener("mouseenter", callback);
+        el.removeEventListener("mouseleave", callback);
+      };
+    },
+    test: (el) => el.matches(":hover"),
+  },
+  ":active": {
+    attribute: "data-active",
+    setup: (el, callback) => {
+      el.addEventListener("mousedown", callback);
+      document.addEventListener("mouseup", callback);
+      return () => {
+        el.removeEventListener("mousedown", callback);
+        document.removeEventListener("mouseup", callback);
+      };
+    },
+    test: (el) => el.matches(":active"),
+  },
+  ":visited": {
+    attribute: "data-visited",
+  },
+  ":checked": {
+    attribute: "data-checked",
+    setup: (el, callback) => {
+      if (el.type === "checkbox") {
+        // Listen to user interactions
+        el.addEventListener("input", callback);
+        // Intercept programmatic changes to .checked property
+        const originalDescriptor = Object.getOwnPropertyDescriptor(
+          HTMLInputElement.prototype,
+          "checked",
+        );
+        Object.defineProperty(el, "checked", {
+          get: originalDescriptor.get,
+          set(value) {
+            originalDescriptor.set.call(this, value);
+            callback();
+          },
+          configurable: true,
+        });
+        return () => {
+          // Restore original property descriptor
+          Object.defineProperty(el, "checked", originalDescriptor);
+          el.removeEventListener("input", callback);
+        };
+      }
+      if (el.type === "radio") {
+        // Listen to changes on the radio group
+        const radioSet =
+          el.closest("[data-radio-list], fieldset, form") || document;
+        radioSet.addEventListener("input", callback);
+
+        // Intercept programmatic changes to .checked property
+        const originalDescriptor = Object.getOwnPropertyDescriptor(
+          HTMLInputElement.prototype,
+          "checked",
+        );
+        Object.defineProperty(el, "checked", {
+          get: originalDescriptor.get,
+          set(value) {
+            originalDescriptor.set.call(this, value);
+            callback();
+          },
+          configurable: true,
+        });
+        return () => {
+          radioSet.removeEventListener("input", callback);
+          // Restore original property descriptor
+          Object.defineProperty(el, "checked", originalDescriptor);
+        };
+      }
+      if (el.tagName === "INPUT") {
+        el.addEventListener("input", callback);
+        return () => {
+          el.removeEventListener("input", callback);
+        };
+      }
+      return () => {};
+    },
+    test: (el) => el.matches(":checked"),
+  },
+  ":focus": {
+    attribute: "data-focus",
+    setup: (el, callback) => {
+      el.addEventListener("focusin", callback);
+      el.addEventListener("focusout", callback);
+      return () => {
+        el.removeEventListener("focusin", callback);
+        el.removeEventListener("focusout", callback);
+      };
+    },
+    test: (el) => {
+      if (el.matches(":focus")) {
+        return true;
+      }
+      const focusProxy = el.getAttribute("focus-proxy");
+      if (focusProxy) {
+        return document.querySelector(`#${focusProxy}`).matches(":focus");
+      }
+      return false;
+    },
+  },
+  ":focus-visible": {
+    attribute: "data-focus-visible",
+    setup: (el, callback) => {
+      document.addEventListener("keydown", callback);
+      document.addEventListener("keyup", callback);
+      return () => {
+        document.removeEventListener("keydown", callback);
+        document.removeEventListener("keyup", callback);
+      };
+    },
+    test: (el) => {
+      if (el.matches(":focus-visible")) {
+        return true;
+      }
+      const focusProxy = el.getAttribute("focus-proxy");
+      if (focusProxy) {
+        return document
+          .querySelector(`#${focusProxy}`)
+          .matches(":focus-visible");
+      }
+      return false;
+    },
+  },
+  ":disabled": {
+    attribute: "data-disabled",
+    add: (el) => {
+      if (
+        el.tagName === "BUTTON" ||
+        el.tagName === "INPUT" ||
+        el.tagName === "SELECT" ||
+        el.tagName === "TEXTAREA"
+      ) {
+        el.disabled = true;
+      }
+    },
+    remove: (el) => {
+      if (
+        el.tagName === "BUTTON" ||
+        el.tagName === "INPUT" ||
+        el.tagName === "SELECT" ||
+        el.tagName === "TEXTAREA"
+      ) {
+        el.disabled = false;
+      }
+    },
+  },
+  ":read-only": {
+    attribute: "data-readonly",
+    add: (el) => {
+      if (
+        el.tagName === "INPUT" ||
+        el.tagName === "SELECT" ||
+        el.tagName === "TEXTAREA"
+      ) {
+        if (el.type === "checkbox" || el.type === "radio") {
+          // there is no readOnly for checkboxes/radios
+          return;
+        }
+        el.readOnly = true;
+      }
+    },
+    remove: (el) => {
+      if (
+        el.tagName === "INPUT" ||
+        el.tagName === "SELECT" ||
+        el.tagName === "TEXTAREA"
+      ) {
+        if (el.type === "checkbox" || el.type === "radio") {
+          // there is no readOnly for checkboxes/radios
+          return;
+        }
+        el.readOnly = false;
+      }
+    },
+  },
+  ":valid": {
+    attribute: "data-valid",
+    test: (el) => el.matches(":valid"),
+  },
+  ":invalid": {
+    attribute: "data-invalid",
+    test: (el) => el.matches(":invalid"),
+  },
+  ":-navi-loading": {
+    attribute: "data-loading",
+  },
+  ":-navi-status-info": {
+    attribute: "data-status-info",
+  },
+  ":-navi-status-success": {
+    attribute: "data-status-success",
+  },
+  ":-navi-status-warning": {
+    attribute: "data-status-warning",
+  },
+  ":-navi-status-error": {
+    attribute: "data-status-error",
+  },
+};
+
+const NAVI_PSEUDO_STATE_CUSTOM_EVENT = "navi_pseudo_state";
+const dispatchNaviPseudoStateEvent = (element, value, oldValue) => {
+  if (!element) {
+    return;
+  }
+  element.dispatchEvent(
+    new CustomEvent(NAVI_PSEUDO_STATE_CUSTOM_EVENT, {
+      detail: {
+        pseudoState: value,
+        oldPseudoState: oldValue,
+      },
+    }),
+  );
+};
+
+const EMPTY_STATE = {};
+const initPseudoStyles = (
+  element,
+  {
+    pseudoClasses,
+    pseudoState, // ":disabled", ":read-only", ":-navi-loading", etc...
+    effect,
+    elementToImpact = element,
+    elementListeningPseudoState,
+  },
+) => {
+  if (elementListeningPseudoState === element) {
+    console.warn(
+      `elementListeningPseudoState should not be the same as element to avoid infinite loop`,
+    );
+    elementListeningPseudoState = null;
+  }
+
+  const onStateChange = (value, oldValue) => {
+    effect?.(value, oldValue);
+    if (elementListeningPseudoState) {
+      dispatchNaviPseudoStateEvent(
+        elementListeningPseudoState,
+        value,
+        oldValue,
+      );
+    }
+  };
+
+  if (!pseudoClasses || pseudoClasses.length === 0) {
+    onStateChange(EMPTY_STATE);
+    return () => {};
+  }
+
+  const [teardown, addTeardown] = createPubSub();
+
+  let state;
+  const checkPseudoClasses = () => {
+    let someChange = false;
+    const currentState = {};
+    for (const pseudoClass of pseudoClasses) {
+      const pseudoClassDefinition = PSEUDO_CLASSES[pseudoClass];
+      if (!pseudoClassDefinition) {
+        console.warn(`Unknown pseudo class: ${pseudoClass}`);
+        continue;
+      }
+      let currentValue;
+      if (
+        pseudoState &&
+        Object.hasOwn(pseudoState, pseudoClass) &&
+        pseudoState[pseudoClass] !== undefined
+      ) {
+        currentValue = pseudoState[pseudoClass];
+      } else {
+        const { test } = pseudoClassDefinition;
+        if (test) {
+          currentValue = test(element, pseudoState);
+        }
+      }
+      currentState[pseudoClass] = currentValue;
+      const oldValue = state ? state[pseudoClass] : undefined;
+      if (oldValue !== currentValue || !state) {
+        someChange = true;
+        const { attribute, add, remove } = pseudoClassDefinition;
+        if (currentValue) {
+          if (attribute) {
+            elementToImpact.setAttribute(attribute, "");
+          }
+          add?.(element);
+        } else {
+          if (attribute) {
+            elementToImpact.removeAttribute(attribute);
+          }
+          remove?.(element);
+        }
+      }
+    }
+    if (!someChange) {
+      return;
+    }
+    const oldState = state;
+    state = currentState;
+    onStateChange(state, oldState);
+  };
+
+  element.addEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, (event) => {
+    const oldState = event.detail.oldPseudoState;
+    state = event.detail.pseudoState;
+    onStateChange(state, oldState);
+  });
+
+  for (const pseudoClass of pseudoClasses) {
+    const pseudoClassDefinition = PSEUDO_CLASSES[pseudoClass];
+    if (!pseudoClassDefinition) {
+      console.warn(`Unknown pseudo class: ${pseudoClass}`);
+      continue;
+    }
+    const { setup } = pseudoClassDefinition;
+    if (setup) {
+      const cleanup = setup(element, () => {
+        checkPseudoClasses();
+      });
+      addTeardown(cleanup);
+    }
+  }
+  checkPseudoClasses();
+  // just in case + catch use forcing them in chrome devtools
+  const interval = setInterval(() => {
+    checkPseudoClasses();
+  }, 300);
+  addTeardown(() => {
+    clearInterval(interval);
+  });
+
+  return teardown;
+};
+
+const applyStyle = (element, style, pseudoState, pseudoNamedStyles) => {
+  if (!element) {
+    return;
+  }
+  updateStyle(element, getStyleToApply(style, pseudoState, pseudoNamedStyles));
+};
+
+const PSEUDO_STATE_DEFAULT = {};
+const PSEUDO_NAMED_STYLES_DEFAULT = {};
+const getStyleToApply = (styles, pseudoState, pseudoNamedStyles) => {
+  if (
+    !pseudoState ||
+    pseudoState === PSEUDO_STATE_DEFAULT ||
+    !pseudoNamedStyles ||
+    pseudoNamedStyles === PSEUDO_NAMED_STYLES_DEFAULT
+  ) {
+    return styles;
+  }
+
+  const isMatching = (pseudoKey) => {
+    if (pseudoKey.startsWith("::")) {
+      const nextColonIndex = pseudoKey.indexOf(":", 2);
+      if (nextColonIndex === -1) {
+        return true;
+      }
+      // Handle pseudo-elements with states like "::-navi-loader:checked:disabled"
+      const pseudoStatesString = pseudoKey.slice(nextColonIndex);
+      return isMatching(pseudoStatesString);
+    }
+    const nextColonIndex = pseudoKey.indexOf(":", 1);
+    if (nextColonIndex === -1) {
+      return pseudoState[pseudoKey];
+    }
+    // Handle compound pseudo-states like ":checked:disabled"
+    return pseudoKey
+      .slice(1)
+      .split(":")
+      .every((state) => pseudoState[state]);
+  };
+
+  const styleToAddSet = new Set();
+  for (const pseudoKey of Object.keys(pseudoNamedStyles)) {
+    if (isMatching(pseudoKey)) {
+      const stylesToApply = pseudoNamedStyles[pseudoKey];
+      styleToAddSet.add(stylesToApply);
+    }
+  }
+  if (styleToAddSet.size === 0) {
+    return styles;
+  }
+  let style = styles || {};
+  for (const styleToAdd of styleToAddSet) {
+    style = mergeTwoStyles(style, styleToAdd, "css");
+  }
+  return style;
+};
+
+const styleKeySetWeakMap = new WeakMap();
+const updateStyle = (element, style) => {
+  const oldStyleKeySet = styleKeySetWeakMap.get(element);
+  const styleKeySet = new Set(style ? Object.keys(style) : []);
+  if (!oldStyleKeySet) {
+    for (const key of styleKeySet) {
+      if (key.startsWith("--")) {
+        element.style.setProperty(key, style[key]);
+      } else {
+        element.style[key] = style[key];
+      }
+    }
+    styleKeySetWeakMap.set(element, styleKeySet);
+    return;
+  }
+  const toDeleteKeySet = new Set(oldStyleKeySet);
+  for (const key of styleKeySet) {
+    toDeleteKeySet.delete(key);
+    if (key.startsWith("--")) {
+      element.style.setProperty(key, style[key]);
+    } else {
+      element.style[key] = style[key];
+    }
+  }
+  for (const toDeleteKey of toDeleteKeySet) {
+    if (toDeleteKey.startsWith("--")) {
+      element.style.removeProperty(toDeleteKey);
+    } else {
+      // we can't use removeProperty because "toDeleteKey" is in camelCase
+      // e.g., backgroundColor (and it's safer to just let the browser do the conversion)
+      element.style[toDeleteKey] = "";
+    }
+  }
+  styleKeySetWeakMap.set(element, styleKeySet);
+  return;
+};
+
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  [data-flow-inline] {
+    display: inline;
+  }
+  [data-flow-row] {
+    display: flex;
+    flex-direction: column;
+  }
+  [data-flow-column] {
+    display: flex;
+    flex-direction: row;
+  }
+  [data-flow-inline][data-flow-row],
+  [data-flow-inline][data-flow-column] {
+    display: inline-flex;
+  }
+`;
+const PSEUDO_CLASSES_DEFAULT = [];
+const PSEUDO_ELEMENTS_DEFAULT = [];
+const STYLE_CSS_VARS_DEFAULT = {};
+const Box = props => {
+  const {
+    as = "div",
+    baseClassName,
+    className,
+    baseStyle,
+    // style management
+    style,
+    styleCSSVars = STYLE_CSS_VARS_DEFAULT,
+    basePseudoState,
+    pseudoState,
+    // for demo purposes it's possible to control pseudo state from props
+    pseudoClasses = PSEUDO_CLASSES_DEFAULT,
+    pseudoElements = PSEUDO_ELEMENTS_DEFAULT,
+    pseudoStyle,
+    // visualSelector convey the following:
+    // The box itself is visually "invisible", one of its descendant is responsible for visual representation
+    // - Some styles will be used on the box itself (for instance margins)
+    // - Some styles will be used on the visual element (for instance paddings, backgroundColor)
+    // -> introduced for <Button /> with transform:scale on press
+    visualSelector,
+    // pseudoStateSelector convey the following:
+    // The box contains content that holds pseudoState
+    // -> introduced for <Input /> with a wrapped for loading, checkboxes, etc
+    pseudoStateSelector,
+    hasChildFunction,
+    children,
+    ...rest
+  } = props;
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
+  const TagName = as;
+  const defaultDisplay = getDefaultDisplay(TagName);
+  let {
+    box,
+    inline,
+    row,
+    column
+  } = rest;
+  if (box === "auto" || inline || defaultDisplay === "inline") {
+    if (rest.width !== undefined || rest.height !== undefined) {
+      box = true;
+    }
+  }
+  if (box) {
+    if (inline === undefined) {
+      inline = true;
+    }
+    if (column === undefined && !row) {
+      column = true;
+    }
+  }
+  let boxFlow;
+  if (inline) {
+    if (row) {
+      boxFlow = "inline-row";
+    } else if (column) {
+      boxFlow = "inline-column";
+    } else {
+      boxFlow = "inline";
+    }
+  } else if (row) {
+    boxFlow = "row";
+  } else if (column) {
+    boxFlow = "column";
+  } else {
+    boxFlow = defaultDisplay;
+  }
+  const innerClassName = withPropsClassName(baseClassName, className);
+  const selfForwardedProps = {};
+  const childForwardedProps = {};
+  {
+    const parentBoxFlow = useContext(BoxFlowContext);
+    const styleDeps = [
+    // Layout and alignment props
+    parentBoxFlow, boxFlow,
+    // Style context dependencies
+    styleCSSVars, pseudoClasses, pseudoElements,
+    // Selectors
+    visualSelector, pseudoStateSelector];
+    let innerPseudoState;
+    if (basePseudoState && pseudoState) {
+      innerPseudoState = {};
+      const baseStateKeys = Object.keys(basePseudoState);
+      const pseudoStateKeySet = new Set(Object.keys(pseudoState));
+      for (const key of baseStateKeys) {
+        if (pseudoStateKeySet.has(key)) {
+          pseudoStateKeySet.delete(key);
+          const value = pseudoState[key];
+          styleDeps.push(value);
+          innerPseudoState[key] = value;
+        } else {
+          const value = basePseudoState[key];
+          styleDeps.push(value);
+          innerPseudoState[key] = value;
+        }
+      }
+      for (const key of pseudoStateKeySet) {
+        const value = pseudoState[key];
+        styleDeps.push(value);
+        innerPseudoState[key] = value;
+      }
+    } else if (basePseudoState) {
+      innerPseudoState = basePseudoState;
+      for (const key of Object.keys(basePseudoState)) {
+        const value = basePseudoState[key];
+        styleDeps.push(value);
+      }
+    } else if (pseudoState) {
+      innerPseudoState = pseudoState;
+      for (const key of Object.keys(pseudoState)) {
+        const value = pseudoState[key];
+        styleDeps.push(value);
+      }
+    } else {
+      innerPseudoState = PSEUDO_STATE_DEFAULT;
+    }
+    const boxStyles = {};
+    const styleContext = {
+      parentBoxFlow,
+      boxFlow,
+      styleCSSVars,
+      pseudoState: innerPseudoState,
+      pseudoClasses,
+      pseudoElements,
+      remainingProps: rest,
+      styles: boxStyles
+    };
+    let boxPseudoNamedStyles = PSEUDO_NAMED_STYLES_DEFAULT;
+    const shouldForwardAllToChild = visualSelector && pseudoStateSelector;
+    const addStyle = (value, name, stylesTarget, context) => {
+      styleDeps.push(value); // impact box style -> add to deps
+      const cssVar = styleCSSVars[name];
+      const mergedValue = prepareStyleValue(stylesTarget[name], value, name, context);
+      if (cssVar) {
+        stylesTarget[cssVar] = mergedValue;
+        return true;
+      }
+      stylesTarget[name] = mergedValue;
+      return false;
+    };
+    const addStyleMaybeForwarding = (value, name, stylesTarget, context, visualChildPropStrategy) => {
+      if (!visualChildPropStrategy) {
+        addStyle(value, name, stylesTarget, context);
+        return false;
+      }
+      const cssVar = styleCSSVars[name];
+      if (cssVar) {
+        // css var wins over visual child handling
+        addStyle(value, name, stylesTarget, context);
+        return false;
+      }
+      if (visualChildPropStrategy === "copy") {
+        // we stylyze ourself + forward prop to the child
+        addStyle(value, name, stylesTarget, context);
+      }
+      return true;
+    };
+    const assignStyle = (value, name, styleContext, boxStylesTarget, styleOrigin) => {
+      const context = styleOrigin === "base_style" ? "js" : "css";
+      const isCss = styleOrigin === "base_style" || styleOrigin === "style";
+      if (isCss) {
+        addStyle(value, name, boxStylesTarget, context);
+        return;
+      }
+      const isPseudoStyle = styleOrigin === "pseudo_style";
+      const mightStyle = isStyleProp(name);
+      if (!mightStyle) {
+        // not a style prop what do we do with it?
+        if (shouldForwardAllToChild) {
+          if (isPseudoStyle) ; else {
+            childForwardedProps[name] = value;
+          }
+        } else {
+          if (isPseudoStyle) {
+            console.warn(`unsupported pseudo style key "${name}"`);
+          }
+          selfForwardedProps[name] = value;
+        }
+        return;
+      }
+      // it's a style prop, we need first to check if we have css var to handle them
+      // otherwise we decide to put it either on self or child
+      const visualChildPropStrategy = visualSelector && getVisualChildStylePropStrategy(name);
+      const getStyle = getHowToHandleStyleProp(name);
+      if (
+      // prop name === css style name
+      !getStyle) {
+        const needForwarding = addStyleMaybeForwarding(value, name, boxStylesTarget, context, visualChildPropStrategy);
+        if (needForwarding) {
+          if (isPseudoStyle) ; else {
+            childForwardedProps[name] = value;
+          }
+        }
+        return;
+      }
+      const cssValues = getStyle(value, styleContext);
+      if (!cssValues) {
+        return;
+      }
+      let needForwarding = false;
+      for (const styleName of Object.keys(cssValues)) {
+        const cssValue = cssValues[styleName];
+        needForwarding = addStyleMaybeForwarding(cssValue, styleName, boxStylesTarget, context, visualChildPropStrategy);
+      }
+      if (needForwarding) {
+        if (isPseudoStyle) ; else {
+          childForwardedProps[name] = value;
+        }
+      }
+    };
+    if (baseStyle) {
+      for (const key of baseStyle) {
+        const value = baseStyle[key];
+        assignStyle(value, key, styleContext, boxStyles, "baseStyle");
+      }
+    }
+    const remainingPropKeyArray = Object.keys(rest);
+    for (const propName of remainingPropKeyArray) {
+      if (propName === "ref") {
+        // some props not destructured but that are neither
+        // style props, nor should be forwarded to the child
+        continue;
+      }
+      const propValue = rest[propName];
+      assignStyle(propValue, propName, styleContext, boxStyles, "prop");
+    }
+    if (pseudoStyle) {
+      const assignPseudoStyle = (propValue, propName, pseudoStyleContext, pseudoStylesTarget) => {
+        assignStyle(propValue, propName, pseudoStyleContext, pseudoStylesTarget, "pseudo_style");
+      };
+      const pseudoStyleKeys = Object.keys(pseudoStyle);
+      if (pseudoStyleKeys.length) {
+        boxPseudoNamedStyles = {};
+        for (const key of pseudoStyleKeys) {
+          const pseudoStyleContext = {
+            ...styleContext,
+            styleCSSVars: {
+              ...styleCSSVars,
+              ...styleCSSVars[key]
+            },
+            pseudoName: key
+          };
+
+          // pseudo class
+          if (key.startsWith(":")) {
+            styleDeps.push(key);
+            const pseudoClassStyles = {};
+            const pseudoClassStyle = pseudoStyle[key];
+            for (const pseudoClassStyleKey of Object.keys(pseudoClassStyle)) {
+              const pseudoClassStyleValue = pseudoClassStyle[pseudoClassStyleKey];
+              assignPseudoStyle(pseudoClassStyleValue, pseudoClassStyleKey, pseudoStyleContext, pseudoClassStyles);
+            }
+            boxPseudoNamedStyles[key] = pseudoClassStyles;
+            continue;
+          }
+          // pseudo element
+          if (key.startsWith("::")) {
+            styleDeps.push(key);
+            const pseudoElementStyles = {};
+            const pseudoElementStyle = pseudoStyle[key];
+            for (const pseudoElementStyleKey of Object.keys(pseudoElementStyle)) {
+              const pseudoElementStyleValue = pseudoElementStyle[pseudoElementStyleKey];
+              assignPseudoStyle(pseudoElementStyleValue, pseudoElementStyleKey, pseudoStyleContext, pseudoElementStyles);
+            }
+            boxPseudoNamedStyles[key] = pseudoElementStyles;
+            continue;
+          }
+          console.warn(`unsupported pseudo style key "${key}"`);
+        }
+      }
+      childForwardedProps.pseudoStyle = pseudoStyle;
+    }
+    if (typeof style === "string") {
+      const styleObject = normalizeStyles(style, "css");
+      for (const styleName of Object.keys(styleObject)) {
+        const styleValue = styleObject[styleName];
+        assignStyle(styleValue, styleName, styleContext, boxStyles, "style");
+      }
+    } else if (style && typeof style === "object") {
+      for (const styleName of Object.keys(style)) {
+        const styleValue = style[styleName];
+        assignStyle(styleValue, styleName, styleContext, boxStyles, "style");
+      }
+    }
+    const updateStyle = useCallback(state => {
+      const boxEl = ref.current;
+      applyStyle(boxEl, boxStyles, state, boxPseudoNamedStyles);
+    }, styleDeps);
+    const finalStyleDeps = [pseudoStateSelector, innerPseudoState, updateStyle];
+    // By default ":hover", ":active" are not tracked.
+    // But is code explicitely do something like:
+    // pseudoStyle={{ ":hover": { backgroundColor: "red" } }}
+    // then we'll track ":hover" state changes even for basic elements like <div>
+    let innerPseudoClasses;
+    if (pseudoStyle) {
+      innerPseudoClasses = [...pseudoClasses];
+      if (pseudoClasses !== PSEUDO_CLASSES_DEFAULT) {
+        finalStyleDeps.push(...pseudoClasses);
+      }
+      for (const key of Object.keys(pseudoStyle)) {
+        if (key.startsWith(":") && !innerPseudoClasses.includes(key)) {
+          innerPseudoClasses.push(key);
+          finalStyleDeps.push(key);
+        }
+      }
+    } else {
+      innerPseudoClasses = pseudoClasses;
+      if (pseudoClasses !== PSEUDO_CLASSES_DEFAULT) {
+        finalStyleDeps.push(...pseudoClasses);
+      }
+    }
+    useLayoutEffect(() => {
+      const boxEl = ref.current;
+      if (!boxEl) {
+        return null;
+      }
+      const pseudoStateEl = pseudoStateSelector ? boxEl.querySelector(pseudoStateSelector) : boxEl;
+      const visualEl = visualSelector ? boxEl.querySelector(visualSelector) : null;
+      return initPseudoStyles(pseudoStateEl, {
+        pseudoClasses: innerPseudoClasses,
+        pseudoState: innerPseudoState,
+        effect: updateStyle,
+        elementToImpact: boxEl,
+        elementListeningPseudoState: visualEl === pseudoStateEl ? null : visualEl
+      });
+    }, finalStyleDeps);
+  }
+
+  // When hasChildFunction is used it means
+  // Some/all the children needs to access remainingProps
+  // to render and will provide a function to do so.
+  let innerChildren;
+  if (hasChildFunction) {
+    if (Array.isArray(children)) {
+      innerChildren = children.map(child => typeof child === "function" ? child(childForwardedProps) : child);
+    } else if (typeof children === "function") {
+      innerChildren = children(childForwardedProps);
+    } else {
+      innerChildren = children;
+    }
+  } else {
+    innerChildren = children;
+  }
+  return jsx(TagName, {
+    ref: ref,
+    className: innerClassName,
+    "data-flow-inline": inline ? "" : undefined,
+    "data-flow-row": row ? "" : undefined,
+    "data-flow-column": column ? "" : undefined,
+    "data-visual-selector": visualSelector,
+    ...selfForwardedProps,
+    children: jsx(BoxFlowContext.Provider, {
+      value: boxFlow,
+      children: innerChildren
+    })
+  });
+};
+
+/**
+ * Fix alignment behavior for flex/grid containers that use `height: 100%`.
+ *
+ * Context:
+ * - When a flex/grid container has `height: 100%`, it is "height-locked".
+ * - If its content becomes taller than the container, alignment rules like
+ *   `align-items: center` will cause content to be partially clipped.
+ *
+ * Goal:
+ * - Center content only when it fits.
+ * - Align content at start when it overflows.
+ *
+ * How:
+ * - Temporarily remove height-constraint (`height:auto`) to measure natural height.
+ * - Compare natural height to container height.
+ * - Add/remove an attribute so CSS can adapt alignment.
+ *
+ * Usage:
+ *   monitorItemsOverflow(containerElement);
+ *
+ * CSS example:
+ *   .container { align-items: center; }
+ *   .container[data-items-height-overflow] { align-items: flex-start; }
+ */
+
+
+const WIDTH_ATTRIBUTE_NAME = "data-items-width-overflow";
+const HEIGHT_ATTRIBUTE_NAME = "data-items-height-overflow";
+const monitorItemsOverflow = (container) => {
+  let widthIsOverflowing;
+  let heightIsOverflowing;
+  const onItemsWidthOverflowChange = () => {
+    if (widthIsOverflowing) {
+      container.setAttribute(WIDTH_ATTRIBUTE_NAME, "");
+    } else {
+      container.removeAttribute(WIDTH_ATTRIBUTE_NAME);
+    }
+  };
+  const onItemsHeightOverflowChange = () => {
+    if (heightIsOverflowing) {
+      container.setAttribute(HEIGHT_ATTRIBUTE_NAME, "");
+    } else {
+      container.removeAttribute(HEIGHT_ATTRIBUTE_NAME);
+    }
+  };
+
+  const update = () => {
+    // Save current manual height constraint
+    const prevWidth = container.style.width;
+    const prevHeight = container.style.height;
+    // Remove constraint → get true content dimension
+    container.style.width = "auto";
+    container.style.height = "auto";
+    const naturalWidth = container.scrollWidth;
+    const naturalHeight = container.scrollHeight;
+    if (prevWidth) {
+      container.style.width = prevWidth;
+    } else {
+      container.style.removeProperty("width");
+    }
+    if (prevHeight) {
+      container.style.height = prevHeight;
+    } else {
+      container.style.removeProperty("height");
+    }
+
+    const lockedWidth = container.clientWidth;
+    const lockedHeight = container.clientHeight;
+    const currentWidthIsOverflowing = naturalWidth > lockedWidth;
+    const currentHeightIsOverflowing = naturalHeight > lockedHeight;
+    if (currentWidthIsOverflowing !== widthIsOverflowing) {
+      widthIsOverflowing = currentWidthIsOverflowing;
+      onItemsWidthOverflowChange();
+    }
+    if (currentHeightIsOverflowing !== heightIsOverflowing) {
+      heightIsOverflowing = currentHeightIsOverflowing;
+      onItemsHeightOverflowChange();
+    }
+  };
+
+  const [teardown, addTeardown] = createPubSub();
+
+  update();
+
+  // mutation observer
+  const mutationObserver = new MutationObserver(() => {
+    update();
+  });
+  mutationObserver.observe(container, {
+    childList: true,
+    characterData: true,
+  });
+  addTeardown(() => {
+    mutationObserver.disconnect();
+  });
+
+  // resize observer
+  const resizeObserver = new ResizeObserver(update);
+  resizeObserver.observe(container);
+  addTeardown(() => {
+    resizeObserver.disconnect();
+  });
+
+  const destroy = () => {
+    teardown();
+    container.removeAttribute(WIDTH_ATTRIBUTE_NAME);
+    container.removeAttribute(HEIGHT_ATTRIBUTE_NAME);
+  };
+  return destroy;
+};
+
+installImportMetaCss(import.meta);
+import.meta.css = /* css */ `
+  * {
+    box-sizing: border-box;
+  }
+
+  .ui_transition {
+    --transition-duration: 300ms;
+    --justify-content: center;
+    --align-items: center;
+
+    --x-transition-duration: var(--transition-duration);
+    --x-justify-content: var(--justify-content);
+    --x-align-items: var(--align-items);
+
+    position: relative;
+  }
+  /* Alignment controls */
+  .ui_transition[data-align-x="start"] {
+    --x-justify-content: flex-start;
+  }
+  .ui_transition[data-align-x="center"] {
+    --x-justify-content: center;
+  }
+  .ui_transition[data-align-x="end"] {
+    --x-justify-content: flex-end;
+  }
+  .ui_transition[data-align-y="start"] {
+    --x-align-items: flex-start;
+  }
+  .ui_transition[data-align-y="center"] {
+    --x-align-items: center;
+  }
+  .ui_transition[data-align-y="end"] {
+    --x-align-items: flex-end;
+  }
+
+  .ui_transition,
+  .ui_transition_active_group,
+  .ui_transition_previous_group,
+  .ui_transition_target_slot,
+  .ui_transition_previous_target_slot,
+  .ui_transition_outgoing_slot,
+  .ui_transition_previous_outgoing_slot {
+    width: 100%;
+    height: 100%;
+  }
+
+  .ui_transition_target_slot,
+  .ui_transition_outgoing_slot,
+  .ui_transition_previous_target_slot,
+  .ui_transition_previous_outgoing_slot {
+    display: flex;
+    align-items: var(--x-align-items);
+    justify-content: var(--x-justify-content);
+  }
+  .ui_transition_target_slot[data-items-width-overflow],
+  .ui_transition_previous_target_slot[data-items-width-overflow],
+  .ui_transition_previous_target_slot[data-items-width-overflow],
+  .ui_transition_previous_outgoing_slot[data-items-width-overflow] {
+    --x-justify-content: flex-start;
+  }
+  .ui_transition_target_slot[data-items-height-overflow],
+  .ui_transition_previous_slot[data-items-height-overflow],
+  .ui_transition_previous_target_slot[data-items-height-overflow],
+  .ui_transition_previous_outgoing_slot[data-items-height-overflow] {
+    --x-align-items: flex-start;
+  }
+
+  .ui_transition_active_group {
+    position: relative;
+  }
+  .ui_transition_target_slot {
+    position: relative;
+  }
+  .ui_transition_outgoing_slot,
+  .ui_transition_previous_outgoing_slot {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  .ui_transition_previous_group {
+    position: absolute;
+    inset: 0;
+  }
+  .ui_transition[data-only-previous-group] .ui_transition_previous_group {
+    position: relative;
+  }
+
+  .ui_transition_target_slot_background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: -1;
+    display: none;
+    width: var(--target-slot-width, 100%);
+    height: var(--target-slot-height, 100%);
+    background: var(--target-slot-background, transparent);
+    pointer-events: none;
+  }
+  .ui_transition[data-transitioning] .ui_transition_target_slot_background {
+    display: block;
+  }
+`;
+
+const CONTENT_ID_ATTRIBUTE = "data-content-id";
+const CONTENT_PHASE_ATTRIBUTE = "data-content-phase";
+const UNSET = {
+  domNodes: [],
+  domNodesClone: [],
+  isEmpty: true,
+
+  type: "unset",
+  contentId: "unset",
+  contentPhase: undefined,
+  isContentPhase: false,
+  isContent: false,
+  toString: () => "unset",
+};
+
+const isSameConfiguration = (configA, configB) => {
+  return configA.toString() === configB.toString();
+};
+
+const createUITransitionController = (
+  root,
+  {
+    duration = 300,
+    alignX = "center",
+    alignY = "center",
+    onStateChange = () => {},
+    pauseBreakpoints = [],
+  } = {},
+) => {
+  const debugConfig = {
+    detection: root.hasAttribute("data-debug-detection"),
+    size: root.hasAttribute("data-debug-size"),
+  };
+  const hasDebugLogs = debugConfig.size;
+  const debugDetection = (message) => {
+    if (!debugConfig.detection) return;
+    console.debug(`[detection]`, message);
+  };
+  const debugSize = (message) => {
+    if (!debugConfig.size) return;
+    console.debug(`[size]`, message);
+  };
+
+  const activeGroup = root.querySelector(".ui_transition_active_group");
+  const targetSlot = root.querySelector(".ui_transition_target_slot");
+  const outgoingSlot = root.querySelector(".ui_transition_outgoing_slot");
+  const previousGroup = root.querySelector(".ui_transition_previous_group");
+  const previousTargetSlot = previousGroup?.querySelector(
+    ".ui_transition_previous_target_slot",
+  );
+  const previousOutgoingSlot = previousGroup?.querySelector(
+    ".ui_transition_previous_outgoing_slot",
+  );
+
+  if (
+    !root ||
+    !activeGroup ||
+    !targetSlot ||
+    !outgoingSlot ||
+    !previousGroup ||
+    !previousTargetSlot ||
+    !previousOutgoingSlot
+  ) {
+    throw new Error(
+      "createUITransitionController requires element with .active_group, .target_slot, .outgoing_slot, .previous_group, .previous_target_slot, and .previous_outgoing_slot elements",
+    );
+  }
+
+  // we maintain a background copy behind target slot to avoid showing
+  // the body flashing during the fade-in
+  const targetSlotBackground = document.createElement("div");
+  targetSlotBackground.className = "ui_transition_target_slot_background";
+  activeGroup.insertBefore(targetSlotBackground, targetSlot);
+
+  root.style.setProperty("--x-transition-duration", `${duration}ms`);
+  outgoingSlot.setAttribute("inert", "");
+  previousGroup.setAttribute("inert", "");
+
+  const detectConfiguration = (slot, { contentId, contentPhase } = {}) => {
+    const domNodes = Array.from(slot.childNodes);
+    if (!domNodes) {
+      return UNSET;
+    }
+
+    const isEmpty = domNodes.length === 0;
+    let textNodeCount = 0;
+    let elementNodeCount = 0;
+    let firstElementNode;
+    const domNodesClone = [];
+    if (isEmpty) {
+      if (contentPhase === undefined) {
+        contentPhase = "empty";
+      }
+    } else {
+      const contentIdSlotAttr = slot.getAttribute(CONTENT_ID_ATTRIBUTE);
+      let contentIdChildAttr;
+      for (const domNode of domNodes) {
+        if (domNode.nodeType === Node.TEXT_NODE) {
+          textNodeCount++;
+        } else {
+          if (!firstElementNode) {
+            firstElementNode = domNode;
+          }
+          elementNodeCount++;
+
+          if (domNode.hasAttribute("data-content-phase")) {
+            const contentPhaseAttr = domNode.getAttribute("data-content-phase");
+            contentPhase = contentPhaseAttr || "attr";
+          }
+          if (domNode.hasAttribute("data-content-key")) {
+            contentIdChildAttr = domNode.getAttribute("data-content-key");
+          }
+        }
+        const domNodeClone = domNode.cloneNode(true);
+        domNodesClone.push(domNodeClone);
+      }
+
+      if (contentIdSlotAttr && contentIdChildAttr) {
+        console.warn(
+          `Slot and slot child both have a [${CONTENT_ID_ATTRIBUTE}]. Slot is ${contentIdSlotAttr} and child is ${contentIdChildAttr}, using the child.`,
+        );
+      }
+      if (contentId === undefined) {
+        contentId = contentIdChildAttr || contentIdSlotAttr || undefined;
+      }
+    }
+    const isOnlyTextNodes = elementNodeCount === 0 && textNodeCount > 1;
+    const singleElementNode = elementNodeCount === 1 ? firstElementNode : null;
+
+    contentId = contentId || getElementSignature(domNodes[0]);
+    if (!contentPhase && isEmpty) {
+      // Imagine code rendering null while switching to a new content
+      // or even while staying on the same content.
+      // In the UI we want to consider this as an "empty" phase.
+      // meaning the ui will keep the same size until something else happens
+      // This prevent layout shifts of code not properly handling
+      // intermediate states.
+      contentPhase = "empty";
+    }
+
+    let width;
+    let height;
+    let borderRadius;
+    let border;
+    let background;
+
+    if (isEmpty) {
+      debugSize(`measureSlot(".${slot.className}") -> it is empty`);
+    } else if (singleElementNode) {
+      const visualSelector = singleElementNode.getAttribute(
+        "data-visual-selector",
+      );
+      const visualElement = visualSelector
+        ? singleElementNode.querySelector(visualSelector) || singleElementNode
+        : singleElementNode;
+      const rect = visualElement.getBoundingClientRect();
+      width = rect.width;
+      height = rect.height;
+      debugSize(`measureSlot(".${slot.className}") -> [${width}x${height}]`);
+      borderRadius = getBorderRadius(visualElement);
+      border = getComputedStyle(visualElement).border;
+      background = getComputedStyle(visualElement).background;
+    } else {
+      // text, multiple elements
+      const rect = slot.getBoundingClientRect();
+      width = rect.width;
+      height = rect.height;
+      debugSize(`measureSlot(".${slot.className}") -> [${width}x${height}]`);
+    }
+
+    const commonProperties = {
+      domNodes,
+      domNodesClone,
+      isEmpty,
+      isOnlyTextNodes,
+      singleElementNode,
+
+      width,
+      height,
+      borderRadius,
+      border,
+      background,
+
+      contentId,
+    };
+
+    if (contentPhase) {
+      return {
+        ...commonProperties,
+        type: "content_phase",
+        contentPhase,
+        isContentPhase: true,
+        isContent: false,
+        toString: () => `content(${contentId}).phase(${contentPhase})`,
+      };
+    }
+    return {
+      ...commonProperties,
+      type: "content",
+      contentPhase: undefined,
+      isContentPhase: false,
+      isContent: true,
+      toString: () => `content(${contentId})`,
+    };
+  };
+
+  const targetSlotInitialConfiguration = detectConfiguration(targetSlot);
+  const outgoingSlotInitialConfiguration = detectConfiguration(outgoingSlot, {
+    contentPhase: "true",
+  });
+  let targetSlotConfiguration = targetSlotInitialConfiguration;
+  let outgoingSlotConfiguration = outgoingSlotInitialConfiguration;
+  let previousTargetSlotConfiguration = UNSET;
+
+  const updateSlotAttributes = () => {
+    if (targetSlotConfiguration.isEmpty && outgoingSlotConfiguration.isEmpty) {
+      root.setAttribute("data-only-previous-group", "");
+    } else {
+      root.removeAttribute("data-only-previous-group");
+    }
+  };
+  const updateAlignment = () => {
+    // Set data attributes for CSS-based alignment
+    root.setAttribute("data-align-x", alignX);
+    root.setAttribute("data-align-y", alignY);
+  };
+
+  const moveConfigurationIntoSlot = (configuration, slot) => {
+    slot.innerHTML = "";
+    for (const domNode of configuration.domNodesClone) {
+      slot.appendChild(domNode);
+    }
+    // in case border or stuff like that have changed we re-detect the config
+    const updatedConfig = detectConfiguration(slot);
+    if (slot === targetSlot) {
+      targetSlotConfiguration = updatedConfig;
+    } else if (slot === outgoingSlot) {
+      outgoingSlotConfiguration = updatedConfig;
+    } else if (slot === previousTargetSlot) {
+      previousTargetSlotConfiguration = updatedConfig;
+    } else if (slot === previousOutgoingSlot) ; else {
+      throw new Error("Unknown slot for applyConfiguration");
+    }
+  };
+
+  updateAlignment();
+
+  let transitionType = "none";
+  const groupTransitionOptions = {
+    // debugBreakpoints: [0.25],
+    pauseBreakpoints,
+    lifecycle: {
+      setup: () => {
+        updateSlotAttributes();
+        root.setAttribute("data-transitioning", "");
+        onStateChange({ isTransitioning: true });
+        return {
+          teardown: () => {
+            root.removeAttribute("data-transitioning");
+            updateSlotAttributes(); // Update positioning after transition
+            onStateChange({ isTransitioning: false });
+          },
+        };
+      },
+    },
+  };
+  const transitionController = createGroupTransitionController(
+    groupTransitionOptions,
+  );
+
+  const elementToClip = root;
+  const morphContainerIntoTarget = () => {
+    const morphTransitions = [];
+    {
+      // TODO: ideally when scrollContainer is document AND we transition
+      // from a layout with scrollbar to a layout without
+      // we have clip path detecting we go from a given width/height to a new width/height
+      // that might just be the result of scrollbar appearing/disappearing
+      // we should detect when this happens to avoid clipping what correspond to the scrollbar presence toggling
+      const fromWidth = previousTargetSlotConfiguration.width || 0;
+      const fromHeight = previousTargetSlotConfiguration.height || 0;
+      const toWidth = targetSlotConfiguration.width || 0;
+      const toHeight = targetSlotConfiguration.height || 0;
+      debugSize(
+        `transition from [${fromWidth}x${fromHeight}] to [${toWidth}x${toHeight}]`,
+      );
+      const restoreOverflow = preventIntermediateScrollbar(root, {
+        fromWidth,
+        fromHeight,
+        toWidth,
+        toHeight,
+        onPrevent: ({ x, y, scrollContainer }) => {
+          if (x) {
+            debugSize(
+              `Temporarily hiding horizontal overflow during transition on ${getElementSignature(scrollContainer)}`,
+            );
+          }
+          if (y) {
+            debugSize(
+              `Temporarily hiding vertical overflow during transition on ${getElementSignature(scrollContainer)}`,
+            );
+          }
+        },
+        onRestore: () => {
+          debugSize(`Restored overflow after transition`);
+        },
+      });
+
+      const onSizeTransitionFinished = () => {
+        // Restore overflow when transition is complete
+        restoreOverflow();
+      };
+
+      // https://emilkowal.ski/ui/the-magic-of-clip-path
+      const elementToClipRect = elementToClip.getBoundingClientRect();
+      const elementToClipWidth = elementToClipRect.width;
+      const elementToClipHeight = elementToClipRect.height;
+      // Calculate where content is positioned within the large container
+      const getAlignedPosition = (containerSize, contentSize, align) => {
+        switch (align) {
+          case "start":
+            return 0;
+          case "end":
+            return containerSize - contentSize;
+          case "center":
+          default:
+            return (containerSize - contentSize) / 2;
+        }
+      };
+      // Position of "from" content within large container
+      const fromLeft = getAlignedPosition(
+        elementToClipWidth,
+        fromWidth,
+        alignX,
+      );
+      const fromTop = getAlignedPosition(
+        elementToClipHeight,
+        fromHeight,
+        alignY,
+      );
+      // Position of target content within large container
+      const targetLeft = getAlignedPosition(
+        elementToClipWidth,
+        toWidth,
+        alignX,
+      );
+      const targetTop = getAlignedPosition(
+        elementToClipHeight,
+        toHeight,
+        alignY,
+      );
+      debugSize(
+        `Positions in container: from [${fromLeft},${fromTop}] ${fromWidth}x${fromHeight} to [${targetLeft},${targetTop}] ${toWidth}x${toHeight}`,
+      );
+      // Get border-radius values
+      const fromBorderRadius =
+        previousTargetSlotConfiguration.borderRadius || 0;
+      const toBorderRadius = targetSlotConfiguration.borderRadius || 0;
+      const startInsetTop = fromTop;
+      const startInsetRight = elementToClipWidth - (fromLeft + fromWidth);
+      const startInsetBottom = elementToClipHeight - (fromTop + fromHeight);
+      const startInsetLeft = fromLeft;
+
+      const endInsetTop = targetTop;
+      const endInsetRight = elementToClipWidth - (targetLeft + toWidth);
+      const endInsetBottom = elementToClipHeight - (targetTop + toHeight);
+      const endInsetLeft = targetLeft;
+
+      const startClipPath = `inset(${startInsetTop}px ${startInsetRight}px ${startInsetBottom}px ${startInsetLeft}px round ${fromBorderRadius}px)`;
+      const endClipPath = `inset(${endInsetTop}px ${endInsetRight}px ${endInsetBottom}px ${endInsetLeft}px round ${toBorderRadius}px)`;
+      // Create clip-path animation using Web Animations API
+      const clipAnimation = elementToClip.animate(
+        [{ clipPath: startClipPath }, { clipPath: endClipPath }],
+        {
+          duration,
+          easing: "ease",
+          fill: "forwards",
+        },
+      );
+
+      // Handle finish
+      clipAnimation.finished
+        .then(() => {
+          // Clear clip-path to restore normal behavior
+          elementToClip.style.clipPath = "";
+          clipAnimation.cancel();
+          onSizeTransitionFinished();
+        })
+        .catch(() => {
+          // Animation was cancelled
+        });
+      clipAnimation.play();
+    }
+
+    return morphTransitions;
+  };
+  const fadeInTargetSlot = () => {
+    targetSlotBackground.style.setProperty(
+      "--target-slot-background",
+      targetSlotConfiguration.background,
+    );
+    targetSlotBackground.style.setProperty(
+      "--target-slot-width",
+      `${targetSlotConfiguration.width || 0}px`,
+    );
+    targetSlotBackground.style.setProperty(
+      "--target-slot-height",
+      `${targetSlotConfiguration.height || 0}px`,
+    );
+    return createOpacityTransition(targetSlot, 1, {
+      from: 0,
+      duration,
+      styleSynchronizer: "inline_style",
+      onFinish: (targetSlotOpacityTransition) => {
+        targetSlotBackground.style.removeProperty("--target-slot-background");
+        targetSlotBackground.style.removeProperty("--target-slot-width");
+        targetSlotBackground.style.removeProperty("--target-slot-height");
+        targetSlotOpacityTransition.cancel();
+      },
+    });
+  };
+  const fadeOutPreviousGroup = () => {
+    return createOpacityTransition(previousGroup, 0, {
+      from: 1,
+      duration,
+      styleSynchronizer: "inline_style",
+      onFinish: (previousGroupOpacityTransition) => {
+        previousGroupOpacityTransition.cancel();
+        previousGroup.style.opacity = "0"; // keep previous group visually hidden
+      },
+    });
+  };
+  const fadeOutOutgoingSlot = () => {
+    return createOpacityTransition(outgoingSlot, 0, {
+      duration,
+      from: 1,
+      styleSynchronizer: "inline_style",
+      onFinish: (outgoingSlotOpacityTransition) => {
+        outgoingSlotOpacityTransition.cancel();
+        outgoingSlot.style.opacity = "0"; // keep outgoing slot visually hidden
+      },
+    });
+  };
+
+  // content_to_content transition (uses previous_group)
+  const applyContentToContentTransition = (toConfiguration) => {
+    // 1. move target slot to previous
+    moveConfigurationIntoSlot(targetSlotConfiguration, previousTargetSlot);
+    targetSlotConfiguration = toConfiguration;
+    // 2. move outgoing slot to previous
+    moveConfigurationIntoSlot(outgoingSlotConfiguration, previousOutgoingSlot);
+    moveConfigurationIntoSlot(UNSET, outgoingSlot);
+
+    const transitions = [
+      ...morphContainerIntoTarget(),
+      fadeInTargetSlot(),
+      fadeOutPreviousGroup(),
+    ];
+    const transition = transitionController.update(transitions, {
+      onFinish: () => {
+        moveConfigurationIntoSlot(UNSET, previousTargetSlot);
+        moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
+        if (hasDebugLogs) {
+          console.groupEnd();
+        }
+      },
+    });
+    transition.play();
+  };
+  // content_phase_to_content_phase transition (uses outgoing_slot)
+  const applyContentPhaseToContentPhaseTransition = (toConfiguration) => {
+    // 1. Move target slot to outgoing
+    moveConfigurationIntoSlot(targetSlotConfiguration, outgoingSlot);
+    targetSlotConfiguration = toConfiguration;
+
+    const transitions = [
+      ...morphContainerIntoTarget(),
+      fadeInTargetSlot(),
+      fadeOutOutgoingSlot(),
+    ];
+    const transition = transitionController.update(transitions, {
+      onFinish: () => {
+        moveConfigurationIntoSlot(UNSET, outgoingSlot);
+
+        if (hasDebugLogs) {
+          console.groupEnd();
+        }
+      },
+    });
+    transition.play();
+  };
+  // any_to_empty transition
+  const applyToEmptyTransition = () => {
+    // 1. move target slot to previous
+    moveConfigurationIntoSlot(targetSlotConfiguration, previousTargetSlot);
+    targetSlotConfiguration = UNSET;
+    // 2. move outgoing slot to previous
+    moveConfigurationIntoSlot(outgoingSlotConfiguration, previousOutgoingSlot);
+    outgoingSlotConfiguration = UNSET;
+
+    const transitions = [...morphContainerIntoTarget(), fadeOutPreviousGroup()];
+    const transition = transitionController.update(transitions, {
+      onFinish: () => {
+        moveConfigurationIntoSlot(UNSET, previousTargetSlot);
+        moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
+        if (hasDebugLogs) {
+          console.groupEnd();
+        }
+      },
+    });
+    transition.play();
+  };
+  // Main transition method
+  const transitionTo = (
+    newContentElement,
+    { contentPhase, contentId } = {},
+  ) => {
+    if (contentId) {
+      targetSlot.setAttribute(CONTENT_ID_ATTRIBUTE, contentId);
+    } else {
+      targetSlot.removeAttribute(CONTENT_ID_ATTRIBUTE);
+    }
+    if (contentPhase) {
+      targetSlot.setAttribute(CONTENT_PHASE_ATTRIBUTE, contentPhase);
+    } else {
+      targetSlot.removeAttribute(CONTENT_PHASE_ATTRIBUTE);
+    }
+    if (newContentElement) {
+      targetSlot.innerHTML = "";
+      targetSlot.appendChild(newContentElement);
+    } else {
+      targetSlot.innerHTML = "";
+    }
+  };
+  // Reset to initial content
+  const resetContent = () => {
+    transitionController.cancel();
+    moveConfigurationIntoSlot(targetSlotInitialConfiguration, targetSlot);
+    moveConfigurationIntoSlot(outgoingSlotInitialConfiguration, outgoingSlot);
+    moveConfigurationIntoSlot(UNSET, previousTargetSlot);
+    moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
+  };
+
+  const targetSlotEffect = (reasons) => {
+    if (root.hasAttribute("data-disabled")) {
+      return;
+    }
+    const fromConfiguration = targetSlotConfiguration;
+    const toConfiguration = detectConfiguration(targetSlot);
+    if (hasDebugLogs) {
+      console.group(`targetSlotEffect()`);
+      console.debug(`reasons:`);
+      console.debug(`- ${reasons.join("\n- ")}`);
+    }
+    if (isSameConfiguration(fromConfiguration, toConfiguration)) {
+      debugDetection(
+        `already in desired state (${toConfiguration}) -> early return`,
+      );
+      if (hasDebugLogs) {
+        console.groupEnd();
+      }
+      return;
+    }
+    const fromConfigType = fromConfiguration.type;
+    const toConfigType = toConfiguration.type;
+    transitionType = `${fromConfigType}_to_${toConfigType}`;
+    debugDetection(
+      `Prepare "${transitionType}" transition (${fromConfiguration} -> ${toConfiguration})`,
+    );
+    // content_to_empty / content_phase_to_empty
+    if (toConfiguration.isEmpty) {
+      applyToEmptyTransition();
+      return;
+    }
+    // content_phase_to_content_phase
+    if (fromConfiguration.isContentPhase && toConfiguration.isContentPhase) {
+      applyContentPhaseToContentPhaseTransition(toConfiguration);
+      return;
+    }
+    // content_phase_to_content
+    if (fromConfiguration.isContentPhase && toConfiguration.isContent) {
+      applyContentPhaseToContentPhaseTransition(toConfiguration);
+      return;
+    }
+    // content_to_content_phase
+    if (fromConfiguration.isContent && toConfiguration.isContentPhase) {
+      applyContentPhaseToContentPhaseTransition(toConfiguration);
+      return;
+    }
+    // content_to_content (default case)
+    applyContentToContentTransition(toConfiguration);
+  };
+
+  const [teardown, addTeardown] = createPubSub();
+  {
+    const mutationObserver = new MutationObserver((mutations) => {
+      const reasonParts = [];
+      for (const mutation of mutations) {
+        if (mutation.type === "childList") {
+          const added = mutation.addedNodes.length;
+          const removed = mutation.removedNodes.length;
+          if (added && removed) {
+            reasonParts.push(`addedNodes(${added}) removedNodes(${removed})`);
+          } else if (added) {
+            reasonParts.push(`addedNodes(${added})`);
+          } else {
+            reasonParts.push(`removedNodes(${removed})`);
+          }
+          continue;
+        }
+        if (mutation.type === "attributes") {
+          const { attributeName } = mutation;
+          if (
+            attributeName === CONTENT_ID_ATTRIBUTE ||
+            attributeName === CONTENT_PHASE_ATTRIBUTE
+          ) {
+            const { oldValue } = mutation;
+            if (oldValue === null) {
+              const value = targetSlot.getAttribute(attributeName);
+              reasonParts.push(
+                value
+                  ? `added [${attributeName}=${value}]`
+                  : `added [${attributeName}]`,
+              );
+            } else if (targetSlot.hasAttribute(attributeName)) {
+              const value = targetSlot.getAttribute(attributeName);
+              reasonParts.push(`[${attributeName}] ${oldValue} -> ${value}`);
+            } else {
+              reasonParts.push(
+                oldValue
+                  ? `removed [${attributeName}=${oldValue}]`
+                  : `removed [${attributeName}]`,
+              );
+            }
+          }
+        }
+      }
+
+      if (reasonParts.length === 0) {
+        return;
+      }
+      targetSlotEffect(reasonParts);
+    });
+    mutationObserver.observe(targetSlot, {
+      childList: true,
+      attributes: true,
+      attributeFilter: [CONTENT_ID_ATTRIBUTE, CONTENT_PHASE_ATTRIBUTE],
+      characterData: false,
+    });
+    addTeardown(() => {
+      mutationObserver.disconnect();
+    });
+  }
+  {
+    const slots = [
+      targetSlot,
+      outgoingSlot,
+      previousTargetSlot,
+      previousOutgoingSlot,
+    ];
+    for (const slot of slots) {
+      addTeardown(monitorItemsOverflow(slot));
+    }
+  }
+
+  const setDuration = (newDuration) => {
+    duration = newDuration;
+    // Update CSS variable immediately
+    root.style.setProperty("--x-transition-duration", `${duration}ms`);
+  };
+  const setAlignment = (newAlignX, newAlignY) => {
+    alignX = newAlignX;
+    alignY = newAlignY;
+    updateAlignment();
+  };
+
+  return {
+    updateContentId: (value) => {
+      if (value) {
+        targetSlot.setAttribute(CONTENT_ID_ATTRIBUTE, value);
+      } else {
+        targetSlot.removeAttribute(CONTENT_ID_ATTRIBUTE);
+      }
+    },
+
+    transitionTo,
+    resetContent,
+    setDuration,
+    setAlignment,
+    updateAlignment,
+    setPauseBreakpoints: (value) => {
+      groupTransitionOptions.pauseBreakpoints = value;
+    },
+    cleanup: () => {
+      teardown();
+    },
+  };
+};
+
+/**
+ * UITransition
+ *
+ * A Preact component that enables smooth animated transitions between its children when the content changes.
+ * It observes content keys and phases to create different types of transitions.
+ *
+ * Features:
+ * - Content transitions: Between different content keys (e.g., user profiles, search results)
+ * - Phase transitions: Between loading/content/error states for the same content key
+ * - Automatic size animation to accommodate content changes
+ * - Configurable transition types: "slide-left", "cross-fade"
+ * - Independent duration control for content and phase transitions
+ *
+ * Usage:
+ * - Wrap dynamic content in <UITransition> to animate between states
+ * - Set a unique `data-content-id` on your rendered content to identify each content variant
+ * - Use `data-content-phase` to mark loading/error states for phase transitions
+ * - Configure transition types and durations for both content and phase changes
+ *
+ * Example:
+ *
+ *   <UITransition>
+ *     {isLoading
+ *       ? <Spinner data-content-key={userId} data-content-phase />
+ *       : <UserProfile user={user} data-content-key={userId} />}
+ *   </UITransition>
+ *
+ * When `data-content-id` changes, UITransition animates content transitions.
+ * When `data-content-phase` changes for the same key, it animates phase transitions.
+ */
+
+const UITransitionContentIdContext = createContext();
+const UITransition = ({
+  children,
+  contentId,
+  type,
+  duration,
+  debugDetection,
+  debugContent,
+  debugSize,
+  disabled,
+  uiTransitionRef,
+  alignX,
+  alignY,
+  ...props
+}) => {
+  const contentIdRef = useRef(contentId);
+  const updateContentId = () => {
+    const uiTransition = uiTransitionRef.current;
+    if (!uiTransition) {
+      return;
+    }
+    const value = contentIdRef.current;
+    uiTransition.updateContentId(value);
+  };
+  const uiTransitionContentIdContextValue = useMemo(() => {
+    const set = new Set();
+    const onSetChange = () => {
+      const value = Array.from(set).join("|");
+      contentIdRef.current = value;
+      updateContentId();
+    };
+    const update = (part, newPart) => {
+      if (!set.has(part)) {
+        console.warn(`UITransition: trying to update an id that does not exist: ${part}`);
+        return;
+      }
+      set.delete(part);
+      set.add(newPart);
+      onSetChange();
+    };
+    const add = part => {
+      if (!part) {
+        return;
+      }
+      if (set.has(part)) {
+        return;
+      }
+      set.add(part);
+      onSetChange();
+    };
+    const remove = part => {
+      if (!part) {
+        return;
+      }
+      if (!set.has(part)) {
+        return;
+      }
+      set.delete(part);
+      onSetChange();
+    };
+    return {
+      add,
+      update,
+      remove
+    };
+  }, []);
+  const ref = useRef();
+  const uiTransitionRefDefault = useRef();
+  uiTransitionRef = uiTransitionRef || uiTransitionRefDefault;
+  useLayoutEffect(() => {
+    const uiTransition = createUITransitionController(ref.current, {
+      alignX,
+      alignY
+    });
+    uiTransitionRef.current = uiTransition;
+    return () => {
+      uiTransition.cleanup();
+    };
+  }, [disabled, alignX, alignY]);
+  return jsxs("div", {
+    ref: ref,
+    ...props,
+    className: "ui_transition",
+    "data-disabled": disabled ? "" : undefined,
+    "data-transition-type": type,
+    "data-transition-duration": duration,
+    "data-debug-detection": debugDetection ? "" : undefined,
+    "data-debug-size": debugSize ? "" : undefined,
+    "data-debug-content": debugContent ? "" : undefined,
+    children: [jsxs("div", {
+      className: "ui_transition_active_group",
+      children: [jsx("div", {
+        className: "ui_transition_target_slot",
+        "data-content-id": contentIdRef.current ? contentIdRef.current : undefined,
+        children: jsx(UITransitionContentIdContext.Provider, {
+          value: uiTransitionContentIdContextValue,
+          children: children
+        })
+      }), jsx("div", {
+        className: "ui_transition_outgoing_slot",
+        inert: true
+      })]
+    }), jsxs("div", {
+      className: "ui_transition_previous_group",
+      inert: true,
+      children: [jsx("div", {
+        className: "ui_transition_previous_target_slot"
+      }), jsx("div", {
+        className: "ui_transition_previous_outgoing_slot"
+      })]
+    })]
+  });
+};
+
+/**
+ * The goal of this hook is to allow a component to set a "content key"
+ * Meaning all content within the component is identified by that key
+ *
+ * When the key changes, UITransition will be able to detect that and consider the content
+ * as changed even if the component is still the same
+ *
+ * This is used by <Route> to set the content key to the route path
+ * When the route becomes inactive it will call useUITransitionContentId(undefined)
+ * And if a sibling route becones active it will call useUITransitionContentId with its own path
+ *
+ */
+const useUITransitionContentId = value => {
+  const contentId = useContext(UITransitionContentIdContext);
+  const valueRef = useRef();
+  if (contentId !== undefined && valueRef.current !== value) {
+    const previousValue = valueRef.current;
+    valueRef.current = value;
+    if (previousValue === undefined) {
+      contentId.add(value);
+    } else {
+      contentId.update(previousValue, value);
+    }
+  }
+  useLayoutEffect(() => {
+    if (contentId === undefined) {
+      return null;
+    }
+    return () => {
+      contentId.remove(valueRef.current);
+    };
+  }, []);
 };
 
 /**
@@ -8599,7 +8245,7 @@ const useNavStateBasic = (id, initialValue, { debug } = {}) => {
   ];
 };
 
-const useNavState = useNavStateBasic;
+const useNavState$1 = useNavStateBasic;
 
 const NEVER_SET = {};
 const useUrlSearchParam = (paramName, defaultValue) => {
@@ -8620,1100 +8266,6 @@ const useUrlSearchParam = (paramName, defaultValue) => {
   };
 
   return [value, setSearchParamValue];
-};
-
-/**
- * Fix alignment behavior for flex/grid containers that use `height: 100%`.
- *
- * Context:
- * - When a flex/grid container has `height: 100%`, it is "height-locked".
- * - If its content becomes taller than the container, alignment rules like
- *   `align-items: center` will cause content to be partially clipped.
- *
- * Goal:
- * - Center content only when it fits.
- * - Align content at start when it overflows.
- *
- * How:
- * - Temporarily remove height-constraint (`height:auto`) to measure natural height.
- * - Compare natural height to container height.
- * - Add/remove an attribute so CSS can adapt alignment.
- *
- * Usage:
- *   monitorItemsOverflow(containerElement);
- *
- * CSS example:
- *   .container { align-items: center; }
- *   .container[data-items-height-overflow] { align-items: flex-start; }
- */
-
-
-const WIDTH_ATTRIBUTE_NAME = "data-items-width-overflow";
-const HEIGHT_ATTRIBUTE_NAME = "data-items-height-overflow";
-const monitorItemsOverflow = (container) => {
-  let widthIsOverflowing;
-  let heightIsOverflowing;
-  const onItemsWidthOverflowChange = () => {
-    if (widthIsOverflowing) {
-      container.setAttribute(WIDTH_ATTRIBUTE_NAME, "");
-    } else {
-      container.removeAttribute(WIDTH_ATTRIBUTE_NAME);
-    }
-  };
-  const onItemsHeightOverflowChange = () => {
-    if (heightIsOverflowing) {
-      container.setAttribute(HEIGHT_ATTRIBUTE_NAME, "");
-    } else {
-      container.removeAttribute(HEIGHT_ATTRIBUTE_NAME);
-    }
-  };
-
-  const update = () => {
-    // Save current manual height constraint
-    const prevWidth = container.style.width;
-    const prevHeight = container.style.height;
-    // Remove constraint → get true content dimension
-    container.style.width = "auto";
-    container.style.height = "auto";
-    const naturalWidth = container.scrollWidth;
-    const naturalHeight = container.scrollHeight;
-    if (prevWidth) {
-      container.style.width = prevWidth;
-    } else {
-      container.style.removeProperty("width");
-    }
-    if (prevHeight) {
-      container.style.height = prevHeight;
-    } else {
-      container.style.removeProperty("height");
-    }
-
-    const lockedWidth = container.clientWidth;
-    const lockedHeight = container.clientHeight;
-    const currentWidthIsOverflowing = naturalWidth > lockedWidth;
-    const currentHeightIsOverflowing = naturalHeight > lockedHeight;
-    if (currentWidthIsOverflowing !== widthIsOverflowing) {
-      widthIsOverflowing = currentWidthIsOverflowing;
-      onItemsWidthOverflowChange();
-    }
-    if (currentHeightIsOverflowing !== heightIsOverflowing) {
-      heightIsOverflowing = currentHeightIsOverflowing;
-      onItemsHeightOverflowChange();
-    }
-  };
-
-  const [teardown, addTeardown] = createPubSub();
-
-  update();
-
-  // mutation observer
-  const mutationObserver = new MutationObserver(() => {
-    update();
-  });
-  mutationObserver.observe(container, {
-    childList: true,
-    characterData: true,
-  });
-  addTeardown(() => {
-    mutationObserver.disconnect();
-  });
-
-  // resize observer
-  const resizeObserver = new ResizeObserver(update);
-  resizeObserver.observe(container);
-  addTeardown(() => {
-    resizeObserver.disconnect();
-  });
-
-  const destroy = () => {
-    teardown();
-    container.removeAttribute(WIDTH_ATTRIBUTE_NAME);
-    container.removeAttribute(HEIGHT_ATTRIBUTE_NAME);
-  };
-  return destroy;
-};
-
-installImportMetaCss(import.meta);
-import.meta.css = /* css */ `
-  * {
-    box-sizing: border-box;
-  }
-
-  .ui_transition {
-    --transition-duration: 300ms;
-    --justify-content: center;
-    --align-items: center;
-
-    --x-transition-duration: var(--transition-duration);
-    --x-justify-content: var(--justify-content);
-    --x-align-items: var(--align-items);
-
-    position: relative;
-  }
-  /* Alignment controls */
-  .ui_transition[data-align-x="start"] {
-    --x-justify-content: flex-start;
-  }
-  .ui_transition[data-align-x="center"] {
-    --x-justify-content: center;
-  }
-  .ui_transition[data-align-x="end"] {
-    --x-justify-content: flex-end;
-  }
-  .ui_transition[data-align-y="start"] {
-    --x-align-items: flex-start;
-  }
-  .ui_transition[data-align-y="center"] {
-    --x-align-items: center;
-  }
-  .ui_transition[data-align-y="end"] {
-    --x-align-items: flex-end;
-  }
-
-  .ui_transition,
-  .ui_transition_active_group,
-  .ui_transition_previous_group,
-  .ui_transition_target_slot,
-  .ui_transition_previous_target_slot,
-  .ui_transition_outgoing_slot,
-  .ui_transition_previous_outgoing_slot {
-    width: 100%;
-    height: 100%;
-  }
-
-  .ui_transition_target_slot,
-  .ui_transition_outgoing_slot,
-  .ui_transition_previous_target_slot,
-  .ui_transition_previous_outgoing_slot {
-    display: flex;
-    align-items: var(--x-align-items);
-    justify-content: var(--x-justify-content);
-  }
-  .ui_transition_target_slot[data-items-width-overflow],
-  .ui_transition_previous_target_slot[data-items-width-overflow],
-  .ui_transition_previous_target_slot[data-items-width-overflow],
-  .ui_transition_previous_outgoing_slot[data-items-width-overflow] {
-    --x-justify-content: flex-start;
-  }
-  .ui_transition_target_slot[data-items-height-overflow],
-  .ui_transition_previous_slot[data-items-height-overflow],
-  .ui_transition_previous_target_slot[data-items-height-overflow],
-  .ui_transition_previous_outgoing_slot[data-items-height-overflow] {
-    --x-align-items: flex-start;
-  }
-
-  .ui_transition_active_group {
-    position: relative;
-  }
-  .ui_transition_target_slot {
-    position: relative;
-  }
-  .ui_transition_outgoing_slot,
-  .ui_transition_previous_outgoing_slot {
-    position: absolute;
-    top: 0;
-    left: 0;
-  }
-  .ui_transition_previous_group {
-    position: absolute;
-    inset: 0;
-  }
-  .ui_transition[data-only-previous-group] .ui_transition_previous_group {
-    position: relative;
-  }
-
-  .ui_transition_target_slot_background {
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: -1;
-    display: none;
-    width: var(--target-slot-width, 100%);
-    height: var(--target-slot-height, 100%);
-    background: var(--target-slot-background, transparent);
-    pointer-events: none;
-  }
-  .ui_transition[data-transitioning] .ui_transition_target_slot_background {
-    display: block;
-  }
-`;
-
-const CONTENT_ID_ATTRIBUTE = "data-content-id";
-const CONTENT_PHASE_ATTRIBUTE = "data-content-phase";
-const UNSET = {
-  domNodes: [],
-  domNodesClone: [],
-  isEmpty: true,
-
-  type: "unset",
-  contentId: "unset",
-  contentPhase: undefined,
-  isContentPhase: false,
-  isContent: false,
-  toString: () => "unset",
-};
-
-const isSameConfiguration = (configA, configB) => {
-  return configA.toString() === configB.toString();
-};
-
-const createUITransitionController = (
-  root,
-  {
-    duration = 300,
-    alignX = "center",
-    alignY = "center",
-    onStateChange = () => {},
-    pauseBreakpoints = [],
-  } = {},
-) => {
-  const debugConfig = {
-    detection: root.hasAttribute("data-debug-detection"),
-    size: root.hasAttribute("data-debug-size"),
-  };
-  const hasDebugLogs = debugConfig.size;
-  const debugDetection = (message) => {
-    if (!debugConfig.detection) return;
-    console.debug(`[detection]`, message);
-  };
-  const debugSize = (message) => {
-    if (!debugConfig.size) return;
-    console.debug(`[size]`, message);
-  };
-
-  const activeGroup = root.querySelector(".ui_transition_active_group");
-  const targetSlot = root.querySelector(".ui_transition_target_slot");
-  const outgoingSlot = root.querySelector(".ui_transition_outgoing_slot");
-  const previousGroup = root.querySelector(".ui_transition_previous_group");
-  const previousTargetSlot = previousGroup?.querySelector(
-    ".ui_transition_previous_target_slot",
-  );
-  const previousOutgoingSlot = previousGroup?.querySelector(
-    ".ui_transition_previous_outgoing_slot",
-  );
-
-  if (
-    !root ||
-    !activeGroup ||
-    !targetSlot ||
-    !outgoingSlot ||
-    !previousGroup ||
-    !previousTargetSlot ||
-    !previousOutgoingSlot
-  ) {
-    throw new Error(
-      "createUITransitionController requires element with .active_group, .target_slot, .outgoing_slot, .previous_group, .previous_target_slot, and .previous_outgoing_slot elements",
-    );
-  }
-
-  // we maintain a background copy behind target slot to avoid showing
-  // the body flashing during the fade-in
-  const targetSlotBackground = document.createElement("div");
-  targetSlotBackground.className = "ui_transition_target_slot_background";
-  activeGroup.insertBefore(targetSlotBackground, targetSlot);
-
-  root.style.setProperty("--x-transition-duration", `${duration}ms`);
-  outgoingSlot.setAttribute("inert", "");
-  previousGroup.setAttribute("inert", "");
-
-  const detectConfiguration = (slot, { contentId, contentPhase } = {}) => {
-    const domNodes = Array.from(slot.childNodes);
-    if (!domNodes) {
-      return UNSET;
-    }
-
-    const isEmpty = domNodes.length === 0;
-    let textNodeCount = 0;
-    let elementNodeCount = 0;
-    let firstElementNode;
-    const domNodesClone = [];
-    if (isEmpty) {
-      if (contentPhase === undefined) {
-        contentPhase = "empty";
-      }
-    } else {
-      const contentIdSlotAttr = slot.getAttribute(CONTENT_ID_ATTRIBUTE);
-      let contentIdChildAttr;
-      for (const domNode of domNodes) {
-        if (domNode.nodeType === Node.TEXT_NODE) {
-          textNodeCount++;
-        } else {
-          if (!firstElementNode) {
-            firstElementNode = domNode;
-          }
-          elementNodeCount++;
-
-          if (domNode.hasAttribute("data-content-phase")) {
-            const contentPhaseAttr = domNode.getAttribute("data-content-phase");
-            contentPhase = contentPhaseAttr || "attr";
-          }
-          if (domNode.hasAttribute("data-content-key")) {
-            contentIdChildAttr = domNode.getAttribute("data-content-key");
-          }
-        }
-        const domNodeClone = domNode.cloneNode(true);
-        domNodesClone.push(domNodeClone);
-      }
-
-      if (contentIdSlotAttr && contentIdChildAttr) {
-        console.warn(
-          `Slot and slot child both have a [${CONTENT_ID_ATTRIBUTE}]. Slot is ${contentIdSlotAttr} and child is ${contentIdChildAttr}, using the child.`,
-        );
-      }
-      if (contentId === undefined) {
-        contentId = contentIdChildAttr || contentIdSlotAttr || undefined;
-      }
-    }
-    const isOnlyTextNodes = elementNodeCount === 0 && textNodeCount > 1;
-    const singleElementNode = elementNodeCount === 1 ? firstElementNode : null;
-
-    contentId = contentId || getElementSignature(domNodes[0]);
-    if (!contentPhase && isEmpty) {
-      // Imagine code rendering null while switching to a new content
-      // or even while staying on the same content.
-      // In the UI we want to consider this as an "empty" phase.
-      // meaning the ui will keep the same size until something else happens
-      // This prevent layout shifts of code not properly handling
-      // intermediate states.
-      contentPhase = "empty";
-    }
-
-    let width;
-    let height;
-    let borderRadius;
-    let border;
-    let background;
-
-    if (isEmpty) {
-      debugSize(`measureSlot(".${slot.className}") -> it is empty`);
-    } else if (singleElementNode) {
-      const visualSelector = singleElementNode.getAttribute(
-        "data-visual-selector",
-      );
-      const visualElement = visualSelector
-        ? singleElementNode.querySelector(visualSelector) || singleElementNode
-        : singleElementNode;
-      const rect = visualElement.getBoundingClientRect();
-      width = rect.width;
-      height = rect.height;
-      debugSize(`measureSlot(".${slot.className}") -> [${width}x${height}]`);
-      borderRadius = getBorderRadius(visualElement);
-      border = getComputedStyle(visualElement).border;
-      background = getComputedStyle(visualElement).background;
-    } else {
-      // text, multiple elements
-      const rect = slot.getBoundingClientRect();
-      width = rect.width;
-      height = rect.height;
-      debugSize(`measureSlot(".${slot.className}") -> [${width}x${height}]`);
-    }
-
-    const commonProperties = {
-      domNodes,
-      domNodesClone,
-      isEmpty,
-      isOnlyTextNodes,
-      singleElementNode,
-
-      width,
-      height,
-      borderRadius,
-      border,
-      background,
-
-      contentId,
-    };
-
-    if (contentPhase) {
-      return {
-        ...commonProperties,
-        type: "content_phase",
-        contentPhase,
-        isContentPhase: true,
-        isContent: false,
-        toString: () => `content(${contentId}).phase(${contentPhase})`,
-      };
-    }
-    return {
-      ...commonProperties,
-      type: "content",
-      contentPhase: undefined,
-      isContentPhase: false,
-      isContent: true,
-      toString: () => `content(${contentId})`,
-    };
-  };
-
-  const targetSlotInitialConfiguration = detectConfiguration(targetSlot);
-  const outgoingSlotInitialConfiguration = detectConfiguration(outgoingSlot, {
-    contentPhase: "true",
-  });
-  let targetSlotConfiguration = targetSlotInitialConfiguration;
-  let outgoingSlotConfiguration = outgoingSlotInitialConfiguration;
-  let previousTargetSlotConfiguration = UNSET;
-
-  const updateSlotAttributes = () => {
-    if (targetSlotConfiguration.isEmpty && outgoingSlotConfiguration.isEmpty) {
-      root.setAttribute("data-only-previous-group", "");
-    } else {
-      root.removeAttribute("data-only-previous-group");
-    }
-  };
-  const updateAlignment = () => {
-    // Set data attributes for CSS-based alignment
-    root.setAttribute("data-align-x", alignX);
-    root.setAttribute("data-align-y", alignY);
-  };
-
-  const moveConfigurationIntoSlot = (configuration, slot) => {
-    slot.innerHTML = "";
-    for (const domNode of configuration.domNodesClone) {
-      slot.appendChild(domNode);
-    }
-    // in case border or stuff like that have changed we re-detect the config
-    const updatedConfig = detectConfiguration(slot);
-    if (slot === targetSlot) {
-      targetSlotConfiguration = updatedConfig;
-    } else if (slot === outgoingSlot) {
-      outgoingSlotConfiguration = updatedConfig;
-    } else if (slot === previousTargetSlot) {
-      previousTargetSlotConfiguration = updatedConfig;
-    } else if (slot === previousOutgoingSlot) ; else {
-      throw new Error("Unknown slot for applyConfiguration");
-    }
-  };
-
-  updateAlignment();
-
-  let transitionType = "none";
-  const groupTransitionOptions = {
-    // debugBreakpoints: [0.25],
-    pauseBreakpoints,
-    lifecycle: {
-      setup: () => {
-        updateSlotAttributes();
-        root.setAttribute("data-transitioning", "");
-        onStateChange({ isTransitioning: true });
-        return {
-          teardown: () => {
-            root.removeAttribute("data-transitioning");
-            updateSlotAttributes(); // Update positioning after transition
-            onStateChange({ isTransitioning: false });
-          },
-        };
-      },
-    },
-  };
-  const transitionController = createGroupTransitionController(
-    groupTransitionOptions,
-  );
-
-  const elementToClip = root;
-  const morphContainerIntoTarget = () => {
-    const morphTransitions = [];
-    {
-      // TODO: ideally when scrollContainer is document AND we transition
-      // from a layout with scrollbar to a layout without
-      // we have clip path detecting we go from a given width/height to a new width/height
-      // that might just be the result of scrollbar appearing/disappearing
-      // we should detect when this happens to avoid clipping what correspond to the scrollbar presence toggling
-      const fromWidth = previousTargetSlotConfiguration.width || 0;
-      const fromHeight = previousTargetSlotConfiguration.height || 0;
-      const toWidth = targetSlotConfiguration.width || 0;
-      const toHeight = targetSlotConfiguration.height || 0;
-      debugSize(
-        `transition from [${fromWidth}x${fromHeight}] to [${toWidth}x${toHeight}]`,
-      );
-      const restoreOverflow = preventIntermediateScrollbar(root, {
-        fromWidth,
-        fromHeight,
-        toWidth,
-        toHeight,
-        onPrevent: ({ x, y, scrollContainer }) => {
-          if (x) {
-            debugSize(
-              `Temporarily hiding horizontal overflow during transition on ${getElementSignature(scrollContainer)}`,
-            );
-          }
-          if (y) {
-            debugSize(
-              `Temporarily hiding vertical overflow during transition on ${getElementSignature(scrollContainer)}`,
-            );
-          }
-        },
-        onRestore: () => {
-          debugSize(`Restored overflow after transition`);
-        },
-      });
-
-      const onSizeTransitionFinished = () => {
-        // Restore overflow when transition is complete
-        restoreOverflow();
-      };
-
-      // https://emilkowal.ski/ui/the-magic-of-clip-path
-      const elementToClipRect = elementToClip.getBoundingClientRect();
-      const elementToClipWidth = elementToClipRect.width;
-      const elementToClipHeight = elementToClipRect.height;
-      // Calculate where content is positioned within the large container
-      const getAlignedPosition = (containerSize, contentSize, align) => {
-        switch (align) {
-          case "start":
-            return 0;
-          case "end":
-            return containerSize - contentSize;
-          case "center":
-          default:
-            return (containerSize - contentSize) / 2;
-        }
-      };
-      // Position of "from" content within large container
-      const fromLeft = getAlignedPosition(
-        elementToClipWidth,
-        fromWidth,
-        alignX,
-      );
-      const fromTop = getAlignedPosition(
-        elementToClipHeight,
-        fromHeight,
-        alignY,
-      );
-      // Position of target content within large container
-      const targetLeft = getAlignedPosition(
-        elementToClipWidth,
-        toWidth,
-        alignX,
-      );
-      const targetTop = getAlignedPosition(
-        elementToClipHeight,
-        toHeight,
-        alignY,
-      );
-      debugSize(
-        `Positions in container: from [${fromLeft},${fromTop}] ${fromWidth}x${fromHeight} to [${targetLeft},${targetTop}] ${toWidth}x${toHeight}`,
-      );
-      // Get border-radius values
-      const fromBorderRadius =
-        previousTargetSlotConfiguration.borderRadius || 0;
-      const toBorderRadius = targetSlotConfiguration.borderRadius || 0;
-      const startInsetTop = fromTop;
-      const startInsetRight = elementToClipWidth - (fromLeft + fromWidth);
-      const startInsetBottom = elementToClipHeight - (fromTop + fromHeight);
-      const startInsetLeft = fromLeft;
-
-      const endInsetTop = targetTop;
-      const endInsetRight = elementToClipWidth - (targetLeft + toWidth);
-      const endInsetBottom = elementToClipHeight - (targetTop + toHeight);
-      const endInsetLeft = targetLeft;
-
-      const startClipPath = `inset(${startInsetTop}px ${startInsetRight}px ${startInsetBottom}px ${startInsetLeft}px round ${fromBorderRadius}px)`;
-      const endClipPath = `inset(${endInsetTop}px ${endInsetRight}px ${endInsetBottom}px ${endInsetLeft}px round ${toBorderRadius}px)`;
-      // Create clip-path animation using Web Animations API
-      const clipAnimation = elementToClip.animate(
-        [{ clipPath: startClipPath }, { clipPath: endClipPath }],
-        {
-          duration,
-          easing: "ease",
-          fill: "forwards",
-        },
-      );
-
-      // Handle finish
-      clipAnimation.finished
-        .then(() => {
-          // Clear clip-path to restore normal behavior
-          elementToClip.style.clipPath = "";
-          clipAnimation.cancel();
-          onSizeTransitionFinished();
-        })
-        .catch(() => {
-          // Animation was cancelled
-        });
-      clipAnimation.play();
-    }
-
-    return morphTransitions;
-  };
-  const fadeInTargetSlot = () => {
-    targetSlotBackground.style.setProperty(
-      "--target-slot-background",
-      targetSlotConfiguration.background,
-    );
-    targetSlotBackground.style.setProperty(
-      "--target-slot-width",
-      `${targetSlotConfiguration.width || 0}px`,
-    );
-    targetSlotBackground.style.setProperty(
-      "--target-slot-height",
-      `${targetSlotConfiguration.height || 0}px`,
-    );
-    return createOpacityTransition(targetSlot, 1, {
-      from: 0,
-      duration,
-      styleSynchronizer: "inline_style",
-      onFinish: (targetSlotOpacityTransition) => {
-        targetSlotBackground.style.removeProperty("--target-slot-background");
-        targetSlotBackground.style.removeProperty("--target-slot-width");
-        targetSlotBackground.style.removeProperty("--target-slot-height");
-        targetSlotOpacityTransition.cancel();
-      },
-    });
-  };
-  const fadeOutPreviousGroup = () => {
-    return createOpacityTransition(previousGroup, 0, {
-      from: 1,
-      duration,
-      styleSynchronizer: "inline_style",
-      onFinish: (previousGroupOpacityTransition) => {
-        previousGroupOpacityTransition.cancel();
-        previousGroup.style.opacity = "0"; // keep previous group visually hidden
-      },
-    });
-  };
-  const fadeOutOutgoingSlot = () => {
-    return createOpacityTransition(outgoingSlot, 0, {
-      duration,
-      from: 1,
-      styleSynchronizer: "inline_style",
-      onFinish: (outgoingSlotOpacityTransition) => {
-        outgoingSlotOpacityTransition.cancel();
-        outgoingSlot.style.opacity = "0"; // keep outgoing slot visually hidden
-      },
-    });
-  };
-
-  // content_to_content transition (uses previous_group)
-  const applyContentToContentTransition = (toConfiguration) => {
-    // 1. move target slot to previous
-    moveConfigurationIntoSlot(targetSlotConfiguration, previousTargetSlot);
-    targetSlotConfiguration = toConfiguration;
-    // 2. move outgoing slot to previous
-    moveConfigurationIntoSlot(outgoingSlotConfiguration, previousOutgoingSlot);
-    moveConfigurationIntoSlot(UNSET, outgoingSlot);
-
-    const transitions = [
-      ...morphContainerIntoTarget(),
-      fadeInTargetSlot(),
-      fadeOutPreviousGroup(),
-    ];
-    const transition = transitionController.update(transitions, {
-      onFinish: () => {
-        moveConfigurationIntoSlot(UNSET, previousTargetSlot);
-        moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
-        if (hasDebugLogs) {
-          console.groupEnd();
-        }
-      },
-    });
-    transition.play();
-  };
-  // content_phase_to_content_phase transition (uses outgoing_slot)
-  const applyContentPhaseToContentPhaseTransition = (toConfiguration) => {
-    // 1. Move target slot to outgoing
-    moveConfigurationIntoSlot(targetSlotConfiguration, outgoingSlot);
-    targetSlotConfiguration = toConfiguration;
-
-    const transitions = [
-      ...morphContainerIntoTarget(),
-      fadeInTargetSlot(),
-      fadeOutOutgoingSlot(),
-    ];
-    const transition = transitionController.update(transitions, {
-      onFinish: () => {
-        moveConfigurationIntoSlot(UNSET, outgoingSlot);
-
-        if (hasDebugLogs) {
-          console.groupEnd();
-        }
-      },
-    });
-    transition.play();
-  };
-  // any_to_empty transition
-  const applyToEmptyTransition = () => {
-    // 1. move target slot to previous
-    moveConfigurationIntoSlot(targetSlotConfiguration, previousTargetSlot);
-    targetSlotConfiguration = UNSET;
-    // 2. move outgoing slot to previous
-    moveConfigurationIntoSlot(outgoingSlotConfiguration, previousOutgoingSlot);
-    outgoingSlotConfiguration = UNSET;
-
-    const transitions = [...morphContainerIntoTarget(), fadeOutPreviousGroup()];
-    const transition = transitionController.update(transitions, {
-      onFinish: () => {
-        moveConfigurationIntoSlot(UNSET, previousTargetSlot);
-        moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
-        if (hasDebugLogs) {
-          console.groupEnd();
-        }
-      },
-    });
-    transition.play();
-  };
-  // Main transition method
-  const transitionTo = (
-    newContentElement,
-    { contentPhase, contentId } = {},
-  ) => {
-    if (contentId) {
-      targetSlot.setAttribute(CONTENT_ID_ATTRIBUTE, contentId);
-    } else {
-      targetSlot.removeAttribute(CONTENT_ID_ATTRIBUTE);
-    }
-    if (contentPhase) {
-      targetSlot.setAttribute(CONTENT_PHASE_ATTRIBUTE, contentPhase);
-    } else {
-      targetSlot.removeAttribute(CONTENT_PHASE_ATTRIBUTE);
-    }
-    if (newContentElement) {
-      targetSlot.innerHTML = "";
-      targetSlot.appendChild(newContentElement);
-    } else {
-      targetSlot.innerHTML = "";
-    }
-  };
-  // Reset to initial content
-  const resetContent = () => {
-    transitionController.cancel();
-    moveConfigurationIntoSlot(targetSlotInitialConfiguration, targetSlot);
-    moveConfigurationIntoSlot(outgoingSlotInitialConfiguration, outgoingSlot);
-    moveConfigurationIntoSlot(UNSET, previousTargetSlot);
-    moveConfigurationIntoSlot(UNSET, previousOutgoingSlot);
-  };
-
-  const targetSlotEffect = (reasons) => {
-    if (root.hasAttribute("data-disabled")) {
-      return;
-    }
-    const fromConfiguration = targetSlotConfiguration;
-    const toConfiguration = detectConfiguration(targetSlot);
-    if (hasDebugLogs) {
-      console.group(`targetSlotEffect()`);
-      console.debug(`reasons:`);
-      console.debug(`- ${reasons.join("\n- ")}`);
-    }
-    if (isSameConfiguration(fromConfiguration, toConfiguration)) {
-      debugDetection(
-        `already in desired state (${toConfiguration}) -> early return`,
-      );
-      if (hasDebugLogs) {
-        console.groupEnd();
-      }
-      return;
-    }
-    const fromConfigType = fromConfiguration.type;
-    const toConfigType = toConfiguration.type;
-    transitionType = `${fromConfigType}_to_${toConfigType}`;
-    debugDetection(
-      `Prepare "${transitionType}" transition (${fromConfiguration} -> ${toConfiguration})`,
-    );
-    // content_to_empty / content_phase_to_empty
-    if (toConfiguration.isEmpty) {
-      applyToEmptyTransition();
-      return;
-    }
-    // content_phase_to_content_phase
-    if (fromConfiguration.isContentPhase && toConfiguration.isContentPhase) {
-      applyContentPhaseToContentPhaseTransition(toConfiguration);
-      return;
-    }
-    // content_phase_to_content
-    if (fromConfiguration.isContentPhase && toConfiguration.isContent) {
-      applyContentPhaseToContentPhaseTransition(toConfiguration);
-      return;
-    }
-    // content_to_content_phase
-    if (fromConfiguration.isContent && toConfiguration.isContentPhase) {
-      applyContentPhaseToContentPhaseTransition(toConfiguration);
-      return;
-    }
-    // content_to_content (default case)
-    applyContentToContentTransition(toConfiguration);
-  };
-
-  const [teardown, addTeardown] = createPubSub();
-  {
-    const mutationObserver = new MutationObserver((mutations) => {
-      const reasonParts = [];
-      for (const mutation of mutations) {
-        if (mutation.type === "childList") {
-          const added = mutation.addedNodes.length;
-          const removed = mutation.removedNodes.length;
-          if (added && removed) {
-            reasonParts.push(`addedNodes(${added}) removedNodes(${removed})`);
-          } else if (added) {
-            reasonParts.push(`addedNodes(${added})`);
-          } else {
-            reasonParts.push(`removedNodes(${removed})`);
-          }
-          continue;
-        }
-        if (mutation.type === "attributes") {
-          const { attributeName } = mutation;
-          if (
-            attributeName === CONTENT_ID_ATTRIBUTE ||
-            attributeName === CONTENT_PHASE_ATTRIBUTE
-          ) {
-            const { oldValue } = mutation;
-            if (oldValue === null) {
-              const value = targetSlot.getAttribute(attributeName);
-              reasonParts.push(
-                value
-                  ? `added [${attributeName}=${value}]`
-                  : `added [${attributeName}]`,
-              );
-            } else if (targetSlot.hasAttribute(attributeName)) {
-              const value = targetSlot.getAttribute(attributeName);
-              reasonParts.push(`[${attributeName}] ${oldValue} -> ${value}`);
-            } else {
-              reasonParts.push(
-                oldValue
-                  ? `removed [${attributeName}=${oldValue}]`
-                  : `removed [${attributeName}]`,
-              );
-            }
-          }
-        }
-      }
-
-      if (reasonParts.length === 0) {
-        return;
-      }
-      targetSlotEffect(reasonParts);
-    });
-    mutationObserver.observe(targetSlot, {
-      childList: true,
-      attributes: true,
-      attributeFilter: [CONTENT_ID_ATTRIBUTE, CONTENT_PHASE_ATTRIBUTE],
-      characterData: false,
-    });
-    addTeardown(() => {
-      mutationObserver.disconnect();
-    });
-  }
-  {
-    const slots = [
-      targetSlot,
-      outgoingSlot,
-      previousTargetSlot,
-      previousOutgoingSlot,
-    ];
-    for (const slot of slots) {
-      addTeardown(monitorItemsOverflow(slot));
-    }
-  }
-
-  const setDuration = (newDuration) => {
-    duration = newDuration;
-    // Update CSS variable immediately
-    root.style.setProperty("--x-transition-duration", `${duration}ms`);
-  };
-  const setAlignment = (newAlignX, newAlignY) => {
-    alignX = newAlignX;
-    alignY = newAlignY;
-    updateAlignment();
-  };
-
-  return {
-    updateContentId: (value) => {
-      if (value) {
-        targetSlot.setAttribute(CONTENT_ID_ATTRIBUTE, value);
-      } else {
-        targetSlot.removeAttribute(CONTENT_ID_ATTRIBUTE);
-      }
-    },
-
-    transitionTo,
-    resetContent,
-    setDuration,
-    setAlignment,
-    updateAlignment,
-    setPauseBreakpoints: (value) => {
-      groupTransitionOptions.pauseBreakpoints = value;
-    },
-    cleanup: () => {
-      teardown();
-    },
-  };
-};
-
-/**
- * UITransition
- *
- * A Preact component that enables smooth animated transitions between its children when the content changes.
- * It observes content keys and phases to create different types of transitions.
- *
- * Features:
- * - Content transitions: Between different content keys (e.g., user profiles, search results)
- * - Phase transitions: Between loading/content/error states for the same content key
- * - Automatic size animation to accommodate content changes
- * - Configurable transition types: "slide-left", "cross-fade"
- * - Independent duration control for content and phase transitions
- *
- * Usage:
- * - Wrap dynamic content in <UITransition> to animate between states
- * - Set a unique `data-content-id` on your rendered content to identify each content variant
- * - Use `data-content-phase` to mark loading/error states for phase transitions
- * - Configure transition types and durations for both content and phase changes
- *
- * Example:
- *
- *   <UITransition>
- *     {isLoading
- *       ? <Spinner data-content-key={userId} data-content-phase />
- *       : <UserProfile user={user} data-content-key={userId} />}
- *   </UITransition>
- *
- * When `data-content-id` changes, UITransition animates content transitions.
- * When `data-content-phase` changes for the same key, it animates phase transitions.
- */
-
-const UITransitionContentIdContext = createContext();
-const UITransition = ({
-  children,
-  contentId,
-  type,
-  duration,
-  debugDetection,
-  debugContent,
-  debugSize,
-  disabled,
-  uiTransitionRef,
-  alignX,
-  alignY,
-  ...props
-}) => {
-  const contentIdRef = useRef(contentId);
-  const updateContentId = () => {
-    const uiTransition = uiTransitionRef.current;
-    if (!uiTransition) {
-      return;
-    }
-    const value = contentIdRef.current;
-    uiTransition.updateContentId(value);
-  };
-  const uiTransitionContentIdContextValue = useMemo(() => {
-    const set = new Set();
-    const onSetChange = () => {
-      const value = Array.from(set).join("|");
-      contentIdRef.current = value;
-      updateContentId();
-    };
-    const update = (part, newPart) => {
-      if (!set.has(part)) {
-        console.warn(`UITransition: trying to update an id that does not exist: ${part}`);
-        return;
-      }
-      set.delete(part);
-      set.add(newPart);
-      onSetChange();
-    };
-    const add = part => {
-      if (!part) {
-        return;
-      }
-      if (set.has(part)) {
-        return;
-      }
-      set.add(part);
-      onSetChange();
-    };
-    const remove = part => {
-      if (!part) {
-        return;
-      }
-      if (!set.has(part)) {
-        return;
-      }
-      set.delete(part);
-      onSetChange();
-    };
-    return {
-      add,
-      update,
-      remove
-    };
-  }, []);
-  const ref = useRef();
-  const uiTransitionRefDefault = useRef();
-  uiTransitionRef = uiTransitionRef || uiTransitionRefDefault;
-  useLayoutEffect(() => {
-    const uiTransition = createUITransitionController(ref.current, {
-      alignX,
-      alignY
-    });
-    uiTransitionRef.current = uiTransition;
-    return () => {
-      uiTransition.cleanup();
-    };
-  }, [disabled, alignX, alignY]);
-  return jsxs("div", {
-    ref: ref,
-    ...props,
-    className: "ui_transition",
-    "data-disabled": disabled ? "" : undefined,
-    "data-transition-type": type,
-    "data-transition-duration": duration,
-    "data-debug-detection": debugDetection ? "" : undefined,
-    "data-debug-size": debugSize ? "" : undefined,
-    "data-debug-content": debugContent ? "" : undefined,
-    children: [jsxs("div", {
-      className: "ui_transition_active_group",
-      children: [jsx("div", {
-        className: "ui_transition_target_slot",
-        "data-content-id": contentIdRef.current ? contentIdRef.current : undefined,
-        children: jsx(UITransitionContentIdContext.Provider, {
-          value: uiTransitionContentIdContextValue,
-          children: children
-        })
-      }), jsx("div", {
-        className: "ui_transition_outgoing_slot",
-        inert: true
-      })]
-    }), jsxs("div", {
-      className: "ui_transition_previous_group",
-      inert: true,
-      children: [jsx("div", {
-        className: "ui_transition_previous_target_slot"
-      }), jsx("div", {
-        className: "ui_transition_previous_outgoing_slot"
-      })]
-    })]
-  });
-};
-
-/**
- * The goal of this hook is to allow a component to set a "content key"
- * Meaning all content within the component is identified by that key
- *
- * When the key changes, UITransition will be able to detect that and consider the content
- * as changed even if the component is still the same
- *
- * This is used by <Route> to set the content key to the route path
- * When the route becomes inactive it will call useUITransitionContentId(undefined)
- * And if a sibling route becones active it will call useUITransitionContentId with its own path
- *
- */
-const useUITransitionContentId = value => {
-  const contentId = useContext(UITransitionContentIdContext);
-  const valueRef = useRef();
-  if (contentId !== undefined && valueRef.current !== value) {
-    const previousValue = valueRef.current;
-    valueRef.current = value;
-    if (previousValue === undefined) {
-      contentId.add(value);
-    } else {
-      contentId.update(previousValue, value);
-    }
-  }
-  useLayoutEffect(() => {
-    if (contentId === undefined) {
-      return null;
-    }
-    return () => {
-      contentId.remove(valueRef.current);
-    };
-  }, []);
 };
 
 // import { signal } from "@preact/signals";
@@ -9974,105 +8526,6 @@ const RouteSlot = () => {
 };
 Route.Slot = RouteSlot;
 
-/**
- * Hook that reactively checks if a URL is visited.
- * Re-renders when the visited URL set changes.
- *
- * @param {string} url - The URL to check
- * @returns {boolean} Whether the URL has been visited
- */
-const useIsVisited = (url) => {
-  return useMemo(() => {
-    // Access the signal to create reactive dependency
-    // eslint-disable-next-line no-unused-expressions
-    visitedUrlsSignal.value;
-
-    return isVisited(url);
-  }, [url, visitedUrlsSignal.value]);
-};
-
-const useCustomValidationRef = (elementRef, targetSelector) => {
-  const customValidationRef = useRef();
-
-  useLayoutEffect(() => {
-    const element = elementRef.current;
-    if (!element) {
-      console.warn(
-        "useCustomValidationRef: elementRef.current is null, make sure to pass a ref to an element",
-      );
-      /* can happen if the component does this for instance:
-      const Component = () => {
-        const ref = useRef(null) 
-        
-        if (something) {
-          return <input ref={ref} />  
-        }
-        return <span></span>
-      }
-
-      usually it's better to split the component in two but hey 
-      */
-      return null;
-    }
-    let target;
-    {
-      target = element;
-    }
-    const unsubscribe = subscribe(element, target);
-    const validationInterface = element.__validationInterface__;
-    customValidationRef.current = validationInterface;
-    return () => {
-      unsubscribe();
-    };
-  }, [targetSelector]);
-
-  return customValidationRef;
-};
-
-const subscribeCountWeakMap = new WeakMap();
-const subscribe = (element, target) => {
-  if (element.__validationInterface__) {
-    let subscribeCount = subscribeCountWeakMap.get(element);
-    subscribeCountWeakMap.set(element, subscribeCount + 1);
-  } else {
-    installCustomConstraintValidation(element, target);
-    subscribeCountWeakMap.set(element, 1);
-  }
-  return () => {
-    unsubscribe(element);
-  };
-};
-
-const unsubscribe = (element) => {
-  const subscribeCount = subscribeCountWeakMap.get(element);
-  if (subscribeCount === 1) {
-    element.__validationInterface__.uninstall();
-    subscribeCountWeakMap.delete(element);
-  } else {
-    subscribeCountWeakMap.set(element, subscribeCount - 1);
-  }
-};
-
-const useConstraints = (elementRef, constraints, targetSelector) => {
-  const customValidationRef = useCustomValidationRef(
-    elementRef,
-    targetSelector,
-  );
-  useLayoutEffect(() => {
-    const customValidation = customValidationRef.current;
-    const cleanupCallbackSet = new Set();
-    for (const constraint of constraints) {
-      const unregister = customValidation.registerConstraint(constraint);
-      cleanupCallbackSet.add(unregister);
-    }
-    return () => {
-      for (const cleanupCallback of cleanupCallbackSet) {
-        cleanupCallback();
-      }
-    };
-  }, constraints);
-};
-
 const FormContext = createContext();
 
 const FormActionContext = createContext();
@@ -10108,1546 +8561,6 @@ const renderActionableComponent = (props, {
     });
   }
   return jsx(Basic, {
-    ...props
-  });
-};
-
-const LinkBlankTargetSvg = () => {
-  return jsx("svg", {
-    viewBox: "0 0 24 24",
-    xmlns: "http://www.w3.org/2000/svg",
-    children: jsx("path", {
-      d: "M10.0002 5H8.2002C7.08009 5 6.51962 5 6.0918 5.21799C5.71547 5.40973 5.40973 5.71547 5.21799 6.0918C5 6.51962 5 7.08009 5 8.2002V15.8002C5 16.9203 5 17.4801 5.21799 17.9079C5.40973 18.2842 5.71547 18.5905 6.0918 18.7822C6.5192 19 7.07899 19 8.19691 19H15.8031C16.921 19 17.48 19 17.9074 18.7822C18.2837 18.5905 18.5905 18.2839 18.7822 17.9076C19 17.4802 19 16.921 19 15.8031V14M20 9V4M20 4H15M20 4L13 11",
-      stroke: "currentColor",
-      fill: "none",
-      "stroke-width": "2",
-      "stroke-linecap": "round",
-      "stroke-linejoin": "round"
-    })
-  });
-};
-const LinkAnchorSvg = () => {
-  return jsx("svg", {
-    viewBox: "0 0 24 24",
-    xmlns: "http://www.w3.org/2000/svg",
-    children: jsxs("g", {
-      children: [jsx("path", {
-        d: "M13.2218 3.32234C15.3697 1.17445 18.8521 1.17445 21 3.32234C23.1479 5.47022 23.1479 8.95263 21 11.1005L17.4645 14.636C15.3166 16.7839 11.8342 16.7839 9.6863 14.636C9.48752 14.4373 9.30713 14.2271 9.14514 14.0075C8.90318 13.6796 8.97098 13.2301 9.25914 12.9419C9.73221 12.4688 10.5662 12.6561 11.0245 13.1435C11.0494 13.1699 11.0747 13.196 11.1005 13.2218C12.4673 14.5887 14.6834 14.5887 16.0503 13.2218L19.5858 9.6863C20.9526 8.31947 20.9526 6.10339 19.5858 4.73655C18.219 3.36972 16.0029 3.36972 14.636 4.73655L13.5754 5.79721C13.1849 6.18774 12.5517 6.18774 12.1612 5.79721C11.7706 5.40669 11.7706 4.77352 12.1612 4.383L13.2218 3.32234Z",
-        fill: "currentColor"
-      }), jsx("path", {
-        d: "M6.85787 9.6863C8.90184 7.64233 12.2261 7.60094 14.3494 9.42268C14.7319 9.75083 14.7008 10.3287 14.3444 10.685C13.9253 11.1041 13.2317 11.0404 12.7416 10.707C11.398 9.79292 9.48593 9.88667 8.27209 11.1005L4.73655 14.636C3.36972 16.0029 3.36972 18.219 4.73655 19.5858C6.10339 20.9526 8.31947 20.9526 9.6863 19.5858L10.747 18.5251C11.1375 18.1346 11.7706 18.1346 12.1612 18.5251C12.5517 18.9157 12.5517 19.5488 12.1612 19.9394L11.1005 21C8.95263 23.1479 5.47022 23.1479 3.32234 21C1.17445 18.8521 1.17445 15.3697 3.32234 13.2218L6.85787 9.6863Z",
-        fill: "currentColor"
-      })]
-    })
-  });
-};
-
-/**
- * Merges a component's base className with className received from props.
- *
- * ```jsx
- * const MyButton = ({ className, children }) => (
- *   <button className={withPropsClassName("btn", className)}>
- *     {children}
- *   </button>
- * );
- *
- * // Usage:
- * <MyButton className="primary large" /> // Results in "btn primary large"
- * <MyButton /> // Results in "btn"
- * ```
- *
- * @param {string} baseClassName - The component's base CSS class name
- * @param {string} [classNameFromProps] - Additional className from props (optional)
- * @returns {string} The merged className string
- */
-const withPropsClassName = (baseClassName, classNameFromProps) => {
-  if (!classNameFromProps) {
-    return baseClassName;
-  }
-
-  // Trim and normalize whitespace from the props className
-  const trimmedPropsClassName = classNameFromProps.trim();
-  if (!trimmedPropsClassName) {
-    return baseClassName;
-  }
-
-  // Normalize multiple spaces to single spaces and combine
-  const normalizedPropsClassName = trimmedPropsClassName.replace(/\s+/g, " ");
-  if (!baseClassName) {
-    return normalizedPropsClassName;
-  }
-  return `${baseClassName} ${normalizedPropsClassName}`;
-};
-
-/**
- * Processes component props to extract and generate styles for layout, spacing, alignment, expansion, and typography.
- * Returns remaining props and styled objects based on configuration.
- *
- * ```jsx
- * const MyButton = (props) => {
- *   const [remainingProps, style] = withPropsStyle(props, {
- *     base: { padding: 10, backgroundColor: 'blue' },
- *     layout: true, // Enable spacing, alignment, and expansion props
- *     typo: true,   // Enable typography props
- *   });
- *   return <button style={style} {...remainingProps}>{props.children}</button>;
- * };
- *
- * // Usage:
- * <MyButton margin={10} expandX selfAlignX="center" color="white">Click me</MyButton>
- * <MyButton paddingX={20} bold style={{ border: '1px solid red' }}>Bold button</MyButton>
- * ```
- *
- * ## Advanced: Multiple Style Objects
- *
- * You can generate additional style objects with different configurations:
- *
- * ```jsx
- * const [remainingProps, mainStyle, layoutOnlyStyle] = withPropsStyle(props, {
- *   base: { color: 'blue' },
- *   layout: true,
- *   typo: true,
- * }, {
- *   layout: true,  // Second style object with only layout styles
- * });
- * ```
- *
- * @param {object} props - Component props including style and layout props
- * @param {object} config - Main configuration for which style categories to process
- * @param {string|object} [config.base] - Base styles to apply first
- * @param {boolean} [config.layout] - Enable all layout props (shorthand for spacing, align, expansion)
- * @param {boolean} [config.spacing] - Enable margin/padding props
- * @param {boolean} [config.align] - Enable alignment props (selfAlignX, selfAlignY)
- * @param {boolean} [config.expansion] - Enable expansion props (expandX, expandY)
- * @param {boolean} [config.typo] - Enable typography props (color, bold, italic, etc.)
- * @param {...object} remainingConfig - Additional configuration objects for generating separate style objects
- * @param {boolean|object} [remainingConfig.base] - Include base styles (true for main base, or custom base object)
- * @param {boolean} [remainingConfig.style] - Include styles from props in this config
- * @returns {array} [remainingProps, mainStyle, ...additionalStyles] - Non-style props and style objects
- */
-
-const normalizeSpacingStyle = (value, property = "padding") => {
-  const cssSize = sizeSpacingScale[value];
-  return cssSize || stringifyStyle(value, property);
-};
-const normalizeTypoStyle = (value, property = "fontSize") => {
-  const cssSize = sizeTypoScale[value];
-  return cssSize || stringifyStyle(value, property);
-};
-
-const PASS_THROUGH = { name: "pass_through" };
-const applyOnCSSProp = (cssStyle) => {
-  return (value) => {
-    return { [cssStyle]: value };
-  };
-};
-const applyOnTwoCSSProps = (cssStyleA, cssStyleB) => {
-  return (value) => {
-    return {
-      [cssStyleA]: value,
-      [cssStyleB]: value,
-    };
-  };
-};
-const applyToCssPropWhenTruthy = (
-  cssProp,
-  cssPropValue,
-  cssPropValueOtherwise,
-) => {
-  return (value, styleContext) => {
-    if (value) {
-      return { [cssProp]: cssPropValue };
-    }
-    if (cssPropValueOtherwise === undefined) {
-      return null;
-    }
-    if (value === undefined) {
-      return null;
-    }
-    if (styleContext.styles[cssProp] !== undefined) {
-      // keep any value previously set
-      return null;
-    }
-    return { [cssProp]: cssPropValueOtherwise };
-  };
-};
-const applyOnTwoProps = (propA, propB) => {
-  return (value, context) => {
-    const firstProp = All_PROPS[propA];
-    const secondProp = All_PROPS[propB];
-    const firstPropResult = firstProp(value, context);
-    const secondPropResult = secondProp(value, context);
-    if (firstPropResult && secondPropResult) {
-      return {
-        ...firstPropResult,
-        ...secondPropResult,
-      };
-    }
-    return firstPropResult || secondPropResult;
-  };
-};
-
-const LAYOUT_PROPS = {
-  // all are handled by data-attributes
-  inline: () => {},
-  box: () => {},
-  row: () => {},
-  column: () => {},
-
-  absolute: applyToCssPropWhenTruthy("position", "absolute", "static"),
-  relative: applyToCssPropWhenTruthy("position", "relative", "static"),
-  fixed: applyToCssPropWhenTruthy("position", "fixed", "static"),
-};
-const OUTER_SPACING_PROPS = {
-  margin: PASS_THROUGH,
-  marginLeft: PASS_THROUGH,
-  marginRight: PASS_THROUGH,
-  marginTop: PASS_THROUGH,
-  marginBottom: PASS_THROUGH,
-  marginX: applyOnTwoCSSProps("marginLeft", "marginRight"),
-  marginY: applyOnTwoCSSProps("marginTop", "marginBottom"),
-};
-const INNER_SPACING_PROPS = {
-  padding: PASS_THROUGH,
-  paddingLeft: PASS_THROUGH,
-  paddingRight: PASS_THROUGH,
-  paddingTop: PASS_THROUGH,
-  paddingBottom: PASS_THROUGH,
-  paddingX: applyOnTwoCSSProps("paddingLeft", "paddingRight"),
-  paddingY: applyOnTwoCSSProps("paddingTop", "paddingBottom"),
-};
-const DIMENSION_PROPS = {
-  width: PASS_THROUGH,
-  minWidth: PASS_THROUGH,
-  maxWidth: PASS_THROUGH,
-  height: PASS_THROUGH,
-  minHeight: PASS_THROUGH,
-  maxHeight: PASS_THROUGH,
-  expand: applyOnTwoProps("expandX", "expandY"),
-  shrink: applyOnTwoProps("shrinkX", "shrinkY"),
-  // apply after width/height to override if both are set
-  expandX: (value, { parentLayout }) => {
-    if (!value) {
-      return null;
-    }
-    if (parentLayout === "column" || parentLayout === "inline-column") {
-      return { flexGrow: 1 }; // Grow horizontally in row
-    }
-    if (parentLayout === "row") {
-      return { minWidth: "100%", width: "auto" }; // Take full width in column
-    }
-    return { minWidth: "100%", width: "auto" }; // Take full width outside flex
-  },
-  expandY: (value, { parentLayout }) => {
-    if (!value) {
-      return null;
-    }
-    if (parentLayout === "column") {
-      return { minHeight: "100%", height: "auto" }; // Make column full height
-    }
-    if (parentLayout === "row" || parentLayout === "inline-row") {
-      return { flexGrow: 1 }; // Make row full height
-    }
-    return { minHeight: "100%", height: "auto" }; // Take full height outside flex
-  },
-  shrinkX: (value, { parentLayout }) => {
-    if (!value) {
-      return null;
-    }
-    if (parentLayout === "row" || parentLayout === "inline-row") {
-      return { flexShrink: 1 };
-    }
-    return { maxWidth: "100%" };
-  },
-  shrinkY: (value, { parentLayout }) => {
-    if (!value) {
-      return null;
-    }
-    if (parentLayout === "column" || parentLayout === "inline-column") {
-      return { flexShrink: 1 };
-    }
-    return { maxHeight: "100%" };
-  },
-
-  scaleX: (value) => {
-    return { transform: `scaleX(${stringifyStyle(value, "scaleX")})` };
-  },
-  scaleY: (value) => {
-    return { transform: `scaleY(${value})` };
-  },
-  scale: (value) => {
-    if (Array.isArray(value)) {
-      const [x, y] = value;
-      return { transform: `scale(${x}, ${y})` };
-    }
-    return { transform: `scale(${value})` };
-  },
-  scaleZ: (value) => {
-    return { transform: `scaleZ(${value})` };
-  },
-};
-const POSITION_PROPS = {
-  // For row, selfAlignX uses auto margins for positioning
-  // NOTE: Auto margins only work effectively for positioning individual items.
-  // When multiple adjacent items have the same auto margin alignment (e.g., selfAlignX="end"),
-  // only the first item will be positioned as expected because subsequent items
-  // will be positioned relative to the previous item's margins, not the container edge.
-  selfAlignX: (value, { parentLayout }) => {
-    const insideRowLayout =
-      parentLayout === "row" || parentLayout === "inline-row";
-
-    if (value === "start") {
-      if (insideRowLayout) {
-        return { alignSelf: "start" };
-      }
-      return { marginRight: "auto" };
-    }
-    if (value === "end") {
-      if (insideRowLayout) {
-        return { alignSelf: "end" };
-      }
-      return { marginLeft: "auto" };
-    }
-    if (value === "center") {
-      if (insideRowLayout) {
-        return { alignSelf: "center" };
-      }
-      return { marginLeft: "auto", marginRight: "auto" };
-    }
-    if (insideRowLayout && value !== "stretch") {
-      return { alignSelf: value };
-    }
-    return undefined;
-  },
-  selfAlignY: (value, { parentLayout }) => {
-    const inlineColumnLayout =
-      parentLayout === "column" || parentLayout === "inline-column";
-
-    if (value === "start") {
-      if (inlineColumnLayout) {
-        return { alignSelf: "start" };
-      }
-      return { marginBottom: "auto" };
-    }
-    if (value === "center") {
-      if (inlineColumnLayout) {
-        return { alignSelf: "center" };
-      }
-      return { marginTop: "auto", marginBottom: "auto" };
-    }
-    if (value === "end") {
-      if (inlineColumnLayout) {
-        return { alignSelf: "end" };
-      }
-      return { marginTop: "auto" };
-    }
-    return undefined;
-  },
-  left: PASS_THROUGH,
-  top: PASS_THROUGH,
-  bottom: PASS_THROUGH,
-  right: PASS_THROUGH,
-
-  translateX: (value) => {
-    return { transform: `translateX(${value})` };
-  },
-  translateY: (value) => {
-    return { transform: `translateY(${value})` };
-  },
-  translate: (value) => {
-    if (Array.isArray(value)) {
-      const [x, y] = value;
-      return { transform: `translate(${x}, ${y})` };
-    }
-    return { transform: `translate(${stringifyStyle(value, "translateX")})` };
-  },
-  rotateX: (value) => {
-    return { transform: `rotateX(${value})` };
-  },
-  rotateY: (value) => {
-    return { transform: `rotateY(${value})` };
-  },
-  rotateZ: (value) => {
-    return { transform: `rotateZ(${value})` };
-  },
-  rotate: (value) => {
-    return { transform: `rotate(${value})` };
-  },
-  skewX: (value) => {
-    return { transform: `skewX(${value})` };
-  },
-  skewY: (value) => {
-    return { transform: `skewY(${value})` };
-  },
-  skew: (value) => {
-    if (Array.isArray(value)) {
-      const [x, y] = value;
-      return { transform: `skew(${x}, ${y})` };
-    }
-    return { transform: `skew(${value})` };
-  },
-};
-const TYPO_PROPS = {
-  font: applyOnCSSProp("fontFamily"),
-  fontFamily: PASS_THROUGH,
-  fontWeight: PASS_THROUGH,
-  size: applyOnCSSProp("fontSize"),
-  fontSize: PASS_THROUGH,
-  bold: applyToCssPropWhenTruthy("fontWeight", "bold", "normal"),
-  think: applyToCssPropWhenTruthy("fontWeight", "thin", "normal"),
-  italic: applyToCssPropWhenTruthy("fontStyle", "italic", "normal"),
-  underline: applyToCssPropWhenTruthy("textDecoration", "underline", "none"),
-  underlineStyle: applyOnCSSProp("textDecorationStyle"),
-  underlineColor: applyOnCSSProp("textDecorationColor"),
-  textShadow: PASS_THROUGH,
-  lineHeight: PASS_THROUGH,
-  color: PASS_THROUGH,
-  noWrap: applyToCssPropWhenTruthy("whiteSpace", "nowrap", "normal"),
-  pre: applyToCssPropWhenTruthy("whiteSpace", "pre", "normal"),
-  preWrap: applyToCssPropWhenTruthy("whiteSpace", "pre-wrap", "normal"),
-  preLine: applyToCssPropWhenTruthy("whiteSpace", "pre-line", "normal"),
-};
-const VISUAL_PROPS = {
-  outline: PASS_THROUGH,
-  outlineStyle: PASS_THROUGH,
-  outlineColor: PASS_THROUGH,
-  outlineWidth: PASS_THROUGH,
-  boxDecorationBreak: PASS_THROUGH,
-  boxShadow: PASS_THROUGH,
-  background: PASS_THROUGH,
-  backgroundColor: PASS_THROUGH,
-  backgroundImage: PASS_THROUGH,
-  backgroundSize: PASS_THROUGH,
-  border: PASS_THROUGH,
-  borderTop: PASS_THROUGH,
-  borderLeft: PASS_THROUGH,
-  borderRight: PASS_THROUGH,
-  borderBottom: PASS_THROUGH,
-  borderWidth: PASS_THROUGH,
-  borderRadius: PASS_THROUGH,
-  borderColor: PASS_THROUGH,
-  borderStyle: PASS_THROUGH,
-  opacity: PASS_THROUGH,
-  filter: PASS_THROUGH,
-  cursor: PASS_THROUGH,
-};
-const CONTENT_PROPS = {
-  align: applyOnTwoProps("alignX", "alignY"),
-  alignX: (value, { layout }) => {
-    if (layout === "row" || layout === "inline-row") {
-      if (value === "stretch") {
-        return undefined; // this is the default
-      }
-      return { alignItems: value };
-    }
-    if (layout === "column" || layout === "inline-column") {
-      if (value === "start") {
-        return undefined; // this is the default
-      }
-      return { justifyContent: value };
-    }
-    return { textAlign: value };
-  },
-  alignY: (value, { layout }) => {
-    if (layout === "row" || layout === "inline-row") {
-      if (value === "start") {
-        return undefined;
-      }
-      return {
-        justifyContent: value,
-      };
-    }
-    if (layout === "column" || layout === "inline-column") {
-      if (value === "stretch") {
-        return undefined;
-      }
-      return { alignItems: value };
-    }
-    return { verticalAlign: value };
-  },
-  spacing: (value, { layout }) => {
-    if (
-      layout === "row" ||
-      layout === "column" ||
-      layout === "inline-row" ||
-      layout === "inline-column"
-    ) {
-      return {
-        gap: resolveSpacingSize(value, "gap"),
-      };
-    }
-    return undefined;
-  },
-};
-const All_PROPS = {
-  ...LAYOUT_PROPS,
-  ...OUTER_SPACING_PROPS,
-  ...INNER_SPACING_PROPS,
-  ...DIMENSION_PROPS,
-  ...POSITION_PROPS,
-  ...TYPO_PROPS,
-  ...VISUAL_PROPS,
-  ...CONTENT_PROPS,
-};
-const LAYOUT_PROP_NAME_SET = new Set(Object.keys(LAYOUT_PROPS));
-const OUTER_SPACING_PROP_NAME_SET = new Set(Object.keys(OUTER_SPACING_PROPS));
-const INNER_SPACING_PROP_NAME_SET = new Set(Object.keys(INNER_SPACING_PROPS));
-const DIMENSION_PROP_NAME_SET = new Set(Object.keys(DIMENSION_PROPS));
-const POSITION_PROP_NAME_SET = new Set(Object.keys(POSITION_PROPS));
-const TYPO_PROP_NAME_SET = new Set(Object.keys(TYPO_PROPS));
-const VISUAL_PROP_NAME_SET = new Set(Object.keys(VISUAL_PROPS));
-const CONTENT_PROP_NAME_SET = new Set(Object.keys(CONTENT_PROPS));
-const STYLE_PROP_NAME_SET = new Set(Object.keys(All_PROPS));
-
-const COPIED_ON_VISUAL_CHILD_PROP_SET = new Set([
-  ...LAYOUT_PROP_NAME_SET,
-  "expand",
-  "shrink",
-  "expandX",
-  "expandY",
-  "alignX",
-  "alignY",
-]);
-const HANDLED_BY_VISUAL_CHILD_PROP_SET = new Set([
-  ...INNER_SPACING_PROP_NAME_SET,
-  ...VISUAL_PROP_NAME_SET,
-  ...CONTENT_PROP_NAME_SET,
-]);
-const getVisualChildStylePropStrategy = (name) => {
-  if (COPIED_ON_VISUAL_CHILD_PROP_SET.has(name)) {
-    return "copy";
-  }
-  if (HANDLED_BY_VISUAL_CHILD_PROP_SET.has(name)) {
-    return "forward";
-  }
-  return null;
-};
-
-const isStyleProp = (name) => STYLE_PROP_NAME_SET.has(name);
-
-const getStylePropGroup = (name) => {
-  if (LAYOUT_PROP_NAME_SET.has(name)) {
-    return "layout";
-  }
-  if (OUTER_SPACING_PROP_NAME_SET.has(name)) {
-    return "margin";
-  }
-  if (INNER_SPACING_PROP_NAME_SET.has(name)) {
-    return "padding";
-  }
-  if (DIMENSION_PROP_NAME_SET.has(name)) {
-    return "dimension";
-  }
-  if (POSITION_PROP_NAME_SET.has(name)) {
-    return "position";
-  }
-  if (TYPO_PROP_NAME_SET.has(name)) {
-    return "typo";
-  }
-  if (VISUAL_PROP_NAME_SET.has(name)) {
-    return "visual";
-  }
-  if (CONTENT_PROP_NAME_SET.has(name)) {
-    return "content";
-  }
-  return null;
-};
-const getNormalizer = (key) => {
-  if (key === "borderRadius") {
-    return normalizeSpacingStyle;
-  }
-  const group = getStylePropGroup(key);
-  if (group === "margin" || group === "padding") {
-    return normalizeSpacingStyle;
-  }
-  if (group === "typo") {
-    return normalizeTypoStyle;
-  }
-  return stringifyStyle;
-};
-const getHowToHandleStyleProp = (name) => {
-  const getStyle = All_PROPS[name];
-  if (getStyle === PASS_THROUGH) {
-    return null;
-  }
-  return getStyle;
-};
-const prepareStyleValue = (existingValue, value, name, context) => {
-  const normalizer = getNormalizer(name);
-  const cssValue = normalizer(value, name);
-  const mergedValue = mergeOneStyle(existingValue, cssValue, name, context);
-  return mergedValue;
-};
-
-// Unified design scale using t-shirt sizes with rem units for accessibility.
-// This scale is used for spacing to create visual harmony
-// and consistent proportions throughout the design system.
-const sizeSpacingScale = {
-  xxs: "0.125em", // 0.125 = 2px at 16px base
-  xs: "0.25em", // 0.25 = 4px at 16px base
-  sm: "0.5em", // 0.5 = 8px at 16px base
-  md: "1em", // 1 = 16px at 16px base (base font size)
-  lg: "1.5em", // 1.5 = 24px at 16px base
-  xl: "2em", // 2 = 32px at 16px base
-  xxl: "3em", // 3 = 48px at 16px base
-};
-sizeSpacingScale.s = sizeSpacingScale.sm;
-sizeSpacingScale.m = sizeSpacingScale.md;
-sizeSpacingScale.l = sizeSpacingScale.lg;
-const sizeSpacingScaleKeys = new Set(Object.keys(sizeSpacingScale));
-const isSizeSpacingScaleKey = (key) => {
-  return sizeSpacingScaleKeys.has(key);
-};
-const resolveSpacingSize = (size, property = "padding") => {
-  return stringifyStyle(sizeSpacingScale[size] || size, property);
-};
-
-const sizeTypoScale = {
-  xxs: "0.625rem", // 0.625 = 10px at 16px base (smaller than before for more range)
-  xs: "0.75rem", // 0.75 = 12px at 16px base
-  sm: "0.875rem", // 0.875 = 14px at 16px base
-  md: "1rem", // 1 = 16px at 16px base (base font size)
-  lg: "1.125rem", // 1.125 = 18px at 16px base
-  xl: "1.25rem", // 1.25 = 20px at 16px base
-  xxl: "1.5rem", // 1.5 = 24px at 16px base
-};
-sizeTypoScale.s = sizeTypoScale.sm;
-sizeTypoScale.m = sizeTypoScale.md;
-sizeTypoScale.l = sizeTypoScale.lg;
-
-const DEFAULT_DISPLAY_BY_TAG_NAME = {
-  "inline": new Set([
-    "a",
-    "abbr",
-    "b",
-    "bdi",
-    "bdo",
-    "br",
-    "cite",
-    "code",
-    "dfn",
-    "em",
-    "i",
-    "kbd",
-    "label",
-    "mark",
-    "q",
-    "s",
-    "samp",
-    "small",
-    "span",
-    "strong",
-    "sub",
-    "sup",
-    "time",
-    "u",
-    "var",
-    "wbr",
-    "area",
-    "audio",
-    "img",
-    "map",
-    "track",
-    "video",
-    "embed",
-    "iframe",
-    "object",
-    "picture",
-    "portal",
-    "source",
-    "svg",
-    "math",
-    "input",
-    "meter",
-    "output",
-    "progress",
-    "select",
-    "textarea",
-  ]),
-  "block": new Set([
-    "address",
-    "article",
-    "aside",
-    "blockquote",
-    "div",
-    "dl",
-    "fieldset",
-    "figure",
-    "footer",
-    "form",
-    "h1",
-    "h2",
-    "h3",
-    "h4",
-    "h5",
-    "h6",
-    "header",
-    "hr",
-    "main",
-    "nav",
-    "ol",
-    "p",
-    "pre",
-    "section",
-    "table",
-    "ul",
-    "video",
-    "canvas",
-    "details",
-    "dialog",
-    "dd",
-    "dt",
-    "figcaption",
-    "li",
-    "summary",
-    "caption",
-    "colgroup",
-    "tbody",
-    "td",
-    "tfoot",
-    "th",
-    "thead",
-    "tr",
-  ]),
-  "inline-block": new Set([
-    "button",
-    "input",
-    "select",
-    "textarea",
-    "img",
-    "video",
-    "audio",
-    "canvas",
-    "embed",
-    "iframe",
-    "object",
-  ]),
-  "table-cell": new Set(["td", "th"]),
-  "table-row": new Set(["tr"]),
-  "list-item": new Set(["li"]),
-  "none": new Set([
-    "head",
-    "meta",
-    "title",
-    "link",
-    "style",
-    "script",
-    "noscript",
-    "template",
-    "slot",
-  ]),
-};
-
-// Create a reverse map for quick lookup: tagName -> display value
-const TAG_NAME_TO_DEFAULT_DISPLAY = new Map();
-for (const display of Object.keys(DEFAULT_DISPLAY_BY_TAG_NAME)) {
-  const displayTagnameSet = DEFAULT_DISPLAY_BY_TAG_NAME[display];
-  for (const tagName of displayTagnameSet) {
-    TAG_NAME_TO_DEFAULT_DISPLAY.set(tagName, display);
-  }
-}
-
-/**
- * Get the default CSS display value for a given HTML tag name
- * @param {string} tagName - The HTML tag name (case-insensitive)
- * @returns {string} The default display value ("block", "inline", "inline-block", etc.) or "inline" as fallback
- * @example
- * getDefaultDisplay("div")      // "block"
- * getDefaultDisplay("span")     // "inline"
- * getDefaultDisplay("img")      // "inline-block"
- * getDefaultDisplay("unknown")  // "inline" (fallback)
- */
-const getDefaultDisplay = (tagName) => {
-  const normalizedTagName = tagName.toLowerCase();
-  return TAG_NAME_TO_DEFAULT_DISPLAY.get(normalizedTagName) || "inline";
-};
-
-const BoxLayoutContext = createContext();
-
-const PSEUDO_CLASSES = {
-  ":hover": {
-    attribute: "data-hover",
-    setup: (el, callback) => {
-      el.addEventListener("mouseenter", callback);
-      el.addEventListener("mouseleave", callback);
-      return () => {
-        el.removeEventListener("mouseenter", callback);
-        el.removeEventListener("mouseleave", callback);
-      };
-    },
-    test: (el) => el.matches(":hover"),
-  },
-  ":active": {
-    attribute: "data-active",
-    setup: (el, callback) => {
-      el.addEventListener("mousedown", callback);
-      document.addEventListener("mouseup", callback);
-      return () => {
-        el.removeEventListener("mousedown", callback);
-        document.removeEventListener("mouseup", callback);
-      };
-    },
-    test: (el) => el.matches(":active"),
-  },
-  ":visited": {
-    attribute: "data-visited",
-  },
-  ":checked": {
-    attribute: "data-checked",
-    setup: (el, callback) => {
-      if (el.type === "checkbox") {
-        // Listen to user interactions
-        el.addEventListener("input", callback);
-        // Intercept programmatic changes to .checked property
-        const originalDescriptor = Object.getOwnPropertyDescriptor(
-          HTMLInputElement.prototype,
-          "checked",
-        );
-        Object.defineProperty(el, "checked", {
-          get: originalDescriptor.get,
-          set(value) {
-            originalDescriptor.set.call(this, value);
-            callback();
-          },
-          configurable: true,
-        });
-        return () => {
-          // Restore original property descriptor
-          Object.defineProperty(el, "checked", originalDescriptor);
-          el.removeEventListener("input", callback);
-        };
-      }
-      if (el.type === "radio") {
-        // Listen to changes on the radio group
-        const radioSet =
-          el.closest("[data-radio-list], fieldset, form") || document;
-        radioSet.addEventListener("input", callback);
-
-        // Intercept programmatic changes to .checked property
-        const originalDescriptor = Object.getOwnPropertyDescriptor(
-          HTMLInputElement.prototype,
-          "checked",
-        );
-        Object.defineProperty(el, "checked", {
-          get: originalDescriptor.get,
-          set(value) {
-            originalDescriptor.set.call(this, value);
-            callback();
-          },
-          configurable: true,
-        });
-        return () => {
-          radioSet.removeEventListener("input", callback);
-          // Restore original property descriptor
-          Object.defineProperty(el, "checked", originalDescriptor);
-        };
-      }
-      if (el.tagName === "INPUT") {
-        el.addEventListener("input", callback);
-        return () => {
-          el.removeEventListener("input", callback);
-        };
-      }
-      return () => {};
-    },
-    test: (el) => el.matches(":checked"),
-  },
-  ":focus": {
-    attribute: "data-focus",
-    setup: (el, callback) => {
-      el.addEventListener("focusin", callback);
-      el.addEventListener("focusout", callback);
-      return () => {
-        el.removeEventListener("focusin", callback);
-        el.removeEventListener("focusout", callback);
-      };
-    },
-    test: (el) => el.matches(":focus"),
-  },
-  ":focus-visible": {
-    attribute: "data-focus-visible",
-    setup: (el, callback) => {
-      document.addEventListener("keydown", callback);
-      document.addEventListener("keyup", callback);
-      return () => {
-        document.removeEventListener("keydown", callback);
-        document.removeEventListener("keyup", callback);
-      };
-    },
-    test: (el) => el.matches(":focus-visible"),
-  },
-  ":disabled": {
-    attribute: "data-disabled",
-    add: (el) => {
-      if (
-        el.tagName === "BUTTON" ||
-        el.tagName === "INPUT" ||
-        el.tagName === "SELECT" ||
-        el.tagName === "TEXTAREA"
-      ) {
-        el.disabled = true;
-      }
-    },
-    remove: (el) => {
-      if (
-        el.tagName === "BUTTON" ||
-        el.tagName === "INPUT" ||
-        el.tagName === "SELECT" ||
-        el.tagName === "TEXTAREA"
-      ) {
-        el.disabled = false;
-      }
-    },
-  },
-  ":read-only": {
-    attribute: "data-readonly",
-    add: (el) => {
-      if (
-        el.tagName === "INPUT" ||
-        el.tagName === "SELECT" ||
-        el.tagName === "TEXTAREA"
-      ) {
-        if (el.type === "checkbox" || el.type === "radio") {
-          // there is no readOnly for checkboxes/radios
-          return;
-        }
-        el.readOnly = true;
-      }
-    },
-    remove: (el) => {
-      if (
-        el.tagName === "INPUT" ||
-        el.tagName === "SELECT" ||
-        el.tagName === "TEXTAREA"
-      ) {
-        if (el.type === "checkbox" || el.type === "radio") {
-          // there is no readOnly for checkboxes/radios
-          return;
-        }
-        el.readOnly = false;
-      }
-    },
-  },
-  ":valid": {
-    attribute: "data-valid",
-    test: (el) => el.matches(":valid"),
-  },
-  ":invalid": {
-    attribute: "data-invalid",
-    test: (el) => el.matches(":invalid"),
-  },
-  ":-navi-loading": {
-    attribute: "data-loading",
-  },
-};
-
-const dispatchNaviPseudoStateEvent = (element, value, previousValue) => {
-  if (!element) {
-    return;
-  }
-  element.dispatchEvent(
-    new CustomEvent("navi_pseudo_state", {
-      detail: {
-        pseudoState: value,
-        previousPseudoState: previousValue,
-      },
-    }),
-  );
-};
-
-const EMPTY_STATE = {};
-const initPseudoStyles = (
-  element,
-  {
-    pseudoClasses,
-    pseudoState, // ":disabled", ":read-only", ":-navi-loading", etc...
-    effect,
-    elementToImpact = element,
-    elementListeningPseudoState,
-  },
-) => {
-  const onStateChange = (value, previousValue) => {
-    effect?.(value, previousValue);
-    dispatchNaviPseudoStateEvent(
-      elementListeningPseudoState,
-      value,
-      previousValue,
-    );
-  };
-
-  if (!pseudoClasses || pseudoClasses.length === 0) {
-    onStateChange(EMPTY_STATE);
-    return () => {};
-  }
-
-  const [teardown, addTeardown] = createPubSub();
-
-  let state;
-  const checkPseudoClasses = () => {
-    let someChange = false;
-    const currentState = {};
-    for (const pseudoClass of pseudoClasses) {
-      const pseudoClassDefinition = PSEUDO_CLASSES[pseudoClass];
-      if (!pseudoClassDefinition) {
-        console.warn(`Unknown pseudo class: ${pseudoClass}`);
-        continue;
-      }
-      let currentValue;
-      if (
-        pseudoState &&
-        Object.hasOwn(pseudoState, pseudoClass) &&
-        pseudoState[pseudoClass] !== undefined
-      ) {
-        currentValue = pseudoState[pseudoClass];
-      } else {
-        const { test } = pseudoClassDefinition;
-        if (test) {
-          currentValue = test(element, pseudoState);
-        }
-      }
-      currentState[pseudoClass] = currentValue;
-      const oldValue = state ? state[pseudoClass] : undefined;
-      if (oldValue !== currentValue || !state) {
-        someChange = true;
-        const { attribute, add, remove } = pseudoClassDefinition;
-        if (currentValue) {
-          if (attribute) {
-            elementToImpact.setAttribute(attribute, "");
-          }
-          add?.(element);
-        } else {
-          if (attribute) {
-            elementToImpact.removeAttribute(attribute);
-          }
-          remove?.(element);
-        }
-      }
-    }
-    if (!someChange) {
-      return;
-    }
-    const previousState = state;
-    state = currentState;
-    onStateChange(state, previousState);
-  };
-
-  element.addEventListener("navi_pseudo_state_check", (event) => {
-    const previousState = event.detail.previousPseudoState;
-    state = event.detail.pseudoState;
-    onStateChange(state, previousState);
-  });
-
-  for (const pseudoClass of pseudoClasses) {
-    const pseudoClassDefinition = PSEUDO_CLASSES[pseudoClass];
-    if (!pseudoClassDefinition) {
-      console.warn(`Unknown pseudo class: ${pseudoClass}`);
-      continue;
-    }
-    const { setup } = pseudoClassDefinition;
-    if (setup) {
-      const cleanup = setup(element, () => {
-        checkPseudoClasses();
-      });
-      addTeardown(cleanup);
-    }
-  }
-  checkPseudoClasses();
-  // just in case + catch use forcing them in chrome devtools
-  const interval = setInterval(() => {
-    checkPseudoClasses();
-  }, 300);
-  addTeardown(() => {
-    clearInterval(interval);
-  });
-
-  return teardown;
-};
-
-const applyStyle = (element, style, pseudoState, pseudoNamedStyles) => {
-  if (!element) {
-    return;
-  }
-  updateStyle(element, getStyleToApply(style, pseudoState, pseudoNamedStyles));
-};
-
-const PSEUDO_STATE_DEFAULT = {};
-const PSEUDO_NAMED_STYLES_DEFAULT = {};
-const getStyleToApply = (styles, pseudoState, pseudoNamedStyles) => {
-  if (
-    !pseudoState ||
-    pseudoState === PSEUDO_STATE_DEFAULT ||
-    !pseudoNamedStyles ||
-    pseudoNamedStyles === PSEUDO_NAMED_STYLES_DEFAULT
-  ) {
-    return styles;
-  }
-
-  const isMatching = (pseudoKey) => {
-    if (pseudoKey.startsWith("::")) {
-      const nextColonIndex = pseudoKey.indexOf(":", 2);
-      if (nextColonIndex === -1) {
-        return true;
-      }
-      // Handle pseudo-elements with states like "::-navi-loader:checked:disabled"
-      const pseudoStatesString = pseudoKey.slice(nextColonIndex);
-      return isMatching(pseudoStatesString);
-    }
-    const nextColonIndex = pseudoKey.indexOf(":", 1);
-    if (nextColonIndex === -1) {
-      return pseudoState[pseudoKey];
-    }
-    // Handle compound pseudo-states like ":checked:disabled"
-    return pseudoKey
-      .slice(1)
-      .split(":")
-      .every((state) => pseudoState[state]);
-  };
-
-  const styleToAddSet = new Set();
-  for (const pseudoKey of Object.keys(pseudoNamedStyles)) {
-    if (isMatching(pseudoKey)) {
-      const stylesToApply = pseudoNamedStyles[pseudoKey];
-      styleToAddSet.add(stylesToApply);
-    }
-  }
-  if (styleToAddSet.size === 0) {
-    return styles;
-  }
-  let style = styles || {};
-  for (const styleToAdd of styleToAddSet) {
-    style = mergeTwoStyles(style, styleToAdd, "css");
-  }
-  return style;
-};
-
-const styleKeySetWeakMap = new WeakMap();
-const updateStyle = (element, style) => {
-  const previousStyleKeySet = styleKeySetWeakMap.get(element);
-  const styleKeySet = new Set(style ? Object.keys(style) : []);
-  if (!previousStyleKeySet) {
-    for (const key of styleKeySet) {
-      if (key.startsWith("--")) {
-        element.style.setProperty(key, style[key]);
-      } else {
-        element.style[key] = style[key];
-      }
-    }
-    styleKeySetWeakMap.set(element, styleKeySet);
-    return;
-  }
-  const toDeleteKeySet = new Set(previousStyleKeySet);
-  for (const key of styleKeySet) {
-    toDeleteKeySet.delete(key);
-    if (key.startsWith("--")) {
-      element.style.setProperty(key, style[key]);
-    } else {
-      element.style[key] = style[key];
-    }
-  }
-  for (const toDeleteKey of toDeleteKeySet) {
-    if (toDeleteKey.startsWith("--")) {
-      element.style.removeProperty(toDeleteKey);
-    } else {
-      // we can't use removeProperty because "toDeleteKey" is in camelCase
-      // e.g., backgroundColor (and it's safer to just let the browser do the conversion)
-      element.style[toDeleteKey] = "";
-    }
-  }
-  styleKeySetWeakMap.set(element, styleKeySet);
-  return;
-};
-
-installImportMetaCss(import.meta);import.meta.css = /* css */`
-  [data-layout-inline] {
-    display: inline;
-  }
-
-  [data-layout-row] {
-    display: flex;
-    flex-direction: column;
-  }
-
-  [data-layout-column] {
-    display: flex;
-    flex-direction: row;
-  }
-
-  [data-layout-row] > [data-layout-row],
-  [data-layout-row] > [data-layout-column],
-  [data-layout-column] > [data-layout-column],
-  [data-layout-column] > [data-layout-row] {
-    flex-shrink: 0;
-  }
-
-  [data-layout-inline][data-layout-row],
-  [data-layout-inline][data-layout-column] {
-    display: inline-flex;
-  }
-`;
-const PSEUDO_CLASSES_DEFAULT = [];
-const PSEUDO_ELEMENTS_DEFAULT = [];
-const STYLE_CSS_VARS_DEFAULT = {};
-const Box = props => {
-  const {
-    as = "div",
-    baseClassName,
-    className,
-    baseStyle,
-    // style management
-    style,
-    styleCSSVars = STYLE_CSS_VARS_DEFAULT,
-    basePseudoState,
-    pseudoState,
-    // for demo purposes it's possible to control pseudo state from props
-    pseudoClasses = PSEUDO_CLASSES_DEFAULT,
-    pseudoElements = PSEUDO_ELEMENTS_DEFAULT,
-    pseudoStyle,
-    // visualSelector convey the following:
-    // The box itself is visually "invisible", one of its descendant is responsible for visual representation
-    // - Some styles will be used on the box itself (for instance margins)
-    // - Some styles will be used on the visual element (for instance paddings, backgroundColor)
-    // -> introduced for <Button /> with transform:scale on press
-    visualSelector,
-    // pseudoStateSelector convey the following:
-    // The box contains content that holds pseudoState
-    // -> introduced for <Input /> with a wrapped for loading, checkboxes, etc
-    pseudoStateSelector,
-    hasChildFunction,
-    children,
-    ...rest
-  } = props;
-  const defaultRef = useRef();
-  const ref = props.ref || defaultRef;
-  const TagName = as;
-  const defaultDisplay = getDefaultDisplay(TagName);
-  let {
-    box,
-    inline,
-    row,
-    column
-  } = rest;
-  if (box === "auto" || inline || defaultDisplay === "inline") {
-    if (rest.width !== undefined || rest.height !== undefined) {
-      box = true;
-    }
-  }
-  if (box) {
-    if (inline === undefined) {
-      inline = true;
-    }
-    if (column === undefined && !row) {
-      column = true;
-    }
-  }
-  let layout;
-  if (inline) {
-    if (row) {
-      layout = "inline-row";
-    } else if (column) {
-      layout = "inline-column";
-    } else {
-      layout = "inline";
-    }
-  } else if (row) {
-    layout = "row";
-  } else if (column) {
-    layout = "column";
-  } else {
-    layout = defaultDisplay;
-  }
-  const innerClassName = withPropsClassName(baseClassName, className);
-  const selfForwardedProps = {};
-  const childForwardedProps = {};
-  {
-    const parentLayout = useContext(BoxLayoutContext);
-    const styleDeps = [
-    // Layout and alignment props
-    parentLayout, layout,
-    // Style context dependencies
-    styleCSSVars, pseudoClasses, pseudoElements,
-    // Selectors
-    visualSelector, pseudoStateSelector];
-    let innerPseudoState;
-    if (basePseudoState && pseudoState) {
-      innerPseudoState = {};
-      const baseStateKeys = Object.keys(basePseudoState);
-      const pseudoStateKeySet = new Set(Object.keys(pseudoState));
-      for (const key of baseStateKeys) {
-        if (pseudoStateKeySet.has(key)) {
-          pseudoStateKeySet.delete(key);
-          const value = pseudoState[key];
-          styleDeps.push(value);
-          innerPseudoState[key] = value;
-        } else {
-          const value = basePseudoState[key];
-          styleDeps.push(value);
-          innerPseudoState[key] = value;
-        }
-      }
-      for (const key of pseudoStateKeySet) {
-        const value = pseudoState[key];
-        styleDeps.push(value);
-        innerPseudoState[key] = value;
-      }
-    } else if (basePseudoState) {
-      innerPseudoState = basePseudoState;
-      for (const key of Object.keys(basePseudoState)) {
-        const value = basePseudoState[key];
-        styleDeps.push(value);
-      }
-    } else if (pseudoState) {
-      innerPseudoState = pseudoState;
-      for (const key of Object.keys(pseudoState)) {
-        const value = pseudoState[key];
-        styleDeps.push(value);
-      }
-    } else {
-      innerPseudoState = PSEUDO_STATE_DEFAULT;
-    }
-    const boxStyles = {};
-    const styleContext = {
-      parentLayout,
-      layout,
-      styleCSSVars,
-      pseudoState: innerPseudoState,
-      pseudoClasses,
-      pseudoElements,
-      remainingProps: rest,
-      styles: boxStyles
-    };
-    let boxPseudoNamedStyles = PSEUDO_NAMED_STYLES_DEFAULT;
-    const shouldForwardAllToChild = visualSelector && pseudoStateSelector;
-    const addStyle = (value, name, stylesTarget, context) => {
-      styleDeps.push(value); // impact box style -> add to deps
-      const cssVar = styleCSSVars[name];
-      const mergedValue = prepareStyleValue(stylesTarget[name], value, name, context);
-      if (cssVar) {
-        stylesTarget[cssVar] = mergedValue;
-        return true;
-      }
-      stylesTarget[name] = mergedValue;
-      return false;
-    };
-    const addStyleMaybeForwarding = (value, name, stylesTarget, context, visualChildPropStrategy) => {
-      if (!visualChildPropStrategy) {
-        addStyle(value, name, stylesTarget, context);
-        return false;
-      }
-      const cssVar = styleCSSVars[name];
-      if (cssVar) {
-        // css var wins over visual child handling
-        addStyle(value, name, stylesTarget, context);
-        return false;
-      }
-      if (visualChildPropStrategy === "copy") {
-        // we stylyze ourself + forward prop to the child
-        addStyle(value, name, stylesTarget, context);
-      }
-      return true;
-    };
-    const assignStyle = (value, name, styleContext, boxStylesTarget, styleOrigin) => {
-      const context = styleOrigin === "base_style" ? "js" : "css";
-      const isCss = styleOrigin === "base_style" || styleOrigin === "style";
-      if (isCss) {
-        addStyle(value, name, boxStylesTarget, context);
-        return;
-      }
-      const isPseudoStyle = styleOrigin === "pseudo_style";
-      const mightStyle = isStyleProp(name);
-      if (!mightStyle) {
-        // not a style prop what do we do with it?
-        if (shouldForwardAllToChild) {
-          if (isPseudoStyle) ; else {
-            childForwardedProps[name] = value;
-          }
-        } else {
-          if (isPseudoStyle) {
-            console.warn(`unsupported pseudo style key "${name}"`);
-          }
-          selfForwardedProps[name] = value;
-        }
-        return;
-      }
-      // it's a style prop, we need first to check if we have css var to handle them
-      // otherwise we decide to put it either on self or child
-      const visualChildPropStrategy = visualSelector && getVisualChildStylePropStrategy(name);
-      const getStyle = getHowToHandleStyleProp(name);
-      if (
-      // prop name === css style name
-      !getStyle) {
-        const needForwarding = addStyleMaybeForwarding(value, name, boxStylesTarget, context, visualChildPropStrategy);
-        if (needForwarding) {
-          if (isPseudoStyle) ; else {
-            childForwardedProps[name] = value;
-          }
-        }
-        return;
-      }
-      const cssValues = getStyle(value, styleContext);
-      if (!cssValues) {
-        return;
-      }
-      let needForwarding = false;
-      for (const styleName of Object.keys(cssValues)) {
-        const cssValue = cssValues[styleName];
-        needForwarding = addStyleMaybeForwarding(cssValue, styleName, boxStylesTarget, context, visualChildPropStrategy);
-      }
-      if (needForwarding) {
-        if (isPseudoStyle) ; else {
-          childForwardedProps[name] = value;
-        }
-      }
-    };
-    if (baseStyle) {
-      for (const key of baseStyle) {
-        const value = baseStyle[key];
-        assignStyle(value, key, styleContext, boxStyles, "baseStyle");
-      }
-    }
-    const remainingPropKeyArray = Object.keys(rest);
-    for (const propName of remainingPropKeyArray) {
-      if (propName === "ref") {
-        // some props not destructured but that are neither
-        // style props, nor should be forwarded to the child
-        continue;
-      }
-      const propValue = rest[propName];
-      assignStyle(propValue, propName, styleContext, boxStyles, "prop");
-    }
-    if (pseudoStyle) {
-      const assignPseudoStyle = (propValue, propName, pseudoStyleContext, pseudoStylesTarget) => {
-        assignStyle(propValue, propName, pseudoStyleContext, pseudoStylesTarget, "pseudo_style");
-      };
-      const pseudoStyleKeys = Object.keys(pseudoStyle);
-      if (pseudoStyleKeys.length) {
-        boxPseudoNamedStyles = {};
-        for (const key of pseudoStyleKeys) {
-          const pseudoStyleContext = {
-            ...styleContext,
-            styleCSSVars: {
-              ...styleCSSVars,
-              ...styleCSSVars[key]
-            },
-            pseudoName: key
-          };
-
-          // pseudo class
-          if (key.startsWith(":")) {
-            styleDeps.push(key);
-            const pseudoClassStyles = {};
-            const pseudoClassStyle = pseudoStyle[key];
-            for (const pseudoClassStyleKey of Object.keys(pseudoClassStyle)) {
-              const pseudoClassStyleValue = pseudoClassStyle[pseudoClassStyleKey];
-              assignPseudoStyle(pseudoClassStyleValue, pseudoClassStyleKey, pseudoStyleContext, pseudoClassStyles);
-            }
-            boxPseudoNamedStyles[key] = pseudoClassStyles;
-            continue;
-          }
-          // pseudo element
-          if (key.startsWith("::")) {
-            styleDeps.push(key);
-            const pseudoElementStyles = {};
-            const pseudoElementStyle = pseudoStyle[key];
-            for (const pseudoElementStyleKey of Object.keys(pseudoElementStyle)) {
-              const pseudoElementStyleValue = pseudoElementStyle[pseudoElementStyleKey];
-              assignPseudoStyle(pseudoElementStyleValue, pseudoElementStyleKey, pseudoStyleContext, pseudoElementStyles);
-            }
-            boxPseudoNamedStyles[key] = pseudoElementStyles;
-            continue;
-          }
-          console.warn(`unsupported pseudo style key "${key}"`);
-        }
-      }
-      childForwardedProps.pseudoStyle = pseudoStyle;
-    }
-    if (typeof style === "string") {
-      const styleObject = normalizeStyles(style, "css");
-      for (const styleName of Object.keys(styleObject)) {
-        const styleValue = styleObject[styleName];
-        assignStyle(styleValue, styleName, styleContext, boxStyles, "style");
-      }
-    } else if (style && typeof style === "object") {
-      for (const styleName of Object.keys(style)) {
-        const styleValue = style[styleName];
-        assignStyle(styleValue, styleName, styleContext, boxStyles, "style");
-      }
-    }
-    const updateStyle = useCallback(state => {
-      const boxEl = ref.current;
-      applyStyle(boxEl, boxStyles, state, boxPseudoNamedStyles);
-    }, styleDeps);
-    const finalStyleDeps = [pseudoStateSelector, innerPseudoState, updateStyle];
-    // By default ":hover", ":active" are not tracked.
-    // But is code explicitely do something like:
-    // pseudoStyle={{ ":hover": { backgroundColor: "red" } }}
-    // then we'll track ":hover" state changes even for basic elements like <div>
-    let innerPseudoClasses;
-    if (pseudoStyle) {
-      innerPseudoClasses = [...pseudoClasses];
-      if (pseudoClasses !== PSEUDO_CLASSES_DEFAULT) {
-        finalStyleDeps.push(...pseudoClasses);
-      }
-      for (const key of Object.keys(pseudoStyle)) {
-        if (key.startsWith(":") && !innerPseudoClasses.includes(key)) {
-          innerPseudoClasses.push(key);
-          finalStyleDeps.push(key);
-        }
-      }
-    } else {
-      innerPseudoClasses = pseudoClasses;
-      if (pseudoClasses !== PSEUDO_CLASSES_DEFAULT) {
-        finalStyleDeps.push(...pseudoClasses);
-      }
-    }
-    useLayoutEffect(() => {
-      const boxEl = ref.current;
-      if (!boxEl) {
-        return null;
-      }
-      const pseudoStateEl = pseudoStateSelector ? boxEl.querySelector(pseudoStateSelector) : boxEl;
-      const visualEl = visualSelector ? boxEl.querySelector(visualSelector) : null;
-      return initPseudoStyles(pseudoStateEl, {
-        pseudoClasses: innerPseudoClasses,
-        pseudoState: innerPseudoState,
-        effect: updateStyle,
-        elementToImpact: boxEl,
-        elementListeningPseudoState: visualEl
-      });
-    }, finalStyleDeps);
-  }
-
-  // When hasChildFunction is used it means
-  // Some/all the children needs to access remainingProps
-  // to render and will provide a function to do so.
-  let innerChildren;
-  if (hasChildFunction) {
-    if (Array.isArray(children)) {
-      innerChildren = children.map(child => typeof child === "function" ? child(childForwardedProps) : child);
-    } else if (typeof children === "function") {
-      innerChildren = children(childForwardedProps);
-    } else {
-      innerChildren = children;
-    }
-  } else {
-    innerChildren = children;
-  }
-  return jsx(TagName, {
-    ref: ref,
-    className: innerClassName,
-    "data-layout-inline": inline ? "" : undefined,
-    "data-layout-row": row ? "" : undefined,
-    "data-layout-column": column ? "" : undefined,
-    "data-visual-selector": visualSelector,
-    ...selfForwardedProps,
-    children: jsx(BoxLayoutContext.Provider, {
-      value: layout,
-      children: innerChildren
-    })
-  });
-};
-const Layout = props => {
-  return jsx(Box, {
     ...props
   });
 };
@@ -11767,10 +8680,10 @@ setupNetworkMonitoring();
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   .navi_rectangle_loading {
     position: relative;
+    display: flex;
     width: 100%;
     height: 100%;
     opacity: 0;
-    display: block;
   }
 
   .navi_rectangle_loading[data-visible] {
@@ -11849,14 +8762,13 @@ const RectangleLoadingSvg = ({
   const drawableWidth = width - margin * 2;
   const drawableHeight = height - margin * 2;
 
-  // ✅ Check if this should be a circle
+  // ✅ Check if this should be a circle - only if width and height are nearly equal
   const maxPossibleRadius = Math.min(drawableWidth, drawableHeight) / 2;
   const actualRadius = Math.min(radius || Math.min(drawableWidth, drawableHeight) * 0.05, maxPossibleRadius // ✅ Limité au radius maximum possible
   );
-
-  // ✅ Determine if we're dealing with a circle
-  const isCircle = actualRadius >= maxPossibleRadius * 0.95; // 95% = virtually a circle
-
+  const aspectRatio = Math.max(drawableWidth, drawableHeight) / Math.min(drawableWidth, drawableHeight);
+  const isNearlySquare = aspectRatio <= 1.2; // Allow some tolerance for nearly square shapes
+  const isCircle = isNearlySquare && actualRadius >= maxPossibleRadius * 0.95;
   let pathLength;
   let rectPath;
   if (isCircle) {
@@ -12201,6 +9113,71 @@ const LoaderBackgroundBasic = ({
       })
     }), children]
   });
+};
+
+/**
+ * Custom hook creating a stable callback that doesn't trigger re-renders.
+ *
+ * PROBLEM: Parent components often forget to use useCallback, causing library
+ * components to re-render unnecessarily when receiving callback props.
+ *
+ * SOLUTION: Library components can use this hook to create stable callback
+ * references internally, making them defensive against parents who don't
+ * optimize their callbacks. This ensures library components don't force
+ * consumers to think about useCallback.
+ *
+ * USAGE:
+ * ```js
+ * // Parent component (consumer) - no useCallback needed
+ * const Parent = () => {
+ *   const [count, setCount] = useState(0);
+ *
+ *   // Parent naturally creates new function reference each render
+ *   // (forgetting useCallback is common and shouldn't break performance)
+ *   return <LibraryButton onClick={(e) => setCount(count + 1)} />;
+ * };
+ *
+ * // Library component - defensive against changing callbacks
+ * const LibraryButton = ({ onClick }) => {
+ *   // ✅ Create stable reference from parent's potentially changing callback
+ *   const stableClick = useStableCallback(onClick);
+ *
+ *   // Internal expensive components won't re-render when parent updates
+ *   return <ExpensiveInternalButton onClick={stableClick} />;
+ * };
+ *
+ * // Deep internal component gets stable reference
+ * const ExpensiveInternalButton = memo(({ onClick }) => {
+ *   // This won't re-render when Parent's count changes
+ *   // But onClick will always call the latest Parent callback
+ *   return <button onClick={onClick}>Click me</button>;
+ * });
+ * ```
+ *
+ * Perfect for library components that need performance without burdening consumers.
+ */
+
+
+const useStableCallback = (callback, mapper) => {
+  const callbackRef = useRef();
+  callbackRef.current = callback;
+  const stableCallbackRef = useRef();
+
+  // Return original falsy value directly when callback is not a function
+  if (!callback) {
+    return callback;
+  }
+
+  const existingStableCallback = stableCallbackRef.current;
+  if (existingStableCallback) {
+    return existingStableCallback;
+  }
+  const stableCallback = (...args) => {
+    const currentCallback = callbackRef.current;
+    return currentCallback(...args);
+  };
+  stableCallbackRef.current = stableCallback;
+  return stableCallback;
 };
 
 const DEBUG = {
@@ -13489,6 +10466,150 @@ const createSelectionKeyboardShortcuts = (selectionController, {
   }];
 };
 
+const addManyEventListeners = (element, events) => {
+  const cleanupCallbackSet = new Set();
+  for (const event of Object.keys(events)) {
+    const callback = events[event];
+    element.addEventListener(event, callback);
+    cleanupCallbackSet.add(() => {
+      element.removeEventListener(event, callback);
+    });
+  }
+  return () => {
+    for (const cleanupCallback of cleanupCallbackSet) {
+      cleanupCallback();
+    }
+  };
+};
+
+const useActionEvents = (
+  elementRef,
+  {
+    actionOrigin = "action_prop",
+    /**
+     * @param {Event} e - L'événement original
+     * @param {"form_reset" | "blur_invalid" | "escape_key"} reason - Raison du cancel
+     */
+    onCancel,
+    onRequested,
+    onPrevented,
+    onAction,
+    onStart,
+    onAbort,
+    onError,
+    onEnd,
+  },
+) => {
+  onCancel = useStableCallback(onCancel);
+  onRequested = useStableCallback(onRequested);
+  onPrevented = useStableCallback(onPrevented);
+  onAction = useStableCallback(onAction);
+  onStart = useStableCallback(onStart);
+  onAbort = useStableCallback(onAbort);
+  onError = useStableCallback(onError);
+  onEnd = useStableCallback(onEnd);
+
+  useLayoutEffect(() => {
+    const element = elementRef.current;
+    if (!element) {
+      return null;
+    }
+
+    return addManyEventListeners(element, {
+      cancel: (e) => {
+        // cancel don't need to check for actionOrigin because
+        // it's actually unrelated to a specific actions
+        // in that sense it should likely be moved elsewhere as it's related to
+        // interaction and constraint validation, not to a specific action
+        onCancel?.(e, e.detail.reason);
+      },
+      actionrequested: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onRequested?.(e);
+      },
+      actionprevented: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onPrevented?.(e);
+      },
+      action: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onAction?.(e);
+      },
+      actionstart: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onStart?.(e);
+      },
+      actionabort: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onAbort?.(e);
+      },
+      actionerror: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onError?.(e.detail.error, e);
+      },
+      actionend: onEnd,
+    });
+  }, [
+    actionOrigin,
+    onCancel,
+    onRequested,
+    onPrevented,
+    onAction,
+    onStart,
+    onAbort,
+    onError,
+    onEnd,
+  ]);
+};
+
+const useRequestedActionStatus = (elementRef) => {
+  const [actionRequester, setActionRequester] = useState(null);
+  const [actionPending, setActionPending] = useState(false);
+  const [actionAborted, setActionAborted] = useState(false);
+  const [actionError, setActionError] = useState(null);
+
+  useActionEvents(elementRef, {
+    onAction: (actionEvent) => {
+      setActionRequester(actionEvent.detail.requester);
+    },
+    onStart: () => {
+      setActionPending(true);
+      setActionAborted(false);
+      setActionError(null);
+    },
+    onAbort: () => {
+      setActionPending(false);
+      setActionAborted(true);
+    },
+    onError: (error) => {
+      setActionPending(false);
+      setActionError(error);
+    },
+    onEnd: () => {
+      setActionPending(false);
+    },
+  });
+
+  return {
+    actionRequester,
+    actionPending,
+    actionAborted,
+    actionError,
+  };
+};
+
 // autoFocus does not work so we focus in a useLayoutEffect,
 // see https://github.com/preactjs/preact/issues/1255
 
@@ -13581,6 +10702,2736 @@ const useAutoFocus = (
       focusableElement.scrollIntoView({ inline: "nearest", block: "nearest" });
     }
   }, []);
+};
+
+installImportMetaCss(import.meta);
+/**
+ * A callout component that mimics native browser validation messages.
+ * Features:
+ * - Positions above or below target element based on available space
+ * - Follows target element during scrolling and resizing
+ * - Automatically hides when target element is not visible
+ * - Arrow automatically shows when pointing at a valid anchor element
+ * - Centers in viewport when no anchor element provided or anchor is too big
+ */
+
+import.meta.css = /* css */ `
+  @layer navi {
+    .navi_callout {
+      --callout-success-color: #4caf50;
+      --callout-info-color: #2196f3;
+      --callout-warning-color: #ff9800;
+      --callout-error-color: #f44336;
+
+      --callout-background-color: white;
+      --callout-icon-color: black;
+      --callout-padding: 8px;
+    }
+  }
+
+  .navi_callout {
+    --x-callout-border-color: var(--x-callout-status-color);
+    --x-callout-background-color: var(--callout-background-color);
+    --x-callout-icon-color: var(--x-callout-status-color);
+
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    display: block;
+    height: auto;
+    opacity: 0;
+    /* will be positioned with transform: translate */
+    transition: opacity 0.2s ease-in-out;
+    overflow: visible;
+
+    &[data-status="success"] {
+      --x-callout-status-color: var(--callout-success-color);
+    }
+    &[data-status="info"] {
+      --x-callout-status-color: var(--callout-info-color);
+    }
+    &[data-status="warning"] {
+      --x-callout-status-color: var(--callout-warning-color);
+    }
+    &[data-status="error"] {
+      --x-callout-status-color: var(--callout-error-color);
+    }
+
+    .navi_callout_box {
+      position: relative;
+      border-style: solid;
+      border-color: transparent;
+
+      .navi_callout_frame {
+        position: absolute;
+        filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
+        pointer-events: none;
+
+        svg {
+          position: absolute;
+          inset: 0;
+          overflow: visible;
+
+          .navi_callout_border {
+            fill: var(--x-callout-border-color);
+          }
+          .navi_callout_background {
+            fill: var(--x-callout-background-color);
+          }
+        }
+      }
+
+      .navi_callout_body {
+        position: relative;
+        display: flex;
+        max-width: 47vw;
+        padding: var(--callout-padding);
+        flex-direction: row;
+        gap: 10px;
+
+        .navi_callout_icon {
+          display: flex;
+          width: 22px;
+          height: 22px;
+          flex-shrink: 0;
+          align-items: center;
+          align-self: flex-start;
+          justify-content: center;
+          background-color: var(--x-callout-icon-color);
+          border-radius: 2px;
+
+          svg {
+            width: 16px;
+            height: 12px;
+            color: white;
+          }
+        }
+
+        .navi_callout_message {
+          min-width: 0;
+          align-self: center;
+          word-break: break-word;
+          overflow-wrap: anywhere;
+
+          .navi_callout_error_stack {
+            max-height: 200px;
+            overflow: auto;
+          }
+          iframe {
+            display: block;
+            margin: 0;
+          }
+        }
+      }
+    }
+
+    .navi_callout_close_button_column {
+      display: flex;
+      height: 22px;
+
+      .navi_callout_close_button {
+        width: 1em;
+        height: 1em;
+        padding: 0;
+        align-self: center;
+        color: currentColor;
+        font-size: inherit;
+        background: none;
+        border: none;
+        border-radius: 0.2em;
+        cursor: pointer;
+
+        &:hover {
+          background: rgba(0, 0, 0, 0.1);
+        }
+
+        .navi_callout_close_button_svg {
+          width: 100%;
+          height: 100%;
+        }
+      }
+    }
+  }
+`;
+
+/**
+ * Shows a callout attached to the specified element
+ * @param {string} message - HTML content for the callout
+ * @param {Object} options - Configuration options
+ * @param {HTMLElement} [options.anchorElement] - Element the callout should follow. If not provided or too big, callout will be centered in viewport
+ * @param {string} [options.status=""] - Callout status: "info" | "warning" | "error" | "success"
+ * @param {Function} [options.onClose] - Callback when callout is closed
+ * @param {boolean} [options.closeOnClickOutside] - Whether to close on outside clicks (defaults to true for "info" status)
+ * @param {boolean} [options.debug=false] - Enable debug logging
+ * @returns {Object} - Callout object with properties:
+ *   - {Function} close - Function to close the callout
+ *   - {Function} update - Function to update message and options
+ *   - {Function} updatePosition - Function to update position
+ *   - {HTMLElement} element - The callout DOM element
+ *   - {boolean} opened - Whether the callout is currently open
+ */
+const openCallout = (
+  message,
+  {
+    anchorElement,
+    // status determines visual styling and behavior:
+    // "info" - polite announcement (e.g., "This element cannot be modified")
+    // "warning" - expected failure requiring user action (e.g., "Field is required")
+    // "error" - unexpected failure, may not be actionable (e.g., "Server error")
+    // "success" - positive feedback (e.g., "Changes saved successfully")
+    // "" - neutral information
+    status = "",
+    onClose,
+    closeOnClickOutside = status === "info",
+    showErrorStack,
+    debug = false,
+  } = {},
+) => {
+  const callout = {
+    opened: true,
+    close: null,
+    status: undefined,
+
+    update: null,
+    updatePosition: null,
+
+    element: null,
+  };
+
+  if (debug) {
+    console.debug("open callout", {
+      anchorElement,
+      message,
+      status,
+    });
+  }
+
+  const [teardown, addTeardown] = createPubSub(true);
+  const close = (reason) => {
+    if (!callout.opened) {
+      return;
+    }
+    if (debug) {
+      console.debug(`callout closed (reason: ${reason})`);
+    }
+    callout.opened = false;
+    teardown(reason);
+  };
+  if (onClose) {
+    addTeardown(onClose);
+  }
+
+  const [updateStatus, addStatusEffect, cleanupStatusEffects] =
+    createValueEffect(undefined);
+  addTeardown(cleanupStatusEffects);
+
+  // Create and add callout to document
+  const calloutElement = createCalloutElement();
+  const calloutMessageElement = calloutElement.querySelector(
+    ".navi_callout_message",
+  );
+  const calloutCloseButton = calloutElement.querySelector(
+    ".navi_callout_close_button",
+  );
+  calloutCloseButton.onclick = () => {
+    close("click_close_button");
+  };
+  const calloutId = `navi_callout_${Date.now()}`;
+  calloutElement.id = calloutId;
+  calloutStyleController.set(calloutElement, { opacity: 0 });
+  const update = (newMessage, options = {}) => {
+    // Connect callout with target element for accessibility
+    if (options.status && options.status !== callout.status) {
+      callout.status = status;
+      updateStatus(status);
+    }
+
+    if (options.closeOnClickOutside) {
+      closeOnClickOutside = options.closeOnClickOutside;
+    }
+
+    if (Error.isError(newMessage)) {
+      const error = newMessage;
+      newMessage = error.message;
+      if (showErrorStack && error.stack) {
+        newMessage += `<pre class="navi_callout_error_stack">${escapeHtml(String(error.stack))}</pre>`;
+      }
+    }
+
+    // Check if the message is a full HTML document (starts with DOCTYPE)
+    if (typeof newMessage === "string" && isHtmlDocument(newMessage)) {
+      // Create iframe to isolate the HTML document
+      const iframe = document.createElement("iframe");
+      iframe.style.border = "none";
+      iframe.style.width = "100%";
+      iframe.style.backgroundColor = "white";
+      iframe.srcdoc = newMessage;
+
+      // Clear existing content and add iframe
+      calloutMessageElement.innerHTML = "";
+      calloutMessageElement.appendChild(iframe);
+    } else {
+      calloutMessageElement.innerHTML = newMessage;
+    }
+  };
+  {
+    const handleClickOutside = (event) => {
+      if (!closeOnClickOutside) {
+        return;
+      }
+
+      const clickTarget = event.target;
+      if (
+        clickTarget === calloutElement ||
+        calloutElement.contains(clickTarget)
+      ) {
+        return;
+      }
+      // if (
+      //   clickTarget === targetElement ||
+      //   targetElement.contains(clickTarget)
+      // ) {
+      //   return;
+      // }
+      close("click_outside");
+    };
+    document.addEventListener("click", handleClickOutside, true);
+    addTeardown(() => {
+      document.removeEventListener("click", handleClickOutside, true);
+    });
+  }
+  Object.assign(callout, {
+    element: calloutElement,
+    update,
+    close,
+  });
+  addStatusEffect(() => {
+    if (status) {
+      calloutElement.setAttribute("data-status", status);
+    } else {
+      calloutElement.removeAttribute("data-status");
+    }
+
+    if (!status || status === "info" || status === "success") {
+      calloutElement.setAttribute("role", "status");
+    } else if (status) {
+      calloutElement.setAttribute("role", "alert");
+    }
+  });
+  document.body.appendChild(calloutElement);
+  addTeardown(() => {
+    calloutElement.remove();
+  });
+
+  if (anchorElement) {
+    const anchorVisuallyVisibleInfo = getVisuallyVisibleInfo(anchorElement, {
+      countOffscreenAsVisible: true,
+    });
+    if (!anchorVisuallyVisibleInfo.visible) {
+      console.warn(
+        `anchor element is not visually visible (${anchorVisuallyVisibleInfo.reason}) -> will be anchored to first visually visible ancestor`,
+      );
+      anchorElement = getFirstVisuallyVisibleAncestor(anchorElement);
+    }
+
+    allowWheelThrough(calloutElement, anchorElement);
+    anchorElement.setAttribute("data-callout", calloutId);
+    addTeardown(() => {
+      anchorElement.removeAttribute("data-callout");
+    });
+
+    addStatusEffect((status) => {
+      if (!status) {
+        return () => {};
+      }
+      // todo:
+      // - dispatch something on the element to indicate the status
+      // and that would in turn be used by pseudo styles system to eventually apply styles
+      const statusColor = resolveCSSColor(
+        `var(--callout-${status}-color)`,
+        calloutElement,
+      );
+      anchorElement.setAttribute("data-callout-status", status);
+      anchorElement.style.setProperty("--callout-color", statusColor);
+      return () => {
+        anchorElement.removeAttribute("data-callout-status");
+        anchorElement.style.removeProperty("--callout-color");
+      };
+    });
+    addStatusEffect((status) => {
+      if (!status || status === "info" || status === "success") {
+        anchorElement.setAttribute("aria-describedby", calloutId);
+        return () => {
+          anchorElement.removeAttribute("aria-describedby");
+        };
+      }
+      anchorElement.setAttribute("aria-errormessage", calloutId);
+      anchorElement.setAttribute("aria-invalid", "true");
+      return () => {
+        anchorElement.removeAttribute("aria-errormessage");
+        anchorElement.removeAttribute("aria-invalid");
+      };
+    });
+
+    {
+      const onfocus = () => {
+        if (status === "error") {
+          // error messages must be explicitely closed by the user
+          return;
+        }
+        if (anchorElement.hasAttribute("data-callout-stay-on-focus")) {
+          return;
+        }
+        close("target_element_focus");
+      };
+      anchorElement.addEventListener("focus", onfocus);
+      addTeardown(() => {
+        anchorElement.removeEventListener("focus", onfocus);
+      });
+    }
+    anchorElement.callout = callout;
+    addTeardown(() => {
+      delete anchorElement.callout;
+    });
+  }
+
+  update(message, { status });
+
+  {
+    const documentScrollLeftAtOpen = document.documentElement.scrollLeft;
+    const documentScrollTopAtOpen = document.documentElement.scrollTop;
+
+    let positioner;
+    let strategy;
+    const determine = () => {
+      if (!anchorElement) {
+        return "centered";
+      }
+      // Check if anchor element is too big to reasonably position callout relative to it
+      const anchorRect = anchorElement.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const anchorTooBig = anchorRect.height > viewportHeight - 50;
+      if (anchorTooBig) {
+        return "centered";
+      }
+      return "anchored";
+    };
+    const updatePositioner = () => {
+      const newStrategy = determine();
+      if (newStrategy === strategy) {
+        return;
+      }
+      positioner?.stop();
+      if (newStrategy === "centered") {
+        positioner = centerCalloutInViewport(calloutElement, {
+          documentScrollLeftAtOpen,
+          documentScrollTopAtOpen,
+        });
+      } else {
+        positioner = stickCalloutToAnchor(calloutElement, anchorElement);
+      }
+      strategy = newStrategy;
+    };
+    updatePositioner();
+    addTeardown(() => {
+      positioner.stop();
+    });
+    {
+      const handleResize = () => {
+        updatePositioner();
+      };
+      window.addEventListener("resize", handleResize);
+      addTeardown(() => {
+        window.removeEventListener("resize", handleResize);
+      });
+    }
+    callout.updatePosition = () => positioner.update();
+  }
+
+  return callout;
+};
+
+// Configuration parameters for callout appearance
+const BORDER_WIDTH = 1;
+const CORNER_RADIUS = 3;
+const ARROW_WIDTH = 16;
+const ARROW_HEIGHT = 8;
+const ARROW_SPACING = 8;
+
+// HTML template for the callout
+const calloutTemplate = /* html */ `
+  <div class="navi_callout">
+    <div class="navi_callout_box">
+      <div class="navi_callout_frame"></div>
+      <div class="navi_callout_body">
+        <div class="navi_callout_icon">
+          <svg viewBox="0 0 125 300" xmlns="http://www.w3.org/2000/svg">
+            <path
+              fill="currentColor"
+              d="m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z"
+            />
+          </svg>
+        </div>
+        <div class="navi_callout_message">Default message</div>
+        <div class="navi_callout_close_button_column">
+          <button class="navi_callout_close_button">
+            <svg
+              class="navi_callout_close_button_svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                fill-rule="evenodd"
+                clip-rule="evenodd"
+                d="M5.29289 5.29289C5.68342 4.90237 6.31658 4.90237 6.70711 5.29289L12 10.5858L17.2929 5.29289C17.6834 4.90237 18.3166 4.90237 18.7071 5.29289C19.0976 5.68342 19.0976 6.31658 18.7071 6.70711L13.4142 12L18.7071 17.2929C19.0976 17.6834 19.0976 18.3166 18.7071 18.7071C18.3166 19.0976 17.6834 19.0976 17.2929 18.7071L12 13.4142L6.70711 18.7071C6.31658 19.0976 5.68342 19.0976 5.29289 18.7071C4.90237 18.3166 4.90237 17.6834 5.29289 17.2929L10.5858 12L5.29289 6.70711C4.90237 6.31658 4.90237 5.68342 5.29289 5.29289Z"
+                fill="currentColor"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+`;
+
+const calloutStyleController = createStyleController("callout");
+
+/**
+ * Creates a new callout element from template
+ * @returns {HTMLElement} - The callout element
+ */
+const createCalloutElement = () => {
+  const div = document.createElement("div");
+  div.innerHTML = calloutTemplate;
+  const calloutElement = div.firstElementChild;
+  return calloutElement;
+};
+
+const centerCalloutInViewport = (
+  calloutElement,
+  { documentScrollLeftAtOpen, documentScrollTopAtOpen },
+) => {
+  // Set up initial styles for centered positioning
+  const calloutBoxElement = calloutElement.querySelector(".navi_callout_box");
+  const calloutFrameElement = calloutElement.querySelector(
+    ".navi_callout_frame",
+  );
+  const calloutBodyElement = calloutElement.querySelector(".navi_callout_body");
+  const calloutMessageElement = calloutElement.querySelector(
+    ".navi_callout_message",
+  );
+
+  // Remove any margins and set frame positioning for no arrow
+  calloutBoxElement.style.marginTop = "";
+  calloutBoxElement.style.marginBottom = "";
+  calloutBoxElement.style.borderWidth = `${BORDER_WIDTH}px`;
+  calloutFrameElement.style.left = `-${BORDER_WIDTH}px`;
+  calloutFrameElement.style.right = `-${BORDER_WIDTH}px`;
+  calloutFrameElement.style.top = `-${BORDER_WIDTH}px`;
+  calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
+
+  // Generate simple rectangle SVG without arrow and position in center
+  const updateCenteredPosition = () => {
+    const calloutElementClone =
+      cloneCalloutToMeasureNaturalSize(calloutElement);
+    const { height } = calloutElementClone.getBoundingClientRect();
+    calloutElementClone.remove();
+
+    // Handle content overflow when viewport is too small
+    const viewportHeight = window.innerHeight;
+    const maxAllowedHeight = viewportHeight - 40; // Leave some margin from viewport edges
+
+    if (height > maxAllowedHeight) {
+      const paddingSizes = getPaddingSizes(calloutBodyElement);
+      const paddingY = paddingSizes.top + paddingSizes.bottom;
+      const spaceNeededAroundContent = BORDER_WIDTH * 2 + paddingY;
+      const spaceAvailableForContent =
+        maxAllowedHeight - spaceNeededAroundContent;
+      calloutMessageElement.style.maxHeight = `${spaceAvailableForContent}px`;
+      calloutMessageElement.style.overflowY = "scroll";
+    } else {
+      // Reset overflow styles if not needed
+      calloutMessageElement.style.maxHeight = "";
+      calloutMessageElement.style.overflowY = "";
+    }
+
+    // Get final dimensions after potential overflow adjustments
+    const { width: finalWidth, height: finalHeight } =
+      calloutElement.getBoundingClientRect();
+    calloutFrameElement.innerHTML = generateSvgWithoutArrow(
+      finalWidth,
+      finalHeight,
+    );
+
+    // Center in viewport (accounting for document scroll)
+    const viewportWidth = window.innerWidth;
+    const left = documentScrollLeftAtOpen + (viewportWidth - finalWidth) / 2;
+    const top = documentScrollTopAtOpen + (viewportHeight - finalHeight) / 2;
+
+    calloutStyleController.set(calloutElement, {
+      opacity: 1,
+      transform: {
+        translateX: left,
+        translateY: top,
+      },
+    });
+  };
+
+  // Initial positioning
+  updateCenteredPosition();
+  window.addEventListener("resize", updateCenteredPosition);
+
+  // Return positioning function for dynamic updates
+  return {
+    update: updateCenteredPosition,
+    stop: () => {
+      window.removeEventListener("resize", updateCenteredPosition);
+    },
+  };
+};
+
+/**
+ * Positions a callout relative to an anchor element with an arrow pointing to it
+ * @param {HTMLElement} calloutElement - The callout element to position
+ * @param {HTMLElement} anchorElement - The anchor element to stick to
+ * @returns {Object} - Object with update and stop functions
+ */
+const stickCalloutToAnchor = (calloutElement, anchorElement) => {
+  // Get references to callout parts
+  const calloutBoxElement = calloutElement.querySelector(".navi_callout_box");
+  const calloutFrameElement = calloutElement.querySelector(
+    ".navi_callout_frame",
+  );
+  const calloutBodyElement = calloutElement.querySelector(".navi_callout_body");
+  const calloutMessageElement = calloutElement.querySelector(
+    ".navi_callout_message",
+  );
+
+  // Set initial border styles
+  calloutBoxElement.style.borderWidth = `${BORDER_WIDTH}px`;
+  calloutFrameElement.style.left = `-${BORDER_WIDTH}px`;
+  calloutFrameElement.style.right = `-${BORDER_WIDTH}px`;
+
+  const anchorVisibleRectEffect = visibleRectEffect(
+    anchorElement,
+    ({ left: anchorLeft, right: anchorRight, visibilityRatio }) => {
+      const calloutElementClone =
+        cloneCalloutToMeasureNaturalSize(calloutElement);
+      // Check for preferred and forced position from anchor element
+      const preferredPosition = anchorElement.getAttribute(
+        "data-callout-position",
+      );
+      const forcedPosition = anchorElement.getAttribute(
+        "data-callout-position-force",
+      );
+
+      const {
+        position,
+        left: calloutLeft,
+        top: calloutTop,
+        width: calloutWidth,
+        height: calloutHeight,
+        spaceAboveTarget,
+        spaceBelowTarget,
+      } = pickPositionRelativeTo(calloutElementClone, anchorElement, {
+        alignToViewportEdgeWhenTargetNearEdge: 20,
+        // when fully to the left, the border color is collé to the browser window making it hard to see
+        minLeft: 1,
+        positionPreference:
+          // we want to avoid the callout to switch position when it can still fit so
+          // we start with preferredPosition if given but once a position is picked we stick to it
+          // This is implemented by favoring the data attribute of the callout then of the anchor
+          calloutElement.getAttribute("data-position") || preferredPosition,
+        forcePosition: forcedPosition,
+      });
+      calloutElementClone.remove();
+
+      // Calculate arrow position to point at anchorElement element
+      let arrowLeftPosOnCallout;
+      // Determine arrow target position based on attribute
+      const arrowPositionAttribute = anchorElement.getAttribute(
+        "data-callout-arrow-x",
+      );
+      let arrowAnchorLeft;
+      if (arrowPositionAttribute === "center") {
+        // Target the center of the anchorElement element
+        arrowAnchorLeft = (anchorLeft + anchorRight) / 2;
+      } else if (arrowPositionAttribute === "end") {
+        const anchorBorderSizes = getBorderSizes(anchorElement);
+        // Target the right edge of the anchorElement element (before borders)
+        arrowAnchorLeft = anchorRight - anchorBorderSizes.right;
+      } else {
+        const anchorBorderSizes = getBorderSizes(anchorElement);
+        // Default behavior: target the left edge of the anchorElement element (after borders)
+        arrowAnchorLeft = anchorLeft + anchorBorderSizes.left;
+      }
+
+      // Calculate arrow position within the callout
+      if (calloutLeft < arrowAnchorLeft) {
+        // Callout is left of the target point, move arrow right
+        const diff = arrowAnchorLeft - calloutLeft;
+        arrowLeftPosOnCallout = diff;
+      } else if (calloutLeft + calloutWidth < arrowAnchorLeft) {
+        // Edge case: target point is beyond right edge of callout
+        arrowLeftPosOnCallout = calloutWidth - ARROW_WIDTH;
+      } else {
+        // Target point is within callout width
+        arrowLeftPosOnCallout = arrowAnchorLeft - calloutLeft;
+      }
+
+      // Ensure arrow stays within callout bounds with some padding
+      const minArrowPos = CORNER_RADIUS + ARROW_WIDTH / 2 + ARROW_SPACING;
+      const maxArrowPos = calloutWidth - minArrowPos;
+      arrowLeftPosOnCallout = Math.max(
+        minArrowPos,
+        Math.min(arrowLeftPosOnCallout, maxArrowPos),
+      );
+
+      // Force content overflow when there is not enough space to display
+      // the entirety of the callout
+      const spaceAvailable =
+        position === "below" ? spaceBelowTarget : spaceAboveTarget;
+      const paddingSizes = getPaddingSizes(calloutBodyElement);
+      const paddingY = paddingSizes.top + paddingSizes.bottom;
+      const spaceNeededAroundContent =
+        ARROW_HEIGHT + BORDER_WIDTH * 2 + paddingY;
+      const spaceAvailableForContent =
+        spaceAvailable - spaceNeededAroundContent;
+      const contentHeight = calloutHeight - spaceNeededAroundContent;
+      const spaceRemainingAfterContent =
+        spaceAvailableForContent - contentHeight;
+      if (spaceRemainingAfterContent < 2) {
+        const maxHeight = spaceAvailableForContent;
+        calloutMessageElement.style.maxHeight = `${maxHeight}px`;
+        calloutMessageElement.style.overflowY = "scroll";
+      } else {
+        calloutMessageElement.style.maxHeight = "";
+        calloutMessageElement.style.overflowY = "";
+      }
+
+      const { width, height } = calloutElement.getBoundingClientRect();
+      if (position === "above") {
+        // Position above target element
+        calloutBoxElement.style.marginTop = "";
+        calloutBoxElement.style.marginBottom = `${ARROW_HEIGHT}px`;
+        calloutFrameElement.style.top = `-${BORDER_WIDTH}px`;
+        calloutFrameElement.style.bottom = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
+        calloutFrameElement.innerHTML = generateSvgWithBottomArrow(
+          width,
+          height,
+          arrowLeftPosOnCallout,
+        );
+      } else {
+        calloutBoxElement.style.marginTop = `${ARROW_HEIGHT}px`;
+        calloutBoxElement.style.marginBottom = "";
+        calloutFrameElement.style.top = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
+        calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
+        calloutFrameElement.innerHTML = generateSvgWithTopArrow(
+          width,
+          height,
+          arrowLeftPosOnCallout,
+        );
+      }
+
+      calloutElement.setAttribute("data-position", position);
+      calloutStyleController.set(calloutElement, {
+        opacity: visibilityRatio ? 1 : 0,
+        transform: {
+          translateX: calloutLeft,
+          translateY: calloutTop,
+        },
+      });
+    },
+  );
+  const calloutSizeChangeObserver = observeCalloutSizeChange(
+    calloutMessageElement,
+    (width, height) => {
+      anchorVisibleRectEffect.check(`callout_size_change (${width}x${height})`);
+    },
+  );
+  anchorVisibleRectEffect.onBeforeAutoCheck(() => {
+    // prevent feedback loop because check triggers size change which triggers check...
+    calloutSizeChangeObserver.disable();
+    return () => {
+      calloutSizeChangeObserver.enable();
+    };
+  });
+
+  return {
+    update: anchorVisibleRectEffect.check,
+    stop: () => {
+      calloutSizeChangeObserver.disconnect();
+      anchorVisibleRectEffect.disconnect();
+    },
+  };
+};
+
+const observeCalloutSizeChange = (elementSizeToObserve, callback) => {
+  let lastContentWidth;
+  let lastContentHeight;
+  const resizeObserver = new ResizeObserver((entries) => {
+    const [entry] = entries;
+    const { width, height } = entry.contentRect;
+    // Debounce tiny changes that are likely sub-pixel rounding
+    if (lastContentWidth !== undefined) {
+      const widthDiff = Math.abs(width - lastContentWidth);
+      const heightDiff = Math.abs(height - lastContentHeight);
+      const threshold = 1; // Ignore changes smaller than 1px
+      if (widthDiff < threshold && heightDiff < threshold) {
+        return;
+      }
+    }
+    lastContentWidth = width;
+    lastContentHeight = height;
+    callback(width, height);
+  });
+  resizeObserver.observe(elementSizeToObserve);
+
+  return {
+    disable: () => {
+      resizeObserver.unobserve(elementSizeToObserve);
+    },
+    enable: () => {
+      resizeObserver.observe(elementSizeToObserve);
+    },
+    disconnect: () => {
+      resizeObserver.disconnect();
+    },
+  };
+};
+
+const escapeHtml = (string) => {
+  return string
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+
+/**
+ * Checks if a string is a full HTML document (starts with DOCTYPE)
+ * @param {string} content - The content to check
+ * @returns {boolean} - True if it looks like a complete HTML document
+ */
+const isHtmlDocument = (content) => {
+  if (typeof content !== "string") {
+    return false;
+  }
+  // Trim whitespace and check if it starts with DOCTYPE (case insensitive)
+  const trimmed = content.trim();
+  return /^<!doctype\s+html/i.test(trimmed);
+};
+
+// It's ok to do this because the element is absolutely positioned
+const cloneCalloutToMeasureNaturalSize = (calloutElement) => {
+  // Create invisible clone to measure natural size
+  const calloutElementClone = calloutElement.cloneNode(true);
+  calloutElementClone.style.visibility = "hidden";
+  const calloutMessageElementClone = calloutElementClone.querySelector(
+    ".navi_callout_message",
+  );
+  // Reset any overflow constraints on the clone
+  calloutMessageElementClone.style.maxHeight = "";
+  calloutMessageElementClone.style.overflowY = "";
+
+  // Add clone to DOM to measure
+  calloutElement.parentNode.appendChild(calloutElementClone);
+
+  return calloutElementClone;
+};
+
+/**
+ * Generates SVG path for callout with arrow on top
+ * @param {number} width - Callout width
+ * @param {number} height - Callout height
+ * @param {number} arrowPosition - Horizontal position of arrow
+ * @returns {string} - SVG markup
+ */
+const generateSvgWithTopArrow = (width, height, arrowPosition) => {
+  // Calculate valid arrow position range
+  const arrowLeft =
+    ARROW_WIDTH / 2 + CORNER_RADIUS + BORDER_WIDTH + ARROW_SPACING;
+  const minArrowPos = arrowLeft;
+  const maxArrowPos = width - arrowLeft;
+  const constrainedArrowPos = Math.max(
+    minArrowPos,
+    Math.min(arrowPosition, maxArrowPos),
+  );
+
+  // Calculate content height
+  const contentHeight = height - ARROW_HEIGHT;
+
+  // Create two paths: one for the border (outer) and one for the content (inner)
+  const adjustedWidth = width;
+  const adjustedHeight = contentHeight + ARROW_HEIGHT;
+
+  // Slight adjustment for visual balance
+  const innerArrowWidthReduction = Math.min(BORDER_WIDTH * 0.3, 1);
+
+  // Outer path (border)
+  const outerPath = `
+      M${CORNER_RADIUS},${ARROW_HEIGHT} 
+      H${constrainedArrowPos - ARROW_WIDTH / 2} 
+      L${constrainedArrowPos},0 
+      L${constrainedArrowPos + ARROW_WIDTH / 2},${ARROW_HEIGHT} 
+      H${width - CORNER_RADIUS} 
+      Q${width},${ARROW_HEIGHT} ${width},${ARROW_HEIGHT + CORNER_RADIUS} 
+      V${adjustedHeight - CORNER_RADIUS} 
+      Q${width},${adjustedHeight} ${width - CORNER_RADIUS},${adjustedHeight} 
+      H${CORNER_RADIUS} 
+      Q0,${adjustedHeight} 0,${adjustedHeight - CORNER_RADIUS} 
+      V${ARROW_HEIGHT + CORNER_RADIUS} 
+      Q0,${ARROW_HEIGHT} ${CORNER_RADIUS},${ARROW_HEIGHT}
+    `;
+
+  // Inner path (content) - keep arrow width almost the same
+  const innerRadius = Math.max(0, CORNER_RADIUS - BORDER_WIDTH);
+  const innerPath = `
+    M${innerRadius + BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} 
+    H${constrainedArrowPos - ARROW_WIDTH / 2 + innerArrowWidthReduction} 
+    L${constrainedArrowPos},${BORDER_WIDTH} 
+    L${constrainedArrowPos + ARROW_WIDTH / 2 - innerArrowWidthReduction},${ARROW_HEIGHT + BORDER_WIDTH} 
+    H${width - innerRadius - BORDER_WIDTH} 
+    Q${width - BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} ${width - BORDER_WIDTH},${ARROW_HEIGHT + innerRadius + BORDER_WIDTH} 
+    V${adjustedHeight - innerRadius - BORDER_WIDTH} 
+    Q${width - BORDER_WIDTH},${adjustedHeight - BORDER_WIDTH} ${width - innerRadius - BORDER_WIDTH},${adjustedHeight - BORDER_WIDTH} 
+    H${innerRadius + BORDER_WIDTH} 
+    Q${BORDER_WIDTH},${adjustedHeight - BORDER_WIDTH} ${BORDER_WIDTH},${adjustedHeight - innerRadius - BORDER_WIDTH} 
+    V${ARROW_HEIGHT + innerRadius + BORDER_WIDTH} 
+    Q${BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH} ${innerRadius + BORDER_WIDTH},${ARROW_HEIGHT + BORDER_WIDTH}
+  `;
+
+  return /* html */ `
+    <svg
+      width="${adjustedWidth}"
+      height="${adjustedHeight}"
+      viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      role="presentation"
+      aria-hidden="true"
+    >
+      <path d="${outerPath}" class="navi_callout_border" />
+      <path d="${innerPath}" class="navi_callout_background" />
+    </svg>`;
+};
+
+/**
+ * Generates SVG path for callout with arrow on bottom
+ * @param {number} width - Callout width
+ * @param {number} height - Callout height
+ * @param {number} arrowPosition - Horizontal position of arrow
+ * @returns {string} - SVG markup
+ */
+const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
+  // Calculate valid arrow position range
+  const arrowLeft =
+    ARROW_WIDTH / 2 + CORNER_RADIUS + BORDER_WIDTH + ARROW_SPACING;
+  const minArrowPos = arrowLeft;
+  const maxArrowPos = width - arrowLeft;
+  const constrainedArrowPos = Math.max(
+    minArrowPos,
+    Math.min(arrowPosition, maxArrowPos),
+  );
+
+  // Calculate content height
+  const contentHeight = height - ARROW_HEIGHT;
+
+  // Create two paths: one for the border (outer) and one for the content (inner)
+  const adjustedWidth = width;
+  const adjustedHeight = contentHeight + ARROW_HEIGHT;
+
+  // For small border widths, keep inner arrow nearly the same size as outer
+  const innerArrowWidthReduction = Math.min(BORDER_WIDTH * 0.3, 1);
+
+  // Outer path with rounded corners
+  const outerPath = `
+      M${CORNER_RADIUS},0 
+      H${width - CORNER_RADIUS} 
+      Q${width},0 ${width},${CORNER_RADIUS} 
+      V${contentHeight - CORNER_RADIUS} 
+      Q${width},${contentHeight} ${width - CORNER_RADIUS},${contentHeight} 
+      H${constrainedArrowPos + ARROW_WIDTH / 2} 
+      L${constrainedArrowPos},${adjustedHeight} 
+      L${constrainedArrowPos - ARROW_WIDTH / 2},${contentHeight} 
+      H${CORNER_RADIUS} 
+      Q0,${contentHeight} 0,${contentHeight - CORNER_RADIUS} 
+      V${CORNER_RADIUS} 
+      Q0,0 ${CORNER_RADIUS},0
+    `;
+
+  // Inner path with correct arrow direction and color
+  const innerRadius = Math.max(0, CORNER_RADIUS - BORDER_WIDTH);
+  const innerPath = `
+    M${innerRadius + BORDER_WIDTH},${BORDER_WIDTH} 
+    H${width - innerRadius - BORDER_WIDTH} 
+    Q${width - BORDER_WIDTH},${BORDER_WIDTH} ${width - BORDER_WIDTH},${innerRadius + BORDER_WIDTH} 
+    V${contentHeight - innerRadius - BORDER_WIDTH} 
+    Q${width - BORDER_WIDTH},${contentHeight - BORDER_WIDTH} ${width - innerRadius - BORDER_WIDTH},${contentHeight - BORDER_WIDTH} 
+    H${constrainedArrowPos + ARROW_WIDTH / 2 - innerArrowWidthReduction} 
+    L${constrainedArrowPos},${adjustedHeight - BORDER_WIDTH} 
+    L${constrainedArrowPos - ARROW_WIDTH / 2 + innerArrowWidthReduction},${contentHeight - BORDER_WIDTH} 
+    H${innerRadius + BORDER_WIDTH} 
+    Q${BORDER_WIDTH},${contentHeight - BORDER_WIDTH} ${BORDER_WIDTH},${contentHeight - innerRadius - BORDER_WIDTH} 
+    V${innerRadius + BORDER_WIDTH} 
+    Q${BORDER_WIDTH},${BORDER_WIDTH} ${innerRadius + BORDER_WIDTH},${BORDER_WIDTH}
+  `;
+
+  return /* html */ `
+    <svg
+      width="${adjustedWidth}"
+      height="${adjustedHeight}"
+      viewBox="0 0 ${adjustedWidth} ${adjustedHeight}"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      role="presentation"
+      aria-hidden="true"
+    >
+      <path d="${outerPath}" class="navi_callout_border" />
+      <path d="${innerPath}" class="navi_callout_background" />
+    </svg>`;
+};
+
+/**
+ * Generates SVG path for callout without arrow (simple rectangle)
+ * @param {number} width - Callout width
+ * @param {number} height - Callout height
+ * @returns {string} - SVG markup
+ */
+const generateSvgWithoutArrow = (width, height) => {
+  return /* html */ `
+    <svg
+      width="${width}"
+      height="${height}"
+      viewBox="0 0 ${width} ${height}"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      role="presentation"
+      aria-hidden="true"
+    >
+      <rect
+        class="navi_callout_border"
+        x="0"
+        y="0"
+        width="${width}"
+        height="${height}"
+        rx="${CORNER_RADIUS}"
+        ry="${CORNER_RADIUS}"
+      />
+      <rect
+        class="navi_callout_background"
+        x="${BORDER_WIDTH}"
+        y="${BORDER_WIDTH}"
+        width="${width - BORDER_WIDTH * 2}"
+        height="${height - BORDER_WIDTH * 2}"
+        rx="${Math.max(0, CORNER_RADIUS - BORDER_WIDTH)}"
+        ry="${Math.max(0, CORNER_RADIUS - BORDER_WIDTH)}"
+      />
+    </svg>`;
+};
+
+const generateFieldInvalidMessage = (template, { field }) => {
+  return replaceStringVars(template, {
+    "{field}": () => generateThisFieldText(field),
+  });
+};
+
+const generateThisFieldText = (field) => {
+  if (field.type === "password") {
+    return "Ce mot de passe";
+  }
+  if (field.type === "email") {
+    return "Cette adresse e-mail";
+  }
+  if (field.type === "checkbox") {
+    return "Cette case";
+  }
+  if (field.type === "radio") {
+    return "Cette option";
+  }
+  return "Ce champ";
+};
+
+const replaceStringVars = (string, replacers) => {
+  return string.replace(/(\{\w+\})/g, (match, name) => {
+    const replacer = replacers[name];
+    if (replacer === undefined) {
+      return match;
+    }
+    if (typeof replacer === "function") {
+      return replacer();
+    }
+    return replacer;
+  });
+};
+
+const MIN_LOWER_LETTER_CONSTRAINT = {
+  name: "min_lower_letter",
+  check: (field) => {
+    const fieldValue = field.value;
+    if (!fieldValue && !field.required) {
+      return "";
+    }
+    const minAttribute = field.getAttribute("data-min-lower-letter");
+    if (!minAttribute) {
+      return "";
+    }
+    const min = parseInt(minAttribute, 10);
+    let numberOfLowercaseChars = 0;
+    for (const char of fieldValue) {
+      if (char >= "a" && char <= "z") {
+        numberOfLowercaseChars++;
+      }
+    }
+    if (numberOfLowercaseChars < min) {
+      const messageAttribute = field.getAttribute(
+        "data-min-lower-letter-message",
+      );
+      if (messageAttribute) {
+        return messageAttribute;
+      }
+      if (min === 0) {
+        return generateFieldInvalidMessage(
+          `{field} doit contenir au moins une lettre minuscule.`,
+          { field },
+        );
+      }
+      return generateFieldInvalidMessage(
+        `{field} contenir au moins ${min} lettres minuscules.`,
+        { field },
+      );
+    }
+    return "";
+  },
+};
+const MIN_UPPER_LETTER_CONSTRAINT = {
+  name: "min_upper_letter",
+  check: (field) => {
+    const fieldValue = field.value;
+    if (!fieldValue && !field.required) {
+      return "";
+    }
+    const minAttribute = field.getAttribute("data-min-upper-letter");
+    if (!minAttribute) {
+      return "";
+    }
+    const min = parseInt(minAttribute, 10);
+    let numberOfUppercaseChars = 0;
+    for (const char of fieldValue) {
+      if (char >= "A" && char <= "Z") {
+        numberOfUppercaseChars++;
+      }
+    }
+    if (numberOfUppercaseChars < min) {
+      const messageAttribute = field.getAttribute(
+        "data-min-upper-letter-message",
+      );
+      if (messageAttribute) {
+        return messageAttribute;
+      }
+      if (min === 0) {
+        return generateFieldInvalidMessage(
+          `{field} doit contenir au moins une lettre majuscule.`,
+          { field },
+        );
+      }
+      return generateFieldInvalidMessage(
+        `{field} contenir au moins ${min} lettres majuscules.`,
+        { field },
+      );
+    }
+    return "";
+  },
+};
+const MIN_DIGIT_CONSTRAINT = {
+  name: "min_digit",
+  check: (field) => {
+    const fieldValue = field.value;
+    if (!fieldValue && !field.required) {
+      return "";
+    }
+    const minAttribute = field.getAttribute("data-min-digit");
+    if (!minAttribute) {
+      return "";
+    }
+    const min = parseInt(minAttribute, 10);
+    let numberOfDigitChars = 0;
+    for (const char of fieldValue) {
+      if (char >= "0" && char <= "9") {
+        numberOfDigitChars++;
+      }
+    }
+    if (numberOfDigitChars < min) {
+      const messageAttribute = field.getAttribute("data-min-digit-message");
+      if (messageAttribute) {
+        return messageAttribute;
+      }
+      if (min === 0) {
+        return generateFieldInvalidMessage(
+          `{field} doit contenir au moins un chiffre.`,
+          { field },
+        );
+      }
+      return generateFieldInvalidMessage(
+        `{field} doit contenir au moins ${min} chiffres.`,
+        { field },
+      );
+    }
+    return "";
+  },
+};
+const MIN_SPECIAL_CHARS_CONSTRAINT = {
+  name: "min_special_chars",
+  check: (field) => {
+    const fieldValue = field.value;
+    if (!fieldValue && !field.required) {
+      return "";
+    }
+    const minSpecialChars = field.getAttribute("data-min-special-chars");
+    if (!minSpecialChars) {
+      return "";
+    }
+    const min = parseInt(minSpecialChars, 10);
+    const specialChars = field.getAttribute("data-special-chars");
+    if (!specialChars) {
+      return "L'attribut data-special-chars doit être défini pour utiliser data-min-special-chars.";
+    }
+
+    let numberOfSpecialChars = 0;
+    for (const char of fieldValue) {
+      if (specialChars.includes(char)) {
+        numberOfSpecialChars++;
+      }
+    }
+    if (numberOfSpecialChars < min) {
+      const messageAttribute = field.getAttribute(
+        "data-min-special-chars-message",
+      );
+      if (messageAttribute) {
+        return messageAttribute;
+      }
+      if (min === 1) {
+        return generateFieldInvalidMessage(
+          `{field} doit contenir au moins un caractère spécial. (${specialChars})`,
+          { field },
+        );
+      }
+      return generateFieldInvalidMessage(
+        `{field} doit contenir au moins ${min} caractères spéciaux (${specialChars})`,
+        { field },
+      );
+    }
+    return "";
+  },
+};
+
+const READONLY_CONSTRAINT = {
+  name: "readonly",
+  check: (field, { skipReadonly }) => {
+    if (skipReadonly) {
+      return null;
+    }
+    if (!field.readonly && !field.hasAttribute("data-readonly")) {
+      return null;
+    }
+    if (field.type === "hidden") {
+      return null;
+    }
+    const readonlySilent = field.hasAttribute("data-readonly-silent");
+    if (readonlySilent) {
+      return { silent: true };
+    }
+    const messageAttribute = field.getAttribute("data-readonly-message");
+    if (messageAttribute) {
+      return {
+        message: messageAttribute,
+        status: "info",
+      };
+    }
+    const isBusy = field.getAttribute("aria-busy") === "true";
+    if (isBusy) {
+      return {
+        target: field,
+        message: `Cette action est en cours. Veuillez patienter.`,
+        status: "info",
+      };
+    }
+    return {
+      target: field,
+      message:
+        field.tagName === "BUTTON"
+          ? `Cet action n'est pas disponible pour l'instant.`
+          : `Cet élément est en lecture seule et ne peut pas être modifié.`,
+      status: "info",
+    };
+  },
+};
+
+const SAME_AS_CONSTRAINT = {
+  name: "same_as",
+  check: (field) => {
+    const sameAs = field.getAttribute("data-same-as");
+    if (!sameAs) {
+      return null;
+    }
+    const otherField = document.querySelector(sameAs);
+    if (!otherField) {
+      console.warn(
+        `Same as constraint: could not find element for selector ${sameAs}`,
+      );
+      return null;
+    }
+    const fieldValue = field.value;
+    if (!fieldValue && !field.required) {
+      return null;
+    }
+    const otherFieldValue = otherField.value;
+    if (!otherFieldValue && !otherField.required) {
+      // don't validate if one of the two values is empty
+      return null;
+    }
+    if (fieldValue === otherFieldValue) {
+      return null;
+    }
+    const messageAttribute = field.getAttribute("data-same-as-message");
+    if (messageAttribute) {
+      return messageAttribute;
+    }
+    const type = field.type;
+    if (type === "password") {
+      return `Ce mot de passe doit être identique au précédent.`;
+    }
+    if (type === "email") {
+      return `Cette adresse e-mail doit être identique a la précédente.`;
+    }
+    return `Ce champ doit être identique au précédent.`;
+  },
+};
+
+const SINGLE_SPACE_CONSTRAINT = {
+  name: "single_space",
+  check: (field) => {
+    const singleSpace = field.hasAttribute("data-single-space");
+    if (!singleSpace) {
+      return null;
+    }
+    const fieldValue = field.value;
+    const hasLeadingSpace = fieldValue.startsWith(" ");
+    const hasTrailingSpace = fieldValue.endsWith(" ");
+    const hasDoubleSpace = fieldValue.includes("  ");
+    if (hasLeadingSpace || hasDoubleSpace || hasTrailingSpace) {
+      const messageAttribute = field.getAttribute("data-single-space-message");
+      if (messageAttribute) {
+        return messageAttribute;
+      }
+      if (hasLeadingSpace) {
+        return generateFieldInvalidMessage(
+          `{field} ne doit pas commencer par un espace.`,
+          { field },
+        );
+      }
+      if (hasTrailingSpace) {
+        return generateFieldInvalidMessage(
+          `{field} ne doit pas finir par un espace.`,
+          { field },
+        );
+      }
+      return generateFieldInvalidMessage(
+        `{field} ne doit pas contenir plusieurs espaces consécutifs.`,
+        { field },
+      );
+    }
+    return "";
+  },
+};
+
+/**
+ * https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
+ */
+
+
+// this constraint is not really a native constraint and browser just not let this happen at all
+// in our case it's just here in case some code is wrongly calling "requestAction" or "checkValidity" on a disabled element
+const DISABLED_CONSTRAINT = {
+  name: "disabled",
+  check: (field) => {
+    if (field.disabled) {
+      return generateFieldInvalidMessage(`{field} est désactivé.`, { field });
+    }
+    return null;
+  },
+};
+
+const REQUIRED_CONSTRAINT = {
+  name: "required",
+  check: (field, { registerChange }) => {
+    if (!field.required) {
+      return null;
+    }
+    const messageAttribute = field.getAttribute("data-required-message");
+
+    if (field.type === "checkbox") {
+      if (!field.checked) {
+        if (messageAttribute) {
+          return messageAttribute;
+        }
+        return `Veuillez cocher cette case.`;
+      }
+      return null;
+    }
+    if (field.type === "radio") {
+      // For radio buttons, check if any radio with the same name is selected
+      const name = field.name;
+      if (!name) {
+        // If no name, check just this radio
+        if (!field.checked) {
+          if (messageAttribute) {
+            return messageAttribute;
+          }
+          return `Veuillez sélectionner une option.`;
+        }
+        return null;
+      }
+
+      const closestFieldset = field.closest("fieldset");
+      const fieldsetRequiredMessage = closestFieldset
+        ? closestFieldset.getAttribute("data-required-message")
+        : null;
+
+      // Find the container (form or closest fieldset)
+      const container = field.form || closestFieldset || document;
+      // Check if any radio with the same name is checked
+      const radioSelector = `input[type="radio"][name="${CSS.escape(name)}"]`;
+      const radiosWithSameName = container.querySelectorAll(radioSelector);
+      for (const radio of radiosWithSameName) {
+        if (radio.checked) {
+          return null; // At least one radio is selected
+        }
+        registerChange((onChange) => {
+          radio.addEventListener("change", onChange);
+          return () => {
+            radio.removeEventListener("change", onChange);
+          };
+        });
+      }
+
+      return {
+        message:
+          messageAttribute ||
+          fieldsetRequiredMessage ||
+          `Veuillez sélectionner une option.`,
+        target: closestFieldset
+          ? closestFieldset.querySelector("legend")
+          : undefined,
+      };
+    }
+    if (field.value) {
+      return null;
+    }
+    if (messageAttribute) {
+      return messageAttribute;
+    }
+    if (field.type === "password") {
+      return field.hasAttribute("data-same-as")
+        ? `Veuillez confirmer le mot de passe.`
+        : `Veuillez saisir un mot de passe.`;
+    }
+    if (field.type === "email") {
+      return field.hasAttribute("data-same-as")
+        ? `Veuillez confirmer l'adresse e-mail`
+        : `Veuillez saisir une adresse e-mail.`;
+    }
+    return field.hasAttribute("data-same-as")
+      ? `Veuillez confirmer le champ précédent`
+      : `Veuillez remplir ce champ.`;
+  },
+};
+
+const PATTERN_CONSTRAINT = {
+  name: "pattern",
+  check: (field) => {
+    const pattern = field.pattern;
+    if (!pattern) {
+      return null;
+    }
+    const value = field.value;
+    if (!value && !field.required) {
+      return null;
+    }
+    const regex = new RegExp(pattern);
+    if (regex.test(value)) {
+      return null;
+    }
+    const messageAttribute = field.getAttribute("data-pattern-message");
+    if (messageAttribute) {
+      return messageAttribute;
+    }
+    let message = generateFieldInvalidMessage(
+      `{field} ne correspond pas au format requis.`,
+      { field },
+    );
+    const title = field.title;
+    if (title) {
+      message += `<br />${title}`;
+    }
+    return message;
+  },
+};
+// https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/email#validation
+const emailregex =
+  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+const TYPE_EMAIL_CONSTRAINT = {
+  name: "type_email",
+  check: (field) => {
+    if (field.type !== "email") {
+      return null;
+    }
+    const value = field.value;
+    if (!value && !field.required) {
+      return null;
+    }
+    const messageAttribute = field.getAttribute("data-type-email-message");
+    if (!value.includes("@")) {
+      if (messageAttribute) {
+        return messageAttribute;
+      }
+      return `Veuillez inclure "@" dans l'adresse e-mail. Il manque un symbole "@" dans ${value}.`;
+    }
+    if (!emailregex.test(value)) {
+      if (messageAttribute) {
+        return messageAttribute;
+      }
+      return `Veuillez saisir une adresse e-mail valide.`;
+    }
+    return null;
+  },
+};
+
+const MIN_LENGTH_CONSTRAINT = {
+  name: "min_length",
+  check: (field) => {
+    if (field.tagName === "INPUT") {
+      if (!INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET.has(field.type)) {
+        return null;
+      }
+    } else if (field.tagName !== "TEXTAREA") {
+      return null;
+    }
+
+    const minLength = field.minLength;
+    if (minLength === -1) {
+      return null;
+    }
+    const value = field.value;
+    if (!value && !field.required) {
+      return null;
+    }
+    const valueLength = value.length;
+    if (valueLength >= minLength) {
+      return null;
+    }
+    const messageAttribute = field.getAttribute("data-min-length-message");
+    if (messageAttribute) {
+      return messageAttribute;
+    }
+    if (valueLength === 1) {
+      return generateFieldInvalidMessage(
+        `{field} doit contenir au moins ${minLength} caractère (il contient actuellement un seul caractère).`,
+        { field },
+      );
+    }
+    return generateFieldInvalidMessage(
+      `{field} doit contenir au moins ${minLength} caractères (il contient actuellement ${valueLength} caractères).`,
+      { field },
+    );
+  },
+};
+const INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET = new Set([
+  "text",
+  "search",
+  "url",
+  "tel",
+  "email",
+  "password",
+]);
+
+const MAX_LENGTH_CONSTRAINT = {
+  name: "max_length",
+  check: (field) => {
+    if (field.tagName === "INPUT") {
+      if (!INPUT_TYPE_SUPPORTING_MAX_LENGTH_SET.has(field.type)) {
+        return null;
+      }
+    } else if (field.tagName !== "TEXTAREA") {
+      return null;
+    }
+    const maxLength = field.maxLength;
+    if (maxLength === -1) {
+      return null;
+    }
+    const value = field.value;
+    const valueLength = value.length;
+    if (valueLength <= maxLength) {
+      return null;
+    }
+    const messageAttribute = field.getAttribute("data-max-length-message");
+    if (messageAttribute) {
+      return messageAttribute;
+    }
+    return generateFieldInvalidMessage(
+      `{field} doit contenir au maximum ${maxLength} caractères (il contient actuellement ${valueLength} caractères).`,
+      { field },
+    );
+  },
+};
+const INPUT_TYPE_SUPPORTING_MAX_LENGTH_SET = new Set(
+  INPUT_TYPE_SUPPORTING_MIN_LENGTH_SET,
+);
+
+const TYPE_NUMBER_CONSTRAINT = {
+  name: "type_number",
+  check: (field) => {
+    if (field.tagName !== "INPUT") {
+      return null;
+    }
+    if (field.type !== "number") {
+      return null;
+    }
+    if (field.value === "" && !field.required) {
+      return null;
+    }
+    const value = field.valueAsNumber;
+    if (isNaN(value)) {
+      const messageAttribute = field.getAttribute("data-type-number-message");
+      if (messageAttribute) {
+        return messageAttribute;
+      }
+      return generateFieldInvalidMessage(`{field} doit être un nombre.`, {
+        field,
+      });
+    }
+    return null;
+  },
+};
+
+const MIN_CONSTRAINT = {
+  name: "min",
+  check: (field) => {
+    if (field.tagName !== "INPUT") {
+      return null;
+    }
+    if (field.type === "number") {
+      const minString = field.min;
+      if (minString === "") {
+        return null;
+      }
+      const minNumber = parseFloat(minString);
+      if (isNaN(minNumber)) {
+        return null;
+      }
+      const valueAsNumber = field.valueAsNumber;
+      if (isNaN(valueAsNumber)) {
+        return null;
+      }
+      if (valueAsNumber < minNumber) {
+        const messageAttribute = field.getAttribute("data-min-message");
+        if (messageAttribute) {
+          return messageAttribute;
+        }
+        return generateFieldInvalidMessage(
+          `{field} doit être supérieur ou égal à <strong>${minString}</strong>.`,
+          { field },
+        );
+      }
+      return null;
+    }
+    if (field.type === "time") {
+      const min = field.min;
+      if (min === undefined) {
+        return null;
+      }
+      const [minHours, minMinutes] = min.split(":").map(Number);
+      const value = field.value;
+      const [hours, minutes] = value.split(":").map(Number);
+      const messageAttribute = field.getAttribute("data-min-message");
+      if (hours < minHours || (hours === minHours && minMinutes < minutes)) {
+        if (messageAttribute) {
+          return messageAttribute;
+        }
+        return generateFieldInvalidMessage(
+          `{field} doit être <strong>${min}</strong> ou plus.`,
+          { field },
+        );
+      }
+      return null;
+    }
+    // "range"
+    // - user interface do not let user enter anything outside the boundaries
+    // - when setting value via js browser enforce boundaries too
+    // "date", "month", "week", "datetime-local"
+    // - same as "range"
+    return null;
+  },
+};
+
+const MAX_CONSTRAINT = {
+  name: "max",
+  check: (field) => {
+    if (field.tagName !== "INPUT") {
+      return null;
+    }
+    if (field.type === "number") {
+      const maxAttribute = field.max;
+      if (maxAttribute === "") {
+        return null;
+      }
+      const maxNumber = parseFloat(maxAttribute);
+      if (isNaN(maxNumber)) {
+        return null;
+      }
+      const valueAsNumber = field.valueAsNumber;
+      if (isNaN(valueAsNumber)) {
+        return null;
+      }
+      if (valueAsNumber > maxNumber) {
+        const messageAttribute = field.getAttribute("data-max-message");
+        if (messageAttribute) {
+          return messageAttribute;
+        }
+        return generateFieldInvalidMessage(
+          `{field} être <strong>${maxAttribute}</strong> ou plus.`,
+          { field },
+        );
+      }
+      return null;
+    }
+    if (field.type === "time") {
+      const max = field.max;
+      if (max === undefined) {
+        return null;
+      }
+      const [maxHours, maxMinutes] = max.split(":").map(Number);
+      const value = field.value;
+      const [hours, minutes] = value.split(":").map(Number);
+      if (hours > maxHours || (hours === maxHours && maxMinutes > minutes)) {
+        const messageAttribute = field.getAttribute("data-max-message");
+        if (messageAttribute) {
+          return messageAttribute;
+        }
+        return generateFieldInvalidMessage(
+          `{field} doit être <strong>${max}</strong> ou moins.`,
+          { field },
+        );
+      }
+      return null;
+    }
+    return null;
+  },
+};
+
+const listenInputChange = (input, callback) => {
+  const [teardown, addTeardown] = createPubSub();
+
+  let valueAtInteraction;
+  const oninput = () => {
+    valueAtInteraction = undefined;
+  };
+  const onkeydown = (e) => {
+    if (e.key === "Enter") {
+      /**
+       * Browser trigger a "change" event right after the enter is pressed
+       * if the input value has changed.
+       * We need to prevent the next change event otherwise we would request action twice
+       */
+      valueAtInteraction = input.value;
+    }
+    if (e.key === "Escape") {
+      /**
+       * Browser trigger a "change" event right after the escape is pressed
+       * if the input value has changed.
+       * We need to prevent the next change event otherwise we would request action when
+       * we actually want to cancel
+       */
+      valueAtInteraction = input.value;
+    }
+  };
+  const onchange = (e) => {
+    if (
+      valueAtInteraction !== undefined &&
+      e.target.value === valueAtInteraction
+    ) {
+      valueAtInteraction = undefined;
+      return;
+    }
+    callback(e);
+  };
+  input.addEventListener("input", oninput);
+  input.addEventListener("keydown", onkeydown);
+  input.addEventListener("change", onchange);
+  addTeardown(() => {
+    input.removeEventListener("input", oninput);
+    input.removeEventListener("keydown", onkeydown);
+    input.removeEventListener("change", onchange);
+  });
+
+  {
+    // Handle programmatic value changes that don't trigger browser change events
+    //
+    // Problem: When input values are set programmatically (not by user typing),
+    // browsers don't fire the 'change' event. However, our application logic
+    // still needs to detect these changes.
+    //
+    // Example scenario:
+    // 1. User starts editing (letter key pressed, value set programmatically)
+    // 2. User doesn't type anything additional (this is the key part)
+    // 3. User clicks outside to finish editing
+    // 4. Without this code, no change event would fire despite the fact that the input value did change from its original state
+    //
+    // This distinction is crucial because:
+    //
+    // - If the user typed additional text after the initial programmatic value,
+    //   the browser would fire change events normally
+    // - But when they don't type anything else, the browser considers it as "no user interaction"
+    //   even though the programmatic initial value represents a meaningful change
+    //
+    // We achieve this by checking if the input value has changed between focus and blur without any user interaction
+    // if yes we fire the callback because input value did change
+    let valueAtStart = input.value;
+    let interacted = false;
+
+    const onfocus = () => {
+      interacted = false;
+      valueAtStart = input.value;
+    };
+    const oninput = (e) => {
+      if (!e.isTrusted) {
+        // non trusted "input" events will be ignored by the browser when deciding to fire "change" event
+        // we ignore them too
+        return;
+      }
+      interacted = true;
+    };
+    const onblur = (e) => {
+      if (interacted) {
+        return;
+      }
+      if (valueAtStart === input.value) {
+        return;
+      }
+      callback(e);
+    };
+
+    input.addEventListener("focus", onfocus);
+    input.addEventListener("input", oninput);
+    input.addEventListener("blur", onblur);
+    addTeardown(() => {
+      input.removeEventListener("focus", onfocus);
+      input.removeEventListener("input", oninput);
+      input.removeEventListener("blur", onblur);
+    });
+  }
+
+  return teardown;
+};
+
+/**
+ * Custom form validation implementation
+ *
+ * This implementation addresses several limitations of the browser's native validation API:
+ *
+ * Limitations of native validation:
+ * - Cannot programmatically detect if validation message is currently displayed
+ * - No ability to dismiss messages with keyboard (e.g., Escape key)
+ * - Requires complex event handling to manage validation message display
+ * - Limited support for storing/managing multiple validation messages
+ * - No customization of validation message appearance
+ *
+ * Design approach:
+ * - Works alongside native validation (which acts as a fallback)
+ * - Proactively detects validation issues before native validation triggers
+ * - Provides complete control over validation message UX
+ * - Supports keyboard navigation and dismissal
+ * - Allows custom styling and positioning of validation messages
+ *
+ * Features:
+ * - Constraint-based validation system with built-in and custom constraints
+ * - Custom validation messages with different severity levels
+ * - Form submission prevention on validation failure
+ * - Validation on Enter key in forms or standalone inputs
+ * - Escape key to dismiss validation messages
+ * - Support for standard HTML validation attributes (required, pattern, type="email")
+ * - Validation messages that follow the input element and adapt to viewport
+ *
+ * Constraint evaluation behavior:
+ * This implementation differs from browser native validation in how it handles empty values.
+ * Native validation typically ignores constraints (like minLength) when the input is empty,
+ * only validating them once the user starts typing. This prevents developers from knowing
+ * the validation state until user interaction begins.
+ *
+ * Our approach:
+ * - When 'required' attribute is not set: behaves like native validation (ignores constraints on empty values)
+ * - When 'required' attribute is set: evaluates all constraints even on empty values
+ *
+ * This allows for complete constraint state visibility when fields are required, enabling
+ * better UX patterns like showing all validation requirements upfront.
+ */
+
+const NAVI_VALIDITY_CHANGE_CUSTOM_EVENT = "navi_validity_change";
+
+const STANDARD_CONSTRAINT_SET = new Set([
+  DISABLED_CONSTRAINT,
+  REQUIRED_CONSTRAINT,
+  PATTERN_CONSTRAINT,
+  TYPE_EMAIL_CONSTRAINT,
+  TYPE_NUMBER_CONSTRAINT,
+  MIN_LENGTH_CONSTRAINT,
+  MAX_LENGTH_CONSTRAINT,
+  MIN_CONSTRAINT,
+  MAX_CONSTRAINT,
+]);
+const NAVI_CONSTRAINT_SET = new Set([
+  // the order matters here, the last constraint is picked first when multiple constraints fail
+  // so it's better to keep the most complex constraints at the beginning of the list
+  // so the more basic ones shows up first
+  MIN_SPECIAL_CHARS_CONSTRAINT,
+  SINGLE_SPACE_CONSTRAINT,
+  MIN_DIGIT_CONSTRAINT,
+  MIN_UPPER_LETTER_CONSTRAINT,
+  MIN_LOWER_LETTER_CONSTRAINT,
+  SAME_AS_CONSTRAINT,
+  READONLY_CONSTRAINT,
+]);
+const DEFAULT_CONSTRAINT_SET = new Set([
+  ...STANDARD_CONSTRAINT_SET,
+  ...NAVI_CONSTRAINT_SET,
+]);
+
+const validationInProgressWeakSet = new WeakSet();
+
+const requestAction = (
+  target,
+  action,
+  {
+    actionOrigin,
+    event,
+    requester = target,
+    method = "rerun",
+    meta = {},
+    confirmMessage,
+  } = {},
+) => {
+  if (!actionOrigin) {
+    console.warn("requestAction: actionOrigin is required");
+  }
+  let elementToValidate = requester;
+
+  let validationInterface = elementToValidate.__validationInterface__;
+  if (!validationInterface) {
+    validationInterface = installCustomConstraintValidation(elementToValidate);
+  }
+
+  const customEventDetail = {
+    action,
+    actionOrigin,
+    method,
+    event,
+    requester,
+    meta,
+  };
+
+  // Determine what needs to be validated and how to handle the result
+  const isForm = elementToValidate.tagName === "FORM";
+  const formToValidate = isForm ? elementToValidate : elementToValidate.form;
+
+  let isValid = false;
+  let elementForConfirmation = elementToValidate;
+  let elementForDispatch = elementToValidate;
+
+  if (formToValidate) {
+    // Form validation case
+    if (validationInProgressWeakSet.has(formToValidate)) {
+      return false;
+    }
+    validationInProgressWeakSet.add(formToValidate);
+    setTimeout(() => {
+      validationInProgressWeakSet.delete(formToValidate);
+    });
+
+    // Validate all form elements
+    const formElements = formToValidate.elements;
+    isValid = true; // Assume valid until proven otherwise
+    for (const formElement of formElements) {
+      const elementValidationInterface = formElement.__validationInterface__;
+      if (!elementValidationInterface) {
+        continue;
+      }
+
+      const elementIsValid = elementValidationInterface.checkValidity({
+        fromRequestAction: true,
+        skipReadonly:
+          formElement.tagName === "BUTTON" && formElement !== requester,
+      });
+      if (!elementIsValid) {
+        elementValidationInterface.reportValidity();
+        isValid = false;
+        break;
+      }
+    }
+
+    elementForConfirmation = formToValidate;
+    elementForDispatch = target;
+  } else {
+    // Single element validation case
+    isValid = validationInterface.checkValidity({ fromRequestAction: true });
+    if (!isValid) {
+      validationInterface.reportValidity();
+    }
+    elementForConfirmation = target;
+    elementForDispatch = target;
+  }
+
+  // If validation failed, dispatch actionprevented and return
+  if (!isValid) {
+    const actionPreventedCustomEvent = new CustomEvent("actionprevented", {
+      detail: customEventDetail,
+    });
+    elementForDispatch.dispatchEvent(actionPreventedCustomEvent);
+    return false;
+  }
+
+  // Validation passed, check for confirmation
+  confirmMessage =
+    confirmMessage ||
+    elementForConfirmation.getAttribute("data-confirm-message");
+  if (confirmMessage) {
+    // eslint-disable-next-line no-alert
+    if (!window.confirm(confirmMessage)) {
+      const actionPreventedCustomEvent = new CustomEvent("actionprevented", {
+        detail: customEventDetail,
+      });
+      elementForDispatch.dispatchEvent(actionPreventedCustomEvent);
+      return false;
+    }
+  }
+
+  // All good, dispatch the action
+  const actionCustomEvent = new CustomEvent("action", {
+    detail: customEventDetail,
+  });
+  elementForDispatch.dispatchEvent(actionCustomEvent);
+  return true;
+};
+
+const forwardActionRequested = (e, action, target = e.target) => {
+  requestAction(target, action, {
+    actionOrigin: e.detail?.actionOrigin,
+    event: e.detail?.event || e,
+    requester: e.detail?.requester,
+    meta: e.detail?.meta,
+  });
+};
+
+const closeValidationMessage = (element, reason) => {
+  const validationInterface = element.__validationInterface__;
+  if (!validationInterface) {
+    return false;
+  }
+  const { validationMessage } = validationInterface;
+  if (!validationMessage) {
+    return false;
+  }
+  return validationMessage.close(reason);
+};
+
+const formInstrumentedWeakSet = new WeakSet();
+const installCustomConstraintValidation = (
+  element,
+  elementReceivingValidationMessage = element,
+) => {
+  if (element.tagName === "INPUT" && element.type === "hidden") {
+    elementReceivingValidationMessage = element.form || document.body;
+  }
+
+  const validationInterface = {
+    uninstall: undefined,
+    registerConstraint: undefined,
+    addCustomMessage: undefined,
+    removeCustomMessage: undefined,
+    checkValidity: undefined,
+    reportValidity: undefined,
+    validationMessage: null,
+  };
+
+  const [teardown, addTeardown] = createPubSub();
+  {
+    const uninstall = () => {
+      teardown();
+    };
+    validationInterface.uninstall = uninstall;
+  }
+
+  const isForm = element.tagName === "FORM";
+  if (isForm) {
+    formInstrumentedWeakSet.add(element);
+    addTeardown(() => {
+      formInstrumentedWeakSet.delete(element);
+    });
+  }
+
+  {
+    element.__validationInterface__ = validationInterface;
+    addTeardown(() => {
+      delete element.__validationInterface__;
+    });
+  }
+
+  const dispatchCancelCustomEvent = (options) => {
+    const cancelEvent = new CustomEvent("cancel", options);
+    element.dispatchEvent(cancelEvent);
+  };
+  const closeElementValidationMessage = (reason) => {
+    if (validationInterface.validationMessage) {
+      validationInterface.validationMessage.close(reason);
+      return true;
+    }
+    return false;
+  };
+
+  const constraintSet = new Set(DEFAULT_CONSTRAINT_SET);
+
+  {
+    validationInterface.registerConstraint = (constraint) => {
+      if (typeof constraint === "function") {
+        constraint = {
+          name: constraint.name || "custom_function",
+          check: constraint,
+        };
+      }
+      constraintSet.add(constraint);
+      return () => {
+        constraintSet.delete(constraint);
+      };
+    };
+  }
+
+  let failedConstraintInfo = null;
+  const validityInfoMap = new Map();
+  const hasTitleAttribute = element.hasAttribute("title");
+
+  let constraintValidityState = { valid: true };
+  const getConstraintValidityState = () => constraintValidityState;
+  validationInterface.getConstraintValidityState = getConstraintValidityState;
+
+  const resetValidity = ({ fromRequestAction } = {}) => {
+    if (fromRequestAction && failedConstraintInfo) {
+      for (const [key, customMessage] of customMessageMap) {
+        if (customMessage.removeOnRequestAction) {
+          customMessageMap.delete(key);
+        }
+      }
+    }
+    for (const [, validityInfo] of validityInfoMap) {
+      if (validityInfo.cleanup) {
+        validityInfo.cleanup();
+      }
+    }
+    validityInfoMap.clear();
+    failedConstraintInfo = null;
+  };
+  addTeardown(resetValidity);
+
+  const checkValidity = ({ fromRequestAction, skipReadonly } = {}) => {
+    let newConstraintValidityState = { valid: true };
+
+    resetValidity({ fromRequestAction });
+    for (const constraint of constraintSet) {
+      const constraintCleanupSet = new Set();
+      const registerChange = (register) => {
+        const registerResult = register(() => {
+          checkValidity();
+        });
+        if (typeof registerResult === "function") {
+          constraintCleanupSet.add(registerResult);
+        }
+      };
+      const cleanup = () => {
+        for (const cleanupCallback of constraintCleanupSet) {
+          cleanupCallback();
+        }
+        constraintCleanupSet.clear();
+      };
+
+      const checkResult = constraint.check(element, {
+        fromRequestAction,
+        skipReadonly,
+        registerChange,
+      });
+      if (!checkResult) {
+        cleanup();
+        newConstraintValidityState[constraint.name] = null;
+        continue;
+      }
+      const constraintValidityInfo =
+        typeof checkResult === "string"
+          ? { message: checkResult }
+          : checkResult;
+      const thisConstraintFailureInfo = {
+        name: constraint.name,
+        constraint,
+        status: "warning",
+        ...constraintValidityInfo,
+        cleanup,
+        reportStatus: "not_reported",
+      };
+      validityInfoMap.set(constraint, thisConstraintFailureInfo);
+      newConstraintValidityState.valid = false;
+      newConstraintValidityState[constraint.name] = thisConstraintFailureInfo;
+
+      // Constraint evaluation: evaluate all constraints when required is set,
+      // otherwise follow native behavior (skip constraints on empty values)
+      if (failedConstraintInfo) {
+        // there is already a failing constraint, which one to we pick?
+        const constraintPicked = pickConstraint(
+          failedConstraintInfo.constraint,
+          constraint,
+        );
+        if (constraintPicked === constraint) {
+          failedConstraintInfo = thisConstraintFailureInfo;
+        }
+      } else {
+        // first failing constraint
+        failedConstraintInfo = thisConstraintFailureInfo;
+      }
+    }
+
+    if (failedConstraintInfo) {
+      if (!hasTitleAttribute) {
+        // when a constraint is failing browser displays that constraint message if the element has no title attribute.
+        // We want to do the same with our message (overriding the browser in the process to get better messages)
+        element.setAttribute("title", failedConstraintInfo.message);
+      }
+    } else {
+      if (!hasTitleAttribute) {
+        element.removeAttribute("title");
+      }
+      closeElementValidationMessage("becomes_valid");
+    }
+
+    if (
+      !compareTwoJsValues(constraintValidityState, newConstraintValidityState)
+    ) {
+      constraintValidityState = newConstraintValidityState;
+      element.dispatchEvent(new CustomEvent(NAVI_VALIDITY_CHANGE_CUSTOM_EVENT));
+    }
+    return newConstraintValidityState.valid;
+  };
+  const reportValidity = ({ skipFocus } = {}) => {
+    if (!failedConstraintInfo) {
+      closeElementValidationMessage("becomes_valid");
+      return;
+    }
+    if (failedConstraintInfo.silent) {
+      closeElementValidationMessage("invalid_silent");
+      return;
+    }
+    if (validationInterface.validationMessage) {
+      const { message, status, closeOnClickOutside } = failedConstraintInfo;
+      validationInterface.validationMessage.update(message, {
+        status,
+        closeOnClickOutside,
+      });
+      return;
+    }
+    if (!skipFocus) {
+      element.focus();
+    }
+    const removeCloseOnCleanup = addTeardown(() => {
+      closeElementValidationMessage("cleanup");
+    });
+
+    const anchorElement =
+      failedConstraintInfo.target || elementReceivingValidationMessage;
+    validationInterface.validationMessage = openCallout(
+      failedConstraintInfo.message,
+      {
+        anchorElement,
+        status: failedConstraintInfo.status,
+        closeOnClickOutside: failedConstraintInfo.closeOnClickOutside,
+        onClose: () => {
+          removeCloseOnCleanup();
+          validationInterface.validationMessage = null;
+          if (failedConstraintInfo) {
+            failedConstraintInfo.reportStatus = "closed";
+          }
+          if (!skipFocus) {
+            element.focus();
+          }
+        },
+      },
+    );
+    failedConstraintInfo.reportStatus = "reported";
+  };
+  validationInterface.checkValidity = checkValidity;
+  validationInterface.reportValidity = reportValidity;
+
+  const customMessageMap = new Map();
+  {
+    constraintSet.add({
+      name: "custom_message",
+      check: () => {
+        for (const [, { message, status }] of customMessageMap) {
+          return { message, status };
+        }
+        return null;
+      },
+    });
+    const addCustomMessage = (
+      key,
+      message,
+      { status = "info", removeOnRequestAction = false } = {},
+    ) => {
+      customMessageMap.set(key, { message, status, removeOnRequestAction });
+      checkValidity();
+      reportValidity();
+      return () => {
+        removeCustomMessage(key);
+      };
+    };
+    const removeCustomMessage = (key) => {
+      if (customMessageMap.has(key)) {
+        customMessageMap.delete(key);
+        checkValidity();
+        reportValidity();
+      }
+    };
+    addTeardown(() => {
+      customMessageMap.clear();
+    });
+    Object.assign(validationInterface, {
+      addCustomMessage,
+      removeCustomMessage,
+    });
+  }
+
+  checkValidity();
+  {
+    const oninput = () => {
+      customMessageMap.clear();
+      closeElementValidationMessage("input_event");
+      checkValidity();
+    };
+    element.addEventListener("input", oninput);
+    addTeardown(() => {
+      element.removeEventListener("input", oninput);
+    });
+  }
+
+  {
+    // this ensure we re-check validity (and remove message no longer relevant)
+    // once the action ends (used to remove the NOT_BUSY_CONSTRAINT message)
+    const onactionend = () => {
+      checkValidity();
+    };
+    element.addEventListener("actionend", onactionend);
+    addTeardown(() => {
+      element.removeEventListener("actionend", onactionend);
+    });
+  }
+
+  {
+    const nativeReportValidity = element.reportValidity;
+    element.reportValidity = () => {
+      reportValidity();
+    };
+    addTeardown(() => {
+      element.reportValidity = nativeReportValidity;
+    });
+  }
+
+  request_on_enter: {
+    if (element.tagName !== "INPUT") {
+      // maybe we want it too for checkboxes etc, we'll see
+      break request_on_enter;
+    }
+    const onkeydown = (keydownEvent) => {
+      if (keydownEvent.defaultPrevented) {
+        return;
+      }
+      if (keydownEvent.key !== "Enter") {
+        return;
+      }
+      if (element.hasAttribute("data-action")) {
+        if (wouldKeydownSubmitForm(keydownEvent)) {
+          keydownEvent.preventDefault();
+        }
+        dispatchActionRequestedCustomEvent(element, {
+          event: keydownEvent,
+          requester: element,
+        });
+        return;
+      }
+      const { form } = element;
+      if (!form) {
+        return;
+      }
+      keydownEvent.preventDefault();
+      dispatchActionRequestedCustomEvent(form, {
+        event: keydownEvent,
+        requester: getFirstButtonSubmittingForm(form) || element,
+      });
+    };
+    element.addEventListener("keydown", onkeydown);
+    addTeardown(() => {
+      element.removeEventListener("keydown", onkeydown);
+    });
+  }
+
+  {
+    const onclick = (clickEvent) => {
+      if (clickEvent.defaultPrevented) {
+        return;
+      }
+      if (element.tagName !== "BUTTON") {
+        return;
+      }
+      if (element.hasAttribute("data-action")) {
+        if (wouldButtonClickSubmitForm(element, clickEvent)) {
+          clickEvent.preventDefault();
+        }
+        dispatchActionRequestedCustomEvent(element, {
+          event: clickEvent,
+          requester: element,
+        });
+        return;
+      }
+      const { form } = element;
+      if (!form) {
+        return;
+      }
+      if (element.type === "reset") {
+        return;
+      }
+      if (wouldButtonClickSubmitForm(element, clickEvent)) {
+        clickEvent.preventDefault();
+      }
+      dispatchActionRequestedCustomEvent(form, {
+        event: clickEvent,
+        requester: element,
+      });
+    };
+    element.addEventListener("click", onclick);
+    addTeardown(() => {
+      element.removeEventListener("click", onclick);
+    });
+  }
+
+  request_on_input_change: {
+    const isInput =
+      element.tagName === "INPUT" || element.tagName === "TEXTAREA";
+    if (!isInput) {
+      break request_on_input_change;
+    }
+    const stop = listenInputChange(element, (e) => {
+      if (element.hasAttribute("data-action")) {
+        dispatchActionRequestedCustomEvent(element, {
+          event: e,
+          requester: element,
+        });
+        return;
+      }
+    });
+    addTeardown(() => {
+      stop();
+    });
+  }
+
+  execute_on_form_submit: {
+    if (!isForm) {
+      break execute_on_form_submit;
+    }
+    // We will dispatch "action" when "submit" occurs (code called from.submit() to bypass validation)
+    const form = element;
+    const removeListener = addEventListener(form, "submit", (e) => {
+      e.preventDefault();
+      const actionCustomEvent = new CustomEvent("action", {
+        detail: {
+          action: null,
+          event: e,
+          method: "rerun",
+          requester: form,
+          meta: {
+            isSubmit: true,
+          },
+        },
+      });
+      form.dispatchEvent(actionCustomEvent);
+    });
+    addTeardown(() => {
+      removeListener();
+    });
+  }
+
+  {
+    const onkeydown = (e) => {
+      if (e.key === "Escape") {
+        if (!closeElementValidationMessage("escape_key")) {
+          dispatchCancelCustomEvent({ detail: { reason: "escape_key" } });
+        }
+      }
+    };
+    element.addEventListener("keydown", onkeydown);
+    addTeardown(() => {
+      element.removeEventListener("keydown", onkeydown);
+    });
+  }
+
+  {
+    const onblur = () => {
+      if (element.value === "") {
+        dispatchCancelCustomEvent({
+          detail: {
+            reason: "blur_empty",
+          },
+        });
+        return;
+      }
+      // if we have failed constraint, we cancel too
+      if (failedConstraintInfo) {
+        dispatchCancelCustomEvent({
+          detail: {
+            reason: "blur_invalid",
+            failedConstraintInfo,
+          },
+        });
+        return;
+      }
+    };
+    element.addEventListener("blur", onblur);
+    addTeardown(() => {
+      element.removeEventListener("blur", onblur);
+    });
+  }
+
+  return validationInterface;
+};
+
+const pickConstraint = (a, b) => {
+  const aPrio = getConstraintPriority(a);
+  const bPrio = getConstraintPriority(b);
+  if (aPrio > bPrio) {
+    return a;
+  }
+  return b;
+};
+const getConstraintPriority = (constraint) => {
+  if (constraint.name === "required") {
+    return 100;
+  }
+  if (STANDARD_CONSTRAINT_SET.has(constraint)) {
+    return 10;
+  }
+  return 1;
+};
+
+const wouldButtonClickSubmitForm = (button, clickEvent) => {
+  if (clickEvent.defaultPrevented) {
+    return false;
+  }
+  const { form } = button;
+  if (!form) {
+    return false;
+  }
+  if (!button) {
+    return false;
+  }
+  const wouldSubmitFormByType =
+    button.type === "submit" || button.type === "image";
+  if (wouldSubmitFormByType) {
+    return true;
+  }
+  if (button.type) {
+    return false;
+  }
+  if (getFirstButtonSubmittingForm(form)) {
+    // an other button is explicitly submitting the form, this one would not submit it
+    return false;
+  }
+  // this is the only button inside the form without type attribute, so it defaults to type="submit"
+  return true;
+};
+const getFirstButtonSubmittingForm = (form) => {
+  return form.querySelector(
+    `button[type="submit"], input[type="submit"], input[type="image"]`,
+  );
+};
+
+const wouldKeydownSubmitForm = (keydownEvent) => {
+  if (keydownEvent.defaultPrevented) {
+    return false;
+  }
+  const keydownTarget = keydownEvent.target;
+  const { form } = keydownTarget;
+  if (!form) {
+    return false;
+  }
+  if (keydownEvent.key !== "Enter") {
+    return false;
+  }
+  const isTextInput =
+    keydownTarget.tagName === "INPUT" || keydownTarget.tagName === "TEXTAREA";
+  if (!isTextInput) {
+    return false;
+  }
+  return true;
+};
+
+const dispatchActionRequestedCustomEvent = (
+  fieldOrForm,
+  { actionOrigin = "action_prop", event, requester },
+) => {
+  const actionRequestedCustomEvent = new CustomEvent("actionrequested", {
+    cancelable: true,
+    detail: {
+      actionOrigin,
+      event,
+      requester,
+    },
+  });
+  fieldOrForm.dispatchEvent(actionRequestedCustomEvent);
+};
+// https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
+const requestSubmit = HTMLFormElement.prototype.requestSubmit;
+HTMLFormElement.prototype.requestSubmit = function (submitter) {
+  const form = this;
+  const isInstrumented = formInstrumentedWeakSet.has(form);
+  if (!isInstrumented) {
+    requestSubmit.call(form, submitter);
+    return;
+  }
+  const programmaticEvent = new CustomEvent("programmatic_requestsubmit", {
+    cancelable: true,
+    detail: {
+      submitter,
+    },
+  });
+  dispatchActionRequestedCustomEvent(form, {
+    event: programmaticEvent,
+    requester: submitter,
+  });
+
+  // When all fields are valid calling the native requestSubmit would let browser go through the
+  // standard form validation steps leading to form submission.
+  // We don't want that because we have our own action system to handle forms
+  // If we did that the form submission would happen in parallel of our action system
+  // and because we listen to "submit" event to dispatch "action" event
+  // we would end up with two actions being executed.
+  //
+  // In case we have discrepencies in our implementation compared to the browser standard
+  // this also prevent the native validation message to show up.
+
+  // requestSubmit.call(this, submitter);
+};
+
+// const submit = HTMLFormElement.prototype.submit;
+// HTMLFormElement.prototype.submit = function (...args) {
+//   const form = this;
+//   if (form.hasAttribute("data-method")) {
+//     console.warn("You must use form.requestSubmit() instead of form.submit()");
+//     return form.requestSubmit();
+//   }
+//   return submit.apply(this, args);
+// };
+
+const addEventListener = (element, event, callback) => {
+  element.addEventListener(event, callback);
+  return () => {
+    element.removeEventListener(event, callback);
+  };
+};
+
+const useCustomValidationRef = (elementRef, targetSelector) => {
+  const customValidationRef = useRef();
+
+  useLayoutEffect(() => {
+    const element = elementRef.current;
+    if (!element) {
+      console.warn(
+        "useCustomValidationRef: elementRef.current is null, make sure to pass a ref to an element",
+      );
+      /* can happen if the component does this for instance:
+      const Component = () => {
+        const ref = useRef(null) 
+        
+        if (something) {
+          return <input ref={ref} />  
+        }
+        return <span></span>
+      }
+
+      usually it's better to split the component in two but hey 
+      */
+      return null;
+    }
+    let target;
+    {
+      target = element;
+    }
+    const unsubscribe = subscribe(element, target);
+    const validationInterface = element.__validationInterface__;
+    customValidationRef.current = validationInterface;
+    return () => {
+      unsubscribe();
+    };
+  }, [targetSelector]);
+
+  return customValidationRef;
+};
+
+const subscribeCountWeakMap = new WeakMap();
+const subscribe = (element, target) => {
+  if (element.__validationInterface__) {
+    let subscribeCount = subscribeCountWeakMap.get(element);
+    subscribeCountWeakMap.set(element, subscribeCount + 1);
+  } else {
+    installCustomConstraintValidation(element, target);
+    subscribeCountWeakMap.set(element, 1);
+  }
+  return () => {
+    unsubscribe(element);
+  };
+};
+
+const unsubscribe = (element) => {
+  const subscribeCount = subscribeCountWeakMap.get(element);
+  if (subscribeCount === 1) {
+    element.__validationInterface__.uninstall();
+    subscribeCountWeakMap.delete(element);
+  } else {
+    subscribeCountWeakMap.set(element, subscribeCount - 1);
+  }
+};
+
+const useConstraints = (elementRef, constraints, targetSelector) => {
+  const customValidationRef = useCustomValidationRef(
+    elementRef,
+    targetSelector,
+  );
+  useLayoutEffect(() => {
+    const customValidation = customValidationRef.current;
+    const cleanupCallbackSet = new Set();
+    for (const constraint of constraints) {
+      const unregister = customValidation.registerConstraint(constraint);
+      cleanupCallbackSet.add(unregister);
+    }
+    return () => {
+      for (const cleanupCallback of cleanupCallbackSet) {
+        cleanupCallback();
+      }
+    };
+  }, constraints);
 };
 
 const useInitialTextSelection = (ref, textSelection) => {
@@ -13962,9 +13813,7 @@ const Icon = ({
   // but 2 zéros gives too big icons
   // while 1 "W" gives a nice result
   baseChar = "W",
-  "aria-label": ariaLabel,
-  role,
-  decorative = false,
+  decorative,
   onClick,
   ...props
 }) => {
@@ -13980,15 +13829,16 @@ const Icon = ({
     width,
     height
   } = props;
-  if (width !== undefined || height !== undefined) {
+  if (width === undefined && height === undefined) {
+    if (decorative === undefined) {
+      decorative = true;
+    }
+  } else {
     box = true;
   }
   const ariaProps = decorative ? {
     "aria-hidden": "true"
-  } : {
-    role,
-    "aria-label": ariaLabel
-  };
+  } : {};
   if (box) {
     return jsx(Box, {
       ...props,
@@ -14023,6 +13873,715 @@ const Icon = ({
       children: innerChildren
     })]
   });
+};
+
+const LinkBlankTargetSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 24 24",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: jsx("path", {
+      d: "M10.0002 5H8.2002C7.08009 5 6.51962 5 6.0918 5.21799C5.71547 5.40973 5.40973 5.71547 5.21799 6.0918C5 6.51962 5 7.08009 5 8.2002V15.8002C5 16.9203 5 17.4801 5.21799 17.9079C5.40973 18.2842 5.71547 18.5905 6.0918 18.7822C6.5192 19 7.07899 19 8.19691 19H15.8031C16.921 19 17.48 19 17.9074 18.7822C18.2837 18.5905 18.5905 18.2839 18.7822 17.9076C19 17.4802 19 16.921 19 15.8031V14M20 9V4M20 4H15M20 4L13 11",
+      stroke: "currentColor",
+      fill: "none",
+      "stroke-width": "2",
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round"
+    })
+  });
+};
+const LinkAnchorSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 24 24",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: jsxs("g", {
+      children: [jsx("path", {
+        d: "M13.2218 3.32234C15.3697 1.17445 18.8521 1.17445 21 3.32234C23.1479 5.47022 23.1479 8.95263 21 11.1005L17.4645 14.636C15.3166 16.7839 11.8342 16.7839 9.6863 14.636C9.48752 14.4373 9.30713 14.2271 9.14514 14.0075C8.90318 13.6796 8.97098 13.2301 9.25914 12.9419C9.73221 12.4688 10.5662 12.6561 11.0245 13.1435C11.0494 13.1699 11.0747 13.196 11.1005 13.2218C12.4673 14.5887 14.6834 14.5887 16.0503 13.2218L19.5858 9.6863C20.9526 8.31947 20.9526 6.10339 19.5858 4.73655C18.219 3.36972 16.0029 3.36972 14.636 4.73655L13.5754 5.79721C13.1849 6.18774 12.5517 6.18774 12.1612 5.79721C11.7706 5.40669 11.7706 4.77352 12.1612 4.383L13.2218 3.32234Z",
+        fill: "currentColor"
+      }), jsx("path", {
+        d: "M6.85787 9.6863C8.90184 7.64233 12.2261 7.60094 14.3494 9.42268C14.7319 9.75083 14.7008 10.3287 14.3444 10.685C13.9253 11.1041 13.2317 11.0404 12.7416 10.707C11.398 9.79292 9.48593 9.88667 8.27209 11.1005L4.73655 14.636C3.36972 16.0029 3.36972 18.219 4.73655 19.5858C6.10339 20.9526 8.31947 20.9526 9.6863 19.5858L10.747 18.5251C11.1375 18.1346 11.7706 18.1346 12.1612 18.5251C12.5517 18.9157 12.5517 19.5488 12.1612 19.9394L11.1005 21C8.95263 23.1479 5.47022 23.1479 3.32234 21C1.17445 18.8521 1.17445 15.3697 3.32234 13.2218L6.85787 9.6863Z",
+        fill: "currentColor"
+      })]
+    })
+  });
+};
+
+// used by form elements such as <input>, <select>, <textarea> to have their own action bound to a single parameter
+// when inside a <form> the form params are updated when the form element single param is updated
+const useActionBoundToOneParam = (action, externalValue) => {
+  const actionFirstArgSignal = useSignal(externalValue);
+  const boundAction = useBoundAction(action, actionFirstArgSignal);
+  const getValue = useCallback(() => actionFirstArgSignal.value, []);
+  const setValue = useCallback((value) => {
+    actionFirstArgSignal.value = value;
+  }, []);
+  const externalValueRef = useRef(externalValue);
+  if (externalValue !== externalValueRef.current) {
+    externalValueRef.current = externalValue;
+    setValue(externalValue);
+  }
+
+  const value = getValue();
+  return [boundAction, value, setValue];
+};
+const useActionBoundToOneArrayParam = (
+  action,
+  name,
+  externalValue,
+  fallbackValue,
+  defaultValue,
+) => {
+  const [boundAction, value, setValue] = useActionBoundToOneParam(
+    action,
+    name);
+
+  const add = (valueToAdd, valueArray = value) => {
+    setValue(addIntoArray(valueArray, valueToAdd));
+  };
+
+  const remove = (valueToRemove, valueArray = value) => {
+    setValue(removeFromArray(valueArray, valueToRemove));
+  };
+
+  const result = [boundAction, value, setValue];
+  result.add = add;
+  result.remove = remove;
+  return result;
+};
+// used by <details> to just call their action
+const useAction = (action, paramsSignal) => {
+  return useBoundAction(action, paramsSignal);
+};
+
+const useBoundAction = (action, actionParamsSignal) => {
+  const actionRef = useRef();
+  const actionCallbackRef = useRef();
+
+  if (!action) {
+    return null;
+  }
+  if (isFunctionButNotAnActionFunction(action)) {
+    actionCallbackRef.current = action;
+    const existingAction = actionRef.current;
+    if (existingAction) {
+      return existingAction;
+    }
+    const actionFromFunction = createAction(
+      (...args) => {
+        return actionCallbackRef.current?.(...args);
+      },
+      {
+        name: action.name,
+        // We don't want to give empty params by default
+        // we want to give undefined for regular functions
+        params: undefined,
+      },
+    );
+    if (!actionParamsSignal) {
+      actionRef.current = actionFromFunction;
+      return actionFromFunction;
+    }
+    const actionBoundToParams =
+      actionFromFunction.bindParams(actionParamsSignal);
+    actionRef.current = actionBoundToParams;
+    return actionBoundToParams;
+  }
+  if (actionParamsSignal) {
+    return action.bindParams(actionParamsSignal);
+  }
+  return action;
+};
+
+const isFunctionButNotAnActionFunction = (action) => {
+  return typeof action === "function" && !action.isAction;
+};
+
+const ErrorBoundaryContext = createContext(null);
+
+const useResetErrorBoundary = () => {
+  const resetErrorBoundary = useContext(ErrorBoundaryContext);
+  return resetErrorBoundary;
+};
+
+const addCustomMessage = (element, key, message, options) => {
+  const customConstraintValidation =
+    element.__validationInterface__ ||
+    (element.__validationInterface__ =
+      installCustomConstraintValidation(element));
+
+  return customConstraintValidation.addCustomMessage(key, message, options);
+};
+
+const removeCustomMessage = (element, key) => {
+  const customConstraintValidation = element.__validationInterface__;
+  if (!customConstraintValidation) {
+    return;
+  }
+  customConstraintValidation.removeCustomMessage(key);
+};
+
+const useExecuteAction = (
+  elementRef,
+  {
+    errorEffect = "show_validation_message", // "show_validation_message" or "throw"
+    errorMapping,
+  } = {},
+) => {
+  // see https://medium.com/trabe/catching-asynchronous-errors-in-react-using-error-boundaries-5e8a5fd7b971
+  // and https://codepen.io/dmail/pen/XJJqeGp?editors=0010
+  // To change if https://github.com/preactjs/preact/issues/4754 lands
+  const [error, setError] = useState(null);
+  const resetErrorBoundary = useResetErrorBoundary();
+  useLayoutEffect(() => {
+    if (error) {
+      error.__handled__ = true; // prevent jsenv from displaying it
+      throw error;
+    }
+  }, [error]);
+
+  const validationMessageTargetRef = useRef(null);
+  const addErrorMessage = (error) => {
+    let calloutAnchor = validationMessageTargetRef.current;
+    let message;
+    if (errorMapping) {
+      const errorMappingResult = errorMapping(error);
+      if (typeof errorMappingResult === "string") {
+        message = errorMappingResult;
+      } else if (Error.isError(errorMappingResult)) {
+        message = errorMappingResult;
+      } else if (
+        typeof errorMappingResult === "object" &&
+        errorMappingResult !== null
+      ) {
+        message = errorMappingResult.message || error.message;
+        calloutAnchor = errorMappingResult.target || calloutAnchor;
+      }
+    } else {
+      message = error;
+    }
+    addCustomMessage(calloutAnchor, "action_error", message, {
+      status: "error",
+      // This error should not prevent <form> submission
+      // so whenever user tries to submit the form the error is cleared
+      // (Hitting enter key, clicking on submit button, etc. would allow to re-submit the form in error state)
+      removeOnRequestAction: true,
+    });
+  };
+  const removeErrorMessage = () => {
+    const validationMessageTarget = validationMessageTargetRef.current;
+    if (validationMessageTarget) {
+      removeCustomMessage(validationMessageTarget, "action_error");
+    }
+  };
+
+  useLayoutEffect(() => {
+    const element = elementRef.current;
+    if (!element) {
+      return null;
+    }
+    const form = element.tagName === "FORM" ? element : element.form;
+    if (!form) {
+      return null;
+    }
+    const onReset = () => {
+      removeErrorMessage();
+    };
+    form.addEventListener("reset", onReset);
+    return () => {
+      form.removeEventListener("reset", onReset);
+    };
+  });
+
+  // const errorEffectRef = useRef();
+  // errorEffectRef.current = errorEffect;
+  const executeAction = useCallback(
+    (actionEvent) => {
+      const { action, actionOrigin, requester, event, method } =
+        actionEvent.detail;
+      const sharedActionEventDetail = {
+        action,
+        actionOrigin,
+        requester,
+        event,
+        method,
+      };
+
+      const dispatchCustomEvent = (type, options) => {
+        const element = elementRef.current;
+        const customEvent = new CustomEvent(type, options);
+        element.dispatchEvent(customEvent);
+      };
+      if (resetErrorBoundary) {
+        resetErrorBoundary();
+      }
+      removeErrorMessage();
+      setError(null);
+
+      const validationMessageTarget = requester || elementRef.current;
+      validationMessageTargetRef.current = validationMessageTarget;
+
+      dispatchCustomEvent("actionstart", {
+        detail: sharedActionEventDetail,
+      });
+
+      return action[method]({
+        reason: `"${event.type}" event on ${(() => {
+          const target = event.target;
+          const tagName = target.tagName.toLowerCase();
+
+          if (target.id) {
+            return `${tagName}#${target.id}`;
+          }
+
+          const uiName = target.getAttribute("data-ui-name");
+          if (uiName) {
+            return `${tagName}[data-ui-name="${uiName}"]`;
+          }
+
+          return `<${tagName}>`;
+        })()}`,
+        onAbort: (reason) => {
+          if (
+            // at this stage the action side effect might have removed the <element> from the DOM
+            // (in theory no because action side effect are batched to happen after)
+            // but other side effects might do this
+            elementRef.current
+          ) {
+            dispatchCustomEvent("actionabort", {
+              detail: {
+                ...sharedActionEventDetail,
+                reason,
+              },
+            });
+          }
+        },
+        onError: (error) => {
+          if (
+            // at this stage the action side effect might have removed the <element> from the DOM
+            // (in theory no because action side effect are batched to happen after)
+            // but other side effects might do this
+            elementRef.current
+          ) {
+            dispatchCustomEvent("actionerror", {
+              detail: {
+                ...sharedActionEventDetail,
+                error,
+              },
+            });
+          }
+          if (errorEffect === "show_validation_message") {
+            addErrorMessage(error);
+          } else if (errorEffect === "throw") {
+            setError(error);
+          }
+        },
+        onComplete: (data) => {
+          if (
+            // at this stage the action side effect might have removed the <element> from the DOM
+            // (in theory no because action side effect are batched to happen after)
+            // but other side effects might do this
+            elementRef.current
+          ) {
+            dispatchCustomEvent("actionend", {
+              detail: {
+                ...sharedActionEventDetail,
+                data,
+              },
+            });
+          }
+        },
+      });
+    },
+    [errorEffect],
+  );
+
+  return executeAction;
+};
+
+const detectMac = () => {
+  // Modern way using User-Agent Client Hints API
+  if (window.navigator.userAgentData) {
+    return window.navigator.userAgentData.platform === "macOS";
+  }
+  // Fallback to userAgent string parsing
+  return /Mac|iPhone|iPad|iPod/.test(window.navigator.userAgent);
+};
+const isMac = detectMac();
+
+// Maps canonical browser key names to their user-friendly aliases.
+// Used for both event matching and ARIA normalization.
+const keyMapping = {
+  " ": { alias: ["space"] },
+  "escape": { alias: ["esc"] },
+  "arrowup": { alias: ["up"] },
+  "arrowdown": { alias: ["down"] },
+  "arrowleft": { alias: ["left"] },
+  "arrowright": { alias: ["right"] },
+  "delete": { alias: ["del"] },
+  // Platform-specific mappings
+  ...(isMac
+    ? { delete: { alias: ["backspace"] } }
+    : { backspace: { alias: ["delete"] } }),
+};
+
+const activeShortcutsSignal = signal([]);
+const shortcutsMap = new Map();
+
+const areShortcutsEqual = (shortcutA, shortcutB) => {
+  return (
+    shortcutA.key === shortcutB.key &&
+    shortcutA.description === shortcutB.description &&
+    shortcutA.enabled === shortcutB.enabled
+  );
+};
+
+const areShortcutArraysEqual = (arrayA, arrayB) => {
+  if (arrayA.length !== arrayB.length) {
+    return false;
+  }
+
+  for (let i = 0; i < arrayA.length; i++) {
+    if (!areShortcutsEqual(arrayA[i], arrayB[i])) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+const updateActiveShortcuts = () => {
+  const activeElement = activeElementSignal.peek();
+  const currentActiveShortcuts = activeShortcutsSignal.peek();
+  const activeShortcuts = [];
+  for (const [element, { shortcuts }] of shortcutsMap) {
+    if (element === activeElement || element.contains(activeElement)) {
+      activeShortcuts.push(...shortcuts);
+    }
+  }
+
+  // Only update if shortcuts have actually changed
+  if (!areShortcutArraysEqual(currentActiveShortcuts, activeShortcuts)) {
+    activeShortcutsSignal.value = activeShortcuts;
+  }
+};
+effect(() => {
+  // eslint-disable-next-line no-unused-expressions
+  activeElementSignal.value;
+  updateActiveShortcuts();
+});
+const addShortcuts = (element, shortcuts) => {
+  shortcutsMap.set(element, { shortcuts });
+  updateActiveShortcuts();
+};
+const removeShortcuts = (element) => {
+  shortcutsMap.delete(element);
+  updateActiveShortcuts();
+};
+
+const useKeyboardShortcuts = (
+  elementRef,
+  shortcuts,
+  {
+    onActionPrevented,
+    onActionStart,
+    onActionAbort,
+    onActionError,
+    onActionEnd,
+    allowConcurrentActions,
+  } = {},
+) => {
+  if (!elementRef) {
+    throw new Error(
+      "useKeyboardShortcuts requires an elementRef to attach shortcuts to.",
+    );
+  }
+
+  const executeAction = useExecuteAction(elementRef);
+  const shortcutActionIsBusyRef = useRef(false);
+  useActionEvents(elementRef, {
+    actionOrigin: "keyboard_shortcut",
+    onPrevented: onActionPrevented,
+    onAction: (actionEvent) => {
+      const { shortcut } = actionEvent.detail.meta || {};
+      if (!shortcut) {
+        // not a shortcut (an other interaction triggered the action, don't request it again)
+        return;
+      }
+      // action can be a function or an action object, whem a function we must "wrap" it in a function returning that function
+      // otherwise setState would call that action immediately
+      // setAction(() => actionEvent.detail.action);
+      executeAction(actionEvent, {
+        requester: document.activeElement,
+      });
+    },
+    onStart: (e) => {
+      const { shortcut } = e.detail.meta || {};
+      if (!shortcut) {
+        return;
+      }
+      if (!allowConcurrentActions) {
+        shortcutActionIsBusyRef.current = true;
+      }
+      shortcut.onStart?.(e);
+      onActionStart?.(e);
+    },
+    onAbort: (e) => {
+      const { shortcut } = e.detail.meta || {};
+      if (!shortcut) {
+        return;
+      }
+      shortcutActionIsBusyRef.current = false;
+      shortcut.onAbort?.(e);
+      onActionAbort?.(e);
+    },
+    onError: (error, e) => {
+      const { shortcut } = e.detail.meta || {};
+      if (!shortcut) {
+        return;
+      }
+      shortcutActionIsBusyRef.current = false;
+      shortcut.onError?.(error, e);
+      onActionError?.(error, e);
+    },
+    onEnd: (e) => {
+      const { shortcut } = e.detail.meta || {};
+      if (!shortcut) {
+        return;
+      }
+      shortcutActionIsBusyRef.current = false;
+      shortcut.onEnd?.(e);
+      onActionEnd?.(e);
+    },
+  });
+
+  const shortcutDeps = [];
+  for (const shortcut of shortcuts) {
+    shortcutDeps.push(
+      shortcut.key,
+      shortcut.description,
+      shortcut.enabled,
+      shortcut.confirmMessage,
+    );
+    shortcut.action = useAction(shortcut.action);
+  }
+
+  useEffect(() => {
+    const element = elementRef.current;
+    const shortcutsCopy = [];
+    for (const shortcutCandidate of shortcuts) {
+      shortcutsCopy.push({
+        ...shortcutCandidate,
+        handler: (keyboardEvent) => {
+          if (shortcutCandidate.handler) {
+            return shortcutCandidate.handler(keyboardEvent);
+          }
+          if (shortcutActionIsBusyRef.current) {
+            return false;
+          }
+          const { action } = shortcutCandidate;
+          return requestAction(element, action, {
+            actionOrigin: "keyboard_shortcut",
+            event: keyboardEvent,
+            requester: document.activeElement,
+            confirmMessage: shortcutCandidate.confirmMessage,
+            meta: {
+              shortcut: shortcutCandidate,
+            },
+          });
+        },
+      });
+    }
+
+    addShortcuts(element, shortcuts);
+
+    const onKeydown = (event) => {
+      applyKeyboardShortcuts(shortcutsCopy, event);
+    };
+    element.addEventListener("keydown", onKeydown);
+    return () => {
+      element.removeEventListener("keydown", onKeydown);
+      removeShortcuts(element);
+    };
+  }, [shortcutDeps]);
+};
+
+const applyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
+  if (!canInterceptKeys(keyboardEvent)) {
+    return null;
+  }
+  for (const shortcutCandidate of shortcuts) {
+    let { enabled = true, key } = shortcutCandidate;
+    if (!enabled) {
+      continue;
+    }
+
+    if (typeof key === "function") {
+      const keyReturnValue = key(keyboardEvent);
+      if (!keyReturnValue) {
+        continue;
+      }
+      key = keyReturnValue;
+    }
+    if (!key) {
+      console.error(shortcutCandidate);
+      throw new TypeError(`key is required in keyboard shortcut, got ${key}`);
+    }
+
+    // Handle platform-specific combination objects
+    let actualCombination;
+    let crossPlatformCombination;
+    if (typeof key === "object" && key !== null) {
+      actualCombination = isMac ? key.mac : key.other;
+    } else {
+      actualCombination = key;
+      if (containsPlatformSpecificKeys(key)) {
+        crossPlatformCombination = generateCrossPlatformCombination(key);
+      }
+    }
+
+    // Check both the actual combination and cross-platform combination
+    const matchesActual =
+      actualCombination &&
+      keyboardEventIsMatchingKeyCombination(keyboardEvent, actualCombination);
+    const matchesCrossPlatform =
+      crossPlatformCombination &&
+      crossPlatformCombination !== actualCombination &&
+      keyboardEventIsMatchingKeyCombination(
+        keyboardEvent,
+        crossPlatformCombination,
+      );
+
+    if (!matchesActual && !matchesCrossPlatform) {
+      continue;
+    }
+    if (typeof enabled === "function" && !enabled(keyboardEvent)) {
+      continue;
+    }
+    const returnValue = shortcutCandidate.handler(keyboardEvent);
+    if (returnValue) {
+      keyboardEvent.preventDefault();
+    }
+    return shortcutCandidate;
+  }
+  return null;
+};
+const containsPlatformSpecificKeys = (combination) => {
+  const lowerCombination = combination.toLowerCase();
+  const macSpecificKeys = ["command", "cmd"];
+
+  return macSpecificKeys.some((key) => lowerCombination.includes(key));
+};
+const generateCrossPlatformCombination = (combination) => {
+  let crossPlatform = combination;
+
+  if (isMac) {
+    // No need to convert anything TO Windows/Linux-specific format since we're on Mac
+    return null;
+  }
+  // If not on Mac but combination contains Mac-specific keys, generate Windows equivalent
+  crossPlatform = crossPlatform.replace(/\bcommand\b/gi, "control");
+  crossPlatform = crossPlatform.replace(/\bcmd\b/gi, "control");
+
+  return crossPlatform;
+};
+const keyboardEventIsMatchingKeyCombination = (event, keyCombination) => {
+  const keys = keyCombination.toLowerCase().split("+");
+
+  for (const key of keys) {
+    let modifierFound = false;
+
+    // Check if this key is a modifier
+    for (const [eventProperty, config] of Object.entries(modifierKeyMapping)) {
+      const allNames = [...config.names];
+
+      // Add Mac-specific names only if we're on Mac and they exist
+      if (isMac && config.macNames) {
+        allNames.push(...config.macNames);
+      }
+
+      if (allNames.includes(key)) {
+        // Check if the corresponding event property is pressed
+        if (!event[eventProperty]) {
+          return false;
+        }
+        modifierFound = true;
+        break;
+      }
+    }
+    if (modifierFound) {
+      continue;
+    }
+
+    // Check if it's a range pattern like "a-z" or "0-9"
+    if (key.includes("-") && key.length === 3) {
+      const [startChar, dash, endChar] = key;
+      if (dash === "-") {
+        // Only check ranges for single alphanumeric characters
+        const eventKey = event.key.toLowerCase();
+        if (eventKey.length !== 1) {
+          return false; // Not a single character key
+        }
+
+        // Only allow a-z and 0-9 ranges
+        const isValidRange =
+          (startChar >= "a" && endChar <= "z") ||
+          (startChar >= "0" && endChar <= "9");
+
+        if (!isValidRange) {
+          return false; // Invalid range pattern
+        }
+
+        const eventKeyCode = eventKey.charCodeAt(0);
+        const startCode = startChar.charCodeAt(0);
+        const endCode = endChar.charCodeAt(0);
+
+        if (eventKeyCode >= startCode && eventKeyCode <= endCode) {
+          continue; // Range matched
+        }
+        return false; // Range not matched
+      }
+    }
+
+    // If it's not a modifier or range, check if it matches the actual key
+    if (!isSameKey(event.key, key)) {
+      return false;
+    }
+  }
+  return true;
+};
+// Configuration for mapping shortcut key names to browser event properties
+const modifierKeyMapping = {
+  metaKey: {
+    names: ["meta"],
+    macNames: ["command", "cmd"],
+  },
+  ctrlKey: {
+    names: ["control", "ctrl"],
+  },
+  shiftKey: {
+    names: ["shift"],
+  },
+  altKey: {
+    names: ["alt"],
+    macNames: ["option"],
+  },
+};
+const isSameKey = (browserEventKey, key) => {
+  browserEventKey = browserEventKey.toLowerCase();
+  key = key.toLowerCase();
+
+  if (browserEventKey === key) {
+    return true;
+  }
+
+  // Check if either key is an alias for the other
+  for (const [canonicalKey, config] of Object.entries(keyMapping)) {
+    const allKeys = [canonicalKey, ...config.alias];
+    if (allKeys.includes(browserEventKey) && allKeys.includes(key)) {
+      return true;
+    }
+  }
+
+  return false;
 };
 
 const useFormEvents = (
@@ -14127,7 +14686,7 @@ const useUIStateController = (
   const formContext = useContext(FormContext);
   const { id, name, onUIStateChange, action } = props;
   const uncontrolled = !formContext && !action;
-  const [navState, setNavState] = useNavState(id);
+  const [navState, setNavState] = useNavState$1(id);
 
   const uiStateControllerRef = useRef();
   const hasStateProp = Object.hasOwn(props, statePropName);
@@ -14613,132 +15172,144 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     border-radius: var(--x-button-border-radius);
     outline: none;
     cursor: pointer;
-  }
-  .navi_button_content {
-    position: relative;
-    display: inherit;
-    box-sizing: border-box;
-    width: 100%;
-    height: 100%;
-    padding-top: var(
-      --button-padding-top,
-      var(--button-padding-y, var(--button-padding, 1px))
-    );
-    padding-right: var(
-      --button-padding-right,
-      var(--button-padding-x, var(--button-padding, 6px))
-    );
-    padding-bottom: var(
-      --button-padding-bottom,
-      var(--button-padding-y, var(--button-padding, 1px))
-    );
-    padding-left: var(
-      --button-padding-left,
-      var(--button-padding-x, var(--button-padding, 6px))
-    );
-    align-items: inherit;
-    justify-content: inherit;
-    color: var(--x-button-color);
-    background-color: var(--x-button-background-color);
-    border-width: var(--x-button-outer-width);
-    border-style: solid;
-    border-color: transparent;
-    border-radius: var(--x-button-border-radius);
-    outline-width: var(--x-button-border-width);
-    outline-style: solid;
-    outline-color: var(--x-button-border-color);
-    outline-offset: calc(-1 * (var(--x-button-border-width)));
-    transition-property: transform;
-    transition-duration: 0.15s;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .navi_button_shadow {
-    position: absolute;
-    inset: calc(-1 * var(--x-button-outer-width));
-    border-radius: inherit;
-    pointer-events: none;
-  }
 
-  /* Hover */
-  .navi_button[data-hover] {
-    --x-button-border-color: var(--button-border-color-hover);
-    --x-button-background-color: var(--button-background-color-hover);
-    --x-button-color: var(--button-color-hover);
-  }
-  .navi_button[data-nohover] {
-    --x-button-border-color: var(--button-border-color);
-    --x-button-background-color: var(--button-background-color);
-    --x-button-color: var(--button-color);
-  }
-  /* Active */
-  .navi_button[data-active] {
-    --x-button-outline-color: var(--button-border-color-active);
-  }
-  .navi_button[data-active] .navi_button_content {
-    transform: scale(0.9);
-  }
-  .navi_button[data-active] .navi_button_shadow {
-    box-shadow:
-      inset 0 3px 6px rgba(0, 0, 0, 0.2),
-      inset 0 1px 2px rgba(0, 0, 0, 0.3),
-      inset 0 0 0 1px rgba(0, 0, 0, 0.1),
-      inset 2px 0 4px rgba(0, 0, 0, 0.1),
-      inset -2px 0 4px rgba(0, 0, 0, 0.1);
-  }
-  /* Readonly */
-  .navi_button[data-readonly] {
-    --x-button-border-color: var(--button-border-color-readonly);
-    --x-button-background-color: var(--button-background-color-readonly);
-    --x-button-color: var(--button-color-readonly);
-  }
-  /* Focus */
-  .navi_button[data-focus-visible] {
-    --x-button-border-color: var(--x-button-outline-color);
-  }
-  .navi_button[data-focus-visible] .navi_button_content {
-    outline-width: var(--x-button-outer-width);
-    outline-offset: calc(-1 * var(--x-button-outer-width));
-  }
-  /* Disabled */
-  .navi_button[data-disabled] {
-    color: unset;
-    cursor: default;
-  }
-  .navi_button[data-disabled] {
-    --x-button-border-color: var(--button-border-color-disabled);
-    --x-button-background-color: var(--button-background-color-disabled);
-    --x-button-color: var(--button-color-disabled);
-  }
-  /* no active effect */
-  .navi_button[data-disabled] .navi_button_content {
-    transform: none;
-  }
-  .navi_button[data-disabled] .navi_button_shadow {
-    box-shadow: none;
+    &[data-icon] {
+      --button-padding: 0;
+    }
+
+    .navi_button_content {
+      position: relative;
+      display: inherit;
+      box-sizing: border-box;
+      width: 100%;
+      height: 100%;
+      padding-top: var(
+        --button-padding-top,
+        var(--button-padding-y, var(--button-padding, 1px))
+      );
+      padding-right: var(
+        --button-padding-right,
+        var(--button-padding-x, var(--button-padding, 6px))
+      );
+      padding-bottom: var(
+        --button-padding-bottom,
+        var(--button-padding-y, var(--button-padding, 1px))
+      );
+      padding-left: var(
+        --button-padding-left,
+        var(--button-padding-x, var(--button-padding, 6px))
+      );
+      align-items: inherit;
+      justify-content: inherit;
+      color: var(--x-button-color);
+      background-color: var(--x-button-background-color);
+      border-width: var(--x-button-outer-width);
+      border-style: solid;
+      border-color: transparent;
+      border-radius: var(--x-button-border-radius);
+      outline-width: var(--x-button-border-width);
+      outline-style: solid;
+      outline-color: var(--x-button-border-color);
+      outline-offset: calc(-1 * (var(--x-button-border-width)));
+      transition-property: transform;
+      transition-duration: 0.15s;
+      transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+
+      .navi_button_shadow {
+        position: absolute;
+        inset: calc(-1 * var(--x-button-outer-width));
+        border-radius: inherit;
+        pointer-events: none;
+      }
+    }
+
+    /* Hover */
+    &[data-hover] {
+      --x-button-border-color: var(--button-border-color-hover);
+      --x-button-background-color: var(--button-background-color-hover);
+      --x-button-color: var(--button-color-hover);
+    }
+    &[data-nohover] {
+      --x-button-border-color: var(--button-border-color);
+      --x-button-background-color: var(--button-background-color);
+      --x-button-color: var(--button-color);
+    }
+    /* Active */
+    &[data-active] {
+      --x-button-outline-color: var(--button-border-color-active);
+    }
+    &[data-active] {
+      .navi_button_content {
+        transform: scale(0.9);
+      }
+    }
+    &[data-active] {
+      .navi_button_shadow {
+        box-shadow:
+          inset 0 3px 6px rgba(0, 0, 0, 0.2),
+          inset 0 1px 2px rgba(0, 0, 0, 0.3),
+          inset 0 0 0 1px rgba(0, 0, 0, 0.1),
+          inset 2px 0 4px rgba(0, 0, 0, 0.1),
+          inset -2px 0 4px rgba(0, 0, 0, 0.1);
+      }
+    }
+    /* Readonly */
+    &[data-readonly] {
+      --x-button-border-color: var(--button-border-color-readonly);
+      --x-button-background-color: var(--button-background-color-readonly);
+      --x-button-color: var(--button-color-readonly);
+    }
+    /* Focus */
+    &[data-focus-visible] {
+      --x-button-border-color: var(--x-button-outline-color);
+    }
+    &[data-focus-visible] {
+      .navi_button_content {
+        outline-width: var(--x-button-outer-width);
+        outline-offset: calc(-1 * var(--x-button-outer-width));
+      }
+    }
+    /* Disabled */
+    &[data-disabled] {
+      --x-button-border-color: var(--button-border-color-disabled);
+      --x-button-background-color: var(--button-background-color-disabled);
+      --x-button-color: var(--button-color-disabled);
+
+      color: unset;
+      cursor: default;
+
+      /* Remove active effects */
+      .navi_button_content {
+        transform: none;
+
+        .navi_button_shadow {
+          box-shadow: none;
+        }
+      }
+    }
+    /* Discrete variant */
+    &[data-discrete] {
+      --x-button-background-color: transparent;
+      --x-button-border-color: transparent;
+
+      &[data-hover] {
+        --x-button-border-color: var(--button-border-color-hover);
+      }
+      &[data-nohover] {
+        --x-button-border-color: transparent;
+      }
+      &[data-readonly] {
+        --x-button-border-color: transparent;
+      }
+      &[data-disabled] {
+        --x-button-border-color: transparent;
+      }
+    }
   }
   /* Callout (info, warning, error) */
   .navi_button[data-callout] {
     --x-button-border-color: var(--callout-color);
   }
-
-  /* Discrete variant */
-  .navi_button[data-discrete] {
-    --x-button-background-color: transparent;
-    --x-button-border-color: transparent;
-  }
-  .navi_button[data-discrete][data-hover] {
-    --x-button-border-color: var(--button-border-color-hover);
-  }
-  .navi_button[data-discrete][data-nohover] {
-    --x-button-border-color: transparent;
-  }
-  .navi_button[data-discrete][data-readonly] {
-    --x-button-border-color: transparent;
-  }
-  .navi_button[data-discrete][data-disabled] {
-    --x-button-border-color: transparent;
-  }
-
   .navi_button > img {
     border-radius: inherit;
   }
@@ -14796,6 +15367,7 @@ const ButtonBasic = props => {
     autoFocus,
     // visual
     discrete,
+    icon,
     children,
     ...rest
   } = props;
@@ -14820,6 +15392,7 @@ const ButtonBasic = props => {
     ...rest,
     as: "button",
     ref: ref,
+    "data-icon": icon ? "" : undefined,
     "data-discrete": discrete ? "" : undefined,
     "data-readonly-silent": innerLoading ? "" : undefined,
     "data-callout-arrow-x": "center",
@@ -15023,14 +15596,14 @@ const WarningSvg = () => {
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
     .navi_message_box {
-      --background-color-info: #eaf6fc;
-      --color-info: #376cc2;
-      --background-color-success: #ecf9ef;
-      --color-success: #50c464;
-      --background-color-warning: #fdf6e3;
-      --color-warning: #f19c05;
-      --background-color-error: #fcebed;
-      --color-error: #eb364b;
+      --background-color-info: var(--navi-info-color-light);
+      --color-info: var(--navi-info-color);
+      --background-color-success: var(--navi-success-color-light);
+      --color-success: var(--navi-success-color);
+      --background-color-warning: var(--navi-warning-color-light);
+      --color-warning: var(--navi-warning-color);
+      --background-color-error: var(--navi-error-color-light);
+      --color-error: var(--navi-error-color);
     }
   }
 
@@ -15041,19 +15614,19 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     background-color: var(--x-background-color);
   }
 
-  .navi_message_box[data-level="info"] {
+  .navi_message_box[data-status-info] {
     --x-background-color: var(--background-color-info);
     --x-color: var(--color-info);
   }
-  .navi_message_box[data-level="success"] {
+  .navi_message_box[data-status-success] {
     --x-background-color: var(--background-color-success);
     --x-color: var(--color-success);
   }
-  .navi_message_box[data-level="warning"] {
+  .navi_message_box[data-status-warning] {
     --x-background-color: var(--background-color-warning);
     --x-color: var(--color-warning);
   }
-  .navi_message_box[data-level="error"] {
+  .navi_message_box[data-status-error] {
     --x-background-color: var(--background-color-error);
     --x-color: var(--color-error);
   }
@@ -15064,53 +15637,11 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     border-bottom-left-radius: 6px;
   }
 `;
-Object.assign(PSEUDO_CLASSES, {
-  ":-navi-info": {
-    add: el => {
-      el.setAttribute("data-level", "info");
-    },
-    remove: el => {
-      if (el.getAttribute("data-level") === "info") {
-        el.removeAttribute("data-level");
-      }
-    }
-  },
-  ":-navi-success": {
-    add: el => {
-      el.setAttribute("data-level", "success");
-    },
-    remove: el => {
-      if (el.getAttribute("data-level") === "success") {
-        el.removeAttribute("data-level");
-      }
-    }
-  },
-  ":-navi-warning": {
-    add: el => {
-      el.setAttribute("data-level", "warning");
-    },
-    remove: el => {
-      if (el.getAttribute("data-level") === "warning") {
-        el.removeAttribute("data-level");
-      }
-    }
-  },
-  ":-navi-error": {
-    add: el => {
-      el.setAttribute("data-level", "error");
-    },
-    remove: el => {
-      if (el.getAttribute("data-level") === "error") {
-        el.removeAttribute("data-level");
-      }
-    }
-  }
-});
-const MessageBoxPseudoClasses = [":-navi-info", ":-navi-success", ":-navi-warning", ":-navi-error"];
-const MessageBoxLevelContext = createContext();
+const MessageBoxPseudoClasses = [":-navi-status-info", ":-navi-status-success", ":-navi-status-warning", ":-navi-status-error"];
+const MessageBoxStatusContext = createContext();
 const MessageBoxReportTitleChildContext = createContext();
 const MessageBox = ({
-  level = "info",
+  status = "info",
   padding = "sm",
   icon,
   leftStripe,
@@ -15121,15 +15652,16 @@ const MessageBox = ({
   const [hasTitleChild, setHasTitleChild] = useState(false);
   const innerLeftStripe = leftStripe === undefined ? hasTitleChild : leftStripe;
   if (icon === true) {
-    icon = level === "info" ? jsx(InfoSvg, {}) : level === "success" ? jsx(SuccessSvg, {}) : level === "warning" ? jsx(WarningSvg, {}) : level === "error" ? jsx(ErrorSvg, {}) : null;
+    icon = status === "info" ? jsx(InfoSvg, {}) : status === "success" ? jsx(SuccessSvg, {}) : status === "warning" ? jsx(WarningSvg, {}) : status === "error" ? jsx(ErrorSvg, {}) : null;
   } else if (typeof icon === "function") {
     const Comp = icon;
     icon = jsx(Comp, {});
   }
   return jsx(Box, {
     as: "div",
-    role: level === "info" ? "status" : "alert",
+    role: status === "info" ? "status" : "alert",
     "data-left-stripe": innerLeftStripe ? "" : undefined,
+    inline: true,
     column: true,
     alignY: "start",
     spacing: "sm",
@@ -15138,13 +15670,13 @@ const MessageBox = ({
     padding: padding,
     pseudoClasses: MessageBoxPseudoClasses,
     basePseudoState: {
-      ":-navi-info": level === "info",
-      ":-navi-success": level === "success",
-      ":-navi-warning": level === "warning",
-      ":-navi-error": level === "error"
+      ":-navi-status-info": status === "info",
+      ":-navi-status-success": status === "success",
+      ":-navi-status-warning": status === "warning",
+      ":-navi-status-error": status === "error"
     },
-    children: jsx(MessageBoxLevelContext.Provider, {
-      value: level,
+    children: jsx(MessageBoxStatusContext.Provider, {
+      value: status,
       children: jsxs(MessageBoxReportTitleChildContext.Provider, {
         value: setHasTitleChild,
         children: [icon && jsx(Icon, {
@@ -15155,12 +15687,11 @@ const MessageBox = ({
         }), onClose && jsx(Button, {
           action: onClose,
           discrete: true,
+          icon: true,
           border: "none",
           "data-nohover": "",
           alignX: "center",
           alignY: "center",
-          width: "1em",
-          height: "1em",
           pseudoStyle: {
             ":hover": {
               backgroundColor: "rgba(0, 0, 0, 0.1)"
@@ -15178,8 +15709,8 @@ const MessageBox = ({
 const TitleLevelContext = createContext();
 const TitlePseudoClasses = [":hover"];
 const Title = props => {
-  const messageBoxLevel = useContext(MessageBoxLevelContext);
-  const innerAs = props.as || (messageBoxLevel ? "h4" : "h1");
+  const messageBoxStatus = useContext(MessageBoxStatusContext);
+  const innerAs = props.as || (messageBoxStatus ? "h4" : "h1");
   const titleLevel = parseInt(innerAs.slice(1));
   const reportTitleToMessageBox = useContext(MessageBoxReportTitleChildContext);
   reportTitleToMessageBox?.(true);
@@ -15188,15 +15719,32 @@ const Title = props => {
     children: jsx(Text, {
       bold: true,
       className: withPropsClassName("navi_title"),
-      as: messageBoxLevel ? "h4" : "h1",
-      marginTop: messageBoxLevel ? "0" : undefined,
-      marginBottom: messageBoxLevel ? "sm" : undefined,
-      color: messageBoxLevel ? `var(--x-color)` : undefined,
+      as: messageBoxStatus ? "h4" : "h1",
+      marginTop: messageBoxStatus ? "0" : undefined,
+      marginBottom: messageBoxStatus ? "sm" : undefined,
+      color: messageBoxStatus ? `var(--x-color)` : undefined,
       ...props,
       pseudoClasses: TitlePseudoClasses,
       children: props.children
     })
   });
+};
+
+/**
+ * Hook that reactively checks if a URL is visited.
+ * Re-renders when the visited URL set changes.
+ *
+ * @param {string} url - The URL to check
+ * @returns {boolean} Whether the URL has been visited
+ */
+const useIsVisited = (url) => {
+  return useMemo(() => {
+    // Access the signal to create reactive dependency
+    // eslint-disable-next-line no-unused-expressions
+    visitedUrlsSignal.value;
+
+    return isVisited(url);
+  }, [url, visitedUrlsSignal.value]);
 };
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
@@ -15933,6 +16481,68 @@ const TabBasic = ({
   });
 };
 
+const createUniqueValueConstraint = (
+  // the set might be incomplete (the front usually don't have the full copy of all the items from the backend)
+  // but this is already nice to help user with what we know
+  // it's also possible that front is unsync with backend, preventing user to choose a value
+  // that is actually free.
+  // But this is unlikely to happen and user could reload the page to be able to choose that name
+  // that suddenly became available
+  existingValueSet,
+  message = `"{value}" est utilisé. Veuillez entrer une autre valeur.`,
+) => {
+  return {
+    name: "unique",
+    check: (field) => {
+      const fieldValue = field.value;
+      const hasConflict = existingValueSet.has(fieldValue);
+      // console.log({
+      //   inputValue,
+      //   names: Array.from(otherNameSet.values()),
+      //   hasConflict,
+      // });
+      if (hasConflict) {
+        return replaceStringVars(message, {
+          "{value}": fieldValue,
+        });
+      }
+      return "";
+    },
+  };
+};
+
+const DEFAULT_VALIDITY_STATE = { valid: true };
+const useConstraintValidityState = (ref) => {
+  const checkValue = () => {
+    const element = ref.current;
+    if (!element) {
+      return DEFAULT_VALIDITY_STATE;
+    }
+    const { __validationInterface__ } = element;
+    if (!__validationInterface__) {
+      return DEFAULT_VALIDITY_STATE;
+    }
+    const value = __validationInterface__.getConstraintValidityState();
+    return value;
+  };
+
+  const [constraintValidityState, setConstraintValidityState] =
+    useState(checkValue);
+
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element) {
+      return;
+    }
+    setConstraintValidityState(checkValue());
+    element.addEventListener(NAVI_VALIDITY_CHANGE_CUSTOM_EVENT, () => {
+      setConstraintValidityState(checkValue());
+    });
+  }, []);
+
+  return constraintValidityState;
+};
+
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
     label {
@@ -16370,6 +16980,158 @@ const InputCheckboxInsideForm = InputCheckboxBasic;
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
+    .navi_checkbox_list {
+      display: flex;
+      flex-direction: column;
+    }
+  }
+`;
+const CheckboxList = forwardRef((props, ref) => {
+  const uiStateController = useUIGroupStateController(props, "checkbox_list", {
+    childComponentType: "checkbox",
+    aggregateChildStates: childUIStateControllers => {
+      const values = [];
+      for (const childUIStateController of childUIStateControllers) {
+        if (childUIStateController.uiState) {
+          values.push(childUIStateController.uiState);
+        }
+      }
+      return values.length === 0 ? undefined : values;
+    }
+  });
+  const uiState = useUIState(uiStateController);
+  const checkboxList = renderActionableComponent(props, ref);
+  return jsx(UIStateControllerContext.Provider, {
+    value: uiStateController,
+    children: jsx(UIStateContext.Provider, {
+      value: uiState,
+      children: checkboxList
+    })
+  });
+});
+const Checkbox = InputCheckbox;
+const CheckboxListBasic = forwardRef((props, ref) => {
+  const contextReadOnly = useContext(ReadOnlyContext);
+  const contextDisabled = useContext(DisabledContext);
+  const contextLoading = useContext(LoadingContext);
+  const uiStateController = useContext(UIStateControllerContext);
+  const {
+    name,
+    readOnly,
+    disabled,
+    required,
+    loading,
+    children,
+    ...rest
+  } = props;
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
+  const innerLoading = loading || contextLoading;
+  const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
+  const innerDisabled = disabled || contextDisabled;
+  return jsx("div", {
+    ...rest,
+    ref: innerRef,
+    name: name,
+    className: "navi_checkbox_list",
+    "data-checkbox-list": true
+    // eslint-disable-next-line react/no-unknown-property
+    ,
+    onresetuistate: e => {
+      uiStateController.resetUIState(e);
+    },
+    children: jsx(ParentUIStateControllerContext.Provider, {
+      value: uiStateController,
+      children: jsx(FieldNameContext.Provider, {
+        value: name,
+        children: jsx(ReadOnlyContext.Provider, {
+          value: innerReadOnly,
+          children: jsx(DisabledContext.Provider, {
+            value: innerDisabled,
+            children: jsx(RequiredContext.Provider, {
+              value: required,
+              children: jsx(LoadingContext.Provider, {
+                value: innerLoading,
+                children: children
+              })
+            })
+          })
+        })
+      })
+    })
+  });
+});
+forwardRef((props, ref) => {
+  const uiStateController = useContext(UIStateControllerContext);
+  const uiState = useContext(UIStateContext);
+  const {
+    action,
+    actionErrorEffect,
+    onCancel,
+    onActionPrevented,
+    onActionStart,
+    onActionAbort,
+    onActionError,
+    onActionEnd,
+    loading,
+    children,
+    ...rest
+  } = props;
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
+  const [boundAction] = useActionBoundToOneArrayParam(action, uiState);
+  const {
+    loading: actionLoading
+  } = useActionStatus(boundAction);
+  const executeAction = useExecuteAction(innerRef, {
+    errorEffect: actionErrorEffect
+  });
+  const [actionRequester, setActionRequester] = useState(null);
+  useActionEvents(innerRef, {
+    onCancel: (e, reason) => {
+      uiStateController.resetUIState(e);
+      onCancel?.(e, reason);
+    },
+    onPrevented: onActionPrevented,
+    onAction: actionEvent => {
+      setActionRequester(actionEvent.detail.requester);
+      executeAction(actionEvent);
+    },
+    onStart: onActionStart,
+    onAbort: e => {
+      uiStateController.resetUIState(e);
+      onActionAbort?.(e);
+    },
+    onError: e => {
+      uiStateController.resetUIState(e);
+      onActionError?.(e);
+    },
+    onEnd: e => {
+      onActionEnd?.(e);
+    }
+  });
+  return jsx(CheckboxListBasic, {
+    "data-action": boundAction.name,
+    ...rest,
+    ref: innerRef,
+    onChange: event => {
+      const checkboxList = innerRef.current;
+      const checkbox = event.target;
+      requestAction(checkboxList, boundAction, {
+        event,
+        requester: checkbox
+      });
+    },
+    loading: loading || actionLoading,
+    children: jsx(LoadingElementContext.Provider, {
+      value: actionRequester,
+      children: children
+    })
+  });
+});
+
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  @layer navi {
     .navi_radio {
       --outline-offset: 1px;
       --outline-width: 2px;
@@ -16757,6 +17519,481 @@ const InputRadioInsideForm = InputRadio;
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
+    .navi_input_range {
+      --border-radius: 6px;
+      --outline-width: 2px;
+      --height: 8px;
+      --thumb-size: 16px;
+      --thumb-width: var(--thumb-size);
+      --thumb-height: var(--thumb-size);
+      --thumb-border-radius: 100%;
+      --thumb-cursor: pointer;
+
+      --outline-color: var(--navi-focus-outline-color);
+      --loader-color: var(--navi-loader-color);
+      --color: rgb(24, 117, 255);
+
+      --border-color: rgba(150, 150, 150);
+      --track-border-color: color-mix(
+        in srgb,
+        var(--border-color) 35%,
+        transparent
+      );
+      --background-color: #efefef;
+      --fill-color: var(--color);
+      --thumb-color: var(--fill-color);
+      /* Hover */
+      --border-color-hover: color-mix(in srgb, var(--border-color) 75%, black);
+      --track-border-color-hover: color-mix(
+        in srgb,
+        var(--track-border-color) 75%,
+        black
+      );
+      --track-color-hover: color-mix(in srgb, var(--fill-color) 95%, black);
+      --color-hover: color-mix(in srgb, var(--rail-color) 95%, black);
+      --fill-color-hover: color-mix(in srgb, var(--fill-color) 80%, black);
+      --thumb-color-hover: color-mix(in srgb, var(--thumb-color) 80%, black);
+      /* Active */
+      --border-color-active: color-mix(
+        in srgb,
+        var(--border-color) 50%,
+        transparent
+      );
+      --track-border-color-active: var(--border-color-active);
+      --background-color-active: color-mix(
+        in srgb,
+        var(--background-color) 75%,
+        white
+      );
+      --fill-color-active: color-mix(in srgb, var(--fill-color) 75%, white);
+      --thumb-color-active: color-mix(in srgb, var(--thumb-color) 75%, white);
+      /* Readonly */
+      --border-color-readonly: color-mix(
+        in srgb,
+        var(--border-color) 30%,
+        white
+      );
+      --background-color-readonly: var(--background-color);
+      --fill-color-readonly: color-mix(in srgb, var(--fill-color) 30%, grey);
+      --thumb-color-readonly: var(--fill-color-readonly);
+      /* Disabled */
+      --background-color-disabled: color-mix(
+        in srgb,
+        var(--background-color) 60%,
+        transparent
+      );
+      --border-color-disabled: #b1b1b1;
+      --track-border-color-disabled: var(--border-color-disabled);
+      --fill-color-disabled: #cbcbcb;
+      --thumb-color-disabled: #cbcbcb;
+    }
+  }
+
+  .navi_input_range {
+    --x-fill-ratio: 0;
+    --x-border-color: var(--border-color);
+    --x-track-border-color: var(--track-border-color);
+    --x-background-color: var(--background-color);
+    --x-fill-color: var(--fill-color);
+    --x-thumb-color: var(--thumb-color);
+    --x-thumb-border: none;
+    --x-thumb-cursor: var(--thumb-cursor);
+
+    position: relative;
+    box-sizing: border-box;
+    width: 100%;
+    height: var(--height);
+    margin: 2px;
+    flex-direction: inherit;
+    align-items: center;
+    border-radius: 2px;
+    outline-width: var(--outline-width);
+    outline-style: none;
+    outline-color: var(--outline-color);
+    outline-offset: 2px;
+
+    .navi_native_input {
+      position: absolute;
+      inset: 0;
+      margin: 0;
+      opacity: 0;
+      --webkit-appearance: none;
+      font-size: inherit;
+      appearance: none;
+
+      &::-webkit-slider-thumb {
+        width: var(--thumb-width);
+        height: var(--thumb-height);
+        border-radius: var(--thumb-border-radius);
+        -webkit-appearance: none;
+        cursor: var(--x-thumb-cursor);
+      }
+    }
+
+    .navi_input_range_background {
+      position: absolute;
+      width: 100%;
+      height: var(--height);
+      background: var(--x-background-color);
+      border-width: 1px;
+      border-style: solid;
+      border-color: var(--x-border-color);
+      border-radius: var(--border-radius);
+    }
+    .navi_input_range_track {
+      position: absolute;
+      box-sizing: border-box;
+      width: 100%;
+      height: var(--height);
+      border-width: 1px;
+      border-style: solid;
+      border-color: var(--x-track-border-color);
+      border-radius: var(--border-radius);
+    }
+    .navi_input_range_fill {
+      position: absolute;
+      width: 100%;
+      height: var(--height);
+      background: var(--x-fill-color);
+      background-clip: content-box;
+      border-radius: var(--border-radius);
+      clip-path: inset(0 calc((1 - var(--x-fill-ratio)) * 100%) 0 0);
+    }
+    .navi_input_range_thumb {
+      position: absolute;
+      left: calc(
+        var(--x-fill-ratio) * (100% - var(--thumb-size)) + var(--thumb-size) / 2
+      );
+      width: var(--thumb-width);
+      height: var(--thumb-height);
+      background: var(--x-thumb-color);
+      border: var(--x-thumb-border);
+      border-radius: var(--thumb-border-radius);
+      transform: translateX(-50%);
+      cursor: var(--x-thumb-cursor);
+    }
+    .navi_input_range_focus_proxy {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+    }
+
+    /* Hover */
+    &:hover {
+      --x-border-color: var(--border-color-hover);
+      --x-track-border-color: var(--track-border-color-hover);
+      --x-fill-color: var(--fill-color-hover);
+      --x-thumb-color: var(--thumb-color-hover);
+    }
+    /* Active */
+    &:active {
+      --x-border-color: var(--border-color-active);
+      --x-track-border-color: var(--track-border-color-active);
+      --x-background-color: var(--background-color-active);
+      --x-fill-color: var(--fill-color-active);
+      --x-thumb-color: var(--thumb-color-active);
+    }
+    /* Focus */
+    &[data-focus-visible] {
+      outline-style: solid;
+    }
+    /* Readonly */
+    &[data-readonly] {
+      --x-background-color: var(--background-color-readonly);
+      --x-border-color: var(--border-color-readonly);
+      --x-fill-color: var(--fill-color-readonly);
+      --x-thumb-color: var(--thumb-color-readonly);
+      --x-thumb-cursor: default;
+    }
+    /* Disabled */
+    &[data-disabled] {
+      --x-background-color: var(--background-color-disabled);
+      --x-border-color: var(--border-color-disabled);
+      --x-track-border-color: var(--track-border-color-disabled);
+      --x-fill-color: var(--fill-color-disabled);
+      --x-thumb-color: var(--thumb-color-disabled);
+      --x-thumb-cursor: default;
+    }
+  }
+
+  /* Disabled */
+  .navi_input_range[data-disabled] {
+    --x-background-color: var(--background-color-disabled);
+    --x-color: var(--color-disabled);
+  }
+  /* Callout (info, warning, error) */
+  .navi_input_range[data-callout] {
+    /* What can we do? */
+  }
+`;
+const InputRange = props => {
+  const uiStateController = useUIStateController(props, "input");
+  const uiState = useUIState(uiStateController);
+  const input = renderActionableComponent(props, {
+    Basic: InputRangeBasic,
+    WithAction: InputRangeWithAction,
+    InsideForm: InputRangeInsideForm
+  });
+  return jsx(UIStateControllerContext.Provider, {
+    value: uiStateController,
+    children: jsx(UIStateContext.Provider, {
+      value: uiState,
+      children: input
+    })
+  });
+};
+const InputStyleCSSVars$1 = {
+  "outlineWidth": "--outline-width",
+  "borderRadius": "--border-radius",
+  "borderColor": "--border-color",
+  "backgroundColor": "--background-color",
+  "color": "--color",
+  ":hover": {
+    borderColor: "--border-color-hover",
+    backgroundColor: "--background-color-hover",
+    fillColor: "--fill-color-hover",
+    thumbColor: "--thumb-color-hover"
+  },
+  ":active": {
+    borderColor: "--border-color-hover",
+    backgroundColor: "--background-color-hover",
+    fillColor: "--fill-color-active",
+    thumbColor: "--thumb-color-active"
+  },
+  ":read-only": {
+    borderColor: "--border-color-readonly",
+    backgroundColor: "--background-color-readonly",
+    fillColor: "--fill-color-readonly",
+    thumbColor: "--thumb-color-readonly"
+  },
+  ":disabled": {
+    borderColor: "--border-color-disabled",
+    backgroundColor: "--background-color-disabled",
+    fillColor: "--fill-color-disabled",
+    thumbColor: "--thumb-color-disabled"
+  }
+};
+const InputPseudoClasses$1 = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
+const InputPseudoElements$1 = ["::-navi-loader"];
+const InputRangeBasic = props => {
+  const contextReadOnly = useContext(ReadOnlyContext);
+  const contextDisabled = useContext(DisabledContext);
+  const contextLoading = useContext(LoadingContext);
+  const contextLoadingElement = useContext(LoadingElementContext);
+  const reportReadOnlyOnLabel = useContext(ReportReadOnlyOnLabelContext);
+  const uiStateController = useContext(UIStateControllerContext);
+  const uiState = useContext(UIStateContext);
+  const {
+    onInput,
+    readOnly,
+    disabled,
+    constraints = [],
+    loading,
+    autoFocus,
+    autoFocusVisible,
+    autoSelect,
+    ...rest
+  } = props;
+  const defaultRef = useRef();
+  const ref = rest.ref || defaultRef;
+  const innerValue = uiState;
+  const innerLoading = loading || contextLoading && contextLoadingElement === ref.current;
+  const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
+  const innerDisabled = disabled || contextDisabled;
+  // infom any <label> parent of our readOnly state
+  reportReadOnlyOnLabel?.(innerReadOnly);
+  useAutoFocus(ref, autoFocus, {
+    autoFocusVisible,
+    autoSelect
+  });
+  useConstraints(ref, constraints);
+  const innerOnInput = useStableCallback(onInput);
+  const focusProxyId = `input_range_focus_proxy_${useId()}`;
+  const inertButFocusable = innerReadOnly && !innerDisabled;
+  const renderInput = inputProps => {
+    const updateFillRatio = () => {
+      const input = ref.current;
+      if (!input) {
+        return;
+      }
+      const inputValue = input.value;
+      const ratio = (inputValue - input.min) / (input.max - input.min);
+      input.parentNode.style.setProperty("--x-fill-ratio", ratio);
+    };
+    useLayoutEffect(() => {
+      updateFillRatio();
+    }, []);
+
+    // we must disable the input when readOnly to prevent drag and keyboard interactions effectively
+    // for some reason we have to do this here instead of just giving the disabled attribute
+    // via props, as for some reason preact won't set it correctly on the input element in that case
+    // this means however that the input is no longer focusable
+    // we have to put an other focusable element somewhere
+    useLayoutEffect(() => {
+      const input = ref.current;
+      if (!input) {
+        return;
+      }
+      const focusProxy = document.querySelector(`#${focusProxyId}`);
+      if (innerReadOnly) {
+        if (document.activeElement === input) {
+          focusProxy.focus({
+            preventScroll: true
+          });
+        }
+        input.setAttribute("focus-proxy", focusProxyId);
+        input.disabled = innerReadOnly;
+      } else {
+        if (document.activeElement === focusProxy) {
+          input.focus({
+            preventScroll: true
+          });
+        }
+        if (!innerDisabled) {
+          input.disabled = false;
+        }
+        input.removeAttribute("focus-proxy");
+      }
+    }, [innerReadOnly, innerDisabled]);
+    return jsx(Box, {
+      ...inputProps,
+      as: "input",
+      type: "range",
+      ref: ref,
+      "data-value": uiState,
+      value: innerValue,
+      onInput: e => {
+        const inputValue = e.target.valueAsNumber;
+        uiStateController.setUIState(inputValue, e);
+        innerOnInput?.(e);
+        updateFillRatio();
+      },
+      onresetuistate: e => {
+        uiStateController.resetUIState(e);
+      },
+      onsetuistate: e => {
+        uiStateController.setUIState(e.detail.value, e);
+        updateFillRatio();
+      }
+      // style management
+      ,
+      baseClassName: "navi_native_input"
+    });
+  };
+  const renderInputMemoized = useCallback(renderInput, [uiState, innerValue, innerOnInput, innerDisabled, innerReadOnly]);
+  return jsxs(Box, {
+    as: "span",
+    box: true,
+    baseClassName: "navi_input_range",
+    styleCSSVars: InputStyleCSSVars$1,
+    pseudoStateSelector: ".navi_native_input",
+    visualSelector: ".navi_native_input",
+    basePseudoState: {
+      ":read-only": innerReadOnly,
+      ":disabled": innerDisabled,
+      ":-navi-loading": innerLoading
+    },
+    pseudoClasses: InputPseudoClasses$1,
+    pseudoElements: InputPseudoElements$1,
+    hasChildFunction: true,
+    ...rest,
+    ref: undefined,
+    children: [jsx(LoaderBackground, {
+      loading: innerLoading,
+      color: "var(--loader-color)",
+      inset: -1
+    }), jsx("div", {
+      className: "navi_input_range_background"
+    }), jsx("div", {
+      className: "navi_input_range_fill"
+    }), jsx("div", {
+      className: "navi_input_range_track"
+    }), jsx("div", {
+      className: "navi_input_range_thumb"
+    }), jsx("div", {
+      id: focusProxyId,
+      className: "navi_input_range_focus_proxy",
+      tabIndex: inertButFocusable ? "0" : "-1"
+    }), renderInputMemoized]
+  });
+};
+const InputRangeWithAction = props => {
+  const uiState = useContext(UIStateContext);
+  const {
+    action,
+    loading,
+    onCancel,
+    onActionPrevented,
+    onActionStart,
+    onActionError,
+    onActionEnd,
+    cancelOnBlurInvalid,
+    cancelOnEscape,
+    actionErrorEffect,
+    ...rest
+  } = props;
+  const defaultRef = useRef();
+  const ref = props.ref || defaultRef;
+  const [boundAction] = useActionBoundToOneParam(action, uiState);
+  const {
+    loading: actionLoading
+  } = useActionStatus(boundAction);
+  const executeAction = useExecuteAction(ref, {
+    errorEffect: actionErrorEffect
+  });
+  // here updating the input won't call the associated action
+  // (user have to blur or press enter for this to happen)
+  // so we can keep the ui state on cancel/abort/error and let user decide
+  // to update ui state or retry via blur/enter as is
+  useActionEvents(ref, {
+    onCancel: (e, reason) => {
+      if (reason.startsWith("blur_invalid")) {
+        if (!cancelOnBlurInvalid) {
+          return;
+        }
+        if (
+        // error prevent cancellation until the user closes it (or something closes it)
+        e.detail.failedConstraintInfo.level === "error" && e.detail.failedConstraintInfo.reportStatus !== "closed") {
+          return;
+        }
+      }
+      if (reason === "escape_key") {
+        if (!cancelOnEscape) {
+          return;
+        }
+      }
+      onCancel?.(e, reason);
+    },
+    onRequested: e => {
+      forwardActionRequested(e, boundAction);
+    },
+    onPrevented: onActionPrevented,
+    onAction: executeAction,
+    onStart: onActionStart,
+    onError: onActionError,
+    onEnd: onActionEnd
+  });
+  return jsx(InputRangeBasic, {
+    "data-action": boundAction.name,
+    ...rest,
+    ref: ref,
+    loading: loading || actionLoading
+  });
+};
+const InputRangeInsideForm = props => {
+  const {
+    // We destructure formContext to avoid passing it to the underlying input element
+    // eslint-disable-next-line no-unused-vars
+    formContext,
+    ...rest
+  } = props;
+  return jsx(InputRangeBasic, {
+    ...rest
+  });
+};
+
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  @layer navi {
     .navi_input {
       --border-radius: 2px;
       --border-width: 1px;
@@ -17136,27 +18373,29 @@ const convertToUTCTimezone = localDateTimeString => {
   }
 };
 
-const Input = forwardRef((props, ref) => {
+const Input = props => {
   const {
     type
   } = props;
   if (type === "radio") {
     return jsx(InputRadio, {
-      ...props,
-      ref: ref
+      ...props
     });
   }
   if (type === "checkbox") {
     return jsx(InputCheckbox, {
-      ...props,
-      ref: ref
+      ...props
+    });
+  }
+  if (type === "range") {
+    return jsx(InputRange, {
+      ...props
     });
   }
   return jsx(InputTextual, {
-    ...props,
-    ref: ref
+    ...props
   });
-});
+};
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   .navi_editable_wrapper {
@@ -17303,158 +18542,6 @@ const Editable = forwardRef((props, ref) => {
       className: ["navi_editable_wrapper", ...(wrapperProps?.className || "").split(" ")].join(" "),
       children: input
     })]
-  });
-});
-
-installImportMetaCss(import.meta);import.meta.css = /* css */`
-  @layer navi {
-    .navi_checkbox_list {
-      display: flex;
-      flex-direction: column;
-    }
-  }
-`;
-const CheckboxList = forwardRef((props, ref) => {
-  const uiStateController = useUIGroupStateController(props, "checkbox_list", {
-    childComponentType: "checkbox",
-    aggregateChildStates: childUIStateControllers => {
-      const values = [];
-      for (const childUIStateController of childUIStateControllers) {
-        if (childUIStateController.uiState) {
-          values.push(childUIStateController.uiState);
-        }
-      }
-      return values.length === 0 ? undefined : values;
-    }
-  });
-  const uiState = useUIState(uiStateController);
-  const checkboxList = renderActionableComponent(props, ref);
-  return jsx(UIStateControllerContext.Provider, {
-    value: uiStateController,
-    children: jsx(UIStateContext.Provider, {
-      value: uiState,
-      children: checkboxList
-    })
-  });
-});
-const Checkbox = InputCheckbox;
-const CheckboxListBasic = forwardRef((props, ref) => {
-  const contextReadOnly = useContext(ReadOnlyContext);
-  const contextDisabled = useContext(DisabledContext);
-  const contextLoading = useContext(LoadingContext);
-  const uiStateController = useContext(UIStateControllerContext);
-  const {
-    name,
-    readOnly,
-    disabled,
-    required,
-    loading,
-    children,
-    ...rest
-  } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-  const innerLoading = loading || contextLoading;
-  const innerReadOnly = readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
-  const innerDisabled = disabled || contextDisabled;
-  return jsx("div", {
-    ...rest,
-    ref: innerRef,
-    name: name,
-    className: "navi_checkbox_list",
-    "data-checkbox-list": true
-    // eslint-disable-next-line react/no-unknown-property
-    ,
-    onresetuistate: e => {
-      uiStateController.resetUIState(e);
-    },
-    children: jsx(ParentUIStateControllerContext.Provider, {
-      value: uiStateController,
-      children: jsx(FieldNameContext.Provider, {
-        value: name,
-        children: jsx(ReadOnlyContext.Provider, {
-          value: innerReadOnly,
-          children: jsx(DisabledContext.Provider, {
-            value: innerDisabled,
-            children: jsx(RequiredContext.Provider, {
-              value: required,
-              children: jsx(LoadingContext.Provider, {
-                value: innerLoading,
-                children: children
-              })
-            })
-          })
-        })
-      })
-    })
-  });
-});
-forwardRef((props, ref) => {
-  const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
-  const {
-    action,
-    actionErrorEffect,
-    onCancel,
-    onActionPrevented,
-    onActionStart,
-    onActionAbort,
-    onActionError,
-    onActionEnd,
-    loading,
-    children,
-    ...rest
-  } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-  const [boundAction] = useActionBoundToOneArrayParam(action, uiState);
-  const {
-    loading: actionLoading
-  } = useActionStatus(boundAction);
-  const executeAction = useExecuteAction(innerRef, {
-    errorEffect: actionErrorEffect
-  });
-  const [actionRequester, setActionRequester] = useState(null);
-  useActionEvents(innerRef, {
-    onCancel: (e, reason) => {
-      uiStateController.resetUIState(e);
-      onCancel?.(e, reason);
-    },
-    onPrevented: onActionPrevented,
-    onAction: actionEvent => {
-      setActionRequester(actionEvent.detail.requester);
-      executeAction(actionEvent);
-    },
-    onStart: onActionStart,
-    onAbort: e => {
-      uiStateController.resetUIState(e);
-      onActionAbort?.(e);
-    },
-    onError: e => {
-      uiStateController.resetUIState(e);
-      onActionError?.(e);
-    },
-    onEnd: e => {
-      onActionEnd?.(e);
-    }
-  });
-  return jsx(CheckboxListBasic, {
-    "data-action": boundAction.name,
-    ...rest,
-    ref: innerRef,
-    onChange: event => {
-      const checkboxList = innerRef.current;
-      const checkbox = event.target;
-      requestAction(checkboxList, boundAction, {
-        event,
-        requester: checkbox
-      });
-    },
-    loading: loading || actionLoading,
-    children: jsx(LoadingElementContext.Provider, {
-      value: actionRequester,
-      children: children
-    })
   });
 });
 
@@ -17911,7 +18998,8 @@ const useRefArray = (items, keyFromItem) => {
   }, [items]);
 };
 
-installImportMetaCss(import.meta);import.meta.css = /* css */`
+installImportMetaCss(import.meta);const useNavState = () => {};
+import.meta.css = /* css */`
   .navi_select[data-readonly] {
     pointer-events: none;
   }
@@ -17979,7 +19067,7 @@ forwardRef((props, ref) => {
   } = props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
-  const [navState, setNavState] = useNavState(id);
+  const [navState, setNavState] = useNavState();
   const valueAtStart = navState === undefined ? initialValue : navState;
   const [value, setValue] = useState(valueAtStart);
   useEffect(() => {
@@ -18016,7 +19104,7 @@ forwardRef((props, ref) => {
   } = props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
-  const [navState, setNavState, resetNavState] = useNavState(id);
+  const [navState, setNavState, resetNavState] = useNavState();
   const [boundAction, value, setValue, initialValue] = useActionBoundToOneParam(action, name);
   const {
     loading: actionLoading
@@ -18092,7 +19180,7 @@ forwardRef((props, ref) => {
   } = props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
-  const [navState, setNavState] = useNavState(id);
+  const [navState, setNavState] = useNavState();
   const [value, setValue, initialValue] = [name, externalValue, navState];
   useEffect(() => {
     setNavState(value);
@@ -18121,687 +19209,6 @@ forwardRef((props, ref) => {
     children: children
   });
 });
-
-const createUniqueValueConstraint = (
-  // the set might be incomplete (the front usually don't have the full copy of all the items from the backend)
-  // but this is already nice to help user with what we know
-  // it's also possible that front is unsync with backend, preventing user to choose a value
-  // that is actually free.
-  // But this is unlikely to happen and user could reload the page to be able to choose that name
-  // that suddenly became available
-  existingValueSet,
-  message = `"{value}" already exists. Please choose another value.`,
-) => {
-  return {
-    name: "unique_value",
-    check: (input) => {
-      const inputValue = input.value;
-      const hasConflict = existingValueSet.has(inputValue);
-      // console.log({
-      //   inputValue,
-      //   names: Array.from(otherNameSet.values()),
-      //   hasConflict,
-      // });
-      if (hasConflict) {
-        return message.replace("{value}", inputValue);
-      }
-      return "";
-    },
-  };
-};
-
-const SINGLE_SPACE_CONSTRAINT = {
-  name: "single_space",
-  check: (input) => {
-    const inputValue = input.value;
-    const hasLeadingSpace = inputValue.startsWith(" ");
-    const hasTrailingSpace = inputValue.endsWith(" ");
-    const hasDoubleSpace = inputValue.includes("  ");
-    if (hasLeadingSpace || hasDoubleSpace || hasTrailingSpace) {
-      return "Spaces at the beginning, end, or consecutive spaces are not allowed";
-    }
-    return "";
-  },
-};
-
-installImportMetaCss(import.meta);import.meta.css = /* css */`
-  .action_error {
-    padding: 20px;
-    background: #fdd;
-    border: 1px solid red;
-    margin-top: 0;
-    margin-bottom: 20px;
-  }
-`;
-const renderIdleDefault = () => null;
-const renderLoadingDefault = () => null;
-const renderAbortedDefault = () => null;
-const renderErrorDefault = error => {
-  let routeErrorText = error && error.message ? error.message : error;
-  return jsxs("p", {
-    className: "action_error",
-    children: ["An error occured: ", routeErrorText]
-  });
-};
-const renderCompletedDefault = () => null;
-const ActionRenderer = ({
-  action,
-  children,
-  disabled
-}) => {
-  const {
-    idle: renderIdle = renderIdleDefault,
-    loading: renderLoading = renderLoadingDefault,
-    aborted: renderAborted = renderAbortedDefault,
-    error: renderError = renderErrorDefault,
-    completed: renderCompleted,
-    always: renderAlways
-  } = typeof children === "function" ? {
-    completed: children
-  } : children || {};
-  if (disabled) {
-    return null;
-  }
-  if (action === undefined) {
-    throw new Error("ActionRenderer requires an action to render, but none was provided.");
-  }
-  const {
-    idle,
-    loading,
-    aborted,
-    error,
-    data
-  } = useActionStatus(action);
-  const UIRenderedPromise = useUIRenderedPromise(action);
-  const [errorBoundary, resetErrorBoundary] = useErrorBoundary();
-
-  // Mark this action as bound to UI components (has renderers)
-  // This tells the action system that errors should be caught and stored
-  // in the action's error state rather than bubbling up
-  useLayoutEffect(() => {
-    if (action) {
-      const {
-        ui
-      } = getActionPrivateProperties(action);
-      ui.hasRenderers = true;
-    }
-  }, [action]);
-  useLayoutEffect(() => {
-    resetErrorBoundary();
-  }, [action, loading, idle, resetErrorBoundary]);
-  useLayoutEffect(() => {
-    UIRenderedPromise.resolve();
-    return () => {
-      actionUIRenderedPromiseWeakMap.delete(action);
-    };
-  }, [action]);
-
-  // If renderAlways is provided, it wins and handles all rendering
-  if (renderAlways) {
-    return renderAlways({
-      idle,
-      loading,
-      aborted,
-      error,
-      data
-    });
-  }
-  if (idle) {
-    return renderIdle(action);
-  }
-  if (errorBoundary) {
-    return renderError(errorBoundary, "ui_error", action);
-  }
-  if (error) {
-    return renderError(error, "action_error", action);
-  }
-  if (aborted) {
-    return renderAborted(action);
-  }
-  let renderCompletedSafe;
-  if (renderCompleted) {
-    renderCompletedSafe = renderCompleted;
-  } else {
-    const {
-      ui
-    } = getActionPrivateProperties(action);
-    if (ui.renderCompleted) {
-      renderCompletedSafe = ui.renderCompleted;
-    } else {
-      renderCompletedSafe = renderCompletedDefault;
-    }
-  }
-  if (loading) {
-    if (action.canDisplayOldData && data !== undefined) {
-      return renderCompletedSafe(data, action);
-    }
-    return renderLoading(action);
-  }
-  return renderCompletedSafe(data, action);
-};
-const defaultPromise = Promise.resolve();
-defaultPromise.resolve = () => {};
-const actionUIRenderedPromiseWeakMap = new WeakMap();
-const useUIRenderedPromise = action => {
-  if (!action) {
-    return defaultPromise;
-  }
-  const actionUIRenderedPromise = actionUIRenderedPromiseWeakMap.get(action);
-  if (actionUIRenderedPromise) {
-    return actionUIRenderedPromise;
-  }
-  let resolve;
-  const promise = new Promise(res => {
-    resolve = res;
-  });
-  promise.resolve = resolve;
-  actionUIRenderedPromiseWeakMap.set(action, promise);
-  return promise;
-};
-
-const useFocusGroup = (
-  elementRef,
-  { enabled = true, direction, skipTab, loop, name } = {},
-) => {
-  useLayoutEffect(() => {
-    if (!enabled) {
-      return null;
-    }
-    const focusGroup = initFocusGroup(elementRef.current, {
-      direction,
-      skipTab,
-      loop,
-      name,
-    });
-    return focusGroup.cleanup;
-  }, [direction, skipTab, loop, name]);
-};
-
-installImportMetaCss(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
-const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
-import.meta.css = /* css */`
-  .summary_marker {
-    width: 1em;
-    height: 1em;
-    line-height: 1em;
-  }
-  .summary_marker_svg .arrow {
-    animation-duration: 0.3s;
-    animation-fill-mode: forwards;
-    animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-  .summary_marker_svg .arrow[data-animation-target="down"] {
-    animation-name: morph-to-down;
-  }
-  @keyframes morph-to-down {
-    from {
-      d: path("${rightArrowPath}");
-    }
-    to {
-      d: path("${downArrowPath}");
-    }
-  }
-  .summary_marker_svg .arrow[data-animation-target="right"] {
-    animation-name: morph-to-right;
-  }
-  @keyframes morph-to-right {
-    from {
-      d: path("${downArrowPath}");
-    }
-    to {
-      d: path("${rightArrowPath}");
-    }
-  }
-
-  .summary_marker_svg .foreground_circle {
-    stroke-dasharray: 503 1507; /* ~25% of circle perimeter */
-    stroke-dashoffset: 0;
-    animation: progress-around-circle 1.5s linear infinite;
-  }
-  @keyframes progress-around-circle {
-    0% {
-      stroke-dashoffset: 0;
-    }
-    100% {
-      stroke-dashoffset: -2010;
-    }
-  }
-
-  /* fading and scaling */
-  .summary_marker_svg .arrow {
-    transition: opacity 0.3s ease-in-out;
-    opacity: 1;
-  }
-  .summary_marker_svg .loading_container {
-    transition: transform 0.3s linear;
-    transform: scale(0.3);
-  }
-  .summary_marker_svg .background_circle,
-  .summary_marker_svg .foreground_circle {
-    transition: opacity 0.3s ease-in-out;
-    opacity: 0;
-  }
-  .summary_marker_svg[data-loading] .arrow {
-    opacity: 0;
-  }
-  .summary_marker_svg[data-loading] .loading_container {
-    transform: scale(1);
-  }
-  .summary_marker_svg[data-loading] .background_circle {
-    opacity: 0.2;
-  }
-  .summary_marker_svg[data-loading] .foreground_circle {
-    opacity: 1;
-  }
-`;
-const SummaryMarker = ({
-  open,
-  loading
-}) => {
-  const showLoading = useDebounceTrue(loading, 300);
-  const mountedRef = useRef(false);
-  const prevOpenRef = useRef(open);
-  useLayoutEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-  const shouldAnimate = mountedRef.current && prevOpenRef.current !== open;
-  prevOpenRef.current = open;
-  return jsx("span", {
-    className: "summary_marker",
-    children: jsxs("svg", {
-      className: "summary_marker_svg",
-      viewBox: "0 -960 960 960",
-      xmlns: "http://www.w3.org/2000/svg",
-      "data-loading": open ? showLoading || undefined : undefined,
-      children: [jsxs("g", {
-        className: "loading_container",
-        "transform-origin": "480px -480px",
-        children: [jsx("circle", {
-          className: "background_circle",
-          cx: "480",
-          cy: "-480",
-          r: "320",
-          stroke: "currentColor",
-          fill: "none",
-          strokeWidth: "60",
-          opacity: "0.2"
-        }), jsx("circle", {
-          className: "foreground_circle",
-          cx: "480",
-          cy: "-480",
-          r: "320",
-          stroke: "currentColor",
-          fill: "none",
-          strokeWidth: "60",
-          strokeLinecap: "round",
-          strokeDasharray: "503 1507"
-        })]
-      }), jsx("g", {
-        className: "arrow_container",
-        "transform-origin": "480px -480px",
-        children: jsx("path", {
-          className: "arrow",
-          fill: "currentColor",
-          "data-animation-target": shouldAnimate ? open ? "down" : "right" : undefined,
-          d: open ? downArrowPath : rightArrowPath
-        })
-      })]
-    })
-  });
-};
-
-installImportMetaCss(import.meta);import.meta.css = /* css */`
-  .navi_details {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-shrink: 0;
-    flex-direction: column;
-  }
-
-  .navi_details > summary {
-    display: flex;
-    flex-shrink: 0;
-    flex-direction: column;
-    cursor: pointer;
-    user-select: none;
-  }
-  .summary_body {
-    display: flex;
-    width: 100%;
-    flex-direction: row;
-    align-items: center;
-    gap: 0.2em;
-  }
-  .summary_label {
-    display: flex;
-    padding-right: 10px;
-    flex: 1;
-    align-items: center;
-    gap: 0.2em;
-  }
-
-  .navi_details > summary:focus {
-    z-index: 1;
-  }
-`;
-const Details = forwardRef((props, ref) => {
-  return renderActionableComponent(props, ref);
-});
-const DetailsBasic = forwardRef((props, ref) => {
-  const {
-    id,
-    label = "Summary",
-    open,
-    loading,
-    className,
-    focusGroup,
-    focusGroupDirection,
-    arrowKeyShortcuts = true,
-    openKeyShortcut = "ArrowRight",
-    closeKeyShortcut = "ArrowLeft",
-    onToggle,
-    children,
-    ...rest
-  } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-  const [navState, setNavState] = useNavState(id);
-  const [innerOpen, innerOpenSetter] = useState(open || navState);
-  useFocusGroup(innerRef, {
-    enabled: focusGroup,
-    name: typeof focusGroup === "string" ? focusGroup : undefined,
-    direction: focusGroupDirection
-  });
-
-  /**
-   * Browser will dispatch "toggle" event even if we set open={true}
-   * When rendering the component for the first time
-   * We have to ensure the initial "toggle" event is ignored.
-   *
-   * If we don't do that code will think the details has changed and run logic accordingly
-   * For example it will try to navigate to the current url while we are already there
-   *
-   * See:
-   * - https://techblog.thescore.com/2024/10/08/why-we-decided-to-change-how-the-details-element-works/
-   * - https://github.com/whatwg/html/issues/4500
-   * - https://stackoverflow.com/questions/58942600/react-html-details-toggles-uncontrollably-when-starts-open
-   *
-   */
-
-  const summaryRef = useRef(null);
-  useKeyboardShortcuts(innerRef, [{
-    key: openKeyShortcut,
-    enabled: arrowKeyShortcuts,
-    when: e => document.activeElement === summaryRef.current &&
-    // avoid handling openKeyShortcut twice when keydown occurs inside nested details
-    !e.defaultPrevented,
-    action: e => {
-      const details = innerRef.current;
-      if (!details.open) {
-        e.preventDefault();
-        details.open = true;
-        return;
-      }
-      const summary = summaryRef.current;
-      const firstFocusableElementInDetails = findAfter(summary, elementIsFocusable, {
-        root: details
-      });
-      if (!firstFocusableElementInDetails) {
-        return;
-      }
-      e.preventDefault();
-      firstFocusableElementInDetails.focus();
-    }
-  }, {
-    key: closeKeyShortcut,
-    enabled: arrowKeyShortcuts,
-    when: () => {
-      const details = innerRef.current;
-      return details.open;
-    },
-    action: e => {
-      const details = innerRef.current;
-      const summary = summaryRef.current;
-      if (document.activeElement === summary) {
-        e.preventDefault();
-        summary.focus();
-        details.open = false;
-      } else {
-        e.preventDefault();
-        summary.focus();
-      }
-    }
-  }]);
-  const mountedRef = useRef(false);
-  useEffect(() => {
-    mountedRef.current = true;
-  }, []);
-  return jsxs("details", {
-    ...rest,
-    ref: innerRef,
-    id: id,
-    className: ["navi_details", ...(className ? className.split(" ") : [])].join(" "),
-    onToggle: e => {
-      const isOpen = e.newState === "open";
-      if (mountedRef.current) {
-        if (isOpen) {
-          innerOpenSetter(true);
-          setNavState(true);
-        } else {
-          innerOpenSetter(false);
-          setNavState(undefined);
-        }
-      }
-      onToggle?.(e);
-    },
-    open: innerOpen,
-    children: [jsx("summary", {
-      ref: summaryRef,
-      children: jsxs("div", {
-        className: "summary_body",
-        children: [jsx(SummaryMarker, {
-          open: innerOpen,
-          loading: loading
-        }), jsx("div", {
-          className: "summary_label",
-          children: label
-        })]
-      })
-    }), children]
-  });
-});
-forwardRef((props, ref) => {
-  const {
-    action,
-    loading,
-    onToggle,
-    onActionPrevented,
-    onActionStart,
-    onActionError,
-    onActionEnd,
-    children,
-    ...rest
-  } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-  const effectiveAction = useAction(action);
-  const {
-    loading: actionLoading
-  } = useActionStatus(effectiveAction);
-  const executeAction = useExecuteAction(innerRef, {
-    // the error will be displayed by actionRenderer inside <details>
-    errorEffect: "none"
-  });
-  useActionEvents(innerRef, {
-    onPrevented: onActionPrevented,
-    onAction: e => {
-      executeAction(e);
-    },
-    onStart: onActionStart,
-    onError: onActionError,
-    onEnd: onActionEnd
-  });
-  return jsx(DetailsBasic, {
-    ...rest,
-    ref: innerRef,
-    loading: loading || actionLoading,
-    onToggle: toggleEvent => {
-      const isOpen = toggleEvent.newState === "open";
-      if (isOpen) {
-        requestAction(toggleEvent.target, effectiveAction, {
-          event: toggleEvent,
-          method: "run"
-        });
-      } else {
-        effectiveAction.abort();
-      }
-      onToggle?.(toggleEvent);
-    },
-    children: jsx(ActionRenderer, {
-      action: effectiveAction,
-      children: children
-    })
-  });
-});
-
-// http://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-keyshortcuts
-const generateAriaKeyShortcuts = (key) => {
-  let actualCombination;
-
-  // Handle platform-specific combination objects
-  if (typeof key === "object" && key !== null) {
-    actualCombination = isMac ? key.mac : key.other;
-  } else {
-    actualCombination = key;
-  }
-
-  if (actualCombination) {
-    return normalizeKeyCombination(actualCombination);
-  }
-
-  return "";
-};
-
-const normalizeKeyCombination = (combination) => {
-  const lowerCaseCombination = combination.toLowerCase();
-  const keys = lowerCaseCombination.split("+");
-
-  // First normalize keys to their canonical form, then apply ARIA mapping
-  for (let i = 0; i < keys.length; i++) {
-    let key = normalizeKey(keys[i]);
-
-    // Then apply ARIA-specific mappings if they exist
-    if (keyToAriaKeyMapping[key]) {
-      key = keyToAriaKeyMapping[key];
-    }
-
-    keys[i] = key;
-  }
-
-  return keys.join("+");
-};
-const keyToAriaKeyMapping = {
-  // Platform-specific ARIA names
-  command: "meta",
-  option: "altgraph", // Mac option key uses "altgraph" in ARIA spec
-
-  // Regular keys - platform-specific normalization
-  delete: isMac ? "backspace" : "delete", // Mac delete key is backspace semantically
-  backspace: isMac ? "backspace" : "delete",
-};
-const normalizeKey = (key) => {
-  key = key.toLowerCase();
-
-  // Find the canonical form for this key
-  for (const [canonicalKey, config] of Object.entries(keyMapping)) {
-    const allKeys = [canonicalKey, ...config.alias];
-    if (allKeys.includes(key)) {
-      return canonicalKey;
-    }
-  }
-
-  return key;
-};
-
-installImportMetaCss(import.meta);import.meta.css = /* css */`
-  .navi_shortcut_container[data-visually-hidden] {
-    /* Visually hidden container - doesn't affect layout */
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-
-    /* Ensure it's not interactable */
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  .navi_shortcut_button[data-visually-hidden] {
-    /* Visually hidden but accessible to screen readers */
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-
-    /* Ensure it's not focusable via tab navigation */
-    opacity: 0;
-    pointer-events: none;
-  }
-`;
-const ActiveKeyboardShortcuts = ({
-  visible
-}) => {
-  const activeShortcuts = activeShortcutsSignal.value;
-  return jsx("div", {
-    className: "navi_shortcut_container",
-    "data-visually-hidden": visible ? undefined : "",
-    children: activeShortcuts.map(shortcut => {
-      return jsx(KeyboardShortcutAriaElement, {
-        visible: visible,
-        keyCombination: shortcut.key,
-        description: shortcut.description,
-        enabled: shortcut.enabled,
-        "data-action": shortcut.action ? shortcut.action.name : undefined,
-        "data-confirm-message": shortcut.confirmMessage
-      }, shortcut.key);
-    })
-  });
-};
-const KeyboardShortcutAriaElement = ({
-  visible,
-  keyCombination,
-  description,
-  enabled,
-  ...props
-}) => {
-  if (typeof keyCombination === "function") {
-    return null;
-  }
-  const ariaKeyshortcuts = generateAriaKeyShortcuts(keyCombination);
-  return jsx("button", {
-    className: "navi_shortcut_button",
-    "data-visually-hidden": visible ? undefined : "",
-    "aria-keyshortcuts": ariaKeyshortcuts,
-    tabIndex: "-1",
-    disabled: !enabled,
-    ...props,
-    children: description
-  });
-};
 
 const TableSelectionContext = createContext();
 const useTableSelectionContextValue = (
@@ -19118,6 +19525,24 @@ const createItemTracker = () => {
   return [useItemTrackerProvider, useTrackItem, useTrackedItem, useTrackedItems];
 };
 
+const useFocusGroup = (
+  elementRef,
+  { enabled = true, direction, skipTab, loop, name } = {},
+) => {
+  useLayoutEffect(() => {
+    if (!enabled) {
+      return null;
+    }
+    const focusGroup = initFocusGroup(elementRef.current, {
+      direction,
+      skipTab,
+      loop,
+      name,
+    });
+    return focusGroup.cleanup;
+  }, [direction, skipTab, loop, name]);
+};
+
 const Z_INDEX_EDITING = 1; /* To go above neighbours, but should not be too big to stay under the sticky cells */
 
 /* needed because cell uses position:relative, sticky must win even if before in DOM order */
@@ -19142,8 +19567,8 @@ const Z_INDEX_TABLE_UI = Z_INDEX_STICKY_CORNER + 1;
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   .navi_table_drag_clone_container {
     position: absolute;
-    left: var(--table-visual-left);
     top: var(--table-visual-top);
+    left: var(--table-visual-left);
     width: var(--table-visual-width);
     height: var(--table-visual-height);
     /* background: rgba(0, 0, 0, 0.5); */
@@ -19173,12 +19598,12 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   }
 
   .navi_table_cell_foreground {
-    pointer-events: none;
     position: absolute;
     inset: 0;
+    z-index: ${Z_INDEX_CELL_FOREGROUND};
     background: lightgrey;
     opacity: 0;
-    z-index: ${Z_INDEX_CELL_FOREGROUND};
+    pointer-events: none;
   }
   .navi_table_cell[data-first-row] .navi_table_cell_foreground {
     background-color: grey;
@@ -19188,8 +19613,8 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
   }
 
   .navi_table_drag_clone_container .navi_table_cell_foreground {
-    opacity: 1;
     background-color: rgba(255, 255, 255, 0.2);
+    opacity: 1;
     backdrop-filter: blur(10px);
   }
   .navi_table_drag_clone_container
@@ -19204,25 +19629,25 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
 
   .navi_table_column_drop_preview {
     position: absolute;
-    left: var(--column-left);
     top: var(--column-top);
+    left: var(--column-left);
+    z-index: ${Z_INDEX_DROP_PREVIEW};
     width: var(--column-width);
     height: var(--column-height);
-    pointer-events: none;
-    z-index: ${Z_INDEX_DROP_PREVIEW};
     /* Invisible container - just for positioning */
     background: transparent;
     border: none;
+    pointer-events: none;
   }
 
   .navi_table_column_drop_preview_line {
     position: absolute;
     top: 0;
     bottom: 0;
+    left: 0; /* Default: left edge for dropping before */
     width: 4px;
     background: rgba(0, 0, 255, 0.5);
     opacity: 0;
-    left: 0; /* Default: left edge for dropping before */
     transform: translateX(-50%);
   }
   .navi_table_column_drop_preview[data-after]
@@ -19238,9 +19663,9 @@ installImportMetaCss(import.meta);import.meta.css = /* css */`
     position: absolute;
     left: 0; /* Default: left edge for dropping before */
     display: flex;
+    color: rgba(0, 0, 255, 0.5);
     opacity: 0;
     transform: translateX(-50%);
-    color: rgba(0, 0, 255, 0.5);
   }
   .navi_table_column_drop_preview[data-after] .arrow_positioner {
     left: 100%; /* Right edge for dropping after */
@@ -22032,117 +22457,138 @@ const useCellsAndColumns = (cells, columns) => {
   };
 };
 
-/**
- * Creates a signal that stays synchronized with an external value,
- * only updating the signal when the value actually changes.
- *
- * This hook solves a common reactive UI pattern where:
- * 1. A signal controls a UI element (like an input field)
- * 2. The UI element can be modified by user interaction
- * 3. When the external "source of truth" changes, it should take precedence
- *
- * @param {any} value - The external value to sync with (the "source of truth")
- * @param {any} [initialValue] - Optional initial value for the signal (defaults to value)
- * @returns {Signal} A signal that tracks the external value but allows temporary local changes
- *
- * @example
- * const FileNameEditor = ({ file }) => {
- *   // Signal stays in sync with file.name, but allows user editing
- *   const nameSignal = useSignalSync(file.name);
- *
- *   return (
- *     <Editable
- *       valueSignal={nameSignal}  // User can edit this
- *       action={renameFileAction} // Saves changes
- *     />
- *   );
- * };
- *
- * // Scenario:
- * // 1. file.name = "doc.txt", nameSignal.value = "doc.txt"
- * // 2. User types "report" -> nameSignal.value = "report.txt"
- * // 3. External update: file.name = "shared-doc.txt"
- * // 4. Next render: nameSignal.value = "shared-doc.txt" (model wins!)
- *
- */
+// http://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-keyshortcuts
+const generateAriaKeyShortcuts = (key) => {
+  let actualCombination;
 
-const useSignalSync = (value, initialValue = value) => {
-  const signal = useSignal(initialValue);
-  const previousValueRef = useRef(value);
-
-  // Only update signal when external value actually changes
-  // This preserves user input between external changes
-  if (previousValueRef.current !== value) {
-    previousValueRef.current = value;
-    signal.value = value; // Model takes precedence
+  // Handle platform-specific combination objects
+  if (typeof key === "object" && key !== null) {
+    actualCombination = isMac ? key.mac : key.other;
+  } else {
+    actualCombination = key;
   }
 
-  return signal;
+  if (actualCombination) {
+    return normalizeKeyCombination(actualCombination);
+  }
+
+  return "";
+};
+
+const normalizeKeyCombination = (combination) => {
+  const lowerCaseCombination = combination.toLowerCase();
+  const keys = lowerCaseCombination.split("+");
+
+  // First normalize keys to their canonical form, then apply ARIA mapping
+  for (let i = 0; i < keys.length; i++) {
+    let key = normalizeKey(keys[i]);
+
+    // Then apply ARIA-specific mappings if they exist
+    if (keyToAriaKeyMapping[key]) {
+      key = keyToAriaKeyMapping[key];
+    }
+
+    keys[i] = key;
+  }
+
+  return keys.join("+");
+};
+const keyToAriaKeyMapping = {
+  // Platform-specific ARIA names
+  command: "meta",
+  option: "altgraph", // Mac option key uses "altgraph" in ARIA spec
+
+  // Regular keys - platform-specific normalization
+  delete: isMac ? "backspace" : "delete", // Mac delete key is backspace semantically
+  backspace: isMac ? "backspace" : "delete",
+};
+const normalizeKey = (key) => {
+  key = key.toLowerCase();
+
+  // Find the canonical form for this key
+  for (const [canonicalKey, config] of Object.entries(keyMapping)) {
+    const allKeys = [canonicalKey, ...config.alias];
+    if (allKeys.includes(key)) {
+      return canonicalKey;
+    }
+  }
+
+  return key;
 };
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
-  .svg_mask_content * {
-    fill: black !important;
-    stroke: black !important;
-    fill-opacity: 1 !important;
-    stroke-opacity: 1 !important;
-    color: black !important;
-    opacity: 1 !important;
+  .navi_shortcut_container[data-visually-hidden] {
+    /* Visually hidden container - doesn't affect layout */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+
+    /* Ensure it's not interactable */
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .navi_shortcut_button[data-visually-hidden] {
+    /* Visually hidden but accessible to screen readers */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+
+    /* Ensure it's not focusable via tab navigation */
+    opacity: 0;
+    pointer-events: none;
   }
 `;
-const SVGMaskOverlay = ({
-  viewBox,
-  children
+const ActiveKeyboardShortcuts = ({
+  visible
 }) => {
-  if (!Array.isArray(children)) {
-    return children;
-  }
-  if (children.length === 1) {
-    return children[0];
-  }
-  if (!viewBox) {
-    console.error("SVGComposition requires an explicit viewBox");
+  const activeShortcuts = activeShortcutsSignal.value;
+  return jsx("div", {
+    className: "navi_shortcut_container",
+    "data-visually-hidden": visible ? undefined : "",
+    children: activeShortcuts.map(shortcut => {
+      return jsx(KeyboardShortcutAriaElement, {
+        visible: visible,
+        keyCombination: shortcut.key,
+        description: shortcut.description,
+        enabled: shortcut.enabled,
+        "data-action": shortcut.action ? shortcut.action.name : undefined,
+        "data-confirm-message": shortcut.confirmMessage
+      }, shortcut.key);
+    })
+  });
+};
+const KeyboardShortcutAriaElement = ({
+  visible,
+  keyCombination,
+  description,
+  enabled,
+  ...props
+}) => {
+  if (typeof keyCombination === "function") {
     return null;
   }
-
-  // First SVG is the base, all others are overlays
-  const [baseSvg, ...overlaySvgs] = children;
-
-  // Generate unique ID for this instance
-  const instanceId = `svgmo-${Math.random().toString(36).slice(2, 9)}`;
-
-  // Create nested masked elements
-  let maskedElement = baseSvg;
-
-  // Apply each mask in sequence
-  overlaySvgs.forEach((overlaySvg, index) => {
-    const maskId = `mask-${instanceId}-${index}`;
-    maskedElement = jsx("g", {
-      mask: `url(#${maskId})`,
-      children: maskedElement
-    });
-  });
-  return jsxs("svg", {
-    viewBox: viewBox,
-    width: "100%",
-    height: "100%",
-    children: [jsx("defs", {
-      children: overlaySvgs.map((overlaySvg, index) => {
-        const maskId = `mask-${instanceId}-${index}`;
-
-        // IMPORTANT: clone the overlay SVG exactly as is, just add the mask class
-        return jsxs("mask", {
-          id: maskId,
-          children: [jsx("rect", {
-            width: "100%",
-            height: "100%",
-            fill: "white"
-          }), cloneElement(overlaySvg, {
-            className: "svg_mask_content" // Apply styling to make it black
-          })]
-        }, maskId);
-      })
-    }), maskedElement, overlaySvgs]
+  const ariaKeyshortcuts = generateAriaKeyShortcuts(keyCombination);
+  return jsx("button", {
+    className: "navi_shortcut_button",
+    "data-visually-hidden": visible ? undefined : "",
+    "aria-keyshortcuts": ariaKeyshortcuts,
+    tabIndex: "-1",
+    disabled: !enabled,
+    ...props,
+    children: description
   });
 };
 
@@ -22435,12 +22881,6 @@ const Paragraph = props => {
   });
 };
 
-const FontSizedSvg = () => {};
-
-const IconAndText = () => {};
-
-const LinkWithIcon = () => {};
-
 const Image = props => {
   return jsx(Box, {
     ...props,
@@ -22454,6 +22894,423 @@ const Svg = props => {
     as: "svg"
   });
 };
+
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .svg_mask_content * {
+    fill: black !important;
+    stroke: black !important;
+    fill-opacity: 1 !important;
+    stroke-opacity: 1 !important;
+    color: black !important;
+    opacity: 1 !important;
+  }
+`;
+const SVGMaskOverlay = ({
+  viewBox,
+  children
+}) => {
+  if (!Array.isArray(children)) {
+    return children;
+  }
+  if (children.length === 1) {
+    return children[0];
+  }
+  if (!viewBox) {
+    console.error("SVGComposition requires an explicit viewBox");
+    return null;
+  }
+
+  // First SVG is the base, all others are overlays
+  const [baseSvg, ...overlaySvgs] = children;
+
+  // Generate unique ID for this instance
+  const instanceId = `svgmo-${Math.random().toString(36).slice(2, 9)}`;
+
+  // Create nested masked elements
+  let maskedElement = baseSvg;
+
+  // Apply each mask in sequence
+  overlaySvgs.forEach((overlaySvg, index) => {
+    const maskId = `mask-${instanceId}-${index}`;
+    maskedElement = jsx("g", {
+      mask: `url(#${maskId})`,
+      children: maskedElement
+    });
+  });
+  return jsxs("svg", {
+    viewBox: viewBox,
+    width: "100%",
+    height: "100%",
+    children: [jsx("defs", {
+      children: overlaySvgs.map((overlaySvg, index) => {
+        const maskId = `mask-${instanceId}-${index}`;
+
+        // IMPORTANT: clone the overlay SVG exactly as is, just add the mask class
+        return jsxs("mask", {
+          id: maskId,
+          children: [jsx("rect", {
+            width: "100%",
+            height: "100%",
+            fill: "white"
+          }), cloneElement(overlaySvg, {
+            className: "svg_mask_content" // Apply styling to make it black
+          })]
+        }, maskId);
+      })
+    }), maskedElement, overlaySvgs]
+  });
+};
+
+installImportMetaCss(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
+const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
+import.meta.css = /* css */`
+  .summary_marker {
+    width: 1em;
+    height: 1em;
+    line-height: 1em;
+  }
+  .summary_marker_svg .arrow {
+    animation-duration: 0.3s;
+    animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+    animation-fill-mode: forwards;
+  }
+  .summary_marker_svg .arrow[data-animation-target="down"] {
+    animation-name: morph-to-down;
+  }
+  @keyframes morph-to-down {
+    from {
+      d: path("${rightArrowPath}");
+    }
+    to {
+      d: path("${downArrowPath}");
+    }
+  }
+  .summary_marker_svg .arrow[data-animation-target="right"] {
+    animation-name: morph-to-right;
+  }
+  @keyframes morph-to-right {
+    from {
+      d: path("${downArrowPath}");
+    }
+    to {
+      d: path("${rightArrowPath}");
+    }
+  }
+
+  .summary_marker_svg .foreground_circle {
+    stroke-dasharray: 503 1507; /* ~25% of circle perimeter */
+    stroke-dashoffset: 0;
+    animation: progress-around-circle 1.5s linear infinite;
+  }
+  @keyframes progress-around-circle {
+    0% {
+      stroke-dashoffset: 0;
+    }
+    100% {
+      stroke-dashoffset: -2010;
+    }
+  }
+
+  /* fading and scaling */
+  .summary_marker_svg .arrow {
+    opacity: 1;
+    transition: opacity 0.3s ease-in-out;
+  }
+  .summary_marker_svg .loading_container {
+    transform: scale(0.3);
+    transition: transform 0.3s linear;
+  }
+  .summary_marker_svg .background_circle,
+  .summary_marker_svg .foreground_circle {
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+  }
+  .summary_marker_svg[data-loading] .arrow {
+    opacity: 0;
+  }
+  .summary_marker_svg[data-loading] .loading_container {
+    transform: scale(1);
+  }
+  .summary_marker_svg[data-loading] .background_circle {
+    opacity: 0.2;
+  }
+  .summary_marker_svg[data-loading] .foreground_circle {
+    opacity: 1;
+  }
+`;
+const SummaryMarker = ({
+  open,
+  loading
+}) => {
+  const showLoading = useDebounceTrue(loading, 300);
+  const mountedRef = useRef(false);
+  const prevOpenRef = useRef(open);
+  useLayoutEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+  const shouldAnimate = mountedRef.current && prevOpenRef.current !== open;
+  prevOpenRef.current = open;
+  return jsx("span", {
+    className: "summary_marker",
+    children: jsxs("svg", {
+      className: "summary_marker_svg",
+      viewBox: "0 -960 960 960",
+      xmlns: "http://www.w3.org/2000/svg",
+      "data-loading": open ? showLoading || undefined : undefined,
+      children: [jsxs("g", {
+        className: "loading_container",
+        "transform-origin": "480px -480px",
+        children: [jsx("circle", {
+          className: "background_circle",
+          cx: "480",
+          cy: "-480",
+          r: "320",
+          stroke: "currentColor",
+          fill: "none",
+          strokeWidth: "60",
+          opacity: "0.2"
+        }), jsx("circle", {
+          className: "foreground_circle",
+          cx: "480",
+          cy: "-480",
+          r: "320",
+          stroke: "currentColor",
+          fill: "none",
+          strokeWidth: "60",
+          strokeLinecap: "round",
+          strokeDasharray: "503 1507"
+        })]
+      }), jsx("g", {
+        className: "arrow_container",
+        "transform-origin": "480px -480px",
+        children: jsx("path", {
+          className: "arrow",
+          fill: "currentColor",
+          "data-animation-target": shouldAnimate ? open ? "down" : "right" : undefined,
+          d: open ? downArrowPath : rightArrowPath
+        })
+      })]
+    })
+  });
+};
+
+installImportMetaCss(import.meta);import.meta.css = /* css */`
+  .navi_details {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-shrink: 0;
+    flex-direction: column;
+  }
+
+  .navi_details > summary {
+    display: flex;
+    flex-shrink: 0;
+    flex-direction: column;
+    cursor: pointer;
+    user-select: none;
+  }
+  .summary_body {
+    display: flex;
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.2em;
+  }
+  .summary_label {
+    display: flex;
+    padding-right: 10px;
+    flex: 1;
+    align-items: center;
+    gap: 0.2em;
+  }
+
+  .navi_details > summary:focus {
+    z-index: 1;
+  }
+`;
+const Details = forwardRef((props, ref) => {
+  return renderActionableComponent(props, ref);
+});
+const DetailsBasic = forwardRef((props, ref) => {
+  const {
+    id,
+    label = "Summary",
+    open,
+    loading,
+    className,
+    focusGroup,
+    focusGroupDirection,
+    arrowKeyShortcuts = true,
+    openKeyShortcut = "ArrowRight",
+    closeKeyShortcut = "ArrowLeft",
+    onToggle,
+    children,
+    ...rest
+  } = props;
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
+  const [navState, setNavState] = useNavState$1(id);
+  const [innerOpen, innerOpenSetter] = useState(open || navState);
+  useFocusGroup(innerRef, {
+    enabled: focusGroup,
+    name: typeof focusGroup === "string" ? focusGroup : undefined,
+    direction: focusGroupDirection
+  });
+
+  /**
+   * Browser will dispatch "toggle" event even if we set open={true}
+   * When rendering the component for the first time
+   * We have to ensure the initial "toggle" event is ignored.
+   *
+   * If we don't do that code will think the details has changed and run logic accordingly
+   * For example it will try to navigate to the current url while we are already there
+   *
+   * See:
+   * - https://techblog.thescore.com/2024/10/08/why-we-decided-to-change-how-the-details-element-works/
+   * - https://github.com/whatwg/html/issues/4500
+   * - https://stackoverflow.com/questions/58942600/react-html-details-toggles-uncontrollably-when-starts-open
+   *
+   */
+
+  const summaryRef = useRef(null);
+  useKeyboardShortcuts(innerRef, [{
+    key: openKeyShortcut,
+    enabled: arrowKeyShortcuts,
+    when: e => document.activeElement === summaryRef.current &&
+    // avoid handling openKeyShortcut twice when keydown occurs inside nested details
+    !e.defaultPrevented,
+    action: e => {
+      const details = innerRef.current;
+      if (!details.open) {
+        e.preventDefault();
+        details.open = true;
+        return;
+      }
+      const summary = summaryRef.current;
+      const firstFocusableElementInDetails = findAfter(summary, elementIsFocusable, {
+        root: details
+      });
+      if (!firstFocusableElementInDetails) {
+        return;
+      }
+      e.preventDefault();
+      firstFocusableElementInDetails.focus();
+    }
+  }, {
+    key: closeKeyShortcut,
+    enabled: arrowKeyShortcuts,
+    when: () => {
+      const details = innerRef.current;
+      return details.open;
+    },
+    action: e => {
+      const details = innerRef.current;
+      const summary = summaryRef.current;
+      if (document.activeElement === summary) {
+        e.preventDefault();
+        summary.focus();
+        details.open = false;
+      } else {
+        e.preventDefault();
+        summary.focus();
+      }
+    }
+  }]);
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    mountedRef.current = true;
+  }, []);
+  return jsxs("details", {
+    ...rest,
+    ref: innerRef,
+    id: id,
+    className: ["navi_details", ...(className ? className.split(" ") : [])].join(" "),
+    onToggle: e => {
+      const isOpen = e.newState === "open";
+      if (mountedRef.current) {
+        if (isOpen) {
+          innerOpenSetter(true);
+          setNavState(true);
+        } else {
+          innerOpenSetter(false);
+          setNavState(undefined);
+        }
+      }
+      onToggle?.(e);
+    },
+    open: innerOpen,
+    children: [jsx("summary", {
+      ref: summaryRef,
+      children: jsxs("div", {
+        className: "summary_body",
+        children: [jsx(SummaryMarker, {
+          open: innerOpen,
+          loading: loading
+        }), jsx("div", {
+          className: "summary_label",
+          children: label
+        })]
+      })
+    }), children]
+  });
+});
+forwardRef((props, ref) => {
+  const {
+    action,
+    loading,
+    onToggle,
+    onActionPrevented,
+    onActionStart,
+    onActionError,
+    onActionEnd,
+    children,
+    ...rest
+  } = props;
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
+  const effectiveAction = useAction(action);
+  const {
+    loading: actionLoading
+  } = useActionStatus(effectiveAction);
+  const executeAction = useExecuteAction(innerRef, {
+    // the error will be displayed by actionRenderer inside <details>
+    errorEffect: "none"
+  });
+  useActionEvents(innerRef, {
+    onPrevented: onActionPrevented,
+    onAction: e => {
+      executeAction(e);
+    },
+    onStart: onActionStart,
+    onError: onActionError,
+    onEnd: onActionEnd
+  });
+  return jsx(DetailsBasic, {
+    ...rest,
+    ref: innerRef,
+    loading: loading || actionLoading,
+    onToggle: toggleEvent => {
+      const isOpen = toggleEvent.newState === "open";
+      if (isOpen) {
+        requestAction(toggleEvent.target, effectiveAction, {
+          event: toggleEvent,
+          method: "run"
+        });
+      } else {
+        effectiveAction.abort();
+      }
+      onToggle?.(toggleEvent);
+    },
+    children: jsx(ActionRenderer, {
+      action: effectiveAction,
+      children: children
+    })
+  });
+});
 
 installImportMetaCss(import.meta);import.meta.css = /* css */`
   @layer navi {
@@ -22656,6 +23513,36 @@ const ExclamationSvg = () => {
   });
 };
 
+const EyeClosedSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 24 24",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: jsx("path", {
+      "fill-rule": "evenodd",
+      "clip-rule": "evenodd",
+      d: "M22.2954 6.31083C22.6761 6.474 22.8524 6.91491 22.6893 7.29563L21.9999 7.00019C22.6893 7.29563 22.6894 7.29546 22.6893 7.29563L22.6886 7.29731L22.6875 7.2998L22.6843 7.30716L22.6736 7.33123C22.6646 7.35137 22.6518 7.37958 22.6352 7.41527C22.6019 7.48662 22.5533 7.58794 22.4888 7.71435C22.3599 7.967 22.1675 8.32087 21.9084 8.73666C21.4828 9.4197 20.8724 10.2778 20.0619 11.1304L21.0303 12.0987C21.3231 12.3916 21.3231 12.8665 21.0303 13.1594C20.7374 13.4523 20.2625 13.4523 19.9696 13.1594L18.969 12.1588C18.3093 12.7115 17.5528 13.2302 16.695 13.6564L17.6286 15.0912C17.8545 15.4383 17.7562 15.9029 17.409 16.1288C17.0618 16.3547 16.5972 16.2564 16.3713 15.9092L15.2821 14.2353C14.5028 14.4898 13.659 14.6628 12.7499 14.7248V16.5002C12.7499 16.9144 12.4141 17.2502 11.9999 17.2502C11.5857 17.2502 11.2499 16.9144 11.2499 16.5002V14.7248C10.3689 14.6647 9.54909 14.5004 8.78982 14.2586L7.71575 15.9093C7.48984 16.2565 7.02526 16.3548 6.67807 16.1289C6.33089 15.903 6.23257 15.4384 6.45847 15.0912L7.37089 13.689C6.5065 13.2668 5.74381 12.7504 5.07842 12.1984L4.11744 13.1594C3.82455 13.4523 3.34968 13.4523 3.05678 13.1594C2.76389 12.8665 2.76389 12.3917 3.05678 12.0988L3.98055 11.175C3.15599 10.3153 2.53525 9.44675 2.10277 8.75486C1.83984 8.33423 1.6446 7.97584 1.51388 7.71988C1.44848 7.59182 1.3991 7.48914 1.36537 7.41683C1.3485 7.38067 1.33553 7.35207 1.32641 7.33167L1.31562 7.30729L1.31238 7.29984L1.31129 7.29733L1.31088 7.29638C1.31081 7.2962 1.31056 7.29563 1.99992 7.00019L1.31088 7.29638C1.14772 6.91565 1.32376 6.474 1.70448 6.31083C2.08489 6.1478 2.52539 6.32374 2.68888 6.70381C2.68882 6.70368 2.68894 6.70394 2.68888 6.70381L2.68983 6.706L2.69591 6.71972C2.7018 6.73291 2.7114 6.7541 2.72472 6.78267C2.75139 6.83983 2.79296 6.92644 2.84976 7.03767C2.96345 7.26029 3.13762 7.58046 3.37472 7.95979C3.85033 8.72067 4.57157 9.70728 5.55561 10.6218C6.42151 11.4265 7.48259 12.1678 8.75165 12.656C9.70614 13.0232 10.7854 13.2502 11.9999 13.2502C13.2416 13.2502 14.342 13.013 15.3124 12.631C16.5738 12.1345 17.6277 11.3884 18.4866 10.5822C19.4562 9.67216 20.1668 8.69535 20.6354 7.9434C20.869 7.5685 21.0405 7.25246 21.1525 7.03286C21.2085 6.92315 21.2494 6.83776 21.2757 6.78144C21.2888 6.75328 21.2983 6.73242 21.3041 6.71943L21.31 6.70595L21.3106 6.70475C21.3105 6.70485 21.3106 6.70466 21.3106 6.70475M22.2954 6.31083C21.9147 6.14771 21.4738 6.32423 21.3106 6.70475L22.2954 6.31083ZM2.68888 6.70381C2.68882 6.70368 2.68894 6.70394 2.68888 6.70381V6.70381Z",
+      fill: "currentColor"
+    })
+  });
+};
+
+const EyeSvg = () => {
+  return jsxs("svg", {
+    viewBox: "0 0 24 24",
+    children: [jsx("path", {
+      "fill-rule": "evenodd",
+      "clip-rule": "evenodd",
+      d: "M12 8.25C9.92893 8.25 8.25 9.92893 8.25 12C8.25 14.0711 9.92893 15.75 12 15.75C14.0711 15.75 15.75 14.0711 15.75 12C15.75 9.92893 14.0711 8.25 12 8.25ZM9.75 12C9.75 10.7574 10.7574 9.75 12 9.75C13.2426 9.75 14.25 10.7574 14.25 12C14.25 13.2426 13.2426 14.25 12 14.25C10.7574 14.25 9.75 13.2426 9.75 12Z",
+      fill: "currentColor"
+    }), jsx("path", {
+      "fill-rule": "evenodd",
+      "clip-rule": "evenodd",
+      d: "M12 3.25C7.48587 3.25 4.44529 5.9542 2.68057 8.24686L2.64874 8.2882C2.24964 8.80653 1.88206 9.28392 1.63269 9.8484C1.36564 10.4529 1.25 11.1117 1.25 12C1.25 12.8883 1.36564 13.5471 1.63269 14.1516C1.88206 14.7161 2.24964 15.1935 2.64875 15.7118L2.68057 15.7531C4.44529 18.0458 7.48587 20.75 12 20.75C16.5141 20.75 19.5547 18.0458 21.3194 15.7531L21.3512 15.7118C21.7504 15.1935 22.1179 14.7161 22.3673 14.1516C22.6344 13.5471 22.75 12.8883 22.75 12C22.75 11.1117 22.6344 10.4529 22.3673 9.8484C22.1179 9.28391 21.7504 8.80652 21.3512 8.28818L21.3194 8.24686C19.5547 5.9542 16.5141 3.25 12 3.25ZM3.86922 9.1618C5.49864 7.04492 8.15036 4.75 12 4.75C15.8496 4.75 18.5014 7.04492 20.1308 9.1618C20.5694 9.73159 20.8263 10.0721 20.9952 10.4545C21.1532 10.812 21.25 11.2489 21.25 12C21.25 12.7511 21.1532 13.188 20.9952 13.5455C20.8263 13.9279 20.5694 14.2684 20.1308 14.8382C18.5014 16.9551 15.8496 19.25 12 19.25C8.15036 19.25 5.49864 16.9551 3.86922 14.8382C3.43064 14.2684 3.17374 13.9279 3.00476 13.5455C2.84684 13.188 2.75 12.7511 2.75 12C2.75 11.2489 2.84684 10.812 3.00476 10.4545C3.17374 10.0721 3.43063 9.73159 3.86922 9.1618Z",
+      fill: "currentColor"
+    })]
+  });
+};
+
 const HeartSvg = () => jsx("svg", {
   viewBox: "0 0 24 24",
   xmlns: "http://www.w3.org/2000/svg",
@@ -22710,5 +23597,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, BadgeCount, Box, Button, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, FontSizedSvg, Form, HeartSvg, HomeSvg, Icon, IconAndText, Image, Input, Label, Layout, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkWithIcon, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useActiveRouteInfo, useCellsAndColumns, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useUrlSearchParam, valueInLocalStorage };
+export { ActionRenderer, ActiveKeyboardShortcuts, BadgeCount, Box, Button, Caption, CheckSvg, Checkbox, CheckboxList, Code, Col, Colgroup, Details, DialogLayout, Editable, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Form, HeartSvg, HomeSvg, Icon, Image, Input, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, MessageBox, Paragraph, Radio, RadioList, Route, RouteLink, Routes, RowNumberCol, RowNumberTableCell, SINGLE_SPACE_CONSTRAINT, SVGMaskOverlay, SearchSvg, Select, SelectionContext, SettingsSvg, StarSvg, SummaryMarker, Svg, Tab, TabList, Table, TableCell, Tbody, Text, Thead, Title, Tr, UITransition, UserSvg, ViewportLayout, actionIntegratedVia, addCustomMessage, compareTwoJsValues, createAction, createSelectionKeyboardShortcuts, createUniqueValueConstraint, enableDebugActions, enableDebugOnDocumentLoading, forwardActionRequested, goBack, goForward, goTo, installCustomConstraintValidation, isCellSelected, isColumnSelected, isRowSelected, localStorageSignal, openCallout, rawUrlPart, reload, removeCustomMessage, rerunActions, resource, setBaseUrl, setupRoutes, stopLoad, stringifyTableSelectionValue, updateActions, useActionData, useActionStatus, useActiveRouteInfo, useCellsAndColumns, useConstraintValidityState, useDependenciesDiff, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState$1 as useNavState, useRouteStatus, useRunOnMount, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useUrlSearchParam, valueInLocalStorage };
 //# sourceMappingURL=jsenv_navi.js.map
