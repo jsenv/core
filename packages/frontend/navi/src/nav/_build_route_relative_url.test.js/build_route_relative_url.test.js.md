@@ -7,6 +7,7 @@
 - [extra parameters](extra_parameters/extra_parameters.md)
 - [edge cases](edge_cases/edge_cases.md)
 - [complex patterns](complex_patterns/complex_patterns.md)
+- [string params](string_params/string_params.md)
 
 ---
 

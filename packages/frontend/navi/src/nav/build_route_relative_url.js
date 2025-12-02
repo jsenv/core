@@ -34,6 +34,24 @@ export const buildRouteRelativeUrl = (
   let relativeUrl = urlPatternInput;
   let hasRawUrlPartWithInvalidChars = false;
 
+  // Handle string params (query string)
+  if (typeof params === "string") {
+    let queryString = params;
+    // Remove leading ? if present
+    if (queryString.startsWith("?")) {
+      queryString = queryString.slice(1);
+    }
+
+    if (queryString) {
+      relativeUrl += (relativeUrl.includes("?") ? "&" : "?") + queryString;
+    }
+
+    return {
+      relativeUrl,
+      hasRawUrlPartWithInvalidChars,
+    };
+  }
+
   // Encode parameter values for URL usage, with special handling for raw URL parts.
   // When a parameter is wrapped with rawUrlPart(), it bypasses encoding and is
   // inserted as-is into the URL. This allows including pre-encoded values or

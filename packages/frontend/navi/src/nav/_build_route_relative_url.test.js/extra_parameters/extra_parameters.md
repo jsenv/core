@@ -14,7 +14,7 @@ return {
   empty_params: run("/api/endpoint", {}),
   undefined_values: run("/api/test", {
     defined: "value",
-    undefined,
+    undefined: undefined,
     null: null,
   }),
 };

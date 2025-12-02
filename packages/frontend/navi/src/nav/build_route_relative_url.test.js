@@ -101,4 +101,20 @@ await snapshotTests(import.meta.url, ({ test }) => {
       }),
     };
   });
+
+  test("string params", () => {
+    return {
+      basic_search_string: run("/toto", "?test=a&bar=b"),
+      search_string_with_existing_params: run(
+        "/api/users?existing=value",
+        "?test=a&bar=b",
+      ),
+      empty_search_string: run("/path", ""),
+      search_string_without_question: run("/path", "test=a&bar=b"),
+      search_string_with_encoded_values: run(
+        "/search",
+        "?q=hello%20world&type=exact",
+      ),
+    };
+  });
 });
