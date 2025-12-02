@@ -15,7 +15,9 @@ const App = () => {
     <div>
       <TabList>
         <Tab route={HOME_ROUTE}>Home</Tab>
-        <Tab route={MAP_ROUTE}>Map</Tab>
+        <Tab route={MAP_ROUTE} routeParams="?toto">
+          Map
+        </Tab>
       </TabList>
 
       <main>

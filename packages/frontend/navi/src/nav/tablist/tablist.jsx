@@ -212,6 +212,7 @@ export const Tab = (props) => {
 
 const TabRoute = ({
   route,
+  routeParams,
   children,
   paddingX,
   padding,
@@ -223,6 +224,7 @@ const TabRoute = ({
     <TabBasic selected={active} paddingX="0" {...props}>
       <RouteLink
         route={route}
+        routeParams={routeParams}
         expand
         discrete
         align="center"
