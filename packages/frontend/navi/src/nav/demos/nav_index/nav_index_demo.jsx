@@ -6,7 +6,7 @@
  * 🏠 Home vs 📊 Dashboard: Basic page switching
  *
  * When you click Dashboard, you automatically land on Users (the default section)
- * - Users Management: Opens automatically ✨ (uses smart navigation with slots)
+ * - Users Management: This is the index route ✨ (uses index prop for auto-navigation)
  * - Settings: You must click to open 👆 (uses manual navigation)
  * - Analytics: You must click to open 👆 (uses manual navigation but different pattern)
  *
@@ -209,7 +209,8 @@ const Dashboard = () => {
                   }}
                 >
                   <h2 style={{ margin: 0, color: "#15803d" }}>
-                    ✨ Users Management (Auto-opened)
+                    ✨ Users Management (Index route - this is what you end up
+                    seeing)
                   </h2>
                   <p style={{ margin: "0.5rem 0 0 0", color: "#16a34a" }}>
                     You landed here automatically! When you clicked Dashboard,
@@ -271,16 +272,18 @@ const Dashboard = () => {
                     }}
                   >
                     <p style={{ margin: "0 0 0.5rem 0" }}>
-                      <strong>🎯 What happened:</strong> Dashboard → Users →
-                      User List (all automatic!)
+                      <strong>🎯 What happened:</strong> You navigated to
+                      /dashboard and the route with index prop decided what to
+                      show.
                     </p>
                     <p style={{ margin: "0 0 0.5rem 0" }}>
-                      <strong>🤔 Why:</strong> This gives users the fastest path
-                      to the most common task.
+                      <strong>🤔 Why:</strong> Index props let routes decide
+                      what content to display, ensuring one URL equals one
+                      content.
                     </p>
                     <p style={{ margin: 0 }}>
-                      <strong>🛠️ How:</strong> Uses "nested smart navigation"
-                      with slots for flexible content.
+                      <strong>🛠️ How:</strong> Uses index prop to auto-navigate
+                      when no specific sub-route matches.
                     </p>
                   </div>
                   <div
