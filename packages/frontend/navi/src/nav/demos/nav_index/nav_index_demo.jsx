@@ -280,7 +280,8 @@ const Dashboard = () => {
                   >
                     ✓ User List (Also auto-loaded!)
                   </h3>
-                  <div
+
+                  <details
                     style={{
                       backgroundColor: "#ecfdf5",
                       border: "1px solid #a7f3d0",
@@ -289,22 +290,33 @@ const Dashboard = () => {
                       marginTop: "1rem",
                     }}
                   >
-                    <p style={{ margin: "0 0 0.5rem 0" }}>
-                      <strong>🎯 What happened:</strong> You navigated to
-                      /dashboard and got redirected to /dashboard/users because
-                      this route has the index prop.
-                    </p>
-                    <p style={{ margin: "0 0 0.5rem 0" }}>
-                      <strong>🤔 Why:</strong> Index props redirect when no
-                      specific route matches, ensuring /dashboard doesn&apos;t
-                      display content - only /dashboard/users does.
-                    </p>
-                    <p style={{ margin: 0 }}>
-                      <strong>🛠️ How:</strong> The index prop redirects
-                      /dashboard to /dashboard/users so you always end up on the
-                      &quot;right URL&quot; with actual content.
-                    </p>
-                  </div>
+                    <summary
+                      style={{
+                        cursor: "pointer",
+                        fontWeight: "bold",
+                        color: "#059669",
+                      }}
+                    >
+                      🔍 How did we get here? (Click to expand)
+                    </summary>
+                    <div style={{ marginTop: "0.5rem" }}>
+                      <p style={{ margin: "0 0 0.5rem 0" }}>
+                        <strong>🎯 What happened:</strong> You navigated to
+                        /dashboard and got redirected to /dashboard/users
+                        because this route has the index prop.
+                      </p>
+                      <p style={{ margin: "0 0 0.5rem 0" }}>
+                        <strong>🤔 Why:</strong> Index props redirect when no
+                        specific route matches, ensuring /dashboard doesn&apos;t
+                        display content - only /dashboard/users does.
+                      </p>
+                      <p style={{ margin: 0 }}>
+                        <strong>🛠️ How:</strong> The index prop redirects
+                        /dashboard to /dashboard/users so you always end up on
+                        the &quot;right URL&quot; with actual content.
+                      </p>
+                    </div>
+                  </details>
                   <div
                     style={{
                       marginTop: "1rem",
@@ -431,7 +443,8 @@ const Dashboard = () => {
                           >
                             🔧 General Settings (Default here)
                           </h3>
-                          <div
+
+                          <details
                             style={{
                               backgroundColor: "#fef2f2",
                               border: "1px solid #fca5a5",
@@ -440,21 +453,32 @@ const Dashboard = () => {
                               marginTop: "1rem",
                             }}
                           >
-                            <p style={{ margin: "0 0 0.5rem 0" }}>
-                              <strong>🎯 What happened:</strong> You clicked
-                              Settings, then landed on General (the default
-                              sub-section).
-                            </p>
-                            <p style={{ margin: "0 0 0.5rem 0" }}>
-                              <strong>🤔 Why:</strong> Settings requires
-                              intentional navigation since it&apos;s used less
-                              frequently than user management.
-                            </p>
-                            <p style={{ margin: 0 }}>
-                              <strong>🛠️ How:</strong> Uses manual navigation
-                              with standard routing (no slots needed).
-                            </p>
-                          </div>
+                            <summary
+                              style={{
+                                cursor: "pointer",
+                                fontWeight: "bold",
+                                color: "#dc2626",
+                              }}
+                            >
+                              🔍 How did we get here? (Click to expand)
+                            </summary>
+                            <div style={{ marginTop: "0.5rem" }}>
+                              <p style={{ margin: "0 0 0.5rem 0" }}>
+                                <strong>🎯 What happened:</strong> You clicked
+                                Settings, then landed on General (the default
+                                sub-section).
+                              </p>
+                              <p style={{ margin: "0 0 0.5rem 0" }}>
+                                <strong>🤔 Why:</strong> Settings requires
+                                intentional navigation since it&apos;s used less
+                                frequently than user management.
+                              </p>
+                              <p style={{ margin: 0 }}>
+                                <strong>🛠️ How:</strong> Uses manual navigation
+                                with standard routing (no slots needed).
+                              </p>
+                            </div>
+                          </details>
                         </div>
                       }
                     />
@@ -533,7 +557,8 @@ const Dashboard = () => {
                           <h3 style={{ color: "#7c3aed" }}>
                             Analytics Overview
                           </h3>
-                          <div
+
+                          <details
                             style={{
                               backgroundColor: "#f5f3ff",
                               border: "1px solid #c4b5fd",
@@ -542,33 +567,45 @@ const Dashboard = () => {
                               marginTop: "1rem",
                             }}
                           >
-                            <h4 style={{ color: "#7c3aed" }}>
-                              🔍 What happened?
-                            </h4>
-                            <p>
-                              You clicked &quot;Analytics&quot; which brought
-                              you here, similar to how Settings works.
-                            </p>
+                            <summary
+                              style={{
+                                cursor: "pointer",
+                                fontWeight: "bold",
+                                color: "#7c3aed",
+                              }}
+                            >
+                              🔍 How did we get here? (Click to expand)
+                            </summary>
+                            <div style={{ marginTop: "0.5rem" }}>
+                              <h4 style={{ color: "#7c3aed" }}>
+                                🔍 What happened?
+                              </h4>
+                              <p>
+                                You clicked &quot;Analytics&quot; which brought
+                                you here, similar to how Settings works.
+                              </p>
 
-                            <h4 style={{ color: "#7c3aed" }}>
-                              🤔 Why did this happen?
-                            </h4>
-                            <p>
-                              Analytics is configured with a <code>Routes</code>{" "}
-                              pattern that requires deliberate user interaction
-                              - it won&apos;t auto-open like Users.
-                            </p>
+                              <h4 style={{ color: "#7c3aed" }}>
+                                🤔 Why did this happen?
+                              </h4>
+                              <p>
+                                Analytics is configured with a{" "}
+                                <code>Routes</code> pattern that requires
+                                deliberate user interaction - it won&apos;t
+                                auto-open like Users.
+                              </p>
 
-                            <h4 style={{ color: "#7c3aed" }}>
-                              ⚙️ How does this work?
-                            </h4>
-                            <p>
-                              Analytics uses the same <code>Routes</code>{" "}
-                              component pattern as Settings, demonstrating
-                              consistent manual navigation behavior across
-                              different sections.
-                            </p>
-                          </div>
+                              <h4 style={{ color: "#7c3aed" }}>
+                                ⚙️ How does this work?
+                              </h4>
+                              <p>
+                                Analytics uses the same <code>Routes</code>{" "}
+                                component pattern as Settings, demonstrating
+                                consistent manual navigation behavior across
+                                different sections.
+                              </p>
+                            </div>
+                          </details>
                         </div>
                       }
                     />
@@ -615,27 +652,6 @@ const Dashboard = () => {
                   </p>
                 </header>
 
-                {/* Sub-navigation */}
-                <div
-                  style={{
-                    backgroundColor: "#fff",
-                    borderBottom: "1px solid #e2e8f0",
-                    padding: "0 2rem",
-                  }}
-                >
-                  <TabList
-                    underline
-                    style={{
-                      "--tab-color": "#64748b",
-                      "--tab-active-color": "#0891b2",
-                    }}
-                  >
-                    <Tab route={REPORTS_SECTION_ROUTE}>🖥️ Overview</Tab>
-                    <Tab route={MONITORING_EXPORT_ROUTE}>🚨 Alerts</Tab>
-                    <Tab route={MONITORING_ARCHIVE_ROUTE}>📋 Logs</Tab>
-                  </TabList>
-                </div>
-
                 {/* Content Area using Routes */}
                 <div style={{ padding: "2rem" }}>
                   <Routes>
@@ -647,7 +663,8 @@ const Dashboard = () => {
                           <h3 style={{ color: "#0891b2" }}>
                             🖥️ System Monitoring Overview
                           </h3>
-                          <div
+
+                          <details
                             style={{
                               backgroundColor: "#f0fdff",
                               border: "1px solid #a5f3fc",
@@ -656,34 +673,45 @@ const Dashboard = () => {
                               marginTop: "1rem",
                             }}
                           >
-                            <h4 style={{ color: "#0891b2" }}>
-                              🎯 What&apos;s different here?
-                            </h4>
-                            <p>
-                              This section shows content directly at
-                              /dashboard/monitoring - no redirect needed because
-                              there&apos;s actual content to display.
-                            </p>
+                            <summary
+                              style={{
+                                cursor: "pointer",
+                                fontWeight: "bold",
+                                color: "#0891b2",
+                              }}
+                            >
+                              🔍 How is this different? (Click to expand)
+                            </summary>
+                            <div style={{ marginTop: "0.5rem" }}>
+                              <h4 style={{ color: "#0891b2" }}>
+                                🎯 What&apos;s different here?
+                              </h4>
+                              <p>
+                                This section shows content directly at
+                                /dashboard/monitoring - no redirect needed
+                                because there&apos;s actual content to display.
+                              </p>
 
-                            <h4 style={{ color: "#0891b2" }}>
-                              🤔 Why no index route?
-                            </h4>
-                            <p>
-                              Index routes are only needed when the base URL has
-                              no content. Here, /dashboard/monitoring shows this
-                              dashboard directly.
-                            </p>
+                              <h4 style={{ color: "#0891b2" }}>
+                                🤔 Why no index route?
+                              </h4>
+                              <p>
+                                Index routes are only needed when the base URL
+                                has no content. Here, /dashboard/monitoring
+                                shows this dashboard directly.
+                              </p>
 
-                            <h4 style={{ color: "#0891b2" }}>
-                              ⚙️ How does this work?
-                            </h4>
-                            <p>
-                              The route matches /dashboard/monitoring exactly
-                              and displays content. Sub-pages are available but
-                              optional - users can stay on the main dashboard or
-                              navigate to specific tools.
-                            </p>
-                          </div>
+                              <h4 style={{ color: "#0891b2" }}>
+                                ⚙️ How does this work?
+                              </h4>
+                              <p>
+                                The route matches /dashboard/monitoring exactly
+                                and displays content. Sub-pages are available
+                                but optional - users can stay on the main
+                                dashboard or navigate to specific tools.
+                              </p>
+                            </div>
+                          </details>
 
                           {/* Sample dashboard content */}
                           <div
@@ -768,6 +796,35 @@ const Dashboard = () => {
                               </p>
                             </div>
                           </div>
+
+                          {/* Optional Sub-navigation - less prominent */}
+                          <div
+                            style={{
+                              marginTop: "3rem",
+                              paddingTop: "2rem",
+                              borderTop: "1px solid #e2e8f0",
+                            }}
+                          >
+                            <h4
+                              style={{ color: "#0891b2", marginBottom: "1rem" }}
+                            >
+                              Additional Tools
+                            </h4>
+                            <TabList
+                              style={{
+                                "--tab-color": "#64748b",
+                                "--tab-active-color": "#0891b2",
+                                "fontSize": "0.9rem",
+                              }}
+                            >
+                              <Tab route={MONITORING_EXPORT_ROUTE}>
+                                🚨 Alerts
+                              </Tab>
+                              <Tab route={MONITORING_ARCHIVE_ROUTE}>
+                                📋 Logs
+                              </Tab>
+                            </TabList>
+                          </div>
                         </div>
                       }
                     />
@@ -780,7 +837,7 @@ const Dashboard = () => {
                             Alert configuration and notification settings would
                             be available here.
                           </p>
-                          <div
+                          <details
                             style={{
                               backgroundColor: "#f0fdff",
                               border: "1px solid #a5f3fc",
@@ -789,12 +846,23 @@ const Dashboard = () => {
                               marginTop: "1rem",
                             }}
                           >
-                            <p>
-                              This is a sub-page of Monitoring that provides
-                              specific functionality while the main Monitoring
-                              page shows the dashboard overview.
-                            </p>
-                          </div>
+                            <summary
+                              style={{
+                                cursor: "pointer",
+                                fontWeight: "bold",
+                                color: "#0891b2",
+                              }}
+                            >
+                              🔍 Technical details (Click to expand)
+                            </summary>
+                            <div style={{ marginTop: "0.5rem" }}>
+                              <p>
+                                This is a sub-page of Monitoring that provides
+                                specific functionality while the main Monitoring
+                                page shows the dashboard overview.
+                              </p>
+                            </div>
+                          </details>
                         </div>
                       }
                     />
@@ -804,7 +872,7 @@ const Dashboard = () => {
                         <div>
                           <h3 style={{ color: "#0891b2" }}>📋 System Logs</h3>
                           <p>Application logs and system event history.</p>
-                          <div
+                          <details
                             style={{
                               backgroundColor: "#f0fdff",
                               border: "1px solid #a5f3fc",
@@ -813,11 +881,22 @@ const Dashboard = () => {
                               marginTop: "1rem",
                             }}
                           >
-                            <p>
-                              Another optional sub-page that enhances the main
-                              Monitoring dashboard without requiring it.
-                            </p>
-                          </div>
+                            <summary
+                              style={{
+                                cursor: "pointer",
+                                fontWeight: "bold",
+                                color: "#0891b2",
+                              }}
+                            >
+                              🔍 Technical details (Click to expand)
+                            </summary>
+                            <div style={{ marginTop: "0.5rem" }}>
+                              <p>
+                                Another optional sub-page that enhances the main
+                                Monitoring dashboard without requiring it.
+                              </p>
+                            </div>
+                          </details>
                         </div>
                       }
                     />
