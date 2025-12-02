@@ -552,31 +552,6 @@ const Dashboard = () => {
   );
 };
 
-// Section Components that preserve Routes vs Route.Slot patterns
-
-// Users Section - Uses Route.Slot pattern (index route behavior)
-const UsersSection = () => (
-  <div>
-    <SectionHeader
-      backgroundColor="#f0fdf4"
-      borderColor="#bbf7d0"
-      color="#15803d"
-      title="✨ Users Management (Index route - this is what you end up seeing)"
-      description="You landed here automatically! When you clicked Dashboard, the URL redirected to /dashboard/users because this route has the index prop."
-    />
-    <TabNavigation
-      tabs={[
-        { route: USERS_LIST_ROUTE, label: "📋 User List" },
-        { route: USERS_ACTIVITY_ROUTE, label: "📊 Activity" },
-      ]}
-      activeColor="#3b82f6"
-    />
-    <div style={{ padding: "0 2rem" }}>
-      <Route.Slot />
-    </div>
-  </div>
-);
-
 // Settings Section - Uses Routes pattern (manual navigation)
 const SettingsSection = () => (
   <div>
