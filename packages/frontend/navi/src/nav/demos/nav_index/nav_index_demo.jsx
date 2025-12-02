@@ -9,7 +9,7 @@
  * - Users Management: This is the index route ✨ (uses index prop for auto-navigation)
  * - Settings: You must click to open 👆 (uses manual navigation)
  * - Analytics: You must click to open 👆 (uses manual navigation but different pattern)
- * - Reports: Has content at base URL 📋 (no index needed, displays content directly)
+ * - Monitoring: Has content at base URL 🖥️ (no index needed, displays content directly)
  *
  * Each section demonstrates different technical patterns under the hood.
  */
@@ -30,23 +30,23 @@ const {
   SETTINGS_SECURITY_ROUTE,
   ANALYTICS_OVERVIEW_ROUTE,
   ANALYTICS_REPORTS_ROUTE,
-  REPORTS_EXPORT_ROUTE,
-  REPORTS_ARCHIVE_ROUTE,
+  MONITORING_EXPORT_ROUTE,
+  MONITORING_ARCHIVE_ROUTE,
 } = setupRoutes({
   HOME_ROUTE: "home",
   DASHBOARD_ROUTE: "dashboard{/}?*",
   USERS_SECTION_ROUTE: "dashboard/users{/}?*",
   SETTINGS_SECTION_ROUTE: "dashboard/settings{/}?*",
   ANALYTICS_SECTION_ROUTE: "dashboard/analytics{/}?*",
-  REPORTS_SECTION_ROUTE: "dashboard/reports{/}?*",
+  REPORTS_SECTION_ROUTE: "dashboard/monitoring{/}?*",
   USERS_LIST_ROUTE: "dashboard/users/list",
   USERS_ACTIVITY_ROUTE: "dashboard/users/activity",
   SETTINGS_GENERAL_ROUTE: "dashboard/settings/general",
   SETTINGS_SECURITY_ROUTE: "dashboard/settings/security",
   ANALYTICS_OVERVIEW_ROUTE: "dashboard/analytics/overview",
   ANALYTICS_REPORTS_ROUTE: "dashboard/analytics/reports",
-  REPORTS_EXPORT_ROUTE: "dashboard/reports/export",
-  REPORTS_ARCHIVE_ROUTE: "dashboard/reports/archive",
+  MONITORING_EXPORT_ROUTE: "dashboard/monitoring/export",
+  MONITORING_ARCHIVE_ROUTE: "dashboard/monitoring/archive",
 });
 
 const App = () => {
@@ -152,7 +152,7 @@ const Dashboard = () => {
             <Tab route={USERS_SECTION_ROUTE}>👥 Users Management</Tab>
             <Tab route={SETTINGS_SECTION_ROUTE}>⚙️ Settings</Tab>
             <Tab route={ANALYTICS_SECTION_ROUTE}>📈 Analytics</Tab>
-            <Tab route={REPORTS_SECTION_ROUTE}>📊 Reports</Tab>
+            <Tab route={REPORTS_SECTION_ROUTE}>🖥️ Monitoring</Tab>
           </TabList>
         </nav>
 
@@ -202,7 +202,7 @@ const Dashboard = () => {
               borderRadius: "4px",
             }}
           >
-            📊 <strong>Reports:</strong> Has content at base URL
+            🖥️ <strong>Monitoring:</strong> Has content at base URL
           </div>
         </div>
       </aside>
@@ -589,8 +589,8 @@ const Dashboard = () => {
             }
           />
 
-          {/* Reports section with content at base URL - no index needed
-              - REPORTS_SECTION_ROUTE has content at /dashboard/reports directly
+          {/* Monitoring section with content at base URL - no index needed
+              - REPORTS_SECTION_ROUTE has content at /dashboard/monitoring directly
               - Also has nested sub-pages for specific actions
               - Demonstrates route with both base content and optional sub-navigation */}
           <Route
@@ -606,10 +606,10 @@ const Dashboard = () => {
                   }}
                 >
                   <h2 style={{ margin: 0, color: "#0891b2" }}>
-                    📊 Reports Dashboard
+                    🖥️ System Monitoring
                   </h2>
                   <p style={{ margin: "0.5rem 0 0 0", color: "#0891b2" }}>
-                    This section shows content directly at /dashboard/reports
+                    This section shows content directly at /dashboard/monitoring
                     without needing an index route. You can view the main
                     dashboard or access specific tools.
                   </p>
@@ -630,9 +630,9 @@ const Dashboard = () => {
                       "--tab-active-color": "#0891b2",
                     }}
                   >
-                    <Tab route={REPORTS_SECTION_ROUTE}>📊 Dashboard</Tab>
-                    <Tab route={REPORTS_EXPORT_ROUTE}>📤 Export Data</Tab>
-                    <Tab route={REPORTS_ARCHIVE_ROUTE}>📁 Archive</Tab>
+                    <Tab route={REPORTS_SECTION_ROUTE}>🖥️ Overview</Tab>
+                    <Tab route={MONITORING_EXPORT_ROUTE}>🚨 Alerts</Tab>
+                    <Tab route={MONITORING_ARCHIVE_ROUTE}>📋 Logs</Tab>
                   </TabList>
                 </div>
 
@@ -645,7 +645,7 @@ const Dashboard = () => {
                       element={
                         <div>
                           <h3 style={{ color: "#0891b2" }}>
-                            📊 Reports Dashboard
+                            🖥️ System Monitoring Overview
                           </h3>
                           <div
                             style={{
@@ -661,7 +661,7 @@ const Dashboard = () => {
                             </h4>
                             <p>
                               This section shows content directly at
-                              /dashboard/reports - no redirect needed because
+                              /dashboard/monitoring - no redirect needed because
                               there&apos;s actual content to display.
                             </p>
 
@@ -670,7 +670,7 @@ const Dashboard = () => {
                             </h4>
                             <p>
                               Index routes are only needed when the base URL has
-                              no content. Here, /dashboard/reports shows this
+                              no content. Here, /dashboard/monitoring shows this
                               dashboard directly.
                             </p>
 
@@ -678,8 +678,8 @@ const Dashboard = () => {
                               ⚙️ How does this work?
                             </h4>
                             <p>
-                              The route matches /dashboard/reports exactly and
-                              displays content. Sub-pages are available but
+                              The route matches /dashboard/monitoring exactly
+                              and displays content. Sub-pages are available but
                               optional - users can stay on the main dashboard or
                               navigate to specific tools.
                             </p>
@@ -709,7 +709,7 @@ const Dashboard = () => {
                                   color: "#0891b2",
                                 }}
                               >
-                                📈 Sales Report
+                                📈 Server Uptime
                               </h4>
                               <p
                                 style={{
@@ -719,7 +719,7 @@ const Dashboard = () => {
                                   color: "#0891b2",
                                 }}
                               >
-                                $45,231
+                                99.9%
                               </p>
                               <p
                                 style={{
@@ -728,7 +728,7 @@ const Dashboard = () => {
                                   fontSize: "0.9rem",
                                 }}
                               >
-                                +12% from last month
+                                +0.1% from last month
                               </p>
                             </div>
                             <div
@@ -745,7 +745,7 @@ const Dashboard = () => {
                                   color: "#0891b2",
                                 }}
                               >
-                                👥 User Growth
+                                ⚡ Response Time
                               </h4>
                               <p
                                 style={{
@@ -755,7 +755,7 @@ const Dashboard = () => {
                                   color: "#0891b2",
                                 }}
                               >
-                                1,247
+                                142ms
                               </p>
                               <p
                                 style={{
@@ -764,7 +764,7 @@ const Dashboard = () => {
                                   fontSize: "0.9rem",
                                 }}
                               >
-                                +8% from last month
+                                -15ms from last week
                               </p>
                             </div>
                           </div>
@@ -772,13 +772,13 @@ const Dashboard = () => {
                       }
                     />
                     <Route
-                      route={REPORTS_EXPORT_ROUTE}
+                      route={MONITORING_EXPORT_ROUTE}
                       element={
                         <div>
-                          <h3 style={{ color: "#0891b2" }}>📤 Export Data</h3>
+                          <h3 style={{ color: "#0891b2" }}>🚨 System Alerts</h3>
                           <p>
-                            Export tools and data download options would be
-                            available here.
+                            Alert configuration and notification settings would
+                            be available here.
                           </p>
                           <div
                             style={{
@@ -790,20 +790,20 @@ const Dashboard = () => {
                             }}
                           >
                             <p>
-                              This is a sub-page of Reports that provides
-                              specific functionality while the main Reports page
-                              shows the dashboard overview.
+                              This is a sub-page of Monitoring that provides
+                              specific functionality while the main Monitoring
+                              page shows the dashboard overview.
                             </p>
                           </div>
                         </div>
                       }
                     />
                     <Route
-                      route={REPORTS_ARCHIVE_ROUTE}
+                      route={MONITORING_ARCHIVE_ROUTE}
                       element={
                         <div>
-                          <h3 style={{ color: "#0891b2" }}>📁 Archive</h3>
-                          <p>Historical reports and archived data.</p>
+                          <h3 style={{ color: "#0891b2" }}>📋 System Logs</h3>
+                          <p>Application logs and system event history.</p>
                           <div
                             style={{
                               backgroundColor: "#f0fdff",
@@ -815,7 +815,7 @@ const Dashboard = () => {
                           >
                             <p>
                               Another optional sub-page that enhances the main
-                              Reports dashboard without requiring it.
+                              Monitoring dashboard without requiring it.
                             </p>
                           </div>
                         </div>
