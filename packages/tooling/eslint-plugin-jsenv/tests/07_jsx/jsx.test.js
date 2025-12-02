@@ -85,7 +85,7 @@ export const App = () => {
       errors: [
         {
           messageId: "not_found_param",
-          data: { param: "b", func: "Toto" },
+          data: { param: "b", func: "<Toto>" },
           type: "JSXAttribute",
         },
       ],
@@ -110,12 +110,12 @@ export const App = () => {
       errors: [
         {
           messageId: "not_found_param",
-          data: { param: "disabled", func: "Button" },
+          data: { param: "disabled", func: "<Button>" },
           type: "JSXAttribute",
         },
         {
           messageId: "not_found_param",
-          data: { param: "size", func: "Button" },
+          data: { param: "size", func: "<Button>" },
           type: "JSXAttribute",
         },
       ],
@@ -140,7 +140,7 @@ export const App = () => {
       errors: [
         {
           messageId: "not_found_param",
-          data: { param: "unknownProp", func: "Button" },
+          data: { param: "unknownProp", func: "<Button>" },
           type: "JSXAttribute",
         },
       ],
@@ -165,12 +165,12 @@ export const App = () => {
       errors: [
         {
           messageId: "not_found_param",
-          data: { param: "extra", func: "ComponentWithoutProps" },
+          data: { param: "extra", func: "<ComponentWithoutProps>" },
           type: "JSXAttribute",
         },
         {
           messageId: "not_found_param",
-          data: { param: "another", func: "ComponentWithoutProps" },
+          data: { param: "another", func: "<ComponentWithoutProps>" },
           type: "JSXAttribute",
         },
       ],
@@ -201,7 +201,7 @@ export const App = () => {
       errors: [
         {
           messageId: "not_found_param",
-          data: { param: "extra", func: "Some" },
+          data: { param: "extra", func: "<Some>" },
           type: "JSXAttribute",
           suggestions: [
             {
