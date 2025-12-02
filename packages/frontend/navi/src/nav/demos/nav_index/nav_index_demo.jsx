@@ -8,13 +8,17 @@ const {
   MAP_TAB_B_ROUTE,
   MAP_TAB_A_WALK_ROUTE,
   MAP_TAB_A_TRANSIT_ROUTE,
+  MAP_TAB_B_WALK_ROUTE,
+  MAP_TAB_B_TRANSIT_ROUTE,
 } = setupRoutes({
   HOME_ROUTE: "home",
   MAP_ROUTE: "map{/}?*",
   MAP_TAB_A_ROUTE: "map/tab_a{/}?*",
-  MAP_TAB_B_ROUTE: "map/tab_b",
+  MAP_TAB_B_ROUTE: "map/tab_b{/}?*",
   MAP_TAB_A_WALK_ROUTE: "map/tab_a/walk",
   MAP_TAB_A_TRANSIT_ROUTE: "map/tab_a/transit",
+  MAP_TAB_B_WALK_ROUTE: "map/tab_b/walk",
+  MAP_TAB_B_TRANSIT_ROUTE: "map/tab_b/transit",
 });
 
 const App = () => {
@@ -67,7 +71,19 @@ const Map = () => {
           <Route index route={MAP_TAB_A_WALK_ROUTE} element="Walk" />
           <Route route={MAP_TAB_A_TRANSIT_ROUTE} element="Transit" />
         </Route>
-        <Route route={MAP_TAB_B_ROUTE} element={<Box>Tab B content</Box>} />
+        <Route
+          route={MAP_TAB_B_ROUTE}
+          element={
+            <Box>
+              Tab B content
+              <TabList>
+                <Tab route={MAP_TAB_B_WALK_ROUTE}>Walk</Tab>
+                <Tab route={MAP_TAB_B_TRANSIT_ROUTE}>Transit</Tab>
+              </TabList>
+              <Route.Slot />
+            </Box>
+          }
+        />
       </Routes>
     </Box>
   );
