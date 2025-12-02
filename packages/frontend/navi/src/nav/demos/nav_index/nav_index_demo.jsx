@@ -6,17 +6,17 @@
  * Test Case 1: Simple top-level navigation between Home and Map
  *
  * Test Case 2: Multi-level nested index routes with <Route.Slot />
- *   - /map auto-redirects to Users tab (index route)
- *   - /map/tab_a auto-redirects to Walk sub-tab (nested index route)
+ *   - /dashboard auto-redirects to Users tab (index route)
+ *   - /dashboard/users auto-redirects to List sub-tab (nested index route)
  *   - Uses <Route.Slot /> pattern for nested route rendering
  *
  * Test Case 3: Non-index route with nested routes using <Routes>
  *   - Settings tab is NOT index, requires manual navigation
  *   - Uses <Routes> instead of <Route.Slot /> for nested structure
  *
- * Test Case 4: Index route without <Route.Slot />
- *   - Profile tab is marked as index but uses <Routes> for nested routes
- *   - Tests index behavior when not using slot pattern
+ * Test Case 4: Non-index route without <Route.Slot />
+ *   - Analytics tab uses <Routes> for nested routes instead of <Route.Slot />
+ *   - Tests route behavior when not using slot pattern and not being an index
  */
 
 import { Route, Routes, setupRoutes, Tab, TabList } from "@jsenv/navi";
@@ -189,7 +189,7 @@ const Dashboard = () => {
               borderRadius: "4px",
             }}
           >
-            <strong>Test Case 4:</strong> Analytics (index + routes)
+            <strong>Test Case 4:</strong> Analytics (non-index + routes)
           </div>
         </div>
       </aside>
@@ -435,10 +435,9 @@ const Dashboard = () => {
           />
 
           {/* Test Case 4: Index route without <Route.Slot /> 
-              - ANALYTICS_SECTION_ROUTE is marked as index but uses <Routes> for nested routes
-              - Tests index route behavior when not using slot pattern */}
+              - ANALYTICS_SECTION_ROUTE uses <Routes> for nested routes instead of <Route.Slot />
+              - Tests route behavior when not using slot pattern but not being an index */}
           <Route
-            index
             route={ANALYTICS_SECTION_ROUTE}
             element={
               <div>
@@ -452,8 +451,8 @@ const Dashboard = () => {
                 >
                   <h2 style={{ margin: 0, color: "#1e293b" }}>Analytics</h2>
                   <p style={{ margin: "0.5rem 0 0 0", color: "#64748b" }}>
-                    View analytics and reports. Index route but uses Routes
-                    instead of Route.Slot.
+                    View analytics and reports. Non-index route that uses Routes
+                    pattern (requires manual navigation).
                   </p>
                 </header>
 
@@ -502,13 +501,12 @@ const Dashboard = () => {
                               <code>&lt;Routes&gt;</code> (like Settings)
                             </p>
                             <p>
-                              <strong>Index behavior:</strong> This section IS
-                              an index route, but since Users is also index,
-                              Users takes priority
+                              <strong>Navigation:</strong> This section is NOT
+                              an index route, so requires manual navigation
                             </p>
                             <p>
-                              This tests how multiple index routes are resolved
-                              and demonstrates the Routes pattern with an index
+                              This demonstrates the Routes pattern for non-index
+                              sections that must be manually navigated to.
                               route.
                             </p>
                           </div>
