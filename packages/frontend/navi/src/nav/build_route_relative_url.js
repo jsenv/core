@@ -33,23 +33,17 @@ export const buildRouteRelativeUrl = (
 ) => {
   let relativeUrl = urlPatternInput;
   let hasRawUrlPartWithInvalidChars = false;
+  let stringQueryParams = "";
 
-  // Handle string params (query string)
+  // Handle string params (query string) - store for later appending
   if (typeof params === "string") {
-    let queryString = params;
-    // Remove leading ? if present
-    if (queryString.startsWith("?")) {
-      queryString = queryString.slice(1);
+    stringQueryParams = params;
+    // Remove leading ? if present for processing
+    if (stringQueryParams.startsWith("?")) {
+      stringQueryParams = stringQueryParams.slice(1);
     }
-
-    if (queryString) {
-      relativeUrl += (relativeUrl.includes("?") ? "&" : "?") + queryString;
-    }
-
-    return {
-      relativeUrl,
-      hasRawUrlPartWithInvalidChars,
-    };
+    // Set params to empty object so the rest of the function processes the URL pattern
+    params = {};
   }
 
   // Encode parameter values for URL usage, with special handling for raw URL parts.
@@ -67,7 +61,6 @@ export const buildRouteRelativeUrl = (
     }
     return encodeURIComponent(value);
   };
-
   const keys = Object.keys(params);
   const extraParamSet = new Set(keys);
 
@@ -162,8 +155,13 @@ export const buildRouteRelativeUrl = (
         const value = params[key];
         if (value !== undefined && value !== null) {
           const encodedKey = encodeURIComponent(key);
-          const encodedValue = encodeParamValue(value);
-          searchParamPairs.push(`${encodedKey}=${encodedValue}`);
+          // Handle boolean values - if true, just add the key without value
+          if (value === true) {
+            searchParamPairs.push(encodedKey);
+          } else {
+            const encodedValue = encodeParamValue(value);
+            searchParamPairs.push(`${encodedKey}=${encodedValue}`);
+          }
         }
       }
       if (searchParamPairs.length > 0) {
@@ -176,6 +174,11 @@ export const buildRouteRelativeUrl = (
         Array.from(extraParamSet),
       );
     }
+  }
+
+  // Append string query params if any
+  if (stringQueryParams) {
+    relativeUrl += (relativeUrl.includes("?") ? "&" : "?") + stringQueryParams;
   }
 
   return {

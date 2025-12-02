@@ -124,4 +124,14 @@ await snapshotTests(import.meta.url, ({ test }) => {
       ),
     };
   });
+
+  test("map pattern with boolean params", () => {
+    return {
+      map_with_object_boolean: run("map{/}?*", {
+        toto: true,
+      }),
+      map_with_string_boolean: run("map{/}?*", "?toto"),
+      map_no_params: run("map{/}?*"),
+    };
+  });
 });

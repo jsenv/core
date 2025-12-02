@@ -8,6 +8,7 @@
 - [edge cases](edge_cases/edge_cases.md)
 - [complex patterns](complex_patterns/complex_patterns.md)
 - [string params](string_params/string_params.md)
+- [map pattern with boolean params](map_pattern_with_boolean_params/map_pattern_with_boolean_params.md)
 
 ---
 
