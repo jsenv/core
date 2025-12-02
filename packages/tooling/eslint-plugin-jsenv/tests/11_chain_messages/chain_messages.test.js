@@ -52,7 +52,7 @@ greet({  }); // 'xyz' is completely unknown and different from expected params
       errors: [
         {
           messageId: "not_found_param", // Falls back to basic message
-          data: { param: "xyz", func: "greet" },
+          data: { param: "xyz", func: `"greet" params` },
           type: "Property",
         },
       ],
@@ -72,7 +72,7 @@ authenticate({ username: "john" }); // 'passwd' should suggest 'password'
           messageId: "not_found_param_with_suggestions", // Enhanced message with suggestions
           data: {
             param: "passwd",
-            func: "authenticate",
+            func: `"authenticate" params`,
             suggestions: "password",
           },
           type: "Property",
@@ -112,7 +112,7 @@ validate({ email: "test@example.com", phone: "123" }); // 'extra' should trigger
       errors: [
         {
           messageId: "not_found_param", // Enhanced message for extraneous params
-          data: { param: "extra", func: "validate" },
+          data: { param: "extra", func: `"validate" params` },
           type: "Property",
         },
       ],
@@ -135,8 +135,8 @@ step1({ id: 1, name: "John", email: "john@test.com" }); // Should show available
           messageId: "not_found_param_chain_with_suggestions", // Chain message with available params
           data: {
             param: "unknown",
-            firstFunc: "step1",
-            secondFunc: "step2",
+            firstFunc: `"step1" params`,
+            secondFunc: `"step2" params`,
             available: "id, name, email, config",
           },
           type: "Property",

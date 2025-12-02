@@ -103,8 +103,8 @@ ruleTester.run(
             messageId: "not_found_param_chain_with_suggestions",
             data: {
               param: "minification",
-              firstFunc: "test",
-              secondFunc: "build",
+              firstFunc: `"test" params`,
+              secondFunc: `"build" params`,
               available: "expectedFileCount, logLevel",
             },
             type: "Property",

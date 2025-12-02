@@ -95,7 +95,7 @@ export const App = () => <WrappedComponent title="Hello"  />;`,
       errors: [
         {
           messageId: "not_found_param",
-          data: { param: "extra", func: "WrappedComponent" },
+          data: { param: "extra", func: `<WrappedComponent> props` },
         },
       ],
     },
@@ -119,7 +119,7 @@ export const App = () => <MemoizedComponent name="John"  />;`,
       errors: [
         {
           messageId: "not_found_param",
-          data: { param: "unused", func: "MemoizedComponent" },
+          data: { param: "unused", func: `<MemoizedComponent> props` },
         },
       ],
     },
@@ -155,11 +155,11 @@ export const App = () => (
       errors: [
         {
           messageId: "not_found_param",
-          data: { param: "extra1", func: "ReactForwardRefComponent" },
+          data: { param: "extra1", func: `<ReactForwardRefComponent> props` },
         },
         {
           messageId: "not_found_param",
-          data: { param: "extra2", func: "ReactMemoComponent" },
+          data: { param: "extra2", func: `<ReactMemoComponent> props` },
         },
       ],
     },
@@ -183,7 +183,7 @@ boundFunction({ name: "Alice" });`,
       errors: [
         {
           messageId: "not_found_param",
-          data: { param: "extra", func: "boundFunction" },
+          data: { param: "extra", func: `"boundFunction" params` },
         },
       ],
     },

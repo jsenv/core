@@ -33,7 +33,7 @@ foo({ a: 1 });`,
       errors: [
         {
           messageId: "not_found_param",
-          data: { param: "b", func: "foo" },
+          data: { param: "b", func: `"foo" params` },
           type: "Property",
         },
       ],

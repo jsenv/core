@@ -46,7 +46,7 @@ ruleTester.run("no-unknown-params caching mechanism", noUnknownParamsRule, {
           messageId: "not_found_param_with_file",
           data: {
             param: "invalidParam",
-            func: "extremeFunction",
+            func: `"extremeFunction" params`,
             filePath: "./extreme_function.js",
           },
         },

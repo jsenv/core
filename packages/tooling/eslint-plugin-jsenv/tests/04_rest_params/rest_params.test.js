@@ -89,7 +89,7 @@ mixed(
       errors: [
         {
           messageId: "not_found_param",
-          data: { param: "extra", func: "mixed" },
+          data: { param: "extra", func: `"mixed" params` },
           type: "Property",
         },
       ],
@@ -179,8 +179,8 @@ processRequest({
           messageId: "not_found_param_chain_with_suggestions",
           data: {
             param: "debug",
-            firstFunc: "initializeApp",
-            secondFunc: "setupCore",
+            firstFunc: `"initializeApp" params`,
+            secondFunc: `"setupCore" params`,
             available: "name, version",
           },
           type: "Property",
@@ -189,8 +189,8 @@ processRequest({
           messageId: "not_found_param_chain_with_suggestions",
           data: {
             param: "timeout",
-            firstFunc: "initializeApp",
-            secondFunc: "setupCore",
+            firstFunc: `"initializeApp" params`,
+            secondFunc: `"setupCore" params`,
             available: "name, version",
           },
           type: "Property",
@@ -199,8 +199,8 @@ processRequest({
           messageId: "not_found_param_chain_with_suggestions",
           data: {
             param: "email",
-            firstFunc: "createUser",
-            secondFunc: "saveUser",
+            firstFunc: `"createUser" params`,
+            secondFunc: `"saveUser" params`,
             available: "id, name",
           },
           type: "Property",
@@ -209,8 +209,8 @@ processRequest({
           messageId: "not_found_param_chain_with_suggestions",
           data: {
             param: "age",
-            firstFunc: "createUser",
-            secondFunc: "saveUser",
+            firstFunc: `"createUser" params`,
+            secondFunc: `"saveUser" params`,
             available: "id, name",
           },
           type: "Property",
@@ -219,8 +219,8 @@ processRequest({
           messageId: "not_found_param_chain_with_suggestions",
           data: {
             param: "headers",
-            firstFunc: "processRequest",
-            secondFunc: "validateRequest",
+            firstFunc: `"processRequest" params`,
+            secondFunc: `"validateRequest" params`,
             available: "method, body",
           },
           type: "Property",
@@ -229,8 +229,8 @@ processRequest({
           messageId: "not_found_param_chain_with_suggestions",
           data: {
             param: "timeout",
-            firstFunc: "processRequest",
-            secondFunc: "validateRequest",
+            firstFunc: `"processRequest" params`,
+            secondFunc: `"validateRequest" params`,
             available: "method, body",
           },
           type: "Property",
@@ -271,22 +271,22 @@ invalidMultipleRename({ y: 2 });`,
       errors: [
         {
           messageId: "not_found_param",
-          data: { param: "b", func: "invalidRename1" },
+          data: { param: "b", func: `"invalidRename1" params` },
           type: "Property",
         },
         {
           messageId: "not_found_param",
-          data: { param: "c", func: "invalidRename2" },
+          data: { param: "c", func: `"invalidRename2" params` },
           type: "Property",
         },
         {
           messageId: "not_found_param",
-          data: { param: "x", func: "invalidMultipleRename" },
+          data: { param: "x", func: `"invalidMultipleRename" params` },
           type: "Property",
         },
         {
           messageId: "not_found_param",
-          data: { param: "y", func: "invalidMultipleRename" },
+          data: { param: "y", func: `"invalidMultipleRename" params` },
           type: "Property",
         },
       ],

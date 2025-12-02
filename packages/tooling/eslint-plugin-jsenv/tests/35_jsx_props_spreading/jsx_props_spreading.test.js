@@ -60,7 +60,7 @@ export const Usage = () => {
           messageId: "not_found_param",
           data: {
             param: "unused",
-            func: "Component",
+            func: `<Component> props`,
           },
           suggestions: [
             {
@@ -105,7 +105,7 @@ export const Usage = () => {
           messageId: "not_found_param",
           data: {
             param: "c",
-            func: "FormattedText",
+            func: `"FormattedText" params`,
           },
           suggestions: [
             {

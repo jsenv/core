@@ -130,7 +130,7 @@ directCall({ id: 1 });`,
         errors: [
           {
             messageId: "not_found_param",
-            data: { param: "name", func: "directCall" },
+            data: { param: "name", func: `"directCall" params` },
             type: "Property",
           },
         ],

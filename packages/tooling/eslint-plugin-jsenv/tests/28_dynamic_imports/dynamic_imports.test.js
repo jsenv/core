@@ -108,8 +108,8 @@ ruleTester.run("no-unknown-params dynamic imports", noUnknownParamsRule, {
           messageId: "not_found_param_chain_with_suggestions",
           data: {
             param: "unknownParam",
-            firstFunc: "test",
-            secondFunc: "build",
+            firstFunc: `"test" params`,
+            secondFunc: `"build" params`,
             available: "expectedCount, logLevel, bundling, minification",
           },
         },

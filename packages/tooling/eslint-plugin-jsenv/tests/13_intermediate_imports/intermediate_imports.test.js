@@ -53,7 +53,7 @@ ruleTester.run(
             messageId: "not_found_param_with_file",
             data: {
               param: "age",
-              func: "processData",
+              func: `"processData" params`,
               filePath: "./helper.js",
             },
           },
@@ -61,7 +61,7 @@ ruleTester.run(
             messageId: "not_found_param_with_file",
             data: {
               param: "isActive",
-              func: "validateUser",
+              func: `"validateUser" params`,
               filePath: "./intermediate.js",
             },
           },

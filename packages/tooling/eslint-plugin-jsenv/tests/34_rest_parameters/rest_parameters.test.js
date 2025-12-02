@@ -118,8 +118,8 @@ wrapper({ id: 1 });`,
             messageId: "not_found_param_chain_with_suggestions",
             data: {
               param: "unknownParam",
-              firstFunc: "wrapper",
-              secondFunc: "handler", // ✅ Fixed: Now correctly reports 'handler' as the function that rejects the parameter
+              firstFunc: `"wrapper" params`,
+              secondFunc: `"handler" params`, // ✅ Fixed: Now correctly reports 'handler' as the function that rejects the parameter
               available: "id, name",
             },
           },

@@ -54,8 +54,8 @@ function handleRest({ age }) {
             messageId: "not_found_param_chain_with_suggestions",
             data: {
               param: "unused",
-              firstFunc: "processData",
-              secondFunc: "handleRest",
+              firstFunc: `"processData" params`,
+              secondFunc: `"handleRest" params`,
               available: "name, age",
             },
           },

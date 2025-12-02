@@ -51,7 +51,7 @@ function MyComponent({ title }) {
         errors: [
           {
             messageId: "not_found_param",
-            data: { param: "extra", func: "MyComponent" },
+            data: { param: "extra", func: `<MyComponent> props` },
           },
         ],
       },

@@ -45,7 +45,7 @@ knownFunction({ name: "test" });`,
       errors: [
         {
           messageId: "not_found_param",
-          data: { param: "extra", func: "knownFunction" },
+          data: { param: "extra", func: `"knownFunction" params` },
         },
       ],
     },

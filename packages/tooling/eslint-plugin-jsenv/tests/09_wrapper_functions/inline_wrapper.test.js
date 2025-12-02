@@ -66,11 +66,11 @@ MemoInline({ name: "John" });`,
         errors: [
           {
             messageId: "not_found_param",
-            data: { param: "extra1", func: "ForwardRefInline" },
+            data: { param: "extra1", func: `"ForwardRefInline" params` },
           },
           {
             messageId: "not_found_param",
-            data: { param: "extra2", func: "MemoInline" },
+            data: { param: "extra2", func: `"MemoInline" params` },
           },
         ],
       },
