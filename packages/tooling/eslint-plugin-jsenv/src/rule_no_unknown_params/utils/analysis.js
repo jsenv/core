@@ -331,6 +331,7 @@ export function analyzeJSXElement(
           options,
           givenNames: givenAttrs,
           allowChainRemovalSuggestion: false, // preserve previous behaviour
+          isJSX: true,
         });
       }
     }
@@ -406,6 +407,7 @@ export function analyzeJSXElement(
               options,
               givenNames: givenAttrs,
               allowChainRemovalSuggestion: true,
+              isJSX: true,
             });
           }
         }
@@ -503,6 +505,7 @@ export function analyzeJSXElement(
               options,
               givenNames: givenAttrs,
               allowChainRemovalSuggestion: true,
+              isJSX: true,
             });
           }
         }
@@ -545,6 +548,7 @@ export function analyzeJSXElement(
           !IGNORED_JSX_PROPS.has(attr.name.name),
       )
       .map((attr) => attr.name.name),
+    isJSX: true,
   });
 }
 
@@ -560,6 +564,7 @@ function handleObjectPatternUnknownProps({
   maxChainDepth,
   options,
   givenNames,
+  isJSX = false,
 }) {
   if (objectEntries.length === 0) return;
 
@@ -604,6 +609,7 @@ function handleObjectPatternUnknownProps({
         maxChainDepth,
         options,
         givenNames,
+        isJSX,
       });
     }
     return;
@@ -630,6 +636,7 @@ function handleObjectPatternUnknownProps({
       maxChainDepth,
       options,
       givenNames,
+      isJSX,
     });
   }
 }
@@ -647,6 +654,7 @@ function reportIfUnknown({
   maxChainDepth,
   options,
   givenNames,
+  isJSX = false,
 }) {
   const chainResult = checkParameterChaining(
     name,
@@ -672,6 +680,7 @@ function reportIfUnknown({
     options,
     givenNames,
     allowChainRemovalSuggestion: false,
+    isJSX,
   });
 }
 
@@ -694,6 +703,7 @@ function reportUnknownParam({
   options,
   givenNames,
   allowChainRemovalSuggestion,
+  isJSX = false,
 }) {
   const errorMessage = generateErrorMessage(
     name,
@@ -706,6 +716,7 @@ function reportUnknownParam({
     maxChainDepth,
     functionDefWrapper.sourceFile,
     options,
+    isJSX,
   );
   if (!errorMessage) return;
   const { messageId, data, autofixes, forceRemovalSuggestion } = errorMessage;

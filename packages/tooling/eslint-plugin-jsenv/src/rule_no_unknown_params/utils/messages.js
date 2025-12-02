@@ -19,6 +19,19 @@ function getRelativeFilePath(sourceFile, currentFile) {
   }
 }
 
+/**
+ * Format function name based on context (JSX vs function call)
+ * @param {string} functionName - The function name
+ * @param {boolean} isJSX - Whether this is a JSX component
+ * @returns {string} - Formatted function name
+ */
+function formatFunctionName(functionName, isJSX = false) {
+  if (isJSX) {
+    return `<${functionName}>`;
+  }
+  return `${functionName}()`;
+}
+
 // Helper function to generate appropriate error message based on call chain
 export function generateErrorMessage(
   paramName,
@@ -31,6 +44,7 @@ export function generateErrorMessage(
   maxChainDepth = 40,
   functionSourceFile = null,
   options = {},
+  isJSX = false,
 ) {
   const { reportAllUnknownParams = false } = options;
   // Collect all available parameters in the function and its chain
@@ -122,6 +136,14 @@ export function generateErrorMessage(
     }
   }
 
+  // Format function names based on context
+  const formattedResponsibleFunc = formatFunctionName(responsibleFunc, isJSX);
+  const formattedFirstFunc = formatFunctionName(firstFunc, isJSX);
+  const formattedSecondFunc = secondFunc
+    ? formatFunctionName(secondFunc, false)
+    : null; // Chain functions are typically function calls
+  const formattedLastFunc = formatFunctionName(lastFunc, false);
+
   if (chain.length === 0) {
     // Simple case - no chain
     if (suggestions.length > 0) {
@@ -130,7 +152,7 @@ export function generateErrorMessage(
         : "not_found_param_with_suggestions";
       const data = {
         param: paramName,
-        func: responsibleFunc,
+        func: formattedResponsibleFunc,
         suggestions: suggestions.join(", "),
       };
       if (shouldShowFilePath) {
@@ -150,7 +172,7 @@ export function generateErrorMessage(
       ? "not_found_param_with_file"
       : "not_found_param";
 
-    const data = { param: paramName, func: responsibleFunc };
+    const data = { param: paramName, func: formattedResponsibleFunc };
     if (shouldShowFilePath) {
       data.filePath = relativeFilePath;
     }
@@ -170,8 +192,8 @@ export function generateErrorMessage(
         : "not_found_param_chain_with_suggestions";
       const data = {
         param: paramName,
-        firstFunc,
-        secondFunc,
+        firstFunc: formattedFirstFunc,
+        secondFunc: formattedSecondFunc,
         available: availableParamsArray.join(", "),
       };
       if (shouldShowFilePath) {
@@ -187,7 +209,11 @@ export function generateErrorMessage(
     const messageId = shouldShowFilePath
       ? "not_found_param_chain_with_file"
       : "not_found_param_chain";
-    const data = { param: paramName, firstFunc, secondFunc };
+    const data = {
+      param: paramName,
+      firstFunc: formattedFirstFunc,
+      secondFunc: formattedSecondFunc,
+    };
     if (shouldShowFilePath) {
       data.filePath = relativeFilePath;
     }
@@ -206,8 +232,8 @@ export function generateErrorMessage(
       : "not_found_param_chain_long_with_suggestions";
     const data = {
       param: paramName,
-      firstFunc,
-      lastFunc,
+      firstFunc: formattedFirstFunc,
+      lastFunc: formattedLastFunc,
       available: availableParamsArray.join(", "),
     };
     if (shouldShowFilePath) {
@@ -224,7 +250,11 @@ export function generateErrorMessage(
   const messageId = shouldShowFilePath
     ? "not_found_param_long_chain_with_file"
     : "not_found_param_long_chain";
-  const data = { param: paramName, firstFunc, lastFunc };
+  const data = {
+    param: paramName,
+    firstFunc: formattedFirstFunc,
+    lastFunc: formattedLastFunc,
+  };
   if (shouldShowFilePath) {
     data.filePath = relativeFilePath;
   }
