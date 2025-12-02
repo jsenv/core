@@ -660,59 +660,6 @@ const Dashboard = () => {
                       route={REPORTS_SECTION_ROUTE}
                       element={
                         <div>
-                          <h3 style={{ color: "#0891b2" }}>
-                            🖥️ System Monitoring Overview
-                          </h3>
-
-                          <details
-                            style={{
-                              backgroundColor: "#f0fdff",
-                              border: "1px solid #a5f3fc",
-                              borderRadius: "6px",
-                              padding: "1rem",
-                              marginTop: "1rem",
-                            }}
-                          >
-                            <summary
-                              style={{
-                                cursor: "pointer",
-                                fontWeight: "bold",
-                                color: "#0891b2",
-                              }}
-                            >
-                              🔍 How is this different? (Click to expand)
-                            </summary>
-                            <div style={{ marginTop: "0.5rem" }}>
-                              <h4 style={{ color: "#0891b2" }}>
-                                🎯 What&apos;s different here?
-                              </h4>
-                              <p>
-                                This section shows content directly at
-                                /dashboard/monitoring - no redirect needed
-                                because there&apos;s actual content to display.
-                              </p>
-
-                              <h4 style={{ color: "#0891b2" }}>
-                                🤔 Why no index route?
-                              </h4>
-                              <p>
-                                Index routes are only needed when the base URL
-                                has no content. Here, /dashboard/monitoring
-                                shows this dashboard directly.
-                              </p>
-
-                              <h4 style={{ color: "#0891b2" }}>
-                                ⚙️ How does this work?
-                              </h4>
-                              <p>
-                                The route matches /dashboard/monitoring exactly
-                                and displays content. Sub-pages are available
-                                but optional - users can stay on the main
-                                dashboard or navigate to specific tools.
-                              </p>
-                            </div>
-                          </details>
-
                           {/* Sample dashboard content */}
                           <div
                             style={{
@@ -796,6 +743,55 @@ const Dashboard = () => {
                               </p>
                             </div>
                           </div>
+
+                          <details
+                            style={{
+                              backgroundColor: "#f0fdff",
+                              border: "1px solid #a5f3fc",
+                              borderRadius: "6px",
+                              padding: "1rem",
+                              marginTop: "1rem",
+                            }}
+                          >
+                            <summary
+                              style={{
+                                cursor: "pointer",
+                                fontWeight: "bold",
+                                color: "#0891b2",
+                              }}
+                            >
+                              🔍 How is this different? (Click to expand)
+                            </summary>
+                            <div style={{ marginTop: "0.5rem" }}>
+                              <h4 style={{ color: "#0891b2" }}>
+                                🎯 What&apos;s different here?
+                              </h4>
+                              <p>
+                                This section shows content directly at
+                                /dashboard/monitoring - no redirect needed
+                                because there&apos;s actual content to display.
+                              </p>
+
+                              <h4 style={{ color: "#0891b2" }}>
+                                🤔 Why no index route?
+                              </h4>
+                              <p>
+                                Index routes are only needed when the base URL
+                                has no content. Here, /dashboard/monitoring
+                                shows this dashboard directly.
+                              </p>
+
+                              <h4 style={{ color: "#0891b2" }}>
+                                ⚙️ How does this work?
+                              </h4>
+                              <p>
+                                The route matches /dashboard/monitoring exactly
+                                and displays content. Sub-pages are available
+                                but optional - users can stay on the main
+                                dashboard or navigate to specific tools.
+                              </p>
+                            </div>
+                          </details>
 
                           {/* Optional Sub-navigation - less prominent */}
                           <div
