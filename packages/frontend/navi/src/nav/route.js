@@ -406,7 +406,7 @@ const createRoute = (urlPatternInput) => {
     if (route.action) {
       route.action.replaceParams(updatedParams);
     }
-    browserIntegration.goTo(updatedUrl, { replace: true });
+    browserIntegration.navTo(updatedUrl, { replace: true });
   };
   route.replaceParams = replaceParams;
 
@@ -417,7 +417,7 @@ const createRoute = (urlPatternInput) => {
      * and listen store changes to do this:
      *
      * When we detect changes we want to update the route params
-     * so we'll need to use goTo(buildUrl(params), { replace: true })
+     * so we'll need to use navTo(buildUrl(params), { replace: true })
      *
      * reinserted is useful because the item id might have changed
      * but not the mutable key

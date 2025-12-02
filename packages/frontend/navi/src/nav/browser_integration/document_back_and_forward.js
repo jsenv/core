@@ -1,17 +1,17 @@
 import { signal } from "@preact/signals";
 
-export const canGoBackSignal = signal(false);
-export const updateCanGoBack = (can) => {
-  canGoBackSignal.value = can;
+export const canNavBackSignal = signal(false);
+export const updateCanNavBack = (can) => {
+  canNavBackSignal.value = can;
 };
-export const useCanGoBack = () => {
-  return canGoBackSignal.value;
+export const useCanNavBack = () => {
+  return canNavBackSignal.value;
 };
 
-export const canGoForwardSignal = signal(false);
-export const updateCanGoForward = (can) => {
-  canGoBackSignal.value = can;
+export const canNavForwardSignal = signal(false);
+export const updateCanNavForward = (can) => {
+  canNavForwardSignal.value = can;
 };
-export const useCanGoForward = () => {
-  return canGoForwardSignal.value;
+export const useCanNavForward = () => {
+  return canNavForwardSignal.value;
 };

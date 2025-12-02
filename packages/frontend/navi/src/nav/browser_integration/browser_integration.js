@@ -84,7 +84,7 @@ setOnRouteDefined(() => {
 setBrowserIntegration(browserIntegration);
 
 export const actionIntegratedVia = browserIntegration.integration;
-export const goTo = browserIntegration.goTo;
+export const navTo = browserIntegration.navTo;
 export const stopLoad = (reason = "stopLoad() called") => {
   const windowIsLoading = windowIsLoadingSignal.value;
   if (windowIsLoading) {
@@ -96,8 +96,8 @@ export const stopLoad = (reason = "stopLoad() called") => {
   }
 };
 export const reload = browserIntegration.reload;
-export const goBack = browserIntegration.goBack;
-export const goForward = browserIntegration.goForward;
+export const navBack = browserIntegration.navBack;
+export const navForward = browserIntegration.navForward;
 export const isVisited = browserIntegration.isVisited;
 export const visitedUrlsSignal = browserIntegration.visitedUrlsSignal;
 export const handleActionTask = browserIntegration.handleActionTask;

@@ -170,7 +170,7 @@ export const setupBrowserIntegrationViaHistory = ({
     });
   });
 
-  const goTo = async (target, { state = null, replace } = {}) => {
+  const navTo = async (target, { state = null, replace } = {}) => {
     const url = new URL(target, window.location.href).href;
     const currentUrl = documentUrlSignal.peek();
     if (url === currentUrl) {
@@ -184,7 +184,7 @@ export const setupBrowserIntegrationViaHistory = ({
     handleRoutingTask(url, {
       state,
       replace,
-      reason: `goTo called with "${url}"`,
+      reason: `navTo called with "${url}"`,
     });
   };
 
@@ -200,11 +200,11 @@ export const setupBrowserIntegrationViaHistory = ({
     });
   };
 
-  const goBack = () => {
+  const navBack = () => {
     window.history.back();
   };
 
-  const goForward = () => {
+  const navForward = () => {
     window.history.forward();
   };
 
@@ -222,11 +222,11 @@ export const setupBrowserIntegrationViaHistory = ({
   return {
     integration: "browser_history_api",
     init,
-    goTo,
+    navTo,
     stop,
     reload,
-    goBack,
-    goForward,
+    navBack,
+    navForward,
     getDocumentState,
     replaceDocumentState,
     isVisited,

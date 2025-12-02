@@ -1,6 +1,6 @@
 import { useRef, useState } from "preact/hooks";
 
-import { goTo } from "./browser_integration.js";
+import { navTo } from "./browser_integration.js";
 import { documentUrlSignal } from "./document_url_signal.js";
 
 const NEVER_SET = {};
@@ -18,7 +18,7 @@ export const useUrlSearchParam = (paramName, defaultValue) => {
     const newUrlObject = new URL(window.location.href);
     newUrlObject.searchParams.set(paramName, newValue);
     const newUrl = newUrlObject.href;
-    goTo(newUrl, { replace });
+    navTo(newUrl, { replace });
   };
 
   return [value, setSearchParamValue];
