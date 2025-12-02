@@ -14,6 +14,7 @@ return {
   empty_params: run("/api/endpoint", {}),
   undefined_values: run("/api/test", {
     defined: "value",
+    // eslint-disable-next-line object-shorthand
     undefined: undefined,
     null: null,
   }),

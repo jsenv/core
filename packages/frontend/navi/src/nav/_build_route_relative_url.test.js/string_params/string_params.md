@@ -1,12 +1,24 @@
-# [string params](../../build_route_relative_url.test.js#L105)
+# [string params](../../build_route_relative_url.test.js#L106)
 
 ```js
 return {
   basic_search_string: run("/toto", "?test=a&bar=b"),
-  search_string_with_existing_params: run("/api/users?existing=value", "?test=a&bar=b"),
+  search_string_with_existing_params: run(
+    "/api/users?existing=value",
+    "?test=a&bar=b",
+  ),
   empty_search_string: run("/path", ""),
   search_string_without_question: run("/path", "test=a&bar=b"),
-  search_string_with_encoded_values: run("/search", "?q=hello%20world&type=exact"),
+  search_string_with_encoded_values: run(
+    "/search",
+    "?q=hello%20world&type=exact",
+  ),
+  boolean_query_param: run("/api/data", "?bar"),
+  boolean_with_other_params: run("/api/data", "?foo=value&bar&baz=test"),
+  multiple_boolean_params: run(
+    "/api/data?flag3",
+    "?flag1&flag2&param=value",
+  ),
 };
 ```
 
@@ -16,7 +28,10 @@ return {
   "search_string_with_existing_params": "/api/users?existing=value&test=a&bar=b",
   "empty_search_string": "/path",
   "search_string_without_question": "/path?test=a&bar=b",
-  "search_string_with_encoded_values": "/search?q=hello%20world&type=exact"
+  "search_string_with_encoded_values": "/search?q=hello%20world&type=exact",
+  "boolean_query_param": "/api/data?bar",
+  "boolean_with_other_params": "/api/data?foo=value&bar&baz=test",
+  "multiple_boolean_params": "/api/data?flag3&flag1&flag2&param=value"
 }
 ```
 

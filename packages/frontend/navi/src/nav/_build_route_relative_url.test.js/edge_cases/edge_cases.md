@@ -1,4 +1,4 @@
-# [edge cases](../../build_route_relative_url.test.js#L73)
+# [edge cases](../../build_route_relative_url.test.js#L74)
 
 ```js
 return {

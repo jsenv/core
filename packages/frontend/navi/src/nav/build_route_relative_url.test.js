@@ -64,7 +64,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
       empty_params: run("/api/endpoint", {}),
       undefined_values: run("/api/test", {
         defined: "value",
-        undefined,
+        // eslint-disable-next-line object-shorthand
+        undefined: undefined,
         null: null,
       }),
     };
@@ -114,6 +115,12 @@ await snapshotTests(import.meta.url, ({ test }) => {
       search_string_with_encoded_values: run(
         "/search",
         "?q=hello%20world&type=exact",
+      ),
+      boolean_query_param: run("/api/data", "?bar"),
+      boolean_with_other_params: run("/api/data", "?foo=value&bar&baz=test"),
+      multiple_boolean_params: run(
+        "/api/data?flag3",
+        "?flag1&flag2&param=value",
       ),
     };
   });
