@@ -27,9 +27,9 @@ function getRelativeFilePath(sourceFile, currentFile) {
  */
 function formatFunctionName(functionName, isJSX = false) {
   if (isJSX) {
-    return `<${functionName}>`;
+    return `<${functionName}> props`;
   }
-  return `${functionName}()`;
+  return `"${functionName}" params`;
 }
 
 // Helper function to generate appropriate error message based on call chain
