@@ -7,24 +7,20 @@ export const rawUrlPart = (value) => {
 };
 
 const removeOptionalParts = (url) => {
-  // Remove optional parts from right to left to handle nested optionals
+  // Only remove optional parts that still have ? (weren't replaced with actual values)
+  // Find the first unused optional part and remove everything from there onwards
   let result = url;
-  let changed = true;
 
-  while (changed) {
-    changed = false;
-    const originalLength = result.length;
+  // Find the first occurrence of an unused optional part (still has ?)
+  const optionalPartMatch = result.match(/(\/?\*|\/:[^/?]*|\{[^}]*\})\?/);
 
-    // Handle optional patterns ending with ?
-    // Remove: /*?, :param?, {param}?, {/time/*}?, etc.
-    result = result.replace(/(\/?\*|\/:[^/?]*|\{[^}]*\})\?$/g, "");
+  if (optionalPartMatch) {
+    // Remove everything from the start of the first unused optional part
+    const optionalStartIndex = optionalPartMatch.index;
+    result = result.substring(0, optionalStartIndex);
 
-    // Clean up trailing slashes that might be left over
-    result = result.replace(/\/+$/, "");
-
-    if (result.length !== originalLength) {
-      changed = true;
-    }
+    // Clean up trailing slashes
+    result = result.replace(/\/$/, "");
   }
 
   return result;
@@ -74,6 +70,50 @@ export const buildRouteRelativeUrl = (
       extraParamSet.delete(key);
     }
   }
+
+  // Handle complex optional groups like {/time/:duration}?
+  // Replace parameters inside optional groups and remove the optional marker
+  relativeUrl = relativeUrl.replace(/\{([^}]*)\}\?/g, (match, group) => {
+    let processedGroup = group;
+    let hasReplacements = false;
+
+    // Check if any parameters in the group were provided
+    for (const key of keys) {
+      if (params[key] !== undefined) {
+        const encodedValue = encodeParamValue(params[key]);
+        const paramPattern = new RegExp(`:${key}\\b`);
+        if (paramPattern.test(processedGroup)) {
+          processedGroup = processedGroup.replace(paramPattern, encodedValue);
+          hasReplacements = true;
+          extraParamSet.delete(key);
+        }
+      }
+    }
+
+    // Also check for literal parts that match parameter names (like /time where time is a param)
+    for (const key of keys) {
+      if (params[key] !== undefined) {
+        const encodedValue = encodeParamValue(params[key]);
+        // Check for literal parts like /time that match parameter names
+        const literalPattern = new RegExp(`\\/${key}\\b`);
+        if (literalPattern.test(processedGroup)) {
+          processedGroup = processedGroup.replace(
+            literalPattern,
+            `/${encodedValue}`,
+          );
+          hasReplacements = true;
+          extraParamSet.delete(key);
+        }
+      }
+    }
+
+    // If we made replacements, include the group (without the optional marker)
+    // If no replacements, return empty string (remove the optional group)
+    return hasReplacements ? processedGroup : "";
+  });
+
+  // Clean up any double slashes or trailing slashes that might result
+  relativeUrl = relativeUrl.replace(/\/+/g, "/").replace(/\/$/, "");
 
   // Handle remaining wildcards
   let wildcardIndex = 0;
