@@ -134,4 +134,85 @@ await snapshotTests(import.meta.url, ({ test }) => {
       map_no_params: run("map{/}?*"),
     };
   });
+
+  test("boolean parameters", () => {
+    return {
+      single_boolean_true: run("/api/data", {
+        flag: true,
+      }),
+      single_boolean_false: run("/api/data", {
+        flag: false,
+      }),
+      mixed_boolean_and_values: run("/api/data", {
+        enabled: true,
+        disabled: false,
+        name: "test",
+        count: 42,
+      }),
+      multiple_true_booleans: run("/search", {
+        exact: true,
+        caseSensitive: true,
+        regex: true,
+      }),
+      boolean_with_optional_parts: run("/api{/users}?", {
+        admin: true,
+      }),
+      boolean_with_path_params: run("/users/:id", {
+        id: "123",
+        active: true,
+        verified: false,
+      }),
+    };
+  });
+
+  test("string params with optional parts", () => {
+    return {
+      string_with_simple_optional: run("/api/users/*?", "?search=test"),
+      string_with_complex_optional: run(
+        "/map/isochrone{/time/:duration}?",
+        "?format=json&debug",
+      ),
+      string_with_nested_optional: run(
+        "/api{/v1{/users}?}?",
+        "?include=profile&expand",
+      ),
+      string_with_wildcard_optional: run(
+        "/files{/*}?",
+        "?download&compress=true",
+      ),
+      string_merging_with_existing: run(
+        "/search?q=test",
+        "?sort=date&highlight",
+      ),
+    };
+  });
+
+  test("mixed parameter scenarios", () => {
+    return {
+      object_and_path_replacement: run("/users/:id/posts/*", {
+        id: "user123",
+        0: "latest",
+        featured: true,
+        draft: false,
+      }),
+      boolean_overwrites_path_param: run("/api/:enabled", {
+        enabled: true,
+        debug: true,
+      }),
+      complex_pattern_with_booleans: run("/search{/:query}?{/filters/*}?", {
+        query: "javascript",
+        0: "recent",
+        exact: true,
+        caseSensitive: false,
+      }),
+      empty_vs_false_boolean: run("/test", {
+        empty: "",
+        zero: 0,
+        false: false,
+        true: true,
+        undefined: undefined,
+        null: null,
+      }),
+    };
+  });
 });
